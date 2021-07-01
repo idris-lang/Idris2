@@ -503,7 +503,7 @@ groupCons fc fn pvars cs
     -- The type of 'ConGroup' ensures that we refer to the arguments by
     -- the same name in each of the clauses
     addConG {vars'} {todo'} n tag pargs pats pid rhs []
-        = do cty <- the (Core (NF vars')) $ if n == UN "->"
+        = do cty <- if n == UN "->"
                       then pure $ NBind fc (MN "_" 0) (Pi fc top Explicit (NType fc)) $
                               (\d, a => pure $ NBind fc (MN "_" 1) (Pi fc top Explicit (NErased fc False))
                                 (\d, a => pure $ NType fc))
@@ -757,9 +757,9 @@ getScore : {ns : _} ->
 getScore fc phase name npss
     = do catch (do sameType fc phase name (mkEnv fc ns) npss
                    pure (Right ()))
-               (\err => case err of
-                             CaseCompile _ _ err => pure (Left err)
-                             _ => throw err)
+               \case
+                 CaseCompile _ _ err => pure $ Left err
+                 err => throw err
 
 -- Pick the leftmost matchable thing with all constructors in the
 -- same family, or all variables, or all the same type constructor.

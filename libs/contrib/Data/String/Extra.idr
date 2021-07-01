@@ -89,16 +89,6 @@ index n str with (unpack str)
   index Z str | (x :: xs) = Just x
   index (S n) str | (x :: xs) = index n str | xs
 
-||| Produce a string by repeating the character `c` `n` times.
-public export
-replicate : (n : Nat) -> (c : Char) -> String
-replicate n c = pack $ replicate n c
-
-||| Indent a given string by `n` spaces.
-public export
-indent : (n : Nat) -> String -> String
-indent n x = replicate n ' ' ++ x
-
 ||| Indent each line of a given string by `n` spaces.
 public export
 indentLines : (n : Nat) -> String -> String

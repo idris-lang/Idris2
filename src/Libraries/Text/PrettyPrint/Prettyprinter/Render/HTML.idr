@@ -1,7 +1,7 @@
 module Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML
 
 import Data.List
-import Data.Strings
+import Data.String
 
 %default covering
 

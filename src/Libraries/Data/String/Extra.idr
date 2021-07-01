@@ -3,12 +3,12 @@ module Libraries.Data.String.Extra
 import Data.List
 import Data.List1
 import Data.Nat
-import Data.Strings
+import Data.String
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default total
 
@@ -146,9 +146,9 @@ unlines = pack . unlines' . map unpack
 ||| Indent a given string by `n` spaces.
 public export
 indent : (n : Nat) -> String -> String
-indent n x = replicate n ' ' ++ x
+indent n x = Extra.replicate n ' ' ++ x
 
 ||| Indent each line of a given string by `n` spaces.
 public export
 indentLines : (n : Nat) -> String -> String
-indentLines n str = unlines $ map (indent n) $ forget $ lines str
+indentLines n str = unlines $ map (Extra.indent n) $ forget $ lines str

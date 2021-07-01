@@ -475,7 +475,7 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
          rhs <- mkDef locs INil tm ty
 
          logTerm "unify.instantiate" 5 "Definition" rhs
-         let simpleDef = MkPMDefInfo (SolvedHole num) (isSimple rhs)
+         let simpleDef = MkPMDefInfo (SolvedHole num) (isSimple rhs) False
          let newdef = record { definition =
                                  PMDef simpleDef [] (STerm 0 rhs) (STerm 0 rhs) []
                              } mdef
@@ -1437,18 +1437,20 @@ retryGuess mode smode (hid, (loc, hname))
                          ignore $ addDef (Resolved hid) gdef
                          removeGuess hid
                          pure True)
-                     (\err => case err of
-                                DeterminingArg _ n i _ _ =>
-                                    do logTerm "unify.retry" 5 ("Failed (det " ++ show hname ++ " " ++ show n ++ ")")
-                                                 (type def)
-                                       setInvertible loc (Resolved i)
-                                       pure False -- progress not made yet!
-                                _ => do logTermNF "unify.retry" 5 ("Search failed at " ++ show rig ++ " for " ++ show hname)
-                                                  [] (type def)
-                                        case smode of
-                                             LastChance =>
-                                                 throw !(normaliseErr err)
-                                             _ => pure False) -- Postpone again
+                     \case
+                       DeterminingArg _ n i _ _ =>
+                         do logTerm "unify.retry" 5
+                                    ("Failed (det " ++ show hname ++ " " ++ show n ++ ")")
+                                    (type def)
+                            setInvertible loc (Resolved i)
+                            pure False -- progress not made yet!
+                       err =>
+                         do logTermNF "unify.retry" 5
+                                      ("Search failed at " ++ show rig ++ " for " ++ show hname)
+                                      [] (type def)
+                            case smode of
+                                 LastChance => throw !(normaliseErr err)
+                                 _ => pure False -- Postpone again
                Guess tm envb [constr] =>
                  do let umode = case smode of
                                      MatchArgs => inMatch
@@ -1462,7 +1464,7 @@ retryGuess mode smode (hid, (loc, hname))
                                               do ty <- getType [] tm
                                                  logTerm "unify.retry" 5 "Retry Delay" tm
                                                  pure $ delayMeta r envb !(getTerm ty) tm
-                                  let gdef = record { definition = PMDef (MkPMDefInfo NotHole True)
+                                  let gdef = record { definition = PMDef (MkPMDefInfo NotHole True False)
                                                                          [] (STerm 0 tm') (STerm 0 tm') [] } def
                                   logTerm "unify.retry" 5 ("Resolved " ++ show hname) tm'
                                   ignore $ addDef (Resolved hid) gdef
@@ -1488,7 +1490,7 @@ retryGuess mode smode (hid, (loc, hname))
                          -- All constraints resolved, so turn into a
                          -- proper definition and remove it from the
                          -- hole list
-                         [] => do let gdef = record { definition = PMDef (MkPMDefInfo NotHole True)
+                         [] => do let gdef = record { definition = PMDef (MkPMDefInfo NotHole True False)
                                                                          [] (STerm 0 tm) (STerm 0 tm) [] } def
                                   logTerm "unify.retry" 5 ("Resolved " ++ show hname) tm
                                   ignore $ addDef (Resolved hid) gdef

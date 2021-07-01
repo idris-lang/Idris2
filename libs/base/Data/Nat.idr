@@ -10,6 +10,10 @@ export
 Uninhabited (S n = Z) where
   uninhabited Refl impossible
 
+export
+Uninhabited (a = b) => Uninhabited (S a = S b) where
+  uninhabited Refl @{ab} = uninhabited @{ab} Refl
+
 public export
 isZero : Nat -> Bool
 isZero Z     = True

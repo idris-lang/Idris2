@@ -125,6 +125,22 @@ Show Bits64 where
   showPrec = primNumShow prim__cast_Bits64String
 
 export
+Show Int8 where
+  showPrec = primNumShow prim__cast_Int8String
+
+export
+Show Int16 where
+  showPrec = primNumShow prim__cast_Int16String
+
+export
+Show Int32 where
+  showPrec = primNumShow prim__cast_Int32String
+
+export
+Show Int64 where
+  showPrec = primNumShow prim__cast_Int64String
+
+export
 Show Double where
   showPrec = primNumShow prim__cast_DoubleString
 
@@ -178,6 +194,10 @@ export
 Show Bool where
   show True = "True"
   show False = "False"
+
+export
+Show Void where
+  show v impossible
 
 export
 Show () where

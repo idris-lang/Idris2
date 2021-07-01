@@ -4,7 +4,7 @@ import Core.Context
 import Core.Core
 import Core.Directory
 
-import Data.Strings
+import Data.String
 
 import Parser.Lexer.Source
 

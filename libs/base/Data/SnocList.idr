@@ -22,9 +22,11 @@ public export
 Lin       <>> xs = xs
 (sx :< x) <>> xs = sx <>> x :: xs
 
+export
 Cast (SnocList a) (List a) where
   cast sx = sx <>> []
 
+export
 Cast (List a) (SnocList a) where
   cast xs = Lin <>< xs
 
@@ -33,13 +35,11 @@ public export
 asList : SnocList type -> List type
 asList = (reverse . cast)
 
-
 public export
 Eq a => Eq (SnocList a) where
   (==) Lin Lin = True
   (==) (sx :< x) (sy :< y) = x == y && sx == sy
   (==) _ _ = False
-
 
 public export
 Ord a => Ord (SnocList a) where
@@ -75,13 +75,11 @@ length (sx :< x) = S $ length sx
 
 export
 Show a => Show (SnocList a) where
-  show xs = "[< " ++ show' "" xs ++ "]"
+  show xs = concat ("[< " :: intersperse ", " (show' [] xs) ++ ["]"])
     where
-      show' : String -> SnocList a -> String
+      show' : List String -> SnocList a -> List String
       show' acc Lin       = acc
-      show' acc (Lin :< x)= show x ++ acc
-      show' acc (xs :< x) = show' (", " ++ show x ++ acc) xs
-
+      show' acc (xs :< x) = show' (show x :: acc) xs
 
 public export
 Functor SnocList where

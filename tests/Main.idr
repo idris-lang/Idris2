@@ -8,7 +8,7 @@ import Test.Golden
 -- Test cases
 
 ttimpTests : TestPool
-ttimpTests = MkTestPool "TTImp" []
+ttimpTests = MkTestPool "TTImp" [] Nothing
      [ "basic001", "basic002", "basic003", "basic004", "basic005"
      , "basic006"
      , "coverage001", "coverage002"
@@ -23,7 +23,7 @@ ttimpTests = MkTestPool "TTImp" []
      ]
 
 idrisTestsBasic : TestPool
-idrisTestsBasic = MkTestPool "Fundamental language features" []
+idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
       -- Fundamental language features
       ["basic001", "basic002", "basic003", "basic004", "basic005",
        "basic006", "basic007", "basic008", "basic009", "basic010",
@@ -34,13 +34,13 @@ idrisTestsBasic = MkTestPool "Fundamental language features" []
        "basic031", "basic032", "basic033", "basic034", "basic035",
        "basic036", "basic037", "basic038", "basic039", "basic040",
        "basic041", "basic042", "basic043", "basic044", "basic045",
-       "basic046", "basic047", "basic048", "basic049", "basic050",
+       "basic046", "basic047",             "basic049", "basic050",
        "basic051", "basic052", "basic053", "basic054", "basic055",
        "basic056", "basic057", "basic058", "basic059", "basic060",
        "basic061"]
 
 idrisTestsCoverage : TestPool
-idrisTestsCoverage = MkTestPool "Coverage checking" []
+idrisTestsCoverage = MkTestPool "Coverage checking" [] Nothing
        -- Coverage checking
       ["coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
@@ -49,16 +49,16 @@ idrisTestsCoverage = MkTestPool "Coverage checking" []
        "coverage017"]
 
 idrisTestsCasetree : TestPool
-idrisTestsCasetree = MkTestPool "Case tree building" []
+idrisTestsCasetree = MkTestPool "Case tree building" [] Nothing
        -- Case tree building
       ["casetree001"]
 
 idrisTestsWarning : TestPool
-idrisTestsWarning = MkTestPool "Warnings" []
+idrisTestsWarning = MkTestPool "Warnings" [] Nothing
      ["warning001"]
 
 idrisTestsError : TestPool
-idrisTestsError = MkTestPool "Error messages" []
+idrisTestsError = MkTestPool "Error messages" [] Nothing
        -- Error messages
       ["error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
@@ -69,7 +69,7 @@ idrisTestsError = MkTestPool "Error messages" []
        "perror006", "perror007", "perror008"]
 
 idrisTestsInteractive : TestPool
-idrisTestsInteractive = MkTestPool "Interactive editing" []
+idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
        -- Interactive editing support
       ["interactive001", "interactive002", "interactive003", "interactive004",
        "interactive005", "interactive006", "interactive007", "interactive008",
@@ -79,10 +79,10 @@ idrisTestsInteractive = MkTestPool "Interactive editing" []
        "interactive021", "interactive022", "interactive023", "interactive024",
        "interactive025", "interactive026", "interactive027", "interactive028",
        "interactive029", "interactive030", "interactive031", "interactive032",
-       "interactive033"]
+       "interactive033", "interactive034", "interactive035"]
 
 idrisTestsInterface : TestPool
-idrisTestsInterface = MkTestPool "Interface" []
+idrisTestsInterface = MkTestPool "Interface" [] Nothing
        -- Interfaces
       ["interface001", "interface002", "interface003", "interface004",
        "interface005", "interface006", "interface007", "interface008",
@@ -90,10 +90,10 @@ idrisTestsInterface = MkTestPool "Interface" []
        "interface013", "interface014", "interface015", "interface016",
        "interface017", "interface018", "interface019", "interface020",
        "interface021", "interface022", "interface023", "interface024",
-       "interface025"]
+       "interface025", "interface026"]
 
 idrisTestsLinear : TestPool
-idrisTestsLinear = MkTestPool "Quantities" []
+idrisTestsLinear = MkTestPool "Quantities" [] Nothing
        -- QTT and linearity related
        ["linear001", "linear002", "linear003", -- "linear004" -- disabled due to requiring linearity subtyping
         "linear005", "linear006", "linear007", "linear008",
@@ -101,7 +101,7 @@ idrisTestsLinear = MkTestPool "Quantities" []
         "linear013", "linear014"]
 
 idrisTestsLiterate : TestPool
-idrisTestsLiterate = MkTestPool "Literate programming" []
+idrisTestsLiterate = MkTestPool "Literate programming" [] Nothing
        -- Literate
       ["literate001", "literate002", "literate003", "literate004",
        "literate005", "literate006", "literate007", "literate008",
@@ -109,50 +109,60 @@ idrisTestsLiterate = MkTestPool "Literate programming" []
        "literate013", "literate014", "literate015", "literate016"]
 
 idrisTestsPerformance : TestPool
-idrisTestsPerformance = MkTestPool "Performance" []
+idrisTestsPerformance = MkTestPool "Performance" [] Nothing
        -- Performance: things which have been slow in the past, or which
        -- pose interesting challenges for the elaborator
-      ["perf001", "perf002", "perf003", "perf004", "perf005", "perf006",
+      ["perf001", "perf002", "perf003", "perf004", "perf005",
        "perf007", "perf008"]
 
 idrisTestsRegression : TestPool
-idrisTestsRegression = MkTestPool "Various regressions" []
+idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
        -- Miscellaneous regressions
       ["reg001", "reg002", "reg003", "reg004", "reg005", "reg006", "reg007",
        "reg008", "reg009", "reg010", "reg011", "reg012", "reg013", "reg014",
        "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
-       "reg036", "reg037", "reg038", "reg039", "reg040", "reg041"]
+       "reg036", "reg037", "reg038", "reg039", "reg040", "reg041", "reg042",
+       "reg043", "reg044"]
 
 idrisTestsData : TestPool
-idrisTestsData = MkTestPool "Data and record types" []
+idrisTestsData = MkTestPool "Data and record types" [] Nothing
       [-- Data types
        "data001",
        -- Records, access and dependent update
        "record001", "record002", "record003", "record004", "record005",
-       "record006", "record007"]
+       "record006", "record007", "record008"]
 
 idrisTestsBuiltin : TestPool
-idrisTestsBuiltin = MkTestPool "Builtin types and functions" []
+idrisTestsBuiltin = MkTestPool "Builtin types and functions" [] Nothing
       -- %builtin related tests for the frontend (type-checking)
       ["builtin001", "builtin002", "builtin003", "builtin004", "builtin005",
        "builtin006", "builtin007", "builtin008", "builtin009", "builtin010",
        "builtin011"]
 
 idrisTestsEvaluator : TestPool
-idrisTestsEvaluator = MkTestPool "Evaluation" []
+idrisTestsEvaluator = MkTestPool "Evaluation" [] Nothing
       [ -- Evaluator
-       "evaluator001", "evaluator002", "evaluator003", "evaluator004",
-       -- Unfortunately the behaviour of Double is platform dependent so the
-       -- following test is turned off.
-       -- "evaluator005",
+       "evaluator001", "evaluator002", "evaluator003",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
        "interpreter005", "interpreter006", "interpreter007"]
 
+idrisTestsAllBackends : Requirement -> TestPool
+idrisTestsAllBackends cg = MkTestPool
+      ("Test across all backends: " ++ show cg ++ " instance")
+      [] (Just cg)
+      [ -- Evaluator
+       "evaluator004",
+       -- Unfortunately the behaviour of Double is platform dependent so the
+       -- following test is turned off.
+       -- "evaluator005",
+       "basic048",
+       "perf006"]
+
 idrisTests : TestPool
-idrisTests = MkTestPool "Misc" []
+idrisTests = MkTestPool "Misc" [] Nothing
        -- Documentation strings
       ["docs001", "docs002", "docs003",
        -- Eta equality
@@ -185,17 +195,19 @@ idrisTests = MkTestPool "Misc" []
        -- with-disambiguation
        "with003",
        -- pretty printing
-       "pretty001"]
+       "pretty001",
+       -- golden file testing
+       "golden001"]
 
 typeddTests : TestPool
-typeddTests = MkTestPool "Type Driven Development" []
+typeddTests = MkTestPool "Type Driven Development" [] Nothing
      [ "chapter01", "chapter02", "chapter03", "chapter04", "chapter05"
      , "chapter06", "chapter07", "chapter08", "chapter09", "chapter10"
      , "chapter11", "chapter12", "chapter13", "chapter14"
      ]
 
 chezTests : TestPool
-chezTests = MkTestPool "Chez backend" [Chez]
+chezTests = MkTestPool "Chez backend" [] (Just Chez)
     [ "chez001", "chez002", "chez003", "chez004", "chez005", "chez006"
     , "chez007", "chez008", "chez009", "chez010", "chez011", "chez012"
     , "chez013", "chez014", "chez015", "chez016", "chez017", "chez018"
@@ -214,14 +226,14 @@ chezTests = MkTestPool "Chez backend" [Chez]
     ]
 
 refcTests : TestPool
-refcTests = MkTestPool "Reference counting C backend" [C]
+refcTests = MkTestPool "Reference counting C backend" [] (Just C)
     [ "refc001" , "refc002"
     , "strings", "integers", "doubles"
     , "buffer", "clock", "args"
     ]
 
 racketTests : TestPool
-racketTests = MkTestPool "Racket backend" [Racket]
+racketTests = MkTestPool "Racket backend" [] (Just Racket)
     [ "forkjoin001"
     , "semaphores001", "semaphores002"
     , "futures001"
@@ -236,7 +248,7 @@ racketTests = MkTestPool "Racket backend" [Racket]
     ]
 
 nodeTests : TestPool
-nodeTests = MkTestPool "Node backend" [Node]
+nodeTests = MkTestPool "Node backend" [] (Just Node)
     [ "node001", "node002", "node003", "node004", "node005", "node006"
     , "node007", "node008", "node009", "node011", "node012", "node015"
     , "node017", "node018", "node019", "node021", "node022", "node023"
@@ -255,17 +267,17 @@ nodeTests = MkTestPool "Node backend" [Node]
     ]
 
 ideModeTests : TestPool
-ideModeTests = MkTestPool "IDE mode" []
+ideModeTests = MkTestPool "IDE mode" [] Nothing
   [ "ideMode001", "ideMode002", "ideMode003", "ideMode004", "ideMode005"
   ]
 
 preludeTests : TestPool
-preludeTests = MkTestPool "Prelude library" []
+preludeTests = MkTestPool "Prelude library" [] Nothing
   [ "reg001"
   ]
 
 templateTests : TestPool
-templateTests = MkTestPool "Test templates" []
+templateTests = MkTestPool "Test templates" [] Nothing
   [ "simple-test", "ttimp", "with-ipkg"
   ]
 
@@ -275,7 +287,7 @@ templateTests = MkTestPool "Test templates" []
 -- that only runs if all backends are
 -- available.
 baseLibraryTests : TestPool
-baseLibraryTests = MkTestPool "Base library" [Chez, Node]
+baseLibraryTests = MkTestPool "Base library" [Chez, Node] Nothing
   [ "system_file001"
   , "data_bits001"
   , "system_info001"
@@ -284,18 +296,18 @@ baseLibraryTests = MkTestPool "Base library" [Chez, Node]
 
 -- same behavior as `baseLibraryTests`
 contribLibraryTests : TestPool
-contribLibraryTests = MkTestPool "Contrib library" [Chez, Node]
+contribLibraryTests = MkTestPool "Contrib library" [Chez, Node] Nothing
   [ "json_001"
   ]
 
 codegenTests : TestPool
-codegenTests = MkTestPool "Code generation" []
+codegenTests = MkTestPool "Code generation" [] Nothing
   [ "con001"
   , "builtin001"
   ]
 
 main : IO ()
-main = runner
+main = runner $
   [ testPaths "ttimp" ttimpTests
   , testPaths "idris2" idrisTestsBasic
   , testPaths "idris2" idrisTestsCoverage
@@ -323,7 +335,11 @@ main = runner
   , testPaths "node" nodeTests
   , testPaths "templates" templateTests
   , testPaths "codegen" codegenTests
-  ] where
+  ]
+  ++ map (testPaths "allbackends" . idrisTestsAllBackends) [Chez, Node, Racket]
+
+
+    where
 
     testPaths : String -> TestPool -> TestPool
     testPaths dir = record { testCases $= map ((dir ++ "/") ++) }

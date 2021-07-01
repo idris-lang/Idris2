@@ -9,7 +9,7 @@ import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 
 import System.Info
 
@@ -157,9 +157,18 @@ record Session where
   dumpanf : Maybe String -- file to output ANF definitions
   dumpvmcode : Maybe String -- file to output VM code definitions
   profile : Bool -- generate profiling information, if supported
+  searchTimeout : Integer -- maximum number of milliseconds to run
+                          -- expression/program search
   -- Warnings
   warningsAsErrors : Bool
   showShadowingWarning : Bool
+  -- Experimental
+  checkHashesInsteadOfModTime : Bool
+  incrementalCGs : List CG
+  wholeProgram : Bool
+     -- Use whole program compilation for executables, no matter what
+     -- incremental CGs are set (intended for overriding any environment
+     -- variables that set incremental compilation)
 
 public export
 record PPrinter where
@@ -208,7 +217,8 @@ export
 defaultSession : Session
 defaultSession = MkSessionOpts False False False Chez [] False defaultLogLevel
                                False False False Nothing Nothing
-                               Nothing Nothing False False True
+                               Nothing Nothing False 1000 False True
+                               False [] False
 
 export
 defaultElab : ElabDirectives

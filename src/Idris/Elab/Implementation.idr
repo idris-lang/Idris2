@@ -203,6 +203,9 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
 
                log "elab.implementation" 5 $ "Added defaults: body is " ++ show body
                log "elab.implementation" 5 $ "Missing methods: " ++ show missing
+               when (not (isNil missing)) $
+                 throw (GenericMsg ifc ("Missing methods in " ++ show iname ++ ": "
+                                        ++ showSep ", " (map show missing)))
 
                -- Add the 'using' hints
                defs <- get Ctxt

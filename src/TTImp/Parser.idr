@@ -9,11 +9,11 @@ import Parser.Source
 import TTImp.TTImp
 
 import public Libraries.Text.Parser
-import        Data.List
-import        Data.List.Views
-import        Data.List1
-import        Data.Maybe
-import        Data.Strings
+import Data.List
+import Data.List.Views
+import Data.List1
+import Data.Maybe
+import Data.String
 
 topDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 -- All the clauses get parsed as one-clause definitions. Collect any
@@ -594,8 +594,7 @@ recordParam fname indents
   <|> do symbol "{"
          commit
          start <- location
-         info <- the (EmptyRule (PiInfo RawImp))
-                 (pure  AutoImplicit <* keyword "auto"
+         info <- (pure  AutoImplicit <* keyword "auto"
               <|>(do
                   keyword "default"
                   t <- simpleExpr fname indents

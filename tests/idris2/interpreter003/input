@@ -1,7 +1,7 @@
 fromMaybe "test" Nothing
 :module Data.Maybe
 fromMaybe "test" Nothing
-:module Data.Strings
+:module Data.String
 toLower "HELLO"
 isJust (Just 'x')
 :module DoesNotExists

@@ -45,8 +45,12 @@ data InBounds : (k : Nat) -> (xs : List a) -> Type where
 
 public export
 Uninhabited (InBounds k []) where
-    uninhabited InFirst impossible
-    uninhabited (InLater _) impossible
+  uninhabited InFirst impossible
+  uninhabited (InLater _) impossible
+
+export
+Uninhabited (InBounds k xs) => Uninhabited (InBounds (S k) (x::xs)) where
+  uninhabited (InLater y) = uninhabited y
 
 ||| Decide whether `k` is a valid index into `xs`.
 public export
@@ -217,6 +221,9 @@ public export
 union : Eq a => List a -> List a -> List a
 union = unionBy (==)
 
+||| Like @span@ but using a predicate that might convert a to b, i.e. given a
+||| predicate from a to Maybe b and a list of as, returns a tuple consisting of
+||| the longest prefix of the list where a -> Just b, and the rest of the list.
 public export
 spanBy : (a -> Maybe b) -> List a -> (List b, List a)
 spanBy p [] = ([], [])
@@ -224,6 +231,9 @@ spanBy p (x :: xs) = case p x of
   Nothing => ([], x :: xs)
   Just y => let (ys, zs) = spanBy p xs in (y :: ys, zs)
 
+||| Given a predicate and a list, returns a tuple consisting of the longest
+||| prefix of the list whose elements satisfy the predicate, and the rest of the
+||| list.
 public export
 span : (a -> Bool) -> List a -> (List a, List a)
 span p []      = ([], [])
@@ -692,6 +702,11 @@ Uninhabited ([] = x :: xs) where
 export
 Uninhabited (x :: xs = []) where
   uninhabited Refl impossible
+
+export
+{0 xs : List a} -> Either (Uninhabited $ x === y) (Uninhabited $ xs === ys) => Uninhabited (x::xs = y::ys) where
+  uninhabited @{Left  z} Refl = uninhabited @{z} Refl
+  uninhabited @{Right z} Refl = uninhabited @{z} Refl
 
 ||| (::) is injective
 export

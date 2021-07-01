@@ -13,7 +13,7 @@ execute : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
 execute defs dir term = do coreLift $ putStrLn "Maybe in an hour."
 
 lazyCodegen : Codegen
-lazyCodegen = MkCG compile execute
+lazyCodegen = MkCG compile execute Nothing Nothing
 
 main : IO ()
 main = mainWithCodegens [("lazy", lazyCodegen)]

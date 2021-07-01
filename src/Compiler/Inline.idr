@@ -7,6 +7,7 @@ import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
 import Core.FC
+import Core.Options
 import Core.TT
 
 import Libraries.Data.LengthMatch
@@ -315,9 +316,9 @@ fixArityTm (CRef fc n) args
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure (unload args (CRef fc n))
-         let Just def = compexpr gdef
-              | Nothing => pure (unload args (CRef fc n))
-         let arity = getArity def
+         let arity = case compexpr gdef of
+                          Just def => getArity def
+                          _ => 0
          pure $ expandToArity arity (CApp fc (CRef fc n) []) args
 fixArityTm (CLam fc x sc) args
     = pure $ expandToArity Z (CLam fc x !(fixArityTm sc [])) args
@@ -501,9 +502,16 @@ mergeLamDef : {auto c : Ref Ctxt Defs} ->
               Name -> Core ()
 mergeLamDef n
     = do defs <- get Ctxt
-         Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
-         let Just cexpr =  compexpr def             | Nothing => pure ()
-         setCompiled n !(mergeLam cexpr)
+         Just def <- lookupCtxtExact n (gamma defs)
+              | Nothing => pure ()
+         let PMDef pi _ _ _ _ = definition def
+              | _ => pure ()
+         if not (isNil (incrementalCGs !getSession)) &&
+                externalDecl pi -- better keep it at arity 0
+            then pure ()
+            else do let Just cexpr =  compexpr def
+                             | Nothing => pure ()
+                    setCompiled n !(mergeLam cexpr)
 
 export
 compileAndInlineAll : {auto c : Ref Ctxt Defs} ->

@@ -9,7 +9,7 @@ import Core.Options
 import Libraries.Utils.Path
 
 import Data.List
-import Data.Strings
+import Data.String
 import Data.Maybe
 
 import System.Directory
@@ -106,8 +106,8 @@ nsToPath loc ns
             | Nothing => pure (Left (ModuleNotFound loc ns))
          pure (Right f)
 
--- Given a namespace, return the full path to the source module (if it
--- exists in the working directory)
+-- Given a namespace, return the path to the source module relative
+-- to the working directory, if the module exists.
 export
 nsToSource : {auto c : Ref Ctxt Defs} ->
              FC -> ModuleIdent -> Core String
@@ -206,6 +206,18 @@ getTTCFileName inp ext
          d <- getDirs
          let bdir = build_dir d
          pure $ bdir </> "ttc" </> fname
+
+-- Given a source file, return the name of the corresponding object file.
+-- As above, but without the build directory
+export
+getObjFileName : {auto c : Ref Ctxt Defs} ->
+                 String -> String -> Core String
+getObjFileName inp ext
+    = do -- Get its namespace from the file relative to the working directory
+         -- and generate the ttc file from that
+         ns <- ctxtPathToNS inp
+         let fname = ModuleIdent.toPath ns <.> ext
+         pure $ fname
 
 -- Given a root executable name, return the name in the build directory
 export

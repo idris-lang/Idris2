@@ -40,13 +40,13 @@ import Data.Maybe
 import Data.List
 import Data.List.Views
 import Data.List1
-import Data.Strings
+import Data.String
 import Libraries.Data.String.Extra
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 -- Convert high level Idris declarations (PDecl from Idris.Syntax) into
 -- TTImp, recording any high level syntax info on the way (e.g. infix
@@ -1010,6 +1010,7 @@ mutual
              AmbigDepth n => pure [IPragma [] (\nest, env => setAmbigLimit n)]
              AutoImplicitDepth n => pure [IPragma [] (\nest, env => setAutoImplicitLimit n)]
              NFMetavarThreshold n => pure [IPragma [] (\nest, env => setNFThreshold n)]
+             SearchTimeout n => pure [IPragma [] (\nest, env => setSearchTimeout n)]
              PairNames ty f s => pure [IPragma [] (\nest, env => setPair fc ty f s)]
              RewriteName eq rw => pure [IPragma [] (\nest, env => setRewrite fc eq rw)]
              PrimInteger n => pure [IPragma [] (\nest, env => setFromInteger n)]
