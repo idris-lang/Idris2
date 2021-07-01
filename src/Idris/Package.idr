@@ -658,7 +658,8 @@ localPackageFile Nothing
        let candidates = map fileName tree.files
        case filter (".ipkg" `isSuffixOf`) candidates of
          [fp] => pure fp
-         _ => throw $ UserError "No .ipkg file supplied and none could be found in the working directory."
+         [] => throw $ UserError "No .ipkg file supplied and none could be found in the working directory."
+         _ => throw $ UserError "No .ipkg file supplied and the working directory contains more than one."
 
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
