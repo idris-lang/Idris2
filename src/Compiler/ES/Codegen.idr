@@ -616,7 +616,7 @@ mutual
                                      cnst <- jsConstant c
                                      pure (Text cnst, d)
 
-  stmt (Error x)   = pure . jsCrashExp $ jsStringDoc x
+  stmt (Error x)   = pure $ jsCrashExp (jsStringDoc x) <+> ";"
   stmt (Block ss s) = do
     docs <- traverse stmt $ forget ss
     doc  <- stmt s
