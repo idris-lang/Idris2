@@ -19,6 +19,7 @@ import Data.These
 import Parser.Package
 import System
 import System.Directory
+import Libraries.System.Directory.Tree
 import System.File
 
 import Libraries.Data.StringMap
@@ -439,8 +440,7 @@ install pkg opts installSrc -- not used but might be in the future
          let toInstall = maybe (modules pkg)
                                (:: modules pkg)
                                (mainmod pkg)
-         Just wdir <- coreLift currentDir
-             | Nothing => throw (InternalError "Can't get current directory")
+         wdir <- getWorkingDir
          -- Make the package installation directory
          let targetDir = prefix_dir (dirs (options defs)) </>
                              "idris2-" ++ showVersion False version </>
@@ -580,8 +580,7 @@ clean pkg opts -- `opts` is not used but might be in the future
                                        [] => Nothing
                                        (x :: xs) => Just(xs, x))
                           pkgmods
-         Just srcdir <- coreLift currentDir
-              | Nothing => throw (InternalError "Can't get current directory")
+         srcdir <- getWorkingDir
          let d = dirs (options defs)
          let builddir = srcdir </> build_dir d </> "ttc"
          let outputdir = srcdir </> outputDirWithDefault d
@@ -649,24 +648,37 @@ parsePkgFile file = do
       | Left err => throw err
   addFields fs (initPkgDesc pname)
 
+||| If the user did not provide a package file we can look in the working
+||| directory. If there is exactly one `.ipkg` file then use that!
+localPackageFile : Maybe String -> Core String
+localPackageFile (Just fp) = pure fp
+localPackageFile Nothing
+  = do wdir <- getWorkingDir
+       tree <- coreLift (explore $ parse wdir)
+       let candidates = map fileName tree.files
+       case filter (".ipkg" `isSuffixOf`) candidates of
+         [fp] => pure fp
+         _ => throw $ UserError "No .ipkg file supplied and none could be found in the working directory."
+
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  {auto o : Ref ROpts REPLOpts} ->
                  List CLOpt ->
-                 (PkgCommand, String) ->
+                 (PkgCommand, Maybe String) ->
                  Core ()
-processPackage opts (cmd, file)
+processPackage opts (cmd, mfile)
     = withCtxt . withSyn . withROpts $ case cmd of
         Init =>
           do pkg <- coreLift interactive
-             let fp = if file == "" then pkg.name ++ ".ipkg" else file
+             let fp = fromMaybe (pkg.name ++ ".ipkg") mfile
              False <- coreLift (exists fp)
                | _ => throw (GenericMsg emptyFC ("File " ++ fp ++ " already exists"))
              Right () <- coreLift $ writeFile fp (show $ the (Doc ()) $ pretty pkg)
                | Left err => throw (FileErr fp err)
              pure ()
         _ =>
-          do let Just (dir, filename) = splitParent file
+          do file <- localPackageFile mfile
+             let Just (dir, filename) = splitParent file
                  | _ => throw $ InternalError "Tried to split empty string"
              let True = isSuffixOf ".ipkg" filename
                  | _ => do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
@@ -704,7 +716,7 @@ processPackage opts (cmd, file)
 
 record PackageOpts where
   constructor MkPFR
-  pkgDetails : List (PkgCommand, String)
+  pkgDetails : List (PkgCommand, Maybe String)
   oopts : List CLOpt
   hasError : Bool
 
@@ -712,7 +724,7 @@ partitionOpts : List CLOpt -> PackageOpts
 partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
   where
     data OptType : Type where
-      PPackage : PkgCommand -> String -> OptType
+      PPackage : PkgCommand -> Maybe String -> OptType
       POpt : OptType
       PIgnore : OptType
       PErr : OptType
