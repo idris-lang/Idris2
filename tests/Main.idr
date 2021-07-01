@@ -223,7 +223,7 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "semaphores002"
     , "perf001"
     , "reg001"
-    , "channels001"
+    , "channels001", "channels002", "channels003", "channels004", "channels005"
     ]
 
 refcTests : TestPool
