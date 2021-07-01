@@ -125,6 +125,22 @@ Show Bits64 where
   showPrec = primNumShow prim__cast_Bits64String
 
 export
+Show Int8 where
+  showPrec = primNumShow prim__cast_Int8String
+
+export
+Show Int16 where
+  showPrec = primNumShow prim__cast_Int16String
+
+export
+Show Int32 where
+  showPrec = primNumShow prim__cast_Int32String
+
+export
+Show Int64 where
+  showPrec = primNumShow prim__cast_Int64String
+
+export
 Show Double where
   showPrec = primNumShow prim__cast_DoubleString
 

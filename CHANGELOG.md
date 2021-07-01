@@ -2,7 +2,28 @@
 
 ## [Next version]
 
-### Library changes
+### Language changes
+
+* Missing methods in implementations now give a compile time error. This was
+  always the intended behaviour, but until now had not been implemented!
+
+### Compiler changes
+
+* Added incremental compilation, using either the `--inc` flag or the
+  `IDRIS2_INC_CGS` environment variable, which compiles modules incrementally.
+  In incremental mode, the final build step is much faster than in whole
+  program mode (the default), at the cost of runtime performance being about
+  half as good. The `--whole-program` flag overrides incremental compilation,
+  and reverts to whole program compilation. Incremental compilation is currently
+  supported only by the Chez Scheme back end.
+
+### Library Changes
+
+#### Prelude
+
+Changed
+
+- Removed `Data.Strings`.  Use `Data.String` instead.
 
 #### System.Concurrency
 

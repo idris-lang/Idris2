@@ -850,11 +850,12 @@ Eq a => Eq (Binder a) where
   (==) = eqBinderBy (==)
 
 export
+total
 Eq (Term vars) where
   (==) (Local _ _ idx _) (Local _ _ idx' _) = idx == idx'
   (==) (Ref _ _ n) (Ref _ _ n') = n == n'
   (==) (Meta _ _ i args) (Meta _ _ i' args')
-      = assert_total (i == i' && args == args')
+      = i == i' && assert_total (args == args')
   (==) (Bind _ _ b sc) (Bind _ _ b' sc')
       = assert_total (b == b' && sc == believe_me sc')
   (==) (App _ f a) (App _ f' a') = f == f' && a == a'
@@ -869,11 +870,12 @@ Eq (Term vars) where
 
 -- Check equality, ignoring variable naming
 export
+total
 eqTerm : Term vs -> Term vs' -> Bool
 eqTerm (Local _ _ idx _) (Local _ _ idx' _) = idx == idx'
 eqTerm (Ref _ _ n) (Ref _ _ n') = n == n'
 eqTerm (Meta _ _ i args) (Meta _ _ i' args')
-    = assert_total (i == i' && all (uncurry eqTerm) (zip args args'))
+    = i == i' && assert_total (all (uncurry eqTerm) (zip args args'))
 eqTerm (Bind _ _ b sc) (Bind _ _ b' sc')
     = assert_total (eqBinderBy eqTerm b b') && eqTerm sc sc'
 eqTerm (App _ f a) (App _ f' a') = eqTerm f f' && eqTerm a a'
@@ -1319,7 +1321,7 @@ mutual
 
   export
   shrinkTerm : Term vars -> SubVars newvars vars -> Maybe (Term newvars)
-  shrinkTerm (Local fc r idx loc) prf = map (\(MkVar loc') => Local fc r _ loc') $ subElem loc prf
+  shrinkTerm (Local fc r idx loc) prf = (\(MkVar loc') => Local fc r _ loc') <$> subElem loc prf
   shrinkTerm (Ref fc x name) prf = Just (Ref fc x name)
   shrinkTerm (Meta fc x y xs) prf
      = do xs' <- traverse (\x => shrinkTerm x prf) xs

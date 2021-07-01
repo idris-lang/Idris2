@@ -19,7 +19,7 @@ import Core.Unify
 import Data.List
 import Data.List1
 import Data.So
-import Data.Strings
+import Data.String
 
 import Idris.Desugar
 import Idris.Error

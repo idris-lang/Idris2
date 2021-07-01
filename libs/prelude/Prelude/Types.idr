@@ -69,18 +69,28 @@ Num Nat where
 
   fromInteger x = integerToNat x
 
+-- used for nat hack
+public export
+equalNat : (m, n : Nat) -> Bool
+equalNat Z Z = True
+equalNat (S j) (S k) = equalNat j k
+equalNat _ _ = False
+
 public export
 Eq Nat where
-  Z == Z = True
-  S j == S k = j == k
-  _ == _ = False
+  (==) = equalNat
+
+-- used for nat hack
+public export
+compareNat : (m, n : Nat) -> Ordering
+compareNat Z Z = EQ
+compareNat Z (S k) = LT
+compareNat (S k) Z = GT
+compareNat (S j) (S k) = compareNat j k
 
 public export
 Ord Nat where
-  compare Z Z = EQ
-  compare Z (S k) = LT
-  compare (S k) Z = GT
-  compare (S j) (S k) = compare j k
+  compare = compareNat
 
 public export
 natToInteger : Nat -> Integer
@@ -578,7 +588,7 @@ unpack str = unpack' (prim__cast_IntegerInt (natToInteger (length str)) - 1) str
     unpack' pos str acc
         = if pos < 0
              then acc
-             else assert_total $ unpack' (pos - 1) str (assert_total (prim__strIndex str pos)::acc)
+             else unpack' (assert_smaller pos (pos - 1)) str $ (assert_total $ prim__strIndex str pos) :: acc
 
 -- This function runs fast when compiled but won't compute at compile time.
 -- If you need to unpack strings at compile time, use Prelude.unpack.
@@ -771,21 +781,21 @@ ceiling x = prim__doubleCeiling x
 
 -- These functions are here to support the range syntax:
 -- range expressions like `[a..b]` are desugared to `rangeFromXXX` calls.
--- They are not exported, but similar functions are exported from
--- `Data.Stream` instead.
 
-total
+public export
 countFrom : n -> (n -> n) -> Stream n
 countFrom start diff = start :: countFrom (diff start) diff
 
-partial
+public export
+covering
 takeUntil : (n -> Bool) -> Stream n -> List n
 takeUntil p (x :: xs)
     = if p x
          then [x]
          else x :: takeUntil p xs
 
-partial
+public export
+covering
 takeBefore : (n -> Bool) -> Stream n -> List n
 takeBefore p (x :: xs)
     = if p x
@@ -803,46 +813,37 @@ interface Range a where
 
 -- Idris 1 went to great lengths to prove that these were total. I don't really
 -- think it's worth going to those lengths! Let's keep it simple and assert.
-export
+public export
 Range Nat where
-  rangeFromTo x y
-      = if y > x
-           then assert_total $ takeUntil (>= y) (countFrom x S)
-           else if x > y
-                   then assert_total $ takeUntil (<= y) (countFrom x (\n => minus n 1))
-                   else [x]
-  rangeFromThenTo x y z
-      = if y > x
-           then (if z > x
-                    then assert_total $ takeBefore (> z) (countFrom x (plus (minus y x)))
-                    else [])
-           else (if x == y
-                    then (if x == z then [x] else [])
-                    else assert_total $ takeBefore (< z) (countFrom x (\n => minus n (minus x y))))
+  rangeFromTo x y = case compare x y of
+    LT => assert_total $ takeUntil (>= y) (countFrom x S)
+    EQ => pure x
+    GT => assert_total $ takeUntil (<= y) (countFrom x (\n => minus n 1))
+  rangeFromThenTo x y z = case compare x y of
+    LT => if z > x
+             then assert_total $ takeBefore (> z) (countFrom x (plus (minus y x)))
+             else Nil
+    EQ => if x == z then pure x else Nil
+    GT => assert_total $ takeBefore (< z) (countFrom x (\n => minus n (minus x y)))
   rangeFrom x = countFrom x S
   rangeFromThen x y
       = if y > x
            then countFrom x (plus (minus y x))
            else countFrom x (\n => minus n (minus x y))
 
-export
+public export
 (Integral a, Ord a, Neg a) => Range a where
-  rangeFromTo x y
-      = if y > x
-           then assert_total $ takeUntil (>= y) (countFrom x (+1))
-           else if x > y
-                   then assert_total $ takeUntil (<= y) (countFrom x (\x => x-1))
-                   else [x]
-  rangeFromThenTo x y z
-      = if (z - x) > (z - y)
-           then -- go up
-             assert_total $ takeBefore (> z) (countFrom x (+ (y-x)))
-           else if (z - x) < (z - y)
-                then -- go down
-                     assert_total $ takeBefore (< z) (countFrom x (\n => n - (x - y)))
-                else -- meaningless
-                  if x == y && y == z
-                     then [x] else []
+  rangeFromTo x y = case compare x y of
+    LT => assert_total $ takeUntil (>= y) (countFrom x (+1))
+    EQ => pure x
+    GT => assert_total $ takeUntil (<= y) (countFrom x (\x => x-1))
+  rangeFromThenTo x y z = case compare (z - x) (z - y) of
+    -- Go down
+    LT => assert_total $ takeBefore (< z) (countFrom x (\n => n - (x - y)))
+    -- Meaningless
+    EQ => if x == y && y == z then pure x else Nil
+    -- Go up
+    GT => assert_total $ takeBefore (> z) (countFrom x (+ (y-x)))
   rangeFrom x = countFrom x (1+)
   rangeFromThen x y
       = if y > x

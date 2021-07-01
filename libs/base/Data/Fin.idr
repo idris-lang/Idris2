@@ -148,7 +148,7 @@ Ord (Fin n) where
 public export
 natToFin : Nat -> (n : Nat) -> Maybe (Fin n)
 natToFin Z     (S _) = Just FZ
-natToFin (S k) (S j) = map FS $ natToFin k j
+natToFin (S k) (S j) = FS <$> natToFin k j
 natToFin _ _ = Nothing
 
 ||| Convert an `Integer` to a `Fin`, provided the integer is within bounds.

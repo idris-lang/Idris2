@@ -7,14 +7,14 @@ import Core.Context
 import Core.TT
 import Core.Metadata
 import Data.List1
-import Data.Strings
+import Data.String
 import Libraries.Data.List.Extra
 import Libraries.Data.String.Extra
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default total
 
@@ -39,7 +39,7 @@ constant : Rule Constant
 constant
     = terminal "Expected constant"
                \case
-                 CharLit c    =>  map Ch $ getCharLit c
+                 CharLit c    =>  Ch <$> getCharLit c
                  DoubleLit d  => Just (Db d)
                  IntegerLit i => Just (BI i)
                  Ident s      => isConstantType (UN s) >>=

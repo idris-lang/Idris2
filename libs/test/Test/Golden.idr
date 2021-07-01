@@ -228,10 +228,10 @@ runTest opts testPath = forkIO $ do
   let time = timeDifference end start
 
   if result
-    then printTiming (timing opts) time $ testPath ++ ": " ++
+    then printTiming (timing opts) time testPath $
       (if opts.color then show . colored BrightGreen else id) "success"
     else do
-      printTiming (timing opts) time $ testPath ++ ": " ++
+      printTiming (timing opts) time testPath $
         (if opts.color then show . colored BrightRed else id) "FAILURE"
       if interactive opts
         then mayOverwrite (Just exp) out
@@ -274,13 +274,16 @@ runTest opts testPath = forkIO $ do
                     | Left err => putStrLn $ (testPath ++ "/expected") ++ ": " ++ show err
                   pure ()
 
-    printTiming : Bool -> Clock type -> String -> IO ()
-    printTiming False _     msg = putStrLn msg
-    printTiming True  clock msg =
+    printTiming : Bool -> Clock type -> String -> String -> IO ()
+    printTiming False _     path msg = putStrLn $ concat [path, ": ", msg]
+    printTiming True  clock path msg =
       let time  = showTime 2 3 clock
-          spent = String.length time + String.length msg
+          -- We use 9 instead of `String.length msg` because:
+          -- 1. ": success" and ": FAILURE" have the same length
+          -- 2. ANSI escape codes make the msg look longer than it is
+          spent = String.length time + String.length path + 9
           pad   = pack $ replicate (minus 72 spent) ' '
-      in putStrLn $ concat [msg, pad, time]
+      in putStrLn $ concat [path, ": ", msg, pad, time]
 
 ||| Find the first occurrence of an executable on `PATH`.
 export
@@ -347,6 +350,22 @@ findCG
        Nothing <- checkRequirement C       | p => pure (Just "refc")
        pure Nothing
 
+||| A choice of a codegen
+public export
+data Codegen
+  = ||| Do NOT pass a cg argument to the executable being tested
+    Nothing
+  | ||| Use whatever the test runner was passed at the toplevel,
+    ||| and if nothing was passed guess a sensible default using findCG
+    Default
+  | ||| Use exactly the given requirement
+    Just Requirement
+
+export
+toList : Codegen -> List Requirement
+toList (Just r) = [r]
+toList _ = []
+
 ||| A test pool is characterised by
 |||  + a name
 |||  + a list of requirement
@@ -357,7 +376,7 @@ record TestPool where
   constructor MkTestPool
   poolName : String
   constraints : List Requirement
-  codegen : Maybe Requirement
+  codegen : Codegen
   testCases : List String
 
 ||| Only keep the tests that have been asked for
@@ -419,8 +438,9 @@ poolRunner opts pool
 
        -- if the test pool requires a specific codegen then use that
        let opts = case codegen pool of
-                    Nothing => opts
+                    Nothing => { codegen := Nothing } opts
                     Just cg => { codegen := Just (show @{CG} cg) } opts
+                    Default => opts
        -- if so run them all!
        loop opts initSummary tests
 
@@ -449,7 +469,7 @@ runner : List TestPool -> IO ()
 runner tests
     = do args <- getArgs
          Just opts <- options args
-            | _ => do print args
+            | _ => do printLn args
                       putStrLn usage
          -- if no CG has been set, find a sensible default based on what is available
          opts <- case codegen opts of

@@ -524,7 +524,7 @@ find p (x::xs) = if p x then Just x else find p xs
 public export
 findIndex : (elem -> Bool) -> Vect len elem -> Maybe (Fin len)
 findIndex p []        = Nothing
-findIndex p (x :: xs) = if p x then Just FZ else map FS (findIndex p xs)
+findIndex p (x :: xs) = if p x then Just FZ else FS <$> findIndex p xs
 
 ||| Find the indices of all elements that satisfy some test
 |||
@@ -535,7 +535,7 @@ public export
 findIndices : (elem -> Bool) -> Vect m elem -> List (Fin m)
 findIndices p []        = []
 findIndices p (x :: xs)
-     = let is = map FS $ findIndices p xs in
+     = let is = FS <$> findIndices p xs in
            if p x then FZ :: is else is
 
 ||| Find the index of the first element of the vector that satisfies some test

@@ -2,7 +2,7 @@ module Core.Name.Namespace
 
 import Data.List
 import Data.List1
-import Data.Strings
+import Data.String
 import Decidable.Equality
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util

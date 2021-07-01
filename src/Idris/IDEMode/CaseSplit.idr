@@ -23,13 +23,13 @@ import Data.List
 import Data.List1
 import Libraries.Data.List.Extra
 import Libraries.Data.String.Extra
-import Data.Strings
+import Data.String
 import System.File
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 
@@ -178,7 +178,7 @@ updateCase splits line col
                                   else do rs <- traverse getReplaces valid
                                           let stok = tokens l
                                           defs <- get Ctxt
-                                          u <- newRef UPD (the (List String) [])
+                                          u <- newRef UPD []
                                           updateAll defs stok rs
   where
     getValid : ClauseUpdate -> Maybe (List (Name, RawImp))

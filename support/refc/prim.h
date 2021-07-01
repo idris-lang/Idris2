@@ -1,5 +1,4 @@
-#ifndef __PRIM_H__
-#define __PRIM_H__
+#pragma once
 
 #include "cBackend.h"
 
@@ -44,4 +43,3 @@ Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Value *, Value *, Value
 Value *System_Concurrency_Raw_prim__conditionSignal(Value *, Value *);
 
 Value *System_Concurrency_Raw_prim__conditionBroadcast(Value *, Value *);
-#endif

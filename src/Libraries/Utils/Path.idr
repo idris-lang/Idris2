@@ -4,7 +4,7 @@ import Data.List
 import Data.List1
 import Data.Maybe
 import Data.Nat
-import Data.Strings
+import Data.String
 import Libraries.Data.String.Extra
 
 import Libraries.Text.Token
@@ -110,14 +110,14 @@ Show Body where
 export
 Show Volume where
   show (UNC server share) = "\\\\" ++ server ++ "\\" ++ share
-  show (Disk disk) = Strings.singleton disk ++ ":"
+  show (Disk disk) = String.singleton disk ++ ":"
 
 ||| Displays the path in the format of this platform.
 export
 Show Path where
   show path =
     let
-      sep = Strings.singleton dirSeparator
+      sep = String.singleton dirSeparator
       showVol = maybe "" show path.volume
       showRoot = if path.hasRoot then sep else ""
       showBody = join sep $ map show path.body

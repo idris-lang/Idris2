@@ -360,7 +360,7 @@ conTypeEq (CName x tag) (CName x' tag')
              Yes Refl => Just Refl
              No contra => Nothing
 conTypeEq CDelay CDelay = Just Refl
-conTypeEq (CConst x) (CConst y) = map (cong CConst) $ constantEq x y
+conTypeEq (CConst x) (CConst y) = cong CConst <$> constantEq x y
 conTypeEq _ _ = Nothing
 
 data Group : List Name -> -- variables in scope
@@ -503,7 +503,7 @@ groupCons fc fn pvars cs
     -- The type of 'ConGroup' ensures that we refer to the arguments by
     -- the same name in each of the clauses
     addConG {vars'} {todo'} n tag pargs pats pid rhs []
-        = do cty <- the (Core (NF vars')) $ if n == UN "->"
+        = do cty <- if n == UN "->"
                       then pure $ NBind fc (MN "_" 0) (Pi fc top Explicit (NType fc)) $
                               (\d, a => pure $ NBind fc (MN "_" 1) (Pi fc top Explicit (NErased fc False))
                                 (\d, a => pure $ NType fc))

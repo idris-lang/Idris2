@@ -1,5 +1,4 @@
-#ifndef _STRUCT_H
-#define _STRUCT_H
+#pragma once
 
 typedef struct {
     int x;
@@ -18,5 +17,3 @@ namedpoint* mkNamedPoint(char* str, point* p);
 void freeNamedPoint(namedpoint* np);
 
 char* getString(void *p);
-
-#endif

@@ -1,6 +1,6 @@
 module Text.PrettyPrint.Prettyprinter.Render.String
 
-import Data.Strings
+import Data.String
 import Data.String.Extra
 import Text.PrettyPrint.Prettyprinter.Doc
 

@@ -194,7 +194,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- split on that, rather than adding it as a new argument
          let splitOn = findScrutinee env scr
 
-         caseretty_in <- the (Core (Term vars)) $ case expected of
+         caseretty_in <- case expected of
                            Just ty => getTerm ty
                            _ =>
                               do nmty <- genName "caseTy"

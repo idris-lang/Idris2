@@ -3,7 +3,7 @@ module Idris.Package.Types
 import Core.FC
 import Core.Name.Namespace
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Idris.CommandLine
 import Idris.Version
 import Libraries.Text.PrettyPrint.Prettyprinter

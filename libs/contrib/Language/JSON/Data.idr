@@ -4,7 +4,7 @@ import Data.Bits
 import Data.List
 import Data.Nat
 import Data.String.Extra
-import Data.Strings
+import Data.String
 
 %default total
 

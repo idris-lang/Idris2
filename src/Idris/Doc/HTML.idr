@@ -4,7 +4,7 @@ import Core.Context
 import Core.Core
 import Core.Directory
 
-import Data.Strings
+import Data.String
 
 import Parser.Lexer.Source
 
@@ -46,8 +46,11 @@ packageInternal _ = pure False
 
 prettyNameRoot : Name -> String
 prettyNameRoot n =
-  let root = htmlEscape $ nameRoot n in
-  if isOpName n then "(" ++ root ++ ")" else root
+  let root = nameRoot n in
+  -- We need to take the root first and then re-wrap in a UN for the op check
+  -- to avoid false positives for record fields (RF) names (which get an
+  -- implicit "."-prefix).
+  htmlEscape (if isOpName (UN root) then "(" ++ root ++ ")" else root)
 
 renderHtml : {auto c : Ref Ctxt Defs} ->
              SimpleDocTree IdrisDocAnn ->

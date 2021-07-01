@@ -1,11 +1,5 @@
 module TestIntegers
 
-import IntBits
-import IntCasts
-import IntEqOrd
-import IntNum
-import IntShow
-
 import Data.Bits
 import Data.List.Quantifiers
 

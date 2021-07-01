@@ -2,7 +2,7 @@ module System
 
 import public Data.So
 import Data.List
-import Data.Strings
+import Data.String
 
 %default total
 
@@ -100,8 +100,7 @@ unsetEnv var
    = do ok <- primIO $ prim__unsetEnv var
         pure $ ok == 0
 
-%foreign libc "system"
-         "scheme:blodwen-system"
+%foreign "C:idris2_system, libidris2_support, idris_system.h"
 prim__system : String -> PrimIO Int
 
 export

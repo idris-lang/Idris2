@@ -40,13 +40,13 @@ import Data.Maybe
 import Data.List
 import Data.List.Views
 import Data.List1
-import Data.Strings
+import Data.String
 import Libraries.Data.String.Extra
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 -- Convert high level Idris declarations (PDecl from Idris.Syntax) into
 -- TTImp, recording any high level syntax info on the way (e.g. infix
@@ -770,10 +770,15 @@ mutual
                  Core IField
   desugarField ps ns (MkField fc doc rig p n ty)
       = do addDocStringNS ns n doc
+           addDocStringNS ns (toRF n) doc
            syn <- get Syn
            pure (MkIField fc rig !(traverse (desugar AnyExpr ps) p )
                           n !(bindTypeNames fc (usingImpl syn)
                           ps !(desugar AnyExpr ps ty)))
+        where
+          toRF : Name -> Name
+          toRF (UN n) = RF n
+          toRF n = n
 
   export
   desugarFnOpt : {auto s : Ref Syn SyntaxInfo} ->
