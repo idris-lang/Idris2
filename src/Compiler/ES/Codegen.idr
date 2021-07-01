@@ -72,7 +72,11 @@ jsIdent s = concatMap okchar (unpack s)
                   else "x" ++ the (String) (asHex (cast {to=Int} c))
 
 keywordSafe : String -> String
-keywordSafe "var" = "var_"
+keywordSafe "var"    = "var$"
+keywordSafe "switch" = "switch$"
+keywordSafe "return" = "return$"
+keywordSafe "const"  = "const$"
+keywordSafe "function" = "function$"
 keywordSafe s = s
 
 --------------------------------------------------------------------------------
