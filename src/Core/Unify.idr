@@ -475,7 +475,9 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
          rhs <- mkDef locs INil tm ty
 
          logTerm "unify.instantiate" 5 "Definition" rhs
-         let simpleDef = MkPMDefInfo (SolvedHole num) (isSimple rhs) False
+         let simpleDef = MkPMDefInfo (SolvedHole num)
+                                     (not (isUserName mname) && isSimple rhs)
+                                     False
          let newdef = record { definition =
                                  PMDef simpleDef [] (STerm 0 rhs) (STerm 0 rhs) []
                              } mdef
