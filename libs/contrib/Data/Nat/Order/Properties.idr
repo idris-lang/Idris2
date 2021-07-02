@@ -73,14 +73,16 @@ notLteIsnotlte a b not_a_lte_b = reflect (lteReflection a b) not_a_lte_b
 -- The converse to lteIsLTE:
 export
 GTIsnotlte : (a, b : Nat) -> b `LT` a -> a `lte` b = False
--- GTIsnotlte a b b_lt_a =
---   let not_a_lte_b : Not (a `LTE` b)
---       not_a_lte_b = \a_lte_b =>
---         irreflexive {rel = LT} $ CalcWith {leq = LTE} $
---         |~ 1 + a
---         <~ 1 + b ...(plusLteMonotoneLeft 1 a b a_lte_b)
---         <~ a     ...(b_lt_a)
---   in notLteIsnotlte a b not_a_lte_b
+GTIsnotlte a b prf =
+  notLteIsnotlte a b $ \contra =>
+    let trn = transitive {rel = LTE} prf contra in
+    notSuccLTE trn
+  where
+    notSuccLTE : {x : Nat} -> Not $ LTE (S x) x
+    notSuccLTE {x} q =
+      case x of
+           0   => succNotLTEzero q
+           S _ => notSuccLTE $ fromLteSucc q
 
 ||| Subtracting a number gives a smaller number
 export

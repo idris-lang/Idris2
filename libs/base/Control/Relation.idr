@@ -35,6 +35,9 @@ public export
 interface (Reflexive ty rel, Symmetric ty rel) => Tolerance ty rel where
 
 public export
+interface (Transitive ty rel, Symmetric ty rel) => PartialEquivalence ty rel where
+
+public export
 interface (Reflexive ty rel, Transitive ty rel, Symmetric ty rel) => Equivalence ty rel where
 
 ----------------------------------------
