@@ -1,5 +1,7 @@
 module System.Concurrency
 
+import Data.IORef
+
 %default total
 
 -- At the moment this is pretty fundamentally tied to the Scheme RTS.
@@ -196,7 +198,12 @@ export
 channelGet : HasIO io => Channel a -> io a
 channelGet chan = primIO (prim__channelGet chan)
 
-||| Blocks until a receiver is ready to accept the value `val` through `chan`.
+||| CAUTION: Different behaviour under chez and racket:
+||| - Chez: Puts a value on the channel. If there already is a value, blocks
+|||         until that value has been received.
+||| - Racket: Blocks until a receiver is ready to accept the value `val` through
+|||           `chan`.
 export
 channelPut : HasIO io => Channel a -> a -> io ()
 channelPut chan val = primIO (prim__channelPut chan val)
+

@@ -25,6 +25,19 @@ Changed
 
 - Removed `Data.Strings`.  Use `Data.String` instead.
 
+#### System.Concurrency
+
+* Reimplement the `Channels` primitive in the Chez-Scheme backend since it had
+  some non-deterministic properties (see issue
+  [#1552](https://github.com/idris-lang/idris2/issues/1552)).
+  NOTE: Due to complications with race-conditions, Chez not having channels
+  built in, etc, the reimplementation changes the semantics slightly:
+  `channelPut` no longer blocks until the value has been received under the
+  `chez` backend, but instead only blocks if there is already a value in the
+  channel that has not been received.
+  With thanks to Alain Zscheile (@zseri) for help with understanding condition
+  variables, and figuring out where the problems were and how to solve them.
+
 ## v0.4.0
 
 ### Syntax changes
