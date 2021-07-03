@@ -209,6 +209,7 @@ runTest opts testPath = forkIO $ do
   let exe = "\"" ++ exeUnderTest opts ++ cg ++ "\""
   ignore $ system $ "cd " ++ testPath ++ " && " ++
     "sh ./run " ++ exe ++ " | tr -d '\\r' > output"
+  ignore $ system $ "cd " ++ testPath ++ " && rm -rf build"
   end <- clockTime UTC
 
   Right out <- readFile $ testPath ++ "/output"

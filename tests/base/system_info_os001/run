@@ -8,5 +8,3 @@ esac
 export EXPECTED_OS
 
 $1 --no-banner --no-color --console-width 0 Os.idr --exec main
-
-rm -rf build

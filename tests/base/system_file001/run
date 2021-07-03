@@ -11,5 +11,3 @@ $1 --cg node --no-color --console-width 0 --no-banner ReadFilePage.idr < input
 # $1 --cg refc --no-color --console-width 0 --no-banner ReadFilePage.idr < input
 # GAMBIT hung seemingly indefinitely
 # $1 --cg gambit --no-color --console-width 0 --no-banner ReadFilePage.idr < input
-
-rm -rf build

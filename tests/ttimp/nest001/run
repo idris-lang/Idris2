@@ -1,3 +1,1 @@
 $1 --yaffle Let.yaff < input
-
-rm -rf build
