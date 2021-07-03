@@ -10,6 +10,7 @@ module System.Signal
 import Data.Fuel
 import Data.List
 import Data.List.Elem
+import System.Errno
 
 %default total
 
@@ -143,9 +144,6 @@ prim__sendSignal : Int -> Int -> PrimIO Int
 %foreign signalFFI "raise_signal"
 prim__raiseSignal : Int -> PrimIO Int
 
-%foreign "C:idris2_getErrno, libidris2_support, idris_support.h"
-prim__getErrorNo : PrimIO Int
-
 ||| An Error represented by a code. See
 ||| relevant `errno` documentation.
 ||| https://man7.org/linux/man-pages/man3/errno.3.html
@@ -153,7 +151,7 @@ public export
 data SignalError = Error Int
 
 getError : HasIO io => io SignalError
-getError = Error <$> primIO prim__getErrorNo
+getError = Error <$> getErrno
 
 isError : Int -> Bool
 isError (-1) = True

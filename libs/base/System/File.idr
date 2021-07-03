@@ -5,6 +5,7 @@ import public Data.Fuel
 import Data.List
 import Data.String
 import System.Info
+import System.Errno
 
 %default total
 
@@ -128,7 +129,7 @@ returnError
 
 export
 Show FileError where
-  show (GenericFileError errno) = "File error: " ++ show errno
+  show (GenericFileError errno) = strerror errno
   show FileReadError = "File Read Error"
   show FileWriteError = "File Write Error"
   show FileNotFound = "File Not Found"
