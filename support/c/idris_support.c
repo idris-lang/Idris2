@@ -6,6 +6,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 int _argc;
@@ -37,6 +38,10 @@ int idris2_getErrno() {
 #else
     return errno;
 #endif
+}
+
+char* idris2_strerror(int errnum) {
+    return strerror(errnum);
 }
 
 char* idris2_getStr() {
