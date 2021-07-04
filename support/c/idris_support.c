@@ -68,6 +68,8 @@ void idris2_sleep(int sec) {
     t.tv_sec = sec;
     t.tv_nsec = 0;
 
+    // TODO: `nanosleep` can fail
+    // TODO: `nanosleep` can return early due to interrupt
     nanosleep(&t, NULL);
 #endif
 }
