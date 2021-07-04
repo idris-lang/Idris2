@@ -26,11 +26,7 @@ idris2docs_venv
 /benchmark/**/build
 /benchmark/*.csv
 
-/bootstrap/bin/
-/bootstrap/lib/
-/bootstrap/idris2-[0-9]*/
-/bootstrap/idris2_app/idris2-boot.*
-/bootstrap/idris2_app/libidris2_support.*
+/bootstrap-build
 
 /src/IdrisPaths.idr
 
