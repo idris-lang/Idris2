@@ -2,6 +2,7 @@ module Compiler.Scheme.Gambit
 
 import Compiler.Common
 import Compiler.CompileExpr
+import Compiler.Generated
 import Compiler.Inline
 import Compiler.Scheme.Common
 
@@ -49,7 +50,7 @@ findGSCBackend =
 
 schHeader : String
 schHeader =
-    "; @" ++ "generated\n" ++
+    "; " ++ (generatedString "Gambit") ++ "\n" ++
     "(declare (block)\n" ++
     "(inlining-limit 450)\n" ++
     "(standard-bindings)\n" ++

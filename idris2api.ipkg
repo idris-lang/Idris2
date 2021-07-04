@@ -11,6 +11,7 @@ modules =
     Compiler.CaseOpts,
     Compiler.Common,
     Compiler.CompileExpr,
+    Compiler.Generated,
     Compiler.Inline,
     Compiler.LambdaLift,
     Compiler.Separate,
