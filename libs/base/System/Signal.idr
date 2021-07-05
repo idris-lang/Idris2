@@ -193,12 +193,8 @@ defaultSignal sig = do
 ||| of your program to retrieve (and mark as handled) the next
 ||| signal that was collected, if any.
 |||
-||| Multiple signals will be collected and can then be retrieved
-||| in the order they were received by multiple calls to
-||| `handleNextCollectedSignal`.
-|||
-||| You can call `handleManyCollectedSignals` to get a List of
-||| pending signals instead of retrieving them one at a time.
+||| Signals are not queued, so the return order of signals is
+||| not specified and signals may be deduplicated.
 export
 collectSignal : HasIO io => Signal -> io (Either SignalError ())
 collectSignal sig = do
