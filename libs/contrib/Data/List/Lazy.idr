@@ -107,18 +107,27 @@ Functor LazyList where
   map f (x :: xs) = f x :: map f xs
 
 public export
+Apply LazyList where
+  fs <*> vs = bindLazy (\f => map f vs) fs
+
+public export
 Applicative LazyList where
   pure x = [x]
-  fs <*> vs = bindLazy (\f => map f vs) fs
+
+public export
+Alt LazyList where
+  (<|>) = (++)
 
 public export
 Alternative LazyList where
   empty = []
-  (<|>) = (++)
+
+public export
+Bind LazyList where
+  m >>= f = bindLazy f m
 
 public export
 Monad LazyList where
-  m >>= f = bindLazy f m
 
 -- There is no Traversable instance for lazy lists.
 -- The result of a traversal will be a non-lazy list in general

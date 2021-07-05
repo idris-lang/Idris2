@@ -850,14 +850,20 @@ transpose (x :: xs) = zipWith (::) x (transpose xs) -- = [| x :: xs |]
 -- These only work if the length is known at run time!
 
 public export
+implementation Apply (Vect k) where
+    fs <*> vs = zipWith apply fs vs
+
+public export
+implementation Bind (Vect k) where
+    m >>= f = diag (map f m)
+
+public export
 implementation {k : Nat} -> Applicative (Vect k) where
     pure = replicate _
-    fs <*> vs = zipWith apply fs vs
 
 -- ||| This monad is different from the List monad, (>>=)
 -- ||| uses the diagonal.
 implementation {k : Nat} -> Monad (Vect k) where
-    m >>= f = diag (map f m)
 
 public export
 implementation Traversable (Vect k) where
