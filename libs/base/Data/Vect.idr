@@ -370,6 +370,10 @@ implementation Foldable (Vect n) where
 
   foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
 
+public export
+implementation Foldable1 (Vect $ S n) where
+  foldMap1 f (h :: t) = foldl (\acc, elem => acc <+> f elem) (f h) t
+
 --------------------------------------------------------------------------------
 -- Special folds
 --------------------------------------------------------------------------------
@@ -869,6 +873,11 @@ public export
 implementation Traversable (Vect k) where
     traverse f []        = pure []
     traverse f (x :: xs) = [| f x :: traverse f xs |]
+
+public export
+implementation Traversable1 (Vect $ S k) where
+    traverse1 f (x :: [])         = (:: []) <$> f x
+    traverse1 f (x :: v@(_ :: _)) = (::) <$> f x <*> traverse1 f v
 
 --------------------------------------------------------------------------------
 -- Show
