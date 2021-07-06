@@ -1,8 +1,6 @@
 ||| Division theorem for (type-level) natural number division
 module Data.Nat.Division
 
-import Control.Order
-import Control.Relation
 import Syntax.WithProof
 import Syntax.PreorderReasoning
 import Syntax.PreorderReasoning.Generic

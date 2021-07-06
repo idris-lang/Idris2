@@ -1,8 +1,6 @@
 module Data.Tree.Perfect
 
 import Control.WellFounded
-import Control.Relation
-import Control.Order
 import Decidable.Order.Strict
 import Data.Monoid.Exponentiation
 import Data.Num.Implementations

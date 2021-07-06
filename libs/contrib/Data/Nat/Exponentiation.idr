@@ -1,7 +1,5 @@
 module Data.Nat.Exponentiation
 
-import Control.Relation
-import Control.Order
 import Data.Nat as Nat
 import Data.Nat.Properties
 import Data.Monoid.Exponentiation as Mon

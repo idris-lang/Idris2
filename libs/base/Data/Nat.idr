@@ -1,7 +1,7 @@
 module Data.Nat
 
-import Control.Relation
-import Control.Order
+import public Control.Relation
+import public Control.Order
 
 %default total
 
@@ -159,6 +159,11 @@ succNotLTEzero LTEZero impossible
 export
 fromLteSucc : LTE (S m) (S n) -> LTE m n
 fromLteSucc (LTESucc x) = x
+
+export
+succNotLTEpred : {x : Nat} -> Not $ LTE (S x) x
+succNotLTEpred {x =   0} prf = succNotLTEzero prf
+succNotLTEpred {x = S _} prf = succNotLTEpred $ fromLteSucc prf
 
 public export
 isLTE : (m, n : Nat) -> Dec (LTE m n)

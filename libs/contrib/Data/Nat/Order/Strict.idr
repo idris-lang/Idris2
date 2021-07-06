@@ -2,8 +2,6 @@
 module Data.Nat.Order.Strict
 
 import Data.Nat
-import Control.Relation
-import Control.Order
 import Decidable.Order.Strict
 import Decidable.Equality
 import Data.Nat.Order
@@ -13,10 +11,8 @@ import Data.Nat.Order
 public export
 Irreflexive Nat LT where
   irreflexive {x = 0} _ impossible
-  irreflexive {x = S k} (LTESucc prf) =
-    -- why can't this be inlined?
-    let rec = irreflexive {x = k} {rel = LT} in
-      rec prf
+  irreflexive {x = S _} (LTESucc prf) =
+    irreflexive {rel = Nat.LT} prf
 
 public export
 Transitive Nat LT where

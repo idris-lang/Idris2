@@ -1,7 +1,5 @@
 module Data.Nat.Factor
 
-import Control.Relation
-import Control.Order
 import Control.WellFounded
 import Data.Fin
 import Data.Fin.Extra

@@ -1,8 +1,6 @@
 ||| Additional properties/lemmata of Nats involving order
 module Data.Nat.Order.Properties
 
-import Control.Relation
-import Control.Order
 import Syntax.PreorderReasoning
 import Syntax.PreorderReasoning.Generic
 import Data.Nat
@@ -75,14 +73,7 @@ export
 GTIsnotlte : (a, b : Nat) -> b `LT` a -> a `lte` b = False
 GTIsnotlte a b prf =
   notLteIsnotlte a b $ \contra =>
-    let trn = transitive {rel = LTE} prf contra in
-    notSuccLTE trn
-  where
-    notSuccLTE : {x : Nat} -> Not $ LTE (S x) x
-    notSuccLTE {x} q =
-      case x of
-           0   => succNotLTEzero q
-           S _ => notSuccLTE $ fromLteSucc q
+    succNotLTEpred $ transitive {rel = LTE} prf contra
 
 ||| Subtracting a number gives a smaller number
 export
