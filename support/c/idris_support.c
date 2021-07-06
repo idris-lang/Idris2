@@ -55,27 +55,44 @@ void idris2_putStr(char* f) {
     idris2_writeLine(stdout, f);
 }
 
+#ifndef _WIN32
+static void idris2_nanosleep(time_t seconds, long nanos) {
+    struct timespec t;
+    t.tv_sec = seconds;
+    t.tv_nsec = nanos;
+    for (;;) {
+        int r = nanosleep(&t, &t);
+        if (r == 0) {
+            return;
+        }
+        if (errno == EINTR) {
+            continue;
+        }
+        fprintf(stderr, "nanosleep failed: %s\n", strerror(errno));
+        abort();
+    }
+}
+#endif
+
 void idris2_sleep(int sec) {
+    if (sec <= 0) {
+        return;
+    }
 #ifdef _WIN32
     win32_sleep(sec*1000);
 #else
-    struct timespec t;
-    t.tv_sec = sec;
-    t.tv_nsec = 0;
-
-    nanosleep(&t, NULL);
+    idris2_nanosleep(sec, 0);
 #endif
 }
 
 void idris2_usleep(int usec) {
+    if (usec <= 0) {
+        return;
+    }
 #ifdef _WIN32
     win32_sleep(usec/1000);
 #else
-    struct timespec t;
-    t.tv_sec = usec / 1000000;
-    t.tv_nsec = (usec % 1000000) * 1000;
-
-    nanosleep(&t, NULL);
+    idris2_nanosleep(usec / 1000000, usec % 1000000 * 1000);
 #endif
 }
 
