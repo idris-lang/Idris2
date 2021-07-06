@@ -151,6 +151,18 @@ mapHom : Bifunctor f => (a -> b) -> f a a -> f b b
 mapHom f = bimap f f
 
 ||| An applicative functor without `pure`.
+|||
+||| This allows us to get access to `(<*>)` and
+||| possibly `(>>=)` for data types, for which we cannot
+||| define `pure`, such as sorted maps or vectors
+||| (fixed length lists). In case of vectors, it is possible
+||| to implement `pure`, but only if we have access to the
+||| vector's length (see the implementations of
+||| `Apply` and `Applicative` for `Data.Vect` in base).
+|||
+||| In the case of `Pair`, we can get `(<*>)` and
+||| `(>>=)` for pairs whose first value is a `Semigroup`, while
+||| for `pure` we'd need a `Monoid`.
 public export
 interface Functor f => Apply f where
   constructor MkApply
@@ -300,6 +312,13 @@ interface Foldable t where
   foldMap : Monoid m => (f : a -> m) -> t a -> m
   foldMap f = foldr ((<+>) . f) neutral
 
+||| Like `Foldable1` but for non-empty data structures.
+|||
+||| In general this means that we only need a `Semigroup` to
+||| accumulate the values stored in a data structure, while in
+||| the case of `Foldable` we need a `Monoid`.
+|||
+||| @ t The type of the 'Foldable' parameterised type.
 public export
 interface Foldable t => Foldable1 t where
   constructor MkFoldable1
@@ -585,6 +604,10 @@ namespace Traversable
     using Foldable.Compose Functor.Compose where
       traverse = traverse . traverse
 
+||| Like `Traversable` but for non-empty data structures.
+||| This allows us to traverse a data structure with
+||| an effect that has only a `Bind` instance, while with
+||| `Traversable` we need an `Applicative` effect.
 public export
 interface (Foldable1 t, Traversable t) => Traversable1 t where
   constructor MkTraversable1
