@@ -40,7 +40,7 @@ implementation Poset Nat LTE where
   antisymmetric = LTEIsAntisymmetric
 
 public export
-total zeroNeverGreater : {n : Nat} -> LTE (S n) Z -> Void
+total zeroNeverGreater : {n : Nat} -> Not (LTE (S n) Z)
 zeroNeverGreater LTEZero     impossible
 zeroNeverGreater (LTESucc _) impossible
 
@@ -49,7 +49,7 @@ total zeroAlwaysSmaller : {n : Nat} -> LTE Z n
 zeroAlwaysSmaller = LTEZero
 
 public export
-total ltesuccinjective : {0 n : Nat} -> {0 m : Nat} -> (LTE n m -> Void) -> LTE (S n) (S m) -> Void
+total ltesuccinjective : {0 n, m : Nat} -> Not (LTE n m) -> Not (LTE (S n) (S m))
 ltesuccinjective disprf (LTESucc nLTEm) = void (disprf nLTEm)
 ltesuccinjective disprf LTEZero         impossible
 
