@@ -135,11 +135,13 @@ collectUsed (APPLY _ fn arg) = collectReg fn <+> collectReg arg
 collectUsed (CALL _ _ _ args) = foldMap collectReg args
 collectUsed (OP _ _ args) = foldMap collectReg args
 collectUsed (EXTPRIM _ _ args) = foldMap collectReg args
-collectUsed (CASE _ is mdef)
-    = foldMap (foldMap collectUsed . snd) is
+collectUsed (CASE sc is mdef)
+    = collectReg sc
+      <+> foldMap (foldMap collectUsed . snd) is
       <+> maybe empty (foldMap collectUsed) mdef
-collectUsed (CONSTCASE _ is mdef)
-    = foldMap (foldMap collectUsed . snd) is
+collectUsed (CONSTCASE sc is mdef)
+    = collectReg sc
+      <+> foldMap (foldMap collectUsed . snd) is
       <+> maybe empty (foldMap collectUsed) mdef
 collectUsed (PROJECT _ val _) = collectReg val
 collectUsed (NULL _) = empty
