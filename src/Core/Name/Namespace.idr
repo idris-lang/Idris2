@@ -266,6 +266,10 @@ primIONS : Namespace
 primIONS = mkNamespace "PrimIO"
 
 export
+ioNS : Namespace
+ioNS = mkNamespace "Prelude.IO"
+
+export
 reflectionNS : Namespace
 reflectionNS = mkNamespace "Language.Reflection"
 
