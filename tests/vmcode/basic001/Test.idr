@@ -25,7 +25,7 @@ main = do
     putStrLn $ foo $ Left (Right ())
 
     -- recursion
-    printLn $ bah [0 .. 10] 
+    printLn $ bah [0 .. 10]
     printLn $ bah [11, 2]
 
     -- primitive pattern matching

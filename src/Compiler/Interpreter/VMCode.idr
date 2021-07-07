@@ -242,7 +242,7 @@ parameters {auto c : Ref Ctxt Defs}
             _ => interpError stk $ "PROJECT: Expected Constructor, found " ++ showType valObj
     step stk (NULL reg) = setReg stk reg Null
     step stk (ERROR msg) = interpError stk $ "ERROR: " ++ msg
-        
+
     callFunc : Ref State InterpState => Stack -> Name -> List Object -> Core Object
     callFunc stk fn args = saveLocals $ do
         let ind = pack $ '|' <$ stk
@@ -279,4 +279,3 @@ executeExpr c _ tm = do
 export
 codegenVMCodeInterp : Codegen
 codegenVMCodeInterp = MkCG compileExpr executeExpr Nothing Nothing
-
