@@ -785,30 +785,34 @@ emitFDef funcName ((varType, varName, varCFType) :: xs) = do
     decreaseIndentation
     emit EmptyFC ")"
 
-extractValue : (cfType:CFType) -> (varName:String) -> String
-extractValue CFUnit          varName = "void"
-extractValue CFInt           varName = "((Value_Int64*)" ++ varName ++ ")->i64"
-extractValue CFInt8          varName = "((Value_Int8*)" ++ varName ++ ")->i8"
-extractValue CFInt16         varName = "((Value_Int16*)" ++ varName ++ ")->i16"
-extractValue CFInt32         varName = "((Value_Int32*)" ++ varName ++ ")->i32"
-extractValue CFInt64         varName = "((Value_Int64*)" ++ varName ++ ")->i64"
-extractValue CFUnsigned8     varName = "((Value_Bits8*)" ++ varName ++ ")->ui8"
-extractValue CFUnsigned16    varName = "((Value_Bits16*)" ++ varName ++ ")->ui16"
-extractValue CFUnsigned32    varName = "((Value_Bits32*)" ++ varName ++ ")->ui32"
-extractValue CFUnsigned64    varName = "((Value_Bits64*)" ++ varName ++ ")->ui64"
-extractValue CFString        varName = "((Value_String*)" ++ varName ++ ")->str"
-extractValue CFDouble        varName = "((Value_Double*)" ++ varName ++ ")->d"
-extractValue CFChar          varName = "((Value_Char*)" ++ varName ++ ")->c"
-extractValue CFPtr           varName = "((Value_Pointer*)" ++ varName ++ ")->p"
-extractValue CFGCPtr         varName = "((Value_GCPointer*)" ++ varName ++ ")->p->p"
-extractValue CFBuffer        varName = "((Value_Buffer*)" ++ varName ++ ")->buffer"
-extractValue CFWorld         varName = "(Value_World*)" ++ varName
-extractValue (CFFun x y)     varName = "(Value_Closure*)" ++ varName
-extractValue (CFIORes x)     varName = extractValue x varName
-extractValue (CFStruct x xs) varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
+-- Generic C parameter or RefC specific parameter
+data CLang = CLangC | CLangRefC
+
+extractValue : (cLang : CLang) -> (cfType:CFType) -> (varName:String) -> String
+extractValue _ CFUnit           varName = "void"
+extractValue _ CFInt            varName = "((Value_Int64*)" ++ varName ++ ")->i64"
+extractValue _ CFInt8           varName = "((Value_Int8*)" ++ varName ++ ")->i8"
+extractValue _ CFInt16          varName = "((Value_Int16*)" ++ varName ++ ")->i16"
+extractValue _ CFInt32          varName = "((Value_Int32*)" ++ varName ++ ")->i32"
+extractValue _ CFInt64          varName = "((Value_Int64*)" ++ varName ++ ")->i64"
+extractValue _ CFUnsigned8      varName = "((Value_Bits8*)" ++ varName ++ ")->ui8"
+extractValue _ CFUnsigned16     varName = "((Value_Bits16*)" ++ varName ++ ")->ui16"
+extractValue _ CFUnsigned32     varName = "((Value_Bits32*)" ++ varName ++ ")->ui32"
+extractValue _ CFUnsigned64     varName = "((Value_Bits64*)" ++ varName ++ ")->ui64"
+extractValue _ CFString         varName = "((Value_String*)" ++ varName ++ ")->str"
+extractValue _ CFDouble         varName = "((Value_Double*)" ++ varName ++ ")->d"
+extractValue _ CFChar           varName = "((Value_Char*)" ++ varName ++ ")->c"
+extractValue _ CFPtr            varName = "((Value_Pointer*)" ++ varName ++ ")->p"
+extractValue _ CFGCPtr          varName = "((Value_GCPointer*)" ++ varName ++ ")->p->p"
+extractValue CLangC    CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer->data"
+extractValue CLangRefC CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer"
+extractValue _ CFWorld          varName = "(Value_World*)" ++ varName
+extractValue _ (CFFun x y)      varName = "(Value_Closure*)" ++ varName
+extractValue c (CFIORes x)      varName = extractValue c x varName
+extractValue _ (CFStruct x xs)  varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
 -- not really total but this way this internal error does not contaminate everything else
-extractValue (CFUser x xs)   varName = "(Value*)" ++ varName
-extractValue n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw FFI type in C backend: " ++ show n)
+extractValue _ (CFUser x xs)    varName = "(Value*)" ++ varName
+extractValue _ n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw FFI type in C backend: " ++ show n)
 
 packCFType : (cfType:CFType) -> (varName:String) -> String
 packCFType CFUnit          varName = "NULL"
@@ -898,6 +902,9 @@ createCFunctions n (MkACon tag arity nt) = do
 createCFunctions n (MkAForeign ccs fargs ret) = do
   case parseCC (additionalFFILangs ++ ["RefC", "C"]) ccs of
       Just (lang, fctForeignName :: extLibOpts) => do
+          let cLang = if lang == "RefC"
+                         then CLangRefC
+                         else CLangC
           let isStandardFFI = Prelude.elem lang ["RefC", "C"]
           let fctName = if isStandardFFI
                            then UN fctForeignName
@@ -937,19 +944,19 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
               CFIORes CFUnit => do
                   emit EmptyFC $ cName fctName
                               ++ "("
-                              ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) (discardLastArgument typeVarNameArgList))
+                              ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   emit EmptyFC "return NULL;"
               CFIORes ret => do
                   emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
-                              ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) (discardLastArgument typeVarNameArgList))
+                              ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
               _ => do
                   emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
-                              ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) typeVarNameArgList)
+                              ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) typeVarNameArgList)
                               ++ ");"
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
 

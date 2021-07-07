@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <gmp.h>
 
+#include "buffer.h"
+
 #define NO_TAG 0
 #define BITS8_TAG 1
 #define BITS16_TAG 2
@@ -177,7 +179,7 @@ typedef struct
 {
     Value_header header;
     size_t len;
-    char *buffer;
+    Buffer *buffer;
 } Value_Buffer;
 
 typedef struct
