@@ -264,6 +264,11 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "integers"
     ]
 
+vmcodeInterpTests : TestPool
+vmcodeInterpTests = MkTestPool "VMCode interpreter" [] Nothing
+    [ "basic001"
+    ]
+
 ideModeTests : TestPool
 ideModeTests = MkTestPool "IDE mode" [] Nothing
   [ "ideMode001", "ideMode002", "ideMode003", "ideMode004", "ideMode005"
@@ -332,6 +337,7 @@ main = runner $
   , testPaths "refc" refcTests
   , testPaths "racket" racketTests
   , testPaths "node" nodeTests
+  , testPaths "vmcode" vmcodeInterpTests
   , testPaths "templates" templateTests
   , testPaths "codegen" codegenTests
   ]
