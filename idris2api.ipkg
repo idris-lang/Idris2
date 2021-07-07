@@ -24,6 +24,8 @@ modules =
     Compiler.ES.Node,
     Compiler.ES.TailRec,
 
+    Compiler.Interpreter.VMCode,
+
     Compiler.RefC,
     Compiler.RefC.CC,
     Compiler.RefC.RefC,

@@ -9,6 +9,7 @@ import Compiler.ES.Node
 import Compiler.ES.Javascript
 import Compiler.Common
 import Compiler.Inline
+import Compiler.Interpreter.VMCode
 
 import Core.Binary
 import Core.Context
@@ -247,6 +248,7 @@ getCG Gambit = pure $ Just codegenGambit
 getCG Node = pure $ Just codegenNode
 getCG Javascript = pure $ Just codegenJavascript
 getCG RefC = pure $ Just codegenRefC
+getCG VMCodeInterp = pure $ Just codegenVMCodeInterp
 getCG (Other s) = getCodegen s
 
 export

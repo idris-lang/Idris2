@@ -7,6 +7,7 @@ import Core.Context
 import Core.Core
 import Core.TT
 
+import Libraries.Data.IntMap
 import Data.List
 import Data.Maybe
 import Data.Vect
@@ -57,6 +58,8 @@ data VMInst : Type where
 public export
 data VMDef : Type where
      MkVMFun : (args : List Int) -> List VMInst -> VMDef
+     MkVMForeign : (ccs : List String) -> (fargs : List CFType) ->
+                   CFType -> VMDef
      MkVMError : List VMInst -> VMDef
 
 export
@@ -101,11 +104,48 @@ Show VMInst where
 export
 Show VMDef where
   show (MkVMFun args body) = show args ++ ": " ++ show body
+  show (MkVMForeign ccs args ret)
+      = "Foreign call " ++ show ccs ++ " " ++
+        show args ++ " " ++ show ret
   show (MkVMError err) = "Error: " ++ show err
 
 toReg : AVar -> Reg
 toReg (ALocal i) = Loc i
 toReg ANull = Discard
+
+projectArgs : Int -> Int -> (used : IntMap ()) -> (args : List Int) -> List VMInst
+projectArgs scr i used [] = []
+projectArgs scr i used (arg :: args)
+    = case lookup arg used of
+           Just _ => PROJECT (Loc arg) (Loc scr) i :: projectArgs scr (i + 1) used args
+           Nothing => projectArgs scr (i + 1) used args
+
+collectReg : Reg -> IntMap ()
+collectReg (Loc i) = singleton i ()
+collectReg _ = empty
+
+collectUsed : VMInst -> IntMap ()
+collectUsed (DECLARE reg) = collectReg reg
+collectUsed START = empty
+collectUsed (ASSIGN _ val) = collectReg val
+collectUsed (MKCON _ _ args) = foldMap collectReg args
+collectUsed (MKCLOSURE _ _ _ args) = foldMap collectReg args
+collectUsed (MKCONSTANT _ _) = empty
+collectUsed (APPLY _ fn arg) = collectReg fn <+> collectReg arg
+collectUsed (CALL _ _ _ args) = foldMap collectReg args
+collectUsed (OP _ _ args) = foldMap collectReg args
+collectUsed (EXTPRIM _ _ args) = foldMap collectReg args
+collectUsed (CASE sc is mdef)
+    = collectReg sc
+      <+> foldMap (foldMap collectUsed . snd) is
+      <+> maybe empty (foldMap collectUsed) mdef
+collectUsed (CONSTCASE sc is mdef)
+    = collectReg sc
+      <+> foldMap (foldMap collectUsed . snd) is
+      <+> maybe empty (foldMap collectUsed) mdef
+collectUsed (PROJECT _ val _) = collectReg val
+collectUsed (NULL _) = empty
+collectUsed (ERROR _) = empty
 
 toVM : (tailpos : Bool) -> (target : Reg) -> ANF -> List VMInst
 toVM t Discard _ = []
@@ -127,19 +167,18 @@ toVM t res (AOp fc _ op args)
     = [OP res op (map toReg args)]
 toVM t res (AExtPrim fc _ p args)
     = [EXTPRIM res p (map toReg args)]
+toVM t res (AConCase fc (ALocal scr) [MkAConAlt n ci mt args code] Nothing) -- exactly one alternative, so skip matching
+    = let body = toVM t res code
+          used = foldMap collectUsed body
+       in projectArgs scr 0 used args ++ body
 toVM t res (AConCase fc (ALocal scr) alts def)
     = [CASE (Loc scr) (map toVMConAlt alts) (map (toVM t res) def)]
   where
-    projectArgs : Int -> List Int -> List VMInst
-    projectArgs i [] = []
-    projectArgs i (arg :: args)
-        = PROJECT (Loc arg) (Loc scr) i :: projectArgs (i + 1) args
-
     toVMConAlt : AConAlt -> (Either Int Name, List VMInst)
-    toVMConAlt (MkAConAlt n ci (Just tag) args code)
-        = (Left tag, projectArgs 0 args ++ toVM t res code)
-    toVMConAlt (MkAConAlt n ci Nothing args code)
-        = (Right n, projectArgs 0 args ++ toVM t res code)
+    toVMConAlt (MkAConAlt n ci tag args code)
+       = let body = toVM t res code
+             used = foldMap collectUsed body
+          in (maybe (Right n) Left tag, projectArgs scr 0 used args ++ body)
 toVM t res (AConstCase fc (ALocal scr) alts def)
     = [CONSTCASE (Loc scr) (map toVMConstAlt alts) (map (toVM t res) def)]
   where
@@ -165,21 +204,21 @@ findVars (CALL (Loc r) _ _ _) = [r]
 findVars (OP (Loc r) _ _) = [r]
 findVars (EXTPRIM (Loc r) _ _) = [r]
 findVars (CASE _ alts d)
-    = concatMap findVarAlt alts ++ fromMaybe [] (map (concatMap findVars) d)
+    = foldMap findVarAlt alts ++ fromMaybe [] (map (foldMap findVars) d)
   where
     findVarAlt : (Either Int Name, List VMInst) -> List Int
-    findVarAlt (t, code) = concatMap findVars code
+    findVarAlt (t, code) = foldMap findVars code
 findVars (CONSTCASE _ alts d)
-    = concatMap findConstVarAlt alts ++ fromMaybe [] (map (concatMap findVars) d)
+    = foldMap findConstVarAlt alts ++ fromMaybe [] (map (foldMap findVars) d)
   where
     findConstVarAlt : (Constant, List VMInst) -> List Int
-    findConstVarAlt (t, code) = concatMap findVars code
+    findConstVarAlt (t, code) = foldMap findVars code
 findVars (PROJECT (Loc r) _ _) = [r]
 findVars _ = []
 
 declareVars : List Int -> List VMInst -> List VMInst
 declareVars got code
-    = let vs = concatMap findVars code in
+    = let vs = foldMap findVars code in
           declareAll got vs
   where
     declareAll : List Int -> List Int -> List VMInst
@@ -193,6 +232,8 @@ export
 toVMDef : ANFDef -> Maybe VMDef
 toVMDef (MkAFun args body)
     = Just $ MkVMFun args (declareVars args (toVM True RVal body))
+toVMDef (MkAForeign ccs cargs ret)
+    = Just $ MkVMForeign ccs cargs ret
 toVMDef (MkAError body)
     = Just $ MkVMError (declareVars [] (toVM True RVal body))
 toVMDef _ = Nothing

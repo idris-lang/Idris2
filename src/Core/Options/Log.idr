@@ -53,6 +53,7 @@ knownTopics = [
     ("compile.casetree.pick", Nothing),
     ("compile.casetree.partition", Nothing),
     ("compiler.inline.eval", Nothing),
+    ("compiler.interpreter", Nothing),
     ("compiler.refc", Nothing),
     ("compiler.refc.cc", Nothing),
     ("compiler.scheme.chez", Nothing),
