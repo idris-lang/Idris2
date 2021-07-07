@@ -11,11 +11,12 @@ import Compiler.VMCode
 import Data.IOArray
 import Libraries.Data.NameMap
 import Data.Nat
+import Data.SnocList
 import Data.Vect
 
 public export
 data Object : Type where
-    Closure : (predMissing : Nat) -> (args : List Object) -> Name -> Object
+    Closure : (predMissing : Nat) -> (args : SnocList Object) -> Name -> Object
     Constructor : (tag : Either Int Name) -> (args : List Object) -> Object
     Const : Constant -> Object
     Null : Object
@@ -33,7 +34,7 @@ mutual
     showSep k (o :: os) = showDepth k o ++ ", " ++ showSep k os
 
     showDepth : Nat -> Object -> String
-    showDepth (S k) (Closure mis args fn) = show fn ++ "-" ++ show mis ++ "(" ++ showSep k args ++ ")"
+    showDepth (S k) (Closure mis args fn) = show fn ++ "-" ++ show mis ++ "(" ++ showSep k (args <>> []) ++ ")"
     showDepth (S k) (Constructor (Left t) args) = "tag" ++ show t ++ "(" ++ showSep k args ++ ")"
     showDepth (S k) (Const c) = show c
     showDepth _ obj = showType obj
@@ -46,14 +47,14 @@ record InterpState where
     constructor MkInterpState
     defs : NameMap VMDef
     locals : IOArray Object
-    return : Maybe Object
+    returnObj : Maybe Object
 
 initInterpState : List (Name, VMDef) -> Core InterpState
 initInterpState defsList = do
     let defs = fromList defsList
     locals <- coreLift $ newArray 0
-    let return = Nothing
-    pure $ MkInterpState defs locals return
+    let returnObj = Nothing
+    pure $ MkInterpState defs locals returnObj
 
 0
 Stack : Type
@@ -80,14 +81,14 @@ getReg stk (Loc i) = do
         Nothing =>
             interpError stk $ "Missing local " ++ show i
 getReg stk RVal = do
-    objm <- return <$> get State
+    objm <- returnObj <$> get State
     case objm of
         Just obj => pure obj
-        Nothing => interpError stk "Missing return val"
+        Nothing => interpError stk "Missing returnObj val"
 getReg stk Discard = pure Null
 
 setReg : Ref State InterpState => Stack -> Reg -> Object -> Core ()
-setReg stk RVal obj = update State $ record { return = Just obj }
+setReg stk RVal obj = update State $ record { returnObj = Just obj }
 setReg stk (Loc i) obj = do
     ls <- locals <$> get State
     when (i >= max ls) $ interpError stk $ "Attempt to set register: " ++ show i ++ ", size of locals: " ++ show (max ls)
@@ -161,7 +162,7 @@ beginFunction args (DECLARE _ :: is) maxLoc = beginFunction args is maxLoc
 beginFunction args (START :: is) maxLoc = do
     locals <- coreLift $ newArray (maxLoc + 1)
     ignore $ traverse (\(idx, arg) => coreLift $ writeArray locals idx arg) args
-    update State $ record { locals = locals, return = Nothing }
+    update State $ record { locals = locals, returnObj = Nothing }
     pure is
 beginFunction args is maxLoc = pure is
 
@@ -178,16 +179,16 @@ parameters {auto c : Ref Ctxt Defs}
         setReg stk target $ Constructor tag argObjs
     step stk (MKCLOSURE target fn missing args) = do
         argObjs <- traverse (getReg stk) args
-        setReg stk target $ Closure (pred missing) argObjs fn
+        setReg stk target $ Closure (pred missing) ([<] <>< argObjs) fn
     step stk (MKCONSTANT target c) = setReg stk target $ Const c
     step stk (APPLY target fn arg) = do
         fnObj <- getReg stk fn
         argObj <- getReg stk arg
         case fnObj of
             Closure Z args fn => do
-                res <- callFunc stk fn (args ++ [argObj])
+                res <- callFunc stk fn (args <>> [argObj])
                 setReg stk target res
-            Closure (S k) args fn => setReg stk target $ Closure k (args ++ [argObj]) fn
+            Closure (S k) args fn => setReg stk target $ Closure k (args :< argObj) fn
             obj => interpError stk $ "APPLY: While applying " ++ show fn ++ ", expected closure, found: " ++ show obj
     step stk (CALL target _ fn args) = do
         argObjs <- traverse (getReg stk) args
@@ -253,6 +254,9 @@ parameters {auto c : Ref Ctxt Defs}
         res <- case lookup fn defs of
             Nothing => interpError stk $ "Undefined function: " ++ show fn
             Just (MkVMFun as is) => do
+                when (length as /= length args) $ interpError stk
+                    $ "Unexpected argument count during function call, expected: "
+                    ++ show (length as) ++ ", found: " ++ show (length args)
                 is' <- beginFunction (zip as args) is (foldl max (-1) as)
                 traverse_ (step stk') is'
                 getReg stk' RVal
