@@ -124,8 +124,11 @@ public export %inline
   MkRWST m <|> MkRWST n = MkRWST \r,s,w => m r s w <|> n r s w
 
 public export %inline
-(Monad m, Alternative m) => Alternative (RWST r w s m) where
+(Monad m, Plus m) => Plus (RWST r w s m) where
   empty = MkRWST \_,_,_ => empty
+
+public export %inline
+(Monad m, Plus m) => Alternative (RWST r w s m) where
 
 public export %inline
 Monad m => Bind (RWST r w s m) where

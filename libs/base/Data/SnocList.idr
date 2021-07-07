@@ -135,8 +135,11 @@ Alt SnocList where
   xs <|> ys = xs ++ ys
 
 public export
-Alternative SnocList where
+Plus SnocList where
   empty = Lin
+
+public export
+Alternative SnocList where
 
 ||| Check if something is a member of a snoc-list using the default Boolean equality.
 public export

@@ -79,5 +79,8 @@ implementation Alt f => Alt (ReaderT stateType f) where
   (MkReaderT f) <|> (MkReaderT g) = MkReaderT (\st => f st <|> g st)
 
 public export
-implementation (Monad f, Alternative f) => Alternative (ReaderT stateType f) where
+implementation (Monad f, Plus f) => Plus (ReaderT stateType f) where
   empty = lift empty
+
+public export
+implementation (Monad f, Plus f) => Alternative (ReaderT stateType f) where

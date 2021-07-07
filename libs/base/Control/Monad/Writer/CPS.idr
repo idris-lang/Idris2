@@ -98,8 +98,11 @@ public export %inline
   MkWriterT m <|> MkWriterT n = MkWriterT \w => m w <|> n w
 
 public export %inline
-(Monad m, Alternative m) => Alternative (WriterT w m) where
+(Monad m, Plus m) => Plus (WriterT w m) where
   empty = MkWriterT \_ => empty
+
+public export %inline
+(Monad m, Plus m) => Alternative (WriterT w m) where
 
 public export %inline
 Monad m => Bind (WriterT w m) where

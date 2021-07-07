@@ -83,10 +83,12 @@ Alt HDec where
   p@(MkHDec True _) <|> _ = p
   _ <|> q = q
 
-||| Lazy in the second argument
+public export
+Plus HDec where
+  empty = no
+
 public export
 Alternative HDec where
-  empty = no
 
 public export
 Bind HDec where

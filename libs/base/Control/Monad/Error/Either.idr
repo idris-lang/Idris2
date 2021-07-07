@@ -140,11 +140,14 @@ public export
       | Right r => pure (Right r)
     pure (Left (l <+> l'))
 
-||| Alternative instance that collects left results, allowing you to try
+||| Plus instance that collects left results, allowing you to try
 ||| multiple possibilities and combine failures.
 public export
-(Monad m, Monoid e) => Alternative (EitherT e m) where
+(Monad m, Monoid e) => Plus (EitherT e m) where
   empty = left neutral
+
+public export
+(Monad m, Monoid e) => Alternative (EitherT e m) where
 
 public export
 MonadTrans (EitherT e) where

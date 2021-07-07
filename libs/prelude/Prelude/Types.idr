@@ -225,8 +225,11 @@ Alt Maybe where
   Nothing  <|> v = v
 
 public export
-Alternative Maybe where
+Plus Maybe where
   empty = Nothing
+
+public export
+Alternative Maybe where
 
 public export
 Bind Maybe where
@@ -452,8 +455,11 @@ Alt List where
   xs <|> ys = xs ++ ys
 
 public export
-Alternative List where
+Plus List where
   empty = []
+
+public export
+Alternative List where
 
 public export
 Bind List where

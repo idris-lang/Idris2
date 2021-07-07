@@ -32,11 +32,11 @@ bindLazy : (a -> LazyList b) -> LazyList a -> LazyList b
 bindLazy f = foldrLazy ((++) . f) []
 
 public export
-choice : Alternative f => LazyList (f a) -> f a
+choice : Plus f => LazyList (f a) -> f a
 choice = foldrLazy (<|>) empty
 
 public export
-choiceMap : Alternative f => (a -> f b) -> LazyList a -> f b
+choiceMap : Plus f => (a -> f b) -> LazyList a -> f b
 choiceMap g = foldrLazy ((<|>) . g) empty
 
 public export
@@ -119,8 +119,11 @@ Alt LazyList where
   (<|>) = (++)
 
 public export
-Alternative LazyList where
+Plus LazyList where
   empty = []
+
+public export
+Alternative LazyList where
 
 public export
 Bind LazyList where

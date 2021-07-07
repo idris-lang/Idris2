@@ -60,8 +60,11 @@ Monad m => Alt (ParseT m) where
                             Fail _ _ => b.runParser s
 
 public export
-Monad m => Alternative (ParseT m) where
+Monad m => Plus (ParseT m) where
     empty = P $ \s => pure $ Fail s.pos "no alternative left"
+
+public export
+Monad m => Alternative (ParseT m) where
 
 public export
 Monad m => Bind (ParseT m) where

@@ -117,8 +117,10 @@ Monad m => Alt (ValidatorT m a) where
                 (Right r) => pure $ Right r
                 (Left e') => pure $ Left (e <+> " / " <+> e')
 
-Monad m => Alternative (ValidatorT m a) where
+Monad m => Plus (ValidatorT m a) where
     empty = MkValidator \x => MkEitherT $ pure (Left "invalid")
+
+Monad m => Alternative (ValidatorT m a) where
 
 ||| Alter the input before validation using given function.
 export

@@ -139,8 +139,12 @@ Monad m => Alt (MaybeT m) where
 
 ||| See note about Monad prerequisite on Semigroup instance.
 public export
-Monad m => Alternative (MaybeT m) where
+Monad m => Plus (MaybeT m) where
   empty = nothing
+
+||| See note about Monad prerequisite on Semigroup instance.
+public export
+Monad m => Alternative (MaybeT m) where
 
 public export
 MonadTrans MaybeT where

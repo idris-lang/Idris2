@@ -75,7 +75,7 @@ public export
 Monoid e => Monoid (Validated e a) where
   neutral = Invalid neutral
 
-||| Alternative composition preserves validity selecting the leftmost valid value.
+||| Alt composition preserves validity selecting the leftmost valid value.
 ||| If both sides are invalid, errors are accumulated.
 public export
 Semigroup e => Alt (Validated e) where
@@ -83,11 +83,12 @@ Semigroup e => Alt (Validated e) where
   _           <|> r@(Valid _) = r
   Invalid e1  <|> Invalid e2  = Invalid $ e1 <+> e2
 
-||| Alternative composition preserves validity selecting the leftmost valid value.
-||| If both sides are invalid, errors are accumulated.
+public export
+Monoid e => Plus (Validated e) where
+  empty = neutral
+
 public export
 Monoid e => Alternative (Validated e) where
-  empty = neutral
 
 public export
 Foldable (Validated e) where

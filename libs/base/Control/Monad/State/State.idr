@@ -106,8 +106,11 @@ implementation Monad f => Alt f => Alt (StateT st f) where
     (ST f) <|> (ST g) = ST (\st => f st <|> g st)
 
 public export
-implementation (Monad f, Alternative f) => Alternative (StateT st f) where
+implementation (Monad f, Plus f) => Plus (StateT st f) where
     empty = lift empty
+
+public export
+implementation (Monad f, Plus f) => Alternative (StateT st f) where
 
 public export
 implementation HasIO m => HasIO (StateT stateType m) where
