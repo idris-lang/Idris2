@@ -26,6 +26,11 @@ public export
 interface Connex ty rel where
   connex : {x, y : ty} -> Not (x = y) -> Either (rel x y) (rel y x)
 
+||| A relation is strongly connex if for any two x and y, either x ~ y or y ~ x.
+public export
+interface StronglyConnex ty rel where
+  order : (x, y : ty) -> Either (rel x y) (rel y x)
+
 ||| A linear order is a connex partial order.
 public export
 interface (PartialOrder ty rel, Connex ty rel) => LinearOrder ty rel where
