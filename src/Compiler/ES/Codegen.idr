@@ -241,7 +241,7 @@ jsCharOfInt : IntKind -> Doc -> Doc
 jsCharOfInt k = callFun1 (esName "truncToChar") . fromInt k
 
 -- Invokes a function from the preamble to check if an bounded
--- singed integer is withint bound, and - if that's not the case -
+-- signed integer is within bounds, and - if that's not the case -
 -- truncate it accordingly.
 -- `isBigInt` reflects whether `int` is a `BigInt` or a `Number`.
 --
