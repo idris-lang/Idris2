@@ -134,10 +134,7 @@ import Core.Context
 
 -- indices of a list starting at 1
 indices : List a -> List Int
-indices = go 1
-  where go : Int -> List a -> List Int
-        go _ []       = []
-        go i (_ :: t) = i :: go (i+1) t
+indices as = [1 .. cast (length as)]
 
 zipWithIndices : List a -> List (Int,a)
 zipWithIndices as = zip (indices as) as
