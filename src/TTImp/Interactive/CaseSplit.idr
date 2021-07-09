@@ -338,6 +338,7 @@ mkCase {c} {u} fn orig lhs_raw
                -- Fixes Issue #74. The problem is that if the function is defined in a sub module,
                -- then the current namespace (accessed by calling getNS) differs from the function
                -- namespace, therefore it is not considered visible by TTImp.Elab.App.checkVisibleNS
+               -- FIXME: Causes issue #1385
                setAllPublic True
 
                -- Use 'Rig0' since it might be a type level function, or it might
