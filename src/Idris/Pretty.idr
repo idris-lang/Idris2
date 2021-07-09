@@ -13,7 +13,6 @@ import public Idris.Pretty.Render
 import public Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
-import Algebra
 import Idris.REPL.Opts
 import Idris.Syntax
 
