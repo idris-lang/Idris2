@@ -542,7 +542,7 @@ isFun _          = True
 -- ```javascript
 --   switch(foo.a1) {
 --     case 0: return 2;
---     default: return 0;j
+--     default: return 0;
 --   }
 -- ```
 switch :  (scrutinee : Doc)
