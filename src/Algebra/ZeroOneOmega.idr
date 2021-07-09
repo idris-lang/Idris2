@@ -69,3 +69,65 @@ Top ZeroOneOmega where
   topAbs {x = Rig0} = Refl
   topAbs {x = Rig1} = Refl
   topAbs {x = RigW} = Refl
+
+----------------------------------------
+
+rigPlusAssociative : (x, y, z : ZeroOneOmega) ->
+  rigPlus x (rigPlus y z) = rigPlus (rigPlus x y) z
+rigPlusAssociative Rig0 _ _ = Refl
+rigPlusAssociative Rig1 Rig0 _ = Refl
+rigPlusAssociative Rig1 Rig1 Rig0 = Refl
+rigPlusAssociative Rig1 Rig1 Rig1 = Refl
+rigPlusAssociative Rig1 Rig1 RigW = Refl
+rigPlusAssociative Rig1 RigW Rig0 = Refl
+rigPlusAssociative Rig1 RigW Rig1 = Refl
+rigPlusAssociative Rig1 RigW RigW = Refl
+rigPlusAssociative RigW Rig0 _ = Refl
+rigPlusAssociative RigW Rig1 Rig0 = Refl
+rigPlusAssociative RigW Rig1 Rig1 = Refl
+rigPlusAssociative RigW Rig1 RigW = Refl
+rigPlusAssociative RigW RigW Rig0 = Refl
+rigPlusAssociative RigW RigW Rig1 = Refl
+rigPlusAssociative RigW RigW RigW = Refl
+
+rigPlusCommutative : (x, y : ZeroOneOmega) ->
+  rigPlus x y = rigPlus y x
+rigPlusCommutative Rig0 Rig0 = Refl
+rigPlusCommutative Rig0 Rig1 = Refl
+rigPlusCommutative Rig0 RigW = Refl
+rigPlusCommutative Rig1 Rig0 = Refl
+rigPlusCommutative Rig1 Rig1 = Refl
+rigPlusCommutative Rig1 RigW = Refl
+rigPlusCommutative RigW Rig0 = Refl
+rigPlusCommutative RigW Rig1 = Refl
+rigPlusCommutative RigW RigW = Refl
+
+rigMultAssociative : (x, y, z : ZeroOneOmega) ->
+  rigMult x (rigMult y z) = rigMult (rigMult x y) z
+rigMultAssociative Rig0 _ _ = Refl
+rigMultAssociative Rig1 Rig0 _ = Refl
+rigMultAssociative Rig1 Rig1 Rig0 = Refl
+rigMultAssociative Rig1 Rig1 Rig1 = Refl
+rigMultAssociative Rig1 Rig1 RigW = Refl
+rigMultAssociative Rig1 RigW Rig0 = Refl
+rigMultAssociative Rig1 RigW Rig1 = Refl
+rigMultAssociative Rig1 RigW RigW = Refl
+rigMultAssociative RigW Rig0 _ = Refl
+rigMultAssociative RigW Rig1 Rig0 = Refl
+rigMultAssociative RigW Rig1 Rig1 = Refl
+rigMultAssociative RigW Rig1 RigW = Refl
+rigMultAssociative RigW RigW Rig0 = Refl
+rigMultAssociative RigW RigW Rig1 = Refl
+rigMultAssociative RigW RigW RigW = Refl
+
+rigMultCommutative : (x, y : ZeroOneOmega) ->
+  rigMult x y = rigMult y x
+rigMultCommutative Rig0 Rig0 = Refl
+rigMultCommutative Rig0 Rig1 = Refl
+rigMultCommutative Rig0 RigW = Refl
+rigMultCommutative Rig1 Rig0 = Refl
+rigMultCommutative Rig1 Rig1 = Refl
+rigMultCommutative Rig1 RigW = Refl
+rigMultCommutative RigW Rig0 = Refl
+rigMultCommutative RigW Rig1 = Refl
+rigMultCommutative RigW RigW = Refl
