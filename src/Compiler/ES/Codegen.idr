@@ -431,7 +431,7 @@ jsOp (Crash) [_, msg] = pure $ jsCrashExp msg
 --------------------------------------------------------------------------------
 
 -- from an FFI declaration, reads the backend to use.
--- Exapmple: `readCCPart "node:lambda: x => x"` yields
+-- Example: `readCCPart "node:lambda: x => x"` yields
 -- `("node","lambda: x => x")`.
 readCCPart : String -> (String, String)
 readCCPart = breakDrop1 ':'
