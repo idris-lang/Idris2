@@ -210,9 +210,8 @@ addToPreamble name def = do
   case lookup name (preamble s) of
     Nothing => put ESs $ record { preamble $= insert name def } s
     Just x =>
-      if x == def
-       then pure ()
-       else errorConcat
+      unless (x == def) $ do
+        errorConcat
               [ "two incompatible definitions for ", name
               , "<|",x ,"|> <|" , def, "|>"
               ]
