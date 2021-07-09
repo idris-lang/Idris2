@@ -76,6 +76,7 @@ modules = Control.ANSI,
           Data.Nat.Fib,
           Data.Nat.Order.Strict,
           Data.Nat.Order.Properties,
+          Data.Nat.Order.Relation,
           Data.Nat.Properties,
 
           Data.Num.Implementations,
