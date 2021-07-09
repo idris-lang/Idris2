@@ -284,22 +284,35 @@ boolOp : (op : String) -> (lhs : Doc) -> (rhs : Doc) -> Doc
 boolOp o lhs rhs = "(" <+> binOp o lhs rhs <+> "?1:0)"
 
 -- convert an Idris constant to its JS representation
-jsConstant : Constant -> Core String
-jsConstant (I i)    = pure $ show i
-jsConstant (I8 i)   = pure $ show i
-jsConstant (I16 i)  = pure $ show i
-jsConstant (I32 i)  = pure $ show i
-jsConstant (I64 i)  = pure $ show i ++ "n"
-jsConstant (BI i)   = pure $ show i ++ "n"
-jsConstant (Str s)  = pure $ jsString s
-jsConstant (Ch c)   = pure . jsString $ singleton c
-jsConstant (Db f)   = pure $ show f
-jsConstant WorldVal = pure $ esName "idrisworld"
-jsConstant (B8 i)   = pure $ show i
-jsConstant (B16 i)  = pure $ show i
-jsConstant (B32 i)  = pure $ show i
-jsConstant (B64 i)  = pure $ show i ++ "n"
-jsConstant ty       = error $ "Unsuported constant " ++ show ty
+jsConstant : Constant -> String
+jsConstant (I i)    = show i
+jsConstant (I8 i)   = show i
+jsConstant (I16 i)  = show i
+jsConstant (I32 i)  = show i
+jsConstant (I64 i)  = show i ++ "n"
+jsConstant (BI i)   = show i ++ "n"
+jsConstant (Str s)  = jsString s
+jsConstant (Ch c)   = jsString $ singleton c
+jsConstant (Db f)   = show f
+jsConstant WorldVal = esName "idrisworld"
+jsConstant (B8 i)   = show i
+jsConstant (B16 i)  = show i
+jsConstant (B32 i)  = show i
+jsConstant (B64 i)  = show i ++ "n"
+jsConstant IntType = "#t"
+jsConstant Int8Type = "#t"
+jsConstant Int16Type = "#t"
+jsConstant Int32Type = "#t"
+jsConstant Int64Type = "#t"
+jsConstant IntegerType = "#t"
+jsConstant Bits8Type = "#t"
+jsConstant Bits16Type = "#t"
+jsConstant Bits32Type = "#t"
+jsConstant Bits64Type = "#t"
+jsConstant StringType = "#t"
+jsConstant CharType = "#t"
+jsConstant DoubleType = "#t"
+jsConstant WorldType = "#t"
 
 -- Creates the definition of a binary arithmetic operation.
 -- Rounding / truncation behavior is determined from the
@@ -586,7 +599,7 @@ mutual
 
   exp (EOp x xs) = traverseVect exp xs >>= jsOp x
   exp (EExtPrim x xs) = traverse exp xs >>= jsPrim x
-  exp (EPrimVal x) = Text <$> jsConstant x
+  exp (EPrimVal x) = pure . Text $ jsConstant x
   exp EErased = pure "undefined"
 
   -- converts a `Stmt e` to JS code.
@@ -617,8 +630,7 @@ mutual
     pure $ switch ex as d
     where alt : EConstAlt r -> Core (Doc,Doc)
           alt (MkEConstAlt c b) = do d    <- stmt b
-                                     cnst <- jsConstant c
-                                     pure (Text cnst, d)
+                                     pure (Text $ jsConstant c, d)
 
   stmt (Error x)   = pure $ jsCrashExp (jsStringDoc x) <+> ";"
   stmt (Block ss s) = do
