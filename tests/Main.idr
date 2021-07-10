@@ -90,7 +90,7 @@ idrisTestsInterface = MkTestPool "Interface" [] Nothing
        "interface013", "interface014", "interface015", "interface016",
        "interface017", "interface018", "interface019", "interface020",
        "interface021", "interface022", "interface023", "interface024",
-       "interface025", "interface026"]
+       "interface025", "interface026", "interface027"]
 
 idrisTestsLinear : TestPool
 idrisTestsLinear = MkTestPool "Quantities" [] Nothing
@@ -132,7 +132,7 @@ idrisTestsData = MkTestPool "Data and record types" [] Nothing
        "data001",
        -- Records, access and dependent update
        "record001", "record002", "record003", "record004", "record005",
-       "record006", "record007", "record008"]
+       "record006", "record007", "record008", "record009"]
 
 idrisTestsBuiltin : TestPool
 idrisTestsBuiltin = MkTestPool "Builtin types and functions" [] Nothing
@@ -174,7 +174,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Namespace blocks
        "namespace001",
        -- Parameters blocks
-       "params001","params002",
+       "params001", "params002", "params003",
        -- Packages and ipkg files
        "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
        "pkg008", "pkg009", "pkg010",

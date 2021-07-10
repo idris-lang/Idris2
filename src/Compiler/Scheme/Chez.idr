@@ -85,7 +85,7 @@ findLibs ds
 
 schHeader : String -> List String -> Bool -> String
 schHeader chez libs whole
-  = (if os /= "windows" then "#!" ++ chez ++ " --script\n\n" else "") ++
+  = (if os /= "windows" then "#!" ++ chez ++ " --program\n\n" else "") ++
     "; " ++ (generatedString "Chez") ++ "\n" ++
     "(import (chezscheme))\n" ++
     "(case (machine-type)\n" ++
@@ -411,7 +411,7 @@ startChezCmd chez appdir target = unlines
     , "set APPDIR=%~dp0"
     , "set PATH=%APPDIR%\\" ++ appdir ++ ";%PATH%"
     , "set IDRIS2_INC_SRC=%APPDIR%\\"
-    , "\"" ++ chez ++ "\" --script \"%APPDIR%/" ++ target ++ "\" %*"
+    , "\"" ++ chez ++ "\" --program \"%APPDIR%/" ++ target ++ "\" %*"
     ]
 
 startChezWinSh : String -> String -> String -> String
@@ -425,7 +425,7 @@ startChezWinSh chez appdir target = unlines
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
     , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
     , "export IDRIS2_INC_SRC=\"$DIR/" ++ appdir ++ "\""
-    , "\"$CHEZ\" --script \"$DIR/" ++ target ++ "\" \"$@\""
+    , "\"$CHEZ\" --program \"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
 ||| Compile a TT expression to Chez Scheme
