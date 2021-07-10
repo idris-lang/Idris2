@@ -152,7 +152,8 @@ needsBuildingTime sourceFile ttcFile depFiles
 checkDepHashes : {auto c : Ref Ctxt Defs} ->
                  String -> Core Bool
 checkDepHashes depFileName
-  = catch (do depCodeHash            <- hashFile depFileName
+  = catch (do defs                   <- get Ctxt
+              depCodeHash            <- hashFileWith (defs.options.hashFn) depFileName
               depTTCFileName         <- getTTCFileName depFileName "ttc"
               (depStoredCodeHash, _) <- readHashes depTTCFileName
               pure $ depCodeHash /= depStoredCodeHash)
@@ -165,7 +166,8 @@ needsBuildingHash : {auto c : Ref Ctxt Defs} ->
                     (sourceFile : String) -> (ttcFile : String) ->
                     (depFiles : List String) -> Core Bool
 needsBuildingHash sourceFile ttcFile depFiles
-  = do  codeHash            <- hashFile sourceFile
+  = do  defs                <- get Ctxt
+        codeHash            <- hashFileWith (defs.options.hashFn) sourceFile
         (storedCodeHash, _) <- readHashes ttcFile
         depFilesHashDiffers <- any id <$> traverse checkDepHashes depFiles
         pure $ codeHash /= storedCodeHash || depFilesHashDiffers

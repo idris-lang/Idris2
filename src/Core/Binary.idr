@@ -277,7 +277,7 @@ writeToTTC extradata sourceFileName ttcFileName
          defs <- get Ctxt
          ust <- get UST
          gdefs <- getSaveDefs (currentNS defs) (keys (toSave defs)) [] defs
-         sourceHash <- hashFile sourceFileName
+         sourceHash <- hashFileWith defs.options.hashFn sourceFileName
          log "ttc.write" 5 $ "Writing " ++ ttcFileName ++ " with source hash " ++ sourceHash ++ " and interface hash " ++ show (ifaceHash defs)
          writeTTCFile bin
                    (MkTTCFile ttcVersion (sourceHash) (ifaceHash defs) (importHashes defs)
