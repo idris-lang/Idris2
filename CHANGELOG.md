@@ -6,6 +6,7 @@
 
 * Missing methods in implementations now give a compile time error. This was
   always the intended behaviour, but until now had not been implemented!
+* Records now work in `parameters` blocks and `where` clauses.
 
 ### Compiler changes
 
