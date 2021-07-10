@@ -4,7 +4,7 @@ parameters (X : Nat)
 
   record Bar where
     constructor MkBar
-    Gnu : Foo 
+    Gnu : Foo
 
   Baz : Foo -> Nat
   Baz x = x
