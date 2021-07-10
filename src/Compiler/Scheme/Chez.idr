@@ -85,7 +85,9 @@ findLibs ds
 
 schHeader : String -> List String -> Bool -> String
 schHeader chez libs whole
-  = (if os /= "windows" then "#!" ++ chez ++ " --program\n\n" else "") ++
+  = (if os /= "windows"
+        then "#!" ++ chez ++ (if whole then " --program\n\n" else " --script\n\n")
+        else "") ++
     "; " ++ (generatedString "Chez") ++ "\n" ++
     "(import (chezscheme))\n" ++
     "(case (machine-type)\n" ++
