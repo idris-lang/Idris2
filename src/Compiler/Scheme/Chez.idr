@@ -289,7 +289,8 @@ cCall fc cfn clib args ret collectSafe
              argTypes <- traverse (cftySpec fc) (filter notWorld args)
              retType <- cftySpec fc retty
              pure $
-                 "(let ([c-code (foreign-callable #f " ++
+                 "(let ([c-code (foreign-callable "
+                       ++ (if collectSafe then "__collect_safe " else "#f ") ++
                        mkFun args retty n ++
                        " (" ++ showSep " " argTypes ++ ") " ++ retType ++ ")])" ++
                        " (lock-object c-code) (foreign-callable-entry-point c-code))"
@@ -307,6 +308,13 @@ schemeCall fc sfn argns ret
                CFIORes _ => pure $ mkWorld call
                _ => pure call
 
+-- If we're passing a scheme object to C, we need to block the GC during the
+-- call in case it gets moved. This is only necessary for buffers since we
+-- don't allow scheme objects to be passed in general
+collectUnsafe : CFType -> Bool
+collectUnsafe CFBuffer = True
+collectUnsafe _ = False
+
 -- Use a calling convention to compile a foreign def.
 -- Returns any preamble needed for loading libraries, and the body of the
 -- function call.
@@ -315,19 +323,18 @@ useCC : {auto c : Ref Ctxt Defs} ->
         FC -> List String -> List (Name, CFType) -> CFType ->
         Maybe Version -> Core (Maybe String, String)
 useCC fc ccs args ret version
-    = case parseCC ["scheme,chez", "scheme", "C__collect_safe", "C"] ccs of
+    = case parseCC ["scheme,chez", "scheme", "C"] ccs of
            Just ("scheme,chez", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure (Nothing, body)
            Just ("scheme", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure (Nothing, body)
-           Just ("C__collect_safe", (cfn :: clib :: _)) => do
-             if unsupportedCallingConvention version
+           Just ("C", (cfn :: clib :: _)) =>
+             if unsupportedCallingConvention version ||
+                any collectUnsafe (map snd args)
                then cCall fc cfn clib args ret False
                else cCall fc cfn clib args ret True
-           Just ("C", (cfn :: clib :: _)) =>
-             cCall fc cfn clib args ret False
            _ => throw (NoForeignCC fc ccs)
 
 -- For every foreign arg type, return a name, and whether to pass it to the
