@@ -600,14 +600,15 @@ executeExpr c tmpDir tm
 incCompile : Ref Ctxt Defs ->
              (sourceFile : String) -> Core (Maybe (String, List String))
 incCompile c sourceFile
-    = do ssFile <- getTTCFileName sourceFile "ss"
+    = do -- Disable on Windows, for now, since it doesn't work!
+         -- When re-enabling it, please also turn it back on in test chez033
+         let True = os /= "windows"
+               | False => pure Nothing
+
+         ssFile <- getTTCFileName sourceFile "ss"
          soFile <- getTTCFileName sourceFile "so"
          soFilename <- getObjFileName sourceFile "so"
          cdata <- getIncCompileData False Cases
-
-         -- Disable on Windows, for now, since it doesn't work!
-         let False = os == "windows"
-               | True => pure Nothing
 
          d <- getDirs
          let outputDir = build_dir d </> "ttc"
