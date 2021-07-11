@@ -39,7 +39,7 @@ Value *newIORef(Value *erased, Value *input_value, Value *_world)
     }
 
     // store value
-    Value_IORef *ioRef = (Value_IORef *)newValue();
+    Value_IORef *ioRef = IDRIS2_NEW_VALUE(Value_IORef);
     ioRef->header.tag = IOREF_TAG;
     ioRef->index = world->listIORefs->filled;
     world->listIORefs->refs[world->listIORefs->filled] = newReference(input_value);
@@ -142,7 +142,7 @@ Value *arraySet(Value *erased, Value *_array, Value *_index, Value *v, Value *_w
 Value *onCollect(Value *_erased, Value *_anyPtr, Value *_freeingFunction, Value *_world)
 {
     printf("onCollect called\n");
-    Value_GCPointer *retVal = (Value_GCPointer *)newValue();
+    Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
     retVal->header.tag = GC_POINTER_TAG;
     retVal->p = (Value_Pointer *)newReference(_anyPtr);
     retVal->onCollectFct = (Value_Closure *)newReference(_freeingFunction);
@@ -152,7 +152,7 @@ Value *onCollect(Value *_erased, Value *_anyPtr, Value *_freeingFunction, Value 
 Value *onCollectAny(Value *_erased, Value *_anyPtr, Value *_freeingFunction, Value *_world)
 {
     printf("onCollectAny called\n");
-    Value_GCPointer *retVal = (Value_GCPointer *)newValue();
+    Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
     retVal->header.tag = GC_POINTER_TAG;
     retVal->p = (Value_Pointer *)_anyPtr;
     retVal->onCollectFct = (Value_Closure *)_freeingFunction;
@@ -171,7 +171,7 @@ Value *voidElim(Value *erased1, Value *erased2)
 // using pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
 Value *System_Concurrency_Raw_prim__makeMutex(Value *_world)
 {
-    Value_Mutex *mut = (Value_Mutex *)newValue();
+    Value_Mutex *mut = IDRIS2_NEW_VALUE(Value_Mutex);
     mut->header.tag = MUTEX_TAG;
     mut->mutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
     if (pthread_mutex_init(mut->mutex, NULL))
@@ -219,7 +219,7 @@ Value *System_Concurrency_Raw_prim__makeCondition(Value *_world)
     //     pthread_cond_t *cond;
     // }Value_Condition;
 
-    Value_Condition *c = (Value_Condition *)newValue();
+    Value_Condition *c = IDRIS2_NEW_VALUE(Value_Condition);
     c->header.tag = CONDITION_TAG;
     c->cond = (pthread_cond_t *)malloc(sizeof(pthread_cond_t));
     if (pthread_cond_init(c->cond, NULL))
