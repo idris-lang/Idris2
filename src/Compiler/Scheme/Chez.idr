@@ -85,7 +85,9 @@ findLibs ds
 
 schHeader : String -> List String -> Bool -> String
 schHeader chez libs whole
-  = (if os /= "windows" then "#!" ++ chez ++ " --program\n\n" else "") ++
+  = (if os /= "windows"
+        then "#!" ++ chez ++ (if whole then " --program\n\n" else " --script\n\n")
+        else "") ++
     "; " ++ (generatedString "Chez") ++ "\n" ++
     "(import (chezscheme))\n" ++
     "(case (machine-type)\n" ++
@@ -581,6 +583,8 @@ compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String)
 compileExpr makeitso c tmpDir outputDir tm outfile
     = do s <- getSession
          if not (wholeProgram s) && (Chez `elem` incrementalCGs !getSession)
+               -- Disable on Windows, for now, since it doesn't work!
+               && os /= "windows"
             then compileExprInc makeitso c tmpDir outputDir tm outfile
             else compileExprWhole makeitso c tmpDir outputDir tm outfile
 
@@ -596,7 +600,12 @@ executeExpr c tmpDir tm
 incCompile : Ref Ctxt Defs ->
              (sourceFile : String) -> Core (Maybe (String, List String))
 incCompile c sourceFile
-    = do ssFile <- getTTCFileName sourceFile "ss"
+    = do -- Disable on Windows, for now, since it doesn't work!
+         -- When re-enabling it, please also turn it back on in test chez033
+         let True = os /= "windows"
+               | False => pure Nothing
+
+         ssFile <- getTTCFileName sourceFile "ss"
          soFile <- getTTCFileName sourceFile "so"
          soFilename <- getObjFileName sourceFile "so"
          cdata <- getIncCompileData False Cases
