@@ -19,6 +19,7 @@
   half as good. The `--whole-program` flag overrides incremental compilation,
   and reverts to whole program compilation. Incremental compilation is currently
   supported only by the Chez Scheme back end.
+  This is currently supported only on Unix-like platforms (not yet Windows)
 
 ### Library Changes
 

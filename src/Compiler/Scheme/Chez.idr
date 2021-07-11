@@ -583,6 +583,8 @@ compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String)
 compileExpr makeitso c tmpDir outputDir tm outfile
     = do s <- getSession
          if not (wholeProgram s) && (Chez `elem` incrementalCGs !getSession)
+               -- Disable on Windows, for now, since it doesn't work!
+               && os /= "windows"
             then compileExprInc makeitso c tmpDir outputDir tm outfile
             else compileExprWhole makeitso c tmpDir outputDir tm outfile
 
@@ -602,6 +604,10 @@ incCompile c sourceFile
          soFile <- getTTCFileName sourceFile "so"
          soFilename <- getObjFileName sourceFile "so"
          cdata <- getIncCompileData False Cases
+
+         -- Disable on Windows, for now, since it doesn't work!
+         let False = os == "windows"
+               | True => pure Nothing
 
          d <- getDirs
          let outputDir = build_dir d </> "ttc"
