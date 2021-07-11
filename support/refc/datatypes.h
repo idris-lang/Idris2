@@ -176,8 +176,7 @@ typedef struct
 typedef struct
 {
     Value_header header;
-    size_t len;
-    char *buffer;
+    void *buffer; // *Buffer
 } Value_Buffer;
 
 typedef struct
