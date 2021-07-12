@@ -42,6 +42,14 @@ Changed
   With thanks to Alain Zscheile (@zseri) for help with understanding condition
   variables, and figuring out where the problems were and how to solve them.
 
+#### Control.Relation, Control.Order
+
+* The old system of interfaces for defining order relations (to say,
+  for instance, that LTE is a partial order) is replaced with a new
+  system of interfaces. These interfaces defines properties of binary
+  relations (functions of type `ty -> ty -> Type`), and orders are
+  defined simply as bundles of these properties.
+
 ## v0.4.0
 
 ### Syntax changes
