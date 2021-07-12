@@ -1,6 +1,6 @@
 module Main
 
-import Test.Golden
+import IdrisGolden
 
 %default covering
 

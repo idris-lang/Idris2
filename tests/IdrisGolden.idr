@@ -1,0 +1,432 @@
+||| Copy of `Test.Golden` with Idris project specific logic.
+
+module IdrisGolden
+
+import Control.ANSI
+
+import Data.Either
+import Data.Maybe
+import Data.List
+import Data.List1
+import Data.String
+
+import System
+import System.Clock
+import System.Directory
+import System.File
+import System.Future
+import System.Info
+import System.Path
+
+-- [ Options ]
+
+||| Options for the test driver.
+public export
+record Options where
+  constructor MkOptions
+  ||| Name of the idris2 executable
+  exeUnderTest : String
+  ||| Which codegen should we use?
+  codegen      : Maybe String
+  ||| Should we only run some specific cases?
+  onlyNames    : List String
+  ||| Should we run the test suite interactively?
+  interactive  : Bool
+  ||| Should we use colors?
+  color        : Bool
+  ||| Should we time and display the tests
+  timing       : Bool
+  ||| How many threads should we use?
+  threads      : Nat
+  ||| Should we write the list of failing cases to a file?
+  failureFile     : Maybe String
+
+export
+initOptions : String -> Bool -> Options
+initOptions exe color
+  = MkOptions exe
+              Nothing
+              []
+              False
+              color
+              False
+              1
+              Nothing
+
+export
+usage : String
+usage = unwords
+  ["Usage:"
+  , "runtests <path>"
+  , "[--timing]"
+  , "[--interactive]"
+  , "[--[no-]color, --[no-]colour]"
+  , "[--cg CODEGEN]"
+  , "[--threads N]"
+  , "[--failure-file PATH]"
+  , "[--only-file PATH]"
+  , "[--only [NAMES]]"
+  ]
+
+export
+fail : String -> IO a
+fail err
+    = do putStrLn err
+         exitWith (ExitFailure 1)
+
+||| Process the command line options.
+export
+options : List String -> IO (Maybe Options)
+options args = case args of
+    (_ :: exe :: rest) => mkOptions exe rest
+    _ => pure Nothing
+
+  where
+
+    go : List String -> Maybe String -> Options -> Maybe (Maybe String, Options)
+    go rest only opts = case rest of
+      []                            => pure (only, opts)
+      ("--timing" :: xs)            => go xs only (record { timing = True} opts)
+      ("--interactive" :: xs)       => go xs only (record { interactive = True } opts)
+      ("--color"  :: xs)            => go xs only (record { color = True } opts)
+      ("--colour" :: xs)            => go xs only (record { color = True } opts)
+      ("--no-color"  :: xs)         => go xs only (record { color = False } opts)
+      ("--no-colour" :: xs)         => go xs only (record { color = False } opts)
+      ("--cg" :: cg :: xs)          => go xs only (record { codegen = Just cg } opts)
+      ("--threads" :: n :: xs)      => do let pos : Nat = !(parsePositive n)
+                                          go xs only (record { threads = pos } opts)
+      ("--failure-file" :: p :: xs) => go  xs only (record { failureFile = Just p } opts)
+      ("--only" :: xs)              => pure (only, record { onlyNames = xs } opts)
+      ("--only-file" :: p :: xs)    => go xs (Just p) opts
+      _ => Nothing
+
+    mkOptions : String -> List String -> IO (Maybe Options)
+    mkOptions exe rest
+      = do color <- (Just "DUMB" /=) <$> getEnv "TERM"
+           let Just (mfp, opts) = go rest Nothing (initOptions exe color)
+                 | Nothing => pure Nothing
+           let Just fp = mfp
+                 | Nothing => pure (Just opts)
+           Right only <- readFile fp
+             | Left err => fail (show err)
+           pure $ Just $ record { onlyNames $= (forget (lines only) ++) } opts
+
+||| Normalise strings between different OS.
+|||
+||| on Windows, we just ignore backslashes and slashes when comparing,
+||| similarity up to that is good enough. Leave errors that depend
+||| on the confusion of slashes and backslashes to unix machines.
+normalize : String -> String
+normalize str =
+    if isWindows
+      then pack $ filter (\ch => ch /= '/' && ch /= '\\') (unpack str)
+      else str
+
+||| The result of a test run
+||| `Left` corresponds to a failure, and `Right` to a success
+Result : Type
+Result = Either String String
+
+||| Run the specified Golden test with the supplied options.
+|||
+||| See the module documentation for more information.
+|||
+||| @testPath the directory that contains the test.
+export
+runTest : Options -> (testPath : String) -> IO (Future Result)
+runTest opts testPath = forkIO $ do
+  start <- clockTime UTC
+  let cg = maybe "" (" --cg " ++) (codegen opts)
+  let exe = "\"" ++ exeUnderTest opts ++ cg ++ "\""
+  ignore $ system $ "cd " ++ testPath ++ " && " ++
+    "sh ./run " ++ exe ++ " | tr -d '\\r' > output"
+  end <- clockTime UTC
+
+  Right out <- readFile $ testPath ++ "/output"
+    | Left err => do putStrLn $ (testPath ++ "/output") ++ ": " ++ show err
+                     pure (Left testPath)
+
+  Right exp <- readFile $ testPath ++ "/expected"
+    | Left FileNotFound => do
+        if interactive opts
+          then mayOverwrite Nothing out
+          else putStrLn $ (testPath ++ "/expected") ++ ": " ++ show FileNotFound
+        pure (Left testPath)
+    | Left err => do putStrLn $ (testPath ++ "/expected") ++ ": " ++ show err
+                     pure (Left testPath)
+
+  let result = normalize out == normalize exp
+  let time = timeDifference end start
+
+  if result
+    then printTiming (timing opts) time testPath $
+      (if opts.color then show . colored BrightGreen else id) "success"
+    else do
+      printTiming (timing opts) time testPath $
+        (if opts.color then show . colored BrightRed else id) "FAILURE"
+      if interactive opts
+        then mayOverwrite (Just exp) out
+        else putStrLn . unlines $ expVsOut exp out
+
+  pure $ if result then Right testPath else Left testPath
+
+  where
+    getAnswer : IO Bool
+    getAnswer = do
+      str <- getLine
+      case str of
+        "y" => pure True
+        "n" => pure False
+        ""  => pure False
+        _   => do putStrLn "Invalid answer."
+                  getAnswer
+
+    expVsOut : String -> String -> List String
+    expVsOut exp out = ["Expected:", exp, "Given:", out]
+
+    mayOverwrite : Maybe String -> String -> IO ()
+    mayOverwrite mexp out = do
+      case mexp of
+        Nothing => putStr $ unlines
+          [ "Golden value missing. I computed the following result:"
+          , out
+          , "Accept new golden value? [y/N]"
+          ]
+        Just exp => do
+          code <- system $ "git diff --no-index --exit-code " ++
+            (if opts.color then  "--word-diff=color " else "") ++
+            testPath ++ "/expected " ++ testPath ++ "/output"
+          putStrLn . unlines $
+            ["Golden value differs from actual value."] ++
+            (if (code < 0) then expVsOut exp out else []) ++
+            ["Accept actual value as new golden value? [y/N]"]
+      b <- getAnswer
+      when b $ do Right _ <- writeFile (testPath ++ "/expected") out
+                    | Left err => putStrLn $ (testPath ++ "/expected") ++ ": " ++ show err
+                  pure ()
+
+    printTiming : Bool -> Clock type -> String -> String -> IO ()
+    printTiming False _     path msg = putStrLn $ concat [path, ": ", msg]
+    printTiming True  clock path msg =
+      let time  = showTime 2 3 clock
+          -- We use 9 instead of `String.length msg` because:
+          -- 1. ": success" and ": FAILURE" have the same length
+          -- 2. ANSI escape codes make the msg look longer than it is
+          spent = String.length time + String.length path + 9
+          pad   = pack $ replicate (minus 72 spent) ' '
+      in putStrLn $ concat [path, ": ", msg, pad, time]
+
+||| Find the first occurrence of an executable on `PATH`.
+export
+pathLookup : List String -> IO (Maybe String)
+pathLookup names = do
+  path <- getEnv "PATH"
+  let extensions = if isWindows then [".exe", ".cmd", ".bat", ""] else [""]
+  let pathList = forget $ split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
+  let candidates = [p ++ "/" ++ x ++ y | p <- pathList,
+                                         x <- names,
+                                         y <- extensions]
+  firstExists candidates
+
+
+||| Some test may involve Idris' backends and have requirements.
+||| We define here the ones supported by Idris
+public export
+data Requirement = C | Chez | Node | Racket | Gambit
+
+export
+Show Requirement where
+  show C = "C"
+  show Chez = "Chez"
+  show Node = "node"
+  show Racket = "racket"
+  show Gambit = "gambit"
+
+export
+[CG] Show Requirement where
+  show C = "refc"
+  show Chez = "chez"
+  show Node = "node"
+  show Racket = "racket"
+  show Gambit = "gambit"
+
+export
+checkRequirement : Requirement -> IO (Maybe String)
+checkRequirement req
+  = if platformSupport req
+      then do let (envvar, paths) = requirement req
+              Just exec <- getEnv envvar | Nothing => pathLookup paths
+              pure (Just exec)
+      else pure Nothing
+  where
+    requirement : Requirement -> (String, List String)
+    requirement C = ("CC", ["cc"])
+    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "chezscheme", "scheme"])
+    requirement Node = ("NODE", ["node"])
+    requirement Racket = ("RACKET", ["racket"])
+    requirement Gambit = ("GAMBIT", ["gsc"])
+    platformSupport : Requirement -> Bool
+    platformSupport C = not isWindows
+    platformSupport Racket = not isWindows
+    platformSupport _ = True
+
+export
+findCG : IO (Maybe String)
+findCG
+  = do Nothing <- getEnv "IDRIS2_TESTS_CG" | p => pure p
+       Nothing <- checkRequirement Chez    | p => pure (Just "chez")
+       Nothing <- checkRequirement Node    | p => pure (Just "node")
+       Nothing <- checkRequirement Racket  | p => pure (Just "racket")
+       Nothing <- checkRequirement Gambit  | p => pure (Just "gsc")
+       Nothing <- checkRequirement C       | p => pure (Just "refc")
+       pure Nothing
+
+||| A choice of a codegen
+public export
+data Codegen
+  = ||| Do NOT pass a cg argument to the executable being tested
+    Nothing
+  | ||| Use whatever the test runner was passed at the toplevel,
+    ||| and if nothing was passed guess a sensible default using findCG
+    Default
+  | ||| Use exactly the given requirement
+    Just Requirement
+
+export
+toList : Codegen -> List Requirement
+toList (Just r) = [r]
+toList _ = []
+
+||| A test pool is characterised by
+|||  + a name
+|||  + a list of requirement
+|||  + a choice of codegen (overriding the default)
+|||  + and a list of directory paths
+public export
+record TestPool where
+  constructor MkTestPool
+  poolName : String
+  constraints : List Requirement
+  codegen : Codegen
+  testCases : List String
+
+||| Only keep the tests that have been asked for
+export
+filterTests : Options -> List String -> List String
+filterTests opts = case onlyNames opts of
+  [] => id
+  xs => filter (\ name => any (`isInfixOf` name) xs)
+
+||| The summary of a test pool run
+public export
+record Summary where
+  constructor MkSummary
+  success : List String
+  failure : List String
+
+export
+initSummary : Summary
+initSummary = MkSummary [] []
+
+export
+updateSummary : List Result -> Summary -> Summary
+updateSummary res =
+  let (ls, ws) = partitionEithers res in
+  { success $= (ws ++)
+  , failure $= (ls ++)
+  }
+
+export
+Semigroup Summary where
+  MkSummary ws1 ls1 <+> MkSummary ws2 ls2
+    = MkSummary (ws1 ++ ws2) (ls1 ++ ls2)
+
+export
+Monoid Summary where
+  neutral = initSummary
+
+||| A runner for a test pool
+export
+poolRunner : Options -> TestPool -> IO Summary
+poolRunner opts pool
+  = do -- check that we indeed want to run some of these tests
+       let tests = filterTests opts (testCases pool)
+       let (_ :: _) = tests
+             | [] => pure initSummary
+       -- if so make sure the constraints are satisfied
+       cs <- for (toList (codegen pool) ++ constraints pool) $ \ req => do
+          mfp <- checkRequirement req
+          let msg = case mfp of
+                      Nothing => "✗ " ++ show req ++ " not found"
+                      Just fp => "✓ Found " ++ show req ++ " at " ++ fp
+          pure (mfp, msg)
+       let (cs, msgs) = unzip cs
+
+       putStrLn (banner msgs)
+
+       let Just _ = the (Maybe (List String)) (sequence cs)
+             | Nothing => pure initSummary
+
+       -- if the test pool requires a specific codegen then use that
+       let opts = case codegen pool of
+                    Nothing => { codegen := Nothing } opts
+                    Just cg => { codegen := Just (show @{CG} cg) } opts
+                    Default => opts
+       -- if so run them all!
+       loop opts initSummary tests
+
+  where
+
+    separator : String
+    separator = fastPack $ replicate 72 '-'
+
+    banner : List String -> String
+    banner msgs = fastUnlines
+        $ [ "", separator, pool.poolName ]
+       ++ msgs
+       ++ [ separator, "" ]
+
+    loop : Options -> Summary -> List String -> IO Summary
+    loop opts acc [] = pure acc
+    loop opts acc tests
+      = do let (now, later) = splitAt opts.threads tests
+           bs <- map await <$> traverse (runTest opts) now
+           loop opts (updateSummary bs acc) later
+
+
+||| A runner for a whole test suite
+export
+runner : List TestPool -> IO ()
+runner tests
+    = do args <- getArgs
+         Just opts <- options args
+            | _ => do printLn args
+                      putStrLn usage
+         -- if no CG has been set, find a sensible default based on what is available
+         opts <- case codegen opts of
+                   Nothing => pure $ record { codegen = !findCG } opts
+                   Just _ => pure opts
+         -- run the tests
+         res <- concat <$> traverse (poolRunner opts) tests
+
+         -- report the result
+         let nsucc  = length res.success
+         let nfail  = length res.failure
+         let ntotal = nsucc + nfail
+         putStrLn (show nsucc ++ "/" ++ show ntotal ++ " tests successful")
+
+         -- deal with failures
+         let list = fastUnlines res.failure
+         when (nfail > 0) $
+           do putStrLn "Failing tests:"
+              putStrLn list
+         -- always overwrite the failure file, if it is given
+         whenJust opts.failureFile $ \ path =>
+           do Right _ <- writeFile path list
+                | Left err => fail (show err)
+              pure ()
+
+         -- exit
+         if nfail == 0
+           then exitWith ExitSuccess
+           else exitWith (ExitFailure 1)
