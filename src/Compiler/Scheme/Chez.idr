@@ -317,14 +317,14 @@ useCC : {auto c : Ref Ctxt Defs} ->
         FC -> List String -> List (Name, CFType) -> CFType ->
         Maybe Version -> Core (Maybe String, String)
 useCC fc ccs args ret version
-    = case parseCC ["scheme,chez", "scheme", "C__collect_safe", "C"] ccs of
+    = case parseCC ["scheme,chez", "scheme", "C__blocking", "C"] ccs of
            Just ("scheme,chez", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure (Nothing, body)
            Just ("scheme", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure (Nothing, body)
-           Just ("C__collect_safe", (cfn :: clib :: _)) => do
+           Just ("C__blocking", (cfn :: clib :: _)) => do
              if unsupportedCallingConvention version
                then cCall fc cfn clib args ret False
                else cCall fc cfn clib args ret True
