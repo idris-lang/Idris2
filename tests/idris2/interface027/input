@@ -1,0 +1,6 @@
+A 100 'c' == A 100 'd'
+A 100 'c' == A 100 'c'
+A 4 "paper" == A 5 "postcard"
+(==) @{mkEq True} 4 5
+(==) @{mkEq False} 4 5
+:q

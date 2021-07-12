@@ -6,6 +6,9 @@
 
 * Missing methods in implementations now give a compile time error. This was
   always the intended behaviour, but until now had not been implemented!
+* Records now work in `parameters` blocks and `where` clauses.
+* Implementations of interfaces now work in `parameters` blocks and
+  `where` clauses
 
 ### Compiler changes
 
@@ -16,6 +19,7 @@
   half as good. The `--whole-program` flag overrides incremental compilation,
   and reverts to whole program compilation. Incremental compilation is currently
   supported only by the Chez Scheme back end.
+  This is currently supported only on Unix-like platforms (not yet Windows)
 
 ### Library Changes
 
@@ -37,6 +41,14 @@ Changed
   channel that has not been received.
   With thanks to Alain Zscheile (@zseri) for help with understanding condition
   variables, and figuring out where the problems were and how to solve them.
+
+#### Control.Relation, Control.Order
+
+* The old system of interfaces for defining order relations (to say,
+  for instance, that LTE is a partial order) is replaced with a new
+  system of interfaces. These interfaces defines properties of binary
+  relations (functions of type `ty -> ty -> Type`), and orders are
+  defined simply as bundles of these properties.
 
 ## v0.4.0
 

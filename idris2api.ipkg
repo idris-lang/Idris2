@@ -17,12 +17,14 @@ modules =
     Compiler.Separate,
     Compiler.VMCode,
 
-    Compiler.ES.ES,
-    Compiler.ES.Imperative,
-    Compiler.ES.ImperativeAst,
+    Compiler.ES.Ast,
+    Compiler.ES.Codegen,
+    Compiler.ES.Doc,
     Compiler.ES.Javascript,
     Compiler.ES.Node,
+    Compiler.ES.State,
     Compiler.ES.TailRec,
+    Compiler.ES.ToAst,
 
     Compiler.Interpreter.VMCode,
 
