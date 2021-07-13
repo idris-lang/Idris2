@@ -100,7 +100,7 @@ schHeader chez libs whole
     showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeStringChez x ++ "\")") libs) ++ "\n\n" ++
     if whole
        then "(let ()\n"
-       else "(source-directories (list (getenv \"IDRIS2_INC_SRC\") \".\"))\n"
+       else "(source-directories (cons (getenv \"IDRIS2_INC_SRC\") (source-directories)))\n"
 
 schFooter : Bool -> Bool -> String
 schFooter prof whole
