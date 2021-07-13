@@ -1,3 +1,5 @@
+rm -rf build
+
 $1 --no-color --console-width 0 --check StrError1.idr || true
 $1 --no-color --console-width 0 --check StrError2.idr || true
 $1 --no-color --console-width 0 --check StrError3.idr || true
@@ -11,4 +13,3 @@ $1 --no-color --console-width 0 --check StrError10.idr || true
 $1 --no-color --console-width 0 --check StrError11.idr || true
 $1 --no-color --console-width 0 --check StrError12.idr || true
 
-rm -rf build

@@ -1,4 +1,5 @@
+rm -rf build
+
 $1 --no-color --console-width 0 --check Eta.idr
 $1 --no-color --console-width 0 --check Eta2.idr
 
-rm -rf build

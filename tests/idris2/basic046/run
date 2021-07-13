@@ -1,3 +1,4 @@
+rm -rf build
+
 $1 --no-banner --no-color --console-width 0 TupleSections.idr < input
 
-rm -rf build
