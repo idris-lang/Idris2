@@ -8,6 +8,7 @@ import Compiler.Common
 import Core.AutoSearch
 import Core.CompileExpr
 import Core.Context
+import Core.Directory
 import Core.InitPrimitives
 import Core.Metadata
 import Core.Normalise
@@ -18,7 +19,7 @@ import Core.Unify
 import Data.List
 import Data.List1
 import Data.So
-import Data.Strings
+import Data.String
 
 import Idris.Desugar
 import Idris.Error
@@ -43,6 +44,7 @@ import TTImp.TTImp
 import TTImp.ProcessDecls
 
 import Libraries.Utils.Hex
+import Libraries.Utils.Path
 
 import Data.List
 import System
@@ -133,7 +135,8 @@ getInput f
                    pure (pack inp)
 
 ||| Do nothing and tell the user to wait for us to implmement this (or join the effort!)
-todoCmd : {auto o : Ref ROpts REPLOpts} ->
+todoCmd : {auto c : Ref Ctxt Defs} ->
+          {auto o : Ref ROpts REPLOpts} ->
           String -> Core ()
 todoCmd cmdName = iputStrLn $ reflow $ cmdName ++ ": command not yet implemented. Hopefully soon!"
 
@@ -260,24 +263,24 @@ processCatch cmd
                            msg <- perror err
                            pure $ REPL $ REPLError msg)
 
-idePutStrLn : File -> Integer -> String -> Core ()
+idePutStrLn : {auto c : Ref Ctxt Defs} -> File -> Integer -> String -> Core ()
 idePutStrLn outf i msg
     = send outf (SExpList [SymbolAtom "write-string",
                 toSExp msg, toSExp i])
 
-returnFromIDE : File -> Integer -> SExp -> Core ()
+returnFromIDE : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
 returnFromIDE outf i msg
     = do send outf (SExpList [SymbolAtom "return", msg, toSExp i])
 
-printIDEResult : File -> Integer -> SExp -> Core ()
+printIDEResult : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
 printIDEResult outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "ok", toSExp msg])
 
-printIDEResultWithHighlight : File -> Integer -> SExp -> Core ()
+printIDEResultWithHighlight : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
 printIDEResultWithHighlight outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "ok", toSExp msg
                                                                         -- TODO return syntax highlighted result
                                                                         , SExpList []])
 
-printIDEError : Ref ROpts REPLOpts => File -> Integer -> Doc IdrisAnn -> Core ()
+printIDEError : Ref ROpts REPLOpts => {auto c : Ref Ctxt Defs} -> File -> Integer -> Doc IdrisAnn -> Core ()
 printIDEError outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "error", toSExp !(renderWithoutColor msg) ])
 
 SExpable REPLEval where
@@ -292,6 +295,7 @@ SExpable REPLOpt where
   toSExp (EvalMode mod) = SExpList [ SymbolAtom "eval", toSExp mod ]
   toSExp (Editor editor) = SExpList [ SymbolAtom "editor", toSExp editor ]
   toSExp (CG str) = SExpList [ SymbolAtom "cg", toSExp str ]
+  toSExp (Profile p) = SExpList [ SymbolAtom "profile", toSExp p ]
 
 
 displayIDEResult : {auto c : Ref Ctxt Defs} ->
@@ -395,10 +399,34 @@ displayIDEResult outf i (REPL $ ConsoleWidthSet mn)
 displayIDEResult outf i (NameLocList dat)
   = printIDEResult outf i $ SExpList !(traverse (constructSExp . map toNonEmptyFC) dat)
   where
+    -- In order to recover the full path to the module referenced by FC,
+    -- which stores a module identifier as opposed to a full path,
+    -- we need to check the project's source folder and all the library directories
+    -- for the relevant source file.
+    -- (!) Always returns the *absolute* path.
+    sexpOriginDesc : OriginDesc -> Core String
+    sexpOriginDesc (PhysicalIdrSrc modIdent) = do
+      defs <- get Ctxt
+      let wdir = defs.options.dirs.working_dir
+      let pkg_dirs = filter (/= ".") defs.options.dirs.extra_dirs
+      let exts = map show listOfExtensions
+      Just fname <- catch
+          (Just . (wdir </>) <$> nsToSource replFC modIdent) -- Try local source first
+          -- if not found, try looking for the file amongst the loaded packages.
+          (const $ firstAvailable $ do
+            pkg_dir <- pkg_dirs
+            let pkg_dir_abs = ifThenElse (isRelative pkg_dir) (wdir </> pkg_dir) pkg_dir
+            ext <- exts
+            pure (pkg_dir_abs </> ModuleIdent.toPath modIdent <.> ext))
+        | _ => pure "(File-Not-Found)"
+      pure fname
+    sexpOriginDesc (PhysicalPkgSrc fname) = pure fname
+    sexpOriginDesc (Virtual Interactive) = pure "(Interactive)"
+
     constructSExp : (Name, NonEmptyFC) -> Core SExp
-    constructSExp (name, fname, (startLine, startCol), (endLine, endCol)) = pure $
+    constructSExp (name, origin, (startLine, startCol), (endLine, endCol)) = pure $
         SExpList [ StringAtom !(render $ pretty name)
-                 , StringAtom fname
+                 , StringAtom !(sexpOriginDesc origin)
                  , IntegerAtom $ cast $ startLine
                  , IntegerAtom $ cast $ startCol
                  , IntegerAtom $ cast $ endLine

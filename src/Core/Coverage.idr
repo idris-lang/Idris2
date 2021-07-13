@@ -8,18 +8,18 @@ import Core.Normalise
 import Core.TT
 import Core.Value
 
-import Libraries.Data.Bool.Extra
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
+
 import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.String.Extra
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 
@@ -48,7 +48,7 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
     findN i tm
         = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
                    | _ => False in
-              anyTrue (map (findN i) args)
+              any (findN i) args
 
     -- Assuming in normal form. Look for: mismatched constructors, or
     -- a name appearing strong rigid in the other term
@@ -56,15 +56,15 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
     conflictTm (Local _ _ i _) tm
         = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
                    | _ => False in
-              anyTrue (map (findN i) args)
+              any (findN i) args
     conflictTm tm (Local _ _ i _)
         = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
                    | _ => False in
-              anyTrue (map (findN i) args)
+              any (findN i) args
     conflictTm tm tm'
         = let (f, args) = getFnArgs tm
               (f', args') = getFnArgs tm' in
-          clash f f' || anyTrue (zipWith conflictTm args args')
+          clash f f' || any (uncurry conflictTm) (zip args args')
 
     conflictArgs : Name -> Term vars -> List (Name, Term vars) -> Bool
     conflictArgs n tm [] = False
@@ -141,7 +141,6 @@ isEmpty : {vars : _} ->
 isEmpty defs env (NTCon fc n t a args)
   = do Just nty <- lookupDefExact n (gamma defs)
          | _ => pure False
-       log "coverage.empty" 10 $ "Checking type: " ++ show nty
        case nty of
             TCon _ _ _ _ flags _ cons _
                  => if not (external flags)
@@ -165,7 +164,7 @@ getCons defs (NTCon _ tn _ _ _)
            Just (TCon _ _ _ _ _ _ cons _) =>
                 do cs' <- traverse addTy cons
                    pure (mapMaybe id cs')
-           _ => pure []
+           _ => throw (InternalError "Called `getCons` on something that is not a Type constructor")
   where
     addTy : Name -> Core (Maybe (NF [], Name, Int, Nat))
     addTy cn
@@ -214,24 +213,22 @@ getMissingAlts fc defs (NPrimVal _ WorldType) alts
          then pure [DefaultCase (Unmatched "Coverage check")]
          else pure []
 getMissingAlts fc defs (NPrimVal _ c) alts
-    = if any isDefault alts
-         then pure []
+  = do log "coverage.missing" 50 $ "Looking for missing alts at type " ++ show c
+       if any isDefault alts
+         then do log "coverage.missing" 20 "Found default"
+                 pure []
          else pure [DefaultCase (Unmatched "Coverage check")]
-  where
-    isDefault : CaseAlt vars -> Bool
-    isDefault (DefaultCase _) = True
-    isDefault _ = False
 -- Similarly for types
 getMissingAlts fc defs (NType _) alts
-    = if any isDefault alts
-         then pure []
-         else pure [DefaultCase (Unmatched "Coverage check")]
-  where
-    isDefault : CaseAlt vars -> Bool
-    isDefault (DefaultCase _) = True
-    isDefault _ = False
+    = do log "coverage.missing" 50 "Looking for missing alts at type Type"
+         if any isDefault alts
+           then do log "coverage.missing" 20 "Found default"
+                   pure []
+           else pure [DefaultCase (Unmatched "Coverage check")]
 getMissingAlts fc defs nfty alts
-    = do allCons <- getCons defs nfty
+    = do log "coverage.missing" 50 $ "Getting constructors for: " ++ show nfty
+         logNF "coverage.missing" 20 "Getting constructors for" (mkEnv fc _) nfty
+         allCons <- getCons defs nfty
          pure (filter (noneOf alts)
                  (map (mkAlt fc (Unmatched "Coverage check") . snd) allCons))
   where
@@ -396,12 +393,13 @@ getMissing : {vars : _} ->
 getMissing fc n ctree
    = do defs <- get Ctxt
         let psIn = map (Ref fc Bound) vars
-        pats <- buildArgs fc defs [] [] psIn ctree
-        logC "coverage.missing" 20 $ map unlines $
-          flip traverse (concat pats) $ \ pat =>
-            do pat' <- toFullNames pat
-               pure (show pat')
-        pure (map (apply fc (Ref fc Func n)) pats)
+        patss <- buildArgs fc defs [] [] psIn ctree
+        let pats = concat patss
+        unless (null pats) $
+          logC "coverage.missing" 20 $ map unlines $
+            flip traverse pats $ \ pat =>
+              show <$> toFullNames pat
+        pure (map (apply fc (Ref fc Func n)) patss)
 
 -- For the given name, get the names it refers to which are not themselves
 -- covering.

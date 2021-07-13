@@ -1,11 +1,13 @@
 package base
-version = 0.3.0
+version = 0.4.0
 
-opts = "--ignore-missing-ipkg"
+opts = "--ignore-missing-ipkg -Wno-shadowing"
 
 modules = Control.App,
           Control.App.Console,
           Control.App.FileIO,
+
+          Control.Applicative.Const,
 
           Control.Monad.Either,
           Control.Monad.Error.Either,
@@ -27,13 +29,17 @@ modules = Control.App,
           Control.Monad.Writer.CPS,
           Control.Monad.Writer.Interface,
           Control.WellFounded,
+          Control.Relation,
+          Control.Order,
 
+          Data.Bifoldable,
           Data.Bits,
           Data.Bool,
           Data.Bool.Xor,
           Data.Buffer,
           Data.Colist,
           Data.Colist1,
+          Data.Contravariant,
           Data.DPair,
           Data.Either,
           Data.Fin,
@@ -44,6 +50,8 @@ modules = Control.App,
           Data.IOArray.Prims,
           Data.IORef,
           Data.List,
+          Data.SnocList,
+          Data.SnocList.Elem,
           Data.List.Elem,
           Data.List.Views,
           Data.List.Quantifiers,
@@ -59,7 +67,6 @@ modules = Control.App,
           Data.So,
           Data.Stream,
           Data.String,
-          Data.Strings,
           Data.These,
           Data.Vect,
           Data.Vect.Elem,
@@ -71,17 +78,18 @@ modules = Control.App,
           Decidable.Decidable,
           Decidable.Equality,
           Decidable.Equality.Core,
-          Decidable.Order,
 
           Language.Reflection,
           Language.Reflection.TT,
           Language.Reflection.TTImp,
 
           System,
-          System.Concurrency,
           System.Clock,
+          System.Concurrency,
           System.Directory,
-          System.File,
+          System.Errno,
           System.FFI,
+          System.File,
           System.Info,
-          System.REPL
+          System.REPL,
+          System.Signal

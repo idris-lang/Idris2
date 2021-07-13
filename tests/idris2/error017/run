@@ -1,0 +1,4 @@
+$1 --no-color --console-width 0 --no-banner --check Issue962.idr
+$1 --no-color --console-width 0 --no-banner --check Issue962-case.idr
+
+rm -rf build/

@@ -277,12 +277,18 @@ defined as follows:
     interface Applicative m => Monad (m : Type -> Type) where
         (>>=)  : m a -> (a -> m b) -> m b
 
+There is also a non-binding sequencing operator, defined for ``Monad`` as:
+
+.. code-block:: idris
+
+    v >> e = v >>= \_ => e
+
 Inside a ``do`` block, the following syntactic transformations are
 applied:
 
 - ``x <- v; e`` becomes ``v >>= (\x => e)``
 
-- ``v; e`` becomes ``v >>= (\_ => e)``
+- ``v; e`` becomes ``v >> e``
 
 - ``let x = v; e`` becomes ``let x = v in e``
 
@@ -305,10 +311,10 @@ Using this we can, for example, define a function which adds two
                    y' <- y -- Extract value from y
                    pure (x' + y') -- Add them
 
-This function will extract the values from ``x`` and ``y``, if they
-are both available, or return ``Nothing`` if one or both are not ("fail fast"). Managing the
-``Nothing`` cases is achieved by the ``>>=`` operator, hidden by the
-``do`` notation.
+This function will extract the values from ``x`` and ``y``, if they are both
+available, or return ``Nothing`` if one or both are not ("fail fast"). Managing
+the ``Nothing`` cases is achieved by the ``>>=`` operator, hidden by the ``do``
+notation.
 
 ::
 
@@ -318,10 +324,10 @@ are both available, or return ``Nothing`` if one or both are not ("fail fast"). 
     Nothing
 
 The translation of ``do`` notation is entirely syntactic, so there is no
-need for the ``(>>=)`` operator to be the operator defined in the ``Monad``
-interface. Idris will, in general, try to disambiguate which ``(>>=)`` you
-mean by type, but you can explicitly choose with qualified do notation,
-for example:
+need for the ``(>>=)`` and ``(>>)`` operators to be the operator defined in the
+``Monad`` interface. Idris will, in general, try to disambiguate which
+operators you mean by type, but you can explicitly choose with qualified do
+notation, for example:
 
 .. code-block:: idris
 
@@ -331,8 +337,8 @@ for example:
                    y' <- y -- Extract value from y
                    pure (x' + y') -- Add them
 
-The ``Prelude.do`` means that Idris will use the ``(>>=)`` operator defined
-in the ``Prelude``.
+The ``Prelude.do`` means that Idris will use the ``(>>=)`` and ``(>>)``
+operators defined in the ``Prelude``.
 
 Pattern Matching Bind
 ~~~~~~~~~~~~~~~~~~~~~
@@ -344,7 +350,7 @@ which reads a number from the console, returning a value of the form
 
 .. code-block:: idris
 
-    import Data.Strings
+    import Data.String
 
     readNumber : IO (Maybe Nat)
     readNumber = do
@@ -714,6 +720,25 @@ do this with a ``using`` clause in the implementation as follows:
 
 The ``using PlusNatSemi`` clause indicates that ``PlusNatMonoid`` should
 extend ``PlusNatSemi`` specifically.
+
+.. _InterfaceConstructors:
+
+Interface Constructors
+======================
+
+Interfaces, just like records, can be declared with a user-defined constructor.
+
+.. code-block:: idris
+
+    interface A a where
+      getA : a
+
+    interface A t => B t where
+      constructor MkB
+
+      getB : t
+
+Then ``MkB : A t => t -> B t``.
 
 .. _DeterminingParameters:
 

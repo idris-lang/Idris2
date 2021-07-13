@@ -1,9 +1,10 @@
 module System.Path
 
 import Data.List
+import Data.List1
 import Data.Maybe
 import Data.Nat
-import Data.Strings
+import Data.String
 import Data.String.Extra
 
 import Text.Token
@@ -13,7 +14,7 @@ import Text.Quantity
 
 import System.Info
 
-infixr 5 </>
+infixr 5 </>, />
 infixr 7 <.>
 
 
@@ -107,14 +108,14 @@ Show Body where
 export
 Show Volume where
   show (UNC server share) = "\\\\" ++ server ++ "\\" ++ share
-  show (Disk disk) = Strings.singleton disk ++ ":"
+  show (Disk disk) = String.singleton disk ++ ":"
 
 ||| Displays the path in the format of this platform.
 export
 Show Path where
   show path =
     let
-      sep = Strings.singleton dirSeparator
+      sep = String.singleton dirSeparator
       showVol = maybe "" show path.volume
       showRoot = if path.hasRoot then sep else ""
       showBody = join sep $ map show path.body
@@ -226,11 +227,10 @@ parseBody : Grammar PathToken True Body
 parseBody =
   do
     text <- match PTText
-    the (Grammar _ False _) $
-      case text of
-        ".." => pure ParentDir
-        "." => pure CurDir
-        normal => pure (Normal normal)
+    pure $ case text of
+      ".." => ParentDir
+      "." => CurDir
+      normal => Normal normal
 
 parsePath : Grammar PathToken False Path
 parsePath =
@@ -344,6 +344,7 @@ setFileName' name path =
   else
     append' path (parse name)
 
+export
 splitFileName : String -> (String, String)
 splitFileName name =
   case break (== '.') $ reverse $ unpack name of
@@ -384,11 +385,28 @@ isRelative = not . isAbsolute
 ||| - If the right path has a volume but no root, it replaces left.
 |||
 ||| ```idris example
+||| parse "/usr" /> "local/etc" == "/usr/local/etc"
+||| ```
+export
+(/>) : (left : Path) -> (right : String) -> Path
+(/>) left right = append' left (parse right)
+
+||| Appends the right path to the left path.
+|||
+||| If the path on the right is absolute, it replaces the left path.
+|||
+||| On Windows:
+|||
+||| - If the right path has a root but no volume (e.g., `\windows`), it replaces
+|||   everything except for the volume (if any) of left.
+||| - If the right path has a volume but no root, it replaces left.
+|||
+||| ```idris example
 ||| "/usr" </> "local/etc" == "/usr/local/etc"
 ||| ```
 export
 (</>) : (left : String) -> (right : String) -> String
-(</>) left right = show $ append' (parse left) (parse right)
+(</>) left right = show $ parse left /> right
 
 ||| Joins path components into one.
 |||
@@ -397,7 +415,7 @@ export
 ||| ```
 export
 joinPath : List String -> String
-joinPath xs = foldl (</>) "" xs
+joinPath xs = show $ foldl (/>) (parse "") xs
 
 ||| Splits path into components.
 |||
@@ -505,7 +523,8 @@ fileStem path = pure $ fst $ splitFileName !(fileName path)
 ||| - Otherwise, the portion of the file name after the last ".".
 export
 extension : String -> Maybe String
-extension path = pure $ snd $ splitFileName !(fileName path)
+extension path = fileName path >>=
+  filter (/= "") . Just . snd . splitFileName
 
 ||| Updates the file name in the path.
 |||

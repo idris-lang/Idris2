@@ -8,6 +8,8 @@ import Control.Monad.RWS.CPS
 import Control.Monad.Trans
 import Control.Monad.Writer.CPS
 
+%default total
+
 ||| A computation which runs in a context and produces an output
 public export
 interface Monad m => MonadState stateType m | m where

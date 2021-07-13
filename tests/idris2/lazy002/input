@@ -1,0 +1,2 @@
+:exec putStrLn $ show x
+:exec putStrLn $ show y

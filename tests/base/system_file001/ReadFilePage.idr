@@ -1,5 +1,5 @@
 import System.File
-import Data.Strings
+import Data.String
 
 putLines : List String -> IO ()
 putLines = putStrLn . fastAppend
@@ -42,4 +42,3 @@ main = do totalChecks
           Right l8 <- readFile "test.txt"
             | Left err => putStrLn $ show err
           putStrLn l8
-

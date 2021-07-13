@@ -1,5 +1,15 @@
 #include "runtime.h"
 
+void missing_ffi()
+{
+  fprintf(
+    stderr,
+    "Foreign function declared, but not defined.\n"
+    "Cannot call missing FFI - aborting.\n"
+  );
+  exit(1);
+}
+
 void push_Arglist(Value_Arglist *arglist, Value *arg)
 {
   if (arglist->filled >= arglist->total)
@@ -73,19 +83,39 @@ Value *tailcall_apply_closure(Value *_clos, Value *arg)
 
 int extractInt(Value *v)
 {
+  if (v->header.tag == INTEGER_TAG)
+  {
+    return (int)mpz_get_si(((Value_Integer *)v)->i);
+  }
+
+  if (v->header.tag == INT8_TAG)
+  {
+    return (int)((Value_Int8 *)v)->i8;
+  }
+
+  if (v->header.tag == INT16_TAG)
+  {
+    return (int)((Value_Int16 *)v)->i16;
+  }
+
+  if (v->header.tag == INT32_TAG)
+  {
+    return (int)((Value_Int32 *)v)->i32;
+  }
+
   if (v->header.tag == INT64_TAG)
   {
     return (int)((Value_Int64 *)v)->i64;
   }
 
-  if (v->header.tag == INT32_TAG)
-  {
-    return ((Value_Int32 *)v)->i32;
-  }
-
   if (v->header.tag == DOUBLE_TAG)
   {
     return (int)((Value_Double *)v)->d;
+  }
+
+  if (v->header.tag == CHAR_TAG)
+  {
+    return (int)((Value_Char *)v)->c;
   }
 
   return -1;

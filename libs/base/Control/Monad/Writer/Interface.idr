@@ -8,6 +8,8 @@ import Control.Monad.RWS.CPS
 import Control.Monad.Trans
 import Control.Monad.Writer.CPS
 
+%default total
+
 ||| MonadWriter interface
 |||
 ||| tell is like tell on the MUD's it shouts to monad

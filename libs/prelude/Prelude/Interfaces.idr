@@ -19,6 +19,7 @@ import Prelude.Ops
 |||     forall a b c, a <+> (b <+> c) == (a <+> b) <+> c
 public export
 interface Semigroup ty where
+  constructor MkSemigroup
   (<+>) : ty -> ty -> ty
 
 ||| Sets equipped with a single binary operation that is associative, along with
@@ -32,6 +33,7 @@ interface Semigroup ty where
 |||     forall a, neutral <+> a == a
 public export
 interface Semigroup ty => Monoid ty where
+  constructor MkMonoid
   neutral : ty
 
 public export
@@ -68,6 +70,7 @@ Monoid b => Monoid (a -> b) where
 ||| @ f a parameterised type
 public export
 interface Functor f where
+  constructor MkFunctor
   ||| Apply a function across everything of type 'a' in a parameterised type
   ||| @ f the parameterised type
   ||| @ func the function to apply
@@ -81,6 +84,14 @@ public export
 (<$>) : Functor f => (func : a -> b) -> f a -> f b
 (<$>) func x = map func x
 
+||| Flipped version of `<$>`, an infix alias for `map`, applying a function across
+||| everything of type 'a' in a parameterised type.
+||| @ f the parameterised type
+||| @ func the function to apply
+public export
+(<&>) : Functor f => f a -> (func : a -> b) -> f b
+(<&>) x func = map func x
+
 ||| Run something for effects, replacing the return value with a given parameter.
 public export
 (<$) : Functor f => b -> f a -> f b
@@ -92,6 +103,7 @@ public export
 ($>) fa b = map (const b) fa
 
 ||| Run something for effects, throwing away the return value.
+%inline
 public export
 ignore : Functor f => f a -> f ()
 ignore = map (const ())
@@ -106,6 +118,7 @@ namespace Functor
 ||| @f The action of the Bifunctor on pairs of objects
 public export
 interface Bifunctor f where
+  constructor MkBifunctor
   ||| The action of the Bifunctor on pairs of morphisms
   |||
   ||| ````idris example
@@ -139,6 +152,7 @@ mapHom f = bimap f f
 
 public export
 interface Functor f => Applicative f where
+  constructor MkApplicative
   pure : a -> f a
   (<*>) : f (a -> b) -> f a -> f b
 
@@ -164,11 +178,13 @@ namespace Applicative
 
 public export
 interface Applicative f => Alternative f where
+  constructor MkAlternative
   empty : f a
   (<|>) : f a -> Lazy (f a) -> f a
 
 public export
 interface Applicative m => Monad m where
+  constructor MkMonad
   ||| Also called `bind`.
   (>>=) : m a -> (a -> m b) -> m b
 
@@ -206,11 +222,16 @@ public export
 guard : Alternative f => Bool -> f ()
 guard x = if x then pure () else empty
 
-||| Conditionally execute an applicative expression.
+||| Conditionally execute an applicative expression when the boolean is true.
 public export
 when : Applicative f => Bool -> Lazy (f ()) -> f ()
 when True f = f
 when False f = pure ()
+
+||| Execute an applicative expression unless the boolean is true.
+%inline public export
+unless : Applicative f => Bool -> Lazy (f ()) -> f ()
+unless = when . not
 
 ---------------------------
 -- FOLDABLE, TRAVERSABLE --
@@ -222,6 +243,7 @@ when False f = pure ()
 ||| @ t The type of the 'Foldable' parameterised type.
 public export
 interface Foldable t where
+  constructor MkFoldable
   ||| Successively combine the elements in a parameterised type using the
   ||| provided function, starting with the element that is in the final position
   ||| i.e. the right-most position.
@@ -243,75 +265,140 @@ interface Foldable t where
   null : t elem -> Lazy Bool
   null = foldr {acc = Lazy Bool} (\ _,_ => False) True
 
-||| Similar to `foldl`, but uses a function wrapping its result in a `Monad`.
-||| Consequently, the final value is wrapped in the same `Monad`.
-public export
-foldlM : (Foldable t, Monad m) => (funcM: a -> b -> m a) -> (init: a) -> (input: t b) -> m a
-foldlM fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
+  ||| Similar to `foldl`, but uses a function wrapping its result in a `Monad`.
+  ||| Consequently, the final value is wrapped in the same `Monad`.
+  foldlM : Monad m => (funcM : acc -> elem -> m acc) -> (init : acc) -> (input : t elem) -> m acc
+  foldlM fm a0 = foldl (\ma, b => ma >>= flip fm b) (pure a0)
 
-||| Maps each element to a value and combine them
-public export
-foldMap : (Foldable t, Monoid m) => (a -> m) -> t a -> m
-foldMap f = foldr ((<+>) . f) neutral
+  ||| Produce a list of the elements contained in the parametrised type.
+  toList : t elem -> List elem
+  toList = foldr (::) []
+
+  ||| Maps each element to a value and combine them.
+  ||| For performance reasons, this should wherever
+  ||| be implemented with tail recursion.
+  ||| @ f The function to apply to each element.
+  foldMap : Monoid m => (f : a -> m) -> t a -> m
+  foldMap f = foldr ((<+>) . f) neutral
 
 ||| Combine each element of a structure into a monoid.
 public export
 concat : (Foldable t, Monoid a) => t a -> a
-concat = foldr (<+>) neutral
+concat = foldMap id
 
 ||| Combine into a monoid the collective results of applying a function to each
 ||| element of a structure.
 public export
 concatMap : (Foldable t, Monoid m) => (a -> m) -> t a -> m
-concatMap f = foldr ((<+>) . f) neutral
+concatMap = foldMap
+
+namespace Bool.Lazy
+  namespace Semigroup
+    public export
+    [Any] Semigroup (Lazy Bool) where
+      x <+> y = force x || y
+
+    public export
+    [All] Semigroup (Lazy Bool) where
+      x <+> y = force x && y
+
+  namespace Monoid
+    public export
+    [Any] Monoid (Lazy Bool) using Semigroup.Any where
+      neutral = delay False
+
+    public export
+    [All] Monoid (Lazy Bool) using Semigroup.All where
+      neutral = delay True
 
 ||| The conjunction of all elements of a structure containing lazy boolean
 ||| values.  `and` short-circuits from left to right, evaluating until either an
 ||| element is `False` or no elements remain.
 public export
 and : Foldable t => t (Lazy Bool) -> Bool
-and = foldl (&&) True
+and = force . concat @{(%search, All)}
 
 ||| The disjunction of all elements of a structure containing lazy boolean
 ||| values.  `or` short-circuits from left to right, evaluating either until an
 ||| element is `True` or no elements remain.
 public export
 or : Foldable t => t (Lazy Bool) -> Bool
-or = foldl (||) False
+or = force . concat @{(%search, Any)}
+
+namespace Bool
+  namespace Semigroup
+    public export
+    [Any] Semigroup Bool where
+      x <+> y = x || delay y
+
+    public export
+    [All] Semigroup Bool where
+      x <+> y = x && delay y
+
+  namespace Monoid
+    public export
+    [Any] Monoid Bool using Bool.Semigroup.Any where
+      neutral = False
+
+    public export
+    [All] Monoid Bool using Bool.Semigroup.All where
+      neutral = True
 
 ||| The disjunction of the collective results of applying a predicate to all
 ||| elements of a structure.  `any` short-circuits from left to right.
 public export
 any : Foldable t => (a -> Bool) -> t a -> Bool
-any p = foldl (\x,y => x || p y) False
+any = foldMap @{%search} @{Any}
 
 ||| The disjunction of the collective results of applying a predicate to all
 ||| elements of a structure.  `all` short-circuits from left to right.
 public export
 all : Foldable t => (a -> Bool) -> t a -> Bool
-all p = foldl (\x,y => x && p y)  True
+all = foldMap @{%search} @{All}
+  where
+    monoid : Monoid Bool
+    monoid = MkMonoid @{MkSemigroup (\x, y => x && y)} True
+
+namespace Num
+  namespace Semigroup
+    public export
+    [Additive] Num a => Semigroup a where
+      (<+>) = (+)
+
+    public export
+    [Multiplicative] Num a => Semigroup a where
+      (<+>) = (*)
+
+  namespace Monoid
+    public export
+    [Additive] Num a => Monoid a using Semigroup.Additive where
+      neutral = 0
+
+    public export
+    [Multiplicative] Num a => Monoid a using Semigroup.Multiplicative where
+      neutral = 1
 
 ||| Add together all the elements of a structure.
 public export
 sum : (Foldable t, Num a) => t a -> a
-sum = foldr (+) 0
+sum = concat @{(%search, Additive)}
 
 ||| Add together all the elements of a structure.
 ||| Same as `sum` but tail recursive.
 export
 sum' : (Foldable t, Num a) => t a -> a
-sum' = foldl (+) 0
+sum' = sum
 
 ||| Multiply together all elements of a structure.
 public export
 product : (Foldable t, Num a) => t a -> a
-product = foldr (*) 1
+product = concat @{(%search, Multiplicative)}
 
 ||| Multiply together all elements of a structure.
 ||| Same as `product` but tail recursive.
 export
 product' : (Foldable t, Num a) => t a -> a
-product' = foldl (*) 1
+product' = product
 
 ||| Map each element of a structure to a computation, evaluate those
 ||| computations and discard the results.
@@ -328,6 +415,23 @@ sequence_ = foldr (*>) (pure ())
 public export
 for_ : (Foldable t, Applicative f) => t a -> (a -> f b) -> f ()
 for_ = flip traverse_
+
+namespace Lazy
+  public export
+  [SemigroupAlternative] Alternative f => Semigroup (Lazy (f a)) where
+    x <+> y = force x <|> y
+
+  public export
+  [MonoidAlternative] Alternative f => Monoid (Lazy (f a)) using Lazy.SemigroupAlternative where
+    neutral = delay empty
+
+public export
+[SemigroupAlternative] Alternative f => Semigroup (f a) where
+  x <+> y = x <|> delay y
+
+public export
+[MonoidAlternative] Alternative f => Monoid (f a) using Interfaces.SemigroupAlternative where
+  neutral = empty
 
 ||| Fold using Alternative.
 |||
@@ -351,18 +455,12 @@ for_ = flip traverse_
 ||| Note: In Haskell, `choice` is called `asum`.
 public export
 choice : (Foldable t, Alternative f) => t (Lazy (f a)) -> f a
-choice t = foldr {elem = Lazy (f a)} {acc = Lazy (f a)}
-                 (\ x, xs => x <|> xs)
-                 empty
-                 t
+choice = force . concat @{(%search, Lazy.MonoidAlternative)}
 
 ||| A fused version of `choice` and `map`.
 public export
 choiceMap : (Foldable t, Alternative f) => (a -> f b) -> t a -> f b
-choiceMap act t = foldr {elem = a} {acc = Lazy (f b)}
-                        (\e, a => act e <|> a)
-                        empty
-                        t
+choiceMap = foldMap @{%search} @{MonoidAlternative}
 
 namespace Foldable
   ||| Composition of foldables is foldable.
@@ -371,9 +469,25 @@ namespace Foldable
     foldr = foldr . flip . foldr
     foldl = foldl . foldl
     null tf = null tf || all (force . null) tf
+    foldMap = foldMap . foldMap
+
+||| `Bifoldable` identifies foldable structures with two different varieties
+||| of elements (as opposed to `Foldable`, which has one variety of element).
+||| Common examples are `Either` and `Pair`.
+public export
+interface Bifoldable p where
+  constructor MkBifoldable
+  bifoldr : (a -> acc -> acc) -> (b -> acc -> acc) -> acc -> p a b -> acc
+
+  bifoldl : (acc -> a -> acc) -> (acc -> b -> acc) -> acc -> p a b -> acc
+  bifoldl f g z t = bifoldr (flip (.) . flip f) (flip (.) . flip g) id t z
+
+  binull : p a b -> Lazy Bool
+  binull = bifoldr {acc = Lazy Bool} (\ _,_ => False) (\ _,_ => False) True
 
 public export
 interface (Functor t, Foldable t) => Traversable t where
+  constructor MkTraversable
   ||| Map each element of a structure to a computation, evaluate those
   ||| computations and combine the results.
   traverse : Applicative f => (a -> f b) -> t a -> f (t b)
@@ -387,6 +501,27 @@ sequence = traverse id
 public export
 for : (Traversable t, Applicative f) => t a -> (a -> f b) -> f (t b)
 for = flip traverse
+
+public export
+interface (Bifunctor p, Bifoldable p) => Bitraversable p where
+  constructor MkBitraversable
+  ||| Map each element of a structure to a computation, evaluate those
+  ||| computations and combine the results.
+  bitraverse : Applicative f => (a -> f c) -> (b -> f d) -> p a b -> f (p c d)
+
+||| Evaluate each computation in a structure and collect the results.
+public export
+bisequence : (Bitraversable p, Applicative f) => p (f a) (f b) -> f (p a b)
+bisequence = bitraverse id id
+
+||| Like `bitraverse` but with the arguments flipped.
+public export
+bifor :  (Bitraversable p, Applicative f)
+      => p a b
+      -> (a -> f c)
+      -> (b -> f d)
+      -> f (p c d)
+bifor t f g = bitraverse f g t
 
 namespace Traversable
   ||| Composition of traversables is traversable.

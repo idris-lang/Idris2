@@ -1,5 +1,6 @@
 module TTImp.Elab.Case
 
+import Core.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -13,6 +14,7 @@ import Core.Value
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.Elab.ImplicitBind
+import TTImp.Elab.Utils
 import TTImp.TTImp
 import TTImp.Utils
 
@@ -32,7 +34,7 @@ changeVar old new (Meta fc nm i args)
     = Meta fc nm i (map (changeVar old new) args)
 changeVar (MkVar old) (MkVar new) (Bind fc x b sc)
     = Bind fc x (assert_total (map (changeVar (MkVar old) (MkVar new)) b))
-		            (changeVar (MkVar (Later old)) (MkVar (Later new)) sc)
+           (changeVar (MkVar (Later old)) (MkVar (Later new)) sc)
 changeVar old new (App fc fn arg)
     = App fc (changeVar old new fn) (changeVar old new arg)
 changeVar old new (As fc s nm p)
@@ -51,14 +53,14 @@ findLater {older} x (_ :: xs)
     = let MkVar p = findLater {older} x xs in
           MkVar (Later p)
 
-toRig1 : {idx : Nat} -> (0 p : IsVar name idx vs) -> Env Term vs -> Env Term vs
+toRig1 : {idx : Nat} -> (0 p : IsVar nm idx vs) -> Env Term vs -> Env Term vs
 toRig1 First (b :: bs)
     = if isErased (multiplicity b)
          then setMultiplicity b linear :: bs
          else b :: bs
 toRig1 (Later p) (b :: bs) = b :: toRig1 p bs
 
-toRig0 : {idx : Nat} -> (0 p : IsVar name idx vs) -> Env Term vs -> Env Term vs
+toRig0 : {idx : Nat} -> (0 p : IsVar nm idx vs) -> Env Term vs -> Env Term vs
 toRig0 First (b :: bs) = setMultiplicity b erased :: bs
 toRig0 (Later p) (b :: bs) = b :: toRig0 p bs
 
@@ -97,7 +99,7 @@ merge : {vs : List Name} ->
         List (Var vs) -> List (Var vs) -> List (Var vs)
 merge [] xs = xs
 merge (v :: vs) xs
-    = merge vs (v :: filter (\p => not (sameVar v p)) xs)
+    = merge vs (v :: filter (not . sameVar v) xs)
 
 -- Extend the list of variables we need in the environment so far, removing
 -- duplicates
@@ -192,7 +194,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- split on that, rather than adding it as a new argument
          let splitOn = findScrutinee env scr
 
-         caseretty_in <- the (Core (Term vars)) $ case expected of
+         caseretty_in <- case expected of
                            Just ty => getTerm ty
                            _ =>
                               do nmty <- genName "caseTy"
@@ -205,6 +207,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
                             (maybe (Bind fc scrn (Pi fc caseRig Explicit scrty)
                                        (weaken caseretty))
                                    (const caseretty) splitOn)
+         (erasedargs, _) <- findErased casefnty
 
          logEnv "elab.case" 10 "Case env" env
          logTermNF "elab.case" 2 ("Case function type: " ++ show casen) [] casefnty
@@ -215,19 +218,14 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- actually bound! This is rather hacky, but a lot less fiddly than
          -- the alternative of fixing up the environment
          when (not (isNil fullImps)) $ findImpsIn fc [] [] casefnty
-         cidx <- addDef casen (newDef fc casen (if isErased rigc then erased else top)
-                                      [] casefnty vis None)
+         cidx <- addDef casen (record { eraseArgs = erasedargs }
+                                (newDef fc casen (if isErased rigc then erased else top)
+                                      [] casefnty vis None))
+
          -- don't worry about totality of the case block; it'll be handled
          -- by the totality of the parent function
          setFlag fc (Resolved cidx) (SetTotal PartialOK)
          let caseRef : Term vars = Ref fc Func (Resolved cidx)
-
-         -- If there's no duplication of the scrutinee in the block,
-         -- inline it.
-         -- This will be the case either if the scrutinee is a variable, in
-         -- which case the duplication won't hurt, or if (TODO) none of the
-         -- case patterns in alts are just a variable
-         maybe (pure ()) (const (setFlag fc casen Inline)) splitOn
 
          let applyEnv = applyToFull fc caseRef env
          let appTm : Term vars
@@ -250,6 +248,17 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          let olddelayed = delayedElab ust
          put UST (record { delayedElab = [] } ust)
          processDecl [InCase] nest' [] (IDef fc casen alts')
+
+         -- If there's no duplication of the scrutinee in the block,
+         -- flag it as inlinable.
+         -- This will be the case either if the scrutinee is a variable, in
+         -- which case the duplication won't hurt, or if there's no variable
+         -- duplicated in the body (what ghc calls W-safe)
+         -- We'll check that second condition later, after generating the
+         -- runtime (erased) case trees
+         let inlineOK = maybe False (const True) splitOn
+         when inlineOK $ setFlag fc casen Inline
+
          ust <- get UST
          put UST (record { delayedElab = olddelayed } ust)
 
@@ -376,15 +385,15 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
            (scrtm_in, gscrty, caseRig) <- handle
               (do c <- runDelays 10 $ check chrig elabinfo nest env scr (Just (gnf env scrtyv))
                   pure (fst c, snd c, chrig))
-              (\err => case err of
-                            e@(LinearMisuse _ _ r _)
-                              => branchOne
-                                    (do c <- runDelays 10 $ check linear elabinfo nest env scr
-                                               (Just (gnf env scrtyv))
-                                        pure (fst c, snd c, linear))
-                                    (throw e)
-                                    r
-                            e => throw e)
+              \case
+                e@(LinearMisuse _ _ r _)
+                  => branchOne
+                     (do c <- runDelays 10 $ check linear elabinfo nest env scr
+                              (Just (gnf env scrtyv))
+                         pure (fst c, snd c, linear))
+                     (throw e)
+                     r
+                e => throw e
 
            scrty <- getTerm gscrty
            logTermNF "elab.case" 5 "Scrutinee type" env scrty

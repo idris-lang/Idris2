@@ -42,7 +42,7 @@ addToHier : Name -> a ->
             StringMap (List (Name, a)) -> StringMap (List (Name, a))
 addToHier n val hier
      -- Only add user defined names. Machine generated names can only be
-		 -- found with the exactNames
+     -- found with the exactNames
      = case userNameRoot n of
             Nothing => hier
             Just root =>
@@ -53,9 +53,9 @@ addToHier n val hier
     update : a -> List (Name, a) -> List (Name, a)
     update val [] = [(n, val)]
     update val (old :: xs)
-		    = if n == fst old
-					   then (n, val) :: xs
-						 else old :: update val xs
+      = if n == fst old
+          then (n, val) :: xs
+          else old :: update val xs
 
 export
 addName : Name -> a -> ANameMap a -> ANameMap a

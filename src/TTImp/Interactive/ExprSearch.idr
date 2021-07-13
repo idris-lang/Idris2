@@ -18,6 +18,7 @@ import Core.Env
 import Core.LinearCheck
 import Core.Metadata
 import Core.Normalise
+import Core.Options
 import Core.Unify
 import Core.TT
 import Core.Value
@@ -28,7 +29,6 @@ import TTImp.TTImp
 import TTImp.Unelab
 import TTImp.Utils
 
-import Libraries.Data.Bool.Extra
 import Data.Either
 import Data.List
 
@@ -38,9 +38,9 @@ import Data.List
 -- of the LHS. Only recursive calls with a different structure are okay.
 record RecData where
   constructor MkRecData
-  {vars : List Name}
+  {localVars : List Name}
   recname : Name -- resolved name
-  lhsapp : Term vars
+  lhsapp : Term localVars
 
 -- Additional definitions required to support the result
 ExprDefs : Type
@@ -92,11 +92,14 @@ searchN : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           Nat -> Core (Search a) -> Core (List a, Core (Search a))
 searchN max s
-    = tryUnify
-         (do res <- s
-             xs <- count max res
-             pure xs)
-         (pure ([], pure NoMore))
+    = do startTimer (searchTimeout !getSession) "expression search"
+         tryUnify
+           (do res <- s
+               xs <- count max res
+               clearTimer
+               pure xs)
+           (do clearTimer
+               pure ([], pure NoMore))
   where
     count : Nat -> Search a -> Core (List a, Core (Search a))
     count k NoMore = pure ([], pure NoMore)
@@ -236,7 +239,12 @@ firstSuccess (elab :: elabs)
          catch (do Result res more <- elab
                       | NoMore => continue ust defs elabs
                    pure (Result res (continue ust defs (more :: elabs))))
-               (\err => continue ust defs elabs)
+               (\err =>
+                    case err of
+                         -- Give up on timeout, or we'll keep trying all the
+                         -- other branches.
+                         Timeout _ => noResult
+                         _ => continue ust defs elabs)
   where
     continue : UState -> Defs -> List (Core (Search a)) ->
                Core (Search a)
@@ -302,6 +310,7 @@ searchName : {vars : _} ->
              Core (Search (Term vars, ExprDefs))
 searchName fc rigc opts env target topty (n, ndef)
     = do defs <- get Ctxt
+         checkTimer
          let True = visibleInAny (!getNS :: !getNestedNS)
                                  (fullname ndef) (visibility ndef)
              | _ => noResult
@@ -372,6 +381,7 @@ searchNames fc rig opts env ty topty []
     = noResult
 searchNames fc rig opts env ty topty (n :: ns)
     = do defs <- get Ctxt
+         checkTimer
          vis <- traverse (visible (gamma defs) (currentNS defs :: nestedNS defs)) (n :: ns)
          let visns = mapMaybe id vis
          nfty <- nf defs env ty
@@ -431,13 +441,13 @@ tryRecursive fc rig opts env ty topty rdata
       appsDiff : Term vs -> Term vs' -> List (Term vs) -> List (Term vs') ->
                  Bool
       appsDiff (Ref _ (DataCon _ _) f) (Ref _ (DataCon _ _) f') args args'
-         = f /= f' || anyTrue (zipWith argDiff args args')
+         = f /= f' || any (uncurry argDiff) (zip args args')
       appsDiff (Ref _ (TyCon _ _) f) (Ref _ (TyCon _ _) f') args args'
-         = f /= f' || anyTrue (zipWith argDiff args args')
+         = f /= f' || any (uncurry argDiff) (zip args args')
       appsDiff (Ref _ _ f) (Ref _ _ f') args args'
          = f == f'
            && length args == length args'
-           && anyTrue (zipWith argDiff args args')
+           && any (uncurry argDiff) (zip args args')
       appsDiff (Ref _ (DataCon _ _) f) (Local _ _ _ _) _ _ = True
       appsDiff (Local _ _ _ _) (Ref _ (DataCon _ _) f) _ _ = True
       appsDiff f f' [] [] = argDiff f f'
@@ -471,6 +481,7 @@ searchLocalWith fc nofn rig opts env [] ty topty
     = noResult
 searchLocalWith {vars} fc nofn rig opts env ((p, pty) :: rest) ty topty
     = do defs <- get Ctxt
+         checkTimer
          nty <- nf defs env ty
          getSuccessful fc rig opts False env ty topty
                        [findPos defs p id !(nf defs env pty) nty,
@@ -793,6 +804,7 @@ searchHole : {auto c : Ref Ctxt Defs} ->
 searchHole fc rig opts n locs topty defs glob
     = do searchty <- normalise defs [] (type glob)
          logTerm "interaction.search" 10 "Normalised type" searchty
+         checkTimer
          searchType fc rig opts [] topty locs searchty
 
 -- Declared at the top
@@ -865,6 +877,13 @@ exprSearchOpts opts fc n_in hints
     = do defs <- get Ctxt
          Just (n, idx, gdef) <- lookupHoleName n_in defs
              | Nothing => undefinedName fc n_in
+         -- the REPL does this step, but doing it here too because
+         -- expression search might be invoked some other way
+         let Hole _ _ = definition gdef
+             | PMDef pi [] (STerm _ tm) _ _
+                 => do raw <- unelab [] !(toFullNames !(normaliseHoles defs [] tm))
+                       one raw
+             | _ => throw (GenericMsg fc "Name is already defined")
          lhs <- findHoleLHS !(getFullName (Resolved idx))
          log "interaction.search" 10 $ "LHS hole data " ++ show (n, lhs)
          opts' <- if getRecData opts
@@ -882,13 +901,24 @@ exprSearchOpts opts fc n_in hints
                                [res] => pure $ Just res
                                _ => pure Nothing
 
+exprSearch' : {auto c : Ref Ctxt Defs} ->
+              {auto m : Ref MD Metadata} ->
+              {auto u : Ref UST UState} ->
+              FC -> Name -> List Name ->
+              Core (Search RawImp)
+exprSearch' = exprSearchOpts (initSearchOpts True 5)
+
 export
 exprSearch : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              FC -> Name -> List Name ->
              Core (Search RawImp)
-exprSearch = exprSearchOpts (initSearchOpts True 5)
+exprSearch fc n hints
+    = do startTimer (searchTimeout !getSession) "expression search"
+         res <- exprSearch' fc n hints
+         clearTimer
+         pure res
 
 export
 exprSearchN : {auto c : Ref Ctxt Defs} ->

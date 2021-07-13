@@ -1,14 +1,18 @@
 module Idris.SetOptions
 
+import Compiler.Common
+
 import Core.Context
 import Core.Directory
 import Core.Metadata
 import Core.Options
 import Core.Unify
 import Libraries.Utils.Path
-import Libraries.Data.List1 as Lib
+import Libraries.Data.List.Extra
 
 import Idris.CommandLine
+import Idris.Package.Types
+import Idris.ProcessIdr
 import Idris.REPL
 import Idris.Syntax
 import Idris.Version
@@ -16,58 +20,76 @@ import Idris.Version
 import IdrisPaths
 
 import Data.List
+import Data.List1
 import Data.So
-import Data.Strings
+import Data.String
+
+import Libraries.Data.List1 as Lib
 
 import System
 import System.Directory
 
 %default covering
 
--- Get a list of all the candidate directories that match a package spec
--- in a given path. Return an empty list on file error (e.g. path not existing)
-export
-candidateDirs : String -> String -> PkgVersionBounds ->
-                IO (List (String, PkgVersion))
-candidateDirs dname pkg bounds
-    = do Right d <- openDir dname
-             | Left err => pure []
-         getFiles d []
+||| Dissected information about a package directory
+record PkgDir where
+  constructor MkPkgDir
+  ||| Directory name. Example "contrib-0.3.0"
+  dirName : String
+  ||| Package name. Example "contrib"
+  pkgName : String
+  ||| Package version. Example `Just $ MkPkgVersion (0 ::: [3,0])`
+  version : Maybe PkgVersion
+
+-- dissects a directory name, trying to extract
+-- the corresponding package name and -version
+pkgDir : String -> PkgDir
+pkgDir str =
+   -- Split the dir name into parts concatenated by "-"
+   -- treating the last part as the version number
+   -- and the initial parts as the package name.
+   -- For reasons of backwards compatibility, we also
+   -- accept hyphenated directory names without a part
+   -- corresponding to a version number.
+   case Lib.unsnoc $ split (== '-') str of
+     (Nil, last) => MkPkgDir str last Nothing
+     (init,last) =>
+       case toVersion last of
+         Just v  => MkPkgDir str (concat $ intersperse "-" init) (Just v)
+         Nothing => MkPkgDir str str Nothing
   where
     toVersion : String -> Maybe PkgVersion
     toVersion = map MkPkgVersion
               . traverse parsePositive
-              . forget
               . split (== '.')
 
-    getVersion : String -> (String, PkgVersion)
-    getVersion str =
-      -- Split the dir name into parts concatenated by "-"
-      -- treating the last part as the version number
-      -- and the initial parts as the package name.
-      -- For reasons of backwards compatibility, we also
-      -- accept hyphenated directory names without a part
-      -- corresponding to a version number.
-      case Lib.unsnoc $ split (== '-') str of
-        (Nil, last) => (last, MkPkgVersion [0])
-        (init,last) =>
-          case toVersion last of
-            Just v  => (concat $ intersperse "-" init, v)
-            Nothing => (str, MkPkgVersion [0])
-
-    -- Return a list of paths that match the version spec
-    -- (full name, version string)
-    -- We'll order by version string that the highest version number is the
-    -- one we use
-    getFiles : Directory -> List (String, PkgVersion) ->
-               IO (List (String, PkgVersion))
+dirEntries : String -> IO (List String)
+dirEntries dname =
+    do Right d <- openDir dname
+         | Left err => pure []
+       getFiles d []
+  where
+    getFiles : Directory -> List String -> IO (List String)
     getFiles d acc
         = do Right str <- dirEntry d
-                   | Left err => pure (reverse acc)
-             let (pkgdir, ver) = getVersion str
-             if pkgdir == pkg && inBounds ver bounds
-                then getFiles d (((dname </> str), ver) :: acc)
-                else getFiles d acc
+               | Left err => pure (reverse acc)
+             getFiles d (str :: acc)
+
+getPackageDirs : String -> IO (List PkgDir)
+getPackageDirs dname = map pkgDir <$> dirEntries dname
+
+-- Get a list of all the candidate directories that match a package spec
+-- in a given path. Return an empty list on file error (e.g. path not existing)
+export
+candidateDirs : String -> String -> PkgVersionBounds ->
+                IO (List (String, Maybe PkgVersion))
+candidateDirs dname pkg bounds =
+  mapMaybe checkBounds <$> getPackageDirs dname
+
+  where checkBounds : PkgDir -> Maybe (String,Maybe PkgVersion)
+        checkBounds (MkPkgDir dirName pkgName ver) =
+          do guard (pkgName == pkg && inBounds ver bounds)
+             pure ((dname </> dirName), ver)
 
 export
 addPkgDir : {auto c : Ref Ctxt Defs} ->
@@ -110,6 +132,143 @@ dirOption dirs LibDir
     = coreLift $ putStrLn
          (prefix_dir dirs </> "idris2-" ++ showVersion False version)
 
+--------------------------------------------------------------------------------
+--          Bash Autocompletions
+--------------------------------------------------------------------------------
+
+findIpkg : {auto c : Ref Ctxt Defs} -> Core (List String)
+findIpkg =
+  do Just srcdir <- coreLift currentDir
+       | Nothing => throw (InternalError "Can't get current directory")
+     fs <- coreLift $ dirEntries srcdir
+     pure $ filter (".ipkg" `isSuffixOf`) fs
+
+packageNames : String -> IO (List String)
+packageNames dir = filter notHidden . map pkgName <$> getPackageDirs dir
+  where notHidden : String -> Bool
+        notHidden = not . isPrefixOf "."
+
+
+findPackages : {auto c : Ref Ctxt Defs} -> Core (List String)
+findPackages =
+  do defs <- get Ctxt
+     let globaldir = prefix_dir (dirs (options defs)) </>
+                           "idris2-" ++ showVersion False version
+     let depends = depends_dir (dirs (options defs))
+     Just srcdir <- coreLift currentDir
+         | Nothing => throw (InternalError "Can't get current directory")
+     let localdir = srcdir </> depends
+
+     -- Get candidate directories from the global install location,
+     -- and the local package directory
+     locFiles <- coreLift $ packageNames localdir
+     globFiles <- coreLift $ packageNames globaldir
+     pure $ locFiles ++ globFiles
+
+-- keep only those Strings, of which `x` is a prefix
+prefixOnly : String -> List String -> List String
+prefixOnly x = sortedNub . filter (\s => x /= s && isPrefixOf x s)
+
+-- filter a list of Strings by the given prefix, but only if
+-- the prefix is not "--", bash complete's constant for empty input.
+prefixOnlyIfNonEmpty : String -> List String -> List String
+prefixOnlyIfNonEmpty "--" = id
+prefixOnlyIfNonEmpty s    = prefixOnly s
+
+
+-- list of registered codegens
+codegens : {auto c : Ref Ctxt Defs} -> Core (List String)
+codegens = map fst . availableCGs . options <$> get Ctxt
+
+logLevels : List String
+logLevels = map fst knownTopics >>= prefixes . forget . split (== '.')
+  where prefixes : List String -> List String
+        prefixes [] = []
+        prefixes (x :: xs) = x :: map (x ++ "." ++) (prefixes xs)
+
+-- given a pair of strings, the first representing the word
+-- actually being edited, the second representing the word
+-- before the one being edited, return a list of possible
+-- completions. If the list of completions is empty, bash
+-- will perform directory completion.
+opts : {auto c : Ref Ctxt Defs} -> String -> String -> Core (List String)
+opts "--" "idris2"  = pure optionFlags
+
+-- codegens
+opts x "--cg"      = prefixOnlyIfNonEmpty x <$> codegens
+opts x "--codegen" = prefixOnlyIfNonEmpty x <$> codegens
+
+-- packages
+opts x "-p"        = prefixOnlyIfNonEmpty x <$> findPackages
+opts x "--package" = prefixOnlyIfNonEmpty x <$> findPackages
+
+-- logging
+opts x "--log"     = pure $ prefixOnlyIfNonEmpty x logLevels
+
+-- with directories
+opts "--" "-o"           = pure []
+opts "--" "--output"     = pure []
+opts "--" "--source-dir" = pure []
+opts "--" "--build-dir"  = pure []
+opts "--" "--output-dir" = pure []
+
+-- with package files
+opts x "--build"     = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--install"   = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--mkdoc"     = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--typecheck" = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--clean"     = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--repl"      = prefixOnlyIfNonEmpty x <$> findIpkg
+
+-- options
+opts x _ = pure $ if (x `elem` optionFlags)
+                     -- `x` is already a known option => perform
+                     -- directory completion
+                     then Nil
+                     else prefixOnly x optionFlags
+
+-- bash autocompletion script using the given function name
+completionScript : (fun : String) -> String
+completionScript fun =
+  let fun' = "_" ++ fun
+   in unlines [ fun' ++ "()"
+              , "{"
+              , "  ED=$([ -z $2 ] && echo \"--\" || echo $2)"
+              , "  COMPREPLY=($(idris2 --bash-completion $ED $3))"
+              , "}"
+              , ""
+              , "complete -F " ++ fun' ++ " -o dirnames idris2"
+              ]
+
+--------------------------------------------------------------------------------
+--          Processing Options
+--------------------------------------------------------------------------------
+
+export
+setIncrementalCG : {auto c : Ref Ctxt Defs} ->
+                   {auto o : Ref ROpts REPLOpts} ->
+                   Bool -> String -> Core ()
+setIncrementalCG failOnError cgn
+    = do defs <- get Ctxt
+         case getCG (options defs) cgn of
+           Just cg =>
+               do Just cgd <- getCG cg
+                       | Nothing => pure ()
+                  let Just _ = incCompileFile cgd
+                       | Nothing =>
+                            if failOnError
+                               then do coreLift $ putStrLn $ cgn ++ " does not support incremental builds"
+                                       coreLift $ exitWith (ExitFailure 1)
+                               else pure ()
+                  setSession (record { incrementalCGs $= (cg :: )} !getSession)
+           Nothing =>
+              if failOnError
+                 then do coreLift $ putStrLn "No such code generator"
+                         coreLift $ putStrLn $ "Code generators available: " ++
+                                         showSep ", " (map fst (availableCGs (options defs)))
+                         coreLift $ exitWith (ExitFailure 1)
+                 else pure ()
+
 -- Options to be processed before type checking. Return whether to continue.
 export
 preOptions : {auto c : Ref Ctxt Defs} ->
@@ -134,6 +293,9 @@ preOptions (IdeModeSocket _ :: opts)
          preOptions opts
 preOptions (CheckOnly :: opts)
     = do setSession (record { nobanner = True } !getSession)
+         preOptions opts
+preOptions (Profile :: opts)
+    = do setSession (record { profile = True } !getSession)
          preOptions opts
 preOptions (Quiet :: opts)
     = do setOutput (REPL True)
@@ -199,7 +361,8 @@ preOptions (DumpVMCode f :: opts)
     = do setSession (record { dumpvmcode = Just f } !getSession)
          preOptions opts
 preOptions (Logging n :: opts)
-    = do setSession (record { logLevel $= insertLogLevel n } !getSession)
+    = do setSession (record { logEnabled = True,
+                              logLevel $= insertLogLevel n } !getSession)
          preOptions opts
 preOptions (ConsoleWidth n :: opts)
     = do setConsoleWidth n
@@ -207,6 +370,29 @@ preOptions (ConsoleWidth n :: opts)
 preOptions (Color b :: opts)
     = do setColor b
          preOptions opts
+preOptions (WarningsAsErrors :: opts)
+    = do setSession (record { warningsAsErrors = True } !getSession)
+         preOptions opts
+preOptions (IgnoreShadowingWarnings :: opts)
+    = do setSession (record { showShadowingWarning = False } !getSession)
+         preOptions opts
+preOptions (HashesInsteadOfModTime :: opts)
+    = do setSession (record { checkHashesInsteadOfModTime = True } !getSession)
+         preOptions opts
+preOptions (IncrementalCG e :: opts)
+    = do defs <- get Ctxt
+         setIncrementalCG True e
+         preOptions opts
+preOptions (WholeProgram :: opts)
+    = do setSession (record { wholeProgram = True } !getSession)
+         preOptions opts
+preOptions (BashCompletion a b :: _)
+    = do os <- opts a b
+         coreLift $ putStr $ unlines os
+         pure False
+preOptions (BashCompletionScript fun :: _)
+    = do coreLift $ putStrLn $ completionScript fun
+         pure False
 preOptions (_ :: opts) = preOptions opts
 
 -- Options to be processed after type checking. Returns whether execution
@@ -223,11 +409,11 @@ postOptions res@(ErrorLoadingFile _ _) (OutputFile _ :: rest)
     = do ignore $ postOptions res rest
          pure False
 postOptions res (OutputFile outfile :: rest)
-    = do ignore $ compileExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN "main")) outfile
+    = do ignore $ compileExp (PRef EmptyFC (UN "main")) outfile
          ignore $ postOptions res rest
          pure False
 postOptions res (ExecFn str :: rest)
-    = do ignore $ execExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN str))
+    = do ignore $ execExp (PRef EmptyFC (UN str))
          ignore $ postOptions res rest
          pure False
 postOptions res (CheckOnly :: rest)

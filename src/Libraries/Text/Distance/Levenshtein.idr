@@ -2,7 +2,7 @@ module Libraries.Text.Distance.Levenshtein
 
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Libraries.Data.IOMatrix
 import Libraries.Data.List.Extra
 
@@ -25,7 +25,7 @@ spec a b = loop (fastUnpack a) (fastUnpack b) where
 ||| Dynamic programming
 export
 compute : HasIO io => String -> String -> io Nat
-compute a b = assert_total $ do
+compute a b = do
   let w = strLength a
   let h = strLength b
   -- In mat[i][j], we store the distance between
@@ -43,7 +43,8 @@ compute a b = assert_total $ do
 
   -- We introduce a specialised `read` for ease of use
   let get = \i, j => case !(read {io} mat i j) of
-        Nothing => idris_crash "INTERNAL ERROR: Badly initialised matrix"
+        Nothing => assert_total $
+          idris_crash "INTERNAL ERROR: Badly initialised matrix"
         Just n => pure n
 
   -- We fill the matrix from the bottom up, using the same formula we used
@@ -53,8 +54,8 @@ compute a b = assert_total $ do
       -- here we change Levenshtein slightly so that we may only substitute
       -- alpha / numerical characters for similar ones. This avoids suggesting
       -- "#" as a replacement for an out of scope "n".
-      let cost = let c = strIndex a (i-1)
-                     d = strIndex b (j-1)
+      let cost = let c = assert_total $ strIndex a (i-1)
+                     d = assert_total $ strIndex b (j-1)
                  in if c == d then 0 else
                     if isAlpha c && isAlpha d then 1 else
                     if isDigit c && isDigit d then 1 else 2

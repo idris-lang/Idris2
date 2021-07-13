@@ -101,8 +101,10 @@ angles : Doc ann -> Doc ann
 angles = enclose langle rangle
 
 export
-brackets : Doc ann -> Doc ann
-brackets = enclose lbracket rbracket
+brackets : {default lbracket ldelim : Doc ann} ->
+           {default rbracket rdelim : Doc ann} ->
+           Doc ann -> Doc ann
+brackets {ldelim, rdelim} = enclose ldelim rdelim
 
 export
 braces : Doc ann -> Doc ann

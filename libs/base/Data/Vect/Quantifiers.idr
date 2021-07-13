@@ -2,6 +2,8 @@ module Data.Vect.Quantifiers
 
 import Data.Vect
 
+%default total
+
 ||| A proof that some element of a vector satisfies some property
 |||
 ||| @ p the property to be satsified
@@ -16,6 +18,11 @@ export
 implementation Uninhabited (Any p Nil) where
   uninhabited (Here _) impossible
   uninhabited (There _) impossible
+
+export
+implementation {0 p : a -> Type} -> Uninhabited (p x) => Uninhabited (Any p xs) => Uninhabited (Any p $ x::xs) where
+  uninhabited (Here y) = uninhabited y
+  uninhabited (There y) = uninhabited y
 
 ||| Eliminator for `Any`
 public export
@@ -78,3 +85,8 @@ all d (x::xs) with (d x)
     case all d xs of
       Yes prf' => Yes (prf :: prf')
       No prf' => No (notAllThere prf')
+
+export
+Either (Uninhabited $ p x) (Uninhabited $ All p xs) => Uninhabited (All p $ x::xs) where
+  uninhabited @{Left  _} (px::pxs) = uninhabited px
+  uninhabited @{Right _} (px::pxs) = uninhabited pxs

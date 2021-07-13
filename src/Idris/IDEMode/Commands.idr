@@ -1,8 +1,10 @@
 module Idris.IDEMode.Commands
 
 import Core.Core
+import Core.Context
+import Core.Context.Log
 import Core.Name
-import public Idris.REPLOpts
+import public Idris.REPL.Opts
 import Libraries.Utils.Hex
 
 import System.File
@@ -90,13 +92,9 @@ getIDECommand (SExpList [SymbolAtom "add-missing", IntegerAtom line, StringAtom 
 getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n])
     = Just $ ExprSearch l n [] False
 getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n, SExpList hs])
-    = case readHints hs of
-           Just hs' => Just $ ExprSearch l n hs' False
-           _ => Nothing
+    = (\hs' => ExprSearch l n hs' False) <$> readHints hs
 getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n, SExpList hs, SymbolAtom mode])
-    = case readHints hs of
-           Just hs' => Just $ ExprSearch l n hs' (getMode mode)
-           _ => Nothing
+    = (\hs' => ExprSearch l n hs' (getMode mode)) <$> readHints hs
   where
     getMode : String -> Bool
     getMode m = m == "all"
@@ -281,9 +279,10 @@ sendStr f st =
   map (const ()) (fPutStr f st)
 
 export
-send : SExpable a => File -> a -> Core ()
+send : {auto c : Ref Ctxt Defs} -> SExpable a => File -> a -> Core ()
 send f resp
     = do let r = show (toSExp resp) ++ "\n"
+         log "ide-mode.send" 20 r
          coreLift $ sendStr f $ leftPad '0' 6 (asHex (cast (length r)))
          coreLift $ sendStr f r
          coreLift $ fflush f

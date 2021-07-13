@@ -41,6 +41,7 @@ Ord Prec where
 ||| Things that have a canonical `String` representation.
 public export
 interface Show ty where
+  constructor MkShow
   ||| Convert a value to its `String` representation.
   ||| @ x the value to convert
   show : (x : ty) -> String
@@ -124,6 +125,22 @@ Show Bits64 where
   showPrec = primNumShow prim__cast_Bits64String
 
 export
+Show Int8 where
+  showPrec = primNumShow prim__cast_Int8String
+
+export
+Show Int16 where
+  showPrec = primNumShow prim__cast_Int16String
+
+export
+Show Int32 where
+  showPrec = primNumShow prim__cast_Int32String
+
+export
+Show Int64 where
+  showPrec = primNumShow prim__cast_Int64String
+
+export
 Show Double where
   showPrec = primNumShow prim__cast_DoubleString
 
@@ -155,11 +172,6 @@ showLitChar c
            "DLE", "DC1", "DC2", "DC3", "DC4", "NAK", "SYN", "ETB",
            "CAN", "EM",  "SUB", "ESC", "FS",  "GS",  "RS",  "US"]
 
-    getAt : Nat -> List String -> Maybe String
-    getAt Z     (x :: xs) = Just x
-    getAt (S k) (x :: xs) = getAt k xs
-    getAt _     []        = Nothing
-
 showLitString : List Char -> String -> String
 showLitString []        = id
 showLitString ('"'::cs) = ("\\\"" ++) . showLitString cs
@@ -182,6 +194,10 @@ export
 Show Bool where
   show True = "True"
   show False = "False"
+
+export
+Show Void where
+  show v impossible
 
 export
 Show () where

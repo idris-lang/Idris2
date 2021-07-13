@@ -1,5 +1,7 @@
 module Core.FC
 
+import Core.Name.Namespace
+
 import Data.Maybe
 import Libraries.Text.Bounded
 import Libraries.Text.PrettyPrint.Prettyprinter
@@ -20,18 +22,61 @@ public export
 FileName : Type
 FileName = String
 
+public export
+data VirtualIdent : Type where
+  Interactive : VirtualIdent
+
+public export
+Eq VirtualIdent where
+  Interactive == Interactive = True
+
+export
+Show VirtualIdent where
+  show Interactive = "(Interactive)"
+
+public export
+data OriginDesc : Type where
+  ||| Anything that originates in physical Idris source files is assigned a
+  ||| `PhysicalIdrSrc modIdent`,
+  |||   where `modIdent` is the top-level module identifier of that file.
+  PhysicalIdrSrc : (ident : ModuleIdent) -> OriginDesc
+  ||| Anything parsed from a package file is decorated with `PhysicalPkgSrc fname`,
+  |||   where `fname` is path to the package file.
+  PhysicalPkgSrc : (fname : FileName) -> OriginDesc
+  Virtual : (ident : VirtualIdent) -> OriginDesc
+
+public export
+Eq OriginDesc where
+  PhysicalIdrSrc ident == PhysicalIdrSrc ident' = ident == ident'
+  PhysicalPkgSrc fname == PhysicalPkgSrc fname' = fname == fname'
+  Virtual ident        == Virtual ident'        = ident == ident'
+  _                    == _                     = False
+
+export
+Show OriginDesc where
+  show (PhysicalIdrSrc ident) = show ident
+  show (PhysicalPkgSrc fname) = show fname
+  show (Virtual ident) = show ident
+
+export
+Pretty OriginDesc where
+  pretty = pretty . show
+
 ||| A file context is a filename together with starting and ending positions.
 ||| It's often carried by AST nodes that might have been created from a source
 ||| file or by the compiler. That makes it useful to have the notion of
 ||| `EmptyFC` as part of the type.
 public export
-data FC = MkFC FileName FilePos FilePos
+data FC = MkFC        OriginDesc FilePos FilePos
+        | ||| Virtual FCs are FC attached to desugared/generated code. They can help with marking
+          ||| errors, but we shouldn't attach semantic highlighting metadata to them.
+          MkVirtualFC OriginDesc FilePos FilePos
         | EmptyFC
 
 ||| A version of a file context that cannot be empty
 public export
 NonEmptyFC : Type
-NonEmptyFC = (FileName, FilePos, FilePos)
+NonEmptyFC = (OriginDesc, FilePos, FilePos)
 
 ------------------------------------------------------------------------
 -- Conversion between NonEmptyFC and FC
@@ -45,11 +90,28 @@ justFC (fname, start, end) = MkFC fname start end
 export
 isNonEmptyFC : FC -> Maybe NonEmptyFC
 isNonEmptyFC (MkFC fn start end) = Just (fn, start, end)
+isNonEmptyFC (MkVirtualFC fn start end) = Just (fn, start, end)
 isNonEmptyFC EmptyFC = Nothing
+
+||| A view checking whether an arbitrary FC originates from a source location
+export
+isConcreteFC : FC -> Maybe NonEmptyFC
+isConcreteFC (MkFC fn start end) = Just (fn, start, end)
+isConcreteFC _ = Nothing
+
+||| Turn an FC into a virtual one
+export
+virtualiseFC : FC -> FC
+virtualiseFC (MkFC fn start end) = MkVirtualFC fn start end
+virtualiseFC fc = fc
 
 export
 defaultFC : NonEmptyFC
-defaultFC = ("", (0, 0), (0, 0))
+defaultFC = (Virtual Interactive, (0, 0), (0, 0))
+
+export
+replFC : FC
+replFC = justFC defaultFC
 
 export
 toNonEmptyFC : FC -> NonEmptyFC
@@ -59,8 +121,8 @@ toNonEmptyFC = fromMaybe defaultFC . isNonEmptyFC
 -- Projections
 
 export
-file : NonEmptyFC -> FileName
-file (fn, _, _) = fn
+origin : NonEmptyFC -> OriginDesc
+origin (fn, _, _) = fn
 
 export
 startPos : NonEmptyFC -> FilePos
@@ -90,8 +152,8 @@ endCol = snd . endPos
 -- Smart constructors
 
 export
-boundToFC : FileName -> WithBounds t -> FC
-boundToFC fname b = MkFC fname (start b) (end b)
+boundToFC : OriginDesc -> WithBounds t -> FC
+boundToFC mbModIdent b = MkFC mbModIdent (start b) (end b)
 
 ------------------------------------------------------------------------
 -- Predicates
@@ -117,10 +179,6 @@ export
 emptyFC : FC
 emptyFC = EmptyFC
 
-export
-toplevelFC : FC
-toplevelFC = MkFC "(toplevel)" (0, 0) (0, 0)
-
 ------------------------------------------------------------------------
 -- Basic operations
 export
@@ -140,22 +198,29 @@ mergeFC _ _ = Nothing
 export
 Eq FC where
   (==) (MkFC n s e) (MkFC n' s' e') = n == n' && s == s' && e == e'
+  (==) (MkVirtualFC n s e) (MkVirtualFC n' s' e') = n == n' && s == s' && e == e'
   (==) EmptyFC EmptyFC = True
   (==) _ _ = False
 
 export
 Show FC where
   show EmptyFC = "EmptyFC"
-  show (MkFC file startPos endPos) = file ++ ":" ++
+  show (MkFC ident startPos endPos) = show ident ++ ":" ++
              showPos startPos ++ "--" ++
              showPos endPos
+  show (MkVirtualFC ident startPos endPos) = show ident ++ ":" ++
+             showPos startPos ++ "--" ++
+             showPos endPos
+
+prettyPos : FilePos -> Doc ann
+prettyPos (l, c) = pretty (l + 1) <+> colon <+> pretty (c + 1)
 
 export
 Pretty FC where
   pretty EmptyFC = pretty "EmptyFC"
-  pretty (MkFC file startPos endPos) = pretty file <+> colon
+  pretty (MkFC ident startPos endPos) = pretty ident <+> colon
                  <+> prettyPos startPos <+> pretty "--"
                  <+> prettyPos endPos
-    where
-      prettyPos : FilePos -> Doc ann
-      prettyPos (l, c) = pretty (l + 1) <+> colon <+> pretty (c + 1)
+  pretty (MkVirtualFC ident startPos endPos) = pretty ident <+> colon
+                 <+> prettyPos startPos <+> pretty "--"
+                 <+> prettyPos endPos

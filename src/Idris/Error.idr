@@ -7,7 +7,7 @@ import Core.Env
 import Core.Options
 import Core.Value
 
-import Idris.REPLOpts
+import Idris.REPL.Opts
 import Idris.Resugar
 import Idris.Syntax
 import Idris.Pretty
@@ -15,24 +15,30 @@ import Idris.Pretty
 import Parser.Source
 
 import Data.List
-import Libraries.Data.List1 as Lib
-import Libraries.Data.List.Extra
+import Data.List1
 import Data.Maybe
 import Data.Stream
-import Data.Strings
+import Data.String
+
+import Libraries.Data.List.Extra
+import Libraries.Data.List1 as Lib
 import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import System.File
 import Libraries.Utils.String
 import Libraries.Data.String.Extra
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+import System.File
+
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
+
+keyword : Doc IdrisAnn -> Doc IdrisAnn
+keyword = annotate (Syntax SynKeyword)
 
 -- | Add binding site information if the term is simply a machine-inserted name
 pShowMN : {vars : _} -> Term vars -> Env t vars -> Doc IdrisAnn -> Doc IdrisAnn
@@ -50,7 +56,7 @@ pshow env tm
     = do defs <- get Ctxt
          ntm <- normaliseHoles defs env tm
          itm <- resugar env ntm
-         pure (pShowMN ntm env $ prettyTerm itm)
+         pure (pShowMN ntm env $ reAnnotate Syntax $ prettyTerm itm)
 
 pshowNoNorm : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
@@ -59,12 +65,13 @@ pshowNoNorm : {vars : _} ->
 pshowNoNorm env tm
     = do defs <- get Ctxt
          itm <- resugar env tm
-         pure (pShowMN tm env $ prettyTerm itm)
+         pure (pShowMN tm env $ reAnnotate Syntax $ prettyTerm itm)
 
 ploc : {auto o : Ref ROpts REPLOpts} ->
        FC -> Core (Doc IdrisAnn)
-ploc EmptyFC = pure emptyDoc
-ploc fc@(MkFC fn s e) = do
+ploc fc = do
+    let Just (fn, s, e) = isNonEmptyFC fc
+        | Nothing => pure emptyDoc
     let (sr, sc) = mapHom (fromInteger . cast) s
     let (er, ec) = mapHom (fromInteger . cast) e
     let nsize = length $ show (er + 1)
@@ -80,7 +87,7 @@ ploc fc@(MkFC fn s e) = do
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
     pad : Nat -> String -> String
-    pad size s = replicate (size `minus` length s) '0' ++ s
+    pad size s = Extra.replicate (size `minus` length s) '0' ++ s
     addLineNumbers : Nat -> Nat -> List (Doc IdrisAnn) -> List (Doc IdrisAnn)
     addLineNumbers size st xs =
       snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
@@ -88,10 +95,12 @@ ploc fc@(MkFC fn s e) = do
 -- Assumes the two FCs are sorted
 ploc2 : {auto o : Ref ROpts REPLOpts} ->
         FC -> FC -> Core (Doc IdrisAnn)
-ploc2 fc EmptyFC = ploc fc
-ploc2 EmptyFC fc = ploc fc
-ploc2 (MkFC fn1 s1 e1) (MkFC fn2 s2 e2) =
-    do let (sr1, sc1) = mapHom (fromInteger . cast) s1
+ploc2 fc1 fc2 =
+    do let Just (fn1, s1, e1) = isNonEmptyFC fc1
+           | Nothing => ploc fc2
+       let Just (fn2, s2, e2) = isNonEmptyFC fc2
+           | Nothing => ploc fc1
+       let (sr1, sc1) = mapHom (fromInteger . cast) s1
        let (sr2, sc2) = mapHom (fromInteger . cast) s2
        let (er1, ec1) = mapHom (fromInteger . cast) e1
        let (er2, ec2) = mapHom (fromInteger . cast) e2
@@ -140,10 +149,33 @@ ploc2 (MkFC fn1 s1 e1) (MkFC fn2 s2 e2) =
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
     pad : Nat -> String -> String
-    pad size s = replicate (size `minus` length s) '0' ++ s
+    pad size s = Extra.replicate (size `minus` length s) '0' ++ s
     addLineNumbers : Nat -> Nat -> List (Doc IdrisAnn) -> List (Doc IdrisAnn)
     addLineNumbers size st xs =
       snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
+
+export
+pwarning : {auto c : Ref Ctxt Defs} ->
+           {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
+           Warning -> Core (Doc IdrisAnn)
+pwarning (UnreachableClause fc env tm)
+    = pure $ errorDesc (reflow "Unreachable clause:"
+        <++> code !(pshow env tm))
+        <+> line <+> !(ploc fc)
+pwarning (ShadowingGlobalDefs _ ns)
+    = pure $ vcat
+    $ reflow "We are about to implicitly bind the following lowercase names."
+   :: reflow "You may be unintentionally shadowing the associated global definitions:"
+   :: map (\ (n, ns) => indent 2 $ hsep $ pretty n
+                            :: reflow "is shadowing"
+                            :: punctuate comma (map pretty (forget ns)))
+          (forget ns)
+
+pwarning (Deprecated s)
+    = pure $ pretty "Deprecation warning:" <++> pretty s
+pwarning (GenericWarn s)
+    = pure $ pretty s
 
 export
 perror : {auto c : Ref Ctxt Defs} ->
@@ -176,10 +208,12 @@ perror (PatternVariableUnifies fc env n tm)
     prettyVar (PV n _) = prettyVar n
     prettyVar n = pretty n
     order : FC -> FC -> (FC, FC)
-    order EmptyFC fc2 = (EmptyFC, fc2)
-    order fc1 EmptyFC = (fc1, EmptyFC)
-    order fc1@(MkFC _ sr1 sc1) fc2@(MkFC _ sr2 sc2) =
-      if sr1 < sr2 then (fc1, fc2) else if sr1 == sr2 && sc1 < sc2 then (fc1, fc2) else (fc2, fc1)
+    order fc1 fc2 =
+      let Just (_, sr1, sc1) = isNonEmptyFC fc1
+           | Nothing => (EmptyFC, fc2)
+          Just (_, sr2, sc2) = isNonEmptyFC fc2
+           | Nothing => (fc1, EmptyFC)
+      in if sr1 < sr2 then (fc1, fc2) else if sr1 == sr2 && sc1 < sc2 then (fc1, fc2) else (fc2, fc1)
 perror (CyclicMeta fc env n tm)
     = pure $ errorDesc (reflow "Cycle detected in solution of metavariable" <++> meta (pretty !(prettyName n)) <++> equals
         <++> code !(pshow env tm)) <+> line <+> !(ploc fc)
@@ -399,12 +433,12 @@ perror (BadDotPattern fc env reason x y)
         <++> parens (pretty reason) <+> dot) <+> line <+> !(ploc fc)
 perror (MatchTooSpecific fc env tm)
     = pure $ errorDesc (reflow "Can't match on" <++> code !(pshow env tm)
-        <++> reflow "as it has a polymorphic type.") <+> line <+> !(ploc fc)
+        <++> reflow "as it must have a polymorphic type.") <+> line <+> !(ploc fc)
 perror (BadImplicit fc str)
     = pure $ errorDesc (reflow "Can't infer type for unbound implicit name" <++> code (pretty str) <+> dot)
         <+> line <+> !(ploc fc) <+> line <+> reflow "Suggestion: try making it a bound implicit."
-perror (BadRunElab fc env script)
-    = pure $ errorDesc (reflow "Bad elaborator script" <++> code !(pshow env script) <+> dot)
+perror (BadRunElab fc env script desc)
+    = pure $ errorDesc (reflow "Bad elaborator script" <++> code !(pshow env script) <++> parens (pretty desc) <+> dot)
         <+> line <+> !(ploc fc)
 perror (GenericMsg fc str) = pure $ pretty str <+> line <+> !(ploc fc)
 perror (TTCError msg)
@@ -427,14 +461,15 @@ perror (CyclicImports ns)
 perror ForceNeeded = pure $ errorDesc (reflow "Internal error when resolving implicit laziness")
 perror (InternalError str) = pure $ errorDesc (reflow "INTERNAL ERROR" <+> colon) <++> pretty str
 perror (UserError str) = pure $ errorDesc (pretty "Error" <+> colon) <++> pretty str
-perror (NoForeignCC fc) = do
+perror (NoForeignCC fc specs) = do
     let cgs = fst <$> availableCGs (options !(get Ctxt))
-    let res = vsep [ errorDesc (reflow "The given specifier was not accepted by any backend. Available backends" <+> colon)
+    let res = vsep [ errorDesc (reflow ("The given specifier '" ++ show specs ++ "' was not accepted by any backend. Available backends") <+> colon)
                    , indent 2 (concatWith (\ x, y => x <+> ", " <+> y) (map reflow cgs))
                    , reflow "Some backends have additional specifier rules, refer to their documentation."
                    ] <+> line <+> !(ploc fc)
     pure res
 perror (BadMultiline fc str) = pure $ errorDesc (reflow "While processing multi-line string" <+> dot <++> pretty str <+> dot) <+> line <+> !(ploc fc)
+perror (Timeout str) = pure $ errorDesc (reflow "Timeout in" <++> pretty str)
 
 perror (InType fc n err)
     = pure $ hsep [ errorDesc (reflow "While processing type of" <++> code (pretty !(prettyName n))) <+> dot
@@ -459,19 +494,7 @@ perror (MaybeMisspelling err ns) = pure $ !(perror err) <+> case ns of
        reflow "Did you mean any of:"
        <++> concatWith (surround (comma <+> space)) (map pretty xs)
        <+> comma <++> reflow "or" <++> pretty x <+> "?"
-
-
-export
-pwarning : {auto c : Ref Ctxt Defs} ->
-           {auto s : Ref Syn SyntaxInfo} ->
-           {auto o : Ref ROpts REPLOpts} ->
-           Warning -> Core (Doc IdrisAnn)
-pwarning (UnreachableClause fc env tm)
-    = pure $ errorDesc (reflow "Unreachable clause:"
-        <++> code !(pshow env tm))
-        <+> line <+> !(ploc fc)
-pwarning (Deprecated s)
-    = pure $ pretty "Deprecation warning:" <++> pretty s
+perror (WarningAsError warn) = pwarning warn
 
 prettyMaybeLoc : Maybe FC -> Doc IdrisAnn
 prettyMaybeLoc Nothing = emptyDoc

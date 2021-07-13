@@ -1,5 +1,8 @@
 module Data.Nat
 
+import public Control.Relation
+import public Control.Order
+
 %default total
 
 export
@@ -9,6 +12,10 @@ Uninhabited (Z = S n) where
 export
 Uninhabited (S n = Z) where
   uninhabited Refl impossible
+
+export
+Uninhabited (a = b) => Uninhabited (S a = S b) where
+  uninhabited Refl @{ab} = uninhabited @{ab} Refl
 
 public export
 isZero : Nat -> Bool
@@ -77,6 +84,41 @@ Uninhabited (LTE m n) => Uninhabited (LTE (S m) (S n)) where
   uninhabited (LTESucc lte) = uninhabited lte
 
 public export
+Reflexive Nat LTE where
+  reflexive {x = Z} = LTEZero
+  reflexive {x = S k} = LTESucc $ reflexive {x = k}
+
+public export
+Transitive Nat LTE where
+  transitive LTEZero _ = LTEZero
+  transitive (LTESucc xy) (LTESucc yz) =
+    LTESucc $ transitive {rel = LTE} xy yz
+
+public export
+Antisymmetric Nat LTE where
+  antisymmetric LTEZero LTEZero = Refl
+  antisymmetric (LTESucc xy) (LTESucc yx) =
+    cong S $ antisymmetric xy yx
+
+public export
+Connex Nat LTE where
+  connex {x = Z} _ = Left LTEZero
+  connex {y = Z} _ = Right LTEZero
+  connex {x = S _} {y = S _} prf =
+    case connex {rel = LTE} $ prf . (cong S) of
+      Left jk => Left $ LTESucc jk
+      Right kj => Right $ LTESucc kj
+
+public export
+Preorder Nat LTE where
+
+public export
+PartialOrder Nat LTE where
+
+public export
+LinearOrder Nat LTE where
+
+public export
 GTE : Nat -> Nat -> Type
 GTE left right = LTE right left
 
@@ -118,6 +160,11 @@ export
 fromLteSucc : LTE (S m) (S n) -> LTE m n
 fromLteSucc (LTESucc x) = x
 
+export
+succNotLTEpred : {x : Nat} -> Not $ LTE (S x) x
+succNotLTEpred {x =   0} prf = succNotLTEzero prf
+succNotLTEpred {x = S _} prf = succNotLTEpred $ fromLteSucc prf
+
 public export
 isLTE : (m, n : Nat) -> Dec (LTE m n)
 isLTE Z n = Yes LTEZero
@@ -140,11 +187,6 @@ isGT : (m, n : Nat) -> Dec (GT m n)
 isGT m n = isLT n m
 
 export
-lteRefl : {n : Nat} -> LTE n n
-lteRefl {n = Z}   = LTEZero
-lteRefl {n = S k} = LTESucc lteRefl
-
-export
 lteSuccRight : LTE n m -> LTE n (S m)
 lteSuccRight LTEZero     = LTEZero
 lteSuccRight (LTESucc x) = LTESucc (lteSuccRight x)
@@ -154,11 +196,6 @@ lteSuccLeft : LTE (S n) m -> LTE n m
 lteSuccLeft (LTESucc x) = lteSuccRight x
 
 export
-lteTransitive : LTE n m -> LTE m p -> LTE n p
-lteTransitive LTEZero y = LTEZero
-lteTransitive (LTESucc x) (LTESucc y) = LTESucc (lteTransitive x y)
-
-public export
 lteAddRight : (n : Nat) -> LTE n (n + m)
 lteAddRight Z = LTEZero
 lteAddRight (S k) {m} = LTESucc (lteAddRight {m} k)
@@ -443,10 +480,10 @@ plusLteMonotoneLeft p q r p_lt_q
 export
 plusLteMonotone : {m, n, p, q : Nat} -> m `LTE` n -> p `LTE` q ->
                   (m + p) `LTE` (n + q)
-plusLteMonotone left right
-  = lteTransitive
-      (plusLteMonotoneLeft m p q right)
-      (plusLteMonotoneRight q m n left)
+plusLteMonotone left right =
+  transitive {rel=LTE}
+    (plusLteMonotoneLeft m p q right)
+    (plusLteMonotoneRight q m n left)
 
 zeroPlusLeftZero : (a,b : Nat) -> (0 = a + b) -> a = 0
 zeroPlusLeftZero 0 0 Refl = Refl
@@ -752,14 +789,6 @@ sucMinR (S l) = cong S $ sucMinR l
 namespace Semigroup
 
   public export
-  [Additive] Semigroup Nat where
-    (<+>) = (+)
-
-  public export
-  [Multiplicative] Semigroup Nat where
-    (<+>) = (*)
-
-  public export
   [Maximum] Semigroup Nat where
     (<+>) = max
 
@@ -768,14 +797,6 @@ namespace Semigroup
     (<+>) = min
 
 namespace Monoid
-
-  public export
-  [Additive] Monoid Nat using Semigroup.Additive where
-    neutral = 0
-
-  public export
-  [Multiplicative] Monoid Nat using Semigroup.Multiplicative where
-    neutral = 1
 
   public export
   [Maximum] Monoid Nat using Semigroup.Maximum where

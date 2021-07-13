@@ -9,6 +9,26 @@ export
 singleton : Char -> String
 singleton c = strCons c ""
 
+||| Create a string by using n copies of a character
+export
+replicate : Nat -> Char -> String
+replicate n c = pack (replicate n c)
+
+||| Indent a given string by `n` spaces.
+public export
+indent : (n : Nat) -> String -> String
+indent n x = replicate n ' ' ++ x
+
+||| Pad a string on the left
+export
+padLeft : Nat -> Char -> String -> String
+padLeft n c str = replicate (minus n (String.length str)) c ++ str
+
+||| Pad a string on the right
+export
+padRight : Nat -> Char -> String -> String
+padRight n c str = str ++ replicate (minus n (String.length str)) c
+
 partial
 foldr1 : (a -> a -> a) -> List a -> a
 foldr1 _ [x] = x
@@ -17,25 +37,6 @@ foldr1 f (x::xs) = f x (foldr1 f xs)
 partial
 foldl1 : (a -> a -> a) -> List a -> a
 foldl1 f (x::xs) = foldl f x xs
-
--- This function runs fast when compiled but won't compute at compile time.
--- If you need to unpack strings at compile time, use Prelude.unpack.
-%foreign
-  "scheme:string-unpack"
-  "javascript:lambda:(str)=>__prim_js2idris_array(Array.from(str))"
-export
-fastUnpack : String -> List Char
-
--- This works quickly because when string-concat builds the result, it allocates
--- enough room in advance so there's only one allocation, rather than lots!
---
--- Like fastUnpack, this function won't reduce at compile time.
--- If you need to concatenate strings at compile time, use Prelude.concat.
-%foreign
-  "scheme:string-concat"
-  "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
-export
-fastConcat : List String -> String
 
 -- This uses fastConcat internally so it won't compute at compile time.
 export
@@ -131,6 +132,8 @@ unlines' (l::ls) = l ++ '\n' :: unlines' ls
 export
 unlines : List String -> String
 unlines = pack . unlines' . map unpack
+
+%transform "fastUnlines" unlines = fastUnlines
 
 ||| A view checking whether a string is empty
 ||| and, if not, returning its head and tail
@@ -373,3 +376,7 @@ parseDouble = mkDouble . wfe . trim
                        pure (w, if w < 0 then (-f) else f, 0)
                    _ => Nothing
                _ => Nothing
+
+public export
+null : String -> Bool
+null = (== "")

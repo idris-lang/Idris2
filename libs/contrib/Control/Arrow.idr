@@ -13,23 +13,26 @@ infixr 2 \|/
 
 public export
 interface Category arr => Arrow (0 arr : Type -> Type -> Type) where
+  ||| Converts a function from input to output into a arrow computation.
   arrow  : (a -> b) -> arr a b
+  ||| Converts an arrow from `a` to `b` into an arrow on pairs, that applies
+  ||| its argument to the first component and leaves the second component
+  ||| untouched, thus saving its value across a computation.
   first  : arr a b -> arr (a, c) (b, c)
-
+  ||| Converts an arrow from `a` to `b` into an arrow on pairs, that applies
+  ||| its argument to the second component and leaves the first component
+  ||| untouched, thus saving its value across a computation.
   second : arr a b -> arr (c, a) (c, b)
   second f = arrow {arr = arr} swap >>> first f >>> arrow {arr = arr} swap
     where
     swap : (x, y) -> (y, x)
     swap (a, b) = (b, a)
-
+  ||| A combinator which processes both components of a pair.
   (***)  : arr a b -> arr a' b' -> arr (a, a') (b, b')
   f *** g = first f >>> second g
-
+  ||| A combinator which builds a pair from the results of two arrows.
   (&&&)  : arr a b -> arr a b' -> arr a (b, b')
   f &&& g = arrow dup >>> f *** g
-    where
-    dup : x -> (x,x)
-    dup x = (x,x)
 
 public export
 implementation Arrow Morphism where
@@ -122,3 +125,8 @@ implementation ArrowApply a => Monad (ArrowMonad a) where
 public export
 interface Arrow arr => ArrowLoop (0 arr : Type -> Type -> Type) where
   loop : arr (Pair a c) (Pair b c) -> arr a b
+
+||| Applying a binary operator to the results of two arrow computations.
+public export
+liftA2 : Arrow arr => (a -> b -> c) -> arr d a -> arr d b -> arr d c
+liftA2 op f g = (f &&& g) >>> arrow (\(a, b) => a `op` b)

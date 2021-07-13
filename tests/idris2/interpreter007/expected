@@ -1,5 +1,5 @@
-foo
-foo
-bar
-Main> Main> Main> Main> Main> "bar"
-Main> Main> Bye for now!
+Main> Main> Main> foo
+Main> foo
+Main> "bar"
+Main> bar
+Main> Bye for now!

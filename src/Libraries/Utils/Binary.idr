@@ -4,14 +4,20 @@ import Core.Core
 import Core.Name
 
 import Data.Buffer
-import public Data.IOArray
 import Data.List
 import Data.List.Elem
 import Data.List1
 import Data.Nat
+import Data.String
 import Data.Vect
 
+import System.Info
 import System.File
+
+import Libraries.Data.PosMap
+import Libraries.Utils.String
+
+import public Data.IOArray
 
 -- Serialising data as binary. Provides an interface TTC which allows
 -- reading and writing to chunks of memory, "Binary", which can be written
@@ -151,7 +157,7 @@ getTag {b}
 -- Some useful types from the prelude
 
 export
-TTC Int where
+[Wasteful] TTC Int where
   toBuf b val
     = do chunk <- get Bin
          if avail chunk >= 8
@@ -172,6 +178,32 @@ TTC Int where
               else throw (TTCError (EndOfBuffer ("Int " ++ show (loc chunk, size chunk))))
 
 export
+TTC Int where
+  toBuf b val
+    = if val >= -127 && val < 128
+         then tag (val + 127)
+         else do tag 255
+                 chunk <- get Bin
+                 if avail chunk >= 8
+                    then
+                      do coreLift $ setInt (buf chunk) (loc chunk) val
+                         put Bin (appended 8 chunk)
+                    else do chunk' <- extendBinary 8 chunk
+                            coreLift $ setInt (buf chunk') (loc chunk') val
+                            put Bin (appended 8 chunk')
+
+  fromBuf b
+    = case !getTag of
+           255 => do chunk <- get Bin
+                     if toRead chunk >= 8
+                       then
+                         do val <- coreLift $ getInt (buf chunk) (loc chunk)
+                            put Bin (incLoc 8 chunk)
+                            pure val
+                       else throw (TTCError (EndOfBuffer ("Int " ++ show (loc chunk, size chunk))))
+           t => pure (t - 127)
+
+export
 TTC String where
   toBuf b val
       -- To support UTF-8 strings, this has to get the length of the string
@@ -190,6 +222,7 @@ TTC String where
   fromBuf b
       = do len <- fromBuf {a = Int} b
            chunk <- get Bin
+           when (len < 0) $ corrupt "String"
            if toRead chunk >= len
               then
                 do val <- coreLift $ getString (buf chunk) (loc chunk) len
@@ -220,7 +253,7 @@ TTC Binary where
          if toRead chunk >= len
             then
               do Just newbuf <- coreLift $ newBuffer len
-                      | Nothing => throw (InternalError "Can't create buffer")
+                      | Nothing => corrupt "Binary"
                  coreLift $ copyData (buf chunk) (loc chunk) len
                                      newbuf 0
                  put Bin (incLoc len chunk)
@@ -378,6 +411,11 @@ export
                rewrite (plusSuccRightSucc k done)
                readElems (val :: xs) k
 
+export
+(TTC a, Measure a) => TTC (PosMap a) where
+  toBuf b = toBuf b . toList
+  fromBuf b = fromList <$> fromBuf b
+
 %hide Fin.fromInteger
 
 count : List.Elem.Elem x xs -> Int
@@ -419,3 +457,35 @@ TTC Nat where
   fromBuf b
      = do val <- fromBuf b
           pure (fromInteger val)
+
+||| Get a file's modified time. If it doesn't exist, return 0 (UNIX Epoch)
+export
+modTime : String -> Core Int
+modTime fname
+  = do Right f <- coreLift $ openFile fname Read
+         | Left err => pure 0 -- Beginning of Time :)
+       Right t <- coreLift $ fileModifiedTime f
+         | Left err => do coreLift $ closeFile f
+                          pure 0
+       coreLift $ closeFile f
+       pure t
+
+export
+hashFile : String -> Core String
+hashFile fileName
+  = do Right fileHandle <- coreLift $ popen
+            ("sha256sum \"" ++ osEscape fileName ++ "\"") Read
+         | Left _ => coreFail $ InternalError ("Can't get sha256sum of " ++ fileName)
+       Right hashLine <- coreLift $ fGetLine fileHandle
+         | Left _ =>
+           do coreLift $ pclose fileHandle
+              coreFail $ InternalError ("Can't get sha256sum of " ++ fileName)
+       coreLift $ pclose fileHandle
+       let (hash::_) = words hashLine
+         | Nil => coreFail $ InternalError ("Can't get sha256sum of " ++ fileName)
+       pure hash
+  where
+    osEscape : String -> String
+    osEscape = if isWindows
+      then id
+      else escapeStringUnix

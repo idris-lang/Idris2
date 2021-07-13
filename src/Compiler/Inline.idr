@@ -1,11 +1,13 @@
 module Compiler.Inline
 
+import Compiler.CaseOpts
 import Compiler.CompileExpr
 
 import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
 import Core.FC
+import Core.Options
 import Core.TT
 
 import Libraries.Data.LengthMatch
@@ -82,7 +84,7 @@ mutual
                else usedl
   used n (CLet _ _ True val sc) = used n val + used (Later n) sc
   used n (CApp _ x args) = foldr (+) (used n x) (map (used n) args)
-  used n (CCon _ _ _ args) = foldr (+) 0 (map (used n) args)
+  used n (CCon _ _ _ _ args) = foldr (+) 0 (map (used n) args)
   used n (COp _ _ args) = foldr (+) 0 (map (used n) args)
   used n (CExtPrim _ _ args) = foldr (+) 0 (map (used n) args)
   used n (CForce _ _ x) = used n x
@@ -97,7 +99,7 @@ mutual
 
   usedCon : {free : _} ->
             {idx : Nat} -> (0 p : IsVar n idx free) -> CConAlt free -> Int
-  usedCon n (MkConAlt _ _ args sc)
+  usedCon n (MkConAlt _ _ _ args sc)
       = let MkVar n' = weakenNs (mkSizeOf args) (MkVar n) in
             used n' sc
 
@@ -149,7 +151,7 @@ mutual
   -- boost by removing unnecessary lambdas that we'll keep the special case.
   eval rec env stk (CRef fc n)
       = case (n == NS primIONS (UN "io_bind"), stk) of
-          (True, _ :: _ :: act :: cont :: world :: stk) =>
+          (True, act :: cont :: world :: stk) =>
                  do xn <- genName "act"
                     sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
                     pure $ unload stk $
@@ -189,8 +191,8 @@ mutual
                       pure (CLet fc x True val' (refToLocal xn x sc'))
   eval rec env stk (CApp fc f args)
       = eval rec env (!(traverse (eval rec env []) args) ++ stk) f
-  eval rec env stk (CCon fc n t args)
-      = pure $ unload stk $ CCon fc n t !(traverse (eval rec env []) args)
+  eval rec env stk (CCon fc n ci t args)
+      = pure $ unload stk $ CCon fc n ci t !(traverse (eval rec env []) args)
   eval rec env stk (COp fc p args)
       = pure $ unload stk $ COp fc p !(traverseVect (eval rec env []) args)
   eval rec env stk (CExtPrim fc p args)
@@ -203,16 +205,30 @@ mutual
       = pure $ unload stk (CDelay fc lr !(eval rec env [] e))
   eval rec env stk (CConCase fc sc alts def)
       = do sc' <- eval rec env [] sc
-           Nothing <- pickAlt rec env stk sc' alts def | Just val => pure val
-           def' <- traverseOpt (eval rec env stk) def
-           pure $ CConCase fc sc'
-                     !(traverse (evalAlt fc rec env stk) alts)
+           let env' = update sc env sc'
+           Nothing <- pickAlt rec env' stk sc' alts def | Just val => pure val
+           def' <- traverseOpt (eval rec env' stk) def
+           pure $ caseOfCase $ CConCase fc sc'
+                     !(traverse (evalAlt fc rec env' stk) alts)
                      def'
+    where
+      updateLoc : {idx, vs : _} ->
+                  (0 p : IsVar x idx (vs ++ free)) ->
+                  EEnv free vs -> CExp free -> EEnv free vs
+      updateLoc {vs = []} p env val = env
+      updateLoc {vs = (x::xs)} First (e :: env) val = val :: env
+      updateLoc {vs = (y::xs)} (Later p) (e :: env) val = e :: updateLoc p env val
+
+      update : {vs : _} ->
+               CExp (vs ++ free) -> EEnv free vs -> CExp free -> EEnv free vs
+      update (CLocal _ p) env sc = updateLoc p env sc
+      update _ env _ = env
+
   eval rec env stk (CConstCase fc sc alts def)
       = do sc' <- eval rec env [] sc
            Nothing <- pickConstAlt rec env stk sc' alts def | Just val => pure val
            def' <- traverseOpt (eval rec env stk) def
-           pure $ CConstCase fc sc'
+           pure $ caseOfCase $ CConstCase fc sc'
                          !(traverse (evalConstAlt rec env stk) alts)
                          def'
   eval rec env stk (CPrimVal fc c) = pure $ unload stk $ CPrimVal fc c
@@ -233,11 +249,11 @@ mutual
             {auto l : Ref LVar Int} ->
             FC -> List Name -> EEnv free vars -> Stack free -> CConAlt (vars ++ free) ->
             Core (CConAlt free)
-  evalAlt {free} {vars} fc rec env stk (MkConAlt n t args sc)
+  evalAlt {free} {vars} fc rec env stk (MkConAlt n ci t args sc)
       = do (bs, env') <- extendLoc fc env args
            scEval <- eval rec env' stk
                           (rewrite sym (appendAssociative args vars free) in sc)
-           pure $ MkConAlt n t args (refsToLocals bs scEval)
+           pure $ MkConAlt n ci t args (refsToLocals bs scEval)
 
   evalConstAlt : {vars, free : _} ->
                  {auto c : Ref Ctxt Defs} ->
@@ -254,9 +270,9 @@ mutual
             CExp free -> List (CConAlt (vars ++ free)) ->
             Maybe (CExp (vars ++ free)) ->
             Core (Maybe (CExp free))
-  pickAlt rec env stk (CCon fc n t args) [] def
+  pickAlt rec env stk (CCon fc n ci t args) [] def
       = traverseOpt (eval rec env stk) def
-  pickAlt {vars} {free} rec env stk (CCon fc n t args) (MkConAlt n' t' args' sc :: alts) def
+  pickAlt {vars} {free} rec env stk con@(CCon fc n ci t args) (MkConAlt n' _ t' args' sc :: alts) def
       = if matches n t n' t'
            then case checkLengthMatch args args' of
                      Nothing => pure Nothing
@@ -266,7 +282,7 @@ mutual
                             pure $ Just !(eval rec env' stk
                                     (rewrite sym (appendAssociative args' vars free) in
                                              sc))
-           else pickAlt rec env stk (CCon fc n t args) alts def
+           else pickAlt rec env stk con alts def
     where
       matches : Name -> Maybe Int -> Name -> Maybe Int -> Bool
       matches _ (Just t) _ (Just t') = t == t'
@@ -300,9 +316,9 @@ fixArityTm (CRef fc n) args
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure (unload args (CRef fc n))
-         let Just def = compexpr gdef
-              | Nothing => pure (unload args (CRef fc n))
-         let arity = getArity def
+         let arity = case compexpr gdef of
+                          Just def => getArity def
+                          _ => 0
          pure $ expandToArity arity (CApp fc (CRef fc n) []) args
 fixArityTm (CLam fc x sc) args
     = pure $ expandToArity Z (CLam fc x !(fixArityTm sc [])) args
@@ -311,8 +327,8 @@ fixArityTm (CLet fc x inl val sc) args
                  (CLet fc x inl !(fixArityTm val []) !(fixArityTm sc [])) args
 fixArityTm (CApp fc f fargs) args
     = fixArityTm f (!(traverse (\tm => fixArityTm tm []) fargs) ++ args)
-fixArityTm (CCon fc n t args) []
-    = pure $ CCon fc n t !(traverse (\tm => fixArityTm tm []) args)
+fixArityTm (CCon fc n ci t args) []
+    = pure $ CCon fc n ci t !(traverse (\tm => fixArityTm tm []) args)
 fixArityTm (COp fc op args) []
     = pure $ COp fc op !(traverseArgs args)
   where
@@ -333,8 +349,8 @@ fixArityTm (CConCase fc sc alts def) args
                            !(traverseOpt (\tm => fixArityTm tm []) def)) args
   where
     fixArityAlt : CConAlt vars -> Core (CConAlt vars)
-    fixArityAlt (MkConAlt n t a sc)
-        = pure $ MkConAlt n t a !(fixArityTm sc [])
+    fixArityAlt (MkConAlt n ci t a sc)
+        = pure $ MkConAlt n ci t a !(fixArityTm sc [])
 fixArityTm (CConstCase fc sc alts def) args
     = pure $ expandToArity Z
               (CConstCase fc !(fixArityTm sc [])
@@ -415,14 +431,62 @@ mergeLam (MkFun args def)
          pure $ MkFun args' exp'
 mergeLam d = pure d
 
+mutual
+  addRefs : NameMap Bool -> CExp vars -> NameMap Bool
+  addRefs ds (CRef _ n) = insert n False ds
+  addRefs ds (CLam _ _ sc) = addRefs ds sc
+  addRefs ds (CLet _ _ _ val sc) = addRefs (addRefs ds val) sc
+  addRefs ds (CApp _ f args) = addRefsArgs (addRefs ds f) args
+  addRefs ds (CCon _ n _ _ args) = addRefsArgs (insert n False ds) args
+  addRefs ds (COp _ _ args) = addRefsArgs ds (toList args)
+  addRefs ds (CExtPrim _ _ args) = addRefsArgs ds args
+  addRefs ds (CForce _ _ e) = addRefs ds e
+  addRefs ds (CDelay _ _ e) = addRefs ds e
+  addRefs ds (CConCase _ sc alts def)
+      = let ds' = maybe ds (addRefs ds) def in
+            addRefsConAlts (addRefs ds' sc) alts
+  addRefs ds (CConstCase _ sc alts def)
+      = let ds' = maybe ds (addRefs ds) def in
+            addRefsConstAlts (addRefs ds' sc) alts
+  addRefs ds tm = ds
+
+  addRefsArgs : NameMap Bool -> List (CExp vars) -> NameMap Bool
+  addRefsArgs ds [] = ds
+  addRefsArgs ds (a :: as) = addRefsArgs (addRefs ds a) as
+
+  addRefsConAlts : NameMap Bool -> List (CConAlt vars) -> NameMap Bool
+  addRefsConAlts ds [] = ds
+  addRefsConAlts ds (MkConAlt _ _ _ _ sc :: rest)
+      = addRefsConAlts (addRefs ds sc) rest
+
+  addRefsConstAlts : NameMap Bool -> List (CConstAlt vars) -> NameMap Bool
+  addRefsConstAlts ds [] = ds
+  addRefsConstAlts ds (MkConstAlt _ sc :: rest)
+      = addRefsConstAlts (addRefs ds sc) rest
+
+getRefs : CDef -> NameMap Bool
+getRefs (MkFun args exp) = addRefs empty exp
+getRefs _ = empty
+
 export
 inlineDef : {auto c : Ref Ctxt Defs} ->
             Name -> Core ()
 inlineDef n
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
-         let Just cexpr =  compexpr def             | Nothing => pure ()
+         let Just cexpr = compexpr def              | Nothing => pure ()
          setCompiled n !(inline n cexpr)
+
+-- Update the names a function refers to at runtime based on the transformation
+-- results (saves generating code unnecessarily).
+updateCallGraph : {auto c : Ref Ctxt Defs} ->
+                  Name -> Core ()
+updateCallGraph n
+    = do defs <- get Ctxt
+         Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
+         let Just cexpr =  compexpr def             | Nothing => pure ()
+         let refs = getRefs cexpr
+         ignore $ addDef n (record { refersToRuntimeM = Just refs } def)
 
 export
 fixArityDef : {auto c : Ref Ctxt Defs} ->
@@ -438,9 +502,16 @@ mergeLamDef : {auto c : Ref Ctxt Defs} ->
               Name -> Core ()
 mergeLamDef n
     = do defs <- get Ctxt
-         Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
-         let Just cexpr =  compexpr def             | Nothing => pure ()
-         setCompiled n !(mergeLam cexpr)
+         Just def <- lookupCtxtExact n (gamma defs)
+              | Nothing => pure ()
+         let PMDef pi _ _ _ _ = definition def
+              | _ => pure ()
+         if not (isNil (incrementalCGs !getSession)) &&
+                externalDecl pi -- better keep it at arity 0
+            then pure ()
+            else do let Just cexpr =  compexpr def
+                             | Nothing => pure ()
+                    setCompiled n !(mergeLam cexpr)
 
 export
 compileAndInlineAll : {auto c : Ref Ctxt Defs} ->
@@ -451,14 +522,20 @@ compileAndInlineAll
          cns <- filterM nonErased ns
 
          traverse_ compileDef cns
-
-         traverse_ inlineDef cns
-         traverse_ mergeLamDef cns
-         traverse_ fixArityDef cns
-         traverse_ inlineDef cns
-         traverse_ mergeLamDef cns
-         traverse_ fixArityDef cns
+         transform 3 cns -- number of rounds to run transformations.
+                         -- This seems to be the point where not much useful
+                         -- happens any more.
+         traverse_ updateCallGraph cns
   where
+    transform : Nat -> List Name -> Core ()
+    transform Z cns = pure ()
+    transform (S k) cns
+        = do traverse_ inlineDef cns
+             traverse_ mergeLamDef cns
+             traverse_ caseLamDef cns
+             traverse_ fixArityDef cns
+             transform k cns
+
     nonErased : Name -> Core Bool
     nonErased n
         = do defs <- get Ctxt

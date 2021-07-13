@@ -5,17 +5,19 @@ module Idris.IDEMode.Parser
 
 import Idris.IDEMode.Commands
 import Core.Core
+import Core.Name
+import Core.Metadata
+import Core.FC
 
 import Data.Maybe
 import Data.List
-import Data.Strings
+import Data.String
 import Parser.Lexer.Source
 import Parser.Source
 import Parser.Support
 import Libraries.Text.Lexer
 import Libraries.Text.Lexer.Tokenizer
 import Libraries.Text.Parser
-import Libraries.Utils.Either
 import Libraries.Utils.String
 
 %default total
@@ -28,12 +30,12 @@ symbols = ["(", ":", ")"]
 
 stringTokens : Tokenizer Token
 stringTokens
-    = match (someUntil (is '"') (escape (is '\\') any <|> any)) (\x => StringLit 0 x)
+    = match (someUntil (is '"') (escape (is '\\') any <|> any)) $ StringLit 0
 
 ideTokens : Tokenizer Token
 ideTokens =
       match (choice $ exact <$> symbols) Symbol
-  <|> match digits (\x => IntegerLit (cast x))
+  <|> match digits (IntegerLit . cast)
   <|> compose (is '"')
               (const $ StringBegin False)
               (const ())
@@ -76,15 +78,15 @@ sexp
          pure (SExpList xs)
 
 ideParser : {e : _} ->
-            (fname : String) -> String -> Grammar Token e ty -> Either Error ty
-ideParser fname str p
-    = do toks   <- mapError (fromLexError fname) $ idelex str
-         parsed <- mapError (fromParsingError fname) $ parse p toks
-         Right (fst parsed)
+            String -> Grammar SemanticDecorations Token e ty -> Either Error ty
+ideParser str p
+    = do toks   <- mapFst (fromLexError (Virtual Interactive)) $ idelex str
+         (decor, (parsed, _)) <- mapFst (fromParsingError (Virtual Interactive)) $ parseWith p toks
+         Right parsed
 
 
 export
 covering
 parseSExp : String -> Either Error SExp
 parseSExp inp
-    = ideParser "(interactive)" inp (do c <- sexp; eoi; pure c)
+    = ideParser inp (do c <- sexp; eoi; pure c)

@@ -84,20 +84,22 @@ oneSoleFactorOfOne (S (S k)) (CofactorExists (S j) prf) =
 
 ||| Every natural number is factor of itself.
 export
-factorReflexive : (n : Nat) -> Factor n n
-factorReflexive a = CofactorExists 1 (rewrite multOneRightNeutral a in Refl)
+Reflexive Nat Factor where
+  reflexive {x} = CofactorExists 1 $ rewrite multOneRightNeutral x in Refl
 
 ||| Factor relation is transitive. If b is factor of a and c is b factor of c
 ||| is also a factor of a.
 export
-factorTransitive : (a, b, c : Nat) -> Factor a b -> Factor b c -> Factor a c
-factorTransitive a b c (CofactorExists qb prfAB) (CofactorExists qc prfBC) =
-    CofactorExists (qb * qc) (
+Transitive Nat Factor where
+  transitive {x} (CofactorExists qb prfAB) (CofactorExists qc prfBC) =
+    CofactorExists (qb * qc) $
         rewrite prfBC in
         rewrite prfAB in
-        rewrite multAssociative a qb qc in
+        rewrite multAssociative x qb qc in
         Refl
-    )
+
+export
+Preorder Nat Factor where
 
 multOneSoleNeutral : (a, b : Nat) -> S a = S a * b -> b = 1
 multOneSoleNeutral Z b prf =
@@ -124,21 +126,23 @@ multOneSoleNeutral (S k) (S (S j)) prf =
         succInjective k (j + (S (S (j + (k * (S (S j))))))) $
         succInjective (S k) (S (j + (S (S (j + (k * (S (S j)))))))) prf
 
-||| If a is a factor of b and b is a factor of a, then we can conclude a = b.
-export
-factorAntisymmetric : {a, b : Nat} -> Factor a b -> Factor b a -> a = b
-factorAntisymmetric {a = 0} (CofactorExists qa prfAB) (CofactorExists qb prfBA) = sym prfAB
-factorAntisymmetric {a = S a} {b = 0} (CofactorExists qa prfAB) (CofactorExists qb prfBA) = prfBA
-factorAntisymmetric {a = S a} {b = S b} (CofactorExists qa prfAB) (CofactorExists qb prfBA) =
-    let qIs1 = multOneSoleNeutral a (qa * qb) $
-            rewrite multAssociative (S a) qa qb in
-            rewrite sym prfAB in
-            prfBA
-    in
-    rewrite prfAB in
-    rewrite oneSoleFactorOfOne qa . CofactorExists qb $ sym qIs1 in
-    rewrite multOneRightNeutral a in
-    Refl
+||| If a is a factor of b and b is a factor of a, then a = b.
+public export
+Antisymmetric Nat Factor where
+  antisymmetric {x = Z} (CofactorExists qa prfAB) (CofactorExists qb prfBA) = sym prfAB
+  antisymmetric {x = S _} {y = Z} (CofactorExists qa prfAB) (CofactorExists qb prfBA) = prfBA
+  antisymmetric {x = S a} {y = S _} (CofactorExists qa prfAB) (CofactorExists qb prfBA) =
+      let qIs1 = multOneSoleNeutral a (qa * qb) $
+              rewrite multAssociative (S a) qa qb in
+              rewrite sym prfAB in
+              prfBA
+      in
+      rewrite prfAB in
+      rewrite oneSoleFactorOfOne qa . CofactorExists qb $ sym qIs1 in
+      rewrite multOneRightNeutral a in
+      Refl
+
+PartialOrder Nat Factor where
 
 ||| No number can simultaneously be and not be a factor of another number.
 export
@@ -264,7 +268,7 @@ minusFactor (CofactorExists qab prfAB) (CofactorExists qa prfA) =
 ||| A decision procedure for whether of not p is a factor of n.
 export
 decFactor : (n, d : Nat) -> DecFactor d n
-decFactor Z Z = ItIsFactor $ factorReflexive Z
+decFactor Z Z = ItIsFactor $ reflexive {x = Z}
 decFactor (S k) Z = ItIsNotFactor $ ZeroNotFactorS k
 decFactor n (S d) =
         let Fraction n (S d) q r prf = Data.Fin.Extra.divMod n (S d) in
@@ -298,22 +302,24 @@ factNotSuccFact {p = S (S k)} pGt1 (CofactorExists q prf) =
             Refl
         )
 
-||| The relation of common factor is symmetric, that is if p is a common factor
-||| of n and m, then it is also a common factor if m and n.
-export
-commonFactorSym : CommonFactor p a b -> CommonFactor p b a
-commonFactorSym (CommonFactorExists p pfa pfb) = CommonFactorExists p pfb pfa
+using (p : Nat)
+  ||| The relation of common factor is symmetric, that is if p is a
+  ||| common factor of n and m, then it is also a common factor of
+  ||| m and n.
+  public export
+  Symmetric Nat (CommonFactor p) where
+    symmetric (CommonFactorExists p pfx pfy) = CommonFactorExists p pfy pfx
 
-||| The relation of greates common divisor is symmetric.
-export
-gcdSym : GCD p a b -> GCD p b a
-gcdSym {a = Z} {b = Z} (MkGCD {notBothZero} _ _) impossible
-gcdSym {a = S a} {b} (MkGCD {notBothZero = LeftIsNotZero} cf greatest) =
-        MkGCD {notBothZero = RightIsNotZero} (commonFactorSym cf) $
-        \q, cf => greatest q (commonFactorSym cf)
-gcdSym {a} {b = S b} (MkGCD {notBothZero = RightIsNotZero} cf greatest) =
-        MkGCD {notBothZero = LeftIsNotZero} (commonFactorSym cf) $
-        \q, cf => greatest q (commonFactorSym cf)
+  ||| The relation of greatest common divisor is symmetric.
+  public export
+  Symmetric Nat (GCD p) where
+    symmetric {x = Z} {y = Z} (MkGCD {notBothZero} _ _) impossible
+    symmetric {x = S a} {y} (MkGCD {notBothZero = LeftIsNotZero} cf greatest) =
+            MkGCD {notBothZero = RightIsNotZero} (symmetric {ty = Nat} cf) $
+            \q, cf => greatest q (symmetric {ty = Nat} cf)
+    symmetric {x} {y = S b} (MkGCD {notBothZero = RightIsNotZero} cf greatest) =
+            MkGCD {notBothZero = LeftIsNotZero} (symmetric {ty = Nat} cf) $
+            \q, cf => greatest q (symmetric {ty = Nat} cf)
 
 ||| If p is a common factor of a and b, then it is also a factor of their GCD.
 ||| This actually follows directly from the definition of GCD.
@@ -334,8 +340,9 @@ oneCommonFactor a b = CommonFactorExists 1
 export
 selfIsCommonFactor : (a : Nat) -> {auto ok : LTE 1 a} -> CommonFactor a a a
 selfIsCommonFactor Z = absurd $ succNotLTEzero ok
-selfIsCommonFactor (S k) = CommonFactorExists (S k) (factorReflexive $ S k) (factorReflexive $ S k)
-
+selfIsCommonFactor (S k) =
+  let prf = reflexive {x = S k} in
+    CommonFactorExists (S k) prf prf
 
 -- Some helpers for the gcd function.
 data Search : Type where
@@ -358,7 +365,7 @@ notLteAndGt (S k) (S j) aLteB aGtB = notLteAndGt k j (fromLteSucc aLteB) (fromLt
 gcd_step : (x : Search) ->
     (rec : (y : Search) -> Smaller y x ->  (f : Nat ** GCD f (left y) (right y))) ->
     (f : Nat ** GCD f (left x) (right x))
-gcd_step (SearchArgs Z _ bLteA {bNonZero}) _ = absurd . succNotLTEzero $ lteTransitive bNonZero bLteA
+gcd_step (SearchArgs Z _ bLteA {bNonZero}) _ = absurd . succNotLTEzero $ transitive {ty = Nat} bNonZero bLteA
 gcd_step (SearchArgs _ Z _ {bNonZero}) _ = absurd $ succNotLTEzero bNonZero
 gcd_step (SearchArgs (S a) (S b) bLteA {bNonZero}) rec = case divMod (S a) (S b) of
     Fraction (S a) (S b) q FZ prf =>
@@ -367,7 +374,7 @@ gcd_step (SearchArgs (S a) (S b) bLteA {bNonZero}) rec = case divMod (S a) (S b)
                 rewrite sym $ multRightSuccPlus q b in
                 replace {p = \x => S a = x} (plusZeroRightNeutral (q * S b)) $ sym prf
             skDividesA = CofactorExists q sbIsFactor
-            skDividesB = factorReflexive (S b)
+            skDividesB = reflexive {x = S b}
             greatest = the
                 ((q' : Nat) -> CommonFactor q' (S a) (S b) -> Factor q' (S b))
                 (\q', (CommonFactorExists q' _ qfb) => qfb)
@@ -382,7 +389,7 @@ gcd_step (SearchArgs (S a) (S b) bLteA {bNonZero}) rec = case divMod (S a) (S b)
                     (S k) => LTESucc LTEZero
                 smaller = the (LTE (S (S (plus b (S (finToNat r))))) (S (plus a (S b)))) $
                     rewrite plusCommutative a (S b) in
-                    LTESucc . LTESucc . plusLteLeft b . fromLteSucc $ lteTransitive (elemSmallerThanBound $ FS r) bLteA
+                    LTESucc . LTESucc . plusLteLeft b . fromLteSucc $ transitive {ty = Nat} (elemSmallerThanBound $ FS r) bLteA
                 (f ** MkGCD (CommonFactorExists f prfSb prfRem) greatestSbSr) =
                     rec (SearchArgs (S b) (S $ finToNat r) rLtSb) smaller
                 prfSa = the (Factor f (S a)) $
@@ -398,7 +405,7 @@ gcd_step (SearchArgs (S a) (S b) bLteA {bNonZero}) rec = case divMod (S a) (S b)
                                 multFactor (S b) q
                             rightPrf = minusFactor {a = q * S b} {b = S (finToNat r)}
                                 (rewrite prf in qfa)
-                                (factorTransitive q' (S b) (q * S b) qfb sbfqSb)
+                                (transitive {ty = Nat} qfb sbfqSb)
                         in
                         greatestSbSr q' (CommonFactorExists q' qfb rightPrf)
                     )
@@ -413,11 +420,11 @@ export
 gcd : (a, b : Nat) -> {auto ok : NotBothZero a b} -> (f : Nat ** GCD f a b)
 gcd Z Z impossible
 gcd Z b =
-    (b ** MkGCD (CommonFactorExists b (anythingFactorZero b) (factorReflexive b)) $
+    (b ** MkGCD (CommonFactorExists b (anythingFactorZero b) (reflexive {x = b})) $
         \q, (CommonFactorExists q _ prf) => prf
     )
 gcd a Z =
-    (a ** MkGCD (CommonFactorExists a (factorReflexive a) (anythingFactorZero a)) $
+    (a ** MkGCD (CommonFactorExists a (reflexive {x = a}) (anythingFactorZero a)) $
         \q, (CommonFactorExists q prf _) => prf
     )
 gcd (S a) (S b) with (cmp (S a) (S b))
@@ -439,13 +446,13 @@ gcd (S a) (S b) with (cmp (S a) (S b))
                 LTESucc . lteSuccRight $ lteAddRight a
             (f ** MkGCD prf greatest) = sizeInd gcd_step $ SearchArgs (S (a + S d)) (S a) aGtB
         in
-        (f ** MkGCD (commonFactorSym prf) (\q, cf => greatest q $ commonFactorSym cf))
+        (f ** MkGCD (symmetric {ty = Nat} prf) (\q, cf => greatest q $ symmetric {ty = Nat} cf))
 
 ||| For every two natural numbers there is a unique greatest common divisor.
 export
 gcdUnique : {a, b, p, q : Nat} -> GCD p a b -> GCD q a b -> p = q
 gcdUnique (MkGCD pCFab greatestP) (MkGCD qCFab greatestQ) =
-    factorAntisymmetric (greatestQ p pCFab) (greatestP q qCFab)
+    antisymmetric (greatestQ p pCFab) (greatestP q qCFab)
 
 
 divByGcdHelper : (a, b, c : Nat) -> GCD (S a) (S a * S b) (S a * c) -> GCD 1 (S b) c
@@ -488,7 +495,7 @@ divByGcdGcdOne {a = S a} {b = Z} {c = Z} (MkGCD {notBothZero} _ _) =
 divByGcdGcdOne {a = S a} {b = Z} {c = S c} gcdPrf@(MkGCD {notBothZero} _ _) =
         case replace {p = \x => NotBothZero x (S a * S c)} (multZeroRightZero (S a)) notBothZero of
             LeftIsNotZero impossible
-            RightIsNotZero => gcdSym $ divByGcdHelper a c Z $ gcdSym gcdPrf
+            RightIsNotZero => symmetric {ty = Nat} $ divByGcdHelper a c Z $ symmetric {ty = Nat} gcdPrf
 divByGcdGcdOne {a = S a} {b = S b} {c = Z} gcdPrf@(MkGCD {notBothZero} _ _) =
         case replace {p = \x => NotBothZero (S a * S b) x} (multZeroRightZero (S a)) notBothZero of
             RightIsNotZero impossible

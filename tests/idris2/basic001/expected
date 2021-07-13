@@ -3,7 +3,7 @@ Main> Main> Cons (S Z) (Cons (S (S Z)) []) : Vect (S (S Z)) Nat
 Main> Error: When unifying Vect (S (S Z)) Nat and Vect (S Z) Nat.
 Mismatch between: S Z and Z.
 
-(interactive):1:28--1:51
+(Interactive):1:28--1:51
  1 | zipWith plus (Cons Z Nil) (Cons (S Z) (Cons Z Nil))
                                 ^^^^^^^^^^^^^^^^^^^^^^^
 

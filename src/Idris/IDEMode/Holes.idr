@@ -9,7 +9,7 @@ import Idris.Pretty
 
 import Idris.IDEMode.Commands
 
-import Libraries.Data.String.Extra
+import Libraries.Data.String.Extra as L
 import Libraries.Utils.Term
 
 %default covering
@@ -86,7 +86,12 @@ extractHoleData defs env fn (S args) (Bind fc x b sc)
        let premise = MkHolePremise x ity (multiplicity b) (isImplicit b)
        pure $ record { context $= (premise ::)  } rest
 extractHoleData defs env fn args ty
-  = do ity <- resugar env !(normalise defs env ty)
+  = do nty <- normalise defs env ty
+       ity <- resugar env nty
+       log "idemode.hole" 20 $
+          "Return type: " ++ show !(toFullNames ty)
+          ++ "\n  Evaluated to: " ++ show !(toFullNames nty)
+          ++ "\n  Resugared to: " ++ show ity
        pure $ MkHoleData fn ity []
 
 
@@ -141,7 +146,7 @@ prettyHole : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              Defs -> Env Term vars -> Name -> Nat -> Term vars ->
-             Core (Doc IdrisAnn)
+             Core (Doc IdrisSyntax)
 prettyHole defs env fn args ty
   = do hdata <- holeData defs env fn args ty
        case hdata.context of
@@ -150,7 +155,7 @@ prettyHole defs env fn args ty
                             map (\premise => prettyRigHole premise.multiplicity
                                     <+> prettyImpBracket premise.isImplicit (prettyName premise.name <++> colon <++> prettyTerm premise.type))
                                     hdata.context) <+> hardline
-                    <+> (pretty $ replicate 30 '-') <+> hardline
+                    <+> (pretty $ L.replicate 30 '-') <+> hardline
                     <+> pretty (nameRoot $ hdata.name) <++> colon <++> prettyTerm hdata.type
 
 sexpPremise : HolePremise -> SExp

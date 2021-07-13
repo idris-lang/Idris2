@@ -2,6 +2,7 @@ module Compiler.Scheme.Gambit
 
 import Compiler.Common
 import Compiler.CompileExpr
+import Compiler.Generated
 import Compiler.Inline
 import Compiler.Scheme.Common
 
@@ -16,7 +17,7 @@ import Libraries.Utils.Path
 import Data.List
 import Data.Maybe
 import Libraries.Data.NameMap
-import Data.Strings
+import Data.String
 import Data.Vect
 
 import Idris.Env
@@ -49,7 +50,7 @@ findGSCBackend =
 
 schHeader : String
 schHeader =
-    "; @generated\n" ++
+    "; " ++ (generatedString "Gambit") ++ "\n" ++
     "(declare (block)\n" ++
     "(inlining-limit 450)\n" ++
     "(standard-bindings)\n" ++
@@ -73,29 +74,13 @@ gambitString : String -> String
 gambitString cs = strCons '"' (showGambitString (unpack cs) "\"")
 
 mutual
-  -- Primitive types have been converted to names for the purpose of matching
-  -- on types
-  tySpec : NamedCExp -> Core String
-  tySpec (NmCon fc (UN "Int") _ []) = pure "int"
-  tySpec (NmCon fc (UN "String") _ []) = pure "UTF-8-string"
-  tySpec (NmCon fc (UN "Double") _ []) = pure "double"
-  tySpec (NmCon fc (UN "Char") _ []) = pure "char"
-  tySpec (NmCon fc (NS _ n) _ [_])
-     = cond [(n == UN "Ptr", pure "(pointer void)")]
-          (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
-  tySpec (NmCon fc (NS _ n) _ [])
-     = cond [(n == UN "Unit", pure "void"),
-             (n == UN "AnyPtr", pure "(pointer void)")]
-          (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
-  tySpec ty = throw (GenericMsg (getFC ty) ("Can't pass argument of type " ++ show ty ++ " to foreign function"))
-
   handleRet : String -> String -> String
   handleRet "void" op = op ++ " " ++ mkWorld (schConstructor gambitString (UN "") (Just 0) [])
   handleRet _ op = mkWorld op
 
   getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))
-  getFArgs (NmCon fc _ (Just 0) _) = pure []
-  getFArgs (NmCon fc _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
+  getFArgs (NmCon fc _ _ (Just 0) _) = pure []
+  getFArgs (NmCon fc _ _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
   getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
 
   gambitPrim : Int -> ExtPrim -> List NamedCExp -> Core String
@@ -152,6 +137,10 @@ cType fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t ++
 cftySpec : FC -> CFType -> Core String
 cftySpec fc CFUnit = pure "void"
 cftySpec fc CFInt = pure "int"
+cftySpec fc CFInt8 = pure "char"
+cftySpec fc CFInt16 = pure "short"
+cftySpec fc CFInt32 = pure "int"
+cftySpec fc CFInt64 = pure "long"
 cftySpec fc CFUnsigned8 = pure "unsigned-char"
 cftySpec fc CFUnsigned16 = pure "unsigned-short"
 cftySpec fc CFUnsigned32 = pure "unsigned-int"
@@ -201,11 +190,11 @@ cCall fc cfn fnWrapName clib args ret
          --                   copyLib (fname, fullname)
          --                   put Loaded (clib :: loaded)
          --                   pure ""
-         argTypes <- traverse (\a => cftySpec fc (snd a)) args
+         argTypes <- traverse (cftySpec fc . snd) args
          retType <- cftySpec fc ret
 
          argsInfo <- traverse buildArg args
-         argCTypes <- traverse (\a => cType fc (snd a)) args
+         argCTypes <- traverse (cType fc . snd) args
          retCType <- cType fc ret
 
          let cWrapperDefs = map buildCWrapperDefs $ mapMaybe snd argsInfo
@@ -301,15 +290,14 @@ schemeCall fc sfn argns ret
 useCC : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         FC -> List String -> List (Name, CFType) -> CFType -> Core (Maybe String, (String, String))
-useCC fc [] args ret = throw (NoForeignCC fc)
-useCC fc (cc :: ccs) args ret
-    = case parseCC cc of
-           Nothing => useCC fc ccs args ret
+useCC fc ccs args ret
+    = case parseCC ["scheme,gambit", "scheme", "C"] ccs of
+           Nothing => throw (NoForeignCC fc ccs)
            Just ("scheme,gambit", [sfn]) => pure (Nothing, (!(schemeCall fc sfn (map fst args) ret), ""))
            Just ("scheme", [sfn]) => pure (Nothing, (!(schemeCall fc sfn (map fst args) ret), ""))
            Just ("C", [cfn, clib]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
            Just ("C", [cfn, clib, chdr]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
-           _ => useCC fc ccs args ret
+           _ => throw (NoForeignCC fc ccs)
   where
     fnWrapName : String -> String -> String
     fnWrapName cfn schemeArgName = schemeArgName ++ "-" ++ cfn ++ "-cFunWrap"
@@ -420,4 +408,4 @@ executeExpr c tmpDir tm
 
 export
 codegenGambit : Codegen
-codegenGambit = MkCG compileExpr executeExpr
+codegenGambit = MkCG compileExpr executeExpr Nothing Nothing

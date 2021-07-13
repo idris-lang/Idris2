@@ -2,10 +2,12 @@ module System
 
 import public Data.So
 import Data.List
-import Data.Strings
+import Data.String
+
+%default total
 
 support : String -> String
-support fn = "C:" ++ fn ++ ", libidris2_support"
+support fn = "C:" ++ fn ++ ", libidris2_support, idris_support.h"
 
 libc : String -> String
 libc fn = "C:" ++ fn ++ ", libc 6"
@@ -15,12 +17,10 @@ libc fn = "C:" ++ fn ++ ", libc 6"
 
 %foreign "scheme,racket:blodwen-sleep"
          support "idris2_sleep"
---         "C:idris2_sleep, libidris2_support"
 prim__sleep : Int -> PrimIO ()
 
 %foreign "scheme,racket:blodwen-usleep"
          support "idris2_usleep"
---         "C:idris2_usleep, libidris2_support"
 prim__usleep : Int -> PrimIO ()
 
 export
@@ -31,15 +31,25 @@ export
 usleep : HasIO io => (x : Int) -> So (x >= 0) => io ()
 usleep sec = primIO (prim__usleep sec)
 
--- This one is going to vary for different back ends. Probably needs a
--- better convention. Will revisit...
-%foreign "scheme:blodwen-args"
-         "node:lambda:() => __prim_js2idris_array(process.argv.slice(1))"
-prim__getArgs : PrimIO (List String)
+-- Get the number of arguments
+%foreign "scheme:blodwen-arg-count"
+         support "idris2_getArgCount"
+         "node:lambda:() => process.argv.length"
+prim__getArgCount : PrimIO Int
+
+-- Get argument number `n`
+%foreign "scheme:blodwen-arg"
+         support "idris2_getArg"
+         "node:lambda:n => process.argv[n]"
+prim__getArg : Int -> PrimIO String
 
 export
 getArgs : HasIO io => io (List String)
-getArgs = primIO prim__getArgs
+getArgs = do
+            n <- primIO prim__getArgCount
+            if n > 0
+              then for [0..n-1] $ primIO . prim__getArg
+              else pure []
 
 %foreign libc "getenv"
          "node:lambda: n => process.env[n]"
@@ -61,6 +71,7 @@ getEnv var
            else pure (Just (prim__getString env))
 
 export
+covering
 getEnvironment : HasIO io => io (List (String, String))
 getEnvironment = getAllPairs 0 []
   where
@@ -89,8 +100,7 @@ unsetEnv var
    = do ok <- primIO $ prim__unsetEnv var
         pure $ ok == 0
 
-%foreign libc "system"
-         "scheme:blodwen-system"
+%foreign "C:idris2_system, libidris2_support, idris_system.h"
 prim__system : String -> PrimIO Int
 
 export
@@ -105,8 +115,16 @@ export
 time : HasIO io => io Integer
 time = pure $ cast !(primIO prim__time)
 
+%foreign support "idris2_getPID"
+prim__getPID : PrimIO Int
+
+||| Get the ID of the currently running process.
+export
+getPID : HasIO io => io Int
+getPID = primIO prim__getPID
+
 %foreign libc "exit"
-         "node:lambda:c => process.exit(Number(c))"
+         "node:lambda:c => process.exit(c)"
 prim__exit : Int -> PrimIO ()
 
 ||| Programs can either terminate successfully, or end in a caught

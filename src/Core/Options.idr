@@ -9,7 +9,7 @@ import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 
 import System.Info
 
@@ -53,32 +53,38 @@ toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs pdirs ldirs ddirs) =
 
 public export
 data CG = Chez
+        | ChezSep
         | Racket
         | Gambit
         | Node
         | Javascript
         | RefC
+        | VMCodeInterp
         | Other String
 
 export
 Eq CG where
   Chez == Chez = True
+  ChezSep == ChezSep = True
   Racket == Racket = True
   Gambit == Gambit = True
   Node == Node = True
   Javascript == Javascript = True
   RefC == RefC = True
+  VMCodeInterp == VMCodeInterp = True
   Other s == Other t = s == t
   _ == _ = False
 
 export
 Show CG where
   show Chez = "chez"
+  show ChezSep = "chez-sep"
   show Racket = "racket"
   show Gambit = "gambit"
   show Node = "node"
   show Javascript = "javascript"
   show RefC = "refc"
+  show VMCodeInterp = "vmcode-interp"
   show (Other s) = s
 
 public export
@@ -126,6 +132,7 @@ record ElabDirectives where
   totality : TotalReq
   ambigLimit : Nat
   autoImplicitLimit : Nat
+  nfThreshold : Nat
   --
   -- produce traditional (prefix) record projections,
   -- in addition to postfix (dot) projections
@@ -140,6 +147,8 @@ record Session where
   findipkg : Bool
   codegen : CG
   directives : List String
+  logEnabled : Bool -- do we check logging flags at all? This is 'False' until
+                    -- any logging is enabled.
   logLevel : LogLevels
   logTimings : Bool
   ignoreMissingPkg : Bool -- fail silently on missing packages. This is because
@@ -150,6 +159,19 @@ record Session where
   dumplifted : Maybe String -- file to output lambda lifted definitions
   dumpanf : Maybe String -- file to output ANF definitions
   dumpvmcode : Maybe String -- file to output VM code definitions
+  profile : Bool -- generate profiling information, if supported
+  searchTimeout : Integer -- maximum number of milliseconds to run
+                          -- expression/program search
+  -- Warnings
+  warningsAsErrors : Bool
+  showShadowingWarning : Bool
+  -- Experimental
+  checkHashesInsteadOfModTime : Bool
+  incrementalCGs : List CG
+  wholeProgram : Bool
+     -- Use whole program compilation for executables, no matter what
+     -- incremental CGs are set (intended for overriding any environment
+     -- variables that set incremental compilation)
 
 public export
 record PPrinter where
@@ -176,11 +198,13 @@ export
 availableCGs : Options -> List (String, CG)
 availableCGs o
     = [("chez", Chez),
+       ("chez-sep", ChezSep),
        ("racket", Racket),
        ("node", Node),
        ("javascript", Javascript),
        ("refc", RefC),
-       ("gambit", Gambit)] ++ additionalCGs o
+       ("gambit", Gambit),
+       ("vmcode-interp", VMCodeInterp)] ++ additionalCGs o
 
 export
 getCG : Options -> String -> Maybe CG
@@ -195,13 +219,14 @@ defaultPPrint = MkPPOpts False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez [] defaultLogLevel
+defaultSession = MkSessionOpts False False False Chez [] False defaultLogLevel
                                False False False Nothing Nothing
-                               Nothing Nothing
+                               Nothing Nothing False 1000 False True
+                               False [] False
 
 export
 defaultElab : ElabDirectives
-defaultElab = MkElabDirectives True True CoveringOnly 3 50 True
+defaultElab = MkElabDirectives True True CoveringOnly 3 50 50 True
 
 export
 defaults : Options

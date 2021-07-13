@@ -9,8 +9,9 @@ import Core.Name.Namespace
 import Core.Options
 
 import Data.List
+import Data.List1
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Data.Either
 
 import System
@@ -21,17 +22,23 @@ public export
 data PkgCommand
       = Build
       | Install
+      | InstallWithSrc
+      | MkDoc
       | Typecheck
       | Clean
       | REPL
+      | Init
 
 export
 Show PkgCommand where
   show Build = "--build"
   show Install = "--install"
+  show InstallWithSrc = "--install-with-src"
+  show MkDoc = "--mkdoc"
   show Typecheck = "--typecheck"
   show Clean = "--clean"
   show REPL = "--repl"
+  show Init = "--init"
 
 public export
 data DirCommand
@@ -41,61 +48,16 @@ export
 Show DirCommand where
   show LibDir = "--libdir"
 
+||| Help topics
 public export
-data PkgVersion = MkPkgVersion (List Nat)
+data HelpTopic
+  =
+    ||| Interactive debugging topics
+   HelpLogging
 
-export
-Show PkgVersion where
-  show (MkPkgVersion vs) = showSep "." (map show vs)
-
-export
-Eq PkgVersion where
-  MkPkgVersion p == MkPkgVersion q = p == q
-
-export
-Ord PkgVersion where
-  -- list ordering gives us what we want
-  compare (MkPkgVersion p) (MkPkgVersion q) = compare p q
-
--- version must be >= lowerBound and <= upperBound
--- Do we want < and > as well?
-public export
-record PkgVersionBounds where
-  constructor MkPkgVersionBounds
-  lowerBound : Maybe PkgVersion
-  lowerInclusive : Bool -- >= if true
-  upperBound : Maybe PkgVersion
-  upperInclusive : Bool -- <= if true
-
-export
-Show PkgVersionBounds where
-  show p = if noBounds p then "any"
-              else maybe "" (\v => (if p.lowerInclusive then ">= " else "> ")
-                                       ++ show v ++ " ") p.lowerBound ++
-                   maybe "" (\v => (if p.upperInclusive then "<= " else "< ") ++ show v) p.upperBound
-    where
-      noBounds : PkgVersionBounds -> Bool
-      noBounds p = isNothing p.lowerBound && isNothing p.upperBound
-
-export
-anyBounds : PkgVersionBounds
-anyBounds = MkPkgVersionBounds Nothing True Nothing True
-
-export
-current : PkgVersionBounds
-current = let (maj,min,patch) = semVer version
-              version = Just (MkPkgVersion [maj, min, patch]) in
-              MkPkgVersionBounds version True version True
-
-export
-inBounds : PkgVersion -> PkgVersionBounds -> Bool
-inBounds v bounds
-   = maybe True (\v' => if bounds.lowerInclusive
-                           then v >= v'
-                           else v > v') bounds.lowerBound &&
-     maybe True (\v' => if bounds.upperInclusive
-                           then v <= v'
-                           else v < v') bounds.upperBound
+recogniseHelpTopic : String -> Maybe HelpTopic
+recogniseHelpTopic "logging" = pure HelpLogging
+recogniseHelpTopic _ = Nothing
 
 ||| CLOpt - possible command line options
 public export
@@ -119,12 +81,14 @@ data CLOpt
   BuildDir String |
    ||| Set output directory
   OutputDir String |
+   ||| Generate profile data when compiling (backend dependent)
+  Profile |
    ||| Show the installation prefix
   ShowPrefix |
    ||| Display Idris version
   Version |
    ||| Display help text
-  Help |
+  Help (Maybe HelpTopic) |
    ||| Suppress the banner
   NoBanner |
    ||| Run Idris 2 in quiet mode
@@ -140,7 +104,7 @@ data CLOpt
    ||| Add a package as a dependency
   PkgPath String |
    ||| Build or install a given package, depending on PkgCommand
-  Package PkgCommand String |
+  Package PkgCommand (Maybe String) |
    ||| Show locations of data/library directories
   Directory DirCommand |
    ||| The input Idris file
@@ -167,14 +131,29 @@ data CLOpt
   FindIPKG |
   Timing |
   DebugElabCheck |
-  BlodwenPaths
+  BlodwenPaths |
+  ||| Treat warnings as errors
+  WarningsAsErrors |
+  ||| Do not print shadowing warnings
+  IgnoreShadowingWarnings |
+  ||| Use SHA256 hashes to determine if a source file needs rebuilding instead
+  ||| of modification time.
+  HashesInsteadOfModTime |
+  ||| Use incremental code generation, if the backend supports it
+  IncrementalCG String |
+  ||| Use whole program compilation - overrides IncrementalCG if set
+  WholeProgram |
+  ||| Generate bash completion info
+  BashCompletion String String |
+  ||| Generate bash completion script
+  BashCompletionScript String
 
 ||| Extract the host and port to bind the IDE socket to
 export
 ideSocketModeAddress : List CLOpt -> (String, Int)
 ideSocketModeAddress []  = ("localhost", 38398)
 ideSocketModeAddress (IdeModeSocket hp :: _) =
-  let (h, p) = Strings.break (== ':') hp
+  let (h, p) = String.break (== ':') hp
       port = fromMaybe 38398 (portPart p >>= parsePositive)
       host = if h == "" then "localhost" else h
   in (host, port)
@@ -234,6 +213,10 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Don't implicitly import Prelude"),
            MkOpt ["--codegen", "--cg"] [Required "backend"] (\f => [SetCG f])
               (Just $ "Set code generator " ++ showDefault (codegen defaultSession)),
+           MkOpt ["--incremental-cg", "--inc"] [Required "backend"] (\f => [IncrementalCG f])
+             (Just "Incremental code generation on given backend"),
+           MkOpt ["--whole-program", "--wp"] [] [WholeProgram]
+             (Just "Use whole program compilation (overrides --inc)"),
            MkOpt ["--directive"] [Required "directive"] (\d => [Directive d])
               (Just $ "Pass a directive to the current code generator"),
            MkOpt ["--package", "-p"] [Required "package"] (\f => [PkgPath f])
@@ -244,6 +227,18 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just $ "Set build directory"),
            MkOpt ["--output-dir"] [Required "dir"] (\d => [OutputDir d])
               (Just $ "Set output directory"),
+           MkOpt ["--profile"] [] [Profile]
+              (Just "Generate profile data when compiling, if supported"),
+
+           optSeparator,
+           MkOpt ["-Werror"] [] [WarningsAsErrors]
+              (Just "Treat warnings as errors"),
+           MkOpt ["-Wno-shadowing"] [] [IgnoreShadowingWarnings]
+              (Just "Do not print shadowing warnings"),
+
+           optSeparator,
+           MkOpt ["-Xcheck-hashes"] [] [HashesInsteadOfModTime]
+             (Just "Use SHA256 hashes instead of modification time to determine if a source file needs rebuilding"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
@@ -254,15 +249,28 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Show library directory"),
 
            optSeparator,
-           MkOpt ["--build"] [Required "package file"] (\f => [Package Build f])
+           MkOpt ["--init"] [Optional "package file"]
+              (\ f => [Package Init f])
+              (Just "Interactively initialise a new project"),
+
+           MkOpt ["--build"] [Optional "package file"]
+               (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),
-           MkOpt ["--install"] [Required "package file"] (\f => [Package Install f])
+           MkOpt ["--install"] [Optional "package file"]
+              (\f => [Package Install f])
               (Just "Install the given package"),
-           MkOpt ["--typecheck"] [Required "package file"] (\f => [Package Typecheck f])
+           MkOpt ["--install-with-src"] [Optional "package file"]
+              (\f => [Package InstallWithSrc f])
+              (Just "Install the given package"),
+           MkOpt ["--mkdoc"] [Optional "package file"]
+              (\f => [Package MkDoc f])
+              (Just "Build documentation for the given package"),
+           MkOpt ["--typecheck"] [Optional "package file"]
+              (\f => [Package Typecheck f])
               (Just "Typechecks the given package without code generation"),
-           MkOpt ["--clean"] [Required "package file"] (\f => [Package Clean f])
+           MkOpt ["--clean"] [Optional "package file"] (\f => [Package Clean f])
               (Just "Clean intermediate files/executables for the given package"),
-           MkOpt ["--repl"] [Required "package file"] (\f => [Package REPL f])
+           MkOpt ["--repl"] [Optional "package file"] (\f => [Package REPL f])
               (Just "Build the given package and launch a REPL instance."),
            MkOpt ["--find-ipkg"] [] [FindIPKG]
               (Just "Find and use an .ipkg file in a parent directory."),
@@ -302,7 +310,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            optSeparator,
            MkOpt ["--version", "-v"] [] [Version]
               (Just "Display version string"),
-           MkOpt ["--help", "-h", "-?"] [] [Help]
+           MkOpt ["--help", "-h", "-?"] [Optional "topic"] (\ tp => [Help (tp >>= recogniseHelpTopic)])
               (Just "Display help text"),
 
            -- Internal debugging options
@@ -319,7 +327,19 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--dumpvmcode"] [Required "output file"] (\f => [DumpVMCode f])
               Nothing, -- dump VM Code to the given file
            MkOpt ["--debug-elab-check"] [] [DebugElabCheck]
-              Nothing -- do more elaborator checks (currently conversion in LinearCheck)
+              Nothing, -- do more elaborator checks (currently conversion in LinearCheck)
+
+           optSeparator,
+           -- bash completion
+           MkOpt ["--bash-completion"]
+                 [ Required "input"
+                 , Required "previous input"]
+                 (\w1,w2 => [BashCompletion w1 w2])
+                 (Just "Print bash autocompletion information"),
+           MkOpt ["--bash-completion-script"]
+                 [ Required "function name" ]
+                 (\n => [BashCompletionScript n])
+                 (Just "Generate a bash script to activate autocompletion for Idris2")
            ]
 
 optShow : OptDesc -> (String, Maybe String)
@@ -357,7 +377,7 @@ envsUsage = makeTextFromOptionsOrEnvs $ map (\e => (e.name, Just e.help)) envs
 
 export
 versionMsg : String
-versionMsg = "Idris 2, version " ++ showVersion True version
+versionMsg = "Idris 2, version " ++ show version
 
 export
 usage : String
@@ -441,3 +461,8 @@ getCmdOpts : IO (Either String (List CLOpt))
 getCmdOpts = do (_ :: opts) <- getArgs
                     | _ => pure (Left "Invalid command line")
                 pure $ getOpts opts
+
+||| List of all command line option flags.
+export
+optionFlags : List String
+optionFlags = options >>= flags

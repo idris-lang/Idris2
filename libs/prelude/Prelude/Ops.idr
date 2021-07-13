@@ -11,9 +11,10 @@ infixr 4 ||
 
 -- List and String operators
 infixr 7 ::, ++
+infixl 7 :<
 
 -- Functor/Applicative/Monad/Algebra operators
-infixl 1 >>=, =<<, >>, >=>, <=<
+infixl 1 >>=, =<<, >>, >=>, <=<, <&>
 infixr 2 <|>
 infixl 3 <*>, *>, <*
 infixr 4 <$>, $>, <$

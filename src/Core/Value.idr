@@ -6,8 +6,12 @@ import Core.Env
 import Core.TT
 
 import Libraries.Data.IntMap
+import Libraries.Data.NameMap
 
 %default covering
+
+public export
+data EvalOrder = CBV | CBN
 
 public export
 record EvalOpts where
@@ -15,28 +19,28 @@ record EvalOpts where
   holesOnly : Bool -- only evaluate hole solutions
   argHolesOnly : Bool -- only evaluate holes which are relevant arguments
   removeAs : Bool -- reduce 'as' patterns (don't do this on LHS)
-  usedMetas : IntMap () -- Metavariables we're under, to detect cycles
   evalAll : Bool -- evaluate everything, including private names
   tcInline : Bool -- inline for totality checking
   fuel : Maybe Nat -- Limit for recursion depth
   reduceLimit : List (Name, Nat) -- reduction limits for given names. If not
                      -- present, no limit
+  strategy : EvalOrder
 
 export
 defaultOpts : EvalOpts
-defaultOpts = MkEvalOpts False False True empty False False Nothing []
+defaultOpts = MkEvalOpts False False True False False Nothing [] CBN
 
 export
 withHoles : EvalOpts
-withHoles = MkEvalOpts True True False empty False False Nothing []
+withHoles = MkEvalOpts True True False False False Nothing [] CBN
 
 export
 withAll : EvalOpts
-withAll = MkEvalOpts False False True empty True False Nothing []
+withAll = MkEvalOpts False False True True False Nothing [] CBN
 
 export
 withArgHoles : EvalOpts
-withArgHoles = MkEvalOpts False True False empty False False Nothing []
+withArgHoles = MkEvalOpts False True False False False Nothing [] CBN
 
 export
 tcOnly : EvalOpts
@@ -45,6 +49,14 @@ tcOnly = record { tcInline = True } withArgHoles
 export
 onLHS : EvalOpts
 onLHS = record { removeAs = False } defaultOpts
+
+export
+cbn : EvalOpts
+cbn = defaultOpts
+
+export
+cbv : EvalOpts
+cbv = record { strategy = CBV } defaultOpts
 
 mutual
   public export
@@ -59,12 +71,12 @@ mutual
                    LocalEnv free vars ->
                    Env Term free ->
                    Term (vars ++ free) -> Closure free
-       MkNFClosure : NF free -> Closure free
+       MkNFClosure : EvalOpts -> Env Term free -> NF free -> Closure free
 
   -- The head of a value: things you can apply arguments to
   public export
   data NHead : List Name -> Type where
-       NLocal : Maybe Bool -> (idx : Nat) -> (0 p : IsVar name idx vars) ->
+       NLocal : Maybe Bool -> (idx : Nat) -> (0 p : IsVar nm idx vars) ->
                 NHead vars
        NRef   : NameType -> Name -> NHead vars
        NMeta  : Name -> Int -> List (Closure vars) -> NHead vars
@@ -90,6 +102,14 @@ mutual
        NPrimVal : FC -> Constant -> NF vars
        NErased  : FC -> (imp : Bool) -> NF vars
        NType    : FC -> NF vars
+
+export
+ntCon : FC -> Name -> Int -> Nat -> List (FC, Closure vars) -> NF vars
+ntCon fc (UN "Type") tag Z [] = NType fc
+ntCon fc n tag Z [] = case isConstantType n of
+  Just c => NPrimVal fc c
+  Nothing => NTCon fc n tag Z []
+ntCon fc n tag arity args = NTCon fc n tag arity args
 
 export
 getLoc : NF vars -> FC

@@ -2,27 +2,30 @@ module System.Directory
 
 import public System.File
 
+%default total
+
 public export
 DirPtr : Type
 DirPtr = AnyPtr
 
 support : String -> String
-support fn = "C:" ++ fn ++ ", libidris2_support"
+support fn = "C:" ++ fn ++ ", libidris2_support, idris_directory.h"
 
-%foreign support "idris2_fileErrno"
-         "node:support:fileErrno,support_system_directory"
+%foreign "C:idris2_fileErrno, libidris2_support, idris_file.h"
+         "node:support:fileErrno,support_system_file"
 prim__fileErrno : PrimIO Int
 
 returnError : HasIO io => io (Either FileError a)
 returnError
     = do err <- primIO prim__fileErrno
-         case err of
-              0 => pure $ Left FileReadError
-              1 => pure $ Left FileWriteError
-              2 => pure $ Left FileNotFound
-              3 => pure $ Left PermissionDenied
-              4 => pure $ Left FileExists
-              _ => pure $ Left (GenericFileError (err-5))
+         pure $ Left $
+           case err of
+              0 => FileReadError
+              1 => FileWriteError
+              2 => FileNotFound
+              3 => PermissionDenied
+              4 => FileExists
+              _ => GenericFileError (err-5)
 
 ok : HasIO io => a -> io (Either FileError a)
 ok x = pure (Right x)

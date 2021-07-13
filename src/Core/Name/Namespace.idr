@@ -2,10 +2,11 @@ module Core.Name.Namespace
 
 import Data.List
 import Data.List1
-import Data.Strings
+import Data.String
 import Decidable.Equality
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Utils.Path
 
 %default total
 
@@ -113,6 +114,12 @@ unsafeUnfoldModuleIdent (MkMI ns) = ns
 export
 unsafeFoldModuleIdent : List String -> ModuleIdent
 unsafeFoldModuleIdent = MkMI
+
+namespace ModuleIdent
+  ||| A.B.C -> "A/B/C"
+  export
+  toPath : ModuleIdent -> String
+  toPath = joinPath . reverse . unsafeUnfoldModuleIdent
 
 -------------------------------------------------------------------------------------
 -- HIERARCHICAL STRUCTURE
@@ -239,6 +246,10 @@ preludeNS : Namespace
 preludeNS = mkNamespace "Prelude"
 
 export
+numNS : Namespace
+numNS = mkNamespace "Prelude.Num"
+
+export
 typesNS : Namespace
 typesNS = mkNamespace "Prelude.Types"
 
@@ -253,6 +264,10 @@ eqOrdNS = mkNamespace "Prelude.EqOrd"
 export
 primIONS : Namespace
 primIONS = mkNamespace "PrimIO"
+
+export
+ioNS : Namespace
+ioNS = mkNamespace "Prelude.IO"
 
 export
 reflectionNS : Namespace

@@ -28,13 +28,13 @@ import Libraries.Text.Lexer
 import Data.List
 import Data.List1
 import Data.List.Views
-import Data.Strings
+import Data.String
 import Libraries.Data.String.Extra
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default total
 

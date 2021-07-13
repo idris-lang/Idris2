@@ -48,12 +48,12 @@ void buf_ntohl(void* buf, int len) {
     }
 }
 
-void* idrnet_malloc(int size) {
-    return malloc(size);
-}
-
-void idrnet_free(void* ptr) {
-    free(ptr);
+struct sockaddr_un get_sockaddr_unix(char* host) {
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strcpy(addr.sun_path, host);
+    return addr;
 }
 
 unsigned int idrnet_peek(void *ptr, unsigned int offset) {
@@ -119,14 +119,20 @@ int idrnet_getaddrinfo(struct addrinfo** address_res, char* host, int port,
 }
 
 int idrnet_bind(int sockfd, int family, int socket_type, char* host, int port) {
-    struct addrinfo *address_res;
-    int addr_res = idrnet_getaddrinfo(&address_res, host, port, family, socket_type);
-    if (addr_res != 0) {
-        //printf("Lib err: bind getaddrinfo\n");
-        return -1;
-    }
+    int bind_res;
+    if (family == AF_UNIX) {
+        struct sockaddr_un addr = get_sockaddr_unix(host);
+        bind_res = bind(sockfd, (struct sockaddr *)&addr, sizeof(addr));
+    } else {
+        struct addrinfo *address_res;
+        int addr_res = idrnet_getaddrinfo(&address_res, host, port, family, socket_type);
+        if (addr_res != 0) {
+            //printf("Lib err: bind getaddrinfo\n");
+            return -1;
+        }
 
-    int bind_res = bind(sockfd, address_res->ai_addr, address_res->ai_addrlen);
+        bind_res = bind(sockfd, address_res->ai_addr, address_res->ai_addrlen);
+    }
     if (bind_res == -1) {
         //freeaddrinfo(address_res);
         //printf("Lib err: bind\n");
@@ -146,14 +152,14 @@ int idrnet_getsockname(int sockfd, void *address, void *len) {
 }
 
 int idrnet_sockaddr_port(int sockfd) {
-  struct sockaddr address;
-  socklen_t addrlen = sizeof(struct sockaddr);
-  int res = getsockname(sockfd, &address, &addrlen);
+  struct sockaddr_storage address;
+  socklen_t addrlen = sizeof(struct sockaddr_storage);
+  int res = getsockname(sockfd, (struct sockaddr*)&address, &addrlen);
   if(res < 0) {
     return -1;
   }
 
-  switch(address.sa_family) {
+  switch(address.ss_family) {
   case AF_INET:
     return ntohs(((struct sockaddr_in*)&address)->sin_port);
   case AF_INET6:
@@ -165,6 +171,10 @@ int idrnet_sockaddr_port(int sockfd) {
 
 
 int idrnet_connect(int sockfd, int family, int socket_type, char* host, int port) {
+    if (family == AF_UNIX) {
+        struct sockaddr_un addr = get_sockaddr_unix(host);
+        return connect(sockfd, (struct sockaddr *)&addr, sizeof(addr));
+    }
     struct addrinfo* remote_host;
     int addr_res = idrnet_getaddrinfo(&remote_host, host, port, family, socket_type);
     if (addr_res != 0) {
@@ -197,6 +207,11 @@ char* idrnet_sockaddr_ipv4(void* sockaddr) {
 int idrnet_sockaddr_ipv4_port(void* sockaddr) {
     struct sockaddr_in* addr = (struct sockaddr_in*) sockaddr;
     return ((int) ntohs(addr->sin_port));
+}
+
+char* idrnet_sockaddr_unix(void* sockaddr) {
+    struct sockaddr_un* addr = (struct sockaddr_un*) sockaddr;
+    return addr->sun_path;
 }
 
 void* idrnet_create_sockaddr() {

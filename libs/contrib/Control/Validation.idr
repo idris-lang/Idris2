@@ -13,7 +13,7 @@ module Control.Validation
 import Control.Monad.Identity
 import Control.Monad.Error.Either
 import Data.Nat
-import Data.Strings
+import Data.String
 import Data.Vect
 import Decidable.Equality
 
@@ -110,6 +110,8 @@ Monad m => Alternative (ValidatorT m a) where
             (Left e) => case !(runEitherT $ validateT right x) of
                 (Right r) => pure $ Right r
                 (Left e') => pure $ Left (e <+> " / " <+> e')
+
+    empty = MkValidator \x => MkEitherT $ pure (Left "invalid")
 
 ||| Alter the input before validation using given function.
 export

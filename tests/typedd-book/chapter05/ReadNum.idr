@@ -1,4 +1,4 @@
-import Data.Strings
+import Data.String
 
 readNumber : IO (Maybe Nat)
 readNumber = do

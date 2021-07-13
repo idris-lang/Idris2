@@ -152,11 +152,12 @@ mutual
   getUnquoteDecl (IDef fc v d)
       = pure $ IDef fc v !(traverse getUnquoteClause d)
   getUnquoteDecl (IParameters fc ps ds)
-      = pure $ IParameters fc !(traverse unqPair ps)
+      = pure $ IParameters fc
+                           !(traverse unqTuple ps)
                            !(traverse getUnquoteDecl ds)
     where
-      unqPair : (Name, RawImp) -> Core (Name, RawImp)
-      unqPair (n, t) = pure (n, !(getUnquote t))
+      unqTuple : (Name, RigCount, PiInfo RawImp, RawImp) -> Core (Name, RigCount, PiInfo RawImp, RawImp)
+      unqTuple (n, rig, i, t) = pure (n, rig, i, !(getUnquote t))
   getUnquoteDecl (IRecord fc ns v d)
       = pure $ IRecord fc ns v !(getUnquoteRecord d)
   getUnquoteDecl (INamespace fc ns ds)
@@ -202,7 +203,7 @@ checkQuote : {vars : _} ->
              Core (Term vars, Glued vars)
 checkQuote rig elabinfo nest env fc tm exp
     = do defs <- get Ctxt
-         q <- newRef Unq (the (List (Name, FC, RawImp)) [])
+         q <- newRef Unq []
          tm' <- getUnquote tm
          qtm <- reflect fc defs (onLHS (elabMode elabinfo)) env tm'
          unqs <- get Unq
@@ -239,12 +240,12 @@ checkQuoteDecl : {vars : _} ->
                  Core (Term vars, Glued vars)
 checkQuoteDecl rig elabinfo nest env fc ds exp
     = do defs <- get Ctxt
-         q <- newRef Unq (the (List (Name, FC, RawImp)) [])
+         q <- newRef Unq []
          ds' <- traverse getUnquoteDecl ds
          qds <- reflect fc defs (onLHS (elabMode elabinfo)) env ds'
          unqs <- get Unq
          qd <- getCon fc defs (reflectionttimp "Decl")
-         qty <- appCon fc defs (preludetypes "List") [qd]
+         qty <- appCon fc defs (basics "List") [qd]
          checkExp rig elabinfo env fc
                   !(bindUnqs unqs rig elabinfo nest env qds)
                   (gnf env qty) exp

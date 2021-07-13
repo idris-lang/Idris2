@@ -1,13 +1,15 @@
 module Core.Options.Log
 
-import Data.List
+import public Data.List
 import Data.List1
-import Data.Maybe
+import public Data.Maybe
 import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
-import Data.Strings
+import Data.String
 import Data.These
 import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 
 %default total
 
@@ -34,6 +36,148 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 ----------------------------------------------------------------------------------
 -- INDIVIDUAL LOG LEVEL
 
+public export
+knownTopics : List (String, Maybe String)
+knownTopics = [
+    ("auto", Nothing),
+    ("builtin.Natural", Nothing),
+    ("builtin.Natural.addTransform", Nothing),
+    ("builtin.NaturalToInteger", Nothing),
+    ("builtin.NaturalToInteger.addTransforms", Nothing),
+    ("builtin.IntegerToNatural", Nothing),
+    ("builtin.IntegerToNatural.addTransforms", Nothing),
+    ("compile.casetree", Nothing),
+    ("compile.casetree.clauses", Nothing),
+    ("compile.casetree.getpmdef", Nothing),
+    ("compile.casetree.intermediate", Nothing),
+    ("compile.casetree.pick", Nothing),
+    ("compile.casetree.partition", Nothing),
+    ("compiler.inline.eval", Nothing),
+    ("compiler.interpreter", Nothing),
+    ("compiler.refc", Nothing),
+    ("compiler.refc.cc", Nothing),
+    ("compiler.scheme.chez", Nothing),
+    ("coverage", Nothing),
+    ("coverage.empty", Nothing),
+    ("coverage.missing", Nothing),
+    ("coverage.recover", Nothing),
+    ("declare.data", Nothing),
+    ("declare.data.constructor", Nothing),
+    ("declare.data.parameters", Nothing),
+    ("declare.def", Nothing),
+    ("declare.def.clause", Nothing),
+    ("declare.def.clause.impossible", Nothing),
+    ("declare.def.clause.with", Nothing),
+    ("declare.def.impossible", Nothing),
+    ("declare.def.lhs", Nothing),
+    ("declare.def.lhs.implicits", Nothing),
+    ("declare.param", Nothing),
+    ("declare.record", Nothing),
+    ("declare.record.field", Nothing),
+    ("declare.record.projection", Nothing),
+    ("declare.record.projection.prefix", Nothing),
+    ("declare.type", Nothing),
+    ("desugar.idiom", Nothing),
+    ("doc.record", Nothing),
+    ("elab", Nothing),
+    ("elab.ambiguous", Nothing),
+    ("elab.app.var", Nothing),
+    ("elab.app.lhs", Nothing),
+    ("elab.as", Nothing),
+    ("elab.bindnames", Nothing),
+    ("elab.binder", Nothing),
+    ("elab.case", Nothing),
+    ("elab.def.local", Nothing),
+    ("elab.delay", Nothing),
+    ("elab.hole", Nothing),
+    ("elab.implicits", Nothing),
+    ("elab.implementation", Nothing),
+    ("elab.interface", Nothing),
+    ("elab.interface.default", Nothing),
+    ("elab.local", Nothing),
+    ("elab.prune", Nothing),
+    ("elab.record", Nothing),
+    ("elab.retry", Nothing),
+    ("elab.rewrite", Nothing),
+    ("elab.unify", Nothing),
+    ("elab.update", Nothing),
+    ("elab.with", Nothing),
+    ("eval.casetree", Nothing),
+    ("eval.casetree.stuck", Nothing),
+    ("eval.eta", Nothing),
+    ("eval.stuck", Nothing),
+    ("idemode.hole", Nothing),
+    ("ide-mode.highlight", Nothing),
+    ("ide-mode.highlight.alias", Nothing),
+    ("ide-mode.send", Nothing),
+    ("import", Nothing),
+    ("import.file", Nothing),
+    ("interaction.casesplit", Nothing),
+    ("interaction.generate", Nothing),
+    ("interaction.search", Nothing),
+    ("metadata.names", Nothing),
+    ("module.hash", Nothing),
+    ("quantity", Nothing),
+    ("quantity.hole", Nothing),
+    ("quantity.hole.update", Nothing),
+    ("repl.eval", Nothing),
+    ("resugar.var", Nothing),
+    ("specialise", Nothing),
+    ("totality", Nothing),
+    ("totality.positivity", Nothing),
+    ("totality.termination", Nothing),
+    ("totality.termination.calc", Nothing),
+    ("totality.termination.guarded", Nothing),
+    ("totality.termination.sizechange", Nothing),
+    ("totality.termination.sizechange.checkCall", Nothing),
+    ("totality.termination.sizechange.checkCall.inPath", Nothing),
+    ("totality.termination.sizechange.checkCall.inPathNot.restart", Nothing),
+    ("totality.termination.sizechange.checkCall.inPathNot.return", Nothing),
+    ("totality.termination.sizechange.inPath", Nothing),
+    ("totality.termination.sizechange.isTerminating", Nothing),
+    ("totality.termination.sizechange.needsChecking", Nothing),
+    ("transform.lhs", Nothing),
+    ("transform.rhs", Nothing),
+    ("ttc.read", Nothing),
+    ("ttc.write", Nothing),
+    ("typesearch.equiv", Nothing),
+    ("unelab.case", Nothing),
+    ("unelab.var", Nothing),
+    ("unify", Nothing),
+    ("unify.application", Nothing),
+    ("unify.binder", Nothing),
+    ("unify.constant", Nothing),
+    ("unify.constraint", Nothing),
+    ("unify.delay", Nothing),
+    ("unify.equal", Nothing),
+    ("unify.head", Nothing),
+    ("unify.hole", Nothing),
+    ("unify.instantiate", Nothing),
+    ("unify.invertible", Nothing),
+    ("unify.meta", Nothing),
+    ("unify.noeta", Nothing),
+    ("unify.postpone", Nothing),
+    ("unify.retry", Nothing),
+    ("unify.search", Nothing),
+    ("unify.unsolved", Nothing)
+]
+
+export
+helpTopics : String
+helpTopics = show $ vcat $ map helpTopic knownTopics
+
+  where
+
+  helpTopic : (String, Maybe String) -> Doc ()
+  helpTopic (str, mblurb)
+    = let title = "+" <++> pretty str
+          blurb = maybe [] ((::[]) . indent 2 . reflow) mblurb
+      in vcat (title :: blurb)
+
+public export
+KnownTopic : String -> Type
+KnownTopic s = IsJust (lookup s knownTopics)
+
 ||| An individual log level is a pair of a list of non-empty strings and a number.
 ||| We keep the representation opaque to force users to call the smart constructor
 export
@@ -49,10 +193,23 @@ mkLogLevel' ps n = MkLogLevel (maybe [] forget ps) n
 ||| The smart constructor makes sure that the empty string is mapped to the empty
 ||| list. This bypasses the fact that the function `split` returns a non-empty
 ||| list no matter what.
+|||
+||| However, invoking this function comes without guarantees that
+||| the passed string corresponds to a known topic. For this,
+||| use `mkLogLevel`.
+|||
+||| Use this function to create user defined loglevels, for instance, during
+||| elaborator reflection.
 export
-mkLogLevel : String -> Nat -> LogLevel
-mkLogLevel "" = mkLogLevel' Nothing
-mkLogLevel ps = mkLogLevel' (Just (split (== '.') ps))
+mkUnverifiedLogLevel : (s : String) -> Nat -> LogLevel
+mkUnverifiedLogLevel "" = mkLogLevel' Nothing
+mkUnverifiedLogLevel ps = mkLogLevel' (Just (split (== '.') ps))
+
+||| Like `mkUnverifiedLogLevel` but with a compile time check that
+||| the passed string is a known topic.
+export
+mkLogLevel : (s : String) -> {auto 0 _ : KnownTopic s} -> Nat -> LogLevel
+mkLogLevel s = mkUnverifiedLogLevel s
 
 ||| The unsafe constructor should only be used in places where the topic has already
 ||| been appropriately processed.
@@ -98,7 +255,7 @@ parseLogLevel str = do
                 ns = tail nns in
                 case ns of
                      [] => pure (MkLogLevel [], n)
-                     [ns] => pure (mkLogLevel n, ns)
+                     [ns] => pure (mkUnverifiedLogLevel n, ns)
                      _ => Nothing
   lvl <- parsePositive n
   pure $ c (fromInteger lvl)
@@ -128,6 +285,7 @@ insertLogLevel (MkLogLevel ps n) = insert ps n
 ||| in the LogLevels.
 export
 keepLog : LogLevel -> LogLevels -> Bool
+keepLog (MkLogLevel _ Z) _ = True
 keepLog (MkLogLevel path n) levels = go path levels where
 
   go : List String -> StringTrie Nat -> Bool

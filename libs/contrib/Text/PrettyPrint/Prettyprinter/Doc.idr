@@ -3,7 +3,7 @@ module Text.PrettyPrint.Prettyprinter.Doc
 import Data.List
 import public Data.List1
 import Data.Maybe
-import Data.Strings
+import Data.String
 import public Data.String.Extra
 
 %default total
@@ -413,6 +413,10 @@ Pretty Char where
 export Pretty Nat where pretty = unsafeTextWithoutNewLines . show
 export Pretty Int where pretty = unsafeTextWithoutNewLines . show
 export Pretty Integer where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int8 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int16 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int32 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int64 where pretty = unsafeTextWithoutNewLines . show
 export Pretty Double where pretty = unsafeTextWithoutNewLines . show
 export Pretty Bits8 where pretty = unsafeTextWithoutNewLines . show
 export Pretty Bits16 where pretty = unsafeTextWithoutNewLines . show

@@ -1,0 +1,6 @@
+1/1: Building HandleSignal (HandleSignal.idr)
+Main> before
+after
+done.
+Main> 
+Bye for now!

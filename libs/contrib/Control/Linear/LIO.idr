@@ -49,6 +49,14 @@ data L : (io : Type -> Type) ->
             (1 _ : ContType io u_act u_k a b) ->
             L io {use=u_k} b
 
+public export
+L0 : (io : Type -> Type) -> (ty : Type) -> Type
+L0 io ty = L io {use = 0} ty
+
+public export
+L1 : (io : Type -> Type) -> (ty : Type) -> Type
+L1 io ty = L io {use = 1} ty
+
 ContType io None u_k a b = (0 _ : a) -> L io {use=u_k} b
 ContType io Linear u_k a b = (1 _ : a) -> L io {use=u_k} b
 ContType io Unrestricted u_k a b = a -> L io {use=u_k} b

@@ -765,3 +765,5 @@ mutual
     reflect fc defs lhs env (ILog x)
         = do x' <- reflect fc defs lhs env x
              appCon fc defs (reflectionttimp "ILog") [x']
+    reflect fc defs lhs env (IBuiltin _ _ _)
+        = throw (GenericMsg fc "Can't reflect a %builtin")

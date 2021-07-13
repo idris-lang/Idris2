@@ -125,8 +125,8 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
     addDataConstructors tag [] gam = pure gam
     addDataConstructors tag (MkCon fc n a ty :: cs) gam
         = do let condef = newDef fc n top vars ty (conVisibility vis) (DCon tag a Nothing)
-             (idx, gam') <- addCtxt n condef gam
              -- Check 'n' is undefined
              Nothing <- lookupCtxtExact n gam
                  | Just gdef => throw (AlreadyDefined fc n)
+             (idx, gam') <- addCtxt n condef gam
              addDataConstructors (tag + 1) cs gam'

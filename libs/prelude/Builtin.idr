@@ -1,5 +1,7 @@
 module Builtin
 
+%default total
+
 -- The most primitive data types; things which are used by desugaring
 
 -- Totality assertions
@@ -72,7 +74,12 @@ infix 5 #
 ||| A pair type where each component is linear
 public export
 data LPair : Type -> Type -> Type where
-     (#) : (1 _ : a) -> (1 _ : b) -> LPair a b
+  ||| A linear pair of elements.
+  ||| If you take one copy of the linear pair apart
+  ||| then you only get one copy of its left and right elements.
+  ||| @ a the left element of the pair
+  ||| @ b the right element of the pair
+  (#) : (1 _ : a) -> (1 _ : b) -> LPair a b
 
 namespace DPair
   ||| Dependent pairs aid in the construction of dependent types by providing
@@ -207,6 +214,7 @@ force x = Force x
 ||| Interface for types that can be constructed from string literals.
 public export
 interface FromString ty where
+  constructor MkFromString
   ||| Conversion from String.
   fromString : String -> ty
 
@@ -222,3 +230,47 @@ FromString String where
 public export
 defaultString : FromString String
 defaultString = %search
+
+%charLit fromChar
+
+||| Interface for types that can be constructed from char literals.
+public export
+interface FromChar ty where
+  constructor MkFromChar
+  ||| Conversion from Char.
+  fromChar : Char -> ty
+
+%allow_overloads fromChar
+
+%inline
+public export
+FromChar Char where
+  fromChar s = s
+
+%defaulthint
+%inline
+public export
+defaultChar : FromChar Char
+defaultChar = %search
+
+%doubleLit fromDouble
+
+||| Interface for types that can be constructed from double literals.
+public export
+interface FromDouble ty where
+  constructor MkFromDouble
+  ||| Conversion from Double.
+  fromDouble : Double -> ty
+
+%allow_overloads fromDouble
+
+%inline
+public export
+FromDouble Double where
+  fromDouble s = s
+
+%defaulthint
+%inline
+public export
+defaultDouble : FromDouble Double
+defaultDouble = %search

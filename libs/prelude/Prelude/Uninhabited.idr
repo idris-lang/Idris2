@@ -8,6 +8,7 @@ import Prelude.Basics
 ||| A canonical proof that some type is empty.
 public export
 interface Uninhabited t where
+  constructor MkUninhabited
   ||| If I have a t, I've had a contradiction.
   ||| @ t the uninhabited type
   uninhabited : t -> Void

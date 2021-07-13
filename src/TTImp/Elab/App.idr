@@ -55,19 +55,39 @@ getNameType rigc env fc x
                       do est <- get EST
                          put EST
                             (record { linearUsed $= ((MkVar lv) :: ) } est)
+                 log "ide-mode.highlight" 8
+                     $ "getNameType is trying to add Bound: "
+                      ++ show x ++ " (" ++ show fc ++ ")"
+                 when (isSourceName x) $
+                   whenJust (isConcreteFC fc) \nfc => do
+                     log "ide-mode.highlight" 7 $ "getNameType is adding Bound: " ++ show x
+                     addSemanticDecorations [(nfc, Bound, Just x)]
+
                  pure (Local fc (Just (isLet binder)) _ lv, gnf env bty)
            Nothing =>
               do defs <- get Ctxt
                  [(pname, i, def)] <- lookupCtxtName x (gamma defs)
                       | [] => undefinedName fc x
                       | ns => throw (AmbiguousName fc (map fst ns))
-                 checkVisibleNS fc !(getFullName pname) (visibility def)
+                 checkVisibleNS fc (fullname def) (visibility def)
                  rigSafe (multiplicity def) rigc
                  let nt = case definition def of
                                PMDef _ _ _ _ _ => Func
                                DCon t a _ => DataCon t a
                                TCon t a _ _ _ _ _ _ => TyCon t a
                                _ => Func
+
+                 log "ide-mode.highlight" 8
+                     $ "getNameType is trying to add something for: "
+                      ++ show def.fullname ++ " (" ++ show fc ++ ")"
+
+                 when (isSourceName def.fullname) $
+                   whenJust (isConcreteFC fc) \nfc => do
+                     let decor = nameTypeDecoration nt
+                     log "ide-mode.highlight" 7
+                       $ "getNameType is adding " ++ show decor ++ ": " ++ show def.fullname
+                     addSemanticDecorations [(nfc, decor, Just def.fullname)]
+
                  pure (Ref fc nt (Resolved i), gnf env (embed (type def)))
   where
     rigSafe : RigCount -> RigCount -> Core ()
@@ -89,7 +109,7 @@ getVarType rigc nest env fc x
            Just (nestn, argns, tmf) =>
               do defs <- get Ctxt
                  let arglen = length argns
-                 let n' = maybe x id nestn
+                 let n' = fromMaybe x nestn
                  case !(lookupCtxtExact n' (gamma defs)) of
                       Nothing => undefinedName fc n'
                       Just ndef =>
@@ -110,6 +130,14 @@ getVarType rigc nest env fc x
                                 log "metadata.names" 7 $ "getVarType is adding ↓"
                                 addNameType fc x env tyenv
 
+                                when (isSourceName ndef.fullname) $
+                                  whenJust (isConcreteFC fc) \nfc => do
+                                    let decor = nameTypeDecoration nt
+                                    log "ide-mode.highlight" 7
+                                       $ "getNameType is adding "++ show decor ++": "
+                                                                 ++ show ndef.fullname
+                                    addSemanticDecorations [(nfc, decor, Just ndef.fullname)]
+
                                 pure (tm, arglen, gnf env tyenv)
     where
       useVars : {vars : _} ->
@@ -124,18 +152,6 @@ getVarType rigc nest env fc x
 isHole : NF vars -> Bool
 isHole (NApp _ (NMeta _ _ _) _) = True
 isHole _ = False
-
--- Return whether we already know the return type of the given function
--- type. If we know this, we can possibly infer some argument types before
--- elaborating them, which might help us disambiguate things more easily.
-concrete : Defs -> Env Term vars -> NF vars -> Core Bool
-concrete defs env (NBind fc _ (Pi _ _ _ _) sc)
-    = do sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
-         concrete defs env sc'
-concrete defs env (NDCon _ _ _ _ _) = pure True
-concrete defs env (NTCon _ _ _ _ _) = pure True
-concrete defs env (NPrimVal _ _) = pure True
-concrete defs env _ = pure False
 
 mutual
   makeImplicit : {vars : _} ->
@@ -296,9 +312,11 @@ mutual
   needsDelayLHS (IAutoApp _ f _) = needsDelayLHS f
   needsDelayLHS (INamedApp _ f _ _) = needsDelayLHS f
   needsDelayLHS (IAlternative _ _ _) = pure True
+  needsDelayLHS (IAs _ _ _ _ t) = needsDelayLHS t
   needsDelayLHS (ISearch _ _) = pure True
   needsDelayLHS (IPrimVal _ _) = pure True
   needsDelayLHS (IType _) = pure True
+  needsDelayLHS (IWithUnambigNames _ _ t) = needsDelayLHS t
   needsDelayLHS _ = pure False
 
   onLHS : ElabMode -> Bool
@@ -312,21 +330,20 @@ mutual
   needsDelay (InLHS _) _ tm = needsDelayLHS tm
   needsDelay _ kr tm = needsDelayExpr kr tm
 
-  checkPatTyValid : {vars : _} ->
-                    {auto c : Ref Ctxt Defs} ->
-                    FC -> Defs -> Env Term vars ->
-                    NF vars -> Term vars -> Glued vars -> Core ()
-  checkPatTyValid fc defs env (NApp _ (NMeta n i _) _) arg got
-      = do Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
-                | Nothing => pure ()
-           if isErased (multiplicity gdef)
-              then do -- Argument is only valid if gotnf is not a concrete type
-                      gotnf <- getNF got
-                      if !(concrete defs env gotnf)
-                         then throw (MatchTooSpecific fc env arg)
-                         else pure ()
-              else pure ()
-  checkPatTyValid fc defs env _ _ _ = pure ()
+  checkValidPattern :
+    {vars : _} ->
+    {auto c : Ref Ctxt Defs} ->
+    {auto m : Ref MD Metadata} ->
+    {auto u : Ref UST UState} ->
+    {auto e : Ref EST (EState vars)} ->
+    RigCount -> Env Term vars -> FC ->
+    Term vars -> Glued vars ->
+    Core (Term vars, Glued vars)
+  checkValidPattern rig env fc tm ty
+    = do log "elab.app.lhs" 50 $ "Checking that " ++ show tm ++ " is a valid pattern"
+         case tm of
+           Bind _ _ (Lam _ _ _ _)  _ => registerDot rig env fc NotConstructor tm ty
+           _ => pure (tm, ty)
 
   dotErased : {auto c : Ref Ctxt Defs} -> (argty : NF vars) ->
               Maybe Name -> Nat -> ElabMode -> RigCount -> RawImp -> Core RawImp
@@ -419,16 +436,35 @@ mutual
              defs <- get Ctxt
              aty' <- nf defs env metaty
              logNF "elab" 10 ("Now trying " ++ show nm ++ " " ++ show arg) env aty'
-             (argv, argt) <- check argRig elabinfo
-                                   nest env arg (Just (glueBack defs env aty'))
+
+             -- On the LHS, checking an argument can't resolve its own type,
+             -- it must be resolved from elsewhere. Otherwise we might match
+             -- on things which are too specific for their polymorphic type.
              when (onLHS (elabMode elabinfo)) $
-                  checkPatTyValid fc defs env aty' argv argt
+                case aty' of
+                     NApp _ (NMeta _ i _) _ =>
+                          do Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
+                                  | Nothing => pure ()
+                             when (isErased (multiplicity gdef)) $ addNoSolve i
+                     _ => pure ()
+             res <- check argRig (record { topLevel = False } elabinfo) nest env arg (Just $ glueBack defs env aty')
+             when (onLHS (elabMode elabinfo)) $
+                case aty' of
+                     NApp _ (NMeta _ i _) _ => removeNoSolve i
+                     _ => pure ()
+
+             (argv, argt) <-
+               if not (onLHS (elabMode elabinfo))
+                 then pure res
+                 else do let (argv, argt) = res
+                         checkValidPattern rig env fc argv argt
+
              defs <- get Ctxt
              -- If we're on the LHS, reinstantiate it with 'argv' because it
              -- *may* have as patterns in it and we need to retain them.
              -- (As patterns are a bit of a hack but I don't yet see a
              -- better way that leads to good code...)
-             logTerm "elab" 5 ("Solving " ++ show metaval ++ " with") argv
+             logTerm "elab" 10 ("Solving " ++ show metaval ++ " with") argv
              ok <- solveIfUndefined env metaval argv
              -- If there's a constraint, make a constant, but otherwise
              -- just return the term as expected
@@ -456,8 +492,14 @@ mutual
                                      (\t => pure (Just !(toFullNames!(getTerm t))))
                                      expty
                          pure ("Overall expected type: " ++ show ety))
-             (argv, argt) <- check argRig elabinfo
+             res <- check argRig (record { topLevel = False } elabinfo)
                                    nest env arg (Just (glueBack defs env aty))
+             (argv, argt) <-
+               if not (onLHS (elabMode elabinfo))
+                 then pure res
+                 else do let (argv, argt) = res
+                         checkValidPattern rig env fc argv argt
+
              logGlueNF "elab" 10 "Got arg type" env argt
              defs <- get Ctxt
              let fntm = App fc tm argv
@@ -711,6 +753,8 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
         prims <- getPrimitiveNames
         elabinfo <- updateElabInfo prims (elabMode elabinfo) n expargs elabinfo
 
+        addNameLoc fc' n
+
         logC "elab" 10
                 (do defs <- get Ctxt
                     fnty <- quote defs env nty
@@ -740,6 +784,9 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
     normalisePrims prims env res
         = do tm <- Normalise.normalisePrims (`boundSafe` elabMode elabinfo)
                                             isIPrimVal
+                                            (case elabMode elabinfo of
+                                                  InLHS _ => True
+                                                  _ => False)
                                             prims n expargs (fst res) env
              pure (fromMaybe (fst res) tm, snd res)
 

@@ -32,9 +32,9 @@ drop Z     xs      = xs
 drop (S n) []      = []
 drop (S n) (_::xs) = drop n xs
 
-||| Satisfiable if `k` is a valid index into `xs`
+||| Satisfiable if `k` is a valid index into `xs`.
 |||
-||| @ k the potential index
+||| @ k  the potential index
 ||| @ xs the list into which k may be an index
 public export
 data InBounds : (k : Nat) -> (xs : List a) -> Type where
@@ -45,10 +45,14 @@ data InBounds : (k : Nat) -> (xs : List a) -> Type where
 
 public export
 Uninhabited (InBounds k []) where
-    uninhabited InFirst impossible
-    uninhabited (InLater _) impossible
+  uninhabited InFirst impossible
+  uninhabited (InLater _) impossible
 
-||| Decide whether `k` is a valid index into `xs`
+export
+Uninhabited (InBounds k xs) => Uninhabited (InBounds (S k) (x::xs)) where
+  uninhabited (InLater y) = uninhabited y
+
+||| Decide whether `k` is a valid index into `xs`.
 public export
 inBounds : (k : Nat) -> (xs : List a) -> Dec (InBounds k xs)
 inBounds _ [] = No uninhabited
@@ -103,6 +107,8 @@ dropWhile : (p : a -> Bool) -> List a -> List a
 dropWhile p []      = []
 dropWhile p (x::xs) = if p x then dropWhile p xs else x::xs
 
+||| Applied to a predicate and a list, returns the list of those elements that
+||| satisfy the predicate.
 public export
 filter : (p : a -> Bool) -> List a -> List a
 filter p [] = []
@@ -116,6 +122,25 @@ public export
 find : (p : a -> Bool) -> (xs : List a) -> Maybe a
 find p [] = Nothing
 find p (x::xs) = if p x then Just x else find p xs
+
+||| Find the index and proof of InBounds of the first element (if exists) of a
+||| list that satisfies the given test, else `Nothing`.
+public export
+findIndex : (a -> Bool) -> (xs : List a) -> Maybe $ Fin (length xs)
+findIndex _ [] = Nothing
+findIndex p (x :: xs) = if p x
+  then Just FZ
+  else FS <$> findIndex p xs
+
+||| Find indices of all elements that satisfy the given test.
+public export
+findIndices : (a -> Bool) -> List a -> List Nat
+findIndices p = h 0 where
+  h : Nat -> List a -> List Nat
+  h _         []  = []
+  h lvl (x :: xs) = if p x
+    then lvl :: h (S lvl) xs
+    else        h (S lvl) xs
 
 ||| Find associated information in a list using a custom comparison.
 public export
@@ -196,6 +221,9 @@ public export
 union : Eq a => List a -> List a -> List a
 union = unionBy (==)
 
+||| Like @span@ but using a predicate that might convert a to b, i.e. given a
+||| predicate from a to Maybe b and a list of as, returns a tuple consisting of
+||| the longest prefix of the list where a -> Just b, and the rest of the list.
 public export
 spanBy : (a -> Maybe b) -> List a -> (List b, List a)
 spanBy p [] = ([], [])
@@ -203,6 +231,9 @@ spanBy p (x :: xs) = case p x of
   Nothing => ([], x :: xs)
   Just y => let (ys, zs) = spanBy p xs in (y :: ys, zs)
 
+||| Given a predicate and a list, returns a tuple consisting of the longest
+||| prefix of the list whose elements satisfy the predicate, and the rest of the
+||| list.
 public export
 span : (a -> Bool) -> List a -> (List a, List a)
 span p []      = ([], [])
@@ -459,11 +490,6 @@ toList1' : (l : List a) -> Maybe (List1 a)
 toList1' [] = Nothing
 toList1' (x :: xs) = Just (x ::: xs)
 
-||| Convert any Foldable structure to a list.
-public export
-toList : Foldable t => t a -> List a
-toList = foldr (::) []
-
 ||| Prefix every element in the list with the given element
 |||
 ||| ```idris example
@@ -626,17 +652,61 @@ transpose (heads :: tails) = spreadHeads heads (transpose tails) where
   spreadHeads (head :: heads) []              = [head] :: spreadHeads heads []
   spreadHeads (head :: heads) (tail :: tails) = (head :: tail) :: spreadHeads heads tails
 
+------------------------------------------------------------------------
+-- Grouping
+
+||| `groupBy` operates like `group`, but uses the provided equality
+||| predicate instead of `==`.
+public export
+groupBy : (a -> a -> Bool) -> List a -> List (List1 a)
+groupBy _ [] = []
+groupBy eq (h :: t) = let (ys,zs) = go h t
+                       in ys :: zs
+
+  where go : a -> List a -> (List1 a, List (List1 a))
+        go v [] = (singleton v,[])
+        go v (x :: xs) = let (ys,zs) = go x xs
+                          in if eq v x
+                                then (cons v ys, zs)
+                                else (singleton v, ys :: zs)
+
+||| The `group` function takes a list of values and returns a list of
+||| lists such that flattening the resulting list is equal to the
+||| argument.  Moreover, each list in the resulting list
+||| contains only equal elements.
+public export
+group : Eq a => List a -> List (List1 a)
+group = groupBy (==)
+
+||| `groupWith` operates like `group`, but uses the provided projection when
+||| comparing for equality
+public export
+groupWith : Eq b => (a -> b) -> List a -> List (List1 a)
+groupWith f = groupBy (\x,y => f x == f y)
+
+||| `groupAllWith` operates like `groupWith`, but sorts the list
+||| first so that each equivalence class has, at most, one list in the
+||| output
+public export
+groupAllWith : Ord b => (a -> b) -> List a -> List (List1 a)
+groupAllWith f = groupWith f . sortBy (comparing f)
+
 --------------------------------------------------------------------------------
 -- Properties
 --------------------------------------------------------------------------------
 
 export
-Uninhabited ([] = Prelude.(::) x xs) where
+Uninhabited ([] = x :: xs) where
   uninhabited Refl impossible
 
 export
-Uninhabited (Prelude.(::) x xs = []) where
+Uninhabited (x :: xs = []) where
   uninhabited Refl impossible
+
+export
+{0 xs : List a} -> Either (Uninhabited $ x === y) (Uninhabited $ xs === ys) => Uninhabited (x::xs = y::ys) where
+  uninhabited @{Left  z} Refl = uninhabited @{z} Refl
+  uninhabited @{Right z} Refl = uninhabited @{z} Refl
 
 ||| (::) is injective
 export

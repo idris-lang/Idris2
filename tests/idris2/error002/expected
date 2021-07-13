@@ -1,7 +1,7 @@
 1/1: Building Error (Error.idr)
 Error: While processing right hand side of wrong. Undefined name ys. 
 
-Error.idr:6:17--6:19
+Error:6:17--6:19
  2 |      Nil : Vect Z a
  3 |      (::) : a -> Vect k a -> Vect (S k) a
  4 | 

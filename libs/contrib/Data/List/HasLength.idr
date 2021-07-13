@@ -124,7 +124,7 @@ listTerminating p = case view p of
 
 data P : List Nat -> Type where
   PNil : P []
-  PCon : P (map id xs) -> P (x :: xs)
+  PCon : P (map f xs) -> P (x :: xs)
 
 covering
 notListTerminating : (p : Subset Nat (HasLength xs)) -> P xs

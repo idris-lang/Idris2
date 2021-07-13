@@ -62,7 +62,7 @@ copyArray : MArray arr => (newsize : Int) -> (1 _ : arr t) ->
 copyArray newsize a
     = let size # a = msize a in
           newArray newsize $
-            (\a' => copyContent (min (newsize - 1) (size - 1)) a a')
+            copyContent (min (newsize - 1) (size - 1)) a
   where
     copyContent : Int -> (1 _ : arr t) -> (1 _ : arr t) -> LPair (arr t) (arr t)
     copyContent pos a a'

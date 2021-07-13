@@ -1,12 +1,8 @@
-#ifndef __PRIM_H__
-#define __PRIM_H__
+#pragma once
 
 #include "cBackend.h"
 
 
-
-// Value * Prelude_IO_prim__putStr(Value *, Value *);
-Value *Prelude_IO_prim__getChar(Value *);
 
 // IORef
 
@@ -26,8 +22,6 @@ Value *arrayGet(Value *, Value *, Value *, Value *);
 Value *arraySet(Value *, Value *, Value *, Value *, Value *);
 
 // Pointer
-Value *PrimIO_prim__nullAnyPtr(Value *);
-
 Value *onCollect(Value *, Value *, Value *, Value *);
 Value *onCollectAny(Value *, Value *, Value *, Value *);
 
@@ -49,4 +43,3 @@ Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Value *, Value *, Value
 Value *System_Concurrency_Raw_prim__conditionSignal(Value *, Value *);
 
 Value *System_Concurrency_Raw_prim__conditionBroadcast(Value *, Value *);
-#endif

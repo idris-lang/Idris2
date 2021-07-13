@@ -2,6 +2,8 @@ module PrimIO
 
 import Builtin
 
+%default total
+
 public export
 data IORes : Type -> Type where
      MkIORes : (result : a) -> (1 x : %World) -> IORes a
@@ -17,12 +19,12 @@ data IO : Type -> Type where
 
 export
 prim__io_pure : a -> PrimIO a
-prim__io_pure x = \w => MkIORes x w
+prim__io_pure = MkIORes
 
 %inline
 export
 io_pure : a -> IO a
-io_pure x = MkIO (\w => MkIORes x w)
+io_pure x = MkIO (MkIORes x)
 
 export
 prim__io_bind : (1 act : PrimIO a) -> (1 k : a -> PrimIO b) -> PrimIO b
@@ -70,12 +72,12 @@ export %inline
 toPrim : (1 act : IO a) -> PrimIO a
 toPrim (MkIO fn) = fn
 
-%foreign "C:idris2_isNull, libidris2_support"
-         "javascript:lambda:x=>x===undefined||x===null?1n:0n"
+%foreign "C:idris2_isNull, libidris2_support, idris_support.h"
+         "javascript:lambda:x=>x===undefined||x===null?1:0"
 export
 prim__nullAnyPtr : AnyPtr -> Int
 
-%foreign "C:idris2_getNull,libidris2_support"
+%foreign "C:idris2_getNull, libidris2_support, idris_support.h"
 export
 prim__getNullAnyPtr : AnyPtr
 

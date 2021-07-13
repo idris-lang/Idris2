@@ -3,7 +3,7 @@
 3/3: Building Test (Test.idr)
 Error: While processing type of thing. Undefined name Nat. 
 
-Test.idr:5:9--5:12
+Test:5:9--5:12
  1 | module Test
  2 | 
  3 | import Mult
@@ -13,7 +13,7 @@ Test.idr:5:9--5:12
 
 Error: No type declaration for Test.thing.
 
-Test.idr:6:1--6:28
+Test:6:1--6:28
  2 | 
  3 | import Mult
  4 | 

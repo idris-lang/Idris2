@@ -9,7 +9,6 @@ import Core.TT
 import Core.Unify
 import Core.Value
 
-import Libraries.Data.Bool.Extra
 import Data.Either
 import Data.List
 import Data.Maybe
@@ -139,9 +138,9 @@ anyOne : {vars : _} ->
 anyOne fc env top [] = throw (CantSolveGoal fc [] top)
 anyOne fc env top [elab]
     = catch elab
-         (\err => case err of
-                       CantSolveGoal _ _ _ => throw err
-                       _ => throw (CantSolveGoal fc [] top))
+         \case
+           err@(CantSolveGoal _ _ _) => throw err
+           _ => throw $ CantSolveGoal fc [] top
 anyOne fc env top (elab :: elabs)
     = tryUnify elab (anyOne fc env top elabs)
 
@@ -153,9 +152,9 @@ exactlyOne : {vars : _} ->
              Core (Term vars)
 exactlyOne fc env top target [elab]
     = catch elab
-         (\err => case err of
-                       CantSolveGoal _ _ _ => throw err
-                       _ => throw (CantSolveGoal fc [] top))
+         \case
+           err@(CantSolveGoal _ _ _) => throw err
+           _ => throw $ CantSolveGoal fc [] top
 exactlyOne {vars} fc env top target all
     = do elabs <- successful all
          case rights elabs of
@@ -222,12 +221,12 @@ usableLocal loc defaults env (NDCon _ n _ _ args)
     = do defs <- get Ctxt
          us <- traverse (usableLocal loc defaults env)
                         !(traverse (evalClosure defs) $ map snd args)
-         pure (allTrue us)
+         pure (all id us)
 usableLocal loc defaults env (NApp _ (NLocal _ _ _) args)
     = do defs <- get Ctxt
          us <- traverse (usableLocal loc defaults env)
                         !(traverse (evalClosure defs) $ map snd args)
-         pure (allTrue us)
+         pure (all id us)
 usableLocal loc defaults env (NBind fc x (Pi _ _ _ _) sc)
     = do defs <- get Ctxt
          usableLocal loc defaults env
@@ -253,7 +252,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
     ambig (AmbiguousSearch _ _ _ _) = True
     ambig _ = False
 
-    clearEnvType : {idx : Nat} -> (0 p : IsVar name idx vs) ->
+    clearEnvType : {idx : Nat} -> (0 p : IsVar nm idx vs) ->
                    FC -> Env Term vs -> Env Term vs
     clearEnvType First fc (b :: env)
         = Lam (binderLoc b) (multiplicity b) Explicit (Erased fc False) :: env

@@ -9,6 +9,7 @@ import Core.Metadata
 import Core.Normalise
 import Core.UnifyState
 import Core.Unify
+import Core.Value
 
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
@@ -16,8 +17,9 @@ import TTImp.Elab.Term
 import TTImp.TTImp
 import TTImp.Unelab
 
-import Libraries.Data.IntMap
 import Data.List
+import Data.Maybe
+import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 
 %default covering
@@ -128,17 +130,19 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
          logTerm "elab" 5 "Looking for delayed in " chktm
          ust <- get UST
          catch (retryDelayed (sortBy (\x, y => compare (fst x) (fst y))
-                                     (delayedElab ust)))
-               (\err =>
-                  do ust <- get UST
-                     put UST (record { delayedElab = olddelayed } ust)
-                     throw err)
+                                       (delayedElab ust)))
+                 (\err =>
+                    do ust <- get UST
+                       put UST (record { delayedElab = olddelayed } ust)
+                       throw err)
          ust <- get UST
          put UST (record { delayedElab = olddelayed } ust)
          solveConstraintsAfter constart solvemode MatchArgs
 
-         -- As long as we're not in a case block, finish off constraint solving
-         when (not incase) $
+         -- As long as we're not in the RHS of a case block,
+         -- finish off constraint solving
+         -- On the LHS the constraint solving is used to handle overloading
+         when (not incase || isJust (isLHS mode)) $
            -- resolve any default hints
            do log "elab" 5 "Resolving default hints"
               solveConstraintsAfter constart solvemode Defaults
@@ -156,7 +160,7 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
 
          -- Linearity and hole checking.
          -- on the LHS, all holes need to have been solved
-         chktm <- the (Core (Term vars)) $ case mode of
+         chktm <- case mode of
               InLHS _ => do when (not incase) $ checkUserHolesAfter constart True
                             pure chktm
               InTransform => do when (not incase) $ checkUserHolesAfter constart True
@@ -226,7 +230,7 @@ checkTermSub : {inner, vars : _} ->
                RawImp -> Glued vars ->
                Core (Term vars)
 checkTermSub defining mode opts nest env env' sub tm ty
-    = do defs <- the (Core Defs) $ case mode of
+    = do defs <- case mode of
                       InType => branch -- might need to backtrack if there's
                                        -- a case in the type
                       _ => get Ctxt
@@ -236,16 +240,20 @@ checkTermSub defining mode opts nest env env' sub tm ty
             catch {t = Error}
                   (elabTermSub defining mode opts nest
                                env env' sub tm (Just ty))
-                  (\err => case err of
-                              TryWithImplicits loc benv ns
-                                 => do put Ctxt defs
-                                       put UST ust
-                                       put MD mv
-                                       tm' <- bindImps loc benv ns tm
-                                       elabTermSub defining mode opts nest
-                                                   env env' sub
-                                                   tm' (Just ty)
-                              _ => throw err)
+                  \case
+                    TryWithImplicits loc benv ns
+                      => do put Ctxt defs
+                            put UST ust
+                            put MD mv
+                            tm' <- bindImps loc benv ns tm
+                            elabTermSub defining mode opts nest
+                                        env env' sub
+                                        tm' (Just ty)
+                    err => throw err
+         case mode of
+              InType => commit -- bracket the 'branch' above
+              _ => pure ()
+
          pure (fst res)
   where
     bindImps' : {vs : _} ->

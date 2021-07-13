@@ -6,7 +6,6 @@ import Data.Monoid.Exponentiation as Mon
 import Data.Num.Implementations as Num
 import Data.Nat.Views
 import Data.Nat.Order
-import Decidable.Order
 import Syntax.PreorderReasoning
 import Syntax.PreorderReasoning.Generic
 
@@ -18,7 +17,7 @@ pow = Mon.(^)
 
 public export
 lpow : Nat -> Nat -> Nat
-lpow = linear @{Nat.Monoid.Multiplicative}
+lpow = linear @{Monoid.Multiplicative}
 
 public export
 pow2 : Nat -> Nat
@@ -33,7 +32,7 @@ modularCorrect : (v : Nat) -> {n : Nat} ->
                  pow v n === lpow v n
 modularCorrect
    = Mon.modularCorrect
-     @{Nat.Monoid.Multiplicative}
+     @{Monoid.Multiplicative}
      (sym (multAssociative _ _ _))
      (irrelevantEq $ multOneLeftNeutral _)
 
@@ -48,7 +47,7 @@ unfoldLpow2 = unfoldDouble
 export
 unfoldPow2 : pow2 (S n) === (pow2 n + pow2 n)
 unfoldPow2 = irrelevantEq $ Calc $
-  let mon : Monoid Nat; mon = Nat.Monoid.Multiplicative
+  let mon : Monoid Nat; mon = Monoid.Multiplicative
       lpow2 : Nat -> Nat; lpow2 = linear @{mon} 2 in
   |~ pow2 (S n)
   ~~ lpow2 (S n)       ...( pow2Correct )
@@ -57,7 +56,7 @@ unfoldPow2 = irrelevantEq $ Calc $
 
 export
 lteLpow2 : {m : Nat} -> 1 `LTE` lpow2 m
-lteLpow2 {m = Z} = lteRefl
+lteLpow2 {m = Z} = reflexive {rel = LTE}
 lteLpow2 {m = S m} = CalcWith $
   let ih = lteLpow2 {m} in
   |~ 1

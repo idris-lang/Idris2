@@ -1,5 +1,5 @@
 import System.File
-import Data.Strings
+import Data.String
 import Data.List
 
 main : IO ()

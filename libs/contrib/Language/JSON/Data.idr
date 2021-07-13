@@ -4,7 +4,7 @@ import Data.Bits
 import Data.List
 import Data.Nat
 import Data.String.Extra
-import Data.Strings
+import Data.String
 
 %default total
 
@@ -56,7 +56,8 @@ showChar c
          '\\' => "\\\\"
          '"'  => "\\\""
          c => if isControl c || c >= '\127'
-                 then "\\u" ++ b16ToHexString (cast $ ord c)
+                 then let hex = b16ToHexString (cast $ ord c)
+                       in "\\u" ++ justifyRight 4 '0' hex
                  else singleton c
 
 private

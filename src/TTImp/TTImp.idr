@@ -341,7 +341,7 @@ mutual
                 ImpTy -> ImpDecl
        IData : FC -> Visibility -> ImpData -> ImpDecl
        IDef : FC -> Name -> List ImpClause -> ImpDecl
-       IParameters : FC -> List (Name, RawImp) ->
+       IParameters : FC -> List (Name, RigCount, PiInfo RawImp, RawImp) ->
                      List ImpDecl -> ImpDecl
        IRecord : FC ->
                  Maybe String -> -- nested namespace
@@ -356,10 +356,11 @@ mutual
                   NestedNames vars -> Env Term vars -> Core ()) ->
                  ImpDecl
        ILog : Maybe (List String, Nat) -> ImpDecl
+       IBuiltin : FC -> BuiltinType -> Name -> ImpDecl
 
   export
   Show ImpDecl where
-    show (IClaim _ _ _ opts ty) = show opts ++ " " ++ show ty
+    show (IClaim _ c _ opts ty) = show opts ++ " " ++ show c ++ " " ++ show ty
     show (IData _ _ d) = show d
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"
     show (IParameters _ ps ds)
@@ -378,6 +379,7 @@ mutual
     show (ILog (Just (topic, lvl))) = "%logging " ++ case topic of
       [] => show lvl
       _  => concat (intersperse "." topic) ++ " " ++ show lvl
+    show (IBuiltin _ type name) = "%builtin " ++ show type ++ " " ++ show name
 
 export
 isIPrimVal : RawImp -> Maybe Constant
@@ -540,7 +542,7 @@ implicitsAs n defs ns tm
                     "\n  In the type of " ++ show n ++ ": " ++ show ty ++
                     "\n  Using locals: " ++ show ns ++
                     "\n  Found implicits: " ++ show implicits
-                  pure $ impAs loc implicits (IVar loc nm)
+                  pure $ impAs (virtualiseFC loc) implicits (IVar loc nm)
       where
         -- If there's an @{c} in the list of given implicits, that's the next
         -- autoimplicit, so don't rewrite the LHS and update the list of given
@@ -713,10 +715,28 @@ getFC (IAs x _ _ _ _) = x
 getFC (Implicit x _) = x
 getFC (IWithUnambigNames x _ _) = x
 
+namespace ImpDecl
+
+  public export
+  getFC : ImpDecl -> FC
+  getFC (IClaim fc _ _ _ _) = fc
+  getFC (IData fc _ _) = fc
+  getFC (IDef fc _ _) = fc
+  getFC (IParameters fc _ _) = fc
+  getFC (IRecord fc _ _ _ ) = fc
+  getFC (INamespace fc _ _) = fc
+  getFC (ITransform fc _ _ _) = fc
+  getFC (IRunElabDecl fc _) = fc
+  getFC (IPragma _ _) = EmptyFC
+  getFC (ILog _) = EmptyFC
+  getFC (IBuiltin fc _ _) = fc
+
 export
 apply : RawImp -> List RawImp -> RawImp
 apply f [] = f
-apply f (x :: xs) = apply (IApp (getFC f) f x) xs
+apply f (x :: xs) =
+  let fFC = getFC f in
+  apply (IApp (fromMaybe fFC (mergeFC fFC (getFC x))) f x) xs
 
 export
 gapply : RawImp -> List (Maybe Name, RawImp) -> RawImp
@@ -739,6 +759,17 @@ getFn (IMustUnify _ _ f) = getFn f
 getFn f = f
 
 -- Everything below is TTC instances
+
+export
+TTC BuiltinType where
+    toBuf b BuiltinNatural = tag 0
+    toBuf b NaturalToInteger = tag 1
+    toBuf b IntegerToNatural = tag 2
+    fromBuf b = case !getTag of
+        0 => pure BuiltinNatural
+        1 => pure NaturalToInteger
+        2 => pure IntegerToNatural
+        _ => corrupt "BuiltinType"
 
 mutual
   export
@@ -1103,6 +1134,8 @@ mutual
     toBuf b (IPragma _ f) = throw (InternalError "Can't write Pragma")
     toBuf b (ILog n)
         = do tag 8; toBuf b n
+    toBuf b (IBuiltin fc type name)
+        = do tag 9; toBuf b fc; toBuf b type; toBuf b name
 
     fromBuf b
         = case !getTag of
@@ -1132,17 +1165,19 @@ mutual
                        pure (IRunElabDecl fc tm)
                8 => do n <- fromBuf b
                        pure (ILog n)
+               9 => do fc <- fromBuf b
+                       type <- fromBuf b
+                       name <- fromBuf b
+                       pure (IBuiltin fc type name)
                _ => corrupt "ImpDecl"
 
 
 -- Log message with a RawImp
 export
 logRaw : {auto c : Ref Ctxt Defs} ->
-         String -> Nat -> Lazy String -> RawImp -> Core ()
+         (s : String) ->
+         {auto 0 _ : KnownTopic s} ->
+         Nat -> Lazy String -> RawImp -> Core ()
 logRaw str n msg tm
-    = do opts <- getSession
-         let lvl = mkLogLevel str n
-         if keepLog lvl (logLevel opts)
-            then do coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-                                          ++ ": " ++ show tm
-            else pure ()
+    = when !(logging str n) $
+        do logString str n (msg ++ ": " ++ show tm)

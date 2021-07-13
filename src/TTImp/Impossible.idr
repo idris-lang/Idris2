@@ -134,7 +134,7 @@ mutual
                throw (InternalError "Can't deal with constants here yet")
 
            gdefs <- lookupNameBy id n (gamma defs)
-           [(n', _, gdef)] <- dropNoMatch mty gdefs
+           [(n', i, gdef)] <- dropNoMatch mty gdefs
               | [] => undefinedName fc n
               | ts => throw (AmbiguousName fc (map fst ts))
            tynf <- nf defs [] (type gdef)
@@ -148,7 +148,7 @@ mutual
                         DCon t a _ => DataCon t a
                         TCon t a _ _ _ _ _ _ => TyCon t a
                         _ => Func
-           processArgs (Ref fc head n') tynf exps autos named
+           processArgs (Ref fc head (Resolved i)) tynf exps autos named
 
   mkTerm : {auto c : Ref Ctxt Defs} ->
            {auto q : Ref QVar Int} ->

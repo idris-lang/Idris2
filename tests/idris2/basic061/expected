@@ -1,0 +1,8 @@
+1/1: Building UnderscoredIntegerLiterals (UnderscoredIntegerLiterals.idr)
+UnderscoredIntegerLiterals> 10000000000
+UnderscoredIntegerLiterals> True
+UnderscoredIntegerLiterals> 3405705229
+UnderscoredIntegerLiterals> True
+UnderscoredIntegerLiterals> True
+UnderscoredIntegerLiterals> True
+UnderscoredIntegerLiterals> Bye for now!
