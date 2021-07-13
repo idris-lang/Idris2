@@ -21,14 +21,29 @@ Bad1:3:1--3:2
      ^
 
 1/1: Building Bad2 (Bad2.idr)
-Error: Expected 'case', 'if', 'do', application or operator expression.
+Error: Couldn't parse any alternatives:
+1: Expected 'case', 'if', 'do', application or operator expression.
 
 Bad2:3:13--3:14
  1 | module Bad2
  2 | 
  3 | badReturn : (whatever : Int)
                  ^
+2: Expected '`'.
 
+Bad2:3:13--3:14
+ 1 | module Bad2
+ 2 | 
+ 3 | badReturn : (whatever : Int)
+                 ^
+3: Expected operator.
+
+Bad2:3:13--3:14
+ 1 | module Bad2
+ 2 | 
+ 3 | badReturn : (whatever : Int)
+                 ^
+... (51 others)
 1/1: Building Bad3 (Bad3.idr)
 Error: Couldn't parse declaration.
 

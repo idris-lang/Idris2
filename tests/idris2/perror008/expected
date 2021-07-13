@@ -1,5 +1,13 @@
 1/1: Building Issue710a (Issue710a.idr)
-Error: Expected a capitalised identifier, got: r.
+Error: Couldn't parse any alternatives:
+1: Expected a capitalised identifier, got: r.
+
+Issue710a:3:8--3:9
+ 1 | module Issue710a
+ 2 | 
+ 3 | record r where
+            ^
+2: Expected '('.
 
 Issue710a:3:8--3:9
  1 | module Issue710a
@@ -8,7 +16,15 @@ Issue710a:3:8--3:9
             ^
 
 1/1: Building Issue710b (Issue710b.idr)
-Error: Expected a capitalised identifier, got: r.
+Error: Couldn't parse any alternatives:
+1: Expected a capitalised identifier, got: r.
+
+Issue710b:3:6--3:7
+ 1 | module Issue710b
+ 2 | 
+ 3 | data r : Type where
+          ^
+2: Expected '('.
 
 Issue710b:3:6--3:7
  1 | module Issue710b
@@ -17,7 +33,17 @@ Issue710b:3:6--3:7
           ^
 
 1/1: Building Issue710c (Issue710c.idr)
-Error: Expected a capitalised identifier, got: leaf.
+Error: Couldn't parse any alternatives:
+1: Expected a capitalised identifier, got: leaf.
+
+Issue710c:5:3--5:4
+ 1 | infix 3 #
+ 2 | 
+ 3 | data T : Type where
+ 4 |   (#) : T -> T -> T
+ 5 |   leaf : T
+       ^
+2: Expected '('.
 
 Issue710c:5:3--5:4
  1 | infix 3 #
@@ -28,7 +54,14 @@ Issue710c:5:3--5:4
        ^
 
 1/1: Building Issue710d (Issue710d.idr)
-Error: Expected a capitalised identifier, got: mkT.
+Error: Couldn't parse any alternatives:
+1: Expected a capitalised identifier, got: mkT.
+
+Issue710d:2:15--2:16
+ 1 | record T where
+ 2 |   constructor mkT
+                   ^
+2: Expected '('.
 
 Issue710d:2:15--2:16
  1 | record T where
@@ -45,7 +78,14 @@ Issue710e:3:11--3:12
                ^
 
 1/1: Building Issue710f (Issue710f.idr)
-Error: Expected a capitalised identifier, got: cons.
+Error: Couldn't parse any alternatives:
+1: Expected a capitalised identifier, got: cons.
+
+Issue710f:2:15--2:16
+ 1 | interface Lalala where
+ 2 |   constructor cons
+                   ^
+2: Expected '('.
 
 Issue710f:2:15--2:16
  1 | interface Lalala where
