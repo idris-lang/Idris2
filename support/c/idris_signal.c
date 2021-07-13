@@ -1,93 +1,34 @@
 #include "idris_signal.h"
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <assert.h>
+#include <limits.h>
 #include <signal.h>
+#include <stdatomic.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-#ifdef _WIN32
-#include <windows.h>
-HANDLE ghMutex;
-#else
-#include <pthread.h>
-static pthread_mutex_t sig_mutex = PTHREAD_MUTEX_INITIALIZER;
-#endif
+static_assert(ATOMIC_LONG_LOCK_FREE == 2,
+  "when not lock free, atomic functions are not async-signal-safe");
 
-// ring buffer style storage for collected
-// signals.
-static int signal_buf_cap = 0;
-static int signals_in_buf = 0;
-static int signal_buf_next_read_idx = 0;
-static int *signal_buf = NULL;
+#define N_SIGNALS 32
+static atomic_long signal_count[N_SIGNALS];
 
-void _init_buf() {
-  if (signal_buf == NULL) {
-    signal_buf_cap = 10;
-    signal_buf = malloc(sizeof(int) * signal_buf_cap);
-  }
-}
-
-// returns truthy or falsey (1 or 0)
-int _lock() {
-#ifdef _WIN32
-  if (ghMutex == NULL) {
-    ghMutex = CreateMutex(
-      NULL,
-      FALSE,
-      NULL);
+void _collect_signal(int signum) {
+  if (signum < 0 || signum >= N_SIGNALS) {
+    abort();
   }
 
-  DWORD dwWaitResult = WaitForSingleObject(
-    ghMutex,
-    INFINITE);
-
-  switch (dwWaitResult) 
-    {
-       case WAIT_OBJECT_0: 
-         return 1;
-
-       case WAIT_ABANDONED: 
-         return 0;
-    }
-#else
-  pthread_mutex_lock(&sig_mutex);
-  return 1;
-#endif
-}
-
-void _unlock() {
-#ifdef _WIN32
-  ReleaseMutex(ghMutex);
-#else
-  pthread_mutex_unlock(&sig_mutex);
-#endif
-}
-
-void _collect_signal(int signum);
-
-void _collect_signal_core(int signum) {
-  _init_buf();
-
-  // FIXME: allow for adjusting capacity of signal buffer
-  // instead of ignoring new signals when at capacity.
-  if (signals_in_buf == signal_buf_cap) {
-    return;
+  long prev = atomic_fetch_add(&signal_count[signum], 1);
+  if (prev == LONG_MAX) {
+    // Practically impossible, but better crash explicitly
+    fprintf(stderr, "signal count overflow\n");
+    abort();
   }
-
-  int write_idx = (signal_buf_next_read_idx + signals_in_buf) % signal_buf_cap;
-  signal_buf[write_idx] = signum;
-  signals_in_buf += 1;
 
 #ifdef _WIN32
   //re-instate signal handler
   signal(signum, _collect_signal);
 #endif
-}
-
-void _collect_signal(int signum) {
-  if (_lock()) {
-    _collect_signal_core(signum);
-    _unlock();
-  }
 }
 
 #ifndef _WIN32
@@ -130,16 +71,21 @@ int collect_signal(int signum) {
 }
 
 int handle_next_collected_signal() {
-  if (_lock()) {
-    if (signals_in_buf == 0) {
-      _unlock();
-      return -1;
+  for (int signum = 0; signum != N_SIGNALS; ++signum) {
+    for (;;) {
+      long count = atomic_load(&signal_count[signum]);
+      if (count == 0) {
+        break;
+      }
+      if (count < 0) {
+        // Practically impossible, but better crash explicitly
+        fprintf(stderr, "signal count overflow\n");
+        abort();
+      }
+      if (atomic_compare_exchange_strong(&signal_count[signum], &count, count - 1)) {
+        return signum;
+      }
     }
-    int next = signal_buf[signal_buf_next_read_idx];
-    signal_buf_next_read_idx = (signal_buf_next_read_idx + 1) % signal_buf_cap;
-    signals_in_buf -= 1;
-    _unlock();
-    return next;
   }
   return -1;
 }
@@ -150,6 +96,7 @@ int raise_signal(int signum) {
 
 int send_signal(int pid, int signum) {
 #ifdef _WIN32
+  // TODO: ignores pid
   return raise_signal(signum);
 #else
   return kill(pid, signum);

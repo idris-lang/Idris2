@@ -138,7 +138,11 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    rfNameNS <- inCurrentNS (RF fldNameStr)
                    unNameNS <- inCurrentNS (UN fldNameStr)
 
-                   ty <- unelab tyenv ty_chk
+                   let nestDrop
+                          = map (\ (n, (_, ns, _)) => (n, length ns))
+                                (names nest)
+                   nestDrop <- traverse (\ (n, ns) => pure (!(toFullNames n), ns)) nestDrop
+                   ty <- unelabNest nestDrop tyenv ty_chk
                    let ty' = substNames vars upds ty
                    log "declare.record.field" 5 $ "Field type: " ++ show ty'
                    let rname = MN "rec" 0

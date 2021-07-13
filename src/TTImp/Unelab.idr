@@ -66,9 +66,10 @@ Eq UnelabMode where
 
 mutual
   unelabCase : {auto c : Ref Ctxt Defs} ->
+               List (Name, Nat) ->
                Name -> List IArg -> RawImp ->
                Core RawImp
-  unelabCase n args orig
+  unelabCase nest n args orig
       = do defs <- get Ctxt
            Just glob <- lookupCtxtExact n (gamma defs)
                 | Nothing => pure orig
@@ -106,10 +107,10 @@ mutual
       mkClause fc dropped (vs ** (env, lhs, rhs))
           = do let pat = nthArg fc dropped lhs
                logTerm "unelab.case" 20 "Unelaborating LHS" pat
-               lhs' <- unelabTy Full env pat
+               lhs' <- unelabTy Full nest env pat
                logTerm "unelab.case" 20 "Unelaborating RHS" rhs
                logEnv "unelab.case" 20 "In Env" env
-               rhs' <- unelabTy Full env rhs
+               rhs' <- unelabTy Full nest env rhs
                pure (PatClause fc (fst lhs') (fst rhs'))
 
       mkCase : List (vs ** (Env Term vs, Term vs, Term vs)) ->
@@ -122,11 +123,12 @@ mutual
 
   unelabSugar : {auto c : Ref Ctxt Defs} ->
                 (umode : UnelabMode) ->
+                (nest : List (Name, Nat)) ->
                 (RawImp, Glued vars) ->
                 Core (RawImp, Glued vars)
-  unelabSugar (NoSugar _) res = pure res
-  unelabSugar ImplicitHoles res = pure res
-  unelabSugar _ (tm, ty)
+  unelabSugar (NoSugar _) nest res = pure res
+  unelabSugar ImplicitHoles nest res = pure res
+  unelabSugar _ nest (tm, ty)
       = let (f, args) = getFnArgs tm [] in
             case f of
              IVar fc (NS ns (CaseBlock n i)) =>
@@ -134,10 +136,27 @@ mutual
                          [ "Unelaborating case " ++ show (n, i)
                          , "with arguments: " ++ show args
                          ]
-                  tm <- unelabCase (NS ns (CaseBlock n i)) args tm
+                  tm <- unelabCase nest (NS ns (CaseBlock n i)) args tm
                   log "unelab.case" 20 $ "Unelaborated to: " ++ show tm
                   pure (tm, ty)
              _ => pure (tm, ty)
+
+  dropParams : {auto c : Ref Ctxt Defs} ->
+               List (Name, Nat) -> (RawImp, Glued vars) ->
+               Core (RawImp, Glued vars)
+  dropParams nest (tm, ty)
+     = case getFnArgs tm [] of
+            (IVar fc n, args) =>
+                case lookup n nest of
+                     Nothing => pure (tm, ty)
+                     Just i => pure $ (apply (IVar fc n) (drop i args), ty)
+            _ => pure (tm, ty)
+    where
+      apply : RawImp -> List IArg -> RawImp
+      apply tm [] = tm
+      apply tm (Exp fc a :: args) = apply (IApp fc tm a) args
+      apply tm (Auto fc a :: args) = apply (IAutoApp fc tm a) args
+      apply tm (Named fc n a :: args) = apply (INamedApp fc tm n a) args
 
   -- Turn a term back into an unannotated TTImp. Returns the type of the
   -- unelaborated term so that we can work out where to put the implicit
@@ -147,22 +166,24 @@ mutual
   unelabTy : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              (umode : UnelabMode) ->
+             (nest : List (Name, Nat)) ->
              Env Term vars -> Term vars ->
              Core (RawImp, Glued vars)
-  unelabTy umode env tm
-      = unelabSugar umode !(unelabTy' umode env tm)
+  unelabTy umode nest env tm
+      = unelabSugar umode nest !(dropParams nest !(unelabTy' umode nest env tm))
 
   unelabTy' : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               (umode : UnelabMode) ->
+              (nest : List (Name, Nat)) ->
               Env Term vars -> Term vars ->
               Core (RawImp, Glued vars)
-  unelabTy' umode env (Local fc _ idx p)
+  unelabTy' umode nest env (Local fc _ idx p)
       = do let nm = nameAt p
            log "unelab.case" 20 $ "Found local name: " ++ show nm
            let ty = gnf env (binderType (getBinder p env))
            pure (IVar fc nm, ty)
-  unelabTy' umode env (Ref fc nt n)
+  unelabTy' umode nest env (Ref fc nt n)
       = do defs <- get Ctxt
            Just ty <- lookupTyExact n (gamma defs)
                | Nothing => case umode of
@@ -179,7 +200,7 @@ mutual
                      ]
 
            pure (IVar fc n', gnf env (embed ty))
-  unelabTy' umode env (Meta fc n i args)
+  unelabTy' umode nest env (Meta fc n i args)
       = do defs <- get Ctxt
            let mkn = nameRoot n
            Just ty <- lookupTyExact (Resolved i) (gamma defs)
@@ -187,15 +208,15 @@ mutual
                                  ImplicitHoles => pure (Implicit fc True, gErased fc)
                                  _ => pure (IHole fc mkn, gErased fc)
            pure (IHole fc mkn, gnf env (embed ty))
-  unelabTy' umode env (Bind fc x b sc)
-      = do (sc', scty) <- unelabTy umode (b :: env) sc
+  unelabTy' umode nest env (Bind fc x b sc)
+      = do (sc', scty) <- unelabTy umode nest (b :: env) sc
            case umode of
                 NoSugar True =>
                    let x' = uniqueLocal vars x in
-                       unelabBinder umode fc env x' b
+                       unelabBinder umode nest fc env x' b
                                     (renameVars (CompatExt CompatPre) sc) sc'
                                     (renameVars (CompatExt CompatPre) !(getTerm scty))
-                _ => unelabBinder umode fc env x b sc sc' !(getTerm scty)
+                _ => unelabBinder umode nest fc env x b sc sc' !(getTerm scty)
     where
       next : Name -> Name
       next (MN n i) = MN n (i + 1)
@@ -208,9 +229,9 @@ mutual
          = if n `elem` vs
               then uniqueLocal vs (next n)
               else n
-  unelabTy' umode env (App fc fn arg)
-      = do (fn', gfnty) <- unelabTy umode env fn
-           (arg', gargty) <- unelabTy umode env arg
+  unelabTy' umode nest env (App fc fn arg)
+      = do (fn', gfnty) <- unelabTy umode nest env fn
+           (arg', gargty) <- unelabTy umode nest env arg
            fnty <- getNF gfnty
            defs <- get Ctxt
            case fnty of
@@ -223,66 +244,68 @@ mutual
                         pure (INamedApp fc fn' x arg',
                                 glueBack defs env sc')
                 _ => pure (IApp fc fn' arg', gErased fc)
-  unelabTy' umode env (As fc s p tm)
-      = do (p', _) <- unelabTy' umode env p
-           (tm', ty) <- unelabTy' umode env tm
+  unelabTy' umode nest env (As fc s p tm)
+      = do (p', _) <- unelabTy' umode nest env p
+           (tm', ty) <- unelabTy' umode nest env tm
            case p' of
                 IVar _ n =>
                     case umode of
                          NoSugar _ => pure (IAs fc (getLoc p) s n tm', ty)
                          _ => pure (tm', ty)
                 _ => pure (tm', ty) -- Should never happen!
-  unelabTy' umode env (TDelayed fc r tm)
-      = do (tm', ty) <- unelabTy' umode env tm
+  unelabTy' umode nest env (TDelayed fc r tm)
+      = do (tm', ty) <- unelabTy' umode nest env tm
            defs <- get Ctxt
            pure (IDelayed fc r tm', gErased fc)
-  unelabTy' umode env (TDelay fc r _ tm)
-      = do (tm', ty) <- unelabTy' umode env tm
+  unelabTy' umode nest env (TDelay fc r _ tm)
+      = do (tm', ty) <- unelabTy' umode nest env tm
            defs <- get Ctxt
            pure (IDelay fc tm', gErased fc)
-  unelabTy' umode env (TForce fc r tm)
-      = do (tm', ty) <- unelabTy' umode env tm
+  unelabTy' umode nest env (TForce fc r tm)
+      = do (tm', ty) <- unelabTy' umode nest env tm
            defs <- get Ctxt
            pure (IForce fc tm', gErased fc)
-  unelabTy' umode env (PrimVal fc c) = pure (IPrimVal fc c, gErased fc)
-  unelabTy' umode env (Erased fc _) = pure (Implicit fc True, gErased fc)
-  unelabTy' umode env (TType fc) = pure (IType fc, gType fc)
-  unelabTy' umode _ tm
+  unelabTy' umode nest env (PrimVal fc c) = pure (IPrimVal fc c, gErased fc)
+  unelabTy' umode nest env (Erased fc _) = pure (Implicit fc True, gErased fc)
+  unelabTy' umode nest env (TType fc) = pure (IType fc, gType fc)
+  unelabTy' umode nest _ tm
       = let fc = getLoc tm in
             pure (Implicit fc False, gErased fc)
 
   unelabPi : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              (umode : UnelabMode) ->
+             (nest : List (Name, Nat)) ->
              Env Term vars -> PiInfo (Term vars) ->
              Core (PiInfo RawImp)
-  unelabPi umode env Explicit = pure Explicit
-  unelabPi umode env Implicit = pure Implicit
-  unelabPi umode env AutoImplicit = pure AutoImplicit
-  unelabPi umode env (DefImplicit t)
-      = do (t', _) <- unelabTy umode env t
+  unelabPi umode nest env Explicit = pure Explicit
+  unelabPi umode nest env Implicit = pure Implicit
+  unelabPi umode nest env AutoImplicit = pure AutoImplicit
+  unelabPi umode nest env (DefImplicit t)
+      = do (t', _) <- unelabTy umode nest env t
            pure (DefImplicit t')
 
   unelabBinder : {vars : _} ->
                  {auto c : Ref Ctxt Defs} ->
                  (umode : UnelabMode) ->
+                 (nest : List (Name, Nat)) ->
                  FC -> Env Term vars -> (x : Name) ->
                  Binder (Term vars) -> Term (x :: vars) ->
                  RawImp -> Term (x :: vars) ->
                  Core (RawImp, Glued vars)
-  unelabBinder umode fc env x (Lam fc' rig p ty) sctm sc scty
-      = do (ty', _) <- unelabTy umode env ty
-           p' <- unelabPi umode env p
+  unelabBinder umode nest fc env x (Lam fc' rig p ty) sctm sc scty
+      = do (ty', _) <- unelabTy umode nest env ty
+           p' <- unelabPi umode nest env p
            pure (ILam fc rig p' (Just x) ty' sc,
                     gnf env (Bind fc x (Pi fc' rig p ty) scty))
-  unelabBinder umode fc env x (Let fc' rig val ty) sctm sc scty
-      = do (val', vty) <- unelabTy umode env val
-           (ty', _) <- unelabTy umode env ty
+  unelabBinder umode nest fc env x (Let fc' rig val ty) sctm sc scty
+      = do (val', vty) <- unelabTy umode nest env val
+           (ty', _) <- unelabTy umode nest env ty
            pure (ILet fc EmptyFC rig x ty' val' sc,
                     gnf env (Bind fc x (Let fc' rig val ty) scty))
-  unelabBinder umode fc env x (Pi _ rig p ty) sctm sc scty
-      = do (ty', _) <- unelabTy umode env ty
-           p' <- unelabPi umode env p
+  unelabBinder umode nest fc env x (Pi _ rig p ty) sctm sc scty
+      = do (ty', _) <- unelabTy umode nest env ty
+           p' <- unelabPi umode nest env p
            let nm = if used 0 sctm || isNoSugar umode
                        then Just x
                        else if rig /= top || isDefImp p
@@ -296,16 +319,16 @@ mutual
       isDefImp : PiInfo t -> Bool
       isDefImp (DefImplicit _) = True
       isDefImp _ = False
-  unelabBinder umode fc env x (PVar fc' rig _ ty) sctm sc scty
-      = do (ty', _) <- unelabTy umode env ty
+  unelabBinder umode nest fc env x (PVar fc' rig _ ty) sctm sc scty
+      = do (ty', _) <- unelabTy umode nest env ty
            pure (sc, gnf env (Bind fc x (PVTy fc' rig ty) scty))
-  unelabBinder umode fc env x (PLet fc' rig val ty) sctm sc scty
-      = do (val', vty) <- unelabTy umode env val
-           (ty', _) <- unelabTy umode env ty
+  unelabBinder umode nest fc env x (PLet fc' rig val ty) sctm sc scty
+      = do (val', vty) <- unelabTy umode nest env val
+           (ty', _) <- unelabTy umode nest env ty
            pure (ILet fc EmptyFC rig x ty' val' sc,
                     gnf env (Bind fc x (PLet fc' rig val ty) scty))
-  unelabBinder umode fc env x (PVTy _ rig ty) sctm sc scty
-      = do (ty', _) <- unelabTy umode env ty
+  unelabBinder umode nest fc env x (PVTy _ rig ty) sctm sc scty
+      = do (ty', _) <- unelabTy umode nest env ty
            pure (sc, gType fc)
 
 export
@@ -313,7 +336,7 @@ unelabNoSugar : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
                 Env Term vars -> Term vars -> Core RawImp
 unelabNoSugar env tm
-    = do tm' <- unelabTy (NoSugar False) env tm
+    = do tm' <- unelabTy (NoSugar False) [] env tm
          pure $ fst tm'
 
 export
@@ -321,7 +344,7 @@ unelabUniqueBinders : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
                 Env Term vars -> Term vars -> Core RawImp
 unelabUniqueBinders env tm
-    = do tm' <- unelabTy (NoSugar True) env tm
+    = do tm' <- unelabTy (NoSugar True) [] env tm
          pure $ fst tm'
 
 export
@@ -329,14 +352,16 @@ unelabNoPatvars : {vars : _} ->
                   {auto c : Ref Ctxt Defs} ->
                   Env Term vars -> Term vars -> Core RawImp
 unelabNoPatvars env tm
-    = do tm' <- unelabTy ImplicitHoles env tm
+    = do tm' <- unelabTy ImplicitHoles [] env tm
          pure $ fst tm'
 
 export
-unelab : {vars : _} ->
-         {auto c : Ref Ctxt Defs} ->
-         Env Term vars -> Term vars -> Core RawImp
-unelab env (Meta fc n i args)
+unelabNest : {vars : _} ->
+             {auto c : Ref Ctxt Defs} ->
+             List (Name, Nat) ->
+             Env Term vars ->
+             Term vars -> Core RawImp
+unelabNest nest env (Meta fc n i args)
     = do let mkn = nameRoot n ++ showScope args
          pure (IHole fc mkn)
   where
@@ -351,6 +376,13 @@ unelab env (Meta fc n i args)
     showScope : List (Term vars) -> String
     showScope ts = " " ++ showNScope (mapMaybe toName ts)
 
-unelab env tm
-    = do tm' <- unelabTy Full env tm
+unelabNest nest env tm
+    = do tm' <- unelabTy Full nest env tm
          pure $ fst tm'
+
+export
+unelab : {vars : _} ->
+         {auto c : Ref Ctxt Defs} ->
+         Env Term vars ->
+         Term vars -> Core RawImp
+unelab = unelabNest []

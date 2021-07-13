@@ -8,6 +8,7 @@ module Network.Socket.Raw
 import public Network.Socket.Data
 
 import Network.FFI
+import System.FFI
 
 -- ---------------------------------------------------------------- [ Pointers ]
 
@@ -38,18 +39,18 @@ sock_peek (BPtr ptr) offset = primIO $ prim__idrnet_peek ptr offset
 ||| Frees a given pointer
 export
 sock_free : HasIO io => BufPtr -> io ()
-sock_free (BPtr ptr) = primIO $ prim__idrnet_free ptr
+sock_free (BPtr ptr) = free ptr
 
 export
 sockaddr_free : HasIO io => SockaddrPtr -> io ()
-sockaddr_free (SAPtr ptr) = primIO $ prim__idrnet_free ptr
+sockaddr_free (SAPtr ptr) = free ptr
 
 ||| Allocates an amount of memory given by the ByteLength parameter.
 |||
 ||| Used to allocate a mutable pointer to be given to the Recv functions.
 export
 sock_alloc : HasIO io => ByteLength -> io BufPtr
-sock_alloc bl = map BPtr $ primIO $ prim__idrnet_malloc bl
+sock_alloc bl = map BPtr $ malloc bl
 
 ||| Retrieves the port the given socket is bound to
 export

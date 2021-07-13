@@ -2,10 +2,7 @@ Idris 2
 =======
 
 [![Documentation Status](https://readthedocs.org/projects/idris2/badge/?version=latest)](https://idris2.readthedocs.io/en/latest/?badge=latest)
-[![Windows Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-windows.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-windows.yml)
-[![Ubuntu Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-ubuntu-combined.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-ubuntu-combined.yml)
-[![macOS Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-macos-combined.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-macos-combined.yml)
-[![Nix Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-nix.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-nix.yml)
+[![Build Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-idris2.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-idris2.yml)
 
 [Idris 2](https://idris-lang.org/) is a purely functional programming language
 with first class types.

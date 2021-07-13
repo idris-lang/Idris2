@@ -1,0 +1,2 @@
+$1 --no-banner --no-color --console-width 0 Main.idr --inc chez < input
+rm -rf build

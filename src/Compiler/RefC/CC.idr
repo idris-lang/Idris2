@@ -60,7 +60,7 @@ compileCFile {asShared} objectFile outFile =
 
      let runcc = cc ++ " -Werror " ++ sharedFlag ++ objectFile ++
                        " -o " ++ outFile ++ " " ++
-                       fullprefix_dir dirs "lib" </> "libidris2_support.a" ++ " " ++
+                       (fullprefix_dir dirs "lib" </> "libidris2_support.a") ++ " " ++
                        "-lidris2_refc " ++
                        "-L" ++ fullprefix_dir dirs "refc " ++
                        clibdirs (lib_dirs dirs) ++

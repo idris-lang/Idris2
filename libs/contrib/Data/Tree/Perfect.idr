@@ -1,7 +1,6 @@
 module Data.Tree.Perfect
 
 import Control.WellFounded
-import Decidable.Order
 import Decidable.Order.Strict
 import Data.Monoid.Exponentiation
 import Data.Num.Implementations
@@ -53,7 +52,7 @@ toNat {n = S n} (Right p) = toNat p + pow2 n
 
 export
 toNatBounded : (n : Nat) -> (p : Path n) -> toNat p `LT` pow2 n
-toNatBounded Z Here = lteRefl
+toNatBounded Z Here = reflexive {rel = LTE}
 toNatBounded (S n) (Left p) = CalcWith $
   |~ S (toNat p)
   <~ pow2 n          ...( toNatBounded n p )

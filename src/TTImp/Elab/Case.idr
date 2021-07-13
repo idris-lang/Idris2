@@ -211,6 +211,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
 
          logEnv "elab.case" 10 "Case env" env
          logTermNF "elab.case" 2 ("Case function type: " ++ show casen) [] casefnty
+         traverse_ addToSave (keys (getMetas casefnty))
 
          -- If we've had to add implicits to the case type (because there
          -- were unbound implicits) then we're in a bit of a mess. Easiest

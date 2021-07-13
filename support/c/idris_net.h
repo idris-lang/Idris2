@@ -38,9 +38,6 @@ struct sockaddr_un {
 };
 #endif
 
-// Memory management functions
-void* idrnet_malloc(int size);
-void idrnet_free(void* ptr);
 unsigned int idrnet_peek(void *ptr, unsigned int offset);
 void idrnet_poke(void *ptr, unsigned int offset, char val);
 
