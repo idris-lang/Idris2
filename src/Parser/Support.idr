@@ -29,14 +29,17 @@ fromLexError origin (_, l, c, _)
     = LexFail (MkFC origin (l, c) (l, c + 1)) "Can't recognise token."
 
 export
-fromParsingError : (Show token, Pretty token) =>
-                   OriginDesc -> ParsingError token -> Error
-fromParsingError origin (Error msg Nothing)
-    = ParseFail (MkFC origin (0, 0) (0, 0)) (msg +> '.')
-fromParsingError origin (Error msg (Just t))
-    = let l = t.startLine
-          c = t.startCol in
-          ParseFail (MkFC origin (l, c) (l, c + 1)) (msg +> '.')
+fromParsingErrors : (Show token, Pretty token) =>
+                    OriginDesc -> List1 (ParsingError token) -> Error
+fromParsingErrors origin = ParseFail . (map fromError)
+  where
+    fromError : ParsingError token -> (FC, String)
+    fromError (Error msg Nothing)
+        = (MkFC origin (0, 0) (0, 0), msg +> '.')
+    fromError (Error msg (Just t))
+        = let l = t.startLine
+              c = t.startCol in
+              (MkFC origin (l, c) (l, c + 1), msg +> '.')
 
 export
 hex : Char -> Maybe Int

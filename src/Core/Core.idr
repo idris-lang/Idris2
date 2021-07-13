@@ -149,7 +149,7 @@ data Error : Type where
      CantFindPackage : String -> Error
      LitFail : FC -> Error
      LexFail : FC -> String -> Error
-     ParseFail : FC -> String -> Error
+     ParseFail : List1 (FC, String) -> Error
      ModuleNotFound : FC -> ModuleIdent -> Error
      CyclicImports : List ModuleIdent -> Error
      ForceNeeded : Error
@@ -324,7 +324,7 @@ Show Error where
   show (CantFindPackage fname) = "Can't find package " ++ fname
   show (LitFail fc) = show fc ++ ":Can't parse literate"
   show (LexFail fc err) = show fc ++ ":Lexer error (" ++ show err ++ ")"
-  show (ParseFail fc err) = "Parse error (" ++ show err ++ ")"
+  show (ParseFail errs) = "Parse errors (" ++ show errs ++ ")"
   show (ModuleNotFound fc ns)
       = show fc ++ ":" ++ show ns ++ " not found"
   show (CyclicImports ns)
@@ -420,7 +420,7 @@ getErrorLoc (FileErr _ _) = Nothing
 getErrorLoc (CantFindPackage _) = Nothing
 getErrorLoc (LitFail loc) = Just loc
 getErrorLoc (LexFail loc _) = Just loc
-getErrorLoc (ParseFail loc _) = Just loc
+getErrorLoc (ParseFail ((loc, _) ::: _)) = Just loc
 getErrorLoc (ModuleNotFound loc _) = Just loc
 getErrorLoc (CyclicImports _) = Nothing
 getErrorLoc ForceNeeded = Nothing
