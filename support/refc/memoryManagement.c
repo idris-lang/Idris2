@@ -1,5 +1,7 @@
 #include "runtime.h"
 
+#include <stdarg.h>
+
 Value *newValue()
 {
     Value *retVal = (Value *)malloc(sizeof(Value));
@@ -146,23 +148,40 @@ Value_Integer *makeIntegerLiteral(char *i)
     return retVal;
 }
 
-Value_String *makeEmptyString(size_t l)
+Value_String *makeString(const char *s)
+{
+    return makeStringWithLength(s, strlen(s));
+}
+
+Value_String *makeStringWithLength(const char *s, size_t len)
+{
+    return makeStringConcat(s, len, "", 0);
+}
+
+Value_String *makeStringConcat(const char *a, size_t a_len, const char *b, size_t b_len)
 {
     Value_String *retVal = (Value_String *)newValue();
     retVal->header.tag = STRING_TAG;
-    retVal->str = malloc(l);
-    memset(retVal->str, 0, l);
+    retVal->str = malloc(a_len + b_len + 1);
+    memcpy(retVal->str, a, a_len);
+    memcpy(retVal->str + a_len, b, b_len);
+    retVal->str[a_len + b_len] = 0;
     return retVal;
 }
 
-Value_String *makeString(char *s)
+Value_String* makeStringPrintf(const char* fmt, ...)
 {
     Value_String *retVal = (Value_String *)newValue();
-    int l = strlen(s);
+
+    va_list ap;
+    va_start(ap, fmt);
+    size_t len = vsnprintf(NULL, 0, fmt, ap);
+    va_end(ap);
     retVal->header.tag = STRING_TAG;
-    retVal->str = malloc(l + 1);
-    memset(retVal->str, 0, l + 1);
-    memcpy(retVal->str, s, l);
+    retVal->str = malloc(len + 1);
+    va_start(ap, fmt);
+    vsnprintf(retVal->str, len + 1, fmt, ap);
+    va_end(ap);
     return retVal;
 }
 

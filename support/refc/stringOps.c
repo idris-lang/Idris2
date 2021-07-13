@@ -16,22 +16,15 @@ Value *head(Value *str)
 
 Value *tail(Value *input)
 {
-    Value_String *tailStr = (Value_String *)newValue();
-    tailStr->header.tag = STRING_TAG;
     Value_String *s = (Value_String *)input;
-    int l = strlen(s->str);
+    size_t l = strlen(s->str);
     if(l != 0)
     {
-        tailStr->str = malloc(l);
-        memset(tailStr->str, 0, l);
-        memcpy(tailStr->str, s->str + 1, l - 1);
-        return (Value *)tailStr;
+        return (Value *)makeStringWithLength(s->str + 1, l - 1);
     }
     else
     {
-        tailStr->str = malloc(1);
-        tailStr->str[0] = '\0';
-        return (Value *)tailStr;
+        return (Value *)makeStringWithLength("", 0);
     }
 }
 
@@ -61,21 +54,16 @@ Value *strIndex(Value *str, Value *i)
 
 Value *strCons(Value *c, Value *str)
 {
-    int l = strlen(((Value_String *)str)->str);
-    Value_String *retVal = makeEmptyString(l + 2);
-    retVal->str[0] = ((Value_Char *)c)->c;
-    memcpy(retVal->str + 1, ((Value_String *)str)->str, l);
-    return (Value *)retVal;
+    char c_char = ((Value_Char *)c)->c;
+    char *str_s = ((Value_String *)str)->str;
+    return (Value *)makeStringConcat(&c_char, 1, str_s, strlen(str_s));
 }
 
 Value *strAppend(Value *a, Value *b)
 {
-    int la = strlen(((Value_String *)a)->str);
-    int lb = strlen(((Value_String *)b)->str);
-    Value_String *retVal = makeEmptyString(la + lb + 1);
-    memcpy(retVal->str, ((Value_String *)a)->str, la);
-    memcpy(retVal->str + la, ((Value_String *)b)->str, lb);
-    return (Value *)retVal;
+    char *a_s = ((Value_String *)a)->str;
+    char *b_s = ((Value_String *)b)->str;
+    return (Value *)makeStringConcat(a_s, strlen(a_s), b_s, strlen(b_s));
 }
 
 Value *strSubstr(Value *start, Value *len, Value *s)
@@ -90,8 +78,7 @@ Value *strSubstr(Value *start, Value *len, Value *s)
         l = tailLen;
     }
 
-    Value_String *retVal = makeEmptyString(l + 1);
-    memcpy(retVal->str, input + offset, l);
+    Value_String *retVal = makeStringWithLength(input + offset, l);
 
     return (Value *)retVal;
 }

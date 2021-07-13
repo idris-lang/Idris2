@@ -25,8 +25,14 @@ Value_Int64 *makeInt64(int64_t i);
 Value_Int8 *makeBool(int p);
 Value_Integer *makeInteger();
 Value_Integer *makeIntegerLiteral(char *i);
-Value_String *makeEmptyString(size_t l);
-Value_String *makeString(char *);
+Value_String *makeString(const char *);
+Value_String *makeStringWithLength(const char *, size_t);
+Value_String *makeStringConcat(const char *a, size_t a_len, const char *b, size_t b_len);
+Value_String *makeStringPrintf(const char* fmt, ...)
+#if defined(__clang__) || defined(__GNUC__)
+__attribute__ ((format(printf, 1, 2)))
+#endif
+;
 
 Value_Pointer *makePointer(void *);
 Value_GCPointer *makeGCPointer(void *ptr_Raw, Value_Closure *onCollectFct);
