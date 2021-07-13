@@ -197,7 +197,7 @@ operator : Rule Name
 operator
     = terminal "Expected operator"
                \case
-                 Symbol s => 
+                 Symbol s =>
                    if s `elem` reservedSymbols
                    then Nothing
                    else Just (UN s)
@@ -275,7 +275,7 @@ isNotReservedSymbol x
 export
 opNonNS : Rule Name
 opNonNS = do
-  symbol "(" 
+  symbol "("
   id <- bounds (operatorCandidate <|> postfixProj)
   isNotReservedSymbol (nameRoot <$> id)
   symbol ")"
