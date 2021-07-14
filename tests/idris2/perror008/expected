@@ -19,21 +19,21 @@ Issue710b:3:6--3:7
 1/1: Building Issue710c (Issue710c.idr)
 Error: Expected a capitalised identifier, got: leaf.
 
-Issue710c:5:3--5:4
+Issue710c:5:3--5:7
  1 | infix 3 #
  2 | 
  3 | data T : Type where
  4 |   (#) : T -> T -> T
  5 |   leaf : T
-       ^
+       ^^^^
 
 1/1: Building Issue710d (Issue710d.idr)
 Error: Expected a capitalised identifier, got: mkT.
 
-Issue710d:2:15--2:16
+Issue710d:2:15--2:18
  1 | record T where
  2 |   constructor mkT
-                   ^
+                   ^^^
 
 1/1: Building Issue710e (Issue710e.idr)
 Error: Expected a capitalised identifier, got: a.
@@ -47,20 +47,20 @@ Issue710e:3:11--3:12
 1/1: Building Issue710f (Issue710f.idr)
 Error: Expected a capitalised identifier, got: cons.
 
-Issue710f:2:15--2:16
+Issue710f:2:15--2:19
  1 | interface Lalala where
  2 |   constructor cons
-                   ^
+                   ^^^^
 
 Uncaught error: Error: Expected a capitalised identifier, got: ggg.
 
-Issue1224a:1:8--1:9
+Issue1224a:1:8--1:11
  1 | module ggg
-            ^
+            ^^^
 
 Uncaught error: Error: Expected a capitalised identifier, got: ggg.
 
-Issue1224b:1:8--1:9
+Issue1224b:1:8--1:11
  1 | import ggg
-            ^
+            ^^^
 

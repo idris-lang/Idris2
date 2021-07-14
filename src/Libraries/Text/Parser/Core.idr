@@ -278,7 +278,8 @@ doParse : Semigroup state => state -> (commit : Bool) ->
           (xs : List (WithBounds tok)) ->
           ParseResult state tok ty
 doParse s com (Empty val) xs = Res s com (irrelevantBounds val) xs
-doParse s com (Fail location fatal str) xs = Failure com fatal str (maybe (bounds <$> head' xs) Just location)
+doParse s com (Fail location fatal str) xs
+  = Failure com fatal str (location <|> (bounds <$> head' xs))
 doParse s com (Try g) xs = case doParse s com g xs of
   -- recover from fatal match but still propagate the 'commit'
   Failure com _ msg ts => Failure com False msg ts
