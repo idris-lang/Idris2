@@ -1,3 +1,4 @@
+rm -rf build
+
 $1 FinPerf.idr --exec main
 
-rm -rf build/

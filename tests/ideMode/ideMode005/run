@@ -1,3 +1,5 @@
+rm -rf build
+
 rm -f output*
 
 $1 --no-color --console-width 0 --ide-mode < input1 > output1
@@ -51,4 +53,3 @@ diff expectedG outputG >> output
 $1 --no-color --console-width 0 --ide-mode < inputH > outputH
 diff expectedH outputH >> output
 
-rm -rf build

@@ -1,3 +1,5 @@
+rm -rf build
+
 rm -f expected
 
 if ! NProcs=$(nproc || sysctl -n hw.ncpu) 2>/dev/null; then
@@ -9,4 +11,3 @@ echo "$NProcs processors" > expected
 
 $1 --no-banner --no-color --console-width 0 NumProcessors.idr --exec main
 
-rm -rf build
