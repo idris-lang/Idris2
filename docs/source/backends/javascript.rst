@@ -30,7 +30,7 @@ expression.
 
 .. code-block:: idris
 
-    %foreign "node:lambda:fp=>require('fs').fstatSync(fp.fd, {bigint: true}).size"
+    %foreign "node:lambda:fp=>require('fs').fstatSync(fp.fd, {bigint: false}).size"
     prim__fileSize : FilePtr -> PrimIO Int
 
 ``require`` can be used to import javascript modules.
@@ -50,14 +50,32 @@ An interesting example is creating a foreign for the setTimeout function:
 
 .. code-block:: idris
 
-    %foreign "javascript:lambda:(callback, delay)=>setTimeout(callback, Number(delay))"
+    %foreign "javascript:lambda:(callback, delay)=>setTimeout(callback, delay)"
     prim__setTimeout : (PrimIO ()) -> Int -> PrimIO ()
 
     setTimeout : HasIO io => IO () -> Int -> io ()
     setTimeout callback delay = primIO $ prim__setTimeout (toPrim callback) delay
 
-An important note here is that the codegen is using ``BigInt`` to represent
-idris ``Int``, that's why we need to apply ``Number`` to the ``delay``.
+Note: Previous versions of the javascript backends treated ``Int`` as a
+64 bit signed integer represented by ``BigInt`` in javascript land. This is no
+longer the case: ``Int`` is now treated as a 32 bit signed integer represented
+by ``Number``. This should facilitate interop between Idris2 and the backend.
+
+However, unless you have good reasons to do otherwise, consider using
+one of the other fixed precision integral types. They are supposed to behave
+the same across all backends. All signed and unsigned integrals of up to
+32 bit precision (``Int8``, ``Int16``, ``Int32``, ``Bits8``, ``Bits16``, and ``Bits32``)
+are represented by ``Number`` while ``Int64``, ``Bits64``, and ``Integer``
+are represented by ``BigInt``. The example above could therefore be
+improved by using ``Int32`` instad of ``Int``:
+
+.. code-block:: idris
+
+    %foreign "javascript:lambda:(callback, delay)=>setTimeout(callback, delay)"
+    prim__setTimeout : (PrimIO ()) -> Int32 -> PrimIO ()
+
+    setTimeout : HasIO io => IO () -> Int32 -> io ()
+    setTimeout callback delay = primIO $ prim__setTimeout (toPrim callback) delay
 
 Browser Example
 ===============
@@ -131,17 +149,14 @@ setInterval
 
 .. code-block:: idris
 
-    %foreign "browser:lambda: (a,i)=>setInterval(a,Number(i))"
-    prim__setInterval : PrimIO () -> Int -> PrimIO ()
+    %foreign "browser:lambda: (a,i)=>setInterval(a,i)"
+    prim__setInterval : PrimIO () -> Int32 -> PrimIO ()
 
-    setInterval : (HasIO io) => IO () -> Int -> io ()
+    setInterval : (HasIO io) => IO () -> Int32 -> io ()
     setInterval a i = primIO $ prim__setInterval (toPrim a) i
 
 The ``setInterval`` JavaScript function executes the given function in every ``x`` millisecond.
 We can use Idris generated functions in the callback as far as they have the type ``IO ()`` .
-But there is a difference in the parameter for the time interval. On the JavaScript side it
-expects a number, meanwhile ``Int`` in Idris is represented as a ``BigInt`` in JavaScript,
-for that reason the implementation of the ``%foreign`` needs to make the conversion.
 
 HTML Dom elements
 -----------------
@@ -173,16 +188,11 @@ retrieved via the FFI.
 
 .. code-block:: idris
 
-    %foreign "browser:lambda: n=>(BigInt(n.width))"
-    prim__width : AnyPtr -> PrimIO Int
+    %foreign "browser:lambda: n=>(n.width)"
+    prim__width : AnyPtr -> PrimIO Bits32
 
-    width : HasIO io => DomNode -> io Int
+    width : HasIO io => DomNode -> io Bits32
     width (MkNode p) = primIO $ prim__width p
-
-
-Note the ``BigInt`` conversation from the JavaScript. The ``n.width`` returns a JavaScript
-``Number`` and the corresponding ``Int`` of Idris is repersented as a ``BigInt`` in JavaScript.
-The implementor of the FFI function must keep these conversions in mind.
 
 Handling JavaScript events
 --------------------------
@@ -203,3 +213,39 @@ In this example shows how to attach an event handler to a particular DOM element
 are also associated with ``AnyPtr`` on the Idris side. To seperate ``DomNode`` form ``DomEvent``
 we create two different types. Also it demonstrates how a simple callback function defined in
 Idris can be used on the JavaScript side.
+
+Directives
+----------
+
+The javascript code generators accepts three different directives
+about how compact and obfusacted the generated code should be.
+The following examples show the code generated for the ``putStr``
+function from the prelude for each of the three directives.
+(``--cg node`` is used in the examples below, but the behavior is
+the same when generating code to be run in browsers with ``--cg javascript``).
+
+With ``idris2 --cg node --directive pretty`` (the default, if no directive is
+given), a basic pretty printer is used to generate properly indented
+javascript code.
+
+.. code-block:: javascript
+
+    function Prelude_IO_putStr($0, $1) {
+     return $0.a2(undefined)($7 => Prelude_IO_prim__putStr($1, $7));
+    }
+
+With ``idris2 --cg node --directive compact``, every toplevel function
+is declared on a single line, and unneeded spaces are removed:
+
+.. code-block:: javascript
+
+    function Prelude_IO_putStr($0,$1){return $0.a2(undefined)($7=>Prelude_IO_prim__putStr($1,$7));}
+
+Finally, with ``idris2 --cg node --directive minimal``, toplevel function
+names are (with a few exceptions like the ones from the static
+preamble) obfuscated to reduce the size of the generated javascript
+file:
+
+.. code-block:: javascript
+
+    function $R3a($0,$1){return $0.a2(undefined)($7=>$R3b($1,$7));}

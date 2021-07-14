@@ -79,7 +79,7 @@ idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
        "interactive021", "interactive022", "interactive023", "interactive024",
        "interactive025", "interactive026", "interactive027", "interactive028",
        "interactive029", "interactive030", "interactive031", "interactive032",
-       "interactive033", "interactive034", "interactive035"]
+       "interactive033", "interactive034", "interactive035", "interactive036"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool "Interface" [] Nothing
@@ -296,6 +296,7 @@ baseLibraryTests = MkTestPool "Base library" [Chez, Node] Nothing
   , "system_info_os001"
   , "system_system"
   , "data_bits001"
+  , "system_errno"
   , "system_info001"
   , "system_signal001", "system_signal002", "system_signal003", "system_signal004"
   ]

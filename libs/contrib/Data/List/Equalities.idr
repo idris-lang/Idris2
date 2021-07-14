@@ -6,7 +6,7 @@ import Data.List
 
 ||| A list constructued using snoc cannot be empty.
 export
-snocNonEmpty : {x : a} -> {xs : List a} -> xs ++ [x] = [] -> Void
+snocNonEmpty : {x : a} -> {xs : List a} -> Not (xs ++ [x] = [])
 snocNonEmpty {xs = []} prf = uninhabited prf
 snocNonEmpty {xs = y :: ys} prf = uninhabited prf
 

@@ -5,6 +5,7 @@ import Compiler.RefC.CC
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.ANF
+import Compiler.Generated
 
 import Core.Context
 import Core.Context.Log
@@ -969,7 +970,7 @@ header : {auto c : Ref Ctxt Defs}
       -> Core ()
 header = do
     let initLines = [ "#include <runtime.h>"
-                    , "/* automatically generated using the Idris2 C Backend */"]
+                    , "/* " ++ (generatedString "RefC") ++" */"]
     let headerFiles = Libraries.Data.SortedSet.toList !(get HeaderFiles)
     let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
     fns <- get FunctionDefinitions

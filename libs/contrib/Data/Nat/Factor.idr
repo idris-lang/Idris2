@@ -146,7 +146,7 @@ PartialOrder Nat Factor where
 
 ||| No number can simultaneously be and not be a factor of another number.
 export
-factorNotFactorAbsurd : {n, p : Nat} -> Factor p n -> NotFactor p n -> Void
+factorNotFactorAbsurd : {n, p : Nat} -> Factor p n -> Not (NotFactor p n)
 factorNotFactorAbsurd {n = S k} {p = Z} (CofactorExists q prf) (ZeroNotFactorS k) =
         uninhabited prf
 factorNotFactorAbsurd {n} {p} (CofactorExists q prf) (ProperRemExists q' r contra) with (cmp q q')
@@ -357,7 +357,7 @@ right (SearchArgs _ r _) = r
 Sized Search where
     size (SearchArgs a b _) = a + b
 
-notLteAndGt : (a, b : Nat) -> LTE a b -> GT a b -> Void
+notLteAndGt : (a, b : Nat) -> LTE a b -> Not (GT a b)
 notLteAndGt Z b aLteB aGtB = succNotLTEzero aGtB
 notLteAndGt (S k) Z aLteB aGtB = succNotLTEzero aLteB
 notLteAndGt (S k) (S j) aLteB aGtB = notLteAndGt k j (fromLteSucc aLteB) (fromLteSucc aGtB)
