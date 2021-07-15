@@ -102,6 +102,9 @@ data Name = UN String -- user defined name
           | NS Namespace Name -- name in a namespace
           | DN String Name -- a name and how to display it
           | RF String -- record field name
+          | Nested (Int, Int) Name -- nested function name
+          | CaseBlock Int Int -- case block nested in (resolved) name
+          | WithBlock Int Int -- with block nested in (resolved) name
 
 export
 Show Name where
@@ -110,6 +113,10 @@ Show Name where
   show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
   show (DN str y) = str
   show (RF n) = "." ++ n
+  show (Nested (outer, idx) inner)
+      = show outer ++ ":" ++ show idx ++ ":" ++ show inner
+  show (CaseBlock outer i) = "case block in " ++ show outer
+  show (WithBlock outer i) = "with block in " ++ show outer
 
 public export
 data Count = M0 | M1 | MW
