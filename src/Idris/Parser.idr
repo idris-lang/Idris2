@@ -614,58 +614,73 @@ mutual
 
   explicitPi : OriginDesc -> IndentInfo -> Rule PTerm
   explicitPi fname indents
-      = do decoratedSymbol fname "("
-           binders <- pibindList fname indents
-           decoratedSymbol fname ")"
-           exp <- bindSymbol fname
+      = do b <- bounds $ do
+                  decoratedSymbol fname "("
+                  binders <- pibindList fname indents
+                  decoratedSymbol fname ")"
+                  pure binders
+           exp <- mustWorkBecause b.bounds "Cannot return a named argument"
+                    $ bindSymbol fname
            scope <- mustWork $ typeExpr pdef fname indents
-           pure (pibindAll fname exp binders scope)
+           pure (pibindAll fname exp b.val scope)
 
   autoImplicitPi : OriginDesc -> IndentInfo -> Rule PTerm
   autoImplicitPi fname indents
-      = do decoratedSymbol fname "{"
-           decoratedKeyword fname "auto"
-           commit
-           binders <- pibindList fname indents
-           decoratedSymbol fname "}"
-           decoratedSymbol fname "->"
+      = do b <- bounds $ do
+                  decoratedSymbol fname "{"
+                  decoratedKeyword fname "auto"
+                  commit
+                  binders <- pibindList fname indents
+                  decoratedSymbol fname "}"
+                  pure binders
+           mustWorkBecause b.bounds "Cannot return an auto implicit argument"
+             $ decoratedSymbol fname "->"
            scope <- mustWork $ typeExpr pdef fname indents
-           pure (pibindAll fname AutoImplicit binders scope)
+           pure (pibindAll fname AutoImplicit b.val scope)
 
   defaultImplicitPi : OriginDesc -> IndentInfo -> Rule PTerm
   defaultImplicitPi fname indents
-      = do decoratedSymbol fname "{"
-           decoratedKeyword fname "default"
-           commit
-           t <- simpleExpr fname indents
-           binders <- pibindList fname indents
-           decoratedSymbol fname "}"
-           decoratedSymbol fname "->"
+      = do b <- bounds $ do
+                  decoratedSymbol fname "{"
+                  decoratedKeyword fname "default"
+                  commit
+                  t <- simpleExpr fname indents
+                  binders <- pibindList fname indents
+                  decoratedSymbol fname "}"
+                  pure (t, binders)
+           mustWorkBecause b.bounds "Cannot return a default implicit argument"
+             $ decoratedSymbol fname "->"
            scope <- mustWork $ typeExpr pdef fname indents
-           pure (pibindAll fname (DefImplicit t) binders scope)
+           pure $ let (t, binders) = b.val in
+                  pibindAll fname (DefImplicit t) binders scope
 
   forall_ : OriginDesc -> IndentInfo -> Rule PTerm
   forall_ fname indents
-      = do decoratedKeyword fname "forall"
-           commit
-           ns <- sepBy1 (decoratedSymbol fname ",")
-                        (bounds (decoratedSimpleBinderName fname))
-           let binders = map (\n => ( erased {a=RigCount}
+      = do b <- bounds $ do
+                  decoratedKeyword fname "forall"
+                  commit
+                  ns <- sepBy1 (decoratedSymbol fname ",")
+                               (bounds (decoratedSimpleBinderName fname))
+                  pure $ map (\n => ( erased {a=RigCount}
                                     , map (Just . UN) n
                                     , PImplicit (boundToFC fname n))
-                                    ) (forget ns)
-           decoratedSymbol fname "."
+                             ) (forget ns)
+           mustWorkBecause b.bounds "Cannot return a forall quantifier"
+             $ decoratedSymbol fname "."
            scope <- mustWork $ typeExpr pdef fname indents
-           pure (pibindAll fname Implicit binders scope)
+           pure (pibindAll fname Implicit b.val scope)
 
   implicitPi : OriginDesc -> IndentInfo -> Rule PTerm
   implicitPi fname indents
-      = do decoratedSymbol fname "{"
-           binders <- pibindList fname indents
-           decoratedSymbol fname "}"
-           decoratedSymbol fname "->"
+      = do b <- bounds $ do
+                  decoratedSymbol fname "{"
+                  binders <- pibindList fname indents
+                  decoratedSymbol fname "}"
+                  pure binders
+           mustWorkBecause b.bounds "Cannot return an implicit argument"
+            $ decoratedSymbol fname "->"
            scope <- mustWork $ typeExpr pdef fname indents
-           pure (pibindAll fname Implicit binders scope)
+           pure (pibindAll fname Implicit b.val scope)
 
   lam : OriginDesc -> IndentInfo -> Rule PTerm
   lam fname indents
