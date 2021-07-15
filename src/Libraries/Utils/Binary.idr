@@ -17,7 +17,7 @@ import System.File
 import Libraries.Data.PosMap
 import Libraries.Utils.String
 
-import public Data.IOArray
+import public Libraries.Data.IOArray
 
 -- Serialising data as binary. Provides an interface TTC which allows
 -- reading and writing to chunks of memory, "Binary", which can be written

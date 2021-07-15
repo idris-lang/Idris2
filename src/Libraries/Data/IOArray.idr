@@ -1,4 +1,4 @@
-module Data.IOArray
+module Libraries.Data.IOArray
 
 import Data.IOArray.Prims
 import Data.List
@@ -6,30 +6,29 @@ import Data.List
 %default total
 
 export
-record IOArray elem where
+record IOArray a where
   constructor MkIOArray
   maxSize : Int
-  content : ArrayData (Maybe elem)
+  content : ArrayData (Maybe a)
 
 export
-max : IOArray elem -> Int
+max : IOArray a -> Int
 max = maxSize
 
 export
-newArray : HasIO io => Int -> io (IOArray elem)
+newArray : HasIO io => Int -> io (IOArray a)
 newArray size
     = pure (MkIOArray size !(primIO (prim__newArray size Nothing)))
 
 export
-writeArray : HasIO io => IOArray elem -> Int -> elem -> io Bool
+writeArray : HasIO io => IOArray a -> Int -> a -> io ()
 writeArray arr pos el
     = if pos < 0 || pos >= max arr
-         then pure False
-         else do primIO (prim__arraySet (content arr) pos (Just el))
-                 pure True
+         then pure ()
+         else primIO (prim__arraySet (content arr) pos (Just el))
 
 export
-readArray : HasIO io => IOArray elem -> Int -> io (Maybe elem)
+readArray : HasIO io => IOArray a -> Int -> io (Maybe a)
 readArray arr pos
     = if pos < 0 || pos >= max arr
          then pure Nothing
@@ -39,15 +38,15 @@ readArray arr pos
 -- other array
 export
 newArrayCopy : HasIO io =>
-               (newsize : Int) -> IOArray elem -> io (IOArray elem)
+               (newsize : Int) -> IOArray a -> io (IOArray a)
 newArrayCopy newsize arr
     = do let newsize' = if newsize < max arr then max arr else newsize
          arr' <- newArray newsize'
          copyFrom (content arr) (content arr') (max arr - 1)
          pure arr'
   where
-    copyFrom : ArrayData (Maybe elem) ->
-               ArrayData (Maybe elem) ->
+    copyFrom : ArrayData (Maybe a) ->
+               ArrayData (Maybe a) ->
                Int -> io ()
     copyFrom old new pos
         = if pos < 0
@@ -57,10 +56,10 @@ newArrayCopy newsize arr
                      copyFrom old new $ assert_smaller pos (pos - 1)
 
 export
-toList : HasIO io => IOArray elem -> io (List (Maybe elem))
+toList : HasIO io => IOArray a -> io (List (Maybe a))
 toList arr = iter 0 (max arr) []
   where
-    iter : Int -> Int -> List (Maybe elem) -> io (List (Maybe elem))
+    iter : Int -> Int -> List (Maybe a) -> io (List (Maybe a))
     iter pos end acc
          = if pos >= end
               then pure (reverse acc)
@@ -68,13 +67,13 @@ toList arr = iter 0 (max arr) []
                       assert_total (iter (pos + 1) end (el :: acc))
 
 export
-fromList : HasIO io => List (Maybe elem) -> io (IOArray elem)
+fromList : HasIO io => List (Maybe a) -> io (IOArray a)
 fromList ns
     = do arr <- newArray (cast (length ns))
          addToArray 0 ns arr
          pure arr
   where
-    addToArray : Int -> List (Maybe elem) -> IOArray elem -> io ()
+    addToArray : Int -> List (Maybe a) -> IOArray a -> io ()
     addToArray loc [] arr = pure ()
     addToArray loc (Nothing :: ns) arr = addToArray (loc + 1) ns arr
     addToArray loc (Just el :: ns) arr

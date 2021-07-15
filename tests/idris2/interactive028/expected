@@ -1,9 +1,10 @@
-Main> Expected 'case', 'if', 'do', application or operator expression.
+Main> Couldn't parse any alternatives:
+1: Expected 'case', 'if', 'do', application or operator expression.
 
 (Interactive):1:4--1:5
  1 | :t (3 : Nat)
         ^
-
+... (52 others)
 Main> Expected string begin.
 
 (Interactive):1:5--1:7

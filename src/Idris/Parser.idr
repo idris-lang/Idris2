@@ -518,9 +518,9 @@ mutual
                   pure t
            pure (PQuote (boundToFC fname b) b.val)
     <|> do b <- bounds $ do
-                  decoratedSymbol fname "`{{"
+                  decoratedSymbol fname "`{"
                   t <- name
-                  decoratedSymbol fname "}}"
+                  decoratedSymbol fname "}"
                   pure t
            pure (PQuoteName (boundToFC fname b) b.val)
     <|> do b <- bounds $ do

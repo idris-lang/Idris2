@@ -17,11 +17,49 @@ export
 getUnique : List String -> String -> String
 getUnique xs x = if x `elem` xs then getUnique xs (x ++ "'") else x
 
+-- Extract the RawImp pieces from a ImpDecl so they can be searched for unquotes
+-- Used in findBindableNames{,Quot}
+rawImpFromDecl : ImpDecl -> List RawImp
+rawImpFromDecl decl = case decl of
+    IClaim fc1 y z ys ty => [getFromTy ty]
+    IData fc1 y (MkImpData fc2 n tycon opts datacons)
+        => tycon :: map getFromTy datacons
+    IData fc1 y (MkImpLater fc2 n tycon) => [tycon]
+    IDef fc1 y ys => getFromClause !ys
+    IParameters fc1 ys zs => rawImpFromDecl !zs ++ map getParamTy ys
+    IRecord fc1 y z (MkImpRecord fc n params conName fields) => do
+        (a, b) <- map (snd . snd) params
+        getFromPiInfo a ++ [b] ++ getFromIField !fields
+    INamespace fc1 ys zs => rawImpFromDecl !zs
+    ITransform fc1 y z w => [z, w]
+    IRunElabDecl fc1 y => [] -- Not sure about this either
+    IPragma _ f => []
+    ILog k => []
+    IBuiltin _ _ _ => []
+  where getParamTy : (a, b, c, RawImp) -> RawImp
+        getParamTy (_, _, _, ty) = ty
+        getFromTy : ImpTy -> RawImp
+        getFromTy (MkImpTy _ _ _ ty) = ty
+        getFromClause : ImpClause -> List RawImp
+        getFromClause (PatClause fc1 lhs rhs) = [lhs, rhs]
+        getFromClause (WithClause fc1 lhs wval prf flags ys) = [wval, lhs] ++ getFromClause !ys
+        getFromClause (ImpossibleClause fc1 lhs) = [lhs]
+        getFromPiInfo : PiInfo RawImp -> List RawImp
+        getFromPiInfo (DefImplicit x) = [x]
+        getFromPiInfo _ = []
+        getFromIField : IField -> List RawImp
+        getFromIField (MkIField fc x y z w) = getFromPiInfo y ++ [w]
+
 -- Bind lower case names in argument position
 -- Don't go under case, let, or local bindings, or IAlternative
 export
 findBindableNames : (arg : Bool) -> List Name -> (used : List String) ->
                     RawImp -> List (String, String)
+
+-- Helper to traverse the inside of a quoted expression, looking for unquotes
+findBindableNamesQuot : List Name -> (used : List String) -> RawImp ->
+                        List (String, String)
+
 findBindableNames True env used (IVar fc (UN n))
     = if not (UN n `elem` env) && lowerFirst n
          then [(n, getUnique used n)]
@@ -59,14 +97,81 @@ findBindableNames arg env used (IDelay fc t)
 findBindableNames arg env used (IForce fc t)
     = findBindableNames arg env used t
 findBindableNames arg env used (IQuote fc t)
-    = findBindableNames arg env used t
-findBindableNames arg env used (IUnquote fc t)
-    = findBindableNames arg env used t
+    = findBindableNamesQuot env used t
+findBindableNames arg env used (IQuoteDecl fc d)
+    = findBindableNamesQuot env used !(rawImpFromDecl !d)
 findBindableNames arg env used (IAlternative fc u alts)
     = concatMap (findBindableNames arg env used) alts
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findBindableNames arg env used tm = []
+
+findBindableNamesQuot env used (IPi fc x y z argTy retTy)
+    = findBindableNamesQuot env used ![argTy, retTy]
+findBindableNamesQuot env used (ILam fc x y z argTy lamTy)
+    = findBindableNamesQuot env used ![argTy, lamTy]
+findBindableNamesQuot env used (ILet fc lhsfc x y nTy nVal scope)
+    = findBindableNamesQuot env used ![nTy, nVal, scope]
+findBindableNamesQuot env used (ICase fc x ty xs)
+    = findBindableNamesQuot env used !([x, ty] ++ getRawImp !xs)
+  where getRawImp : ImpClause -> List RawImp
+        getRawImp (PatClause fc1 lhs rhs) = [lhs, rhs]
+        getRawImp (WithClause fc1 lhs wval prf flags ys) = [wval, lhs] ++ getRawImp !ys
+        getRawImp (ImpossibleClause fc1 lhs) = [lhs]
+findBindableNamesQuot env used (ILocal fc xs x)
+    = findBindableNamesQuot env used !(x :: rawImpFromDecl !xs)
+findBindableNamesQuot env used (ICaseLocal fc uname internalName args x)
+    = findBindableNamesQuot env used x
+findBindableNamesQuot env used (IApp fc x y)
+    = findBindableNamesQuot env used ![x, y]
+findBindableNamesQuot env used (INamedApp fc x y z)
+    = findBindableNamesQuot env used ![x, z]
+findBindableNamesQuot env used (IAutoApp fc x y)
+    = findBindableNamesQuot env used ![x, y]
+findBindableNamesQuot env used (IWithApp fc x y)
+    = findBindableNamesQuot env used ![x, y]
+findBindableNamesQuot env used (IRewrite fc x y)
+    = findBindableNamesQuot env used ![x, y]
+findBindableNamesQuot env used (ICoerced fc x)
+    = findBindableNamesQuot env used x
+findBindableNamesQuot env used (IBindHere fc x y)
+    = findBindableNamesQuot env used y
+findBindableNamesQuot env used (IUpdate fc xs x)
+    = findBindableNamesQuot env used !(x :: map getRawImp xs)
+  where getRawImp : IFieldUpdate -> RawImp
+        getRawImp (ISetField path y) = y
+        getRawImp (ISetFieldApp path y) = y
+findBindableNamesQuot env used (IAs fc nfc x y z)
+    = findBindableNamesQuot env used z
+findBindableNamesQuot env used (IDelayed fc x y)
+    = findBindableNamesQuot env used y
+findBindableNamesQuot env used (IDelay fc x)
+    = findBindableNamesQuot env used x
+findBindableNamesQuot env used (IForce fc x)
+    = findBindableNamesQuot env used x
+findBindableNamesQuot env used (IUnquote fc x)
+    = findBindableNames True env used x
+findBindableNamesQuot env used (IWithUnambigNames fc xs x)
+    = findBindableNamesQuot env used x
+findBindableNamesQuot env used (IVar fc x) = []
+findBindableNamesQuot env used (ISearch fc depth) = []
+findBindableNamesQuot env used (IAlternative fc x xs) = []
+findBindableNamesQuot env used (IBindVar fc x) = []
+findBindableNamesQuot env used (IPrimVal fc c) = []
+findBindableNamesQuot env used (IType fc) = []
+findBindableNamesQuot env used (IHole fc x) = []
+findBindableNamesQuot env used (Implicit fc bindIfUnsolved) = []
+-- These are the ones I'm not sure about
+findBindableNamesQuot env used (IMustUnify fc x y)
+    = findBindableNamesQuot env used y
+findBindableNamesQuot env used (IUnifyLog fc k x)
+    = findBindableNamesQuot env used x
+-- Should f `(g `(List ~(x))) bind "x" as a parameter to "f"?
+-- Depends how (or if) recursive quoting works
+findBindableNamesQuot env used (IQuote fc x) = []
+findBindableNamesQuot env used (IQuoteName fc x) = []
+findBindableNamesQuot env used (IQuoteDecl fc xs) = []
+findBindableNamesQuot env used (IRunElab fc x) = []
 
 export
 findUniqueBindableNames :
