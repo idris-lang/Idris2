@@ -114,6 +114,8 @@ ${TEST_PREFIX}/${NAME_VERSION} :
 	ln -s ${IDRIS2_CURDIR}/libs/network/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/network-${IDRIS2_VERSION}
 endif
 
+.PHONY: ${TEST_PREFIX}/${NAME_VERSION}
+
 testenv:
 	@${MAKE} ${TEST_PREFIX}/${NAME_VERSION}
 	@${MAKE} -C tests testbin IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}

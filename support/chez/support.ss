@@ -257,7 +257,7 @@
 (define (blodwen-get-thread-data ty)
   (blodwen-thread-data))
 
-(define (blodwen-set-thread-data a)
+(define (blodwen-set-thread-data ty a)
   (blodwen-thread-data a))
 
 ;; Semaphore
