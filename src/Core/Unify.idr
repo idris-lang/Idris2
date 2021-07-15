@@ -1439,7 +1439,7 @@ retryGuess mode smode (hid, (loc, hname))
                          ignore $ addDef (Resolved hid) gdef
                          removeGuess hid
                          pure True)
-                     \case
+                     $ \case
                        DeterminingArg _ n i _ _ =>
                          do logTerm "unify.retry" 5
                                     ("Failed (det " ++ show hname ++ " " ++ show n ++ ")")

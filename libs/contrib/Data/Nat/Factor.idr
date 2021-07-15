@@ -211,7 +211,7 @@ factorLteNumber (CofactorExists (S k) prf) =
 export
 plusDivisorAlsoFactor : Factor p n -> Factor p (n + p)
 plusDivisorAlsoFactor (CofactorExists q prf) =
-        CofactorExists (S q)
+        CofactorExists (S q) $
             rewrite plusCommutative n p in
             rewrite multRightSuccPlus p q in
             cong (plus p) prf
@@ -223,7 +223,7 @@ plusDivisorNeitherFactor (ZeroNotFactorS k) =
         rewrite plusZeroRightNeutral k in
         ZeroNotFactorS k
 plusDivisorNeitherFactor (ProperRemExists q r remPrf) =
-        ProperRemExists (S q) r
+        ProperRemExists (S q) r $
             rewrite multRightSuccPlus p q in
             rewrite sym $ plusAssociative p (p * q) (S $ finToNat r) in
             rewrite plusCommutative p ((p * q) + S (finToNat r)) in
@@ -235,7 +235,7 @@ export
 multNAlsoFactor : Factor p n -> (a : Nat) -> {auto aok : LTE 1 a} -> Factor p (n * a)
 multNAlsoFactor _ Z = absurd $ succNotLTEzero aok
 multNAlsoFactor (CofactorExists q prf) (S a) =
-        CofactorExists (q * S a)
+        CofactorExists (q * S a) $
             rewrite prf in
             sym $ multAssociative p q (S a)
 
@@ -255,15 +255,14 @@ plusFactor (CofactorExists qn prfN) (CofactorExists qm prfM) =
 export
 minusFactor : {a, b, p : Nat} -> Factor p (a + b) -> Factor p a -> Factor p b
 minusFactor (CofactorExists qab prfAB) (CofactorExists qa prfA) =
-        CofactorExists (minus qab qa) (
+        CofactorExists (minus qab qa) $
             rewrite multDistributesOverMinusRight p qab qa in
             rewrite sym prfA in
             rewrite sym prfAB in
-            replace {p = \x => b = minus (a + b) x} (plusZeroRightNeutral a)
+            replace {p = \x => b = minus (a + b) x} (plusZeroRightNeutral a) $
             rewrite plusMinusLeftCancel a b 0 in
             rewrite minusZeroRight b in
             Refl
-        )
 
 ||| A decision procedure for whether of not p is a factor of n.
 export
@@ -369,7 +368,7 @@ gcd_step (SearchArgs Z _ bLteA {bNonZero}) _ = absurd . succNotLTEzero $ transit
 gcd_step (SearchArgs _ Z _ {bNonZero}) _ = absurd $ succNotLTEzero bNonZero
 gcd_step (SearchArgs (S a) (S b) bLteA {bNonZero}) rec = case divMod (S a) (S b) of
     Fraction (S a) (S b) q FZ prf =>
-        let sbIsFactor = the (S a = plus q (mult b q))
+        let sbIsFactor = the (S a = plus q (mult b q)) $
                 rewrite multCommutative b q in
                 rewrite sym $ multRightSuccPlus q b in
                 replace {p = \x => S a = x} (plusZeroRightNeutral (q * S b)) $ sym prf
@@ -459,25 +458,25 @@ divByGcdHelper : (a, b, c : Nat) -> GCD (S a) (S a * S b) (S a * c) -> GCD 1 (S 
 divByGcdHelper a b c (MkGCD _ greatest) =
     MkGCD (CommonFactorExists 1 (oneIsFactor (S b)) (oneIsFactor c)) $
     \q, (CommonFactorExists q (CofactorExists qb prfQB) (CofactorExists qc prfQC)) =>
-        let qFab = CofactorExists {n = S a * S b} {p = q * S a} qb
+        let qFab = CofactorExists {n = S a * S b} {p = q * S a} qb $
                 rewrite multCommutative q (S a) in
                 rewrite sym $ multAssociative (S a) q qb in
                 rewrite sym $ prfQB in
                 Refl
-            qFac = CofactorExists {n = S a * c} {p = q * S a} qc
+            qFac = CofactorExists {n = S a * c} {p = q * S a} qc $
                 rewrite multCommutative q (S a) in
                 rewrite sym $ multAssociative (S a) q qc in
                 rewrite sym $ prfQC in
                 Refl
             CofactorExists f prfQAfA =
                 greatest (q * S a) (CommonFactorExists (q * S a) qFab qFac)
-            qf1 = multOneSoleNeutral a (f * q)
+            qf1 = multOneSoleNeutral a (f * q) $
                 rewrite multCommutative f q in
                 rewrite multAssociative (S a) q f in
                 rewrite sym $ multCommutative q (S a) in
                 prfQAfA
         in
-        CofactorExists f
+        CofactorExists f $
             rewrite multCommutative q f in
             sym qf1
 
