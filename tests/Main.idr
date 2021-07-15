@@ -197,7 +197,9 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- pretty printing
        "pretty001",
        -- golden file testing
-       "golden001"]
+       "golden001",
+       -- unification
+       "unify001"]
 
 typeddTests : TestPool
 typeddTests = MkTestPool "Type Driven Development" [] Nothing
