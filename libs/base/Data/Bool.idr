@@ -115,9 +115,9 @@ notFalseIsTrue {x=False} f = absurd $ f Refl
 --------------------------------------------------------------------------------
 
 ||| You can reverse decidability when bool is involved.
--- Given a contra on bool equality (a = b) -> Void, produce a proof of the opposite (that (not a) = b)
+-- Given a contra on bool equality Not (a = b), produce a proof of the opposite (that (not a) = b)
 public export
-invertContraBool : (a : Bool) -> (b : Bool) -> (a = b -> Void) -> (not a = b)
+invertContraBool : (a, b : Bool) -> Not (a = b) -> (not a = b)
 invertContraBool False False contra = absurd $ contra Refl
 invertContraBool False True contra = Refl
 invertContraBool True False contra = Refl

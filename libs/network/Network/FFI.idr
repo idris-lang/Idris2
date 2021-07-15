@@ -139,14 +139,6 @@ prim__idrnet_geteagain : PrimIO Int
 export
 prim__idrnet_errno : PrimIO Int
 
-%foreign "C:idrnet_malloc, libidris2_support, idris_net.h"
-export
-prim__idrnet_malloc : (size : Int) -> PrimIO AnyPtr
-
-%foreign "C:idrnet_free, libidris2_support, idris_net.h"
-export
-prim__idrnet_free : (ptr : AnyPtr) -> PrimIO ()
-
 %foreign "C:idrnet_peek, libidris2_support, idris_net.h"
 export
 prim__idrnet_peek : (ptr : AnyPtr) -> (offset : {-Unsigned-} Int) -> PrimIO {-Unsigned-} Int

@@ -56,14 +56,6 @@ struct sockaddr_un get_sockaddr_unix(char* host) {
     return addr;
 }
 
-void* idrnet_malloc(int size) {
-    return malloc(size);
-}
-
-void idrnet_free(void* ptr) {
-    free(ptr);
-}
-
 unsigned int idrnet_peek(void *ptr, unsigned int offset) {
   unsigned char *buf_c = (unsigned char*) ptr;
   return (unsigned int) buf_c[offset];

@@ -11,7 +11,7 @@ import Decidable.Equality
 %default total
 
 public export
-zeroNeverGreater : {n : Nat} -> LTE (S n) Z -> Void
+zeroNeverGreater : Not (LTE (S n) Z)
 zeroNeverGreater LTEZero     impossible
 zeroNeverGreater (LTESucc _) impossible
 

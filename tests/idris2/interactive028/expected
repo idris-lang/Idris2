@@ -7,15 +7,15 @@ Main> Couldn't parse any alternatives:
 ... (52 others)
 Main> Expected string begin.
 
-(Interactive):1:5--1:6
+(Interactive):1:5--1:7
  1 | :cd ..
-         ^
+         ^^
 
 Main> Expected string begin.
 
-(Interactive):1:7--1:8
+(Interactive):1:7--1:15
  1 | :load expected
-           ^
+           ^^^^^^^^
 
 Main> 
 Bye for now!

@@ -1,9 +1,3 @@
-if [ "$OS" = "windows" ]; then
-    # incremental builds don't work on windows so we get lots of warnings,
-    # but we still need the test output to be correct
-    $1 --no-banner --no-color --console-width 0 Main.idr < input
-else
-    $1 --no-banner --no-color --console-width 0 Main.idr --inc chez < input
-fi
-
 rm -rf build
+
+$1 --no-banner --no-color --console-width 0 Main.idr --inc chez < input
