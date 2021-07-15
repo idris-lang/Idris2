@@ -131,6 +131,7 @@ data CLOpt
   FindIPKG |
   Timing |
   DebugElabCheck |
+  AltErrorCount Nat |
   BlodwenPaths |
   ||| Treat warnings as errors
   WarningsAsErrors |
@@ -328,6 +329,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               Nothing, -- dump VM Code to the given file
            MkOpt ["--debug-elab-check"] [] [DebugElabCheck]
               Nothing, -- do more elaborator checks (currently conversion in LinearCheck)
+           MkOpt ["--alt-error-count"] [RequiredNat "alternative count"] (\c => [AltErrorCount c])
+              (Just "Outputs errors for the given number of alternative parsing attempts."),
 
            optSeparator,
            -- bash completion

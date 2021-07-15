@@ -21,7 +21,7 @@ runParserTo : {e : _} ->
 runParserTo origin lit reject str p
     = do str    <- mapFst (fromLitError origin) $ unlit lit str
          toks   <- mapFst (fromLexError origin) $ lexTo reject str
-         (decs, (parsed, _)) <- mapFst (fromParsingError origin) $ parseWith p toks
+         (decs, (parsed, _)) <- mapFst (fromParsingErrors origin) $ parseWith p toks
          Right (decs, parsed)
 
 export

@@ -258,7 +258,7 @@ reservedSymbols : List String
 reservedSymbols
     = symbols ++ groupSymbols ++ (groupClose <$> groupSymbols) ++
       ["%", "\\", ":", "=", ":=", "|", "|||", "<-", "->", "=>", "?", "!",
-       "&", "**", "..", "~"]
+       "&", "**", "..", "~", "@"]
 
 fromBinLit : String -> Integer
 fromBinLit str

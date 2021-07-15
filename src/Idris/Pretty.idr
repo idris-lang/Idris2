@@ -49,6 +49,10 @@ colorAnn (Syntax SynPragma) = color BrightMagenta
 colorAnn (Syntax (SynRef _)) = []
 
 export
+warning : Doc IdrisAnn -> Doc IdrisAnn
+warning = annotate Warning
+
+export
 error : Doc IdrisAnn -> Doc IdrisAnn
 error = annotate Error
 

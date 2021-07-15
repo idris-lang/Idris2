@@ -338,6 +338,9 @@ preOptions (Timing :: opts)
 preOptions (DebugElabCheck :: opts)
     = do setDebugElabCheck True
          preOptions opts
+preOptions (AltErrorCount c :: opts)
+    = do setSession (record { logErrorCount = c } !getSession)
+         preOptions opts
 preOptions (RunREPL _ :: opts)
     = do setOutput (REPL True)
          setSession (record { nobanner = True } !getSession)
