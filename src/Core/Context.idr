@@ -13,8 +13,8 @@ import public Core.TT
 import Libraries.Utils.Binary
 
 import Data.Fin
+import Libraries.Data.IOArray
 import Libraries.Data.IntMap
-import Data.IOArray
 import Data.List
 import Data.List1
 import Data.Maybe

@@ -8,7 +8,7 @@ import Core.Primitives
 import Core.Value
 import Compiler.Common
 import Compiler.VMCode
-import Data.IOArray
+import Libraries.Data.IOArray
 import Libraries.Data.NameMap
 import Data.Nat
 import Data.SnocList
