@@ -21,25 +21,28 @@ getUnique xs x = if x `elem` xs then getUnique xs (x ++ "'") else x
 -- Used in findBindableNames{,Quot}
 rawImpFromDecl : ImpDecl -> List RawImp
 rawImpFromDecl decl = case decl of
-		IClaim fc1 y z ys ty => [getFromTy ty]
-		IData fc1 y (MkImpData fc2 n tycon opts datacons)
+    IClaim fc1 y z ys ty => [getFromTy ty]
+    IData fc1 y (MkImpData fc2 n tycon opts datacons)
         => tycon :: map getFromTy datacons
-		IData fc1 y (MkImpLater fc2 n tycon) => [tycon]
-		IDef fc1 y ys => getFromClause !ys
-		IParameters fc1 ys zs => rawImpFromDecl !zs ++ map snd ys
-		IRecord fc1 y z (MkImpRecord fc n params conName fields) => do
-      (a, b) <- map (snd . snd) params
-      getFromPiInfo a ++ [b] ++ getFromIField !fields
-		INamespace fc1 ys zs => rawImpFromDecl !zs
-		ITransform fc1 y z w => [z, w]
-		IRunElabDecl fc1 y => [] -- Not sure about this either
-		IPragma f => []
-		ILog k => []
-  where getFromTy : ImpTy -> RawImp
-        getFromTy (MkImpTy _ _ ty) = ty
+    IData fc1 y (MkImpLater fc2 n tycon) => [tycon]
+    IDef fc1 y ys => getFromClause !ys
+    IParameters fc1 ys zs => rawImpFromDecl !zs ++ map getParamTy ys
+    IRecord fc1 y z (MkImpRecord fc n params conName fields) => do
+        (a, b) <- map (snd . snd) params
+        getFromPiInfo a ++ [b] ++ getFromIField !fields
+    INamespace fc1 ys zs => rawImpFromDecl !zs
+    ITransform fc1 y z w => [z, w]
+    IRunElabDecl fc1 y => [] -- Not sure about this either
+    IPragma _ f => []
+    ILog k => []
+    IBuiltin _ _ _ => []
+  where getParamTy : (a, b, c, RawImp) -> RawImp
+        getParamTy (_, _, _, ty) = ty
+        getFromTy : ImpTy -> RawImp
+        getFromTy (MkImpTy _ _ _ ty) = ty
         getFromClause : ImpClause -> List RawImp
         getFromClause (PatClause fc1 lhs rhs) = [lhs, rhs]
-        getFromClause (WithClause fc1 lhs wval flags ys) = [wval, lhs] ++ getFromClause !ys
+        getFromClause (WithClause fc1 lhs wval prf flags ys) = [wval, lhs] ++ getFromClause !ys
         getFromClause (ImpossibleClause fc1 lhs) = [lhs]
         getFromPiInfo : PiInfo RawImp -> List RawImp
         getFromPiInfo (DefImplicit x) = [x]
@@ -107,13 +110,13 @@ findBindableNamesQuot env used (IPi fc x y z argTy retTy)
     = findBindableNamesQuot env used ![argTy, retTy]
 findBindableNamesQuot env used (ILam fc x y z argTy lamTy)
     = findBindableNamesQuot env used ![argTy, lamTy]
-findBindableNamesQuot env used (ILet fc x y nTy nVal scope)
+findBindableNamesQuot env used (ILet fc lhsfc x y nTy nVal scope)
     = findBindableNamesQuot env used ![nTy, nVal, scope]
 findBindableNamesQuot env used (ICase fc x ty xs)
     = findBindableNamesQuot env used !([x, ty] ++ getRawImp !xs)
   where getRawImp : ImpClause -> List RawImp
         getRawImp (PatClause fc1 lhs rhs) = [lhs, rhs]
-        getRawImp (WithClause fc1 lhs wval flags ys) = [wval, lhs] ++ getRawImp !ys
+        getRawImp (WithClause fc1 lhs wval prf flags ys) = [wval, lhs] ++ getRawImp !ys
         getRawImp (ImpossibleClause fc1 lhs) = [lhs]
 findBindableNamesQuot env used (ILocal fc xs x)
     = findBindableNamesQuot env used !(x :: rawImpFromDecl !xs)
@@ -121,8 +124,10 @@ findBindableNamesQuot env used (ICaseLocal fc uname internalName args x)
     = findBindableNamesQuot env used x
 findBindableNamesQuot env used (IApp fc x y)
     = findBindableNamesQuot env used ![x, y]
-findBindableNamesQuot env used (IImplicitApp fc x y z)
+findBindableNamesQuot env used (INamedApp fc x y z)
     = findBindableNamesQuot env used ![x, z]
+findBindableNamesQuot env used (IAutoApp fc x y)
+    = findBindableNamesQuot env used ![x, y]
 findBindableNamesQuot env used (IWithApp fc x y)
     = findBindableNamesQuot env used ![x, y]
 findBindableNamesQuot env used (IRewrite fc x y)
@@ -136,7 +141,7 @@ findBindableNamesQuot env used (IUpdate fc xs x)
   where getRawImp : IFieldUpdate -> RawImp
         getRawImp (ISetField path y) = y
         getRawImp (ISetFieldApp path y) = y
-findBindableNamesQuot env used (IAs fc x y z)
+findBindableNamesQuot env used (IAs fc nfc x y z)
     = findBindableNamesQuot env used z
 findBindableNamesQuot env used (IDelayed fc x y)
     = findBindableNamesQuot env used y
