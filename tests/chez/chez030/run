@@ -1,0 +1,5 @@
+rm -rf build
+
+$1 --no-banner --no-color --console-width 0 --directive extraRuntime=extensions.scm -o chez030 ExtraRuntime.idr
+./build/exec/chez030
+

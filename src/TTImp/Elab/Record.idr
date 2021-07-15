@@ -1,6 +1,7 @@
 module TTImp.Elab.Record
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -14,6 +15,7 @@ import TTImp.Elab.Delayed
 import TTImp.TTImp
 
 import Data.List
+import Data.Maybe
 
 %default covering
 
@@ -38,14 +40,14 @@ applyImp f [] = f
 applyImp f ((Nothing, arg) :: xs)
     = applyImp (IApp (getFC f) f arg) xs
 applyImp f ((Just n, arg) :: xs)
-    = applyImp (IImplicitApp (getFC f) f (Just n) arg) xs
+    = applyImp (INamedApp (getFC f) f n arg) xs
 
 toLHS' : FC -> Rec -> (Maybe Name, RawImp)
 toLHS' loc (Field mn@(Just _) n _)
-    = (mn, IAs loc UseRight (UN n) (Implicit loc True))
-toLHS' loc (Field mn n _) = (mn, IBindVar loc n)
+    = (mn, IAs loc EmptyFC UseRight (UN n) (Implicit loc True))
+toLHS' loc (Field mn n _) = (mn, IBindVar EmptyFC n)
 toLHS' loc (Constr mn con args)
-    = let args' = map (\a => toLHS' loc (snd a)) args in
+    = let args' = map (toLHS' loc . snd) args in
           (mn, applyImp (IVar loc con) args')
 
 toLHS : FC -> Rec -> RawImp
@@ -54,7 +56,7 @@ toLHS fc r = snd (toLHS' fc r)
 toRHS' : FC -> Rec -> (Maybe Name, RawImp)
 toRHS' loc (Field mn _ val) = (mn, val)
 toRHS' loc (Constr mn con args)
-    = let args' = map (\a => toRHS' loc (snd a)) args in
+    = let args' = map (toRHS' loc . snd) args in
           (mn, applyImp (IVar loc con) args')
 
 toRHS : FC -> Rec -> RawImp
@@ -66,7 +68,8 @@ findConName defs tyn
            Just (TCon _ _ _ _ _ _ [con] _) => pure (Just con)
            _ => pure Nothing
 
-findFields : Defs -> Name ->
+findFields : {auto c : Ref Ctxt Defs} ->
+             Defs -> Name ->
              Core (Maybe (List (String, Maybe Name, Maybe Name)))
 findFields defs con
     = case !(lookupTyExact con (gamma defs)) of
@@ -74,7 +77,7 @@ findFields defs con
            _ => pure Nothing
   where
     getExpNames : NF [] -> Core (List (String, Maybe Name, Maybe Name))
-    getExpNames (NBind fc x (Pi _ p ty) sc)
+    getExpNames (NBind fc x (Pi _ _ p ty) sc)
         = do rest <- getExpNames !(sc defs (toClosure defaultOpts [] (Erased fc False)))
              let imp = case p of
                             Explicit => Nothing
@@ -126,7 +129,7 @@ findPath loc (p :: ps) full (Just tyn) val (Field mn n v)
         = do fldn <- genFieldName p
              args' <- mkArgs ps
              -- If it's an implicit argument, leave it as _ by default
-             let arg = maybe (IVar loc (UN fldn))
+             let arg = maybe (IVar EmptyFC (UN fldn))
                              (const (Implicit loc False))
                              imp
              pure ((p, Field imp fldn arg) :: args')
@@ -151,11 +154,7 @@ getSides loc (ISetField path val) tyn orig rec
    -- then set the path on the rhs to 'val'
    = findPath loc path path (Just tyn) (const val) rec
 getSides loc (ISetFieldApp path val) tyn orig rec
-   = findPath loc path path (Just tyn) (\n => apply val [IVar loc (UN n)]) rec
- where
-   get : List String -> RawImp -> RawImp
-   get [] rec = rec
-   get (p :: ps) rec = get ps (IApp loc (IVar loc (UN p)) rec)
+   = findPath loc path path (Just tyn) (\n => apply val [IVar EmptyFC (UN n)]) rec
 
 getAllSides : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
@@ -178,18 +177,21 @@ recUpdate : {vars : _} ->
             List IFieldUpdate ->
             (rec : RawImp) -> (grecty : Glued vars) ->
             Core RawImp
-recUpdate rigc elabinfo loc nest env flds rec grecty
+recUpdate rigc elabinfo iloc nest env flds rec grecty
       = do defs <- get Ctxt
            rectynf <- getNF grecty
            let Just rectyn = getRecordType env rectynf
-                    | Nothing => throw (RecordTypeNeeded loc env)
+                    | Nothing => throw (RecordTypeNeeded iloc env)
            fldn <- genFieldName "__fld"
-           sides <- getAllSides loc flds rectyn rec
-                                (Field Nothing fldn (IVar loc (UN fldn)))
-           pure $ ICase loc rec (Implicit loc False) [mkClause sides]
+           sides <- getAllSides iloc flds rectyn rec
+                                (Field Nothing fldn (IVar vloc (UN fldn)))
+           pure $ ICase vloc rec (Implicit vloc False) [mkClause sides]
   where
+    vloc : FC
+    vloc = virtualiseFC iloc
+
     mkClause : Rec -> ImpClause
-    mkClause rec = PatClause loc (toLHS loc rec) (toRHS loc rec)
+    mkClause rec = PatClause vloc (toLHS vloc rec) (toRHS vloc rec)
 
 needType : Error -> Bool
 needType (RecordTypeNeeded _ _) = True
@@ -218,7 +220,7 @@ checkUpdate rig elabinfo nest env fc upds rec expected
                                pure ty
          let solvemode = case elabMode elabinfo of
                               InLHS c => inLHS
-                              _ => inTermP False
+                              _ => inTerm
          delayOnFailure fc rig env recty needType 5 $
            \delayed =>
              do solveConstraints solvemode Normal
@@ -228,7 +230,7 @@ checkUpdate rig elabinfo nest env fc upds rec expected
                 let recty' = if delayed
                                 then gnf env exp
                                 else recty
-                logGlueNF 5 (show delayed ++ " record type " ++ show rec) env recty'
+                logGlueNF "elab.record" 5 (show delayed ++ " record type " ++ show rec) env recty'
                 rcase <- recUpdate rig elabinfo fc nest env upds rec recty'
-                log 5 $ "Record update: " ++ show rcase
+                log "elab.record" 5 $ "Record update: " ++ show rcase
                 check rig elabinfo nest env rcase expected

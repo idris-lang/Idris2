@@ -4,7 +4,7 @@
 Theorem Proving
 ###############
 
-A tutorial on theorem proving in Idris 2. 
+A tutorial on theorem proving in Idris 2.
 
 .. note::
 

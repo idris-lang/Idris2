@@ -1,4 +1,5 @@
-9
+1/1: Building CB (CB.idr)
+Main> 9
 Callback coming
 In callback
 24
@@ -7,5 +8,4 @@ In callback with (1, 2)
 3
 9
 'k'
-1/1: Building CB (CB.idr)
-Main> Main> Bye for now!
+Main> Bye for now!

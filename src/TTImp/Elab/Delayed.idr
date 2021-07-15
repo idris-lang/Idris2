@@ -2,6 +2,7 @@ module TTImp.Elab.Delayed
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -13,7 +14,8 @@ import Core.Value
 import TTImp.Elab.Check
 import TTImp.TTImp
 
-import Data.IntMap
+import Libraries.Data.IntMap
+import Libraries.Data.NameMap
 import Data.List
 
 %default covering
@@ -37,8 +39,8 @@ mkClosedElab {vars = x :: vars} fc (b :: env) elab
     -- everything except 'Let', so make the appropriate corresponding binder
     -- here
     newBinder : Binder (Term vars) -> Binder (Term vars)
-    newBinder (Let c val ty) = Let c val ty
-    newBinder b = Lam (multiplicity b) Explicit (binderType b)
+    newBinder b@(Let _ _ _ _) = b
+    newBinder b = Lam (binderLoc b) (multiplicity b) Explicit (binderType b)
 
 deeper : {auto e : Ref EST (EState vars)} ->
          Core a -> Core a
@@ -68,6 +70,8 @@ delayOnFailure : {vars : _} ->
                  Core (Term vars, Glued vars)
 delayOnFailure fc rig env expected pred pri elab
     = do est <- get EST
+         ust <- get UST
+         let nos = noSolve ust -- remember the holes we shouldn't solve
          handle (elab False)
           (\err =>
               do est <- get EST
@@ -75,13 +79,23 @@ delayOnFailure fc rig env expected pred pri elab
                     then
                       do nm <- genName "delayed"
                          (ci, dtm) <- newDelayed fc linear env nm !(getTerm expected)
-                         logGlueNF 5 ("Postponing elaborator " ++ show nm ++
+                         logGlueNF "elab.delay" 5 ("Postponing elaborator " ++ show nm ++
                                       " at " ++ show fc ++
                                       " for") env expected
-                         log 10 ("Due to error " ++ show err)
+                         log "elab.delay" 10 ("Due to error " ++ show err)
                          ust <- get UST
+                         defs <- get Ctxt
                          put UST (record { delayedElab $=
-                                 ((pri, ci, mkClosedElab fc env (deeper (elab True))) :: ) }
+                                 ((pri, ci, localHints defs,
+                                   mkClosedElab fc env
+                                      (deeper
+                                        (do ust <- get UST
+                                            let nos' = noSolve ust
+                                            put UST (record { noSolve = nos } ust)
+                                            res <- elab True
+                                            ust <- get UST
+                                            put UST (record { noSolve = nos' } ust)
+                                            pure res))) :: ) }
                                          ust)
                          pure (dtm, expected)
                     else throw err)
@@ -99,14 +113,24 @@ delayElab : {vars : _} ->
             Core (Term vars, Glued vars)
 delayElab {vars} fc rig env exp pri elab
     = do est <- get EST
+         ust <- get UST
+         let nos = noSolve ust -- remember the holes we shouldn't solve
          nm <- genName "delayed"
          expected <- mkExpected exp
          (ci, dtm) <- newDelayed fc linear env nm !(getTerm expected)
-         logGlueNF 5 ("Postponing elaborator " ++ show nm ++
+         logGlueNF "elab.delay" 5 ("Postponing elaborator " ++ show nm ++
                       " for") env expected
          ust <- get UST
+         defs <- get Ctxt
          put UST (record { delayedElab $=
-                 ((pri, ci, mkClosedElab fc env elab) :: ) }
+                 ((pri, ci, localHints defs, mkClosedElab fc env
+                                              (do ust <- get UST
+                                                  let nos' = noSolve ust
+                                                  put UST (record { noSolve = nos } ust)
+                                                  res <- elab
+                                                  ust <- get UST
+                                                  put UST (record { noSolve = nos' } ust)
+                                                  pure res)) :: ) }
                          ust)
          pure (dtm, expected)
   where
@@ -130,38 +154,41 @@ ambiguous (WhenUnifying _ _ _ _ err) = ambiguous err
 ambiguous _ = False
 
 mutual
-  mismatchNF : {vars : _} ->
+  mismatchNF : {auto c : Ref Ctxt Defs} ->
+               {vars : _} ->
                Defs -> NF vars -> NF vars -> Core Bool
   mismatchNF defs (NTCon _ xn xt _ xargs) (NTCon _ yn yt _ yargs)
       = if xn /= yn
            then pure True
-           else anyM (mismatch defs) (zip xargs yargs)
+           else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
   mismatchNF defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
       = if xt /= yt
            then pure True
-           else anyM (mismatch defs) (zip xargs yargs)
+           else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
   mismatchNF defs (NPrimVal _ xc) (NPrimVal _ yc) = pure (xc /= yc)
   mismatchNF defs (NDelayed _ _ x) (NDelayed _ _ y) = mismatchNF defs x y
   mismatchNF defs (NDelay _ _ _ x) (NDelay _ _ _ y)
       = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
   mismatchNF _ _ _ = pure False
 
-  mismatch : {vars : _} ->
+  mismatch : {auto c : Ref Ctxt Defs} ->
+             {vars : _} ->
              Defs -> (Closure vars, Closure vars) -> Core Bool
   mismatch defs (x, y)
       = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
 
-contra : {vars : _} ->
-               Defs -> NF vars -> NF vars -> Core Bool
+contra : {auto c : Ref Ctxt Defs} ->
+         {vars : _} ->
+         Defs -> NF vars -> NF vars -> Core Bool
 -- Unlike 'impossibleOK', any mismatch indicates an unrecoverable error
 contra defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
     = if xn /= yn
          then pure True
-         else anyM (mismatch defs) (zip xargs yargs)
+         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
 contra defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure True
-         else anyM (mismatch defs) (zip xargs yargs)
+         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
 contra defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
 contra defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
 contra defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
@@ -204,31 +231,35 @@ retryDelayed' : {vars : _} ->
                 {auto u : Ref UST UState} ->
                 {auto e : Ref EST (EState vars)} ->
                 RetryError ->
-                List (Nat, Int, Core ClosedTerm) ->
-                List (Nat, Int, Core ClosedTerm) ->
-                Core (List (Nat, Int, Core ClosedTerm))
+                List (Nat, Int, NameMap (), Core ClosedTerm) ->
+                List (Nat, Int, NameMap (), Core ClosedTerm) ->
+                Core (List (Nat, Int, NameMap (), Core ClosedTerm))
 retryDelayed' errmode acc [] = pure (reverse acc)
-retryDelayed' errmode acc (d@(_, i, elab) :: ds)
+retryDelayed' errmode acc (d@(_, i, hints, elab) :: ds)
     = do defs <- get Ctxt
          Just Delayed <- lookupDefExact (Resolved i) (gamma defs)
               | _ => retryDelayed' errmode acc ds
          handle
            (do est <- get EST
-               log 5 (show (delayDepth est) ++ ": Retrying delayed hole " ++ show !(getFullName (Resolved i)))
+               log "elab.retry" 5 (show (delayDepth est) ++ ": Retrying delayed hole " ++ show !(getFullName (Resolved i)))
                -- elab itself might have delays internally, so keep track of them
                ust <- get UST
                put UST (record { delayedElab = [] } ust)
+               defs <- get Ctxt
+               put Ctxt (record { localHints = hints } defs)
+
                tm <- elab
                ust <- get UST
                let ds' = reverse (delayedElab ust) ++ ds
 
                updateDef (Resolved i) (const (Just
-                    (PMDef (MkPMDefInfo NotHole True) [] (STerm 0 tm) (STerm 0 tm) [])))
-               logTerm 5 ("Resolved delayed hole " ++ show i) tm
-               logTermNF 5 ("Resolved delayed hole NF " ++ show i) [] tm
+                    (PMDef (MkPMDefInfo NotHole True False)
+                           [] (STerm 0 tm) (STerm 0 tm) [])))
+               logTerm "elab.update" 5 ("Resolved delayed hole " ++ show i) tm
+               logTermNF "elab.update" 5 ("Resolved delayed hole NF " ++ show i) [] tm
                removeHole i
                retryDelayed' errmode acc ds')
-           (\err => do log 5 $ show errmode ++ ":Error in " ++ show !(getFullName (Resolved i))
+           (\err => do log "elab" 5 $ show errmode ++ ":Error in " ++ show !(getFullName (Resolved i))
                                 ++ "\n" ++ show err
                        case errmode of
                          RecoverableErrors =>
@@ -243,13 +274,12 @@ retryDelayed : {vars : _} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
-               List (Nat, Int, Core ClosedTerm) ->
+               List (Nat, Int, NameMap (), Core ClosedTerm) ->
                Core ()
 retryDelayed ds
     = do est <- get EST
          ds <- retryDelayed' RecoverableErrors [] ds -- try everything again
-         retryDelayed' AllErrors [] ds -- fail on all errors
-         pure ()
+         ignore $ retryDelayed' AllErrors [] ds -- fail on all errors
 
 -- Run an elaborator, then all the delayed elaborators arising from it
 export
@@ -265,10 +295,9 @@ runDelays pri elab
          put UST (record { delayedElab = [] } ust)
          tm <- elab
          ust <- get UST
-         log 2 $ "Rerunning delayed in elaborator"
-         handle (do retryDelayed' AllErrors []
-                       (reverse (filter hasPri (delayedElab ust)))
-                    pure ())
+         log "elab.delay" 2 $ "Rerunning delayed in elaborator"
+         handle (do ignore $ retryDelayed' AllErrors []
+                       (reverse (filter hasPri (delayedElab ust))))
                 (\err => do put UST (record { delayedElab = olddelayed } ust)
                             throw err)
          ust <- get UST

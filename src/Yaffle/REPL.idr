@@ -2,6 +2,7 @@ module Yaffle.REPL
 
 import Core.AutoSearch
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.FC
@@ -27,7 +28,7 @@ import Parser.Source
 
 showInfo : (Name, Int, GlobalDef) -> Core ()
 showInfo (n, _, d)
-    = coreLift $ putStrLn (show n ++ " ==>\n" ++
+    = coreLift_ $ putStrLn (show n ++ " ==>\n" ++
                    "\t" ++ show (definition d) ++ "\n" ++
                    "\t" ++ show (sizeChange d) ++ "\n")
 
@@ -40,96 +41,96 @@ process (Eval ttimp)
     = do (tm, _) <- elabTerm 0 InExpr [] (MkNested []) [] ttimp Nothing
          defs <- get Ctxt
          tmnf <- normalise defs [] tm
-         coreLift (printLn !(unelab [] tmnf))
+         coreLift_ (printLn !(unelab [] tmnf))
          pure True
 process (Check (IVar _ n))
     = do defs <- get Ctxt
          ns <- lookupTyName n (gamma defs)
-         traverse printName ns
+         traverse_ printName ns
          pure True
   where
     printName : (Name, Int, ClosedTerm) -> Core ()
     printName (n, _, tyh)
         = do defs <- get Ctxt
              ty <- normaliseHoles defs [] tyh
-             coreLift $ putStrLn $ show n ++ " : " ++
-                                   show !(unelab [] ty)
+             coreLift_ $ putStrLn $ show n ++ " : " ++
+                                    show !(unelab [] ty)
 process (Check ttimp)
     = do (tm, gty) <- elabTerm 0 InExpr [] (MkNested []) [] ttimp Nothing
          defs <- get Ctxt
          tyh <- getTerm gty
          ty <- normaliseHoles defs [] tyh
-         coreLift (printLn !(unelab [] ty))
+         coreLift_ (printLn !(unelab [] ty))
          pure True
 process (ProofSearch n_in)
     = do defs <- get Ctxt
          [(n, i, ty)] <- lookupTyName n_in (gamma defs)
-              | [] => throw (UndefinedName toplevelFC n_in)
-              | ns => throw (AmbiguousName toplevelFC (map fst ns))
-         def <- search toplevelFC top False 1000 n ty []
+              | [] => undefinedName (justFC defaultFC) n_in
+              | ns => throw (AmbiguousName (justFC defaultFC) (map fst ns))
+         def <- search (justFC defaultFC) top False 1000 n ty []
          defs <- get Ctxt
          defnf <- normaliseHoles defs [] def
-         coreLift (printLn !(toFullNames defnf))
+         coreLift_ (printLn !(toFullNames defnf))
          pure True
 process (ExprSearch n_in)
     = do defs <- get Ctxt
          [(n, i, ty)] <- lookupTyName n_in (gamma defs)
-              | [] => throw (UndefinedName toplevelFC n_in)
-              | ns => throw (AmbiguousName toplevelFC (map fst ns))
-         results <- exprSearchN toplevelFC 1 n []
-         traverse_ (\d => coreLift (printLn d)) results
+              | [] => undefinedName (justFC defaultFC) n_in
+              | ns => throw (AmbiguousName (justFC defaultFC) (map fst ns))
+         results <- exprSearchN (justFC defaultFC) 1 n []
+         traverse_ (coreLift . printLn) results
          pure True
 process (GenerateDef line name)
     = do defs <- get Ctxt
          Just (_, n', _, _) <- findTyDeclAt (\p, n => onLine line p)
-              | Nothing => do coreLift (putStrLn ("Can't find declaration for " ++ show name))
+              | Nothing => do coreLift_ (putStrLn ("Can't find declaration for " ++ show name))
                               pure True
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
                   catch
                     (do ((fc, cs) :: _) <- logTime "Generation" $
                                 makeDefN (\p, n => onLine line p) 1 n'
-                           | _ => coreLift (putStrLn "Failed")
-                        coreLift $ putStrLn (show cs))
-                    (\err => coreLift $ putStrLn $ "Can't find a definition for " ++ show n')
-              Just _ => coreLift $ putStrLn "Already defined"
-              Nothing => coreLift $ putStrLn $ "Can't find declaration for " ++ show name
+                           | _ => coreLift_ (putStrLn "Failed")
+                        coreLift_ $ putStrLn (show cs))
+                    (\err => coreLift_ $ putStrLn $ "Can't find a definition for " ++ show n')
+              Just _ => coreLift_ $ putStrLn "Already defined"
+              Nothing => coreLift_ $ putStrLn $ "Can't find declaration for " ++ show name
          pure True
 process (Missing n_in)
     = do defs <- get Ctxt
          case !(lookupCtxtName n_in (gamma defs)) of
-              [] => throw (UndefinedName emptyFC n_in)
+              [] => undefinedName emptyFC n_in
               ts => do traverse_ (\fn =>
                           do tot <- getTotality emptyFC fn
-                             the (Core ()) $ case isCovering tot of
+                             case isCovering tot of
                                   MissingCases cs =>
-                                     coreLift (putStrLn (show fn ++ ":\n" ++
+                                     coreLift_ (putStrLn (show fn ++ ":\n" ++
                                                  showSep "\n" (map show cs)))
                                   NonCoveringCall ns =>
-                                     coreLift (putStrLn
+                                     coreLift_ (putStrLn
                                          (show fn ++ ": Calls non covering function"
                                            ++ case ns of
                                                    [fn] => " " ++ show fn
                                                    _ => "s: " ++ showSep ", " (map show ns)))
-                                  _ => coreLift $ putStrLn (show fn ++ ": All cases covered"))
+                                  _ => coreLift_ $ putStrLn (show fn ++ ": All cases covered"))
                         (map fst ts)
                        pure True
 process (CheckTotal n)
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of
-              [] => throw (UndefinedName emptyFC n)
+              [] => undefinedName emptyFC n
               ts => do traverse_ (\fn =>
-                          do checkTotal emptyFC fn
+                          do ignore $ checkTotal emptyFC fn
                              tot <- getTotality emptyFC fn
-                             coreLift (putStrLn (show fn ++ " is " ++ show tot)))
+                             coreLift_ (putStrLn (show fn ++ " is " ++ show tot)))
                                (map fst ts)
                        pure True
 process (DebugInfo n)
     = do defs <- get Ctxt
-         traverse showInfo !(lookupCtxtName n (gamma defs))
+         traverse_ showInfo !(lookupCtxtName n (gamma defs))
          pure True
 process Quit
-    = do coreLift $ putStrLn "Bye for now!"
+    = do coreLift_ $ putStrLn "Bye for now!"
          pure False
 
 processCatch : {auto c : Ref Ctxt Defs} ->
@@ -138,7 +139,7 @@ processCatch : {auto c : Ref Ctxt Defs} ->
                ImpREPL -> Core Bool
 processCatch cmd
     = catch (process cmd)
-            (\err => do coreLift (putStrLn (show err))
+            (\err => do coreLift_ (putStrLn (show err))
                         pure True)
 
 export
@@ -147,12 +148,9 @@ repl : {auto c : Ref Ctxt Defs} ->
        {auto u : Ref UST UState} ->
        Core ()
 repl
-    = do coreLift (putStr "Yaffle> ")
+    = do coreLift_ (putStr "Yaffle> ")
          inp <- coreLift getLine
-         case runParser Nothing inp command of
-              Left err => do coreLift (printLn err)
+         case runParser (Virtual Interactive) Nothing inp command of
+              Left err => do coreLift_ (printLn err)
                              repl
-              Right cmd =>
-                  do if !(processCatch cmd)
-                        then repl
-                        else pure ()
+              Right (decor, cmd) => when !(processCatch cmd) repl

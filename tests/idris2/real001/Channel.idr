@@ -4,7 +4,7 @@ import Linear
 import Data.IORef
 import Data.List
 
-import System.Concurrency.Raw
+import System.Concurrency
 
 public export
 data Actions : Type -> Type where
@@ -29,6 +29,10 @@ data Protocol : Type -> Type where
 public export
 (>>=) : Protocol a -> (a -> Protocol b) -> Protocol b
 (>>=) = Bind
+
+public export
+(>>) : Protocol a -> Protocol b -> Protocol b
+ma >> mb = ma >>= \ _ => mb
 
 public export
 ClientK : Protocol a -> (a -> Actions b) -> Actions b
@@ -58,11 +62,22 @@ public export
 data QueueEntry : Type where
      Entry : (1 val : any) -> QueueEntry
 
+data Stack : Type -> Type where
+     Nil : Stack a
+     (::) : (1 _ : a) -> (1 xs : Stack a) -> Stack a
+
+reverseOnto : (1 _ : Stack a) -> (1 _ : Stack a) -> Stack a
+reverseOnto acc [] = acc
+reverseOnto acc (x::xs) = reverseOnto (x::acc) xs
+
+reverse : (1 _ : Stack a) -> Stack a
+reverse = reverseOnto []
+
 public export
 record RawMsgQueue where
   constructor MkRawMsgQueue
-  inputStack : List QueueEntry
-  outputStack : List QueueEntry
+  1 inputStack : Stack QueueEntry
+  1 outputStack : Stack QueueEntry
 
 newQueue : RawMsgQueue
 newQueue = MkRawMsgQueue [] []
@@ -105,7 +120,7 @@ mkChannels p
                MkChannel lock cond_lock cond serverInbox clientInbox)
 
 export
-send : (1 chan : Channel {p} (Send ty next)) -> (1 val : ty) ->
+send : (1 chan : Channel {p} (Send ty next)) -> (val : ty) ->
        One IO (Channel {p} (next val))
 send (MkChannel lock cond_lock cond local remote) val
     = do lift $ mutexAcquire lock
@@ -202,5 +217,5 @@ fork proc
         -- deconstruct and reconstruct is a hack to work around the fact that
         -- 'run' doesn't express the function is only used once in its type, because
         -- 'Monad' and 'Applicative' don't express linearity... ugh!
-         lift $ fork (run (proc (MkChannel a b c d e)))
+         lift $ ignore $ fork (run (proc (MkChannel a b c d e)))
          pure cchan

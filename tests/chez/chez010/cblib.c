@@ -20,4 +20,3 @@ int applyIntFnPure(int x, int y, IntFn f) {
 char applyCharFn(char c, int x, CharFn f) {
     return f(c, x);
 }
-

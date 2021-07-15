@@ -1,22 +1,73 @@
 module Idris.Parser
 
-import        Core.Options
-import        Idris.Syntax
+import Core.Options
+import Core.Metadata
+import Idris.Syntax
 import public Parser.Source
-import        Parser.Lexer.Source
-import        TTImp.TTImp
+import Parser.Lexer.Source
+import TTImp.TTImp
 
-import public Text.Parser
-import        Data.List
-import        Data.List.Views
-import        Data.List1
-import        Data.Maybe
-import        Data.Strings
+import public Libraries.Text.Parser
+import Data.Either
+import Data.List
+import Data.List.Views
+import Data.List1
+import Data.Maybe
+import Data.String
+import Libraries.Utils.String
+
+import Idris.Parser.Let
 
 %default covering
 
+decorate : OriginDesc -> Decoration -> Rule a -> Rule a
+decorate fname decor rule = do
+  res <- bounds rule
+  act [((fname, (start res, end res)), decor, Nothing)]
+  pure res.val
+
+
+decorationFromBounded : OriginDesc -> Decoration -> WithBounds a -> ASemanticDecoration
+decorationFromBounded fname decor bnds
+   = ((fname, start bnds, end bnds), decor, Nothing)
+
+boundedNameDecoration : OriginDesc -> Decoration -> WithBounds Name -> ASemanticDecoration
+boundedNameDecoration fname decor bstr = ((fname, start bstr, end bstr)
+                                         , decor
+                                         , Just bstr.val)
+
+decorateBoundedNames : OriginDesc -> Decoration -> List (WithBounds Name) -> EmptyRule ()
+decorateBoundedNames fname decor bns = act $ map (boundedNameDecoration fname decor) bns
+
+decorateBoundedName : OriginDesc -> Decoration -> WithBounds Name -> EmptyRule ()
+decorateBoundedName fname decor bn = act [boundedNameDecoration fname decor bn]
+
+decorateKeywords : OriginDesc -> List (WithBounds a) -> EmptyRule ()
+decorateKeywords fname = act . map (decorationFromBounded fname Keyword)
+
+dependentDecorate : OriginDesc -> Rule a -> (a -> Decoration) -> Rule a
+dependentDecorate fname rule decor = do
+  res <- bounds rule
+  act [((fname, (start res, end res)), decor res.val, Nothing)]
+  pure res.val
+
+decoratedKeyword : OriginDesc -> String -> Rule ()
+decoratedKeyword fname kwd = decorate fname Keyword (keyword kwd)
+
+decoratedSymbol : OriginDesc -> String -> Rule ()
+decoratedSymbol fname smb = decorate fname Keyword (symbol smb)
+
+decoratedDataTypeName : OriginDesc -> Rule Name
+decoratedDataTypeName fname = decorate fname Typ dataTypeName
+
+decoratedDataConstructorName : OriginDesc -> Rule Name
+decoratedDataConstructorName fname = decorate fname Data dataConstructorName
+
+decoratedSimpleBinderName : OriginDesc -> Rule String
+decoratedSimpleBinderName fname = decorate fname Bound unqualifiedName
+
 -- Forward declare since they're used in the parser
-topDecl : FileName -> IndentInfo -> Rule (List PDecl)
+topDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
 collectDefs : List PDecl -> List PDecl
 
 -- Some context for the parser
@@ -43,52 +94,50 @@ export
 plhs : ParseOpts
 plhs = MkParseOpts False False
 
+%hide Prelude.(>>)
 %hide Prelude.(>>=)
+%hide Core.Core.(>>)
 %hide Core.Core.(>>=)
 %hide Prelude.pure
 %hide Core.Core.pure
+%hide Prelude.(<*>)
+%hide Core.Core.(<*>)
 
-atom : FileName -> Rule PTerm
+atom : OriginDesc -> Rule PTerm
 atom fname
-    = do (start, end) <- position
-         exactIdent "Type"
-         pure (PType (MkFC fname start end))
-  <|> do (start, end) <- position
-         x <- name
-         pure (PRef (MkFC fname start end) x)
-  <|> do (start, end) <- position
-         x <- constant
-         pure (PPrimVal (MkFC fname start end) x)
-  <|> do (start, end) <- position
-         symbol "_"
-         pure (PImplicit (MkFC fname start end))
-  <|> do (start, end) <- position
-         symbol "?"
-         pure (PInfer (MkFC fname start end))
-  <|> do (start, end) <- position
-         x <- holeName
-         pure (PHole (MkFC fname start end) False x)
-  <|> do (start, end) <- position
-         pragma "MkWorld"
-         pure (PPrimVal (MkFC fname start end) WorldVal)
-  <|> do (start, end) <- position
-         pragma "World"
-         pure (PPrimVal (MkFC fname start end) WorldType)
-  <|> do (start, end) <- position
-         pragma "search"
-         pure (PSearch (MkFC fname start end) 50)
+    = do x <- bounds $ decorate fname Typ $ exactIdent "Type"
+         pure (PType (boundToFC fname x))
+  <|> do x <- bounds $ name
+         pure (PRef (boundToFC fname x) x.val)
+  <|> do x <- bounds $ dependentDecorate fname constant \c =>
+                       if isPrimType c
+                       then Typ
+                       else Data
+         pure (PPrimVal (boundToFC fname x) x.val)
+  <|> do x <- bounds $ decoratedSymbol fname "_"
+         pure (PImplicit (boundToFC fname x))
+  <|> do x <- bounds $ symbol "?"
+         pure (PInfer (boundToFC fname x))
+  <|> do x <- bounds $ holeName
+         pure (PHole (boundToFC fname x) False x.val)
+  <|> do x <- bounds $ decorate fname Data $ pragma "MkWorld"
+         pure (PPrimVal (boundToFC fname x) WorldVal)
+  <|> do x <- bounds $ decorate fname Typ  $ pragma "World"
+         pure (PPrimVal (boundToFC fname x) WorldType)
+  <|> do x <- bounds $ pragma "search"
+         pure (PSearch (boundToFC fname x) 50)
 
-whereBlock : FileName -> Int -> Rule (List PDecl)
+whereBlock : OriginDesc -> Int -> Rule (List PDecl)
 whereBlock fname col
-    = do keyword "where"
+    = do decoratedKeyword fname "where"
          ds <- blockAfter col (topDecl fname)
          pure (collectDefs (concat ds))
 
 -- Expect a keyword, but if we get anything else it's a fatal error
-commitKeyword : IndentInfo -> String -> Rule ()
-commitKeyword indents req
+commitKeyword : OriginDesc -> IndentInfo -> String -> Rule ()
+commitKeyword fname indents req
     = do mustContinue indents (Just req)
-         keyword req
+         decoratedKeyword fname req
          mustContinue indents Nothing
 
 commitSymbol : String -> Rule ()
@@ -96,106 +145,118 @@ commitSymbol req
     = symbol req
        <|> fatalError ("Expected '" ++ req ++ "'")
 
+continueWithDecorated : OriginDesc -> IndentInfo -> String -> Rule ()
+continueWithDecorated fname indents req
+    = mustContinue indents (Just req) *> decoratedSymbol fname req
+
+
 continueWith : IndentInfo -> String -> Rule ()
 continueWith indents req
-    = do mustContinue indents (Just req)
-         symbol req
+    = mustContinue indents (Just req) *> symbol req
 
 iOperator : Rule Name
 iOperator
-    = operator
-  <|> do symbol "`"
-         n <- name
-         symbol "`"
-         pure n
+    = operator <|> (symbol "`" *> name <* symbol "`")
 
 data ArgType
-    = ExpArg PTerm
-    | ImpArg (Maybe Name) PTerm
+    = UnnamedExpArg PTerm
+    | UnnamedAutoArg PTerm
+    | NamedArg Name PTerm
     | WithArg PTerm
 
 argTerm : ArgType -> PTerm
-argTerm (ExpArg t) = t
-argTerm (ImpArg _ t) = t
+argTerm (UnnamedExpArg t) = t
+argTerm (UnnamedAutoArg t) = t
+argTerm (NamedArg _ t) = t
 argTerm (WithArg t) = t
 
 mutual
-  appExpr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
+  appExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   appExpr q fname indents
       = case_ fname indents
     <|> doBlock fname indents
-    <|> lambdaCase fname indents
+    <|> lam fname indents
     <|> lazy fname indents
     <|> if_ fname indents
     <|> with_ fname indents
-    <|> do start <- location
-           f <- simpleExpr fname indents
-           args <- many (argExpr q fname indents)
-           end <- pure $ endPos $ getPTermLoc $ fromMaybe f $ argTerm <$> last' args
-           pure (applyExpImp start end f args)
-    <|> do start <- location
-           op <- iOperator
-           arg <- expr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc arg
-           pure (PPrefixOp (MkFC fname start end) op arg)
+    <|> do b <- bounds (MkPair <$> simpleExpr fname indents <*> many (argExpr q fname indents))
+           (f, args) <- pure b.val
+           pure (applyExpImp (start b) (end b) f (concat args))
+    <|> do b <- bounds (MkPair <$> bounds iOperator <*> expr pdef fname indents)
+           (op, arg) <- pure b.val
+           pure (PPrefixOp (boundToFC fname b) (boundToFC fname op) op.val arg)
     <|> fail "Expected 'case', 'if', 'do', application or operator expression"
     where
       applyExpImp : FilePos -> FilePos -> PTerm ->
                     List ArgType ->
                     PTerm
       applyExpImp start end f [] = f
-      applyExpImp start end f (ExpArg exp :: args)
+      applyExpImp start end f (UnnamedExpArg exp :: args)
           = applyExpImp start end (PApp (MkFC fname start end) f exp) args
-      applyExpImp start end f (ImpArg n imp :: args)
-          = applyExpImp start end (PImplicitApp (MkFC fname start end) f n imp) args
+      applyExpImp start end f (UnnamedAutoArg imp :: args)
+          = applyExpImp start end (PAutoApp (MkFC fname start end) f imp) args
+      applyExpImp start end f (NamedArg n imp :: args)
+          = let fc = MkFC fname start end in
+            applyExpImp start end (PNamedApp fc f n imp) args
       applyExpImp start end f (WithArg exp :: args)
           = applyExpImp start end (PWithApp (MkFC fname start end) f exp) args
 
-  argExpr : ParseOpts -> FileName -> IndentInfo -> Rule ArgType
+  argExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule (List ArgType)
   argExpr q fname indents
       = do continue indents
            arg <- simpleExpr fname indents
-           the (SourceEmptyRule _) $ case arg of
-                PHole loc _ n => pure (ExpArg (PHole loc True n))
-                t => pure (ExpArg t)
+           the (EmptyRule _) $ case arg of
+                PHole loc _ n => pure [UnnamedExpArg (PHole loc True n)]
+                t => pure [UnnamedExpArg t]
     <|> do continue indents
-           arg <- implicitArg fname indents
-           pure (ImpArg (fst arg) (snd arg))
+           braceArgs fname indents
     <|> if withOK q
            then do continue indents
-                   symbol "|"
+                   decoratedSymbol fname "|"
                    arg <- expr (record {withOK = False} q) fname indents
-                   pure (WithArg arg)
+                   pure [WithArg arg]
            else fail "| not allowed here"
+    where
+      underscore : FC -> ArgType
+      underscore fc = NamedArg (UN "_") (PImplicit fc)
 
-  implicitArg : FileName -> IndentInfo -> Rule (Maybe Name, PTerm)
-  implicitArg fname indents
-      = do start <- location
-           symbol "{"
-           x <- unqualifiedName
-           (do symbol "="
+      braceArgs : OriginDesc -> IndentInfo -> Rule (List ArgType)
+      braceArgs fname indents
+          = do start <- bounds (decoratedSymbol fname "{")
+               list <- sepBy (decoratedSymbol fname ",")
+                        $ do x <- bounds (decoratedSimpleBinderName fname)
+                             let fc = boundToFC fname x
+                             option (NamedArg (UN x.val) $ PRef fc (UN x.val))
+                              $ do tm <- decoratedSymbol fname "=" *> expr pdef fname indents
+                                   pure (NamedArg (UN x.val) tm)
+               matchAny <- option [] (if isCons list then
+                                         do decoratedSymbol fname ","
+                                            x <- bounds (decoratedSymbol fname "_")
+                                            pure [underscore (boundToFC fname x)]
+                                      else fail "non-empty list required")
+               end <- bounds (decoratedSymbol fname "}")
+               matchAny <- do let fc = boundToFC fname (mergeBounds start end)
+                              pure $ if isNil list
+                                then [underscore fc]
+                                else matchAny
+               pure $ matchAny ++ list
+
+        <|> do decoratedSymbol fname "@{"
                commit
                tm <- expr pdef fname indents
-               symbol "}"
-               pure (Just (UN x), tm))
-             <|> (do end <- endLocation
-                     symbol "}"
-                     pure (Just (UN x), PRef (MkFC fname start end) (UN x)))
-    <|> do symbol "@{"
-           commit
-           tm <- expr pdef fname indents
-           symbol "}"
-           pure (Nothing, tm)
+               decoratedSymbol fname "}"
+               pure [UnnamedAutoArg tm]
 
-  with_ : FileName -> IndentInfo -> Rule PTerm
+  with_ : OriginDesc -> IndentInfo -> Rule PTerm
   with_ fname indents
-      = do start <- location
-           keyword "with"
-           commit
-           ns <- singleName <|> nameList
-           end <- location
-           rhs <- expr pdef fname indents
-           pure (PWithUnambigNames (MkFC fname start end) ns rhs)
+      = do b <- bounds (do decoratedKeyword fname "with"
+                           commit
+                           ns <- singleName <|> nameList
+                           end <- location
+                           rhs <- expr pdef fname indents
+                           pure (ns, rhs))
+           (ns, rhs) <- pure b.val
+           pure (PWithUnambigNames (boundToFC fname b) ns rhs)
     where
       singleName : Rule (List Name)
       singleName = do
@@ -204,651 +265,598 @@ mutual
 
       nameList : Rule (List Name)
       nameList = do
-        symbol "["
+        decoratedSymbol fname "["
         commit
-        ns <- sepBy1 (symbol ",") name
-        symbol "]"
-        pure ns
+        ns <- sepBy1 (decoratedSymbol fname ",") name
+        decoratedSymbol fname "]"
+        pure (forget ns)
 
-  opExpr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
+  opExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   opExpr q fname indents
-      = do start <- location
-           l <- appExpr q fname indents
+      = do l <- bounds (appExpr q fname indents)
            (if eqOK q
-               then do continue indents
-                       symbol "="
-                       r <- opExpr q fname indents
-                       end <- pure $ endPos $ getPTermLoc r
-                       pure (POp (MkFC fname start end) (UN "=") l r)
+               then do r <- bounds (continue indents *> decoratedSymbol fname "=" *> opExpr q fname indents)
+                       pure $
+                         let fc = boundToFC fname (mergeBounds l r)
+                             opFC = virtualiseFC fc -- already been highlighted: we don't care
+                         in POp fc opFC (UN "=") l.val r.val
                else fail "= not allowed")
              <|>
-             (do continue indents
-                 op <- iOperator
-                 middle <- location
-                 r <- opExpr q fname indents
-                 end <- pure $ endPos $ getPTermLoc r
-                 pure (POp (MkFC fname start end) op l r))
-               <|> pure l
+             (do b <- bounds [| MkPair (continue indents *> bounds iOperator) (opExpr q fname indents) |]
+                 (op, r) <- pure b.val
+                 let fc = boundToFC fname (mergeBounds l b)
+                 let opFC = boundToFC fname op
+                 pure (POp fc opFC op.val l.val r))
+               <|> pure l.val
 
-  dpair : FileName -> FilePos -> IndentInfo -> Rule PTerm
-  dpair fname start indents
-      = do x <- unqualifiedName
-           symbol ":"
-           ty <- expr pdef fname indents
-           loc <- pure $ endPos $ getPTermLoc ty
-           symbol "**"
-           rest <- dpair fname loc indents <|> expr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc rest
-           pure (PDPair (MkFC fname start end)
-                        (PRef (MkFC fname start loc) (UN x))
+  dpairType : OriginDesc -> WithBounds t -> IndentInfo -> Rule PTerm
+  dpairType fname start indents
+      = do loc <- bounds (do x <- decoratedSimpleBinderName fname
+                             decoratedSymbol fname ":"
+                             ty <- expr pdef fname indents
+                             pure (x, ty))
+           (x, ty) <- pure loc.val
+           op <- bounds (symbol "**")
+           rest <- bounds (nestedDpair fname loc indents <|> expr pdef fname indents)
+           pure (PDPair (boundToFC fname (mergeBounds start rest))
+                        (boundToFC fname op)
+                        (PRef (boundToFC fname loc) (UN x))
                         ty
-                        rest)
-    <|> do l <- expr pdef fname indents
-           loc <- location
-           symbol "**"
-           rest <- dpair fname loc indents <|> expr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc rest
-           pure (PDPair (MkFC fname start end)
-                        l
-                        (PImplicit (MkFC fname start end))
-                        rest)
+                        rest.val)
 
-  bracketedExpr : FileName -> FilePos -> IndentInfo -> Rule PTerm
-  bracketedExpr fname start indents
+  nestedDpair : OriginDesc -> WithBounds t -> IndentInfo -> Rule PTerm
+  nestedDpair fname start indents
+      = dpairType fname start indents
+    <|> do l <- expr pdef fname indents
+           loc <- bounds (symbol "**")
+           rest <- bounds (nestedDpair fname loc indents <|> expr pdef fname indents)
+           pure (PDPair (boundToFC fname (mergeBounds start rest))
+                        (boundToFC fname loc)
+                        l
+                        (PImplicit (boundToFC fname (mergeBounds start rest)))
+                        rest.val)
+
+  bracketedExpr : OriginDesc -> WithBounds t -> IndentInfo -> Rule PTerm
+  bracketedExpr fname s indents
       -- left section. This may also be a prefix operator, but we'll sort
       -- that out when desugaring: if the operator is infix, treat it as a
       -- section otherwise treat it as prefix
-      = do op <- iOperator
-           e <- expr pdef fname indents
-           continueWith indents ")"
-           end <- location
-           pure (PSectionL (MkFC fname start end) op e)
+      = do b <- bounds (do op <- bounds iOperator
+                           e <- expr pdef fname indents
+                           continueWithDecorated fname indents ")"
+                           pure (op, e))
+           (op, e) <- pure b.val
+           act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
+           let fc = boundToFC fname (mergeBounds s b)
+           let opFC = boundToFC fname op
+           pure (PSectionL fc opFC op.val e)
     <|> do  -- (.y.z)  -- section of projection (chain)
-          start <- location
-          projs <- some $ postfixApp fname indents
-          args <- many $ simpleExpr fname indents
-          end <- location
-          symbol ")"
-          pure $ PPostfixProjsSection (MkFC fname start end) projs args
+           b <- bounds $ forget <$> some (bounds postfixProj)
+           decoratedSymbol fname ")"
+           act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
+           let projs = map (\ proj => (boundToFC fname proj, proj.val)) b.val
+           pure $ PPostfixAppPartial (boundToFC fname b) projs
       -- unit type/value
-    <|> do continueWith indents ")"
-           end <- location
-           pure (PUnit (MkFC fname start end))
-      -- right section (1-tuple is just an expression)
-    <|> do p <- dpair fname start indents
-           symbol ")"
-           pure p
-    <|> do e <- expr pdef fname indents
-           (do op <- iOperator
-               end <- endLocation
-               symbol ")"
-               pure (PSectionR (MkFC fname start end) e op)
-             <|>
-            -- all the other bracketed expressions
-            tuple fname start indents e)
+    <|> do b <- bounds (continueWith indents ")")
+           pure (PUnit (boundToFC fname (mergeBounds s b)))
+      -- dependent pairs with type annotation (so, the type form)
+    <|> do dpairType fname s indents <* (decorate fname Typ $ symbol ")")
+                                     <* act [(toNonEmptyFC $ boundToFC fname s, Typ, Nothing)]
+    <|> do e <- bounds (expr pdef fname indents)
+           -- dependent pairs with no type annotation
+           (do loc <- bounds (symbol "**")
+               rest <- bounds ((nestedDpair fname loc indents <|> expr pdef fname indents) <* symbol ")")
+               pure (PDPair (boundToFC fname (mergeBounds s rest))
+                            (boundToFC fname loc)
+                            e.val
+                            (PImplicit (boundToFC fname (mergeBounds s rest)))
+                            rest.val)) <|>
+             -- right sections
+             ((do op <- bounds (bounds iOperator <* decoratedSymbol fname ")")
+                  act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
+                  let fc = boundToFC fname (mergeBounds s op)
+                  let opFC = boundToFC fname op.val
+                  pure (PSectionR fc opFC e.val op.val.val)
+               <|>
+              -- all the other bracketed expressions
+              tuple fname s indents e.val))
+    <|> do here <- location
+           let fc = MkFC fname here here
+           let var = PRef fc (MN "__leftTupleSection" 0)
+           ts <- bounds (nonEmptyTuple fname s indents var)
+           pure (PLam fc top Explicit var (PInfer fc) ts.val)
 
-  getInitRange : List PTerm -> SourceEmptyRule (PTerm, Maybe PTerm)
-  getInitRange [x] = pure (x, Nothing)
-  getInitRange [x, y] = pure (x, Just y)
+  getInitRange : List (WithBounds PTerm) -> EmptyRule (PTerm, Maybe PTerm)
+  getInitRange [x] = pure (x.val, Nothing)
+  getInitRange [x,y] = pure (x.val, Just y.val)
   getInitRange _ = fatalError "Invalid list range syntax"
 
-  listRange : FileName -> FilePos -> IndentInfo -> List PTerm -> Rule PTerm
-  listRange fname start indents xs
-      = do end <- endLocation
-           symbol "]"
-           let fc = MkFC fname start end
+  listRange : OriginDesc -> WithBounds t -> IndentInfo -> List (WithBounds PTerm) -> Rule PTerm
+  listRange fname s indents xs
+      = do b <- bounds (decoratedSymbol fname "]")
+           let fc = boundToFC fname (mergeBounds s b)
            rstate <- getInitRange xs
+           decorateKeywords fname xs
            pure (PRangeStream fc (fst rstate) (snd rstate))
-    <|> do y <- expr pdef fname indents
-           end <- endLocation
-           symbol "]"
-           let fc = MkFC fname start end
+    <|> do y <- bounds (expr pdef fname indents <* decoratedSymbol fname "]")
+           let fc = boundToFC fname (mergeBounds s y)
            rstate <- getInitRange xs
-           pure (PRange fc (fst rstate) (snd rstate) y)
+           decorateKeywords fname xs
+           pure (PRange fc (fst rstate) (snd rstate) y.val)
 
-  listExpr : FileName -> FilePos -> IndentInfo -> Rule PTerm
-  listExpr fname start indents
-      = do ret <- expr pnowith fname indents
-           let endRet = getPTermLoc ret
-           symbol "|"
-           conds <- sepBy1 (symbol ",") (doAct fname indents)
-           end <- pure $ endPos $ fromMaybe endRet (map getLoc $ join $ last' <$> last' conds)
-           symbol "]"
-           pure (PComprehension (MkFC fname start end) ret (concat conds))
-    <|> do xs <- sepBy (symbol ",") (expr pdef fname indents)
-           (do symbol ".."
-               listRange fname start indents xs)
-             <|> (do end <- endLocation
-                     symbol "]"
-                     pure (PList (MkFC fname start end) xs))
+  listExpr : OriginDesc -> WithBounds () -> IndentInfo -> Rule PTerm
+  listExpr fname s indents
+      = do b <- bounds (do ret <- expr pnowith fname indents
+                           decoratedSymbol fname "|"
+                           conds <- sepBy1 (decoratedSymbol fname ",") (doAct fname indents)
+                           decoratedSymbol fname "]"
+                           pure (ret, conds))
+           (ret, conds) <- pure b.val
+           pure (PComprehension (boundToFC fname (mergeBounds s b)) ret (concat conds))
+    <|> do xs <- option [] $ do
+                     hd <- expr pdef fname indents
+                     tl <- many $ do b <- bounds (symbol ",")
+                                     x <- expr pdef fname indents
+                                     pure (x <$ b)
+                     pure ((hd <$ s) :: tl)
+           (do decoratedSymbol fname ".."
+               listRange fname s indents xs)
+             <|> (do b <- bounds (symbol "]")
+                     pure $
+                       let fc = boundToFC fname (mergeBounds s b)
+                           nilFC = if null xs then fc else boundToFC fname b
+                       in PList fc nilFC (map (\ t => (boundToFC fname t, t.val)) xs))
+
+  snocListExpr : OriginDesc -> WithBounds () -> IndentInfo -> Rule PTerm
+  snocListExpr fname s indents
+      = {- TODO: comprehension -}
+        do mHeadTail <- optional $ do
+             hd <- many $ do x <- expr pdef fname indents
+                             b <- bounds (symbol ",")
+                             pure (x <$ b)
+             tl <- expr pdef fname indents
+             pure (hd, tl)
+           {- TODO: reverse ranges -}
+           b <- bounds (symbol "]")
+           pure $
+             let xs : List (WithBounds PTerm)
+                    = case mHeadTail of
+                        Nothing      => []
+                        Just (hd,tl) => hd ++ [ tl <$ b]
+                 fc = boundToFC fname (mergeBounds s b)
+                 nilFC = ifThenElse (null xs) fc (boundToFC fname s)
+             in PSnocList fc nilFC (map (\ t => (boundToFC fname t, t.val)) xs) --)
+
+  nonEmptyTuple : OriginDesc -> WithBounds t -> IndentInfo -> PTerm -> Rule PTerm
+  nonEmptyTuple fname s indents e
+      = do vals <- some $ do b <- bounds (symbol ",")
+                             exp <- optional (expr pdef fname indents)
+                             pure (boundToFC fname b, exp)
+           end <- continueWithDecorated fname indents ")"
+           act [(toNonEmptyFC (boundToFC fname s), Keyword, Nothing)]
+           pure $ let (start ::: rest) = vals in
+                  buildOutput (fst start) (mergePairs 0 start rest)
+    where
+
+      lams : List (FC, PTerm) -> PTerm -> PTerm
+      lams [] e = e
+      lams ((fc, var) :: vars) e
+        = let vfc = virtualiseFC fc in
+          PLam vfc top Explicit var (PInfer vfc) $ lams vars e
+
+      buildOutput : FC -> (List (FC, PTerm), PTerm) -> PTerm
+      buildOutput fc (vars, scope) = lams vars $ PPair fc e scope
+
+      optionalPair : Int ->
+                     (FC, Maybe PTerm) -> (Int, (List (FC, PTerm), PTerm))
+      optionalPair i (fc, Just e)  = (i, ([], e))
+      optionalPair i (fc, Nothing) =
+        let var = PRef fc (MN "__infixTupleSection" i) in
+        (i+1, ([(fc, var)], var))
+
+      mergePairs : Int -> (FC, Maybe PTerm) ->
+                   List (FC, Maybe PTerm) -> (List (FC, PTerm), PTerm)
+      mergePairs i hd [] = snd (optionalPair i hd)
+      mergePairs i hd (exp :: rest)
+          = let (j, (var, t)) = optionalPair i hd in
+            let (vars, ts)    = mergePairs j exp rest in
+            (var ++ vars, PPair (fst exp) t ts)
 
   -- A pair, dependent pair, or just a single expression
-  tuple : FileName -> FilePos -> IndentInfo -> PTerm -> Rule PTerm
-  tuple fname start indents e
-      = do rest <- some (do symbol ","
-                            estart <- location
-                            el <- expr pdef fname indents
-                            pure (estart, el))
-           continueWith indents ")"
-           end <- location
-           pure (PPair (MkFC fname start end) e
-                       (mergePairs end rest))
-     <|> do continueWith indents ")"
-            end <- location
-            pure (PBracketed (MkFC fname start end) e)
-    where
-      mergePairs : FilePos -> List (FilePos, PTerm) -> PTerm
-      mergePairs end [] = PUnit (MkFC fname start end)
-      mergePairs end [(estart, exp)] = exp
-      mergePairs end ((estart, exp) :: rest)
-          = PPair (MkFC fname estart end) exp (mergePairs end rest)
+  tuple : OriginDesc -> WithBounds t -> IndentInfo -> PTerm -> Rule PTerm
+  tuple fname s indents e
+     =   nonEmptyTuple fname s indents e
+     <|> do end <- bounds (continueWithDecorated fname indents ")")
+            act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
+            pure (PBracketed (boundToFC fname (mergeBounds s end)) e)
 
-  postfixApp : FileName -> IndentInfo -> Rule PTerm
-  postfixApp fname indents
-    = do
-        start <- location
-        di <- dotIdent
-        end <- location
-        pure $ PRef (MkFC fname start end) di
-    <|> do
-        symbol ".("
-        commit
-        e <- expr pdef fname indents
-        symbol ")"
-        pure e
-
-  simpleExpr : FileName -> IndentInfo -> Rule PTerm
+  simpleExpr : OriginDesc -> IndentInfo -> Rule PTerm
   simpleExpr fname indents
     = do  -- x.y.z
-          start <- location
-          root <- simplerExpr fname indents
-          projs <- many $ postfixApp fname indents
-          end <- location
+          b <- bounds (do root <- simplerExpr fname indents
+                          projs <- many (bounds postfixProj)
+                          pure (root, projs))
+          (root, projs) <- pure b.val
+          let projs = map (\ proj => (boundToFC fname proj, proj.val)) projs
           pure $ case projs of
             [] => root
-            _  => PPostfixProjs (MkFC fname start end) root projs
+            _  => PPostfixApp (boundToFC fname b) root projs
+    <|> do b <- bounds (forget <$> some (bounds postfixProj))
+           pure $ let projs = map (\ proj => (boundToFC fname proj, proj.val)) b.val in
+                  PPostfixAppPartial (boundToFC fname b) projs
 
-  simplerExpr : FileName -> IndentInfo -> Rule PTerm
+  simplerExpr : OriginDesc -> IndentInfo -> Rule PTerm
   simplerExpr fname indents
-      = do start <- location
-           x <- unqualifiedName
-           symbol "@"
-           commit
-           expr <- simpleExpr fname indents
-           end <- pure $ endPos $ getPTermLoc expr
-           pure (PAs (MkFC fname start end) (UN x) expr)
+      = do b <- bounds (do x <- bounds (decoratedSimpleBinderName fname)
+                           decoratedSymbol fname "@"
+                           commit
+                           expr <- simpleExpr fname indents
+                           pure (x, expr))
+           (x, expr) <- pure b.val
+           pure (PAs (boundToFC fname b) (boundToFC fname x) (UN x.val) expr)
     <|> atom fname
     <|> binder fname indents
     <|> rewrite_ fname indents
     <|> record_ fname indents
-    <|> do start <- location
-           symbol ".("
-           commit
-           e <- expr pdef fname indents
-           end <- endLocation
-           symbol ")"
-           pure (PDotted (MkFC fname start end) e)
-    <|> do start <- location
-           symbol "`("
-           e <- expr pdef fname indents
-           end <- endLocation
-           symbol ")"
-           pure (PQuote (MkFC fname start end) e)
-    <|> do start <- location
-           symbol "`{{"
-           n <- name
-           end <- endLocation
-           symbol "}}"
-           pure (PQuoteName (MkFC fname start end) n)
-    <|> do start <- location
-           symbol "`["
-           ns <- nonEmptyBlock (topDecl fname)
-           end <- endLocation
-           symbol "]"
-           pure (PQuoteDecl (MkFC fname start end) (collectDefs (concat ns)))
-    <|> do start <- location
-           symbol "~"
-           e <- simpleExpr fname indents
-           end <- pure $ endPos $ getPTermLoc e
-           pure (PUnquote (MkFC fname start end) e)
-    <|> do start <- location
-           symbol "("
+    <|> singlelineStr pdef fname indents
+    <|> multilineStr pdef fname indents
+    <|> do b <- bounds (decoratedSymbol fname ".(" *> commit *> expr pdef fname indents <* decoratedSymbol fname ")")
+           pure (PDotted (boundToFC fname b) b.val)
+    <|> do b <- bounds (decoratedSymbol fname "`(" *> expr pdef fname indents <* decoratedSymbol fname ")")
+           pure (PQuote (boundToFC fname b) b.val)
+    <|> do b <- bounds (decoratedSymbol fname "`{{" *> name <* decoratedSymbol fname "}}")
+           pure (PQuoteName (boundToFC fname b) b.val)
+    <|> do b <- bounds (decoratedSymbol fname "`[" *> nonEmptyBlock (topDecl fname) <* decoratedSymbol fname "]")
+           pure (PQuoteDecl (boundToFC fname b) (collectDefs (concat b.val)))
+    <|> do b <- bounds (decoratedSymbol fname "~" *> simpleExpr fname indents)
+           pure (PUnquote (boundToFC fname b) b.val)
+    <|> do start <- bounds (symbol "(")
            bracketedExpr fname start indents
-    <|> do start <- location
-           symbol "["
+    <|> do start <- bounds (symbol "[<")
+           snocListExpr fname start indents
+    <|> do start <- bounds (symbol "[>" <|> symbol "[")
            listExpr fname start indents
-    <|> do start <- location
-           symbol "!"
-           e <- simpleExpr fname indents
-           end <- pure $ endPos $ getPTermLoc e
-           pure (PBang (MkFC fname start end) e)
-    <|> do start <- location
-           symbol "[|"
-           e <- expr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc e
-           symbol "|]"
-           pure (PIdiom (MkFC fname start end) e)
-    <|> do start <- location
-           pragma "runElab"
-           e <- expr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc e
-           pure (PRunElab (MkFC fname start end) e)
-    <|> do start <- location
-           pragma "logging"
-           lvl <- intLit
-           e <- expr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc e
-           pure (PUnifyLog (MkFC fname start end) (integerToNat lvl) e)
+    <|> do b <- bounds (decoratedSymbol fname "!" *> simpleExpr fname indents)
+           pure (PBang (virtualiseFC $ boundToFC fname b) b.val)
+    <|> do b <- bounds (decoratedSymbol fname "[|" *> expr pdef fname indents <* decoratedSymbol fname "|]")
+           pure (PIdiom (boundToFC fname b) b.val)
+    <|> do b <- bounds (pragma "runElab" *> expr pdef fname indents)
+           pure (PRunElab (boundToFC fname b) b.val)
+    <|> do b <- bounds $ do pragma "logging"
+                            topic <- optional (split (('.') ==) <$> simpleStr)
+                            lvl   <- intLit
+                            e     <- expr pdef fname indents
+                            pure (MkPair (mkLogLevel' topic (integerToNat lvl)) e)
+           (lvl, e) <- pure b.val
+           pure (PUnifyLog (boundToFC fname b) lvl e)
 
-  multiplicity : SourceEmptyRule (Maybe Integer)
-  multiplicity
-      = do c <- intLit
-           pure (Just c)
---     <|> do symbol "&"
---            pure (Just 2) -- Borrowing, not implemented
-    <|> pure Nothing
+  multiplicity : OriginDesc -> EmptyRule RigCount
+  multiplicity fname
+      = case !(optional $ decorate fname Keyword intLit) of
+          (Just 0) => pure erased
+          (Just 1) => pure linear
+          Nothing => pure top
+          _ => fail "Invalid multiplicity (must be 0 or 1)"
 
-  getMult : Maybe Integer -> SourceEmptyRule RigCount
-  getMult (Just 0) = pure erased
-  getMult (Just 1) = pure linear
-  getMult Nothing = pure top
-  getMult _ = fatalError "Invalid multiplicity (must be 0 or 1)"
-
-  pibindAll : FC -> PiInfo PTerm -> List (RigCount, Maybe Name, PTerm) ->
+  pibindAll : OriginDesc -> PiInfo PTerm ->
+              List (RigCount, WithBounds (Maybe Name), PTerm) ->
               PTerm -> PTerm
-  pibindAll fc p [] scope = scope
-  pibindAll fc p ((rig, n, ty) :: rest) scope
-           = PPi fc rig p n ty (pibindAll fc p rest scope)
+  pibindAll fname p [] scope = scope
+  pibindAll fname p ((rig, n, ty) :: rest) scope
+           = PPi (boundToFC fname n) rig p (n.val) ty (pibindAll fname p rest scope)
 
-  bindList : FileName -> FilePos -> IndentInfo ->
-             Rule (List (RigCount, PTerm, PTerm))
-  bindList fname start indents
-      = sepBy1 (symbol ",")
-               (do rigc <- multiplicity
-                   pat <- simpleExpr fname indents
-                   ty <- option
-                            (PInfer (MkFC fname start start))
-                            (do symbol ":"
-                                opExpr pdef fname indents)
-                   rig <- getMult rigc
-                   pure (rig, pat, ty))
+  bindList : OriginDesc -> IndentInfo ->
+             Rule (List (RigCount, WithBounds PTerm, PTerm))
+  bindList fname indents
+      = forget <$> sepBy1 (decoratedSymbol fname ",")
+                          (do rig <- multiplicity fname
+                              pat <- bounds (simpleExpr fname indents)
+                              ty <- option
+                                       (PInfer (boundToFC fname pat))
+                                       (decoratedSymbol fname ":" *> opExpr pdef fname indents)
+                              pure (rig, pat, ty))
 
-  pibindListName : FileName -> FilePos -> IndentInfo ->
-                   Rule (List (RigCount, Name, PTerm))
-  pibindListName fname start indents
-       = do rigc <- multiplicity
-            ns <- sepBy1 (symbol ",") binderName
-            symbol ":"
+  pibindListName : OriginDesc -> IndentInfo ->
+                   Rule (List (RigCount, WithBounds Name, PTerm))
+  pibindListName fname indents
+       = do rig <- multiplicity fname
+            ns <- sepBy1 (decoratedSymbol fname ",") (bounds binderName)
+            let ns = forget $ map (map UN) ns
+            decorateBoundedNames fname Bound ns
+            decoratedSymbol fname ":"
             ty <- expr pdef fname indents
             atEnd indents
-            rig <- getMult rigc
-            pure (map (\n => (rig, UN n, ty)) ns)
-     <|> sepBy1 (symbol ",")
-                (do rigc <- multiplicity
-                    n <- binderName
-                    symbol ":"
-                    ty <- expr pdef fname indents
-                    rig <- getMult rigc
-                    pure (rig, UN n, ty))
+            pure (map (\n => (rig, n, ty)) ns)
+     <|> forget <$> sepBy1 (decoratedSymbol fname ",")
+                           (do rig <- multiplicity fname
+                               n <- bounds (decorate fname Bound binderName)
+                               decoratedSymbol fname ":"
+                               ty <- expr pdef fname indents
+                               pure (rig, map UN n, ty))
     where
       -- _ gets treated specially here, it means "I don't care about the name"
       binderName : Rule String
-      binderName = unqualifiedName <|> do symbol "_"; pure "_"
+      binderName = unqualifiedName <|> (symbol "_" $> "_")
 
-  pibindList : FileName -> FilePos -> IndentInfo ->
-               Rule (List (RigCount, Maybe Name, PTerm))
-  pibindList fname start indents
-    = do params <- pibindListName fname start indents
-         pure $ map (\(rig, n, ty) => (rig, Just n, ty)) params
+  pibindList : OriginDesc -> IndentInfo ->
+               Rule (List (RigCount, WithBounds (Maybe Name), PTerm))
+  pibindList fname indents
+    = do params <- pibindListName fname indents
+         pure $ map (\(rig, n, ty) => (rig, map Just n, ty)) params
 
-  bindSymbol : Rule (PiInfo PTerm)
-  bindSymbol
-      = do symbol "->"
-           pure Explicit
-    <|> do symbol "=>"
-           pure AutoImplicit
+  bindSymbol : OriginDesc -> Rule (PiInfo PTerm)
+  bindSymbol fname
+      = (decoratedSymbol fname "->" $> Explicit)
+    <|> (decoratedSymbol fname "=>" $> AutoImplicit)
 
-
-  explicitPi : FileName -> IndentInfo -> Rule PTerm
+  explicitPi : OriginDesc -> IndentInfo -> Rule PTerm
   explicitPi fname indents
-      = do start <- location
-           symbol "("
-           binders <- pibindList fname start indents
-           symbol ")"
-           exp <- bindSymbol
-           scope <- typeExpr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc scope
-           pure (pibindAll (MkFC fname start end) exp binders scope)
+      = do decoratedSymbol fname "("
+           binders <- pibindList fname indents
+           decoratedSymbol fname ")"
+           exp <- bindSymbol fname
+           scope <- mustWork $ typeExpr pdef fname indents
+           pure (pibindAll fname exp binders scope)
 
-  autoImplicitPi : FileName -> IndentInfo -> Rule PTerm
+  autoImplicitPi : OriginDesc -> IndentInfo -> Rule PTerm
   autoImplicitPi fname indents
-      = do start <- location
-           symbol "{"
-           keyword "auto"
+      = do decoratedSymbol fname "{"
+           decoratedKeyword fname "auto"
            commit
-           binders <- pibindList fname start indents
-           symbol "}"
-           symbol "->"
-           scope <- typeExpr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc scope
-           pure (pibindAll (MkFC fname start end) AutoImplicit binders scope)
+           binders <- pibindList fname indents
+           decoratedSymbol fname "}"
+           decoratedSymbol fname "->"
+           scope <- mustWork $ typeExpr pdef fname indents
+           pure (pibindAll fname AutoImplicit binders scope)
 
-  defaultImplicitPi : FileName -> IndentInfo -> Rule PTerm
+  defaultImplicitPi : OriginDesc -> IndentInfo -> Rule PTerm
   defaultImplicitPi fname indents
-      = do start <- location
-           symbol "{"
-           keyword "default"
+      = do decoratedSymbol fname "{"
+           decoratedKeyword fname "default"
            commit
            t <- simpleExpr fname indents
-           binders <- pibindList fname start indents
-           symbol "}"
-           symbol "->"
-           scope <- typeExpr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc scope
-           pure (pibindAll (MkFC fname start end) (DefImplicit t) binders scope)
+           binders <- pibindList fname indents
+           decoratedSymbol fname "}"
+           decoratedSymbol fname "->"
+           scope <- mustWork $ typeExpr pdef fname indents
+           pure (pibindAll fname (DefImplicit t) binders scope)
 
-  forall_ : FileName -> IndentInfo -> Rule PTerm
+  forall_ : OriginDesc -> IndentInfo -> Rule PTerm
   forall_ fname indents
-      = do start <- location
-           keyword "forall"
+      = do decoratedKeyword fname "forall"
            commit
-           nstart <- location
-           ns <- sepBy1 (symbol ",") unqualifiedName
-           nend <- location
-           let nfc = MkFC fname nstart nend
-           let binders = map (\n => (erased {a=RigCount},
-                                     Just (UN n), PImplicit nfc)) ns
-           symbol "."
-           scope <- typeExpr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc scope
-           pure (pibindAll (MkFC fname start end) Implicit binders scope)
+           ns <- sepBy1 (decoratedSymbol fname ",")
+                        (bounds (decoratedSimpleBinderName fname))
+           let binders = map (\n => ( erased {a=RigCount}
+                                    , map (Just . UN) n
+                                    , PImplicit (boundToFC fname n))
+                                    ) (forget ns)
+           decoratedSymbol fname "."
+           scope <- mustWork $ typeExpr pdef fname indents
+           pure (pibindAll fname Implicit binders scope)
 
-  implicitPi : FileName -> IndentInfo -> Rule PTerm
+  implicitPi : OriginDesc -> IndentInfo -> Rule PTerm
   implicitPi fname indents
-      = do start <- location
-           symbol "{"
-           binders <- pibindList fname start indents
-           symbol "}"
-           symbol "->"
-           scope <- typeExpr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc scope
-           pure (pibindAll (MkFC fname start end) Implicit binders scope)
+      = do decoratedSymbol fname "{"
+           binders <- pibindList fname indents
+           decoratedSymbol fname "}"
+           decoratedSymbol fname "->"
+           scope <- mustWork $ typeExpr pdef fname indents
+           pure (pibindAll fname Implicit binders scope)
 
-  lam : FileName -> IndentInfo -> Rule PTerm
+  lam : OriginDesc -> IndentInfo -> Rule PTerm
   lam fname indents
-      = do start <- location
-           symbol "\\"
-           binders <- bindList fname start indents
-           symbol "=>"
+      = do decoratedSymbol fname "\\"
+           commit
+           switch <- optional (bounds $ decoratedKeyword fname "case")
+           case switch of
+             Nothing => continueLam
+             Just r  => continueLamCase r
+
+     where
+
+       bindAll : List (RigCount, WithBounds PTerm, PTerm) -> PTerm -> PTerm
+       bindAll [] scope = scope
+       bindAll ((rig, pat, ty) :: rest) scope
+           = PLam (boundToFC fname pat) rig Explicit pat.val ty
+                  (bindAll rest scope)
+
+       continueLam : Rule PTerm
+       continueLam = do
+           binders <- bindList fname indents
+           decoratedSymbol fname "=>"
            mustContinue indents Nothing
            scope <- expr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc scope
-           pure (bindAll (MkFC fname start end) binders scope)
-     where
-       bindAll : FC -> List (RigCount, PTerm, PTerm) -> PTerm -> PTerm
-       bindAll fc [] scope = scope
-       bindAll fc ((rig, pat, ty) :: rest) scope
-           = PLam fc rig Explicit pat ty (bindAll fc rest scope)
+           pure (bindAll binders scope)
 
-  letBinder : FileName -> IndentInfo ->
-              Rule (FilePos, FilePos, RigCount, PTerm, PTerm, PTerm, List PClause)
-  letBinder fname indents
-      = do start <- location
-           rigc <- multiplicity
-           pat <- expr plhs fname indents
-           tyend <- pure $ endPos $ getPTermLoc pat
-           ty <- option (PImplicit (MkFC fname start tyend))
-                        (do symbol ":"
-                            typeExpr (pnoeq pdef) fname indents)
-           symbol "="
-           val <- expr pnowith fname indents
-           alts <- block (patAlt fname)
-           end <- location
-           end <- pure $ fromMaybe end (endPos <$> getPClauseLoc <$> last' alts)
-           rig <- getMult rigc
-           pure (start, end, rig, pat, ty, val, alts)
-
-  buildLets : FileName ->
-              List (FilePos, FilePos, RigCount, PTerm, PTerm, PTerm, List PClause) ->
-              PTerm -> PTerm
-  buildLets fname [] sc = sc
-  buildLets fname ((start, end, rig, pat, ty, val, alts) :: rest) sc
-      = let fc = MkFC fname start end in
-            PLet fc rig pat ty val
-                 (buildLets fname rest sc) alts
-
-  buildDoLets : FileName ->
-                List (FilePos, FilePos, RigCount, PTerm, PTerm, PTerm, List PClause) ->
-                List PDo
-  buildDoLets fname [] = []
-  buildDoLets fname ((start, end, rig, PRef fc' (UN n), ty, val, []) :: rest)
-      = let fc = MkFC fname start end in
-            if lowerFirst n
-               then DoLet fc (UN n) rig ty val :: buildDoLets fname rest
-               else DoLetPat fc (PRef fc' (UN n)) ty val []
-                         :: buildDoLets fname rest
-  buildDoLets fname ((start, end, rig, pat, ty, val, alts) :: rest)
-      = let fc = MkFC fname start end in
-            DoLetPat fc pat ty val alts :: buildDoLets fname rest
-
-  let_ : FileName -> IndentInfo -> Rule PTerm
-  let_ fname indents
-      = do start <- location
-           keyword "let"
-           res <- nonEmptyBlock (letBinder fname)
-           commitKeyword indents "in"
-           scope <- typeExpr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc scope
-           pure (buildLets fname res scope)
-
-    <|> do start <- location
-           keyword "let"
-           commit
-           ds <- nonEmptyBlock (topDecl fname)
-           commitKeyword indents "in"
-           scope <- typeExpr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc scope
-           pure (PLocal (MkFC fname start end) (collectDefs (concat ds)) scope)
-
-  case_ : FileName -> IndentInfo -> Rule PTerm
-  case_ fname indents
-      = do start <- location
-           keyword "case"
-           scr <- expr pdef fname indents
-           commitKeyword indents "of"
-           alts <- block (caseAlt fname)
-           end <- location
-           end <- pure $ fromMaybe end (endPos <$> getPClauseLoc <$> last' alts)
-           pure (PCase (MkFC fname start end) scr alts)
-
-  lambdaCase : FileName -> IndentInfo -> Rule PTerm
-  lambdaCase fname indents
-      = do start <- location
-           symbol "\\"
-           endCase <- endLocation
-           keyword "case"
-           commit
-           alts <- block (caseAlt fname)
-           end <- location
-           end <- pure $ fromMaybe end (endPos <$> getPClauseLoc <$> last' alts)
-           pure $
-            (let fc = MkFC fname start end
-                 fcCase = MkFC fname start endCase
+       continueLamCase : WithBounds () -> Rule PTerm
+       continueLamCase endCase = do
+           b <- bounds (forget <$> nonEmptyBlock (caseAlt fname))
+           pure
+            (let fc = boundToFC fname b
+                 fcCase = virtualiseFC $ boundToFC fname endCase
                  n = MN "lcase" 0 in
               PLam fcCase top Explicit (PRef fcCase n) (PInfer fcCase) $
-                PCase fc (PRef fcCase n) alts)
+                PCase (virtualiseFC fc) (PRef fcCase n) b.val)
 
-  caseAlt : FileName -> IndentInfo -> Rule PClause
-  caseAlt fname indents
-      = do start <- location
-           lhs <- opExpr plhs fname indents
-           caseRHS fname start indents lhs
+  letBlock : OriginDesc -> IndentInfo -> Rule (WithBounds (Either LetBinder LetDecl))
+  letBlock fname indents = bounds (letBinder <||> letDecl) where
 
-  caseRHS : FileName -> FilePos -> IndentInfo -> PTerm -> Rule PClause
-  caseRHS fname start indents lhs
-      = do symbol "=>"
-           mustContinue indents Nothing
-           rhs <- expr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc rhs
-           atEnd indents
-           pure (MkPatClause (MkFC fname start end) lhs rhs [])
-    <|> do end <- endLocation
-           keyword "impossible"
-           atEnd indents
-           pure (MkImpossible (MkFC fname start end) lhs)
+    letBinder : Rule LetBinder
+    letBinder = do s <- bounds (MkPair <$> multiplicity fname <*> expr plhs fname indents)
+                   (rig, pat) <- pure s.val
+                   ty <- option (PImplicit (virtualiseFC $ boundToFC fname s))
+                                (decoratedSymbol fname ":" *> typeExpr (pnoeq pdef) fname indents)
+                   (decoratedSymbol fname "=" <|> decoratedSymbol fname ":=")
+                   val <- expr pnowith fname indents
+                   alts <- block (patAlt fname)
+                   pure (MkLetBinder rig pat ty val alts)
 
-  if_ : FileName -> IndentInfo -> Rule PTerm
-  if_ fname indents
-      = do start <- location
-           keyword "if"
-           x <- expr pdef fname indents
-           commitKeyword indents "then"
-           t <- expr pdef fname indents
-           commitKeyword indents "else"
-           e <- expr pdef fname indents
-           atEnd indents
-           end <- location
-           pure (PIfThenElse (MkFC fname start end) x t e)
+    letDecl : Rule LetDecl
+    letDecl = collectDefs . concat <$> nonEmptyBlock (try . topDecl fname)
 
-  record_ : FileName -> IndentInfo -> Rule PTerm
-  record_ fname indents
-      = do start <- location
-           keyword "record"
-           symbol "{"
+  let_ : OriginDesc -> IndentInfo -> Rule PTerm
+  let_ fname indents
+      = do decoratedKeyword fname "let"
            commit
-           fs <- sepBy1 (symbol ",") (field fname indents)
-           end <- endLocation
-           symbol "}"
-           pure (PUpdate (MkFC fname start end) fs)
+           res <- nonEmptyBlock (letBlock fname)
+           commitKeyword fname indents "in"
+           scope <- typeExpr pdef fname indents
+           pure (mkLets fname res scope)
 
-  field : FileName -> IndentInfo -> Rule PFieldUpdate
-  field fname indents
-      = do path <- map fieldName <$> [| name :: many recFieldCompat |]
-           upd <- (do symbol "="; pure PSetField)
+  case_ : OriginDesc -> IndentInfo -> Rule PTerm
+  case_ fname indents
+      = do b <- bounds (do decoratedKeyword fname "case"
+                           scr <- expr pdef fname indents
+                           mustWork (commitKeyword fname indents "of")
+                           alts <- block (caseAlt fname)
+                           pure (scr, alts))
+           (scr, alts) <- pure b.val
+           pure (PCase (virtualiseFC $ boundToFC fname b) scr alts)
+
+
+  caseAlt : OriginDesc -> IndentInfo -> Rule PClause
+  caseAlt fname indents
+      = do lhs <- bounds (opExpr plhs fname indents)
+           caseRHS fname lhs indents lhs.val
+
+  caseRHS : OriginDesc -> WithBounds t -> IndentInfo -> PTerm -> Rule PClause
+  caseRHS fname start indents lhs
+      = do rhs <- bounds (decoratedSymbol fname "=>" *> mustContinue indents Nothing *> expr pdef fname indents)
+           atEnd indents
+           let fc = boundToFC fname (mergeBounds start rhs)
+           pure (MkPatClause fc lhs rhs.val [])
+    <|> do end <- bounds (decoratedKeyword fname "impossible")
+           atEnd indents
+           pure (MkImpossible (boundToFC fname (mergeBounds start end)) lhs)
+
+  if_ : OriginDesc -> IndentInfo -> Rule PTerm
+  if_ fname indents
+      = do b <- bounds (do decoratedKeyword fname "if"
+                           x <- expr pdef fname indents
+                           commitKeyword fname indents "then"
+                           t <- expr pdef fname indents
+                           commitKeyword fname indents "else"
+                           e <- expr pdef fname indents
+                           pure (x, t, e))
+           atEnd indents
+           (x, t, e) <- pure b.val
+           pure (PIfThenElse (boundToFC fname b) x t e)
+
+  record_ : OriginDesc -> IndentInfo -> Rule PTerm
+  record_ fname indents
+      = do b <- bounds (do kw <- option False
+                                 (decoratedKeyword fname "record"
+                                   $> True) -- TODO deprecated
+                           decoratedSymbol fname "{"
+                           commit
+                           fs <- sepBy1 (decoratedSymbol fname ",") (field kw fname indents)
+                           decoratedSymbol fname "}"
+                           pure $ forget fs)
+           pure (PUpdate (boundToFC fname b) b.val)
+
+  field : Bool -> OriginDesc -> IndentInfo -> Rule PFieldUpdate
+  field kw fname indents
+      = do path <- map fieldName <$> [| decorate fname Function name :: many recFieldCompat |]
+           upd <- (ifThenElse kw (decoratedSymbol fname "=") (decoratedSymbol fname ":=") $> PSetField)
                       <|>
-                  (do symbol "$="; pure PSetFieldApp)
+                  (decoratedSymbol fname "$=" $> PSetFieldApp)
            val <- opExpr plhs fname indents
            pure (upd path val)
     where
       fieldName : Name -> String
       fieldName (UN s) = s
+      fieldName (RF s) = s
       fieldName _ = "_impossible"
 
       -- this allows the dotted syntax .field
       -- but also the arrowed syntax ->field for compatibility with Idris 1
       recFieldCompat : Rule Name
-      recFieldCompat = dotIdent <|> (symbol "->" *> name)
+      recFieldCompat = decorate fname Function postfixProj
+                  <|> (decoratedSymbol fname "->"
+                       *> decorate fname Function name)
 
-  rewrite_ : FileName -> IndentInfo -> Rule PTerm
+  rewrite_ : OriginDesc -> IndentInfo -> Rule PTerm
   rewrite_ fname indents
-      = do start <- location
-           keyword "rewrite"
-           rule <- expr pdef fname indents
-           commitKeyword indents "in"
-           tm <- expr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc tm
-           pure (PRewrite (MkFC fname start end) rule tm)
+      = do b <- bounds (do decoratedKeyword fname "rewrite"
+                           rule <- expr pdef fname indents
+                           commitKeyword fname indents "in"
+                           tm <- expr pdef fname indents
+                           pure (rule, tm))
+           (rule, tm) <- pure b.val
+           pure (PRewrite (boundToFC fname b) rule tm)
 
-  doBlock : FileName -> IndentInfo -> Rule PTerm
+  doBlock : OriginDesc -> IndentInfo -> Rule PTerm
   doBlock fname indents
-      = do start <- location
-           keyword "do"
-           actions <- block (doAct fname)
-           end <- location
-           end <- pure $ fromMaybe end $ map (endPos . getLoc) $ join $ last' <$> last' actions
-           pure (PDoBlock (MkFC fname start end) Nothing (concat actions))
-    <|> do start <- location
-           nsdo <- namespacedIdent
-           the (SourceEmptyRule PTerm) $ case nsdo of
-                ("do" :: ns) =>
-                   do actions <- block (doAct fname)
-                      end <- location
-                      end <- pure $ fromMaybe end $ map (endPos . getLoc) $ join $ last' <$> last' actions
-                      pure (PDoBlock (MkFC fname start end)
-                                     (Just (reverse ns)) (concat actions))
+      = do b <- bounds $ keyword "do" *> block (doAct fname)
+           commit
+           pure (PDoBlock (virtualiseFC $ boundToFC fname b) Nothing (concat b.val))
+    <|> do nsdo <- bounds namespacedIdent
+           -- TODO: need to attach metadata correctly here
+           the (EmptyRule PTerm) $ case nsdo.val of
+                (ns, "do") =>
+                   do commit
+                      actions <- Core.bounds (block (doAct fname))
+                      let fc = virtualiseFC $
+                               boundToFC fname (mergeBounds nsdo actions)
+                      pure (PDoBlock fc ns (concat actions.val))
                 _ => fail "Not a namespaced 'do'"
 
-  lowerFirst : String -> Bool
-  lowerFirst "" = False
-  lowerFirst str = assert_total (isLower (prim__strHead str))
-
-  validPatternVar : Name -> SourceEmptyRule ()
+  validPatternVar : Name -> EmptyRule ()
   validPatternVar (UN n)
       = if lowerFirst n then pure ()
                         else fail "Not a pattern variable"
   validPatternVar _ = fail "Not a pattern variable"
 
-  doAct : FileName -> IndentInfo -> Rule (List PDo)
+  doAct : OriginDesc -> IndentInfo -> Rule (List PDo)
   doAct fname indents
-      = do start <- location
-           n <- name
-           -- If the name doesn't begin with a lower case letter, we should
-           -- treat this as a pattern, so fail
-           validPatternVar n
-           symbol "<-"
-           val <- expr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc val
+      = do b <- bounds (do n <- bounds name
+                           -- If the name doesn't begin with a lower case letter, we should
+                           -- treat this as a pattern, so fail
+                           validPatternVar n.val
+                           decoratedSymbol fname "<-"
+                           val <- expr pdef fname indents
+                           pure (n, val))
            atEnd indents
-           pure [DoBind (MkFC fname start end) n val]
-    <|> do keyword "let"
-           res <- block (letBinder fname)
+           let (n, val) = b.val
+           pure [DoBind (boundToFC fname b) (boundToFC fname n) n.val val]
+    <|> do decoratedKeyword fname "let"
+           commit
+           res <- nonEmptyBlock (letBlock fname)
            atEnd indents
-           pure (buildDoLets fname res)
-    <|> do start <- location
-           keyword "let"
-           res <- block (topDecl fname)
-           end <- location
-           end <- pure $ fromMaybe end $ map (endPos . getPDeclLoc) $ join $ last' <$> last' res
+           pure (mkDoLets fname res)
+    <|> do b <- bounds (decoratedKeyword fname "rewrite" *> expr pdef fname indents)
            atEnd indents
-           pure [DoLetLocal (MkFC fname start end) (concat res)]
-    <|> do start <- location
-           keyword "rewrite"
-           rule <- expr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc rule
-           atEnd indents
-           pure [DoRewrite (MkFC fname start end) rule]
-    <|> do start <- location
-           e <- expr plhs fname indents
-           (do atEnd indents
-               end <- pure $ endPos $ getPTermLoc e
-               pure [DoExp (MkFC fname start end) e])
-             <|> (do symbol "<-"
-                     val <- expr pnowith fname indents
-                     alts <- block (patAlt fname)
-                     end <- location
-                     end <- pure $ fromMaybe end $ (endPos . getPClauseLoc) <$> last' alts
+           pure [DoRewrite (boundToFC fname b) b.val]
+    <|> do e <- bounds (expr plhs fname indents)
+           (atEnd indents $> [DoExp (virtualiseFC $ boundToFC fname e) e.val])
+             <|> (do b <- bounds $ decoratedSymbol fname "<-" *> [| (expr pnowith fname indents, block (patAlt fname)) |]
                      atEnd indents
-                     pure [DoBindPat (MkFC fname start end) e val alts])
+                     let (v, alts) = b.val
+                     let fc = virtualiseFC $ boundToFC fname (mergeBounds e b)
+                     pure [DoBindPat fc e.val v alts])
 
-  patAlt : FileName -> IndentInfo -> Rule PClause
+  patAlt : OriginDesc -> IndentInfo -> Rule PClause
   patAlt fname indents
-      = do symbol "|"
+      = do decoratedSymbol fname "|"
            caseAlt fname indents
 
-  lazy : FileName -> IndentInfo -> Rule PTerm
+  lazy : OriginDesc -> IndentInfo -> Rule PTerm
   lazy fname indents
-      = do start <- location
-           exactIdent "Lazy"
-           tm <- simpleExpr fname indents
-           end <- pure $ endPos $ getPTermLoc tm
-           pure (PDelayed (MkFC fname start end) LLazy tm)
-    <|> do start <- location
-           exactIdent "Inf"
-           tm <- simpleExpr fname indents
-           end <- pure $ endPos $ getPTermLoc tm
-           pure (PDelayed (MkFC fname start end) LInf tm)
-    <|> do start <- location
-           exactIdent "Delay"
-           tm <- simpleExpr fname indents
-           end <- pure $ endPos $ getPTermLoc tm
-           pure (PDelay (MkFC fname start end) tm)
-    <|> do start <- location
-           exactIdent "Force"
-           tm <- simpleExpr fname indents
-           end <- pure $ endPos $ getPTermLoc tm
-           pure (PForce (MkFC fname start end) tm)
+      = do tm <- bounds (decorate fname Typ (exactIdent "Lazy")
+                         *> simpleExpr fname indents)
+           pure (PDelayed (boundToFC fname tm) LLazy tm.val)
+    <|> do tm <- bounds (decorate fname Typ (exactIdent "Inf")
+                         *> simpleExpr fname indents)
+           pure (PDelayed (boundToFC fname tm) LInf tm.val)
+    <|> do tm <- bounds (decorate fname Data (exactIdent "Delay")
+                         *> simpleExpr fname indents)
+           pure (PDelay (boundToFC fname tm) tm.val)
+    <|> do tm <- bounds (decorate fname Data (exactIdent "Force")
+                         *> simpleExpr fname indents)
+           pure (PForce (boundToFC fname tm) tm.val)
 
-  binder : FileName -> IndentInfo -> Rule PTerm
+  binder : OriginDesc -> IndentInfo -> Rule PTerm
   binder fname indents
       = let_ fname indents
     <|> autoImplicitPi fname indents
@@ -858,103 +866,137 @@ mutual
     <|> explicitPi fname indents
     <|> lam fname indents
 
-  typeExpr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
+  typeExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   typeExpr q fname indents
-      = do start <- location
-           arg <- opExpr q fname indents
+      = do arg <- bounds (opExpr q fname indents)
            (do continue indents
-               rest <- some (do exp <- bindSymbol
-                                op <- opExpr pdef fname indents
-                                pure (exp, op))
-               end <- location
-               end <- pure $ fromMaybe end $ (endPos . getPTermLoc . snd) <$> last' rest
-               pure (mkPi start end arg rest))
-             <|> pure arg
+               rest <- some [| (bindSymbol fname, bounds $ opExpr pdef fname indents) |]
+               pure (mkPi arg (forget rest)))
+             <|> pure arg.val
     where
-      mkPi : FilePos -> FilePos -> PTerm -> List (PiInfo PTerm, PTerm) -> PTerm
-      mkPi start end arg [] = arg
-      mkPi start end arg ((exp, a) :: as)
-            = PPi (MkFC fname start end) top exp Nothing arg
-                  (mkPi start end a as)
+      mkPi : WithBounds PTerm -> List (PiInfo PTerm, WithBounds PTerm) -> PTerm
+      mkPi arg [] = arg.val
+      mkPi arg ((exp, a) :: as)
+            = PPi (boundToFC fname arg) top exp Nothing arg.val
+                  (mkPi a as)
 
   export
-  expr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
+  expr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   expr = typeExpr
 
-visOption : Rule Visibility
-visOption
-    = do keyword "public"
-         keyword "export"
-         pure Public
-  <|> do keyword "export"
-         pure Export
-  <|> do keyword "private"
-         pure Private
+  interpBlock : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
+  interpBlock q fname idents = interpBegin *> (mustWork $ expr q fname idents) <* interpEnd
 
-visibility : SourceEmptyRule Visibility
-visibility
-    = visOption
+  export
+  singlelineStr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
+  singlelineStr q fname idents
+      = decorate fname Data $
+        do b <- bounds $ do begin <- bounds strBegin
+                            commit
+                            xs <- many $ bounds $ (interpBlock q fname idents) <||> strLitLines
+                            pstrs <- case traverse toPStr xs of
+                                          Left err => fatalLoc begin.bounds err
+                                          Right pstrs => pure $ pstrs
+                            strEnd
+                            pure pstrs
+           pure $ PString (boundToFC fname b) b.val
+    where
+      toPStr : (WithBounds $ Either PTerm (List1 String)) -> Either String PStr
+      toPStr x = case x.val of
+                      Right (str:::[]) => Right $ StrLiteral (boundToFC fname x) str
+                      Right (_:::strs) => Left "Multi-line string is expected to begin with \"\"\""
+                      Left tm => Right $ StrInterp (boundToFC fname x) tm
+
+  export
+  multilineStr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
+  multilineStr q fname idents
+      = decorate fname Data $
+        do b <- bounds $ do multilineBegin
+                            commit
+                            xs <- many $ bounds $ (interpBlock q fname idents) <||> strLitLines
+                            endloc <- location
+                            strEnd
+                            pure (endloc, toLines xs [] [])
+           pure $ let ((_, col), xs) = b.val in
+                      PMultiline (boundToFC fname b) (fromInteger $ cast col) xs
+    where
+      toLines : List (WithBounds $ Either PTerm (List1 String)) -> List PStr -> List (List PStr) -> List (List PStr)
+      toLines [] line acc = acc `snoc` line
+      toLines (x::xs) line acc
+          = case x.val of
+                 Left tm => toLines xs (line `snoc` (StrInterp (boundToFC fname x) tm)) acc
+                 Right (str:::[]) => toLines xs (line `snoc` (StrLiteral (boundToFC fname x) str)) acc
+                 Right (str:::strs@(_::_)) => toLines xs [StrLiteral (boundToFC fname x) (last strs)]
+                                                         ((acc `snoc` (line `snoc` (StrLiteral (boundToFC fname x) str))) ++
+                                                               ((\str => [StrLiteral (boundToFC fname x) str]) <$> (init strs)))
+
+visOption : OriginDesc ->  Rule Visibility
+visOption fname
+    = (decoratedKeyword fname "public" *> decoratedKeyword fname "export" $> Public)
+  <|> (decoratedKeyword fname "export" $> Export)
+  <|> (decoratedKeyword fname "private" $> Private)
+
+visibility : OriginDesc -> EmptyRule Visibility
+visibility fname
+    = visOption fname
   <|> pure Private
 
-tyDecl : String -> FileName -> IndentInfo -> Rule PTypeDecl
-tyDecl predoc fname indents
-    = do start <- location
-         doc   <- option "" documentation
-         n     <- name
-         symbol ":"
-         mustWork $
-            do ty  <- expr pdef fname indents
-               end <- pure $ endPos $ getPTermLoc ty
-               atEnd indents
-               pure (MkPTy (MkFC fname start end) n (predoc ++ doc) ty)
+tyDecls : Rule Name -> String -> OriginDesc -> IndentInfo -> Rule (List1 PTypeDecl)
+tyDecls declName predoc fname indents
+    = do bs <- do docns <- sepBy1 (decoratedSymbol fname ",") [| (option "" documentation, bounds declName) |]
+                  decoratedSymbol fname ":"
+                  mustWork $ do ty  <- expr pdef fname indents
+                                pure $ map (\(doc, n) => (doc, n.val, boundToFC fname n, ty))
+                                           docns
+         atEnd indents
+         pure $ map (\(doc, n, nFC, ty) => (MkPTy nFC nFC n (predoc ++ doc) ty))
+                    bs
 
-withFlags : SourceEmptyRule (List WithFlag)
+withFlags : EmptyRule (List WithFlag)
 withFlags
-    = do pragma "syntactic"
-         fs <- withFlags
-         pure $ Syntactic :: fs
+    = pragma "syntactic" *> (Syntactic ::) <$> withFlags
   <|> pure []
 
 mutual
   parseRHS : (withArgs : Nat) ->
-             FileName -> FilePos -> Int ->
+             OriginDesc -> WithBounds t -> Int ->
              IndentInfo -> (lhs : PTerm) -> Rule PClause
   parseRHS withArgs fname start col indents lhs
-       = do symbol "="
-            mustWork $
-              do rhs <- expr pdef fname indents
-                 ws <- option [] (whereBlock fname col)
-                 atEnd indents
-                 end <- location
-                 pure (MkPatClause (MkFC fname start end) lhs rhs ws)
-     <|> do keyword "with"
-            wstart <- location
-            flags <- withFlags
-            symbol "("
-            wval <- bracketedExpr fname wstart indents
-            ws <- nonEmptyBlock (clause (S withArgs) fname)
-            end <- location
-            pure (MkWithClause (MkFC fname start end) lhs wval flags ws)
-     <|> do end <- endLocation
-            keyword "impossible"
+       = do b <- bounds $ decoratedSymbol fname "=" *> mustWork [| (expr pdef fname indents, option [] $ whereBlock fname col) |]
             atEnd indents
-            pure (MkImpossible (MkFC fname start end) lhs)
+            (rhs, ws) <- pure b.val
+            let fc = boundToFC fname (mergeBounds start b)
+            pure (MkPatClause fc lhs rhs ws)
+     <|> do b <- bounds (do decoratedKeyword fname "with"
+                            commit
+                            flags <- withFlags
+                            start <- bounds (decoratedSymbol fname "(")
+                            wval <- bracketedExpr fname start indents
+                            prf <- optional (decoratedKeyword fname "proof"
+                                             *> UN <$> decoratedSimpleBinderName fname)
+                            ws <- mustWork $ nonEmptyBlockAfter col (clause (S withArgs) fname)
+                            pure (prf, flags, wval, forget ws))
+            (prf, flags, wval, ws) <- pure b.val
+            let fc = boundToFC fname (mergeBounds start b)
+            pure (MkWithClause fc lhs wval prf flags ws)
+     <|> do end <- bounds (decoratedKeyword fname "impossible")
+            atEnd indents
+            pure (MkImpossible (boundToFC fname (mergeBounds start end)) lhs)
 
-  ifThenElse : Bool -> Lazy t -> Lazy t -> t
-  ifThenElse True t e = t
-  ifThenElse False t e = e
-
-  clause : Nat -> FileName -> IndentInfo -> Rule PClause
+  clause : Nat -> OriginDesc -> IndentInfo -> Rule PClause
   clause withArgs fname indents
-      = do start <- location
-           col <- column
-           lhs <- expr plhs fname indents
-           extra <- many parseWithArg
+      = do b <- bounds (do col <- column
+                           lhs <- expr plhs fname indents
+                           extra <- many parseWithArg
+                           pure (col, lhs, extra))
+           (col, lhs, extra) <- pure b.val
            -- Can't have the dependent 'if' here since we won't be able
            -- to infer the termination status of the rule
            ifThenElse (withArgs /= length extra)
-              (fatalError "Wrong number of 'with' arguments")
-              (parseRHS withArgs fname start col indents (applyArgs lhs extra))
+              (fatalError $ "Wrong number of 'with' arguments:"
+                         ++ " expected " ++ show withArgs
+                         ++ " but got " ++ show (length extra))
+              (parseRHS withArgs fname b col indents (applyArgs lhs extra))
     where
       applyArgs : PTerm -> List (FC, PTerm) -> PTerm
       applyArgs f [] = f
@@ -962,115 +1004,98 @@ mutual
 
       parseWithArg : Rule (FC, PTerm)
       parseWithArg
-          = do symbol "|"
-               start <- location
-               tm <- expr plhs fname indents
-               end <- pure $ endPos $ getPTermLoc tm
-               pure (MkFC fname start end, tm)
+          = do decoratedSymbol fname "|"
+               tm <- bounds (expr plhs fname indents)
+               pure (boundToFC fname tm, tm.val)
 
-mkTyConType : FC -> List Name -> PTerm
-mkTyConType fc [] = PType fc
-mkTyConType fc (x :: xs)
-   = PPi fc linear Explicit Nothing (PType fc) (mkTyConType fc xs)
+mkTyConType : OriginDesc -> FC -> List (WithBounds Name) -> PTerm
+mkTyConType fname fc [] = PType (virtualiseFC fc)
+mkTyConType fname fc (x :: xs)
+   = let bfc = boundToFC fname x in
+     PPi bfc top Explicit Nothing (PType (virtualiseFC fc))
+     $ mkTyConType fname fc xs
 
-mkDataConType : FC -> PTerm -> List ArgType -> PTerm
-mkDataConType fc ret [] = ret
-mkDataConType fc ret (ExpArg x :: xs)
-    = PPi fc linear Explicit Nothing x (mkDataConType fc ret xs)
-mkDataConType fc ret (ImpArg n (PRef fc' x) :: xs)
-    = if n == Just x
-         then PPi fc linear Implicit n (PType fc')
-                          (mkDataConType fc ret xs)
-         else PPi fc linear Implicit n (PRef fc' x)
-                          (mkDataConType fc ret xs)
-mkDataConType fc ret (ImpArg n x :: xs)
-    = PPi fc linear Implicit n x (mkDataConType fc ret xs)
-mkDataConType fc ret (WithArg a :: xs)
-    = PImplicit fc -- This can't happen because we parse constructors without
-                   -- withOK set
+mkDataConType : FC -> PTerm -> List ArgType -> Maybe PTerm
+mkDataConType fc ret [] = Just ret
+mkDataConType fc ret (UnnamedExpArg x :: xs)
+    = PPi fc top Explicit Nothing x <$> mkDataConType fc ret xs
+mkDataConType fc ret (UnnamedAutoArg x :: xs)
+    = PPi fc top AutoImplicit Nothing x <$> mkDataConType fc ret xs
+mkDataConType _ _ _ -- with and named applications not allowed in simple ADTs
+    = Nothing
 
-simpleCon : FileName -> PTerm -> IndentInfo -> Rule PTypeDecl
+simpleCon : OriginDesc -> PTerm -> IndentInfo -> Rule PTypeDecl
 simpleCon fname ret indents
-    = do start <- location
-         cdoc   <- option "" documentation
-         cname  <- name
-         params <- many (argExpr plhs fname indents)
-         end <- location
-         end <- pure $ fromMaybe end $ (endPos . getPTermLoc . argTerm) <$> last' params
+    = do b <- bounds (do cdoc   <- option "" documentation
+                         cname  <- bounds $ decoratedDataConstructorName fname
+                         params <- many (argExpr plhs fname indents)
+                         pure (cdoc, cname.val, boundToFC fname cname, params))
          atEnd indents
-         pure (let cfc = MkFC fname start end in
-                   MkPTy cfc cname cdoc (mkDataConType cfc ret params))
+         (cdoc, cname, cnameFC, params) <- pure b.val
+         let cfc = boundToFC fname b
+         fromMaybe (fatalError "Named arguments not allowed in ADT constructors")
+                   (pure . MkPTy cfc cnameFC cname cdoc <$> mkDataConType cfc ret (concat params))
 
-simpleData : FileName -> FilePos -> Name -> IndentInfo -> Rule PDataDecl
-simpleData fname start n indents
-    = do params <- many name
-         tyend <- location
-         let tyfc = MkFC fname start tyend
-         symbol "="
-         let conRetTy = papply tyfc (PRef tyfc n)
-                           (map (PRef tyfc) params)
-         cons <- sepBy1 (symbol "|")
-                        (simpleCon fname conRetTy indents)
-         end <- location
-         end <- pure $ fromMaybe end $ (endPos . getPTypeDeclLoc) <$> last' cons
-         pure (MkPData (MkFC fname start end) n
-                       (mkTyConType tyfc params) [] cons)
+simpleData : OriginDesc -> WithBounds t ->
+             WithBounds Name -> IndentInfo -> Rule PDataDecl
+simpleData fname start tyName indents
+    = do b <- bounds (do params <- many (bounds $ decorate fname Bound name)
+                         tyend <- bounds (decoratedSymbol fname "=")
+                         let tyfc = boundToFC fname (mergeBounds start tyend)
+                         let tyCon = PRef (boundToFC fname tyName) tyName.val
+                         let toPRef = \ t => PRef (boundToFC fname t) t.val
+                         let conRetTy = papply tyfc tyCon (map toPRef params)
+                         cons <- sepBy1 (decoratedSymbol fname "|") (simpleCon fname conRetTy indents)
+                         pure (params, tyfc, forget cons))
+         (params, tyfc, cons) <- pure b.val
+         pure (MkPData (boundToFC fname (mergeBounds start b)) tyName.val
+                       (mkTyConType fname tyfc params) [] cons)
 
 dataOpt : Rule DataOpt
 dataOpt
-    = do exactIdent "noHints"
-         pure NoHints
-  <|> do exactIdent "uniqueSearch"
-         pure UniqueSearch
-  <|> do exactIdent "search"
-         ns <- some name
-         pure (SearchBy ns)
-  <|> do exactIdent "external"
-         pure External
-  <|> do exactIdent "noNewtype"
-         pure NoNewtype
+    = (exactIdent "noHints" $> NoHints)
+  <|> (exactIdent "uniqueSearch" $> UniqueSearch)
+  <|> (exactIdent "search" *> SearchBy <$> forget <$> some name)
+  <|> (exactIdent "external" $> External)
+  <|> (exactIdent "noNewtype" $> NoNewtype)
 
-dataBody : FileName -> Int -> FilePos -> Name -> IndentInfo -> PTerm ->
-          SourceEmptyRule PDataDecl
+dataBody : OriginDesc -> Int -> WithBounds t -> Name -> IndentInfo -> PTerm ->
+          EmptyRule PDataDecl
 dataBody fname mincol start n indents ty
     = do atEndIndent indents
-         end <- location
-         pure (MkPLater (MkFC fname start end) n ty)
-  <|> do keyword "where"
-         opts <- option [] (do symbol "["
-                               dopts <- sepBy1 (symbol ",") dataOpt
-                               symbol "]"
-                               pure dopts)
-         cs <- blockAfter mincol (tyDecl "" fname)
-         end <- location
-         end <- pure $ fromMaybe end $ (endPos . getPTypeDeclLoc) <$> last' cs
-         pure (MkPData (MkFC fname start end) n ty opts cs)
+         pure (MkPLater (boundToFC fname start) n ty)
+  <|> do b <- bounds (do decoratedKeyword fname "where"
+                         opts <- option [] $ decoratedSymbol fname "[" *> forget <$> sepBy1 (decoratedSymbol fname ",") dataOpt <* decoratedSymbol fname "]"
+                         cs <- blockAfter mincol (tyDecls (mustWork $ decoratedDataConstructorName fname) "" fname)
+                         pure (opts, concatMap forget cs))
+         (opts, cs) <- pure b.val
+         pure (MkPData (boundToFC fname (mergeBounds start b)) n ty opts cs)
 
-gadtData : FileName -> Int -> FilePos -> Name -> IndentInfo -> Rule PDataDecl
-gadtData fname mincol start n indents
-    = do symbol ":"
+gadtData : OriginDesc -> Int -> WithBounds t ->
+           WithBounds Name -> IndentInfo -> Rule PDataDecl
+gadtData fname mincol start tyName indents
+    = do decoratedSymbol fname ":"
          commit
          ty <- expr pdef fname indents
-         dataBody fname mincol start n indents ty
+         dataBody fname mincol start tyName.val indents ty
 
-dataDeclBody : FileName -> IndentInfo -> Rule PDataDecl
+dataDeclBody : OriginDesc -> IndentInfo -> Rule PDataDecl
 dataDeclBody fname indents
-    = do start <- location
-         col <- column
-         keyword "data"
-         n <- name
-         simpleData fname start n indents
-           <|> gadtData fname col start n indents
+    = do b <- bounds (do col <- column
+                         decoratedKeyword fname "data"
+                         n <- mustWork (bounds $ decoratedDataTypeName fname)
+                         pure (col, n))
+         (col, n) <- pure b.val
+         simpleData fname b n indents <|> gadtData fname col b n indents
 
-dataDecl : FileName -> IndentInfo -> Rule PDecl
+dataDecl : OriginDesc -> IndentInfo -> Rule PDecl
 dataDecl fname indents
-    = do start <- location
-         doc   <- option "" documentation
-         vis   <- visibility
-         dat   <- dataDeclBody fname indents
-         end   <- location
-         end   <- pure $ endPos $ getPDataDeclLoc dat
-         pure (PData (MkFC fname start end) doc vis dat)
+    = do b <- bounds (do doc   <- option "" documentation
+                         vis   <- visibility fname
+                         dat   <- dataDeclBody fname indents
+                         pure (doc, vis, dat))
+         (doc, vis, dat) <- pure b.val
+         pure (PData (boundToFC fname b) doc vis dat)
 
 stripBraces : String -> String
 stripBraces str = pack (drop '{' (reverse (drop '}' (reverse (unpack str)))))
@@ -1081,32 +1106,31 @@ stripBraces str = pack (drop '{' (reverse (drop '}' (reverse (unpack str)))))
 
 onoff : Rule Bool
 onoff
-   = do exactIdent "on"
-        pure True
- <|> do exactIdent "off"
-        pure False
+   = (exactIdent "on" $> True)
+ <|> (exactIdent "off" $> False)
 
 extension : Rule LangExt
 extension
-    = do exactIdent "ElabReflection"
-         pure ElabReflection
-  <|> do exactIdent "PostfixProjections"
-         pure PostfixProjections
-  <|> do exactIdent "Borrowing"
-         pure Borrowing
+    = (exactIdent "ElabReflection" $> ElabReflection)
+  <|> (exactIdent "Borrowing" $> Borrowing)
 
-totalityOpt : Rule TotalReq
-totalityOpt
-    = do keyword "partial"
-         pure PartialOK
-  <|> do keyword "total"
-         pure Total
-  <|> do keyword "covering"
-         pure CoveringOnly
+totalityOpt : OriginDesc -> Rule TotalReq
+totalityOpt fname
+    = (decoratedKeyword fname "partial" $> PartialOK)
+  <|> (decoratedKeyword fname "total" $> Total)
+  <|> (decoratedKeyword fname "covering" $> CoveringOnly)
 
-directive : FileName -> IndentInfo -> Rule Directive
+logLevel : Rule (Maybe LogLevel)
+logLevel
+  = (Nothing <$ exactIdent "off")
+    <|> do topic <- optional (split ('.' ==) <$> simpleStr)
+           lvl <- intLit
+           pure (Just (mkLogLevel' topic (fromInteger lvl)))
+    <|> fail "expected a log level"
+
+directive : OriginDesc -> IndentInfo -> Rule Directive
 directive fname indents
-    = do pragma "hide"
+    = do decorate fname Keyword $ pragma "hide"
          n <- name
          atEnd indents
          pure (Hide n)
@@ -1114,165 +1138,153 @@ directive fname indents
 --          n <- name
 --          atEnd indents
 --          pure (Hide True n)
-  <|> do pragma "logging"
-         lvl <- intLit
+  <|> do decorate fname Keyword $ pragma "logging"
+         lvl <- logLevel
          atEnd indents
-         pure (Logging (fromInteger lvl))
-  <|> do pragma "auto_lazy"
+         pure (Logging lvl)
+  <|> do decorate fname Keyword $ pragma "auto_lazy"
          b <- onoff
          atEnd indents
          pure (LazyOn b)
-  <|> do pragma "unbound_implicits"
+  <|> do decorate fname Keyword $ pragma "unbound_implicits"
          b <- onoff
          atEnd indents
          pure (UnboundImplicits b)
-  <|> do pragma "ambiguity_depth"
-         lvl <- intLit
+  <|> do decorate fname Keyword $ pragma "prefix_record_projections"
+         b <- onoff
+         atEnd indents
+         pure (PrefixRecordProjections b)
+  <|> do decorate fname Keyword $ pragma "ambiguity_depth"
+         lvl <- decorate fname Keyword $ intLit
          atEnd indents
          pure (AmbigDepth (fromInteger lvl))
-  <|> do pragma "auto_implicit_depth"
-         dpt <- intLit
+  <|> do decorate fname Keyword $ pragma "auto_implicit_depth"
+         dpt <- decorate fname Keyword $ intLit
          atEnd indents
          pure (AutoImplicitDepth (fromInteger dpt))
-  <|> do pragma "pair"
+  <|> do decorate fname Keyword $ pragma "nf_metavar_threshold"
+         dpt <- decorate fname Keyword $ intLit
+         atEnd indents
+         pure (NFMetavarThreshold (fromInteger dpt))
+  <|> do decorate fname Keyword $ pragma "search_timeout"
+         t <- decorate fname Keyword $ intLit
+         atEnd indents
+         pure (SearchTimeout t)
+  <|> do decorate fname Keyword $ pragma "pair"
          ty <- name
          f <- name
          s <- name
          atEnd indents
          pure (PairNames ty f s)
-  <|> do pragma "rewrite"
+  <|> do decorate fname Keyword $ pragma "rewrite"
          eq <- name
          rw <- name
          atEnd indents
          pure (RewriteName eq rw)
-  <|> do pragma "integerLit"
+  <|> do decorate fname Keyword $ pragma "integerLit"
          n <- name
          atEnd indents
          pure (PrimInteger n)
-  <|> do pragma "stringLit"
+  <|> do decorate fname Keyword $ pragma "stringLit"
          n <- name
          atEnd indents
          pure (PrimString n)
-  <|> do pragma "charLit"
+  <|> do decorate fname Keyword $ pragma "charLit"
          n <- name
          atEnd indents
          pure (PrimChar n)
-  <|> do pragma "name"
+  <|> do decorate fname Keyword $ pragma "doubleLit"
          n <- name
-         ns <- sepBy1 (symbol ",") unqualifiedName
          atEnd indents
-         pure (Names n ns)
-  <|> do pragma "start"
+         pure (PrimDouble n)
+  <|> do decorate fname Keyword $ pragma "name"
+         n <- name
+         ns <- sepBy1 (decoratedSymbol fname ",")
+                       (decoratedSimpleBinderName fname)
+         atEnd indents
+         pure (Names n (forget ns))
+  <|> do decorate fname Keyword $ pragma "start"
          e <- expr pdef fname indents
          atEnd indents
          pure (StartExpr e)
-  <|> do pragma "allow_overloads"
+  <|> do decorate fname Keyword $ pragma "allow_overloads"
          n <- name
          atEnd indents
          pure (Overloadable n)
-  <|> do pragma "language"
+  <|> do decorate fname Keyword $ pragma "language"
          e <- extension
          atEnd indents
          pure (Extension e)
-  <|> do pragma "default"
-         tot <- totalityOpt
+  <|> do decorate fname Keyword $ pragma "default"
+         tot <- totalityOpt fname
          atEnd indents
          pure (DefaultTotality tot)
 
 fix : Rule Fixity
 fix
-    = do keyword "infixl"; pure InfixL
-  <|> do keyword "infixr"; pure InfixR
-  <|> do keyword "infix"; pure Infix
-  <|> do keyword "prefix"; pure Prefix
+    = (keyword "infixl" $> InfixL)
+  <|> (keyword "infixr" $> InfixR)
+  <|> (keyword "infix"  $> Infix)
+  <|> (keyword "prefix" $> Prefix)
 
-namespaceHead : Rule (List1 String)
-namespaceHead
-    = do keyword "namespace"
-         commit
-         ns <- namespacedIdent
-         pure ns
+namespaceHead : Rule Namespace
+namespaceHead = keyword "namespace" *> mustWork namespaceId
 
-namespaceDecl : FileName -> IndentInfo -> Rule PDecl
+namespaceDecl : OriginDesc -> IndentInfo -> Rule PDecl
 namespaceDecl fname indents
-    = do start <- location
-         doc   <- option "" documentation
-         col   <- column
-         ns    <- namespaceHead
-         end   <- location
-         ds    <- blockAfter col (topDecl fname)
-         pure (PNamespace (MkFC fname start end) (List1.toList ns) (concat ds))
+    = do b <- bounds (do doc   <- option "" documentation
+                         col   <- column
+                         ns    <- namespaceHead
+                         ds    <- blockAfter col (topDecl fname)
+                         pure (doc, ns, ds))
+         (doc, ns, ds) <- pure b.val
+         pure (PNamespace (boundToFC fname b) ns (collectDefs $ concat ds))
 
-transformDecl : FileName -> IndentInfo -> Rule PDecl
+transformDecl : OriginDesc -> IndentInfo -> Rule PDecl
 transformDecl fname indents
-    = do start <- location
-         pragma "transform"
-         n <- strLit
-         lhs <- expr plhs fname indents
-         symbol "="
-         rhs <- expr pnowith fname indents
-         end <- pure $ endPos $ getPTermLoc rhs
-         pure (PTransform (MkFC fname start end) n lhs rhs)
+    = do b <- bounds (do pragma "transform"
+                         n <- simpleStr
+                         lhs <- expr plhs fname indents
+                         decoratedSymbol fname "="
+                         rhs <- expr pnowith fname indents
+                         pure (n, lhs, rhs))
+         (n, lhs, rhs) <- pure b.val
+         pure (PTransform (boundToFC fname b) n lhs rhs)
 
-runElabDecl : FileName -> IndentInfo -> Rule PDecl
+runElabDecl : OriginDesc -> IndentInfo -> Rule PDecl
 runElabDecl fname indents
-    = do start <- location
-         pragma "runElab"
-         tm <- expr pnowith fname indents
-         end <- pure $ endPos $ getPTermLoc tm
-         pure (PRunElabDecl (MkFC fname start end) tm)
+    = do tm <- bounds (pragma "runElab" *> expr pnowith fname indents)
+         pure (PRunElabDecl (boundToFC fname tm) tm.val)
 
-mutualDecls : FileName -> IndentInfo -> Rule PDecl
+mutualDecls : OriginDesc -> IndentInfo -> Rule PDecl
 mutualDecls fname indents
-    = do start <- location
-         keyword "mutual"
-         commit
-         ds <- assert_total (nonEmptyBlock (topDecl fname))
-         end <- location
-         end <- pure $ fromMaybe end $ map (endPos . getPDeclLoc) $ join $ last' <$> last' ds
-         pure (PMutual (MkFC fname start end) (concat ds))
+    = do ds <- bounds (decoratedKeyword fname "mutual" *> commit *> assert_total (nonEmptyBlock (topDecl fname)))
+         pure (PMutual (boundToFC fname ds) (concat ds.val))
 
-paramDecls : FileName -> IndentInfo -> Rule PDecl
-paramDecls fname indents
-    = do start <- location
-         keyword "parameters"
-         commit
-         symbol "("
-         ps <- sepBy (symbol ",")
-                     (do x <- unqualifiedName
-                         symbol ":"
-                         ty <- typeExpr pdef fname indents
-                         pure (UN x, ty))
-         symbol ")"
-         ds <- assert_total (nonEmptyBlock (topDecl fname))
-         end <- location
-         end <- pure $ fromMaybe end $ map (endPos . getPDeclLoc) $ join $ last' <$> last' ds
-         pure (PParameters (MkFC fname start end) ps (collectDefs (concat ds)))
-
-usingDecls : FileName -> IndentInfo -> Rule PDecl
+usingDecls : OriginDesc -> IndentInfo -> Rule PDecl
 usingDecls fname indents
-    = do start <- location
-         keyword "using"
-         commit
-         symbol "("
-         us <- sepBy (symbol ",")
-                     (do n <- option Nothing
-                                (do x <- unqualifiedName
-                                    symbol ":"
-                                    pure (Just (UN x)))
-                         ty <- typeExpr pdef fname indents
-                         pure (n, ty))
-         symbol ")"
-         ds <- assert_total (nonEmptyBlock (topDecl fname))
-         end <- location
-         end <- pure $ fromMaybe end $ map (endPos . getPDeclLoc) $ join $ last' <$> last' ds
-         pure (PUsing (MkFC fname start end) us (collectDefs (concat ds)))
+    = do b <- bounds (do decoratedKeyword fname "using"
+                         commit
+                         decoratedSymbol fname "("
+                         us <- sepBy (decoratedSymbol fname ",")
+                                     (do n <- optional
+                                                (do x <- unqualifiedName
+                                                    decoratedSymbol fname ":"
+                                                    pure (UN x))
+                                         ty <- typeExpr pdef fname indents
+                                         pure (n, ty))
+                         decoratedSymbol fname ")"
+                         ds <- assert_total (nonEmptyBlock (topDecl fname))
+                         pure (us, ds))
+         (us, ds) <- pure b.val
+         pure (PUsing (boundToFC fname b) us (collectDefs (concat ds)))
 
-fnOpt : Rule PFnOpt
-fnOpt = do x <- totalityOpt
+fnOpt : OriginDesc -> Rule PFnOpt
+fnOpt fname
+      = do x <- totalityOpt fname
            pure $ IFnOpt (Totality x)
 
-fnDirectOpt : FileName -> Rule PFnOpt
+fnDirectOpt : OriginDesc -> Rule PFnOpt
 fnDirectOpt fname
     = do pragma "hint"
          pure $ IFnOpt (Hint True)
@@ -1291,23 +1303,33 @@ fnDirectOpt fname
   <|> do pragma "macro"
          pure $ IFnOpt Macro
   <|> do pragma "spec"
-         ns <- sepBy (symbol ",") name
+         ns <- sepBy (decoratedSymbol fname ",") name
          pure $ IFnOpt (SpecArgs ns)
   <|> do pragma "foreign"
          cs <- block (expr pdef fname)
          pure $ PForeign cs
 
-visOpt : FileName -> Rule (Either Visibility PFnOpt)
+builtinDecl : OriginDesc -> IndentInfo -> Rule PDecl
+builtinDecl fname indents
+    = do b <- bounds (do pragma "builtin"
+                         commit
+                         t <- builtinType
+                         n <- name
+                         pure (t, n))
+         (t, n) <- pure b.val
+         pure $ PBuiltin (boundToFC fname b) t n
+
+visOpt : OriginDesc -> Rule (Either Visibility PFnOpt)
 visOpt fname
-    = do vis <- visOption
+    = do vis <- visOption fname
          pure (Left vis)
-  <|> do tot <- fnOpt
+  <|> do tot <- fnOpt fname
          pure (Right tot)
   <|> do opt <- fnDirectOpt fname
          pure (Right opt)
 
 getVisibility : Maybe Visibility -> List (Either Visibility PFnOpt) ->
-               SourceEmptyRule Visibility
+                EmptyRule Visibility
 getVisibility Nothing [] = pure Private
 getVisibility (Just vis) [] = pure vis
 getVisibility Nothing (Left x :: xs) = getVisibility (Just x) xs
@@ -1315,113 +1337,104 @@ getVisibility (Just vis) (Left x :: xs)
    = fatalError "Multiple visibility modifiers"
 getVisibility v (_ :: xs) = getVisibility v xs
 
-getRight : Either a b -> Maybe b
-getRight (Left _) = Nothing
-getRight (Right v) = Just v
+recordConstructor : OriginDesc -> Rule Name
+recordConstructor fname
+  = do exactIdent "constructor"
+       n <- mustWork $ decoratedDataConstructorName fname
+       pure n
 
-constraints : FileName -> IndentInfo -> SourceEmptyRule (List (Maybe Name, PTerm))
+constraints : OriginDesc -> IndentInfo -> EmptyRule (List (Maybe Name, PTerm))
 constraints fname indents
     = do tm <- appExpr pdef fname indents
-         symbol "=>"
+         decoratedSymbol fname "=>"
          more <- constraints fname indents
          pure ((Nothing, tm) :: more)
-  <|> do symbol "("
-         n <- name
-         symbol ":"
+  <|> do decoratedSymbol fname "("
+         n <- decorate fname Bound name
+         decoratedSymbol fname ":"
          tm <- expr pdef fname indents
-         symbol ")"
-         symbol "=>"
+         decoratedSymbol fname ")"
+         decoratedSymbol fname "=>"
          more <- constraints fname indents
          pure ((Just n, tm) :: more)
   <|> pure []
 
-implBinds : FileName -> IndentInfo -> SourceEmptyRule (List (Name, RigCount, PTerm))
+implBinds : OriginDesc -> IndentInfo -> EmptyRule (List (Name, RigCount, PTerm))
 implBinds fname indents
-    = do symbol "{"
-         m <- multiplicity
-         rig <- getMult m
-         n <- name
-         symbol ":"
+    = do decoratedSymbol fname "{"
+         rig <- multiplicity fname
+         n <- decorate fname Bound name
+         decoratedSymbol fname ":"
          tm <- expr pdef fname indents
-         symbol "}"
-         symbol "->"
+         decoratedSymbol fname "}"
+         decoratedSymbol fname "->"
          more <- implBinds fname indents
          pure ((n, rig, tm) :: more)
   <|> pure []
 
-ifaceParam : FileName -> IndentInfo -> Rule (Name, PTerm)
+ifaceParam : OriginDesc -> IndentInfo -> Rule (List Name, (RigCount, PTerm))
 ifaceParam fname indents
-    = do symbol "("
-         n <- name
-         symbol ":"
+    = do decoratedSymbol fname "("
+         rig <- multiplicity fname
+         ns <- sepBy1 (decoratedSymbol fname ",") (decorate fname Bound name)
+         decoratedSymbol fname ":"
          tm <- expr pdef fname indents
-         symbol ")"
-         pure (n, tm)
-  <|> do start <- location
-         n <- name
-         end <- location
-         pure (n, PInfer (MkFC fname start end))
+         decoratedSymbol fname ")"
+         pure (forget ns, (rig, tm))
+  <|> do n <- bounds (decorate fname Bound name)
+         pure ([n.val], (erased, PInfer (boundToFC fname n)))
 
-ifaceDecl : FileName -> IndentInfo -> Rule PDecl
+ifaceDecl : OriginDesc -> IndentInfo -> Rule PDecl
 ifaceDecl fname indents
-    = do start <- location
-         doc   <- option "" documentation
-         vis   <- visibility
-         col   <- column
-         keyword "interface"
-         commit
-         cons   <- constraints fname indents
-         n      <- name
-         params <- many (ifaceParam fname indents)
-         det    <- option []
-                     (do symbol "|"
-                         sepBy (symbol ",") name)
-         keyword "where"
-         dc <- option Nothing
-                 (do exactIdent "constructor"
-                     n <- name
-                     pure (Just n))
-         body <- assert_total (blockAfter col (topDecl fname))
-         end  <- location
-         end <- pure $ fromMaybe end $ map (endPos . getPDeclLoc) $ join $ last' <$> last' body
-         pure (PInterface (MkFC fname start end)
-                      vis cons n doc params det dc (collectDefs (concat body)))
+    = do b <- bounds (do doc   <- option "" documentation
+                         vis   <- visibility fname
+                         col   <- column
+                         decoratedKeyword fname "interface"
+                         commit
+                         cons   <- constraints fname indents
+                         n      <- decorate fname Typ name
+                         paramss <- many (ifaceParam fname indents)
+                         let params = concatMap (\ (ns, rt) => map (\ n => (n, rt)) ns) paramss
+                         det    <- option [] $ decoratedSymbol fname "|" *> sepBy (decoratedSymbol fname ",") (decorate fname Bound name)
+                         decoratedKeyword fname "where"
+                         dc <- optional (recordConstructor fname)
+                         body <- assert_total (blockAfter col (topDecl fname))
+                         pure (\fc : FC => PInterface fc
+                                      vis cons n doc params det dc (collectDefs (concat body))))
+         pure (b.val (boundToFC fname b))
 
-implDecl : FileName -> IndentInfo -> Rule PDecl
+implDecl : OriginDesc -> IndentInfo -> Rule PDecl
 implDecl fname indents
-    = do start <- location
-         doc     <- option "" documentation
-         visOpts <- many (visOpt fname)
-         vis     <- getVisibility Nothing visOpts
-         let opts = mapMaybe getRight visOpts
-         col <- column
-         option () (keyword "implementation")
-         iname <- option Nothing (do symbol "["
-                                     iname <- name
-                                     symbol "]"
-                                     pure (Just iname))
-         impls  <- implBinds fname indents
-         cons   <- constraints fname indents
-         n      <- name
-         params <- many (simpleExpr fname indents)
-         nusing <- option [] (do keyword "using"
-                                 names <- some name
-                                 pure names)
-         body <- optional (do keyword "where"
-                              blockAfter col (topDecl fname))
+    = do b <- bounds (do doc     <- option "" documentation
+                         visOpts <- many (visOpt fname)
+                         vis     <- getVisibility Nothing visOpts
+                         let opts = mapMaybe getRight visOpts
+                         col <- column
+                         option () (decoratedKeyword fname "implementation")
+                         iname  <- optional $ decoratedSymbol fname "["
+                                           *> decorate fname Function name
+                                           <* decoratedSymbol fname "]"
+                         impls  <- implBinds fname indents
+                         cons   <- constraints fname indents
+                         n      <- decorate fname Typ name
+                         params <- many (simpleExpr fname indents)
+                         nusing <- option [] $ decoratedKeyword fname "using"
+                                            *> forget <$> some (decorate fname Function name)
+                         body <- optional $ decoratedKeyword fname "where" *> blockAfter col (topDecl fname)
+                         pure $ \fc : FC =>
+                            (PImplementation fc vis opts Single impls cons n params iname nusing
+                                             (map (collectDefs . concat) body)))
          atEnd indents
-         end <- location
-         pure (PImplementation (MkFC fname start end)
-                         vis opts Single impls cons n params iname nusing
-                         (map (collectDefs . concat) body))
+         pure (b.val (boundToFC fname b))
 
-fieldDecl : FileName -> IndentInfo -> Rule (List PField)
+fieldDecl : OriginDesc -> IndentInfo -> Rule (List PField)
 fieldDecl fname indents
       = do doc <- option "" documentation
-           symbol "{"
+           decoratedSymbol fname "{"
            commit
-           fs <- fieldBody doc Implicit
-           symbol "}"
+           impl <- option Implicit (AutoImplicit <$ decoratedKeyword fname "auto")
+           fs <- fieldBody doc impl
+           decoratedSymbol fname "}"
            atEnd indents
            pure fs
     <|> do doc <- option "" documentation
@@ -1431,114 +1444,128 @@ fieldDecl fname indents
   where
     fieldBody : String -> PiInfo PTerm -> Rule (List PField)
     fieldBody doc p
-        = do start <- location
-             m <- multiplicity
-             rigin <- getMult m
-             let rig = if isErased rigin then erased else linear
-             ns <- sepBy1 (symbol ",") name
-             symbol ":"
-             ty <- expr pdef fname indents
-             end <- pure $ endPos $ getPTermLoc ty
-             pure (map (\n => MkField (MkFC fname start end)
-                                      doc rig p n ty) ns)
+        = do b <- bounds (do rig <- multiplicity fname
+                             ns <- sepBy1 (decoratedSymbol fname ",") (do
+                                     n <- decorate fname Function name
+                                     pure n)
+                             decoratedSymbol fname ":"
+                             ty <- expr pdef fname indents
+                             pure (\fc : FC => map (\n => MkField fc doc rig p n ty) (forget ns)))
+             pure (b.val (boundToFC fname b))
 
-recordParam : FileName -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm,  PTerm))
-recordParam fname indents
-    = do symbol "("
-         start <- location
-         params <- pibindListName fname start indents
-         symbol ")"
-         pure $ map (\(c, n, tm) => (n, c, Explicit, tm)) params
-  <|> do symbol "{"
+typedArg : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm, PTerm))
+typedArg fname indents
+    = do decoratedSymbol fname "("
+         params <- pibindListName fname indents
+         decoratedSymbol fname ")"
+         pure $ map (\(c, n, tm) => (n.val, c, Explicit, tm)) params
+  <|> do decoratedSymbol fname "{"
          commit
-         info <- the (SourceEmptyRule (PiInfo PTerm))
-                 (pure  AutoImplicit <* keyword "auto"
-              <|>(do
-                  keyword "default"
-                  t <- simpleExpr fname indents
-                  pure $ DefImplicit t)
+         info <-
+                 (pure  AutoImplicit <* decoratedKeyword fname "auto"
+              <|> (decoratedKeyword fname "default" *> DefImplicit <$> simpleExpr fname indents)
               <|> pure      Implicit)
-         start <- location
-         params <- pibindListName fname start indents
-         symbol "}"
-         pure $ map (\(c, n, tm) => (n, c, info, tm)) params
-  <|> do start <- location
-         n <- name
-         end <- location
-         pure [(n, top, Explicit, PInfer (MkFC fname start end))]
+         params <- pibindListName fname indents
+         decoratedSymbol fname "}"
+         pure $ map (\(c, n, tm) => (n.val, c, info, tm)) params
 
-recordDecl : FileName -> IndentInfo -> Rule PDecl
+recordParam : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm,  PTerm))
+recordParam fname indents
+    = typedArg fname indents
+  <|> do n <- bounds name
+         pure [(n.val, top, Explicit, PInfer (boundToFC fname n))]
+
+recordDecl : OriginDesc -> IndentInfo -> Rule PDecl
 recordDecl fname indents
-    = do start <- location
-         doc   <- option "" documentation
-         vis   <- visibility
-         col   <- column
-         keyword "record"
-         n       <- name
-         paramss <- many (recordParam fname indents)
-         let params = concat paramss
-         keyword "where"
-         dcflds <- blockWithOptHeaderAfter col ctor (fieldDecl fname)
-         end    <- location
-         pure (PRecord (MkFC fname start end)
-                       doc vis n params (fst dcflds) (concat (snd dcflds)))
-  where
-  ctor : IndentInfo -> Rule Name
-  ctor idt = do exactIdent "constructor"
-                n <- name
-                atEnd idt
-                pure n
+    = do b <- bounds (do doc   <- option "" documentation
+                         vis   <- visibility fname
+                         col   <- column
+                         decoratedKeyword fname "record"
+                         n       <- mustWork (decoratedDataTypeName fname)
+                         paramss <- many (recordParam fname indents)
+                         let params = concat paramss
+                         decoratedKeyword fname "where"
+                         dcflds <- blockWithOptHeaderAfter col
+                                      (\ idt => recordConstructor fname <* atEnd idt)
+                                      (fieldDecl fname)
+                         pure (\fc : FC => PRecord fc doc vis n params (fst dcflds) (concat (snd dcflds))))
+         pure (b.val (boundToFC fname b))
 
-claim : FileName -> IndentInfo -> Rule PDecl
-claim fname indents
-    = do start   <- location
-         doc     <- option "" documentation
-         visOpts <- many (visOpt fname)
-         vis     <- getVisibility Nothing visOpts
-         let opts = mapMaybe getRight visOpts
-         m   <- multiplicity
-         rig <- getMult m
-         cl  <- tyDecl doc fname indents
-         end <- pure $ endPos $ getPTypeDeclLoc cl
-         pure (PClaim (MkFC fname start end) rig vis opts cl)
-
-definition : FileName -> IndentInfo -> Rule PDecl
-definition fname indents
-    = do start <- location
-         nd    <- clause 0 fname indents
-         end   <- pure $ endPos $ getPClauseLoc nd
-         pure (PDef (MkFC fname start end) [nd])
-
-fixDecl : FileName -> IndentInfo -> Rule (List PDecl)
-fixDecl fname indents
-    = do start <- location
-         fixity <- fix
+paramDecls : OriginDesc -> IndentInfo -> Rule PDecl
+paramDecls fname indents
+    = do b1 <- bounds (decoratedKeyword fname "parameters")
          commit
-         prec <- intLit
-         ops <- sepBy1 (symbol ",") iOperator
-         end <- location
-         pure (map (PFixity (MkFC fname start end) fixity (fromInteger prec)) ops)
+         args <- bounds (newParamDecls fname indents <|> oldParamDecls fname indents)
+         commit
+         declarations <- the (Rule (WithBounds (List1 (List PDecl)))) (assert_total (Core.bounds $ nonEmptyBlock (topDecl fname)))
+         mergedBounds <- pure $  b1 `mergeBounds` (args `mergeBounds` declarations)
+         pure (PParameters (boundToFC fname mergedBounds) args.val (collectDefs (concat declarations.val)))
 
-directiveDecl : FileName -> IndentInfo -> Rule PDecl
+  where
+    oldParamDecls : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm, PTerm))
+    oldParamDecls fname indents
+        = do decoratedSymbol fname "("
+             ps <- sepBy (decoratedSymbol fname ",")
+                         (do x <- decoratedSimpleBinderName fname
+                             decoratedSymbol fname ":"
+                             ty <- typeExpr pdef fname indents
+                             pure (UN x, top, Explicit, ty))
+             decoratedSymbol fname ")"
+             pure ps
+
+    newParamDecls : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm, PTerm))
+    newParamDecls fname indents
+        = map concat (some $ typedArg fname indents)
+
+
+claims : OriginDesc -> IndentInfo -> Rule (List1 PDecl)
+claims fname indents
+    = do bs <- bounds (do
+                  doc     <- option "" documentation
+                  visOpts <- many (visOpt fname)
+                  vis     <- getVisibility Nothing visOpts
+                  let opts = mapMaybe getRight visOpts
+                  rig  <- multiplicity fname
+                  cls  <- tyDecls (decorate fname Function name)
+                                  doc fname indents
+                  pure $ map (\cl => the (Pair _ _) (doc, vis, opts, rig, cl)) cls)
+         pure $ map (\(doc, vis, opts, rig, cl) : Pair _ _ =>
+                           PClaim (boundToFC fname bs) rig vis opts cl)
+                    bs.val
+
+definition : OriginDesc -> IndentInfo -> Rule PDecl
+definition fname indents
+    = do nd <- bounds (clause 0 fname indents)
+         pure (PDef (boundToFC fname nd) [nd.val])
+
+fixDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
+fixDecl fname indents
+    = do b <- bounds (do fixity <- decorate fname Keyword $ fix
+                         commit
+                         prec <- decorate fname Keyword $ intLit
+                         ops <- sepBy1 (decoratedSymbol fname ",") iOperator
+                         pure (fixity, prec, ops))
+         (fixity, prec, ops) <- pure b.val
+         pure (map (PFixity (boundToFC fname b) fixity (fromInteger prec)) (forget ops))
+
+directiveDecl : OriginDesc -> IndentInfo -> Rule PDecl
 directiveDecl fname indents
-    = do start <- location
-         (do d <- directive fname indents
-             end <- location
-             pure (PDirective (MkFC fname start end) d))
-           <|>
-          (do pragma "runElab"
-              tm <- expr pdef fname indents
-              end <- pure $ endPos $ getPTermLoc tm
-              atEnd indents
-              pure (PReflect (MkFC fname start end) tm))
+    = do b <- bounds ((do d <- directive fname indents
+                          pure (\fc : FC => PDirective fc d))
+                     <|>
+                      (do pragma "runElab"
+                          tm <- expr pdef fname indents
+                          atEnd indents
+                          pure (\fc : FC => PReflect fc tm)))
+         pure (b.val (boundToFC fname b))
 
 -- Declared at the top
--- topDecl : FileName -> IndentInfo -> Rule (List PDecl)
+-- topDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
 topDecl fname indents
     = do d <- dataDecl fname indents
          pure [d]
-  <|> do d <- claim fname indents
-         pure [d]
+  <|> do ds <- claims fname indents
+         pure (forget ds)
   <|> do d <- definition fname indents
          pure [d]
   <|> fixDecl fname indents
@@ -1556,20 +1583,20 @@ topDecl fname indents
          pure [d]
   <|> do d <- usingDecls fname indents
          pure [d]
+  <|> do d <- builtinDecl fname indents
+         pure [d]
   <|> do d <- runElabDecl fname indents
          pure [d]
   <|> do d <- transformDecl fname indents
          pure [d]
   <|> do d <- directiveDecl fname indents
          pure [d]
-  <|> do start <- location
-         dstr <- terminal "Expected CG directive"
-                          (\x => case tok x of
-                                      CGDirective d => Just d
-                                      _ => Nothing)
-         end <- location
-         pure [let cgrest = span isAlphaNum dstr in
-                   PDirective (MkFC fname start end)
+  <|> do dstr <- bounds (terminal "Expected CG directive"
+                          (\case
+                             CGDirective d => Just d
+                             _ => Nothing))
+         pure [let cgrest = span isAlphaNum dstr.val in
+                   PDirective (boundToFC fname dstr)
                         (CGAction (fst cgrest) (stripBraces (trim (snd cgrest))))]
   <|> fatalError "Couldn't parse declaration"
 
@@ -1582,20 +1609,14 @@ topDecl fname indents
 -- collectDefs : List PDecl -> List PDecl
 collectDefs [] = []
 collectDefs (PDef annot cs :: ds)
-    = let (cs', rest) = spanMap isClause ds in
-          PDef annot (cs ++ cs') :: assert_total (collectDefs rest)
-  where
-    spanMap : (a -> Maybe (List b)) -> List a -> (List b, List a)
-    spanMap f [] = ([], [])
-    spanMap f (x :: xs) = case f x of
-                               Nothing => ([], x :: xs)
-                               Just y => case spanMap f xs of
-                                              (ys, zs) => (y ++ ys, zs)
-
-    isClause : PDecl -> Maybe (List PClause)
-    isClause (PDef annot cs)
-        = Just cs
-    isClause _ = Nothing
+    = let (csWithFC, rest) = spanBy isPDef ds
+          cs' = cs ++ concat (map snd csWithFC)
+          annot' = foldr
+                   (\fc1, fc2 => fromMaybe EmptyFC (mergeFC fc1 fc2))
+                   annot
+                   (map fst csWithFC)
+      in
+          PDef annot' cs' :: assert_total (collectDefs rest)
 collectDefs (PNamespace annot ns nds :: ds)
     = PNamespace annot ns (collectDefs nds) :: collectDefs ds
 collectDefs (PMutual annot nds :: ds)
@@ -1604,45 +1625,45 @@ collectDefs (d :: ds)
     = d :: collectDefs ds
 
 export
-import_ : FileName -> IndentInfo -> Rule Import
+import_ : OriginDesc -> IndentInfo -> Rule Import
 import_ fname indents
-    = do start <- location
-         keyword "import"
-         reexp <- option False (do keyword "public"
-                                   pure True)
-         ns <- namespacedIdent
-         nsAs <- option ns (do exactIdent "as"
-                               namespacedIdent)
-         end <- location
+    = do b <- bounds (do decoratedKeyword fname "import"
+                         reexp <- option False (decoratedKeyword fname "public" $> True)
+                         ns <- mustWork moduleIdent
+                         nsAs <- option (miAsNamespace ns)
+                                        (do exactIdent "as"
+                                            mustWork namespaceId)
+                         pure (reexp, ns, nsAs))
          atEnd indents
-         pure (MkImport (MkFC fname start end) reexp (List1.toList ns) (List1.toList nsAs))
+         (reexp, ns, nsAs) <- pure b.val
+         pure (MkImport (boundToFC fname b) reexp ns nsAs)
 
 export
-prog : FileName -> SourceEmptyRule Module
+prog : OriginDesc -> EmptyRule Module
 prog fname
-    = do start  <- location
-         doc    <- option "" documentation
-         nspace <- option ["Main"]
-                     (do keyword "module"
-                         namespacedIdent)
-         end     <- location
-         imports <- block (import_ fname)
+    = do b <- bounds (do doc    <- option "" documentation
+                         nspace <- option (nsAsModuleIdent mainNS)
+                                     (do decoratedKeyword fname "module"
+                                         mustWork moduleIdent)
+                         imports <- block (import_ fname)
+                         pure (doc, nspace, imports))
          ds      <- block (topDecl fname)
-         pure (MkModule (MkFC fname start end)
-                        (List1.toList nspace) imports doc (collectDefs (concat ds)))
+         (doc, nspace, imports) <- pure b.val
+         pure (MkModule (boundToFC fname b)
+                        nspace imports doc (collectDefs (concat ds)))
 
 export
-progHdr : FileName -> SourceEmptyRule Module
+progHdr : OriginDesc -> EmptyRule Module
 progHdr fname
-    = do start  <- location
-         doc    <- option "" documentation
-         nspace <- option ["Main"]
-                     (do keyword "module"
-                         namespacedIdent)
-         end     <- location
-         imports <- block (import_ fname)
-         pure (MkModule (MkFC fname start end)
-                        (List1.toList nspace) imports doc [])
+    = do b <- bounds (do doc    <- option "" documentation
+                         nspace <- option (nsAsModuleIdent mainNS)
+                                     (do decoratedKeyword fname "module"
+                                         mustWork moduleIdent)
+                         imports <- block (import_ fname)
+                         pure (doc, nspace, imports))
+         (doc, nspace, imports) <- pure b.val
+         pure (MkModule (boundToFC fname b)
+                        nspace imports doc [])
 
 parseMode : Rule REPLEval
 parseMode
@@ -1679,6 +1700,8 @@ setOption set
          pure (ShowNamespace set)
   <|> do exactIdent "showtypes"
          pure (ShowTypes set)
+  <|> do exactIdent "profile"
+         pure (Profile set)
   <|> if set then setVarOption else fatalError "Unrecognised option"
 
 replCmd : List String -> Rule ()
@@ -1697,25 +1720,25 @@ editCmd
          n <- name
          pure (TypeAt (fromInteger line) (fromInteger col) n)
   <|> do replCmd ["cs"]
-         upd <- option False (do symbol "!"; pure True)
+         upd <- option False (symbol "!" $> True)
          line <- intLit
          col <- intLit
          n <- name
          pure (CaseSplit upd (fromInteger line) (fromInteger col) n)
   <|> do replCmd ["ac"]
-         upd <- option False (do symbol "!"; pure True)
+         upd <- option False (symbol "!" $> True)
          line <- intLit
          n <- name
          pure (AddClause upd (fromInteger line) n)
   <|> do replCmd ["ps", "proofsearch"]
-         upd <- option False (do symbol "!"; pure True)
+         upd <- option False (symbol "!" $> True)
          line <- intLit
          n <- name
          pure (ExprSearch upd (fromInteger line) n [])
   <|> do replCmd ["psnext"]
          pure ExprSearchNext
   <|> do replCmd ["gd"]
-         upd <- option False (do symbol "!"; pure True)
+         upd <- option False (symbol "!" $> True)
          line <- intLit
          n <- name
          nreject <- option 0 intLit
@@ -1723,17 +1746,17 @@ editCmd
   <|> do replCmd ["gdnext"]
          pure GenerateDefNext
   <|> do replCmd ["ml", "makelemma"]
-         upd <- option False (do symbol "!"; pure True)
+         upd <- option False (symbol "!" $> True)
          line <- intLit
          n <- name
          pure (MakeLemma upd (fromInteger line) n)
   <|> do replCmd ["mc", "makecase"]
-         upd <- option False (do symbol "!"; pure True)
+         upd <- option False (symbol "!" $> True)
          line <- intLit
          n <- name
          pure (MakeCase upd (fromInteger line) n)
   <|> do replCmd ["mw", "makewith"]
-         upd <- option False (do symbol "!"; pure True)
+         upd <- option False (symbol "!" $> True)
          line <- intLit
          n <- name
          pure (MakeWith upd (fromInteger line) n)
@@ -1756,6 +1779,9 @@ data CmdArg : Type where
      ||| The command takes a number.
      NumberArg : CmdArg
 
+     ||| The command takes a number or auto.
+     AutoNumberArg : CmdArg
+
      ||| The command takes an option.
      OptionArg : CmdArg
 
@@ -1768,6 +1794,9 @@ data CmdArg : Type where
      ||| The command takes a string
      StringArg : CmdArg
 
+     ||| The command takes a on or off.
+     OnOffArg : CmdArg
+
      ||| The command takes multiple arguments.
      Args : List CmdArg -> CmdArg
 
@@ -1778,10 +1807,12 @@ Show CmdArg where
   show ExprArg = "<expr>"
   show DeclsArg = "<decls>"
   show NumberArg = "<number>"
+  show AutoNumberArg = "<number|auto>"
   show OptionArg = "<option>"
   show FileArg = "<file>"
   show ModuleArg = "<module>"
-  show StringArg = "<module>"
+  show StringArg = "<string>"
+  show OnOffArg = "(on|off)"
   show (Args args) = showSep " " (map show args)
 
 export
@@ -1828,7 +1859,7 @@ nameArgCmd parseCmd command doc = (names, NameArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      n <- name
+      n <- mustWork name
       pure (command n)
 
 stringArgCmd : ParseCmd -> (String -> REPLCmd) -> String -> CommandDefinition
@@ -1841,10 +1872,10 @@ stringArgCmd parseCmd command doc = (names, StringArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      s <- strLit
+      s <- mustWork simpleStr
       pure (command s)
 
-moduleArgCmd : ParseCmd -> (List String -> REPLCmd) -> String -> CommandDefinition
+moduleArgCmd : ParseCmd -> (ModuleIdent -> REPLCmd) -> String -> CommandDefinition
 moduleArgCmd parseCmd command doc = (names, ModuleArg, doc, parse)
   where
     names : List String
@@ -1854,8 +1885,8 @@ moduleArgCmd parseCmd command doc = (names, ModuleArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      n <- moduleIdent
-      pure (command (List1.toList n))
+      n <- mustWork moduleIdent
+      pure (command n)
 
 exprArgCmd : ParseCmd -> (PTerm -> REPLCmd) -> String -> CommandDefinition
 exprArgCmd parseCmd command doc = (names, ExprArg, doc, parse)
@@ -1867,7 +1898,7 @@ exprArgCmd parseCmd command doc = (names, ExprArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      tm <- expr pdef "(interactive)" init
+      tm <- mustWork $ expr pdef (Virtual Interactive) init
       pure (command tm)
 
 declsArgCmd : ParseCmd -> (List PDecl -> REPLCmd) -> String -> CommandDefinition
@@ -1879,7 +1910,7 @@ declsArgCmd parseCmd command doc = (names, DeclsArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      tm <- topDecl "(interactive)" init
+      tm <- mustWork $ topDecl (Virtual Interactive) init
       pure (command tm)
 
 optArgCmd : ParseCmd -> (REPLOpt -> REPLCmd) -> Bool -> String -> CommandDefinition
@@ -1892,7 +1923,7 @@ optArgCmd parseCmd command set doc = (names, OptionArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      opt <- setOption set
+      opt <- mustWork $ setOption set
       pure (command opt)
 
 numberArgCmd : ParseCmd -> (Nat -> REPLCmd) -> String -> CommandDefinition
@@ -1905,8 +1936,38 @@ numberArgCmd parseCmd command doc = (names, NumberArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      i <- intLit
+      i <- mustWork intLit
       pure (command (fromInteger i))
+
+autoNumberArgCmd : ParseCmd -> (Maybe Nat -> REPLCmd) -> String -> CommandDefinition
+autoNumberArgCmd parseCmd command doc = (names, AutoNumberArg, doc, parse)
+  where
+    names : List String
+    names = extractNames parseCmd
+
+    autoNumber : Rule (Maybe Nat)
+    autoNumber = Nothing <$ keyword "auto"
+             <|> Just . fromInteger <$> intLit
+
+    parse : Rule REPLCmd
+    parse = do
+      symbol ":"
+      runParseCmd parseCmd
+      mi <- mustWork autoNumber
+      pure (command mi)
+
+onOffArgCmd : ParseCmd -> (Bool -> REPLCmd) -> String -> CommandDefinition
+onOffArgCmd parseCmd command doc = (names, OnOffArg, doc, parse)
+  where
+    names : List String
+    names = extractNames parseCmd
+
+    parse : Rule REPLCmd
+    parse = do
+      symbol ":"
+      runParseCmd parseCmd
+      i <- mustWork onOffLit
+      pure (command i)
 
 compileArgsCmd : ParseCmd -> (PTerm -> String -> REPLCmd) -> String -> CommandDefinition
 compileArgsCmd parseCmd command doc
@@ -1919,35 +1980,57 @@ compileArgsCmd parseCmd command doc
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      n <- unqualifiedName
-      tm <- expr pdef "(interactive)" init
+      n <- mustWork unqualifiedName
+      tm <- mustWork $ expr pdef (Virtual Interactive) init
       pure (command tm n)
+
+loggingArgCmd : ParseCmd -> (Maybe LogLevel -> REPLCmd) -> String -> CommandDefinition
+loggingArgCmd parseCmd command doc = (names, Args [StringArg, NumberArg], doc, parse) where
+
+  names : List String
+  names = extractNames parseCmd
+
+  parse : Rule REPLCmd
+  parse = do
+    symbol ":"
+    runParseCmd parseCmd
+    lvl <- mustWork logLevel
+    pure (command lvl)
 
 parserCommandsForHelp : CommandTable
 parserCommandsForHelp =
   [ exprArgCmd (ParseREPLCmd ["t", "type"]) Check "Check the type of an expression"
+  , exprArgCmd (ParseREPLCmd ["ti"]) CheckWithImplicits "Check the type of an expression, showing implicit arguments"
   , nameArgCmd (ParseREPLCmd ["printdef"]) PrintDef "Show the definition of a function"
-  , nameArgCmd (ParseREPLCmd ["s", "search"]) ProofSearch "Search for values by type"
+  , exprArgCmd (ParseREPLCmd ["s", "search"]) TypeSearch "Search for values by type"
   , nameArgCmd (ParseIdentCmd "di") DebugInfo "Show debugging information for a name"
   , moduleArgCmd (ParseKeywordCmd "module") ImportMod "Import an extra module"
   , noArgCmd (ParseREPLCmd ["q", "quit", "exit"]) Quit "Exit the Idris system"
   , noArgCmd (ParseREPLCmd ["cwd"]) CWD "Displays the current working directory"
+  , stringArgCmd (ParseREPLCmd ["cd"]) CD "Change the current working directory"
+  , stringArgCmd (ParseREPLCmd ["sh"]) RunShellCommand "Run a shell command"
   , optArgCmd (ParseIdentCmd "set") SetOpt True "Set an option"
   , optArgCmd (ParseIdentCmd "unset") SetOpt False "Unset an option"
+  , noArgCmd (ParseREPLCmd ["opts"]) GetOpts "Show current options settings"
   , compileArgsCmd (ParseREPLCmd ["c", "compile"]) Compile "Compile to an executable"
   , exprArgCmd (ParseIdentCmd "exec") Exec "Compile to an executable and run"
   , stringArgCmd (ParseIdentCmd "directive") CGDirective "Set a codegen-specific directive"
+  , stringArgCmd (ParseREPLCmd ["l", "load"]) Load "Load a file"
   , noArgCmd (ParseREPLCmd ["r", "reload"]) Reload "Reload current file"
   , noArgCmd (ParseREPLCmd ["e", "edit"]) Edit "Edit current file using $EDITOR or $VISUAL"
   , nameArgCmd (ParseREPLCmd ["miss", "missing"]) Missing "Show missing clauses"
   , nameArgCmd (ParseKeywordCmd "total") Total "Check the totality of a name"
-  , nameArgCmd (ParseIdentCmd "doc") Doc "Show documentation for a name"
-  , moduleArgCmd (ParseIdentCmd "browse") Browse "Browse contents of a namespace"
-  , numberArgCmd (ParseREPLCmd ["log", "logging"]) SetLog "Set logging level"
+  , exprArgCmd (ParseIdentCmd "doc") Doc "Show documentation for a name or primitive"
+  , moduleArgCmd (ParseIdentCmd "browse") (Browse . miAsNamespace) "Browse contents of a namespace"
+  , loggingArgCmd (ParseREPLCmd ["log", "logging"]) SetLog "Set logging level"
+  , autoNumberArgCmd (ParseREPLCmd ["consolewidth"]) SetConsoleWidth "Set the width of the console output (0 for unbounded) (auto by default)"
+  , onOffArgCmd (ParseREPLCmd ["color", "colour"]) SetColor "Whether to use color for the console output (enabled by default)"
   , noArgCmd (ParseREPLCmd ["m", "metavars"]) Metavars "Show remaining proof obligations (metavariables or holes)"
   , noArgCmd (ParseREPLCmd ["version"]) ShowVersion "Display the Idris version"
   , noArgCmd (ParseREPLCmd ["?", "h", "help"]) Help "Display this help text"
   , declsArgCmd (ParseKeywordCmd "let") NewDefn "Define a new value"
+  , stringArgCmd (ParseREPLCmd ["lp", "loadpackage"]) ImportPackage "Load all modules of the package"
+  , exprArgCmd (ParseREPLCmd ["fs", "fsearch"]) FuzzyTypeSearch "Search for global definitions by sketching the names distribution of the wanted type(s)."
   ]
 
 export
@@ -1962,16 +2045,14 @@ nonEmptyCommand =
 
 eval : Rule REPLCmd
 eval = do
-  tm <- expr pdef "(interactive)" init
+  tm <- expr pdef (Virtual Interactive) init
   pure (Eval tm)
 
 export
-command : SourceEmptyRule REPLCmd
+command : EmptyRule REPLCmd
 command
-    = do eoi
-         pure NOP
+    = eoi $> NOP
   <|> nonEmptyCommand
-  <|> do symbol ":?"; pure Help -- special case, :? doesn't fit into above scheme
-  <|> do symbol ":"; cmd <- editCmd
-         pure (Editing cmd)
+  <|> symbol ":?" $> Help -- special case, :? doesn't fit into above scheme
+  <|> symbol ":" *> Editing <$> editCmd
   <|> eval

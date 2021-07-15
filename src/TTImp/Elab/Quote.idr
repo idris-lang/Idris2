@@ -31,8 +31,8 @@ mutual
       = pure $ IPi fc c p n !(getUnquote arg) !(getUnquote ret)
   getUnquote (ILam fc c p n arg sc)
       = pure $ ILam fc c p n !(getUnquote arg) !(getUnquote sc)
-  getUnquote (ILet fc c n ty val sc)
-      = pure $ ILet fc c n !(getUnquote ty) !(getUnquote val) !(getUnquote sc)
+  getUnquote (ILet fc lhsFC c n ty val sc)
+      = pure $ ILet fc lhsFC c n !(getUnquote ty) !(getUnquote val) !(getUnquote sc)
   getUnquote (ICase fc sc ty cs)
       = pure $ ICase fc !(getUnquote sc) !(getUnquote ty)
                         !(traverse getUnquoteClause cs)
@@ -42,8 +42,10 @@ mutual
       = pure $ IUpdate fc !(traverse getUnquoteUpdate ds) !(getUnquote sc)
   getUnquote (IApp fc f a)
       = pure $ IApp fc !(getUnquote f) !(getUnquote a)
-  getUnquote (IImplicitApp fc f n a)
-      = pure $ IImplicitApp fc !(getUnquote f) n !(getUnquote a)
+  getUnquote (IAutoApp fc f a)
+      = pure $ IAutoApp fc !(getUnquote f) !(getUnquote a)
+  getUnquote (INamedApp fc f n a)
+      = pure $ INamedApp fc !(getUnquote f) n !(getUnquote a)
   getUnquote (IWithApp fc f a)
       = pure $ IWithApp fc !(getUnquote f) !(getUnquote a)
   getUnquote (IAlternative fc at as)
@@ -54,8 +56,8 @@ mutual
       = pure $ ICoerced fc !(getUnquote t)
   getUnquote (IBindHere fc m t)
       = pure $ IBindHere fc m !(getUnquote t)
-  getUnquote (IAs fc u nm t)
-      = pure $ IAs fc u nm !(getUnquote t)
+  getUnquote (IAs fc nameFC u nm t)
+      = pure $ IAs fc nameFC u nm !(getUnquote t)
   getUnquote (IMustUnify fc r t)
       = pure $ IMustUnify fc r !(getUnquote t)
   getUnquote (IDelayed fc r t)
@@ -72,7 +74,7 @@ mutual
            put Unq ((qv, fc, tm) :: unqs)
            pure (IUnquote fc (IVar fc qv)) -- turned into just qv when reflecting
   getUnquote tm = pure tm
-  
+
   getUnquoteClause : {auto c : Ref Ctxt Defs} ->
                      {auto q : Ref Unq (List (Name, FC, RawImp))} ->
                      {auto u : Ref UST UState} ->
@@ -80,9 +82,14 @@ mutual
                      Core ImpClause
   getUnquoteClause (PatClause fc l r)
       = pure $ PatClause fc !(getUnquote l) !(getUnquote r)
-  getUnquoteClause (WithClause fc l w flags cs)
-      = pure $ WithClause fc !(getUnquote l) !(getUnquote w)
-                          flags !(traverse getUnquoteClause cs)
+  getUnquoteClause (WithClause fc l w prf flags cs)
+      = pure $ WithClause
+                 fc
+                 !(getUnquote l)
+                 !(getUnquote w)
+                 prf
+                 flags
+                 !(traverse getUnquoteClause cs)
   getUnquoteClause (ImpossibleClause fc l)
       = pure $ ImpossibleClause fc !(getUnquote l)
 
@@ -99,7 +106,7 @@ mutual
                  {auto u : Ref UST UState} ->
                  ImpTy ->
                  Core ImpTy
-  getUnquoteTy (MkImpTy fc n t) = pure $ MkImpTy fc n !(getUnquote t)
+  getUnquoteTy (MkImpTy fc nameFC n t) = pure $ MkImpTy fc nameFC n !(getUnquote t)
 
   getUnquoteField : {auto c : Ref Ctxt Defs} ->
                     {auto q : Ref Unq (List (Name, FC, RawImp))} ->
@@ -127,10 +134,10 @@ mutual
                    {auto u : Ref UST UState} ->
                    ImpData ->
                    Core ImpData
-  getUnquoteData (MkImpData fc n tc opts cs) 
+  getUnquoteData (MkImpData fc n tc opts cs)
       = pure $ MkImpData fc n !(getUnquote tc) opts
                          !(traverse getUnquoteTy cs)
-  getUnquoteData (MkImpLater fc n tc) 
+  getUnquoteData (MkImpLater fc n tc)
       = pure $ MkImpLater fc n !(getUnquote tc)
 
   getUnquoteDecl : {auto c : Ref Ctxt Defs} ->
@@ -145,11 +152,12 @@ mutual
   getUnquoteDecl (IDef fc v d)
       = pure $ IDef fc v !(traverse getUnquoteClause d)
   getUnquoteDecl (IParameters fc ps ds)
-      = pure $ IParameters fc !(traverse unqPair ps) 
+      = pure $ IParameters fc
+                           !(traverse unqTuple ps)
                            !(traverse getUnquoteDecl ds)
     where
-      unqPair : (Name, RawImp) -> Core (Name, RawImp)
-      unqPair (n, t) = pure (n, !(getUnquote t))
+      unqTuple : (Name, RigCount, PiInfo RawImp, RawImp) -> Core (Name, RigCount, PiInfo RawImp, RawImp)
+      unqTuple (n, rig, i, t) = pure (n, rig, i, !(getUnquote t))
   getUnquoteDecl (IRecord fc ns v d)
       = pure $ IRecord fc ns v !(getUnquoteRecord d)
   getUnquoteDecl (INamespace fc ns ds)
@@ -172,11 +180,11 @@ bindUnqs ((qvar, fc, esctm) :: qs) rig elabinfo nest env tm
     = do defs <- get Ctxt
          Just (idx, gdef) <- lookupCtxtExactI (reflectionttimp "TTImp") (gamma defs)
               | _ => throw (UndefinedName fc (reflectionttimp "TTImp"))
-         (escv, escty) <- check rig elabinfo nest env esctm 
-                                (Just (gnf env (Ref fc (TyCon 0 0) 
+         (escv, escty) <- check rig elabinfo nest env esctm
+                                (Just (gnf env (Ref fc (TyCon 0 0)
                                            (Resolved idx))))
          sc <- bindUnqs qs rig elabinfo nest env tm
-         pure (Bind fc qvar (Let (rigMult top rig) escv !(getTerm escty))
+         pure (Bind fc qvar (Let fc (rigMult top rig) escv !(getTerm escty))
                     (refToLocal qvar qvar sc))
 
 onLHS : ElabMode -> Bool
@@ -195,7 +203,7 @@ checkQuote : {vars : _} ->
              Core (Term vars, Glued vars)
 checkQuote rig elabinfo nest env fc tm exp
     = do defs <- get Ctxt
-         q <- newRef Unq (the (List (Name, FC, RawImp)) [])
+         q <- newRef Unq []
          tm' <- getUnquote tm
          qtm <- reflect fc defs (onLHS (elabMode elabinfo)) env tm'
          unqs <- get Unq
@@ -232,12 +240,12 @@ checkQuoteDecl : {vars : _} ->
                  Core (Term vars, Glued vars)
 checkQuoteDecl rig elabinfo nest env fc ds exp
     = do defs <- get Ctxt
-         q <- newRef Unq (the (List (Name, FC, RawImp)) [])
+         q <- newRef Unq []
          ds' <- traverse getUnquoteDecl ds
          qds <- reflect fc defs (onLHS (elabMode elabinfo)) env ds'
          unqs <- get Unq
          qd <- getCon fc defs (reflectionttimp "Decl")
-         qty <- appCon fc defs (preludetypes "List") [qd]
+         qty <- appCon fc defs (basics "List") [qd]
          checkExp rig elabinfo env fc
                   !(bindUnqs unqs rig elabinfo nest env qds)
                   (gnf env qty) exp

@@ -1,6 +1,12 @@
 1/1: Building casetot (casetot.idr)
-casetot.idr:12:1--13:1:main is not covering at:
-12	main : IO ()
-13	main = do
+Error: main is not covering.
 
-	Calls non covering function Main.case block in case block in main
+casetot:12:1--12:13
+ 08 | 
+ 09 | ints : Vect 4 Int
+ 10 | ints = [1, 2, 3, 4]
+ 11 | 
+ 12 | main : IO ()
+      ^^^^^^^^^^^^
+
+Calls non covering function Main.case block in case block in main

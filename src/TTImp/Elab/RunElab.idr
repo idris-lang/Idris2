@@ -1,6 +1,7 @@
 module TTImp.Elab.RunElab
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.GetType
@@ -19,6 +20,8 @@ import TTImp.TTImp
 import TTImp.Unelab
 import TTImp.Utils
 
+%default covering
+
 export
 elabScript : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
@@ -27,19 +30,20 @@ elabScript : {vars : _} ->
              FC -> NestedNames vars ->
              Env Term vars -> NF vars -> Maybe (Glued vars) ->
              Core (NF vars)
-elabScript fc nest env (NDCon nfc nm t ar args) exp
+elabScript fc nest env script@(NDCon nfc nm t ar args) exp
     = do defs <- get Ctxt
          fnm <- toFullNames nm
          case fnm of
-              NS ["Reflection", "Language"] (UN n)
-                 => elabCon defs n args
-              _ => failWith defs
+              NS ns (UN n)
+                 => if ns == reflectionNS
+                      then elabCon defs n (map snd args)
+                      else failWith defs $ "bad reflection namespace " ++ show ns
+              _ => failWith defs $ "bad fullnames " ++ show fnm
   where
-    failWith : Defs -> Core a
-    failWith defs
-      = do defs <- get Ctxt
-           empty <- clearDefs defs
-           throw (BadRunElab fc env !(quote empty env (NDCon nfc nm t ar args)))
+    failWith : Defs -> String -> Core a
+    failWith defs desc
+      = do empty <- clearDefs defs
+           throw (BadRunElab fc env !(quote empty env script) desc)
 
     scriptRet : Reflect a => a -> Core (NF vars)
     scriptRet tm
@@ -54,24 +58,26 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
         = do act' <- elabScript fc nest env
                                 !(evalClosure defs act) exp
              case !(evalClosure defs k) of
-                  NBind _ x (Lam _ _ _) sc =>
+                  NBind _ x (Lam _ _ _ _) sc =>
                       elabScript fc nest env
                               !(sc defs (toClosure withAll env
                                               !(quote defs env act'))) exp
-                  _ => failWith defs
+                  x => failWith defs $ "non-function RHS of a Bind: " ++ show x
     elabCon defs "Fail" [_,msg]
         = do msg' <- evalClosure defs msg
              throw (GenericMsg fc ("Error during reflection: " ++
                                       !(reify defs msg')))
-    elabCon defs "LogMsg" [lvl, str]
-        = do lvl' <- evalClosure defs lvl
-             logC !(reify defs lvl') $
+    elabCon defs "LogMsg" [topic, verb, str]
+        = do topic' <- evalClosure defs topic
+             verb' <- evalClosure defs verb
+             unverifiedLogC !(reify defs topic') !(reify defs verb') $
                   do str' <- evalClosure defs str
                      reify defs str'
              scriptRet ()
-    elabCon defs "LogTerm" [lvl, str, tm]
-        = do lvl' <- evalClosure defs lvl
-             logC !(reify defs lvl') $
+    elabCon defs "LogTerm" [topic, verb, str, tm]
+        = do topic' <- evalClosure defs topic
+             verb' <- evalClosure defs verb
+             unverifiedLogC !(reify defs topic') !(reify defs verb') $
                   do str' <- evalClosure defs str
                      tm' <- evalClosure defs tm
                      pure $ !(reify defs str') ++ ": " ++
@@ -94,7 +100,7 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
              scriptRet !(unelabUniqueBinders env !(quote empty env tm'))
     elabCon defs "Lambda" [x, _, scope]
         = do empty <- clearDefs defs
-             NBind bfc x (Lam c p ty) sc <- evalClosure defs scope
+             NBind bfc x (Lam fc' c p ty) sc <- evalClosure defs scope
                    | _ => throw (GenericMsg fc "Not a lambda")
              n <- genVarName "x"
              sc' <- sc defs (toClosure withAll env (Ref bfc Bound n))
@@ -102,11 +108,11 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
              let lamsc = refToLocal n x qsc
              qp <- quotePi p
              qty <- quote empty env ty
-             let env' = Lam c qp qty :: env
+             let env' = Lam fc' c qp qty :: env
 
              runsc <- elabScript fc (weaken nest) env'
                                  !(nf defs env' lamsc) Nothing -- (map weaken exp)
-             nf empty env (Bind bfc x (Lam c qp qty) !(quote empty env' runsc))
+             nf empty env (Bind bfc x (Lam fc' c qp qty) !(quote empty env' runsc))
        where
          quotePi : PiInfo (NF vars) -> Core (PiInfo (Term vars))
          quotePi Explicit = pure Explicit
@@ -158,11 +164,12 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
              decls <- reify defs d'
              traverse_ (processDecl [] (MkNested []) []) decls
              scriptRet ()
-    elabCon defs n args = failWith defs
+    elabCon defs n args = failWith defs $ "unexpected Elab constructor " ++ n ++
+                                          ", or incorrect count of arguments: " ++ show (length args)
 elabScript fc nest env script exp
     = do defs <- get Ctxt
          empty <- clearDefs defs
-         throw (BadRunElab fc env !(quote empty env script))
+         throw (BadRunElab fc env !(quote empty env script) "script is not a data value")
 
 export
 checkRunElab : {vars : _} ->
@@ -171,15 +178,15 @@ checkRunElab : {vars : _} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
                RigCount -> ElabInfo ->
-               NestedNames vars -> Env Term vars -> 
+               NestedNames vars -> Env Term vars ->
                FC -> RawImp -> Maybe (Glued vars) ->
                Core (Term vars, Glued vars)
 checkRunElab rig elabinfo nest env fc script exp
     = do expected <- mkExpected exp
          defs <- get Ctxt
-         when (not (isExtension ElabReflection defs)) $
+         unless (isExtension ElabReflection defs) $
              throw (GenericMsg fc "%language ElabReflection not enabled")
-         let n = NS ["Reflection", "Language"] (UN "Elab")
+         let n = NS reflectionNS (UN "Elab")
          let ttn = reflectiontt "TT"
          elabtt <- appCon fc defs n [expected]
          (stm, sty) <- runDelays 0 $

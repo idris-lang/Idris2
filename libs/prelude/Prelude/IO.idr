@@ -14,7 +14,7 @@ import Prelude.Show
 
 public export
 Functor IO where
-  map f io = io_bind io (\b => io_pure (f b))
+  map f io = io_bind io $ io_pure . f
 
 %inline
 public export
@@ -32,15 +32,29 @@ Monad IO where
 
 public export
 interface Monad io => HasIO io where
-  liftIO : (1 _ : IO a) -> io a
+  constructor MkHasIO
+  liftIO : IO a -> io a
+
+public export
+interface Monad io => HasLinearIO io where
+  constructor MkHasLinearIO
+  liftIO1 : (1 _ : IO a) -> io a
 
 public export %inline
-HasIO IO where
-  liftIO x = x
+HasLinearIO IO where
+  liftIO1 x = x
+
+public export %inline
+HasLinearIO io => HasIO io where
+  liftIO x = liftIO1 x
 
 export %inline
-primIO : HasIO io => (1 fn : (1 x : %World) -> IORes a) -> io a
+primIO : HasIO io => (fn : (1 x : %World) -> IORes a) -> io a
 primIO op = liftIO (fromPrim op)
+
+export %inline
+primIO1 : HasLinearIO io => (1 fn : (1 x : %World) -> IORes a) -> io a
+primIO1 op = liftIO1 (fromPrim op)
 
 %extern
 prim__onCollectAny : AnyPtr -> (AnyPtr -> PrimIO ()) -> PrimIO GCAnyPtr
@@ -55,7 +69,7 @@ export
 onCollect : Ptr t -> (Ptr t -> IO ()) -> IO (GCPtr t)
 onCollect ptr c = fromPrim (prim__onCollect ptr (\x => toPrim (c x)))
 
-%foreign "C:idris2_getString, libidris2_support"
+%foreign "C:idris2_getString, libidris2_support, idris_support.h"
          "javascript:lambda:x=>x"
 export
 prim__getString : Ptr String -> String
@@ -65,11 +79,11 @@ prim__putChar : Char -> (1 x : %World) -> IORes ()
 %foreign "C:getchar,libc 6"
 %extern prim__getChar : (1 x : %World) -> IORes Char
 
-%foreign "C:idris2_getStr,libidris2_support"
+%foreign "C:idris2_getStr, libidris2_support, idris_support.h"
          "node:support:getStr,support_system_file"
 prim__getStr : PrimIO String
 
-%foreign "C:idris2_putStr,libidris2_support"
+%foreign "C:idris2_putStr, libidris2_support, idris_support.h"
          "node:lambda:x=>process.stdout.write(x)"
 prim__putStr : String -> PrimIO ()
 
@@ -88,32 +102,36 @@ export
 getLine : HasIO io => io String
 getLine = primIO prim__getStr
 
-||| Write a single character to stdout.
+||| Write one single-byte character to stdout.
 export
 putChar : HasIO io => Char -> io ()
 putChar c = primIO (prim__putChar c)
 
-||| Write a single character to stdout, with a trailing newline.
+||| Write one multi-byte character to stdout, with a trailing newline.
 export
 putCharLn : HasIO io => Char -> io ()
 putCharLn c = putStrLn (prim__cast_CharString c)
 
-||| Read a single character from stdin.
+||| Read one single-byte character from stdin.
 export
 getChar : HasIO io => io Char
 getChar = primIO prim__getChar
 
+%foreign "scheme:blodwen-thread"
 export
-prim_fork : (1 prog : PrimIO ()) -> PrimIO ThreadID
-prim_fork act w = prim__schemeCall ThreadID "blodwen-thread" [act] w
+prim__fork : (1 prog : PrimIO ()) -> PrimIO ThreadID
 
 export
 fork : (1 prog : IO ()) -> IO ThreadID
-fork act = schemeCall ThreadID "blodwen-thread" [toPrim act]
+fork act = fromPrim (prim__fork (toPrim act))
 
-%foreign "C:idris2_readString, libidris2_support"
+%foreign "scheme:blodwen-thread-wait"
 export
-prim__getErrno : Int
+prim__threadWait : (1 threadID : ThreadID) -> PrimIO ()
+
+export
+threadWait : (1 threadID : ThreadID) -> IO ()
+threadWait threadID = fromPrim (prim__threadWait threadID)
 
 ||| Output something showable to stdout, without a trailing newline.
 export

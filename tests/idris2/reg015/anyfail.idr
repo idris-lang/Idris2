@@ -1,8 +1,8 @@
 data SimpleData = PtrAndSize AnyPtr Int
 
 record Complicated where
-  constructor MkComplicated 
-  simple : SimpleData 
+  constructor MkComplicated
+  simple : SimpleData
 
 record MoreComplicated where
     constructor MkMoreComplicated
@@ -10,7 +10,7 @@ record MoreComplicated where
 
 record EvenMoreComplicated where
     constructor MkEvenMoreComplicated
-    somethingEven : MoreComplicated 
+    somethingEven : MoreComplicated
 
 data TooComplicatedToBeTrue : (something : EvenMoreComplicated) -> Type where
     SomethingVeryComplicatedIs :

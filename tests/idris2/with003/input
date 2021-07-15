@@ -1,5 +1,5 @@
 do myPrintLn "foo"; myPrintLn "boo"; map (+1) (myPrintLn "woo"); myPrintLn "goo"; myPrintLn "foo"
-with Prelude.(>>=) do myPrintLn "foo"; myPrintLn "boo"; map (+1) (myPrintLn "woo"); myPrintLn "goo"; myPrintLn "foo"
+with Prelude.(>>) do myPrintLn "foo"; myPrintLn "boo"; map (+1) (myPrintLn "woo"); myPrintLn "goo"; myPrintLn "foo"
 :t []
 :t with Vect.Nil []
 :t with Prelude.Nil []

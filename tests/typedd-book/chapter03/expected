@@ -1,6 +1,21 @@
 1/8: Building IsEven (IsEven.idr)
 2/8: Building Matrix (Matrix.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Data.Vect.elem, Prelude.Types.elem
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Data.Vect.elem, Prelude.Types.elem
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Data.Vect.elem, Prelude.Types.elem
 3/8: Building VecSort (VecSort.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Data.Vect.elem, Prelude.Types.elem
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Data.Vect.elem, Prelude.Types.elem
 4/8: Building Vectors (Vectors.idr)
 5/8: Building WordLength (WordLength.idr)
 6/8: Building WordLength_vec (WordLength_vec.idr)

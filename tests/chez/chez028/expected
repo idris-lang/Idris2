@@ -1,0 +1,7 @@
+1/1: Building ExpressionParser (ExpressionParser.idr)
+Main> 5678
+-3
+262145
+10
+7
+Main> Bye for now!

@@ -2,6 +2,7 @@ module Idris.Elab.Implementation
 
 import Core.Binary
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -20,9 +21,9 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Control.Monad.State
-import Data.ANameMap
+import Libraries.Data.ANameMap
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -33,8 +34,9 @@ replaceSep = pack . map toForward . unpack
     toForward '\\' = '/'
     toForward x = x
 
-mkImpl : FC -> Name -> List RawImp -> Name
-mkImpl fc n ps
+export
+mkImplName : FC -> Name -> List RawImp -> Name
+mkImplName fc n ps
     = DN (show n ++ " implementation at " ++ replaceSep (show fc))
          (UN ("__Impl_" ++ show n ++ "_" ++
           showSep "_" (map show ps)))
@@ -50,13 +52,18 @@ bindImpls fc [] ty = ty
 bindImpls fc ((n, r, ty) :: rest) sc
     = IPi fc r Implicit (Just n) ty (bindImpls fc rest sc)
 
-addDefaults : FC -> Name -> List Name -> List (Name, List ImpClause) ->
+addDefaults : FC -> Name ->
+              (params : List (Name, RawImp)) -> -- parameters have been specialised, use them!
+              (allMethods : List Name) ->
+              (defaults : List (Name, List ImpClause)) ->
               List ImpDecl ->
               (List ImpDecl, List Name) -- Updated body, list of missing methods
-addDefaults fc impName allms defs body
+addDefaults fc impName params allms defs body
     = let missing = dropGot allms body in
           extendBody [] missing body
   where
+    specialiseMeth : Name -> (Name, RawImp)
+    specialiseMeth n = (n, INamedApp fc (IVar fc n) (UN "__con") (IVar fc impName))
     -- Given the list of missing names, if any are among the default definitions,
     -- add them to the body
     extendBody : List Name -> List Name -> List ImpDecl ->
@@ -72,10 +79,12 @@ addDefaults fc impName allms defs body
                     -- That is, default method implementations could depend on
                     -- other methods.
                     -- (See test idris2/interface014 for an example!)
-                    let mupdates
-                            = map (\n => (n, IImplicitApp fc (IVar fc n)
-                                                          (Just (UN "__con"))
-                                                          (IVar fc impName))) allms
+
+                    -- Similarly if any parameters appear in the clauses, they should
+                    -- be substituted for the actual parameters because they are going
+                    -- to be referring to unbound variables otherwise.
+                    -- (See test idris2/interface018 for an example!)
+                    let mupdates = params ++ map specialiseMeth allms
                         cs' = map (substNamesClause [] mupdates) cs in
                         extendBody ms ns
                              (IDef fc n (map (substLocClause fc) cs') :: body)
@@ -91,9 +100,9 @@ getMethImps : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               Env Term vars -> Term vars ->
               Core (List (Name, RigCount, RawImp))
-getMethImps env (Bind fc x (Pi c Implicit ty) sc)
+getMethImps env (Bind fc x (Pi fc' c Implicit ty) sc)
     = do rty <- unelabNoSugar env ty
-         ts <- getMethImps (Pi c Implicit ty :: env) sc
+         ts <- getMethImps (Pi fc' c Implicit ty :: env) sc
          pure ((x, c, rty) :: ts)
 getMethImps env tm = pure []
 
@@ -109,14 +118,19 @@ elabImplementation : {vars : _} ->
                      (constraints : List (Maybe Name, RawImp)) ->
                      Name ->
                      (ps : List RawImp) ->
-                     (implName : Maybe Name) ->
+                     (namedimpl : Bool) ->
+                     (implName : Name) ->
                      (nusing : List Name) ->
                      Maybe (List ImpDecl) ->
                      Core ()
 -- TODO: Refactor all these steps into separate functions
-elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nusing mbody
-    = do let impName_in = maybe (mkImpl fc iname ps) id impln
-         impName <- inCurrentNS impName_in
+elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named impName_in nusing mbody
+    = do -- let impName_in = maybe (mkImplName fc iname ps) id impln
+         -- If we're in a nested block, update the name
+         let impName_nest = case lookup impName_in (names nest) of
+                                 Just (Just n', _) => n'
+                                 _ => impName_in
+         impName <- inCurrentNS impName_nest
          -- The interface name might be qualified, so check if it's an
          -- alias for something
          syn <- get Syn
@@ -124,111 +138,125 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
          inames <- lookupCtxtName iname (gamma defs)
          let [cndata] = concatMap (\n => lookupName n (ifaces syn))
                                   (map fst inames)
-             | [] => throw (UndefinedName fc iname)
-             | ns => throw (AmbiguousName fc (map fst ns))
+             | [] => undefinedName vfc iname
+             | ns => throw (AmbiguousName vfc (map fst ns))
          let cn : Name = fst cndata
          let cdata : IFaceInfo = snd cndata
 
          Just ity <- lookupTyExact cn (gamma defs)
-              | Nothing => throw (UndefinedName fc cn)
+              | Nothing => undefinedName vfc cn
          Just conty <- lookupTyExact (iconstructor cdata) (gamma defs)
-              | Nothing => throw (UndefinedName fc (iconstructor cdata))
+              | Nothing => undefinedName vfc (iconstructor cdata)
 
          let impsp = nub (concatMap findIBinds ps ++
                           concatMap findIBinds (map snd cons))
 
-         logTerm 3 ("Found interface " ++ show cn) ity
-         log 3 $ " with params: " ++ show (params cdata)
-                 ++ " and parents: " ++ show (parents cdata)
-                 ++ " using implicits: " ++ show impsp
-                 ++ " and methods: " ++ show (methods cdata) ++ "\n"
-                 ++ "Constructor: " ++ show (iconstructor cdata) ++ "\n"
-         logTerm 3 "Constructor type: " conty
-         log 5 $ "Making implementation " ++ show impName
+         logTerm "elab.implementation" 3 ("Found interface " ++ show cn) ity
+         log "elab.implementation" 3 $
+                 "\n  with params: " ++ show (params cdata)
+                 ++ "\n  specialised to: " ++ show ps
+                 ++ "\n  and parents: " ++ show (parents cdata)
+                 ++ "\n  using implicits: " ++ show impsp
+                 ++ "\n  and methods: " ++ show (methods cdata) ++ "\n"
+                 ++ "\nConstructor: " ++ show (iconstructor cdata) ++ "\n"
+         logTerm "elab.implementation" 3 "Constructor type: " conty
+         log "elab.implementation" 5 $ "Making implementation " ++ show impName
 
          -- 1. Build the type for the implementation
          -- Make the constraints auto implicit arguments, which can be explicitly
          -- given when using named implementations
          --    (cs : Constraints) -> Impl params
          -- Don't make it a hint if it's a named implementation
-         let opts = maybe ([Inline, Hint True])
-                          (const ([Inline])) impln
+         let opts = if named
+                       then [Inline]
+                       else [Inline, Hint True]
 
-         let initTy = bindImpls fc is $ bindConstraints fc AutoImplicit cons
-                         (apply (IVar fc iname) ps)
+         let initTy = bindImpls vfc is $ bindConstraints vfc AutoImplicit cons
+                         (apply (IVar vfc iname) ps)
          let paramBinds = if !isUnboundImplicits
                           then findBindableNames True vars [] initTy
                           else []
          let impTy = doBind paramBinds initTy
 
-         let impTyDecl = IClaim fc top vis opts (MkImpTy fc impName impTy)
-         log 5 $ "Implementation type: " ++ show impTy
+         let impTyDecl = IClaim vfc top vis opts (MkImpTy EmptyFC EmptyFC impName impTy)
+
+         log "elab.implementation" 5 $ "Implementation type: " ++ show impTy
 
          when (typePass pass) $ processDecl [] nest env impTyDecl
 
          -- If the body is empty, we're done for now (just declaring that
          -- the implementation exists and define it later)
-         when (defPass pass) $ maybe (pure ())
-           (\body_in => do
+         when (defPass pass) $
+           whenJust mbody $ \body_in => do
                defs <- get Ctxt
                Just impTyc <- lookupTyExact impName (gamma defs)
                     | Nothing => throw (InternalError ("Can't happen, can't find type of " ++ show impName))
                methImps <- getMethImps [] impTyc
-               log 3 $ "Bind implicits to each method: " ++ show methImps
+               log "elab.implementation" 3 $ "Bind implicits to each method: " ++ show methImps
 
-               -- 1.5. Lookup default definitions and add them to to body
+               -- 1.5. Lookup default definitions and add them to the body
                let (body, missing)
-                     = addDefaults fc impName (map (dropNS . fst) (methods cdata))
+                     = addDefaults vfc impName
+                                      (zip (params cdata) ps)
+                                      (map (dropNS . name) (methods cdata))
                                       (defaults cdata) body_in
 
-               log 5 $ "Added defaults: body is " ++ show body
-               log 5 $ "Missing methods: " ++ show missing
+               log "elab.implementation" 5 $ "Added defaults: body is " ++ show body
+               log "elab.implementation" 5 $ "Missing methods: " ++ show missing
+               when (not (isNil missing)) $
+                 throw (GenericMsg ifc ("Missing methods in " ++ show iname ++ ": "
+                                        ++ showSep ", " (map show missing)))
 
                -- Add the 'using' hints
                defs <- get Ctxt
                let hs = openHints defs -- snapshot open hint state
-               log 10 $ "Open hints: " ++ (show (impName :: nusing))
-               traverse_ (\n => do n' <- checkUnambig fc n
+               log "elab.implementation" 10 $ "Open hints: " ++ (show (impName :: nusing))
+               traverse_ (\n => do n' <- checkUnambig vfc n
                                    addOpenHint n') nusing
 
                -- 2. Elaborate top level function types for this interface
                defs <- get Ctxt
                fns <- topMethTypes [] impName methImps impsp
                                       (implParams cdata) (params cdata)
-                                      (map fst (methods cdata))
+                                      (map name (methods cdata))
                                       (methods cdata)
                traverse_ (processDecl [] nest env) (map mkTopMethDecl fns)
 
                -- 3. Build the record for the implementation
                let mtops = map (Builtin.fst . snd) fns
                let con = iconstructor cdata
-               let ilhs = impsApply (IVar fc impName)
-                                    (map (\x => (x, IBindVar fc (show x)))
+               let ilhs = impsApply (IVar EmptyFC impName)
+                                    (map (\x => (x, IBindVar vfc (show x)))
                                               (map fst methImps))
                -- RHS is the constructor applied to a search for the necessary
                -- parent constraints, then the method implementations
                defs <- get Ctxt
                let fldTys = getFieldArgs !(normaliseHoles defs [] conty)
-               log 5 $ "Field types " ++ show fldTys
-               let irhs = apply (IVar fc con)
-                                (map (const (ISearch fc 500)) (parents cdata)
-                                 ++ map (mkMethField methImps fldTys) fns)
-               let impFn = IDef fc impName [PatClause fc ilhs irhs]
-               log 5 $ "Implementation record: " ++ show impFn
+               log "elab.implementation" 5 $ "Field types " ++ show fldTys
+               let irhs = apply (autoImpsApply (IVar vfc con) $ map (const (ISearch vfc 500)) (parents cdata))
+                                  (map (mkMethField methImps fldTys) fns)
+               let impFn = IDef vfc impName [PatClause vfc ilhs irhs]
+               log "elab.implementation" 5 $ "Implementation record: " ++ show impFn
 
                -- If it's a named implementation, add it as a global hint while
                -- elaborating the record and bodies
-               maybe (pure ()) (\x => addOpenHint impName) impln
+               when named $ addOpenHint impName
 
                -- Make sure we don't use this name to solve parent constraints
                -- when elaborating the record, or we'll end up in a cycle!
-               setFlag fc impName BlockedHint
-               traverse (processDecl [] nest env) [impFn]
-               unsetFlag fc impName BlockedHint
+               setFlag vfc impName BlockedHint
 
-               setFlag fc impName TCInline
+               -- Update nested names so we elaborate the body in the right
+               -- environment
+               names' <- traverse applyEnv (impName :: mtops)
+               let nest' = record { names $= (names' ++) } nest
+
+               traverse_ (processDecl [] nest' env) [impFn]
+               unsetFlag vfc impName BlockedHint
+
+               setFlag vfc impName TCInline
                -- it's the methods we're interested in, not the implementation
-               setFlag fc impName (SetTotal PartialOK)
+               setFlag vfc impName (SetTotal PartialOK)
 
                -- 4. (TODO: Order method bodies to be in declaration order, in
                --    case of dependencies)
@@ -236,28 +264,40 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
                -- 5. Elaborate the method bodies
                let upds = map methNameUpdate fns
                body' <- traverse (updateBody upds) body
-               log 10 $ "Implementation body: " ++ show body'
-               traverse (processDecl [] nest env) body'
+
+               log "elab.implementation" 10 $ "Implementation body: " ++ show body'
+               traverse_ (processDecl [] nest' env) body'
 
                -- 6. Add transformation rules for top level methods
-               traverse (addTransform impName upds) (methods cdata)
+               traverse_ (addTransform impName upds) (methods cdata)
 
                -- inline flag has done its job, and outside the interface
                -- it can hurt, so unset it now
-               unsetFlag fc impName TCInline
+               unsetFlag vfc impName TCInline
 
                -- Reset the open hints (remove the named implementation)
                setOpenHints hs
-               pure ()) mbody
-  where
+
+    where
+    vfc : FC
+    vfc = virtualiseFC ifc
+
+    applyEnv : Name ->
+               Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))
+    applyEnv n
+        = do n' <- resolveName n
+             pure (Resolved n', (Nothing, reverse (allVars env),
+                      \fn, nt => applyToFull vfc
+                                     (Ref vfc nt (Resolved n')) env))
+
     -- For the method fields in the record, get the arguments we need to abstract
     -- over
     getFieldArgs : Term vs -> List (Name, List (Name, RigCount, PiInfo RawImp))
-    getFieldArgs (Bind _ x (Pi c p ty) sc)
+    getFieldArgs (Bind _ x (Pi _ _ _ ty) sc)
         = (x, getArgs ty) :: getFieldArgs sc
       where
         getArgs : Term vs' -> List (Name, RigCount, PiInfo RawImp)
-        getArgs (Bind _ x (Pi c p _) sc)
+        getArgs (Bind _ x (Pi _ c p _) sc)
             = (x, c, forgetDef p) :: getArgs sc
         getArgs _ = []
     getFieldArgs _ = []
@@ -265,23 +305,27 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     impsApply : RawImp -> List (Name, RawImp) -> RawImp
     impsApply fn [] = fn
     impsApply fn ((n, arg) :: ns)
-        = impsApply (IImplicitApp fc fn (Just n) arg) ns
+        = impsApply (INamedApp vfc fn n arg) ns
+
+    autoImpsApply : RawImp -> List RawImp -> RawImp
+    autoImpsApply f [] = f
+    autoImpsApply f (x :: xs) = autoImpsApply (IAutoApp (getFC f) f x) xs
 
     mkLam : List (Name, RigCount, PiInfo RawImp) -> RawImp -> RawImp
     mkLam [] tm = tm
     mkLam ((x, c, p) :: xs) tm
-        = ILam fc c p (Just x) (Implicit fc False) (mkLam xs tm)
+        = ILam EmptyFC c p (Just x) (Implicit vfc False) (mkLam xs tm)
 
-    applyTo : FC -> RawImp -> List (Name, RigCount, PiInfo RawImp) -> RawImp
-    applyTo fc tm [] = tm
-    applyTo fc tm ((x, c, Explicit) :: xs)
-        = applyTo fc (IApp fc tm (IVar fc x)) xs
-    applyTo fc tm ((x, c, AutoImplicit) :: xs)
-        = applyTo fc (IImplicitApp fc tm (Just x) (IVar fc x)) xs
-    applyTo fc tm ((x, c, Implicit) :: xs)
-        = applyTo fc (IImplicitApp fc tm (Just x) (IVar fc x)) xs
-    applyTo fc tm ((x, c, DefImplicit _) :: xs)
-        = applyTo fc (IImplicitApp fc tm (Just x) (IVar fc x)) xs
+    applyTo : RawImp -> List (Name, RigCount, PiInfo RawImp) -> RawImp
+    applyTo tm [] = tm
+    applyTo tm ((x, c, Explicit) :: xs)
+        = applyTo (IApp EmptyFC tm (IVar EmptyFC x)) xs
+    applyTo tm ((x, c, AutoImplicit) :: xs)
+        = applyTo (INamedApp EmptyFC tm x (IVar EmptyFC x)) xs
+    applyTo tm ((x, c, Implicit) :: xs)
+        = applyTo (INamedApp EmptyFC tm x (IVar EmptyFC x)) xs
+    applyTo tm ((x, c, DefImplicit _) :: xs)
+        = applyTo (INamedApp EmptyFC tm x (IVar EmptyFC x)) xs
 
     -- When applying the method in the field for the record, eta expand
     -- the expected arguments based on the field type, so that implicits get
@@ -296,8 +340,8 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
               -- implicit arguments to the declaration
               mkLam argns
                     (impsApply
-                         (applyTo fc (IVar fc n) argns)
-                         (map (\n => (n, IVar fc (UN (show n)))) imps))
+                         (applyTo (IVar EmptyFC n) argns)
+                         (map (\n => (n, IVar vfc (UN (show n)))) imps))
       where
         applyUpdate : (Name, RigCount, PiInfo RawImp) ->
                       (Name, RigCount, PiInfo RawImp)
@@ -310,18 +354,18 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     methName n
         = DN (show n)
              (UN (show n ++ "_" ++ show iname ++ "_" ++
-                     maybe "" show impln ++ "_" ++
+                     (if named then show impName_in else "") ++
                      showSep "_" (map show ps)))
 
     applyCon : Name -> Name -> Core (Name, RawImp)
     applyCon impl n
         = do mn <- inCurrentNS (methName n)
-             pure (dropNS n, IVar fc mn)
+             pure (dropNS n, IVar vfc mn)
 
     bindImps : List (Name, RigCount, RawImp) -> RawImp -> RawImp
     bindImps [] ty = ty
     bindImps ((n, c, t) :: ts) ty
-        = IPi fc c Implicit (Just n) t (bindImps ts ty)
+        = IPi vfc c Implicit (Just n) t (bindImps ts ty)
 
     -- Return method name, specialised method name, implicit name updates,
     -- and method type. Also return how the method name should be updated
@@ -329,20 +373,20 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     topMethType : List (Name, RawImp) ->
                   Name -> List (Name, RigCount, RawImp) ->
                   List String -> List Name -> List Name -> List Name ->
-                  (Name, RigCount, Maybe TotalReq, (Bool, RawImp)) ->
+                  Method ->
                   Core ((Name, Name, List (String, String), RigCount, Maybe TotalReq, RawImp),
                            List (Name, RawImp))
-    topMethType methupds impName methImps impsp imppnames pnames allmeths (mn, c, treq, (d, mty_in))
+    topMethType methupds impName methImps impsp imppnames pnames allmeths meth
         = do -- Get the specialised type by applying the method to the
              -- parameters
-             n <- inCurrentNS (methName mn)
+             n <- inCurrentNS (methName meth.name)
 
              -- Avoid any name clashes between parameters and method types by
              -- renaming IBindVars in the method types which appear in the
              -- parameters
              let upds' = !(traverse (applyCon impName) allmeths)
-             let mty_in = substNames vars upds' mty_in
-             let (mty_in, upds) = runState (renameIBinds impsp (findImplicits mty_in) mty_in) []
+             let mty_in = substNames vars upds' meth.type
+             let (upds, mty_in) = runState Prelude.Nil (renameIBinds impsp (findImplicits mty_in) mty_in)
              -- Finally update the method type so that implicits from the
              -- parameters are passed through to any earlier methods which
              -- appear in the type
@@ -352,41 +396,43 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
              -- substitute in the explicit parameters.
              let mty_iparams
                    = substBindVars vars
-                                (map (\n => (n, Implicit fc False)) imppnames)
+                                (map (\n => (n, Implicit vfc False)) imppnames)
                                 mty_in
              let mty_params
                    = substNames vars (zip pnames ps) mty_iparams
-             log 5 $ "Substitute implicits " ++ show imppnames ++
+             log "elab.implementation" 5 $ "Substitute implicits " ++ show imppnames ++
                      " parameters " ++ show (zip pnames ps) ++
                      " "  ++ show mty_in ++ " is " ++
                      show mty_params
 
              let mbase = bindImps methImps $
-                         bindConstraints fc AutoImplicit cons $
+                         bindConstraints vfc AutoImplicit cons $
                          mty_params
              let ibound = findImplicits mbase
 
-             mty <- bindTypeNamesUsed ibound vars mbase
+             mty <- bindTypeNamesUsed ifc ibound vars mbase
 
-             log 3 $ "Method " ++ show mn ++ " ==> " ++
+             log "elab.implementation" 3 $
+                     "Method " ++ show meth.name ++ " ==> " ++
                      show n ++ " : " ++ show mty
-             log 3 $ "    (initially " ++ show mty_in ++ ")"
-             log 5 $ "Updates " ++ show methupds
-             log 5 $ "From " ++ show mbase
-             log 3 $ "Name updates " ++ show upds
-             log 3 $ "Param names: " ++ show pnames
-             log 10 $ "Used names " ++ show ibound
+             log "elab.implementation" 3 $ "    (initially " ++ show mty_in ++ ")"
+             log "elab.implementation" 5 $ "Updates " ++ show methupds
+             log "elab.implementation" 5 $ "From " ++ show mbase
+             log "elab.implementation" 3 $ "Name updates " ++ show upds
+             log "elab.implementation" 3 $ "Param names: " ++ show pnames
+             log "elab.implementation" 10 $ "Used names " ++ show ibound
              let ibinds = map fst methImps
              let methupds' = if isNil ibinds then []
-                             else [(n, impsApply (IVar fc n)
-                                     (map (\x => (x, IBindVar fc (show x))) ibinds))]
-             pure ((mn, n, upds, c, treq, mty), methupds')
+                             else [(n, impsApply (IVar vfc n)
+                                     (map (\x => (x, IBindVar vfc (show x))) ibinds))]
+
+             pure ((meth.name, n, upds, meth.count, meth.totalReq, mty), methupds')
 
     topMethTypes : List (Name, RawImp) ->
                    Name -> List (Name, RigCount, RawImp) ->
                    List String ->
                    List Name -> List Name -> List Name ->
-                   List (Name, RigCount, Maybe TotalReq, (Bool, RawImp)) ->
+                   List Method ->
                    Core (List (Name, Name, List (String, String), RigCount, Maybe TotalReq, RawImp))
     topMethTypes upds impName methImps impsp imppnames pnames allmeths [] = pure []
     topMethTypes upds impName methImps impsp imppnames pnames allmeths (m :: ms)
@@ -397,12 +443,16 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     mkTopMethDecl : (Name, Name, List (String, String), RigCount, Maybe TotalReq, RawImp) -> ImpDecl
     mkTopMethDecl (mn, n, upds, c, treq, mty)
         = let opts = maybe opts_in (\t => Totality t :: opts_in) treq in
-              IClaim fc c vis opts (MkImpTy fc n mty)
+              IClaim vfc c vis opts (MkImpTy EmptyFC EmptyFC n mty)
 
     -- Given the method type (result of topMethType) return the mapping from
     -- top level method name to current implementation's method name
     methNameUpdate : (Name, Name, t) -> (Name, Name)
-    methNameUpdate (mn, fn, _) = (UN (nameRoot mn), fn)
+    methNameUpdate (UN mn, fn, _) = (UN mn, fn)
+    methNameUpdate (RF mn, fn, _) = (RF mn, fn)
+    methNameUpdate (NS _ mn, fn, p) = methNameUpdate (mn, fn, p)
+    methNameUpdate (mn, fn, p) = (UN (nameRoot mn), fn) -- probably impossible
+
 
     findMethName : List (Name, Name) -> FC -> Name -> Core Name
     findMethName ns fc n
@@ -419,9 +469,12 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     updateApp ns (IApp fc f arg)
         = do f' <- updateApp ns f
              pure (IApp fc f' arg)
-    updateApp ns (IImplicitApp fc f x arg)
+    updateApp ns (IAutoApp fc f arg)
         = do f' <- updateApp ns f
-             pure (IImplicitApp fc f' x arg)
+             pure (IAutoApp fc f' arg)
+    updateApp ns (INamedApp fc f x arg)
+        = do f' <- updateApp ns f
+             pure (INamedApp fc f' x arg)
     updateApp ns tm
         = throw (GenericMsg (getFC tm) "Invalid method definition")
 
@@ -430,10 +483,10 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     updateClause ns (PatClause fc lhs rhs)
         = do lhs' <- updateApp ns lhs
              pure (PatClause fc lhs' rhs)
-    updateClause ns (WithClause fc lhs wval flags cs)
+    updateClause ns (WithClause fc lhs wval prf flags cs)
         = do lhs' <- updateApp ns lhs
              cs' <- traverse (updateClause ns) cs
-             pure (WithClause fc lhs' wval flags cs')
+             pure (WithClause fc lhs' wval prf flags cs')
     updateClause ns (ImpossibleClause fc lhs)
         = do lhs' <- updateApp ns lhs
              pure (ImpossibleClause fc lhs')
@@ -442,28 +495,30 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     updateBody ns (IDef fc n cs)
         = do cs' <- traverse (updateClause ns) cs
              n' <- findMethName ns fc n
+             log "ide-mode.highlight" 1 $ show (n, n', fc)
              pure (IDef fc n' cs')
-    updateBody ns _
-        = throw (GenericMsg fc
+    updateBody ns e
+        = throw (GenericMsg (getFC e)
                    "Implementation body can only contain definitions")
 
     addTransform : Name -> List (Name, Name) ->
-                   (Name, RigCount, Maybe TotalReq, Bool, RawImp) ->
+                   Method ->
                    Core ()
-    addTransform iname ns (top, _, _, _, ty)
-        = do log 3 $ "Adding transform for " ++ show top ++ " : " ++ show ty ++
+    addTransform iname ns meth
+        = do log "elab.implementation" 3 $
+                     "Adding transform for " ++ show meth.name ++ " : " ++ show meth.type ++
                      "\n\tfor " ++ show iname ++ " in " ++ show ns
-             let lhs = IImplicitApp fc (IVar fc top)
-                                       (Just (UN "__con"))
-                                       (IVar fc iname)
-             let Just mname = lookup (dropNS top) ns
+             let lhs = INamedApp vfc (IVar vfc meth.name)
+                                     (UN "__con")
+                                     (IVar vfc iname)
+             let Just mname = lookup (dropNS meth.name) ns
                  | Nothing => pure ()
-             let rhs = IVar fc mname
-             log 5 $ show lhs ++ " ==> " ++ show rhs
+             let rhs = IVar vfc mname
+             log "elab.implementation" 5 $ show lhs ++ " ==> " ++ show rhs
              handleUnify
                  (processDecl [] nest env
-                     (ITransform fc (UN (show top ++ " " ++ show iname)) lhs rhs))
+                     (ITransform vfc (UN (show meth.name ++ " " ++ show iname)) lhs rhs))
                  (\err =>
-                     log 5 $ "Can't add transform " ++
+                     log "elab.implementation" 5 $ "Can't add transform " ++
                                 show lhs ++ " ==> " ++ show rhs ++
                              "\n\t" ++ show err)

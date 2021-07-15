@@ -10,17 +10,52 @@ import Core.Name
 import Core.Options
 import Core.TT
 
-import Data.NameMap
+import Libraries.Data.NameMap
+import Libraries.Data.PosMap
 import Data.Vect
 
-import Utils.Binary
+import Libraries.Utils.Binary
 
 %default covering
+
+export
+TTC Namespace where
+  toBuf b = toBuf b . unsafeUnfoldNamespace
+  fromBuf = Core.map unsafeFoldNamespace . fromBuf
+
+export
+TTC ModuleIdent where
+  toBuf b = toBuf b . unsafeUnfoldModuleIdent
+  fromBuf = Core.map unsafeFoldModuleIdent . fromBuf
+
+export
+TTC VirtualIdent where
+  toBuf b Interactive = tag 0
+
+  fromBuf b =
+    case !getTag of
+      0 => pure Interactive
+      _ => corrupt "VirtualIdent"
+
+export
+TTC OriginDesc where
+  toBuf b (PhysicalIdrSrc ident) = do tag 0; toBuf b ident
+  toBuf b (PhysicalPkgSrc fname) = do tag 1; toBuf b fname
+  toBuf b (Virtual ident) = do tag 2; toBuf b ident
+
+  fromBuf b =
+    case !getTag of
+      0 => [| PhysicalIdrSrc (fromBuf b) |]
+      1 => [| PhysicalPkgSrc (fromBuf b) |]
+      2 => [| Virtual        (fromBuf b) |]
+      _ => corrupt "OriginDesc"
 
 export
 TTC FC where
   toBuf b (MkFC file startPos endPos)
       = do tag 0; toBuf b file; toBuf b startPos; toBuf b endPos
+  toBuf b (MkVirtualFC file startPos endPos)
+      = do tag 2; toBuf b file; toBuf b startPos; toBuf b endPos
   toBuf b EmptyFC = tag 1
 
   fromBuf b
@@ -29,6 +64,9 @@ TTC FC where
                      s <- fromBuf b; e <- fromBuf b
                      pure (MkFC f s e)
              1 => pure EmptyFC
+             2 => do f <- fromBuf b;
+                     s <- fromBuf b; e <- fromBuf b
+                     pure (MkVirtualFC f s e)
              _ => corrupt "FC"
 
 export
@@ -38,9 +76,10 @@ TTC Name where
   toBuf b (MN x y) = do tag 2; toBuf b x; toBuf b y
   toBuf b (PV x y) = do tag 3; toBuf b x; toBuf b y
   toBuf b (DN x y) = do tag 4; toBuf b x; toBuf b y
-  toBuf b (Nested x y) = do tag 5; toBuf b x; toBuf b y
-  toBuf b (CaseBlock x y) = do tag 6; toBuf b x; toBuf b y
-  toBuf b (WithBlock x y) = do tag 7; toBuf b x; toBuf b y
+  toBuf b (RF x) = do tag 5; toBuf b x
+  toBuf b (Nested x y) = do tag 6; toBuf b x; toBuf b y
+  toBuf b (CaseBlock x y) = do tag 7; toBuf b x; toBuf b y
+  toBuf b (WithBlock x y) = do tag 8; toBuf b x; toBuf b y
   toBuf b (Resolved x)
       = throw (InternalError ("Can't write resolved name " ++ show x))
 
@@ -61,12 +100,14 @@ TTC Name where
                      y <- fromBuf b
                      pure (DN x y)
              5 => do x <- fromBuf b
-                     y <- fromBuf b
-                     pure (Nested x y)
+                     pure (RF x)
              6 => do x <- fromBuf b
                      y <- fromBuf b
-                     pure (CaseBlock x y)
+                     pure (Nested x y)
              7 => do x <- fromBuf b
+                     y <- fromBuf b
+                     pure (CaseBlock x y)
+             8 => do x <- fromBuf b
                      y <- fromBuf b
                      pure (WithBlock x y)
              _ => corrupt "Name"
@@ -124,6 +165,15 @@ TTC Constant where
   toBuf b DoubleType = tag 18
   toBuf b WorldType = tag 19
 
+  toBuf b (I32 x) = do tag 20; toBuf b x
+  toBuf b (I64 x) = do tag 21; toBuf b x
+  toBuf b Int32Type = tag 22
+  toBuf b Int64Type = tag 23
+  toBuf b (I8 x) = do tag 24; toBuf b x
+  toBuf b (I16 x) = do tag 25; toBuf b x
+  toBuf b Int8Type = tag 26
+  toBuf b Int16Type = tag 27
+
   fromBuf b
       = case !getTag of
              0 => do x <- fromBuf b; pure (I x)
@@ -146,6 +196,14 @@ TTC Constant where
              17 => pure CharType
              18 => pure DoubleType
              19 => pure WorldType
+             20 => do x <- fromBuf b; pure (I32 x)
+             21 => do x <- fromBuf b; pure (I64 x)
+             22 => pure Int32Type
+             23 => pure Int64Type
+             24 => do x <- fromBuf b; pure (I8 x)
+             25 => do x <- fromBuf b; pure (I16 x)
+             26 => pure Int8Type
+             27 => pure Int16Type
              _ => corrupt "Constant"
 
 export
@@ -194,21 +252,21 @@ getName _ [] = Nothing
 mutual
   export
   {vars : _} -> TTC (Binder (Term vars)) where
-    toBuf b (Lam c x ty) = do tag 0; toBuf b c; toBuf b x; toBuf b ty
-    toBuf b (Let c val ty) = do tag 1; toBuf b c; toBuf b val -- ; toBuf b ty
-    toBuf b (Pi c x ty) = do tag 2; toBuf b c; toBuf b x; toBuf b ty
-    toBuf b (PVar c p ty) = do tag 3; toBuf b c; toBuf b p; toBuf b ty
-    toBuf b (PLet c val ty) = do tag 4; toBuf b c; toBuf b val -- ; toBuf b ty
-    toBuf b (PVTy c ty) = do tag 5; toBuf b c -- ; toBuf b ty
+    toBuf b (Lam _ c x ty) = do tag 0; toBuf b c; toBuf b x; toBuf b ty
+    toBuf b (Let _ c val ty) = do tag 1; toBuf b c; toBuf b val -- ; toBuf b ty
+    toBuf b (Pi _ c x ty) = do tag 2; toBuf b c; toBuf b x; toBuf b ty
+    toBuf b (PVar _ c p ty) = do tag 3; toBuf b c; toBuf b p; toBuf b ty
+    toBuf b (PLet _ c val ty) = do tag 4; toBuf b c; toBuf b val -- ; toBuf b ty
+    toBuf b (PVTy _ c ty) = do tag 5; toBuf b c -- ; toBuf b ty
 
     fromBuf b
         = case !getTag of
-               0 => do c <- fromBuf b; x <- fromBuf b; ty <- fromBuf b; pure (Lam c x ty)
-               1 => do c <- fromBuf b; x <- fromBuf b; pure (Let c x (Erased emptyFC False))
-               2 => do c <- fromBuf b; x <- fromBuf b; y <- fromBuf b; pure (Pi c x y)
-               3 => do c <- fromBuf b; p <- fromBuf b; ty <- fromBuf b; pure (PVar c p ty)
-               4 => do c <- fromBuf b; x <- fromBuf b; pure (PLet c x (Erased emptyFC False))
-               5 => do c <- fromBuf b; pure (PVTy c (Erased emptyFC False))
+               0 => do c <- fromBuf b; x <- fromBuf b; ty <- fromBuf b; pure (Lam emptyFC c x ty)
+               1 => do c <- fromBuf b; x <- fromBuf b; pure (Let emptyFC c x (Erased emptyFC False))
+               2 => do c <- fromBuf b; x <- fromBuf b; y <- fromBuf b; pure (Pi emptyFC c x y)
+               3 => do c <- fromBuf b; p <- fromBuf b; ty <- fromBuf b; pure (PVar emptyFC c p ty)
+               4 => do c <- fromBuf b; x <- fromBuf b; pure (PLet emptyFC c x (Erased emptyFC False))
+               5 => do c <- fromBuf b; pure (PVTy emptyFC c (Erased emptyFC False))
                _ => corrupt "Binder"
 
   export
@@ -226,8 +284,8 @@ mutual
   export
   {vars : _} -> TTC (Term vars) where
     toBuf b (Local {name} fc c idx y)
-        = if idx < 244
-             then do tag (12 + cast idx)
+        = if idx < 243
+             then do tag (13 + cast idx)
                      toBuf b c
              else do tag 0
                      toBuf b c
@@ -243,11 +301,14 @@ mutual
              toBuf b x;
              toBuf b bnd; toBuf b scope
     toBuf b (App fc fn arg)
-        = do tag 4;
-             toBuf b fn; toBuf b arg
---              let (fn, args) = getFnArgs (App fc fn arg)
---              toBuf b fn; -- toBuf b p;
---              toBuf b args
+        = do let (fn, args) = getFnArgs (App fc fn arg)
+             case args of
+                  [arg] => do tag 4
+                              toBuf b fn
+                              toBuf b arg
+                  args => do tag 12
+                             toBuf b fn
+                             toBuf b args
     toBuf b (As fc s as tm)
         = do tag 5;
              toBuf b as; toBuf b s; toBuf b tm
@@ -299,8 +360,11 @@ mutual
                        pure (PrimVal emptyFC c)
                10 => pure (Erased emptyFC False)
                11 => pure (TType emptyFC)
+               12 => do fn <- fromBuf b
+                        args <- fromBuf b
+                        pure (apply emptyFC fn args)
                idxp => do c <- fromBuf b
-                          let idx : Nat = fromInteger (cast (idxp - 12))
+                          let idx : Nat = fromInteger (cast (idxp - 13))
                           let Just name = getName idx vars
                               | Nothing => corrupt "Term"
                           pure (Local {name} emptyFC c idx (mkPrf idx))
@@ -585,6 +649,29 @@ export
                  100 => pure BelieveMe
                  _ => corrupt "PrimFn 3"
 
+export
+TTC ConInfo where
+  toBuf b DATACON = tag 0
+  toBuf b TYCON = tag 1
+  toBuf b NIL = tag 2
+  toBuf b CONS = tag 3
+  toBuf b ENUM = tag 4
+  toBuf b NOTHING = tag 5
+  toBuf b JUST = tag 6
+  toBuf b RECORD = tag 7
+
+  fromBuf b
+      = case !getTag of
+             0 => pure DATACON
+             1 => pure TYCON
+             2 => pure NIL
+             3 => pure CONS
+             4 => pure ENUM
+             5 => pure NOTHING
+             6 => pure JUST
+             7 => pure RECORD
+             _ => corrupt "ConInfo"
+
 mutual
   export
   {vars : _} -> TTC (CExp vars) where
@@ -593,11 +680,11 @@ mutual
     toBuf b (CLam fc x sc) = do tag 2; toBuf b fc; toBuf b x; toBuf b sc
     toBuf b (CLet fc x inl val sc) = do tag 3; toBuf b fc; toBuf b x; toBuf b inl; toBuf b val; toBuf b sc
     toBuf b (CApp fc f as) = assert_total $ do tag 4; toBuf b fc; toBuf b f; toBuf b as
-    toBuf b (CCon fc t n as) = assert_total $ do tag 5; toBuf b fc; toBuf b t; toBuf b n; toBuf b as
+    toBuf b (CCon fc t n ci as) = assert_total $ do tag 5; toBuf b fc; toBuf b t; toBuf b n; toBuf b ci; toBuf b as
     toBuf b (COp {arity} fc op as) = assert_total $ do tag 6; toBuf b fc; toBuf b arity; toBuf b op; toBuf b as
     toBuf b (CExtPrim fc f as) = assert_total $ do tag 7; toBuf b fc; toBuf b f; toBuf b as
-    toBuf b (CForce fc x) = assert_total $ do tag 8; toBuf b fc; toBuf b x
-    toBuf b (CDelay fc x) = assert_total $ do tag 9; toBuf b fc; toBuf b x
+    toBuf b (CForce fc lr x) = assert_total $ do tag 8; toBuf b fc; toBuf b lr; toBuf b x
+    toBuf b (CDelay fc lr x) = assert_total $ do tag 9; toBuf b fc; toBuf b lr; toBuf b x
     toBuf b (CConCase fc sc alts def) = assert_total $ do tag 10; toBuf b fc; toBuf b sc; toBuf b alts; toBuf b def
     toBuf b (CConstCase fc sc alts def) = assert_total $ do tag 11; toBuf b fc; toBuf b sc; toBuf b alts; toBuf b def
     toBuf b (CPrimVal fc c) = do tag 12; toBuf b fc; toBuf b c
@@ -624,8 +711,8 @@ mutual
                        f <- fromBuf b; as <- fromBuf b
                        pure (CApp fc f as)
                5 => do fc <- fromBuf b
-                       t <- fromBuf b; n <- fromBuf b; as <- fromBuf b
-                       pure (CCon fc t n as)
+                       t <- fromBuf b; n <- fromBuf b; ci <- fromBuf b; as <- fromBuf b
+                       pure (CCon fc t n ci as)
                6 => do fc <- fromBuf b
                        arity <- fromBuf b; op <- fromBuf b; args <- fromBuf b
                        pure (COp {arity} fc op args)
@@ -633,11 +720,13 @@ mutual
                        p <- fromBuf b; as <- fromBuf b
                        pure (CExtPrim fc p as)
                8 => do fc <- fromBuf b
+                       lr <- fromBuf b
                        x <- fromBuf b
-                       pure (CForce fc x)
+                       pure (CForce fc lr x)
                9 => do fc <- fromBuf b
+                       lr <- fromBuf b
                        x <- fromBuf b
-                       pure (CDelay fc x)
+                       pure (CDelay fc lr x)
                10 => do fc <- fromBuf b
                         sc <- fromBuf b; alts <- fromBuf b; def <- fromBuf b
                         pure (CConCase fc sc alts def)
@@ -656,12 +745,12 @@ mutual
 
   export
   {vars : _} -> TTC (CConAlt vars) where
-    toBuf b (MkConAlt n t as sc) = do toBuf b n; toBuf b t; toBuf b as; toBuf b sc
+    toBuf b (MkConAlt n ci t as sc) = do toBuf b n; toBuf b ci; toBuf b t; toBuf b as; toBuf b sc
 
     fromBuf b
-        = do n <- fromBuf b; t <- fromBuf b
+        = do n <- fromBuf b; ci <- fromBuf b; t <- fromBuf b
              as <- fromBuf b; sc <- fromBuf b
-             pure (MkConAlt n t as sc)
+             pure (MkConAlt n ci t as sc)
 
   export
   {vars : _} -> TTC (CConstAlt vars) where
@@ -675,35 +764,49 @@ export
 TTC CFType where
   toBuf b CFUnit = tag 0
   toBuf b CFInt = tag 1
-  toBuf b CFUnsigned = tag 2
-  toBuf b CFString = tag 3
-  toBuf b CFDouble = tag 4
-  toBuf b CFChar = tag 5
-  toBuf b CFPtr = tag 6
-  toBuf b CFWorld = tag 7
-  toBuf b (CFFun s t) = do tag 8; toBuf b s; toBuf b t
-  toBuf b (CFIORes t) = do tag 9; toBuf b t
-  toBuf b (CFStruct n a) = do tag 10; toBuf b n; toBuf b a
-  toBuf b (CFUser n a) = do tag 11; toBuf b n; toBuf b a
-  toBuf b CFGCPtr = tag 12
-  toBuf b CFBuffer = tag 13
+  toBuf b CFUnsigned8 = tag 2
+  toBuf b CFUnsigned16 = tag 3
+  toBuf b CFUnsigned32 = tag 4
+  toBuf b CFUnsigned64 = tag 5
+  toBuf b CFString = tag 6
+  toBuf b CFDouble = tag 7
+  toBuf b CFChar = tag 8
+  toBuf b CFPtr = tag 9
+  toBuf b CFWorld = tag 10
+  toBuf b (CFFun s t) = do tag 11; toBuf b s; toBuf b t
+  toBuf b (CFIORes t) = do tag 12; toBuf b t
+  toBuf b (CFStruct n a) = do tag 13; toBuf b n; toBuf b a
+  toBuf b (CFUser n a) = do tag 14; toBuf b n; toBuf b a
+  toBuf b CFGCPtr = tag 15
+  toBuf b CFBuffer = tag 16
+  toBuf b CFInt8 = tag 17
+  toBuf b CFInt16 = tag 18
+  toBuf b CFInt32 = tag 19
+  toBuf b CFInt64 = tag 20
 
   fromBuf b
       = case !getTag of
              0 => pure CFUnit
              1 => pure CFInt
-             2 => pure CFUnsigned
-             3 => pure CFString
-             4 => pure CFDouble
-             5 => pure CFChar
-             6 => pure CFPtr
-             7 => pure CFWorld
-             8 => do s <- fromBuf b; t <- fromBuf b; pure (CFFun s t)
-             9 => do t <- fromBuf b; pure (CFIORes t)
-             10 => do n <- fromBuf b; a <- fromBuf b; pure (CFStruct n a)
-             11 => do n <- fromBuf b; a <- fromBuf b; pure (CFUser n a)
-             12 => pure CFGCPtr
-             13 => pure CFBuffer
+             2 => pure CFUnsigned8
+             3 => pure CFUnsigned16
+             4 => pure CFUnsigned32
+             5 => pure CFUnsigned64
+             6 => pure CFString
+             7 => pure CFDouble
+             8 => pure CFChar
+             9 => pure CFPtr
+             10 => pure CFWorld
+             11 => do s <- fromBuf b; t <- fromBuf b; pure (CFFun s t)
+             12 => do t <- fromBuf b; pure (CFIORes t)
+             13 => do n <- fromBuf b; a <- fromBuf b; pure (CFStruct n a)
+             14 => do n <- fromBuf b; a <- fromBuf b; pure (CFUser n a)
+             15 => pure CFGCPtr
+             16 => pure CFBuffer
+             17 => pure CFInt8
+             18 => pure CFInt16
+             19 => pure CFInt32
+             20 => pure CFInt64
              _ => corrupt "CFType"
 
 export
@@ -728,21 +831,27 @@ TTC CDef where
 export
 TTC CG where
   toBuf b Chez = tag 0
+  toBuf b ChezSep = tag 1
   toBuf b Racket = tag 2
   toBuf b Gambit = tag 3
   toBuf b (Other s) = do tag 4; toBuf b s
   toBuf b Node = tag 5
   toBuf b Javascript = tag 6
+  toBuf b RefC = tag 7
+  toBuf b VMCodeInterp = tag 8
 
   fromBuf b
       = case !getTag of
              0 => pure Chez
+             1 => pure ChezSep
              2 => pure Racket
              3 => pure Gambit
              4 => do s <- fromBuf b
                      pure (Other s)
              5 => pure Node
              6 => pure Javascript
+             7 => pure RefC
+             8 => pure VMCodeInterp
              _ => corrupt "CG"
 
 export
@@ -773,11 +882,13 @@ TTC PrimNames where
       = do toBuf b (fromIntegerName l)
            toBuf b (fromStringName l)
            toBuf b (fromCharName l)
+           toBuf b (fromDoubleName l)
   fromBuf b
       = do i <- fromBuf b
            str <- fromBuf b
            c <- fromBuf b
-           pure (MkPrimNs i str c)
+           d <- fromBuf b
+           pure (MkPrimNs i str c d)
 
 export
 TTC HoleInfo where
@@ -795,10 +906,12 @@ TTC PMDefInfo where
   toBuf b l
       = do toBuf b (holeInfo l)
            toBuf b (alwaysReduce l)
+           toBuf b (externalDecl l)
   fromBuf b
       = do h <- fromBuf b
            r <- fromBuf b
-           pure (MkPMDefInfo h r)
+           e <- fromBuf b
+           pure (MkPMDefInfo h r e)
 
 export
 TTC TypeFlags where
@@ -891,6 +1004,7 @@ TTC DefFlag where
   toBuf b Macro = tag 8
   toBuf b (PartialEval x) = tag 9 -- names not useful any more
   toBuf b AllGuarded = tag 10
+  toBuf b (ConType ci) = do tag 11; toBuf b ci
 
   fromBuf b
       = case !getTag of
@@ -903,6 +1017,7 @@ TTC DefFlag where
              8 => pure Macro
              9 => pure (PartialEval [])
              10 => pure AllGuarded
+             11 => do ci <- fromBuf b; pure (ConType ci)
              _ => corrupt "DefFlag"
 
 export
@@ -932,14 +1047,14 @@ TTC GlobalDef where
       = -- Only write full details for user specified names. The others will
         -- be holes where all we will ever need after loading is the definition
         do toBuf b (compexpr gdef)
-           toBuf b (map toList (refersToRuntimeM gdef))
+           toBuf b (map NameMap.toList (refersToRuntimeM gdef))
            toBuf b (location gdef)
            -- We don't need any of the rest for code generation, so if
            -- we're decoding then, we can skip these (see Compiler.Common
            -- for how it's decoded minimally there)
            toBuf b (multiplicity gdef)
            toBuf b (fullname gdef)
-           toBuf b (map toList (refersToM gdef))
+           toBuf b (map NameMap.toList (refersToM gdef))
            toBuf b (definition gdef)
            when (isUserName (fullname gdef) || cwName (fullname gdef)) $
               do toBuf b (type gdef)
@@ -947,7 +1062,7 @@ TTC GlobalDef where
                  toBuf b (safeErase gdef)
                  toBuf b (specArgs gdef)
                  toBuf b (inferrable gdef)
-                 toBuf b (vars gdef)
+                 toBuf b (localVars gdef)
                  toBuf b (visibility gdef)
                  toBuf b (totality gdef)
                  toBuf b (flags gdef)
@@ -1005,12 +1120,12 @@ TTC Transform where
            pure (MkTransform {vars} n env lhs rhs)
 
 -- decode : Context -> Int -> (update : Bool) -> ContextEntry -> Core GlobalDef
-Core.Context.decode gam idx update (Coded bin)
+Core.Context.decode gam idx update (Coded ns bin)
     = do b <- newRef Bin bin
          def <- fromBuf b
          let a = getContent gam
          arr <- get Arr
-         def' <- resolved gam def
+         def' <- resolved gam (restoreNS ns def)
          when update $ coreLift $ writeArray arr idx (Decoded def')
          pure def'
 Core.Context.decode gam idx update (Decoded def) = pure def

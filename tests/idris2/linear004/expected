@@ -3,41 +3,44 @@
 Main> S Z
 Main> S (S Z)
 Main> S Z
-Main> (interactive):1:15--1:16:x is not accessible in this context at:
-1	efn (\x, y => x)        -- Bad
-	              ^
+Main> Error: x is not accessible in this context.
 
-Main> (interactive):1:5--1:9:When unifying Nat -> Nat -> Nat and (0 _ : Nat) -> Nat -> Nat
-Mismatch between:
-	Nat -> Nat -> Nat
-and
-	(0 _ : Nat) -> Nat -> Nat
-at:
-1	efn plus                -- Bad
-	    ^^^^
+(interactive):1:15--1:16
+   |
+ 1 | efn (\x, y => x)        -- Bad
+   |               ^
 
-Main> (interactive):1:5--1:8:When unifying (1 _ : Nat) -> Nat -> Nat and (0 _ : Nat) -> Nat -> Nat
-Mismatch between:
-	(1 _ : Nat) -> Nat -> Nat
-and
-	(0 _ : Nat) -> Nat -> Nat
-at:
-1	efn lin                 -- Bad
-	    ^^^
+Main> Error: When unifying Nat -> Nat -> Nat and (0 _ : Nat) -> Nat -> Nat.
+Mismatch between: Nat -> Nat -> Nat and (0 _ : Nat) -> Nat -> Nat.
 
-Main> (interactive):1:20--1:21:x is not accessible in this context at:
-1	efn (\x, y => plus x y) -- Bad
-	                   ^
+(interactive):1:5--1:9
+   |
+ 1 | efn plus                -- Bad
+   |     ^^^^
+
+Main> Error: When unifying (1 _ : Nat) -> Nat -> Nat and (0 _ : Nat) -> Nat -> Nat.
+Mismatch between: (1 _ : Nat) -> Nat -> Nat and (0 _ : Nat) -> Nat -> Nat.
+
+(interactive):1:5--1:8
+   |
+ 1 | efn lin                 -- Bad
+   |     ^^^
+
+Main> Error: x is not accessible in this context.
+
+(interactive):1:20--1:21
+   |
+ 1 | efn (\x, y => plus x y) -- Bad
+   |                    ^
 
 Main> S (S Z)
 Main> S (S Z)
-Main> (interactive):1:6--1:12:When unifying (0 _ : Nat) -> Nat -> Nat and Nat -> Nat -> Nat
-Mismatch between:
-	(0 _ : Nat) -> Nat -> Nat
-and
-	Nat -> Nat -> Nat
-at:
-1	okfn ignore             -- Bad
-	     ^^^^^^
+Main> Error: When unifying (0 _ : Nat) -> Nat -> Nat and Nat -> Nat -> Nat.
+Mismatch between: (0 _ : Nat) -> Nat -> Nat and Nat -> Nat -> Nat.
+
+(interactive):1:6--1:12
+   |
+ 1 | okfn ignore             -- Bad
+   |      ^^^^^^
 
 Main> Bye for now!

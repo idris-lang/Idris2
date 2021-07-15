@@ -1,4 +1,5 @@
 package idris2
+version = 0.4.0
 
 modules =
     Algebra,
@@ -7,21 +8,32 @@ modules =
     Algebra.ZeroOneOmega,
 
     Compiler.ANF,
+    Compiler.CaseOpts,
     Compiler.Common,
     Compiler.CompileExpr,
+    Compiler.Generated,
     Compiler.Inline,
     Compiler.LambdaLift,
+    Compiler.Separate,
     Compiler.VMCode,
 
-    Compiler.ES.ES,
-    Compiler.ES.Imperative,
-    Compiler.ES.ImperativeAst,
+    Compiler.ES.Ast,
+    Compiler.ES.Codegen,
+    Compiler.ES.Doc,
     Compiler.ES.Javascript,
     Compiler.ES.Node,
-    Compiler.ES.RemoveUnused,
+    Compiler.ES.State,
     Compiler.ES.TailRec,
+    Compiler.ES.ToAst,
+
+    Compiler.Interpreter.VMCode,
+
+    Compiler.RefC,
+    Compiler.RefC.CC,
+    Compiler.RefC.RefC,
 
     Compiler.Scheme.Chez,
+    Compiler.Scheme.ChezSep,
     Compiler.Scheme.Racket,
     Compiler.Scheme.Gambit,
     Compiler.Scheme.Common,
@@ -32,6 +44,8 @@ modules =
     Core.CaseTree,
     Core.CompileExpr,
     Core.Context,
+    Core.Context.Data,
+    Core.Context.Log,
     Core.Core,
     Core.Coverage,
     Core.Directory,
@@ -43,8 +57,10 @@ modules =
     Core.LinearCheck,
     Core.Metadata,
     Core.Name,
+    Core.Name.Namespace,
     Core.Normalise,
     Core.Options,
+    Core.Options.Log,
     Core.Primitives,
     Core.Reflect,
     Core.Termination,
@@ -55,32 +71,28 @@ modules =
     Core.UnifyState,
     Core.Value,
 
-    Data.ANameMap,
-    Data.IntMap,
-    Data.LengthMatch,
-    Data.NameMap,
-    Data.StringMap,
-    Data.StringTrie,
-    Data.These,
-
-    Data.Bool.Extra,
-
-    Data.List.Extra,
-
     IdrisPaths,
 
     Idris.CommandLine,
     Idris.Desugar,
-    Idris.DocString,
+    Idris.Desugar.Mutual,
+    Idris.Env,
+    Idris.Doc.HTML,
+    Idris.Doc.String,
     Idris.Driver,
     Idris.Error,
     Idris.ModTree,
+
     Idris.Package,
+    Idris.Package.Init,
+    Idris.Package.Types,
+
     Idris.Parser,
+    Idris.Parser.Let,
+    Idris.Pretty,
+    Idris.Pretty.Render,
     Idris.ProcessIdr,
     Idris.REPL,
-    Idris.REPLCommon,
-    Idris.REPLOpts,
     Idris.Resugar,
     Idris.SetOptions,
     Idris.Syntax,
@@ -98,6 +110,66 @@ modules =
     Idris.IDEMode.SyntaxHighlight,
     Idris.IDEMode.TokenLine,
 
+    Idris.REPL.Common,
+    Idris.REPL.Opts,
+    Idris.REPL.FuzzySearch,
+
+    Libraries.Control.ANSI,
+    Libraries.Control.ANSI.CSI,
+    Libraries.Control.ANSI.SGR,
+    Libraries.Control.Delayed,
+
+    Libraries.Data.ANameMap,
+    Libraries.Data.DList,
+    Libraries.Data.Fin,
+    Libraries.Data.Graph,
+    Libraries.Data.IMaybe,
+    Libraries.Data.IntMap,
+    Libraries.Data.IOArray,
+    Libraries.Data.IOMatrix,
+    Libraries.Data.LengthMatch,
+    Libraries.Data.List.Extra,
+    Libraries.Data.List.Lazy,
+    Libraries.Data.List1,
+    Libraries.Data.NameMap,
+    Libraries.Data.PosMap,
+    Libraries.Data.SortedMap,
+    Libraries.Data.SortedSet,
+    Libraries.Data.String.Extra,
+    Libraries.Data.String.Iterator,
+    Libraries.Data.StringMap,
+    Libraries.Data.StringTrie,
+    Libraries.Data.Version,
+
+    Libraries.System.Directory.Tree,
+
+    Libraries.Text.Bounded,
+    Libraries.Text.Distance.Levenshtein,
+    Libraries.Text.Lexer,
+    Libraries.Text.Lexer.Core,
+    Libraries.Text.Lexer.Tokenizer,
+    Libraries.Text.Literate,
+    Libraries.Text.Parser,
+    Libraries.Text.Parser.Core,
+    Libraries.Text.PrettyPrint.Prettyprinter,
+    Libraries.Text.PrettyPrint.Prettyprinter.Doc,
+    Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML,
+    Libraries.Text.PrettyPrint.Prettyprinter.Render.String,
+    Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal,
+    Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree,
+    Libraries.Text.PrettyPrint.Prettyprinter.Symbols,
+    Libraries.Text.PrettyPrint.Prettyprinter.Util,
+    Libraries.Text.Quantity,
+    Libraries.Text.Token,
+
+    Libraries.Utils.Binary,
+    Libraries.Utils.Hex,
+    Libraries.Utils.Octal,
+    Libraries.Utils.Path,
+    Libraries.Utils.Shunting,
+    Libraries.Utils.String,
+    Libraries.Utils.Term,
+
     Parser.Package,
     Parser.Source,
     Parser.Support,
@@ -107,25 +179,15 @@ modules =
     Parser.Lexer.Package,
     Parser.Lexer.Source,
 
-    Parser.Rule.Common,
     Parser.Rule.Package,
     Parser.Rule.Source,
-
-    Text.Literate,
-    Text.Quantity,
-    Text.Token,
-
-    Text.Lexer,
-    Text.Lexer.Core,
-
-    Text.Parser,
-    Text.Parser.Core,
 
     TTImp.BindImplicits,
     TTImp.Elab,
     TTImp.Impossible,
     TTImp.Parser,
     TTImp.PartialEval,
+    TTImp.ProcessBuiltin,
     TTImp.ProcessData,
     TTImp.ProcessDecls,
     TTImp.ProcessDef,
@@ -165,17 +227,9 @@ modules =
     TTImp.Interactive.GenerateDef,
     TTImp.Interactive.MakeLemma,
 
-    Utils.Binary,
-    Utils.Either,
-    Utils.Hex,
-    Utils.Octal,
-    Utils.Path,
-    Utils.Shunting,
-    Utils.String,
-
     Yaffle.Main,
     Yaffle.REPL
 
-depends = contrib, network
+depends = network
 
 sourcedir = "src"

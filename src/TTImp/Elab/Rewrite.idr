@@ -1,6 +1,7 @@
 module TTImp.Elab.Rewrite
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.GetType
@@ -34,7 +35,7 @@ getRewriteTerms : {vars : _} ->
                   Core (NF vars, NF vars, NF vars)
 getRewriteTerms loc defs (NTCon nfc eq t a args) err
     = if !(isEqualTy eq)
-         then case reverse args of
+         then case reverse $ map snd args of
                    (rhs :: lhs :: rhsty :: lhsty :: _) =>
                         pure (!(evalClosure defs lhs),
                               !(evalClosure defs rhs),
@@ -75,13 +76,13 @@ elabRewrite loc env expected rulety
          -- the metavariables might have been updated
          expnf <- nf defs env expected
 
-         logNF 5 "Rewriting" env lt
-         logNF 5 "Rewriting in" env expnf
+         logNF "elab.rewrite" 5 "Rewriting" env lt
+         logNF "elab.rewrite" 5 "Rewriting in" env expnf
          rwexp_sc <- replace defs env lt (Ref loc Bound parg) expnf
-         logTerm 5 "Rewritten to" rwexp_sc
+         logTerm "elab.rewrite" 5 "Rewritten to" rwexp_sc
 
          empty <- clearDefs defs
-         let pred = Bind loc parg (Lam top Explicit
+         let pred = Bind loc parg (Lam loc top Explicit
                           !(quote empty env lty))
                           (refsToLocals (Add parg parg None) rwexp_sc)
          gpredty <- getType env pred
@@ -106,19 +107,20 @@ checkRewrite : {vars : _} ->
                Core (Term vars, Glued vars)
 checkRewrite rigc elabinfo nest env fc rule tm Nothing
     = throw (GenericMsg fc "Can't infer a type for rewrite")
-checkRewrite {vars} rigc elabinfo nest env fc rule tm (Just expected)
-    = delayOnFailure fc rigc env expected rewriteErr 10 (\delayed =>
-        do (rulev, grulet) <- check erased elabinfo nest env rule Nothing
+checkRewrite {vars} rigc elabinfo nest env ifc rule tm (Just expected)
+    = delayOnFailure ifc rigc env expected rewriteErr 10 $ \delayed =>
+        do let vfc = virtualiseFC ifc
+           (rulev, grulet) <- check erased elabinfo nest env rule Nothing
            rulet <- getTerm grulet
            expTy <- getTerm expected
-           when delayed $ log 5 "Retrying rewrite"
-           (lemma, pred, predty) <- elabRewrite fc env expTy rulet
+           when delayed $ log "elab.rewrite" 5 "Retrying rewrite"
+           (lemma, pred, predty) <- elabRewrite vfc env expTy rulet
 
            rname <- genVarName "_"
            pname <- genVarName "_"
 
-           let pbind = Let erased pred predty
-           let rbind = Let erased (weaken rulev) (weaken rulet)
+           let pbind = Let vfc erased pred predty
+           let rbind = Let vfc erased (weaken rulev) (weaken rulet)
 
            let env' = rbind :: pbind :: env
 
@@ -127,17 +129,15 @@ checkRewrite {vars} rigc elabinfo nest env fc rule tm (Just expected)
            -- implicits for the rewriting lemma are in the right place. But,
            -- we still need the right type for the EState, so weaken it once
            -- for each of the let bindings above.
-           (rwtm, grwty) <- inScope fc (pbind :: env)
-              (\e' => inScope {e=e'} fc env'
-                 (\e'' => check {e = e''} {vars = rname :: pname :: vars}
-                                rigc elabinfo (weaken (weaken nest)) env'
-                                (apply (IVar fc lemma) [IVar fc pname,
-                                                        IVar fc rname,
-                                                        tm])
-                                (Just (gnf env'
-                                         (weakenNs [rname, pname] expTy)))
-                         ))
+           (rwtm, grwty) <-
+              inScope vfc (pbind :: env) $ \e' =>
+                inScope {e=e'} vfc env' $ \e'' =>
+                  let offset = mkSizeOf [rname, pname] in
+                  check {e = e''} rigc elabinfo (weakenNs offset nest) env'
+                                (apply (IVar vfc lemma) [IVar vfc pname,
+                                                         IVar vfc rname,
+                                                         tm])
+                                (Just (gnf env' (weakenNs offset expTy)))
            rwty <- getTerm grwty
-           pure (Bind fc pname pbind (Bind fc rname rbind rwtm),
-                 gnf env (Bind fc pname pbind (Bind fc rname rbind rwty))))
-
+           let binding = Bind vfc pname pbind . Bind vfc rname rbind
+           pure (binding rwtm, gnf env (binding rwty))

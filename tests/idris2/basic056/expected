@@ -1,0 +1,4 @@
+1/1: Building DoubleLit (DoubleLit.idr)
+Main> MkInUnit 0.25 _
+MkNewtype 123.456
+Main> Bye for now!

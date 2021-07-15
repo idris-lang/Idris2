@@ -1,0 +1,21 @@
+1/1: Building Test1 (Test1.idr)
+Error: While processing right hand side of G. yv is not accessible in this context.
+
+Test1:4:12--4:14
+ 1 | data Foo : Nat -> Type where
+ 2 | 
+ 3 | G : (0 yv : Nat) -> Type
+ 4 | G yv = Foo yv -> Bool
+                ^^
+
+1/1: Building Test2 (Test2.idr)
+Error: While processing right hand side of f. Main.G is not accessible in this context.
+
+Test2:8:12--8:13
+ 4 | G yv = Foo yv -> Bool
+ 5 | 
+ 6 | partial
+ 7 | f : (0 x : Nat) -> Nat
+ 8 | f x = case G x of
+                ^
+

@@ -25,12 +25,12 @@ mutual
   chk env (Ref fc nt n)
       = do defs <- get Ctxt
            Just ty <- lookupTyExact n (gamma defs)
-               | Nothing => throw (UndefinedName fc n)
+               | Nothing => undefinedName fc n
            pure $ gnf env (embed ty)
   chk env (Meta fc n i args)
       = do defs <- get Ctxt
            Just mty <- lookupTyExact (Resolved i) (gamma defs)
-               | Nothing => throw (UndefinedName fc n)
+               | Nothing => undefinedName fc n
            chkMeta fc env !(nf defs env (embed mty)) args
   chk env (Bind fc nm b sc)
       = do bt <- chkBinder env b
@@ -39,7 +39,7 @@ mutual
   chk env (App fc f a)
       = do fty <- chk env f
            case !(getNF fty) of
-                NBind _ _ (Pi _ _ ty) scdone =>
+                NBind _ _ (Pi _ _ _ ty) scdone =>
                       do defs <- get Ctxt
                          aty <- chk env a
                          sc' <- scdone defs (toClosure defaultOpts env a)
@@ -71,7 +71,7 @@ mutual
   chkMeta fc env ty []
       = do defs <- get Ctxt
            pure $ glueBack defs env ty
-  chkMeta fc env (NBind _ _ (Pi _ _ ty) scdone) (a :: args)
+  chkMeta fc env (NBind _ _ (Pi _ _ _ ty) scdone) (a :: args)
       = do defs <- get Ctxt
            aty <- chk env a
            sc' <- scdone defs (toClosure defaultOpts env a)
@@ -87,21 +87,25 @@ mutual
 
   discharge : FC -> (nm : Name) -> Binder (Term vars) ->
               Term vars -> Term (nm :: vars) -> (Term vars)
-  discharge fc n (Lam c x ty) bindty scopety
-      = Bind fc n (Pi c x ty) scopety
-  discharge fc n (Let c val ty) bindty scopety
-      = Bind fc n (Let c val ty) scopety
-  discharge fc n (Pi c x ty) bindty scopety
+  discharge fc n (Lam fc' c x ty) bindty scopety
+      = Bind fc n (Pi fc' c x ty) scopety
+  discharge fc n (Let fc' c val ty) bindty scopety
+      = Bind fc n (Let fc' c val ty) scopety
+  discharge fc n (Pi _ _ _ _) bindty scopety
       = bindty
-  discharge fc n (PVar c p ty) bindty scopety
-      = Bind fc n (PVTy c ty) scopety
-  discharge fc n (PLet c val ty) bindty scopety
-      = Bind fc n (PLet c val ty) scopety
-  discharge fc n (PVTy c ty) bindty scopety
+  discharge fc n (PVar fc' c p ty) bindty scopety
+      = Bind fc n (PVTy fc' c ty) scopety
+  discharge fc n (PLet fc' c val ty) bindty scopety
+      = Bind fc n (PLet fc' c val ty) scopety
+  discharge fc n (PVTy _ _ _) bindty scopety
       = bindty
 
   chkConstant : FC -> Constant -> Term vars
   chkConstant fc (I x) = PrimVal fc IntType
+  chkConstant fc (I8 x) = PrimVal fc Int8Type
+  chkConstant fc (I16 x) = PrimVal fc Int16Type
+  chkConstant fc (I32 x) = PrimVal fc Int32Type
+  chkConstant fc (I64 x) = PrimVal fc Int64Type
   chkConstant fc (BI x) = PrimVal fc IntegerType
   chkConstant fc (B8 x) = PrimVal fc Bits8Type
   chkConstant fc (B16 x) = PrimVal fc Bits16Type
@@ -118,4 +122,3 @@ getType : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           Env Term vars -> (term : Term vars) -> Core (Glued vars)
 getType env term = chk env term
-

@@ -1,0 +1,15 @@
+1/1: Building Issue835 (Issue835.idr)
+Issue835>    P : Nat -> Type
+------------------------------
+rhs1 : Dec (P 0)
+Issue835>    P : Nat -> Type
+   P2 : Nat -> Type
+   x1 : Nat
+   x : Nat
+------------------------------
+rhs2 : P2 x
+Issue835>    P2 : Nat -> Type
+   x : Nat
+------------------------------
+rhs3 : P2 x
+Issue835> Bye for now!

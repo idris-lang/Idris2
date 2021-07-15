@@ -4,40 +4,17 @@ import Data.Maybe
 import Data.Either
 import Data.Nat
 import Data.List
+import Data.List1
+
+import public Decidable.Equality.Core as Decidable.Equality
 
 %default total
-
---------------------------------------------------------------------------------
--- Decidable equality
---------------------------------------------------------------------------------
-
-||| Decision procedures for propositional equality
-public export
-interface DecEq t where
-  ||| Decide whether two elements of `t` are propositionally equal
-  decEq : (x1 : t) -> (x2 : t) -> Dec (x1 = x2)
-
---------------------------------------------------------------------------------
--- Utility lemmas
---------------------------------------------------------------------------------
-
-||| The negation of equality is symmetric (follows from symmetry of equality)
-export
-negEqSym : forall a, b . (a = b -> Void) -> (b = a -> Void)
-negEqSym p h = p (sym h)
-
-||| Everything is decidably equal to itself
-export
-decEqSelfIsYes : DecEq a => {x : a} -> decEq x x = Yes Refl
-decEqSelfIsYes {x} with (decEq x x)
-  decEqSelfIsYes {x} | Yes Refl = Refl
-  decEqSelfIsYes {x} | No contra = absurd $ contra Refl
 
 --------------------------------------------------------------------------------
 --- Unit
 --------------------------------------------------------------------------------
 
-export
+public export
 DecEq () where
   decEq () () = Yes Refl
 
@@ -45,7 +22,7 @@ DecEq () where
 -- Booleans
 --------------------------------------------------------------------------------
 
-export
+public export
 DecEq Bool where
   decEq True  True  = Yes Refl
   decEq False False = Yes Refl
@@ -56,7 +33,7 @@ DecEq Bool where
 -- Nat
 --------------------------------------------------------------------------------
 
-export
+public export
 DecEq Nat where
   decEq Z     Z     = Yes Refl
   decEq Z     (S _) = No absurd
@@ -69,7 +46,7 @@ DecEq Nat where
 -- Maybe
 --------------------------------------------------------------------------------
 
-export
+public export
 DecEq t => DecEq (Maybe t) where
   decEq Nothing Nothing = Yes Refl
   decEq Nothing (Just _) = No absurd
@@ -83,13 +60,7 @@ DecEq t => DecEq (Maybe t) where
 -- Either
 --------------------------------------------------------------------------------
 
-Uninhabited (Left x = Right y) where
-  uninhabited Refl impossible
-
-Uninhabited (Right x = Left y) where
-  uninhabited Refl impossible
-
-export
+public export
 (DecEq t, DecEq s) => DecEq (Either t s) where
   decEq (Left x) (Left y) with (decEq x y)
    decEq (Left x) (Left x) | Yes Refl = Yes Refl
@@ -107,7 +78,7 @@ export
 pairInjective : (a, b) = (c, d) -> (a = c, b = d)
 pairInjective Refl = (Refl, Refl)
 
-export
+public export
 (DecEq a, DecEq b) => DecEq (a, b) where
   decEq (a, b) (a', b') with (decEq a a')
     decEq (a, b) (a', b') | (No contra) =
@@ -121,7 +92,7 @@ export
 -- List
 --------------------------------------------------------------------------------
 
-export
+public export
 DecEq a => DecEq (List a) where
   decEq [] [] = Yes Refl
   decEq (x :: xs) [] = No absurd
@@ -133,6 +104,20 @@ DecEq a => DecEq (List a) where
       decEq (x :: xs) (x :: xs) | (Yes Refl) | (Yes Refl) = Yes Refl
       decEq (x :: xs) (x :: ys) | (Yes Refl) | (No contra) =
         No $ contra . snd . consInjective
+
+
+--------------------------------------------------------------------------------
+-- List1
+--------------------------------------------------------------------------------
+
+public export
+DecEq a => DecEq (List1 a) where
+
+  decEq (x ::: xs) (y ::: ys) with (decEq x y)
+    decEq (x ::: xs) (y ::: ys) | No contra = No (contra . fst . consInjective)
+    decEq (x ::: xs) (y ::: ys) | Yes eqxy with (decEq xs ys)
+      decEq (x ::: xs) (y ::: ys) | Yes eqxy | No contra = No (contra . snd . consInjective)
+      decEq (x ::: xs) (y ::: ys) | Yes eqxy | Yes eqxsys = Yes (cong2 (:::) eqxy eqxsys)
 
 -- TODO: Other prelude data types
 
@@ -146,51 +131,51 @@ DecEq a => DecEq (List a) where
 --------------------------------------------------------------------------------
 -- Int
 --------------------------------------------------------------------------------
-export
+public export
 implementation DecEq Int where
     decEq x y = case x == y of -- Blocks if x or y not concrete
                      True => Yes primitiveEq
                      False => No primitiveNotEq
        where primitiveEq : forall x, y . x = y
              primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . x = y -> Void
+             primitiveNotEq : forall x, y . Not (x = y)
              primitiveNotEq prf = believe_me {b = Void} ()
 
 --------------------------------------------------------------------------------
 -- Char
 --------------------------------------------------------------------------------
-export
+public export
 implementation DecEq Char where
     decEq x y = case x == y of -- Blocks if x or y not concrete
                      True => Yes primitiveEq
                      False => No primitiveNotEq
        where primitiveEq : forall x, y . x = y
              primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . x = y -> Void
+             primitiveNotEq : forall x, y . Not (x = y)
              primitiveNotEq prf = believe_me {b = Void} ()
 
 --------------------------------------------------------------------------------
 -- Integer
 --------------------------------------------------------------------------------
-export
+public export
 implementation DecEq Integer where
     decEq x y = case x == y of -- Blocks if x or y not concrete
                      True => Yes primitiveEq
                      False => No primitiveNotEq
        where primitiveEq : forall x, y . x = y
              primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . x = y -> Void
+             primitiveNotEq : forall x, y . Not (x = y)
              primitiveNotEq prf = believe_me {b = Void} ()
 
 --------------------------------------------------------------------------------
 -- String
 --------------------------------------------------------------------------------
-export
+public export
 implementation DecEq String where
     decEq x y = case x == y of -- Blocks if x or y not concrete
                      True => Yes primitiveEq
                      False => No primitiveNotEq
        where primitiveEq : forall x, y . x = y
              primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . x = y -> Void
+             primitiveNotEq : forall x, y . Not (x = y)
              primitiveNotEq prf = believe_me {b = Void} ()

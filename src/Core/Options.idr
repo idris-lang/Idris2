@@ -2,13 +2,14 @@ module Core.Options
 
 import Core.Core
 import Core.Name
+import public Core.Options.Log
 import Core.TT
-import Utils.Binary
-import Utils.Path
+import Libraries.Utils.Binary
+import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 
 import System.Info
 
@@ -20,9 +21,11 @@ record Dirs where
   working_dir : String
   source_dir : Maybe String -- source directory, relative to working directory
   build_dir : String -- build directory, relative to working directory
+  depends_dir : String -- local dependencies directory, relative to working directory
   output_dir : Maybe String -- output directory, relative to working directory
   prefix_dir : String -- installation prefix, for finding data files (e.g. run time support)
   extra_dirs : List String -- places to look for import files
+  package_dirs : List String -- places to look for packages
   lib_dirs : List String -- places to look for libraries (for code generation)
   data_dirs : List String -- places to look for data file
 
@@ -36,41 +39,52 @@ outputDirWithDefault d = fromMaybe (build_dir d </> "exec") (output_dir d)
 
 public export
 toString : Dirs -> String
-toString d@(MkDirs wdir sdir bdir odir dfix edirs ldirs ddirs) =
+toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs pdirs ldirs ddirs) =
   unlines [ "+ Working Directory      :: " ++ show wdir
           , "+ Source Directory       :: " ++ show sdir
           , "+ Build Directory        :: " ++ show bdir
+          , "+ Local Depend Directory :: " ++ show ldir
           , "+ Output Directory       :: " ++ show (outputDirWithDefault d)
           , "+ Installation Prefix    :: " ++ show dfix
           , "+ Extra Directories      :: " ++ show edirs
+          , "+ Package Directories    :: " ++ show pdirs
           , "+ CG Library Directories :: " ++ show ldirs
           , "+ Data Directories       :: " ++ show ddirs]
 
 public export
 data CG = Chez
+        | ChezSep
         | Racket
         | Gambit
         | Node
         | Javascript
+        | RefC
+        | VMCodeInterp
         | Other String
 
 export
 Eq CG where
   Chez == Chez = True
+  ChezSep == ChezSep = True
   Racket == Racket = True
   Gambit == Gambit = True
   Node == Node = True
   Javascript == Javascript = True
+  RefC == RefC = True
+  VMCodeInterp == VMCodeInterp = True
   Other s == Other t = s == t
   _ == _ = False
 
 export
 Show CG where
   show Chez = "chez"
+  show ChezSep = "chez-sep"
   show Racket = "racket"
   show Gambit = "gambit"
   show Node = "node"
   show Javascript = "javascript"
+  show RefC = "refc"
+  show VMCodeInterp = "vmcode-interp"
   show (Other s) = s
 
 public export
@@ -92,18 +106,21 @@ record PrimNames where
   fromIntegerName : Maybe Name
   fromStringName : Maybe Name
   fromCharName : Maybe Name
+  fromDoubleName : Maybe Name
+
+export
+primNamesToList : PrimNames -> List Name
+primNamesToList (MkPrimNs i s c d) = catMaybes [i,s,c,d]
 
 public export
 data LangExt
      = ElabReflection
      | Borrowing -- not yet implemented
-     | PostfixProjections
 
 export
 Eq LangExt where
   ElabReflection == ElabReflection = True
   Borrowing == Borrowing = True
-  PostfixProjections == PostfixProjections = True
   _ == _ = False
 
 -- Other options relevant to the current session (so not to be saved in a TTC)
@@ -115,6 +132,12 @@ record ElabDirectives where
   totality : TotalReq
   ambigLimit : Nat
   autoImplicitLimit : Nat
+  nfThreshold : Nat
+  --
+  -- produce traditional (prefix) record projections,
+  -- in addition to postfix (dot) projections
+  -- default: yes
+  prefixRecordProjections : Bool
 
 public export
 record Session where
@@ -124,13 +147,31 @@ record Session where
   findipkg : Bool
   codegen : CG
   directives : List String
-  logLevel : Nat
+  logEnabled : Bool -- do we check logging flags at all? This is 'False' until
+                    -- any logging is enabled.
+  logLevel : LogLevels
   logTimings : Bool
+  ignoreMissingPkg : Bool -- fail silently on missing packages. This is because
+          -- while we're bootstrapping, we find modules by a different route
+          -- but we still want to have the dependencies listed properly
   debugElabCheck : Bool -- do conversion check to verify results of elaborator
   dumpcases : Maybe String -- file to output compiled case trees
   dumplifted : Maybe String -- file to output lambda lifted definitions
   dumpanf : Maybe String -- file to output ANF definitions
   dumpvmcode : Maybe String -- file to output VM code definitions
+  profile : Bool -- generate profiling information, if supported
+  searchTimeout : Integer -- maximum number of milliseconds to run
+                          -- expression/program search
+  -- Warnings
+  warningsAsErrors : Bool
+  showShadowingWarning : Bool
+  -- Experimental
+  checkHashesInsteadOfModTime : Bool
+  incrementalCGs : List CG
+  wholeProgram : Bool
+     -- Use whole program compilation for executables, no matter what
+     -- incremental CGs are set (intended for overriding any environment
+     -- variables that set incremental compilation)
 
 public export
 record PPrinter where
@@ -157,37 +198,41 @@ export
 availableCGs : Options -> List (String, CG)
 availableCGs o
     = [("chez", Chez),
+       ("chez-sep", ChezSep),
        ("racket", Racket),
        ("node", Node),
        ("javascript", Javascript),
-       ("gambit", Gambit)] ++ additionalCGs o
+       ("refc", RefC),
+       ("gambit", Gambit),
+       ("vmcode-interp", VMCodeInterp)] ++ additionalCGs o
 
 export
 getCG : Options -> String -> Maybe CG
 getCG o cg = lookup (toLower cg) (availableCGs o)
 
 defaultDirs : Dirs
-defaultDirs = MkDirs "." Nothing "build" Nothing
-                     "/usr/local" ["."] [] []
+defaultDirs = MkDirs "." Nothing "build" "depends" Nothing
+                     "/usr/local" ["."] [] [] []
 
 defaultPPrint : PPrinter
 defaultPPrint = MkPPOpts False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez [] 0
-                               False False Nothing Nothing
-                               Nothing Nothing
+defaultSession = MkSessionOpts False False False Chez [] False defaultLogLevel
+                               False False False Nothing Nothing
+                               Nothing Nothing False 1000 False True
+                               False [] False
 
 export
 defaultElab : ElabDirectives
-defaultElab = MkElabDirectives True True CoveringOnly 3 50
+defaultElab = MkElabDirectives True True CoveringOnly 3 50 50 True
 
 export
 defaults : Options
 defaults = MkOptions defaultDirs defaultPPrint defaultSession
                      defaultElab Nothing Nothing
-                     (MkPrimNs Nothing Nothing Nothing) []
+                     (MkPrimNs Nothing Nothing Nothing Nothing) []
                      []
 
 -- Reset the options which are set by source files
@@ -195,7 +240,7 @@ export
 clearNames : Options -> Options
 clearNames = record { pairnames = Nothing,
                       rewritenames = Nothing,
-                      primnames = MkPrimNs Nothing Nothing Nothing,
+                      primnames = MkPrimNs Nothing Nothing Nothing Nothing,
                       extensions = []
                     }
 
@@ -219,6 +264,10 @@ setFromString n = record { primnames->fromStringName = Just n }
 export
 setFromChar : Name -> Options -> Options
 setFromChar n = record { primnames->fromCharName = Just n }
+
+export
+setFromDouble : Name -> Options -> Options
+setFromDouble n = record { primnames->fromDoubleName = Just n }
 
 export
 setExtension : LangExt -> Options -> Options

@@ -1,0 +1,4 @@
+foo : String
+foo = """
+   a
+    """

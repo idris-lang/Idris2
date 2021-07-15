@@ -555,6 +555,52 @@ then the function bodies. As a result, none of the function types can
 depend on the reduction behaviour of any of the functions in the
 block.
 
+Forward declarations can allow you to have more fine-grained control over the order
+in which mutually defined concepts are declared. This can be useful if you need to
+mention a datatype's constructor in the type of a mutually defined function, or need
+to rely on the behaviour of a mutually defined function for something to typecheck.
+
+.. code-block:: idris
+
+  data V : Type
+  T : V -> Type
+
+  data V : Type where
+    N : V
+    Pi : (a : V) -> (b : T a -> V) -> V
+
+  T N = Nat
+  T (Pi a b) = (x : T a) -> T (b x)
+
+.. code-block:: idris
+
+  data Even : Nat -> Type
+  data Odd  : Nat -> Type
+
+  data Even : Nat -> Type where
+    ZIsEven : Even Z
+    SOddisEven : Odd n -> Even (S k)
+
+  data Odd : Nat -> Type where
+    SEvenIsOdd : Even n -> Odd (S k)
+
+
+.. code-block:: idris
+
+  even : Nat -> Bool
+  odd  : Nat -> Bool
+
+  -- or just ``even, odd : Nat -> Bool``
+
+  even    Z  = True
+  even (S k) = odd k
+
+  odd    Z  = False
+  odd (S k) = even k
+
+Placing signature declarations forward can suggest Idris to detect
+their corresponding mutual definitions.
+
 I/O
 ===
 
@@ -716,8 +762,8 @@ Useful Data Types
 
 Idris includes a number of useful data types and library functions
 (see the ``libs/`` directory in the distribution, and the
-`documentation <https://www.idris-lang.org/documentation/>`_). This section
-describes a few of these, and how to import them.
+`documentation <https://www.idris-lang.org/pages/documentation.html>`_). This
+section describes a few of these, and how to import them.
 
 ``List`` and ``Vect``
 ---------------------
@@ -737,12 +783,25 @@ Note that the constructor names are the same for each — constructor
 names (in fact, names in general) can be overloaded, provided that
 they are declared in different namespaces (see Section
 :ref:`sect-namespaces`), and will typically be resolved according to
-their type. As syntactic sugar, any type with the constructor names
+their type. As syntactic sugar, any implementation of the names
 ``Nil`` and ``::`` can be written in list form. For example:
 
 -  ``[]`` means ``Nil``
 
 -  ``[1,2,3]`` means ``1 :: 2 :: 3 :: Nil``
+
+Similarly, any implementation of the names ``Lin`` and ``:<`` can be
+written in **snoc**-list form:
+
+- ``[<]`` mean ``Lin``
+- ``[< 1, 2, 3]`` means ``Lin :< 1 :< 2 :< 3``.
+
+and the prelude includes a pre-defined datatype for snoc-lists:
+
+.. code-block:: idris
+
+    data SnocList a = Lin | (:<) (SnocList a) a
+
 
 The library also defines a number of functions for manipulating these
 types. ``map`` is overloaded both for ``List`` and ``Vect`` (we'll see more
@@ -988,8 +1047,8 @@ type. The field names can be used to access the field values:
     "Fred" : String
     *Record> fred.age
     30 : Int
-    *Record> :t firstName
-    firstName : Person -> String
+    *Record> :t (.firstName)
+    Main.Person.(.firstName) : Person -> String
 
 We can use prefix field projections, like in Haskell:
 
@@ -999,6 +1058,14 @@ We can use prefix field projections, like in Haskell:
     "Fred" : String
     *Record> age fred
     30 : Int
+    *Record> :t firstName
+    firstName : Person -> String
+
+Prefix field projections can be disabled per record definition
+using pragma ``%prefix_record_projections off``, which makes
+all subsequently defined records generate only dotted projections.
+This pragma has effect until the end of the module
+or until the closest occurrence of ``%prefix_record_projections on``.
 
 We can also use the field names to update a record (or, more
 precisely, produce a copy of the record with the given fields
@@ -1161,6 +1228,8 @@ Or even:
 More Expressions
 ================
 
+.. _sect-let-bindings:
+
 ``let`` bindings
 ----------------
 
@@ -1183,6 +1252,49 @@ pattern matching at the top level:
     showPerson : Person -> String
     showPerson p = let MkPerson name age = p in
                        name ++ " is " ++ show age ++ " years old"
+
+These let bindings can be annotated with a type:
+
+.. code-block:: idris
+
+   mirror : List a -> List a
+   mirror xs = let xs' : List a = reverse xs in
+                   xs ++ xs'
+
+We can also use the symbol ``:=`` instead of ``=`` to, among other things,
+avoid ambiguities with propositional equality:
+
+.. code-block:: idris
+
+   Diag : a -> Type
+   Diag v = let ty : Type := v = v in ty
+
+Local definitions can also be introduced using ``let``. Just like top level
+ones and ones defined in a ``where`` clause you need to:
+
+1. declare the function and its type
+2. define the function by pattern matching
+
+.. code-block:: idris
+
+   foldMap : Monoid m => (a -> m) -> Vect n a -> m
+   foldMap f = let fo : m -> a -> m
+                   fo ac el = ac <+> f el
+                in foldl fo neutral
+
+The symbol ``:=`` cannot be used in a local function definition. Which means
+that it can be used to interleave let bindings and local definitions without
+introducing ambiguities.
+
+.. code-block:: idris
+
+   foldMap : Monoid m => (a -> m) -> Vect n a -> m
+   foldMap f = let fo : m -> a -> m
+                   fo ac el = ac <+> f el
+                   initial := neutral
+                    --     ^ this indicates that `initial` is a separate binding,
+                    -- not relevant to definition of `fo`
+                in foldl fo initial
 
 List comprehensions
 -------------------

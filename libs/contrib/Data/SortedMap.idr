@@ -1,5 +1,7 @@
 module Data.SortedMap
 
+%hide Prelude.toList
+
 -- TODO: write split
 
 private
@@ -254,11 +256,6 @@ export
 values : SortedMap k v -> List v
 values = map snd . toList
 
-export
-null : SortedMap k v -> Bool
-null Empty = True
-null (M _ _) = False
-
 treeMap : (a -> b) -> Tree n k a o -> Tree n k b o
 treeMap f (Leaf k v) = Leaf k (f v)
 treeMap f (Branch2 t1 k t2) = Branch2 (treeMap f t1) k (treeMap f t2)
@@ -288,6 +285,12 @@ implementation Functor (SortedMap k) where
 export
 implementation Foldable (SortedMap k) where
   foldr f z = foldr f z . values
+  foldl f z = foldl f z . values
+
+  null Empty = True
+  null (M _ _) = False
+
+  foldMap f = foldMap f . values
 
 export
 implementation Traversable (SortedMap k) where
@@ -319,6 +322,10 @@ mergeLeft = mergeWith const
 export
 (Show k, Show v) => Show (SortedMap k v) where
    show m = "fromList " ++ (show $ toList m)
+
+export
+(Eq k, Eq v) => Eq (SortedMap k v) where
+  (==) = (==) `on` toList
 
 -- TODO: is this the right variant of merge to use for this? I think it is, but
 -- I could also see the advantages of using `mergeLeft`. The current approach is

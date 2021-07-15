@@ -15,4 +15,3 @@ addBaz (plus x y) (AddThings _ _) = plus x y
 -- Can't unify because of the repeated argument
 addBaz4 : (x : Nat) -> Baz x -> Nat
 addBaz4 (plus _ _) (AddThings x x) = plus x x
-

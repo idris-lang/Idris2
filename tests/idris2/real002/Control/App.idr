@@ -89,7 +89,7 @@ prim_app_bind fn k w
     = let MkAppRes x' w' = fn w in k x' w'
 
 toPrimApp : IO a -> PrimApp a
-toPrimApp x 
+toPrimApp x
     = \w => case toPrim x w of
                  MkIORes r w => MkAppRes r w
 
@@ -97,9 +97,9 @@ PrimApp1 : Usage -> Type -> Type
 PrimApp1 u a = (1 x : %World) -> App1Res u a
 
 toPrimApp1 : {u : _} -> IO a -> PrimApp1 u a
-toPrimApp1 x 
+toPrimApp1 x
     = \w => case toPrim x w of
-                 MkIORes r w => 
+                 MkIORes r w =>
                      case u of
                           One => MkApp1Res1 r w
                           Any => MkApp1ResW r w
@@ -158,6 +158,10 @@ bindL (MkApp prog) next
                    Left err => absurdWith2 next world' err
 
 export
+seqL : App {l=NoThrow} e () -> (1 k : App {l} e b) -> App {l} e b
+seqL ma mb = bindL ma (\ () => mb)
+
+export
 app : (1 p : App {l=NoThrow} e a) -> App1 {u=Any} e a
 app (MkApp prog)
     = MkApp1 $ \world =>
@@ -200,6 +204,17 @@ namespace App1
   (>>=) : {u : _} -> (1 act : App1 {u} e a) ->
           (1 k : Cont1Type u a u' e b) -> App1 {u=u'} e b
   (>>=) = bindApp1
+
+  export
+  delay : {u : _} -> (1 k : App1 {u=u'} e b) ->
+          Cont1Type u () u' e b
+  delay {u = One} mb = \ () => mb
+  delay {u = Any} mb = \ _ => mb
+
+  export
+  (>>) : {u : _} -> (1 act : App1 {u} e ()) ->
+          (1 k : App1 {u=u'} e b) -> App1 {u=u'} e b
+  ma >> mb = ma >>= delay mb
 
   export
   pure : (x : a) -> App1 {u=Any} e a
@@ -284,13 +299,13 @@ handle (MkApp prog) onok onerr
     = MkApp $
            prim_app_bind prog $ \res =>
              case res of
-                  Left (First err) => 
+                  Left (First err) =>
                         let MkApp err' = onerr err in
                             err'
-                  Left (Later p) => 
+                  Left (Later p) =>
                         -- different exception, so rethrow
                         MkAppRes (Left p)
-                  Right ok => 
+                  Right ok =>
                         let MkApp ok' = onok ok in
                             ok'
 

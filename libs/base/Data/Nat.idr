@@ -1,5 +1,8 @@
 module Data.Nat
 
+import public Control.Relation
+import public Control.Order
+
 %default total
 
 export
@@ -9,6 +12,10 @@ Uninhabited (Z = S n) where
 export
 Uninhabited (S n = Z) where
   uninhabited Refl impossible
+
+export
+Uninhabited (a = b) => Uninhabited (S a = S b) where
+  uninhabited Refl @{ab} = uninhabited @{ab} Refl
 
 public export
 isZero : Nat -> Bool
@@ -58,6 +65,11 @@ data NotBothZero : (n, m : Nat) -> Type where
   LeftIsNotZero  : NotBothZero (S n) m
   RightIsNotZero : NotBothZero n     (S m)
 
+export
+Uninhabited (NotBothZero 0 0) where
+  uninhabited LeftIsNotZero impossible
+  uninhabited RightIsNotZero impossible
+
 public export
 data LTE  : (n, m : Nat) -> Type where
   LTEZero : LTE Z    right
@@ -67,6 +79,45 @@ export
 Uninhabited (LTE (S n) Z) where
   uninhabited LTEZero impossible
 
+export
+Uninhabited (LTE m n) => Uninhabited (LTE (S m) (S n)) where
+  uninhabited (LTESucc lte) = uninhabited lte
+
+public export
+Reflexive Nat LTE where
+  reflexive {x = Z} = LTEZero
+  reflexive {x = S k} = LTESucc $ reflexive {x = k}
+
+public export
+Transitive Nat LTE where
+  transitive LTEZero _ = LTEZero
+  transitive (LTESucc xy) (LTESucc yz) =
+    LTESucc $ transitive {rel = LTE} xy yz
+
+public export
+Antisymmetric Nat LTE where
+  antisymmetric LTEZero LTEZero = Refl
+  antisymmetric (LTESucc xy) (LTESucc yx) =
+    cong S $ antisymmetric xy yx
+
+public export
+Connex Nat LTE where
+  connex {x = Z} _ = Left LTEZero
+  connex {y = Z} _ = Right LTEZero
+  connex {x = S _} {y = S _} prf =
+    case connex {rel = LTE} $ prf . (cong S) of
+      Left jk => Left $ LTESucc jk
+      Right kj => Right $ LTESucc kj
+
+public export
+Preorder Nat LTE where
+
+public export
+PartialOrder Nat LTE where
+
+public export
+LinearOrder Nat LTE where
+
 public export
 GTE : Nat -> Nat -> Type
 GTE left right = LTE right left
@@ -74,6 +125,28 @@ GTE left right = LTE right left
 public export
 LT : Nat -> Nat -> Type
 LT left right = LTE (S left) right
+
+namespace LT
+
+  ||| LT is defined in terms of LTE which makes it annoying to use.
+  ||| This convenient view of allows us to avoid having to constantly
+  ||| perform nested matches to obtain another LT subproof instead of
+  ||| an LTE one.
+  public export
+  data View : LT m n -> Type where
+    LTZero : View (LTESucc LTEZero)
+    LTSucc : (lt : m `LT` n) -> View (LTESucc lt)
+
+  ||| Deconstruct an LT proof into either a base case or a further *LT*
+  export
+  view : (lt : LT m n) -> View lt
+  view (LTESucc LTEZero) = LTZero
+  view (LTESucc lt@(LTESucc _)) = LTSucc lt
+
+  ||| A convenient alias for trivial LT proofs
+  export
+  ltZero : Z `LT` S m
+  ltZero = LTESucc LTEZero
 
 public export
 GT : Nat -> Nat -> Type
@@ -88,6 +161,11 @@ fromLteSucc : LTE (S m) (S n) -> LTE m n
 fromLteSucc (LTESucc x) = x
 
 export
+succNotLTEpred : {x : Nat} -> Not $ LTE (S x) x
+succNotLTEpred {x =   0} prf = succNotLTEzero prf
+succNotLTEpred {x = S _} prf = succNotLTEpred $ fromLteSucc prf
+
+public export
 isLTE : (m, n : Nat) -> Dec (LTE m n)
 isLTE Z n = Yes LTEZero
 isLTE (S k) Z = No succNotLTEzero
@@ -96,10 +174,17 @@ isLTE (S k) (S j)
            No contra => No (contra . fromLteSucc)
            Yes prf => Yes (LTESucc prf)
 
-export
-lteRefl : {n : Nat} -> LTE n n
-lteRefl {n = Z}   = LTEZero
-lteRefl {n = S k} = LTESucc lteRefl
+public export
+isGTE : (m, n : Nat) -> Dec (GTE m n)
+isGTE m n = isLTE n m
+
+public export
+isLT : (m, n : Nat) -> Dec (LT m n)
+isLT m n = isLTE (S m) n
+
+public export
+isGT : (m, n : Nat) -> Dec (GT m n)
+isGT m n = isLT n m
 
 export
 lteSuccRight : LTE n m -> LTE n (S m)
@@ -111,20 +196,28 @@ lteSuccLeft : LTE (S n) m -> LTE n m
 lteSuccLeft (LTESucc x) = lteSuccRight x
 
 export
-lteTransitive : LTE n m -> LTE m p -> LTE n p
-lteTransitive LTEZero y = LTEZero
-lteTransitive (LTESucc x) (LTESucc y) = LTESucc (lteTransitive x y)
-
-export
 lteAddRight : (n : Nat) -> LTE n (n + m)
 lteAddRight Z = LTEZero
 lteAddRight (S k) {m} = LTESucc (lteAddRight {m} k)
 
 export
+notLTEImpliesGT : {a, b : Nat} -> Not (a `LTE` b) -> a `GT` b
+notLTEImpliesGT {a = 0  }           not_z_lte_b    = absurd $ not_z_lte_b LTEZero
+notLTEImpliesGT {a = S a} {b = 0  } notLTE = LTESucc LTEZero
+notLTEImpliesGT {a = S a} {b = S k} notLTE = LTESucc (notLTEImpliesGT (notLTE . LTESucc))
+
+export
+LTEImpliesNotGT : a `LTE` b -> Not (a `GT` b)
+LTEImpliesNotGT LTEZero q = absurd q
+LTEImpliesNotGT (LTESucc p) (LTESucc q) = LTEImpliesNotGT p q
+
+export
 notLTImpliesGTE : {a, b : _} -> Not (LT a b) -> GTE a b
-notLTImpliesGTE {b = Z} _ = LTEZero
-notLTImpliesGTE {a = Z} {b = S k} notLt = absurd (notLt (LTESucc LTEZero))
-notLTImpliesGTE {a = S k} {b = S j} notLt = LTESucc (notLTImpliesGTE (notLt . LTESucc))
+notLTImpliesGTE notLT = fromLteSucc $ notLTEImpliesGT notLT
+
+export
+LTImpliesNotGTE : a `LT` b -> Not (a `GTE` b)
+LTImpliesNotGTE p q = LTEImpliesNotGT q p
 
 public export
 lte : Nat -> Nat -> Bool
@@ -144,6 +237,25 @@ public export
 gt : Nat -> Nat -> Bool
 gt left right = lt right left
 
+export
+lteReflectsLTE : (k : Nat) -> (n : Nat) -> lte k n === True -> k `LTE` n
+lteReflectsLTE (S k)  0    _ impossible
+lteReflectsLTE 0      0    _   = LTEZero
+lteReflectsLTE 0     (S k) _   = LTEZero
+lteReflectsLTE (S k) (S j) prf = LTESucc (lteReflectsLTE k j prf)
+
+export
+gteReflectsGTE : (k : Nat) -> (n : Nat) -> gte k n === True -> k `GTE` n
+gteReflectsGTE k n prf = lteReflectsLTE n k prf
+
+export
+ltReflectsLT : (k : Nat) -> (n : Nat) -> lt k n === True -> k `LT` n
+ltReflectsLT k n prf = lteReflectsLTE (S k) n prf
+
+export
+gtReflectsGT : (k : Nat) -> (n : Nat) -> gt k n === True -> k `GT` n
+gtReflectsGT k n prf = ltReflectsLT n k prf
+
 public export
 minimum : Nat -> Nat -> Nat
 minimum Z m = Z
@@ -159,60 +271,93 @@ maximum (S n) (S m) = S (maximum n m)
 -- Proofs on S
 
 export
-eqSucc : (left, right : Nat) -> left = right -> S left = S right
+eqSucc : (0 left, right : Nat) -> left = right -> S left = S right
 eqSucc _ _ Refl = Refl
 
 export
-succInjective : (left, right : Nat) -> S left = S right -> left = right
+succInjective : (0 left, right : Nat) -> S left = S right -> left = right
 succInjective _ _ Refl = Refl
 
-export
-SIsNotZ : (S x = Z) -> Void
-SIsNotZ Refl impossible
+||| A definition of non-zero with a better behaviour than `Not (x = Z)`
+||| This is amenable to proof search and `NonZero Z` is more readily
+||| detected as impossible by Idris
+public export
+data NonZero : Nat -> Type where
+  SIsNonZero : NonZero (S x)
 
-export partial
-modNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
-modNatNZ left Z         p = void (p Refl)
-modNatNZ left (S right) _ = mod' left left right
-  where
-    mod' : Nat -> Nat -> Nat -> Nat
-    mod' Z        centre right = centre
-    mod' (S left) centre right =
+export Uninhabited (NonZero Z) where uninhabited SIsNonZero impossible
+
+export
+SIsNotZ : Not (S x = Z)
+SIsNotZ = absurd
+
+||| Auxiliary function:
+||| mod' fuel a b = a `mod` (S b)
+||| assuming we have enough fuel
+public export
+mod' : Nat -> Nat -> Nat -> Nat
+mod' Z        centre right = centre
+mod' (S fuel) centre right =
       if lte centre right then
         centre
       else
-        mod' left (minus centre (S right)) right
+        mod' fuel (minus centre (S right)) right
+
+public export
+modNatNZ : Nat -> (y: Nat) -> (0 _ : NonZero y) -> Nat
+modNatNZ left Z         p = void (absurd p)
+modNatNZ left (S right) _ = mod' left left right
 
 export partial
 modNat : Nat -> Nat -> Nat
-modNat left (S right) = modNatNZ left (S right) SIsNotZ
+modNat left (S right) = modNatNZ left (S right) SIsNonZero
 
-export partial
-divNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
-divNatNZ left Z         p = void (p Refl)
+||| Auxiliary function:
+||| div' fuel a b = a `div` (S b)
+||| assuming we have enough fuel
+public export
+div' : Nat -> Nat -> Nat -> Nat
+div' Z        centre right = Z
+div' (S fuel) centre right =
+  if lte centre right then
+    Z
+  else
+    S (div' fuel (minus centre (S right)) right)
+
+-- 'public' to allow type-level division
+public export
+divNatNZ : Nat -> (y: Nat) -> (0 _ : NonZero y) -> Nat
 divNatNZ left (S right) _ = div' left left right
-  where
-    div' : Nat -> Nat -> Nat -> Nat
-    div' Z        centre right = Z
-    div' (S left) centre right =
-      if lte centre right then
-        Z
-      else
-        S (div' left (minus centre (S right)) right)
 
 export partial
 divNat : Nat -> Nat -> Nat
-divNat left (S right) = divNatNZ left (S right) SIsNotZ
+divNat left (S right) = divNatNZ left (S right) SIsNonZero
 
 export partial
-divCeilNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
+divCeilNZ : Nat -> (y: Nat) -> (0 _ : NonZero y) -> Nat
 divCeilNZ x y p = case (modNatNZ x y p) of
   Z   => divNatNZ x y p
   S _ => S (divNatNZ x y p)
 
 export partial
 divCeil : Nat -> Nat -> Nat
-divCeil x (S y) = divCeilNZ x (S y) SIsNotZ
+divCeil x (S y) = divCeilNZ x (S y) SIsNonZero
+
+
+public export
+divmod' : Nat -> Nat -> Nat -> (Nat, Nat)
+divmod' Z        centre right = (Z, centre)
+divmod' (S fuel) centre right =
+  if lte centre right then
+    (Z, centre)
+  else
+    let qr = divmod' fuel (minus centre (S right)) right
+    in (S (fst qr), snd qr)
+
+public export
+divmodNatNZ : Nat -> (y: Nat) -> (0 _ : NonZero y) -> (Nat, Nat)
+divmodNatNZ left (S right) _ = divmod' left left right
+
 
 public export
 Integral Nat where
@@ -223,7 +368,7 @@ export partial
 gcd : (a: Nat) -> (b: Nat) -> {auto ok: NotBothZero a b} -> Nat
 gcd a Z     = a
 gcd Z b     = b
-gcd a (S b) = gcd (S b) (modNatNZ a (S b) SIsNotZ)
+gcd a (S b) = gcd (S b) (modNatNZ a (S b) SIsNonZero)
 
 export partial
 lcm : Nat -> Nat -> Nat
@@ -319,10 +464,34 @@ plusLeftLeftRightZero left right p =
     rewrite plusZeroRightNeutral left in
       p
 
+export
 plusLteMonotoneRight : (p, q, r : Nat) -> q `LTE` r -> (q+p) `LTE` (r+p)
 plusLteMonotoneRight p  Z     r     LTEZero    = rewrite plusCommutative r p in
                                                  lteAddRight p
 plusLteMonotoneRight p (S q) (S r) (LTESucc l) = LTESucc $ plusLteMonotoneRight p q r l
+
+export
+plusLteMonotoneLeft : (p, q, r : Nat) -> q `LTE` r -> (p + q) `LTE` (p + r)
+plusLteMonotoneLeft p q r p_lt_q
+   = rewrite plusCommutative p q in
+     rewrite plusCommutative p r in
+     plusLteMonotoneRight p q r p_lt_q
+
+export
+plusLteMonotone : {m, n, p, q : Nat} -> m `LTE` n -> p `LTE` q ->
+                  (m + p) `LTE` (n + q)
+plusLteMonotone left right =
+  transitive {rel=LTE}
+    (plusLteMonotoneLeft m p q right)
+    (plusLteMonotoneRight q m n left)
+
+zeroPlusLeftZero : (a,b : Nat) -> (0 = a + b) -> a = 0
+zeroPlusLeftZero 0 0 Refl = Refl
+zeroPlusLeftZero (S k) b _ impossible
+
+zeroPlusRightZero : (a,b : Nat) -> (0 = a + b) -> b = 0
+zeroPlusRightZero 0 0 Refl = Refl
+zeroPlusRightZero (S k) b _ impossible
 
 -- Proofs on *
 
@@ -392,8 +561,9 @@ multOneLeftNeutral right = plusZeroRightNeutral right
 
 export
 multOneRightNeutral : (left : Nat) -> left * 1 = left
-multOneRightNeutral left = rewrite multCommutative left 1 in multOneLeftNeutral left
-
+multOneRightNeutral left =
+  rewrite multCommutative left 1 in
+  multOneLeftNeutral left
 
 -- Proofs on minus
 
@@ -430,6 +600,31 @@ export
 minusPlusZero : (n, m : Nat) -> minus n (n + m) = Z
 minusPlusZero Z     _ = Refl
 minusPlusZero (S n) m = minusPlusZero n m
+
+export
+minusPos : m `LT` n -> Z `LT` minus n m
+minusPos lt = case view lt of
+  LTZero    => ltZero
+  LTSucc lt => minusPos lt
+
+export
+minusLteMonotone : {p : Nat} -> m `LTE` n -> minus m p `LTE` minus n p
+minusLteMonotone LTEZero = LTEZero
+minusLteMonotone {p = Z} prf@(LTESucc _) = prf
+minusLteMonotone {p = S p} (LTESucc lte) = minusLteMonotone lte
+
+export
+minusLtMonotone : m `LT` n -> p `LT` n -> minus m p `LT` minus n p
+minusLtMonotone mltn pltn = case view pltn of
+  LTZero => rewrite minusZeroRight m in mltn
+  LTSucc pltn => case view mltn of
+    LTZero => minusPos pltn
+    LTSucc mltn => minusLtMonotone mltn pltn
+
+public export
+minusPlus : (m : Nat) -> minus (plus m n) m === n
+minusPlus Z = irrelevantEq (minusZeroRight n)
+minusPlus (S m) = minusPlus m
 
 export
 plusMinusLte : (n, m : Nat) -> LTE n m -> (minus m n) + n = m
@@ -476,6 +671,11 @@ multDistributesOverMinusRight left centre right =
     rewrite multCommutative centre left in
     rewrite multCommutative right left in
             Refl
+
+export
+zeroMultEitherZero : (a,b : Nat) -> a*b = 0 -> Either (a = 0) (b = 0)
+zeroMultEitherZero 0 b prf = Left Refl
+zeroMultEitherZero (S a) b prf = Right $ zeroPlusLeftZero b (a * b) (sym prf)
 
 -- power proofs
 
@@ -586,10 +786,18 @@ sucMinR (S l) = cong S $ sucMinR l
 
 -- Algebra -----------------------------
 
-public export
-Semigroup Nat where
-  (<+>) = plus
+namespace Semigroup
 
-public export
-Monoid Nat where
-  neutral = Z
+  public export
+  [Maximum] Semigroup Nat where
+    (<+>) = max
+
+  public export
+  [Minimum] Semigroup Nat where
+    (<+>) = min
+
+namespace Monoid
+
+  public export
+  [Maximum] Monoid Nat using Semigroup.Maximum where
+    neutral = 0

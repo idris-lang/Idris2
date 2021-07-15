@@ -3,11 +3,13 @@ module TTImp.Elab.ImplicitBind
 -- variables or unbound implicits as type variables)
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
 import Core.Normalise
 import Core.Unify
+import Core.UnifyState
 import Core.TT
 import Core.Value
 
@@ -16,7 +18,7 @@ import TTImp.Elab.Delayed
 import TTImp.TTImp
 
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -46,7 +48,7 @@ mkOuterHole loc rig n topenv Nothing
          let env = outerEnv est
          nm <- genName ("type_of_" ++ nameRoot n)
          ty <- metaVar loc erased env nm (TType loc)
-         log 10 $ "Made metavariable for type of " ++ show n ++ ": " ++ show nm
+         log "elab.implicits" 10 $ "Made metavariable for type of " ++ show n ++ ": " ++ show nm
          put EST (addBindIfUnsolved nm rig Explicit topenv (embedSub sub ty) (TType loc) est)
          tm <- implBindVar loc rig env n ty
          pure (embedSub sub tm, embedSub sub ty)
@@ -113,7 +115,7 @@ bindUnsolved {vars} fc elabmode _
     = do est <- get EST
          defs <- get Ctxt
          let bifs = bindIfUnsolved est
-         log 5 $ "Bindable unsolved implicits: " ++ show (map fst bifs)
+         log "elab.implicits" 5 $ "Bindable unsolved implicits: " ++ show (map fst bifs)
          traverse_ (mkImplicit defs (outerEnv est) (subEnv est)) (bindIfUnsolved est)
   where
     makeBoundVar : {outer, vs : _} ->
@@ -145,14 +147,13 @@ bindUnsolved {vars} fc elabmode _
              bindtm <- makeBoundVar n rig p outerEnv
                                     sub subEnv
                                     !(normaliseHoles defs env exp)
-             logTerm 5 ("Added unbound implicit") bindtm
-             unify (case elabmode of
+             logTerm "elab.implicits" 5 ("Added unbound implicit") bindtm
+             ignore $ unify (case elabmode of
                          InLHS _ => inLHS
-                         _ => inTermP False)
+                         _ => inTerm)
                    fc env tm bindtm
-             pure ()
 
-swapIsVarH : {idx : Nat} -> (0 p : IsVar name idx (x :: y :: xs)) ->
+swapIsVarH : {idx : Nat} -> (0 p : IsVar nm idx (x :: y :: xs)) ->
              Var (y :: x :: xs)
 swapIsVarH First = MkVar (Later First)
 swapIsVarH (Later p) = swapP p -- it'd be nice to do this all at the top
@@ -165,7 +166,7 @@ swapIsVarH (Later p) = swapP p -- it'd be nice to do this all at the top
     swapP (Later x) = MkVar (Later (Later x))
 
 swapIsVar : (vs : List Name) ->
-            {idx : Nat} -> (0 p : IsVar name idx (vs ++ x :: y :: xs)) ->
+            {idx : Nat} -> (0 p : IsVar nm idx (vs ++ x :: y :: xs)) ->
             Var (vs ++ y :: x :: xs)
 swapIsVar [] prf = swapIsVarH prf
 swapIsVar (x :: xs) First = MkVar First
@@ -194,11 +195,11 @@ swapVars (TType fc) = TType fc
 -- when hitting any non-implicit binder
 push : {vs : _} ->
        FC -> (n : Name) -> Binder (Term vs) -> Term (n :: vs) -> Term vs
-push ofc n b tm@(Bind fc (PV x i) (Pi c Implicit ty) sc) -- only push past 'PV's
+push ofc n b tm@(Bind fc (PV x i) (Pi fc' c Implicit ty) sc) -- only push past 'PV's
     = case shrinkTerm ty (DropCons SubRefl) of
            Nothing => -- needs explicit pi, do nothing
                       Bind ofc n b tm
-           Just ty' => Bind fc (PV x i) (Pi c Implicit ty')
+           Just ty' => Bind fc (PV x i) (Pi fc' c Implicit ty')
                             (push ofc n (map weaken b) (swapVars {vs = []} sc))
 push ofc n b tm = Bind ofc n b tm
 
@@ -212,10 +213,10 @@ liftImps (PI _) (tm, TType fc) = (liftImps' tm, TType fc)
   where
     liftImps' : {vars : _} ->
                 Term vars -> Term vars
-    liftImps' (Bind fc (PV n i) (Pi c Implicit ty) sc)
-        = Bind fc (PV n i) (Pi c Implicit ty) (liftImps' sc)
-    liftImps' (Bind fc n (Pi c p ty) sc)
-        = push fc n (Pi c p ty) (liftImps' sc)
+    liftImps' (Bind fc (PV n i) b@(Pi _ _ Implicit _) sc)
+        = Bind fc (PV n i) b (liftImps' sc)
+    liftImps' (Bind fc n b@(Pi _ _ _ _) sc)
+        = push fc n b (liftImps' sc)
     liftImps' tm = tm
 liftImps _ x = x
 
@@ -238,8 +239,7 @@ bindImplVars {vars} fc mode gam env imps_in scope scty
     tidyName (Nested n inner) = tidyName inner
     tidyName n = n
 
-    getBinds : {new : _} ->
-               (imps : List (Name, Name, ImplBinding vs)) ->
+    getBinds : (imps : List (Name, Name, ImplBinding vs)) ->
                Bounds new -> (tm : Term vs) -> (ty : Term vs) ->
                (Term (new ++ vs), Term (new ++ vs))
     getBinds [] bs tm ty = (refsToLocals bs tm, refsToLocals bs ty)
@@ -248,29 +248,31 @@ bindImplVars {vars} fc mode gam env imps_in scope scty
               bty' = refsToLocals bs bty in
               case mode of
                    PI c =>
-                      (Bind fc _ (Pi c Implicit bty') tm',
+                      (Bind fc _ (Pi fc c Implicit bty') tm',
                        TType fc)
                    _ =>
-                      (Bind fc _ (PVar c (map (weakenNs new) p) bty') tm',
-                       Bind fc _ (PVTy c bty') ty')
+                      (Bind fc _ (PVar fc c (map (weakenNs (sizeOf bs)) p) bty') tm',
+                       Bind fc _ (PVTy fc c bty') ty')
     getBinds ((n, metan, AsBinding c _ _ bty bpat) :: imps) bs tm ty
         = let (tm', ty') = getBinds imps (Add n metan bs) tm ty
               bty' = refsToLocals bs bty
               bpat' = refsToLocals bs bpat in
-              (Bind fc _ (PLet c bpat' bty') tm',
-               Bind fc _ (PLet c bpat' bty') ty')
+              (Bind fc _ (PLet fc c bpat' bty') tm',
+               Bind fc _ (PLet fc c bpat' bty') ty')
 
-normaliseHolesScope : {vars : _} ->
+normaliseHolesScope : {auto c : Ref Ctxt Defs} ->
+                      {vars : _} ->
                       Defs -> Env Term vars -> Term vars -> Core (Term vars)
 normaliseHolesScope defs env (Bind fc n b sc)
     = pure $ Bind fc n b
                   !(normaliseHolesScope defs
                    -- use Lam because we don't want it reducing in the scope
-                   (Lam (multiplicity b) Explicit (binderType b) :: env) sc)
+                   (Lam fc (multiplicity b) Explicit (binderType b) :: env) sc)
 normaliseHolesScope defs env tm = normaliseHoles defs env tm
 
 export
-bindImplicits : {vars : _} ->
+bindImplicits : {auto c : Ref Ctxt Defs} ->
+                {vars : _} ->
                 FC -> BindMode ->
                 Defs -> Env Term vars ->
                 List (Name, ImplBinding vars) ->
@@ -315,11 +317,11 @@ getToBind fc elabmode NONE env excepts
 getToBind {vars} fc elabmode impmode env excepts
     = do solveConstraints (case elabmode of
                                 InLHS _ => inLHS
-                                _ => inTermP False) Normal
+                                _ => inTerm) Normal
          bindUnsolved fc elabmode impmode
          solveConstraints (case elabmode of
                                 InLHS _ => inLHS
-                                _ => inTermP False) Normal
+                                _ => inTerm) Normal
          defs <- get Ctxt
          est <- get EST
          let tob = reverse $ filter (\x => not (fst x `elem` excepts)) $
@@ -330,8 +332,8 @@ getToBind {vars} fc elabmode impmode env excepts
          let hnames = map fst res
          -- Return then in dependency order
          let res' = depSort hnames res
-         log 10 $ "Bound names: " ++ show res
-         log 10 $ "Sorted: " ++ show res'
+         log "elab.implicits" 10 $ "Bound names: " ++ show res
+         log "elab.implicits" 10 $ "Sorted: " ++ show res'
          pure res'
   where
     normBindingTy : Defs -> ImplBinding vars -> Core (ImplBinding vars)
@@ -345,7 +347,7 @@ getToBind {vars} fc elabmode impmode env excepts
                Core (List (Name, ImplBinding vars))
     normImps defs ns [] = pure []
     normImps defs ns ((PV n i, bty) :: ts)
-        = do logTermNF 10 ("Implicit pattern var " ++ show (PV n i)) env
+        = do logTermNF "elab.implicits" 10 ("Implicit pattern var " ++ show (PV n i)) env
                        (bindingType bty)
              if PV n i `elem` ns
                 then normImps defs ns ts
@@ -353,7 +355,7 @@ getToBind {vars} fc elabmode impmode env excepts
                         pure ((PV n i, !(normBindingTy defs bty)) :: rest)
     normImps defs ns ((n, bty) :: ts)
         = do tmnf <- normaliseHoles defs env (bindingTerm bty)
-             logTerm 10 ("Normalising implicit " ++ show n) tmnf
+             logTerm "elab.implicits" 10 ("Normalising implicit " ++ show n) tmnf
              case getFnArgs tmnf of
                 -- n reduces to another hole, n', so treat it as that as long
                 -- as it isn't already done
@@ -415,6 +417,12 @@ checkBindVar rig elabinfo nest env fc str topexp
          noteLHSPatVar elabmode (UN str)
          notePatVar n
          est <- get EST
+
+         whenJust (isConcreteFC fc) \nfc => do
+           log "ide-mode.highlight" 7 $ "getNameType is adding Bound: " ++ show n
+           addSemanticDecorations [(nfc, Bound, Just n)]
+
+
          case lookup n (boundNames est) of
               Nothing =>
                 do (tm, exp, bty) <- mkPatternHole fc rig n env
@@ -424,11 +432,15 @@ checkBindVar rig elabinfo nest env fc str topexp
                    case implicitMode elabinfo of
                         PI _ => setInvertible fc n
                         _ => pure ()
-                   log 5 $ "Added Bound implicit " ++ show (n, (rig, tm, exp, bty))
+                   log "elab.implicits" 5 $ "Added Bound implicit " ++ show (n, (rig, tm, exp, bty))
                    est <- get EST
                    put EST (record { boundNames $= ((n, NameBinding rig Explicit tm exp) ::),
                                      toBind $= ((n, NameBinding rig Explicit tm bty) :: ) } est)
+
+                   log "metadata.names" 7 $ "checkBindVar is adding ↓"
                    addNameType fc (UN str) env exp
+                   addNameLoc fc (UN str)
+
                    checkExp rig elabinfo env fc tm (gnf env exp) topexp
               Just bty =>
                 do -- Check rig is consistent with the one in bty, and
@@ -436,7 +448,11 @@ checkBindVar rig elabinfo nest env fc str topexp
                    combine (UN str) rig (bindingRig bty)
                    let tm = bindingTerm bty
                    let ty = bindingType bty
+
+                   log "metadata.names" 7 $ "checkBindVar is adding ↓"
                    addNameType fc (UN str) env ty
+                   addNameLoc fc (UN str)
+
                    checkExp rig elabinfo env fc tm (gnf env ty) topexp
   where
     updateRig : Name -> RigCount -> List (Name, ImplBinding vars) ->
@@ -457,6 +473,40 @@ checkBindVar rig elabinfo nest env fc str topexp
     combine : Name -> RigCount -> RigCount -> Core ()
     combine n l r = when (isIncompatible l r)
                          (throw (LinearUsed fc 2 n))
+
+checkPolyConstraint :
+            {auto c : Ref Ctxt Defs} ->
+            PolyConstraint -> Core ()
+checkPolyConstraint (MkPolyConstraint fc env arg x y)
+    = do defs <- get Ctxt
+         -- If 'x' is a metavariable and 'y' is concrete, that means we've
+         -- ended up putting something too concrete in for a polymorphic
+         -- argument
+         xnf <- continueNF defs env x
+         case xnf of
+              NApp _ (NMeta _ _ _) _ =>
+                   do ynf <- continueNF defs env y
+                      if !(concrete defs env ynf)
+                         then do empty <- clearDefs defs
+                                 throw (MatchTooSpecific fc env arg)
+                         else pure ()
+              _ => pure ()
+checkPolyConstraint _ = pure ()
+
+solvePolyConstraint :
+            {auto c : Ref Ctxt Defs} ->
+            {auto u : Ref UST UState} ->
+            PolyConstraint -> Core ()
+solvePolyConstraint (MkPolyConstraint fc env arg x y)
+    = do defs <- get Ctxt
+         -- If the LHS of the constraint isn't a metavariable, we can solve
+         -- the constraint
+         case !(continueNF defs env x) of
+              xnf@(NApp _ (NMeta _ _ _) _) => pure ()
+              t => do res <- unify inLHS fc env t !(continueNF defs env y)
+                      -- If there's any constraints, it just means we didn't
+                      -- solve anything and it won't help the check
+                      pure ()
 
 export
 checkBindHere : {vars : _} ->
@@ -485,22 +535,32 @@ checkBindHere rig elabinfo nest env fc bindmode tm exp
                              nest env tm exp
          solveConstraints (case elabMode elabinfo of
                                 InLHS c => inLHS
-                                _ => inTermP False) Normal
-         solveConstraintsAfter constart
-                          (case elabMode elabinfo of
-                                InLHS c => inLHS
-                                _ => inTermP False) Defaults
+                                _ => inTerm) Normal
+
          ust <- get UST
          catch (retryDelayed (delayedElab ust))
                (\err =>
                   do ust <- get UST
                      put UST (record { delayedElab = [] } ust)
                      throw err)
+
+         -- Check all the patterns standing for polymorphic variables are
+         -- indeed polymorphic
+         ust <- get UST
+         let cons = polyConstraints ust
+         put UST (record { polyConstraints = [] } ust)
+         traverse_ solvePolyConstraint cons
+         traverse_ checkPolyConstraint cons
+
+         solveConstraintsAfter constart
+                          (case elabMode elabinfo of
+                                InLHS c => inLHS
+                                _ => inTerm) Defaults
          checkDots -- Check dot patterns unifying with the claimed thing
                    -- before binding names
 
-         logTerm 5 "Binding names" tmv
-         logTermNF 5 "Normalised" env tmv
+         logTerm "elab.implicits" 5 "Binding names" tmv
+         logTermNF "elab.implicits" 5 "Normalised" env tmv
          argImps <- getToBind fc (elabMode elabinfo)
                               bindmode env dontbind
          clearToBind dontbind

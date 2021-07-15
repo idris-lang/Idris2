@@ -40,4 +40,3 @@ main
          printLn (the Bits16 (fromInteger (-1)))
          printLn (the Bits32 (fromInteger (-1)))
          printLn (the Bits64 (fromInteger (-1)))
-

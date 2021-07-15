@@ -1,5 +1,7 @@
 module Data.Maybe
 
+%default total
+
 public export
 isNothing : Maybe a -> Bool
 isNothing Nothing  = True
@@ -34,7 +36,7 @@ fromMaybe _   (Just j) = j
 
 ||| Returns the `a` value of a `Maybe a` which is proved `Just`.
 public export
-fromJust : (v : Maybe a) -> IsJust v => a
+fromJust : (v : Maybe a) -> (0 _ : IsJust v) => a
 fromJust (Just x) = x
 fromJust Nothing impossible
 
@@ -60,3 +62,8 @@ lowerMaybe (Just x) = x
 export
 raiseToMaybe : (Monoid a, Eq a) => a -> Maybe a
 raiseToMaybe x = if x == neutral then Nothing else Just x
+
+public export
+filter : (a -> Bool) -> Maybe a -> Maybe a
+filter _ Nothing = Nothing
+filter f (Just x) = toMaybe (f x) x

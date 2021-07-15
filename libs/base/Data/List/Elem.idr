@@ -42,6 +42,11 @@ Uninhabited (Elem {a} x []) where
   uninhabited Here impossible
   uninhabited (There p) impossible
 
+export
+Uninhabited (x = z) => Uninhabited (Elem z xs) => Uninhabited (Elem z $ x::xs) where
+  uninhabited Here @{xz} = uninhabited Refl @{xz}
+  uninhabited (There y) = uninhabited y
+
 ||| An item not in the head and not in the tail is not in the list at all.
 export
 neitherHereNorThere : Not (x = y) -> Not (Elem x xs) -> Not (Elem x (y :: xs))
@@ -49,7 +54,7 @@ neitherHereNorThere xny _     Here        = xny Refl
 neitherHereNorThere _   xnxs  (There xxs) = xnxs xxs
 
 ||| Check whether the given element is a member of the given list.
-export
+public export
 isElem : DecEq a => (x : a) -> (xs : List a) -> Dec (Elem x xs)
 isElem x [] = No absurd
 isElem x (y :: xs) with (decEq x y)

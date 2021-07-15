@@ -14,6 +14,26 @@
       (cons (vector-ref desc 2)
             (blodwen-read-args (vector-ref desc 3)))))
 
+(define blodwen-toSignedInt
+  (lambda (x bits)
+    (if (bit-set? bits x)
+        (bitwise-ior x (arithmetic-shift (- 1) bits))
+        (bitwise-and x (- (arithmetic-shift 1 bits) 1)))))
+
+(define blodwen-toUnsignedInt
+  (lambda (x bits)
+    (modulo x (arithmetic-shift 1 bits))))
+
+(define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
+(define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
+(define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
+(define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
+
+(define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
+(define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
+(define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
+(define bs/ (lambda (x y bits) (blodwen-toSignedInt (quotient x y) bits)))
+
 (define-macro (b+ x y bits)
   (if (exact-integer? bits)
       `(remainder (+ ,x ,y) ,(arithmetic-shift 1 bits))
@@ -36,12 +56,23 @@
 (define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
 (define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
 
+(define bits16->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits32->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits32->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define bits64->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
+
+(define blodwen-bits-shl-signed
+  (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
+
+
 (define-macro (blodwen-and . args) `(bitwise-and ,@args))
 (define-macro (blodwen-or . args) `(bitwise-ior ,@args))
 (define-macro (blodwen-xor . args) `(bitwise-xor ,@args))
 (define-macro (blodwen-bits-shl x y bits)
                    `(remainder (arithmetic-shift ,x ,y)
-                               (arithmetic-shitt 1 ,bits)))
+                               (arithmetic-shift 1 ,bits)))
 (define-macro (blodwen-shl x y) `(arithmetic-shift ,x ,y))
 (define-macro (blodwen-shr x y) `(arithmetic-shift ,x (- ,y)))
 
@@ -49,6 +80,34 @@
   (let ((s (gensym)))
     `(let ((,s ,x))
       (if (flonum? ,s) (##flonum->exact-int ,s) (##floor ,s)))))
+
+(define exact-truncate
+  (lambda (x)
+    (inexact->exact (truncate x))))
+
+(define exact-truncate-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (exact-truncate x) y)))
+
+(define exact-truncate-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (exact-truncate x) y)))
+
+(define cast-char-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (char->integer x) y)))
+
+(define cast-char-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (char->integer x) y)))
+
+(define cast-string-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (cast-string-int x) y)))
+
+(define cast-string-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (cast-string-int x) y)))
 
 ;; TODO Convert to macro
 (define (cast-string-double x)
@@ -59,7 +118,22 @@
   (cast-num (string->number (destroy-prefix x))))
 
 (define-macro (cast-string-int x)
-  `(floor (cast-string-double ,x)))
+  `(exact-truncate (cast-string-double ,x)))
+
+(define (from-idris-list xs)
+  (if (= (vector-ref xs 0) 0)
+    '()
+    (cons (vector-ref xs 1) (from-idris-list (vector-ref xs 2)))))
+
+(define-macro (string-pack xs)
+  `(apply string (from-idris-list ,xs)))
+(define (to-idris-list-rev acc xs)
+  (if (null? xs)
+    acc
+    (to-idris-list-rev (vector 1 (car xs) acc) (cdr xs))))
+(define (string-unpack s) (to-idris-list-rev (vector 0) (reverse (string->list s))))
+(define-macro (string-concat xs)
+  `(apply string-append (from-idris-list ,xs)))
 
 (define-macro (string-cons x y)
   `(string-append (string ,x) ,y))
@@ -75,6 +149,17 @@
     (substring s start end)))
 
 (define-macro (get-tag x) `(vector-ref ,x 0))
+
+(define (blodwen-string-iterator-new s)
+  0)
+
+(define (blodwen-string-iterator-to-string _ s ofs f)
+  (f (substring s ofs (string-length s))))
+
+(define (blodwen-string-iterator-next s ofs)
+  (if (>= ofs (string-length s))
+      (vector 0)  ; EOF
+      (vector 1 (string-ref s ofs) (+ ofs 1))))
 
 ;; These two are only used in this file
 (define-macro (either-left x) `(vector 0 ,x))
@@ -131,15 +216,12 @@
 (define (blodwen-time)
   (exact-floor (time->seconds (current-time))))
 
-(define (blodwen-args)
-  (define (blodwen-build-args args)
-    (if (null? args)
-        (vector 0) ; Prelude.List
-        (vector 1 (car args) (blodwen-build-args (cdr args)))))
-  (blodwen-build-args (cdr (command-line))))
+
+(define (blodwen-arg-count)
+  (length (command-line)))
+
+(define (blodwen-arg n)
+  (if (< n (length (command-line))) (list-ref (command-line) n) ""))
 
 (define (blodwen-hasenv var)
   (if (getenv var #f) 1 0))
-
-(define (blodwen-system cmd)
-  (fxarithmetic-shift-right (shell-command cmd) 8))

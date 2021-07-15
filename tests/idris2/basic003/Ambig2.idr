@@ -24,4 +24,3 @@ namespace Set
 
 keepUnique : List b -> List b
 keepUnique {b} xs = toList (fromList xs)
-

@@ -1,8 +1,8 @@
 ||| A DYI version of 'string interpolation', mimicking Python 3's 'f-string' syntax
-||| Not as fancy 
+||| Not as fancy
 module Data.String.Interpolation
 
-import Data.Strings
+import Data.String
 
 namespace Data.String.Interpolation.Basic
   %inline
@@ -16,18 +16,18 @@ namespace Data.String.Interpolation.Nested
   F : List (List String) -> String
   F strss = F (concat strss)
 
-{- Examples: 
+{- Examples:
 fstring : String
-fstring = let apples = "apples" in 
+fstring = let apples = "apples" in
           F["I have some ", apples," here."]                     --- cf. f"I have some {apples} here."
 
 multiline : String
 multiline = let name = "Edwin"
                 profession = "Hacker"
-                affiliation = "the University of St. Andrews" in --- cf. 
+                affiliation = "the University of St. Andrews" in --- cf.
                 F [["Hi ",name,". "             ]                --- f"Hi {name}. "              \
                   ,["You are a ",profession,". "]                --- f"You are a {profession}. " \
                   ,["You were in ",affiliation,"."]              --- f"You were in {affiliation}."
                   ]
-          
+
 -}

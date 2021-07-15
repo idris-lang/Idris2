@@ -19,4 +19,3 @@ data Baz : Nat -> Type where
 
 addBaz : (x : Nat) -> Baz x -> Nat
 addBaz (plus $x $y) (AddThings $x $y) = plus x y
-

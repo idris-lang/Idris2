@@ -1,7 +1,10 @@
 module Control.WellFounded
 
+import Control.Relation
 import Data.Nat
 import Data.List
+
+%default total
 
 public export
 data Accessible : (rel : a -> a -> Type) -> (x : a) -> Type where
@@ -9,7 +12,7 @@ data Accessible : (rel : a -> a -> Type) -> (x : a) -> Type where
            Accessible rel x
 
 public export
-interface WellFounded (rel : a -> a -> Type) where
+interface WellFounded a rel where
   wellFounded : (x : a) -> Accessible rel x
 
 export
@@ -27,13 +30,13 @@ accInd step z (Access f) =
   step z $ \y, lt => accInd step y (f y lt)
 
 export
-wfRec : WellFounded rel =>
+wfRec : (0 _ : WellFounded a rel) =>
         (step : (x : a) -> ((y : a) -> rel y x -> b) -> b) ->
         a -> b
 wfRec step x = accRec step x (wellFounded {rel} x)
 
 export
-wfInd : WellFounded rel => {0 P : a -> Type} ->
+wfInd : (0 _ : WellFounded a rel) => {0 P : a -> Type} ->
         (step : (x : a) -> ((y : a) -> rel y x -> P y) -> P x) ->
         (myz : a) -> P myz
 wfInd step myz = accInd step myz (wellFounded {rel} myz)
@@ -56,7 +59,7 @@ sizeAccessible x = Access (acc $ size x)
   where
     acc : (sizeX : Nat) -> (y : a) -> (size y `LT` sizeX) -> SizeAccessible y
     acc (S x') y (LTESucc yLEx')
-        = Access (\z, zLTy => acc x' z (lteTransitive zLTy yLEx'))
+        = Access $ \z, zLTy => acc x' z $ transitive {rel = LTE} zLTy yLEx'
 
 export
 sizeInd : Sized a => {0 P : a -> Type} ->
@@ -73,7 +76,7 @@ sizeRec step z = accRec step z (sizeAccessible z)
 
 export
 implementation Sized Nat where
-  size = \x => x
+  size = id
 
 export
 implementation Sized (List a) where

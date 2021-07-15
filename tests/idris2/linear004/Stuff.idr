@@ -31,7 +31,9 @@ ifThenElse True t e = t
 ifThenElse False t e = e
 
 public export
-data Nat = Z | S Nat
+data Nat : Type where
+     Z : Nat
+     S : (1 _ : Nat) -> Nat
 
 public export
 fromInteger : Integer -> Nat
@@ -46,7 +48,9 @@ plus (S k) y = S (plus k y)
 infixr 5 ::
 
 public export
-data List a = Nil | (::) a (List a)
+data List : Type -> Type where
+     Nil : List a
+     (::) : (1 _ : a) -> (1 _ : List a) -> List a
 
 public export
 data Eq : a -> b -> Type where

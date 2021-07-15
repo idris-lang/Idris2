@@ -4,15 +4,21 @@
 module Idris.IDEMode.Parser
 
 import Idris.IDEMode.Commands
+import Core.Core
+import Core.Name
+import Core.Metadata
+import Core.FC
 
+import Data.Maybe
 import Data.List
-import Data.Strings
+import Data.String
 import Parser.Lexer.Source
 import Parser.Source
-import Text.Lexer
-import Text.Parser
-import Utils.Either
-import Utils.String
+import Parser.Support
+import Libraries.Text.Lexer
+import Libraries.Text.Lexer.Tokenizer
+import Libraries.Text.Parser
+import Libraries.Utils.String
 
 %default total
 
@@ -22,26 +28,35 @@ import Utils.String
 symbols : List String
 symbols = ["(", ":", ")"]
 
-ideTokens : TokenMap Token
-ideTokens =
-    map (\x => (exact x, Symbol)) symbols ++
-    [(digits, \x => IntegerLit (cast x)),
-     (stringLit, \x => StringLit (stripQuotes x)),
-     (identAllowDashes, \x => Ident x),
-     (space, Comment)]
+stringTokens : Tokenizer Token
+stringTokens
+    = match (someUntil (is '"') (escape (is '\\') any <|> any)) $ StringLit 0
 
-idelex : String -> Either (Int, Int, String) (List (TokenData Token))
+ideTokens : Tokenizer Token
+ideTokens =
+      match (choice $ exact <$> symbols) Symbol
+  <|> match digits (IntegerLit . cast)
+  <|> compose (is '"')
+              (const $ StringBegin False)
+              (const ())
+              (const stringTokens)
+              (const $ is '"')
+              (const StringEnd)
+  <|> match identAllowDashes Ident
+  <|> match space (const Comment)
+
+idelex : String -> Either (StopReason, Int, Int, String) (List (WithBounds Token))
 idelex str
     = case lex ideTokens str of
            -- Add the EndInput token so that we'll have a line and column
            -- number to read when storing spans in the file
-           (tok, (l, c, "")) => Right (filter notComment tok ++
-                                      [MkToken l c l c EndInput])
+           (tok, (EndInput, l, c, _)) => Right (filter notComment tok ++
+                                               [MkBounded EndInput False (MkBounds l c l c)])
            (_, fail) => Left fail
     where
-      notComment : TokenData Token -> Bool
-      notComment t = case tok t of
-                          Comment _ => False
+      notComment : WithBounds Token -> Bool
+      notComment t = case t.val of
+                          Comment => False
                           _ => True
 
 covering
@@ -53,7 +68,7 @@ sexp
          pure (BoolAtom False)
   <|> do i <- intLit
          pure (IntegerAtom i)
-  <|> do str <- strLit
+  <|> do str <- simpleStr
          pure (StringAtom str)
   <|> do symbol ":"; x <- unqualifiedName
          pure (SymbolAtom x)
@@ -62,15 +77,16 @@ sexp
          symbol ")"
          pure (SExpList xs)
 
-ideParser : {e : _} -> String -> Grammar (TokenData Token) e ty -> Either (ParseError Token) ty
+ideParser : {e : _} ->
+            String -> Grammar SemanticDecorations Token e ty -> Either Error ty
 ideParser str p
-    = do toks   <- mapError LexFail $ idelex str
-         parsed <- mapError toGenericParsingError $ parse p toks
-         Right (fst parsed)
+    = do toks   <- mapFst (fromLexError (Virtual Interactive)) $ idelex str
+         (decor, (parsed, _)) <- mapFst (fromParsingError (Virtual Interactive)) $ parseWith p toks
+         Right parsed
 
 
 export
 covering
-parseSExp : String -> Either (ParseError Token) SExp
+parseSExp : String -> Either Error SExp
 parseSExp inp
     = ideParser inp (do c <- sexp; eoi; pure c)

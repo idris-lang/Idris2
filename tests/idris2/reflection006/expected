@@ -2,8 +2,19 @@
 LOG 0: [x, y]
 LOG 0: Left: ((Prelude.Types.plus x) y)
 LOG 0: Right: ((Prelude.Types.plus y) x)
-refleq.idr:24:16--24:21:While processing right hand side of commutes at refleq.idr:24:1--25:1:
-Error during reflection: Not done at:
-24	commutes x y = prove
-	               ^^^^^
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  any is shadowing Prelude.Interfaces.any
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  any is shadowing Prelude.Interfaces.any
+Error: While processing right hand side of commutes. Error during reflection: Not done
+
+refleq:24:16--24:21
+ 20 |          logMsg "" 0 (show env)
+ 21 |          solveReflected g
+ 22 | 
+ 23 | commutes : (x, y : Nat) -> plus x y = plus y x
+ 24 | commutes x y = prove
+                     ^^^^^
 

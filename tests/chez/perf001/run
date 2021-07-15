@@ -1,0 +1,5 @@
+rm -rf build
+
+$1 -c Fact.idr -o fact
+./build/exec/fact
+

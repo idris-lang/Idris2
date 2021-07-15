@@ -18,6 +18,8 @@ This is a placeholder, to get set up with readthedocs.
 
    packages
    envvars
-   postfixprojs
+   records
    literate
    overloadedlit
+   builtins
+   debugging

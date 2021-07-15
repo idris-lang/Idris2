@@ -15,7 +15,7 @@ beyond work on the language core, are (in no particular order):
   - code colouring
   - it'd be nice if Ctrl-C didn't quit the whole system!
 * IDE mode improvements
-  - Syntax highlighting support for output 
+  - Syntax highlighting support for output
   - Several functions from the version 1 IDE protocol are not yet implemented,
     and I haven't confirmed it works in everything.
   - (Not really part of Idris 2, but an editing mode for vim would be lovely!)
@@ -27,6 +27,7 @@ beyond work on the language core, are (in no particular order):
     to lex!
 * An alternative, high performance, back end. OCaml seems worth a try.
 * JS and Node back ends would be nice.
+* A Jupyter kernel for Idris, to allow for more industry standard literate programming.
 
 The default Prelude describes the rationale for what gets included and what
 doesn't. Mostly what is there is copied from Idris 1, but it's not impossible

@@ -7,15 +7,21 @@ import        Core.Env
 import        Core.Hash
 import public Core.Name
 import        Core.Options
+import public Core.Options.Log
 import public Core.TT
 
-import Utils.Binary
+import Libraries.Utils.Binary
 
-import Data.IntMap
-import Data.IOArray
+import Data.Fin
+import Libraries.Data.IOArray
+import Libraries.Data.IntMap
 import Data.List
-import Data.NameMap
-import Data.StringMap
+import Data.List1
+import Data.Maybe
+import Data.Nat
+import Libraries.Data.NameMap
+import Libraries.Data.StringMap
+import Libraries.Text.Distance.Levenshtein
 
 import System
 import System.Clock
@@ -34,10 +40,12 @@ record PMDefInfo where
   holeInfo : HoleInfo -- data if it comes from a solved hole
   alwaysReduce : Bool -- always reduce, even when quoting etc
                  -- typically for inlinable metavariable solutions
+  externalDecl : Bool -- declared in another module, which may affect how it
+                      -- is compiled
 
 export
 defaultPI : PMDefInfo
-defaultPI = MkPMDefInfo NotHole False
+defaultPI = MkPMDefInfo NotHole False False
 
 public export
 record TypeFlags where
@@ -188,6 +196,9 @@ data DefFlag
     | AllGuarded -- safe to treat as a constructor for the purposes of
          -- productivity checking. All clauses are guarded by constructors,
          -- and there are no other function applications
+    | ConType ConInfo
+         -- Is it a special type of constructor, e.g. a nil or cons shaped
+         -- thing, that can be compiled specially?
 
 export
 Eq DefFlag where
@@ -200,6 +211,7 @@ Eq DefFlag where
     (==) Macro Macro = True
     (==) (PartialEval x) (PartialEval y) = x == y
     (==) AllGuarded AllGuarded = True
+    (==) (ConType x) (ConType y) = x == y
     (==) _ _ = False
 
 export
@@ -213,6 +225,7 @@ Show DefFlag where
   show Macro = "macro"
   show (PartialEval _) = "partialeval"
   show AllGuarded = "allguarded"
+  show (ConType ci) = "contype " ++ show ci
 
 public export
 data SizeChange = Smaller | Same | Unknown
@@ -261,7 +274,7 @@ record GlobalDef where
   specArgs : List Nat -- arguments to specialise by
   inferrable : List Nat -- arguments which can be inferred from elsewhere in the type
   multiplicity : RigCount
-  vars : List Name -- environment name is defined in
+  localVars : List Name -- environment name is defined in
   visibility : Visibility
   totality : Totality
   flags : List DefFlag
@@ -287,6 +300,12 @@ export
 refersToRuntime : GlobalDef -> NameMap Bool
 refersToRuntime def = maybe empty id (refersToRuntimeM def)
 
+export
+findSetTotal : List DefFlag -> Maybe TotalReq
+findSetTotal [] = Nothing
+findSetTotal (SetTotal t :: _) = Just t
+findSetTotal (_ :: xs) = findSetTotal xs
+
 -- Label for array references
 export
 data Arr : Type where
@@ -295,7 +314,8 @@ data Arr : Type where
 -- binary blob yet, so decode it first time
 public export
 data ContextEntry : Type where
-     Coded : Binary -> ContextEntry
+     Coded : Namespace -> -- namespace for decoding into, with restoreNS
+             Binary -> ContextEntry
      Decoded : GlobalDef -> ContextEntry
 
 data PossibleName : Type where
@@ -329,15 +349,22 @@ record Context where
     -- This only matters during evaluation and type checking, to control
     -- access in a program - in all other cases, we'll assume everything is
     -- visible
-    visibleNS : List (List String)
-    allPublic : Bool -- treat everything as public. This is only intended
+    visibleNS : List Namespace
+    allPublic : Bool -- treat everything as public. This is intended
                      -- for checking partially evaluated definitions
+                     -- or for use outside of the main compilation
+                     -- process (e.g. when implementing interactive
+                     -- features such as case splitting).
     inlineOnly : Bool -- only return things with the 'alwaysReduce' flag
     hidden : NameMap () -- Never return these
 
 export
 getContent : Context -> Ref Arr (IOArray ContextEntry)
 getContent = content
+
+export
+namesResolvedAs : Context -> NameMap Name
+namesResolvedAs ctxt = map Resolved ctxt.resolvedAs
 
 -- Implemented later, once we can convert to and from full names
 -- Defined in Core.TTC
@@ -355,7 +382,19 @@ initCtxtS : Int -> Core Context
 initCtxtS s
     = do arr <- coreLift $ newArray s
          aref <- newRef Arr arr
-         pure (MkContext 0 0 empty empty aref 0 empty [["_PE"]] False False empty)
+         pure $ MkContext
+            { firstEntry = 0
+            , nextEntry = 0
+            , resolvedAs = empty
+            , possibles = empty
+            , content = aref
+            , branchDepth = 0
+            , staging = empty
+            , visibleNS = [partialEvalNS]
+            , allPublic = False
+            , inlineOnly = False
+            , hidden = empty
+            }
 
 export
 initCtxt : Core Context
@@ -461,8 +500,7 @@ lookupCtxtExactI (Resolved idx) ctxt
            Just val =>
                  pure $ returnDef (inlineOnly ctxt) idx !(decode ctxt idx True val)
            Nothing =>
-              do let a = content ctxt
-                 arr <- get Arr
+              do arr <- get Arr @{content ctxt}
                  Just def <- coreLift (readArray arr idx)
                       | Nothing => pure Nothing
                  pure $ returnDef (inlineOnly ctxt) idx !(decode ctxt idx True def)
@@ -477,18 +515,15 @@ lookupCtxtExact (Resolved idx) ctxt
     = case lookup idx (staging ctxt) of
            Just res =>
                 do def <- decode ctxt idx True res
-                   case returnDef (inlineOnly ctxt) idx def of
-                        Nothing => pure Nothing
-                        Just (_, def) => pure (Just def)
+                   pure $ map (\(_, def) => def) $
+                     returnDef (inlineOnly ctxt) idx def
            Nothing =>
-              do let a = content ctxt
-                 arr <- get Arr
+              do arr <- get Arr @{content ctxt}
                  Just res <- coreLift (readArray arr idx)
                       | Nothing => pure Nothing
                  def <- decode ctxt idx True res
-                 case returnDef (inlineOnly ctxt) idx def of
-                      Nothing => pure Nothing
-                      Just (_, def) => pure (Just def)
+                 pure $ map (\(_, def) => def) $
+                   returnDef (inlineOnly ctxt) idx def
 lookupCtxtExact n ctxt
     = do Just (i, def) <- lookupCtxtExactI n ctxt
               | Nothing => pure Nothing
@@ -510,6 +545,11 @@ lookupContextEntry n ctxt
                   | Nothing => pure Nothing
          lookupContextEntry (Resolved idx) ctxt
 
+||| Check if the name has been hidden by the `%hide` directive.
+export
+isHidden : Name -> Context -> Bool
+isHidden fulln ctxt = isJust $ lookup fulln (hidden ctxt)
+
 export
 lookupCtxtName : Name -> Context -> Core (List (Name, Int, GlobalDef))
 lookupCtxtName n ctxt
@@ -522,10 +562,6 @@ lookupCtxtName n ctxt
                       | Nothing => pure []
                  lookupPossibles [] ps
   where
-    matches : Name -> Name -> Bool
-    matches (NS ns _) (NS cns _) = ns `isPrefixOf` cns
-    matches (NS _ _) _ = True -- no in library name, so root doesn't match
-    matches _ _ = True -- no prefix, so root must match, so good
 
     resn : (Name, Int, GlobalDef) -> Int
     resn (_, i, _) = i
@@ -583,9 +619,29 @@ export
 newDef : FC -> Name -> RigCount -> List Name ->
          ClosedTerm -> Visibility -> Def -> GlobalDef
 newDef fc n rig vars ty vis def
-    = MkGlobalDef fc n ty [] [] [] []
-                  rig vars vis unchecked [] Nothing Nothing False False False def
-                  Nothing Nothing []
+    = MkGlobalDef
+        { location = fc
+        , fullname = n
+        , type = ty
+        , eraseArgs = []
+        , safeErase = []
+        , specArgs = []
+        , inferrable = []
+        , multiplicity = rig
+        , localVars = vars
+        , visibility = vis
+        , totality = unchecked
+        , flags = []
+        , refersToM = Nothing
+        , refersToRuntimeM = Nothing
+        , invertible = False
+        , noCycles = False
+        , linearChecked = False
+        , definition = def
+        , compexpr = Nothing
+        , namedcompexpr = Nothing
+        , sizeChange = []
+        }
 
 -- Rewrite rules, applied after type checking, for runtime code only
 -- LHS and RHS must have the same type, but we don't (currently) require that
@@ -598,6 +654,72 @@ data Transform : Type where
      MkTransform : {vars : _} ->
                    Name -> -- name for identifying the rule
                    Env Term vars -> Term vars -> Term vars -> Transform
+
+||| Types that are transformed into a faster representation
+||| during codegen.
+public export
+data BuiltinType : Type where
+    BuiltinNatural : BuiltinType
+    NaturalToInteger : BuiltinType
+    IntegerToNatural : BuiltinType
+
+export
+Show BuiltinType where
+    show BuiltinNatural = "Natural"
+    show NaturalToInteger = "NaturalToInteger"
+    show IntegerToNatural = "IntegerToNatural"
+
+-- Token types to make it harder to get the constructor names
+-- the wrong way round.
+public export data ZERO = MkZERO
+public export data SUCC = MkSUCC
+
+||| Record containing names of 'Nat'-like constructors.
+public export
+record NatBuiltin where
+    constructor MkNatBuiltin
+    zero : Name
+    succ : Name
+
+||| Record containing information about a NatToInteger function.
+public export
+record NatToInt where
+    constructor MkNatToInt
+    natToIntArity : Nat -- total number of arguments
+    natIdx : Fin natToIntArity -- index into arguments of the 'Nat'-like argument
+
+||| Record containing information about a IntegerToNat function.
+public export
+record IntToNat where
+    constructor MkIntToNat
+    intToNatArity : Nat
+    intIdx : Fin intToNatArity
+
+||| Rewrite rules for %builtin pragmas
+||| Seperate to 'Transform' because it must also modify case statements
+||| behaviour should remain the same after this transform
+public export
+record BuiltinTransforms where
+    constructor MkBuiltinTransforms
+    natTyNames : NameMap NatBuiltin -- map from Nat-like names to their constructors
+    natZNames : NameMap ZERO -- set of Z-like names
+    natSNames : NameMap SUCC -- set of S-like names
+    natToIntegerFns : NameMap NatToInt -- set of functions to transform to `id`
+    integerToNatFns : NameMap IntToNat -- set of functions to transform to `max 0`
+
+-- TODO: After next release remove nat from here and use %builtin pragma instead
+initBuiltinTransforms : BuiltinTransforms
+initBuiltinTransforms =
+    let type = NS typesNS (UN "Nat")
+        zero = NS typesNS (UN "Z")
+        succ = NS typesNS (UN "S")
+    in MkBuiltinTransforms
+        { natTyNames = singleton type (MkNatBuiltin {zero, succ})
+        , natZNames = singleton zero MkZERO
+        , natSNames = singleton succ MkSUCC
+        , natToIntegerFns = empty
+        , integerToNatFns = empty
+        }
 
 export
 getFnName : Transform -> Maybe Name
@@ -673,6 +795,36 @@ HasNames (Term vars) where
       = pure (TForce fc r !(resolved gam y))
   resolved gam tm = pure tm
 
+export
+HasNames Pat where
+  full gam (PAs fc n p)
+     = [| PAs (pure fc) (full gam n) (full gam p) |]
+  full gam (PCon fc n i ar ps)
+     = [| PCon (pure fc) (full gam n) (pure i) (pure ar) (traverse (full gam) ps) |]
+  full gam (PTyCon fc n ar ps)
+     = [| PTyCon (pure fc) (full gam n) (pure ar) (traverse (full gam) ps) |]
+  full gam p@(PConst _ _) = pure p
+  full gam (PArrow fc x p q)
+     = [| PArrow (pure fc) (full gam x) (full gam p) (full gam q) |]
+  full gam (PDelay fc laz p q)
+     = [| PDelay (pure fc) (pure laz) (full gam p) (full gam q) |]
+  full gam (PLoc fc n) = PLoc fc <$> full gam n
+  full gam (PUnmatchable fc t) = PUnmatchable fc <$> full gam t
+
+  resolved gam (PAs fc n p)
+     = [| PAs (pure fc) (resolved gam n) (resolved gam p) |]
+  resolved gam (PCon fc n i ar ps)
+     = [| PCon (pure fc) (resolved gam n) (pure i) (pure ar) (traverse (resolved gam) ps) |]
+  resolved gam (PTyCon fc n ar ps)
+     = [| PTyCon (pure fc) (resolved gam n) (pure ar) (traverse (resolved gam) ps) |]
+  resolved gam p@(PConst _ _) = pure p
+  resolved gam (PArrow fc x p q)
+     = [| PArrow (pure fc) (resolved gam x) (resolved gam p) (resolved gam q) |]
+  resolved gam (PDelay fc laz p q)
+     = [| PDelay (pure fc) (pure laz) (resolved gam p) (resolved gam q) |]
+  resolved gam (PLoc fc n) = PLoc fc <$> resolved gam n
+  resolved gam (PUnmatchable fc t) = PUnmatchable fc <$> resolved gam t
+
 mutual
   export
   HasNames (CaseTree vars) where
@@ -725,6 +877,15 @@ HasNames (Env Term vars) where
       = pure $ !(traverse (resolved gam) b) :: !(resolved gam bs)
 
 export
+HasNames Clause where
+  full gam (MkClause env lhs rhs)
+     = pure $ MkClause !(full gam env) !(full gam lhs) !(full gam rhs)
+
+  resolved gam (MkClause env lhs rhs)
+    = [| MkClause (resolved gam env) (resolved gam lhs) (resolved gam rhs) |]
+
+
+export
 HasNames Def where
   full gam (PMDef r args ct rt pats)
       = pure $ PMDef r args !(full gam ct) !(full gam rt)
@@ -761,6 +922,31 @@ HasNames Def where
   resolved gam (Guess tm b cs)
       = pure $ Guess !(resolved gam tm) b cs
   resolved gam t = pure t
+
+export
+StripNamespace Def where
+  trimNS ns (PMDef i args ct rt pats)
+      = PMDef i args (trimNS ns ct) rt (map trimNSpat pats)
+    where
+      trimNSpat : (vs ** (Env Term vs, Term vs, Term vs)) ->
+                  (vs ** (Env Term vs, Term vs, Term vs))
+      trimNSpat (vs ** (env, lhs, rhs))
+          = (vs ** (env, trimNS ns lhs, trimNS ns rhs))
+  trimNS ns d = d
+
+  restoreNS ns (PMDef i args ct rt pats)
+      = PMDef i args (restoreNS ns ct) rt (map restoreNSpat pats)
+    where
+      restoreNSpat : (vs ** (Env Term vs, Term vs, Term vs)) ->
+                  (vs ** (Env Term vs, Term vs, Term vs))
+      restoreNSpat (vs ** (env, lhs, rhs))
+          = (vs ** (env, restoreNS ns lhs, restoreNS ns rhs))
+  restoreNS ns d = d
+
+export
+StripNamespace GlobalDef where
+  trimNS ns def = record { definition $= trimNS ns } def
+  restoreNS ns def = record { definition $= restoreNS ns } def
 
 HasNames (NameMap a) where
   full gam nmap
@@ -872,8 +1058,8 @@ record Defs where
   constructor MkDefs
   gamma : Context
   mutData : List Name -- Currently declared but undefined data types
-  currentNS : List String -- namespace for current definitions
-  nestedNS : List (List String) -- other nested namespaces we can look in
+  currentNS : Namespace -- namespace for current definitions
+  nestedNS : List Namespace -- other nested namespaces we can look in
   options : Options
   toSave : NameMap ()
   nextTag : Int
@@ -891,6 +1077,8 @@ record Defs where
   openHints : NameMap ()
      -- ^ currently open global hints; just for the rest of this module (not exported)
      -- and prioritised
+  localHints : NameMap ()
+     -- ^ Hints defined in the current environment
   saveTypeHints : List (Name, Name, Bool)
      -- We don't look up anything in here, it's merely for saving out to TTC.
      -- We save the hints in the 'GlobalDef' itself for faster lookup.
@@ -899,13 +1087,17 @@ record Defs where
      -- ^ A mapping from names to transformation rules which update applications
      -- of that name
   saveTransforms : List (Name, Transform)
+  builtinTransforms : BuiltinTransforms
+     -- ^ A mapping from names to transformations resulting from a %builtin pragma
+     -- seperate to `transforms` because these must always fire globally so run these
+     -- when compiling to `CExp`.
   namedirectives : NameMap (List String)
   ifaceHash : Int
-  importHashes : List (List String, Int)
+  importHashes : List (Namespace, Int)
      -- ^ interface hashes of imported modules
-  imported : List (List String, Bool, List String)
+  imported : List (ModuleIdent, Bool, Namespace)
      -- ^ imported modules, whether to rexport, as namespace
-  allImported : List (String, (List String, Bool, List String))
+  allImported : List (String, (ModuleIdent, Bool, Namespace))
      -- ^ all imported filenames/namespaces, just to avoid loading something
      -- twice unnecessarily (this is a record of all the things we've
      -- called 'readFromTTC' with, in practice)
@@ -914,17 +1106,27 @@ record Defs where
      -- be interpreted however the specific code generator requires
   toCompileCase : List Name
      -- ^ Names which need to be compiled to run time case trees
+  incData : List (CG, String, List String)
+     -- ^ What we've compiled incrementally for this module: codegen,
+     -- object file, any additional CG dependent data (e.g. linker flags)
+  allIncData : List (CG, List String, List String)
+     -- ^ Incrementally compiled files for all imports. Only lists CGs for
+     -- while all modules have associated incremental compile data
   toIR : NameMap ()
      -- ^ Names which need to be compiled to IR at the end of processing
      -- the current module
-  userHoles : NameMap ()
+  userHoles : NameMap Bool
      -- ^ Metavariables the user still has to fill in. In practice, that's
-     -- everything with a user accessible name and a definition of Hole
+     -- everything with a user accessible name and a definition of Hole.
+     -- The Bool says whether it was introduced in another module.
   peFailures : NameMap ()
      -- ^ Partial evaluation names which have failed, so don't bother trying
      -- again
   timings : StringMap (Bool, Integer)
      -- ^ record of timings from logTimeRecord
+  timer : Maybe (Integer, String)
+     -- ^ for timing and checking timeouts; the maximum time after which a
+     -- timeout should be thrown
   warnings : List Warning
      -- ^ as yet unreported warnings
 
@@ -942,9 +1144,39 @@ export
 initDefs : Core Defs
 initDefs
     = do gam <- initCtxt
-         pure (MkDefs gam [] ["Main"] [] defaults empty 100
-                      empty empty empty [] [] empty []
-                      empty 5381 [] [] [] [] [] empty empty empty empty [])
+         pure $ MkDefs
+           { gamma = gam
+           , mutData = []
+           , currentNS = mainNS
+           , nestedNS = []
+           , options = defaults
+           , toSave = empty
+           , nextTag = 100
+           , typeHints = empty
+           , autoHints = empty
+           , openHints = empty
+           , localHints = empty
+           , saveTypeHints = []
+           , saveAutoHints = []
+           , transforms = empty
+           , saveTransforms = []
+           , builtinTransforms = initBuiltinTransforms
+           , namedirectives = empty
+           , ifaceHash = 5381
+           , importHashes = []
+           , imported = []
+           , allImported = []
+           , cgdirectives = []
+           , toCompileCase = []
+           , incData = []
+           , allIncData = []
+           , toIR = empty
+           , userHoles = empty
+           , peFailures = empty
+           , timings = empty
+           , timer = Nothing
+           , warnings = []
+           }
 
 -- Reset the context, except for the options
 export
@@ -958,6 +1190,64 @@ clearCtxt
     resetElab : Options -> Options
     resetElab = record { elabDirectives = defaultElab }
 
+export
+getFieldNames : Context -> Namespace -> List Name
+getFieldNames ctxt recNS
+  = let nms = resolvedAs ctxt in
+    keys $ flip filterBy nms $ \ n =>
+      case isRF n of
+        Nothing => False
+        Just (ns, field) => ns == recNS
+
+-- Find similar looking names in the context
+export
+getSimilarNames : {auto c : Ref Ctxt Defs} -> Name -> Core (List String)
+getSimilarNames nm = case userNameRoot nm of
+  Nothing => pure []
+  Just str => if length str <= 1 then pure [] else
+    let threshold : Nat := max 1 (assert_total (divNat (length str) 3))
+        test : Name -> IO (Maybe Nat) := \ nm => do
+            let (Just str') = userNameRoot nm
+                   | _ => pure Nothing
+            dist <- Levenshtein.compute str str'
+            pure (dist <$ guard (dist <= threshold))
+    in do defs <- get Ctxt
+          kept <- coreLift $ mapMaybeM test (resolvedAs (gamma defs))
+          let sorted = sortBy (\ x, y => compare (snd x) (snd y)) $ toList kept
+          let roots = mapMaybe (showNames nm str . fst) sorted
+          pure (nub roots)
+
+  where
+
+  showNames : Name -> String -> Name -> Maybe String
+  showNames target str nm = do
+    let root = nameRoot nm
+    let True = str == root | _ => pure root
+    let full = show nm
+    let True = str == full || show target == full | _ => pure full
+    Nothing
+
+
+maybeMisspelling : {auto c : Ref Ctxt Defs} ->
+                   Error -> Name -> Core a
+maybeMisspelling err nm = do
+  candidates <- getSimilarNames nm
+  case candidates of
+    [] => throw err
+    (x::xs) => throw (MaybeMisspelling err (x ::: xs))
+
+-- Throw an UndefinedName exception. But try to find similar names first.
+export
+undefinedName : {auto c : Ref Ctxt Defs} ->
+                FC -> Name -> Core a
+undefinedName loc nm = maybeMisspelling (UndefinedName loc nm) nm
+
+-- Throw a NoDeclaration exception. But try to find similar names first.
+export
+noDeclaration : {auto c : Ref Ctxt Defs} ->
+                FC -> Name -> Core a
+noDeclaration loc nm = maybeMisspelling (NoDeclaration loc nm) nm
+
 -- Get the canonical name of something that might have been aliased via
 -- import as
 export
@@ -966,7 +1256,7 @@ canonicalName : {auto c : Ref Ctxt Defs} ->
 canonicalName fc n
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of
-              [] => throw (UndefinedName fc n)
+              [] => undefinedName fc n
               [(n, _, _)] => pure n
               ns => throw (AmbiguousName fc (map fst ns))
 
@@ -1009,10 +1299,12 @@ initHash
 
 export
 addUserHole : {auto c : Ref Ctxt Defs} ->
-              Name -> Core ()
-addUserHole n
+              Bool -> -- defined in another module?
+              Name -> -- hole name
+              Core ()
+addUserHole ext n
     = do defs <- get Ctxt
-         put Ctxt (record { userHoles $= insert n () } defs)
+         put Ctxt (record { userHoles $= insert n ext } defs)
 
 export
 clearUserHole : {auto c : Ref Ctxt Defs} ->
@@ -1037,10 +1329,10 @@ getUserHoles
     isHole defs n
         = do Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure True
-             case definition def of
-                  None => pure True
-                  Hole _ _ => pure True
-                  _ => pure False
+             pure $ case definition def of
+                  None => True
+                  Hole _ _ => True
+                  _ => False
 
 export
 addDef : {auto c : Ref Ctxt Defs} ->
@@ -1057,10 +1349,10 @@ addDef n def
 
 export
 addContextEntry : {auto c : Ref Ctxt Defs} ->
-                  Name -> Binary -> Core Int
-addContextEntry n def
+                  Namespace -> Name -> Binary -> Core Int
+addContextEntry ns n def
     = do defs <- get Ctxt
-         (idx, gam') <- addEntry n (Coded def) (gamma defs)
+         (idx, gam') <- addEntry n (Coded ns def) (gamma defs)
          put Ctxt (record { gamma = gam' } defs)
          pure idx
 
@@ -1080,11 +1372,30 @@ addBuiltin : {arity : _} ->
              Name -> ClosedTerm -> Totality ->
              PrimFn arity -> Core ()
 addBuiltin n ty tot op
-    = do addDef n (MkGlobalDef emptyFC n ty [] [] [] [] top [] Public tot
-                               [Inline] Nothing Nothing
-                               False False True (Builtin op)
-                               Nothing Nothing [])
-         pure ()
+   = do ignore $
+       addDef n $ MkGlobalDef
+         { location = emptyFC
+         , fullname = n
+         , type = ty
+         , eraseArgs = []
+         , safeErase = []
+         , specArgs = []
+         , inferrable = []
+         , multiplicity = top
+         , localVars = []
+         , visibility = Public
+         , totality = tot
+         , flags = [Inline]
+         , refersToM = Nothing
+         , refersToRuntimeM = Nothing
+         , invertible = False
+         , noCycles = False
+         , linearChecked = True
+         , definition = Builtin op
+         , compexpr = Nothing
+         , namedcompexpr = Nothing
+         , sizeChange = []
+         }
 
 export
 updateDef : {auto c : Ref Ctxt Defs} ->
@@ -1095,8 +1406,7 @@ updateDef n fdef
              | Nothing => pure ()
          case fdef (definition gdef) of
               Nothing => pure ()
-              Just def' => do addDef n (record { definition = def' } gdef)
-                              pure ()
+              Just def' => ignore $ addDef n (record { definition = def' } gdef)
 
 export
 updateTy : {auto c : Ref Ctxt Defs} ->
@@ -1105,8 +1415,7 @@ updateTy i ty
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
               | Nothing => pure ()
-         addDef (Resolved i) (record { type = ty } gdef)
-         pure ()
+         ignore $ addDef (Resolved i) (record { type = ty } gdef)
 
 export
 setCompiled : {auto c : Ref Ctxt Defs} ->
@@ -1115,8 +1424,7 @@ setCompiled n cexp
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure ()
-         addDef n (record { compexpr = Just cexp } gdef)
-         pure ()
+         ignore $ addDef n (record { compexpr = Just cexp } gdef)
 
 export
 setNamedCompiled : {auto c : Ref Ctxt Defs} ->
@@ -1125,8 +1433,7 @@ setNamedCompiled n cexp
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure ()
-         addDef n (record { namedcompexpr = Just cexp } gdef)
-         pure ()
+         ignore $ addDef n (record { namedcompexpr = Just cexp } gdef)
 
 -- Record that the name has been linearity checked so we don't need to do
 -- it again
@@ -1137,8 +1444,7 @@ setLinearCheck i chk
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
               | Nothing => pure ()
-         addDef (Resolved i) (record { linearChecked = chk } gdef)
-         pure ()
+         ignore $ addDef (Resolved i) (record { linearChecked = chk } gdef)
 
 export
 setCtxt : {auto c : Ref Ctxt Defs} -> Context -> Core ()
@@ -1253,24 +1559,26 @@ lookupDefTyExact = lookupExactBy (\g => (definition g, type g))
 
 -- private names are only visible in this namespace if their namespace
 -- is the current namespace (or an outer one)
--- that is: given that most recent namespace is first in the list,
--- the namespace of 'n' is a suffix of nspace
-visibleIn : (nspace : List String) -> Name -> Visibility -> Bool
-visibleIn nspace (NS ns n) Private = isSuffixOf ns nspace
+-- that is: the namespace of 'n' is a parent of nspace
+export
+visibleIn : Namespace -> Name -> Visibility -> Bool
+visibleIn nspace (NS ns n) Private = isParentOf ns nspace
 -- Public and Export names are always visible
 visibleIn nspace n _ = True
 
 export
-visibleInAny : (nspace : List (List String)) -> Name -> Visibility -> Bool
+visibleInAny : List Namespace -> Name -> Visibility -> Bool
 visibleInAny nss n vis = any (\ns => visibleIn ns n vis) nss
 
-reducibleIn : (nspace : List String) -> Name -> Visibility -> Bool
-reducibleIn nspace (NS ns (UN n)) Export = isSuffixOf ns nspace
-reducibleIn nspace (NS ns (UN n)) Private = isSuffixOf ns nspace
+reducibleIn : Namespace -> Name -> Visibility -> Bool
+reducibleIn nspace (NS ns (UN n)) Export = isParentOf ns nspace
+reducibleIn nspace (NS ns (UN n)) Private = isParentOf ns nspace
+reducibleIn nspace (NS ns (RF n)) Export = isParentOf ns nspace
+reducibleIn nspace (NS ns (RF n)) Private = isParentOf ns nspace
 reducibleIn nspace n _ = True
 
 export
-reducibleInAny : (nspace : List (List String)) -> Name -> Visibility -> Bool
+reducibleInAny : List Namespace -> Name -> Visibility -> Bool
 reducibleInAny nss n vis = any (\ns => reducibleIn ns n vis) nss
 
 export
@@ -1317,22 +1625,20 @@ setFlag : {auto c : Ref Ctxt Defs} ->
 setFlag fc n fl
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
+              | Nothing => undefinedName fc n
          let flags' = fl :: filter (/= fl) (flags def)
-         addDef n (record { flags = flags' } def)
-         pure ()
+         ignore $ addDef n (record { flags = flags' } def)
 
 export
 setNameFlag : {auto c : Ref Ctxt Defs} ->
-			    		FC -> Name -> DefFlag -> Core ()
+              FC -> Name -> DefFlag -> Core ()
 setNameFlag fc n fl
     = do defs <- get Ctxt
          [(n', i, def)] <- lookupCtxtName n (gamma defs)
-              | [] => throw (UndefinedName fc n)
+              | [] => undefinedName fc n
               | res => throw (AmbiguousName fc (map fst res))
          let flags' = fl :: filter (/= fl) (flags def)
-         addDef (Resolved i) (record { flags = flags' } def)
-         pure ()
+         ignore $ addDef (Resolved i) (record { flags = flags' } def)
 
 export
 unsetFlag : {auto c : Ref Ctxt Defs} ->
@@ -1340,10 +1646,9 @@ unsetFlag : {auto c : Ref Ctxt Defs} ->
 unsetFlag fc n fl
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
+              | Nothing => undefinedName fc n
          let flags' = filter (/= fl) (flags def)
-         addDef n (record { flags = flags' } def)
-         pure ()
+         ignore $ addDef n (record { flags = flags' } def)
 
 export
 hasFlag : {auto c : Ref Ctxt Defs} ->
@@ -1351,7 +1656,7 @@ hasFlag : {auto c : Ref Ctxt Defs} ->
 hasFlag fc n fl
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
+              | Nothing => undefinedName fc n
          pure (fl `elem` flags def)
 
 export
@@ -1360,9 +1665,8 @@ setSizeChange : {auto c : Ref Ctxt Defs} ->
 setSizeChange loc n sc
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName loc n)
-         addDef n (record { sizeChange = sc } def)
-         pure ()
+              | Nothing => undefinedName loc n
+         ignore $ addDef n (record { sizeChange = sc } def)
 
 export
 setTotality : {auto c : Ref Ctxt Defs} ->
@@ -1370,9 +1674,8 @@ setTotality : {auto c : Ref Ctxt Defs} ->
 setTotality loc n tot
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName loc n)
-         addDef n (record { totality = tot } def)
-         pure ()
+              | Nothing => undefinedName loc n
+         ignore $ addDef n (record { totality = tot } def)
 
 export
 setCovering : {auto c : Ref Ctxt Defs} ->
@@ -1380,9 +1683,8 @@ setCovering : {auto c : Ref Ctxt Defs} ->
 setCovering loc n tot
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName loc n)
-         addDef n (record { totality->isCovering = tot } def)
-         pure ()
+              | Nothing => undefinedName loc n
+         ignore $ addDef n (record { totality->isCovering = tot } def)
 
 export
 setTerminating : {auto c : Ref Ctxt Defs} ->
@@ -1390,9 +1692,8 @@ setTerminating : {auto c : Ref Ctxt Defs} ->
 setTerminating loc n tot
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName loc n)
-         addDef n (record { totality->isTerminating = tot } def)
-         pure ()
+              | Nothing => undefinedName loc n
+         ignore $ addDef n (record { totality->isTerminating = tot } def)
 
 export
 getTotality : {auto c : Ref Ctxt Defs} ->
@@ -1400,7 +1701,7 @@ getTotality : {auto c : Ref Ctxt Defs} ->
 getTotality loc n
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName loc n)
+              | Nothing => undefinedName loc n
          pure $ totality def
 
 export
@@ -1409,7 +1710,7 @@ getSizeChange : {auto c : Ref Ctxt Defs} ->
 getSizeChange loc n
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName loc n)
+              | Nothing => undefinedName loc n
          pure $ sizeChange def
 
 export
@@ -1418,9 +1719,8 @@ setVisibility : {auto c : Ref Ctxt Defs} ->
 setVisibility fc n vis
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
-         addDef n (record { visibility = vis } def)
-         pure ()
+              | Nothing => undefinedName fc n
+         ignore $ addDef n (record { visibility = vis } def)
 
 -- Set a name as Private that was previously visible (and, if 'everywhere' is
 -- set, hide in any modules imported by this one)
@@ -1430,7 +1730,7 @@ hide : {auto c : Ref Ctxt Defs} ->
 hide fc n
     = do defs <- get Ctxt
          [(nsn, _)] <- lookupCtxtName n (gamma defs)
-              | [] => throw (UndefinedName fc n)
+              | [] => undefinedName fc n
               | res => throw (AmbiguousName fc (map fst res))
          put Ctxt (record { gamma $= hideName nsn } defs)
 
@@ -1440,7 +1740,7 @@ getVisibility : {auto c : Ref Ctxt Defs} ->
 getVisibility fc n
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
+              | Nothing => undefinedName fc n
          pure $ visibility def
 
 public export
@@ -1470,16 +1770,19 @@ getSearchData : {auto c : Ref Ctxt Defs} ->
 getSearchData fc defaults target
     = do defs <- get Ctxt
          Just (TCon _ _ _ dets u _ _ _) <- lookupDefExact target (gamma defs)
-              | _ => throw (UndefinedName fc target)
-         let hs = case lookup !(toFullNames target) (typeHints defs) of
-                       Just hs => hs
-                       Nothing => []
+              | _ => undefinedName fc target
+         hs <- case lookup !(toFullNames target) (typeHints defs) of
+                       Just hs => filterM (\x => notHidden x (gamma defs)) hs
+                       Nothing => pure []
          if defaults
-            then let defns = map fst (filter isDefault
+            then let defns = map fst !(filterM (\x => pure $ isDefault x
+                                                 && !(notHidden x (gamma defs)))
                                              (toList (autoHints defs))) in
                      pure (MkSearchData [] [(False, defns)])
-            else let opens = map fst (toList (openHints defs))
-                     autos = map fst (filter (not . isDefault)
+            else let opens = map fst !(filterM (\x => notHidden x (gamma defs))
+                                             (toList (openHints defs)))
+                     autos = map fst !(filterM (\x => pure $ not (isDefault x)
+                                                 && !(notHidden x (gamma defs)))
                                              (toList (autoHints defs)))
                      tyhs = map fst (filter direct hs)
                      chasers = map fst (filter (not . direct) hs) in
@@ -1489,6 +1792,13 @@ getSearchData fc defaults target
                                 (not (uniqueAuto u), tyhs),
                                 (True, chasers)]))
   where
+    ||| We don't want hidden (by `%hide`) names to appear in the search.
+    ||| Lookup has to be done by a full qualified name, not a resolved ID.
+    notHidden : forall a. (Name, a) -> Context -> Core Bool
+    notHidden (n, _) ctxt = do
+      fulln <- toFullNames n
+      pure $ not (isHidden fulln ctxt)
+
     isDefault : (Name, Bool) -> Bool
     isDefault = snd
 
@@ -1501,7 +1811,7 @@ setMutWith : {auto c : Ref Ctxt Defs} ->
 setMutWith fc tn tns
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tn (gamma defs)
-              | _ => throw (UndefinedName fc tn)
+              | _ => undefinedName fc tn
          let TCon t a ps dets u _ cons det = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setMutWith]"))
          updateDef tn (const (Just (TCon t a ps dets u tns cons det)))
@@ -1526,7 +1836,7 @@ setDetermining : {auto c : Ref Ctxt Defs} ->
 setDetermining fc tyn args
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tyn (gamma defs)
-              | _ => throw (UndefinedName fc tyn)
+              | _ => undefinedName fc tyn
          let TCon t a ps _ u cons ms det = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setDetermining]"))
          apos <- getPos 0 args (type g)
@@ -1535,7 +1845,7 @@ setDetermining fc tyn args
     -- Type isn't normalised, but the argument names refer to those given
     -- explicitly in the type, so there's no need.
     getPos : Nat -> List Name -> Term vs -> Core (List Nat)
-    getPos i ns (Bind _ x (Pi _ _ _) sc)
+    getPos i ns (Bind _ x (Pi _ _ _ _) sc)
         = if x `elem` ns
              then do rest <- getPos (1 + i) (filter (/=x) ns) sc
                      pure $ i :: rest
@@ -1550,7 +1860,7 @@ setDetags : {auto c : Ref Ctxt Defs} ->
 setDetags fc tyn args
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tyn (gamma defs)
-              | _ => throw (UndefinedName fc tyn)
+              | _ => undefinedName fc tyn
          let TCon t a ps det u cons ms _ = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setDetermining]"))
          updateDef tyn (const (Just (TCon t a ps det u cons ms args)))
@@ -1561,7 +1871,7 @@ setUniqueSearch : {auto c : Ref Ctxt Defs} ->
 setUniqueSearch fc tyn u
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tyn (gamma defs)
-              | _ => throw (UndefinedName fc tyn)
+              | _ => undefinedName fc tyn
          let TCon t a ps ds fl cons ms det = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setDetermining]"))
          let fl' = record { uniqueAuto = u } fl
@@ -1573,7 +1883,7 @@ setExternal : {auto c : Ref Ctxt Defs} ->
 setExternal fc tyn u
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tyn (gamma defs)
-              | _ => throw (UndefinedName fc tyn)
+              | _ => undefinedName fc tyn
          let TCon t a ps ds fl cons ms det = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setDetermining]"))
          let fl' = record { external = u } fl
@@ -1581,7 +1891,7 @@ setExternal fc tyn u
 
 export
 addHintFor : {auto c : Ref Ctxt Defs} ->
-					   FC -> Name -> Name -> Bool -> Bool -> Core ()
+             FC -> Name -> Name -> Bool -> Bool -> Core ()
 addHintFor fc tyn_in hintn_in direct loading
     = do defs <- get Ctxt
          tyn <- toFullNames tyn_in
@@ -1604,13 +1914,21 @@ addHintFor fc tyn_in hintn_in direct loading
 
 export
 addGlobalHint : {auto c : Ref Ctxt Defs} ->
-					      Name -> Bool -> Core ()
+                Name -> Bool -> Core ()
 addGlobalHint hintn_in isdef
     = do defs <- get Ctxt
          hintn <- toResolvedNames hintn_in
 
          put Ctxt (record { autoHints $= insert hintn isdef,
                             saveAutoHints $= ((hintn, isdef) ::) } defs)
+
+export
+addLocalHint : {auto c : Ref Ctxt Defs} ->
+               Name -> Core ()
+addLocalHint hintn_in
+    = do defs <- get Ctxt
+         hintn <- toResolvedNames hintn_in
+         put Ctxt (record { localHints $= insert hintn () } defs)
 
 export
 addOpenHint : {auto c : Ref Ctxt Defs} -> Name -> Core ()
@@ -1662,7 +1980,7 @@ clearSavedHints
 -- Set the default namespace for new definitions
 export
 setNS : {auto c : Ref Ctxt Defs} ->
-        List String -> Core ()
+        Namespace -> Core ()
 setNS ns
     = do defs <- get Ctxt
          put Ctxt (record { currentNS = ns } defs)
@@ -1670,7 +1988,7 @@ setNS ns
 -- Set the nested namespaces we're allowed to look inside
 export
 setNestedNS : {auto c : Ref Ctxt Defs} ->
-              List (List String) -> Core ()
+              List Namespace -> Core ()
 setNestedNS ns
     = do defs <- get Ctxt
          put Ctxt (record { nestedNS = ns } defs)
@@ -1678,7 +1996,7 @@ setNestedNS ns
 -- Get the default namespace for new definitions
 export
 getNS : {auto c : Ref Ctxt Defs} ->
-        Core (List String)
+        Core Namespace
 getNS
     = do defs <- get Ctxt
          pure (currentNS defs)
@@ -1686,7 +2004,7 @@ getNS
 -- Get the nested namespaces we're allowed to look inside
 export
 getNestedNS : {auto c : Ref Ctxt Defs} ->
-              Core (List (List String))
+              Core (List Namespace)
 getNestedNS
     = do defs <- get Ctxt
          pure (nestedNS defs)
@@ -1697,14 +2015,14 @@ getNestedNS
 -- "import X as [current namespace]")
 export
 addImported : {auto c : Ref Ctxt Defs} ->
-              (List String, Bool, List String) -> Core ()
+              (ModuleIdent, Bool, Namespace) -> Core ()
 addImported mod
     = do defs <- get Ctxt
          put Ctxt (record { imported $= (mod ::) } defs)
 
 export
 getImported : {auto c : Ref Ctxt Defs} ->
-              Core (List (List String, Bool, List String))
+              Core (List (ModuleIdent, Bool, Namespace))
 getImported
     = do defs <- get Ctxt
          pure (imported defs)
@@ -1731,6 +2049,7 @@ getDirectives cg
     getDir : (CG, String) -> Maybe String
     getDir (x', str) = if cg == x' then Just str else Nothing
 
+export
 getNextTypeTag : {auto c : Ref Ctxt Defs} ->
                  Core Int
 getNextTypeTag
@@ -1738,126 +2057,30 @@ getNextTypeTag
          put Ctxt (record { nextTag $= (+1) } defs)
          pure (nextTag defs)
 
--- If a name appears more than once in an argument list, only the first is
--- considered a parameter
-dropReps : List (Maybe (Term vars)) -> List (Maybe (Term vars))
-dropReps [] = []
-dropReps {vars} (Just (Local fc r x p) :: xs)
-    = Just (Local fc r x p) :: assert_total (dropReps (map toNothing xs))
-  where
-    toNothing : Maybe (Term vars) -> Maybe (Term vars)
-    toNothing tm@(Just (Local _ _ v' _))
-        = if x == v' then Nothing else tm
-    toNothing tm = tm
-dropReps (x :: xs) = x :: dropReps xs
-
-updateParams : Maybe (List (Maybe (Term vars))) ->
-                  -- arguments to the type constructor which could be
-                  -- parameters
-                  -- Nothing, as an argument, means this argument can't
-                  -- be a parameter position
-               List (Term vars) ->
-                  -- arguments to an application
-               List (Maybe (Term vars))
-updateParams Nothing args = dropReps $ map couldBeParam args
-  where
-    couldBeParam : Term vars -> Maybe (Term vars)
-    couldBeParam (Local fc r v p) = Just (Local fc r v p)
-    couldBeParam _ = Nothing
-updateParams (Just args) args' = dropReps $ zipWith mergeArg args args'
-  where
-    mergeArg : Maybe (Term vars) -> Term vars -> Maybe (Term vars)
-    mergeArg (Just (Local fc r x p)) (Local _ _ y _)
-        = if x == y then Just (Local fc r x p) else Nothing
-    mergeArg _ _ = Nothing
-
-getPs : {vars : _} ->
-        Maybe (List (Maybe (Term vars))) -> Name -> Term vars ->
-        Maybe (List (Maybe (Term vars)))
-getPs acc tyn (Bind _ x (Pi _ _ ty) sc)
-      = let scPs = getPs (Prelude.map (Prelude.map (Prelude.map weaken)) acc) tyn sc in
-            map (map shrink) scPs
-  where
-    shrink : Maybe (Term (x :: vars)) -> Maybe (Term vars)
-    shrink Nothing = Nothing
-    shrink (Just tm) = shrinkTerm tm (DropCons SubRefl)
-getPs acc tyn tm
-    = case getFnArgs tm of
-           (Ref _ _ n, args) =>
-              if n == tyn
-                 then Just (updateParams acc args)
-                 else acc
-           _ => acc
-
-toPos : Maybe (List (Maybe a)) -> List Nat
-toPos Nothing = []
-toPos (Just ns) = justPos 0 ns
-  where
-    justPos : Nat -> List (Maybe a) -> List Nat
-    justPos i [] = []
-    justPos i (Just x :: xs) = i :: justPos (1 + i) xs
-    justPos i (Nothing :: xs) = justPos (1 + i) xs
-
-getConPs : {vars : _} ->
-           Maybe (List (Maybe (Term vars))) -> Name -> Term vars -> List Nat
-getConPs acc tyn (Bind _ x (Pi _ _ ty) sc)
-    = let bacc = getPs acc tyn ty in
-          getConPs (map (map (map weaken)) bacc) tyn sc
-getConPs acc tyn tm = toPos (getPs acc tyn tm)
-
-combinePos : Eq a => List (List a) -> List a
-combinePos [] = []
-combinePos (xs :: xss) = filter (\x => all (elem x) xss) xs
-
-paramPos : Name -> (dcons : List ClosedTerm) ->
-           List Nat
-paramPos tyn dcons = combinePos (map (getConPs Nothing tyn) dcons)
-
-export
-addData : {auto c : Ref Ctxt Defs} ->
-					List Name -> Visibility -> Int -> DataDef -> Core Int
-addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
-    = do defs <- get Ctxt
-         tag <- getNextTypeTag
-         let tydef = newDef dfc tyn top vars tycon vis
-                            (TCon tag arity
-                                  (paramPos (Resolved tidx) (map type datacons))
-                                  (allDet arity)
-                                  defaultFlags [] (map name datacons) Nothing)
-         (idx, gam') <- addCtxt tyn tydef (gamma defs)
-         gam'' <- addDataConstructors 0 datacons gam'
-         put Ctxt (record { gamma = gam'' } defs)
-         pure idx
-  where
-    allDet : Nat -> List Nat
-    allDet Z = []
-    allDet (S k) = [0..k]
-
-    conVisibility : Visibility -> Visibility
-    conVisibility Export = Private
-    conVisibility x = x
-
-    addDataConstructors : (tag : Int) -> List Constructor ->
-                          Context -> Core Context
-    addDataConstructors tag [] gam = pure gam
-    addDataConstructors tag (MkCon fc n a ty :: cs) gam
-        = do let condef = newDef fc n top vars ty (conVisibility vis) (DCon tag a Nothing)
-             (idx, gam') <- addCtxt n condef gam
-             -- Check 'n' is undefined
-             Nothing <- lookupCtxtExact n gam
-                 | Just gdef => throw (AlreadyDefined fc n)
-             addDataConstructors (tag + 1) cs gam'
-
 -- Add a new nested namespace to the current namespace for new definitions
 -- e.g. extendNS ["Data"] when namespace is "Prelude.List" leads to
 -- current namespace of "Prelude.List.Data"
 -- Inner namespaces go first, for ease of name lookup
 export
 extendNS : {auto c : Ref Ctxt Defs} ->
-           List String -> Core ()
+           Namespace -> Core ()
 extendNS ns
     = do defs <- get Ctxt
-         put Ctxt (record { currentNS $= ((reverse ns) ++) } defs)
+         put Ctxt (record { currentNS $= (<.> ns) } defs)
+
+export
+withExtendedNS : {auto c : Ref Ctxt Defs} ->
+                 Namespace -> Core a -> Core a
+withExtendedNS ns act
+    = do defs <- get Ctxt
+         let cns = currentNS defs
+         put Ctxt (record { currentNS = cns <.> ns } defs)
+         ma <- catch (Right <$> act) (pure . Left)
+         defs <- get Ctxt
+         put Ctxt (record { currentNS = cns } defs)
+         case ma of
+           Left err => throw err
+           Right a  => pure a
 
 -- Get the name as it would be defined in the current namespace
 -- i.e. if it doesn't have an explicit namespace already, add it,
@@ -1883,18 +2106,21 @@ inCurrentNS n@(MN _ _)
 inCurrentNS n@(DN _ _)
     = do defs <- get Ctxt
          pure (NS (currentNS defs) n)
+inCurrentNS n@(RF _)
+    = do defs <- get Ctxt
+         pure (NS (currentNS defs) n)
 inCurrentNS n = pure n
 
 export
 setVisible : {auto c : Ref Ctxt Defs} ->
-             (nspace : List String) -> Core ()
+             Namespace -> Core ()
 setVisible nspace
     = do defs <- get Ctxt
          put Ctxt (record { gamma->visibleNS $= (nspace ::) } defs)
 
 export
 getVisible : {auto c : Ref Ctxt Defs} ->
-             Core (List (List String))
+             Core (List Namespace)
 getVisible
     = do defs <- get Ctxt
          pure (visibleNS (gamma defs))
@@ -1920,21 +2146,18 @@ isAllPublic
 -- the namespace itself, and any namespace it's nested inside)
 export
 isVisible : {auto c : Ref Ctxt Defs} ->
-            (nspace : List String) -> Core Bool
+            Namespace -> Core Bool
 isVisible nspace
     = do defs <- get Ctxt
          pure (any visible (allParents (currentNS defs) ++
                             nestedNS defs ++
                             visibleNS (gamma defs)))
-  where
-    allParents : List String -> List (List String)
-    allParents [] = []
-    allParents (n :: ns) = (n :: ns) :: allParents ns
 
-    -- Visible if any visible namespace is a suffix of the namespace we're
+  where
+    -- Visible if any visible namespace is a parent of the namespace we're
     -- asking about
-    visible : List String -> Bool
-    visible visns = isSuffixOf visns nspace
+    visible : Namespace -> Bool
+    visible visns = isParentOf visns nspace
 
 -- Get the next entry id in the context (this is for recording where to go
 -- back to when backtracking in the elaborator)
@@ -2007,6 +2230,12 @@ addExtraDir dir
          put Ctxt (record { options->dirs->extra_dirs $= (++ [dir]) } defs)
 
 export
+addPackageDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
+addPackageDir dir
+    = do defs <- get Ctxt
+         put Ctxt (record { options->dirs->package_dirs $= (++ [dir]) } defs)
+
+export
 addDataDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
 addDataDir dir
     = do defs <- get Ctxt
@@ -2025,6 +2254,12 @@ setBuildDir dir
          put Ctxt (record { options->dirs->build_dir = dir } defs)
 
 export
+setDependsDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
+setDependsDir dir
+    = do defs <- get Ctxt
+         put Ctxt (record { options->dirs->depends_dir = dir } defs)
+
+export
 setOutputDir : {auto c : Ref Ctxt Defs} -> Maybe String -> Core ()
 setOutputDir dir
     = do defs <- get Ctxt
@@ -2040,7 +2275,7 @@ export
 setWorkingDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
 setWorkingDir dir
     = do defs <- get Ctxt
-         coreLift $ changeDir dir
+         coreLift_ $ changeDir dir
          Just cdir <- coreLift $ currentDir
               | Nothing => throw (InternalError "Can't get current directory")
          put Ctxt (record { options->dirs->working_dir = cdir } defs)
@@ -2051,6 +2286,14 @@ getWorkingDir
     = do Just d <- coreLift $ currentDir
               | Nothing => throw (InternalError "Can't get current directory")
          pure d
+
+export
+withCtxt : {auto c : Ref Ctxt Defs} -> Core a -> Core a
+withCtxt = wrapRef Ctxt resetCtxt
+  where
+    resetCtxt : Defs -> Core ()
+    resetCtxt defs = do let dir = defs.options.dirs.working_dir
+                        coreLift_ $ changeDir dir
 
 export
 setPrefix : {auto c : Ref Ctxt Defs} -> String -> Core ()
@@ -2074,7 +2317,7 @@ checkUnambig : {auto c : Ref Ctxt Defs} ->
 checkUnambig fc n
     = do defs <- get Ctxt
          case !(lookupDefName n (gamma defs)) of
-              [] => throw (UndefinedName fc n)
+              [] => undefinedName fc n
               [(fulln, i, _)] => pure (Resolved i)
               ns => throw (AmbiguousName fc (map fst ns))
 
@@ -2091,6 +2334,12 @@ setUnboundImplicits : {auto c : Ref Ctxt Defs} ->
 setUnboundImplicits a
     = do defs <- get Ctxt
          put Ctxt (record { options->elabDirectives->unboundImplicits = a } defs)
+
+export
+setPrefixRecordProjections : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
+setPrefixRecordProjections b = do
+  defs <- get Ctxt
+  put Ctxt (record { options->elabDirectives->prefixRecordProjections = b } defs)
 
 export
 setDefaultTotalityOption : {auto c : Ref Ctxt Defs} ->
@@ -2114,6 +2363,20 @@ setAutoImplicitLimit max
          put Ctxt (record { options->elabDirectives->autoImplicitLimit = max } defs)
 
 export
+setNFThreshold : {auto c : Ref Ctxt Defs} ->
+                 Nat -> Core ()
+setNFThreshold max
+    = do defs <- get Ctxt
+         put Ctxt (record { options->elabDirectives->nfThreshold = max } defs)
+
+export
+setSearchTimeout : {auto c : Ref Ctxt Defs} ->
+                   Integer -> Core ()
+setSearchTimeout t
+    = do defs <- get Ctxt
+         put Ctxt (record { options->session->searchTimeout = t } defs)
+
+export
 isLazyActive : {auto c : Ref Ctxt Defs} ->
                Core Bool
 isLazyActive
@@ -2126,6 +2389,11 @@ isUnboundImplicits : {auto c : Ref Ctxt Defs} ->
 isUnboundImplicits
     = do defs <- get Ctxt
          pure (unboundImplicits (elabDirectives (options defs)))
+
+export
+isPrefixRecordProjections : {auto c : Ref Ctxt Defs} -> Core Bool
+isPrefixRecordProjections =
+  prefixRecordProjections . elabDirectives . options <$> get Ctxt
 
 export
 getDefaultTotalityOption : {auto c : Ref Ctxt Defs} ->
@@ -2189,6 +2457,13 @@ setFromChar : {auto c : Ref Ctxt Defs} ->
 setFromChar n
     = do defs <- get Ctxt
          put Ctxt (record { options $= setFromChar n } defs)
+
+export
+setFromDouble : {auto c : Ref Ctxt Defs} ->
+              Name -> Core ()
+setFromDouble n
+    = do defs <- get Ctxt
+         put Ctxt (record { options $= setFromDouble n } defs)
 
 export
 addNameDirective : {auto c : Ref Ctxt Defs} ->
@@ -2261,11 +2536,42 @@ fromCharName
          pure $ fromCharName (primnames (options defs))
 
 export
-setLogLevel : {auto c : Ref Ctxt Defs} ->
-              Nat -> Core ()
-setLogLevel l
+fromDoubleName : {auto c : Ref Ctxt Defs} ->
+               Core (Maybe Name)
+fromDoubleName
     = do defs <- get Ctxt
-         put Ctxt (record { options->session->logLevel = l } defs)
+         pure $ fromDoubleName (primnames (options defs))
+
+export
+getPrimNames : {auto c : Ref Ctxt Defs} -> Core PrimNames
+getPrimNames = [| MkPrimNs fromIntegerName fromStringName fromCharName fromDoubleName |]
+
+export
+getPrimitiveNames : {auto c : Ref Ctxt Defs} -> Core (List Name)
+getPrimitiveNames = primNamesToList <$> getPrimNames
+
+export
+addLogLevel : {auto c : Ref Ctxt Defs} ->
+              Maybe LogLevel -> Core ()
+addLogLevel lvl
+    = do defs <- get Ctxt
+         case lvl of
+           Nothing => put Ctxt (record { options->session->logEnabled = True,
+                                         options->session->logLevel = defaultLogLevel } defs)
+           Just l  => put Ctxt (record { options->session->logEnabled = True,
+                                         options->session->logLevel $= insertLogLevel l } defs)
+
+export
+withLogLevel : {auto c : Ref Ctxt Defs} ->
+               LogLevel -> Core a -> Core a
+withLogLevel l comp = do
+  defs <- get Ctxt
+  let logs = logLevel (session (options defs))
+  put Ctxt (record { options->session->logLevel = insertLogLevel l logs } defs)
+  r <- comp
+  defs <- get Ctxt
+  put Ctxt (record { options->session->logLevel = logs } defs)
+  pure r
 
 export
 setLogTimings : {auto c : Ref Ctxt Defs} ->
@@ -2296,153 +2602,97 @@ setSession sopts
          put Ctxt (record { options->session = sopts } defs)
 
 export
-recordWarning : {auto c : Ref Ctxt Defs} ->
-                Warning -> Core ()
+recordWarning : {auto c : Ref Ctxt Defs} -> Warning -> Core ()
 recordWarning w
     = do defs <- get Ctxt
-         put Ctxt (record { warnings $= (w ::) } defs)
-
--- Log message with a term, translating back to human readable names first
-export
-logTerm : {vars : _} ->
-          {auto c : Ref Ctxt Defs} ->
-          Nat -> Lazy String -> Term vars -> Core ()
-logTerm lvl msg tm
-    = do opts <- getSession
-         if logLevel opts >= lvl
-            then do tm' <- toFullNames tm
-                    coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-                                          ++ ": " ++ show tm'
-            else pure ()
+         session <- getSession
+         put Ctxt $ record { warnings $= (w ::) } defs
 
 export
-log : {auto c : Ref Ctxt Defs} ->
-      Nat -> Lazy String -> Core ()
-log lvl msg
-    = do opts <- getSession
-         if logLevel opts >= lvl
-            then coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-            else pure ()
-
-export
-logC : {auto c : Ref Ctxt Defs} ->
-       Nat -> Core String -> Core ()
-logC lvl cmsg
-    = do opts <- getSession
-         if logLevel opts >= lvl
-            then do msg <- cmsg
-                    coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-            else pure ()
-
-export
-logTimeOver : Integer -> Core String -> Core a -> Core a
-logTimeOver nsecs str act
+getTime : Core Integer
+getTime
     = do clock <- coreLift (clockTime Process)
-         let nano = 1000000000
-         let t = seconds clock * nano + nanoseconds clock
-         res <- act
-         clock <- coreLift (clockTime Process)
-         let t' = seconds clock * nano + nanoseconds clock
-         let time = t' - t
-         when (time > nsecs) $
-           assert_total $ -- We're not dividing by 0
-              do str' <- str
-                 coreLift $ putStrLn $ "TIMING " ++ str' ++ ": " ++
-                          show (time `div` nano) ++ "." ++
-                          addZeros (unpack (show ((time `mod` nano) `div` 1000000))) ++
-                          "s"
-         pure res
+         pure (seconds clock * nano + nanoseconds clock)
   where
-    addZeros : List Char -> String
-    addZeros [] = "000"
-    addZeros [x] = "00" ++ cast x
-    addZeros [x,y] = "0" ++ cast x ++ cast y
-    addZeros str = pack str
+    nano : Integer
+    nano = 1000000000
 
+-- A simple timeout mechanism. We can start a timer, clear it, or check
+-- whether too much time has passed and throw an exception if so
+
+||| Initialise the timer, setting the time in milliseconds after which a
+||| timeout should be thrown.
+||| Note: It's important to clear the timer when the operation that might
+||| timeout is complete, otherwise something else might throw a timeout
+||| error!
 export
-logTimeWhen : {auto c : Ref Ctxt Defs} ->
-              Bool -> Lazy String -> Core a -> Core a
-logTimeWhen p str act
-    = if p
-         then do clock <- coreLift (clockTime Process)
-                 let nano = 1000000000
-                 let t = seconds clock * nano + nanoseconds clock
-                 res <- act
-                 clock <- coreLift (clockTime Process)
-                 let t' = seconds clock * nano + nanoseconds clock
-                 let time = t' - t
-                 assert_total $ -- We're not dividing by 0
-                    coreLift $ putStrLn $ "TIMING " ++ str ++ ": " ++
-                             show (time `div` nano) ++ "." ++
-                             addZeros (unpack (show ((time `mod` nano) `div` 1000000))) ++
-                             "s"
-                 pure res
-         else act
-  where
-    addZeros : List Char -> String
-    addZeros [] = "000"
-    addZeros [x] = "00" ++ cast x
-    addZeros [x,y] = "0" ++ cast x ++ cast y
-    addZeros str = pack str
-
-logTimeRecord' : {auto c : Ref Ctxt Defs} ->
-                 String -> Core a -> Core a
-logTimeRecord' key act
-    = do clock <- coreLift (clockTime Process)
-         let nano = 1000000000
-         let t = seconds clock * nano + nanoseconds clock
-         res <- act
-         clock <- coreLift (clockTime Process)
-         let t' = seconds clock * nano + nanoseconds clock
-         let time = t' - t
+startTimer : {auto c : Ref Ctxt Defs} ->
+             Integer -> String -> Core ()
+startTimer tmax action
+    = do t <- getTime
          defs <- get Ctxt
-         let tot = case lookup key (timings defs) of
-                        Nothing => 0
-                        Just (_, t) => t
-         put Ctxt (record { timings $= insert key (False, tot + time) } defs)
-         pure res
+         put Ctxt $ record { timer = Just (t + tmax * 1000000, action) } defs
 
--- for ad-hoc profiling, record the time the action takes and add it
--- to the time for the given category
+||| Clear the timer
 export
-logTimeRecord : {auto c : Ref Ctxt Defs} ->
-                String -> Core a -> Core a
-logTimeRecord key act
+clearTimer : {auto c : Ref Ctxt Defs} -> Core ()
+clearTimer
     = do defs <- get Ctxt
-         -- Only record if we're not currently recording that key
-         case lookup key (timings defs) of
-              Just (True, t) => act
-              Just (False, t)
-                => do put Ctxt (record { timings $= insert key (True, t) } defs)
-                      logTimeRecord' key act
-              Nothing
-                => logTimeRecord' key act
+         put Ctxt $ record { timer = Nothing } defs
 
+||| If the timer was started more than t milliseconds ago, throw an exception
 export
-showTimeRecord : {auto c : Ref Ctxt Defs} ->
-                 Core ()
-showTimeRecord
+checkTimer : {auto c : Ref Ctxt Defs} ->
+             Core ()
+checkTimer
     = do defs <- get Ctxt
-         traverse_ showTimeLog (toList (timings defs))
+         let Just (max, action) = timer defs
+                | Nothing => pure ()
+         t <- getTime
+         if (t > max)
+            then throw (Timeout action)
+            else pure ()
+
+-- Update the list of imported incremental compile data, if we're in
+-- incremental mode for the current CG
+export
+addImportedInc : {auto c : Ref Ctxt Defs} ->
+                 ModuleIdent -> List (CG, String, List String) -> Core ()
+addImportedInc modNS inc
+    = do s <- getSession
+         let cg = s.codegen
+         defs <- get Ctxt
+         when (cg `elem` s.incrementalCGs) $
+           case lookup cg inc of
+                Nothing =>
+                  -- No incremental compile data for current CG, so we can't
+                  -- compile incrementally
+                  do recordWarning (GenericWarn ("No incremental compile data for " ++ show modNS))
+                     defs <- get Ctxt
+                     put Ctxt (record { allIncData $= drop cg } defs)
+                Just (mods, extra) =>
+                     put Ctxt (record { allIncData $= addMod cg (mods, extra) }
+                                      defs)
   where
-    addZeros : List Char -> String
-    addZeros [] = "000"
-    addZeros [x] = "00" ++ cast x
-    addZeros [x,y] = "0" ++ cast x ++ cast y
-    addZeros str = pack str
+    addMod : CG -> (String, List String) ->
+             List (CG, (List String, List String)) ->
+             List (CG, (List String, List String))
+    addMod cg (mod, all) [] = [(cg, ([mod], all))]
+    addMod cg (mod, all) ((cg', (mods, libs)) :: xs)
+        = if cg == cg'
+             then ((cg, (mod :: mods, libs ++ all)) :: xs)
+             else ((cg', (mods, libs)) :: addMod cg (mod, all) xs)
 
-    showTimeLog : (String, (Bool, Integer)) -> Core ()
-    showTimeLog (key, (_, time))
-        = do coreLift $ putStr (key ++ ": ")
-             let nano = 1000000000
-             assert_total $ -- We're not dividing by 0
-                    coreLift $ putStrLn $ show (time `div` nano) ++ "." ++
-                               addZeros (unpack (show ((time `mod` nano) `div` 1000000))) ++
-                               "s"
+    drop : CG -> List (CG, a) -> List (CG, a)
+    drop cg [] = []
+    drop cg ((x, v) :: xs)
+        = if cg == x
+             then xs
+             else ((x, v) :: drop cg xs)
 
 export
-logTime : {auto c : Ref Ctxt Defs} ->
-          Lazy String -> Core a -> Core a
-logTime str act
-    = do opts <- getSession
-         logTimeWhen (logTimings opts) str act
+setIncData : {auto c : Ref Ctxt Defs} ->
+             CG -> (String, List String) -> Core ()
+setIncData cg res
+    = do defs <- get Ctxt
+         put Ctxt (record { incData $= ((cg, res) :: )} defs)

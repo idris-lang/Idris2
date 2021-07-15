@@ -2,11 +2,7 @@ Idris 2
 =======
 
 [![Documentation Status](https://readthedocs.org/projects/idris2/badge/?version=latest)](https://idris2.readthedocs.io/en/latest/?badge=latest)
-[![](https://github.com/idris-lang/Idris2/workflows/Windows/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Windows")
-[![](https://github.com/idris-lang/Idris2/workflows/Ubuntu/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Ubuntu")
-[![](https://github.com/idris-lang/Idris2/workflows/Ubuntu%20Racket/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Ubuntu+Racket")
-[![](https://github.com/idris-lang/Idris2/workflows/macOS/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"macOS")
-[![](https://github.com/idris-lang/Idris2/workflows/Idris%20bootstrap/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Idris+bootstrap")
+[![Build Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-idris2.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-idris2.yml)
 
 [Idris 2](https://idris-lang.org/) is a purely functional programming language
 with first class types.
@@ -44,6 +40,7 @@ exceptions. The most notable user visible differences, which might cause Idris
   Notably, elaborator reflection will exist, but most likely in a slightly
   different form because the internal details of the elaborator are different.
 + The `Prelude` is much smaller (and easier to replace with an alternative).
+  Command-line option `--no-prelude` can be used to not implicitly import `Prelude`.
 + `let x = val in e` no longer computes with `x` in `e`, instead being
   essentially equivalent to `(\x => e) val`. This is to make the
   behaviour of `let` consistent in the presence of `case` and `with` (where
@@ -84,11 +81,16 @@ separated from the high level language which means it is potentially usable
 as a core language for other high level syntaxes.
 
 Javascript
-====================
+----------
 The javascript codegen uses the new BigInt, hence nodejs 10.4 or higher is required.
 
+Editor Plugins
+--------------
+The [wiki](https://github.com/idris-lang/Idris2/wiki/The-Idris-editor-experience)
+lists the current plugins available for common text editors and their features.
+
 Things still missing
-====================
+--------------------
 
 + Disambiguation via 'with'
 + Cumulativity (so we currently have Type : Type! Bear that in mind when you
@@ -99,8 +101,17 @@ Things still missing
 + ':search' and ':apropos' at the REPL
 + Metaprogramming (reflection, partial evaluation)
 
+Contributions wanted
+-------------------
+
++ [Good first issues](https://github.com/idris-lang/Idris2/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
++ [Contributors wanted](https://github.com/idris-lang/Idris2/wiki/Contributions-wanted)
+
+If you want to learn about Idris more, contributing to the compiler could be one
+way to do so. Just select one good first issue and ask about it on the [Discord](https://discord.gg/UX68fDs2jc) channel.
+
 Talks
-=====
+-----
 
 [![Edwin Brady Tells Us What's New in Idris 2 (Berlin Functional Programming Group)](https://img.youtube.com/vi/nbClauMCeds/0.jpg)](https://www.youtube.com/watch?v=nbClauMCeds "Edwin Brady Tells Us What's New in Idris 2 (Berlin Functional Programming Group)")
 

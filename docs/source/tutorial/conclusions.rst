@@ -25,11 +25,11 @@ dependent types in general, can be obtained from various sources:
 
 *  Examining the prelude and exploring the ``samples`` in the
    distribution. The Idris 2 source can be found online at:
-   
+
    * https://github.com/edwinb/Idris2.
 
 *  Existing projects on the ``Idris Hackers`` web space:
-   
+
    * https://idris-hackers.github.io.
 
 *  Various papers (e.g. [#BradyHammond2012]_, [#Brady]_, and [#BradyHammond2010]_).  Although these mostly

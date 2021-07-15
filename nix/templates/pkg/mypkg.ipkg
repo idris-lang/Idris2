@@ -1,0 +1,5 @@
+package mypkg
+
+modules = Foo
+main = Foo
+executable = runMyPkg

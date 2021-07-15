@@ -15,4 +15,3 @@ test bytes_list = do
   let int9 = (index 12 bytes_list * 8) + (index 13 bytes_list * 4) + (index 14 bytes_list * 2) + (index 15 bytes_list)
   let int10 = (index 12 bytes_list * 8) + (index 13 bytes_list * 4) + (index 14 bytes_list * 2) + (index 15 bytes_list)
   pure int1
-

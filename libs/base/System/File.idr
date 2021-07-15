@@ -1,8 +1,13 @@
 module System.File
 
+import public Data.Fuel
+
 import Data.List
-import Data.Strings
+import Data.String
 import System.Info
+import System.Errno
+
+%default total
 
 public export
 data Mode = Read | WriteTruncate | Append | ReadWrite | ReadWriteTruncate | ReadAppend
@@ -12,26 +17,27 @@ FilePtr : Type
 FilePtr = AnyPtr
 
 support : String -> String
-support fn = "C:" ++ fn ++ ", libidris2_support"
-
-libc : String -> String
-libc fn = "C:" ++ fn ++ ", libc 6"
+support fn = "C:" ++ fn ++ ", libidris2_support, idris_file.h"
 
 %foreign support "idris2_openFile"
          "node:support:openFile,support_system_file"
 prim__open : String -> String -> PrimIO FilePtr
 
 %foreign support "idris2_closeFile"
-         "node:lambdaRequire:fs:(fp) => __require_fs.closeSync(fp.fd)"
+         "node:lambda:(fp) => require('fs').closeSync(fp.fd)"
 prim__close : FilePtr -> PrimIO ()
 
 %foreign support "idris2_fileError"
-         "node:lambda:x=>(x===1n?BigInt(1):BigInt(0))"
-prim_error : FilePtr -> PrimIO Int
+         "node:lambda:x=>(x===1?1:0)"
+prim__error : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileErrno"
-         "node:lambda:()=>-BigInt(process.__lasterr.errno)"
-prim_fileErrno : PrimIO Int
+         "node:support:fileErrno,support_system_file"
+prim__fileErrno : PrimIO Int
+
+%foreign support "idris2_seekLine"
+         "node:support:seekLine,support_system_file"
+prim__seekLine : FilePtr -> PrimIO Int
 
 %foreign support "idris2_readLine"
          "node:support:readLine,support_system_file"
@@ -43,11 +49,11 @@ prim__readChars : Int -> FilePtr -> PrimIO (Ptr String)
 prim__readChar : FilePtr -> PrimIO Int
 
 %foreign support "idris2_writeLine"
-         "node:lambdaRequire:fs:(filePtr, line) => __require_fs.writeSync(filePtr.fd, line, undefined, 'utf-8')"
+         "node:lambda:(filePtr, line) => require('fs').writeSync(filePtr.fd, line, undefined, 'utf-8')"
 prim__writeLine : FilePtr -> String -> PrimIO Int
 
 %foreign support "idris2_eof"
-         "node:lambda:x=>(x.eof?1n:0n)"
+         "node:lambda:x=>(x.eof?1:0)"
 prim__eof : FilePtr -> PrimIO Int
 
 %foreign "C:fflush,libc 6"
@@ -61,7 +67,7 @@ prim__pclose : FilePtr -> PrimIO ()
 prim__removeFile : String -> PrimIO Int
 
 %foreign support "idris2_fileSize"
-         "node:lambdaRequire:fs:fp=>__require_fs.fstatSync(fp.fd, {bigint: true}).size"
+         "node:lambda:fp=>require('fs').fstatSync(fp.fd).size"
 prim__fileSize : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileSize"
@@ -71,7 +77,7 @@ prim__fPoll : FilePtr -> PrimIO Int
 prim__fileAccessTime : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileModifiedTime"
-         "node:lambdaRequire:fs:fp=>__require_fs.fstatSync(fp.fd, {bigint: true}).mtimeMs / 1000n"
+         "node:lambda:fp=>require('fs').fstatSync(fp.fd).mtimeMs / 1000"
 prim__fileModifiedTime : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileStatusTime"
@@ -89,7 +95,7 @@ prim__stdout : FilePtr
          "node:lambda:x=>({fd:2, buffer: Buffer.alloc(0), name:'<stderr>', eof: false})"
 prim__stderr : FilePtr
 
-%foreign libc "chmod"
+%foreign "C:chmod, libc 6, sys/stat.h"
          "node:support:chmod,support_system_file"
 prim__chmod : String -> Int -> PrimIO Int
 
@@ -111,18 +117,19 @@ data FileError = GenericFileError Int -- errno
 
 returnError : HasIO io => io (Either FileError a)
 returnError
-    = do err <- primIO prim_fileErrno
-         case err of
-              0 => pure $ Left FileReadError
-              1 => pure $ Left FileWriteError
-              2 => pure $ Left FileNotFound
-              3 => pure $ Left PermissionDenied
-              4 => pure $ Left FileExists
-              _ => pure $ Left (GenericFileError (err-5))
+    = do err <- primIO prim__fileErrno
+         pure $ Left $
+           case err of
+              0 => FileReadError
+              1 => FileWriteError
+              2 => FileNotFound
+              3 => PermissionDenied
+              4 => FileExists
+              _ => GenericFileError (err-5)
 
 export
 Show FileError where
-  show (GenericFileError errno) = "File error: " ++ show errno
+  show (GenericFileError errno) = strerror errno
   show FileReadError = "File Read Error"
   show FileWriteError = "File Write Error"
   show FileNotFound = "File Not Found"
@@ -160,11 +167,37 @@ export
 closeFile : HasIO io => File -> io ()
 closeFile (FHandle f) = primIO (prim__close f)
 
+||| Check if a file exists for reading.
+export
+exists : HasIO io => String -> io Bool
+exists f
+    = do Right ok <- openFile f Read
+             | Left err => pure False
+         closeFile ok
+         pure True
+
+||| Pick the first existing file
+export
+firstExists : HasIO io => List String -> io (Maybe String)
+firstExists [] = pure Nothing
+firstExists (x :: xs) = if !(exists x) then pure (Just x) else firstExists xs
+
 export
 fileError : HasIO io => File -> io Bool
 fileError (FHandle f)
-    = do x <- primIO $ prim_error f
+    = do x <- primIO $ prim__error f
          pure (x /= 0)
+
+||| Seek through the next newline.
+||| This is @fGetLine@ without the overhead of copying
+||| any characters.
+export
+fSeekLine : HasIO io => (h : File) -> io (Either FileError ())
+fSeekLine (FHandle f)
+    = do res <- primIO (prim__seekLine f)
+         if res /= 0
+            then returnError
+            else ok ()
 
 export
 fGetLine : HasIO io => (h : File) -> io (Either FileError String)
@@ -186,7 +219,7 @@ export
 fGetChar : HasIO io => (h : File) -> io (Either FileError Char)
 fGetChar (FHandle h)
     = do c <- primIO (prim__readChar h)
-         ferr <- primIO (prim_error h)
+         ferr <- primIO (prim__error h)
          if (ferr /= 0)
             then returnError
             else ok (cast c)
@@ -212,8 +245,7 @@ fEOF (FHandle f)
 export
 fflush : HasIO io => (h : File) -> io ()
 fflush (FHandle f)
-    = do primIO (prim__flush f)
-         pure ()
+    = ignore $ primIO (prim__flush f)
 
 export
 popen : HasIO io => String -> Mode -> io (Either FileError File)
@@ -273,40 +305,73 @@ fPoll (FHandle f)
     = do p <- primIO (prim__fPoll f)
          pure (p > 0)
 
+||| Perform a given operation on successful file open
+||| and ensure the file is closed afterwards or perform
+||| a different operation if the file fails to open.
 export
+withFile : HasIO io => (filename : String) ->
+                       Mode ->
+                       (onError : FileError -> io a) ->
+                       (onOpen  : File -> io (Either a b)) ->
+                       io (Either a b)
+withFile filename mode onError onOpen =
+  do Right h <- openFile filename mode
+       | Left err => Left <$> onError err
+     res <- onOpen h
+     closeFile h
+     pure res
+
+readLinesOnto : HasIO io => (acc : List String) ->
+                            (offset : Nat) ->
+                            (fuel : Fuel) ->
+                            File ->
+                            io (Either FileError (Bool, List String))
+readLinesOnto acc _ Dry h = pure (Right (False, reverse acc))
+readLinesOnto acc offset (More fuel) h
+  = do False <- fEOF h
+         | True => pure $ Right (True, reverse acc)
+       case offset of
+            (S offset') => (fSeekLine h *> readLinesOnto acc offset' (More fuel) h) @{Applicative.Compose}
+            0           => (fGetLine h >>= \str => readLinesOnto (str :: acc) 0 fuel h) @{Monad.Compose}
+
+||| Read a chunk of a file in a line-delimited fashion.
+||| You can use this function to read an entire file
+||| as with @readFile@ by reading until @forever@ or by
+||| iterating through pages until hitting the end of
+||| the file.
+|||
+||| The @limit@ function can provide you with enough
+||| fuel to read exactly a given number of lines.
+|||
+||| On success, returns a tuple of whether the end of
+||| the file was reached or not and the lines read in
+||| from the file.
+|||
+||| Note that each line will still have a newline
+||| character at the end.
+|||
+||| Important: because we are chunking by lines, this
+||| function's totality depends on the assumption that
+||| no single line in the input file is infinite.
+export
+readFilePage : HasIO io => (offset : Nat) -> (until : Fuel) -> String -> io (Either FileError (Bool, List String))
+readFilePage offset fuel file
+  = withFile file Read pure $
+      readLinesOnto [] offset fuel
+
+export
+partial
 readFile : HasIO io => String -> io (Either FileError String)
-readFile file
-  = do Right h <- openFile file Read
-          | Left err => returnError
-       Right content <- read [] h
-          | Left err => do closeFile h
-                           returnError
-       closeFile h
-       pure (Right (fastAppend content))
-  where
-    read : List String -> File -> io (Either FileError (List String))
-    read acc h
-        = do eof <- fEOF h
-             if eof
-                then pure (Right (reverse acc))
-                else
-                  do Right str <- fGetLine h
-                        | Left err => returnError
-                     read (str :: acc) h
+readFile = (map $ map (fastConcat . snd)) . readFilePage 0 forever
 
 ||| Write a string to a file
 export
 writeFile : HasIO io =>
             (filepath : String) -> (contents : String) ->
             io (Either FileError ())
-writeFile fn contents = do
-     Right h  <- openFile fn WriteTruncate
-        | Left err => pure (Left err)
-     Right () <- fPutStr h contents
-        | Left err => do closeFile h
-                         pure (Left err)
-     closeFile h
-     pure (Right ())
+writeFile file contents
+  = withFile file WriteTruncate pure $
+      (flip fPutStr contents)
 
 namespace FileMode
   public export

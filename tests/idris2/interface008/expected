@@ -1,6 +1,14 @@
 1/1: Building Deps (Deps.idr)
-Deps.idr:18:13--18:14:While processing right hand side of badcard at Deps.idr:18:3--19:3:
-k is not accessible in this context at:
-18	  badcard = k
-	            ^
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  card is shadowing Main.card
+Error: While processing right hand side of badcard. k is not accessible in this context.
+
+Deps:18:13--18:14
+ 14 |   badcard   : Nat
+ 15 |   badto     : t -> Fin card
+ 16 | 
+ 17 | implementation BadFinite (Fin k) where
+ 18 |   badcard = k
+                  ^
 

@@ -2,6 +2,7 @@ module TTImp.Elab.Local
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -14,35 +15,43 @@ import TTImp.Elab.Check
 import TTImp.Elab.Utils
 import TTImp.TTImp
 
+import Libraries.Data.NameMap
 import Data.List
 
 %default covering
 
 export
-checkLocal : {vars : _} ->
+localHelper : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
-             RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
-             FC -> List ImpDecl -> (scope : RawImp) ->
-             (expTy : Maybe (Glued vars)) ->
-             Core (Term vars, Glued vars)
-checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
+             List ImpDecl -> (NestedNames vars -> Core a) ->
+             Core a
+localHelper {vars} nest env nestdecls_in func
     = do est <- get EST
          let f = defining est
          defs <- get Ctxt
-         let vis = case !(lookupCtxtExact (Resolved (defining est)) (gamma defs)) of
-                        Just gdef => visibility gdef
-                        Nothing => Public
+         gdef <- lookupCtxtExact (Resolved (defining est)) (gamma defs)
+         let vis  = maybe Public visibility gdef
+         let mult = maybe linear GlobalDef.multiplicity gdef
+
          -- If the parent function is public, the nested definitions need
          -- to be public too
-         let nestdecls =
+         let nestdeclsVis =
                if vis == Public
                   then map setPublic nestdecls_in
                   else nestdecls_in
-         let defNames = definedInBlock [] nestdecls
+
+         -- If the parent function is erased, then the nested definitions
+         -- will be erased too
+         let nestdeclsMult =
+           if mult == erased
+              then map setErased nestdeclsVis
+              else nestdeclsVis
+
+         let defNames = definedInBlock emptyNS nestdeclsMult
          names' <- traverse (applyEnv f)
                             (nub defNames) -- binding names must be unique
                                            -- fixes bug #115
@@ -54,10 +63,22 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
          ust <- get UST
          let olddelayed = delayedElab ust
          put UST (record { delayedElab = [] } ust)
-         traverse (processDecl [] nest' env') (map (updateName nest') nestdecls)
+         defs <- get Ctxt
+         -- store the local hints, so we can reset them after we've elaborated
+         -- everything
+         let oldhints = localHints defs
+
+         let nestdecls = map (updateName nest') nestdeclsMult
+         log "elab.def.local" 20 $ show nestdecls
+
+         traverse_ (processDecl [] nest' env') nestdecls
          ust <- get UST
          put UST (record { delayedElab = olddelayed } ust)
-         check rig elabinfo nest' env scope expty
+         defs <- get Ctxt
+         res <- func nest'
+         defs <- get Ctxt
+         put Ctxt (record { localHints = oldhints } defs)
+         pure res
   where
     -- For the local definitions, don't allow access to linear things
     -- unless they're explicitly passed.
@@ -92,8 +113,8 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
                _ => n
 
     updateTyName : NestedNames vars -> ImpTy -> ImpTy
-    updateTyName nest (MkImpTy loc' n ty)
-        = MkImpTy loc' (newName nest n) ty
+    updateTyName nest (MkImpTy loc' nameLoc n ty)
+        = MkImpTy loc' nameLoc (newName nest n) ty
 
     updateDataName : NestedNames vars -> ImpData -> ImpData
     updateDataName nest (MkImpData loc' n tycons dopts dcons)
@@ -120,6 +141,28 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
     setPublic (INamespace fc ps decls)
         = INamespace fc ps (map setPublic decls)
     setPublic d = d
+
+    setErased : ImpDecl -> ImpDecl
+    setErased (IClaim fc _ v opts ty) = IClaim fc erased v opts ty
+    setErased (IParameters fc ps decls)
+        = IParameters fc ps (map setErased decls)
+    setErased (INamespace fc ps decls)
+        = INamespace fc ps (map setErased decls)
+    setErased d = d
+
+export
+checkLocal : {vars : _} ->
+             {auto c : Ref Ctxt Defs} ->
+             {auto m : Ref MD Metadata} ->
+             {auto u : Ref UST UState} ->
+             {auto e : Ref EST (EState vars)} ->
+             RigCount -> ElabInfo ->
+             NestedNames vars -> Env Term vars ->
+             FC -> List ImpDecl -> (scope : RawImp) ->
+             (expTy : Maybe (Glued vars)) ->
+             Core (Term vars, Glued vars)
+checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
+    = localHelper nest env nestdecls_in $ \nest' => check rig elabinfo nest' env scope expty
 
 getLocalTerm : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
@@ -155,8 +198,8 @@ checkCaseLocal {vars} rig elabinfo nest env fc uname iname args sc expty
                          TCon t a _ _ _ _ _ _ => Ref fc (TyCon t a) iname
                          _ => Ref fc Func iname
          (app, args) <- getLocalTerm fc env name args
-         log 5 $ "Updating case local " ++ show uname ++ " " ++ show args
-         logTermNF 5 "To" env app
+         log "elab.local" 5 $ "Updating case local " ++ show uname ++ " " ++ show args
+         logTermNF "elab.local" 5 "To" env app
          let nest' = record { names $= ((uname, (Just iname, args,
                                                 (\fc, nt => app))) :: ) }
                             nest

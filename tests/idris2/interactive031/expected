@@ -1,0 +1,7 @@
+1/1: Building Signatures (Signatures.idr)
+Main> mapTree1 f Nil1 = Nil1
+mapTree1 f (Node1 x y z) = Node1 (f x) (mapTree1 f z) (mapTree1 f y)
+Main> mapTree2 f Nil2 = Nil2
+mapTree2 f (Node2 x y) = Node2 (f x) []
+Main> 
+Bye for now!

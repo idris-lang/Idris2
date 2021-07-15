@@ -18,6 +18,12 @@ main
          val <- getDouble buf 10
          printLn val
 
+         let stringWithNULs = "string\NUL\NUL\NUL\NULcontaining 4 NULs"
+         -- since the string contains only ASCII characters, `stringByteLength`
+         -- should equal `length`
+         putStrLn $ "bytes: " ++ show (stringByteLength stringWithNULs)
+         putStrLn $ "characters: " ++ show (length stringWithNULs)
+
          setString buf 20 "Hello there!"
          val <- getString buf 20 5
          printLn val
@@ -49,8 +55,6 @@ main
             | Nothing => putStrLn "Buffer split failed"
          printBuffer a
          printBuffer b
-         freeBuffer buf
-         freeBuffer buf2
 
 -- Put back when the File API is moved to C and these can work again
 --          Right f <- openBinaryFile "test.buf" Read
@@ -61,4 +65,3 @@ main
 --              | Left err => do putStrLn "Buffer read fail"
 --                               closeFile f
 --          closeFile f
-

@@ -1,5 +1,7 @@
 module Builtin
 
+%default total
+
 -- The most primitive data types; things which are used by desugaring
 
 -- Totality assertions
@@ -52,7 +54,7 @@ data Pair : Type -> Type -> Type where
   ||| A pair of elements.
   ||| @ a the left element of the pair
   ||| @ b the right element of the pair
-  MkPair : {0 a, b : Type} -> (1 x : a) -> (1 y : b) -> Pair a b
+  MkPair : {0 a, b : Type} -> (x : a) -> (y : b) -> Pair a b
 
 ||| Return the first element of a pair.
 public export
@@ -69,11 +71,15 @@ snd (x, y) = y
 
 infix 5 #
 
-||| A pair type for use in operations on linear resources, which return a
-||| value and an updated resource
+||| A pair type where each component is linear
 public export
 data LPair : Type -> Type -> Type where
-     (#) : (x : a) -> (1 _ : b) -> LPair a b
+  ||| A linear pair of elements.
+  ||| If you take one copy of the linear pair apart
+  ||| then you only get one copy of its left and right elements.
+  ||| @ a the left element of the pair
+  ||| @ b the right element of the pair
+  (#) : (1 _ : a) -> (1 _ : b) -> LPair a b
 
 namespace DPair
   ||| Dependent pairs aid in the construction of dependent types by providing
@@ -115,7 +121,7 @@ data Equal : forall a, b . a -> b -> Type where
 
 %name Equal prf
 
-infix 9 ===, ~=~
+infix 6 ===, ~=~
 
 -- An equality type for when you want to assert that each side of the
 -- equality has the same type, but there's not other evidence available
@@ -142,7 +148,7 @@ public export
 %inline
 public export
 rewrite__impl : {0 x, y : a} -> (0 p : _) ->
-                (0 rule : x = y) -> (1 val : p y) -> p x
+                (0 rule : x = y) -> (val : p y) -> p x
 rewrite__impl p Refl prf = prf
 
 %rewrite Equal rewrite__impl
@@ -165,6 +171,16 @@ public export
 trans : forall a, b, c . (0 l : a = b) -> (0 r : b = c) -> a = c
 trans Refl Refl = Refl
 
+||| Injectivity of MkDPair (first components)
+export
+mkDPairInjectiveFst : MkDPair a pa === MkDPair b qb -> a === b
+mkDPairInjectiveFst Refl = Refl
+
+||| Injectivity of MkDPair (snd components)
+export
+mkDPairInjectiveSnd : MkDPair a pa === MkDPair a qa -> pa === qa
+mkDPairInjectiveSnd Refl = Refl
+
 ||| Subvert the type checker.  This function is abstract, so it will not reduce
 ||| in the type checker.  Use it with care - it can result in segfaults or
 ||| worse!
@@ -172,15 +188,24 @@ public export
 believe_me : a -> b
 believe_me = prim__believe_me _ _
 
+||| Assert to the usage checker that the given function uses its argument linearly.
+public export
+assert_linear : (1 f : a -> b) -> (1 val : a) -> b
+assert_linear = believe_me id
+  where
+    id : (1 f : a -> b) -> a -> b
+    id f = f
+
+
 export partial
 idris_crash : String -> a
 idris_crash = prim__crash _
 
-public export
+public export %inline
 delay : a -> Lazy a
 delay x = Delay x
 
-public export
+public export %inline
 force : Lazy a -> a
 force x = Force x
 
@@ -189,6 +214,7 @@ force x = Force x
 ||| Interface for types that can be constructed from string literals.
 public export
 interface FromString ty where
+  constructor MkFromString
   ||| Conversion from String.
   fromString : String -> ty
 
@@ -204,3 +230,47 @@ FromString String where
 public export
 defaultString : FromString String
 defaultString = %search
+
+%charLit fromChar
+
+||| Interface for types that can be constructed from char literals.
+public export
+interface FromChar ty where
+  constructor MkFromChar
+  ||| Conversion from Char.
+  fromChar : Char -> ty
+
+%allow_overloads fromChar
+
+%inline
+public export
+FromChar Char where
+  fromChar s = s
+
+%defaulthint
+%inline
+public export
+defaultChar : FromChar Char
+defaultChar = %search
+
+%doubleLit fromDouble
+
+||| Interface for types that can be constructed from double literals.
+public export
+interface FromDouble ty where
+  constructor MkFromDouble
+  ||| Conversion from Double.
+  fromDouble : Double -> ty
+
+%allow_overloads fromDouble
+
+%inline
+public export
+FromDouble Double where
+  fromDouble s = s
+
+%defaulthint
+%inline
+public export
+defaultDouble : FromDouble Double
+defaultDouble = %search

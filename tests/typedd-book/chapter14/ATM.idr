@@ -1,5 +1,5 @@
 import Data.Vect
-import Data.Strings
+import Data.String
 
 data ATMState = Ready | CardInserted | Session
 
@@ -30,6 +30,11 @@ data ATMCmd : (ty : Type) -> ATMState -> (ty -> ATMState) -> Type where
   (>>=) : ATMCmd a state1 state2_fn ->
           ((res : a) -> ATMCmd b (state2_fn res) state3_fn) ->
           ATMCmd b state1 state3_fn
+
+(>>) : ATMCmd () state1 state2_fn ->
+       Lazy (ATMCmd a (state2_fn ()) state3_fn) ->
+      ATMCmd a state1 state3_fn
+ma >> mb = ma >>= \ () => mb
 
 readVect : (n : Nat) -> IO (Vect n Char)
 readVect Z = do discard <- getLine  -- rest of input up to enter

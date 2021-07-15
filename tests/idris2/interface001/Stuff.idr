@@ -110,4 +110,3 @@ public export
 data Dec : Type -> Type where
      Yes : a -> Dec a
      No : (a -> Void) -> Dec a
-

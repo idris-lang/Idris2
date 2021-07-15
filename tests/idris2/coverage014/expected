@@ -1,0 +1,25 @@
+1/1: Building Issue794 (Issue794.idr)
+Error: Impossible pattern gives an error:
+Can't solve constraint between: ?_ ++ [?_] and ?x :: ?xs.
+
+Issue794:15:7--15:17
+ 11 | empty Empty impossible
+ 12 | 
+ 13 | 
+ 14 | snoc : SnocList (x :: xs) -> a
+ 15 | snoc (Snoc _ _ _) impossible
+            ^^^^^^^^^^
+
+Error: empty is not covering.
+
+Issue794:10:1--10:32
+ 06 |      Empty : SnocList []
+ 07 |      Snoc : (x : a) -> (xs : List a) ->
+ 08 |             (rec : SnocList xs) -> SnocList (xs ++ [x])
+ 09 | 
+ 10 | empty : SnocList (x :: xs) -> a
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    empty (Snoc m m m)
+

@@ -32,11 +32,12 @@ is a very convenient way to bootstrap.
 Can Idris 2 generate Javascript? What about plug-in code generators?
 ====================================================================
 
-Not yet, but there is a Javascript code generator in development.
+Yes! A `JavaScript code generator <https://idris2.readthedocs.io/en/latest/backends/javascript.html>`_
+is built in, and can target either the browser or NodeJS.
 
-Like Idris 1, Idris 2 will support plug-in code generation to allow you to
-write a back end for the platform of your choice, but this is not yet
-implemented.
+Like Idris 1, Idris 2
+`supports plug-in code generation <https://idris2.readthedocs.io/en/latest/backends/custom.html>`_
+to allow you to write a back end for the platform of your choice.
 
 What are the main differences between Idris 1 and Idris 2?
 ==========================================================
@@ -53,6 +54,46 @@ Also, being implemented in Idris, we've been able to take advantage of the
 type system to remove some significant sources of bugs!
 
 You can find more details in Section :ref:`updates-index`.
+
+Why aren't there more linearity annotations in the library?
+===========================================================
+
+In theory, now that Idris 2 is based on Quantitative Type Theory (see
+Section :ref:`sect-multiplicities`, we can write more precise types in the
+Prelude and Base libraries which give more precise usage information. We have
+chosen not to do that (yet) however. Consider, for example, what would happen
+if we did::
+
+    id : (1 _ : a) -> a
+    id x = x
+
+This is definitely correct, because ``x`` is used exactly once. However, we
+also have::
+
+    map : (a -> b) -> List a -> List b
+
+We can't guarantee that the function passed to ``map`` is linear in its
+argument in general, and so we can no longer say ``map id xs`` since the
+multiplicity of ``id`` doesn't match the multiplicity of the function passed
+to ``map``.
+
+Eventually, we hope to extend the core language with multiplicity polymorphism
+which will help resolve these problems. Until then, we consider linearity an
+experimental new feature in the type system, and therefore we follow the general
+philosophy that if you don't want to use linearity, its presence mustn't
+impact the way you write programs.
+
+How do I get command history in the Idris2 REPL?
+================================================
+
+The Idris2 repl does not support readline in the interest of
+keeping dependencies minimal. A useful work around is to
+install `rlwrap <https://linux.die.net/man/1/rlwrap>`_, this
+utility provides command history simply by invoking the Idris2
+repl as an argument to the utility ``rlwrap idris2``.
+
+The goal, eventually, is to use the IDE mode as the basis of an implementation
+of a sophisticated REPL, developed independently from the Idris 2 core.
 
 Where can I find more answers?
 ==============================

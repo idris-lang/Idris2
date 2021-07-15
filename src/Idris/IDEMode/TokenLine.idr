@@ -2,7 +2,7 @@
 module Idris.IDEMode.TokenLine
 
 import Parser.Lexer.Source
-import Text.Lexer
+import Libraries.Text.Lexer
 
 %default total
 
@@ -58,4 +58,4 @@ tokens str
            -- Add the EndInput token so that we'll have a line and column
            -- number to read when storing spans in the file
            (srctoks, (l, c, rest)) =>
-              map tok srctoks ++ (if rest == "" then [] else [Other rest])
+              map val srctoks ++ (if rest == "" then [] else [Other rest])

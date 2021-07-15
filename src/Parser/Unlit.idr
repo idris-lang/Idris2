@@ -1,7 +1,7 @@
 module Parser.Unlit
 
-import public Text.Literate
-import Data.Strings
+import public Libraries.Text.Literate
+import Data.String
 
 %default total
 
@@ -17,14 +17,24 @@ styleOrg : LiterateStyle
 styleOrg = MkLitStyle
               [ ("#+BEGIN_SRC idris","#+END_SRC")
               , ("#+begin_src idris","#+end_src")
-              , ("#+COMMENT idris","#+END_COMMENT")
-              , ("#+comment idris","#+end_comment")]
+              , ("#+BEGIN_COMMENT idris","#+END_COMMENT")
+              , ("#+begin_comment idris","#+end_comment")]
               ["#+IDRIS:"]
               [".org"]
 
 export
 styleCMark : LiterateStyle
-styleCMark = MkLitStyle [("```idris", "```")] Nil [".md", ".markdown"]
+styleCMark = MkLitStyle
+              [("```idris", "```"), ("~~~idris", "~~~"), ("<!-- idris", "-->")]
+              Nil
+              [".md", ".markdown"]
+
+export
+styleTeX : LiterateStyle
+styleTeX = MkLitStyle
+              [("\\begin{code}", "\\end{code}"), ("\\begin{hidden}", "\\end{hidden}")]
+              Nil
+              [".tex", ".ltx"]
 
 export
 isLitFile : String -> Maybe LiterateStyle
@@ -33,7 +43,9 @@ isLitFile fname =
       Just s => Just s
       Nothing => case isStyle styleOrg of
                      Just s => Just s
-                     Nothing => isStyle styleCMark
+                     Nothing => case isStyle styleCMark of
+                                     Just s => Just s
+                                     Nothing => isStyle styleTeX
 
   where
    hasSuffix : String -> Bool
@@ -54,7 +66,9 @@ isLitLine str =
                     (Just l, s) => (Just l, s)
                     otherwise => case isLiterateLine styleCMark str of
                                    (Just l, s) => (Just l, s)
-                                   otherwise => (Nothing, str)
+                                   otherwise => case isLiterateLine styleTeX str of
+                                                   (Just l, s) => (Just l, s)
+                                                   otherwise => (Nothing, str)
 
 export
 unlit : Maybe LiterateStyle -> String -> Either LiterateError String

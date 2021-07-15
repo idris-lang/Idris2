@@ -1,6 +1,10 @@
 module System.Clock
 
+import Data.Nat
+import Data.String
 import PrimIO
+
+%default total
 
 ||| The various types of system clock available.
 public export
@@ -49,6 +53,18 @@ Show (Clock type) where
   show (MkClock {type} seconds nanoseconds) =
     show type ++ ": " ++ show seconds ++ "s " ++ show nanoseconds ++ "ns"
 
+export
+showTime : (s, ns : Nat) -> Clock type -> String
+showTime s ns (MkClock seconds nanoseconds) =
+  let seconds = show seconds
+      quotient : Integer = cast $ 10 `power` minus 9 ns
+      nanoseconds = show (cast nanoseconds `div` quotient)
+  in concat [ padLeft s '0' seconds
+            , "."
+            , padRight ns '0' nanoseconds
+            , "s"
+            ]
+
 ||| A helper to deconstruct a Clock.
 public export
 seconds : Clock type -> Integer
@@ -80,29 +96,86 @@ isClockMandatory GCCPU  = Optional
 isClockMandatory GCReal = Optional
 isClockMandatory _      = Mandatory
 
-prim_clockTimeMonotonic : IO OSClock
-prim_clockTimeMonotonic = schemeCall OSClock "blodwen-clock-time-monotonic" []
+%foreign "scheme:blodwen-clock-time-monotonic"
+         "RefC:clockTimeMonotonic"
+prim__clockTimeMonotonic : PrimIO OSClock
+
+clockTimeMonotonic : IO OSClock
+clockTimeMonotonic = fromPrim prim__clockTimeMonotonic
+
+%foreign "scheme:blodwen-clock-time-utc"
+         "RefC:clockTimeUtc"
+prim__clockTimeUtc : PrimIO OSClock
+
+clockTimeUtc : IO OSClock
+clockTimeUtc = fromPrim prim__clockTimeUtc
+
+%foreign "scheme:blodwen-clock-time-process"
+         "RefC:clockTimeProcess"
+prim__clockTimeProcess : PrimIO OSClock
+
+clockTimeProcess : IO OSClock
+clockTimeProcess = fromPrim prim__clockTimeProcess
+
+%foreign "scheme:blodwen-clock-time-thread"
+         "RefC:clockTimeThread"
+prim__clockTimeThread : PrimIO OSClock
+
+clockTimeThread : IO OSClock
+clockTimeThread = fromPrim prim__clockTimeThread
+
+%foreign "scheme:blodwen-clock-time-gccpu"
+         "RefC:clockTimeGcCpu"
+prim__clockTimeGcCpu : PrimIO OSClock
+
+clockTimeGcCpu : IO OSClock
+clockTimeGcCpu = fromPrim prim__clockTimeGcCpu
+
+%foreign "scheme:blodwen-clock-time-gcreal"
+         "RefC:clockTimeGcReal"
+prim__clockTimeGcReal : PrimIO OSClock
+
+clockTimeGcReal : IO OSClock
+clockTimeGcReal = fromPrim prim__clockTimeGcReal
 
 fetchOSClock : ClockType -> IO OSClock
-fetchOSClock UTC       = schemeCall OSClock "blodwen-clock-time-utc" []
-fetchOSClock Monotonic = prim_clockTimeMonotonic
-fetchOSClock Process   = schemeCall OSClock "blodwen-clock-time-process" []
-fetchOSClock Thread    = schemeCall OSClock "blodwen-clock-time-thread" []
-fetchOSClock GCCPU     = schemeCall OSClock "blodwen-clock-time-gccpu" []
-fetchOSClock GCReal    = schemeCall OSClock "blodwen-clock-time-gcreal" []
-fetchOSClock Duration  = prim_clockTimeMonotonic
+fetchOSClock UTC       = clockTimeUtc
+fetchOSClock Monotonic = clockTimeMonotonic
+fetchOSClock Process   = clockTimeProcess
+fetchOSClock Thread    = clockTimeThread
+fetchOSClock GCCPU     = clockTimeGcCpu
+fetchOSClock GCReal    = clockTimeGcReal
+fetchOSClock Duration  = clockTimeMonotonic
+
+%foreign "scheme:blodwen-is-time?"
+         "RefC:clockValid"
+prim__osClockValid : OSClock -> PrimIO Int
 
 ||| A test to determine the status of optional clocks.
 osClockValid : OSClock -> IO Int
-osClockValid clk = schemeCall Int "blodwen-is-time?" [clk]
+osClockValid clk = fromPrim (prim__osClockValid clk)
+
+%foreign "scheme:blodwen-clock-second"
+         "RefC:clockSecond"
+prim__osClockSecond : OSClock -> PrimIO Bits64
+
+osClockSecond : OSClock -> IO Bits64
+osClockSecond clk = fromPrim (prim__osClockSecond clk)
+
+%foreign "scheme:blodwen-clock-nanosecond"
+         "RefC:clockNanosecond"
+prim__osClockNanosecond : OSClock -> PrimIO Bits64
+
+osClockNanosecond : OSClock -> IO Bits64
+osClockNanosecond clk = fromPrim (prim__osClockNanosecond clk)
 
 fromOSClock : {type : ClockType} -> OSClock -> IO (Clock type)
 fromOSClock clk =
   pure $
     MkClock
       {type}
-      !(schemeCall Integer "blodwen-clock-second" [clk])
-      !(schemeCall Integer "blodwen-clock-nanosecond" [clk])
+      (cast !(osClockSecond clk))
+      (cast !(osClockNanosecond clk))
 
 public export
 clockTimeReturnType : (typ : ClockType) -> Type

@@ -2,13 +2,17 @@ module TTImp.TTImp
 
 import Core.Binary
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Normalise
+import Core.Options
+import Core.Options.Log
 import Core.TT
 import Core.TTC
 import Core.Value
 
 import Data.List
+import Data.Maybe
 
 %default covering
 
@@ -49,7 +53,7 @@ mutual
              (argTy : RawImp) -> (retTy : RawImp) -> RawImp
        ILam : FC -> RigCount -> PiInfo RawImp -> Maybe Name ->
               (argTy : RawImp) -> (lamTy : RawImp) -> RawImp
-       ILet : FC -> RigCount -> Name ->
+       ILet : FC -> (lhsFC : FC) -> RigCount -> Name ->
               (nTy : RawImp) -> (nVal : RawImp) ->
               (scope : RawImp) -> RawImp
        ICase : FC -> RawImp -> (ty : RawImp) ->
@@ -66,7 +70,8 @@ mutual
        IUpdate : FC -> List IFieldUpdate -> RawImp -> RawImp
 
        IApp : FC -> RawImp -> RawImp -> RawImp
-       IImplicitApp : FC -> RawImp -> Maybe Name -> RawImp -> RawImp
+       IAutoApp : FC -> RawImp -> RawImp -> RawImp
+       INamedApp : FC -> RawImp -> Name -> RawImp -> RawImp
        IWithApp : FC -> RawImp -> RawImp -> RawImp
 
        ISearch : FC -> (depth : Nat) -> RawImp
@@ -80,7 +85,7 @@ mutual
        -- A name which should be implicitly bound
        IBindVar : FC -> String -> RawImp
        -- An 'as' pattern, valid on the LHS of a clause only
-       IAs : FC -> UseSide -> Name -> RawImp -> RawImp
+       IAs : FC -> (nameFC : FC) -> UseSide -> Name -> RawImp -> RawImp
        -- A 'dot' pattern, i.e. one which must also have the given value
        -- by unification
        IMustUnify : FC -> DotReason -> RawImp -> RawImp
@@ -101,7 +106,7 @@ mutual
        IType : FC -> RawImp
        IHole : FC -> String -> RawImp
 
-       IUnifyLog : FC -> Nat -> RawImp -> RawImp
+       IUnifyLog : FC -> LogLevel -> RawImp -> RawImp
        -- An implicit value, solved by unification, but which will also be
        -- bound (either as a pattern variable or a type variable) if unsolved
        -- at the end of elaborator
@@ -130,7 +135,7 @@ mutual
       show (ILam fc c p n arg sc)
          = "(%lam " ++ show c ++ " " ++ show p ++ " " ++
            showPrec App n ++ " " ++ show arg ++ " " ++ show sc ++ ")"
-      show (ILet fc c n ty val sc)
+      show (ILet fc lhsFC c n ty val sc)
          = "(%let " ++ show c ++ " " ++ " " ++ show n ++ " " ++ show ty ++
            " " ++ show val ++ " " ++ show sc ++ ")"
       show (ICase _ scr scrty alts)
@@ -142,11 +147,12 @@ mutual
                ++ " " ++ show args ++ ") " ++ show sc ++ ")"
       show (IUpdate _ flds rec)
          = "(%record " ++ showSep ", " (map show flds) ++ " " ++ show rec ++ ")"
-
       show (IApp fc f a)
          = "(" ++ show f ++ " " ++ show a ++ ")"
-      show (IImplicitApp fc f n a)
+      show (INamedApp fc f n a)
          = "(" ++ show f ++ " [" ++ show n ++ " = " ++ show a ++ "])"
+      show (IAutoApp fc f a)
+         = "(" ++ show f ++ " [" ++ show a ++ "])"
       show (IWithApp fc f a)
          = "(" ++ show f ++ " | " ++ show a ++ ")"
       show (ISearch fc d)
@@ -160,7 +166,7 @@ mutual
       show (IBindHere fc b sc)
          = "(%bindhere " ++ show sc ++ ")"
       show (IBindVar fc n) = "$" ++ n
-      show (IAs fc _ n tm) = show n ++ "@(" ++ show tm ++ ")"
+      show (IAs fc _ _ n tm) = show n ++ "@(" ++ show tm ++ ")"
       show (IMustUnify fc r tm) = ".(" ++ show tm ++ ")"
       show (IDelayed fc r tm) = "(%delayed " ++ show tm ++ ")"
       show (IDelay fc tm) = "(%delay " ++ show tm ++ ")"
@@ -201,6 +207,11 @@ mutual
        Macro : FnOpt
        SpecArgs : List Name -> FnOpt
 
+  public export
+  isTotalityReq : FnOpt -> Bool
+  isTotalityReq (Totality _) = True
+  isTotalityReq _ = False
+
   export
   Show FnOpt where
     show Inline = "%inline"
@@ -232,11 +243,11 @@ mutual
 
   public export
   data ImpTy : Type where
-       MkImpTy : FC -> (n : Name) -> (ty : RawImp) -> ImpTy
+       MkImpTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : RawImp) -> ImpTy
 
   export
   Show ImpTy where
-    show (MkImpTy fc n ty) = "(%claim " ++ show n ++ " " ++ show ty ++ ")"
+    show (MkImpTy fc _ n ty) = "(%claim " ++ show n ++ " " ++ show ty ++ ")"
 
   public export
   data DataOpt : Type where
@@ -306,7 +317,8 @@ mutual
   public export
   data ImpClause : Type where
        PatClause : FC -> (lhs : RawImp) -> (rhs : RawImp) -> ImpClause
-       WithClause : FC -> (lhs : RawImp) -> (wval : RawImp) ->
+       WithClause : FC -> (lhs : RawImp) ->
+                    (wval : RawImp) -> (prf : Maybe Name) ->
                     (flags : List WithFlag) ->
                     List ImpClause -> ImpClause
        ImpossibleClause : FC -> (lhs : RawImp) -> ImpClause
@@ -315,8 +327,11 @@ mutual
   Show ImpClause where
     show (PatClause fc lhs rhs)
        = show lhs ++ " = " ++ show rhs
-    show (WithClause fc lhs wval flags block)
-       = show lhs ++ " with " ++ show wval ++ "\n\t" ++ show block
+    show (WithClause fc lhs wval prf flags block)
+       = show lhs
+       ++ " with " ++ show wval
+       ++ maybe "" (\ nm => " proof " ++ show nm) prf
+       ++ "\n\t" ++ show block
     show (ImpossibleClause fc lhs)
        = show lhs ++ " impossible"
 
@@ -326,22 +341,26 @@ mutual
                 ImpTy -> ImpDecl
        IData : FC -> Visibility -> ImpData -> ImpDecl
        IDef : FC -> Name -> List ImpClause -> ImpDecl
-       IParameters : FC -> List (Name, RawImp) ->
+       IParameters : FC -> List (Name, RigCount, PiInfo RawImp, RawImp) ->
                      List ImpDecl -> ImpDecl
        IRecord : FC ->
                  Maybe String -> -- nested namespace
                  Visibility -> ImpRecord -> ImpDecl
-       INamespace : FC -> List String -> List ImpDecl -> ImpDecl
+       INamespace : FC -> Namespace -> List ImpDecl -> ImpDecl
        ITransform : FC -> Name -> RawImp -> RawImp -> ImpDecl
        IRunElabDecl : FC -> RawImp -> ImpDecl
-       IPragma : ({vars : _} ->
+       IPragma : List Name -> -- pragmas might define names that wouldn't
+                       -- otherwise be spotted in 'definedInBlock' so they
+                       -- can be flagged here.
+                 ({vars : _} ->
                   NestedNames vars -> Env Term vars -> Core ()) ->
                  ImpDecl
-       ILog : Nat -> ImpDecl
+       ILog : Maybe (List String, Nat) -> ImpDecl
+       IBuiltin : FC -> BuiltinType -> Name -> ImpDecl
 
   export
   Show ImpDecl where
-    show (IClaim _ _ _ opts ty) = show opts ++ " " ++ show ty
+    show (IClaim _ c _ opts ty) = show opts ++ " " ++ show c ++ " " ++ show ty
     show (IData _ _ d) = show d
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"
     show (IParameters _ ps ds)
@@ -355,8 +374,17 @@ mutual
         = "%transform " ++ show n ++ " " ++ show lhs ++ " ==> " ++ show rhs
     show (IRunElabDecl _ tm)
         = "%runElab " ++ show tm
-    show (IPragma _) = "[externally defined pragma]"
-    show (ILog lvl) = "%logging " ++ show lvl
+    show (IPragma _ _) = "[externally defined pragma]"
+    show (ILog Nothing) = "%logging off"
+    show (ILog (Just (topic, lvl))) = "%logging " ++ case topic of
+      [] => show lvl
+      _  => concat (intersperse "." topic) ++ " " ++ show lvl
+    show (IBuiltin _ type name) = "%builtin " ++ show type ++ " " ++ show name
+
+export
+isIPrimVal : RawImp -> Maybe Constant
+isIPrimVal (IPrimVal _ c) = Just c
+isIPrimVal _ = Nothing
 
 -- REPL commands for TTImp interaction
 public export
@@ -372,14 +400,22 @@ data ImpREPL : Type where
      Quit : ImpREPL
 
 export
+mapAltType : (RawImp -> RawImp) -> AltType -> AltType
+mapAltType f (UniqueDefault x) = UniqueDefault (f x)
+mapAltType _ u = u
+
+export
 lhsInCurrentNS : {auto c : Ref Ctxt Defs} ->
                  NestedNames vars -> RawImp -> Core RawImp
 lhsInCurrentNS nest (IApp loc f a)
     = do f' <- lhsInCurrentNS nest f
          pure (IApp loc f' a)
-lhsInCurrentNS nest (IImplicitApp loc f n a)
+lhsInCurrentNS nest (IAutoApp loc f a)
     = do f' <- lhsInCurrentNS nest f
-         pure (IImplicitApp loc f' n a)
+         pure (IAutoApp loc f' a)
+lhsInCurrentNS nest (INamedApp loc f n a)
+    = do f' <- lhsInCurrentNS nest f
+         pure (INamedApp loc f' n a)
 lhsInCurrentNS nest (IWithApp loc f a)
     = do f' <- lhsInCurrentNS nest f
          pure (IWithApp loc f' a)
@@ -403,13 +439,15 @@ findIBinds (ILam fc rig p n aty sc)
     = findIBinds aty ++ findIBinds sc
 findIBinds (IApp fc fn av)
     = findIBinds fn ++ findIBinds av
-findIBinds (IImplicitApp fc fn n av)
+findIBinds (IAutoApp fc fn av)
+    = findIBinds fn ++ findIBinds av
+findIBinds (INamedApp _ fn _ av)
     = findIBinds fn ++ findIBinds av
 findIBinds (IWithApp fc fn av)
     = findIBinds fn ++ findIBinds av
-findIBinds (IAs fc _ (UN n) pat)
+findIBinds (IAs fc _ _ (UN n) pat)
     = n :: findIBinds pat
-findIBinds (IAs fc _ n pat)
+findIBinds (IAs fc _ _ n pat)
     = findIBinds pat
 findIBinds (IMustUnify fc r pat)
     = findIBinds pat
@@ -437,11 +475,13 @@ findImplicits (ILam fc rig p n aty sc)
     = findImplicits aty ++ findImplicits sc
 findImplicits (IApp fc fn av)
     = findImplicits fn ++ findImplicits av
-findImplicits (IImplicitApp fc fn n av)
+findImplicits (IAutoApp _ fn av)
+    = findImplicits fn ++ findImplicits av
+findImplicits (INamedApp _ fn _ av)
     = findImplicits fn ++ findImplicits av
 findImplicits (IWithApp fc fn av)
     = findImplicits fn ++ findImplicits av
-findImplicits (IAs fc _ n pat)
+findImplicits (IAs fc _ _ n pat)
     = findImplicits pat
 findImplicits (IMustUnify fc r pat)
     = findImplicits pat
@@ -461,24 +501,48 @@ findImplicits tm = []
 -- IBindVar anywhere else in the pattern) so that they will be available on the
 -- rhs
 export
-implicitsAs : Defs -> List Name -> RawImp -> Core RawImp
-implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) tm
+implicitsAs : {auto c : Ref Ctxt Defs} ->
+              Int -> Defs ->
+              (vars : List Name) ->
+              RawImp -> Core RawImp
+implicitsAs n defs ns tm
+  = do let implicits = findIBinds tm
+       log "declare.def.lhs.implicits" 30 $ "Found implicits: " ++ show implicits
+       setAs (map Just (ns ++ map UN implicits)) [] tm
   where
-    setAs : List (Maybe Name) -> RawImp -> Core RawImp
-    setAs is (IApp loc f a)
-        = do f' <- setAs is f
+    -- Takes the function application expression which is the lhs of a clause
+    -- and decomposes it into the underlying function symbol and the variables
+    -- bound by appearing as arguments, and then passes this onto `findImps`.
+    -- More precisely, implicit and explicit arguments are recorded separately,
+    -- into `is` and `es` respectively.
+    setAs : List (Maybe Name) -> List (Maybe Name) -> RawImp -> Core RawImp
+    setAs is es (IApp loc f a)
+        = do f' <- setAs is (Nothing :: es) f
              pure $ IApp loc f' a
-    setAs is (IImplicitApp loc f n a)
-        = do f' <- setAs (n :: is) f
-             pure $ IImplicitApp loc f' n a
-    setAs is (IWithApp loc f a)
-        = do f' <- setAs is f
+    setAs is es (IAutoApp loc f a)
+        = do f' <- setAs (Nothing :: is) es f
+             pure $ IAutoApp loc f' a
+    setAs is es (INamedApp loc f n a)
+        = do f' <- setAs (Just n :: is) (Just n :: es) f
+             pure $ INamedApp loc f' n a
+    setAs is es (IWithApp loc f a)
+        = do f' <- setAs is es f
              pure $ IWithApp loc f' a
-    setAs is (IVar loc n)
-        = case !(lookupTyExact n (gamma defs)) of
-               Nothing => pure $ IVar loc n
-               Just ty => pure $ impAs loc
-                                    !(findImps is !(nf defs [] ty)) (IVar loc n)
+    setAs is es (IVar loc nm)
+        -- #834 Use the (already) resolved name rather than the local one
+        = case !(lookupTyExact (Resolved n) (gamma defs)) of
+            Nothing =>
+               do log "declare.def.lhs.implicits" 30 $
+                    "Could not find variable " ++ show n
+                  pure $ IVar loc nm
+            Just ty =>
+               do ty' <- nf defs [] ty
+                  implicits <- findImps is es ns ty'
+                  log "declare.def.lhs.implicits" 30 $
+                    "\n  In the type of " ++ show n ++ ": " ++ show ty ++
+                    "\n  Using locals: " ++ show ns ++
+                    "\n  Found implicits: " ++ show implicits
+                  pure $ impAs (virtualiseFC loc) implicits (IVar loc nm)
       where
         -- If there's an @{c} in the list of given implicits, that's the next
         -- autoimplicit, so don't rewrite the LHS and update the list of given
@@ -492,75 +556,126 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) tm
                          pure (x :: ns')
         updateNs n [] = Nothing
 
-        findImps : List (Maybe Name) -> NF [] -> Core (List (Name, PiInfo RawImp))
-        findImps ns (NBind fc x (Pi _ Explicit _) sc)
-            = findImps ns !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+        -- Finds the missing implicits which should be added to the lhs of the
+        -- original pattern clause.
+        --
+        -- The first argument, `ns`, specifies which implicit variables alredy
+        -- appear in the lhs, and therefore need not be added.
+        -- The second argument, `es`, specifies which *explicit* variables appear
+        -- in the lhs: this is used to determine when to stop searching for further
+        -- implicits to add.
+        findImps : List (Maybe Name) -> List (Maybe Name) ->
+                   List Name -> NF [] ->
+                   Core (List (Name, PiInfo RawImp))
+        -- #834 When we are in a local definition, we have an explicit telescope
+        -- corresponding to the variables bound in the parent function.
+        -- So we first peel off all of the explicit quantifiers corresponding
+        -- to these variables.
+        findImps ns es (_ :: locals) (NBind fc x (Pi _ _ Explicit _) sc)
+          = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+               findImps ns es locals body
+               -- ^ TODO? check that name of the pi matches name of local?
+        -- don't add implicits coming after explicits that aren't given
+        findImps ns es [] (NBind fc x (Pi _ _ Explicit _) sc)
+            = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+                 case es of
+                   -- Explicits were skipped, therefore all explicits are given anyway
+                   Just (UN "_") :: _ => findImps ns es [] body
+                   -- Explicits weren't skipped, so we need to check
+                   _ => case updateNs x es of
+                          Nothing => pure [] -- explicit wasn't given
+                          Just es' => findImps ns es' [] body
         -- if the implicit was given, skip it
-        findImps ns (NBind fc x (Pi _ AutoImplicit _) sc)
-            = case updateNs x ns of
+        findImps ns es [] (NBind fc x (Pi _ _ AutoImplicit _) sc)
+            = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+                 case updateNs x ns of
                    Nothing => -- didn't find explicit call
-                      pure $ (x, AutoImplicit) :: !(findImps ns !(sc defs (toClosure defaultOpts [] (Erased fc False))))
-                   Just ns' => findImps ns' !(sc defs (toClosure defaultOpts [] (Erased fc False)))
-        findImps ns (NBind fc x (Pi _ p _) sc)
-            = if Just x `elem` ns
-                 then findImps ns !(sc defs (toClosure defaultOpts [] (Erased fc False)))
-                 else pure $ (x, forgetDef p) :: !(findImps ns !(sc defs (toClosure defaultOpts [] (Erased fc False))))
-        findImps _ _ = pure []
+                      pure $ (x, AutoImplicit) :: !(findImps ns es [] body)
+                   Just ns' => findImps ns' es [] body
+        findImps ns es [] (NBind fc x (Pi _ _ p _) sc)
+            = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+                 if Just x `elem` ns
+                   then findImps ns es [] body
+                   else pure $ (x, forgetDef p) :: !(findImps ns es [] body)
+        findImps _ _ locals _
+          = do log "declare.def.lhs.implicits" 50 $
+                  "Giving up with the following locals left: " ++ show locals
+               pure []
 
         impAs : FC -> List (Name, PiInfo RawImp) -> RawImp -> RawImp
         impAs loc' [] tm = tm
         impAs loc' ((UN n, AutoImplicit) :: ns) tm
             = impAs loc' ns $
-                 IImplicitApp loc' tm (Just (UN n)) (IBindVar loc' n)
+                 INamedApp loc' tm (UN n) (IBindVar loc' n)
+
         impAs loc' ((n, Implicit) :: ns) tm
             = impAs loc' ns $
-                 IImplicitApp loc' tm (Just n)
-                     (IAs loc' UseLeft n (Implicit loc' True))
+                 INamedApp loc' tm n
+                     (IAs loc' EmptyFC UseLeft n (Implicit loc' True))
+
         impAs loc' ((n, DefImplicit t) :: ns) tm
             = impAs loc' ns $
-                 IImplicitApp loc' tm (Just n)
-                     (IAs loc' UseLeft n (Implicit loc' True))
+                 INamedApp loc' tm n
+                     (IAs loc' EmptyFC UseLeft n (Implicit loc' True))
+
         impAs loc' (_ :: ns) tm = impAs loc' ns tm
-    setAs is tm = pure tm
+    setAs is es tm = pure tm
 
 export
-definedInBlock : List String -> -- namespace to resolve names
+definedInBlock : Namespace -> -- namespace to resolve names
                  List ImpDecl -> List Name
 definedInBlock ns decls =
     concatMap (defName ns) decls
   where
     getName : ImpTy -> Name
-    getName (MkImpTy _ n _) = n
+    getName (MkImpTy _ _ n _) = n
 
     getFieldName : IField -> Name
     getFieldName (MkIField _ _ _ n _) = n
 
-    expandNS : List String -> Name -> Name
-    expandNS [] n = n
-    expandNS ns (UN n) = NS ns (UN n)
-    expandNS ns n@(MN _ _) = NS ns n
-    expandNS ns n@(DN _ _) = NS ns n
-    expandNS ns n = n
+    expandNS : Namespace -> Name -> Name
+    expandNS ns n
+       = if ns == emptyNS then n else case n of
+           UN _ => NS ns n
+           MN _ _ => NS ns n
+           DN _ _ => NS ns n
+           RF _ => NS ns n
+           _ => n
 
-    defName : List String -> ImpDecl -> List Name
+    defName : Namespace -> ImpDecl -> List Name
     defName ns (IClaim _ _ _ _ ty) = [expandNS ns (getName ty)]
     defName ns (IData _ _ (MkImpData _ n _ _ cons))
         = expandNS ns n :: map (expandNS ns) (map getName cons)
     defName ns (IData _ _ (MkImpLater _ n _)) = [expandNS ns n]
     defName ns (IParameters _ _ pds) = concatMap (defName ns) pds
-    defName ns (INamespace _ n nds) = concatMap (defName (n ++ ns)) nds
+    defName ns (INamespace _ n nds) = concatMap (defName (ns <.> n)) nds
     defName ns (IRecord _ fldns _ (MkImpRecord _ n _ con flds))
         = expandNS ns con :: all
       where
-        fldns' : List String
-        fldns' = maybe ns (\f => f :: ns) fldns
+        fldns' : Namespace
+        fldns' = maybe ns (\ f => ns <.> mkNamespace f) fldns
+
+        toRF : Name -> Name
+        toRF (UN n) = RF n
+        toRF n = n
 
         fnsUN : List Name
         fnsUN = map getFieldName flds
 
-        all : List Name
-        all = expandNS ns n :: map (expandNS fldns') fnsUN
+        fnsRF : List Name
+        fnsRF = map toRF fnsUN
 
+        -- Depending on %prefix_record_projections,
+        -- the record may or may not produce prefix projections (fnsUN).
+        --
+        -- However, since definedInBlock is pure, we can't check that flag
+        -- (and it would also be wrong if %prefix_record_projections appears
+        -- inside the parameter block)
+        -- so let's just declare all of them and some may go unused.
+        all : List Name
+        all = expandNS ns n :: map (expandNS fldns') (fnsRF ++ fnsUN)
+
+    defName ns (IPragma pns _) = map (expandNS ns) pns
     defName _ _ = []
 
 export
@@ -568,13 +683,14 @@ getFC : RawImp -> FC
 getFC (IVar x _) = x
 getFC (IPi x _ _ _ _ _) = x
 getFC (ILam x _ _ _ _ _) = x
-getFC (ILet x _ _ _ _ _) = x
+getFC (ILet x _ _ _ _ _ _) = x
 getFC (ICase x _ _ _) = x
 getFC (ILocal x _ _) = x
 getFC (ICaseLocal x _ _ _ _) = x
 getFC (IUpdate x _ _) = x
 getFC (IApp x _ _) = x
-getFC (IImplicitApp x _ _ _) = x
+getFC (INamedApp x _ _ _) = x
+getFC (IAutoApp x _ _) = x
 getFC (IWithApp x _ _) = x
 getFC (ISearch x _) = x
 getFC (IAlternative x _ _) = x
@@ -595,25 +711,65 @@ getFC (IQuoteName x _) = x
 getFC (IQuoteDecl x _) = x
 getFC (IUnquote x _) = x
 getFC (IRunElab x _) = x
-getFC (IAs x _ _ _) = x
+getFC (IAs x _ _ _ _) = x
 getFC (Implicit x _) = x
 getFC (IWithUnambigNames x _ _) = x
+
+namespace ImpDecl
+
+  public export
+  getFC : ImpDecl -> FC
+  getFC (IClaim fc _ _ _ _) = fc
+  getFC (IData fc _ _) = fc
+  getFC (IDef fc _ _) = fc
+  getFC (IParameters fc _ _) = fc
+  getFC (IRecord fc _ _ _ ) = fc
+  getFC (INamespace fc _ _) = fc
+  getFC (ITransform fc _ _ _) = fc
+  getFC (IRunElabDecl fc _) = fc
+  getFC (IPragma _ _) = EmptyFC
+  getFC (ILog _) = EmptyFC
+  getFC (IBuiltin fc _ _) = fc
 
 export
 apply : RawImp -> List RawImp -> RawImp
 apply f [] = f
-apply f (x :: xs) = apply (IApp (getFC f) f x) xs
+apply f (x :: xs) =
+  let fFC = getFC f in
+  apply (IApp (fromMaybe fFC (mergeFC fFC (getFC x))) f x) xs
+
+export
+gapply : RawImp -> List (Maybe Name, RawImp) -> RawImp
+gapply f [] = f
+gapply f (x :: xs) = gapply (uncurry (app f) x) xs where
+
+  app : RawImp -> Maybe Name -> RawImp -> RawImp
+  app f Nothing x =  IApp (getFC f) f x
+  app f (Just nm) x = INamedApp (getFC f) f nm x
+
 
 export
 getFn : RawImp -> RawImp
-getFn (IApp _ f arg) = getFn f
-getFn (IWithApp _ f arg) = getFn f
-getFn (IImplicitApp _ f _ _) = getFn f
-getFn (IAs _ _ _ f) = getFn f
+getFn (IApp _ f _) = getFn f
+getFn (IWithApp _ f _) = getFn f
+getFn (INamedApp _ f _ _) = getFn f
+getFn (IAutoApp _ f _) = getFn f
+getFn (IAs _ _ _ _ f) = getFn f
 getFn (IMustUnify _ _ f) = getFn f
 getFn f = f
 
 -- Everything below is TTC instances
+
+export
+TTC BuiltinType where
+    toBuf b BuiltinNatural = tag 0
+    toBuf b NaturalToInteger = tag 1
+    toBuf b IntegerToNatural = tag 2
+    fromBuf b = case !getTag of
+        0 => pure BuiltinNatural
+        1 => pure NaturalToInteger
+        2 => pure IntegerToNatural
+        _ => corrupt "BuiltinType"
 
 mutual
   export
@@ -625,8 +781,8 @@ mutual
     toBuf b (ILam fc r p n argTy scope)
         = do tag 2; toBuf b fc; toBuf b r; toBuf b p; toBuf b n;
              toBuf b argTy; toBuf b scope
-    toBuf b (ILet fc r n nTy nVal scope)
-        = do tag 3; toBuf b fc; toBuf b r; toBuf b n;
+    toBuf b (ILet fc lhsFC r n nTy nVal scope)
+        = do tag 3; toBuf b fc; toBuf b lhsFC; toBuf b r; toBuf b n;
              toBuf b nTy; toBuf b nVal; toBuf b scope
     toBuf b (ICase fc y ty xs)
         = do tag 4; toBuf b fc; toBuf b y; toBuf b ty; toBuf b xs
@@ -638,7 +794,7 @@ mutual
         = do tag 6; toBuf b fc; toBuf b fs; toBuf b rec
     toBuf b (IApp fc fn arg)
         = do tag 7; toBuf b fc; toBuf b fn; toBuf b arg
-    toBuf b (IImplicitApp fc fn y arg)
+    toBuf b (INamedApp fc fn y arg)
         = do tag 8; toBuf b fc; toBuf b fn; toBuf b y; toBuf b arg
     toBuf b (IWithApp fc fn arg)
         = do tag 9; toBuf b fc; toBuf b fn; toBuf b arg
@@ -655,8 +811,9 @@ mutual
         = do tag 14; toBuf b fc; toBuf b m; toBuf b y
     toBuf b (IBindVar fc y)
         = do tag 15; toBuf b fc; toBuf b y
-    toBuf b (IAs fc s y pattern)
-        = do tag 16; toBuf b fc; toBuf b s; toBuf b y; toBuf b pattern
+    toBuf b (IAs fc nameFC s y pattern)
+        = do tag 16; toBuf b fc; toBuf b nameFC; toBuf b s; toBuf b y;
+             toBuf b pattern
     toBuf b (IMustUnify fc r pattern)
         -- No need to record 'r', it's for type errors only
         = do tag 17; toBuf b fc; toBuf b pattern
@@ -691,6 +848,8 @@ mutual
         = do tag 29; toBuf b fc; toBuf b i
     toBuf b (IWithUnambigNames fc ns rhs)
         = do tag 30; toBuf b ns; toBuf b rhs
+    toBuf b (IAutoApp fc fn arg)
+        = do tag 31; toBuf b fc; toBuf b fn; toBuf b arg
 
     fromBuf b
         = case !getTag of
@@ -706,10 +865,11 @@ mutual
                        argTy <- fromBuf b; scope <- fromBuf b
                        pure (ILam fc r p n argTy scope)
                3 => do fc <- fromBuf b;
+                       lhsFC <- fromBuf b;
                        r <- fromBuf b; n <- fromBuf b
                        nTy <- fromBuf b; nVal <- fromBuf b
                        scope <- fromBuf b
-                       pure (ILet fc r n nTy nVal scope)
+                       pure (ILet fc lhsFC r n nTy nVal scope)
                4 => do fc <- fromBuf b; y <- fromBuf b;
                        ty <- fromBuf b; xs <- fromBuf b
                        pure (ICase fc y ty xs)
@@ -724,7 +884,7 @@ mutual
                        pure (IApp fc fn arg)
                8 => do fc <- fromBuf b; fn <- fromBuf b
                        y <- fromBuf b; arg <- fromBuf b
-                       pure (IImplicitApp fc fn y arg)
+                       pure (INamedApp fc fn y arg)
                9 => do fc <- fromBuf b; fn <- fromBuf b
                        arg <- fromBuf b
                        pure (IWithApp fc fn arg)
@@ -741,10 +901,10 @@ mutual
                         pure (IBindHere fc m y)
                15 => do fc <- fromBuf b; y <- fromBuf b
                         pure (IBindVar fc y)
-               16 => do fc <- fromBuf b; side <- fromBuf b
-                        y <- fromBuf b
-                        pattern <- fromBuf b
-                        pure (IAs fc side y pattern)
+               16 => do fc <- fromBuf b; nameFC <- fromBuf b
+                        side <- fromBuf b;
+                        y <- fromBuf b; pattern <- fromBuf b
+                        pure (IAs fc nameFC side y pattern)
                17 => do fc <- fromBuf b
                         pattern <- fromBuf b
                         pure (IMustUnify fc UnknownDot pattern)
@@ -781,6 +941,9 @@ mutual
                         ns <- fromBuf b
                         rhs <- fromBuf b
                         pure (IWithUnambigNames fc ns rhs)
+               31 => do fc <- fromBuf b; fn <- fromBuf b
+                        arg <- fromBuf b
+                        pure (IAutoApp fc fn arg)
                _ => corrupt "RawImp"
 
   export
@@ -828,11 +991,11 @@ mutual
 
   export
   TTC ImpTy where
-    toBuf b (MkImpTy fc n ty)
-        = do toBuf b fc; toBuf b n; toBuf b ty
+    toBuf b (MkImpTy fc nameFC n ty)
+        = do toBuf b fc; toBuf b nameFC; toBuf b n; toBuf b ty
     fromBuf b
-        = do fc <- fromBuf b; n <- fromBuf b; ty <- fromBuf b
-             pure (MkImpTy fc n ty)
+        = do fc <- fromBuf b; nameFC <- fromBuf b; n <- fromBuf b; ty <- fromBuf b
+             pure (MkImpTy fc nameFC n ty)
 
   export
   TTC ImpClause where
@@ -840,8 +1003,13 @@ mutual
         = do tag 0; toBuf b fc; toBuf b lhs; toBuf b rhs
     toBuf b (ImpossibleClause fc lhs)
         = do tag 1; toBuf b fc; toBuf b lhs
-    toBuf b (WithClause fc lhs wval flags cs)
-        = do tag 2; toBuf b fc; toBuf b lhs; toBuf b wval; toBuf b cs
+    toBuf b (WithClause fc lhs wval prf flags cs)
+        = do tag 2
+             toBuf b fc
+             toBuf b lhs
+             toBuf b wval
+             toBuf b prf
+             toBuf b cs
 
     fromBuf b
         = case !getTag of
@@ -851,8 +1019,9 @@ mutual
                1 => do fc <- fromBuf b; lhs <- fromBuf b;
                        pure (ImpossibleClause fc lhs)
                2 => do fc <- fromBuf b; lhs <- fromBuf b;
-                       wval <- fromBuf b; cs <- fromBuf b
-                       pure (WithClause fc lhs wval [] cs)
+                       wval <- fromBuf b; prf <- fromBuf b;
+                       cs <- fromBuf b
+                       pure (WithClause fc lhs wval prf [] cs)
                _ => corrupt "ImpClause"
 
   export
@@ -962,9 +1131,11 @@ mutual
         = do tag 6; toBuf b fc; toBuf b n; toBuf b lhs; toBuf b rhs
     toBuf b (IRunElabDecl fc tm)
         = do tag 7; toBuf b fc; toBuf b tm
-    toBuf b (IPragma f) = throw (InternalError "Can't write Pragma")
+    toBuf b (IPragma _ f) = throw (InternalError "Can't write Pragma")
     toBuf b (ILog n)
         = do tag 8; toBuf b n
+    toBuf b (IBuiltin fc type name)
+        = do tag 9; toBuf b fc; toBuf b type; toBuf b name
 
     fromBuf b
         = case !getTag of
@@ -994,4 +1165,19 @@ mutual
                        pure (IRunElabDecl fc tm)
                8 => do n <- fromBuf b
                        pure (ILog n)
+               9 => do fc <- fromBuf b
+                       type <- fromBuf b
+                       name <- fromBuf b
+                       pure (IBuiltin fc type name)
                _ => corrupt "ImpDecl"
+
+
+-- Log message with a RawImp
+export
+logRaw : {auto c : Ref Ctxt Defs} ->
+         (s : String) ->
+         {auto 0 _ : KnownTopic s} ->
+         Nat -> Lazy String -> RawImp -> Core ()
+logRaw str n msg tm
+    = when !(logging str n) $
+        do logString str n (msg ++ ": " ++ show tm)

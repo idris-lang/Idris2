@@ -6,7 +6,7 @@ import Parser.Unlit
 
 import Data.List
 import Data.Nat
-import Data.Strings
+import Data.String
 
 %default total
 
@@ -30,7 +30,7 @@ makeWith n srcline
           src = snd isrc
           lhs = pack (readLHS 0 (unpack src)) in
           mkWithArg markerM indent lhs ++ "\n" ++
-          mkWithPat markerM indent lhs ++ "\n"
+          mkWithPat markerM indent lhs
   where
     readLHS : (brackets : Nat) -> List Char -> List Char
     readLHS Z ('=' :: rest) = []

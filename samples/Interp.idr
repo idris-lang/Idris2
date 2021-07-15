@@ -52,6 +52,3 @@ main : IO ()
 main = do putStr "Enter a number: "
           x <- getLine
           printLn (interp [] fact (cast x))
-
-
-

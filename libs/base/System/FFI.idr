@@ -4,6 +4,8 @@
 
 module System.FFI
 
+%default total
+
 export
 data Struct : String -> -- C struct name
               List (String, Type) -> -- field names and types
@@ -15,11 +17,11 @@ data FieldType : String -> Type -> List (String, Type) -> Type where
      Later : FieldType n t ts -> FieldType n t (f :: ts)
 
 %extern
-prim__getField : {s : _} -> forall fs, ty . 
+prim__getField : {s : _} -> forall fs, ty .
                          Struct s fs -> (n : String) ->
                          FieldType n ty fs -> ty
 %extern
-prim__setField : {s : _} -> forall fs, ty . 
+prim__setField : {s : _} -> forall fs, ty .
                          Struct s fs -> (n : String) ->
                          FieldType n ty fs -> ty -> PrimIO ()
 
@@ -33,3 +35,18 @@ setField : {s : _} -> Struct s fs -> (n : String) ->
            {auto fieldok : FieldType n ty fs} -> ty -> IO ()
 setField s n val = primIO (prim__setField s n fieldok val)
 
+%foreign "C:idris2_malloc, libidris2_support, idris_memory.h"
+prim__malloc : (size : Int) -> PrimIO AnyPtr
+
+%foreign "C:idris2_free, libidris2_support, idris_memory.h"
+prim__free : AnyPtr -> PrimIO ()
+
+||| Allocate memory with libc `malloc`.
+export
+malloc : HasIO io => (size : Int) -> io AnyPtr
+malloc size = primIO $ prim__malloc size
+
+||| Release memory with libc `free`.
+export
+free : HasIO io => AnyPtr -> io ()
+free ptr = primIO $ prim__free ptr

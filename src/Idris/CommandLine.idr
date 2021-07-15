@@ -2,13 +2,16 @@ module Idris.CommandLine
 
 import IdrisPaths
 
+import Idris.Env
 import Idris.Version
 
+import Core.Name.Namespace
 import Core.Options
 
 import Data.List
+import Data.List1
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Data.Either
 
 import System
@@ -19,17 +22,23 @@ public export
 data PkgCommand
       = Build
       | Install
+      | InstallWithSrc
+      | MkDoc
       | Typecheck
       | Clean
       | REPL
+      | Init
 
 export
 Show PkgCommand where
   show Build = "--build"
   show Install = "--install"
+  show InstallWithSrc = "--install-with-src"
+  show MkDoc = "--mkdoc"
   show Typecheck = "--typecheck"
   show Clean = "--clean"
   show REPL = "--repl"
+  show Init = "--init"
 
 public export
 data DirCommand
@@ -38,6 +47,17 @@ data DirCommand
 export
 Show DirCommand where
   show LibDir = "--libdir"
+
+||| Help topics
+public export
+data HelpTopic
+  =
+    ||| Interactive debugging topics
+   HelpLogging
+
+recogniseHelpTopic : String -> Maybe HelpTopic
+recogniseHelpTopic "logging" = pure HelpLogging
+recogniseHelpTopic _ = Nothing
 
 ||| CLOpt - possible command line options
 public export
@@ -61,24 +81,30 @@ data CLOpt
   BuildDir String |
    ||| Set output directory
   OutputDir String |
+   ||| Generate profile data when compiling (backend dependent)
+  Profile |
    ||| Show the installation prefix
   ShowPrefix |
    ||| Display Idris version
   Version |
    ||| Display help text
-  Help |
+  Help (Maybe HelpTopic) |
    ||| Suppress the banner
   NoBanner |
    ||| Run Idris 2 in quiet mode
   Quiet |
    ||| Run Idris 2 in verbose mode (cancels quiet if it's the default)
   Verbose |
+   ||| Set the console width for REPL output
+  ConsoleWidth (Maybe Nat) |
+   ||| Whether to use color in the console output
+  Color Bool |
    ||| Set the log level globally
-  Logging Nat |
+  Logging LogLevel |
    ||| Add a package as a dependency
   PkgPath String |
    ||| Build or install a given package, depending on PkgCommand
-  Package PkgCommand String |
+  Package PkgCommand (Maybe String) |
    ||| Show locations of data/library directories
   Directory DirCommand |
    ||| The input Idris file
@@ -101,17 +127,33 @@ data CLOpt
   DumpVMCode String |
    ||| Run a REPL command then exit immediately
   RunREPL String |
+  IgnoreMissingIPKG |
   FindIPKG |
   Timing |
   DebugElabCheck |
-  BlodwenPaths
+  BlodwenPaths |
+  ||| Treat warnings as errors
+  WarningsAsErrors |
+  ||| Do not print shadowing warnings
+  IgnoreShadowingWarnings |
+  ||| Use SHA256 hashes to determine if a source file needs rebuilding instead
+  ||| of modification time.
+  HashesInsteadOfModTime |
+  ||| Use incremental code generation, if the backend supports it
+  IncrementalCG String |
+  ||| Use whole program compilation - overrides IncrementalCG if set
+  WholeProgram |
+  ||| Generate bash completion info
+  BashCompletion String String |
+  ||| Generate bash completion script
+  BashCompletionScript String
 
 ||| Extract the host and port to bind the IDE socket to
 export
 ideSocketModeAddress : List CLOpt -> (String, Int)
 ideSocketModeAddress []  = ("localhost", 38398)
 ideSocketModeAddress (IdeModeSocket hp :: _) =
-  let (h, p) = Strings.break (== ':') hp
+  let (h, p) = String.break (== ':') hp
       port = fromMaybe 38398 (portPart p >>= parsePositive)
       host = if h == "" then "localhost" else h
   in (host, port)
@@ -125,18 +167,27 @@ ideSocketModeAddress (_ :: rest) = ideSocketModeAddress rest
 formatSocketAddress : (String, Int) -> String
 formatSocketAddress (host, port) = host ++ ":" ++ show port
 
-data OptType = Required String | Optional String | RequiredNat String
+data OptType
+  = Required String
+   | Optional String
+   | RequiredNat String
+   | AutoNat String
+   | RequiredLogLevel String
 
 Show OptType where
   show (Required a) = "<" ++ a ++ ">"
   show (RequiredNat a) = "<" ++ a ++ ">"
+  show (RequiredLogLevel a) = "<" ++ a ++ ">"
   show (Optional a) = "[" ++ a ++ "]"
+  show (AutoNat a) = "<" ++ a ++ ">"
 
 ActType : List OptType -> Type
 ActType [] = List CLOpt
 ActType (Required a :: as) = String -> ActType as
 ActType (RequiredNat a :: as) = Nat -> ActType as
+ActType (RequiredLogLevel a :: as) = LogLevel -> ActType as
 ActType (Optional a :: as) = Maybe String -> ActType as
+ActType (AutoNat a :: as) = Maybe Nat -> ActType as
 
 record OptDesc where
   constructor MkOpt
@@ -162,6 +213,10 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Don't implicitly import Prelude"),
            MkOpt ["--codegen", "--cg"] [Required "backend"] (\f => [SetCG f])
               (Just $ "Set code generator " ++ showDefault (codegen defaultSession)),
+           MkOpt ["--incremental-cg", "--inc"] [Required "backend"] (\f => [IncrementalCG f])
+             (Just "Incremental code generation on given backend"),
+           MkOpt ["--whole-program", "--wp"] [] [WholeProgram]
+             (Just "Use whole program compilation (overrides --inc)"),
            MkOpt ["--directive"] [Required "directive"] (\d => [Directive d])
               (Just $ "Pass a directive to the current code generator"),
            MkOpt ["--package", "-p"] [Required "package"] (\f => [PkgPath f])
@@ -172,6 +227,18 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just $ "Set build directory"),
            MkOpt ["--output-dir"] [Required "dir"] (\d => [OutputDir d])
               (Just $ "Set output directory"),
+           MkOpt ["--profile"] [] [Profile]
+              (Just "Generate profile data when compiling, if supported"),
+
+           optSeparator,
+           MkOpt ["-Werror"] [] [WarningsAsErrors]
+              (Just "Treat warnings as errors"),
+           MkOpt ["-Wno-shadowing"] [] [IgnoreShadowingWarnings]
+              (Just "Do not print shadowing warnings"),
+
+           optSeparator,
+           MkOpt ["-Xcheck-hashes"] [] [HashesInsteadOfModTime]
+             (Just "Use SHA256 hashes instead of modification time to determine if a source file needs rebuilding"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
@@ -182,18 +249,33 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Show library directory"),
 
            optSeparator,
-           MkOpt ["--build"] [Required "package file"] (\f => [Package Build f])
+           MkOpt ["--init"] [Optional "package file"]
+              (\ f => [Package Init f])
+              (Just "Interactively initialise a new project"),
+
+           MkOpt ["--build"] [Optional "package file"]
+               (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),
-           MkOpt ["--install"] [Required "package file"] (\f => [Package Install f])
+           MkOpt ["--install"] [Optional "package file"]
+              (\f => [Package Install f])
               (Just "Install the given package"),
-           MkOpt ["--typecheck"] [Required "package file"] (\f => [Package Typecheck f])
+           MkOpt ["--install-with-src"] [Optional "package file"]
+              (\f => [Package InstallWithSrc f])
+              (Just "Install the given package"),
+           MkOpt ["--mkdoc"] [Optional "package file"]
+              (\f => [Package MkDoc f])
+              (Just "Build documentation for the given package"),
+           MkOpt ["--typecheck"] [Optional "package file"]
+              (\f => [Package Typecheck f])
               (Just "Typechecks the given package without code generation"),
-           MkOpt ["--clean"] [Required "package file"] (\f => [Package Clean f])
+           MkOpt ["--clean"] [Optional "package file"] (\f => [Package Clean f])
               (Just "Clean intermediate files/executables for the given package"),
-           MkOpt ["--repl"] [Required "package file"] (\f => [Package REPL f])
+           MkOpt ["--repl"] [Optional "package file"] (\f => [Package REPL f])
               (Just "Build the given package and launch a REPL instance."),
            MkOpt ["--find-ipkg"] [] [FindIPKG]
-              (Just "Find and use an .ipkg file in a parent directory"),
+              (Just "Find and use an .ipkg file in a parent directory."),
+           MkOpt ["--ignore-missing-ipkg"] [] [IgnoreMissingIPKG]
+              (Just "Fail silently if a dependency is missing."),
 
            optSeparator,
            MkOpt ["--ide-mode"] [] [IdeMode]
@@ -214,15 +296,21 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Suppress the banner"),
            MkOpt ["--quiet", "-q"] [] [Quiet]
               (Just "Quiet mode; display fewer messages"),
+           MkOpt ["--console-width"] [AutoNat "console width"] (\l => [ConsoleWidth l])
+              (Just "Width for console output (0 for unbounded) (auto by default)"),
+           MkOpt ["--color", "--colour"] [] ([Color True])
+              (Just "Forces colored console output (enabled by default)"),
+           MkOpt ["--no-color", "--no-colour"] [] ([Color False])
+              (Just "Disables colored console output"),
            MkOpt ["--verbose"] [] [Verbose]
               (Just "Verbose mode (default)"),
-           MkOpt ["--log"] [RequiredNat "log level"] (\l => [Logging l])
+           MkOpt ["--log"] [RequiredLogLevel "log level"] (\l => [Logging l])
               (Just "Global log level (0 by default)"),
 
            optSeparator,
            MkOpt ["--version", "-v"] [] [Version]
               (Just "Display version string"),
-           MkOpt ["--help", "-h", "-?"] [] [Help]
+           MkOpt ["--help", "-h", "-?"] [Optional "topic"] (\ tp => [Help (tp >>= recogniseHelpTopic)])
               (Just "Display help text"),
 
            -- Internal debugging options
@@ -239,25 +327,40 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--dumpvmcode"] [Required "output file"] (\f => [DumpVMCode f])
               Nothing, -- dump VM Code to the given file
            MkOpt ["--debug-elab-check"] [] [DebugElabCheck]
-              Nothing -- do more elaborator checks (currently conversion in LinearCheck)
+              Nothing, -- do more elaborator checks (currently conversion in LinearCheck)
+
+           optSeparator,
+           -- bash completion
+           MkOpt ["--bash-completion"]
+                 [ Required "input"
+                 , Required "previous input"]
+                 (\w1,w2 => [BashCompletion w1 w2])
+                 (Just "Print bash autocompletion information"),
+           MkOpt ["--bash-completion-script"]
+                 [ Required "function name" ]
+                 (\n => [BashCompletionScript n])
+                 (Just "Generate a bash script to activate autocompletion for Idris2")
            ]
 
-optsUsage : (options : List OptDesc) -> String
-optsUsage options = let optsShow = map optShow options
-                        maxOpt = foldr (\(opt, _), acc => max acc (length opt)) 0 optsShow in
-                        concatMap (optUsage maxOpt) optsShow
+optShow : OptDesc -> (String, Maybe String)
+optShow (MkOpt [] _ _ _) = ("", Just "")
+optShow (MkOpt flags argdescs action help) = (showSep ", " flags ++ " " ++
+                                              showSep " " (map show argdescs),
+                                              help)
   where
     showSep : String -> List String -> String
     showSep sep [] = ""
     showSep sep [x] = x
     showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
 
-    optShow : OptDesc -> (String, Maybe String)
-    optShow (MkOpt [] _ _ _) = ("", Just "")
-    optShow (MkOpt flags argdescs action help) = (showSep ", " flags ++ " " ++
-                                                  showSep " " (map show argdescs),
-                                                  help)
+firstColumnWidth : Nat
+firstColumnWidth = let maxOpt = foldr max 0 $ map (length . fst . optShow) options
+                       maxEnv = foldr max 0 $ map (length . .name) envs in
+                       max maxOpt maxEnv
 
+makeTextFromOptionsOrEnvs : List (String, Maybe String) -> String
+makeTextFromOptionsOrEnvs rows = concatMap (optUsage firstColumnWidth) rows
+  where
     optUsage : Nat -> (String, Maybe String) -> String
     optUsage maxOpt (optshow, help) = maybe ""  -- Don't show anything if there's no help string (that means
                                                 -- it's an internal option)
@@ -266,16 +369,25 @@ optsUsage options = let optsShow = map optShow options
                                              h ++ "\n")
                                       help
 
+optsUsage : String
+optsUsage = makeTextFromOptionsOrEnvs $ map optShow options
+
+envsUsage : String
+envsUsage = makeTextFromOptionsOrEnvs $ map (\e => (e.name, Just e.help)) envs
+
 export
 versionMsg : String
-versionMsg = "Idris 2, version " ++ showVersion True version
+versionMsg = "Idris 2, version " ++ show version
 
 export
 usage : String
 usage = versionMsg ++ "\n" ++
         "Usage: idris2 [options] [input file]\n\n" ++
         "Available options:\n" ++
-        optsUsage options
+        optsUsage ++
+        "\n" ++
+        "Environment variables:\n" ++
+        envsUsage
 
 checkNat : Integer -> Maybe Nat
 checkNat n = toMaybe (n >= 0) (integerToNat n)
@@ -283,16 +395,32 @@ checkNat n = toMaybe (n >= 0) (integerToNat n)
 processArgs : String -> (args : List OptType) -> List String -> ActType args ->
               Either String (List CLOpt, List String)
 processArgs flag [] xs f = Right (f, xs)
+-- Missing required arguments
 processArgs flag (opt@(Required _) :: as) [] f =
+  Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
+processArgs flag (opt@(RequiredNat _) :: as) [] f =
+  Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
+processArgs flag (opt@(RequiredLogLevel _) :: as) [] f =
   Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
 processArgs flag (Optional a :: as) [] f =
   processArgs flag as [] (f Nothing)
-processArgs flag (opt@(RequiredNat _) :: as) [] f =
+processArgs flag (opt@(AutoNat _) :: as) [] f =
   Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
+-- Happy cases
 processArgs flag (RequiredNat a :: as) (x :: xs) f =
   do arg <- maybeToEither ("Expected Nat argument " ++ show x ++ " for flag " ++ flag)
                           (parseInteger x >>= checkNat)
      processArgs flag as xs (f arg)
+processArgs flag (RequiredLogLevel a :: as) (x :: xs) f =
+  do arg <- maybeToEither ("Expected LogLevel argument " ++ show x ++ " for flag " ++ flag)
+                          (parseLogLevel x)
+     processArgs flag as xs (f arg)
+processArgs flag (AutoNat a :: as) ("auto" :: xs) f =
+  processArgs flag as xs (f Nothing)
+processArgs flag (AutoNat a :: as) (x :: xs) f =
+  do arg <- maybeToEither ("Expected Nat or \"auto\" argument " ++ show x ++ " for flag " ++ flag)
+                          (parseInteger x >>= checkNat)
+     processArgs flag as xs (f (Just arg))
 processArgs flag (Required a :: as) (x :: xs) f =
   processArgs flag as xs (f x)
 processArgs flag (Optional a :: as) (x :: xs) f =
@@ -333,3 +461,8 @@ getCmdOpts : IO (Either String (List CLOpt))
 getCmdOpts = do (_ :: opts) <- getArgs
                     | _ => pure (Left "Invalid command line")
                 pure $ getOpts opts
+
+||| List of all command line option flags.
+export
+optionFlags : List String
+optionFlags = options >>= flags

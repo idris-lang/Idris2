@@ -2,6 +2,7 @@ module Idris.ModTree
 
 import Core.Binary
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Directory
 import Core.Metadata
@@ -14,22 +15,24 @@ import Idris.Desugar
 import Idris.Error
 import Idris.Parser
 import Idris.ProcessIdr
-import Idris.REPLCommon
+import Idris.REPL.Common
 import Idris.Syntax
+import Idris.Pretty
 
 import Data.List
-import Data.StringMap
+import Data.Either
 
 import System.Directory
 import System.File
 
-import Utils.Either
+import Libraries.Data.StringMap
+import Libraries.Data.String.Extra as String
 
 %default covering
 
 record ModTree where
   constructor MkModTree
-  nspace : List String
+  nspace : ModuleIdent
   sourceFile : Maybe String
   deps : List ModTree
 
@@ -48,25 +51,24 @@ public export
 record BuildMod where
   constructor MkBuildMod
   buildFile : String
-  buildNS : List String
-  imports : List (List String)
+  buildNS : ModuleIdent
+  imports : List ModuleIdent
 
 export
 Show BuildMod where
-  show t = buildFile t ++ " [" ++ showSep ", " (map showNS (imports t)) ++ "]"
-    where
-      showNS : List String -> String
-      showNS ns = showSep "." (reverse ns)
+  show t = buildFile t ++ " [" ++ showSep ", " (map show (imports t)) ++ "]"
 
 data AllMods : Type where
 
 mkModTree : {auto c : Ref Ctxt Defs} ->
-            {auto a : Ref AllMods (List (List String, ModTree))} ->
+            {auto o : Ref ROpts REPLOpts} ->
+            {auto a : Ref AllMods (List (ModuleIdent, ModTree))} ->
             FC ->
-            (done : List (List String)) -> -- if 'mod' is here we have a cycle
-            (mod : List String) ->
+            (done : List ModuleIdent) -> -- if 'mod' is here we have a cycle
+            (modFP : Maybe FileName) -> -- Sometimes we know already know what the file name is
+            (mod : ModuleIdent) ->      -- Otherwise we'll compute it from the module name
             Core ModTree
-mkModTree loc done mod
+mkModTree loc done modFP mod
   = if mod `elem` done
        then throw (CyclicImports (done ++ [mod]))
        else
@@ -76,10 +78,10 @@ mkModTree loc done mod
                     -- If we've seen it before, reuse what we found
                     case lookup mod all of
                          Nothing =>
-                           do file <- nsToSource loc mod
-                              modInfo <- readHeader file
+                           do file <- maybe (nsToSource loc mod) pure modFP
+                              modInfo <- readHeader file mod
                               let imps = map path (imports modInfo)
-                              ms <- traverse (mkModTree loc (mod :: done)) imps
+                              ms <- traverse (mkModTree loc (mod :: done) Nothing) imps
                               let mt = MkModTree mod (Just file) ms
                               all <- get AllMods
                               put AllMods ((mod, mt) :: all)
@@ -89,6 +91,7 @@ mkModTree loc done mod
                 (\err =>
                     case err of
                          CyclicImports _ => throw err
+                         ParseFail _ _ => throw err
                          _ => pure (MkModTree mod Nothing []))
 
 data DoneMod : Type where
@@ -120,6 +123,7 @@ mkBuildMods mod
 -- Given a main file name, return the list of modules that need to be
 -- built for that main file, in the order they need to be built
 -- Return an empty list if it turns out it's in the 'done' list
+export
 getBuildMods : {auto c : Ref Ctxt Defs} ->
                {auto o : Ref ROpts REPLOpts} ->
                FC -> (done : List BuildMod) ->
@@ -127,75 +131,84 @@ getBuildMods : {auto c : Ref Ctxt Defs} ->
                Core (List BuildMod)
 getBuildMods loc done fname
     = do a <- newRef AllMods []
-         d <- getDirs
-         fname_ns <- pathToNS (working_dir d) (source_dir d) fname
+         fname_ns <- ctxtPathToNS fname
          if fname_ns `elem` map buildNS done
             then pure []
             else
-              do t <- mkModTree {a} loc [] fname_ns
+              do t <- mkModTree {a} loc [] (Just fname) fname_ns
                  dm <- newRef DoneMod empty
                  o <- newRef BuildOrder []
                  mkBuildMods {d=dm} {o} t
                  pure (reverse !(get BuildOrder))
 
-fnameModified : String -> Core Integer
-fnameModified fname
-    = do Right f <- coreLift $ openFile fname Read
-             | Left err => throw (FileErr fname err)
-         Right t <- coreLift $ fileModifiedTime f
-             | Left err => do coreLift $ closeFile f
-                              throw (FileErr fname err)
-         coreLift $ closeFile f
-         pure (cast t)
+needsBuildingTime : (sourceFile : String) -> (ttcFile : String) ->
+                    (depFiles : List String) -> Core Bool
+needsBuildingTime sourceFile ttcFile depFiles
+  = do ttcTime  <- modTime ttcFile
+       srcTime  <- modTime sourceFile
+       depTimes <- traverse modTime depFiles
+       pure $ any (>= ttcTime) (srcTime :: depTimes)
+
+checkDepHashes : {auto c : Ref Ctxt Defs} ->
+                 String -> Core Bool
+checkDepHashes depFileName
+  = catch (do depCodeHash            <- hashFile depFileName
+              depTTCFileName         <- getTTCFileName depFileName "ttc"
+              (depStoredCodeHash, _) <- readHashes depTTCFileName
+              pure $ depCodeHash /= depStoredCodeHash)
+          (\error => pure False)
+
+
+||| Build from source if any of the dependencies, or the associated source file,
+||| have been modified from the stored hashes.
+needsBuildingHash : {auto c : Ref Ctxt Defs} ->
+                    (sourceFile : String) -> (ttcFile : String) ->
+                    (depFiles : List String) -> Core Bool
+needsBuildingHash sourceFile ttcFile depFiles
+  = do  codeHash            <- hashFile sourceFile
+        (storedCodeHash, _) <- readHashes ttcFile
+        depFilesHashDiffers <- any id <$> traverse checkDepHashes depFiles
+        pure $ codeHash /= storedCodeHash || depFilesHashDiffers
 
 buildMod : {auto c : Ref Ctxt Defs} ->
            {auto s : Ref Syn SyntaxInfo} ->
            {auto o : Ref ROpts REPLOpts} ->
            FC -> Nat -> Nat -> BuildMod ->
            Core (List Error)
--- Build from source if any of the dependencies, or the associated source
--- file, have a modification time which is newer than the module's ttc
--- file
 buildMod loc num len mod
    = do clearCtxt; addPrimitives
         lazyActive True; setUnboundImplicits True
-        let src = buildFile mod
-        mttc <- getTTCFileName src "ttc"
+        session <- getSession
+
+        let sourceFile = buildFile mod
+        let modNamespace = buildNS mod
+        ttcFile <- getTTCFileName sourceFile "ttc"
         -- We'd expect any errors in nsToPath to have been caught by now
         -- since the imports have been built! But we still have to check.
         depFilesE <- traverse (nsToPath loc) (imports mod)
         let (ferrs, depFiles) = partitionEithers depFilesE
-        ttcTime <- catch (do t <- fnameModified mttc
-                             pure (Just t))
-                         (\err => pure Nothing)
-        srcTime <- fnameModified src
-        depTimes <- traverse (\f => do t <- fnameModified f
-                                       pure (f, t)) depFiles
-        let needsBuilding =
-               case ttcTime of
-                    Nothing => True
-                    Just t => any (\x => x > t) (srcTime :: map snd depTimes)
+
+        needsBuilding <- (if session.checkHashesInsteadOfModTime
+          then needsBuildingHash else needsBuildingTime) sourceFile ttcFile depFiles
+
         u <- newRef UST initUState
-        m <- newRef MD initMetadata
+        m <- newRef MD (initMetadata (PhysicalIdrSrc modNamespace))
         put Syn initSyntax
 
-        let showMod = showSep "." (reverse (buildNS mod))
+        errs <- if (not needsBuilding) then pure [] else
+           do let pad = minus (length $ show len) (length $ show num)
+              let msg : Doc IdrisAnn
+                  = pretty (String.replicate pad ' ') <+> pretty num
+                    <+> slash <+> pretty len <+> colon
+                    <++> pretty "Building" <++> pretty mod.buildNS
+                    <++> parens (pretty sourceFile)
+              process {u} {m} msg sourceFile modNamespace
 
-        if needsBuilding
-           then do let msg = show num ++ "/" ++ show len ++
-                                   ": Building " ++ showMod ++
-                                   " (" ++ src ++ ")"
-                   [] <- process {u} {m} msg src
-                      | errs => do emitWarnings
-                                   traverse emitError errs
-                                   pure (ferrs ++ errs)
-                   emitWarnings
-                   traverse_ emitError ferrs
-                   pure ferrs
-           else do emitWarnings
-                   traverse_ emitError ferrs
-                   pure ferrs
+        defs <- get Ctxt
+        ws <- emitWarningsAndErrors (if null errs then ferrs else errs)
+        pure (ws ++ if null errs then ferrs else ferrs ++ errs)
 
+export
 buildMods : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             {auto o : Ref ROpts REPLOpts} ->
@@ -216,19 +229,20 @@ buildDeps : {auto c : Ref Ctxt Defs} ->
             (mainFile : String) ->
             Core (List Error)
 buildDeps fname
-    = do mods <- getBuildMods toplevelFC [] fname
-         ok <- buildMods toplevelFC 1 (length mods) mods
+    = do mods <- getBuildMods EmptyFC [] fname
+         ok <- buildMods EmptyFC 1 (length mods) mods
          case ok of
               [] => do -- On success, reload the main ttc in a clean context
                        clearCtxt; addPrimitives
-                       put MD initMetadata
+                       modIdent <- ctxtPathToNS fname
+                       put MD (initMetadata (PhysicalIdrSrc modIdent))
                        mainttc <- getTTCFileName fname "ttc"
-                       log 10 $ "Reloading " ++ show mainttc ++ " from " ++ fname
+                       log "import" 10 $ "Reloading " ++ show mainttc ++ " from " ++ fname
                        readAsMain mainttc
 
                        -- Load the associated metadata for interactive editing
                        mainttm <- getTTCFileName fname "ttm"
-                       log 10 $ "Reloading " ++ show mainttm
+                       log "import" 10 $ "Reloading " ++ show mainttm
                        readFromTTM mainttm
                        pure []
               errs => pure errs -- Error happened, give up
@@ -251,10 +265,10 @@ buildAll : {auto c : Ref Ctxt Defs} ->
            (allFiles : List String) ->
            Core (List Error)
 buildAll allFiles
-    = do mods <- getAllBuildMods toplevelFC [] allFiles
+    = do mods <- getAllBuildMods EmptyFC [] allFiles
          -- There'll be duplicates, so if something is already built, drop it
          let mods' = dropLater mods
-         buildMods toplevelFC 1 (length mods') mods'
+         buildMods EmptyFC 1 (length mods') mods'
   where
     dropLater : List BuildMod -> List BuildMod
     dropLater [] = []

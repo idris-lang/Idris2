@@ -1,3 +1,4 @@
-$1 Case.idr --check
-
 rm -rf build
+
+$1 --no-color --console-width 0 Case.idr --check
+

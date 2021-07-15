@@ -16,7 +16,7 @@ data Usage = None | Linear | Unrestricted
 
 -- Not sure about this, it is a horrible hack, but it makes the notation
 -- a bit nicer
-public export 
+public export
 fromInteger : (x : Integer) -> {auto _ : Either (x = 0) (x = 1)} -> Usage
 fromInteger 0 = None
 fromInteger 1 = Linear
@@ -48,6 +48,14 @@ data L : (io : Type -> Type) ->
             (1 _ : L io {use=u_act} a) ->
             (1 _ : ContType io u_act u_k a b) ->
             L io {use=u_k} b
+
+public export
+L0 : (io : Type -> Type) -> (ty : Type) -> Type
+L0 io ty = L io {use = 0} ty
+
+public export
+L1 : (io : Type -> Type) -> (ty : Type) -> Type
+L1 io ty = L io {use = 1} ty
 
 ContType io None u_k a b = (0 _ : a) -> L io {use=u_k} b
 ContType io Linear u_k a b = (1 _ : a) -> L io {use=u_k} b
@@ -95,7 +103,7 @@ Applicative io => Applicative (L io) where
 
 export
 (Applicative m, LinearBind m) => Monad (L m) where
-  (>>=) = Bind
+  (>>=) a k = Bind a k
 
 -- prioritise this one for concrete LIO, so we get the most useful
 -- linearity annotations.
@@ -106,6 +114,20 @@ export %inline
         (1 _ : ContType io u_act u_k a b) -> L io {use=u_k} b
 (>>=) = Bind
 
+export
+delay : {u_act : _} -> (1 _ : L io {use=u_k} b) -> ContType io u_act u_k () b
+delay mb = case u_act of
+  None => \ _ => mb
+  Linear => \ () => mb
+  Unrestricted => \ _ => mb
+
+export %inline
+(>>) : {u_act : _} ->
+        LinearBind io =>
+        (1 _ : L io {use=u_act} ()) ->
+        (1 _ : L io {use=u_k} b) -> L io {use=u_k} b
+ma >> mb = ma >>= delay mb
+
 export %inline
 pure0 : (0 x : a) -> L io {use=0} a
 pure0 = Pure0
@@ -115,9 +137,9 @@ pure1 : (1 x : a) -> L io {use=1} a
 pure1 = Pure1
 
 export
-(LinearBind io, HasIO io) => HasIO (L io) where
-  liftIO p = Action (liftIO p)
+(LinearBind io, HasLinearIO io) => HasLinearIO (L io) where
+  liftIO1 p = Action (liftIO1 p)
 
 public export
 LinearIO : (Type -> Type) -> Type
-LinearIO io = (LinearBind io, HasIO io)
+LinearIO io = (LinearBind io, HasLinearIO io)

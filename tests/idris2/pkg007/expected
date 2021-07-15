@@ -1,0 +1,6 @@
+Package name: Package authors: Package options: Source directory: 1/4: Building A.Path.Of.Dires.First (A/Path/Of/Dires/First.idr)
+2/4: Building A.Path.Of.Dires.Second (A/Path/Of/Dires/Second.idr)
+3/4: Building Another.One.Third (Another/One/Third.idr)
+4/4: Building Another.Fourth (Another/Fourth.idr)
+Package name: Package authors: Package options: Source directory: 1/2: Building Yet.Another.Path (src/Yet/Another/Path.idr)
+2/2: Building And.A.Proof (src/And/A/Proof.idr)

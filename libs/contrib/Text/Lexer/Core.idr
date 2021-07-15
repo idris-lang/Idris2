@@ -4,7 +4,7 @@ import public Control.Delayed
 import Data.Bool
 import Data.List
 import Data.Nat
-import Data.Strings
+import Data.String
 
 ||| A language of token recognisers.
 ||| @ consumes If `True`, this recogniser is guaranteed to consume at
@@ -78,8 +78,8 @@ reject = Lookahead False
 export
 concatMap : (a -> Recognise c) -> (xs : List a) ->
             Recognise (c && (isCons xs))
-concatMap {c} _ [] = rewrite andFalseFalse c in Empty
-concatMap {c} f (x :: xs)
+concatMap _ [] = rewrite andFalseFalse c in Empty
+concatMap f (x :: xs)
    = rewrite andTrueNeutral c in
      rewrite sym (orSameAndRightNeutral c (isCons xs)) in
              SeqEmpty (f x) (Core.concatMap f xs)
@@ -199,13 +199,12 @@ tokenise pred line col acc tmap str
 export
 lex : TokenMap a -> String -> (List (TokenData a), (Int, Int, String))
 lex tmap str
-    = let (ts, (l, c, str')) = tokenise (const False) 0 0 [] tmap (unpack str) in
+    = let (ts, (l, c, str')) = tokenise (const False) 0 0 [] tmap (fastUnpack str) in
           (ts, (l, c, pack str'))
 
 export
 lexTo : (TokenData a -> Bool) ->
         TokenMap a -> String -> (List (TokenData a), (Int, Int, String))
 lexTo pred tmap str
-    = let (ts, (l, c, str')) = tokenise pred 0 0 [] tmap (unpack str) in
+    = let (ts, (l, c, str')) = tokenise pred 0 0 [] tmap (fastUnpack str) in
           (ts, (l, c, pack str'))
-

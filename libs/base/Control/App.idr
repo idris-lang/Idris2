@@ -2,6 +2,9 @@ module Control.App
 
 import Data.IORef
 
+%default covering
+
+||| `Error` is a type synonym for `Type`, specify for exception handling.
 public export
 Error : Type
 Error = Type
@@ -11,6 +14,8 @@ data HasErr : Error -> List Error -> Type where
      Here : HasErr e (e :: es)
      There : HasErr e es -> HasErr e (e' :: es)
 
+||| States whether the program's execution path is linear or might throw exceptions so that we can know
+||| whether it is safe to reference linear resources.
 public export
 data Path = MayThrow | NoThrow
 
@@ -59,14 +64,14 @@ PrimApp : Type -> Type
 PrimApp a = (1 x : %World) -> AppRes a
 
 prim_app_pure : a -> PrimApp a
-prim_app_pure x = \w => MkAppRes x w
+prim_app_pure = MkAppRes
 
 prim_app_bind : (1 act : PrimApp a) -> (1 k : a -> PrimApp b) -> PrimApp b
 prim_app_bind fn k w
     = let MkAppRes x' w' = fn w in k x' w'
 
 toPrimApp : (1 act : IO a) -> PrimApp a
-toPrimApp x 
+toPrimApp x
     = \w => case toPrim x w of
                  MkIORes r w => MkAppRes r w
 
@@ -74,9 +79,9 @@ PrimApp1 : Usage -> Type -> Type
 PrimApp1 u a = (1 x : %World) -> App1Res u a
 
 toPrimApp1 : {u : _} -> (1 act : IO a) -> PrimApp1 u a
-toPrimApp1 x 
+toPrimApp1 x
     = \w => case toPrim x w of
-                 MkIORes r w => 
+                 MkIORes r w =>
                      case u of
                           One => MkApp1Res1 r w
                           Any => MkApp1ResW r w
@@ -86,6 +91,11 @@ prim_app1_bind : (1 act : PrimApp1 Any a) ->
 prim_app1_bind fn k w
     = let MkApp1ResW x' w' = fn w in k x' w'
 
+||| A type supports throwing and catching exceptions. See `interface Exception err e` for details.
+||| @ l  An implicit Path states whether the program's execution path is linear or might throw
+|||      exceptions. The default value is `MayThrow` which represents that the program might throw.
+||| @ es A list of exception types that can be thrown. Constrained interfaces can be defined by
+|||      parameterising with a list of errors `es`.
 export
 data App : {default MayThrow l : Path} ->
            (es : List Error) -> Type -> Type where
@@ -124,11 +134,19 @@ bindApp1 {u=Any} (MkApp1 fn)
                               MkApp1 res = k x' in
                               res w')
 
+||| When type is present in app "errors" list, app is allowed to perform I/O.
+public export
+data AppHasIO : Type where
+
+public export
+Uninhabited AppHasIO where
+  uninhabited _ impossible
+
 absurdWith1 : (1 w : b) -> OneOf e NoThrow -> any
 absurdWith1 w (First p) impossible
 
-absurdWithVoid : (1 w : b) -> OneOf [Void] t -> any
-absurdWithVoid w (First p) impossible
+absurdWithAppHasIO : (1 w : b) -> OneOf [AppHasIO] t -> any
+absurdWithAppHasIO w (First p) impossible
 
 absurdWith2 : (1 x : a) -> (1 w : b) -> OneOf e NoThrow -> any
 absurdWith2 x w (First p) impossible
@@ -161,7 +179,7 @@ app1 (MkApp1 prog)
               MkAppRes (Right x') world'
 
 pureApp : a -> App {l} e a
-pureApp x = MkApp $ \w => MkAppRes (Right x) w
+pureApp x = MkApp $ MkAppRes (Right x)
 
 export
 Functor (App {l} es) where
@@ -188,13 +206,23 @@ namespace App1
           (1 k : Cont1Type u a u' e b) -> App1 {u=u'} e b
   (>>=) = bindApp1
 
+  delay : {u_act : _} -> (1 _ : App1 {u=u_k} e b) -> Cont1Type u_act () u_k e b
+  delay mb = case u_act of
+                  One => \ () => mb
+                  Any => \ _ => mb
+
+  export %inline
+  (>>) : {u_act : _} -> (1 _ : App1 {u=u_act} e ()) ->
+         (1 _ : App1 {u=u_k} e b) -> App1 {u=u_k} e b
+  ma >> mb = ma >>= delay mb
+
   export
   pure : (x : a) -> App1 {u=Any} e a
-  pure x =  MkApp1 $ \w => MkApp1ResW x w
+  pure x =  MkApp1 $ MkApp1ResW x
 
   export
   pure1 : (1 x : a) -> App1 e a
-  pure1 x =  MkApp1 $ \w => MkApp1Res1 x w
+  pure1 x =  MkApp1 $ MkApp1Res1 x
 
 export
 data State : (tag : a) -> Type -> List Error -> Type where
@@ -213,21 +241,21 @@ get tag @{MkState r}
           MkAppRes (Right val)
 
 export
-put : (0 tag : _) -> State tag t e => (1 val : t) -> App {l} e ()
+put : (0 tag : _) -> State tag t e => (val : t) -> App {l} e ()
 put tag @{MkState r} val
     = MkApp $
           prim_app_bind (toPrimApp $ writeIORef r val) $ \val =>
           MkAppRes (Right ())
 
 export
-modify : (0 tag : _) -> State tag t e => (1 p : t -> t) -> App {l} e ()
+modify : (0 tag : _) -> State tag t e => (p : t -> t) -> App {l} e ()
 modify tag f
     = let (>>=) = bindL in
           do x <- get tag
              put tag (f x)
 
 export
-new : t -> (1 p : State tag t e => App {l} e a) -> App {l} e a
+new : t -> (p : State tag t e => App {l} e a) -> App {l} e a
 new val prog
     = MkApp $
          prim_app_bind (toPrimApp $ newIORef val) $ \ref =>
@@ -235,10 +263,10 @@ new val prog
                 MkApp res = prog @{st} in
                 res
 
+||| An alias for `HasErr`.
 public export
-interface Exception err e where
-  throw : err -> App e a
-  catch : App e a -> (err -> App e a) -> App e a
+Exception : Error -> List Error -> Type
+Exception = HasErr
 
 findException : HasErr e es -> e -> OneOf es MayThrow
 findException Here err = First err
@@ -249,10 +277,11 @@ findError Here (First err) = Just err
 findError (There p) (Later q) = findError p q
 findError _ _ = Nothing
 
-export
-HasErr e es => Exception e es where
-  throw err = MkApp $ MkAppRes (Left (findException %search err))
-  catch (MkApp prog) handler
+throw : HasErr err es => err -> App es a
+throw err = MkApp $ MkAppRes (Left (findException %search err))
+
+catch : HasErr err es => App es a -> (err -> App es a) -> App es a
+catch (MkApp prog) handler
       = MkApp $
            prim_app_bind prog $ \res =>
               case res of
@@ -272,13 +301,13 @@ handle (MkApp prog) onok onerr
     = MkApp $
            prim_app_bind prog $ \res =>
              case res of
-                  Left (First err) => 
+                  Left (First err) =>
                         let MkApp err' = onerr err in
                             err'
-                  Left (Later p) => 
+                  Left (Later p) =>
                         -- different exception, so rethrow
                         MkAppRes (Left p)
-                  Right ok => 
+                  Right ok =>
                         let MkApp ok' = onok ok in
                             ok'
 
@@ -293,8 +322,10 @@ lift (MkApp prog)
 
 public export
 Init : List Error
-Init = [Void]
+Init = [AppHasIO]
 
+||| The only way provided by `Control.App` to run an App.
+||| @ Init A concrete list of errors.
 export
 run : App {l} Init a -> IO a
 run (MkApp prog)
@@ -310,7 +341,7 @@ noThrow : App Init a -> App Init {l=NoThrow} a
 noThrow (MkApp prog)
     = MkApp $ \w =>
               case prog w of
-                   MkAppRes (Left err) w => absurdWithVoid w err
+                   MkAppRes (Left err) w => absurdWithAppHasIO w err
                    MkAppRes (Right res) w => MkAppRes (Right res) w
 
 public export
@@ -322,13 +353,13 @@ interface PrimIO e where
   fork : (forall e' . PrimIO e' => App {l} e' ()) -> App e ()
 
 export
-HasErr Void e => PrimIO e where
+HasErr AppHasIO e => PrimIO e where
   primIO op =
         MkApp $ \w =>
             let MkAppRes r w = toPrimApp op w in
                 MkAppRes (Right r) w
 
-  primIO1 op = MkApp1 $ \w => toPrimApp1 op w
+  primIO1 op = MkApp1 $ toPrimApp1 op
 
   fork thread
       = MkApp $

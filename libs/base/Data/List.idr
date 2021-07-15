@@ -2,6 +2,10 @@ module Data.List
 
 import Data.Nat
 import Data.List1
+import Data.Fin
+import public Data.Zippable
+
+%default total
 
 public export
 isNil : List a -> Bool
@@ -28,9 +32,9 @@ drop Z     xs      = xs
 drop (S n) []      = []
 drop (S n) (_::xs) = drop n xs
 
-||| Satisfiable if `k` is a valid index into `xs`
+||| Satisfiable if `k` is a valid index into `xs`.
 |||
-||| @ k the potential index
+||| @ k  the potential index
 ||| @ xs the list into which k may be an index
 public export
 data InBounds : (k : Nat) -> (xs : List a) -> Type where
@@ -41,10 +45,14 @@ data InBounds : (k : Nat) -> (xs : List a) -> Type where
 
 public export
 Uninhabited (InBounds k []) where
-    uninhabited InFirst impossible
-    uninhabited (InLater _) impossible
+  uninhabited InFirst impossible
+  uninhabited (InLater _) impossible
 
-||| Decide whether `k` is a valid index into `xs`
+export
+Uninhabited (InBounds k xs) => Uninhabited (InBounds (S k) (x::xs)) where
+  uninhabited (InLater y) = uninhabited y
+
+||| Decide whether `k` is a valid index into `xs`.
 public export
 inBounds : (k : Nat) -> (xs : List a) -> Dec (InBounds k xs)
 inBounds _ [] = No uninhabited
@@ -58,18 +66,36 @@ inBounds (S k) (x :: xs) with (inBounds k xs)
 |||
 ||| @ ok a proof that the index is within bounds
 public export
-index : (n : Nat) -> (xs : List a) -> {auto ok : InBounds n xs} -> a
+index : (n : Nat) -> (xs : List a) -> {auto 0 ok : InBounds n xs} -> a
 index Z (x :: xs) {ok = InFirst} = x
 index (S k) (_ :: xs) {ok = InLater _} = index k xs
+
+public export
+index' : (xs : List a) -> Fin (length xs) -> a
+index' (x::_)  FZ     = x
+index' (_::xs) (FS i) = index' xs i
 
 ||| Generate a list by repeatedly applying a partial function until exhausted.
 ||| @ f the function to iterate
 ||| @ x the initial value that will be the head of the list
+covering
 public export
 iterate : (f : a -> Maybe a) -> (x : a) -> List a
 iterate f x  = x :: case f x of
   Nothing => []
   Just y => iterate f y
+
+covering
+public export
+unfoldr : (b -> Maybe (a, b)) -> b -> List a
+unfoldr f c = case f c of
+  Nothing     => []
+  Just (a, n) => a :: unfoldr f n
+
+public export
+iterateN : Nat -> (a -> a) -> a -> List a
+iterateN Z     _ _ = []
+iterateN (S n) f x = x :: iterateN n f (f x)
 
 public export
 takeWhile : (p : a -> Bool) -> List a -> List a
@@ -81,6 +107,8 @@ dropWhile : (p : a -> Bool) -> List a -> List a
 dropWhile p []      = []
 dropWhile p (x::xs) = if p x then dropWhile p xs else x::xs
 
+||| Applied to a predicate and a list, returns the list of those elements that
+||| satisfy the predicate.
 public export
 filter : (p : a -> Bool) -> List a -> List a
 filter p [] = []
@@ -94,6 +122,25 @@ public export
 find : (p : a -> Bool) -> (xs : List a) -> Maybe a
 find p [] = Nothing
 find p (x::xs) = if p x then Just x else find p xs
+
+||| Find the index and proof of InBounds of the first element (if exists) of a
+||| list that satisfies the given test, else `Nothing`.
+public export
+findIndex : (a -> Bool) -> (xs : List a) -> Maybe $ Fin (length xs)
+findIndex _ [] = Nothing
+findIndex p (x :: xs) = if p x
+  then Just FZ
+  else FS <$> findIndex p xs
+
+||| Find indices of all elements that satisfy the given test.
+public export
+findIndices : (a -> Bool) -> List a -> List Nat
+findIndices p = h 0 where
+  h : Nat -> List a -> List Nat
+  h _         []  = []
+  h lvl (x :: xs) = if p x
+    then lvl :: h (S lvl) xs
+    else        h (S lvl) xs
 
 ||| Find associated information in a list using a custom comparison.
 public export
@@ -174,13 +221,26 @@ public export
 union : Eq a => List a -> List a -> List a
 union = unionBy (==)
 
+||| Like @span@ but using a predicate that might convert a to b, i.e. given a
+||| predicate from a to Maybe b and a list of as, returns a tuple consisting of
+||| the longest prefix of the list where a -> Just b, and the rest of the list.
+public export
+spanBy : (a -> Maybe b) -> List a -> (List b, List a)
+spanBy p [] = ([], [])
+spanBy p (x :: xs) = case p x of
+  Nothing => ([], x :: xs)
+  Just y => let (ys, zs) = spanBy p xs in (y :: ys, zs)
+
+||| Given a predicate and a list, returns a tuple consisting of the longest
+||| prefix of the list whose elements satisfy the predicate, and the rest of the
+||| list.
 public export
 span : (a -> Bool) -> List a -> (List a, List a)
 span p []      = ([], [])
 span p (x::xs) =
   if p x then
     let (ys, zs) = span p xs in
-      (x::ys, zs)
+        (x::ys, zs)
   else
     ([], x::xs)
 
@@ -192,8 +252,8 @@ public export
 split : (a -> Bool) -> List a -> List1 (List a)
 split p xs =
   case break p xs of
-    (chunk, [])          => [chunk]
-    (chunk, (c :: rest)) => chunk :: toList (split p (assert_smaller xs rest))
+    (chunk, [])          => singleton chunk
+    (chunk, (c :: rest)) => chunk ::: forget (split p (assert_smaller xs rest))
 
 public export
 splitAt : (n : Nat) -> (xs : List a) -> (List a, List a)
@@ -247,6 +307,10 @@ public export
 splitOn : Eq a => a -> List a -> List1 (List a)
 splitOn a = split (== a)
 
+public export
+replaceWhen : (a -> Bool) -> a -> List a -> List a
+replaceWhen p b l = map (\c => if p c then b else c) l
+
 ||| Replaces all occurences of the first argument with the second argument in a list.
 |||
 ||| ```idris example
@@ -255,7 +319,7 @@ splitOn a = split (== a)
 |||
 public export
 replaceOn : Eq a => a -> a -> List a -> List a
-replaceOn a b l = map (\c => if c == a then b else c) l
+replaceOn a = replaceWhen (== a)
 
 public export
 reverseOnto : List a -> List a -> List a
@@ -284,38 +348,43 @@ export
 intersect : Eq a => List a -> List a -> List a
 intersect = intersectBy (==)
 
-||| Combine two lists elementwise using some function.
-|||
-||| If the lists are different lengths, the result is truncated to the
-||| length of the shortest list.
 export
-zipWith : (a -> b -> c) -> List a -> List b -> List c
-zipWith _ [] _ = []
-zipWith _ _ [] = []
-zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
-
-||| Combine two lists elementwise into pairs.
-|||
-||| If the lists are different lengths, the result is truncated to the
-||| length of the shortest list.
-export
-zip : List a -> List b -> List (a, b)
-zip = zipWith \x, y => (x, y)
+intersectAllBy : (a -> a -> Bool) -> List (List a) -> List a
+intersectAllBy eq [] = []
+intersectAllBy eq (xs :: xss) = filter (\x => all (elemBy eq x) xss) xs
 
 export
-zipWith3 : (a -> b -> c -> d) -> List a -> List b -> List c -> List d
-zipWith3 _ [] _ _ = []
-zipWith3 _ _ [] _ = []
-zipWith3 _ _ _ [] = []
-zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
+intersectAll : Eq a => List (List a) -> List a
+intersectAll = intersectAllBy (==)
 
-||| Combine three lists elementwise into tuples.
-|||
-||| If the lists are different lengths, the result is truncated to the
-||| length of the shortest list.
-export
-zip3 : List a -> List b -> List c -> List (a, b, c)
-zip3 = zipWith3 \x, y, z => (x, y, z)
+---------------------------
+-- Zippable --
+---------------------------
+
+public export
+Zippable List where
+  zipWith _ [] _ = []
+  zipWith _ _ [] = []
+  zipWith f (x :: xs) (y :: ys) = f x y :: zipWith f xs ys
+
+  zipWith3 _ [] _ _ = []
+  zipWith3 _ _ [] _ = []
+  zipWith3 _ _ _ [] = []
+  zipWith3 f (x :: xs) (y :: ys) (z :: zs) = f x y z :: zipWith3 f xs ys zs
+
+  unzipWith f [] = ([], [])
+  unzipWith f (x :: xs) = let (b, c) = f x
+                              (bs, cs) = unzipWith f xs in
+                              (b :: bs, c :: cs)
+
+  unzipWith3 f [] = ([], [], [])
+  unzipWith3 f (x :: xs) = let (b, c, d) = f x
+                               (bs, cs, ds) = unzipWith3 f xs in
+                               (b :: bs, c :: cs, d :: ds)
+
+---------------------------
+-- Non-empty List
+---------------------------
 
 public export
 data NonEmpty : (xs : List a) -> Type where
@@ -345,15 +414,15 @@ public export
 last : (l : List a) -> {auto 0 ok : NonEmpty l} -> a
 last [] impossible
 last [x] = x
-last (x::y::ys) = last (y::ys)
+last (x :: xs@(_::_)) = last xs
 
 ||| Return all but the last element of a non-empty list.
 ||| @ ok proof the list is non-empty
 public export
 init : (l : List a) -> {auto 0 ok : NonEmpty l} -> List a
 init [] impossible
-init [_] = []
-init (x::y::ys) = x :: init (y::ys)
+init [x] = []
+init (x :: xs@(_::_)) = x :: init xs
 
 ||| Attempt to get the head of a list. If the list is empty, return `Nothing`.
 public export
@@ -383,10 +452,43 @@ init' : List a -> Maybe (List a)
 init' [] = Nothing
 init' xs@(_::_) = Just (init xs)
 
-||| Convert any Foldable structure to a list.
+public export
+foldr1By : (func : a -> b -> b) -> (map : a -> b) ->
+           (l : List a) -> {auto 0 ok : NonEmpty l} -> b
+foldr1By f map [] impossible
+foldr1By f map [x] = map x
+foldr1By f map (x :: xs@(_::_)) = f x (foldr1By f map xs)
+
+public export
+foldl1By : (func : b -> a -> b) -> (map : a -> b) ->
+           (l : List a) -> {auto 0 ok : NonEmpty l} -> b
+foldl1By f map [] impossible
+foldl1By f map (x::xs) = foldl f (map x) xs
+
+||| Foldr a non-empty list without seeding the accumulator.
+||| @ ok proof that the list is non-empty
+public export
+foldr1 : (a -> a -> a) -> (l : List a) -> {auto 0 ok : NonEmpty l} -> a
+foldr1 f xs = foldr1By f id xs
+
+||| Foldl a non-empty list without seeding the accumulator.
+||| @ ok proof that the list is non-empty
+public export
+foldl1 : (a -> a -> a) -> (l : List a) -> {auto 0 ok : NonEmpty l} -> a
+foldl1 f xs = foldl1By f id xs
+
+||| Convert to a non-empty list.
+||| @ ok proof the list is non-empty
 export
-toList : Foldable t => t a -> List a
-toList = foldr (::) []
+toList1 : (l : List a) -> {auto 0 ok : NonEmpty l} -> List1 a
+toList1 [] impossible
+toList1 (x :: xs) = x ::: xs
+
+||| Convert to a non-empty list, returning Nothing if the list is empty.
+export
+toList1' : (l : List a) -> Maybe (List1 a)
+toList1' [] = Nothing
+toList1' (x :: xs) = Just (x ::: xs)
 
 ||| Prefix every element in the list with the given element
 |||
@@ -398,7 +500,6 @@ export
 mergeReplicate : a -> List a -> List a
 mergeReplicate sep []      = []
 mergeReplicate sep (y::ys) = sep :: y :: mergeReplicate sep ys
-
 
 ||| Insert some separator between the elements of a list.
 |||
@@ -434,36 +535,10 @@ mapMaybe f (x::xs) =
     Nothing => mapMaybe f xs
     Just j  => j :: mapMaybe f xs
 
---------------------------------------------------------------------------------
--- Special folds
---------------------------------------------------------------------------------
-
-||| Foldl a non-empty list without seeding the accumulator.
-||| @ ok proof that the list is non-empty
+||| Extract all of the values contained in a List of Maybes
 public export
-foldl1 : (a -> a -> a) -> (l : List a)  -> {auto 0 ok : NonEmpty l} -> a
-foldl1 f [] impossible
-foldl1 f (x::xs) = foldl f x xs
-
-||| Foldr a non-empty list without seeding the accumulator.
-||| @ ok proof that the list is non-empty
-public export
-foldr1 : (a -> a -> a) -> (l : List a)  -> {auto 0 ok : NonEmpty l} -> a
-foldr1 f [] impossible
-foldr1 f [x] = x
-foldr1 f (x::y::ys) = f x (foldr1 f (y::ys))
-
-||| Foldl without seeding the accumulator. If the list is empty, return `Nothing`.
-public export
-foldl1' : (a -> a -> a) -> List a -> Maybe a
-foldl1' f [] = Nothing
-foldl1' f xs@(_::_) = Just (foldl1 f xs)
-
-||| Foldr without seeding the accumulator. If the list is empty, return `Nothing`.
-public export
-foldr1' : (a -> a -> a) -> List a -> Maybe a
-foldr1' f [] = Nothing
-foldr1' f xs@(_::_) = Just (foldr1 f xs)
+catMaybes : List (Maybe a) -> List a
+catMaybes = mapMaybe id
 
 --------------------------------------------------------------------------------
 -- Sorting
@@ -577,17 +652,61 @@ transpose (heads :: tails) = spreadHeads heads (transpose tails) where
   spreadHeads (head :: heads) []              = [head] :: spreadHeads heads []
   spreadHeads (head :: heads) (tail :: tails) = (head :: tail) :: spreadHeads heads tails
 
+------------------------------------------------------------------------
+-- Grouping
+
+||| `groupBy` operates like `group`, but uses the provided equality
+||| predicate instead of `==`.
+public export
+groupBy : (a -> a -> Bool) -> List a -> List (List1 a)
+groupBy _ [] = []
+groupBy eq (h :: t) = let (ys,zs) = go h t
+                       in ys :: zs
+
+  where go : a -> List a -> (List1 a, List (List1 a))
+        go v [] = (singleton v,[])
+        go v (x :: xs) = let (ys,zs) = go x xs
+                          in if eq v x
+                                then (cons v ys, zs)
+                                else (singleton v, ys :: zs)
+
+||| The `group` function takes a list of values and returns a list of
+||| lists such that flattening the resulting list is equal to the
+||| argument.  Moreover, each list in the resulting list
+||| contains only equal elements.
+public export
+group : Eq a => List a -> List (List1 a)
+group = groupBy (==)
+
+||| `groupWith` operates like `group`, but uses the provided projection when
+||| comparing for equality
+public export
+groupWith : Eq b => (a -> b) -> List a -> List (List1 a)
+groupWith f = groupBy (\x,y => f x == f y)
+
+||| `groupAllWith` operates like `groupWith`, but sorts the list
+||| first so that each equivalence class has, at most, one list in the
+||| output
+public export
+groupAllWith : Ord b => (a -> b) -> List a -> List (List1 a)
+groupAllWith f = groupWith f . sortBy (comparing f)
+
 --------------------------------------------------------------------------------
 -- Properties
 --------------------------------------------------------------------------------
 
 export
-Uninhabited ([] = Prelude.(::) x xs) where
+Uninhabited ([] = x :: xs) where
   uninhabited Refl impossible
 
 export
-Uninhabited (Prelude.(::) x xs = []) where
+Uninhabited (x :: xs = []) where
   uninhabited Refl impossible
+
+export
+{0 xs : List a} -> Either (Uninhabited $ x === y) (Uninhabited $ xs === ys) => Uninhabited (x::xs = y::ys) where
+  uninhabited @{Left  z} Refl = uninhabited @{z} Refl
+  uninhabited @{Right z} Refl = uninhabited @{z} Refl
 
 ||| (::) is injective
 export
@@ -624,6 +743,14 @@ revAppend (v :: vs) ns
             rewrite appendAssociative (reverse ns) (reverse vs) [v] in
               Refl
 
+||| List reverse applied twice yields the identity function.
+export
+reverseInvolutive : (xs : List a) -> reverse (reverse xs) = xs
+reverseInvolutive [] = Refl
+reverseInvolutive (x :: xs) = rewrite revOnto [x] xs in
+                                rewrite sym (revAppend (reverse xs) [x]) in
+                                  cong (x ::) $ reverseInvolutive xs
+
 export
 dropFusion : (n, m : Nat) -> (l : List t) -> drop n (drop m l) = drop (n+m) l
 dropFusion  Z     m    l      = Refl
@@ -632,3 +759,8 @@ dropFusion (S n) (S m) []     = Refl
 dropFusion (S n) (S m) (x::l) = rewrite plusAssociative n 1 m in
                                 rewrite plusCommutative n 1 in
                                 dropFusion (S n) m l
+
+export
+lengthMap : (xs : List a) -> length (map f xs) = length xs
+lengthMap [] = Refl
+lengthMap (x :: xs) = cong S (lengthMap xs)

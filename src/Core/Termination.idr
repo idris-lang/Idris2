@@ -2,6 +2,7 @@ module Core.Termination
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Normalise
 import Core.TT
@@ -9,7 +10,8 @@ import Core.Value
 
 import Control.Monad.State
 
-import Data.NameMap
+import Libraries.Data.NameMap
+import Libraries.Data.SortedMap
 import Data.List
 
 %default covering
@@ -24,8 +26,10 @@ totRefs defs (n :: ns)
               | Nothing => pure rest
          case isTerminating (totality d) of
               IsTerminating => pure rest
-              Unchecked => pure rest
-              bad => case rest of
+              Unchecked => do
+                log "totality" 20 $ "Totality unchecked for " ++ show !(toFullNames n)
+                pure rest
+              _ => case rest of
                           NotTerminating (BadCall ns)
                              => toFullNames $ NotTerminating (BadCall (n :: ns))
                           _ => toFullNames $ NotTerminating (BadCall [n])
@@ -42,7 +46,8 @@ export
 checkIfGuarded : {auto c : Ref Ctxt Defs} ->
                  FC -> Name -> Core ()
 checkIfGuarded fc n
-    = do defs <- get Ctxt
+    = do log "totality.termination.guarded" 6 $ "Check if Guarded: " ++ show !(toFullNames n)
+         defs <- get Ctxt
          Just (PMDef _ _ _ _ pats) <- lookupDefExact n (gamma defs)
               | _ => pure ()
          t <- allGuarded pats
@@ -148,7 +153,7 @@ mutual
             !(findSC defs (b :: env) g (map (\ (p, tm) => (p, weaken tm)) pats) sc)
     where
       findSCbinder : Binder (Term vars) -> Core (List SCCall)
-      findSCbinder (Let c val ty) = findSC defs env g pats val
+      findSCbinder (Let _ c val ty) = findSC defs env g pats val
       findSCbinder b = pure [] -- only types, no need to look
   -- If we're Guarded and find a Delay, continue with the argument as InDelay
   findSC defs env Guarded pats (TDelay _ _ _ tm)
@@ -288,10 +293,10 @@ mutual
                 Core (Maybe (List (vs ** (Env Term vs,
                                          List (Nat, Term vs), Term vs))))
   getCasePats {vars} defs n pats args
-      = case !(lookupDefExact n (gamma defs)) of
+      = pure $ case !(lookupDefExact n (gamma defs)) of
              Just (PMDef _ _ _ _ pdefs)
-                => pure $ Just (map matchArgs pdefs)
-             _ => pure Nothing
+                => Just (map matchArgs pdefs)
+             _ => Nothing
     where
       updateRHS : {vs, vs' : _} ->
                   List (Term vs, Term vs') -> Term vs -> Term vs'
@@ -359,11 +364,11 @@ mutual
         -- Under 'assert_total' we assume that all calls are fine, so leave
         -- the size change list empty
       = do Just gdef <- lookupCtxtExact fn_in (gamma defs)
-                | Nothing => throw (UndefinedName fc fn_in)
+                | Nothing => undefinedName fc fn_in
            let fn = fullname gdef
-           log 10 $ "Looking under " ++ show fn
-           aSmaller <- resolved (gamma defs) (NS ["Builtin"] (UN "assert_smaller"))
-           cond [(fn == NS ["Builtin"] (UN "assert_total"), pure []),
+           log "totality.termination.sizechange" 10 $ "Looking under " ++ show !(toFullNames fn)
+           aSmaller <- resolved (gamma defs) (NS builtinNS (UN "assert_smaller"))
+           cond [(fn == NS builtinNS (UN "assert_total"), pure []),
               (caseFn fn,
                   do mps <- getCasePats defs fn pats args
                      case mps of
@@ -381,9 +386,10 @@ mutual
                (vs ** (Env Term vs, List (Nat, Term vs), Term vs)) ->
                Core (List SCCall)
   findInCase defs g (_ ** (env, pats, tm))
-     = do logC 10 (do ps <- traverse toFullNames (map snd pats)
-                      pure ("Looking in case args " ++ show ps))
-          logTermNF 10 "        =" env tm
+     = do logC "totality" 10 $
+                   do ps <- traverse toFullNames (map snd pats)
+                      pure ("Looking in case args " ++ show ps)
+          logTermNF "totality" 10 "        =" env tm
           rhs <- normaliseOpts tcOnly defs env tm
           findSC defs env g pats (delazy defs rhs)
 
@@ -407,9 +413,10 @@ export
 calculateSizeChange : {auto c : Ref Ctxt Defs} ->
                       FC -> Name -> Core (List SCCall)
 calculateSizeChange loc n
-    = do defs <- get Ctxt
+    = do log "totality.termination.sizechange" 5 $ "Calculating Size Change: " ++ show !(toFullNames n)
+         defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName loc n)
+              | Nothing => undefinedName loc n
          getSC defs (definition def)
 
 Arg : Type
@@ -432,23 +439,41 @@ initArgs (S k)
          args' <- initArgs k
          pure (Just (arg, Same) :: args')
 
+data Explored : Type where
+
+-- Cached results of exploring the size change graph, so that if we visit a
+-- node again, we don't have to re-explore the whole thing
+SizeChanges : Type
+SizeChanges = SortedMap (Name, List (Maybe Arg)) Terminating
+
 -- Traverse the size change graph. When we reach a point we've seen before,
 -- at least one of the arguments must have got smaller, otherwise it's
 -- potentially non-terminating
 checkSC : {auto a : Ref APos Arg} ->
           {auto c : Ref Ctxt Defs} ->
+          {auto e : Ref Explored SizeChanges} ->
           Defs ->
           Name -> -- function we're checking
           List (Maybe (Arg, SizeChange)) -> -- functions arguments and change
           List (Name, List (Maybe Arg)) -> -- calls we've seen so far
           Core Terminating
 checkSC defs f args path
-   = let pos = (f, map (map Builtin.fst) args) in
-         if pos `elem` path
-            then toFullNames $ checkDesc (mapMaybe (map Builtin.snd) args) path
-            else case !(lookupCtxtExact f (gamma defs)) of
-                      Nothing => pure IsTerminating
-                      Just def => continue (sizeChange def) (pos :: path)
+   = do exp <- get Explored
+        log "totality.termination.sizechange" 7 $ "Checking Size Change Graph: " ++ show !(toFullNames f)
+        let pos = (f, map (map Builtin.fst) args)
+        case lookup pos exp of
+             Just done => pure done -- already explored this bit of tree
+             Nothing =>
+                if pos `elem` path
+                   then do log "totality.termination.sizechange.inPath" 8 $ "Checking arguments: " ++ show !(toFullNames f)
+                           res <- toFullNames $ checkDesc (mapMaybe (map Builtin.snd) args) path
+                           put Explored (insert pos res exp)
+                           pure res
+                   else case !(lookupCtxtExact f (gamma defs)) of
+                             Nothing => do log "totality.termination.sizechange.isTerminating" 8 $ "Size Change Graph is Terminating for: " ++ show !(toFullNames f)
+                                           pure IsTerminating
+                             Just def => do log "totality.termination.sizechange.needsChecking" 8 $ "Size Change Graph needs traversing: " ++ show !(toFullNames f)
+                                            continue (sizeChange def) (pos :: path)
   where
     -- Look for something descending in the list of size changes
     checkDesc : List SizeChange -> List (Name, List (Maybe Arg)) -> Terminating
@@ -478,13 +503,14 @@ checkSC defs f args path
 
     checkCall : List (Name, List (Maybe Arg)) -> SCCall -> Core Terminating
     checkCall path sc
-        = do let inpath = fnCall sc `elem` map fst path
-             Just gdef <- lookupCtxtExact (fnCall sc) (gamma defs)
+        = do Just gdef <- lookupCtxtExact (fnCall sc) (gamma defs)
                   | Nothing => pure IsTerminating -- nothing to check
              let Unchecked = isTerminating (totality gdef)
                   | IsTerminating => pure IsTerminating
                   | _ => pure (NotTerminating (BadCall [fnCall sc]))
+             log "totality.termination.sizechange.checkCall" 8 $ "CheckCall Size Change Graph: " ++ show !(toFullNames (fnCall sc))
              term <- checkSC defs (fnCall sc) (mkArgs (fnArgs sc)) path
+             let inpath = fnCall sc `elem` map fst path
              if not inpath
                 then case term of
                        NotTerminating (RecPath _) =>
@@ -492,10 +518,15 @@ checkSC defs f args path
                           -- was mutually recursive, so start again with new
                           -- arguments (that is, where we'd start if the
                           -- function was the top level thing we were checking)
-                          do args' <- initArgs (length (fnArgs sc))
-                             checkSC defs (fnCall sc) args' path
-                       t => pure t
-                else pure term
+                          do log "totality.termination.sizechange.checkCall.inPathNot.restart" 9 $ "ReChecking Size Change Graph: " ++ show !(toFullNames (fnCall sc))
+                             args' <- initArgs (length (fnArgs sc))
+                             t <- checkSC defs (fnCall sc) args' path
+                             setTerminating emptyFC (fnCall sc) t
+                             pure t
+                       t => do log "totality.termination.sizechange.checkCall.inPathNot.return" 9 $ "Have result: " ++ show !(toFullNames (fnCall sc))
+                               pure t
+                else do log "totality.termination.sizechange.checkCall.inPath" 9 $ "Have Result: " ++ show !(toFullNames (fnCall sc))
+                        pure term
 
     getWorst : Terminating -> List Terminating -> Terminating
     getWorst term [] = term
@@ -512,14 +543,16 @@ calcTerminating : {auto c : Ref Ctxt Defs} ->
                   FC -> Name -> Core Terminating
 calcTerminating loc n
     = do defs <- get Ctxt
+         log "totality.termination.calc" 7 $ "Calculating termination: " ++ show !(toFullNames n)
          case !(lookupCtxtExact n (gamma defs)) of
-              Nothing => throw (UndefinedName loc n)
+              Nothing => undefinedName loc n
               Just def =>
                 case !(totRefs defs (nub !(addCases defs (keys (refersTo def))))) of
                      IsTerminating =>
                         do let ty = type def
                            a <- newRef APos firstArg
                            args <- initArgs !(getArity defs [] ty)
+                           e <- newRef Explored empty
                            checkSC defs n args []
                      bad => pure bad
   where
@@ -545,6 +578,7 @@ checkTerminating : {auto c : Ref Ctxt Defs} ->
                    FC -> Name -> Core Terminating
 checkTerminating loc n
     = do tot <- getTotality loc n
+         log "totality.termination" 6 $ "Checking termination: " ++ show !(toFullNames n)
          case isTerminating tot of
               Unchecked =>
                  do tot' <- calcTerminating loc n
@@ -552,7 +586,8 @@ checkTerminating loc n
                     pure tot'
               t => pure t
 
-nameIn : Defs -> List Name -> NF [] -> Core Bool
+nameIn : {auto c : Ref Ctxt Defs} ->
+         Defs -> List Name -> NF [] -> Core Bool
 nameIn defs tyns (NBind fc x b sc)
     = if !(nameIn defs tyns (binderType b))
          then pure True
@@ -560,29 +595,30 @@ nameIn defs tyns (NBind fc x b sc)
                  nameIn defs tyns sc'
 nameIn defs tyns (NApp _ _ args)
     = anyM (nameIn defs tyns)
-           !(traverse (evalClosure defs) args)
+           !(traverse (evalClosure defs . snd) args)
 nameIn defs tyns (NTCon _ n _ _ args)
     = if n `elem` tyns
          then pure True
-         else do args' <- traverse (evalClosure defs) args
+         else do args' <- traverse (evalClosure defs . snd) args
                  anyM (nameIn defs tyns) args'
 nameIn defs tyns (NDCon _ n _ _ args)
     = anyM (nameIn defs tyns)
-           !(traverse (evalClosure defs) args)
+           !(traverse (evalClosure defs . snd) args)
 nameIn defs tyns _ = pure False
 
 -- Check an argument type doesn't contain a negative occurrence of any of
 -- the given type names
-posArg : Defs -> List Name -> NF [] -> Core Terminating
+posArg : {auto c : Ref Ctxt Defs} ->
+         Defs -> List Name -> NF [] -> Core Terminating
 -- a tyn can only appear in the parameter positions of
 -- tc; report positivity failure if it appears anywhere else
 posArg defs tyns (NTCon _ tc _ _ args)
     = let testargs : List (Closure [])
              = case !(lookupDefExact tc (gamma defs)) of
                     Just (TCon _ _ params _ _ _ _ _) =>
-                         dropParams 0 params args
-                    _ => args in
-          if !(anyM (nameIn defs tyns)
+                         dropParams 0 params (map snd args)
+                    _ => map snd args
+      in if !(anyM (nameIn defs tyns)
                   !(traverse (evalClosure defs) testargs))
              then pure (NotTerminating NotStrictlyPositive)
              else pure IsTerminating
@@ -594,15 +630,16 @@ posArg defs tyns (NTCon _ tc _ _ args)
              then dropParams (S i) ps xs
              else x :: dropParams (S i) ps xs
 -- a tyn can not appear as part of ty
-posArg defs tyns (NBind fc x (Pi c e ty) sc)
+posArg defs tyns (NBind fc x (Pi _ _ e ty) sc)
     = if !(nameIn defs tyns ty)
          then pure (NotTerminating NotStrictlyPositive)
          else do sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
                  posArg defs tyns sc'
 posArg defs tyn _ = pure IsTerminating
 
-checkPosArgs : Defs -> List Name -> NF [] -> Core Terminating
-checkPosArgs defs tyns (NBind fc x (Pi c e ty) sc)
+checkPosArgs : {auto c : Ref Ctxt Defs} ->
+               Defs -> List Name -> NF [] -> Core Terminating
+checkPosArgs defs tyns (NBind fc x (Pi _ _ e ty) sc)
     = case !(posArg defs tyns ty) of
            IsTerminating =>
                 checkPosArgs defs tyns
@@ -634,6 +671,7 @@ calcPositive : {auto c : Ref Ctxt Defs} ->
                FC -> Name -> Core (Terminating, List Name)
 calcPositive loc n
     = do defs <- get Ctxt
+         log "totality.positivity" 6 $ "Calculating positivity: " ++ show !(toFullNames n)
          case !(lookupDefTyExact n (gamma defs)) of
               Just (TCon _ _ _ _ _ tns dcons _, ty) =>
                   case !(totRefsIn defs ty) of
@@ -642,7 +680,7 @@ calcPositive loc n
                                pure (t , dcons)
                        bad => pure (bad, dcons)
               Just _ => throw (GenericMsg loc (show n ++ " not a data type"))
-              Nothing => throw (UndefinedName loc n)
+              Nothing => undefinedName loc n
 
 -- Check whether a data type satisfies the strict positivity condition, and
 -- record in the context
@@ -652,13 +690,15 @@ checkPositive : {auto c : Ref Ctxt Defs} ->
 checkPositive loc n_in
     = do n <- toResolvedNames n_in
          tot <- getTotality loc n
+         log "totality.positivity" 6 $ "Checking positivity: " ++ show !(toFullNames n)
          case isTerminating tot of
               Unchecked =>
                   do (tot', cons) <- calcPositive loc n
                      setTerminating loc n tot'
-                     traverse (\c => setTerminating loc c tot') cons
+                     traverse_ (\c => setTerminating loc c tot') cons
                      pure tot'
               t => pure t
+
 
 -- Check and record totality of the given name; positivity if it's a data
 -- type, termination if it's a function
@@ -668,9 +708,10 @@ checkTotal : {auto c : Ref Ctxt Defs} ->
 checkTotal loc n_in
     = do defs <- get Ctxt
          let Just nidx = getNameID n_in (gamma defs)
-             | Nothing => throw (UndefinedName loc n_in)
+             | Nothing => undefinedName loc n_in
          let n = Resolved nidx
          tot <- getTotality loc n
+         log "totality" 5 $ "Checking totality: " ++ show !(toFullNames n)
          defs <- get Ctxt
          case isTerminating tot of
               Unchecked =>

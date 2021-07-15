@@ -21,7 +21,7 @@ mutual
 ||| Merge sort implementation for Vect n a
 export total
 sortBy : {n : Nat} -> (cmp : a -> a -> Ordering) -> (xs : Vect n a) -> Vect n a
-sortBy {n} cmp xs = sortBySplit n cmp xs
+sortBy cmp xs = sortBySplit n cmp xs
 
 export total
 sort : Ord a => {n : Nat} -> Vect n a -> Vect n a

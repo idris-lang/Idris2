@@ -4,6 +4,7 @@ import Control.Monad.Identity
 import Control.Monad.Trans
 
 import Data.Maybe
+import Data.Vect
 import Data.String.Parser
 
 %default partial
@@ -29,13 +30,13 @@ pureParsing str = parse (many (satisfy isDigit)) str
 -- test option
 optParser : ParseT IO String
 optParser = do res <- option "" (takeWhile isDigit)
-               string "def"
+               ignore $ string "def"
                pure $ res
 
 -- test optional
 maybeParser : ParseT IO Bool
 maybeParser = do res <- optional (string "abc")
-                 string "def"
+                 ignore $ string "def"
                  pure $ isJust res
 
 main : IO ()
@@ -44,7 +45,7 @@ main = do
     res <- parseT (string "hi") "hiyaaaaaa"
     case res of
         Left err => putStrLn "NOOOOOOO!"
-        Right ((), i) => printLn i
+        Right (_, i) => printLn i
     bad <- parseT (satisfy isDigit) "a"
     showRes bad
     bad2 <- parseT (string "good" <?> "Not good") "bad bad bad"
@@ -61,5 +62,13 @@ main = do
     res <- parseT maybeParser "abcdef"
     showRes res
     res <- parseT maybeParser "def"
+    showRes res
+    res <- parseT (commaSep alphaNum) "a,1,b,2"
+    showRes res
+    res <- parseT (ntimes 4 letter) "abcd"
+    showRes res
+    res <- parseT (requireFailure letter) "1"
+    showRes res
+    res <- parseT (requireFailure letter) "a" -- Should error
     showRes res
     pure ()

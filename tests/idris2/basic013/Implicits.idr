@@ -1,6 +1,6 @@
 public export
-interface Do (m : Type) where
-  Next : m -> Type
+interface Do (0 m : Type) where
+  0 Next : m -> Type
   bind : (x : m) -> Next x
 
 -- Test that the implicits don't turn into as patterns on the LHS - they

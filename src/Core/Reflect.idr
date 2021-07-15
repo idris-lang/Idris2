@@ -1,6 +1,7 @@
 module Core.Reflect
 
 import Algebra.Semiring
+import Data.List1
 
 import Core.Context
 import Core.Env
@@ -12,7 +13,8 @@ import Core.Value
 
 public export
 interface Reify a where
-  reify : {vars : _} ->
+  reify : {auto c : Ref Ctxt Defs} ->
+          {vars : _} ->
           Defs -> NF vars -> Core a
 
 public export
@@ -40,31 +42,31 @@ appCon fc defs n args
 
 export
 preludetypes : String -> Name
-preludetypes n = NS ["Types", "Prelude"] (UN n)
+preludetypes n = NS typesNS (UN n)
 
 export
 basics : String -> Name
-basics n = NS ["Basics", "Prelude"] (UN n)
+basics n = NS basicsNS (UN n)
 
 export
 builtin : String -> Name
-builtin n = NS ["Builtin"] (UN n)
+builtin n = NS builtinNS (UN n)
 
 export
 primio : String -> Name
-primio n = NS ["PrimIO"] (UN n)
+primio n = NS primIONS (UN n)
 
 export
 reflection : String -> Name
-reflection n = NS ["Reflection", "Language"] (UN n)
+reflection n = NS reflectionNS (UN n)
 
 export
 reflectiontt : String -> Name
-reflectiontt n = NS ["TT", "Reflection", "Language"] (UN n)
+reflectiontt n = NS reflectionTTNS (UN n)
 
 export
 reflectionttimp : String -> Name
-reflectionttimp n = NS ["TTImp", "Reflection", "Language"] (UN n)
+reflectionttimp n = NS reflectionTTImpNS (UN n)
 
 export
 cantReify : NF vars -> String -> Core a
@@ -148,7 +150,7 @@ Reify Nat where
   reify defs val@(NDCon _ n _ _ args)
       = case (!(full (gamma defs) n), args) of
              (NS _ (UN "Z"), _) => pure Z
-             (NS _ (UN "S"), [k])
+             (NS _ (UN "S"), [(_, k)])
                  => do k' <- reify defs !(evalClosure defs k)
                        pure (S k')
              _ => cantReify val "Nat"
@@ -166,7 +168,7 @@ Reify a => Reify (List a) where
   reify defs val@(NDCon _ n _ _ args)
       = case (!(full (gamma defs) n), args) of
              (NS _ (UN "Nil"), _) => pure []
-             (NS _ (UN "::"), [_, x, xs])
+             (NS _ (UN "::"), [_, (_, x), (_, xs)])
                   => do x' <- reify defs !(evalClosure defs x)
                         xs' <- reify defs !(evalClosure defs xs)
                         pure (x' :: xs')
@@ -175,18 +177,36 @@ Reify a => Reify (List a) where
 
 export
 Reflect a => Reflect (List a) where
-  reflect fc defs lhs env [] = appCon fc defs (preludetypes "Nil") [Erased fc False]
+  reflect fc defs lhs env [] = appCon fc defs (basics "Nil") [Erased fc False]
   reflect fc defs lhs env (x :: xs)
       = do x' <- reflect fc defs lhs env x
            xs' <- reflect fc defs lhs env xs
-           appCon fc defs (preludetypes "::") [Erased fc False, x', xs']
+           appCon fc defs (basics "::") [Erased fc False, x', xs']
+
+export
+Reify a => Reify (List1 a) where
+  reify defs val@(NDCon _ n _ _ [_, (_, x), (_, xs)])
+      = case !(full (gamma defs) n) of
+             NS _ (UN ":::")
+                  => do x' <- reify defs !(evalClosure defs x)
+                        xs' <- reify defs !(evalClosure defs xs)
+                        pure (x' ::: xs')
+             _ => cantReify val "List1"
+  reify defs val = cantReify val "List1"
+
+export
+Reflect a => Reflect (List1 a) where
+  reflect fc defs lhs env xxs
+      = do x' <- reflect fc defs lhs env (head xxs)
+           xs' <- reflect fc defs lhs env (tail xxs)
+           appCon fc defs (NS (mkNamespace "Data.List1") (UN ":::")) [Erased fc False, x', xs']
 
 export
 Reify a => Reify (Maybe a) where
   reify defs val@(NDCon _ n _ _ args)
       = case (!(full (gamma defs) n), args) of
              (NS _ (UN "Nothing"), _) => pure Nothing
-             (NS _ (UN "Just"), [_, x])
+             (NS _ (UN "Just"), [_, (_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (Just x')
              _ => cantReify val "Maybe"
@@ -201,7 +221,7 @@ Reflect a => Reflect (Maybe a) where
 
 export
 (Reify a, Reify b) => Reify (a, b) where
-  reify defs val@(NDCon _ n _ _ [_, _, x, y])
+  reify defs val@(NDCon _ n _ _ [_, _, (_, x), (_, y)])
       = case (!(full (gamma defs) n)) of
              NS _ (UN "MkPair")
                  => do x' <- reify defs !(evalClosure defs x)
@@ -218,26 +238,75 @@ export
            appCon fc defs (builtin "MkPair") [Erased fc False, Erased fc False, x', y']
 
 export
+Reify Namespace where
+  reify defs val@(NDCon _ n _ _ [(_, ns)])
+    = case (!(full (gamma defs) n)) of
+        NS _ (UN "MkNS")
+          => do ns' <- reify defs !(evalClosure defs ns)
+                pure (unsafeFoldNamespace ns')
+        _ => cantReify val "Namespace"
+  reify defs val = cantReify val "Namespace"
+
+export
+Reflect Namespace where
+  reflect fc defs lhs env ns
+    = do ns' <- reflect fc defs lhs env (unsafeUnfoldNamespace ns)
+         appCon fc defs (reflectiontt "MkNS") [ns']
+
+export
+Reify ModuleIdent where
+  reify defs val@(NDCon _ n _ _ [(_, ns)])
+    = case (!(full (gamma defs) n)) of
+        NS _ (UN "MkMI")
+          => do ns' <- reify defs !(evalClosure defs ns)
+                pure (unsafeFoldModuleIdent ns')
+        _ => cantReify val "ModuleIdent"
+  reify defs val = cantReify val "ModuleIdent"
+
+export
+Reflect ModuleIdent where
+  reflect fc defs lhs env ns
+    = do ns' <- reflect fc defs lhs env (unsafeUnfoldModuleIdent ns)
+         appCon fc defs (reflectiontt "MkMI") [ns']
+
+export
 Reify Name where
   reify defs val@(NDCon _ n _ _ args)
       = case (!(full (gamma defs) n), args) of
-             (NS _ (UN "UN"), [str])
+             (NS _ (UN "UN"), [(_, str)])
                  => do str' <- reify defs !(evalClosure defs str)
                        pure (UN str')
-             (NS _ (UN "MN"), [str, i])
+             (NS _ (UN "MN"), [(_, str), (_, i)])
                  => do str' <- reify defs !(evalClosure defs str)
                        i' <- reify defs !(evalClosure defs i)
                        pure (MN str' i')
-             (NS _ (UN "NS"), [ns, n])
+             (NS _ (UN "NS"), [(_, ns), (_, n)])
                  => do ns' <- reify defs !(evalClosure defs ns)
                        n' <- reify defs !(evalClosure defs n)
                        pure (NS ns' n')
-             (NS _ (UN "DN"), [str, n])
+             (NS _ (UN "DN"), [(_, str), (_, n)])
                  => do str' <- reify defs !(evalClosure defs str)
                        n' <- reify defs !(evalClosure defs n)
                        pure (DN str' n')
-             _ => cantReify val "Name"
-  reify defs val = cantReify val "Name"
+             (NS _ (UN "RF"), [(_, str)])
+                 => do str' <- reify defs !(evalClosure defs str)
+                       pure (RF str')
+             (NS _ (UN "Nested"), [(_, ix), (_, n)])
+                 => do ix' <- reify defs !(evalClosure defs ix)
+                       n' <- reify defs !(evalClosure defs n)
+                       pure (Nested ix' n')
+             (NS _ (UN "CaseBlock"), [(_, outer), (_, i)])
+                 => do outer' <- reify defs !(evalClosure defs outer)
+                       i' <- reify defs !(evalClosure defs i)
+                       pure (CaseBlock outer' i')
+             (NS _ (UN "WithBlock"), [(_, outer), (_, i)])
+                 => do outer' <- reify defs !(evalClosure defs outer)
+                       i' <- reify defs !(evalClosure defs i)
+                       pure (WithBlock outer' i')
+             (NS _ (UN _), _)
+                 => cantReify val "Name, reifying it is unimplemented or intentionally internal"
+             _ => cantReify val "Name, the name was not found in context"
+  reify defs val = cantReify val "Name, value is not an NDCon interally"
 
 export
 Reflect Name where
@@ -256,11 +325,28 @@ Reflect Name where
       = do str' <- reflect fc defs lhs env str
            n' <- reflect fc defs lhs env n
            appCon fc defs (reflectiontt "DN") [str', n']
+  reflect fc defs lhs env (RF x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "RF") [x']
+  reflect fc defs lhs env (Nested ix n)
+      = do ix' <- reflect fc defs lhs env ix
+           n'  <- reflect fc defs lhs env n
+           appCon fc defs (reflectiontt "Nested") [ix',n']
+  reflect fc defs lhs env (CaseBlock outer i)
+      = do outer' <- reflect fc defs lhs env outer
+           i' <- reflect fc defs lhs env i
+           appCon fc defs (reflectiontt "CaseBlock") [outer',i']
+  reflect fc defs lhs env (WithBlock outer i)
+      = do outer' <- reflect fc defs lhs env outer
+           i' <- reflect fc defs lhs env i
+           appCon fc defs (reflectiontt "WithBlock") [outer',i']
   reflect fc defs lhs env (Resolved i)
       = case !(full (gamma defs) (Resolved i)) of
-             Resolved _ => cantReflect fc "Name"
+             Resolved _ => cantReflect fc
+                      "Name directly, Resolved is intentionally internal"
              n => reflect fc defs lhs env n
-  reflect fc defs lhs env val = cantReflect fc "Name"
+  reflect fc defs lhs env n = cantReflect fc
+    "Name, reflecting it is unimplemented or intentionally internal"
 
 export
 Reify NameType where
@@ -268,11 +354,11 @@ Reify NameType where
       = case (!(full (gamma defs) n), args) of
              (NS _ (UN "Bound"), _) => pure Bound
              (NS _ (UN "Func"), _) => pure Func
-             (NS _ (UN "DataCon"), [t,i])
+             (NS _ (UN "DataCon"), [(_, t), (_, i)])
                   => do t' <- reify defs !(evalClosure defs t)
                         i' <- reify defs !(evalClosure defs i)
                         pure (DataCon t' i')
-             (NS _ (UN "TyCon"), [t,i])
+             (NS _ (UN "TyCon"), [(_, t),(_, i)])
                   => do t' <- reify defs !(evalClosure defs t)
                         i' <- reify defs !(evalClosure defs i)
                         pure (TyCon t' i')
@@ -296,37 +382,57 @@ export
 Reify Constant where
   reify defs val@(NDCon _ n _ _ args)
       = case (!(full (gamma defs) n), args) of
-             (NS _ (UN "I"), [x])
+             (NS _ (UN "I"), [(_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (I x')
-             (NS _ (UN "BI"), [x])
+             (NS _ (UN "I8"), [(_, x)])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (I8 x')
+             (NS _ (UN "I16"), [(_, x)])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (I16 x')
+             (NS _ (UN "I32"), [(_, x)])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (I32 x')
+             (NS _ (UN "I64"), [(_, x)])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (I64 x')
+             (NS _ (UN "BI"), [(_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (BI x')
-             (NS _ (UN "B8"), [x])
+             (NS _ (UN "B8"), [(_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (B8 x')
-             (NS _ (UN "B16"), [x])
+             (NS _ (UN "B16"), [(_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (B16 x')
-             (NS _ (UN "B32"), [x])
+             (NS _ (UN "B32"), [(_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (B32 x')
-             (NS _ (UN "B64"), [x])
+             (NS _ (UN "B64"), [(_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (B64 x')
-             (NS _ (UN "Str"), [x])
+             (NS _ (UN "Str"), [(_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (Str x')
-             (NS _ (UN "Ch"), [x])
+             (NS _ (UN "Ch"), [(_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (Ch x')
-             (NS _ (UN "Db"), [x])
+             (NS _ (UN "Db"), [(_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (Db x')
              (NS _ (UN "WorldVal"), [])
                   => pure WorldVal
              (NS _ (UN "IntType"), [])
                   => pure IntType
+             (NS _ (UN "Int8Type"), [])
+                  => pure Int8Type
+             (NS _ (UN "Int16Type"), [])
+                  => pure Int16Type
+             (NS _ (UN "Int32Type"), [])
+                  => pure Int32Type
+             (NS _ (UN "Int64Type"), [])
+                  => pure Int64Type
              (NS _ (UN "IntegerType"), [])
                   => pure IntegerType
              (NS _ (UN "Bits8Type"), [])
@@ -353,6 +459,18 @@ Reflect Constant where
   reflect fc defs lhs env (I x)
       = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "I") [x']
+  reflect fc defs lhs env (I8 x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "I8") [x']
+  reflect fc defs lhs env (I16 x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "I16") [x']
+  reflect fc defs lhs env (I32 x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "I32") [x']
+  reflect fc defs lhs env (I64 x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "I64") [x']
   reflect fc defs lhs env (BI x)
       = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "BI") [x']
@@ -381,6 +499,14 @@ Reflect Constant where
       = getCon fc defs (reflectiontt "WorldVal")
   reflect fc defs lhs env IntType
       = getCon fc defs (reflectiontt "IntType")
+  reflect fc defs lhs env Int8Type
+      = getCon fc defs (reflectiontt "Int8Type")
+  reflect fc defs lhs env Int16Type
+      = getCon fc defs (reflectiontt "Int16Type")
+  reflect fc defs lhs env Int32Type
+      = getCon fc defs (reflectiontt "Int32Type")
+  reflect fc defs lhs env Int64Type
+      = getCon fc defs (reflectiontt "Int64Type")
   reflect fc defs lhs env IntegerType
       = getCon fc defs (reflectiontt "IntegerType")
   reflect fc defs lhs env Bits8Type
@@ -457,7 +583,7 @@ Reify t => Reify (PiInfo t) where
              (NS _ (UN "ImplicitArg"), _) => pure Implicit
              (NS _ (UN "ExplicitArg"), _) => pure Explicit
              (NS _ (UN "AutoImplicit"), _) => pure AutoImplicit
-             (NS _ (UN "DefImplicit"), [_, t])
+             (NS _ (UN "DefImplicit"), [_, (_, t)])
                  => do t' <- reify defs !(evalClosure defs t)
                        pure (DefImplicit t')
              _ => cantReify val "PiInfo"
@@ -492,10 +618,52 @@ Reflect LazyReason where
   reflect fc defs lhs env LUnknown = getCon fc defs (reflectiontt "LUnknown")
 
 export
+Reify VirtualIdent where
+  reify defs val@(NDCon _ n _ _ args)
+      = case (!(full (gamma defs) n), args) of
+             (NS _ (UN "Interactive"), [])
+                   => pure Interactive
+             _ => cantReify val "VirtualIdent"
+  reify defs val = cantReify val "VirtualIdent"
+
+export
+Reflect VirtualIdent where
+  reflect fc defs lhs env Interactive
+      = getCon fc defs (reflectiontt "Interactive")
+
+export
+Reify OriginDesc where
+  reify defs val@(NDCon _ n _ _ args)
+      = case (!(full (gamma defs) n), args) of
+             (NS _ (UN "PhysicalIdrSrc"), [(_, ident)])
+                   => do ident' <- reify defs !(evalClosure defs ident)
+                         pure (PhysicalIdrSrc ident')
+             (NS _ (UN "PhysicalPkgSrc"), [(_, fname)])
+                   => do fname' <- reify defs !(evalClosure defs fname)
+                         pure (PhysicalPkgSrc fname')
+             (NS _ (UN "Virtual"), [(_, ident)])
+                   => do ident' <- reify defs !(evalClosure defs ident)
+                         pure (Virtual ident')
+             _ => cantReify val "OriginDesc"
+  reify defs val = cantReify val "OriginDesc"
+
+export
+Reflect OriginDesc where
+  reflect fc defs lhs env (PhysicalIdrSrc ident)
+      = do ident' <- reflect fc defs lhs env ident
+           appCon fc defs (reflectiontt "PhysicalIdrSrc") [ident']
+  reflect fc defs lhs env (PhysicalPkgSrc fname)
+      = do fname' <- reflect fc defs lhs env fname
+           appCon fc defs (reflectiontt "PhysicalPkgSrc") [fname']
+  reflect fc defs lhs env (Virtual ident)
+      = do ident' <- reflect fc defs lhs env ident
+           appCon fc defs (reflectiontt "Virtual") [ident']
+
+export
 Reify FC where
   reify defs val@(NDCon _ n _ _ args)
       = case (!(full (gamma defs) n), args) of
-             (NS _ (UN "MkFC"), [fn, start, end])
+             (NS _ (UN "MkFC"), [(_, fn), (_, start), (_, end)])
                    => do fn' <- reify defs !(evalClosure defs fn)
                          start' <- reify defs !(evalClosure defs start)
                          end' <- reify defs !(evalClosure defs end)
@@ -508,6 +676,11 @@ export
 Reflect FC where
   reflect fc defs True env _ = pure $ Erased fc False
   reflect fc defs lhs env (MkFC fn start end)
+      = do fn' <- reflect fc defs lhs env fn
+           start' <- reflect fc defs lhs env start
+           end' <- reflect fc defs lhs env end
+           appCon fc defs (reflectiontt "MkFC") [fn', start', end']
+  reflect fc defs lhs env (MkVirtualFC fn start end)
       = do fn' <- reflect fc defs lhs env fn
            start' <- reflect fc defs lhs env start
            end' <- reflect fc defs lhs env end

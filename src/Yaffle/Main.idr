@@ -13,7 +13,7 @@ import Core.Normalise
 import Core.Options
 import Core.TT
 import Core.UnifyState
-import Utils.Path
+import Libraries.Utils.Path
 
 import TTImp.Parser
 import TTImp.ProcessDecls
@@ -23,7 +23,7 @@ import Yaffle.REPL
 
 import Data.List
 import Data.So
-import Data.Strings
+import Data.String
 import System
 
 %default covering
@@ -35,7 +35,7 @@ processArgs : List String -> Core Bool
 processArgs [] = pure False
 processArgs ["--timing"] = pure True
 processArgs _
-    = coreLift $ do putStrLn usage
+    = coreLift $ do ignore $ putStrLn usage
                     exitWith (ExitFailure 1)
 
 HasNames () where
@@ -44,26 +44,26 @@ HasNames () where
 
 export
 yaffleMain : String -> List String -> Core ()
-yaffleMain fname args
+yaffleMain sourceFileName args
     = do defs <- initDefs
          c <- newRef Ctxt defs
-         m <- newRef MD initMetadata
-         u <- newRef UST initUState
-         d <- getDirs
          t <- processArgs args
+         modIdent <- ctxtPathToNS sourceFileName
+         m <- newRef MD (initMetadata (PhysicalIdrSrc modIdent))
+         u <- newRef UST initUState
          setLogTimings t
          addPrimitives
-         case extension fname of
-              Just "ttc" => do coreLift $ putStrLn "Processing as TTC"
-                               readFromTTC {extra = ()} True emptyFC True fname [] []
-                               coreLift $ putStrLn "Read TTC"
-              _ => do coreLift $ putStrLn "Processing as TTImp"
-                      ok <- processTTImpFile fname
+         case extension sourceFileName of
+              Just "ttc" => do coreLift_ $ putStrLn "Processing as TTC"
+                               ignore $ readFromTTC {extra = ()} True emptyFC True sourceFileName (nsAsModuleIdent emptyNS) emptyNS
+                               coreLift_ $ putStrLn "Read TTC"
+              _ => do coreLift_ $ putStrLn "Processing as TTImp"
+                      ok <- processTTImpFile sourceFileName
                       when ok $
-                         do ns <- pathToNS (working_dir d) (source_dir d) fname
-                            makeBuildDirectory ns
-                            writeToTTC () !(getTTCFileName fname "ttc")
-                            coreLift $ putStrLn "Written TTC"
+                         do makeBuildDirectory modIdent
+                            ttcFileName <- getTTCFileName sourceFileName "ttc"
+                            writeToTTC () sourceFileName ttcFileName
+                            coreLift_ $ putStrLn "Written TTC"
          ust <- get UST
 
          repl {c} {u}

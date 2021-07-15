@@ -31,7 +31,7 @@ In ``Average.idr``, add:
 
 .. code-block:: idris
 
-    import Data.Strings -- for `words`
+    import Data.String -- for `words`
     import Data.List -- for `length` on lists
 
 In ``AveMain.idr`` and ``Reverse.idr`` add:
@@ -58,7 +58,7 @@ Chapter 4
 
 For the reasons described above:
 
-+ In ``DataStore.idr``, add ``import System.REPL`` and ``import Data.Strings``
++ In ``DataStore.idr``, add ``import System.REPL`` and ``import Data.String``
 + In ``SumInputs.idr``, add ``import System.REPL``
 + In ``TryIndex.idr``, add an implicit argument:
 
@@ -66,15 +66,21 @@ For the reasons described above:
 
     tryIndex : {n : _} -> Integer -> Vect n a -> Maybe a
 
++ In exercise 5 of 4.2, add an implicit argument:
+
+.. code-block:: idris
+
+    sumEntries : Num a => {n : _} -> (pos : Integer) -> Vect n a -> Vect n a -> Maybe a
+
 Chapter 5
 ---------
 
 There is no longer a ``Cast`` instance from ``String`` to ``Nat``, because its
 behaviour of returing Z if the ``String`` wasn't numeric was thought to be
 confusing and potentially error prone. Instead, there is ``stringToNatOrZ`` in
-``Data.Strings`` which at least has a clearer name. So:
+``Data.String`` which at least has a clearer name. So:
 
-In ``Loops.idr`` and ``ReadNum.idr`` add ``import Data.Strings`` and change ``cast`` to
+In ``Loops.idr`` and ``ReadNum.idr`` add ``import Data.String`` and change ``cast`` to
 ``stringToNatOrZ``
 
 In ``ReadNum.idr``, since functions must now be ``covering`` by default, add
@@ -83,7 +89,7 @@ a ``partial`` annotation to ``readNumber_v2``.
 Chapter 6
 ---------
 
-In ``DataStore.idr`` and ``DataStoreHoles.idr``, add ``import Data.Strings`` and
+In ``DataStore.idr`` and ``DataStoreHoles.idr``, add ``import Data.String`` and
 ``import System.REPL``. Also in ``DataStore.idr``, the ``schema`` argument to
 ``display`` is required for matching, so change the type to:
 
@@ -91,7 +97,7 @@ In ``DataStore.idr`` and ``DataStoreHoles.idr``, add ``import Data.Strings`` and
 
     display : {schema : _} -> SchemaType schema -> String
 
-In ``TypeFuns.idr`` add ``import Data.Strings``
+In ``TypeFuns.idr`` add ``import Data.String``
 
 Chapter 7
 ---------
@@ -152,7 +158,7 @@ Chapter 9
 
 In ``Hangman.idr``:
 
-+ Add ``import Data.Strings``, ``import Data.Vect.Elem`` and ``import Decidable.Equality``
++ Add ``import Data.String``, ``import Data.Vect.Elem`` and ``import Decidable.Equality``
 + ``removeElem`` pattern matches on ``n``, so it needs to be written in its
   type:
 
@@ -254,20 +260,23 @@ It's no longer necessary to give ``{input}`` explicitly in the patterns for
 
 In ``IsSuffix.idr``, the matching has to be written slightly differently. The
 recursive with application in Idris 1 probably shouldn't have allowed this!
+Note that the ``Snoc`` - ``Snoc`` case has to be written first otherwise Idris
+generates a case tree splitting on ``input1`` and ``input2`` instead of the
+``SnocList`` objects and this leads to a lot of cases being detected as missing.
 
 .. code-block:: idris
 
-    isSuffix : Eq a => List a -> List a -> Bool
-    isSuffix input1 input2 with (snocList input1, snocList input2)
-      isSuffix [] input2 | (Empty, s) = True
-      isSuffix input1 [] | (s, Empty) = False
-      isSuffix (xs ++ [x]) (ys ++ [y]) | (Snoc xsrec, Snoc ysrec)
-         = if x == y
-              then isSuffix xs ys | (xsrec, ysrec)
-              else False
+  isSuffix : Eq a => List a -> List a -> Bool
+  isSuffix input1 input2 with (snocList input1, snocList input2)
+    isSuffix _ _ | (Snoc x xs xsrec, Snoc y ys ysrec)
+       = (x == y) && (isSuffix _ _ | (xsrec, ysrec))
+    isSuffix _ _ | (Empty, s) = True
+    isSuffix _ _ | (s, Empty) = False
 
 This doesn't yet get past the totality checker, however, because it doesn't
 know about looking inside pairs.
+
+For the ``VList`` view in the exercise 4 after Chapter 10-2 ``import Data.List.Views.Extra`` from ``contrib`` library.
 
 In ``DataStore.idr``: Well this is embarrassing - I've no idea how Idris 1 lets
 this through! I think perhaps it's too "helpful" when solving unification
@@ -317,28 +326,42 @@ arguments for the dividend and remainder, so they need to be explicit in
     bound x with (divides x 12)
       bound ((12 * div) + rem) | (DivBy div rem prf) = rem + 1
 
-In ``ArithCmd.idr``, update ``DivBy`` as above. Also add ``import Data.Strings`` for
-``Strings.toLower``.
+In addition,  ``import Data.Bits`` has to be added for ``shiftR``, which
+now uses a safer type for the number of shifts:
 
-In ``ArithCmd.idr``, update ``DivBy`` and ``import Data.Strings`` as above. Also,
-since export rules are per-namespace now, rather than per-file, you need to
-export ``(>>=)`` from the namespaces ``CommandDo`` and ``ConsoleDo``.
+.. code-block:: idris
+
+    randoms : Int -> Stream Int
+    randoms seed = let seed' = 1664525 * seed + 1013904223 in
+                       (seed' `shiftR` fromNat 2) :: randoms seed'
+
+
+In ``ArithCmd.idr``, update ``DivBy``, ``randoms``, and ``import Data.Bits``
+as above. Also add ``import Data.String`` for ``String.toLower``.
+
+In ``ArithCmd.idr``, update ``DivBy``, ``randoms``, ``import Data.Bits`` and
+``import Data.String`` as above.  Also, since export rules are per-namespace
+now, rather than per-file, you need to export ``(>>=)`` from the namespaces
+``CommandDo`` and ``ConsoleDo``.
 
 In ``ArithCmdDo.idr``, since ``(>>=)`` is ``export``, ``Command`` and ``ConsoleIO``
-also have to be ``export``.
+also have to be ``export``. Also, update ``randoms`` and ``import Data.Bits`` as above.
 
 In ``StreamFail.idr``, add a ``partial`` annotation to ``labelWith``.
 
 Chapter 12
 ----------
 
-For reasons described above: In ``ArithState.idr``, add ``import Data.Strings``.
-Also the ``(>>=)`` operators need to be set as ``export`` since they are in their
-own namespaces, and in ``getRandom``, ``DivBy`` needs to take additional
-arguments ``div`` and ``rem``.
+For reasons described above: In ``ArithState.idr``, add ``import Data.String``
+and ``import Data.Bits`` and update ``randoms``.  Also the ``(>>=)`` operators
+need to be set as ``export`` since they are in their own namespaces, and in
+``getRandom``, ``DivBy`` needs to take additional arguments ``div`` and
+``rem``.
 
 In ``ArithState.idr``, since ``(>>=)`` is ``export``, ``Command`` and ``ConsoleIO``
 also have to be ``export``.
+
+evalState from Control.Monad.State now takes the ``stateType`` argument first.
 
 Chapter 13
 ----------
@@ -371,7 +394,7 @@ In ``StackIO.idr``:
 
 In ``Vending.idr``:
 
-+ Add ``import Data.Strings`` and change ``cast`` to ``stringToNatOrZ`` in ``strToInput``
++ Add ``import Data.String`` and change ``cast`` to ``stringToNatOrZ`` in ``strToInput``
 + In ``MachineCmd`` type, add an implicit argument to ``(>>=)`` data constructor:
 
 .. code-block:: idris
@@ -428,14 +451,14 @@ Chapter 14
 
 In ``ATM.idr``:
 
-+ Add ``import Data.Strings`` and change ``cast`` to ``stringToNatOrZ`` in ``runATM``
++ Add ``import Data.String`` and change ``cast`` to ``stringToNatOrZ`` in ``runATM``
 
 In ``Hangman.idr``, add:
 
 .. code-block:: idris
 
     import Data.Vect.Elem -- `Elem` now has its own submodule
-    import Data.Strings -- for `toUpper`
+    import Data.String -- for `toUpper`
     import Data.List -- for `nub`
 
 + In ``Loop`` namespace, export ``GameLoop`` type and its data constructors:

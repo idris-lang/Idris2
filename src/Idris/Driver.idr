@@ -2,12 +2,15 @@ module Idris.Driver
 
 import Compiler.Common
 
+import Core.Context.Log
 import Core.Core
+import Core.Directory
 import Core.InitPrimitives
 import Core.Metadata
 import Core.Unify
 
 import Idris.CommandLine
+import Idris.Env
 import Idris.IDEMode.REPL
 import Idris.ModTree
 import Idris.Package
@@ -16,17 +19,20 @@ import Idris.REPL
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
+import Idris.Pretty
+import Idris.Error
 
 import IdrisPaths
 
 import Data.List
 import Data.List1
 import Data.So
-import Data.Strings
+import Data.String
 import System
 import System.Directory
 import System.File
-import Utils.Path
+import Libraries.Utils.Path
+import Libraries.Utils.Term
 
 import Yaffle.Main
 
@@ -39,39 +45,50 @@ findInput (_ :: fs) = findInput fs
 
 -- Add extra data from the "IDRIS2_x" environment variables
 updateEnv : {auto c : Ref Ctxt Defs} ->
+            {auto o : Ref ROpts REPLOpts} ->
             Core ()
 updateEnv
     = do defs <- get Ctxt
-         bprefix <- coreLift $ getEnv "IDRIS2_PREFIX"
-         the (Core ()) $ case bprefix of
+         bprefix <- coreLift $ idrisGetEnv "IDRIS2_PREFIX"
+         case bprefix of
               Just p => setPrefix p
               Nothing => setPrefix yprefix
-         bpath <- coreLift $ getEnv "IDRIS2_PATH"
-         the (Core ()) $ case bpath of
+         bpath <- coreLift $ idrisGetEnv "IDRIS2_PATH"
+         case bpath of
               Just path => do traverseList1_ addExtraDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
-         bdata <- coreLift $ getEnv "IDRIS2_DATA"
-         the (Core ()) $ case bdata of
+         bdata <- coreLift $ idrisGetEnv "IDRIS2_DATA"
+         case bdata of
               Just path => do traverseList1_ addDataDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
-         blibs <- coreLift $ getEnv "IDRIS2_LIBS"
-         the (Core ()) $ case blibs of
+         blibs <- coreLift $ idrisGetEnv "IDRIS2_LIBS"
+         case blibs of
               Just path => do traverseList1_ addLibDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
-         cg <- coreLift $ getEnv "IDRIS2_CG"
-         the (Core ()) $ case cg of
+         pdirs <- coreLift $ idrisGetEnv "IDRIS2_PACKAGE_PATH"
+         case pdirs of
+              Just path => do traverseList1_ addPackageDir (map trim (split (==pathSeparator) path))
+              Nothing => pure ()
+         cg <- coreLift $ idrisGetEnv "IDRIS2_CG"
+         case cg of
               Just e => case getCG (options defs) e of
                              Just cg => setCG cg
                              Nothing => throw (InternalError ("Unknown code generator " ++ show e))
               Nothing => pure ()
-
+         inccgs <- coreLift $ idrisGetEnv "IDRIS2_INC_CGS"
+         case inccgs of
+              Just cgs =>
+                   traverse_ (setIncrementalCG False) $
+                       map trim (toList (split (==',') cgs))
+              Nothing => pure ()
          -- IDRIS2_PATH goes first so that it overrides this if there's
          -- any conflicts. In particular, that means that setting IDRIS2_PATH
          -- for the tests means they test the local version not the installed
          -- version
          defs <- get Ctxt
-         addPkgDir "prelude"
-         addPkgDir "base"
+         -- These might fail while bootstrapping
+         catch (addPkgDir "prelude" anyBounds) (const (pure ()))
+         catch (addPkgDir "base" anyBounds) (const (pure ()))
          addDataDir (prefix_dir (dirs (options defs)) </>
                         ("idris2-" ++ showVersion False version) </> "support")
          addLibDir (prefix_dir (dirs (options defs)) </>
@@ -84,8 +101,8 @@ updateREPLOpts : {auto o : Ref ROpts REPLOpts} ->
                  Core ()
 updateREPLOpts
     = do opts <- get ROpts
-         ed <- coreLift $ getEnv "EDITOR"
-         the (Core ()) $ case ed of
+         ed <- coreLift $ idrisGetEnv "EDITOR"
+         case ed of
               Just e => put ROpts (record { editor = e } opts)
               Nothing => pure ()
 
@@ -96,7 +113,7 @@ showInfo : {auto c : Ref Ctxt Defs}
 showInfo Nil = pure False
 showInfo (BlodwenPaths :: _)
     = do defs <- get Ctxt
-         iputStrLn (toString (dirs (options defs)))
+         iputStrLn $ pretty (toString (dirs (options defs)))
          pure True
 showInfo (_::rest) = showInfo rest
 
@@ -105,6 +122,11 @@ tryYaffle [] = pure False
 tryYaffle (Yaffle f :: _) = do yaffleMain f []
                                pure True
 tryYaffle (c :: cs) = tryYaffle cs
+
+ignoreMissingIpkg : List CLOpt -> Bool
+ignoreMissingIpkg [] = False
+ignoreMissingIpkg (IgnoreMissingIPKG :: _) = True
+ignoreMissingIpkg (c :: cs) = ignoreMissingIpkg cs
 
 tryTTM : List CLOpt -> Core Bool
 tryTTM [] = pure False
@@ -141,50 +163,55 @@ stMain cgs opts
          addPrimitives
 
          setWorkingDir "."
-         updateEnv
+         when (ignoreMissingIpkg opts) $
+            setSession (record { ignoreMissingPkg = True } !getSession)
+
          let ide = ideMode opts
          let ideSocket = ideModeSocket opts
          let outmode = if ide then IDEMode 0 stdin stdout else REPL False
          let fname = findInput opts
-         o <- newRef ROpts (REPLOpts.defaultOpts fname outmode cgs)
+         o <- newRef ROpts (REPL.Opts.defaultOpts fname outmode cgs)
+         updateEnv
 
          finish <- showInfo opts
-         if finish
-            then pure ()
-            else do
-
+         when (not finish) $ do
            -- If there's a --build or --install, just do that then quit
            done <- processPackageOpts opts
 
-           when (not done) $
+           when (not done) $ flip catch renderError $
               do True <- preOptions opts
                      | False => pure ()
 
                  when (checkVerbose opts) $ -- override Quiet if implicitly set
                      setOutput (REPL False)
                  u <- newRef UST initUState
-                 m <- newRef MD initMetadata
+                 origin <- maybe
+                   (pure $ Virtual Interactive) (\fname => do
+                     modIdent <- ctxtPathToNS fname
+                     pure (PhysicalIdrSrc modIdent)
+                     ) fname
+                 m <- newRef MD (initMetadata origin)
                  updateREPLOpts
                  session <- getSession
                  when (not $ nobanner session) $ do
-                   iputStrLn banner
-                   when (isCons cgs) $ iputStrLn ("With codegen for: " ++
-                                                       fastAppend (map (\(s, _) => s ++ " ") cgs))
+                   iputStrLn $ pretty banner
+                   when (isCons cgs) $ iputStrLn (reflow "With codegen for:" <++> hsep (pretty . fst <$> cgs))
                  fname <- if findipkg session
                              then findIpkg fname
                              else pure fname
                  setMainFile fname
                  result <- case fname of
-                      Nothing => logTime "Loading prelude" $ do
+                      Nothing => logTime "+ Loading prelude" $ do
                                    when (not $ noprelude session) $
                                      readPrelude True
                                    pure Done
-                      Just f => logTime "Loading main file" $ do
+                      Just f => logTime "+ Loading main file" $ do
                                   res <- loadMainFile f
                                   displayErrors res
                                   pure res
 
-                 doRepl <- postOptions result opts
+                 doRepl <- catch (postOptions result opts)
+                                 (\err => emitError err *> pure False)
                  if doRepl then
                    if ide || ideSocket then
                      if not ideSocket
@@ -213,6 +240,17 @@ stMain cgs opts
                          Nothing => pure ()
                          Just _ => coreLift $ exitWith (ExitFailure 1)
 
+  where
+
+  renderError : {auto c : Ref Ctxt Defs} ->
+                {auto s : Ref Syn SyntaxInfo} ->
+                {auto o : Ref ROpts REPLOpts} ->
+                Error -> Core ()
+  renderError err = do
+    doc <- perror err
+    msg <- render doc
+    throw (UserError msg)
+
 -- Run any options (such as --version or --help) which imply printing a
 -- message then exiting. Returns wheter the program should continue
 
@@ -221,8 +259,11 @@ quitOpts [] = pure True
 quitOpts (Version :: _)
     = do putStrLn versionMsg
          pure False
-quitOpts (Help :: _)
+quitOpts (Help Nothing :: _)
     = do putStrLn usage
+         pure False
+quitOpts (Help (Just HelpLogging) :: _)
+    = do putStrLn helpTopics
          pure False
 quitOpts (ShowPrefix :: _)
     = do putStrLn yprefix
@@ -231,14 +272,14 @@ quitOpts (_ :: opts) = quitOpts opts
 
 export
 mainWithCodegens : List (String, Codegen) -> IO ()
-mainWithCodegens cgs = do Right opts <- getCmdOpts
-                            | Left err => do putStrLn err
-                                             putStrLn usage
-                          continue <- quitOpts opts
-                          if continue
-                              then
-                                  coreRun (stMain cgs opts)
-                                    (\err : Error => do putStrLn ("Uncaught error: " ++ show err)
-                                                        exitWith (ExitFailure 1))
-                                    (\res => pure ())
-                              else pure ()
+mainWithCodegens cgs = do
+  Right opts <- getCmdOpts
+    | Left err => do putStrLn err
+                     putStrLn usage
+  continue <- quitOpts opts
+  when continue $ do
+    setupTerm
+    coreRun (stMain cgs opts)
+      (\err : Error => do putStrLn ("Uncaught error: " ++ show err)
+                          exitWith (ExitFailure 1))
+      (\res => pure ())

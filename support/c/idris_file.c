@@ -96,6 +96,25 @@ void idris2_pclose(void *stream) {
 #endif
 }
 
+// seek through the next newline, consuming and
+// throwing away anything until then.
+int idris2_seekLine(FILE *f)
+{
+    while (1) {
+        int c = fgetc(f);
+        if (c == -1) {
+            if (feof(f)) {
+                return 0;
+            } else {
+                return -1;
+            }
+        }
+        if (c == '\n') {
+            return 0;
+        }
+    }
+}
+
 char* idris2_readLine(FILE* f) {
     char *buffer = NULL;
     size_t n = 0;
@@ -120,12 +139,20 @@ char* idris2_readChars(int num, FILE* f) {
     }
 }
 
+size_t idris2_readBufferData(FILE* h, char* buffer, size_t loc, size_t max) {
+    return fread(buffer + loc, sizeof(uint8_t), max, h);
+}
+
 int idris2_writeLine(FILE* f, char* str) {
     if (fputs(str, f) == EOF) {
         return 0;
     } else {
         return 1;
     }
+}
+
+size_t idris2_writeBufferData(FILE* h, const char* buffer, size_t loc, size_t len) {
+    return fwrite(buffer + loc, sizeof(uint8_t), len, h);
 }
 
 int idris2_eof(FILE* f) {

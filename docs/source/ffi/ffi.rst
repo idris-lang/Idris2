@@ -27,8 +27,41 @@ the library. In this document, we will assume the default Chez Scheme code
 generator (the examples also work with the Racket or Gambit code generator) and
 that the foreign language is C.
 
-Example
--------
+Scheme Sidenote
+---------------
+
+Scheme foreign specifiers can be written to target particular flavors.
+
+The following example shows a foreign declaration that allocates memory in a
+way specific to the choice of code generator. In this example there is no
+general scheme specifier present that matches every flavor, e.g.
+``scheme:foo``, so it  will only match the specific flavors listed:
+
+.. code-block:: idris
+
+    %foreign "scheme,chez:foreign-alloc"
+             "scheme,racket:malloc"
+             "C:malloc,libc"
+    allocMem : (bytes : Int) -> PrimIO AnyPtr
+
+.. note::
+    If your backend (code generator) is not specified but defines a C FFI
+    it will be able to make use of the ``C:malloc,libc`` specifier.
+
+C Sidenote
+----------
+
+The ``C`` language specifier is used for common functions that may be used by
+any backend which can, in turn, FFI out to C. For example, Scheme.
+
+The common C functions do no automatic memory management, deferring that to
+the individual backends.
+
+The standard C backend is known as "RefC", and uses the ``RefC`` language
+specifier.
+
+FFI Example
+-----------
 
 As a running example, we are going to work with a small C file. Save the
 following content to a file ``smallc.c``
@@ -57,7 +90,7 @@ write a small program which uses ``add`` to add two integers:
 
     %foreign "C:add,libsmall"
     add : Int -> Int -> Int
-  
+
     main : IO ()
     main = printLn (add 70 24)
 
@@ -84,7 +117,7 @@ returns a primitive IO action:
 .. code-block:: idris
 
     %foreign "C:addWithMessage,libsmall"
-    prim_addWithMessage : String -> Int -> Int -> PrimIO Int
+    prim__addWithMessage : String -> Int -> Int -> PrimIO Int
 
 Internally, ``PrimIO Int`` is a function which takes the current (linear)
 state of the world, and returns an ``Int`` with an updated state of the world.
@@ -101,8 +134,8 @@ So, we can extend our program as follows:
 .. code-block:: idris
 
   addWithMessage : HasIO io => String -> Int -> Int -> io Int
-  addWithMessage s x y = primIO $ prim_addWithMessage s x y
-  
+  addWithMessage s x y = primIO $ prim__addWithMessage s x y
+
   main : IO ()
   main
       = do printLn (add 70 24)
@@ -138,7 +171,7 @@ use that instead:
     add : Int -> Int -> Int
 
     %foreign (libsmall "addWithMessage")
-    prim_addWithMessage : String -> Int -> Int -> PrimIO Int
+    prim__addWithMessage : String -> Int -> Int -> PrimIO Int
 
 .. _sect-ffi-string:
 
@@ -153,6 +186,10 @@ others.  Argument types can be any of the following primitives:
 * ``Int``
 * ``Char``
 * ``Double`` (as ``double`` in C)
+* ``Bits8``
+* ``Bits16``
+* ``Bits32``
+* ``Bits64``
 * ``String`` (as ``char*`` in C)
 * ``Ptr t`` and ``AnyPtr`` (both as ``void*`` in C)
 
@@ -227,11 +264,11 @@ Idris function as the callback:
 .. code-block:: idris
 
     %foreign (libsmall "applyFn")
-    prim_applyFn : String -> Int -> (String -> Int -> String) -> PrimIO String
-    
+    prim__applyFn : String -> Int -> (String -> Int -> String) -> PrimIO String
+
     applyFn : HasIO io =>
               String -> Int -> (String -> Int -> String) -> io String
-    applyFn c i f = primIO $ prim_applyFn c i f
+    applyFn c i f = primIO $ prim__applyFn c i f
 
 For example, we can try this as follows:
 
@@ -243,7 +280,7 @@ For example, we can try this as follows:
                  if x == 1
                     then str
                     else str ++ "s"
-    
+
     main : IO ()
     main
         = do str1 <- applyFn "Biscuit" 10 pluralise
@@ -256,18 +293,18 @@ As a variant, the callback could have a side effect:
 .. code-block:: idris
 
     %foreign (libsmall "applyFn")
-    prim_applyFnIO : String -> Int -> (String -> Int -> PrimIO String) ->
+    prim__applyFnIO : String -> Int -> (String -> Int -> PrimIO String) ->
                      PrimIO String
-  
+
 This is a little more fiddly to lift to a ``HasIO`` function,
 due to the callback, but we can do so using ``toPrim : IO a -> PrimIO a``:
-  
+
 .. code-block:: idris
 
     applyFnIO : HasIO io =>
                 String -> Int -> (String -> Int -> IO String) -> io String
-    applyFnIO c i f = primIO $ prim_applyFnIO c i (\s, i => toPrim $ f s i)
-  
+    applyFnIO c i f = primIO $ prim__applyFnIO c i (\s, i => toPrim $ f s i)
+
 Note that the callback is explicitly in ``IO`` here, since ``HasIO`` doesn't
 have a general method for extracting the primitive ``IO`` operation.
 
@@ -283,7 +320,7 @@ in the callback:
                     if x == 1
                        then str
                        else str ++ "s"
-    
+
     main : IO ()
     main
         = do str1 <- applyFnIO "Biscuit" 10 pluralise
@@ -328,15 +365,15 @@ We can define a type for accessing ``point`` in Idris by importing
 
     Point : Type
     Point = Struct "point" [("x", Int), ("y", Int)]
-    
+
     %foreign (libsmall "mkPoint")
     mkPoint : Int -> Int -> Point
-    
+
     %foreign (libsmall "freePoint")
-    prim_freePoint : Point -> PrimIO ()
-    
+    prim__freePoint : Point -> PrimIO ()
+
     freePoint : Point -> IO ()
-    freePoint p = primIO $ prim_freePoint p
+    freePoint p = primIO $ prim__freePoint p
 
 The ``Point`` type in Idris now corresponds to ``point*`` in C. Fields can
 be read and written using the following, also from ``System.FFI``:
@@ -377,6 +414,10 @@ The field types of a ``Struct`` can be any of the following:
 * ``Int``
 * ``Char``
 * ``Double`` (``double`` in C)
+* ``Bits8``
+* ``Bits16``
+* ``Bits32``
+* ``Bits64``
 * ``Ptr a`` or ``AnyPtr`` (``void*`` in C)
 * Another ``Struct``, which is a pointer to a ``struct`` in C
 
@@ -396,8 +437,8 @@ You can represent this in Idris as:
 ::
 
     NamedPoint : Type
-    NamedPoint 
-        = Struct "namedpoint" 
+    NamedPoint
+        = Struct "namedpoint"
                    [("name", Ptr String),
                    ("pt", Point)]
 

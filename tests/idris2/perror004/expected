@@ -1,2 +1,10 @@
 1/1: Building PError (PError.idr)
-PError.idr:4:33--4:33:Parse error: Wrong number of 'with' arguments (next tokens: [symbol =, identifier x, identifier foo, identifier x, identifier y, symbol |, identifier True, symbol |, identifier True, symbol =])
+Error: Wrong number of 'with' arguments: expected 2 but got 3.
+
+PError:4:33--4:34
+ 1 | foo : Nat -> Nat -> Bool
+ 2 | foo x y with (x == y)
+ 3 |   foo x y | True with (y == x)
+ 4 |     foo x y | True | False | 10 = x
+                                     ^
+

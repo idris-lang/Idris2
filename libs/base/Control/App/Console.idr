@@ -2,6 +2,8 @@ module Control.App.Console
 
 import public Control.App
 
+%default total
+
 public export
 interface Console e where
   putChar : Char -> App {l} e ()
@@ -9,7 +11,7 @@ interface Console e where
   getChar : App {l} e Char
   getLine : App {l} e String
 
-export 
+export
 PrimIO e => Console e where
   putChar c = primIO $ putChar c
   putStr str = primIO $ putStr str

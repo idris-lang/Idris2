@@ -2,6 +2,7 @@ module Compiler.Scheme.Gambit
 
 import Compiler.Common
 import Compiler.CompileExpr
+import Compiler.Generated
 import Compiler.Inline
 import Compiler.Scheme.Common
 
@@ -10,14 +11,16 @@ import Core.Directory
 import Core.Name
 import Core.Options
 import Core.TT
-import Utils.Hex
-import Utils.Path
+import Libraries.Utils.Hex
+import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Data.NameMap
-import Data.Strings
+import Libraries.Data.NameMap
+import Data.String
 import Data.Vect
+
+import Idris.Env
 
 import System
 import System.Directory
@@ -29,23 +32,31 @@ import System.Info
 -- TODO Look for gsi-script, then gsi
 findGSI : IO String
 findGSI =
-  do env <- getEnv "GAMBIT_GSI"
+  do env <- idrisGetEnv "GAMBIT_GSI"
      pure $ fromMaybe "/usr/bin/env gsi" env
 
 -- TODO Look for gsc-script, then gsc
 findGSC : IO String
 findGSC =
-  do env <- getEnv "GAMBIT_GSC"
+  do env <- idrisGetEnv "GAMBIT_GSC"
      pure $ fromMaybe "/usr/bin/env gsc" env
 
+findGSCBackend : IO String
+findGSCBackend =
+  do env <- idrisGetEnv "GAMBIT_GSC_BACKEND"
+     pure $ case env of
+              Nothing => ""
+              Just e => " -cc " ++ e
+
 schHeader : String
-schHeader = "; @generated\n
-         (declare (block)
-         (inlining-limit 450)
-         (standard-bindings)
-         (extended-bindings)
-         (not safe)
-         (optimize-dead-definitions))\n"
+schHeader =
+    "; " ++ (generatedString "Gambit") ++ "\n" ++
+    "(declare (block)\n" ++
+    "(inlining-limit 450)\n" ++
+    "(standard-bindings)\n" ++
+    "(extended-bindings)\n" ++
+    "(not safe)\n" ++
+    "(optimize-dead-definitions))\n"
 
 showGambitChar : Char -> String -> String
 showGambitChar '\\' = ("\\\\" ++)
@@ -63,29 +74,13 @@ gambitString : String -> String
 gambitString cs = strCons '"' (showGambitString (unpack cs) "\"")
 
 mutual
-  -- Primitive types have been converted to names for the purpose of matching
-  -- on types
-  tySpec : NamedCExp -> Core String
-  tySpec (NmCon fc (UN "Int") _ []) = pure "int"
-  tySpec (NmCon fc (UN "String") _ []) = pure "UTF-8-string"
-  tySpec (NmCon fc (UN "Double") _ []) = pure "double"
-  tySpec (NmCon fc (UN "Char") _ []) = pure "char"
-  tySpec (NmCon fc (NS _ n) _ [_])
-     = cond [(n == UN "Ptr", pure "(pointer void)")]
-          (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
-  tySpec (NmCon fc (NS _ n) _ [])
-     = cond [(n == UN "Unit", pure "void"),
-             (n == UN "AnyPtr", pure "(pointer void)")]
-          (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
-  tySpec ty = throw (GenericMsg (getFC ty) ("Can't pass argument of type " ++ show ty ++ " to foreign function"))
-
   handleRet : String -> String -> String
   handleRet "void" op = op ++ " " ++ mkWorld (schConstructor gambitString (UN "") (Just 0) [])
   handleRet _ op = mkWorld op
 
   getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))
-  getFArgs (NmCon fc _ (Just 0) _) = pure []
-  getFArgs (NmCon fc _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
+  getFArgs (NmCon fc _ _ (Just 0) _) = pure []
+  getFArgs (NmCon fc _ _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
   getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
 
   gambitPrim : Int -> ExtPrim -> List NamedCExp -> Core String
@@ -142,7 +137,14 @@ cType fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t ++
 cftySpec : FC -> CFType -> Core String
 cftySpec fc CFUnit = pure "void"
 cftySpec fc CFInt = pure "int"
-cftySpec fc CFUnsigned = pure "unsigned-int"
+cftySpec fc CFInt8 = pure "char"
+cftySpec fc CFInt16 = pure "short"
+cftySpec fc CFInt32 = pure "int"
+cftySpec fc CFInt64 = pure "long"
+cftySpec fc CFUnsigned8 = pure "unsigned-char"
+cftySpec fc CFUnsigned16 = pure "unsigned-short"
+cftySpec fc CFUnsigned32 = pure "unsigned-int"
+cftySpec fc CFUnsigned64 = pure "unsigned-long"
 cftySpec fc CFString = pure "UTF-8-string"
 cftySpec fc CFDouble = pure "double"
 cftySpec fc CFChar = pure "char"
@@ -188,11 +190,11 @@ cCall fc cfn fnWrapName clib args ret
          --                   copyLib (fname, fullname)
          --                   put Loaded (clib :: loaded)
          --                   pure ""
-         argTypes <- traverse (\a => cftySpec fc (snd a)) args
+         argTypes <- traverse (cftySpec fc . snd) args
          retType <- cftySpec fc ret
 
          argsInfo <- traverse buildArg args
-         argCTypes <- traverse (\a => cType fc (snd a)) args
+         argCTypes <- traverse (cType fc . snd) args
          retCType <- cType fc ret
 
          let cWrapperDefs = map buildCWrapperDefs $ mapMaybe snd argsInfo
@@ -208,7 +210,7 @@ cCall fc cfn fnWrapName clib args ret
          let body = setBoxes ++ "\n" ++ call
 
          pure $ case ret of -- XXX
-                     CFIORes _ => (handleRet retType body, wrapDeclarations) 
+                     CFIORes _ => (handleRet retType body, wrapDeclarations)
                      _ => (body, wrapDeclarations)
   where
     mkNs : Int -> List CFType -> List (Maybe String)
@@ -225,7 +227,7 @@ cCall fc cfn fnWrapName clib args ret
     replaceChar old new = pack . replaceOn old new . unpack
 
     buildCWrapperDefs : CCallbackInfo -> CWrapperDefs
-    buildCWrapperDefs (MkCCallbackInfo arg schemeWrap callbackStr argTypes retType) = 
+    buildCWrapperDefs (MkCCallbackInfo arg schemeWrap callbackStr argTypes retType) =
       let box = schemeWrap ++ "-box"
           setBox = "\n (set-box! " ++ box ++ " " ++ callbackStr ++ ")"
           cWrapName = replaceChar '-' '_' schemeWrap
@@ -288,15 +290,14 @@ schemeCall fc sfn argns ret
 useCC : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         FC -> List String -> List (Name, CFType) -> CFType -> Core (Maybe String, (String, String))
-useCC fc [] args ret
-    = throw (GenericMsg fc "No recognised foreign calling convention")
-useCC fc (cc :: ccs) args ret
-    = case parseCC cc of
-           Nothing => useCC fc ccs args ret
+useCC fc ccs args ret
+    = case parseCC ["scheme,gambit", "scheme", "C"] ccs of
+           Nothing => throw (NoForeignCC fc ccs)
+           Just ("scheme,gambit", [sfn]) => pure (Nothing, (!(schemeCall fc sfn (map fst args) ret), ""))
            Just ("scheme", [sfn]) => pure (Nothing, (!(schemeCall fc sfn (map fst args) ret), ""))
            Just ("C", [cfn, clib]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
            Just ("C", [cfn, clib, chdr]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
-           _ => useCC fc ccs args ret
+           _ => throw (NoForeignCC fc ccs)
   where
     fnWrapName : String -> String -> String
     fnWrapName cfn schemeArgName = schemeArgName ++ "-" ++ cfn ++ "-cFunWrap"
@@ -323,7 +324,7 @@ mkStruct (CFStruct n flds)
     showFld : (String, CFType) -> Core String
     showFld (n, ty) = pure $ "(" ++ n ++ " " ++ !(cftySpec emptyFC ty) ++ ")"
 mkStruct (CFIORes t) = mkStruct t
-mkStruct (CFFun a b) = do mkStruct a; mkStruct b
+mkStruct (CFFun a b) = do ignore (mkStruct a); mkStruct b
 mkStruct _ = pure ""
 
 schFgnDef : {auto c : Ref Ctxt Defs} ->
@@ -355,7 +356,7 @@ getFgnCall (n, fc, d) = schFgnDef fc n d
 compileToSCM : Ref Ctxt Defs ->
                ClosedTerm -> (outfile : String) -> Core (List String)
 compileToSCM c tm outfile
-    = do cdata <- getCompileData Cases tm
+    = do cdata <- getCompileData False Cases tm
          let ndefs = namedDefs cdata
          -- let tags = nameTags cdata
          let ctm = forget (mainExpr cdata)
@@ -368,8 +369,10 @@ compileToSCM c tm outfile
          let code = fastAppend (map snd fgndefs ++ compdefs)
          main <- schExp gambitPrim gambitString 0 ctm
          support <- readDataFile "gambit/support.scm"
+         ds <- getDirectives Gambit
+         extraRuntime <- getExtraRuntime ds
          foreign <- readDataFile "gambit/foreign.scm"
-         let scm = showSep "\n" [schHeader, support, foreign, code, main]
+         let scm = showSep "\n" [schHeader, support, extraRuntime, foreign, code, main]
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)
          pure $ mapMaybe fst fgndefs
@@ -382,9 +385,15 @@ compileExpr c tmpDir outputDir tm outfile
          libsname <- compileToSCM c tm srcPath
          libsfile <- traverse findLibraryFile $ map (<.> "a") (nub libsname)
          gsc <- coreLift findGSC
-         let cmd = gsc ++ 
-                   " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
-                   (showSep " " libsfile) ++ "\" -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
+         gscBackend <- coreLift findGSCBackend
+         ds <- getDirectives Gambit
+         let gscCompileOpts =
+             case find (== "C") ds of
+                 Nothing => gscBackend ++ " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
+                   (showSep " " libsfile) ++ "\""
+                 Just _ => " -c"
+         let cmd =
+             gsc ++ gscCompileOpts ++ " -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
          ok <- coreLift $ system cmd
          if ok == 0
             then pure (Just execPath)
@@ -392,12 +401,11 @@ compileExpr c tmpDir outputDir tm outfile
 
 executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c tmpDir tm
-    = do outn <- compileExpr c tmpDir tmpDir tm "_tmpgambit"
-         case outn of
-              -- TODO: on windows, should add exe extension
-              Just outn => map (const ()) $ coreLift $ system outn
-              Nothing => pure ()
+    = do Just sh <- compileExpr c tmpDir tmpDir tm "_tmpgambit"
+           | Nothing => throw (InternalError "compileExpr returned Nothing")
+         coreLift_ $ system sh -- TODO: on windows, should add exe extension
+         pure ()
 
 export
 codegenGambit : Codegen
-codegenGambit = MkCG compileExpr executeExpr
+codegenGambit = MkCG compileExpr executeExpr Nothing Nothing

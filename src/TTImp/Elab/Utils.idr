@@ -1,5 +1,6 @@
 module TTImp.Elab.Utils
 
+import Core.CaseTree
 import Core.Context
 import Core.Core
 import Core.Env
@@ -12,11 +13,12 @@ import TTImp.TTImp
 
 %default covering
 
-detagSafe : Defs -> NF [] -> Core Bool
+detagSafe : {auto c : Ref Ctxt Defs} ->
+            Defs -> NF [] -> Core Bool
 detagSafe defs (NTCon _ n _ _ args)
     = do Just (TCon _ _ _ _ _ _ _ (Just detags)) <- lookupDefExact n (gamma defs)
               | _ => pure False
-         args' <- traverse (evalClosure defs) args
+         args' <- traverse (evalClosure defs . snd) args
          pure $ notErased 0 detags args'
   where
     -- if any argument positions are in the detaggable set, and unerased, then
@@ -30,8 +32,9 @@ detagSafe defs (NTCon _ n _ _ args)
         = elem i ns || notErased (i + 1) ns rest
 detagSafe defs _ = pure False
 
-findErasedFrom : Defs -> Nat -> NF [] -> Core (List Nat, List Nat)
-findErasedFrom defs pos (NBind fc x (Pi c _ aty) scf)
+findErasedFrom : {auto c : Ref Ctxt Defs} ->
+                 Defs -> Nat -> NF [] -> Core (List Nat, List Nat)
+findErasedFrom defs pos (NBind fc x (Pi _ c _ aty) scf)
     = do -- In the scope, use 'Erased fc True' to mean 'argument is erased'.
          -- It's handy here, because we can use it to tell if a detaggable
          -- argument position is available
@@ -62,9 +65,10 @@ updateErasable n
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure ()
          (es, dtes) <- findErased (type gdef)
-         addDef n (record { eraseArgs = es,
-                            safeErase = dtes } gdef)
-         pure ()
+         ignore $ addDef n $ record
+                    { eraseArgs = es,
+                      safeErase = dtes } gdef
+
 export
 wrapErrorC : List ElabOpt -> (Error -> Error) -> Core a -> Core a
 wrapErrorC opts err
@@ -73,8 +77,8 @@ wrapErrorC opts err
          else wrapError err
 
 plicit : Binder (Term vars) -> PiInfo RawImp
-plicit (Pi _ p _) = forgetDef p
-plicit (PVar _ p _) = forgetDef p
+plicit (Pi _ _ p _) = forgetDef p
+plicit (PVar _ _ p _) = forgetDef p
 plicit _ = Explicit
 
 export
@@ -93,7 +97,7 @@ bindNotReq fc i (b :: env) (KeepCons p) ns tm
          (ns', refToLocal (MN "arg" i) _ btm)
 bindNotReq {vs = n :: _} fc i (b :: env) (DropCons p) ns tm
    = bindNotReq fc i env p ((plicit b, n) :: ns)
-       (Bind fc _ (Pi (multiplicity b) Explicit (binderType b)) tm)
+       (Bind fc _ (Pi (binderLoc b) (multiplicity b) Explicit (binderType b)) tm)
 
 export
 bindReq : {vs : _} ->
@@ -105,11 +109,177 @@ bindReq {vs} fc env SubRefl ns tm
   where
     notLets : List Name -> (vars : List Name) -> Env Term vars -> List Name
     notLets acc [] _ = acc
-    notLets acc (v :: vs) (Let _ _ _ :: env) = notLets acc vs env
-    notLets acc (v :: vs) (_ :: env) = notLets (v :: acc) vs env
+    notLets acc (v :: vs) (b :: env) = if isLet b then notLets acc vs env
+                                       else notLets (v :: acc) vs env
 bindReq {vs = n :: _} fc (b :: env) (KeepCons p) ns tm
     = do b' <- shrinkBinder b p
          bindReq fc env p ((plicit b, n) :: ns)
-            (Bind fc _ (Pi (multiplicity b) Explicit (binderType b')) tm)
+            (Bind fc _ (Pi (binderLoc b) (multiplicity b) Explicit (binderType b')) tm)
 bindReq fc (b :: env) (DropCons p) ns tm
     = bindReq fc env p ns tm
+
+-- This machinery is to calculate whether any top level argument is used
+-- more than once in a case block, in which case inlining wouldn't be safe
+-- since it might duplicate work.
+
+data ArgUsed = Used1 -- been used
+             | Used0 -- not used
+             | LocalVar -- don't care if it's used
+
+data Usage : List Name -> Type where
+     Nil : Usage []
+     (::) : ArgUsed -> Usage xs -> Usage (x :: xs)
+
+initUsed : (xs : List Name) -> Usage xs
+initUsed [] = []
+initUsed (x :: xs) = Used0 :: initUsed xs
+
+initUsedCase : (xs : List Name) -> Usage xs
+initUsedCase [] = []
+initUsedCase [x] = [Used0]
+initUsedCase (x :: xs) = LocalVar :: initUsedCase xs
+
+setUsedVar : {idx : _} ->
+             (0 _ : IsVar n idx xs) -> Usage xs -> Usage xs
+setUsedVar First (Used0 :: us) = Used1 :: us
+setUsedVar (Later p) (x :: us) = x :: setUsedVar p us
+setUsedVar First us = us
+
+isUsed : {idx : _} ->
+         (0 _ : IsVar n idx xs) -> Usage xs -> Bool
+isUsed First (Used1 :: us) = True
+isUsed First (_ :: us) = False
+isUsed (Later p) (_ :: us) = isUsed p us
+
+data Used : Type where
+
+setUsed : {idx : _} ->
+          {auto u : Ref Used (Usage vars)} ->
+          (0 _ : IsVar n idx vars) -> Core ()
+setUsed p
+    = do used <- get Used
+         put Used (setUsedVar p used)
+
+extendUsed : ArgUsed -> (new : List Name) -> Usage vars -> Usage (new ++ vars)
+extendUsed a [] x = x
+extendUsed a (y :: xs) x = a :: extendUsed a xs x
+
+dropUsed : (new : List Name) -> Usage (new ++ vars) -> Usage vars
+dropUsed [] x = x
+dropUsed (x :: xs) (u :: us) = dropUsed xs us
+
+inExtended : ArgUsed -> (new : List Name) ->
+             {auto u : Ref Used (Usage vars)} ->
+             (Ref Used (Usage (new ++ vars)) -> Core a) ->
+             Core a
+inExtended a new sc
+    = do used <- get Used
+         u' <- newRef Used (extendUsed a new used)
+         res <- sc u'
+         put Used (dropUsed new !(get Used @{u'}))
+         pure res
+
+termInlineSafe : {vars : _} ->
+                 {auto u : Ref Used (Usage vars)} ->
+                 Term vars -> Core Bool
+termInlineSafe (Local fc isLet idx p)
+   = if isUsed p !(get Used)
+        then pure False
+         else do setUsed p
+                 pure True
+termInlineSafe (Meta fc x y xs)
+    = allInlineSafe xs
+  where
+    allInlineSafe : List (Term vars) -> Core Bool
+    allInlineSafe [] = pure True
+    allInlineSafe (x :: xs)
+        = do xok <- termInlineSafe x
+             if xok
+                then allInlineSafe xs
+                else pure False
+termInlineSafe (Bind fc x b scope)
+   = do bok <- binderInlineSafe b
+        if bok
+           then inExtended LocalVar [x] (\u' => termInlineSafe scope)
+           else pure False
+  where
+    binderInlineSafe : Binder (Term vars) -> Core Bool
+    binderInlineSafe (Let _ _ val _) = termInlineSafe val
+    binderInlineSafe _ = pure True
+termInlineSafe (App fc fn arg)
+    = do fok <- termInlineSafe fn
+         if fok
+            then termInlineSafe arg
+            else pure False
+termInlineSafe (As fc x as pat) = termInlineSafe pat
+termInlineSafe (TDelayed fc x ty) = termInlineSafe ty
+termInlineSafe (TDelay fc x ty arg) = termInlineSafe arg
+termInlineSafe (TForce fc x val) = termInlineSafe val
+termInlineSafe _ = pure True
+
+mutual
+  caseInlineSafe : {vars : _} ->
+                   {auto u : Ref Used (Usage vars)} ->
+                   CaseTree vars -> Core Bool
+  caseInlineSafe (Case idx p scTy xs)
+      = if isUsed p !(get Used)
+           then pure False
+           else do setUsed p
+                   altsSafe xs
+    where
+      altsSafe : List (CaseAlt vars) -> Core Bool
+      altsSafe [] = pure True
+      altsSafe (a :: as)
+          = do u <- get Used
+               aok <- caseAltInlineSafe a
+               if aok
+                  then do -- We can reset the usage information, because we're
+                          -- only going to use one alternative at a time
+                          put Used u
+                          altsSafe as
+                  else pure False
+  caseInlineSafe (STerm x tm) = termInlineSafe tm
+  caseInlineSafe (Unmatched msg) = pure True
+  caseInlineSafe Impossible = pure True
+
+  caseAltInlineSafe : {vars : _} ->
+                      {auto u : Ref Used (Usage vars)} ->
+                      CaseAlt vars -> Core Bool
+  caseAltInlineSafe (ConCase x tag args sc)
+      = inExtended Used0 args (\u' => caseInlineSafe sc)
+  caseAltInlineSafe (DelayCase ty arg sc)
+      = inExtended Used0 [ty, arg] (\u' => caseInlineSafe sc)
+  caseAltInlineSafe (ConstCase x sc) = caseInlineSafe sc
+  caseAltInlineSafe (DefaultCase sc) = caseInlineSafe sc
+
+-- An inlining is safe if no variable is used more than once in the tree,
+-- which means that there's no risk of an input being evaluated more than
+-- once after the definition is expanded.
+export
+inlineSafe : {vars : _} ->
+             CaseTree vars -> Core Bool
+inlineSafe t
+    = do u <- newRef Used (initUsed vars)
+         caseInlineSafe t
+
+export
+canInlineDef : {auto c : Ref Ctxt Defs} ->
+               Name -> Core Bool
+canInlineDef n
+    = do defs <- get Ctxt
+         Just (PMDef _ _ _ rtree _) <- lookupDefExact n (gamma defs)
+             | _ => pure False
+         inlineSafe rtree
+
+-- This is a special case because the only argument we actually care about
+-- is the last one, since the others are just variables passed through from
+-- the environment, and duplicating a variable doesn't cost anything.
+export
+canInlineCaseBlock : {auto c : Ref Ctxt Defs} ->
+                     Name -> Core Bool
+canInlineCaseBlock n
+    = do defs <- get Ctxt
+         Just (PMDef _ vars _ rtree _) <- lookupDefExact n (gamma defs)
+             | _ => pure False
+         u <- newRef Used (initUsedCase vars)
+         caseInlineSafe rtree

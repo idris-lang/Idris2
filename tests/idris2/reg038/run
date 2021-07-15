@@ -1,0 +1,5 @@
+rm -rf build
+
+$1 --no-color --console-width 0 Test1.idr --check
+$1 --no-color --console-width 0 Test2.idr --check
+

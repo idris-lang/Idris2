@@ -1,2 +1,2 @@
-Uncaught error: Module imports form a cycle: Cycle2 -> Cycle1 -> Cycle1
-Uncaught error: Module imports form a cycle: Loop -> Loop
+Uncaught error: Error: Module imports form a cycle: Cycle2 -> Cycle1 -> Cycle1
+Uncaught error: Error: Module imports form a cycle: Loop -> Loop

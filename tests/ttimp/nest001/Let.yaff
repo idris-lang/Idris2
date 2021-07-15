@@ -1,6 +1,6 @@
 testlet : Integer -> Integer
-testlet $x = let y = prim__add_Integer x x in 
-                 prim__add_Integer y y 
+testlet $x = let y = prim__add_Integer x x in
+                 prim__add_Integer y y
 
 data Nat : Type where
      Z : Nat
@@ -11,7 +11,7 @@ plus Z     $y = y
 plus (S $k) $y = S (plus k y)
 
 fn2 : Nat -> Nat -> Nat
-fn2 $x $y 
+fn2 $x $y
     = let w : Nat
           w = plus x x;
           help : Nat -> Nat
@@ -19,7 +19,7 @@ fn2 $x $y
           plus (help y) w
 
 fn : Nat -> Nat -> Nat
-fn $x $y 
+fn $x $y
     = let w : ?; w = plus x x in
       let foo = plus x x in
       let help : Nat -> Nat;

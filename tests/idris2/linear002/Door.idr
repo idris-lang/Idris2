@@ -32,12 +32,11 @@ knock : (1 d : Door Closed) -> One m (Door Closed)
 openDoor : (1 d : Door Closed) -> One m (Either (Door Closed) (Door Open))
 closeDoor : (1 d : Door Open) -> One m (Door Closed)
 
-deleteDoor : (1 d : Door Closed) -> Any m ()
+deleteDoor : (1 d : Door Closed) -> Any m Unit
 
-doorProg : Any m ()
+doorProg : Any m Unit
 doorProg
     = do d <- newDoor
          Right d' <- openDoor d
             | Left d => deleteDoor d
          ?foo
-

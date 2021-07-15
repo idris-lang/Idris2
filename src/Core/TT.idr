@@ -3,11 +3,14 @@ module Core.TT
 import public Core.FC
 import public Core.Name
 
-import Data.Bool.Extra
 import Data.List
-import Data.NameMap
+import Data.Nat
 import Data.Vect
 import Decidable.Equality
+
+import Libraries.Data.NameMap
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import public Algebra
 
@@ -20,9 +23,19 @@ data NameType : Type where
      DataCon : (tag : Int) -> (arity : Nat) -> NameType
      TyCon   : (tag : Int) -> (arity : Nat) -> NameType
 
+export
+isCon : NameType -> Maybe (Int, Nat)
+isCon (DataCon t a) = Just (t, a)
+isCon (TyCon t a) = Just (t, a)
+isCon _ = Nothing
+
 public export
 data Constant
     = I Int
+    | I8 Integer -- reuse code from I64 with fewer casts
+    | I16 Integer
+    | I32 Integer
+    | I64 Integer
     | BI Integer
     | B8 Int -- For now, since we don't have Bits types. We need to
                 -- make sure the Integer remains in range
@@ -35,6 +48,10 @@ data Constant
     | WorldVal
 
     | IntType
+    | Int8Type
+    | Int16Type
+    | Int32Type
+    | Int64Type
     | IntegerType
     | Bits8Type
     | Bits16Type
@@ -46,10 +63,74 @@ data Constant
     | WorldType
 
 export
+isConstantType : Name -> Maybe Constant
+isConstantType (UN n) = case n of
+  "Int"     => Just IntType
+  "Int8"    => Just Int8Type
+  "Int16"   => Just Int16Type
+  "Int32"   => Just Int32Type
+  "Int64"   => Just Int64Type
+  "Integer" => Just IntegerType
+  "Bits8"   => Just Bits8Type
+  "Bits16"  => Just Bits16Type
+  "Bits32"  => Just Bits32Type
+  "Bits64"  => Just Bits64Type
+  "String"  => Just StringType
+  "Char"    => Just CharType
+  "Double"  => Just DoubleType
+  "%World"  => Just WorldType
+  _ => Nothing
+isConstantType _ = Nothing
+
+export
+isPrimType : Constant -> Bool
+isPrimType (I   x)  = False
+isPrimType (I8  x)  = False
+isPrimType (I16 x)  = False
+isPrimType (I32 x)  = False
+isPrimType (I64 x)  = False
+isPrimType (BI  x)  = False
+isPrimType (B8  x)  = False
+isPrimType (B16 x)  = False
+isPrimType (B32 x)  = False
+isPrimType (B64 x)  = False
+isPrimType (Str x)  = False
+isPrimType (Ch  x)  = False
+isPrimType (Db  x)  = False
+isPrimType WorldVal = False
+
+isPrimType Int8Type    = True
+isPrimType Int16Type   = True
+isPrimType Int32Type   = True
+isPrimType Int64Type   = True
+isPrimType IntType     = True
+isPrimType IntegerType = True
+isPrimType Bits8Type   = True
+isPrimType Bits16Type  = True
+isPrimType Bits32Type  = True
+isPrimType Bits64Type  = True
+isPrimType StringType  = True
+isPrimType CharType    = True
+isPrimType DoubleType  = True
+isPrimType WorldType   = True
+
+export
 constantEq : (x, y : Constant) -> Maybe (x = y)
 constantEq (I x) (I y) = case decEq x y of
                               Yes Refl => Just Refl
                               No contra => Nothing
+constantEq (I8 x) (I8 y) = case decEq x y of
+                                  Yes Refl => Just Refl
+                                  No contra => Nothing
+constantEq (I16 x) (I16 y) = case decEq x y of
+                                  Yes Refl => Just Refl
+                                  No contra => Nothing
+constantEq (I32 x) (I32 y) = case decEq x y of
+                                  Yes Refl => Just Refl
+                                  No contra => Nothing
+constantEq (I64 x) (I64 y) = case decEq x y of
+                                  Yes Refl => Just Refl
+                                  No contra => Nothing
 constantEq (BI x) (BI y) = case decEq x y of
                                 Yes Refl => Just Refl
                                 No contra => Nothing
@@ -62,6 +143,10 @@ constantEq (Ch x) (Ch y) = case decEq x y of
 constantEq (Db x) (Db y) = Nothing -- no DecEq for Doubles!
 constantEq WorldVal WorldVal = Just Refl
 constantEq IntType IntType = Just Refl
+constantEq Int8Type Int8Type = Just Refl
+constantEq Int16Type Int16Type = Just Refl
+constantEq Int32Type Int32Type = Just Refl
+constantEq Int64Type Int64Type = Just Refl
 constantEq IntegerType IntegerType = Just Refl
 constantEq StringType StringType = Just Refl
 constantEq CharType CharType = Just Refl
@@ -72,6 +157,10 @@ constantEq _ _ = Nothing
 export
 Show Constant where
   show (I x) = show x
+  show (I8 x) = show x
+  show (I16 x) = show x
+  show (I32 x) = show x
+  show (I64 x) = show x
   show (BI x) = show x
   show (B8 x) = show x
   show (B16 x) = show x
@@ -82,6 +171,10 @@ Show Constant where
   show (Db x) = show x
   show WorldVal = "%MkWorld"
   show IntType = "Int"
+  show Int8Type = "Int8"
+  show Int16Type = "Int16"
+  show Int32Type = "Int32"
+  show Int64Type = "Int64"
   show IntegerType = "Integer"
   show Bits8Type = "Bits8"
   show Bits16Type = "Bits16"
@@ -93,8 +186,43 @@ Show Constant where
   show WorldType = "%World"
 
 export
+Pretty Constant where
+  pretty (I x) = pretty x
+  pretty (I8 x) = pretty x
+  pretty (I16 x) = pretty x
+  pretty (I32 x) = pretty x
+  pretty (I64 x) = pretty x
+  pretty (BI x) = pretty x
+  pretty (B8 x) = pretty x
+  pretty (B16 x) = pretty x
+  pretty (B32 x) = pretty x
+  pretty (B64 x) = pretty x
+  pretty (Str x) = dquotes (pretty x)
+  pretty (Ch x) = squotes (pretty x)
+  pretty (Db x) = pretty x
+  pretty WorldVal = pretty "%MkWorld"
+  pretty IntType = pretty "Int"
+  pretty Int8Type = pretty "Int8"
+  pretty Int16Type = pretty "Int16"
+  pretty Int32Type = pretty "Int32"
+  pretty Int64Type = pretty "Int64"
+  pretty IntegerType = pretty "Integer"
+  pretty Bits8Type = pretty "Bits8"
+  pretty Bits16Type = pretty "Bits16"
+  pretty Bits32Type = pretty "Bits32"
+  pretty Bits64Type = pretty "Bits64"
+  pretty StringType = pretty "String"
+  pretty CharType = pretty "Char"
+  pretty DoubleType = pretty "Double"
+  pretty WorldType = pretty "%World"
+
+export
 Eq Constant where
   (I x) == (I y) = x == y
+  (I8 x) == (I8 y) = x == y
+  (I16 x) == (I16 y) = x == y
+  (I32 x) == (I32 y) = x == y
+  (I64 x) == (I64 y) = x == y
   (BI x) == (BI y) = x == y
   (B8 x) == (B8 y) = x == y
   (B16 x) == (B16 y) = x == y
@@ -105,6 +233,10 @@ Eq Constant where
   (Db x) == (Db y) = x == y
   WorldVal == WorldVal = True
   IntType == IntType = True
+  Int8Type == Int8Type = True
+  Int16Type == Int16Type = True
+  Int32Type == Int32Type = True
+  Int64Type == Int64Type = True
   IntegerType == IntegerType = True
   Bits8Type == Bits8Type = True
   Bits16Type == Bits16Type = True
@@ -130,7 +262,52 @@ constTag StringType = 9
 constTag CharType = 10
 constTag DoubleType = 11
 constTag WorldType = 12
+constTag Int8Type = 13
+constTag Int16Type = 14
+constTag Int32Type = 15
+constTag Int64Type = 16
 constTag _ = 0
+
+||| Precision of integral types.
+public export
+data Precision = P Int | Unlimited
+
+export
+Eq Precision where
+  (P m) == (P n)         = m == n
+  Unlimited == Unlimited = True
+  _         == _         = False
+
+export
+Ord Precision where
+  compare (P m) (P n)         = compare m n
+  compare Unlimited Unlimited = EQ
+  compare Unlimited _         = GT
+  compare _         Unlimited = LT
+
+-- so far, we only support limited precision
+-- unsigned integers
+public export
+data IntKind = Signed Precision | Unsigned Int
+
+public export
+intKind : Constant -> Maybe IntKind
+intKind IntegerType = Just $ Signed Unlimited
+intKind Int8Type    = Just . Signed   $ P 8
+intKind Int16Type   = Just . Signed   $ P 16
+intKind Int32Type   = Just . Signed   $ P 32
+intKind Int64Type   = Just . Signed   $ P 64
+intKind IntType     = Just . Signed   $ P 64
+intKind Bits8Type   = Just $ Unsigned 8
+intKind Bits16Type  = Just $ Unsigned 16
+intKind Bits32Type  = Just $ Unsigned 32
+intKind Bits64Type  = Just $ Unsigned 64
+intKind _           = Nothing
+
+public export
+precision : IntKind -> Precision
+precision (Signed p)   = p
+precision (Unsigned p) = P p
 
 -- All the internal operators, parameterised by their arity
 public export
@@ -223,6 +400,17 @@ Show (PrimFn arity) where
 public export
 data PiInfo t = Implicit | Explicit | AutoImplicit | DefImplicit t
 
+export
+eqPiInfoBy : (t -> u -> Bool) -> PiInfo t -> PiInfo u -> Bool
+eqPiInfoBy eqT = go where
+
+  go : PiInfo t -> PiInfo u -> Bool
+  go Implicit Implicit = True
+  go Explicit Explicit = True
+  go AutoImplicit AutoImplicit = True
+  go (DefImplicit t) (DefImplicit t') = eqT t t'
+  go _ _ = False
+
 -- There's few places where we need the default - it's just when checking if
 -- there's a default during elaboration - so often it's easier just to erase it
 -- to a normal implicit
@@ -242,86 +430,101 @@ Show t => Show (PiInfo t) where
 
 export
 Eq t => Eq (PiInfo t) where
-  (==) Implicit Implicit = True
-  (==) Explicit Explicit = True
-  (==) AutoImplicit AutoImplicit = True
-  (==) (DefImplicit t) (DefImplicit t') = t == t'
-  (==) _ _ = False
+  (==) = eqPiInfoBy (==)
 
 public export
 data Binder : Type -> Type where
-	   -- Lambda bound variables with their implicitness
-     Lam : RigCount -> PiInfo type -> (ty : type) -> Binder type
-		 -- Let bound variables with their value
-     Let : RigCount -> (val : type) -> (ty : type) -> Binder type
-		 -- Forall/pi bound variables with their implicitness
-     Pi : RigCount -> PiInfo type -> (ty : type) -> Binder type
-		 -- pattern bound variables. The PiInfo gives the implicitness at the
+     -- Lambda bound variables with their implicitness
+     Lam : FC -> RigCount -> PiInfo type -> (ty : type) -> Binder type
+     -- Let bound variables with their value
+     Let : FC -> RigCount -> (val : type) -> (ty : type) -> Binder type
+     -- Forall/pi bound variables with their implicitness
+     Pi : FC -> RigCount -> PiInfo type -> (ty : type) -> Binder type
+     -- pattern bound variables. The PiInfo gives the implicitness at the
      -- point it was bound (Explicit if it was explicitly named in the
      -- program)
-     PVar : RigCount -> PiInfo type -> (ty : type) -> Binder type
-		 -- variable bound for an as pattern (Like a let, but no computational
+     PVar : FC -> RigCount -> PiInfo type -> (ty : type) -> Binder type
+     -- variable bound for an as pattern (Like a let, but no computational
      -- force, and only used on the lhs. Converted to a let on the rhs because
      -- we want the computational behaviour.)
-     PLet : RigCount -> (val : type) -> (ty : type) -> Binder type
-		 -- the type of pattern bound variables
-     PVTy : RigCount -> (ty : type) -> Binder type
+     PLet : FC -> RigCount -> (val : type) -> (ty : type) -> Binder type
+     -- the type of pattern bound variables
+     PVTy : FC -> RigCount -> (ty : type) -> Binder type
+
+export
+isLet : Binder t -> Bool
+isLet (Let _ _ _ _) = True
+isLet _ = False
+
+export
+isImplicit : Binder t -> Bool
+isImplicit (Pi _ _ Explicit _) = False
+isImplicit (Pi _ _ _ _) = True
+isImplicit (Lam _ _ Explicit _) = False
+isImplicit (Lam _ _ _ _) = True
+isImplicit _ = False
+
+export
+binderLoc : Binder tm -> FC
+binderLoc (Lam fc _ x ty) = fc
+binderLoc (Let fc _ val ty) = fc
+binderLoc (Pi fc _ x ty) = fc
+binderLoc (PVar fc _ p ty) = fc
+binderLoc (PLet fc _ val ty) = fc
+binderLoc (PVTy fc _ ty) = fc
 
 export
 binderType : Binder tm -> tm
-binderType (Lam _ x ty) = ty
-binderType (Let _ val ty) = ty
-binderType (Pi _ x ty) = ty
-binderType (PVar _ _ ty) = ty
-binderType (PLet _ val ty) = ty
-binderType (PVTy _ ty) = ty
+binderType (Lam _ _ x ty) = ty
+binderType (Let _ _ val ty) = ty
+binderType (Pi _ _ x ty) = ty
+binderType (PVar _ _ _ ty) = ty
+binderType (PLet _ _ val ty) = ty
+binderType (PVTy _ _ ty) = ty
 
 export
 multiplicity : Binder tm -> RigCount
-multiplicity (Lam c x ty) = c
-multiplicity (Let c val ty) = c
-multiplicity (Pi c x ty) = c
-multiplicity (PVar c p ty) = c
-multiplicity (PLet c val ty) = c
-multiplicity (PVTy c ty) = c
+multiplicity (Lam _ c x ty) = c
+multiplicity (Let _ c val ty) = c
+multiplicity (Pi _ c x ty) = c
+multiplicity (PVar _ c p ty) = c
+multiplicity (PLet _ c val ty) = c
+multiplicity (PVTy _ c ty) = c
 
 export
 piInfo : Binder tm -> PiInfo tm
-piInfo (Lam c x ty) = x
-piInfo (Let c val ty) = Explicit
-piInfo (Pi c x ty) = x
-piInfo (PVar c p ty) = p
-piInfo (PLet c val ty) = Explicit
-piInfo (PVTy c ty) = Explicit
+piInfo (Lam _ c x ty) = x
+piInfo (Let _ c val ty) = Explicit
+piInfo (Pi _ c x ty) = x
+piInfo (PVar _ c p ty) = p
+piInfo (PLet _ c val ty) = Explicit
+piInfo (PVTy _ c ty) = Explicit
 
 export
 setMultiplicity : Binder tm -> RigCount -> Binder tm
-setMultiplicity (Lam c x ty) c' = Lam c' x ty
-setMultiplicity (Let c val ty) c' = Let c' val ty
-setMultiplicity (Pi c x ty) c' = Pi c' x ty
-setMultiplicity (PVar c p ty) c' = PVar c' p ty
-setMultiplicity (PLet c val ty) c' = PLet c' val ty
-setMultiplicity (PVTy c ty) c' = PVTy c' ty
-
-showCount : RigCount -> String
-showCount = elimSemi "0 " "1 " (const "")
+setMultiplicity (Lam fc _ x ty) c = Lam fc c x ty
+setMultiplicity (Let fc _ val ty) c = Let fc c val ty
+setMultiplicity (Pi fc _ x ty) c = Pi fc c x ty
+setMultiplicity (PVar fc _ p ty) c = PVar fc c p ty
+setMultiplicity (PLet fc _ val ty) c = PLet fc c val ty
+setMultiplicity (PVTy fc _ ty) c = PVTy fc c ty
 
 Show ty => Show (Binder ty) where
-	show (Lam c _ t) = "\\" ++ showCount c ++ show t
-	show (Pi c _ t) = "Pi " ++ showCount c ++ show t
-	show (Let c v t) = "let " ++ showCount c ++ show v ++ " : " ++ show t
-	show (PVar c _ t) = "pat " ++ showCount c ++ show t
-	show (PLet c v t) = "plet " ++ showCount c ++ show v ++ " : " ++ show t
-	show (PVTy c t) = "pty " ++ showCount c ++ show t
+  show (Lam _ c _ t) = "\\" ++ showCount c ++ show t
+  show (Pi _ c _ t) = "Pi " ++ showCount c ++ show t
+  show (Let _ c v t) = "let " ++ showCount c ++ show v ++ " : " ++ show t
+  show (PVar _ c _ t) = "pat " ++ showCount c ++ show t
+  show (PLet _ c v t) = "plet " ++ showCount c ++ show v ++ " : " ++ show t
+  show (PVTy _ c t) = "pty " ++ showCount c ++ show t
 
 export
 setType : Binder tm -> tm -> Binder tm
-setType (Lam c x _) ty = Lam c x ty
-setType (Let c val _) ty = Let c val ty
-setType (Pi c x _) ty = Pi c x ty
-setType (PVar c p _) ty = PVar c p ty
-setType (PLet c val _) ty = PLet c val ty
-setType (PVTy c _) ty = PVTy c ty
+setType (Lam fc c x _) ty = Lam fc c x ty
+setType (Let fc c val _) ty = Let fc c val ty
+setType (Pi fc c x _) ty = Pi fc c x ty
+setType (PVar fc c p _) ty = PVar fc c p ty
+setType (PLet fc c val _) ty = PLet fc c val ty
+setType (PVTy fc c _) ty = PVTy fc c ty
 
 export
 Functor PiInfo where
@@ -331,18 +534,42 @@ Functor PiInfo where
   map func (DefImplicit t) = (DefImplicit (func t))
 
 export
+Foldable PiInfo where
+  foldr f acc Implicit = acc
+  foldr f acc Explicit = acc
+  foldr f acc AutoImplicit = acc
+  foldr f acc (DefImplicit x) = f x acc
+
+export
+Traversable PiInfo where
+  traverse f Implicit = pure Implicit
+  traverse f Explicit = pure Explicit
+  traverse f AutoImplicit = pure AutoImplicit
+  traverse f (DefImplicit x) = map DefImplicit (f x)
+
+export
 Functor Binder where
-  map func (Lam c x ty) = Lam c (map func x) (func ty)
-  map func (Let c val ty) = Let c (func val) (func ty)
-  map func (Pi c x ty) = Pi c (map func x) (func ty)
-  map func (PVar c p ty) = PVar c (map func p) (func ty)
-  map func (PLet c val ty) = PLet c (func val) (func ty)
-  map func (PVTy c ty) = PVTy c (func ty)
+  map func (Lam fc c x ty) = Lam fc c (map func x) (func ty)
+  map func (Let fc c val ty) = Let fc c (func val) (func ty)
+  map func (Pi fc c x ty) = Pi fc c (map func x) (func ty)
+  map func (PVar fc c p ty) = PVar fc c (map func p) (func ty)
+  map func (PLet fc c val ty) = PLet fc c (func val) (func ty)
+  map func (PVTy fc c ty) = PVTy fc c (func ty)
+
 
 public export
 data IsVar : Name -> Nat -> List Name -> Type where
      First : IsVar n Z (n :: ns)
      Later : IsVar n i ns -> IsVar n (S i) (m :: ns)
+
+export
+dropLater : IsVar nm (S idx) (v :: vs) -> IsVar nm idx vs
+dropLater (Later p) = p
+
+export
+mkVar : (wkns : List Name) -> IsVar nm (length wkns) (wkns ++ nm :: vars)
+mkVar [] = First
+mkVar (w :: ws) = Later (mkVar ws)
 
 public export
 dropVar : (ns : List Name) -> {idx : Nat} -> (0 p : IsVar name idx ns) -> List Name
@@ -352,6 +579,12 @@ dropVar (n :: xs) (Later p) = n :: dropVar xs p
 public export
 data Var : List Name -> Type where
      MkVar : {i : Nat} -> (0 p : IsVar n i vars) -> Var vars
+
+namespace Var
+
+  export
+  later : Var ns -> Var (n :: ns)
+  later (MkVar p) = MkVar (Later p)
 
 export
 sameVar : Var xs -> Var xs -> Bool
@@ -370,6 +603,99 @@ dropFirst (MkVar (Later p) :: vs) = MkVar p :: dropFirst vs
 export
 Show (Var ns) where
   show (MkVar {i} _) = show i
+
+namespace HasLength
+
+  public export
+  data HasLength : Nat -> List a -> Type where
+    Z : HasLength Z []
+    S : HasLength n as -> HasLength (S n) (a :: as)
+
+  export
+  sucR : HasLength n xs -> HasLength (S n) (xs ++ [x])
+  sucR Z     = S Z
+  sucR (S n) = S (sucR n)
+
+  export
+  hlAppend : HasLength m xs -> HasLength n ys -> HasLength (m + n) (xs ++ ys)
+  hlAppend Z ys = ys
+  hlAppend (S xs) ys = S (hlAppend xs ys)
+
+  export
+  mkHasLength : (xs : List a) -> HasLength (length xs) xs
+  mkHasLength [] = Z
+  mkHasLength (_ :: xs) = S (mkHasLength xs)
+
+  export
+  take : (n : Nat) -> (xs : Stream a) -> HasLength n (take n xs)
+  take Z _ = Z
+  take (S n) (x :: xs) = S (take n xs)
+
+  export
+  cast : {ys : _} -> List.length xs = List.length ys -> HasLength m xs -> HasLength m ys
+  cast {ys = []}      eq Z = Z
+  cast {ys = y :: ys} eq (S p) = S (cast (succInjective _ _ eq) p)
+
+  hlReverseOnto : HasLength m acc -> HasLength n xs -> HasLength (m + n) (reverseOnto acc xs)
+  hlReverseOnto p Z = rewrite plusZeroRightNeutral m in p
+  hlReverseOnto {n = S n} p (S q) = rewrite sym (plusSuccRightSucc m n) in hlReverseOnto (S p) q
+
+  export
+  hlReverse : HasLength m acc -> HasLength m (reverse acc)
+  hlReverse = hlReverseOnto Z
+
+public export
+record SizeOf {a : Type} (xs : List a) where
+  constructor MkSizeOf
+  size        : Nat
+  0 hasLength : HasLength size xs
+
+namespace SizeOf
+
+  export
+  zero : SizeOf []
+  zero = MkSizeOf Z Z
+
+  export
+  suc : SizeOf as -> SizeOf (a :: as)
+  suc (MkSizeOf n p) = MkSizeOf (S n) (S p)
+
+  -- ||| suc but from the right
+  export
+  sucR : SizeOf as -> SizeOf (as ++ [a])
+  sucR (MkSizeOf n p) = MkSizeOf (S n) (sucR p)
+
+  export
+  (+) : SizeOf xs -> SizeOf ys -> SizeOf (xs ++ ys)
+  MkSizeOf m p + MkSizeOf n q = MkSizeOf (m + n) (hlAppend p q)
+
+  export
+  mkSizeOf : (xs : List a) -> SizeOf xs
+  mkSizeOf xs = MkSizeOf (length xs) (mkHasLength xs)
+
+  export
+  reverse : SizeOf xs -> SizeOf (reverse xs)
+  reverse (MkSizeOf n p) = MkSizeOf n (hlReverse p)
+
+  export
+  map : SizeOf xs -> SizeOf (map f xs)
+  map (MkSizeOf n p) = MkSizeOf n (cast (sym $ lengthMap xs) p)
+
+  export
+  take : {n : Nat} -> {0 xs : Stream a} -> SizeOf (take n xs)
+  take = MkSizeOf n (take n xs)
+
+namespace SizedView
+
+  public export
+  data SizedView : SizeOf as -> Type where
+    Z : SizedView (MkSizeOf Z Z)
+    S : (n : SizeOf as) -> SizedView (suc {a} n)
+
+export
+sizedView : (p : SizeOf as) -> SizedView p
+sizedView (MkSizeOf Z Z)         = Z
+sizedView (MkSizeOf (S n) (S p)) = S (MkSizeOf n p)
 
 namespace CList
   -- A list correspoding to another list
@@ -417,6 +743,61 @@ data Term : List Name -> Type where
               Term vars
      TType : FC -> Term vars
 
+-- Remove/restore the given namespace from all Refs. This is to allow
+-- writing terms and case trees to disk without repeating the same namespace
+-- all over the place.
+public export
+interface StripNamespace a where
+  trimNS : Namespace -> a -> a
+  restoreNS : Namespace -> a -> a
+
+export
+StripNamespace (Term vars) where
+  trimNS ns tm@(Ref fc x (NS tns n))
+      = if ns == tns then Ref fc x (NS (unsafeFoldNamespace []) n) else tm
+        -- ^ A blank namespace, rather than a UN, so we don't catch primitive
+        -- names which are represented as UN.
+  trimNS ns (Meta fc x y xs)
+      = Meta fc x y (map (trimNS ns) xs)
+  trimNS ns (Bind fc x b scope)
+      = Bind fc x (map (trimNS ns) b) (trimNS ns scope)
+  trimNS ns (App fc fn arg)
+      = App fc (trimNS ns fn) (trimNS ns arg)
+  trimNS ns (As fc s p tm)
+      = As fc s (trimNS ns p) (trimNS ns tm)
+  trimNS ns (TDelayed fc x y)
+      = TDelayed fc x (trimNS ns y)
+  trimNS ns (TDelay fc x t y)
+      = TDelay fc x (trimNS ns t) (trimNS ns y)
+  trimNS ns (TForce fc r y)
+      = TForce fc r (trimNS ns y)
+  trimNS ns tm = tm
+
+  restoreNS ns tm@(Ref fc x (NS tmns n))
+      = if isNil (unsafeUnfoldNamespace tmns)
+            then Ref fc x (NS ns n)
+            else tm
+  restoreNS ns (Meta fc x y xs)
+      = Meta fc x y (map (restoreNS ns) xs)
+  restoreNS ns (Bind fc x b scope)
+      = Bind fc x (map (restoreNS ns) b) (restoreNS ns scope)
+  restoreNS ns (App fc fn arg)
+      = App fc (restoreNS ns fn) (restoreNS ns arg)
+  restoreNS ns (As fc s p tm)
+      = As fc s (restoreNS ns p) (restoreNS ns tm)
+  restoreNS ns (TDelayed fc x y)
+      = TDelayed fc x (restoreNS ns y)
+  restoreNS ns (TDelay fc x t y)
+      = TDelay fc x (restoreNS ns t) (restoreNS ns y)
+  restoreNS ns (TForce fc r y)
+      = TForce fc r (restoreNS ns y)
+  restoreNS ns tm = tm
+
+export
+isErased : Term vars -> Bool
+isErased (Erased _ _) = True
+isErased _ = False
+
 export
 getLoc : Term vars -> FC
 getLoc (Local fc _ _ _) = fc
@@ -440,27 +821,41 @@ Eq LazyReason where
   (==) _ _ = False
 
 export
+Show LazyReason where
+    show LInf = "Inf"
+    show LLazy = "Lazy"
+    show LUnknown = "Unkown"
+
+export
 compatible : LazyReason -> LazyReason -> Bool
 compatible LUnknown _ = True
 compatible _ LUnknown = True
 compatible x y = x == y
 
 export
-Eq a => Eq (Binder a) where
-  (Lam c p ty) == (Lam c' p' ty') = c == c' && p == p' && ty == ty'
-  (Let c v ty) == (Let c' v' ty') = c == c' && v == v' && ty == ty'
-  (Pi c p ty) == (Pi c' p' ty') = c == c' && p == p' && ty == ty'
-  (PVar c p ty) == (PVar c' p' ty') = c == c' && p == p' && ty == ty'
-  (PLet c v ty) == (PLet c' v' ty') = c == c' && v == v' && ty == ty'
-  (PVTy c ty) == (PVTy c' ty') = c == c' && ty == ty'
-  _ == _ = False
+eqBinderBy : (t -> u -> Bool) -> (Binder t -> Binder u -> Bool)
+eqBinderBy eqTU = go where
+
+  go : Binder t -> Binder u -> Bool
+  go (Lam _ c p ty) (Lam _ c' p' ty') = c == c' && eqPiInfoBy eqTU p p' && eqTU ty ty'
+  go (Let _ c v ty) (Let _ c' v' ty') = c == c' && eqTU v v' && eqTU ty ty'
+  go (Pi _ c p ty) (Pi _ c' p' ty')   = c == c' && eqPiInfoBy eqTU p p' && eqTU ty ty'
+  go (PVar _ c p ty) (PVar _ c' p' ty') = c == c' && eqPiInfoBy eqTU p p' && eqTU ty ty'
+  go (PLet _ c v ty) (PLet _ c' v' ty') = c == c' && eqTU v v' && eqTU ty ty'
+  go (PVTy _ c ty) (PVTy _ c' ty') = c == c' && eqTU ty ty'
+  go _ _ = False
 
 export
+Eq a => Eq (Binder a) where
+  (==) = eqBinderBy (==)
+
+export
+total
 Eq (Term vars) where
   (==) (Local _ _ idx _) (Local _ _ idx' _) = idx == idx'
   (==) (Ref _ _ n) (Ref _ _ n') = n == n'
   (==) (Meta _ _ i args) (Meta _ _ i' args')
-      = assert_total (i == i' && args == args')
+      = i == i' && assert_total (args == args')
   (==) (Bind _ _ b sc) (Bind _ _ b' sc')
       = assert_total (b == b' && sc == believe_me sc')
   (==) (App _ f a) (App _ f' a') = f == f' && a == a'
@@ -475,35 +870,14 @@ Eq (Term vars) where
 
 -- Check equality, ignoring variable naming
 export
+total
 eqTerm : Term vs -> Term vs' -> Bool
 eqTerm (Local _ _ idx _) (Local _ _ idx' _) = idx == idx'
 eqTerm (Ref _ _ n) (Ref _ _ n') = n == n'
 eqTerm (Meta _ _ i args) (Meta _ _ i' args')
-    = assert_total (i == i' && allTrue (zipWith eqTerm args args'))
+    = i == i' && assert_total (all (uncurry eqTerm) (zip args args'))
 eqTerm (Bind _ _ b sc) (Bind _ _ b' sc')
-    = assert_total (eqBinder b b' && eqTerm sc sc')
-  where
-    eqPiInfo : PiInfo (Term vs) -> PiInfo (Term vs') -> Bool
-    eqPiInfo Explicit Explicit = True
-    eqPiInfo Implicit Implicit = True
-    eqPiInfo AutoImplicit AutoImplicit = True
-    eqPiInfo (DefImplicit t) (DefImplicit t') = eqTerm t t'
-    eqPiInfo _ _ = False
-
-    eqBinder : Binder (Term vs) -> Binder (Term vs') -> Bool
-    eqBinder (Lam c p ty) (Lam c' p' ty')
-        = c == c' && eqPiInfo p p' && eqTerm ty ty'
-    eqBinder (Let c v ty) (Let c' v' ty')
-        = c == c' && eqTerm v v' && eqTerm ty ty'
-    eqBinder (Pi c p ty) (Pi c' p' ty')
-        = c == c' && eqPiInfo p p' && eqTerm ty ty'
-    eqBinder (PVar c p ty) (PVar c' p' ty')
-        = c == c' && eqPiInfo p p' && eqTerm ty ty'
-    eqBinder (PLet c v ty) (PLet c' v' ty')
-        = c == c' && eqTerm v v' && eqTerm ty ty'
-    eqBinder (PVTy c ty) (PVTy c' ty')
-        = c == c' && eqTerm ty ty'
-    eqBinder _ _ = False
+    = assert_total (eqBinderBy eqTerm b b') && eqTerm sc sc'
 eqTerm (App _ f a) (App _ f' a') = eqTerm f f' && eqTerm a a'
 eqTerm (As _ _ a p) (As _ _ a' p') = eqTerm a a' && eqTerm p p'
 eqTerm (TDelayed _ _ t) (TDelayed _ _ t') = eqTerm t t'
@@ -515,14 +889,15 @@ eqTerm (TType _) (TType _) = True
 eqTerm _ _ = False
 
 public export
-interface Weaken (tm : List Name -> Type) where
-  weaken : {n, vars : _} -> tm vars -> tm (n :: vars)
-  weakenNs : {vars : _} -> (ns : List Name) -> tm vars -> tm (ns ++ vars)
+interface Weaken tm where
+  weaken : {0 vars : List Name} -> tm vars -> tm (n :: vars)
+  weakenNs : SizeOf ns -> tm vars -> tm (ns ++ vars)
 
-  weakenNs [] t = t
-  weakenNs (n :: ns) t = weaken (weakenNs ns t)
+  weakenNs p t = case sizedView p of
+    Z   => t
+    S p => weaken (weakenNs p t)
 
-  weaken = weakenNs [_]
+  weaken = weakenNs (suc zero)
 
 public export
 data Visibility = Private | Export | Public
@@ -532,6 +907,12 @@ Show Visibility where
   show Private = "private"
   show Export = "export"
   show Public = "public export"
+
+export
+Pretty Visibility where
+  pretty Private = pretty "private"
+  pretty Export = pretty "export"
+  pretty Public = pretty "public" <+> pretty "export"
 
 export
 Eq Visibility where
@@ -580,11 +961,21 @@ export
 Show PartialReason where
   show NotStrictlyPositive = "not strictly positive"
   show (BadCall [n])
-	   = "possibly not terminating due to call to " ++ show n
+      = "possibly not terminating due to call to " ++ show n
   show (BadCall ns)
-	   = "possibly not terminating due to calls to " ++ showSep ", " (map show ns)
+      = "possibly not terminating due to calls to " ++ showSep ", " (map show ns)
   show (RecPath ns)
-	   = "possibly not terminating due to recursive path " ++ showSep " -> " (map show ns)
+      = "possibly not terminating due to recursive path " ++ showSep " -> " (map show ns)
+
+export
+Pretty PartialReason where
+  pretty NotStrictlyPositive = reflow "not strictly positive"
+  pretty (BadCall [n])
+    = reflow "possibly not terminating due to call to" <++> pretty n
+  pretty (BadCall ns)
+    = reflow "possibly not terminating due to calls to" <++> concatWith (surround (comma <+> space)) (pretty <$> ns)
+  pretty (RecPath ns)
+    = reflow "possibly not terminating due to recursive path" <++> concatWith (surround (pretty " -> ")) (pretty <$> ns)
 
 public export
 data Terminating
@@ -597,6 +988,12 @@ Show Terminating where
   show Unchecked = "not yet checked"
   show IsTerminating = "terminating"
   show (NotTerminating p) = show p
+
+export
+Pretty Terminating where
+  pretty Unchecked = reflow "not yet checked"
+  pretty IsTerminating = pretty "terminating"
+  pretty (NotTerminating p) = pretty p
 
 public export
 data Covering
@@ -613,6 +1010,15 @@ Show Covering where
   show (NonCoveringCall cs)
      = "not covering due to calls to functions " ++ showSep ", " (map show cs)
 
+export
+Pretty Covering where
+  pretty IsCovering = pretty "covering"
+  pretty (MissingCases c) = reflow "not covering all cases"
+  pretty (NonCoveringCall [f])
+     = reflow "not covering due to call to function" <++> pretty f
+  pretty (NonCoveringCall cs)
+     = reflow "not covering due to calls to functions" <++> concatWith (surround (comma <+> space)) (pretty <$> cs)
+
 -- Totality status of a definition. We separate termination checking from
 -- coverage checking.
 public export
@@ -624,7 +1030,7 @@ record Totality where
 export
 Show Totality where
   show tot
-    = let t	= isTerminating tot
+    = let t = isTerminating tot
           c = isCovering tot in
         showTot t c
     where
@@ -633,6 +1039,13 @@ Show Totality where
       showTot IsTerminating c = show c
       showTot t IsCovering = show t
       showTot t c = show c ++ "; " ++ show t
+
+export
+Pretty Totality where
+  pretty (MkTotality IsTerminating IsCovering) = pretty "total"
+  pretty (MkTotality IsTerminating c) = pretty c
+  pretty (MkTotality t IsCovering) = pretty t
+  pretty (MkTotality t c) = pretty c <+> semi <++> pretty t
 
 export
 unchecked : Totality
@@ -650,99 +1063,85 @@ public export
 data NVar : Name -> List Name -> Type where
      MkNVar : {i : Nat} -> (0 p : IsVar n i vars) -> NVar n vars
 
-export
-weakenNVar : (ns : List Name) ->
-             {idx : Nat} -> (0 p : IsVar name idx inner) ->
-             NVar name (ns ++ inner)
-weakenNVar [] x = MkNVar x
-weakenNVar (y :: xs) x
-   = let MkNVar x' = weakenNVar xs x in
-         MkNVar (Later x')
+namespace NVar
+  export
+  later : NVar nm ns -> NVar nm (n :: ns)
+  later (MkNVar p) = MkNVar (Later p)
 
 export
-insertNVar : {outer : List Name} ->
-            (idx : Nat) ->
-            (0 p : IsVar name idx (outer ++ inner)) ->
-            NVar name (outer ++ n :: inner)
-insertNVar {outer = []} idx x = MkNVar (Later x)
-insertNVar {outer = (name :: xs)} Z First = MkNVar First
-insertNVar {n} {outer = (x :: xs)} (S i) (Later y)
-    = let MkNVar prf = insertNVar {n} i y in
-          MkNVar (Later prf)
+weakenNVar : SizeOf ns -> NVar name inner -> NVar name (ns ++ inner)
+weakenNVar p x = case sizedView p of
+  Z     => x
+  (S p) => later (weakenNVar p x)
 
 export
-insertVar : {outer : _} ->
-            (idx : Nat) ->
-            (0 p : IsVar name idx (outer ++ inner)) ->
+insertNVar : SizeOf outer ->
+             NVar nm (outer ++ inner) ->
+             NVar nm (outer ++ n :: inner)
+insertNVar p v = case sizedView p of
+  Z     => later v
+  (S p) => case v of
+    MkNVar First     => MkNVar First
+    MkNVar (Later v) => later (insertNVar p (MkNVar v))
+
+export
+insertVar : SizeOf outer ->
+            Var (outer ++ inner) ->
             Var (outer ++ n :: inner)
-insertVar {outer = []} idx x = MkVar (Later x)
-insertVar {outer = (name :: xs)} Z First = MkVar First
-insertVar {n} {outer = (x :: xs)} (S i) (Later y)
-    = let MkVar prf = insertVar {n} i y in
-          MkVar (Later prf)
+insertVar p (MkVar v) = let MkNVar v' = insertNVar p (MkNVar v) in MkVar v'
 
 export
-weakenVar : (ns : List Name) -> {idx : Nat} -> (0 p : IsVar name idx inner) ->
-            Var (ns ++ inner)
-weakenVar [] x = MkVar x
-weakenVar (y :: xs) x
-   = let MkVar x' = weakenVar xs x in
-         MkVar (Later x')
+weakenVar : SizeOf ns -> Var inner -> Var (ns ++ inner)
+weakenVar p (MkVar v) = let MkNVar v' = weakenNVar p (MkNVar v) in MkVar v'
 
 export
-insertVarNames : {outer, ns : _} ->
-                 (idx : Nat) ->
-                 (0 p : IsVar name idx (outer ++ inner)) ->
-                 Var (outer ++ (ns ++ inner))
-insertVarNames {ns} {outer = []} idx prf = weakenVar ns prf
-insertVarNames {outer = (y :: xs)} Z First = MkVar First
-insertVarNames {ns} {outer = (y :: xs)} (S i) (Later x)
-    = let MkVar prf = insertVarNames {ns} i x in
-          MkVar (Later prf)
-
-export
-insertNVarNames : {outer, ns : _} ->
-                  (idx : Nat) ->
-                  (0 p : IsVar name idx (outer ++ inner)) ->
+insertNVarNames : SizeOf outer -> SizeOf ns ->
+                  NVar name (outer ++ inner) ->
                   NVar name (outer ++ (ns ++ inner))
-insertNVarNames {ns} {outer = []} idx prf = weakenNVar ns prf
-insertNVarNames {outer = (y :: xs)} Z First = MkNVar First
-insertNVarNames {ns} {outer = (y :: xs)} (S i) (Later x)
-    = let MkNVar prf = insertNVarNames {ns} i x in
-          MkNVar (Later prf)
+insertNVarNames p q v = case sizedView p of
+  Z     => weakenNVar q v
+  (S p) => case v of
+    MkNVar First      => MkNVar First
+    MkNVar (Later v') => later (insertNVarNames p q (MkNVar v'))
 
 export
-insertNames : {outer, inner : _} ->
-              (ns : List Name) -> Term (outer ++ inner) ->
+insertVarNames : SizeOf outer -> SizeOf ns ->
+                 Var (outer ++ inner) ->
+                 Var (outer ++ (ns ++ inner))
+insertVarNames p q (MkVar v) = let MkNVar v' = insertNVarNames p q (MkNVar v) in MkVar v'
+
+export
+insertNames : SizeOf outer -> SizeOf ns ->
+              Term (outer ++ inner) ->
               Term (outer ++ (ns ++ inner))
-insertNames ns (Local fc r idx prf)
-    = let MkNVar prf' = insertNVarNames {ns} idx prf in
-          Local fc r _ prf'
-insertNames ns (Ref fc nt name) = Ref fc nt name
-insertNames ns (Meta fc name idx args)
-    = Meta fc name idx (map (insertNames ns) args)
-insertNames {outer} {inner} ns (Bind fc x b scope)
-    = Bind fc x (assert_total (map (insertNames ns) b))
-           (insertNames {outer = x :: outer} {inner} ns scope)
-insertNames ns (App fc fn arg)
-    = App fc (insertNames ns fn) (insertNames ns arg)
-insertNames ns (As fc s as tm)
-    = As fc s (insertNames ns as) (insertNames ns tm)
-insertNames ns (TDelayed fc r ty) = TDelayed fc r (insertNames ns ty)
-insertNames ns (TDelay fc r ty tm)
-    = TDelay fc r (insertNames ns ty) (insertNames ns tm)
-insertNames ns (TForce fc r tm) = TForce fc r (insertNames ns tm)
-insertNames ns (PrimVal fc c) = PrimVal fc c
-insertNames ns (Erased fc i) = Erased fc i
-insertNames ns (TType fc) = TType fc
+insertNames out ns (Local fc r idx prf)
+   = let MkNVar prf' = insertNVarNames out ns (MkNVar prf) in
+     Local fc r _ prf'
+insertNames out ns (Ref fc nt name) = Ref fc nt name
+insertNames out ns (Meta fc name idx args)
+    = Meta fc name idx (map (insertNames out ns) args)
+insertNames out ns (Bind fc x b scope)
+    = Bind fc x (assert_total (map (insertNames out ns) b))
+           (insertNames (suc out) ns scope)
+insertNames out ns (App fc fn arg)
+    = App fc (insertNames out ns fn) (insertNames out ns arg)
+insertNames out ns (As fc s as tm)
+    = As fc s (insertNames out ns as) (insertNames out ns tm)
+insertNames out ns (TDelayed fc r ty) = TDelayed fc r (insertNames out ns ty)
+insertNames out ns (TDelay fc r ty tm)
+    = TDelay fc r (insertNames out ns ty) (insertNames out ns tm)
+insertNames out ns (TForce fc r tm) = TForce fc r (insertNames out ns tm)
+insertNames out ns (PrimVal fc c) = PrimVal fc c
+insertNames out ns (Erased fc i) = Erased fc i
+insertNames out ns (TType fc) = TType fc
 
 export
 Weaken Term where
-  weakenNs ns tm = insertNames {outer = []} ns tm
+  weakenNs p tm = insertNames zero p tm
 
 export
 Weaken Var where
-  weaken (MkVar p) = MkVar (Later p)
+  weaken = later
 
 export
 varExtend : IsVar x idx xs -> IsVar x idx (xs ++ ys)
@@ -765,14 +1164,20 @@ apply : FC -> Term vars -> List (Term vars) -> Term vars
 apply loc fn [] = fn
 apply loc fn (a :: args) = apply loc (App loc fn a) args
 
+-- Creates a chain of `App` nodes, each with its own file context
+export
+applyWithFC : Term vars -> List (FC, Term vars) -> Term vars
+applyWithFC fn [] = fn
+applyWithFC fn ((fc, arg) :: args) = applyWithFC (App fc fn arg) args
+
 -- Build a simple function type
 export
-fnType : {vars : _} -> Term vars -> Term vars -> Term vars
-fnType arg scope = Bind emptyFC (MN "_" 0) (Pi top Explicit arg) (weaken scope)
+fnType : {vars : _} -> FC -> Term vars -> Term vars -> Term vars
+fnType fc arg scope = Bind emptyFC (MN "_" 0) (Pi fc top Explicit arg) (weaken scope)
 
 export
-linFnType : {vars : _} -> Term vars -> Term vars -> Term vars
-linFnType arg scope = Bind emptyFC (MN "_" 0) (Pi linear Explicit arg) (weaken scope)
+linFnType : {vars : _} -> FC -> Term vars -> Term vars -> Term vars
+linFnType fc arg scope = Bind emptyFC (MN "_" 0) (Pi fc linear Explicit arg) (weaken scope)
 
 export
 getFnArgs : Term vars -> (Term vars, List (Term vars))
@@ -897,18 +1302,18 @@ mutual
   export
   shrinkBinder : Binder (Term vars) -> SubVars newvars vars ->
                  Maybe (Binder (Term newvars))
-  shrinkBinder (Lam c p ty) prf
-      = Just (Lam c !(shrinkPi p prf) !(shrinkTerm ty prf))
-  shrinkBinder (Let c val ty) prf
-      = Just (Let c !(shrinkTerm val prf) !(shrinkTerm ty prf))
-  shrinkBinder (Pi c p ty) prf
-      = Just (Pi c !(shrinkPi p prf) !(shrinkTerm ty prf))
-  shrinkBinder (PVar c p ty) prf
-      = Just (PVar c !(shrinkPi p prf) !(shrinkTerm ty prf))
-  shrinkBinder (PLet c val ty) prf
-      = Just (PLet c !(shrinkTerm val prf) !(shrinkTerm ty prf))
-  shrinkBinder (PVTy c ty) prf
-      = Just (PVTy c !(shrinkTerm ty prf))
+  shrinkBinder (Lam fc c p ty) prf
+      = Just (Lam fc c !(shrinkPi p prf) !(shrinkTerm ty prf))
+  shrinkBinder (Let fc c val ty) prf
+      = Just (Let fc c !(shrinkTerm val prf) !(shrinkTerm ty prf))
+  shrinkBinder (Pi fc c p ty) prf
+      = Just (Pi fc c !(shrinkPi p prf) !(shrinkTerm ty prf))
+  shrinkBinder (PVar fc c p ty) prf
+      = Just (PVar fc c !(shrinkPi p prf) !(shrinkTerm ty prf))
+  shrinkBinder (PLet fc c val ty) prf
+      = Just (PLet fc c !(shrinkTerm val prf) !(shrinkTerm ty prf))
+  shrinkBinder (PVTy fc c ty) prf
+      = Just (PVTy fc c !(shrinkTerm ty prf))
 
   export
   shrinkVar : Var vars -> SubVars newvars vars -> Maybe (Var newvars)
@@ -916,10 +1321,7 @@ mutual
 
   export
   shrinkTerm : Term vars -> SubVars newvars vars -> Maybe (Term newvars)
-  shrinkTerm (Local fc r idx loc) prf
-     = case subElem loc prf of
-            Nothing => Nothing
-            Just (MkVar loc') => Just (Local fc r _ loc')
+  shrinkTerm (Local fc r idx loc) prf = (\(MkVar loc') => Local fc r _ loc') <$> subElem loc prf
   shrinkTerm (Ref fc x name) prf = Just (Ref fc x name)
   shrinkTerm (Meta fc x y xs) prf
      = do xs' <- traverse (\x => shrinkTerm x prf) xs
@@ -979,64 +1381,60 @@ namespace Bounds
        None : Bounds []
        Add : (x : Name) -> Name -> Bounds xs -> Bounds (x :: xs)
 
-export
-addVars : {later, bound : _} ->
-          {idx : Nat} ->
-          Bounds bound -> (0 p : IsVar name idx (later ++ vars)) ->
-          NVar name (later ++ (bound ++ vars))
-addVars {later = []} {bound} bs p = weakenNVar bound p
-addVars {later = (x :: xs)} bs First = MkNVar First
-addVars {later = (x :: xs)} bs (Later p)
-  = let MkNVar p' = addVars {later = xs} bs p in
-        MkNVar (Later p')
+  export
+  sizeOf : Bounds xs -> SizeOf xs
+  sizeOf None        = zero
+  sizeOf (Add _ _ b) = suc (sizeOf b)
 
-resolveRef : {later : _} ->
-             (done : List Name) -> Bounds bound -> FC -> Name ->
-             Maybe (Term (later ++ (done ++ bound ++ vars)))
-resolveRef done None fc n = Nothing
-resolveRef {later} {vars} done (Add {xs} new old bs) fc n
+export
+addVars : SizeOf outer -> Bounds bound ->
+          NVar name (outer ++ vars) ->
+          NVar name (outer ++ (bound ++ vars))
+addVars p = insertNVarNames p . sizeOf
+
+resolveRef : SizeOf outer -> SizeOf done -> Bounds bound -> FC -> Name ->
+             Maybe (Term (outer ++ (done ++ bound ++ vars)))
+resolveRef p q None fc n = Nothing
+resolveRef {outer} {done} p q (Add {xs} new old bs) fc n
     = if n == old
-         then rewrite appendAssociative later done (new :: xs ++ vars) in
-              let MkNVar p = weakenNVar {inner = new :: xs ++ vars}
-                                        (later ++ done) First in
+         then rewrite appendAssociative outer done (new :: xs ++ vars) in
+              let MkNVar p = weakenNVar (p + q) (MkNVar First) in
                      Just (Local fc Nothing _ p)
          else rewrite appendAssociative done [new] (xs ++ vars)
-                in resolveRef (done ++ [new]) bs fc n
+                in resolveRef p (sucR q) bs fc n
 
-mkLocals : {later, bound : _} ->
-           Bounds bound ->
-           Term (later ++ vars) -> Term (later ++ (bound ++ vars))
-mkLocals bs (Local fc r idx p)
-    = let MkNVar p' = addVars bs p in Local fc r _ p'
-mkLocals bs (Ref fc Bound name)
-    = maybe (Ref fc Bound name) id (resolveRef [] bs fc name)
-mkLocals bs (Ref fc nt name)
+mkLocals : SizeOf outer -> Bounds bound ->
+           Term (outer ++ vars) -> Term (outer ++ (bound ++ vars))
+mkLocals outer bs (Local fc r idx p)
+    = let MkNVar p' = addVars outer bs (MkNVar p) in Local fc r _ p'
+mkLocals outer bs (Ref fc Bound name)
+    = maybe (Ref fc Bound name) id (resolveRef outer zero bs fc name)
+mkLocals outer bs (Ref fc nt name)
     = Ref fc nt name
-mkLocals bs (Meta fc name y xs)
-    = maybe (Meta fc name y (map (mkLocals bs) xs))
-            id (resolveRef [] bs fc name)
-mkLocals {later} bs (Bind fc x b scope)
-    = Bind fc x (map (mkLocals bs) b)
-           (mkLocals {later = x :: later} bs scope)
-mkLocals bs (App fc fn arg)
-    = App fc (mkLocals bs fn) (mkLocals bs arg)
-mkLocals bs (As fc s as tm)
-    = As fc s (mkLocals bs as) (mkLocals bs tm)
-mkLocals bs (TDelayed fc x y)
-    = TDelayed fc x (mkLocals bs y)
-mkLocals bs (TDelay fc x t y)
-    = TDelay fc x (mkLocals bs t) (mkLocals bs y)
-mkLocals bs (TForce fc r x)
-    = TForce fc r (mkLocals bs x)
-mkLocals bs (PrimVal fc c) = PrimVal fc c
-mkLocals bs (Erased fc i) = Erased fc i
-mkLocals bs (TType fc) = TType fc
+mkLocals outer bs (Meta fc name y xs)
+    = maybe (Meta fc name y (map (mkLocals outer bs) xs))
+            id (resolveRef outer zero bs fc name)
+mkLocals outer bs (Bind fc x b scope)
+    = Bind fc x (map (mkLocals outer bs) b)
+           (mkLocals (suc outer) bs scope)
+mkLocals outer bs (App fc fn arg)
+    = App fc (mkLocals outer bs fn) (mkLocals outer bs arg)
+mkLocals outer bs (As fc s as tm)
+    = As fc s (mkLocals outer bs as) (mkLocals outer bs tm)
+mkLocals outer bs (TDelayed fc x y)
+    = TDelayed fc x (mkLocals outer bs y)
+mkLocals outer bs (TDelay fc x t y)
+    = TDelay fc x (mkLocals outer bs t) (mkLocals outer bs y)
+mkLocals outer bs (TForce fc r x)
+    = TForce fc r (mkLocals outer bs x)
+mkLocals outer bs (PrimVal fc c) = PrimVal fc c
+mkLocals outer bs (Erased fc i) = Erased fc i
+mkLocals outer bs (TType fc) = TType fc
 
 export
-refsToLocals : {bound : _} ->
-               Bounds bound -> Term vars -> Term (bound ++ vars)
+refsToLocals : Bounds bound -> Term vars -> Term (bound ++ vars)
 refsToLocals None y = y
-refsToLocals bs y = mkLocals {later = []} bs y
+refsToLocals bs y = mkLocals zero  bs y
 
 -- Replace any reference to 'x' with a locally bound name 'new'
 export
@@ -1044,20 +1442,25 @@ refToLocal : (x : Name) -> (new : Name) -> Term vars -> Term (new :: vars)
 refToLocal x new tm = refsToLocals (Add new x None) tm
 
 export
-isVar : (n : Name) -> (ns : List Name) -> Maybe (Var ns)
-isVar n [] = Nothing
-isVar n (m :: ms)
+isNVar : (n : Name) -> (ns : List Name) -> Maybe (NVar n ns)
+isNVar n [] = Nothing
+isNVar n (m :: ms)
     = case nameEq n m of
-           Nothing => do MkVar p <- isVar n ms
-                         pure (MkVar (Later p))
-           Just Refl => pure (MkVar First)
+           Nothing   => map later (isNVar n ms)
+           Just Refl => pure (MkNVar First)
+
+export
+isVar : (n : Name) -> (ns : List Name) -> Maybe (Var ns)
+isVar n ns = do
+  MkNVar v <- isNVar n ns
+  pure (MkVar v)
 
 -- Replace any Ref Bound in a type with appropriate local
 export
 resolveNames : (vars : List Name) -> Term vars -> Term vars
 resolveNames vars (Ref fc Bound name)
-    = case isVar name vars of
-           Just (MkVar prf) => Local fc (Just False) _ prf
+    = case isNVar name vars of
+           Just (MkNVar prf) => Local fc (Just False) _ prf
            _ => Ref fc Bound name
 resolveNames vars (Meta fc n i xs)
     = Meta fc n i (map (resolveNames vars) xs)
@@ -1084,57 +1487,62 @@ namespace SubstEnv
        (::) : Term vars ->
               SubstEnv ds vars -> SubstEnv (d :: ds) vars
 
-  findDrop : {drop : _} -> {idx : Nat} ->
-             FC -> Maybe Bool -> (0 p : IsVar name idx (drop ++ vars)) ->
-             SubstEnv drop vars -> Term vars
-  findDrop {drop = []} fc r var env = Local fc r _ var
-  findDrop {drop = x :: xs} fc r First (tm :: env) = tm
-  findDrop {drop = x :: xs} fc r (Later p) (tm :: env)
-      = findDrop fc r p env
+  findDrop : FC -> Maybe Bool ->
+             Var (dropped ++ vars) ->
+             SubstEnv dropped vars ->
+             Term vars
+  findDrop fc r (MkVar var) [] = Local fc r _ var
+  findDrop fc r (MkVar First) (tm :: env) = tm
+  findDrop fc r (MkVar (Later p)) (tm :: env)
+      = findDrop fc r (MkVar p) env
 
-  find : {drop, vars, outer : _} -> {idx : Nat} ->
-         FC -> Maybe Bool -> (0 p : IsVar name idx (outer ++ (drop ++ vars))) ->
-         SubstEnv drop vars ->
+  find : FC -> Maybe Bool ->
+         SizeOf outer ->
+         Var (outer ++ (dropped ++ vars)) ->
+         SubstEnv dropped vars ->
          Term (outer ++ vars)
-  find {outer = []} fc r var env = findDrop fc r var env
-  find {outer = x :: xs} fc r First env = Local fc r _ First
-  find {outer = x :: xs} fc r (Later p) env = weaken (find fc r p env)
+  find fc r outer var env = case sizedView outer of
+    Z       => findDrop fc r var env
+    S outer => case var of
+      MkVar First     => Local fc r _ First
+      MkVar (Later p) => weaken (find fc r outer (MkVar p) env)
+       -- TODO: refactor to only weaken once?
 
-  substEnv : {drop, vars, outer : _} ->
-             SubstEnv drop vars -> Term (outer ++ (drop ++ vars)) ->
+  substEnv : SizeOf outer ->
+             SubstEnv dropped vars ->
+             Term (outer ++ (dropped ++ vars)) ->
              Term (outer ++ vars)
-  substEnv env (Local fc r _ prf)
-      = find fc r prf env
-  substEnv env (Ref fc x name) = Ref fc x name
-  substEnv env (Meta fc n i xs)
-      = Meta fc n i (map (substEnv env) xs)
-  substEnv {outer} env (Bind fc x b scope)
-      = Bind fc x (map (substEnv env) b)
-                  (substEnv {outer = x :: outer} env scope)
-  substEnv env (App fc fn arg)
-      = App fc (substEnv env fn) (substEnv env arg)
-  substEnv env (As fc s as pat)
-      = As fc s (substEnv env as) (substEnv env pat)
-  substEnv env (TDelayed fc x y) = TDelayed fc x (substEnv env y)
-  substEnv env (TDelay fc x t y)
-      = TDelay fc x (substEnv env t) (substEnv env y)
-  substEnv env (TForce fc r x) = TForce fc r (substEnv env x)
-  substEnv env (PrimVal fc c) = PrimVal fc c
-  substEnv env (Erased fc i) = Erased fc i
-  substEnv env (TType fc) = TType fc
+  substEnv outer env (Local fc r _ prf)
+      = find fc r outer (MkVar prf) env
+  substEnv outer env (Ref fc x name) = Ref fc x name
+  substEnv outer env (Meta fc n i xs)
+      = Meta fc n i (map (substEnv outer env) xs)
+  substEnv outer env (Bind fc x b scope)
+      = Bind fc x (map (substEnv outer env) b)
+                  (substEnv (suc outer) env scope)
+  substEnv outer env (App fc fn arg)
+      = App fc (substEnv outer env fn) (substEnv outer env arg)
+  substEnv outer env (As fc s as pat)
+      = As fc s (substEnv outer env as) (substEnv outer env pat)
+  substEnv outer env (TDelayed fc x y) = TDelayed fc x (substEnv outer env y)
+  substEnv outer env (TDelay fc x t y)
+      = TDelay fc x (substEnv outer env t) (substEnv outer env y)
+  substEnv outer env (TForce fc r x) = TForce fc r (substEnv outer env x)
+  substEnv outer env (PrimVal fc c) = PrimVal fc c
+  substEnv outer env (Erased fc i) = Erased fc i
+  substEnv outer env (TType fc) = TType fc
 
   export
-  substs : {drop, vars : _} ->
-           SubstEnv drop vars -> Term (drop ++ vars) -> Term vars
-  substs env tm = substEnv {outer = []} env tm
+  substs : SubstEnv dropped vars -> Term (dropped ++ vars) -> Term vars
+  substs env tm = substEnv zero env tm
 
   export
-  subst : {vars, x : _} -> Term vars -> Term (x :: vars) -> Term vars
-  subst val tm = substEnv {outer = []} {drop = [_]} [val] tm
+  subst : Term vars -> Term (x :: vars) -> Term vars
+  subst val tm = substs [val] tm
 
 -- Replace an explicit name with a term
 export
-substName : {vars : _} -> Name -> Term vars -> Term vars -> Term vars
+substName : Name -> Term vars -> Term vars -> Term vars
 substName x new (Ref fc nt name)
     = case nameEq x name of
            Nothing => Ref fc nt name
@@ -1166,7 +1574,7 @@ addMetas ns (Meta fc n i xs) = addMetaArgs (insert n False ns) xs
     addMetaArgs : NameMap Bool -> List (Term vars) -> NameMap Bool
     addMetaArgs ns [] = ns
     addMetaArgs ns (t :: ts) = addMetaArgs (addMetas ns t) ts
-addMetas ns (Bind fc x (Let c val ty) scope)
+addMetas ns (Bind fc x (Let _ c val ty) scope)
     = addMetas (addMetas (addMetas ns val) ty) scope
 addMetas ns (Bind fc x b scope)
     = addMetas (addMetas ns (binderType b)) scope
@@ -1197,7 +1605,7 @@ addRefs ua at ns (Meta fc n i xs)
     addRefsArgs : NameMap Bool -> List (Term vars) -> NameMap Bool
     addRefsArgs ns [] = ns
     addRefsArgs ns (t :: ts) = addRefsArgs (addRefs ua at ns t) ts
-addRefs ua at ns (Bind fc x (Let c val ty) scope)
+addRefs ua at ns (Bind fc x (Let _ c val ty) scope)
     = addRefs ua at (addRefs ua at (addRefs ua at ns val) ty) scope
 addRefs ua at ns (Bind fc x b scope)
     = addRefs ua at (addRefs ua at ns (binderType b)) scope
@@ -1224,53 +1632,45 @@ getRefs : (aTotal : Name) -> Term vars -> NameMap Bool
 getRefs at tm = addRefs False at empty tm
 
 export
-nameAt : {vars : _} ->
-         (idx : Nat) -> (0 p : IsVar n idx vars) -> Name
-nameAt {vars = n :: ns} Z First = n
-nameAt {vars = n :: ns} (S k) (Later p) = nameAt k p
+nameAt : {vars : _} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> Name
+nameAt {vars = n :: ns} First     = n
+nameAt {vars = n :: ns} (Later p) = nameAt p
 
-export 
+export
+withPiInfo : Show t => PiInfo t -> String -> String
+withPiInfo Explicit tm = "(" ++ tm ++ ")"
+withPiInfo Implicit tm = "{" ++ tm ++ "}"
+withPiInfo AutoImplicit tm = "{auto " ++ tm ++ "}"
+withPiInfo (DefImplicit t) tm = "{default " ++ show t ++ " " ++ tm ++ "}"
+
+
+export
 {vars : _} -> Show (Term vars) where
   show tm = let (fn, args) = getFnArgs tm in showApp fn args
     where
       showApp : {vars : _} -> Term vars -> List (Term vars) -> String
-      showApp (Local {name} _ c idx p) []
-         = show (nameAt idx p) ++ "[" ++ show idx ++ "]"
+      showApp (Local _ c idx p) []
+         = show (nameAt p) ++ "[" ++ show idx ++ "]"
+
       showApp (Ref _ _ n) [] = show n
-      showApp (Meta _ n i args) []
+      showApp (Meta _ n _ args) []
           = "?" ++ show n ++ "_" ++ show args
-      showApp (Bind _ x (Lam c p ty) sc) []
-          = "\\" ++ showCount c ++ show x ++ " : " ++ show ty ++
+      showApp (Bind _ x (Lam _ c info ty) sc) []
+          = "\\" ++ withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
             " => " ++ show sc
-      showApp (Bind _ x (Let c val ty) sc) []
+      showApp (Bind _ x (Let _ c val ty) sc) []
           = "let " ++ showCount c ++ show x ++ " : " ++ show ty ++
             " = " ++ show val ++ " in " ++ show sc
-      showApp (Bind _ x (Pi c Explicit ty) sc) []
-          = "((" ++ showCount c ++ show x ++ " : " ++ show ty ++
-            ") -> " ++ show sc ++ ")"
-      showApp (Bind _ x (Pi c Implicit ty) sc) []
-          = "{" ++ showCount c ++ show x ++ " : " ++ show ty ++
-            "} -> " ++ show sc
-      showApp (Bind _ x (Pi c AutoImplicit ty) sc) []
-          = "{auto " ++ showCount c ++ show x ++ " : " ++ show ty ++
-            "} -> " ++ show sc
-      showApp (Bind _ x (Pi c (DefImplicit tm) ty) sc) []
-          = "{default " ++ show tm ++ " "
-                ++ showCount c ++ show x ++ " : " ++ show ty ++
-            "} -> " ++ show sc
-      showApp (Bind _ x (PVar c Explicit ty) sc) []
-          = "pat " ++ showCount c ++ show x ++ " : " ++ show ty ++
+      showApp (Bind _ x (Pi _ c info ty) sc) []
+          = withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
+            " -> " ++ show sc ++ ")"
+      showApp (Bind _ x (PVar _ c info ty) sc) []
+          = withPiInfo info ("pat " ++ showCount c ++ show x ++ " : " ++ show ty) ++
             " => " ++ show sc
-      showApp (Bind _ x (PVar c Implicit ty) sc) []
-          = "{pat " ++ showCount c ++ show x ++ " : " ++ show ty ++
-            "} => " ++ show sc
-      showApp (Bind _ x (PVar c AutoImplicit ty) sc) []
-          = "{auto pat " ++ showCount c ++ show x ++ " : " ++ show ty ++
-            "} => " ++ show sc
-      showApp (Bind _ x (PLet c val ty) sc) []
+      showApp (Bind _ x (PLet _ c val ty) sc) []
           = "plet " ++ showCount c ++ show x ++ " : " ++ show ty ++
             " = " ++ show val ++ " in " ++ show sc
-      showApp (Bind _ x (PVTy c ty) sc) []
+      showApp (Bind _ x (PVTy _ c ty) sc) []
           = "pty " ++ showCount c ++ show x ++ " : " ++ show ty ++
             " => " ++ show sc
       showApp (App _ _ _) [] = "[can't happen]"
@@ -1285,3 +1685,8 @@ export
       showApp f args = "(" ++ assert_total (show f) ++ " " ++
                         assert_total (showSep " " (map show args))
                      ++ ")"
+
+export
+{vars : _} -> Pretty (Term vars) where
+  pretty = pretty . show
+  -- TODO: prettier output

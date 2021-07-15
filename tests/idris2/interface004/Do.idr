@@ -1,6 +1,6 @@
 public export
-interface Do (m : Type) where
-  Next : m -> Type
+interface Do (0 m : Type) where
+  0 Next : m -> Type
   bind : (x : m) -> Next x
 
 public export
@@ -12,4 +12,3 @@ foo : Maybe Int -> Maybe Int -> Maybe Int
 foo x y
    = bind x (\x' =>
      bind y (\y' => Just (x' + y')))
-

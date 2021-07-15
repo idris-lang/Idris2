@@ -8,11 +8,26 @@
     [(i3nt ti3nt a6nt ta6nt) "windows"]
     [else "unknown"]))
 
-(define blodwen-read-args (lambda (desc)
-  (case (vector-ref desc 0)
-    ((0) '())
-    ((1) (cons (vector-ref desc 2)
-               (blodwen-read-args (vector-ref desc 3)))))))
+(define blodwen-toSignedInt
+  (lambda (x bits)
+    (if (logbit? bits x)
+        (logor x (ash (- 1) bits))
+        (logand x (- (ash 1 bits) 1)))))
+
+(define blodwen-toUnsignedInt
+  (lambda (x bits)
+    (modulo x (ash 1 bits))))
+
+(define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
+(define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
+(define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
+(define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
+
+(define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
+(define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
+(define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
+(define bs/ (lambda (x y bits) (blodwen-toSignedInt (quotient x y) bits)))
+
 (define b+ (lambda (x y bits) (remainder (+ x y) (ash 1 bits))))
 (define b- (lambda (x y bits) (remainder (- x y) (ash 1 bits))))
 (define b* (lambda (x y bits) (remainder (* x y) (ash 1 bits))))
@@ -23,7 +38,17 @@
 (define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
 (define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
 
+(define bits16->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits32->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits32->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define bits64->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
+
+(define blodwen-bits-shl-signed (lambda (x y bits) (blodwen-toSignedInt (ash x y) bits)))
+
 (define blodwen-bits-shl (lambda (x y bits) (remainder (ash x y) (ash 1 bits))))
+
 (define blodwen-shl (lambda (x y) (ash x y)))
 (define blodwen-shr (lambda (x y) (ash x (- y))))
 (define blodwen-and (lambda (x y) (logand x y)))
@@ -39,23 +64,60 @@
       ((equal? x "") "")
       ((equal? (string-ref x 0) #\#) "")
       (else x))))
-(define cast-string-int
-  (lambda (x)
-    (floor (cast-num (string->number (destroy-prefix x))))))
-(define cast-int-char
-  (lambda (x)
-    (if (and (>= x 0)
-             (<= x #x10ffff))
-        (integer->char x)
-        0)))
+
 (define exact-floor
   (lambda (x)
     (inexact->exact (floor x))))
+
+(define exact-truncate
+  (lambda (x)
+    (inexact->exact (truncate x))))
+
+(define exact-truncate-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (exact-truncate x) y)))
+
+(define exact-truncate-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (exact-truncate x) y)))
+
+(define cast-char-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (char->integer x) y)))
+
+(define cast-char-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (char->integer x) y)))
+
+(define cast-string-int
+  (lambda (x)
+    (exact-truncate (cast-num (string->number (destroy-prefix x))))))
+
+(define cast-string-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (cast-string-int x) y)))
+
+(define cast-string-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (cast-string-int x) y)))
+
+(define cast-int-char
+  (lambda (x)
+    (if (or
+          (and (>= x 0) (<= x #xd7ff))
+          (and (>= x #xe000) (<= x #x10ffff)))
+        (integer->char x)
+        (integer->char 0))))
+
 (define cast-string-double
   (lambda (x)
     (cast-num (string->number (destroy-prefix x)))))
+
+(define (string-concat xs) (apply string-append xs))
+(define (string-unpack s) (string->list s))
+(define (string-pack xs) (list->string xs))
+
 (define string-cons (lambda (x y) (string-append (string x) y)))
-(define get-tag (lambda (x) (vector-ref x 0)))
 (define string-reverse (lambda (x)
   (list->string (reverse (string->list x)))))
 (define (string-substr off len s)
@@ -66,6 +128,17 @@
           (if (> b l)
               ""
               (substring s b end))))
+
+(define (blodwen-string-iterator-new s)
+  0)
+
+(define (blodwen-string-iterator-to-string _ s ofs f)
+  (f (substring s ofs (string-length s))))
+
+(define (blodwen-string-iterator-next s ofs)
+  (if (>= ofs (string-length s))
+      '() ; EOF
+      (cons (string-ref s ofs) (+ ofs 1))))
 
 (define either-left
   (lambda (x)
@@ -165,10 +238,21 @@
 
 ;; Threads
 
-(define blodwen-thread-data (make-thread-parameter #f))
+(define-record thread-handle (semaphore))
 
-(define (blodwen-thread p)
-    (fork-thread (lambda () (p (vector 0)))))
+(define (blodwen-thread proc)
+  (let [(sema (blodwen-make-semaphore 0))]
+    (fork-thread (lambda () (proc (vector 0)) (blodwen-semaphore-post sema)))
+    (make-thread-handle sema)
+    ))
+
+(define (blodwen-thread-wait handle)
+  (blodwen-semaphore-wait (thread-handle-semaphore handle)))
+
+;; Thread mailboxes
+
+(define blodwen-thread-data
+  (make-thread-parameter #f))
 
 (define (blodwen-get-thread-data ty)
   (blodwen-thread-data))
@@ -176,19 +260,160 @@
 (define (blodwen-set-thread-data a)
   (blodwen-thread-data a))
 
-(define (blodwen-mutex) (make-mutex))
-(define (blodwen-lock m) (mutex-acquire m))
-(define (blodwen-unlock m) (mutex-release m))
-(define (blodwen-thisthread) (get-thread-id))
+;; Semaphore
 
-(define (blodwen-condition) (make-condition))
-(define (blodwen-condition-wait c m) (condition-wait c m))
-(define (blodwen-condition-wait-timeout c m t)
-  (let ((sec (div t 1000000))
-        (micro (mod t 1000000)))
-  (condition-wait c m (make-time 'time-duration (* 1000 micro) sec))))
-(define (blodwen-condition-signal c) (condition-signal c))
-(define (blodwen-condition-broadcast c) (condition-broadcast c))
+(define-record semaphore (box mutex condition))
+
+(define (blodwen-make-semaphore init)
+  (make-semaphore (box init) (make-mutex) (make-condition)))
+
+(define (blodwen-semaphore-post sema)
+  (with-mutex (semaphore-mutex sema)
+    (let [(sema-box (semaphore-box sema))]
+      (set-box! sema-box (+ (unbox sema-box) 1))
+      (condition-signal (semaphore-condition sema))
+    )))
+
+(define (blodwen-semaphore-wait sema)
+  (with-mutex (semaphore-mutex sema)
+    (let [(sema-box (semaphore-box sema))]
+      (when (= (unbox sema-box) 0)
+        (condition-wait (semaphore-condition sema) (semaphore-mutex sema)))
+      (set-box! sema-box (- (unbox sema-box) 1))
+      )))
+
+;; Barrier
+
+(define-record barrier (count-box num-threads mutex cond))
+
+(define (blodwen-make-barrier num-threads)
+  (make-barrier (box 0) num-threads (make-mutex) (make-condition)))
+
+(define (blodwen-barrier-wait barrier)
+  (let [(count-box (barrier-count-box barrier))
+        (num-threads (barrier-num-threads barrier))
+        (mutex (barrier-mutex barrier))
+        (condition (barrier-cond barrier))]
+    (with-mutex mutex
+    (let* [(count-old (unbox count-box))
+           (count-new (+ count-old 1))]
+      (set-box! count-box count-new)
+      (if (= count-new num-threads)
+          (condition-broadcast condition)
+          (condition-wait condition mutex))
+      ))))
+
+;; Channel
+; With thanks to Alain Zscheile (@zseri) for help with understanding condition
+; variables, and figuring out where the problems were and how to solve them.
+
+(define-record channel (read-mut read-cv read-box val-cv val-box))
+
+(define (blodwen-make-channel ty)
+  (make-channel
+    (make-mutex)
+    (make-condition)
+    (box #t)
+    (make-condition)
+    (box '())
+    ))
+
+; block on the read status using read-cv until the value has been read
+(define (channel-put-while-helper chan)
+  (let ([read-mut (channel-read-mut chan)]
+        [read-box (channel-read-box chan)]
+        [read-cv  (channel-read-cv  chan)]
+        )
+    (if (unbox read-box)
+      (void)    ; val has been read, so everything is fine
+      (begin    ; otherwise, block/spin with cv
+        (condition-wait read-cv read-mut)
+        (channel-put-while-helper chan)
+        )
+      )))
+
+(define (blodwen-channel-put ty chan val)
+  (with-mutex (channel-read-mut chan)
+    (channel-put-while-helper chan)
+    (let ([read-box (channel-read-box chan)]
+          [val-box  (channel-val-box  chan)]
+          )
+      (set-box! val-box val)
+      (set-box! read-box #f)
+      ))
+  (condition-signal (channel-val-cv chan))
+  )
+
+; block on the value until it has been set
+(define (channel-get-while-helper chan)
+  (let ([read-mut (channel-read-mut chan)]
+        [read-box (channel-read-box chan)]
+        [val-cv   (channel-val-cv   chan)]
+        )
+    (if (unbox read-box)
+      (begin
+        (condition-wait val-cv read-mut)
+        (channel-get-while-helper chan)
+        )
+      (void)
+      )))
+
+(define (blodwen-channel-get ty chan)
+  (mutex-acquire (channel-read-mut chan))
+  (channel-get-while-helper chan)
+  (let* ([val-box  (channel-val-box  chan)]
+         [read-box (channel-read-box chan)]
+         [read-cv  (channel-read-cv  chan)]
+         [the-val  (unbox val-box)]
+         )
+    (set-box! val-box '())
+    (set-box! read-box #t)
+    (mutex-release (channel-read-mut chan))
+    (condition-signal read-cv)
+    the-val))
+
+;; Mutex
+
+(define (blodwen-make-mutex)
+  (make-mutex))
+(define (blodwen-mutex-acquire mutex)
+  (mutex-acquire mutex))
+(define (blodwen-mutex-release mutex)
+  (mutex-release mutex))
+
+;; Condition variable
+
+(define (blodwen-make-condition)
+  (make-condition))
+(define (blodwen-condition-wait condition mutex)
+  (condition-wait condition mutex))
+(define (blodwen-condition-wait-timeout condition mutex timeout)
+  (let* [(sec (div timeout 1000000))
+         (micro (mod timeout 1000000))]
+    (condition-wait condition mutex (make-time 'time-duration (* 1000 micro) sec))))
+(define (blodwen-condition-signal condition)
+  (condition-signal condition))
+(define (blodwen-condition-broadcast condition)
+  (condition-broadcast condition))
+
+;; Future
+
+(define-record future-internal (result ready mutex signal))
+(define (blodwen-make-future work)
+  (let ([future (make-future-internal #f #f (make-mutex) (make-condition))])
+    (fork-thread (lambda ()
+      (let ([result (work)])
+        (with-mutex (future-internal-mutex future)
+          (set-future-internal-result! future result)
+          (set-future-internal-ready! future #t)
+          (condition-broadcast (future-internal-signal future))))))
+    future))
+(define (blodwen-await-future ty future)
+  (let ([mutex (future-internal-mutex future)])
+    (with-mutex mutex
+      (if (not (future-internal-ready future))
+          (condition-wait (future-internal-signal future) mutex))
+      (future-internal-result future))))
 
 (define (blodwen-sleep s) (sleep (make-time 'time-duration 0 s)))
 (define (blodwen-usleep s)
@@ -208,18 +433,15 @@
 (define (blodwen-clock-second time) (time-second time))
 (define (blodwen-clock-nanosecond time) (time-nanosecond time))
 
-(define (blodwen-args)
-  (define (blodwen-build-args args)
-    (if (null? args)
-        (vector 0) ; Prelude.List
-        (vector 1 (car args) (blodwen-build-args (cdr args)))))
-    (blodwen-build-args (command-line)))
+
+(define (blodwen-arg-count)
+  (length (command-line)))
+
+(define (blodwen-arg n)
+  (if (< n (length (command-line))) (list-ref (command-line) n) ""))
 
 (define (blodwen-hasenv var)
   (if (eq? (getenv var) #f) 0 1))
-
-(define (blodwen-system cmd)
-  (system cmd))
 
 ;; Randoms
 (define random-seed-register 0)

@@ -1,38 +1,57 @@
 module Core.Name
 
 import Data.List
+import Data.String
+import Data.Maybe
 import Decidable.Equality
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
+
+import public Core.Name.Namespace
 
 %default total
 
+||| Name helps us track a name's structure as well as its origin:
+||| was it user-provided or machine-manufactured? For what reason?
 public export
 data Name : Type where
-     NS : List String -> Name -> Name -- in a namespace
+     NS : Namespace -> Name -> Name -- in a namespace
      UN : String -> Name -- user defined name
      MN : String -> Int -> Name -- machine generated name
      PV : Name -> Int -> Name -- pattern variable name; int is the resolved function id
      DN : String -> Name -> Name -- a name and how to display it
+     RF : String -> Name  -- record field name
      Nested : (Int, Int) -> Name -> Name -- nested function name
      CaseBlock : String -> Int -> Name -- case block nested in (resolved) name
      WithBlock : String -> Int -> Name -- with block nested in (resolved) name
      Resolved : Int -> Name -- resolved, index into context
 
+export
+mkNamespacedName : Maybe Namespace -> String -> Name
+mkNamespacedName Nothing nm = UN nm
+mkNamespacedName (Just ns) nm = NS ns (UN nm)
+
+||| `matches a b` checks that the name `a` matches `b` assuming
+||| the name roots are already known to be matching.
+||| For instance, both `reverse` and `List.reverse` match the fully
+||| qualified name `Data.List.reverse`.
+export
+matches : Name -> Name -> Bool
+matches (NS ns _) (NS cns _) = isApproximationOf ns cns
+matches (NS _ _) _
+  -- gallais: I don't understand this case but that's what was there.
+  = True -- no in library name, so root doesn't match
+matches _ _ = True -- no prefix, so root must match, so good
+
 -- Update a name imported with 'import as', for creating an alias
 export
-asName : List String -> -- Initial module name
-         List String -> -- 'as' module name
+asName : ModuleIdent -> -- Initial module name
+         Namespace -> -- 'as' module name
          Name -> -- identifier
          Name
-asName mod ns (DN s n) = DN s (asName mod ns n)
-asName mod ns (NS oldns n)
-    = NS (updateNS mod oldns) n
-  where
-    updateNS : List String -> List String -> List String
-    updateNS mod (m :: ms)
-        = if mod == m :: ms
-             then ns
-             else m :: updateNS mod ms
-    updateNS mod [] = []
+asName old new (DN s n) = DN s (asName old new n)
+asName old new (NS ns n)
+    = NS (replace old new ns) n
 asName _ _ n = n
 
 export
@@ -40,7 +59,14 @@ userNameRoot : Name -> Maybe String
 userNameRoot (NS _ n) = userNameRoot n
 userNameRoot (UN n) = Just n
 userNameRoot (DN _ n) = userNameRoot n
+userNameRoot (RF n) = Just ("." ++ n)  -- TMP HACK
 userNameRoot _ = Nothing
+
+export
+isUnderscoreName : Name -> Bool
+isUnderscoreName (UN "_") = True
+isUnderscoreName (MN "_" _) = True
+isUnderscoreName _ = False
 
 export
 isUserName : Name -> Bool
@@ -50,6 +76,32 @@ isUserName (NS _ n) = isUserName n
 isUserName (DN _ n) = isUserName n
 isUserName _ = True
 
+||| True iff name can be traced back to a source name.
+||| Used to determine whether it needs semantic highlighting.
+export
+isSourceName : Name -> Bool
+isSourceName (NS _ n) = isSourceName n
+isSourceName (UN _) = True
+isSourceName (MN _ _) = False
+isSourceName (PV n _) = isSourceName n
+isSourceName (DN _ n) = isSourceName n
+isSourceName (RF _) = True
+isSourceName (Nested _ n) = isSourceName n
+isSourceName (CaseBlock _ _) = False
+isSourceName (WithBlock _ _) = False
+isSourceName (Resolved _) = False
+
+export
+isRF : Name -> Maybe (Namespace, String)
+isRF (NS ns n) = map (mapFst (ns <.>)) (isRF n)
+isRF (RF n) = Just (emptyNS, n)
+isRF _ = Nothing
+
+export
+isUN : Name -> Maybe String
+isUN (UN str) = Just str
+isUN _ = Nothing
+
 export
 nameRoot : Name -> String
 nameRoot (NS _ n) = nameRoot n
@@ -57,10 +109,24 @@ nameRoot (UN n) = n
 nameRoot (MN n _) = n
 nameRoot (PV n _) = nameRoot n
 nameRoot (DN _ n) = nameRoot n
+nameRoot (RF n) = n
 nameRoot (Nested _ inner) = nameRoot inner
 nameRoot (CaseBlock n _) = "$" ++ show n
 nameRoot (WithBlock n _) = "$" ++ show n
 nameRoot (Resolved i) = "$" ++ show i
+
+export
+displayName : Name -> (Maybe Namespace, String)
+displayName (NS ns n) = mapFst (pure . maybe ns (ns <.>)) $ displayName n
+displayName (UN n) = (Nothing, n)
+displayName (MN n _) = (Nothing, n)
+displayName (PV n _) = displayName n
+displayName (DN n _) = (Nothing, n)
+displayName (RF n) = (Nothing, n)
+displayName (Nested _ n) = displayName n
+displayName (CaseBlock outer _) = (Nothing, "case block in " ++ show outer)
+displayName (WithBlock outer _) = (Nothing, "with block in " ++ show outer)
+displayName (Resolved i) = (Nothing, "$resolved" ++ show i)
 
 --- Drop a namespace from a name
 export
@@ -68,24 +134,54 @@ dropNS : Name -> Name
 dropNS (NS _ n) = n
 dropNS n = n
 
+-- Drop all of the namespaces from a name
 export
-showSep : String -> List String -> String
-showSep sep [] = ""
-showSep sep [x] = x
-showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
+dropAllNS : Name -> Name
+dropAllNS (NS _ n) = dropAllNS n
+dropAllNS n = n
 
 export
 Show Name where
-  show (NS ns n) = showSep "." (reverse ns) ++ "." ++ show n
+  show (NS ns n@(RF _)) = show ns ++ ".(" ++ show n ++ ")"
+  show (NS ns n) = show ns ++ "." ++ show n
   show (UN x) = x
   show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
   show (PV n d) = "{P:" ++ show n ++ ":" ++ show d ++ "}"
   show (DN str n) = str
+  show (RF n) = "." ++ n
   show (Nested (outer, idx) inner)
       = show outer ++ ":" ++ show idx ++ ":" ++ show inner
   show (CaseBlock outer i) = "case block in " ++ outer
   show (WithBlock outer i) = "with block in " ++ outer
   show (Resolved x) = "$resolved" ++ show x
+
+export
+[Raw] Show Name where
+  show (NS ns n) = "NS " ++ show ns ++ " (" ++ show n ++ ")"
+  show (UN x) = "UN " ++ x
+  show (MN x y) = "MN (" ++ show x ++ ") " ++ show y
+  show (PV n d) = "PV (" ++ show n ++ ") " ++ show d
+  show (DN str n) = "DN " ++ str ++ " (" ++ show n ++ ")"
+  show (RF n) = "RF " ++ n
+  show (Nested ij n) = "Nested " ++ show ij ++ " (" ++ show n ++ ")"
+  show (CaseBlock str i) = "CaseBlock " ++ str ++ " " ++ show i
+  show (WithBlock str i) = "CaseBlock " ++ str ++ " " ++ show i
+  show (Resolved i) = "Resolved " ++ show i
+
+export
+Pretty Name where
+  pretty (NS ns n@(RF _)) = pretty ns <+> dot <+> parens (pretty n)
+  pretty (NS ns n) = pretty ns <+> dot <+> pretty n
+  pretty (UN x) = pretty x
+  pretty (MN x y) = braces (pretty x <+> colon <+> pretty y)
+  pretty (PV n d) = braces (pretty 'P' <+> colon <+> pretty n <+> colon <+> pretty d)
+  pretty (DN str _) = pretty str
+  pretty (RF n) = "." <+> pretty n
+  pretty (Nested (outer, idx) inner)
+    = pretty outer <+> colon <+> pretty idx <+> colon <+> pretty inner
+  pretty (CaseBlock outer _) = reflow "case block in" <++> pretty outer
+  pretty (WithBlock outer _) = reflow "with block in" <++> pretty outer
+  pretty (Resolved x) = pretty "$resolved" <+> pretty x
 
 export
 Eq Name where
@@ -94,6 +190,7 @@ Eq Name where
     (==) (MN x y) (MN x' y') = y == y' && x == x'
     (==) (PV x y) (PV x' y') = x == x' && y == y'
     (==) (DN _ n) (DN _ n') = n == n'
+    (==) (RF n) (RF n') = n == n'
     (==) (Nested x y) (Nested x' y') = x == x' && y == y'
     (==) (CaseBlock x y) (CaseBlock x' y') = y == y' && x == x'
     (==) (WithBlock x y) (WithBlock x' y') = y == y' && x == x'
@@ -106,10 +203,11 @@ nameTag (UN _) = 1
 nameTag (MN _ _) = 2
 nameTag (PV _ _) = 3
 nameTag (DN _ _) = 4
-nameTag (Nested _ _) = 5
-nameTag (CaseBlock _ _) = 6
-nameTag (WithBlock _ _) = 7
-nameTag (Resolved _) = 8
+nameTag (RF _) = 5
+nameTag (Nested _ _) = 6
+nameTag (CaseBlock _ _) = 7
+nameTag (WithBlock _ _) = 8
+nameTag (Resolved _) = 9
 
 export
 Ord Name where
@@ -132,6 +230,7 @@ Ord Name where
                GT => GT
                LT => LT
     compare (DN _ n) (DN _ n') = compare n n'
+    compare (RF n) (RF n') = compare n n'
     compare (Nested x y) (Nested x' y')
         = case compare y y' of
                EQ => compare x x'
@@ -150,6 +249,7 @@ Ord Name where
     compare (Resolved x) (Resolved y) = compare x y
 
     compare x y = compare (nameTag x) (nameTag y)
+
 
 export
 nameEq : (x : Name) -> (y : Name) -> Maybe (x = y)
@@ -176,6 +276,9 @@ nameEq (DN x t) (DN y t') with (decEq x y)
     nameEq (DN y t) (DN y t) | (Yes Refl) | (Just Refl) = Just Refl
     nameEq (DN y t) (DN y t') | (Yes Refl) | Nothing = Nothing
   nameEq (DN x t) (DN y t') | (No p) = Nothing
+nameEq (RF x) (RF y) with (decEq x y)
+  nameEq (RF y) (RF y) | (Yes Refl) = Just Refl
+  nameEq (RF x) (RF y) | (No contra) = Nothing
 nameEq (Nested x y) (Nested x' y') with (decEq x x')
   nameEq (Nested x y) (Nested x' y') | (No p) = Nothing
   nameEq (Nested x y) (Nested x y') | (Yes Refl) with (nameEq y y')

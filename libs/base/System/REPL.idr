@@ -2,6 +2,8 @@ module System.REPL
 
 import System.File
 
+%default covering
+
 ||| A basic read-eval-print loop, maintaining a state
 ||| @ state the input state
 ||| @ prompt the prompt to show
@@ -33,5 +35,3 @@ repl : HasIO io =>
        (prompt : String) -> (onInput : String -> String) -> io ()
 repl prompt fn
    = replWith () prompt (\x, s => Just (fn s, ()))
-
-

@@ -1,6 +1,7 @@
 module TTImp.Elab.Binders
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -61,12 +62,12 @@ checkPi rig elabinfo nest env fc rigf info n argTy retTy expTy
          (tyv, tyt) <- check pirig elabinfo nest env argTy
                              (Just (gType fc))
          info' <- checkPiInfo rigf elabinfo nest env info (Just (gnf env tyv))
-         let env' : Env Term (n :: _) = Pi rigf info' tyv :: env
+         let env' : Env Term (n :: _) = Pi fc rigf info' tyv :: env
          let nest' = weaken (dropName n nest)
          (scopev, scopet) <-
             inScope fc env' (\e' =>
               check {e=e'} pirig elabinfo nest' env' retTy (Just (gType fc)))
-         checkExp rig elabinfo env fc (Bind fc n (Pi rigf info' tyv) scopev) (gType fc) expTy
+         checkExp rig elabinfo env fc (Bind fc n (Pi (getFC argTy) rigf info' tyv) scopev) (gType fc) expTy
   where
     -- Might want to match on the LHS, so use the context rig, otherwise
     -- it's always erased
@@ -80,7 +81,7 @@ findLamRig Nothing = pure top
 findLamRig (Just expty)
     = do tynf <- getNF expty
          case tynf of
-              NBind _ _ (Pi c _ _) sc => pure c
+              NBind _ _ (Pi _ c _ _) sc => pure c
               _ => pure top
 
 inferLambda : {vars : _} ->
@@ -100,17 +101,17 @@ inferLambda rig elabinfo nest env fc rigl info n argTy scope expTy
          let rigb = rigb_in `glb` rigl
          (tyv, tyt) <- check erased elabinfo nest env argTy (Just (gType fc))
          info' <- checkPiInfo rigl elabinfo nest env info (Just (gnf env tyv))
-         let env' : Env Term (n :: _) = Lam rigb info' tyv :: env
+         let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
          let nest' = weaken (dropName n nest)
          (scopev, scopet) <- inScope fc env' (\e' =>
                                 check {e=e'} rig elabinfo
                                       nest' env' scope Nothing)
-         let lamty = gnf env (Bind fc n (Pi rigb info' tyv) !(getTerm scopet))
-         logGlue 5 "Inferred lambda type" env lamty
+         let lamty = gnf env (Bind fc n (Pi fc rigb info' tyv) !(getTerm scopet))
+         logGlue "elab.binder" 5 "Inferred lambda type" env lamty
          maybe (pure ())
-               (logGlueNF 5 "Expected lambda type" env) expTy
-         checkExpP rig True elabinfo env fc
-                  (Bind fc n (Lam rigb info' tyv) scopev)
+               (logGlueNF "elab.binder" 5 "Expected lambda type" env) expTy
+         checkExp rig elabinfo env fc
+                  (Bind fc n (Lam fc rigb info' tyv) scopev)
                   lamty expTy
 
 getTyNF : {vars : _} ->
@@ -140,35 +141,44 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope Nothing
     = let rig = if isErased rig_in then erased else linear in
           inferLambda rig elabinfo nest env fc rigl info n argTy scope Nothing
 checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
-    = do let rig = the RigCount $ if isErased rig_in then erased else linear
+    = do let rig = if isErased rig_in then erased else linear
          let solvemode = case elabMode elabinfo of
                               InLHS _ => inLHS
-                              _ => inTermP False
+                              _ => inTerm
          solveConstraints solvemode Normal
          expty <- getTerm expty_in
          exptynf <- getTyNF env expty
          defs <- get Ctxt
          case exptynf of
-              Bind bfc bn (Pi c _ pty) psc =>
+              Bind bfc bn (Pi fc' c _ pty) psc =>
                  do (tyv, tyt) <- check erased elabinfo nest env
                                         argTy (Just (gType fc))
                     info' <- checkPiInfo rigl elabinfo nest env info (Just (gnf env tyv))
                     let rigb = rigl `glb` c
-                    let env' : Env Term (n :: _) = Lam rigb info' tyv :: env
-                    convertP True fc elabinfo env (gnf env tyv) (gnf env pty)
+                    let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
+                    ignore $ convert fc elabinfo env (gnf env tyv) (gnf env pty)
                     let nest' = weaken (dropName n nest)
                     (scopev, scopet) <-
                        inScope fc env' (\e' =>
                           check {e=e'} rig elabinfo nest' env' scope
                                 (Just (gnf env' (renameTop n psc))))
-                    logTermNF 10 "Lambda type" env exptynf
-                    logGlueNF 10 "Got scope type" env' scopet
-                    checkExpP rig True elabinfo env fc
-                             (Bind fc n (Lam rigb info' tyv) scopev)
-                             (gnf env
-                                  (Bind fc n (Pi rigb info' tyv) !(getTerm scopet)))
-                             (Just (gnf env
-                                       (Bind fc bn (Pi c info' pty) psc)))
+                    logTermNF "elab.binder" 10 "Lambda type" env exptynf
+                    logGlueNF "elab.binder" 10 "Got scope type" env' scopet
+
+                    -- Currently, the fc a PLam holds (and that ILam gets as a consequence)
+                    -- is the file context of the argument to the lambda. This fits nicely
+                    -- in this exact use, but is likely a bug.
+                    log "metadata.names" 7 "checkLambda is adding ↓"
+                    addNameType fc n env pty -- Add the type of the argument to the metadata
+
+                    -- We've already checked the argument and scope types,
+                    -- so we just need to check multiplicities
+                    when (rigb /= c) $
+                        throw (CantConvert fc env
+                                  (Bind fc n (Pi fc' rigb info' tyv) !(getTerm scopet))
+                                  (Bind fc bn (Pi fc' c info' pty) psc))
+                    pure (Bind fc n (Lam fc' rigb info' tyv) scopev,
+                          gnf env (Bind fc n (Pi fc' rigb info' tyv) !(getTerm scopet)))
               _ => inferLambda rig elabinfo nest env fc rigl info n argTy scope (Just expty_in)
 
 weakenExp : {x, vars : _} ->
@@ -187,13 +197,12 @@ checkLet : {vars : _} ->
            {auto e : Ref EST (EState vars)} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars ->
-           FC ->
-           RigCount -> (n : Name) ->
+           FC -> (lhsFC : FC) -> RigCount -> (n : Name) ->
            (nTy : RawImp) -> (nVal : RawImp) -> (scope : RawImp) ->
            (expTy : Maybe (Glued vars)) ->
            Core (Term vars, Glued vars)
-checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
-    = do let rigc = the RigCount $ if isErased rigc_in then erased else linear
+checkLet rigc_in elabinfo nest env fc lhsFC rigl n nTy nVal scope expty {vars}
+    = do let rigc = if isErased rigc_in then erased else linear
          (tyv, tyt) <- check erased elabinfo nest env nTy (Just (gType fc))
          -- Try checking at the given multiplicity; if that doesn't work,
          -- try checking at Rig1 (meaning that we're using a linear variable
@@ -220,7 +229,7 @@ checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
                                                elabinfo -- without preciseInf
                                                nest env nVal (Just (gnf env tyv))
                                     pure (fst c, snd c, rigl |*| rigc))
-         let env' : Env Term (n :: _) = Lam rigb Explicit tyv :: env
+         let env' : Env Term (n :: _) = Lam fc rigb Explicit tyv :: env
          let nest' = weaken (dropName n nest)
          expScope <- weakenExp env' expty
          (scopev, gscopet) <-
@@ -231,8 +240,13 @@ checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
          -- No need to 'checkExp' here - we've already checked scopet
          -- against the expected type when checking the scope, so just
          -- build the term directly
-         pure (Bind fc n (Let rigb valv tyv) scopev,
-               gnf env (Bind fc n (Let rigb valv tyv) scopet))
+
+         -- Add the lhs of the let to metadata
+         log "metadata.names" 7 $ "checkLet is adding ↓"
+         addNameType lhsFC n env tyv
+
+         pure (Bind fc n (Let fc rigb valv tyv) scopev,
+               gnf env (Bind fc n (Let fc rigb valv tyv) scopet))
   where
     linearErr : Error -> Maybe RigCount
     linearErr (LinearMisuse _ _ r _) = Just r

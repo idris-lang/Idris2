@@ -6,7 +6,10 @@ import Core.TT
 import Data.List
 import Data.List1
 import Data.Vect
-import Parser.Source
+
+import Libraries.Data.IMaybe
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import public Data.IORef
 import System
@@ -34,6 +37,7 @@ data DotReason = NonLinearVar
                | ErasedArg
                | UserDotted
                | UnknownDot
+               | UnderAppliedCon
 
 export
 Show DotReason where
@@ -43,6 +47,25 @@ Show DotReason where
   show ErasedArg = "Erased argument"
   show UserDotted = "User dotted"
   show UnknownDot = "Unknown reason"
+  show UnderAppliedCon = "Under-applied constructor"
+
+export
+Pretty DotReason where
+  pretty NonLinearVar = reflow "Non linear pattern variable"
+  pretty VarApplied = reflow "Variable applied to arguments"
+  pretty NotConstructor = reflow "Not a constructor application or primitive"
+  pretty ErasedArg = reflow "Erased argument"
+  pretty UserDotted = reflow "User dotted"
+  pretty UnknownDot = reflow "Unknown reason"
+  pretty UnderAppliedCon = reflow "Under-applied constructor"
+
+public export
+data Warning : Type where
+     UnreachableClause : {vars : _} ->
+                         FC -> Env Term vars -> Term vars -> Warning
+     ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
+     Deprecated : String -> Warning
+     GenericWarn : String -> Warning
 
 -- All possible errors, carrying a location
 public export
@@ -60,8 +83,9 @@ data Error : Type where
                     FC -> Env Term vars -> Term vars -> Term vars -> Error -> Error
      ValidCase : {vars : _} ->
                  FC -> Env Term vars -> Either (Term vars) Error -> Error
+
      UndefinedName : FC -> Name -> Error
-     InvisibleName : FC -> Name -> Maybe (List String) -> Error
+     InvisibleName : FC -> Name -> Maybe Namespace -> Error
      BadTypeConType : FC -> Name -> Error
      BadDataConType : FC -> Name -> Name -> Error
      NotCovering : FC -> Name -> Covering -> Error
@@ -84,8 +108,8 @@ data Error : Type where
      NotRecordField : FC -> String -> Maybe Name -> Error
      NotRecordType : FC -> Name -> Error
      IncompatibleFieldUpdate : FC -> List String -> Error
-     InvalidImplicits : {vars : _} ->
-                        FC -> Env Term vars -> List (Maybe Name) -> Term vars -> Error
+     InvalidArgs : {vars : _} ->
+                        FC -> Env Term vars -> List Name -> Term vars -> Error
      TryWithImplicits : {vars : _} ->
                         FC -> Env Term vars -> List (Name, Term vars) -> Error
      BadUnboundImplicit : {vars : _} ->
@@ -118,27 +142,31 @@ data Error : Type where
                      FC -> Env Term vars -> DotReason -> Term vars -> Term vars -> Error
      BadImplicit : FC -> String -> Error
      BadRunElab : {vars : _} ->
-                  FC -> Env Term vars -> Term vars -> Error
+                  FC -> Env Term vars -> Term vars -> (description : String) -> Error
      GenericMsg : FC -> String -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
-     ParseFail : Show token =>
-               FC -> ParseError token -> Error
-     ModuleNotFound : FC -> List String -> Error
-     CyclicImports : List (List String) -> Error
+     CantFindPackage : String -> Error
+     LitFail : FC -> Error
+     LexFail : FC -> String -> Error
+     ParseFail : FC -> String -> Error
+     ModuleNotFound : FC -> ModuleIdent -> Error
+     CyclicImports : List ModuleIdent -> Error
      ForceNeeded : Error
      InternalError : String -> Error
      UserError : String -> Error
+     ||| Contains list of specifiers for which foreign call cannot be resolved
+     NoForeignCC : FC -> List String -> Error
+     BadMultiline : FC -> String -> Error
+     Timeout : String -> Error
 
      InType : FC -> Name -> Error -> Error
      InCon : FC -> Name -> Error -> Error
      InLHS : FC -> Name -> Error -> Error
      InRHS : FC -> Name -> Error -> Error
 
-public export
-data Warning : Type where
-     UnreachableClause : {vars : _} ->
-                         FC -> Env Term vars -> Term vars -> Warning
+     MaybeMisspelling : Error -> List1 String -> Error
+     WarningAsError : Warning -> Error
 
 export
 Show TTCErrorMsg where
@@ -150,6 +178,15 @@ Show TTCErrorMsg where
 
 -- Simplest possible display - higher level languages should unelaborate names
 -- and display annotations appropriately
+
+export
+Show Warning where
+    show (UnreachableClause _ _ _) = ":Unreachable clause"
+    show (ShadowingGlobalDefs _ _) = ":Shadowing names"
+    show (Deprecated name) = ":Deprecated " ++ name
+    show (GenericWarn msg) = msg
+
+
 export
 Show Error where
   show (Fatal err) = show err
@@ -169,10 +206,11 @@ Show Error where
            case prob of
              Left tm => assert_total (show tm) ++ " is not a valid impossible pattern because it typechecks"
              Right err => "Not a valid impossible pattern:\n\t" ++ assert_total (show err)
-  show (UndefinedName fc x) = show fc ++ ":Undefined name " ++ show x
+  show (UndefinedName fc x)
+    = show fc ++ ":Undefined name " ++ show x
   show (InvisibleName fc x (Just ns))
        = show fc ++ ":Name " ++ show x ++ " is inaccessible since " ++
-         showSep "." (reverse ns) ++ " is not explicitly imported"
+         show ns ++ " is not explicitly imported"
   show (InvisibleName fc x _) = show fc ++ ":Name " ++ show x ++ " is private"
   show (BadTypeConType fc n)
        = show fc ++ ":Return type of " ++ show n ++ " must be Type"
@@ -230,8 +268,8 @@ Show Error where
       = show fc ++ ":" ++ show ty ++ " is not a record type"
   show (IncompatibleFieldUpdate fc flds)
       = show fc ++ ":Field update " ++ showSep "->" flds ++ " not compatible with other updates"
-  show (InvalidImplicits fc env ns tm)
-     = show fc ++ ":" ++ show ns ++ " are not valid implicit arguments in " ++ show tm
+  show (InvalidArgs fc env ns tm)
+     = show fc ++ ":" ++ show ns ++ " are not valid arguments in " ++ show tm
   show (TryWithImplicits fc env imps)
      = show fc ++ ":Need to bind implicits "
           ++ showSep "," (map (\x => show (fst x) ++ " : " ++ show (snd x)) imps)
@@ -279,21 +317,25 @@ Show Error where
            " (" ++ show reason ++ ")" ++
            " - it elaborates to " ++ show y
   show (BadImplicit fc str) = show fc ++ ":" ++ str ++ " can't be bound here"
-  show (BadRunElab fc env script) = show fc ++ ":Bad elaborator script " ++ show script
+  show (BadRunElab fc env script desc) = show fc ++ ":Bad elaborator script " ++ show script ++ " (" ++ desc ++ ")"
   show (GenericMsg fc str) = show fc ++ ":" ++ str
   show (TTCError msg) = "Error in TTC file: " ++ show msg
   show (FileErr fname err) = "File error (" ++ fname ++ "): " ++ show err
+  show (CantFindPackage fname) = "Can't find package " ++ fname
+  show (LitFail fc) = show fc ++ ":Can't parse literate"
+  show (LexFail fc err) = show fc ++ ":Lexer error (" ++ show err ++ ")"
   show (ParseFail fc err) = "Parse error (" ++ show err ++ ")"
   show (ModuleNotFound fc ns)
-      = show fc ++ ":" ++ showSep "." (reverse ns) ++ " not found"
+      = show fc ++ ":" ++ show ns ++ " not found"
   show (CyclicImports ns)
-      = "Module imports form a cycle: " ++ showSep " -> " (map showMod ns)
-    where
-      showMod : List String -> String
-      showMod ns = showSep "." (reverse ns)
+      = "Module imports form a cycle: " ++ showSep " -> " (map show ns)
   show ForceNeeded = "Internal error when resolving implicit laziness"
   show (InternalError str) = "INTERNAL ERROR: " ++ str
   show (UserError str) = "Error: " ++ str
+  show (NoForeignCC fc specs) = show fc ++
+       ":The given specifier " ++ show specs ++ " was not accepted by any available backend."
+  show (BadMultiline fc str) = "Invalid multiline string: " ++ str
+  show (Timeout str) = "Timeout in " ++ str
 
   show (InType fc n err)
        = show fc ++ ":When elaborating type of " ++ show n ++ ":\n" ++
@@ -307,6 +349,19 @@ Show Error where
   show (InRHS fc n err)
        = show fc ++ ":When elaborating right hand side of " ++ show n ++ ":\n" ++
          show err
+
+  show (MaybeMisspelling err ns)
+     = show err ++ "\nDid you mean" ++ case ns of
+         (n ::: []) => ": " ++ n ++ "?"
+         _ => " any of: " ++ showSep ", " (map show (forget ns)) ++ "?"
+  show (WarningAsError w) = show w
+
+export
+getWarningLoc : Warning -> Maybe FC
+getWarningLoc (UnreachableClause fc _ _) = Just fc
+getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
+getWarningLoc (Deprecated _) = Nothing
+getWarningLoc (GenericWarn _) = Nothing
 
 export
 getErrorLoc : Error -> Maybe FC
@@ -337,7 +392,7 @@ getErrorLoc (RecordTypeNeeded loc _) = Just loc
 getErrorLoc (NotRecordField loc _ _) = Just loc
 getErrorLoc (NotRecordType loc _) = Just loc
 getErrorLoc (IncompatibleFieldUpdate loc _) = Just loc
-getErrorLoc (InvalidImplicits loc _ _ _) = Just loc
+getErrorLoc (InvalidArgs loc _ _ _) = Just loc
 getErrorLoc (TryWithImplicits loc _ _) = Just loc
 getErrorLoc (BadUnboundImplicit loc _ _ _) = Just loc
 getErrorLoc (CantSolveGoal loc _ _) = Just loc
@@ -358,24 +413,28 @@ getErrorLoc (CaseCompile loc _ _) = Just loc
 getErrorLoc (MatchTooSpecific loc _ _) = Just loc
 getErrorLoc (BadDotPattern loc _ _ _ _) = Just loc
 getErrorLoc (BadImplicit loc _) = Just loc
-getErrorLoc (BadRunElab loc _ _) = Just loc
+getErrorLoc (BadRunElab loc _ _ _) = Just loc
 getErrorLoc (GenericMsg loc _) = Just loc
 getErrorLoc (TTCError _) = Nothing
 getErrorLoc (FileErr _ _) = Nothing
+getErrorLoc (CantFindPackage _) = Nothing
+getErrorLoc (LitFail loc) = Just loc
+getErrorLoc (LexFail loc _) = Just loc
 getErrorLoc (ParseFail loc _) = Just loc
 getErrorLoc (ModuleNotFound loc _) = Just loc
 getErrorLoc (CyclicImports _) = Nothing
 getErrorLoc ForceNeeded = Nothing
 getErrorLoc (InternalError _) = Nothing
 getErrorLoc (UserError _) = Nothing
+getErrorLoc (NoForeignCC loc _) = Just loc
+getErrorLoc (BadMultiline loc _) = Just loc
+getErrorLoc (Timeout _) = Nothing
 getErrorLoc (InType _ _ err) = getErrorLoc err
 getErrorLoc (InCon _ _ err) = getErrorLoc err
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
 getErrorLoc (InRHS _ _ err) = getErrorLoc err
-
-export
-getWarningLoc : Warning -> Maybe FC
-getWarningLoc (UnreachableClause fc _ _) = Just fc
+getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
+getErrorLoc (WarningAsError warn) = getWarningLoc warn
 
 -- Core is a wrapper around IO that is specialised for efficiency.
 export
@@ -395,11 +454,7 @@ coreFail e = MkCore (pure (Left e))
 
 export
 wrapError : (Error -> Error) -> Core a -> Core a
-wrapError fe (MkCore prog)
-    = MkCore (prog >>=
-                 (\x => case x of
-                             Left err => pure (Left (fe err))
-                             Right val => pure (Right val)))
+wrapError fe (MkCore prog) = MkCore $ mapFst fe <$> prog
 
 -- This would be better if we restrict it to a limited set of IO operations
 export
@@ -426,14 +481,50 @@ export %inline
 (<$>) : (a -> b) -> Core a -> Core b
 (<$>) f (MkCore a) = MkCore (map (map f) a)
 
+export %inline
+(<$) : b -> Core a -> Core b
+(<$) = (<$>) . const
+
+export %inline
+ignore : Core a -> Core ()
+ignore = map (\ _ => ())
+
+-- This would be better if we restrict it to a limited set of IO operations
+export
+%inline
+coreLift_ : IO a -> Core ()
+coreLift_ op = ignore (coreLift op)
+
 -- Monad (specialised)
 export %inline
 (>>=) : Core a -> (a -> Core b) -> Core b
 (>>=) (MkCore act) f
     = MkCore (act >>=
-                   (\x => case x of
-                               Left err => pure (Left err)
-                               Right val => runCore (f val)))
+                   \case
+                     Left err => pure $ Left err
+                     Right val => runCore $ f val)
+
+export %inline
+(>>) : Core () -> Core a -> Core a
+ma >> mb = ma >>= const mb
+
+-- Flipped bind
+infixr 1 =<<
+export %inline
+(=<<) : (a -> Core b) -> Core a -> Core b
+(=<<) = flip (>>=)
+
+-- Kleisli compose
+infixr 1 >=>
+export %inline
+(>=>) : (a -> Core b) -> (b -> Core c) -> (a -> Core c)
+f >=> g = (g =<<) . f
+
+-- Flipped kleisli compose
+infixr 1 <=<
+export %inline
+(<=<) : (b -> Core c) -> (a -> Core b) -> (a -> Core c)
+(<=<) = flip (>=>)
 
 -- Applicative (specialised)
 export %inline
@@ -444,17 +535,51 @@ export
 (<*>) : Core (a -> b) -> Core a -> Core b
 (<*>) (MkCore f) (MkCore a) = MkCore [| f <*> a |]
 
+export
+(*>) : Core a -> Core b -> Core b
+(*>) (MkCore a) (MkCore b) = MkCore [| a *> b |]
+
+export
+(<*) : Core a -> Core b -> Core a
+(<*) (MkCore a) (MkCore b) = MkCore [| a <* b |]
+
 export %inline
 when : Bool -> Lazy (Core ()) -> Core ()
 when True f = f
 when False f = pure ()
 
+
+export %inline
+unless : Bool -> Lazy (Core ()) -> Core ()
+unless = when . not
+
+export
+iwhen : (b : Bool) -> Lazy (Core a) -> Core (IMaybe b a)
+iwhen True f = Just <$> f
+iwhen False _ = pure Nothing
+
+export
+iunless : (b : Bool) -> Lazy (Core a) -> Core (IMaybe (not b) a)
+iunless b f = iwhen (not b) f
+
+export %inline
+whenJust : Maybe a -> (a -> Core ()) -> Core ()
+whenJust (Just a) k = k a
+whenJust Nothing k = pure ()
+
+export
+iwhenJust : IMaybe b a -> (a -> Core ()) -> Core ()
+iwhenJust (Just a) k = k a
+iwhenJust Nothing k = pure ()
+
 -- Control.Catchable in Idris 1, just copied here (but maybe no need for
 -- it since we'll only have the one instance for Core Error...)
 public export
-interface Catchable (m : Type -> Type) t | m where
-    throw : t -> m a
+interface Catchable m t | m where
+    throw : {0 a : Type} -> t -> m a
     catch : m a -> (t -> m a) -> m a
+
+    breakpoint : m a -> m (Either t a)
 
 export
 Catchable Core Error where
@@ -463,7 +588,13 @@ Catchable Core Error where
                     case p' of
                          Left e => let MkCore he = h e in he
                          Right val => pure (Right val))
+  breakpoint (MkCore prog) = MkCore (pure <$> prog)
   throw = coreFail
+
+-- Prelude.Monad.foldlM hand specialised for Core
+export
+foldlC : Foldable t => (a -> b -> Core a) -> a -> t b -> Core a
+foldlC fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
 
 -- Traversable (specialised)
 traverse' : (a -> Core b) -> List a -> List b -> Core (List b)
@@ -471,36 +602,66 @@ traverse' f [] acc = pure (reverse acc)
 traverse' f (x :: xs) acc
     = traverse' f xs (!(f x) :: acc)
 
+%inline
 export
 traverse : (a -> Core b) -> List a -> Core (List b)
 traverse f xs = traverse' f xs []
 
+%inline
+export
+for : List a -> (a -> Core b) -> Core (List b)
+for = flip traverse
+
 export
 traverseList1 : (a -> Core b) -> List1 a -> Core (List1 b)
-traverseList1 f (x :: xs) = [| f x :: traverse f xs |]
+traverseList1 f xxs
+    = let x = head xxs
+          xs = tail xxs in
+          [| f x ::: traverse f xs |]
 
 export
 traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
 traverseVect f [] = pure []
 traverseVect f (x :: xs) = [| f x :: traverseVect f xs |]
 
+%inline
 export
 traverseOpt : (a -> Core b) -> Maybe a -> Core (Maybe b)
 traverseOpt f Nothing = pure Nothing
 traverseOpt f (Just x) = map Just (f x)
 
 export
+traversePair : (a -> Core b) -> (w, a) -> Core (w, b)
+traversePair f (w, a) = (w,) <$> f a
+
+export
 traverse_ : (a -> Core b) -> List a -> Core ()
 traverse_ f [] = pure ()
 traverse_ f (x :: xs)
-    = do f x
-         traverse_ f xs
+    = Core.do ignore (f x)
+              traverse_ f xs
+%inline
+export
+for_ : List a -> (a -> Core ()) -> Core ()
+for_ = flip traverse_
+
+%inline
+export
+sequence : List (Core a) -> Core (List a)
+sequence (x :: xs)
+   = do
+        x' <- x
+        xs' <- sequence xs
+        pure (x' :: xs')
+sequence [] = pure []
 
 export
 traverseList1_ : (a -> Core b) -> List1 a -> Core ()
-traverseList1_ f (x :: xs) = do
-  f x
-  traverse_ f xs
+traverseList1_ f xxs
+    = do let x = head xxs
+         let xs = tail xxs
+         ignore (f x)
+         traverse_ f xs
 
 namespace PiInfo
   export
@@ -513,12 +674,32 @@ namespace PiInfo
 namespace Binder
   export
   traverse : (a -> Core b) -> Binder a -> Core (Binder b)
-  traverse f (Lam c p ty) = pure $ Lam c !(traverse f p) !(f ty)
-  traverse f (Let c val ty) = pure $ Let c !(f val) !(f ty)
-  traverse f (Pi c p ty) = pure $ Pi c !(traverse f p) !(f ty)
-  traverse f (PVar c p ty) = pure $ PVar c !(traverse f p) !(f ty)
-  traverse f (PLet c val ty) = pure $ PLet c !(f val) !(f ty)
-  traverse f (PVTy c ty) = pure $ PVTy c !(f ty)
+  traverse f (Lam fc c p ty) = pure $ Lam fc c !(traverse f p) !(f ty)
+  traverse f (Let fc c val ty) = pure $ Let fc c !(f val) !(f ty)
+  traverse f (Pi fc c p ty) = pure $ Pi fc c !(traverse f p) !(f ty)
+  traverse f (PVar fc c p ty) = pure $ PVar fc c !(traverse f p) !(f ty)
+  traverse f (PLet fc c val ty) = pure $ PLet fc c !(f val) !(f ty)
+  traverse f (PVTy fc c ty) = pure $ PVTy fc c !(f ty)
+
+export
+mapTermM : ({vars : _} -> Term vars -> Core (Term vars)) ->
+           ({vars : _} -> Term vars -> Core (Term vars))
+mapTermM f = goTerm where
+
+    goTerm : {vars : _} -> Term vars -> Core (Term vars)
+    goTerm tm@(Local _ _ _ _) = f tm
+    goTerm tm@(Ref _ _ _) = f tm
+    goTerm (Meta fc n i args) = f =<< Meta fc n i <$> traverse goTerm args
+    goTerm (Bind fc x bd sc) = f =<< Bind fc x <$> traverse goTerm bd <*> goTerm sc
+    goTerm (App fc fn arg) = f =<< App fc <$> goTerm fn <*> goTerm arg
+    goTerm (As fc u as pat) = f =<< As fc u <$> goTerm as <*> goTerm pat
+    goTerm (TDelayed fc la d) = f =<< TDelayed fc la <$> goTerm d
+    goTerm (TDelay fc la ty arg) = f =<< TDelay fc la <$> goTerm ty <*> goTerm arg
+    goTerm (TForce fc la t) = f =<< TForce fc la <$> goTerm t
+    goTerm tm@(PrimVal _ _) = f tm
+    goTerm tm@(Erased _ _) = f tm
+    goTerm tm@(TType _) = f tm
+
 
 export
 anyM : (a -> Core Bool) -> List a -> Core Bool
@@ -548,7 +729,7 @@ filterM p (x :: xs)
 export
 data Ref : (l : label) -> Type -> Type where
      [search l]
-	   MkRef : IORef a -> Ref x a
+     MkRef : IORef a -> Ref x a
 
 export
 newRef : (x : label) -> t -> Core (Ref x t)
@@ -564,6 +745,27 @@ export %inline
 put : (x : label) -> {auto ref : Ref x a} -> a -> Core ()
 put x {ref = MkRef io} val = coreLift (writeIORef io val)
 
+export %inline
+update : (x : label) -> {auto ref : Ref x a} -> (a -> a) -> Core ()
+update x f
+  = do v <- get x
+       put x (f v)
+
+export
+wrapRef : (x : label) -> {auto ref : Ref x a} ->
+          (a -> Core ()) ->
+          Core b ->
+          Core b
+wrapRef x onClose op
+  = do v <- get x
+       o <- catch op $ \err =>
+              do onClose v
+                 put x v
+                 throw err
+       onClose v
+       put x v
+       pure o
+
 export
 cond : List (Lazy Bool, Lazy a) -> a -> a
 cond [] def = def
@@ -574,3 +776,17 @@ condC : List (Core Bool, Core a) -> Core a -> Core a
 condC [] def = def
 condC ((x, y) :: xs) def
     = if !x then y else condC xs def
+
+export
+writeFile : (fname : String) -> (content : String) -> Core ()
+writeFile fname content =
+  coreLift (File.writeFile fname content) >>= \case
+    Right () => pure ()
+    Left err => throw $ FileErr fname err
+
+export
+readFile : (fname : String) -> Core String
+readFile fname =
+  coreLift (File.readFile fname) >>= \case
+    Right content => pure content
+    Left err => throw $ FileErr fname err

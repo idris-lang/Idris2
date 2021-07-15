@@ -1,6 +1,7 @@
 module Control.Monad.Trans
 
-public export
-interface MonadTrans (t : (Type -> Type) -> Type -> Type) where
-    lift : Monad m => m a -> t m a
+%default total
 
+public export
+interface MonadTrans t where
+    lift : Monad m => m a -> t m a

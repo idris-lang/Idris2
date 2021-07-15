@@ -1,7 +1,9 @@
+
 module Core.UnifyState
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.FC
@@ -9,12 +11,13 @@ import Core.Normalise
 import Core.Options
 import Core.TT
 import Core.TTC
-import Utils.Binary
+import Core.Value
+import Libraries.Utils.Binary
 
-import Data.IntMap
+import Libraries.Data.IntMap
 import Data.List
-import Data.NameMap
-import Data.StringMap
+import Libraries.Data.NameMap
+import Libraries.Data.StringMap
 
 %default covering
 
@@ -25,9 +28,8 @@ data Constraint : Type where
      MkConstraint : {vars : _} ->
                     FC ->
                     (withLazy : Bool) ->
-                    (blockedOn : List Name) ->
                     (env : Env Term vars) ->
-                    (x : Term vars) -> (y : Term vars) ->
+                    (x : NF vars) -> (y : NF vars) ->
                     Constraint
      -- An unsolved sequence of constraints, arising from arguments in an
      -- application where solving later constraints relies on solving earlier
@@ -35,36 +37,23 @@ data Constraint : Type where
      MkSeqConstraint : {vars : _} ->
                        FC ->
                        (env : Env Term vars) ->
-                       (xs : List (Term vars)) ->
-                       (ys : List (Term vars)) ->
+                       (xs : List (NF vars)) ->
+                       (ys : List (NF vars)) ->
                        Constraint
      -- A resolved constraint
      Resolved : Constraint
 
-export
-TTC Constraint where
-  toBuf b (MkConstraint {vars} fc l block env x y)
-     = do tag 0; toBuf b vars; toBuf b l
-          toBuf b block
-          toBuf b fc; toBuf b env; toBuf b x; toBuf b y
-  toBuf b (MkSeqConstraint {vars} fc env xs ys)
-     = do tag 1; toBuf b vars; toBuf b fc; toBuf b env; toBuf b xs; toBuf b ys
-  toBuf b Resolved = tag 2
-
-  fromBuf b
-      = case !getTag of
-             0 => do vars <- fromBuf b
-                     fc <- fromBuf b; l <- fromBuf b
-                     block <- fromBuf b
-                     env <- fromBuf b
-                     x <- fromBuf b; y <- fromBuf b
-                     pure (MkConstraint {vars} fc l block env x y)
-             1 => do vars <- fromBuf b
-                     fc <- fromBuf b; env <- fromBuf b
-                     xs <- fromBuf b; ys <- fromBuf b
-                     pure (MkSeqConstraint {vars} fc env xs ys)
-             2 => pure Resolved
-             _ => corrupt "Constraint"
+-- a constraint on the LHS arising from checking an argument in a position
+-- where we expect a polymorphic type. If, in the end, the expected type is
+-- polymorphic but the argument is concrete, then the pattern match is too
+-- specific
+public export
+data PolyConstraint : Type where
+     MkPolyConstraint : {vars : _} ->
+                        FC -> Env Term vars ->
+                        (arg : Term vars) ->
+                        (expty : NF vars) ->
+                        (argty : NF vars) -> PolyConstraint
 
 public export
 record UState where
@@ -80,21 +69,40 @@ record UState where
                                    -- user defined hole names, which don't need
                                    -- to have been solved
   constraints : IntMap Constraint -- map for finding constraints by ID
+  noSolve : IntMap () -- Names not to solve
+                      -- If we're checking an LHS, then checking an argument can't
+                      -- solve its own type, or we might end up with something
+                      -- less polymorphic than it should be
+  polyConstraints : List PolyConstraint -- constraints which need to be solved
+                      -- successfully to check an LHS is polymorphic enough
   dotConstraints : List (Name, DotReason, Constraint) -- dot pattern constraints
   nextName : Int
   nextConstraint : Int
-  delayedElab : List (Nat, Int, Core ClosedTerm)
+  delayedElab : List (Nat, Int, NameMap (), Core ClosedTerm)
                 -- Elaborators which we need to try again later, because
                 -- we didn't have enough type information to elaborate
                 -- successfully yet.
                 -- 'Nat' is the priority (lowest first)
-                -- The 'Int' is the resolved name. Delays can't be nested,
-                -- so we just process them in order.
+                -- The 'Int' is the resolved name.
+                -- NameMap () is the set of local hints at the point of delay
   logging : Bool
 
 export
 initUState : UState
-initUState = MkUState empty empty empty empty empty [] 0 0 [] False
+initUState = MkUState
+  { holes = empty
+  , guesses = empty
+  , currentHoles = empty
+  , delayedHoles = empty
+  , constraints = empty
+  , noSolve = empty
+  , polyConstraints = []
+  , dotConstraints = []
+  , nextName = 0
+  , nextConstraint = 0
+  , delayedElab = []
+  , logging = False
+  }
 
 export
 data UST : Type where
@@ -124,6 +132,7 @@ genMVName : {auto c : Ref Ctxt Defs} ->
             Name -> Core Name
 genMVName (UN str) = genName str
 genMVName (MN str _) = genName str
+genMVName (RF str) = genName str
 genMVName n
     = do ust <- get UST
          put UST (record { nextName $= (+1) } ust)
@@ -190,6 +199,20 @@ removeHoleName n
          let Just i = getNameID n (gamma defs)
              | Nothing => pure ()
          removeHole i
+
+export
+addNoSolve : {auto u : Ref UST UState} ->
+             Int -> Core ()
+addNoSolve i
+    = do ust <- get UST
+         put UST (record { noSolve $= insert i () } ust)
+
+export
+removeNoSolve : {auto u : Ref UST UState} ->
+                Int -> Core ()
+removeNoSolve i
+    = do ust <- get UST
+         put UST (record { noSolve $= delete i } ust)
 
 export
 saveHoles : {auto u : Ref UST UState} ->
@@ -279,14 +302,29 @@ addConstraint constr
 
 export
 addDot : {vars : _} ->
+         {auto c : Ref Ctxt Defs} ->
          {auto u : Ref UST UState} ->
          FC -> Env Term vars -> Name -> Term vars -> DotReason -> Term vars ->
          Core ()
 addDot fc env dotarg x reason y
     = do ust <- get UST
+         defs <- get Ctxt
+         xnf <- nf defs env x
+         ynf <- nf defs env y
          put UST (record { dotConstraints $=
-                             ((dotarg, reason, MkConstraint fc False [] env x y) ::)
+                             ((dotarg, reason, MkConstraint fc False env xnf ynf) ::)
                          } ust)
+
+export
+addPolyConstraint : {vars : _} ->
+                    {auto u : Ref UST UState} ->
+                    FC -> Env Term vars -> Term vars -> NF vars -> NF vars ->
+                    Core ()
+addPolyConstraint fc env arg x@(NApp _ (NMeta _ _ _) _) y
+    = do ust <- get UST
+         put UST (record { polyConstraints $= ((MkPolyConstraint fc env arg x y) ::) } ust)
+addPolyConstraint fc env arg x y
+    = pure ()
 
 mkConstantAppArgs : {vars : _} ->
                     Bool -> FC -> Env Term vars ->
@@ -299,15 +337,6 @@ mkConstantAppArgs {done} {vars = x :: xs} lets fc (b :: env) wkns
              then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
                   rewrite (appendAssociative wkns [x] (xs ++ done)) in rec
              else rewrite (appendAssociative wkns [x] (xs ++ done)) in rec
-  where
-    isLet : Binder (Term vars) -> Bool
-    isLet (Let _ _ _) = True
-    isLet _ = False
-
-    mkVar : (wkns : List Name) ->
-            IsVar name (length wkns) (wkns ++ name :: vars ++ done)
-    mkVar [] = First
-    mkVar (w :: ws) = Later (mkVar ws)
 
 mkConstantAppArgsSub : {vars : _} ->
                        Bool -> FC -> Env Term vars ->
@@ -330,15 +359,6 @@ mkConstantAppArgsSub {done} {vars = x :: xs}
              then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
                   rewrite appendAssociative wkns [x] (xs ++ done) in rec
              else rewrite appendAssociative wkns [x] (xs ++ done) in rec
-  where
-    isLet : Binder (Term vars) -> Bool
-    isLet (Let _ _ _) = True
-    isLet _ = False
-
-    mkVar : (wkns : List Name) ->
-            IsVar name (length wkns) (wkns ++ name :: vars ++ done)
-    mkVar [] = First
-    mkVar (w :: ws) = Later (mkVar ws)
 
 mkConstantAppArgsOthers : {vars : _} ->
                           Bool -> FC -> Env Term vars ->
@@ -361,16 +381,6 @@ mkConstantAppArgsOthers {done} {vars = x :: xs}
              then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
                   rewrite appendAssociative wkns [x] (xs ++ done) in rec
              else rewrite appendAssociative wkns [x] (xs ++ done) in rec
-  where
-    isLet : Binder (Term vars) -> Bool
-    isLet (Let _ _ _) = True
-    isLet _ = False
-
-    mkVar : (wkns : List Name) ->
-            IsVar name (length wkns) (wkns ++ name :: vars ++ done)
-    mkVar [] = First
-    mkVar (w :: ws) = Later (mkVar ws)
-
 
 export
 applyTo : {vars : _} ->
@@ -420,8 +430,8 @@ newMetaLets {vars} fc rig env n ty def nocyc lets
                            else abstractEnvType fc env ty
          let hole = record { noCycles = nocyc }
                            (newDef fc n rig [] hty Public def)
-         log 5 $ "Adding new meta " ++ show (n, fc, rig)
-         logTerm 10 ("New meta type " ++ show n) hty
+         log "unify.meta" 5 $ "Adding new meta " ++ show (n, fc, rig)
+         logTerm "unify.meta" 10 ("New meta type " ++ show n) hty
          defs <- get Ctxt
          idx <- addDef n hole
          addHoleName fc n idx
@@ -448,7 +458,7 @@ mkConstant fc [] tm = tm
 --     = mkConstant fc env (Bind fc x (Let c val ty) tm)
 mkConstant {vars = x :: _} fc (b :: env) tm
     = let ty = binderType b in
-          mkConstant fc env (Bind fc x (Lam (multiplicity b) Explicit ty) tm)
+          mkConstant fc env (Bind fc x (Lam fc (multiplicity b) Explicit ty) tm)
 
 -- Given a term and a type, add a new guarded constant to the global context
 -- by applying the term to the current environment
@@ -467,8 +477,8 @@ newConstant {vars} fc rig env tm ty constrs
          cn <- genName "postpone"
          let guess = newDef fc cn rig [] defty Public
                             (Guess def (length env) constrs)
-         log 5 $ "Adding new constant " ++ show (cn, fc, rig)
-         logTerm 10 ("New constant type " ++ show cn) defty
+         log "unify.constant" 5 $ "Adding new constant " ++ show (cn, fc, rig)
+         logTerm "unify.constant" 10 ("New constant type " ++ show cn) defty
          idx <- addDef cn guess
          addGuessName fc cn idx
          pure (Meta fc cn idx envArgs)
@@ -489,8 +499,8 @@ newSearch : {vars : _} ->
 newSearch {vars} fc rig depth def env n ty
     = do let hty = abstractEnvType fc env ty
          let hole = newDef fc n rig [] hty Public (BySearch rig depth def)
-         log 10 $ "Adding new search " ++ show fc ++ " " ++ show n
-         logTermNF 10 "New search type" env ty
+         log "unify.search" 10 $ "Adding new search " ++ show fc ++ " " ++ show n
+         logTermNF "unify.search" 10 "New search type" [] hty
          idx <- addDef n hole
          addGuessName fc n idx
          pure (idx, Meta fc n idx envArgs)
@@ -511,7 +521,7 @@ newDelayed {vars} fc rig env n ty
     = do let hty = abstractEnvType fc env ty
          let hole = newDef fc n rig [] hty Public Delayed
          idx <- addDef n hole
-         log 10 $ "Added delayed elaborator " ++ show (n, idx)
+         log "unify.delay" 10 $ "Added delayed elaborator " ++ show (n, idx)
          addHoleName fc n idx
          pure (idx, Meta fc n idx envArgs)
   where
@@ -576,12 +586,12 @@ checkDelayedHoles
 -- not guarded by a unification problem (in which case, report that the unification
 -- problem is unsolved) and it doesn't depend on an implicit pattern variable
 -- (in which case, perhaps suggest binding it explicitly)
-export
 checkValidHole : {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
-                 (Int, (FC, Name)) -> Core ()
-checkValidHole (idx, (fc, n))
-    = do defs <- get Ctxt
+                 Int -> (Int, (FC, Name)) -> Core ()
+checkValidHole base (idx, (fc, n))
+  = when (idx >= base) $
+      do defs <- get Ctxt
          ust <- get UST
          Just gdef <- lookupCtxtExact (Resolved idx) (gamma defs)
               | Nothing => pure ()
@@ -596,15 +606,17 @@ checkValidHole (idx, (fc, n))
                      let Just c = lookup con (constraints ust)
                           | Nothing => pure ()
                      case c of
-                          MkConstraint fc l blocked env x y =>
+                          MkConstraint fc l env x y =>
                              do put UST (record { guesses = empty } ust)
-                                xnf <- normaliseHoles defs env x
-                                ynf <- normaliseHoles defs env y
+                                empty <- clearDefs defs
+                                xnf <- quote empty env x
+                                ynf <- quote empty env y
                                 throw (CantSolveEq fc env xnf ynf)
                           MkSeqConstraint fc env (x :: _) (y :: _) =>
                              do put UST (record { guesses = empty } ust)
-                                xnf <- normaliseHoles defs env x
-                                ynf <- normaliseHoles defs env y
+                                empty <- clearDefs defs
+                                xnf <- quote empty env x
+                                ynf <- quote empty env y
                                 throw (CantSolveEq fc env xnf ynf)
                           _ => pure ()
               _ => traverse_ checkRef !(traverse getFullName
@@ -622,14 +634,14 @@ checkValidHole (idx, (fc, n))
 -- Also throw an error if there are unresolved guarded constants or
 -- unsolved searches
 export
-checkUserHoles : {auto u : Ref UST UState} ->
-                 {auto c : Ref Ctxt Defs} ->
-                 Bool -> Core ()
-checkUserHoles now
+checkUserHolesAfter : {auto u : Ref UST UState} ->
+                      {auto c : Ref Ctxt Defs} ->
+                      Int -> Bool -> Core ()
+checkUserHolesAfter base now
     = do gs_map <- getGuesses
          let gs = toList gs_map
-         log 10 $ "Unsolved guesses " ++ show gs
-         traverse_ checkValidHole gs
+         log "unify.unsolved" 10 $ "Unsolved guesses " ++ show gs
+         traverse_ (checkValidHole base) gs
          hs_map <- getCurrentHoles
          let hs = toList hs_map
          let hs' = if any isUserName (map (snd . snd) hs)
@@ -644,6 +656,12 @@ checkUserHoles now
     nameEq (_, _, x) (_, _, y) = x == y
 
 export
+checkUserHoles : {auto u : Ref UST UState} ->
+                 {auto c : Ref Ctxt Defs} ->
+                 Bool -> Core ()
+checkUserHoles = checkUserHolesAfter 0
+
+export
 checkNoGuards : {auto u : Ref UST UState} ->
                 {auto c : Ref Ctxt Defs} ->
                 Core ()
@@ -652,75 +670,84 @@ checkNoGuards = checkUserHoles False
 export
 dumpHole : {auto u : Ref UST UState} ->
            {auto c : Ref Ctxt Defs} ->
-           (loglevel : Nat) -> (hole : Int) -> Core ()
-dumpHole lvl hole
+           (s : String) ->
+           {auto 0 _ : KnownTopic s} ->
+           Nat -> (hole : Int) -> Core ()
+dumpHole str n hole
     = do ust <- get UST
          defs <- get Ctxt
-         if logLevel (session (options defs)) < lvl
-            then pure ()
-            else do
-               defs <- get Ctxt
-               case !(lookupCtxtExact (Resolved hole) (gamma defs)) of
-                 Nothing => pure ()
-                 Just gdef => case (definition gdef, type gdef) of
-                    (Guess tm envb constraints, ty) =>
-                         do log lvl $ "!" ++ show !(getFullName (Resolved hole)) ++ " : " ++
-                                              show !(toFullNames !(normaliseHoles defs [] ty))
-                            log lvl $ "\t  = " ++ show !(normaliseHoles defs [] tm)
-                                            ++ "\n\twhen"
-                            traverse dumpConstraint constraints
-                            pure ()
-                    (Hole _ p, ty) =>
-                         log lvl $ "?" ++ show (fullname gdef) ++ " : " ++
-                                           show !(normaliseHoles defs [] ty)
-                                           ++ if implbind p then " (ImplBind)" else ""
-                                           ++ if invertible gdef then " (Invertible)" else ""
-                    (BySearch _ _ _, ty) =>
-                         log lvl $ "Search " ++ show hole ++ " : " ++
-                                           show !(toFullNames !(normaliseHoles defs [] ty))
-                    (PMDef _ args t _ _, ty) =>
-                         log 4 $ "Solved: " ++ show hole ++ " : " ++
-                                       show !(normalise defs [] ty) ++
-                                       " = " ++ show !(normalise defs [] (Ref emptyFC Func (Resolved hole)))
-                    (ImpBind, ty) =>
-                         log 4 $ "Bound: " ++ show hole ++ " : " ++
-                                       show !(normalise defs [] ty)
-                    (Delayed, ty) =>
-                         log 4 $ "Delayed elaborator : " ++
-                                       show !(normalise defs [] ty)
-                    _ => pure ()
+         sopts <- getSession
+         defs <- get Ctxt
+         case !(lookupCtxtExact (Resolved hole) (gamma defs)) of
+          Nothing => pure ()
+          Just gdef => case (definition gdef, type gdef) of
+             (Guess tm envb constraints, ty) =>
+                  do logString str n $
+                       "!" ++ show !(getFullName (Resolved hole)) ++ " : "
+                           ++ show !(toFullNames !(normaliseHoles defs [] ty))
+                       ++ "\n\t  = "
+                           ++ show !(normaliseHoles defs [] tm)
+                           ++ "\n\twhen"
+                     traverse_ dumpConstraint constraints
+             (Hole _ p, ty) =>
+                  logString str n $
+                    "?" ++ show (fullname gdef) ++ " : "
+                        ++ show !(normaliseHoles defs [] ty)
+                        ++ if implbind p then " (ImplBind)" else ""
+                        ++ if invertible gdef then " (Invertible)" else ""
+             (BySearch _ _ _, ty) =>
+                  logString str n $
+                     "Search " ++ show hole ++ " : " ++
+                     show !(toFullNames !(normaliseHoles defs [] ty))
+             (PMDef _ args t _ _, ty) =>
+                  log str 4 $
+                     "Solved: " ++ show hole ++ " : " ++
+                     show !(normalise defs [] ty) ++
+                     " = " ++ show !(normalise defs [] (Ref emptyFC Func (Resolved hole)))
+             (ImpBind, ty) =>
+                  log str 4 $
+                      "Bound: " ++ show hole ++ " : " ++
+                      show !(normalise defs [] ty)
+             (Delayed, ty) =>
+                  log str 4 $
+                     "Delayed elaborator : " ++
+                     show !(normalise defs [] ty)
+             _ => pure ()
   where
     dumpConstraint : Int -> Core ()
-    dumpConstraint n
+    dumpConstraint cid
         = do ust <- get UST
              defs <- get Ctxt
-             case lookup n (constraints ust) of
+             case lookup cid (constraints ust) of
                   Nothing => pure ()
-                  Just Resolved => log lvl "\tResolved"
-                  Just (MkConstraint _ lazy _ env x y) =>
-                    do log lvl $ "\t  " ++ show !(toFullNames !(normalise defs env x))
-                                      ++ " =?= " ++ show !(toFullNames !(normalise defs env y))
-                       log 5 $ "\t    from " ++ show !(toFullNames x)
-                                      ++ " =?= " ++ show !(toFullNames y) ++
-                               if lazy then "\n\t(lazy allowed)" else ""
+                  Just Resolved => logString str n "\tResolved"
+                  Just (MkConstraint _ lazy env x y) =>
+                    do logString str n $
+                         "\t  " ++ show !(toFullNames !(quote defs env x))
+                                ++ " =?= " ++ show !(toFullNames !(quote defs env y))
+                       empty <- clearDefs defs
+                       log str 5 $
+                         "\t    from " ++ show !(toFullNames !(quote empty env x))
+                            ++ " =?= " ++ show !(toFullNames !(quote empty env y))
+                            ++ if lazy then "\n\t(lazy allowed)" else ""
                   Just (MkSeqConstraint _ _ xs ys) =>
-                       log lvl $ "\t\t" ++ show xs ++ " =?= " ++ show ys
+                       logString str n $ "\t\t" ++ show xs ++ " =?= " ++ show ys
 
 export
 dumpConstraints : {auto u : Ref UST UState} ->
                   {auto c : Ref Ctxt Defs} ->
-                  (loglevel : Nat) ->
+                  (topics : String) ->
+                  {auto 0 _ : KnownTopic topics} ->
+                  (verbosity : Nat) ->
                   (all : Bool) ->
                   Core ()
-dumpConstraints loglevel all
+dumpConstraints str n all
     = do ust <- get UST
          defs <- get Ctxt
-         if logLevel (session (options defs)) >= loglevel then
-            do let hs = toList (guesses ust) ++
-                        toList (if all then holes ust else currentHoles ust)
-               case hs of
-                    [] => pure ()
-                    _ => do log loglevel "--- CONSTRAINTS AND HOLES ---"
-                            traverse (dumpHole loglevel) (map fst hs)
-                            pure ()
-            else pure ()
+         sopts <- getSession
+         when !(logging str n) $ do
+           let hs = toList (guesses ust) ++
+                    toList (if all then holes ust else currentHoles ust)
+           unless (isNil hs) $
+             do logString str n "--- CONSTRAINTS AND HOLES ---"
+                traverse_ (dumpHole str n) (map fst hs)

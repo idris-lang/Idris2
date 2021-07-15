@@ -1,5 +1,4 @@
-#ifndef IDRISNET_H
-#define IDRISNET_H
+#pragma once
 
 // Includes used by the idris-file.
 #ifdef _WIN32
@@ -10,6 +9,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #endif
 
 struct sockaddr_storage;
@@ -28,9 +28,16 @@ typedef struct idrnet_recvfrom_result {
     struct sockaddr_storage* remote_addr;
 } idrnet_recvfrom_result;
 
-// Memory management functions
-void* idrnet_malloc(int size);
-void idrnet_free(void* ptr);
+#ifdef _WIN32
+// mingw-w64 is currently missing the afunix.h header even though windows
+// supports unix sockets so we have to define the unix sockaddr structure
+// ourselves
+struct sockaddr_un {
+    u_short sun_family;
+    char sun_path[108];
+};
+#endif
+
 unsigned int idrnet_peek(void *ptr, unsigned int offset);
 void idrnet_poke(void *ptr, unsigned int offset, char val);
 
@@ -38,6 +45,12 @@ void idrnet_poke(void *ptr, unsigned int offset, char val);
 int idrnet_errno();
 
 int idrnet_socket(int domain, int type, int protocol);
+
+// Address family accessors
+int idrnet_af_unspec(void);
+int idrnet_af_unix(void);
+int idrnet_af_inet(void);
+int idrnet_af_inet6(void);
 
 // Bind
 int idrnet_bind(int sockfd, int family, int socket_type, char* host, int port);
@@ -52,6 +65,7 @@ int idrnet_connect(int sockfd, int family, int socket_type, char* host, int port
 int idrnet_sockaddr_family(void* sockaddr);
 char* idrnet_sockaddr_ipv4(void* sockaddr);
 int idrnet_sockaddr_ipv4_port(void* sockaddr);
+char* idrnet_sockaddr_unix(void *sockaddr);
 void* idrnet_create_sockaddr();
 
 int idrnet_sockaddr_port(int sockfd);
@@ -96,5 +110,3 @@ int idrnet_getaddrinfo(struct addrinfo** address_res, char* host,
 int idrnet_geteagain();
 
 int isNull(void* ptr);
-
-#endif

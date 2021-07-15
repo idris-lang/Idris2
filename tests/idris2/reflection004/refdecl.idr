@@ -15,19 +15,19 @@ axes 1 = ["x"]
 axes 2 = "y" :: axes 1
 axes 3 = "z" :: axes 2
 axes 4  = "w" :: axes 3
-axes (S (S (S (S (S _))))) {lte = (LTESucc (LTESucc (LTESucc (LTESucc (LTESucc _)))))} impossible
+axes (S (S (S (S (S _))))) {lte} = absurd lte
 
 mkPoint : (n : Nat) -> {auto gt : GT n 0} -> {auto lte : LTE n 4} -> Decl
 mkPoint n
     = let type = "Point" ++ show n ++ "D" in
       IRecord emptyFC Public
-      (MkRecord emptyFC (NS ["Main"] (UN type)) [] (NS ["Main"] (UN ("Mk" ++ type)))
-        (toList $ map (\axis => MkIField emptyFC MW ExplicitArg (UN axis) `(Double)) (axes n)))
+      (MkRecord emptyFC (NS (MkNS ["Main"]) (UN type)) [] (NS (MkNS ["Main"]) (UN ("Mk" ++ type)))
+        (toList $ map (\axis => MkIField emptyFC MW ExplicitArg (RF axis) `(Double)) (axes n)))
 
 logDecls : TTImp -> Elab (Int -> Int)
 logDecls v
     = do declare [IClaim EmptyFC MW Public []
-                 (MkTy EmptyFC `{{ Main.foo }}
+                 (MkTy EmptyFC EmptyFC `{{ Main.foo }}
                                `(Int -> Int -> Int) )]
 
          declare `[ foo x y = x + y ]

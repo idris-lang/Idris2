@@ -1,0 +1,4 @@
+:load "Specifiers.idr"
+:exec main
+:set eval execute
+main

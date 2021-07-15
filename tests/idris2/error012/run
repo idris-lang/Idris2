@@ -1,1 +1,1 @@
-$1 nothere.idr -o argh
+$1 --no-color --console-width 0 nothere.idr -o argh

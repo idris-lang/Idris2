@@ -1,6 +1,7 @@
 module TTImp.Elab
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.LinearCheck
@@ -8,6 +9,7 @@ import Core.Metadata
 import Core.Normalise
 import Core.UnifyState
 import Core.Unify
+import Core.Value
 
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
@@ -15,16 +17,17 @@ import TTImp.Elab.Term
 import TTImp.TTImp
 import TTImp.Unelab
 
-import Data.IntMap
 import Data.List
-import Data.NameMap
+import Data.Maybe
+import Libraries.Data.IntMap
+import Libraries.Data.NameMap
 
 %default covering
 
 findPLetRenames : {vars : _} ->
                   Term vars -> List (Name, (RigCount, Name))
-findPLetRenames (Bind fc n (PLet c (Local _ _ idx p) ty) sc)
-    = case nameAt idx p of
+findPLetRenames (Bind fc n (PLet _ c (Local _ _ idx p) ty) sc)
+    = case nameAt p of
            x@(MN _ _) => (x, (c, n)) :: findPLetRenames sc
            _ => findPLetRenames sc
 findPLetRenames (Bind fc n _ sc) = findPLetRenames sc
@@ -33,7 +36,7 @@ findPLetRenames tm = []
 doPLetRenames : {vars : _} ->
                 List (Name, (RigCount, Name)) ->
                 List Name -> Term vars -> Term vars
-doPLetRenames ns drops (Bind fc n b@(PLet _ _ _) sc)
+doPLetRenames ns drops (Bind fc n b@(PLet _ _ _ _) sc)
     = if n `elem` drops
          then subst (Erased fc False) (doPLetRenames ns drops sc)
          else Bind fc n b (doPLetRenames ns drops sc)
@@ -61,23 +64,19 @@ normaliseHoleTypes
     = do ust <- get UST
          let hs = keys (holes ust)
          defs <- get Ctxt
-         traverse (normaliseH defs) hs
-         pure ()
+         traverse_ (normaliseH defs) hs
   where
     updateType : Defs -> Int -> GlobalDef -> Core ()
     updateType defs i def
         = do ty' <- normaliseHoles defs [] (type def)
-             addDef (Resolved i) (record { type = ty' } def)
-             pure ()
+             ignore $ addDef (Resolved i) (record { type = ty' } def)
 
     normaliseH : Defs -> Int -> Core ()
     normaliseH defs i
-        = case !(lookupCtxtExact (Resolved i) (gamma defs)) of
-               Just gdef =>
-                  case definition gdef of
-                       Hole _ _ => updateType defs i gdef
-                       _ => pure ()
-               Nothing => pure ()
+        = whenJust !(lookupCtxtExact (Resolved i) (gamma defs)) $ \ gdef =>
+            case definition gdef of
+              Hole _ _ => updateType defs i gdef
+              _ => pure ()
 
 export
 addHoleToSave : {auto c : Ref Ctxt Defs} ->
@@ -126,31 +125,33 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
          --   is most likely just to be able to display helpful errors
          let solvemode = case mode of
                               InLHS _ => inLHS
-                              _ => inTermP False
+                              _ => inTerm
          solveConstraints solvemode Normal
-         logTerm 5 "Looking for delayed in " chktm
+         logTerm "elab" 5 "Looking for delayed in " chktm
          ust <- get UST
          catch (retryDelayed (sortBy (\x, y => compare (fst x) (fst y))
-                                     (delayedElab ust)))
-               (\err =>
-                  do ust <- get UST
-                     put UST (record { delayedElab = olddelayed } ust)
-                     throw err)
+                                       (delayedElab ust)))
+                 (\err =>
+                    do ust <- get UST
+                       put UST (record { delayedElab = olddelayed } ust)
+                       throw err)
          ust <- get UST
          put UST (record { delayedElab = olddelayed } ust)
          solveConstraintsAfter constart solvemode MatchArgs
 
-         -- As long as we're not in a case block, finish off constraint solving
-         when (not incase) $
+         -- As long as we're not in the RHS of a case block,
+         -- finish off constraint solving
+         -- On the LHS the constraint solving is used to handle overloading
+         when (not incase || isJust (isLHS mode)) $
            -- resolve any default hints
-           do log 5 "Resolving default hints"
+           do log "elab" 5 "Resolving default hints"
               solveConstraintsAfter constart solvemode Defaults
               -- perhaps resolving defaults helps...
               -- otherwise, this last go is most likely just to give us more
               -- helpful errors.
               solveConstraintsAfter constart solvemode LastChance
 
-         dumpConstraints 4 False
+         dumpConstraints "elab" 4 False
          defs <- get Ctxt
          chktm <- if inPE -- Need to fully normalise holes in partial evaluation
                           -- because the holes don't have types saved to ttc
@@ -159,16 +160,16 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
 
          -- Linearity and hole checking.
          -- on the LHS, all holes need to have been solved
-         chktm <- the (Core (Term vars)) $ case mode of
-              InLHS _ => do when (not incase) $ checkUserHoles True
+         chktm <- case mode of
+              InLHS _ => do when (not incase) $ checkUserHolesAfter constart True
                             pure chktm
-              InTransform => do when (not incase) $ checkUserHoles True
+              InTransform => do when (not incase) $ checkUserHolesAfter constart True
                                 pure chktm
               -- elsewhere, all unification problems must be
               -- solved, though we defer that if it's a case block since we
               -- might learn a bit more later.
               _ => if (not incase)
-                      then do checkUserHoles (inTrans || inPE)
+                      then do checkUserHolesAfter constart (inTrans || inPE)
                               linearCheck (getFC tm) rigc False env chktm
                           -- Linearity checking looks in case blocks, so no
                           -- need to check here.
@@ -193,7 +194,7 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
                  do let vs = findPLetRenames chktm
                     let ret = doPLetRenames vs [] chktm
                     pure (ret, gnf env (doPLetRenames vs [] !(getTerm chkty)))
-              _ => do dumpConstraints 2 False
+              _ => do dumpConstraints "elab" 2 False
                       pure (chktm, chkty)
   where
     addHoles : (acc : IntMap (FC, Name)) ->
@@ -229,7 +230,7 @@ checkTermSub : {inner, vars : _} ->
                RawImp -> Glued vars ->
                Core (Term vars)
 checkTermSub defining mode opts nest env env' sub tm ty
-    = do defs <- the (Core Defs) $ case mode of
+    = do defs <- case mode of
                       InType => branch -- might need to backtrack if there's
                                        -- a case in the type
                       _ => get Ctxt
@@ -239,16 +240,20 @@ checkTermSub defining mode opts nest env env' sub tm ty
             catch {t = Error}
                   (elabTermSub defining mode opts nest
                                env env' sub tm (Just ty))
-                  (\err => case err of
-                              TryWithImplicits loc benv ns
-                                 => do put Ctxt defs
-                                       put UST ust
-                                       put MD mv
-                                       tm' <- bindImps loc benv ns tm
-                                       elabTermSub defining mode opts nest
-                                                   env env' sub
-                                                   tm' (Just ty)
-                              _ => throw err)
+                  \case
+                    TryWithImplicits loc benv ns
+                      => do put Ctxt defs
+                            put UST ust
+                            put MD mv
+                            tm' <- bindImps loc benv ns tm
+                            elabTermSub defining mode opts nest
+                                        env env' sub
+                                        tm' (Just ty)
+                    err => throw err
+         case mode of
+              InType => commit -- bracket the 'branch' above
+              _ => pure ()
+
          pure (fst res)
   where
     bindImps' : {vs : _} ->

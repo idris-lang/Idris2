@@ -1,9 +1,11 @@
 module Idris.IDEMode.Commands
 
 import Core.Core
+import Core.Context
+import Core.Context.Log
 import Core.Name
-import public Idris.REPLOpts
-import Utils.Hex
+import public Idris.REPL.Opts
+import Libraries.Utils.Hex
 
 import System.File
 
@@ -24,6 +26,7 @@ data IDECommand
      = Interpret String
      | LoadFile String (Maybe Integer)
      | TypeOf String (Maybe (Integer, Integer))
+     | NameAt String (Maybe (Integer, Integer))
      | CaseSplit Integer Integer String
      | AddClause Integer String
      -- deprecated: | AddProofClause
@@ -48,6 +51,7 @@ data IDECommand
      | ElaborateTerm     String -- then change String to Term, as in idris1
      | PrintDefinition String
      | ReplCompletions String
+     | EnableSyntax Bool
      | Version
      | GetOptions
 
@@ -71,6 +75,11 @@ getIDECommand (SExpList [SymbolAtom "type-of", StringAtom n])
 getIDECommand (SExpList [SymbolAtom "type-of", StringAtom n,
                          IntegerAtom l, IntegerAtom c])
     = Just $ TypeOf n (Just (l, c))
+getIDECommand (SExpList [SymbolAtom "name-at", StringAtom n])
+    = Just $ NameAt n Nothing
+getIDECommand (SExpList [SymbolAtom "name-at", StringAtom n,
+                         IntegerAtom l, IntegerAtom c])
+    = Just $ NameAt n (Just (l, c))
 getIDECommand (SExpList [SymbolAtom "case-split", IntegerAtom l, IntegerAtom c,
                          StringAtom n])
     = Just $ CaseSplit l c n
@@ -83,13 +92,9 @@ getIDECommand (SExpList [SymbolAtom "add-missing", IntegerAtom line, StringAtom 
 getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n])
     = Just $ ExprSearch l n [] False
 getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n, SExpList hs])
-    = case readHints hs of
-           Just hs' => Just $ ExprSearch l n hs' False
-           _ => Nothing
+    = (\hs' => ExprSearch l n hs' False) <$> readHints hs
 getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n, SExpList hs, SymbolAtom mode])
-    = case readHints hs of
-           Just hs' => Just $ ExprSearch l n hs' (getMode mode)
-           _ => Nothing
+    = (\hs' => ExprSearch l n hs' (getMode mode)) <$> readHints hs
   where
     getMode : String -> Bool
     getMode m = m == "all"
@@ -135,6 +140,8 @@ getIDECommand (SExpList [SymbolAtom "print-definition", StringAtom n])
     = Just $ PrintDefinition n
 getIDECommand (SExpList [SymbolAtom "repl-completions", StringAtom n])
     = Just $ ReplCompletions n
+getIDECommand (SExpList [SymbolAtom "enable-syntax", BoolAtom b])
+    = Just $ EnableSyntax b
 getIDECommand (SymbolAtom "version") = Just Version
 getIDECommand (SExpList [SymbolAtom "get-options"]) = Just GetOptions
 getIDECommand _ = Nothing
@@ -146,6 +153,8 @@ putIDECommand (LoadFile fname Nothing)        = (SExpList [SymbolAtom "load-file
 putIDECommand (LoadFile fname (Just line))    = (SExpList [SymbolAtom "load-file", StringAtom fname, IntegerAtom line])
 putIDECommand (TypeOf cmd Nothing)            = (SExpList [SymbolAtom "type-of", StringAtom cmd])
 putIDECommand (TypeOf cmd (Just (line, col))) = (SExpList [SymbolAtom "type-of", StringAtom cmd, IntegerAtom line, IntegerAtom col])
+putIDECommand (NameAt cmd Nothing)            = (SExpList [SymbolAtom "name-at", StringAtom cmd])
+putIDECommand (NameAt cmd (Just (line, col))) = (SExpList [SymbolAtom "name-at", StringAtom cmd, IntegerAtom line, IntegerAtom col])
 putIDECommand (CaseSplit line col n)          = (SExpList [SymbolAtom "case-split", IntegerAtom line, IntegerAtom col, StringAtom n])
 putIDECommand (AddClause line n)              = (SExpList [SymbolAtom "add-clause", IntegerAtom line, StringAtom n])
 putIDECommand (AddMissing line n)             = (SExpList [SymbolAtom "add-missing", IntegerAtom line, StringAtom n])
@@ -154,7 +163,7 @@ putIDECommand (ExprSearch line n exprs mode)  = (SExpList [SymbolAtom "proof-sea
   getMode : Bool -> SExp
   getMode True  = SymbolAtom "all"
   getMode False = SymbolAtom "other"
-putIDECommand ExprSearchNext                  = SymbolAtom "proof-search--next"
+putIDECommand ExprSearchNext                  = SymbolAtom "proof-search-next"
 putIDECommand (GenerateDef line n)            = (SExpList [SymbolAtom "generate-def", IntegerAtom line, StringAtom n])
 putIDECommand GenerateDefNext                 = SymbolAtom "generate-def-next"
 putIDECommand (MakeLemma line n)              = (SExpList [SymbolAtom "make-lemma", IntegerAtom line, StringAtom n])
@@ -177,6 +186,7 @@ putIDECommand (ElaborateTerm     tm)          = (SExpList [SymbolAtom "elaborate
 putIDECommand (PrintDefinition n)             = (SExpList [SymbolAtom "print-definition", StringAtom n])
 putIDECommand (ReplCompletions n)             = (SExpList [SymbolAtom "repl-completions", StringAtom n])
 putIDECommand (Directive n)             = (SExpList [SymbolAtom "directive", StringAtom n])
+putIDECommand (EnableSyntax b)                = (SExpList [SymbolAtom "enable-syntax", BoolAtom b])
 putIDECommand GetOptions                      = (SExpList [SymbolAtom "get-options"])
 putIDECommand Version                         = SymbolAtom "version"
 
@@ -269,9 +279,10 @@ sendStr f st =
   map (const ()) (fPutStr f st)
 
 export
-send : SExpable a => File -> a -> Core ()
+send : {auto c : Ref Ctxt Defs} -> SExpable a => File -> a -> Core ()
 send f resp
     = do let r = show (toSExp resp) ++ "\n"
+         log "ide-mode.send" 20 r
          coreLift $ sendStr f $ leftPad '0' 6 (asHex (cast (length r)))
          coreLift $ sendStr f r
          coreLift $ fflush f

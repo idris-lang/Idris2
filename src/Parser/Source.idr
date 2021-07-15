@@ -4,29 +4,38 @@ import public Parser.Lexer.Source
 import public Parser.Rule.Source
 import public Parser.Unlit
 
+import Core.Core
+import Core.Name
+import Core.Metadata
+import Core.FC
+
 import System.File
-import Utils.Either
 
 %default total
 
 export
 runParserTo : {e : _} ->
-              Maybe LiterateStyle -> (TokenData Token -> Bool) ->
-              String -> Grammar (TokenData Token) e ty -> Either (ParseError Token) ty
-runParserTo lit pred str p
-    = do str    <- mapError LitFail $ unlit lit str
-         toks   <- mapError LexFail $ lexTo pred str
-         parsed <- mapError toGenericParsingError $ parse p toks
-         Right (fst parsed)
+              (origin : OriginDesc) ->
+              Maybe LiterateStyle -> Lexer ->
+              String -> Grammar SemanticDecorations Token e ty -> Either Error (SemanticDecorations, ty)
+runParserTo origin lit reject str p
+    = do str    <- mapFst (fromLitError origin) $ unlit lit str
+         toks   <- mapFst (fromLexError origin) $ lexTo reject str
+         (decs, (parsed, _)) <- mapFst (fromParsingError origin) $ parseWith p toks
+         Right (decs, parsed)
 
 export
 runParser : {e : _} ->
-            Maybe LiterateStyle -> String -> Grammar (TokenData Token) e ty -> Either (ParseError Token) ty
-runParser lit = runParserTo lit (const False)
+            (origin : OriginDesc) -> Maybe LiterateStyle -> String ->
+            Grammar SemanticDecorations Token e ty -> Either Error (SemanticDecorations, ty)
+runParser origin lit = runParserTo origin lit (pred $ const False)
 
 export covering
-parseFile : (fn : String) -> Rule ty -> IO (Either (ParseError Token) ty)
-parseFile fn p
-    = do Right str <- readFile fn
-             | Left err => pure (Left (FileFail err))
-         pure (runParser (isLitFile fn) str p)
+parseFile : (fname : String)
+         -> (origin : OriginDesc)
+         -> Rule ty
+         -> IO (Either Error (SemanticDecorations, ty))
+parseFile fname origin p
+    = do Right str <- readFile fname
+             | Left err => pure (Left (FileErr fname err))
+         pure (runParser origin (isLitFile fname) str p)

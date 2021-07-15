@@ -1,0 +1,11 @@
+1/1: Building void (void.idr)
+Error: While processing left hand side of Calc. Can't match on ?y [no locals in scope] (Non linear pattern variable).
+
+void:18:19--18:20
+ 14 | 
+ 15 | public export
+ 16 | Calc : {x : a} -> {y : b} -> FastDerivation x y -> x = y
+ 17 | Calc (|~ x) = Refl
+ 18 | Calc {y} ((~~) {z=y} {y=y} der (MkDPair y Refl)) = Calc der
+                        ^
+

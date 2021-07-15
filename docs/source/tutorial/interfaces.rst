@@ -177,6 +177,50 @@ interface declaration, it elaborates the interface header but none of the
 method types on the first pass, and elaborates the method types and any
 default definitions on the second pass.
 
+Quantities for Parameters
+=========================
+
+By default parameters that are not explicitly ascribed a type in an ``interface``
+declaration are assigned the quantity ``0``. This means that the parameter is not
+available to use at runtime in the methods' definitions.
+
+For instance, ``Show a`` gives rise to a ``0``-quantified type variable ``a`` in
+the type of the ``show`` method:
+
+::
+
+     Main> :set showimplicits
+     Main> :t show
+     Prelude.show : {0 a : Type} -> Show a => a -> String
+
+However some use cases require that some of the parameters are available at runtime.
+We may for instance want to declare an interface for ``Storable`` types. The constraint
+``Storable a size`` means that we can store values of type ``a`` in a ``Buffer`` in
+exactly ``size`` bytes.
+
+If the user provides a method to read a value for such a type ``a`` at a given offset,
+then we can read the ``k`` th element stored in the buffer by computing the appropriate
+offset from ``k`` and ``size``. This is demonstrated by providing a default implementation
+for the method ``peekElementOff`` implemented in terms of ``peekByteOff`` and the parameter
+``size``.
+
+.. code-block:: idris
+
+    data ForeignPtr : Type -> Type where
+      MkFP : Buffer -> ForeignPtr a
+
+    interface Storable (0 a : Type) (size : Nat) | a where
+      peekByteOff : HasIO io => ForeignPtr a -> Int -> io a
+
+      peekElemOff : HasIO io => ForeignPtr a -> Int -> io a
+      peekElemOff fp k = peekByteOff fp (k * cast size)
+
+
+Note that ``a`` is explicitly marked as runtime irrelevant so that it is erased by the
+compiler. Equivalently we could have written ``interface Storable a (size : Nat)``.
+The meaning of ``| a`` is explained in :ref:`DeterminingParameters`.
+
+
 Functors and Applicatives
 =========================
 
@@ -189,8 +233,9 @@ prelude:
 
 .. code-block:: idris
 
-    interface Functor (f : Type -> Type) where
+    interface Functor (0 f : Type -> Type) where
         map : (m : a -> b) -> f a -> f b
+
 
 A functor allows a function to be applied across a structure, for
 example to apply a function to every element in a ``List``:
@@ -213,7 +258,7 @@ abstracts the notion of function application:
 
     infixl 2 <*>
 
-    interface Functor f => Applicative (f : Type -> Type) where
+    interface Functor f => Applicative (0 f : Type -> Type) where
         pure  : a -> f a
         (<*>) : f (a -> b) -> f a -> f b
 
@@ -232,12 +277,18 @@ defined as follows:
     interface Applicative m => Monad (m : Type -> Type) where
         (>>=)  : m a -> (a -> m b) -> m b
 
+There is also a non-binding sequencing operator, defined for ``Monad`` as:
+
+.. code-block:: idris
+
+    v >> e = v >>= \_ => e
+
 Inside a ``do`` block, the following syntactic transformations are
 applied:
 
 - ``x <- v; e`` becomes ``v >>= (\x => e)``
 
-- ``v; e`` becomes ``v >>= (\_ => e)``
+- ``v; e`` becomes ``v >> e``
 
 - ``let x = v; e`` becomes ``let x = v in e``
 
@@ -260,10 +311,10 @@ Using this we can, for example, define a function which adds two
                    y' <- y -- Extract value from y
                    pure (x' + y') -- Add them
 
-This function will extract the values from ``x`` and ``y``, if they
-are both available, or return ``Nothing`` if one or both are not ("fail fast"). Managing the
-``Nothing`` cases is achieved by the ``>>=`` operator, hidden by the
-``do`` notation.
+This function will extract the values from ``x`` and ``y``, if they are both
+available, or return ``Nothing`` if one or both are not ("fail fast"). Managing
+the ``Nothing`` cases is achieved by the ``>>=`` operator, hidden by the ``do``
+notation.
 
 ::
 
@@ -273,10 +324,10 @@ are both available, or return ``Nothing`` if one or both are not ("fail fast"). 
     Nothing
 
 The translation of ``do`` notation is entirely syntactic, so there is no
-need for the ``(>>=)`` operator to be the operator defined in the ``Monad``
-interface. Idris will, in general, try to disambiguate which ``(>>=)`` you
-mean by type, but you can explicitly choose with qualified do notation,
-for example:
+need for the ``(>>=)`` and ``(>>)`` operators to be the operator defined in the
+``Monad`` interface. Idris will, in general, try to disambiguate which
+operators you mean by type, but you can explicitly choose with qualified do
+notation, for example:
 
 .. code-block:: idris
 
@@ -286,8 +337,8 @@ for example:
                    y' <- y -- Extract value from y
                    pure (x' + y') -- Add them
 
-The ``Prelude.do`` means that Idris will use the ``(>>=)`` operator defined
-in the ``Prelude``.
+The ``Prelude.do`` means that Idris will use the ``(>>=)`` and ``(>>)``
+operators defined in the ``Prelude``.
 
 Pattern Matching Bind
 ~~~~~~~~~~~~~~~~~~~~~
@@ -299,7 +350,7 @@ which reads a number from the console, returning a value of the form
 
 .. code-block:: idris
 
-    import Data.Strings
+    import Data.String
 
     readNumber : IO (Maybe Nat)
     readNumber = do
@@ -410,7 +461,7 @@ has an implementation of both ``Monad`` and ``Alternative``:
 
 .. code-block:: idris
 
-    interface Applicative f => Alternative (f : Type -> Type) where
+    interface Applicative f => Alternative (0 f : Type -> Type) where
         empty : f a
         (<|>) : f a -> f a -> f a
 
@@ -670,6 +721,27 @@ do this with a ``using`` clause in the implementation as follows:
 The ``using PlusNatSemi`` clause indicates that ``PlusNatMonoid`` should
 extend ``PlusNatSemi`` specifically.
 
+.. _InterfaceConstructors:
+
+Interface Constructors
+======================
+
+Interfaces, just like records, can be declared with a user-defined constructor.
+
+.. code-block:: idris
+
+    interface A a where
+      getA : a
+
+    interface A t => B t where
+      constructor MkB
+
+      getB : t
+
+Then ``MkB : A t => t -> B t``.
+
+.. _DeterminingParameters:
+
 Determining Parameters
 ======================
 
@@ -678,7 +750,7 @@ parameters used to find an implementation are restricted. For example:
 
 .. code-block:: idris
 
-    interface Monad m => MonadState s (m : Type -> Type) | m where
+    interface Monad m => MonadState s (0 m : Type -> Type) | m where
       get : m s
       put : s -> m ()
 
@@ -686,8 +758,8 @@ In this interface, only ``m`` needs to be known to find an implementation of
 this interface, and ``s`` can then be determined from the implementation. This
 is declared with the ``| m`` after the interface declaration. We call ``m`` a
 *determining parameter* of the ``MonadState`` interface, because it is the
-parameter used to find an implementation.
-
+parameter used to find an implementation. This is similar to the concept of
+*functional dependencies* `in Haskell <https://wiki.haskell.org/Functional_dependencies>`_.
 
 .. [#ConorRoss] Conor McBride and Ross Paterson. 2008. Applicative programming
        with effects. J. Funct. Program. 18, 1 (January 2008),

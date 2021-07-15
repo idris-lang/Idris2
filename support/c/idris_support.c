@@ -6,6 +6,11 @@
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+int _argc;
+char **_argv;
 
 #ifdef _WIN32
 extern char **_environ;
@@ -19,12 +24,24 @@ int idris2_isNull(void* ptr) {
     return (ptr == NULL);
 }
 
+void *idris2_getNull() {
+    return NULL;
+}
+
 char* idris2_getString(void *p) {
     return (char*)p;
 }
 
 int idris2_getErrno() {
+#ifdef _WIN32
+    return win32_getErrno();
+#else
     return errno;
+#endif
+}
+
+char* idris2_strerror(int errnum) {
+    return strerror(errnum);
 }
 
 char* idris2_getStr() {
@@ -71,6 +88,19 @@ int idris2_time() {
     return time(NULL); // RTS needs to have 32 bit integers at least
 }
 
+void idris2_setArgs(int argc, char *argv[]) {
+    _argc = argc;
+    _argv = argv;
+}
+
+int idris2_getArgCount() {
+    return _argc;
+}
+
+char* idris2_getArg(int n) {
+    return _argv[n];
+}
+
 char* idris2_getEnvPair(int i) {
     return *(environ + i);
 }
@@ -90,3 +120,21 @@ int idris2_unsetenv(const char *name) {
     return unsetenv(name);
 #endif
 }
+
+int idris2_getPID() {
+#ifdef _WIN32
+    return win32_getPID();
+#else
+    return getpid();
+#endif
+}
+
+// get the number of processors configured
+long idris2_getNProcessors() {
+#ifdef _WIN32
+    return win32_getNProcessors();
+#else
+    return sysconf(_SC_NPROCESSORS_CONF);
+#endif
+}
+

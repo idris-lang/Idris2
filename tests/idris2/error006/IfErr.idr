@@ -21,4 +21,3 @@ Eq Foo where
 
 test2 : String
 test2 = showIfEq MkFoo MkBar
-

@@ -19,7 +19,7 @@ As such, it should contain:
 - Semigroup, Monoid
 - Functor, Applicative, Monad and related functions
 - Foldable, Traversable
-- Enum for range syntax
+- Range for range syntax
 - Console IO and interfaces for supporting IO
 
 Everything else should be in the base libraries, and imported as required.
@@ -35,6 +35,7 @@ to be (division by zero, as a concrete example).
 import public Builtin
 import public PrimIO
 import public Prelude.Basics as Prelude
+import public Prelude.Cast as Prelude
 import public Prelude.EqOrd as Prelude
 import public Prelude.Interfaces as Prelude
 import public Prelude.IO as Prelude

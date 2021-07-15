@@ -1,50 +1,138 @@
 package contrib
+version = 0.4.0
+
+opts = "--ignore-missing-ipkg -Wno-shadowing"
 
 modules = Control.ANSI,
           Control.ANSI.SGR,
           Control.ANSI.CSI,
+
           Control.Delayed,
+
           Control.Linear.LIO,
+
           Control.Monad.Algebra,
-          Control.Monad.Syntax,
 
           Control.Algebra,
           Control.Algebra.Laws,
           Control.Algebra.Implementations,
 
+          Control.Arrow,
+          Control.Category,
+
+          Control.Validation,
+
+          Data.Binary.Digit,
+          Data.Binary,
+
           Data.Bool.Algebra,
+          Data.Bool.Decidable,
+
+          Data.Container,
+
+          Data.Fin.Extra,
+
+          Data.Fun.Extra,
+          Data.Fun.Graph,
+
+          Data.IMaybe,
+
+          Data.InductionRecursion.DybjerSetzer,
+
+          Data.Int.Order,
+
+          Data.Late,
 
           Data.Linear.Array,
 
           Data.List.Algebra,
           Data.List.TailRec,
           Data.List.Equalities,
+          Data.List.Extra,
           Data.List.Reverse,
           Data.List.Views.Extra,
           Data.List.Palindrome,
+          Data.List.HasLength,
+          Data.List.AtIndex,
 
-          Data.Fin.Extra,
+          Data.List.Elem.Extra,
+
+          Data.List.Lazy,
+          Data.List.Lazy.Quantifiers,
 
           Data.Logic.Propositional,
+
+          Data.Monoid.Exponentiation,
 
           Data.Morphisms.Algebra,
 
           Data.Nat.Algebra,
           Data.Nat.Ack,
+          Data.Nat.Division,
           Data.Nat.Equational,
+          Data.Nat.Exponentiation,
           Data.Nat.Fact,
           Data.Nat.Factor,
           Data.Nat.Fib,
+          Data.Nat.Order.Strict,
+          Data.Nat.Order.Properties,
+          Data.Nat.Order.Relation,
+          Data.Nat.Properties,
+
+          Data.Num.Implementations,
+
+          Data.OpenUnion,
+
+          Data.Order,
+
+          Data.Path,
+
+          Data.Recursion.Free,
+
+          Data.Rel.Complement,
 
           Data.SortedMap,
           Data.SortedSet,
+
+          Data.Stream.Extra,
+
           Data.String.Extra,
           Data.String.Interpolation,
+          Data.String.Iterator,
           Data.String.Parser,
+          Data.String.Parser.Expression,
+          Data.String.Position,
 
+          Data.Telescope,
+          Data.Telescope.Telescope,
+          Data.Telescope.Segment,
+          Data.Telescope.Fun,
+          Data.Telescope.SimpleFun,
+          Data.Telescope.Congruence,
+
+          Data.Tree.Perfect,
+
+          Data.Validated,
+
+          Data.Vect.Binary,
+          Data.Vect.Properties,
+          Data.Vect.Properties.Tabulate,
+          Data.Vect.Properties.Index,
+          Data.Vect.Properties.Foldr,
+          Data.Vect.Properties.Map,
+          Data.Vect.Properties.Fin,
+          Data.Vect.Extra,
           Data.Vect.Sort,
+          Data.Vect.Views.Extra,
+
+          Data.Void,
+
+          Data.HVect,
 
           Debug.Buffer,
+
+          Decidable.Order.Strict,
+          Decidable.Decidable.Extra,
 
           Language.JSON,
           Language.JSON.Data,
@@ -55,6 +143,21 @@ modules = Control.ANSI,
           Language.JSON.String.Parser,
           Language.JSON.String.Tokens,
           Language.JSON.Tokens,
+
+          Search.Generator,
+          Search.HDecidable,
+          Search.Negation,
+          Search.Properties,
+
+          Syntax.WithProof,
+          Syntax.PreorderReasoning,
+          Syntax.PreorderReasoning.Generic,
+
+          System.Console.GetOpt,
+          System.Directory.Tree,
+          System.Future,
+          System.Random,
+          System.Path,
 
           Text.Token,
           Text.Quantity,
@@ -67,10 +170,6 @@ modules = Control.ANSI,
           Text.PrettyPrint.Prettyprinter.Symbols,
           Text.PrettyPrint.Prettyprinter.Util,
           Text.PrettyPrint.Prettyprinter.SimpleDocTree,
+          Text.PrettyPrint.Prettyprinter.Render.HTML,
           Text.PrettyPrint.Prettyprinter.Render.String,
-          Text.PrettyPrint.Prettyprinter.Render.Terminal,
-
-          System.Random,
-          System.Path,
-          Syntax.WithProof,
-          Syntax.PreorderReasoning
+          Text.PrettyPrint.Prettyprinter.Render.Terminal
