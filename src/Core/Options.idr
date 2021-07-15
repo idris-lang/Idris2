@@ -147,24 +147,30 @@ record Session where
   findipkg : Bool
   codegen : CG
   directives : List String
+  searchTimeout : Integer -- maximum number of milliseconds to run
+                          -- expression/program search
+  ignoreMissingPkg : Bool -- fail silently on missing packages. This is because
+          -- while we're bootstrapping, we find modules by a different route
+          -- but we still want to have the dependencies listed properly
+
+  -- Troubleshooting
   logEnabled : Bool -- do we check logging flags at all? This is 'False' until
                     -- any logging is enabled.
   logLevel : LogLevels
   logTimings : Bool
-  ignoreMissingPkg : Bool -- fail silently on missing packages. This is because
-          -- while we're bootstrapping, we find modules by a different route
-          -- but we still want to have the dependencies listed properly
   debugElabCheck : Bool -- do conversion check to verify results of elaborator
   dumpcases : Maybe String -- file to output compiled case trees
   dumplifted : Maybe String -- file to output lambda lifted definitions
   dumpanf : Maybe String -- file to output ANF definitions
   dumpvmcode : Maybe String -- file to output VM code definitions
   profile : Bool -- generate profiling information, if supported
-  searchTimeout : Integer -- maximum number of milliseconds to run
-                          -- expression/program search
+  logErrorCount : Nat -- when parsing alternatives fails, how many errors
+                      -- should be shown.
+
   -- Warnings
   warningsAsErrors : Bool
   showShadowingWarning : Bool
+
   -- Experimental
   checkHashesInsteadOfModTime : Bool
   incrementalCGs : List CG
@@ -219,9 +225,9 @@ defaultPPrint = MkPPOpts False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez [] False defaultLogLevel
-                               False False False Nothing Nothing
-                               Nothing Nothing False 1000 False True
+defaultSession = MkSessionOpts False False False Chez [] 1000 False False
+                               defaultLogLevel False False Nothing Nothing
+                               Nothing Nothing False 1 False True
                                False [] False
 
 export

@@ -457,19 +457,16 @@ perror (ParseFail ((fc, msg) ::: Nil))
 perror (ParseFail errs)
     = pure $ errorDesc (reflow "Couldn't parse any alternatives" <+> colon) <+> line <+> !listErrors
   where
-    -- how many alternative errors to display.
-    showCount : Nat
-    showCount = 3
-
-    prettyErrors : Nat -> List (FC, String) -> Core (Doc IdrisAnn)
-    prettyErrors _ []   = pure emptyDoc
-    prettyErrors 0 errs = pure $ meta (pretty "... (\{show $ length errs} others)")
-    prettyErrors (S k) ((fc, msg) :: hs)
+    prettyErrors : Nat -> Nat -> List (FC, String) -> Core (Doc IdrisAnn)
+    prettyErrors showCount _ []   = pure emptyDoc
+    prettyErrors showCount 0 errs = pure $ meta (pretty "... (\{show $ length errs} others)")
+    prettyErrors showCount (S k) ((fc, msg) :: hs)
         = do let idx = show $ showCount `minus` k
-             pure $ warning (pretty "\{idx}: \{msg}") <+> line <+> !(ploc fc) <+> !(prettyErrors k hs)
+             pure $ warning (pretty "\{idx}: \{msg}") <+> line <+> !(ploc fc) <+> !(prettyErrors showCount k hs)
 
     listErrors : Core (Doc IdrisAnn)
-    listErrors = prettyErrors showCount . nub . reverse $ forget errs
+    listErrors = do showCount <- logErrorCount . session . options <$> get Ctxt
+                    prettyErrors showCount showCount . nub . reverse $ forget errs
 perror (ModuleNotFound fc ns)
     = pure $ errorDesc ("Module" <++> annotate FileCtxt (pretty ns) <++> reflow "not found") <+> line <+> !(ploc fc)
 perror (CyclicImports ns)

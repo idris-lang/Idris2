@@ -29,21 +29,7 @@ Bad2:3:13--3:14
  2 | 
  3 | badReturn : (whatever : Int)
                  ^
-2: Expected '`'.
-
-Bad2:3:13--3:14
- 1 | module Bad2
- 2 | 
- 3 | badReturn : (whatever : Int)
-                 ^
-3: Expected operator.
-
-Bad2:3:13--3:14
- 1 | module Bad2
- 2 | 
- 3 | badReturn : (whatever : Int)
-                 ^
-... (51 others)
+... (53 others)
 1/1: Building Bad3 (Bad3.idr)
 Error: Couldn't parse declaration.
 

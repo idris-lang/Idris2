@@ -37,15 +37,5 @@ Main> Couldn't parse any alternatives:
 (Interactive):1:10--1:11
  1 | :t with [] 4
               ^
-2: Expected '('.
-
-(Interactive):1:10--1:11
- 1 | :t with [] 4
-              ^
-3: Expected 'if'.
-
-(Interactive):1:4--1:5
- 1 | :t with [] 4
-        ^
-... (8 others)
+... (10 others)
 Main> Bye for now!
