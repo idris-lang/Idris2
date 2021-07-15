@@ -1,0 +1,7 @@
+1/1: Building Cafe (Cafe.idr)
+Main> "Café"
+"Café"
+"Idris the magic 龍"
+length "Café" = 4
+length "Café" = 5
+Main> Bye for now!

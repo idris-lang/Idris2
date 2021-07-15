@@ -277,6 +277,7 @@ ideModeTests = MkTestPool "IDE mode" [] Nothing
 preludeTests : TestPool
 preludeTests = MkTestPool "Prelude library" [] Nothing
   [ "reg001"
+  , "show001"
   ]
 
 templateTests : TestPool
