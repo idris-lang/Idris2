@@ -504,7 +504,7 @@ mutual
            pure (PDotted (boundToFC fname b) b.val)
     <|> do b <- bounds (decoratedSymbol fname "`(" *> expr pdef fname indents <* decoratedSymbol fname ")")
            pure (PQuote (boundToFC fname b) b.val)
-    <|> do b <- bounds (decoratedSymbol fname "`{{" *> name <* decoratedSymbol fname "}}")
+    <|> do b <- bounds (decoratedSymbol fname "`{" *> name <* decoratedSymbol fname "}")
            pure (PQuoteName (boundToFC fname b) b.val)
     <|> do b <- bounds (decoratedSymbol fname "`[" *> nonEmptyBlock (topDecl fname) <* decoratedSymbol fname "]")
            pure (PQuoteDecl (boundToFC fname b) (collectDefs (concat b.val)))
