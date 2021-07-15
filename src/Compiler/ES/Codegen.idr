@@ -423,6 +423,7 @@ jsOp StrSubstr [offset, len, str] =
   pure $ callFun (esName "substr") [offset,len,str]
 jsOp DoubleExp [x]     = pure $ callFun1 "Math.exp" x
 jsOp DoubleLog [x]     = pure $ callFun1 "Math.log" x
+jsOp DoublePow [x, y]  = pure $ callFun "Math.pow" [x, y]
 jsOp DoubleSin [x]     = pure $ callFun1 "Math.sin" x
 jsOp DoubleCos [x]     = pure $ callFun1 "Math.cos" x
 jsOp DoubleTan [x]     = pure $ callFun1 "Math.tan" x
