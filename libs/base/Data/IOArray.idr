@@ -21,11 +21,12 @@ newArray size
     = pure (MkIOArray size !(primIO (prim__newArray size Nothing)))
 
 export
-writeArray : HasIO io => IOArray elem -> Int -> elem -> io ()
+writeArray : HasIO io => IOArray elem -> Int -> elem -> io Bool
 writeArray arr pos el
     = if pos < 0 || pos >= max arr
-         then pure ()
-         else primIO (prim__arraySet (content arr) pos (Just el))
+         then pure False
+         else do primIO (prim__arraySet (content arr) pos (Just el))
+                 pure True
 
 export
 readArray : HasIO io => IOArray elem -> Int -> io (Maybe elem)
