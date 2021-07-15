@@ -186,7 +186,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Quotation and reflection
        "reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",
-       "reflection009",
+       "reflection009","reflection010",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
