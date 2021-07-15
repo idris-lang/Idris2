@@ -37,10 +37,11 @@ fromParsingErrors origin = ParseFail . (map fromError)
     fromError (Error msg Nothing)
         = (MkFC origin (0, 0) (0, 0), msg +> '.')
     fromError (Error msg (Just t))
-        = let fc = if start == end
-                    then MkFC origin start (mapSnd (+1) start)
-                    else MkFC origin start end
-          in (fc, msg +> '.')
+        = let start = startBounds t; end = endBounds t in
+            let fc = if start == end
+                      then MkFC origin start (mapSnd (+1) start)
+                      else MkFC origin start end
+            in (fc, msg +> '.')
 
 export
 hex : Char -> Maybe Int
