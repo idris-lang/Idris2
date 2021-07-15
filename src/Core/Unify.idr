@@ -14,6 +14,7 @@ import Core.Value
 
 import Data.List
 import Data.List.Views
+import Data.Maybe
 
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
@@ -447,7 +448,7 @@ getIVars (ICons v vs) = v :: getIVars vs
 -- and returning the term
 -- If the type of the metavariable doesn't have enough arguments, fail, because
 -- this wasn't valid for pattern unification
-instantiate : {auto c : Ref Ctxt Defs} ->
+tryInstantiate : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
               {vars, newvars : _} ->
               FC -> UnifyInfo -> Env Term vars ->
@@ -456,8 +457,8 @@ instantiate : {auto c : Ref Ctxt Defs} ->
               List (Var newvars) -> -- Variable each argument maps to
               Term vars -> -- original, just for error message
               Term newvars -> -- shrunk environment
-              Core ()
-instantiate {newvars} loc mode env mname mref num mdef locs otm tm
+              Core Bool -- postpone if the type is yet unknown
+tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
     = do logTerm "unify.instantiate" 5 ("Instantiating in " ++ show newvars) tm
 --          let Hole _ _ = definition mdef
 --              | def => ufail {a=()} loc (show mname ++ " already resolved as " ++ show def)
@@ -472,7 +473,11 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
          log "unify.instantiate" 5 ("From vars: " ++ show newvars)
 
          defs <- get Ctxt
-         rhs <- mkDef locs INil tm ty
+         -- Try to instantiate the hole
+         Just rhs <- mkDef locs INil tm ty
+           | _ => do
+               log "unify.instantiate" 5 "Postponed"
+               pure False
 
          logTerm "unify.instantiate" 5 "Definition" rhs
          let simpleDef = MkPMDefInfo (SolvedHole num)
@@ -483,6 +488,7 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
                              } mdef
          ignore $ addDef (Resolved mref) newdef
          removeHole mref
+         pure True
   where
     precise : Bool
     precise
@@ -581,22 +587,22 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
     mkDef : {vs, newvars : _} ->
             List (Var newvars) ->
             IVars vs newvars -> Term newvars -> Term vs ->
-            Core (Term vs)
+            Core (Maybe (Term vs))
     mkDef (v :: vs) vars soln (Bind bfc x (Pi fc c _ ty) sc)
        = do sc' <- mkDef vs (ICons (Just v) vars) soln sc
-            pure $ Bind bfc x (Lam fc c Explicit (Erased bfc False)) sc'
+            pure $ (Bind bfc x (Lam fc c Explicit (Erased bfc False)) <$> sc')
     mkDef vs vars soln (Bind bfc x b@(Let _ c val ty) sc)
-       = do sc' <- mkDef vs (ICons Nothing vars) soln sc
-            let Just scs = shrinkTerm sc' (DropCons SubRefl)
-                | Nothing => pure $ Bind bfc x b sc'
-            pure scs
-    mkDef [] vars soln ty
+       = do mbsc' <- mkDef vs (ICons Nothing vars) soln sc
+            flip traverseOpt mbsc' \sc' =>
+              case shrinkTerm sc' (DropCons SubRefl) of
+                Just scs => pure scs
+                Nothing => pure $ Bind bfc x b sc'
+    mkDef [] vars soln _
        = do let Just soln' = updateIVars vars soln
                 | Nothing => ufail loc ("Can't make solution for " ++ show mname
                                            ++ " " ++ show (getIVars vars, soln))
-            pure soln'
-    mkDef _ _ _ ty = ufail loc $ "Can't make solution for " ++ show mname
-                             ++ " at " ++ show ty
+            pure (Just soln')
+    mkDef _ _ _ _ = pure Nothing
 
 export
 solveIfUndefined : {vars : _} ->
@@ -615,8 +621,7 @@ solveIfUndefined env (Meta fc mname idx args) soln
                        Just stm =>
                           do Just hdef <- lookupCtxtExact (Resolved idx) (gamma defs)
                                   | Nothing => throw (InternalError "Can't happen: no definition")
-                             instantiate fc inTerm env mname idx (length args) hdef locs soln stm
-                             pure True
+                             tryInstantiate fc inTerm env mname idx (length args) hdef locs soln stm
 solveIfUndefined env metavar soln
     = pure False
 
@@ -829,7 +834,7 @@ mutual
               (solfull : Term vars) -> -- Original solution
               (soln : Term newvars) -> -- Solution with shrunk environment
               (solnf : NF vars) ->
-              Core UnifyResult
+              Core (Maybe UnifyResult)
   solveHole loc mode env mname mref margs margs' locs submv solfull stm solnf
       = do defs <- get Ctxt
            ust <- get UST
@@ -837,7 +842,7 @@ mutual
            -- if the terms are the same, this isn't a solution
            -- but they are already unifying, so just return
            if solutionHeadSame solnf || inNoSolve mref (noSolve ust)
-              then pure success
+              then pure $ Just success
               else -- Rather than doing the occurs check here immediately,
                    -- we'll wait until all metavariables are resolved, and in
                    -- the meantime look out for cycles when normalising (which
@@ -845,8 +850,8 @@ mutual
                    -- metavariables)
                    do Just hdef <- lookupCtxtExact (Resolved mref) (gamma defs)
                            | Nothing => throw (InternalError ("Can't happen: Lost hole " ++ show mname))
-                      instantiate loc mode env mname mref (length margs) hdef locs solfull stm
-                      pure $ solvedHole mref
+                      progress <- tryInstantiate loc mode env mname mref (length margs) hdef locs solfull stm
+                      pure $ toMaybe progress (solvedHole mref)
     where
       inNoSolve : Int -> IntMap () -> Bool
       inNoSolve i ns
@@ -908,19 +913,24 @@ mutual
                                           (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
                                           tmnf
 
+                     let solveOrElsePostpone : Term newvars -> Core UnifyResult
+                         solveOrElsePostpone stm = do
+                           mbResult <- solveHole fc mode env mname mref
+                                            margs margs' locs submv
+                                            tm stm tmnf
+                           flip fromMaybe (pure <$> mbResult) $
+                             postponeS swap loc mode "Can't instantiate" env
+                                       (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs') tmnf
+
                      case shrinkTerm tm submv of
-                          Just stm => solveHole fc mode env mname mref
-                                                margs margs' locs submv
-                                                tm stm tmnf
+                          Just stm => solveOrElsePostpone stm
                           Nothing =>
                             do tm' <- quote defs env tmnf
                                case shrinkTerm tm' submv of
                                     Nothing => postponeS swap loc mode "Can't shrink" env
-                                               (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
-                                               tmnf
-                                    Just stm => solveHole fc mode env mname mref
-                                                          margs margs' locs submv
-                                                          tm stm tmnf
+                                                 (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
+                                                 tmnf
+                                    Just stm => solveOrElsePostpone stm
 
   -- Unify an application with something else
   unifyApp : {auto c : Ref Ctxt Defs} ->
