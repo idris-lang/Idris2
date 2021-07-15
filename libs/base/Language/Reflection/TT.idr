@@ -161,3 +161,6 @@ data TotalReq = Total | CoveringOnly | PartialOK
 
 public export
 data Visibility = Private | Export | Public
+
+public export
+data BuiltinType = BuiltinNatural | NaturalToInteger | IntegerToNatural

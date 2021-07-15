@@ -627,6 +627,28 @@ Reify VirtualIdent where
   reify defs val = cantReify val "VirtualIdent"
 
 export
+Reflect BuiltinType where
+  reflect fc defs lhs env BuiltinNatural
+      = getCon fc defs (reflectiontt "BuiltinNatural")
+  reflect fc defs lhs env NaturalToInteger
+      = getCon fc defs (reflectiontt "NaturalToInteger")
+  reflect fc defs lhs env IntegerToNatural
+      = getCon fc defs (reflectiontt "IntegerToNatural")
+
+export
+Reify BuiltinType where
+  reify defs val@(NDCon _ n _ _ args)
+      = case (!(full (gamma defs) n), args) of
+             (NS _ (UN "BuiltinNatural"), [])
+                   => pure BuiltinNatural
+             (NS _ (UN "NaturalToInteger"), [])
+                   => pure NaturalToInteger
+             (NS _ (UN "IntegerToNatural"), [])
+                   => pure IntegerToNatural
+             _ => cantReify val "BuiltinType"
+  reify defs val = cantReify val "BuiltinType"
+
+export
 Reflect VirtualIdent where
   reflect fc defs lhs env Interactive
       = getCon fc defs (reflectiontt "Interactive")
