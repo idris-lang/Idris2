@@ -276,6 +276,7 @@ export
 opNonNS : Rule Name
 opNonNS = do
   symbol "("
+  commit
   id <- bounds (operatorCandidate <|> postfixProj)
   isNotReservedSymbol (nameRoot <$> id)
   symbol ")"
