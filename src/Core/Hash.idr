@@ -384,6 +384,9 @@ Hashable (PrimFn arity) where
     Crash =>
       h `hashWithSalt` 37
 
+    DoublePow =>
+      h `hashWithSalt` 38
+
 export
 Hashable ConInfo where
   hashWithSalt h = \case
