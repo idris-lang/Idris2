@@ -249,7 +249,7 @@
 (define (blodwen-get-thread-data ty)
   (thread-cell-ref blodwen-thread-data))
 
-(define (blodwen-set-thread-data a)
+(define (blodwen-set-thread-data ty a)
   (thread-cell-set! blodwen-thread-data a))
 
 ;; Semaphores
