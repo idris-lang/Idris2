@@ -124,7 +124,7 @@ idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
        "reg036", "reg037", "reg038", "reg039", "reg040", "reg041", "reg042",
-       "reg043", "reg044", "reg045"]
+       "reg043", "reg044", "reg045", "reg046"]
 
 idrisTestsData : TestPool
 idrisTestsData = MkTestPool "Data and record types" [] Nothing
@@ -197,9 +197,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- pretty printing
        "pretty001",
        -- golden file testing
-       "golden001",
-       -- unification
-       "unify001"]
+       "golden001"]
 
 typeddTests : TestPool
 typeddTests = MkTestPool "Type Driven Development" [] Nothing
