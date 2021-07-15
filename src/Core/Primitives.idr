@@ -537,6 +537,12 @@ doubleExp = doubleOp exp
 doubleLog : Vect 1 (NF vars) -> Maybe (NF vars)
 doubleLog = doubleOp log
 
+doublePow : {vars : _ } -> Vect 2 (NF vars) -> Maybe (NF vars)
+doublePow = binOp pow'
+    where pow' : Constant -> Constant -> Maybe Constant
+          pow' (Db x) (Db y) = pure $ Db (pow x y)
+          pow' _ _ = Nothing
+
 doubleSin : Vect 1 (NF vars) -> Maybe (NF vars)
 doubleSin = doubleOp sin
 
@@ -659,6 +665,7 @@ getOp StrSubstr = strSubstr
 
 getOp DoubleExp = doubleExp
 getOp DoubleLog = doubleLog
+getOp DoublePow = doublePow
 getOp DoubleSin = doubleSin
 getOp DoubleCos = doubleCos
 getOp DoubleTan = doubleTan
@@ -705,6 +712,7 @@ opName StrReverse = prim "strReverse"
 opName StrSubstr = prim "strSubstr"
 opName DoubleExp = prim "doubleExp"
 opName DoubleLog = prim "doubleLog"
+opName DoublePow = prim "doublePow"
 opName DoubleSin = prim "doubleSin"
 opName DoubleCos = prim "doubleCos"
 opName DoubleTan = prim "doubleTan"
@@ -772,6 +780,7 @@ allPrimitives =
 
     [MkPrim DoubleExp doubleTy isTotal,
      MkPrim DoubleLog doubleTy isTotal,
+     MkPrim DoublePow (arithTy DoubleType) isTotal,
      MkPrim DoubleSin doubleTy isTotal,
      MkPrim DoubleCos doubleTy isTotal,
      MkPrim DoubleTan doubleTy isTotal,
