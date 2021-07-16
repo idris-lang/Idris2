@@ -277,9 +277,11 @@ findError Here (First err) = Just err
 findError (There p) (Later q) = findError p q
 findError _ _ = Nothing
 
+export
 throw : HasErr err es => err -> App es a
 throw err = MkApp $ MkAppRes (Left (findException %search err))
 
+export
 catch : HasErr err es => App es a -> (err -> App es a) -> App es a
 catch (MkApp prog) handler
       = MkApp $
