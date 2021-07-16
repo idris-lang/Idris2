@@ -370,6 +370,15 @@ mutual
     reify defs val = cantReify val "Record"
 
   export
+  Reify WithFlag where
+    reify defs val@(NDCon _ n _ _ args)
+        = case (!(full (gamma defs) n), map snd args) of
+               (NS _ (UN "Syntactic"), [])
+                    => pure Syntactic
+               _ => cantReify val "WithFlag"
+    reify defs val = cantReify val "WithFlag"
+
+  export
   Reify ImpClause where
     reify defs val@(NDCon _ n _ _ args)
         = case (!(full (gamma defs) n), map snd args) of
@@ -378,13 +387,14 @@ mutual
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
                           pure (PatClause x' y' z')
-               (NS _ (UN "WithClause"), [v,w,x,y,z])
-                    => do v' <- reify defs !(evalClosure defs v)
+               (NS _ (UN "WithClause"), [u,v,w,x,y,z])
+                    => do u' <- reify defs !(evalClosure defs u)
+                          v' <- reify defs !(evalClosure defs v)
                           w' <- reify defs !(evalClosure defs w)
                           x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (WithClause v' w' x' y' [] z')
+                          pure (WithClause u' v' w' x' y' z')
                (NS _ (UN "ImpossibleClause"), [x,y])
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
@@ -418,11 +428,12 @@ mutual
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
                           pure (IParameters x' y' z')
-               (NS _ (UN "IRecord"), [x,y,z])
-                    => do x' <- reify defs !(evalClosure defs x)
+               (NS _ (UN "IRecord"), [w, x,y,z])
+                    => do w' <- reify defs !(evalClosure defs w)
+                          x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (IRecord x' Nothing y' z')
+                          pure (IRecord w' x' y' z')
                (NS _ (UN "INamespace"), [w,x,y])
                     => do w' <- reify defs !(evalClosure defs w)
                           x' <- reify defs !(evalClosure defs x)
@@ -700,6 +711,11 @@ mutual
              appCon fc defs (reflectionttimp "MkRecord") [v', w', x', y', z']
 
   export
+  Reflect WithFlag where
+    reflect fc defs lhs env Syntactic
+        = getCon fc defs (reflectionttimp "Syntactic")
+
+  export
   Reflect ImpClause where
     reflect fc defs lhs env (PatClause x y z)
         = do x' <- reflect fc defs lhs env x
@@ -711,8 +727,9 @@ mutual
              v' <- reflect fc defs lhs env v
              w' <- reflect fc defs lhs env w
              x' <- reflect fc defs lhs env x
+             y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "WithClause") [u', v', w', x', z']
+             appCon fc defs (reflectionttimp "WithClause") [u', v', w', x', y', z']
     reflect fc defs lhs env (ImpossibleClause x y)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
@@ -742,11 +759,12 @@ mutual
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
              appCon fc defs (reflectionttimp "IParameters") [x', y', z']
-    reflect fc defs lhs env (IRecord x _ y z)
-        = do x' <- reflect fc defs lhs env x
+    reflect fc defs lhs env (IRecord w x y z)
+        = do w' <- reflect fc defs lhs env w
+             x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "IRecord") [x', y', z']
+             appCon fc defs (reflectionttimp "IRecord") [w', x', y', z']
     reflect fc defs lhs env (INamespace x y z)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
