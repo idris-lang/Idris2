@@ -234,8 +234,6 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just $ "Set output directory"),
            MkOpt ["--profile"] [] [Profile]
               (Just "Generate profile data when compiling, if supported"),
-           MkOpt ["--case-tree-opt"] [] [CaseTreeHeuristics]
-              (Just "Apply experimental optimizations to case tree generation"),
 
            optSeparator,
            MkOpt ["-Werror"] [] [WarningsAsErrors]
@@ -246,6 +244,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            optSeparator,
            MkOpt ["-Xcheck-hashes"] [] [HashesInsteadOfModTime]
              (Just "Use SHA256 hashes instead of modification time to determine if a source file needs rebuilding"),
+           MkOpt ["-Xcase-tree-opt"] [] [CaseTreeHeuristics]
+              (Just "Apply experimental optimizations to case tree generation"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
