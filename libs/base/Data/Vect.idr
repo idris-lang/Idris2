@@ -87,6 +87,17 @@ take : (n  : Nat)
 take 0 xs = Nil
 take (S k) (x :: xs) = x :: take k xs
 
+||| Drop the first `n` elements of a Vect.
+drop : (n : Nat) -> Vect (n + m) elem -> Vect m elem
+drop 0 xs = xs
+drop (S k) (x :: xs) = drop k xs
+
+||| Drop up to the first `n` elements of a Vect.
+drop' : (n : Nat) -> Vect l elem -> Vect (l `minus` n) elem
+drop' 0 xs = rewrite minusZeroRight l in xs
+drop' (S k) [] = rewrite minusZeroLeft (S k) in []
+drop' (S k) (x :: xs) = drop' k xs
+
 ||| Extract a particular element from a vector
 |||
 ||| ```idris example
@@ -351,9 +362,13 @@ foldrImpl f e go (x::xs) = foldrImpl f e (go . (f x)) xs
 public export
 implementation Foldable (Vect n) where
   foldr f e xs = foldrImpl f e id xs
+  foldl f z [] = z
+  foldl f z (x :: xs) = foldl f (f z x) xs
 
   null [] = True
   null _ = False
+
+  foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
 
 --------------------------------------------------------------------------------
 -- Special folds
@@ -509,7 +524,7 @@ find p (x::xs) = if p x then Just x else find p xs
 public export
 findIndex : (elem -> Bool) -> Vect len elem -> Maybe (Fin len)
 findIndex p []        = Nothing
-findIndex p (x :: xs) = if p x then Just FZ else map FS (findIndex p xs)
+findIndex p (x :: xs) = if p x then Just FZ else FS <$> findIndex p xs
 
 ||| Find the indices of all elements that satisfy some test
 |||
@@ -520,7 +535,7 @@ public export
 findIndices : (elem -> Bool) -> Vect m elem -> List (Fin m)
 findIndices p []        = []
 findIndices p (x :: xs)
-     = let is = map FS $ findIndices p xs in
+     = let is = FS <$> findIndices p xs in
            if p x then FZ :: is else is
 
 ||| Find the index of the first element of the vector that satisfies some test

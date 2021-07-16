@@ -22,7 +22,7 @@ extend : {extvs : _} ->
          NestedNames extvs ->
          Term extvs ->
          (vars' ** (SubVars vs vars', Env Term vars', NestedNames vars'))
-extend env p nest (Bind fc n b@(Pi _ _ _ _) sc)
+extend env p nest (Bind _ n b@(Pi fc c pi ty) sc)
     = extend (b :: env) (DropCons p) (weaken nest) sc
 extend env p nest tm = (_ ** (p, env, nest))
 

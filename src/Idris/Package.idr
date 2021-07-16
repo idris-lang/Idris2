@@ -7,17 +7,19 @@ import Core.Core
 import Core.Directory
 import Core.Env
 import Core.Metadata
+import Core.Name.Namespace
 import Core.Options
 import Core.Unify
 
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Data.These
 
 import Parser.Package
 import System
 import System.Directory
+import Libraries.System.Directory.Tree
 import System.File
 
 import Libraries.Data.StringMap
@@ -44,10 +46,10 @@ import IdrisPaths
 import public Idris.Package.Types
 import Idris.Package.Init
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 
@@ -108,14 +110,14 @@ field fname
            equals
            vs <- sepBy1 dot' integerLit
            end <- location
-           pure (PVersion (MkFC fname start end)
+           pure (PVersion (MkFC (PhysicalPkgSrc fname) start end)
                           (MkPkgVersion (fromInteger <$> vs)))
     <|> do start <- location
            ignore $ exactProperty "version"
            equals
            v <- stringLit
            end <- location
-           pure (PVersionDep (MkFC fname start end) v)
+           pure (PVersionDep (MkFC (PhysicalPkgSrc fname) start end) v)
     <|> do ignore $ exactProperty "depends"
            equals
            ds <- sep depends
@@ -125,14 +127,14 @@ field fname
            ms <- sep (do start <- location
                          m <- moduleIdent
                          end <- location
-                         pure (MkFC fname start end, m))
+                         pure (MkFC (PhysicalPkgSrc fname) start end, m))
            pure (PModules ms)
     <|> do ignore $ exactProperty "main"
            equals
            start <- location
            m <- moduleIdent
            end <- location
-           pure (PMainMod (MkFC fname start end) m)
+           pure (PMainMod (MkFC (PhysicalPkgSrc fname) start end) m)
     <|> do ignore $ exactProperty "executable"
            equals
            e <- (stringLit <|> packageName)
@@ -186,7 +188,7 @@ field fname
              equals
              str <- stringLit
              end <- location
-             pure $ fieldConstructor (MkFC fname start end) str
+             pure $ fieldConstructor (MkFC (PhysicalPkgSrc fname) start end) str
 
 parsePkgDesc : String -> Rule (String, List DescField)
 parsePkgDesc fname
@@ -284,10 +286,11 @@ compileMain : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               {auto o : Ref ROpts REPLOpts} ->
               Name -> String -> String -> Core ()
-compileMain mainn mmod exec
-    = do m <- newRef MD (initMetadata mmod)
+compileMain mainn mfilename exec
+    = do modIdent <- ctxtPathToNS mfilename
+         m <- newRef MD (initMetadata (PhysicalIdrSrc modIdent))
          u <- newRef UST initUState
-         ignore $ loadMainFile mmod
+         ignore $ loadMainFile mfilename
          ignore $ compileExp (PRef replFC mainn) exec
 
 prepareCompilation : {auto c : Ref Ctxt Defs} ->
@@ -339,11 +342,26 @@ copyFile src dest
              | Left err => pure (Left err)
          writeToFile dest buf
 
-installFrom : {auto c : Ref Ctxt Defs} ->
+installFrom : {auto o : Ref ROpts REPLOpts} ->
+              {auto c : Ref Ctxt Defs} ->
               String -> String -> ModuleIdent -> Core ()
 installFrom builddir destdir ns
-    = do let ttcfile = joinPath (reverse $ unsafeUnfoldModuleIdent ns)
+    = do let ttcfile = ModuleIdent.toPath ns
          let ttcPath = builddir </> "ttc" </> ttcfile <.> "ttc"
+         objPaths_in <- traverse
+                     (\cg =>
+                        do Just cgdata <- getCG cg
+                                | Nothing => pure Nothing
+                           let Just ext = incExt cgdata
+                                | Nothing => pure Nothing
+                           let srcFile = builddir </> "ttc" </> ttcfile <.> ext
+                           let destFile = destdir </> ttcfile <.> ext
+                           let Just (dir, _) = splitParent destFile
+                                | Nothing => pure Nothing
+                           ensureDirectoryExists dir
+                           pure $ Just (srcFile, destFile))
+                     (incrementalCGs !getSession)
+         let objPaths = mapMaybe id objPaths_in
 
          let modPath  = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns
          let destNest = joinPath modPath
@@ -359,6 +377,50 @@ installFrom builddir destdir ns
              | Left err => throw $ InternalError $ unlines
                              [ "Can't copy file " ++ ttcPath ++ " to " ++ destPath
                              , show err ]
+         -- Copy object files, if any. They don't necessarily get created,
+         -- since some modules don't generate any code themselves.
+         traverse_ (\ (obj, dest) =>
+                      do coreLift $ putStrLn $ "Installing " ++ obj ++ " to " ++ destPath
+                         ignore $ coreLift $ copyFile obj dest)
+                   objPaths
+
+         pure ()
+
+installSrcFrom : {auto c : Ref Ctxt Defs} ->
+                 String -> String -> (ModuleIdent, FileName) -> Core ()
+installSrcFrom wdir destdir (ns, srcRelPath)
+    = do let srcfile = ModuleIdent.toPath ns
+         let srcPath = wdir </> srcRelPath
+         let Just ext = extension srcPath
+           | _ => throw (InternalError $
+                "Unexpected failure when installing source file:\n"
+              ++ srcPath
+              ++ "\n"
+              ++ "Can't extract file extension.")
+
+         let modPath  = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns
+         let destNest = joinPath modPath
+         let destPath = destdir </> destNest
+         let destFile = destdir </> srcfile <.> ext
+
+         Right _ <- coreLift $ mkdirAll $ destNest
+             | Left err => throw $ InternalError $ unlines
+                             [ "Can't make directories " ++ show modPath
+                             , show err ]
+         coreLift $ putStrLn $ "Installing " ++ srcPath ++ " to " ++ destPath
+         when !(coreLift $ exists destFile) $ do
+           -- Grant read/write access to the file we are about to overwrite.
+           Right _ <- coreLift $ chmod destFile
+             (MkPermissions [Read, Write] [Read, Write] [Read, Write])
+             | Left err => throw $ UserError (show err)
+           pure ()
+         Right _ <- coreLift $ copyFile srcPath destFile
+             | Left err => throw $ InternalError $ unlines
+                             [ "Can't copy file " ++ srcPath ++ " to " ++ destPath
+                             , show err ]
+         -- Make the source read-only
+         Right _ <- coreLift $ chmod destFile (MkPermissions [Read] [Read] [Read])
+           | Left err => throw $ UserError (show err)
          pure ()
 
 -- Install all the built modules in prefix/package/
@@ -368,33 +430,35 @@ install : {auto c : Ref Ctxt Defs} ->
           {auto o : Ref ROpts REPLOpts} ->
           PkgDesc ->
           List CLOpt ->
+          (installSrc : Bool) ->
           Core ()
-install pkg opts -- not used but might be in the future
+install pkg opts installSrc -- not used but might be in the future
     = do defs <- get Ctxt
          let build = build_dir (dirs (options defs))
+         let src = source_dir (dirs (options defs))
          runScript (preinstall pkg)
-         let toInstall = maybe (map fst (modules pkg))
-                               (\ m => fst m :: map fst (modules pkg))
+         let toInstall = maybe (modules pkg)
+                               (:: modules pkg)
                                (mainmod pkg)
-         Just srcdir <- coreLift currentDir
-             | Nothing => throw (InternalError "Can't get current directory")
+         wdir <- getWorkingDir
          -- Make the package installation directory
-         let installPrefix = prefix_dir (dirs (options defs)) </>
-                             "idris2-" ++ showVersion False version
-         True <- coreLift $ changeDir installPrefix
-             | False => throw $ InternalError $ "Can't change directory to " ++ installPrefix
-         Right _ <- coreLift $ mkdirAll (installDir pkg)
+         let targetDir = prefix_dir (dirs (options defs)) </>
+                             "idris2-" ++ showVersion False version </>
+                             installDir pkg
+         Right _ <- coreLift $ mkdirAll targetDir
              | Left err => throw $ InternalError $ unlines
-                             [ "Can't make directory " ++ installDir pkg
+                             [ "Can't make directory " ++ targetDir
                              , show err ]
-         True <- coreLift $ changeDir (installDir pkg)
-             | False => throw $ InternalError $ "Can't change directory to " ++ installDir pkg
+         True <- coreLift $ changeDir targetDir
+             | False => throw $ InternalError $ "Can't change directory to " ++ targetDir
 
          -- We're in that directory now, so copy the files from
-         -- srcdir/build into it
-         traverse_ (installFrom (srcdir </> build)
-                                (installPrefix </> installDir pkg)) toInstall
-         coreLift_ $ changeDir srcdir
+         -- wdir/build into it
+         traverse_ (installFrom (wdir </> build) targetDir . fst) toInstall
+         when installSrc $ do
+           traverse_ (installSrcFrom wdir targetDir) toInstall
+         coreLift_ $ changeDir wdir
+
          runScript (postinstall pkg)
 
 -- Check package without compiling anything.
@@ -516,8 +580,7 @@ clean pkg opts -- `opts` is not used but might be in the future
                                        [] => Nothing
                                        (x :: xs) => Just(xs, x))
                           pkgmods
-         Just srcdir <- coreLift currentDir
-              | Nothing => throw (InternalError "Can't get current directory")
+         srcdir <- getWorkingDir
          let d = dirs (options defs)
          let builddir = srcdir </> build_dir d </> "ttc"
          let outputdir = srcdir </> outputDirWithDefault d
@@ -559,13 +622,17 @@ runRepl : {auto c : Ref Ctxt Defs} ->
           Core ()
 runRepl fname = do
   u <- newRef UST initUState
-  m <- newRef MD (initMetadata $ fromMaybe "(interactive)" fname)
-  the (Core ()) $
-      case fname of
-          Nothing => pure ()
-          Just fn => do
-            errs <- loadMainFile fn
-            displayErrors errs
+  origin <- maybe
+    (pure $ Virtual Interactive) (\fname => do
+      modIdent <- ctxtPathToNS fname
+      pure (PhysicalIdrSrc modIdent)
+      ) fname
+  m <- newRef MD (initMetadata origin)
+  case fname of
+      Nothing => pure ()
+      Just fn => do
+        errs <- loadMainFile fn
+        displayErrors errs
   repl {u} {s}
 
 export
@@ -581,24 +648,38 @@ parsePkgFile file = do
       | Left err => throw err
   addFields fs (initPkgDesc pname)
 
+||| If the user did not provide a package file we can look in the working
+||| directory. If there is exactly one `.ipkg` file then use that!
+localPackageFile : Maybe String -> Core String
+localPackageFile (Just fp) = pure fp
+localPackageFile Nothing
+  = do wdir <- getWorkingDir
+       tree <- coreLift (explore $ parse wdir)
+       let candidates = map fileName tree.files
+       case filter (".ipkg" `isSuffixOf`) candidates of
+         [fp] => pure fp
+         [] => throw $ UserError "No .ipkg file supplied and none could be found in the working directory."
+         _ => throw $ UserError "No .ipkg file supplied and the working directory contains more than one."
+
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  {auto o : Ref ROpts REPLOpts} ->
                  List CLOpt ->
-                 (PkgCommand, String) ->
+                 (PkgCommand, Maybe String) ->
                  Core ()
-processPackage opts (cmd, file)
+processPackage opts (cmd, mfile)
     = withCtxt . withSyn . withROpts $ case cmd of
         Init =>
           do pkg <- coreLift interactive
-             let fp = if file == "" then pkg.name ++ ".ipkg" else file
+             let fp = fromMaybe (pkg.name ++ ".ipkg") mfile
              False <- coreLift (exists fp)
                | _ => throw (GenericMsg emptyFC ("File " ++ fp ++ " already exists"))
              Right () <- coreLift $ writeFile fp (show $ the (Doc ()) $ pretty pkg)
                | Left err => throw (FileErr fp err)
              pure ()
         _ =>
-          do let Just (dir, filename) = splitParent file
+          do file <- localPackageFile mfile
+             let Just (dir, filename) = splitParent file
                  | _ => throw $ InternalError "Tried to split empty string"
              let True = isSuffixOf ".ipkg" filename
                  | _ => do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
@@ -618,7 +699,11 @@ processPackage opts (cmd, file)
                               pure ()
                   Install => do [] <- build pkg opts
                                    | errs => coreLift (exitWith (ExitFailure 1))
-                                install pkg opts
+                                install pkg opts {installSrc = False}
+                  InstallWithSrc =>
+                             do [] <- build pkg opts
+                                   | errs => coreLift (exitWith (ExitFailure 1))
+                                install pkg opts {installSrc = True}
                   Typecheck => do
                     [] <- check pkg opts
                       | errs => coreLift (exitWith (ExitFailure 1))
@@ -632,7 +717,7 @@ processPackage opts (cmd, file)
 
 record PackageOpts where
   constructor MkPFR
-  pkgDetails : List (PkgCommand, String)
+  pkgDetails : List (PkgCommand, Maybe String)
   oopts : List CLOpt
   hasError : Bool
 
@@ -640,29 +725,32 @@ partitionOpts : List CLOpt -> PackageOpts
 partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
   where
     data OptType : Type where
-      PPackage : PkgCommand -> String -> OptType
+      PPackage : PkgCommand -> Maybe String -> OptType
       POpt : OptType
       PIgnore : OptType
       PErr : OptType
     optType : CLOpt -> OptType
-    optType (Package cmd f)  = PPackage cmd f
-    optType Quiet            = POpt
-    optType Verbose          = POpt
-    optType Timing           = POpt
-    optType CaseTreeHeuristics = POpt
-    optType (Logging l)      = POpt
-    optType (DumpCases f)    = POpt
-    optType (DumpLifted f)   = POpt
-    optType (DumpVMCode f)   = POpt
-    optType DebugElabCheck   = POpt
-    optType (SetCG f)        = POpt
-    optType (Directive d)    = POpt
-    optType (BuildDir f)     = POpt
-    optType (OutputDir f)    = POpt
-    optType (ConsoleWidth n) = PIgnore
-    optType (Color b)        = PIgnore
-    optType NoBanner         = PIgnore
-    optType x                = PErr
+    optType (Package cmd f)        = PPackage cmd f
+    optType Quiet                  = POpt
+    optType Verbose                = POpt
+    optType Timing                 = POpt
+    optType (Logging l)            = POpt
+    optType CaseTreeHeuristics     = POpt
+    optType (DumpCases f)          = POpt
+    optType (DumpLifted f)         = POpt
+    optType (DumpVMCode f)         = POpt
+    optType DebugElabCheck         = POpt
+    optType (SetCG f)              = POpt
+    optType (Directive d)          = POpt
+    optType (BuildDir f)           = POpt
+    optType (OutputDir f)          = POpt
+    optType WarningsAsErrors       = POpt
+    optType HashesInsteadOfModTime = POpt
+    optType Profile                = POpt
+    optType (ConsoleWidth n)       = PIgnore
+    optType (Color b)              = PIgnore
+    optType NoBanner               = PIgnore
+    optType x                      = PErr
 
     pOptUpdate : CLOpt -> (PackageOpts -> PackageOpts)
     pOptUpdate opt with (optType opt)

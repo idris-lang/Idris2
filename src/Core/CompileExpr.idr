@@ -153,6 +153,10 @@ public export
 data CFType : Type where
      CFUnit : CFType
      CFInt : CFType
+     CFInt8 : CFType
+     CFInt16 : CFType
+     CFInt32 : CFType
+     CFInt64 : CFType
      CFUnsigned8 : CFType
      CFUnsigned16 : CFType
      CFUnsigned32 : CFType
@@ -346,6 +350,10 @@ export
 Show CFType where
   show CFUnit = "Unit"
   show CFInt = "Int"
+  show CFInt8 = "Int_8"
+  show CFInt16 = "Int_16"
+  show CFInt32 = "Int_32"
+  show CFInt64 = "Int_64"
   show CFUnsigned8 = "Bits_8"
   show CFUnsigned16 = "Bits_16"
   show CFUnsigned32 = "Bits_32"

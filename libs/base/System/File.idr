@@ -3,8 +3,9 @@ module System.File
 import public Data.Fuel
 
 import Data.List
-import Data.Strings
+import Data.String
 import System.Info
+import System.Errno
 
 %default total
 
@@ -27,7 +28,7 @@ prim__open : String -> String -> PrimIO FilePtr
 prim__close : FilePtr -> PrimIO ()
 
 %foreign support "idris2_fileError"
-         "node:lambda:x=>(x===1n?BigInt(1):BigInt(0))"
+         "node:lambda:x=>(x===1?1:0)"
 prim__error : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileErrno"
@@ -52,7 +53,7 @@ prim__readChar : FilePtr -> PrimIO Int
 prim__writeLine : FilePtr -> String -> PrimIO Int
 
 %foreign support "idris2_eof"
-         "node:lambda:x=>(x.eof?1n:0n)"
+         "node:lambda:x=>(x.eof?1:0)"
 prim__eof : FilePtr -> PrimIO Int
 
 %foreign "C:fflush,libc 6"
@@ -66,7 +67,7 @@ prim__pclose : FilePtr -> PrimIO ()
 prim__removeFile : String -> PrimIO Int
 
 %foreign support "idris2_fileSize"
-         "node:lambda:fp=>require('fs').fstatSync(fp.fd, {bigint: true}).size"
+         "node:lambda:fp=>require('fs').fstatSync(fp.fd).size"
 prim__fileSize : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileSize"
@@ -76,7 +77,7 @@ prim__fPoll : FilePtr -> PrimIO Int
 prim__fileAccessTime : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileModifiedTime"
-         "node:lambda:fp=>require('fs').fstatSync(fp.fd, {bigint: true}).mtimeMs / 1000n"
+         "node:lambda:fp=>require('fs').fstatSync(fp.fd).mtimeMs / 1000"
 prim__fileModifiedTime : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileStatusTime"
@@ -117,17 +118,18 @@ data FileError = GenericFileError Int -- errno
 returnError : HasIO io => io (Either FileError a)
 returnError
     = do err <- primIO prim__fileErrno
-         case err of
-              0 => pure $ Left FileReadError
-              1 => pure $ Left FileWriteError
-              2 => pure $ Left FileNotFound
-              3 => pure $ Left PermissionDenied
-              4 => pure $ Left FileExists
-              _ => pure $ Left (GenericFileError (err-5))
+         pure $ Left $
+           case err of
+              0 => FileReadError
+              1 => FileWriteError
+              2 => FileNotFound
+              3 => PermissionDenied
+              4 => FileExists
+              _ => GenericFileError (err-5)
 
 export
 Show FileError where
-  show (GenericFileError errno) = "File error: " ++ show errno
+  show (GenericFileError errno) = strerror errno
   show FileReadError = "File Read Error"
   show FileWriteError = "File Write Error"
   show FileNotFound = "File Not Found"

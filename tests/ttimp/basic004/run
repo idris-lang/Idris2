@@ -1,3 +1,4 @@
+rm -rf build
+
 $1 --yaffle AsPat.yaff < input
 
-rm -rf build

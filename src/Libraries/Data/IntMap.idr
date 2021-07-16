@@ -224,6 +224,10 @@ insert k v (M _ t) =
     Right t' => (M _ t')
 
 export
+singleton : Int -> v -> IntMap v
+singleton k v = insert k v empty
+
+export
 insertFrom : List (Int, v) -> IntMap v -> IntMap v
 insertFrom = flip $ foldl $ flip $ uncurry insert
 

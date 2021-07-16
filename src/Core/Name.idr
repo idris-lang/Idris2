@@ -1,7 +1,7 @@
 module Core.Name
 
 import Data.List
-import Data.Strings
+import Data.String
 import Data.Maybe
 import Decidable.Equality
 import Libraries.Text.PrettyPrint.Prettyprinter
@@ -154,6 +154,19 @@ Show Name where
   show (CaseBlock outer i) = "case block in " ++ outer
   show (WithBlock outer i) = "with block in " ++ outer
   show (Resolved x) = "$resolved" ++ show x
+
+export
+[Raw] Show Name where
+  show (NS ns n) = "NS " ++ show ns ++ " (" ++ show n ++ ")"
+  show (UN x) = "UN " ++ x
+  show (MN x y) = "MN (" ++ show x ++ ") " ++ show y
+  show (PV n d) = "PV (" ++ show n ++ ") " ++ show d
+  show (DN str n) = "DN " ++ str ++ " (" ++ show n ++ ")"
+  show (RF n) = "RF " ++ n
+  show (Nested ij n) = "Nested " ++ show ij ++ " (" ++ show n ++ ")"
+  show (CaseBlock str i) = "CaseBlock " ++ str ++ " " ++ show i
+  show (WithBlock str i) = "CaseBlock " ++ str ++ " " ++ show i
+  show (Resolved i) = "Resolved " ++ show i
 
 export
 Pretty Name where

@@ -2,6 +2,8 @@ module Control.Monad.Identity
 
 import Data.Bits
 
+%default total
+
 public export
 record Identity (a : Type) where
   constructor Id

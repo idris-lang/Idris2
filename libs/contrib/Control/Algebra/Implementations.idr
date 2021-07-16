@@ -18,4 +18,5 @@ Monoid (ty -> ty) where
   neutral = id
 
 MonoidV (ty -> ty) where
+  monoidNeutralIsNeutralL _ = Refl
   monoidNeutralIsNeutralR _ = Refl

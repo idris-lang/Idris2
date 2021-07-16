@@ -33,6 +33,7 @@ prim__integerToNat i
 
 public export
 integerToNat : Integer -> Nat
+integerToNat 0 = Z -- Force evaluation and hence caching of x at compile time
 integerToNat x
   = if intToBool (prim__lte_Integer x 0)
        then Z
@@ -68,18 +69,28 @@ Num Nat where
 
   fromInteger x = integerToNat x
 
+-- used for nat hack
+public export
+equalNat : (m, n : Nat) -> Bool
+equalNat Z Z = True
+equalNat (S j) (S k) = equalNat j k
+equalNat _ _ = False
+
 public export
 Eq Nat where
-  Z == Z = True
-  S j == S k = j == k
-  _ == _ = False
+  (==) = equalNat
+
+-- used for nat hack
+public export
+compareNat : (m, n : Nat) -> Ordering
+compareNat Z Z = EQ
+compareNat Z (S k) = LT
+compareNat (S k) Z = GT
+compareNat (S j) (S k) = compareNat j k
 
 public export
 Ord Nat where
-  compare Z Z = EQ
-  compare Z (S k) = LT
-  compare (S k) Z = GT
-  compare (S j) (S k) = compare j k
+  compare = compareNat
 
 public export
 natToInteger : Nat -> Integer
@@ -91,7 +102,7 @@ natToInteger (S k) = 1 + natToInteger k
 ||| Counts the number of elements that satify a predicate.
 public export
 count : (Foldable t) => (predicate : a -> Bool) -> (t a) -> Nat
-count predicate = foldr (\v => if predicate v then S else id) Z
+count predicate = foldMap @{%search} @{Additive} (\x => if predicate x then 1 else 0)
 
 -----------
 -- PAIRS --
@@ -196,7 +207,7 @@ Applicative Maybe where
   pure = Just
 
   Just f <*> Just a = Just (f a)
-  _      <*> _        = Nothing
+  _      <*> _      = Nothing
 
 public export
 Alternative Maybe where
@@ -220,7 +231,7 @@ Foldable Maybe where
 public export
 Traversable Maybe where
   traverse f Nothing = pure Nothing
-  traverse f (Just x) = (pure Just) <*> (f x)
+  traverse f (Just x) = Just <$> f x
 
 ---------
 -- DEC --
@@ -235,7 +246,7 @@ data Dec : Type -> Type where
 
   ||| The case where the property holding would be a contradiction.
   ||| @ contra a demonstration that prop would be a contradiction
-  No  : (contra : prop -> Void) -> Dec prop
+  No  : (contra : Not prop) -> Dec prop
 
 export Uninhabited (Yes p === No q) where uninhabited eq impossible
 export Uninhabited (No p === Yes q) where uninhabited eq impossible
@@ -255,6 +266,16 @@ data Either : (a : Type) -> (b : Type) -> Type where
 
 export Uninhabited (Left p === Right q) where uninhabited eq impossible
 export Uninhabited (Right p === Left q) where uninhabited eq impossible
+
+export
+Either (Uninhabited a) (Uninhabited b) => Uninhabited (a, b) where
+  uninhabited (x, _) @{Left  _} = uninhabited x
+  uninhabited (_, y) @{Right _} = uninhabited y
+
+export
+Uninhabited a => Uninhabited b => Uninhabited (Either a b) where
+  uninhabited (Left l)  = uninhabited l
+  uninhabited (Right r) = uninhabited r
 
 ||| Simply-typed eliminator for Either.
 ||| @ f the action to take on Left
@@ -390,6 +411,8 @@ Foldable List where
 
   toList = id
 
+  foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
+
 public export
 Applicative List where
   pure x = [x]
@@ -407,7 +430,7 @@ Monad List where
 public export
 Traversable List where
   traverse f [] = pure []
-  traverse f (x::xs) = pure (::) <*> (f x) <*> (traverse f xs)
+  traverse f (x::xs) = [| f x :: traverse f xs |]
 
 -- This works quickly because when string-concat builds the result, it allocates
 -- enough room in advance so there's only one allocation, rather than lots!
@@ -416,7 +439,7 @@ Traversable List where
 -- If you need to concatenate strings at compile time, use Prelude.concat.
 %foreign
   "scheme:string-concat"
-  "C:fastConcat"
+  "RefC:fastConcat"
   "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
 export
 fastConcat : List String -> String
@@ -544,7 +567,7 @@ pack (x :: xs) = strCons x (pack xs)
 
 %foreign
     "scheme:string-pack"
-    "C:fastPack"
+    "RefC:fastPack"
     "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
 export
 fastPack : List Char -> String
@@ -565,13 +588,13 @@ unpack str = unpack' (prim__cast_IntegerInt (natToInteger (length str)) - 1) str
     unpack' pos str acc
         = if pos < 0
              then acc
-             else assert_total $ unpack' (pos - 1) str (assert_total (prim__strIndex str pos)::acc)
+             else unpack' (assert_smaller pos (pos - 1)) str $ (assert_total $ prim__strIndex str pos) :: acc
 
 -- This function runs fast when compiled but won't compute at compile time.
 -- If you need to unpack strings at compile time, use Prelude.unpack.
 %foreign
   "scheme:string-unpack"
-  "C:fastUnpack"
+  "RefC:fastUnpack"
   "javascript:lambda:(str)=>__prim_js2idris_array(Array.from(str))"
 export
 fastUnpack : String -> List Char
@@ -702,7 +725,7 @@ log x = prim__doubleLog x
 
 public export
 pow : Double -> Double -> Double
-pow x y = exp (y * log x)
+pow x y = exp (y * log x) -- prim__doublePow x y
 
 public export
 sin : Double -> Double
@@ -758,21 +781,21 @@ ceiling x = prim__doubleCeiling x
 
 -- These functions are here to support the range syntax:
 -- range expressions like `[a..b]` are desugared to `rangeFromXXX` calls.
--- They are not exported, but similar functions are exported from
--- `Data.Stream` instead.
 
-total
+public export
 countFrom : n -> (n -> n) -> Stream n
 countFrom start diff = start :: countFrom (diff start) diff
 
-partial
+public export
+covering
 takeUntil : (n -> Bool) -> Stream n -> List n
 takeUntil p (x :: xs)
     = if p x
          then [x]
          else x :: takeUntil p xs
 
-partial
+public export
+covering
 takeBefore : (n -> Bool) -> Stream n -> List n
 takeBefore p (x :: xs)
     = if p x
@@ -790,46 +813,37 @@ interface Range a where
 
 -- Idris 1 went to great lengths to prove that these were total. I don't really
 -- think it's worth going to those lengths! Let's keep it simple and assert.
-export
+public export
 Range Nat where
-  rangeFromTo x y
-      = if y > x
-           then assert_total $ takeUntil (>= y) (countFrom x S)
-           else if x > y
-                   then assert_total $ takeUntil (<= y) (countFrom x (\n => minus n 1))
-                   else [x]
-  rangeFromThenTo x y z
-      = if y > x
-           then (if z > x
-                    then assert_total $ takeBefore (> z) (countFrom x (plus (minus y x)))
-                    else [])
-           else (if x == y
-                    then (if x == z then [x] else [])
-                    else assert_total $ takeBefore (< z) (countFrom x (\n => minus n (minus x y))))
+  rangeFromTo x y = case compare x y of
+    LT => assert_total $ takeUntil (>= y) (countFrom x S)
+    EQ => pure x
+    GT => assert_total $ takeUntil (<= y) (countFrom x (\n => minus n 1))
+  rangeFromThenTo x y z = case compare x y of
+    LT => if z > x
+             then assert_total $ takeBefore (> z) (countFrom x (plus (minus y x)))
+             else Nil
+    EQ => if x == z then pure x else Nil
+    GT => assert_total $ takeBefore (< z) (countFrom x (\n => minus n (minus x y)))
   rangeFrom x = countFrom x S
   rangeFromThen x y
       = if y > x
            then countFrom x (plus (minus y x))
            else countFrom x (\n => minus n (minus x y))
 
-export
+public export
 (Integral a, Ord a, Neg a) => Range a where
-  rangeFromTo x y
-      = if y > x
-           then assert_total $ takeUntil (>= y) (countFrom x (+1))
-           else if x > y
-                   then assert_total $ takeUntil (<= y) (countFrom x (\x => x-1))
-                   else [x]
-  rangeFromThenTo x y z
-      = if (z - x) > (z - y)
-           then -- go up
-             assert_total $ takeBefore (> z) (countFrom x (+ (y-x)))
-           else if (z - x) < (z - y)
-                then -- go down
-                     assert_total $ takeBefore (< z) (countFrom x (\n => n - (x - y)))
-                else -- meaningless
-                  if x == y && y == z
-                     then [x] else []
+  rangeFromTo x y = case compare x y of
+    LT => assert_total $ takeUntil (>= y) (countFrom x (+1))
+    EQ => pure x
+    GT => assert_total $ takeUntil (<= y) (countFrom x (\x => x-1))
+  rangeFromThenTo x y z = case compare (z - x) (z - y) of
+    -- Go down
+    LT => assert_total $ takeBefore (< z) (countFrom x (\n => n - (x - y)))
+    -- Meaningless
+    EQ => if x == y && y == z then pure x else Nil
+    -- Go up
+    GT => assert_total $ takeBefore (> z) (countFrom x (+ (y-x)))
   rangeFrom x = countFrom x (1+)
   rangeFromThen x y
       = if y > x

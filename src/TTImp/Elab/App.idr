@@ -153,18 +153,6 @@ isHole : NF vars -> Bool
 isHole (NApp _ (NMeta _ _ _) _) = True
 isHole _ = False
 
--- Return whether we already know the return type of the given function
--- type. If we know this, we can possibly infer some argument types before
--- elaborating them, which might help us disambiguate things more easily.
-concrete : Defs -> Env Term vars -> NF vars -> Core Bool
-concrete defs env (NBind fc _ (Pi _ _ _ _) sc)
-    = do sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
-         concrete defs env sc'
-concrete defs env (NDCon _ _ _ _ _) = pure True
-concrete defs env (NTCon _ _ _ _ _) = pure True
-concrete defs env (NPrimVal _ _) = pure True
-concrete defs env _ = pure False
-
 mutual
   makeImplicit : {vars : _} ->
                  {auto c : Ref Ctxt Defs} ->
@@ -324,9 +312,11 @@ mutual
   needsDelayLHS (IAutoApp _ f _) = needsDelayLHS f
   needsDelayLHS (INamedApp _ f _ _) = needsDelayLHS f
   needsDelayLHS (IAlternative _ _ _) = pure True
+  needsDelayLHS (IAs _ _ _ _ t) = needsDelayLHS t
   needsDelayLHS (ISearch _ _) = pure True
   needsDelayLHS (IPrimVal _ _) = pure True
   needsDelayLHS (IType _) = pure True
+  needsDelayLHS (IWithUnambigNames _ _ t) = needsDelayLHS t
   needsDelayLHS _ = pure False
 
   onLHS : ElabMode -> Bool
@@ -354,21 +344,6 @@ mutual
          case tm of
            Bind _ _ (Lam _ _ _ _)  _ => registerDot rig env fc NotConstructor tm ty
            _ => pure (tm, ty)
-
-
-  checkPatTyValid : {vars : _} ->
-                    {auto c : Ref Ctxt Defs} ->
-                    FC -> Defs -> Env Term vars ->
-                    NF vars -> Term vars -> Glued vars -> Core ()
-  checkPatTyValid fc defs env (NApp _ (NMeta n i _) _) arg got
-      = do Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
-                | Nothing => pure ()
-           when (isErased (multiplicity gdef)) $ do
-             -- Argument is only valid if gotnf is not a concrete type
-             gotnf <- getNF got
-             when !(concrete defs env gotnf) $
-               throw (MatchTooSpecific fc env arg)
-  checkPatTyValid fc defs env _ _ _ = pure ()
 
   dotErased : {auto c : Ref Ctxt Defs} -> (argty : NF vars) ->
               Maybe Name -> Nat -> ElabMode -> RigCount -> RawImp -> Core RawImp
@@ -462,12 +437,26 @@ mutual
              aty' <- nf defs env metaty
              logNF "elab" 10 ("Now trying " ++ show nm ++ " " ++ show arg) env aty'
 
-             res <- check argRig elabinfo nest env arg (Just $ glueBack defs env aty')
+             -- On the LHS, checking an argument can't resolve its own type,
+             -- it must be resolved from elsewhere. Otherwise we might match
+             -- on things which are too specific for their polymorphic type.
+             when (onLHS (elabMode elabinfo)) $
+                case aty' of
+                     NApp _ (NMeta _ i _) _ =>
+                          do Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
+                                  | Nothing => pure ()
+                             when (isErased (multiplicity gdef)) $ addNoSolve i
+                     _ => pure ()
+             res <- check argRig (record { topLevel = False } elabinfo) nest env arg (Just $ glueBack defs env aty')
+             when (onLHS (elabMode elabinfo)) $
+                case aty' of
+                     NApp _ (NMeta _ i _) _ => removeNoSolve i
+                     _ => pure ()
+
              (argv, argt) <-
                if not (onLHS (elabMode elabinfo))
                  then pure res
                  else do let (argv, argt) = res
-                         checkPatTyValid fc defs env aty' argv argt
                          checkValidPattern rig env fc argv argt
 
              defs <- get Ctxt
@@ -475,7 +464,7 @@ mutual
              -- *may* have as patterns in it and we need to retain them.
              -- (As patterns are a bit of a hack but I don't yet see a
              -- better way that leads to good code...)
-             logTerm "elab" 5 ("Solving " ++ show metaval ++ " with") argv
+             logTerm "elab" 10 ("Solving " ++ show metaval ++ " with") argv
              ok <- solveIfUndefined env metaval argv
              -- If there's a constraint, make a constant, but otherwise
              -- just return the term as expected
@@ -503,7 +492,7 @@ mutual
                                      (\t => pure (Just !(toFullNames!(getTerm t))))
                                      expty
                          pure ("Overall expected type: " ++ show ety))
-             res <- check argRig elabinfo
+             res <- check argRig (record { topLevel = False } elabinfo)
                                    nest env arg (Just (glueBack defs env aty))
              (argv, argt) <-
                if not (onLHS (elabMode elabinfo))
@@ -795,6 +784,9 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
     normalisePrims prims env res
         = do tm <- Normalise.normalisePrims (`boundSafe` elabMode elabinfo)
                                             isIPrimVal
+                                            (case elabMode elabinfo of
+                                                  InLHS _ => True
+                                                  _ => False)
                                             prims n expargs (fst res) env
              pure (fromMaybe (fst res) tm, snd res)
 

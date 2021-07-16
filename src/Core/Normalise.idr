@@ -60,26 +60,15 @@ export
 toClosure : EvalOpts -> Env Term outer -> Term outer -> Closure outer
 toClosure opts env tm = MkClosure opts [] env tm
 
-useMeta : Bool -> FC -> Name -> Defs -> EvalOpts -> Core (Maybe EvalOpts)
-useMeta False _ _ _ opts = pure $ Just opts
-useMeta True fc (Resolved i) defs opts
-    = case lookup i (usedMetas opts) of
-           Nothing => pure (Just (record { usedMetas $= insert i () } opts))
-           Just _ => pure Nothing
-useMeta True fc n defs opts
-    = do let Just i = getNameID n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
-         useMeta True fc (Resolved i) defs opts
-
 updateLimit : NameType -> Name -> EvalOpts -> Core (Maybe EvalOpts)
 updateLimit Func n opts
-    = if not (isNil (reduceLimit opts))
-         then case lookup n (reduceLimit opts) of
-                   Nothing => pure Nothing
-                   Just Z => pure Nothing
+    = pure $ if isNil (reduceLimit opts)
+         then Just opts
+         else case lookup n (reduceLimit opts) of
+                   Nothing => Nothing
+                   Just Z => Nothing
                    Just (S k) =>
-                      pure (Just (record { reduceLimit $= set n k } opts))
-         else pure (Just opts)
+                      Just (record { reduceLimit $= set n k } opts)
   where
     set : Name -> Nat -> List (Name, Nat) -> List (Name, Nat)
     set n v [] = []
@@ -128,7 +117,10 @@ parameters (defs : Defs, topopts : EvalOpts)
                       (\defs', arg => evalWithOpts defs' topopts
                                               env (arg :: locs) scope stk)
     eval env locs (App fc fn arg) stk
-        = eval env locs fn ((fc, MkClosure topopts locs env arg) :: stk)
+        = case strategy topopts of
+               CBV => do arg' <- eval env locs arg []
+                         eval env locs fn ((fc, MkNFClosure topopts env arg') :: stk)
+               CBN => eval env locs fn ((fc, MkClosure topopts locs env arg) :: stk)
     eval env locs (As fc s n tm) stk
         = if removeAs topopts
              then eval env locs tm stk
@@ -151,6 +143,62 @@ parameters (defs : Defs, topopts : EvalOpts)
     eval env locs (Erased fc i) stk = pure $ NErased fc i
     eval env locs (TType fc) stk = pure $ NType fc
 
+    -- Apply an evaluated argument (perhaps cached from an earlier evaluation)
+    -- to a stack
+    applyToStack : {auto c : Ref Ctxt Defs} ->
+                   {free : _} ->
+                   Env Term free -> Bool ->
+                   NF free -> Stack free -> Core (NF free)
+    applyToStack env cont (NBind fc _ (Lam _ _ _ _) sc) (arg :: stk)
+        = do arg' <- sc defs $ snd arg
+             applyToStack env cont arg' stk
+    applyToStack env cont (NBind fc x b@(Let _ r val ty) sc) stk
+        = if (holesOnly topopts || argHolesOnly topopts) && not (tcInline topopts)
+             then do b' <- if cont
+                              then traverse (\t => applyToStack env cont t []) b
+                              else pure b
+                     pure (NBind fc x b'
+                              (\defs', arg => applyToStack env cont !(sc defs' arg) stk))
+             else do val' <- applyToStack env cont val []
+                     applyToStack env cont !(sc defs (MkNFClosure topopts env val')) stk
+    applyToStack env cont (NBind fc x b sc) stk
+        = do b' <- if cont
+                      then traverse (\t => applyToStack env cont t []) b
+                      else pure b
+             pure (NBind fc x b'
+                      (\defs', arg => applyToStack env cont !(sc defs' arg) stk))
+    applyToStack env cont (NApp fc (NRef nt fn) args) stk
+        = evalRef env False fc nt fn (args ++ stk)
+                  (NApp fc (NRef nt fn) (args ++ stk))
+    applyToStack env cont (NApp fc (NLocal mrig idx p) args) stk
+        = evalLocal env fc mrig _ p (args ++ stk) []
+    applyToStack env cont (NApp fc (NMeta n i args) args') stk
+        = evalMeta env fc n i args (args' ++ stk)
+    applyToStack env cont (NDCon fc n t a args) stk
+        = pure $ NDCon fc n t a (args ++ stk)
+    applyToStack env cont (NTCon fc n t a args) stk
+        = pure $ NTCon fc n t a (args ++ stk)
+    applyToStack env cont (NAs fc s p t) stk
+       = if removeAs topopts
+            then applyToStack env cont t stk
+            else do p' <- applyToStack env cont p []
+                    t' <- applyToStack env cont t stk
+                    pure (NAs fc s p' t')
+    applyToStack env cont (NDelayed fc r tm) stk
+       = do tm' <- applyToStack env cont tm stk
+            pure (NDelayed fc r tm')
+    applyToStack env cont nf@(NDelay fc r ty tm) stk
+       = pure nf -- stack should always be empty here!
+    applyToStack env cont (NForce fc r tm args) stk
+       = do tm' <- applyToStack env cont tm []
+            case tm' of
+                 NDelay fc r _ arg =>
+                    eval env [arg] (Local {name = UN "fvar"} fc Nothing _ First) stk
+                 _ => pure (NForce fc r tm' (args ++ stk))
+    applyToStack env cont nf@(NPrimVal fc _) _ = pure nf
+    applyToStack env cont nf@(NErased fc _) _ = pure nf
+    applyToStack env cont nf@(NType fc) _ = pure nf
+
     evalLocClosure : {auto c : Ref Ctxt Defs} ->
                      {free : _} ->
                      Env Term free ->
@@ -160,26 +208,11 @@ parameters (defs : Defs, topopts : EvalOpts)
                      Core (NF free)
     evalLocClosure env fc mrig stk (MkClosure opts locs' env' tm')
         = evalWithOpts defs opts env' locs' tm' stk
-    evalLocClosure {free} env fc mrig stk (MkNFClosure nf)
-        = applyToStack nf stk
-      where
-        applyToStack : NF free -> Stack free -> Core (NF free)
-        applyToStack (NBind fc _ (Lam _ _ _ _) sc) (arg :: stk)
-            = do arg' <- sc defs $ snd arg
-                 applyToStack arg' stk
-        applyToStack (NApp fc (NRef nt fn) args) stk
-            = evalRef env False fc nt fn (args ++ stk)
-                      (NApp fc (NRef nt fn) args)
-        applyToStack (NApp fc (NLocal mrig idx p) args) stk
-          = evalLocal env fc mrig _ p (args ++ stk) []
-        applyToStack (NDCon fc n t a args) stk
-            = pure $ NDCon fc n t a (args ++ stk)
-        applyToStack (NTCon fc n t a args) stk
-            = pure $ NTCon fc n t a (args ++ stk)
-        applyToStack nf _ = pure nf
+    evalLocClosure {free} env fc mrig stk (MkNFClosure opts env' nf)
+        = applyToStack env' False nf stk
 
     evalLocal : {auto c : Ref Ctxt Defs} ->
-                {free, vars : _} ->
+                {free : _} ->
                 Env Term free ->
                 FC -> Maybe Bool ->
                 (idx : Nat) -> (0 p : IsVar nm idx (vars ++ free)) ->
@@ -188,7 +221,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                 Core (NF free)
     -- If it's one of the free variables, we are done unless the free
     -- variable maps to a let-binding
-    evalLocal {vars = []} env fc mrig idx prf stk locs
+    evalLocal env fc mrig idx prf stk []
         = if not (holesOnly topopts || argHolesOnly topopts)
              -- if we know it's not a let, no point in even running `getBinder`
              && fromMaybe True mrig
@@ -203,12 +236,15 @@ parameters (defs : Defs, topopts : EvalOpts)
               env fc mrig (S idx) (Later p) stk (_ :: locs)
         = evalLocal {vars = xs} env fc mrig idx p stk locs
 
-    updateLocal : (idx : Nat) -> (0 p : IsVar nm idx (vars ++ free)) ->
+    updateLocal : EvalOpts -> Env Term free ->
+                  (idx : Nat) -> (0 p : IsVar nm idx (vars ++ free)) ->
                   LocalEnv free vars -> NF free ->
                   LocalEnv free vars
-    updateLocal Z First (x :: locs) nf = MkNFClosure nf :: locs
-    updateLocal (S idx) (Later p) (x :: locs) nf = x :: updateLocal idx p locs nf
-    updateLocal _ _ locs nf = locs
+    updateLocal opts env Z First (x :: locs) nf
+        = MkNFClosure opts env nf :: locs
+    updateLocal opts env (S idx) (Later p) (x :: locs) nf
+        = x :: updateLocal opts env idx p locs nf
+    updateLocal _ _ _ _ locs nf = locs
 
     evalMeta : {auto c : Ref Ctxt Defs} ->
                {free : _} ->
@@ -255,13 +291,14 @@ parameters (defs : Defs, topopts : EvalOpts)
              -- want to shortcut that second check, if we're evaluating
              -- everything, so don't let bind unless we need that log!
              let redok = redok1 || redok2
+             checkTimer -- If we're going to time out anywhere, it'll be
+                        -- when evaluating something recursive, so this is a
+                        -- good place to check
              unless redok2 $ logC "eval.stuck" 5 $ do n' <- toFullNames n
                                                       pure $ "Stuck function: " ++ show n'
              if redok
                 then do
-                   Just opts' <- useMeta (noCycles res) fc n defs topopts
-                        | Nothing => pure def
-                   Just opts' <- updateLimit nt n opts'
+                   Just opts' <- updateLimit nt n topopts
                         | Nothing => do log "eval.stuck" 10 $ "Function " ++ show n ++ " past reduction limit"
                                         pure def -- name is past reduction limit
                    evalDef env opts' meta fc
@@ -321,8 +358,8 @@ parameters (defs : Defs, topopts : EvalOpts)
     tryAlt {more}
            env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN "->") tag [s,t] sc)
        = evalConAlt {more} env loc opts fc stk [s,t]
-                  [MkNFClosure aty,
-                   MkNFClosure (NBind pfc x (Lam fc' r e aty) scty)]
+                  [MkNFClosure opts env aty,
+                   MkNFClosure opts env (NBind pfc x (Lam fc' r e aty) scty)]
                   sc
     -- Delay matching
     tryAlt env loc opts fc stk (NDelay _ _ ty arg) (DelayCase tyn argn sc)
@@ -374,7 +411,7 @@ parameters (defs : Defs, topopts : EvalOpts)
            -- we have not defined quote yet (it depends on eval itself) so we show the NF
            -- i.e. only the top-level constructor.
            log "eval.casetree" 5 $ "Evaluated " ++ show name ++ " to " ++ show xval
-           let loc' = updateLocal idx (varExtend x) loc xval
+           let loc' = updateLocal opts env idx (varExtend x) loc xval
            findAlt env loc' opts fc stk xval alts
     evalTree env loc opts fc stk (STerm _ tm)
           = case fuel opts of
@@ -422,9 +459,9 @@ parameters (defs : Defs, topopts : EvalOpts)
                -- Stack must be exactly the right height
                Just (args, []) =>
                   do argsnf <- evalAll args
-                     case fn argsnf of
-                          Nothing => pure def
-                          Just res => pure res
+                     pure $ case fn argsnf of
+                          Nothing => def
+                          Just res => res
                _ => pure def
       where
         -- No traverse for Vect in Core...
@@ -473,7 +510,17 @@ evalWithOpts {vars} defs opts = eval {vars} defs opts
 
 evalClosure defs (MkClosure opts locs env tm)
     = eval defs opts env locs tm []
-evalClosure defs (MkNFClosure nf) = pure nf
+evalClosure defs (MkNFClosure opts env nf)
+    = applyToStack defs opts env True nf []
+
+export
+evalClosureWithOpts : {auto c : Ref Ctxt Defs} ->
+                      {free : _} ->
+                      Defs -> EvalOpts -> Closure free -> Core (NF free)
+evalClosureWithOpts defs opts (MkClosure _ locs env tm)
+    = eval defs opts env locs tm []
+evalClosureWithOpts defs opts (MkNFClosure _ env nf)
+    = applyToStack defs opts env True nf []
 
 export
 nf : {auto c : Ref Ctxt Defs} ->
@@ -585,9 +632,9 @@ mutual
           = let MkVar isv' = addLater xs isv in
                 MkVar (Later isv')
   quoteHead q defs fc bounds env (NRef Bound (MN n i))
-      = case findName bounds of
-             Just (MkVar p) => pure $ Local fc Nothing _ (varExtend p)
-             Nothing => pure $ Ref fc Bound (MN n i)
+      = pure $ case findName bounds of
+             Just (MkVar p) => Local fc Nothing _ (varExtend p)
+             Nothing => Ref fc Bound (MN n i)
     where
       findName : Bounds bound' -> Maybe (Var bound')
       findName None = Nothing
@@ -716,20 +763,8 @@ export
 continueNF : {auto c : Ref Ctxt Defs} ->
              {vars : _} ->
              Defs -> Env Term vars -> NF vars -> Core (NF vars)
-continueNF defs env stuck@(NApp fc (NRef nt fn) stk)
-    = evalRef defs defaultOpts env False fc nt fn stk stuck
-continueNF defs env (NApp fc (NMeta name idx args) stk)
-    = evalMeta defs defaultOpts env fc name idx args stk
--- Next batch are already in normal form
-continueNF defs env nf@(NDCon fc x tag arity xs) = pure nf
-continueNF defs env nf@(NTCon fc x tag arity xs) = pure nf
-continueNF defs env nf@(NPrimVal fc x) = pure nf
-continueNF defs env nf@(NErased fc imp) = pure nf
-continueNF defs env nf@(NType fc) = pure nf
--- For the rest, easiest just to quote and reevaluate
-continueNF defs env tm
-    = do empty <- clearDefs defs
-         nf defs env !(quote empty env tm)
+continueNF defs env stuck
+   = applyToStack defs defaultOpts env True stuck []
 
 export
 glueBack : {auto c : Ref Ctxt Defs} ->
@@ -883,14 +918,57 @@ tryUpdate ms (Erased fc i) = pure $ Erased fc i
 tryUpdate ms (TType fc) = pure $ TType fc
 
 mutual
+  allConvNF : {auto c : Ref Ctxt Defs} ->
+              {vars : _} ->
+              Ref QVar Int -> Defs -> Env Term vars ->
+              List (NF vars) -> List (NF vars) -> Core Bool
+  allConvNF q defs env [] [] = pure True
+  allConvNF q defs env (x :: xs) (y :: ys)
+      = do ok <- allConvNF q defs env xs ys
+           if ok then convGen q defs env x y
+                 else pure False
+  allConvNF q defs env _ _ = pure False
+
+  -- return False if anything differs at the head, to quickly find
+  -- conversion failures without going deeply into all the arguments.
+  -- True means they might still match
+  quickConv : List (NF vars) -> List (NF vars) -> Bool
+  quickConv [] [] = True
+  quickConv (x :: xs) (y :: ys) = quickConvArg x y && quickConv xs ys
+    where
+      quickConvHead : NHead vars -> NHead vars -> Bool
+      quickConvHead (NLocal _ _ _) (NLocal _ _ _) = True
+      quickConvHead (NRef _ n) (NRef _ n') = n == n'
+      quickConvHead (NMeta n _ _) (NMeta n' _ _) = n == n'
+      quickConvHead _ _ = False
+
+      quickConvArg : NF vars -> NF vars -> Bool
+      quickConvArg (NBind{}) _ = True -- let's not worry about eta here...
+      quickConvArg _ (NBind{}) = True
+      quickConvArg (NApp _ h _) (NApp _ h' _) = quickConvHead h h'
+      quickConvArg (NDCon _ _ t _ _) (NDCon _ _ t' _ _) = t == t'
+      quickConvArg (NTCon _ n _ _ _) (NTCon _ n' _ _ _) = n == n'
+      quickConvArg (NAs _ _ _ t) (NAs _ _ _ t') = quickConvArg t t'
+      quickConvArg (NDelayed _ _ t) (NDelayed _ _ t') = quickConvArg t t'
+      quickConvArg (NDelay _ _ _ _) (NDelay _ _ _ _) = True
+      quickConvArg (NForce _ _ t _) (NForce _ _ t' _) = quickConvArg t t'
+      quickConvArg (NPrimVal _ c) (NPrimVal _ c') = c == c'
+      quickConvArg (NType _) (NType _) = True
+      quickConvArg (NErased _ _) _ = True
+      quickConvArg _ (NErased _ _) = True
+      quickConvArg _ _ = False
+  quickConv _ _ = False
+
   allConv : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
             Ref QVar Int -> Defs -> Env Term vars ->
             List (Closure vars) -> List (Closure vars) -> Core Bool
-  allConv q defs env [] [] = pure True
-  allConv q defs env (x :: xs) (y :: ys)
-      = pure $ !(convGen q defs env x y) && !(allConv q defs env xs ys)
-  allConv q defs env _ _ = pure False
+  allConv q defs env xs ys
+      = do xsnf <- traverse (evalClosure defs) xs
+           ysnf <- traverse (evalClosure defs) ys
+           if quickConv xsnf ysnf
+              then allConvNF q defs env xsnf ysnf
+              else pure False
 
   -- If the case trees match in structure, get the list of variables which
   -- have to match in the call
@@ -1389,6 +1467,8 @@ normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
                  (Constant -> Bool) ->
                  -- view to check whether an argument is a constant
                  (arg -> Maybe Constant) ->
+                 -- Reduce everything (True) or just public export (False)
+                 Bool ->
                  -- list of primitives
                  List Name ->
                  -- view of the potential redex
@@ -1399,7 +1479,7 @@ normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
                  Env Term vs ->         -- evaluation environment
                  -- output only evaluated if primitive
                  Core (Maybe (Term vs))
-normalisePrims boundSafe viewConstant prims n args tm env
+normalisePrims boundSafe viewConstant all prims n args tm env
    = do let True = elem (dropNS !(getFullName n)) prims -- is a primitive
               | _ => pure Nothing
         let (mc :: _) = reverse args -- with at least one argument
@@ -1409,5 +1489,7 @@ normalisePrims boundSafe viewConstant prims n args tm env
         let True = boundSafe c -- that we should expand
               | _ => pure Nothing
         defs <- get Ctxt
-        tm <- normalise defs env tm
+        tm <- if all
+                 then normaliseAll defs env tm
+                 else normalise defs env tm
         pure (Just tm)

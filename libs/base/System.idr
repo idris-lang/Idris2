@@ -2,7 +2,9 @@ module System
 
 import public Data.So
 import Data.List
-import Data.Strings
+import Data.String
+
+%default total
 
 support : String -> String
 support fn = "C:" ++ fn ++ ", libidris2_support, idris_support.h"
@@ -46,7 +48,7 @@ getArgs : HasIO io => io (List String)
 getArgs = do
             n <- primIO prim__getArgCount
             if n > 0
-              then for [0..n-1] (\x => primIO $ prim__getArg x)
+              then for [0..n-1] $ primIO . prim__getArg
               else pure []
 
 %foreign libc "getenv"
@@ -69,6 +71,7 @@ getEnv var
            else pure (Just (prim__getString env))
 
 export
+covering
 getEnvironment : HasIO io => io (List (String, String))
 getEnvironment = getAllPairs 0 []
   where
@@ -97,8 +100,7 @@ unsetEnv var
    = do ok <- primIO $ prim__unsetEnv var
         pure $ ok == 0
 
-%foreign libc "system"
-         "scheme:blodwen-system"
+%foreign "C:idris2_system, libidris2_support, idris_system.h"
 prim__system : String -> PrimIO Int
 
 export
@@ -113,8 +115,16 @@ export
 time : HasIO io => io Integer
 time = pure $ cast !(primIO prim__time)
 
+%foreign support "idris2_getPID"
+prim__getPID : PrimIO Int
+
+||| Get the ID of the currently running process.
+export
+getPID : HasIO io => io Int
+getPID = primIO prim__getPID
+
 %foreign libc "exit"
-         "node:lambda:c => process.exit(Number(c))"
+         "node:lambda:c => process.exit(c)"
 prim__exit : Int -> PrimIO ()
 
 ||| Programs can either terminate successfully, or end in a caught

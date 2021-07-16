@@ -1,7 +1,8 @@
 module Idris.REPL.Common
 
-import Core.Env
 import Core.Context.Log
+import Core.Directory
+import Core.Env
 import Core.InitPrimitives
 import Core.Metadata
 import Core.Primitives
@@ -80,9 +81,19 @@ emitProblem a replDocCreator idemodeDocCreator getFC
                      -- TODO: Display a better message when the error doesn't contain a location
                      case map toNonEmptyFC (getFC a) of
                           Nothing => iputStrLn msg
-                          Just (file, startPos, endPos) =>
+                          Just (origin, startPos, endPos) => do
+                            fname <- case origin of
+                              PhysicalIdrSrc ident => do
+                                -- recover the file name relative to the working directory.
+                                -- (This is what idris2-mode expects)
+                                let fc = MkFC (PhysicalIdrSrc ident) startPos endPos
+                                catch (nsToSource fc ident) (const $ pure "(File-Not-Found)")
+                              PhysicalPkgSrc fname =>
+                                pure fname
+                              Virtual Interactive =>
+                                pure "(Interactive)"
                             send f (SExpList [SymbolAtom "warning",
-                                   SExpList [toSExp file,
+                                   SExpList [toSExp {a = String} fname,
                                             toSExp (addOne startPos),
                                               toSExp (addOne endPos),
                                               toSExp !(renderWithoutColor msg),
@@ -93,13 +104,6 @@ emitProblem a replDocCreator idemodeDocCreator getFC
     addOne : (Int, Int) -> (Int, Int)
     addOne (l, c) = (l + 1, c + 1)
 
-export
-emitWarning : {auto c : Ref Ctxt Defs} ->
-              {auto o : Ref ROpts REPLOpts} ->
-              {auto s : Ref Syn SyntaxInfo} ->
-              Warning -> Core ()
-emitWarning w = emitProblem w displayWarning pwarning getWarningLoc
-
 -- Display an error message from checking a source file
 export
 emitError : {auto c : Ref Ctxt Defs} ->
@@ -109,14 +113,35 @@ emitError : {auto c : Ref Ctxt Defs} ->
 emitError e = emitProblem e display perror getErrorLoc
 
 export
+emitWarning : {auto c : Ref Ctxt Defs} ->
+              {auto o : Ref ROpts REPLOpts} ->
+              {auto s : Ref Syn SyntaxInfo} ->
+              Warning -> Core ()
+emitWarning w = emitProblem w displayWarning pwarning getWarningLoc
+
+export
 emitWarnings : {auto c : Ref Ctxt Defs} ->
                {auto o : Ref ROpts REPLOpts} ->
                {auto s : Ref Syn SyntaxInfo} ->
-               Core ()
+               Core (List Error)
 emitWarnings
     = do defs <- get Ctxt
-         traverse_ emitWarning (reverse (warnings defs))
-         put Ctxt (record { warnings = [] } defs)
+         let ws = reverse (warnings defs)
+         session <- getSession
+         if (session.warningsAsErrors)
+           then let errs = WarningAsError <$> ws in
+                errs <$ traverse_ emitError errs
+           else [] <$ traverse_ emitWarning ws
+
+export
+emitWarningsAndErrors : {auto c : Ref Ctxt Defs} ->
+                        {auto o : Ref ROpts REPLOpts} ->
+                        {auto s : Ref Syn SyntaxInfo} ->
+                        List Error -> Core (List Error)
+emitWarningsAndErrors errs = do
+  ws <- emitWarnings
+  traverse_ emitError errs
+  pure ws
 
 getFCLine : FC -> Maybe Int
 getFCLine = map startLine . isNonEmptyFC
@@ -136,15 +161,15 @@ resetContext : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
                {auto m : Ref MD Metadata} ->
-               (source : String) ->
+               (origin : OriginDesc) ->
                Core ()
-resetContext fname
+resetContext origin
     = do defs <- get Ctxt
          put Ctxt (record { options = clearNames (options defs) } !initDefs)
          addPrimitives
          put UST initUState
          put Syn initSyntax
-         put MD (initMetadata fname)
+         put MD (initMetadata origin)
 
 public export
 data EditResult : Type where
@@ -226,7 +251,7 @@ equivTypes ty1 ty2 =
        | False => pure False
      _ <- newRef UST initUState
      b <- catch
-           (do res <- unify inTerm replFC [] ty1 ty2
+           (do res <- unify inTerm EmptyFC [] ty1 ty2
                case res of
                  (MkUnifyResult [] _ [] NoLazy) => pure True
                  _ => pure False)

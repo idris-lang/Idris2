@@ -9,7 +9,7 @@ import Core.Options
 import Libraries.Utils.Path
 
 import Data.List
-import Data.Strings
+import Data.String
 import Data.Maybe
 
 import System.Directory
@@ -18,7 +18,33 @@ import System.Info
 
 %default total
 
+public export
+data IdrSrcExt = E_idr | E_lidr | E_yaff | E_org | E_md
+
+public export
+Eq IdrSrcExt where
+  E_idr  == E_idr  = True
+  E_lidr == E_lidr = True
+  E_yaff == E_yaff = True
+  E_org  == E_org  = True
+  E_md   == E_md   = True
+  _      == _      = False
+
+public export
+Show IdrSrcExt where
+  show E_idr  = "idr"
+  show E_lidr = "lidr"
+  show E_yaff = "yaff"
+  show E_org  = "org"
+  show E_md   = "md"
+
+public export
+listOfExtensions : List IdrSrcExt
+listOfExtensions = [E_idr, E_lidr, E_yaff, E_org, E_md]
+
 -- Return the name of the first file available in the list
+-- Used in LSP.
+export
 firstAvailable : {auto c : Ref Ctxt Defs} ->
                  List String -> Core (Maybe String)
 firstAvailable [] = pure Nothing
@@ -73,24 +99,23 @@ nsToPath : {auto c : Ref Ctxt Defs} ->
            FC -> ModuleIdent -> Core (Either Error String)
 nsToPath loc ns
     = do d <- getDirs
-         let fnameBase = joinPath (reverse $ unsafeUnfoldModuleIdent ns)
+         let fnameBase = ModuleIdent.toPath ns
          let fs = map (\p => p </> fnameBase <.> "ttc")
                       ((build_dir d </> "ttc") :: extra_dirs d)
          Just f <- firstAvailable fs
             | Nothing => pure (Left (ModuleNotFound loc ns))
          pure (Right f)
 
--- Given a namespace, return the full path to the source module (if it
--- exists in the working directory)
+-- Given a namespace, return the path to the source module relative
+-- to the working directory, if the module exists.
 export
 nsToSource : {auto c : Ref Ctxt Defs} ->
              FC -> ModuleIdent -> Core String
 nsToSource loc ns
     = do d <- getDirs
-         let fnameOrig = joinPath (reverse $ unsafeUnfoldModuleIdent ns)
+         let fnameOrig = ModuleIdent.toPath ns
          let fnameBase = maybe fnameOrig (\srcdir => srcdir </> fnameOrig) (source_dir d)
-         let fs = map (\ext => fnameBase <.> ext)
-                      [".idr", ".lidr", ".yaff", ".org", ".md"]
+         let fs = map ((fnameBase <.>) . show) listOfExtensions
          Just f <- firstAvailable fs
             | Nothing => throw (ModuleNotFound loc ns)
          pure f
@@ -98,20 +123,32 @@ nsToSource loc ns
 -- Given a filename in the working directory + source directory, return the correct
 -- namespace for it
 export
-pathToNS : String -> Maybe String -> String -> Core ModuleIdent
-pathToNS wdir sdir fname =
+mbPathToNS : String -> Maybe String -> String -> Maybe ModuleIdent
+mbPathToNS wdir sdir fname =
   let
     sdir = fromMaybe "" sdir
     base = if isAbsolute fname then wdir </> sdir else sdir
   in
-    case Path.dropBase base fname of
-      Nothing => throw (UserError (
+    unsafeFoldModuleIdent . reverse . splitPath . Path.dropExtension
+      <$> Path.dropBase base fname
+
+export
+corePathToNS : String -> Maybe String -> String -> Core ModuleIdent
+corePathToNS wdir sdir fname = do
+  let err = UserError $
           "Source file "
-        ++ show fname
-        ++ " is not in the source directory "
-        ++ show (wdir </> sdir)))
-      Just relPath =>
-        pure $ unsafeFoldModuleIdent $ reverse $ splitPath $ Path.dropExtension relPath
+       ++ show fname
+       ++ " is not in the source directory "
+       ++ show (wdir </> fromMaybe "" sdir)
+  maybe (throw err) pure (mbPathToNS wdir sdir fname)
+
+export
+ctxtPathToNS : {auto c : Ref Ctxt Defs} -> String -> Core ModuleIdent
+ctxtPathToNS fname = do
+  defs <- get Ctxt
+  let wdir = defs.options.dirs.working_dir
+  let sdir = defs.options.dirs.source_dir
+  corePathToNS wdir sdir fname
 
 dirExists : String -> IO Bool
 dirExists dir = do Right d <- openDir dir
@@ -162,14 +199,25 @@ export
 getTTCFileName : {auto c : Ref Ctxt Defs} ->
                  String -> String -> Core String
 getTTCFileName inp ext
-    = do ns <- getNS
-         d <- getDirs
-         -- Get its namespace from the file relative to the working directory
+    = do -- Get its namespace from the file relative to the working directory
          -- and generate the ttc file from that
-         ns <- pathToNS (working_dir d) (source_dir d) inp
-         let fname = joinPath (reverse $ unsafeUnfoldModuleIdent ns) <.> ext
+         ns <- ctxtPathToNS inp
+         let fname = ModuleIdent.toPath ns <.> ext
+         d <- getDirs
          let bdir = build_dir d
          pure $ bdir </> "ttc" </> fname
+
+-- Given a source file, return the name of the corresponding object file.
+-- As above, but without the build directory
+export
+getObjFileName : {auto c : Ref Ctxt Defs} ->
+                 String -> String -> Core String
+getObjFileName inp ext
+    = do -- Get its namespace from the file relative to the working directory
+         -- and generate the ttc file from that
+         ns <- ctxtPathToNS inp
+         let fname = ModuleIdent.toPath ns <.> ext
+         pure $ fname
 
 -- Given a root executable name, return the name in the build directory
 export

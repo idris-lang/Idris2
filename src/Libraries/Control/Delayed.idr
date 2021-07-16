@@ -1,6 +1,8 @@
 ||| Utilities functions for contitionally delaying values.
 module Libraries.Control.Delayed
 
+%default total
+
 ||| Type-level function for a conditionally infinite type.
 public export
 inf : Bool -> Type -> Type

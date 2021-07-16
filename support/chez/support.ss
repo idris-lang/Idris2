@@ -10,11 +10,9 @@
 
 (define blodwen-toSignedInt
   (lambda (x bits)
-    (let ((ma (ash 1 bits)))
-      (if (or (< x (- 0 ma))
-              (>= x ma))
-          (remainder x ma)
-          x))))
+    (if (logbit? bits x)
+        (logor x (ash (- 1) bits))
+        (logand x (- (ash 1 bits) 1)))))
 
 (define blodwen-toUnsignedInt
   (lambda (x bits)
@@ -47,13 +45,7 @@
 (define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
 (define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
 
-(define truncate-bits
-  (lambda (x bits)
-    (if (logbit? bits x)
-        (logor x (ash (- 1) bits))
-        (logand x (- (ash 1 bits) 1)))))
-
-(define blodwen-bits-shl-signed (lambda (x y bits) (truncate-bits (ash x y) bits)))
+(define blodwen-bits-shl-signed (lambda (x y bits) (blodwen-toSignedInt (ash x y) bits)))
 
 (define blodwen-bits-shl (lambda (x y bits) (remainder (ash x y) (ash 1 bits))))
 
@@ -186,9 +178,6 @@
 (define (blodwen-buffer-size buf)
   (bytevector-length buf))
 
-(define (blodwen-buffer-free buf)
-  (void))  ; Rely on built-in memory management
-
 (define (blodwen-buffer-setbyte buf loc val)
   (bytevector-u8-set! buf loc val))
 
@@ -268,7 +257,7 @@
 (define (blodwen-get-thread-data ty)
   (blodwen-thread-data))
 
-(define (blodwen-set-thread-data a)
+(define (blodwen-set-thread-data ty a)
   (blodwen-thread-data a))
 
 ;; Semaphore
@@ -315,33 +304,73 @@
       ))))
 
 ;; Channel
+; With thanks to Alain Zscheile (@zseri) for help with understanding condition
+; variables, and figuring out where the problems were and how to solve them.
 
-(define-record channel (box mutex semaphore-get semaphore-put))
+(define-record channel (read-mut read-cv read-box val-cv val-box))
 
 (define (blodwen-make-channel ty)
   (make-channel
-   (box '())
-   (make-mutex)
-   (blodwen-make-semaphore 0)
-   (blodwen-make-semaphore 0)))
+    (make-mutex)
+    (make-condition)
+    (box #t)
+    (make-condition)
+    (box '())
+    ))
 
-(define (blodwen-channel-get ty chan)
-  (blodwen-semaphore-post (channel-semaphore-get chan))
-  (blodwen-semaphore-wait (channel-semaphore-put chan))
-  (with-mutex (channel-mutex chan)
-    (let* [(chan-box (channel-box chan))
-           (chan-msg-queue (unbox chan-box))]
-      (set-box! chan-box (cdr chan-msg-queue))
-      (car chan-msg-queue)
+; block on the read status using read-cv until the value has been read
+(define (channel-put-while-helper chan)
+  (let ([read-mut (channel-read-mut chan)]
+        [read-box (channel-read-box chan)]
+        [read-cv  (channel-read-cv  chan)]
+        )
+    (if (unbox read-box)
+      (void)    ; val has been read, so everything is fine
+      (begin    ; otherwise, block/spin with cv
+        (condition-wait read-cv read-mut)
+        (channel-put-while-helper chan)
+        )
       )))
 
 (define (blodwen-channel-put ty chan val)
-  (with-mutex (channel-mutex chan)
-    (let* [(chan-box (channel-box chan))
-           (chan-msg-queue (unbox chan-box))]
-      (set-box! chan-box (append chan-msg-queue (list val)))))
-  (blodwen-semaphore-post (channel-semaphore-put chan))
-  (blodwen-semaphore-wait (channel-semaphore-get chan)))
+  (with-mutex (channel-read-mut chan)
+    (channel-put-while-helper chan)
+    (let ([read-box (channel-read-box chan)]
+          [val-box  (channel-val-box  chan)]
+          )
+      (set-box! val-box val)
+      (set-box! read-box #f)
+      ))
+  (condition-signal (channel-val-cv chan))
+  )
+
+; block on the value until it has been set
+(define (channel-get-while-helper chan)
+  (let ([read-mut (channel-read-mut chan)]
+        [read-box (channel-read-box chan)]
+        [val-cv   (channel-val-cv   chan)]
+        )
+    (if (unbox read-box)
+      (begin
+        (condition-wait val-cv read-mut)
+        (channel-get-while-helper chan)
+        )
+      (void)
+      )))
+
+(define (blodwen-channel-get ty chan)
+  (mutex-acquire (channel-read-mut chan))
+  (channel-get-while-helper chan)
+  (let* ([val-box  (channel-val-box  chan)]
+         [read-box (channel-read-box chan)]
+         [read-cv  (channel-read-cv  chan)]
+         [the-val  (unbox val-box)]
+         )
+    (set-box! val-box '())
+    (set-box! read-box #t)
+    (mutex-release (channel-read-mut chan))
+    (condition-signal read-cv)
+    the-val))
 
 ;; Mutex
 
@@ -413,9 +442,6 @@
 
 (define (blodwen-hasenv var)
   (if (eq? (getenv var) #f) 0 1))
-
-(define (blodwen-system cmd)
-  (system cmd))
 
 ;; Randoms
 (define random-seed-register 0)

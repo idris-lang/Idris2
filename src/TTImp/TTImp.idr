@@ -360,7 +360,7 @@ mutual
 
   export
   Show ImpDecl where
-    show (IClaim _ _ _ opts ty) = show opts ++ " " ++ show ty
+    show (IClaim _ c _ opts ty) = show opts ++ " " ++ show c ++ " " ++ show ty
     show (IData _ _ d) = show d
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"
     show (IParameters _ ps ds)

@@ -5,7 +5,7 @@ import public Parser.Lexer.Common
 import Data.List1
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Libraries.Data.String.Extra
 import public Libraries.Text.Bounded
 import Libraries.Text.Lexer.Tokenizer
@@ -60,7 +60,7 @@ Show Token where
   show StringEnd = "string end"
   show InterpBegin = "string interp begin"
   show InterpEnd = "string interp end"
-  show (StringLit n x) = "string" ++ replicate n '#' ++ " " ++ show x
+  show (StringLit n x) = "string" ++ Extra.replicate n '#' ++ " " ++ show x
   -- Identifiers
   show (HoleIdent x) = "hole identifier " ++ x
   show (Ident x) = "identifier " ++ x
@@ -89,7 +89,7 @@ Pretty Token where
   pretty StringEnd = reflow "string end"
   pretty InterpBegin = reflow "string interp begin"
   pretty InterpEnd = reflow "string interp end"
-  pretty (StringLit n x) = pretty ("string" ++ String.Extra.replicate n '#') <++> dquotes (pretty x)
+  pretty (StringLit n x) = pretty ("string" ++ Extra.replicate n '#') <++> dquotes (pretty x)
   -- Identifiers
   pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
   pretty (Ident x) = pretty "identifier" <++> pretty x
@@ -174,14 +174,14 @@ stringBegin : Lexer
 stringBegin = many (is '#') <+> (is '"')
 
 stringEnd : Nat -> String
-stringEnd hashtag = "\"" ++ replicate hashtag '#'
+stringEnd hashtag = "\"" ++ Extra.replicate hashtag '#'
 
 multilineBegin : Lexer
 multilineBegin = many (is '#') <+> (exact "\"\"\"") <+>
                     manyUntil newline space <+> newline
 
 multilineEnd : Nat -> String
-multilineEnd hashtag = "\"\"\"" ++ replicate hashtag '#'
+multilineEnd hashtag = "\"\"\"" ++ Extra.replicate hashtag '#'
 
 -- Do this as an entire token, because the contents will be processed by
 -- a specific back end
@@ -219,7 +219,7 @@ symbols = [",", ";", "_", "`"]
 export
 groupSymbols : List String
 groupSymbols = [".(", -- for things such as Foo.Bar.(+)
-    "@{", "[|", "(", "{", "[<", "[>", "[", "`(", "`{{", "`["]
+    "@{", "[|", "(", "{", "[<", "[>", "[", "`(", "`{", "`["]
 
 export
 groupClose : String -> String
@@ -232,7 +232,7 @@ groupClose "[<" = "]"
 groupClose "[>" = "]"
 groupClose "{" = "}"
 groupClose "`(" = ")"
-groupClose "`{{" = "}}"
+groupClose "`{" = "}"
 groupClose "`[" = "]"
 groupClose _ = ""
 
@@ -258,7 +258,7 @@ reservedSymbols : List String
 reservedSymbols
     = symbols ++ groupSymbols ++ (groupClose <$> groupSymbols) ++
       ["%", "\\", ":", "=", ":=", "|", "|||", "<-", "->", "=>", "?", "!",
-       "&", "**", "..", "~"]
+       "&", "**", "..", "~", "@"]
 
 fromBinLit : String -> Integer
 fromBinLit str
@@ -293,7 +293,7 @@ fromOctLit str
 mutual
   stringTokens : Bool -> Nat -> Tokenizer Token
   stringTokens multi hashtag
-      = let escapeChars = "\\" ++ replicate hashtag '#'
+      = let escapeChars = "\\" ++ Extra.replicate hashtag '#'
             interpStart = escapeChars ++ "{"
             escapeLexer = escape (exact escapeChars) any
             charLexer = non $ exact (if multi then multilineEnd hashtag else stringEnd hashtag)
@@ -320,11 +320,11 @@ mutual
                   (exact . groupClose)
                   Symbol
       <|> match (choice $ exact <$> symbols) Symbol
-      <|> match doubleLit (\x => DoubleLit (cast x))
-      <|> match binLit (\x => IntegerLit (fromBinLit x))
-      <|> match hexLit (\x => IntegerLit (fromHexLit x))
-      <|> match octLit (\x => IntegerLit (fromOctLit x))
-      <|> match digits (\x => IntegerLit (cast x))
+      <|> match doubleLit (DoubleLit . cast)
+      <|> match binUnderscoredLit (IntegerLit . fromBinLit . removeUnderscores)
+      <|> match hexUnderscoredLit (IntegerLit . fromHexLit . removeUnderscores)
+      <|> match octUnderscoredLit (IntegerLit . fromOctLit . removeUnderscores)
+      <|> match digitsUnderscoredLit (IntegerLit . cast . removeUnderscores)
       <|> compose multilineBegin
                   (const $ StringBegin True)
                   countHashtag
@@ -337,7 +337,7 @@ mutual
                   (stringTokens False)
                   (\hashtag => exact (stringEnd hashtag) <+> reject (is '"'))
                   (const StringEnd)
-      <|> match charLit (\x => CharLit (stripQuotes x))
+      <|> match charLit (CharLit . stripQuotes)
       <|> match dotIdent (\x => DotIdent (assert_total $ strTail x))
       <|> match namespacedIdent parseNamespace
       <|> match identNormal parseIdent
@@ -349,17 +349,22 @@ mutual
       parseIdent : String -> Token
       parseIdent x = if x `elem` keywords then Keyword x
                      else Ident x
+
       parseNamespace : String -> Token
       parseNamespace ns = case mkNamespacedIdent ns of
                                (Nothing, ident) => parseIdent ident
                                (Just ns, n)     => DotSepIdent ns n
+
       countHashtag : String -> Nat
       countHashtag = count (== '#') . unpack
 
       removeOptionalLeadingSpace : String -> String
       removeOptionalLeadingSpace str = case strM str of
-        StrCons ' ' tail => tail
-        _ => str
+                                            StrCons ' ' tail => tail
+                                            _ => str
+
+      removeUnderscores : String -> String
+      removeUnderscores s = fastPack $ filter (/= '_') (fastUnpack s)
 
 export
 lexTo : Lexer ->

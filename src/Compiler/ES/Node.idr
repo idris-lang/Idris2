@@ -3,12 +3,13 @@ module Compiler.ES.Node
 
 import Idris.Env
 
-import Compiler.ES.ES
+import Compiler.ES.Codegen
 
 import Compiler.Common
 import Compiler.CompileExpr
 
 import Core.Context
+import Core.Options
 import Core.TT
 import Libraries.Utils.Path
 
@@ -16,6 +17,8 @@ import System
 import System.File
 
 import Data.Maybe
+
+%default covering
 
 findNode : IO String
 findNode = do
@@ -26,8 +29,7 @@ findNode = do
 
 ||| Compile a TT expression to Node
 compileToNode : Ref Ctxt Defs -> ClosedTerm -> Core String
-compileToNode c tm = do
-  compileToES c tm ["node", "javascript"]
+compileToNode c tm = compileToES c Node tm ["node", "javascript"]
 
 ||| Node implementation of the `compileExpr` interface.
 compileExpr :  Ref Ctxt Defs
@@ -56,4 +58,4 @@ executeExpr c tmpDir tm =
 ||| Codegen wrapper for Node implementation.
 export
 codegenNode : Codegen
-codegenNode = MkCG compileExpr executeExpr
+codegenNode = MkCG compileExpr executeExpr Nothing Nothing

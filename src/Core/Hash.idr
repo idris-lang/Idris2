@@ -7,7 +7,7 @@ import Core.CompileExpr
 import Data.List
 import Data.List1
 import Libraries.Data.List.Lazy
-import Data.Strings
+import Data.String
 import Libraries.Data.String.Iterator
 import Data.Vect
 
@@ -227,6 +227,14 @@ Hashable CFType where
       h `hashWithSalt` 15 `hashWithSalt` n `hashWithSalt` fs
     CFUser n xs =>
       h `hashWithSalt` 16 `hashWithSalt` n `hashWithSalt` xs
+    CFInt8 =>
+      h `hashWithSalt` 17
+    CFInt16 =>
+      h `hashWithSalt` 18
+    CFInt32 =>
+      h `hashWithSalt` 19
+    CFInt64 =>
+      h `hashWithSalt` 20
 
 export
 Hashable Constant where
@@ -375,6 +383,9 @@ Hashable (PrimFn arity) where
       h `hashWithSalt` 36
     Crash =>
       h `hashWithSalt` 37
+
+    DoublePow =>
+      h `hashWithSalt` 38
 
 export
 Hashable ConInfo where

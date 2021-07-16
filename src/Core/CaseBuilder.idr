@@ -362,10 +362,7 @@ conTypeEq (CName x tag) (CName x' tag')
              Yes Refl => Just Refl
              No contra => Nothing
 conTypeEq CDelay CDelay = Just Refl
-conTypeEq (CConst x) (CConst y)
-   = case constantEq x y of
-          Nothing => Nothing
-          Just Refl => Just Refl
+conTypeEq (CConst x) (CConst y) = cong CConst <$> constantEq x y
 conTypeEq _ _ = Nothing
 
 data Group : List Name -> -- variables in scope
@@ -508,7 +505,7 @@ groupCons fc fn pvars cs
     -- The type of 'ConGroup' ensures that we refer to the arguments by
     -- the same name in each of the clauses
     addConG {vars'} {todo'} n tag pargs pats pid rhs []
-        = do cty <- the (Core (NF vars')) $ if n == UN "->"
+        = do cty <- if n == UN "->"
                       then pure $ NBind fc (MN "_" 0) (Pi fc top Explicit (NType fc)) $
                               (\d, a => pure $ NBind fc (MN "_" 1) (Pi fc top Explicit (NErased fc False))
                                 (\d, a => pure $ NType fc))
@@ -895,9 +892,9 @@ getScore : {ns : _} ->
 getScore fc phase name npss
     = do catch (do sameType fc phase name (mkEnv fc ns) npss
                    pure (Right ()))
-               (\err => case err of
-                             CaseCompile _ _ err => pure (Left err)
-                             _ => throw err)
+               \case
+                 CaseCompile _ _ err => pure $ Left err
+                 err => throw err
 
 ||| Pick the leftmost matchable thing with all constructors in the
 ||| same family, or all variables, or all the same type constructor.
@@ -1075,7 +1072,7 @@ mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a args
 mkPat args orig (Ref fc (TyCon t a) n) = pure $ PTyCon fc n a args
 mkPat args orig (Ref fc Func n)
   = do prims <- getPrimitiveNames
-       mtm <- normalisePrims (const True) isPConst prims n args orig []
+       mtm <- normalisePrims (const True) isPConst True prims n args orig []
        case mtm of
          Just tm => mkPat [] tm tm
          Nothing =>

@@ -2,6 +2,7 @@ module Compiler.Scheme.ChezSep
 
 import Compiler.Common
 import Compiler.CompileExpr
+import Compiler.Generated
 import Compiler.Inline
 import Compiler.Scheme.Common
 import Compiler.Scheme.Chez
@@ -21,8 +22,7 @@ import Libraries.Utils.Path
 import Data.List
 import Data.List1
 import Data.Maybe
-import Libraries.Data.NameMap
-import Data.Strings
+import Data.String
 import Data.Vect
 
 import Idris.Env
@@ -31,6 +31,10 @@ import System
 import System.Directory
 import System.File
 import System.Info
+
+import Libraries.Data.NameMap
+import Libraries.Data.Version
+import Libraries.Utils.String
 
 %default covering
 
@@ -45,7 +49,7 @@ schHeader libs compilationUnits = unlines
   , "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")"
   , "                           (load-shared-object \"ws2_32.dll\")]"
   , "  [else (load-shared-object \"libc.so\")]"
-  , unlines ["  (load-shared-object \"" ++ escapeString lib ++ "\")" | lib <- libs]
+  , unlines ["  (load-shared-object \"" ++ escapeStringChez lib ++ "\")" | lib <- libs]
   , ")"
   ]
 
@@ -75,10 +79,11 @@ startChezCmd chez appDirSh targetSh = unlines
 startChezWinSh : String -> String -> String -> String
 startChezWinSh chez appDirSh targetSh = unlines
     [ "#!/bin/sh"
+    , "# " ++ (generatedString "Chez")
     , ""
     , "set -e # exit on any error"
     , ""
-    , "DIR=$(dirname \"$(realpath \"$0\")\")"
+    , "DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
     , "export PATH=\"$DIR/" ++ appDirSh ++ "\":$PATH"
     , "\"$CHEZ\" --program \"$DIR/" ++ targetSh ++ "\" \"$@\""
@@ -150,6 +155,7 @@ compileToSS c chez appdir tm = do
   ds <- getDirectives Chez
   libs <- findLibs ds
   traverse_ copyLib libs
+  version <- coreLift $ chezVersion chez
 
   -- get the material for compilation
   cdata <- getCompileData False Cases tm
@@ -213,8 +219,9 @@ compileToSS c chez appdir tm = do
             ++ "  (import (chezscheme) (support) " ++ imports ++ ")\n\n"
       let footer = ")"
 
-      fgndefs <- traverse (Chez.getFgnCall appdir) cu.definitions
+      fgndefs <- traverse (Chez.getFgnCall version) cu.definitions
       compdefs <- traverse (getScheme Chez.chezExtPrim Chez.chezString) cu.definitions
+      loadlibs <- traverse (loadLib appdir) (mapMaybe fst fgndefs)
 
       -- write the files
       log "compiler.scheme.chez" 3 $ "Generating code for " ++ chezLib
@@ -222,7 +229,7 @@ compileToSS c chez appdir tm = do
         [header]
         ++ map snd fgndefs  -- definitions using foreign libs
         ++ compdefs
-        ++ map fst fgndefs  -- foreign library load statements
+        ++ loadlibs  -- foreign library load statements
         ++ [footer]
 
       Core.writeFile (appdir </> chezLib <.> "hash") cuHash
@@ -307,4 +314,4 @@ executeExpr c tmpDir tm
 ||| Codegen wrapper for Chez scheme implementation.
 export
 codegenChezSep : Codegen
-codegenChezSep = MkCG (compileExpr True) executeExpr
+codegenChezSep = MkCG (compileExpr True) executeExpr Nothing Nothing

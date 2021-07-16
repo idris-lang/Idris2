@@ -32,9 +32,9 @@ drop Z     xs      = xs
 drop (S n) []      = []
 drop (S n) (_::xs) = drop n xs
 
-||| Satisfiable if `k` is a valid index into `xs`
+||| Satisfiable if `k` is a valid index into `xs`.
 |||
-||| @ k the potential index
+||| @ k  the potential index
 ||| @ xs the list into which k may be an index
 public export
 data InBounds : (k : Nat) -> (xs : List a) -> Type where
@@ -45,10 +45,14 @@ data InBounds : (k : Nat) -> (xs : List a) -> Type where
 
 public export
 Uninhabited (InBounds k []) where
-    uninhabited InFirst impossible
-    uninhabited (InLater _) impossible
+  uninhabited InFirst impossible
+  uninhabited (InLater _) impossible
 
-||| Decide whether `k` is a valid index into `xs`
+export
+Uninhabited (InBounds k xs) => Uninhabited (InBounds (S k) (x::xs)) where
+  uninhabited (InLater y) = uninhabited y
+
+||| Decide whether `k` is a valid index into `xs`.
 public export
 inBounds : (k : Nat) -> (xs : List a) -> Dec (InBounds k xs)
 inBounds _ [] = No uninhabited
@@ -103,6 +107,8 @@ dropWhile : (p : a -> Bool) -> List a -> List a
 dropWhile p []      = []
 dropWhile p (x::xs) = if p x then dropWhile p xs else x::xs
 
+||| Applied to a predicate and a list, returns the list of those elements that
+||| satisfy the predicate.
 public export
 filter : (p : a -> Bool) -> List a -> List a
 filter p [] = []
@@ -116,6 +122,25 @@ public export
 find : (p : a -> Bool) -> (xs : List a) -> Maybe a
 find p [] = Nothing
 find p (x::xs) = if p x then Just x else find p xs
+
+||| Find the index and proof of InBounds of the first element (if exists) of a
+||| list that satisfies the given test, else `Nothing`.
+public export
+findIndex : (a -> Bool) -> (xs : List a) -> Maybe $ Fin (length xs)
+findIndex _ [] = Nothing
+findIndex p (x :: xs) = if p x
+  then Just FZ
+  else FS <$> findIndex p xs
+
+||| Find indices of all elements that satisfy the given test.
+public export
+findIndices : (a -> Bool) -> List a -> List Nat
+findIndices p = h 0 where
+  h : Nat -> List a -> List Nat
+  h _         []  = []
+  h lvl (x :: xs) = if p x
+    then lvl :: h (S lvl) xs
+    else        h (S lvl) xs
 
 ||| Find associated information in a list using a custom comparison.
 public export
@@ -196,6 +221,9 @@ public export
 union : Eq a => List a -> List a -> List a
 union = unionBy (==)
 
+||| Like @span@ but using a predicate that might convert a to b, i.e. given a
+||| predicate from a to Maybe b and a list of as, returns a tuple consisting of
+||| the longest prefix of the list where a -> Just b, and the rest of the list.
 public export
 spanBy : (a -> Maybe b) -> List a -> (List b, List a)
 spanBy p [] = ([], [])
@@ -203,6 +231,9 @@ spanBy p (x :: xs) = case p x of
   Nothing => ([], x :: xs)
   Just y => let (ys, zs) = spanBy p xs in (y :: ys, zs)
 
+||| Given a predicate and a list, returns a tuple consisting of the longest
+||| prefix of the list whose elements satisfy the predicate, and the rest of the
+||| list.
 public export
 span : (a -> Bool) -> List a -> (List a, List a)
 span p []      = ([], [])
@@ -671,6 +702,11 @@ Uninhabited ([] = x :: xs) where
 export
 Uninhabited (x :: xs = []) where
   uninhabited Refl impossible
+
+export
+{0 xs : List a} -> Either (Uninhabited $ x === y) (Uninhabited $ xs === ys) => Uninhabited (x::xs = y::ys) where
+  uninhabited @{Left  z} Refl = uninhabited @{z} Refl
+  uninhabited @{Right z} Refl = uninhabited @{z} Refl
 
 ||| (::) is injective
 export

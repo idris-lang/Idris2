@@ -18,7 +18,7 @@ import TTImp.Elab.Prim
 import Data.List
 import Data.List1
 import Data.Maybe
-import Data.Strings
+import Data.String
 
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
@@ -30,6 +30,8 @@ import public Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import Parser.Lexer.Source
+
+%default covering
 
 public export
 data IdrisDocAnn
@@ -242,13 +244,14 @@ getDocsForName fc n
                 | Nothing => pure Empty
            ty <- resugar [] =<< normaliseHoles defs [] (type def)
            let prettyName = pretty (nameRoot nm)
-           let projDecl = hsep [ fun nm prettyName, colon, prettyTerm ty ]
-           let [(_, str)] = lookupName nm (docstrings syn)
-                  | _ => pure projDecl
-           pure $ annotate (Decl nm)
-                $ vcat [ projDecl
-                       , annotate DocStringBody $ vcat (reflowDoc str)
-                       ]
+           let projDecl = annotate (Decl nm) $ hsep [ fun nm prettyName, colon, prettyTerm ty ]
+           case lookupName nm (docstrings syn) of
+                [(_, "")] => pure projDecl
+                [(_, str)] =>
+                  pure $ vcat [ projDecl
+                              , annotate DocStringBody $ vcat (reflowDoc str)
+                              ]
+                _ => pure projDecl
 
     getFieldsDoc : Name -> Core (List (Doc IdrisDocAnn))
     getFieldsDoc recName
@@ -342,7 +345,7 @@ summarise n -- n is fully qualified
                         _ => Nothing
          ty <- normaliseHoles defs [] (type def)
          pure (nameRoot n ++ " : " ++ show !(resugar [] ty) ++
-                  maybe "" (\d => "\n\t" ++ d) doc)
+                  maybe "" ((++) "\n\t") doc)
 
 -- Display all the exported names in the given namespace
 export

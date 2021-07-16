@@ -1,9 +1,9 @@
-||| A simple parser combinator library for strings. Inspired by attoparsec zepto.
+||| A simple parser combinator library for String. Inspired by attoparsec zepto.
 module Data.String.Parser
 import public Control.Monad.Identity
 import Control.Monad.Trans
 
-import Data.Strings
+import Data.String
 import Data.Fin
 import Data.List
 import Data.List1

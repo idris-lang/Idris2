@@ -1,0 +1,5 @@
+rm -rf build
+
+$1 --no-banner --no-color --console-width 0 -o integers TestIntegers.idr > /dev/null
+./build/exec/integers
+

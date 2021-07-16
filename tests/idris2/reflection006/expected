@@ -10,7 +10,7 @@ You may be unintentionally shadowing the associated global definitions:
   any is shadowing Prelude.Interfaces.any
 Error: While processing right hand side of commutes. Error during reflection: Not done
 
-refleq.idr:24:16--24:21
+refleq:24:16--24:21
  20 |          logMsg "" 0 (show env)
  21 |          solveReflected g
  22 | 

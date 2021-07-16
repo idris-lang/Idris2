@@ -8,7 +8,6 @@ import Core.Context
 import Core.Name
 import Core.TT
 
-import Libraries.Data.Bool.Extra
 import Data.List
 import Data.Vect
 
@@ -170,6 +169,7 @@ schOp StrSubstr [x, y, z] = pure $ op "string-substr" [x, y, z]
 -- `e` is Euler's number, which approximates to: 2.718281828459045
 schOp DoubleExp [x] = pure $ op "flexp" [x] -- Base is `e`. Same as: `pow(e, x)`
 schOp DoubleLog [x] = pure $ op "fllog" [x] -- Base is `e`.
+schOp DoublePow [x, y] = pure $ op "expt" [x, y]
 schOp DoubleSin [x] = pure $ op "flsin" [x]
 schOp DoubleCos [x] = pure $ op "flcos" [x]
 schOp DoubleTan [x] = pure $ op "fltan" [x]
@@ -294,17 +294,17 @@ mutual
   used n (NmRef _ _) = False
   used n (NmLam _ _ sc) = used n sc
   used n (NmLet _ _ v sc) = used n v || used n sc
-  used n (NmApp _ f args) = used n f || anyTrue (map (used n) args)
-  used n (NmCon _ _ _ _ args) = anyTrue (map (used n) args)
-  used n (NmOp _ _ args) = anyTrue (toList (map (used n) args))
-  used n (NmExtPrim _ _ args) = anyTrue (map (used n) args)
+  used n (NmApp _ f args) = used n f || any (used n) args
+  used n (NmCon _ _ _ _ args) = any (used n) args
+  used n (NmOp _ _ args) = any (used n) (toList args)
+  used n (NmExtPrim _ _ args) = any (used n) args
   used n (NmForce _ _ t) = used n t
   used n (NmDelay _ _ t) = used n t
   used n (NmConCase _ sc alts def)
-      = used n sc || anyTrue (map (usedCon n) alts)
+      = used n sc || any (usedCon n) alts
             || maybe False (used n) def
   used n (NmConstCase _ sc alts def)
-      = used n sc || anyTrue (map (usedConst n) alts)
+      = used n sc || any (usedConst n) alts
             || maybe False (used n) def
   used n _ = False
 

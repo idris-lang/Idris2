@@ -4,6 +4,22 @@ import public Data.List
 
 %default total
 
+public export
+data Namespace = MkNS (List String) -- namespace, stored in reverse order
+
+public export
+data ModuleIdent = MkMI (List String) -- module identifier, stored in reverse order
+
+export
+showSep : String -> List String -> String
+showSep sep [] = ""
+showSep sep [x] = x
+showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
+
+export
+Show Namespace where
+  show (MkNS ns) = showSep "." (reverse ns)
+
 -- 'FilePos' represents the position of
 -- the source information in the file (or REPL).
 -- in the form of '(line-no, column-no)'.
@@ -11,13 +27,31 @@ public export
 FilePos : Type
 FilePos = (Int, Int)
 
--- 'FC' represents the source location of the term.
--- The first 'FilePos' indicates the starting position.
--- the second 'FilePos' indicates the start of the next term.
 public export
-data FC : Type where
-   MkFC : String -> FilePos -> FilePos -> FC
-   EmptyFC : FC
+data VirtualIdent : Type where
+  Interactive : VirtualIdent
+
+public export
+data OriginDesc : Type where
+  ||| Anything that originates in physical Idris source files is assigned a
+  ||| `PhysicalIdrSrc modIdent`,
+  |||   where `modIdent` is the top-level module identifier of that file.
+  PhysicalIdrSrc : (ident : ModuleIdent) -> OriginDesc
+  ||| Anything parsed from a package file is decorated with `PhysicalPkgSrc fname`,
+  |||   where `fname` is path to the package file.
+  PhysicalPkgSrc : (fname : String) -> OriginDesc
+  Virtual : (ident : VirtualIdent) -> OriginDesc
+
+||| A file context is a filename together with starting and ending positions.
+||| It's often carried by AST nodes that might have been created from a source
+||| file or by the compiler. That makes it useful to have the notion of
+||| `EmptyFC` as part of the type.
+public export
+data FC = MkFC        OriginDesc FilePos FilePos
+        | ||| Virtual FCs are FC attached to desugared/generated code. They can help with marking
+          ||| errors, but we shouldn't attach semantic highlighting metadata to them.
+          MkVirtualFC OriginDesc FilePos FilePos
+        | EmptyFC
 
 public export
 emptyFC : FC
@@ -34,10 +68,14 @@ public export
 data Constant
     = I Int
     | BI Integer
-    | B8 Int
-    | B16 Int
-    | B32 Int
-    | B64 Integer
+    | I8 Int8
+    | I16 Int16
+    | I32 Int32
+    | I64 Int64
+    | B8 Bits8
+    | B16 Bits16
+    | B32 Bits32
+    | B64 Bits64
     | Str String
     | Ch Char
     | Db Double
@@ -45,6 +83,10 @@ data Constant
 
     | IntType
     | IntegerType
+    | Int8Type
+    | Int16Type
+    | Int32Type
+    | Int64Type
     | Bits8Type
     | Bits16Type
     | Bits32Type
@@ -55,24 +97,14 @@ data Constant
     | WorldType
 
 public export
-data Namespace = MkNS (List String) -- namespace, stored in reverse order
-
-export
-showSep : String -> List String -> String
-showSep sep [] = ""
-showSep sep [x] = x
-showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
-
-export
-Show Namespace where
-  show (MkNS ns) = showSep "." (reverse ns)
-
-public export
 data Name = UN String -- user defined name
           | MN String Int -- machine generated name
           | NS Namespace Name -- name in a namespace
           | DN String Name -- a name and how to display it
           | RF String -- record field name
+          | Nested (Int, Int) Name -- nested function name
+          | CaseBlock Int Int -- case block nested in (resolved) name
+          | WithBlock Int Int -- with block nested in (resolved) name
 
 export
 Show Name where
@@ -81,6 +113,10 @@ Show Name where
   show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
   show (DN str y) = str
   show (RF n) = "." ++ n
+  show (Nested (outer, idx) inner)
+      = show outer ++ ":" ++ show idx ++ ":" ++ show inner
+  show (CaseBlock outer i) = "case block in " ++ show outer
+  show (WithBlock outer i) = "with block in " ++ show outer
 
 public export
 data Count = M0 | M1 | MW

@@ -27,6 +27,10 @@ namespace Any
     uninhabited (Here _) impossible
     uninhabited (There _) impossible
 
+  export
+  {0 p : a -> Type} -> Uninhabited (p x) => Uninhabited (Any p xs) => Uninhabited (Any p $ x::xs) where
+    uninhabited (Here y) = uninhabited y
+    uninhabited (There y) = uninhabited y
 
   ||| Modify the property given a pointwise function
   export
@@ -67,12 +71,30 @@ namespace All
     Nil  : All p Nil
     (::) : {0 xs : List a} -> p x -> All p xs -> All p (x :: xs)
 
+  Either (Uninhabited $ p x) (Uninhabited $ All p xs) => Uninhabited (All p $ x::xs) where
+    uninhabited @{Left  _} (px::pxs) = uninhabited px
+    uninhabited @{Right _} (px::pxs) = uninhabited pxs
 
   ||| Modify the property given a pointwise function
   export
   mapProperty : (f : {0 x : a} -> p x -> q x) -> All p l -> All q l
   mapProperty f [] = []
   mapProperty f (p::pl) = f p :: mapProperty f pl
+
+  ||| Modify the property given a pointwise interface function
+  public export
+  imapProperty : (0 i : Type -> Type)
+              -> (f : {0 a : Type} -> i a => p a -> q a)
+              -> {0 types : List Type}
+              -> All i types => All p types -> All q types
+  imapProperty i f @{[]} [] = []
+  imapProperty i f @{ix :: ixs} (x :: xs) = f @{ix} x :: imapProperty i f @{ixs} xs
+
+  ||| Forget property source for a homogeneous collection of properties
+  public export
+  forget : All (const type) types -> List type
+  forget [] = []
+  forget (x :: xs) = x :: forget xs
 
   ||| Given a decision procedure for a property, decide whether all elements of
   ||| a list satisfy it.
@@ -96,6 +118,20 @@ namespace All
   zipPropertyWith f [] [] = []
   zipPropertyWith f (px :: pxs) (qx :: qxs)
     = f px qx :: zipPropertyWith f pxs qxs
+
+  export
+  All Show (map p xs) => Show (All p xs) where
+    show pxs = "[" ++ show' "" pxs ++ "]"
+      where
+        show' : String -> All Show (map p xs') => All p xs' -> String
+        show' acc @{[]} [] = acc
+        show' acc @{[_]} [px] = acc ++ show px
+        show' acc @{_ :: _} (px :: pxs) = show' (acc ++ show px ++ ", ") pxs
+
+  ||| A heterogeneous list of arbitrary types
+  public export
+  HList : List Type -> Type
+  HList = All id
 
 ------------------------------------------------------------------------
 -- Relationship between all and any

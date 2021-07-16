@@ -11,7 +11,7 @@ import Core.Options
 import Data.List
 import Data.List1
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Data.Either
 
 import System
@@ -22,6 +22,7 @@ public export
 data PkgCommand
       = Build
       | Install
+      | InstallWithSrc
       | MkDoc
       | Typecheck
       | Clean
@@ -32,6 +33,7 @@ export
 Show PkgCommand where
   show Build = "--build"
   show Install = "--install"
+  show InstallWithSrc = "--install-with-src"
   show MkDoc = "--mkdoc"
   show Typecheck = "--typecheck"
   show Clean = "--clean"
@@ -45,6 +47,17 @@ data DirCommand
 export
 Show DirCommand where
   show LibDir = "--libdir"
+
+||| Help topics
+public export
+data HelpTopic
+  =
+    ||| Interactive debugging topics
+   HelpLogging
+
+recogniseHelpTopic : String -> Maybe HelpTopic
+recogniseHelpTopic "logging" = pure HelpLogging
+recogniseHelpTopic _ = Nothing
 
 ||| CLOpt - possible command line options
 public export
@@ -75,7 +88,7 @@ data CLOpt
    ||| Display Idris version
   Version |
    ||| Display help text
-  Help |
+  Help (Maybe HelpTopic) |
    ||| Suppress the banner
   NoBanner |
    ||| Run Idris 2 in quiet mode
@@ -91,7 +104,7 @@ data CLOpt
    ||| Add a package as a dependency
   PkgPath String |
    ||| Build or install a given package, depending on PkgCommand
-  Package PkgCommand String |
+  Package PkgCommand (Maybe String) |
    ||| Show locations of data/library directories
   Directory DirCommand |
    ||| The input Idris file
@@ -118,16 +131,26 @@ data CLOpt
   FindIPKG |
   Timing |
   DebugElabCheck |
+  AltErrorCount Nat |
   BlodwenPaths |
+   ||| Treat warnings as errors
+  WarningsAsErrors |
+   ||| Do not print shadowing warnings
+  IgnoreShadowingWarnings |
+   ||| Use SHA256 hashes to determine if a source file needs rebuilding instead
+   ||| of modification time.
+  HashesInsteadOfModTime |
    ||| Apply experimental heuristics to case tree generation that
    ||| sometimes improves performance and reduces compiled code
    ||| size.
   CaseTreeHeuristics |
-  ||| Do not print shadowing warnings
-  IgnoreShadowingWarnings |
-  ||| Generate bash completion info
+   ||| Use incremental code generation, if the backend supports it
+  IncrementalCG String |
+   ||| Use whole program compilation - overrides IncrementalCG if set
+  WholeProgram |
+   ||| Generate bash completion info
   BashCompletion String String |
-  ||| Generate bash completion script
+   ||| Generate bash completion script
   BashCompletionScript String
 
 ||| Extract the host and port to bind the IDE socket to
@@ -135,7 +158,7 @@ export
 ideSocketModeAddress : List CLOpt -> (String, Int)
 ideSocketModeAddress []  = ("localhost", 38398)
 ideSocketModeAddress (IdeModeSocket hp :: _) =
-  let (h, p) = Strings.break (== ':') hp
+  let (h, p) = String.break (== ':') hp
       port = fromMaybe 38398 (portPart p >>= parsePositive)
       host = if h == "" then "localhost" else h
   in (host, port)
@@ -195,6 +218,10 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Don't implicitly import Prelude"),
            MkOpt ["--codegen", "--cg"] [Required "backend"] (\f => [SetCG f])
               (Just $ "Set code generator " ++ showDefault (codegen defaultSession)),
+           MkOpt ["--incremental-cg", "--inc"] [Required "backend"] (\f => [IncrementalCG f])
+             (Just "Incremental code generation on given backend"),
+           MkOpt ["--whole-program", "--wp"] [] [WholeProgram]
+             (Just "Use whole program compilation (overrides --inc)"),
            MkOpt ["--directive"] [Required "directive"] (\d => [Directive d])
               (Just $ "Pass a directive to the current code generator"),
            MkOpt ["--package", "-p"] [Required "package"] (\f => [PkgPath f])
@@ -211,8 +238,14 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Apply experimental optimizations to case tree generation"),
 
            optSeparator,
-           MkOpt ["--no-shadowing-warning"] [] [IgnoreShadowingWarnings]
+           MkOpt ["-Werror"] [] [WarningsAsErrors]
+              (Just "Treat warnings as errors"),
+           MkOpt ["-Wno-shadowing"] [] [IgnoreShadowingWarnings]
               (Just "Do not print shadowing warnings"),
+
+           optSeparator,
+           MkOpt ["-Xcheck-hashes"] [] [HashesInsteadOfModTime]
+             (Just "Use SHA256 hashes instead of modification time to determine if a source file needs rebuilding"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
@@ -224,20 +257,27 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
 
            optSeparator,
            MkOpt ["--init"] [Optional "package file"]
-              (\ f => [Package Init (fromMaybe "" f)])
+              (\ f => [Package Init f])
               (Just "Interactively initialise a new project"),
 
-           MkOpt ["--build"] [Required "package file"] (\f => [Package Build f])
+           MkOpt ["--build"] [Optional "package file"]
+               (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),
-           MkOpt ["--install"] [Required "package file"] (\f => [Package Install f])
+           MkOpt ["--install"] [Optional "package file"]
+              (\f => [Package Install f])
               (Just "Install the given package"),
-           MkOpt ["--mkdoc"] [Required "package file"] (\f => [Package MkDoc f])
+           MkOpt ["--install-with-src"] [Optional "package file"]
+              (\f => [Package InstallWithSrc f])
+              (Just "Install the given package"),
+           MkOpt ["--mkdoc"] [Optional "package file"]
+              (\f => [Package MkDoc f])
               (Just "Build documentation for the given package"),
-           MkOpt ["--typecheck"] [Required "package file"] (\f => [Package Typecheck f])
+           MkOpt ["--typecheck"] [Optional "package file"]
+              (\f => [Package Typecheck f])
               (Just "Typechecks the given package without code generation"),
-           MkOpt ["--clean"] [Required "package file"] (\f => [Package Clean f])
+           MkOpt ["--clean"] [Optional "package file"] (\f => [Package Clean f])
               (Just "Clean intermediate files/executables for the given package"),
-           MkOpt ["--repl"] [Required "package file"] (\f => [Package REPL f])
+           MkOpt ["--repl"] [Optional "package file"] (\f => [Package REPL f])
               (Just "Build the given package and launch a REPL instance."),
            MkOpt ["--find-ipkg"] [] [FindIPKG]
               (Just "Find and use an .ipkg file in a parent directory."),
@@ -277,7 +317,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            optSeparator,
            MkOpt ["--version", "-v"] [] [Version]
               (Just "Display version string"),
-           MkOpt ["--help", "-h", "-?"] [] [Help]
+           MkOpt ["--help", "-h", "-?"] [Optional "topic"] (\ tp => [Help (tp >>= recogniseHelpTopic)])
               (Just "Display help text"),
 
            -- Internal debugging options
@@ -295,6 +335,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               Nothing, -- dump VM Code to the given file
            MkOpt ["--debug-elab-check"] [] [DebugElabCheck]
               Nothing, -- do more elaborator checks (currently conversion in LinearCheck)
+           MkOpt ["--alt-error-count"] [RequiredNat "alternative count"] (\c => [AltErrorCount c])
+              (Just "Outputs errors for the given number of alternative parsing attempts."),
 
            optSeparator,
            -- bash completion
@@ -344,7 +386,7 @@ envsUsage = makeTextFromOptionsOrEnvs $ map (\e => (e.name, Just e.help)) envs
 
 export
 versionMsg : String
-versionMsg = "Idris 2, version " ++ showVersion True version
+versionMsg = "Idris 2, version " ++ show version
 
 export
 usage : String

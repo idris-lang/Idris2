@@ -1,7 +1,7 @@
 module Text.PrettyPrint.Prettyprinter.Util
 
 import Data.List
-import Data.Strings
+import Data.String
 import Text.PrettyPrint.Prettyprinter.Doc
 import Text.PrettyPrint.Prettyprinter.Render.String
 

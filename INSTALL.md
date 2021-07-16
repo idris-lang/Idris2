@@ -10,7 +10,7 @@ The requirements are:
 
 - A Scheme compiler; either Chez Scheme (default), or Racket.
 - `bash`, with `realpath`. On Linux, you probably already have this.
-  On a Mac, you can install this with `brew install coreutils`.
+  On a macOS, you can install this with `brew install coreutils`.
   On FreeBSD, OpenBSD and NetBSD, you can install `realpath` and `GNU make`
   using a package manager.  For instance, on OpenBSD you can install all of them
   with `pkg_add coreutils gmake` command.
@@ -34,8 +34,8 @@ of `make` in the following steps.
 
 ### 1: Set installation target directory
 
-- Change the `PREFIX` in `config.mk`. The default is to install in
-  `$HOME/.idris2`
+- Change the `PREFIX` in `config.mk` to the absolute path of your chosen
+installation destination. The default is to install in `$HOME/.idris2`
 
 If you have an existing Idris 2, go to Step 3. Otherwise, read on...
 
@@ -81,14 +81,23 @@ that everything has worked correctly. Assuming that `idris2` is in your
 `PATH`.
 
 - `make clean` -- to make sure you're building everything with the new version
-- `make all && make install` -- OR `make all IDRIS2_BOOT='idris2 --codegen racket' && make install` if using Racket.
+- `make all && make install` -- OR
+`make all IDRIS2_BOOT='idris2 --codegen racket' && make install`
+if using Racket.
 
 ### 5: Running tests
 
 After `make all`, type `make test` to check everything works. This uses the
 executable in `./build/exec`.
 
-### 6: (Optional) Installing the Idris 2 API
+### 6: (Optional) Enabling incremental compilation
+
+If you are working on Idris, incremental compilation means that rebuilds are
+much faster, at the cost of runtime performance being slower. To enable
+incremental compilation for the Chez back end, set the environment variable
+`IDRIS2_INC_CGS=chez`, or set the `--inc chez` flag in `idris2.ipkg`.
+
+### 7: (Optional) Installing the Idris 2 API
 
 You'll only need this if you're developing support tools, such as an external
 code generator. To do so, once everything is successfully installed, type:
@@ -99,7 +108,7 @@ The API will only work if you've completed the self-hosting step, step 4, since
 the intermediate code versions need to be consistent throughout. Otherwise, you
 will get an `Error in TTC: TTC data is in an older format` error.
 
-### 7: (Optional) Shell Auto-completion
+### 8: (Optional) Shell Auto-completion
 
 Idris2 supports tab auto-completion for Bash-like shells.
 
@@ -114,6 +123,7 @@ eval "$(idris2 --bash-completion-script idris2)"
 You can also add it to your `.bashrc` file.
 
 #### For ZSH Users
+
 From within ZSH, run the following commands:
 
 ```sh
@@ -144,8 +154,8 @@ brew install idris2
 
 ### Installing from nix
 
-If you are a [nix](https://nixos.org/features.html) user you can install Idris 2 together with all the requirements
-by running the following command:
+If you are a [nix](https://nixos.org/features.html) user you can install Idris
+2 together with all the requirements by running the following command:
 
 ```sh
 nix-env -i idris2
@@ -153,7 +163,8 @@ nix-env -i idris2
 
 ### Install from nix flakes
 
-If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can install Idris 2 together with all the requirements by running the following command:
+If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can install
+Idris 2 together with all the requirements by running the following command:
 
 ```sh
 nix profile install github:idris-lang/Idris2
@@ -163,8 +174,9 @@ nix profile install github:idris-lang/Idris2
 
 ### Run on emacs using nix flakes
 
-If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can run Idris 2 in emacs by running the following command:
+If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can run
+Idris 2 in emacs by running the following command:
 
 ```sh
-nix run idris-lang/Idris2#emacs-with-idris idrisCode.idr
+nix run github:idris-lang/Idris2#emacs-with-idris idrisCode.idr
 ```

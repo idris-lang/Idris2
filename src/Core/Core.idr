@@ -59,6 +59,14 @@ Pretty DotReason where
   pretty UnknownDot = reflow "Unknown reason"
   pretty UnderAppliedCon = reflow "Under-applied constructor"
 
+public export
+data Warning : Type where
+     UnreachableClause : {vars : _} ->
+                         FC -> Env Term vars -> Term vars -> Warning
+     ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
+     Deprecated : String -> Warning
+     GenericWarn : String -> Warning
+
 -- All possible errors, carrying a location
 public export
 data Error : Type where
@@ -75,6 +83,7 @@ data Error : Type where
                     FC -> Env Term vars -> Term vars -> Term vars -> Error -> Error
      ValidCase : {vars : _} ->
                  FC -> Env Term vars -> Either (Term vars) Error -> Error
+
      UndefinedName : FC -> Name -> Error
      InvisibleName : FC -> Name -> Maybe Namespace -> Error
      BadTypeConType : FC -> Name -> Error
@@ -140,14 +149,16 @@ data Error : Type where
      CantFindPackage : String -> Error
      LitFail : FC -> Error
      LexFail : FC -> String -> Error
-     ParseFail : FC -> String -> Error
+     ParseFail : List1 (FC, String) -> Error
      ModuleNotFound : FC -> ModuleIdent -> Error
      CyclicImports : List ModuleIdent -> Error
      ForceNeeded : Error
      InternalError : String -> Error
      UserError : String -> Error
-     NoForeignCC : FC -> Error
+     ||| Contains list of specifiers for which foreign call cannot be resolved
+     NoForeignCC : FC -> List String -> Error
      BadMultiline : FC -> String -> Error
+     Timeout : String -> Error
 
      InType : FC -> Name -> Error -> Error
      InCon : FC -> Name -> Error -> Error
@@ -155,13 +166,7 @@ data Error : Type where
      InRHS : FC -> Name -> Error -> Error
 
      MaybeMisspelling : Error -> List1 String -> Error
-
-public export
-data Warning : Type where
-     UnreachableClause : {vars : _} ->
-                         FC -> Env Term vars -> Term vars -> Warning
-     ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
-     Deprecated : String -> Warning
+     WarningAsError : Warning -> Error
 
 export
 Show TTCErrorMsg where
@@ -173,6 +178,15 @@ Show TTCErrorMsg where
 
 -- Simplest possible display - higher level languages should unelaborate names
 -- and display annotations appropriately
+
+export
+Show Warning where
+    show (UnreachableClause _ _ _) = ":Unreachable clause"
+    show (ShadowingGlobalDefs _ _) = ":Shadowing names"
+    show (Deprecated name) = ":Deprecated " ++ name
+    show (GenericWarn msg) = msg
+
+
 export
 Show Error where
   show (Fatal err) = show err
@@ -310,7 +324,7 @@ Show Error where
   show (CantFindPackage fname) = "Can't find package " ++ fname
   show (LitFail fc) = show fc ++ ":Can't parse literate"
   show (LexFail fc err) = show fc ++ ":Lexer error (" ++ show err ++ ")"
-  show (ParseFail fc err) = "Parse error (" ++ show err ++ ")"
+  show (ParseFail errs) = "Parse errors (" ++ show errs ++ ")"
   show (ModuleNotFound fc ns)
       = show fc ++ ":" ++ show ns ++ " not found"
   show (CyclicImports ns)
@@ -318,9 +332,10 @@ Show Error where
   show ForceNeeded = "Internal error when resolving implicit laziness"
   show (InternalError str) = "INTERNAL ERROR: " ++ str
   show (UserError str) = "Error: " ++ str
-  show (NoForeignCC fc) = show fc ++
-       ":The given specifier was not accepted by any available backend."
+  show (NoForeignCC fc specs) = show fc ++
+       ":The given specifier " ++ show specs ++ " was not accepted by any available backend."
   show (BadMultiline fc str) = "Invalid multiline string: " ++ str
+  show (Timeout str) = "Timeout in " ++ str
 
   show (InType fc n err)
        = show fc ++ ":When elaborating type of " ++ show n ++ ":\n" ++
@@ -339,6 +354,15 @@ Show Error where
      = show err ++ "\nDid you mean" ++ case ns of
          (n ::: []) => ": " ++ n ++ "?"
          _ => " any of: " ++ showSep ", " (map show (forget ns)) ++ "?"
+  show (WarningAsError w) = show w
+
+export
+getWarningLoc : Warning -> Maybe FC
+getWarningLoc (UnreachableClause fc _ _) = Just fc
+getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
+getWarningLoc (Deprecated _) = Nothing
+getWarningLoc (GenericWarn _) = Nothing
+
 export
 getErrorLoc : Error -> Maybe FC
 getErrorLoc (Fatal err) = getErrorLoc err
@@ -396,25 +420,21 @@ getErrorLoc (FileErr _ _) = Nothing
 getErrorLoc (CantFindPackage _) = Nothing
 getErrorLoc (LitFail loc) = Just loc
 getErrorLoc (LexFail loc _) = Just loc
-getErrorLoc (ParseFail loc _) = Just loc
+getErrorLoc (ParseFail ((loc, _) ::: _)) = Just loc
 getErrorLoc (ModuleNotFound loc _) = Just loc
 getErrorLoc (CyclicImports _) = Nothing
 getErrorLoc ForceNeeded = Nothing
 getErrorLoc (InternalError _) = Nothing
 getErrorLoc (UserError _) = Nothing
-getErrorLoc (NoForeignCC loc) = Just loc
+getErrorLoc (NoForeignCC loc _) = Just loc
 getErrorLoc (BadMultiline loc _) = Just loc
+getErrorLoc (Timeout _) = Nothing
 getErrorLoc (InType _ _ err) = getErrorLoc err
 getErrorLoc (InCon _ _ err) = getErrorLoc err
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
 getErrorLoc (InRHS _ _ err) = getErrorLoc err
 getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
-
-export
-getWarningLoc : Warning -> Maybe FC
-getWarningLoc (UnreachableClause fc _ _) = Just fc
-getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
-getWarningLoc (Deprecated _) = Nothing
+getErrorLoc (WarningAsError warn) = getWarningLoc warn
 
 -- Core is a wrapper around IO that is specialised for efficiency.
 export
@@ -434,11 +454,7 @@ coreFail e = MkCore (pure (Left e))
 
 export
 wrapError : (Error -> Error) -> Core a -> Core a
-wrapError fe (MkCore prog)
-    = MkCore (prog >>=
-                 (\x => case x of
-                             Left err => pure (Left (fe err))
-                             Right val => pure (Right val)))
+wrapError fe (MkCore prog) = MkCore $ mapFst fe <$> prog
 
 -- This would be better if we restrict it to a limited set of IO operations
 export
@@ -484,9 +500,9 @@ export %inline
 (>>=) : Core a -> (a -> Core b) -> Core b
 (>>=) (MkCore act) f
     = MkCore (act >>=
-                   (\x => case x of
-                               Left err => pure (Left err)
-                               Right val => runCore (f val)))
+                   \case
+                     Left err => pure $ Left err
+                     Right val => runCore $ f val)
 
 export %inline
 (>>) : Core () -> Core a -> Core a
@@ -563,6 +579,8 @@ interface Catchable m t | m where
     throw : {0 a : Type} -> t -> m a
     catch : m a -> (t -> m a) -> m a
 
+    breakpoint : m a -> m (Either t a)
+
 export
 Catchable Core Error where
   catch (MkCore prog) h
@@ -570,6 +588,7 @@ Catchable Core Error where
                     case p' of
                          Left e => let MkCore he = h e in he
                          Right val => pure (Right val))
+  breakpoint (MkCore prog) = MkCore (pure <$> prog)
   throw = coreFail
 
 -- Prelude.Monad.foldlM hand specialised for Core

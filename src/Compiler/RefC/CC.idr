@@ -9,6 +9,8 @@ import System
 import Idris.Version
 import Libraries.Utils.Path
 
+%default total
+
 findCC : IO String
 findCC
     = do Nothing <- getEnv "IDRIS2_CC"
@@ -58,11 +60,11 @@ compileCFile {asShared} objectFile outFile =
 
      let runcc = cc ++ " -Werror " ++ sharedFlag ++ objectFile ++
                        " -o " ++ outFile ++ " " ++
-                       fullprefix_dir dirs "lib" </> "libidris2_support.a" ++ " " ++
+                       (fullprefix_dir dirs "lib" </> "libidris2_support.a") ++ " " ++
                        "-lidris2_refc " ++
                        "-L" ++ fullprefix_dir dirs "refc " ++
                        clibdirs (lib_dirs dirs) ++
-                       "-lm"
+                       "-lgmp -lm"
 
      log "compiler.refc.cc" 10 runcc
      0 <- coreLift $ system runcc

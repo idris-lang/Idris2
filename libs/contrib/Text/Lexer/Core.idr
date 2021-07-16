@@ -4,7 +4,7 @@ import public Control.Delayed
 import Data.Bool
 import Data.List
 import Data.Nat
-import Data.Strings
+import Data.String
 
 ||| A language of token recognisers.
 ||| @ consumes If `True`, this recogniser is guaranteed to consume at

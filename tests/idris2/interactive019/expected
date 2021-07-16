@@ -4,7 +4,7 @@ Main> prim__cast_CharString : Char -> String
 Main.sameSig : Char -> String
   
 
-Data.Strings.singleton : Char -> String
+Data.String.singleton : Char -> String
   Totality: total
 
 Prelude.Show.show : Char -> String
@@ -13,7 +13,9 @@ Prelude.Cast.cast : Char -> String
 Main> Prelude.const : a -> b -> a
   Constant function. Ignores its second argument.
   Totality: total
-Main> Prelude.toUpper : Char -> Char
+Main> Builtin.fromChar : Char -> Char
+
+Prelude.toUpper : Char -> Char
   Convert a letter to the corresponding upper-case letter, if any.
   Non-letters are ignored.
   Totality: total

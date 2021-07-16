@@ -19,4 +19,21 @@ stripQuotes = stripSurrounds 1 1
 export
 lowerFirst : String -> Bool
 lowerFirst "" = False
-lowerFirst str = assert_total (isLower (prim__strHead str))
+lowerFirst str = isLower $ assert_total $ prim__strHead str
+
+escapeGeneric : Char -> List Char -> String -> String
+escapeGeneric esc toEscape = pack . foldr escape [] . unpack
+  where
+    escape : Char -> List Char -> List Char
+    escape c cs =
+      if elem c toEscape
+        then (esc :: c :: cs)
+        else (c :: cs)
+
+export
+escapeStringUnix : String -> String
+escapeStringUnix = escapeGeneric '\\' ['"', '\\']
+
+export
+escapeStringChez : String -> String
+escapeStringChez = escapeGeneric '\\' ['\'', '\\']

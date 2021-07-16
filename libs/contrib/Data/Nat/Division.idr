@@ -9,7 +9,6 @@ import Data.Nat.Equational
 import Data.Nat.Order
 import Data.Nat.Order.Strict
 import Data.Nat.Order.Properties
-import Decidable.Order
 import Decidable.Order.Strict
 
 import Data.Nat.Properties
@@ -39,9 +38,7 @@ fuelLemma numer predDenom fuel enough recurse =
                           (LTESucc LTEZero)
                           denom_lte_numer)
       succenough : S numer' `LTE` S fuel
-      succenough = transitive (S numer') numer (S fuel)
-                              numer'_lt_numer
-                              enough
+      succenough = transitive {rel = LTE} numer'_lt_numer enough
   in fromLteSucc succenough
 
 -- equivalence between the duplicate definitions in Data.Nar  ---
@@ -107,9 +104,10 @@ bound_mod'' (S fuel) numer predDenom enough  = case @@(Data.Nat.lte numer predDe
 export
 boundModNatNZ : (numer, denom : Nat) -> (0 denom_nz : NonZero denom)
               -> (modNatNZ numer denom denom_nz) `LT` denom
-boundModNatNZ numer (S predDenom) denom_nz = LTESucc $
-                                             rewrite sym $ mod''_eq_mod' numer numer predDenom in
-                                             bound_mod'' numer numer predDenom (reflexive numer)
+boundModNatNZ numer (S predDenom) denom_nz =
+  LTESucc $
+    rewrite sym $ mod''_eq_mod' numer numer predDenom in
+      bound_mod'' numer numer predDenom $ reflexive {rel = LTE}
 divisionTheorem' : (numer, predDenom : Nat)
                 -> (fuel : Nat) -> (enough : numer `LTE` fuel)
                 -> numer = (mod'' fuel numer predDenom) + (div'' fuel numer predDenom) * (S predDenom)
@@ -154,7 +152,7 @@ DivisionTheoremDivMod : (numer, denom : Nat)  -> (0 prf : NonZero denom)
                -> numer = snd ( divmodNatNZ numer denom prf)
                        + (fst $ divmodNatNZ numer denom prf)*denom
 DivisionTheoremDivMod numer (S predDenom) prf
-  = divisionTheorem' numer predDenom numer (reflexive numer)
+  = divisionTheorem' numer predDenom numer $ reflexive {rel = LTE}
 
 export
 DivisionTheorem : (numer, denom : Nat) -> (0 prf1, prf2 : NonZero denom)
@@ -231,7 +229,7 @@ multiplesModuloZero  (S fuel) predn (S k) enough =
         <~ (1 + k)*n   ...(multLteMonotoneLeft (1+0) (1+k) n $
                            plusLteMonotoneLeft 1 0 k LTEZero)
   in case @@(Data.Nat.lte ((1 + k)*n) predn) of
-    (True  ** skn_lte_predn) => absurd $ irreflexive {spo = Data.Nat.LT} predn
+    (True  ** skn_lte_predn) => absurd $ irreflexive {rel = Data.Nat.LT}
                                        $ CalcWith {leq = LTE} $
       |~ 1 + predn
       ~~ n         ...(Refl)
@@ -299,7 +297,7 @@ addMultipleMod' (S fuel1) fuel2 predn a (S k) enough1 enough2 =
 addMultipleMod : (a, b, n : Nat) -> (0 n_neq_z1, n_neq_z2 : NonZero n)
               -> snd (divmodNatNZ (a*n + b) n n_neq_z1) = snd (divmodNatNZ b n n_neq_z2)
 addMultipleMod a b n@(S predn) n_neq_z1  n_neq_z2 =
-  addMultipleMod' (a*n + b) b predn b a (reflexive {po = LTE} _) (reflexive {po = LTE} _)
+  addMultipleMod' (a*n + b) b predn b a (reflexive {rel = LTE}) (reflexive {rel = LTE})
 
 modBelowDenom : (r, n : Nat) -> (0 n_neq_z : NonZero n)
              -> (r `LT` n)

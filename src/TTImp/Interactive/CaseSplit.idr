@@ -330,7 +330,7 @@ mkCase : {auto c : Ref Ctxt Defs} ->
          {auto u : Ref UST UState} ->
          Int -> RawImp -> RawImp -> Core ClauseUpdate
 mkCase {c} {u} fn orig lhs_raw
-    = do m <- newRef MD (initMetadata "(interactive)")
+    = do m <- newRef MD (initMetadata $ Virtual Interactive)
          defs <- get Ctxt
          ust <- get UST
          catch
@@ -338,6 +338,7 @@ mkCase {c} {u} fn orig lhs_raw
                -- Fixes Issue #74. The problem is that if the function is defined in a sub module,
                -- then the current namespace (accessed by calling getNS) differs from the function
                -- namespace, therefore it is not considered visible by TTImp.Elab.App.checkVisibleNS
+               -- FIXME: Causes issue #1385
                setAllPublic True
 
                -- Use 'Rig0' since it might be a type level function, or it might
@@ -404,6 +405,7 @@ getSplitsLHS fc envlen lhs_in n
          let Just idx = getNameID fn (gamma defs)
              | Nothing => undefinedName fc fn
          cases <- traverse (mkCase idx rawlhs) trycases
+         log "interaction.casesplit" 3 $ "Found cases: " ++ show cases
 
          pure (combine cases [])
 

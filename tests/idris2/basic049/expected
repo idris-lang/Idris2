@@ -44,7 +44,7 @@ Error: While processing right hand side of r2_shouldNotTypecheck1. Ambiguous ela
     Main.R2.MkR
     Main.R1.MkR Type
 
-Fld.idr:72:26--72:29
+Fld:72:26--72:29
  68 | r1 : R1 -- explicit fields access
  69 | r1 = MkR {field = "string"}
  70 | 

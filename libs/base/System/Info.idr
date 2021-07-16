@@ -1,5 +1,7 @@
 module System.Info
 
+%default total
+
 %extern prim__os : String
 %extern prim__codegen : String
 

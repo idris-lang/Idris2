@@ -69,3 +69,11 @@ mapFusion : (f : b -> c) -> (g : a -> b) -> (xs : Vect n a)
   -> map f (map g xs) = map (f . g) xs
 mapFusion f g    []     = Refl
 mapFusion f g (x :: xs) = cong (f $ g x ::) $ mapFusion f g xs
+
+||| function extensionality is a congruence wrt mapWithElem
+export
+mapWithElemExtensional : (xs : Vect n a) -> (f, g :  (x : a) -> (0 _ : x `Elem` xs) -> b)
+  -> ((x : a) -> (0 pos : x `Elem` xs) -> f x pos = g x pos)
+  -> mapWithElem xs f = mapWithElem xs g
+mapWithElemExtensional    []     f g prf = Refl
+mapWithElemExtensional (x :: xs) f g prf = cong2 (::) (prf x Here) (mapWithElemExtensional xs _ _ (\x,pos => prf x (There pos)))

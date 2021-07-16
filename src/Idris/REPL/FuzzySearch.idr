@@ -39,7 +39,7 @@ import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Libraries.Data.PosMap
 import Data.Stream
-import Data.Strings
+import Data.String
 import Data.DPair
 import Libraries.Data.String.Extra
 import Libraries.Data.List.Extra
@@ -52,6 +52,8 @@ import Libraries.System.Directory.Tree
 import System
 import System.File
 import System.Directory
+
+%default covering
 
 export
 fuzzySearch : {auto c : Ref Ctxt Defs}
@@ -88,7 +90,7 @@ fuzzySearch expr = do
        allDefs <- traverse (resolved ctxt) defs
        filterM (\def => fuzzyMatch neg pos def.type) allDefs
   put Ctxt defs
-  doc <- traverse (docsOrSignature replFC) $ fullname <$> filteredDefs
+  doc <- traverse (docsOrSignature EmptyFC) $ fullname <$> filteredDefs
   pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
  where
 

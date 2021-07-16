@@ -254,6 +254,22 @@ Reflect Namespace where
          appCon fc defs (reflectiontt "MkNS") [ns']
 
 export
+Reify ModuleIdent where
+  reify defs val@(NDCon _ n _ _ [(_, ns)])
+    = case (!(full (gamma defs) n)) of
+        NS _ (UN "MkMI")
+          => do ns' <- reify defs !(evalClosure defs ns)
+                pure (unsafeFoldModuleIdent ns')
+        _ => cantReify val "ModuleIdent"
+  reify defs val = cantReify val "ModuleIdent"
+
+export
+Reflect ModuleIdent where
+  reflect fc defs lhs env ns
+    = do ns' <- reflect fc defs lhs env (unsafeUnfoldModuleIdent ns)
+         appCon fc defs (reflectiontt "MkMI") [ns']
+
+export
 Reify Name where
   reify defs val@(NDCon _ n _ _ args)
       = case (!(full (gamma defs) n), args) of
@@ -275,8 +291,22 @@ Reify Name where
              (NS _ (UN "RF"), [(_, str)])
                  => do str' <- reify defs !(evalClosure defs str)
                        pure (RF str')
-             _ => cantReify val "Name"
-  reify defs val = cantReify val "Name"
+             (NS _ (UN "Nested"), [(_, ix), (_, n)])
+                 => do ix' <- reify defs !(evalClosure defs ix)
+                       n' <- reify defs !(evalClosure defs n)
+                       pure (Nested ix' n')
+             (NS _ (UN "CaseBlock"), [(_, outer), (_, i)])
+                 => do outer' <- reify defs !(evalClosure defs outer)
+                       i' <- reify defs !(evalClosure defs i)
+                       pure (CaseBlock outer' i')
+             (NS _ (UN "WithBlock"), [(_, outer), (_, i)])
+                 => do outer' <- reify defs !(evalClosure defs outer)
+                       i' <- reify defs !(evalClosure defs i)
+                       pure (WithBlock outer' i')
+             (NS _ (UN _), _)
+                 => cantReify val "Name, reifying it is unimplemented or intentionally internal"
+             _ => cantReify val "Name, the name was not found in context"
+  reify defs val = cantReify val "Name, value is not an NDCon interally"
 
 export
 Reflect Name where
@@ -298,11 +328,25 @@ Reflect Name where
   reflect fc defs lhs env (RF x)
       = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "RF") [x']
+  reflect fc defs lhs env (Nested ix n)
+      = do ix' <- reflect fc defs lhs env ix
+           n'  <- reflect fc defs lhs env n
+           appCon fc defs (reflectiontt "Nested") [ix',n']
+  reflect fc defs lhs env (CaseBlock outer i)
+      = do outer' <- reflect fc defs lhs env outer
+           i' <- reflect fc defs lhs env i
+           appCon fc defs (reflectiontt "CaseBlock") [outer',i']
+  reflect fc defs lhs env (WithBlock outer i)
+      = do outer' <- reflect fc defs lhs env outer
+           i' <- reflect fc defs lhs env i
+           appCon fc defs (reflectiontt "WithBlock") [outer',i']
   reflect fc defs lhs env (Resolved i)
       = case !(full (gamma defs) (Resolved i)) of
-             Resolved _ => cantReflect fc "Name"
+             Resolved _ => cantReflect fc
+                      "Name directly, Resolved is intentionally internal"
              n => reflect fc defs lhs env n
-  reflect fc defs lhs env val = cantReflect fc "Name"
+  reflect fc defs lhs env n = cantReflect fc
+    "Name, reflecting it is unimplemented or intentionally internal"
 
 export
 Reify NameType where
@@ -572,6 +616,48 @@ Reflect LazyReason where
   reflect fc defs lhs env LInf = getCon fc defs (reflectiontt "LInf")
   reflect fc defs lhs env LLazy = getCon fc defs (reflectiontt "LLazy")
   reflect fc defs lhs env LUnknown = getCon fc defs (reflectiontt "LUnknown")
+
+export
+Reify VirtualIdent where
+  reify defs val@(NDCon _ n _ _ args)
+      = case (!(full (gamma defs) n), args) of
+             (NS _ (UN "Interactive"), [])
+                   => pure Interactive
+             _ => cantReify val "VirtualIdent"
+  reify defs val = cantReify val "VirtualIdent"
+
+export
+Reflect VirtualIdent where
+  reflect fc defs lhs env Interactive
+      = getCon fc defs (reflectiontt "Interactive")
+
+export
+Reify OriginDesc where
+  reify defs val@(NDCon _ n _ _ args)
+      = case (!(full (gamma defs) n), args) of
+             (NS _ (UN "PhysicalIdrSrc"), [(_, ident)])
+                   => do ident' <- reify defs !(evalClosure defs ident)
+                         pure (PhysicalIdrSrc ident')
+             (NS _ (UN "PhysicalPkgSrc"), [(_, fname)])
+                   => do fname' <- reify defs !(evalClosure defs fname)
+                         pure (PhysicalPkgSrc fname')
+             (NS _ (UN "Virtual"), [(_, ident)])
+                   => do ident' <- reify defs !(evalClosure defs ident)
+                         pure (Virtual ident')
+             _ => cantReify val "OriginDesc"
+  reify defs val = cantReify val "OriginDesc"
+
+export
+Reflect OriginDesc where
+  reflect fc defs lhs env (PhysicalIdrSrc ident)
+      = do ident' <- reflect fc defs lhs env ident
+           appCon fc defs (reflectiontt "PhysicalIdrSrc") [ident']
+  reflect fc defs lhs env (PhysicalPkgSrc fname)
+      = do fname' <- reflect fc defs lhs env fname
+           appCon fc defs (reflectiontt "PhysicalPkgSrc") [fname']
+  reflect fc defs lhs env (Virtual ident)
+      = do ident' <- reflect fc defs lhs env ident
+           appCon fc defs (reflectiontt "Virtual") [ident']
 
 export
 Reify FC where

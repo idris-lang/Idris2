@@ -33,17 +33,25 @@ localHelper {vars} nest env nestdecls_in func
     = do est <- get EST
          let f = defining est
          defs <- get Ctxt
-         let vis = case !(lookupCtxtExact (Resolved (defining est)) (gamma defs)) of
-                        Just gdef => visibility gdef
-                        Nothing => Public
+         gdef <- lookupCtxtExact (Resolved (defining est)) (gamma defs)
+         let vis  = maybe Public visibility gdef
+         let mult = maybe linear GlobalDef.multiplicity gdef
+
          -- If the parent function is public, the nested definitions need
          -- to be public too
-         let nestdecls =
+         let nestdeclsVis =
                if vis == Public
                   then map setPublic nestdecls_in
                   else nestdecls_in
 
-         let defNames = definedInBlock emptyNS nestdecls
+         -- If the parent function is erased, then the nested definitions
+         -- will be erased too
+         let nestdeclsMult =
+           if mult == erased
+              then map setErased nestdeclsVis
+              else nestdeclsVis
+
+         let defNames = definedInBlock emptyNS nestdeclsMult
          names' <- traverse (applyEnv f)
                             (nub defNames) -- binding names must be unique
                                            -- fixes bug #115
@@ -60,7 +68,7 @@ localHelper {vars} nest env nestdecls_in func
          -- everything
          let oldhints = localHints defs
 
-         let nestdecls = map (updateName nest') nestdecls
+         let nestdecls = map (updateName nest') nestdeclsMult
          log "elab.def.local" 20 $ show nestdecls
 
          traverse_ (processDecl [] nest' env') nestdecls
@@ -133,6 +141,14 @@ localHelper {vars} nest env nestdecls_in func
     setPublic (INamespace fc ps decls)
         = INamespace fc ps (map setPublic decls)
     setPublic d = d
+
+    setErased : ImpDecl -> ImpDecl
+    setErased (IClaim fc _ v opts ty) = IClaim fc erased v opts ty
+    setErased (IParameters fc ps decls)
+        = IParameters fc ps (map setErased decls)
+    setErased (INamespace fc ps decls)
+        = INamespace fc ps (map setErased decls)
+    setErased d = d
 
 export
 checkLocal : {vars : _} ->

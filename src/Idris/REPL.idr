@@ -15,16 +15,18 @@ import Core.CaseTree
 import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
+import Core.Directory
 import Core.Env
+import Core.FC
 import Core.InitPrimitives
 import Core.LinearCheck
 import Core.Metadata
-import Core.FC
 import Core.Normalise
 import Core.Options
-import Core.Termination
 import Core.TT
+import Core.Termination
 import Core.Unify
+import Core.Value
 
 import Parser.Unlit
 
@@ -64,7 +66,7 @@ import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Libraries.Data.PosMap
 import Data.Stream
-import Data.Strings
+import Data.String
 import Data.DPair
 import Libraries.Data.String.Extra
 import Libraries.Data.List.Extra
@@ -78,10 +80,10 @@ import System
 import System.File
 import System.Directory
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 
@@ -204,24 +206,6 @@ getOptions = do
          , ShowTypes (showTypes opts), EvalMode (evalMode opts)
          , Editor (editor opts)
          ]
-
-export
-findCG : {auto o : Ref ROpts REPLOpts} ->
-         {auto c : Ref Ctxt Defs} -> Core Codegen
-findCG
-    = do defs <- get Ctxt
-         case codegen (session (options defs)) of
-              Chez => pure codegenChez
-              ChezSep => pure codegenChezSep
-              Racket => pure codegenRacket
-              Gambit => pure codegenGambit
-              Node => pure codegenNode
-              Javascript => pure codegenJavascript
-              RefC => pure codegenRefC
-              Other s => case !(getCodegen s) of
-                            Just cg => pure cg
-                            Nothing => do coreLift_ $ putStrLn ("No such code generator: " ++ s)
-                                          coreLift $ exitWith (ExitFailure 1)
 
 anyAt : (a -> Bool) -> a -> b -> Bool
 anyAt p loc _ = p loc
@@ -396,7 +380,7 @@ processEdit (TypeAt line col name)
          globals <- lookupCtxtName name (gamma defs)
 
          -- Get the Doc for the result
-         globalResult <- the (Core $ Maybe $ Doc IdrisAnn) $ case globals of
+         globalResult <- case globals of
            [] => pure Nothing
            ts => do tys <- traverse (displayType defs) ts
                     pure $ Just (vsep tys)
@@ -449,7 +433,7 @@ processEdit (ExprSearch upd line name hints)
                   case holeInfo pi of
                        NotHole => pure $ EditError "Not a searchable hole"
                        SolvedHole locs =>
-                          do let (_ ** (env, tm')) = dropLamsTm locs [] tm
+                          do let (_ ** (env, tm')) = dropLamsTm locs [] !(normaliseHoles defs [] tm)
                              itm <- resugar env tm'
                              let itm' : PTerm = if brack then addBracket replFC itm else itm
                              if upd
@@ -596,7 +580,11 @@ execExp : {auto c : Ref Ctxt Defs} ->
           PTerm -> Core REPLResult
 execExp ctm
     = do tm_erased <- prepareExp ctm
-         execute !findCG tm_erased
+         Just cg <- findCG
+              | Nothing =>
+                   do iputStrLn (reflow "No such code generator available")
+                      pure CompilationFailed
+         execute cg tm_erased
          pure $ Executed ctm
 
 
@@ -626,7 +614,11 @@ compileExp : {auto c : Ref Ctxt Defs} ->
              PTerm -> String -> Core REPLResult
 compileExp ctm outfile
     = do tm_erased <- prepareExp ctm
-         ok <- compile !findCG tm_erased outfile
+         Just cg <- findCG
+              | Nothing =>
+                   do iputStrLn (reflow "No such code generator available")
+                      pure CompilationFailed
+         ok <- compile cg tm_erased outfile
          maybe (pure CompilationFailed)
                (pure . Compiled)
                ok
@@ -641,7 +633,8 @@ loadMainFile : {auto c : Ref Ctxt Defs} ->
 loadMainFile f
     = do opts <- get ROpts
          put ROpts (record { evalResultName = Nothing } opts)
-         resetContext f
+         modIdent <- ctxtPathToNS f
+         resetContext (PhysicalIdrSrc modIdent)
          Right res <- coreLift (readFile f)
             | Left err => do setSource ""
                              pure (ErrorLoadingFile f err)
@@ -659,7 +652,7 @@ loadMainFile f
 replEval : {auto c : Ref Ctxt Defs} ->
   {vs : _} ->
   REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
-replEval NormaliseAll = normaliseAll
+replEval NormaliseAll = normaliseOpts (record { strategy = CBV } withAll)
 replEval _ = normalise
 
 record TermWithType where
@@ -841,7 +834,7 @@ process (Missing n)
               [] => undefinedName replFC n
               ts => map Missed $ traverse (\fn =>
                                          do tot <- getTotality replFC fn
-                                            the (Core MissedResult) $ case isCovering tot of
+                                            case isCovering tot of
                                                  MissingCases cs =>
                                                     do tms <- traverse (displayPatTerm defs) cs
                                                        pure $ CasesMissing fn tms
@@ -893,7 +886,7 @@ process Metavars
          let holesWithArgs = mapMaybe (\(n, i, gdef) => do args <- isHole gdef
                                                            pure (n, gdef, args))
                                       globs
-         hData <- the (Core $ List HoleData) $
+         hData <-
              traverse (\n_gdef_args =>
                         -- Inference can't deal with this for now :/
                         let (n, gdef, args) = the (Name, GlobalDef, Nat) n_gdef_args in
@@ -982,7 +975,7 @@ parseCmd = do c <- command; eoi; pure $ Just c
 export
 parseRepl : String -> Either Error (Maybe REPLCmd)
 parseRepl inp
-    = case runParser "(interactive)" Nothing inp (parseEmptyCmd <|> parseCmd) of
+    = case runParser (Virtual Interactive) Nothing inp (parseEmptyCmd <|> parseCmd) of
         Left err => Left err
         Right (decor, result) => Right result
 

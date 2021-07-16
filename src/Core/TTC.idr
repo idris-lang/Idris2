@@ -19,6 +19,38 @@ import Libraries.Utils.Binary
 %default covering
 
 export
+TTC Namespace where
+  toBuf b = toBuf b . unsafeUnfoldNamespace
+  fromBuf = Core.map unsafeFoldNamespace . fromBuf
+
+export
+TTC ModuleIdent where
+  toBuf b = toBuf b . unsafeUnfoldModuleIdent
+  fromBuf = Core.map unsafeFoldModuleIdent . fromBuf
+
+export
+TTC VirtualIdent where
+  toBuf b Interactive = tag 0
+
+  fromBuf b =
+    case !getTag of
+      0 => pure Interactive
+      _ => corrupt "VirtualIdent"
+
+export
+TTC OriginDesc where
+  toBuf b (PhysicalIdrSrc ident) = do tag 0; toBuf b ident
+  toBuf b (PhysicalPkgSrc fname) = do tag 1; toBuf b fname
+  toBuf b (Virtual ident) = do tag 2; toBuf b ident
+
+  fromBuf b =
+    case !getTag of
+      0 => [| PhysicalIdrSrc (fromBuf b) |]
+      1 => [| PhysicalPkgSrc (fromBuf b) |]
+      2 => [| Virtual        (fromBuf b) |]
+      _ => corrupt "OriginDesc"
+
+export
 TTC FC where
   toBuf b (MkFC file startPos endPos)
       = do tag 0; toBuf b file; toBuf b startPos; toBuf b endPos
@@ -36,15 +68,6 @@ TTC FC where
                      s <- fromBuf b; e <- fromBuf b
                      pure (MkVirtualFC f s e)
              _ => corrupt "FC"
-export
-TTC Namespace where
-  toBuf b = toBuf b . unsafeUnfoldNamespace
-  fromBuf = Core.map unsafeFoldNamespace . fromBuf
-
-export
-TTC ModuleIdent where
-  toBuf b = toBuf b . unsafeUnfoldModuleIdent
-  fromBuf = Core.map unsafeFoldModuleIdent . fromBuf
 
 export
 TTC Name where
@@ -551,6 +574,7 @@ export
 
   toBuf b DoubleExp = tag 19
   toBuf b DoubleLog = tag 20
+  toBuf b DoublePow = tag 21
   toBuf b DoubleSin = tag 22
   toBuf b DoubleCos = tag 23
   toBuf b DoubleTan = tag 24
@@ -611,6 +635,7 @@ export
                  14 => pure StrIndex
                  15 => pure StrCons
                  16 => pure StrAppend
+                 21 => pure DoublePow
                  35 => do ty <- fromBuf b; pure (ShiftL ty)
                  36 => do ty <- fromBuf b; pure (ShiftR ty)
                  37 => do ty <- fromBuf b; pure (BAnd ty)
@@ -756,6 +781,10 @@ TTC CFType where
   toBuf b (CFUser n a) = do tag 14; toBuf b n; toBuf b a
   toBuf b CFGCPtr = tag 15
   toBuf b CFBuffer = tag 16
+  toBuf b CFInt8 = tag 17
+  toBuf b CFInt16 = tag 18
+  toBuf b CFInt32 = tag 19
+  toBuf b CFInt64 = tag 20
 
   fromBuf b
       = case !getTag of
@@ -776,6 +805,10 @@ TTC CFType where
              14 => do n <- fromBuf b; a <- fromBuf b; pure (CFUser n a)
              15 => pure CFGCPtr
              16 => pure CFBuffer
+             17 => pure CFInt8
+             18 => pure CFInt16
+             19 => pure CFInt32
+             20 => pure CFInt64
              _ => corrupt "CFType"
 
 export
@@ -807,6 +840,7 @@ TTC CG where
   toBuf b Node = tag 5
   toBuf b Javascript = tag 6
   toBuf b RefC = tag 7
+  toBuf b VMCodeInterp = tag 8
 
   fromBuf b
       = case !getTag of
@@ -819,6 +853,7 @@ TTC CG where
              5 => pure Node
              6 => pure Javascript
              7 => pure RefC
+             8 => pure VMCodeInterp
              _ => corrupt "CG"
 
 export
@@ -873,10 +908,12 @@ TTC PMDefInfo where
   toBuf b l
       = do toBuf b (holeInfo l)
            toBuf b (alwaysReduce l)
+           toBuf b (externalDecl l)
   fromBuf b
       = do h <- fromBuf b
            r <- fromBuf b
-           pure (MkPMDefInfo h r)
+           e <- fromBuf b
+           pure (MkPMDefInfo h r e)
 
 export
 TTC TypeFlags where

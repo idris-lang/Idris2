@@ -9,7 +9,7 @@ import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 
 import System.Info
 
@@ -59,6 +59,7 @@ data CG = Chez
         | Node
         | Javascript
         | RefC
+        | VMCodeInterp
         | Other String
 
 export
@@ -70,6 +71,7 @@ Eq CG where
   Node == Node = True
   Javascript == Javascript = True
   RefC == RefC = True
+  VMCodeInterp == VMCodeInterp = True
   Other s == Other t = s == t
   _ == _ = False
 
@@ -82,6 +84,7 @@ Show CG where
   show Node = "node"
   show Javascript = "javascript"
   show RefC = "refc"
+  show VMCodeInterp = "vmcode-interp"
   show (Other s) = s
 
 public export
@@ -144,21 +147,38 @@ record Session where
   findipkg : Bool
   codegen : CG
   directives : List String
+  searchTimeout : Integer -- maximum number of milliseconds to run
+                          -- expression/program search
+  ignoreMissingPkg : Bool -- fail silently on missing packages. This is because
+          -- while we're bootstrapping, we find modules by a different route
+          -- but we still want to have the dependencies listed properly
+
+  -- Troubleshooting
   logEnabled : Bool -- do we check logging flags at all? This is 'False' until
                     -- any logging is enabled.
   logLevel : LogLevels
   logTimings : Bool
-  ignoreMissingPkg : Bool -- fail silently on missing packages. This is because
-          -- while we're bootstrapping, we find modules by a different route
-          -- but we still want to have the dependencies listed properly
   debugElabCheck : Bool -- do conversion check to verify results of elaborator
   dumpcases : Maybe String -- file to output compiled case trees
   dumplifted : Maybe String -- file to output lambda lifted definitions
   dumpanf : Maybe String -- file to output ANF definitions
   dumpvmcode : Maybe String -- file to output VM code definitions
   profile : Bool -- generate profiling information, if supported
-  caseTreeHeuristics : Bool -- apply heuristics to pick matches for case tree building
+  logErrorCount : Nat -- when parsing alternatives fails, how many errors
+                      -- should be shown.
+
+  -- Warnings
+  warningsAsErrors : Bool
   showShadowingWarning : Bool
+
+  -- Experimental
+  checkHashesInsteadOfModTime : Bool
+  incrementalCGs : List CG
+  wholeProgram : Bool
+     -- Use whole program compilation for executables, no matter what
+     -- incremental CGs are set (intended for overriding any environment
+     -- variables that set incremental compilation)
+  caseTreeHeuristics : Bool -- apply heuristics to pick matches for case tree building
 
 public export
 record PPrinter where
@@ -190,7 +210,8 @@ availableCGs o
        ("node", Node),
        ("javascript", Javascript),
        ("refc", RefC),
-       ("gambit", Gambit)] ++ additionalCGs o
+       ("gambit", Gambit),
+       ("vmcode-interp", VMCodeInterp)] ++ additionalCGs o
 
 export
 getCG : Options -> String -> Maybe CG
@@ -205,9 +226,10 @@ defaultPPrint = MkPPOpts False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez [] False defaultLogLevel
-                               False False False Nothing Nothing
-                               Nothing Nothing False False True
+defaultSession = MkSessionOpts False False False Chez [] 1000 False False
+                               defaultLogLevel False False Nothing Nothing
+                               Nothing Nothing False 1 False True
+                               False [] False False
 
 export
 defaultElab : ElabDirectives

@@ -4,6 +4,7 @@ import Compiler.Common
 
 import Core.Context.Log
 import Core.Core
+import Core.Directory
 import Core.InitPrimitives
 import Core.Metadata
 import Core.Unify
@@ -26,7 +27,7 @@ import IdrisPaths
 import Data.List
 import Data.List1
 import Data.So
-import Data.Strings
+import Data.String
 import System
 import System.Directory
 import System.File
@@ -44,36 +45,42 @@ findInput (_ :: fs) = findInput fs
 
 -- Add extra data from the "IDRIS2_x" environment variables
 updateEnv : {auto c : Ref Ctxt Defs} ->
+            {auto o : Ref ROpts REPLOpts} ->
             Core ()
 updateEnv
     = do defs <- get Ctxt
          bprefix <- coreLift $ idrisGetEnv "IDRIS2_PREFIX"
-         the (Core ()) $ case bprefix of
+         case bprefix of
               Just p => setPrefix p
               Nothing => setPrefix yprefix
          bpath <- coreLift $ idrisGetEnv "IDRIS2_PATH"
-         the (Core ()) $ case bpath of
+         case bpath of
               Just path => do traverseList1_ addExtraDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
          bdata <- coreLift $ idrisGetEnv "IDRIS2_DATA"
-         the (Core ()) $ case bdata of
+         case bdata of
               Just path => do traverseList1_ addDataDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
          blibs <- coreLift $ idrisGetEnv "IDRIS2_LIBS"
-         the (Core ()) $ case blibs of
+         case blibs of
               Just path => do traverseList1_ addLibDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
          pdirs <- coreLift $ idrisGetEnv "IDRIS2_PACKAGE_PATH"
-         the (Core ()) $ case pdirs of
+         case pdirs of
               Just path => do traverseList1_ addPackageDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
          cg <- coreLift $ idrisGetEnv "IDRIS2_CG"
-         the (Core ()) $ case cg of
+         case cg of
               Just e => case getCG (options defs) e of
                              Just cg => setCG cg
                              Nothing => throw (InternalError ("Unknown code generator " ++ show e))
               Nothing => pure ()
-
+         inccgs <- coreLift $ idrisGetEnv "IDRIS2_INC_CGS"
+         case inccgs of
+              Just cgs =>
+                   traverse_ (setIncrementalCG False) $
+                       map trim (toList (split (==',') cgs))
+              Nothing => pure ()
          -- IDRIS2_PATH goes first so that it overrides this if there's
          -- any conflicts. In particular, that means that setting IDRIS2_PATH
          -- for the tests means they test the local version not the installed
@@ -95,7 +102,7 @@ updateREPLOpts : {auto o : Ref ROpts REPLOpts} ->
 updateREPLOpts
     = do opts <- get ROpts
          ed <- coreLift $ idrisGetEnv "EDITOR"
-         the (Core ()) $ case ed of
+         case ed of
               Just e => put ROpts (record { editor = e } opts)
               Nothing => pure ()
 
@@ -159,12 +166,12 @@ stMain cgs opts
          when (ignoreMissingIpkg opts) $
             setSession (record { ignoreMissingPkg = True } !getSession)
 
-         updateEnv
          let ide = ideMode opts
          let ideSocket = ideModeSocket opts
          let outmode = if ide then IDEMode 0 stdin stdout else REPL False
          let fname = findInput opts
          o <- newRef ROpts (REPL.Opts.defaultOpts fname outmode cgs)
+         updateEnv
 
          finish <- showInfo opts
          when (not finish) $ do
@@ -178,7 +185,12 @@ stMain cgs opts
                  when (checkVerbose opts) $ -- override Quiet if implicitly set
                      setOutput (REPL False)
                  u <- newRef UST initUState
-                 m <- newRef MD (initMetadata $ fromMaybe "(interactive)" fname)
+                 origin <- maybe
+                   (pure $ Virtual Interactive) (\fname => do
+                     modIdent <- ctxtPathToNS fname
+                     pure (PhysicalIdrSrc modIdent)
+                     ) fname
+                 m <- newRef MD (initMetadata origin)
                  updateREPLOpts
                  session <- getSession
                  when (not $ nobanner session) $ do
@@ -247,8 +259,11 @@ quitOpts [] = pure True
 quitOpts (Version :: _)
     = do putStrLn versionMsg
          pure False
-quitOpts (Help :: _)
+quitOpts (Help Nothing :: _)
     = do putStrLn usage
+         pure False
+quitOpts (Help (Just HelpLogging) :: _)
+    = do putStrLn helpTopics
          pure False
 quitOpts (ShowPrefix :: _)
     = do putStrLn yprefix

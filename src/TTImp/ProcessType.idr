@@ -19,6 +19,7 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Data.List
+import Data.String
 import Libraries.Data.NameMap
 
 %default covering
@@ -202,7 +203,7 @@ initDef : {vars : _} ->
           {auto u : Ref UST UState} ->
           Name -> Env Term vars -> Term vars -> List FnOpt -> Core Def
 initDef n env ty []
-    = do addUserHole n
+    = do addUserHole False n
          pure None
 initDef n env ty (ExternFn :: opts)
     = do defs <- get Ctxt
@@ -267,7 +268,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
          addNameLoc nameFC n
 
          log "declare.type" 1 $ "Processing " ++ show n
-         log "declare.type" 5 $ "Checking type decl " ++ show n ++ " : " ++ show ty_raw
+         log "declare.type" 5 $ unwords ["Checking type decl:", show rig, show n, ":", show ty_raw]
          idx <- resolveName n
 
          -- Check 'n' is undefined

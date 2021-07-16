@@ -1,4 +1,4 @@
-import Data.Strings
+import Data.String
 
 VendState : Type
 VendState = (Nat, Nat)

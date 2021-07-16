@@ -14,7 +14,7 @@ import Prelude.Show
 
 public export
 Functor IO where
-  map f io = io_bind io (\b => io_pure (f b))
+  map f io = io_bind io $ io_pure . f
 
 %inline
 public export
@@ -132,10 +132,6 @@ prim__threadWait : (1 threadID : ThreadID) -> PrimIO ()
 export
 threadWait : (1 threadID : ThreadID) -> IO ()
 threadWait threadID = fromPrim (prim__threadWait threadID)
-
-%foreign "C:idris2_readString, libidris2_support, idris_support.h"
-export
-prim__getErrno : Int
 
 ||| Output something showable to stdout, without a trailing newline.
 export

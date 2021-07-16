@@ -30,15 +30,15 @@ import TTImp.WithClause
 import Data.Either
 import Data.List
 import Libraries.Data.NameMap
-import Data.Strings
+import Data.String
 import Data.Maybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.String.Extra
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 
@@ -386,8 +386,8 @@ checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
 hasEmptyPat : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               Defs -> Env Term vars -> Term vars -> Core Bool
-hasEmptyPat defs env (Bind fc x b@(PVar _ _ _ ty) sc)
-   = pure $ !(isEmpty defs env !(nf defs env ty))
+hasEmptyPat defs env (Bind fc x b sc)
+   = pure $ !(isEmpty defs env !(nf defs env (binderType b)))
             || !(hasEmptyPat defs (b :: env) sc)
 hasEmptyPat defs env _ = pure False
 
@@ -512,6 +512,13 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                                  (weakenNs (mkSizeOf wargs) notreqty))
          let bNotReq = binder wtyScope
 
+         -- The environment has some implicit and some explcit args, potentially,
+         -- which is inconvenient since we have to know which is which when
+         -- elaborating the application of the rhs function. So it's easier
+         -- if we just make them all explicit - this type isn't visible to
+         -- users anyway!
+         let env' = mkExplicit env'
+
          let Just (reqns, envns, wtype) = bindReq vfc env' withSub [] bNotReq
              | Nothing => throw (InternalError "Impossible happened: With abstraction failure #4")
 
@@ -564,6 +571,11 @@ checkClause {vars} mult vis totreq hashit n opts nest env
   where
     vfc : FC
     vfc = virtualiseFC ifc
+
+    mkExplicit : forall vs . Env Term vs -> Env Term vs
+    mkExplicit [] = []
+    mkExplicit (Pi fc c _ ty :: env) = Pi fc c Explicit ty :: mkExplicit env
+    mkExplicit (b :: env) = b :: mkExplicit env
 
     bindWithArgs :
        (wvalTy : Term xs) -> Maybe (Name, Term xs) ->
@@ -855,6 +867,7 @@ processDef opts nest env fc n_in cs_in
 
          -- Dynamically rebind default totality requirement to this function's totality requirement
          -- and use this requirement when processing `with` blocks
+         log "declare.def" 5 $ "Traversing clauses of " ++ show n ++ " with mult " ++ show mult
          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
          cs <- withTotality treq $
                traverse (checkClause mult (visibility gdef) treq
@@ -871,11 +884,16 @@ processDef opts nest env fc n_in cs_in
                  do t <- toFullNames tree_ct
                     pure ("Case tree for " ++ show n ++ ": " ++ show t)
 
+         -- check whether the name was declared in a different source file
+         defs <- get Ctxt
+         let pi = case lookup n (userHoles defs) of
+                        Nothing => defaultPI
+                        Just e => record { externalDecl = e } defaultPI
          -- Add compile time tree as a placeholder for the runtime tree,
          -- but we'll rebuild that in a later pass once all the case
          -- blocks etc are resolved
          ignore $ addDef (Resolved nidx)
-                  (record { definition = PMDef defaultPI cargs tree_ct tree_ct pats
+                  (record { definition = PMDef pi cargs tree_ct tree_ct pats
                           } gdef)
 
          when (visibility gdef == Public) $
