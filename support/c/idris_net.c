@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "idris_util.h"
+
 #ifndef _WIN32
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -54,14 +56,6 @@ struct sockaddr_un get_sockaddr_unix(char* host) {
     addr.sun_family = AF_UNIX;
     strcpy(addr.sun_path, host);
     return addr;
-}
-
-void* idrnet_malloc(int size) {
-    return malloc(size);
-}
-
-void idrnet_free(void* ptr) {
-    free(ptr);
 }
 
 unsigned int idrnet_peek(void *ptr, unsigned int offset) {

@@ -51,12 +51,14 @@ Show DirCommand where
 ||| Help topics
 public export
 data HelpTopic
-  =
-    ||| Interactive debugging topics
-   HelpLogging
+  = ||| Interactive debugging topics
+    HelpLogging
+  | ||| The various pragmas
+    HelpPragma
 
 recogniseHelpTopic : String -> Maybe HelpTopic
-recogniseHelpTopic "logging" = pure HelpLogging
+recogniseHelpTopic "logging"   = pure HelpLogging
+recogniseHelpTopic "pragma" = pure HelpPragma
 recogniseHelpTopic _ = Nothing
 
 ||| CLOpt - possible command line options
@@ -131,21 +133,26 @@ data CLOpt
   FindIPKG |
   Timing |
   DebugElabCheck |
+  AltErrorCount Nat |
   BlodwenPaths |
-  ||| Treat warnings as errors
+   ||| Treat warnings as errors
   WarningsAsErrors |
-  ||| Do not print shadowing warnings
+   ||| Do not print shadowing warnings
   IgnoreShadowingWarnings |
-  ||| Use SHA256 hashes to determine if a source file needs rebuilding instead
-  ||| of modification time.
+   ||| Use SHA256 hashes to determine if a source file needs rebuilding instead
+   ||| of modification time.
   HashesInsteadOfModTime |
-  ||| Use incremental code generation, if the backend supports it
+   ||| Apply experimental heuristics to case tree generation that
+   ||| sometimes improves performance and reduces compiled code
+   ||| size.
+  CaseTreeHeuristics |
+   ||| Use incremental code generation, if the backend supports it
   IncrementalCG String |
-  ||| Use whole program compilation - overrides IncrementalCG if set
+   ||| Use whole program compilation - overrides IncrementalCG if set
   WholeProgram |
-  ||| Generate bash completion info
+   ||| Generate bash completion info
   BashCompletion String String |
-  ||| Generate bash completion script
+   ||| Generate bash completion script
   BashCompletionScript String
 
 ||| Extract the host and port to bind the IDE socket to
@@ -239,6 +246,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            optSeparator,
            MkOpt ["-Xcheck-hashes"] [] [HashesInsteadOfModTime]
              (Just "Use SHA256 hashes instead of modification time to determine if a source file needs rebuilding"),
+           MkOpt ["-Xcase-tree-opt"] [] [CaseTreeHeuristics]
+              (Just "Apply experimental optimizations to case tree generation"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
@@ -328,6 +337,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               Nothing, -- dump VM Code to the given file
            MkOpt ["--debug-elab-check"] [] [DebugElabCheck]
               Nothing, -- do more elaborator checks (currently conversion in LinearCheck)
+           MkOpt ["--alt-error-count"] [RequiredNat "alternative count"] (\c => [AltErrorCount c])
+              (Just "Outputs errors for the given number of alternative parsing attempts."),
 
            optSeparator,
            -- bash completion

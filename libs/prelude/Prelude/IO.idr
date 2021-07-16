@@ -133,10 +133,6 @@ export
 threadWait : (1 threadID : ThreadID) -> IO ()
 threadWait threadID = fromPrim (prim__threadWait threadID)
 
-%foreign "C:idris2_readString, libidris2_support, idris_support.h"
-export
-prim__getErrno : Int
-
 ||| Output something showable to stdout, without a trailing newline.
 export
 print : (HasIO io, Show a) => a -> io ()

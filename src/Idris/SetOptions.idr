@@ -338,6 +338,9 @@ preOptions (Timing :: opts)
 preOptions (DebugElabCheck :: opts)
     = do setDebugElabCheck True
          preOptions opts
+preOptions (AltErrorCount c :: opts)
+    = do setSession (record { logErrorCount = c } !getSession)
+         preOptions opts
 preOptions (RunREPL _ :: opts)
     = do setOutput (REPL True)
          setSession (record { nobanner = True } !getSession)
@@ -378,6 +381,9 @@ preOptions (IgnoreShadowingWarnings :: opts)
          preOptions opts
 preOptions (HashesInsteadOfModTime :: opts)
     = do setSession (record { checkHashesInsteadOfModTime = True } !getSession)
+         preOptions opts
+preOptions (CaseTreeHeuristics :: opts)
+    = do setSession (record { caseTreeHeuristics = True } !getSession)
          preOptions opts
 preOptions (IncrementalCG e :: opts)
     = do defs <- get Ctxt

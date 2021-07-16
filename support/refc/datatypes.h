@@ -46,7 +46,9 @@ typedef struct
 typedef struct
 {
     Value_header header;
-    char payload[25];
+    // `Value` is an "abstract" struct,
+    // `Value_Xxx` structs have the same header
+    // followed by type-specific payload.
 } Value;
 
 typedef struct
@@ -176,8 +178,7 @@ typedef struct
 typedef struct
 {
     Value_header header;
-    size_t len;
-    char *buffer;
+    void *buffer; // *Buffer
 } Value_Buffer;
 
 typedef struct

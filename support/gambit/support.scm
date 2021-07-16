@@ -192,7 +192,7 @@
   (let ((data (thread-specific (current-thread))))
     (if (eq? data #!void) #f data)))
 
-(define (blodwen-set-thread-data a)
+(define (blodwen-set-thread-data ty a)
   (thread-specific-set! (current-thread) a))
 
 (define blodwen-mutex make-mutex)
@@ -212,9 +212,6 @@
 
 (define blodwen-sleep thread-sleep!)
 (define (blodwen-usleep s) (thread-sleep! (/ s 1e6)))
-
-(define (blodwen-time)
-  (exact-floor (time->seconds (current-time))))
 
 
 (define (blodwen-arg-count)

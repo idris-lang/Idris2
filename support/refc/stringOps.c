@@ -8,7 +8,7 @@ Value *stringLength(Value *s)
 
 Value *head(Value *str)
 {
-    Value_Char *c = (Value_Char *)newValue();
+    Value_Char *c = IDRIS2_NEW_VALUE(Value_Char);
     c->header.tag = CHAR_TAG;
     c->c = ((Value_String *)str)->str[0];
     return (Value *)c;
@@ -16,7 +16,7 @@ Value *head(Value *str)
 
 Value *tail(Value *input)
 {
-    Value_String *tailStr = (Value_String *)newValue();
+    Value_String *tailStr = IDRIS2_NEW_VALUE(Value_String);
     tailStr->header.tag = STRING_TAG;
     Value_String *s = (Value_String *)input;
     int l = strlen(s->str);
@@ -37,7 +37,7 @@ Value *tail(Value *input)
 
 Value *reverse(Value *str)
 {
-    Value_String *retVal = (Value_String *)newValue();
+    Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
     retVal->header.tag = STRING_TAG;
     Value_String *input = (Value_String *)str;
     int l = strlen(input->str);

@@ -512,6 +512,13 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                                  (weakenNs (mkSizeOf wargs) notreqty))
          let bNotReq = binder wtyScope
 
+         -- The environment has some implicit and some explcit args, potentially,
+         -- which is inconvenient since we have to know which is which when
+         -- elaborating the application of the rhs function. So it's easier
+         -- if we just make them all explicit - this type isn't visible to
+         -- users anyway!
+         let env' = mkExplicit env'
+
          let Just (reqns, envns, wtype) = bindReq vfc env' withSub [] bNotReq
              | Nothing => throw (InternalError "Impossible happened: With abstraction failure #4")
 
@@ -564,6 +571,11 @@ checkClause {vars} mult vis totreq hashit n opts nest env
   where
     vfc : FC
     vfc = virtualiseFC ifc
+
+    mkExplicit : forall vs . Env Term vs -> Env Term vs
+    mkExplicit [] = []
+    mkExplicit (Pi fc c _ ty :: env) = Pi fc c Explicit ty :: mkExplicit env
+    mkExplicit (b :: env) = b :: mkExplicit env
 
     bindWithArgs :
        (wvalTy : Term xs) -> Maybe (Name, Term xs) ->
@@ -748,6 +760,7 @@ mkRunTime fc n
              , show (indent 2 $ pretty {ann = ()} !(toFullNames tree_rt))
              ]
            log "compile.casetree" 10 $ show tree_rt
+           log "compile.casetree.measure" 15 $ show (measure tree_rt)
 
            let Just Refl = nameListEq cargs rargs
                    | Nothing => throw (InternalError "WAT")

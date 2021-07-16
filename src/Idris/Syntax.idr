@@ -20,6 +20,7 @@ import Libraries.Data.String.Extra
 import Libraries.Data.StringMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 
 import Parser.Lexer.Source
 
@@ -268,6 +269,56 @@ mutual
        AutoImplicitDepth : Nat -> Directive
        NFMetavarThreshold : Nat -> Directive
        SearchTimeout : Integer -> Directive
+
+  directiveList : List Directive
+  directiveList =
+      [ (Hide (UN "")), (Logging Nothing), (LazyOn False)
+      , (UnboundImplicits False), (AmbigDepth 0)
+      , (PairNames (UN "") (UN "") (UN "")), (RewriteName (UN "") (UN ""))
+      , (PrimInteger (UN "")), (PrimString (UN "")), (PrimChar (UN ""))
+      , (PrimDouble (UN "")), (CGAction "" ""), (Names (UN "") [])
+      , (StartExpr (PRef EmptyFC (UN ""))), (Overloadable (UN ""))
+      , (Extension ElabReflection), (DefaultTotality PartialOK)
+      , (PrefixRecordProjections True), (AutoImplicitDepth 0)
+      , (NFMetavarThreshold 0), (SearchTimeout 0)
+      ]
+
+  isPragma : Directive -> Bool
+  isPragma (CGAction _ _) = False
+  isPragma _              = True
+
+  export
+  pragmaTopics : String
+  pragmaTopics =
+    show $ vsep $ map (((<++>) "+") . pretty {ann=()} . showDirective) $ filter isPragma directiveList
+    where
+      showDirective : Directive -> String
+      showDirective (Hide _)             = "%hide name"
+      showDirective (Logging _)          = "%logging [topic] lvl"
+      showDirective (LazyOn _)           = "%auto_lazy on|off"
+      showDirective (UnboundImplicits _) = "%unbound_implicits"
+      showDirective (AmbigDepth _)       = "%ambiguity_depth n"
+      showDirective (PairNames _ _ _)    = "%pair ty f s"
+      showDirective (RewriteName _ _)    = "%rewrite eq rw"
+      showDirective (PrimInteger _)      = "%integerLit n"
+      showDirective (PrimString _)       = "%stringLit n"
+      showDirective (PrimChar _)         = "%charLit n"
+      showDirective (PrimDouble _)       = "%doubleLit n"
+      showDirective (CGAction _ _)       = "--directive d"
+      showDirective (Names _ _)          = "%name ty ns"
+      showDirective (StartExpr _)        = "%start expr"
+      showDirective (Overloadable _)     = "%allow_overloads"
+      showDirective (Extension _)        = "%language"
+      showDirective (DefaultTotality _)  =
+        "%default partial|total|covering"
+      showDirective (PrefixRecordProjections _) =
+        "%prefix_record_projections on|off"
+      showDirective (AutoImplicitDepth _) =
+        "%auto_implicit_depth n"
+      showDirective (NFMetavarThreshold _) =
+        "%nf_metavar_threshold n"
+      showDirective (SearchTimeout _) =
+        "%search_timeout ms"
 
   public export
   data PField : Type where
@@ -610,7 +661,7 @@ mutual
         = showPrec d f ++ " {" ++ showPrec d n ++ " = " ++ showPrec d a ++ "}"
     showPrec _ (PSearch _ _) = "%search"
     showPrec d (PQuote _ tm) = "`(" ++ showPrec d tm ++ ")"
-    showPrec d (PQuoteName _ n) = "`{{" ++ showPrec d n ++ "}}"
+    showPrec d (PQuoteName _ n) = "`{" ++ showPrec d n ++ "}"
     showPrec d (PQuoteDecl _ tm) = "`[ <<declaration>> ]"
     showPrec d (PUnquote _ tm) = "~(" ++ showPrec d tm ++ ")"
     showPrec d (PRunElab _ tm) = "%runElab " ++ showPrec d tm

@@ -138,7 +138,7 @@ implementation DecEq Int where
                      False => No primitiveNotEq
        where primitiveEq : forall x, y . x = y
              primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . x = y -> Void
+             primitiveNotEq : forall x, y . Not (x = y)
              primitiveNotEq prf = believe_me {b = Void} ()
 
 --------------------------------------------------------------------------------
@@ -151,7 +151,7 @@ implementation DecEq Char where
                      False => No primitiveNotEq
        where primitiveEq : forall x, y . x = y
              primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . x = y -> Void
+             primitiveNotEq : forall x, y . Not (x = y)
              primitiveNotEq prf = believe_me {b = Void} ()
 
 --------------------------------------------------------------------------------
@@ -164,7 +164,7 @@ implementation DecEq Integer where
                      False => No primitiveNotEq
        where primitiveEq : forall x, y . x = y
              primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . x = y -> Void
+             primitiveNotEq : forall x, y . Not (x = y)
              primitiveNotEq prf = believe_me {b = Void} ()
 
 --------------------------------------------------------------------------------
@@ -177,5 +177,5 @@ implementation DecEq String where
                      False => No primitiveNotEq
        where primitiveEq : forall x, y . x = y
              primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . x = y -> Void
+             primitiveNotEq : forall x, y . Not (x = y)
              primitiveNotEq prf = believe_me {b = Void} ()

@@ -87,11 +87,23 @@ b32max = 0x100000000
 b64max : Integer
 b64max = 18446744073709551616 -- 0x10000000000000000
 
-bitCastWrap : (i : Integer) -> (max : Integer) -> Integer
+bitCastWrap : Ord a => Integral a => (i : a) -> (max : a) -> a
 bitCastWrap i max
     = if i >= 0 -- oops, we don't have `rem` yet!
         then i `mod` max
         else max + i `mod` max
+
+bit8CastWrap : (i : Int) -> Int
+bit8CastWrap i = bitCastWrap i b8max
+
+bit16CastWrap : (i : Int) -> Int
+bit16CastWrap i = bitCastWrap i b16max
+
+bit32CastWrap : (i : Int) -> Int
+bit32CastWrap i = bitCastWrap i b32max
+
+bit64CastWrap : (i : Integer) -> Integer
+bit64CastWrap i = bitCastWrap i b64max
 
 int8max : Integer
 int8max = 0x80
@@ -273,6 +285,10 @@ sub (I8 x) (I8 y) = pure $ I8 (int8CastWrap $ x - y)
 sub (I16 x) (I16 y) = pure $ I16 (int16CastWrap $ x - y)
 sub (I32 x) (I32 y) = pure $ I32 (int32CastWrap $ x - y)
 sub (I64 x) (I64 y) = pure $ I64 (int64CastWrap $ x - y)
+sub (B8 x) (B8 y) = pure $ B8 (bit8CastWrap $ x - y)
+sub (B16 x) (B16 y) = pure $ B16 (bit16CastWrap $ x - y)
+sub (B32 x) (B32 y) = pure $ B32 (bit32CastWrap $ x - y)
+sub (B64 x) (B64 y) = pure $ B64 (bit64CastWrap $ x - y)
 sub (Ch x) (Ch y) = pure $ Ch (cast (cast {to=Int} x - cast y))
 sub (Db x) (Db y) = pure $ Db (x - y)
 sub _ _ = Nothing
@@ -304,6 +320,14 @@ div (I32 x) (I32 0) = Nothing
 div (I32 x) (I32 y) = pure $ I32 (int32CastWrap $ assert_total (x `div` y))
 div (I64 x) (I64 0) = Nothing
 div (I64 x) (I64 y) = pure $ I64 (int64CastWrap $ assert_total (x `div` y))
+div (B8 x) (B8 0) = Nothing
+div (B8 x) (B8 y) = pure $ B8 (bit8CastWrap $ assert_total (x `div` y))
+div (B16 x) (B16 0) = Nothing
+div (B16 x) (B16 y) = pure $ B16 (bit16CastWrap $ assert_total (x `div` y))
+div (B32 x) (B32 0) = Nothing
+div (B32 x) (B32 y) = pure $ B32 (bit32CastWrap $ assert_total (x `div` y))
+div (B64 x) (B64 0) = Nothing
+div (B64 x) (B64 y) = pure $ B64 (bit64CastWrap $ assert_total (x `div` y))
 div (Db x) (Db y) = pure $ Db (x / y)
 div _ _ = Nothing
 
@@ -320,6 +344,14 @@ mod (I32 x) (I32 0) = Nothing
 mod (I32 x) (I32 y) = pure $ I32 (int32CastWrap $ assert_total (x `mod` y))
 mod (I64 x) (I64 0) = Nothing
 mod (I64 x) (I64 y) = pure $ I64 (int64CastWrap $ assert_total (x `mod` y))
+mod (B8 x) (B8 0) = Nothing
+mod (B8 x) (B8 y) = pure $ B8 (bit8CastWrap $ assert_total (x `mod` y))
+mod (B16 x) (B16 0) = Nothing
+mod (B16 x) (B16 y) = pure $ B16 (bit16CastWrap $ assert_total (x `mod` y))
+mod (B32 x) (B32 0) = Nothing
+mod (B32 x) (B32 y) = pure $ B32 (bit32CastWrap $ assert_total (x `mod` y))
+mod (B64 x) (B64 0) = Nothing
+mod (B64 x) (B64 y) = pure $ B64 (bit64CastWrap $ assert_total (x `mod` y))
 mod _ _ = Nothing
 
 -- Make sure a signed integer stays within bounds after a
@@ -384,13 +416,17 @@ bor (B32 x) (B32 y) = pure $ B32 (prim__or_Int x y)
 bor (B64 x) (B64 y) = pure $ B64 (prim__or_Integer x y)
 bor _ _ = Nothing
 
--- TODO: Add implementations for
---       Bits64, Integer, Int8, Int16, Int32, and Int64
 bxor : Constant -> Constant -> Maybe Constant
 bxor (I x) (I y) = pure $ I (prim__xor_Int x y)
 bxor (B8 x) (B8 y) = pure $ B8 (prim__xor_Int x y)
 bxor (B16 x) (B16 y) = pure $ B16 (prim__xor_Int x y)
 bxor (B32 x) (B32 y) = pure $ B32 (prim__xor_Int x y)
+bxor (B64 x) (B64 y) = pure $ B64 (prim__xor_Integer x y)
+bxor (I8 x) (I8 y) = pure $ I8 (prim__xor_Integer x y)
+bxor (I16 x) (I16 y) = pure $ I16 (prim__xor_Integer x y)
+bxor (I32 x) (I32 y) = pure $ I32 (prim__xor_Integer x y)
+bxor (I64 x) (I64 y) = pure $ I64 (prim__xor_Integer x y)
+bxor (BI x) (BI y) = pure $ BI (prim__xor_Integer x y)
 bxor _ _ = Nothing
 
 neg : Constant -> Maybe Constant
@@ -400,6 +436,10 @@ neg (I8 x) = pure . I8 $ int8CastWrap (-x)
 neg (I16 x) = pure . I16 $ int16CastWrap (-x)
 neg (I32 x) = pure . I32 $ int32CastWrap (-x)
 neg (I64 x) = pure . I64 $ int64CastWrap (-x)
+neg (B8 x) = pure . B8 $ bit8CastWrap (-x)
+neg (B16 x) = pure . B16 $ bit16CastWrap (-x)
+neg (B32 x) = pure . B32 $ bit32CastWrap (-x)
+neg (B64 x) = pure . B64 $ bit64CastWrap (-x)
 neg (Db x) = pure $ Db (-x)
 neg _ = Nothing
 
@@ -496,6 +536,12 @@ doubleExp = doubleOp exp
 
 doubleLog : Vect 1 (NF vars) -> Maybe (NF vars)
 doubleLog = doubleOp log
+
+doublePow : {vars : _ } -> Vect 2 (NF vars) -> Maybe (NF vars)
+doublePow = binOp pow'
+    where pow' : Constant -> Constant -> Maybe Constant
+          pow' (Db x) (Db y) = pure $ Db (pow x y)
+          pow' _ _ = Nothing
 
 doubleSin : Vect 1 (NF vars) -> Maybe (NF vars)
 doubleSin = doubleOp sin
@@ -619,6 +665,7 @@ getOp StrSubstr = strSubstr
 
 getOp DoubleExp = doubleExp
 getOp DoubleLog = doubleLog
+getOp DoublePow = doublePow
 getOp DoubleSin = doubleSin
 getOp DoubleCos = doubleCos
 getOp DoubleTan = doubleTan
@@ -665,6 +712,7 @@ opName StrReverse = prim "strReverse"
 opName StrSubstr = prim "strSubstr"
 opName DoubleExp = prim "doubleExp"
 opName DoubleLog = prim "doubleLog"
+opName DoublePow = prim "doublePow"
 opName DoubleSin = prim "doubleSin"
 opName DoubleCos = prim "doubleCos"
 opName DoubleTan = prim "doubleTan"
@@ -732,6 +780,7 @@ allPrimitives =
 
     [MkPrim DoubleExp doubleTy isTotal,
      MkPrim DoubleLog doubleTy isTotal,
+     MkPrim DoublePow (arithTy DoubleType) isTotal,
      MkPrim DoubleSin doubleTy isTotal,
      MkPrim DoubleCos doubleTy isTotal,
      MkPrim DoubleTan doubleTy isTotal,

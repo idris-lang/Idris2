@@ -185,6 +185,13 @@ builtinType =
     <|> NaturalToInteger <$ exactIdent "NaturalToInteger"
     <|> IntegerToNatural <$ exactIdent "IntegerToNatural"
 
+operatorCandidate : Rule Name
+operatorCandidate
+    = terminal "Expected operator"
+               \case
+                 Symbol s => Just (UN s)
+                 _ => Nothing
+
 export
 operator : Rule Name
 operator
@@ -192,8 +199,8 @@ operator
                \case
                  Symbol s =>
                    if s `elem` reservedSymbols
-                     then Nothing
-                     else Just (UN s)
+                   then Nothing
+                   else Just (UN s)
                  _ => Nothing
 
 identPart : Rule String
@@ -253,15 +260,27 @@ reservedNames
       , "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"
       ]
 
-isNotReservedIdent : WithBounds String -> EmptyRule ()
-isNotReservedIdent x
+isNotReservedName : WithBounds String -> EmptyRule ()
+isNotReservedName x
     = if x.val `elem` reservedNames
-      then failLoc x.bounds $ "can't use reserved name " ++ x.val
+      then failLoc x.bounds $ "Can't use reserved name \{x.val}"
+      else pure ()
+
+isNotReservedSymbol : WithBounds String -> EmptyRule ()
+isNotReservedSymbol x
+    = if x.val `elem` reservedSymbols
+      then failLoc x.bounds $ "Can't use reserved symbol \{x.val}"
       else pure ()
 
 export
 opNonNS : Rule Name
-opNonNS = symbol "(" *> (operator <|> postfixProj) <* symbol ")"
+opNonNS = do
+  symbol "("
+  commit
+  id <- bounds (operatorCandidate <|> postfixProj)
+  isNotReservedSymbol (nameRoot <$> id)
+  symbol ")"
+  pure id.val
 
 identWithCapital : (capitalised : Bool) -> WithBounds String ->
                    EmptyRule ()
@@ -277,7 +296,7 @@ nameWithCapital b = opNonNS <|> do
   nameNS nsx = do
     let id = snd <$> nsx
     identWithCapital b id
-    isNotReservedIdent id
+    isNotReservedName id
     pure $ uncurry mkNamespacedName nsx.val
 
   opNS : WithBounds (Maybe Namespace, String) -> Rule Name
@@ -302,7 +321,7 @@ capitalisedIdent : Rule String
 capitalisedIdent = do
   id <- bounds identPart
   isCapitalisedIdent id
-  isNotReservedIdent id
+  isNotReservedName id
   pure id.val
 
 export

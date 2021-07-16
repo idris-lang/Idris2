@@ -66,7 +66,7 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
        "error016", "error017", "error018", "error019",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
-       "perror006", "perror007", "perror008"]
+       "perror006", "perror007", "perror008", "perror009"]
 
 idrisTestsInteractive : TestPool
 idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
@@ -79,7 +79,7 @@ idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
        "interactive021", "interactive022", "interactive023", "interactive024",
        "interactive025", "interactive026", "interactive027", "interactive028",
        "interactive029", "interactive030", "interactive031", "interactive032",
-       "interactive033", "interactive034", "interactive035"]
+       "interactive033", "interactive034", "interactive035", "interactive036"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool "Interface" [] Nothing
@@ -124,7 +124,7 @@ idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
        "reg036", "reg037", "reg038", "reg039", "reg040", "reg041", "reg042",
-       "reg043", "reg044", "reg045"]
+       "reg043", "reg044", "reg045", "reg046"]
 
 idrisTestsData : TestPool
 idrisTestsData = MkTestPool "Data and record types" [] Nothing
@@ -186,7 +186,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Quotation and reflection
        "reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",
-       "reflection009",
+       "reflection009","reflection010",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
@@ -213,7 +213,7 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "chez013", "chez014", "chez015", "chez016", "chez017", "chez018"
     , "chez019", "chez020", "chez021", "chez022", "chez023", "chez024"
     , "chez025", "chez026", "chez027", "chez028", "chez029", "chez030"
-    , "chez031", "chez032", "chez033"
+    , "chez031", "chez032", "chez033", "chez034"
     , "futures001"
     , "bitops"
     , "casts"
@@ -296,6 +296,7 @@ baseLibraryTests = MkTestPool "Base library" [Chez, Node] Nothing
   , "system_info_os001"
   , "system_system"
   , "data_bits001"
+  , "system_errno"
   , "system_info001"
   , "system_signal001", "system_signal002", "system_signal003", "system_signal004"
   ]

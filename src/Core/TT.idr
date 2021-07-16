@@ -342,6 +342,7 @@ data PrimFn : Nat -> Type where
 
      DoubleExp : PrimFn 1
      DoubleLog : PrimFn 1
+     DoublePow : PrimFn 2
      DoubleSin : PrimFn 1
      DoubleCos : PrimFn 1
      DoubleTan : PrimFn 1
@@ -384,6 +385,7 @@ Show (PrimFn arity) where
   show StrSubstr = "op_strsubstr"
   show DoubleExp = "op_doubleExp"
   show DoubleLog = "op_doubleLog"
+  show DoublePow = "op_doublePow"
   show DoubleSin = "op_doubleSin"
   show DoubleCos = "op_doubleCos"
   show DoubleTan = "op_doubleTan"

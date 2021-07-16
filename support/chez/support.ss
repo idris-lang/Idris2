@@ -257,7 +257,7 @@
 (define (blodwen-get-thread-data ty)
   (blodwen-thread-data))
 
-(define (blodwen-set-thread-data a)
+(define (blodwen-set-thread-data ty a)
   (blodwen-thread-data a))
 
 ;; Semaphore
@@ -421,7 +421,6 @@
         (micro (mod s 1000000)))
        (sleep (make-time 'time-duration (* 1000 micro) sec))))
 
-(define (blodwen-time) (time-second (current-time)))
 (define (blodwen-clock-time-utc) (current-time 'time-utc))
 (define (blodwen-clock-time-monotonic) (current-time 'time-monotonic))
 (define (blodwen-clock-time-duration) (current-time 'time-duration))

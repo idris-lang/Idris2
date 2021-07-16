@@ -125,6 +125,7 @@ modules =
     Libraries.Data.Graph,
     Libraries.Data.IMaybe,
     Libraries.Data.IntMap,
+    Libraries.Data.IOArray,
     Libraries.Data.IOMatrix,
     Libraries.Data.LengthMatch,
     Libraries.Data.List.Extra,

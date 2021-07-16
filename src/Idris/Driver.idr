@@ -265,6 +265,9 @@ quitOpts (Help Nothing :: _)
 quitOpts (Help (Just HelpLogging) :: _)
     = do putStrLn helpTopics
          pure False
+quitOpts (Help (Just HelpPragma) :: _)
+    = do putStrLn pragmaTopics
+         pure False
 quitOpts (ShowPrefix :: _)
     = do putStrLn yprefix
          pure False

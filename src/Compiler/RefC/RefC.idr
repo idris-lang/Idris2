@@ -5,6 +5,7 @@ import Compiler.RefC.CC
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.ANF
+import Compiler.Generated
 
 import Core.Context
 import Core.Context.Log
@@ -164,6 +165,7 @@ cOp StrReverse    [x]       = "reverse(" ++ x ++ ")"
 cOp (Cast i o)    [x]       = "cast_" ++ (cConstant i) ++ "_to_" ++ (cConstant o) ++ "(" ++ x ++ ")"
 cOp DoubleExp     [x]       = "(Value*)makeDouble(exp(unpackDouble(" ++ x ++ ")))"
 cOp DoubleLog     [x]       = "(Value*)makeDouble(log(unpackDouble(" ++ x ++ ")))"
+cOp DoublePow     [x, y]    = "(Value*)makeDouble(pow(unpackDouble(" ++ x ++ "), unpackDouble(" ++ y ++ ")))"
 cOp DoubleSin     [x]       = "(Value*)makeDouble(sin(unpackDouble(" ++ x ++ ")))"
 cOp DoubleCos     [x]       = "(Value*)makeDouble(cos(unpackDouble(" ++ x ++ ")))"
 cOp DoubleTan     [x]       = "(Value*)makeDouble(tan(unpackDouble(" ++ x ++ ")))"
@@ -969,7 +971,7 @@ header : {auto c : Ref Ctxt Defs}
       -> Core ()
 header = do
     let initLines = [ "#include <runtime.h>"
-                    , "/* automatically generated using the Idris2 C Backend */"]
+                    , "/* " ++ (generatedString "RefC") ++" */"]
     let headerFiles = Libraries.Data.SortedSet.toList !(get HeaderFiles)
     let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
     fns <- get FunctionDefinitions

@@ -61,12 +61,12 @@ negAnyAll {xs=Nil} _ = Nil
 negAnyAll {xs=(x::xs)} f = (f . Here) :: negAnyAll (f . There)
 
 export
-notAllHere : {0 p : a -> Type} -> {xs : Vect n a} -> Not (p x) -> All p (x :: xs) -> Void
+notAllHere : {0 p : a -> Type} -> {xs : Vect n a} -> Not (p x) -> Not (All p (x :: xs))
 notAllHere _ Nil impossible
 notAllHere np (p :: _) = np p
 
 export
-notAllThere : {0 p : a -> Type} -> {xs : Vect n a} -> Not (All p xs) -> All p (x :: xs) -> Void
+notAllThere : {0 p : a -> Type} -> {xs : Vect n a} -> Not (All p xs) -> Not (All p (x :: xs))
 notAllThere _ Nil impossible
 notAllThere np (_ :: ps) = np ps
 

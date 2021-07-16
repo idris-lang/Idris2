@@ -31,10 +31,11 @@ Mismatch between: Vect 0 ?elem and List ?a.
                                             ^
 
 Main> the (Maybe Integer) (pure 4) : Maybe Integer
-Main> Expected 'case', 'if', 'do', application or operator expression.
+Main> Couldn't parse any alternatives:
+1: Expected 'case', 'if', 'do', application or operator expression.
 
-(Interactive):1:4--1:5
+(Interactive):1:4--1:8
  1 | :t with [] 4
-        ^
-
+        ^^^^
+... (44 others)
 Main> Bye for now!

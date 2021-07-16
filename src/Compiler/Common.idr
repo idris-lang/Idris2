@@ -13,10 +13,10 @@ import Core.Directory
 import Core.Options
 import Core.TT
 import Core.TTC
+import Libraries.Data.IOArray
 import Libraries.Utils.Binary
 import Libraries.Utils.Path
 
-import Data.IOArray
 import Data.List
 import Data.List1
 import Libraries.Data.NameMap
