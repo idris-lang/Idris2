@@ -51,12 +51,14 @@ Show DirCommand where
 ||| Help topics
 public export
 data HelpTopic
-  =
-    ||| Interactive debugging topics
-   HelpLogging
+  = ||| Interactive debugging topics
+    HelpLogging
+  | ||| The various pragmas
+    HelpPragma
 
 recogniseHelpTopic : String -> Maybe HelpTopic
-recogniseHelpTopic "logging" = pure HelpLogging
+recogniseHelpTopic "logging"   = pure HelpLogging
+recogniseHelpTopic "pragma" = pure HelpPragma
 recogniseHelpTopic _ = Nothing
 
 ||| CLOpt - possible command line options
