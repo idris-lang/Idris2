@@ -62,12 +62,12 @@ prim__onCollectAny : AnyPtr -> (AnyPtr -> PrimIO ()) -> PrimIO GCAnyPtr
 prim__onCollect : Ptr t -> (Ptr t -> PrimIO ()) -> PrimIO (GCPtr t)
 
 export
-onCollectAny : AnyPtr -> (AnyPtr -> IO ()) -> IO GCAnyPtr
-onCollectAny ptr c = fromPrim (prim__onCollectAny ptr (\x => toPrim (c x)))
+onCollectAny : HasIO io => AnyPtr -> (AnyPtr -> IO ()) -> io GCAnyPtr
+onCollectAny ptr c = primIO (prim__onCollectAny ptr (\x => toPrim (c x)))
 
 export
-onCollect : Ptr t -> (Ptr t -> IO ()) -> IO (GCPtr t)
-onCollect ptr c = fromPrim (prim__onCollect ptr (\x => toPrim (c x)))
+onCollect : HasIO io => Ptr t -> (Ptr t -> IO ()) -> io (GCPtr t)
+onCollect ptr c = primIO (prim__onCollect ptr (\x => toPrim (c x)))
 
 %foreign "C:idris2_getString, libidris2_support, idris_support.h"
          "javascript:lambda:x=>x"
