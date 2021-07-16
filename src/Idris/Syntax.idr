@@ -293,7 +293,7 @@ mutual
     show $ vsep $ map (((<++>) "+") . pretty {ann=()} . showDirective) $ filter isPragma directiveList
     where
       showDirective : Directive -> String
-      showDirective (Hide _)             = "%hide term"
+      showDirective (Hide _)             = "%hide name"
       showDirective (Logging _)          = "%logging [topic] lvl"
       showDirective (LazyOn _)           = "%auto_lazy on|off"
       showDirective (UnboundImplicits _) = "%unbound_implicits"
