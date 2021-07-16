@@ -503,18 +503,6 @@ getExtraRuntime directives
         | Left err => throw (FileErr p err)
       pure contents
 
-||| Looks up an executable from a list of candidate names in the PATH
-export
-pathLookup : List String -> IO (Maybe String)
-pathLookup candidates
-    = do path <- idrisGetEnv "PATH"
-         let extensions = if isWindows then [".exe", ".cmd", ".bat", ""] else [""]
-         let pathList = forget $ String.split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
-         let candidates = [p ++ "/" ++ x ++ y | p <- pathList,
-                                                x <- candidates,
-                                                y <- extensions ]
-         firstExists candidates
-
 ||| Cast implementations. Values of `ConstantPrimitives` can
 ||| be used in a call to `castInt`, which then determines
 ||| the cast implementation based on the given pair of
