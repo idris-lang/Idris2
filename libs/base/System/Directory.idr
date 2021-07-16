@@ -118,3 +118,20 @@ dirEntry d = do r <- nextDirEntry d
                          Left e         => Left e
                          Right (Just n) => Right n
                          Right Nothing  => Left FileNotFound
+
+collectDir : HasIO io => Directory -> io (Either FileError (List String))
+collectDir d
+    = liftIO $ do let (>>=) : (IO . Either e) a -> (a -> (IO . Either e) b) -> (IO . Either e) b
+                      (>>=) = Prelude.(>>=) @{Monad.Compose {m = IO} {t = Either e}}
+                  Just n <- nextDirEntry d
+                    | Nothing => pure $ Right []
+                  ns <- assert_total $ collectDir d
+                  pure $ Right (n :: ns)
+
+export
+listDir : HasIO io => String -> io (Either FileError (List String))
+listDir name = do Right d <- openDir name
+                    | Left e => pure $ Left e
+                  ns <- collectDir d
+                  ignore <- closeDir d
+                  pure $ ns
