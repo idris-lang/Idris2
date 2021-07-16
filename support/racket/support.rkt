@@ -432,8 +432,6 @@
 (define (blodwen-sleep s) (sleep s))
 (define (blodwen-usleep us) (sleep (* 0.000001 us)))
 
-(define (blodwen-time) (current-seconds))
-
 (define (blodwen-clock-time-utc) (current-time 'time-utc))
 (define (blodwen-clock-time-monotonic) (current-time 'time-monotonic))
 (define (blodwen-clock-time-duration) (current-time 'time-duration))
