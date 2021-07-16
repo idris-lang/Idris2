@@ -298,6 +298,7 @@ baseLibraryTests = MkTestPool "Base library" [Chez, Node] Nothing
   , "data_bits001"
   , "data_string_lines001"
   , "data_string_unlines001"
+  , "system_directory"
   , "system_errno"
   , "system_info001"
   , "system_signal001", "system_signal002", "system_signal003", "system_signal004"

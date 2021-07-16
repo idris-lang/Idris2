@@ -1,5 +1,6 @@
 module System.Directory
 
+import System.Errno
 import public System.File
 
 %default total
@@ -97,9 +98,20 @@ removeDir : HasIO io => String -> io ()
 removeDir dirName = primIO (prim__removeDir dirName)
 
 export
-dirEntry : HasIO io => Directory -> io (Either FileError String)
-dirEntry (MkDir d)
+nextDirEntry : HasIO io => Directory -> io (Either FileError (Maybe String))
+nextDirEntry (MkDir d)
     = do res <- primIO (prim__dirEntry d)
          if prim__nullPtr res /= 0
-            then returnError
-            else ok (prim__getString res)
+            then if !(getErrno) /= 0
+                    then returnError
+                    else pure $ Right Nothing
+            else pure $ Right (Just (prim__getString res))
+
+-- This function is deprecated; to be removed after the next version bump
+export
+dirEntry : HasIO io => Directory -> io (Either FileError String)
+dirEntry d = do r <- nextDirEntry d
+                pure $ case r of
+                         Left e         => Left e
+                         Right (Just n) => Right n
+                         Right Nothing  => Left FileNotFound
