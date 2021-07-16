@@ -71,3 +71,32 @@ Chez Directives
   ::
 
     $ idris2 --codegen chez --directive extraRuntime=/path/to/extensions.scm -o main Main.idr
+
+Making a freestanding executable
+================================
+
+It's possible to embed the Chez Scheme system and the built Idris2 program into a freestanding executable with `chez-exe <https://github.com/gwatt/chez-exe>`.
+
+  * Build and install the ``compile-chez-program-tool`` by running the
+    configuration script and then make:
+
+    ::
+
+      $ scheme --script gen-config.ss --bootpath <bootpath>
+
+    where ``<bootpath`` is the path to where the Chez Scheme bootfiles (``petite.boot`` and ``scheme.boot``) and ``scheme.h`` are. More
+    configuration is described in the chez-exe installation instructions.
+  
+  * Invoke ``compile-chez-program``:
+  
+    ::
+
+      $ compile-chez-program --optimize-level 3 build/exec/my_idris_prog_app/my_idris_prog.ss 
+
+    Note that it can only use the ``.ss``-file and not the ``.so``-file. To 
+    embed the full Chez Scheme system including the compiler add the ``--full-chez`` option.
+
+  * The finished executable still requires the libidris_support shared 
+    library. It's possible to also eliminate that dependency by linking with 
+    it statically.
+
