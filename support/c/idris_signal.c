@@ -1,11 +1,14 @@
 #include "idris_signal.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdatomic.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
+
+#include "idris_util.h"
 
 static_assert(ATOMIC_LONG_LOCK_FREE == 2,
   "when not lock free, atomic functions are not async-signal-safe");
@@ -14,20 +17,14 @@ static_assert(ATOMIC_LONG_LOCK_FREE == 2,
 static atomic_long signal_count[N_SIGNALS];
 
 void _collect_signal(int signum) {
-  if (signum < 0 || signum >= N_SIGNALS) {
-    abort();
-  }
+  IDRIS2_VERIFY(signum >= 0 && signum < N_SIGNALS, "signal number out of range: %d", signum);
 
   long prev = atomic_fetch_add(&signal_count[signum], 1);
-  if (prev == LONG_MAX) {
-    // Practically impossible, but better crash explicitly
-    fprintf(stderr, "signal count overflow\n");
-    abort();
-  }
+  IDRIS2_VERIFY(prev != LONG_MAX, "signal count overflow");
 
 #ifdef _WIN32
   //re-instate signal handler
-  signal(signum, _collect_signal);
+  IDRIS2_VERIFY(signal(signum, _collect_signal) != SIG_ERR, "signal failed: %s", strerror(errno));
 #endif
 }
 
@@ -77,11 +74,7 @@ int handle_next_collected_signal() {
       if (count == 0) {
         break;
       }
-      if (count < 0) {
-        // Practically impossible, but better crash explicitly
-        fprintf(stderr, "signal count overflow\n");
-        abort();
-      }
+      IDRIS2_VERIFY(count >= 0, "signal count overflow");
       if (atomic_compare_exchange_strong(&signal_count[signum], &count, count - 1)) {
         return signum;
       }

@@ -1,15 +1,13 @@
 #include "idris_memory.h"
 
 #include <errno.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "idris_util.h"
+
 void* idris2_malloc(int size) {
-    if (size < 0) {
-        fprintf(stderr, "malloc negative argument: %d\n", size);
-        abort();
-    }
+    IDRIS2_VERIFY(size >= 0, "malloc negative argument: %d", size);
 
     if (size == 0) {
         // Do not depend on platform-speific behavior of malloc.
@@ -17,10 +15,7 @@ void* idris2_malloc(int size) {
     }
 
     void* ptr = malloc(size);
-    if (!ptr) {
-        fprintf(stderr, "malloc failed: %s\n", strerror(errno));
-        abort();
-    }
+    IDRIS2_VERIFY(ptr, "malloc failed: %s", strerror(errno));
     return ptr;
 }
 
