@@ -141,6 +141,11 @@ dropAllNS (NS _ n) = dropAllNS n
 dropAllNS n = n
 
 export
+mbApplyNS : Maybe Namespace -> Name -> Name
+mbApplyNS Nothing n = n
+mbApplyNS (Just ns) n = NS ns n
+
+export
 Show Name where
   show (NS ns n@(RF _)) = show ns ++ ".(" ++ show n ++ ")"
   show (NS ns n) = show ns ++ "." ++ show n

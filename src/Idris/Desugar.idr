@@ -397,17 +397,13 @@ mutual
         let ns = mbNamespace !(get Bang)
         desugarB side ps (PDoBlock fc ns (map (guard ns) conds ++ [toPure ns ret]))
     where
-      mbNS : Maybe Namespace -> Name -> Name
-      mbNS Nothing n = n
-      mbNS (Just ns) n = NS ns n
-
       guard : Maybe Namespace -> PDo -> PDo
       guard ns (DoExp fc tm)
-       = DoExp fc (PApp fc (PRef fc (mbNS ns $ UN "guard")) tm)
+       = DoExp fc (PApp fc (PRef fc (mbApplyNS ns $ UN "guard")) tm)
       guard ns d = d
 
       toPure : Maybe Namespace -> PTerm -> PDo
-      toPure ns tm = DoExp fc (PApp fc (PRef fc (mbNS ns $ UN "pure")) tm)
+      toPure ns tm = DoExp fc (PApp fc (PRef fc (mbApplyNS ns $ UN "pure")) tm)
   desugarB side ps (PRewrite fc rule tm)
       = pure $ IRewrite fc !(desugarB side ps rule) !(desugarB side ps tm)
   desugarB side ps (PRange fc start next end)
