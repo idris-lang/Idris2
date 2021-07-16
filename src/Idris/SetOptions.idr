@@ -384,6 +384,7 @@ preOptions (HashesInsteadOfModTime :: opts)
          preOptions opts
 preOptions (CaseTreeHeuristics :: opts)
     = do setSession (record { caseTreeHeuristics = True } !getSession)
+         preOptions opts
 preOptions (IncrementalCG e :: opts)
     = do defs <- get Ctxt
          setIncrementalCG True e
