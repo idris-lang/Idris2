@@ -105,7 +105,10 @@ nextDirEntry (MkDir d)
             then if !(getErrno) /= 0
                     then returnError
                     else pure $ Right Nothing
-            else pure $ Right (Just (prim__getString res))
+            else do let n = prim__getString res
+                    if n == "." || n == ".."
+                       then assert_total $ nextDirEntry (MkDir d)
+                       else pure $ Right (Just n)
 
 -- This function is deprecated; to be removed after the next version bump
 export

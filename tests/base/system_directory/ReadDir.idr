@@ -10,9 +10,7 @@ collectEntries d = do Right (Just n) <- nextDirEntry d
                         | Right Nothing => pure []
                         | Left e        => panic (show e)
                       ns <- collectEntries d
-                      if n == "." || n == ".."
-                         then pure ns
-                         else pure (n :: ns)
+                      pure (n :: ns)
 
 main : IO ()
 main = do Right d <- openDir "dir"
