@@ -1,0 +1,10 @@
+1/1: Building Error1 (Error1.idr)
+Error: Can't use reserved symbol @.
+
+Error1:4:4--4:5
+ 1 | 
+ 2 | data Foo : Type where
+ 3 |   FooBase : Foo
+ 4 |   (@) : Foo -> Foo -> Foo
+        ^
+

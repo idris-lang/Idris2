@@ -2,7 +2,7 @@
 
 set -e # exit on any error
 
-PREFIX=$PWD/bootstrap
+PREFIX=$PWD/bootstrap-build
 
 if [ "$OS" = "windows" ]; then
     # IDRIS_PREFIX is only used to build IDRIS2_BOOT_PATH

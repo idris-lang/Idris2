@@ -14,28 +14,29 @@ Lambda:62:3--88:9
 1/1: Building Bad1 (Bad1.idr)
 Error: Couldn't parse declaration.
 
-Bad1:3:1--3:2
+Bad1:3:1--3:5
  1 | module Bad1
  2 | 
  3 | data Bad = BadDCon (x : Nat)
-     ^
+     ^^^^
 
 1/1: Building Bad2 (Bad2.idr)
-Error: Expected 'case', 'if', 'do', application or operator expression.
+Error: Couldn't parse any alternatives:
+1: Expected 'case', 'if', 'do', application or operator expression.
 
 Bad2:3:13--3:14
  1 | module Bad2
  2 | 
  3 | badReturn : (whatever : Int)
                  ^
-
+... (53 others)
 1/1: Building Bad3 (Bad3.idr)
 Error: Couldn't parse declaration.
 
-Bad3:4:1--4:2
+Bad3:4:1--4:8
  1 | module Bad3
  2 | 
  3 | badExpr : ()
  4 | badExpr (whatever : ())
-     ^
+     ^^^^^^^
 

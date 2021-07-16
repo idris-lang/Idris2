@@ -574,6 +574,7 @@ export
 
   toBuf b DoubleExp = tag 19
   toBuf b DoubleLog = tag 20
+  toBuf b DoublePow = tag 21
   toBuf b DoubleSin = tag 22
   toBuf b DoubleCos = tag 23
   toBuf b DoubleTan = tag 24
@@ -634,6 +635,7 @@ export
                  14 => pure StrIndex
                  15 => pure StrCons
                  16 => pure StrAppend
+                 21 => pure DoublePow
                  35 => do ty <- fromBuf b; pure (ShiftL ty)
                  36 => do ty <- fromBuf b; pure (ShiftR ty)
                  37 => do ty <- fromBuf b; pure (BAnd ty)

@@ -50,6 +50,7 @@ knownTopics = [
     ("compile.casetree.clauses", Nothing),
     ("compile.casetree.getpmdef", Nothing),
     ("compile.casetree.intermediate", Nothing),
+    ("compile.casetree.measure", Just "Log the node counts of each runtime case tree."),
     ("compile.casetree.pick", Nothing),
     ("compile.casetree.partition", Nothing),
     ("compiler.inline.eval", Nothing),

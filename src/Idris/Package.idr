@@ -735,6 +735,7 @@ partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
     optType Verbose                = POpt
     optType Timing                 = POpt
     optType (Logging l)            = POpt
+    optType CaseTreeHeuristics     = POpt
     optType (DumpCases f)          = POpt
     optType (DumpLifted f)         = POpt
     optType (DumpVMCode f)         = POpt

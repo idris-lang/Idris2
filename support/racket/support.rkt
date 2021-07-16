@@ -249,7 +249,7 @@
 (define (blodwen-get-thread-data ty)
   (thread-cell-ref blodwen-thread-data))
 
-(define (blodwen-set-thread-data a)
+(define (blodwen-set-thread-data ty a)
   (thread-cell-set! blodwen-thread-data a))
 
 ;; Semaphores
@@ -431,8 +431,6 @@
 ;; things, but not for `sleep`.
 (define (blodwen-sleep s) (sleep s))
 (define (blodwen-usleep us) (sleep (* 0.000001 us)))
-
-(define (blodwen-time) (current-seconds))
 
 (define (blodwen-clock-time-utc) (current-time 'time-utc))
 (define (blodwen-clock-time-monotonic) (current-time 'time-monotonic))

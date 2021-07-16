@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "idris_util.h"
+
 #ifndef _WIN32
 #include <netinet/in.h>
 #include <arpa/inet.h>

@@ -4,7 +4,7 @@ import Language.Reflection
 
 logPrims : Elab a
 logPrims
-    = do ns <- getType `{{ (++) }}
+    = do ns <- getType `{ (++) }
          traverse_ (\ (n, ty) =>
                         do logMsg "" 0 ("Name: " ++ show n)
                            logTerm "" 0 "Type" ty) ns
@@ -12,7 +12,7 @@ logPrims
 
 logDataCons : Elab a
 logDataCons
-    = do [(n, _)] <- getType `{{ Nat }}
+    = do [(n, _)] <- getType `{ Nat }
              | _ => fail "Ambiguous name"
          logMsg "" 0 ("Resolved name: " ++ show n)
          logMsg "" 0 ("Constructors: " ++ show !(getCons n))
@@ -20,7 +20,7 @@ logDataCons
 
 logBad : Elab a
 logBad
-    = do [(n, _)] <- getType `{{ DoesntExist }}
+    = do [(n, _)] <- getType `{ DoesntExist }
              | [] => fail "Undefined name"
              | _ => fail "Ambiguous name"
          logMsg "" 0 ("Resolved name: " ++ show n)

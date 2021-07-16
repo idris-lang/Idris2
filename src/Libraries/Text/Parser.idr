@@ -2,8 +2,8 @@ module Libraries.Text.Parser
 
 import Data.Bool
 import Data.List
-import Data.List1
 import Data.Nat
+import public Data.List1
 
 import public Libraries.Text.Parser.Core
 import public Libraries.Text.Quantity

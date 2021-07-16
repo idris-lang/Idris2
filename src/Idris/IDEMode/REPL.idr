@@ -378,7 +378,10 @@ displayIDEResult outf i (REPL $ Edited (EditError x))
   = printIDEError outf i x
 displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr))
   = printIDEResult outf i
-  $ StringAtom $ (relit lit $ show name ++ " : " ++ show pty ++ "\n") ++ pappstr
+  $ SExpList [ SymbolAtom "metavariable-lemma"
+             , SExpList [ SymbolAtom "replace-metavariable", StringAtom pappstr ]
+             , SExpList [ SymbolAtom "definition-type", StringAtom $ relit lit $ show name ++ " : " ++ show pty ]
+             ]
 displayIDEResult outf i (REPL $ Edited (MadeWith lit wapp))
   = printIDEResult outf i
   $ StringAtom $ showSep "\n" (map (relit lit) wapp)

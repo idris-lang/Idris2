@@ -91,7 +91,7 @@ mkModTree loc done modFP mod
                 (\err =>
                     case err of
                          CyclicImports _ => throw err
-                         ParseFail _ _ => throw err
+                         ParseFail _ => throw err
                          _ => pure (MkModTree mod Nothing []))
 
 data DoneMod : Type where
