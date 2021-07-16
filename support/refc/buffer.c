@@ -2,11 +2,6 @@
 #include <sys/stat.h>
 #include <string.h>
 
-typedef struct {
-    int size;
-    uint8_t data[];
-} Buffer;
-
 void* newBuffer(int bytes) {
     size_t size = sizeof(Buffer) + bytes*sizeof(uint8_t);
 
@@ -77,11 +72,6 @@ void setBufferString(void* buffer, int loc, char* str) {
     }
 }
 
-size_t writeBufferData(FILE* h, void* buffer, size_t loc, size_t len) {
-    Buffer* b = buffer;
-    return fwrite(b->data + loc, sizeof(uint8_t), len, h);
-}
-
 uint8_t getBufferByte(void* buffer, int loc) {
     Buffer* b = buffer;
     if (loc >= 0 && loc < b->size) {
@@ -96,7 +86,7 @@ int64_t getBufferInt(void* buffer, int loc) {
     if (loc >= 0 && loc+7 < b->size) {
         int64_t result = 0;
         for (size_t i=0; i<8; i++) {
-            result |= (int64_t)b->data[loc + i] << (8 * i);
+            result |= (uint64_t)(uint8_t)b->data[loc + i] << (8 * i);
         }
         return result;
     } else {
@@ -128,9 +118,4 @@ char* getBufferString(void* buffer, int loc, int len) {
     strncpy(rs, s, len);
     rs[len] = '\0';
     return rs;
-}
-
-size_t readBufferData(FILE* h, void* buffer, size_t loc, size_t max) {
-    Buffer* b = buffer;
-    return fread(b->data + loc, sizeof(uint8_t), max, h);
 }
