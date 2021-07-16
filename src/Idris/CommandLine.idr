@@ -133,20 +133,24 @@ data CLOpt
   DebugElabCheck |
   AltErrorCount Nat |
   BlodwenPaths |
-  ||| Treat warnings as errors
+   ||| Treat warnings as errors
   WarningsAsErrors |
-  ||| Do not print shadowing warnings
+   ||| Do not print shadowing warnings
   IgnoreShadowingWarnings |
-  ||| Use SHA256 hashes to determine if a source file needs rebuilding instead
-  ||| of modification time.
+   ||| Use SHA256 hashes to determine if a source file needs rebuilding instead
+   ||| of modification time.
   HashesInsteadOfModTime |
-  ||| Use incremental code generation, if the backend supports it
+   ||| Apply experimental heuristics to case tree generation that
+   ||| sometimes improves performance and reduces compiled code
+   ||| size.
+  CaseTreeHeuristics |
+   ||| Use incremental code generation, if the backend supports it
   IncrementalCG String |
-  ||| Use whole program compilation - overrides IncrementalCG if set
+   ||| Use whole program compilation - overrides IncrementalCG if set
   WholeProgram |
-  ||| Generate bash completion info
+   ||| Generate bash completion info
   BashCompletion String String |
-  ||| Generate bash completion script
+   ||| Generate bash completion script
   BashCompletionScript String
 
 ||| Extract the host and port to bind the IDE socket to
@@ -240,6 +244,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            optSeparator,
            MkOpt ["-Xcheck-hashes"] [] [HashesInsteadOfModTime]
              (Just "Use SHA256 hashes instead of modification time to determine if a source file needs rebuilding"),
+           MkOpt ["-Xcase-tree-opt"] [] [CaseTreeHeuristics]
+              (Just "Apply experimental optimizations to case tree generation"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]

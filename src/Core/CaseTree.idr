@@ -45,6 +45,20 @@ mutual
        ||| Catch-all case
        DefaultCase : CaseTree vars -> CaseAlt vars
 
+mutual
+  public export
+  measure : CaseTree vars -> Nat
+  measure (Case idx p scTy xs) = sum $ measureAlts <$> xs
+  measure (STerm x y) = 0
+  measure (Unmatched msg) = 0
+  measure Impossible = 0
+
+  measureAlts : CaseAlt vars -> Nat
+  measureAlts (ConCase x tag args y) = 1 + (measure y)
+  measureAlts (DelayCase ty arg x) = 1 + (measure x)
+  measureAlts (ConstCase x y) = 1 + (measure y)
+  measureAlts (DefaultCase x) = 1 + (measure x)
+
 export
 isDefault : CaseAlt vars -> Bool
 isDefault (DefaultCase _) = True

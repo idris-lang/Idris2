@@ -760,6 +760,7 @@ mkRunTime fc n
              , show (indent 2 $ pretty {ann = ()} !(toFullNames tree_rt))
              ]
            log "compile.casetree" 10 $ show tree_rt
+           log "compile.casetree.measure" 15 $ show (measure tree_rt)
 
            let Just Refl = nameListEq cargs rargs
                    | Nothing => throw (InternalError "WAT")

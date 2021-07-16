@@ -178,6 +178,7 @@ record Session where
      -- Use whole program compilation for executables, no matter what
      -- incremental CGs are set (intended for overriding any environment
      -- variables that set incremental compilation)
+  caseTreeHeuristics : Bool -- apply heuristics to pick matches for case tree building
 
 public export
 record PPrinter where
@@ -228,7 +229,7 @@ defaultSession : Session
 defaultSession = MkSessionOpts False False False Chez [] 1000 False False
                                defaultLogLevel False False Nothing Nothing
                                Nothing Nothing False 1 False True
-                               False [] False
+                               False [] False False
 
 export
 defaultElab : ElabDirectives
