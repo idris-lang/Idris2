@@ -17,7 +17,6 @@ on:
       - '.github/workflows/ci-super-linter.yml'
   pull_request:
     branches:
-      - master
       - main
     paths-ignore:
       - 'docs/**'
