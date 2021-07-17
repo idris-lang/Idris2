@@ -1,0 +1,13 @@
+1/1: Building inferror (inferror.idr)
+Error: While processing right hand side of g. Ambiguous elaboration. Possible results:
+    Data.SortedMap.toList m
+    Prelude.toList ?arg
+
+inferror:10:15--10:21
+ 06 |     as => as
+ 07 | 
+ 08 | g : Ord k => SortedMap k v -> List (k, v)                        
+ 09 | g m = 
+ 10 |     let kvs = toList m 
+                    ^^^^^^
+

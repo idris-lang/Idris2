@@ -274,12 +274,15 @@ retryDelayed : {vars : _} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
-               List (Nat, Int, NameMap (), Core ClosedTerm) ->
+               UnifyInfo -> List (Nat, Int, NameMap (), Core ClosedTerm) ->
                Core ()
-retryDelayed ds
+retryDelayed mode ds
     = do est <- get EST
-         ds <- retryDelayed' RecoverableErrors [] ds -- try everything again
-         ignore $ retryDelayed' AllErrors [] ds -- fail on all errors
+         ds' <- retryDelayed' RecoverableErrors [] ds -- try everything again
+         solveConstraints mode Normal -- maybe we can resolve some interfaces now
+         if length ds' < length ds
+            then retryDelayed mode ds' -- progress, go around again
+            else ignore $ retryDelayed' AllErrors [] ds' -- fail on all errors
 
 -- Run an elaborator, then all the delayed elaborators arising from it
 export
