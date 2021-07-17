@@ -2,7 +2,7 @@
 Javascript and Node Code Generators
 ***********************************
 
-There two javascript code generators ``node`` and ``javascript``. There are two
+There are two javascript code generators, ``node`` and ``javascript``. There are two
 differences between the two: the ``javascript`` code generator when called to
 output an HTML file will also generate a basic HTML document with the
 generated code inside a ``<script>`` tag; the other distinction is on the ffi
