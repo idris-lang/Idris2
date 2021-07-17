@@ -7,14 +7,15 @@ if [ -z "$SCHEME" ]; then
     exit 1
 fi
 
-if [ "$(uname)" = Darwin ]; then
+if [ "$OS" = windows ] || [ "$OS" = Windows_NT ]; then
+    DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
+    PATH=$DIR/idris2_app:$PATH
+elif [ "$(uname)" = Darwin ]; then
     DIR=$(zsh -c 'printf %s "$0:A:h"' "$0")
 else
     DIR=$(dirname "$(readlink -f -- "$0")")
 fi
 
-LD_LIBRARY_PATH="$DIR/idris2_app":$LD_LIBRARY_PATH
-PATH="$DIR/idris2_app":$PATH
-export LD_LIBRARY_PATH PATH
+export LD_LIBRARY_PATH="$DIR/idris2_app:$LD_LIBRARY_PATH"
 
 ${SCHEME} --script "$DIR/idris2_app/idris2-boot.so" "$@"
