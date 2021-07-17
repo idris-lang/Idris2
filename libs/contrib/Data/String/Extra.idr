@@ -92,7 +92,7 @@ index n str with (unpack str)
 ||| Indent each line of a given string by `n` spaces.
 public export
 indentLines : (n : Nat) -> String -> String
-indentLines n str = unlines $ map (indent n) $ forget $ lines str
+indentLines n str = unlines $ map (indent n) $ lines str
 
 ||| Return a string of the given character repeated
 ||| `n` times.
