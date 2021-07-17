@@ -9,6 +9,8 @@
 * Records now work in `parameters` blocks and `where` clauses.
 * Implementations of interfaces now work in `parameters` blocks and
   `where` clauses
+* The syntax for Name reflection has changed, and now requires a single brace
+  instead of a double brace, e.g. `` `{x} ``
 
 ### Compiler changes
 
