@@ -3,11 +3,11 @@ Error: While processing right hand side of g. Ambiguous elaboration. Possible re
     Data.SortedMap.toList m
     Prelude.toList ?arg
 
-inferror:10:15--10:21
- 06 |     as => as
- 07 | 
- 08 | g : Ord k => SortedMap k v -> List (k, v)                        
- 09 | g m = 
- 10 |     let kvs = toList m 
-                    ^^^^^^
+inferror:9:17--9:23
+ 5 | f m = case sortBy (\(x, _), (y, _) => compare x y) (SortedMap.toList m) of
+ 6 |     as => as
+ 7 | 
+ 8 | g : Ord k => SortedMap k v -> List (k, v)
+ 9 | g m = let kvs = toList m in
+                     ^^^^^^
 
