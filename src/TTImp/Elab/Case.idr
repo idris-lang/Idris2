@@ -370,7 +370,7 @@ checkCase : {vars : _} ->
             Maybe (Glued vars) ->
             Core (Term vars, Glued vars)
 checkCase rig elabinfo nest env fc scr scrty_in alts exp
-    = delayElab fc rig env exp 0 $
+    = delayElab fc rig env exp 10 $
         do scrty_exp <- case scrty_in of
                              Implicit _ _ => guessScrType alts
                              _ => pure scrty_in
@@ -407,7 +407,7 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
     -- type of the case block. But (TODO) consider delaying on failure?
     checkConcrete : NF vs -> Core ()
     checkConcrete (NApp _ (NMeta n i _) _)
-        = throw (GenericMsg (getFC scr) "Can't infer type for case scrutinee")
+        = throw (GenericMsg fc "Can't infer type for case scrutinee")
     checkConcrete _ = pure ()
 
     applyTo : Defs -> RawImp -> NF [] -> Core RawImp
