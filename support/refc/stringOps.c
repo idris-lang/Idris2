@@ -1,4 +1,5 @@
 #include "stringOps.h"
+#include "refc_util.h"
 
 Value *stringLength(Value *s)
 {
@@ -23,6 +24,7 @@ Value *tail(Value *input)
     if(l != 0)
     {
         tailStr->str = malloc(l);
+        IDRIS2_REFC_VERIFY(tailStr->str, "malloc failed");
         memset(tailStr->str, 0, l);
         memcpy(tailStr->str, s->str + 1, l - 1);
         return (Value *)tailStr;
@@ -30,6 +32,7 @@ Value *tail(Value *input)
     else
     {
         tailStr->str = malloc(1);
+        IDRIS2_REFC_VERIFY(tailStr->str, "malloc failed");
         tailStr->str[0] = '\0';
         return (Value *)tailStr;
     }
@@ -42,6 +45,7 @@ Value *reverse(Value *str)
     Value_String *input = (Value_String *)str;
     int l = strlen(input->str);
     retVal->str = malloc(l + 1);
+    IDRIS2_REFC_VERIFY(retVal->str, "malloc failed");
     memset(retVal->str, 0, l + 1);
     char *p = retVal->str;
     char *q = input->str + (l - 1);
@@ -190,6 +194,7 @@ Value *stringIteratorNew(char *str)
     int l = strlen(str);
 
     String_Iterator *it = (String_Iterator *)malloc(sizeof(String_Iterator));
+    IDRIS2_REFC_VERIFY(it, "malloc failed");
     it->str = (char *)malloc(l + 1);
     it->pos = 0;
     memcpy(it->str, str, l + 1); // Take a copy of str, in case it gets GCed
