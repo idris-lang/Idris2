@@ -127,8 +127,9 @@ record BangData where
   constructor MkBangData
   nextName : Int
   bangNames : List (Name, FC, RawImp)
+  mbNamespace : Maybe Namespace
 
-initBangs : BangData
+initBangs : Maybe Namespace -> BangData
 initBangs = MkBangData 0 []
 
 addNS : Maybe Namespace -> Name -> Name
@@ -146,11 +147,11 @@ seqFun fc ns ma mb =
   let fc = virtualiseFC fc in
   IApp fc (IApp fc (IVar fc (addNS ns (UN ">>"))) ma) mb
 
-bindBangs : List (Name, FC, RawImp) -> RawImp -> RawImp
-bindBangs [] tm = tm
-bindBangs ((n, fc, btm) :: bs) tm
-    = bindBangs bs
-    $ bindFun fc Nothing btm
+bindBangs : List (Name, FC, RawImp) -> Maybe Namespace -> RawImp -> RawImp
+bindBangs [] ns tm = tm
+bindBangs ((n, fc, btm) :: bs) ns tm
+    = bindBangs bs ns
+    $ bindFun fc ns btm
     $ ILam EmptyFC top Explicit (Just n) (Implicit fc False) tm
 
 idiomise : FC -> RawImp -> RawImp
@@ -392,15 +393,17 @@ mutual
         pure $ ICase fc !(desugarB side ps x) (IVar fc (UN "Bool"))
                    [PatClause fc (IVar fc (UN "True")) !(desugar side ps t),
                     PatClause fc (IVar fc (UN "False")) !(desugar side ps e)]
-  desugarB side ps (PComprehension fc ret conds)
-      = desugarB side ps (PDoBlock fc Nothing (map guard conds ++ [toPure ret]))
+  desugarB side ps (PComprehension fc ret conds) = do
+        let ns = mbNamespace !(get Bang)
+        desugarB side ps (PDoBlock fc ns (map (guard ns) conds ++ [toPure ns ret]))
     where
-      guard : PDo -> PDo
-      guard (DoExp fc tm) = DoExp fc (PApp fc (PRef fc (UN "guard")) tm)
-      guard d = d
+      guard : Maybe Namespace -> PDo -> PDo
+      guard ns (DoExp fc tm)
+       = DoExp fc (PApp fc (PRef fc (mbApplyNS ns $ UN "guard")) tm)
+      guard ns d = d
 
-      toPure : PTerm -> PDo
-      toPure tm = DoExp fc (PApp fc (PRef fc (UN "pure")) tm)
+      toPure : Maybe Namespace -> PTerm -> PDo
+      toPure ns tm = DoExp fc (PApp fc (PRef fc (mbApplyNS ns $ UN "pure")) tm)
   desugarB side ps (PRewrite fc rule tm)
       = pure $ IRewrite fc !(desugarB side ps rule) !(desugarB side ps tm)
   desugarB side ps (PRange fc start next end)
@@ -553,26 +556,26 @@ mutual
              {auto m : Ref MD Metadata} ->
              Side -> List Name -> FC -> Maybe Namespace -> List PDo -> Core RawImp
   expandDo side ps fc ns [] = throw (GenericMsg fc "Do block cannot be empty")
-  expandDo side ps _ _ [DoExp fc tm] = desugar side ps tm
+  expandDo side ps _ ns [DoExp fc tm] = desugarDo side ps ns tm
   expandDo side ps fc ns [e]
       = throw (GenericMsg (getLoc e)
                   "Last statement in do block must be an expression")
   expandDo side ps topfc ns (DoExp fc tm :: rest)
-      = do tm' <- desugar side ps tm
+      = do tm' <- desugarDo side ps ns tm
            rest' <- expandDo side ps topfc ns rest
            gam <- get Ctxt
            pure $ seqFun fc ns tm' rest'
   expandDo side ps topfc ns (DoBind fc nameFC n tm :: rest)
-      = do tm' <- desugar side ps tm
+      = do tm' <- desugarDo side ps ns tm
            rest' <- expandDo side ps topfc ns rest
            whenJust (isConcreteFC nameFC) \nfc => addSemanticDecorations [(nfc, Bound, Just n)]
            pure $ bindFun fc ns tm'
                 $ ILam nameFC top Explicit (Just n)
                        (Implicit (virtualiseFC fc) False) rest'
   expandDo side ps topfc ns (DoBindPat fc pat exp alts :: rest)
-      = do pat' <- desugar LHS ps pat
+      = do pat' <- desugarDo LHS ps ns pat
            (newps, bpat) <- bindNames False pat'
-           exp' <- desugar side ps exp
+           exp' <- desugarDo side ps ns exp
            alts' <- traverse (map snd . desugarClause ps True) alts
            let ps' = newps ++ ps
            rest' <- expandDo side ps' topfc ns rest
@@ -586,18 +589,18 @@ mutual
                                (PatClause fcOriginal bpat rest'
                                   :: alts'))
   expandDo side ps topfc ns (DoLet fc lhsFC n rig ty tm :: rest)
-      = do b <- newRef Bang initBangs
+      = do b <- newRef Bang (initBangs ns)
            tm' <- desugarB side ps tm
-           ty' <- desugar side ps ty
+           ty' <- desugarDo side ps ns ty
            rest' <- expandDo side ps topfc ns rest
            whenJust (isConcreteFC lhsFC) \nfc => addSemanticDecorations [(nfc, Bound, Just n)]
            let bind = ILet fc (virtualiseFC lhsFC) rig n ty' tm' rest'
            bd <- get Bang
-           pure $ bindBangs (bangNames bd) bind
+           pure $ bindBangs (bangNames bd) ns bind
   expandDo side ps topfc ns (DoLetPat fc pat ty tm alts :: rest)
-      = do b <- newRef Bang initBangs
-           pat' <- desugar LHS ps pat
-           ty' <- desugar side ps ty
+      = do b <- newRef Bang (initBangs ns)
+           pat' <- desugarDo LHS ps ns pat
+           ty' <- desugarDo side ps ns ty
            (newps, bpat) <- bindNames False pat'
            tm' <- desugarB side ps tm
            alts' <- traverse (map snd . desugarClause ps True) alts
@@ -605,7 +608,7 @@ mutual
            rest' <- expandDo side ps' topfc ns rest
            bd <- get Bang
            let fc = virtualiseFC fc
-           pure $ bindBangs (bangNames bd) $
+           pure $ bindBangs (bangNames bd) ns $
                     ICase fc tm' ty'
                        (PatClause fc bpat rest'
                                   :: alts')
@@ -615,7 +618,7 @@ mutual
            pure $ ILocal fc (concat decls') rest'
   expandDo side ps topfc ns (DoRewrite fc rule :: rest)
       = do rest' <- expandDo side ps topfc ns rest
-           rule' <- desugar side ps rule
+           rule' <- desugarDo side ps ns rule
            pure $ IRewrite fc rule' rest'
 
   desugarTree : {auto s : Ref Syn SyntaxInfo} ->
@@ -1031,13 +1034,21 @@ mutual
   desugarDecl ps (PBuiltin fc type name) = pure [IBuiltin fc type name]
 
   export
+  desugarDo : {auto s : Ref Syn SyntaxInfo} ->
+              {auto c : Ref Ctxt Defs} ->
+              {auto m : Ref MD Metadata} ->
+              {auto u : Ref UST UState} ->
+              Side -> List Name -> Maybe Namespace -> PTerm -> Core RawImp
+  desugarDo s ps doNamespace tm
+      = do b <- newRef Bang (initBangs doNamespace)
+           tm' <- desugarB s ps tm
+           bd <- get Bang
+           pure $ bindBangs (bangNames bd) doNamespace tm'
+
+  export
   desugar : {auto s : Ref Syn SyntaxInfo} ->
             {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             Side -> List Name -> PTerm -> Core RawImp
-  desugar s ps tm
-      = do b <- newRef Bang initBangs
-           tm' <- desugarB s ps tm
-           bd <- get Bang
-           pure $ bindBangs (bangNames bd) tm'
+  desugar s ps tm = desugarDo s ps Nothing tm

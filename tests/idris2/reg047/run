@@ -1,0 +1,2 @@
+$1 --no-banner --no-color --console-width 0 QualifiedDoBang.idr < input
+rm -rf build
