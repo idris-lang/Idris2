@@ -43,19 +43,25 @@ from the generated Scheme code, as described in Section :ref:`sect-starting`.
 Why does Idris 2 target Scheme? Surely a dynamically typed target language is going to be slow?
 ===============================================================================================
 
-You may be surprised at how fast Chez Scheme is :). `Racket <https://download.racket-lang.org/>`_,
+You may be surprised at how fast Chez Scheme is! `Racket <https://download.racket-lang.org/>`_,
 as an alternative target, also performs well. Both perform better than the
 Idris 1 back end, which is written in C but has not had the decades of
 engineering effort by run time system specialists that Chez and Racket have.
 Chez Scheme also allows us to turn off run time checks, which we do.
 
-As anecdotal evidence of the performance improvement, as of 23rd May 2020, on a
-Dell XPS 13 running Ubuntu, the performance is:
+As anecdotal evidence of the performance improvement, we compared the
+performance of the Idris 2 runtime with the Idris 1 runtime, using a version of
+the compiler built with the Chez runtime and the same version built with the
+bootstrapping Idris 2.  On a Dell XPS 13 running Ubuntu, with the versions of
+23rd May 2020, the performance was:
 
-* Idris 2 (with the Chez Scheme runtime) checks its own source in 93 seconds.
-* The bootstrapping Idris 2 (compiled with Idris 1) checks the same source in 125s.
-* Idris 1 checks the bootstrapping Idris 2's source (the same as the above,
+* Idris 2 (with the Chez Scheme runtime) checked its own source in 93 seconds.
+* The bootstrapping Idris 2 (compiled with Idris 1) checked the same source in 125s.
+* Idris 1 checked the bootstrapping Idris 2's source (the same as the above,
   but with minor variations due to the syntax changes) in 768 seconds.
+
+Unfortunately we can't repeat this experiment with the latest version, since
+the bootstrapping Idris 2 is no longer able to build the current version.
 
 This is, nevertheless, not intended to be a long term solution, even if it
 is a very convenient way to bootstrap.
@@ -90,7 +96,7 @@ Why aren't there more linearity annotations in the library?
 ===========================================================
 
 In theory, now that Idris 2 is based on Quantitative Type Theory (see
-Section :ref:`sect-multiplicities`, we can write more precise types in the
+Section :ref:`sect-multiplicities`), we can write more precise types in the
 Prelude and Base libraries which give more precise usage information. We have
 chosen not to do that (yet) however. Consider, for example, what would happen
 if we did::
@@ -117,7 +123,7 @@ impact the way you write programs.
 How do I get command history in the Idris2 REPL?
 ================================================
 
-The Idris2 repl does not support readline in the interest of
+The Idris2 REPL does not support readline in the interest of
 keeping dependencies minimal. A useful work around is to
 install `rlwrap <https://linux.die.net/man/1/rlwrap>`_, this
 utility provides command history simply by invoking the Idris2
@@ -338,5 +344,5 @@ Where can I find the community standards for the Idris community?
 ==================================================================
 
 The Idris Community Standards are stated `here
-<https://www.idris-lang.org/documentation/community-standards/>`_ .
+<https://www.idris-lang.org/pages/community-standards.html>`_
 
