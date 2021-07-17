@@ -368,7 +368,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
                   logGlueNF "elab.ambiguous" 5 (fastConcat
                     [ "Ambiguous elaboration at ", show fc, ":\n"
                     , unlines (map show alts)
-                    , "\nWith default. Target type "
+                    , "With default. Target type "
                     ]) env exp'
                   alts' <- pruneByType env !(getNF exp') alts
                   log "elab.prune" 5 $
@@ -426,7 +426,7 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                               , " (", if delayed then "" else "not ", "delayed)"
                               , " at ", show fc, ":\n"
                               , unlines (map show alts')
-                              , "\nTarget type "
+                              , "Target type "
                               ]) env exp'
                           let tryall = case uniq of
                                             FirstSuccess => anyOne fc
