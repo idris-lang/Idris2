@@ -92,18 +92,14 @@ lists the current plugins available for common text editors and their features.
 Things still missing
 --------------------
 
-+ Disambiguation via 'with'
 + Cumulativity (so we currently have Type : Type! Bear that in mind when you
   think you've proved something :))
 + 'rewrite' doesn't yet work on dependent types
-+ Parts of the ide-mode, particularly syntax highlighting
-+ Documentation strings and HTML documentation generation
-+ ':search' and ':apropos' at the REPL
-+ Metaprogramming (reflection, partial evaluation)
 
 Contributions wanted
 -------------------
 
++ [Contribution guidelines](CONTRIBUTING.md)
 + [Good first issues](https://github.com/idris-lang/Idris2/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
 + [Contributors wanted](https://github.com/idris-lang/Idris2/wiki/Contributions-wanted)
 

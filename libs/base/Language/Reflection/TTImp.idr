@@ -66,7 +66,7 @@ mutual
        -- Quasiquotation
        IQuote : FC -> TTImp -> TTImp
        IQuoteName : FC -> Name -> TTImp
-       IQuoteDecl : FC -> TTImp -> TTImp
+       IQuoteDecl : FC -> List Decl -> TTImp
        IUnquote : FC -> TTImp -> TTImp
 
        IPrimVal : FC -> (c : Constant) -> TTImp
@@ -116,9 +116,9 @@ mutual
   data DataOpt : Type where
        SearchBy : List Name -> DataOpt -- determining arguments
        NoHints : DataOpt -- Don't generate search hints for constructors
-       UniqueSearch : DataOpt
-       External : DataOpt
-       NoNewtype : DataOpt
+       UniqueSearch : DataOpt -- auto implicit search must check result is unique
+       External : DataOpt -- implemented externally
+       NoNewtype : DataOpt -- don't apply newtype optimisation
 
   public export
   data Data : Type where
@@ -135,15 +135,19 @@ mutual
   public export
   data Record : Type where
        MkRecord : FC -> (n : Name) ->
-                  (params : List (Name, TTImp)) ->
+                  (params : List (Name, Count, PiInfo TTImp, TTImp)) ->
                   (conName : Name) ->
                   (fields : List IField) ->
                   Record
 
   public export
+  data WithFlag = Syntactic
+
+  public export
   data Clause : Type where
        PatClause : FC -> (lhs : TTImp) -> (rhs : TTImp) -> Clause
        WithClause : FC -> (lhs : TTImp) -> (wval : TTImp) ->
+                    (prf : Maybe Name) -> (flags : List WithFlag) ->
                     List Clause -> Clause
        ImpossibleClause : FC -> (lhs : TTImp) -> Clause
 
@@ -153,9 +157,13 @@ mutual
                 ITy -> Decl
        IData : FC -> Visibility -> Data -> Decl
        IDef : FC -> Name -> List Clause -> Decl
-       IParameters : FC -> List (Name, TTImp) ->
+       IParameters : FC -> List (Name, Count, PiInfo TTImp, TTImp) ->
                      List Decl -> Decl
-       IRecord : FC -> Visibility -> Record -> Decl
+       IRecord : FC ->
+                 Maybe String -> -- nested namespace
+                 Visibility -> Record -> Decl
        INamespace : FC -> Namespace -> List Decl -> Decl
        ITransform : FC -> Name -> TTImp -> TTImp -> Decl
-       ILog : Nat -> Decl
+       IRunElabDecl : FC -> TTImp -> Decl
+       ILog : Maybe (List String, Nat) -> Decl
+       IBuiltin : FC -> BuiltinType -> Name -> Decl

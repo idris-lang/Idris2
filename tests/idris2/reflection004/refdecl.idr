@@ -20,7 +20,7 @@ axes (S (S (S (S (S _))))) {lte} = absurd lte
 mkPoint : (n : Nat) -> {auto gt : GT n 0} -> {auto lte : LTE n 4} -> Decl
 mkPoint n
     = let type = "Point" ++ show n ++ "D" in
-      IRecord emptyFC Public
+      IRecord emptyFC Nothing Public
       (MkRecord emptyFC (NS (MkNS ["Main"]) (UN type)) [] (NS (MkNS ["Main"]) (UN ("Mk" ++ type)))
         (toList $ map (\axis => MkIField emptyFC MW ExplicitArg (RF axis) `(Double)) (axes n)))
 
