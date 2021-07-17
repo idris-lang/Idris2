@@ -246,6 +246,7 @@ runTest opts testPath = forkIO $ do
       case str of
         "y" => pure True
         "n" => pure False
+        "N" => pure False
         ""  => pure False
         _   => do putStrLn "Invalid answer."
                   getAnswer
