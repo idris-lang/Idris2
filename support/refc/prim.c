@@ -1,11 +1,14 @@
 #include <unistd.h>
+#include <string.h>
 #include "prim.h"
+#include "refc_util.h"
 
 // This is NOT THREAD SAFE in the current implementation
 
 IORef_Storage *newIORef_Storage(int capacity)
 {
     IORef_Storage *retVal = (IORef_Storage *)malloc(sizeof(IORef_Storage));
+    IDRIS2_REFC_VERIFY(retVal, "malloc failed");
     retVal->filled = 0;
     retVal->total = capacity;
     retVal->refs = (Value **)malloc(sizeof(Value *) * retVal->total);
@@ -15,6 +18,7 @@ IORef_Storage *newIORef_Storage(int capacity)
 void doubleIORef_Storage(IORef_Storage *ior)
 {
     Value **values = (Value **)malloc(sizeof(Value *) * ior->total * 2);
+    IDRIS2_REFC_VERIFY(values, "malloc failed");
     ior->total *= 2;
     for (int i = 0; i < ior->filled; i++)
     {
@@ -174,11 +178,8 @@ Value *System_Concurrency_Raw_prim__makeMutex(Value *_world)
     Value_Mutex *mut = IDRIS2_NEW_VALUE(Value_Mutex);
     mut->header.tag = MUTEX_TAG;
     mut->mutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
-    if (pthread_mutex_init(mut->mutex, NULL))
-    {
-        fprintf(stderr, "Error init Mutex\n");
-        exit(-1);
-    }
+    int r = pthread_mutex_init(mut->mutex, NULL);
+    IDRIS2_REFC_VERIFY(!r, "pthread_mutex_init failed: %s", strerror(r));
     return (Value *)mut;
 }
 
@@ -187,11 +188,8 @@ Value *System_Concurrency_Raw_prim__makeMutex(Value *_world)
 // using pthread_mutex_lock(pthread_mutex_t *mutex)
 Value *System_Concurrency_Raw_prim__mutexAcquire(Value *_mutex, Value *_world)
 {
-    if (pthread_mutex_lock(((Value_Mutex *)_mutex)->mutex))
-    {
-        fprintf(stderr, "Error locking mutex\n");
-        exit(-1);
-    }
+    int r = pthread_mutex_lock(((Value_Mutex *)_mutex)->mutex);
+    IDRIS2_REFC_VERIFY(!r, "pthread_mutex_lock failed: %s", strerror(r));
     return NULL;
 }
 
@@ -200,11 +198,8 @@ Value *System_Concurrency_Raw_prim__mutexAcquire(Value *_mutex, Value *_world)
 //using int pthread_mutex_unlock(pthread_mutex_t *mutex)
 Value *System_Concurrency_Raw_prim__mutexRelease(Value *_mutex, Value *_world)
 {
-    if (pthread_mutex_unlock(((Value_Mutex *)_mutex)->mutex))
-    {
-        fprintf(stderr, "Error locking mutex\n");
-        exit(-1);
-    }
+    int r = pthread_mutex_unlock(((Value_Mutex *)_mutex)->mutex);
+    IDRIS2_REFC_VERIFY(!r, "pthread_mutex_unlock failed: %s", strerror(r));
     return NULL;
 }
 
@@ -222,11 +217,9 @@ Value *System_Concurrency_Raw_prim__makeCondition(Value *_world)
     Value_Condition *c = IDRIS2_NEW_VALUE(Value_Condition);
     c->header.tag = CONDITION_TAG;
     c->cond = (pthread_cond_t *)malloc(sizeof(pthread_cond_t));
-    if (pthread_cond_init(c->cond, NULL))
-    {
-        fprintf(stderr, "error init condition\n");
-        exit(-1);
-    }
+    IDRIS2_REFC_VERIFY(c->cond, "malloc failed");
+    int r = pthread_cond_init(c->cond, NULL);
+    IDRIS2_REFC_VERIFY(!r, "pthread_cond_init failed: %s", strerror(r));
     return (Value *)c;
 }
 
@@ -237,11 +230,8 @@ Value *System_Concurrency_Raw_prim__conditionWait(Value *_condition, Value *_mut
 {
     Value_Condition *cond = (Value_Condition *)_condition;
     Value_Mutex *mutex = (Value_Mutex *)_mutex;
-    if (pthread_cond_wait(cond->cond, mutex->mutex))
-    {
-        fprintf(stderr, "Error Conditional Wait\n");
-        exit(-1);
-    }
+    int r = pthread_cond_wait(cond->cond, mutex->mutex);
+    IDRIS2_REFC_VERIFY(!r, "pthread_cond_wait failed: %s", strerror(r));
     return NULL;
 }
 
@@ -256,11 +246,8 @@ Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Value *_condition, Valu
     struct timespec t;
     t.tv_sec = timeout->i64 / 1000000;
     t.tv_nsec = timeout->i64 % 1000000;
-    if (pthread_cond_timedwait(cond->cond, mutex->mutex, &t))
-    {
-        fprintf(stderr, "Error in pthread_cond_timedwait\n");
-        exit(-1);
-    }
+    int r = pthread_cond_timedwait(cond->cond, mutex->mutex, &t);
+    IDRIS2_REFC_VERIFY(!r, "pthread_cond_timedwait failed: %s", strerror(r));
     return NULL;
 }
 
@@ -270,11 +257,8 @@ Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Value *_condition, Valu
 Value *System_Concurrency_Raw_prim__conditionSignal(Value *_condition, Value *_world)
 {
     Value_Condition *cond = (Value_Condition *)_condition;
-    if (pthread_cond_signal(cond->cond))
-    {
-        fprintf(stderr, "Error in pthread_cond_signal\n");
-        exit(-1);
-    }
+    int r = pthread_cond_signal(cond->cond);
+    IDRIS2_REFC_VERIFY(!r, "pthread_cond_signal failed: %s", strerror(r));
     return NULL;
 }
 
@@ -284,10 +268,7 @@ Value *System_Concurrency_Raw_prim__conditionSignal(Value *_condition, Value *_w
 Value *System_Concurrency_Raw_prim__conditionBroadcast(Value *_condition, Value *_mutex)
 {
     Value_Condition *cond = (Value_Condition *)_condition;
-    if (pthread_cond_broadcast(cond->cond))
-    {
-        fprintf(stderr, "Error in pthread_cond_broadcast\n");
-        exit(-1);
-    }
+    int r = pthread_cond_broadcast(cond->cond);
+    IDRIS2_REFC_VERIFY(!r, "pthread_cond_broadcast failed: %s", strerror(r));
     return NULL;
 }

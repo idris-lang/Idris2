@@ -1,8 +1,10 @@
 #include "runtime.h"
+#include "refc_util.h"
 
 Value *newValue(size_t size)
 {
     Value *retVal = (Value *)malloc(size);
+    IDRIS2_REFC_VERIFY(retVal, "malloc failed");
     retVal->header.refCounter = 1;
     retVal->header.tag = NO_TAG;
     return retVal;
@@ -225,6 +227,8 @@ void removeReference(Value *elem)
     {
         return;
     }
+    IDRIS2_REFC_VERIFY(elem->header.refCounter > 0,
+        "refCounter %lld", (long long) elem->header.refCounter);
     // remove reference counter
     elem->header.refCounter--;
     if (elem->header.refCounter == 0)
