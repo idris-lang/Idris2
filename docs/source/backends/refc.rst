@@ -52,11 +52,11 @@ To use it, you need to build Idris from source. Since libbf's source code is not
 bundled with idris, you need to download the latest source code, most preferrable
 from `QuickJS Library <https://bellard.org/quickjs/>`_, extract four libbf files 
 (i.e. `libbf.*` and `cutils.*`) to RefC's source code directory ``support/refc``. 
-When bootstrapping, set an environment variable `IDRIS_REFC_INTEGER=libbf` or modify 
-it in `config.mk`.
+When building Idris and compiling your idris source codes, set an environment 
+variable `IDRIS_REFC_INTEGER=libbf`.
 
 Currently the libbf integration is tested against `2021-03-27` version of `QuickJS`.
-The latest standardalone `LibBF` release is not as up-to-date as the one included 
+The latest standalone `LibBF` release is not as up-to-date as the one included 
 in `QuickJS`.
 
 Extending RefC

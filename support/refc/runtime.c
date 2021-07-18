@@ -5,7 +5,9 @@ extern void init_bf();
 #endif
 
 void init_idris2() {
+#ifdef INTEGER_USE_LIBBF
   init_bf();
+#endif
 }
 
 void missing_ffi()

@@ -19,6 +19,12 @@ findCC
            | Just cc => pure cc
          pure "cc"
 
+getIntegerImpl : IO String
+getIntegerImpl
+    = do Nothing <- getEnv "IDRIS_REFC_INTEGER"
+           | Just cc => pure cc
+         pure "gmp"
+
 fullprefix_dir : Dirs -> String -> String
 fullprefix_dir dirs sub
     = prefix_dir dirs </> "idris2-" ++ showVersion False version </> sub
@@ -32,10 +38,12 @@ compileCObjectFile : {auto c : Ref Ctxt Defs}
 compileCObjectFile {asLibrary} sourceFile objectFile =
   do cc <- coreLift findCC
      dirs <- getDirs
+     intImpl <- getIntegerImpl
 
      let libraryFlag = if asLibrary then "-fpic " else ""
+     let intImplFlag = if integerImpl == "libbf" then " -DINTEGER_USE_LIBBF " else ""
 
-     let runccobj = cc ++ " -Werror -c " ++ libraryFlag ++ sourceFile ++
+     let runccobj = cc ++ " -Werror -c " ++ libraryFlag ++ intImplFlag ++ sourceFile ++
                        " -o " ++ objectFile ++ " " ++
                        "-I" ++ fullprefix_dir dirs "refc " ++
                        "-I" ++ fullprefix_dir dirs "include"
@@ -55,16 +63,18 @@ compileCFile : {auto c : Ref Ctxt Defs}
 compileCFile {asShared} objectFile outFile =
   do cc <- coreLift findCC
      dirs <- getDirs
+     intImpl <- getIntegerImpl
 
      let sharedFlag = if asShared then "-shared " else ""
+     let intImplFlag = if integerImpl == "libbf" then "" else "-lgmp "
 
-     let runcc = cc ++ " -Werror " ++ sharedFlag ++ objectFile ++
+     let runcc = cc ++ " -Werror " ++ sharedFlag ++ libbfFlag ++ objectFile ++
                        " -o " ++ outFile ++ " " ++
                        (fullprefix_dir dirs "lib" </> "libidris2_support.a") ++ " " ++
                        "-lidris2_refc " ++
                        "-L" ++ fullprefix_dir dirs "refc " ++
-                       clibdirs (lib_dirs dirs) ++
-                       "-lgmp -lm"
+                       clibdirs (lib_dirs dirs) ++ intImplFlag ++
+                       "-lm"
 
      log "compiler.refc.cc" 10 runcc
      0 <- coreLift $ system runcc
