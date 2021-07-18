@@ -38,10 +38,10 @@ compileCObjectFile : {auto c : Ref Ctxt Defs}
 compileCObjectFile {asLibrary} sourceFile objectFile =
   do cc <- coreLift findCC
      dirs <- getDirs
-     intImpl <- getIntegerImpl
+     intImpl <- coreLift getIntegerImpl
 
      let libraryFlag = if asLibrary then "-fpic " else ""
-     let intImplFlag = if integerImpl == "libbf" then " -DINTEGER_USE_LIBBF " else ""
+     let intImplFlag = if intImpl == "libbf" then " -DINTEGER_USE_LIBBF " else ""
 
      let runccobj = cc ++ " -Werror -c " ++ libraryFlag ++ intImplFlag ++ sourceFile ++
                        " -o " ++ objectFile ++ " " ++
@@ -63,12 +63,12 @@ compileCFile : {auto c : Ref Ctxt Defs}
 compileCFile {asShared} objectFile outFile =
   do cc <- coreLift findCC
      dirs <- getDirs
-     intImpl <- getIntegerImpl
+     intImpl <- coreLift getIntegerImpl
 
      let sharedFlag = if asShared then "-shared " else ""
-     let intImplFlag = if integerImpl == "libbf" then "" else "-lgmp "
+     let intImplFlag = if intImpl == "libbf" then "" else "-lgmp "
 
-     let runcc = cc ++ " -Werror " ++ sharedFlag ++ libbfFlag ++ objectFile ++
+     let runcc = cc ++ " -Werror " ++ sharedFlag ++ objectFile ++
                        " -o " ++ outFile ++ " " ++
                        (fullprefix_dir dirs "lib" </> "libidris2_support.a") ++ " " ++
                        "-lidris2_refc " ++
