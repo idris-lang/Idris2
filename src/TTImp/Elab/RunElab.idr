@@ -88,7 +88,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
              ttimp' <- evalClosure defs ttimp
              tidx <- resolveName (UN "[elaborator script]")
              e <- newRef EST (initEState tidx env)
-             (checktm, _) <- runDelays 0 $
+             (checktm, _) <- runDelays (const True) $
                      check top (initElabInfo InExpr) nest env !(reify defs ttimp')
                            (Just (glueBack defs env exp'))
              empty <- clearDefs defs
@@ -189,7 +189,7 @@ checkRunElab rig elabinfo nest env fc script exp
          let n = NS reflectionNS (UN "Elab")
          let ttn = reflectiontt "TT"
          elabtt <- appCon fc defs n [expected]
-         (stm, sty) <- runDelays 0 $
+         (stm, sty) <- runDelays (const True) $
                            check rig elabinfo nest env script (Just (gnf env elabtt))
          defs <- get Ctxt -- checking might have resolved some holes
          ntm <- elabScript fc nest env
