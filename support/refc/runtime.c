@@ -1,4 +1,5 @@
 #include "runtime.h"
+#include "refc_util.h"
 
 void missing_ffi()
 {
@@ -12,11 +13,7 @@ void missing_ffi()
 
 void push_Arglist(Value_Arglist *arglist, Value *arg)
 {
-  if (arglist->filled >= arglist->total)
-  {
-    fprintf(stderr, "unable to add more arguments to arglist\n");
-    exit(1);
-  }
+  IDRIS2_REFC_VERIFY(arglist->filled < arglist->total, "unable to add more arguments to arglist");
 
   arglist->args[arglist->filled] = newReference(arg);
   arglist->filled++;
