@@ -34,6 +34,31 @@ C, you will need to arrange for them to be accessible via ``LD_LIBRARY_PATH``
 when running the executable. The default Idris 2 support libraries are
 statically linked.
 
+Using LibBF
+===========
+
+By default, arbitrary precision integers are implemented with
+`The GNU Multiple Precision Arithmetic Library <https://gmplib.org/>`_. 
+It is under the dual licenses, GNU LGPL v3 and GNU GPL v2, and available via 
+most package managers.
+
+There is also an experimental implementation of arbitrary precision integers
+with `LibBF Library <https://bellard.org/libbf/>`_, written by Fabrice Bellard
+and released under the MIT license. LibBF is much more lightweight: just two C files
+and two headers, compiled size is about 90 KB of x86 code and has no dependency 
+on other libraries.
+
+To use it, you need to build Idris from source. Since libbf's source code is not
+bundled with idris, you need to download the latest source code, most preferrable
+from `QuickJS Library <https://bellard.org/quickjs/>`_, extract four libbf files 
+(i.e. `libbf.*` and `cutils.*`) to RefC's source code directory ``support/refc``. 
+When bootstrapping, set an environment variable `IDRIS_REFC_INTEGER=libbf` or modify 
+it in `config.mk`.
+
+Currently the libbf integration is tested against `2021-03-27` version of `QuickJS`.
+The latest standardalone `LibBF` release is not as up-to-date as the one included 
+in `QuickJS`.
+
 Extending RefC
 ==============
 

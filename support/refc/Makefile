@@ -13,6 +13,10 @@ ifeq ($(OLD_WIN), 1)
 	CFLAGS += -D_OLD_WIN
 endif
 endif
+ifeq ($(IDRIS_REFC_INTEGER), libbf)
+	SRCS += libbf.c cutils.c
+	CFLAGS += -DINTEGER_USE_LIBBF
+endif
 OBJS = $(SRCS:.c=.o)
 DEPS = $(OBJS:.o=.d)
 
