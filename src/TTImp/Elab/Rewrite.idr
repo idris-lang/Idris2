@@ -108,7 +108,7 @@ checkRewrite : {vars : _} ->
 checkRewrite rigc elabinfo nest env fc rule tm Nothing
     = throw (GenericMsg fc "Can't infer a type for rewrite")
 checkRewrite {vars} rigc elabinfo nest env ifc rule tm (Just expected)
-    = delayOnFailure ifc rigc env expected rewriteErr 10 $ \delayed =>
+    = delayOnFailure ifc rigc env expected rewriteErr Rewrite $ \delayed =>
         do let vfc = virtualiseFC ifc
            (rulev, grulet) <- check erased elabinfo nest env rule Nothing
            rulet <- getTerm grulet

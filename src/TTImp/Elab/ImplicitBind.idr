@@ -533,12 +533,13 @@ checkBindHere rig elabinfo nest env fc bindmode tm exp
                                            bindingVars = True }
                                          elabinfo)
                              nest env tm exp
-         solveConstraints (case elabMode elabinfo of
-                                InLHS c => inLHS
-                                _ => inTerm) Normal
+         let solvemode = case elabMode elabinfo of
+                              InLHS c => inLHS
+                              _ => inTerm
+         solveConstraints solvemode Normal
 
          ust <- get UST
-         catch (retryDelayed (delayedElab ust))
+         catch (retryDelayed solvemode (delayedElab ust))
                (\err =>
                   do ust <- get UST
                      put UST (record { delayedElab = [] } ust)
