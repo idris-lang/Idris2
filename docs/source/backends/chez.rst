@@ -75,7 +75,7 @@ Chez Directives
 Making a freestanding executable
 ================================
 
-It's possible to embed the Chez Scheme system and the built Idris2 program into a freestanding executable with `chez-exe <https://github.com/gwatt/chez-exe>`.
+It's possible to embed the Chez Scheme system and the built Idris2 program into a freestanding executable with `chez-exe <https://github.com/gwatt/chez-exe>`_.
 
   * Build and install the ``compile-chez-program-tool`` by running the
     configuration script and then make:
