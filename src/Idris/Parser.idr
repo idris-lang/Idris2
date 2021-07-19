@@ -799,7 +799,7 @@ mutual
            upd <- (ifThenElse kw (decoratedSymbol fname "=") (decoratedSymbol fname ":=") $> PSetField)
                       <|>
                   (decoratedSymbol fname "$=" $> PSetFieldApp)
-           val <- opExpr plhs fname indents
+           val <- typeExpr plhs fname indents
            pure (upd path val)
     where
       fieldName : Name -> String
