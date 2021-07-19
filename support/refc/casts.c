@@ -907,7 +907,7 @@ uint64_t get_lsb(bf_t i, int b)
     bf_init(i.ctx, &r);
     bf_set_ui(&e, 1);
     bf_mul_2exp(&e, b, BF_PREC_INF, BF_RNDZ);
-    bf_rem(&r, &i, &e, BF_PREC_INF, 0, BF_RNDZ);
+    bf_rem(&r, &i, &e, BF_PREC_INF, 0, BF_DIVREM_EUCLIDIAN);
     bf_get_uint64(&res, &r);
     return res;
 }

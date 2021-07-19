@@ -350,7 +350,7 @@ Value *mod_Integer(Value *x, Value *y)
 #ifdef INTEGER_USE_GMP
     mpz_mod(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
 #else
-    bf_rem(&retVal->i, &((Value_Integer*)x)->i, &((Value_Integer*)y)->i, BF_PREC_INF, 0, BF_RNDZ);
+    bf_rem(&retVal->i, &((Value_Integer*)x)->i, &((Value_Integer*)y)->i, BF_PREC_INF, 0, BF_DIVREM_EUCLIDIAN);
 #endif
     return (Value *)retVal;
 }
@@ -450,7 +450,7 @@ Value *shiftr_Integer(Value *x, Value *y)
     bf_set_ui(&e, 1);
     bf_get_int64(&cnt, &((Value_Integer*)y)->i, 0);
     bf_mul_2exp(&e, cnt, BF_PREC_INF, BF_RNDZ);
-    bf_divrem(&retVal->i, &r, &((Value_Integer*)x)->i, &((Value_Integer*)y)->i, BF_PREC_INF, 0, BF_RNDZ);
+    bf_divrem(&retVal->i, &r, &((Value_Integer*)x)->i, &e, BF_PREC_INF, 0, BF_DIVREM_EUCLIDIAN);
 #endif
     return (Value *)retVal;
 }
