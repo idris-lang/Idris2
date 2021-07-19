@@ -104,7 +104,7 @@ This last example could be implemented by combining raw string literals with mul
 Interpolated strings
 --------------------
 
-Concatenating string literals with runtime values happens all the time, but sprinking our code
+Concatenating string literals with runtime values happens all the time, but sprinkling our code
 with lots of ``"`` and ``++`` symbols sometimes hurts legibility which in turn can introduce bugs
 that are hard to detect for human eyes. Interpolated strings allow to inline the execution of
 programs that evaluate to strings with a string literals in order to avoid manually writing out
