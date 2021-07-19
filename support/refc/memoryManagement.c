@@ -306,6 +306,7 @@ void removeReference(Value *elem)
         case BUFFER_TAG:
         {
             Value_Buffer *b = (Value_Buffer *)elem;
+            free(b->buffer->data);
             free(b->buffer);
             break;
         }
