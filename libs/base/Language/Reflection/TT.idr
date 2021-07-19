@@ -103,8 +103,8 @@ data Name = UN String -- user defined name
           | DN String Name -- a name and how to display it
           | RF String -- record field name
           | Nested (Int, Int) Name -- nested function name
-          | CaseBlock Int Int -- case block nested in (resolved) name
-          | WithBlock Int Int -- with block nested in (resolved) name
+          | CaseBlock String Int -- case block nested in (resolved) name
+          | WithBlock String Int -- with block nested in (resolved) name
 
 export
 Show Name where
@@ -161,3 +161,6 @@ data TotalReq = Total | CoveringOnly | PartialOK
 
 public export
 data Visibility = Private | Export | Public
+
+public export
+data BuiltinType = BuiltinNatural | NaturalToInteger | IntegerToNatural

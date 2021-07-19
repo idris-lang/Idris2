@@ -82,13 +82,13 @@ follows:
                                         -- (zero and successor)
     data List a = Nil | (::) a (List a) -- Polymorphic lists
 
-The above declarations are taken from the standard library. Unary
-natural numbers can be either zero (``Z``), or the successor of
-another natural number (``S k``). Lists can either be empty (``Nil``)
-or a value added to the front of another list (``x :: xs``). In the
-declaration for ``List``, we used an infix operator ``::``. New
-operators such as this can be added using a fixity declaration, as
-follows:
+Data type names cannot begin with a lower case letter (we will see later
+why not!).  The above declarations are taken from the standard library. Unary
+natural numbers can be either zero (``Z``), or the successor of another natural
+number (``S k``). Lists can either be empty (``Nil``) or a value added to the
+front of another list (``x :: xs``). In the declaration for ``List``, we used
+an infix operator ``::``. New operators such as this can be added using a
+fixity declaration, as follows:
 
 ::
 
@@ -132,7 +132,7 @@ library:
 
 The standard arithmetic operators ``+`` and ``*`` are also overloaded
 for use by ``Nat``, and are implemented using the above functions.
-Unlike Haskell, there is no restriction on whether types and function
+Unlike Haskell, there is no restriction on whether function
 names must begin with a capital letter or not. Function names
 (``plus`` and ``mult`` above), data constructors (``Z``, ``S``,
 ``Nil`` and ``::``) and type constructors (``Nat`` and ``List``) are
@@ -505,7 +505,8 @@ arguments. Any name beginning with a lower case letter which appears
 as a parameter or index in a
 type declaration, which is not applied to any arguments, will
 *always* be automatically
-bound as an implicit argument. Implicit arguments can still be given
+bound as an implicit argument; this is why data type names cannot begin with
+a lower case letter. Implicit arguments can still be given
 explicitly in applications, using ``{a=value}`` and ``{n=value}``, for
 example:
 

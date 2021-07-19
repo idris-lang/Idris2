@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <gmp.h>
 
+#include "buffer.h"
+
 #define NO_TAG 0
 #define BITS8_TAG 1
 #define BITS16_TAG 2
@@ -46,7 +48,9 @@ typedef struct
 typedef struct
 {
     Value_header header;
-    char payload[25];
+    // `Value` is an "abstract" struct,
+    // `Value_Xxx` structs have the same header
+    // followed by type-specific payload.
 } Value;
 
 typedef struct
@@ -176,8 +180,7 @@ typedef struct
 typedef struct
 {
     Value_header header;
-    size_t len;
-    char *buffer;
+    Buffer *buffer;
 } Value_Buffer;
 
 typedef struct

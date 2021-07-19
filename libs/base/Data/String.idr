@@ -41,7 +41,10 @@ foldl1 f (x::xs) = foldl f x xs
 -- This uses fastConcat internally so it won't compute at compile time.
 export
 fastUnlines : List String -> String
-fastUnlines = fastConcat . intersperse "\n"
+fastUnlines = fastConcat . unlines'
+  where unlines' : List String -> List String
+        unlines' [] = []
+        unlines' (x :: xs) = x :: "\n" :: unlines' xs
 
 -- This is a deprecated alias for fastConcat for backwards compatibility
 -- (unfortunately, we don't have %deprecated yet).
@@ -97,12 +100,16 @@ unwords = pack . unwords' . map unpack
 ||| lines' (unpack "\rA BC\nD\r\nE\n")
 ||| ```
 export
-lines' : List Char -> List1 (List Char)
-lines' [] = singleton []
-lines' s  = case break isNL s of
-                 (l, s') => l ::: case s' of
-                                       [] => []
-                                       _ :: s'' => forget $ lines' (assert_smaller s s'')
+lines' : List Char -> List (List Char)
+lines' s = linesHelp [] s
+  where linesHelp : List Char -> List Char -> List (List Char)
+        linesHelp [] [] = []
+        linesHelp acc [] = [reverse acc]
+        linesHelp acc ('\n' :: xs) = reverse acc :: linesHelp [] xs
+        linesHelp acc ('\r' :: '\n' :: xs) = reverse acc :: linesHelp [] xs
+        linesHelp acc ('\r' :: xs) = reverse acc :: linesHelp [] xs
+        linesHelp acc (c :: xs) = linesHelp (c :: acc) xs
+
 
 ||| Splits a string into a list of newline separated strings.
 |||
@@ -110,10 +117,11 @@ lines' s  = case break isNL s of
 ||| lines  "\rA BC\nD\r\nE\n"
 ||| ```
 export
-lines : String -> List1 String
+lines : String -> List String
 lines s = map pack (lines' (unpack s))
 
-||| Joins the character lists by newlines into a single character list.
+||| Joins the character lists by a single character list by appending a newline
+||| to each line.
 |||
 ||| ```idris example
 ||| unlines' [['l','i','n','e'], ['l','i','n','e','2'], ['l','n','3'], ['D']]
@@ -121,10 +129,9 @@ lines s = map pack (lines' (unpack s))
 export
 unlines' : List (List Char) -> List Char
 unlines' [] = []
-unlines' [l] = l
 unlines' (l::ls) = l ++ '\n' :: unlines' ls
 
-||| Joins the strings by newlines into a single string.
+||| Joins the strings into a single string by appending a newline to each string.
 |||
 ||| ```idris example
 ||| unlines ["line", "line2", "ln3", "D"]

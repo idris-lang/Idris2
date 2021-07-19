@@ -97,8 +97,12 @@ fmtOpt : OptDescr a -> List (String,String,String)
 fmtOpt (MkOpt sos los ad descr) =
   let sosFmt = concat $ intersperse ", " (map (fmtShort ad) sos)
       losFmt = concat $ intersperse ", " (map (fmtLong ad) los)
-      (h ::: t) = lines descr in
+      (h ::: t) = lines1 descr in
       (sosFmt,losFmt,h) :: map (\s => ("","",s)) t
+  where lines1 : String -> List1 String
+        lines1 s = case lines s of
+                        [] => "" ::: []
+                        (x :: xs) => x ::: xs
 
 ||| Return a string describing the usage of a command, derived from
 ||| the header (first argument) and the options described by the

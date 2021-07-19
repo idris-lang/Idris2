@@ -1144,12 +1144,13 @@ export
 initDefs : Core Defs
 initDefs
     = do gam <- initCtxt
+         opts <- defaults
          pure $ MkDefs
            { gamma = gam
            , mutData = []
            , currentNS = mainNS
            , nestedNS = []
-           , options = defaults
+           , options = opts
            , toSave = empty
            , nextTag = 100
            , typeHints = empty

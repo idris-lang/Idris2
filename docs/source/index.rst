@@ -19,13 +19,14 @@ Documentation for the Idris 2 Language
    :maxdepth: 1
 
    tutorial/index
+   faq/faq
    backends/index
    updates/updates
    typedd/typedd
    reference/packages
+   libraries/index
    app/index
    ffi/index
    proofs/index
-   faq/faq
    implementation/index
    reference/index

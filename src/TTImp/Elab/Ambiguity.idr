@@ -353,7 +353,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
          let solvemode = case elabMode elabinfo of
                               InLHS c => inLHS
                               _ => inTerm
-         delayOnFailure fc rig env expected ambiguous 5 $
+         delayOnFailure fc rig env expected ambiguous Ambiguity $
              \delayed =>
                do solveConstraints solvemode Normal
                   defs <- get Ctxt
@@ -368,7 +368,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
                   logGlueNF "elab.ambiguous" 5 (fastConcat
                     [ "Ambiguous elaboration at ", show fc, ":\n"
                     , unlines (map show alts)
-                    , "\nWith default. Target type "
+                    , "With default. Target type "
                     ]) env exp'
                   alts' <- pruneByType env !(getNF exp') alts
                   log "elab.prune" 5 $
@@ -406,7 +406,7 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                 let solvemode = case elabMode elabinfo of
                                       InLHS c => inLHS
                                       _ => inTerm
-                delayOnFailure fc rig env expected ambiguous 5 $
+                delayOnFailure fc rig env expected ambiguous Ambiguity $
                      \delayed =>
                        do defs <- get Ctxt
                           exp <- getTerm expected
@@ -426,7 +426,7 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                               , " (", if delayed then "" else "not ", "delayed)"
                               , " at ", show fc, ":\n"
                               , unlines (map show alts')
-                              , "\nTarget type "
+                              , "Target type "
                               ]) env exp'
                           let tryall = case uniq of
                                             FirstSuccess => anyOne fc

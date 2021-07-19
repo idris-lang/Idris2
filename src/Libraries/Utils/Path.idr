@@ -1,18 +1,21 @@
 module Libraries.Utils.Path
 
+import Idris.Env
+
 import Data.List
 import Data.List1
 import Data.Maybe
 import Data.Nat
 import Data.String
-import Libraries.Data.String.Extra
 
+import Libraries.Data.String.Extra
 import Libraries.Text.Token
 import Libraries.Text.Lexer
 import Libraries.Text.Parser
 import Libraries.Text.Quantity
 
 import System.Info
+import System.File
 
 %default total
 
@@ -572,3 +575,15 @@ export
 export
 dropExtension : String -> String
 dropExtension path = path <.> ""
+
+||| Looks up an executable from a list of candidate names in the PATH
+export
+pathLookup : List String -> IO (Maybe String)
+pathLookup candidates
+    = do path <- idrisGetEnv "PATH"
+         let extensions = if isWindows then [".exe", ".cmd", ".bat", ""] else [""]
+         let pathList = forget $ String.split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
+         let candidates = [p ++ "/" ++ x ++ y | p <- pathList,
+                                                x <- candidates,
+                                                y <- extensions ]
+         firstExists candidates

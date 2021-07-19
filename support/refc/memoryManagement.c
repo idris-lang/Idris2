@@ -1,8 +1,10 @@
 #include "runtime.h"
+#include "refc_util.h"
 
-Value *newValue()
+Value *newValue(size_t size)
 {
-    Value *retVal = (Value *)malloc(sizeof(Value));
+    Value *retVal = (Value *)malloc(size);
+    IDRIS2_REFC_VERIFY(retVal, "malloc failed");
     retVal->header.refCounter = 1;
     retVal->header.tag = NO_TAG;
     return retVal;
@@ -10,7 +12,7 @@ Value *newValue()
 
 Value_Arglist *newArglist(int missing, int total)
 {
-    Value_Arglist *retVal = (Value_Arglist *)newValue();
+    Value_Arglist *retVal = IDRIS2_NEW_VALUE(Value_Arglist);
     retVal->header.tag = ARGLIST_TAG;
     retVal->total = total;
     retVal->filled = total - missing;
@@ -21,7 +23,7 @@ Value_Arglist *newArglist(int missing, int total)
 
 Value_Constructor *newConstructor(int total, int tag, const char *name)
 {
-    Value_Constructor *retVal = (Value_Constructor *)newValue();
+    Value_Constructor *retVal = IDRIS2_NEW_VALUE(Value_Constructor);
     retVal->header.tag = CONSTRUCTOR_TAG;
     retVal->total = total;
     retVal->tag = tag;
@@ -35,7 +37,7 @@ Value_Constructor *newConstructor(int total, int tag, const char *name)
 
 Value_Closure *makeClosureFromArglist(fun_ptr_t f, Value_Arglist *arglist)
 {
-    Value_Closure *retVal = (Value_Closure *)newValue();
+    Value_Closure *retVal = IDRIS2_NEW_VALUE(Value_Closure);
     retVal->header.tag = CLOSURE_TAG;
     retVal->arglist = arglist; // (Value_Arglist *)newReference((Value*)arglist);
     retVal->f = f;
@@ -48,7 +50,7 @@ Value_Closure *makeClosureFromArglist(fun_ptr_t f, Value_Arglist *arglist)
 
 Value_Double *makeDouble(double d)
 {
-    Value_Double *retVal = (Value_Double *)newValue();
+    Value_Double *retVal = IDRIS2_NEW_VALUE(Value_Double);
     retVal->header.tag = DOUBLE_TAG;
     retVal->d = d;
     return retVal;
@@ -56,7 +58,7 @@ Value_Double *makeDouble(double d)
 
 Value_Char *makeChar(char c)
 {
-    Value_Char *retVal = (Value_Char *)newValue();
+    Value_Char *retVal = IDRIS2_NEW_VALUE(Value_Char);
     retVal->header.tag = CHAR_TAG;
     retVal->c = c;
     return retVal;
@@ -64,7 +66,7 @@ Value_Char *makeChar(char c)
 
 Value_Bits8 *makeBits8(uint8_t i)
 {
-    Value_Bits8 *retVal = (Value_Bits8 *)newValue();
+    Value_Bits8 *retVal = IDRIS2_NEW_VALUE(Value_Bits8);
     retVal->header.tag = BITS8_TAG;
     retVal->ui8 = i;
     return retVal;
@@ -72,7 +74,7 @@ Value_Bits8 *makeBits8(uint8_t i)
 
 Value_Bits16 *makeBits16(uint16_t i)
 {
-    Value_Bits16 *retVal = (Value_Bits16 *)newValue();
+    Value_Bits16 *retVal = IDRIS2_NEW_VALUE(Value_Bits16);
     retVal->header.tag = BITS16_TAG;
     retVal->ui16 = i;
     return retVal;
@@ -80,7 +82,7 @@ Value_Bits16 *makeBits16(uint16_t i)
 
 Value_Bits32 *makeBits32(uint32_t i)
 {
-    Value_Bits32 *retVal = (Value_Bits32 *)newValue();
+    Value_Bits32 *retVal = IDRIS2_NEW_VALUE(Value_Bits32);
     retVal->header.tag = BITS32_TAG;
     retVal->ui32 = i;
     return retVal;
@@ -88,7 +90,7 @@ Value_Bits32 *makeBits32(uint32_t i)
 
 Value_Bits64 *makeBits64(uint64_t i)
 {
-    Value_Bits64 *retVal = (Value_Bits64 *)newValue();
+    Value_Bits64 *retVal = IDRIS2_NEW_VALUE(Value_Bits64);
     retVal->header.tag = BITS64_TAG;
     retVal->ui64 = i;
     return retVal;
@@ -96,7 +98,7 @@ Value_Bits64 *makeBits64(uint64_t i)
 
 Value_Int8 *makeInt8(int8_t i)
 {
-    Value_Int8 *retVal = (Value_Int8 *)newValue();
+    Value_Int8 *retVal = IDRIS2_NEW_VALUE(Value_Int8);
     retVal->header.tag = INT8_TAG;
     retVal->i8 = i;
     return retVal;
@@ -104,7 +106,7 @@ Value_Int8 *makeInt8(int8_t i)
 
 Value_Int16 *makeInt16(int16_t i)
 {
-    Value_Int16 *retVal = (Value_Int16 *)newValue();
+    Value_Int16 *retVal = IDRIS2_NEW_VALUE(Value_Int16);
     retVal->header.tag = INT16_TAG;
     retVal->i16 = i;
     return retVal;
@@ -112,7 +114,7 @@ Value_Int16 *makeInt16(int16_t i)
 
 Value_Int32 *makeInt32(int32_t i)
 {
-    Value_Int32 *retVal = (Value_Int32 *)newValue();
+    Value_Int32 *retVal = IDRIS2_NEW_VALUE(Value_Int32);
     retVal->header.tag = INT32_TAG;
     retVal->i32 = i;
     return retVal;
@@ -120,7 +122,7 @@ Value_Int32 *makeInt32(int32_t i)
 
 Value_Int64 *makeInt64(int64_t i)
 {
-    Value_Int64 *retVal = (Value_Int64 *)newValue();
+    Value_Int64 *retVal = IDRIS2_NEW_VALUE(Value_Int64);
     retVal->header.tag = INT64_TAG;
     retVal->i64 = i;
     return retVal;
@@ -133,7 +135,7 @@ Value_Int8 *makeBool(int p)
 
 Value_Integer *makeInteger()
 {
-    Value_Integer *retVal = (Value_Integer *)newValue();
+    Value_Integer *retVal = IDRIS2_NEW_VALUE(Value_Integer);
     retVal->header.tag = INTEGER_TAG;
     mpz_init(retVal->i);
     return retVal;
@@ -148,7 +150,7 @@ Value_Integer *makeIntegerLiteral(char *i)
 
 Value_String *makeEmptyString(size_t l)
 {
-    Value_String *retVal = (Value_String *)newValue();
+    Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
     retVal->header.tag = STRING_TAG;
     retVal->str = malloc(l);
     memset(retVal->str, 0, l);
@@ -157,7 +159,7 @@ Value_String *makeEmptyString(size_t l)
 
 Value_String *makeString(char *s)
 {
-    Value_String *retVal = (Value_String *)newValue();
+    Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
     int l = strlen(s);
     retVal->header.tag = STRING_TAG;
     retVal->str = malloc(l + 1);
@@ -168,7 +170,7 @@ Value_String *makeString(char *s)
 
 Value_Pointer *makePointer(void *ptr_Raw)
 {
-    Value_Pointer *p = (Value_Pointer *)newValue();
+    Value_Pointer *p = IDRIS2_NEW_VALUE(Value_Pointer);
     p->header.tag = POINTER_TAG;
     p->p = ptr_Raw;
     return p;
@@ -176,7 +178,7 @@ Value_Pointer *makePointer(void *ptr_Raw)
 
 Value_GCPointer *makeGCPointer(void *ptr_Raw, Value_Closure *onCollectFct)
 {
-    Value_GCPointer *p = (Value_GCPointer *)newValue();
+    Value_GCPointer *p = IDRIS2_NEW_VALUE(Value_GCPointer);
     p->header.tag = GC_POINTER_TAG;
     p->p = makePointer(ptr_Raw);
     p->onCollectFct = onCollectFct;
@@ -185,7 +187,7 @@ Value_GCPointer *makeGCPointer(void *ptr_Raw, Value_Closure *onCollectFct)
 
 Value_Buffer *makeBuffer(void *buf)
 {
-    Value_Buffer *b = (Value_Buffer *)newValue();
+    Value_Buffer *b = IDRIS2_NEW_VALUE(Value_Buffer);
     b->header.tag = BUFFER_TAG;
     b->buffer = buf;
     return b;
@@ -193,7 +195,7 @@ Value_Buffer *makeBuffer(void *buf)
 
 Value_Array *makeArray(int length)
 {
-    Value_Array *a = (Value_Array *)newValue();
+    Value_Array *a = IDRIS2_NEW_VALUE(Value_Array);
     a->header.tag = ARRAY_TAG;
     a->capacity = length;
     a->arr = (Value **)malloc(sizeof(Value *) * length);
@@ -203,7 +205,7 @@ Value_Array *makeArray(int length)
 
 Value_World *makeWorld()
 {
-    Value_World *retVal = (Value_World *)newValue();
+    Value_World *retVal = IDRIS2_NEW_VALUE(Value_World);
     retVal->header.tag = WORLD_TAG;
     retVal->listIORefs = NULL;
     return retVal;
@@ -225,6 +227,8 @@ void removeReference(Value *elem)
     {
         return;
     }
+    IDRIS2_REFC_VERIFY(elem->header.refCounter > 0,
+        "refCounter %lld", (long long) elem->header.refCounter);
     // remove reference counter
     elem->header.refCounter--;
     if (elem->header.refCounter == 0)

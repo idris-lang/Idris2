@@ -65,7 +65,7 @@ delayOnFailure : {vars : _} ->
                  FC -> RigCount -> Env Term vars ->
                  (expected : Glued vars) ->
                  (Error -> Bool) ->
-                 (pri : Nat) ->
+                 (pri : DelayReason) ->
                  (Bool -> Core (Term vars, Glued vars)) ->
                  Core (Term vars, Glued vars)
 delayOnFailure fc rig env expected pred pri elab
@@ -108,7 +108,7 @@ delayElab : {vars : _} ->
             {auto e : Ref EST (EState vars)} ->
             FC -> RigCount -> Env Term vars ->
             (expected : Maybe (Glued vars)) ->
-            (pri : Nat) ->
+            (pri : DelayReason) ->
             Core (Term vars, Glued vars) ->
             Core (Term vars, Glued vars)
 delayElab {vars} fc rig env exp pri elab
@@ -231,14 +231,15 @@ retryDelayed' : {vars : _} ->
                 {auto u : Ref UST UState} ->
                 {auto e : Ref EST (EState vars)} ->
                 RetryError ->
-                List (Nat, Int, NameMap (), Core ClosedTerm) ->
-                List (Nat, Int, NameMap (), Core ClosedTerm) ->
-                Core (List (Nat, Int, NameMap (), Core ClosedTerm))
-retryDelayed' errmode acc [] = pure (reverse acc)
-retryDelayed' errmode acc (d@(_, i, hints, elab) :: ds)
+                (progress : Bool) ->
+                List (DelayReason, Int, NameMap (), Core ClosedTerm) ->
+                List (DelayReason, Int, NameMap (), Core ClosedTerm) ->
+                Core (Bool, List (DelayReason, Int, NameMap (), Core ClosedTerm))
+retryDelayed' errmode p acc [] = pure (p, reverse acc)
+retryDelayed' errmode p acc (d@(_, i, hints, elab) :: ds)
     = do defs <- get Ctxt
          Just Delayed <- lookupDefExact (Resolved i) (gamma defs)
-              | _ => retryDelayed' errmode acc ds
+              | _ => retryDelayed' errmode p acc ds
          handle
            (do est <- get EST
                log "elab.retry" 5 (show (delayDepth est) ++ ": Retrying delayed hole " ++ show !(getFullName (Resolved i)))
@@ -258,15 +259,25 @@ retryDelayed' errmode acc (d@(_, i, hints, elab) :: ds)
                logTerm "elab.update" 5 ("Resolved delayed hole " ++ show i) tm
                logTermNF "elab.update" 5 ("Resolved delayed hole NF " ++ show i) [] tm
                removeHole i
-               retryDelayed' errmode acc ds')
+               retryDelayed' errmode True acc ds')
            (\err => do log "elab" 5 $ show errmode ++ ":Error in " ++ show !(getFullName (Resolved i))
                                 ++ "\n" ++ show err
                        case errmode of
                          RecoverableErrors =>
                             if not !(recoverable err)
                                then throw err
-                               else retryDelayed' errmode (d :: acc) ds
-                         AllErrors => throw err)
+                               else retryDelayed' errmode p (d :: acc) ds
+                         AllErrors =>
+                            -- we've got an error, but see if we get a more
+                            -- helpful one with a later elaborator
+                            handle (do ignore $ retryDelayed' errmode p [] ds
+                                       throw err)
+                               (\err' => throw (better err err')))
+  where
+    better : Error -> Error -> Error
+    better e (GenericMsg _ _) = e
+    better (GenericMsg _ _) e = e
+    better e _ = e
 
 export
 retryDelayed : {vars : _} ->
@@ -274,12 +285,15 @@ retryDelayed : {vars : _} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
-               List (Nat, Int, NameMap (), Core ClosedTerm) ->
+               UnifyInfo -> List (DelayReason, Int, NameMap (), Core ClosedTerm) ->
                Core ()
-retryDelayed ds
+retryDelayed mode ds
     = do est <- get EST
-         ds <- retryDelayed' RecoverableErrors [] ds -- try everything again
-         ignore $ retryDelayed' AllErrors [] ds -- fail on all errors
+         (p, ds) <- retryDelayed' RecoverableErrors False [] ds -- try everything again
+         solveConstraints mode Normal -- maybe we can resolve some interfaces now
+         if p
+            then retryDelayed mode ds -- progress, go around again
+            else ignore $ retryDelayed' AllErrors False [] ds -- fail on all errors
 
 -- Run an elaborator, then all the delayed elaborators arising from it
 export
@@ -288,7 +302,7 @@ runDelays : {vars : _} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             {auto e : Ref EST (EState vars)} ->
-            Nat -> Core a -> Core a
+            (DelayReason -> Bool) -> Core a -> Core a
 runDelays pri elab
     = do ust <- get UST
          let olddelayed = delayedElab ust
@@ -296,7 +310,7 @@ runDelays pri elab
          tm <- elab
          ust <- get UST
          log "elab.delay" 2 $ "Rerunning delayed in elaborator"
-         handle (do ignore $ retryDelayed' AllErrors []
+         handle (do ignore $ retryDelayed' AllErrors False []
                        (reverse (filter hasPri (delayedElab ust))))
                 (\err => do put UST (record { delayedElab = olddelayed } ust)
                             throw err)
@@ -304,5 +318,5 @@ runDelays pri elab
          put UST (record { delayedElab $= (++ olddelayed) } ust)
          pure tm
   where
-    hasPri : (Nat, d) -> Bool
-    hasPri (n, _) = natToInteger n <= natToInteger pri
+    hasPri : (DelayReason, d) -> Bool
+    hasPri (n, _) = pri n

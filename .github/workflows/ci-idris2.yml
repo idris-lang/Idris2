@@ -91,6 +91,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y -t hirsute chezscheme
           echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+      - name: Make bootstrap folder readonly
+        run: chmod -R a-w bootstrap
       - name: Build from bootstrap
         run: make bootstrap && make install
       - name: Artifact Bootstrapped Idris2
@@ -112,6 +114,8 @@ jobs:
           brew install chezscheme
           brew install coreutils
           echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+      - name: Make bootstrap folder readonly
+        run: chmod -R a-w bootstrap
       - name: Build Idris 2 from bootstrap
         run: make bootstrap && make install
         shell: bash
@@ -154,8 +158,12 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Bootstrap and install
-        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap && make bootstrap-test && make install"
+      - name: Bootstrap
+        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap"
+      - name: Bootstrap test
+        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap-test"
+      - name: Install
+        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make install"
 
   nix-bootstrap-chez:
     needs: quick-check
@@ -183,6 +191,8 @@ jobs:
         run: |
           sudo apt-get install -y racket
           echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+      - name: Make bootstrap folder readonly
+        run: chmod -R a-w bootstrap
       - name: Build from bootstrap
         run: make bootstrap-racket && make install
       - name: Artifact Bootstrapped Idris2

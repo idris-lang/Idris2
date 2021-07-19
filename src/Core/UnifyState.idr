@@ -55,6 +55,43 @@ data PolyConstraint : Type where
                         (expty : NF vars) ->
                         (argty : NF vars) -> PolyConstraint
 
+-- Explanation for why an elaborator has been delayed. It's helpful to know
+-- the reason for a delay (I wish airlines and train companies knew this)
+-- because it means we can choose to run only a subset (e.g. it's sometimes
+-- useful to just retry the case blocks) and because we can run them in the
+-- order that prioritises the best error messages.
+public export
+data DelayReason
+      = CaseBlock
+      | Ambiguity
+      | RecordUpdate
+      | Rewrite
+      | LazyDelay
+
+public export
+Eq DelayReason where
+  CaseBlock == CaseBlock = True
+  Ambiguity == Ambiguity = True
+  RecordUpdate == RecordUpdate = True
+  Rewrite == Rewrite = True
+  LazyDelay == LazyDelay = True
+  _ == _ = False
+
+public export
+Ord DelayReason where
+  compare x y = compare (tag x) (tag y)
+    where
+      -- The ordering here is chosen to give the most likely useful error
+      -- messages first. For example, often the real reason for a strange error
+      -- is because there's an ambiguity that can't be resolved.
+      tag : DelayReason -> Int
+      tag CaseBlock = 1 -- we can often proceed even if there's still some
+                        -- ambiguity
+      tag Ambiguity = 2
+      tag LazyDelay = 3
+      tag RecordUpdate = 4
+      tag Rewrite = 5
+
 public export
 record UState where
   constructor MkUState
@@ -78,11 +115,10 @@ record UState where
   dotConstraints : List (Name, DotReason, Constraint) -- dot pattern constraints
   nextName : Int
   nextConstraint : Int
-  delayedElab : List (Nat, Int, NameMap (), Core ClosedTerm)
+  delayedElab : List (DelayReason, Int, NameMap (), Core ClosedTerm)
                 -- Elaborators which we need to try again later, because
                 -- we didn't have enough type information to elaborate
                 -- successfully yet.
-                -- 'Nat' is the priority (lowest first)
                 -- The 'Int' is the resolved name.
                 -- NameMap () is the set of local hints at the point of delay
   logging : Bool
