@@ -158,8 +158,12 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Bootstrap and install
-        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap && make bootstrap-test && make install"
+      - name: Bootstrap
+        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap"
+      - name: Bootstrap test
+        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap-test"
+      - name: Install
+        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make install"
 
   nix-bootstrap-chez:
     needs: quick-check
