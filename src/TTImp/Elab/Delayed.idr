@@ -63,18 +63,19 @@ delayOnFailure : {vars : _} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
                  FC -> RigCount -> Env Term vars ->
-                 (expected : Glued vars) ->
+                 (expected : Maybe (Glued vars)) ->
                  (Error -> Bool) ->
                  (pri : DelayReason) ->
                  (Bool -> Core (Term vars, Glued vars)) ->
                  Core (Term vars, Glued vars)
-delayOnFailure fc rig env expected pred pri elab
+delayOnFailure fc rig env exp pred pri elab
     = do est <- get EST
          ust <- get UST
          let nos = noSolve ust -- remember the holes we shouldn't solve
          handle (elab False)
           (\err =>
               do est <- get EST
+                 expected <- mkExpected exp
                  if pred err
                     then
                       do nm <- genName "delayed"
@@ -99,6 +100,13 @@ delayOnFailure fc rig env expected pred pri elab
                                          ust)
                          pure (dtm, expected)
                     else throw err)
+  where
+    mkExpected : Maybe (Glued vars) -> Core (Glued vars)
+    mkExpected (Just ty) = pure ty
+    mkExpected Nothing
+        = do nm <- genName "delayTy"
+             ty <- metaVar fc erased env nm (TType fc)
+             pure (gnf env ty)
 
 export
 delayElab : {vars : _} ->
