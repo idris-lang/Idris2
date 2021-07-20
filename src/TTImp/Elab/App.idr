@@ -422,7 +422,30 @@ mutual
                    then pure True
                    else do sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
                            concrete defs env sc'
-          if (isHole aty && kr) || !(needsDelay (elabMode elabinfo) kr arg_in) then do
+          -- In theory we can check the arguments in any order. But it turns
+          -- out that it's sometimes better to do the rightmost arguments
+          -- first to give ambiguity resolution more to work with. So
+          -- we do that if the target type is unknown, or if we see that
+          -- the raw term is otherwise worth delaying.
+          if (isHole aty && kr) || !(needsDelay (elabMode elabinfo) kr arg_in)
+             then handle (checkRtoL kr arg)
+                  -- if the type isn't resolved, we might encounter an
+                  -- implicit that we can't use yet because we don't know
+                  -- about it. In that case, revert to LtoR
+                    (\err => if invalidArg err
+                                then checkLtoR kr arg
+                                else throw err)
+             else checkLtoR kr arg
+    where
+      invalidArg : Error -> Bool
+      invalidArg (InvalidArgs{}) = True
+      invalidArg _ = False
+
+      checkRtoL : Bool -> -- return type is known
+                  RawImp -> -- argument currently being checked
+                  Core (Term vars, Glued vars)
+      checkRtoL kr arg
+        = do defs <- get Ctxt
              nm <- genMVName x
              empty <- clearDefs defs
              metaty <- quote empty env aty
@@ -483,7 +506,12 @@ mutual
                   _ => pure ()
              removeHole idx
              pure (tm, gty)
-           else do
+
+      checkLtoR : Bool -> -- return type is known
+                  RawImp -> -- argument currently being checked
+                  Core (Term vars, Glued vars)
+      checkLtoR kr arg
+        = do defs <- get Ctxt
              logNF "elab" 10 ("Argument type " ++ show x) env aty
              logNF "elab" 10 ("Full function type") env
                       (NBind fc x (Pi fc argRig Explicit aty) sc)
