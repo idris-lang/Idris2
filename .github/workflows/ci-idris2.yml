@@ -34,6 +34,26 @@ env:
 
 jobs:
 
+  initialise:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v2
+        with:
+          # for pull_request so we can do HEAD^2
+          fetch-depth: 2
+
+      - name: Get commit message
+        run: |
+          if   [[ github.event_name == 'push' ]]; then
+            echo "MSG=$(git log --format=%B -n 1 HEAD)" >> $GITHUB_ENV
+          elif [[ github.event_name == 'pull_request' ]]; then
+            echo "MSG=$(git log --format=%B -n 1 HEAD^2)" >> $GITHUB_ENV
+          fi
+
+    outputs:
+      commit_message: ${{ env.MSG }}
+
   ######################################################################
   # Build from the previous version
   # We perform this check before all the other ones because:
@@ -42,9 +62,10 @@ jobs:
   ######################################################################
 
   quick-check:
+    needs: initialise
     runs-on: ubuntu-latest
     if: |
-      !contains(github.event.commits[0].message, '[ci: skip]')
+      !contains(needs.initialise.outputs.commit_message, '[ci: skip]')
     env:
       IDRIS2_CG: chez
       SCHEME: scheme
@@ -53,8 +74,6 @@ jobs:
         uses: actions/checkout@v2
       - name: Install build dependencies
         run: |
-          echo ${{ toJSON(github.event) }}
-          false
           echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y -t hirsute chezscheme
@@ -102,9 +121,9 @@ jobs:
     needs: quick-check
     runs-on: ubuntu-latest
     if: |
-      !contains(github.event.commits[0].message, '[ci:')
-      || contains(github.event.commits[0].message, '[ci: ubuntu]')
-      || contains(github.event.commits[0].message, '[ci: chez]')
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: ubuntu]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: chez]')
     env:
       IDRIS2_CG: chez
       SCHEME: scheme
@@ -131,9 +150,9 @@ jobs:
     needs: quick-check
     runs-on: macos-latest
     if: |
-      !contains(github.event.commits[0].message, '[ci:')
-      || contains(github.event.commits[0].message, '[ci: macos]')
-      || contains(github.event.commits[0].message, '[ci: chez]')
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: macos]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: chez]')
     env:
       SCHEME: chez
     steps:
@@ -159,9 +178,9 @@ jobs:
     needs: quick-check
     runs-on: windows-latest
     if: |
-      !contains(github.event.commits[0].message, '[ci:')
-      || contains(github.event.commits[0].message, '[ci: windows]')
-      || contains(github.event.commits[0].message, '[ci: chez]')
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: windows]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: chez]')
     env:
       MSYSTEM: MINGW64
       MSYS2_PATH_TYPE: inherit
@@ -203,9 +222,9 @@ jobs:
     needs: quick-check
     runs-on: ubuntu-latest
     if: |
-      !contains(github.event.commits[0].message, '[ci:')
-      || contains(github.event.commits[0].message, '[ci: nix]')
-      || contains(github.event.commits[0].message, '[ci: chez]')
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: nix]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: chez]')
     steps:
     - uses: actions/checkout@v2
       with:
@@ -221,9 +240,9 @@ jobs:
     needs: quick-check
     runs-on: ubuntu-latest
     if: |
-      !contains(github.event.commits[0].message, '[ci:')
-      || contains(github.event.commits[0].message, '[ci: ubuntu]')
-      || contains(github.event.commits[0].message, '[ci: racket]')
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: ubuntu]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: racket]')
     env:
       IDRIS2_CG: racket
     steps:
@@ -330,8 +349,8 @@ jobs:
     needs: quick-check
     runs-on: ubuntu-latest
     if: |
-      !contains(github.event.commits[0].message, '[ci:')
-      || contains(github.event.commits[0].message, '[ci: ubuntu]')
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: ubuntu]')
     env:
       IDRIS2_CG: chez
     steps:
