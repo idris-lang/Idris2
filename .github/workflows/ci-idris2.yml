@@ -100,10 +100,9 @@ jobs:
     needs: quick-check
     runs-on: ubuntu-latest
     if: |
-      contains(github.event.head_commit.message, '[ci:')
-      && !(   contains(github.event.head_commit.message, '[ci: ubuntu]')
-           || contains(github.event.head_commit.message, '[ci: chez]')
-          )
+      !contains(github.event.head_commit.message, '[ci:')
+      || contains(github.event.head_commit.message, '[ci: ubuntu]')
+      || contains(github.event.head_commit.message, '[ci: chez]')
     env:
       IDRIS2_CG: chez
       SCHEME: scheme
@@ -130,10 +129,9 @@ jobs:
     needs: quick-check
     runs-on: macos-latest
     if: |
-      contains(github.event.head_commit.message, '[ci:')
-      && !(   contains(github.event.head_commit.message, '[ci: macos]')
-           || contains(github.event.head_commit.message, '[ci: chez]')
-          )
+      !contains(github.event.head_commit.message, '[ci:')
+      || contains(github.event.head_commit.message, '[ci: macos]')
+      || contains(github.event.head_commit.message, '[ci: chez]')
     env:
       SCHEME: chez
     steps:
@@ -159,10 +157,9 @@ jobs:
     needs: quick-check
     runs-on: windows-latest
     if: |
-      contains(github.event.head_commit.message, '[ci:')
-      && !(   contains(github.event.head_commit.message, '[ci: windows]')
-           || contains(github.event.head_commit.message, '[ci: chez]')
-          )
+      !contains(github.event.head_commit.message, '[ci:')
+      || contains(github.event.head_commit.message, '[ci: windows]')
+      || contains(github.event.head_commit.message, '[ci: chez]')
     env:
       MSYSTEM: MINGW64
       MSYS2_PATH_TYPE: inherit
@@ -204,10 +201,9 @@ jobs:
     needs: quick-check
     runs-on: ubuntu-latest
     if: |
-      contains(github.event.head_commit.message, '[ci:')
-      && !(   contains(github.event.head_commit.message, '[ci: nix]')
-           || contains(github.event.head_commit.message, '[ci: chez]')
-          )
+      !contains(github.event.head_commit.message, '[ci:')
+      || contains(github.event.head_commit.message, '[ci: nix]')
+      || contains(github.event.head_commit.message, '[ci: chez]')
     steps:
     - uses: actions/checkout@v2
       with:
@@ -223,10 +219,9 @@ jobs:
     needs: quick-check
     runs-on: ubuntu-latest
     if: |
-      contains(github.event.head_commit.message, '[ci:')
-      && !(   contains(github.event.head_commit.message, '[ci: ubuntu]')
-           || contains(github.event.head_commit.message, '[ci: racket]')
-          )
+      !contains(github.event.head_commit.message, '[ci:')
+      || contains(github.event.head_commit.message, '[ci: ubuntu]')
+      || contains(github.event.head_commit.message, '[ci: racket]')
     env:
       IDRIS2_CG: racket
     steps:
@@ -333,8 +328,8 @@ jobs:
     needs: quick-check
     runs-on: ubuntu-latest
     if: |
-      contains(github.event.head_commit.message, '[ci:')
-      && !contains(github.event.head_commit.message, '[ci: ubuntu]')
+      !contains(github.event.head_commit.message, '[ci:')
+      || contains(github.event.head_commit.message, '[ci: ubuntu]')
     env:
       IDRIS2_CG: chez
     steps:
