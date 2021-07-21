@@ -6,10 +6,28 @@ on:
       - '*'
     tags:
       - '*'
+    paths-ignore:
+      - 'docs/**'
+      - 'icons/**'
+      - '*.md'
+      - 'CONTRIBUTORS'
+      - 'LICENSE'
+      - '.github/workflows/ci-lint.yml'
+      - '.github/workflows/ci-sphinx.yml'
+      - '.github/workflows/ci-super-linter.yml'
   pull_request:
     branches:
       - master
       - main
+    paths-ignore:
+      - 'docs/**'
+      - 'icons/**'
+      - '*.md'
+      - 'CONTRIBUTORS'
+      - 'LICENSE'
+      - '.github/workflows/ci-lint.yml'
+      - '.github/workflows/ci-sphinx.yml'
+      - '.github/workflows/ci-super-linter.yml'
 
 env:
   IDRIS2_VERSION: 0.4.0 # For previous-version build
