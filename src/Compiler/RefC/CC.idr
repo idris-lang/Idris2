@@ -11,6 +11,10 @@ import Libraries.Utils.Path
 
 %default total
 
+data RefCIntegerImplementation =
+    GMP |
+    LibBF
+
 findCC : IO String
 findCC
     = do Nothing <- getEnv "IDRIS2_CC"
@@ -19,11 +23,13 @@ findCC
            | Just cc => pure cc
          pure "cc"
 
-getIntegerImpl : IO String
-getIntegerImpl
-    = do Nothing <- getEnv "IDRIS_REFC_INTEGER"
-           | Just cc => pure cc
-         pure "gmp"
+getRefCIntegerImplementation : Core RefCIntegerImplementation
+getRefCIntegerImplementation
+    = do Nothing <- coreLift $ getEnv "IDRIS_REFC_INTEGER"
+           | Just "gmp" => pure GMP
+           | Just "libbf" => pure LibBF
+           | Just _ => throw (UserError "IDRIS_REFC_INTEGER should be \"gmp\" or \"libbf\"")
+         pure GMP
 
 fullprefix_dir : Dirs -> String -> String
 fullprefix_dir dirs sub
@@ -38,10 +44,11 @@ compileCObjectFile : {auto c : Ref Ctxt Defs}
 compileCObjectFile {asLibrary} sourceFile objectFile =
   do cc <- coreLift findCC
      dirs <- getDirs
-     intImpl <- coreLift getIntegerImpl
 
      let libraryFlag = if asLibrary then "-fpic " else ""
-     let intImplFlag = if intImpl == "libbf" then " -DINTEGER_USE_LIBBF " else ""
+     let intImplFlag = case !(getRefCIntegerImplementation) of
+                           GMP => ""
+                           LibBF => " -DINTEGER_USE_LIBBF "
 
      let runccobj = cc ++ " -Werror -c " ++ libraryFlag ++ intImplFlag ++ sourceFile ++
                        " -o " ++ objectFile ++ " " ++
@@ -63,10 +70,11 @@ compileCFile : {auto c : Ref Ctxt Defs}
 compileCFile {asShared} objectFile outFile =
   do cc <- coreLift findCC
      dirs <- getDirs
-     intImpl <- coreLift getIntegerImpl
 
      let sharedFlag = if asShared then "-shared " else ""
-     let intImplFlag = if intImpl == "libbf" then "" else "-lgmp "
+     let intImplFlag = case !(getRefCIntegerImplementation) of
+                           GMP => "-lgmp "
+                           LibBF => ""
 
      let runcc = cc ++ " -Werror " ++ sharedFlag ++ objectFile ++
                        " -o " ++ outFile ++ " " ++
