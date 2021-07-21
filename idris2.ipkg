@@ -14,6 +14,7 @@ sourcedir = "src"
 -- (Alternatively: set the environment variable IDRIS2_INC_CGS=chez)
 -- For this to work, you need to do the initial incremental build from clean.
 -- opts = "--inc chez"
+opts = "--timing"
 
 main = Idris.Main
 executable = idris2
