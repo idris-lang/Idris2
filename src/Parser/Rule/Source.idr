@@ -400,6 +400,7 @@ isTerminator (Keyword "in") = True
 isTerminator (Keyword "then") = True
 isTerminator (Keyword "else") = True
 isTerminator (Keyword "where") = True
+isTerminator InterpEnd = True
 isTerminator EndInput = True
 isTerminator _ = False
 
