@@ -46,11 +46,11 @@ jobs:
       - name: Get commit message
         id: get_commit_message
         run: |
-          echo ${{ github.event_name }}
-          if   [[ github.event_name == 'push' ]]; then
+          echo '${{ github.event_name }}'
+          if   [[ '${{ github.event_name }}' == 'push' ]]; then
             echo "push";
             echo ::set-output namecommit_message::$(git log --format=%B -n 1 HEAD)
-          elif [[ github.event_name == 'pull_request' ]]; then
+          elif [[ '${{ github.event_name }}' == 'pull_request' ]]; then
             echo "pull request";
             echo ::set-output namecommit_message::$(git log --format=%B -n 1 HEAD^2)
           fi
