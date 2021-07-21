@@ -78,6 +78,14 @@ int idrnet_socket(int domain, int type, int protocol) {
     return socket(domain, type, protocol);
 }
 
+int idrnet_close(int fd) {
+#ifdef _WIN32
+    return _close(fd);
+#else
+    return close(fd);
+#endif
+}
+
 // Get the address family constants out of C and into Idris
 int idrnet_af_unspec() {
     return AF_UNSPEC;
@@ -190,6 +198,18 @@ int idrnet_connect(int sockfd, int family, int socket_type, char* host, int port
     }
     freeaddrinfo(remote_host);
     return 0;
+}
+
+int idrnet_listen(int socket, int backlog) {
+    return listen(socket, backlog);
+}
+
+FILE* idrnet_fdopen(int fd, const char* mode) {
+#ifdef _WIN32
+    return _fdopen(fd, mode);
+#else
+    return fdopen(fd, mode);
+#endif
 }
 
 

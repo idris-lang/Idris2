@@ -1,7 +1,7 @@
 (define (blodwen-os)
   (case (system-type 'os)
     [(unix) "unix"]
-    [(osx) "darwin"]
+    [(macosx) "darwin"]
     [(windows) "windows"]
     [else "unknown"]))
 

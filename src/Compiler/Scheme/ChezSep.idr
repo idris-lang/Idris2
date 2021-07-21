@@ -58,7 +58,7 @@ schFooter = "(collect 4)\n(blodwen-run-finalisers)\n"
 
 startChez : String -> String -> String -> String
 startChez chez appDirSh targetSh = Chez.startChezPreamble ++ unlines
-    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appDirSh ++ "\":$LD_LIBRARY_PATH"
+    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appDirSh ++ ":$LD_LIBRARY_PATH\""
     , "\"" ++ chez ++ "\" -q "
         ++ "--libdirs \"$DIR/" ++ appDirSh ++ "\" "
         ++ "--program \"$DIR/" ++ targetSh ++ "\" "
@@ -69,10 +69,10 @@ startChezCmd : String -> String -> String -> String
 startChezCmd chez appDirSh targetSh = unlines
     [ "@echo off"
     , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%\\" ++ appDirSh ++ ";%PATH%"
+    , "set PATH=%APPDIR%" ++ appDirSh ++ ";%PATH%"
     , "\"" ++ chez ++ "\" -q "
-        ++ "--libdirs \"%APPDIR%/" ++ appDirSh ++ "\" "
-        ++ "--program \"%APPDIR%/" ++ targetSh ++ "\" "
+        ++ "--libdirs \"%APPDIR%" ++ appDirSh ++ "\" "
+        ++ "--program \"%APPDIR%" ++ targetSh ++ "\" "
         ++ "%*"
     ]
 
@@ -83,11 +83,10 @@ startChezWinSh chez appDirSh targetSh = unlines
     , ""
     , "set -e # exit on any error"
     , ""
-    , "DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
-    , "CHEZ=$(cygpath \"" ++ chez ++"\")"
-    , "export PATH=\"$DIR/" ++ appDirSh ++ "\":$PATH"
-    , "\"$CHEZ\" --program \"$DIR/" ++ targetSh ++ "\" \"$@\""
-    , "\"$CHEZ\" -q "
+    , "DIR=$(dirname \"$(readlink -f -- \"$0\" || cygpath -a -- \"$0\")\")"
+    , "PATH=\"$DIR/" ++ appDirSh ++ ":$PATH\""
+    , "\"" ++ chez ++ "\" --program \"$DIR/" ++ targetSh ++ "\" \"$@\""
+    , "\"" ++ chez ++ "\" -q "
         ++ "--libdirs \"$DIR/" ++ appDirSh ++ "\" "
         ++ "--program \"$DIR/" ++ targetSh ++ "\" "
         ++ "\"$@\""
