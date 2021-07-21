@@ -9,7 +9,6 @@
 #ifdef INTEGER_USE_LIBBF
 #include "libbf.h"
 #else
-#define INTEGER_USE_GMP
 #include <gmp.h>
 #endif
 
@@ -110,10 +109,10 @@ typedef struct
 typedef struct
 {
     Value_header header;
-#ifndef INTEGER_USE_LIBBF
-    mpz_t i;
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_t i;
+#else
+    mpz_t i;
 #endif
 } Value_Integer;
 

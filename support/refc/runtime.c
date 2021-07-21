@@ -95,12 +95,12 @@ int extractInt(Value *v)
 {
   if (v->header.tag == INTEGER_TAG)
   {
-#ifdef INTEGER_USE_GMP
-    return (int)mpz_get_si(((Value_Integer *)v)->i);
-#else
+#ifdef INTEGER_USE_LIBBF
     int64_t res;
     bf_get_int64(&res, &((Value_Integer*)v)->i, 0);
     return (int)res;
+#else
+    return (int)mpz_get_si(((Value_Integer *)v)->i);
 #endif
   }
 

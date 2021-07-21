@@ -43,10 +43,10 @@ Value *add_Int64(Value *x, Value *y)
 Value *add_Integer(Value *x, Value *y)
 {
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_add(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_add(&retVal->i, &((Value_Integer*)x)->i, &((Value_Integer*)y)->i, BF_PREC_INF, 0);
+#else
+    mpz_add(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
 #endif
     return (Value *)retVal;
 }
@@ -91,10 +91,10 @@ Value *sub_Int64(Value *x, Value *y)
 Value *sub_Integer(Value *x, Value *y)
 {
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_sub(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_sub(&retVal->i, &((Value_Integer*)x)->i, &((Value_Integer*)y)->i, BF_PREC_INF, 0);
+#else
+    mpz_sub(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
 #endif
     return (Value *)retVal;
 }
@@ -139,11 +139,11 @@ Value *negate_Int64(Value *x)
 Value *negate_Integer(Value *x)
 {
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_neg(retVal->i, ((Value_Integer *)x)->i);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_set(&retVal->i, &((Value_Integer*)x)->i);
     bf_neg(&retVal->i);
+#else
+    mpz_neg(retVal->i, ((Value_Integer *)x)->i);
 #endif
     return (Value *)retVal;
 }
@@ -188,10 +188,10 @@ Value *mul_Int64(Value *x, Value *y)
 Value *mul_Integer(Value *x, Value *y)
 {
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_mul(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_mul(&retVal->i, &((Value_Integer*)x)->i, &((Value_Integer*)y)->i, BF_PREC_INF, 0);
+#else
+    mpz_mul(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
 #endif
     return (Value *)retVal;
 }
@@ -276,7 +276,11 @@ Value *div_Int64(Value *x, Value *y)
 Value *div_Integer(Value *x, Value *y)
 {
     Value_Integer* retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
+#ifdef INTEGER_USE_LIBBF
+    bf_t r;
+    bf_init(((Value_Integer*)x)->i.ctx, &r);
+    bf_divrem(&retVal->i, &r, &((Value_Integer*)x)->i, &((Value_Integer*)y)->i, BF_PREC_INF, 0, BF_RNDZ);
+#else
     mpz_t rem, yq;
     mpz_inits(rem, yq, NULL);
 
@@ -286,10 +290,6 @@ Value *div_Integer(Value *x, Value *y)
     mpz_divexact(retVal->i, yq, ((Value_Integer *)y)->i);
 
     mpz_clears(rem, yq, NULL);
-#else
-    bf_t r;
-    bf_init(((Value_Integer*)x)->i.ctx, &r);
-    bf_divrem(&retVal->i, &r, &((Value_Integer*)x)->i, &((Value_Integer*)y)->i, BF_PREC_INF, 0, BF_RNDZ);
 #endif
 
     return (Value *)retVal;
@@ -347,10 +347,10 @@ Value *mod_Int64(Value *x, Value *y)
 Value *mod_Integer(Value *x, Value *y)
 {
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_mod(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_rem(&retVal->i, &((Value_Integer*)x)->i, &((Value_Integer*)y)->i, BF_PREC_INF, 0, BF_DIVREM_EUCLIDIAN);
+#else
+    mpz_mod(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
 #endif
     return (Value *)retVal;
 }
@@ -391,14 +391,14 @@ Value *shiftl_Int64(Value *x, Value *y)
 Value *shiftl_Integer(Value *x, Value *y)
 {
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mp_bitcnt_t cnt = (mp_bitcnt_t)mpz_get_ui(((Value_Integer *)y)->i);
-    mpz_mul_2exp(retVal->i, ((Value_Integer *)x)->i, cnt);
-#else
+#ifdef INTEGER_USE_LIBBF
     int64_t cnt;
     bf_get_int64(&cnt, &((Value_Integer*)y)->i, 0);
     bf_set(&retVal->i, &((Value_Integer*)x)->i);
     bf_mul_2exp(&retVal->i, cnt, BF_PREC_INF, BF_RNDZ);
+#else
+    mp_bitcnt_t cnt = (mp_bitcnt_t)mpz_get_ui(((Value_Integer *)y)->i);
+    mpz_mul_2exp(retVal->i, ((Value_Integer *)x)->i, cnt);
 #endif
     return (Value *)retVal;
 }
@@ -439,10 +439,7 @@ Value *shiftr_Int64(Value *x, Value *y)
 Value *shiftr_Integer(Value *x, Value *y)
 {
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mp_bitcnt_t cnt = (mp_bitcnt_t)mpz_get_ui(((Value_Integer *)y)->i);
-    mpz_fdiv_q_2exp(retVal->i, ((Value_Integer *)x)->i, cnt);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_t e, r;
     int64_t cnt;
     bf_init(retVal->i.ctx, &e);
@@ -451,6 +448,9 @@ Value *shiftr_Integer(Value *x, Value *y)
     bf_get_int64(&cnt, &((Value_Integer*)y)->i, 0);
     bf_mul_2exp(&e, cnt, BF_PREC_INF, BF_RNDZ);
     bf_divrem(&retVal->i, &r, &((Value_Integer*)x)->i, &e, BF_PREC_INF, 0, BF_DIVREM_EUCLIDIAN);
+#else
+    mp_bitcnt_t cnt = (mp_bitcnt_t)mpz_get_ui(((Value_Integer *)y)->i);
+    mpz_fdiv_q_2exp(retVal->i, ((Value_Integer *)x)->i, cnt);
 #endif
     return (Value *)retVal;
 }
@@ -491,10 +491,10 @@ Value *and_Int64(Value *x, Value *y)
 Value *and_Integer(Value *x, Value *y)
 {
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_and(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_logic_and(&retVal->i, &((Value_Integer*)x)->i, &((Value_Integer*)y)->i);
+#else
+    mpz_and(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
 #endif
     return (Value *)retVal;
 }
@@ -535,10 +535,10 @@ Value *or_Int64(Value *x, Value *y)
 Value *or_Integer(Value *x, Value *y)
 {
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_ior(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_logic_or(&retVal->i, &((Value_Integer*)x)->i, &((Value_Integer*)y)->i);
+#else
+    mpz_ior(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
 #endif
     return (Value *)retVal;
 }
@@ -579,10 +579,10 @@ Value *xor_Int64(Value *x, Value *y)
 Value *xor_Integer(Value *x, Value *y)
 {
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_xor(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_logic_xor(&retVal->i, &((Value_Integer*)x)->i, &((Value_Integer*)y)->i);
+#else
+    mpz_xor(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
 #endif
     return (Value *)retVal;
 }
@@ -622,13 +622,13 @@ Value *lt_Int64(Value *x, Value *y)
 }
 Value *lt_Integer(Value *x, Value *y)
 {
-#ifdef INTEGER_USE_GMP
+#ifdef INTEGER_USE_LIBBF
     return (Value *)makeBool(
-        mpz_cmp(((Value_Integer *)x)->i, ((Value_Integer *)y)->i) < 0
+        bf_cmp(&((Value_Integer*)x)->i, &((Value_Integer*)y)->i) < 0
     );
 #else
     return (Value *)makeBool(
-        bf_cmp(&((Value_Integer*)x)->i, &((Value_Integer*)y)->i) < 0
+        mpz_cmp(((Value_Integer *)x)->i, ((Value_Integer *)y)->i) < 0
     );
 #endif
 }
@@ -680,13 +680,13 @@ Value *gt_Int64(Value *x, Value *y)
 }
 Value *gt_Integer(Value *x, Value *y)
 {
-#ifdef INTEGER_USE_GMP
-    return (Value *)makeBool(
-        mpz_cmp(((Value_Integer *)x)->i, ((Value_Integer *)y)->i) > 0
-    );
-#else
+#ifdef INTEGER_USE_LIBBF
     return (Value*)makeBool(
         bf_cmp(&((Value_Integer*)x)->i, &((Value_Integer*)y)->i) > 0
+    );
+#else
+    return (Value *)makeBool(
+        mpz_cmp(((Value_Integer *)x)->i, ((Value_Integer *)y)->i) > 0
     );
 #endif
 }
@@ -738,13 +738,13 @@ Value *eq_Int64(Value *x, Value *y)
 }
 Value *eq_Integer(Value *x, Value *y)
 {
-#ifdef INTEGER_USE_GMP
-    return (Value *)makeBool(
-        mpz_cmp(((Value_Integer *)x)->i, ((Value_Integer *)y)->i) == 0
-    );
-#else
+#ifdef INTEGER_USE_LIBBF
     return (Value*)makeBool(
         bf_cmp(&((Value_Integer*)x)->i, &((Value_Integer*)y)->i) == 0
+    );
+#else
+    return (Value *)makeBool(
+        mpz_cmp(((Value_Integer *)x)->i, ((Value_Integer *)y)->i) == 0
     );
 #endif
 }
@@ -796,13 +796,13 @@ Value *lte_Int64(Value *x, Value *y)
 }
 Value *lte_Integer(Value *x, Value *y)
 {
-#ifdef INTEGER_USE_GMP
-    return (Value *)makeBool(
-        mpz_cmp(((Value_Integer *)x)->i, ((Value_Integer *)y)->i) <= 0
-    );
-#else
+#ifdef INTEGER_USE_LIBBF
     return (Value*)makeBool(
         bf_cmp(&((Value_Integer*)x)->i, &((Value_Integer*)y)->i) <= 0
+    );
+#else
+    return (Value *)makeBool(
+        mpz_cmp(((Value_Integer *)x)->i, ((Value_Integer *)y)->i) <= 0
     );
 #endif
 }
@@ -854,13 +854,13 @@ Value *gte_Int64(Value *x, Value *y)
 }
 Value *gte_Integer(Value *x, Value *y)
 {
-#ifdef INTEGER_USE_GMP
-    return (Value *)makeBool(
-        mpz_cmp(((Value_Integer *)x)->i, ((Value_Integer *)y)->i) >= 0
-    );
-#else
+#ifdef INTEGER_USE_LIBBF
     return (Value*)makeBool(
         bf_cmp(&((Value_Integer*)x)->i, &((Value_Integer*)y)->i) >= 0
+    );
+#else
+    return (Value *)makeBool(
+        mpz_cmp(((Value_Integer *)x)->i, ((Value_Integer *)y)->i) >= 0
     );
 #endif
 }

@@ -3,12 +3,6 @@
 #include "cBackend.h"
 #include <stdio.h>
 
-#ifdef INTEGER_USE_LIBBF
-#include "libbf.h"
-#else
-#include <gmp.h>
-#endif
-
 Value *cast_Int8_to_Bits8(Value *);
 Value *cast_Int8_to_Bits16(Value *);
 Value *cast_Int8_to_Bits32(Value *);

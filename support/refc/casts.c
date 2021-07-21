@@ -49,10 +49,10 @@ Value *cast_Int8_to_Integer(Value *input)
     Value_Int8 *from = (Value_Int8 *)input;
 
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_set_si(retVal->i, from->i8);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_set_si(&retVal->i, from->i8);
+#else
+    mpz_set_si(retVal->i, from->i8);
 #endif
 
     return (Value *)retVal;
@@ -129,10 +129,10 @@ Value *cast_Int16_to_Integer(Value *input)
     Value_Int16 *from = (Value_Int16 *)input;
 
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_set_si(retVal->i, from->i16);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_set_si(&retVal->i, from->i16);
+#else
+    mpz_set_si(retVal->i, from->i16);
 #endif
 
     return (Value *)retVal;
@@ -209,10 +209,10 @@ Value *cast_Int32_to_Integer(Value *input)
     Value_Int32 *from = (Value_Int32 *)input;
 
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_set_si(retVal->i, from->i32);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_set_si(&retVal->i, from->i32);
+#else
+    mpz_set_si(retVal->i, from->i32);
 #endif
 
     return (Value *)retVal;
@@ -295,10 +295,10 @@ Value *cast_Int64_to_Integer(Value *input)
     Value_Int64 *from = (Value_Int64 *)input;
 
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_set_si(retVal->i, from->i64);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_set_si(&retVal->i, from->i64);
+#else
+    mpz_set_si(retVal->i, from->i64);
 #endif
 
     return (Value *)retVal;
@@ -380,10 +380,10 @@ Value *cast_double_to_Integer(Value *input)
     Value_Double *from = (Value_Double *)input;
 
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_set_d(retVal->i, from->d);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_set_float64(&retVal->i, from->d);
+#else
+    mpz_set_d(retVal->i, from->d);
 #endif
 
     return (Value *)retVal;
@@ -459,10 +459,10 @@ Value *cast_char_to_Integer(Value *input)
 	Value_Char *from = (Value_Char *)input;
 
 	Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_set_si(retVal->i, from->c);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_set_si(&retVal->i, from->c);
+#else
+    mpz_set_si(retVal->i, from->c);
 #endif
 
 	return (Value *)retVal;
@@ -537,10 +537,10 @@ Value *cast_string_to_Integer(Value *input)
     Value_String *from = (Value_String *)input;
 
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_set_str(retVal->i, from->str, 10);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_atof(&retVal->i, from->str, NULL, 10, BF_PREC_INF, BF_RNDZ);
+#else
+    mpz_set_str(retVal->i, from->str, 10);
 #endif
 
     return (Value *)retVal;
@@ -614,10 +614,10 @@ Value *cast_Bits8_to_Integer(Value *input)
     Value_Bits8 *from = (Value_Bits8 *)input;
 
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_set_ui(retVal->i, from->ui8);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_set_ui(&retVal->i, from->ui8);
+#else
+    mpz_set_ui(retVal->i, from->ui8);
 #endif
 
     return (Value *)retVal;
@@ -694,10 +694,10 @@ Value *cast_Bits16_to_Integer(Value *input)
     Value_Bits16 *from = (Value_Bits16 *)input;
 
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_set_ui(retVal->i, from->ui16);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_set_ui(&retVal->i, from->ui16);
+#else
+    mpz_set_ui(retVal->i, from->ui16);
 #endif
 
     return (Value *)retVal;
@@ -774,10 +774,10 @@ Value *cast_Bits32_to_Integer(Value *input)
     Value_Bits32 *from = (Value_Bits32 *)input;
 
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_set_ui(retVal->i, from->ui32);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_set_ui(&retVal->i, from->ui32);
+#else
+    mpz_set_ui(retVal->i, from->ui32);
 #endif
 
     return (Value *)retVal;
@@ -854,10 +854,10 @@ Value *cast_Bits64_to_Integer(Value *input)
     Value_Bits64 *from = (Value_Bits64 *)input;
 
     Value_Integer *retVal = makeInteger();
-#ifdef INTEGER_USE_GMP
-    mpz_set_ui(retVal->i, from->ui64);
-#else
+#ifdef INTEGER_USE_LIBBF
     bf_set_ui(&retVal->i, from->ui64);
+#else
+    mpz_set_ui(retVal->i, from->ui64);
 #endif
 
     return (Value *)retVal;
@@ -887,17 +887,7 @@ Value *cast_Bits64_to_string(Value *input)
 }
 
 /*  conversions from Integer */
-#ifdef INTEGER_USE_GMP
-uint64_t get_lsb(mpz_t i, mp_bitcnt_t b)
-{
-    mpz_t r;
-    mpz_init(r);
-    mpz_fdiv_r_2exp(r, i, b);
-    uint64_t retVal = mpz_get_ui(r);
-    mpz_clear(r);
-    return retVal;
-}
-#else
+#ifdef INTEGER_USE_LIBBF
 uint64_t get_lsb(bf_t i, int b)
 {
     bf_t e, q, r;
@@ -910,6 +900,16 @@ uint64_t get_lsb(bf_t i, int b)
     bf_rem(&r, &i, &e, BF_PREC_INF, 0, BF_DIVREM_EUCLIDIAN);
     bf_get_uint64(&res, &r);
     return res;
+}
+#else
+uint64_t get_lsb(mpz_t i, mp_bitcnt_t b)
+{
+    mpz_t r;
+    mpz_init(r);
+    mpz_fdiv_r_2exp(r, i, b);
+    uint64_t retVal = mpz_get_ui(r);
+    mpz_clear(r);
+    return retVal;
 }
 #endif
 
@@ -964,12 +964,12 @@ Value *cast_Integer_to_Int64(Value *input)
 Value *cast_Integer_to_double(Value *input)
 {
     Value_Integer *from = (Value_Integer *)input;
-#ifdef INTEGER_USE_GMP
-    return (Value *)makeDouble(mpz_get_d(from->i));
-#else
+#ifdef INTEGER_USE_LIBBF
     double res;
     bf_get_float64(&from->i, &res, BF_RNDN);
     return (Value*)makeDouble(res);
+#else
+    return (Value *)makeDouble(mpz_get_d(from->i));
 #endif
 }
 
@@ -985,10 +985,10 @@ Value *cast_Integer_to_string(Value *input)
 
     Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
     retVal->header.tag = STRING_TAG;
-#ifdef INTEGER_USE_GMP
-    retVal->str = mpz_get_str(NULL, 10, from->i);
-#else
+#ifdef INTEGER_USE_LIBBF
     retVal->str = bf_ftoa(NULL, &from->i, 10, 0, BF_RNDZ | BF_FTOA_FORMAT_FRAC);
+#else
+    retVal->str = mpz_get_str(NULL, 10, from->i);
 #endif
 
     return (Value *)retVal;
