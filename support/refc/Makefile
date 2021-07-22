@@ -17,8 +17,6 @@ ifeq ($(IDRIS_REFC_INTEGER), libbf)
 	SRCS += libbf.c cutils.c
 	CFLAGS += -DINTEGER_USE_LIBBF
 endif
-OBJS = $(SRCS:.c=.o)
-DEPS = $(OBJS:.o=.d)
 
 
 all: build
