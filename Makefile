@@ -154,6 +154,7 @@ ifeq ("$(wildcard support/refc/libbf.c)","")
 endif
 	rm -rf quickjs-2021-03-27*
 	cp -a support/refc support/refc_libbf
+	@${MAKE} -C support/refc_libbf USE_LIBBF=1 clean	
 	@${MAKE} -C support/refc_libbf USE_LIBBF=1
 endif
 
@@ -163,7 +164,6 @@ support-clean:
 	@${MAKE} -C support/chez clean
 ifeq ($(BUILD_REFC_WITH_LIBBF), 1)
 	rm -rf support/refc_libbf
-	@${MAKE} -C support/refc_libbf USE_LIBBF=1 clean
 endif
 
 clean-libs:
