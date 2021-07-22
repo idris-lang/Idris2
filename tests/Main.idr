@@ -1,5 +1,9 @@
 module Main
 
+import System
+import System.Directory
+import System.File
+
 import Test.Golden
 
 %default covering
@@ -124,7 +128,7 @@ idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
        "reg036", "reg037", "reg038", "reg039", "reg040", "reg041", "reg042",
-       "reg043", "reg044", "reg045", "reg046", "reg047", "reg048"]
+       "reg043", "reg044", "reg045", "reg046", "reg047", "reg048", "reg049"]
 
 idrisTestsData : TestPool
 idrisTestsData = MkTestPool "Data and record types" [] Nothing
@@ -199,12 +203,8 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- golden file testing
        "golden001"]
 
-typeddTests : TestPool
-typeddTests = MkTestPool "Type Driven Development" [] Nothing
-     [ "chapter01", "chapter02", "chapter03", "chapter04", "chapter05"
-     , "chapter06", "chapter07", "chapter08", "chapter09", "chapter10"
-     , "chapter11", "chapter12", "chapter13", "chapter14"
-     ]
+typeddTests : IO TestPool
+typeddTests = testsInDir "typedd-book" (const True) "Type Driven Development" [] Nothing
 
 chezTests : TestPool
 chezTests = MkTestPool "Chez backend" [] (Just Chez)
@@ -226,12 +226,8 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "channels001", "channels002", "channels003", "channels004", "channels005"
     ]
 
-refcTests : TestPool
-refcTests = MkTestPool "Reference counting C backend" [] (Just C)
-    [ "refc001" , "refc002"
-    , "strings", "integers", "doubles"
-    , "buffer", "clock", "args"
-    ]
+refcTests : IO TestPool
+refcTests = testsInDir "refc" (const True) "Reference counting C backend" [] (Just C)
 
 racketTests : TestPool
 racketTests = MkTestPool "Racket backend" [] (Just Racket)
@@ -264,56 +260,32 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "integers"
     ]
 
-vmcodeInterpTests : TestPool
-vmcodeInterpTests = MkTestPool "VMCode interpreter" [] Nothing
-    [ "basic001"
-    ]
+vmcodeInterpTests : IO TestPool
+vmcodeInterpTests = testsInDir "vmcode" (const True) "VMCode interpreter" [] Nothing
 
-ideModeTests : TestPool
-ideModeTests = MkTestPool "IDE mode" [] Nothing
-  [ "ideMode001", "ideMode002", "ideMode003", "ideMode004", "ideMode005"
-  ]
+ideModeTests : IO TestPool
+ideModeTests = testsInDir "ideMode" (const True) "IDE mode" [] Nothing
 
-preludeTests : TestPool
-preludeTests = MkTestPool "Prelude library" [] Nothing
-  [ "reg001"
-  ]
+preludeTests : IO TestPool
+preludeTests = testsInDir "prelude" (const True) "Prelude library" [] Nothing
 
-templateTests : TestPool
-templateTests = MkTestPool "Test templates" [] Nothing
-  [ "simple-test", "ttimp", "with-ipkg"
-  ]
+templateTests : IO TestPool
+templateTests = testsInDir "templates" (const True) "Test templates" [] Nothing
 
 -- base library tests are run against
 -- each codegen supported and to keep
 -- things simple it's all one test group
 -- that only runs if all backends are
 -- available.
-baseLibraryTests : TestPool
-baseLibraryTests = MkTestPool "Base library" [Chez, Node] Nothing
-  [ "control_app001"
-  , "system_file001"
-  , "system_info_os001"
-  , "system_system"
-  , "data_bits001"
-  , "data_string_lines001"
-  , "data_string_unlines001"
-  , "system_errno"
-  , "system_info001"
-  , "system_signal001", "system_signal002", "system_signal003", "system_signal004"
-  ]
+baseLibraryTests : IO TestPool
+baseLibraryTests = testsInDir "base" (const True) "Base library" [Chez, Node] Nothing
 
 -- same behavior as `baseLibraryTests`
-contribLibraryTests : TestPool
-contribLibraryTests = MkTestPool "Contrib library" [Chez, Node] Nothing
-  [ "json_001"
-  ]
+contribLibraryTests : IO TestPool
+contribLibraryTests = testsInDir "contrib" (const True) "Contrib library" [Chez, Node] Nothing
 
-codegenTests : TestPool
-codegenTests = MkTestPool "Code generation" [] Nothing
-  [ "con001"
-  , "builtin001"
-  ]
+codegenTests : IO TestPool
+codegenTests = testsInDir "codegen" (const True) "Code generation" [] Nothing
 
 main : IO ()
 main = runner $
@@ -333,18 +305,18 @@ main = runner $
   , testPaths "idris2" idrisTestsBuiltin
   , testPaths "idris2" idrisTestsEvaluator
   , testPaths "idris2" idrisTests
-  , testPaths "typedd-book" typeddTests
-  , testPaths "ideMode" ideModeTests
-  , testPaths "prelude" preludeTests
-  , testPaths "base" baseLibraryTests
-  , testPaths "contrib" contribLibraryTests
+  , !typeddTests
+  , !ideModeTests
+  , !preludeTests
+  , !baseLibraryTests
+  , !contribLibraryTests
   , testPaths "chez" chezTests
-  , testPaths "refc" refcTests
+  , !refcTests
   , testPaths "racket" racketTests
   , testPaths "node" nodeTests
-  , testPaths "vmcode" vmcodeInterpTests
-  , testPaths "templates" templateTests
-  , testPaths "codegen" codegenTests
+  , !vmcodeInterpTests
+  , !templateTests
+  , !codegenTests
   ]
   ++ map (testPaths "allbackends" . idrisTestsAllBackends) [Chez, Node, Racket]
 

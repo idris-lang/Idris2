@@ -17,7 +17,6 @@ on:
       - '.github/workflows/ci-super-linter.yml'
   pull_request:
     branches:
-      - master
       - main
     paths-ignore:
       - 'docs/**'
@@ -183,6 +182,7 @@ jobs:
       !contains(needs.initialise.outputs.commit_message, '[ci:')
       || contains(needs.initialise.outputs.commit_message, '[ci: windows]')
       || contains(needs.initialise.outputs.commit_message, '[ci: chez]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: racket]')
     env:
       MSYSTEM: MINGW64
       MSYS2_PATH_TYPE: inherit
@@ -247,9 +247,12 @@ jobs:
     needs: quick-check
     runs-on: ubuntu-latest
     if: |
-      !contains(needs.initialise.outputs.commit_message, '[ci:')
-      || contains(needs.initialise.outputs.commit_message, '[ci: ubuntu]')
-      || contains(needs.initialise.outputs.commit_message, '[ci: racket]')
+      false &&
+        (!contains(needs.initialise.outputs.commit_message, '[ci:')
+        || contains(needs.initialise.outputs.commit_message, '[ci: ubuntu]')
+        || contains(needs.initialise.outputs.commit_message, '[ci: racket]')
+        )
+
     env:
       IDRIS2_CG: racket
     steps:
@@ -388,6 +391,10 @@ jobs:
   windows-self-host-racket:
     needs: windows-bootstrap-chez
     runs-on: windows-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: windows]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: racket]')
     env:
       IDRIS2_CG: racket
       MSYSTEM: MINGW64
