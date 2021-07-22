@@ -2,6 +2,10 @@ include ../../config.mk
 
 TARGET = libidris2_refc
 
+ifeq ($(USE_LIBBF), 1)
+	TARGET = libidris2_refc_libbf
+endif
+
 LIBTARGET = $(TARGET).a
 
 SRCS := $(wildcard *.c)
@@ -13,8 +17,8 @@ CFLAGS += -O2
 ifeq ($(OLD_WIN), 1)
 	CPPFLAGS += -D_OLD_WIN
 endif
-ifeq ($(IDRIS_REFC_INTEGER), libbf)
-	SRCS += libbf.c cutils.c
+
+ifeq ($(USE_LIBBF), 1)
 	CFLAGS += -DINTEGER_USE_LIBBF
 endif
 

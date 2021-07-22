@@ -48,7 +48,7 @@ compileCObjectFile {asLibrary} sourceFile objectFile =
      dirs <- getDirs
 
      let libraryFlag = if asLibrary then "-fpic " else ""
-     let intImplFlag = case !(getRefCIntegerImplementation) of
+     let intImplFlag = case !getRefCIntegerImplementation of
                            GMP => ""
                            LibBF => " -DINTEGER_USE_LIBBF "
 
@@ -74,17 +74,15 @@ compileCFile {asShared} objectFile outFile =
      dirs <- getDirs
 
      let sharedFlag = if asShared then "-shared " else ""
-     let intImplFlag = case !(getRefCIntegerImplementation) of
-                           GMP => "-lgmp "
-                           LibBF => ""
+     let intImplFlag = case !getRefCIntegerImplementation of
+                           GMP => "-lgmp -lidris2_refc -lm"
+                           LibBF => "-lidris2_refc_libbf -lm"
 
      let runcc = cc ++ " -Werror " ++ sharedFlag ++ objectFile ++
                        " -o " ++ outFile ++ " " ++
                        (fullprefix_dir dirs "lib" </> "libidris2_support.a") ++ " " ++
-                       "-lidris2_refc " ++
                        "-L" ++ fullprefix_dir dirs "refc " ++
-                       clibdirs (lib_dirs dirs) ++ intImplFlag ++
-                       "-lm"
+                       clibdirs (lib_dirs dirs) ++ intImplFlag
 
      log "compiler.refc.cc" 10 runcc
      0 <- coreLift $ system runcc
