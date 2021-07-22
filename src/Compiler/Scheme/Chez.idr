@@ -94,8 +94,7 @@ schHeader chez libs whole
     "  [(i3fb ti3fb a6fb ta6fb) #f]\n" ++
     "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
     "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
-    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")" ++
-    "                           (load-shared-object \"ws2_32.dll\")]\n" ++
+    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")]\n" ++
     "  [else (load-shared-object \"libc.so\")])\n\n" ++
     showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeStringChez x ++ "\")") libs) ++ "\n\n" ++
     if whole
@@ -402,7 +401,7 @@ startChezPreamble = unlines
 
 startChez : String -> String -> String
 startChez appdir target = startChezPreamble ++ unlines
-    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
+    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ ":$LD_LIBRARY_PATH\""
     , "export IDRIS2_INC_SRC=\"$DIR/" ++ appdir ++ "\""
     , "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
@@ -411,9 +410,9 @@ startChezCmd : String -> String -> String -> String -> String
 startChezCmd chez appdir target progType = unlines
     [ "@echo off"
     , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%\\" ++ appdir ++ ";%PATH%"
-    , "set IDRIS2_INC_SRC=%APPDIR%\\" ++ appdir
-    , "\"" ++ chez ++ "\" " ++ progType ++ " \"%APPDIR%/" ++ target ++ "\" %*"
+    , "set PATH=%APPDIR%" ++ appdir ++ ";%PATH%"
+    , "set IDRIS2_INC_SRC=%APPDIR%" ++ appdir
+    , "\"" ++ chez ++ "\" " ++ progType ++ " \"%APPDIR%" ++ target ++ "\" %*"
     ]
 
 startChezWinSh : String -> String -> String -> String -> String
@@ -423,11 +422,10 @@ startChezWinSh chez appdir target progType = unlines
     , ""
     , "set -e # exit on any error"
     , ""
-    , "DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
-    , "CHEZ=$(cygpath \"" ++ chez ++"\")"
-    , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
+    , "DIR=$(dirname \"$(readlink -f -- \"$0\" || cygpath -a -- \"$0\")\")"
+    , "PATH=\"$DIR/" ++ appdir ++ ":$PATH\""
     , "export IDRIS2_INC_SRC=\"$DIR/" ++ appdir ++ "\""
-    , "\"$CHEZ\" " ++ progType ++ " \"$DIR/" ++ target ++ "\" \"$@\""
+    , "\"" ++ chez ++ "\" " ++ progType ++ " \"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
 ||| Compile a TT expression to Chez Scheme

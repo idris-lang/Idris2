@@ -55,13 +55,14 @@ import Network.Socket.Data
 
 %default covering
 
-%foreign "C:fdopen,libc 6"
-prim__fdopen : Int -> String -> PrimIO AnyPtr
+||| TODO: use the version in `Network.FFI` in network after the next release.
+%foreign "C:idrnet_fdopen, libidris2_support, idris_net.h"
+prim__idrnet_fdopen : Int -> String -> PrimIO AnyPtr
 
 export
 socketToFile : Socket -> IO (Either String File)
 socketToFile (MkSocket f _ _ _) = do
-  file <- FHandle <$> primIO (prim__fdopen f "r+")
+  file <- FHandle <$> primIO (prim__idrnet_fdopen f "r+")
   if !(fileError file)
     then pure (Left "Failed to fdopen socket file descriptor")
     else pure (Right file)

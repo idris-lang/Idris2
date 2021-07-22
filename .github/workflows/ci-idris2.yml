@@ -6,15 +6,55 @@ on:
       - '*'
     tags:
       - '*'
+    paths-ignore:
+      - 'docs/**'
+      - 'icons/**'
+      - '*.md'
+      - 'CONTRIBUTORS'
+      - 'LICENSE'
+      - '.github/workflows/ci-lint.yml'
+      - '.github/workflows/ci-sphinx.yml'
+      - '.github/workflows/ci-super-linter.yml'
   pull_request:
     branches:
       - master
       - main
+    paths-ignore:
+      - 'docs/**'
+      - 'icons/**'
+      - '*.md'
+      - 'CONTRIBUTORS'
+      - 'LICENSE'
+      - '.github/workflows/ci-lint.yml'
+      - '.github/workflows/ci-sphinx.yml'
+      - '.github/workflows/ci-super-linter.yml'
 
 env:
   IDRIS2_VERSION: 0.4.0 # For previous-version build
 
 jobs:
+
+  initialise:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v2
+        with:
+          # for pull_request so we can do HEAD^2
+          fetch-depth: 2
+
+      - name: Get commit message
+        id: get_commit_message
+        run: |
+          if   [[ '${{ github.event_name }}' == 'push' ]]; then
+            echo ::set-output name=commit_message::$(git log --format=%B -n 1 HEAD)
+          elif [[ '${{ github.event_name }}' == 'pull_request' ]]; then
+            echo ::set-output name=commit_message::$(git log --format=%B -n 1 HEAD^2)
+          fi
+
+    outputs:
+      commit_message:
+        echo "${{ steps.get_commit_message.outputs.commit_message }}"
 
   ######################################################################
   # Build from the previous version
@@ -24,7 +64,10 @@ jobs:
   ######################################################################
 
   quick-check:
+    needs: initialise
     runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci: skip]')
     env:
       IDRIS2_CG: chez
       SCHEME: scheme
@@ -79,6 +122,10 @@ jobs:
   ubuntu-bootstrap-chez:
     needs: quick-check
     runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: ubuntu]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: chez]')
     env:
       IDRIS2_CG: chez
       SCHEME: scheme
@@ -104,6 +151,10 @@ jobs:
   macos-bootstrap-chez:
     needs: quick-check
     runs-on: macos-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: macos]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: chez]')
     env:
       SCHEME: chez
     steps:
@@ -128,6 +179,10 @@ jobs:
   windows-bootstrap-chez:
     needs: quick-check
     runs-on: windows-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: windows]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: chez]')
     env:
       MSYSTEM: MINGW64
       MSYS2_PATH_TYPE: inherit
@@ -158,12 +213,25 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Bootstrap and install
-        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap && make bootstrap-test && make install"
+      - name: Bootstrap
+        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap"
+      - name: Bootstrap test
+        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap-test"
+      - name: Install
+        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make install"
+      - name: Artifact Idris2 from chez
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows-installed-bootstrapped-idris2-chez
+          path: ${{ env.IDRIS_PREFIX }}
 
   nix-bootstrap-chez:
     needs: quick-check
     runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: nix]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: chez]')
     steps:
     - uses: actions/checkout@v2
       with:
@@ -178,6 +246,10 @@ jobs:
   ubuntu-bootstrap-racket:
     needs: quick-check
     runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: ubuntu]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: racket]')
     env:
       IDRIS2_CG: racket
     steps:
@@ -283,6 +355,9 @@ jobs:
   ubuntu-self-host-previous-version:
     needs: quick-check
     runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: ubuntu]')
     env:
       IDRIS2_CG: chez
     steps:
@@ -309,6 +384,58 @@ jobs:
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
+
+  windows-self-host-racket:
+    needs: windows-bootstrap-chez
+    runs-on: windows-latest
+    env:
+      IDRIS2_CG: racket
+      MSYSTEM: MINGW64
+      MSYS2_PATH_TYPE: inherit
+      CC: gcc
+      RACKET_RACO: raco
+    steps:
+      - name: Init
+        run: |
+          git config --global core.autocrlf false
+          echo "PWD=$(c:\msys64\usr\bin\cygpath -u $(pwd))" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Get Chez Scheme
+        run: |
+          git clone --depth 1 https://github.com/cisco/ChezScheme
+          c:\msys64\usr\bin\bash -l -c "pacman -S --noconfirm tar make"
+          echo "PWD=$(c:\msys64\usr\bin\cygpath -u $(pwd))" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Configure and Build Chez Scheme
+        run: |
+          c:\msys64\usr\bin\bash -l -c "cd $env:PWD && cd ChezScheme && ./configure --threads && make"
+      - name: Set Path
+        run: |
+          $chez="$(pwd)\ChezScheme\ta6nt\bin\ta6nt"
+          $idris="$(pwd)\.idris2"
+          echo "$chez" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "$idris\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "IDRIS_PREFIX=$idris" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "PREFIX=$(c:\msys64\usr\bin\cygpath -u $idris)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: windows-installed-bootstrapped-idris2-chez
+          path: ${{ env.IDRIS_PREFIX }}
+      - name: Install build dependencies
+        uses: Bogdanp/setup-racket@v1.4
+        with:
+          variant: 'CS'
+          version: 'stable'
+          distribution: 'full'
+      - name: Self host
+        run: |
+          c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make"
+      # TODO: fix the broken tests!
+      # - name: Test
+      #  run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make test"
+      - name: Install
+        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make install"
 
   ######################################################################
   # Ubuntu API

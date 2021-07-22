@@ -1,4 +1,5 @@
 #include "runtime.h"
+#include "refc_util.h"
 
 #ifdef INTEGER_USE_LIBBF
 extern void init_bf();
@@ -22,11 +23,7 @@ void missing_ffi()
 
 void push_Arglist(Value_Arglist *arglist, Value *arg)
 {
-  if (arglist->filled >= arglist->total)
-  {
-    fprintf(stderr, "unable to add more arguments to arglist\n");
-    exit(1);
-  }
+  IDRIS2_REFC_VERIFY(arglist->filled < arglist->total, "unable to add more arguments to arglist");
 
   arglist->args[arglist->filled] = newReference(arg);
   arglist->filled++;

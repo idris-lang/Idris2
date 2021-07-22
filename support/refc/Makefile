@@ -4,14 +4,14 @@ TARGET = libidris2_refc
 
 LIBTARGET = $(TARGET).a
 
+SRCS := $(wildcard *.c)
+OBJS = $(SRCS:.c=.o)
+DEPS = $(OBJS:.o=.d)
+
 CFLAGS += -O2
 
-SRCS = $(wildcard *.c)
-ifeq ($(OS), windows)
-	LDFLAGS += -lws2_32
 ifeq ($(OLD_WIN), 1)
-	CFLAGS += -D_OLD_WIN
-endif
+	CPPFLAGS += -D_OLD_WIN
 endif
 ifeq ($(IDRIS_REFC_INTEGER), libbf)
 	SRCS += libbf.c cutils.c
