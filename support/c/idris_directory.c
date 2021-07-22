@@ -60,6 +60,10 @@ int idris2_removeDir(char* path) {
 
 char* idris2_nextDirEntry(void* d) {
     DirInfo* di = (DirInfo*)d;
+    // `readdir` keeps `errno` unchanged on end of stream
+    // so we need to reset `errno` to distinguish between
+    // end of stream and failure.
+    errno = 0;
     struct dirent* de = readdir(di->dirptr);
 
     if (de == NULL) {
