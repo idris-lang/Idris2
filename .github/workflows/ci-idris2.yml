@@ -183,6 +183,7 @@ jobs:
       !contains(needs.initialise.outputs.commit_message, '[ci:')
       || contains(needs.initialise.outputs.commit_message, '[ci: windows]')
       || contains(needs.initialise.outputs.commit_message, '[ci: chez]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: racket]')
     env:
       MSYSTEM: MINGW64
       MSYS2_PATH_TYPE: inherit
@@ -391,6 +392,10 @@ jobs:
   windows-self-host-racket:
     needs: windows-bootstrap-chez
     runs-on: windows-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: windows]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: racket]')
     env:
       IDRIS2_CG: racket
       MSYSTEM: MINGW64
