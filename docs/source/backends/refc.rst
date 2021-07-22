@@ -44,20 +44,21 @@ most package managers.
 
 There is also an experimental implementation of arbitrary precision integers
 with `LibBF Library <https://bellard.org/libbf/>`_, written by Fabrice Bellard
-and released under the MIT license. LibBF is much more lightweight: just two C files
-and two headers, compiled size is about 90 KB of x86 code and has no dependency 
-on other libraries.
+and released under the MIT license. LibBF is much more lightweight: just two 
+C files and two headers, compiled size is about 90 KB of x86 code and has no 
+dependency on other libraries.
 
-To use it, you need to build Idris from source. Since libbf's source code is not
-bundled with idris, you need to download the latest source code, most preferrable
-from `QuickJS Library <https://bellard.org/quickjs/>`_, extract four libbf files 
-(i.e. `libbf.*` and `cutils.*`) to RefC's source code directory ``support/refc``. 
-When building Idris and compiling your idris source codes, set an environment 
-variable `IDRIS_REFC_INTEGER=libbf`.
+Before using it, you need to build Idris with `BUILD_REFC_WITH_LIBBF=1`. Then 
+`LibBf` will be downloaded automatically from official `QuickJS Library <https://bellard.org/quickjs/>`_,
+which is more up-to-date than the standalone `LibBf` release. Alternatively, 
+if you already have `LibBf` (`libbf.*` and `cutils.*`), you can place them in 
+RefC's source code directory ``support/refc``, then no downloading will be performed.
+
+When building your idris source codes, you can set an environment variable 
+`IDRIS_REFC_INTEGER=libbf` to use `LibBf`, and you can still use `gmp` by omitting 
+it.
 
 Currently the libbf integration is tested against `2021-03-27` version of `QuickJS`.
-The latest standalone `LibBF` release is not as up-to-date as the one included 
-in `QuickJS`.
 
 Extending RefC
 ==============
