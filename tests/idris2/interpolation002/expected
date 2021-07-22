@@ -1,0 +1,25 @@
+""""
+Just 1 + Just 2 = Just 3
+hello world.
+Hello Idris2!
+[project]
+name: "project"
+version: "0.1.0"
+[deps]
+"semver" = 0.2
+a b\n
+  c
+sticking together!
+
+A very very 
+
+very very very 
+
+very long string. 
+
+a
+name: #"foo"
+version: "bar"
+bzs: \#\'a\n\t\\'
+"""
+"contains\NULcharacter"

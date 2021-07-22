@@ -37,7 +37,7 @@ ideTokens =
       match (choice $ exact <$> symbols) Symbol
   <|> match digits (IntegerLit . cast)
   <|> compose (is '"')
-              (const $ StringBegin False)
+              (const $ StringBegin Single)
               (const ())
               (const stringTokens)
               (const $ is '"')
