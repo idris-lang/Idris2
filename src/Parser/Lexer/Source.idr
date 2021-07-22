@@ -21,13 +21,16 @@ import Core.Name
 %default total
 
 public export
+data IsMultiline = Multi | Single
+
+public export
 data Token
   -- Literals
   = CharLit String
   | DoubleLit Double
   | IntegerLit Integer
   -- String
-  | StringBegin Bool -- Whether is multiline string
+  | StringBegin IsMultiline -- Whether is multiline string
   | StringEnd
   | InterpBegin
   | InterpEnd
@@ -55,8 +58,8 @@ Show Token where
   show (DoubleLit x) = "double " ++ show x
   show (IntegerLit x) = "literal " ++ show x
   -- String
-  show (StringBegin True) = "string begin"
-  show (StringBegin False) = "multiline string begin"
+  show (StringBegin Single) = "string begin"
+  show (StringBegin Multi) = "multiline string begin"
   show StringEnd = "string end"
   show InterpBegin = "string interp begin"
   show InterpEnd = "string interp end"
@@ -84,8 +87,8 @@ Pretty Token where
   pretty (DoubleLit x) = pretty "double" <++> pretty x
   pretty (IntegerLit x) = pretty "literal" <++> pretty x
   -- String
-  pretty (StringBegin True) = reflow "string begin"
-  pretty (StringBegin False) = reflow "multiline string begin"
+  pretty (StringBegin Single) = reflow "string begin"
+  pretty (StringBegin Multi) = reflow "multiline string begin"
   pretty StringEnd = reflow "string end"
   pretty InterpBegin = reflow "string interp begin"
   pretty InterpEnd = reflow "string interp end"
@@ -326,13 +329,13 @@ mutual
       <|> match octUnderscoredLit (IntegerLit . fromOctLit . removeUnderscores)
       <|> match digitsUnderscoredLit (IntegerLit . cast . removeUnderscores)
       <|> compose multilineBegin
-                  (const $ StringBegin True)
+                  (const $ StringBegin Multi)
                   countHashtag
                   (stringTokens True)
                   (exact . multilineEnd)
                   (const StringEnd)
       <|> compose stringBegin
-                  (const $ StringBegin False)
+                  (const $ StringBegin Single)
                   countHashtag
                   (stringTokens False)
                   (\hashtag => exact (stringEnd hashtag) <+> reject (is '"'))

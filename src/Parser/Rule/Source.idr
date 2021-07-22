@@ -97,14 +97,14 @@ export
 strBegin : Rule ()
 strBegin = terminal "Expected string begin"
                     \case
-                      StringBegin False => Just ()
+                      StringBegin Single => Just ()
                       _ => Nothing
 
 export
 multilineBegin : Rule ()
 multilineBegin = terminal "Expected multiline string begin"
                           \case
-                            StringBegin True => Just ()
+                            StringBegin Multi => Just ()
                             _ => Nothing
 
 export
