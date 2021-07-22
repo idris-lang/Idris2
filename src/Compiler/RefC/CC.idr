@@ -7,6 +7,8 @@ import Core.Options
 import System
 
 import Idris.Version
+import Idris.Env
+
 import Libraries.Utils.Path
 
 %default total
@@ -17,15 +19,15 @@ data RefCIntegerImplementation =
 
 findCC : IO String
 findCC
-    = do Nothing <- getEnv "IDRIS2_CC"
+    = do Nothing <- idrisGetEnv "IDRIS2_CC"
            | Just cc => pure cc
-         Nothing <- getEnv "CC"
+         Nothing <- idrisGetEnv "CC"
            | Just cc => pure cc
          pure "cc"
 
 getRefCIntegerImplementation : Core RefCIntegerImplementation
 getRefCIntegerImplementation
-    = do Nothing <- coreLift $ getEnv "IDRIS_REFC_INTEGER"
+    = do Nothing <- coreLift $ idrisGetEnv "IDRIS_REFC_INTEGER"
            | Just "gmp" => pure GMP
            | Just "libbf" => pure LibBF
            | Just _ => throw (UserError "IDRIS_REFC_INTEGER should be \"gmp\" or \"libbf\"")
