@@ -75,7 +75,7 @@ compileCFile {asShared} objectFile outFile =
 
      let sharedFlag = if asShared then "-shared " else ""
      let intImplFlag = case !getRefCIntegerImplementation of
-                           GMP => "-lgmp -lidris2_refc -lm"
+                           GMP => "-lidris2_refc -lgmp -lm"
                            LibBF => "-lidris2_refc_libbf -lm"
 
      let runcc = cc ++ " -Werror " ++ sharedFlag ++ objectFile ++
