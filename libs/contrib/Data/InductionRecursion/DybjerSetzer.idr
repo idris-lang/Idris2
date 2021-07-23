@@ -4,8 +4,6 @@
 
 module Data.InductionRecursion.DybjerSetzer
 
-%default total
-
 public export
 data Code : (input : sort -> Type) -> (output : Type) -> Type where
   Yield  : output -> Code input output
