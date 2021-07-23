@@ -612,13 +612,14 @@ posArg : {auto c : Ref Ctxt Defs} ->
          Defs -> List Name -> NF [] -> Core Terminating
 -- a tyn can only appear in the parameter positions of
 -- tc; report positivity failure if it appears anywhere else
-posArg defs tyns (NTCon _ tc _ _ args)
-    = let testargs : List (Closure [])
+posArg defs tyns nf@(NTCon _ tc _ _ args) =
+  do logNF "totality.positivity" 50 "Found a type constructor" [] nf
+     let testargs : List (Closure [])
              = case !(lookupDefExact tc (gamma defs)) of
                     Just (TCon _ _ params _ _ _ _ _) =>
                          dropParams 0 params (map snd args)
                     _ => map snd args
-      in if !(anyM (nameIn defs tyns)
+     if !(anyM (nameIn defs tyns)
                   !(traverse (evalClosure defs) testargs))
              then pure (NotTerminating NotStrictlyPositive)
              else pure IsTerminating
@@ -630,38 +631,57 @@ posArg defs tyns (NTCon _ tc _ _ args)
              then dropParams (S i) ps xs
              else x :: dropParams (S i) ps xs
 -- a tyn can not appear as part of ty
-posArg defs tyns (NBind fc x (Pi _ _ e ty) sc)
-    = if !(nameIn defs tyns ty)
+posArg defs tyns nf@(NBind fc x (Pi _ _ e ty) sc)
+  = do logNF "totality.positivity" 50 "Found a Pi-type" [] nf
+       if !(nameIn defs tyns ty)
          then pure (NotTerminating NotStrictlyPositive)
          else do sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
                  posArg defs tyns sc'
-posArg defs tyn _ = pure IsTerminating
+posArg defs tyns nf@(NApp _ _ args)
+    = do logNF "totality.positivity" 50 "Found an application" [] nf
+         args <- traverse (evalClosure defs . snd) args
+         pure $ if !(anyM (nameIn defs tyns) args)
+           then NotTerminating NotStrictlyPositive
+           else IsTerminating
+posArg defs tyn nf
+  = do logNF "totality.positivity" 50 "Reached the catchall" [] nf
+       pure IsTerminating
 
 checkPosArgs : {auto c : Ref Ctxt Defs} ->
                Defs -> List Name -> NF [] -> Core Terminating
 checkPosArgs defs tyns (NBind fc x (Pi _ _ e ty) sc)
     = case !(posArg defs tyns ty) of
            IsTerminating =>
-                checkPosArgs defs tyns
-                       !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+               do let nm = Ref fc Bound (MN "POSCHECK" 0)
+                  let arg = toClosure defaultOpts [] nm
+                  checkPosArgs defs tyns !(sc defs arg)
            bad => pure bad
-checkPosArgs defs tyns _ = pure IsTerminating
+checkPosArgs defs tyns nf
+  = do logNF "totality.positivity" 50 "Giving up on non-Pi type" [] nf
+       pure IsTerminating
 
 checkCon : {auto c : Ref Ctxt Defs} ->
            Defs -> List Name -> Name -> Core Terminating
 checkCon defs tyns cn
     = case !(lookupTyExact cn (gamma defs)) of
-           Nothing => pure Unchecked
-           Just ty =>
-                case !(totRefsIn defs ty) of
-                     IsTerminating => checkPosArgs defs tyns !(nf defs [] ty)
-                     bad => pure bad
+        Nothing => do log "totality.positivity" 20 $
+                        "Couldn't find constructor " ++ show cn
+                      pure Unchecked
+        Just ty =>
+          case !(totRefsIn defs ty) of
+            IsTerminating =>
+              do tyNF <- nf defs [] ty
+                 logNF "totality.positivity" 20 "Checking the type " [] tyNF
+                 checkPosArgs defs tyns tyNF
+            bad => pure bad
 
 checkData : {auto c : Ref Ctxt Defs} ->
             Defs -> List Name -> List Name -> Core Terminating
 checkData defs tyns [] = pure IsTerminating
 checkData defs tyns (c :: cs)
-    = case !(checkCon defs tyns c) of
+    = do log "totality.positivity" 40 $
+           "Checking positivity of constructor " ++ show c
+         case !(checkCon defs tyns c) of
            IsTerminating => checkData defs tyns cs
            bad => pure bad
 
@@ -676,7 +696,9 @@ calcPositive loc n
               Just (TCon _ _ _ _ _ tns dcons _, ty) =>
                   case !(totRefsIn defs ty) of
                        IsTerminating =>
-                            do t <- checkData defs (n :: tns) dcons
+                            do log "totality.positivity" 30 $
+                                 "Now checking constructors of " ++ show !(toFullNames n)
+                               t <- checkData defs (n :: tns) dcons
                                pure (t , dcons)
                        bad => pure (bad, dcons)
               Just _ => throw (GenericMsg loc (show n ++ " not a data type"))
