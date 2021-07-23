@@ -165,6 +165,15 @@ idrisTestsAllBackends cg = MkTestPool
        "basic048",
        "perf006"]
 
+idrisTestsTotality : TestPool
+idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
+       -- Positivity checking
+      ["positivity001", "positivity002", "positivity003", "positivity004",
+       -- Totality checking
+       "total001", "total002", "total003", "total004", "total005",
+       "total006", "total007", "total008", "total009", "total010"
+      ]
+
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
        -- Documentation strings
@@ -182,8 +191,6 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Packages and ipkg files
        "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
        "pkg008", "pkg009", "pkg010",
-       -- Positivity checking
-       "positivity001", "positivity002", "positivity003",
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",
@@ -191,9 +198,6 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",
        "reflection009","reflection010",
-       -- Totality checking
-       "total001", "total002", "total003", "total004", "total005",
-       "total006", "total007", "total008", "total009", "total010",
        -- The 'with' rule
        "with001", "with002", "with004", "with005",
        -- with-disambiguation
@@ -304,6 +308,7 @@ main = runner $
   , testPaths "idris2" idrisTestsData
   , testPaths "idris2" idrisTestsBuiltin
   , testPaths "idris2" idrisTestsEvaluator
+  , testPaths "idris2" idrisTestsTotality
   , testPaths "idris2" idrisTests
   , !typeddTests
   , !ideModeTests

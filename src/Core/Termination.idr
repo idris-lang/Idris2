@@ -635,7 +635,9 @@ posArg defs tyns nf@(NBind fc x (Pi _ _ e ty) sc)
   = do logNF "totality.positivity" 50 "Found a Pi-type" [] nf
        if !(nameIn defs tyns ty)
          then pure (NotTerminating NotStrictlyPositive)
-         else do sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+         else do let nm = Ref fc Bound (MN ("POSCHECK_" ++ show x) 1)
+                 let arg = toClosure defaultOpts [] nm
+                 sc' <- sc defs arg
                  posArg defs tyns sc'
 posArg defs tyns nf@(NApp _ _ args)
     = do logNF "totality.positivity" 50 "Found an application" [] nf
@@ -652,7 +654,7 @@ checkPosArgs : {auto c : Ref Ctxt Defs} ->
 checkPosArgs defs tyns (NBind fc x (Pi _ _ e ty) sc)
     = case !(posArg defs tyns ty) of
            IsTerminating =>
-               do let nm = Ref fc Bound (MN "POSCHECK" 0)
+               do let nm = Ref fc Bound (MN ("POSCHECK_" ++ show x) 0)
                   let arg = toClosure defaultOpts [] nm
                   checkPosArgs defs tyns !(sc defs arg)
            bad => pure bad
