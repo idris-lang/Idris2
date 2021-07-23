@@ -591,7 +591,9 @@ nameIn : {auto c : Ref Ctxt Defs} ->
 nameIn defs tyns (NBind fc x b sc)
     = if !(nameIn defs tyns (binderType b))
          then pure True
-         else do sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+         else do let nm = Ref fc Bound (MN ("NAMEIN_" ++ show x) 0)
+                 let arg = toClosure defaultOpts [] nm
+                 sc' <- sc defs arg
                  nameIn defs tyns sc'
 nameIn defs tyns (NApp _ _ args)
     = anyM (nameIn defs tyns)
