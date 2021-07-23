@@ -13,6 +13,7 @@ import Control.Monad.State
 import Libraries.Data.NameMap
 import Libraries.Data.SortedMap
 import Data.List
+import Data.String
 
 %default covering
 
@@ -610,28 +611,43 @@ nameIn defs tyns _ = pure False
 
 -- Check an argument type doesn't contain a negative occurrence of any of
 -- the given type names
-posArg : {auto c : Ref Ctxt Defs} ->
-         Defs -> List Name -> NF [] -> Core Terminating
+posArg  : {auto c : Ref Ctxt Defs} ->
+          Defs -> List Name -> NF [] -> Core Terminating
+
+posArgs : {auto c : Ref Ctxt Defs} ->
+          Defs -> List Name -> List (Closure []) -> Core Terminating
+posArgs defs tyn [] = pure IsTerminating
+posArgs defs tyn (x :: xs)
+  = do xNF <- evalClosure defs x
+       logNF "totality.positivity" 50 "Checking parameter for positivity" [] xNF
+       IsTerminating <- posArg defs tyn xNF
+          | err => pure err
+       posArgs defs tyn xs
+
 -- a tyn can only appear in the parameter positions of
 -- tc; report positivity failure if it appears anywhere else
-posArg defs tyns nf@(NTCon _ tc _ _ args) =
+posArg defs tyns nf@(NTCon loc tc _ _ args) =
   do logNF "totality.positivity" 50 "Found a type constructor" [] nf
-     let testargs : List (Closure [])
-             = case !(lookupDefExact tc (gamma defs)) of
-                    Just (TCon _ _ params _ _ _ _ _) =>
-                         dropParams 0 params (map snd args)
-                    _ => map snd args
-     if !(anyM (nameIn defs tyns)
-                  !(traverse (evalClosure defs) testargs))
-             then pure (NotTerminating NotStrictlyPositive)
-             else pure IsTerminating
+     testargs <- case !(lookupDefExact tc (gamma defs)) of
+                    Just (TCon _ _ params _ _ _ _ _) => do
+                         log "totality.positivity" 50 $
+                           unwords [show tc, "has", show (length params), "parameters"]
+                         pure $ splitParams 0 params (map snd args)
+                    _ => throw (GenericMsg loc (show tc ++ " not a data type"))
+     let (params, indices) = testargs
+     False <- anyM (nameIn defs tyns) !(traverse (evalClosure defs) indices)
+       | True => pure (NotTerminating NotStrictlyPositive)
+     posArgs defs tyns params
   where
-    dropParams : Nat -> List Nat -> List (Closure []) -> List (Closure [])
-    dropParams i ps [] = []
-    dropParams i ps (x :: xs)
+    splitParams : Nat -> List Nat -> List (Closure []) ->
+        ( List (Closure []) -- parameters (to be checked for strict positivity)
+        , List (Closure []) -- indices    (to be checked for no mention at all)
+        )
+    splitParams i ps [] = ([], [])
+    splitParams i ps (x :: xs)
         = if i `elem` ps
-             then dropParams (S i) ps xs
-             else x :: dropParams (S i) ps xs
+             then mapFst (x ::) (splitParams (S i) ps xs)
+             else mapSnd (x ::) (splitParams (S i) ps xs)
 -- a tyn can not appear as part of ty
 posArg defs tyns nf@(NBind fc x (Pi _ _ e ty) sc)
   = do logNF "totality.positivity" 50 "Found a Pi-type" [] nf
