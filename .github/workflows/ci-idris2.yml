@@ -304,7 +304,7 @@ jobs:
       - name: Test self-hosted
         run: make test INTERACTIVE=''
       - name: Test self-hosted refc libbf
-        run: make test only=refc INTERACTIVE='' IDRIS_REFC_INTEGER=libbf
+        run: make test only=refc INTERACTIVE='' BUILD_REFC_WITH_LIBBF=1 IDRIS_REFC_INTEGER=libbf
 
   macos-self-host-chez:
     needs: macos-bootstrap-chez
