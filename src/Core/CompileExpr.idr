@@ -153,6 +153,7 @@ public export
 data CFType : Type where
      CFUnit : CFType
      CFInt : CFType
+     CFInteger : CFType
      CFInt8 : CFType
      CFInt16 : CFType
      CFInt32 : CFType
@@ -167,6 +168,7 @@ data CFType : Type where
      CFPtr : CFType
      CFGCPtr : CFType
      CFBuffer : CFType
+     CFForeignObj : CFType
      CFWorld : CFType
      CFFun : CFType -> CFType -> CFType
      CFIORes : CFType -> CFType
@@ -350,6 +352,7 @@ export
 Show CFType where
   show CFUnit = "Unit"
   show CFInt = "Int"
+  show CFInteger = "Integer"
   show CFInt8 = "Int_8"
   show CFInt16 = "Int_16"
   show CFInt32 = "Int_32"
@@ -364,6 +367,7 @@ Show CFType where
   show CFPtr = "Ptr"
   show CFGCPtr = "GCPtr"
   show CFBuffer = "Buffer"
+  show CFForeignObj = "ForeignObj"
   show CFWorld = "%World"
   show (CFFun s t) = show s ++ " -> " ++ show t
   show (CFIORes t) = "IORes " ++ show t

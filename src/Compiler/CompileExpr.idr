@@ -575,6 +575,7 @@ data NArgs : Type where
      NPtr : NArgs
      NGCPtr : NArgs
      NBuffer : NArgs
+     NForeignObj : NArgs
      NIORes : Closure [] -> NArgs
 
 getPArgs : {auto c : Ref Ctxt Defs} ->
@@ -611,6 +612,7 @@ getNArgs defs (NS _ (UN "AnyPtr")) [] = pure NPtr
 getNArgs defs (NS _ (UN "GCPtr")) [arg] = pure NGCPtr
 getNArgs defs (NS _ (UN "GCAnyPtr")) [] = pure NGCPtr
 getNArgs defs (NS _ (UN "Buffer")) [] = pure NBuffer
+getNArgs defs (NS _ (UN "ForeignObj")) [] = pure NForeignObj
 getNArgs defs (NS _ (UN "Unit")) [] = pure NUnit
 getNArgs defs (NS _ (UN "Struct")) [n, args]
     = do NPrimVal _ (Str n') <- evalClosure defs n
@@ -621,6 +623,7 @@ getNArgs defs n args = pure $ User n args
 nfToCFType : {auto c : Ref Ctxt Defs} ->
              FC -> (inStruct : Bool) -> NF [] -> Core CFType
 nfToCFType _ _ (NPrimVal _ IntType) = pure CFInt
+nfToCFType _ _ (NPrimVal _ IntegerType) = pure CFInteger
 nfToCFType _ _ (NPrimVal _ Bits8Type) = pure CFUnsigned8
 nfToCFType _ _ (NPrimVal _ Bits16Type) = pure CFUnsigned16
 nfToCFType _ _ (NPrimVal _ Bits32Type) = pure CFUnsigned32
@@ -662,6 +665,7 @@ nfToCFType _ s (NTCon fc n_in _ _ args)
               NPtr => pure CFPtr
               NGCPtr => pure CFGCPtr
               NBuffer => pure CFBuffer
+              NForeignObj => pure CFForeignObj
               NIORes uarg =>
                 do narg <- evalClosure defs uarg
                    carg <- nfToCFType fc s narg
