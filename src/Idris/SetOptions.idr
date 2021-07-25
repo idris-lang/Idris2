@@ -237,7 +237,7 @@ completionScript fun =
               , "  COMPREPLY=($(idris2 --bash-completion $ED $3))"
               , "}"
               , ""
-              , "complete -F " ++ fun' ++ " -o dirnames idris2"
+              , "complete -F " ++ fun' ++ " -o default idris2"
               ]
 
 --------------------------------------------------------------------------------
