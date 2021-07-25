@@ -235,6 +235,10 @@ Hashable CFType where
       h `hashWithSalt` 19
     CFInt64 =>
       h `hashWithSalt` 20
+    CFForeignObj =>
+      h `hashWithSalt` 21
+    CFInteger =>
+      h `hashWithSalt` 22
 
 export
 Hashable Constant where

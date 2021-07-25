@@ -785,6 +785,8 @@ TTC CFType where
   toBuf b CFInt16 = tag 18
   toBuf b CFInt32 = tag 19
   toBuf b CFInt64 = tag 20
+  toBuf b CFForeignObj = tag 21
+  toBuf b CFInteger = tag 22
 
   fromBuf b
       = case !getTag of
@@ -809,6 +811,8 @@ TTC CFType where
              18 => pure CFInt16
              19 => pure CFInt32
              20 => pure CFInt64
+             21 => pure CFForeignObj
+             22 => pure CFInteger
              _ => corrupt "CFType"
 
 export
