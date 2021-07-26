@@ -171,7 +171,8 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
       ["positivity001", "positivity002", "positivity003", "positivity004",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
-       "total006", "total007", "total008", "total009", "total010"
+       "total006", "total007", "total008", "total009", "total010",
+       "total011"
       ]
 
 idrisTests : TestPool
