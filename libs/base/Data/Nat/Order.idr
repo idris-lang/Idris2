@@ -39,6 +39,10 @@ Decidable 2 [Nat,Nat] LTE where
   decide = decideLTE
 
 public export
+Decidable 2 [Nat,Nat] LT where
+  decide m = decideLTE (S m)
+
+public export
 lte : (m : Nat) -> (n : Nat) -> Dec (LTE m n)
 lte m n = decide {ts = [Nat,Nat]} {p = LTE} m n
 
