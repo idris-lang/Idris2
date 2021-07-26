@@ -288,16 +288,30 @@ mutual
   -- of the case block function and return the corresponding RHS.
   -- This way, we can build case blocks directly into the size change graph
   -- rather than treating the definitions separately.
-  getCasePats : {vars : _} ->
+  getCasePats : {auto c : Ref Ctxt Defs} ->
+                {vars : _} ->
                 Defs -> Name -> List (Nat, Term vars) ->
                 List (Term vars) ->
                 Core (Maybe (List (vs ** (Env Term vs,
                                          List (Nat, Term vs), Term vs))))
   getCasePats {vars} defs n pats args
-      = pure $ case !(lookupDefExact n (gamma defs)) of
-             Just (PMDef _ _ _ _ pdefs)
-                => Just (map matchArgs pdefs)
-             _ => Nothing
+      = do Just (PMDef _ _ _ _ pdefs) <- lookupDefExact n (gamma defs)
+             | _ => pure Nothing
+           log "totality" 20 $
+             unwords ["Looking at the", show (length pdefs), "cases of", show  n]
+           let pdefs' = map matchArgs pdefs
+           logC "totality" 20 $ do
+              old <- for pdefs $ \ (_ ** (_, lhs, rhs)) => do
+                       lhs <- toFullNames lhs
+                       rhs <- toFullNames rhs
+                       pure $ "    " ++ show lhs ++ " => " ++ show rhs
+              new <- for pdefs' $ \ (_ ** (_, lhs, rhs)) => do
+                       lhs <- traverse (toFullNames . snd) lhs
+                       rhs <- toFullNames rhs
+                       pure $ "    " ++ show lhs ++ " => " ++ show rhs
+              pure $ unlines $ "Updated" :: old ++ "  to:" :: new
+           pure $ Just pdefs'
+
     where
       updateRHS : {vs, vs' : _} ->
                   List (Term vs, Term vs') -> Term vs -> Term vs'
@@ -756,9 +770,13 @@ checkTotal loc n_in
          log "totality" 5 $ "Checking totality: " ++ show !(toFullNames n)
          defs <- get Ctxt
          case isTerminating tot of
-              Unchecked =>
-                  case !(lookupDefExact n (gamma defs)) of
+              Unchecked => do
+                  mgdef <- lookupCtxtExact n (gamma defs)
+                  case definition <$> mgdef of
                        Just (TCon _ _ _ _ _ _ _ _)
                            => checkPositive loc n
-                       _ => checkTerminating loc n
+                       _ => do whenJust (refersToM =<< mgdef) $ \ refs =>
+                                 log "totality" 5 $ "  Mutually defined with:"
+                                                 ++ show !(traverse toFullNames (keys refs))
+                               checkTerminating loc n
               t => pure t
