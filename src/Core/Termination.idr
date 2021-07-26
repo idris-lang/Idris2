@@ -383,13 +383,15 @@ mutual
            let fn = fullname gdef
            log "totality.termination.sizechange" 10 $ "Looking under " ++ show !(toFullNames fn)
            aSmaller <- resolved (gamma defs) (NS builtinNS (UN "assert_smaller"))
-           cond [(fn == NS builtinNS (UN "assert_total"), pure []),
-              (caseFn fn,
-                  do mps <- getCasePats defs fn pats args
-                     case mps of
-                          Nothing => pure Prelude.Nil
-                          Just ps => do scs <- traverse (findInCase defs g) ps
-                                        pure (concat scs))]
+           cond [(fn == NS builtinNS (UN "assert_total"), pure [])
+              -- #1782: this breaks totality!
+              -- ,(caseFn fn,
+              --     do mps <- getCasePats defs fn pats args
+              --        case mps of
+              --             Nothing => pure Prelude.Nil
+              --             Just ps => do scs <- traverse (findInCase defs g) ps
+              --                           pure (concat scs))
+              ]
               (do scs <- traverse (findSC defs env g pats) args
                   pure ([MkSCCall fn
                            (expandToArity arity

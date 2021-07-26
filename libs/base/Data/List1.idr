@@ -94,10 +94,12 @@ snoc xs x = xs ++ (singleton x)
 
 public export
 unsnoc : (xs : List1 a) -> (List a, a)
-unsnoc (h ::: Nil)       = (Nil, h)
-unsnoc (h ::: (x :: xs)) =
-  let (ini,lst) = unsnoc (x ::: xs)
-   in (h :: ini, lst)
+unsnoc (x ::: xs) = go x xs where
+
+  go : (x : a) -> (xs : List a) -> (List a, a)
+  go x [] = ([], x)
+  go x (y :: ys) = let (ini,lst) = go y ys
+                   in (x :: ini, lst)
 
 ------------------------------------------------------------------------
 -- Reverse
