@@ -9,10 +9,11 @@ The easiest way to install is via the existing generated Scheme code.
 The requirements are:
 
 - A Scheme compiler; either Chez Scheme (default), or Racket.
-- `bash`, `GNU make` and `sha256sum`.  On Linux, you probably already have
-  this.  On macOS and major BSD flavours, you can install them using a package
-  manager: for instance, on macOS, you can install this with the `brew install
-  coreutils` and on OpenBSD, with the `pkg_add coreutils bash gmake` command.
+- `bash`, `GNU make`, `sha256sum` and `GMP`.  On Linux, you probably already
+  have this.  On macOS and major BSD flavours, you can install them using a
+  package manager: for instance, on macOS, you can install with the
+  `brew install coreutils gmp` and on OpenBSD, with the `pkg_add coreutils
+  bash gmake gmp` command.
 
 On Windows, it has been reported that installing via `MSYS2` works
 [MSYS2](https://www.msys2.org/). On Windows older than Windows 8, you may need to
