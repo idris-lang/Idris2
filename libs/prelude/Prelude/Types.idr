@@ -820,7 +820,7 @@ Range Nat where
     EQ => pure x
     GT => assert_total $ takeUntil (<= y) (countFrom x (\n => minus n 1))
   rangeFromThenTo x y z = case compare x y of
-    LT => if z > x
+    LT => if z >= x
              then assert_total $ takeBefore (> z) (countFrom x (plus (minus y x)))
              else Nil
     EQ => if x == z then pure x else Nil
