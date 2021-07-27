@@ -70,7 +70,7 @@ Has [PrimIO, Exception IOError] e => FileIO e where
 
   fPutStr f str = fileOp (fPutStr f str)
 
-  fPutStrLn f str = fileOp (File.fPutStrLn f str)
+  fPutStrLn f str = fileOp (File.ReadWrite.fPutStrLn f str)
 
   fflush f = primIO $ fflush f
 
