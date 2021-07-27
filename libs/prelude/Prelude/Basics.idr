@@ -63,7 +63,7 @@ public export %inline
 ||| ```
 public export
 on : (b -> b -> c) -> (a -> b) -> a -> a -> c
-on f g x y = g x `f` g y
+on f g = \x, y => g x `f` g y
 
 infixl 0 `on`
 
