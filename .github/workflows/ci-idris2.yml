@@ -361,6 +361,7 @@ jobs:
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
       || contains(needs.initialise.outputs.commit_message, '[ci: ubuntu]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
     env:
       IDRIS2_CG: chez
     steps:
@@ -474,3 +475,69 @@ jobs:
       - name: Test API
         run: cd tests/idris2/api001 && ./run idris2
         shell: bash
+
+  ######################################################################
+  # Ubuntu testing some libraries.
+  # We are particularly interested in libraries that are heavily using
+  # dependent types, that are prone to find bugs and regressions in the
+  # compiler.
+  ######################################################################
+
+  ubuntu-test-collie:
+    needs: ubuntu-self-host-previous-version
+    runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
+    env:
+      IDRIS2_CG: chez
+    steps:
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
+      - name: Install build dependencies
+        run: |
+          echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
+          sudo apt-get update
+          sudo apt-get install -y -t hirsute chezscheme
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: 'ohad/collie'
+      - name: Build Collie
+        run: |
+          make
+
+  ubuntu-test-frex:
+    needs: ubuntu-self-host-previous-version
+    runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
+    env:
+      IDRIS2_CG: chez
+    steps:
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
+      - name: Install build dependencies
+        run: |
+          echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
+          sudo apt-get update
+          sudo apt-get install -y -t hirsute chezscheme
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: 'frex-project/idris-frex'
+      - name: Build Frex
+        run: |
+          make
+          make test
