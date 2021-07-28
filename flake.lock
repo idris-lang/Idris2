@@ -45,11 +45,28 @@
         "type": "indirect"
       }
     },
+    "nixpkgs-chez-racket": {
+      "locked": {
+        "lastModified": 1627484694,
+        "narHash": "sha256-UsEb5G0ZJ8l/2y9u9FNj2akXx2PC5QAan24U3t32cfI=",
+        "owner": "L-as",
+        "repo": "nixpkgs",
+        "rev": "9b3c4bee8cee477ac03b0cfd4ebca40954c66106",
+        "type": "github"
+      },
+      "original": {
+        "owner": "L-as",
+        "ref": "chez-racket",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
         "idris-emacs-src": "idris-emacs-src",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "nixpkgs-chez-racket": "nixpkgs-chez-racket"
       }
     }
   },
