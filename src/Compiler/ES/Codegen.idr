@@ -614,7 +614,7 @@ mutual
   stmt (Declare v s) =
     (\d => vcat ["let" <++> var v <+> ";",d]) <$> stmt s
   stmt (Assign v x) =
-    (\d => vcat [hcat [var v,softEq,d,";"]]) <$> exp x
+    (\d => hcat [var v,softEq,d,";"]) <$> exp x
 
   stmt (ConSwitch r sc alts def) = do
     as <- traverse (map (insertBreak r) . alt) alts
