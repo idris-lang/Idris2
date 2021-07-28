@@ -570,7 +570,7 @@ switch sc alts def =
 
   where anyCase : Doc -> Doc -> Doc
         anyCase s d =
-          let b = block $ vcat [d, "break;"]
+          let b = if isMultiline d then block d else d
            in s <+> softColon <+> b
 
         alt : (Doc,Doc) -> Doc
@@ -616,22 +616,33 @@ mutual
     as <- traverse alt alts
     d  <- traverseOpt stmt def
     pure $  switch (minimal sc <+> ".h") as d
-    where alt : EConAlt r -> Core (Doc,Doc)
-          alt (MkEConAlt _ RECORD b)  = ("undefined",) <$> stmt b
-          alt (MkEConAlt _ NIL b)     = ("0",) <$> stmt b
-          alt (MkEConAlt _ CONS b)    = ("undefined",) <$> stmt b
-          alt (MkEConAlt _ NOTHING b) = ("0",) <$> stmt b
-          alt (MkEConAlt _ JUST b)    = ("undefined",) <$> stmt b
-          alt (MkEConAlt t _ b)       = (tag2es t,) <$> stmt b
+    where 
+        alt' : {r : _} -> EConAlt r -> Core (Doc,Doc)
+        alt' (MkEConAlt _ RECORD b)  = ("undefined",) <$> stmt b
+        alt' (MkEConAlt _ NIL b)     = ("0",) <$> stmt b
+        alt' (MkEConAlt _ CONS b)    = ("undefined",) <$> stmt b
+        alt' (MkEConAlt _ NOTHING b) = ("0",) <$> stmt b
+        alt' (MkEConAlt _ JUST b)    = ("undefined",) <$> stmt b
+        alt' (MkEConAlt t _ b)       = (tag2es t,) <$> stmt b
+        alt : {r : _} -> EConAlt r -> Core (Doc, Doc)
+        alt {r=Returns} a = alt' a
+        alt {r=ErrorWithout _} a = do
+            (pat, exp) <- alt' a
+            pure (pat, vcat [exp, "break;"])
 
   stmt (ConstSwitch r sc alts def) = do
     as <- traverse alt alts
     d  <- traverseOpt stmt def
     ex <- exp sc
     pure $ switch ex as d
-    where alt : EConstAlt r -> Core (Doc,Doc)
-          alt (MkEConstAlt c b) = do d    <- stmt b
-                                     pure (Text $ jsConstant c, d)
+    where
+        alt : EConstAlt r -> Core (Doc,Doc)
+        alt (MkEConstAlt c b) = do
+            d  <- stmt b
+            let d' = case r of
+                          Returns => d
+                          ErrorWithout _ => vcat [d, "break;"]
+            pure (Text $ jsConstant c, d')
 
   stmt (Error x)   = pure $ jsCrashExp (jsStringDoc x) <+> ";"
   stmt (Block ss s) = do
