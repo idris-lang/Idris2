@@ -616,7 +616,7 @@ mutual
     as <- traverse alt alts
     d  <- traverseOpt stmt def
     pure $  switch (minimal sc <+> ".h") as d
-    where 
+    where
         alt' : {r : _} -> EConAlt r -> Core (Doc,Doc)
         alt' (MkEConAlt _ RECORD b)  = ("undefined",) <$> stmt b
         alt' (MkEConAlt _ NIL b)     = ("0",) <$> stmt b
