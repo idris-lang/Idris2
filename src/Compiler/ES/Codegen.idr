@@ -570,7 +570,7 @@ switch sc alts def =
 
   where anyCase : Doc -> Doc -> Doc
         anyCase s d =
-          let b = if isMultiline d then block d else d
+          let b = block $ vcat [d, "break;"]
            in s <+> softColon <+> b
 
         alt : (Doc,Doc) -> Doc
@@ -610,7 +610,7 @@ mutual
   stmt (Declare v s) =
     (\d => vcat ["let" <++> var v <+> ";",d]) <$> stmt s
   stmt (Assign v x) =
-    (\d => vcat [hcat [var v,softEq,d,";"], "break;"]) <$> exp x
+    (\d => vcat [hcat [var v,softEq,d,";"]]) <$> exp x
 
   stmt (ConSwitch r sc alts def) = do
     as <- traverse alt alts
