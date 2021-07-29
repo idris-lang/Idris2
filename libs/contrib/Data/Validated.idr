@@ -98,6 +98,28 @@ Traversable (Validated e) where
   traverse _ $ Invalid e = pure $ Invalid e
 
 public export
+Semigroup e => Zippable (Validated e) where
+  zipWith f (Valid l)   (Valid r)   = Valid $ f l r
+  zipWith _ (Valid _)   (Invalid r) = Invalid r
+  zipWith _ (Invalid l) (Valid _)   = Invalid l
+  zipWith _ (Invalid l) (Invalid r) = Invalid $ l <+> r
+
+  zipWith3 f (Valid x)   (Valid y)   (Valid z)   = Valid $ f x y z
+  zipWith3 _ (Valid _)   (Valid _)   (Invalid z) = Invalid z
+  zipWith3 _ (Valid _)   (Invalid y) (Valid _)   = Invalid y
+  zipWith3 _ (Valid _)   (Invalid y) (Invalid z) = Invalid $ y <+> z
+  zipWith3 _ (Invalid x) (Valid _)   (Valid _)   = Invalid x
+  zipWith3 _ (Invalid x) (Valid _)   (Invalid z) = Invalid $ x <+> z
+  zipWith3 _ (Invalid x) (Invalid y) (Valid _)   = Invalid $ x <+> y
+  zipWith3 _ (Invalid x) (Invalid y) (Invalid z) = Invalid $ x <+> y <+> z
+
+  unzipWith f (Valid x)   = let (a, b) = f x in (Valid a, Valid b)
+  unzipWith _ (Invalid e) = (Invalid e, Invalid e)
+
+  unzipWith3 f (Valid x)   = let (a, b, c) = f x in (Valid a, Valid b, Valid c)
+  unzipWith3 _ (Invalid e) = (Invalid e, Invalid e, Invalid e)
+
+public export
 Uninhabited (Valid x = Invalid e) where
   uninhabited Refl impossible
 
@@ -121,11 +143,11 @@ public export
 ||| Special case of `Validated` with a `List` as an error accumulator.
 public export %inline
 ValidatedL : Type -> Type -> Type
-ValidatedL e a = Validated (List1 e) a
+ValidatedL = Validated . List1
 
 public export %inline
-oneInvalid : e -> Applicative f => Validated (f e) a
-oneInvalid x = Invalid $ pure x
+oneInvalid : Applicative f => e -> Validated (f e) a
+oneInvalid = Invalid . pure
 
 --- Conversions to and from `Either` ---
 
