@@ -26,7 +26,6 @@ import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
 import Libraries.Text.Parser
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Utils.Binary
 import Libraries.Utils.String
 import Libraries.Utils.Path
 
@@ -336,13 +335,6 @@ build pkg opts
          runScript (postbuild pkg)
          pure []
 
--- This function is deprecated; to be removed after the next version bump
-copyFile : String -> String -> IO (Either FileError ())
-copyFile src dest
-    = do Right buf <- readFromFile src
-             | Left err => pure (Left err)
-         writeToFile dest buf
-
 installFrom : {auto o : Ref ROpts REPLOpts} ->
               {auto c : Ref Ctxt Defs} ->
               String -> String -> ModuleIdent -> Core ()
@@ -374,7 +366,7 @@ installFrom builddir destdir ns
                              [ "Can't make directories " ++ show modPath
                              , show err ]
          coreLift $ putStrLn $ "Installing " ++ ttcPath ++ " to " ++ destPath
-         Right _ <- coreLift $ Package.copyFile ttcPath destFile
+         Right _ <- coreLift $ Tree.copyFile ttcPath destFile
              | Left err => throw $ InternalError $ unlines
                              [ "Can't copy file " ++ ttcPath ++ " to " ++ destPath
                              , show err ]
@@ -382,7 +374,7 @@ installFrom builddir destdir ns
          -- since some modules don't generate any code themselves.
          traverse_ (\ (obj, dest) =>
                       do coreLift $ putStrLn $ "Installing " ++ obj ++ " to " ++ destPath
-                         ignore $ coreLift $ Package.copyFile obj dest)
+                         ignore $ coreLift $ Tree.copyFile obj dest)
                    objPaths
 
          pure ()
@@ -415,7 +407,7 @@ installSrcFrom wdir destdir (ns, srcRelPath)
              (MkPermissions [Read, Write] [Read, Write] [Read, Write])
              | Left err => throw $ UserError (show err)
            pure ()
-         Right _ <- coreLift $ Package.copyFile srcPath destFile
+         Right _ <- coreLift $ Tree.copyFile srcPath destFile
              | Left err => throw $ InternalError $ unlines
                              [ "Can't copy file " ++ srcPath ++ " to " ++ destPath
                              , show err ]
