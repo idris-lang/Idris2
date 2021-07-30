@@ -1,0 +1,10 @@
+1/1: Building CopyDir (CopyDir.idr)
+Main> Main> Bye for now!
+resultDir:
+nestedDir
+source.bin
+
+resultDir/nestedDir:
+anotherFile.txt
+AQIDBA==
+Hello, world

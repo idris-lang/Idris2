@@ -1,10 +1,12 @@
 module System.Directory.Tree
 
+import Control.Monad.Either
 import Data.DPair
 import Data.List
 import Data.Nat
 import Data.String
 import System.Directory
+import System.File
 import System.Path
 
 %default total
@@ -199,3 +201,27 @@ print t = go [([], ".", Evidence root (pure t))] where
     let bss = map (:: bs) (prefixes (length t.subTrees))
     go (zipWith (\ bs, (dir ** iot) => (bs, fileName dir, Evidence _ iot)) bss t.subTrees)
     go iots
+
+||| Copy a directory and its contents recursively
+||| Returns a FileError if the target directory already exists, or if any of
+||| the source files fail to be copied.
+export
+covering
+copyDir : HasIO io => (src : Path) -> (target : Path) -> io (Either FileError ())
+copyDir src target = runEitherT $ do
+    MkEitherT $ createDir $ show target
+    copyDirContents !(liftIO $ explore src) target
+  where
+    copyFile' : (srcDir : Path) -> (targetDir : Path) -> (fileName : String) -> EitherT FileError io ()
+    copyFile' srcDir targetDir fileName = do
+      MkEitherT $ copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
+
+    covering
+    copyDirContents : {srcDir : Path} -> Tree srcDir -> (targetDir : Path) -> EitherT FileError io ()
+    copyDirContents (MkTree files subTrees) targetDir = do
+      traverse_ (copyFile' srcDir targetDir) (map fileName files)
+      traverse_ (\(subDir ** subDirTree) => do
+          let targetSubDir = targetDir /> fileName subDir
+          MkEitherT $ createDir $ show $ targetSubDir
+          copyDirContents !(liftIO subDirTree) targetSubDir
+        ) subTrees
