@@ -247,11 +247,9 @@ jobs:
     needs: quick-check
     runs-on: ubuntu-latest
     if: |
-      false &&
-        (!contains(needs.initialise.outputs.commit_message, '[ci:')
-        || contains(needs.initialise.outputs.commit_message, '[ci: ubuntu]')
-        || contains(needs.initialise.outputs.commit_message, '[ci: racket]')
-        )
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: ubuntu]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: racket]')
 
     env:
       IDRIS2_CG: racket
