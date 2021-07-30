@@ -24,6 +24,8 @@ data ConInfo = DATACON -- normal data constructor
              | NOTHING -- nothing of an option shaped thing
              | JUST -- just of an option shaped thing
              | RECORD -- record constructor (no tag)
+             | ZERO
+             | SUCC
 
 export
 Show ConInfo where
@@ -35,6 +37,8 @@ Show ConInfo where
   show NOTHING = "[nothing]"
   show JUST    = "[just]"
   show RECORD  = "[record]"
+  show ZERO    = "[zero]"
+  show SUCC    = "[succ]"
 
 export
 Eq ConInfo where
@@ -46,6 +50,8 @@ Eq ConInfo where
   NOTHING == NOTHING = True
   JUST == JUST = True
   RECORD == RECORD = True
+  ZERO == ZERO = True
+  SUCC == SUCC = True
   _ == _ = False
 
 mutual

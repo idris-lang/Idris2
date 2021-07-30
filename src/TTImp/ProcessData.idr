@@ -19,6 +19,7 @@ import TTImp.Elab
 import TTImp.TTImp
 import TTImp.Utils
 
+import Data.DPair
 import Data.List
 import Libraries.Data.NameMap
 
@@ -116,9 +117,6 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc _ cn_in ty_raw)
                            addHashWithNames fullty
               _ => pure ()
          pure (MkCon fc cn !(getArity defs [] fullty) fullty)
-
-conName : Constructor -> Name
-conName (MkCon _ cn _ _) = cn
 
 -- Get the indices of the constructor type (with non-constructor parts erased)
 getIndexPats : {auto c : Ref Ctxt Defs} ->
@@ -254,6 +252,19 @@ hasArgs Z (Bind _ _ (Pi _ c _ _) sc)
          else False
 hasArgs Z _ = True
 
+-- get the first non-erased argument
+firstArg : Term vs -> Maybe (Exists Term)
+firstArg (Bind _ _ (Pi _ c _ val) sc)
+    = if isErased c
+         then firstArg sc
+         else Just $ Evidence _ val
+firstArg tm = Nothing
+
+typeCon : Term vs -> Maybe Name
+typeCon (Ref _ (TyCon _ _) n) = Just n
+typeCon (App _ fn _) = typeCon fn
+typeCon _ = Nothing
+
 shaped : {auto c : Ref Ctxt Defs} ->
          (forall vs . Term vs -> Bool) ->
          List Constructor -> Core (Maybe Name)
@@ -322,10 +333,36 @@ calcRecord fc [c]
          pure True
 calcRecord _ _ = pure False
 
+-- has two constructors
+-- - ZERO: 0 args
+-- - SUCC: 1 arg, of same type
+calcNaty : {auto c : Ref Ctxt Defs} ->
+           FC -> Name -> List Constructor -> Core Bool
+calcNaty fc tyCon cs@[_, _]
+    = do Just zero <- shaped (hasArgs 0) cs
+              | Nothing => pure False
+         Just succ <- shaped (hasArgs 1) cs
+              | Nothing => pure False
+         let Just succCon = find (\con => name con == succ) cs
+              | Nothing => pure False
+         let Just (Evidence _ succArgTy) = firstArg (type succCon)
+              | Nothing => pure False
+         let Just succArgCon = typeCon succArgTy
+              | Nothing => pure False
+         if succArgCon == tyCon
+            then do setFlag fc zero (ConType ZERO)
+                    setFlag fc succ (ConType SUCC)
+                    pure True
+            else pure False
+calcNaty _ _ _ = pure False
+
+
 calcConInfo : {auto c : Ref Ctxt Defs} ->
-              FC -> List Constructor -> Core ()
-calcConInfo fc cons
-   = do False <- calcListy fc cons
+              FC -> Name -> List Constructor -> Core ()
+calcConInfo fc type cons
+   = do False <- calcNaty fc type cons
+           | True => pure ()
+        False <- calcListy fc cons
            | True => pure ()
         False <- calcMaybe fc cons
            | True => pure ()
@@ -455,9 +492,9 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
          addToSave n
          log "declare.data" 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
 
-         let connames = map conName cons
+         let connames = map name cons
          unless (NoHints `elem` opts) $
               traverse_ (\x => addHintFor fc (Resolved tidx) x True False) connames
 
-         calcConInfo fc cons
+         calcConInfo fc (Resolved tidx) cons
          traverse_ updateErasable (Resolved tidx :: connames)
