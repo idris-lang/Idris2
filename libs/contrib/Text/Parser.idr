@@ -1,13 +1,13 @@
-module Libraries.Text.Parser
+module Text.Parser
 
 import Data.Bool
 import Data.List
 import Data.Nat
 import public Data.List1
 
-import public Libraries.Text.Parser.Core
-import public Libraries.Text.Quantity
-import public Libraries.Text.Token
+import public Text.Parser.Core
+import public Text.Quantity
+import public Text.Token
 
 %default total
 

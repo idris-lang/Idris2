@@ -1,4 +1,4 @@
-module Libraries.Text.Bounded
+module Text.Bounded
 
 %default total
 

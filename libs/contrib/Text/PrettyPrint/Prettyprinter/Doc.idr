@@ -1,10 +1,10 @@
-module Libraries.Text.PrettyPrint.Prettyprinter.Doc
+module Text.PrettyPrint.Prettyprinter.Doc
 
 import Data.List
 import public Data.List1
 import Data.Maybe
 import Data.String
-import public Libraries.Data.String.Extra
+import public Data.String.Extra
 
 %hide Data.String.lines
 %hide Data.String.lines'

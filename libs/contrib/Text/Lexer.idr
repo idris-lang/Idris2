@@ -1,12 +1,12 @@
-module Libraries.Text.Lexer
+module Text.Lexer
 
 import Data.Bool
 import Data.List
 import Data.Nat
 
-import public Libraries.Text.Lexer.Core
-import public Libraries.Text.Quantity
-import public Libraries.Text.Token
+import public Text.Lexer.Core
+import public Text.Quantity
+import public Text.Token
 
 %default total
 

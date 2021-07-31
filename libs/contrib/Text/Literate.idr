@@ -21,15 +21,15 @@
 ||| the markers within the document's main text: This will confuse the
 ||| lexer.
 |||
-module Libraries.Text.Literate
+module Text.Literate
 
-import Libraries.Text.Lexer
+import Text.Lexer
 
 import Data.List
 import Data.List1
 import Data.List.Views
 import Data.String
-import Libraries.Data.String.Extra
+import Data.String.Extra
 
 %hide Data.String.lines
 %hide Data.String.lines'

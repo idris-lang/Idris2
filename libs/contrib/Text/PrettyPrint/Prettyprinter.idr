@@ -4,9 +4,9 @@
 ||| [1] https://hackage.haskell.org/package/prettyprinter
 ||| [2] https://hackage.haskell.org/package/prettyprinter-ansi-terminal
 
-module Libraries.Text.PrettyPrint.Prettyprinter
+module Text.PrettyPrint.Prettyprinter
 
-import public Libraries.Text.PrettyPrint.Prettyprinter.Doc
-import public Libraries.Text.PrettyPrint.Prettyprinter.Symbols
+import public Text.PrettyPrint.Prettyprinter.Doc
+import public Text.PrettyPrint.Prettyprinter.Symbols
 
 %default total

@@ -1,4 +1,4 @@
-module Libraries.Text.Quantity
+module Text.Quantity
 
 %default total
 

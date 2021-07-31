@@ -1,11 +1,11 @@
-module Libraries.Text.Parser.Core
+module Text.Parser.Core
 
 import Data.Bool
 import Data.List
 import Data.List1
 
-import public Libraries.Control.Delayed
-import public Libraries.Text.Bounded
+import public Control.Delayed
+import public Text.Bounded
 
 %default total
 

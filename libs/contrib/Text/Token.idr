@@ -1,4 +1,4 @@
-module Libraries.Text.Token
+module Text.Token
 
 %default total
 
