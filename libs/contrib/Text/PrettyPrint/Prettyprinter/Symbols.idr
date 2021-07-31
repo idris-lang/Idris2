@@ -1,6 +1,6 @@
-module Text.PrettyPrint.Prettyprinter.Symbols
+module Libraries.Text.PrettyPrint.Prettyprinter.Symbols
 
-import Text.PrettyPrint.Prettyprinter.Doc
+import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 
 %default total
 
@@ -101,8 +101,10 @@ angles : Doc ann -> Doc ann
 angles = enclose langle rangle
 
 export
-brackets : Doc ann -> Doc ann
-brackets = enclose lbracket rbracket
+brackets : {default lbracket ldelim : Doc ann} ->
+           {default rbracket rdelim : Doc ann} ->
+           Doc ann -> Doc ann
+brackets {ldelim, rdelim} = enclose ldelim rdelim
 
 export
 braces : Doc ann -> Doc ann

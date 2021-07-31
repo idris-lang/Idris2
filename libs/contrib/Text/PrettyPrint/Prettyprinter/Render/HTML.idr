@@ -1,7 +1,9 @@
-module Text.PrettyPrint.Prettyprinter.Render.HTML
+module Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML
 
 import Data.List
 import Data.String
+
+%default covering
 
 export
 htmlEscape : String -> String

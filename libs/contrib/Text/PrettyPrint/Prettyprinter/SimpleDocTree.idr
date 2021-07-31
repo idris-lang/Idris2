@@ -1,7 +1,7 @@
-module Text.PrettyPrint.Prettyprinter.SimpleDocTree
+module Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree
 
-import Text.PrettyPrint.Prettyprinter.Doc
-import Text.Parser
+import Libraries.Text.PrettyPrint.Prettyprinter.Doc
+import Libraries.Text.Parser
 
 %default total
 
@@ -68,6 +68,7 @@ sdocToTreeParser (SLine i rest) = case sdocToTreeParser rest of
   (Just tree, rest') => (Just $ STConcat [STLine i, tree], rest')
   (Nothing, rest') => (Just $ STLine i, rest')
 sdocToTreeParser (SAnnPush ann rest) = case sdocToTreeParser rest of
+  (tree, Nothing) => (Nothing, Nothing)
   (Just tree, Nothing) => (Just $ STAnn ann tree, Nothing)
   (Just tree, Just rest') => case sdocToTreeParser rest' of
     (Just tree', rest'') => (Just $ STConcat [STAnn ann tree, tree'], rest'')

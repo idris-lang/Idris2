@@ -1,4 +1,6 @@
-module Text.Token
+module Libraries.Text.Token
+
+%default total
 
 ||| For a type `kind`, specify a way of converting the recognised
 ||| string into a value.

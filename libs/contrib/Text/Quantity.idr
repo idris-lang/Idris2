@@ -1,4 +1,6 @@
-module Text.Quantity
+module Libraries.Text.Quantity
+
+%default total
 
 public export
 record Quantity where

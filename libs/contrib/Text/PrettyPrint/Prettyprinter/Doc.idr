@@ -1,16 +1,21 @@
-module Text.PrettyPrint.Prettyprinter.Doc
+module Libraries.Text.PrettyPrint.Prettyprinter.Doc
 
 import Data.List
 import public Data.List1
 import Data.Maybe
 import Data.String
-import public Data.String.Extra
+import public Libraries.Data.String.Extra
+
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default total
 
 export
 textSpaces : Int -> String
-textSpaces n = replicate (integerToNat $ cast n) ' '
+textSpaces n = Extra.replicate (integerToNat $ cast n) ' '
 
 ||| Maximum number of characters that fit in one line.
 public export
@@ -360,7 +365,7 @@ interface Pretty a where
 export
 Pretty String where
   pretty str = let str' = if "\n" `isSuffixOf` str then dropLast 1 str else str in
-                   vsep $ map unsafeTextWithoutNewLines $ lines str'
+                   vsep $ map unsafeTextWithoutNewLines $ forget $ lines str'
 
 public export
 FromString (Doc ann) where
@@ -413,10 +418,6 @@ Pretty Char where
 export Pretty Nat where pretty = unsafeTextWithoutNewLines . show
 export Pretty Int where pretty = unsafeTextWithoutNewLines . show
 export Pretty Integer where pretty = unsafeTextWithoutNewLines . show
-export Pretty Int8 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Int16 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Int32 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Int64 where pretty = unsafeTextWithoutNewLines . show
 export Pretty Double where pretty = unsafeTextWithoutNewLines . show
 export Pretty Bits8 where pretty = unsafeTextWithoutNewLines . show
 export Pretty Bits16 where pretty = unsafeTextWithoutNewLines . show
