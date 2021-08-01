@@ -240,8 +240,9 @@ processNatToInteger :
     Ref Ctxt Defs =>
     FC -> Name -> Core ()
 processNatToInteger fc fn = do
+    let show_fn = show fn
     ds <- get Ctxt
-    log "builtin.NaturalToInteger" 5 $ "Processing %builtin NaturalToInteger " ++ show fn ++ "."
+    log "builtin.NaturalToInteger" 5 $ "Processing %builtin NaturalToInteger " ++ show_fn ++ "."
     [(n, _, gdef)] <- lookupCtxtName fn ds.gamma
         | [] => undefinedName fc fn
         | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
@@ -249,26 +250,27 @@ processNatToInteger fc fn = do
         | def => throw $ GenericMsg fc
             $ "Expected function definition, found " ++ showDefType def ++ "."
     type <- toFullNames gdef.type
-    logTerm "builtin.NaturalToInteger" 25 ("Type of " ++ show fn) type
+    logTerm "builtin.NaturalToInteger" 25 ("Type of " ++ show_fn) type
     let [(_ ** arg)] = getNEArgs type
         | [] => throw $ GenericMsg fc $ "No arguments found for " ++ show n ++ "."
-        | _ => throw $ GenericMsg fc $ "More than 1 non-erased arguments found for " ++ show n ++ "."
+        | _ => throw $ GenericMsg fc $ "More than 1 non-erased arguments found for " ++ show_fn ++ "."
     let Just tyCon = getTypeCons arg
         | Nothing => throw $ GenericMsg fc
-            $ "No type constructor found for non-erased arguement of " ++ show n ++ "."
+            $ "No type constructor found for non-erased arguement of " ++ show_fn ++ "."
     True <- isNatural fc tyCon
         | False => throw $ GenericMsg fc $ "Non-erased argument is not a 'Nat'-like type."
     let Just natIdx = getNEIndex type
         | Nothing => throw $ InternalError "Couldn't find non-erased argument."
-    setFlag fc fn $ Identity natIdx
+    setFlag fc n $ Identity natIdx
 
 ||| Check a `%builtin IntegerToNatural` pragma is correct.
 processIntegerToNat :
     Ref Ctxt Defs =>
     FC -> Name -> Core ()
 processIntegerToNat fc fn = do
+    let show_fn = show fn
     ds <- get Ctxt
-    log "builtin.IntegerToNatural" 5 $ "Processing %builtin IntegerToNatural " ++ show fn ++ "."
+    log "builtin.IntegerToNatural" 5 $ "Processing %builtin IntegerToNatural " ++ show_fn ++ "."
     [(n, _, gdef)] <- lookupCtxtName fn ds.gamma
         | [] => undefinedName fc fn
         | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
@@ -276,20 +278,20 @@ processIntegerToNat fc fn = do
     let PMDef _ _ _ _ _ = gdef.definition
         | def => throw $ GenericMsg fc
             $ "Expected function definition, found " ++ showDefType def ++ "."
-    logTerm "builtin.IntegerToNatural" 25 ("Type of " ++ show fn) type
+    logTerm "builtin.IntegerToNatural" 25 ("Type of " ++ show_fn) type
     let Just [intIdx] = getNEIntegerIndex type
-        | Just [] => throw $ GenericMsg fc $ "No unrestricted arguments of type `Integer` found for " ++ show n ++ "."
-        | Just _ => throw $ GenericMsg fc $ "More than one unrestricted arguments of type `Integer` found for " ++ show n ++ "."
+        | Just [] => throw $ GenericMsg fc $ "No unrestricted arguments of type `Integer` found for " ++ show_fn ++ "."
+        | Just _ => throw $ GenericMsg fc $ "More than one unrestricted arguments of type `Integer` found for " ++ show_fn ++ "."
         | Nothing => throw $ InternalError
-            $ "Unexpected arity while processing %builtin IntegerToNatural " ++ show n ++ " (getNEIntegerIndex returned Nothing)"
+            $ "Unexpected arity while processing %builtin IntegerToNatural " ++ show_fn ++ " (getNEIntegerIndex returned Nothing)"
     let Just (_ ** retTy) = getReturnType type
         | Nothing => throw $ InternalError $ "Unexpected type " ++ show type
     let Just retCon = getTypeCons retTy
         | Nothing => throw $ GenericMsg fc
-            $ "No type constructor found for return type of " ++ show n ++ "."
+            $ "No type constructor found for return type of " ++ show_fn ++ "."
     True <- isNatural fc retCon
         | False => throw $ GenericMsg fc $ "Return type is not a 'Nat'-like type"
-    setFlag fc fn $ Identity intIdx
+    setFlag fc n $ Identity intIdx
 
 ||| Check a `%builtin` pragma is correct.
 export
