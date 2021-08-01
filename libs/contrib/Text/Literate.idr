@@ -31,11 +31,6 @@ import Data.List.Views
 import Data.String
 import Data.String.Extra
 
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
-
 %default total
 
 untilEOL : Recognise False
@@ -68,6 +63,17 @@ rawTokens delims ls =
        ++ map (\m => (line m, CodeLine (trim m))) ls
        ++ [(notCodeLine, Any)]
 
+namespace Temp
+  lines' : List Char -> List1 (List Char)
+  lines' [] = singleton []
+  lines' s  = case break isNL s of
+                   (l, s') => l ::: case s' of
+                                         [] => []
+                                         _ :: s'' => forget $ lines' (assert_smaller s s'')
+  export
+  lines : String -> List1 String
+  lines s = map pack (lines' (unpack s))
+
 ||| Merge the tokens into a single source file.
 reduce : List (WithBounds Token) -> List String -> String
 reduce [] acc = fastAppend (reverse acc)
@@ -85,7 +91,7 @@ reduce (MkBounded (CodeLine m src) _ _ :: rest) acc =
                               src
                       )::acc)
 
-reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc with (lines src) -- Strip the deliminators surrounding the block.
+reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc with (Temp.lines src) -- Strip the deliminators surrounding the block.
   reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: ys) with (snocList ys)
     reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: []) | Empty = reduce rest acc -- 2
     reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: (srcs ++ [f])) | (Snoc f srcs rec) =

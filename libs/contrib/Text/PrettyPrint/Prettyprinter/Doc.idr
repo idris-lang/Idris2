@@ -6,11 +6,6 @@ import Data.Maybe
 import Data.String
 import public Data.String.Extra
 
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
-
 %default total
 
 export
@@ -365,7 +360,7 @@ interface Pretty a where
 export
 Pretty String where
   pretty str = let str' = if "\n" `isSuffixOf` str then dropLast 1 str else str in
-                   vsep $ map unsafeTextWithoutNewLines $ forget $ lines str'
+                   vsep $ map unsafeTextWithoutNewLines $ lines str'
 
 public export
 FromString (Doc ann) where
