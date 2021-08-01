@@ -1,5 +1,5 @@
 1/1: Building Test (Test.idr)
-Error: No unrestricted arguments of type `Integer` found for Main.natToMyNat.
+Error: No unrestricted arguments of type `Integer` found for natToMyNat.
 
 Test:20:1--20:37
  16 | natToMyNat : Nat -> MyNat
