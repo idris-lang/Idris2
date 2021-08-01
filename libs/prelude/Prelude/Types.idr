@@ -39,7 +39,7 @@ integerToNat x
        then Z
        else S (assert_total (integerToNat (prim__sub_Integer x 1)))
 
-%builtin IntegerToNatural Prelude.Types.integerToNat
+-- %builtin IntegerToNatural Prelude.Types.integerToNat
 
 -- Define separately so we can spot the name when optimising Nats
 ||| Add two natural numbers.
@@ -101,7 +101,7 @@ natToInteger (S k) = 1 + natToInteger k
                          -- integer (+) may be non-linear in second
                          -- argument
 
-%builtin NaturalToInteger Prelude.Types.natToInteger
+-- %builtin NaturalToInteger Prelude.Types.natToInteger
 
 ||| Counts the number of elements that satify a predicate.
 public export

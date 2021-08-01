@@ -79,7 +79,7 @@ finToInteger : Fin n -> Integer
 finToInteger FZ     = 0
 finToInteger (FS k) = 1 + finToInteger k
 
-%builtin NaturalToInteger Data.Fin.finToInteger
+-- %builtin NaturalToInteger Data.Fin.finToInteger
 
 export
 Show (Fin n) where
@@ -169,7 +169,7 @@ fromInteger : (x : Integer) -> {n : Nat} ->
 fromInteger {n} x {prf} with (integerToFin x n)
   fromInteger {n} x {prf = ItIsJust} | Just y = y
 
-%builtin IntegerToNatural Data.Fin.fromInteger
+-- %builtin IntegerToNatural Data.Fin.fromInteger
 
 ||| Convert an Integer to a Fin in the required bounds/
 ||| This is essentially a composition of `mod` and `fromInteger`
