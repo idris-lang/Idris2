@@ -243,7 +243,7 @@ processNatToInteger fc fn = do
     let show_fn = show fn
     ds <- get Ctxt
     log "builtin.NaturalToInteger" 5 $ "Processing %builtin NaturalToInteger " ++ show_fn ++ "."
-    [(n, _, gdef)] <- lookupCtxtName fn ds.gamma
+    [(_ , i, gdef)] <- lookupCtxtName fn ds.gamma
         | [] => undefinedName fc fn
         | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
     let PMDef _ args _ cases _ = gdef.definition
@@ -252,7 +252,7 @@ processNatToInteger fc fn = do
     type <- toFullNames gdef.type
     logTerm "builtin.NaturalToInteger" 25 ("Type of " ++ show_fn) type
     let [(_ ** arg)] = getNEArgs type
-        | [] => throw $ GenericMsg fc $ "No arguments found for " ++ show n ++ "."
+        | [] => throw $ GenericMsg fc $ "No arguments found for " ++ show_fn ++ "."
         | _ => throw $ GenericMsg fc $ "More than 1 non-erased arguments found for " ++ show_fn ++ "."
     let Just tyCon = getTypeCons arg
         | Nothing => throw $ GenericMsg fc
@@ -261,7 +261,7 @@ processNatToInteger fc fn = do
         | False => throw $ GenericMsg fc $ "Non-erased argument is not a 'Nat'-like type."
     let Just natIdx = getNEIndex type
         | Nothing => throw $ InternalError "Couldn't find non-erased argument."
-    setFlag fc n $ Identity natIdx
+    setFlag fc (Resolved i) $ Identity natIdx
 
 ||| Check a `%builtin IntegerToNatural` pragma is correct.
 processIntegerToNat :
@@ -271,7 +271,7 @@ processIntegerToNat fc fn = do
     let show_fn = show fn
     ds <- get Ctxt
     log "builtin.IntegerToNatural" 5 $ "Processing %builtin IntegerToNatural " ++ show_fn ++ "."
-    [(n, _, gdef)] <- lookupCtxtName fn ds.gamma
+    [(_, i, gdef)] <- lookupCtxtName fn ds.gamma
         | [] => undefinedName fc fn
         | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
     type <- toFullNames gdef.type
@@ -291,7 +291,7 @@ processIntegerToNat fc fn = do
             $ "No type constructor found for return type of " ++ show_fn ++ "."
     True <- isNatural fc retCon
         | False => throw $ GenericMsg fc $ "Return type is not a 'Nat'-like type"
-    setFlag fc n $ Identity intIdx
+    setFlag fc (Resolved i) $ Identity intIdx
 
 ||| Check a `%builtin` pragma is correct.
 export
