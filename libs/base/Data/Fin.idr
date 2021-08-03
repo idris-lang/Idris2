@@ -60,11 +60,6 @@ finToNat : Fin n -> Nat
 finToNat FZ = Z
 finToNat (FS k) = S $ finToNat k
 
-
-export
-Show (Fin n) where
-  show = show . finToNat
-
 ||| `finToNat` is injective
 export
 finToNatInjective : (fm : Fin k) -> (fn : Fin k) -> (finToNat fm) = (finToNat fn) -> fm = fn
@@ -83,6 +78,12 @@ public export
 finToInteger : Fin n -> Integer
 finToInteger FZ     = 0
 finToInteger (FS k) = 1 + finToInteger k
+
+-- %builtin NaturalToInteger Data.Fin.finToInteger
+
+export
+Show (Fin n) where
+  show = show . finToInteger
 
 export
 Cast (Fin n) Integer where
@@ -167,6 +168,8 @@ fromInteger : (x : Integer) -> {n : Nat} ->
               Fin n
 fromInteger {n} x {prf} with (integerToFin x n)
   fromInteger {n} x {prf = ItIsJust} | Just y = y
+
+-- %builtin IntegerToNatural Data.Fin.fromInteger
 
 ||| Convert an Integer to a Fin in the required bounds/
 ||| This is essentially a composition of `mod` and `fromInteger`

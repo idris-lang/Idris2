@@ -12,6 +12,7 @@ modules =
     Compiler.Common,
     Compiler.CompileExpr,
     Compiler.Generated,
+    Compiler.Identity,
     Compiler.Inline,
     Compiler.LambdaLift,
     Compiler.Separate,

@@ -402,7 +402,8 @@ Hashable ConInfo where
     NOTHING => h `hashWithSalt` 5
     JUST => h `hashWithSalt` 6
     RECORD => h `hashWithSalt` 7
-
+    ZERO => h `hashWithSalt` 8
+    SUCC => h `hashWithSalt` 9
 
 mutual
   export
