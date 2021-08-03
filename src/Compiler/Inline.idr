@@ -523,7 +523,7 @@ compileAndInlineAll
          cns <- filterM nonErased ns
 
          traverse_ compileDef cns
-         traverse_ setIdentity cns
+         traverse_ rewriteIdentityFlag cns
          transform 3 cns -- number of rounds to run transformations.
                          -- This seems to be the point where not much useful
                          -- happens any more.
@@ -536,6 +536,7 @@ compileAndInlineAll
              traverse_ mergeLamDef cns
              traverse_ caseLamDef cns
              traverse_ fixArityDef cns
+             traverse_ setIdentity cns
              transform k cns
 
     nonErased : Name -> Core Bool
