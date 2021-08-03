@@ -291,6 +291,7 @@ record GlobalDef where
   compexpr : Maybe CDef
   namedcompexpr : Maybe NamedDef
   sizeChange : List SCCall
+  schemeExpr : Maybe String
 
 export
 refersTo : GlobalDef -> NameMap Bool
@@ -641,6 +642,7 @@ newDef fc n rig vars ty vis def
         , compexpr = Nothing
         , namedcompexpr = Nothing
         , sizeChange = []
+        , schemeExpr = Nothing
         }
 
 -- Rewrite rules, applied after type checking, for runtime code only
@@ -1396,6 +1398,7 @@ addBuiltin n ty tot op
          , compexpr = Nothing
          , namedcompexpr = Nothing
          , sizeChange = []
+         , schemeExpr = Nothing
          }
 
 export
@@ -1407,7 +1410,8 @@ updateDef n fdef
              | Nothing => pure ()
          case fdef (definition gdef) of
               Nothing => pure ()
-              Just def' => ignore $ addDef n (record { definition = def' } gdef)
+              Just def' => ignore $ addDef n (record { definition = def',
+                                                       schemeExpr = Nothing } gdef)
 
 export
 updateTy : {auto c : Ref Ctxt Defs} ->

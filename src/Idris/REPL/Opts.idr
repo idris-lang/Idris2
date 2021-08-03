@@ -30,6 +30,7 @@ record REPLOpts where
   constructor MkREPLOpts
   showTypes : Bool
   evalMode : REPLEval
+  evalTiming : Bool
   mainfile : Maybe String
   literateStyle : Maybe LiterateStyle
   source : String
@@ -56,6 +57,7 @@ defaultOpts fname outmode cgs
     = MkREPLOpts
         { showTypes = False
         , evalMode = NormaliseAll
+        , evalTiming = False
         , mainfile = fname
         , literateStyle = litStyle fname
         , source = ""
@@ -193,3 +195,15 @@ export
 setSynHighlightOn : {auto o : Ref ROpts REPLOpts} -> Bool -> Core ()
 setSynHighlightOn b = do opts <- get ROpts
                          put ROpts (record { synHighlightOn = b } opts)
+
+export
+getEvalTiming : {auto o : Ref ROpts REPLOpts} -> Core Bool
+getEvalTiming
+    = do opts <- get ROpts
+         pure (evalTiming opts)
+
+export
+setEvalTiming : {auto o : Ref ROpts REPLOpts} -> Bool -> Core ()
+setEvalTiming b
+    = do opts <- get ROpts
+         put ROpts (record { evalTiming = b } opts)

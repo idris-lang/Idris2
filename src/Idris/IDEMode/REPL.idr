@@ -297,6 +297,7 @@ SExpable REPLOpt where
   toSExp (Editor editor) = SExpList [ SymbolAtom "editor", toSExp editor ]
   toSExp (CG str) = SExpList [ SymbolAtom "cg", toSExp str ]
   toSExp (Profile p) = SExpList [ SymbolAtom "profile", toSExp p ]
+  toSExp (EvalTiming p) = SExpList [ SymbolAtom "evaltiming", toSExp p ]
 
 
 displayIDEResult : {auto c : Ref Ctxt Defs} ->

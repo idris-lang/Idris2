@@ -1702,6 +1702,8 @@ setOption set
          pure (ShowTypes set)
   <|> do exactIdent "profile"
          pure (Profile set)
+  <|> do exactIdent "evaltiming"
+         pure (EvalTiming set)
   <|> if set then setVarOption else fatalError "Unrecognised option"
 
 replCmd : List String -> Rule ()
@@ -2031,6 +2033,7 @@ parserCommandsForHelp =
   , declsArgCmd (ParseKeywordCmd "let") NewDefn "Define a new value"
   , stringArgCmd (ParseREPLCmd ["lp", "loadpackage"]) ImportPackage "Load all modules of the package"
   , exprArgCmd (ParseREPLCmd ["fs", "fsearch"]) FuzzyTypeSearch "Search for global definitions by sketching the names distribution of the wanted type(s)."
+  , exprArgCmd (ParseREPLCmd ["scheme"]) TmpScheme "Scheme Scaffolding"
   ]
 
 export

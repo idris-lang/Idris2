@@ -28,6 +28,9 @@ import Core.Termination
 import Core.Unify
 import Core.Value
 
+import Core.SchemeEval.Evaluate
+import Core.SchemeEval.Compile
+
 import Parser.Unlit
 
 import Idris.Desugar
@@ -195,6 +198,8 @@ setOpt (CG e)
 setOpt (Profile t)
     = do pp <- getSession
          setSession (record { profile = t } pp)
+setOpt (EvalTiming t)
+    = setEvalTiming t
 
 getOptions : {auto c : Ref Ctxt Defs} ->
          {auto o : Ref ROpts REPLOpts} ->
@@ -726,8 +731,8 @@ process (Eval itm)
          case emode of
             Execute => do ignore (execExp itm); pure (Executed itm)
             _ =>
-              do
-                 (ntm `WithType` ty) <- inferAndNormalize emode itm
+              do (ntm `WithType` ty) <- logTimeWhen !getEvalTiming "Evaluation" $
+                                           inferAndNormalize emode itm
                  itm <- resugar [] ntm
                  defs <- get Ctxt
                  opts <- get ROpts
@@ -943,6 +948,14 @@ process (ImportPackage package) = do
     depthFirst (\x => map (toFilePath x ::) . force) tree (pure [])
 
 process (FuzzyTypeSearch expr) = fuzzySearch expr
+process (TmpScheme itm)
+    = do defs <- get Ctxt
+         (tm `WithType` ty) <- inferAndElab InExpr itm
+         qtm <- logTimeWhen !getEvalTiming "Evaluation" $
+           do sval <- seval [] tm
+              quote sval
+         itm <- logTimeWhen False "resugar" $ resugar [] qtm
+         pure (Evaluated itm Nothing)
 
 processCatch : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->

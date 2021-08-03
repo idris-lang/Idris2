@@ -328,6 +328,14 @@ parameters (defs : Defs, topopts : EvalOpts)
                    | Nothing => pure GotStuck
               evalTree env bound opts fc stk sc
 
+    concrete : NF free -> Bool
+    concrete (NDCon _ _ _ _ _) = True
+    concrete (NTCon _ _ _ _ _) = True
+    concrete (NPrimVal _ _) = True
+    concrete (NBind _ _ _ _) = True
+    concrete (NType _) = True
+    concrete _ = False
+
     tryAlt : {auto c : Ref Ctxt Defs} ->
              {free, more : _} ->
              Env Term free ->
@@ -373,15 +381,10 @@ parameters (defs : Defs, topopts : EvalOpts)
          = if concrete val
               then evalTree env loc opts fc stk sc
               else pure GotStuck
-      where
-        concrete : NF free -> Bool
-        concrete (NDCon _ _ _ _ _) = True
-        concrete (NTCon _ _ _ _ _) = True
-        concrete (NPrimVal _ _) = True
-        concrete (NBind _ _ _ _) = True
-        concrete (NType _) = True
-        concrete _ = False
-    tryAlt _ _ _ _ _ _ _ = pure GotStuck
+    tryAlt _ _ _ _ _ val _
+         = if concrete val
+              then pure NoMatch
+              else pure GotStuck
 
     findAlt : {auto c : Ref Ctxt Defs} ->
               {args, free : _} ->

@@ -471,6 +471,7 @@ data REPLOpt : Type where
      Editor : String -> REPLOpt
      CG : String -> REPLOpt
      Profile : Bool -> REPLOpt
+     EvalTiming : Bool -> REPLOpt
 
 export
 Show REPLOpt where
@@ -481,6 +482,7 @@ Show REPLOpt where
   show (Editor editor) = "editor = " ++ show editor
   show (CG str) = "cg = " ++ str
   show (Profile p) = "profile = " ++ show p
+  show (EvalTiming p) = "evaltiming = " ++ show p
 
 export
 Pretty REPLOpt where
@@ -491,6 +493,7 @@ Pretty REPLOpt where
   pretty (Editor editor) = pretty "editor" <++> equals <++> pretty editor
   pretty (CG str) = pretty "cg" <++> equals <++> pretty str
   pretty (Profile p) = pretty "profile" <++> equals <++> pretty p
+  pretty (EvalTiming p) = pretty "evaltiming" <++> equals <++> pretty p
 
 public export
 data EditCmd : Type where
@@ -541,6 +544,8 @@ data REPLCmd : Type where
      Quit : REPLCmd
      NOP : REPLCmd
      ImportPackage : String -> REPLCmd
+
+     TmpScheme : PTerm -> REPLCmd
 
 public export
 record Import where

@@ -71,6 +71,11 @@ modules =
     Core.UnifyState,
     Core.Value,
 
+    Core.SchemeEval.Builtins,
+    Core.SchemeEval.Compile,
+    Core.SchemeEval.Evaluate,
+    Core.SchemeEval.ToScheme,
+
     IdrisPaths,
 
     Idris.CommandLine,
@@ -166,6 +171,7 @@ modules =
     Libraries.Utils.Hex,
     Libraries.Utils.Octal,
     Libraries.Utils.Path,
+    Libraries.Utils.Scheme,
     Libraries.Utils.Shunting,
     Libraries.Utils.String,
     Libraries.Utils.Term,
