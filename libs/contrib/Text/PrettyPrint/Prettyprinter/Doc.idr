@@ -10,7 +10,7 @@ import public Data.String.Extra
 
 export
 textSpaces : Int -> String
-textSpaces n = Extra.replicate (integerToNat $ cast n) ' '
+textSpaces n = replicate (integerToNat $ cast n) ' '
 
 ||| Maximum number of characters that fit in one line.
 public export

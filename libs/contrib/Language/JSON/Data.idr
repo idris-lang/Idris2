@@ -102,12 +102,12 @@ Show JSON where
 ||| @n The amount of spaces to indent per nesting level.
 export
 format : {default 0 curr : Nat} -> (n : Nat) -> JSON -> String
-format {curr} n json = Extra.indent curr $ formatValue curr n json
+format {curr} n json = indent curr $ formatValue curr n json
   where
     formatValue : (curr, n : Nat) -> JSON -> String
     formatValue _ _ (JArray []) = "[]"
     formatValue curr n (JArray xs@(_ :: _)) = "[\n" ++ formatValues xs
-                                           ++ Extra.indent curr "]"
+                                           ++ indent curr "]"
       where
         formatValues : (xs : List JSON) -> {auto ok : NonEmpty xs} -> String
         formatValues (x :: xs) = format {curr=(curr + n)} n x
@@ -116,10 +116,10 @@ format {curr} n json = Extra.indent curr $ formatValue curr n json
                                       [] => "\n"
     formatValue _ _ (JObject []) = "{}"
     formatValue curr n (JObject xs@(_ :: _)) = "{\n" ++ formatProps xs
-                                            ++ Extra.indent curr "}"
+                                            ++ indent curr "}"
       where
         formatProp : (String, JSON) -> String
-        formatProp (key, value) = Extra.indent (curr + n) (showString key ++ ": ")
+        formatProp (key, value) = indent (curr + n) (showString key ++ ": ")
                                ++ formatValue (curr + n) n value
 
         formatProps : (xs : List (String, JSON)) -> {auto ok : NonEmpty xs} -> String
