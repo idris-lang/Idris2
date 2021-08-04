@@ -63,7 +63,10 @@ rawTokens delims ls =
        ++ map (\m => (line m, CodeLine (trim m))) ls
        ++ [(notCodeLine, Any)]
 
-namespace Temp
+namespace Compat
+  -- `reduce` below was depending on the old behaviour of `lines` before #1585
+  -- was merged. That old `lines` function is added here to preserve behaviour
+  -- of `reduce`.
   lines' : List Char -> List1 (List Char)
   lines' [] = singleton []
   lines' s  = case break isNL s of
@@ -91,7 +94,7 @@ reduce (MkBounded (CodeLine m src) _ _ :: rest) acc =
                               src
                       )::acc)
 
-reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc with (Temp.lines src) -- Strip the deliminators surrounding the block.
+reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc with (Compat.lines src) -- Strip the deliminators surrounding the block.
   reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: ys) with (snocList ys)
     reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: []) | Empty = reduce rest acc -- 2
     reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: (srcs ++ [f])) | (Snoc f srcs rec) =
