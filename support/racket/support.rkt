@@ -496,7 +496,7 @@
   (if (number? obj) 1 0))
 
 (define (blodwen-is-integer obj)
-  (if (integer? obj) 1 0))
+  (if (and (number? obj) (exact? obj)) 1 0))
 
 (define (blodwen-is-float obj)
   (if (flonum? obj) 1 0))
@@ -544,6 +544,9 @@
 
 (define (blodwen-apply obj arg)
   (obj arg))
+
+(define (blodwen-force obj)
+  (obj))
 
 (define (blodwen-read-symbol sym)
   (symbol->string sym))
