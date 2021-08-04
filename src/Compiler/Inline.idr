@@ -2,7 +2,9 @@ module Compiler.Inline
 
 import Compiler.CaseOpts
 import Compiler.CompileExpr
-import Compiler.Identity
+import Compiler.Opts.ConstantFold
+import Compiler.Opts.Identity
+import Compiler.Opts.InlineHeuristics
 
 import Core.CompileExpr
 import Core.Context
@@ -536,6 +538,8 @@ compileAndInlineAll
              traverse_ mergeLamDef cns
              traverse_ caseLamDef cns
              traverse_ fixArityDef cns
+             traverse_ inlineHeuristics cns
+             traverse_ constantFold cns
              traverse_ setIdentity cns
              transform k cns
 

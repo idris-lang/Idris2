@@ -12,11 +12,14 @@ modules =
     Compiler.Common,
     Compiler.CompileExpr,
     Compiler.Generated,
-    Compiler.Identity,
     Compiler.Inline,
     Compiler.LambdaLift,
     Compiler.Separate,
     Compiler.VMCode,
+
+    Compiler.Opts.ConstantFold,
+    Compiler.Opts.Identity,
+    Compiler.Opts.InlineHeuristics,
 
     Compiler.ES.Ast,
     Compiler.ES.Codegen,
