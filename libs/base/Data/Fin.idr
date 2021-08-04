@@ -2,7 +2,7 @@ module Data.Fin
 
 import Data.List1
 import public Data.Maybe
-import Data.Nat
+import public Data.Nat
 import Decidable.Equality.Core
 
 %default total
@@ -159,15 +159,21 @@ integerToFin : Integer -> (n : Nat) -> Maybe (Fin n)
 integerToFin x Z = Nothing -- make sure 'n' is concrete, to save reduction!
 integerToFin x n = if x >= 0 then natToFin (fromInteger x) n else Nothing
 
+public export
+natToFinLT : (x : Nat) -> {0 n : Nat} ->
+             {auto 0 prf : x `LT` n} ->
+             Fin n
+natToFinLT Z {prf = LTESucc _} = FZ
+natToFinLT (S k) {prf = LTESucc _} = FS $ natToFinLT k
+
 ||| Allow overloading of Integer literals for Fin.
 ||| @ x the Integer that the user typed
 ||| @ prf an automatically-constructed proof that `x` is in bounds
 public export
-fromInteger : (x : Integer) -> {n : Nat} ->
-              {auto 0 prf : (IsJust (integerToFin x n))} ->
+fromInteger : (x : Integer) -> {0 n : Nat} ->
+              {auto 0 prf : fromInteger x `LT` n} ->
               Fin n
-fromInteger {n} x {prf} with (integerToFin x n)
-  fromInteger {n} x {prf = ItIsJust} | Just y = y
+fromInteger x = natToFinLT $ fromInteger x
 
 -- %builtin IntegerToNatural Data.Fin.fromInteger
 
