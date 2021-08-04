@@ -1,4 +1,4 @@
-module Compiler.Identity
+module Compiler.Opts.Identity
 
 import Compiler.CompileExpr
 import Core.Context
@@ -15,7 +15,6 @@ makeArgs args = makeArgs' args id
 
 parameters (fn1 : Name) (idIdx : Nat)
   mutual
-
     -- special case for matching on 'Nat'-shaped things
     isUnsucc : Var vars -> CExp vars -> Maybe (Constant, Var (x :: vars))
     isUnsucc (MkVar {i} _) (COp _ (Sub _) [CLocal {idx} _ _, CPrimVal _ c]) =
@@ -25,7 +24,6 @@ parameters (fn1 : Name) (idIdx : Nat)
     isUnsucc _ _ = Nothing
 
     unsuccIdentity : Constant -> Var vars -> CExp vars -> Bool
-    unsuccIdentity c1 var (COp _ (Add _) [CPrimVal _ c2, exp]) = c1 == c2 && cexpIdentity var Nothing Nothing exp
     unsuccIdentity c1 var (COp _ (Add _) [exp, CPrimVal _ c2]) = c1 == c2 && cexpIdentity var Nothing Nothing exp
     unsuccIdentity _ _ _ = False
 
@@ -57,6 +55,22 @@ parameters (fn1 : Name) (idIdx : Nat)
         eqArgs (v :: vs) (a :: as) = cexpIdentity v Nothing Nothing a && eqArgs vs as
         eqArgs _ _ = False
     cexpIdentity var Nothing const (CCon _ _ _ _ _) = False
+    -- special case for integerToNat, see unsuccIdentity for a easier to read
+    -- version that works when the let hasn't been inlined.
+    -- integerToNat : (x : Integer) -> {auto 0 _ : (x >= 0) === True} -> Nat
+    -- integerToNat x = if x == 0
+    --                     then Z
+    --                     else S $ integerToNat (x - 1)
+    cexpIdentity var _ _ (COp _ (Add _) [a1, a2]) = case a2 of
+        CPrimVal _ c1 => case a1 of
+            CApp _ (CRef _ fn2) as =>
+                fn1 == fn2
+                && (case getAt idIdx as of
+                    Just (COp _ (Sub _) [a3, (CPrimVal _ c2)]) =>
+                        c1 == c2 && cexpIdentity var Nothing Nothing a3
+                    _ => False)
+            _ => False
+        _ => False
     cexpIdentity var _ _ (COp _ _ _) = False
     cexpIdentity var _ _ (CExtPrim _ _ _) = False
     cexpIdentity var _ _ (CForce _ _ _) = False
@@ -118,8 +132,9 @@ rewriteIdentityFlag fn = do
         | Nothing => pure ()
     let Just flg@(Identity idx) = find isId gdef.flags
         | _ => pure ()
-    log "compiler.identity" 5 $ "found identity flag for: " ++ show fn ++ ", " ++ show idx
-                             ++ "\n\told def: " ++ show gdef.compexpr
+    log "compiler.identity" 5 $ "found identity flag for: "
+                              ++ show !(getFullName fn) ++ ", " ++ show idx
+                              ++ "\n\told def: " ++ show gdef.compexpr
     let Just cdef = the _ $ gdef.compexpr >>= idCDef idx
         | Nothing => pure ()
     log "compiler.identity" 5 $ "\tnew def: " ++ show cdef
