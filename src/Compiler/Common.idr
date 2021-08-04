@@ -16,6 +16,7 @@ import Core.TTC
 import Libraries.Data.IOArray
 import Libraries.Utils.Binary
 import Libraries.Utils.Path
+import Libraries.Utils.Scheme
 
 import Data.List
 import Data.List1

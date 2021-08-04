@@ -15,6 +15,7 @@ import Libraries.Data.PosMap
 import Data.Vect
 
 import Libraries.Utils.Binary
+import Libraries.Utils.Scheme
 
 %default covering
 

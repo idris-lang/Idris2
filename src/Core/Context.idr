@@ -11,6 +11,7 @@ import public Core.Options.Log
 import public Core.TT
 
 import Libraries.Utils.Binary
+import Libraries.Utils.Scheme
 
 import Data.Fin
 import Libraries.Data.IOArray
@@ -262,6 +263,17 @@ Eq SCCall where
   x == y = fnCall x == fnCall y && fnArgs x == fnArgs y
 
 public export
+data SchemeMode
+        = EvalAll -- evaluate everything
+        | BlockExport -- compile 'export' names in other modules as blocked
+
+export
+Eq SchemeMode where
+   EvalAll == EvalAll = True
+   BlockExport == BlockExport = True
+   _ == _ = False
+
+public export
 record GlobalDef where
   constructor MkGlobalDef
   location : FC
@@ -291,7 +303,7 @@ record GlobalDef where
   compexpr : Maybe CDef
   namedcompexpr : Maybe NamedDef
   sizeChange : List SCCall
-  schemeExpr : Maybe String
+  schemeExpr : Maybe (SchemeMode, SchemeObj Write)
 
 export
 refersTo : GlobalDef -> NameMap Bool
@@ -1131,6 +1143,7 @@ record Defs where
      -- timeout should be thrown
   warnings : List Warning
      -- ^ as yet unreported warnings
+  schemeEvalLoaded : Bool
 
 -- Label for context references
 export
@@ -1179,6 +1192,7 @@ initDefs
            , timings = empty
            , timer = Nothing
            , warnings = []
+           , schemeEvalLoaded = False
            }
 
 -- Reset the context, except for the options

@@ -161,10 +161,12 @@ compileConstant fc t
                    toScheme fc]
 
 compileStk : Ref Sym Integer =>
-          SchVars vars -> List (SchemeObj Write) -> Term vars ->
-          Core (SchemeObj Write)
+             {auto c : Ref Ctxt Defs} ->
+             SchVars vars -> List (SchemeObj Write) -> Term vars ->
+             Core (SchemeObj Write)
 
 compilePiInfo : Ref Sym Integer =>
+                {auto c : Ref Ctxt Defs} ->
                 SchVars vars -> PiInfo (Term vars) ->
                 Core (PiInfo (SchemeObj Write))
 compilePiInfo svs Implicit = pure Implicit
@@ -179,7 +181,7 @@ compileStk svs stk (Local fc isLet idx p)
 compileStk svs stk (Ref fc (DataCon t a) name)
     = if length stk == a -- inline it if it's fully applied
          then pure $ Vector (cast t)
-                       (toScheme name :: 
+                       (toScheme !(toResolvedNames name) ::
                         toScheme fc :: stk)
          else pure $ unload (Apply (Var (schName name)) []) stk
 compileStk svs stk (Ref fc (TyCon t a) name)
@@ -187,14 +189,12 @@ compileStk svs stk (Ref fc (TyCon t a) name)
          then pure $ Vector (-1)
                        (IntegerVal (cast t) ::
                         StringVal (show name) ::
-                        toScheme name ::
+                        toScheme !(toResolvedNames name) ::
                         toScheme fc :: stk)
          else pure $ unload (Apply (Var (schName name)) []) stk
 compileStk svs stk (Ref fc x name)
     = pure $ unload (Apply (Var (schName name)) []) stk
 compileStk svs stk (Meta fc name i xs)
-      -- currently using full names, but when we change toFullNames to
-      -- toResolvedNames, update this to use 'i'
     = do xs' <- traverse (compileStk svs stk) xs
          -- we encode the arity as first argument to the hole definition, which
          -- helps in readback, so we have to apply the hole function to the
@@ -273,6 +273,7 @@ compileStk svs stk (TType fc) = pure $ Vector (-7) [toScheme fc]
 
 export
 compile : Ref Sym Integer =>
+          {auto c : Ref Ctxt Defs} ->
           SchVars vars -> Term vars -> Core (SchemeObj Write)
 compile vars tm = compileStk vars [] tm
 
@@ -476,26 +477,28 @@ bindArgs n (x :: xs) done body
                       (bindArgs n xs (Var (show x) :: done) body)]
 
 compileBody : {auto c : Ref Ctxt Defs} ->
+              Bool -> -- okay to reduce (if False, block)
               Name -> Def -> Core (SchemeObj Write)
-compileBody n None = pure $ blockedAppWith n []
-compileBody n (PMDef pminfo args treeCT treeRT pats)
+compileBody _ n None = pure $ blockedAppWith n []
+compileBody redok n (PMDef pminfo args treeCT treeRT pats)
     = do i <- newRef Sym 0
          argvs <- mkArgs args
          let blk = blockedAppWith n (varObjs argvs)
          body <- compileCase blk argvs treeCT
-         let body' = If (Apply (Var "ct-blockAll") []) blk body
+         let body' = if redok
+                        then If (Apply (Var "ct-blockAll") []) blk body
+                        else blk
          -- If it arose from a hole, we need to take an extra argument for
          -- the arity since that's what Meta gets applied to
          case holeInfo pminfo of
               NotHole => pure (bindArgs n argvs [] body')
               SolvedHole _ => pure (Lambda ["h-0"] (bindArgs n argvs [] body'))
-compileBody n (ExternDef arity) = pure $ blockedAppWith n []
-compileBody n (ForeignDef arity xs) = pure $ blockedAppWith n []
-compileBody n (Builtin x) = pure $ compileBuiltin n x
--- We compile DCon/TCon inline, but include them here for completeness
-compileBody n (DCon tag Z newtypeArg)
-    = pure $ Vector (cast tag) [toScheme n, toScheme emptyFC]
-compileBody n (DCon tag arity newtypeArg)
+compileBody _ n (ExternDef arity) = pure $ blockedAppWith n []
+compileBody _ n (ForeignDef arity xs) = pure $ blockedAppWith n []
+compileBody _ n (Builtin x) = pure $ compileBuiltin n x
+compileBody _ n (DCon tag Z newtypeArg)
+    = pure $ Vector (cast tag) [toScheme !(toResolvedNames n), toScheme emptyFC]
+compileBody _ n (DCon tag arity newtypeArg)
     = do let args = mkArgNs 0 arity
          argvs <- mkArgs args
          let body
@@ -507,10 +510,10 @@ compileBody n (DCon tag arity newtypeArg)
     mkArgNs : Int -> Nat -> List Name
     mkArgNs i Z = []
     mkArgNs i (S k) = MN "arg" i :: mkArgNs (i+1) k
-compileBody n (TCon tag Z parampos detpos flags mutwith datacons detagabbleBy)
+compileBody _ n (TCon tag Z parampos detpos flags mutwith datacons detagabbleBy)
     = pure $ Vector (-1) [IntegerVal (cast tag), StringVal (show n),
                           toScheme n, toScheme emptyFC]
-compileBody n (TCon tag arity parampos detpos flags mutwith datacons detagabbleBy)
+compileBody _ n (TCon tag arity parampos detpos flags mutwith datacons detagabbleBy)
     = do let args = mkArgNs 0 arity
          argvs <- mkArgs args
          let body
@@ -524,22 +527,34 @@ compileBody n (TCon tag arity parampos detpos flags mutwith datacons detagabbleB
     mkArgNs : Int -> Nat -> List Name
     mkArgNs i Z = []
     mkArgNs i (S k) = MN "arg" i :: mkArgNs (i+1) k
-compileBody n (Hole numlocs x) = pure $ blockedMetaApp n
-compileBody n (BySearch x maxdepth defining) = pure $ blockedMetaApp n
-compileBody n (Guess guess envbind constraints) = pure $ blockedMetaApp n
-compileBody n ImpBind = pure $ blockedMetaApp n
-compileBody n Delayed = pure $ blockedMetaApp n
+compileBody _ n (Hole numlocs x) = pure $ blockedMetaApp n
+compileBody _ n (BySearch x maxdepth defining) = pure $ blockedMetaApp n
+compileBody _ n (Guess guess envbind constraints) = pure $ blockedMetaApp n
+compileBody _ n ImpBind = pure $ blockedMetaApp n
+compileBody _ n Delayed = pure $ blockedMetaApp n
 
 export
-compileDef : {auto c : Ref Ctxt Defs} -> Name -> Core ()
-compileDef n_in
+compileDef : {auto c : Ref Ctxt Defs} -> SchemeMode -> Name -> Core ()
+compileDef mode n_in
     = do n <- toFullNames n_in -- change to Resolved for performance later
          defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (UndefinedName emptyFC n)
-         let Nothing = schemeExpr def
-              | _ => pure () -- already done
-         b <- compileBody n !(toFullNames (definition def))
+
+         let True = case schemeExpr def of
+                         Nothing => True
+                         Just (cmode, def) => cmode /= mode
+               | _ => pure () -- already done
+         -- If we're in BlockExport mode, check whether the name is
+         -- available for reduction.
+         let redok = mode == EvalAll ||
+                       reducibleInAny (currentNS defs :: nestedNS defs)
+                                      (fullname def)
+                                      (visibility def)
+         -- 'n' is used in compileBody for generating names for readback,
+         -- and reading back resolved names is quicker because it's just
+         -- an integer
+         b <- compileBody redok !(toResolvedNames n) !(toFullNames (definition def))
          let schdef = Define (schName n) b
 
          -- Add the new definition to the current scheme runtime
@@ -547,7 +562,7 @@ compileDef n_in
               | Nothing => throw (InternalError ("Compiling " ++ show n ++ " failed"))
 
          -- Record that this one is done
-         ignore $ addDef n (record { schemeExpr = Just "Done" } def) 
+         ignore $ addDef n (record { schemeExpr = Just (mode, schdef) } def)
 
 -- Initialise the internal functions we need to build/extend blocked
 -- applications
@@ -558,8 +573,15 @@ export
 initialiseSchemeEval : {auto c : Ref Ctxt Defs} ->
                        Core Bool
 initialiseSchemeEval
-    = catch (do f <- readDataFile "chez/ct-support.ss"
-                Just _ <- coreLift $ evalSchemeStr $ "(begin " ++ f ++ ")"
-                     | Nothing => pure False
-                pure True)
-            (\err => pure False)
+      -- TODO: Need to check what the current runtime is to load the right
+      -- thing
+    = do defs <- get Ctxt
+         if defs.schemeEvalLoaded
+            then pure True
+            else
+             catch (do f <- readDataFile "chez/ct-support.ss"
+                       Just _ <- coreLift $ evalSchemeStr $ "(begin " ++ f ++ ")"
+                            | Nothing => pure False
+                       put Ctxt (record { schemeEvalLoaded = True } defs)
+                       pure True)
+                (\err => pure False)

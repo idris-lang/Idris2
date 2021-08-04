@@ -952,7 +952,7 @@ process (TmpScheme itm)
     = do defs <- get Ctxt
          (tm `WithType` ty) <- inferAndElab InExpr itm
          qtm <- logTimeWhen !getEvalTiming "Evaluation" $
-           do sval <- seval [] tm
+           do sval <- seval EvalAll [] tm
               quote sval
          itm <- logTimeWhen False "resugar" $ resugar [] qtm
          pure (Evaluated itm Nothing)

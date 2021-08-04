@@ -297,7 +297,7 @@ compileBuiltin : {farity : Nat} ->
                 Name -> PrimFn farity -> SchemeObj Write
 compileBuiltin nm fn
     = let args = mkArgList 0 farity in
-          bindArgs args args
+          bindArgs args [] args
   where
     makeBlockedApp : Vect n String -> SchemeObj Write
     makeBlockedApp args = Vector (-2) [toScheme nm, vars args]
@@ -306,6 +306,9 @@ compileBuiltin nm fn
         vars [] = Null
         vars (x :: xs) = Cons (Var x) (vars xs)
 
-    bindArgs : Vect n String -> Vect farity String -> SchemeObj Write
-    bindArgs [] args = applyOp (makeBlockedApp args) fn (map Var args)
-    bindArgs (x :: xs) args = Lambda [x] (bindArgs xs args)
+    bindArgs : Vect n String -> Vect n' String ->
+               Vect farity String -> SchemeObj Write
+    bindArgs [] done args = applyOp (makeBlockedApp args) fn (map Var args)
+    bindArgs (x :: xs) done args
+        = Vector (-9) [makeBlockedApp (reverse done),
+                       Lambda [x] (bindArgs xs (x :: done) args)]

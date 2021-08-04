@@ -27,8 +27,8 @@ getAllNames done (x :: xs)
 
 export
 seval : {auto c : Ref Ctxt Defs} ->
-        Env Term vars -> Term vars -> Core (SVal vars)
-seval env tm
+        SchemeMode -> Env Term vars -> Term vars -> Core (SVal vars)
+seval mode env tm
     = do -- make sure all the names in the term are compiled
          -- We need to recheck in advance, since definitions might have changed
          -- since we last evaluated a name
@@ -38,7 +38,7 @@ seval env tm
          let ms = getRefs (MN "" 0) tm
          let rs = addMetas ms tm
          names <- getAllNames empty (keys rs)
-         traverse_ compileDef (keys names)
+         traverse_ (compileDef mode) (keys names)
          
          i <- newRef Sym 0
          (bind, schEnv) <- mkEnv env id
@@ -360,6 +360,4 @@ quote : {auto c : Ref Ctxt Defs} ->
         SVal vars -> Core (Term vars)
 quote (MkSVal val schEnv)
     = do i <- newRef Sym 0
---          x <- logTimeWhen True "Decoding" $ pure (decodeObj val)
-         coreLift $ debugScheme val
          logTimeWhen False "Quote" $ quote' {outer = []} schEnv val
