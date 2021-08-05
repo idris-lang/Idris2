@@ -25,6 +25,7 @@ constFold e@(COp fc fn xs) = case the _ $ traverse toNF xs of
   where
     toNF : CExp vars -> Maybe (NF vars)
     toNF exp = case constFold exp of
+        CPrimVal fc (I _) => Nothing -- don't fold `Int` because it has varying widths
         CPrimVal fc c => Just $ NPrimVal fc c
         _ => Nothing
     fromNF : NF vars -> Maybe (CExp vars)
