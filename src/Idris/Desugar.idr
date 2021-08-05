@@ -694,14 +694,15 @@ mutual
            pure $ MkImpTy fc nameFC n !(bindTypeNames fc (usingImpl syn)
                                                ps !(desugar AnyExpr ps ty))
 
-  -- Attempt to get function name from function pattern. For example, given the
-  -- pattern 'f x y', getClauseFn would return 'f'.
+  -- Attempt to get the function name from a function pattern. For example,
+  --   - given the pattern 'f x y', getClauseFn would return 'f'.
+  --   - given the pattern 'x == y', getClausefn would return '=='.
   getClauseFn : RawImp -> Core Name
   getClauseFn (IVar _ n) = pure n
   getClauseFn (IApp _ f _) = getClauseFn f
   getClauseFn (IAutoApp _ f _) = getClauseFn f
   getClauseFn (INamedApp _ f _ _) = getClauseFn f
-  getClauseFn tm = throw $ GenericMsg (getFC tm) "Leftmost term in pattern must be a function name"
+  getClauseFn tm = throw $ GenericMsg (getFC tm) "Head term in pattern must be a function name"
 
   desugarLHS : {auto s : Ref Syn SyntaxInfo} ->
                {auto c : Ref Ctxt Defs} ->
