@@ -504,7 +504,7 @@
   (if (number? obj) 1 0))
 
 (define (blodwen-is-integer obj)
-  (if (integer? obj) 1 0))
+  (if (and (number? obj) (exact? obj)) 1 0))
 
 (define (blodwen-is-float obj)
   (if (flonum? obj) 1 0))
@@ -530,6 +530,9 @@
 (define (blodwen-is-pair obj)
   (if (pair? obj) 1 0))
 
+(define (blodwen-is-box obj)
+  (if (box? obj) 1 0))
+
 (define (blodwen-make-symbol str)
   (string->symbol str))
 
@@ -541,8 +544,17 @@
 (define (blodwen-vector-length obj)
   (vector-length obj))
 
+(define (blodwen-vector-list obj)
+  (vector->list obj))
+
+(define (blodwen-unbox obj)
+  (unbox obj))
+
 (define (blodwen-apply obj arg)
   (obj arg))
+
+(define (blodwen-force obj)
+  (obj))
 
 (define (blodwen-read-symbol sym)
   (symbol->string sym))
