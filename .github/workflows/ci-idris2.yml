@@ -70,6 +70,7 @@ jobs:
     env:
       IDRIS2_CG: chez
       SCHEME: scheme
+      IDRIS2_FLAGS: -Xcheck-hashes
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -102,10 +103,23 @@ jobs:
           make install
           cd ..
 
+      - name: Cache Idris2-Quickcheck from Previous Version
+        uses: actions/cache@v2
+        with:
+          path: |
+            build/
+            libs/base/build/
+            libs/prelude/build/
+            libs/contrib/build/
+            libs/network/build/
+            libs/test/build/
+          key: ${{ runner.os }}-from-previous-version-chez-${{ github.ref }}-${{ env.IDRIS2_VERSION }}-${{ env.GITHUB_SHA }}
+          restore-keys: |
+            ${{ runner.os }}-from-previous-version-chez-refs/heads/main-${{ env.IDRIS2_VERSION }}
+
       # Build the current version and save the installation.
       - name: Build current version
-        run: |
-          make && make install
+        run: make && make install
       - name: Artifact Idris2 from previous version
         uses: actions/upload-artifact@v2
         with:
@@ -281,6 +295,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: chez
+      IDRIS2_FLAGS: -Werror
       SCHEME: scheme
     steps:
       - name: Checkout
@@ -298,7 +313,7 @@ jobs:
           echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
       - name: Build self-hosted
-        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
+        run: make all && make install
       - name: Test self-hosted
         run: make test INTERACTIVE=''
 
@@ -306,6 +321,7 @@ jobs:
     needs: macos-bootstrap-chez
     runs-on: macos-latest
     env:
+      IDRIS2_FLAGS: -Werror -Xcheck-hashes
       SCHEME: chez
     steps:
       - name: Checkout
@@ -321,8 +337,25 @@ jobs:
           brew install coreutils
           echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+
+      - name: Set TTC_VERSION for Cache
+        run: echo "TTC_VERSION=$(grep -P "ttcVersion = \K\d+" src/Core/Binary.idr -o)" >> $GITHUB_ENV
+      - name: Cache Idris2-Chez from Bootstrapped
+        uses: actions/cache@v2
+        with:
+          path: |
+            build/
+            libs/base/build/
+            libs/prelude/build/
+            libs/contrib/build/
+            libs/network/build/
+            libs/test/build/
+          key: ${{ runner.os }}-from-bootstrapped-chez-${{ github.ref }}-${{ env.TTC_VERSION }}-${{ env.GITHUB_SHA }}
+          restore-keys: |
+            ${{ runner.os }}-from-bootstrapped-chez-refs/heads/main-${{ env.TTC_VERSION }}
+
       - name: Build self-hosted
-        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
+        run: make all && make install
         shell: bash
       - name: Test self-hosted
         run: make test INTERACTIVE=''
@@ -335,6 +368,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: racket
+      IDRIS2_FLAGS: -Werror -Xcheck-hashes
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -348,8 +382,25 @@ jobs:
           sudo apt-get install -y racket
           echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+
+      - name: Set TTC_VERSION for Cache
+        run: echo "TTC_VERSION=$(grep -P "ttcVersion = \K\d+" src/Core/Binary.idr -o)" >> $GITHUB_ENV
+      - name: Cache Idris2-Racket from Bootstrapped
+        uses: actions/cache@v2
+        with:
+          path: |
+            build/
+            libs/base/build/
+            libs/prelude/build/
+            libs/contrib/build/
+            libs/network/build/
+            libs/test/build/
+          key: ${{ runner.os }}-from-bootstrapped-racket-${{ github.ref }}-${{ env.TTC_VERSION }}-${{ env.GITHUB_SHA }}
+          restore-keys: |
+            ${{ runner.os }}-from-bootstrapped-racket-refs/heads/main-${{ env.TTC_VERSION }}
+
       - name: Build self-hosted
-        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
+        run: make all && make install
       - name: Test self-hosted
         run: make test INTERACTIVE=''
 
@@ -362,6 +413,7 @@ jobs:
       || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
     env:
       IDRIS2_CG: chez
+      IDRIS2_FLAGS: -Werror -Xcheck-hashes
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -377,8 +429,25 @@ jobs:
           sudo apt-get install -y -t hirsute chezscheme
           echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+
+      - name: Set TTC_VERSION for Cache
+        run: echo "TTC_VERSION=$(grep -P "ttcVersion = \K\d+" src/Core/Binary.idr -o)" >> $GITHUB_ENV
+      - name: Cache Self Host Idris2-Chez from Previous Version
+        uses: actions/cache@v2
+        with:
+          path: |
+            build/
+            libs/base/build/
+            libs/prelude/build/
+            libs/contrib/build/
+            libs/network/build/
+            libs/test/build/
+          key: ${{ runner.os }}-from-previous-version-chez-${{ github.ref }}-${{ env.TTC_VERSION }}-${{ env.GITHUB_SHA }}
+          restore-keys: |
+            ${{ runner.os }}-from-previous-version-chez-refs/heads/main-${{ env.TTC_VERSION }}
+
       - name: Build self-hosted from previous version
-        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
+        run: make all && make install
       - name: Test self-hosted from previous version
         run: make test INTERACTIVE=''
       - name: Artifact Idris2

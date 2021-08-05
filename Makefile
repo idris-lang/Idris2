@@ -28,6 +28,8 @@ VERSION_TAG ?= $(GIT_SHA1)
 
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
 export NAME_VERSION := ${NAME}-${IDRIS2_VERSION}
+export IDRIS2_FLAGS
+
 IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
 IDRIS2_APP_IPKG := idris2.ipkg
 IDRIS2_LIB_IPKG := idris2api.ipkg
@@ -61,7 +63,7 @@ all: support ${TARGET} libs
 idris2-exec: ${TARGET}
 
 ${TARGET}: src/IdrisPaths.idr
-	${IDRIS2_BOOT} --build ${IDRIS2_APP_IPKG}
+	${IDRIS2_BOOT} --build ${IDRIS2_APP_IPKG} ${IDRIS2_FLAGS}
 
 # We use FORCE to always rebuild IdrisPath so that the git SHA1 info is always up to date
 src/IdrisPaths.idr: FORCE
@@ -165,10 +167,10 @@ clean: clean-libs support-clean testenv-clean
 install: install-idris2 install-support install-libs
 
 install-api: src/IdrisPaths.idr
-	${IDRIS2_BOOT} --install ${IDRIS2_LIB_IPKG}
+	${IDRIS2_BOOT} --install ${IDRIS2_LIB_IPKG} ${IDRIS2_FLAGS}
 
 install-with-src-api: src/IdrisPaths.idr
-	${IDRIS2_BOOT} --install-with-src ${IDRIS2_LIB_IPKG}
+	${IDRIS2_BOOT} --install-with-src ${IDRIS2_LIB_IPKG} ${IDRIS2_FLAGS}
 
 install-idris2:
 	mkdir -p ${PREFIX}/bin/
