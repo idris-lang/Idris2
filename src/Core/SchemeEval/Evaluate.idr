@@ -11,6 +11,7 @@ import Core.TT
 import Libraries.Data.NameMap
 import Libraries.Utils.Scheme
 
+public export
 data SVal : List Name -> Type where
      MkSVal : ForeignObj -> SchVars vars -> SVal vars
 
@@ -25,16 +26,22 @@ getAllNames done (x :: xs)
              | _ => getAllNames done xs
          getAllNames (insert x () done) (xs ++ keys (refersTo gdef))
 
+-- Evaluate a term via scheme. This will throw if the backend doesn't
+-- support scheme evaluation, so callers should have checked first and fall
+-- back to the internal (slow!) evaluator if initialisation fails.
 export
 seval : {auto c : Ref Ctxt Defs} ->
         SchemeMode -> Env Term vars -> Term vars -> Core (SVal vars)
 seval mode env tm
-    = do -- make sure all the names in the term are compiled
-         -- We need to recheck in advance, since definitions might have changed
-         -- since we last evaluated a name
+    = do -- Check the evaluator is initialised. This will fail if the backend
+         -- doesn't support scheme evaluation.
          True <- logTimeWhen False "Scheme eval" initialiseSchemeEval
               | False => throw (InternalError "Loading scheme support failed")
 
+         -- make sure all the names in the term are compiled
+         -- We need to recheck in advance, since definitions might have changed
+         -- since we last evaluated a name, and we might have evaluated the
+         -- name in a different mode
          let ms = getRefs (MN "" 0) tm
          let rs = addMetas ms tm
          names <- getAllNames empty (keys rs)

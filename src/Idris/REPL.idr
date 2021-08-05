@@ -28,8 +28,7 @@ import Core.Termination
 import Core.Unify
 import Core.Value
 
-import Core.SchemeEval.Evaluate
-import Core.SchemeEval.Compile
+import Core.SchemeEval
 
 import Parser.Unlit
 
@@ -952,8 +951,7 @@ process (TmpScheme itm)
     = do defs <- get Ctxt
          (tm `WithType` ty) <- inferAndElab InExpr itm
          qtm <- logTimeWhen !getEvalTiming "Evaluation" $
-           do sval <- seval EvalAll [] tm
-              quote sval
+                   snormaliseAll [] tm
          itm <- logTimeWhen False "resugar" $ resugar [] qtm
          pure (Evaluated itm Nothing)
 

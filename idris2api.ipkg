@@ -64,6 +64,7 @@ modules =
     Core.Options.Log,
     Core.Primitives,
     Core.Reflect,
+    Core.SchemeEval,
     Core.Termination,
     Core.Transform,
     Core.TT,

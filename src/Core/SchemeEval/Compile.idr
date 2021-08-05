@@ -30,6 +30,7 @@ import Core.TT
 import Data.List
 
 import Libraries.Utils.Scheme
+import System.Info
 
 schString : String -> String
 schString s = concatMap okchar (unpack s)
@@ -564,17 +565,9 @@ compileDef mode n_in
          -- Record that this one is done
          ignore $ addDef n (record { schemeExpr = Just (mode, schdef) } def)
 
--- Initialise the internal functions we need to build/extend blocked
--- applications
--- These are in a support file, chez/support.ss. Returns True if loading
--- and processing succeeds. If it fails, which it probably will during a
--- bootstrap build at least, we can fall back to the default evaluator.
-export
-initialiseSchemeEval : {auto c : Ref Ctxt Defs} ->
-                       Core Bool
-initialiseSchemeEval
-      -- TODO: Need to check what the current runtime is to load the right
-      -- thing
+initEvalWith : {auto c : Ref Ctxt Defs} ->
+               String -> Core Bool
+initEvalWith "chez"
     = do defs <- get Ctxt
          if defs.schemeEvalLoaded
             then pure True
@@ -585,3 +578,14 @@ initialiseSchemeEval
                        put Ctxt (record { schemeEvalLoaded = True } defs)
                        pure True)
                 (\err => pure False)
+initEvalWith _ = pure False -- only works on Chez for now
+
+-- Initialise the internal functions we need to build/extend blocked
+-- applications
+-- These are in a support file, chez/support.ss. Returns True if loading
+-- and processing succeeds. If it fails, which it probably will during a
+-- bootstrap build at least, we can fall back to the default evaluator.
+export
+initialiseSchemeEval : {auto c : Ref Ctxt Defs} ->
+                       Core Bool
+initialiseSchemeEval = initEvalWith codegen
