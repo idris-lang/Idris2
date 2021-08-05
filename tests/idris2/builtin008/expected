@@ -1,5 +1,5 @@
 1/1: Building Test (Test.idr)
-Error: More than 1 non-erased arguments found for Main.finToInteger.
+Error: More than 1 non-erased arguments found for finToInteger.
 
 Test:11:1--11:39
  07 | finToInteger : {k : _} -> Fin k -> Integer

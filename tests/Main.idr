@@ -171,7 +171,8 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
       ["positivity001", "positivity002", "positivity003", "positivity004",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
-       "total006", "total007", "total008", "total009", "total010"
+       "total006", "total007", "total008", "total009", "total010",
+       "total011"
       ]
 
 idrisTests : TestPool
@@ -250,7 +251,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     [ "node001", "node002", "node003", "node004", "node005", "node006"
     , "node007", "node008", "node009", "node011", "node012", "node015"
     , "node017", "node018", "node019", "node021", "node022", "node023"
-    , "node024", "node025"
+    , "node024", "node025", "node026"
     , "perf001"
     -- , "node14", "node020"
     , "args"

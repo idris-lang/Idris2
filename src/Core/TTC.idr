@@ -662,6 +662,8 @@ TTC ConInfo where
   toBuf b NOTHING = tag 5
   toBuf b JUST = tag 6
   toBuf b RECORD = tag 7
+  toBuf b ZERO = tag 8
+  toBuf b SUCC = tag 9
 
   fromBuf b
       = case !getTag of
@@ -673,6 +675,8 @@ TTC ConInfo where
              5 => pure NOTHING
              6 => pure JUST
              7 => pure RECORD
+             8 => pure ZERO
+             9 => pure SUCC
              _ => corrupt "ConInfo"
 
 mutual
@@ -1012,6 +1016,7 @@ TTC DefFlag where
   toBuf b (PartialEval x) = tag 9 -- names not useful any more
   toBuf b AllGuarded = tag 10
   toBuf b (ConType ci) = do tag 11; toBuf b ci
+  toBuf b (Identity x) = do tag 12; toBuf b x
 
   fromBuf b
       = case !getTag of
@@ -1025,6 +1030,7 @@ TTC DefFlag where
              9 => pure (PartialEval [])
              10 => pure AllGuarded
              11 => do ci <- fromBuf b; pure (ConType ci)
+             12 => do x <- fromBuf b; pure (Identity x)
              _ => corrupt "DefFlag"
 
 export

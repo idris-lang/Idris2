@@ -9,11 +9,13 @@ The easiest way to install is via the existing generated Scheme code.
 The requirements are:
 
 - A Scheme compiler; either Chez Scheme (default), or Racket.
-- `bash`, with `realpath`. On Linux, you probably already have this.
-  On a macOS, you can install this with `brew install coreutils`.
-  On FreeBSD, OpenBSD and NetBSD, you can install `realpath` and `GNU make`
-  using a package manager.  For instance, on OpenBSD you can install all of them
-  with `pkg_add coreutils gmake` command.
+- `bash`, `GNU make`, `sha256sum` and `GMP`.  On Linux, you probably already
+  have these.  On macOS and major BSD flavours, you can install them using a
+  package manager: for instance, on macOS, you can install with the
+  `brew install coreutils gmp` and on OpenBSD, with the `pkg_add coreutils
+  bash gmake gmp` command. You specifically need the dev GMP library, which
+  means on some systems the package you need to install will be named
+  something more like `libgmp3-dev`.
 
 On Windows, it has been reported that installing via `MSYS2` works
 [MSYS2](https://www.msys2.org/). On Windows older than Windows 8, you may need to

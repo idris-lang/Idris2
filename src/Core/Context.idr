@@ -200,6 +200,9 @@ data DefFlag
     | ConType ConInfo
          -- Is it a special type of constructor, e.g. a nil or cons shaped
          -- thing, that can be compiled specially?
+    | Identity Nat
+         -- Is it the identity function at runtime?
+         -- The nat represents which argument the function evaluates to
 
 export
 Eq DefFlag where
@@ -213,6 +216,7 @@ Eq DefFlag where
     (==) (PartialEval x) (PartialEval y) = x == y
     (==) AllGuarded AllGuarded = True
     (==) (ConType x) (ConType y) = x == y
+    (==) (Identity x) (Identity y) = x == y
     (==) _ _ = False
 
 export
@@ -227,6 +231,7 @@ Show DefFlag where
   show (PartialEval _) = "partialeval"
   show AllGuarded = "allguarded"
   show (ConType ci) = "contype " ++ show ci
+  show (Identity x) = "identity " ++ show x
 
 public export
 data SizeChange = Smaller | Same | Unknown
@@ -683,58 +688,6 @@ Show BuiltinType where
     show NaturalToInteger = "NaturalToInteger"
     show IntegerToNatural = "IntegerToNatural"
 
--- Token types to make it harder to get the constructor names
--- the wrong way round.
-public export data ZERO = MkZERO
-public export data SUCC = MkSUCC
-
-||| Record containing names of 'Nat'-like constructors.
-public export
-record NatBuiltin where
-    constructor MkNatBuiltin
-    zero : Name
-    succ : Name
-
-||| Record containing information about a NatToInteger function.
-public export
-record NatToInt where
-    constructor MkNatToInt
-    natToIntArity : Nat -- total number of arguments
-    natIdx : Fin natToIntArity -- index into arguments of the 'Nat'-like argument
-
-||| Record containing information about a IntegerToNat function.
-public export
-record IntToNat where
-    constructor MkIntToNat
-    intToNatArity : Nat
-    intIdx : Fin intToNatArity
-
-||| Rewrite rules for %builtin pragmas
-||| Seperate to 'Transform' because it must also modify case statements
-||| behaviour should remain the same after this transform
-public export
-record BuiltinTransforms where
-    constructor MkBuiltinTransforms
-    natTyNames : NameMap NatBuiltin -- map from Nat-like names to their constructors
-    natZNames : NameMap ZERO -- set of Z-like names
-    natSNames : NameMap SUCC -- set of S-like names
-    natToIntegerFns : NameMap NatToInt -- set of functions to transform to `id`
-    integerToNatFns : NameMap IntToNat -- set of functions to transform to `max 0`
-
--- TODO: After next release remove nat from here and use %builtin pragma instead
-initBuiltinTransforms : BuiltinTransforms
-initBuiltinTransforms =
-    let type = NS typesNS (UN "Nat")
-        zero = NS typesNS (UN "Z")
-        succ = NS typesNS (UN "S")
-    in MkBuiltinTransforms
-        { natTyNames = singleton type (MkNatBuiltin {zero, succ})
-        , natZNames = singleton zero MkZERO
-        , natSNames = singleton succ MkSUCC
-        , natToIntegerFns = empty
-        , integerToNatFns = empty
-        }
-
 export
 getFnName : Transform -> Maybe Name
 getFnName (MkTransform _ _ app _)
@@ -1101,10 +1054,6 @@ record Defs where
      -- ^ A mapping from names to transformation rules which update applications
      -- of that name
   saveTransforms : List (Name, Transform)
-  builtinTransforms : BuiltinTransforms
-     -- ^ A mapping from names to transformations resulting from a %builtin pragma
-     -- seperate to `transforms` because these must always fire globally so run these
-     -- when compiling to `CExp`.
   namedirectives : NameMap (List String)
   ifaceHash : Int
   importHashes : List (Namespace, Int)
@@ -1176,7 +1125,6 @@ initDefs
            , saveAutoHints = []
            , transforms = empty
            , saveTransforms = []
-           , builtinTransforms = initBuiltinTransforms
            , namedirectives = empty
            , ifaceHash = 5381
            , importHashes = []
