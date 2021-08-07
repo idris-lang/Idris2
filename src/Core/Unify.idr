@@ -667,7 +667,7 @@ mutual
               Core UnifyResult
   unifyIfEq post loc mode env x y
         = do defs <- get Ctxt
-             if !(convert defs env x y)
+             if !(convertInf defs env x y)
                 then pure success
                 else if post
                         then postpone loc mode ("Postponing unifyIfEq " ++
