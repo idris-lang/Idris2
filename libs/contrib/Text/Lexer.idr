@@ -8,6 +8,8 @@ import public Text.Lexer.Core
 import public Text.Quantity
 import public Text.Token
 
+%default total
+
 export
 toTokenMap : List (Lexer, k) -> TokenMap (Token k)
 toTokenMap = map $ \(l, kind) => (l, Tok kind)
@@ -37,22 +39,22 @@ non l = reject l <+> any
 export
 choiceMap : {c : Bool} ->
             Foldable t => (a -> Recognise c) -> t a -> Recognise c
-choiceMap f xs = foldr (\x, acc => rewrite sym (andSameNeutral c) in
-                                           f x <|> acc)
-                       fail xs
+choiceMap {c} f xs = foldr (\x, acc => rewrite sym (andSameNeutral c) in
+                                               f x <|> acc)
+                           fail xs
 
 ||| Recognise the first matching recogniser in a container. Consumes input if
 ||| recognisers in the list consume. Fails if the container is empty.
 export
 choice : {c : _} ->
          Foldable t => t (Recognise c) -> Recognise c
-choice = Lexer.choiceMap id
+choice = choiceMap id
 
 ||| Sequence a list of recognisers. Guaranteed to consume input if the list is
 ||| non-empty and the recognisers consume.
 export
 concat : {c : _} ->
-         (xs : List (Recognise c)) -> Recognise (c && isCons xs)
+         (xs : List (Recognise c)) -> Recognise (isCons xs && c)
 concat = Lexer.Core.concatMap id
 
 ||| Recognise a specific character.
@@ -124,6 +126,13 @@ mutual
   many : Lexer -> Recognise False
   many l = opt (some l)
 
+||| Repeat the sub-lexer `l` one or more times until the lexer
+||| `stopBefore` is encountered. `stopBefore` will not be consumed.
+||| /((?!`stopBefore`)`l`)\+/
+export
+someUntil : (stopBefore : Recognise c) -> (l : Lexer) -> Lexer
+someUntil stopBefore l = some (reject stopBefore <+> l)
+
 ||| Repeat the sub-lexer `l` zero or more times until the lexer
 ||| `stopBefore` is encountered. `stopBefore` will not be consumed.
 ||| Not guaranteed to consume input.
@@ -139,14 +148,6 @@ manyUntil stopBefore l = many (reject stopBefore <+> l)
 export
 manyThen : (stopAfter : Recognise c) -> (l : Lexer) -> Recognise c
 manyThen stopAfter l = manyUntil stopAfter l <+> stopAfter
-
-||| Recognise many instances of `l` until an instance of `end` is
-||| encountered.
-|||
-||| Useful for defining comments.
-export
-manyTill : (l : Lexer) -> (end : Lexer) -> Recognise False
-manyTill l end = end <|> opt (l <+> manyTill l end)
 
 ||| Recognise a sub-lexer repeated as specified by `q`. Fails if `q` has
 ||| `min` and `max` in the wrong order. Consumes input unless `min q` is zero.
@@ -172,6 +173,18 @@ export
 digits : Lexer
 digits = some digit
 
+||| Recognise a single binary digit
+||| /[0-1]/
+export
+binDigit : Lexer
+binDigit = pred (\c => c == '0' || c == '1')
+
+||| Recognise one or more binary digits
+||| /[0-1]+/
+export
+binDigits : Lexer
+binDigits = some binDigit
+
 ||| Recognise a single hexidecimal digit
 ||| /[0-9A-Fa-f]/
 export
@@ -188,13 +201,13 @@ hexDigits = some hexDigit
 ||| /[0-8]/
 export
 octDigit : Lexer
-octDigit = pred isHexDigit
+octDigit = pred isOctDigit
 
 ||| Recognise one or more octal digits
 ||| /[0-8]+/
 export
 octDigits : Lexer
-octDigits = some hexDigit
+octDigits = some octDigit
 
 ||| Recognise a single alpha character
 ||| /[A-Za-z]/
@@ -307,18 +320,19 @@ export
 quote : (q : Lexer) -> (l : Lexer) -> Lexer
 quote q l = surround q q l
 
-||| Recognise an escape character (often '\\') followed by a sub-lexer
+||| Recognise an escape sub-lexer (often '\\') followed by
+||| another sub-lexer
 ||| /[`esc`]`l`/
 export
-escape : (esc : Char) -> Lexer -> Lexer
-escape esc l = is esc <+> l
+escape : (esc : Lexer) -> Lexer -> Lexer
+escape esc l = esc <+> l
 
 ||| Recognise a string literal, including escaped characters.
 ||| (Note: doesn't yet handle escape sequences such as \123)
 ||| /"(\\\\.|.)\*?"/
 export
 stringLit : Lexer
-stringLit = quote (is '"') (escape '\\' any <|> any)
+stringLit = quote (is '"') (escape (is '\\') any <|> any)
 
 ||| Recognise a character literal, including escaped characters.
 ||| (Note: doesn't yet handle escape sequences such as \123)
@@ -326,7 +340,7 @@ stringLit = quote (is '"') (escape '\\' any <|> any)
 export
 charLit : Lexer
 charLit = let q = '\'' in
-              is q <+> (escape '\\' (control <|> any) <|> isNot q) <+> is q
+              is q <+> (escape (is '\\') (control <|> any) <|> isNot q) <+> is q
   where
     lexStr : List String -> Lexer
     lexStr [] = fail
@@ -348,11 +362,39 @@ export
 intLit : Lexer
 intLit = opt (is '-') <+> digits
 
+||| Recognise a binary literal, prefixed by "0b"
+||| /0b[0-1]+/
+export
+binLit : Lexer
+binLit = exact "0b" <+> binDigits
+
 ||| Recognise a hexidecimal literal, prefixed by "0x" or "0X"
 ||| /0[Xx][0-9A-Fa-f]+/
 export
 hexLit : Lexer
 hexLit = approx "0x" <+> hexDigits
+
+||| Recognise an octal literal, prefixed by "0o"
+||| /0o[0-9A-Fa-f]+/
+export
+octLit : Lexer
+octLit = exact "0o" <+> octDigits
+
+export
+digitsUnderscoredLit : Lexer
+digitsUnderscoredLit = digits <+> many (is '_' <+> digits)
+
+export
+binUnderscoredLit : Lexer
+binUnderscoredLit = binLit <+> many (is '_' <+> binDigits)
+
+export
+hexUnderscoredLit : Lexer
+hexUnderscoredLit = hexLit <+> many (is '_' <+> hexDigits)
+
+export
+octUnderscoredLit : Lexer
+octUnderscoredLit = octLit <+> many (is '_' <+> octDigits)
 
 ||| Recognise `start`, then recognise all input until a newline is encountered,
 ||| and consume the newline. Will succeed if end-of-input is encountered before
