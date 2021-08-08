@@ -1,4 +1,4 @@
 rm -rf build
 
-$1 FinPerf.idr --exec main
+$1 --no-color --console-width 0 FinPerf.idr --exec main
 
