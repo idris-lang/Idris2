@@ -1210,7 +1210,6 @@ mutual
                 {vars : _} ->
                 Ref QVar Int -> Bool -> Defs -> Env Term vars ->
                 Binder (Closure vars) -> Binder (Closure vars) -> Core Bool
-                Binder (NF vars) -> Binder (NF vars) -> Core Bool
   convBinders q i defs env (Pi _ cx ix tx) (Pi _ cy iy ty)
       = if cx /= cy
            then pure False
