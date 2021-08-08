@@ -75,8 +75,6 @@ cName (Nested i n) = "n__" ++ cCleanString (show i) ++ "_" ++ cName n
 cName (CaseBlock x y) = "case__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (WithBlock x y) = "with__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (Resolved i) = "fn__" ++ cCleanString (show i)
-cName n = assert_total $ idris_crash ("INTERNAL ERROR: Unsupported name in C backend " ++ show n)
--- not really total but this way this internal error does not contaminate everything else
 
 escapeChar : Char -> String
 escapeChar c = if isAlphaNum c || isNL c
@@ -100,13 +98,23 @@ where
     showCString ('"'::cs) = ("\\\"" ++) . showCString cs
     showCString (c ::cs) = (showCChar c) . showCString cs
 
+-- deals with C not allowing `-9223372036854775808` as a literal
+showIntMin : Int -> String
+showIntMin x = if x == -9223372036854775808
+    then "INT64_MIN"
+    else "INT64_C("++ show x ++")"
+
+showIntegerMin : Integer -> String
+showIntegerMin x = if x == -9223372036854775808
+    then "INT64_MIN"
+    else "INT64_C("++ show x ++")"
 
 cConstant : Constant -> String
-cConstant (I x) = "(Value*)makeInt64(INT64_C("++ show x ++"))"
+cConstant (I x) = "(Value*)makeInt64("++ showIntMin x ++")"
 cConstant (I8 x) = "(Value*)makeInt8(INT8_C("++ show x ++"))"
 cConstant (I16 x) = "(Value*)makeInt16(INT16_C("++ show x ++"))"
 cConstant (I32 x) = "(Value*)makeInt32(INT32_C("++ show x ++"))"
-cConstant (I64 x) = "(Value*)makeInt64(INT64_C("++ show x ++"))"
+cConstant (I64 x) = "(Value*)makeInt64("++ showIntegerMin x ++")"
 cConstant (BI x) = "(Value*)makeIntegerLiteral(\""++ show x ++"\")"
 cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
 cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
@@ -130,8 +138,6 @@ cConstant Bits8Type = "Bits8"
 cConstant Bits16Type = "Bits16"
 cConstant Bits32Type = "Bits32"
 cConstant Bits64Type = "Bits64"
-cConstant n = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw constant in C backend: " ++ show n)
--- not really total but this way this internal error does not contaminate everything else
 
 extractConstant : Constant -> String
 extractConstant (I x) = show x
