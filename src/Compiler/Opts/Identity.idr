@@ -58,9 +58,9 @@ parameters (fn1 : Name) (idIdx : Nat)
     -- special case for integerToNat, see unsuccIdentity for a easier to read
     -- version that works when the let hasn't been inlined.
     -- integerToNat : (x : Integer) -> {auto 0 _ : (x >= 0) === True} -> Nat
-    -- integerToNat x = if x == 0
-    --                     then Z
-    --                     else S $ integerToNat (x - 1)
+    -- integerToNat x = case x of
+    --                       0 => Z
+    --                       _ => S $ integerToNat (x - 1)
     cexpIdentity var _ _ (COp _ (Add _) [a1, a2]) = case a2 of
         CPrimVal _ c1 => case a1 of
             CApp _ (CRef _ fn2) as =>

@@ -69,8 +69,8 @@ constFold (CLet fc x inlineOK y z) =
      in case val of
         CPrimVal _ _ => if inlineOK
             then constFold $ inlineLet val z
-            else CLet fc x inlineOK (constFold y) (constFold z)
-        _ => CLet fc x inlineOK (constFold y) (constFold z)
+            else CLet fc x inlineOK val (constFold z)
+        _ => CLet fc x inlineOK val (constFold z)
 constFold (CApp fc x xs) = CApp fc (constFold x) (constFold <$> xs)
 constFold (CCon fc x y tag xs) = CCon fc x y tag $ constFold <$> xs
 constFold e@(COp fc fn xs) = case the _ $ traverse toNF xs of
