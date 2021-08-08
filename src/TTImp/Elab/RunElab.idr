@@ -114,7 +114,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                                  !(nf defs env' lamsc) Nothing -- (map weaken exp)
              nf empty env (Bind bfc x (Lam fc' c qp qty) !(quote empty env' runsc))
        where
-         quotePi : PiInfo (NF vars) -> Core (PiInfo (Term vars))
+         quotePi : PiInfo (Closure vars) -> Core (PiInfo (Term vars))
          quotePi Explicit = pure Explicit
          quotePi Implicit = pure Implicit
          quotePi AutoImplicit = pure AutoImplicit

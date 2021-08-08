@@ -5,6 +5,7 @@ import Core.Env
 import Core.Metadata
 import Core.Normalise
 import Core.TT
+import Core.Value
 
 import TTImp.Unelab
 import TTImp.TTImp
@@ -86,5 +87,6 @@ makeLemma : {auto m : Ref MD Metadata} ->
             FC -> Name -> Nat -> ClosedTerm ->
             Core (RawImp, RawImp)
 makeLemma loc n nlocs ty
-    = do (args, ret) <- getArgs [] nlocs ty
+    = do defs <- get Ctxt
+         (args, ret) <- getArgs [] nlocs !(normalise defs [] ty)
          pure (mkType loc args ret, mkApp loc n args)

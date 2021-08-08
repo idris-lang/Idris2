@@ -606,7 +606,7 @@ checkTerminating loc n
 nameIn : {auto c : Ref Ctxt Defs} ->
          Defs -> List Name -> NF [] -> Core Bool
 nameIn defs tyns (NBind fc x b sc)
-    = if !(nameIn defs tyns (binderType b))
+    = if !(nameIn defs tyns !(evalClosure defs (binderType b)))
          then pure True
          else do let nm = Ref fc Bound (MN ("NAMEIN_" ++ show x) 0)
                  let arg = toClosure defaultOpts [] nm
@@ -667,7 +667,7 @@ posArg defs tyns nf@(NTCon loc tc _ _ args) =
 -- a tyn can not appear as part of ty
 posArg defs tyns nf@(NBind fc x (Pi _ _ e ty) sc)
   = do logNF "totality.positivity" 50 "Found a Pi-type" [] nf
-       if !(nameIn defs tyns ty)
+       if !(nameIn defs tyns !(evalClosure defs ty))
          then pure (NotTerminating NotStrictlyPositive)
          else do let nm = Ref fc Bound (MN ("POSCHECK_" ++ show x) 1)
                  let arg = toClosure defaultOpts [] nm
@@ -686,7 +686,7 @@ posArg defs tyn nf
 checkPosArgs : {auto c : Ref Ctxt Defs} ->
                Defs -> List Name -> NF [] -> Core Terminating
 checkPosArgs defs tyns (NBind fc x (Pi _ _ e ty) sc)
-    = case !(posArg defs tyns ty) of
+    = case !(posArg defs tyns !(evalClosure defs ty)) of
            IsTerminating =>
                do let nm = Ref fc Bound (MN ("POSCHECK_" ++ show x) 0)
                   let arg = toClosure defaultOpts [] nm

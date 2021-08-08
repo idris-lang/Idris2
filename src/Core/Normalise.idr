@@ -106,13 +106,13 @@ parameters (defs : Defs, topopts : EvalOpts)
         = eval env (snd thunk :: locs) scope stk
     eval env locs (Bind fc x b@(Let _ r val ty) scope) stk
         = if (holesOnly topopts || argHolesOnly topopts) && not (tcInline topopts)
-             then do b' <- traverse (\tm => eval env locs tm []) b
+             then do let b' = map (MkClosure topopts locs env) b
                      pure $ NBind fc x b'
                         (\defs', arg => evalWithOpts defs' topopts
                                                 env (arg :: locs) scope stk)
              else eval env (MkClosure topopts locs env val :: locs) scope stk
     eval env locs (Bind fc x b scope) stk
-        = do b' <- traverse (\tm => eval env locs tm []) b
+        = do let b' = map (MkClosure topopts locs env) b
              pure $ NBind fc x b'
                       (\defs', arg => evalWithOpts defs' topopts
                                               env (arg :: locs) scope stk)
@@ -154,18 +154,11 @@ parameters (defs : Defs, topopts : EvalOpts)
              applyToStack env cont arg' stk
     applyToStack env cont (NBind fc x b@(Let _ r val ty) sc) stk
         = if (holesOnly topopts || argHolesOnly topopts) && not (tcInline topopts)
-             then do b' <- if cont
-                              then traverse (\t => applyToStack env cont t []) b
-                              else pure b
-                     pure (NBind fc x b'
+             then pure (NBind fc x b
                               (\defs', arg => applyToStack env cont !(sc defs' arg) stk))
-             else do val' <- applyToStack env cont val []
-                     applyToStack env cont !(sc defs (MkNFClosure topopts env val')) stk
+             else applyToStack env cont !(sc defs val) stk
     applyToStack env cont (NBind fc x b sc) stk
-        = do b' <- if cont
-                      then traverse (\t => applyToStack env cont t []) b
-                      else pure b
-             pure (NBind fc x b'
+        = pure (NBind fc x b
                       (\defs', arg => applyToStack env cont !(sc defs' arg) stk))
     applyToStack env cont (NApp fc (NRef nt fn) args) stk
         = evalRef env False fc nt fn (args ++ stk)
@@ -358,7 +351,7 @@ parameters (defs : Defs, topopts : EvalOpts)
     tryAlt {more}
            env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN "->") tag [s,t] sc)
        = evalConAlt {more} env loc opts fc stk [s,t]
-                  [MkNFClosure opts env aty,
+                  [aty,
                    MkNFClosure opts env (NBind pfc x (Lam fc' r e aty) scty)]
                   sc
     -- Delay matching
@@ -655,42 +648,42 @@ mutual
   quotePi : {auto c : Ref Ctxt Defs} ->
             {bound, free : _} ->
             Ref QVar Int -> Defs -> Bounds bound ->
-            Env Term free -> PiInfo (NF free) ->
+            Env Term free -> PiInfo (Closure free) ->
             Core (PiInfo (Term (bound ++ free)))
   quotePi q defs bounds env Explicit = pure Explicit
   quotePi q defs bounds env Implicit = pure Implicit
   quotePi q defs bounds env AutoImplicit = pure AutoImplicit
   quotePi q defs bounds env (DefImplicit t)
-      = do t' <- quoteGenNF q defs bounds env t
+      = do t' <- quoteGenNF q defs bounds env !(evalClosure defs t)
            pure (DefImplicit t')
 
   quoteBinder : {auto c : Ref Ctxt Defs} ->
                 {bound, free : _} ->
                 Ref QVar Int -> Defs -> Bounds bound ->
-                Env Term free -> Binder (NF free) ->
+                Env Term free -> Binder (Closure free) ->
                 Core (Binder (Term (bound ++ free)))
   quoteBinder q defs bounds env (Lam fc r p ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
            pure (Lam fc r p' ty')
   quoteBinder q defs bounds env (Let fc r val ty)
-      = do val' <- quoteGenNF q defs bounds env val
-           ty' <- quoteGenNF q defs bounds env ty
+      = do val' <- quoteGenNF q defs bounds env !(evalClosure defs val)
+           ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            pure (Let fc r val' ty')
   quoteBinder q defs bounds env (Pi fc r p ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
            pure (Pi fc r p' ty')
   quoteBinder q defs bounds env (PVar fc r p ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
            pure (PVar fc r p' ty')
   quoteBinder q defs bounds env (PLet fc r val ty)
-      = do val' <- quoteGenNF q defs bounds env val
-           ty' <- quoteGenNF q defs bounds env ty
+      = do val' <- quoteGenNF q defs bounds env !(evalClosure defs val)
+           ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            pure (PLet fc r val' ty')
   quoteBinder q defs bounds env (PVTy fc r ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            pure (PVTy fc r ty')
 
   quoteGenNF : {auto c : Ref Ctxt Defs} ->
@@ -758,6 +751,44 @@ export
 Quote Closure where
   quoteGen q defs env c = quoteGen q defs env !(evalClosure defs c)
 
+quoteWithPiGen : {auto _ : Ref Ctxt Defs} ->
+                 {bound, vars : _} ->
+                 Ref QVar Int -> Defs -> Bounds bound ->
+                 Env Term vars -> NF vars -> Core (Term (bound ++ vars))
+quoteWithPiGen q defs bound env (NBind fc n (Pi bfc c p ty) sc)
+    = do var <- genName "qv"
+         empty <- clearDefs defs
+         sc' <- quoteWithPiGen q defs (Add n var bound) env
+                     !(sc defs (toClosure defaultOpts env (Ref fc Bound var)))
+         ty' <- quoteGenNF q empty bound env !(evalClosure empty ty)
+         p' <- quotePi q empty bound env p
+         pure (Bind fc n (Pi bfc c p' ty') sc')
+quoteWithPiGen q defs bound env tm
+    = do empty <- clearDefs defs
+         quoteGenNF q empty bound env tm
+
+-- Quote back to a term, but only to find out how many Pi bindings there
+-- are, don't reduce anything else
+export
+quoteWithPi : {auto c : Ref Ctxt Defs} ->
+              {vars : List Name} ->
+              Defs -> Env Term vars -> NF vars -> Core (Term vars)
+quoteWithPi defs env tm
+    = do q <- newRef QVar 0
+         quoteWithPiGen q defs None env tm
+
+-- Expand all the pi bindings at the start of a term, but otherwise don't
+-- reduce
+export
+normalisePis : {auto c : Ref Ctxt Defs} ->
+               {vars : List Name} ->
+               Defs -> Env Term vars -> Term vars -> Core (Term vars)
+normalisePis defs env tm
+    = do tmnf <- nf defs env tm
+         case tmnf of
+              NBind _ _ (Pi _ _ _ _) _ => quoteWithPi defs env tmnf
+              _ => pure tm
+
 -- Resume a previously blocked normalisation with a new environment
 export
 continueNF : {auto c : Ref Ctxt Defs} ->
@@ -775,6 +806,16 @@ glueBack defs env nf
              (do empty <- clearDefs defs
                  quote empty env nf)
              (const (pure nf))
+
+export
+glueClosure : {auto c : Ref Ctxt Defs} ->
+              {vars : _} ->
+              Defs -> Env Term vars -> Closure vars -> Glued vars
+glueClosure defs env clos
+    = MkGlue False
+             (do empty <- clearDefs defs
+                 quote empty env clos)
+             (const (evalClosure defs clos))
 
 export
 normalise : {auto c : Ref Ctxt Defs} ->
@@ -1168,7 +1209,7 @@ mutual
   convBinders : {auto c : Ref Ctxt Defs} ->
                 {vars : _} ->
                 Ref QVar Int -> Bool -> Defs -> Env Term vars ->
-                Binder (NF vars) -> Binder (NF vars) -> Core Bool
+                Binder (Closure vars) -> Binder (Closure vars) -> Core Bool
   convBinders q i defs env (Pi _ cx ix tx) (Pi _ cy iy ty)
       = if cx /= cy
            then pure False
@@ -1404,7 +1445,7 @@ replace' {vars} tmpi defs env lhs parg tm
 
     repSub : NF vars -> Core (Term vars)
     repSub (NBind fc x b scfn)
-        = do b' <- traverse repSub b
+        = do b' <- traverse (\c => repSub !(evalClosure defs c)) b
              let x' = MN "tmp" tmpi
              sc' <- replace' (tmpi + 1) defs env lhs parg
                              !(scfn defs (toClosure defaultOpts env (Ref fc Bound x')))

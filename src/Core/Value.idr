@@ -85,7 +85,7 @@ mutual
   -- we can wait until necessary to reduce constructor arguments
   public export
   data NF : List Name -> Type where
-       NBind    : FC -> (x : Name) -> Binder (NF vars) ->
+       NBind    : FC -> (x : Name) -> Binder (Closure vars) ->
                   (Defs -> Closure vars -> Core (NF vars)) -> NF vars
        -- Each closure is associated with the file context of the App node that
        -- had it as an argument. It's necessary so as to not lose file context
@@ -130,6 +130,9 @@ export
   show (NLocal _ idx p) = show (nameAt p) ++ "[" ++ show idx ++ "]"
   show (NRef _ n) = show n
   show (NMeta n _ args) = "?" ++ show n ++ "_[" ++ show (length args) ++ " closures]"
+
+Show (Closure free) where
+  show _ = "[closure]"
 
 export
 {free : _} -> Show (NF free) where
