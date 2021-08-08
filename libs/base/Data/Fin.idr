@@ -147,10 +147,17 @@ Ord (Fin n) where
   compare (FS x) (FS y) = compare x y
 
 public export
+natToFinLT : (x : Nat) -> {0 n : Nat} ->
+             {auto 0 prf : x `LT` n} ->
+             Fin n
+natToFinLT Z {prf = LTESucc _} = FZ
+natToFinLT (S k) {prf = LTESucc _} = FS $ natToFinLT k
+
+public export
 natToFin : Nat -> (n : Nat) -> Maybe (Fin n)
-natToFin Z     (S _) = Just FZ
-natToFin (S k) (S j) = FS <$> natToFin k j
-natToFin _ _ = Nothing
+natToFin x n = case isLT x n of
+    Yes prf => Just $ natToFinLT x
+    No contra => Nothing
 
 ||| Convert an `Integer` to a `Fin`, provided the integer is within bounds.
 ||| @n The upper bound of the Fin
@@ -160,20 +167,23 @@ integerToFin x Z = Nothing -- make sure 'n' is concrete, to save reduction!
 integerToFin x n = if x >= 0 then natToFin (fromInteger x) n else Nothing
 
 public export
-natToFinLT : (x : Nat) -> {0 n : Nat} ->
-             {auto 0 prf : x `LT` n} ->
-             Fin n
-natToFinLT Z {prf = LTESucc _} = FZ
-natToFinLT (S k) {prf = LTESucc _} = FS $ natToFinLT k
+maybeLTE : (x : Nat) -> (y : Nat) -> Maybe (x `LTE` y)
+maybeLTE Z _ = Just LTEZero
+maybeLTE (S x) (S y) = LTESucc <$> maybeLTE x y
+maybeLTE _ _ = Nothing
+
+public export
+maybeLT : (x : Nat) -> (y : Nat) -> Maybe (x `LT` y)
+maybeLT x y = maybeLTE (S x) y
 
 ||| Allow overloading of Integer literals for Fin.
 ||| @ x the Integer that the user typed
 ||| @ prf an automatically-constructed proof that `x` is in bounds
 public export
-fromInteger : (x : Integer) -> {0 n : Nat} ->
-              {auto 0 prf : fromInteger x `LT` n} ->
+fromInteger : (x : Integer) -> {n : Nat} ->
+              {auto 0 prf : IsJust (maybeLT (fromInteger x) n)} ->
               Fin n
-fromInteger x = natToFinLT $ fromInteger x
+fromInteger x = natToFinLT {prf = fromJust (maybeLT (fromInteger x) n)} $ fromInteger x
 
 -- %builtin IntegerToNatural Data.Fin.fromInteger
 
