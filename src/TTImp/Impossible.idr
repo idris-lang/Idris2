@@ -122,7 +122,7 @@ mutual
 
   buildApp : {auto c : Ref Ctxt Defs} ->
              {auto q : Ref QVar Int} ->
-             FC -> Name -> Maybe (NF []) ->
+             FC -> Name -> Maybe (Closure []) ->
              (expargs : List RawImp) ->
              (autoargs : List RawImp) ->
              (namedargs : List (Name, RawImp)) ->
@@ -134,7 +134,7 @@ mutual
                throw (InternalError "Can't deal with constants here yet")
 
            gdefs <- lookupNameBy id n (gamma defs)
-           [(n', i, gdef)] <- dropNoMatch mty gdefs
+           [(n', i, gdef)] <- dropNoMatch !(traverseOpt (evalClosure defs) mty) gdefs
               | [] => undefinedName fc n
               | ts => throw (AmbiguousName fc (map fst ts))
            tynf <- nf defs [] (type gdef)
@@ -152,7 +152,7 @@ mutual
 
   mkTerm : {auto c : Ref Ctxt Defs} ->
            {auto q : Ref QVar Int} ->
-           RawImp -> Maybe (NF []) ->
+           RawImp -> Maybe (Closure []) ->
            (expargs : List RawImp) ->
            (autoargs : List RawImp) ->
            (namedargs : List (Name, RawImp)) ->

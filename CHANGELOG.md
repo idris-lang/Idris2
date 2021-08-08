@@ -32,10 +32,17 @@
   and reverts to whole program compilation. Incremental compilation is currently
   supported only by the Chez Scheme back end.
   This is currently supported only on Unix-like platforms (not yet Windows)
+* The type checker now tries a lot harder to avoid reducing expressions where
+  it is not needed. This gives a huge performance improvement in programs
+  that potentially do a lot of compile time evaluation. However, sometimes
+  reducing expressions can help in totality and quantity checking, so this may
+  cause some programs not to type check which previously did - in these cases,
+  you will need to give the reduced expressions explicitly.
 
 ### Library Changes
 
 #### Prelude
+
 
 Changed
 
