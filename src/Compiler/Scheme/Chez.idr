@@ -92,7 +92,7 @@ schHeader chez libs whole
     "(import (chezscheme))\n" ++
     "(case (machine-type)\n" ++
     "  [(i3fb ti3fb a6fb ta6fb) #f]\n" ++
-    "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
+    "  [(i3le ti3le a6le ta6le tarm64le) (load-shared-object \"libc.so.6\")]\n" ++
     "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
     "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")]\n" ++
     "  [else (load-shared-object \"libc.so\")])\n\n" ++
