@@ -234,5 +234,3 @@ modules =
 depends = network
 
 sourcedir = "src"
-
-opts = "--inc chez"
