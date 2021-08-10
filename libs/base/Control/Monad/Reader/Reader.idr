@@ -70,7 +70,7 @@ implementation HasIO m => HasIO (ReaderT stateType m) where
   liftIO f = MkReaderT (\_ => liftIO f)
 
 public export
-implementation (Monad f, Alternative f) => Alternative (ReaderT stateType f) where
-  empty = lift empty
+implementation Alternative f => Alternative (ReaderT stateType f) where
+  empty = MkReaderT $ const empty
 
   (MkReaderT f) <|> (MkReaderT g) = MkReaderT (\st => f st <|> g st)
