@@ -119,7 +119,7 @@ Monad m => Applicative (RWST r w s m) where
 public export %inline
 (Monad m, Alternative m) => Alternative (RWST r w s m) where
   empty = MkRWST $ \_,_,_ => empty
-  MkRWST m <|> MkRWST n = MkRWST $ \r,s,w => m r s w <|> n r s w
+  MkRWST m <|> mn = MkRWST $ \r,s,w => m r s w <|> unRWST mn r s w
 
 public export %inline
 Monad m => Monad (RWST r w s m) where
