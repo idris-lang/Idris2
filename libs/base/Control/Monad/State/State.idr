@@ -95,7 +95,7 @@ implementation MonadTrans (StateT stateType) where
 public export
 implementation (Monad f, Alternative f) => Alternative (StateT st f) where
     empty = lift empty
-    ST f <|> ST g = ST $ \st => f st <|> g st
+    ST f <|> mg = ST $ \st => f st <|> runStateT' mg st
 
 public export
 implementation HasIO m => HasIO (StateT stateType m) where

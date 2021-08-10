@@ -93,7 +93,7 @@ Monad m => Applicative (WriterT w m) where
 public export %inline
 (Monad m, Alternative m) => Alternative (WriterT w m) where
   empty = MkWriterT $ \_ => empty
-  MkWriterT m <|> MkWriterT n = MkWriterT $ \w => m w <|> n w
+  MkWriterT m <|> mn = MkWriterT $ \w => m w <|> unWriterT mn w
 
 public export %inline
 Monad m => Monad (WriterT w m) where

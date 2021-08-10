@@ -71,4 +71,4 @@ public export
 implementation Alternative f => Alternative (ReaderT stateType f) where
   empty = MkReaderT $ const empty
 
-  MkReaderT f <|> MkReaderT g = MkReaderT $ \st => f st <|> g st
+  MkReaderT f <|> mg = MkReaderT $ \st => f st <|> runReaderT' mg st
