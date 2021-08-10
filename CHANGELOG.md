@@ -39,6 +39,10 @@
   cause some programs not to type check which previously did - in these cases,
   you will need to give the reduced expressions explicitly.
 
+### REPL/CLI/IDE mode changes
+
+* Added `--list-packages` CLI option.
+
 ### Library Changes
 
 #### Prelude

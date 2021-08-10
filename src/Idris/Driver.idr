@@ -111,10 +111,6 @@ showInfo : {auto c : Ref Ctxt Defs}
         -> List CLOpt
         -> Core Bool
 showInfo Nil = pure False
-showInfo (BlodwenPaths :: _)
-    = do defs <- get Ctxt
-         iputStrLn $ pretty (toString (dirs (options defs)))
-         pure True
 showInfo (_::rest) = showInfo rest
 
 tryYaffle : List CLOpt -> Core Bool
@@ -267,9 +263,6 @@ quitOpts (Help (Just HelpLogging) :: _)
          pure False
 quitOpts (Help (Just HelpPragma) :: _)
     = do putStrLn pragmaTopics
-         pure False
-quitOpts (ShowPrefix :: _)
-    = do putStrLn yprefix
          pure False
 quitOpts (_ :: opts) = quitOpts opts
 
