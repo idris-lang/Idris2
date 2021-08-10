@@ -69,37 +69,33 @@ mapState f = mapStateT $ \(Id p) => Id (f p)
 
 public export
 implementation Functor f => Functor (StateT stateType f) where
-    map f (ST g) = ST (\st => map (map f) (g st)) where
+    map f (ST g) = ST $ \st => map f <$> g st
 
 public export
 implementation Monad f => Applicative (StateT stateType f) where
-    pure x = ST (\st => pure (st, x))
+    pure x = ST $ \st => pure (st, x)
 
-    (ST f) <*> (ST a)
-        = ST (\st =>
-                do (r, g) <- f st
-                   (t, b) <- a r
-                   pure (t, g b))
+    ST f <*> ST a
+        = ST $ \st =>
+               do (r, g) <- f st
+                  (t, b) <- a r
+                  pure (t, g b)
 
 public export
 implementation Monad m => Monad (StateT stateType m) where
-    (ST f) >>= k
-        = ST (\st =>
-                do (st', v) <- f st
-                   let ST kv = k v
-                   kv st')
+    ST f >>= k
+        = ST $ \st =>
+               do (st', v) <- f st
+                  runStateT st' $ k v
 
 public export
 implementation MonadTrans (StateT stateType) where
-    lift x
-        = ST (\st =>
-                do r <- x
-                   pure (st, r))
+    lift x = ST $ \st => (st,) <$> x
 
 public export
 implementation (Monad f, Alternative f) => Alternative (StateT st f) where
     empty = lift empty
-    (ST f) <|> (ST g) = ST (\st => f st <|> g st)
+    ST f <|> ST g = ST $ \st => f st <|> g st
 
 public export
 implementation HasIO m => HasIO (StateT stateType m) where
