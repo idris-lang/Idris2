@@ -583,6 +583,10 @@ lambdaArgs : List Var -> Doc
 lambdaArgs [] = "()" <+> lambdaArrow
 lambdaArgs xs = hcat $ (<+> lambdaArrow) . var <$> xs
 
+insertBreak : (r : Effect) -> (Doc, Doc) -> (Doc, Doc)
+insertBreak Returns x = x
+insertBreak (ErrorWithout _) (pat, exp) = (pat, vcat [exp, "break;"])
+
 mutual
   -- converts an `Exp` to JS code
   exp : {auto c : Ref ESs ESSt} -> Exp -> Core Doc
@@ -610,28 +614,31 @@ mutual
   stmt (Declare v s) =
     (\d => vcat ["let" <++> var v <+> ";",d]) <$> stmt s
   stmt (Assign v x) =
-    (\d => vcat [hcat [var v,softEq,d,";"], "break;"]) <$> exp x
+    (\d => hcat [var v,softEq,d,";"]) <$> exp x
 
   stmt (ConSwitch r sc alts def) = do
-    as <- traverse alt alts
+    as <- traverse (map (insertBreak r) . alt) alts
     d  <- traverseOpt stmt def
     pure $  switch (minimal sc <+> ".h") as d
-    where alt : EConAlt r -> Core (Doc,Doc)
-          alt (MkEConAlt _ RECORD b)  = ("undefined",) <$> stmt b
-          alt (MkEConAlt _ NIL b)     = ("0",) <$> stmt b
-          alt (MkEConAlt _ CONS b)    = ("undefined",) <$> stmt b
-          alt (MkEConAlt _ NOTHING b) = ("0",) <$> stmt b
-          alt (MkEConAlt _ JUST b)    = ("undefined",) <$> stmt b
-          alt (MkEConAlt t _ b)       = (tag2es t,) <$> stmt b
+    where
+        alt : {r : _} -> EConAlt r -> Core (Doc,Doc)
+        alt (MkEConAlt _ RECORD b)  = ("undefined",) <$> stmt b
+        alt (MkEConAlt _ NIL b)     = ("0",) <$> stmt b
+        alt (MkEConAlt _ CONS b)    = ("undefined",) <$> stmt b
+        alt (MkEConAlt _ NOTHING b) = ("0",) <$> stmt b
+        alt (MkEConAlt _ JUST b)    = ("undefined",) <$> stmt b
+        alt (MkEConAlt t _ b)       = (tag2es t,) <$> stmt b
 
   stmt (ConstSwitch r sc alts def) = do
-    as <- traverse alt alts
+    as <- traverse (map (insertBreak r) . alt) alts
     d  <- traverseOpt stmt def
     ex <- exp sc
     pure $ switch ex as d
-    where alt : EConstAlt r -> Core (Doc,Doc)
-          alt (MkEConstAlt c b) = do d    <- stmt b
-                                     pure (Text $ jsConstant c, d)
+    where
+        alt : EConstAlt r -> Core (Doc,Doc)
+        alt (MkEConstAlt c b) = do
+            d <- stmt b
+            pure (Text $ jsConstant c, d)
 
   stmt (Error x)   = pure $ jsCrashExp (jsStringDoc x) <+> ";"
   stmt (Block ss s) = do

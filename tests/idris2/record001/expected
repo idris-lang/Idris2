@@ -1,5 +1,5 @@
 1/1: Building Record (Record.idr)
 Main> [1, 2, 3, 4, 5]
 Main> [1, 2, 3, 4, 5]
-Main> some_fn testPerson : Nat -> Nat
+Main> some_fn testPerson : b testPerson -> Nat
 Main> Bye for now!

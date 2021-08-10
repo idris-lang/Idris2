@@ -26,7 +26,6 @@ decorate fname decor rule = do
   act [((fname, (start res, end res)), decor, Nothing)]
   pure res.val
 
-
 decorationFromBounded : OriginDesc -> Decoration -> WithBounds a -> ASemanticDecoration
 decorationFromBounded fname decor bnds
    = ((fname, start bnds, end bnds), decor, Nothing)
@@ -552,6 +551,8 @@ mutual
                             pure (MkPair (mkLogLevel' topic (integerToNat lvl)) e)
            (lvl, e) <- pure b.val
            pure (PUnifyLog (boundToFC fname b) lvl e)
+    <|> withWarning "DEPRECATED: trailing lambda. Use a $ or parens"
+        (lam fname indents)
 
   multiplicity : OriginDesc -> EmptyRule RigCount
   multiplicity fname

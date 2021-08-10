@@ -335,7 +335,7 @@ mutual
                       opts <- getSession
                       when (debugElabCheck opts) $ do
                         aty <- getNF gaty
-                        when (not !(convert defs env aty ty)) $
+                        when (not !(convert defs env aty !(evalClosure defs ty))) $
                            do ty' <- quote defs env ty
                               aty' <- quote defs env aty
                               throw (CantConvert fc env ty' aty')

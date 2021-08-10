@@ -37,7 +37,7 @@ ideTokens =
       match (choice $ exact <$> symbols) Symbol
   <|> match digits (IntegerLit . cast)
   <|> compose (is '"')
-              (const $ StringBegin False)
+              (const $ StringBegin Single)
               (const ())
               (const stringTokens)
               (const $ is '"')
@@ -81,7 +81,7 @@ ideParser : {e : _} ->
             String -> Grammar SemanticDecorations Token e ty -> Either Error ty
 ideParser str p
     = do toks   <- mapFst (fromLexError (Virtual Interactive)) $ idelex str
-         (decor, (parsed, _)) <- mapFst (fromParsingErrors (Virtual Interactive)) $ parseWith p toks
+         (_, _, (parsed, _)) <- mapFst (fromParsingErrors (Virtual Interactive)) $ parseWith p toks
          Right parsed
 
 

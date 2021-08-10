@@ -1,4 +1,5 @@
 rm -rf build
 
-$1 --no-banner --no-color --console-width 0 Issue524.idr --check
-
+$1 --no-banner --no-color --console-width 0 Issue1771-1.idr --check || true
+$1 --no-banner --no-color --console-width 0 Issue1771-2.idr --check || true
+$1 --no-banner --no-color --console-width 0 Issue1771-3.idr --check || true

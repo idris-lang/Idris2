@@ -20,6 +20,7 @@ import TTImp.Utils
 
 import Data.List
 import Data.Maybe
+import Data.String
 import Libraries.Data.NameMap
 
 %default covering
@@ -183,7 +184,8 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- (esp. in the scrutinee!) are set to 0 in the case type
          let env = updateMults (linearUsed est) env
          defs <- get Ctxt
-         let vis = case !(lookupCtxtExact (Resolved (defining est)) (gamma defs)) of
+         parentDef <- lookupCtxtExact (Resolved (defining est)) (gamma defs)
+         let vis = case parentDef of
                         Just gdef =>
                              if visibility gdef == Public
                                 then Public
@@ -223,9 +225,13 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
                                 (newDef fc casen (if isErased rigc then erased else top)
                                       [] casefnty vis None))
 
-         -- don't worry about totality of the case block; it'll be handled
-         -- by the totality of the parent function
-         setFlag fc (Resolved cidx) (SetTotal PartialOK)
+         -- set the totality of the case block to be the same as that
+         -- of the parent function
+         let tot = fromMaybe PartialOK $ do findSetTotal (flags !parentDef)
+         log "elab.case" 5 $
+           unwords [ "Setting totality requirement for", show casen
+                   , "to", show tot]
+         setFlag fc (Resolved cidx) (SetTotal tot)
          let caseRef : Term vars = Ref fc Func (Resolved cidx)
 
          let applyEnv = applyToFull fc caseRef env

@@ -4,17 +4,15 @@ TARGET = libidris2_refc
 
 LIBTARGET = $(TARGET).a
 
-CFLAGS += -O2
-
-SRCS = $(wildcard *.c)
-ifeq ($(OS), windows)
-	LDFLAGS += -lws2_32
-ifeq ($(OLD_WIN), 1)
-	CFLAGS += -D_OLD_WIN
-endif
-endif
+SRCS := $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 DEPS = $(OBJS:.o=.d)
+
+CFLAGS += -O2
+
+ifeq ($(OLD_WIN), 1)
+	CPPFLAGS += -D_OLD_WIN
+endif
 
 
 all: build

@@ -1,7 +1,12 @@
 #pragma once
 
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdint.h>
+
+#ifdef _WIN32
+#include <io.h>
+#endif
 
 FILE* idris2_openFile(char* name, char* mode);
 void idris2_closeFile(FILE* f);
@@ -11,6 +16,7 @@ int idris2_fileError(FILE* f);
 // Turn errno into an integer understandable by System.File
 int idris2_fileErrno();
 
+int idris2_chmod(const char* path, mode_t mode);
 int idris2_removeFile(const char *filename);
 int idris2_fileSize(FILE* h);
 

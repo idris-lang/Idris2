@@ -977,7 +977,7 @@ parseRepl : String -> Either Error (Maybe REPLCmd)
 parseRepl inp
     = case runParser (Virtual Interactive) Nothing inp (parseEmptyCmd <|> parseCmd) of
         Left err => Left err
-        Right (decor, result) => Right result
+        Right (_, _, result) => Right result
 
 export
 interpret : {auto c : Ref Ctxt Defs} ->

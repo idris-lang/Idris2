@@ -2,6 +2,7 @@ module Compiler.Inline
 
 import Compiler.CaseOpts
 import Compiler.CompileExpr
+import Compiler.Identity
 
 import Core.CompileExpr
 import Core.Context
@@ -522,6 +523,7 @@ compileAndInlineAll
          cns <- filterM nonErased ns
 
          traverse_ compileDef cns
+         traverse_ setIdentity cns
          transform 3 cns -- number of rounds to run transformations.
                          -- This seems to be the point where not much useful
                          -- happens any more.

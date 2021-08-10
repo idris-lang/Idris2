@@ -505,13 +505,13 @@ mutual
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             Ref QVar Int -> Defs -> Bounds bound ->
-            Env Term free -> PiInfo (NF free) ->
+            Env Term free -> PiInfo (Closure free) ->
             Core (PiInfo (Term (bound ++ free)))
   quotePi q defs bounds env Explicit = pure Explicit
   quotePi q defs bounds env Implicit = pure Implicit
   quotePi q defs bounds env AutoImplicit = pure AutoImplicit
   quotePi q defs bounds env (DefImplicit t)
-      = do t' <- quoteGenNF q defs bounds env t
+      = do t' <- quoteGenNF q defs bounds env !(evalClosure defs t)
            pure (DefImplicit t')
 
   quoteBinder : {bound, free : _} ->
@@ -519,30 +519,30 @@ mutual
                 {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
                 Ref QVar Int -> Defs -> Bounds bound ->
-                Env Term free -> Binder (NF free) ->
+                Env Term free -> Binder (Closure free) ->
                 Core (Binder (Term (bound ++ free)))
   quoteBinder q defs bounds env (Lam fc r p ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
            pure (Lam fc r p' ty')
   quoteBinder q defs bounds env (Let fc r val ty)
-      = do val' <- quoteGenNF q defs bounds env val
-           ty' <- quoteGenNF q defs bounds env ty
+      = do val' <- quoteGenNF q defs bounds env !(evalClosure defs val)
+           ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            pure (Let fc r val' ty')
   quoteBinder q defs bounds env (Pi fc r p ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
            pure (Pi fc r p' ty')
   quoteBinder q defs bounds env (PVar fc r p ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
            pure (PVar fc r p' ty')
   quoteBinder q defs bounds env (PLet fc r val ty)
-      = do val' <- quoteGenNF q defs bounds env val
-           ty' <- quoteGenNF q defs bounds env ty
+      = do val' <- quoteGenNF q defs bounds env !(evalClosure defs val)
+           ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            pure (PLet fc r val' ty')
   quoteBinder q defs bounds env (PVTy fc r ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            pure (PVTy fc r ty')
 
   quoteGenNF : {bound, vars : _} ->

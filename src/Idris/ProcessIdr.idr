@@ -206,8 +206,12 @@ readHeader path origin
          -- Stop at the first :, that's definitely not part of the header, to
          -- save lexing the whole file unnecessarily
          setCurrentElabSource res -- for error printing purposes
-         let Right (decor, mod) = runParserTo (PhysicalIdrSrc origin) (isLitFile path) (is ':') res (progHdr (PhysicalIdrSrc origin))
+         let Right (ws, decor, mod)
+            = runParserTo (PhysicalIdrSrc origin)
+                          (isLitFile path) (is ':') res
+                          (progHdr (PhysicalIdrSrc origin))
             | Left err => throw err
+         traverse_ recordWarning ws
          pure mod
 
 %foreign "scheme:collect"
@@ -310,9 +314,14 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                    pure Nothing
            else -- needs rebuilding
              do iputStrLn msg
-                Right (decor, mod) <- logTime ("++ Parsing " ++ sourceFileName) $
-                            pure (runParser (PhysicalIdrSrc origin) (isLitFile sourceFileName) sourcecode (do p <- prog (PhysicalIdrSrc origin); eoi; pure p))
-                      | Left err => pure (Just [err])
+                Right (ws, decor, mod) <-
+                    logTime ("++ Parsing " ++ sourceFileName) $
+                      pure $ runParser (PhysicalIdrSrc origin)
+                                       (isLitFile sourceFileName)
+                                       sourcecode
+                                       (do p <- prog (PhysicalIdrSrc origin); eoi; pure p)
+                  | Left err => pure (Just [err])
+                traverse_ recordWarning ws
                 addSemanticDecorations decor
                 initHash
                 traverse_ addPublicHash (sort importMetas)

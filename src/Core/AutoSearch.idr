@@ -33,7 +33,7 @@ record ArgInfo (vars : List Name) where
   constructor MkArgInfo
   holeID : Int
   argRig : RigCount
-  plicit : PiInfo (NF vars)
+  plicit : PiInfo (Closure vars)
   metaApp : Term vars
   argType : Term vars
 

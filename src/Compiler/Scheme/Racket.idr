@@ -54,7 +54,7 @@ schHeader prof libs
     "(require srfi/19)\n" ++ -- for file handling and data
     "(require ffi/unsafe ffi/unsafe/define)\n" ++ -- for calling C
     (if prof then "(require profile)\n" else "") ++
-    "(require racket/flonum)" ++ -- for float-typed transcendental functions
+    "(require racket/flonum)\n" ++ -- for float-typed transcendental functions
     libs ++
     "(let ()\n"
 
@@ -149,7 +149,7 @@ cftySpec fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t +
                          " to foreign function"))
 
 loadlib : String -> String -> String
-loadlib "libc" _ = "(define-ffi-definer define-libc (ffi-lib #f))"
+loadlib "libc" _ = "(define-ffi-definer define-libc (ffi-lib #f))\n"
 loadlib libn ver
     = "(define-ffi-definer define-" ++ libn ++
       " (ffi-lib \"" ++ libn ++ "\" " ++ ver ++ "))\n"
@@ -342,7 +342,7 @@ startRacket racket appdir target = unlines
     , "  DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
     , "fi"
     , ""
-    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
+    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ ":$LD_LIBRARY_PATH\""
     , racket ++ "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
@@ -350,8 +350,8 @@ startRacketCmd : String -> String -> String -> String
 startRacketCmd racket appdir target = unlines
     [ "@echo off"
     , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%\\" ++ appdir ++ ";%PATH%"
-    , racket ++ "\"" ++ target ++ "\" %*"
+    , "set PATH=%APPDIR%" ++ appdir ++ ";%PATH%"
+    , racket ++ "\"%APPDIR%" ++ target ++ "\" %*"
     ]
 
 startRacketWinSh : String -> String -> String -> String
@@ -361,9 +361,9 @@ startRacketWinSh racket appdir target = unlines
     , ""
     , "set -e # exit on any error"
     , ""
-    , "DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
-    , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
-    , racket ++ "\"" ++ target ++ "\" \"$@\""
+    , "DIR=$(dirname \"$(readlink -f -- \"$0\" || cygpath -a -- \"$0\")\")"
+    , "PATH=\"$DIR/" ++ appdir ++ ":$PATH\""
+    , racket ++ "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
 compileToRKT : Ref Ctxt Defs ->

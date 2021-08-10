@@ -24,6 +24,8 @@ data ConInfo = DATACON -- normal data constructor
              | NOTHING -- nothing of an option shaped thing
              | JUST -- just of an option shaped thing
              | RECORD -- record constructor (no tag)
+             | ZERO
+             | SUCC
 
 export
 Show ConInfo where
@@ -35,6 +37,8 @@ Show ConInfo where
   show NOTHING = "[nothing]"
   show JUST    = "[just]"
   show RECORD  = "[record]"
+  show ZERO    = "[zero]"
+  show SUCC    = "[succ]"
 
 export
 Eq ConInfo where
@@ -46,6 +50,8 @@ Eq ConInfo where
   NOTHING == NOTHING = True
   JUST == JUST = True
   RECORD == RECORD = True
+  ZERO == ZERO = True
+  SUCC == SUCC = True
   _ == _ = False
 
 mutual
@@ -153,6 +159,7 @@ public export
 data CFType : Type where
      CFUnit : CFType
      CFInt : CFType
+     CFInteger : CFType
      CFInt8 : CFType
      CFInt16 : CFType
      CFInt32 : CFType
@@ -167,6 +174,7 @@ data CFType : Type where
      CFPtr : CFType
      CFGCPtr : CFType
      CFBuffer : CFType
+     CFForeignObj : CFType
      CFWorld : CFType
      CFFun : CFType -> CFType -> CFType
      CFIORes : CFType -> CFType
@@ -350,6 +358,7 @@ export
 Show CFType where
   show CFUnit = "Unit"
   show CFInt = "Int"
+  show CFInteger = "Integer"
   show CFInt8 = "Int_8"
   show CFInt16 = "Int_16"
   show CFInt32 = "Int_32"
@@ -364,6 +373,7 @@ Show CFType where
   show CFPtr = "Ptr"
   show CFGCPtr = "GCPtr"
   show CFBuffer = "Buffer"
+  show CFForeignObj = "ForeignObj"
   show CFWorld = "%World"
   show (CFFun s t) = show s ++ " -> " ++ show t
   show (CFIORes t) = "IORes " ++ show t

@@ -11,6 +11,16 @@
   `where` clauses
 * The syntax for Name reflection has changed, and now requires a single brace
   instead of a double brace, e.g. `` `{x} ``
+* Raw string literals allows to write string while customising the escape
+  sequence. Start a string with `#"` in order to change the escape characters
+  to `\#`, close the string with `"#`. Remains compatible with multiline
+  string literals.
+* Interpolated strings allows to insert expressions within string literals
+  and avoid writing concatenation explicitly. Escape a left curly brace `\{`
+  to start an interpolation slice and close it with a right curly brace `}` to
+  resume writing the string literal. The enclosed expression must be of type
+  `String`. Interpolated strings are compatible with raw strings (the slices
+  need to be escaped with `\#{` instead) and multiline strings.
 
 ### Compiler changes
 
@@ -22,10 +32,21 @@
   and reverts to whole program compilation. Incremental compilation is currently
   supported only by the Chez Scheme back end.
   This is currently supported only on Unix-like platforms (not yet Windows)
+* The type checker now tries a lot harder to avoid reducing expressions where
+  it is not needed. This gives a huge performance improvement in programs
+  that potentially do a lot of compile time evaluation. However, sometimes
+  reducing expressions can help in totality and quantity checking, so this may
+  cause some programs not to type check which previously did - in these cases,
+  you will need to give the reduced expressions explicitly.
+
+### REPL/CLI/IDE mode changes
+
+* Added `--list-packages` CLI option.
 
 ### Library Changes
 
 #### Prelude
+
 
 Changed
 

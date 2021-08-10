@@ -82,7 +82,7 @@ findFields defs con
              let imp = case p of
                             Explicit => Nothing
                             _ => Just x
-             pure $ (nameRoot x, imp, getRecordType [] ty) :: rest
+             pure $ (nameRoot x, imp, getRecordType [] !(evalClosure defs ty)) :: rest
     getExpNames _ = pure []
 
 genFieldName : {auto u : Ref UST UState} ->
@@ -221,7 +221,7 @@ checkUpdate rig elabinfo nest env fc upds rec expected
          let solvemode = case elabMode elabinfo of
                               InLHS c => inLHS
                               _ => inTerm
-         delayOnFailure fc rig env recty needType RecordUpdate $
+         delayOnFailure fc rig env (Just recty) needType RecordUpdate $
            \delayed =>
              do solveConstraints solvemode Normal
                 exp <- getTerm recty

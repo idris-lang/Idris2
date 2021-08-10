@@ -6,6 +6,8 @@ import Language.JSON.Parser
 
 import public Language.JSON.Data
 
+import public Text.Bounded
+
 %default total
 
 ||| Parse a JSON string.

@@ -43,11 +43,12 @@ wfInd step myz = accInd step myz (wellFounded {rel} myz)
 
 public export
 interface Sized a where
-  size : a -> Nat
+  constructor MkSized
+  total size : a -> Nat
 
 public export
 Smaller : Sized a => a -> a -> Type
-Smaller x y = size x `LT` size y
+Smaller = \x, y => size x `LT` size y
 
 public export
 SizeAccessible : Sized a => a -> Type
@@ -75,13 +76,17 @@ sizeRec : Sized a =>
 sizeRec step z = accRec step z (sizeAccessible z)
 
 export
-implementation Sized Nat where
+Sized Nat where
   size = id
 
 export
-implementation Sized (List a) where
+WellFounded Nat LT where
+  wellFounded = sizeAccessible
+
+export
+Sized (List a) where
   size = length
 
 export
-implementation (Sized a, Sized b) => Sized (Pair a b) where
+(Sized a, Sized b) => Sized (Pair a b) where
   size (x,y) = size x + size y

@@ -162,7 +162,7 @@ mutual
                  RigCount -> RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) ->
-                 Name -> NF vars -> (Defs -> Closure vars -> Core (NF vars)) ->
+                 Name -> Closure vars -> (Defs -> Closure vars -> Core (NF vars)) ->
                  (argdata : (Maybe Name, Nat)) ->
                  (expargs : List RawImp) ->
                  (autoargs : List RawImp) ->
@@ -192,7 +192,7 @@ mutual
                      RigCount -> RigCount -> ElabInfo ->
                      NestedNames vars -> Env Term vars ->
                      FC -> (fntm : Term vars) ->
-                     Name -> NF vars -> (Defs -> Closure vars -> Core (NF vars)) ->
+                     Name -> Closure vars -> (Defs -> Closure vars -> Core (NF vars)) ->
                      (argpos : (Maybe Name, Nat)) ->
                      (expargs : List RawImp) ->
                      (autoargs : List RawImp) ->
@@ -242,7 +242,7 @@ mutual
                     RigCount -> RigCount -> ElabInfo ->
                     NestedNames vars -> Env Term vars ->
                     FC -> (fntm : Term vars) ->
-                    Name -> NF vars -> NF vars ->
+                    Name -> Closure vars -> Closure vars ->
                     (Defs -> Closure vars -> Core (NF vars)) ->
                     (argpos : (Maybe Name, Nat)) ->
                     (expargs : List RawImp) ->
@@ -345,21 +345,22 @@ mutual
            Bind _ _ (Lam _ _ _ _)  _ => registerDot rig env fc NotConstructor tm ty
            _ => pure (tm, ty)
 
-  dotErased : {auto c : Ref Ctxt Defs} -> (argty : NF vars) ->
+  dotErased : {vars : _} ->
+              {auto c : Ref Ctxt Defs} -> (argty : Closure vars) ->
               Maybe Name -> Nat -> ElabMode -> RigCount -> RawImp -> Core RawImp
   dotErased argty mn argpos (InLHS lrig ) rig tm
       = if not (isErased lrig) && isErased rig
           then do
             -- if the argument type aty has a single constructor, there's no need
             -- to dot it
-            mconsCount <- countConstructors argty
+            defs <- get Ctxt
+            mconsCount <- countConstructors !(evalClosure defs argty)
             if mconsCount == Just 1 || mconsCount == Just 0
               then pure tm
               else
                 -- if argpos is an erased position of 'n', leave it, otherwise dot if
                 -- necessary
-                do defs <- get Ctxt
-                   Just gdef <- maybe (pure Nothing) (\n => lookupCtxtExact n (gamma defs)) mn
+                do Just gdef <- maybe (pure Nothing) (\n => lookupCtxtExact n (gamma defs)) mn
                         | Nothing => pure (dotTerm tm)
                    if argpos `elem` safeErase gdef
                       then pure tm
@@ -405,7 +406,7 @@ mutual
                  RigCount -> RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) -> Name ->
-                 (aty : NF vars) -> (sc : Defs -> Closure vars -> Core (NF vars)) ->
+                 (aty : Closure vars) -> (sc : Defs -> Closure vars -> Core (NF vars)) ->
                  (argdata : (Maybe Name, Nat)) ->
                  (arg : RawImp) ->
                  (expargs : List RawImp) ->
@@ -422,13 +423,35 @@ mutual
                    then pure True
                    else do sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
                            concrete defs env sc'
-          if (isHole aty && kr) || !(needsDelay (elabMode elabinfo) kr arg_in) then do
+          -- In theory we can check the arguments in any order. But it turns
+          -- out that it's sometimes better to do the rightmost arguments
+          -- first to give ambiguity resolution more to work with. So
+          -- we do that if the target type is unknown, or if we see that
+          -- the raw term is otherwise worth delaying.
+          if (isHole !(evalClosure defs aty) && kr) || !(needsDelay (elabMode elabinfo) kr arg_in)
+             then handle (checkRtoL kr arg)
+                  -- if the type isn't resolved, we might encounter an
+                  -- implicit that we can't use yet because we don't know
+                  -- about it. In that case, revert to LtoR
+                    (\err => if invalidArg err
+                                then checkLtoR kr arg
+                                else throw err)
+             else checkLtoR kr arg
+    where
+      invalidArg : Error -> Bool
+      invalidArg (InvalidArgs{}) = True
+      invalidArg _ = False
+
+      checkRtoL : Bool -> -- return type is known
+                  RawImp -> -- argument currently being checked
+                  Core (Term vars, Glued vars)
+      checkRtoL kr arg
+        = do defs <- get Ctxt
              nm <- genMVName x
              empty <- clearDefs defs
              metaty <- quote empty env aty
              (idx, metaval) <- argVar (getFC arg) argRig env nm metaty
              let fntm = App fc tm metaval
-             logNF "elab" 10 ("Delaying " ++ show nm ++ " " ++ show arg) env aty
              logTerm "elab" 10 "...as" metaval
              fnty <- sc defs (toClosure defaultOpts env metaval)
              (tm, gty) <- checkAppWith rig elabinfo nest env fc
@@ -469,11 +492,13 @@ mutual
              -- If there's a constraint, make a constant, but otherwise
              -- just return the term as expected
              tm <- if not ok
-                      then do res <- convert fc elabinfo env (gnf env metaval)
+                      then do res <- convert fc elabinfo env
+                                                 (gnf env metaval)
                                                  (gnf env argv)
                               let [] = constraints res
                                   | cs => do tmty <- getTerm gty
                                              newConstant fc rig env tm tmty cs
+                              ignore $ updateSolution env metaval argv
                               pure tm
                       else pure tm
              case elabMode elabinfo of
@@ -483,8 +508,12 @@ mutual
                   _ => pure ()
              removeHole idx
              pure (tm, gty)
-           else do
-             logNF "elab" 10 ("Argument type " ++ show x) env aty
+
+      checkLtoR : Bool -> -- return type is known
+                  RawImp -> -- argument currently being checked
+                  Core (Term vars, Glued vars)
+      checkLtoR kr arg
+        = do defs <- get Ctxt
              logNF "elab" 10 ("Full function type") env
                       (NBind fc x (Pi fc argRig Explicit aty) sc)
              logC "elab" 10
@@ -493,7 +522,7 @@ mutual
                                      expty
                          pure ("Overall expected type: " ++ show ety))
              res <- check argRig (record { topLevel = False } elabinfo)
-                                   nest env arg (Just (glueBack defs env aty))
+                                   nest env arg (Just (glueClosure defs env aty))
              (argv, argt) <-
                if not (onLHS (elabMode elabinfo))
                  then pure res

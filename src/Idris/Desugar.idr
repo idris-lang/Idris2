@@ -334,8 +334,18 @@ mutual
          pure $ Implicit fc False
   desugarB side ps (PMultiline fc indent lines)
       = addFromString fc !(expandString side ps fc !(trimMultiline fc indent lines))
+
+  -- We only add `fromString` if we are looking at a plain string literal.
+  -- Interpolated string literals don't have a `fromString` call since they
+  -- are always concatenated with other strings and therefore can never use
+  -- another `fromString` implementation that differs from `id`.
+  desugarB side ps (PString fc [])
+      = addFromString fc (IPrimVal fc (Str ""))
+  desugarB side ps (PString fc [StrLiteral fc' str])
+      = addFromString fc (IPrimVal fc' (Str str))
   desugarB side ps (PString fc strs)
-      = addFromString fc !(expandString side ps fc strs)
+      = expandString side ps fc strs
+
   desugarB side ps (PDoBlock fc ns block)
       = expandDo side ps fc ns block
   desugarB side ps (PBang fc term)
@@ -684,14 +694,15 @@ mutual
            pure $ MkImpTy fc nameFC n !(bindTypeNames fc (usingImpl syn)
                                                ps !(desugar AnyExpr ps ty))
 
+  -- Attempt to get the function name from a function pattern. For example,
+  --   - given the pattern 'f x y', getClauseFn would return 'f'.
+  --   - given the pattern 'x == y', getClausefn would return '=='.
   getClauseFn : RawImp -> Core Name
   getClauseFn (IVar _ n) = pure n
   getClauseFn (IApp _ f _) = getClauseFn f
   getClauseFn (IAutoApp _ f _) = getClauseFn f
   getClauseFn (INamedApp _ f _ _) = getClauseFn f
-  getClauseFn tm = throw $ case tm of
-    Implicit fc _ => GenericMsg fc "Invalid name for a declaration"
-    _ => InternalError (show tm ++ " is not a function application")
+  getClauseFn tm = throw $ GenericMsg (getFC tm) "Head term in pattern must be a function name"
 
   desugarLHS : {auto s : Ref Syn SyntaxInfo} ->
                {auto c : Ref Ctxt Defs} ->

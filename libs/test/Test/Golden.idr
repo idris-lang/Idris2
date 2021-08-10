@@ -380,6 +380,34 @@ record TestPool where
   codegen : Codegen
   testCases : List String
 
+||| Find all the test in the given directory.
+export
+testsInDir : (dirName : String) -> (testNameFilter : String -> Bool) -> (poolName : String) -> List Requirement -> Codegen -> IO TestPool
+testsInDir dirName testNameFilter poolName reqs cg = do
+  Right names <- listDir dirName
+    | Left e => do putStrLn ("failed to list " ++ dirName ++ ": " ++ show e)
+                   exitFailure
+  let names = [n | n <- names, testNameFilter n]
+  let testNames = [dirName ++ "/" ++ n | n <- names]
+  testNames <- filter testNames
+  when (length testNames == 0) $ do
+    putStrLn ("no tests found in " ++ dirName)
+    exitFailure
+  pure $ MkTestPool poolName reqs cg testNames
+    where
+      -- Directory without `run` file is not a test
+      isTest : (path : String) -> IO Bool
+      isTest path = exists (path ++ "/run")
+
+      filter : (testPaths : List String) -> IO (List String)
+      filter [] = pure []
+      filter (p :: ps) =
+          do rem <- filter ps
+             case !(isTest p) of
+               True  => pure $ p :: rem
+               False => pure rem
+
+
 ||| Only keep the tests that have been asked for
 export
 filterTests : Options -> List String -> List String
