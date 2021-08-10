@@ -159,6 +159,8 @@ pwarning : {auto c : Ref Ctxt Defs} ->
            {auto s : Ref Syn SyntaxInfo} ->
            {auto o : Ref ROpts REPLOpts} ->
            Warning -> Core (Doc IdrisAnn)
+pwarning (ParserWarning fc msg)
+    = pure $ pretty msg <+> line <+> !(ploc fc)
 pwarning (UnreachableClause fc env tm)
     = pure $ errorDesc (reflow "Unreachable clause:"
         <++> code !(pshow env tm))

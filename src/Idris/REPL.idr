@@ -925,7 +925,7 @@ process (ImportPackage package) = do
   let packageDirPath = parse packageDir
   tree <- coreLift $ explore packageDirPath
   fentries <- coreLift $ toPaths (toRelative tree)
-  errs <- for fentries \entry => do
+  errs <- for fentries $ \entry => do
     let entry' = dropExtension entry
     let sp = forget $ split (== dirSeparator) entry'
     let ns = concat $ intersperse "." sp
@@ -977,7 +977,7 @@ parseRepl : String -> Either Error (Maybe REPLCmd)
 parseRepl inp
     = case runParser (Virtual Interactive) Nothing inp (parseEmptyCmd <|> parseCmd) of
         Left err => Left err
-        Right (decor, result) => Right result
+        Right (_, _, result) => Right result
 
 export
 interpret : {auto c : Ref Ctxt Defs} ->

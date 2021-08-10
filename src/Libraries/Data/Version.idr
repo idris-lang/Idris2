@@ -114,5 +114,5 @@ export
 parseVersion : String -> Maybe Version
 parseVersion str =
   case parse versionParser (lexVersion str) of
-    Right (version, []) => Just version
+    Right (_, version, []) => Just version
     _ => Nothing

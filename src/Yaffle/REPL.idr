@@ -153,4 +153,4 @@ repl
          case runParser (Virtual Interactive) Nothing inp command of
               Left err => do coreLift_ (printLn err)
                              repl
-              Right (decor, cmd) => when !(processCatch cmd) repl
+              Right (_, _, cmd) => when !(processCatch cmd) repl

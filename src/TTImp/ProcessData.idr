@@ -49,7 +49,7 @@ checkRetType env nf chk = chk nf
 checkIsType : {auto c : Ref Ctxt Defs} ->
               FC -> Name -> Env Term vars -> NF vars -> Core ()
 checkIsType loc n env nf
-    = checkRetType env nf
+    = checkRetType env nf $
          \case
            NType _ => pure ()
            _ => throw $ BadTypeConType loc n
@@ -57,7 +57,7 @@ checkIsType loc n env nf
 checkFamily : {auto c : Ref Ctxt Defs} ->
               FC -> Name -> Name -> Env Term vars -> NF vars -> Core ()
 checkFamily loc cn tn env nf
-    = checkRetType env nf
+    = checkRetType env nf $
          \case
            NType _ => throw $ BadDataConType loc cn tn
            NTCon _ n' _ _ _ =>
@@ -235,7 +235,7 @@ findNewtype [con]
     = do defs <- get Ctxt
          Just arg <- getRelevantArg defs 0 Nothing True !(nf defs [] (type con))
               | Nothing => pure ()
-         updateDef (name con)
+         updateDef (name con) $
                \case
                  DCon t a _ => Just $ DCon t a $ Just arg
                  _ => Nothing
