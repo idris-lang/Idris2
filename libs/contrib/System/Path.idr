@@ -145,7 +145,7 @@ TokenKind PathTokenKind where
   tokValue (PTPunct _) _ = ()
 
 pathTokenMap : TokenMap PathToken
-pathTokenMap = toTokenMap $
+pathTokenMap = cast $
   [ (is '/', PTPunct '/')
   , (is '\\', PTPunct '\\')
   , (is ':', PTPunct ':')

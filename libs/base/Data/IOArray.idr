@@ -57,26 +57,26 @@ newArrayCopy newsize arr
                      copyFrom old new $ assert_smaller pos (pos - 1)
 
 export
-toList : HasIO io => IOArray elem -> io (List (Maybe elem))
-toList arr = iter 0 (max arr) []
-  where
-    iter : Int -> Int -> List (Maybe elem) -> io (List (Maybe elem))
-    iter pos end acc
-         = if pos >= end
-              then pure (reverse acc)
-              else do el <- readArray arr pos
-                      assert_total (iter (pos + 1) end (el :: acc))
+HasIO io => Cast (IOArray elem) (io (List (Maybe elem))) where
+  cast arr = iter 0 (max arr) []
+    where
+      iter : Int -> Int -> List (Maybe elem) -> io (List (Maybe elem))
+      iter pos end acc
+           = if pos >= end
+                then pure (reverse acc)
+                else do el <- readArray arr pos
+                        assert_total (iter (pos + 1) end (el :: acc))
 
 export
-fromList : HasIO io => List (Maybe elem) -> io (IOArray elem)
-fromList ns
-    = do arr <- newArray (cast (length ns))
-         addToArray 0 ns arr
-         pure arr
-  where
-    addToArray : Int -> List (Maybe elem) -> IOArray elem -> io ()
-    addToArray loc [] arr = pure ()
-    addToArray loc (Nothing :: ns) arr = addToArray (loc + 1) ns arr
-    addToArray loc (Just el :: ns) arr
-        = do primIO $ prim__arraySet (content arr) loc (Just el)
-             addToArray (loc + 1) ns arr
+HasIO io => Cast (List (Maybe elem)) (io (IOArray elem)) where
+  cast ns
+      = do arr <- newArray (cast (length ns))
+           addToArray 0 ns arr
+           pure arr
+    where
+      addToArray : Int -> List (Maybe elem) -> IOArray elem -> io ()
+      addToArray loc [] arr = pure ()
+      addToArray loc (Nothing :: ns) arr = addToArray (loc + 1) ns arr
+      addToArray loc (Just el :: ns) arr
+          = do primIO $ prim__arraySet (content arr) loc (Just el)
+               addToArray (loc + 1) ns arr

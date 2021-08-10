@@ -25,8 +25,8 @@ contains : k -> SortedSet k -> Bool
 contains k (SetWrapper m) = isJust (Data.SortedMap.lookup k m)
 
 export
-fromList : Ord k => List k -> SortedSet k
-fromList l = SetWrapper (Data.SortedMap.fromList (map (\i => (i, ())) l))
+Ord k => Cast (List k) (SortedSet k) where
+  cast l = SetWrapper (cast (map (\i => (i, ())) l))
 
 export
 toList : SortedSet k -> List k

@@ -81,15 +81,19 @@ partitionEithers l = (lefts l, rights l)
 
 ||| Remove a "useless" Either by collapsing the case distinction
 public export
-fromEither : Either a a -> a
-fromEither (Left l)  = l
-fromEither (Right r) = r
+Cast (Either a a) a where
+  cast (Left  l) = l
+  cast (Right r) = r
 
 ||| Right becomes left and left becomes right
 public export
+Cast (Either a b) (Either b a) where
+  cast (Left  x) = Right x
+  cast (Right x) = Left x
+
+public export
 mirror : Either a b -> Either b a
-mirror (Left  x) = Right x
-mirror (Right x) = Left x
+mirror = cast
 
 --------------------------------------------------------------------------------
 -- Bifunctor
@@ -112,9 +116,9 @@ maybeToEither def Nothing  = Left  def
 
 ||| Convert an Either to a Maybe from Right injection
 public export
-eitherToMaybe : Either e a -> Maybe a
-eitherToMaybe (Left _) = Nothing
-eitherToMaybe (Right x) = Just x
+Cast (Either _ a) (Maybe a) where
+  cast (Left  _) = Nothing
+  cast (Right x) = Just x
 
 -- Injectivity of constructors
 

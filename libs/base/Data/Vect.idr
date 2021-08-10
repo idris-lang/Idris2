@@ -732,9 +732,9 @@ isSuffixOf = isSuffixOfBy (==)
 ||| maybeToVect (Just 2)
 ||| ```
 public export
-maybeToVect : Maybe elem -> (p ** Vect p elem)
-maybeToVect Nothing  = (_ ** [])
-maybeToVect (Just j) = (_ ** [j])
+Cast (Maybe elem) (p ** Vect p elem) where
+  cast Nothing  = (_ ** [])
+  cast (Just j) = (_ ** [j])
 
 ||| Convert first element of Vect (if exists) into Maybe.
 |||
@@ -742,9 +742,9 @@ maybeToVect (Just j) = (_ ** [j])
 ||| vectToMaybe [2]
 ||| ```
 public export
-vectToMaybe : Vect len elem -> Maybe elem
-vectToMaybe []      = Nothing
-vectToMaybe (x::xs) = Just x
+Cast (Vect len elem) (Maybe elem) where
+  cast []     = Nothing
+  cast (x::_) = Just x
 
 --------------------------------------------------------------------------------
 -- Misc

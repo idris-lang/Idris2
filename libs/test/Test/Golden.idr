@@ -363,9 +363,9 @@ data Codegen
     Just Requirement
 
 export
-toList : Codegen -> List Requirement
-toList (Just r) = [r]
-toList _ = []
+Cast Codegen (List Requirement) where
+  cast (Just r) = [r]
+  cast _ = []
 
 ||| A test pool is characterised by
 |||  + a name
@@ -452,7 +452,7 @@ poolRunner opts pool
        let (_ :: _) = tests
              | [] => pure initSummary
        -- if so make sure the constraints are satisfied
-       cs <- for (toList (codegen pool) ++ constraints pool) $ \ req => do
+       cs <- for (cast (codegen pool) ++ constraints pool) $ \ req => do
           mfp <- checkRequirement req
           let msg = case mfp of
                       Nothing => "✗ " ++ show req ++ " not found"

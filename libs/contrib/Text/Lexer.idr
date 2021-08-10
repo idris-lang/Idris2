@@ -11,8 +11,8 @@ import public Text.Token
 %default total
 
 export
-toTokenMap : List (Lexer, k) -> TokenMap (Token k)
-toTokenMap = map $ \(l, kind) => (l, Tok kind)
+Cast (List (Lexer, k)) (TokenMap (Token k)) where
+  cast = map $ \(l, kind) => (l, Tok kind)
 
 ||| Recognise any character.
 ||| /./

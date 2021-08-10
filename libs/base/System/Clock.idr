@@ -169,13 +169,12 @@ prim__osClockNanosecond : OSClock -> PrimIO Bits64
 osClockNanosecond : OSClock -> IO Bits64
 osClockNanosecond clk = fromPrim (prim__osClockNanosecond clk)
 
-fromOSClock : {type : ClockType} -> OSClock -> IO (Clock type)
-fromOSClock clk =
-  pure $
-    MkClock
-      {type}
-      (cast !(osClockSecond clk))
-      (cast !(osClockNanosecond clk))
+{type : ClockType} -> Cast OSClock (IO (Clock type)) where
+  cast clk =
+    pure $
+      MkClock
+        (cast !(osClockSecond clk))
+        (cast !(osClockNanosecond clk))
 
 public export
 clockTimeReturnType : (typ : ClockType) -> Type
@@ -188,12 +187,12 @@ clockTimeReturnType typ with (isClockMandatory typ)
 public export
 clockTime : (typ : ClockType) -> IO (clockTimeReturnType typ)
 clockTime clockType with (isClockMandatory clockType)
-  clockTime clockType | Mandatory = fetchOSClock clockType >>= fromOSClock
+  clockTime clockType | Mandatory = fetchOSClock clockType >>= cast
   clockTime clockType | Optional = do
     clk <- fetchOSClock clockType
     valid <- map (== 1) $ osClockValid clk
     if valid
-      then map Just $ fromOSClock clk
+      then map Just $ cast clk
       else pure Nothing
 
 toNano : Clock type -> Integer

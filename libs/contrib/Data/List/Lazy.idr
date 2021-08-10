@@ -156,9 +156,9 @@ Zippable LazyList where
 --- Lists creation ---
 
 public export
-fromList : List a -> LazyList a
-fromList []      = []
-fromList (x::xs) = x :: fromList xs
+Cast (List a) (LazyList a) where
+  cast []      = []
+  cast (x::xs) = x :: cast xs
 
 covering
 public export
@@ -271,6 +271,6 @@ intercalate sep xss = choice $ intersperse sep xss
 --- Functions converting lazy lists to something ---
 
 public export
-toColist : LazyList a -> Colist a
-toColist [] = []
-toColist (x::xs) = x :: toColist xs
+Cast (LazyList a) (Colist a) where
+  cast [] = []
+  cast (x::xs) = x :: cast xs

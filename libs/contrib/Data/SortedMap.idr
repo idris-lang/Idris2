@@ -238,8 +238,8 @@ delete k (M (S n) t) =
     Right t' => (M _ t')
 
 export
-fromList : Ord k => List (k, v) -> SortedMap k v
-fromList l = foldl (flip (uncurry insert)) empty l
+Ord k => Cast (List (k, v)) (SortedMap k v) where
+  cast l = foldl (flip (uncurry insert)) empty l
 
 export
 toList : SortedMap k v -> List (k, v)

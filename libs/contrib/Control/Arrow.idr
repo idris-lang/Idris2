@@ -74,16 +74,11 @@ interface Arrow arr => ArrowChoice (0 arr : Type -> Type -> Type) where
   right : arr a b -> arr (Either c a) (Either c b)
   right f = arrow mirror >>> left f >>> arrow mirror
 
-
   (+++) : arr a b -> arr c d -> arr (Either a c) (Either b d)
   f +++ g = left f >>> right g
 
   (\|/) : arr a b -> arr c b -> arr (Either a c) b
-  f \|/ g = f +++ g >>> arrow fromEither
-    where
-    fromEither : Either b b -> b
-    fromEither (Left b) = b
-    fromEither (Right b) = b
+  f \|/ g = f +++ g >>> arrow cast
 
 public export
 implementation Monad m => ArrowChoice (Kleislimorphism m) where

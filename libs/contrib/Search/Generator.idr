@@ -14,6 +14,7 @@ import Data.Colist
 import Data.Colist1
 import Data.Fin
 import Data.List
+import Data.List1
 import Data.Stream
 import Data.Vect
 
@@ -34,7 +35,7 @@ interface Generator a where
 ||| ALL of the natural numbers
 public export
 Generator Nat where
-  generate = fromStream nats
+  generate = cast nats
 
 ||| ALL of the booleans
 public export
@@ -44,7 +45,7 @@ Generator Bool where
 ||| ALL of the Fins
 public export
 {n : Nat} -> Generator (Fin (S n)) where
-  generate = fromList1 (allFins n)
+  generate = cast $ allFins n
 
 -- Polymorphic generators
 

@@ -34,13 +34,13 @@ namespace FileName
 ||| Convert a filename anchored in `root` to a filepath by appending the name
 ||| to the root path.
 export
-toFilePath : {root : Path} -> FileName root -> Path
-toFilePath file = root /> fileName file
+{root : Path} -> Cast (FileName root) Path where
+  cast file = root /> fileName file
 
 export
 directoryExists : {root : Path} -> FileName root -> IO Bool
 directoryExists fp = do
-  Right dir <- openDir (show $ toFilePath fp)
+  Right dir <- openDir $ show $ the Path $ cast fp
     | Left _ => pure False
   closeDir dir
   pure True
@@ -157,7 +157,7 @@ findFile needle t = depthFirst check t (pure Nothing) where
   check : {root : Path} -> FileName root ->
           Lazy (IO (Maybe Path)) -> IO (Maybe Path)
   check fn next = if fileName fn == needle
-                    then pure (Just (toFilePath fn))
+                    then pure $ Just $ cast fn
                     else next
 
 ||| Display a tree by printing it procedurally. Note that because directory

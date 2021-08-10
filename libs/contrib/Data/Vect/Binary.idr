@@ -32,12 +32,12 @@ zero {bs} = case bs of
 
 public export
 lookup : BVect n bs a -> Path n bs -> a
-lookup (hd :: _) (Here p) = lookup (fromJust hd) p
+lookup (hd :: _) (Here p) = lookup (cast hd) p
 lookup (_ :: tl) (There p) = lookup tl p
 
 public export
 cons : {bs : _} -> Tree n a -> BVect n bs a -> BVect n (suc bs) a
 cons t [] = [Just t]
 cons {bs = b :: _} t (u :: us) = case b of
-  I => Nothing :: cons (Node t (fromJust u)) us
+  I => Nothing :: cons (Node t (cast u)) us
   O => Just t :: us

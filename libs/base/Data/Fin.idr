@@ -91,9 +91,13 @@ Cast (Fin n) Integer where
 
 ||| Weaken the bound on a Fin by 1
 public export
+Cast (Fin n) (Fin (S n)) where
+  cast FZ     = FZ
+  cast (FS k) = FS $ cast k
+
+public export
 weaken : Fin n -> Fin (S n)
-weaken FZ     = FZ
-weaken (FS k) = FS $ weaken k
+weaken = cast
 
 ||| Weaken the bound on a Fin by some amount
 public export

@@ -9,8 +9,8 @@ data IMaybe : Bool -> Type -> Type where
   Nothing : IMaybe False a
 
 public export
-fromJust : IMaybe True a -> a
-fromJust (Just a) = a
+Cast (IMaybe True a) a where
+  cast (Just a) = a
 
 public export
 Functor (IMaybe b) where

@@ -34,18 +34,18 @@ no : HDec a
 no = MkHDec False absurd
 
 public export
-fromDec : Dec a -> HDec a
-fromDec (Yes p) = yes p
-fromDec (No _) = no
+Cast (Dec a) (HDec a) where
+  cast (Yes p) = yes p
+  cast (No _) = no
 
 public export
-fromMaybe : Maybe a -> HDec a
-fromMaybe = maybe no yes
+Cast (Maybe a) (HDec a) where
+  cast = maybe no yes
 
 public export
-toMaybe : HDec a -> Maybe a
-toMaybe (MkHDec True p) = Just (p Oh)
-toMaybe (MkHDec False _) = Nothing
+Cast (HDec a) (Maybe a) where
+  cast (MkHDec True p) = Just (p Oh)
+  cast (MkHDec False _) = Nothing
 
 ||| A type constructor satisfying AnHdec is morally an HDec i.e. we can
 ||| turn values of this type constructor into half deciders
@@ -55,9 +55,9 @@ public export
 interface AnHDec (0 t : Type -> Type) where
   toHDec : t a -> HDec a
 
-public export AnHDec Dec where toHDec = fromDec
+public export AnHDec Dec where toHDec = cast
 public export AnHDec HDec where toHDec = id
-public export AnHDec Maybe where toHDec = fromMaybe
+public export AnHDec Maybe where toHDec = cast
 
 ------------------------------------------------------------------------
 -- Implementations

@@ -152,31 +152,31 @@ oneInvalid = Invalid . pure
 --- Conversions to and from `Either` ---
 
 public export %inline
-fromEither : Either e a -> Validated e a
-fromEither $ Right x = Valid x
-fromEither $ Left  e = Invalid e
+Cast (Either e a) (Validated e a) where
+  cast $ Right x = Valid x
+  cast $ Left  e = Invalid e
 
 public export %inline
-fromEitherL : Either e a -> ValidatedL e a
-fromEitherL $ Right x = Valid x
-fromEitherL $ Left  e = oneInvalid e
+Cast (Either e a) (ValidatedL e a) where
+  cast $ Right x = Valid x
+  cast $ Left  e = oneInvalid e
 
 public export %inline
-toEither : Validated e a -> Either e a
-toEither $ Valid   x = Right x
-toEither $ Invalid e = Left e
+Cast (Validated e a) (Either e a) where
+  cast $ Valid   x = Right x
+  cast $ Invalid e = Left e
 
 --- Conversions to and from `Maybe` ---
 
 public export %inline
-fromMaybe : Monoid e => Maybe a -> Validated e a
-fromMaybe $ Just x  = Valid x
-fromMaybe $ Nothing = empty
+Monoid e => Cast (Maybe a) (Validated e a) where
+  cast $ Just x  = Valid x
+  cast $ Nothing = empty
 
 public export %inline
-toMaybe : Validated e a -> Maybe a
-toMaybe $ Valid x   = Just x
-toMaybe $ Invalid _ = Nothing
+Cast (Validated e a) (Maybe a) where
+  cast $ Valid x   = Just x
+  cast $ Invalid _ = Nothing
 
 --- Property of being valid ---
 

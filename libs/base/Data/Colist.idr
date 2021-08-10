@@ -19,14 +19,14 @@ data Colist : (a : Type) -> Type where
 
 ||| Convert a list to a `Colist`.
 public export
-fromList : List a -> Colist a
-fromList []        = Nil
-fromList (x :: xs) = x :: fromList xs
+Cast (List a) (Colist a) where
+  cast []        = Nil
+  cast (x :: xs) = x :: cast xs
 
 ||| Convert a stream to a `Colist`.
 public export
-fromStream : Stream a -> Colist a
-fromStream (x :: xs) = x :: fromStream xs
+Cast (Stream a) (Colist a) where
+  cast (x :: xs) = x :: cast xs
 
 ||| Create a `Colist` of only a single element.
 public export
@@ -99,12 +99,12 @@ append (x :: xs) ys = x :: append xs ys
 ||| Append a `Colist` to a `List`.
 public export
 lappend : List a -> Colist a -> Colist a
-lappend xs = append (fromList xs)
+lappend xs = append (cast xs)
 
 ||| Append a `List` to a `Colist`.
 public export
 appendl : Colist a -> List a -> Colist a
-appendl xs = append xs . fromList
+appendl xs = append xs . cast
 
 ||| Try to extract the head and tail of a `Colist`.
 public export

@@ -19,7 +19,7 @@ numberLit
 
 private
 jsonTokenMap : TokenMap JSONToken
-jsonTokenMap = toTokenMap $
+jsonTokenMap = cast $
   [ (spaces, JTIgnore)
   , (is ',', JTPunct Comma)
   , (is ':', JTPunct Colon)

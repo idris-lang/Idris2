@@ -19,26 +19,26 @@ data Colist1 : (a : Type) -> Type where
 
 ||| Convert a `List1` to a `Colist1`.
 public export
-fromList1 : List1 a -> Colist1 a
-fromList1 (h ::: t) = h ::: fromList t
+Cast (List1 a) (Colist1 a) where
+  cast (h ::: t) = h ::: cast t
 
 ||| Convert a stream to a `Colist1`.
 public export
-fromStream : Stream a -> Colist1 a
-fromStream (x :: xs) = x ::: fromStream xs
+Cast (Stream a) (Colist1 a) where
+  cast (x :: xs) = x ::: cast xs
 
 ||| Try to convert a `Colist` to a `Colist1`. Returns `Nothing` if
 ||| the given `Colist` is empty.
 public export
-fromColist : Colist a -> Maybe (Colist1 a)
-fromColist Nil       = Nothing
-fromColist (x :: xs) = Just (x ::: xs)
+Cast (Colist a) (Maybe (Colist1 a)) where
+  cast Nil       = Nothing
+  cast (x :: xs) = Just (x ::: xs)
 
 ||| Try to convert a list to a `Colist1`. Returns `Nothing` if
 ||| the given list is empty.
 public export
-fromList : List a -> Maybe (Colist1 a)
-fromList = fromColist . fromList
+Cast (List a) (Maybe (Colist1 a)) where
+  cast xs = cast $ the (Colist a) $ cast xs
 
 ||| Create a `Colist1` of only a single element.
 public export
@@ -232,18 +232,18 @@ namespace Colist
     zag hds tls
 
   zag (x ::: []) zs [] = x ::
-    let Just zs = List.toList1' $ mapMaybe fromColist (forget zs)
+    let Just zs = cast @{toList1'} $ mapMaybe cast (forget zs)
           | Nothing => []
     in zig zs []
   zag (x ::: []) zs (l :: ls) = x ::
-    let zs = mapMaybe fromColist (forget zs)
+    let zs = mapMaybe cast (forget zs)
     in zig (l ::: zs) ls
   zag (x ::: (y :: xs)) zs ls = x :: zag (y ::: xs) zs ls
 
   public export
   cantor : List (Colist a) -> Colist a
   cantor xs =
-    let Just (l ::: ls) = List.toList1' $ mapMaybe fromColist xs
+    let Just (l ::: ls) = cast @{toList1'} $ mapMaybe cast xs
           | Nothing => []
     in zig (l ::: []) ls
 
@@ -256,11 +256,11 @@ zag : List1 a -> List1 (Colist a) -> Colist (Colist1 a) -> Colist1 a
 zig xs = zag (head <$> xs) (tail <$> xs)
 
 zag (x ::: []) zs [] = x :::
-  let Just zs = List.toList1' (mapMaybe fromColist (forget zs))
+  let Just zs = cast @{toList1'} (mapMaybe cast (forget zs))
         | Nothing => []
   in Colist.zig zs []
 zag (x ::: []) zs (l :: ls) =  x :::
-  let zs = mapMaybe fromColist (forget zs)
+  let zs = mapMaybe cast (forget zs)
   in forgetInf (zig (l ::: zs) ls)
 zag (x ::: (y :: xs)) zs ls = x ::: forgetInf (zag (y ::: xs) zs ls)
 

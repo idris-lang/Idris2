@@ -16,6 +16,6 @@ isI I = True
 isI O = False
 
 public export
-toNat : Digit -> Nat
-toNat O = 0
-toNat I = 1
+Cast Digit Nat where
+  cast O = 0
+  cast I = 1

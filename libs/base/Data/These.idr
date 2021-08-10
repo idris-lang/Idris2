@@ -6,20 +6,20 @@ public export
 data These a b = This a | That b | Both a b
 
 public export
-fromEither : Either a b -> These a b
-fromEither = either This That
+Cast (Either a b) (These a b) where
+  cast = either This That
 
 public export
-fromThis : These a b -> Maybe a
-fromThis (This a) = Just a
-fromThis (That _) = Nothing
-fromThis (Both a _) = Just a
+Cast (These a b) (Maybe a) where
+  cast (This a) = Just a
+  cast (That _) = Nothing
+  cast (Both a _) = Just a
 
 public export
-fromThat : These a b -> Maybe b
-fromThat (This _) = Nothing
-fromThat (That b) = Just b
-fromThat (Both _ b) = Just b
+Cast (These a b) (Maybe b) where
+  cast (This _) = Nothing
+  cast (That b) = Just b
+  cast (Both _ b) = Just b
 
 public export
 these : (a -> c) -> (b -> c) -> (a -> b -> c) -> These a b -> c

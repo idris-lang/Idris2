@@ -49,7 +49,7 @@ finToNatShift (S k) a = cong S (finToNatShift k a)
 export
 invFin : {n : Nat} -> Fin n -> Fin n
 invFin FZ = last
-invFin (FS k) = weaken (invFin k)
+invFin (FS k) = cast $ invFin k
 
 ||| The inverse of a weakened element is the successor of its inverse
 export

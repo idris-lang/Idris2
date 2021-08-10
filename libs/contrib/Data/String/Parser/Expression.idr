@@ -35,13 +35,13 @@ public export
 ReturnType : Type -> Type
 ReturnType a = (BinaryOperator a, BinaryOperator a, BinaryOperator a, UnaryOperator a, UnaryOperator a)
 
-toParserBin : BinaryOperator a -> Parser (a -> a -> a)
-toParserBin [] = fail "couldn't create binary parser"
-toParserBin (x :: xs) = x <|> toParserBin xs
+Cast (BinaryOperator a) (Parser (a -> a -> a)) where
+  cast [] = fail "couldn't create binary parser"
+  cast (x :: xs) = x <|> cast xs
 
-toParserUn : UnaryOperator a -> Parser (a -> a)
-toParserUn [] = fail "couldn't create unary parser"
-toParserUn (x :: xs) = x <|> toParserUn xs
+Cast (UnaryOperator a) (Parser (a -> a)) where
+  cast [] = fail "couldn't create unary parser"
+  cast (x :: xs) = x <|> cast xs
 
 ambiguous : (assoc : String) -> (op : Parser (a -> a -> a)) -> Parser a
 ambiguous assoc op = do ignore op
@@ -96,11 +96,11 @@ buildExpressionParser a operators simpleExpr =
     makeParser a term ops =
       let (rassoc,lassoc,nassoc
                ,prefixx,postfix) = foldr (splitOp a) ([],[],[],[],[]) ops
-          rassocOp = toParserBin rassoc
-          lassocOp = toParserBin lassoc
-          nassocOp = toParserBin nassoc
-          prefixxOp = toParserUn prefixx
-          postfixOp = toParserUn postfix
+          rassocOp = cast rassoc
+          lassocOp = cast lassoc
+          nassocOp = cast nassoc
+          prefixxOp = cast prefixx
+          postfixOp = cast postfix
 
           amRight = ambiguous "right" rassocOp
           amLeft = ambiguous "left" lassocOp

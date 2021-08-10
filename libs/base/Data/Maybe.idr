@@ -54,14 +54,14 @@ justInjective Refl = Refl
 ||| Convert a `Maybe a` value to an `a` value, using `neutral` in the case
 ||| that the `Maybe` value is `Nothing`.
 public export
-lowerMaybe : Monoid a => Maybe a -> a
-lowerMaybe Nothing = neutral
-lowerMaybe (Just x) = x
+Monoid a => Cast (Maybe a) a where
+  cast Nothing  = neutral
+  cast (Just x) = x
 
 ||| Returns `Nothing` when applied to `neutral`, and `Just` the value otherwise.
 export
-raiseToMaybe : (Monoid a, Eq a) => a -> Maybe a
-raiseToMaybe x = if x == neutral then Nothing else Just x
+(Monoid a, Eq a) => Cast a (Maybe a) where
+  cast x = if x == neutral then Nothing else Just x
 
 public export
 filter : (a -> Bool) -> Maybe a -> Maybe a

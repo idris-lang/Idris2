@@ -28,7 +28,7 @@ legalChar = non (quo <|> is '\\' <|> control)
 
 private
 jsonStringTokenMap : TokenMap JSONStringToken
-jsonStringTokenMap = toTokenMap $
+jsonStringTokenMap = cast $
   [ (quo, JSTQuote)
   , (unicodeEscape, JSTUnicodeEscape)
   , (simpleEscape, JSTSimpleEscape)

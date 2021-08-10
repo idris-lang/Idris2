@@ -157,13 +157,17 @@ succNotLTEzero : Not (LTE (S m) Z)
 succNotLTEzero LTEZero impossible
 
 export
+Cast (LTE (S m) (S n)) (LTE m n) where
+  cast (LTESucc x) = x
+
+export
 fromLteSucc : LTE (S m) (S n) -> LTE m n
-fromLteSucc (LTESucc x) = x
+fromLteSucc = cast
 
 export
 succNotLTEpred : {x : Nat} -> Not $ LTE (S x) x
 succNotLTEpred {x =   0} prf = succNotLTEzero prf
-succNotLTEpred {x = S _} prf = succNotLTEpred $ fromLteSucc prf
+succNotLTEpred {x = S k} prf = succNotLTEpred $ the (LTE (S k) k) $ cast prf
 
 public export
 isLTE : (m, n : Nat) -> Dec (LTE m n)
@@ -171,7 +175,7 @@ isLTE Z n = Yes LTEZero
 isLTE (S k) Z = No succNotLTEzero
 isLTE (S k) (S j)
     = case isLTE k j of
-           No contra => No (contra . fromLteSucc)
+           No contra => No (contra . cast)
            Yes prf => Yes (LTESucc prf)
 
 public export
@@ -213,7 +217,7 @@ LTEImpliesNotGT (LTESucc p) (LTESucc q) = LTEImpliesNotGT p q
 
 export
 notLTImpliesGTE : {a, b : _} -> Not (LT a b) -> GTE a b
-notLTImpliesGTE notLT = fromLteSucc $ notLTEImpliesGT notLT
+notLTImpliesGTE notLT = cast $ notLTEImpliesGT notLT
 
 export
 LTImpliesNotGTE : a `LT` b -> Not (a `GTE` b)
@@ -632,7 +636,7 @@ plusMinusLte  Z     m    _   = rewrite minusZeroRight m in
                                plusZeroRightNeutral m
 plusMinusLte (S _)  Z    lte = absurd lte
 plusMinusLte (S n) (S m) lte = rewrite sym $ plusSuccRightSucc (minus m n) n in
-                               cong S $ plusMinusLte n m (fromLteSucc lte)
+                               cong S $ plusMinusLte n m (cast lte)
 
 export
 minusMinusMinusPlus : (left, centre, right : Nat) ->

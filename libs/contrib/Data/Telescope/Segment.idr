@@ -42,8 +42,8 @@ tabulate (S n) tel = (sigma :: tabulate n (uncurry delta)) where
 ||| Any telescope is a segment in the empty telescope. It amounts to looking
 ||| at it left-to-right instead of right-to-left.
 public export
-fromTelescope : {k : Nat} -> Left.Telescope k -> Segment k []
-fromTelescope gamma = tabulate _ (const gamma)
+{k : Nat} -> Cast (Left.Telescope k) (Segment k []) where
+  cast gamma = tabulate _ (const gamma)
 
 ||| Conversely, a segment of size `n` in telescope `gamma` can be seen as a function
 ||| from environments for `gamma` to telescopes of size `n`.
@@ -52,10 +52,10 @@ untabulate : {n : Nat} -> Segment n gamma -> (Left.Environment gamma -> Left.Tel
 untabulate []            _   = []
 untabulate (ty :: delta) env = cons (ty env) (untabulate delta . (\ v => (env ** v)))
 
-||| Any segment in the empty telescope correspond to a telescope.
+||| Any segment in the empty telescope corresponds to a telescope.
 public export
-toTelescope : {k : Nat} -> Segment k [] -> Left.Telescope k
-toTelescope seg = untabulate seg ()
+{k : Nat} -> Cast (Segment k []) (Left.Telescope k) where
+  cast seg = untabulate seg ()
 
 %name Segment delta,delta',delta1,delta2
 
