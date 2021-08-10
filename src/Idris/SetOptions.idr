@@ -12,6 +12,7 @@ import Libraries.Data.List.Extra
 
 import Idris.CommandLine
 import Idris.Package.Types
+import Idris.Pretty
 import Idris.ProcessIdr
 import Idris.REPL
 import Idris.Syntax
@@ -91,17 +92,27 @@ candidateDirs dname pkg bounds =
           do guard (pkgName == pkg && inBounds ver bounds)
              pure ((dname </> dirName), ver)
 
+globalPackageDir : {auto c : Ref Ctxt Defs} -> Core String
+globalPackageDir
+    = do defs <- get Ctxt
+         pure $ prefix_dir (dirs (options defs)) </>
+                  "idris2-" ++ showVersion False version
+
+localPackageDir : {auto c : Ref Ctxt Defs} -> Core String
+localPackageDir
+    = do defs <- get Ctxt
+         Just srcdir <- coreLift currentDir
+             | Nothing => throw (InternalError "Can't get current directory")
+         let depends = depends_dir (dirs (options defs))
+         pure $ srcdir </> depends
+
 export
 addPkgDir : {auto c : Ref Ctxt Defs} ->
             String -> PkgVersionBounds -> Core ()
 addPkgDir p bounds
     = do defs <- get Ctxt
-         let globaldir = prefix_dir (dirs (options defs)) </>
-                               "idris2-" ++ showVersion False version
-         let depends = depends_dir (dirs (options defs))
-         Just srcdir <- coreLift currentDir
-             | Nothing => throw (InternalError "Can't get current directory")
-         let localdir = srcdir </> depends
+         globaldir <- globalPackageDir
+         localdir <- localPackageDir
 
          -- Get candidate directories from the global install location,
          -- and the local package directory
@@ -127,10 +138,49 @@ addPkgDir p bounds
                        else throw (CantFindPackage (p ++ " (" ++ show bounds ++ ")"))
               ((p, _) :: ps) => addExtraDir p
 
-dirOption : Dirs -> DirCommand -> Core ()
+visiblePackages : String -> IO (List PkgDir)
+visiblePackages dir = filter viable <$> getPackageDirs dir
+  where notHidden : PkgDir -> Bool
+        notHidden = not . isPrefixOf "." . pkgName
+
+        notDenylisted : PkgDir -> Bool
+        notDenylisted = not . flip elem ["include", "lib", "support", "refc"] . pkgName
+
+        viable : PkgDir -> Bool
+        viable p = notHidden p && notDenylisted p
+
+findPackages : {auto c : Ref Ctxt Defs} -> Core (List PkgDir)
+findPackages 
+    = do -- global packages
+         defs <- get Ctxt
+         globalPkgs <- coreLift $ visiblePackages !globalPackageDir
+         -- additional packages in directories specified
+         let pkgDirs = (options defs).dirs.package_dirs
+         additionalPkgs <- coreLift $ traverse (\d => visiblePackages d) pkgDirs
+         -- local packages
+         localPkgs <- coreLift $ visiblePackages !localPackageDir
+         pure $ globalPkgs ++ (join additionalPkgs) ++ localPkgs
+
+listPackages : {auto c : Ref Ctxt Defs} ->
+               {auto o : Ref ROpts REPLOpts} ->
+               Core ()
+listPackages
+    = do pkgs <- sortBy (compare `on` pkgName) <$> findPackages
+         traverse_ (iputStrLn . pkgDesc) pkgs
+  where
+    pkgDesc : PkgDir -> Doc IdrisAnn
+    pkgDesc (MkPkgDir _ pkgName version) = pretty pkgName <++> parens (pretty version)
+
+dirOption : {auto c : Ref Ctxt Defs} ->
+            {auto o : Ref ROpts REPLOpts} ->
+            Dirs -> DirCommand -> Core ()
 dirOption dirs LibDir
     = coreLift $ putStrLn
          (prefix_dir dirs </> "idris2-" ++ showVersion False version)
+dirOption dirs BlodwenPaths
+    = iputStrLn $ pretty (toString dirs)
+dirOption dirs Prefix
+    = coreLift $ putStrLn yprefix
 
 --------------------------------------------------------------------------------
 --          Bash Autocompletions
@@ -142,28 +192,6 @@ findIpkg =
        | Nothing => throw (InternalError "Can't get current directory")
      fs <- coreLift $ dirEntries srcdir
      pure $ filter (".ipkg" `isSuffixOf`) fs
-
-packageNames : String -> IO (List String)
-packageNames dir = filter notHidden . map pkgName <$> getPackageDirs dir
-  where notHidden : String -> Bool
-        notHidden = not . isPrefixOf "."
-
-
-findPackages : {auto c : Ref Ctxt Defs} -> Core (List String)
-findPackages =
-  do defs <- get Ctxt
-     let globaldir = prefix_dir (dirs (options defs)) </>
-                           "idris2-" ++ showVersion False version
-     let depends = depends_dir (dirs (options defs))
-     Just srcdir <- coreLift currentDir
-         | Nothing => throw (InternalError "Can't get current directory")
-     let localdir = srcdir </> depends
-
-     -- Get candidate directories from the global install location,
-     -- and the local package directory
-     locFiles <- coreLift $ packageNames localdir
-     globFiles <- coreLift $ packageNames globaldir
-     pure $ locFiles ++ globFiles
 
 -- keep only those Strings, of which `x` is a prefix
 prefixOnly : String -> List String -> List String
@@ -199,8 +227,8 @@ opts x "--cg"      = prefixOnlyIfNonEmpty x <$> codegens
 opts x "--codegen" = prefixOnlyIfNonEmpty x <$> codegens
 
 -- packages
-opts x "-p"        = prefixOnlyIfNonEmpty x <$> findPackages
-opts x "--package" = prefixOnlyIfNonEmpty x <$> findPackages
+opts x "-p"        = prefixOnlyIfNonEmpty x . (map pkgName) <$> findPackages
+opts x "--package" = prefixOnlyIfNonEmpty x . (map pkgName) <$> findPackages
 
 -- logging
 opts x "--log"     = pure $ prefixOnlyIfNonEmpty x logLevels
@@ -231,14 +259,14 @@ opts x _ = pure $ if (x `elem` optionFlags)
 completionScript : (fun : String) -> String
 completionScript fun =
   let fun' = "_" ++ fun
-   in unlines [ fun' ++ "()"
-              , "{"
-              , "  ED=$([ -z $2 ] && echo \"--\" || echo $2)"
-              , "  COMPREPLY=($(idris2 --bash-completion $ED $3))"
-              , "}"
-              , ""
-              , "complete -F " ++ fun' ++ " -o default idris2"
-              ]
+   in String.unlines [ fun' ++ "()"
+                     , "{"
+                     , "  ED=$([ -z $2 ] && echo \"--\" || echo $2)"
+                     , "  COMPREPLY=($(idris2 --bash-completion $ED $3))"
+                     , "}"
+                     , ""
+                     , "complete -F " ++ fun' ++ " -o default idris2"
+                     ]
 
 --------------------------------------------------------------------------------
 --          Processing Options
@@ -332,6 +360,9 @@ preOptions (Directory d :: opts)
     = do defs <- get Ctxt
          dirOption (dirs (options defs)) d
          pure False
+preOptions (ListPackages :: opts)
+    = do listPackages
+         pure False
 preOptions (Timing :: opts)
     = do setLogTimings True
          preOptions opts
@@ -394,7 +425,7 @@ preOptions (WholeProgram :: opts)
          preOptions opts
 preOptions (BashCompletion a b :: _)
     = do os <- opts a b
-         coreLift $ putStr $ unlines os
+         coreLift $ putStr $ String.unlines os
          pure False
 preOptions (BashCompletionScript fun :: _)
     = do coreLift $ putStrLn $ completionScript fun
