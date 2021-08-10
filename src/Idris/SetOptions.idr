@@ -150,7 +150,7 @@ visiblePackages dir = filter viable <$> getPackageDirs dir
         viable p = notHidden p && notDenylisted p
 
 findPackages : {auto c : Ref Ctxt Defs} -> Core (List PkgDir)
-findPackages 
+findPackages
     = do -- global packages
          defs <- get Ctxt
          globalPkgs <- coreLift $ visiblePackages !globalPackageDir
