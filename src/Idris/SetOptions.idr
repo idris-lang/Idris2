@@ -32,6 +32,8 @@ import System.Directory
 
 %default covering
 
+%hide Libraries.Data.String.Extra.unlines
+
 ||| Dissected information about a package directory
 record PkgDir where
   constructor MkPkgDir
@@ -259,14 +261,14 @@ opts x _ = pure $ if (x `elem` optionFlags)
 completionScript : (fun : String) -> String
 completionScript fun =
   let fun' = "_" ++ fun
-   in String.unlines [ fun' ++ "()"
-                     , "{"
-                     , "  ED=$([ -z $2 ] && echo \"--\" || echo $2)"
-                     , "  COMPREPLY=($(idris2 --bash-completion $ED $3))"
-                     , "}"
-                     , ""
-                     , "complete -F " ++ fun' ++ " -o default idris2"
-                     ]
+   in unlines [ fun' ++ "()"
+              , "{"
+              , "  ED=$([ -z $2 ] && echo \"--\" || echo $2)"
+              , "  COMPREPLY=($(idris2 --bash-completion $ED $3))"
+              , "}"
+              , ""
+              , "complete -F " ++ fun' ++ " -o default idris2"
+              ]
 
 --------------------------------------------------------------------------------
 --          Processing Options
@@ -425,7 +427,7 @@ preOptions (WholeProgram :: opts)
          preOptions opts
 preOptions (BashCompletion a b :: _)
     = do os <- opts a b
-         coreLift $ putStr $ String.unlines os
+         coreLift $ putStr $ unlines os
          pure False
 preOptions (BashCompletionScript fun :: _)
     = do coreLift $ putStrLn $ completionScript fun
