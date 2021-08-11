@@ -1,5 +1,6 @@
 module Idris.Pretty
 
+import Core.Metadata
 import Data.List
 import Data.Maybe
 import Data.String
@@ -21,7 +22,7 @@ import Idris.Syntax
 public export
 data IdrisSyntax
   = SynHole
-  | SynKeyword
+  | SynDecor Decoration
   | SynPragma
   | SynRef Name
 
@@ -44,7 +45,11 @@ colorAnn FileCtxt = color BrightBlue
 colorAnn Code = color Magenta
 colorAnn Meta = color Green
 colorAnn (Syntax SynHole) = color Green
-colorAnn (Syntax SynKeyword) = color Red
+colorAnn (Syntax (SynDecor Keyword)) = color BrightWhite
+colorAnn (Syntax (SynDecor Typ)) = color Blue
+colorAnn (Syntax (SynDecor Data)) = color Red
+colorAnn (Syntax (SynDecor Function)) = color Green
+colorAnn (Syntax (SynDecor Bound)) = italic
 colorAnn (Syntax SynPragma) = color BrightMagenta
 colorAnn (Syntax (SynRef _)) = []
 
@@ -66,7 +71,7 @@ fileCtxt = annotate FileCtxt
 
 export
 keyword : Doc IdrisSyntax -> Doc IdrisSyntax
-keyword = annotate SynKeyword
+keyword = annotate (SynDecor Keyword)
 
 export
 meta : Doc IdrisAnn -> Doc IdrisAnn
