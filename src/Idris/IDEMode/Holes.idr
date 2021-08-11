@@ -150,13 +150,14 @@ prettyHole : {vars : _} ->
 prettyHole defs env fn args ty
   = do hdata <- holeData defs env fn args ty
        case hdata.context of
-            [] => pure $ pretty hdata.name <++> colon <++> prettyTerm hdata.type
+            [] => pure $ pretty hdata.name <++> colon <++> !(prettyTerm hdata.type)
             _  => pure $ (indent 1 $ vsep $
-                            map (\premise => prettyRigHole premise.multiplicity
-                                    <+> prettyImpBracket premise.isImplicit (prettyName premise.name <++> colon <++> prettyTerm premise.type))
-                                    hdata.context) <+> hardline
+                            !(traverse (\premise => pure $ prettyRigHole premise.multiplicity
+                                    <+> prettyImpBracket premise.isImplicit
+                                        (prettyName premise.name <++> colon <++> !(prettyTerm premise.type)))
+                                    hdata.context)) <+> hardline
                     <+> (pretty $ L.replicate 30 '-') <+> hardline
-                    <+> pretty (nameRoot $ hdata.name) <++> colon <++> prettyTerm hdata.type
+                    <+> pretty (nameRoot $ hdata.name) <++> colon <++> !(prettyTerm hdata.type)
 
 sexpPremise : HolePremise -> SExp
 sexpPremise premise =

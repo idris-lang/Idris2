@@ -110,8 +110,8 @@ showInfo (n, idx, d)
                 coreLift_ $ putStrLn $
                         "Size change: " ++ showSep ", " scinfo
 
-prettyTerm : PTerm -> Doc IdrisAnn
-prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
+prettyTerm : {auto c : Ref Ctxt Defs} -> PTerm -> Core (Doc IdrisAnn)
+prettyTerm = map (reAnnotate Syntax) . Idris.Pretty.prettyTerm
 
 displayType : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -119,7 +119,8 @@ displayType : {auto c : Ref Ctxt Defs} ->
               Core (Doc IdrisAnn)
 displayType defs (n, i, gdef)
     = maybe (do tm <- resugar [] !(normaliseHoles defs [] (type gdef))
-                pure (pretty !(aliasName (fullname gdef)) <++> colon <++> prettyTerm tm))
+                pure (pretty !(aliasName (fullname gdef))
+                     <++> colon <++> !(prettyTerm tm)))
             (\num => reAnnotate Syntax <$> prettyHole defs [] n num (type gdef))
             (isHole gdef)
 
@@ -138,7 +139,7 @@ displayTerm : {auto c : Ref Ctxt Defs} ->
               Core (Doc IdrisAnn)
 displayTerm defs tm
     = do ptm <- resugar [] !(normaliseHoles defs [] tm)
-         pure (prettyTerm ptm)
+         prettyTerm ptm
 
 displayPatTerm : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
@@ -155,7 +156,7 @@ displayClause : {auto c : Ref Ctxt Defs} ->
 displayClause defs (vs ** (env, lhs, rhs))
     = do lhstm <- resugar env !(normaliseHoles defs env lhs)
          rhstm <- resugar env !(normaliseHoles defs env rhs)
-         pure (prettyTerm lhstm <++> equals <++> prettyTerm rhstm)
+         pure (!(prettyTerm lhstm) <++> equals <++> !(prettyTerm rhstm))
 
 displayPats : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -428,7 +429,7 @@ processEdit (ExprSearch upd line name hints)
                      let itm' : PTerm = if brack then addBracket replFC itm else itm
                      if upd
                         then updateFile (proofSearch name (show itm') (integerToNat (cast (line - 1))))
-                        else pure $ DisplayEdit (prettyTerm itm')
+                        else pure $ DisplayEdit !(prettyTerm itm')
               [(n, nidx, PMDef pi [] (STerm _ tm) _ _)] =>
                   case holeInfo pi of
                        NotHole => pure $ EditError "Not a searchable hole"
@@ -438,7 +439,7 @@ processEdit (ExprSearch upd line name hints)
                              let itm' : PTerm = if brack then addBracket replFC itm else itm
                              if upd
                                 then updateFile (proofSearch name (show itm') (integerToNat (cast (line - 1))))
-                                else pure $ DisplayEdit (prettyTerm itm')
+                                else pure $ DisplayEdit !(prettyTerm itm')
               [] => pure $ EditError $ "Unknown name" <++> pretty name
               _ => pure $ EditError "Not a searchable hole"
 processEdit ExprSearchNext
@@ -452,7 +453,7 @@ processEdit ExprSearchNext
          let tm' = dropLams locs restm
          itm <- pterm tm'
          let itm' : PTerm = if brack then addBracket replFC itm else itm
-         pure $ DisplayEdit (prettyTerm itm')
+         pure $ DisplayEdit !(prettyTerm itm')
 
 processEdit (GenerateDef upd line name rej)
     = do defs <- get Ctxt
@@ -1069,10 +1070,10 @@ mutual
          {auto m : Ref MD Metadata} ->
          {auto o : Ref ROpts REPLOpts} -> REPLResult -> Core ()
   displayResult (REPLError err) = printError err
-  displayResult (Evaluated x Nothing) = printResult $ prettyTerm x
-  displayResult (Evaluated x (Just y)) = printResult (prettyTerm x <++> colon <++> code (prettyTerm y))
+  displayResult (Evaluated x Nothing) = printResult !(prettyTerm x)
+  displayResult (Evaluated x (Just y)) = printResult (!(prettyTerm x) <++> colon <++> code !(prettyTerm y))
   displayResult (Printed xs) = printResult xs
-  displayResult (TermChecked x y) = printResult (prettyTerm x <++> colon <++> code (prettyTerm y))
+  displayResult (TermChecked x y) = printResult (!(prettyTerm x) <++> colon <++> code !(prettyTerm y))
   displayResult (FileLoaded x) = printResult (reflow "Loaded file" <++> pretty x)
   displayResult (ModuleLoaded x) = printResult (reflow "Imported module" <++> pretty x)
   displayResult (ErrorLoadingModule x err) = printResult (reflow "Error loading module" <++> pretty x <+> colon <++> !(perror err))
@@ -1082,7 +1083,7 @@ mutual
   displayResult (CurrentDirectory dir) = printResult (reflow "Current working directory is" <++> dquotes (pretty dir))
   displayResult CompilationFailed = printError (reflow "Compilation failed")
   displayResult (Compiled f) = printResult (pretty "File" <++> pretty f <++> pretty "written")
-  displayResult (ProofFound x) = printResult (prettyTerm x)
+  displayResult (ProofFound x) = printResult !(prettyTerm x)
   displayResult (Missed cases) = printResult $ vsep (handleMissing <$> cases)
   displayResult (CheckedTotal xs) = printResult (vsep (map (\(fn, tot) => pretty fn <++> pretty "is" <++> pretty tot) xs))
   displayResult (FoundHoles []) = printResult (reflow "No holes")

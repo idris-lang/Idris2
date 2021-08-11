@@ -57,7 +57,7 @@ pshow env tm
     = do defs <- get Ctxt
          ntm <- normaliseHoles defs env tm
          itm <- resugar env ntm
-         pure (pShowMN ntm env $ reAnnotate Syntax $ prettyTerm itm)
+         pure (pShowMN ntm env $ reAnnotate Syntax $ !(prettyTerm itm))
 
 pshowNoNorm : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
@@ -66,7 +66,7 @@ pshowNoNorm : {vars : _} ->
 pshowNoNorm env tm
     = do defs <- get Ctxt
          itm <- resugar env tm
-         pure (pShowMN tm env $ reAnnotate Syntax $ prettyTerm itm)
+         pure (pShowMN tm env $ reAnnotate Syntax $ !(prettyTerm itm))
 
 ploc : {auto o : Ref ROpts REPLOpts} ->
        FC -> Core (Doc IdrisAnn)

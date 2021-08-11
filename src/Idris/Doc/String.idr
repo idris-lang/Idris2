@@ -50,6 +50,7 @@ styleAnn (TCon _) = color BrightBlue
 styleAnn DCon = color BrightRed
 styleAnn (Fun _) = color BrightGreen
 styleAnn Header = underline
+styleAnn (Syntax syn) = colorAnn (Syntax syn)
 styleAnn _ = []
 
 export
@@ -108,8 +109,8 @@ getDocsForPrimitive constant = do
     let typeString = show constant ++ " : " ++ show !(resugar [] type)
     pure [typeString ++ "\n\tPrimitive"]
 
-prettyTerm : PTerm -> Doc IdrisDocAnn
-prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
+prettyTerm : {auto c : Ref Ctxt Defs} -> PTerm -> Core (Doc IdrisDocAnn)
+prettyTerm = map (reAnnotate Syntax) . Idris.Pretty.prettyTerm
 
 export
 getDocsForName : {auto o : Ref ROpts REPLOpts} ->
@@ -155,7 +156,7 @@ getDocsForName fc n
                   | Nothing => pure Empty
              syn <- get Syn
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
-             let conWithTypeDoc = annotate (Decl con) (hsep [dCon (prettyName con), colon, prettyTerm ty])
+             let conWithTypeDoc = annotate (Decl con) (hsep [dCon (prettyName con), colon, !(prettyTerm ty)])
              let [(n, str)] = lookupName con (docstrings syn)
                   | _ => pure conWithTypeDoc
              pure $ vcat
@@ -169,7 +170,7 @@ getDocsForName fc n
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure []
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
-             pure [annotate (Decl n) $ prettyTerm ty]
+             pure [annotate (Decl n) $ !(prettyTerm ty)]
 
     getMethDoc : Method -> Core (List (Doc IdrisDocAnn))
     getMethDoc meth
@@ -179,7 +180,7 @@ getDocsForName fc n
              ty <- pterm meth.type
              let nm = prettyName meth.name
              pure $ pure $ vcat [
-               annotate (Decl meth.name) (hsep [fun (meth.name) nm, colon, prettyTerm ty])
+               annotate (Decl meth.name) (hsep [fun (meth.name) nm, colon, !(prettyTerm ty)])
                , annotate DocStringBody $ vcat (
                  toList (indent 2 . pretty . show <$> meth.totalReq)
                  ++ reflowDoc str)
@@ -244,7 +245,7 @@ getDocsForName fc n
                 | Nothing => pure Empty
            ty <- resugar [] =<< normaliseHoles defs [] (type def)
            let prettyName = pretty (nameRoot nm)
-           let projDecl = annotate (Decl nm) $ hsep [ fun nm prettyName, colon, prettyTerm ty ]
+           let projDecl = annotate (Decl nm) $ hsep [ fun nm prettyName, colon, !(prettyTerm ty) ]
            case lookupName nm (docstrings syn) of
                 [(_, "")] => pure projDecl
                 [(_, str)] =>
@@ -307,7 +308,7 @@ getDocsForName fc n
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
              let cat = showCategory def
              nm <- aliasName n
-             let docDecl = annotate (Decl n) (hsep [cat (pretty (show nm)), colon, prettyTerm ty])
+             let docDecl = annotate (Decl n) (hsep [cat (pretty (show nm)), colon, !(prettyTerm ty)])
              let docText = reflowDoc str
              extra <- getExtra n def
              fixes <- getFixityDoc n
