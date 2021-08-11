@@ -17,22 +17,6 @@ import Data.String
 
 %default covering
 
-public export
-record KindedName where
-  constructor MkKindedName
-  nameKind : NameType
-  rawName  : Name
-
-Show KindedName where show = show . rawName
-
-public export
-IRawImp : Type
-IRawImp = RawImp' KindedName
-
-public export
-IImpClause : Type
-IImpClause = ImpClause' KindedName
-
 used : (idx : Nat) -> Term vars -> Bool
 used idx (Local _ _ var _) = idx == var
 used {vars} idx (Bind _ x b sc) = usedBinder b || used (1 + idx) sc

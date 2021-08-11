@@ -18,7 +18,7 @@ public export
 record HolePremise where
   constructor MkHolePremise
   name         : Name
-  type         : PTerm
+  type         : PTerm' KindedName
   multiplicity : RigCount
   isImplicit   : Bool
 
@@ -27,7 +27,7 @@ public export
 record HoleData where
   constructor MkHoleData
   name : Name
-  type : PTerm
+  type : PTerm' KindedName
   context : List HolePremise
 
 ||| If input is a hole, return number of locals in scope at binding
@@ -150,14 +150,13 @@ prettyHole : {vars : _} ->
 prettyHole defs env fn args ty
   = do hdata <- holeData defs env fn args ty
        case hdata.context of
-            [] => pure $ pretty hdata.name <++> colon <++> !(prettyTerm hdata.type)
+            [] => pure $ pretty hdata.name <++> colon <++> prettyTerm hdata.type
             _  => pure $ (indent 1 $ vsep $
-                            !(traverse (\premise => pure $ prettyRigHole premise.multiplicity
-                                    <+> prettyImpBracket premise.isImplicit
-                                        (prettyName premise.name <++> colon <++> !(prettyTerm premise.type)))
-                                    hdata.context)) <+> hardline
+                            map (\premise => prettyRigHole premise.multiplicity
+                                    <+> prettyImpBracket premise.isImplicit (prettyName premise.name <++> colon <++> prettyTerm premise.type))
+                                    hdata.context) <+> hardline
                     <+> (pretty $ L.replicate 30 '-') <+> hardline
-                    <+> pretty (nameRoot $ hdata.name) <++> colon <++> !(prettyTerm hdata.type)
+                    <+> pretty (nameRoot $ hdata.name) <++> colon <++> prettyTerm hdata.type
 
 sexpPremise : HolePremise -> SExp
 sexpPremise premise =

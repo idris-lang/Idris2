@@ -6,7 +6,6 @@ import Core.Env
 import Core.Options
 
 import Idris.Syntax
-import Idris.Pretty
 
 import TTImp.TTImp
 import TTImp.TTImp.Functor
@@ -89,6 +88,12 @@ showFullEnv : {auto c : Ref Ctxt Defs} ->
 showFullEnv
     = do pp <- getPPrint
          pure (showFullEnv pp)
+
+fullNamespace : {auto c : Ref Ctxt Defs} ->
+                Core Bool
+fullNamespace
+    = do pp <- getPPrint
+         pure (fullNamespace pp)
 
 unbracket : PTerm' nm -> PTerm' nm
 unbracket (PBracketed _ tm) = tm
@@ -473,6 +478,16 @@ cleanPTerm ptm
         if ns then pure ptm else mapPTermM cleanNode ptm
 
   where
+
+    cleanName : Name -> Core Name
+    cleanName nm = case nm of
+      MN n _     => pure (UN n)
+      PV n _     => pure n
+      DN n _     => pure (UN n)
+      NS _ n     => cleanName n
+      Nested _ n => cleanName n
+      RF n       => pure (RF n)
+      _          => UN <$> prettyName nm
 
     cleanKindedName : KindedName -> Core KindedName
     cleanKindedName (MkKindedName nt nm) = MkKindedName nt <$> cleanName nm

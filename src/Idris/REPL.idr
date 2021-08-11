@@ -48,6 +48,7 @@ import Idris.Version
 import public Idris.REPL.Common
 import Idris.REPL.FuzzySearch
 
+import TTImp.TTImp.Functor
 import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.Elab.Local
@@ -110,8 +111,8 @@ showInfo (n, idx, d)
                 coreLift_ $ putStrLn $
                         "Size change: " ++ showSep ", " scinfo
 
-prettyTerm : {auto c : Ref Ctxt Defs} -> PTerm -> Core (Doc IdrisAnn)
-prettyTerm = map (reAnnotate Syntax) . Idris.Pretty.prettyTerm
+prettyTerm : PTerm' KindedName -> Doc IdrisAnn
+prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
 
 displayType : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -119,8 +120,7 @@ displayType : {auto c : Ref Ctxt Defs} ->
               Core (Doc IdrisAnn)
 displayType defs (n, i, gdef)
     = maybe (do tm <- resugar [] !(normaliseHoles defs [] (type gdef))
-                pure (pretty !(aliasName (fullname gdef))
-                     <++> colon <++> !(prettyTerm tm)))
+                pure (pretty !(aliasName (fullname gdef)) <++> colon <++> prettyTerm tm))
             (\num => reAnnotate Syntax <$> prettyHole defs [] n num (type gdef))
             (isHole gdef)
 
@@ -139,7 +139,7 @@ displayTerm : {auto c : Ref Ctxt Defs} ->
               Core (Doc IdrisAnn)
 displayTerm defs tm
     = do ptm <- resugar [] !(normaliseHoles defs [] tm)
-         prettyTerm ptm
+         pure (prettyTerm ptm)
 
 displayPatTerm : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
@@ -156,7 +156,7 @@ displayClause : {auto c : Ref Ctxt Defs} ->
 displayClause defs (vs ** (env, lhs, rhs))
     = do lhstm <- resugar env !(normaliseHoles defs env lhs)
          rhstm <- resugar env !(normaliseHoles defs env rhs)
-         pure (!(prettyTerm lhstm) <++> equals <++> !(prettyTerm rhstm))
+         pure (prettyTerm lhstm <++> equals <++> prettyTerm rhstm)
 
 displayPats : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -216,12 +216,12 @@ printClause : {auto c : Ref Ctxt Defs} ->
               Maybe String -> Nat -> ImpClause ->
               Core String
 printClause l i (PatClause _ lhsraw rhsraw)
-    = do lhs <- pterm lhsraw
-         rhs <- pterm rhsraw
+    = do lhs <- pterm $ map (MkKindedName Bound) lhsraw -- hack
+         rhs <- pterm $ map (MkKindedName Bound) rhsraw -- hack
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " = " ++ show rhs))
 printClause l i (WithClause _ lhsraw wvraw prf flags csraw)
-    = do lhs <- pterm lhsraw
-         wval <- pterm wvraw
+    = do lhs <- pterm $ map (MkKindedName Bound) lhsraw -- hack
+         wval <- pterm $ map (MkKindedName Bound) wvraw -- hack
          cs <- traverse (printClause l (i + 2)) csraw
          pure (relit l ((pack (replicate i ' ')
                 ++ show lhs
@@ -230,7 +230,7 @@ printClause l i (WithClause _ lhsraw wvraw prf flags csraw)
                 ++ "\n"))
                ++ showSep "\n" cs)
 printClause l i (ImpossibleClause _ lhsraw)
-    = do lhs <- pterm lhsraw
+    = do lhs <- pterm $ map (MkKindedName Bound) lhsraw -- hack
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " impossible"))
 
 
@@ -341,7 +341,7 @@ nextGenDef reject
               Z => pure (Just (line, res))
               S k => nextGenDef k
 
-dropLams : Nat -> RawImp -> RawImp
+dropLams : Nat -> RawImp' nm -> RawImp' nm
 dropLams Z tm = tm
 dropLams (S k) (ILam _ _ _ _ _ sc) = dropLams k sc
 dropLams _ tm = tm
@@ -425,21 +425,21 @@ processEdit (ExprSearch upd line name hints)
                      Just (_, restm) <- nextProofSearch
                           | Nothing => pure $ EditError "No search results"
                      let tm' = dropLams locs restm
-                     itm <- pterm tm'
-                     let itm' : PTerm = if brack then addBracket replFC itm else itm
+                     itm <- pterm $ map (MkKindedName Bound) tm' -- hack
+                     let itm'  = ifThenElse brack (addBracket replFC itm) itm
                      if upd
                         then updateFile (proofSearch name (show itm') (integerToNat (cast (line - 1))))
-                        else pure $ DisplayEdit !(prettyTerm itm')
+                        else pure $ DisplayEdit (prettyTerm itm')
               [(n, nidx, PMDef pi [] (STerm _ tm) _ _)] =>
                   case holeInfo pi of
                        NotHole => pure $ EditError "Not a searchable hole"
                        SolvedHole locs =>
                           do let (_ ** (env, tm')) = dropLamsTm locs [] !(normaliseHoles defs [] tm)
                              itm <- resugar env tm'
-                             let itm' : PTerm = if brack then addBracket replFC itm else itm
+                             let itm'= ifThenElse brack (addBracket replFC itm) itm
                              if upd
                                 then updateFile (proofSearch name (show itm') (integerToNat (cast (line - 1))))
-                                else pure $ DisplayEdit !(prettyTerm itm')
+                                else pure $ DisplayEdit (prettyTerm itm')
               [] => pure $ EditError $ "Unknown name" <++> pretty name
               _ => pure $ EditError "Not a searchable hole"
 processEdit ExprSearchNext
@@ -451,9 +451,9 @@ processEdit ExprSearchNext
               | _ => pure $ EditError "Not a searchable hole"
          let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
          let tm' = dropLams locs restm
-         itm <- pterm tm'
-         let itm' : PTerm = if brack then addBracket replFC itm else itm
-         pure $ DisplayEdit !(prettyTerm itm')
+         itm <- pterm $ map (MkKindedName Bound) tm' --hack
+         let itm' = ifThenElse brack (addBracket replFC itm) itm
+         pure $ DisplayEdit (prettyTerm itm')
 
 processEdit (GenerateDef upd line name rej)
     = do defs <- get Ctxt
@@ -495,12 +495,12 @@ processEdit (MakeLemma upd line name)
          case !(lookupDefTyName name (gamma defs)) of
               [(n, nidx, Hole locs _, ty)] =>
                   do (lty, lapp) <- makeLemma replFC name locs ty
-                     pty <- pterm lty
-                     papp <- pterm lapp
+                     pty <- pterm $ map (MkKindedName Bound) lty -- hack
+                     papp <- pterm $ map (MkKindedName Bound) lapp -- hack
                      opts <- get ROpts
-                     let pappstr = show (the PTerm (if brack
-                                            then addBracket replFC papp
-                                            else papp))
+                     let pappstr = show (ifThenElse brack
+                                            (addBracket replFC papp)
+                                            papp)
                      Just srcLine <- getSourceLine line
                        | Nothing => pure (EditError "Source line not found")
                      let (markM,_) = isLitLine srcLine
@@ -1070,10 +1070,10 @@ mutual
          {auto m : Ref MD Metadata} ->
          {auto o : Ref ROpts REPLOpts} -> REPLResult -> Core ()
   displayResult (REPLError err) = printError err
-  displayResult (Evaluated x Nothing) = printResult !(prettyTerm x)
-  displayResult (Evaluated x (Just y)) = printResult (!(prettyTerm x) <++> colon <++> code !(prettyTerm y))
+  displayResult (Evaluated x Nothing) = printResult $ prettyTerm x
+  displayResult (Evaluated x (Just y)) = printResult (prettyTerm x <++> colon <++> code (prettyTerm y))
   displayResult (Printed xs) = printResult xs
-  displayResult (TermChecked x y) = printResult (!(prettyTerm x) <++> colon <++> code !(prettyTerm y))
+  displayResult (TermChecked x y) = printResult (prettyTerm x <++> colon <++> code (prettyTerm y))
   displayResult (FileLoaded x) = printResult (reflow "Loaded file" <++> pretty x)
   displayResult (ModuleLoaded x) = printResult (reflow "Imported module" <++> pretty x)
   displayResult (ErrorLoadingModule x err) = printResult (reflow "Error loading module" <++> pretty x <+> colon <++> !(perror err))
@@ -1083,7 +1083,7 @@ mutual
   displayResult (CurrentDirectory dir) = printResult (reflow "Current working directory is" <++> dquotes (pretty dir))
   displayResult CompilationFailed = printError (reflow "Compilation failed")
   displayResult (Compiled f) = printResult (pretty "File" <++> pretty f <++> pretty "written")
-  displayResult (ProofFound x) = printResult !(prettyTerm x)
+  displayResult (ProofFound x) = printResult (prettyTerm x)
   displayResult (Missed cases) = printResult $ vsep (handleMissing <$> cases)
   displayResult (CheckedTotal xs) = printResult (vsep (map (\(fn, tot) => pretty fn <++> pretty "is" <++> pretty tot) xs))
   displayResult (FoundHoles []) = printResult (reflow "No holes")
@@ -1101,7 +1101,8 @@ mutual
   displayResult (Edited (DisplayEdit Empty)) = pure ()
   displayResult (Edited (DisplayEdit xs)) = printResult xs
   displayResult (Edited (EditError x)) = printError x
-  displayResult (Edited (MadeLemma lit name pty pappstr)) = printResult $ pretty (relit lit (show name ++ " : " ++ show pty ++ "\n") ++ pappstr)
+  displayResult (Edited (MadeLemma lit name pty pappstr))
+    = printResult $ pretty (relit lit (show name ++ " : " ++ show pty ++ "\n") ++ pappstr)
   displayResult (Edited (MadeWith lit wapp)) = printResult $ pretty $ showSep "\n" (map (relit lit) wapp)
   displayResult (Edited (MadeCase lit cstr)) = printResult $ pretty $ showSep "\n" (map (relit lit) cstr)
   displayResult (OptionsSet opts) = printResult (vsep (pretty <$> opts))

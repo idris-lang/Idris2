@@ -52,6 +52,10 @@ mutual
   RawImp = RawImp' Name
 
   public export
+  IRawImp : Type
+  IRawImp = RawImp' KindedName
+
+  public export
   data RawImp' : Type -> Type where
        IVar : FC -> nm -> RawImp' nm
        IPi : FC -> RigCount -> PiInfo (RawImp' nm) -> Maybe Name ->
@@ -355,6 +359,10 @@ mutual
   public export
   ImpClause : Type
   ImpClause = ImpClause' Name
+
+  public export
+  IImpClause : Type
+  IImpClause = ImpClause' KindedName
 
   public export
   data ImpClause' : Type -> Type where
