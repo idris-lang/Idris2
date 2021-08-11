@@ -13,6 +13,7 @@ import Core.UnifyState
 
 import TTImp.Elab.Check
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Unelab
 
 import Libraries.Utils.Hex
@@ -150,12 +151,12 @@ getSpecPats fc pename fn stk fnty args sargs pats
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
              tm' <- unelabNoSugar [] tm
-             mkRHSargs sc' (IApp fc app tm') as ds
+             mkRHSargs sc' (IApp fc app (map rawName tm')) as ds
     mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
              tm' <- unelabNoSugar [] tm
-             mkRHSargs sc' (INamedApp fc app x tm') as ds
+             mkRHSargs sc' (INamedApp fc app x (map rawName tm')) as ds
     -- Type will depend on the value here (we assume a variadic function) but
     -- the argument names are still needed
     mkRHSargs ty app (a :: as) ((_, Dynamic) :: ds)
@@ -182,17 +183,17 @@ getSpecPats fc pename fn stk fnty args sargs pats
                 Core ImpClause
     unelabPat pename (_ ** (env, lhs, rhs))
         = do lhsapp <- unelabNoSugar env lhs
-             let lhs' = dropArgs pename lhsapp
+             let lhs' = dropArgs pename (map rawName lhsapp)
              defs <- get Ctxt
              rhsnf <- normaliseArgHoles defs env rhs
              rhs' <- unelabNoSugar env rhsnf
-             pure (PatClause fc lhs' rhs')
+             pure (PatClause fc lhs' (map rawName rhs'))
 
     unelabLHS : Name -> (vs ** (Env Term vs, Term vs, Term vs)) ->
                 Core RawImp
     unelabLHS pename (_ ** (env, lhs, rhs))
         = do lhsapp <- unelabNoSugar env lhs
-             pure $ dropArgs pename lhsapp
+             pure $ dropArgs pename (map rawName lhsapp)
 
 -- Get the reducible names in a function to be partially evaluated. In practice,
 -- that's all the functions it refers to
@@ -308,7 +309,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
              defs <- get Ctxt
              rhsnf <- normaliseArgHoles defs env rhs
              rhs' <- unelabNoSugar env rhsnf
-             pure (PatClause fc lhs' rhs')
+             pure (PatClause fc (map rawName lhs') (map rawName rhs'))
 
     showPat : ImpClause -> String
     showPat (PatClause _ lhs rhs) = show lhs ++ " = " ++ show rhs

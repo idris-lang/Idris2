@@ -13,6 +13,7 @@ import TTImp.BindImplicits
 import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
@@ -143,7 +144,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                                 (names nest)
                    nestDrop <- traverse (\ (n, ns) => pure (!(toFullNames n), ns)) nestDrop
                    ty <- unelabNest nestDrop tyenv ty_chk
-                   let ty' = substNames vars upds ty
+                   let ty' = substNames vars upds $ map rawName ty
                    log "declare.record.field" 5 $ "Field type: " ++ show ty'
                    let rname = MN "rec" 0
 

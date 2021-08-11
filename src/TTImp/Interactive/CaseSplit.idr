@@ -16,6 +16,7 @@ import TTImp.Elab.Check
 import TTImp.ProcessDef
 import TTImp.ProcessDecls
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
@@ -354,7 +355,7 @@ mkCase {c} {u} fn orig lhs_raw
                setAllPublic False
                put Ctxt defs -- reset the context, we don't want any updates
                put UST ust
-               lhs' <- unelabNoSugar [] lhs
+               lhs' <- map (map rawName) $ unelabNoSugar [] lhs
 
                log "interaction.casesplit" 3 $ "Original LHS: " ++ show orig
                log "interaction.casesplit" 3 $ "New LHS: " ++ show lhs'
@@ -401,7 +402,7 @@ getSplitsLHS fc envlen lhs_in n
          OK (fn, tyn, cons) <- findCons n lhs
             | SplitFail err => pure (SplitFail err)
 
-         rawlhs <- unelabNoSugar [] lhs
+         rawlhs <- map (map rawName) $ unelabNoSugar [] lhs
          trycases <- traverse (\c => newLHS fc envlen usedns n c rawlhs) cons
 
          let Just idx = getNameID fn (gamma defs)

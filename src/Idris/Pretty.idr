@@ -203,7 +203,7 @@ mutual
 
   export
   prettyTerm : {auto c : Ref Ctxt Defs} ->
-               PTerm -> Core (Doc IdrisSyntax)
+               PTerm' KindedName -> Core (Doc IdrisSyntax)
   prettyTerm = go Open
     where
       startPrec : Prec
@@ -217,8 +217,8 @@ mutual
         then annotate (SynRef op) $ pretty op
         else Chara '`' <+> annotate (SynRef op) (pretty op) <+> Chara '`'
 
-      go : Prec -> PTerm -> Core (Doc IdrisSyntax)
-      go d (PRef _ n@(NS _ _))
+      go : Prec -> PTerm' KindedName -> Core (Doc IdrisSyntax)
+      go d (PRef _ (MkKindedName nt n)
         = do defs <- get Ctxt
              ns <- fullNamespace
              n' <- ifThenElse ns (pure n) (cleanName n)
@@ -231,8 +231,6 @@ mutual
              let Just decor = defDecoration def
                | Nothing => pure dflt
              pure $ annotate (SynDecor decor) dflt
-      go d (PRef _ n) =
-        pure $ annotate (SynDecor Bound) $ annotate (SynRef n) $ pretty n
       go d (PPi _ rig Explicit Nothing arg ret) = do
         parg <- go startPrec arg
         pret <- go startPrec ret

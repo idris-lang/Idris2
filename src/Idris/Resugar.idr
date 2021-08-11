@@ -9,6 +9,7 @@ import Idris.Syntax
 import Idris.Pretty
 
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
@@ -25,25 +26,26 @@ import Libraries.Data.StringMap
 -- type check (in fact it probably won't due to tidying up names for
 -- readability).
 
-unbracketApp : PTerm -> PTerm
+unbracketApp : PTerm' nm -> PTerm' nm
 unbracketApp (PBracketed _ tm@(PApp _ _ _)) = tm
 unbracketApp tm = tm
 
 -- TODO: Deal with precedences
 mkOp : {auto s : Ref Syn SyntaxInfo} ->
-       PTerm -> Core PTerm
-mkOp tm@(PApp fc (PApp _ (PRef opFC n) x) y)
+       PTerm' KindedName -> Core (PTerm' KindedName)
+mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
     = do syn <- get Syn
+         let n = rawName kn
          case StringMap.lookup (nameRoot n) (infixes syn) of
               Nothing => pure tm
               Just _ => pure (POp fc opFC n (unbracketApp x) (unbracketApp y))
 mkOp tm = pure tm
 
 export
-addBracket : FC -> PTerm -> PTerm
+addBracket : FC -> PTerm' nm -> PTerm' nm
 addBracket fc tm = if needed tm then PBracketed fc tm else tm
   where
-    needed : PTerm -> Bool
+    needed : PTerm' nm -> Bool
     needed (PBracketed _ _) = False
     needed (PRef _ _) = False
     needed (PPair _ _ _) = False
@@ -56,7 +58,8 @@ addBracket fc tm = if needed tm then PBracketed fc tm else tm
     needed tm = True
 
 bracket : {auto s : Ref Syn SyntaxInfo} ->
-          (outer : Nat) -> (inner : Nat) -> PTerm -> Core PTerm
+          (outer : Nat) -> (inner : Nat) ->
+          PTerm' KindedName -> Core (PTerm' KindedName)
 bracket outer inner tm
     = do tm' <- mkOp tm
          if outer > inner
@@ -87,18 +90,18 @@ showFullEnv
     = do pp <- getPPrint
          pure (showFullEnv pp)
 
-unbracket : PTerm -> PTerm
+unbracket : PTerm' nm -> PTerm' nm
 unbracket (PBracketed _ tm) = tm
 unbracket tm = tm
 
 ||| Attempt to extract a constant natural number
-extractNat : Nat -> PTerm -> Maybe Nat
+extractNat : Nat -> PTerm' KindedName -> Maybe Nat
 extractNat acc tm = case tm of
-  PRef _ (NS ns (UN n)) =>
+  PRef _ (MkKindedName _ (NS ns (UN n))) =>
     do guard (n == "Z")
        guard (ns == typesNS || ns == preludeNS)
        pure acc
-  PApp _ (PRef _ (NS ns (UN n))) k => do
+  PApp _ (PRef _ (MkKindedName _ (NS ns (UN n)))) k => do
     do guard (n == "S")
        guard (ns == typesNS || ns == preludeNS)
        extractNat (1 + acc) k
@@ -110,8 +113,8 @@ mutual
 
   ||| Put the special names (Nil, ::, Pair, Z, S, etc) back as syntax
   ||| Returns `Nothing` in case there was nothing to resugar.
-  sugarAppM : PTerm -> Maybe PTerm
-  sugarAppM (PApp fc (PApp _ (PRef opFC (NS ns nm)) l) r) =
+  sugarAppM : PTerm' KindedName -> Maybe (PTerm' KindedName)
+  sugarAppM (PApp fc (PApp _ (PRef opFC (MkKindedName nt (NS ns nm))) l) r) =
     if builtinNS == ns
        then case nameRoot nm of
          "Pair"   => pure $ PPair fc (unbracket l) (unbracket r)
@@ -138,7 +141,7 @@ mutual
     case extractNat 0 tm of
       Just k  => pure $ PPrimVal (getPTermLoc tm) (BI (cast k))
       Nothing => case tm of
-        PRef fc (NS ns nm) =>
+        PRef fc (MkKindedName nt (NS ns nm)) =>
           if builtinNS == ns
              then case nameRoot nm of
                "Unit"   => pure $ PUnit fc
@@ -152,7 +155,7 @@ mutual
 
   ||| Put the special names (Nil, ::, Pair, Z, S, etc.) back as syntax
 
-  sugarApp : PTerm -> PTerm
+  sugarApp : PTerm' KindedName -> PTerm' KindedName
   sugarApp tm = fromMaybe tm (sugarAppM tm)
 
 export
@@ -162,24 +165,24 @@ sugarName (PV n _) = sugarName n
 sugarName (DN n _) = n
 sugarName x = show x
 
-toPRef : FC -> Name -> Core PTerm
-toPRef fc nm = case nm of
-  MN n _     => pure (sugarApp (PRef fc (UN n)))
-  PV n _     => pure (sugarApp (PRef fc n))
-  DN n _     => pure (sugarApp (PRef fc (UN n)))
-  Nested _ n => toPRef fc n
-  _          => pure (sugarApp (PRef fc nm))
+toPRef : FC -> KindedName -> Core (PTerm' KindedName)
+toPRef fc kn@(MkKindedName nt nm) = case nm of
+  MN n _     => pure (sugarApp (PRef fc (MkKindedName nt $ UN n)))
+  PV n _     => pure (sugarApp (PRef fc (MkKindedName nt $ n)))
+  DN n _     => pure (sugarApp (PRef fc (MkKindedName nt $ UN n)))
+  Nested _ n => toPRef fc (MkKindedName nt n)
+  _          => pure (sugarApp (PRef fc kn))
 
 mutual
   toPTerm : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
-            (prec : Nat) -> RawImp -> Core PTerm
+            (prec : Nat) -> IRawImp -> Core (PTerm' KindedName)
   toPTerm p (IVar fc nm) = do
     t <- if fullNamespace !(getPPrint)
       then pure $ PRef fc nm
       else toPRef fc nm
     log "resugar.var" 70 $
-      unwords [ "Resugaring", show @{Raw} nm, "to", show t]
+      unwords [ "Resugaring", show @{Raw} nm.rawName, "to", ?c] --show t]
     pure t
   toPTerm p (IPi fc rig Implicit n arg ret)
       = do imp <- showImplicits
@@ -195,7 +198,8 @@ mutual
     where
       needsBind : Maybe Name -> Bool
       needsBind (Just (UN t))
-          = let ns = findBindableNames False [] [] ret
+          = let ret = map rawName ret
+                ns = findBindableNames False [] [] ret
                 allNs = findAllNames [] ret in
                 ((UN t) `elem` allNs) && not (t `elem` (map Builtin.fst ns))
       needsBind _ = False
@@ -213,15 +217,16 @@ mutual
                           else pure (PImplicit fc)
            sc' <- toPTerm startPrec sc
            pt' <- traverse (toPTerm argPrec) pt
-           bracket p startPrec (PLam fc rig pt' (PRef fc n) arg' sc')
+           let var = PRef fc (MkKindedName Bound n)
+           bracket p startPrec (PLam fc rig pt' var arg' sc')
   toPTerm p (ILet fc lhsFC rig n ty val sc)
       = do imp <- showImplicits
            ty' <- if imp then toPTerm startPrec ty
                          else pure (PImplicit fc)
            val' <- toPTerm startPrec val
            sc' <- toPTerm startPrec sc
-           bracket p startPrec (PLet fc rig (PRef lhsFC n)
-                                     ty' val' sc' [])
+           let var = PRef lhsFC (MkKindedName Bound n)
+           bracket p startPrec (PLet fc rig var ty' val' sc' [])
   toPTerm p (ICase fc sc scty [PatClause _ lhs rhs])
       = do sc' <- toPTerm startPrec sc
            lhs' <- toPTerm startPrec lhs
@@ -233,10 +238,11 @@ mutual
            alts' <- traverse toPClause alts
            bracket p startPrec (mkIf (PCase fc sc' alts'))
     where
-      mkIf : PTerm -> PTerm
+      mkIf : PTerm' KindedName -> PTerm' KindedName
       mkIf tm@(PCase loc sc [MkPatClause _ (PRef _ tval) t [],
                              MkPatClause _ (PRef _ fval) f []])
-         = if dropNS tval == UN "True" && dropNS fval == UN "False"
+         = if dropNS (rawName tval) == UN "True"
+           && dropNS (rawName fval) == UN "False"
               then PIfThenElse loc sc t f
               else tm
       mkIf tm = tm
@@ -277,7 +283,7 @@ mutual
   toPTerm p (IPrimVal fc c) = pure (PPrimVal fc c)
   toPTerm p (IHole fc str) = pure (PHole fc False str)
   toPTerm p (IType fc) = pure (PType fc)
-  toPTerm p (IBindVar fc v) = pure (PRef fc (UN v))
+  toPTerm p (IBindVar fc v) = pure (PRef fc (MkKindedName Bound (UN v)))
   toPTerm p (IBindHere fc _ tm) = toPTerm p tm
   toPTerm p (IAs fc nameFC _ n pat) = pure (PAs fc nameFC n !(toPTerm argPrec pat))
   toPTerm p (IMustUnify fc r pat) = pure (PDotted fc !(toPTerm argPrec pat))
@@ -302,7 +308,9 @@ mutual
 
   mkApp : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
-          PTerm -> List (FC, Maybe (Maybe Name), PTerm) -> Core PTerm
+          PTerm' KindedName ->
+          List (FC, Maybe (Maybe Name), PTerm' KindedName) ->
+          Core (PTerm' KindedName)
   mkApp fn [] = pure fn
   mkApp fn ((fc, Nothing, arg) :: rest)
       = do let ap = sugarApp (PApp fc fn arg)
@@ -319,8 +327,8 @@ mutual
 
   toPTermApp : {auto c : Ref Ctxt Defs} ->
                {auto s : Ref Syn SyntaxInfo} ->
-               RawImp -> List (FC, Maybe (Maybe Name), PTerm) ->
-               Core PTerm
+               IRawImp -> List (FC, Maybe (Maybe Name), PTerm' KindedName) ->
+               Core (PTerm' KindedName)
   toPTermApp (IApp fc f a) args
       = do a' <- toPTerm argPrec a
            toPTermApp f ((fc, Nothing, a') :: args)
@@ -329,7 +337,7 @@ mutual
            toPTermApp f ((fc, Just (Just n), a') :: args)
   toPTermApp fn@(IVar fc n) args
       = do defs <- get Ctxt
-           case !(lookupCtxtExact n (gamma defs)) of
+           case !(lookupCtxtExact (rawName n) (gamma defs)) of
                 Nothing => do fn' <- toPTerm appPrec fn
                               mkApp fn' args
                 Just def => do fn' <- toPTerm appPrec fn
@@ -345,7 +353,7 @@ mutual
 
   toPFieldUpdate : {auto c : Ref Ctxt Defs} ->
                    {auto s : Ref Syn SyntaxInfo} ->
-                   IFieldUpdate -> Core PFieldUpdate
+                   IFieldUpdate' KindedName -> Core (PFieldUpdate' KindedName)
   toPFieldUpdate (ISetField p v)
       = do v' <- toPTerm startPrec v
            pure (PSetField p v')
@@ -355,7 +363,7 @@ mutual
 
   toPClause : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              ImpClause -> Core PClause
+              ImpClause' KindedName -> Core (PClause' KindedName)
   toPClause (PatClause fc lhs rhs)
       = pure (MkPatClause fc !(toPTerm startPrec lhs)
                              !(toPTerm startPrec rhs)
@@ -363,7 +371,7 @@ mutual
   toPClause (WithClause fc lhs rhs prf flags cs)
       = pure (MkWithClause fc !(toPTerm startPrec lhs)
                               !(toPTerm startPrec rhs)
-                              prf
+                              ?e -- prf
                               flags
                               !(traverse toPClause cs))
   toPClause (ImpossibleClause fc lhs)
@@ -371,13 +379,13 @@ mutual
 
   toPTypeDecl : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
-                ImpTy -> Core PTypeDecl
+                ImpTy' KindedName -> Core (PTypeDecl' KindedName)
   toPTypeDecl (MkImpTy fc nameFC n ty)
       = pure (MkPTy fc nameFC n "" !(toPTerm startPrec ty))
 
   toPData : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
-            ImpData -> Core PDataDecl
+            ImpData' KindedName -> Core (PDataDecl' KindedName)
   toPData (MkImpData fc n ty opts cs)
       = pure (MkPData fc n !(toPTerm startPrec ty) opts
                    !(traverse toPTypeDecl cs))
@@ -386,7 +394,7 @@ mutual
 
   toPField : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
-             IField -> Core PField
+             IField' KindedName -> Core (PField' KindedName)
   toPField (MkIField fc c p n ty)
       = do ty' <- toPTerm startPrec ty
            p' <- traverse (toPTerm startPrec) p
@@ -394,8 +402,13 @@ mutual
 
   toPRecord : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              ImpRecord ->
-              Core (Name, List (Name, RigCount, PiInfo PTerm, PTerm), Maybe Name, List PField)
+              ImpRecord' KindedName ->
+              Core ( Name
+                   , List (Name, RigCount
+                          , PiInfo (PTerm' KindedName)
+                          , PTerm' KindedName)
+                   , Maybe Name
+                   , List (PField' KindedName))
   toPRecord (MkImpRecord fc n ps con fs)
       = do ps' <- traverse (\ (n, c, p, ty) =>
                                    do ty' <- toPTerm startPrec ty
@@ -404,7 +417,7 @@ mutual
            fs' <- traverse toPField fs
            pure (n, ps', Just con, fs')
     where
-      mapPiInfo : PiInfo RawImp -> Core (PiInfo PTerm)
+      mapPiInfo : PiInfo IRawImp -> Core (PiInfo (PTerm' KindedName))
       mapPiInfo Explicit        = pure   Explicit
       mapPiInfo Implicit        = pure   Implicit
       mapPiInfo AutoImplicit    = pure   AutoImplicit
@@ -412,7 +425,7 @@ mutual
 
   toPFnOpt : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
-             FnOpt -> Core PFnOpt
+             FnOpt' KindedName -> Core (PFnOpt' KindedName)
   toPFnOpt (ForeignFn cs)
       = do cs' <- traverse (toPTerm startPrec) cs
            pure (PForeign cs')
@@ -420,7 +433,7 @@ mutual
 
   toPDecl : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
-            ImpDecl -> Core (Maybe PDecl)
+            ImpDecl' KindedName -> Core (Maybe (PDecl' KindedName))
   toPDecl (IClaim fc rig vis opts ty)
       = do opts' <- traverse toPFnOpt opts
            pure (Just (PClaim fc rig vis opts' !(toPTypeDecl ty)))
@@ -454,16 +467,19 @@ mutual
 
 export
 cleanPTerm : {auto c : Ref Ctxt Defs} ->
-             PTerm -> Core PTerm
+             PTerm' KindedName -> Core (PTerm' KindedName)
 cleanPTerm ptm
    = do ns <- fullNamespace
-        if True then pure ptm else mapPTermM cleanNode ptm
+        if ns then pure ptm else mapPTermM cleanNode ptm
 
   where
 
-    cleanNode : PTerm -> Core PTerm
+    cleanKindedName : KindedName -> Core KindedName
+    cleanKindedName (MkKindedName nt nm) = MkKindedName nt <$> cleanName nm
+
+    cleanNode : PTerm' KindedName -> Core (PTerm' KindedName)
     cleanNode (PRef fc nm)    =
-      PRef fc <$> cleanName nm
+      PRef fc <$> cleanKindedName nm
     cleanNode (POp fc opFC op x y) =
       (\ op => POp fc opFC op x y) <$> cleanName op
     cleanNode (PPrefixOp fc opFC op x) =
@@ -476,7 +492,7 @@ cleanPTerm ptm
 
 toCleanPTerm : {auto c : Ref Ctxt Defs} ->
                {auto s : Ref Syn SyntaxInfo} ->
-               (prec : Nat) -> RawImp -> Core PTerm
+               (prec : Nat) -> IRawImp -> Core (PTerm' KindedName)
 toCleanPTerm prec tti = do
   ptm <- toPTerm prec tti
   cleanPTerm ptm
@@ -485,7 +501,7 @@ export
 resugar : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
-          Env Term vars -> Term vars -> Core PTerm
+          Env Term vars -> Term vars -> Core (PTerm' KindedName)
 resugar env tm
     = do tti <- unelab env tm
          toCleanPTerm startPrec tti
@@ -494,7 +510,7 @@ export
 resugarNoPatvars : {vars : _} ->
                    {auto c : Ref Ctxt Defs} ->
                    {auto s : Ref Syn SyntaxInfo} ->
-                   Env Term vars -> Term vars -> Core PTerm
+                   Env Term vars -> Term vars -> Core (PTerm' KindedName)
 resugarNoPatvars env tm
     = do tti <- unelabNoPatvars env tm
          toCleanPTerm startPrec tti
@@ -502,5 +518,5 @@ resugarNoPatvars env tm
 export
 pterm : {auto c : Ref Ctxt Defs} ->
         {auto s : Ref Syn SyntaxInfo} ->
-        RawImp -> Core PTerm
+        IRawImp -> Core (PTerm' KindedName)
 pterm raw = toCleanPTerm startPrec raw

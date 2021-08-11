@@ -1126,7 +1126,7 @@ dataBody fname mincol start n indents ty
 gadtData : OriginDesc -> Int -> WithBounds t ->
            WithBounds Name -> IndentInfo -> Rule PDataDecl
 gadtData fname mincol start tyName indents
-    = do decoratedSymbol fname ":"
+    = do mustWork $ decoratedSymbol fname ":"
          commit
          ty <- typeExpr pdef fname indents
          dataBody fname mincol start tyName.val indents ty

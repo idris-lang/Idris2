@@ -26,6 +26,7 @@ import Core.Value
 import TTImp.Elab.Check
 import TTImp.Interactive.CaseSplit
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
@@ -862,7 +863,7 @@ firstLinearOK fc (Result (t, ds) next)
                 defs <- get Ctxt
                 nft <- normaliseHoles defs [] t
                 raw <- unelab [] !(toFullNames nft)
-                pure (Result raw (firstLinearOK fc !next)))
+                pure (Result (map rawName raw) (firstLinearOK fc !next)))
             (\err =>
                 do next' <- next
                    firstLinearOK fc next')
@@ -882,7 +883,7 @@ exprSearchOpts opts fc n_in hints
          let Hole _ _ = definition gdef
              | PMDef pi [] (STerm _ tm) _ _
                  => do raw <- unelab [] !(toFullNames !(normaliseHoles defs [] tm))
-                       one raw
+                       one (map rawName raw)
              | _ => throw (GenericMsg fc "Name is already defined")
          lhs <- findHoleLHS !(getFullName (Resolved idx))
          log "interaction.search" 10 $ "LHS hole data " ++ show (n, lhs)
