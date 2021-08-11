@@ -63,9 +63,12 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                               !(sc defs (toClosure withAll env
                                               !(quote defs env act'))) exp
                   x => failWith defs $ "non-function RHS of a Bind: " ++ show x
-    elabCon defs "Fail" [_,msg]
+    elabCon defs "Fail" [_, mbfc, msg]
         = do msg' <- evalClosure defs msg
-             throw (GenericMsg fc ("Error during reflection: " ++
+             let customFC = case !(evalClosure defs mbfc >>= reify defs) of
+                               EmptyFC => fc
+                               x       => x
+             throw (GenericMsg customFC ("Error during reflection: " ++
                                       !(reify defs msg')))
     elabCon defs "LogMsg" [topic, verb, str]
         = do topic' <- evalClosure defs topic
