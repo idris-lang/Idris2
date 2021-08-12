@@ -221,7 +221,7 @@ getDocsForName fc n
                      [] => []
                      ps => [hsep (header "Parameters" :: punctuate comma (map (pretty . show) ps))]
              let constraints =
-                case the (List Nat) [1] of -- !(traverse pterm (parents iface)) of
+                case !(traverse (pterm . map (MkKindedName Nothing)) (parents iface)) of
                      [] => []
                      ps => [hsep (header "Constraints" :: punctuate comma (map (pretty . show) ps))]
              mdocs <- traverse getMethDoc (methods iface)
