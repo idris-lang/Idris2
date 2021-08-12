@@ -184,8 +184,8 @@ mutual
         else Chara '`' <+> annotate (SynRef op) (pretty op) <+> Chara '`'
 
       go : Prec -> PTerm' KindedName -> Doc IdrisSyntax
-      go d (PRef _ (MkKindedName nt n))
-        = annotate (SynDecor $ nameTypeDecoration nt)
+      go d (PRef _ (MkKindedName mnt n))
+        = maybe id (annotate . SynDecor . nameTypeDecoration) mnt
         $ annotate (SynRef n) $ pretty n
       go d (PPi _ rig Explicit Nothing arg ret) =
         parenthesise (d > startPrec) $ group $
@@ -310,13 +310,15 @@ mutual
       go d (PQuoteDecl _ tm) = parenthesise (d > appPrec) $ "`" <+> brackets (angles (angles (pretty "declaration")))
       go d (PUnquote _ tm) = parenthesise (d > appPrec) $ "~" <+> parens (go startPrec tm)
       go d (PRunElab _ tm) = parenthesise (d > appPrec) $ pragma "%runElab" <++> go startPrec tm
-      go d (PPrimVal _ c) = pretty c
+      go d (PPrimVal _ c) =
+        let decor = if isPrimType c then Typ else Data in
+        annotate (SynDecor decor) $ pretty c
       go d (PHole _ _ n) = hole (pretty (strCons '?' n))
-      go d (PType _) = pretty "Type"
+      go d (PType _) = annotate (SynDecor Typ) "Type"
       go d (PAs _ _ n p) = pretty n <+> "@" <+> go d p
       go d (PDotted _ p) = dot <+> go d p
       go d (PImplicit _) = "_"
-      go d (PInfer _) = "?"
+      go d (PInfer _) = annotate SynHole $ "?"
       go d (POp _ _ op x y) = parenthesise (d > appPrec) $ group $ go startPrec x <++> prettyOp op <++> go startPrec y
       go d (PPrefixOp _ _ op x) = parenthesise (d > appPrec) $ pretty op <+> go startPrec x
       go d (PSectionL _ _ op x) = parens (prettyOp op <++> go startPrec x)

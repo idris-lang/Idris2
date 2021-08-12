@@ -266,7 +266,7 @@ mutual
        MkPatClause : FC -> (lhs : PTerm' nm) -> (rhs : PTerm' nm) ->
                      (whereblock : List (PDecl' nm)) -> PClause' nm
        MkWithClause : FC -> (lhs : PTerm' nm) ->
-                      (wval : PTerm' nm) -> (prf : Maybe nm) ->
+                      (wval : PTerm' nm) -> (prf : Maybe Name) ->
                       List WithFlag -> List (PClause' nm) -> PClause' nm
        MkImpossible : FC -> (lhs : PTerm' nm) -> PClause' nm
 

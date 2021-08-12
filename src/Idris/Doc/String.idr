@@ -13,6 +13,7 @@ import Idris.Resugar
 import Idris.Syntax
 
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Elab.Prim
 
 import Data.List
@@ -177,7 +178,7 @@ getDocsForName fc n
         = do syn <- get Syn
              let [(n, str)] = lookupName meth.name (docstrings syn)
                   | _ => pure []
-             ty <- pterm ?a -- meth.type
+             ty <- pterm (map (MkKindedName Nothing) meth.type) -- hack
              let nm = prettyName meth.name
              pure $ pure $ vcat [
                annotate (Decl meth.name) (hsep [fun (meth.name) nm, colon, prettyTerm ty])

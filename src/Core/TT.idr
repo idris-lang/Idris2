@@ -32,7 +32,7 @@ isCon _ = Nothing
 public export
 record KindedName where
   constructor MkKindedName
-  nameKind : NameType
+  nameKind : Maybe NameType
   rawName  : Name
 
 export

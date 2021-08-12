@@ -182,13 +182,13 @@ mutual
       = do let nm = nameAt p
            log "unelab.case" 20 $ "Found local name: " ++ show nm
            let ty = gnf env (binderType (getBinder p env))
-           pure (IVar fc (MkKindedName Bound nm), ty)
+           pure (IVar fc (MkKindedName (Just Bound) nm), ty)
   unelabTy' umode nest env (Ref fc nt n)
       = do defs <- get Ctxt
            Just ty <- lookupTyExact n (gamma defs)
                | Nothing => case umode of
                                  ImplicitHoles => pure (Implicit fc True, gErased fc)
-                                 _ => pure (IVar fc (MkKindedName nt n), gErased fc)
+                                 _ => pure (IVar fc (MkKindedName (Just nt) n), gErased fc)
            fn <- getFullName n
            n' <- case umode of
                       NoSugar _ => pure fn
@@ -199,7 +199,7 @@ mutual
                      , "sugared to", show n'
                      ]
 
-           pure (IVar fc (MkKindedName nt n'), gnf env (embed ty))
+           pure (IVar fc (MkKindedName (Just nt) n'), gnf env (embed ty))
   unelabTy' umode nest env (Meta fc n i args)
       = do defs <- get Ctxt
            let mkn = nameRoot n

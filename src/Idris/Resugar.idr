@@ -53,6 +53,7 @@ addBracket fc tm = if needed tm then PBracketed fc tm else tm
     needed (PComprehension _ _ _) = False
     needed (PList _ _ _) = False
     needed (PSnocList _ _ _) = False
+    needed (PRange{}) = False
     needed (PPrimVal _ _) = False
     needed tm = True
 
@@ -119,6 +120,10 @@ mutual
   ||| Put the special names (Nil, ::, Pair, Z, S, etc) back as syntax
   ||| Returns `Nothing` in case there was nothing to resugar.
   sugarAppM : PTerm' KindedName -> Maybe (PTerm' KindedName)
+  sugarAppM (PApp fc (PApp _ (PApp _ (PRef opFC (MkKindedName nt (NS ns nm))) l) m) r) =
+    case nameRoot nm of
+      "rangeFromThenTo" => pure $ PRange fc (unbracket l) (Just $ unbracket m) (unbracket r)
+      _ => Nothing
   sugarAppM (PApp fc (PApp _ (PRef opFC (MkKindedName nt (NS ns nm))) l) r) =
     if builtinNS == ns
        then case nameRoot nm of
@@ -140,6 +145,9 @@ mutual
                                                   -- use a snoc list here in a future version
                                                   (xs ++ [(opFC, unbracketApp l)])
                         _                     => Nothing
+              "rangeFromTo" => pure $ PRange fc (unbracket l) Nothing (unbracket r)
+              "rangeFromThen" => pure $ PRangeStream fc (unbracket l) (Just $ unbracket r)
+
               _    => Nothing
   sugarAppM tm =
   -- refolding natural numbers if the expression is a constant
@@ -156,6 +164,10 @@ mutual
                "Nil" => pure $ PList fc fc []
                "Lin" => pure $ PSnocList fc fc []
                _     => Nothing
+        PApp fc (PRef _ (MkKindedName nt (NS ns nm))) arg =>
+          case nameRoot nm of
+            "rangeFrom" => pure $ PRangeStream fc (unbracket arg) Nothing
+            _           => Nothing
         _ => Nothing
 
   ||| Put the special names (Nil, ::, Pair, Z, S, etc.) back as syntax
@@ -187,7 +199,7 @@ mutual
       then pure $ PRef fc nm
       else toPRef fc nm
     log "resugar.var" 70 $
-      unwords [ "Resugaring", show @{Raw} nm.rawName, "to", ?c] --show t]
+      unwords [ "Resugaring", show @{Raw} nm.rawName, "to", show t]
     pure t
   toPTerm p (IPi fc rig Implicit n arg ret)
       = do imp <- showImplicits
@@ -222,7 +234,7 @@ mutual
                           else pure (PImplicit fc)
            sc' <- toPTerm startPrec sc
            pt' <- traverse (toPTerm argPrec) pt
-           let var = PRef fc (MkKindedName Bound n)
+           let var = PRef fc (MkKindedName (Just Bound) n)
            bracket p startPrec (PLam fc rig pt' var arg' sc')
   toPTerm p (ILet fc lhsFC rig n ty val sc)
       = do imp <- showImplicits
@@ -230,7 +242,7 @@ mutual
                          else pure (PImplicit fc)
            val' <- toPTerm startPrec val
            sc' <- toPTerm startPrec sc
-           let var = PRef lhsFC (MkKindedName Bound n)
+           let var = PRef lhsFC (MkKindedName (Just Bound) n)
            bracket p startPrec (PLet fc rig var ty' val' sc' [])
   toPTerm p (ICase fc sc scty [PatClause _ lhs rhs])
       = do sc' <- toPTerm startPrec sc
@@ -288,7 +300,7 @@ mutual
   toPTerm p (IPrimVal fc c) = pure (PPrimVal fc c)
   toPTerm p (IHole fc str) = pure (PHole fc False str)
   toPTerm p (IType fc) = pure (PType fc)
-  toPTerm p (IBindVar fc v) = pure (PRef fc (MkKindedName Bound (UN v)))
+  toPTerm p (IBindVar fc v) = pure (PRef fc (MkKindedName (Just Bound) (UN v)))
   toPTerm p (IBindHere fc _ tm) = toPTerm p tm
   toPTerm p (IAs fc nameFC _ n pat) = pure (PAs fc nameFC n !(toPTerm argPrec pat))
   toPTerm p (IMustUnify fc r pat) = pure (PDotted fc !(toPTerm argPrec pat))
@@ -376,7 +388,7 @@ mutual
   toPClause (WithClause fc lhs rhs prf flags cs)
       = pure (MkWithClause fc !(toPTerm startPrec lhs)
                               !(toPTerm startPrec rhs)
-                              ?e -- prf
+                              prf
                               flags
                               !(traverse toPClause cs))
   toPClause (ImpossibleClause fc lhs)

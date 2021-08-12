@@ -120,7 +120,10 @@ displayType : {auto c : Ref Ctxt Defs} ->
               Core (Doc IdrisAnn)
 displayType defs (n, i, gdef)
     = maybe (do tm <- resugar [] !(normaliseHoles defs [] (type gdef))
-                pure (pretty !(aliasName (fullname gdef)) <++> colon <++> prettyTerm tm))
+                nm <- aliasName (fullname gdef)
+                let ann = maybe id (annotate . Syntax . SynDecor)
+                        $ defDecoration $ definition gdef
+                pure (ann (pretty nm) <++> colon <++> prettyTerm tm))
             (\num => reAnnotate Syntax <$> prettyHole defs [] n num (type gdef))
             (isHole gdef)
 
@@ -216,12 +219,12 @@ printClause : {auto c : Ref Ctxt Defs} ->
               Maybe String -> Nat -> ImpClause ->
               Core String
 printClause l i (PatClause _ lhsraw rhsraw)
-    = do lhs <- pterm $ map (MkKindedName Bound) lhsraw -- hack
-         rhs <- pterm $ map (MkKindedName Bound) rhsraw -- hack
+    = do lhs <- pterm $ map (MkKindedName Nothing) lhsraw -- hack
+         rhs <- pterm $ map (MkKindedName Nothing) rhsraw -- hack
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " = " ++ show rhs))
 printClause l i (WithClause _ lhsraw wvraw prf flags csraw)
-    = do lhs <- pterm $ map (MkKindedName Bound) lhsraw -- hack
-         wval <- pterm $ map (MkKindedName Bound) wvraw -- hack
+    = do lhs <- pterm $ map (MkKindedName Nothing) lhsraw -- hack
+         wval <- pterm $ map (MkKindedName Nothing) wvraw -- hack
          cs <- traverse (printClause l (i + 2)) csraw
          pure (relit l ((pack (replicate i ' ')
                 ++ show lhs
@@ -230,7 +233,7 @@ printClause l i (WithClause _ lhsraw wvraw prf flags csraw)
                 ++ "\n"))
                ++ showSep "\n" cs)
 printClause l i (ImpossibleClause _ lhsraw)
-    = do lhs <- pterm $ map (MkKindedName Bound) lhsraw -- hack
+    = do lhs <- pterm $ map (MkKindedName Nothing) lhsraw -- hack
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " impossible"))
 
 
@@ -425,7 +428,7 @@ processEdit (ExprSearch upd line name hints)
                      Just (_, restm) <- nextProofSearch
                           | Nothing => pure $ EditError "No search results"
                      let tm' = dropLams locs restm
-                     itm <- pterm $ map (MkKindedName Bound) tm' -- hack
+                     itm <- pterm $ map (MkKindedName Nothing) tm' -- hack
                      let itm'  = ifThenElse brack (addBracket replFC itm) itm
                      if upd
                         then updateFile (proofSearch name (show itm') (integerToNat (cast (line - 1))))
@@ -451,7 +454,7 @@ processEdit ExprSearchNext
               | _ => pure $ EditError "Not a searchable hole"
          let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
          let tm' = dropLams locs restm
-         itm <- pterm $ map (MkKindedName Bound) tm' --hack
+         itm <- pterm $ map (MkKindedName Nothing) tm'
          let itm' = ifThenElse brack (addBracket replFC itm) itm
          pure $ DisplayEdit (prettyTerm itm')
 
@@ -495,8 +498,8 @@ processEdit (MakeLemma upd line name)
          case !(lookupDefTyName name (gamma defs)) of
               [(n, nidx, Hole locs _, ty)] =>
                   do (lty, lapp) <- makeLemma replFC name locs ty
-                     pty <- pterm $ map (MkKindedName Bound) lty -- hack
-                     papp <- pterm $ map (MkKindedName Bound) lapp -- hack
+                     pty <- pterm $ map (MkKindedName Nothing) lty -- hack
+                     papp <- pterm $ map (MkKindedName Nothing) lapp -- hack
                      opts <- get ROpts
                      let pappstr = show (ifThenElse brack
                                             (addBracket replFC papp)
@@ -1071,9 +1074,9 @@ mutual
          {auto o : Ref ROpts REPLOpts} -> REPLResult -> Core ()
   displayResult (REPLError err) = printError err
   displayResult (Evaluated x Nothing) = printResult $ prettyTerm x
-  displayResult (Evaluated x (Just y)) = printResult (prettyTerm x <++> colon <++> code (prettyTerm y))
+  displayResult (Evaluated x (Just y)) = printResult (prettyTerm x <++> colon <++> prettyTerm y)
   displayResult (Printed xs) = printResult xs
-  displayResult (TermChecked x y) = printResult (prettyTerm x <++> colon <++> code (prettyTerm y))
+  displayResult (TermChecked x y) = printResult (prettyTerm x <++> colon <++> prettyTerm y)
   displayResult (FileLoaded x) = printResult (reflow "Loaded file" <++> pretty x)
   displayResult (ModuleLoaded x) = printResult (reflow "Imported module" <++> pretty x)
   displayResult (ErrorLoadingModule x err) = printResult (reflow "Error loading module" <++> pretty x <+> colon <++> !(perror err))
