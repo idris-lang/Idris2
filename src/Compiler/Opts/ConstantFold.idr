@@ -55,6 +55,17 @@ findConstAlt c (MkConstAlt c' exp :: alts) def = if c == c'
     then Just exp
     else findConstAlt c alts def
 
+foldableOp : PrimFn ar -> Bool
+foldableOp BelieveMe = False
+foldableOp (Cast from to) = fromMaybe False [| intKind from `smaller` intKind to |]
+  where
+    smaller : IntKind -> IntKind -> Bool
+    smaller (Signed x) (Signed y) = x <= y
+    smaller (Unsigned x) (Unsigned y) = x <= y
+    smaller (Signed x) (Unsigned y) = x < P y
+    smaller (Unsigned x) (Signed y) = P x < y
+foldableOp _ = True
+
 -- constant folding of primitive functions
 -- if a primitive function is applied to only constant
 -- then replace with the result
@@ -73,22 +84,33 @@ constFold (CLet fc x inlineOK y z) =
         _ => CLet fc x inlineOK val (constFold z)
 constFold (CApp fc x xs) = CApp fc (constFold x) (constFold <$> xs)
 constFold (CCon fc x y tag xs) = CCon fc x y tag $ constFold <$> xs
-constFold e@(COp fc fn xs) = case the _ $ traverse toNF xs of
-    Just nfs => maybe e (fromMaybe e . fromNF) $ getOp fn nfs
-    Nothing => constRight fc fn xs
+constFold (COp {arity} fc fn xs) =
+    let xs' : Vect arity (CExp vars)
+        xs' = map constFold xs
+        e : CExp vars
+        e = constRight fc fn xs'
+     in if foldableOp fn
+        then case the (Maybe (Vect arity (NF vars))) $ Prelude.traverse toNF xs' of
+                Nothing => e
+                Just nfs => case getOp fn nfs of
+                    Just nf => fromMaybe e $ fromNF nf
+                    Nothing => e
+        else e
   where
     toNF : CExp vars -> Maybe (NF vars)
-    toNF exp = case constFold exp of
-        CPrimVal fc (I _) => Nothing -- don't fold `Int` because it has varying widths
-        CPrimVal fc c => Just $ NPrimVal fc c
-        _ => Nothing
+    toNF (CPrimVal fc (I _)) = Nothing -- don't fold `Int` because it has varying widths
+    toNF (CPrimVal fc c) = Just $ NPrimVal fc c
+    toNF _ = Nothing
+
     fromNF : NF vars -> Maybe (CExp vars)
     fromNF (NPrimVal fc c) = Just $ CPrimVal fc c
     fromNF _ = Nothing
-    constRight : FC -> PrimFn ar -> Vect ar (CExp vars) -> CExp vars
+
+    constRight : {ar : _} -> FC -> PrimFn ar -> Vect ar (CExp vars) -> CExp vars
     constRight fc (Add ty) [x@(CPrimVal _ _), y] = COp fc (Add ty) [constFold y, x]
     constRight fc (Mul ty) [x@(CPrimVal _ _), y] = COp fc (Mul ty) [constFold y, x]
-    constRight _ _ _ = e
+    constRight fc fn args = COp fc fn args
+
 constFold (CExtPrim fc p xs) = CExtPrim fc p $ constFold <$> xs
 constFold (CForce fc x y) = CForce fc x $ constFold y
 constFold (CDelay fc x y) = CDelay fc x $ constFold y
