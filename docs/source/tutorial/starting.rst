@@ -7,6 +7,11 @@ Getting Started
 Installing from Source
 ======================
 
+.. toctree::
+   :hidden:
+
+   windows
+
 Prerequisites
 -------------
 
@@ -81,7 +86,7 @@ program is doing and how it works, but if not, we will explain the
 details later. You can compile the program to an executable by
 entering ``idris2 hello.idr -o hello`` at the shell prompt. This will,
 by default, create an executable called ``hello``, which invokes a generated
-and compiled Chez Schem program, in the destination directory ``build/exec``
+and compiled Chez Scheme program, in the destination directory ``build/exec``
 which you can run:
 
 ::
