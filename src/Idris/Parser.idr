@@ -1093,12 +1093,13 @@ simpleData : OriginDesc -> WithBounds t ->
 simpleData fname start tyName indents
     = do b <- bounds (do params <- many (bounds $ decorate fname Bound name)
                          tyend <- bounds (decoratedSymbol fname "=")
-                         let tyfc = boundToFC fname (mergeBounds start tyend)
-                         let tyCon = PRef (boundToFC fname tyName) tyName.val
-                         let toPRef = \ t => PRef (boundToFC fname t) t.val
-                         let conRetTy = papply tyfc tyCon (map toPRef params)
-                         cons <- sepBy1 (decoratedSymbol fname "|") (simpleCon fname conRetTy indents)
-                         pure (params, tyfc, forget cons))
+                         mustWork $ do
+                           let tyfc = boundToFC fname (mergeBounds start tyend)
+                           let tyCon = PRef (boundToFC fname tyName) tyName.val
+                           let toPRef = \ t => PRef (boundToFC fname t) t.val
+                           let conRetTy = papply tyfc tyCon (map toPRef params)
+                           cons <- sepBy1 (decoratedSymbol fname "|") (simpleCon fname conRetTy indents)
+                           pure (params, tyfc, forget cons))
          (params, tyfc, cons) <- pure b.val
          pure (MkPData (boundToFC fname (mergeBounds start b)) tyName.val
                        (mkTyConType fname tyfc params) [] cons)
