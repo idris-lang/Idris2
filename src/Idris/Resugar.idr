@@ -516,6 +516,8 @@ cleanPTerm ptm
       (\ op => PSectionL fc opFC op x) <$> cleanName op
     cleanNode (PSectionR fc opFC x op) =
       PSectionR fc opFC x <$> cleanName op
+    cleanNode (PPi fc rig vis (Just n) arg ret) =
+      (\ n => PPi fc rig vis (Just n) arg ret) <$> cleanName n
     cleanNode tm = pure tm
 
 toCleanPTerm : {auto c : Ref Ctxt Defs} ->
