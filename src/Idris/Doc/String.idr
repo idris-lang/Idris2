@@ -105,6 +105,16 @@ addDocStringNS ns n_in doc
 prettyTerm : PTerm' KindedName -> Doc IdrisDocAnn
 prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
 
+showCategory : GlobalDef -> Doc IdrisDocAnn -> Doc IdrisDocAnn
+showCategory d = case defDecoration (definition d) of
+    Nothing => id
+    Just decor => annotate (Syntax $ SynDecor decor)
+
+prettyName : Name -> Doc IdrisDocAnn
+prettyName n =
+      let root = nameRoot n in
+      if isOpName n then parens (pretty root) else pretty root
+
 export
 getDocsForPrimitive : {auto c : Ref Ctxt Defs} ->
                       {auto s : Ref Syn SyntaxInfo} ->
@@ -113,7 +123,7 @@ getDocsForPrimitive constant = do
     let (_, type) = checkPrim EmptyFC constant
     let typeString = pretty (show constant)
                    <++> colon <++> prettyTerm !(resugar [] type)
-    pure (typeString <+> Line <+> nest 2 "Primitive")
+    pure (typeString <+> Line <+> indent 2 "Primitive")
 
 export
 getDocsForName : {auto o : Ref ROpts REPLOpts} ->
@@ -145,11 +155,6 @@ getDocsForName fc n
         = case isTerminating tot of
                Unchecked => ""
                _ => header "Totality" <++> pretty tot
-
-    prettyName : Name -> Doc IdrisDocAnn
-    prettyName n =
-      let root = nameRoot n in
-      if isOpName n then parens (pretty root) else pretty root
 
     getDConDoc : Name -> Core (Doc IdrisDocAnn)
     getDConDoc con
@@ -294,11 +299,6 @@ getDocsForName fc n
                 pure (tot ++ cdoc)
            _ => pure []
 
-    showCategory : GlobalDef -> Doc IdrisDocAnn -> Doc IdrisDocAnn
-    showCategory d = case defDecoration (definition d) of
-      Nothing => id
-      Just decor => annotate (Syntax $ SynDecor decor)
-
     showDoc : (Name, String) -> Core (Doc IdrisDocAnn)
     showDoc (n, str)
         = do defs <- get Ctxt
@@ -345,9 +345,9 @@ summarise n -- n is fully qualified
                                            (d ::: _) => Just d
                         _ => Nothing
          ty <- normaliseHoles defs [] (type def)
-         pure (pretty (nameRoot n)
+         pure (showCategory def (prettyName n)
               <++> colon <++> prettyTerm !(resugar [] ty)
-              <+> maybe "" ((Line <+>) . nest 2 . pretty) doc)
+              <+> maybe "" ((Line <+>) . indent 2 . pretty) doc)
 
 -- Display all the exported names in the given namespace
 export
