@@ -4,6 +4,7 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.Env
+import Core.Metadata
 import Core.TT
 
 import Idris.Pretty
@@ -51,6 +52,7 @@ styleAnn (TCon _) = color BrightBlue
 styleAnn DCon = color BrightRed
 styleAnn (Fun _) = color BrightGreen
 styleAnn Header = underline
+styleAnn (Syntax syn) = syntaxAnn syn
 styleAnn _ = []
 
 export
@@ -293,13 +295,9 @@ getDocsForName fc n
            _ => pure []
 
     showCategory : GlobalDef -> Doc IdrisDocAnn -> Doc IdrisDocAnn
-    showCategory d = case definition d of
-      TCon _ _ _ _ _ _ _ _ => tCon (fullname d)
-      DCon _ _ _ => dCon
-      PMDef _ _ _ _ _ => fun (fullname d)
-      ForeignDef _ _ => fun (fullname d)
-      Builtin _ => fun (fullname d)
-      _ => id
+    showCategory d = case defDecoration (definition d) of
+      Nothing => id
+      Just decor => annotate (Syntax $ SynDecor decor)
 
     showDoc : (Name, String) -> Core (Doc IdrisDocAnn)
     showDoc (n, str)

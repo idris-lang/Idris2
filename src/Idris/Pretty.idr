@@ -37,6 +37,21 @@ data IdrisAnn
   | Syntax IdrisSyntax
 
 export
+decorAnn : Decoration -> AnsiStyle
+decorAnn Keyword = color BrightWhite
+decorAnn Typ = color BrightBlue
+decorAnn Data = color BrightRed
+decorAnn Function = color BrightGreen
+decorAnn Bound = italic
+
+export
+syntaxAnn : IdrisSyntax -> AnsiStyle
+syntaxAnn SynHole = color BrightGreen
+syntaxAnn (SynDecor decor) = decorAnn decor
+syntaxAnn SynPragma = color BrightMagenta
+syntaxAnn (SynRef _) = []
+
+export
 colorAnn : IdrisAnn -> AnsiStyle
 colorAnn Warning = color Yellow <+> bold
 colorAnn Error = color BrightRed <+> bold
@@ -44,14 +59,7 @@ colorAnn ErrorDesc = bold
 colorAnn FileCtxt = color BrightBlue
 colorAnn Code = color Magenta
 colorAnn Meta = color Green
-colorAnn (Syntax SynHole) = color Green
-colorAnn (Syntax (SynDecor Keyword)) = color BrightWhite
-colorAnn (Syntax (SynDecor Typ)) = color BrightBlue
-colorAnn (Syntax (SynDecor Data)) = color BrightRed
-colorAnn (Syntax (SynDecor Function)) = color BrightGreen
-colorAnn (Syntax (SynDecor Bound)) = italic
-colorAnn (Syntax SynPragma) = color BrightMagenta
-colorAnn (Syntax (SynRef _)) = []
+colorAnn (Syntax syn) = syntaxAnn syn
 
 export
 warning : Doc IdrisAnn -> Doc IdrisAnn
