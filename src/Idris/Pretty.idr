@@ -176,6 +176,9 @@ mutual
   prettyUpdate (PSetFieldApp path v) =
     concatWith (surround dot) (pretty <$> path) <++> pretty '$' <+> equals <++> prettyTerm v
 
+  prettyBinder : Name -> Doc IdrisSyntax
+  prettyBinder = annotate (SynDecor Bound) . pretty
+
   export
   prettyTerm : PTerm' KindedName -> Doc IdrisSyntax
   prettyTerm = go Open
@@ -199,32 +202,48 @@ mutual
         parenthesise (d > startPrec) $ group $
           branchVal
             (go startPrec arg <++> "->" <++> go startPrec ret)
-            (parens (prettyRig rig <+> "_" <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret)
+            (parens (prettyRig rig <+> "_" <++> colon <++> go startPrec arg)
+                    <++> "->" <+> line <+> go startPrec ret)
             rig
       go d (PPi _ rig Explicit (Just n) arg ret) =
         parenthesise (d > startPrec) $ group $
-          parens (prettyRig rig <+> pretty n <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret
+          parens (prettyRig rig <+> prettyBinder n
+                 <++> colon <++> go startPrec arg)
+                  <++> "->" <+> line <+> go startPrec ret
       go d (PPi _ rig Implicit Nothing arg ret) =
         parenthesise (d > startPrec) $ group $
-          braces (prettyRig rig <+> pretty '_' <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret
+          braces (prettyRig rig <+> pretty '_'
+                 <++> colon <++> go startPrec arg)
+                 <++> "->" <+> line <+> go startPrec ret
       go d (PPi _ rig Implicit (Just n) arg ret) =
         parenthesise (d > startPrec) $ group $
-          braces (prettyRig rig <+> pretty n <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret
+          braces (prettyRig rig <+> prettyBinder n
+                 <++> colon <++> go startPrec arg)
+                 <++> "->" <+> line <+> go startPrec ret
       go d (PPi _ rig AutoImplicit Nothing arg ret) =
         parenthesise (d > startPrec) $ group $
           branchVal
             (go startPrec arg <++> "=>" <+> line <+> go startPrec ret)
-            (braces (auto_ <++> prettyRig rig <+> "_" <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret)
+            (braces (auto_ <++> prettyRig rig <+> "_"
+                    <++> colon <++> go startPrec arg)
+                    <++> "->" <+> line <+> go startPrec ret)
             rig
       go d (PPi _ rig AutoImplicit (Just n) arg ret) =
         parenthesise (d > startPrec) $ group $
-          braces (auto_ <++> prettyRig rig <+> pretty n <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret
+          braces (auto_ <++> prettyRig rig <+> prettyBinder n
+                 <++> colon <++> go startPrec arg)
+                 <++> "->" <+> line <+> go startPrec ret
       go d (PPi _ rig (DefImplicit t) Nothing arg ret) =
         parenthesise (d > startPrec) $ group $
-          braces (default_ <++> go appPrec t <++> prettyRig rig <+> "_" <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret
+          braces (default_ <++> go appPrec t <++> prettyRig rig <+> "_"
+                 <++> colon <++> go startPrec arg)
+                 <++> "->" <+> line <+> go startPrec ret
       go d (PPi _ rig (DefImplicit t) (Just n) arg ret) =
         parenthesise (d > startPrec) $ group $
-          braces (default_ <++> go appPrec t <++> prettyRig rig <+> pretty n <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret
+          braces (default_ <++> go appPrec t
+                 <++> prettyRig rig <+> prettyBinder n
+                 <++> colon <++> go startPrec arg)
+                 <++> "->" <+> line <+> go startPrec ret
       go d (PLam _ rig _ n ty sc) =
           let (ns, sc) = getLamNames [(rig, n, ty)] sc in
               parenthesise (d > startPrec) $ group $ align $ hang 2 $

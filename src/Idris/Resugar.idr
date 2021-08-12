@@ -107,10 +107,11 @@ extractNat acc tm = case tm of
     do guard (n == "Z")
        guard (ns == typesNS || ns == preludeNS)
        pure acc
-  PApp _ (PRef _ (MkKindedName _ (NS ns (UN n)))) k => do
-    do guard (n == "S")
-       guard (ns == typesNS || ns == preludeNS)
-       extractNat (1 + acc) k
+  PApp _ (PRef _ (MkKindedName _ (NS ns (UN n)))) k => case n of
+    "S" => do guard (ns == typesNS || ns == preludeNS)
+              extractNat (1 + acc) k
+    "fromInteger" => extractNat acc k
+    _ => Nothing
   PPrimVal _ (BI n) => pure (acc + integerToNat n)
   PBracketed _ k    => extractNat acc k
   _                 => Nothing

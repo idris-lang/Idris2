@@ -346,7 +346,7 @@ summarise n -- n is fully qualified
          --                _ => Nothing
          ty <- normaliseHoles defs [] (type def)
          pure $ showCategory def (prettyName n)
-              <++> colon <++> prettyTerm !(resugar [] ty)
+              <++> colon <++> nest 2 (prettyTerm !(resugar [] ty))
 --              <+> maybe "" ((Line <+>) . indent 2 . pretty) doc)
 
 -- Display all the exported names in the given namespace
