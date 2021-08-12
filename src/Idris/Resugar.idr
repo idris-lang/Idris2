@@ -54,7 +54,10 @@ addBracket fc tm = if needed tm then PBracketed fc tm else tm
     needed (PList _ _ _) = False
     needed (PSnocList _ _ _) = False
     needed (PRange{}) = False
+    needed (PRangeStream{}) = False
     needed (PPrimVal _ _) = False
+    needed (PIdiom{}) = False
+    needed (PBang{}) = False
     needed tm = True
 
 bracket : {auto s : Ref Syn SyntaxInfo} ->
