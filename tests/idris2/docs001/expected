@@ -81,5 +81,5 @@ Main> Prelude.Monad : (Type -> Type) -> Type
     Monad (Either e)
     Monad List
 Main> 1 : Integer
-	Primitive
+  Primitive
 Main> Bye for now!
