@@ -125,6 +125,29 @@ getDocsForPrimitive constant = do
                    <++> colon <++> prettyTerm !(resugar [] type)
     pure (typeString <+> Line <+> indent 2 "Primitive")
 
+data Config : Type where
+  ||| Configuration of the printer for a name
+  ||| @ longNames   Do we print qualified names?
+  ||| @ dropFirst   Do we drop the first argument in the type?
+  ||| @ getTotality Do we print the totality status of the function?
+  MkConfig : {default True  longNames   : Bool} ->
+             {default False dropFirst   : Bool} ->
+             {default True  getTotality : Bool} ->
+             Config
+
+||| Printer configuration for interface methods
+||| * longNames turned off for interface methods because the namespace is
+|||             already spelt out for the interface itself
+||| * dropFirst turned on for interface methods because the first argument
+|||             is always the interface constraint
+||| * totality  turned off for interface methods because the methods themselves
+|||             are just projections out of a record and so are total
+methodsConfig : Config
+methodsConfig
+  = MkConfig {longNames = False}
+             {dropFirst = True}
+             {getTotality = False}
+
 export
 getDocsForName : {auto o : Ref ROpts REPLOpts} ->
                  {auto c : Ref Ctxt Defs} ->
@@ -141,9 +164,11 @@ getDocsForName fc n
              | _ => undefinedName fc n
          let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn)) all
              | [] => pure $ pretty ("No documentation for " ++ show n)
-         docs <- traverse showDoc ns
+         docs <- traverse (showDoc MkConfig) ns
          pure $ vcat (punctuate Line docs)
   where
+
+    showDoc : Config -> (Name, String) -> Core (Doc IdrisDocAnn)
 
     -- Avoid generating too much whitespace by not returning a single empty line
     reflowDoc : String -> List (Doc IdrisDocAnn)
@@ -183,16 +208,9 @@ getDocsForName fc n
     getMethDoc : Method -> Core (List (Doc IdrisDocAnn))
     getMethDoc meth
         = do syn <- get Syn
-             let [(n, str)] = lookupName meth.name (docstrings syn)
+             let [nstr] = lookupName meth.name (docstrings syn)
                   | _ => pure []
-             ty <- pterm (map (MkKindedName Nothing) meth.type) -- hack
-             let nm = prettyName meth.name
-             pure $ pure $ vcat [
-               annotate (Decl meth.name) (hsep [fun (meth.name) nm, colon, prettyTerm ty])
-               , annotate DocStringBody $ vcat (
-                 toList (indent 2 . pretty . show <$> meth.totalReq)
-                 ++ reflowDoc str)
-               ]
+             pure <$> showDoc methodsConfig nstr
 
     getInfixDoc : Name -> Core (List (Doc IdrisDocAnn))
     getInfixDoc n
@@ -299,17 +317,24 @@ getDocsForName fc n
                 pure (tot ++ cdoc)
            _ => pure []
 
-    showDoc : (Name, String) -> Core (Doc IdrisDocAnn)
-    showDoc (n, str)
+    showDoc (MkConfig {longNames, dropFirst, getTotality}) (n, str)
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => undefinedName fc n
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
+             -- when printing e.g. interface methods there is no point in
+             -- repeating the interface's name
+             let ty = ifThenElse (not dropFirst) ty $ case ty of
+                        PPi _ _ AutoImplicit _ _ sc => sc
+                        _ => ty
              let cat = showCategory def
              nm <- aliasName n
-             let docDecl = annotate (Decl n) (hsep [cat (pretty (show nm)), colon, prettyTerm ty])
+             -- when printing e.g. interface methods there is no point in
+             -- repeating the namespace the interface lives in
+             let nm = if longNames then pretty (show nm) else prettyName nm
+             let docDecl = annotate (Decl n) (hsep [cat nm, colon, prettyTerm ty])
              let docText = reflowDoc str
-             extra <- getExtra n def
+             extra <- ifThenElse getTotality (getExtra n def) (pure [])
              fixes <- getFixityDoc n
              let docBody = annotate DocStringBody $ vcat $ docText ++ (map (indent 2) (extra ++ fixes))
              pure (vcat [docDecl, docBody])
