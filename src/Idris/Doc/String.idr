@@ -273,7 +273,7 @@ getDocsForName fc n
                 -- should never happen, since we know that the DCon exists:
                 | Nothing => pure Empty
            ty <- resugar [] =<< normaliseHoles defs [] (type def)
-           let prettyName = pretty (nameRoot nm)
+           let prettyName = prettyName nm
            let projDecl = annotate (Decl nm) $ hsep [ fun nm prettyName, colon, prettyTerm ty ]
            case lookupName nm (docstrings syn) of
                 [(_, "")] => pure projDecl
