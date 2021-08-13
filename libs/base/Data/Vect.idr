@@ -858,6 +858,7 @@ implementation {k : Nat} -> Applicative (Vect k) where
 
 -- ||| This monad is different from the List monad, (>>=)
 -- ||| uses the diagonal.
+public export
 implementation {k : Nat} -> Monad (Vect k) where
     m >>= f = diag (map f m)
 
