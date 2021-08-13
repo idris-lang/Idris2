@@ -247,6 +247,9 @@ getDocsForName fc n
                 case !(traverse (pterm . map (MkKindedName Nothing)) (parents iface)) of
                      [] => []
                      ps => [hsep (header "Constraints" :: punctuate comma (map (pretty . show) ps))]
+             let icon = case dropNS (iconstructor iface) of
+                          DN _ _ => [] -- machine inserted
+                          nm => [hsep [header "Constructor", dCon (prettyName nm)]]
              mdocs <- traverse getMethDoc (methods iface)
              let meths = case concat mdocs of
                            [] => []
@@ -260,7 +263,7 @@ getDocsForName fc n
                            [doc] => [header "Implementation" <++> annotate Declarations doc]
                            docs => [vcat [header "Implementations"
                                    , annotate Declarations $ vcat $ map (indent 2) docs]]
-             pure (vcat (params ++ constraints ++ meths ++ insts))
+             pure (vcat (params ++ constraints ++ icon ++ meths ++ insts))
 
     getFieldDoc : Name -> Core (Doc IdrisDocAnn)
     getFieldDoc nm
