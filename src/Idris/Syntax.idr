@@ -42,13 +42,21 @@ OpStr = Name
 
 mutual
 
+  ||| Source language as produced by the parser
   public export
   PTerm : Type
   PTerm = PTerm' Name
 
-  -- The full high level source language
-  -- This gets desugared to RawImp (TTImp.TTImp), then elaborated to
-  -- Term (Core.TT)
+  ||| Internal PTerm
+  ||| Source language as produced by the unelaboration of core Terms
+  ||| KindedNames carry extra information about the nature of the variable
+  public export
+  IPTerm : Type
+  IPTerm = PTerm' KindedName
+
+  ||| The full high level source language
+  ||| This gets desugared to RawImp (TTImp.TTImp),
+  ||| then elaborated to Term (Core.TT)
   public export
   data PTerm' : Type -> Type where
        -- Direct (more or less) translations to RawImp
@@ -788,7 +796,7 @@ Show PTerm where
   showPrec = showPTermPrec id
 
 export
-Show (PTerm' KindedName) where
+Show IPTerm where
   showPrec = showPTermPrec rawName
 
 public export

@@ -102,7 +102,7 @@ addDocStringNS ns n_in doc
          put Syn (record { docstrings $= addName n' doc,
                            saveDocstrings $= insert n' () } syn)
 
-prettyTerm : PTerm' KindedName -> Doc IdrisDocAnn
+prettyTerm : IPTerm -> Doc IdrisDocAnn
 prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
 
 showCategory : GlobalDef -> Doc IdrisDocAnn -> Doc IdrisDocAnn

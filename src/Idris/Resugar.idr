@@ -31,7 +31,7 @@ unbracketApp tm = tm
 
 -- TODO: Deal with precedences
 mkOp : {auto s : Ref Syn SyntaxInfo} ->
-       PTerm' KindedName -> Core (PTerm' KindedName)
+       IPTerm -> Core IPTerm
 mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
     = do syn <- get Syn
          let n = rawName kn
@@ -62,7 +62,7 @@ addBracket fc tm = if needed tm then PBracketed fc tm else tm
 
 bracket : {auto s : Ref Syn SyntaxInfo} ->
           (outer : Nat) -> (inner : Nat) ->
-          PTerm' KindedName -> Core (PTerm' KindedName)
+          IPTerm -> Core IPTerm
 bracket outer inner tm
     = do tm' <- mkOp tm
          if outer > inner
@@ -104,7 +104,7 @@ unbracket (PBracketed _ tm) = tm
 unbracket tm = tm
 
 ||| Attempt to extract a constant natural number
-extractNat : Nat -> PTerm' KindedName -> Maybe Nat
+extractNat : Nat -> IPTerm -> Maybe Nat
 extractNat acc tm = case tm of
   PRef _ (MkKindedName _ (NS ns (UN n))) =>
     do guard (n == "Z")
@@ -123,7 +123,7 @@ mutual
 
   ||| Put the special names (Nil, ::, Pair, Z, S, etc) back as syntax
   ||| Returns `Nothing` in case there was nothing to resugar.
-  sugarAppM : PTerm' KindedName -> Maybe (PTerm' KindedName)
+  sugarAppM : IPTerm -> Maybe IPTerm
   sugarAppM (PApp fc (PApp _ (PApp _ (PRef opFC (MkKindedName nt (NS ns nm))) l) m) r) =
     case nameRoot nm of
       "rangeFromThenTo" => pure $ PRange fc (unbracket l) (Just $ unbracket m) (unbracket r)
@@ -176,7 +176,7 @@ mutual
 
   ||| Put the special names (Nil, ::, Pair, Z, S, etc.) back as syntax
 
-  sugarApp : PTerm' KindedName -> PTerm' KindedName
+  sugarApp : IPTerm -> IPTerm
   sugarApp tm = fromMaybe tm (sugarAppM tm)
 
 export
@@ -186,7 +186,7 @@ sugarName (PV n _) = sugarName n
 sugarName (DN n _) = n
 sugarName x = show x
 
-toPRef : FC -> KindedName -> Core (PTerm' KindedName)
+toPRef : FC -> KindedName -> Core IPTerm
 toPRef fc kn@(MkKindedName nt nm) = case nm of
   MN n _     => pure (sugarApp (PRef fc (MkKindedName nt $ UN n)))
   PV n _     => pure (sugarApp (PRef fc (MkKindedName nt $ n)))
@@ -197,7 +197,7 @@ toPRef fc kn@(MkKindedName nt nm) = case nm of
 mutual
   toPTerm : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
-            (prec : Nat) -> IRawImp -> Core (PTerm' KindedName)
+            (prec : Nat) -> IRawImp -> Core IPTerm
   toPTerm p (IVar fc nm) = do
     t <- if fullNamespace !(getPPrint)
       then pure $ PRef fc nm
@@ -259,7 +259,7 @@ mutual
            alts' <- traverse toPClause alts
            bracket p startPrec (mkIf (PCase fc sc' alts'))
     where
-      mkIf : PTerm' KindedName -> PTerm' KindedName
+      mkIf : IPTerm -> IPTerm
       mkIf tm@(PCase loc sc [MkPatClause _ (PRef _ tval) t [],
                              MkPatClause _ (PRef _ fval) f []])
          = if dropNS (rawName tval) == UN "True"
@@ -329,9 +329,9 @@ mutual
 
   mkApp : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
-          PTerm' KindedName ->
-          List (FC, Maybe (Maybe Name), PTerm' KindedName) ->
-          Core (PTerm' KindedName)
+          IPTerm ->
+          List (FC, Maybe (Maybe Name), IPTerm) ->
+          Core IPTerm
   mkApp fn [] = pure fn
   mkApp fn ((fc, Nothing, arg) :: rest)
       = do let ap = sugarApp (PApp fc fn arg)
@@ -348,8 +348,8 @@ mutual
 
   toPTermApp : {auto c : Ref Ctxt Defs} ->
                {auto s : Ref Syn SyntaxInfo} ->
-               IRawImp -> List (FC, Maybe (Maybe Name), PTerm' KindedName) ->
-               Core (PTerm' KindedName)
+               IRawImp -> List (FC, Maybe (Maybe Name), IPTerm) ->
+               Core IPTerm
   toPTermApp (IApp fc f a) args
       = do a' <- toPTerm argPrec a
            toPTermApp f ((fc, Nothing, a') :: args)
@@ -425,9 +425,7 @@ mutual
               {auto s : Ref Syn SyntaxInfo} ->
               ImpRecord' KindedName ->
               Core ( Name
-                   , List (Name, RigCount
-                          , PiInfo (PTerm' KindedName)
-                          , PTerm' KindedName)
+                   , List (Name, RigCount, PiInfo IPTerm, IPTerm)
                    , Maybe Name
                    , List (PField' KindedName))
   toPRecord (MkImpRecord fc n ps con fs)
@@ -438,7 +436,7 @@ mutual
            fs' <- traverse toPField fs
            pure (n, ps', Just con, fs')
     where
-      mapPiInfo : PiInfo IRawImp -> Core (PiInfo (PTerm' KindedName))
+      mapPiInfo : PiInfo IRawImp -> Core (PiInfo IPTerm)
       mapPiInfo Explicit        = pure   Explicit
       mapPiInfo Implicit        = pure   Implicit
       mapPiInfo AutoImplicit    = pure   AutoImplicit
@@ -488,7 +486,7 @@ mutual
 
 export
 cleanPTerm : {auto c : Ref Ctxt Defs} ->
-             PTerm' KindedName -> Core (PTerm' KindedName)
+             IPTerm -> Core IPTerm
 cleanPTerm ptm
    = do ns <- fullNamespace
         if ns then pure ptm else mapPTermM cleanNode ptm
@@ -508,7 +506,7 @@ cleanPTerm ptm
     cleanKindedName : KindedName -> Core KindedName
     cleanKindedName (MkKindedName nt nm) = MkKindedName nt <$> cleanName nm
 
-    cleanNode : PTerm' KindedName -> Core (PTerm' KindedName)
+    cleanNode : IPTerm -> Core IPTerm
     cleanNode (PRef fc nm)    =
       PRef fc <$> cleanKindedName nm
     cleanNode (POp fc opFC op x y) =
@@ -525,7 +523,7 @@ cleanPTerm ptm
 
 toCleanPTerm : {auto c : Ref Ctxt Defs} ->
                {auto s : Ref Syn SyntaxInfo} ->
-               (prec : Nat) -> IRawImp -> Core (PTerm' KindedName)
+               (prec : Nat) -> IRawImp -> Core IPTerm
 toCleanPTerm prec tti = do
   ptm <- toPTerm prec tti
   cleanPTerm ptm
@@ -534,7 +532,7 @@ export
 resugar : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
-          Env Term vars -> Term vars -> Core (PTerm' KindedName)
+          Env Term vars -> Term vars -> Core IPTerm
 resugar env tm
     = do tti <- unelab env tm
          toCleanPTerm startPrec tti
@@ -543,7 +541,7 @@ export
 resugarNoPatvars : {vars : _} ->
                    {auto c : Ref Ctxt Defs} ->
                    {auto s : Ref Syn SyntaxInfo} ->
-                   Env Term vars -> Term vars -> Core (PTerm' KindedName)
+                   Env Term vars -> Term vars -> Core IPTerm
 resugarNoPatvars env tm
     = do tti <- unelabNoPatvars env tm
          toCleanPTerm startPrec tti
@@ -551,5 +549,5 @@ resugarNoPatvars env tm
 export
 pterm : {auto c : Ref Ctxt Defs} ->
         {auto s : Ref Syn SyntaxInfo} ->
-        IRawImp -> Core (PTerm' KindedName)
+        IRawImp -> Core IPTerm
 pterm raw = toCleanPTerm startPrec raw

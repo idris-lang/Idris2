@@ -180,7 +180,7 @@ mutual
   prettyBinder = annotate (SynDecor Bound) . pretty
 
   export
-  prettyTerm : PTerm' KindedName -> Doc IdrisSyntax
+  prettyTerm : IPTerm -> Doc IdrisSyntax
   prettyTerm = go Open
     where
       startPrec : Prec
@@ -194,7 +194,7 @@ mutual
         then annotate (SynRef op) $ pretty op
         else Chara '`' <+> annotate (SynRef op) (pretty op) <+> Chara '`'
 
-      go : Prec -> PTerm' KindedName -> Doc IdrisSyntax
+      go : Prec -> IPTerm -> Doc IdrisSyntax
       go d (PRef _ (MkKindedName mnt n))
         = maybe id (annotate . SynDecor . nameTypeDecoration) mnt
         $ annotate (SynRef n) $ pretty n
@@ -249,13 +249,13 @@ mutual
               parenthesise (d > startPrec) $ group $
                 backslash <+> prettyBindings ns <++> "=>" <+> softline <+> go startPrec sc
         where
-          getLamNames : List (RigCount, PTerm' KindedName, PTerm' KindedName) ->
-                        PTerm' KindedName ->
-                        (List (RigCount, PTerm' KindedName, PTerm' KindedName), PTerm' KindedName)
+          getLamNames : List (RigCount, IPTerm, IPTerm) ->
+                        IPTerm ->
+                        (List (RigCount, IPTerm, IPTerm), IPTerm)
           getLamNames acc (PLam _ rig _ n ty sc) = getLamNames ((rig, n, ty) :: acc) sc
           getLamNames acc sc = (reverse acc, sc)
 
-          prettyBindings : List (RigCount, PTerm' KindedName, PTerm' KindedName) -> Doc IdrisSyntax
+          prettyBindings : List (RigCount, IPTerm, IPTerm) -> Doc IdrisSyntax
           prettyBindings [] = neutral
           prettyBindings [(rig, n, (PImplicit _))] = prettyRig rig <+> go startPrec n
           prettyBindings [(rig, n, ty)] = prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty
@@ -291,7 +291,7 @@ mutual
             let_ <++> (group $ align $ hang 2 $ prettyRig rig <+> go startPrec n <++> equals <+> line <+> go startPrec val) <+> line
               <+> in_ <++> (group $ align $ hang 2 $ continuation)
 
-          getPRefName : PTerm' KindedName -> Maybe Name
+          getPRefName : IPTerm -> Maybe Name
           getPRefName (PRef _ n) = Just (rawName n)
           getPRefName _ = Nothing
 
@@ -370,7 +370,7 @@ mutual
       go d (PComprehension _ ret es) =
           group $ brackets (go startPrec (dePure ret) <++> pipe <++> vsep (punctuate comma (prettyDo . deGuard <$> es)))
         where
-          dePure : PTerm' KindedName -> PTerm' KindedName
+          dePure : IPTerm -> IPTerm
           dePure tm@(PApp _ (PRef _ n) arg)
             = if dropNS (rawName n) == UN "pure" then arg else tm
           dePure tm = tm

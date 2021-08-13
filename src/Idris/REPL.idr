@@ -111,7 +111,7 @@ showInfo (n, idx, d)
                 coreLift_ $ putStrLn $
                         "Size change: " ++ showSep ", " scinfo
 
-prettyTerm : PTerm' KindedName -> Doc IdrisAnn
+prettyTerm : IPTerm -> Doc IdrisAnn
 prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
 
 displayType : {auto c : Ref Ctxt Defs} ->
