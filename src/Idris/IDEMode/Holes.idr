@@ -18,7 +18,7 @@ public export
 record HolePremise where
   constructor MkHolePremise
   name         : Name
-  type         : PTerm
+  type         : IPTerm
   multiplicity : RigCount
   isImplicit   : Bool
 
@@ -27,7 +27,7 @@ public export
 record HoleData where
   constructor MkHoleData
   name : Name
-  type : PTerm
+  type : IPTerm
   context : List HolePremise
 
 ||| If input is a hole, return number of locals in scope at binding

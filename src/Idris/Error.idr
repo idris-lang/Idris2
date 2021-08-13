@@ -4,6 +4,7 @@ import Core.CaseTree
 import Core.Core
 import Core.Context
 import Core.Env
+import Core.Metadata
 import Core.Options
 import Core.Value
 
@@ -38,7 +39,7 @@ import System.File
 %default covering
 
 keyword : Doc IdrisAnn -> Doc IdrisAnn
-keyword = annotate (Syntax SynKeyword)
+keyword = annotate (Syntax $ SynDecor Keyword)
 
 -- | Add binding site information if the term is simply a machine-inserted name
 pShowMN : {vars : _} -> Term vars -> Env t vars -> Doc IdrisAnn -> Doc IdrisAnn

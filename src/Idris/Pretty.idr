@@ -1,5 +1,6 @@
 module Idris.Pretty
 
+import Core.Metadata
 import Data.List
 import Data.Maybe
 import Data.String
@@ -21,7 +22,7 @@ import Idris.Syntax
 public export
 data IdrisSyntax
   = SynHole
-  | SynKeyword
+  | SynDecor Decoration
   | SynPragma
   | SynRef Name
 
@@ -36,6 +37,21 @@ data IdrisAnn
   | Syntax IdrisSyntax
 
 export
+decorAnn : Decoration -> AnsiStyle
+decorAnn Keyword = color BrightWhite
+decorAnn Typ = color BrightBlue
+decorAnn Data = color BrightRed
+decorAnn Function = color BrightGreen
+decorAnn Bound = italic
+
+export
+syntaxAnn : IdrisSyntax -> AnsiStyle
+syntaxAnn SynHole = color BrightGreen
+syntaxAnn (SynDecor decor) = decorAnn decor
+syntaxAnn SynPragma = color BrightMagenta
+syntaxAnn (SynRef _) = []
+
+export
 colorAnn : IdrisAnn -> AnsiStyle
 colorAnn Warning = color Yellow <+> bold
 colorAnn Error = color BrightRed <+> bold
@@ -43,10 +59,7 @@ colorAnn ErrorDesc = bold
 colorAnn FileCtxt = color BrightBlue
 colorAnn Code = color Magenta
 colorAnn Meta = color Green
-colorAnn (Syntax SynHole) = color Green
-colorAnn (Syntax SynKeyword) = color Red
-colorAnn (Syntax SynPragma) = color BrightMagenta
-colorAnn (Syntax (SynRef _)) = []
+colorAnn (Syntax syn) = syntaxAnn syn
 
 export
 warning : Doc IdrisAnn -> Doc IdrisAnn
@@ -66,7 +79,7 @@ fileCtxt = annotate FileCtxt
 
 export
 keyword : Doc IdrisSyntax -> Doc IdrisSyntax
-keyword = annotate SynKeyword
+keyword = annotate (SynDecor Keyword)
 
 export
 meta : Doc IdrisAnn -> Doc IdrisAnn
@@ -124,7 +137,7 @@ prettyRig = elimSemi (pretty '0' <+> space)
                      (const emptyDoc)
 
 mutual
-  prettyAlt : PClause -> Doc IdrisSyntax
+  prettyAlt : PClause' KindedName -> Doc IdrisSyntax
   prettyAlt (MkPatClause _ lhs rhs _) =
     space <+> pipe <++> prettyTerm lhs <++> pretty "=>" <++> prettyTerm rhs <+> semi
   prettyAlt (MkWithClause _ lhs wval prf flags cs) =
@@ -132,7 +145,7 @@ mutual
   prettyAlt (MkImpossible _ lhs) =
     space <+> pipe <++> prettyTerm lhs <++> impossible_ <+> semi
 
-  prettyCase : PClause -> Doc IdrisSyntax
+  prettyCase : PClause' KindedName -> Doc IdrisSyntax
   prettyCase (MkPatClause _ lhs rhs _) =
     prettyTerm lhs <++> pretty "=>" <++> prettyTerm rhs
   prettyCase (MkWithClause _ lhs rhs prf flags _) =
@@ -140,11 +153,11 @@ mutual
   prettyCase (MkImpossible _ lhs) =
     prettyTerm lhs <++> impossible_
 
-  prettyString : PStr -> Doc IdrisSyntax
+  prettyString : PStr' KindedName -> Doc IdrisSyntax
   prettyString (StrLiteral _ str) = pretty str
   prettyString (StrInterp _ tm) = prettyTerm tm
 
-  prettyDo : PDo -> Doc IdrisSyntax
+  prettyDo : PDo' KindedName -> Doc IdrisSyntax
   prettyDo (DoExp _ tm) = prettyTerm tm
   prettyDo (DoBind _ _ n tm) = pretty n <++> pretty "<-" <++> prettyTerm tm
   prettyDo (DoBindPat _ l tm alts) =
@@ -157,14 +170,17 @@ mutual
     let_ <++> braces (angles (angles (pretty "definitions")))
   prettyDo (DoRewrite _ rule) = rewrite_ <+> prettyTerm rule
 
-  prettyUpdate : PFieldUpdate -> Doc IdrisSyntax
+  prettyUpdate : PFieldUpdate' KindedName -> Doc IdrisSyntax
   prettyUpdate (PSetField path v) =
     concatWith (surround dot) (pretty <$> path) <++> equals <++> prettyTerm v
   prettyUpdate (PSetFieldApp path v) =
     concatWith (surround dot) (pretty <$> path) <++> pretty '$' <+> equals <++> prettyTerm v
 
+  prettyBinder : Name -> Doc IdrisSyntax
+  prettyBinder = annotate (SynDecor Bound) . pretty
+
   export
-  prettyTerm : PTerm -> Doc IdrisSyntax
+  prettyTerm : IPTerm -> Doc IdrisSyntax
   prettyTerm = go Open
     where
       startPrec : Prec
@@ -178,47 +194,68 @@ mutual
         then annotate (SynRef op) $ pretty op
         else Chara '`' <+> annotate (SynRef op) (pretty op) <+> Chara '`'
 
-      go : Prec -> PTerm -> Doc IdrisSyntax
-      go d (PRef _ n) = annotate (SynRef n) $ pretty n
+      go : Prec -> IPTerm -> Doc IdrisSyntax
+      go d (PRef _ (MkKindedName mnt n))
+        = maybe id (annotate . SynDecor . nameTypeDecoration) mnt
+        $ annotate (SynRef n) $ pretty n
       go d (PPi _ rig Explicit Nothing arg ret) =
         parenthesise (d > startPrec) $ group $
           branchVal
             (go startPrec arg <++> "->" <++> go startPrec ret)
-            (parens (prettyRig rig <+> "_" <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret)
+            (parens (prettyRig rig <+> "_" <++> colon <++> go startPrec arg)
+                    <++> "->" <+> softline <+> go startPrec ret)
             rig
       go d (PPi _ rig Explicit (Just n) arg ret) =
         parenthesise (d > startPrec) $ group $
-          parens (prettyRig rig <+> pretty n <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret
+          parens (prettyRig rig <+> prettyBinder n
+                 <++> colon <++> go startPrec arg)
+                  <++> "->" <+> softline <+> go startPrec ret
       go d (PPi _ rig Implicit Nothing arg ret) =
         parenthesise (d > startPrec) $ group $
-          braces (prettyRig rig <+> pretty '_' <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret
+          braces (prettyRig rig <+> pretty '_'
+                 <++> colon <++> go startPrec arg)
+                 <++> "->" <+> softline <+> go startPrec ret
       go d (PPi _ rig Implicit (Just n) arg ret) =
         parenthesise (d > startPrec) $ group $
-          braces (prettyRig rig <+> pretty n <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret
+          braces (prettyRig rig <+> prettyBinder n
+                 <++> colon <++> go startPrec arg)
+                 <++> "->" <+> softline <+> go startPrec ret
       go d (PPi _ rig AutoImplicit Nothing arg ret) =
         parenthesise (d > startPrec) $ group $
           branchVal
-            (go startPrec arg <++> "=>" <+> line <+> go startPrec ret)
-            (braces (auto_ <++> prettyRig rig <+> "_" <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret)
+            (go startPrec arg <++> "=>" <+> softline <+> go startPrec ret)
+            (braces (auto_ <++> prettyRig rig <+> "_"
+                    <++> colon <++> go startPrec arg)
+                    <++> "->" <+> softline <+> go startPrec ret)
             rig
       go d (PPi _ rig AutoImplicit (Just n) arg ret) =
         parenthesise (d > startPrec) $ group $
-          braces (auto_ <++> prettyRig rig <+> pretty n <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret
+          braces (auto_ <++> prettyRig rig <+> prettyBinder n
+                 <++> colon <++> go startPrec arg)
+                 <++> "->" <+> softline <+> go startPrec ret
       go d (PPi _ rig (DefImplicit t) Nothing arg ret) =
         parenthesise (d > startPrec) $ group $
-          braces (default_ <++> go appPrec t <++> prettyRig rig <+> "_" <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret
+          braces (default_ <++> go appPrec t <++> prettyRig rig <+> "_"
+                 <++> colon <++> go startPrec arg)
+                 <++> "->" <+> softline <+> go startPrec ret
       go d (PPi _ rig (DefImplicit t) (Just n) arg ret) =
         parenthesise (d > startPrec) $ group $
-          braces (default_ <++> go appPrec t <++> prettyRig rig <+> pretty n <++> colon <++> go startPrec arg) <++> "->" <+> line <+> go startPrec ret
+          braces (default_ <++> go appPrec t
+                 <++> prettyRig rig <+> prettyBinder n
+                 <++> colon <++> go startPrec arg)
+                 <++> "->" <+> softline <+> go startPrec ret
       go d (PLam _ rig _ n ty sc) =
           let (ns, sc) = getLamNames [(rig, n, ty)] sc in
-              parenthesise (d > startPrec) $ group $ align $ hang 2 $
-                backslash <+> prettyBindings ns <++> "=>" <+> line <+> go startPrec sc
+              parenthesise (d > startPrec) $ group $
+                backslash <+> prettyBindings ns <++> "=>" <+> softline <+> go startPrec sc
         where
-          getLamNames : List (RigCount, PTerm, PTerm) -> PTerm -> (List (RigCount, PTerm, PTerm), PTerm)
+          getLamNames : List (RigCount, IPTerm, IPTerm) ->
+                        IPTerm ->
+                        (List (RigCount, IPTerm, IPTerm), IPTerm)
           getLamNames acc (PLam _ rig _ n ty sc) = getLamNames ((rig, n, ty) :: acc) sc
           getLamNames acc sc = (reverse acc, sc)
-          prettyBindings : List (RigCount, PTerm, PTerm) -> Doc IdrisSyntax
+
+          prettyBindings : List (RigCount, IPTerm, IPTerm) -> Doc IdrisSyntax
           prettyBindings [] = neutral
           prettyBindings [(rig, n, (PImplicit _))] = prettyRig rig <+> go startPrec n
           prettyBindings [(rig, n, ty)] = prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty
@@ -254,8 +291,8 @@ mutual
             let_ <++> (group $ align $ hang 2 $ prettyRig rig <+> go startPrec n <++> equals <+> line <+> go startPrec val) <+> line
               <+> in_ <++> (group $ align $ hang 2 $ continuation)
 
-          getPRefName : PTerm -> Maybe Name
-          getPRefName (PRef _ n) = Just n
+          getPRefName : IPTerm -> Maybe Name
+          getPRefName (PRef _ n) = Just (rawName n)
           getPRefName _ = Nothing
 
       go d (PLet _ rig n ty val sc alts) =
@@ -276,7 +313,7 @@ mutual
 
         in parenthesise (d > appPrec) $ group $ case f of
           (PRef _ n) =>
-            if isJust (isRF n)
+            if isJust (isRF $ rawName n)
             then go leftAppPrec a <++> go appPrec f
             else catchall
           _ => catchall
@@ -289,9 +326,9 @@ mutual
         parenthesise (d > appPrec) $ group $ go leftAppPrec f <++> "@" <+> braces (go startPrec a)
       go d (PNamedApp _ f n (PRef _ a)) =
         parenthesise (d > appPrec) $ group $
-          if n == a
+          if n == rawName a
              then go leftAppPrec f <++> braces (pretty n)
-             else go leftAppPrec f <++> braces (pretty n <++> equals <++> pretty a)
+             else go leftAppPrec f <++> braces (pretty n <++> equals <++> pretty a.rawName)
       go d (PNamedApp _ f n a) =
         parenthesise (d > appPrec) $ group $ go leftAppPrec f <++> braces (pretty n <++> equals <++> go d a)
       go d (PSearch _ _) = pragma "%search"
@@ -300,13 +337,15 @@ mutual
       go d (PQuoteDecl _ tm) = parenthesise (d > appPrec) $ "`" <+> brackets (angles (angles (pretty "declaration")))
       go d (PUnquote _ tm) = parenthesise (d > appPrec) $ "~" <+> parens (go startPrec tm)
       go d (PRunElab _ tm) = parenthesise (d > appPrec) $ pragma "%runElab" <++> go startPrec tm
-      go d (PPrimVal _ c) = pretty c
+      go d (PPrimVal _ c) =
+        let decor = if isPrimType c then Typ else Data in
+        annotate (SynDecor decor) $ pretty c
       go d (PHole _ _ n) = hole (pretty (strCons '?' n))
-      go d (PType _) = pretty "Type"
+      go d (PType _) = annotate (SynDecor Typ) "Type"
       go d (PAs _ _ n p) = pretty n <+> "@" <+> go d p
       go d (PDotted _ p) = dot <+> go d p
       go d (PImplicit _) = "_"
-      go d (PInfer _) = "?"
+      go d (PInfer _) = annotate SynHole $ "?"
       go d (POp _ _ op x y) = parenthesise (d > appPrec) $ group $ go startPrec x <++> prettyOp op <++> go startPrec y
       go d (PPrefixOp _ _ op x) = parenthesise (d > appPrec) $ pretty op <+> go startPrec x
       go d (PSectionL _ _ op x) = parens (prettyOp op <++> go startPrec x)
@@ -331,12 +370,14 @@ mutual
       go d (PComprehension _ ret es) =
           group $ brackets (go startPrec (dePure ret) <++> pipe <++> vsep (punctuate comma (prettyDo . deGuard <$> es)))
         where
-          dePure : PTerm -> PTerm
-          dePure tm@(PApp _ (PRef _ n) arg) = if dropNS n == UN "pure" then arg else tm
+          dePure : IPTerm -> IPTerm
+          dePure tm@(PApp _ (PRef _ n) arg)
+            = if dropNS (rawName n) == UN "pure" then arg else tm
           dePure tm = tm
 
-          deGuard : PDo -> PDo
-          deGuard tm@(DoExp fc (PApp _ (PRef _ n) arg)) = if dropNS n == UN "guard" then DoExp fc arg else tm
+          deGuard : PDo' KindedName -> PDo' KindedName
+          deGuard tm@(DoExp fc (PApp _ (PRef _ n) arg))
+            = if dropNS (rawName n) == UN "guard" then DoExp fc arg else tm
           deGuard tm = tm
       go d (PRewrite _ rule tm) =
         parenthesise (d > appPrec) $ group $ rewrite_ <++> go startPrec rule <+> line <+> in_ <++> go startPrec tm

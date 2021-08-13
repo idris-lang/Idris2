@@ -1,6 +1,6 @@
 1/1: Building power (power.idr)
 Main> Main.cube : Nat -> Nat
-cube = \x => mult x (mult x (mult x (const (fromInteger 1) x)))
+cube = \x => mult x (mult x (mult x (const 1 x)))
 Main> 27
 Main> Main.cube' : Nat -> Nat
 cube' = \x => mult (mult (plus x 0) x) x

@@ -34,6 +34,21 @@ nameTypeDecoration Func          = Function
 nameTypeDecoration (DataCon _ _) = Data
 nameTypeDecoration (TyCon _ _  ) = Typ
 
+export
+defDecoration : Def -> Maybe Decoration
+defDecoration None = Nothing
+defDecoration (PMDef {}) = Just Function
+defDecoration (ExternDef {}) = Just Function
+defDecoration (ForeignDef {}) = Just Function
+defDecoration (Builtin {}) = Just Function
+defDecoration (DCon {}) = Just Data
+defDecoration (TCon {}) = Just Typ
+defDecoration (Hole {}) = Just Function
+defDecoration (BySearch {}) = Nothing
+defDecoration (Guess {}) = Nothing
+defDecoration ImpBind = Just Bound
+defDecoration Delayed = Nothing
+
 public export
 ASemanticDecoration : Type
 ASemanticDecoration = (NonEmptyFC, Decoration, Maybe Name)

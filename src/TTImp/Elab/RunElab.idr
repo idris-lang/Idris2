@@ -17,6 +17,7 @@ import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.Reflect
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
@@ -100,7 +101,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
         = do tm' <- evalClosure defs tm
              defs <- get Ctxt
              empty <- clearDefs defs
-             scriptRet !(unelabUniqueBinders env !(quote empty env tm'))
+             scriptRet $ map rawName !(unelabUniqueBinders env !(quote empty env tm'))
     elabCon defs "Lambda" [x, _, scope]
         = do empty <- clearDefs defs
              NBind bfc x (Lam fc' c p ty) sc <- evalClosure defs scope
@@ -127,7 +128,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                  | Nothing => nfOpts withAll defs env
                                      !(reflect fc defs False env (the (Maybe RawImp) Nothing))
              ty <- getTerm gty
-             scriptRet (Just !(unelabUniqueBinders env ty))
+             scriptRet (Just $ map rawName $ !(unelabUniqueBinders env ty))
     elabCon defs "LocalVars" []
         = scriptRet vars
     elabCon defs "GenSym" [str]
@@ -145,7 +146,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
       where
         unelabType : (Name, Int, ClosedTerm) -> Core (Name, RawImp)
         unelabType (n, _, ty)
-            = pure (n, !(unelabUniqueBinders [] ty))
+            = pure (n, map rawName !(unelabUniqueBinders [] ty))
     elabCon defs "GetLocalType" [n]
         = do n' <- evalClosure defs n
              n <- reify defs n'
@@ -153,7 +154,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                   Just (MkIsDefined rigb lv) =>
                        do let binder = getBinder lv env
                           let bty = binderType binder
-                          scriptRet !(unelabUniqueBinders env bty)
+                          scriptRet $ map rawName !(unelabUniqueBinders env bty)
                   _ => throw (GenericMsg fc (show n ++ " is not a local variable"))
     elabCon defs "GetCons" [n]
         = do n' <- evalClosure defs n

@@ -199,6 +199,7 @@ modules =
     TTImp.ProcessType,
     TTImp.Reflect,
     TTImp.TTImp,
+    TTImp.TTImp.Functor,
     TTImp.Unelab,
     TTImp.Utils,
     TTImp.WithClause,

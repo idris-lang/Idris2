@@ -12,14 +12,15 @@ Lambda:62:3--88:9
  67 |                           (Func
 
 1/1: Building Bad1 (Bad1.idr)
-Error: Couldn't parse declaration.
+Error: Couldn't parse any alternatives:
+1: Not the end of a block entry.
 
-Bad1:3:1--3:5
+Bad1:3:20--3:21
  1 | module Bad1
  2 | 
  3 | data Bad = BadDCon (x : Nat)
-     ^^^^
-
+                        ^
+... (2 others)
 1/1: Building Bad2 (Bad2.idr)
 Error: Cannot return a named argument.
 

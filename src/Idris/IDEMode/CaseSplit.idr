@@ -12,6 +12,7 @@ import Parser.Unlit
 
 import TTImp.Interactive.CaseSplit
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Utils
 
 import Idris.IDEMode.TokenLine
@@ -44,10 +45,10 @@ toStrUpdate : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               (Name, RawImp) -> Core Updates
 toStrUpdate (UN n, term)
-    = do clause <- pterm term
+    = do clause <- pterm (map (MkKindedName Nothing) term) -- hack
          pure [(n, show (bracket clause))]
   where
-    bracket : PTerm -> PTerm
+    bracket : PTerm' nm -> PTerm' nm
     bracket tm@(PRef _ _) = tm
     bracket tm@(PList _ _ _) = tm
     bracket tm@(PSnocList _ _ _) = tm
@@ -146,7 +147,7 @@ showImpossible : {auto c : Ref Ctxt Defs} ->
                  {auto o : Ref ROpts REPLOpts} ->
                  (indent : Nat) -> RawImp -> Core String
 showImpossible indent lhs
-    = do clause <- pterm lhs
+    = do clause <- pterm (map (MkKindedName Nothing) lhs) -- hack
          pure (fastPack (replicate indent ' ') ++ show clause ++ " impossible")
 
 -- Given a list of updates and a line and column, find the relevant line in

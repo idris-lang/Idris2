@@ -30,6 +30,15 @@ isCon (TyCon t a) = Just (t, a)
 isCon _ = Nothing
 
 public export
+record KindedName where
+  constructor MkKindedName
+  nameKind : Maybe NameType
+  rawName  : Name
+
+export
+Show KindedName where show = show . rawName
+
+public export
 data Constant
     = I Int
     | I8 Integer -- reuse code from I64 with fewer casts
