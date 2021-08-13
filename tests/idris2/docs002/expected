@@ -13,7 +13,6 @@ Doc> Doc.NS.NestedNS.Foo : Type
 Doc> Doc.WrappedInt : Type
   Totality: total
   Constructor: MkWrappedInt : Int -> WrappedInt
-  
 Doc> Doc.SimpleRec : Type
   Totality: total
   Constructor: MkSimpleRec : Int -> String -> SimpleRec

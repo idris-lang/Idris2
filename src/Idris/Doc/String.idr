@@ -190,12 +190,13 @@ getDocsForName fc n
              syn <- get Syn
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
              let conWithTypeDoc = annotate (Decl con) (hsep [dCon (prettyName con), colon, prettyTerm ty])
-             let [(n, str)] = lookupName con (docstrings syn)
-                  | _ => pure conWithTypeDoc
-             pure $ vcat
-               [ conWithTypeDoc
-               , annotate DocStringBody $ vcat $ reflowDoc str
-               ]
+             case lookupName con (docstrings syn) of
+               [(n, "")] => pure conWithTypeDoc
+               [(n, str)] => pure $ vcat
+                    [ conWithTypeDoc
+                    , annotate DocStringBody $ vcat $ reflowDoc str
+                    ]
+               _ => pure conWithTypeDoc
 
     getImplDoc : Name -> Core (List (Doc IdrisDocAnn))
     getImplDoc n
