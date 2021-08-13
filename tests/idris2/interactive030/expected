@@ -21,9 +21,11 @@ Main> Prelude.<$> : Functor f => (a -> b) -> f a -> f b
 Main> Prelude.Monad : (Type -> Type) -> Type
   Parameters: m
   Constraints: Applicative m
+  Constructor: MkMonad
   Methods:
     (>>=) : m a -> (a -> m b) -> m b
       Also called `bind`.
+      Fixity Declaration: infixl operator, level 1
     join : m (m a) -> m a
       Also called `flatten` or mu.
   Implementations:
