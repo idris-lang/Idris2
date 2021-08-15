@@ -11,6 +11,7 @@ record Bounds where
   endLine : Int
   endCol : Int
 
+export
 Show Bounds where
   showPrec d (MkBounds sl sc el ec) =
     showCon d "MkBounds" (concat [showArg sl, showArg sc, showArg el, showArg ec])
