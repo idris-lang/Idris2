@@ -270,6 +270,14 @@ enumTree (CConCase fc sc alts def)
     toEnum _ = Nothing
 enumTree t = t
 
+-- remove pattern matches on unit
+unitTree : CExp vars -> CExp vars
+unitTree exp@(CConCase fc sc alts def) = fromMaybe exp
+    $ do let [MkConAlt _ UNIT _ [] e] = alts
+             | _ => Nothing
+         pure e
+unitTree t = t
+
 -- See if the constructor is a special constructor type, e.g a nil or cons
 -- shaped thing.
 dconFlag : {auto c : Ref Ctxt Defs} ->
@@ -504,7 +512,7 @@ mutual
                def <- getDef n alts
                if isNil cases
                   then pure (fromMaybe (CErased fc) def)
-                  else pure $ enumTree !(builtinNatTree $
+                  else pure $ unitTree $ enumTree !(builtinNatTree $
                             CConCase fc (CLocal fc x) cases def)
   toCExpTree' n (Case _ x scTy alts@(DelayCase _ _ _ :: _))
       = throw (InternalError "Unexpected DelayCase")
