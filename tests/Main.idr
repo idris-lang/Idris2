@@ -259,6 +259,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "casts"
     , "newints"
     , "reg001"
+    , "reg002"
     , "syntax001"
     , "tailrec001"
     , "idiom001"
