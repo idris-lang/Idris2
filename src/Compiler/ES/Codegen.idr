@@ -628,6 +628,7 @@ mutual
         alt (MkEConAlt _ CONS b)    = ("undefined",) <$> stmt b
         alt (MkEConAlt _ NOTHING b) = ("0",) <$> stmt b
         alt (MkEConAlt _ JUST b)    = ("undefined",) <$> stmt b
+        alt (MkEConAlt _ UNIT b)    = ("undefined",) <$> stmt b
         alt (MkEConAlt t _ b)       = (tag2es t,) <$> stmt b
 
   stmt (ConstSwitch r sc alts def) = do
