@@ -93,7 +93,8 @@ namespace Stream
   ||| @ xs the stream
   public export
   take : (n : Nat) -> (xs : Stream a) -> Vect n a
-  take n xs = fromList $ take n xs
+  take Z xs = []
+  take (S k) (x :: xs) = x :: take k xs
 
 ||| Drop the first `n` elements of a Vect.
 public export
