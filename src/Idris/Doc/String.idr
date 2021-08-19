@@ -115,6 +115,11 @@ prettyName n =
       let root = nameRoot n in
       if isOpName n then parens (pretty root) else pretty root
 
+prettyKindedName : Maybe String -> Doc IdrisDocAnn -> Doc IdrisDocAnn
+prettyKindedName Nothing   nm = nm
+prettyKindedName (Just kw) nm
+  = annotate (Syntax $ SynDecor Keyword) (pretty kw) <++> nm
+
 export
 getDocsForPrimitive : {auto c : Ref Ctxt Defs} ->
                       {auto s : Ref Syn SyntaxInfo} ->
@@ -284,61 +289,76 @@ getDocsForName fc n
                               ]
                 _ => pure projDecl
 
-    getFieldsDoc : Name -> Core (List (Doc IdrisDocAnn))
+    getFieldsDoc : Name -> Core (Maybe (Doc IdrisDocAnn))
     getFieldsDoc recName
       = do let (Just ns, n) = displayName recName
-               | _ => pure []
+               | _ => pure Nothing
            let recNS = ns <.> mkNamespace n
            defs <- get Ctxt
            let fields = getFieldNames (gamma defs) recNS
            syn <- get Syn
            case fields of
-             [] => pure []
-             [proj] => pure [header "Projection" <++> annotate Declarations !(getFieldDoc proj)]
-             projs => pure [vcat [header "Projections"
-                                 , annotate Declarations $
-                                      vcat $ map (indent 2) $ !(traverse getFieldDoc projs)]]
+             [] => pure Nothing
+             [proj] => pure $ Just $ header "Projection" <++> annotate Declarations !(getFieldDoc proj)
+             projs => pure $ Just $ vcat
+                           [ header "Projections"
+                           , annotate Declarations $ vcat $
+                               map (indent 2) $ !(traverse getFieldDoc projs)
+                           ]
 
-    getExtra : Name -> GlobalDef -> Core (List (Doc IdrisDocAnn))
+    getExtra : Name -> GlobalDef -> Core (Maybe String, List (Doc IdrisDocAnn))
     getExtra n d = do
       do syn <- get Syn
          let [] = lookupName n (ifaces syn)
-             | [ifacedata] => pure <$> getIFaceDoc ifacedata
-             | _ => pure [] -- shouldn't happen, we've resolved ambiguity by now
+             | [ifacedata] => (Just "interface",) . pure <$> getIFaceDoc ifacedata
+             | _ => pure (Nothing, []) -- shouldn't happen, we've resolved ambiguity by now
          case definition d of
-           PMDef _ _ _ _ _ => pure [showTotal n (totality d)]
+           PMDef _ _ _ _ _ => pure (Nothing, [showTotal n (totality d)])
            TCon _ _ _ _ _ _ cons _ =>
              do let tot = [showTotal n (totality d)]
                 cdocs <- traverse (getDConDoc <=< toFullNames) cons
                 cdoc <- case cdocs of
-                  [] => pure []
-                  [doc] => pure
-                         $ (header "Constructor" <++> annotate Declarations doc)
-                         :: !(getFieldsDoc n)
-                  docs => pure [vcat [header "Constructors"
-                                     , annotate Declarations $
-                                         vcat $ map (indent 2) docs]]
-                pure (tot ++ cdoc)
-           _ => pure []
+                  [] => pure (Just "data", [])
+                  [doc] =>
+                    let cdoc = header "Constructor" <++> annotate Declarations doc in
+                    case !(getFieldsDoc n) of
+                      Nothing => pure (Just "data", [cdoc])
+                      Just fs => pure (Just "record", cdoc :: [fs])
+                  docs => pure (Just "data"
+                               , [vcat [header "Constructors"
+                                       , annotate Declarations $
+                                           vcat $ map (indent 2) docs]])
+                pure (map (tot ++) cdoc)
+           _ => pure (Nothing, [])
 
     showDoc (MkConfig {longNames, dropFirst, getTotality}) (n, str)
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => undefinedName fc n
+             -- First get the extra stuff because this also tells us whether a
+             -- definition is `data`, `record`, or `interface`.
+             (typ, extra) <- ifThenElse getTotality
+                               (getExtra n def)
+                               (pure (Nothing, []))
+
+             -- Then form the type declaration
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
              -- when printing e.g. interface methods there is no point in
              -- repeating the interface's name
              let ty = ifThenElse (not dropFirst) ty $ case ty of
                         PPi _ _ AutoImplicit _ _ sc => sc
                         _ => ty
-             let cat = showCategory def
              nm <- aliasName n
              -- when printing e.g. interface methods there is no point in
              -- repeating the namespace the interface lives in
-             let nm = if longNames then pretty (show nm) else prettyName nm
-             let docDecl = annotate (Decl n) (hsep [cat nm, colon, prettyTerm ty])
+             let cat = showCategory def
+             let nm = ifThenElse longNames
+                        (prettyKindedName typ $ cat $ pretty (show nm))
+                        (cat $ prettyName nm)
+             let docDecl = annotate (Decl n) (hsep [nm, colon, prettyTerm ty])
+
+             -- Finally add the user-provided docstring
              let docText = reflowDoc str
-             extra <- ifThenElse getTotality (getExtra n def) (pure [])
              fixes <- getFixityDoc n
              let docBody = annotate DocStringBody $ vcat $ docText ++ (map (indent 2) (extra ++ fixes))
              pure (vcat [docDecl, docBody])
