@@ -1,16 +1,16 @@
 1/1: Building RecordDoc (RecordDoc.idr)
 RecordDoc> 
-RecordDoc> RecordDoc.A : Type -> Type
+RecordDoc> record RecordDoc.A : Type -> Type
   Totality: total
   Constructor: __mkA : _
   Projection: anA : A a -> a
-RecordDoc> RecordDoc.Tuple : Type -> Type -> Type
+RecordDoc> record RecordDoc.Tuple : Type -> Type -> Type
   Totality: total
   Constructor: __mkTuple : _
   Projections:
     proj1 : Tuple a b -> a
     proj2 : Tuple a b -> b
-RecordDoc> RecordDoc.Singleton : a -> Type
+RecordDoc> record RecordDoc.Singleton : a -> Type
   Totality: total
   Constructor: __mkSingleton : _
   Projections:

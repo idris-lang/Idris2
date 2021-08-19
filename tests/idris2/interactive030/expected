@@ -18,7 +18,7 @@ Main> Prelude.<$> : Functor f => (a -> b) -> f a -> f b
   @ func the function to apply
   Totality: total
   Fixity Declaration: infixr operator, level 4
-Main> Prelude.Monad : (Type -> Type) -> Type
+Main> interface Prelude.Monad : (Type -> Type) -> Type
   Parameters: m
   Constraints: Applicative m
   Constructor: MkMonad

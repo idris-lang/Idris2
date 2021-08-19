@@ -3,7 +3,7 @@ Main> Prelude.plus : Nat -> Nat -> Nat
   @ x the number to case-split on
   @ y the other numberpublic export
   Totality: total
-Main> Prelude.Nat : Type
+Main> data Prelude.Nat : Type
   Natural numbers: unbounded, unsigned integers which can be pattern matched.
   Totality: total
   Constructors:
@@ -11,7 +11,7 @@ Main> Prelude.Nat : Type
       Zero.
     S : Nat -> Nat
       Successor.
-Main> Prelude.List : Type -> Type
+Main> data Prelude.List : Type -> Type
   Generic lists.
   Totality: total
   Constructors:
@@ -19,7 +19,7 @@ Main> Prelude.List : Type -> Type
       Empty list
     (::) : a -> List a -> List a
       A non-empty list, consisting of a head element and the rest of the list.
-Main> Prelude.Show : Type -> Type
+Main> interface Prelude.Show : Type -> Type
   Things that have a canonical `String` representation.
   Parameters: ty
   Constructor: MkShow
@@ -67,7 +67,7 @@ Main> Prelude.show : Show ty => ty -> String
   Convert a value to its `String` representation.
   @ x the value to convert
   Totality: total
-Main> Prelude.Monad : (Type -> Type) -> Type
+Main> interface Prelude.Monad : (Type -> Type) -> Type
   Parameters: m
   Constraints: Applicative m
   Constructor: MkMonad
