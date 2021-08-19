@@ -125,6 +125,21 @@ data Def : Type where
     Delayed : Def
 
 export
+defNameType : Def -> Maybe NameType
+defNameType None = Nothing
+defNameType (PMDef {}) = Just Func
+defNameType (ExternDef {}) = Just Func
+defNameType (ForeignDef {}) = Just Func
+defNameType (Builtin {}) = Just Func
+defNameType (DCon tag ar _) = Just (DataCon tag ar)
+defNameType (TCon tag ar _ _ _ _ _ _) = Just (TyCon tag ar)
+defNameType (Hole {}) = Just Func
+defNameType (BySearch {}) = Nothing
+defNameType (Guess {}) = Nothing
+defNameType ImpBind = Just Bound
+defNameType Delayed = Nothing
+
+export
 Show Def where
   show None = "undefined"
   show (PMDef _ args ct rt pats)
