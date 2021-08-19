@@ -37,8 +37,12 @@ Show Fixity where
   show Prefix = "prefix"
 
 public export
+OpStr' : Type -> Type
+OpStr' nm = nm
+
+public export
 OpStr : Type
-OpStr = Name
+OpStr = OpStr' Name
 
 mutual
 
@@ -97,10 +101,10 @@ mutual
 
        -- Operators
 
-       POp : (full, opFC : FC) -> OpStr -> PTerm' nm -> PTerm' nm -> PTerm' nm
-       PPrefixOp : (full, opFC : FC) -> OpStr -> PTerm' nm -> PTerm' nm
-       PSectionL : (full, opFC : FC) -> OpStr -> PTerm' nm -> PTerm' nm
-       PSectionR : (full, opFC : FC) -> PTerm' nm -> OpStr -> PTerm' nm
+       POp : (full, opFC : FC) -> OpStr' nm -> PTerm' nm -> PTerm' nm -> PTerm' nm
+       PPrefixOp : (full, opFC : FC) -> OpStr' nm -> PTerm' nm -> PTerm' nm
+       PSectionL : (full, opFC : FC) -> OpStr' nm -> PTerm' nm -> PTerm' nm
+       PSectionR : (full, opFC : FC) -> PTerm' nm -> OpStr' nm -> PTerm' nm
        PEq : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
        PBracketed : FC -> PTerm' nm -> PTerm' nm
 
@@ -619,7 +623,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPStr : PStr' nm -> String
   showUpdate : PFieldUpdate' nm -> String
   showPTermPrec : Prec -> PTerm' nm -> String
-  showOpPrec : Prec -> OpStr -> String
+  showOpPrec : Prec -> OpStr' nm -> String
 
   showPTerm : PTerm' nm -> String
   showPTerm = showPTermPrec Open
@@ -734,7 +738,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec _ (PImplicit _) = "_"
   showPTermPrec _ (PInfer _) = "?"
   showPTermPrec d (POp _ _ op x y) = showPTermPrec d x ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d y
-  showPTermPrec d (PPrefixOp _ _ op x) = showPrec d op ++ showPTermPrec d x
+  showPTermPrec d (PPrefixOp _ _ op x) = showOpPrec d op ++ showPTermPrec d x
   showPTermPrec d (PSectionL _ _ op x) = "(" ++ showOpPrec d op ++ " " ++ showPTermPrec d x ++ ")"
   showPTermPrec d (PSectionR _ _ x op) = "(" ++ showPTermPrec d x ++ " " ++ showOpPrec d op ++ ")"
   showPTermPrec d (PEq fc l r) = showPTermPrec d l ++ " = " ++ showPTermPrec d r
@@ -787,7 +791,8 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (PWithUnambigNames fc ns rhs)
         = "with " ++ show ns ++ " " ++ showPTermPrec d rhs
 
-  showOpPrec d op = if isOpName op
+  showOpPrec d op = let op = toName op in
+    if isOpName op
     then        showPrec d op
     else "`" ++ showPrec d op ++ "`"
 

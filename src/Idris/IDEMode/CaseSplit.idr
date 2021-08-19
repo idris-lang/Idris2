@@ -45,7 +45,7 @@ toStrUpdate : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               (Name, RawImp) -> Core Updates
 toStrUpdate (UN n, term)
-    = do clause <- pterm (map (MkKindedName Nothing) term) -- hack
+    = do clause <- pterm (map defaultKindedName term) -- hack
          pure [(n, show (bracket clause))]
   where
     bracket : PTerm' nm -> PTerm' nm
@@ -147,7 +147,7 @@ showImpossible : {auto c : Ref Ctxt Defs} ->
                  {auto o : Ref ROpts REPLOpts} ->
                  (indent : Nat) -> RawImp -> Core String
 showImpossible indent lhs
-    = do clause <- pterm (map (MkKindedName Nothing) lhs) -- hack
+    = do clause <- pterm (map defaultKindedName lhs) -- hack
          pure (fastPack (replicate indent ' ') ++ show clause ++ " impossible")
 
 -- Given a list of updates and a line and column, find the relevant line in
