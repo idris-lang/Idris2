@@ -506,6 +506,10 @@ cleanPTerm ptm
     cleanKindedName : KindedName -> Core KindedName
     cleanKindedName (MkKindedName nt fn nm) = MkKindedName nt fn <$> cleanName nm
 
+    cleanBinderName : PiInfo IPTerm -> Name -> Core (Maybe Name)
+    cleanBinderName AutoImplicit (UN "__con") = pure Nothing
+    cleanBinderName _ nm = Just <$> cleanName nm
+
     cleanNode : IPTerm -> Core IPTerm
     cleanNode (PRef fc nm)    =
       PRef fc <$> cleanKindedName nm
@@ -518,7 +522,7 @@ cleanPTerm ptm
     cleanNode (PSectionR fc opFC x op) =
       PSectionR fc opFC x <$> cleanKindedName op
     cleanNode (PPi fc rig vis (Just n) arg ret) =
-      (\ n => PPi fc rig vis (Just n) arg ret) <$> cleanName n
+      (\ n => PPi fc rig vis n arg ret) <$> cleanBinderName vis n
     cleanNode tm = pure tm
 
 toCleanPTerm : {auto c : Ref Ctxt Defs} ->
