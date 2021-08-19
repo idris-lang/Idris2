@@ -493,7 +493,7 @@ makeDoc pkg opts =
        Right () <- coreLift $ mkdirAll docDir
          | Left err => fileError docDir err
        u <- newRef UST initUState
-       setPPrint (MkPPOpts False False True)
+       setPPrint (MkPPOpts False False False)
 
        [] <- concat <$> for (modules pkg) (\(mod, filename) => do
            let ns = miAsNamespace mod
@@ -504,8 +504,10 @@ makeDoc pkg opts =
            visibleNames <- filterM (visible defs) allInNamespace
 
            let outputFilePath = docDir </> (show mod ++ ".html")
-           allDocs <- annotate Declarations <$> vcat <$> for (sort visibleNames) (getDocsForName emptyFC)
-           Right () <- coreLift $ writeFile outputFilePath !(renderModuleDoc mod allDocs)
+           allDocs <- for (sort visibleNames) $ \ nm =>
+                        getDocsForName emptyFC nm shortNamesConfig
+           let allDecls = annotate Declarations $ vcat allDocs
+           Right () <- coreLift $ writeFile outputFilePath !(renderModuleDoc mod allDecls)
              | Left err => fileError (docBase </> "index.html") err
 
            pure $ the (List Error) []

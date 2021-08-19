@@ -33,7 +33,12 @@ public export
 record KindedName where
   constructor MkKindedName
   nameKind : Maybe NameType
+  fullName : Name -- fully qualified name
   rawName  : Name
+
+export
+defaultKindedName : Name -> KindedName
+defaultKindedName nm = MkKindedName Nothing nm nm
 
 export
 Show KindedName where show = show . rawName

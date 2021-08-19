@@ -229,7 +229,7 @@ docsOrSignature fc n
          let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn))
                                      (map fst all)
              | [] => typeSummary defs
-         pure [!(render styleAnn !(getDocsForName fc n))]
+         pure [!(render styleAnn !(getDocsForName fc n MkConfig))]
   where
     typeSummary : Defs -> Core (List String)
     typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)

@@ -37,10 +37,7 @@ import Parser.Lexer.Source
 
 public export
 data IdrisDocAnn
-  = TCon Name
-  | DCon
-  | Fun Name
-  | Header
+  = Header
   | Declarations
   | Decl Name
   | DocStringBody
@@ -48,24 +45,23 @@ data IdrisDocAnn
 
 export
 styleAnn : IdrisDocAnn -> AnsiStyle
-styleAnn (TCon _) = color BrightBlue
-styleAnn DCon = color BrightRed
-styleAnn (Fun _) = color BrightGreen
-styleAnn Header = underline
-styleAnn (Syntax syn) = syntaxAnn syn
-styleAnn _ = []
+styleAnn Header        = underline
+styleAnn Declarations  = []
+styleAnn (Decl{})      = []
+styleAnn DocStringBody = []
+styleAnn (Syntax syn)  = syntaxAnn syn
 
 export
 tCon : Name -> Doc IdrisDocAnn -> Doc IdrisDocAnn
-tCon n = annotate (TCon n)
+tCon n = annotate (Syntax $ TCon (Just n))
 
 export
-dCon : Doc IdrisDocAnn -> Doc IdrisDocAnn
-dCon = annotate DCon
+dCon : Name -> Doc IdrisDocAnn -> Doc IdrisDocAnn
+dCon n = annotate (Syntax $ DCon (Just n))
 
 export
 fun : Name -> Doc IdrisDocAnn -> Doc IdrisDocAnn
-fun n = annotate (Fun n)
+fun n = annotate (Syntax $ Fun n)
 
 export
 header : Doc IdrisDocAnn -> Doc IdrisDocAnn
@@ -105,11 +101,6 @@ addDocStringNS ns n_in doc
 prettyTerm : IPTerm -> Doc IdrisDocAnn
 prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
 
-showCategory : GlobalDef -> Doc IdrisDocAnn -> Doc IdrisDocAnn
-showCategory d = case defDecoration (definition d) of
-    Nothing => id
-    Just decor => annotate (Syntax $ SynDecor decor)
-
 prettyName : Name -> Doc IdrisDocAnn
 prettyName n =
       let root = nameRoot n in
@@ -118,7 +109,7 @@ prettyName n =
 prettyKindedName : Maybe String -> Doc IdrisDocAnn -> Doc IdrisDocAnn
 prettyKindedName Nothing   nm = nm
 prettyKindedName (Just kw) nm
-  = annotate (Syntax $ SynDecor Keyword) (pretty kw) <++> nm
+  = annotate (Syntax Keyword) (pretty kw) <++> nm
 
 export
 getDocsForPrimitive : {auto c : Ref Ctxt Defs} ->
@@ -130,6 +121,7 @@ getDocsForPrimitive constant = do
                    <++> colon <++> prettyTerm !(resugar [] type)
     pure (typeString <+> Line <+> indent 2 "Primitive")
 
+public export
 data Config : Type where
   ||| Configuration of the printer for a name
   ||| @ longNames   Do we print qualified names?
@@ -147,6 +139,7 @@ data Config : Type where
 |||             is always the interface constraint
 ||| * totality  turned off for interface methods because the methods themselves
 |||             are just projections out of a record and so are total
+export
 methodsConfig : Config
 methodsConfig
   = MkConfig {longNames = False}
@@ -154,11 +147,18 @@ methodsConfig
              {getTotality = False}
 
 export
+shortNamesConfig : Config
+shortNamesConfig
+  = MkConfig {longNames = False}
+             {dropFirst = False}
+             {getTotality = True}
+
+export
 getDocsForName : {auto o : Ref ROpts REPLOpts} ->
                  {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
-                 FC -> Name -> Core (Doc IdrisDocAnn)
-getDocsForName fc n
+                 FC -> Name -> Config -> Core (Doc IdrisDocAnn)
+getDocsForName fc n config
     = do syn <- get Syn
          defs <- get Ctxt
          let extra = case nameRoot n of
@@ -169,7 +169,7 @@ getDocsForName fc n
              | _ => undefinedName fc n
          let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn)) all
              | [] => pure $ pretty ("No documentation for " ++ show n)
-         docs <- traverse (showDoc MkConfig) ns
+         docs <- traverse (showDoc config) ns
          pure $ vcat (punctuate Line docs)
   where
 
@@ -194,7 +194,7 @@ getDocsForName fc n
                   | Nothing => pure Empty
              syn <- get Syn
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
-             let conWithTypeDoc = annotate (Decl con) (hsep [dCon (prettyName con), colon, prettyTerm ty])
+             let conWithTypeDoc = annotate (Decl con) (hsep [dCon con (prettyName con), colon, prettyTerm ty])
              case lookupName con (docstrings syn) of
                [(n, "")] => pure conWithTypeDoc
                [(n, str)] => pure $ vcat
@@ -250,12 +250,12 @@ getDocsForName fc n
                      [] => []
                      ps => [hsep (header "Parameters" :: punctuate comma (map (pretty . show) ps))]
              let constraints =
-                case !(traverse (pterm . map (MkKindedName Nothing)) (parents iface)) of
+                case !(traverse (pterm . map defaultKindedName) (parents iface)) of
                      [] => []
                      ps => [hsep (header "Constraints" :: punctuate comma (map (pretty . show) ps))]
              let icon = case dropNS (iconstructor iface) of
                           DN _ _ => [] -- machine inserted
-                          nm => [hsep [header "Constructor", dCon (prettyName nm)]]
+                          nm => [hsep [header "Constructor", dCon nm (prettyName nm)]]
              mdocs <- traverse getMethDoc (methods iface)
              let meths = case concat mdocs of
                            [] => []
@@ -351,10 +351,9 @@ getDocsForName fc n
              nm <- aliasName n
              -- when printing e.g. interface methods there is no point in
              -- repeating the namespace the interface lives in
-             let cat = showCategory def
-             let nm = ifThenElse longNames
-                        (prettyKindedName typ $ cat $ pretty (show nm))
-                        (cat $ prettyName nm)
+             let cat = showCategory Syntax def
+             let nm = prettyKindedName typ $ cat
+                    $ ifThenElse longNames (pretty (show nm)) (prettyName nm)
              let docDecl = annotate (Decl n) (hsep [nm, colon, prettyTerm ty])
 
              -- Finally add the user-provided docstring
@@ -368,7 +367,7 @@ getDocsForPTerm : {auto o : Ref ROpts REPLOpts} ->
                   {auto c : Ref Ctxt Defs} ->
                   {auto s : Ref Syn SyntaxInfo} ->
                   PTerm -> Core (List String)
-getDocsForPTerm (PRef fc name) = pure $ [!(render styleAnn !(getDocsForName fc name))]
+getDocsForPTerm (PRef fc name) = pure $ [!(render styleAnn !(getDocsForName fc name MkConfig))]
 getDocsForPTerm (PPrimVal _ constant)
   = pure [!(render styleAnn !(getDocsForPrimitive constant))]
 getDocsForPTerm (PType _) = pure ["Type : Type\n\tThe type of all types is Type. The type of Type is Type."]
@@ -394,7 +393,7 @@ summarise n -- n is fully qualified
          --                                   (d ::: _) => Just d
          --                _ => Nothing
          ty <- normaliseHoles defs [] (type def)
-         pure $ showCategory def (prettyName n)
+         pure $ showCategory Syntax def (prettyName n)
               <++> colon <++> hang 0 (prettyTerm !(resugar [] ty))
 --              <+> maybe "" ((Line <+>) . indent 2 . pretty) doc)
 

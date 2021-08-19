@@ -44,13 +44,29 @@ packageInternal (NS ns _) =
      catch ((const True) <$> nsToSource emptyFC mi) (\_ => pure False)
 packageInternal _ = pure False
 
-prettyNameRoot : Name -> String
-prettyNameRoot n =
-  let root = nameRoot n in
-  -- We need to take the root first and then re-wrap in a UN for the op check
-  -- to avoid false positives for record fields (RF) names (which get an
-  -- implicit "."-prefix).
-  htmlEscape (if isOpName (UN root) then "(" ++ root ++ ")" else root)
+addLink : {auto c : Ref Ctxt Defs} ->
+          Maybe Name -> String -> Core String
+addLink Nothing rest = pure rest
+addLink (Just n) rest = do
+  Just cName <- tryCanonicalName emptyFC n
+    | Nothing => pure $ "<span class=\"implicit\">" <+> rest <+> "</span>"
+  True <- packageInternal cName
+    | False => pure $ fastConcat
+                    [ "<span class=\"type resolved\" title=\""
+                    , htmlEscape (show cName)
+                    , "\">"
+                    , rest
+                    , "</span>"
+                    ]
+  pure $ fastConcat
+       [ "<a class=\"type\" href=\""
+       , htmlEscape $ getNS cName
+       , ".html#"
+       , htmlEscape $ show cName
+       , "\">"
+       , rest
+       , "</a>"
+       ]
 
 renderHtml : {auto c : Ref Ctxt Defs} ->
              SimpleDocTree IdrisDocAnn ->
@@ -63,23 +79,18 @@ renderHtml (STLine _) = pure "<br>"
 renderHtml (STAnn Declarations rest) = pure $ "<dl class=\"decls\">" <+> !(renderHtml rest) <+> "</dl>"
 renderHtml (STAnn (Decl n) rest) = pure $ "<dt id=\"" ++ (htmlEscape $ show n) ++ "\">" <+> !(renderHtml rest) <+> "</dt>"
 renderHtml (STAnn DocStringBody rest) = pure $ "<dd>" <+> !(renderHtml rest) <+> "</dd>"
-renderHtml (STAnn DCon rest) = do
-  resthtml <- renderHtml rest
-  pure $ "<span class=\"name constructor\">" <+> resthtml <+> "</span>"
-renderHtml (STAnn (TCon n) rest) = do
-  pure $ "<span class=\"name type\">" <+> (prettyNameRoot n) <+> "</span>"
-renderHtml (STAnn (Fun n) rest) = do
-  pure $ "<span class=\"name function\">" <+> (prettyNameRoot n) <+> "</span>"
+renderHtml (STAnn (Syntax (DCon mn)) rest) = do
+  dcon <- renderHtml rest
+  addLink mn $ "<span class=\"name constructor\">" <+> dcon <+> "</span>"
+renderHtml (STAnn (Syntax (TCon mn)) rest) = do
+  tcon <- renderHtml rest
+  addLink mn $ "<span class=\"name type\">" <+> tcon <+> "</span>"
+renderHtml (STAnn (Syntax (Fun n)) rest) = do
+  fun <- renderHtml rest
+  addLink (Just n) $ "<span class=\"name function\">" <+> fun <+> "</span>"
 renderHtml (STAnn Header rest) = do
   resthtml <- renderHtml rest
   pure $ "<b>" <+> resthtml <+> "</b>"
-renderHtml (STAnn (Syntax (SynRef n)) rest) = do
-  resthtml <- renderHtml rest
-  Just cName <- tryCanonicalName emptyFC n
-    | Nothing => pure $ "<span class=\"implicit\">" <+> resthtml <+> "</span>"
-  True <- packageInternal cName
-    | False => pure $ "<span class=\"type resolved\" title=\"" <+> (htmlEscape $ show cName) <+> "\">" <+> (htmlEscape $ nameRoot cName) <+> "</span>"
-  pure $ "<a class=\"type\" href=\"" ++ (htmlEscape $ getNS cName) ++ ".html#" ++ (htmlEscape $ show cName) ++ "\">" <+> (htmlEscape $ nameRoot cName) <+> "</a>"
 renderHtml (STAnn ann rest) = do
   resthtml <- renderHtml rest
   pure $ "<!-- ann ignored START -->" ++ resthtml ++ "<!-- ann END -->"
