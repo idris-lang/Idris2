@@ -226,7 +226,7 @@ docsOrSignature fc n
          defs <- get Ctxt
          all@(_ :: _) <- lookupCtxtName n (gamma defs)
              | _ => undefinedName fc n
-         let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn))
+         let ns@(_ :: _) = concatMap (\n => lookupName n (defDocstrings syn))
                                      (map fst all)
              | [] => typeSummary defs
          pure [!(render styleAnn !(getDocsForName fc n MkConfig))]

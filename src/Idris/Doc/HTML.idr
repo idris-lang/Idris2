@@ -144,11 +144,15 @@ renderDocIndex pkg = fastConcat $
 export
 renderModuleDoc : {auto c : Ref Ctxt Defs} ->
                   ModuleIdent ->
+                  Maybe String ->
                   Doc IdrisDocAnn ->
                   Core String
-renderModuleDoc mod allModuleDocs = pure $ fastConcat
+renderModuleDoc mod modDoc allModuleDocs = pure $ fastConcat
   [ htmlPreamble (show mod) "../" "namespace"
+  , "<div id=\"moduleHeader\">"
   , "<h1>", show mod, "</h1>"
+  , maybe "" (\ mDoc => "<p>" ++ mDoc ++ "</p>") modDoc
+  , "</div>"
   , !(docDocToHtml allModuleDocs)
   , htmlFooter
   ]

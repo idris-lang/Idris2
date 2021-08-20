@@ -3,6 +3,7 @@ module Idris.Package
 import Compiler.Common
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Directory
 import Core.Env
@@ -22,6 +23,7 @@ import System.Directory
 import Libraries.System.Directory.Tree
 import System.File
 
+import Libraries.Data.SortedMap
 import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
 import Libraries.Text.Parser
@@ -496,8 +498,11 @@ makeDoc pkg opts =
        setPPrint (MkPPOpts False False False)
 
        [] <- concat <$> for (modules pkg) (\(mod, filename) => do
+           -- load dependencies
            let ns = miAsNamespace mod
            addImport (MkImport emptyFC False mod ns)
+
+           -- generate docs for all visible names
            defs <- get Ctxt
            names <- allNames (gamma defs)
            let allInNamespace = filter (inNS ns) names
@@ -507,7 +512,20 @@ makeDoc pkg opts =
            allDocs <- for (sort visibleNames) $ \ nm =>
                         getDocsForName emptyFC nm shortNamesConfig
            let allDecls = annotate Declarations $ vcat allDocs
-           Right () <- coreLift $ writeFile outputFilePath !(renderModuleDoc mod allDecls)
+
+           -- grab module header doc
+           syn  <- get Syn
+           let modDoc = lookup mod (modDocstrings syn)
+           log "doc.module" 10 $ unwords
+             [ "Looked up doc for"
+             , show mod
+             , "and got:"
+             , show modDoc
+             ]
+           log "doc.module" 15 $ "from: " ++ show (modDocstrings syn)
+
+           Right () <- do doc <- renderModuleDoc mod modDoc allDecls
+                          coreLift $ writeFile outputFilePath doc
              | Left err => fileError (docBase </> "index.html") err
 
            pure $ the (List Error) []

@@ -2,6 +2,7 @@ module Idris.Desugar
 
 import Core.Binary
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -15,6 +16,7 @@ import Libraries.Data.List.Extra
 import Libraries.Data.StringMap
 import Libraries.Data.String.Extra
 import Libraries.Data.ANameMap
+import Libraries.Data.SortedMap
 
 import Idris.Doc.String
 import Idris.Syntax
@@ -77,13 +79,21 @@ Eq Side where
 
 export
 extendSyn : {auto s : Ref Syn SyntaxInfo} ->
+            {auto c : Ref Ctxt Defs} ->
             SyntaxInfo -> Core ()
 extendSyn newsyn
     = do syn <- get Syn
+         log "doc.module" 20 $ unlines
+           [ "Old (" ++ unwords (map show $ saveMod syn) ++ "): "
+              ++ show (modDocstrings syn)
+           , "New (" ++ unwords (map show $ saveMod newsyn) ++ "): "
+              ++ show (modDocstrings newsyn)
+           ]
          put Syn (record { infixes $= mergeLeft (infixes newsyn),
                            prefixes $= mergeLeft (prefixes newsyn),
                            ifaces $= merge (ifaces newsyn),
-                           docstrings $= merge (docstrings newsyn),
+                           modDocstrings $= merge (modDocstrings newsyn),
+                           defDocstrings $= merge (defDocstrings newsyn),
                            bracketholes $= ((bracketholes newsyn) ++) }
                   syn)
 
