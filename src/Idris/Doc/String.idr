@@ -387,15 +387,9 @@ summarise n -- n is fully qualified
          defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
              | _ => pure ""
-         -- let doc = case lookupName n (docstrings syn) of
-         --                [(_, doc)] => case Extra.lines doc of
-         --                                   ("" ::: _) => Nothing
-         --                                   (d ::: _) => Just d
-         --                _ => Nothing
          ty <- normaliseHoles defs [] (type def)
          pure $ showCategory Syntax def (prettyName n)
               <++> colon <++> hang 0 (prettyTerm !(resugar [] ty))
---              <+> maybe "" ((Line <+>) . indent 2 . pretty) doc)
 
 -- Display all the exported names in the given namespace
 export
