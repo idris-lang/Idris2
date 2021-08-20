@@ -2,6 +2,7 @@ module Idris.Syntax
 
 import public Core.Binary
 import public Core.Context
+import public Core.Context.Log
 import public Core.Core
 import public Core.FC
 import public Core.Normalise
@@ -16,6 +17,7 @@ import Data.List
 import Data.Maybe
 import Data.String
 import Libraries.Data.NameMap
+import Libraries.Data.SortedMap
 import Libraries.Data.String.Extra
 import Libraries.Data.StringMap
 import Libraries.Text.PrettyPrint.Prettyprinter
@@ -872,11 +874,16 @@ record SyntaxInfo where
   -- (most obviously, -)
   infixes : StringMap (Fixity, Nat)
   prefixes : StringMap Nat
-  ifaces : ANameMap IFaceInfo
+  -- info about modules
+  saveMod : List ModuleIdent -- current module name
+  modDocstrings : SortedMap ModuleIdent String
+  -- info about interfaces
   saveIFaces : List Name -- interfaces defined in current session, to save
                          -- to ttc
-  docstrings : ANameMap String
+  ifaces : ANameMap IFaceInfo
+  -- info about definitions
   saveDocstrings : NameMap () -- names defined in current session
+  defDocstrings : ANameMap String
   bracketholes : List Name -- hole names in argument position (so need
                            -- to be bracketed when solved)
   usingImpl : List (Maybe Name, RawImp)
@@ -902,24 +909,29 @@ TTC SyntaxInfo where
   toBuf b syn
       = do toBuf b (StringMap.toList (infixes syn))
            toBuf b (StringMap.toList (prefixes syn))
+           toBuf b (filter (\n => elemBy (==) (fst n) (saveMod syn))
+                           (SortedMap.toList $ modDocstrings syn))
            toBuf b (filter (\n => fst n `elem` saveIFaces syn)
                            (ANameMap.toList (ifaces syn)))
-           toBuf b (filter (\n => case lookup (fst n) (saveDocstrings syn) of
-                                       Nothing => False
-                                       _ => True)
-                           (ANameMap.toList (docstrings syn)))
+           toBuf b (filter (\n => isJust (lookup (fst n) (saveDocstrings syn)))
+                           (ANameMap.toList (defDocstrings syn)))
            toBuf b (bracketholes syn)
            toBuf b (startExpr syn)
 
   fromBuf b
       = do inf <- fromBuf b
            pre <- fromBuf b
+           moddstr <- fromBuf b
            ifs <- fromBuf b
-           dstrs <- fromBuf b
+           defdstrs <- fromBuf b
            bhs <- fromBuf b
            start <- fromBuf b
-           pure (MkSyntax (fromList inf) (fromList pre) (fromList ifs)
-                          [] (fromList dstrs) empty bhs [] start)
+           pure $ MkSyntax (fromList inf) (fromList pre)
+                   [] (fromList moddstr)
+                   [] (fromList ifs)
+                   empty (fromList defdstrs)
+                   bhs
+                   [] start
 
 HasNames IFaceInfo where
   full gam iface
@@ -962,10 +974,12 @@ initSyntax : SyntaxInfo
 initSyntax
     = MkSyntax initInfix
                initPrefix
+               []
                empty
                []
-               initDocStrings
+               empty
                initSaveDocStrings
+               initDocStrings
                []
                []
                (IVar EmptyFC (UN "main"))

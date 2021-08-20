@@ -24,6 +24,7 @@ import Data.String
 
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
+import Libraries.Data.SortedMap
 import Libraries.Data.StringMap as S
 import Libraries.Data.String.Extra
 
@@ -68,6 +69,16 @@ header : Doc IdrisDocAnn -> Doc IdrisDocAnn
 header d = annotate Header d <+> colon
 
 
+-- Add a doc string for a module name
+export
+addModDocString : {auto s : Ref Syn SyntaxInfo} ->
+                  ModuleIdent -> String ->
+                  Core ()
+addModDocString mi doc
+    = do syn <- get Syn
+         put Syn (record { saveMod $= (mi ::)
+                         , modDocstrings $= insert mi doc } syn)
+
 -- Add a doc string for a name in the current namespace
 export
 addDocString : {auto c : Ref Ctxt Defs} ->
@@ -79,7 +90,7 @@ addDocString n_in doc
          log "doc.record" 50 $
            "Adding doc for " ++ show n_in ++ " (aka " ++ show n ++ " in current NS)"
          syn <- get Syn
-         put Syn (record { docstrings $= addName n doc,
+         put Syn (record { defDocstrings $= addName n doc,
                            saveDocstrings $= insert n () } syn)
 
 -- Add a doc string for a name, in an extended namespace (e.g. for
@@ -95,7 +106,7 @@ addDocStringNS ns n_in doc
                        NS old root => NS (old <.> ns) root
                        root => NS ns root
          syn <- get Syn
-         put Syn (record { docstrings $= addName n' doc,
+         put Syn (record { defDocstrings $= addName n' doc,
                            saveDocstrings $= insert n' () } syn)
 
 prettyTerm : IPTerm -> Doc IdrisDocAnn
@@ -167,7 +178,7 @@ getDocsForName fc n config
          resolved <- lookupCtxtName n (gamma defs)
          let all@(_ :: _) = extra ++ map fst resolved
              | _ => undefinedName fc n
-         let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn)) all
+         let ns@(_ :: _) = concatMap (\n => lookupName n (defDocstrings syn)) all
              | [] => pure $ pretty ("No documentation for " ++ show n)
          docs <- traverse (showDoc config) ns
          pure $ vcat (punctuate Line docs)
@@ -195,7 +206,7 @@ getDocsForName fc n config
              syn <- get Syn
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
              let conWithTypeDoc = annotate (Decl con) (hsep [dCon con (prettyName con), colon, prettyTerm ty])
-             case lookupName con (docstrings syn) of
+             case lookupName con (defDocstrings syn) of
                [(n, "")] => pure conWithTypeDoc
                [(n, str)] => pure $ vcat
                     [ conWithTypeDoc
@@ -214,7 +225,7 @@ getDocsForName fc n config
     getMethDoc : Method -> Core (List (Doc IdrisDocAnn))
     getMethDoc meth
         = do syn <- get Syn
-             let [nstr] = lookupName meth.name (docstrings syn)
+             let [nstr] = lookupName meth.name (defDocstrings syn)
                   | _ => pure []
              pure <$> showDoc methodsConfig nstr
 
@@ -281,7 +292,7 @@ getDocsForName fc n config
            ty <- resugar [] =<< normaliseHoles defs [] (type def)
            let prettyName = prettyName nm
            let projDecl = annotate (Decl nm) $ hsep [ fun nm prettyName, colon, prettyTerm ty ]
-           case lookupName nm (docstrings syn) of
+           case lookupName nm (defDocstrings syn) of
                 [(_, "")] => pure projDecl
                 [(_, str)] =>
                   pure $ vcat [ projDecl
