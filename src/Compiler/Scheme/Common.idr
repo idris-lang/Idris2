@@ -33,6 +33,7 @@ schName : Name -> String
 schName (NS ns (UN n)) = schString (showNSWithSep "-" ns) ++ "-" ++ schString n
 schName (NS ns n) = schString (showNSWithSep "-" ns) ++ "-" ++ schName n
 schName (UN n) = "u--" ++ schString n
+schName (HN n) = "h--" ++ schString n
 schName (MN n i) = schString n ++ "-" ++ show i
 schName (PV n d) = "pat--" ++ schName n
 schName (DN _ n) = schName n

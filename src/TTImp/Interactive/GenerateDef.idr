@@ -11,6 +11,8 @@ import Core.TT
 import Core.Unify
 import Core.Value
 
+import Idris.Syntax
+
 import Parser.Lexer.Source
 
 import TTImp.Elab
@@ -38,6 +40,7 @@ fnName lhs n = nameRoot n
 
 -- Make the hole on the RHS have a unique name
 uniqueRHS : {auto c : Ref Ctxt Defs} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             ImpClause -> Core ImpClause
 uniqueRHS (PatClause fc lhs rhs)
     = pure $ PatClause fc lhs !(mkUniqueName rhs)
@@ -45,13 +48,14 @@ uniqueRHS (PatClause fc lhs rhs)
     mkUniqueName : RawImp -> Core RawImp
     mkUniqueName (IHole fc' rhsn)
         = do defs <- get Ctxt
-             rhsn' <- uniqueName defs [] rhsn
+             rhsn' <- uniqueName [] rhsn
              pure (IHole fc' rhsn')
     mkUniqueName tm = pure tm -- it'll be a hole, but this is needed for covering
 uniqueRHS c = pure c
 
 expandClause : {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                {auto u : Ref UST UState} ->
                FC -> SearchOpts -> Int -> ImpClause ->
                Core (Search (List ImpClause))
@@ -164,6 +168,7 @@ collectClauses (x :: xs)
 mutual
   tryAllSplits : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  {auto u : Ref UST UState} ->
                  FC -> SearchOpts -> Int ->
                  List (Name, List ImpClause) ->
@@ -179,6 +184,7 @@ mutual
 
   mkSplits : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              {auto u : Ref UST UState} ->
              FC -> SearchOpts -> Int -> ImpClause ->
              Core (Search (List ImpClause))
@@ -197,6 +203,7 @@ mutual
 export
 makeDefFromType : {auto c : Ref Ctxt Defs} ->
                   {auto m : Ref MD Metadata} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
                   {auto u : Ref UST UState} ->
                   FC ->
                   SearchOpts ->
@@ -214,7 +221,7 @@ makeDefFromType loc opts n envlen ty
              -- We won't try splitting on these
              let pre_env = replicate envlen (Implicit loc True)
 
-             rhshole <- uniqueName defs [] (fnName False n ++ "_rhs")
+             rhshole <- uniqueName [] (fnName False n ++ "_rhs")
              let initcs = PatClause loc
                                 (apply (IVar loc n) (pre_env ++ (map (IBindVar loc) argns)))
                                 (IHole loc rhshole)
@@ -231,6 +238,7 @@ makeDefFromType loc opts n envlen ty
 export
 makeDef : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           {auto u : Ref UST UState} ->
           (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
           Name -> Core (Search (FC, List ImpClause))
@@ -278,6 +286,7 @@ mostUsed def1 def2 = compare (propBindableUsed def2) (propBindableUsed def1)
 export
 makeDefSort : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               {auto u : Ref UST UState} ->
               (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
               Nat -> (List ImpClause -> List ImpClause -> Ordering) ->
@@ -288,6 +297,7 @@ makeDefSort p max ord n
 export
 makeDefN : {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            {auto u : Ref UST UState} ->
            (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
            Nat -> Name -> Core (List (FC, List ImpClause))

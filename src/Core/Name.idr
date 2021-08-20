@@ -17,6 +17,7 @@ public export
 data Name : Type where
      NS : Namespace -> Name -> Name -- in a namespace
      UN : String -> Name -- user defined name
+     HN : String -> Name -- hole name
      MN : String -> Int -> Name -- machine generated name
      PV : Name -> Int -> Name -- pattern variable name; int is the resolved function id
      DN : String -> Name -> Name -- a name and how to display it
@@ -57,6 +58,7 @@ asName _ _ n = n
 export
 userNameRoot : Name -> Maybe String
 userNameRoot (NS _ n) = userNameRoot n
+userNameRoot (HN n) = Just n
 userNameRoot (UN n) = Just n
 userNameRoot (DN _ n) = userNameRoot n
 userNameRoot (RF n) = Just ("." ++ n)  -- TMP HACK
@@ -65,6 +67,7 @@ userNameRoot _ = Nothing
 export
 isUnderscoreName : Name -> Bool
 isUnderscoreName (UN "_") = True
+isUnderscoreName (HN "_") = True
 isUnderscoreName (MN "_" _) = True
 isUnderscoreName _ = False
 
@@ -81,6 +84,7 @@ isUserName _ = True
 export
 isSourceName : Name -> Bool
 isSourceName (NS _ n) = isSourceName n
+isSourceName (HN _) = True
 isSourceName (UN _) = True
 isSourceName (MN _ _) = False
 isSourceName (PV n _) = isSourceName n
@@ -106,6 +110,7 @@ export
 nameRoot : Name -> String
 nameRoot (NS _ n) = nameRoot n
 nameRoot (UN n) = n
+nameRoot (HN n) = n
 nameRoot (MN n _) = n
 nameRoot (PV n _) = nameRoot n
 nameRoot (DN _ n) = nameRoot n
@@ -119,6 +124,7 @@ export
 displayName : Name -> (Maybe Namespace, String)
 displayName (NS ns n) = mapFst (pure . maybe ns (ns <.>)) $ displayName n
 displayName (UN n) = (Nothing, n)
+displayName (HN n) = (Nothing, n)
 displayName (MN n _) = (Nothing, n)
 displayName (PV n _) = displayName n
 displayName (DN n _) = (Nothing, n)
@@ -150,6 +156,7 @@ Show Name where
   show (NS ns n@(RF _)) = show ns ++ ".(" ++ show n ++ ")"
   show (NS ns n) = show ns ++ "." ++ show n
   show (UN x) = x
+  show (HN x) = "?" ++ x
   show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
   show (PV n d) = "{P:" ++ show n ++ ":" ++ show d ++ "}"
   show (DN str n) = str
@@ -164,6 +171,7 @@ export
 [Raw] Show Name where
   show (NS ns n) = "NS " ++ show ns ++ " (" ++ show n ++ ")"
   show (UN x) = "UN " ++ x
+  show (HN x) = "HN " ++ x
   show (MN x y) = "MN (" ++ show x ++ ") " ++ show y
   show (PV n d) = "PV (" ++ show n ++ ") " ++ show d
   show (DN str n) = "DN " ++ str ++ " (" ++ show n ++ ")"
@@ -178,6 +186,7 @@ Pretty Name where
   pretty (NS ns n@(RF _)) = pretty ns <+> dot <+> parens (pretty n)
   pretty (NS ns n) = pretty ns <+> dot <+> pretty n
   pretty (UN x) = pretty x
+  pretty (HN x) = "?" <+> pretty x
   pretty (MN x y) = braces (pretty x <+> colon <+> pretty y)
   pretty (PV n d) = braces (pretty 'P' <+> colon <+> pretty n <+> colon <+> pretty d)
   pretty (DN str _) = pretty str
@@ -192,6 +201,7 @@ export
 Eq Name where
     (==) (NS ns n) (NS ns' n') = n == n' && ns == ns'
     (==) (UN x) (UN y) = x == y
+    (==) (HN x) (HN y) = x == y
     (==) (MN x y) (MN x' y') = y == y' && x == x'
     (==) (PV x y) (PV x' y') = x == x' && y == y'
     (==) (DN _ n) (DN _ n') = n == n'
@@ -213,6 +223,7 @@ nameTag (Nested _ _) = 6
 nameTag (CaseBlock _ _) = 7
 nameTag (WithBlock _ _) = 8
 nameTag (Resolved _) = 9
+nameTag (HN _) = 10
 
 export
 Ord Name where
@@ -224,6 +235,7 @@ Ord Name where
                GT => GT
                LT => LT
     compare (UN x) (UN y) = compare x y
+    compare (HN x) (HN y) = compare x y
     compare (MN x y) (MN x' y')
         = case compare y y' of
                EQ => compare x x'
@@ -266,6 +278,9 @@ nameEq (NS xs x) (NS ys y) with (decEq xs ys)
 nameEq (UN x) (UN y) with (decEq x y)
   nameEq (UN y) (UN y) | (Yes Refl) = Just Refl
   nameEq (UN x) (UN y) | (No contra) = Nothing
+nameEq (HN x) (HN y) with (decEq x y)
+  nameEq (HN y) (HN y) | (Yes Refl) = Just Refl
+  nameEq (HN x) (HN y) | (No contra) = Nothing
 nameEq (MN x t) (MN x' t') with (decEq x x')
   nameEq (MN x t) (MN x t') | (Yes Refl) with (decEq t t')
     nameEq (MN x t) (MN x t) | (Yes Refl) | (Yes Refl) = Just Refl

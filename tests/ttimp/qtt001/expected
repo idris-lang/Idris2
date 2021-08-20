@@ -1,8 +1,8 @@
 Processing as TTImp
 QTT:14:1--15:1:When elaborating right hand side of Main.dupbad:
 QTT:14:13--15:1:There are 2 uses of linear name x
-Yaffle> Main.foo : (%pi Rig0 Explicit (Just a) %type (%pi Rig1 Explicit (Just _) a a))
-Yaffle> Main.bar : (%pi Rig0 Explicit (Just a) %type (%pi Rig1 Explicit (Just _) a a))
-Yaffle> Main.baz1 : (%pi Rig0 Explicit (Just a) %type (%pi Rig0 Explicit (Just _) a a))
-Yaffle> Main.baz2 : (%pi Rig0 Explicit (Just a) %type (%pi Rig0 Explicit (Just _) a a))
+Yaffle> ?foo : (%pi Rig0 Explicit (Just a) %type (%pi Rig1 Explicit (Just _) a a))
+Yaffle> ?bar : (%pi Rig0 Explicit (Just a) %type (%pi Rig1 Explicit (Just _) a a))
+Yaffle> ?baz1 : (%pi Rig0 Explicit (Just a) %type (%pi Rig0 Explicit (Just _) a a))
+Yaffle> ?baz2 : (%pi Rig0 Explicit (Just a) %type (%pi Rig0 Explicit (Just _) a a))
 Yaffle> Bye for now!

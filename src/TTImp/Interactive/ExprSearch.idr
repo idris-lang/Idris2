@@ -23,6 +23,8 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Interactive.CaseSplit
 import TTImp.TTImp
@@ -168,6 +170,7 @@ initSearchOpts rec depth
 
 search : {auto c : Ref Ctxt Defs} ->
          {auto m : Ref MD Metadata} ->
+         {auto s : Ref Syn SyntaxInfo} ->
          {auto u : Ref UST UState} ->
          FC -> RigCount ->
          SearchOpts -> ClosedTerm ->
@@ -197,6 +200,7 @@ getAllEnv {vars = v :: vs} {done} fc p (b :: env)
 searchIfHole : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                {auto u : Ref UST UState} ->
                FC -> SearchOpts -> ClosedTerm ->
                Env Term vars -> ArgInfo vars ->
@@ -304,6 +308,7 @@ mkCandidates fc f ds (Result (arg, ds') next :: argss)
 searchName : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              {auto u : Ref UST UState} ->
              FC -> RigCount -> SearchOpts ->
              Env Term vars -> NF vars -> ClosedTerm ->
@@ -349,6 +354,7 @@ searchName fc rigc opts env target topty (n, ndef)
 getSuccessful : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
                 {auto m : Ref MD Metadata} ->
+                {auto s : Ref Syn SyntaxInfo} ->
                 {auto u : Ref UST UState} ->
                 FC -> RigCount -> SearchOpts -> Bool ->
                 Env Term vars -> Term vars -> ClosedTerm ->
@@ -363,7 +369,7 @@ getSuccessful {vars} fc rig opts mkHole env ty topty all
                            let base = maybe "arg"
                                             (\r => nameRoot (recname r) ++ "_rhs")
                                             (recData opts)
-                           hn <- uniqueName defs (map nameRoot vars) base
+                           hn <- uniqueName (map nameRoot vars) base
                            (idx, tm) <- newMeta fc rig env (UN hn) ty
                                                 (Hole (length env) (holeInit False))
                                                 False
@@ -374,6 +380,7 @@ getSuccessful {vars} fc rig opts mkHole env ty topty all
 searchNames : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               {auto u : Ref UST UState} ->
               FC -> RigCount -> SearchOpts -> Env Term vars ->
               Term vars -> ClosedTerm ->
@@ -402,6 +409,7 @@ searchNames fc rig opts env ty topty (n :: ns)
 tryRecursive : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                {auto u : Ref UST UState} ->
                FC -> RigCount -> SearchOpts ->
                Env Term vars -> Term vars -> ClosedTerm ->
@@ -472,6 +480,7 @@ usableLocal loc _ _ = True
 searchLocalWith : {vars : _} ->
                   {auto c : Ref Ctxt Defs} ->
                   {auto m : Ref MD Metadata} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
                   {auto u : Ref UST UState} ->
                   FC -> Bool ->
                   RigCount -> SearchOpts -> Env Term vars ->
@@ -552,6 +561,7 @@ searchLocalWith {vars} fc nofn rig opts env ((p, pty) :: rest) ty topty
 searchLocal : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               {auto u : Ref UST UState} ->
               FC -> RigCount -> SearchOpts ->
               Env Term vars -> Term vars -> ClosedTerm ->
@@ -630,6 +640,7 @@ makeHelper fc rig opts env letty targetty (Result (locapp, ds) next)
 tryIntermediateWith : {vars : _} ->
                       {auto c : Ref Ctxt Defs} ->
                       {auto m : Ref MD Metadata} ->
+                      {auto s : Ref Syn SyntaxInfo} ->
                       {auto u : Ref UST UState} ->
                       FC -> RigCount -> SearchOpts ->
                       Env Term vars -> List (Term vars, Term vars) ->
@@ -675,6 +686,7 @@ tryIntermediateWith fc rig opts env ((p, pty) :: rest) ty topty
 tryIntermediate : {vars : _} ->
                   {auto c : Ref Ctxt Defs} ->
                   {auto m : Ref MD Metadata} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
                   {auto u : Ref UST UState} ->
                   FC -> RigCount -> SearchOpts ->
                   Env Term vars -> Term vars -> ClosedTerm ->
@@ -690,6 +702,7 @@ tryIntermediate fc rig opts env ty topty
 tryIntermediateRec : {vars : _} ->
                      {auto c : Ref Ctxt Defs} ->
                      {auto m : Ref MD Metadata} ->
+                     {auto s : Ref Syn SyntaxInfo} ->
                      {auto u : Ref UST UState} ->
                      FC -> RigCount -> SearchOpts ->
                      Env Term vars ->
@@ -725,6 +738,7 @@ tryIntermediateRec fc rig opts env ty topty (Just rd)
 searchType : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              {auto u : Ref UST UState} ->
              FC -> RigCount -> SearchOpts -> Env Term vars ->
              ClosedTerm ->
@@ -798,6 +812,7 @@ searchType fc rig opts env topty _ ty
 
 searchHole : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              {auto u : Ref UST UState} ->
              FC -> RigCount -> SearchOpts -> Name ->
              Nat -> ClosedTerm ->
@@ -871,6 +886,7 @@ firstLinearOK fc (Result (t, ds) next)
 export
 exprSearchOpts : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  {auto u : Ref UST UState} ->
                  SearchOpts -> FC -> Name -> List Name ->
                  Core (Search RawImp)
@@ -904,6 +920,7 @@ exprSearchOpts opts fc n_in hints
 
 exprSearch' : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               {auto u : Ref UST UState} ->
               FC -> Name -> List Name ->
               Core (Search RawImp)
@@ -912,6 +929,7 @@ exprSearch' = exprSearchOpts (initSearchOpts True 5)
 export
 exprSearch : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              {auto u : Ref UST UState} ->
              FC -> Name -> List Name ->
              Core (Search RawImp)
@@ -924,6 +942,7 @@ exprSearch fc n hints
 export
 exprSearchN : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               {auto u : Ref UST UState} ->
               FC -> Nat -> Name -> List Name ->
               Core (List RawImp)

@@ -3,6 +3,7 @@ module TTImp.Utils
 import Core.Context
 import Core.Options
 import Core.TT
+import Idris.Syntax
 import TTImp.TTImp
 
 import Data.List
@@ -465,22 +466,44 @@ mutual
       = INamespace fc' ns (map (substLocDecl fc') ds)
   substLocDecl fc' d = d
 
-nameNum : String -> (String, Int)
+nameNum : String -> (String, Maybe Int)
 nameNum str
     = case span isDigit (reverse str) of
-           ("", _) => (str, 0)
+           ("", _) => (str, Nothing)
            (nums, pre)
               => case unpack pre of
-                      ('_' :: rest) => (reverse (pack rest), cast (reverse nums))
-                      _ => (str, 0)
+                      ('_' :: rest) => (reverse (pack rest), Just $ cast (reverse nums))
+                      _ => (str, Nothing)
+
+nextNameNum : (String, Maybe Int) -> (String, Maybe Int)
+nextNameNum (str, mn) = (str, Just $ maybe 0 (1+) mn)
+
+unNameNum : (String, Maybe Int) -> String
+unNameNum (str, Nothing) = str
+unNameNum (str, Just n) = fastConcat [str, "_", show n]
 
 export
-uniqueName : Defs -> List String -> String -> Core String
-uniqueName defs used n
-    = if !usedName
-         then uniqueName defs used (next n)
-         else pure n
+uniqueName : {auto s : Ref Syn SyntaxInfo} ->
+             List String -> String -> Core String
+uniqueName used n
+    = do syn <- get Syn
+         pure $ loop (holeNames syn ++ used) (nameNum n)
   where
+
+    loop : List String -> (String, Maybe Int) -> String
+    loop used nm =
+      let candidate = unNameNum nm in
+      if candidate `elem` used
+         then loop used (nextNameNum nm)
+         else candidate
+
+export
+uniqueUN : Defs -> List String -> String -> Core String
+uniqueUN defs used n
+    = if !usedName
+         then uniqueUN defs used (next n)
+         else pure n
+   where
     usedName : Core Bool
     usedName
         = pure $ case !(lookupTyName (UN n) (gamma defs)) of
@@ -488,6 +511,4 @@ uniqueName defs used n
                       _ => True
 
     next : String -> String
-    next str
-        = let (n, i) = nameNum str in
-              n ++ "_" ++ show (i + 1)
+    next = unNameNum . nextNameNum . nameNum

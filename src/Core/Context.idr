@@ -1543,6 +1543,8 @@ visibleInAny nss n vis = any (\ns => visibleIn ns n vis) nss
 reducibleIn : Namespace -> Name -> Visibility -> Bool
 reducibleIn nspace (NS ns (UN n)) Export = isParentOf ns nspace
 reducibleIn nspace (NS ns (UN n)) Private = isParentOf ns nspace
+reducibleIn nspace (NS ns (HN n)) Export = isParentOf ns nspace
+reducibleIn nspace (NS ns (HN n)) Private = isParentOf ns nspace
 reducibleIn nspace (NS ns (RF n)) Export = isParentOf ns nspace
 reducibleIn nspace (NS ns (RF n)) Private = isParentOf ns nspace
 reducibleIn nspace n _ = True
@@ -2061,6 +2063,9 @@ inCurrentNS : {auto c : Ref Ctxt Defs} ->
 inCurrentNS (UN n)
     = do defs <- get Ctxt
          pure (NS (currentNS defs) (UN n))
+inCurrentNS (HN n)
+    = do defs <- get Ctxt
+         pure (NS (currentNS defs) (HN n))
 inCurrentNS n@(CaseBlock _ _)
     = do defs <- get Ctxt
          pure (NS (currentNS defs) n)

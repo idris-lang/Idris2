@@ -19,12 +19,27 @@ import Libraries.Data.String.Extra
 %default total
 
 public export
+record State where
+  constructor MkState
+  decorations : SemanticDecorations
+  holeNames : List String
+
+export
+Semigroup State where
+  MkState decs1 hs1 <+> MkState decs2 hs2
+    = MkState (decs1 ++ decs2) (hs1 ++ hs2)
+
+export
+Monoid State where
+  neutral = MkState [] []
+
+public export
 Rule : Type -> Type
-Rule ty = Grammar SemanticDecorations Token True ty
+Rule ty = Grammar State Token True ty
 
 public export
 EmptyRule : Type -> Type
-EmptyRule ty = Grammar SemanticDecorations Token False ty
+EmptyRule ty = Grammar State Token False ty
 
 export
 eoi : EmptyRule ()

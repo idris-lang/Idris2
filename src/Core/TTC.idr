@@ -82,6 +82,7 @@ TTC Name where
   toBuf b (WithBlock x y) = do tag 8; toBuf b x; toBuf b y
   toBuf b (Resolved x)
       = throw (InternalError ("Can't write resolved name " ++ show x))
+  toBuf b (HN x) = do tag 9; toBuf b x
 
   fromBuf b
       = case !getTag of
@@ -110,6 +111,8 @@ TTC Name where
              8 => do x <- fromBuf b
                      y <- fromBuf b
                      pure (WithBlock x y)
+             9 => do x <- fromBuf b
+                     pure (HN x)
              _ => corrupt "Name"
 
 export

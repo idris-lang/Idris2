@@ -888,6 +888,7 @@ record SyntaxInfo where
                            -- to be bracketed when solved)
   usingImpl : List (Maybe Name, RawImp)
   startExpr : RawImp
+  holeNames : List String -- hole names in the file
 
 export
 TTC Fixity where
@@ -917,6 +918,7 @@ TTC SyntaxInfo where
                            (ANameMap.toList (defDocstrings syn)))
            toBuf b (bracketholes syn)
            toBuf b (startExpr syn)
+           toBuf b (holeNames syn)
 
   fromBuf b
       = do inf <- fromBuf b
@@ -926,12 +928,14 @@ TTC SyntaxInfo where
            defdstrs <- fromBuf b
            bhs <- fromBuf b
            start <- fromBuf b
+           hnames <- fromBuf b
            pure $ MkSyntax (fromList inf) (fromList pre)
                    [] (fromList moddstr)
                    [] (fromList ifs)
                    empty (fromList defdstrs)
                    bhs
                    [] start
+                   hnames
 
 HasNames IFaceInfo where
   full gam iface
@@ -983,6 +987,7 @@ initSyntax
                []
                []
                (IVar EmptyFC (UN "main"))
+               []
 
   where
 

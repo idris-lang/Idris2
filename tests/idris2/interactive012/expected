@@ -2,6 +2,6 @@
 Main> succNotZero : S k = 0 -> Void
 succNotZero
 Main> recNotEqLift : (k = j -> Void) -> S k = S j -> Void
-(recNotEqLift contra)
+recNotEqLift contra
 Main> recNotEq f Refl = f Refl
 Main> Bye for now!

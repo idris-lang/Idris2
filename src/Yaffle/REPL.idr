@@ -13,6 +13,8 @@ import Core.TT
 import Core.Unify
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.Interactive.ExprSearch
@@ -35,6 +37,7 @@ showInfo (n, _, d)
 -- Returns 'True' if the REPL should continue
 process : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           {auto u : Ref UST UState} ->
           ImpREPL -> Core Bool
 process (Eval ttimp)
@@ -135,6 +138,7 @@ process Quit
 
 processCatch : {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                {auto u : Ref UST UState} ->
                ImpREPL -> Core Bool
 processCatch cmd
@@ -145,6 +149,7 @@ processCatch cmd
 export
 repl : {auto c : Ref Ctxt Defs} ->
        {auto m : Ref MD Metadata} ->
+       {auto s : Ref Syn SyntaxInfo} ->
        {auto u : Ref UST UState} ->
        Core ()
 repl
