@@ -6,8 +6,8 @@ streams = [ rangeFrom 0
           , iterate (*2) 1
           ]
 
-firstFive : List (Vect 5 Int)
-firstFive = map (take 5) streams
+testTakeFromStream : List (Vect 5 Int)
+testTakeFromStream = map (take 5) streams
 
 main : IO ()
-main = do printLn firstFive
+main = do printLn testTakeFromStream
