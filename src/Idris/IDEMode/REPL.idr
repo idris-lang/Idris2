@@ -32,6 +32,7 @@ import Idris.REPL
 import Idris.Syntax
 import Idris.Version
 import Idris.Pretty
+import Idris.Doc.String
 
 import Idris.IDEMode.Commands
 import Idris.IDEMode.Holes
@@ -342,6 +343,10 @@ displayIDEResult outf i  (REPL $ Printed xs)
   = printIDEResultWithHighlight outf i
   $ mapFst StringAtom
   $ !(renderWithDecorations annToDecoration xs)
+displayIDEResult outf i (REPL (PrintedDoc xs))
+  = printIDEResultWithHighlight outf i
+  $ mapFst StringAtom
+  $ !(renderWithDecorations docToDecoration xs)
 displayIDEResult outf i  (REPL $ TermChecked x y)
   = printIDEResultWithHighlight outf i
   $ mapFst StringAtom
@@ -461,8 +466,15 @@ displayIDEResult outf i (NameLocList dat)
                  , IntegerAtom $ cast $ endLine
                  , IntegerAtom $ cast $ endCol
                  ]
-
-displayIDEResult outf i  _ = pure ()
+-- do not use a catchall so that we are warned about missing cases when adding a
+-- new construtor to the enumeration.
+displayIDEResult _ _ (REPL Done) = pure ()
+displayIDEResult _ _ (REPL (Executed _)) = pure ()
+displayIDEResult _ _ (REPL (ModuleLoaded _)) = pure ()
+displayIDEResult _ _ (REPL (ErrorLoadingModule _ _)) = pure ()
+displayIDEResult _ _ (REPL (ColorSet _)) = pure ()
+displayIDEResult _ _ (REPL DefDeclared) = pure ()
+displayIDEResult _ _ (REPL Exited) = pure ()
 
 
 handleIDEResult : {auto c : Ref Ctxt Defs} ->
