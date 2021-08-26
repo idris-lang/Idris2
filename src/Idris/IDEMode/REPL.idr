@@ -274,12 +274,24 @@ returnFromIDE outf i msg
     = do send outf (SExpList [SymbolAtom "return", msg, toSExp i])
 
 printIDEResult : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
-printIDEResult outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "ok", toSExp msg])
-
-printIDEResultWithHighlight : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
-printIDEResultWithHighlight outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "ok", toSExp msg
-                                                                        -- TODO return syntax highlighted result
-                                                                        , SExpList []])
+printIDEResult outf i msg
+  = returnFromIDE outf i
+  $ SExpList [ SymbolAtom "ok"
+             , toSExp msg
+             ]
+printIDEResultWithHighlight : {auto c : Ref Ctxt Defs} ->
+                              File -> Integer -> SExp -> Core ()
+printIDEResultWithHighlight outf i msg
+  = returnFromIDE outf i
+  $ SExpList [ SymbolAtom "ok"
+             , toSExp msg
+             -- TODO return syntax highlighted result
+             , SExpList [ SExpList [ IntegerAtom 0
+                                   , IntegerAtom 10
+                                   , SExpList [toSExp Data]
+                                   ]
+                        ]
+             ]
 
 printIDEError : Ref ROpts REPLOpts => {auto c : Ref Ctxt Defs} -> File -> Integer -> Doc IdrisAnn -> Core ()
 printIDEError outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "error", toSExp !(renderWithoutColor msg) ])

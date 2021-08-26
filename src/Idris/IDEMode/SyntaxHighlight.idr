@@ -19,6 +19,7 @@ import Libraries.Data.PosMap
 
 %default total
 
+export
 SExpable Decoration where
   toSExp Typ      = SExpList [ SymbolAtom "decor", SymbolAtom "type"]
   toSExp Function = SExpList [ SymbolAtom "decor", SymbolAtom "function"]
