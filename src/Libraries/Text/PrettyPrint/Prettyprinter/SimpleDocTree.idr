@@ -70,10 +70,10 @@ sdocToTreeParser (SLine i rest) = case sdocToTreeParser rest of
 sdocToTreeParser (SAnnPush ann rest) = case sdocToTreeParser rest of
   (tree, Nothing) => (Nothing, Nothing)
   (Just tree, Nothing) => (Just $ STAnn ann tree, Nothing)
-  (Just tree, Just rest') => case sdocToTreeParser rest' of
+  (Just tree, Just rest') => case sdocToTreeParser (assert_smaller rest rest') of
     (Just tree', rest'') => (Just $ STConcat [STAnn ann tree, tree'], rest'')
     (Nothing, rest'') => (Just $ STAnn ann tree, rest'')
-  (Nothing, Just rest') => assert_total $ sdocToTreeParser rest'
+  (Nothing, Just rest') => sdocToTreeParser (assert_smaller rest rest')
   (Nothing, Nothing) => (Nothing, Nothing)
 sdocToTreeParser (SAnnPop rest) = (Nothing, Just rest)
 
