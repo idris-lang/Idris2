@@ -778,6 +778,26 @@ record Span (a : Type) where
   property : a
 
 export
+Functor Span where
+  map f = { property $= f }
+
+export
+Foldable Span where
+  foldr c n span = c span.property n
+
+export
+Traversable Span where
+  traverse f (MkSpan start width prop)
+    = MkSpan start width <$> f prop
+
+export
+Show a => Show (Span a) where
+  show (MkSpan start width prop)
+    = concat {t = List} [ "[", show start, "-", show width, "]"
+                        , show prop
+                        ]
+
+export
 displaySpans : SimpleDocStream a -> (String, List (Span a))
 displaySpans p =
   let (bits, anns) = go Z [<] [<] [] p in

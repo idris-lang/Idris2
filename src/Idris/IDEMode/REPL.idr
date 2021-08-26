@@ -279,19 +279,26 @@ printIDEResult outf i msg
   $ SExpList [ SymbolAtom "ok"
              , toSExp msg
              ]
-printIDEResultWithHighlight : {auto c : Ref Ctxt Defs} ->
-                              File -> Integer -> SExp -> Core ()
-printIDEResultWithHighlight outf i msg
-  = returnFromIDE outf i
-  $ SExpList [ SymbolAtom "ok"
-             , toSExp msg
-             -- TODO return syntax highlighted result
-             , SExpList [ SExpList [ IntegerAtom 0
-                                   , IntegerAtom 10
-                                   , SExpList [toSExp Data]
-                                   ]
-                        ]
-             ]
+
+export
+SExpable a => SExpable (Span a) where
+  toSExp (MkSpan start width ann)
+    = SExpList [ IntegerAtom (cast start)
+               , IntegerAtom (cast width)
+               , SExpList [toSExp ann]
+               ]
+
+printIDEResultWithHighlight :
+  {auto c : Ref Ctxt Defs} ->
+  File -> Integer -> (SExp, List (Span Decoration)) ->
+  Core ()
+printIDEResultWithHighlight outf i (msg, spans) = do
+  log "ide-mode.highlight" 10 $ show spans
+  returnFromIDE outf i
+    $ SExpList [ SymbolAtom "ok"
+               , msg
+               , toSExp spans
+               ]
 
 printIDEError : Ref ROpts REPLOpts => {auto c : Ref Ctxt Defs} -> File -> Integer -> Doc IdrisAnn -> Core ()
 printIDEError outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "error", toSExp !(renderWithoutColor msg) ])
@@ -324,16 +331,22 @@ displayIDEResult outf i  (REPL RequestedHelp  )
   $ StringAtom $ displayHelp
 displayIDEResult outf i  (REPL $ Evaluated x Nothing)
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ show x
+  $ mapFst StringAtom
+   !(renderWithDecorations syntaxToDecoration $ prettyTerm x)
 displayIDEResult outf i  (REPL $ Evaluated x (Just y))
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ show x ++ " : " ++ show y
+  $ mapFst StringAtom
+   !(renderWithDecorations syntaxToDecoration
+     $ prettyTerm x <++> ":" <++> prettyTerm y)
 displayIDEResult outf i  (REPL $ Printed xs)
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ !(renderWithoutColor xs)
+  $ mapFst StringAtom
+  $ !(renderWithDecorations annToDecoration xs)
 displayIDEResult outf i  (REPL $ TermChecked x y)
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ show x ++ " : " ++ show y
+  $ mapFst StringAtom
+   !(renderWithDecorations syntaxToDecoration
+     $ prettyTerm x <++> ":" <++> prettyTerm y)
 displayIDEResult outf i  (REPL $ FileLoaded x)
   = printIDEResult outf i $ SExpList []
 displayIDEResult outf i  (REPL $ ErrorLoadingFile x err)
