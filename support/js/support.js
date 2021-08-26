@@ -16,6 +16,17 @@ function __prim_idris2js_array(x){
   return result;
 }
 
+function __lazy(creator) {
+  let res;
+  let processed = false;
+  return function () {
+    if (processed) return res;
+    res = creator();
+    processed = true;
+    return res;
+  };
+};
+
 function __prim_stringIteratorNew(str) {
   return 0
 }
