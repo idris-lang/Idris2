@@ -1,3 +1,4 @@
+import Data.Stream
 import Data.Vect
 
 streams : List (Stream Int)
