@@ -92,6 +92,7 @@ modules = Control.ANSI,
           Data.Rel.Complement,
 
           Data.SortedMap,
+          Data.SortedMap.Dependent,
           Data.SortedSet,
 
           Data.Stream.Extra,
