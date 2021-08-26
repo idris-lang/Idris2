@@ -386,10 +386,8 @@ mutual
            cond [(fn == NS builtinNS (UN "assert_total"), pure [])
                 ,(caseFn fn,
                     do scs1 <- traverse (findSC defs env g pats) args
-                       mps <- getCasePats defs fn pats args
-                       scs2 <- case mps of
-                                    Nothing => pure Prelude.Nil
-                                    Just ps => traverse (findInCase defs g) ps
+                       mps  <- getCasePats defs fn pats args
+                       scs2 <- traverse (findInCase defs g) $ fromMaybe [] mps
                        pure (concat (scs1 ++ scs2)))
               ]
               (do scs <- traverse (findSC defs env g pats) args
