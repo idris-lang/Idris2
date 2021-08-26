@@ -5,15 +5,18 @@ import Compiler.ANF
 import Compiler.CompileExpr
 import Compiler.Inline
 import Compiler.LambdaLift
+import Compiler.Opts.CSE
 import Compiler.VMCode
 
 import Core.Context
 import Core.Context.Log
 import Core.Directory
 import Core.Options
+import Core.Ord
 import Core.TT
 import Core.TTC
 import Libraries.Data.IOArray
+import Libraries.Data.SortedMap
 import Libraries.Utils.Binary
 import Libraries.Utils.Path
 
@@ -181,8 +184,9 @@ warnIfHole n (MkNmError _)
     = coreLift $ putStrLn $ "Warning: compiling hole " ++ show n
 warnIfHole n _ = pure ()
 
-getNamedDef : {auto c : Ref Ctxt Defs} ->
-              Name -> Core (Maybe (Name, FC, NamedDef))
+getNamedDef :  {auto c : Ref Ctxt Defs}
+            -> Name
+            -> Core (Maybe (Name, FC, NamedDef))
 getNamedDef n
     = do defs <- get Ctxt
          case !(lookupCtxtExact n (gamma defs)) of
@@ -306,15 +310,16 @@ getCompileData doLazyAnnots phase_in tm_in
          -- unknown due to cyclic modules (i.e. declared in one, defined in
          -- another)
          rcns <- filterM nonErased cns
+         um <- analyzeNames rcns
          logTime "++ Merge lambda" $ traverse_ mergeLamDef rcns
          logTime "++ Fix arity" $ traverse_ fixArityDef rcns
-         logTime "++ Forget names" $ traverse_ mkForgetDef rcns
+         logTime "++ Forget names" $ traverse_ (mkForgetDef um) rcns
 
          compiledtm <- fixArityExp !(compileExp tm)
          let mainname = MN "__mainExpression" 0
          (liftedtm, ldefs) <- liftBody {doLazyAnnots} mainname compiledtm
 
-         namedefs <- traverse getNamedDef rcns
+         namedefs <- (additionalToplevel um ++) <$> traverse getNamedDef rcns
          lifted_in <- if phase >= Lifted
                          then logTime "++ Lambda lift" $ traverse (lambdaLift doLazyAnnots) rcns
                          else pure []
@@ -372,7 +377,7 @@ getIncCompileData doLazyAnnots phase
          let ns = keys (toIR defs)
          cns <- traverse toFullNames ns
          rcns <- filterM nonErased cns
-         traverse_ mkForgetDef rcns
+         traverse_ (mkForgetDef empty) rcns
 
          namedefs <- traverse getNamedDef rcns
          lifted_in <- if phase >= Lifted
