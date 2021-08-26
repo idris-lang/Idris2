@@ -64,7 +64,7 @@ record St where
 store : { auto c : Ref Sts St } -> CExp [] -> Core Integer
 store exp =
   let sz = size exp
-   in if sz < 6
+   in if sz < 5
          then pure 0
          else do
            (MkSt map idx)    <- get Sts
@@ -213,7 +213,7 @@ analyzeNames cns = do
                   ", size " ++ show sz
                  )
             ) filtered
-  pure map
+  pure $ fromList filtered
 
 --------------------------------------------------------------------------------
 --          Adjusting Expressions
