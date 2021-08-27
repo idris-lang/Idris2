@@ -1,3 +1,26 @@
+||| This module provides a simple common subexpression elimination (CSE)
+||| algorithm. The main goal right now is to move duplicate
+||| expressions introduced during autosearch (which includes
+||| interface resolution) to the top level.
+|||
+||| As such, the functionality provided by this module should
+||| be considered a form of whole program optimization.
+||| To keep things simple, it operates only on closed terms right
+||| now, which are - in case of several occurences - introduced
+||| as new zero-argument toplevel functions.
+|||
+||| The procedure is very simple: In an analysis step, we
+||| iterate over all toplevel definitions once, trying to
+||| convert every subexpression to a closed one (no free
+||| variables). Closed terms are then stored in a `SortedMap`
+||| together with their size and count.
+|||
+||| This map is then pruned: Expressions with a count of 1 are removed,
+||| as are very small terms (some experiments showed, that a
+||| cut-off size of 5 is a good heuristic). The remaining duplicate
+||| expressions are then introduced as new zero-argument toplevel
+||| functions and replaced accordingly in all function definitions
+||| (including larger extracted subexpressions, if any).
 module Compiler.Opts.CSE
 
 import Core.CompileExpr
@@ -12,6 +35,9 @@ import Data.Nat
 import Data.Vect
 import Libraries.Data.SortedMap
 
+||| Maping from a pairing of closed terms together with
+||| their size (for efficiency) to the number of
+||| occurences in toplevel definitions.
 public export
 UsageMap : Type
 UsageMap = SortedMap (Integer, CExp []) (Name, Integer)
@@ -24,25 +50,24 @@ mutual
   -- comparison for `Nat` is (or used to be?) O(n),
   -- therefore, we use `Integer`
   size : CExp ns -> Integer
-  size (CLocal _ _) = 1
-  size (CRef _ _) = 1
-  size (CLam _ _ y) = size y + 1
-  size (CLet _ _ _ y z) = size y + size z + 1
-  size (CApp _ _ xs) = sum (map size xs) + 1
-  size (CCon _ _ _ _ xs) = sum (map size xs) + 1
-  size (COp _ _ xs) = sum (map size xs) + 1
-  size (CExtPrim _ _ xs) = sum (map size xs) + 1
-  size (CForce _ _ y) = size y + 1
-  size (CDelay _ _ y) = size y + 1
+  size (CLocal _ _)         = 1
+  size (CRef _ _)           = 1
+  size (CLam _ _ y)         = size y + 1
+  size (CLet _ _ _ y z)     = size y + size z + 1
+  size (CApp _ _ xs)        = sum (map size xs) + 1
+  size (CCon _ _ _ _ xs)    = sum (map size xs) + 1
+  size (COp _ _ xs)         = sum (map size xs) + 1
+  size (CExtPrim _ _ xs)    = sum (map size xs) + 1
+  size (CForce _ _ y)       = size y + 1
+  size (CDelay _ _ y)       = size y + 1
+  size (CPrimVal _ _)       = 1
+  size (CErased _)          = 1
+  size (CCrash _ _)         = 1
   size (CConCase _ sc xs x) =
     size sc + sum (map sizeConAlt xs) + sum (map size x) + 1
 
   size (CConstCase _ sc xs x) =
     size sc + sum (map sizeConstAlt xs) + sum (map size x) + 1
-
-  size (CPrimVal _ _) = 1
-  size (CErased _) = 1
-  size (CCrash _ _) = 1
 
   sizeConAlt : CConAlt ns -> Integer
   sizeConAlt (MkConAlt _ _ _ _ z) = 1 + size z
@@ -61,17 +86,25 @@ record St where
   map : UsageMap
   idx : Int
 
-store : { auto c : Ref Sts St } -> CExp [] -> Core Integer
+-- adds a new closed expression to the `UsageMap`
+-- returning the actual count of occurences.
+-- very small expressions are being ignored.
+store : Ref Sts St => CExp [] -> Core Integer
 store exp =
   let sz = size exp
    in if sz < 5
          then pure 0
          else do
            (MkSt map idx)    <- get Sts
+
            (name,count,idx2) <-
              case lookup (sz,exp) map of
                Just (nm,cnt) => pure (nm, cnt+1, idx)
-               Nothing       => pure (MN "gencon" idx, 1, idx + 1)
+               -- TODO: Should we introduce a new kind of name
+               -- for this, so backends can choose a naming on their
+               -- own?
+               Nothing       => pure (MN "csegen" idx, 1, idx + 1)
+
            put Sts $ MkSt (insert (sz,exp) (name, count) map) idx2
            pure count
 
@@ -91,6 +124,9 @@ dropVar (y :: xs) (S k) (Later p) =
     Nothing => Nothing
 
 mutual
+  -- tries to 'strengthen' an expression by removing
+  -- a prefix of bound variables. typically, this is invoked
+  -- with `{pre = []}`.
   dropEnv : {pre : List Name} -> CExp (pre ++ ns) -> Maybe (CExp pre)
   dropEnv (CLocal {idx} fc p) = (\q => CLocal fc q) <$> dropVar pre idx p
   dropEnv (CRef fc x) = Just (CRef fc x)
@@ -135,30 +171,53 @@ mutual
 --------------------------------------------------------------------------------
 
 mutual
-
+  -- Tries to convert an expression to a closed term (`CExp []`).
+  -- If this is successful, the expression's number of occurences
+  -- is increased by one, otherwise, its subexpressions are analyzed
+  -- in a similar manner.
+  --
+  -- We have to be careful here not to count subexpressions too
+  -- often. For instance, consider a case of `outerExp (innerExp)`,
+  -- where both `outerExp` and `innerExp` are closed terms. `innerExp`
+  -- should be added to the set of extracted subexpressions, if
+  -- and only if it appears somewhere else in the code,
+  -- unrelated to `outerExp`. We must
+  -- therefore make sure to analyze subexpressions of closed terms
+  -- exactly once for each closed term, otherwise they might
+  -- be counted as additional common subexpressions although they are not.
   analyze : Ref Sts St => CExp ns -> Core ()
-  analyze c@(COp _ _ xs) = analyzeSubExp c
+
+  -- We ignore prim ops here, since moving them to the toplevel
+  -- might interfere with other optimizations, for instance
+  -- the one dealing with #1320.
+  -- Some other terms are ignored, as I (@stefan-hoeck)
+  -- am being conversvative here,
+  -- not daring to inadvertently change the semantics
+  -- of the program.
+  analyze c@(COp _ _ _)      = analyzeSubExp c
+  analyze c@(CExtPrim _ _ _) = analyzeSubExp c
+  analyze c@(CForce _ _ _)   = analyzeSubExp c
+  analyze c@(CDelay _ _ _)   = analyzeSubExp c
+
   analyze exp = case dropEnv {pre = []} exp of
     Just e0 => do
       count <- store e0
+      -- only analyze subexpressions of closed terms once
       if count == 1 then analyzeSubExp exp else pure ()
     Nothing => analyzeSubExp exp
 
-  -- store all calls to `CCon` that can be converted to
-  -- expressions with an empty environment together with
-  -- their count and a generated name in a sorted map.
   analyzeSubExp : Ref Sts St => CExp ns -> Core ()
-  analyzeSubExp (CLocal _ _) = pure ()
-  analyzeSubExp (CRef _ _) = pure ()
-  analyzeSubExp (CLam _ _ y) = analyze y
-  analyzeSubExp (CLet _ _ _ y z) = analyze y >> analyze z
-  analyzeSubExp (CApp fc x xs) = analyze x >> traverse_ analyze xs
-  analyzeSubExp (CCon _ _ _ _ []) = pure ()
-  analyzeSubExp (CCon _ _ _ _ xs) = traverse_ analyze xs
-  analyzeSubExp (COp _ _ xs) = ignore $ traverseVect analyze xs
-  analyzeSubExp (CExtPrim _ _ xs) = traverse_ analyze xs
-  analyzeSubExp (CForce _ _ y) = analyze y
-  analyzeSubExp (CDelay _ _ y) = analyze y
+  analyzeSubExp (CLocal _ _)         = pure ()
+  analyzeSubExp (CRef _ _)           = pure ()
+  analyzeSubExp (CLam _ _ y)         = analyze y
+  analyzeSubExp (CLet _ _ _ y z)     = analyze y >> analyze z
+  analyzeSubExp (CApp fc x xs)       = analyze x >> traverse_ analyze xs
+  analyzeSubExp (CCon _ _ _ _ [])    = pure ()
+  analyzeSubExp (CCon _ _ _ _ xs)    = traverse_ analyze xs
+  analyzeSubExp (COp _ _ xs)         = ignore $ traverseVect analyze xs
+  analyzeSubExp (CExtPrim _ _ xs)    = traverse_ analyze xs
+  analyzeSubExp (CForce _ _ y)       = analyze y
+  analyzeSubExp (CDelay _ _ y)       = analyze y
   analyzeSubExp (CConCase _ sc xs x) =
     analyze sc                     >>
     traverse_ analyzeConAlt xs     >>
@@ -170,8 +229,8 @@ mutual
     ignore (traverseOpt analyze x)
 
   analyzeSubExp (CPrimVal _ _) = pure ()
-  analyzeSubExp (CErased _) = pure ()
-  analyzeSubExp (CCrash _ _) = pure ()
+  analyzeSubExp (CErased _)    = pure ()
+  analyzeSubExp (CCrash _ _)   = pure ()
 
   analyzeConAlt : { auto c : Ref Sts St } -> CConAlt ns -> Core ()
   analyzeConAlt (MkConAlt _ _ _ _ z) = analyze z
@@ -180,10 +239,10 @@ mutual
   analyzeConstAlt (MkConstAlt _ y) = analyze y
 
 analyzeDef : Ref Sts St => CDef -> Core ()
-analyzeDef (MkFun args x)                = analyze x
-analyzeDef (MkCon _ _ _)                 = pure ()
-analyzeDef (MkForeign _ _ _)             = pure ()
-analyzeDef (MkError _)                   = pure ()
+analyzeDef (MkFun args x)    = analyze x
+analyzeDef (MkCon _ _ _)     = pure ()
+analyzeDef (MkForeign _ _ _) = pure ()
+analyzeDef (MkError _)       = pure ()
 
 analyzeName : Ref Sts St => Ref Ctxt Defs => Name -> Core ()
 analyzeName fn = do
@@ -194,6 +253,9 @@ analyzeName fn = do
         | Nothing => pure ()
     analyzeDef cexp
 
+||| Generates a `UsageMap` (a mapping from closed terms
+||| to their number of occurences plus newly generated
+||| name in case they will be lifted to the toplevel)
 export
 analyzeNames : Ref Ctxt Defs => List Name -> Core UsageMap
 analyzeNames cns = do
@@ -220,11 +282,11 @@ analyzeNames cns = do
 --------------------------------------------------------------------------------
 
 mutual
-  export
   adjust : UsageMap -> CExp ns -> CExp ns
   adjust um exp = case dropEnv {pre = []} exp of
     Nothing => adjustSubExp um exp
     Just e0 => case lookup (size e0, e0) um of
+      -- I'm not sure I'm using `EmptyFC` correctly here
       Just (nm,_) => CApp EmptyFC (CRef EmptyFC nm) []
       Nothing     => adjustSubExp um exp
 
@@ -265,15 +327,23 @@ mutual
   adjustConstAlt : UsageMap -> CConstAlt ns -> CConstAlt ns
   adjustConstAlt um (MkConstAlt x y) = MkConstAlt x $ adjust um y
 
+||| Converts occurences of common subexpressions in toplevel
+||| definitions to invocations of the corresponding
+||| (newly introduced) zero-argument toplevel functions.
 export
 adjustDef : UsageMap -> CDef -> CDef
-adjustDef um (MkFun args x) = MkFun args $ adjust um x
-adjustDef um d@(MkCon _ _ _) = d
+adjustDef um (MkFun args x)      = MkFun args $ adjust um x
+adjustDef um d@(MkCon _ _ _)     = d
 adjustDef um d@(MkForeign _ _ _) = d
-adjustDef um d@(MkError _) = d
+adjustDef um d@(MkError _)       = d
 
+||| Returns a list of zero-argument toplevel function definitions
+||| for the extracted common subexpressions.
 export
 additionalToplevel : UsageMap -> List (Maybe (Name, FC, NamedDef))
 additionalToplevel um = map toDef $ SortedMap.toList um
+  -- note, that even here there is an opportunity to replace smaller
+  -- common subexpressions, hence the call to `adjustSubExp`.
   where toDef : ((Integer, CExp[]),(Name,Integer)) -> Maybe (Name,FC,NamedDef)
-        toDef ((_,exp),(nm,_)) = Just (nm, EmptyFC, forgetDef $ MkFun [] $ adjustSubExp um exp)
+        toDef ((_,exp),(nm,_)) =
+          Just (nm, EmptyFC, forgetDef $ MkFun [] $ adjustSubExp um exp)
