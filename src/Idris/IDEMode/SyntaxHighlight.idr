@@ -9,6 +9,7 @@ import Core.TT
 
 import Idris.REPL
 import Idris.Syntax
+import Idris.Pretty
 import Idris.Doc.String
 import Idris.IDEMode.Commands
 
@@ -19,16 +20,90 @@ import Libraries.Data.PosMap
 
 %default total
 
+------------------------------------------------------------------------
+-- Text properties supported by the IDE mode
+------------------------------------------------------------------------
+
+data Formatting : Type where
+  Bold      : Formatting
+  Italic    : Formatting
+  Underline : Formatting
+
+-- At most one decoration & one formatting
+-- (We could use `These` to guarantee non-emptiness but I am not
+-- convinced this will stay being just 2 fields e.g. the emacs mode
+-- has support for tagging things as errors, adding links, etc.)
+public export
+record Properties where
+  constructor MkProperties
+  decor  : Maybe Decoration
+  format : Maybe Formatting
+
 export
+mkDecor : Decoration -> Properties
+mkDecor dec = MkProperties (Just dec) Nothing
+
+export
+mkFormat : Formatting -> Properties
+mkFormat = MkProperties Nothing . Just
+
+export
+syntaxToProperties : IdrisSyntax -> Maybe Properties
+syntaxToProperties syn = mkDecor <$> syntaxToDecoration syn
+
+export
+annToProperties : IdrisAnn -> Maybe Properties
+annToProperties Warning      = Nothing
+annToProperties Error        = Nothing
+annToProperties ErrorDesc    = Nothing
+annToProperties FileCtxt     = Nothing
+annToProperties Code         = Nothing
+annToProperties Meta         = Nothing
+annToProperties (Syntax syn) = syntaxToProperties syn
+
+export
+docToProperties : IdrisDocAnn -> Maybe Properties
+docToProperties Header        = pure $ mkFormat Underline
+docToProperties Declarations  = Nothing
+docToProperties (Decl _)      = Nothing
+docToProperties DocStringBody = Nothing
+docToProperties (Syntax syn)  = syntaxToProperties syn
+
+-- Semantic properties are passed as a list of even length functioning as a list
+-- of pairs of successive items. So if we want to pass multiple properties we
+-- need to generate a single SExpList. So we define these auxiliary functions
+-- that return lists of SExps that are not wrapped in a SExpList constructor.
+
+namespace Decoration
+
+  export
+  toSExps : Decoration -> List SExp
+  toSExps Typ       = [ SymbolAtom "decor", SymbolAtom "type"]
+  toSExps Function  = [ SymbolAtom "decor", SymbolAtom "function"]
+  toSExps Data      = [ SymbolAtom "decor", SymbolAtom "data"]
+  toSExps Keyword   = [ SymbolAtom "decor", SymbolAtom "keyword"]
+  toSExps Bound     = [ SymbolAtom "decor", SymbolAtom "bound"]
+  toSExps Namespace = [ SymbolAtom "decor", SymbolAtom "namespace"]
+  toSExps Postulate = [ SymbolAtom "decor", SymbolAtom "postulate"]
+  toSExps Module    = [ SymbolAtom "decor", SymbolAtom "module"]
+
 SExpable Decoration where
-  toSExp Typ       = SExpList [ SymbolAtom "decor", SymbolAtom "type"]
-  toSExp Function  = SExpList [ SymbolAtom "decor", SymbolAtom "function"]
-  toSExp Data      = SExpList [ SymbolAtom "decor", SymbolAtom "data"]
-  toSExp Keyword   = SExpList [ SymbolAtom "decor", SymbolAtom "keyword"]
-  toSExp Bound     = SExpList [ SymbolAtom "decor", SymbolAtom "bound"]
-  toSExp Namespace = SExpList [ SymbolAtom "decor", SymbolAtom "namespace"]
-  toSExp Postulate = SExpList [ SymbolAtom "decor", SymbolAtom "postulate"]
-  toSExp Module    = SExpList [ SymbolAtom "decor", SymbolAtom "module"]
+  toSExp = SExpList . toSExps
+
+namespace Formatting
+
+  export
+  toSExps : Formatting -> List SExp
+  toSExps Bold        = [ SymbolAtom "text-formatting", SymbolAtom "bold"]
+  toSExps Italic      = [ SymbolAtom "text-formatting", SymbolAtom "italic"]
+  toSExps Underline   = [ SymbolAtom "text-formatting", SymbolAtom "underline"]
+
+export
+SExpable Properties where
+  toSExp (MkProperties dec form)  = SExpList $ concat {t = List}
+    [ foldMap toSExps dec
+    , foldMap toSExps form
+    ]
 
 
 record Highlight where

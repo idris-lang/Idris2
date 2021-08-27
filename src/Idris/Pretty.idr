@@ -428,9 +428,9 @@ export
 renderWithDecorations :
   {auto c : Ref Ctxt Defs} ->
   {auto o : Ref ROpts REPLOpts} ->
-  (ann -> Maybe Decoration) ->
+  (ann -> Maybe ann') ->
   Doc ann ->
-  Core (String, List (Span Decoration))
+  Core (String, List (Span ann'))
 renderWithDecorations f doc =
   do (str, mspans) <- Render.renderWithSpans doc
      let spans = mapMaybe (traverse f) mspans

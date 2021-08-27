@@ -17,7 +17,6 @@ import Core.TT
 import Core.Unify
 
 import Data.List
-import Data.List1
 import Data.So
 import Data.String
 
@@ -291,10 +290,10 @@ SExpable a => SExpable (Span a) where
 
 printIDEResultWithHighlight :
   {auto c : Ref Ctxt Defs} ->
-  File -> Integer -> (SExp, List (Span Decoration)) ->
+  File -> Integer -> (SExp, List (Span Properties)) ->
   Core ()
 printIDEResultWithHighlight outf i (msg, spans) = do
-  log "ide-mode.highlight" 10 $ show spans
+--  log "ide-mode.highlight" 10 $ show spans
   returnFromIDE outf i
     $ SExpList [ SymbolAtom "ok"
                , msg
@@ -333,24 +332,24 @@ displayIDEResult outf i  (REPL RequestedHelp  )
 displayIDEResult outf i  (REPL $ Evaluated x Nothing)
   = printIDEResultWithHighlight outf i
   $ mapFst StringAtom
-   !(renderWithDecorations syntaxToDecoration $ prettyTerm x)
+   !(renderWithDecorations syntaxToProperties $ prettyTerm x)
 displayIDEResult outf i  (REPL $ Evaluated x (Just y))
   = printIDEResultWithHighlight outf i
   $ mapFst StringAtom
-   !(renderWithDecorations syntaxToDecoration
+   !(renderWithDecorations syntaxToProperties
      $ prettyTerm x <++> ":" <++> prettyTerm y)
 displayIDEResult outf i  (REPL $ Printed xs)
   = printIDEResultWithHighlight outf i
   $ mapFst StringAtom
-  $ !(renderWithDecorations annToDecoration xs)
+  $ !(renderWithDecorations annToProperties xs)
 displayIDEResult outf i (REPL (PrintedDoc xs))
   = printIDEResultWithHighlight outf i
   $ mapFst StringAtom
-  $ !(renderWithDecorations docToDecoration xs)
+  $ !(renderWithDecorations docToProperties xs)
 displayIDEResult outf i  (REPL $ TermChecked x y)
   = printIDEResultWithHighlight outf i
   $ mapFst StringAtom
-   !(renderWithDecorations syntaxToDecoration
+   !(renderWithDecorations syntaxToProperties
      $ prettyTerm x <++> ":" <++> prettyTerm y)
 displayIDEResult outf i  (REPL $ FileLoaded x)
   = printIDEResult outf i $ SExpList []
