@@ -91,7 +91,7 @@ fuzzySearch expr = do
        filterM (\def => fuzzyMatch neg pos def.type) allDefs
   put Ctxt defs
   doc <- traverse (docsOrSignature EmptyFC) $ fullname <$> filteredDefs
-  pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
+  pure $ PrintedDoc $ vsep doc
  where
 
   data NameOrConst = AName Name

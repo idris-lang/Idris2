@@ -1280,14 +1280,16 @@ fix
   <|> (keyword "infix"  $> Infix)
   <|> (keyword "prefix" $> Prefix)
 
-namespaceHead : Rule Namespace
-namespaceHead = keyword "namespace" *> mustWork namespaceId
+namespaceHead : OriginDesc -> Rule Namespace
+namespaceHead fname
+  = do keyword "namespace"
+       decorate fname Namespace $ mustWork namespaceId
 
 namespaceDecl : OriginDesc -> IndentInfo -> Rule PDecl
 namespaceDecl fname indents
     = do b <- bounds (do doc   <- option "" documentation
                          col   <- column
-                         ns    <- namespaceHead
+                         ns    <- namespaceHead fname
                          ds    <- blockAfter col (topDecl fname)
                          pure (doc, ns, ds))
          (doc, ns, ds) <- pure b.val
@@ -1682,10 +1684,10 @@ import_ : OriginDesc -> IndentInfo -> Rule Import
 import_ fname indents
     = do b <- bounds (do decoratedKeyword fname "import"
                          reexp <- option False (decoratedKeyword fname "public" $> True)
-                         ns <- mustWork moduleIdent
+                         ns <- decorate fname Module $ mustWork moduleIdent
                          nsAs <- option (miAsNamespace ns)
                                         (do exactIdent "as"
-                                            mustWork namespaceId)
+                                            decorate fname Namespace $ mustWork namespaceId)
                          pure (reexp, ns, nsAs))
          atEnd indents
          (reexp, ns, nsAs) <- pure b.val
@@ -1697,7 +1699,7 @@ prog fname
     = do b <- bounds (do doc    <- option "" documentation
                          nspace <- option (nsAsModuleIdent mainNS)
                                      (do decoratedKeyword fname "module"
-                                         mustWork moduleIdent)
+                                         decorate fname Module $ mustWork moduleIdent)
                          imports <- block (import_ fname)
                          pure (doc, nspace, imports))
          ds      <- block (topDecl fname)

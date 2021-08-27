@@ -24,6 +24,7 @@ import Libraries.Data.ANameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 import Data.List
+import Data.String
 import System.File
 
 %default covering
@@ -44,23 +45,30 @@ iputStrLn msg
 
 
 printWithStatus : {auto o : Ref ROpts REPLOpts} ->
-                  Doc IdrisAnn -> Doc IdrisAnn -> Core ()
-printWithStatus status msg
-    = do opts <- get ROpts
-         case idemode opts of
-              REPL _ => coreLift $ putStrLn !(render msg)
-              _      => pure () -- this function should never be called in IDE Mode
+                  (Doc ann -> Core String) ->
+                  (Doc ann -> Core ())
+printWithStatus render msg
+  = do opts <- get ROpts
+       case idemode opts of
+         REPL _ => coreLift $ putStrLn !(render msg)
+         _      => pure () -- this function should never be called in IDE Mode
 
 export
 printResult : {auto o : Ref ROpts REPLOpts} ->
               Doc IdrisAnn -> Core ()
-printResult msg = printWithStatus (pretty "ok") msg
+printResult = printWithStatus render
+
+export
+printDocResult : {auto o : Ref ROpts REPLOpts} ->
+                 Doc IdrisDocAnn -> Core ()
+printDocResult = printWithStatus (render styleAnn)
+
 
 -- Return that a protocol request failed somehow
 export
 printError : {auto o : Ref ROpts REPLOpts} ->
              Doc IdrisAnn -> Core ()
-printError msg = printWithStatus (pretty "error") msg
+printError msg = printWithStatus render msg
 
 DocCreator : Type -> Type
 DocCreator a = a -> Core (Doc IdrisAnn)
@@ -193,6 +201,7 @@ data REPLResult : Type where
   RequestedHelp : REPLResult
   Evaluated : IPTerm -> Maybe IPTerm -> REPLResult
   Printed : Doc IdrisAnn -> REPLResult
+  PrintedDoc : Doc IdrisDocAnn -> REPLResult
   TermChecked : IPTerm -> IPTerm -> REPLResult
   FileLoaded : String -> REPLResult
   ModuleLoaded : String -> REPLResult
@@ -216,11 +225,14 @@ data REPLResult : Type where
   Exited : REPLResult
   Edited : EditResult -> REPLResult
 
+prettyTerm : IPTerm -> Doc IdrisDocAnn
+prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
+
 export
 docsOrSignature : {auto o : Ref ROpts REPLOpts} ->
                   {auto c : Ref Ctxt Defs} ->
                   {auto s : Ref Syn SyntaxInfo} ->
-                  FC -> Name -> Core (List String)
+                  FC -> Name -> Core (Doc IdrisDocAnn)
 docsOrSignature fc n
     = do syn  <- get Syn
          defs <- get Ctxt
@@ -229,13 +241,13 @@ docsOrSignature fc n
          let ns@(_ :: _) = concatMap (\n => lookupName n (defDocstrings syn))
                                      (map fst all)
              | [] => typeSummary defs
-         pure [!(render styleAnn !(getDocsForName fc n MkConfig))]
+         getDocsForName fc n MkConfig
   where
-    typeSummary : Defs -> Core (List String)
+    typeSummary : Defs -> Core (Doc IdrisDocAnn)
     typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
-                            | Nothing => pure []
-                          ty <- normaliseHoles defs [] (type def)
-                          pure [(show n) ++ " : " ++ (show !(resugar [] ty))]
+                            | Nothing => pure ""
+                          ty <- resugar [] !(normaliseHoles defs [] (type def))
+                          pure $ pretty n <++> ":" <++> prettyTerm ty
 
 export
 equivTypes : {auto c : Ref Ctxt Defs} ->

@@ -45,6 +45,12 @@ data IdrisDocAnn
   | Syntax IdrisSyntax
 
 export
+-- TODO: how can we deal with bold & so on?
+docToDecoration : IdrisDocAnn -> Maybe Decoration
+docToDecoration (Syntax syn) = syntaxToDecoration syn
+docToDecoration _ = Nothing
+
+export
 styleAnn : IdrisDocAnn -> AnsiStyle
 styleAnn Header        = underline
 styleAnn Declarations  = []
@@ -377,18 +383,39 @@ export
 getDocsForPTerm : {auto o : Ref ROpts REPLOpts} ->
                   {auto c : Ref Ctxt Defs} ->
                   {auto s : Ref Syn SyntaxInfo} ->
-                  PTerm -> Core (List String)
-getDocsForPTerm (PRef fc name) = pure $ [!(render styleAnn !(getDocsForName fc name MkConfig))]
-getDocsForPTerm (PPrimVal _ constant)
-  = pure [!(render styleAnn !(getDocsForPrimitive constant))]
-getDocsForPTerm (PType _) = pure ["Type : Type\n\tThe type of all types is Type. The type of Type is Type."]
-getDocsForPTerm (PString _ _) = pure ["String Literal\n\tDesugars to a fromString call"]
-getDocsForPTerm (PList _ _ _) = pure ["List Literal\n\tDesugars to (::) and Nil"]
-getDocsForPTerm (PSnocList _ _ _) = pure ["SnocList Literal\n\tDesugars to (:<) and Empty"]
-getDocsForPTerm (PPair _ _ _) = pure ["Pair Literal\n\tDesugars to MkPair or Pair"]
-getDocsForPTerm (PDPair _ _ _ _ _) = pure ["Dependant Pair Literal\n\tDesugars to MkDPair or DPair"]
-getDocsForPTerm (PUnit _) = pure ["Unit Literal\n\tDesugars to MkUnit or Unit"]
-getDocsForPTerm pterm = pure ["Docs not implemented for " ++ show pterm ++ " yet"]
+                  PTerm -> Core (Doc IdrisDocAnn)
+getDocsForPTerm (PRef fc name) = getDocsForName fc name MkConfig
+getDocsForPTerm (PPrimVal _ c) = getDocsForPrimitive c
+getDocsForPTerm (PType _) = pure $ vcat
+  [ "Type : Type"
+  , indent 2 "The type of all types is Type. The type of Type is Type."
+  ]
+getDocsForPTerm (PString _ _) = pure $ vcat
+  [ "String Literal"
+  , indent 2 "Desugars to a fromString call"
+  ]
+getDocsForPTerm (PList _ _ _) = pure $ vcat
+  [ "List Literal"
+  , indent 2 "Desugars to (::) and Nil"
+  ]
+getDocsForPTerm (PSnocList _ _ _) = pure $ vcat
+  [ "SnocList Literal"
+  , indent 2 "Desugars to (:<) and Empty"
+  ]
+getDocsForPTerm (PPair _ _ _) = pure $ vcat
+  [ "Pair Literal"
+  , indent 2 "Desugars to MkPair or Pair"
+  ]
+getDocsForPTerm (PDPair _ _ _ _ _) = pure $ vcat
+  [ "Dependant Pair Literal"
+  , indent 2 "Desugars to MkDPair or DPair"
+  ]
+getDocsForPTerm (PUnit _) = pure $ vcat
+  [ "Unit Literal"
+  , indent 2 "Desugars to MkUnit or Unit"
+  ]
+getDocsForPTerm pterm = pure $
+  "Docs not implemented for" <++> pretty (show pterm) <++> "yet"
 
 summarise : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
@@ -407,7 +434,7 @@ export
 getContents : {auto o : Ref ROpts REPLOpts} ->
               {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              Namespace -> Core (List String)
+              Namespace -> Core (Doc IdrisDocAnn)
 getContents ns
    = -- Get all the names, filter by any that match the given namespace
      -- and are visible, then display with their type
@@ -415,7 +442,7 @@ getContents ns
         ns <- allNames (gamma defs)
         let allNs = filter inNS ns
         allNs <- filterM (visible defs) allNs
-        traverse (\ ns => render styleAnn !(summarise ns)) (sort allNs)
+        vsep <$> traverse summarise (sort allNs)
   where
     visible : Defs -> Name -> Core Bool
     visible defs n

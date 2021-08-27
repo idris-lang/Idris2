@@ -30,6 +30,16 @@ data IdrisSyntax
   | Pragma
 
 export
+syntaxToDecoration : IdrisSyntax -> Maybe Decoration
+syntaxToDecoration Hole     = Nothing
+syntaxToDecoration (TCon{}) = pure Typ
+syntaxToDecoration (DCon{}) = pure Data
+syntaxToDecoration (Fun{})  = pure Function
+syntaxToDecoration Bound    = pure Bound
+syntaxToDecoration Keyword  = pure Keyword
+syntaxToDecoration Pragma   = Nothing
+
+export
 kindAnn : KindedName -> Maybe IdrisSyntax
 kindAnn (MkKindedName mcat fn nm) = do
     cat <- mcat
@@ -52,6 +62,11 @@ data IdrisAnn
   | Code
   | Meta
   | Syntax IdrisSyntax
+
+export
+annToDecoration : IdrisAnn -> Maybe Decoration
+annToDecoration (Syntax syn) = syntaxToDecoration syn
+annToDecoration _ = Nothing
 
 export
 syntaxAnn : IdrisSyntax -> AnsiStyle
@@ -408,3 +423,15 @@ mutual
 export
 render : {auto o : Ref ROpts REPLOpts} -> Doc IdrisAnn -> Core String
 render = render colorAnn
+
+export
+renderWithDecorations :
+  {auto c : Ref Ctxt Defs} ->
+  {auto o : Ref ROpts REPLOpts} ->
+  (ann -> Maybe ann') ->
+  Doc ann ->
+  Core (String, List (Span ann'))
+renderWithDecorations f doc =
+  do (str, mspans) <- Render.renderWithSpans doc
+     let spans = mapMaybe (traverse f) mspans
+     pure (str, spans)

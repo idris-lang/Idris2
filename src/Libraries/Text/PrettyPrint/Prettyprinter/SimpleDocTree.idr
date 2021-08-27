@@ -56,7 +56,8 @@ traverse f (STLine i) = pure $ STLine i
 traverse f (STAnn ann rest) = STAnn <$> f ann <*> traverse f rest
 traverse f (STConcat xs) = assert_total $ STConcat <$> Prelude.traverse (traverse f) xs
 
-sdocToTreeParser : SimpleDocStream ann -> (Maybe (SimpleDocTree ann), Maybe (SimpleDocStream ann))
+sdocToTreeParser : SimpleDocStream ann ->
+  (Maybe (SimpleDocTree ann), Maybe (SimpleDocStream ann))
 sdocToTreeParser SEmpty = (Just STEmpty, Nothing)
 sdocToTreeParser (SChar c rest) = case sdocToTreeParser rest of
   (Just tree, rest') => (Just $ STConcat [STChar c, tree], rest')
