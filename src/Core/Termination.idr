@@ -384,13 +384,11 @@ mutual
            log "totality.termination.sizechange" 10 $ "Looking under " ++ show !(toFullNames fn)
            aSmaller <- resolved (gamma defs) (NS builtinNS (UN "assert_smaller"))
            cond [(fn == NS builtinNS (UN "assert_total"), pure [])
-              -- #1782: this breaks totality!
-              -- ,(caseFn fn,
-              --     do mps <- getCasePats defs fn pats args
-              --        case mps of
-              --             Nothing => pure Prelude.Nil
-              --             Just ps => do scs <- traverse (findInCase defs g) ps
-              --                           pure (concat scs))
+                ,(caseFn fn,
+                    do scs1 <- traverse (findSC defs env g pats) args
+                       mps  <- getCasePats defs fn pats args
+                       scs2 <- traverse (findInCase defs g) $ fromMaybe [] mps
+                       pure (concat (scs1 ++ scs2)))
               ]
               (do scs <- traverse (findSC defs env g pats) args
                   pure ([MkSCCall fn
