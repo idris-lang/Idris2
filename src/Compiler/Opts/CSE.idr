@@ -191,7 +191,7 @@ mutual
   -- might interfere with other optimizations, for instance
   -- the one dealing with #1320.
   -- Some other terms are ignored, as I (@stefan-hoeck)
-  -- am being conversvative here,
+  -- am being conservative here,
   -- not daring to inadvertently change the semantics
   -- of the program.
   analyze c@(COp _ _ _)      = analyzeSubExp c
