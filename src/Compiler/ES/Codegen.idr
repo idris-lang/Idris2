@@ -674,6 +674,8 @@ def (MkFunction n as body) = do
   mde  <- mode <$> get ESs
   b    <- stmt Returns body >>= stmt
   case args of
+    -- zero argument toplevel functions are converted to
+    -- lazily evaluated constants.
     [] => pure $ printDoc mde $
       constant (var ref) (
         "__lazy(" <+> function neutral [] b <+> ")"
