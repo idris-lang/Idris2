@@ -815,10 +815,10 @@ displaySpans p =
     go index doc spans ann (SChar c rest)
       = go (S index) (doc :< cast c) spans ann rest
     go index doc spans ann (SText len text rest)
-      = go (cast len + index) (doc :< text) spans ann rest
+      = go (integerToNat (cast len) + index) (doc :< text) spans ann rest
     go index doc spans ann (SLine i rest)
       = let text = strCons '\n' (textSpaces i) in
-        go (S (cast  i) + index) (doc :< text) spans ann rest
+        go (S (integerToNat $ cast i) + index) (doc :< text) spans ann rest
     go index doc spans ann (SAnnPush a rest)
       = go index doc spans ((index, a) :: ann) rest
     go index doc spans ((start, a) :: ann) (SAnnPop rest)
