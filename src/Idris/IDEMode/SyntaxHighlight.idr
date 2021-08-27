@@ -29,6 +29,14 @@ data Formatting : Type where
   Italic    : Formatting
   Underline : Formatting
 
+-- CAREFUL: this instance is used in SExpable Formatting. If you change
+-- it then you need to fix the SExpable implementation in order not to
+-- break the IDE mode.
+Show Formatting where
+  show Bold = "bold"
+  show Italic = "italic"
+  show Underline = "underline"
+
 -- At most one decoration & one formatting
 -- (We could use `These` to guarantee non-emptiness but I am not
 -- convinced this will stay being just 2 fields e.g. the emacs mode
@@ -69,40 +77,21 @@ docToProperties (Decl _)      = Nothing
 docToProperties DocStringBody = Nothing
 docToProperties (Syntax syn)  = syntaxToProperties syn
 
--- Semantic properties are passed as a list of even length functioning as a list
--- of pairs of successive items. So if we want to pass multiple properties we
--- need to generate a single SExpList. So we define these auxiliary functions
--- that return lists of SExps that are not wrapped in a SExpList constructor.
-
-namespace Decoration
-
-  export
-  toSExps : Decoration -> List SExp
-  toSExps Typ       = [ SymbolAtom "decor", SymbolAtom "type"]
-  toSExps Function  = [ SymbolAtom "decor", SymbolAtom "function"]
-  toSExps Data      = [ SymbolAtom "decor", SymbolAtom "data"]
-  toSExps Keyword   = [ SymbolAtom "decor", SymbolAtom "keyword"]
-  toSExps Bound     = [ SymbolAtom "decor", SymbolAtom "bound"]
-  toSExps Namespace = [ SymbolAtom "decor", SymbolAtom "namespace"]
-  toSExps Postulate = [ SymbolAtom "decor", SymbolAtom "postulate"]
-  toSExps Module    = [ SymbolAtom "decor", SymbolAtom "module"]
-
 SExpable Decoration where
-  toSExp = SExpList . toSExps
+  toSExp decor = SExpList [ SymbolAtom "decor"
+                          , SymbolAtom (show decor)
+                          ]
 
-namespace Formatting
-
-  export
-  toSExps : Formatting -> List SExp
-  toSExps Bold        = [ SymbolAtom "text-formatting", SymbolAtom "bold"]
-  toSExps Italic      = [ SymbolAtom "text-formatting", SymbolAtom "italic"]
-  toSExps Underline   = [ SymbolAtom "text-formatting", SymbolAtom "underline"]
+SExpable Formatting where
+  toSExp format = SExpList [ SymbolAtom "text-formatting"
+                           , SymbolAtom (show format)
+                           ]
 
 export
 SExpable Properties where
-  toSExp (MkProperties dec form)  = SExpList $ concat {t = List}
-    [ foldMap toSExps dec
-    , foldMap toSExps form
+  toSExp (MkProperties dec form)  = SExpList $ catMaybes
+    [ toSExp <$> form
+    , toSExp <$> dec
     ]
 
 

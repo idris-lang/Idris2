@@ -285,7 +285,7 @@ SExpable a => SExpable (Span a) where
   toSExp (MkSpan start width ann)
     = SExpList [ IntegerAtom (cast start)
                , IntegerAtom (cast width)
-               , SExpList [toSExp ann]
+               , toSExp ann
                ]
 
 printIDEResultWithHighlight :

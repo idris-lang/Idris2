@@ -57,6 +57,9 @@ Eq Decoration where
   Module    == Module    = True
   _         == _         = False
 
+-- CAREFUL: this instance is used in SExpable Decoration. If you change
+-- it then you need to fix the SExpable implementation in order not to
+-- break the IDE mode.
 public export
 Show Decoration where
   show Typ       = "type"
