@@ -1,3 +1,4 @@
+||| Courtesy of @z-snails
 module Core.Ord
 
 import Core.CompileExpr
