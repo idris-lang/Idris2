@@ -21,11 +21,15 @@ import Libraries.Data.PosMap
 
 export
 SExpable Decoration where
-  toSExp Typ      = SExpList [ SymbolAtom "decor", SymbolAtom "type"]
-  toSExp Function = SExpList [ SymbolAtom "decor", SymbolAtom "function"]
-  toSExp Data     = SExpList [ SymbolAtom "decor", SymbolAtom "data"]
-  toSExp Keyword  = SExpList [ SymbolAtom "decor", SymbolAtom "keyword"]
-  toSExp Bound    = SExpList [ SymbolAtom "decor", SymbolAtom "bound"]
+  toSExp Typ       = SExpList [ SymbolAtom "decor", SymbolAtom "type"]
+  toSExp Function  = SExpList [ SymbolAtom "decor", SymbolAtom "function"]
+  toSExp Data      = SExpList [ SymbolAtom "decor", SymbolAtom "data"]
+  toSExp Keyword   = SExpList [ SymbolAtom "decor", SymbolAtom "keyword"]
+  toSExp Bound     = SExpList [ SymbolAtom "decor", SymbolAtom "bound"]
+  toSExp Namespace = SExpList [ SymbolAtom "decor", SymbolAtom "namespace"]
+  toSExp Postulate = SExpList [ SymbolAtom "decor", SymbolAtom "postulate"]
+  toSExp Module    = SExpList [ SymbolAtom "decor", SymbolAtom "module"]
+
 
 record Highlight where
   constructor MkHighlight
