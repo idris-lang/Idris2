@@ -122,11 +122,12 @@ toVList [] (Snoc x zs rec) prf =
     the (Balanced 0 (S (length zs))) $
       rewrite sym (lengthSnoc x zs) in prf
 toVList (x :: xs) (Snoc y ys srec) prf =
-  rewrite appendAssociative xs ys [y] in
-    VCons $
-      toVList xs srec $
-        balancedPred $
-          rewrite sym (lengthSnoc y ys) in prf
+  rewrite consAppend x xs (ys ++ [y]) in
+    rewrite appendAssociative xs ys [y] in
+      VCons $
+        toVList xs srec $
+          balancedPred $
+            rewrite sym (lengthSnoc y ys) in prf
 
 ||| Covering function for `VList`
 ||| Constructs the view in linear time.

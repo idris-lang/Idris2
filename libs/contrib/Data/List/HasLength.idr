@@ -61,7 +61,9 @@ map f (S n) = S (map f n)
 export
 sucR : HasLength xs n -> HasLength (snoc xs x) (S n)
 sucR Z = S Z
-sucR (S n) = S (sucR n)
+sucR {xs = xsH :: xsT} (S n)
+  = rewrite consAppend xsH xsT [x] in
+      S (sucR n)
 
 ------------------------------------------------------------------------
 -- Views
@@ -118,9 +120,11 @@ namespace CurriedView
 -- /!\ Do NOT re-export these examples
 
 listTerminating : (p : Subset Nat (HasLength xs)) -> HasLength (xs ++ [x]) (S (fst p))
-listTerminating p = case view p of
-  Z => S Z
-  S p => S (listTerminating p)
+listTerminating p with (view p)
+  listTerminating {xs = []} (Element Z Z) | Z = S Z
+  listTerminating {xs = xsH :: xsT} _ | S p =
+    rewrite consAppend xsH xsT [x] in
+      S (listTerminating p)
 
 data P : List Nat -> Type where
   PNil : P []

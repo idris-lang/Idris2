@@ -15,7 +15,9 @@ export
 reverseOntoAcc : (xs, ys, zs : List a) ->
   reverseOnto (ys ++ zs) xs = (reverseOnto ys xs) ++ zs
 reverseOntoAcc [] _ _ = Refl
-reverseOntoAcc (x :: xs) (ys) (zs) = reverseOntoAcc xs (x :: ys) zs
+reverseOntoAcc (x :: xs) (ys) (zs) =
+  rewrite sym $ consAppend x ys zs in
+    reverseOntoAcc xs (x :: ys) zs
 
 ||| Serves as a specification for reverseOnto.
 export

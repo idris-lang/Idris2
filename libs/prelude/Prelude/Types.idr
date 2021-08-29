@@ -380,9 +380,17 @@ Ord a => Ord (List a) where
 
 namespace List
   public export
+  reverseOnto : List a -> List a -> List a
+  reverseOnto acc [] = acc
+  reverseOnto acc (x::xs) = reverseOnto (x::acc) xs
+
+  public export
+  reverse : List a -> List a
+  reverse = reverseOnto []
+
+  public export
   (++) : (xs, ys : List a) -> List a
-  [] ++ ys = ys
-  (x :: xs) ++ ys = x :: xs ++ ys
+  xs ++ ys = reverseOnto ys (reverse xs)
 
   public export
   length : List a -> Nat

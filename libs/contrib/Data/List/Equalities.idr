@@ -8,13 +8,14 @@ import Data.List
 export
 snocNonEmpty : {x : a} -> {xs : List a} -> Not (xs ++ [x] = [])
 snocNonEmpty {xs = []} prf = uninhabited prf
-snocNonEmpty {xs = y :: ys} prf = uninhabited prf
+snocNonEmpty {xs = y :: ys} prf
+  = uninhabited $ trans (sym $ consAppend y ys [x]) prf
 
 ||| Proof that snoc'ed list is not empty in terms of `NonEmpty`.
 export %hint
-SnocNonEmpty : (xs : List a) -> (x : a) -> NonEmpty (xs `snoc` x)
+SnocNonEmpty : (xs : List a) -> (y : a) -> NonEmpty (xs `snoc` y)
 SnocNonEmpty []     _ = IsNonEmpty
-SnocNonEmpty (_::_) _ = IsNonEmpty
+SnocNonEmpty (x::xs) y = rewrite consAppend x xs [y] in IsNonEmpty
 
 ||| Two lists are equal, if their heads are equal and their tails are equal.
 export
@@ -28,13 +29,16 @@ snocInjective : {x : a} -> {xs : List a} -> {y : a} -> {ys : List a} ->
             (xs `snoc` x) = (ys `snoc` y) -> (xs = ys, x = y)
 snocInjective {xs = []} {ys = []} Refl = (Refl, Refl)
 snocInjective {xs = []} {ys = z :: zs} prf =
-  let nilIsSnoc = snd $ consInjective {xs = []} {ys = zs ++ [y]} prf
+  let prf' = trans prf (consAppend z zs [y])
+      nilIsSnoc = snd $ consInjective {xs = []} {ys = zs ++ [y]} prf'
    in void $ snocNonEmpty (sym nilIsSnoc)
 snocInjective {xs = z :: xs} {ys = []} prf =
-  let snocIsNil = snd $ consInjective {x = z} {xs = xs ++ [x]} {ys = []} prf
+  let prf' = trans (sym $ consAppend z xs [x]) prf
+      snocIsNil = snd $ consInjective {x = z} {xs = xs ++ [x]} {ys = []} prf'
    in void $ snocNonEmpty snocIsNil
 snocInjective {xs = w :: xs} {ys = z :: ys} prf =
-  let (wEqualsZ, xsSnocXEqualsYsSnocY) = consInjective prf
+  let prf' = trans (sym $ consAppend w xs [x]) $ trans prf (consAppend z ys [y])
+      (wEqualsZ, xsSnocXEqualsYsSnocY) = consInjective prf'
       (xsEqualsYS, xEqualsY) = snocInjective xsSnocXEqualsYsSnocY
    in (consCong2 wEqualsZ xsEqualsYS, xEqualsY)
 
@@ -46,9 +50,11 @@ appendCong2 : {x1 : List a} -> {x2 : List a} ->
 appendCong2 {x1=[]} {y1=(_ :: _)} Refl _ impossible
 appendCong2 {x1=(_ :: _)} {y1=[]} Refl _ impossible
 appendCong2 {x1=[]} {y1=[]} _ eq2 = eq2
-appendCong2 {x1=(_ :: _)} {y1=(_ :: _)} eq1 eq2 =
-  let (hdEqual, tlEqual) = consInjective eq1
-   in consCong2 hdEqual (appendCong2 tlEqual eq2)
+appendCong2 {x1=(x1h :: x1t)} {y1=(y1h :: y1t)} eq1 eq2 =
+  rewrite consAppend x1h x1t x2 in
+    rewrite consAppend y1h y1t y2 in
+      let (hdEqual, tlEqual) = consInjective eq1
+      in consCong2 hdEqual (appendCong2 tlEqual eq2)
 
 ||| List.map is distributive over appending.
 export
@@ -59,7 +65,9 @@ mapDistributesOverAppend
   -> map f (xs ++ ys) = map f xs ++ map f ys
 mapDistributesOverAppend _ [] _ = Refl
 mapDistributesOverAppend f (x :: xs) ys =
-  cong (f x ::) $ mapDistributesOverAppend f xs ys
+  rewrite consAppend x xs ys in
+    rewrite consAppend (f x) (map f xs) (map f ys) in
+      cong (f x ::) $ mapDistributesOverAppend f xs ys
 
 ||| List.length is distributive over appending.
 export
@@ -68,19 +76,23 @@ lengthDistributesOverAppend
   -> length (xs ++ ys) = length xs + length ys
 lengthDistributesOverAppend [] ys = Refl
 lengthDistributesOverAppend (x :: xs) ys =
-  cong S $ lengthDistributesOverAppend xs ys
+  rewrite consAppend x xs ys in
+    cong S $ lengthDistributesOverAppend xs ys
 
 ||| Length of a snoc'd list is the same as Succ of length list.
 export
-lengthSnoc : (x : _) -> (xs : List a) -> length (snoc xs x) = S (length xs)
+lengthSnoc : (x : _) -> (ys : List a) -> length (snoc ys x) = S (length ys)
 lengthSnoc x [] = Refl
-lengthSnoc x (_ :: xs) = cong S (lengthSnoc x xs)
+lengthSnoc x (y :: ys) = rewrite consAppend y ys [x] in cong S (lengthSnoc x ys)
 
 ||| Appending the same list at left is injective.
 export
 appendSameLeftInjective : (xs, ys, zs : List a) -> zs ++ xs = zs ++ ys -> xs = ys
 appendSameLeftInjective xs ys []      = id
-appendSameLeftInjective xs ys (_::zs) = appendSameLeftInjective xs ys zs . snd . consInjective
+appendSameLeftInjective xs ys (z :: zs) =
+  rewrite consAppend z zs xs in
+    rewrite consAppend z zs ys in
+      appendSameLeftInjective xs ys zs . snd . consInjective
 
 ||| Appending the same list at right is injective.
 export
@@ -95,13 +107,17 @@ appendSameRightInjective xs ys (z::zs) = rewrite appendAssociative xs [z] zs in
 ||| List cannot be equal to itself prepended with some non-empty list.
 export
 appendNonEmptyLeftNotEq : (zs, xs : List a) -> NonEmpty xs => Not (zs = xs ++ zs)
-appendNonEmptyLeftNotEq []      (_::_)  Refl impossible
-appendNonEmptyLeftNotEq (z::zs) (_::xs) prf
-  = appendNonEmptyLeftNotEq zs (xs ++ [z]) @{SnocNonEmpty xs z}
-  $ rewrite sym $ appendAssociative xs [z] zs in snd $ consInjective prf
+appendNonEmptyLeftNotEq []      (x::xs)  prf =
+  absurd $ trans prf (consAppend x xs [])
+appendNonEmptyLeftNotEq (z::zs) (x::xs) prf
+  = let prf' = trans prf $ consAppend x xs (z::zs)
+    in appendNonEmptyLeftNotEq zs (xs ++ [z]) @{SnocNonEmpty xs z}
+       $ rewrite sym $ appendAssociative xs [z] zs in snd $ consInjective prf'
 
 ||| List cannot be equal to itself appended with some non-empty list.
 export
 appendNonEmptyRightNotEq : (zs, xs : List a) -> NonEmpty xs => Not (zs = zs ++ xs)
 appendNonEmptyRightNotEq []      (_::_)  Refl impossible
-appendNonEmptyRightNotEq (_::zs) (x::xs) prf = appendNonEmptyRightNotEq zs (x::xs) $ snd $ consInjective prf
+appendNonEmptyRightNotEq (z::zs) (x::xs) prf =
+  let prf' = trans prf $ consAppend z zs (x::xs)
+  in appendNonEmptyRightNotEq zs (x::xs) $ snd $ consInjective prf'

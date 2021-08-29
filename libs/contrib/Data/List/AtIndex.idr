@@ -1,6 +1,7 @@
 module Data.List.AtIndex
 
 import Data.DPair
+import Data.List
 import Data.List.HasLength
 import Data.Nat
 import Decidable.Equality
@@ -89,28 +90,35 @@ inRange (S n) (x :: xs) p = LTESucc (inRange n xs (inverseS p))
 |||
 export
 weakenR : AtIndex x xs n -> AtIndex x (xs ++ ys) n
-weakenR Z = Z
-weakenR (S p) = S (weakenR p)
+weakenR (Z {as}) = rewrite consAppend x as ys in Z
+weakenR (S {as} {b} p)
+  = rewrite consAppend b as ys in
+      S (weakenR p)
 
 export
 weakenL : (p : Subset Nat (HasLength ws)) -> AtIndex x xs n -> AtIndex x (ws ++ xs) (fst p + n)
 weakenL m p = case view m of
   Z     => p
-  (S m) => S (weakenL m p)
+  (S {x = viewX} {xs = viewXs} m) =>
+    rewrite consAppend viewX viewXs xs in
+      S (weakenL m p)
 
 export
 strengthenL : (p : Subset Nat (HasLength xs)) ->
               lt n (fst p) === True ->
               AtIndex x (xs ++ ys) n -> AtIndex x xs n
-strengthenL m lt idx = case view m of
-  S m => case idx of
-    Z => Z
-    S idx => S (strengthenL m lt idx)
+strengthenL m lt idx with (view m)
+  strengthenL {xs = xsH :: xsT} _ lt idx | S m =
+    case replace {p = \t => AtIndex x t n} (consAppend xsH xsT ys) idx of
+      Z => Z
+      S idx => S (strengthenL m lt idx)
 
 export
 strengthenR : (p : Subset Nat (HasLength ws)) ->
               lte (fst p) n === True ->
               AtIndex x (ws ++ xs) n -> AtIndex x xs (minus n (fst p))
-strengthenR m lt idx = case view m of
-  Z => rewrite minusZeroRight n in idx
-  S m => case idx of S idx => strengthenR m lt idx
+strengthenR m lt idx with (view m)
+  strengthenR {ws = []} (Element Z Z) lt idx | Z = rewrite minusZeroRight n in idx
+  strengthenR {ws = wsH :: wsT} _ lt idx | S m =
+    case replace {p = \t => AtIndex x t n} (consAppend wsH wsT xs) idx of
+      S idx => strengthenR m lt idx

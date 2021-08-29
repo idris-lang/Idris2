@@ -8,52 +8,64 @@ import Data.Nat.Views
 
 %default total
 
-lengthSuc : (xs : List a) -> (y : a) -> (ys : List a) ->
-            length (xs ++ (y :: ys)) = S (length (xs ++ ys))
-lengthSuc [] _ _ = Refl
-lengthSuc (x :: xs) y ys = cong S (lengthSuc xs y ys)
+lengthSum : (xs, ys : List a) -> length (xs ++ ys) = length xs + length ys
+lengthSum [] ys = Refl
+lengthSum (x::xs) ys
+  = rewrite consAppend x xs ys in
+      rewrite lengthSum xs ys in
+        Refl
 
-lengthLT : (xs : List a) -> (ys : List a) ->
-           LTE (length xs) (length (ys ++ xs))
-lengthLT xs [] = reflexive {x = length xs}
-lengthLT xs (x :: ys) = lteSuccRight (lengthLT _ _)
+smallerLeft : (y : a) -> (ys : List a) -> (z : a) -> (zs : List a) ->
+              LTE (S (S (length ys))) (length ((y :: ys) ++ (z :: zs)))
+smallerLeft y ys z zs
+  = rewrite lengthSum (y :: ys) (z :: zs) in
+      rewrite sym $ plusSuccRightSucc (length ys) (length zs) in
+        LTESucc $ LTESucc $ lteAddRight (length ys)
 
-smallerLeft : (ys : List a) -> (y : a) -> (zs : List a) ->
-              LTE (S (S (length ys))) (S (length (ys ++ (y :: zs))))
-smallerLeft [] y zs = LTESucc (LTESucc LTEZero)
-smallerLeft (z :: ys) y zs = LTESucc (smallerLeft ys _ _)
+lteAddLeft : (n : Nat) -> LTE n (m + n)
+lteAddLeft {m} n = rewrite plusCommutative m n in lteAddRight n
 
-smallerRight : (ys : List a) -> (zs : List a) ->
-               LTE (S (S (length zs))) (S (length (ys ++ (y :: zs))))
-smallerRight ys zs = rewrite lengthSuc ys y zs in
-                     (LTESucc (LTESucc (lengthLT _ _)))
+smallerRight : (y : a) -> (ys : List a) -> (z : a) -> (zs : List a) ->
+               LTE (S (S (length zs))) (length ((y :: ys) ++ (z :: zs)))
+smallerRight y ys z zs
+  = rewrite lengthSum (y :: ys) (z :: zs) in
+      LTESucc $ lteAddLeft (S (length zs))
 
 ||| View for splitting a list in half, non-recursively
 public export
 data Split : List a -> Type where
      SplitNil : Split []
      SplitOne : (x : a) -> Split [x]
+     ||| If output by the `split` function, (x::xs) will have length equal to
+     ||| or one plus the length of (y::ys)
      SplitPair : (x : a) -> (xs : List a) ->
                  (y : a) -> (ys : List a) ->
-                 Split (x :: xs ++ y :: ys)
+                 Split ((x :: xs) ++ (y :: ys))
 
-splitHelp : (head : a) ->
+splitHelp : (x : a) ->
             (xs : List a) ->
-            (counter : List a) -> Split (head :: xs)
-splitHelp head [] counter = SplitOne _
-splitHelp head (x :: xs) [] = SplitPair head [] x xs
-splitHelp head (x :: xs) [y] = SplitPair head [] x xs
-splitHelp head (x :: xs) (_ :: _ :: ys)
-    = case splitHelp head xs ys of
-           SplitOne x => SplitPair x [] _ []
-           SplitPair x' xs y' ys => SplitPair x' (x :: xs) y' ys
+            (y : a) ->
+            (ys : List a) ->
+            (counter : List a) ->
+            Split (x :: (reverse xs ++ (y::ys)))
+splitHelp x xs y [] _
+  = rewrite sym $ consAppend x (reverse xs) [y] in
+      SplitPair x (reverse xs) y []
+splitHelp x xs y ys []
+  = rewrite sym $ consAppend x (reverse xs) (y::ys) in
+      SplitPair x (reverse xs) y ys
+splitHelp x xs y0 (y1::ys) (c::cs)
+  = rewrite reverseInvolutive xs in
+      rewrite cong (\u => reverseOnto (y1::ys) u) $ sym $ reverseInvolutive (y0::xs) in
+        splitHelp x (y0::xs) y1 ys (drop 1 cs)
 
 ||| Covering function for the `Split` view
 ||| Constructs the view in linear time
 export
 split : (xs : List a) -> Split xs
 split [] = SplitNil
-split (x :: xs) = splitHelp x xs xs
+split [x] = SplitOne x
+split (x0::x1::xs) = splitHelp x0 [] x1 xs xs
 
 public export
 data SplitRec : List a -> Type where
@@ -71,10 +83,10 @@ splitRec xs with (sizeAccessible xs)
   splitRec xs | acc with (split xs)
     splitRec []  | acc | SplitNil = SplitRecNil
     splitRec [x] | acc | SplitOne x = SplitRecOne x
-    splitRec (y :: ys ++ z :: zs) | Access acc | SplitPair y ys z zs
+    splitRec ((y :: ys) ++ (z :: zs)) | Access acc | SplitPair y ys z zs
       = SplitRecPair _ _
-          (splitRec (y :: ys) | acc _ (smallerLeft ys z zs))
-          (splitRec (z :: zs) | acc _ (smallerRight ys zs))
+          (splitRec (y :: ys) | acc _ (smallerLeft y ys z zs))
+          (splitRec (z :: zs) | acc _ (smallerRight y ys z zs))
 
 ||| View for traversing a list backwards
 public export
