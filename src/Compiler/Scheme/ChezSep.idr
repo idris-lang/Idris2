@@ -166,7 +166,7 @@ compileToSS c chez appdir tm = do
   support <- readDataFile "chez/support-sep.ss"
   let supportHash = show $ hash support
   supportChanged <-
-    coreLift (File.readFile (appdir </> "support.hash")) >>= \case
+    coreLift (readFile (appdir </> "support.hash")) >>= \case
       Left err => pure True
       Right fileHash => pure (fileHash /= supportHash)
   when supportChanged $ do
@@ -185,7 +185,7 @@ compileToSS c chez appdir tm = do
     -- TODO: also check that the .so file exists
     let cuHash = show (hash cu)
     hashChanged <-
-      coreLift (File.readFile (appdir </> chezLib <.> "hash")) >>= \case
+      coreLift (readFile (appdir </> chezLib <.> "hash")) >>= \case
         Left err       => pure True
         Right fileHash => pure (fileHash /= cuHash)
 
