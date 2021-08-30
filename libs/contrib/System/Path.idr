@@ -153,15 +153,15 @@ pathTokenMap = toTokenMap $
   , (some $ non $ oneOf "/\\:?", PTText)
   ]
 
-lexPath : String -> List PathToken
+lexPath : String -> List (WithBounds PathToken)
 lexPath str =
   let
     (tokens, _, _, _) = lex pathTokenMap str
   in
-    map TokenData.tok tokens
+    tokens -- TokenData.tok tokens
 
 -- match both '/' and '\\' regardless of the platform.
-bodySeparator : Grammar PathToken True ()
+bodySeparator : Grammar state PathToken True ()
 bodySeparator = (match $ PTPunct '\\') <|> (match $ PTPunct '/')
 
 -- Windows will automatically translate '/' to '\\'. And the verbatim prefix,
@@ -169,7 +169,7 @@ bodySeparator = (match $ PTPunct '\\') <|> (match $ PTPunct '/')
 -- However, we just parse it and ignore it.
 --
 -- Example: \\?\
-verbatim : Grammar PathToken True ()
+verbatim : Grammar state PathToken True ()
 verbatim =
   do
     ignore $ count (exactly 2) $ match $ PTPunct '\\'
@@ -178,7 +178,7 @@ verbatim =
     pure ()
 
 -- Example: \\server\share
-unc : Grammar PathToken True Volume
+unc : Grammar state PathToken True Volume
 unc =
   do
     ignore $ count (exactly 2) $ match $ PTPunct '\\'
@@ -188,7 +188,7 @@ unc =
     pure $ UNC server share
 
 -- Example: \\?\server\share
-verbatimUnc : Grammar PathToken True Volume
+verbatimUnc : Grammar state PathToken True Volume
 verbatimUnc =
   do
     verbatim
@@ -198,7 +198,7 @@ verbatimUnc =
     pure $ UNC server share
 
 -- Example: C:
-disk : Grammar PathToken True Volume
+disk : Grammar state PathToken True Volume
 disk =
   do
     text <- match PTText
@@ -209,21 +209,21 @@ disk =
     pure $ Disk (toUpper disk)
 
 -- Example: \\?\C:
-verbatimDisk : Grammar PathToken True Volume
+verbatimDisk : Grammar state PathToken True Volume
 verbatimDisk =
   do
     verbatim
     disk <- disk
     pure disk
 
-parseVolume : Grammar PathToken True Volume
+parseVolume : Grammar state PathToken True Volume
 parseVolume =
       verbatimUnc
   <|> verbatimDisk
   <|> unc
   <|> disk
 
-parseBody : Grammar PathToken True Body
+parseBody : Grammar state PathToken True Body
 parseBody =
   do
     text <- match PTText
@@ -232,7 +232,7 @@ parseBody =
       "." => CurDir
       normal => Normal normal
 
-parsePath : Grammar PathToken False Path
+parsePath : Grammar state PathToken False Path
 parsePath =
   do
     vol <- optional parseVolume

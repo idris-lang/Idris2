@@ -106,13 +106,13 @@ parameters (defs : Defs, topopts : EvalOpts)
         = eval env (snd thunk :: locs) scope stk
     eval env locs (Bind fc x b@(Let _ r val ty) scope) stk
         = if (holesOnly topopts || argHolesOnly topopts) && not (tcInline topopts)
-             then do b' <- traverse (\tm => eval env locs tm []) b
+             then do let b' = map (MkClosure topopts locs env) b
                      pure $ NBind fc x b'
                         (\defs', arg => evalWithOpts defs' topopts
                                                 env (arg :: locs) scope stk)
              else eval env (MkClosure topopts locs env val :: locs) scope stk
     eval env locs (Bind fc x b scope) stk
-        = do b' <- traverse (\tm => eval env locs tm []) b
+        = do let b' = map (MkClosure topopts locs env) b
              pure $ NBind fc x b'
                       (\defs', arg => evalWithOpts defs' topopts
                                               env (arg :: locs) scope stk)
@@ -154,18 +154,11 @@ parameters (defs : Defs, topopts : EvalOpts)
              applyToStack env cont arg' stk
     applyToStack env cont (NBind fc x b@(Let _ r val ty) sc) stk
         = if (holesOnly topopts || argHolesOnly topopts) && not (tcInline topopts)
-             then do b' <- if cont
-                              then traverse (\t => applyToStack env cont t []) b
-                              else pure b
-                     pure (NBind fc x b'
+             then pure (NBind fc x b
                               (\defs', arg => applyToStack env cont !(sc defs' arg) stk))
-             else do val' <- applyToStack env cont val []
-                     applyToStack env cont !(sc defs (MkNFClosure topopts env val')) stk
+             else applyToStack env cont !(sc defs val) stk
     applyToStack env cont (NBind fc x b sc) stk
-        = do b' <- if cont
-                      then traverse (\t => applyToStack env cont t []) b
-                      else pure b
-             pure (NBind fc x b'
+        = pure (NBind fc x b
                       (\defs', arg => applyToStack env cont !(sc defs' arg) stk))
     applyToStack env cont (NApp fc (NRef nt fn) args) stk
         = evalRef env False fc nt fn (args ++ stk)
@@ -358,7 +351,7 @@ parameters (defs : Defs, topopts : EvalOpts)
     tryAlt {more}
            env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN "->") tag [s,t] sc)
        = evalConAlt {more} env loc opts fc stk [s,t]
-                  [MkNFClosure opts env aty,
+                  [aty,
                    MkNFClosure opts env (NBind pfc x (Lam fc' r e aty) scty)]
                   sc
     -- Delay matching
@@ -655,42 +648,42 @@ mutual
   quotePi : {auto c : Ref Ctxt Defs} ->
             {bound, free : _} ->
             Ref QVar Int -> Defs -> Bounds bound ->
-            Env Term free -> PiInfo (NF free) ->
+            Env Term free -> PiInfo (Closure free) ->
             Core (PiInfo (Term (bound ++ free)))
   quotePi q defs bounds env Explicit = pure Explicit
   quotePi q defs bounds env Implicit = pure Implicit
   quotePi q defs bounds env AutoImplicit = pure AutoImplicit
   quotePi q defs bounds env (DefImplicit t)
-      = do t' <- quoteGenNF q defs bounds env t
+      = do t' <- quoteGenNF q defs bounds env !(evalClosure defs t)
            pure (DefImplicit t')
 
   quoteBinder : {auto c : Ref Ctxt Defs} ->
                 {bound, free : _} ->
                 Ref QVar Int -> Defs -> Bounds bound ->
-                Env Term free -> Binder (NF free) ->
+                Env Term free -> Binder (Closure free) ->
                 Core (Binder (Term (bound ++ free)))
   quoteBinder q defs bounds env (Lam fc r p ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
            pure (Lam fc r p' ty')
   quoteBinder q defs bounds env (Let fc r val ty)
-      = do val' <- quoteGenNF q defs bounds env val
-           ty' <- quoteGenNF q defs bounds env ty
+      = do val' <- quoteGenNF q defs bounds env !(evalClosure defs val)
+           ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            pure (Let fc r val' ty')
   quoteBinder q defs bounds env (Pi fc r p ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
            pure (Pi fc r p' ty')
   quoteBinder q defs bounds env (PVar fc r p ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
            pure (PVar fc r p' ty')
   quoteBinder q defs bounds env (PLet fc r val ty)
-      = do val' <- quoteGenNF q defs bounds env val
-           ty' <- quoteGenNF q defs bounds env ty
+      = do val' <- quoteGenNF q defs bounds env !(evalClosure defs val)
+           ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            pure (PLet fc r val' ty')
   quoteBinder q defs bounds env (PVTy fc r ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            pure (PVTy fc r ty')
 
   quoteGenNF : {auto c : Ref Ctxt Defs} ->
@@ -758,6 +751,44 @@ export
 Quote Closure where
   quoteGen q defs env c = quoteGen q defs env !(evalClosure defs c)
 
+quoteWithPiGen : {auto _ : Ref Ctxt Defs} ->
+                 {bound, vars : _} ->
+                 Ref QVar Int -> Defs -> Bounds bound ->
+                 Env Term vars -> NF vars -> Core (Term (bound ++ vars))
+quoteWithPiGen q defs bound env (NBind fc n (Pi bfc c p ty) sc)
+    = do var <- genName "qv"
+         empty <- clearDefs defs
+         sc' <- quoteWithPiGen q defs (Add n var bound) env
+                     !(sc defs (toClosure defaultOpts env (Ref fc Bound var)))
+         ty' <- quoteGenNF q empty bound env !(evalClosure empty ty)
+         p' <- quotePi q empty bound env p
+         pure (Bind fc n (Pi bfc c p' ty') sc')
+quoteWithPiGen q defs bound env tm
+    = do empty <- clearDefs defs
+         quoteGenNF q empty bound env tm
+
+-- Quote back to a term, but only to find out how many Pi bindings there
+-- are, don't reduce anything else
+export
+quoteWithPi : {auto c : Ref Ctxt Defs} ->
+              {vars : List Name} ->
+              Defs -> Env Term vars -> NF vars -> Core (Term vars)
+quoteWithPi defs env tm
+    = do q <- newRef QVar 0
+         quoteWithPiGen q defs None env tm
+
+-- Expand all the pi bindings at the start of a term, but otherwise don't
+-- reduce
+export
+normalisePis : {auto c : Ref Ctxt Defs} ->
+               {vars : List Name} ->
+               Defs -> Env Term vars -> Term vars -> Core (Term vars)
+normalisePis defs env tm
+    = do tmnf <- nf defs env tm
+         case tmnf of
+              NBind _ _ (Pi _ _ _ _) _ => quoteWithPi defs env tmnf
+              _ => pure tm
+
 -- Resume a previously blocked normalisation with a new environment
 export
 continueNF : {auto c : Ref Ctxt Defs} ->
@@ -775,6 +806,16 @@ glueBack defs env nf
              (do empty <- clearDefs defs
                  quote empty env nf)
              (const (pure nf))
+
+export
+glueClosure : {auto c : Ref Ctxt Defs} ->
+              {vars : _} ->
+              Defs -> Env Term vars -> Closure vars -> Glued vars
+glueClosure defs env clos
+    = MkGlue False
+             (do empty <- clearDefs defs
+                 quote empty env clos)
+             (const (evalClosure defs clos))
 
 export
 normalise : {auto c : Ref Ctxt Defs} ->
@@ -866,15 +907,26 @@ interface Convert tm where
             {vars : List Name} ->
             Defs -> Env Term vars ->
             tm vars -> tm vars -> Core Bool
+  convertInf : {auto c : Ref Ctxt Defs} ->
+               {vars : List Name} ->
+               Defs -> Env Term vars ->
+               tm vars -> tm vars -> Core Bool
+
   convGen : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
             Ref QVar Int ->
+            Bool -> -- skip forced arguments (must have checked the type
+                    -- elsewhere first)
             Defs -> Env Term vars ->
             tm vars -> tm vars -> Core Bool
 
   convert defs env tm tm'
       = do q <- newRef QVar 0
-           convGen q defs env tm tm'
+           convGen q False defs env tm tm'
+
+  convertInf defs env tm tm'
+      = do q <- newRef QVar 0
+           convGen q True defs env tm tm'
 
 tryUpdate : {vars, vars' : _} ->
             List (Var vars, Var vars') ->
@@ -920,14 +972,14 @@ tryUpdate ms (TType fc) = pure $ TType fc
 mutual
   allConvNF : {auto c : Ref Ctxt Defs} ->
               {vars : _} ->
-              Ref QVar Int -> Defs -> Env Term vars ->
+              Ref QVar Int -> Bool -> Defs -> Env Term vars ->
               List (NF vars) -> List (NF vars) -> Core Bool
-  allConvNF q defs env [] [] = pure True
-  allConvNF q defs env (x :: xs) (y :: ys)
-      = do ok <- allConvNF q defs env xs ys
-           if ok then convGen q defs env x y
+  allConvNF q i defs env [] [] = pure True
+  allConvNF q i defs env (x :: xs) (y :: ys)
+      = do ok <- allConvNF q i defs env xs ys
+           if ok then convGen q i defs env x y
                  else pure False
-  allConvNF q defs env _ _ = pure False
+  allConvNF q i defs env _ _ = pure False
 
   -- return False if anything differs at the head, to quickly find
   -- conversion failures without going deeply into all the arguments.
@@ -961,13 +1013,13 @@ mutual
 
   allConv : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
-            Ref QVar Int -> Defs -> Env Term vars ->
+            Ref QVar Int -> Bool -> Defs -> Env Term vars ->
             List (Closure vars) -> List (Closure vars) -> Core Bool
-  allConv q defs env xs ys
+  allConv q i defs env xs ys
       = do xsnf <- traverse (evalClosure defs) xs
            ysnf <- traverse (evalClosure defs) ys
            if quickConv xsnf ysnf
-              then allConvNF q defs env xsnf ysnf
+              then allConvNF q i defs env xsnf ysnf
               else pure False
 
   -- If the case trees match in structure, get the list of variables which
@@ -1056,10 +1108,10 @@ mutual
 
   chkSameDefs : {auto c : Ref Ctxt Defs} ->
                 {vars : _} ->
-                Ref QVar Int -> Defs -> Env Term vars ->
+                Ref QVar Int -> Bool -> Defs -> Env Term vars ->
                 Name -> Name ->
                 List (Closure vars) -> List (Closure vars) -> Core Bool
-  chkSameDefs q defs env n n' nargs nargs'
+  chkSameDefs q i defs env n n' nargs nargs'
      = do Just (PMDef _ args ct rt _) <- lookupDefExact n (gamma defs)
                | _ => pure False
           Just (PMDef _ args' ct' rt' _) <- lookupDefExact n' (gamma defs)
@@ -1083,27 +1135,27 @@ mutual
                         List (Var vs, Var vs') ->
                         Core Bool
        convertMatches [] = pure True
-       convertMatches ((MkVar {i} p, MkVar {i=i'} p') :: vs)
-          = do let Just varg = getArgPos i nargs
+       convertMatches ((MkVar {i=ix} p, MkVar {i=iy} p') :: vs)
+          = do let Just varg = getArgPos ix nargs
                    | Nothing => pure False
-               let Just varg' = getArgPos i' nargs'
+               let Just varg' = getArgPos iy nargs'
                    | Nothing => pure False
-               pure $ !(convGen q defs env varg varg') &&
+               pure $ !(convGen q i defs env varg varg') &&
                       !(convertMatches vs)
 
   -- If two names are standing for case blocks, check the blocks originate
   -- from the same place, and have the same scrutinee
   chkConvCaseBlock : {auto c : Ref Ctxt Defs} ->
                      {vars : _} ->
-                     FC -> Ref QVar Int -> Defs -> Env Term vars ->
+                     FC -> Ref QVar Int -> Bool -> Defs -> Env Term vars ->
                      NHead vars -> List (Closure vars) ->
                      NHead vars -> List (Closure vars) -> Core Bool
-  chkConvCaseBlock fc q defs env (NRef _ n) nargs (NRef _ n') nargs'
+  chkConvCaseBlock fc q i defs env (NRef _ n) nargs (NRef _ n') nargs'
       = do NS _ (CaseBlock _ _) <- full (gamma defs) n
               | _ => pure False
            NS _ (CaseBlock _ _) <- full (gamma defs) n'
               | _ => pure False
-           False <- chkSameDefs q defs env n n' nargs nargs'
+           False <- chkSameDefs q i defs env n n' nargs nargs'
               | True => pure True
            -- both case operators. Due to the way they're elaborated, two
            -- blocks might arise from the same source but have different
@@ -1127,7 +1179,7 @@ mutual
                 | Nothing => pure False
            let Just sc' = getScrutinee scpos' nargs'
                 | Nothing => pure False
-           ignore $ convGen q defs env sc sc'
+           ignore $ convGen q i defs env sc sc'
            pure (location def == location def')
     where
       -- Need to find the position of the scrutinee to see if they are the
@@ -1140,70 +1192,88 @@ mutual
       getScrutinee Z (x :: xs) = Just x
       getScrutinee (S k) (x :: xs) = getScrutinee k xs
       getScrutinee _ _ = Nothing
-  chkConvCaseBlock _ _ _ _ _ _ _ _ = pure False
+  chkConvCaseBlock _ _ _ _ _ _ _ _ _ = pure False
 
   chkConvHead : {auto c : Ref Ctxt Defs} ->
                 {vars : _} ->
-                Ref QVar Int -> Defs -> Env Term vars ->
+                Ref QVar Int -> Bool -> Defs -> Env Term vars ->
                 NHead vars -> NHead vars -> Core Bool
-  chkConvHead q defs env (NLocal _ idx _) (NLocal _ idx' _) = pure $ idx == idx'
-  chkConvHead q defs env (NRef _ n) (NRef _ n') = pure $ n == n'
-  chkConvHead q defs env (NMeta n i args) (NMeta n' i' args')
+  chkConvHead q i defs env (NLocal _ idx _) (NLocal _ idx' _) = pure $ idx == idx'
+  chkConvHead q i defs env (NRef _ n) (NRef _ n') = pure $ n == n'
+  chkConvHead q inf defs env (NMeta n i args) (NMeta n' i' args')
      = if i == i'
-          then allConv q defs env args args'
+          then allConv q inf defs env args args'
           else pure False
-  chkConvHead q defs env _ _ = pure False
+  chkConvHead q i defs env _ _ = pure False
 
   convBinders : {auto c : Ref Ctxt Defs} ->
                 {vars : _} ->
-                Ref QVar Int -> Defs -> Env Term vars ->
-                Binder (NF vars) -> Binder (NF vars) -> Core Bool
-  convBinders q defs env (Pi _ cx ix tx) (Pi _ cy iy ty)
+                Ref QVar Int -> Bool -> Defs -> Env Term vars ->
+                Binder (Closure vars) -> Binder (Closure vars) -> Core Bool
+  convBinders q i defs env (Pi _ cx ix tx) (Pi _ cy iy ty)
       = if cx /= cy
            then pure False
-           else convGen q defs env tx ty
-  convBinders q defs env (Lam _ cx ix tx) (Lam _ cy iy ty)
+           else convGen q i defs env tx ty
+  convBinders q i defs env (Lam _ cx ix tx) (Lam _ cy iy ty)
       = if cx /= cy
            then pure False
-           else convGen q defs env tx ty
-  convBinders q defs env bx by
+           else convGen q i defs env tx ty
+  convBinders q i defs env bx by
       = if multiplicity bx /= multiplicity by
            then pure False
-           else convGen q defs env (binderType bx) (binderType by)
+           else convGen q i defs env (binderType bx) (binderType by)
 
 
   export
   Convert NF where
-    convGen q defs env (NBind fc x b sc) (NBind _ x' b' sc')
+    convGen q i defs env (NBind fc x b sc) (NBind _ x' b' sc')
         = do var <- genName "conv"
              let c = MkClosure defaultOpts [] env (Ref fc Bound var)
-             bok <- convBinders q defs env b b'
+             bok <- convBinders q i defs env b b'
              if bok
                 then do bsc <- sc defs c
                         bsc' <- sc' defs c
-                        convGen q defs env bsc bsc'
+                        convGen q i defs env bsc bsc'
                 else pure False
 
-    convGen q defs env tmx@(NBind fc x (Lam fc' c ix tx) scx) tmy
+    convGen q i defs env tmx@(NBind fc x (Lam fc' c ix tx) scx) tmy
         = do empty <- clearDefs defs
              etay <- nf defs env
                         (Bind fc x (Lam fc' c !(traverse (quote empty env) ix) !(quote empty env tx))
                            (App fc (weaken !(quote empty env tmy))
                                 (Local fc Nothing _ First)))
-             convGen q defs env tmx etay
-    convGen q defs env tmx tmy@(NBind fc y (Lam fc' c iy ty) scy)
+             convGen q i defs env tmx etay
+    convGen q i defs env tmx tmy@(NBind fc y (Lam fc' c iy ty) scy)
         = do empty <- clearDefs defs
              etax <- nf defs env
                         (Bind fc y (Lam fc' c !(traverse (quote empty env) iy) !(quote empty env ty))
                            (App fc (weaken !(quote empty env tmx))
                                 (Local fc Nothing _ First)))
-             convGen q defs env etax tmy
+             convGen q i defs env etax tmy
 
-    convGen q defs env (NApp fc val args) (NApp _ val' args')
-        = if !(chkConvHead q defs env val val')
-             then allConv q defs env args1 args2
-             else chkConvCaseBlock fc q defs env val args1 val' args2
+    convGen q inf defs env (NApp fc val args) (NApp _ val' args')
+        = if !(chkConvHead q inf defs env val val')
+             then do i <- getInfPos val
+                     allConv q inf defs env (dropInf 0 i args1) (dropInf 0 i args2)
+             else chkConvCaseBlock fc q inf defs env val args1 val' args2
         where
+          getInfPos : NHead vars -> Core (List Nat)
+          getInfPos (NRef _ n)
+              = if inf
+                   then do Just gdef <- lookupCtxtExact n (gamma defs)
+                                | _ => pure []
+                           pure (inferrable gdef)
+                   else pure []
+          getInfPos _ = pure []
+
+          dropInf : Nat -> List Nat -> List a -> List a
+          dropInf _ [] xs = xs
+          dropInf _ _ [] = []
+          dropInf i ds (x :: xs)
+              = if i `elem` ds
+                   then dropInf (S i) ds xs
+                   else x :: dropInf (S i) ds xs
+
           -- Discard file context information irrelevant for conversion checking
           args1 : List (Closure vars)
           args1 = map snd args
@@ -1211,52 +1281,52 @@ mutual
           args2 : List (Closure vars)
           args2 = map snd args'
 
-    convGen q defs env (NDCon _ nm tag _ args) (NDCon _ nm' tag' _ args')
+    convGen q i defs env (NDCon _ nm tag _ args) (NDCon _ nm' tag' _ args')
         = if tag == tag'
-             then allConv q defs env (map snd args) (map snd args')
+             then allConv q i defs env (map snd args) (map snd args')
              else pure False
-    convGen q defs env (NTCon _ nm tag _ args) (NTCon _ nm' tag' _ args')
+    convGen q i defs env (NTCon _ nm tag _ args) (NTCon _ nm' tag' _ args')
         = if nm == nm'
-             then allConv q defs env (map snd args) (map snd args')
+             then allConv q i defs env (map snd args) (map snd args')
              else pure False
-    convGen q defs env (NAs _ _ _ tm) (NAs _ _ _ tm')
-        = convGen q defs env tm tm'
+    convGen q i defs env (NAs _ _ _ tm) (NAs _ _ _ tm')
+        = convGen q i defs env tm tm'
 
-    convGen q defs env (NDelayed _ r arg) (NDelayed _ r' arg')
+    convGen q i defs env (NDelayed _ r arg) (NDelayed _ r' arg')
         = if compatible r r'
-             then convGen q defs env arg arg'
+             then convGen q i defs env arg arg'
              else pure False
-    convGen q defs env (NDelay _ r _ arg) (NDelay _ r' _ arg')
+    convGen q i defs env (NDelay _ r _ arg) (NDelay _ r' _ arg')
         = if compatible r r'
              then do -- if it's codata, don't reduce the argument or we might
                      -- go for ever, if it's infinite
                      adefs <- case r of
                                    LLazy => pure defs
                                    _ => clearDefs defs
-                     convGen q adefs env arg arg'
+                     convGen q i adefs env arg arg'
              else pure False
-    convGen q defs env (NForce _ r arg args) (NForce _ r' arg' args')
+    convGen q i defs env (NForce _ r arg args) (NForce _ r' arg' args')
         = if compatible r r'
-             then if !(convGen q defs env arg arg')
-                     then allConv q defs env (map snd args) (map snd args')
+             then if !(convGen q i defs env arg arg')
+                     then allConv q i defs env (map snd args) (map snd args')
                      else pure False
              else pure False
 
-    convGen q defs env (NPrimVal _ c) (NPrimVal _ c') = pure (c == c')
-    convGen q defs env (NErased _ _) _ = pure True
-    convGen q defs env _ (NErased _ _) = pure True
-    convGen q defs env (NType _) (NType _) = pure True
-    convGen q defs env x y = pure False
+    convGen q i defs env (NPrimVal _ c) (NPrimVal _ c') = pure (c == c')
+    convGen q i defs env (NErased _ _) _ = pure True
+    convGen q i defs env _ (NErased _ _) = pure True
+    convGen q i defs env (NType _) (NType _) = pure True
+    convGen q i defs env x y = pure False
 
   export
   Convert Term where
-    convGen q defs env x y
-        = convGen q defs env !(nf defs env x) !(nf defs env y)
+    convGen q i defs env x y
+        = convGen q i defs env !(nf defs env x) !(nf defs env y)
 
   export
   Convert Closure where
-    convGen q defs env x y
-        = convGen q defs env !(evalClosure defs x) !(evalClosure defs y)
+    convGen q i defs env x y
+        = convGen q i defs env !(evalClosure defs x) !(evalClosure defs y)
 
 export
 getValArity : Defs -> Env Term vars -> NF vars -> Core Nat
@@ -1375,7 +1445,7 @@ replace' {vars} tmpi defs env lhs parg tm
 
     repSub : NF vars -> Core (Term vars)
     repSub (NBind fc x b scfn)
-        = do b' <- traverse repSub b
+        = do b' <- traverse (\c => repSub !(evalClosure defs c)) b
              let x' = MN "tmp" tmpi
              sc' <- replace' (tmpi + 1) defs env lhs parg
                              !(scfn defs (toClosure defaultOpts env (Ref fc Bound x')))

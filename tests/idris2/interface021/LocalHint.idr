@@ -13,7 +13,6 @@ mkFoo gnu = A
 gnat : {auto startHere : (a : Foo ** a = A)} -> Unit
 gnat = ()
 
-%logging 0
 pathology : (gnu : Gnu) -> Unit
 pathology gnu =
   let %hint foo : Foo
@@ -22,4 +21,3 @@ pathology gnu =
                       -> (a : Foo ** a = A)
       bar _ Refl = (A ** Refl)
   in gnat
-%logging 0

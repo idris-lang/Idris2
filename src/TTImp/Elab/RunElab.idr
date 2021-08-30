@@ -17,6 +17,7 @@ import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.Reflect
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
@@ -63,9 +64,12 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                               !(sc defs (toClosure withAll env
                                               !(quote defs env act'))) exp
                   x => failWith defs $ "non-function RHS of a Bind: " ++ show x
-    elabCon defs "Fail" [_,msg]
+    elabCon defs "Fail" [_, mbfc, msg]
         = do msg' <- evalClosure defs msg
-             throw (GenericMsg fc ("Error during reflection: " ++
+             let customFC = case !(evalClosure defs mbfc >>= reify defs) of
+                               EmptyFC => fc
+                               x       => x
+             throw (GenericMsg customFC ("Error during reflection: " ++
                                       !(reify defs msg')))
     elabCon defs "LogMsg" [topic, verb, str]
         = do topic' <- evalClosure defs topic
@@ -97,7 +101,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
         = do tm' <- evalClosure defs tm
              defs <- get Ctxt
              empty <- clearDefs defs
-             scriptRet !(unelabUniqueBinders env !(quote empty env tm'))
+             scriptRet $ map rawName !(unelabUniqueBinders env !(quote empty env tm'))
     elabCon defs "Lambda" [x, _, scope]
         = do empty <- clearDefs defs
              NBind bfc x (Lam fc' c p ty) sc <- evalClosure defs scope
@@ -114,7 +118,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                                  !(nf defs env' lamsc) Nothing -- (map weaken exp)
              nf empty env (Bind bfc x (Lam fc' c qp qty) !(quote empty env' runsc))
        where
-         quotePi : PiInfo (NF vars) -> Core (PiInfo (Term vars))
+         quotePi : PiInfo (Closure vars) -> Core (PiInfo (Term vars))
          quotePi Explicit = pure Explicit
          quotePi Implicit = pure Implicit
          quotePi AutoImplicit = pure AutoImplicit
@@ -124,7 +128,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                  | Nothing => nfOpts withAll defs env
                                      !(reflect fc defs False env (the (Maybe RawImp) Nothing))
              ty <- getTerm gty
-             scriptRet (Just !(unelabUniqueBinders env ty))
+             scriptRet (Just $ map rawName $ !(unelabUniqueBinders env ty))
     elabCon defs "LocalVars" []
         = scriptRet vars
     elabCon defs "GenSym" [str]
@@ -142,7 +146,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
       where
         unelabType : (Name, Int, ClosedTerm) -> Core (Name, RawImp)
         unelabType (n, _, ty)
-            = pure (n, !(unelabUniqueBinders [] ty))
+            = pure (n, map rawName !(unelabUniqueBinders [] ty))
     elabCon defs "GetLocalType" [n]
         = do n' <- evalClosure defs n
              n <- reify defs n'
@@ -150,7 +154,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                   Just (MkIsDefined rigb lv) =>
                        do let binder = getBinder lv env
                           let bty = binderType binder
-                          scriptRet !(unelabUniqueBinders env bty)
+                          scriptRet $ map rawName !(unelabUniqueBinders env bty)
                   _ => throw (GenericMsg fc (show n ++ " is not a local variable"))
     elabCon defs "GetCons" [n]
         = do n' <- evalClosure defs n

@@ -7,7 +7,6 @@ import Data.String
 
 %default total
 
-
 infixl 5 +>
 infixr 5 <+
 
@@ -94,20 +93,14 @@ public export
 indentLines : (n : Nat) -> String -> String
 indentLines n str = unlines $ map (indent n) $ lines str
 
-||| Return a string of the given character repeated
-||| `n` times.
-export
-fastReplicate : (n : Nat) -> Char -> String
-fastReplicate n c = fastPack $ replicate n c
-
 ||| Left-justify a string to the given length, using the
 ||| specified fill character on the right.
 export
 justifyLeft : Nat -> Char -> String -> String
-justifyLeft n c s = s ++ fastReplicate (n `minus` length s) c
+justifyLeft n c s = s ++ replicate (n `minus` length s) c
 
 ||| Right-justify a string to the given length, using the
 ||| specified fill character on the left.
 export
 justifyRight : Nat -> Char -> String -> String
-justifyRight n c s = fastReplicate (n `minus` length s) c ++ s
+justifyRight n c s = replicate (n `minus` length s) c ++ s

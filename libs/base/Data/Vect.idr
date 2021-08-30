@@ -858,6 +858,7 @@ implementation {k : Nat} -> Applicative (Vect k) where
 
 -- ||| This monad is different from the List monad, (>>=)
 -- ||| uses the diagonal.
+public export
 implementation {k : Nat} -> Monad (Vect k) where
     m >>= f = diag (map f m)
 
@@ -865,6 +866,18 @@ public export
 implementation Traversable (Vect k) where
     traverse f []        = pure []
     traverse f (x :: xs) = [| f x :: traverse f xs |]
+
+--------------------------------------------------------------------------------
+-- Semigroup/Monoid
+--------------------------------------------------------------------------------
+
+public export
+Semigroup a => Semigroup (Vect k a) where
+  (<+>) = zipWith (<+>)
+
+public export
+{k : Nat} -> Monoid a => Monoid (Vect k a) where
+  neutral = replicate k neutral
 
 --------------------------------------------------------------------------------
 -- Show

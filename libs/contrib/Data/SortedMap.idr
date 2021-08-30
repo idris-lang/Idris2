@@ -319,6 +319,58 @@ export
 mergeLeft : SortedMap k v -> SortedMap k v -> SortedMap k v
 mergeLeft = mergeWith const
 
+treeLeftMost : Tree n k v o -> (k,v)
+treeLeftMost (Leaf x y) = (x,y)
+treeLeftMost (Branch2 x _ _) = treeLeftMost x
+treeLeftMost (Branch3 x _ _ _ _) = treeLeftMost x
+
+treeRightMost : Tree n k v o -> (k,v)
+treeRightMost (Leaf x y) = (x,y)
+treeRightMost (Branch2 _ _ x) = treeRightMost x
+treeRightMost (Branch3 _ _ _ _ x) = treeRightMost x
+
+treeLookupBetween : Ord k => k -> Tree n k v o -> (Maybe (k,v),Maybe (k,v))
+treeLookupBetween k (Leaf k' v) with (k < k')
+  treeLookupBetween k (Leaf k' v) | True = (Nothing, Just (k',v))
+  treeLookupBetween k (Leaf k' v) | False = (Just (k',v), Nothing)
+treeLookupBetween k (Branch2 t1 k' t2) with (k < k')
+  treeLookupBetween k (Branch2 t1 k' t2) | True = -- k < k'
+    let (lower, upper) = treeLookupBetween k t1 in
+    (lower, upper <|> pure (treeLeftMost t2))
+  treeLookupBetween k (Branch2 t1 k' t2) | False = -- k >= k'
+    let (lower, upper) = treeLookupBetween k t2 in
+    (lower <|> pure (treeRightMost t1), upper)
+treeLookupBetween k (Branch3 t1 k1 t2 k2 t3) with (k < k1)
+  treeLookupBetween k (Branch3 t1 k1 t2 k2 t3) | True = treeLookupBetween k (Branch2 t1 k1 t2)
+  treeLookupBetween k (Branch3 t1 k1 t2 k2 t3) | False with (k < k2)
+    treeLookupBetween k (Branch3 t1 k1 t2 k2 t3) | False | False = treeLookupBetween k (Branch2 t2 k2 t3)
+    treeLookupBetween k (Branch3 t1 k1 t2 k2 t3) | False | True = --k1 <= k < k2
+      let (lower, upper) = treeLookupBetween k (Branch2 t1 k1 t2) in
+      (lower, upper <|> pure (treeLeftMost t3))
+
+||| looks up a key in map, returning the left and right closest values, so that
+|||  k1 <= k < k2. If at the end of the beginning and/or end of the sorted map, returns
+||| nothing appropriately
+export
+lookupBetween : key -> SortedMap key val -> (Maybe (key,val), Maybe (key,val))
+lookupBetween k Empty =  (Nothing, Nothing)
+lookupBetween k (M _ t) = treeLookupBetween k t
+
+
+||| Returns the leftmost (least) key and value
+export
+leftMost : SortedMap key val -> Maybe (key,val)
+leftMost Empty = Nothing
+leftMost (M _ t) = Just $ treeLeftMost t
+
+
+||| Returns the rightmost (greatest) key and value
+export
+rightMost : SortedMap key val -> Maybe (key,val)
+rightMost Empty = Nothing
+rightMost (M _ t) = Just $ treeRightMost t
+
+
 export
 (Show k, Show v) => Show (SortedMap k v) where
    show m = "fromList " ++ (show $ toList m)
@@ -341,3 +393,5 @@ Semigroup v => Semigroup (SortedMap k v) where
 export
 (Ord k, Semigroup v) => Monoid (SortedMap k v) where
   neutral = empty
+(&~) : a -> (a -> b) -> b
+(&~) x f = f x

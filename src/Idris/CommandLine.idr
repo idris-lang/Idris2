@@ -42,11 +42,16 @@ Show PkgCommand where
 
 public export
 data DirCommand
-      = LibDir -- show top level package directory
+      = LibDir | -- show top level package directory
+         ||| Show the installation prefix
+        Prefix |
+        BlodwenPaths
 
 export
 Show DirCommand where
   show LibDir = "--libdir"
+  show Prefix = "--prefix"
+  show BlodwenPaths = "--paths"
 
 ||| Help topics
 public export
@@ -85,8 +90,6 @@ data CLOpt
   OutputDir String |
    ||| Generate profile data when compiling (backend dependent)
   Profile |
-   ||| Show the installation prefix
-  ShowPrefix |
    ||| Display Idris version
   Version |
    ||| Display help text
@@ -105,6 +108,8 @@ data CLOpt
   Logging LogLevel |
    ||| Add a package as a dependency
   PkgPath String |
+   ||| List installed packages
+  ListPackages |
    ||| Build or install a given package, depending on PkgCommand
   Package PkgCommand (Maybe String) |
    ||| Show locations of data/library directories
@@ -134,7 +139,6 @@ data CLOpt
   Timing |
   DebugElabCheck |
   AltErrorCount Nat |
-  BlodwenPaths |
    ||| Treat warnings as errors
   WarningsAsErrors |
    ||| Do not print shadowing warnings
@@ -250,12 +254,14 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Apply experimental optimizations to case tree generation"),
 
            optSeparator,
-           MkOpt ["--prefix"] [] [ShowPrefix]
+           MkOpt ["--prefix"] [] [Directory Prefix]
               (Just "Show installation prefix"),
-           MkOpt ["--paths"] [] [BlodwenPaths]
+           MkOpt ["--paths"] [] [Directory BlodwenPaths]
               (Just "Show paths"),
            MkOpt ["--libdir"] [] [Directory LibDir]
               (Just "Show library directory"),
+           MkOpt ["--list-packages"] [] [ListPackages]
+              (Just "List installed packages"),
 
            optSeparator,
            MkOpt ["--init"] [Optional "package file"]

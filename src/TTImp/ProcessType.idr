@@ -108,13 +108,13 @@ processFnOpt fc _ ndef (SpecArgs ns)
       getDeps : Bool -> NF [] -> NameMap Bool ->
                 Core (NameMap Bool)
       getDeps inparam (NBind _ x (Pi _ _ _ pty) sc) ns
-          = do ns' <- getDeps inparam pty ns
-               defs <- get Ctxt
+          = do defs <- get Ctxt
+               ns' <- getDeps inparam !(evalClosure defs pty) ns
                sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
                getDeps inparam sc' ns'
       getDeps inparam (NBind _ x b sc) ns
-          = do ns' <- getDeps False (binderType b) ns
-               defs <- get Ctxt
+          = do defs <- get Ctxt
+               ns' <- getDeps False !(evalClosure defs (binderType b)) ns
                sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
                getDeps False sc' ns
       getDeps inparam (NApp _ (NRef Bound n) args) ns
@@ -158,7 +158,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
              empty <- clearDefs defs
              sc' <- sc defs (toClosure defaultOpts [] (Ref tfc Bound x))
              if x `elem` ns
-                then do deps <- getDeps True nty NameMap.empty
+                then do deps <- getDeps True !(evalClosure defs nty) NameMap.empty
                         -- Get names depended on by nty
                         -- Keep the ones which are either:
                         --  * parameters
@@ -249,7 +249,7 @@ findInferrable defs ty = fi 0 0 [] [] ty
     fi pos i args acc (NBind fc x (Pi _ _ _ aty) sc)
         = do let argn = MN "inf" i
              sc' <- sc defs (toClosure defaultOpts [] (Ref fc Bound argn))
-             acc' <- findInf acc args aty
+             acc' <- findInf acc args !(evalClosure defs aty)
              rest <- fi (1 + pos) (1 + i) ((argn, pos) :: args) acc' sc'
              pure rest
     fi pos i args acc ret = findInf acc args ret

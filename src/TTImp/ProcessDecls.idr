@@ -170,13 +170,14 @@ processTTImpFile : {auto c : Ref Ctxt Defs} ->
                    String -> Core Bool
 processTTImpFile fname
     = do modIdent <- ctxtPathToNS fname
-         Right (decor, tti) <- logTime "Parsing" $
+         Right (ws, decor, tti) <- logTime "Parsing" $
                             coreLift $ parseFile fname (PhysicalIdrSrc modIdent)
                             (do decls <- prog (PhysicalIdrSrc modIdent)
                                 eoi
                                 pure decls)
                | Left err => do coreLift (putStrLn (show err))
                                 pure False
+         traverse_ recordWarning ws
          logTime "Elaboration" $
             catch (do ignore $ processTTImpDecls (MkNested []) [] tti
                       Nothing <- checkDelayedHoles
