@@ -21,11 +21,14 @@ import Libraries.Utils.Binary
 
 public export
 data Decoration : Type where
-  Typ : Decoration
-  Function : Decoration
-  Data : Decoration
-  Keyword : Decoration
-  Bound : Decoration
+  Typ       : Decoration
+  Function  : Decoration
+  Data      : Decoration
+  Keyword   : Decoration
+  Bound     : Decoration
+  Namespace : Decoration
+  Postulate : Decoration
+  Module    : Decoration
 
 export
 nameTypeDecoration : NameType -> Decoration
@@ -44,27 +47,39 @@ SemanticDecorations = List ASemanticDecoration
 
 public export
 Eq Decoration where
-  Typ      == Typ      = True
-  Function == Function = True
-  Data     == Data     = True
-  Keyword  == Keyword  = True
-  Bound    == Bound    = True
-  _        == _        = False
+  Typ       == Typ       = True
+  Function  == Function  = True
+  Data      == Data      = True
+  Keyword   == Keyword   = True
+  Bound     == Bound     = True
+  Namespace == Namespace = True
+  Postulate == Postulate = True
+  Module    == Module    = True
+  _         == _         = False
 
+-- CAREFUL: this instance is used in SExpable Decoration. If you change
+-- it then you need to fix the SExpable implementation in order not to
+-- break the IDE mode.
 public export
 Show Decoration where
-  show Typ      = "type"
-  show Function = "function"
-  show Data     = "data"
-  show Keyword  = "keyword"
-  show Bound    = "bound"
+  show Typ       = "type"
+  show Function  = "function"
+  show Data      = "data"
+  show Keyword   = "keyword"
+  show Bound     = "bound"
+  show Namespace = "namespace"
+  show Postulate = "postulate"
+  show Module    = "module"
 
 TTC Decoration where
-  toBuf b Typ      = tag 0
-  toBuf b Function = tag 1
-  toBuf b Data     = tag 2
-  toBuf b Keyword  = tag 3
-  toBuf b Bound    = tag 4
+  toBuf b Typ       = tag 0
+  toBuf b Function  = tag 1
+  toBuf b Data      = tag 2
+  toBuf b Keyword   = tag 3
+  toBuf b Bound     = tag 4
+  toBuf b Namespace = tag 5
+  toBuf b Postulate = tag 6
+  toBuf b Module    = tag 7
   fromBuf b
     = case !getTag of
         0 => pure Typ
@@ -72,6 +87,9 @@ TTC Decoration where
         2 => pure Data
         3 => pure Keyword
         4 => pure Bound
+        5 => pure Namespace
+        6 => pure Postulate
+        7 => pure Module
         _ => corrupt "Decoration"
 
 public export

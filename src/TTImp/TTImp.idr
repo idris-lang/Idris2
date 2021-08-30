@@ -46,88 +46,105 @@ public export
 data BindMode = PI RigCount | PATTERN | NONE
 
 mutual
+
   public export
-  data RawImp : Type where
-       IVar : FC -> Name -> RawImp
-       IPi : FC -> RigCount -> PiInfo RawImp -> Maybe Name ->
-             (argTy : RawImp) -> (retTy : RawImp) -> RawImp
-       ILam : FC -> RigCount -> PiInfo RawImp -> Maybe Name ->
-              (argTy : RawImp) -> (lamTy : RawImp) -> RawImp
+  RawImp : Type
+  RawImp = RawImp' Name
+
+  public export
+  IRawImp : Type
+  IRawImp = RawImp' KindedName
+
+  public export
+  data RawImp' : Type -> Type where
+       IVar : FC -> nm -> RawImp' nm
+       IPi : FC -> RigCount -> PiInfo (RawImp' nm) -> Maybe Name ->
+             (argTy : RawImp' nm) -> (retTy : RawImp' nm) -> RawImp' nm
+       ILam : FC -> RigCount -> PiInfo (RawImp' nm) -> Maybe Name ->
+              (argTy : RawImp' nm) -> (lamTy : RawImp' nm) -> RawImp' nm
        ILet : FC -> (lhsFC : FC) -> RigCount -> Name ->
-              (nTy : RawImp) -> (nVal : RawImp) ->
-              (scope : RawImp) -> RawImp
-       ICase : FC -> RawImp -> (ty : RawImp) ->
-               List ImpClause -> RawImp
-       ILocal : FC -> List ImpDecl -> RawImp -> RawImp
+              (nTy : RawImp' nm) -> (nVal : RawImp' nm) ->
+              (scope : RawImp' nm) -> RawImp' nm
+       ICase : FC -> RawImp' nm -> (ty : RawImp' nm) ->
+               List (ImpClause' nm) -> RawImp' nm
+       ILocal : FC -> List (ImpDecl' nm) -> RawImp' nm -> RawImp' nm
        -- Local definitions made elsewhere, but that we're pushing
        -- into a case branch as nested names.
        -- An appearance of 'uname' maps to an application of
        -- 'internalName' to 'args'.
        ICaseLocal : FC -> (uname : Name) ->
                     (internalName : Name) ->
-                    (args : List Name) -> RawImp -> RawImp
+                    (args : List Name) -> RawImp' nm -> RawImp' nm
 
-       IUpdate : FC -> List IFieldUpdate -> RawImp -> RawImp
+       IUpdate : FC -> List (IFieldUpdate' nm) -> RawImp' nm -> RawImp' nm
 
-       IApp : FC -> RawImp -> RawImp -> RawImp
-       IAutoApp : FC -> RawImp -> RawImp -> RawImp
-       INamedApp : FC -> RawImp -> Name -> RawImp -> RawImp
-       IWithApp : FC -> RawImp -> RawImp -> RawImp
+       IApp : FC -> RawImp' nm -> RawImp' nm -> RawImp' nm
+       IAutoApp : FC -> RawImp' nm -> RawImp' nm -> RawImp' nm
+       INamedApp : FC -> RawImp' nm -> Name -> RawImp' nm -> RawImp' nm
+       IWithApp : FC -> RawImp' nm -> RawImp' nm -> RawImp' nm
 
-       ISearch : FC -> (depth : Nat) -> RawImp
-       IAlternative : FC -> AltType -> List RawImp -> RawImp
-       IRewrite : FC -> RawImp -> RawImp -> RawImp
-       ICoerced : FC -> RawImp -> RawImp
+       ISearch : FC -> (depth : Nat) -> RawImp' nm
+       IAlternative : FC -> AltType' nm -> List (RawImp' nm) -> RawImp' nm
+       IRewrite : FC -> RawImp' nm -> RawImp' nm -> RawImp' nm
+       ICoerced : FC -> RawImp' nm -> RawImp' nm
 
        -- Any implicit bindings in the scope should be bound here, using
        -- the given binder
-       IBindHere : FC -> BindMode -> RawImp -> RawImp
+       IBindHere : FC -> BindMode -> RawImp' nm -> RawImp' nm
        -- A name which should be implicitly bound
-       IBindVar : FC -> String -> RawImp
+       IBindVar : FC -> String -> RawImp' nm
        -- An 'as' pattern, valid on the LHS of a clause only
-       IAs : FC -> (nameFC : FC) -> UseSide -> Name -> RawImp -> RawImp
+       IAs : FC -> (nameFC : FC) -> UseSide -> Name -> RawImp' nm -> RawImp' nm
        -- A 'dot' pattern, i.e. one which must also have the given value
        -- by unification
-       IMustUnify : FC -> DotReason -> RawImp -> RawImp
+       IMustUnify : FC -> DotReason -> RawImp' nm -> RawImp' nm
 
        -- Laziness annotations
-       IDelayed : FC -> LazyReason -> RawImp -> RawImp -- the type
-       IDelay : FC -> RawImp -> RawImp -- delay constructor
-       IForce : FC -> RawImp -> RawImp
+       IDelayed : FC -> LazyReason -> RawImp' nm -> RawImp' nm -- the type
+       IDelay : FC -> RawImp' nm -> RawImp' nm -- delay constructor
+       IForce : FC -> RawImp' nm -> RawImp' nm
 
        -- Quasiquoting
-       IQuote : FC -> RawImp -> RawImp
-       IQuoteName : FC -> Name -> RawImp
-       IQuoteDecl : FC -> List ImpDecl -> RawImp
-       IUnquote : FC -> RawImp -> RawImp
-       IRunElab : FC -> RawImp -> RawImp
+       IQuote : FC -> RawImp' nm -> RawImp' nm
+       IQuoteName : FC -> Name -> RawImp' nm
+       IQuoteDecl : FC -> List (ImpDecl' nm) -> RawImp' nm
+       IUnquote : FC -> RawImp' nm -> RawImp' nm
+       IRunElab : FC -> RawImp' nm -> RawImp' nm
 
-       IPrimVal : FC -> (c : Constant) -> RawImp
-       IType : FC -> RawImp
-       IHole : FC -> String -> RawImp
+       IPrimVal : FC -> (c : Constant) -> RawImp' nm
+       IType : FC -> RawImp' nm
+       IHole : FC -> String -> RawImp' nm
 
-       IUnifyLog : FC -> LogLevel -> RawImp -> RawImp
+       IUnifyLog : FC -> LogLevel -> RawImp' nm -> RawImp' nm
        -- An implicit value, solved by unification, but which will also be
        -- bound (either as a pattern variable or a type variable) if unsolved
        -- at the end of elaborator
-       Implicit : FC -> (bindIfUnsolved : Bool) -> RawImp
+       Implicit : FC -> (bindIfUnsolved : Bool) -> RawImp' nm
 
        -- with-disambiguation
-       IWithUnambigNames : FC -> List Name -> RawImp -> RawImp
+       IWithUnambigNames : FC -> List Name -> RawImp' nm -> RawImp' nm
 
   public export
-  data IFieldUpdate : Type where
-       ISetField : (path : List String) -> RawImp -> IFieldUpdate
-       ISetFieldApp : (path : List String) -> RawImp -> IFieldUpdate
+  IFieldUpdate : Type
+  IFieldUpdate = IFieldUpdate' Name
 
   public export
-  data AltType : Type where
-       FirstSuccess : AltType
-       Unique : AltType
-       UniqueDefault : RawImp -> AltType
+  data IFieldUpdate' : Type -> Type where
+       ISetField : (path : List String) -> RawImp' nm -> IFieldUpdate' nm
+       ISetFieldApp : (path : List String) -> RawImp' nm -> IFieldUpdate' nm
+
+  public export
+  AltType : Type
+  AltType = AltType' Name
+
+  public export
+  data AltType' : Type -> Type where
+       FirstSuccess : AltType' nm
+       Unique : AltType' nm
+       UniqueDefault : RawImp' nm -> AltType' nm
 
   export
-    Show RawImp where
+    Show nm => Show (RawImp' nm) where
       show (IVar fc n) = show n
       show (IPi fc c p n arg ret)
          = "(%pi " ++ show c ++ " " ++ show p ++ " " ++
@@ -185,35 +202,39 @@ mutual
       show (IWithUnambigNames fc ns rhs) = "(%with " ++ show ns ++ " " ++ show rhs ++ ")"
 
   export
-  Show IFieldUpdate where
+  Show nm => Show (IFieldUpdate' nm) where
     show (ISetField p val) = showSep "->" p ++ " = " ++ show val
     show (ISetFieldApp p val) = showSep "->" p ++ " $= " ++ show val
 
   public export
-  data FnOpt : Type where
-       Inline : FnOpt
-       TCInline : FnOpt
-       -- Flag means the hint is a direct hint, not a function which might
-       -- find the result (e.g. chasing parent interface dictionaries)
-       Hint : Bool -> FnOpt
-       -- Flag means to use as a default if all else fails
-       GlobalHint : Bool -> FnOpt
-       ExternFn : FnOpt
-       -- Defined externally, list calling conventions
-       ForeignFn : List RawImp -> FnOpt
-       -- assume safe to cancel arguments in unification
-       Invertible : FnOpt
-       Totality : TotalReq -> FnOpt
-       Macro : FnOpt
-       SpecArgs : List Name -> FnOpt
+  FnOpt : Type
+  FnOpt = FnOpt' Name
 
   public export
-  isTotalityReq : FnOpt -> Bool
+  data FnOpt' : Type -> Type where
+       Inline : FnOpt' nm
+       TCInline : FnOpt' nm
+       -- Flag means the hint is a direct hint, not a function which might
+       -- find the result (e.g. chasing parent interface dictionaries)
+       Hint : Bool -> FnOpt' nm
+       -- Flag means to use as a default if all else fails
+       GlobalHint : Bool -> FnOpt' nm
+       ExternFn : FnOpt' nm
+       -- Defined externally, list calling conventions
+       ForeignFn : List (RawImp' nm) -> FnOpt' nm
+       -- assume safe to cancel arguments in unification
+       Invertible : FnOpt' nm
+       Totality : TotalReq -> FnOpt' nm
+       Macro : FnOpt' nm
+       SpecArgs : List Name -> FnOpt' nm
+
+  public export
+  isTotalityReq : FnOpt' nm -> Bool
   isTotalityReq (Totality _) = True
   isTotalityReq _ = False
 
   export
-  Show FnOpt where
+  Show nm => Show (FnOpt' nm) where
     show Inline = "%inline"
     show TCInline = "%tcinline"
     show (Hint t) = "%hint " ++ show t
@@ -242,11 +263,15 @@ mutual
     _ == _ = False
 
   public export
-  data ImpTy : Type where
-       MkImpTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : RawImp) -> ImpTy
+  ImpTy : Type
+  ImpTy = ImpTy' Name
+
+  public export
+  data ImpTy' : Type -> Type where
+       MkImpTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : RawImp' nm) -> ImpTy' nm
 
   export
-  Show ImpTy where
+  Show nm => Show (ImpTy' nm) where
     show (MkImpTy fc _ n ty) = "(%claim " ++ show n ++ " " ++ show ty ++ ")"
 
   public export
@@ -267,14 +292,18 @@ mutual
     (==) _ _ = False
 
   public export
-  data ImpData : Type where
-       MkImpData : FC -> (n : Name) -> (tycon : RawImp) ->
+  ImpData : Type
+  ImpData = ImpData' Name
+
+  public export
+  data ImpData' : Type -> Type where
+       MkImpData : FC -> (n : Name) -> (tycon : RawImp' nm) ->
                    (opts : List DataOpt) ->
-                   (datacons : List ImpTy) -> ImpData
-       MkImpLater : FC -> (n : Name) -> (tycon : RawImp) -> ImpData
+                   (datacons : List (ImpTy' nm)) -> ImpData' nm
+       MkImpLater : FC -> (n : Name) -> (tycon : RawImp' nm) -> ImpData' nm
 
   export
-  Show ImpData where
+  Show nm => Show (ImpData' nm) where
     show (MkImpData fc n tycon _ cons)
         = "(%data " ++ show n ++ " " ++ show tycon ++ " " ++
            show cons ++ ")"
@@ -282,25 +311,38 @@ mutual
         = "(%datadecl " ++ show n ++ " " ++ show tycon ++ ")"
 
   public export
-  data IField : Type where
-       MkIField : FC -> RigCount -> PiInfo RawImp -> Name -> RawImp ->
-                  IField
+  IField : Type
+  IField = IField' Name
 
   public export
-  data ImpRecord : Type where
+  data IField' : Type -> Type where
+       MkIField : FC -> RigCount -> PiInfo (RawImp' nm) -> Name -> RawImp' nm ->
+                  IField' nm
+
+  -- TODO: turn into a proper datatype
+  public export
+  ImpParameter' : Type -> Type
+  ImpParameter' nm = (Name, RigCount, PiInfo (RawImp' nm), RawImp' nm)
+
+  public export
+  ImpRecord : Type
+  ImpRecord = ImpRecord' Name
+
+  public export
+  data ImpRecord' : Type -> Type where
        MkImpRecord : FC -> (n : Name) ->
-                     (params : List (Name, RigCount, PiInfo RawImp, RawImp)) ->
+                     (params : List (ImpParameter' nm)) ->
                      (conName : Name) ->
-                     (fields : List IField) ->
-                     ImpRecord
+                     (fields : List (IField' nm)) ->
+                     ImpRecord' nm
 
   export
-  Show IField where
+  Show nm => Show (IField' nm) where
     show (MkIField _ c Explicit n ty) = show n ++ " : " ++ show ty
     show (MkIField _ c _ n ty) = "{" ++ show n ++ " : " ++ show ty ++ "}"
 
   export
-  Show ImpRecord where
+  Show nm => Show (ImpRecord' nm) where
     show (MkImpRecord _ n params con fields)
         = "record " ++ show n ++ " " ++ show params ++
           " " ++ show con ++ "\n\t" ++
@@ -315,16 +357,24 @@ mutual
       Syntactic == Syntactic = True
 
   public export
-  data ImpClause : Type where
-       PatClause : FC -> (lhs : RawImp) -> (rhs : RawImp) -> ImpClause
-       WithClause : FC -> (lhs : RawImp) ->
-                    (wval : RawImp) -> (prf : Maybe Name) ->
+  ImpClause : Type
+  ImpClause = ImpClause' Name
+
+  public export
+  IImpClause : Type
+  IImpClause = ImpClause' KindedName
+
+  public export
+  data ImpClause' : Type -> Type where
+       PatClause : FC -> (lhs : RawImp' nm) -> (rhs : RawImp' nm) -> ImpClause' nm
+       WithClause : FC -> (lhs : RawImp' nm) ->
+                    (wval : RawImp' nm) -> (prf : Maybe Name) ->
                     (flags : List WithFlag) ->
-                    List ImpClause -> ImpClause
-       ImpossibleClause : FC -> (lhs : RawImp) -> ImpClause
+                    List (ImpClause' nm) -> ImpClause' nm
+       ImpossibleClause : FC -> (lhs : RawImp' nm) -> ImpClause' nm
 
   export
-  Show ImpClause where
+  Show nm => Show (ImpClause' nm) where
     show (PatClause fc lhs rhs)
        = show lhs ++ " = " ++ show rhs
     show (WithClause fc lhs wval prf flags block)
@@ -336,30 +386,35 @@ mutual
        = show lhs ++ " impossible"
 
   public export
-  data ImpDecl : Type where
-       IClaim : FC -> RigCount -> Visibility -> List FnOpt ->
-                ImpTy -> ImpDecl
-       IData : FC -> Visibility -> ImpData -> ImpDecl
-       IDef : FC -> Name -> List ImpClause -> ImpDecl
-       IParameters : FC -> List (Name, RigCount, PiInfo RawImp, RawImp) ->
-                     List ImpDecl -> ImpDecl
+  ImpDecl : Type
+  ImpDecl = ImpDecl' Name
+
+  public export
+  data ImpDecl' : Type -> Type where
+       IClaim : FC -> RigCount -> Visibility -> List (FnOpt' nm) ->
+                ImpTy' nm -> ImpDecl' nm
+       IData : FC -> Visibility -> ImpData' nm -> ImpDecl' nm
+       IDef : FC -> Name -> List (ImpClause' nm) -> ImpDecl' nm
+       IParameters : FC ->
+                     List (ImpParameter' nm) ->
+                     List (ImpDecl' nm) -> ImpDecl' nm
        IRecord : FC ->
                  Maybe String -> -- nested namespace
-                 Visibility -> ImpRecord -> ImpDecl
-       INamespace : FC -> Namespace -> List ImpDecl -> ImpDecl
-       ITransform : FC -> Name -> RawImp -> RawImp -> ImpDecl
-       IRunElabDecl : FC -> RawImp -> ImpDecl
+                 Visibility -> ImpRecord' nm -> ImpDecl' nm
+       INamespace : FC -> Namespace -> List (ImpDecl' nm) -> ImpDecl' nm
+       ITransform : FC -> Name -> RawImp' nm -> RawImp' nm -> ImpDecl' nm
+       IRunElabDecl : FC -> RawImp' nm -> ImpDecl' nm
        IPragma : List Name -> -- pragmas might define names that wouldn't
                        -- otherwise be spotted in 'definedInBlock' so they
                        -- can be flagged here.
                  ({vars : _} ->
                   NestedNames vars -> Env Term vars -> Core ()) ->
-                 ImpDecl
-       ILog : Maybe (List String, Nat) -> ImpDecl
-       IBuiltin : FC -> BuiltinType -> Name -> ImpDecl
+                 ImpDecl' nm
+       ILog : Maybe (List String, Nat) -> ImpDecl' nm
+       IBuiltin : FC -> BuiltinType -> Name -> ImpDecl' nm
 
   export
-  Show ImpDecl where
+  Show nm => Show (ImpDecl' nm) where
     show (IClaim _ c _ opts ty) = show opts ++ " " ++ show c ++ " " ++ show ty
     show (IData _ _ d) = show d
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"
@@ -382,7 +437,7 @@ mutual
     show (IBuiltin _ type name) = "%builtin " ++ show type ++ " " ++ show name
 
 export
-isIPrimVal : RawImp -> Maybe Constant
+isIPrimVal : RawImp' nm -> Maybe Constant
 isIPrimVal (IPrimVal _ c) = Just c
 isIPrimVal _ = Nothing
 
@@ -400,7 +455,7 @@ data ImpREPL : Type where
      Quit : ImpREPL
 
 export
-mapAltType : (RawImp -> RawImp) -> AltType -> AltType
+mapAltType : (RawImp' nm -> RawImp' nm) -> AltType' nm -> AltType' nm
 mapAltType f (UniqueDefault x) = UniqueDefault (f x)
 mapAltType _ u = u
 
@@ -432,7 +487,7 @@ lhsInCurrentNS nest (IVar loc n)
 lhsInCurrentNS nest tm = pure tm
 
 export
-findIBinds : RawImp -> List String
+findIBinds : RawImp' nm -> List String
 findIBinds (IPi fc rig p mn aty retty)
     = findIBinds aty ++ findIBinds retty
 findIBinds (ILam fc rig p n aty sc)
@@ -466,7 +521,7 @@ findIBinds (IBindVar _ n) = [n]
 findIBinds tm = []
 
 export
-findImplicits : RawImp -> List String
+findImplicits : RawImp' nm -> List String
 findImplicits (IPi fc rig p (Just (UN mn)) aty retty)
     = mn :: findImplicits aty ++ findImplicits retty
 findImplicits (IPi fc rig p mn aty retty)
@@ -679,7 +734,7 @@ definedInBlock ns decls =
     defName _ _ = []
 
 export
-getFC : RawImp -> FC
+getFC : RawImp' nm -> FC
 getFC (IVar x _) = x
 getFC (IPi x _ _ _ _ _) = x
 getFC (ILam x _ _ _ _ _) = x
@@ -718,7 +773,7 @@ getFC (IWithUnambigNames x _ _) = x
 namespace ImpDecl
 
   public export
-  getFC : ImpDecl -> FC
+  getFC : ImpDecl' nm -> FC
   getFC (IClaim fc _ _ _ _) = fc
   getFC (IData fc _ _) = fc
   getFC (IDef fc _ _) = fc
@@ -732,24 +787,24 @@ namespace ImpDecl
   getFC (IBuiltin fc _ _) = fc
 
 export
-apply : RawImp -> List RawImp -> RawImp
+apply : RawImp' nm -> List (RawImp' nm) -> RawImp' nm
 apply f [] = f
 apply f (x :: xs) =
   let fFC = getFC f in
   apply (IApp (fromMaybe fFC (mergeFC fFC (getFC x))) f x) xs
 
 export
-gapply : RawImp -> List (Maybe Name, RawImp) -> RawImp
+gapply : RawImp' nm -> List (Maybe Name, RawImp' nm) -> RawImp' nm
 gapply f [] = f
 gapply f (x :: xs) = gapply (uncurry (app f) x) xs where
 
-  app : RawImp -> Maybe Name -> RawImp -> RawImp
+  app : RawImp' nm -> Maybe Name -> RawImp' nm -> RawImp' nm
   app f Nothing x =  IApp (getFC f) f x
   app f (Just nm) x = INamedApp (getFC f) f nm x
 
 
 export
-getFn : RawImp -> RawImp
+getFn : RawImp' nm -> RawImp' nm
 getFn (IApp _ f _) = getFn f
 getFn (IWithApp _ f _) = getFn f
 getFn (INamedApp _ f _ _) = getFn f

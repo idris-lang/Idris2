@@ -730,7 +730,7 @@ Cast Double Nat where
 
 export
 Cast Char Nat where
-  cast = believe_me . cast {to = Integer}
+  cast = integerToNat . cast {to = Integer}
 
 export
 Cast Int Nat where
@@ -742,19 +742,19 @@ Cast Integer Nat where
 
 export
 Cast Bits8 Nat where
-  cast = believe_me . cast {to = Integer}
+  cast = integerToNat . cast {to = Integer}
 
 export
 Cast Bits16 Nat where
-  cast = believe_me . cast {to = Integer}
+  cast = integerToNat . cast {to = Integer}
 
 export
 Cast Bits32 Nat where
-  cast = believe_me . cast {to = Integer}
+  cast = integerToNat . cast {to = Integer}
 
 export
 Cast Bits64 Nat where
-  cast = believe_me . cast {to = Integer}
+  cast = integerToNat . cast {to = Integer}
 
 export
 Cast Int8 Nat where

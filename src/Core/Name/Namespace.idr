@@ -182,6 +182,10 @@ export
 Ord Namespace where
     compare (MkNS ms) (MkNS ns) = compare ms ns
 
+export
+Ord ModuleIdent where
+    compare (MkMI ms) (MkMI ns) = compare ms ns
+
 mkNSInjective : MkNS ms === MkNS ns -> ms === ns
 mkNSInjective Refl = Refl
 

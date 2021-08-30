@@ -23,6 +23,7 @@ import TTImp.Elab.Utils
 import TTImp.Impossible
 import TTImp.PartialEval
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 import TTImp.WithClause
@@ -959,6 +960,7 @@ processDef opts nest env fc n_in cs_in
                       Core (Maybe ClosedTerm)
     checkImpossible n mult tm
         = do itm <- unelabNoPatvars [] tm
+             let itm = map rawName itm
              handleUnify
                (do ctxt <- get Ctxt
                    log "declare.def.impossible" 3 $ "Checking for impossibility: " ++ show itm

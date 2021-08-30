@@ -92,6 +92,8 @@ mkModTree loc done modFP mod
                     case err of
                          CyclicImports _ => throw err
                          ParseFail _ => throw err
+                         LexFail _ _ => throw err
+                         LitFail _ => throw err
                          _ => pure (MkModTree mod Nothing []))
 
 data DoneMod : Type where
@@ -232,6 +234,7 @@ buildDeps : {auto c : Ref Ctxt Defs} ->
             Core (List Error)
 buildDeps fname
     = do mods <- getBuildMods EmptyFC [] fname
+         log "import" 20 $ "Needs to rebuild: " ++ show mods
          ok <- buildMods EmptyFC 1 (length mods) mods
          case ok of
               [] => do -- On success, reload the main ttc in a clean context
