@@ -585,7 +585,7 @@ dropLater (Later p) = p
 export
 mkVar : (wkns : List Name) -> IsVar nm (length wkns) (wkns ++ nm :: vars)
 mkVar [] = First
-mkVar (w :: ws) = Later (mkVar ws)
+mkVar (w :: ws) = rewrite consAppend w ws (nm :: vars) in Later (mkVar ws)
 
 public export
 dropVar : (ns : List Name) -> {idx : Nat} -> (0 p : IsVar name idx ns) -> List Name
@@ -630,12 +630,16 @@ namespace HasLength
   export
   sucR : HasLength n xs -> HasLength (S n) (xs ++ [x])
   sucR Z     = S Z
-  sucR (S n) = S (sucR n)
+  sucR {xs = xsH :: xsT} (S n) =
+    rewrite consAppend xsH xsT [x] in
+      S (sucR n)
 
   export
   hlAppend : HasLength m xs -> HasLength n ys -> HasLength (m + n) (xs ++ ys)
   hlAppend Z ys = ys
-  hlAppend (S xs) ys = S (hlAppend xs ys)
+  hlAppend {xs = x :: xs} (S xsHasLength) ysHasLength =
+    rewrite consAppend x xs ys in
+      S (hlAppend xsHasLength ysHasLength)
 
   export
   mkHasLength : (xs : List a) -> HasLength (length xs) xs
@@ -909,9 +913,11 @@ interface Weaken tm where
   weaken : {0 vars : List Name} -> tm vars -> tm (n :: vars)
   weakenNs : SizeOf ns -> tm vars -> tm (ns ++ vars)
 
-  weakenNs p t = case sizedView p of
-    Z   => t
-    S p => weaken (weakenNs p t)
+  weakenNs {ns} p t with (sizedView p)
+    weakenNs {ns=[]}    _ t | Z   = t
+    weakenNs {ns=n::ns} _ t | S p =
+      rewrite consAppend n ns vars in
+        weaken (weakenNs p t)
 
   weaken = weakenNs (suc zero)
 
@@ -1086,19 +1092,23 @@ namespace NVar
 
 export
 weakenNVar : SizeOf ns -> NVar name inner -> NVar name (ns ++ inner)
-weakenNVar p x = case sizedView p of
-  Z     => x
-  (S p) => later (weakenNVar p x)
+weakenNVar p x with (sizedView p)
+  weakenNVar {ns=[]}    _ x | Z   = x
+  weakenNVar {ns=n::ns} _ x | S p =
+    rewrite consAppend n ns inner in
+      later (weakenNVar p x)
 
 export
 insertNVar : SizeOf outer ->
              NVar nm (outer ++ inner) ->
              NVar nm (outer ++ n :: inner)
-insertNVar p v = case sizedView p of
-  Z     => later v
-  (S p) => case v of
-    MkNVar First     => MkNVar First
-    MkNVar (Later v) => later (insertNVar p (MkNVar v))
+insertNVar p v with (sizedView p)
+  insertNVar {outer=[]}    _ v | Z = later v
+  insertNVar {outer=o::os} _ v | S p =
+    rewrite consAppend o os (n :: inner) in
+      case replace {p = NVar nm} (consAppend o os inner) v of
+        MkNVar First     => MkNVar First
+        MkNVar (Later v) => later (insertNVar p (MkNVar v))
 
 export
 insertVar : SizeOf outer ->
@@ -1114,11 +1124,13 @@ export
 insertNVarNames : SizeOf outer -> SizeOf ns ->
                   NVar name (outer ++ inner) ->
                   NVar name (outer ++ (ns ++ inner))
-insertNVarNames p q v = case sizedView p of
-  Z     => weakenNVar q v
-  (S p) => case v of
-    MkNVar First      => MkNVar First
-    MkNVar (Later v') => later (insertNVarNames p q (MkNVar v'))
+insertNVarNames p q v with (sizedView p)
+  insertNVarNames {outer=[]} _ q v | Z = weakenNVar q v
+  insertNVarNames {outer=o::os} _ q v | S p =
+    rewrite consAppend o os (ns ++ inner) in
+      case replace {p = NVar name} (consAppend o os inner) v of
+        MkNVar First      => MkNVar First
+        MkNVar (Later v') => later (insertNVarNames p q (MkNVar v'))
 
 export
 insertVarNames : SizeOf outer -> SizeOf ns ->
@@ -1136,9 +1148,11 @@ insertNames out ns (Local fc r idx prf)
 insertNames out ns (Ref fc nt name) = Ref fc nt name
 insertNames out ns (Meta fc name idx args)
     = Meta fc name idx (map (insertNames out ns) args)
-insertNames out ns (Bind fc x b scope)
-    = Bind fc x (assert_total (map (insertNames out ns) b))
-           (insertNames (suc out) ns scope)
+insertNames out nsSize (Bind fc x b scope)
+    = let scope' = replace {p=Term} (sym $ consAppend x outer inner) scope
+      in Bind fc x (assert_total (map (insertNames out nsSize) b))
+           $ replace {p=Term} (consAppend x outer (ns ++ inner))
+           $ insertNames (suc out) nsSize scope'
 insertNames out ns (App fc fn arg)
     = App fc (insertNames out ns fn) (insertNames out ns arg)
 insertNames out ns (As fc s as tm)
@@ -1231,7 +1245,10 @@ extendCompats : (args : List Name) ->
                 CompatibleVars xs ys ->
                 CompatibleVars (args ++ xs) (args ++ ys)
 extendCompats [] prf = prf
-extendCompats (x :: xs) prf = CompatExt (extendCompats xs prf)
+extendCompats (a :: as) prf =
+  rewrite consAppend a as xs in
+    rewrite consAppend a as ys in
+      CompatExt (extendCompats as prf)
 
 renameLocalRef : CompatibleVars xs ys ->
                  {idx : Nat} ->
@@ -1298,13 +1315,21 @@ subElem (Later x) (KeepCons p)
 export
 subExtend : (ns : List Name) -> SubVars xs ys -> SubVars (ns ++ xs) (ns ++ ys)
 subExtend [] sub = sub
-subExtend (x :: xs) sub = KeepCons (subExtend xs sub)
+subExtend (n :: ns) sub =
+  rewrite consAppend n ns xs in
+    rewrite consAppend n ns ys in
+      KeepCons (subExtend ns sub)
 
 export
 subInclude : (ns : List Name) -> SubVars xs ys -> SubVars (xs ++ ns) (ys ++ ns)
 subInclude ns SubRefl = SubRefl
-subInclude ns (DropCons p) = DropCons (subInclude ns p)
-subInclude ns (KeepCons p) = KeepCons (subInclude ns p)
+subInclude {ys=y::ys} ns (DropCons p) =
+  rewrite consAppend y ys ns in
+    DropCons (subInclude ns p)
+subInclude {xs=x::xs} {ys=x::ys} ns (KeepCons p) =
+  rewrite consAppend x xs ns in
+    rewrite consAppend x ys ns in
+      KeepCons (subInclude ns p)
 
 mutual
   export
@@ -1413,11 +1438,13 @@ resolveRef : SizeOf outer -> SizeOf done -> Bounds bound -> FC -> Name ->
 resolveRef p q None fc n = Nothing
 resolveRef {outer} {done} p q (Add {xs} new old bs) fc n
     = if n == old
-         then rewrite appendAssociative outer done (new :: xs ++ vars) in
-              let MkNVar p = weakenNVar (p + q) (MkNVar First) in
-                     Just (Local fc Nothing _ p)
-         else rewrite appendAssociative done [new] (xs ++ vars)
-                in resolveRef p (sucR q) bs fc n
+         then rewrite appendAssociative outer done ((new :: xs) ++ vars) in
+                rewrite consAppend new xs vars in
+                let MkNVar p = weakenNVar (p + q) (MkNVar First) in
+                      Just (Local fc Nothing _ p)
+         else rewrite consAppend new xs vars in
+                rewrite appendAssociative done [new] (xs ++ vars) in
+                  resolveRef p (sucR q) bs fc n
 
 mkLocals : SizeOf outer -> Bounds bound ->
            Term (outer ++ vars) -> Term (outer ++ (bound ++ vars))
@@ -1430,9 +1457,11 @@ mkLocals outer bs (Ref fc nt name)
 mkLocals outer bs (Meta fc name y xs)
     = maybe (Meta fc name y (map (mkLocals outer bs) xs))
             id (resolveRef outer zero bs fc name)
-mkLocals outer bs (Bind fc x b scope)
-    = Bind fc x (map (mkLocals outer bs) b)
-           (mkLocals (suc outer) bs scope)
+mkLocals outerSize bs (Bind fc x b scope)
+    = let scope' = replace {p=Term} (sym $ consAppend x outer vars) scope
+      in Bind fc x (map (mkLocals outerSize bs) b)
+            $ replace {p=Term} (consAppend x outer (bound ++ vars))
+            $ mkLocals (suc outerSize) bs scope'
 mkLocals outer bs (App fc fn arg)
     = App fc (mkLocals outer bs fn) (mkLocals outer bs arg)
 mkLocals outer bs (As fc s as tm)
@@ -1508,21 +1537,24 @@ namespace SubstEnv
              SubstEnv dropped vars ->
              Term vars
   findDrop fc r (MkVar var) [] = Local fc r _ var
-  findDrop fc r (MkVar First) (tm :: env) = tm
-  findDrop fc r (MkVar (Later p)) (tm :: env)
-      = findDrop fc r (MkVar p) env
+  findDrop {dropped=d::ds} fc r var (tm :: env) =
+    case replace {p=Var} (consAppend d ds vars) var of
+      MkVar First     => tm
+      MkVar (Later p) => findDrop fc r (MkVar p) env
 
   find : FC -> Maybe Bool ->
          SizeOf outer ->
          Var (outer ++ (dropped ++ vars)) ->
          SubstEnv dropped vars ->
          Term (outer ++ vars)
-  find fc r outer var env = case sizedView outer of
-    Z       => findDrop fc r var env
-    S outer => case var of
-      MkVar First     => Local fc r _ First
-      MkVar (Later p) => weaken (find fc r outer (MkVar p) env)
-       -- TODO: refactor to only weaken once?
+  find {outer=outerList} fc r outer var env with (sizedView outer)
+    find {outer=[]} fc r _ var env    | Z       = findDrop fc r var env
+    find {outer=o::os} fc r _ var env | S outer =
+      rewrite consAppend o os vars in
+        case replace {p=Var} (consAppend o os (dropped ++ vars)) var of
+          MkVar First     => Local fc r _ First
+          MkVar (Later p) => weaken (find fc r outer (MkVar p) env)
+           -- TODO: refactor to only weaken once?
 
   substEnv : SizeOf outer ->
              SubstEnv dropped vars ->
@@ -1533,9 +1565,11 @@ namespace SubstEnv
   substEnv outer env (Ref fc x name) = Ref fc x name
   substEnv outer env (Meta fc n i xs)
       = Meta fc n i (map (substEnv outer env) xs)
-  substEnv outer env (Bind fc x b scope)
-      = Bind fc x (map (substEnv outer env) b)
-                  (substEnv (suc outer) env scope)
+  substEnv {outer=o} outer env (Bind fc x b scope)
+      = let scope' = replace {p=Term} (sym $ consAppend x o (dropped ++ vars)) scope
+        in Bind fc x (map (substEnv outer env) b)
+                   $ replace {p=Term} (consAppend x o vars)
+                   $ substEnv (suc outer) env scope'
   substEnv outer env (App fc fn arg)
       = App fc (substEnv outer env fn) (substEnv outer env arg)
   substEnv outer env (As fc s as pat)
