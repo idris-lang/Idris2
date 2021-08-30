@@ -1,6 +1,7 @@
 000018(:protocol-version 2 0)
 000032(:write-string "1/1: Building Case (Case.idr)" 1)
 00006f(:output (:ok (:highlight-source ((((:filename "Case.idr") (:start 1 1) (:end 1 6)) ((:decor :keyword)))))) 1)
+00006f(:output (:ok (:highlight-source ((((:filename "Case.idr") (:start 1 8) (:end 1 11)) ((:decor :module)))))) 1)
 000070(:output (:ok (:highlight-source ((((:filename "Case.idr") (:start 3 1) (:end 3 6)) ((:decor :function)))))) 1)
 00006f(:output (:ok (:highlight-source ((((:filename "Case.idr") (:start 3 8) (:end 3 8)) ((:decor :keyword)))))) 1)
 0000d6(:output (:ok (:highlight-source ((((:filename "Case.idr") (:start 3 10) (:end 3 13)) ((:name "List") (:namespace "Prelude.Basics") (:decor :type) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)

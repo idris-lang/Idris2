@@ -45,9 +45,6 @@ const _idrisworld = Symbol('idrisworld')
 
 const _crashExp = x=>{throw new IdrisError(x)}
 
-const _sysos =
-  ((o => o === 'linux'?'unix':o==='win32'?'windows':o)(require('os').platform()));
-
 const _bigIntOfString = s=>{
   const idx = s.indexOf('.')
   return idx === -1 ? BigInt(s) : BigInt(s.slice(0, idx))
