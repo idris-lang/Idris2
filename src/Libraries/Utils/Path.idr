@@ -276,7 +276,7 @@ export
 parse : String -> Path
 parse str =
   case parse parsePath (lexPath str) of
-    Right (path, _) => path
+    Right (_, path, _) => path
     _ => emptyPath
 
 --------------------------------------------------------------------------------

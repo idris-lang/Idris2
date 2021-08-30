@@ -2,3 +2,5 @@ rm -rf build
 
 $1 --no-color --console-width 0 Issue1782.idr --check
 $1 --no-color --console-width 0 Issue1460.idr --check
+$1 --no-color --console-width 0 Issue1859.idr --check
+$1 --no-color --console-width 0 Issue1859-2.idr --check

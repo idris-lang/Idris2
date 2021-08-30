@@ -3,6 +3,7 @@ module Libraries.Text.PrettyPrint.Prettyprinter.Doc
 import Data.List
 import public Data.List1
 import Data.Maybe
+import Data.SnocList
 import Data.String
 import public Libraries.Data.String.Extra
 
@@ -747,6 +748,11 @@ layoutCompact doc = scan 0 [doc]
     scan col s@((Nesting f) :: ds) = scan col $ assert_smaller s (f 0 :: ds)
     scan col s@((Annotated _ x) :: ds) = scan col $ assert_smaller s (x :: ds)
 
+
+------------------------------------------------------------------------
+-- Turn the document into a string
+------------------------------------------------------------------------
+
 export
 renderShow : SimpleDocStream ann -> (String -> String)
 renderShow SEmpty = id
@@ -759,3 +765,64 @@ renderShow (SAnnPop x) = renderShow x
 export
 Show (Doc ann) where
   show doc = renderShow (layoutPretty defaultLayoutOptions doc) ""
+
+------------------------------------------------------------------------
+-- Turn the document into a string, and a list of annotation spans
+------------------------------------------------------------------------
+
+public export
+record Span (a : Type) where
+  constructor MkSpan
+  start    : Nat
+  length   : Nat
+  property : a
+
+export
+Functor Span where
+  map f = { property $= f }
+
+export
+Foldable Span where
+  foldr c n span = c span.property n
+
+export
+Traversable Span where
+  traverse f (MkSpan start width prop)
+    = MkSpan start width <$> f prop
+
+export
+Show a => Show (Span a) where
+  show (MkSpan start width prop)
+    = concat {t = List} [ "[", show start, "-", show width, "]"
+                        , show prop
+                        ]
+
+export
+displaySpans : SimpleDocStream a -> (String, List (Span a))
+displaySpans p =
+  let (bits, anns) = go Z [<] [<] [] p in
+  (concat bits, anns)
+
+  where
+
+    go : (index : Nat) ->
+         (doc   : SnocList String) ->
+         (spans : SnocList (Span a)) ->
+         (ann : List (Nat, a)) -> -- starting index, < current
+         SimpleDocStream a ->
+         (List String, List (Span a))
+    go index doc spans ann SEmpty = (doc <>> [], spans <>> [])
+    go index doc spans ann (SChar c rest)
+      = go (S index) (doc :< cast c) spans ann rest
+    go index doc spans ann (SText len text rest)
+      = go (integerToNat (cast len) + index) (doc :< text) spans ann rest
+    go index doc spans ann (SLine i rest)
+      = let text = strCons '\n' (textSpaces i) in
+        go (S (integerToNat $ cast i) + index) (doc :< text) spans ann rest
+    go index doc spans ann (SAnnPush a rest)
+      = go index doc spans ((index, a) :: ann) rest
+    go index doc spans ((start, a) :: ann) (SAnnPop rest)
+      = let span = MkSpan start (minus index start) a in
+        go index doc (spans :< span) ann rest
+    go index doc spans [] (SAnnPop rest)
+      = go index doc spans [] rest

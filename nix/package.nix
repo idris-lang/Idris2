@@ -7,7 +7,6 @@
 , makeWrapper
 , idris2-version
 , srcRev
-, racket
 , gambit
 , nodejs
 , zsh

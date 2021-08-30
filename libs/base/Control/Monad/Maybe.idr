@@ -130,7 +130,9 @@ Monad m => Monad (MaybeT m) where
 public export
 Monad m => Alternative (MaybeT m) where
   empty = nothing
-  a <|> b = a <+> b
+  MkMaybeT x <|> my = MkMaybeT $ x >>= \case
+    r@(Just _) => pure r
+    Nothing    => runMaybeT my
 
 public export
 MonadTrans MaybeT where

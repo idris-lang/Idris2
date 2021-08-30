@@ -40,7 +40,7 @@ findErasedFrom defs pos (NBind fc x (Pi _ c _ aty) scf)
          -- argument position is available
          sc <- scf defs (toClosure defaultOpts [] (Erased fc (isErased c)))
          (erest, dtrest) <- findErasedFrom defs (1 + pos) sc
-         let dt' = if !(detagSafe defs aty)
+         let dt' = if !(detagSafe defs !(evalClosure defs aty))
                       then (pos :: dtrest) else dtrest
          pure $ if isErased c
                    then (pos :: erest, dt')

@@ -67,10 +67,11 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
       ["error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
        "error011", "error012", "error013", "error014", "error015",
-       "error016", "error017", "error018", "error019",
+       "error016", "error017", "error018", "error019", "error020",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
-       "perror006", "perror007", "perror008", "perror009"]
+       "perror006", "perror007", "perror008", "perror009", "perror010",
+       "perror011"]
 
 idrisTestsInteractive : TestPool
 idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
@@ -186,7 +187,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Implicit laziness, lazy evaluation
        "lazy001", "lazy002",
        -- Namespace blocks
-       "namespace001",
+       "namespace001", "namespace002",
        -- Parameters blocks
        "params001", "params002", "params003",
        -- Packages and ipkg files
@@ -251,7 +252,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     [ "node001", "node002", "node003", "node004", "node005", "node006"
     , "node007", "node008", "node009", "node011", "node012", "node015"
     , "node017", "node018", "node019", "node021", "node022", "node023"
-    , "node024", "node025"
+    , "node024", "node025", "node026"
     , "perf001"
     -- , "node14", "node020"
     , "args"
@@ -263,6 +264,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "tailrec001"
     , "idiom001"
     , "integers"
+    , "fix1839"
     ]
 
 vmcodeInterpTests : IO TestPool

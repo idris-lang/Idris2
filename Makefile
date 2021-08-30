@@ -24,6 +24,7 @@ ifeq ($(shell git status >/dev/null 2>&1; echo $$?), 0)
 		GIT_SHA1 := $(shell git rev-parse --short=9 HEAD)
 	endif
 endif
+VERSION_TAG ?= $(GIT_SHA1)
 
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
 export NAME_VERSION := ${NAME}-${IDRIS2_VERSION}
@@ -66,7 +67,7 @@ ${TARGET}: src/IdrisPaths.idr
 src/IdrisPaths.idr: FORCE
 	echo "-- @""generated" > src/IdrisPaths.idr
 	echo 'module IdrisPaths' >> src/IdrisPaths.idr
-	echo 'export idrisVersion : ((Nat,Nat,Nat), String); idrisVersion = ((${MAJOR},${MINOR},${PATCH}), "${GIT_SHA1}")' >> src/IdrisPaths.idr
+	echo 'export idrisVersion : ((Nat,Nat,Nat), String); idrisVersion = ((${MAJOR},${MINOR},${PATCH}), "${VERSION_TAG}")' >> src/IdrisPaths.idr
 	echo 'export yprefix : String; yprefix="${IDRIS2_PREFIX}"' >> src/IdrisPaths.idr
 
 FORCE:

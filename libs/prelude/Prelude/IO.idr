@@ -85,6 +85,7 @@ prim__getStr : PrimIO String
 
 %foreign "C:idris2_putStr, libidris2_support, idris_support.h"
          "node:lambda:x=>process.stdout.write(x)"
+         "browser:lambda:x=>console.log(x)"
 prim__putStr : String -> PrimIO ()
 
 ||| Output a string to stdout without a trailing newline.
