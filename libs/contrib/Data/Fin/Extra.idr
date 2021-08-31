@@ -46,7 +46,7 @@ finToNatShift (S k) a = cong S (finToNatShift k a)
 -------------------------------------------------
 
 ||| Compute the Fin such that `k + invFin k = n - 1`
-export
+public export
 invFin : {n : Nat} -> Fin n -> Fin n
 invFin FZ = last
 invFin (FS k) = weaken (invFin k)
