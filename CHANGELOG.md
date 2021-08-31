@@ -43,10 +43,9 @@
 
 * Added `--list-packages` CLI option.
 
-### Library Changes
+### Library changes
 
 #### Prelude
-
 
 Changed
 
@@ -72,6 +71,12 @@ Changed
   system of interfaces. These interfaces defines properties of binary
   relations (functions of type `ty -> ty -> Type`), and orders are
   defined simply as bundles of these properties.
+
+### Installation changes
+
+* Added a new makefile target to install Idris 2 library documentation.  After `make install`, type
+  `make install-libdocs` to install it.  After that, the index file can be found here: ``idris2
+  --libdir`/docs/index.html`.``
 
 ## v0.4.0
 
