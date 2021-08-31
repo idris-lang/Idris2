@@ -16,13 +16,12 @@ function __prim_idris2js_array(x){
   return result;
 }
 
-function __lazy(creator) {
+function __lazy(thunk) {
   let res;
-  let processed = false;
   return function () {
-    if (processed) return res;
-    res = creator();
-    processed = true;
+    if (thunk === undefined) return res;
+    res = thunk();
+    thunk = undefined;
     return res;
   };
 };
