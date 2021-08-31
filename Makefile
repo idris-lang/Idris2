@@ -186,10 +186,10 @@ install-support:
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/racket
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/gambit
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/js
-	install support/docs/* ${PREFIX}/${NAME_VERSION}/support/docs
-	install support/racket/* ${PREFIX}/${NAME_VERSION}/support/racket
-	install support/gambit/* ${PREFIX}/${NAME_VERSION}/support/gambit
-	install support/js/* ${PREFIX}/${NAME_VERSION}/support/js
+	install -m 644 support/docs/* ${PREFIX}/${NAME_VERSION}/support/docs
+	install -m 644 support/racket/* ${PREFIX}/${NAME_VERSION}/support/racket
+	install -m 644 support/gambit/* ${PREFIX}/${NAME_VERSION}/support/gambit
+	install -m 644 support/js/* ${PREFIX}/${NAME_VERSION}/support/js
 	@${MAKE} -C support/c install
 	@${MAKE} -C support/refc install
 	@${MAKE} -C support/chez install
