@@ -389,6 +389,23 @@ namespace List
   length []        = Z
   length (x :: xs) = S (length xs)
 
+  public export
+  reverseOnto : List a -> List a -> List a
+  reverseOnto acc [] = acc
+  reverseOnto acc (x::xs) = reverseOnto (x::acc) xs
+
+  public export
+  reverse : List a -> List a
+  reverse = reverseOnto []
+
+-- A tail-recursive version of List.(++).
+tailRecAppend : (xs, ys : List a) -> List a
+tailRecAppend xs ys = reverseOnto ys (reverse xs)
+
+-- Always use tailRecAppend at runtime. tailRecAppendIsAppend proves these are
+-- equivalent.
+%transform "tailRecAppend" List.(++) = tailRecAppend
+
 public export
 Functor List where
   map f [] = []
@@ -853,3 +870,35 @@ public export
       = if y > x
            then countFrom x (+ (y - x))
            else countFrom x (\n => n - (x - y))
+
+--------------------------
+-- THEOREMS ABOUT LISTS --
+--------------------------
+
+reverseReverseOnto : (l, r : List a) -> reverse (reverseOnto l r) = reverseOnto r l
+reverseReverseOnto _ [] = Refl
+reverseReverseOnto l (x :: xs) = reverseReverseOnto (x :: l) xs
+
+||| List reverse applied twice yields the identity function.
+export
+reverseInvolutive : (xs : List a) -> reverse (reverse xs) = xs
+reverseInvolutive = reverseReverseOnto []
+
+consReverse : (x : a) -> (l, r : List a) -> x :: reverseOnto r l = reverseOnto r (reverseOnto [x] (reverse l))
+consReverse _ [] _ = Refl
+consReverse x (y::ys) r
+  = rewrite consReverse x ys (y :: r) in
+      rewrite cong (reverseOnto r) $ consReverse y (reverse ys) [x] in
+        rewrite reverseInvolutive ys in
+          Refl
+
+consTailRecAppend : (x : a) -> (l, r : List a) -> tailRecAppend (x :: l) r = x :: (tailRecAppend l r)
+consTailRecAppend x l r
+  = rewrite consReverse x (reverse l) r in
+      rewrite reverseInvolutive l in
+        Refl
+
+tailRecAppendIsAppend : (xs, ys : List a) -> tailRecAppend xs ys = xs ++ ys
+tailRecAppendIsAppend [] ys = Refl
+tailRecAppendIsAppend (x::xs) ys =
+  trans (consTailRecAppend x xs ys) (cong (x ::) $ tailRecAppendIsAppend xs ys)

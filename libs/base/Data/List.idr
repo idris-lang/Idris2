@@ -321,15 +321,6 @@ public export
 replaceOn : Eq a => a -> a -> List a -> List a
 replaceOn a = replaceWhen (== a)
 
-public export
-reverseOnto : List a -> List a -> List a
-reverseOnto acc [] = acc
-reverseOnto acc (x::xs) = reverseOnto (x::acc) xs
-
-public export
-reverse : List a -> List a
-reverse = reverseOnto []
-
 ||| Construct a list with `n` copies of `x`.
 ||| @ n how many copies
 ||| @ x the element to replicate
@@ -742,14 +733,6 @@ revAppend (v :: vs) ns
           rewrite sym (revAppend vs ns) in
             rewrite appendAssociative (reverse ns) (reverse vs) [v] in
               Refl
-
-||| List reverse applied twice yields the identity function.
-export
-reverseInvolutive : (xs : List a) -> reverse (reverse xs) = xs
-reverseInvolutive [] = Refl
-reverseInvolutive (x :: xs) = rewrite revOnto [x] xs in
-                                rewrite sym (revAppend (reverse xs) [x]) in
-                                  cong (x ::) $ reverseInvolutive xs
 
 export
 dropFusion : (n, m : Nat) -> (l : List t) -> drop n (drop m l) = drop (n+m) l
