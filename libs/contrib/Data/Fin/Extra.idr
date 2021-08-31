@@ -51,7 +51,7 @@ invFin : {n : Nat} -> Fin n -> Fin n
 invFin FZ = last
 invFin (FS k) = weaken (invFin k)
 
-public export
+export
 invFinSpec : {n : _} -> (i : Fin n) -> 1 + finToNat i + finToNat (invFin i) = n
 invFinSpec {n = S k} FZ = cong S finToNatLastIsBound
 invFinSpec (FS k) = let H = invFinSpec k in
