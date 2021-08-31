@@ -34,6 +34,7 @@ import Data.List
 import Data.Nat
 import Data.Vect
 import Libraries.Data.SortedMap
+import Libraries.Data.NameMap
 
 ||| Maping from a pairing of closed terms together with
 ||| their size (for efficiency) to the number of
@@ -354,3 +355,37 @@ additionalToplevelDefs um = map toDef $ SortedMap.toList um
   -- common subexpressions, hence the call to `adjustSubExp`.
   where toDef : ((Integer, CExp[]),(Name,Integer)) -> (Name,FC,CDef)
         toDef ((_,exp),(nm,_)) = (nm, EmptyFC, MkFun [] $ adjustSubExp um exp)
+
+||| Returns a list of zero-argument toplevel function definitions
+||| for the extracted common subexpressions.
+export
+addToplevelDefs :  {auto c : Ref Ctxt Defs}
+                -> UsageMap -> Core (List Name)
+addToplevelDefs um = traverse toDef $ SortedMap.toList um
+  where toDef : ((Integer, CExp[]),(Name,Integer)) -> Core Name
+        toDef ((_,exp),(nm,_)) =
+          let def    = MkFun [] $ adjustSubExp um exp
+              global = MkGlobalDef
+                      { location = EmptyFC
+                      , fullname = nm
+                      , type = TType EmptyFC
+                      , eraseArgs = []
+                      , safeErase = []
+                      , specArgs = []
+                      , inferrable = []
+                      , multiplicity = top
+                      , localVars = []
+                      , visibility = Export
+                      , totality = unchecked
+                      , flags = []
+                      , refersToM = Nothing
+                      , refersToRuntimeM = Nothing
+                      , invertible = False
+                      , noCycles = False
+                      , linearChecked = False
+                      , definition = None
+                      , compexpr = Just def
+                      , namedcompexpr = Just (forgetDef def)
+                      , sizeChange = []
+                      }
+            in const nm <$> addDef nm global

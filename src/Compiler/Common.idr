@@ -312,24 +312,21 @@ getCompileData doLazyAnnots phase_in tm_in
          rcns <- filterM nonErased cns
          logTime "++ Merge lambda" $ traverse_ mergeLamDef rcns
          logTime "++ Fix arity" $ traverse_ fixArityDef rcns
-         newDefs <- logTime "++ CSE" $ do
+         csens <- logTime "++ CSE" $ do
            um <- analyzeNames rcns
            traverse_ (cseDef um) rcns
-           pure $ additionalToplevelDefs um
-         logTime "++ Forget names" $ traverse_ mkForgetDef rcns
+           newNames <- addToplevelDefs um
+           pure $ newNames ++ rcns
+         logTime "++ Forget names" $ traverse_ mkForgetDef csens
 
          compiledtm <- fixArityExp !(compileExp tm)
          let mainname = MN "__mainExpression" 0
          (liftedtm, ldefs) <- liftBody {doLazyAnnots} mainname compiledtm
 
-         namedefs  <- do
-           ds <- traverse getNamedDef rcns
-           pure $ map (\(nm,fc,cdef) => Just (nm, fc, forgetDef cdef)) newDefs ++ ds
+         namedefs  <- traverse getNamedDef csens
          lifted_in <- if phase >= Lifted
-                         then logTime "++ Lambda lift" $ do
-                           ds <- traverse (lambdaLift doLazyAnnots) rcns
-                           new <- traverse (\(nm,_,cdef) => lambdaLiftDef doLazyAnnots nm cdef) newDefs
-                           pure $ new ++ ds
+                         then logTime "++ Lambda lift" $
+                              traverse (lambdaLift doLazyAnnots) csens
                          else pure []
 
          let lifted = (mainname, MkLFun [] [] liftedtm) ::
@@ -345,7 +342,7 @@ getCompileData doLazyAnnots phase_in tm_in
          defs <- get Ctxt
          maybe (pure ())
                (\f => do coreLift $ putStrLn $ "Dumping case trees to " ++ f
-                         dumpCases defs f rcns)
+                         dumpCases defs f csens)
                (dumpcases sopts)
          maybe (pure ())
                (\f => do coreLift $ putStrLn $ "Dumping lambda lifted defs to " ++ f
