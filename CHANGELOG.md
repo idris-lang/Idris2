@@ -21,6 +21,29 @@
   resume writing the string literal. The enclosed expression must be of type
   `String`. Interpolated strings are compatible with raw strings (the slices
   need to be escaped with `\#{` instead) and multiline strings.
+* We now support ellipses (written `_`) on the left hand side of a `with`
+  clause. Ellipses are substituted for by the left hand side of the parent
+  clause i.e.
+
+```idris
+  filter : (p : a -> Bool) -> List a -> List a
+  filter p []        = []
+  filter p (x :: xs) with (p x)
+    _ | True  = x :: filter p xs
+    _ | False = filter p xs
+```
+
+means
+
+```idris
+filter : (p : a -> Bool) -> List a -> List a
+filter p []        = []
+filter p (x :: xs) with (p x)
+  filter p (x :: xs) | True  = x :: filter p xs
+  filter p (x :: xs) | False = filter p xs
+```
+
+
 
 ### Compiler changes
 
