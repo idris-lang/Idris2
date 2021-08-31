@@ -843,13 +843,13 @@ mutual
 
   validPatternVar : Name -> EmptyRule ()
   validPatternVar (UN n)
-      = if lowerFirst n then pure ()
-                        else fail "Not a pattern variable"
+      = unless (lowerFirst n || n == "_") $
+          fail "Not a pattern variable"
   validPatternVar _ = fail "Not a pattern variable"
 
   doAct : OriginDesc -> IndentInfo -> Rule (List PDo)
   doAct fname indents
-      = do b <- bounds (do n <- bounds name
+      = do b <- bounds (do n <- bounds (name <|> UN "_" <$ symbol "_")
                            -- If the name doesn't begin with a lower case letter, we should
                            -- treat this as a pattern, so fail
                            validPatternVar n.val
