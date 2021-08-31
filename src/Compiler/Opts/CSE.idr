@@ -337,13 +337,20 @@ adjustDef um d@(MkCon _ _ _)     = d
 adjustDef um d@(MkForeign _ _ _) = d
 adjustDef um d@(MkError _)       = d
 
+export
+cseDef : {auto c : Ref Ctxt Defs} -> UsageMap -> Name -> Core ()
+cseDef um n = do
+  defs <- get Ctxt
+  Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
+  let Just cexpr =  compexpr def             | Nothing => pure ()
+  setCompiled n (adjustDef um cexpr)
+
 ||| Returns a list of zero-argument toplevel function definitions
 ||| for the extracted common subexpressions.
 export
-additionalToplevel : UsageMap -> List (Maybe (Name, FC, NamedDef))
-additionalToplevel um = map toDef $ SortedMap.toList um
+additionalToplevelDefs : UsageMap -> List (Name, FC, CDef)
+additionalToplevelDefs um = map toDef $ SortedMap.toList um
   -- note, that even here there is an opportunity to replace smaller
   -- common subexpressions, hence the call to `adjustSubExp`.
-  where toDef : ((Integer, CExp[]),(Name,Integer)) -> Maybe (Name,FC,NamedDef)
-        toDef ((_,exp),(nm,_)) =
-          Just (nm, EmptyFC, forgetDef $ MkFun [] $ adjustSubExp um exp)
+  where toDef : ((Integer, CExp[]),(Name,Integer)) -> (Name,FC,CDef)
+        toDef ((_,exp),(nm,_)) = (nm, EmptyFC, MkFun [] $ adjustSubExp um exp)

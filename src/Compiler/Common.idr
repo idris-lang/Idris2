@@ -310,18 +310,26 @@ getCompileData doLazyAnnots phase_in tm_in
          -- unknown due to cyclic modules (i.e. declared in one, defined in
          -- another)
          rcns <- filterM nonErased cns
-         um <- analyzeNames rcns
          logTime "++ Merge lambda" $ traverse_ mergeLamDef rcns
          logTime "++ Fix arity" $ traverse_ fixArityDef rcns
-         logTime "++ Forget names" $ traverse_ (mkForgetDef um) rcns
+         newDefs <- logTime "++ CSE" $ do
+           um <- analyzeNames rcns
+           traverse_ (cseDef um) rcns
+           pure $ additionalToplevelDefs um
+         logTime "++ Forget names" $ traverse_ mkForgetDef rcns
 
          compiledtm <- fixArityExp !(compileExp tm)
          let mainname = MN "__mainExpression" 0
          (liftedtm, ldefs) <- liftBody {doLazyAnnots} mainname compiledtm
 
-         namedefs <- (additionalToplevel um ++) <$> traverse getNamedDef rcns
+         namedefs  <- do
+           ds <- traverse getNamedDef rcns
+           pure $ map (\(nm,fc,cdef) => Just (nm, fc, forgetDef cdef)) newDefs ++ ds
          lifted_in <- if phase >= Lifted
-                         then logTime "++ Lambda lift" $ traverse (lambdaLift doLazyAnnots) rcns
+                         then logTime "++ Lambda lift" $ do
+                           ds <- traverse (lambdaLift doLazyAnnots) rcns
+                           new <- traverse (\(nm,_,cdef) => lambdaLiftDef doLazyAnnots nm cdef) newDefs
+                           pure $ new ++ ds
                          else pure []
 
          let lifted = (mainname, MkLFun [] [] liftedtm) ::
@@ -377,7 +385,7 @@ getIncCompileData doLazyAnnots phase
          let ns = keys (toIR defs)
          cns <- traverse toFullNames ns
          rcns <- filterM nonErased cns
-         traverse_ (mkForgetDef empty) rcns
+         traverse_ mkForgetDef rcns
 
          namedefs <- traverse getNamedDef rcns
          lifted_in <- if phase >= Lifted

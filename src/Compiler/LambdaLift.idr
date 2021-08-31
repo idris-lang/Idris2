@@ -412,6 +412,7 @@ liftBody n tm
          ldata <- get Lifts
          pure (tml, defs ldata)
 
+export
 lambdaLiftDef : (doLazyAnnots : Bool) -> Name -> CDef -> Core (List (Name, LiftedDef))
 lambdaLiftDef doLazyAnnots n (MkFun args exp)
     = do (expl, defs) <- liftBody {doLazyAnnots} n exp
