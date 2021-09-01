@@ -105,8 +105,7 @@ mkBuildMods : {auto d : Ref DoneMod (StringMap ())} ->
               {auto o : Ref BuildOrder (List BuildMod)} ->
               ModTree -> Core ()
 mkBuildMods mod
-    = maybe (pure ())
-         (\sf =>
+    = whenJust (sourceFile mod) $ \ sf =>
             do done <- get DoneMod
                case lookup sf done of
                     Just _ => pure ()
@@ -119,8 +118,7 @@ mkBuildMods mod
                                 (MkBuildMod sf (nspace mod)
                                             (map nspace (deps mod)) :: bo)
                           done <- get DoneMod
-                          put DoneMod (insert sf () done))
-         (sourceFile mod)
+                          put DoneMod (insert sf () done)
 
 -- Given a main file name, return the list of modules that need to be
 -- built for that main file, in the order they need to be built
