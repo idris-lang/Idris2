@@ -256,14 +256,10 @@ analyzeName fn = do
 ||| to their number of occurences plus newly generated
 ||| name in case they will be lifted to the toplevel)
 export
-analyzeNames :  Ref Ctxt Defs
-             => (mainExpr : CExp [])
-             -> List Name
-             -> Core UsageMap
-analyzeNames me cns = do
+analyzeNames :  Ref Ctxt Defs => List Name -> Core UsageMap
+analyzeNames cns = do
   log "compiler.cse" 10 $ "Analysing " ++ show (length cns) ++ " names"
   s <- newRef Sts $ MkSt empty 0
-  analyze me
   traverse_ analyzeName cns
   MkSt map _ <- get Sts
   let filtered = reverse

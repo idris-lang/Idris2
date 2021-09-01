@@ -304,7 +304,7 @@ getCompileData doLazyAnnots phase_in tm_in
          compiledtm <- fixArityExp !(compileExp tm)
 
          (cseDefs, csetm) <- logTime "++ CSE" $ do
-           um      <- analyzeNames compiledtm rcns
+           um      <- analyzeNames rcns
            defs    <- mapMaybe id <$> traverse (cseDef um) rcns
            pure $ (cseNewToplevelDefs um ++ defs, adjust um compiledtm)
 
