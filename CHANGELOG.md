@@ -65,6 +65,7 @@ filter p (x :: xs) with (p x)
 ### REPL/CLI/IDE mode changes
 
 * Added `--list-packages` CLI option.
+* Added `--total` CLI option.
 
 ### Library changes
 

@@ -1156,7 +1156,9 @@ clearCtxt
                             timings = timings defs } !initDefs)
   where
     resetElab : Options -> Options
-    resetElab = record { elabDirectives = defaultElab }
+    resetElab opts =
+      let tot = totalReq (session opts) in
+      record { elabDirectives = record { totality = tot } defaultElab } opts
 
 export
 getFieldNames : Context -> Namespace -> List Name
@@ -2558,6 +2560,12 @@ setSession : {auto c : Ref Ctxt Defs} ->
 setSession sopts
     = do defs <- get Ctxt
          put Ctxt (record { options->session = sopts } defs)
+
+%inline
+export
+updateSession : {auto c : Ref Ctxt Defs} ->
+                (Session -> Session) -> Core ()
+updateSession f = setSession (f !getSession)
 
 export
 recordWarning : {auto c : Ref Ctxt Defs} -> Warning -> Core ()
