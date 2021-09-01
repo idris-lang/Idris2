@@ -128,6 +128,7 @@ knownTopics = [
     ("specialise", Nothing),
     ("totality", Nothing),
     ("totality.positivity", Nothing),
+    ("totality.requirement", Nothing),
     ("totality.termination", Nothing),
     ("totality.termination.calc", Nothing),
     ("totality.termination.guarded", Nothing),

@@ -5,6 +5,7 @@ import Core.TT
 
 import Data.List
 import Data.List1
+import Data.String
 import Data.Vect
 
 import Libraries.Data.IMaybe

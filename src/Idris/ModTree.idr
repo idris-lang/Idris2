@@ -21,12 +21,16 @@ import Idris.Pretty
 
 import Data.List
 import Data.Either
+import Data.String
 
+import System
 import System.Directory
 import System.File
 
 import Libraries.Data.StringMap
-import Libraries.Data.String.Extra as String
+import Libraries.Data.String.Extra as Extra
+
+import Debug.Trace
 
 %default covering
 
@@ -149,6 +153,23 @@ needsBuildingTime sourceFile ttcFile depFiles
        depTimes <- traverse modTime depFiles
        pure $ any (>= ttcTime) (srcTime :: depTimes)
 
+checkTotalReq : {auto c : Ref Ctxt Defs} ->
+                String -> String -> TotalReq -> Core Bool
+checkTotalReq sourceFile ttcFile expected
+  = catch (do log "totality.requirement" 20 $
+                "Reading totalReq from " ++ ttcFile
+              Just got <- readTotalReq ttcFile
+                | Nothing => pure False
+              log "totality.requirement" 20 $ unwords
+                [ "Got", show got, "and expected", show expected ++ ":"
+                , "we", ifThenElse (got < expected) "should" "shouldn't"
+                , "rebuild" ]
+              -- if what we got (i.e. what we used when we checked the file the
+              -- first time around) was strictly less stringent than what we
+              -- expect now then we need to rebuild.
+              pure (got < expected))
+          (\error => pure False)
+
 checkDepHashes : {auto c : Ref Ctxt Defs} ->
                  String -> Core Bool
 checkDepHashes depFileName
@@ -158,7 +179,6 @@ checkDepHashes depFileName
               (depStoredCodeHash, _) <- readHashes depTTCFileName
               pure $ depCodeHash /= depStoredCodeHash)
           (\error => pure False)
-
 
 ||| Build from source if any of the dependencies, or the associated source file,
 ||| have been modified from the stored hashes.
@@ -172,6 +192,47 @@ needsBuildingHash sourceFile ttcFile depFiles
         depFilesHashDiffers <- any id <$> traverse checkDepHashes depFiles
         pure $ codeHash /= storedCodeHash || depFilesHashDiffers
 
+export
+needsBuilding :
+  {auto c : Ref Ctxt Defs} ->
+  {auto o : Ref ROpts REPLOpts} ->
+  (sourceFile, ttcFile : String) -> List String -> Core Bool
+needsBuilding sourceFile ttcFile depFiles
+  = do -- if the ttc file does not exist there is no point in asking
+       -- whether we need to rebuild it
+       True <- coreLift $ exists ttcFile
+         | False => pure True
+       -- check if hash match
+       False <- ifThenElse (checkHashesInsteadOfModTime !getSession)
+                           needsBuildingHash
+                           needsBuildingTime
+                  sourceFile ttcFile depFiles
+         | True => pure True
+
+       log "import" 20 $ "Hashes still valid for " ++ sourceFile
+
+       -- in case we're loading the main file, make sure the TTC is
+       -- using the appropriate default totality requirement
+       Just f <- mainfile <$> get ROpts
+         | Nothing => pure False
+       log "totality.requirement" 10 $ concat {t = List}
+         [ "Checking totality requirement of "
+         , sourceFile
+         , " (main file is "
+         , f
+         , ")"
+         ]
+       let True = sourceFile == f
+         | False => pure False
+       True <- checkTotalReq sourceFile ttcFile !(totalReq <$> getSession)
+         | False => pure False
+       -- if it needs rebuilding then remove the buggy .ttc file to avoid going
+       -- into an infinite loop!
+       Right () <- coreLift $ removeFile ttcFile
+         | Left err => throw (FileErr ttcFile err)
+       pure True
+
+
 buildMod : {auto c : Ref Ctxt Defs} ->
            {auto s : Ref Syn SyntaxInfo} ->
            {auto o : Ref ROpts REPLOpts} ->
@@ -180,7 +241,6 @@ buildMod : {auto c : Ref Ctxt Defs} ->
 buildMod loc num len mod
    = do clearCtxt; addPrimitives
         lazyActive True; setUnboundImplicits True
-        session <- getSession
 
         let sourceFile = buildFile mod
         let modNamespace = buildNS mod
@@ -190,20 +250,25 @@ buildMod loc num len mod
         depFilesE <- traverse (nsToPath loc) (imports mod)
         let (ferrs, depFiles) = partitionEithers depFilesE
 
-        needsBuilding <- (if session.checkHashesInsteadOfModTime
-          then needsBuildingHash else needsBuildingTime) sourceFile ttcFile depFiles
+        log "import" 20 $ unwords
+          [ "Checking whether to rebuild "
+          , sourceFile
+          , "(" ++ ttcFile ++ ")"
+          ]
+        rebuild <- needsBuilding sourceFile ttcFile depFiles
 
         u <- newRef UST initUState
         m <- newRef MD (initMetadata (PhysicalIdrSrc modNamespace))
         put Syn initSyntax
 
-        errs <- if (not needsBuilding) then pure [] else
+        errs <- ifThenElse (not rebuild) (pure []) $
            do let pad = minus (length $ show len) (length $ show num)
               let msg : Doc IdrisAnn
-                  = pretty (String.replicate pad ' ') <+> pretty num
+                  = pretty (Extra.replicate pad ' ') <+> pretty num
                     <+> slash <+> pretty len <+> colon
                     <++> pretty "Building" <++> pretty mod.buildNS
                     <++> parens (pretty sourceFile)
+              log "import.file" 10 $ "Processing " ++ sourceFile
               process {u} {m} msg sourceFile modNamespace
 
         defs <- get Ctxt

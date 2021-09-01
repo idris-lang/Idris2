@@ -31,7 +31,6 @@ TTC ModuleIdent where
 export
 TTC VirtualIdent where
   toBuf b Interactive = tag 0
-
   fromBuf b =
     case !getTag of
       0 => pure Interactive
