@@ -11,7 +11,7 @@
 |||    presented vector.
 |||
 ||| 2. Find the element at the given index in the presented vector.
-module Data.Vect.Index
+module Data.Vect.AtIndex
 
 import Data.Vect
 import Decidable.Equality
@@ -19,24 +19,28 @@ import Decidable.Equality
 %default total
 
 public export
-data Index : (idx : Fin n)
-          -> (xs  : Vect n type)
-          -> (x   : type)
-                 -> Type
+data AtIndex : (idx : Fin n)
+            -> (xs  : Vect n type)
+            -> (x   : type)
+                   -> Type
   where
-    Here : Index FZ (x::xs) x
+    Here : AtIndex FZ (x::xs) x
 
-    There : (later : Index     rest      xs  x)
-                  -> Index (FS rest) (y::xs) x
+    There : (later : AtIndex     rest      xs  x)
+                  -> AtIndex (FS rest) (y::xs) x
 
 namespace Check
   public export
-  elemDiffers : (y = x -> Void) -> Index FZ (y :: xs) x -> Void
+  elemDiffers : (y = x -> Void)
+              -> AtIndex FZ (y :: xs) x
+              -> Void
   elemDiffers f Here
     = f Refl
 
   public export
-  elemNotInRest : (Index z xs x -> Void) -> Index (FS z) (y :: xs) x -> Void
+  elemNotInRest : (AtIndex z xs x -> Void)
+               ->  AtIndex (FS z) (y :: xs) x
+               ->  Void
   elemNotInRest f (There later)
     = f later
 
@@ -47,7 +51,7 @@ namespace Check
        => (idx : Fin n)
        -> (x   : type)
        -> (xs  : Vect n type)
-              -> Dec (Index idx xs x)
+              -> Dec (AtIndex idx xs x)
 
   index FZ _ [] impossible
   index (FS y) _ [] impossible
@@ -58,7 +62,7 @@ namespace Check
     index FZ x (y :: xs) | (No contra)
       = No (elemDiffers contra)
 
-  index (FS z) x (y :: xs) with (index z xs x)
+  index (FS z) x (y :: xs) with (Check.index z x xs)
     index (FS z) x (y :: xs) | (Yes prf)
       = Yes (There prf)
     index (FS z) x (y :: xs) | (No contra)
@@ -66,8 +70,8 @@ namespace Check
 
 namespace Find
   public export
-  elemNotInRest : (DPair type (Index     x        xs)  -> Void)
-               ->  DPair type (Index (FS x) (y :: xs)) -> Void
+  elemNotInRest : (DPair type (AtIndex     x        xs)  -> Void)
+               ->  DPair type (AtIndex (FS x) (y :: xs)) -> Void
 
   elemNotInRest f (MkDPair i (There later))
     = f (MkDPair i later)
@@ -78,7 +82,7 @@ namespace Find
   index : DecEq type
        => (idx : Fin n)
        -> (xs  : Vect n type)
-              -> Dec (DPair type (Index idx xs))
+              -> Dec (DPair type (AtIndex idx xs))
   index FZ (x :: xs)
     = Yes (MkDPair x Here)
 
