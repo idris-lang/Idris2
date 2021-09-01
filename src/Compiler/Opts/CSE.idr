@@ -101,9 +101,6 @@ store exp =
            (name,count,idx2) <-
              case lookup (sz,exp) map of
                Just (nm,cnt) => pure (nm, cnt+1, idx)
-               -- TODO: Should we introduce a new kind of name
-               -- for this, so backends can choose a naming on their
-               -- own?
                Nothing       => pure (MN "csegen" idx, 1, idx + 1)
 
            put Sts $ MkSt (insert (sz,exp) (name, count) map) idx2
@@ -186,6 +183,7 @@ mutual
   -- therefore make sure to analyze subexpressions of closed terms
   -- exactly once for each closed term, otherwise they might
   -- be counted as additional common subexpressions although they are not.
+  export
   analyze : Ref Sts St => CExp ns -> Core ()
 
   -- We ignore prim ops here, since moving them to the toplevel
@@ -258,10 +256,14 @@ analyzeName fn = do
 ||| to their number of occurences plus newly generated
 ||| name in case they will be lifted to the toplevel)
 export
-analyzeNames : Ref Ctxt Defs => List Name -> Core UsageMap
-analyzeNames cns = do
+analyzeNames :  Ref Ctxt Defs
+             => (mainExpr : CExp [])
+             -> List Name
+             -> Core UsageMap
+analyzeNames me cns = do
   log "compiler.cse" 10 $ "Analysing " ++ show (length cns) ++ " names"
   s <- newRef Sts $ MkSt empty 0
+  analyze me
   traverse_ analyzeName cns
   MkSt map _ <- get Sts
   let filtered = reverse
@@ -283,11 +285,11 @@ analyzeNames cns = do
 --------------------------------------------------------------------------------
 
 mutual
+  export
   adjust : UsageMap -> CExp ns -> CExp ns
   adjust um exp = case dropEnv {pre = []} exp of
     Nothing => adjustSubExp um exp
     Just e0 => case lookup (size e0, e0) um of
-      -- I'm not sure I'm using `EmptyFC` correctly here
       Just (nm,_) => CApp EmptyFC (CRef EmptyFC nm) []
       Nothing     => adjustSubExp um exp
 
@@ -339,53 +341,19 @@ adjustDef um d@(MkForeign _ _ _) = d
 adjustDef um d@(MkError _)       = d
 
 export
-cseDef : {auto c : Ref Ctxt Defs} -> UsageMap -> Name -> Core ()
+cseDef :  {auto c : Ref Ctxt Defs}
+       -> UsageMap
+       -> Name
+       -> Core (Maybe (Name, FC, CDef))
 cseDef um n = do
   defs <- get Ctxt
-  Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
-  let Just cexpr =  compexpr def             | Nothing => pure ()
-  setCompiled n (adjustDef um cexpr)
+  Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure Nothing
+  let Just cexpr =  compexpr def             | Nothing => pure Nothing
+  pure $ Just (n, location def, adjustDef um cexpr)
 
-||| Returns a list of zero-argument toplevel function definitions
-||| for the extracted common subexpressions.
 export
-additionalToplevelDefs : UsageMap -> List (Name, FC, CDef)
-additionalToplevelDefs um = map toDef $ SortedMap.toList um
-  -- note, that even here there is an opportunity to replace smaller
-  -- common subexpressions, hence the call to `adjustSubExp`.
-  where toDef : ((Integer, CExp[]),(Name,Integer)) -> (Name,FC,CDef)
-        toDef ((_,exp),(nm,_)) = (nm, EmptyFC, MkFun [] $ adjustSubExp um exp)
-
-||| Returns a list of zero-argument toplevel function definitions
-||| for the extracted common subexpressions.
-export
-addToplevelDefs :  {auto c : Ref Ctxt Defs}
-                -> UsageMap -> Core (List Name)
-addToplevelDefs um = traverse toDef $ SortedMap.toList um
-  where toDef : ((Integer, CExp[]),(Name,Integer)) -> Core Name
+cseNewToplevelDefs : UsageMap -> List (Name, FC, CDef)
+cseNewToplevelDefs um = map toDef $ SortedMap.toList um
+  where toDef : ((Integer, CExp[]),(Name,Integer)) -> (Name, FC, CDef)
         toDef ((_,exp),(nm,_)) =
-          let def    = MkFun [] $ adjustSubExp um exp
-              global = MkGlobalDef
-                      { location = EmptyFC
-                      , fullname = nm
-                      , type = TType EmptyFC
-                      , eraseArgs = []
-                      , safeErase = []
-                      , specArgs = []
-                      , inferrable = []
-                      , multiplicity = top
-                      , localVars = []
-                      , visibility = Export
-                      , totality = unchecked
-                      , flags = []
-                      , refersToM = Nothing
-                      , refersToRuntimeM = Nothing
-                      , invertible = False
-                      , noCycles = False
-                      , linearChecked = False
-                      , definition = None
-                      , compexpr = Just def
-                      , namedcompexpr = Just (forgetDef def)
-                      , sizeChange = []
-                      }
-            in const nm <$> addDef nm global
+          (nm, EmptyFC, MkFun [] $ adjustSubExp um exp)

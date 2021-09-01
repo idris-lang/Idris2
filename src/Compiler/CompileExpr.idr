@@ -792,14 +792,3 @@ compileDef n
     noDefYet : Def -> List CG -> Bool
     noDefYet None (_ :: _) = True
     noDefYet _ _ = False
-
-export
-mkForgetDef :  {auto c : Ref Ctxt Defs} -> Name -> Core ()
-mkForgetDef n
-    = do defs <- get Ctxt
-         Just gdef <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (InternalError ("Trying to compile unknown name " ++ show n))
-         case compexpr gdef of
-              Nothing => pure ()
-              Just cdef => do let ncdef = forgetDef cdef
-                              setNamedCompiled n ncdef
