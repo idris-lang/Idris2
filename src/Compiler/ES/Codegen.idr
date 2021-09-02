@@ -673,7 +673,14 @@ def (MkFunction n as body) = do
   args <- traverse registerLocal as
   mde  <- mode <$> get ESs
   b    <- stmt Returns body >>= stmt
-  pure $ printDoc mde $ function (var ref) (map var args) b
+  case args of
+    -- zero argument toplevel functions are converted to
+    -- lazily evaluated constants.
+    [] => pure $ printDoc mde $
+      constant (var ref) (
+        "__lazy(" <+> function neutral [] b <+> ")"
+      )
+    _  => pure $ printDoc mde $ function (var ref) (map var args) b
 
 -- generate code for the given foreign function definition
 foreign :  {auto c : Ref ESs ESSt}

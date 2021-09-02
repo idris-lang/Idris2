@@ -53,6 +53,7 @@ knownTopics = [
     ("compile.casetree.measure", Just "Log the node counts of each runtime case tree."),
     ("compile.casetree.pick", Nothing),
     ("compile.casetree.partition", Nothing),
+    ("compiler.cse", Nothing),
     ("compiler.identity", Nothing),
     ("compiler.inline.eval", Nothing),
     ("compiler.interpreter", Nothing),
