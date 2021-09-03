@@ -291,7 +291,7 @@ getCompileData doLazyAnnots phase_in tm_in
          arr <- coreLift $ newArray asize
          logTime "++ Get names" $ getAllDesc (natHackNames' ++ keys ns) arr defs
 
-         let entries = mapMaybe id !(coreLift (toList arr))
+         let entries = catMaybes !(coreLift (toList arr))
          let allNs = map (Resolved . fst) entries
          cns <- traverse toFullNames allNs
 
@@ -305,7 +305,7 @@ getCompileData doLazyAnnots phase_in tm_in
 
          (cseDefs, csetm) <- logTime "++ CSE" $ do
            um      <- analyzeNames rcns
-           defs    <- mapMaybe id <$> traverse (cseDef um) rcns
+           defs    <- catMaybes <$> traverse (cseDef um) rcns
            pure $ (cseNewToplevelDefs um ++ defs, adjust um compiledtm)
 
          namedDefs <- logTime "++ Forget names" $
@@ -330,22 +330,21 @@ getCompileData doLazyAnnots phase_in tm_in
                       else pure []
 
          defs <- get Ctxt
-         maybe (pure ())
-               (\f => do coreLift $ putStrLn $ "Dumping case trees to " ++ f
-                         dumpCases f namedDefs)
-               (dumpcases sopts)
-         maybe (pure ())
-               (\f => do coreLift $ putStrLn $ "Dumping lambda lifted defs to " ++ f
-                         dumpLifted f lifted)
-               (dumplifted sopts)
-         maybe (pure ())
-               (\f => do coreLift $ putStrLn $ "Dumping ANF defs to " ++ f
-                         dumpANF f anf)
-               (dumpanf sopts)
-         maybe (pure ())
-               (\f => do coreLift $ putStrLn $ "Dumping VM defs to " ++ f
-                         dumpVMCode f vmcode)
-               (dumpvmcode sopts)
+         whenJust (dumpcases sopts) $ \ f =>
+            do coreLift $ putStrLn $ "Dumping case trees to " ++ f
+               dumpCases f namedDefs
+
+         whenJust (dumplifted sopts) $ \ f =>
+            do coreLift $ putStrLn $ "Dumping lambda lifted defs to " ++ f
+               dumpLifted f lifted
+
+         whenJust (dumpanf sopts) $ \ f =>
+            do coreLift $ putStrLn $ "Dumping ANF defs to " ++ f
+               dumpANF f anf
+
+         whenJust (dumpvmcode sopts) $ \ f =>
+            do coreLift $ putStrLn $ "Dumping VM defs to " ++ f
+               dumpVMCode f vmcode
 
          -- We're done with our minimal context now, so put it back the way
          -- it was. Back ends shouldn't look at the global context, because
@@ -370,7 +369,7 @@ getIncCompileData doLazyAnnots phase
          let ns = keys (toIR defs)
          cns <- traverse toFullNames ns
          rcns <- filterM nonErased cns
-         cseDefs <- mapMaybe id <$> traverse (cseDef empty) rcns
+         cseDefs <- catMaybes <$> traverse (cseDef empty) rcns
 
          namedDefs <- traverse getNamedDef cseDefs
 
