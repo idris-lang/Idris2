@@ -144,6 +144,7 @@ public export
 record Session where
   constructor MkSessionOpts
   noprelude : Bool
+  totalReq : TotalReq
   nobanner : Bool
   findipkg : Bool
   codegen : CG
@@ -202,7 +203,6 @@ record Options where
   additionalCGs : List (String, CG)
   hashFn : String
 
-
 export
 availableCGs : Options -> List (String, CG)
 availableCGs o
@@ -228,7 +228,7 @@ defaultPPrint = MkPPOpts False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez [] 1000 False False
+defaultSession = MkSessionOpts False CoveringOnly False False Chez [] 1000 False False
                                defaultLogLevel False False Nothing Nothing
                                Nothing Nothing False 1 False True
                                False [] False False

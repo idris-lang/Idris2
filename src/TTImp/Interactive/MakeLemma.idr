@@ -5,9 +5,11 @@ import Core.Env
 import Core.Metadata
 import Core.Normalise
 import Core.TT
+import Core.Value
 
 import TTImp.Unelab
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Utils
 
 import Data.List
@@ -44,7 +46,7 @@ getArgs : {vars : _} ->
           Core (List (Name, Maybe Name, PiInfo RawImp, RigCount, RawImp), RawImp)
 getArgs {vars} env (S k) (Bind _ x b@(Pi _ c _ ty) sc)
     = do defs <- get Ctxt
-         ty' <- unelab env !(normalise defs env ty)
+         ty' <- map (map rawName) $ unelab env !(normalise defs env ty)
          let x' = UN !(uniqueName defs (map nameRoot vars) (nameRoot x))
          (sc', ty) <- getArgs (b :: env) k (renameTop x' sc)
          -- Don't need to use the name if it's not used in the scope type
@@ -59,7 +61,7 @@ getArgs {vars} env (S k) (Bind _ x b@(Pi _ c _ ty) sc)
          pure ((x, mn, p', c, ty') :: sc', ty)
 getArgs env k ty
       = do defs <- get Ctxt
-           ty' <- unelab env !(normalise defs env ty)
+           ty' <- map (map rawName) $ unelab env !(normalise defs env ty)
            pure ([], ty')
 
 mkType : FC -> List (Name, Maybe Name, PiInfo RawImp, RigCount, RawImp) ->
@@ -86,5 +88,6 @@ makeLemma : {auto m : Ref MD Metadata} ->
             FC -> Name -> Nat -> ClosedTerm ->
             Core (RawImp, RawImp)
 makeLemma loc n nlocs ty
-    = do (args, ret) <- getArgs [] nlocs ty
+    = do defs <- get Ctxt
+         (args, ret) <- getArgs [] nlocs !(normalise defs [] ty)
          pure (mkType loc args ret, mkApp loc n args)

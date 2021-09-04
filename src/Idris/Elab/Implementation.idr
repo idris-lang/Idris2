@@ -17,6 +17,7 @@ import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.ProcessDecls
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
@@ -101,7 +102,7 @@ getMethImps : {vars : _} ->
               Env Term vars -> Term vars ->
               Core (List (Name, RigCount, RawImp))
 getMethImps env (Bind fc x (Pi fc' c Implicit ty) sc)
-    = do rty <- unelabNoSugar env ty
+    = do rty <- map (map rawName) $ unelabNoSugar env ty
          ts <- getMethImps (Pi fc' c Implicit ty :: env) sc
          pure ((x, c, rty) :: ts)
 getMethImps env tm = pure []

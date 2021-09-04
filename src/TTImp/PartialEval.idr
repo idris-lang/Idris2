@@ -13,6 +13,7 @@ import Core.UnifyState
 
 import TTImp.Elab.Check
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Unelab
 
 import Libraries.Utils.Hex
@@ -150,12 +151,12 @@ getSpecPats fc pename fn stk fnty args sargs pats
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
              tm' <- unelabNoSugar [] tm
-             mkRHSargs sc' (IApp fc app tm') as ds
+             mkRHSargs sc' (IApp fc app (map rawName tm')) as ds
     mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
              tm' <- unelabNoSugar [] tm
-             mkRHSargs sc' (INamedApp fc app x tm') as ds
+             mkRHSargs sc' (INamedApp fc app x (map rawName tm')) as ds
     -- Type will depend on the value here (we assume a variadic function) but
     -- the argument names are still needed
     mkRHSargs ty app (a :: as) ((_, Dynamic) :: ds)
@@ -182,17 +183,17 @@ getSpecPats fc pename fn stk fnty args sargs pats
                 Core ImpClause
     unelabPat pename (_ ** (env, lhs, rhs))
         = do lhsapp <- unelabNoSugar env lhs
-             let lhs' = dropArgs pename lhsapp
+             let lhs' = dropArgs pename (map rawName lhsapp)
              defs <- get Ctxt
              rhsnf <- normaliseArgHoles defs env rhs
              rhs' <- unelabNoSugar env rhsnf
-             pure (PatClause fc lhs' rhs')
+             pure (PatClause fc lhs' (map rawName rhs'))
 
     unelabLHS : Name -> (vs ** (Env Term vs, Term vs, Term vs)) ->
                 Core RawImp
     unelabLHS pename (_ ** (env, lhs, rhs))
         = do lhsapp <- unelabNoSugar env lhs
-             pure $ dropArgs pename lhsapp
+             pure $ dropArgs pename (map rawName lhsapp)
 
 -- Get the reducible names in a function to be partially evaluated. In practice,
 -- that's all the functions it refers to
@@ -308,7 +309,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
              defs <- get Ctxt
              rhsnf <- normaliseArgHoles defs env rhs
              rhs' <- unelabNoSugar env rhsnf
-             pure (PatClause fc lhs' rhs')
+             pure (PatClause fc (map rawName lhs') (map rawName rhs'))
 
     showPat : ImpClause -> String
     showPat (PatClause _ lhs rhs) = show lhs ++ " = " ++ show rhs
@@ -505,13 +506,13 @@ mutual
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             Ref QVar Int -> Defs -> Bounds bound ->
-            Env Term free -> PiInfo (NF free) ->
+            Env Term free -> PiInfo (Closure free) ->
             Core (PiInfo (Term (bound ++ free)))
   quotePi q defs bounds env Explicit = pure Explicit
   quotePi q defs bounds env Implicit = pure Implicit
   quotePi q defs bounds env AutoImplicit = pure AutoImplicit
   quotePi q defs bounds env (DefImplicit t)
-      = do t' <- quoteGenNF q defs bounds env t
+      = do t' <- quoteGenNF q defs bounds env !(evalClosure defs t)
            pure (DefImplicit t')
 
   quoteBinder : {bound, free : _} ->
@@ -519,30 +520,30 @@ mutual
                 {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
                 Ref QVar Int -> Defs -> Bounds bound ->
-                Env Term free -> Binder (NF free) ->
+                Env Term free -> Binder (Closure free) ->
                 Core (Binder (Term (bound ++ free)))
   quoteBinder q defs bounds env (Lam fc r p ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
            pure (Lam fc r p' ty')
   quoteBinder q defs bounds env (Let fc r val ty)
-      = do val' <- quoteGenNF q defs bounds env val
-           ty' <- quoteGenNF q defs bounds env ty
+      = do val' <- quoteGenNF q defs bounds env !(evalClosure defs val)
+           ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            pure (Let fc r val' ty')
   quoteBinder q defs bounds env (Pi fc r p ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
            pure (Pi fc r p' ty')
   quoteBinder q defs bounds env (PVar fc r p ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
            pure (PVar fc r p' ty')
   quoteBinder q defs bounds env (PLet fc r val ty)
-      = do val' <- quoteGenNF q defs bounds env val
-           ty' <- quoteGenNF q defs bounds env ty
+      = do val' <- quoteGenNF q defs bounds env !(evalClosure defs val)
+           ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            pure (PLet fc r val' ty')
   quoteBinder q defs bounds env (PVTy fc r ty)
-      = do ty' <- quoteGenNF q defs bounds env ty
+      = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            pure (PVTy fc r ty')
 
   quoteGenNF : {bound, vars : _} ->

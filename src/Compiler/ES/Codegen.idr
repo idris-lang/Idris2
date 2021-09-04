@@ -518,13 +518,25 @@ jsPrim (NS _ (UN "prim__writeIORef")) [_,r,v,_] = pure $ hcat ["(", r, ".value="
 jsPrim (NS _ (UN "prim__newArray")) [_,s,v,_] = pure $ hcat ["(Array(", s, ").fill(", v, "))"]
 jsPrim (NS _ (UN "prim__arrayGet")) [_,x,p,_] = pure $ hcat ["(", x, "[", p, "])"]
 jsPrim (NS _ (UN "prim__arraySet")) [_,x,p,v,_] = pure $ hcat ["(", x, "[", p, "]=", v, ")"]
-jsPrim (NS _ (UN "prim__os")) [] = pure $ Text $ esName "sysos"
 jsPrim (NS _ (UN "void")) [_, _] = pure . jsCrashExp $ jsStringDoc "Error: Executed 'void'"
 jsPrim (NS _ (UN "prim__void")) [_, _] = pure . jsCrashExp $ jsStringDoc "Error: Executed 'void'"
 jsPrim (NS _ (UN "prim__codegen")) [] = do
     (cg :: _) <- ccTypes <$> get ESs
         | _ => pure "\"javascript\""
     pure . Text $ jsString cg
+
+-- fix #1839: Only support `prim__os` in Node backend but not in browsers
+jsPrim (NS _ (UN "prim__os")) [] = do
+  tys <- ccTypes <$> get ESs
+  case searchForeign tys ["node"] of
+    Right _ => do
+      addToPreamble "prim__os" $
+        "const _sysos = ((o => o === 'linux'?'unix':o==='win32'?'windows':o)" ++
+        "(require('os').platform()));"
+      pure $ Text $ esName "sysos"
+    Left  _ =>
+      throw $ InternalError $ "prim not implemented: prim__os"
+
 jsPrim x args = throw $ InternalError $ "prim not implemented: " ++ (show x)
 
 --------------------------------------------------------------------------------
@@ -661,7 +673,14 @@ def (MkFunction n as body) = do
   args <- traverse registerLocal as
   mde  <- mode <$> get ESs
   b    <- stmt Returns body >>= stmt
-  pure $ printDoc mde $ function (var ref) (map var args) b
+  case args of
+    -- zero argument toplevel functions are converted to
+    -- lazily evaluated constants.
+    [] => pure $ printDoc mde $
+      constant (var ref) (
+        "__lazy(" <+> function neutral [] b <+> ")"
+      )
+    _  => pure $ printDoc mde $ function (var ref) (map var args) b
 
 -- generate code for the given foreign function definition
 foreign :  {auto c : Ref ESs ESSt}

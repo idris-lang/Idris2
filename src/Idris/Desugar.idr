@@ -2,6 +2,7 @@ module Idris.Desugar
 
 import Core.Binary
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -15,6 +16,7 @@ import Libraries.Data.List.Extra
 import Libraries.Data.StringMap
 import Libraries.Data.String.Extra
 import Libraries.Data.ANameMap
+import Libraries.Data.SortedMap
 
 import Idris.Doc.String
 import Idris.Syntax
@@ -77,13 +79,21 @@ Eq Side where
 
 export
 extendSyn : {auto s : Ref Syn SyntaxInfo} ->
+            {auto c : Ref Ctxt Defs} ->
             SyntaxInfo -> Core ()
 extendSyn newsyn
     = do syn <- get Syn
+         log "doc.module" 20 $ unlines
+           [ "Old (" ++ unwords (map show $ saveMod syn) ++ "): "
+              ++ show (modDocstrings syn)
+           , "New (" ++ unwords (map show $ saveMod newsyn) ++ "): "
+              ++ show (modDocstrings newsyn)
+           ]
          put Syn (record { infixes $= mergeLeft (infixes newsyn),
                            prefixes $= mergeLeft (prefixes newsyn),
                            ifaces $= merge (ifaces newsyn),
-                           docstrings $= merge (docstrings newsyn),
+                           modDocstrings $= merge (modDocstrings newsyn),
+                           defDocstrings $= merge (defDocstrings newsyn),
                            bracketholes $= ((bracketholes newsyn) ++) }
                   syn)
 
@@ -195,7 +205,7 @@ mutual
                                  !(desugarB side ps' retTy)
   desugarB side ps (PLam fc rig p pat@(PRef prefFC n@(UN nm)) argTy scope)
       =  if lowerFirst nm || nm == "_"
-           then do whenJust (isConcreteFC prefFC) \nfc
+           then do whenJust (isConcreteFC prefFC) $ \nfc
                      => addSemanticDecorations [(nfc, Bound, Just n)]
                    pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
                            (Just n) !(desugarB AnyExpr ps argTy)
@@ -218,7 +228,7 @@ mutual
                  ICase fc (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [snd !(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLet fc rig (PRef prefFC n) nTy nVal scope [])
-      = do whenJust (isConcreteFC prefFC) \nfc =>
+      = do whenJust (isConcreteFC prefFC) $ \nfc =>
              addSemanticDecorations [(nfc, Bound, Just n)]
            pure $ ILet fc prefFC rig n !(desugarB side ps nTy) !(desugarB side ps nVal)
                                        !(desugar side (n :: ps) scope)
@@ -376,7 +386,7 @@ mutual
       = do r' <- desugarB side ps r
            let pval = apply (IVar opFC mkdpairname) [IVar nameFC n, r']
            let vfc = virtualiseFC nameFC
-           whenJust (isConcreteFC nameFC) \nfc =>
+           whenJust (isConcreteFC nameFC) $ \nfc =>
              addSemanticDefault (nfc, Bound, Just n)
            pure $ IAlternative fc (UniqueDefault pval)
                   [apply (IVar opFC dpairname)
@@ -578,7 +588,7 @@ mutual
   expandDo side ps topfc ns (DoBind fc nameFC n tm :: rest)
       = do tm' <- desugarDo side ps ns tm
            rest' <- expandDo side ps topfc ns rest
-           whenJust (isConcreteFC nameFC) \nfc => addSemanticDecorations [(nfc, Bound, Just n)]
+           whenJust (isConcreteFC nameFC) $ \nfc => addSemanticDecorations [(nfc, Bound, Just n)]
            pure $ bindFun fc ns tm'
                 $ ILam nameFC top Explicit (Just n)
                        (Implicit (virtualiseFC fc) False) rest'
@@ -603,7 +613,7 @@ mutual
            tm' <- desugarB side ps tm
            ty' <- desugarDo side ps ns ty
            rest' <- expandDo side ps topfc ns rest
-           whenJust (isConcreteFC lhsFC) \nfc => addSemanticDecorations [(nfc, Bound, Just n)]
+           whenJust (isConcreteFC lhsFC) $ \nfc => addSemanticDecorations [(nfc, Bound, Just n)]
            let bind = ILet fc (virtualiseFC lhsFC) rig n ty' tm' rest'
            bd <- get Bang
            pure $ bindBangs (bangNames bd) ns bind
@@ -694,14 +704,15 @@ mutual
            pure $ MkImpTy fc nameFC n !(bindTypeNames fc (usingImpl syn)
                                                ps !(desugar AnyExpr ps ty))
 
+  -- Attempt to get the function name from a function pattern. For example,
+  --   - given the pattern 'f x y', getClauseFn would return 'f'.
+  --   - given the pattern 'x == y', getClausefn would return '=='.
   getClauseFn : RawImp -> Core Name
   getClauseFn (IVar _ n) = pure n
   getClauseFn (IApp _ f _) = getClauseFn f
   getClauseFn (IAutoApp _ f _) = getClauseFn f
   getClauseFn (INamedApp _ f _ _) = getClauseFn f
-  getClauseFn tm = throw $ case tm of
-    Implicit fc _ => GenericMsg fc "Invalid name for a declaration"
-    _ => InternalError (show tm ++ " is not a function application")
+  getClauseFn tm = throw $ GenericMsg (getFC tm) "Head term in pattern must be a function name"
 
   desugarLHS : {auto s : Ref Syn SyntaxInfo} ->
                {auto c : Ref Ctxt Defs} ->

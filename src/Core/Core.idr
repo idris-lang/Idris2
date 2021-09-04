@@ -5,6 +5,7 @@ import Core.TT
 
 import Data.List
 import Data.List1
+import Data.String
 import Data.Vect
 
 import Libraries.Data.IMaybe
@@ -61,6 +62,7 @@ Pretty DotReason where
 
 public export
 data Warning : Type where
+     ParserWarning : FC -> String -> Warning
      UnreachableClause : {vars : _} ->
                          FC -> Env Term vars -> Term vars -> Warning
      ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
@@ -181,6 +183,7 @@ Show TTCErrorMsg where
 
 export
 Show Warning where
+    show (ParserWarning _ msg) = msg
     show (UnreachableClause _ _ _) = ":Unreachable clause"
     show (ShadowingGlobalDefs _ _) = ":Shadowing names"
     show (Deprecated name) = ":Deprecated " ++ name
@@ -358,6 +361,7 @@ Show Error where
 
 export
 getWarningLoc : Warning -> Maybe FC
+getWarningLoc (ParserWarning fc _) = Just fc
 getWarningLoc (UnreachableClause fc _ _) = Just fc
 getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
 getWarningLoc (Deprecated _) = Nothing
@@ -780,13 +784,13 @@ condC ((x, y) :: xs) def
 export
 writeFile : (fname : String) -> (content : String) -> Core ()
 writeFile fname content =
-  coreLift (File.writeFile fname content) >>= \case
+  coreLift (writeFile fname content) >>= \case
     Right () => pure ()
     Left err => throw $ FileErr fname err
 
 export
 readFile : (fname : String) -> Core String
 readFile fname =
-  coreLift (File.readFile fname) >>= \case
+  coreLift (readFile fname) >>= \case
     Right content => pure content
     Left err => throw $ FileErr fname err

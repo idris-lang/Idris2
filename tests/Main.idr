@@ -41,6 +41,7 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic046", "basic047",             "basic049", "basic050",
        "basic051", "basic052", "basic053", "basic054", "basic055",
        "basic056", "basic057", "basic058", "basic059", "basic060",
+       "basic061",
        "interpolation001", "interpolation002"]
 
 idrisTestsCoverage : TestPool
@@ -67,10 +68,11 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
       ["error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
        "error011", "error012", "error013", "error014", "error015",
-       "error016", "error017", "error018", "error019",
+       "error016", "error017", "error018", "error019", "error020",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
-       "perror006", "perror007", "perror008", "perror009"]
+       "perror006", "perror007", "perror008", "perror009", "perror010",
+       "perror011"]
 
 idrisTestsInteractive : TestPool
 idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
@@ -172,7 +174,7 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
-       "total011"
+       "total011", "total012"
       ]
 
 idrisTests : TestPool
@@ -186,7 +188,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Implicit laziness, lazy evaluation
        "lazy001", "lazy002",
        -- Namespace blocks
-       "namespace001",
+       "namespace001", "namespace002",
        -- Parameters blocks
        "params001", "params002", "params003",
        -- Packages and ipkg files
@@ -200,7 +202,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "reflection005", "reflection006", "reflection007", "reflection008",
        "reflection009","reflection010",
        -- The 'with' rule
-       "with001", "with002", "with004", "with005",
+       "with001", "with002", "with004", "with005", "with006",
        -- with-disambiguation
        "with003",
        -- pretty printing
@@ -263,6 +265,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "tailrec001"
     , "idiom001"
     , "integers"
+    , "fix1839"
     ]
 
 vmcodeInterpTests : IO TestPool

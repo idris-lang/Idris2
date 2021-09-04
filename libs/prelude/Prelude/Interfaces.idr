@@ -45,6 +45,14 @@ Monoid () where
   neutral = ()
 
 public export
+Semigroup a => Semigroup b => Semigroup (a, b) where
+  (x, y) <+> (v, w) = (x <+> v, y <+> w)
+
+public export
+Monoid a => Monoid b => Monoid (a, b) where
+  neutral = (neutral, neutral)
+
+public export
 Semigroup Ordering where
   LT <+> _ = LT
   GT <+> _ = GT

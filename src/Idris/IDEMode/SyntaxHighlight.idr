@@ -9,6 +9,7 @@ import Core.TT
 
 import Idris.REPL
 import Idris.Syntax
+import Idris.Pretty
 import Idris.Doc.String
 import Idris.IDEMode.Commands
 
@@ -19,12 +20,80 @@ import Libraries.Data.PosMap
 
 %default total
 
+------------------------------------------------------------------------
+-- Text properties supported by the IDE mode
+------------------------------------------------------------------------
+
+data Formatting : Type where
+  Bold      : Formatting
+  Italic    : Formatting
+  Underline : Formatting
+
+-- CAREFUL: this instance is used in SExpable Formatting. If you change
+-- it then you need to fix the SExpable implementation in order not to
+-- break the IDE mode.
+Show Formatting where
+  show Bold = "bold"
+  show Italic = "italic"
+  show Underline = "underline"
+
+-- At most one decoration & one formatting
+-- (We could use `These` to guarantee non-emptiness but I am not
+-- convinced this will stay being just 2 fields e.g. the emacs mode
+-- has support for tagging things as errors, adding links, etc.)
+public export
+record Properties where
+  constructor MkProperties
+  decor  : Maybe Decoration
+  format : Maybe Formatting
+
+export
+mkDecor : Decoration -> Properties
+mkDecor dec = MkProperties (Just dec) Nothing
+
+export
+mkFormat : Formatting -> Properties
+mkFormat = MkProperties Nothing . Just
+
+export
+syntaxToProperties : IdrisSyntax -> Maybe Properties
+syntaxToProperties syn = mkDecor <$> syntaxToDecoration syn
+
+export
+annToProperties : IdrisAnn -> Maybe Properties
+annToProperties Warning      = Nothing
+annToProperties Error        = Nothing
+annToProperties ErrorDesc    = Nothing
+annToProperties FileCtxt     = Nothing
+annToProperties Code         = Nothing
+annToProperties Meta         = Nothing
+annToProperties (Syntax syn) = syntaxToProperties syn
+
+export
+docToProperties : IdrisDocAnn -> Maybe Properties
+docToProperties Header        = pure $ mkFormat Underline
+docToProperties Declarations  = Nothing
+docToProperties (Decl _)      = Nothing
+docToProperties DocStringBody = Nothing
+docToProperties (Syntax syn)  = syntaxToProperties syn
+
 SExpable Decoration where
-  toSExp Typ      = SExpList [ SymbolAtom "decor", SymbolAtom "type"]
-  toSExp Function = SExpList [ SymbolAtom "decor", SymbolAtom "function"]
-  toSExp Data     = SExpList [ SymbolAtom "decor", SymbolAtom "data"]
-  toSExp Keyword  = SExpList [ SymbolAtom "decor", SymbolAtom "keyword"]
-  toSExp Bound    = SExpList [ SymbolAtom "decor", SymbolAtom "bound"]
+  toSExp decor = SExpList [ SymbolAtom "decor"
+                          , SymbolAtom (show decor)
+                          ]
+
+SExpable Formatting where
+  toSExp format = SExpList [ SymbolAtom "text-formatting"
+                           , SymbolAtom (show format)
+                           ]
+
+export
+SExpable Properties where
+  toSExp (MkProperties dec form)  = SExpList $ catMaybes
+    [ toSExp <$> form
+    , toSExp <$> dec
+    ]
+
 
 record Highlight where
   constructor MkHighlight

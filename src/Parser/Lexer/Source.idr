@@ -247,7 +247,11 @@ export
 ||| Test whether a user name begins with an operator symbol.
 isOpName : Name -> Bool
 isOpName n = fromMaybe False $ do
-   n <- userNameRoot n
+   -- NB: we can't use userNameRoot because that'll prefix `RF`
+   -- names with a `.` which means that record fields will systematically
+   -- be declared to be operators.
+   guard (isUserName n)
+   let n = nameRoot n
    c <- fst <$> strUncons n
    guard (isOpChar c)
    pure True

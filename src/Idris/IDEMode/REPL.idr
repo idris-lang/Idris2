@@ -17,7 +17,6 @@ import Core.TT
 import Core.Unify
 
 import Data.List
-import Data.List1
 import Data.So
 import Data.String
 
@@ -32,6 +31,7 @@ import Idris.REPL
 import Idris.Syntax
 import Idris.Version
 import Idris.Pretty
+import Idris.Doc.String
 
 import Idris.IDEMode.Commands
 import Idris.IDEMode.Holes
@@ -274,12 +274,31 @@ returnFromIDE outf i msg
     = do send outf (SExpList [SymbolAtom "return", msg, toSExp i])
 
 printIDEResult : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
-printIDEResult outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "ok", toSExp msg])
+printIDEResult outf i msg
+  = returnFromIDE outf i
+  $ SExpList [ SymbolAtom "ok"
+             , toSExp msg
+             ]
 
-printIDEResultWithHighlight : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
-printIDEResultWithHighlight outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "ok", toSExp msg
-                                                                        -- TODO return syntax highlighted result
-                                                                        , SExpList []])
+export
+SExpable a => SExpable (Span a) where
+  toSExp (MkSpan start width ann)
+    = SExpList [ IntegerAtom (cast start)
+               , IntegerAtom (cast width)
+               , toSExp ann
+               ]
+
+printIDEResultWithHighlight :
+  {auto c : Ref Ctxt Defs} ->
+  File -> Integer -> (SExp, List (Span Properties)) ->
+  Core ()
+printIDEResultWithHighlight outf i (msg, spans) = do
+--  log "ide-mode.highlight" 10 $ show spans
+  returnFromIDE outf i
+    $ SExpList [ SymbolAtom "ok"
+               , msg
+               , toSExp spans
+               ]
 
 printIDEError : Ref ROpts REPLOpts => {auto c : Ref Ctxt Defs} -> File -> Integer -> Doc IdrisAnn -> Core ()
 printIDEError outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "error", toSExp !(renderWithoutColor msg) ])
@@ -312,16 +331,26 @@ displayIDEResult outf i  (REPL RequestedHelp  )
   $ StringAtom $ displayHelp
 displayIDEResult outf i  (REPL $ Evaluated x Nothing)
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ show x
+  $ mapFst StringAtom
+   !(renderWithDecorations syntaxToProperties $ prettyTerm x)
 displayIDEResult outf i  (REPL $ Evaluated x (Just y))
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ show x ++ " : " ++ show y
+  $ mapFst StringAtom
+   !(renderWithDecorations syntaxToProperties
+     $ prettyTerm x <++> ":" <++> prettyTerm y)
 displayIDEResult outf i  (REPL $ Printed xs)
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ !(renderWithoutColor xs)
+  $ mapFst StringAtom
+  $ !(renderWithDecorations annToProperties xs)
+displayIDEResult outf i (REPL (PrintedDoc xs))
+  = printIDEResultWithHighlight outf i
+  $ mapFst StringAtom
+  $ !(renderWithDecorations docToProperties xs)
 displayIDEResult outf i  (REPL $ TermChecked x y)
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ show x ++ " : " ++ show y
+  $ mapFst StringAtom
+   !(renderWithDecorations syntaxToProperties
+     $ prettyTerm x <++> ":" <++> prettyTerm y)
 displayIDEResult outf i  (REPL $ FileLoaded x)
   = printIDEResult outf i $ SExpList []
 displayIDEResult outf i  (REPL $ ErrorLoadingFile x err)
@@ -436,8 +465,15 @@ displayIDEResult outf i (NameLocList dat)
                  , IntegerAtom $ cast $ endLine
                  , IntegerAtom $ cast $ endCol
                  ]
-
-displayIDEResult outf i  _ = pure ()
+-- do not use a catchall so that we are warned about missing cases when adding a
+-- new construtor to the enumeration.
+displayIDEResult _ _ (REPL Done) = pure ()
+displayIDEResult _ _ (REPL (Executed _)) = pure ()
+displayIDEResult _ _ (REPL (ModuleLoaded _)) = pure ()
+displayIDEResult _ _ (REPL (ErrorLoadingModule _ _)) = pure ()
+displayIDEResult _ _ (REPL (ColorSet _)) = pure ()
+displayIDEResult _ _ (REPL DefDeclared) = pure ()
+displayIDEResult _ _ (REPL Exited) = pure ()
 
 
 handleIDEResult : {auto c : Ref Ctxt Defs} ->

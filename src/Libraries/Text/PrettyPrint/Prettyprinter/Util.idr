@@ -19,6 +19,11 @@ words s = map pretty $ map pack (helper (unpack s))
            s' => let (w, s'') = break isSpace s' in
                      w :: helper (assert_smaller s s'')
 
+||| Optionally annotate a document
+export
+annotateM : Maybe ann -> Doc ann -> Doc ann
+annotateM = maybe id annotate
+
 ||| Insert soft linebreaks between words, so that text is broken into multiple
 ||| lines when it exceeds the available width.
 export

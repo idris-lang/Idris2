@@ -4,6 +4,7 @@ import Core.CaseTree
 import Core.Core
 import Core.Context
 import Core.Env
+import Core.Metadata
 import Core.Options
 import Core.Value
 
@@ -38,7 +39,7 @@ import System.File
 %default covering
 
 keyword : Doc IdrisAnn -> Doc IdrisAnn
-keyword = annotate (Syntax SynKeyword)
+keyword = annotate (Syntax Keyword)
 
 -- | Add binding site information if the term is simply a machine-inserted name
 pShowMN : {vars : _} -> Term vars -> Env t vars -> Doc IdrisAnn -> Doc IdrisAnn
@@ -159,6 +160,8 @@ pwarning : {auto c : Ref Ctxt Defs} ->
            {auto s : Ref Syn SyntaxInfo} ->
            {auto o : Ref ROpts REPLOpts} ->
            Warning -> Core (Doc IdrisAnn)
+pwarning (ParserWarning fc msg)
+    = pure $ pretty msg <+> line <+> !(ploc fc)
 pwarning (UnreachableClause fc env tm)
     = pure $ errorDesc (reflow "Unreachable clause:"
         <++> code !(pshow env tm))

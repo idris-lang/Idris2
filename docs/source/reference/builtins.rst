@@ -27,7 +27,7 @@ Here's an example:
     data Nat
         = Z
         | S Nat
-    
+
     %builtin Natural Nat
 
 Note that the order of the constructors doesn't matter.
@@ -37,11 +37,11 @@ so long as any extra arguments are erased.
 For example:
 
 .. code-block:: idris
-    
+
     data Fin : Nat -> Type where
         FZ : Fin (S k)
         FS : Fin k -> Fin (S k)
-    
+
     %builtin Natural Fin
 
 works because the ``k`` is always erased.
@@ -62,7 +62,7 @@ Here are the specifics for the conversion:
     case k of
         Z => zexp
         S k' => sexp
-    
+
 =>
 
 .. code-block:: idris

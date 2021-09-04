@@ -16,6 +16,16 @@ function __prim_idris2js_array(x){
   return result;
 }
 
+function __lazy(thunk) {
+  let res;
+  return function () {
+    if (thunk === undefined) return res;
+    res = thunk();
+    thunk = undefined;
+    return res;
+  };
+};
+
 function __prim_stringIteratorNew(str) {
   return 0
 }
@@ -44,9 +54,6 @@ function __tailRec(f,ini) {
 const _idrisworld = Symbol('idrisworld')
 
 const _crashExp = x=>{throw new IdrisError(x)}
-
-const _sysos =
-  ((o => o === 'linux'?'unix':o==='win32'?'windows':o)(require('os').platform()));
 
 const _bigIntOfString = s=>{
   const idx = s.indexOf('.')

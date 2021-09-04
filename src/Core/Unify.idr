@@ -465,9 +465,11 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
          case fullname mdef of
               PV pv pi => throw (PatternVariableUnifies loc env (PV pv pi) otm)
               _ => pure ()
-         let ty = type mdef -- assume all pi binders we need are there since
-                            -- it was built from an environment, so no need
-                            -- to normalise
+         defs <- get Ctxt
+         ty <- normalisePis defs [] $ type mdef
+                     -- make sure we have all the pi binders we need in the
+                     -- type to make the metavariable definition
+         logTerm "unify.instantiate" 5 ("Type: " ++ show mname) (type mdef)
          logTerm "unify.instantiate" 5 ("Type: " ++ show mname) ty
          log "unify.instantiate" 5 ("With locs: " ++ show locs)
          log "unify.instantiate" 5 ("From vars: " ++ show newvars)
@@ -593,7 +595,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
             pure $ (Bind bfc x (Lam fc c Explicit (Erased bfc False)) <$> sc')
     mkDef vs vars soln (Bind bfc x b@(Let _ c val ty) sc)
        = do mbsc' <- mkDef vs (ICons Nothing vars) soln sc
-            flip traverseOpt mbsc' \sc' =>
+            flip traverseOpt mbsc' $ \sc' =>
               case shrinkTerm sc' (DropCons SubRefl) of
                 Just scs => pure scs
                 Nothing => pure $ Bind bfc x b sc'
@@ -604,15 +606,15 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
             pure (Just soln')
     mkDef _ _ _ _ = pure Nothing
 
+-- update a solution that the machine found with the thing the programmer
+-- actually wrote! We assume that we've already checked that they unify.
 export
-solveIfUndefined : {vars : _} ->
-                   {auto c : Ref Ctxt Defs} ->
-                   {auto u : Ref UST UState} ->
-                   Env Term vars -> Term vars -> Term vars -> Core Bool
-solveIfUndefined env (Meta fc mname idx args) soln
+updateSolution : {vars : _} ->
+                 {auto c : Ref Ctxt Defs} ->
+                 {auto u : Ref UST UState} ->
+                 Env Term vars -> Term vars -> Term vars -> Core Bool
+updateSolution env (Meta fc mname idx args) soln
     = do defs <- get Ctxt
-         Just (Hole _ _) <- lookupDefExact (Resolved idx) (gamma defs)
-              | _ => pure False
          case !(patternEnvTm env args) of
               Nothing => pure False
               Just (newvars ** (locs, submv)) =>
@@ -622,6 +624,19 @@ solveIfUndefined env (Meta fc mname idx args) soln
                           do Just hdef <- lookupCtxtExact (Resolved idx) (gamma defs)
                                   | Nothing => throw (InternalError "Can't happen: no definition")
                              tryInstantiate fc inTerm env mname idx (length args) hdef locs soln stm
+updateSolution env metavar soln
+    = pure False
+
+export
+solveIfUndefined : {vars : _} ->
+                   {auto c : Ref Ctxt Defs} ->
+                   {auto u : Ref UST UState} ->
+                   Env Term vars -> Term vars -> Term vars -> Core Bool
+solveIfUndefined env metavar@(Meta fc mname idx args) soln
+    = do defs <- get Ctxt
+         Just (Hole _ _) <- lookupDefExact (Resolved idx) (gamma defs)
+              | _ => pure False
+         updateSolution env metavar soln
 solveIfUndefined env metavar soln
     = pure False
 
@@ -667,19 +682,21 @@ mutual
               Core UnifyResult
   unifyIfEq post loc mode env x y
         = do defs <- get Ctxt
-             if !(convert defs env x y)
+             if !(convertInf defs env x y)
                 then pure success
                 else if post
                         then postpone loc mode ("Postponing unifyIfEq " ++
                                                  show (atTop mode)) env x y
                         else convertError loc env x y
 
-  getArgTypes : Defs -> (fnType : NF vars) -> List (Closure vars) ->
+  getArgTypes : {vars : _} ->
+                {auto c : Ref Ctxt Defs} ->
+                Defs -> (fnType : NF vars) -> List (Closure vars) ->
                 Core (Maybe (List (NF vars)))
   getArgTypes defs (NBind _ n (Pi _ _ _ ty) sc) (a :: as)
      = do Just scTys <- getArgTypes defs !(sc defs a) as
                | Nothing => pure Nothing
-          pure (Just (ty :: scTys))
+          pure (Just (!(evalClosure defs ty) :: scTys))
   getArgTypes _ _ [] = pure (Just [])
   getArgTypes _ _ _ = pure Nothing
 
@@ -1071,9 +1088,9 @@ mutual
                     {auto u : Ref UST UState} ->
                     {vars : _} ->
                     UnifyInfo -> FC -> Env Term vars ->
-                    FC -> Name -> Binder (NF vars) ->
+                    FC -> Name -> Binder (Closure vars) ->
                     (Defs -> Closure vars -> Core (NF vars)) ->
-                    FC -> Name -> Binder (NF vars) ->
+                    FC -> Name -> Binder (Closure vars) ->
                     (Defs -> Closure vars -> Core (NF vars)) ->
                     Core UnifyResult
   unifyBothBinders mode loc env xfc x (Pi fcx cx ix tx) scx yfc y (Pi fcy cy iy ty) scy
@@ -1124,13 +1141,11 @@ mutual
                     (NBind yfc y (Lam fcy cy iy ty) scy)
              else
                do empty <- clearDefs defs
-                  tx' <- quote empty env tx
                   ct <- unify (lower mode) loc env tx ty
                   xn <- genVarName "x"
-                  let env' : Env Term (x :: _)
-                           = Lam fcx cx Explicit tx' :: env
                   txtm <- quote empty env tx
-                  tytm <- quote empty env ty
+                  let env' : Env Term (x :: _)
+                           = Lam fcx cx Explicit txtm :: env
 
                   tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
                   tscy <- scy defs (toClosure defaultOpts env (Ref loc Bound xn))
@@ -1340,9 +1355,35 @@ mutual
              empty <- clearDefs defs
              if !(convert empty env x y)
                 then pure success
-                else do xnf <- evalClosure defs x
-                        ynf <- evalClosure defs y
-                        unify mode loc env xnf ynf
+                else
+                  do xnf <- evalClosure defs x
+                     ynf <- evalClosure defs y
+                     -- If one's a meta and the other isn't, don't reduce at
+                     -- all
+                     case (xnf, ynf) of
+                         -- They might be equal, don't want to make a cycle
+                         (NApp _ (NMeta _ _ _) _, NApp _ (NMeta _ _ _) _)
+                               => unify mode loc env xnf ynf
+                         (NApp _ (NMeta _ i _) _, _) =>
+                            do ynf' <- evalClosure empty y
+                               xtm <- quote empty env xnf
+                               ytm <- quote empty env ynf'
+                               cs <- unify mode loc env !(nf empty env xtm)
+                                                        !(nf empty env ytm)
+                               case constraints cs of
+                                    [] => pure cs
+                                    _ => do ynf <- evalClosure defs y
+                                            unify mode loc env xnf ynf
+                         (_, NApp _ (NMeta _ i _ ) _) =>
+                            do xnf' <- evalClosure empty x
+                               xtm <- quote empty env xnf'
+                               ytm <- quote empty env ynf
+                               cs <- unify mode loc env !(nf empty env ytm)
+                                                        !(nf empty env xtm)
+                               case constraints cs of
+                                    [] => pure cs
+                                    _ => unify mode loc env xnf ynf
+                         _ => unify mode loc env xnf ynf
 
 export
 setInvertible : {auto c : Ref Ctxt Defs} ->
@@ -1449,7 +1490,7 @@ retryGuess mode smode (hid, (loc, hname))
                          ignore $ addDef (Resolved hid) gdef
                          removeGuess hid
                          pure True)
-                     \case
+                     $ \case
                        DeterminingArg _ n i _ _ =>
                          do logTerm "unify.retry" 5
                                     ("Failed (det " ++ show hname ++ " " ++ show n ++ ")")

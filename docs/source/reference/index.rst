@@ -17,6 +17,7 @@ This is a placeholder, to get set up with readthedocs.
    :maxdepth: 1
 
    packages
+   documenting
    envvars
    records
    literate

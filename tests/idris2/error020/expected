@@ -1,0 +1,7 @@
+1/1: Building Error (Error.idr)
+Error: Head term in pattern must be a function name
+
+Error:1:3--1:4
+ 1 | (a, b) = (1, 2)
+       ^
+

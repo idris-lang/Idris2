@@ -125,6 +125,21 @@ data Def : Type where
     Delayed : Def
 
 export
+defNameType : Def -> Maybe NameType
+defNameType None = Nothing
+defNameType (PMDef {}) = Just Func
+defNameType (ExternDef {}) = Just Func
+defNameType (ForeignDef {}) = Just Func
+defNameType (Builtin {}) = Just Func
+defNameType (DCon tag ar _) = Just (DataCon tag ar)
+defNameType (TCon tag ar _ _ _ _ _ _) = Just (TyCon tag ar)
+defNameType (Hole {}) = Just Func
+defNameType (BySearch {}) = Nothing
+defNameType (Guess {}) = Nothing
+defNameType ImpBind = Just Bound
+defNameType Delayed = Nothing
+
+export
 Show Def where
   show None = "undefined"
   show (PMDef _ args ct rt pats)
@@ -294,8 +309,13 @@ record GlobalDef where
   linearChecked : Bool -- Flag whether we've already checked its linearity
   definition : Def
   compexpr : Maybe CDef
-  namedcompexpr : Maybe NamedDef
   sizeChange : List SCCall
+
+export
+gDefKindedName : GlobalDef -> KindedName
+gDefKindedName def
+  = let nm = fullname def in
+    MkKindedName (defNameType $ definition def) nm nm
 
 export
 refersTo : GlobalDef -> NameMap Bool
@@ -644,7 +664,6 @@ newDef fc n rig vars ty vis def
         , linearChecked = False
         , definition = def
         , compexpr = Nothing
-        , namedcompexpr = Nothing
         , sizeChange = []
         }
 
@@ -1137,7 +1156,9 @@ clearCtxt
                             timings = timings defs } !initDefs)
   where
     resetElab : Options -> Options
-    resetElab = record { elabDirectives = defaultElab }
+    resetElab opts =
+      let tot = totalReq (session opts) in
+      record { elabDirectives = record { totality = tot } defaultElab } opts
 
 export
 getFieldNames : Context -> Namespace -> List Name
@@ -1342,7 +1363,6 @@ addBuiltin n ty tot op
          , linearChecked = True
          , definition = Builtin op
          , compexpr = Nothing
-         , namedcompexpr = Nothing
          , sizeChange = []
          }
 
@@ -1374,15 +1394,6 @@ setCompiled n cexp
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure ()
          ignore $ addDef n (record { compexpr = Just cexp } gdef)
-
-export
-setNamedCompiled : {auto c : Ref Ctxt Defs} ->
-                   Name -> NamedDef -> Core ()
-setNamedCompiled n cexp
-    = do defs <- get Ctxt
-         Just gdef <- lookupCtxtExact n (gamma defs)
-              | Nothing => pure ()
-         ignore $ addDef n (record { namedcompexpr = Just cexp } gdef)
 
 -- Record that the name has been linearity checked so we don't need to do
 -- it again
@@ -2549,6 +2560,12 @@ setSession : {auto c : Ref Ctxt Defs} ->
 setSession sopts
     = do defs <- get Ctxt
          put Ctxt (record { options->session = sopts } defs)
+
+%inline
+export
+updateSession : {auto c : Ref Ctxt Defs} ->
+                (Session -> Session) -> Core ()
+updateSession f = setSession (f !getSession)
 
 export
 recordWarning : {auto c : Ref Ctxt Defs} -> Warning -> Core ()

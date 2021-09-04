@@ -12,7 +12,7 @@ export
 data Elab : Type -> Type where
      Pure : a -> Elab a
      Bind : Elab a -> (a -> Elab b) -> Elab b
-     Fail : String -> Elab a
+     Fail : FC -> String -> Elab a
 
      LogMsg : String -> Nat -> String -> Elab ()
      LogTerm : String -> Nat -> String -> TTImp -> Elab ()
@@ -63,7 +63,11 @@ Monad Elab where
 ||| Report an error in elaboration
 export
 fail : String -> Elab a
-fail = Fail
+fail = Fail EmptyFC
+
+export
+failAt : FC -> String -> Elab a
+failAt = Fail
 
 ||| Write a log message, if the log level is >= the given level
 export

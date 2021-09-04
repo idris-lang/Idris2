@@ -19,8 +19,7 @@ these from:
 - `Racket <https://download.racket-lang.org/>`_
 
 Both are also available from MacPorts/Homebrew and all major Linux
-distributions. Windows requires some further prerequisites, see 
-:ref:`windows-install`.
+distributions. Windows requires some further prerequisites, see :ref:`windows-install`.
 
 **Note**: If you install Chez Scheme from source files, building it locally, make sure
 you run ``./configure --threads`` to build multithreading support in.
