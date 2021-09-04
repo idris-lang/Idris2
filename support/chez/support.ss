@@ -15,7 +15,8 @@
         (if (not evaluated)
             (begin (set! evaluated #t)
                    (set! res (f))
-                   (set! f void)))
+                   (set! f void))
+            (void))
         res))))
 
 (define blodwen-toSignedInt
