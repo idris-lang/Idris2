@@ -8,6 +8,16 @@
     [(i3nt ti3nt a6nt ta6nt) "windows"]
     [else "unknown"]))
 
+(define blodwen-lazy
+  (lambda (f)
+    (let ([evaluated #f] [res void])
+      (lambda ()
+        (if (not evaluated)
+            (begin (set! evaluated #t)
+                   (set! res (f))
+                   (set! f void)))
+        res))))
+
 (define blodwen-toSignedInt
   (lambda (x bits)
     (if (logbit? bits x)
@@ -17,6 +27,7 @@
 (define blodwen-toUnsignedInt
   (lambda (x bits)
     (modulo x (ash 1 bits))))
+
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))

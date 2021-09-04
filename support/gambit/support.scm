@@ -7,6 +7,16 @@
     [(memq (caddr (system-type)) '(mingw32 mingw64)) "windows"]
     [else "unknown"]))
 
+(define blodwen-lazy
+  (lambda (f)
+    (let ([evaluated #f] [res void])
+      (lambda ()
+        (if (not evaluated)
+            (begin (set! evaluated #t)
+                   (set! res (f))
+                   (set! f void)))
+        res))))
+
 ;; TODO Convert to macro
 (define (blodwen-read-args desc)
   (if (fx= (vector-ref desc 0) 0)

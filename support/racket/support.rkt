@@ -5,6 +5,16 @@
     [(windows) "windows"]
     [else "unknown"]))
 
+(define blodwen-lazy
+  (lambda (f)
+    (let ([evaluated #f] [res void])
+      (lambda ()
+        (if (not evaluated)
+            (begin (set! evaluated #t)
+                   (set! res (f))
+                   (set! f void)))
+        res))))
+
 (define blodwen-toSignedInt
   (lambda (x bits)
     (if (bitwise-bit-set? x bits)
