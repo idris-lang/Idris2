@@ -83,6 +83,27 @@ normaliseLHS defs env (Bind fc n b sc)
 normaliseLHS defs env tm
     = quote defs env !(nfOpts onLHS defs env tm)
 
+-- The size limit here is the depth of stuck applications. If it gets past
+-- that size, return the original
+export
+tryNormaliseSizeLimit : {auto c : Ref Ctxt Defs} ->
+                     {free : _} ->
+                     Defs -> Nat ->
+                     Env Term free -> Term free -> Core (Term free)
+tryNormaliseSizeLimit defs limit env tm
+    = do tm' <- nf defs env tm
+         quoteOpts (MkQuoteOpts False False (Just limit)) defs env tm'
+
+export
+normaliseSizeLimit : {auto c : Ref Ctxt Defs} ->
+                     {free : _} ->
+                     Defs -> Nat ->
+                     Env Term free -> Term free -> Core (Term free)
+normaliseSizeLimit defs limit env tm
+    = catch (do tm' <- nf defs env tm
+                quoteOpts (MkQuoteOpts False False (Just limit)) defs env tm')
+            (\err => pure tm)
+
 export
 normaliseArgHoles : {auto c : Ref Ctxt Defs} ->
                     {free : _} ->
