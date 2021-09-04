@@ -412,6 +412,7 @@ liftBody n tm
          ldata <- get Lifts
          pure (tml, defs ldata)
 
+export
 lambdaLiftDef : (doLazyAnnots : Bool) -> Name -> CDef -> Core (List (Name, LiftedDef))
 lambdaLiftDef doLazyAnnots n (MkFun args exp)
     = do (expl, defs) <- liftBody {doLazyAnnots} n exp
@@ -428,11 +429,8 @@ lambdaLiftDef doLazyAnnots n (MkError exp)
 -- An empty list an error, because on success you will always get at least
 -- one definition, the lifted definition for the given name.
 export
-lambdaLift : {auto c : Ref Ctxt Defs} ->
-             (doLazyAnnots : Bool) ->
-             Name -> Core (List (Name, LiftedDef))
-lambdaLift doLazyAnnots n
-    = do defs <- get Ctxt
-         Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure []
-         let Just cexpr = compexpr def              | Nothing => pure []
-         lambdaLiftDef doLazyAnnots n cexpr
+lambdaLift :  {auto c : Ref Ctxt Defs}
+           -> (doLazyAnnots : Bool)
+           -> (Name,FC,CDef)
+           -> Core (List (Name, LiftedDef))
+lambdaLift doLazyAnnots (n,_,def) = lambdaLiftDef doLazyAnnots n def

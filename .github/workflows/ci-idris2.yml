@@ -9,6 +9,7 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'icons/**'
+      - 'Release/**'
       - '*.md'
       - 'CONTRIBUTORS'
       - 'LICENSE'

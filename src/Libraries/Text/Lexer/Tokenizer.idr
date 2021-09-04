@@ -121,7 +121,7 @@ tokenise reject tokenizer line col acc str
               end = endFn tag
               beginTok'' = MkBounded (mapBegin beginTok') False (MkBounds line col line' col')
               (midToks, (reason, line'', col'', rest'')) =
-                    tokenise end middle line' col' [] rest
+                    assert_total $ tokenise end middle line' col' [] rest
            in case reason of
                    (ComposeNotClosing _ _) => Left reason
                    _ => let Just (endTok', lineEnd, colEnd, restEnd) =

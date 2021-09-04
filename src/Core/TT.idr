@@ -33,7 +33,12 @@ public export
 record KindedName where
   constructor MkKindedName
   nameKind : Maybe NameType
+  fullName : Name -- fully qualified name
   rawName  : Name
+
+export
+defaultKindedName : Name -> KindedName
+defaultKindedName nm = MkKindedName Nothing nm nm
 
 export
 Show KindedName where show = show . rawName
@@ -955,6 +960,16 @@ Eq TotalReq where
     (==) CoveringOnly CoveringOnly = True
     (==) PartialOK PartialOK = True
     (==) _ _ = False
+
+||| Bigger means more requirements
+||| So if a definition was checked at b, it can be accepted at a <= b.
+export
+Ord TotalReq where
+  PartialOK <= _ = True
+  _ <= Total = True
+  a <= b = a == b
+
+  a < b = a <= b && a /= b
 
 export
 Show TotalReq where

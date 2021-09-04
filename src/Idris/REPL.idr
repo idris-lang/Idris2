@@ -121,8 +121,7 @@ displayType : {auto c : Ref Ctxt Defs} ->
 displayType defs (n, i, gdef)
     = maybe (do tm <- resugar [] !(normaliseHoles defs [] (type gdef))
                 nm <- aliasName (fullname gdef)
-                let ann = maybe id (annotate . Syntax . SynDecor)
-                        $ defDecoration $ definition gdef
+                let ann = showCategory Syntax gdef
                 pure (ann (pretty nm) <++> colon <++> prettyTerm tm))
             (\num => reAnnotate Syntax <$> prettyHole defs [] n num (type gdef))
             (isHole gdef)
@@ -219,12 +218,12 @@ printClause : {auto c : Ref Ctxt Defs} ->
               Maybe String -> Nat -> ImpClause ->
               Core String
 printClause l i (PatClause _ lhsraw rhsraw)
-    = do lhs <- pterm $ map (MkKindedName Nothing) lhsraw -- hack
-         rhs <- pterm $ map (MkKindedName Nothing) rhsraw -- hack
+    = do lhs <- pterm $ map defaultKindedName lhsraw -- hack
+         rhs <- pterm $ map defaultKindedName rhsraw -- hack
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " = " ++ show rhs))
 printClause l i (WithClause _ lhsraw wvraw prf flags csraw)
-    = do lhs <- pterm $ map (MkKindedName Nothing) lhsraw -- hack
-         wval <- pterm $ map (MkKindedName Nothing) wvraw -- hack
+    = do lhs <- pterm $ map defaultKindedName lhsraw -- hack
+         wval <- pterm $ map defaultKindedName wvraw -- hack
          cs <- traverse (printClause l (i + 2)) csraw
          pure (relit l ((pack (replicate i ' ')
                 ++ show lhs
@@ -233,7 +232,7 @@ printClause l i (WithClause _ lhsraw wvraw prf flags csraw)
                 ++ "\n"))
                ++ showSep "\n" cs)
 printClause l i (ImpossibleClause _ lhsraw)
-    = do lhs <- pterm $ map (MkKindedName Nothing) lhsraw -- hack
+    = do lhs <- pterm $ map defaultKindedName lhsraw -- hack
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " impossible"))
 
 
@@ -428,7 +427,7 @@ processEdit (ExprSearch upd line name hints)
                      Just (_, restm) <- nextProofSearch
                           | Nothing => pure $ EditError "No search results"
                      let tm' = dropLams locs restm
-                     itm <- pterm $ map (MkKindedName Nothing) tm' -- hack
+                     itm <- pterm $ map defaultKindedName tm' -- hack
                      let itm'  = ifThenElse brack (addBracket replFC itm) itm
                      if upd
                         then updateFile (proofSearch name (show itm') (integerToNat (cast (line - 1))))
@@ -454,7 +453,7 @@ processEdit ExprSearchNext
               | _ => pure $ EditError "Not a searchable hole"
          let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
          let tm' = dropLams locs restm
-         itm <- pterm $ map (MkKindedName Nothing) tm'
+         itm <- pterm $ map defaultKindedName tm'
          let itm' = ifThenElse brack (addBracket replFC itm) itm
          pure $ DisplayEdit (prettyTerm itm')
 
@@ -498,8 +497,8 @@ processEdit (MakeLemma upd line name)
          case !(lookupDefTyName name (gamma defs)) of
               [(n, nidx, Hole locs _, ty)] =>
                   do (lty, lapp) <- makeLemma replFC name locs ty
-                     pty <- pterm $ map (MkKindedName Nothing) lty -- hack
-                     papp <- pterm $ map (MkKindedName Nothing) lapp -- hack
+                     pty <- pterm $ map defaultKindedName lty -- hack
+                     papp <- pterm $ map defaultKindedName lapp -- hack
                      opts <- get ROpts
                      let pappstr = show (ifThenElse brack
                                             (addBracket replFC papp)
@@ -831,7 +830,7 @@ process (TypeSearch searchTerm)
               filterM (\def => equivTypes def.type ty') allDefs
          put Ctxt defs
          doc <- traverse (docsOrSignature replFC) $ fullname <$> filteredDefs
-         pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
+         pure $ PrintedDoc $ vsep doc
 process (Missing n)
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of
@@ -859,10 +858,10 @@ process (Total n)
                                (map fst ts)
 process (Doc itm)
     = do doc <- getDocsForPTerm itm
-         pure $ Printed $ vsep $ pretty <$> doc
+         pure $ PrintedDoc doc
 process (Browse ns)
     = do doc <- getContents ns
-         pure $ Printed $ vsep $ pretty <$> doc
+         pure $ PrintedDoc doc
 process (DebugInfo n)
     = do defs <- get Ctxt
          traverse_ showInfo !(lookupCtxtName n (gamma defs))
@@ -1076,6 +1075,7 @@ mutual
   displayResult (Evaluated x Nothing) = printResult $ prettyTerm x
   displayResult (Evaluated x (Just y)) = printResult (prettyTerm x <++> colon <++> prettyTerm y)
   displayResult (Printed xs) = printResult xs
+  displayResult (PrintedDoc xs) = printDocResult xs
   displayResult (TermChecked x y) = printResult (prettyTerm x <++> colon <++> prettyTerm y)
   displayResult (FileLoaded x) = printResult (reflow "Loaded file" <++> pretty x)
   displayResult (ModuleLoaded x) = printResult (reflow "Imported module" <++> pretty x)
@@ -1109,7 +1109,12 @@ mutual
   displayResult (Edited (MadeWith lit wapp)) = printResult $ pretty $ showSep "\n" (map (relit lit) wapp)
   displayResult (Edited (MadeCase lit cstr)) = printResult $ pretty $ showSep "\n" (map (relit lit) cstr)
   displayResult (OptionsSet opts) = printResult (vsep (pretty <$> opts))
-  displayResult _ = pure ()
+
+  -- do not use a catchall so that we are warned when a new constructor is added
+  displayResult Done = pure ()
+  displayResult (Executed _) = pure ()
+  displayResult DefDeclared = pure ()
+  displayResult Exited = pure ()
 
   export
   displayHelp : String

@@ -35,9 +35,11 @@ import Idris.REPL.Common
 import Idris.REPL.Opts
 import Idris.Syntax
 import Idris.Pretty
+import Idris.Doc.String
 
 import Data.List
 import Libraries.Data.NameMap
+import Libraries.Data.SortedMap
 import Libraries.Utils.Path
 
 import System
@@ -322,6 +324,14 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                                        (do p <- prog (PhysicalIdrSrc origin); eoi; pure p)
                   | Left err => pure (Just [err])
                 traverse_ recordWarning ws
+                -- save the doc string for the current module
+                log "doc.module" 10 $ unlines
+                  [ "Recording doc"
+                  , documentation mod
+                  , "for module " ++ show (moduleNS mod)
+                  ]
+                addModDocString (moduleNS mod) (documentation mod)
+
                 addSemanticDecorations decor
                 initHash
                 traverse_ addPublicHash (sort importMetas)
@@ -383,7 +393,6 @@ process buildmsg sourceFileName ident
                         do defs <- get Ctxt
                            ns <- ctxtPathToNS sourceFileName
                            makeBuildDirectory ns
-
                            traverse_
                               (\cg =>
                                   do Just cgdata <- getCG cg

@@ -13,7 +13,6 @@ import public Idris.Pretty.Render
 import public Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
-import Algebra
 import Idris.REPL.Opts
 import Idris.Syntax
 
@@ -21,10 +20,37 @@ import Idris.Syntax
 
 public export
 data IdrisSyntax
-  = SynHole
-  | SynDecor Decoration
-  | SynPragma
-  | SynRef Name
+  = Hole
+  | TCon (Maybe Name) -- these may be primitive types
+  | DCon (Maybe Name) -- these may be primitive constructors
+  | Fun  Name
+  | Bound
+  | Keyword
+  | Pragma
+
+export
+syntaxToDecoration : IdrisSyntax -> Maybe Decoration
+syntaxToDecoration Hole     = Nothing
+syntaxToDecoration (TCon{}) = pure Typ
+syntaxToDecoration (DCon{}) = pure Data
+syntaxToDecoration (Fun{})  = pure Function
+syntaxToDecoration Bound    = pure Bound
+syntaxToDecoration Keyword  = pure Keyword
+syntaxToDecoration Pragma   = Nothing
+
+export
+kindAnn : KindedName -> Maybe IdrisSyntax
+kindAnn (MkKindedName mcat fn nm) = do
+    cat <- mcat
+    pure $ case cat of
+      Bound     => Bound
+      Func      => Fun fn
+      DataCon{} => DCon (Just fn)
+      TyCon{}   => TCon (Just fn)
+
+export
+showCategory : (IdrisSyntax -> ann) -> GlobalDef -> Doc ann -> Doc ann
+showCategory embed def = annotateM (embed <$> kindAnn (gDefKindedName def))
 
 public export
 data IdrisAnn
@@ -37,19 +63,19 @@ data IdrisAnn
   | Syntax IdrisSyntax
 
 export
-decorAnn : Decoration -> AnsiStyle
-decorAnn Keyword = color BrightWhite
-decorAnn Typ = color BrightBlue
-decorAnn Data = color BrightRed
-decorAnn Function = color BrightGreen
-decorAnn Bound = italic
+annToDecoration : IdrisAnn -> Maybe Decoration
+annToDecoration (Syntax syn) = syntaxToDecoration syn
+annToDecoration _ = Nothing
 
 export
 syntaxAnn : IdrisSyntax -> AnsiStyle
-syntaxAnn SynHole = color BrightGreen
-syntaxAnn (SynDecor decor) = decorAnn decor
-syntaxAnn SynPragma = color BrightMagenta
-syntaxAnn (SynRef _) = []
+syntaxAnn Hole = color BrightGreen
+syntaxAnn (TCon{}) = color BrightBlue
+syntaxAnn (DCon{}) = color BrightRed
+syntaxAnn (Fun{})  = color BrightGreen
+syntaxAnn Bound    = italic
+syntaxAnn Keyword  = color BrightWhite
+syntaxAnn Pragma   = color BrightMagenta
 
 export
 colorAnn : IdrisAnn -> AnsiStyle
@@ -79,7 +105,7 @@ fileCtxt = annotate FileCtxt
 
 export
 keyword : Doc IdrisSyntax -> Doc IdrisSyntax
-keyword = annotate (SynDecor Keyword)
+keyword = annotate Keyword
 
 export
 meta : Doc IdrisAnn -> Doc IdrisAnn
@@ -87,7 +113,7 @@ meta = annotate Meta
 
 export
 hole : Doc IdrisSyntax -> Doc IdrisSyntax
-hole = annotate SynHole
+hole = annotate Hole
 
 export
 code : Doc IdrisAnn -> Doc IdrisAnn
@@ -128,7 +154,7 @@ rewrite_ = keyword (pretty "rewrite")
 
 export
 pragma : Doc IdrisSyntax -> Doc IdrisSyntax
-pragma = annotate SynPragma
+pragma = annotate Pragma
 
 export
 prettyRig : RigCount -> Doc ann
@@ -177,7 +203,7 @@ mutual
     concatWith (surround dot) (pretty <$> path) <++> pretty '$' <+> equals <++> prettyTerm v
 
   prettyBinder : Name -> Doc IdrisSyntax
-  prettyBinder = annotate (SynDecor Bound) . pretty
+  prettyBinder = annotate Bound . pretty
 
   export
   prettyTerm : IPTerm -> Doc IdrisSyntax
@@ -189,15 +215,13 @@ mutual
       appPrec = User 10
       leftAppPrec : Prec
       leftAppPrec = User 9
-      prettyOp : OpStr -> Doc IdrisSyntax
-      prettyOp op = if isOpName op
-        then annotate (SynRef op) $ pretty op
-        else Chara '`' <+> annotate (SynRef op) (pretty op) <+> Chara '`'
+      prettyOp : OpStr' KindedName -> Doc IdrisSyntax
+      prettyOp op@(MkKindedName _ _ nm) = if isOpName nm
+        then annotateM (kindAnn op) $ pretty nm
+        else Chara '`' <+> annotateM (kindAnn op) (pretty nm) <+> Chara '`'
 
       go : Prec -> IPTerm -> Doc IdrisSyntax
-      go d (PRef _ (MkKindedName mnt n))
-        = maybe id (annotate . SynDecor . nameTypeDecoration) mnt
-        $ annotate (SynRef n) $ pretty n
+      go d (PRef _ nm) = annotateM (kindAnn nm) $ pretty nm.rawName
       go d (PPi _ rig Explicit Nothing arg ret) =
         parenthesise (d > startPrec) $ group $
           branchVal
@@ -338,16 +362,16 @@ mutual
       go d (PUnquote _ tm) = parenthesise (d > appPrec) $ "~" <+> parens (go startPrec tm)
       go d (PRunElab _ tm) = parenthesise (d > appPrec) $ pragma "%runElab" <++> go startPrec tm
       go d (PPrimVal _ c) =
-        let decor = if isPrimType c then Typ else Data in
-        annotate (SynDecor decor) $ pretty c
+        let decor = if isPrimType c then TCon Nothing else DCon Nothing in
+        annotate decor $ pretty c
       go d (PHole _ _ n) = hole (pretty (strCons '?' n))
-      go d (PType _) = annotate (SynDecor Typ) "Type"
+      go d (PType _) = annotate (TCon Nothing) "Type"
       go d (PAs _ _ n p) = pretty n <+> "@" <+> go d p
       go d (PDotted _ p) = dot <+> go d p
       go d (PImplicit _) = "_"
-      go d (PInfer _) = annotate SynHole $ "?"
+      go d (PInfer _) = annotate Hole $ "?"
       go d (POp _ _ op x y) = parenthesise (d > appPrec) $ group $ go startPrec x <++> prettyOp op <++> go startPrec y
-      go d (PPrefixOp _ _ op x) = parenthesise (d > appPrec) $ pretty op <+> go startPrec x
+      go d (PPrefixOp _ _ op x) = parenthesise (d > appPrec) $ prettyOp op <+> go startPrec x
       go d (PSectionL _ _ op x) = parens (prettyOp op <++> go startPrec x)
       go d (PSectionR _ _ x op) = parens (go startPrec x <++> prettyOp op)
       go d (PEq fc l r) = parenthesise (d > appPrec) $ go startPrec l <++> equals <++> go startPrec r
@@ -398,3 +422,15 @@ mutual
 export
 render : {auto o : Ref ROpts REPLOpts} -> Doc IdrisAnn -> Core String
 render = render colorAnn
+
+export
+renderWithDecorations :
+  {auto c : Ref Ctxt Defs} ->
+  {auto o : Ref ROpts REPLOpts} ->
+  (ann -> Maybe ann') ->
+  Doc ann ->
+  Core (String, List (Span ann'))
+renderWithDecorations f doc =
+  do (str, mspans) <- Render.renderWithSpans doc
+     let spans = mapMaybe (traverse f) mspans
+     pure (str, spans)

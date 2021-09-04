@@ -2,6 +2,7 @@ module Idris.Syntax
 
 import public Core.Binary
 import public Core.Context
+import public Core.Context.Log
 import public Core.Core
 import public Core.FC
 import public Core.Normalise
@@ -16,6 +17,7 @@ import Data.List
 import Data.Maybe
 import Data.String
 import Libraries.Data.NameMap
+import Libraries.Data.SortedMap
 import Libraries.Data.String.Extra
 import Libraries.Data.StringMap
 import Libraries.Text.PrettyPrint.Prettyprinter
@@ -37,8 +39,12 @@ Show Fixity where
   show Prefix = "prefix"
 
 public export
+OpStr' : Type -> Type
+OpStr' nm = nm
+
+public export
 OpStr : Type
-OpStr = Name
+OpStr = OpStr' Name
 
 mutual
 
@@ -97,10 +103,10 @@ mutual
 
        -- Operators
 
-       POp : (full, opFC : FC) -> OpStr -> PTerm' nm -> PTerm' nm -> PTerm' nm
-       PPrefixOp : (full, opFC : FC) -> OpStr -> PTerm' nm -> PTerm' nm
-       PSectionL : (full, opFC : FC) -> OpStr -> PTerm' nm -> PTerm' nm
-       PSectionR : (full, opFC : FC) -> PTerm' nm -> OpStr -> PTerm' nm
+       POp : (full, opFC : FC) -> OpStr' nm -> PTerm' nm -> PTerm' nm -> PTerm' nm
+       PPrefixOp : (full, opFC : FC) -> OpStr' nm -> PTerm' nm -> PTerm' nm
+       PSectionL : (full, opFC : FC) -> OpStr' nm -> PTerm' nm -> PTerm' nm
+       PSectionR : (full, opFC : FC) -> PTerm' nm -> OpStr' nm -> PTerm' nm
        PEq : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
        PBracketed : FC -> PTerm' nm -> PTerm' nm
 
@@ -235,6 +241,11 @@ mutual
   papply : FC -> PTerm' nm -> List (PTerm' nm) -> PTerm' nm
   papply fc f [] = f
   papply fc f (a :: as) = papply fc (PApp fc f a) as
+
+  export
+  applyArgs : PTerm' nm -> List (FC, PTerm' nm) -> PTerm' nm
+  applyArgs f [] = f
+  applyArgs f ((fc, a) :: args) = applyArgs (PApp fc f a) args
 
   public export
   PTypeDecl : Type
@@ -619,7 +630,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPStr : PStr' nm -> String
   showUpdate : PFieldUpdate' nm -> String
   showPTermPrec : Prec -> PTerm' nm -> String
-  showOpPrec : Prec -> OpStr -> String
+  showOpPrec : Prec -> OpStr' nm -> String
 
   showPTerm : PTerm' nm -> String
   showPTerm = showPTermPrec Open
@@ -734,7 +745,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec _ (PImplicit _) = "_"
   showPTermPrec _ (PInfer _) = "?"
   showPTermPrec d (POp _ _ op x y) = showPTermPrec d x ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d y
-  showPTermPrec d (PPrefixOp _ _ op x) = showPrec d op ++ showPTermPrec d x
+  showPTermPrec d (PPrefixOp _ _ op x) = showOpPrec d op ++ showPTermPrec d x
   showPTermPrec d (PSectionL _ _ op x) = "(" ++ showOpPrec d op ++ " " ++ showPTermPrec d x ++ ")"
   showPTermPrec d (PSectionR _ _ x op) = "(" ++ showPTermPrec d x ++ " " ++ showOpPrec d op ++ ")"
   showPTermPrec d (PEq fc l r) = showPTermPrec d l ++ " = " ++ showPTermPrec d r
@@ -787,7 +798,8 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (PWithUnambigNames fc ns rhs)
         = "with " ++ show ns ++ " " ++ showPTermPrec d rhs
 
-  showOpPrec d op = if isOpName op
+  showOpPrec d op = let op = toName op in
+    if isOpName op
     then        showPrec d op
     else "`" ++ showPrec d op ++ "`"
 
@@ -867,11 +879,16 @@ record SyntaxInfo where
   -- (most obviously, -)
   infixes : StringMap (Fixity, Nat)
   prefixes : StringMap Nat
-  ifaces : ANameMap IFaceInfo
+  -- info about modules
+  saveMod : List ModuleIdent -- current module name
+  modDocstrings : SortedMap ModuleIdent String
+  -- info about interfaces
   saveIFaces : List Name -- interfaces defined in current session, to save
                          -- to ttc
-  docstrings : ANameMap String
+  ifaces : ANameMap IFaceInfo
+  -- info about definitions
   saveDocstrings : NameMap () -- names defined in current session
+  defDocstrings : ANameMap String
   bracketholes : List Name -- hole names in argument position (so need
                            -- to be bracketed when solved)
   usingImpl : List (Maybe Name, RawImp)
@@ -897,24 +914,29 @@ TTC SyntaxInfo where
   toBuf b syn
       = do toBuf b (StringMap.toList (infixes syn))
            toBuf b (StringMap.toList (prefixes syn))
+           toBuf b (filter (\n => elemBy (==) (fst n) (saveMod syn))
+                           (SortedMap.toList $ modDocstrings syn))
            toBuf b (filter (\n => fst n `elem` saveIFaces syn)
                            (ANameMap.toList (ifaces syn)))
-           toBuf b (filter (\n => case lookup (fst n) (saveDocstrings syn) of
-                                       Nothing => False
-                                       _ => True)
-                           (ANameMap.toList (docstrings syn)))
+           toBuf b (filter (\n => isJust (lookup (fst n) (saveDocstrings syn)))
+                           (ANameMap.toList (defDocstrings syn)))
            toBuf b (bracketholes syn)
            toBuf b (startExpr syn)
 
   fromBuf b
       = do inf <- fromBuf b
            pre <- fromBuf b
+           moddstr <- fromBuf b
            ifs <- fromBuf b
-           dstrs <- fromBuf b
+           defdstrs <- fromBuf b
            bhs <- fromBuf b
            start <- fromBuf b
-           pure (MkSyntax (fromList inf) (fromList pre) (fromList ifs)
-                          [] (fromList dstrs) empty bhs [] start)
+           pure $ MkSyntax (fromList inf) (fromList pre)
+                   [] (fromList moddstr)
+                   [] (fromList ifs)
+                   empty (fromList defdstrs)
+                   bhs
+                   [] start
 
 HasNames IFaceInfo where
   full gam iface
@@ -957,10 +979,12 @@ initSyntax : SyntaxInfo
 initSyntax
     = MkSyntax initInfix
                initPrefix
+               []
                empty
                []
-               initDocStrings
+               empty
                initSaveDocStrings
+               initDocStrings
                []
                []
                (IVar EmptyFC (UN "main"))

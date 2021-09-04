@@ -1,0 +1,8 @@
+1/1: Building IgnoreDo (IgnoreDo.idr)
+IgnoreDo> IgnoreDo.bound : Maybe () -> Maybe b -> Maybe b
+bound m n = m >>= (\x => let y = 0 in n)
+IgnoreDo> IgnoreDo.ignored : Maybe () -> Maybe b -> Maybe b
+ignored m n = m >>= (\_ => n)
+IgnoreDo> IgnoreDo.seqd : Maybe () -> Maybe b -> Maybe b
+seqd m n = m >> Delay n
+IgnoreDo> Bye for now!

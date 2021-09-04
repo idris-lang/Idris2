@@ -71,11 +71,7 @@ getNameType rigc env fc x
                       | ns => throw (AmbiguousName fc (map fst ns))
                  checkVisibleNS fc (fullname def) (visibility def)
                  rigSafe (multiplicity def) rigc
-                 let nt = case definition def of
-                               PMDef _ _ _ _ _ => Func
-                               DCon t a _ => DataCon t a
-                               TCon t a _ _ _ _ _ _ => TyCon t a
-                               _ => Func
+                 let nt = fromMaybe Func (defNameType $ definition def)
 
                  log "ide-mode.highlight" 8
                      $ "getNameType is trying to add something for: "
@@ -113,11 +109,7 @@ getVarType rigc nest env fc x
                  case !(lookupCtxtExact n' (gamma defs)) of
                       Nothing => undefinedName fc n'
                       Just ndef =>
-                         let nt = case definition ndef of
-                                       PMDef _ _ _ _ _ => Func
-                                       DCon t a _ => DataCon t a
-                                       TCon t a _ _ _ _ _ _ => TyCon t a
-                                       _ => Func
+                         let nt = fromMaybe Func (defNameType $ definition ndef)
                              tm = tmf fc nt
                              tyenv = useVars (getArgs tm)
                                              (embed (type ndef)) in

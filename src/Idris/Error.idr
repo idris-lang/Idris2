@@ -39,7 +39,7 @@ import System.File
 %default covering
 
 keyword : Doc IdrisAnn -> Doc IdrisAnn
-keyword = annotate (Syntax $ SynDecor Keyword)
+keyword = annotate (Syntax Keyword)
 
 -- | Add binding site information if the term is simply a machine-inserted name
 pShowMN : {vars : _} -> Term vars -> Env t vars -> Doc IdrisAnn -> Doc IdrisAnn
