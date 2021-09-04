@@ -41,6 +41,7 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic046", "basic047",             "basic049", "basic050",
        "basic051", "basic052", "basic053", "basic054", "basic055",
        "basic056", "basic057", "basic058", "basic059", "basic060",
+       "basic061",
        "interpolation001", "interpolation002"]
 
 idrisTestsCoverage : TestPool
@@ -173,7 +174,7 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
-       "total011"
+       "total011", "total012"
       ]
 
 idrisTests : TestPool
@@ -201,7 +202,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "reflection005", "reflection006", "reflection007", "reflection008",
        "reflection009","reflection010",
        -- The 'with' rule
-       "with001", "with002", "with004", "with005",
+       "with001", "with002", "with004", "with005", "with006",
        -- with-disambiguation
        "with003",
        -- pretty printing

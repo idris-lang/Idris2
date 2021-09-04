@@ -87,4 +87,7 @@ mkDoLets origin lets = letFactory
             then DoLet fc fc' (UN n) rig ty val
             else DoLetPat fc (PRef fc' (UN n)) ty val []
          ) :: buildDoLets rest
-      (MkLetBinder rig pat ty val alts) => DoLetPat fc pat ty val alts :: buildDoLets rest
+      (MkLetBinder rig (PImplicit fc') ty val []) =>
+        DoLet fc fc' (UN "_") rig ty val :: buildDoLets rest
+      (MkLetBinder rig pat ty val alts) =>
+        DoLetPat fc pat ty val alts :: buildDoLets rest

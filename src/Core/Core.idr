@@ -5,6 +5,7 @@ import Core.TT
 
 import Data.List
 import Data.List1
+import Data.String
 import Data.Vect
 
 import Libraries.Data.IMaybe
@@ -783,13 +784,13 @@ condC ((x, y) :: xs) def
 export
 writeFile : (fname : String) -> (content : String) -> Core ()
 writeFile fname content =
-  coreLift (File.writeFile fname content) >>= \case
+  coreLift (writeFile fname content) >>= \case
     Right () => pure ()
     Left err => throw $ FileErr fname err
 
 export
 readFile : (fname : String) -> Core String
 readFile fname =
-  coreLift (File.readFile fname) >>= \case
+  coreLift (readFile fname) >>= \case
     Right content => pure content
     Left err => throw $ FileErr fname err

@@ -961,6 +961,16 @@ Eq TotalReq where
     (==) PartialOK PartialOK = True
     (==) _ _ = False
 
+||| Bigger means more requirements
+||| So if a definition was checked at b, it can be accepted at a <= b.
+export
+Ord TotalReq where
+  PartialOK <= _ = True
+  _ <= Total = True
+  a <= b = a == b
+
+  a < b = a <= b && a /= b
+
 export
 Show TotalReq where
     show Total = "total"

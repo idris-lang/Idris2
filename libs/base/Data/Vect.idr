@@ -87,6 +87,15 @@ take : (n  : Nat)
 take 0 xs = Nil
 take (S k) (x :: xs) = x :: take k xs
 
+namespace Stream
+  ||| Take precisely n elements from the stream.
+  ||| @ n how many elements to take
+  ||| @ xs the stream
+  public export
+  take : (n : Nat) -> (xs : Stream a) -> Vect n a
+  take Z xs = []
+  take (S k) (x :: xs) = x :: take k xs
+
 ||| Drop the first `n` elements of a Vect.
 public export
 drop : (n : Nat) -> Vect (n + m) elem -> Vect m elem

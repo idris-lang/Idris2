@@ -16,6 +16,16 @@ function __prim_idris2js_array(x){
   return result;
 }
 
+function __lazy(thunk) {
+  let res;
+  return function () {
+    if (thunk === undefined) return res;
+    res = thunk();
+    thunk = undefined;
+    return res;
+  };
+};
+
 function __prim_stringIteratorNew(str) {
   return 0
 }

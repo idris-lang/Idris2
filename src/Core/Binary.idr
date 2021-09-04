@@ -17,6 +17,7 @@ import Core.UnifyState
 
 import Data.Buffer
 import Data.List
+import Data.String
 
 import System.File
 
@@ -31,7 +32,7 @@ import public Libraries.Utils.Binary
 ||| (Increment this when changing anything in the data format)
 export
 ttcVersion : Int
-ttcVersion = 61
+ttcVersion = 62
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -41,6 +42,7 @@ checkTTCVersion file ver exp
 record TTCFile extra where
   constructor MkTTCFile
   version : Int
+  totalReq : TotalReq
   sourceHash : String
   ifaceHash : Int
   importHashes : List (Namespace, Int)
@@ -93,14 +95,14 @@ HasNames (Name, Name, Bool) where
   resolved c (n1, n2, b) = pure (!(resolved c n1), !(resolved c n2), b)
 
 HasNames e => HasNames (TTCFile e) where
-  full gam (MkTTCFile version sourceHash ifaceHash iHashes incData
+  full gam (MkTTCFile version totalReq sourceHash ifaceHash iHashes incData
                       context userHoles
                       autoHints typeHints
                       imported nextVar currentNS nestedNS
                       pairnames rewritenames primnames
                       namedirectives cgdirectives trans
                       extra)
-      = pure $ MkTTCFile version sourceHash ifaceHash iHashes incData
+      = pure $ MkTTCFile version totalReq sourceHash ifaceHash iHashes incData
                          context userHoles
                          !(traverse (full gam) autoHints)
                          !(traverse (full gam) typeHints)
@@ -131,14 +133,14 @@ HasNames e => HasNames (TTCFile e) where
   -- I don't think we ever actually want to call this, because after we read
   -- from the file we're going to add them to learn what the resolved names
   -- are supposed to be! But for completeness, let's do it right.
-  resolved gam (MkTTCFile version sourceHash ifaceHash iHashes incData
+  resolved gam (MkTTCFile version totalReq sourceHash ifaceHash iHashes incData
                       context userHoles
                       autoHints typeHints
                       imported nextVar currentNS nestedNS
                       pairnames rewritenames primnames
                       namedirectives cgdirectives trans
                       extra)
-      = pure $ MkTTCFile version sourceHash ifaceHash iHashes incData
+      = pure $ MkTTCFile version totalReq sourceHash ifaceHash iHashes incData
                          context userHoles
                          !(traverse (resolved gam) autoHints)
                          !(traverse (resolved gam) typeHints)
@@ -177,6 +179,7 @@ writeTTCFile b file_in
       = do file <- toFullNames file_in
            toBuf b "TT2"
            toBuf @{Wasteful} b (version file)
+           toBuf b (totalReq file)
            toBuf b (sourceHash file)
            toBuf b (ifaceHash file)
            toBuf b (importHashes file)
@@ -204,9 +207,11 @@ readTTCFile : TTC extra =>
 readTTCFile readall file as b
       = do hdr <- fromBuf b
            chunk <- get Bin
-           when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
+           when (hdr /= "TT2") $
+             corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
            ver <- fromBuf @{Wasteful} b
            checkTTCVersion file ver ttcVersion
+           totalReq <- fromBuf b
            sourceFileHash <- fromBuf b
            ifaceHash <- fromBuf b
            importHashes <- fromBuf b
@@ -214,7 +219,8 @@ readTTCFile readall file as b
            imp <- fromBuf b
            ex <- fromBuf b
            if not readall
-              then pure (MkTTCFile ver sourceFileHash ifaceHash importHashes
+              then pure (MkTTCFile ver totalReq
+                                   sourceFileHash ifaceHash importHashes
                                    incData [] [] [] [] []
                                    0 (mkNamespace "") [] Nothing
                                    Nothing
@@ -234,7 +240,8 @@ readTTCFile readall file as b
                  nds <- fromBuf b
                  cgds <- fromBuf b
                  trans <- fromBuf b
-                 pure (MkTTCFile ver sourceFileHash ifaceHash importHashes incData
+                 pure (MkTTCFile ver totalReq
+                                 sourceFileHash ifaceHash importHashes incData
                                  (map (replaceNS cns) defs) uholes
                                  autohs typehs imp nextv cns nns
                                  pns rws prims nds cgds trans ex)
@@ -278,9 +285,15 @@ writeToTTC extradata sourceFileName ttcFileName
          ust <- get UST
          gdefs <- getSaveDefs (currentNS defs) (keys (toSave defs)) [] defs
          sourceHash <- hashFileWith defs.options.hashFn sourceFileName
-         log "ttc.write" 5 $ "Writing " ++ ttcFileName ++ " with source hash " ++ sourceHash ++ " and interface hash " ++ show (ifaceHash defs)
+         totalReq <- getDefaultTotalityOption
+         log "ttc.write" 5 $ unwords
+           [ "Writing", ttcFileName
+           , "with source hash", sourceHash
+           , "and interface hash", show (ifaceHash defs)
+           ]
          writeTTCFile bin
-                   (MkTTCFile ttcVersion (sourceHash) (ifaceHash defs) (importHashes defs)
+                   (MkTTCFile ttcVersion totalReq
+                              sourceHash (ifaceHash defs) (importHashes defs)
                               (incData defs)
                               gdefs
                               (keys (userHoles defs))
@@ -507,9 +520,29 @@ getImportHashes file b
          when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
          ver <- fromBuf @{Wasteful} b
          checkTTCVersion file ver ttcVersion
+         totalReq <- fromBuf {a = TotalReq} b
          sourceFileHash <- fromBuf {a = String} b
          interfaceHash <- fromBuf {a = Int} b
          fromBuf b
+
+export
+getTotalReq : String -> Ref Bin Binary -> Core TotalReq
+getTotalReq file b
+    = do hdr <- fromBuf {a = String} b
+         when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
+         ver <- fromBuf @{Wasteful} b
+         checkTTCVersion file ver ttcVersion
+         fromBuf b
+
+export
+readTotalReq : (fileName : String) -> -- file containing the module
+               Core (Maybe TotalReq)
+readTotalReq fileName
+    = do Right buffer <- coreLift $ readFromFile fileName
+            | Left err => pure Nothing
+         b <- newRef Bin buffer
+         catch (Just <$> getTotalReq fileName b)
+               (\err => pure Nothing)
 
 export
 getHashes : String -> Ref Bin Binary -> Core (String, Int)
@@ -518,6 +551,7 @@ getHashes file b
          when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
          ver <- fromBuf @{Wasteful} b
          checkTTCVersion file ver ttcVersion
+         totReq <- fromBuf {a = TotalReq} b
          sourceFileHash <- fromBuf b
          interfaceHash <- fromBuf b
          pure (sourceFileHash, interfaceHash)
@@ -529,8 +563,7 @@ readHashes fileName
     = do Right buffer <- coreLift $ readFromFile fileName
             | Left err => pure ("", 0)
          b <- newRef Bin buffer
-         catch (do hashes <- getHashes fileName b
-                   pure hashes)
+         catch (getHashes fileName b)
                (\err => pure ("", 0))
 
 export

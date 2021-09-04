@@ -15,6 +15,7 @@ modules =
     Compiler.Identity,
     Compiler.Inline,
     Compiler.LambdaLift,
+    Compiler.Opts.CSE,
     Compiler.Separate,
     Compiler.VMCode,
 
@@ -65,6 +66,7 @@ modules =
     Core.Normalise.Quote,
     Core.Options,
     Core.Options.Log,
+    Core.Ord,
     Core.Primitives,
     Core.Reflect,
     Core.Termination,
