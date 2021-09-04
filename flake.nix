@@ -35,9 +35,7 @@
             inherit idris2-version chez;
             srcRev = self.shortRev or "dirty";
           };
-          buildIdris = { projectName, src, idrisLibraries }:
-            pkgs.callPackage ./nix/buildIdris.nix
-              { inherit src projectName idrisLibraries idris2-version; idris2 = idris2Pkg; };
+          buildIdris = pkgs.callPackage ./nix/buildIdris.nix { inherit idris2-version; idris2 = idris2Pkg; };
         in rec {
           checks = import ./nix/test.nix {
             inherit (pkgs) system stdenv runCommand lib;
