@@ -1,5 +1,6 @@
 module Core.Core
 
+import Core.Context.Context
 import Core.Env
 import Core.TT
 
@@ -11,6 +12,7 @@ import Data.Vect
 import Libraries.Data.IMaybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Utils.Binary
 
 import public Data.IORef
 import System
@@ -729,11 +731,6 @@ filterM p (x :: xs)
          then do xs' <- filterM p xs
                  pure (x :: xs')
          else filterM p xs
-
-export
-data Ref : (l : label) -> Type -> Type where
-     [search l]
-     MkRef : IORef a -> Ref x a
 
 export
 newRef : (x : label) -> t -> Core (Ref x t)

@@ -8,6 +8,7 @@ import Compiler.LambdaLift
 import Compiler.Opts.CSE
 import Compiler.VMCode
 
+import Core.Binary.Prims
 import Core.Context
 import Core.Context.Log
 import Core.Directory
@@ -17,7 +18,6 @@ import Core.TT
 import Core.TTC
 import Libraries.Data.IOArray
 import Libraries.Data.SortedMap
-import Libraries.Utils.Binary
 import Libraries.Utils.Path
 
 import Data.List
