@@ -1076,7 +1076,12 @@ mkPat args orig (Ref fc Func n)
   = do prims <- getPrimitiveNames
        mtm <- normalisePrims (const True) isPConst True prims n args orig []
        case mtm of
-         Just tm => mkPat [] tm tm
+         Just tm => if tm /= orig -- check we made progress; if there's an
+                                  -- unresolved interface, we might be stuck
+                                  -- and we'd loop forever
+                       then mkPat [] tm tm
+                       else -- Possibly this should be an error instead?
+                            pure $ PUnmatchable (getLoc orig) orig
          Nothing =>
            do log "compile.casetree" 10 $
                 "Unmatchable function: " ++ show n
