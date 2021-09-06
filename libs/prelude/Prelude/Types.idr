@@ -398,41 +398,16 @@ namespace List
   reverse : List a -> List a
   reverse = reverseOnto []
 
--- A tail-recursive version of List.(++).
-tailRecAppend : (xs, ys : List a) -> List a
-tailRecAppend xs ys = reverseOnto ys (reverse xs)
+  ||| Tail-recursive append. Uses of (++) are automatically transformed to
+  ||| this. The only reason this is exported is that the proof of equivalence
+  ||| lives in a different module.
+  public export
+  tailRecAppend : (xs, ys : List a) -> List a
+  tailRecAppend xs ys = reverseOnto ys (reverse xs)
 
--- Always use tailRecAppend at runtime. tailRecAppendIsAppend proves these are
--- equivalent.
-%transform "tailRecAppend" List.(++) = tailRecAppend
-
-reverseReverseOnto : (l, r : List a) -> reverse (reverseOnto l r) = reverseOnto r l
-reverseReverseOnto _ [] = Refl
-reverseReverseOnto l (x :: xs) = reverseReverseOnto (x :: l) xs
-
-||| List reverse applied twice yields the identity function.
-export
-reverseInvolutive : (xs : List a) -> reverse (reverse xs) = xs
-reverseInvolutive = reverseReverseOnto []
-
-consReverse : (x : a) -> (l, r : List a) -> x :: reverseOnto r l = reverseOnto r (reverseOnto [x] (reverse l))
-consReverse _ [] _ = Refl
-consReverse x (y::ys) r
-  = rewrite consReverse x ys (y :: r) in
-      rewrite cong (reverseOnto r . reverse) $ consReverse x ys [y] in
-        rewrite reverseInvolutive (y :: reverseOnto [x] (reverse ys)) in
-          Refl
-
-consTailRecAppend : (x : a) -> (l, r : List a) -> tailRecAppend (x :: l) r = x :: (tailRecAppend l r)
-consTailRecAppend x l r
-  = rewrite consReverse x (reverse l) r in
-      rewrite reverseInvolutive l in
-        Refl
-
-tailRecAppendIsAppend : (xs, ys : List a) -> tailRecAppend xs ys = xs ++ ys
-tailRecAppendIsAppend [] ys = Refl
-tailRecAppendIsAppend (x::xs) ys =
-  trans (consTailRecAppend x xs ys) (cong (x ::) $ tailRecAppendIsAppend xs ys)
+  -- Always use tailRecAppend at runtime. Data.List.tailRecAppendIsAppend
+  -- proves these are equivalent.
+  %transform "tailRecAppend" (++) = tailRecAppend
 
 public export
 Functor List where
