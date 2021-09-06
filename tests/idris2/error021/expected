@@ -1,0 +1,11 @@
+1/1: Building DeepAmbig (DeepAmbig.idr)
+Error: While processing right hand side of test. Undefined name va. 
+
+DeepAmbig:50:59--50:61
+ 46 |       x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $
+ 47 |       x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $
+ 48 |       x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $
+ 49 |       x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $
+ 50 |       x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ x $ va
+                                                                ^^
+
