@@ -338,7 +338,7 @@ mutual
                         when (not !(convert defs env aty !(evalClosure defs ty))) $
                            do ty' <- quote defs env ty
                               aty' <- quote defs env aty
-                              throw (CantConvert fc env ty' aty')
+                              throw (CantConvert fc (gamma defs) env ty' aty')
                       pure (App fc f' aerased,
                             glueBack defs env sc',
                             fused ++ aused)

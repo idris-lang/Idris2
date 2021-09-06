@@ -199,7 +199,7 @@ needType (InType _ _ err) = needType err
 needType (InCon _ _ err) = needType err
 needType (InLHS _ _ err) = needType err
 needType (InRHS _ _ err) = needType err
-needType (WhenUnifying _ _ _ _ err) = needType err
+needType (WhenUnifying _ _ _ _ _ err) = needType err
 needType _ = False
 
 export

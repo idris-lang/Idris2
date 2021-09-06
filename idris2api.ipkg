@@ -42,10 +42,12 @@ modules =
 
     Core.AutoSearch,
     Core.Binary,
+    Core.Binary.Prims,
     Core.CaseBuilder,
     Core.CaseTree,
     Core.CompileExpr,
     Core.Context,
+    Core.Context.Context,
     Core.Context.Data,
     Core.Context.Log,
     Core.Core,

@@ -365,11 +365,12 @@ mkCase {c} {u} fn orig lhs_raw
                do put Ctxt defs
                   put UST ust
                   case err of
-                       WhenUnifying _ env l r err
-                          => if !(impossibleOK defs !(nf defs env l)
-                                                    !(nf defs env r))
-                                then pure (Impossible lhs_raw)
-                                else pure Invalid
+                       WhenUnifying _ gam env l r err
+                         => do let defs = record { gamma = gam } defs
+                               if !(impossibleOK defs !(nf defs env l)
+                                                      !(nf defs env r))
+                                  then pure (Impossible lhs_raw)
+                                  else pure Invalid
                        _ => pure Invalid)
 
 substLets : {vars : _} ->
