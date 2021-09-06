@@ -128,6 +128,11 @@ displayName (CaseBlock outer _) = (Nothing, "case block in " ++ show outer)
 displayName (WithBlock outer _) = (Nothing, "with block in " ++ show outer)
 displayName (Resolved i) = (Nothing, "$resolved" ++ show i)
 
+export
+splitNS : Name -> (Namespace, Name)
+splitNS (NS ns nm) = mapFst (ns <.>) (splitNS nm)
+splitNS nm = (emptyNS, nm)
+
 --- Drop a namespace from a name
 export
 dropNS : Name -> Name

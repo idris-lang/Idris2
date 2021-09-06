@@ -186,8 +186,11 @@ mutual
                  do scs <- traverse (findSC defs env Guarded pats) args
                     pure (concat scs)
              (_, Ref fc Func fn, args) =>
-                 do Just ty <- lookupTyExact fn (gamma defs)
-                         | Nothing =>
+                 do logC "totality" 50 $
+                       pure $ "Looking up type of " ++ show !(toFullNames fn)
+                    Just ty <- lookupTyExact fn (gamma defs)
+                         | Nothing => do
+                              log "totality" 50 $ "Lookup failed"
                               findSCcall defs env Unguarded pats fc fn 0 args
                     arity <- getArity defs [] ty
                     findSCcall defs env Unguarded pats fc fn arity args
@@ -523,7 +526,8 @@ checkSC defs f args path
              let Unchecked = isTerminating (totality gdef)
                   | IsTerminating => pure IsTerminating
                   | _ => pure (NotTerminating (BadCall [fnCall sc]))
-             log "totality.termination.sizechange.checkCall" 8 $ "CheckCall Size Change Graph: " ++ show !(toFullNames (fnCall sc))
+             log "totality.termination.sizechange.checkCall" 8 $
+                "CheckCall Size Change Graph: " ++ show !(toFullNames (fnCall sc))
              term <- checkSC defs (fnCall sc) (mkArgs (fnArgs sc)) path
              let inpath = fnCall sc `elem` map fst path
              if not inpath

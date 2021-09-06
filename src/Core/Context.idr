@@ -2158,6 +2158,17 @@ getPrimitiveNames : {auto c : Ref Ctxt Defs} -> Core (List Name)
 getPrimitiveNames = primNamesToList <$> getPrimNames
 
 export
+isPrimName : List Name -> Name -> Bool
+isPrimName prims given = let (ns, nm) = splitNS given in go ns nm prims where
+
+  go : Namespace -> Name -> List Name -> Bool
+  go ns nm [] = False
+  go ns nm (p :: ps)
+    = let (ns', nm') = splitNS p in
+      (nm' == nm && (ns' `isApproximationOf` ns))
+      || go ns nm ps
+
+export
 addLogLevel : {auto c : Ref Ctxt Defs} ->
               Maybe LogLevel -> Core ()
 addLogLevel lvl

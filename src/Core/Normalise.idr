@@ -348,7 +348,7 @@ normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
                  -- output only evaluated if primitive
                  Core (Maybe (Term vs))
 normalisePrims boundSafe viewConstant all prims n args tm env
-   = do let True = elem (dropNS !(getFullName n)) prims -- is a primitive
+   = do let True = isPrimName prims !(getFullName n) -- is a primitive
               | _ => pure Nothing
         let (mc :: _) = reverse args -- with at least one argument
               | _ => pure Nothing
