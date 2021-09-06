@@ -179,3 +179,11 @@ long win32_getNProcessors() {
                                                  ;
 }
 
+int win32_getFileNo(FILE* f) {
+    return _fileno(f);
+}
+
+int win32_isTTY(int fd) {
+    return _isatty(fd);
+}
+

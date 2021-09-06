@@ -23,6 +23,9 @@ prim__fileModifiedTime : FilePtr -> PrimIO Int
 %foreign support "idris2_fileStatusTime"
 prim__fileStatusTime : FilePtr -> PrimIO Int
 
+%foreign support "idris2_fileIsTTY"
+prim__fileIsTTY : FilePtr -> PrimIO Int
+
 ||| Check if a file exists for reading.
 export
 exists : HasIO io => String -> io Bool
@@ -75,3 +78,9 @@ fPoll : HasIO io => File -> io Bool
 fPoll (FHandle f)
     = do p <- primIO (prim__fPoll f)
          pure (p > 0)
+
+||| Check whether the given File is a terminal device.
+export
+isTTY : HasIO io => (h : File) -> io Bool
+isTTY (FHandle f) = (/= 0) <$> primIO (prim__fileIsTTY f)
+
