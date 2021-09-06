@@ -15,9 +15,9 @@ ttimpTests : TestPool
 ttimpTests = MkTestPool "TTImp" [] Nothing
      [ "basic001", "basic002", "basic003", "basic004", "basic005"
      , "basic006"
-     , "coverage001", "coverage002"
+     , "coverage002"
      , "dot001"
-     , "eta001", "eta002"
+     , "eta001"
      , "lazy001"
      , "nest001", "nest002"
      , "perf001", "perf002", "perf003"

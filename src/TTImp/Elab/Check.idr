@@ -581,7 +581,7 @@ successful allowCons ((tm, elab) :: elabs)
                            put MD md
                            put Ctxt defs
                            elabs' <- successful allowCons elabs
-                           pure (Left (tm, !(normaliseErr err)) :: elabs'))
+                           pure (Left (tm, err) :: elabs'))
 
 export
 exactlyOne' : {vars : _} ->
@@ -740,7 +740,7 @@ convertWithLazy withLazy fc elabinfo env x y
                   -- throwing because they may no longer be known
                   -- by the time we look at the error
                   defs <- get Ctxt
-                  throw !(normaliseErr (WhenUnifying fc env xtm ytm err)))
+                  throw (WhenUnifying fc (gamma defs) env xtm ytm err))
 
 export
 convert : {vars : _} ->

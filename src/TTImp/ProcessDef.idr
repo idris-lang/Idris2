@@ -97,17 +97,19 @@ impossibleOK defs x y = pure False
 export
 impossibleErrOK : {auto c : Ref Ctxt Defs} ->
                   Defs -> Error -> Core Bool
-impossibleErrOK defs (CantConvert fc env l r)
-    = impossibleOK defs !(nf defs env l)
-                        !(nf defs env r)
-impossibleErrOK defs (CantSolveEq fc env l r)
-    = impossibleOK defs !(nf defs env l)
-                        !(nf defs env r)
+impossibleErrOK defs (CantConvert fc gam env l r)
+    = do let defs = record { gamma = gam } defs
+         impossibleOK defs !(nf defs env l)
+                           !(nf defs env r)
+impossibleErrOK defs (CantSolveEq fc gam env l r)
+    = do let defs = record { gamma = gam } defs
+         impossibleOK defs !(nf defs env l)
+                           !(nf defs env r)
 impossibleErrOK defs (BadDotPattern _ _ ErasedArg _ _) = pure True
 impossibleErrOK defs (CyclicMeta _ _ _ _) = pure True
 impossibleErrOK defs (AllFailed errs)
     = anyM (impossibleErrOK defs) (map snd errs)
-impossibleErrOK defs (WhenUnifying _ _ _ _ err)
+impossibleErrOK defs (WhenUnifying _ _ _ _ _ err)
     = impossibleErrOK defs err
 impossibleErrOK defs _ = pure False
 
@@ -160,8 +162,9 @@ recoverable defs x y = pure False
 export
 recoverableErr : {auto c : Ref Ctxt Defs} ->
                  Defs -> Error -> Core Bool
-recoverableErr defs (CantConvert fc env l r)
-  = do l <- nf defs env l
+recoverableErr defs (CantConvert fc gam env l r)
+  = do let defs = record { gamma = gam } defs
+       l <- nf defs env l
        r <- nf defs env r
        log "coverage.recover" 10 $ unlines
          [ "Recovering from CantConvert?"
@@ -171,14 +174,15 @@ recoverableErr defs (CantConvert fc env l r)
          ]
        recoverable defs l r
 
-recoverableErr defs (CantSolveEq fc env l r)
-    = recoverable defs !(nf defs env l)
-                       !(nf defs env r)
+recoverableErr defs (CantSolveEq fc gam env l r)
+  = do let defs = record { gamma = gam } defs
+       recoverable defs !(nf defs env l)
+                        !(nf defs env r)
 recoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure True
 recoverableErr defs (CyclicMeta _ _ _ _) = pure True
 recoverableErr defs (AllFailed errs)
     = anyM (recoverableErr defs) (map snd errs)
-recoverableErr defs (WhenUnifying _ _ _ _ err)
+recoverableErr defs (WhenUnifying _ _ _ _ _ err)
     = recoverableErr defs err
 recoverableErr defs _ = pure False
 

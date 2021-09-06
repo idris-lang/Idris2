@@ -1,6 +1,0 @@
-rm -rf build
-
-echo ':q' | $1 --yaffle Vect.yaff
-echo ':q' | $1 --yaffle Vect2.yaff
-echo ':q' | $1 --yaffle Vect3.yaff
-
