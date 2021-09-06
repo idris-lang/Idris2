@@ -576,12 +576,22 @@ successful allowCons ((tm, elab) :: elabs)
                    -- Record success, and the state we ended at
                    pure (Right (minus ncons' ncons,
                                 res, defs', ust', est', md') :: elabs'))
-               (\err => do put UST ust
+               (\err => do when (abandon err) $ throw err
+                           put UST ust
                            put EST est
                            put MD md
                            put Ctxt defs
                            elabs' <- successful allowCons elabs
                            pure (Left (tm, !(normaliseErr err)) :: elabs'))
+  where
+    abandon : Error -> Bool
+    abandon (UndefinedName _ _) = True
+    abandon (InType _ _ err) = abandon err
+    abandon (InCon _ _ err) = abandon err
+    abandon (InLHS _ _ err) = abandon err
+    abandon (InRHS _ _ err) = abandon err
+    abandon (AllFailed errs) = any (abandon . snd) errs
+    abandon _ = False
 
 export
 exactlyOne' : {vars : _} ->
