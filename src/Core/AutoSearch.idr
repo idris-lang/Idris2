@@ -78,14 +78,14 @@ searchIfHole : {vars : _} ->
                (arg : ArgInfo vars) ->
                Core ()
 searchIfHole fc defaults trying ispair Z def top env arg
-    = throw (CantSolveGoal fc [] top) -- possibly should say depth limit hit?
+    = throw (CantSolveGoal fc (gamma !(get Ctxt)) [] top) -- possibly should say depth limit hit?
 searchIfHole fc defaults trying ispair (S depth) def top env arg
     = do let hole = holeID arg
          let rig = argRig arg
 
          defs <- get Ctxt
          Just gdef <- lookupCtxtExact (Resolved hole) (gamma defs)
-              | Nothing => throw (CantSolveGoal fc [] top)
+              | Nothing => throw (CantSolveGoal fc (gamma !(get Ctxt)) [] top)
          let Hole _ _ = definition gdef
               | _ => pure () -- already solved
          top' <- if ispair
@@ -101,7 +101,7 @@ searchIfHole fc defaults trying ispair (S depth) def top env arg
             then pure ()
             else do vs <- unify inTerm fc env (metaApp arg) argdef
                     let [] = constraints vs
-                        | _ => throw (CantSolveGoal fc [] top)
+                        | _ => throw (CantSolveGoal fc (gamma defs) [] top)
                     pure ()
 
 successful : {vars : _} ->
@@ -135,12 +135,12 @@ anyOne : {vars : _} ->
          FC -> Env Term vars -> (topTy : ClosedTerm) ->
          List (Core (Term vars)) ->
          Core (Term vars)
-anyOne fc env top [] = throw (CantSolveGoal fc [] top)
+anyOne fc env top [] = throw (CantSolveGoal fc (gamma !(get Ctxt)) [] top)
 anyOne fc env top [elab]
     = catch elab $
          \case
-           err@(CantSolveGoal _ _ _) => throw err
-           _ => throw $ CantSolveGoal fc [] top
+           err@(CantSolveGoal _ _ _ _) => throw err
+           _ => throw $ CantSolveGoal fc (gamma !(get Ctxt)) [] top
 anyOne fc env top (elab :: elabs)
     = tryUnify elab (anyOne fc env top elabs)
 
@@ -153,8 +153,8 @@ exactlyOne : {vars : _} ->
 exactlyOne fc env top target [elab]
     = catch elab $
          \case
-           err@(CantSolveGoal _ _ _) => throw err
-           _ => throw $ CantSolveGoal fc [] top
+           err@(CantSolveGoal _ _ _ _) => throw err
+           _ => throw $ CantSolveGoal fc (gamma !(get Ctxt)) [] top
 exactlyOne {vars} fc env top target all
     = do elabs <- successful all
          case rights elabs of
@@ -163,7 +163,7 @@ exactlyOne {vars} fc env top target all
                        put Ctxt defs
                        commit
                        pure res
-              [] => throw (CantSolveGoal fc [] top)
+              [] => throw (CantSolveGoal fc (gamma !(get Ctxt)) [] top)
               rs => throw (AmbiguousSearch fc env !(quote !(get Ctxt) env target)
                              !(traverse normRes rs))
   where
@@ -275,7 +275,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
              logNF "auto" 10 "For target" env target
              ures <- unify inTerm fc env target appTy
              let [] = constraints ures
-                 | _ => throw (CantSolveGoal fc [] top)
+                 | _ => throw (CantSolveGoal fc (gamma defs) [] top)
              -- We can only use the local if its type is not an unsolved hole
              if !(usableLocal fc defaults env ty)
                 then do
@@ -290,7 +290,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
                             (impLast args)
                    pure candidate
                 else do logNF "auto" 10 "Can't use " env ty
-                        throw (CantSolveGoal fc [] top)
+                        throw (CantSolveGoal fc (gamma defs) [] top)
 
     findPos : Defs -> Term vars ->
               (Term vars -> Term vars) ->
@@ -300,10 +300,10 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
     findPos defs p f nty@(NTCon pfc pn _ _ [(_, xty), (_, yty)]) target
         = handleUnify (findDirect defs prf f nty target) (\e =>
            if ambig e then throw e else
-             do fname <- maybe (throw (CantSolveGoal fc [] top))
+             do fname <- maybe (throw (CantSolveGoal fc (gamma defs) [] top))
                                pure
                                !fstName
-                sname <- maybe (throw (CantSolveGoal fc [] top))
+                sname <- maybe (throw (CantSolveGoal fc (gamma defs) [] top))
                                pure
                                !sndName
                 if !(isPairType pn)
@@ -325,7 +325,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
                                                          ytytm,
                                                          f arg])
                                      ytynf target)]
-                   else throw (CantSolveGoal fc [] top))
+                   else throw (CantSolveGoal fc (gamma defs) [] top))
     findPos defs p f nty target
         = findDirect defs p f nty target
 
@@ -366,9 +366,9 @@ searchName fc rigc defaults trying depth def top env target (n, ndef)
     = do defs <- get Ctxt
          when (not (visibleInAny (!getNS :: !getNestedNS)
                                  (fullname ndef) (visibility ndef))) $
-            throw (CantSolveGoal fc [] top)
+            throw (CantSolveGoal fc (gamma defs) [] top)
          when (BlockedHint `elem` flags ndef) $
-            throw (CantSolveGoal fc [] top)
+            throw (CantSolveGoal fc (gamma defs) [] top)
 
          let ty = type ndef
          let namety : NameType
@@ -381,7 +381,7 @@ searchName fc rigc defaults trying depth def top env target (n, ndef)
          (args, appTy) <- mkArgs fc rigc env nty
          ures <- unify inTerm fc env target appTy
          let [] = constraints ures
-             | _ => throw (CantSolveGoal fc [] top)
+             | _ => throw (CantSolveGoal fc (gamma defs) [] top)
          ispair <- isPairNF env nty defs
          let candidate = apply fc (Ref fc namety n) (map metaApp args)
          logTermNF "auto" 10 "Candidate " env candidate
@@ -401,7 +401,7 @@ searchNames : {vars : _} ->
               Env Term vars -> Bool -> List Name ->
               (target : NF vars) -> Core (Term vars)
 searchNames fc rigc defaults trying depth defining topty env ambig [] target
-    = throw (CantSolveGoal fc [] topty)
+    = throw (CantSolveGoal fc (gamma !(get Ctxt)) [] topty)
 searchNames fc rigc defaults trying depth defining topty env ambig (n :: ns) target
     = do defs <- get Ctxt
          visnsm <- traverse (visible (gamma defs) (currentNS defs :: nestedNS defs)) (n :: ns)
@@ -463,9 +463,9 @@ concreteDets {vars} fc defaults env top pos dets (arg :: args)
                   throw (DeterminingArg fc n i [] top)
     concrete defs (NApp _ (NMeta n i _) _) False
         = do Just (Hole _ b) <- lookupDefExact n (gamma defs)
-                  | def => throw (CantSolveGoal fc [] top)
+                  | def => throw (CantSolveGoal fc (gamma defs) [] top)
              unless (implbind b) $
-                  throw (CantSolveGoal fc [] top)
+                  throw (CantSolveGoal fc (gamma defs) [] top)
     concrete defs tm atTop = pure ()
 
 checkConcreteDets : {vars : _} ->
@@ -535,7 +535,7 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
                                        (\e => if ambig e
                                                  then throw e
                                                  else tryGroups Nothing nty (hintGroups sd))
-                     else throw (CantSolveGoal fc [] top)
+                     else throw (CantSolveGoal fc (gamma defs) [] top)
               _ => do logNF "auto" 10 "Next target: " env nty
                       searchLocalVars fc rigc defaults trying' depth def top env nty
   where
@@ -548,7 +548,7 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
     tryGroups : Maybe Error ->
                 NF vars -> List (Bool, List Name) -> Core (Term vars)
     tryGroups (Just err) nty [] = throw err
-    tryGroups Nothing nty [] = throw (CantSolveGoal fc [] top)
+    tryGroups Nothing nty [] = throw (CantSolveGoal fc (gamma !(get Ctxt)) [] top)
     tryGroups merr nty ((ambigok, g) :: gs)
         = handleUnify
              (do logC "auto" 5

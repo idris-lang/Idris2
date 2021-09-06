@@ -1,5 +1,6 @@
 module Core.Core
 
+import Core.Context.Context
 import Core.Env
 import Core.TT
 
@@ -11,6 +12,7 @@ import Data.Vect
 import Libraries.Data.IMaybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Utils.Binary
 
 import public Data.IORef
 import System
@@ -74,15 +76,15 @@ public export
 data Error : Type where
      Fatal : Error -> Error -- flag as unrecoverable (so don't postpone awaiting further info)
      CantConvert : {vars : _} ->
-                   FC -> Env Term vars -> Term vars -> Term vars -> Error
+                   FC -> Context -> Env Term vars -> Term vars -> Term vars -> Error
      CantSolveEq : {vars : _} ->
-                   FC -> Env Term vars -> Term vars -> Term vars -> Error
+                   FC -> Context -> Env Term vars -> Term vars -> Term vars -> Error
      PatternVariableUnifies : {vars : _} ->
                               FC -> Env Term vars -> Name -> Term vars -> Error
      CyclicMeta : {vars : _} ->
                   FC -> Env Term vars -> Name -> Term vars -> Error
      WhenUnifying : {vars : _} ->
-                    FC -> Env Term vars -> Term vars -> Term vars -> Error -> Error
+                    FC -> Context -> Env Term vars -> Term vars -> Term vars -> Error -> Error
      ValidCase : {vars : _} ->
                  FC -> Env Term vars -> Either (Term vars) Error -> Error
 
@@ -117,7 +119,7 @@ data Error : Type where
      BadUnboundImplicit : {vars : _} ->
                           FC -> Env Term vars -> Name -> Term vars -> Error
      CantSolveGoal : {vars : _} ->
-                     FC -> Env Term vars -> Term vars -> Error
+                     FC -> Context -> Env Term vars -> Term vars -> Error
      DeterminingArg : {vars : _} ->
                       FC -> Name -> Int -> Env Term vars -> Term vars -> Error
      UnsolvedHoles : List (FC, Name) -> Error
@@ -193,16 +195,16 @@ Show Warning where
 export
 Show Error where
   show (Fatal err) = show err
-  show (CantConvert fc env x y)
+  show (CantConvert fc _ env x y)
       = show fc ++ ":Type mismatch: " ++ show x ++ " and " ++ show y
-  show (CantSolveEq fc env x y)
+  show (CantSolveEq fc _ env x y)
       = show fc ++ ":" ++ show x ++ " and " ++ show y ++ " are not equal"
   show (PatternVariableUnifies fc env n x)
       = show fc ++ ":Pattern variable " ++ show n ++ " unifies with " ++ show x
   show (CyclicMeta fc env n tm)
       = show fc ++ ":Cycle detected in metavariable solution " ++ show n
              ++ " = " ++ show tm
-  show (WhenUnifying fc _ x y err)
+  show (WhenUnifying fc _ _ x y err)
       = show fc ++ ":When unifying: " ++ show x ++ " and " ++ show y ++ "\n\t" ++ show err
   show (ValidCase fc _ prob)
       = show fc ++ ":" ++
@@ -280,7 +282,7 @@ Show Error where
   show (BadUnboundImplicit fc env n ty)
       = show fc ++ ":Can't bind name " ++ nameRoot n ++
                    " with type " ++ show ty
-  show (CantSolveGoal fc env g)
+  show (CantSolveGoal fc gam env g)
       = show fc ++ ":Can't solve goal " ++ assert_total (show g)
   show (DeterminingArg fc n i env g)
       = show fc ++ ":Can't solve goal " ++ assert_total (show g) ++
@@ -370,11 +372,11 @@ getWarningLoc (GenericWarn _) = Nothing
 export
 getErrorLoc : Error -> Maybe FC
 getErrorLoc (Fatal err) = getErrorLoc err
-getErrorLoc (CantConvert loc _ _ _) = Just loc
-getErrorLoc (CantSolveEq loc _ _ _) = Just loc
+getErrorLoc (CantConvert loc _ _ _ _) = Just loc
+getErrorLoc (CantSolveEq loc _ _ _ _) = Just loc
 getErrorLoc (PatternVariableUnifies loc _ _ _) = Just loc
 getErrorLoc (CyclicMeta loc _ _ _) = Just loc
-getErrorLoc (WhenUnifying loc _ _ _ _) = Just loc
+getErrorLoc (WhenUnifying loc _ _ _ _ _) = Just loc
 getErrorLoc (ValidCase loc _ _) = Just loc
 getErrorLoc (UndefinedName loc _) = Just loc
 getErrorLoc (InvisibleName loc _ _) = Just loc
@@ -399,7 +401,7 @@ getErrorLoc (IncompatibleFieldUpdate loc _) = Just loc
 getErrorLoc (InvalidArgs loc _ _ _) = Just loc
 getErrorLoc (TryWithImplicits loc _ _) = Just loc
 getErrorLoc (BadUnboundImplicit loc _ _ _) = Just loc
-getErrorLoc (CantSolveGoal loc _ _) = Just loc
+getErrorLoc (CantSolveGoal loc _ _ _) = Just loc
 getErrorLoc (DeterminingArg loc _ _ _ _) = Just loc
 getErrorLoc (UnsolvedHoles ((loc, _) :: _)) = Just loc
 getErrorLoc (UnsolvedHoles []) = Nothing
@@ -729,11 +731,6 @@ filterM p (x :: xs)
          then do xs' <- filterM p xs
                  pure (x :: xs')
          else filterM p xs
-
-export
-data Ref : (l : label) -> Type -> Type where
-     [search l]
-     MkRef : IORef a -> Ref x a
 
 export
 newRef : (x : label) -> t -> Core (Ref x t)

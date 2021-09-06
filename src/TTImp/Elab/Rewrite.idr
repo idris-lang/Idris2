@@ -52,7 +52,7 @@ rewriteErr (InType _ _ err) = rewriteErr err
 rewriteErr (InCon _ _ err) = rewriteErr err
 rewriteErr (InLHS _ _ err) = rewriteErr err
 rewriteErr (InRHS _ _ err) = rewriteErr err
-rewriteErr (WhenUnifying _ _ _ _ err) = rewriteErr err
+rewriteErr (WhenUnifying _ _ _ _ _ err) = rewriteErr err
 rewriteErr _ = False
 
 -- Returns the rewriting lemma to use, and the predicate for passing to the

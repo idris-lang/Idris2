@@ -3,3 +3,27 @@ Main> Main.append: append (_ :: _) _
 Main> Main.lookup: All cases covered
 Main> Main.zip: All cases covered
 Main> Bye for now!
+1/1: Building Vect2 (Vect2.idr)
+Error: zip [] [] is not a valid impossible case.
+
+Vect2:8:1--8:21
+ 4 |      Nil  : Vect Z a
+ 5 |      (::) : a -> Vect k a -> Vect (S k) a
+ 6 | 
+ 7 | zip : Vect n a -> Vect n b -> Vect n (a, b)
+ 8 | zip [] [] impossible
+     ^^^^^^^^^^^^^^^^^^^^
+
+1/1: Building Vect3 (Vect3.idr)
+Error: Impossible pattern gives an error:
+When unifying Nat and Vect ?n ?b.
+Mismatch between: Nat and Vect ?n ?b.
+
+Vect3:9:8--9:9
+ 5 |      Nil  : Vect Z a
+ 6 |      (::) : a -> Vect k a -> Vect (S k) a
+ 7 | 
+ 8 | zip : Vect n a -> Vect n b -> Vect n (a, b)
+ 9 | zip [] Z impossible
+            ^
+

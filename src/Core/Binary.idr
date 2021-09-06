@@ -3,6 +3,7 @@
 ||| everything, not just the things in the current file).
 module Core.Binary
 
+import public Core.Binary.Prims
 import Core.CaseTree
 import Core.Context
 import Core.Context.Log
