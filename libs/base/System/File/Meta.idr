@@ -24,7 +24,7 @@ prim__fileModifiedTime : FilePtr -> PrimIO Int
 prim__fileStatusTime : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileIsTTY"
-         "node:lambda:fp=>require('tty').isatty(fp.fd)"
+         "node:lambda:fp=>Number(require('tty').isatty(fp.fd))"
 prim__fileIsTTY : FilePtr -> PrimIO Int
 
 ||| Check if a file exists for reading.
