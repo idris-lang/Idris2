@@ -32,6 +32,7 @@ import Core.TT
 import Core.Ord
 import Data.List
 import Data.Nat
+import Data.String
 import Data.Vect
 import Libraries.Data.SortedMap
 import Libraries.Data.NameMap
@@ -202,7 +203,7 @@ mutual
     Just e0 => do
       count <- store e0
       -- only analyze subexpressions of closed terms once
-      if count == 1 then analyzeSubExp exp else pure ()
+      when (count == 1) $ analyzeSubExp exp
     Nothing => analyzeSubExp exp
 
   analyzeSubExp : Ref Sts St => CExp ns -> Core ()
@@ -261,19 +262,20 @@ analyzeNames cns = do
   log "compiler.cse" 10 $ "Analysing " ++ show (length cns) ++ " names"
   s <- newRef Sts $ MkSt empty 0
   traverse_ analyzeName cns
-  MkSt map _ <- get Sts
+  MkSt res _ <- get Sts
   let filtered = reverse
                . sortBy (comparing $ snd . snd)
                . filter ((> 1) . snd . snd)
-               $ SortedMap.toList map
+               $ SortedMap.toList res
 
-  traverse_ (\((sz,_),(name,cnt)) =>
-                log "compiler.cse" 10 (
+  log "compiler.cse" 10 $ unlines $
+    "Selected the following definitions:"
+    ::  map (\((sz,_),(name,cnt)) =>
                   show name ++
                   ": count " ++ show cnt ++
                   ", size " ++ show sz
-                 )
-            ) filtered
+           ) filtered
+
   pure $ fromList filtered
 
 --------------------------------------------------------------------------------
