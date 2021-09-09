@@ -79,7 +79,7 @@ getNameType rigc env fc x
 
                  when (isSourceName def.fullname) $
                    whenJust (isConcreteFC fc) $ \nfc => do
-                     let decor = nameTypeDecoration nt
+                     let decor = nameDecoration def.fullname nt
                      log "ide-mode.highlight" 7
                        $ "getNameType is adding " ++ show decor ++ ": " ++ show def.fullname
                      addSemanticDecorations [(nfc, decor, Just def.fullname)]
@@ -124,7 +124,7 @@ getVarType rigc nest env fc x
 
                                 when (isSourceName ndef.fullname) $
                                   whenJust (isConcreteFC fc) $ \nfc => do
-                                    let decor = nameTypeDecoration nt
+                                    let decor = nameDecoration ndef.fullname nt
                                     log "ide-mode.highlight" 7
                                        $ "getNameType is adding "++ show decor ++": "
                                                                  ++ show ndef.fullname

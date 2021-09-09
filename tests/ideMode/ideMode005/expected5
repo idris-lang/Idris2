@@ -72,7 +72,7 @@
 0000d7(:output (:ok (:highlight-source ((((:filename "Rainbow.idr") (:start 26 5) (:end 26 7)) ((:name "Nat") (:namespace "Prelude.Types") (:decor :type) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 0000d0(:output (:ok (:highlight-source ((((:filename "Rainbow.idr") (:start 27 1) (:end 27 1)) ((:name "m") (:namespace "Main") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000074(:output (:ok (:highlight-source ((((:filename "Rainbow.idr") (:start 27 3) (:end 27 3)) ((:decor :keyword)))))) 1)
-0000dd(:output (:ok (:highlight-source ((((:filename "Rainbow.idr") (:start 27 5) (:end 27 14)) ((:name "believe_me") (:namespace "Builtin") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
+0000de(:output (:ok (:highlight-source ((((:filename "Rainbow.idr") (:start 27 5) (:end 27 14)) ((:name "believe_me") (:namespace "Builtin") (:decor :postulate) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000073(:output (:ok (:highlight-source ((((:filename "Rainbow.idr") (:start 27 16) (:end 27 23)) ((:decor :data)))))) 1)
 000075(:output (:ok (:highlight-source ((((:filename "Rainbow.idr") (:start 29 1) (:end 29 7)) ((:decor :function)))))) 1)
 000074(:output (:ok (:highlight-source ((((:filename "Rainbow.idr") (:start 29 9) (:end 29 9)) ((:decor :keyword)))))) 1)

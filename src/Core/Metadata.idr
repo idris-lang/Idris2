@@ -31,11 +31,18 @@ data Decoration : Type where
   Module    : Decoration
 
 export
-nameTypeDecoration : NameType -> Decoration
-nameTypeDecoration Bound         = Bound
-nameTypeDecoration Func          = Function
-nameTypeDecoration (DataCon _ _) = Data
-nameTypeDecoration (TyCon _ _  ) = Typ
+nameDecoration : Name -> NameType -> Decoration
+nameDecoration nm nt
+  = ifThenElse (isUnsafeBuiltin nm) Postulate (nameTypeDecoration nt)
+
+  where
+
+  nameTypeDecoration : NameType -> Decoration
+  nameTypeDecoration Bound         = Bound
+  nameTypeDecoration Func          = Function
+  nameTypeDecoration (DataCon _ _) = Data
+  nameTypeDecoration (TyCon _ _  ) = Typ
+
 
 public export
 ASemanticDecoration : Type
