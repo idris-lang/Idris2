@@ -70,6 +70,7 @@ modules = Control.App,
           Data.These,
           Data.Vect,
           Data.Vect.Elem,
+          Data.Vect.AtIndex,
           Data.Vect.Quantifiers,
           Data.Zippable,
 
