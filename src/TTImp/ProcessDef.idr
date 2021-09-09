@@ -75,23 +75,36 @@ impossibleOK : {auto c : Ref Ctxt Defs} ->
                {vars : _} ->
                Defs -> NF vars -> NF vars -> Core Bool
 impossibleOK defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
-    = if xn == yn
-         then anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
-         else pure False
+    = if xn /= yn
+         then pure True
+         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
 -- If it's a data constructor, any mismatch will do
 impossibleOK defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure True
          else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
 impossibleOK defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
-impossibleOK defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
+
+-- NPrimVal is apart from NDCon, NTCon, NBind, and NType
 impossibleOK defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
-impossibleOK defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
+impossibleOK defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
+impossibleOK defs (NPrimVal _ _) (NBind _ _ _ _) = pure True
+impossibleOK defs (NBind _ _ _ _) (NPrimVal _ _) = pure True
 impossibleOK defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure True
-impossibleOK defs (NTCon _ _ _ _ _) (NType _) = pure True
-impossibleOK defs (NType _) (NTCon _ _ _ _ _) = pure True
+impossibleOK defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
 impossibleOK defs (NPrimVal _ _) (NType _) = pure True
 impossibleOK defs (NType _) (NPrimVal _ _) = pure True
+
+-- NTCon is apart from NBind, and NType
+impossibleOK defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure True
+impossibleOK defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure True
+impossibleOK defs (NTCon _ _ _ _ _) (NType _) = pure True
+impossibleOK defs (NType _) (NTCon _ _ _ _ _) = pure True
+
+-- NBind is apart from NType
+impossibleOK defs (NBind _ _ _ _) (NType _) = pure True
+impossibleOK defs (NType _) (NBind _ _ _ _) = pure True
+
 impossibleOK defs x y = pure False
 
 export
@@ -133,6 +146,9 @@ recoverable defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure False
 -- Type constructor vs. type
 recoverable defs (NTCon _ _ _ _ _) (NType _) = pure False
 recoverable defs (NType _) (NTCon _ _ _ _ _) = pure False
+-- Type constructor vs. binder
+recoverable defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure False
+recoverable defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure False
 
 recoverable defs (NTCon _ _ _ _ _) _ = pure True
 recoverable defs _ (NTCon _ _ _ _ _) = pure True
@@ -155,6 +171,9 @@ recoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
 
 -- PRIMITIVES
 recoverable defs (NPrimVal _ x) (NPrimVal _ y) = pure (x == y)
+-- primitive vs. binder
+recoverable defs (NPrimVal _ _) (NBind _ _ _ _) = pure False
+recoverable defs (NBind _ _ _ _) (NPrimVal _ _) = pure False
 
 -- OTHERWISE: no
 recoverable defs x y = pure False
