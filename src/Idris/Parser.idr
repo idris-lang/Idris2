@@ -1599,7 +1599,8 @@ claims fname indents
                   vis     <- getVisibility Nothing visOpts
                   let opts = mapMaybe getRight visOpts
                   rig  <- multiplicity fname
-                  cls  <- tyDecls (decorate fname Function name)
+                  cls  <- tyDecls (dependentDecorate fname name
+                                  $ \ nm => ifThenElse (isUnsafeBuiltin nm) Postulate Function)
                                   doc fname indents
                   pure $ map (\cl => the (Pair _ _) (doc, vis, opts, rig, cl)) cls)
          pure $ map (\(doc, vis, opts, rig, cl) : Pair _ _ =>

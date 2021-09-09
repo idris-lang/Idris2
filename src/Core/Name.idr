@@ -151,6 +151,18 @@ mbApplyNS Nothing n = n
 mbApplyNS (Just ns) n = NS ns n
 
 export
+isUnsafeBuiltin : Name -> Bool
+isUnsafeBuiltin nm = case splitNS nm of
+  (ns, UN str) => (ns == builtinNS || ns == emptyNS)
+               && any {t = List} id
+                      [ "assert_" `isPrefixOf` str
+                      , str `elem` [ "prim__believe_me", "believe_me"
+                                   , "prim__crash", "idris_crash"
+                                   ]
+                      ]
+  _ => False
+
+export
 Show Name where
   show (NS ns n@(RF _)) = show ns ++ ".(" ++ show n ++ ")"
   show (NS ns n) = show ns ++ "." ++ show n
