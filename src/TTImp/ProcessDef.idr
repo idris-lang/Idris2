@@ -59,6 +59,27 @@ mutual
   mismatchNF defs (NDelayed _ _ x) (NDelayed _ _ y) = mismatchNF defs x y
   mismatchNF defs (NDelay _ _ _ x) (NDelay _ _ _ y)
       = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
+
+  -- NPrimVal is apart from NDCon, NTCon, NBind, and NType
+  mismatchNF defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
+  mismatchNF defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
+  mismatchNF defs (NPrimVal _ _) (NBind _ _ _ _) = pure True
+  mismatchNF defs (NBind _ _ _ _) (NPrimVal _ _) = pure True
+  mismatchNF defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure True
+  mismatchNF defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
+  mismatchNF defs (NPrimVal _ _) (NType _) = pure True
+  mismatchNF defs (NType _) (NPrimVal _ _) = pure True
+
+-- NTCon is apart from NBind, and NType
+  mismatchNF defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure True
+  mismatchNF defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure True
+  mismatchNF defs (NTCon _ _ _ _ _) (NType _) = pure True
+  mismatchNF defs (NType _) (NTCon _ _ _ _ _) = pure True
+
+-- NBind is apart from NType
+  mismatchNF defs (NBind _ _ _ _) (NType _) = pure True
+  mismatchNF defs (NType _) (NBind _ _ _ _) = pure True
+
   mismatchNF _ _ _ = pure False
 
   mismatch : {auto c : Ref Ctxt Defs} ->
