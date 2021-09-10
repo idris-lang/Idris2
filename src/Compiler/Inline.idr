@@ -151,7 +151,7 @@ mutual
   -- whether they're safe to inline, but until then this gives such a huge
   -- boost by removing unnecessary lambdas that we'll keep the special case.
   eval rec env stk (CRef fc n)
-      = case (n == NS primIONS (UN "io_bind"), stk) of
+      = case (n == NS primIONS (UN $ Basic "io_bind"), stk) of
           (True, act :: cont :: world :: stk) =>
                  do xn <- genName "act"
                     sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])

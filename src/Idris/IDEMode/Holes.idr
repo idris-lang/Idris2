@@ -48,7 +48,7 @@ isHole def
 
 -- Bring these back into REPL.idr
 showName : Name -> Bool
-showName (UN "_") = False
+showName (UN Underscore) = False
 showName (MN _ _) = False
 showName _ = True
 

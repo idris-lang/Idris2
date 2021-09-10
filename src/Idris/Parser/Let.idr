@@ -83,11 +83,13 @@ mkDoLets origin lets = letFactory
     buildDoLets [] = []
     buildDoLets (b :: rest) = let fc = boundToFC origin b in case b.val of
       (MkLetBinder rig (PRef fc' (UN n)) ty val []) =>
-         (if lowerFirst n
+         (if isJust (isBasic n >>= \ n => guard (lowerFirst n))
             then DoLet fc fc' (UN n) rig ty val
             else DoLetPat fc (PRef fc' (UN n)) ty val []
          ) :: buildDoLets rest
+      (MkLetBinder rig (PRef fc' (UN Underscore)) ty val []) =>
+        DoLet fc fc' (UN Underscore) rig ty val :: buildDoLets rest
       (MkLetBinder rig (PImplicit fc') ty val []) =>
-        DoLet fc fc' (UN "_") rig ty val :: buildDoLets rest
+        DoLet fc fc' (UN Underscore) rig ty val :: buildDoLets rest
       (MkLetBinder rig pat ty val alts) =>
         DoLetPat fc pat ty val alts :: buildDoLets rest

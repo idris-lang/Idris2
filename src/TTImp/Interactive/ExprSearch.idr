@@ -370,7 +370,7 @@ getSuccessful {vars} fc rig opts mkHole env ty topty all
                                             (\r => nameRoot (recname r) ++ "_rhs")
                                             (recData opts)
                            hn <- uniqueName (map nameRoot vars) base
-                           (idx, tm) <- newMeta fc rig env (UN hn) ty
+                           (idx, tm) <- newMeta fc rig env (UN $ Hole hn) ty
                                                 (Hole (length env) (holeInit False))
                                                 False
                            one (tm, [])
@@ -753,7 +753,7 @@ searchType {vars} fc rig opts env topty Z (Bind bfc n b@(Pi fc' c info ty) sc)
       getSuccessful fc rig opts False env ty topty
            [searchLocal fc rig opts env (Bind bfc n b sc) topty,
             (do defs <- get Ctxt
-                let n' = UN !(getArgName defs n [] vars !(nf defs env ty))
+                let n' = UN $ Basic !(getArgName defs n [] vars !(nf defs env ty))
                 let env' : Env Term (n' :: _) = b :: env
                 let sc' = renameTop n' sc
                 log "interaction.search" 10 $ "Introduced lambda, search for " ++ show sc'

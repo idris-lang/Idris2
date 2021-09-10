@@ -19,19 +19,20 @@ export
 renameIBinds : (renames : List String) ->
                (used : List String) ->
                RawImp -> State (List (String, String)) RawImp
-renameIBinds rs us (IPi fc c p (Just (UN n)) ty sc)
+renameIBinds rs us (IPi fc c p (Just un@(UN (Basic n))) ty sc)
     = if n `elem` rs
          then let n' = getUnique (rs ++ us) n
-                  sc' = substNames (map UN (filter (/= n) us))
-                                   [(UN n, IVar fc (UN n'))] sc in
+                  un' = UN (Basic n')
+                  sc' = substNames (map (UN . Basic) (filter (/= n) us))
+                                   [(un, IVar fc un')] sc in
              do scr <- renameIBinds rs (n' :: us) sc'
                 ty' <- renameIBinds rs us ty
                 upds <- get
                 put ((n, n') :: upds)
-                pure $ IPi fc c p (Just (UN n')) ty' scr
+                pure $ IPi fc c p (Just un') ty' scr
          else do scr <- renameIBinds rs us sc
                  ty' <- renameIBinds rs us ty
-                 pure $ IPi fc c p (Just (UN n)) ty' scr
+                 pure $ IPi fc c p (Just un) ty' scr
 renameIBinds rs us (IPi fc c p n ty sc)
     = pure $ IPi fc c p n !(renameIBinds rs us ty) !(renameIBinds rs us sc)
 renameIBinds rs us (ILam fc c p n ty sc)
@@ -73,18 +74,18 @@ renameIBinds rs us tm = pure $ tm
 export
 doBind : List (String, String) -> RawImp -> RawImp
 doBind [] tm = tm
-doBind ns (IVar fc (UN n))
-    = maybe (IVar fc (UN n))
-            (\n' => IBindVar fc n')
+doBind ns (IVar fc nm@(UN (Basic n)))
+    = maybe (IVar fc nm)
+            (IBindVar fc)
             (lookup n ns)
 doBind ns (IPi fc rig p mn aty retty)
     = let ns' = case mn of
-                     Just (UN n) => filter (\x => fst x /= n) ns
+                     Just (UN (Basic n)) => filter (\x => fst x /= n) ns
                      _ => ns in
           IPi fc rig p mn (doBind ns' aty) (doBind ns' retty)
 doBind ns (ILam fc rig p mn aty sc)
     = let ns' = case mn of
-                     Just (UN n) => filter (\x => fst x /= n) ns
+                     Just (UN (Basic n)) => filter (\x => fst x /= n) ns
                      _ => ns in
           ILam fc rig p mn (doBind ns' aty) (doBind ns' sc)
 doBind ns (IApp fc fn av)
@@ -120,7 +121,7 @@ bindNames arg tm
     = if !isUnboundImplicits
          then do let ns = nub (findBindableNames arg [] [] tm)
                  log "elab.bindnames" 10 $ "Found names :" ++ show ns
-                 pure (map UN (map snd ns), doBind ns tm)
+                 pure (map (UN . Basic) (map snd ns), doBind ns tm)
          else pure ([], tm)
 
 -- if the name is part of the using decls, add the relevant binder for it:
@@ -190,4 +191,5 @@ piBindNames loc env tm
     piBind : List String -> RawImp -> RawImp
     piBind [] ty = ty
     piBind (n :: ns) ty
-       = IPi loc erased Implicit (Just (UN n)) (Implicit loc False) (piBind ns ty)
+       = IPi loc erased Implicit (Just (UN $ Basic n)) (Implicit loc False)
+       $ piBind ns ty

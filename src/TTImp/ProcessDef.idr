@@ -589,8 +589,8 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                       Nothing => []
                       Just _  =>
                        let fc = emptyFC in
-                       let refl = IVar fc (NS builtinNS (UN "Refl")) in
-                       [(mprf, INamedApp fc refl (UN "x") wval_raw)]
+                       let refl = IVar fc (NS builtinNS (UN $ Basic "Refl")) in
+                       [(mprf, INamedApp fc refl (UN $ Basic "x") wval_raw)]
 
          let rhs_in = gapply (IVar vfc wname)
                     $ map (\ nm => (Nothing, IVar vfc nm)) envns
@@ -650,7 +650,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
     bindWithArgs {xs} wvalTy (Just (name, wval)) wvalEnv = do
       defs <- get Ctxt
 
-      let eqName = NS builtinNS (UN "Equal")
+      let eqName = NS builtinNS (UN $ Basic "Equal")
       Just (TCon t ar _ _ _ _ _ _) <- lookupDefExact eqName (gamma defs)
         | _ => throw (InternalError "Cannot find builtin Equal")
       let eqTyCon = Ref vfc (TyCon t ar) !(toResolvedNames eqName)
@@ -830,7 +830,7 @@ mkRunTime fc n
 
     mkCrash : {vars : _} -> String -> Term vars
     mkCrash msg
-       = apply fc (Ref fc Func (NS builtinNS (UN "idris_crash")))
+       = apply fc (Ref fc Func (NS builtinNS (UN $ Basic "idris_crash")))
                [Erased fc False, PrimVal fc (Str msg)]
 
     matchAny : Term vars -> Term vars
@@ -954,7 +954,7 @@ processDef opts nest env fc n_in cs_in
          defs <- get Ctxt
          put Ctxt (record { toCompileCase $= (n ::) } defs)
 
-         atotal <- toResolvedNames (NS builtinNS (UN "assert_total"))
+         atotal <- toResolvedNames (NS builtinNS (UN $ Basic "assert_total"))
          when (not (InCase `elem` opts)) $
              do calcRefs False atotal (Resolved nidx)
                 sc <- calculateSizeChange fc n

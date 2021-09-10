@@ -73,18 +73,21 @@ TTC FC where
 
 export
 TTC Name where
+  -- for efficiency reasons we do not encode UserName separately
+  -- hence the nested pattern matches on UN (Basic/Hole/Field)
   toBuf b (NS xs x) = do tag 0; toBuf b xs; toBuf b x
-  toBuf b (UN x) = do tag 1; toBuf b x
+  toBuf b (UN (Basic x)) = do tag 1; toBuf b x
   toBuf b (MN x y) = do tag 2; toBuf b x; toBuf b y
   toBuf b (PV x y) = do tag 3; toBuf b x; toBuf b y
   toBuf b (DN x y) = do tag 4; toBuf b x; toBuf b y
-  toBuf b (RF x) = do tag 5; toBuf b x
+  toBuf b (UN (Field x)) = do tag 5; toBuf b x
   toBuf b (Nested x y) = do tag 6; toBuf b x; toBuf b y
   toBuf b (CaseBlock x y) = do tag 7; toBuf b x; toBuf b y
   toBuf b (WithBlock x y) = do tag 8; toBuf b x; toBuf b y
   toBuf b (Resolved x)
       = throw (InternalError ("Can't write resolved name " ++ show x))
-  toBuf b (HN x) = do tag 9; toBuf b x
+  toBuf b (UN (Hole x)) = do tag 9; toBuf b x
+  toBuf b (UN Underscore) = tag 10
 
   fromBuf b
       = case !getTag of
@@ -92,7 +95,7 @@ TTC Name where
                      x <- fromBuf b
                      pure (NS xs x)
              1 => do x <- fromBuf b
-                     pure (UN x)
+                     pure (UN $ Basic x)
              2 => do x <- fromBuf b
                      y <- fromBuf b
                      pure (MN x y)
@@ -103,7 +106,7 @@ TTC Name where
                      y <- fromBuf b
                      pure (DN x y)
              5 => do x <- fromBuf b
-                     pure (RF x)
+                     pure (UN $ Field x)
              6 => do x <- fromBuf b
                      y <- fromBuf b
                      pure (Nested x y)
@@ -114,7 +117,8 @@ TTC Name where
                      y <- fromBuf b
                      pure (WithBlock x y)
              9 => do x <- fromBuf b
-                     pure (HN x)
+                     pure (UN $ Hole x)
+             10 => pure (UN Underscore)
              _ => corrupt "Name"
 
 export

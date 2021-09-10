@@ -128,7 +128,7 @@ chezString cs = strCons '"' (showChezString (unpack cs) "\"")
 
 mutual
   handleRet : String -> String -> String
-  handleRet "void" op = op ++ " " ++ mkWorld (schConstructor chezString (UN "") (Just 0) [])
+  handleRet "void" op = op ++ " " ++ mkWorld (schConstructor chezString (UN $ Basic "") (Just 0) [])
   handleRet _ op = mkWorld op
 
   getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))

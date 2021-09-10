@@ -1,11 +1,13 @@
-module Libraries.Data.StringMap
+module Libraries.Data.UserNameMap
 
 -- Hand specialised map, for efficiency...
+
+import Core.Name
 
 %default total
 
 Key : Type
-Key = String
+Key = UserName
 
 -- TODO: write split
 
@@ -200,25 +202,31 @@ treeToList = treeToList' (:: [])
     treeToList' cont (Branch3 t1 _ t2 _ t3) = treeToList' (:: treeToList' (:: treeToList' cont t3) t2) t1
 
 export
-data StringMap : Type -> Type where
-  Empty : StringMap v
-  M : (n : Nat) -> Tree n v -> StringMap v
+data UserNameMap : Type -> Type where
+  Empty : UserNameMap v
+  M : (n : Nat) -> Tree n v -> UserNameMap v
 
 export
-empty : StringMap v
+empty : UserNameMap v
 empty = Empty
 
 export
-singleton : String -> v -> StringMap v
+singleton : UserName -> v -> UserNameMap v
 singleton k v = M Z (Leaf k v)
 
 export
-lookup : String -> StringMap v -> Maybe v
+lookup : UserName -> UserNameMap v -> Maybe v
 lookup _ Empty = Nothing
 lookup k (M _ t) = treeLookup k t
 
 export
-insert : String -> v -> StringMap v -> StringMap v
+lookupName : (n : Name) -> (dict : UserNameMap v) -> Maybe v
+lookupName n dict = case userNameRoot n of
+  Nothing  => Nothing
+  Just un => lookup un dict
+
+export
+insert : UserName -> v -> UserNameMap v -> UserNameMap v
 insert k v Empty = M Z (Leaf k v)
 insert k v (M _ t) =
   case treeInsert k v t of
@@ -226,11 +234,11 @@ insert k v (M _ t) =
     Right t' => (M _ t')
 
 export
-insertFrom : List (String, v) -> StringMap v -> StringMap v
+insertFrom : List (UserName, v) -> UserNameMap v -> UserNameMap v
 insertFrom = flip $ foldl $ flip $ uncurry insert
 
 export
-delete : String -> StringMap v -> StringMap v
+delete : UserName -> UserNameMap v -> UserNameMap v
 delete _ Empty = Empty
 delete k (M Z t) =
   case treeDelete k t of
@@ -242,23 +250,23 @@ delete k (M (S _) t) =
     Right t' => (M _ t')
 
 export
-fromList : List (String, v) -> StringMap v
+fromList : List (UserName, v) -> UserNameMap v
 fromList l = foldl (flip (uncurry insert)) empty l
 
 export
-toList : StringMap v -> List (String, v)
+toList : UserNameMap v -> List (UserName, v)
 toList Empty = []
 toList (M _ t) = treeToList t
 
 ||| Gets the Keys of the map.
 export
-keys : StringMap v -> List String
-keys = map fst . StringMap.toList
+keys : UserNameMap v -> List UserName
+keys = map fst . UserNameMap.toList
 
 ||| Gets the values of the map. Could contain duplicates.
 export
-values : StringMap v -> List v
-values = map snd . StringMap.toList
+values : UserNameMap v -> List v
+values = map snd . UserNameMap.toList
 
 treeMap : (a -> b) -> Tree n a -> Tree n b
 treeMap f (Leaf k v) = Leaf k (f v)
@@ -267,42 +275,42 @@ treeMap f (Branch3 t1 k1 t2 k2 t3)
     = Branch3 (treeMap f t1) k1 (treeMap f t2) k2 (treeMap f t3)
 
 export
-implementation Functor StringMap where
+implementation Functor UserNameMap where
   map _ Empty = Empty
   map f (M n t) = M _ (treeMap f t)
 
 ||| Merge two maps. When encountering duplicate keys, using a function to combine the values.
 ||| Uses the ordering of the first map given.
 export
-mergeWith : (v -> v -> v) -> StringMap v -> StringMap v -> StringMap v
+mergeWith : (v -> v -> v) -> UserNameMap v -> UserNameMap v -> UserNameMap v
 mergeWith f x y = insertFrom inserted x where
   inserted : List (Key, v)
   inserted = do
-    (k, v) <- StringMap.toList y
+    (k, v) <- UserNameMap.toList y
     let v' = (maybe id f $ lookup k x) v
     pure (k, v')
 
 ||| Merge two maps using the Semigroup (and by extension, Monoid) operation.
 ||| Uses mergeWith internally, so the ordering of the left map is kept.
 export
-merge : Semigroup v => StringMap v -> StringMap v -> StringMap v
+merge : Semigroup v => UserNameMap v -> UserNameMap v -> UserNameMap v
 merge = mergeWith (<+>)
 
 ||| Left-biased merge, also keeps the ordering specified  by the left map.
 export
-mergeLeft : StringMap v -> StringMap v -> StringMap v
+mergeLeft : UserNameMap v -> UserNameMap v -> UserNameMap v
 mergeLeft x y = mergeWith const x y
 
 export
-adjust : String -> (v -> v) -> StringMap v -> StringMap v
+adjust : UserName -> (v -> v) -> UserNameMap v -> UserNameMap v
 adjust k f m =
   case lookup k m of
     Nothing => m
     Just v => insert k (f v) m
 
 export
-Show v => Show (StringMap v) where
-  show m = show $ map {b=String} (\(k,v) => k ++ "->" ++ show v) $ StringMap.toList m
+Show v => Show (UserNameMap v) where
+  show m = show $ map (\(k,v) => show k ++ "->" ++ show v) $ UserNameMap.toList m
 
 -- TODO: is this the right variant of merge to use for this? I think it is, but
 -- I could also see the advantages of using `mergeLeft`. The current approach is
@@ -310,9 +318,9 @@ Show v => Show (StringMap v) where
 -- the `First` monoid. However, this does require more code to do the same
 -- thing.
 export
-Semigroup v => Semigroup (StringMap v) where
+Semigroup v => Semigroup (UserNameMap v) where
   (<+>) = merge
 
 export
-(Semigroup v) => Monoid (StringMap v) where
+(Semigroup v) => Monoid (UserNameMap v) where
   neutral = empty
