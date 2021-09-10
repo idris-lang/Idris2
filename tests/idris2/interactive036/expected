@@ -1,4 +1,4 @@
 1/1: Building casefn (casefn.idr)
-Main>   False => ?cfn_rhs_1
-  True => ?cfn_rhs_2
+Main>   False => ?cfn_rhs_0
+  True => ?cfn_rhs_1
 Main> Bye for now!
