@@ -30,6 +30,14 @@ void idris2_closeFile(FILE* f) {
     IDRIS2_VERIFY(fclose(f) == 0, "fclose failed: %s", strerror(errno));
 }
 
+int idris2_getFileNo(FILE* f) {
+#ifdef _WIN32
+    return win32_getFileNo(f);
+#else
+    return fileno(f);
+#endif
+}
+
 int idris2_fileError(FILE* f) {
     return ferror(f);
 }
@@ -61,11 +69,7 @@ int idris2_removeFile(const char *filename) {
 }
 
 int idris2_fileSize(FILE* f) {
-#ifdef _WIN32
-    int fd = win32_getFileNo(f);
-#else
-    int fd = fileno(f);
-#endif
+    int fd = idris2_getFileNo(f);
 
     struct stat buf;
     if (fstat(fd, &buf) == 0) {
@@ -84,11 +88,7 @@ int idris2_fpoll(FILE* f)
     struct timeval timeout;
     timeout.tv_sec = 1;
     timeout.tv_usec = 0;
-#ifdef _WIN32
-    int fd = win32_getFileNo(f);
-#else
-    int fd = fileno(f);
-#endif
+    int fd = idris2_getFileNo(f);
 
     FD_ZERO(&x);
     FD_SET(fd, &x);
@@ -180,11 +180,7 @@ int idris2_eof(FILE* f) {
 }
 
 int idris2_fileAccessTime(FILE* f) {
-#ifdef _WIN32
-    int fd = win32_getFileNo(f);
-#else
-    int fd = fileno(f);
-#endif
+    int fd = idris2_getFileNo(f);
 
     struct stat buf;
     if (fstat(fd, &buf) == 0) {
@@ -195,11 +191,7 @@ int idris2_fileAccessTime(FILE* f) {
 }
 
 int idris2_fileModifiedTime(FILE* f) {
-#ifdef _WIN32
-    int fd = win32_getFileNo(f);
-#else
-    int fd = fileno(f);
-#endif
+    int fd = idris2_getFileNo(f);
 
     struct stat buf;
     if (fstat(fd, &buf) == 0) {
@@ -210,11 +202,7 @@ int idris2_fileModifiedTime(FILE* f) {
 }
 
 int idris2_fileStatusTime(FILE* f) {
-#ifdef _WIN32
-    int fd = win32_getFileNo(f);
-#else
-    int fd = fileno(f);
-#endif
+    int fd = idris2_getFileNo(f);
 
     struct stat buf;
     if (fstat(fd, &buf) == 0) {
@@ -225,11 +213,10 @@ int idris2_fileStatusTime(FILE* f) {
 }
 
 int idris2_fileIsTTY(FILE* f) {
+    int fd = idris2_getFileNo(f);
 #ifdef _WIN32
-    int fd = win32_getFileNo(f);
     return win32_isTTY(fd);
 #else
-    int fd = fileno(f);
     return isatty(fd);
 #endif
 }
