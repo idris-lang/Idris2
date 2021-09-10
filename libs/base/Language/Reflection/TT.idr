@@ -97,9 +97,10 @@ data Constant
     | WorldType
 
 public export
-data Name = UN String -- user defined name
+data Name = NS Namespace Name -- name in a namespace
+          | UN String -- user defined name
+          | HN String -- hole name
           | MN String Int -- machine generated name
-          | NS Namespace Name -- name in a namespace
           | DN String Name -- a name and how to display it
           | RF String -- record field name
           | Nested (Int, Int) Name -- nested function name
@@ -110,6 +111,7 @@ export
 Show Name where
   show (NS ns n) = show ns ++ "." ++ show n
   show (UN x) = x
+  show (HN x) = "?" ++ x
   show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
   show (DN str y) = str
   show (RF n) = "." ++ n

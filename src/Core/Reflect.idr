@@ -275,6 +275,9 @@ Reify Name where
              (NS _ (UN "UN"), [(_, str)])
                  => do str' <- reify defs !(evalClosure defs str)
                        pure (UN str')
+             (NS _ (UN "HN"), [(_, str)])
+                 => do str' <- reify defs !(evalClosure defs str)
+                       pure (HN str')
              (NS _ (UN "MN"), [(_, str), (_, i)])
                  => do str' <- reify defs !(evalClosure defs str)
                        i' <- reify defs !(evalClosure defs i)
@@ -312,6 +315,9 @@ Reflect Name where
   reflect fc defs lhs env (UN x)
       = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "UN") [x']
+  reflect fc defs lhs env (HN x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "HN") [x']
   reflect fc defs lhs env (MN x i)
       = do x' <- reflect fc defs lhs env x
            i' <- reflect fc defs lhs env i

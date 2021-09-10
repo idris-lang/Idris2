@@ -14,6 +14,10 @@ import public Core.Name.Namespace
 ||| Name helps us track a name's structure as well as its origin:
 ||| was it user-provided or machine-manufactured? For what reason?
 public export
+-- Remember to update
+-- 1. Reify/Reflect in Core.Reflect,
+-- 2. and Language.Reflection.TT in base
+-- if you add new constructors
 data Name : Type where
      NS : Namespace -> Name -> Name -- in a namespace
      UN : String -> Name -- user defined name
@@ -342,7 +346,5 @@ namesEq [] [] = Just Refl
 namesEq (x :: xs) (y :: ys)
     = do p <- nameEq x y
          ps <- namesEq xs ys
-         rewrite p
-         rewrite ps
-         Just Refl
+         pure (cong2 (::) p ps)
 namesEq _ _ = Nothing
