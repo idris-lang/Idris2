@@ -407,23 +407,23 @@ preOptions (Color b :: opts)
     = do setColor b
          preOptions opts
 preOptions (WarningsAsErrors :: opts)
-    = do setSession (record { warningsAsErrors = True } !getSession)
+    = do updateSession (record { warningsAsErrors = True })
          preOptions opts
 preOptions (IgnoreShadowingWarnings :: opts)
-    = do setSession (record { showShadowingWarning = False } !getSession)
+    = do updateSession (record { showShadowingWarning = False })
          preOptions opts
 preOptions (HashesInsteadOfModTime :: opts)
-    = do setSession (record { checkHashesInsteadOfModTime = True } !getSession)
+    = do updateSession (record { checkHashesInsteadOfModTime = True })
          preOptions opts
 preOptions (CaseTreeHeuristics :: opts)
-    = do setSession (record { caseTreeHeuristics = True } !getSession)
+    = do updateSession (record { caseTreeHeuristics = True })
          preOptions opts
 preOptions (IncrementalCG e :: opts)
     = do defs <- get Ctxt
          setIncrementalCG True e
          preOptions opts
 preOptions (WholeProgram :: opts)
-    = do setSession (record { wholeProgram = True } !getSession)
+    = do updateSession (record { wholeProgram = True })
          preOptions opts
 preOptions (BashCompletion a b :: _)
     = do os <- opts a b
@@ -432,6 +432,9 @@ preOptions (BashCompletion a b :: _)
 preOptions (BashCompletionScript fun :: _)
     = do coreLift $ putStrLn $ completionScript fun
          pure False
+preOptions (Total :: opts)
+    = do updateSession (record { totalReq = Total })
+         preOptions opts
 preOptions (_ :: opts) = preOptions opts
 
 -- Options to be processed after type checking. Returns whether execution

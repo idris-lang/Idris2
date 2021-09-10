@@ -38,6 +38,7 @@ int idris2_eof(FILE* f);
 int idris2_fileAccessTime(FILE* f);
 int idris2_fileModifiedTime(FILE* f);
 int idris2_fileStatusTime(FILE* f);
+int idris2_fileIsTTY(FILE* f);
 
 FILE* idris2_stdin();
 FILE* idris2_stdout();

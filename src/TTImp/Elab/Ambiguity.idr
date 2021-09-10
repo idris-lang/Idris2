@@ -104,11 +104,6 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
     buildAlt f ((fc', Just (Just i), a) :: as)
         = buildAlt (INamedApp fc' f i a) as
 
-    isPrimName : List Name -> Name -> Bool
-    isPrimName [] fn = False
-    isPrimName (p :: ps) fn
-        = dropNS fn == p || isPrimName ps fn
-
     -- If it's not a constructor application, dot it
     wrapDot : Bool -> EState vars ->
               ElabMode -> Name -> List RawImp -> Def -> RawImp -> RawImp

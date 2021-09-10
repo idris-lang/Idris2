@@ -237,7 +237,7 @@ getOpt :  ArgOrder a                         -- non-option handling
 getOpt _        _        []         =  emptyRes
 getOpt ordering descs (arg::args)   =
   let (opt,rest) = getNext (unpack arg) args descs
-      res        = getOpt ordering descs rest
+      res        = getOpt ordering descs (assert_smaller args rest)
    in case (opt,ordering) of
            (Opt x, _)                   => {options $= (x::)} res
            (UnreqOpt x, _)              => {unrecognized $= (x::)} res

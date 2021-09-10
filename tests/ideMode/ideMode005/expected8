@@ -1,6 +1,7 @@
 000018(:protocol-version 2 0)
 000042(:write-string "1/1: Building RecordUpdate (RecordUpdate.idr)" 1)
 000077(:output (:ok (:highlight-source ((((:filename "RecordUpdate.idr") (:start 1 1) (:end 1 6)) ((:decor :keyword)))))) 1)
+000077(:output (:ok (:highlight-source ((((:filename "RecordUpdate.idr") (:start 1 8) (:end 1 19)) ((:decor :module)))))) 1)
 000077(:output (:ok (:highlight-source ((((:filename "RecordUpdate.idr") (:start 3 1) (:end 3 6)) ((:decor :keyword)))))) 1)
 000075(:output (:ok (:highlight-source ((((:filename "RecordUpdate.idr") (:start 3 8) (:end 3 17)) ((:decor :type)))))) 1)
 000079(:output (:ok (:highlight-source ((((:filename "RecordUpdate.idr") (:start 3 19) (:end 3 23)) ((:decor :keyword)))))) 1)

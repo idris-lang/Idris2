@@ -79,7 +79,7 @@ getNameType rigc env fc x
 
                  when (isSourceName def.fullname) $
                    whenJust (isConcreteFC fc) $ \nfc => do
-                     let decor = nameTypeDecoration nt
+                     let decor = nameDecoration def.fullname nt
                      log "ide-mode.highlight" 7
                        $ "getNameType is adding " ++ show decor ++ ": " ++ show def.fullname
                      addSemanticDecorations [(nfc, decor, Just def.fullname)]
@@ -124,7 +124,7 @@ getVarType rigc nest env fc x
 
                                 when (isSourceName ndef.fullname) $
                                   whenJust (isConcreteFC fc) $ \nfc => do
-                                    let decor = nameTypeDecoration nt
+                                    let decor = nameDecoration ndef.fullname nt
                                     log "ide-mode.highlight" 7
                                        $ "getNameType is adding "++ show decor ++": "
                                                                  ++ show ndef.fullname
@@ -827,7 +827,7 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
     -- as an expression because we'll normalise the function away and match on
     -- the result
     updateElabInfo prims (InLHS _) n [IPrimVal fc c] elabinfo =
-        do if elem (dropNS !(getFullName n)) prims
+        do if isPrimName prims !(getFullName n)
               then pure (record { elabMode = InExpr } elabinfo)
               else pure elabinfo
     updateElabInfo _ _ _ _ info = pure info

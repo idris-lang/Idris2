@@ -186,10 +186,10 @@ install-support:
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/racket
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/gambit
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/js
-	install support/docs/* ${PREFIX}/${NAME_VERSION}/support/docs
-	install support/racket/* ${PREFIX}/${NAME_VERSION}/support/racket
-	install support/gambit/* ${PREFIX}/${NAME_VERSION}/support/gambit
-	install support/js/* ${PREFIX}/${NAME_VERSION}/support/js
+	install -m 644 support/docs/styles.css ${PREFIX}/${NAME_VERSION}/support/docs
+	install -m 644 support/racket/* ${PREFIX}/${NAME_VERSION}/support/racket
+	install -m 644 support/gambit/* ${PREFIX}/${NAME_VERSION}/support/gambit
+	install -m 644 support/js/* ${PREFIX}/${NAME_VERSION}/support/js
 	@${MAKE} -C support/c install
 	@${MAKE} -C support/refc install
 	@${MAKE} -C support/chez install
@@ -207,6 +207,16 @@ install-with-src-libs:
 	${MAKE} -C libs/contrib install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/network install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/test install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+
+install-libdocs: libdocs
+	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/{prelude,base,contrib,network,test}
+	cp -r libs/prelude/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/prelude
+	cp -r libs/base/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/base
+	cp -r libs/contrib/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/contrib
+	cp -r libs/network/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/network
+	cp -r libs/test/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/test
+	install -m 644 support/docs/* ${PREFIX}/${NAME_VERSION}/docs
+
 
 .PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
 

@@ -830,7 +830,7 @@ process (TypeSearch searchTerm)
               filterM (\def => equivTypes def.type ty') allDefs
          put Ctxt defs
          doc <- traverse (docsOrSignature replFC) $ fullname <$> filteredDefs
-         pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
+         pure $ PrintedDoc $ vsep doc
 process (Missing n)
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of
@@ -858,10 +858,10 @@ process (Total n)
                                (map fst ts)
 process (Doc itm)
     = do doc <- getDocsForPTerm itm
-         pure $ Printed $ vsep $ pretty <$> doc
+         pure $ PrintedDoc doc
 process (Browse ns)
     = do doc <- getContents ns
-         pure $ Printed $ vsep $ pretty <$> doc
+         pure $ PrintedDoc doc
 process (DebugInfo n)
     = do defs <- get Ctxt
          traverse_ showInfo !(lookupCtxtName n (gamma defs))
@@ -1075,6 +1075,7 @@ mutual
   displayResult (Evaluated x Nothing) = printResult $ prettyTerm x
   displayResult (Evaluated x (Just y)) = printResult (prettyTerm x <++> colon <++> prettyTerm y)
   displayResult (Printed xs) = printResult xs
+  displayResult (PrintedDoc xs) = printDocResult xs
   displayResult (TermChecked x y) = printResult (prettyTerm x <++> colon <++> prettyTerm y)
   displayResult (FileLoaded x) = printResult (reflow "Loaded file" <++> pretty x)
   displayResult (ModuleLoaded x) = printResult (reflow "Imported module" <++> pretty x)
@@ -1108,7 +1109,12 @@ mutual
   displayResult (Edited (MadeWith lit wapp)) = printResult $ pretty $ showSep "\n" (map (relit lit) wapp)
   displayResult (Edited (MadeCase lit cstr)) = printResult $ pretty $ showSep "\n" (map (relit lit) cstr)
   displayResult (OptionsSet opts) = printResult (vsep (pretty <$> opts))
-  displayResult _ = pure ()
+
+  -- do not use a catchall so that we are warned when a new constructor is added
+  displayResult Done = pure ()
+  displayResult (Executed _) = pure ()
+  displayResult DefDeclared = pure ()
+  displayResult Exited = pure ()
 
   export
   displayHelp : String

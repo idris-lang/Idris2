@@ -1,4 +1,4 @@
-// To compile this file for the samples `sample/ffi/Small.dir` and `sample/ffi/Struct.idr`, you will
+// To compile this file for the samples `sample/ffi/Small.idr` and `sample/ffi/Struct.idr`, you will
 // need to manually compile and link it into a `.so` file, and place it in a location where the
 // resulting exectuable can find it. For example:
 //      gcc -c -fPIC smallc.c -o smallc.o

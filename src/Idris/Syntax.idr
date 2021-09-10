@@ -242,6 +242,11 @@ mutual
   papply fc f [] = f
   papply fc f (a :: as) = papply fc (PApp fc f a) as
 
+  export
+  applyArgs : PTerm' nm -> List (FC, PTerm' nm) -> PTerm' nm
+  applyArgs f [] = f
+  applyArgs f ((fc, a) :: args) = applyArgs (PApp fc f a) args
+
   public export
   PTypeDecl : Type
   PTypeDecl = PTypeDecl' Name

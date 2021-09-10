@@ -226,3 +226,8 @@ public export
 when : Bool -> Lazy (Grammar state token False ()) -> Grammar state token False ()
 when True y = y
 when False y = pure ()
+
+public export
+%inline
+unless : Bool -> Lazy (Grammar state token False ()) -> Grammar state token False ()
+unless = when . not

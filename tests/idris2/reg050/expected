@@ -1,0 +1,11 @@
+1/1: Building loopy (loopy.idr)
+Error: While processing right hand side of eatBinary. While processing right hand side of eatBinary,firstDigit. Patterns for eatBinary,firstDigit,f require matching on different types.
+
+loopy:24:5--24:18
+ 20 |   firstDigit : List Char -> i
+ 21 |   firstDigit [] = 0
+ 22 |   firstDigit (d :: ds) = let
+ 23 |     f : Maybe i -> i
+ 24 |     f Nothing = 0
+          ^^^^^^^^^^^^^
+

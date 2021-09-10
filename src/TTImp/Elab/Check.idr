@@ -580,8 +580,20 @@ successful allowCons ((tm, elab) :: elabs)
                            put EST est
                            put MD md
                            put Ctxt defs
+                           when (abandon err) $ throw err
                            elabs' <- successful allowCons elabs
-                           pure (Left (tm, !(normaliseErr err)) :: elabs'))
+                           pure (Left (tm, err) :: elabs'))
+  where
+    -- Some errors, it's not worth trying all the possibilities because
+    -- something serious has gone wrong, so just give up immediately.
+    abandon : Error -> Bool
+    abandon (UndefinedName _ _) = True
+    abandon (InType _ _ err) = abandon err
+    abandon (InCon _ _ err) = abandon err
+    abandon (InLHS _ _ err) = abandon err
+    abandon (InRHS _ _ err) = abandon err
+    abandon (AllFailed errs) = any (abandon . snd) errs
+    abandon _ = False
 
 export
 exactlyOne' : {vars : _} ->
@@ -740,7 +752,7 @@ convertWithLazy withLazy fc elabinfo env x y
                   -- throwing because they may no longer be known
                   -- by the time we look at the error
                   defs <- get Ctxt
-                  throw !(normaliseErr (WhenUnifying fc env xtm ytm err)))
+                  throw (WhenUnifying fc (gamma defs) env xtm ytm err))
 
 export
 convert : {vars : _} ->

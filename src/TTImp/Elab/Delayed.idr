@@ -158,7 +158,7 @@ ambiguous (InType _ _ err) = ambiguous err
 ambiguous (InCon _ _ err) = ambiguous err
 ambiguous (InLHS _ _ err) = ambiguous err
 ambiguous (InRHS _ _ err) = ambiguous err
-ambiguous (WhenUnifying _ _ _ _ err) = ambiguous err
+ambiguous (WhenUnifying _ _ _ _ _ err) = ambiguous err
 ambiguous _ = False
 
 mutual
@@ -207,11 +207,13 @@ contra defs x y = pure False
 export
 recoverable : {auto c : Ref Ctxt Defs} ->
               Error -> Core Bool
-recoverable (CantConvert _ env l r)
+recoverable (CantConvert _ gam env l r)
    = do defs <- get Ctxt
+        let defs = record { gamma = gam } defs
         pure $ not !(contra defs !(nf defs env l) !(nf defs env r))
-recoverable (CantSolveEq _ env l r)
+recoverable (CantSolveEq _ gam env l r)
    = do defs <- get Ctxt
+        let defs = record { gamma = gam } defs
         pure $ not !(contra defs !(nf defs env l) !(nf defs env r))
 recoverable (UndefinedName _ _) = pure False
 recoverable (LinearMisuse _ _ _ _) = pure False
@@ -219,7 +221,7 @@ recoverable (InType _ _ err) = recoverable err
 recoverable (InCon _ _ err) = recoverable err
 recoverable (InLHS _ _ err) = recoverable err
 recoverable (InRHS _ _ err) = recoverable err
-recoverable (WhenUnifying _ _ _ _ err) = recoverable err
+recoverable (WhenUnifying _ _ _ _ _ err) = recoverable err
 recoverable _ = pure True
 
 data RetryError

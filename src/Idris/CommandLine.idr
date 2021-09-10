@@ -157,7 +157,9 @@ data CLOpt
    ||| Generate bash completion info
   BashCompletion String String |
    ||| Generate bash completion script
-  BashCompletionScript String
+  BashCompletionScript String |
+   ||| Turn on %default total globally
+  Total
 
 ||| Extract the host and port to bind the IDE socket to
 export
@@ -242,6 +244,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Generate profile data when compiling, if supported"),
 
            optSeparator,
+           MkOpt ["--total"] [] [Total]
+              (Just "Require functions to be total by default"),
            MkOpt ["-Werror"] [] [WarningsAsErrors]
               (Just "Treat warnings as errors"),
            MkOpt ["-Wno-shadowing"] [] [IgnoreShadowingWarnings]
