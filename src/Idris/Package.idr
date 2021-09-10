@@ -331,7 +331,7 @@ build pkg opts
               Just exec =>
                    do let Just (mainNS, mainFile) = mainmod pkg
                                | Nothing => throw (GenericMsg emptyFC "No main module given")
-                      let mainName = NS (miAsNamespace mainNS) (UN "main")
+                      let mainName = NS (miAsNamespace mainNS) (UN $ Basic "main")
                       compileMain mainName mainFile exec
 
          runScript (postbuild pkg)

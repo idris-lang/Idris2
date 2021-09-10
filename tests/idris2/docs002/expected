@@ -7,6 +7,8 @@ a : SimpleRec -> Int
 b : SimpleRec -> String
 hello : Int -> Int
 world : Nat -> Nat
+a : SimpleRec -> Int
+b : SimpleRec -> String
 Doc> Doc.NS.NestedNS.Foo : Type
   A type of Foo
   

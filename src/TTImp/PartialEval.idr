@@ -142,11 +142,11 @@ getSpecPats fc pename fn stk fnty args sargs pats
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
-             mkRHSargs sc' (IApp fc app (IVar fc (UN a))) as ds
+             mkRHSargs sc' (IApp fc app (IVar fc (UN $ Basic a))) as ds
     mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
-             mkRHSargs sc' (INamedApp fc app x (IVar fc (UN a))) as ds
+             mkRHSargs sc' (INamedApp fc app x (IVar fc (UN $ Basic a))) as ds
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
@@ -160,7 +160,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
     -- Type will depend on the value here (we assume a variadic function) but
     -- the argument names are still needed
     mkRHSargs ty app (a :: as) ((_, Dynamic) :: ds)
-        = mkRHSargs ty (IApp fc app (IVar fc (UN a))) as ds
+        = mkRHSargs ty (IApp fc app (IVar fc (UN $ Basic a))) as ds
     mkRHSargs _ app _ _
         = pure app
 
@@ -293,7 +293,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
     getAllRefs : NameMap Bool -> List ArgMode -> NameMap Bool
     getAllRefs ns (Dynamic :: xs) = getAllRefs ns xs
     getAllRefs ns (Static t :: xs)
-        = addRefs False (UN "_") (getAllRefs ns xs) t
+        = addRefs False (UN Underscore) (getAllRefs ns xs) t
     getAllRefs ns [] = ns
 
     updateApp : Name -> RawImp -> RawImp
@@ -364,7 +364,7 @@ specialise {vars} fc env gdef fn stk
                let nhash = hash (mapMaybe getStatic (map snd sargs))
                               `hashWithSalt` fn -- add function name to hash to avoid namespace clashes
                let pename = NS partialEvalNS
-                            (UN ("PE_" ++ nameRoot fnfull ++ "_" ++ asHex nhash))
+                            (UN $ Basic ("PE_" ++ nameRoot fnfull ++ "_" ++ asHex nhash))
                defs <- get Ctxt
                case lookup pename (peFailures defs) of
                     Nothing => Just <$> mkSpecDef fc gdef pename sargs fn stk

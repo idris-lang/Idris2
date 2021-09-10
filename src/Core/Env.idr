@@ -266,7 +266,7 @@ uniqifyEnv env = uenv [] env
   where
     next : Name -> Name
     next (MN n i) = MN n (i + 1)
-    next (UN n) = MN n 0
+    next (UN n) = MN (displayUserName n) 0
     next (NS ns n) = NS ns (next n)
     next n = MN (show n) 0
 

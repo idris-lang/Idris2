@@ -180,15 +180,15 @@ mutual
   implicitArg fname indents
       = do start <- location
            symbol "{"
-           x <- unqualifiedName
+           x <- UN . Basic <$> unqualifiedName
            (do symbol "="
                commit
                tm <- expr fname indents
                symbol "}"
-               pure (Just (UN x), tm))
+               pure (Just x, tm))
              <|> (do symbol "}"
                      end <- location
-                     pure (Just (UN x), IVar (MkFC fname start end) (UN x)))
+                     pure (Just x, IVar (MkFC fname start end) x))
     <|> do symbol "@{"
            commit
            tm <- expr fname indents
@@ -198,12 +198,12 @@ mutual
   as : OriginDesc -> IndentInfo -> Rule RawImp
   as fname indents
       = do start <- location
-           x <- unqualifiedName
+           x <- UN . Basic <$> unqualifiedName
            nameEnd <- location
            symbol "@"
            pat <- simpleExpr fname indents
            end <- location
-           pure (IAs (MkFC fname start end) (MkFC fname start nameEnd) UseRight (UN x) pat)
+           pure (IAs (MkFC fname start end) (MkFC fname start nameEnd) UseRight x pat)
 
   simpleExpr : OriginDesc -> IndentInfo -> Rule RawImp
   simpleExpr fname indents
@@ -247,7 +247,7 @@ mutual
                                        (do symbol ":"
                                            appExpr fname indents)
                               rig <- getMult rigc
-                              pure (rig, UN n, ty))
+                              pure (rig, UN (Basic n), ty))
 
 
   pibindListName : OriginDesc -> FilePos -> IndentInfo ->
@@ -259,7 +259,7 @@ mutual
             ty <- expr fname indents
             atEnd indents
             rig <- getMult rigc
-            pure (map (\n => (rig, UN n, ty)) (forget ns))
+            pure (map (\n => (rig, UN (Basic n), ty)) (forget ns))
      <|> forget <$> sepBy1 (symbol ",")
                            (do rigc <- multiplicity
                                n <- name
@@ -297,7 +297,10 @@ mutual
            ns <- sepBy1 (symbol ",") unqualifiedName
            nend <- location
            let nfc = MkFC fname nstart nend
-           let binders = map (\n => (erased {a=RigCount}, Just (UN n), Implicit nfc False)) (forget ns)
+           let binders = map (\n => ( erased {a=RigCount}
+                                    , Just (UN $ Basic n)
+                                    , Implicit nfc False))
+                             (forget ns)
            symbol "."
            scope <- typeExpr fname indents
            end <- location
@@ -628,7 +631,7 @@ fieldDecl fname indents
              ty <- expr fname indents
              end <- location
              pure (map (\n => MkIField (MkFC fname start end)
-                                       linear p (UN n) ty) (forget ns))
+                                       linear p (UN $ Basic n) ty) (forget ns))
 
 recordDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 recordDecl fname indents

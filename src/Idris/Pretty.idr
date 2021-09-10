@@ -396,12 +396,12 @@ mutual
         where
           dePure : IPTerm -> IPTerm
           dePure tm@(PApp _ (PRef _ n) arg)
-            = if dropNS (rawName n) == UN "pure" then arg else tm
+            = if dropNS (rawName n) == UN (Basic "pure") then arg else tm
           dePure tm = tm
 
           deGuard : PDo' KindedName -> PDo' KindedName
           deGuard tm@(DoExp fc (PApp _ (PRef _ n) arg))
-            = if dropNS (rawName n) == UN "guard" then DoExp fc arg else tm
+            = if dropNS (rawName n) == UN (Basic "guard") then DoExp fc arg else tm
           deGuard tm = tm
       go d (PRewrite _ rule tm) =
         parenthesise (d > appPrec) $ group $ rewrite_ <++> go startPrec rule <+> line <+> in_ <++> go startPrec tm

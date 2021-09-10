@@ -172,7 +172,7 @@ getMethDecl {vars} env nest params mnames (c, nm, ty)
 -- bind the auto implicit for the interface - put it first, as it may be needed
 -- in other method variables, including implicit variables
 bindIFace : FC -> RawImp -> RawImp -> RawImp
-bindIFace fc ity sc = IPi fc top AutoImplicit (Just (UN "__con")) ity sc
+bindIFace fc ity sc = IPi fc top AutoImplicit (Just (UN $ Basic "__con")) ity sc
 
 -- Get the top level function for implementing a method
 getMethToplevel : {vars : _} ->
@@ -201,7 +201,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
          let argns = getExplicitArgs 0 sig.type
          -- eta expand the RHS so that we put implicits in the right place
          let fnclause = PatClause vfc (INamedApp vfc (IVar sig.location cn)
-                                                   (UN "__con")
+                                                   (UN $ Basic "__con")
                                                    conapp)
                                   (mkLam argns
                                     (apply (IVar EmptyFC (methName sig.name))
@@ -220,7 +220,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
         = IPi (getFC pty) rig Implicit (Just n) pty (bindPs ps ty)
 
     applyCon : Name -> (Name, RawImp)
-    applyCon n = let name = UN "__con" in
+    applyCon n = let name = UN (Basic "__con") in
                  (n, INamedApp vfc (IVar vfc n) name (IVar vfc name))
 
     getExplicitArgs : Int -> RawImp -> List Name
@@ -235,12 +235,12 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
        = ILam EmptyFC top Explicit (Just x) (Implicit vfc False) (mkLam xs tm)
 
     bindName : Name -> String
-    bindName (UN n) = "__bind_" ++ n
+    bindName (UN n) = "__bind_" ++ displayUserName n
     bindName (NS _ n) = bindName n
     bindName n = show n
 
     methName : Name -> Name
-    methName n = UN (bindName n)
+    methName n = UN (Basic $ bindName n)
 
 -- Get the function for chasing a constraint. This is one of the
 -- arguments to the record, appearing before the method arguments.
@@ -257,7 +257,7 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
          let fty = IPi fc top Explicit Nothing ity con
          ty_imp <- bindTypeNames fc [] (meths ++ vars) fty
          let hintname = DN ("Constraint " ++ show con)
-                          (UN ("__" ++ show iname ++ "_" ++ show con))
+                          (UN (Basic $ "__" ++ show iname ++ "_" ++ show con))
 
          let tydecl = IClaim fc top vis [Inline, Hint False]
                           (MkImpTy EmptyFC EmptyFC hintname ty_imp)
@@ -271,12 +271,12 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
          pure (hintname, [tydecl, fndef])
   where
     bindName : Name -> String
-    bindName (UN n) = "__bind_" ++ n
+    bindName (UN n) = "__bind_" ++ displayUserName n
     bindName (NS _ n) = bindName n
     bindName n = show n
 
     constName : Name -> Name
-    constName n = UN (bindName n)
+    constName n = UN (Basic $ bindName n)
 
     impsBind : RawImp -> List String -> RawImp
     impsBind fn [] = fn
@@ -290,9 +290,11 @@ getDefault _ = Nothing
 
 mkCon : FC -> Name -> Name
 mkCon loc (NS ns (UN n))
-   = NS ns (DN (n ++ " at " ++ show loc) (UN ("__mk" ++ n)))
+   = let str = displayUserName n in
+     NS ns (DN (str ++ " at " ++ show loc) (UN $ Basic ("__mk" ++ str)))
 mkCon loc n
-   = DN (show n ++ " at " ++ show loc) (UN ("__mk" ++ show n))
+   = let str = show n in
+     DN (str ++ " at " ++ show loc) (UN $ Basic ("__mk" ++  str))
 
 updateIfaceSyn : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
@@ -378,7 +380,7 @@ elabInterface {vars} ifc vis env nest constraints iname params dets mcon body
     nameCons : Int -> List (Maybe Name, RawImp) -> List (Name, RawImp)
     nameCons i [] = []
     nameCons i ((_, ty) :: rest)
-        = (UN ("__con" ++ show i), ty) :: nameCons (i + 1) rest
+        = (UN (Basic $ "__con" ++ show i), ty) :: nameCons (i + 1) rest
 
     -- Elaborate the data declaration part of the interface
     elabAsData : (conName : Name) -> List Name ->
@@ -476,8 +478,8 @@ elabInterface {vars} ifc vis env nest constraints iname params dets mcon body
 
         applyParams : RawImp -> List Name -> RawImp
         applyParams tm [] = tm
-        applyParams tm (UN n :: ns)
-            = applyParams (INamedApp vdfc tm (UN n) (IBindVar vdfc n)) ns
+        applyParams tm (UN (Basic n) :: ns)
+            = applyParams (INamedApp vdfc tm (UN (Basic n)) (IBindVar vdfc n)) ns
         applyParams tm (_ :: ns) = applyParams tm ns
 
         changeNameTerm : Name -> RawImp -> Core RawImp

@@ -41,7 +41,7 @@ constant
         CharLit c    =>  Ch <$> getCharLit c
         DoubleLit d  => Just (Db d)
         IntegerLit i => Just (BI i)
-        Ident s      => isConstantType (UN s) >>=
+        Ident s      => isConstantType (UN $ Basic s) >>=
                              \case WorldType => Nothing
                                    c         => Just c
         _            => Nothing
@@ -140,7 +140,7 @@ aDotIdent = terminal "Expected dot+identifier" $
 
 export
 postfixProj : Rule Name
-postfixProj = RF <$> aDotIdent
+postfixProj = UN . Field <$> aDotIdent
 
 export
 symbol : String -> Rule ()
@@ -188,7 +188,7 @@ operatorCandidate : Rule Name
 operatorCandidate
     = terminal "Expected operator" $
                \case
-                 Symbol s => Just (UN s)
+                 Symbol s => Just (UN $ Basic s) -- TODO: have an operator construct?
                  _ => Nothing
 
 export
@@ -199,7 +199,7 @@ operator
                  Symbol s =>
                    if s `elem` reservedSymbols
                    then Nothing
-                   else Just (UN s)
+                   else Just (UN $ Basic s) -- TODO: have an operator construct?
                  _ => Nothing
 
 identPart : Rule String
@@ -296,7 +296,7 @@ nameWithCapital b = opNonNS <|> do
     let id = snd <$> nsx
     identWithCapital b id
     isNotReservedName id
-    pure $ uncurry mkNamespacedName nsx.val
+    pure $ uncurry mkNamespacedName (map Basic nsx.val)
 
   opNS : WithBounds (Maybe Namespace, String) -> Rule Name
   opNS nsx = do
@@ -325,7 +325,7 @@ capitalisedIdent = do
 
 export
 dataConstructorName : Rule Name
-dataConstructorName = opNonNS <|> UN <$> capitalisedIdent
+dataConstructorName = opNonNS <|> (UN . Basic) <$> capitalisedIdent
 
 export %inline
 dataTypeName : Rule Name
