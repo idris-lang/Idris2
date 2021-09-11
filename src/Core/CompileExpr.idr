@@ -25,7 +25,7 @@ data ConInfo = DATACON -- normal data constructor
              | JUST -- just of an option shaped thing
              | RECORD -- record constructor (no tag)
              | ZERO -- zero of a nat-like type
-             | SUCC -- successort of a nat-like type
+             | SUCC -- successor of a nat-like type
              | UNIT -- unit
 
 export
@@ -40,7 +40,7 @@ Show ConInfo where
   show RECORD  = "[record]"
   show ZERO    = "[zero]"
   show SUCC    = "[succ]"
-  show UNIT = "[unit]"
+  show UNIT    = "[unit]"
 
 export
 Eq ConInfo where

@@ -312,7 +312,7 @@ mutual
            case fl of
                 ENUM => pure $ CPrimVal fc (I tag)
                 ZERO => pure $ CPrimVal fc (BI 0)
-                SUCC => do x <- (newMN "succ")
+                SUCC => do x <- newMN "succ"
                            pure $ CLam fc x $ COp fc (Add IntegerType) [CPrimVal fc (BI 1), CLocal fc First]
                 _ => pure $ CCon fc cn fl (Just tag) []
   toCExpTm m n (Ref fc (TyCon tag arity) fn)
