@@ -1,6 +1,7 @@
 module Core.Coverage
 
-import Core.CaseTree
+import Core.Case.CaseTree
+import Core.Case.Util
 import Core.Context
 import Core.Context.Log
 import Core.Env
@@ -13,8 +14,8 @@ import Data.Maybe
 import Data.String
 
 import Libraries.Data.NameMap
-import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.String.Extra
+import Libraries.Text.PrettyPrint.Prettyprinter
 
 %hide Data.String.lines
 %hide Data.String.lines'
@@ -149,50 +150,6 @@ isEmpty defs env (NTCon fc n t a args)
             _ => pure False
 isEmpty defs env _ = pure False
 
--- Need this to get a NF from a Term; the names are free in any case
-freeEnv : FC -> (vs : List Name) -> Env Term vs
-freeEnv fc [] = []
-freeEnv fc (n :: ns) = PVar fc top Explicit (Erased fc False) :: freeEnv fc ns
-
--- Given a normalised type, get all the possible constructors for that
--- type family, with their type, name, tag, and arity
-getCons : {auto c : Ref Ctxt Defs} ->
-          {vars : _} ->
-          Defs -> NF vars -> Core (List (NF [], Name, Int, Nat))
-getCons defs (NTCon _ tn _ _ _)
-    = case !(lookupDefExact tn (gamma defs)) of
-           Just (TCon _ _ _ _ _ _ cons _) =>
-                do cs' <- traverse addTy cons
-                   pure (mapMaybe id cs')
-           _ => throw (InternalError "Called `getCons` on something that is not a Type constructor")
-  where
-    addTy : Name -> Core (Maybe (NF [], Name, Int, Nat))
-    addTy cn
-        = do Just gdef <- lookupCtxtExact cn (gamma defs)
-                  | _ => pure Nothing
-             case (definition gdef, type gdef) of
-                  (DCon t arity _, ty) =>
-                        pure (Just (!(nf defs [] ty), cn, t, arity))
-                  _ => pure Nothing
-getCons defs _ = pure []
-
-emptyRHS : FC -> CaseTree vars -> CaseTree vars
-emptyRHS fc (Case idx el sc alts) = Case idx el sc (map emptyRHSalt alts)
-  where
-    emptyRHSalt : CaseAlt vars -> CaseAlt vars
-    emptyRHSalt (ConCase n t args sc) = ConCase n t args (emptyRHS fc sc)
-    emptyRHSalt (DelayCase c arg sc) = DelayCase c arg (emptyRHS fc sc)
-    emptyRHSalt (ConstCase c sc) = ConstCase c (emptyRHS fc sc)
-    emptyRHSalt (DefaultCase sc) = DefaultCase (emptyRHS fc sc)
-emptyRHS fc (STerm i s) = STerm i (Erased fc False)
-emptyRHS fc sc = sc
-
-mkAlt : {vars : _} ->
-        FC -> CaseTree vars -> (Name, Int, Nat) -> CaseAlt vars
-mkAlt fc sc (cn, t, ar)
-    = ConCase cn t (map (MN "m") (take ar [0..]))
-              (weakenNs (map take) (emptyRHS fc sc))
-
 altMatch : CaseAlt vars -> CaseAlt vars -> Bool
 altMatch _ (DefaultCase _) = True
 altMatch (DelayCase _ _ t) (DelayCase _ _ t') = True
@@ -273,12 +230,6 @@ addNot v t ((v', ts) :: xs)
     = if sameVar (MkVar v) v'
          then ((v', t :: ts) :: xs)
          else ((v', ts) :: addNot v t xs)
-
-tagIs : Int -> CaseAlt vars -> Bool
-tagIs t (ConCase _ t' _ _) = t == t'
-tagIs t (ConstCase _ _) = False
-tagIs t (DelayCase _ _ _) = False
-tagIs t (DefaultCase _) = True
 
 tagIsNot : List Int -> CaseAlt vars -> Bool
 tagIsNot ts (ConCase _ t' _ _) = not (t' `elem` ts)

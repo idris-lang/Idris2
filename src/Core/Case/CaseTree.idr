@@ -1,4 +1,4 @@
-module Core.CaseTree
+module Core.Case.CaseTree
 
 import Core.TT
 
