@@ -1304,7 +1304,6 @@ replaceDefaults fc defs (NPrimVal _ _) cs = pure (cs, [])
 replaceDefaults fc defs (NType _) cs = pure (cs, [])
 replaceDefaults fc defs nfty cs
     = do cs' <- traverse rep cs
---          log "compile.casetree" 1 $ " repped::: " ++ (show cs')
          let (cs'', extraClauseIdxs) = dropRep (concat cs') []
          let extraClauseIdxs' =
            if (length cs == (length cs'' + 1))
@@ -1317,7 +1316,6 @@ replaceDefaults fc defs nfty cs
     rep : CaseAlt vars -> Core (List (CaseAlt vars))
     rep (DefaultCase sc)
         = do allCons <- getCons defs nfty
---              log "compile.casetree" 1 $ " all cons: " ++ (show allCons)
              pure (map (mkAlt fc sc . snd) allCons)
     rep c = pure [c]
 
@@ -1326,18 +1324,13 @@ replaceDefaults fc defs nfty cs
     dropRep (c@(ConCase n t args sc) :: rest) extra
           -- assumption is that there's no defaultcase in 'rest' because
           -- we've just removed it
-          -- TODO: instead of just filtering below, need to continue with all
-          --       things that pass filter and track all things eliminated by
-          --       filter as extra...
-          -- TODO: I think if I just findReachedAlts against things failing the
-          --       filter that might be the right idea.
         = let (filteredClauses, extraCases) = partition (not . tagIs t) rest
-              extra' = extraCases >>= findReachedAlts
-              (rest', extra'') = dropRep filteredClauses extra'
-          in  (c :: rest', extra ++ extra'')
+              extraClauses = extraCases >>= findReachedAlts
+              (rest', extra') = dropRep filteredClauses extraClauses
+          in  (c :: rest', extra ++ extra')
     dropRep (c :: rest) extra
         = let (rest', extra') = dropRep rest extra
-          in  (c :: rest', extra ++ extra')
+          in  (c :: rest', extra')
 
 findExtra : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
