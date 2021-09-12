@@ -491,7 +491,6 @@ checkPolyConstraint (MkPolyConstraint fc env arg x y)
                                  throw (MatchTooSpecific fc env arg)
                          else pure ()
               _ => pure ()
-checkPolyConstraint _ = pure ()
 
 solvePolyConstraint :
             {auto c : Ref Ctxt Defs} ->
