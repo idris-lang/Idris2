@@ -18,6 +18,8 @@ import Decidable.Equality
 
 import Libraries.Text.PrettyPrint.Prettyprinter
 
+import Debug.Trace
+
 %default covering
 
 public export
@@ -1226,16 +1228,135 @@ simpleCase fc phase fn ty def clauses
          defs <- get Ctxt
          patCompile fc fn phase ty ps def
 
-findReached : CaseTree ns -> List Int
-findReached (Case _ _ _ alts) = concatMap findRAlts alts
+mutual
+  findReachedAlts : CaseAlt ns' -> List Int
+  findReachedAlts (ConCase _ _ _ t) = findReached t
+  findReachedAlts (DelayCase _ _ t) = findReached t
+  findReachedAlts (ConstCase _ t) = findReached t
+  findReachedAlts (DefaultCase t) = findReached t
+
+  findReached : CaseTree ns -> List Int
+  findReached (Case _ _ _ alts) = concatMap findReachedAlts alts
+  findReached (STerm i _) = [i]
+  findReached _ = []
+
+-- Given a normalised type, get all the possible constructors for that
+-- type family, with their type, name, tag, and arity
+getCons : {auto c : Ref Ctxt Defs} ->
+          {vars : _} ->
+          Defs -> NF vars -> Core (List (NF [], Name, Int, Nat))
+getCons defs (NTCon _ tn _ _ _)
+    = case !(lookupDefExact tn (gamma defs)) of
+           Just (TCon _ _ _ _ _ _ cons _) =>
+                do cs' <- traverse addTy cons
+                   pure (mapMaybe id cs')
+           _ => throw (InternalError "Called `getCons` on something that is not a Type constructor")
   where
-    findRAlts : CaseAlt ns' -> List Int
-    findRAlts (ConCase _ _ _ t) = findReached t
-    findRAlts (DelayCase _ _ t) = findReached t
-    findRAlts (ConstCase _ t) = findReached t
-    findRAlts (DefaultCase t) = findReached t
-findReached (STerm i _) = [i]
-findReached _ = []
+    addTy : Name -> Core (Maybe (NF [], Name, Int, Nat))
+    addTy cn
+        = do Just gdef <- lookupCtxtExact cn (gamma defs)
+                  | _ => pure Nothing
+             case (definition gdef, type gdef) of
+                  (DCon t arity _, ty) =>
+                        pure (Just (!(nf defs [] ty), cn, t, arity))
+                  _ => pure Nothing
+getCons defs _ = pure []
+
+emptyRHS : FC -> CaseTree vars -> CaseTree vars
+emptyRHS fc (Case idx el sc alts) = Case idx el sc (map emptyRHSalt alts)
+  where
+    emptyRHSalt : CaseAlt vars -> CaseAlt vars
+    emptyRHSalt (ConCase n t args sc) = ConCase n t args (emptyRHS fc sc)
+    emptyRHSalt (DelayCase c arg sc) = DelayCase c arg (emptyRHS fc sc)
+    emptyRHSalt (ConstCase c sc) = ConstCase c (emptyRHS fc sc)
+    emptyRHSalt (DefaultCase sc) = DefaultCase (emptyRHS fc sc)
+emptyRHS fc (STerm i s) = STerm i (Erased fc False)
+emptyRHS fc sc = sc
+
+
+mkAlt : {vars : _} ->
+        FC -> CaseTree vars -> (Name, Int, Nat) -> CaseAlt vars
+mkAlt fc sc (cn, t, ar)
+    = ConCase cn t (map (MN "m") (take ar [0..]))
+              (weakenNs (map take) (emptyRHS fc sc))
+
+tagIs : Int -> CaseAlt vars -> Bool
+tagIs t (ConCase _ t' _ _) = t == t'
+tagIs t (ConstCase _ _) = False
+tagIs t (DelayCase _ _ _) = False
+tagIs t (DefaultCase _) = True
+
+-- Need this to get a NF from a Term; the names are free in any case
+freeEnv : FC -> (vs : List Name) -> Env Term vs
+freeEnv fc [] = []
+freeEnv fc (n :: ns) = PVar fc top Explicit (Erased fc False) :: freeEnv fc ns
+
+-- Replace a default case with explicit branches for the constructors.
+-- This is easier than checking whether a default is needed when traversing
+-- the tree (just one constructor lookup up front).
+replaceDefaults : {auto c : Ref Ctxt Defs} ->
+                  {vars : _} ->
+                  FC -> Defs -> NF vars -> List (CaseAlt vars) ->
+                  Core (List (CaseAlt vars), List Int)
+-- Leave it alone if it's a primitive type though, since we need the catch
+-- all case there
+replaceDefaults fc defs (NPrimVal _ _) cs = pure (cs, [])
+replaceDefaults fc defs (NType _) cs = pure (cs, [])
+replaceDefaults fc defs nfty cs
+    = do cs' <- traverse rep cs
+         log "compile.casetree" 1 $ " repped::: " ++ (show cs')
+         let (cs'', extraClauseIdxs) = dropRep (concat cs') []
+         let extraClauseIdxs' =
+           if (length cs == (length cs'' + 1))
+              then extraClauseIdxs
+              else []
+--          when (length cs == (length cs'' + 1)) $ do
+         log "compile.casetree" 1 $ "   //////   " ++ (show $ extraClauseIdxs')
+         pure (cs'', nub extraClauseIdxs')
+  where
+    rep : CaseAlt vars -> Core (List (CaseAlt vars))
+    rep (DefaultCase sc)
+        = do allCons <- getCons defs nfty
+             log "compile.casetree" 1 $ " all cons: " ++ (show allCons)
+             pure (map (mkAlt fc sc . snd) allCons)
+    rep c = pure [c]
+
+    dropRep : List (CaseAlt vars) -> List Int -> (List (CaseAlt vars), List Int)
+    dropRep [] extra = ([], extra)
+    dropRep (c@(ConCase n t args sc) :: rest) extra
+          -- assumption is that there's no defaultcase in 'rest' because
+          -- we've just removed it
+          -- TODO: instead of just filtering below, need to continue with all
+          --       things that pass filter and track all things eliminated by
+          --       filter as extra...
+          -- TODO: I think if I just findReachedAlts against things failing the
+          --       filter that might be the right idea.
+        = let (filteredClauses, extraCases) = partition (not . tagIs t) rest
+              extra' = extraCases >>= findReachedAlts
+              (rest', extra'') = dropRep filteredClauses extra'
+          in  (c :: rest', extra ++ extra'')
+    dropRep (c :: rest) extra
+        = let (rest', extra') = dropRep rest extra
+          in  (c :: rest', extra ++ extra')
+
+findExtra : {auto c : Ref Ctxt Defs} ->
+            {vars : _} ->
+            FC -> Defs -> CaseTree vars ->
+            Core (List Int)
+findExtra fc defs ctree@(Case {name = var} idx el ty altsIn)
+  = do let fenv = freeEnv fc _
+       nfty <- nf defs fenv ty
+       (alts', extraCases) <- replaceDefaults fc defs nfty altsIn
+       extraCases' <- concat <$> traverse findExtraAlts alts'
+       pure (extraCases ++ extraCases')
+  where
+    -- we won't have defaults at the root level of the case alts this helper
+    -- handles due to having replaced them already.
+    findExtraAlts : CaseAlt vars -> Core (List Int)
+    findExtraAlts (ConCase x tag args ctree') = findExtra fc defs ctree'
+    findExtraAlts _ = pure []
+
+findExtra fc defs ctree = pure []
 
 -- Returns the case tree, and a list of the clauses that aren't reachable
 export
@@ -1263,7 +1384,11 @@ getPMDef fc phase fn ty clauses
          logC "compile.casetree.getpmdef" 20 $
            pure $ "Compiled to: " ++ show !(toFullNames t)
          let reached = findReached t
-         pure (_ ** (t, getUnreachable 0 reached clauses))
+         extra <- findExtra fc defs t
+         trace (show $ reached) $ pure ()
+         trace (show $ extra) $ pure ()
+         let unreachable = getUnreachable 0 (reached \\ extra) clauses
+         pure (_ ** (t, unreachable))
   where
     getUnreachable : Int -> List Int -> List Clause -> List Clause
     getUnreachable i is [] = []
