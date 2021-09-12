@@ -1304,20 +1304,20 @@ replaceDefaults fc defs (NPrimVal _ _) cs = pure (cs, [])
 replaceDefaults fc defs (NType _) cs = pure (cs, [])
 replaceDefaults fc defs nfty cs
     = do cs' <- traverse rep cs
-         log "compile.casetree" 1 $ " repped::: " ++ (show cs')
+--          log "compile.casetree" 1 $ " repped::: " ++ (show cs')
          let (cs'', extraClauseIdxs) = dropRep (concat cs') []
          let extraClauseIdxs' =
            if (length cs == (length cs'' + 1))
               then extraClauseIdxs
               else []
 --          when (length cs == (length cs'' + 1)) $ do
-         log "compile.casetree" 1 $ "   //////   " ++ (show $ extraClauseIdxs')
+--          log "compile.casetree" 1 $ "   //////   " ++ (show $ extraClauseIdxs')
          pure (cs'', nub extraClauseIdxs')
   where
     rep : CaseAlt vars -> Core (List (CaseAlt vars))
     rep (DefaultCase sc)
         = do allCons <- getCons defs nfty
-             log "compile.casetree" 1 $ " all cons: " ++ (show allCons)
+--              log "compile.casetree" 1 $ " all cons: " ++ (show allCons)
              pure (map (mkAlt fc sc . snd) allCons)
     rep c = pure [c]
 
@@ -1385,8 +1385,8 @@ getPMDef fc phase fn ty clauses
            pure $ "Compiled to: " ++ show !(toFullNames t)
          let reached = findReached t
          extra <- findExtra fc defs t
-         trace (show $ reached) $ pure ()
-         trace (show $ extra) $ pure ()
+--          trace (show $ reached) $ pure ()
+--          trace (show $ extra) $ pure ()
          let unreachable = getUnreachable 0 (reached \\ extra) clauses
          pure (_ ** (t, unreachable))
   where
