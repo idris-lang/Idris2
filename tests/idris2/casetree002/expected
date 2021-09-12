@@ -1,0 +1,41 @@
+1/1: Building DefaultCases (DefaultCases.idr)
+Warning: Unreachable clause: extraDefault _
+
+DefaultCases:12:1--12:15
+ 08 | 
+ 09 | extraDefault : MyBit -> Int
+ 10 | extraDefault A = 1
+ 11 | extraDefault B = 2
+ 12 | extraDefault _ = 3
+      ^^^^^^^^^^^^^^
+
+Warning: Unreachable clause: earlyDefault A
+
+DefaultCases:20:1--20:15
+ 16 | usefulDefault _ = 2
+ 17 | 
+ 18 | earlyDefault : MyBit -> Int
+ 19 | earlyDefault _ = 1
+ 20 | earlyDefault A = 2
+      ^^^^^^^^^^^^^^
+
+Warning: Unreachable clause: nestedExtraDefault _ _
+
+DefaultCases:36:1--36:23
+ 32 | nestedExtraDefault A A = 1
+ 33 | nestedExtraDefault A B = 2
+ 34 | nestedExtraDefault B A = 3
+ 35 | nestedExtraDefault B B = 4
+ 36 | nestedExtraDefault _ _ = 5
+      ^^^^^^^^^^^^^^^^^^^^^^
+
+Warning: Unreachable clause: nestedEarlyDefault B B
+
+DefaultCases:49:1--49:23
+ 45 | nestedEarlyDefault A A = 1
+ 46 | nestedEarlyDefault A B = 2
+ 47 | nestedEarlyDefault B A = 3
+ 48 | nestedEarlyDefault _ _ = 4
+ 49 | nestedEarlyDefault B B = 5
+      ^^^^^^^^^^^^^^^^^^^^^^
+
