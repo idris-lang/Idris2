@@ -1,6 +1,7 @@
 000018(:protocol-version 2 0)
 000046(:write-string "1/1: Building StringLiterals (StringLiterals.idr)" 1)
 000079(:output (:ok (:highlight-source ((((:filename "StringLiterals.idr") (:start 1 1) (:end 1 6)) ((:decor :keyword)))))) 1)
+000079(:output (:ok (:highlight-source ((((:filename "StringLiterals.idr") (:start 1 8) (:end 1 21)) ((:decor :module)))))) 1)
 00007a(:output (:ok (:highlight-source ((((:filename "StringLiterals.idr") (:start 3 1) (:end 3 5)) ((:decor :function)))))) 1)
 000079(:output (:ok (:highlight-source ((((:filename "StringLiterals.idr") (:start 3 7) (:end 3 7)) ((:decor :keyword)))))) 1)
 0000de(:output (:ok (:highlight-source ((((:filename "StringLiterals.idr") (:start 3 9) (:end 3 18)) ((:name "FromString") (:namespace "Builtin") (:decor :type) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)

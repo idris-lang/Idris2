@@ -5,16 +5,19 @@ import Compiler.ANF
 import Compiler.CompileExpr
 import Compiler.Inline
 import Compiler.LambdaLift
+import Compiler.Opts.CSE
 import Compiler.VMCode
 
+import Core.Binary.Prims
 import Core.Context
 import Core.Context.Log
 import Core.Directory
 import Core.Options
+import Core.Ord
 import Core.TT
 import Core.TTC
 import Libraries.Data.IOArray
-import Libraries.Utils.Binary
+import Libraries.Data.SortedMap
 import Libraries.Utils.Path
 import Libraries.Utils.Scheme
 
@@ -182,16 +185,12 @@ warnIfHole n (MkNmError _)
     = coreLift $ putStrLn $ "Warning: compiling hole " ++ show n
 warnIfHole n _ = pure ()
 
-getNamedDef : {auto c : Ref Ctxt Defs} ->
-              Name -> Core (Maybe (Name, FC, NamedDef))
-getNamedDef n
-    = do defs <- get Ctxt
-         case !(lookupCtxtExact n (gamma defs)) of
-              Nothing => pure Nothing
-              Just def => case namedcompexpr def of
-                               Nothing => pure Nothing
-                               Just d => do warnIfHole n d
-                                            pure (Just (n, location def, d))
+getNamedDef :  {auto c : Ref Ctxt Defs}
+            -> (Name,FC,CDef)
+            -> Core (Name, FC, NamedDef)
+getNamedDef (n,fc,cdef) =
+  let ndef = forgetDef cdef
+   in warnIfHole n ndef >> pure (n,fc,ndef)
 
 replaceEntry : {auto c : Ref Ctxt Defs} ->
                (Int, Maybe (Namespace, Binary)) -> Core ()
@@ -207,11 +206,10 @@ natHackNames
        NS typesNS (UN "prim__integerToNat")]
 
 -- Hmm, these dump functions are all very similar aren't they...
-dumpCases : Defs -> String -> List Name ->
-            Core ()
-dumpCases defs fn cns
-    = do cstrs <- traverse dumpCase cns
-         Right () <- coreLift $ writeFile fn (fastAppend cstrs)
+dumpCases : String -> List (Name,FC,NamedDef) -> Core ()
+dumpCases fn defs
+    = do Right () <- coreLift $ writeFile fn
+                     (fastAppend $ map dumpCase defs)
                | Left err => throw (FileErr fn err)
          pure ()
   where
@@ -219,14 +217,9 @@ dumpCases defs fn cns
     fullShow (DN _ n) = show n
     fullShow n = show n
 
-    dumpCase : Name -> Core String
-    dumpCase n
-        = case !(lookupCtxtExact n (gamma defs)) of
-               Nothing => pure ""
-               Just d =>
-                    case namedcompexpr d of
-                         Nothing => pure ""
-                         Just def => pure (fullShow n ++ " = " ++ show def ++ "\n")
+    dumpCase : (Name,FC,NamedDef) -> String
+    dumpCase (n,_,def)
+        = fullShow n ++ " = " ++ show def ++ "\n"
 
 dumpLifted : String -> List (Name, LiftedDef) -> Core ()
 dumpLifted fn lns
@@ -299,7 +292,7 @@ getCompileData doLazyAnnots phase_in tm_in
          arr <- coreLift $ newArray asize
          logTime "++ Get names" $ getAllDesc (natHackNames' ++ keys ns) arr defs
 
-         let entries = mapMaybe id !(coreLift (toList arr))
+         let entries = catMaybes !(coreLift (toList arr))
          let allNs = map (Resolved . fst) entries
          cns <- traverse toFullNames allNs
 
@@ -309,15 +302,22 @@ getCompileData doLazyAnnots phase_in tm_in
          rcns <- filterM nonErased cns
          logTime "++ Merge lambda" $ traverse_ mergeLamDef rcns
          logTime "++ Fix arity" $ traverse_ fixArityDef rcns
-         logTime "++ Forget names" $ traverse_ mkForgetDef rcns
-
          compiledtm <- fixArityExp !(compileExp tm)
-         let mainname = MN "__mainExpression" 0
-         (liftedtm, ldefs) <- liftBody {doLazyAnnots} mainname compiledtm
 
-         namedefs <- traverse getNamedDef rcns
+         (cseDefs, csetm) <- logTime "++ CSE" $ do
+           um      <- analyzeNames rcns
+           defs    <- catMaybes <$> traverse (cseDef um) rcns
+           pure $ (cseNewToplevelDefs um ++ defs, adjust um compiledtm)
+
+         namedDefs <- logTime "++ Forget names" $
+           traverse getNamedDef cseDefs
+
+         let mainname = MN "__mainExpression" 0
+         (liftedtm, ldefs) <- liftBody {doLazyAnnots} mainname csetm
+
          lifted_in <- if phase >= Lifted
-                         then logTime "++ Lambda lift" $ traverse (lambdaLift doLazyAnnots) rcns
+                         then logTime "++ Lambda lift" $
+                              traverse (lambdaLift doLazyAnnots) cseDefs
                          else pure []
 
          let lifted = (mainname, MkLFun [] [] liftedtm) ::
@@ -331,30 +331,27 @@ getCompileData doLazyAnnots phase_in tm_in
                       else pure []
 
          defs <- get Ctxt
-         maybe (pure ())
-               (\f => do coreLift $ putStrLn $ "Dumping case trees to " ++ f
-                         dumpCases defs f rcns)
-               (dumpcases sopts)
-         maybe (pure ())
-               (\f => do coreLift $ putStrLn $ "Dumping lambda lifted defs to " ++ f
-                         dumpLifted f lifted)
-               (dumplifted sopts)
-         maybe (pure ())
-               (\f => do coreLift $ putStrLn $ "Dumping ANF defs to " ++ f
-                         dumpANF f anf)
-               (dumpanf sopts)
-         maybe (pure ())
-               (\f => do coreLift $ putStrLn $ "Dumping VM defs to " ++ f
-                         dumpVMCode f vmcode)
-               (dumpvmcode sopts)
+         whenJust (dumpcases sopts) $ \ f =>
+            do coreLift $ putStrLn $ "Dumping case trees to " ++ f
+               dumpCases f namedDefs
+
+         whenJust (dumplifted sopts) $ \ f =>
+            do coreLift $ putStrLn $ "Dumping lambda lifted defs to " ++ f
+               dumpLifted f lifted
+
+         whenJust (dumpanf sopts) $ \ f =>
+            do coreLift $ putStrLn $ "Dumping ANF defs to " ++ f
+               dumpANF f anf
+
+         whenJust (dumpvmcode sopts) $ \ f =>
+            do coreLift $ putStrLn $ "Dumping VM defs to " ++ f
+               dumpVMCode f vmcode
 
          -- We're done with our minimal context now, so put it back the way
          -- it was. Back ends shouldn't look at the global context, because
          -- it'll have to decode the definitions again.
          traverse_ replaceEntry entries
-         pure (MkCompileData compiledtm
-                             (mapMaybe id namedefs)
-                             lifted anf vmcode)
+         pure (MkCompileData csetm namedDefs lifted anf vmcode)
 
 export
 compileTerm : {auto c : Ref Ctxt Defs} ->
@@ -373,11 +370,13 @@ getIncCompileData doLazyAnnots phase
          let ns = keys (toIR defs)
          cns <- traverse toFullNames ns
          rcns <- filterM nonErased cns
-         traverse_ mkForgetDef rcns
+         cseDefs <- catMaybes <$> traverse (cseDef empty) rcns
 
-         namedefs <- traverse getNamedDef rcns
+         namedDefs <- traverse getNamedDef cseDefs
+
          lifted_in <- if phase >= Lifted
-                         then logTime "++ Lambda lift" $ traverse (lambdaLift doLazyAnnots) rcns
+                         then logTime "++ Lambda lift" $
+                              traverse (lambdaLift doLazyAnnots) cseDefs
                          else pure []
          let lifted = concat lifted_in
          anf <- if phase >= ANF
@@ -386,9 +385,7 @@ getIncCompileData doLazyAnnots phase
          vmcode <- if phase >= VMCode
                       then logTime "++ Get VM Code" $ pure (allDefs anf)
                       else pure []
-         pure (MkCompileData (CErased emptyFC)
-                             (mapMaybe id namedefs)
-                             lifted anf vmcode)
+         pure (MkCompileData (CErased emptyFC) namedDefs lifted anf vmcode)
 
 -- Some things missing from Prelude.File
 

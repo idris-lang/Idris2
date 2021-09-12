@@ -18,8 +18,8 @@ runParser : (fname : String) -> (str : String) -> Rule ty -> Either Error ty
 runParser fname str p
     = do toks   <- mapFst (\err => fromLexError
                      (PhysicalPkgSrc fname) (NoRuleApply, err)) $ lex str
-         parsed <- mapFst (fromParsingErrors (PhysicalPkgSrc fname)) $ parse p toks
-         Right (fst parsed)
+         (_, val, _) <- mapFst (fromParsingErrors (PhysicalPkgSrc fname)) $ parse p toks
+         Right val
 
 export
 covering

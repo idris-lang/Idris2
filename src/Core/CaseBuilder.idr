@@ -434,12 +434,14 @@ nextNames {vars} fc root (p :: pats) fty
           fa_tys <- the (Core (Maybe (NF vars), ArgType vars)) $
               case fty of
                    Nothing => pure (Nothing, Unknown)
-                   Just (NBind pfc _ (Pi _ _ _ (NErased _ _)) fsc) =>
-                      pure (Just !(fsc defs (toClosure defaultOpts env (Ref pfc Bound n))),
-                        Unknown)
-                   Just (NBind pfc _ (Pi _ c _ farg) fsc) =>
-                      pure (Just !(fsc defs (toClosure defaultOpts env (Ref pfc Bound n))),
-                        Known c !(quote empty env farg))
+                   Just (NBind pfc _ (Pi _ c _ fargc) fsc) =>
+                      do farg <- evalClosure defs fargc
+                         case farg of
+                              NErased _ _ =>
+                                pure (Just !(fsc defs (toClosure defaultOpts env (Ref pfc Bound n))),
+                                  Unknown)
+                              _ => pure (Just !(fsc defs (toClosure defaultOpts env (Ref pfc Bound n))),
+                                      Known c !(quote empty env farg))
                    Just t =>
                       pure (Nothing, Stuck !(quote empty env t))
           (args ** (l, ps)) <- nextNames {vars} fc root pats (fst fa_tys)
@@ -506,8 +508,8 @@ groupCons fc fn pvars cs
     -- the same name in each of the clauses
     addConG {vars'} {todo'} n tag pargs pats pid rhs []
         = do cty <- if n == UN "->"
-                      then pure $ NBind fc (MN "_" 0) (Pi fc top Explicit (NType fc)) $
-                              (\d, a => pure $ NBind fc (MN "_" 1) (Pi fc top Explicit (NErased fc False))
+                      then pure $ NBind fc (MN "_" 0) (Pi fc top Explicit (MkNFClosure defaultOpts (mkEnv fc vars') (NType fc))) $
+                              (\d, a => pure $ NBind fc (MN "_" 1) (Pi fc top Explicit (MkNFClosure defaultOpts (mkEnv fc vars') (NErased fc False)))
                                 (\d, a => pure $ NType fc))
                       else do defs <- get Ctxt
                               Just t <- lookupTyExact n (gamma defs)
@@ -554,10 +556,10 @@ groupCons fc fn pvars cs
                 (acc : List (Group vars' todo')) ->
                 Core (List (Group vars' todo'))
     addDelayG {vars'} {todo'} pty parg pats pid rhs []
-        = do let dty = NBind fc (MN "a" 0) (Pi fc erased Explicit (NType fc)) $
+        = do let dty = NBind fc (MN "a" 0) (Pi fc erased Explicit (MkNFClosure defaultOpts (mkEnv fc vars') (NType fc))) $
                         (\d, a =>
                             do a' <- evalClosure d a
-                               pure (NBind fc (MN "x" 0) (Pi fc top Explicit a')
+                               pure (NBind fc (MN "x" 0) (Pi fc top Explicit a)
                                        (\dv, av => pure (NDelayed fc LUnknown a'))))
              ([tyname, argname] ** (l, newargs)) <- nextNames {vars=vars'} fc "e" [pty, parg]
                                                   (Just dty)
@@ -892,7 +894,7 @@ getScore : {ns : _} ->
 getScore fc phase name npss
     = do catch (do sameType fc phase name (mkEnv fc ns) npss
                    pure (Right ()))
-               \case
+               $ \case
                  CaseCompile _ _ err => pure $ Left err
                  err => throw err
 
@@ -1074,7 +1076,12 @@ mkPat args orig (Ref fc Func n)
   = do prims <- getPrimitiveNames
        mtm <- normalisePrims (const True) isPConst True prims n args orig []
        case mtm of
-         Just tm => mkPat [] tm tm
+         Just tm => if tm /= orig -- check we made progress; if there's an
+                                  -- unresolved interface, we might be stuck
+                                  -- and we'd loop forever
+                       then mkPat [] tm tm
+                       else -- Possibly this should be an error instead?
+                            pure $ PUnmatchable (getLoc orig) orig
          Nothing =>
            do log "compile.casetree" 10 $
                 "Unmatchable function: " ++ show n

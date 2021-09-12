@@ -4,6 +4,7 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.Env
+import Core.Metadata
 import Core.TT
 
 import Idris.Pretty
@@ -13,6 +14,7 @@ import Idris.Resugar
 import Idris.Syntax
 
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Elab.Prim
 
 import Data.List
@@ -22,6 +24,7 @@ import Data.String
 
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
+import Libraries.Data.SortedMap
 import Libraries.Data.StringMap as S
 import Libraries.Data.String.Extra
 
@@ -35,39 +38,52 @@ import Parser.Lexer.Source
 
 public export
 data IdrisDocAnn
-  = TCon Name
-  | DCon
-  | Fun Name
-  | Header
+  = Header
   | Declarations
   | Decl Name
   | DocStringBody
   | Syntax IdrisSyntax
 
 export
+-- TODO: how can we deal with bold & so on?
+docToDecoration : IdrisDocAnn -> Maybe Decoration
+docToDecoration (Syntax syn) = syntaxToDecoration syn
+docToDecoration _ = Nothing
+
+export
 styleAnn : IdrisDocAnn -> AnsiStyle
-styleAnn (TCon _) = color BrightBlue
-styleAnn DCon = color BrightRed
-styleAnn (Fun _) = color BrightGreen
-styleAnn Header = underline
-styleAnn _ = []
+styleAnn Header        = underline
+styleAnn Declarations  = []
+styleAnn (Decl{})      = []
+styleAnn DocStringBody = []
+styleAnn (Syntax syn)  = syntaxAnn syn
 
 export
 tCon : Name -> Doc IdrisDocAnn -> Doc IdrisDocAnn
-tCon n = annotate (TCon n)
+tCon n = annotate (Syntax $ TCon (Just n))
 
 export
-dCon : Doc IdrisDocAnn -> Doc IdrisDocAnn
-dCon = annotate DCon
+dCon : Name -> Doc IdrisDocAnn -> Doc IdrisDocAnn
+dCon n = annotate (Syntax $ DCon (Just n))
 
 export
 fun : Name -> Doc IdrisDocAnn -> Doc IdrisDocAnn
-fun n = annotate (Fun n)
+fun n = annotate (Syntax $ Fun n)
 
 export
 header : Doc IdrisDocAnn -> Doc IdrisDocAnn
 header d = annotate Header d <+> colon
 
+
+-- Add a doc string for a module name
+export
+addModDocString : {auto s : Ref Syn SyntaxInfo} ->
+                  ModuleIdent -> String ->
+                  Core ()
+addModDocString mi doc
+    = do syn <- get Syn
+         put Syn (record { saveMod $= (mi ::)
+                         , modDocstrings $= insert mi doc } syn)
 
 -- Add a doc string for a name in the current namespace
 export
@@ -80,7 +96,7 @@ addDocString n_in doc
          log "doc.record" 50 $
            "Adding doc for " ++ show n_in ++ " (aka " ++ show n ++ " in current NS)"
          syn <- get Syn
-         put Syn (record { docstrings $= addName n doc,
+         put Syn (record { defDocstrings $= addName n doc,
                            saveDocstrings $= insert n () } syn)
 
 -- Add a doc string for a name, in an extended namespace (e.g. for
@@ -96,27 +112,70 @@ addDocStringNS ns n_in doc
                        NS old root => NS (old <.> ns) root
                        root => NS ns root
          syn <- get Syn
-         put Syn (record { docstrings $= addName n' doc,
+         put Syn (record { defDocstrings $= addName n' doc,
                            saveDocstrings $= insert n' () } syn)
+
+prettyTerm : IPTerm -> Doc IdrisDocAnn
+prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
+
+prettyName : Name -> Doc IdrisDocAnn
+prettyName n =
+      let root = nameRoot n in
+      if isOpName n then parens (pretty root) else pretty root
+
+prettyKindedName : Maybe String -> Doc IdrisDocAnn -> Doc IdrisDocAnn
+prettyKindedName Nothing   nm = nm
+prettyKindedName (Just kw) nm
+  = annotate (Syntax Keyword) (pretty kw) <++> nm
 
 export
 getDocsForPrimitive : {auto c : Ref Ctxt Defs} ->
                       {auto s : Ref Syn SyntaxInfo} ->
-                      Constant -> Core (List String)
+                      Constant -> Core (Doc IdrisDocAnn)
 getDocsForPrimitive constant = do
     let (_, type) = checkPrim EmptyFC constant
-    let typeString = show constant ++ " : " ++ show !(resugar [] type)
-    pure [typeString ++ "\n\tPrimitive"]
+    let typeString = pretty (show constant)
+                   <++> colon <++> prettyTerm !(resugar [] type)
+    pure (typeString <+> Line <+> indent 2 "Primitive")
 
-prettyTerm : PTerm -> Doc IdrisDocAnn
-prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
+public export
+data Config : Type where
+  ||| Configuration of the printer for a name
+  ||| @ longNames   Do we print qualified names?
+  ||| @ dropFirst   Do we drop the first argument in the type?
+  ||| @ getTotality Do we print the totality status of the function?
+  MkConfig : {default True  longNames   : Bool} ->
+             {default False dropFirst   : Bool} ->
+             {default True  getTotality : Bool} ->
+             Config
+
+||| Printer configuration for interface methods
+||| * longNames turned off for interface methods because the namespace is
+|||             already spelt out for the interface itself
+||| * dropFirst turned on for interface methods because the first argument
+|||             is always the interface constraint
+||| * totality  turned off for interface methods because the methods themselves
+|||             are just projections out of a record and so are total
+export
+methodsConfig : Config
+methodsConfig
+  = MkConfig {longNames = False}
+             {dropFirst = True}
+             {getTotality = False}
+
+export
+shortNamesConfig : Config
+shortNamesConfig
+  = MkConfig {longNames = False}
+             {dropFirst = False}
+             {getTotality = True}
 
 export
 getDocsForName : {auto o : Ref ROpts REPLOpts} ->
                  {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
-                 FC -> Name -> Core (Doc IdrisDocAnn)
-getDocsForName fc n
+                 FC -> Name -> Config -> Core (Doc IdrisDocAnn)
+getDocsForName fc n config
     = do syn <- get Syn
          defs <- get Ctxt
          let extra = case nameRoot n of
@@ -125,11 +184,13 @@ getDocsForName fc n
          resolved <- lookupCtxtName n (gamma defs)
          let all@(_ :: _) = extra ++ map fst resolved
              | _ => undefinedName fc n
-         let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn)) all
+         let ns@(_ :: _) = concatMap (\n => lookupName n (defDocstrings syn)) all
              | [] => pure $ pretty ("No documentation for " ++ show n)
-         docs <- traverse showDoc ns
+         docs <- traverse (showDoc config) ns
          pure $ vcat (punctuate Line docs)
   where
+
+    showDoc : Config -> (Name, String) -> Core (Doc IdrisDocAnn)
 
     -- Avoid generating too much whitespace by not returning a single empty line
     reflowDoc : String -> List (Doc IdrisDocAnn)
@@ -142,11 +203,6 @@ getDocsForName fc n
                Unchecked => ""
                _ => header "Totality" <++> pretty tot
 
-    prettyName : Name -> Doc IdrisDocAnn
-    prettyName n =
-      let root = nameRoot n in
-      if isOpName n then parens (pretty root) else pretty root
-
     getDConDoc : Name -> Core (Doc IdrisDocAnn)
     getDConDoc con
         = do defs <- get Ctxt
@@ -155,13 +211,14 @@ getDocsForName fc n
                   | Nothing => pure Empty
              syn <- get Syn
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
-             let conWithTypeDoc = annotate (Decl con) (hsep [dCon (prettyName con), colon, prettyTerm ty])
-             let [(n, str)] = lookupName con (docstrings syn)
-                  | _ => pure conWithTypeDoc
-             pure $ vcat
-               [ conWithTypeDoc
-               , annotate DocStringBody $ vcat $ reflowDoc str
-               ]
+             let conWithTypeDoc = annotate (Decl con) (hsep [dCon con (prettyName con), colon, prettyTerm ty])
+             case lookupName con (defDocstrings syn) of
+               [(n, "")] => pure conWithTypeDoc
+               [(n, str)] => pure $ vcat
+                    [ conWithTypeDoc
+                    , annotate DocStringBody $ vcat $ reflowDoc str
+                    ]
+               _ => pure conWithTypeDoc
 
     getImplDoc : Name -> Core (List (Doc IdrisDocAnn))
     getImplDoc n
@@ -174,16 +231,9 @@ getDocsForName fc n
     getMethDoc : Method -> Core (List (Doc IdrisDocAnn))
     getMethDoc meth
         = do syn <- get Syn
-             let [(n, str)] = lookupName meth.name (docstrings syn)
+             let [nstr] = lookupName meth.name (defDocstrings syn)
                   | _ => pure []
-             ty <- pterm meth.type
-             let nm = prettyName meth.name
-             pure $ pure $ vcat [
-               annotate (Decl meth.name) (hsep [fun (meth.name) nm, colon, prettyTerm ty])
-               , annotate DocStringBody $ vcat (
-                 toList (indent 2 . pretty . show <$> meth.totalReq)
-                 ++ reflowDoc str)
-               ]
+             pure <$> showDoc methodsConfig nstr
 
     getInfixDoc : Name -> Core (List (Doc IdrisDocAnn))
     getInfixDoc n
@@ -217,9 +267,12 @@ getDocsForName fc n
                      [] => []
                      ps => [hsep (header "Parameters" :: punctuate comma (map (pretty . show) ps))]
              let constraints =
-                case !(traverse pterm (parents iface)) of
+                case !(traverse (pterm . map defaultKindedName) (parents iface)) of
                      [] => []
                      ps => [hsep (header "Constraints" :: punctuate comma (map (pretty . show) ps))]
+             let icon = case dropNS (iconstructor iface) of
+                          DN _ _ => [] -- machine inserted
+                          nm => [hsep [header "Constructor", dCon nm (prettyName nm)]]
              mdocs <- traverse getMethDoc (methods iface)
              let meths = case concat mdocs of
                            [] => []
@@ -233,7 +286,7 @@ getDocsForName fc n
                            [doc] => [header "Implementation" <++> annotate Declarations doc]
                            docs => [vcat [header "Implementations"
                                    , annotate Declarations $ vcat $ map (indent 2) docs]]
-             pure (vcat (params ++ constraints ++ meths ++ insts))
+             pure (vcat (params ++ constraints ++ icon ++ meths ++ insts))
 
     getFieldDoc : Name -> Core (Doc IdrisDocAnn)
     getFieldDoc nm
@@ -243,9 +296,9 @@ getDocsForName fc n
                 -- should never happen, since we know that the DCon exists:
                 | Nothing => pure Empty
            ty <- resugar [] =<< normaliseHoles defs [] (type def)
-           let prettyName = pretty (nameRoot nm)
+           let prettyName = prettyName nm
            let projDecl = annotate (Decl nm) $ hsep [ fun nm prettyName, colon, prettyTerm ty ]
-           case lookupName nm (docstrings syn) of
+           case lookupName nm (defDocstrings syn) of
                 [(_, "")] => pure projDecl
                 [(_, str)] =>
                   pure $ vcat [ projDecl
@@ -253,63 +306,75 @@ getDocsForName fc n
                               ]
                 _ => pure projDecl
 
-    getFieldsDoc : Name -> Core (List (Doc IdrisDocAnn))
+    getFieldsDoc : Name -> Core (Maybe (Doc IdrisDocAnn))
     getFieldsDoc recName
       = do let (Just ns, n) = displayName recName
-               | _ => pure []
+               | _ => pure Nothing
            let recNS = ns <.> mkNamespace n
            defs <- get Ctxt
            let fields = getFieldNames (gamma defs) recNS
            syn <- get Syn
            case fields of
-             [] => pure []
-             [proj] => pure [header "Projection" <++> annotate Declarations !(getFieldDoc proj)]
-             projs => pure [vcat [header "Projections"
-                                 , annotate Declarations $
-                                      vcat $ map (indent 2) $ !(traverse getFieldDoc projs)]]
+             [] => pure Nothing
+             [proj] => pure $ Just $ header "Projection" <++> annotate Declarations !(getFieldDoc proj)
+             projs => pure $ Just $ vcat
+                           [ header "Projections"
+                           , annotate Declarations $ vcat $
+                               map (indent 2) $ !(traverse getFieldDoc projs)
+                           ]
 
-    getExtra : Name -> GlobalDef -> Core (List (Doc IdrisDocAnn))
+    getExtra : Name -> GlobalDef -> Core (Maybe String, List (Doc IdrisDocAnn))
     getExtra n d = do
       do syn <- get Syn
          let [] = lookupName n (ifaces syn)
-             | [ifacedata] => pure <$> getIFaceDoc ifacedata
-             | _ => pure [] -- shouldn't happen, we've resolved ambiguity by now
+             | [ifacedata] => (Just "interface",) . pure <$> getIFaceDoc ifacedata
+             | _ => pure (Nothing, []) -- shouldn't happen, we've resolved ambiguity by now
          case definition d of
-           PMDef _ _ _ _ _ => pure [showTotal n (totality d)]
+           PMDef _ _ _ _ _ => pure (Nothing, [showTotal n (totality d)])
            TCon _ _ _ _ _ _ cons _ =>
              do let tot = [showTotal n (totality d)]
                 cdocs <- traverse (getDConDoc <=< toFullNames) cons
                 cdoc <- case cdocs of
-                  [] => pure []
-                  [doc] => pure
-                         $ (header "Constructor" <++> annotate Declarations doc)
-                         :: !(getFieldsDoc n)
-                  docs => pure [vcat [header "Constructors"
-                                     , annotate Declarations $
-                                         vcat $ map (indent 2) docs]]
-                pure (tot ++ cdoc)
-           _ => pure []
+                  [] => pure (Just "data", [])
+                  [doc] =>
+                    let cdoc = header "Constructor" <++> annotate Declarations doc in
+                    case !(getFieldsDoc n) of
+                      Nothing => pure (Just "data", [cdoc])
+                      Just fs => pure (Just "record", cdoc :: [fs])
+                  docs => pure (Just "data"
+                               , [vcat [header "Constructors"
+                                       , annotate Declarations $
+                                           vcat $ map (indent 2) docs]])
+                pure (map (tot ++) cdoc)
+           _ => pure (Nothing, [])
 
-    showCategory : GlobalDef -> Doc IdrisDocAnn -> Doc IdrisDocAnn
-    showCategory d = case definition d of
-      TCon _ _ _ _ _ _ _ _ => tCon (fullname d)
-      DCon _ _ _ => dCon
-      PMDef _ _ _ _ _ => fun (fullname d)
-      ForeignDef _ _ => fun (fullname d)
-      Builtin _ => fun (fullname d)
-      _ => id
-
-    showDoc : (Name, String) -> Core (Doc IdrisDocAnn)
-    showDoc (n, str)
+    showDoc (MkConfig {longNames, dropFirst, getTotality}) (n, str)
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => undefinedName fc n
+             -- First get the extra stuff because this also tells us whether a
+             -- definition is `data`, `record`, or `interface`.
+             (typ, extra) <- ifThenElse getTotality
+                               (getExtra n def)
+                               (pure (Nothing, []))
+
+             -- Then form the type declaration
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
-             let cat = showCategory def
+             -- when printing e.g. interface methods there is no point in
+             -- repeating the interface's name
+             let ty = ifThenElse (not dropFirst) ty $ case ty of
+                        PPi _ _ AutoImplicit _ _ sc => sc
+                        _ => ty
              nm <- aliasName n
-             let docDecl = annotate (Decl n) (hsep [cat (pretty (show nm)), colon, prettyTerm ty])
+             -- when printing e.g. interface methods there is no point in
+             -- repeating the namespace the interface lives in
+             let cat = showCategory Syntax def
+             let nm = prettyKindedName typ $ cat
+                    $ ifThenElse longNames (pretty (show nm)) (prettyName nm)
+             let docDecl = annotate (Decl n) (hsep [nm, colon, prettyTerm ty])
+
+             -- Finally add the user-provided docstring
              let docText = reflowDoc str
-             extra <- getExtra n def
              fixes <- getFixityDoc n
              let docBody = annotate DocStringBody $ vcat $ docText ++ (map (indent 2) (extra ++ fixes))
              pure (vcat [docDecl, docBody])
@@ -318,40 +383,58 @@ export
 getDocsForPTerm : {auto o : Ref ROpts REPLOpts} ->
                   {auto c : Ref Ctxt Defs} ->
                   {auto s : Ref Syn SyntaxInfo} ->
-                  PTerm -> Core (List String)
-getDocsForPTerm (PRef fc name) = pure $ [!(render styleAnn !(getDocsForName fc name))]
-getDocsForPTerm (PPrimVal _ constant) = getDocsForPrimitive constant
-getDocsForPTerm (PType _) = pure ["Type : Type\n\tThe type of all types is Type. The type of Type is Type."]
-getDocsForPTerm (PString _ _) = pure ["String Literal\n\tDesugars to a fromString call"]
-getDocsForPTerm (PList _ _ _) = pure ["List Literal\n\tDesugars to (::) and Nil"]
-getDocsForPTerm (PSnocList _ _ _) = pure ["SnocList Literal\n\tDesugars to (:<) and Empty"]
-getDocsForPTerm (PPair _ _ _) = pure ["Pair Literal\n\tDesugars to MkPair or Pair"]
-getDocsForPTerm (PDPair _ _ _ _ _) = pure ["Dependant Pair Literal\n\tDesugars to MkDPair or DPair"]
-getDocsForPTerm (PUnit _) = pure ["Unit Literal\n\tDesugars to MkUnit or Unit"]
-getDocsForPTerm pterm = pure ["Docs not implemented for " ++ show pterm ++ " yet"]
+                  PTerm -> Core (Doc IdrisDocAnn)
+getDocsForPTerm (PRef fc name) = getDocsForName fc name MkConfig
+getDocsForPTerm (PPrimVal _ c) = getDocsForPrimitive c
+getDocsForPTerm (PType _) = pure $ vcat
+  [ "Type : Type"
+  , indent 2 "The type of all types is Type. The type of Type is Type."
+  ]
+getDocsForPTerm (PString _ _) = pure $ vcat
+  [ "String Literal"
+  , indent 2 "Desugars to a fromString call"
+  ]
+getDocsForPTerm (PList _ _ _) = pure $ vcat
+  [ "List Literal"
+  , indent 2 "Desugars to (::) and Nil"
+  ]
+getDocsForPTerm (PSnocList _ _ _) = pure $ vcat
+  [ "SnocList Literal"
+  , indent 2 "Desugars to (:<) and Empty"
+  ]
+getDocsForPTerm (PPair _ _ _) = pure $ vcat
+  [ "Pair Literal"
+  , indent 2 "Desugars to MkPair or Pair"
+  ]
+getDocsForPTerm (PDPair _ _ _ _ _) = pure $ vcat
+  [ "Dependant Pair Literal"
+  , indent 2 "Desugars to MkDPair or DPair"
+  ]
+getDocsForPTerm (PUnit _) = pure $ vcat
+  [ "Unit Literal"
+  , indent 2 "Desugars to MkUnit or Unit"
+  ]
+getDocsForPTerm pterm = pure $
+  "Docs not implemented for" <++> pretty (show pterm) <++> "yet"
 
 summarise : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
-            Name -> Core String
+            Name -> Core (Doc IdrisDocAnn)
 summarise n -- n is fully qualified
     = do syn <- get Syn
          defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
              | _ => pure ""
-         let doc = case lookupName n (docstrings syn) of
-                        [(_, doc)] => case Extra.lines doc of
-                                           ("" ::: _) => Nothing
-                                           (d ::: _) => Just d
-                        _ => Nothing
          ty <- normaliseHoles defs [] (type def)
-         pure (nameRoot n ++ " : " ++ show !(resugar [] ty) ++
-                  maybe "" ((++) "\n\t") doc)
+         pure $ showCategory Syntax def (prettyName n)
+              <++> colon <++> hang 0 (prettyTerm !(resugar [] ty))
 
 -- Display all the exported names in the given namespace
 export
-getContents : {auto c : Ref Ctxt Defs} ->
+getContents : {auto o : Ref ROpts REPLOpts} ->
+              {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              Namespace -> Core (List String)
+              Namespace -> Core (Doc IdrisDocAnn)
 getContents ns
    = -- Get all the names, filter by any that match the given namespace
      -- and are visible, then display with their type
@@ -359,7 +442,7 @@ getContents ns
         ns <- allNames (gamma defs)
         let allNs = filter inNS ns
         allNs <- filterM (visible defs) allNs
-        traverse summarise (sort allNs)
+        vsep <$> traverse summarise (sort allNs)
   where
     visible : Defs -> Name -> Core Bool
     visible defs n

@@ -186,8 +186,11 @@ mutual
                  do scs <- traverse (findSC defs env Guarded pats) args
                     pure (concat scs)
              (_, Ref fc Func fn, args) =>
-                 do Just ty <- lookupTyExact fn (gamma defs)
-                         | Nothing =>
+                 do logC "totality" 50 $
+                       pure $ "Looking up type of " ++ show !(toFullNames fn)
+                    Just ty <- lookupTyExact fn (gamma defs)
+                         | Nothing => do
+                              log "totality" 50 $ "Lookup failed"
                               findSCcall defs env Unguarded pats fc fn 0 args
                     arity <- getArity defs [] ty
                     findSCcall defs env Unguarded pats fc fn arity args
@@ -384,13 +387,11 @@ mutual
            log "totality.termination.sizechange" 10 $ "Looking under " ++ show !(toFullNames fn)
            aSmaller <- resolved (gamma defs) (NS builtinNS (UN "assert_smaller"))
            cond [(fn == NS builtinNS (UN "assert_total"), pure [])
-              -- #1782: this breaks totality!
-              -- ,(caseFn fn,
-              --     do mps <- getCasePats defs fn pats args
-              --        case mps of
-              --             Nothing => pure Prelude.Nil
-              --             Just ps => do scs <- traverse (findInCase defs g) ps
-              --                           pure (concat scs))
+                ,(caseFn fn,
+                    do scs1 <- traverse (findSC defs env g pats) args
+                       mps  <- getCasePats defs fn pats args
+                       scs2 <- traverse (findInCase defs g) $ fromMaybe [] mps
+                       pure (concat (scs1 ++ scs2)))
               ]
               (do scs <- traverse (findSC defs env g pats) args
                   pure ([MkSCCall fn
@@ -525,7 +526,8 @@ checkSC defs f args path
              let Unchecked = isTerminating (totality gdef)
                   | IsTerminating => pure IsTerminating
                   | _ => pure (NotTerminating (BadCall [fnCall sc]))
-             log "totality.termination.sizechange.checkCall" 8 $ "CheckCall Size Change Graph: " ++ show !(toFullNames (fnCall sc))
+             log "totality.termination.sizechange.checkCall" 8 $
+                "CheckCall Size Change Graph: " ++ show !(toFullNames (fnCall sc))
              term <- checkSC defs (fnCall sc) (mkArgs (fnArgs sc)) path
              let inpath = fnCall sc `elem` map fst path
              if not inpath
@@ -606,7 +608,7 @@ checkTerminating loc n
 nameIn : {auto c : Ref Ctxt Defs} ->
          Defs -> List Name -> NF [] -> Core Bool
 nameIn defs tyns (NBind fc x b sc)
-    = if !(nameIn defs tyns (binderType b))
+    = if !(nameIn defs tyns !(evalClosure defs (binderType b)))
          then pure True
          else do let nm = Ref fc Bound (MN ("NAMEIN_" ++ show x) 0)
                  let arg = toClosure defaultOpts [] nm
@@ -667,7 +669,7 @@ posArg defs tyns nf@(NTCon loc tc _ _ args) =
 -- a tyn can not appear as part of ty
 posArg defs tyns nf@(NBind fc x (Pi _ _ e ty) sc)
   = do logNF "totality.positivity" 50 "Found a Pi-type" [] nf
-       if !(nameIn defs tyns ty)
+       if !(nameIn defs tyns !(evalClosure defs ty))
          then pure (NotTerminating NotStrictlyPositive)
          else do let nm = Ref fc Bound (MN ("POSCHECK_" ++ show x) 1)
                  let arg = toClosure defaultOpts [] nm
@@ -686,7 +688,7 @@ posArg defs tyn nf
 checkPosArgs : {auto c : Ref Ctxt Defs} ->
                Defs -> List Name -> NF [] -> Core Terminating
 checkPosArgs defs tyns (NBind fc x (Pi _ _ e ty) sc)
-    = case !(posArg defs tyns ty) of
+    = case !(posArg defs tyns !(evalClosure defs ty)) of
            IsTerminating =>
                do let nm = Ref fc Bound (MN ("POSCHECK_" ++ show x) 0)
                   let arg = toClosure defaultOpts [] nm

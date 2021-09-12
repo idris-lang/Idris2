@@ -6,17 +6,14 @@ WrappedInt : Type
 a : SimpleRec -> Int
 b : SimpleRec -> String
 hello : Int -> Int
-	Hello!
 world : Nat -> Nat
-	World!
 Doc> Doc.NS.NestedNS.Foo : Type
   A type of Foo
   
-Doc> Doc.WrappedInt : Type
+Doc> data Doc.WrappedInt : Type
   Totality: total
   Constructor: MkWrappedInt : Int -> WrappedInt
-  
-Doc> Doc.SimpleRec : Type
+Doc> record Doc.SimpleRec : Type
   Totality: total
   Constructor: MkSimpleRec : Int -> String -> SimpleRec
   Projections:

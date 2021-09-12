@@ -636,7 +636,7 @@ checkValidHole base (idx, (fc, n))
                   do defs <- get Ctxt
                      Just ty <- lookupTyExact n (gamma defs)
                           | Nothing => pure ()
-                     throw (CantSolveGoal fc [] ty)
+                     throw (CantSolveGoal fc (gamma defs) [] ty)
               Guess tm envb (con :: _) =>
                   do ust <- get UST
                      let Just c = lookup con (constraints ust)
@@ -647,13 +647,13 @@ checkValidHole base (idx, (fc, n))
                                 empty <- clearDefs defs
                                 xnf <- quote empty env x
                                 ynf <- quote empty env y
-                                throw (CantSolveEq fc env xnf ynf)
+                                throw (CantSolveEq fc (gamma defs) env xnf ynf)
                           MkSeqConstraint fc env (x :: _) (y :: _) =>
                              do put UST (record { guesses = empty } ust)
                                 empty <- clearDefs defs
                                 xnf <- quote empty env x
                                 ynf <- quote empty env y
-                                throw (CantSolveEq fc env xnf ynf)
+                                throw (CantSolveEq fc (gamma defs) env xnf ynf)
                           _ => pure ()
               _ => traverse_ checkRef !(traverse getFullName
                                         ((keys (getRefs (Resolved (-1)) (type gdef)))))

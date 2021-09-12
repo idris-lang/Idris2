@@ -107,7 +107,8 @@ export
 system : HasIO io => String -> io Int
 system cmd = primIO (prim__system cmd)
 
-%foreign "C:idris2_time, libidris2_support, idris2_support.h"
+%foreign support "idris2_time"
+         "javascript:lambda:() => Math.floor(new Date().getTime() / 1000)"
 prim__time : PrimIO Int
 
 ||| Return the number of seconds since epoch.

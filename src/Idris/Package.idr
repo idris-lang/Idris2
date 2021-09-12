@@ -3,6 +3,7 @@ module Idris.Package
 import Compiler.Common
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Directory
 import Core.Env
@@ -22,11 +23,11 @@ import System.Directory
 import Libraries.System.Directory.Tree
 import System.File
 
+import Libraries.Data.SortedMap
 import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
 import Libraries.Text.Parser
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Utils.Binary
 import Libraries.Utils.String
 import Libraries.Utils.Path
 
@@ -336,12 +337,6 @@ build pkg opts
          runScript (postbuild pkg)
          pure []
 
-copyFile : String -> String -> IO (Either FileError ())
-copyFile src dest
-    = do Right buf <- readFromFile src
-             | Left err => pure (Left err)
-         writeToFile dest buf
-
 installFrom : {auto o : Ref ROpts REPLOpts} ->
               {auto c : Ref Ctxt Defs} ->
               String -> String -> ModuleIdent -> Core ()
@@ -373,7 +368,7 @@ installFrom builddir destdir ns
                              [ "Can't make directories " ++ show modPath
                              , show err ]
          coreLift $ putStrLn $ "Installing " ++ ttcPath ++ " to " ++ destPath
-         Right _ <- coreLift $ copyFile ttcPath destFile
+         Right _ <- coreLift $ Tree.copyFile ttcPath destFile
              | Left err => throw $ InternalError $ unlines
                              [ "Can't copy file " ++ ttcPath ++ " to " ++ destPath
                              , show err ]
@@ -381,7 +376,7 @@ installFrom builddir destdir ns
          -- since some modules don't generate any code themselves.
          traverse_ (\ (obj, dest) =>
                       do coreLift $ putStrLn $ "Installing " ++ obj ++ " to " ++ destPath
-                         ignore $ coreLift $ copyFile obj dest)
+                         ignore $ coreLift $ Tree.copyFile obj dest)
                    objPaths
 
          pure ()
@@ -414,7 +409,7 @@ installSrcFrom wdir destdir (ns, srcRelPath)
              (MkPermissions [Read, Write] [Read, Write] [Read, Write])
              | Left err => throw $ UserError (show err)
            pure ()
-         Right _ <- coreLift $ copyFile srcPath destFile
+         Right _ <- coreLift $ Tree.copyFile srcPath destFile
              | Left err => throw $ InternalError $ unlines
                              [ "Can't copy file " ++ srcPath ++ " to " ++ destPath
                              , show err ]
@@ -493,19 +488,37 @@ makeDoc pkg opts =
        Right () <- coreLift $ mkdirAll docDir
          | Left err => fileError docDir err
        u <- newRef UST initUState
-       setPPrint (MkPPOpts False False True)
+       setPPrint (MkPPOpts False False False)
 
        [] <- concat <$> for (modules pkg) (\(mod, filename) => do
+           -- load dependencies
            let ns = miAsNamespace mod
            addImport (MkImport emptyFC False mod ns)
+
+           -- generate docs for all visible names
            defs <- get Ctxt
            names <- allNames (gamma defs)
            let allInNamespace = filter (inNS ns) names
            visibleNames <- filterM (visible defs) allInNamespace
 
            let outputFilePath = docDir </> (show mod ++ ".html")
-           allDocs <- annotate Declarations <$> vcat <$> for (sort visibleNames) (getDocsForName emptyFC)
-           Right () <- coreLift $ writeFile outputFilePath !(renderModuleDoc mod allDocs)
+           allDocs <- for (sort visibleNames) $ \ nm =>
+                        getDocsForName emptyFC nm shortNamesConfig
+           let allDecls = annotate Declarations $ vcat allDocs
+
+           -- grab module header doc
+           syn  <- get Syn
+           let modDoc = lookup mod (modDocstrings syn)
+           log "doc.module" 10 $ unwords
+             [ "Looked up doc for"
+             , show mod
+             , "and got:"
+             , show modDoc
+             ]
+           log "doc.module" 15 $ "from: " ++ show (modDocstrings syn)
+
+           Right () <- do doc <- renderModuleDoc mod modDoc allDecls
+                          coreLift $ writeFile outputFilePath doc
              | Left err => fileError (docBase </> "index.html") err
 
            pure $ the (List Error) []

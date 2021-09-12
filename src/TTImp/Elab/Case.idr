@@ -209,6 +209,10 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
                             (maybe (Bind fc scrn (Pi fc caseRig Explicit scrty)
                                        (weaken caseretty))
                                    (const caseretty) splitOn)
+         -- If we can normalise the type without the result being excessively
+         -- big do it. It's the depth of stuck applications - 10 is already
+         -- pretty much unreadable!
+         casefnty <- normaliseSizeLimit defs 10 [] casefnty
          (erasedargs, _) <- findErased casefnty
 
          logEnv "elab.case" 10 "Case env" env
@@ -392,7 +396,7 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
            (scrtm_in, gscrty, caseRig) <- handle
               (do c <- runDelays (const True) $ check chrig elabinfo nest env scr (Just (gnf env scrtyv))
                   pure (fst c, snd c, chrig))
-              \case
+            $ \case
                 e@(LinearMisuse _ _ r _)
                   => branchOne
                      (do c <- runDelays (const True) $ check linear elabinfo nest env scr

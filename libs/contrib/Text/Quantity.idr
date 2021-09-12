@@ -1,5 +1,7 @@
 module Text.Quantity
 
+%default total
+
 public export
 record Quantity where
   constructor Qty

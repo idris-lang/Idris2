@@ -1,5 +1,6 @@
 module Core.TTC
 
+import Core.Binary.Prims
 import Core.CaseTree
 import Core.CompileExpr
 import Core.Context
@@ -12,6 +13,8 @@ import Core.TT
 
 import Libraries.Data.NameMap
 import Libraries.Data.PosMap
+
+import Libraries.Data.IOArray
 import Data.Vect
 
 import Libraries.Utils.Binary
@@ -32,7 +35,6 @@ TTC ModuleIdent where
 export
 TTC VirtualIdent where
   toBuf b Interactive = tag 0
-
   fromBuf b =
     case !getTag of
       0 => pure Interactive

@@ -128,6 +128,11 @@ displayName (CaseBlock outer _) = (Nothing, "case block in " ++ show outer)
 displayName (WithBlock outer _) = (Nothing, "with block in " ++ show outer)
 displayName (Resolved i) = (Nothing, "$resolved" ++ show i)
 
+export
+splitNS : Name -> (Namespace, Name)
+splitNS (NS ns nm) = mapFst (ns <.>) (splitNS nm)
+splitNS nm = (emptyNS, nm)
+
 --- Drop a namespace from a name
 export
 dropNS : Name -> Name
@@ -144,6 +149,18 @@ export
 mbApplyNS : Maybe Namespace -> Name -> Name
 mbApplyNS Nothing n = n
 mbApplyNS (Just ns) n = NS ns n
+
+export
+isUnsafeBuiltin : Name -> Bool
+isUnsafeBuiltin nm = case splitNS nm of
+  (ns, UN str) => (ns == builtinNS || ns == emptyNS)
+               && any {t = List} id
+                      [ "assert_" `isPrefixOf` str
+                      , str `elem` [ "prim__believe_me", "believe_me"
+                                   , "prim__crash", "idris_crash"
+                                   ]
+                      ]
+  _ => False
 
 export
 Show Name where

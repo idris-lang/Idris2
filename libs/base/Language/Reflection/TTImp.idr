@@ -167,3 +167,36 @@ mutual
        IRunElabDecl : FC -> TTImp -> Decl
        ILog : Maybe (List String, Nat) -> Decl
        IBuiltin : FC -> BuiltinType -> Name -> Decl
+
+public export
+getFC : TTImp -> FC
+getFC (IVar fc y)                = fc
+getFC (IPi fc _ _ _ _ _)         = fc
+getFC (ILam fc _ _ _ _ _)        = fc
+getFC (ILet fc _ _ _ _ _ _)      = fc
+getFC (ICase fc _ _ _)           = fc
+getFC (ILocal fc _ _)            = fc
+getFC (IUpdate fc _ _)           = fc
+getFC (IApp fc _ _)              = fc
+getFC (INamedApp fc _ _ _)       = fc
+getFC (IAutoApp fc _ _)          = fc
+getFC (IWithApp fc _ _)          = fc
+getFC (ISearch fc _)             = fc
+getFC (IAlternative fc _ _)      = fc
+getFC (IRewrite fc _ _)          = fc
+getFC (IBindHere fc _ _)         = fc
+getFC (IBindVar fc _)            = fc
+getFC (IAs fc _ _ _ _)           = fc
+getFC (IMustUnify fc _ _)        = fc
+getFC (IDelayed fc _ _)          = fc
+getFC (IDelay fc _)              = fc
+getFC (IForce fc _)              = fc
+getFC (IQuote fc _)              = fc
+getFC (IQuoteName fc _)          = fc
+getFC (IQuoteDecl fc _)          = fc
+getFC (IUnquote fc _)            = fc
+getFC (IPrimVal fc _)            = fc
+getFC (IType fc)                 = fc
+getFC (IHole fc _)               = fc
+getFC (Implicit fc _)            = fc
+getFC (IWithUnambigNames fc _ _) = fc

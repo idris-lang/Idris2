@@ -87,6 +87,15 @@ take : (n  : Nat)
 take 0 xs = Nil
 take (S k) (x :: xs) = x :: take k xs
 
+namespace Stream
+  ||| Take precisely n elements from the stream.
+  ||| @ n how many elements to take
+  ||| @ xs the stream
+  public export
+  take : (n : Nat) -> (xs : Stream a) -> Vect n a
+  take Z xs = []
+  take (S k) (x :: xs) = x :: take k xs
+
 ||| Drop the first `n` elements of a Vect.
 public export
 drop : (n : Nat) -> Vect (n + m) elem -> Vect m elem
@@ -858,6 +867,7 @@ implementation {k : Nat} -> Applicative (Vect k) where
 
 -- ||| This monad is different from the List monad, (>>=)
 -- ||| uses the diagonal.
+public export
 implementation {k : Nat} -> Monad (Vect k) where
     m >>= f = diag (map f m)
 
@@ -865,6 +875,18 @@ public export
 implementation Traversable (Vect k) where
     traverse f []        = pure []
     traverse f (x :: xs) = [| f x :: traverse f xs |]
+
+--------------------------------------------------------------------------------
+-- Semigroup/Monoid
+--------------------------------------------------------------------------------
+
+public export
+Semigroup a => Semigroup (Vect k a) where
+  (<+>) = zipWith (<+>)
+
+public export
+{k : Nat} -> Monoid a => Monoid (Vect k a) where
+  neutral = replicate k neutral
 
 --------------------------------------------------------------------------------
 -- Show

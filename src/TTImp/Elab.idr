@@ -68,7 +68,8 @@ normaliseHoleTypes
   where
     updateType : Defs -> Int -> GlobalDef -> Core ()
     updateType defs i def
-        = do ty' <- normaliseHoles defs [] (type def)
+        = do ty' <- catch (tryNormaliseSizeLimit defs 10 [] (type def))
+                          (\err => normaliseHoles defs [] (type def))
              ignore $ addDef (Resolved i) (record { type = ty' } def)
 
     normaliseH : Defs -> Int -> Core ()
@@ -241,7 +242,7 @@ checkTermSub defining mode opts nest env env' sub tm ty
             catch {t = Error}
                   (elabTermSub defining mode opts nest
                                env env' sub tm (Just ty))
-                  \case
+                  $ \case
                     TryWithImplicits loc benv ns
                       => do put Ctxt defs
                             put UST ust

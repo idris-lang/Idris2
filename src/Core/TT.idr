@@ -30,6 +30,20 @@ isCon (TyCon t a) = Just (t, a)
 isCon _ = Nothing
 
 public export
+record KindedName where
+  constructor MkKindedName
+  nameKind : Maybe NameType
+  fullName : Name -- fully qualified name
+  rawName  : Name
+
+export
+defaultKindedName : Name -> KindedName
+defaultKindedName nm = MkKindedName Nothing nm nm
+
+export
+Show KindedName where show = show . rawName
+
+public export
 data Constant
     = I Int
     | I8 Integer -- reuse code from I64 with fewer casts
@@ -946,6 +960,16 @@ Eq TotalReq where
     (==) CoveringOnly CoveringOnly = True
     (==) PartialOK PartialOK = True
     (==) _ _ = False
+
+||| Bigger means more requirements
+||| So if a definition was checked at b, it can be accepted at a <= b.
+export
+Ord TotalReq where
+  PartialOK <= _ = True
+  _ <= Total = True
+  a <= b = a == b
+
+  a < b = a <= b && a /= b
 
 export
 Show TotalReq where

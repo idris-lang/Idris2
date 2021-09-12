@@ -42,11 +42,16 @@ Show PkgCommand where
 
 public export
 data DirCommand
-      = LibDir -- show top level package directory
+      = LibDir | -- show top level package directory
+         ||| Show the installation prefix
+        Prefix |
+        BlodwenPaths
 
 export
 Show DirCommand where
   show LibDir = "--libdir"
+  show Prefix = "--prefix"
+  show BlodwenPaths = "--paths"
 
 ||| Help topics
 public export
@@ -85,8 +90,6 @@ data CLOpt
   OutputDir String |
    ||| Generate profile data when compiling (backend dependent)
   Profile |
-   ||| Show the installation prefix
-  ShowPrefix |
    ||| Display Idris version
   Version |
    ||| Display help text
@@ -105,6 +108,8 @@ data CLOpt
   Logging LogLevel |
    ||| Add a package as a dependency
   PkgPath String |
+   ||| List installed packages
+  ListPackages |
    ||| Build or install a given package, depending on PkgCommand
   Package PkgCommand (Maybe String) |
    ||| Show locations of data/library directories
@@ -134,7 +139,6 @@ data CLOpt
   Timing |
   DebugElabCheck |
   AltErrorCount Nat |
-  BlodwenPaths |
    ||| Treat warnings as errors
   WarningsAsErrors |
    ||| Do not print shadowing warnings
@@ -153,7 +157,9 @@ data CLOpt
    ||| Generate bash completion info
   BashCompletion String String |
    ||| Generate bash completion script
-  BashCompletionScript String
+  BashCompletionScript String |
+   ||| Turn on %default total globally
+  Total
 
 ||| Extract the host and port to bind the IDE socket to
 export
@@ -238,6 +244,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Generate profile data when compiling, if supported"),
 
            optSeparator,
+           MkOpt ["--total"] [] [Total]
+              (Just "Require functions to be total by default"),
            MkOpt ["-Werror"] [] [WarningsAsErrors]
               (Just "Treat warnings as errors"),
            MkOpt ["-Wno-shadowing"] [] [IgnoreShadowingWarnings]
@@ -250,12 +258,14 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Apply experimental optimizations to case tree generation"),
 
            optSeparator,
-           MkOpt ["--prefix"] [] [ShowPrefix]
+           MkOpt ["--prefix"] [] [Directory Prefix]
               (Just "Show installation prefix"),
-           MkOpt ["--paths"] [] [BlodwenPaths]
+           MkOpt ["--paths"] [] [Directory BlodwenPaths]
               (Just "Show paths"),
            MkOpt ["--libdir"] [] [Directory LibDir]
               (Just "Show library directory"),
+           MkOpt ["--list-packages"] [] [ListPackages]
+              (Just "List installed packages"),
 
            optSeparator,
            MkOpt ["--init"] [Optional "package file"]

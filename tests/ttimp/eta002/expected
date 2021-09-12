@@ -1,5 +1,0 @@
-Processing as TTImp
-Eta:16:1--17:1:When elaborating right hand side of Main.etaBad:
-Eta:16:10--17:1:When unifying: (Main.Eq ({arg:12} : Integer) -> ({arg:13} : Integer) -> Main.Test)) ({arg:12} : Integer) -> ({arg:13} : Integer) -> Main.Test)) \(x : Char) => \(y : ?Main.{_:18}_[x[0]]) => (Main.MkTest x[1] y[0]) \(x : Char) => \(y : ?Main.{_:18}_[x[0]]) => (Main.MkTest x[1] y[0])) and (Main.Eq (x : Char) -> (y : ?Main.{_:18}_[x[0]]) -> Main.Test)) ({arg:12} : Integer) -> ({arg:13} : Integer) -> Main.Test)) Main.MkTest \(x : Char) => \(y : ?Main.{_:18}_[x[0]]) => (Main.MkTest x[1] y[0]))
-	Eta:16:10--17:1:Type mismatch: Integer and Char
-Yaffle> Bye for now!

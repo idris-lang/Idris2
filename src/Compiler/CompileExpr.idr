@@ -1,5 +1,6 @@
 module Compiler.CompileExpr
 
+import Compiler.Opts.CSE
 import Core.CaseTree
 import public Core.CompileExpr
 import Core.Context
@@ -609,7 +610,7 @@ nfToCFType _ _ (NPrimVal _ CharType) = pure CFChar
 nfToCFType _ _ (NPrimVal _ WorldType) = pure CFWorld
 nfToCFType _ False (NBind fc _ (Pi _ _ _ ty) sc)
     = do defs <- get Ctxt
-         sty <- nfToCFType fc False ty
+         sty <- nfToCFType fc False !(evalClosure defs ty)
          sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
          tty <- nfToCFType fc False sc'
          pure (CFFun sty tty)
@@ -654,8 +655,8 @@ getCFTypes : {auto c : Ref Ctxt Defs} ->
              List CFType -> NF [] ->
              Core (List CFType, CFType)
 getCFTypes args (NBind fc _ (Pi _ _ _ ty) sc)
-    = do aty <- nfToCFType fc False ty
-         defs <- get Ctxt
+    = do defs <- get Ctxt
+         aty <- nfToCFType fc False !(evalClosure defs ty)
          sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
          getCFTypes (aty :: args) sc'
 getCFTypes args t
@@ -791,15 +792,3 @@ compileDef n
     noDefYet : Def -> List CG -> Bool
     noDefYet None (_ :: _) = True
     noDefYet _ _ = False
-
-export
-mkForgetDef : {auto c : Ref Ctxt Defs} ->
-              Name -> Core ()
-mkForgetDef n
-    = do defs <- get Ctxt
-         Just gdef <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (InternalError ("Trying to compile unknown name " ++ show n))
-         case compexpr gdef of
-              Nothing => pure ()
-              Just cdef => do let ncdef = forgetDef cdef
-                              setNamedCompiled n ncdef
