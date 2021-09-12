@@ -299,10 +299,7 @@ replaceDefaults fc defs (NPrimVal _ _) cs = pure cs
 replaceDefaults fc defs (NType _) cs = pure cs
 replaceDefaults fc defs nfty cs
     = do cs' <- traverse rep cs
-         let cs'' = dropRep (concat cs')
-         when (length cs == (length cs'' + 1)) $ do
-           log "coverage.missing" 1 $ (show $ length cs) ++ "   //////   " ++ (show $ length cs'')
-         pure cs''
+         pure (dropRep (concat cs'))
   where
     rep : CaseAlt vars -> Core (List (CaseAlt vars))
     rep (DefaultCase sc)
@@ -360,21 +357,17 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
               ps' = map (substName var (TDelay fc LUnknown
                                              (Ref fc Bound t)
                                              (Ref fc Bound a))) ps in
-              do log "coverage.missing" 1 $ " -=== " ++ (show ps')
-                 buildArgs fc defs (weakenNs l known) (weakenNs l not')
-                                   ps' sc
+              buildArgs fc defs (weakenNs l known) (weakenNs l not')
+                                ps' sc
     buildArgAlt not' (ConstCase c sc)
         = do let ps' = map (substName var (PrimVal fc c)) ps
              buildArgs fc defs known not' ps' sc
     buildArgAlt not' (DefaultCase sc)
-        = do log "coverage.missing" 1 $ " ==== " ++ (show sc)
-             buildArgs fc defs known not' ps sc
+        = buildArgs fc defs known not' ps sc
 
     buildArgsAlt : KnownVars vars (List Int) -> List (CaseAlt vars) ->
                    Core (List (List ClosedTerm))
-    buildArgsAlt not' [] = 
-      do log "coverage.missing" 1 $ " --== " ++ (show not')
-         pure []
+    buildArgsAlt not' [] = pure []
     buildArgsAlt not' (c@(ConCase _ t _ _) :: cs)
         = pure $ !(buildArgAlt not' c) ++
                  !(buildArgsAlt (addNot el t not') cs)

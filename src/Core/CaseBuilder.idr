@@ -18,8 +18,6 @@ import Decidable.Equality
 
 import Libraries.Text.PrettyPrint.Prettyprinter
 
-import Debug.Trace
-
 %default covering
 
 public export
@@ -1307,11 +1305,13 @@ replaceDefaults fc defs nfty cs
          let (cs'', extraClauseIdxs) = dropRep (concat cs') []
          let extraClauseIdxs' =
            if (length cs == (length cs'' + 1))
-              then extraClauseIdxs
+              then nub extraClauseIdxs
               else []
---          when (length cs == (length cs'' + 1)) $ do
---          log "compile.casetree" 1 $ "   //////   " ++ (show $ extraClauseIdxs')
-         pure (cs'', nub extraClauseIdxs')
+         -- if a clause is unreachable under all the branches it can be found under
+         -- then it is entirely unreachable.
+         log "compile.casetree.clauses" 20 $
+           "Marking the following clause indices as unreachable under the current branch of the tree: " ++ (show $ extraClauseIdxs')
+         pure (cs'', extraClauseIdxs')
   where
     rep : CaseAlt vars -> Core (List (CaseAlt vars))
     rep (DefaultCase sc)
