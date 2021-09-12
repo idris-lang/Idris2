@@ -46,10 +46,17 @@ finToNatShift (S k) a = cong S (finToNatShift k a)
 -------------------------------------------------
 
 ||| Compute the Fin such that `k + invFin k = n - 1`
-export
+public export
 invFin : {n : Nat} -> Fin n -> Fin n
 invFin FZ = last
 invFin (FS k) = weaken (invFin k)
+
+export
+invFinSpec : {n : _} -> (i : Fin n) -> 1 + finToNat i + finToNat (invFin i) = n
+invFinSpec {n = S k} FZ = cong S finToNatLastIsBound
+invFinSpec (FS k) = let H = invFinSpec k in
+  let h = finToNatWeakenNeutral {n = invFin k} in
+  cong S (rewrite h in H)
 
 ||| The inverse of a weakened element is the successor of its inverse
 export

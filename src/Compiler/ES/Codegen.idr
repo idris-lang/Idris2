@@ -202,12 +202,15 @@ jsBigIntOfString = callFun1 (esName "bigIntOfString")
 -- call _parseFloat from the preamble, which
 -- converts a string to a `Number`
 jsNumberOfString : Doc -> Doc
-jsNumberOfString = callFun1 "parseFloat"
+jsNumberOfString = callFun1 (esName "numberOfString")
 
 -- convert an string to an integral type based
 -- on its `IntKind`.
 jsIntOfString : IntKind -> Doc -> Doc
-jsIntOfString k = if useBigInt k then jsBigIntOfString else jsNumberOfString
+jsIntOfString k =
+  if useBigInt k
+     then jsBigIntOfString
+     else callFun1 (esName "intOfString")
 
 -- introduce a binary infix operation
 binOp : (symbol : String) -> (lhs : Doc) -> (rhs : Doc) -> Doc
