@@ -1309,8 +1309,9 @@ replaceDefaults fc defs nfty cs
               else []
          -- if a clause is unreachable under all the branches it can be found under
          -- then it is entirely unreachable.
-         log "compile.casetree.clauses" 20 $
-           "Marking the following clause indices as unreachable under the current branch of the tree: " ++ (show $ extraClauseIdxs')
+         when (not $ null extraClauseIdxs') $
+           log "compile.casetree.clauses" 25 $
+             "Marking the following clause indices as unreachable under the current branch of the tree: " ++ (show $ extraClauseIdxs')
          pure (cs'', extraClauseIdxs')
   where
     rep : CaseAlt vars -> Core (List (CaseAlt vars))
