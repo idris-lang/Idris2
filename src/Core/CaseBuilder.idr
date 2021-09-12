@@ -1341,14 +1341,15 @@ findExtra fc defs ctree@(Case {name = var} idx el ty altsIn)
   = do let fenv = freeEnv fc _
        nfty <- nf defs fenv ty
        (alts', extraCases) <- replaceDefaults fc defs nfty altsIn
-       extraCases' <- concat <$> traverse findExtraAlts alts'
+       extraCases' <- concat <$> traverse findExtraAlts altsIn
        pure (extraCases ++ extraCases')
   where
-    -- we won't have defaults at the root level of the case alts this helper
-    -- handles due to having replaced them already.
     findExtraAlts : CaseAlt vars -> Core (List Int)
     findExtraAlts (ConCase x tag args ctree') = findExtra fc defs ctree'
-    findExtraAlts _ = pure []
+    findExtraAlts (DelayCase x arg ctree') = findExtra fc defs ctree'
+    findExtraAlts (ConstCase x ctree') = findExtra fc defs ctree'
+    -- already handled defaults by elaborating them to all possible cons
+    findExtraAlts (DefaultCase ctree') = pure []
 
 findExtra fc defs ctree = pure []
 
@@ -1378,6 +1379,8 @@ getPMDef fc phase fn ty clauses
          logC "compile.casetree.getpmdef" 20 $
            pure $ "Compiled to: " ++ show !(toFullNames t)
          let reached = findReached t
+         log "compile.casetree.clauses" 25 $
+           "Reached clauses: " ++ (show $ reached)
          extra <- findExtra fc defs t
 --          trace (show $ reached) $ pure ()
 --          trace (show $ extra) $ pure ()
