@@ -1263,7 +1263,7 @@ identifyUnreachableDefaults fc defs nfty cs
          -- then it is entirely unreachable.
          when (not $ null extraClauseIdxs') $
            log "compile.casetree.clauses" 25 $
-             "Marking the following clause indices as unreachable under the current branch of the tree: " ++ (show $ extraClauseIdxs')
+             "Marking the following clause indices as unreachable under the current branch of the tree: " ++ (show extraClauseIdxs')
          pure extraClauseIdxs'
   where
     rep : CaseAlt vars -> Core (List (CaseAlt vars))
@@ -1332,7 +1332,7 @@ getPMDef fc phase fn ty clauses
            pure $ "Compiled to: " ++ show !(toFullNames t)
          let reached = findReached t
          log "compile.casetree.clauses" 25 $
-           "Reached clauses: " ++ (show $ reached)
+           "Reached clauses: " ++ (show reached)
          extra <- findExtra fc defs t
          let unreachable = getUnreachable 0 (reached \\ extra) clauses
          pure (_ ** (t, unreachable))
