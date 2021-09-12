@@ -1,8 +1,8 @@
 module Core.Hash
 
-import Core.CaseTree
-import Core.TT
+import Core.Case.CaseTree
 import Core.CompileExpr
+import Core.TT
 
 import Data.List
 import Data.List1

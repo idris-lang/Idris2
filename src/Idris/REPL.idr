@@ -11,7 +11,7 @@ import Compiler.RefC.RefC
 import Compiler.Inline
 
 import Core.AutoSearch
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.CompileExpr
 import Core.Context
 import Core.Context.Log

@@ -1,6 +1,6 @@
 module Idris.Error
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Core
 import Core.Context
 import Core.Env

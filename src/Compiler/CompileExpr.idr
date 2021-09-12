@@ -1,7 +1,7 @@
 module Compiler.CompileExpr
 
 import Compiler.Opts.CSE
-import Core.CaseTree
+import Core.Case.CaseTree
 import public Core.CompileExpr
 import Core.Context
 import Core.Env

@@ -1,6 +1,6 @@
 module Core.Unify
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
