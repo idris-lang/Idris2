@@ -1292,15 +1292,17 @@ freeEnv fc (n :: ns) = PVar fc top Explicit (Erased fc False) :: freeEnv fc ns
 -- Replace a default case with explicit branches for the constructors.
 -- This is easier than checking whether a default is needed when traversing
 -- the tree (just one constructor lookup up front).
-replaceDefaults : {auto c : Ref Ctxt Defs} ->
-                  {vars : _} ->
-                  FC -> Defs -> NF vars -> List (CaseAlt vars) ->
-                  Core (List (CaseAlt vars), List Int)
+-- Unreachable defaults are those that when replaced by all possible constructors
+-- followed by a removal of duplicate cases there is one _fewer_ total case alts.
+identifyUnreachableDefaults : {auto c : Ref Ctxt Defs} ->
+                              {vars : _} ->
+                              FC -> Defs -> NF vars -> List (CaseAlt vars) ->
+                              Core (List Int)
 -- Leave it alone if it's a primitive type though, since we need the catch
 -- all case there
-replaceDefaults fc defs (NPrimVal _ _) cs = pure (cs, [])
-replaceDefaults fc defs (NType _) cs = pure (cs, [])
-replaceDefaults fc defs nfty cs
+identifyUnreachableDefaults fc defs (NPrimVal _ _) cs = pure []
+identifyUnreachableDefaults fc defs (NType _) cs = pure []
+identifyUnreachableDefaults fc defs nfty cs
     = do cs' <- traverse rep cs
          let (cs'', extraClauseIdxs) = dropRep (concat cs') []
          let extraClauseIdxs' =
@@ -1312,7 +1314,7 @@ replaceDefaults fc defs nfty cs
          when (not $ null extraClauseIdxs') $
            log "compile.casetree.clauses" 25 $
              "Marking the following clause indices as unreachable under the current branch of the tree: " ++ (show $ extraClauseIdxs')
-         pure (cs'', extraClauseIdxs')
+         pure extraClauseIdxs'
   where
     rep : CaseAlt vars -> Core (List (CaseAlt vars))
     rep (DefaultCase sc)
@@ -1340,7 +1342,7 @@ findExtra : {auto c : Ref Ctxt Defs} ->
 findExtra fc defs ctree@(Case {name = var} idx el ty altsIn)
   = do let fenv = freeEnv fc _
        nfty <- nf defs fenv ty
-       (alts', extraCases) <- replaceDefaults fc defs nfty altsIn
+       extraCases <- identifyUnreachableDefaults fc defs nfty altsIn
        extraCases' <- concat <$> traverse findExtraAlts altsIn
        pure (extraCases ++ extraCases')
   where
@@ -1382,8 +1384,6 @@ getPMDef fc phase fn ty clauses
          log "compile.casetree.clauses" 25 $
            "Reached clauses: " ++ (show $ reached)
          extra <- findExtra fc defs t
---          trace (show $ reached) $ pure ()
---          trace (show $ extra) $ pure ()
          let unreachable = getUnreachable 0 (reached \\ extra) clauses
          pure (_ ** (t, unreachable))
   where
