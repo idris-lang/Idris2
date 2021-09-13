@@ -23,7 +23,7 @@ import Libraries.Data.String.Extra
 namespace VerbosityLvl
   public export
   data VerbosityLvl =
-   ||| Supress all message output to `stdout`.
+   ||| Suppress all message output to `stdout`.
    NoneLvl |
    ||| Keep only errors.
    ErrorLvl |
@@ -36,7 +36,7 @@ data OutputMode
     ||| Given that we can divide elaboration messages into
     ||| two categories: informational message and error message,
     ||| `VerbosityLvl` applies a filter on the output,
-    |||  supressing writes to `stdout` if the level condition isn't met.
+    |||  suppressing writes to `stdout` if the level condition isn't met.
     REPL VerbosityLvl
 
 public export
