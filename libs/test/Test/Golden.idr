@@ -207,7 +207,7 @@ runTest opts testPath = forkIO $ do
   start <- clockTime UTC
   let cg = maybe "" (" --cg " ++) (codegen opts)
   let exe = "\"" ++ exeUnderTest opts ++ cg ++ "\""
-  ignore $ system $ "cd " ++ testPath ++ " && " ++
+  ignore $ system $ "cd \"" ++ testPath ++ "\" && " ++
     "sh ./run " ++ exe ++ " | tr -d '\\r' > output"
   end <- clockTime UTC
 
