@@ -186,7 +186,7 @@ install-support:
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/racket
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/gambit
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/js
-	install -m 644 support/docs/styles.css ${PREFIX}/${NAME_VERSION}/support/docs
+	install -m 644 support/docs/*.css ${PREFIX}/${NAME_VERSION}/support/docs
 	install -m 644 support/racket/* ${PREFIX}/${NAME_VERSION}/support/racket
 	install -m 644 support/gambit/* ${PREFIX}/${NAME_VERSION}/support/gambit
 	install -m 644 support/js/* ${PREFIX}/${NAME_VERSION}/support/js
