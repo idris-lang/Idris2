@@ -175,27 +175,27 @@ dd.fixity {
 */
 
 a.function {
-  color: rgb(53,155,115);
+  color: rgb(53, 155, 115);
 }
 
 .function {
-  color: rgb(53,155,115);
+  color: rgb(53, 155, 115);
 }
 
 a.constructor {
-  color: rgb(213,94,0);
+  color: rgb(213, 94, 0);
 }
 
 .constructor {
-  color: rgb(213,94,0);
+  color: rgb(213, 94, 0);
 }
 
 a.type {
-  color: rgb(61,183,233);
+  color: rgb(61, 183, 233);
 }
 
 .type {
-  color: rgb(61,183,233);
+  color: rgb(61, 183, 233);
 }
 
 .keyword {
@@ -203,8 +203,7 @@ a.type {
 }
 
 .boundvar {
-    color: rgb(247,72,165);
-    /* Too much colour makes it hard to differ the rest of the colours */
+  color: rgb(247, 72, 165); /* Too much colour makes it hard to differ the rest of the colours */
   color: inherit;
 }
 
