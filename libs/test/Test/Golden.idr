@@ -196,6 +196,9 @@ normalize str =
 Result : Type
 Result = Either String String
 
+guardPath : String -> String
+guardPath s = "\"" ++ s ++ "\""
+
 ||| Run the specified Golden test with the supplied options.
 ||| See the module documentation for more information.
 ||| @testPath the directory that contains the test.
@@ -205,7 +208,7 @@ runTest opts testPath = forkIO $ do
   start <- clockTime UTC
   let cg = maybe "" (" --cg " ++) (codegen opts)
   let exe = "\"" ++ exeUnderTest opts ++ cg ++ "\""
-  ignore $ system $ "cd \"" ++ testPath ++ "\" && " ++
+  ignore $ system $ "cd " ++ guardPath testPath ++ " && " ++
     "sh ./run " ++ exe ++ " | tr -d '\\r' > output"
   end <- clockTime UTC
 
@@ -263,7 +266,7 @@ runTest opts testPath = forkIO $ do
         Just exp => do
           code <- system $ "git diff --no-index --exit-code " ++
             (if opts.color then  "--word-diff=color " else "") ++
-            testPath ++ "/expected " ++ testPath ++ "/output"
+            guardPath testPath ++ "/expected " ++ guardPath testPath ++ "/output"
           putStr . unlines $
             ["Golden value differs from actual value."] ++
             (if (code < 0) then expVsOut exp out else []) ++
