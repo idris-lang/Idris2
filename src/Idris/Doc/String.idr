@@ -120,8 +120,10 @@ prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
 
 prettyName : Name -> Doc IdrisDocAnn
 prettyName n =
-      let root = nameRoot n in
-      if isOpName n then parens (pretty root) else pretty root
+  case userNameRoot n of
+    -- shouldn't happen: we only show UN anyways...
+    Nothing => pretty (nameRoot n)
+    Just un => if isOpUserName un then parens (pretty un) else pretty un
 
 prettyKindedName : Maybe String -> Doc IdrisDocAnn -> Doc IdrisDocAnn
 prettyKindedName Nothing   nm = nm

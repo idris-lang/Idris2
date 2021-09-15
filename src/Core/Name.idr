@@ -6,6 +6,7 @@ import Data.Maybe
 import Decidable.Equality
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Utils.String
 
 import public Core.Name.Namespace
 
@@ -84,9 +85,17 @@ userNameRoot _ = Nothing
 
 export
 isUnderscoreName : Name -> Bool
-isUnderscoreName (UN (Basic "_")) = True
+isUnderscoreName (UN Underscore) = True
 isUnderscoreName (MN "_" _) = True
 isUnderscoreName _ = False
+
+export
+isPatternVariable : UserName -> Bool
+isPatternVariable (Basic nm) = lowerFirst nm
+isPatternVariable (Field _) = False
+isPatternVariable (Hole _) = False
+isPatternVariable Underscore = True
+
 
 export
 isUserName : Name -> Bool

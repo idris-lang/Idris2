@@ -35,7 +35,6 @@ import TTImp.Utils
 
 import Libraries.Data.IMaybe
 import Libraries.Utils.Shunting
-import Libraries.Utils.String
 
 import Control.Monad.State
 import Data.Maybe
@@ -204,7 +203,7 @@ mutual
                               mn !(desugarB side ps argTy)
                                  !(desugarB side ps' retTy)
   desugarB side ps (PLam fc rig p pat@(PRef prefFC n@(UN nm)) argTy scope)
-      =  if isJust (isBasic nm) || nm == Underscore
+      =  if isPatternVariable nm
            then do whenJust (isConcreteFC prefFC) $ \nfc
                      => addSemanticDecorations [(nfc, Bound, Just n)]
                    pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
@@ -330,7 +329,8 @@ mutual
   desugarB side ps (PHole fc br holename)
       = do when br $
               do syn <- get Syn
-                 put Syn (record { bracketholes $= ((UN (Hole holename)) ::) } syn)
+                 let hole = UN (Hole holename)
+                 put Syn (record { bracketholes $= (hole ::) } syn)
            pure $ IHole fc holename
   desugarB side ps (PType fc) = pure $ IType fc
   desugarB side ps (PAs fc nameFC vname pattern)

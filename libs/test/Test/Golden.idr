@@ -207,7 +207,7 @@ runTest opts testPath = forkIO $ do
   start <- clockTime UTC
   let cg = maybe "" (" --cg " ++) (codegen opts)
   let exe = "\"" ++ exeUnderTest opts ++ cg ++ "\""
-  ignore $ system $ "cd " ++ testPath ++ " && " ++
+  ignore $ system $ "cd \"" ++ testPath ++ "\" && " ++
     "sh ./run " ++ exe ++ " | tr -d '\\r' > output"
   end <- clockTime UTC
 
@@ -331,7 +331,7 @@ checkRequirement req
   where
     requirement : Requirement -> (String, List String)
     requirement C = ("CC", ["cc"])
-    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "chezscheme", "scheme"])
+    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "chezscheme", "chez-scheme", "scheme"])
     requirement Node = ("NODE", ["node"])
     requirement Racket = ("RACKET", ["racket"])
     requirement Gambit = ("GAMBIT", ["gsc"])

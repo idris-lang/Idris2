@@ -210,7 +210,7 @@ checkTerm rig elabinfo nest env (IType fc) exp
     = checkExp rig elabinfo env fc (TType fc) (gType fc) exp
 
 checkTerm rig elabinfo nest env (IHole fc str) exp
-    = checkHole rig elabinfo nest env fc str exp
+    = checkHole rig elabinfo nest env fc (Hole str) exp
 checkTerm rig elabinfo nest env (IUnifyLog fc lvl tm) exp
     = withLogLevel lvl $ check rig elabinfo nest env tm exp
 checkTerm rig elabinfo nest env (Implicit fc b) (Just gexpty)

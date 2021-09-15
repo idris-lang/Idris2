@@ -328,7 +328,7 @@ preOptions (Profile :: opts)
     = do setSession (record { profile = True } !getSession)
          preOptions opts
 preOptions (Quiet :: opts)
-    = do setOutput (REPL True)
+    = do setOutput (REPL VerbosityLvl.ErrorLvl)
          preOptions opts
 preOptions (NoPrelude :: opts)
     = do setSession (record { noprelude = True } !getSession)
@@ -375,7 +375,7 @@ preOptions (AltErrorCount c :: opts)
     = do setSession (record { logErrorCount = c } !getSession)
          preOptions opts
 preOptions (RunREPL _ :: opts)
-    = do setOutput (REPL True)
+    = do setOutput (REPL VerbosityLvl.ErrorLvl)
          setSession (record { nobanner = True } !getSession)
          preOptions opts
 preOptions (FindIPKG :: opts)

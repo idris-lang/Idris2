@@ -497,13 +497,13 @@ cleanPTerm ptm
 
     cleanName : Name -> Core Name
     cleanName nm = case nm of
-      MN n _     => pure (UN $ Basic n)
+      MN n _     => pure (UN $ mkUserName n) -- this may be "_"
       PV n _     => pure n
-      DN n _     => pure (UN $ Basic n)
+      DN n _     => pure (UN $ mkUserName n) -- this may be "_"
       NS _ n     => cleanName n
       Nested _ n => cleanName n
       UN n       => pure (UN n)
-      _          => UN . Basic <$> prettyName nm
+      _          => UN . mkUserName <$> prettyName nm
 
     cleanKindedName : KindedName -> Core KindedName
     cleanKindedName (MkKindedName nt fn nm) = MkKindedName nt fn <$> cleanName nm

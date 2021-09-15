@@ -33,7 +33,7 @@ import public Libraries.Utils.Binary
 ||| (Increment this when changing anything in the data format)
 export
 ttcVersion : Int
-ttcVersion = 63
+ttcVersion = 64
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
