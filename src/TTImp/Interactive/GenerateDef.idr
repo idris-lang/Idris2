@@ -28,7 +28,7 @@ import Data.List
 %default covering
 
 fnName : Bool -> Name -> String
-fnName lhs (UN n)
+fnName lhs (UN (Basic n))
     = if isIdentNormal n then n
       else if lhs then "(" ++ n ++ ")"
       else "op"
@@ -89,7 +89,7 @@ expandClause loc opts n c
 
 splittableNames : RawImp -> List Name
 splittableNames (IApp _ f (IBindVar _ n))
-    = splittableNames f ++ [UN n]
+    = splittableNames f ++ [UN $ Basic n]
 splittableNames (IApp _ f _)
     = splittableNames f
 splittableNames (IAutoApp _ f _)
@@ -114,7 +114,7 @@ trySplit loc lhsraw lhs rhs n
     valid _ = Nothing
 
     fixNames : RawImp -> RawImp
-    fixNames (IVar loc' (UN n)) = IBindVar loc' n
+    fixNames (IVar loc' (UN (Basic n))) = IBindVar loc' n
     fixNames (IVar loc' (MN _ _)) = Implicit loc' True
     fixNames (IApp loc' f a) = IApp loc' (fixNames f) (fixNames a)
     fixNames (IAutoApp loc' f a) = IAutoApp loc' (fixNames f) (fixNames a)
@@ -127,7 +127,7 @@ trySplit loc lhsraw lhs rhs n
                Nothing => IVar loc' n
                Just tm => fixNames tm
     updateLHS ups (IBindVar loc' n)
-        = case lookup (UN n) ups of
+        = case lookup (UN (Basic n)) ups of
                Nothing => IBindVar loc' n
                Just tm => fixNames tm
     updateLHS ups (IApp loc' f a) = IApp loc' (updateLHS ups f) (updateLHS ups a)

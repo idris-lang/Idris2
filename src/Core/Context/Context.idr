@@ -18,7 +18,7 @@ import Data.Nat
 import Libraries.Data.IntMap
 import Libraries.Data.IOArray
 import Libraries.Data.NameMap
-import Libraries.Data.StringMap
+import Libraries.Data.UserNameMap
 import Libraries.Utils.Binary
 
 public export
@@ -357,8 +357,8 @@ record Context where
     nextEntry : Int
     -- Map from full name to its position in the context
     resolvedAs : NameMap Int
-    -- Map from strings to all the possible names in all namespaces
-    possibles : StringMap (List PossibleName)
+    -- Map from usernames to all the possible names in all namespaces
+    possibles : UserNameMap (List PossibleName)
     -- Reference to the actual content, indexed by Int
     content : Ref Arr (IOArray ContextEntry)
     -- Branching depth, in a backtracking elaborator. 0 is top level; at lower

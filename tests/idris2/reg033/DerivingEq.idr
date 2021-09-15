@@ -21,7 +21,7 @@ genEq typeName = do
   let and : TTImp -> TTImp -> TTImp
       and x y = `(~(x) && ~(y))
       compareEq : String -> String -> TTImp
-      compareEq x y = `(~(IVar pos $ UN x) == ~(IVar pos $ UN y))
+      compareEq x y = `(~(IVar pos $ UN (Basic x)) == ~(IVar pos $ UN (Basic y)))
       makeClause : Name -> Elab Clause
       makeClause constr = do
         [(_, ty)] <- getType constr

@@ -6,28 +6,44 @@ import Data.Maybe
 import Decidable.Equality
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Utils.String
 
 import public Core.Name.Namespace
 
 %default total
+
+||| A username has some structure
+public export
+data UserName : Type where
+  Basic : String -> UserName -- default name constructor       e.g. map
+  Field : String -> UserName -- field accessor                 e.g. .fst
+  Underscore : UserName      -- no name                        e.g. _
+
+||| A smart constructor taking a string and parsing it as the appropriate
+||| username
+export
+mkUserName : String -> UserName
+mkUserName "_" = Underscore
+mkUserName str with (strM str)
+  mkUserName _   | StrCons '.' n = Field n
+  mkUserName str | _             = Basic str
 
 ||| Name helps us track a name's structure as well as its origin:
 ||| was it user-provided or machine-manufactured? For what reason?
 public export
 data Name : Type where
      NS : Namespace -> Name -> Name -- in a namespace
-     UN : String -> Name -- user defined name
+     UN : UserName -> Name -- user defined name
      MN : String -> Int -> Name -- machine generated name
      PV : Name -> Int -> Name -- pattern variable name; int is the resolved function id
      DN : String -> Name -> Name -- a name and how to display it
-     RF : String -> Name  -- record field name
      Nested : (Int, Int) -> Name -> Name -- nested function name
      CaseBlock : String -> Int -> Name -- case block nested in (resolved) name
      WithBlock : String -> Int -> Name -- with block nested in (resolved) name
      Resolved : Int -> Name -- resolved, index into context
 
 export
-mkNamespacedName : Maybe Namespace -> String -> Name
+mkNamespacedName : Maybe Namespace -> UserName -> Name
 mkNamespacedName Nothing nm = UN nm
 mkNamespacedName (Just ns) nm = NS ns (UN nm)
 
@@ -55,18 +71,23 @@ asName old new (NS ns n)
 asName _ _ n = n
 
 export
-userNameRoot : Name -> Maybe String
+userNameRoot : Name -> Maybe UserName
 userNameRoot (NS _ n) = userNameRoot n
 userNameRoot (UN n) = Just n
 userNameRoot (DN _ n) = userNameRoot n
-userNameRoot (RF n) = Just ("." ++ n)  -- TMP HACK
 userNameRoot _ = Nothing
 
 export
 isUnderscoreName : Name -> Bool
-isUnderscoreName (UN "_") = True
+isUnderscoreName (UN Underscore) = True
 isUnderscoreName (MN "_" _) = True
 isUnderscoreName _ = False
+
+export
+isPatternVariable : UserName -> Bool
+isPatternVariable (Basic nm) = lowerFirst nm
+isPatternVariable (Field _) = False
+isPatternVariable Underscore = True
 
 export
 isUserName : Name -> Bool
@@ -85,7 +106,6 @@ isSourceName (UN _) = True
 isSourceName (MN _ _) = False
 isSourceName (PV n _) = isSourceName n
 isSourceName (DN _ n) = isSourceName n
-isSourceName (RF _) = True
 isSourceName (Nested _ n) = isSourceName n
 isSourceName (CaseBlock _ _) = False
 isSourceName (WithBlock _ _) = False
@@ -94,22 +114,32 @@ isSourceName (Resolved _) = False
 export
 isRF : Name -> Maybe (Namespace, String)
 isRF (NS ns n) = map (mapFst (ns <.>)) (isRF n)
-isRF (RF n) = Just (emptyNS, n)
+isRF (UN (Field n)) = Just (emptyNS, n)
 isRF _ = Nothing
 
 export
-isUN : Name -> Maybe String
-isUN (UN str) = Just str
+isUN : Name -> Maybe UserName
+isUN (UN un) = Just un
 isUN _ = Nothing
+
+export
+isBasic : UserName -> Maybe String
+isBasic (Basic str) = Just str
+isBasic _ = Nothing
+
+export
+displayUserName : UserName -> String
+displayUserName (Basic n) = n
+displayUserName (Field n) = n
+displayUserName Underscore = "_"
 
 export
 nameRoot : Name -> String
 nameRoot (NS _ n) = nameRoot n
-nameRoot (UN n) = n
+nameRoot (UN n) = displayUserName n
 nameRoot (MN n _) = n
 nameRoot (PV n _) = nameRoot n
 nameRoot (DN _ n) = nameRoot n
-nameRoot (RF n) = n
 nameRoot (Nested _ inner) = nameRoot inner
 nameRoot (CaseBlock n _) = "$" ++ show n
 nameRoot (WithBlock n _) = "$" ++ show n
@@ -118,11 +148,10 @@ nameRoot (Resolved i) = "$" ++ show i
 export
 displayName : Name -> (Maybe Namespace, String)
 displayName (NS ns n) = mapFst (pure . maybe ns (ns <.>)) $ displayName n
-displayName (UN n) = (Nothing, n)
+displayName (UN n) = (Nothing, displayUserName n)
 displayName (MN n _) = (Nothing, n)
 displayName (PV n _) = displayName n
 displayName (DN n _) = (Nothing, n)
-displayName (RF n) = (Nothing, n)
 displayName (Nested _ n) = displayName n
 displayName (CaseBlock outer _) = (Nothing, "case block in " ++ show outer)
 displayName (WithBlock outer _) = (Nothing, "with block in " ++ show outer)
@@ -153,24 +182,30 @@ mbApplyNS (Just ns) n = NS ns n
 export
 isUnsafeBuiltin : Name -> Bool
 isUnsafeBuiltin nm = case splitNS nm of
-  (ns, UN str) => (ns == builtinNS || ns == emptyNS)
-               && any {t = List} id
-                      [ "assert_" `isPrefixOf` str
-                      , str `elem` [ "prim__believe_me", "believe_me"
-                                   , "prim__crash", "idris_crash"
-                                   ]
-                      ]
+  (ns, UN (Basic str)) =>
+       (ns == builtinNS || ns == emptyNS)
+    && any {t = List} id
+           [ "assert_" `isPrefixOf` str
+           , str `elem` [ "prim__believe_me", "believe_me"
+                        , "prim__crash", "idris_crash"
+                        ]
+           ]
   _ => False
 
 export
+Show UserName where
+  show (Basic n) = n
+  show (Field n) = "." ++ n
+  show Underscore = "_"
+
+export
 Show Name where
-  show (NS ns n@(RF _)) = show ns ++ ".(" ++ show n ++ ")"
+  show (NS ns n@(UN (Field _))) = show ns ++ ".(" ++ show n ++ ")"
   show (NS ns n) = show ns ++ "." ++ show n
-  show (UN x) = x
+  show (UN x) = show x
   show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
   show (PV n d) = "{P:" ++ show n ++ ":" ++ show d ++ "}"
   show (DN str n) = str
-  show (RF n) = "." ++ n
   show (Nested (outer, idx) inner)
       = show outer ++ ":" ++ show idx ++ ":" ++ show inner
   show (CaseBlock outer i) = "case block in " ++ outer
@@ -178,32 +213,50 @@ Show Name where
   show (Resolved x) = "$resolved" ++ show x
 
 export
+[RawUN] Show UserName where
+  show (Basic n) = "Basic " ++ n
+  show (Field n) = "Field " ++ n
+  show Underscore = "Underscore"
+
+export
 [Raw] Show Name where
   show (NS ns n) = "NS " ++ show ns ++ " (" ++ show n ++ ")"
-  show (UN x) = "UN " ++ x
+  show (UN x) = "UN (" ++ show @{RawUN} x ++ ")"
   show (MN x y) = "MN (" ++ show x ++ ") " ++ show y
   show (PV n d) = "PV (" ++ show n ++ ") " ++ show d
   show (DN str n) = "DN " ++ str ++ " (" ++ show n ++ ")"
-  show (RF n) = "RF " ++ n
   show (Nested ij n) = "Nested " ++ show ij ++ " (" ++ show n ++ ")"
   show (CaseBlock str i) = "CaseBlock " ++ str ++ " " ++ show i
   show (WithBlock str i) = "CaseBlock " ++ str ++ " " ++ show i
   show (Resolved i) = "Resolved " ++ show i
 
 export
+Pretty UserName where
+  pretty (Basic n) = pretty n
+  pretty (Field n) = "." <+> pretty n
+  pretty Underscore = "_"
+
+export
 Pretty Name where
-  pretty (NS ns n@(RF _)) = pretty ns <+> dot <+> parens (pretty n)
+  pretty (NS ns n@(UN (Field _))) = pretty ns <+> dot <+> parens (pretty n)
   pretty (NS ns n) = pretty ns <+> dot <+> pretty n
   pretty (UN x) = pretty x
   pretty (MN x y) = braces (pretty x <+> colon <+> pretty y)
   pretty (PV n d) = braces (pretty 'P' <+> colon <+> pretty n <+> colon <+> pretty d)
   pretty (DN str _) = pretty str
-  pretty (RF n) = "." <+> pretty n
   pretty (Nested (outer, idx) inner)
     = pretty outer <+> colon <+> pretty idx <+> colon <+> pretty inner
   pretty (CaseBlock outer _) = reflow "case block in" <++> pretty outer
   pretty (WithBlock outer _) = reflow "with block in" <++> pretty outer
   pretty (Resolved x) = pretty "$resolved" <+> pretty x
+
+export
+Eq UserName where
+  (==) (Basic x) (Basic y) = x == y
+  (==) (Field x) (Field y) = x == y
+  (==) Underscore Underscore = True
+  (==) _ _ = False
+
 
 export
 Eq Name where
@@ -212,12 +265,23 @@ Eq Name where
     (==) (MN x y) (MN x' y') = y == y' && x == x'
     (==) (PV x y) (PV x' y') = x == x' && y == y'
     (==) (DN _ n) (DN _ n') = n == n'
-    (==) (RF n) (RF n') = n == n'
     (==) (Nested x y) (Nested x' y') = x == x' && y == y'
     (==) (CaseBlock x y) (CaseBlock x' y') = y == y' && x == x'
     (==) (WithBlock x y) (WithBlock x' y') = y == y' && x == x'
     (==) (Resolved x) (Resolved x') = x == x'
     (==) _ _ = False
+
+usernameTag : UserName -> Int
+usernameTag (Basic _) = 0
+usernameTag (Field _) = 2
+usernameTag Underscore = 3
+
+export
+Ord UserName where
+  compare (Basic x) (Basic y) = compare x y
+  compare (Field x) (Field y) = compare x y
+  compare Underscore Underscore = EQ
+  compare x y = compare (usernameTag x) (usernameTag y)
 
 nameTag : Name -> Int
 nameTag (NS _ _) = 0
@@ -225,7 +289,6 @@ nameTag (UN _) = 1
 nameTag (MN _ _) = 2
 nameTag (PV _ _) = 3
 nameTag (DN _ _) = 4
-nameTag (RF _) = 5
 nameTag (Nested _ _) = 6
 nameTag (CaseBlock _ _) = 7
 nameTag (WithBlock _ _) = 8
@@ -252,7 +315,6 @@ Ord Name where
                GT => GT
                LT => LT
     compare (DN _ n) (DN _ n') = compare n n'
-    compare (RF n) (RF n') = compare n n'
     compare (Nested x y) (Nested x' y')
         = case compare y y' of
                EQ => compare x x'
@@ -274,15 +336,25 @@ Ord Name where
 
 
 export
+userNameEq : (x, y : UserName) -> Maybe (x = y)
+userNameEq (Basic x) (Basic y) with (decEq x y)
+  userNameEq (Basic x) (Basic y) | Yes prf = Just (cong Basic prf)
+  userNameEq (Basic x) (Basic y) | No nprf = Nothing
+userNameEq (Field x) (Field y) with (decEq x y)
+  userNameEq (Field x) (Field y) | Yes prf = Just (cong Field prf)
+  userNameEq (Field x) (Field y) | No nprf = Nothing
+userNameEq Underscore Underscore = Just Refl
+userNameEq _ _ = Nothing
+
+
+export
 nameEq : (x : Name) -> (y : Name) -> Maybe (x = y)
 nameEq (NS xs x) (NS ys y) with (decEq xs ys)
   nameEq (NS ys x) (NS ys y) | (Yes Refl) with (nameEq x y)
     nameEq (NS ys x) (NS ys y) | (Yes Refl) | Nothing = Nothing
     nameEq (NS ys y) (NS ys y) | (Yes Refl) | (Just Refl) = Just Refl
   nameEq (NS xs x) (NS ys y) | (No contra) = Nothing
-nameEq (UN x) (UN y) with (decEq x y)
-  nameEq (UN y) (UN y) | (Yes Refl) = Just Refl
-  nameEq (UN x) (UN y) | (No contra) = Nothing
+nameEq (UN x) (UN y) = map (cong UN) (userNameEq x y)
 nameEq (MN x t) (MN x' t') with (decEq x x')
   nameEq (MN x t) (MN x t') | (Yes Refl) with (decEq t t')
     nameEq (MN x t) (MN x t) | (Yes Refl) | (Yes Refl) = Just Refl
@@ -298,9 +370,6 @@ nameEq (DN x t) (DN y t') with (decEq x y)
     nameEq (DN y t) (DN y t) | (Yes Refl) | (Just Refl) = Just Refl
     nameEq (DN y t) (DN y t') | (Yes Refl) | Nothing = Nothing
   nameEq (DN x t) (DN y t') | (No p) = Nothing
-nameEq (RF x) (RF y) with (decEq x y)
-  nameEq (RF y) (RF y) | (Yes Refl) = Just Refl
-  nameEq (RF x) (RF y) | (No contra) = Nothing
 nameEq (Nested x y) (Nested x' y') with (decEq x x')
   nameEq (Nested x y) (Nested x' y') | (No p) = Nothing
   nameEq (Nested x y) (Nested x y') | (Yes Refl) with (nameEq y y')

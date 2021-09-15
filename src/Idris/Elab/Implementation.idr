@@ -39,7 +39,7 @@ export
 mkImplName : FC -> Name -> List RawImp -> Name
 mkImplName fc n ps
     = DN (show n ++ " implementation at " ++ replaceSep (show fc))
-         (UN ("__Impl_" ++ show n ++ "_" ++
+         (UN $ Basic ("__Impl_" ++ show n ++ "_" ++
           showSep "_" (map show ps)))
 
 bindConstraints : FC -> PiInfo RawImp ->
@@ -64,7 +64,7 @@ addDefaults fc impName params allms defs body
           extendBody [] missing body
   where
     specialiseMeth : Name -> (Name, RawImp)
-    specialiseMeth n = (n, INamedApp fc (IVar fc n) (UN "__con") (IVar fc impName))
+    specialiseMeth n = (n, INamedApp fc (IVar fc n) (UN $ Basic "__con") (IVar fc impName))
     -- Given the list of missing names, if any are among the default definitions,
     -- add them to the body
     extendBody : List Name -> List Name -> List ImpDecl ->
@@ -342,19 +342,19 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
               mkLam argns
                     (impsApply
                          (applyTo (IVar EmptyFC n) argns)
-                         (map (\n => (n, IVar vfc (UN (show n)))) imps))
+                         (map (\n => (n, IVar vfc (UN (Basic $ show n)))) imps))
       where
         applyUpdate : (Name, RigCount, PiInfo RawImp) ->
                       (Name, RigCount, PiInfo RawImp)
-        applyUpdate (UN n, c, p)
-            = maybe (UN n, c, p) (\n' => (UN n', c, p)) (lookup n upds)
+        applyUpdate (UN (Basic n), c, p)
+            = maybe (UN (Basic n), c, p) (\n' => (UN (Basic n'), c, p)) (lookup n upds)
         applyUpdate t = t
 
     methName : Name -> Name
     methName (NS _ n) = methName n
     methName n
         = DN (show n)
-             (UN (show n ++ "_" ++ show iname ++ "_" ++
+             (UN $ Basic (show n ++ "_" ++ show iname ++ "_" ++
                      (if named then show impName_in else "") ++
                      showSep "_" (map show ps)))
 
@@ -450,9 +450,8 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
     -- top level method name to current implementation's method name
     methNameUpdate : (Name, Name, t) -> (Name, Name)
     methNameUpdate (UN mn, fn, _) = (UN mn, fn)
-    methNameUpdate (RF mn, fn, _) = (RF mn, fn)
     methNameUpdate (NS _ mn, fn, p) = methNameUpdate (mn, fn, p)
-    methNameUpdate (mn, fn, p) = (UN (nameRoot mn), fn) -- probably impossible
+    methNameUpdate (mn, fn, p) = (UN (Basic $ nameRoot mn), fn) -- probably impossible
 
 
     findMethName : List (Name, Name) -> FC -> Name -> Core Name
@@ -510,7 +509,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                      "Adding transform for " ++ show meth.name ++ " : " ++ show meth.type ++
                      "\n\tfor " ++ show iname ++ " in " ++ show ns
              let lhs = INamedApp vfc (IVar vfc meth.name)
-                                     (UN "__con")
+                                     (UN $ Basic "__con")
                                      (IVar vfc iname)
              let Just mname = lookup (dropNS meth.name) ns
                  | Nothing => pure ()
@@ -518,7 +517,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
              log "elab.implementation" 5 $ show lhs ++ " ==> " ++ show rhs
              handleUnify
                  (processDecl [] nest env
-                     (ITransform vfc (UN (show meth.name ++ " " ++ show iname)) lhs rhs))
+                     (ITransform vfc (UN $ Basic (show meth.name ++ " " ++ show iname)) lhs rhs))
                  (\err =>
                      log "elab.implementation" 5 $ "Can't add transform " ++
                                 show lhs ++ " ==> " ++ show rhs ++

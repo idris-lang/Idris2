@@ -167,40 +167,45 @@ process (LoadFile fname_in _)
          replWrap $ Idris.REPL.process (Load fname) >>= outputSyntaxHighlighting fname
 process (NameAt name Nothing)
     = do defs <- get Ctxt
-         glob <- lookupCtxtName (UN name) (gamma defs)
+         glob <- lookupCtxtName (UN (mkUserName name)) (gamma defs)
          let dat = map (\(name, _, gdef) => (name, gdef.location)) glob
          pure (NameLocList dat)
 process (NameAt n (Just _))
     = do todoCmd "name-at <name> <line> <column>"
          pure $ REPL $ Edited $ DisplayEdit emptyDoc
 process (TypeOf n Nothing)
-    = replWrap $ Idris.REPL.process (Check (PRef replFC (UN n)))
+    = replWrap $ Idris.REPL.process (Check (PRef replFC (UN $ mkUserName n)))
 process (TypeOf n (Just (l, c)))
-    = replWrap $ Idris.REPL.process (Editing (TypeAt (fromInteger l) (fromInteger c) (UN n)))
+    = replWrap $ Idris.REPL.process
+               $ Editing (TypeAt (fromInteger l) (fromInteger c) (UN $ mkUserName n))
 process (CaseSplit l c n)
-    = replWrap $ Idris.REPL.process (Editing (CaseSplit False (fromInteger l) (fromInteger c) (UN n)))
+    = replWrap $ Idris.REPL.process
+    $ Editing $ CaseSplit False (fromInteger l) (fromInteger c)
+    $ UN $ mkUserName n
 process (AddClause l n)
-    = replWrap $ Idris.REPL.process (Editing (AddClause False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process
+    $ Editing $ AddClause False (fromInteger l)
+    $ UN $ mkUserName n
 process (AddMissing l n)
     = do todoCmd "add-missing"
          pure $ REPL $ Edited $ DisplayEdit emptyDoc
 process (ExprSearch l n hs all)
-    = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l) (UN n)
-                                                 (map UN hs)))
+    = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l)
+                     (UN $ Basic n) (map (UN . Basic) hs)))
 process ExprSearchNext
     = replWrap $ Idris.REPL.process (Editing ExprSearchNext)
 process (GenerateDef l n)
-    = replWrap $ Idris.REPL.process (Editing (GenerateDef False (fromInteger l) (UN n) 0))
+    = replWrap $ Idris.REPL.process (Editing (GenerateDef False (fromInteger l) (UN $ Basic n) 0))
 process GenerateDefNext
     = replWrap $ Idris.REPL.process (Editing GenerateDefNext)
 process (MakeLemma l n)
-    = replWrap $ Idris.REPL.process (Editing (MakeLemma False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process (Editing (MakeLemma False (fromInteger l) (UN $ mkUserName n)))
 process (MakeCase l n)
-    = replWrap $ Idris.REPL.process (Editing (MakeCase False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process (Editing (MakeCase False (fromInteger l) (UN $ mkUserName n)))
 process (MakeWith l n)
-    = replWrap $ Idris.REPL.process (Editing (MakeWith False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process (Editing (MakeWith False (fromInteger l) (UN $ mkUserName n)))
 process (DocsFor n modeOpt)
-    = replWrap $ Idris.REPL.process (Doc (PRef EmptyFC (UN n)))
+    = replWrap $ Idris.REPL.process (Doc (PRef EmptyFC (UN $ mkUserName n)))
 process (Apropos n)
     = do todoCmd "apropros"
          pure $ REPL $ Printed emptyDoc

@@ -199,10 +199,10 @@ replaceEntry (i, Just (ns, b))
 
 natHackNames : List Name
 natHackNames
-    = [UN "prim__add_Integer",
-       UN "prim__sub_Integer",
-       UN "prim__mul_Integer",
-       NS typesNS (UN "prim__integerToNat")]
+    = [UN (Basic "prim__add_Integer"),
+       UN (Basic "prim__sub_Integer"),
+       UN (Basic "prim__mul_Integer"),
+       NS typesNS (UN $ Basic "prim__integerToNat")]
 
 -- Hmm, these dump functions are all very similar aren't they...
 dumpCases : String -> List (Name,FC,NamedDef) -> Core ()

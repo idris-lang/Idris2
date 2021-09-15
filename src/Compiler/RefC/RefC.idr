@@ -64,13 +64,18 @@ cCleanString : String -> String
 cCleanString cs = showcCleanString (unpack cs) ""
 
 export
+cUserName : UserName -> String
+cUserName (Basic n) = cCleanString n
+cUserName (Field n) = "rec__" ++ cCleanString n
+cUserName Underscore = cCleanString "_"
+
+export
 cName : Name -> String
 cName (NS ns n) = cCleanString (showNSWithSep "_" ns) ++ "_" ++ cName n
-cName (UN n) = cCleanString n
+cName (UN n) = cUserName n
 cName (MN n i) = cCleanString n ++ "_" ++ cCleanString (show i)
 cName (PV n d) = "pat__" ++ cName n
 cName (DN _ n) = cName n
-cName (RF n) = "rec__" ++ cCleanString n
 cName (Nested i n) = "n__" ++ cCleanString (show i) ++ "_" ++ cName n
 cName (CaseBlock x y) = "case__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (WithBlock x y) = "with__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
@@ -228,20 +233,20 @@ Show ExtPrim where
 ||| Match on a user given name to get the scheme primitive
 toPrim : Name -> ExtPrim
 toPrim pn@(NS _ n)
-    = cond [(n == UN "prim__newIORef", NewIORef),
-            (n == UN "prim__readIORef", ReadIORef),
-            (n == UN "prim__writeIORef", WriteIORef),
-            (n == UN "prim__newArray", NewArray),
-            (n == UN "prim__arrayGet", ArrayGet),
-            (n == UN "prim__arraySet", ArraySet),
-            (n == UN "prim__getField", GetField),
-            (n == UN "prim__setField", SetField),
-            (n == UN "void", VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
-            (n == UN "prim__void", VoidElim),
-            (n == UN "prim__os", SysOS),
-            (n == UN "prim__codegen", SysCodegen),
-            (n == UN "prim__onCollect", OnCollect),
-            (n == UN "prim__onCollectAny", OnCollectAny)
+    = cond [(n == UN (Basic "prim__newIORef"), NewIORef),
+            (n == UN (Basic "prim__readIORef"), ReadIORef),
+            (n == UN (Basic "prim__writeIORef"), WriteIORef),
+            (n == UN (Basic "prim__newArray"), NewArray),
+            (n == UN (Basic "prim__arrayGet"), ArrayGet),
+            (n == UN (Basic "prim__arraySet"), ArraySet),
+            (n == UN (Basic "prim__getField"), GetField),
+            (n == UN (Basic "prim__setField"), SetField),
+            (n == UN (Basic "void"), VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
+            (n == UN (Basic "prim__void"), VoidElim),
+            (n == UN (Basic "prim__os"), SysOS),
+            (n == UN (Basic "prim__codegen"), SysCodegen),
+            (n == UN (Basic "prim__onCollect"), OnCollect),
+            (n == UN (Basic "prim__onCollectAny"), OnCollectAny)
             ]
            (Unknown pn)
 toPrim pn = assert_total $ idris_crash ("INTERNAL ERROR: Unknown primitive: " ++ cName pn)
@@ -909,8 +914,8 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
                          else CLangC
           let isStandardFFI = Prelude.elem lang ["RefC", "C"]
           let fctName = if isStandardFFI
-                           then UN fctForeignName
-                           else UN $ lang ++ "_" ++ fctForeignName
+                           then UN $ Basic $ fctForeignName
+                           else UN $ Basic $ lang ++ "_" ++ fctForeignName
           if isStandardFFI
              then case extLibOpts of
                       [lib, header] => addHeader header

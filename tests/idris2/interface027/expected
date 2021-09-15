@@ -1,7 +1,10 @@
 1/1: Building params (params.idr)
 Main> False
 Main> True
-Main> Error: When unifying X 4 ?t and X 5 ?t.
+Main> Error: When unifying:
+    X 4 ?t
+and:
+    X 5 ?t
 Mismatch between: 0 and 1.
 
 (Interactive):1:1--1:12

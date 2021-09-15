@@ -245,16 +245,18 @@ isOpChar c = c `elem` (unpack ":!#$%&*+./<=>?@\\^|-~")
 
 export
 ||| Test whether a user name begins with an operator symbol.
-isOpName : Name -> Bool
-isOpName n = fromMaybe False $ do
-   -- NB: we can't use userNameRoot because that'll prefix `RF`
-   -- names with a `.` which means that record fields will systematically
-   -- be declared to be operators.
-   guard (isUserName n)
-   let n = nameRoot n
+isOpUserName : UserName -> Bool
+isOpUserName (Basic n) = fromMaybe False $ do
    c <- fst <$> strUncons n
    guard (isOpChar c)
    pure True
+isOpUserName (Field _) = False
+isOpUserName Underscore = False
+
+export
+||| Test whether a name begins with an operator symbol.
+isOpName : Name -> Bool
+isOpName = maybe False isOpUserName . userNameRoot
 
 validSymbol : Lexer
 validSymbol = some (pred isOpChar)

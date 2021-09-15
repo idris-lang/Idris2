@@ -603,17 +603,21 @@ cmpTy t = constTy t t IntType
 doubleTy : ClosedTerm
 doubleTy = predTy DoubleType DoubleType
 
+pi : (x : String) -> RigCount -> PiInfo (Term xs) -> Term xs ->
+     Term (UN (Basic x) :: xs) -> Term xs
+pi x rig plic ty sc = Bind emptyFC (UN (Basic x)) (Pi emptyFC rig plic ty) sc
+
 believeMeTy : ClosedTerm
 believeMeTy
-    = Bind emptyFC (UN "a") (Pi emptyFC erased Explicit (TType emptyFC)) $
-      Bind emptyFC (UN "b") (Pi emptyFC erased Explicit (TType emptyFC)) $
-      Bind emptyFC (UN "x") (Pi emptyFC top Explicit (Local emptyFC Nothing _ (Later First))) $
+    = pi "a" erased Explicit (TType emptyFC) $
+      pi "b" erased Explicit (TType emptyFC) $
+      pi "x" top    Explicit (Local emptyFC Nothing _ (Later First)) $
       Local emptyFC Nothing _ (Later First)
 
 crashTy : ClosedTerm
 crashTy
-    = Bind emptyFC (UN "a") (Pi emptyFC erased Explicit (TType emptyFC)) $
-      Bind emptyFC (UN "msg") (Pi emptyFC top Explicit (PrimVal emptyFC StringType)) $
+    = pi "a" erased Explicit (TType emptyFC) $
+      pi "msg" top Explicit (PrimVal emptyFC StringType) $
       Local emptyFC Nothing _ (Later First)
 
 castTo : Constant -> Vect 1 (NF vars) -> Maybe (NF vars)
@@ -682,7 +686,7 @@ getOp BelieveMe = believeMe
 getOp _ = const Nothing
 
 prim : String -> Name
-prim str = UN $ "prim__" ++ str
+prim str = UN $ Basic $ "prim__" ++ str
 
 export
 opName : {0 arity : Nat} -> PrimFn arity -> Name

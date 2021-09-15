@@ -166,9 +166,8 @@ export
 genMVName : {auto c : Ref Ctxt Defs} ->
             {auto u : Ref UST UState} ->
             Name -> Core Name
-genMVName (UN str) = genName str
+genMVName (UN str) = genName (displayUserName str)
 genMVName (MN str _) = genName str
-genMVName (RF str) = genName str
 genMVName n
     = do ust <- get UST
          put UST (record { nextName $= (+1) } ust)

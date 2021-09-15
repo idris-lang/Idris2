@@ -288,7 +288,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
     -- so that it applies to the right original variable
     getBindName : Int -> Name -> List Name -> (Name, Name)
     getBindName idx n@(UN un) vs
-       = if n `elem` vs then (n, MN un idx) else (n, n)
+       = if n `elem` vs then (n, MN (displayUserName un) idx) else (n, n)
     getBindName idx n vs
        = if n `elem` vs then (n, MN "_cn" idx) else (n, n)
 
@@ -327,7 +327,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
     -- Names used in the pattern we're matching on, so don't bind them
     -- in the generated case block
     usedIn : RawImp -> List Name
-    usedIn (IBindVar _ n) = [UN n]
+    usedIn (IBindVar _ n) = [UN $ Basic n]
     usedIn (IApp _ f a) = usedIn f ++ usedIn a
     usedIn (IAs _ _ _ n a) = n :: usedIn a
     usedIn (IAlternative _ _ alts) = concatMap usedIn alts

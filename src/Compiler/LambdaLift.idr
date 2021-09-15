@@ -148,7 +148,7 @@ genName
   where
     mkName : Name -> Int -> Name
     mkName (NS ns b) i = NS ns (mkName b i)
-    mkName (UN n) i = MN n i
+    mkName (UN n) i = MN (displayUserName n) i
     mkName (DN _ n) i = mkName n i
     mkName (CaseBlock outer inner) i = MN ("case block in " ++ outer ++ " (" ++ show inner ++ ")") i
     mkName (WithBlock outer inner) i = MN ("with block in " ++ outer ++ " (" ++ show inner ++ ")") i
