@@ -507,7 +507,7 @@ groupCons fc fn pvars cs
     -- The type of 'ConGroup' ensures that we refer to the arguments by
     -- the same name in each of the clauses
     addConG {vars'} {todo'} n tag pargs pats pid rhs []
-        = do cty <- if n == UN "->"
+        = do cty <- if n == UN (Basic "->")
                       then pure $ NBind fc (MN "_" 0) (Pi fc top Explicit (MkNFClosure defaultOpts (mkEnv fc vars') (NType fc))) $
                               (\d, a => pure $ NBind fc (MN "_" 1) (Pi fc top Explicit (MkNFClosure defaultOpts (mkEnv fc vars') (NErased fc False)))
                                 (\d, a => pure $ NType fc))
@@ -626,7 +626,7 @@ groupCons fc fn pvars cs
            then addConG n 0 pargs pats pid rhs acc
            else throw (CaseCompile cfc fn (NotFullyApplied n))
     addGroup (PArrow _ _ s t) pprf pats pid rhs acc
-         = addConG (UN "->") 0 [s, t] pats pid rhs acc
+         = addConG (UN $ Basic "->") 0 [s, t] pats pid rhs acc
     -- Go inside the delay; we'll flag the case as needing to force its
     -- scrutinee (need to check in 'caseGroups below)
     addGroup (PDelay _ _ pty parg) pprf pats pid rhs acc
@@ -1101,8 +1101,8 @@ mkPat args orig (TDelay fc r ty p)
 mkPat args orig (PrimVal fc c)
     = pure $ if constTag c == 0
          then PConst fc c
-         else PTyCon fc (UN (show c)) 0 []
-mkPat args orig (TType fc) = pure $ PTyCon fc (UN "Type") 0 []
+         else PTyCon fc (UN (Basic $ show c)) 0 []
+mkPat args orig (TType fc) = pure $ PTyCon fc (UN $ Basic "Type") 0 []
 mkPat args orig tm
    = do log "compile.casetree" 10 $
           "Catchall: marking " ++ show tm ++ " as unmatchable"

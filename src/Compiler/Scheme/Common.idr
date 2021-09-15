@@ -29,14 +29,19 @@ schString s = concatMap okchar (unpack s)
                   else "C-" ++ show (cast {to=Int} c)
 
 export
+schUserName : UserName -> String
+schUserName (Basic n) = "u--" ++ schString n
+schUserName (Field n) = "rf--" ++ schString n
+schUserName Underscore = "u--_"
+
+export
 schName : Name -> String
-schName (NS ns (UN n)) = schString (showNSWithSep "-" ns) ++ "-" ++ schString n
+schName (NS ns (UN (Basic n))) = schString (showNSWithSep "-" ns) ++ "-" ++ schString n
+schName (UN n) = schUserName n
 schName (NS ns n) = schString (showNSWithSep "-" ns) ++ "-" ++ schName n
-schName (UN n) = "u--" ++ schString n
 schName (MN n i) = schString n ++ "-" ++ show i
 schName (PV n d) = "pat--" ++ schName n
 schName (DN _ n) = schName n
-schName (RF n) = "rf--" ++ schString n
 schName (Nested (i, x) n) = "n--" ++ show i ++ "-" ++ show x ++ "-" ++ schName n
 schName (CaseBlock x y) = "case--" ++ schString x ++ "-" ++ show y
 schName (WithBlock x y) = "with--" ++ schString x ++ "-" ++ show y
@@ -222,21 +227,21 @@ Show ExtPrim where
 ||| Match on a user given name to get the scheme primitive
 toPrim : Name -> ExtPrim
 toPrim pn@(NS _ n)
-    = cond [(n == UN "prim__newIORef", NewIORef),
-            (n == UN "prim__readIORef", ReadIORef),
-            (n == UN "prim__writeIORef", WriteIORef),
-            (n == UN "prim__newArray", NewArray),
-            (n == UN "prim__arrayGet", ArrayGet),
-            (n == UN "prim__arraySet", ArraySet),
-            (n == UN "prim__getField", GetField),
-            (n == UN "prim__setField", SetField),
-            (n == UN "void", VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
-            (n == UN "prim__void", VoidElim),
-            (n == UN "prim__os", SysOS),
-            (n == UN "prim__codegen", SysCodegen),
-            (n == UN "prim__onCollect", OnCollect),
-            (n == UN "prim__onCollectAny", OnCollectAny),
-            (n == UN "prim__makeFuture", MakeFuture)
+    = cond [(n == UN (Basic "prim__newIORef"), NewIORef),
+            (n == UN (Basic "prim__readIORef"), ReadIORef),
+            (n == UN (Basic "prim__writeIORef"), WriteIORef),
+            (n == UN (Basic "prim__newArray"), NewArray),
+            (n == UN (Basic "prim__arrayGet"), ArrayGet),
+            (n == UN (Basic "prim__arraySet"), ArraySet),
+            (n == UN (Basic "prim__getField"), GetField),
+            (n == UN (Basic "prim__setField"), SetField),
+            (n == UN (Basic "void"), VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
+            (n == UN (Basic "prim__void"), VoidElim),
+            (n == UN (Basic "prim__os"), SysOS),
+            (n == UN (Basic "prim__codegen"), SysCodegen),
+            (n == UN (Basic "prim__onCollect"), OnCollect),
+            (n == UN (Basic "prim__onCollectAny"), OnCollectAny),
+            (n == UN (Basic "prim__makeFuture"), MakeFuture)
             ]
            (Unknown pn)
 toPrim pn = Unknown pn

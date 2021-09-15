@@ -321,16 +321,21 @@ mutual
 
   directiveList : List Directive
   directiveList =
-      [ (Hide (UN "")), (Logging Nothing), (LazyOn False)
+      [ (Hide ph), (Logging Nothing), (LazyOn False)
       , (UnboundImplicits False), (AmbigDepth 0)
-      , (PairNames (UN "") (UN "") (UN "")), (RewriteName (UN "") (UN ""))
-      , (PrimInteger (UN "")), (PrimString (UN "")), (PrimChar (UN ""))
-      , (PrimDouble (UN "")), (CGAction "" ""), (Names (UN "") [])
-      , (StartExpr (PRef EmptyFC (UN ""))), (Overloadable (UN ""))
+      , (PairNames ph ph ph), (RewriteName ph ph)
+      , (PrimInteger ph), (PrimString ph), (PrimChar ph)
+      , (PrimDouble ph), (CGAction "" ""), (Names ph [])
+      , (StartExpr (PRef EmptyFC ph)), (Overloadable ph)
       , (Extension ElabReflection), (DefaultTotality PartialOK)
       , (PrefixRecordProjections True), (AutoImplicitDepth 0)
       , (NFMetavarThreshold 0), (SearchTimeout 0)
       ]
+
+      where
+        -- placeholder
+        ph : Name
+        ph = UN $ Basic ""
 
   isPragma : Directive -> Bool
   isPragma (CGAction _ _) = False
@@ -773,12 +778,12 @@ parameters {0 nm : Type} (toName : nm -> Name)
       where
         dePure : PTerm' nm -> PTerm' nm
         dePure tm@(PApp _ (PRef _ n) arg)
-            = if dropNS (toName n) == UN "pure" then arg else tm
+            = if dropNS (toName n) == UN (Basic "pure") then arg else tm
         dePure tm = tm
 
         deGuard : PDo' nm -> PDo' nm
         deGuard tm@(DoExp fc (PApp _ (PRef _ n) arg))
-            = if dropNS (toName n) == UN "guard" then DoExp fc arg else tm
+            = if dropNS (toName n) == UN (Basic "guard") then DoExp fc arg else tm
         deGuard tm = tm
   showPTermPrec d (PRewrite _ rule tm)
         = "rewrite " ++ showPTermPrec d rule ++ " in " ++ showPTermPrec d tm
@@ -987,7 +992,7 @@ initSyntax
                initDocStrings
                []
                []
-               (IVar EmptyFC (UN "main"))
+               (IVar EmptyFC (UN $ Basic "main"))
 
   where
 

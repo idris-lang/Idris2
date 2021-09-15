@@ -120,8 +120,10 @@ prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
 
 prettyName : Name -> Doc IdrisDocAnn
 prettyName n =
-      let root = nameRoot n in
-      if isOpName n then parens (pretty root) else pretty root
+  case userNameRoot n of
+    -- shouldn't happen: we only show UN anyways...
+    Nothing => pretty (nameRoot n)
+    Just un => if isOpUserName un then parens (pretty un) else pretty un
 
 prettyKindedName : Maybe String -> Doc IdrisDocAnn -> Doc IdrisDocAnn
 prettyKindedName Nothing   nm = nm
@@ -179,7 +181,7 @@ getDocsForName fc n config
     = do syn <- get Syn
          defs <- get Ctxt
          let extra = case nameRoot n of
-                       "-" => [NS numNS (UN "negate")]
+                       "-" => [NS numNS (UN $ Basic "negate")]
                        _ => []
          resolved <- lookupCtxtName n (gamma defs)
          let all@(_ :: _) = extra ++ map fst resolved
@@ -237,7 +239,9 @@ getDocsForName fc n config
 
     getInfixDoc : Name -> Core (List (Doc IdrisDocAnn))
     getInfixDoc n
-        = do let Just (fixity, assoc) = S.lookupName n (infixes !(get Syn))
+        = do let Just (Basic n) = userNameRoot n
+                    | _ => pure []
+             let Just (fixity, assoc) = S.lookup n (infixes !(get Syn))
                     | Nothing => pure []
              pure $ pure $ hsep
                   [ pretty (show fixity)
@@ -248,7 +252,9 @@ getDocsForName fc n config
 
     getPrefixDoc : Name -> Core (List (Doc IdrisDocAnn))
     getPrefixDoc n
-        = do let Just assoc = S.lookupName n (prefixes !(get Syn))
+        = do let Just (Basic n) = userNameRoot n
+                    | _ => pure []
+             let Just assoc = S.lookup n (prefixes !(get Syn))
                     | Nothing => pure []
              pure $ ["prefix operator, level" <++> pretty (show assoc)]
 

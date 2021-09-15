@@ -35,7 +35,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
     = do defs <- get Ctxt
          fnm <- toFullNames nm
          case fnm of
-              NS ns (UN n)
+              NS ns (UN (Basic n))
                  => if ns == reflectionNS
                       then elabCon defs n (map snd args)
                       else failWith defs $ "bad reflection namespace " ++ show ns
@@ -90,7 +90,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
     elabCon defs "Check" [exp, ttimp]
         = do exp' <- evalClosure defs exp
              ttimp' <- evalClosure defs ttimp
-             tidx <- resolveName (UN "[elaborator script]")
+             tidx <- resolveName (UN $ Basic "[elaborator script]")
              e <- newRef EST (initEState tidx env)
              (checktm, _) <- runDelays (const True) $
                      check top (initElabInfo InExpr) nest env !(reify defs ttimp')
@@ -190,7 +190,7 @@ checkRunElab rig elabinfo nest env fc script exp
          defs <- get Ctxt
          unless (isExtension ElabReflection defs) $
              throw (GenericMsg fc "%language ElabReflection not enabled")
-         let n = NS reflectionNS (UN "Elab")
+         let n = NS reflectionNS (UN $ Basic "Elab")
          let ttn = reflectiontt "TT"
          elabtt <- appCon fc defs n [expected]
          (stm, sty) <- runDelays (const True) $

@@ -536,14 +536,14 @@ mutual
 
   export
   findBindAllExpPattern : List (Name, RawImp) -> Maybe RawImp
-  findBindAllExpPattern = lookup (UN "_")
+  findBindAllExpPattern = lookup (UN Underscore)
 
   isImplicitAs : RawImp -> Bool
   isImplicitAs (IAs _ _ UseLeft _ (Implicit _ _)) = True
   isImplicitAs _ = False
 
   isBindAllExpPattern : Name -> Bool
-  isBindAllExpPattern (UN "_") = True
+  isBindAllExpPattern (UN Underscore) = True
   isBindAllExpPattern _ = False
 
   -- Check an application of 'fntm', with type 'fnty' to the given list
@@ -598,7 +598,7 @@ mutual
                    then -- We are done
                         checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
                    else -- Some user defined binding is present while we are out of explicit arguments, that's an error
-                        throw (InvalidArgs fc env (map (const (UN "<auto>")) autoargs ++ map fst namedargs) tm)
+                        throw (InvalidArgs fc env (map (const (UN $ Basic "<auto>")) autoargs ++ map fst namedargs) tm)
   -- Function type is delayed, so force the term and continue
   checkAppWith' rig elabinfo nest env fc tm (NDelayed dfc r ty@(NBind _ _ (Pi _ _ _ _) sc)) argdata expargs autoargs namedargs kr expty
       = checkAppWith' rig elabinfo nest env fc (TForce dfc r tm) ty argdata expargs autoargs namedargs kr expty
@@ -710,7 +710,7 @@ mutual
       = do defs <- get Ctxt
            if all isImplicitAs (autoargs ++ map snd (filter (not . isBindAllExpPattern . fst) namedargs))
               then checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
-              else throw (InvalidArgs fc env (map (const (UN "<auto>")) autoargs ++ map fst namedargs) tm)
+              else throw (InvalidArgs fc env (map (const (UN $ Basic "<auto>")) autoargs ++ map fst namedargs) tm)
 
   ||| Entrypoint for checkAppWith: run the elaboration first and, if we're
   ||| on the LHS and the result is an under-applied constructor then insist

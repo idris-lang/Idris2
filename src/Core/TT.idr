@@ -78,7 +78,7 @@ data Constant
 
 export
 isConstantType : Name -> Maybe Constant
-isConstantType (UN n) = case n of
+isConstantType (UN (Basic n)) = case n of
   "Int"     => Just IntType
   "Int8"    => Just Int8Type
   "Int16"   => Just Int16Type
