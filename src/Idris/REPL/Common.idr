@@ -29,7 +29,10 @@ import System.File
 
 %default covering
 
--- Output informational messages, unless quiet flag is set
+||| Output informational messages, unless suppressed by a flag.
+||| This function should only be called with informational
+||| messages, an unhandled error is an example of what should
+||| *not* end up here.
 export
 iputStrLn : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
@@ -37,38 +40,52 @@ iputStrLn : {auto c : Ref Ctxt Defs} ->
 iputStrLn msg
     = do opts <- get ROpts
          case idemode opts of
-              REPL False => coreLift $ putStrLn !(render msg)
+              REPL InfoLvl  => coreLift $ putStrLn !(render msg)
+              -- output silenced
               REPL _ => pure ()
               IDEMode i _ f =>
                 send f (SExpList [SymbolAtom "write-string",
                                  toSExp !(renderWithoutColor msg), toSExp i])
 
 
+data MsgStatus = MsgStatusError | MsgStatusInfo
+
+doPrint : MsgStatus -> VerbosityLvl -> Bool
+doPrint MsgStatusError InfoLvl  = True
+doPrint MsgStatusError ErrorLvl = True
+doPrint MsgStatusError NoneLvl  = False
+doPrint MsgStatusInfo  InfoLvl  = True
+doPrint MsgStatusInfo  ErrorLvl = False
+doPrint MsgStatusInfo  NoneLvl  = False
+
 printWithStatus : {auto o : Ref ROpts REPLOpts} ->
                   (Doc ann -> Core String) ->
-                  (Doc ann -> Core ())
-printWithStatus render msg
+                  (Doc ann -> MsgStatus -> Core ())
+printWithStatus render msg status
   = do opts <- get ROpts
        case idemode opts of
-         REPL _ => coreLift $ putStrLn !(render msg)
-         _      => pure () -- this function should never be called in IDE Mode
+         REPL verbosityLvl =>
+           case doPrint status verbosityLvl of
+             True   => coreLift $ putStrLn !(render msg)
+             False  => pure ()
+         IDEMode {} => pure () -- this function should never be called in IDE Mode
 
 export
 printResult : {auto o : Ref ROpts REPLOpts} ->
               Doc IdrisAnn -> Core ()
-printResult = printWithStatus render
+printResult x = printWithStatus render x MsgStatusInfo
 
 export
 printDocResult : {auto o : Ref ROpts REPLOpts} ->
                  Doc IdrisDocAnn -> Core ()
-printDocResult = printWithStatus (render styleAnn)
+printDocResult x = printWithStatus (render styleAnn) x MsgStatusInfo
 
 
 -- Return that a protocol request failed somehow
 export
 printError : {auto o : Ref ROpts REPLOpts} ->
              Doc IdrisAnn -> Core ()
-printError msg = printWithStatus render msg
+printError msg = printWithStatus render msg MsgStatusError
 
 DocCreator : Type -> Type
 DocCreator a = a -> Core (Doc IdrisAnn)
@@ -77,13 +94,13 @@ export
 emitProblem : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
             {auto s : Ref Syn SyntaxInfo} ->
-            a -> (DocCreator a) -> (DocCreator a) -> (a -> Maybe FC) -> Core ()
-emitProblem a replDocCreator idemodeDocCreator getFC
+            a -> (DocCreator a) -> (DocCreator a) -> (a -> Maybe FC) -> MsgStatus -> Core ()
+emitProblem a replDocCreator idemodeDocCreator getFC status
     = do opts <- get ROpts
          case idemode opts of
               REPL _ =>
-                  do msg <- replDocCreator a >>= render
-                     coreLift $ putStrLn msg
+                  do msg <- replDocCreator a
+                     printWithStatus render msg status
               IDEMode i _ f =>
                   do msg <- idemodeDocCreator a
                      -- TODO: Display a better message when the error doesn't contain a location
@@ -118,14 +135,14 @@ emitError : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
             {auto s : Ref Syn SyntaxInfo} ->
             Error -> Core ()
-emitError e = emitProblem e display perror getErrorLoc
+emitError e = emitProblem e display perror getErrorLoc MsgStatusError
 
 export
 emitWarning : {auto c : Ref Ctxt Defs} ->
               {auto o : Ref ROpts REPLOpts} ->
               {auto s : Ref Syn SyntaxInfo} ->
               Warning -> Core ()
-emitWarning w = emitProblem w displayWarning pwarning getWarningLoc
+emitWarning w = emitProblem w displayWarning pwarning getWarningLoc MsgStatusInfo
 
 export
 emitWarnings : {auto c : Ref Ctxt Defs} ->
