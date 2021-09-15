@@ -191,7 +191,7 @@ getDocsForName fc n config
          let ns@(_ :: _) = concatMap (\n => lookupName n (defDocstrings syn)) all
              | [] => pure emptyDoc
          docs <- traverse (showDoc config) ns
-         pure $ vcat (punctuate Line docs)
+         pure $ vcat docs
   where
 
     showDoc : Config -> (Name, String) -> Core (Doc IdrisDocAnn)
