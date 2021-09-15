@@ -528,9 +528,15 @@ makeDoc pkg opts =
        Right () <- coreLift $ writeFile (docBase </> "index.html") $ renderDocIndex pkg
          | Left err => fileError (docBase </> "index.html") err
 
-       css <- readDataFile "docs/styles.css"
-       Right () <- coreLift $ writeFile (docBase </> "styles.css") css
-         | Left err => fileError (docBase </> "styles.css") err
+       errs <- for cssFiles $ \ cssFile => do
+          let fn = cssFile.filename ++ ".css"
+          css <- readDataFile ("docs/" ++ fn)
+          Right () <- coreLift $ writeFile (docBase </> fn) css
+            | Left err => fileError (docBase </> fn) err
+          pure (the (List Error) [])
+
+       let [] = concat errs
+           | err => pure err
 
        runScript (postbuild pkg)
        pure []

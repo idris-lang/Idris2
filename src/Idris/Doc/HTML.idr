@@ -115,13 +115,77 @@ docDocToHtml doc =
       renderHtml $ removeNewlinesFromDeclarations dt
 
 htmlPreamble : String -> String -> String -> String
-htmlPreamble title root class = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">"
-  ++ "<title>" ++ htmlEscape title ++ "</title>"
-  ++ "<link rel=\"stylesheet\" href=\"" ++ root ++ "styles.css\"></head>"
-  ++ "<body class=\"" ++ class ++ "\">"
-  ++ "<header><strong>Idris2Doc</strong> : " ++ htmlEscape title
-  ++ "<nav><a href=\"" ++ root ++ "index.html\">Index</a></nav></header>"
-  ++ "<div class=\"container\">"
+htmlPreamble title root class =
+  let title       = htmlEscape title in
+  let cssID       = "preferredStyle" in
+  let cssSelectID = "selectPreferredStyle" in
+  let cssDefault  = "default" in
+  let cssLocalKey = "stylefile" in
+  """
+  <!DOCTYPE html><html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <title>\{title}</title>
+    <link rel="stylesheet" type="text/css" id="\{cssID}" href="\{root}\{cssDefault}.css">
+    <script>
+      /* Updates the stylesheet to use the preferred one.
+         Note that we set the link to root ++ sourceLoc because the config
+         is shared across the whole website, so the root may differ from
+         page to page.
+      */
+      function setStyleSource (sourceLoc) {
+        document.getElementById("\{cssID}").href = "\{root}" + sourceLoc + ".css";
+        document.getElementById("\{cssSelectID}").value = sourceLoc;
+      }
+      /* Initialises the preferred style sheet:
+         1. if there is a stored value then use that
+            otherwise select the default
+         2. set both the css link href & the drop down menu selected option
+      */
+      function initStyleSource () {
+        var preferredStyle = localStorage.getItem("\{cssLocalKey}");
+        if (preferredStyle !== null) {
+          setStyleSource(preferredStyle);
+        } else {
+          setStyleSource("\{cssDefault}");
+        };
+      }
+      function saveStyleSource (preferredStyle) {
+        localStorage.\{cssLocalKey} = preferredStyle;
+      }
+      </script>
+  </head>
+
+  <body class="\{class}">
+  <header>
+    <strong>Idris2Doc</strong> : \{title}
+    <nav><a href="\{root}index.html">Index</a>
+
+    <select id="\{cssSelectID}">
+      \{String.unlines $ flip map cssFiles $ \ css =>
+         #"<option value="\#{css.filename}">\#{css.stylename}</option>"#
+      }
+    </select>
+    </nav>
+
+    <script>
+    /* We start by initialising the style source */
+    initStyleSource();
+
+    /* This listens for changes on the drop down menu and updates the
+       css used for the current page when a selection is made.
+    */
+    document.getElementById("\{cssSelectID}").addEventListener("change", function(){
+      var selected = this.options[this.selectedIndex].value; /* the option chosen */
+      setStyleSource (selected);
+      saveStyleSource (selected);
+    });
+  </script>
+
+  </header>
+  <div class="container">
+  """
 
 htmlFooter : String
 htmlFooter = "</div><footer>Produced by Idris 2 version " ++ (showVersion True version) ++ "</footer></body></html>"
