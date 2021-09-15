@@ -76,9 +76,13 @@ renderHtml (STChar ' ') = pure "&ensp;"
 renderHtml (STChar c) = pure $ cast c
 renderHtml (STText _ text) = pure $ htmlEscape text
 renderHtml (STLine _) = pure "<br>"
-renderHtml (STAnn Declarations rest) = pure $ "<dl class=\"decls\">" <+> !(renderHtml rest) <+> "</dl>"
+renderHtml (STAnn Declarations rest)
+  = pure $ "<dl class=\"decls\">" <+> !(renderHtml rest) <+> "</dl>"
 renderHtml (STAnn (Decl n) rest) = pure $ "<dt id=\"" ++ (htmlEscape $ show n) ++ "\">" <+> !(renderHtml rest) <+> "</dt>"
-renderHtml (STAnn DocStringBody rest) = pure $ "<dd>" <+> !(renderHtml rest) <+> "</dd>"
+renderHtml (STAnn DocStringBody rest)
+  = pure $ "<dd>" <+> !(renderHtml rest) <+> "</dd>"
+renderHtml (STAnn UserDocString rest)
+  = pure $ "<pre>" <+> !(renderHtml rest) <+> "</pre>"
 renderHtml (STAnn (Syntax (DCon mn)) rest) = do
   dcon <- renderHtml rest
   addLink mn $ "<span class=\"name constructor\">" <+> dcon <+> "</span>"
@@ -205,17 +209,22 @@ renderDocIndex pkg = fastConcat $
       moduleLink (mod, filename) =
          "<li><a class=\"code\" href=\"docs/" ++ (show mod) ++ ".html\">" ++ (show mod) ++ "</a></li>"
 
+preserveLayout : String -> String
+preserveLayout d = "<pre>" ++ d ++ "</pre>"
+
 export
 renderModuleDoc : {auto c : Ref Ctxt Defs} ->
                   ModuleIdent ->
                   Maybe String ->
                   Doc IdrisDocAnn ->
                   Core String
-renderModuleDoc mod modDoc allModuleDocs = pure $ fastConcat
+renderModuleDoc mod modDoc allModuleDocs =
+  let mdoc = maybe "" (preserveLayout . htmlEscape) modDoc
+  in pure $ fastConcat
   [ htmlPreamble (show mod) "../" "namespace"
   , "<div id=\"moduleHeader\">"
   , "<h1>", show mod, "</h1>"
-  , maybe "" (\ mDoc => "<p>" ++ mDoc ++ "</p>") modDoc
+  , mdoc
   , "</div>"
   , !(docDocToHtml allModuleDocs)
   , htmlFooter

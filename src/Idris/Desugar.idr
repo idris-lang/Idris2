@@ -91,7 +91,7 @@ extendSyn newsyn
          put Syn (record { infixes $= mergeLeft (infixes newsyn),
                            prefixes $= mergeLeft (prefixes newsyn),
                            ifaces $= merge (ifaces newsyn),
-                           modDocstrings $= merge (modDocstrings newsyn),
+                           modDocstrings $= mergeLeft (modDocstrings newsyn),
                            defDocstrings $= merge (defDocstrings newsyn),
                            bracketholes $= ((bracketholes newsyn) ++) }
                   syn)

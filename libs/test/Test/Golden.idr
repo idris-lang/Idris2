@@ -197,9 +197,7 @@ Result : Type
 Result = Either String String
 
 ||| Run the specified Golden test with the supplied options.
-|||
 ||| See the module documentation for more information.
-|||
 ||| @testPath the directory that contains the test.
 export
 runTest : Options -> (testPath : String) -> IO (Future Result)

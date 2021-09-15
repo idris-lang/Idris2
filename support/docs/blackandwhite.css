@@ -88,6 +88,12 @@ p {
   padding: 0;
 }
 
+pre {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
 .code {
   font-family: "Lucida Console", Monaco, monospace;
   font-size: 10pt;
