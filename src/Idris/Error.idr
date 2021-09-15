@@ -231,8 +231,9 @@ perror (CyclicMeta fc env n tm)
 perror (WhenUnifying _ gam env x y err)
     = do defs <- get Ctxt
          setCtxt gam
-         let res = errorDesc (reflow "When unifying" <++> code !(pshow env x) <++> "and"
-                      <++> code !(pshow env y)) <+> dot <+> line <+> !(perror err)
+         let res = errorDesc (reflow "When unifying:" <+> line
+                   <+> "    " <+> code !(pshow env x) <+> line <+> "and:" <+> line
+                   <+> "    " <+> code !(pshow env y)) <+> line <+> !(perror err)
          put Ctxt defs
          pure res
 perror (ValidCase fc env (Left tm))

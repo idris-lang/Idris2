@@ -1,5 +1,8 @@
 1/1: Building quote (quote.idr)
-Error: While processing right hand side of bad. When unifying Int and TTImp.
+Error: While processing right hand side of bad. When unifying:
+    Int
+and:
+    TTImp
 Mismatch between: Int and TTImp.
 
 quote:25:19--25:22
