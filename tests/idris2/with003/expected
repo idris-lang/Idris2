@@ -23,7 +23,10 @@ Main> Error: Ambiguous elaboration. Possible results:
 
 Main> [] : Vect 0 ?elem
 Main> [] : List ?a
-Main> Error: When unifying Vect 0 ?elem and List ?a.
+Main> Error: When unifying:
+    Vect 0 ?elem
+and:
+    List ?a
 Mismatch between: Vect 0 ?elem and List ?a.
 
 (Interactive):1:40--1:41
