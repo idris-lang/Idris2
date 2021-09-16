@@ -48,9 +48,14 @@ iputStrLn msg
                                  toSExp !(renderWithoutColor msg), toSExp i])
 
 
-data MsgStatus = MsgStatusError | MsgStatusInfo
+||| Sampled against `VerbosityLvl`.
+public export
+data MsgStatus = MsgStatusNone | MsgStatusError | MsgStatusInfo
 
 doPrint : MsgStatus -> VerbosityLvl -> Bool
+doPrint MsgStatusNone  InfoLvl  = True
+doPrint MsgStatusNone  ErrorLvl = True
+doPrint MsgStatusNone  NoneLvl  = True
 doPrint MsgStatusError InfoLvl  = True
 doPrint MsgStatusError ErrorLvl = True
 doPrint MsgStatusError NoneLvl  = False
@@ -70,16 +75,21 @@ printWithStatus render msg status
              False  => pure ()
          IDEMode {} => pure () -- this function should never be called in IDE Mode
 
+||| Print REPL result.
 export
 printResult : {auto o : Ref ROpts REPLOpts} ->
               Doc IdrisAnn -> Core ()
-printResult x = printWithStatus render x MsgStatusInfo
+printResult x = printWithStatus render x MsgStatusNone
+ --                                      ^^^^^^^^^^^^^
+ -- "results" are printed no matter the verbosity level
 
+||| Print REPL result.
 export
 printDocResult : {auto o : Ref ROpts REPLOpts} ->
                  Doc IdrisDocAnn -> Core ()
-printDocResult x = printWithStatus (render styleAnn) x MsgStatusInfo
-
+printDocResult x = printWithStatus (render styleAnn) x MsgStatusNone
+ --                                                    ^^^^^^^^^^^^^
+ -- "results" are printed no matter the verbosity level
 
 -- Return that a protocol request failed somehow
 export
