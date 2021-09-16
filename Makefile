@@ -209,7 +209,11 @@ install-with-src-libs:
 	${MAKE} -C libs/test install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 install-libdocs: libdocs
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/{prelude,base,contrib,network,test}
+	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/prelude
+	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/base
+	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/contrib
+	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/network
+	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/test
 	cp -r libs/prelude/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/prelude
 	cp -r libs/base/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/base
 	cp -r libs/contrib/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/contrib
