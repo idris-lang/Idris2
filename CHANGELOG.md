@@ -55,6 +55,9 @@ filter p (x :: xs) with (p x)
   and reverts to whole program compilation. Incremental compilation is currently
   supported only by the Chez Scheme back end.
   This is currently supported only on Unix-like platforms (not yet Windows)
+  - Note that you must set `IDRIS2_INC_CGS` when building and installing
+    all libraries you plan to link with an incremental build.
+  - Note also that this is experimental and not yet well tested!
 * The type checker now tries a lot harder to avoid reducing expressions where
   it is not needed. This gives a huge performance improvement in programs
   that potentially do a lot of compile time evaluation. However, sometimes
