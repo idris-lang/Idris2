@@ -2231,7 +2231,7 @@ recordWarning w
 export
 getTime : Core Integer
 getTime
-    = do clock <- coreLift (clockTime Process)
+    = do clock <- coreLift (clockTime Monotonic)
          pure (seconds clock * nano + nanoseconds clock)
   where
     nano : Integer
