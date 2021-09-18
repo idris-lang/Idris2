@@ -1,5 +1,5 @@
 package contrib
-version = 0.4.0
+version = 0.5.0
 
 opts = "--ignore-missing-ipkg -Wno-shadowing"
 
