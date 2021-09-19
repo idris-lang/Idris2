@@ -18,7 +18,7 @@ import TTImp.TTImp
 import Data.List
 import Data.String
 
-import Libraries.Data.StringMap
+import Libraries.Data.UserNameMap
 
 %default covering
 
@@ -31,7 +31,7 @@ expandAmbigName : {vars : _} ->
                   RawImp -> Maybe (Glued vars) -> Core RawImp
 expandAmbigName (InLHS _) nest env orig args (IBindVar fc n) exp
     = do est <- get EST
-         if UN n `elem` lhsPatVars est
+         if UN (Basic n) `elem` lhsPatVars est
             then pure $ IMustUnify fc NonLinearVar orig
             else pure $ orig
 expandAmbigName mode nest env orig args (IVar fc x) exp
@@ -68,7 +68,7 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
                                                       (uniqType primNs x args)
                                                       (map (mkAlt primApp est) nalts)
   where
-    lookupUN : Maybe String -> StringMap a -> Maybe a
+    lookupUN : Maybe UserName -> UserNameMap a -> Maybe a
     lookupUN Nothing _ = Nothing
     lookupUN (Just n) sm = lookup n sm
 

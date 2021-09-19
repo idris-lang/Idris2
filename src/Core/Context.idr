@@ -23,6 +23,7 @@ import Data.Maybe
 import Data.Nat
 import Libraries.Data.NameMap
 import Libraries.Data.StringMap
+import Libraries.Data.UserNameMap
 import Libraries.Text.Distance.Levenshtein
 
 import System
@@ -74,7 +75,7 @@ initCtxt : Core Context
 initCtxt = initCtxtS initSize
 
 addPossible : Name -> Int ->
-              StringMap (List PossibleName) -> StringMap (List PossibleName)
+              UserNameMap (List PossibleName) -> UserNameMap (List PossibleName)
 addPossible n i ps
     = case userNameRoot n of
            Nothing => ps
@@ -84,7 +85,7 @@ addPossible n i ps
                    Just nis => insert nr (Direct n i :: nis) ps
 
 addAlias : Name -> Name -> Int ->
-           StringMap (List PossibleName) -> StringMap (List PossibleName)
+           UserNameMap (List PossibleName) -> UserNameMap (List PossibleName)
 addAlias alias full i ps
     = case userNameRoot alias of
            Nothing => ps
@@ -824,12 +825,12 @@ getFieldNames ctxt recNS
 -- Find similar looking names in the context
 export
 getSimilarNames : {auto c : Ref Ctxt Defs} -> Name -> Core (List String)
-getSimilarNames nm = case userNameRoot nm of
+getSimilarNames nm = case show <$> userNameRoot nm of
   Nothing => pure []
   Just str => if length str <= 1 then pure [] else
     let threshold : Nat := max 1 (assert_total (divNat (length str) 3))
         test : Name -> IO (Maybe Nat) := \ nm => do
-            let (Just str') = userNameRoot nm
+            let (Just str') = show <$> userNameRoot nm
                    | _ => pure Nothing
             dist <- Levenshtein.compute str str'
             pure (dist <$ guard (dist <= threshold))
@@ -1188,8 +1189,6 @@ visibleInAny nss n vis = any (\ns => visibleIn ns n vis) nss
 reducibleIn : Namespace -> Name -> Visibility -> Bool
 reducibleIn nspace (NS ns (UN n)) Export = isParentOf ns nspace
 reducibleIn nspace (NS ns (UN n)) Private = isParentOf ns nspace
-reducibleIn nspace (NS ns (RF n)) Export = isParentOf ns nspace
-reducibleIn nspace (NS ns (RF n)) Private = isParentOf ns nspace
 reducibleIn nspace n _ = True
 
 export
@@ -1721,9 +1720,6 @@ inCurrentNS n@(MN _ _)
 inCurrentNS n@(DN _ _)
     = do defs <- get Ctxt
          pure (NS (currentNS defs) n)
-inCurrentNS n@(RF _)
-    = do defs <- get Ctxt
-         pure (NS (currentNS defs) n)
 inCurrentNS n = pure n
 
 export
@@ -2243,7 +2239,7 @@ recordWarning w
 export
 getTime : Core Integer
 getTime
-    = do clock <- coreLift (clockTime Process)
+    = do clock <- coreLift (clockTime Monotonic)
          pure (seconds clock * nano + nanoseconds clock)
   where
     nano : Integer

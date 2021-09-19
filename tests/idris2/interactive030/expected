@@ -5,7 +5,6 @@ Main> Prelude.negate : Neg ty => ty -> ty
   The underlying of unary minus. `-5` desugars to `negate (fromInteger 5)`.
   Totality: total
   Fixity Declaration: prefix operator, level 10
-
 Prelude.- : Neg ty => ty -> ty -> ty
   Totality: total
   Fixity Declarations:

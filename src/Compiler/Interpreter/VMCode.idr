@@ -120,7 +120,7 @@ callPrim stk fn args = case the (Either Object (Vect ar Constant)) $ traverse ge
     getConst o = Left o
 
 NS_UN : Namespace -> String -> Name
-NS_UN ns un = NS ns (UN un)
+NS_UN ns un = NS ns (UN $ Basic un)
 
 argError : Ref State InterpState => Stack -> Vect h Object -> Core a
 argError stk obj = interpError stk $ "Unexpected arguments: " ++ foldMap ((" " ++) . showType) obj

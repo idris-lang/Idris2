@@ -136,8 +136,8 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                               upds (b :: tyenv) sc
              else
                 do let fldNameStr = nameRoot n
-                   rfNameNS <- inCurrentNS (RF fldNameStr)
-                   unNameNS <- inCurrentNS (UN fldNameStr)
+                   rfNameNS <- inCurrentNS (UN $ Field fldNameStr)
+                   unNameNS <- inCurrentNS (UN $ Basic fldNameStr)
 
                    let nestDrop
                           = map (\ (n, (_, ns, _)) => (n, length ns))
@@ -173,9 +173,9 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    let lhs = IApp bfc (IVar bfc rfNameNS)
                                 (if imp == Explicit
                                     then lhs_exp
-                                    else INamedApp bfc lhs_exp (UN fldNameStr)
+                                    else INamedApp bfc lhs_exp (UN $ Basic fldNameStr)
                                              (IBindVar bfc fldNameStr))
-                   let rhs = IVar EmptyFC (UN fldNameStr)
+                   let rhs = IVar EmptyFC (UN $ Basic fldNameStr)
                    log "declare.record.projection" 5 $ "Projection " ++ show lhs ++ " = " ++ show rhs
                    processDecl [] nest env
                        (IDef bfc rfNameNS [PatClause bfc lhs rhs])

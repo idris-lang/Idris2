@@ -547,7 +547,10 @@ getItDecls
     = do opts <- get ROpts
          case evalResultName opts of
             Nothing => pure []
-            Just n => pure [ IClaim replFC top Private [] (MkImpTy replFC EmptyFC (UN "it") (Implicit replFC False)), IDef replFC (UN "it") [PatClause replFC (IVar replFC (UN "it")) (IVar replFC n)]]
+            Just n =>
+              let it = UN $ Basic "it" in
+              pure [ IClaim replFC top Private [] (MkImpTy replFC EmptyFC it (Implicit replFC False))
+                  , IDef replFC it [PatClause replFC (IVar replFC it) (IVar replFC n)]]
 
 prepareExp :
     {auto c : Ref Ctxt Defs} ->
@@ -557,9 +560,9 @@ prepareExp :
     {auto o : Ref ROpts REPLOpts} ->
     PTerm -> Core ClosedTerm
 prepareExp ctm
-    = do ttimp <- desugar AnyExpr [] (PApp replFC (PRef replFC (UN "unsafePerformIO")) ctm)
+    = do ttimp <- desugar AnyExpr [] (PApp replFC (PRef replFC (UN $ Basic "unsafePerformIO")) ctm)
          let ttimpWithIt = ILocal replFC !getItDecls ttimp
-         inidx <- resolveName (UN "[input]")
+         inidx <- resolveName (UN $ Basic "[input]")
          (tm, ty) <- elabTerm inidx InExpr [] (MkNested [])
                                  [] ttimpWithIt Nothing
          tm_erased <- linearCheck replFC linear True [] tm
@@ -608,7 +611,7 @@ execDecls decls = do
     execDecl : PDecl -> Core ()
     execDecl decl = do
       i <- desugarDecl [] decl
-      inidx <- resolveName (UN "[defs]")
+      inidx <- resolveName (UN $ Basic "[defs]")
       _ <- newRef EST (initEStateSub inidx [] SubRefl)
       processLocal [] (MkNested []) [] !getItDecls i
 
@@ -679,13 +682,13 @@ inferAndElab : {auto c : Ref Ctxt Defs} ->
 inferAndElab emode itm
   = do ttimp <- desugar AnyExpr [] itm
        let ttimpWithIt = ILocal replFC !getItDecls ttimp
-       inidx <- resolveName (UN "[input]")
+       inidx <- resolveName (UN $ Basic "[input]")
        -- a TMP HACK to prioritise list syntax for List: hide
        -- foreign argument lists. TODO: once the new FFI is fully
        -- up and running we won't need this. Also, if we add
        -- 'with' disambiguation we can use that instead.
-       catch (do hide replFC (NS primIONS (UN "::"))
-                 hide replFC (NS primIONS (UN "Nil")))
+       catch (do hide replFC (NS primIONS (UN $ Basic "::"))
+                 hide replFC (NS primIONS (UN $ Basic "Nil")))
              (\err => pure ())
        (tm , gty) <- elabTerm inidx emode [] (MkNested [])
                    [] ttimpWithIt Nothing
@@ -749,10 +752,10 @@ process (Eval itm)
                     then do ity <- resugar [] !(norm defs [] ty)
                             pure (Evaluated itm (Just ity))
                     else pure (Evaluated itm Nothing)
-process (Check (PRef fc (UN "it")))
+process (Check (PRef fc (UN (Basic "it"))))
     = do opts <- get ROpts
          case evalResultName opts of
-              Nothing => throw (UndefinedName fc (UN "it"))
+              Nothing => throw (UndefinedName fc (UN $ Basic "it"))
               Just n => process (Check (PRef fc n))
 process (Check (PRef fc fn))
     = do defs <- get Ctxt
@@ -1082,7 +1085,7 @@ mutual
          {auto s : Ref Syn SyntaxInfo} ->
          {auto m : Ref MD Metadata} ->
          {auto o : Ref ROpts REPLOpts} -> REPLResult -> Core ()
-  displayResult (REPLError err) = printError err
+  displayResult (REPLError err) = printResult err
   displayResult (Evaluated x Nothing) = printResult $ prettyTerm x
   displayResult (Evaluated x (Just y)) = printResult (prettyTerm x <++> colon <++> prettyTerm y)
   displayResult (Printed xs) = printResult xs
@@ -1093,9 +1096,9 @@ mutual
   displayResult (ErrorLoadingModule x err) = printResult (reflow "Error loading module" <++> pretty x <+> colon <++> !(perror err))
   displayResult (ErrorLoadingFile x err) = printResult (reflow "Error loading file" <++> pretty x <+> colon <++> pretty (show err))
   displayResult (ErrorsBuildingFile x errs) = printResult (reflow "Error(s) building file" <++> pretty x) -- messages already displayed while building
-  displayResult NoFileLoaded = printError (reflow "No file can be reloaded")
+  displayResult NoFileLoaded = printResult (reflow "No file can be reloaded")
   displayResult (CurrentDirectory dir) = printResult (reflow "Current working directory is" <++> dquotes (pretty dir))
-  displayResult CompilationFailed = printError (reflow "Compilation failed")
+  displayResult CompilationFailed = printResult (reflow "Compilation failed")
   displayResult (Compiled f) = printResult (pretty "File" <++> pretty f <++> pretty "written")
   displayResult (ProofFound x) = printResult (prettyTerm x)
   displayResult (Missed cases) = printResult $ vsep (handleMissing <$> cases)
@@ -1114,7 +1117,7 @@ mutual
   displayResult (RequestedHelp) = printResult (pretty displayHelp)
   displayResult (Edited (DisplayEdit Empty)) = pure ()
   displayResult (Edited (DisplayEdit xs)) = printResult xs
-  displayResult (Edited (EditError x)) = printError x
+  displayResult (Edited (EditError x)) = printResult x
   displayResult (Edited (MadeLemma lit name pty pappstr))
     = printResult $ pretty (relit lit (show name ++ " : " ++ show pty ++ "\n") ++ pappstr)
   displayResult (Edited (MadeWith lit wapp)) = printResult $ pretty $ showSep "\n" (map (relit lit) wapp)

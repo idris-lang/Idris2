@@ -20,10 +20,24 @@ import Libraries.Data.String.Extra
 
 %default total
 
+namespace VerbosityLvl
+  public export
+  data VerbosityLvl =
+   ||| Suppress all message output to `stdout`.
+   NoneLvl |
+   ||| Keep only errors.
+   ErrorLvl |
+   ||| Keep everything.
+   InfoLvl
+
 public export
 data OutputMode
-  = IDEMode Integer File File
-  | REPL Bool -- quiet flag (ignore iputStrLn)
+  = IDEMode Integer File File |
+    ||| Given that we can divide elaboration messages into
+    ||| two categories: informational message and error message,
+    ||| `VerbosityLvl` applies a filter on the output,
+    |||  suppressing writes to `stdout` if the level condition isn't met.
+    REPL VerbosityLvl
 
 public export
 record REPLOpts where

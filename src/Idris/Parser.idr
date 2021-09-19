@@ -219,17 +219,17 @@ mutual
            else fail "| not allowed here"
     where
       underscore : FC -> ArgType
-      underscore fc = NamedArg (UN "_") (PImplicit fc)
+      underscore fc = NamedArg (UN Underscore) (PImplicit fc)
 
       braceArgs : OriginDesc -> IndentInfo -> Rule (List ArgType)
       braceArgs fname indents
           = do start <- bounds (decoratedSymbol fname "{")
                list <- sepBy (decoratedSymbol fname ",")
-                        $ do x <- bounds (decoratedSimpleBinderName fname)
+                        $ do x <- bounds (UN . Basic <$> decoratedSimpleBinderName fname)
                              let fc = boundToFC fname x
-                             option (NamedArg (UN x.val) $ PRef fc (UN x.val))
+                             option (NamedArg x.val $ PRef fc x.val)
                               $ do tm <- decoratedSymbol fname "=" *> typeExpr pdef fname indents
-                                   pure (NamedArg (UN x.val) tm)
+                                   pure (NamedArg x.val tm)
                matchAny <- option [] (if isCons list then
                                          do decoratedSymbol fname ","
                                             x <- bounds (decoratedSymbol fname "_")
@@ -280,14 +280,14 @@ mutual
                        pure $
                          let fc = boundToFC fname (mergeBounds l r)
                              opFC = virtualiseFC fc -- already been highlighted: we don't care
-                         in POp fc opFC (UN "=") l.val r.val
+                         in POp fc opFC (UN $ Basic "=") l.val r.val
                else fail "= not allowed")
              <|>
              (do b <- bounds $ do
                         continue indents
                         op <- bounds iOperator
                         e <- case op.val of
-                               UN "$" => typeExpr q fname indents
+                               UN (Basic "$") => typeExpr q fname indents
                                _ => expr q fname indents
                         pure (op, e)
                  (op, r) <- pure b.val
@@ -298,7 +298,7 @@ mutual
 
   dpairType : OriginDesc -> WithBounds t -> IndentInfo -> Rule PTerm
   dpairType fname start indents
-      = do loc <- bounds (do x <- decoratedSimpleBinderName fname
+      = do loc <- bounds (do x <- UN . Basic <$> decoratedSimpleBinderName fname
                              decoratedSymbol fname ":"
                              ty <- typeExpr pdef fname indents
                              pure (x, ty))
@@ -307,7 +307,7 @@ mutual
            rest <- bounds (nestedDpair fname loc indents <|> typeExpr pdef fname indents)
            pure (PDPair (boundToFC fname (mergeBounds start rest))
                         (boundToFC fname op)
-                        (PRef (boundToFC fname loc) (UN x))
+                        (PRef (boundToFC fname loc) x)
                         ty
                         rest.val)
 
@@ -494,13 +494,13 @@ mutual
 
   simplerExpr : OriginDesc -> IndentInfo -> Rule PTerm
   simplerExpr fname indents
-      = do b <- bounds (do x <- bounds (decoratedSimpleBinderName fname)
+      = do b <- bounds (do x <- bounds (UN . Basic <$> decoratedSimpleBinderName fname)
                            decoratedSymbol fname "@"
                            commit
                            expr <- simpleExpr fname indents
                            pure (x, expr))
            (x, expr) <- pure b.val
-           pure (PAs (boundToFC fname b) (boundToFC fname x) (UN x.val) expr)
+           pure (PAs (boundToFC fname b) (boundToFC fname x) x.val expr)
     <|> atom fname
     <|> record_ fname indents
     <|> singlelineStr pdef fname indents
@@ -586,8 +586,9 @@ mutual
                    Rule (List (RigCount, WithBounds Name, PTerm))
   pibindListName fname indents
        = do rig <- multiplicity fname
-            ns <- sepBy1 (decoratedSymbol fname ",") (bounds binderName)
-            let ns = forget $ map (map UN) ns
+            ns <- sepBy1 (decoratedSymbol fname ",")
+                         (bounds $ UN <$> binderName)
+            let ns = forget ns
             decorateBoundedNames fname Bound ns
             decoratedSymbol fname ":"
             ty <- typeExpr pdef fname indents
@@ -601,8 +602,9 @@ mutual
                                pure (rig, map UN n, ty))
     where
       -- _ gets treated specially here, it means "I don't care about the name"
-      binderName : Rule String
-      binderName = unqualifiedName <|> (symbol "_" $> "_")
+      binderName : Rule UserName
+      binderName = Basic <$> unqualifiedName
+               <|> symbol "_" $> Underscore
 
   pibindList : OriginDesc -> IndentInfo ->
                Rule (List (RigCount, WithBounds (Maybe Name), PTerm))
@@ -665,7 +667,7 @@ mutual
                   ns <- sepBy1 (decoratedSymbol fname ",")
                                (bounds (decoratedSimpleBinderName fname))
                   pure $ map (\n => ( erased {a=RigCount}
-                                    , map (Just . UN) n
+                                    , map (Just . UN . Basic) n
                                     , PImplicit (boundToFC fname n))
                              ) (forget ns)
            mustWorkBecause b.bounds "Cannot return a forall quantifier"
@@ -806,8 +808,8 @@ mutual
            pure (upd path val)
     where
       fieldName : Name -> String
-      fieldName (UN s) = s
-      fieldName (RF s) = s
+      fieldName (UN (Basic s)) = s
+      fieldName (UN (Field s)) = s
       fieldName _ = "_impossible"
 
       -- this allows the dotted syntax .field
@@ -844,14 +846,15 @@ mutual
                 _ => fail "Not a namespaced 'do'"
 
   validPatternVar : Name -> EmptyRule ()
-  validPatternVar (UN n)
-      = unless (lowerFirst n || n == "_") $
+  validPatternVar (UN Underscore) = pure ()
+  validPatternVar (UN (Basic n))
+      = unless (lowerFirst n) $
           fail "Not a pattern variable"
   validPatternVar _ = fail "Not a pattern variable"
 
   doAct : OriginDesc -> IndentInfo -> Rule (List PDo)
   doAct fname indents
-      = do b <- bounds (do n <- bounds (name <|> UN "_" <$ symbol "_")
+      = do b <- bounds (do n <- bounds (name <|> UN Underscore <$ symbol "_")
                            -- If the name doesn't begin with a lower case letter, we should
                            -- treat this as a pattern, so fail
                            validPatternVar n.val
@@ -1027,7 +1030,7 @@ mutual
                             start <- bounds (decoratedSymbol fname "(")
                             wval <- bracketedExpr fname start indents
                             prf <- optional (decoratedKeyword fname "proof"
-                                             *> UN <$> decoratedSimpleBinderName fname)
+                                             *> UN . Basic <$> decoratedSimpleBinderName fname)
                             ws <- mustWork $ nonEmptyBlockAfter col
                                            $ clause (S withArgs) (Just lhs) fname
                             pure (prf, flags, wval, forget ws))
@@ -1343,7 +1346,7 @@ usingDecls fname indents
                                      (do n <- optional
                                                 (do x <- unqualifiedName
                                                     decoratedSymbol fname ":"
-                                                    pure (UN x))
+                                                    pure (UN $ Basic x))
                                          ty <- typeExpr pdef fname indents
                                          pure (n, ty))
                          decoratedSymbol fname ")"
@@ -1579,10 +1582,10 @@ paramDecls fname indents
     oldParamDecls fname indents
         = do decoratedSymbol fname "("
              ps <- sepBy (decoratedSymbol fname ",")
-                         (do x <- decoratedSimpleBinderName fname
+                         (do x <- UN . Basic <$> decoratedSimpleBinderName fname
                              decoratedSymbol fname ":"
                              ty <- typeExpr pdef fname indents
-                             pure (UN x, top, Explicit, ty))
+                             pure (x, top, Explicit, ty))
              decoratedSymbol fname ")"
              pure ps
 

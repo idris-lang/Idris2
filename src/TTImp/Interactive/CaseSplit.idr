@@ -122,7 +122,7 @@ unique : List String -> List String -> Int -> List Name -> String
 unique [] supply suff usedns = unique supply supply (suff + 1) usedns
 unique (str :: next) supply suff usedns
     = let var = mkVarN str suff in
-          if UN var `elem` usedns
+          if UN (Basic var) `elem` usedns
              then unique next supply suff usedns
              else var
   where
@@ -154,7 +154,7 @@ getArgName defs x bound allvars ty
              else lookupName n ts
 
     notBound : String -> Bool
-    notBound x = not $ UN x `elem` bound
+    notBound x = not $ UN (Basic x) `elem` bound
 
     findNames : NF vars -> Core (List String)
     findNames (NBind _ x (Pi _ _ _ _) _)
@@ -166,7 +166,7 @@ getArgName defs x bound allvars ty
     findNames ty = pure (filter notBound defaultNames)
 
     getName : Name -> List String -> List Name -> String
-    getName (UN n) defs used = unique (n :: defs) (n :: defs) 0 used
+    getName (UN (Basic n)) defs used = unique (n :: defs) (n :: defs) 0 used
     getName _ defs used = unique defs defs 0 used
 
 export
@@ -179,7 +179,7 @@ getArgNames defs bound allvars env (NBind fc x (Pi _ _ p ty) sc)
                     Explicit => pure [!(getArgName defs x bound allvars !(evalClosure defs ty))]
                     _ => pure []
          sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
-         pure $ ns ++ !(getArgNames defs bound (map UN ns ++ allvars) env sc')
+         pure $ ns ++ !(getArgNames defs bound (map (UN . Basic) ns ++ allvars) env sc')
 getArgNames defs bound allvars env val = pure []
 
 export

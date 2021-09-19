@@ -105,7 +105,7 @@ mutual
 
 export
 ntCon : FC -> Name -> Int -> Nat -> List (FC, Closure vars) -> NF vars
-ntCon fc (UN "Type") tag Z [] = NType fc
+ntCon fc (UN (Basic "Type")) tag Z [] = NType fc
 ntCon fc n tag Z [] = case isConstantType n of
   Just c => NPrimVal fc c
   Nothing => NTCon fc n tag Z []

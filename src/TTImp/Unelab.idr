@@ -309,7 +309,7 @@ mutual
            let nm = if used 0 sctm || isNoSugar umode
                        then Just x
                        else if rig /= top || isDefImp p
-                               then Just (UN "_")
+                               then Just (UN Underscore)
                                else Nothing
            pure (IPi fc rig p' nm ty' sc, gType fc)
     where
