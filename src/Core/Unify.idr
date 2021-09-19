@@ -1516,7 +1516,8 @@ retryGuess mode smode (hid, (loc, hname))
                                  LastChance => throw err
                                  _ => if recoverable err
                                          then pure False -- Postpone again
-                                         else throw err
+                                         else throw (CantSolveGoal loc (gamma defs)
+                                                        [] (type def) (Just err))
                Guess tm envb [constr] =>
                  do let umode = case smode of
                                      MatchArgs => inMatch
