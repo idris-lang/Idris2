@@ -1,0 +1,5 @@
+1/3: Building A (A.idr)
+2/3: Building B (B.idr)
+3/3: Building C (C.idr)
+[38;5;9;1mError:[0m [1mWhile processing right hand side of [38;5;5;1mfoo[0;1m[0m. [1mUndefined name [38;5;5;1mA.AFoo[0;1m.[0m 
+
