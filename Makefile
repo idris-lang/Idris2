@@ -14,7 +14,7 @@ IDRIS2_CG ?= chez
 
 MAJOR=0
 MINOR=5
-PATCH=0
+PATCH=1
 
 GIT_SHA1=
 ifeq ($(shell git status >/dev/null 2>&1; echo $$?), 0)
