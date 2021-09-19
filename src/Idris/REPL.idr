@@ -958,7 +958,10 @@ process (TmpScheme itm)
          (tm `WithType` ty) <- inferAndElab InExpr itm
          qtm <- logTimeWhen !getEvalTiming "Evaluation" $
                    snormaliseAll [] tm
-         itm <- logTimeWhen False "resugar" $ resugar [] qtm
+         qtm' <- logTimeWhen !getEvalTiming "Evaluation 2" $
+                   (do nf <- snfAll [] tm
+                       quote [] nf)
+         itm <- logTimeWhen False "resugar" $ resugar [] qtm'
          pure (Evaluated itm Nothing)
 
 processCatch : {auto c : Ref Ctxt Defs} ->

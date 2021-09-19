@@ -181,6 +181,10 @@ compilePiInfo svs (DefImplicit t)
 
 compileStk svs stk (Local fc isLet idx p)
     = pure $ unload (Var (getSchVar p svs)) stk
+-- We are assuming that the bound name is a valid scheme symbol. We should
+-- only see this when inventing temporary names during quoting
+compileStk svs stk (Ref fc Bound name)
+    = pure $ unload (Symbol (show name)) stk
 compileStk svs stk (Ref fc (DataCon t a) name)
     = if length stk == a -- inline it if it's fully applied
          then pure $ Vector (cast t)

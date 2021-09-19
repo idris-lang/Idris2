@@ -83,6 +83,7 @@ modules =
     Core.SchemeEval.Builtins,
     Core.SchemeEval.Compile,
     Core.SchemeEval.Evaluate,
+    Core.SchemeEval.Quote,
     Core.SchemeEval.ToScheme,
 
     IdrisPaths,

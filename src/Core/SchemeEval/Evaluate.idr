@@ -23,7 +23,7 @@ data SObj : List Name -> Type where
 mutual
   public export
   data SHead : List Name -> Type where
-       SLocal : (idx : Nat) -> (0 p : IsVar name idx vars) -> SHead vars
+       SLocal : (idx : Nat) -> (0 p : IsVar nm idx vars) -> SHead vars
        SRef : NameType -> Name -> SHead vars
        SMeta : Name -> Int -> List (Core (SNF vars)) -> SHead vars
 
@@ -392,18 +392,20 @@ mutual
                then []
                else unsafeVectorRef obj i :: readVector len (i + 1) obj
 
+-- Quote a scheme value directly back to a Term, without making an SNF
+-- in between. This is what we want if we're just looking for a normal
+-- form immediately (so, evaluating under binders)
 export
-quote : {auto c : Ref Ctxt Defs} ->
-        SObj vars -> Core (Term vars)
-quote (MkSObj val schEnv)
+quoteObj : {auto c : Ref Ctxt Defs} ->
+           SObj vars -> Core (Term vars)
+quoteObj (MkSObj val schEnv)
     = do i <- newRef Sym 0
          quote' {outer = []} schEnv val
 
 mutual
-  snfVector : Ref Sym Integer =>
-              SchVars (outer ++ vars) ->
+  snfVector : SchVars vars ->
               Integer -> List ForeignObj ->
-              Core (SNF (outer ++ vars))
+              Core (SNF vars)
   snfVector svs (-2) [_, fname_in, args_in] -- Blocked application
       = do let Just fname = fromScheme (decodeObj fname_in)
                     | _ => invalidS
@@ -589,10 +591,9 @@ mutual
            else invalidS
   snfVector _ _ _ = invalidS
 
-  snfPiInfo : Ref Sym Integer =>
-              SchVars (outer ++ vars) ->
+  snfPiInfo : SchVars vars ->
               ForeignObj ->
-              Core (PiInfo (SNF (outer ++ vars)))
+              Core (PiInfo (SNF vars))
   snfPiInfo svs obj
       = if isInteger obj
            then case unsafeGetInteger obj of
@@ -605,15 +606,14 @@ mutual
                            pure (DefImplicit t')
            else pure Explicit
 
-  snfBinder : Ref Sym Integer =>
-              SchVars (outer ++ vars) ->
+  snfBinder : SchVars vars ->
               (forall ty . FC -> RigCount -> PiInfo ty -> ty -> Binder ty) ->
               ForeignObj -> -- body of binder, represented as a function
               RigCount ->
-              PiInfo (SNF (outer ++ vars)) ->
-              SNF (outer ++ vars) -> -- decoded type
+              PiInfo (SNF vars) ->
+              SNF vars -> -- decoded type
               Name -> -- bound name
-              Core (SNF (outer ++ vars))
+              Core (SNF vars)
   snfBinder svs binder proc_in r pi ty name
       = do let Procedure proc = decodeObj proc_in
                     | _ => invalidS
@@ -622,14 +622,13 @@ mutual
                                   let sc = unsafeApply proc arg
                                   snf' svs sc))
 
-  snfPLet : Ref Sym Integer =>
-            SchVars (outer ++ vars) ->
+  snfPLet : SchVars vars ->
             ForeignObj -> -- body of binder, represented as a function
             RigCount ->
-            SNF (outer ++ vars) -> -- decoded type
-            SNF (outer ++ vars) -> -- decoded value
+            SNF vars -> -- decoded type
+            SNF vars -> -- decoded value
             Name -> -- bound name
-            Core (SNF (outer ++ vars))
+            Core (SNF vars)
   snfPLet svs proc_in r val ty name
       = do let Procedure proc = decodeObj proc_in
                     | _ => invalidS
@@ -638,9 +637,8 @@ mutual
                                   let sc = unsafeApply proc arg
                                   snf' svs sc))
 
-  snf' : Ref Sym Integer =>
-         SchVars (outer ++ vars) -> ForeignObj ->
-         Core (SNF (outer ++ vars))
+  snf' : SchVars vars -> ForeignObj ->
+         Core (SNF vars)
   snf' svs obj
       = if isVector obj
            then snfVector svs (unsafeGetInteger (unsafeVectorRef obj 0))
@@ -671,8 +669,7 @@ mutual
                then []
                else unsafeVectorRef obj i :: readVector len (i + 1) obj
 
-snf : {auto c : Ref Ctxt Defs} ->
-      SObj vars -> Core (SNF vars)
-snf (MkSObj val schEnv)
-    = do i <- newRef Sym 0
-         snf' {outer = []} schEnv val
+export
+toSNF : {auto c : Ref Ctxt Defs} ->
+        SObj vars -> Core (SNF vars)
+toSNF (MkSObj val schEnv) = snf' schEnv val
