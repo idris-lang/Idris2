@@ -1750,17 +1750,23 @@ parseMode
           pure EvalTC
    <|> do exactIdent "normalise"
           pure NormaliseAll
+   <|> do exactIdent "default"
+          pure NormaliseAll
+   <|> do exactIdent "normal"
+          pure NormaliseAll
    <|> do exactIdent "normalize" -- oh alright then
           pure NormaliseAll
    <|> do exactIdent "execute"
           pure Execute
    <|> do exactIdent "exec"
           pure Execute
+   <|> do exactIdent "scheme"
+          pure Scheme
 
 setVarOption : Rule REPLOpt
 setVarOption
     = do exactIdent "eval"
-         mode <- parseMode
+         mode <- option NormaliseAll parseMode
          pure (EvalMode mode)
   <|> do exactIdent "editor"
          e <- unqualifiedName
@@ -2110,7 +2116,6 @@ parserCommandsForHelp =
   , declsArgCmd (ParseKeywordCmd "let") NewDefn "Define a new value"
   , stringArgCmd (ParseREPLCmd ["lp", "loadpackage"]) ImportPackage "Load all modules of the package"
   , exprArgCmd (ParseREPLCmd ["fs", "fsearch"]) FuzzyTypeSearch "Search for global definitions by sketching the names distribution of the wanted type(s)."
-  , exprArgCmd (ParseREPLCmd ["scheme"]) TmpScheme "Scheme Scaffolding"
   ]
 
 export

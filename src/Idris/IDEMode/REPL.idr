@@ -312,6 +312,7 @@ SExpable REPLEval where
   toSExp EvalTC = SymbolAtom "typecheck"
   toSExp NormaliseAll = SymbolAtom "normalise"
   toSExp Execute = SymbolAtom "execute"
+  toSExp Scheme = SymbolAtom "scheme"
 
 SExpable REPLOpt where
   toSExp (ShowImplicits impl) = SExpList [ SymbolAtom "show-implicits", toSExp impl ]

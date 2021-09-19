@@ -735,6 +735,14 @@ process (Eval itm)
          let emode = evalMode opts
          case emode of
             Execute => do ignore (execExp itm); pure (Executed itm)
+            Scheme =>
+              do defs <- get Ctxt
+                 (tm `WithType` ty) <- inferAndElab InExpr itm
+                 qtm <- logTimeWhen !getEvalTiming "Evaluation" $
+                           (do nf <- snfAll [] tm
+                               quote [] nf)
+                 itm <- logTimeWhen False "resugar" $ resugar [] qtm
+                 pure (Evaluated itm Nothing)
             _ =>
               do (ntm `WithType` ty) <- logTimeWhen !getEvalTiming "Evaluation" $
                                            inferAndNormalize emode itm
@@ -953,16 +961,6 @@ process (ImportPackage package) = do
     depthFirst (\x => map (toFilePath x ::) . force) tree (pure [])
 
 process (FuzzyTypeSearch expr) = fuzzySearch expr
-process (TmpScheme itm)
-    = do defs <- get Ctxt
-         (tm `WithType` ty) <- inferAndElab InExpr itm
-         qtm <- logTimeWhen !getEvalTiming "Evaluation" $
-                   snormaliseAll [] tm
-         qtm' <- logTimeWhen !getEvalTiming "Evaluation 2" $
-                   (do nf <- snfAll [] tm
-                       quote [] nf)
-         itm <- logTimeWhen False "resugar" $ resugar [] qtm'
-         pure (Evaluated itm Nothing)
 
 processCatch : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
@@ -1053,6 +1051,7 @@ mutual
       prompt EvalTC = "[tc] "
       prompt NormaliseAll = ""
       prompt Execute = "[exec] "
+      prompt Scheme = "[scheme] "
 
   export
   handleMissing' : MissedResult -> String
