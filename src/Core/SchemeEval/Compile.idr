@@ -2,10 +2,7 @@ module Core.SchemeEval.Compile
 
 {- TODO:
 
-- Make sure 'quote' covers everything
-- Add an evaluator mode rather than using :scheme
 - Make a decent set of test cases
-- Go back to resolved names for quicker readback
 - Option to keep vs discard FCs for faster quoting where we don't need FC
 
 Advanced TODO (possibly not worth it...):
@@ -38,8 +35,8 @@ schString s = concatMap okchar (unpack s)
                   else "C-" ++ show (cast {to=Int} c)
 
 schVarUN : UserName -> String
-schVarUN (Basic n) = n
-schVarUN (Field n) = "rf--" ++ n
+schVarUN (Basic n) = schString n
+schVarUN (Field n) = "rf--" ++ schString n
 schVarUN Underscore = "_US_"
 
 schVarName : Name -> String

@@ -200,7 +200,6 @@ export
 evalSchemeObj : SchemeObj Write -> IO (Maybe ForeignObj)
 evalSchemeObj obj
     = do let str = toString obj
---          putStrLn str
          evalSchemeStr str
   where
     showSep : String -> List String -> String
