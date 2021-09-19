@@ -12,8 +12,37 @@ import Libraries.Data.NameMap
 import Libraries.Utils.Scheme
 
 public export
-data SVal : List Name -> Type where
-     MkSVal : ForeignObj -> SchVars vars -> SVal vars
+data SObj : List Name -> Type where
+     MkSObj : ForeignObj -> SchVars vars -> SObj vars
+
+-- Values, which we read off evaluated scheme objects.
+-- Unfortunately we can't quite get away with using Core.Value.NF because
+-- of the different representation of closures. Also, we're call by value
+-- when going via scheme, so this structure is a little bit simpler (not
+-- recording a LocalEnv for example).
+mutual
+  public export
+  data SHead : List Name -> Type where
+       SLocal : (idx : Nat) -> (0 p : IsVar name idx vars) -> SHead vars
+       SRef : NameType -> Name -> SHead vars
+       SMeta : Name -> Int -> List (Core (SNF vars)) -> SHead vars
+
+  public export
+  data SNF : List Name -> Type where
+       SBind    : FC -> (x : Name) -> Binder (SNF vars) ->
+                  (SObj vars -> Core (SNF vars)) -> SNF vars
+       SApp     : FC -> SHead vars -> List (Core (SNF vars)) -> SNF vars
+       SDCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
+                  List (Core (SNF vars)) -> SNF vars
+       STCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
+                  List (Core (SNF vars)) -> SNF vars
+       SDelayed : FC -> LazyReason -> SNF vars -> SNF vars
+       SDelay   : FC -> LazyReason -> Core (SNF vars) -> Core (SNF vars) ->
+                  SNF vars
+       SForce   : FC -> LazyReason -> SNF vars -> SNF vars
+       SPrimVal : FC -> Constant -> SNF vars
+       SErased  : FC -> (imp : Bool) -> SNF vars
+       SType    : FC -> SNF vars
 
 getAllNames : {auto c : Ref Ctxt Defs} ->
               NameMap () -> List Name -> Core (NameMap ())
@@ -31,7 +60,7 @@ getAllNames done (x :: xs)
 -- back to the internal (slow!) evaluator if initialisation fails.
 export
 seval : {auto c : Ref Ctxt Defs} ->
-        SchemeMode -> Env Term vars -> Term vars -> Core (SVal vars)
+        SchemeMode -> Env Term vars -> Term vars -> Core (SObj vars)
 seval mode env tm
     = do -- Check the evaluator is initialised. This will fail if the backend
          -- doesn't support scheme evaluation.
@@ -52,21 +81,19 @@ seval mode env tm
          stm <- compile schEnv !(toFullNames tm)
          Just res <- coreLift $ evalSchemeObj (bind stm)
               | Nothing => throw (InternalError "Compiling expression failed")
-         pure (MkSVal res schEnv)
+         pure (MkSObj res schEnv)
   where
     mkEnv : forall vars . Ref Sym Integer =>
             Env Term vars ->
             (SchemeObj Write -> SchemeObj Write) ->
             Core (SchemeObj Write -> SchemeObj Write, SchVars vars)
     mkEnv [] k = pure (k, [])
---     mkEnv (Let v :: es) k
---         = do i <- nextName
---              (bind, vs) <- mkEnv es k
---              v' <- toScheme vs v
---              let n = "let-var-" ++ show i
---              pure (\x => "(let [(" ++ n ++ " " ++ v' ++ ")] " ++
---                                bind x ++ ")",
---                                Bound n :: vs)
+    mkEnv (Let fc c val ty :: es) k
+        = do i <- nextName
+             (bind, vs) <- mkEnv es k
+             val' <- compile vs val
+             let n = "let-var-" ++ show i
+             pure (\x => Let n val' (bind x), Bound n :: vs)
     mkEnv (_ :: es) k
         = do i <- nextName
              (bind, vs) <- mkEnv es k
@@ -74,6 +101,9 @@ seval mode env tm
 
 invalid : Core (Term vs)
 invalid = pure (Erased emptyFC False)
+
+invalidS : Core (SNF vs)
+invalidS = pure (SErased emptyFC False)
 
 getArgList : ForeignObj -> List ForeignObj
 getArgList obj
@@ -171,7 +201,7 @@ mutual
            pure (TType fc)
   quoteVector svs (-8) [_, proc_in, rig_in, pi_in, ty_in, name_in] -- Lambda
       = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN "x"
+                           Nothing => UN (Basic "x")
                            Just n' => n'
            let rig = case fromScheme (decodeObj rig_in) of
                           Nothing => top
@@ -181,7 +211,7 @@ mutual
            quoteBinder svs Lam proc_in rig pi ty name
   quoteVector svs (-3) [_, proc_in, rig_in, pi_in, ty_in, name_in] -- Pi
       = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN "x"
+                           Nothing => UN (Basic "x")
                            Just n' => n'
            let rig = case fromScheme (decodeObj rig_in) of
                           Nothing => top
@@ -191,7 +221,7 @@ mutual
            quoteBinder svs Pi proc_in rig pi ty name
   quoteVector svs (-12) [_, proc_in, rig_in, pi_in, ty_in, name_in] -- PVar
       = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN "x"
+                           Nothing => UN (Basic "x")
                            Just n' => n'
            let rig = case fromScheme (decodeObj rig_in) of
                           Nothing => top
@@ -201,7 +231,7 @@ mutual
            quoteBinder svs PVar proc_in rig pi ty name
   quoteVector svs (-13) [_, proc_in, rig_in, ty_in, name_in] -- PVTy
       = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN "x"
+                           Nothing => UN (Basic "x")
                            Just n' => n'
            let rig = case fromScheme (decodeObj rig_in) of
                           Nothing => top
@@ -210,7 +240,7 @@ mutual
            quoteBinder svs (\fc, r, p, t => PVTy fc r t) proc_in rig Explicit ty name
   quoteVector svs (-14) [_, proc_in, rig_in, val_in, ty_in, name_in] -- PLet
       = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN "x"
+                           Nothing => UN (Basic "x")
                            Just n' => n'
            let rig = case fromScheme (decodeObj rig_in) of
                           Nothing => top
@@ -339,7 +369,7 @@ mutual
         else if isProcedure obj then quoteBinder svs Lam obj top
                                               Explicit
                                               (Erased emptyFC False)
-                                              (UN "x")
+                                              (UN (Basic "x"))
         else if isSymbol obj then pure $ findName svs (unsafeReadSymbol obj)
         else if isFloat obj then pure $ PrimVal emptyFC (Db (unsafeGetFloat obj))
         else if isInteger obj then pure $ PrimVal emptyFC (I (cast (unsafeGetInteger obj)))
@@ -348,12 +378,12 @@ mutual
         else invalid
     where
       findName : forall vars . SchVars vars -> String -> Term vars
-      findName [] n = Ref emptyFC Func (UN n)
+      findName [] n = Ref emptyFC Func (UN (Basic n))
       findName (x :: xs) n
           = if getName x == n
                then Local emptyFC Nothing _ First
                else let Local fc loc _ p = findName xs n
-                           | _ => Ref emptyFC Func (UN n) in
+                           | _ => Ref emptyFC Func (UN (Basic n)) in
                         Local fc loc _ (Later p)
 
       readVector : Integer -> Integer -> ForeignObj -> List ForeignObj
@@ -364,7 +394,285 @@ mutual
 
 export
 quote : {auto c : Ref Ctxt Defs} ->
-        SVal vars -> Core (Term vars)
-quote (MkSVal val schEnv)
+        SObj vars -> Core (Term vars)
+quote (MkSObj val schEnv)
     = do i <- newRef Sym 0
-         logTimeWhen False "Quote" $ quote' {outer = []} schEnv val
+         quote' {outer = []} schEnv val
+
+mutual
+  snfVector : Ref Sym Integer =>
+              SchVars (outer ++ vars) ->
+              Integer -> List ForeignObj ->
+              Core (SNF (outer ++ vars))
+  snfVector svs (-2) [_, fname_in, args_in] -- Blocked application
+      = do let Just fname = fromScheme (decodeObj fname_in)
+                    | _ => invalidS
+           let args = map (snf' svs) (getArgList args_in)
+           pure (SApp emptyFC (SRef Func fname) args)
+  snfVector svs (-10) [_, fn_arity, args_in] -- Block meta app
+      = do let Just (fname, arity_in) = the (Maybe (Name, Integer)) $
+                                            fromScheme (decodeObj fn_arity)
+                    | _ => invalidS
+           let arity : Nat = cast arity_in
+           let args = map (snf' svs) (getArgList args_in)
+           pure (SApp emptyFC (SMeta fname 0 (take arity args))
+                               (drop arity args))
+  snfVector svs (-11) [_, loc_in, args_in] -- Blocked local var application
+      = do SApp fc loc args <- snf' svs loc_in
+                | _ => invalidS
+           let args' = map (snf' svs) (getArgList args_in)
+           pure (SApp fc loc (args ++ args'))
+  snfVector svs (-1) (_ :: tag_in :: strtag :: cname_in :: fc_in :: args_in) -- TyCon
+      = do let Just cname = fromScheme (decodeObj cname_in)
+                    | Nothing => invalidS
+           let Just tag = the (Maybe Integer) $ fromScheme (decodeObj tag_in)
+                    | Nothing => invalidS
+           let fc = case fromScheme (decodeObj fc_in) of
+                         Just fc => fc
+                         _ => emptyFC
+           let args = map (snf' svs) args_in
+           pure (STCon fc cname (cast tag) (length args) args)
+  snfVector svs (-15) [_, r_in, ty_in] -- Delayed
+      = do ty <- snf' svs ty_in
+           let r = case fromScheme (decodeObj r_in) of
+                        Just r => r
+                        _ => LUnknown
+           pure (SDelayed emptyFC r ty)
+  snfVector svs (-4) [_, r_in, fc_in, ty_in, tm_in] -- Delay
+      = do let Procedure tmproc = decodeObj tm_in
+                | _ => invalidS
+           let Procedure typroc = decodeObj ty_in
+                | _ => invalidS
+           -- Block further reduction under tm_in
+           let tm = do Just _ <- coreLift $ evalSchemeStr "(ct-blockAll #t)"
+                            | Nothing => invalidS
+                       res <- snf' svs (unsafeForce tmproc)
+                       Just _ <- coreLift $ evalSchemeStr "(ct-blockAll #f)"
+                            | Nothing => invalidS
+                       pure res
+           let ty = snf' svs (unsafeForce typroc)
+           let fc = case fromScheme (decodeObj fc_in) of
+                         Just fc => fc
+                         _ => emptyFC
+           let r = case fromScheme (decodeObj r_in) of
+                        Just r => r
+                        _ => LUnknown
+           pure (SDelay fc r ty tm)
+  snfVector svs (-5) [_, r_in, fc_in, tm_in] -- Force
+      = do -- The thing we were trying to force was stuck. Corresponding to
+           -- Core.Normalise, reduce it anyway here (so no ct-blockAll like above)
+           tm <- snf' svs tm_in
+           let fc = case fromScheme (decodeObj fc_in) of
+                         Just fc => fc
+                         _ => emptyFC
+           let r = case fromScheme (decodeObj r_in) of
+                        Just r => r
+                        _ => LUnknown
+           pure (SForce fc r tm)
+  snfVector svs (-6) [_, fc_in, imp_in] -- Erased
+      = do let fc = case fromScheme (decodeObj fc_in) of
+                         Just fc => fc
+                         _ => emptyFC
+           let imp = case fromScheme (decodeObj imp_in) of
+                          Just imp => imp
+                          _ => False
+           pure (SErased fc imp)
+  snfVector svs (-7) [_, fc_in] -- Type
+      = do let fc = case fromScheme (decodeObj fc_in) of
+                         Just fc => fc
+                         _ => emptyFC
+           pure (SType fc)
+  snfVector svs (-8) [_, proc_in, rig_in, pi_in, ty_in, name_in] -- Lambda
+      = do let name = case fromScheme (decodeObj name_in) of
+                           Nothing => UN (Basic "x")
+                           Just n' => n'
+           let rig = case fromScheme (decodeObj rig_in) of
+                          Nothing => top
+                          Just r => r
+           ty <- snf' svs ty_in
+           pi <- snfPiInfo svs pi_in
+           snfBinder svs Lam proc_in rig pi ty name
+  snfVector svs (-3) [_, proc_in, rig_in, pi_in, ty_in, name_in] -- Pi
+      = do let name = case fromScheme (decodeObj name_in) of
+                           Nothing => UN (Basic "x")
+                           Just n' => n'
+           let rig = case fromScheme (decodeObj rig_in) of
+                          Nothing => top
+                          Just r => r
+           ty <- snf' svs ty_in
+           pi <- snfPiInfo svs pi_in
+           snfBinder svs Pi proc_in rig pi ty name
+  snfVector svs (-12) [_, proc_in, rig_in, pi_in, ty_in, name_in] -- PVar
+      = do let name = case fromScheme (decodeObj name_in) of
+                           Nothing => UN (Basic "x")
+                           Just n' => n'
+           let rig = case fromScheme (decodeObj rig_in) of
+                          Nothing => top
+                          Just r => r
+           ty <- snf' svs ty_in
+           pi <- snfPiInfo svs pi_in
+           snfBinder svs PVar proc_in rig pi ty name
+  snfVector svs (-13) [_, proc_in, rig_in, ty_in, name_in] -- PVTy
+      = do let name = case fromScheme (decodeObj name_in) of
+                           Nothing => UN (Basic "x")
+                           Just n' => n'
+           let rig = case fromScheme (decodeObj rig_in) of
+                          Nothing => top
+                          Just r => r
+           ty <- snf' svs ty_in
+           snfBinder svs (\fc, r, p, t => PVTy fc r t) proc_in rig Explicit ty name
+  snfVector svs (-14) [_, proc_in, rig_in, val_in, ty_in, name_in] -- PLet
+      = do let name = case fromScheme (decodeObj name_in) of
+                           Nothing => UN (Basic "x")
+                           Just n' => n'
+           let rig = case fromScheme (decodeObj rig_in) of
+                          Nothing => top
+                          Just r => r
+           ty <- snf' svs ty_in
+           val <- snf' svs val_in
+           snfPLet svs proc_in rig val ty name
+  snfVector svs (-9) [_, blocked, _] -- Blocked top level lambda
+      = snf' svs blocked
+
+  -- constants here
+  snfVector svs (-100) [_, x]
+      = do let Just x' = fromScheme (decodeObj x)
+                 | Nothing => invalidS
+           pure $ SPrimVal emptyFC (I x')
+  snfVector svs (-101) [_, x]
+      = do let Just x' = fromScheme (decodeObj x)
+                 | Nothing => invalidS
+           pure $ SPrimVal emptyFC (I8 x')
+  snfVector svs (-102) [_, x]
+      = do let Just x' = fromScheme (decodeObj x)
+                 | Nothing => invalidS
+           pure $ SPrimVal emptyFC (I16 x')
+  snfVector svs (-103) [_, x]
+      = do let Just x' = fromScheme (decodeObj x)
+                 | Nothing => invalidS
+           pure $ SPrimVal emptyFC (I32 x')
+  snfVector svs (-104) [_, x]
+      = do let Just x' = fromScheme (decodeObj x)
+                 | Nothing => invalidS
+           pure $ SPrimVal emptyFC (I64 x')
+  snfVector svs (-105) [_, x]
+      = do let Just x' = fromScheme (decodeObj x)
+                 | Nothing => invalidS
+           pure $ SPrimVal emptyFC (BI x')
+  snfVector svs (-106) [_, x]
+      = do let Just x' = fromScheme (decodeObj x)
+                 | Nothing => invalidS
+           pure $ SPrimVal emptyFC (B8 x')
+  snfVector svs (-107) [_, x]
+      = do let Just x' = fromScheme (decodeObj x)
+                 | Nothing => invalidS
+           pure $ SPrimVal emptyFC (B16 x')
+  snfVector svs (-108) [_, x]
+      = do let Just x' = fromScheme (decodeObj x)
+                 | Nothing => invalidS
+           pure $ SPrimVal emptyFC (B32 x')
+  snfVector svs (-109) [_, x]
+      = do let Just x' = fromScheme (decodeObj x)
+                 | Nothing => invalidS
+           pure $ SPrimVal emptyFC (B64 x')
+
+  snfVector svs tag (_ :: cname_in :: fc_in :: args_in) -- DataCon
+      = if tag >= 0
+           then do 
+             let Just cname = fromScheme (decodeObj cname_in)
+                    | Nothing => invalidS
+             let fc = case fromScheme (decodeObj fc_in) of
+                           Just fc => fc
+                           _ => emptyFC
+             let args = map (snf' svs) args_in
+             pure (SDCon fc cname (cast tag) (length args) args)
+           else invalidS
+  snfVector _ _ _ = invalidS
+
+  snfPiInfo : Ref Sym Integer =>
+              SchVars (outer ++ vars) ->
+              ForeignObj ->
+              Core (PiInfo (SNF (outer ++ vars)))
+  snfPiInfo svs obj
+      = if isInteger obj
+           then case unsafeGetInteger obj of
+                     0 => pure Implicit
+                     1 => pure Explicit
+                     2 => pure AutoImplicit
+                     _ => pure Explicit
+           else if isBox obj
+                   then do t' <- snf' svs (unsafeUnbox obj)
+                           pure (DefImplicit t')
+           else pure Explicit
+
+  snfBinder : Ref Sym Integer =>
+              SchVars (outer ++ vars) ->
+              (forall ty . FC -> RigCount -> PiInfo ty -> ty -> Binder ty) ->
+              ForeignObj -> -- body of binder, represented as a function
+              RigCount ->
+              PiInfo (SNF (outer ++ vars)) ->
+              SNF (outer ++ vars) -> -- decoded type
+              Name -> -- bound name
+              Core (SNF (outer ++ vars))
+  snfBinder svs binder proc_in r pi ty name
+      = do let Procedure proc = decodeObj proc_in
+                    | _ => invalidS
+           pure (SBind emptyFC name (binder emptyFC r pi ty)
+                       (\tm => do let MkSObj arg _ = tm
+                                  let sc = unsafeApply proc arg
+                                  snf' svs sc))
+
+  snfPLet : Ref Sym Integer =>
+            SchVars (outer ++ vars) ->
+            ForeignObj -> -- body of binder, represented as a function
+            RigCount ->
+            SNF (outer ++ vars) -> -- decoded type
+            SNF (outer ++ vars) -> -- decoded value
+            Name -> -- bound name
+            Core (SNF (outer ++ vars))
+  snfPLet svs proc_in r val ty name
+      = do let Procedure proc = decodeObj proc_in
+                    | _ => invalidS
+           pure (SBind emptyFC name (PLet emptyFC r val ty)
+                       (\tm => do let MkSObj arg _ = tm
+                                  let sc = unsafeApply proc arg
+                                  snf' svs sc))
+
+  snf' : Ref Sym Integer =>
+         SchVars (outer ++ vars) -> ForeignObj ->
+         Core (SNF (outer ++ vars))
+  snf' svs obj
+      = if isVector obj
+           then snfVector svs (unsafeGetInteger (unsafeVectorRef obj 0))
+                              (unsafeVectorToList obj)
+           else if isProcedure obj then snfBinder svs Lam obj top
+                                                 Explicit
+                                                 (SErased emptyFC False)
+                                                 (UN (Basic "x"))
+           else if isSymbol obj then pure $ findName svs (unsafeReadSymbol obj)
+           else if isFloat obj then pure $ SPrimVal emptyFC (Db (unsafeGetFloat obj))
+           else if isInteger obj then pure $ SPrimVal emptyFC (I (cast (unsafeGetInteger obj)))
+           else if isString obj then pure $ SPrimVal emptyFC (Str (unsafeGetString obj))
+           else if isChar obj then pure $ SPrimVal emptyFC (Ch (unsafeGetChar obj))
+           else invalidS
+    where
+      findName : forall vars . SchVars vars -> String -> SNF vars
+      findName [] n = SApp emptyFC (SRef Func (UN (Basic n))) []
+      findName (x :: xs) n
+          = if getName x == n
+               then SApp emptyFC (SLocal _ First) []
+               else let SApp fc (SLocal _ p) args = findName xs n
+                           | _ => SApp emptyFC (SRef Func (UN (Basic n))) [] in
+                        SApp fc (SLocal _ (Later p)) []
+
+      readVector : Integer -> Integer -> ForeignObj -> List ForeignObj
+      readVector len i obj
+          = if len == i
+               then []
+               else unsafeVectorRef obj i :: readVector len (i + 1) obj
+
+snf : {auto c : Ref Ctxt Defs} ->
+      SObj vars -> Core (SNF vars)
+snf (MkSObj val schEnv)
+    = do i <- newRef Sym 0
+         snf' {outer = []} schEnv val

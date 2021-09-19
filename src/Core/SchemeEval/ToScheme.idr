@@ -9,13 +9,23 @@ Scheme Namespace where
   fromScheme x = Just $ unsafeFoldNamespace !(fromScheme x)
 
 export
+Scheme UserName where
+  toScheme (Basic str) = toScheme str
+  toScheme (Field str) = Vector 5 [toScheme str]
+  toScheme Underscore = Vector 9 []
+
+  fromScheme (Vector 5 [x]) = pure $ Field !(fromScheme x)
+  fromScheme (Vector 9 []) = pure Underscore
+  fromScheme (StringVal x) = pure (Basic x)
+  fromScheme _ = Nothing
+
+export
 Scheme Name where
   toScheme (NS x y) = Vector 0 [toScheme x, toScheme y]
   toScheme (UN x) = toScheme x
   toScheme (MN x y) = Vector 2 [toScheme x, toScheme y]
   toScheme (PV x y) = Vector 3 [toScheme x, toScheme y]
   toScheme (DN x y) = Vector 4 [toScheme x, toScheme y]
-  toScheme (RF x) = Vector 5 [toScheme x]
   toScheme (Nested x y) = Vector 6 [toScheme x, toScheme y]
   toScheme (CaseBlock x y) = Vector 7 [toScheme x, toScheme y]
   toScheme (WithBlock x y) = Vector 8 [toScheme x, toScheme y]
@@ -30,17 +40,19 @@ Scheme Name where
   fromScheme (Vector 4 [x, y])
       = pure $ DN !(fromScheme x) !(fromScheme y)
   fromScheme (Vector 5 [x, y])
-      = pure $ RF !(fromScheme x)
+      = pure $ UN (Field !(fromScheme x))
   fromScheme (Vector 6 [x, y])
       = pure $ Nested !(fromScheme x) !(fromScheme y)
   fromScheme (Vector 7 [x, y])
       = pure $ CaseBlock !(fromScheme x) !(fromScheme y)
   fromScheme (Vector 8 [x, y])
       = pure $ WithBlock !(fromScheme x) !(fromScheme y)
+  fromScheme (Vector 9 [])
+      = pure $ UN Underscore
   fromScheme (IntegerVal x)
       = pure $ Resolved (cast x)
   fromScheme (StringVal x)
-      = pure $ UN x
+      = pure $ UN (Basic x)
   fromScheme _ = Nothing
 
 export

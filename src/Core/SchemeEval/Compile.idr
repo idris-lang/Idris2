@@ -5,15 +5,12 @@ module Core.SchemeEval.Compile
 - Make sure 'quote' covers everything
 - Add an evaluator mode rather than using :scheme
 - Make a decent set of test cases
-- Deal with non-reducing 'export' names
-- Deal with evaluation options: reduce all vs just reduce as in typechecker
 - Go back to resolved names for quicker readback
-- Write a conversion check
-
 - Option to keep vs discard FCs for faster quoting where we don't need FC
 
-Advanced TODO:
-- Extend unification to use SVal; include SVal in Glued
+Advanced TODO (possibly not worth it...):
+- Write a conversion check
+- Extend unification to use SObj; include SObj in Glued
 
 -}
 
@@ -40,14 +37,19 @@ schString s = concatMap okchar (unpack s)
                   then cast c
                   else "C-" ++ show (cast {to=Int} c)
 
+schVarUN : UserName -> String
+schVarUN (Basic n) = n
+schVarUN (Field n) = "rf--" ++ n
+schVarUN Underscore = "_US_"
+
 schVarName : Name -> String
-schVarName (NS ns (UN n)) = schString (showNSWithSep "-" ns) ++ "-" ++ schString n
+schVarName (NS ns (UN n))
+   = schString (showNSWithSep "-" ns) ++ "-" ++ schVarUN n
 schVarName (NS ns n) = schString (showNSWithSep "-" ns) ++ "-" ++ schVarName n
-schVarName (UN n) = "u--" ++ schString n
+schVarName (UN n) = "u--" ++ schVarUN n
 schVarName (MN n i) = schString n ++ "-" ++ show i
 schVarName (PV n d) = "pat--" ++ schVarName n
 schVarName (DN _ n) = schVarName n
-schVarName (RF n) = "rf--" ++ schString n
 schVarName (Nested (i, x) n) = "n--" ++ show i ++ "-" ++ show x ++ "-" ++ schVarName n
 schVarName (CaseBlock x y) = "case--" ++ schString x ++ "-" ++ show y
 schVarName (WithBlock x y) = "with--" ++ schString x ++ "-" ++ show y
@@ -158,7 +160,7 @@ compileConstant fc (Db x) = FloatVal x
 compileConstant fc t
     = Vector (-1) [IntegerVal (cast (constTag t)),
                    StringVal (show t),
-                   toScheme (UN (show t)),
+                   toScheme (UN (Basic (show t))),
                    toScheme fc]
 
 compileStk : Ref Sym Integer =>
@@ -389,7 +391,7 @@ compileCase blk svs (Case idx p scTy xs)
 
         makeAlt : String -> CaseAlt vars ->
                   Core (Maybe (SchemeObj Write, SchemeObj Write))
-        makeAlt var (ConCase (UN "->") t [_, _] sc)
+        makeAlt var (ConCase (UN (Basic "->")) t [_, _] sc)
             = pure Nothing -- do this in 'addPiMatch' below, since the
                            -- representation is different
         makeAlt var (ConCase n t args sc)
@@ -402,7 +404,7 @@ compileCase blk svs (Case idx p scTy xs)
         -- t is a function type, and conveniently the scope of a pi
         -- binding is represented as a function. Lucky us! So we just need
         -- to extract it then evaluate the scope
-        addPiMatch var (ConCase (UN "->") _ [s, t] sc :: _) def
+        addPiMatch var (ConCase (UN (Basic "->")) _ [s, t] sc :: _) def
             = do sn <- getArgName
                  tn <- getArgName
                  let svs' = Bound (schVarName sn) ::
