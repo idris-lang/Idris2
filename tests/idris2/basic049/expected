@@ -55,5 +55,5 @@ Fld:72:26--72:29
 Main> Main.myDog : OrdinaryDog
 Main> Main.mySuperDog : SuperDog
 Main> Main.other : Other String
-Main> 1 hole: Main.r2_shouldNotTypecheck1
+Main> 1 hole: Main.r2_shouldNotTypecheck1 : ?_ [no locals in scope]
 Main> Bye for now!

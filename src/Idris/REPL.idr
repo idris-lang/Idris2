@@ -1093,10 +1093,13 @@ mutual
   displayResult (Missed cases) = printResult $ vsep (handleMissing <$> cases)
   displayResult (CheckedTotal xs) = printResult (vsep (map (\(fn, tot) => pretty fn <++> pretty "is" <++> pretty tot) xs))
   displayResult (FoundHoles []) = printResult (reflow "No holes")
-  displayResult (FoundHoles [x]) = printResult (reflow "1 hole" <+> colon <++> pretty x.name)
+  displayResult (FoundHoles [x]) = do
+     let hole = pretty x.name <++> colon <++> prettyTerm x.type
+     printResult (reflow "1 hole" <+> colon <++> hole)
   displayResult (FoundHoles xs) = do
-    let holes = concatWith (surround (pretty ", ")) (pretty . name <$> xs)
-    printResult (pretty (length xs) <++> pretty "holes" <+> colon <++> holes)
+    let header = pretty (length xs) <++> pretty "holes" <+> colon
+    let holes  = xs <&> \ x => pretty x.name <++> colon <++> prettyTerm x.type
+    printResult $ vcat (header :: map (indent 2) holes)
   displayResult (LogLevelSet Nothing) = printResult (reflow "Logging turned off")
   displayResult (LogLevelSet (Just k)) = printResult (reflow "Set log level to" <++> pretty k)
   displayResult (ConsoleWidthSet (Just k)) = printResult (reflow "Set consolewidth to" <++> pretty k)
