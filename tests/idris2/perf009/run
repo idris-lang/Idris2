@@ -1,3 +1,3 @@
 rm -rf build
 
-$1 --check C.idr
+$1 --no-color --console-width 0 --check C.idr
