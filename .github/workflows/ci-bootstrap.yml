@@ -2,6 +2,7 @@
 # Unlike the main yml file this uses the LTS version of chezscheme,
 # not the hirsute one. The main purpose is to make sure that
 # `make bootstrap` does not rely on `__collect_safe`.
+#
 # Note that we are *not* running on ubuntu-latest so this needs manual
 # upgrades if we want to jump on a newer github actions environment.
 ######################################################################
