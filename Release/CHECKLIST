@@ -5,6 +5,7 @@
 [ ] Change version number in flake.nix
 [ ] Change version number in test pkg010 (TODO: make this step unnecessary!)
 [ ] Update bootstrap chez and racket
+[ ] Remove __collect_safe from generated chez (to avoid need for chez >9.5)
 [ ] Tag on github with version number (in the form vX.Y.Z)
 [ ] make libdocs and upload to idris-lang.org
 [ ] Run release script

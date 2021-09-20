@@ -30,7 +30,6 @@ import Idris.Resugar
 import Idris.REPL
 import Idris.Syntax
 import Idris.Version
-import Idris.Pretty
 import Idris.Doc.String
 
 import Idris.IDEMode.Commands
@@ -385,7 +384,17 @@ displayIDEResult outf i  (REPL $ CheckedTotal xs)
   $ StringAtom $ showSep "\n"
   $ map (\ (fn, tot) => (show fn ++ " is " ++ show tot)) xs
 displayIDEResult outf i  (REPL $ FoundHoles holes)
-  = printIDEResult outf i $ SExpList $ map sexpHole holes
+  = printIDEResultWithHighlight outf i =<< case holes of
+      []  => pure (StringAtom "No holes", [])
+      [x] => do let hole = pretty x.name <++> colon <++> prettyTerm x.type
+                hlght <- renderWithDecorations syntaxToProperties
+                           $ "1 hole" <+> colon <++> hole
+                pure $ mapFst StringAtom hlght
+      xs => do let holes = xs <&> \ x => pretty x.name <++> colon <++> prettyTerm x.type
+               let header = pretty (length xs) <++> pretty "holes" <+> colon
+               hlght <- renderWithDecorations syntaxToProperties
+                           $ vcat (header :: map (indent 2) holes)
+               pure $ mapFst StringAtom hlght
 displayIDEResult outf i  (REPL $ LogLevelSet k)
   = printIDEResult outf i
   $ StringAtom $ "Set loglevel to " ++ show k

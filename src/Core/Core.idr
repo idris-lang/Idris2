@@ -119,7 +119,8 @@ data Error : Type where
      BadUnboundImplicit : {vars : _} ->
                           FC -> Env Term vars -> Name -> Term vars -> Error
      CantSolveGoal : {vars : _} ->
-                     FC -> Context -> Env Term vars -> Term vars -> Error
+                     FC -> Context -> Env Term vars -> Term vars ->
+                     Maybe Error -> Error
      DeterminingArg : {vars : _} ->
                       FC -> Name -> Int -> Env Term vars -> Term vars -> Error
      UnsolvedHoles : List (FC, Name) -> Error
@@ -282,7 +283,7 @@ Show Error where
   show (BadUnboundImplicit fc env n ty)
       = show fc ++ ":Can't bind name " ++ nameRoot n ++
                    " with type " ++ show ty
-  show (CantSolveGoal fc gam env g)
+  show (CantSolveGoal fc gam env g cause)
       = show fc ++ ":Can't solve goal " ++ assert_total (show g)
   show (DeterminingArg fc n i env g)
       = show fc ++ ":Can't solve goal " ++ assert_total (show g) ++
@@ -401,7 +402,7 @@ getErrorLoc (IncompatibleFieldUpdate loc _) = Just loc
 getErrorLoc (InvalidArgs loc _ _ _) = Just loc
 getErrorLoc (TryWithImplicits loc _ _) = Just loc
 getErrorLoc (BadUnboundImplicit loc _ _ _) = Just loc
-getErrorLoc (CantSolveGoal loc _ _ _) = Just loc
+getErrorLoc (CantSolveGoal loc _ _ _ _) = Just loc
 getErrorLoc (DeterminingArg loc _ _ _ _) = Just loc
 getErrorLoc (UnsolvedHoles ((loc, _) :: _)) = Just loc
 getErrorLoc (UnsolvedHoles []) = Nothing

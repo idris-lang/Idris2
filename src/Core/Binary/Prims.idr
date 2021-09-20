@@ -408,8 +408,9 @@ modTime fname
        pure t
 
 export
-hashFileWith : String -> String -> Core String
-hashFileWith sha256sum fileName
+hashFileWith : Maybe String -> String -> Core (Maybe String)
+hashFileWith Nothing _ = pure Nothing
+hashFileWith (Just sha256sum) fileName
   = do Right fileHandle <- coreLift $ popen
             (sha256sum ++ " \"" ++ osEscape fileName ++ "\"") Read
          | Left _ => err
@@ -420,9 +421,9 @@ hashFileWith sha256sum fileName
        coreLift $ pclose fileHandle
        let w@(_::_) = words hashLine
          | Nil => err
-       pure $ last w
+       pure $ Just $ last w
   where
-    err : Core String
+    err : Core a
     err = coreFail $ InternalError ("Can't get " ++ sha256sum ++ " of " ++ fileName)
     osEscape : String -> String
     osEscape = if isWindows

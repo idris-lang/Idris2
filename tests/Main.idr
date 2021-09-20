@@ -86,7 +86,8 @@ idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
        "interactive021", "interactive022", "interactive023", "interactive024",
        "interactive025", "interactive026", "interactive027", "interactive028",
        "interactive029", "interactive030", "interactive031", "interactive032",
-       "interactive033", "interactive034", "interactive035", "interactive036"]
+       "interactive033", "interactive034", "interactive035", "interactive036",
+       "interactive037"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool "Interface" [] Nothing
@@ -120,7 +121,7 @@ idrisTestsPerformance = MkTestPool "Performance" [] Nothing
        -- Performance: things which have been slow in the past, or which
        -- pose interesting challenges for the elaborator
       ["perf001", "perf002", "perf003", "perf004", "perf005",
-       "perf007", "perf008"]
+       "perf007", "perf008", "perf009"]
 
 idrisTestsRegression : TestPool
 idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
