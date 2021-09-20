@@ -6,5 +6,3 @@ Test> Bye for now!
 2/3: Building Mult (Mult.idr)
 Test> S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S Z)))))))))))))))))
 Test> Bye for now!
-Test> S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S Z)))))))))))))))))
-Test> Bye for now!
