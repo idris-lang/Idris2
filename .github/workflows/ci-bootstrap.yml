@@ -11,16 +11,10 @@ name: Bootstrap
 
 on:
   push:
-    branches:
-      - '*'
-    tags:
-      - '*'
     paths:
       - 'bootstrap/idris2_app/idris2.ss'
       - '.github/workflows/ci-bootstrap.yml'
   pull_request:
-    branches:
-      - main
     paths:
       - 'bootstrap/idris2_app/idris2.ss'
       - '.github/workflows/ci-bootstrap.yml'
