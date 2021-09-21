@@ -45,6 +45,7 @@ modules =
     Core.Binary.Prims,
     Core.Case.CaseBuilder,
     Core.Case.CaseTree,
+    Core.Case.Util,
     Core.CompileExpr,
     Core.Context,
     Core.Context.Context,
