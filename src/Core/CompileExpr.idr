@@ -265,7 +265,7 @@ elem n [] = False
 elem n (x :: xs) = n == x || elem n xs
 
 tryNext : Name -> Name
-tryNext (UN n) = MN n 0
+tryNext (UN n) = MN (displayUserName n) 0
 tryNext (MN n i) = MN n (1 + i)
 tryNext n = MN (nameRoot n) 0
 

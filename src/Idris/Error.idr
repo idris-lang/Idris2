@@ -231,8 +231,9 @@ perror (CyclicMeta fc env n tm)
 perror (WhenUnifying _ gam env x y err)
     = do defs <- get Ctxt
          setCtxt gam
-         let res = errorDesc (reflow "When unifying" <++> code !(pshow env x) <++> "and"
-                      <++> code !(pshow env y)) <+> dot <+> line <+> !(perror err)
+         let res = errorDesc (reflow "When unifying:" <+> line
+                   <+> "    " <+> code !(pshow env x) <+> line <+> "and:" <+> line
+                   <+> "    " <+> code !(pshow env y)) <+> line <+> !(perror err)
          put Ctxt defs
          pure res
 perror (ValidCase fc env (Left tm))
@@ -375,14 +376,18 @@ perror (TryWithImplicits fc env imps)
 perror (BadUnboundImplicit fc env n ty)
     = pure $ errorDesc (reflow "Can't bind name" <++> code (pretty (nameRoot n)) <++> reflow "with type" <++> code !(pshow env ty)
         <+> colon) <+> line <+> !(ploc fc) <+> line <+> reflow "Suggestion: try an explicit bind."
-perror (CantSolveGoal fc gam env g)
+perror (CantSolveGoal fc gam env g reason)
     = do defs <- get Ctxt
          setCtxt gam
          let (_ ** (env', g')) = dropEnv env g
          let res = errorDesc (reflow "Can't find an implementation for" <++> code !(pshow env' g')
                      <+> dot) <+> line <+> !(ploc fc)
          put Ctxt defs
-         pure res
+         case reason of
+              Nothing => pure res
+              Just r => do rdesc <- perror r
+                           pure (res <+> line <+>
+                                 (reflow "Possible cause:" <++> rdesc))
   where
     -- For display, we don't want to see the full top level type; just the
     -- return type

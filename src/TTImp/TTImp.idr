@@ -500,7 +500,7 @@ findIBinds (INamedApp _ fn _ av)
     = findIBinds fn ++ findIBinds av
 findIBinds (IWithApp fc fn av)
     = findIBinds fn ++ findIBinds av
-findIBinds (IAs fc _ _ (UN n) pat)
+findIBinds (IAs fc _ _ (UN (Basic n)) pat)
     = n :: findIBinds pat
 findIBinds (IAs fc _ _ n pat)
     = findIBinds pat
@@ -522,7 +522,7 @@ findIBinds tm = []
 
 export
 findImplicits : RawImp' nm -> List String
-findImplicits (IPi fc rig p (Just (UN mn)) aty retty)
+findImplicits (IPi fc rig p (Just (UN (Basic mn))) aty retty)
     = mn :: findImplicits aty ++ findImplicits retty
 findImplicits (IPi fc rig p mn aty retty)
     = findImplicits aty ++ findImplicits retty
@@ -563,7 +563,7 @@ implicitsAs : {auto c : Ref Ctxt Defs} ->
 implicitsAs n defs ns tm
   = do let implicits = findIBinds tm
        log "declare.def.lhs.implicits" 30 $ "Found implicits: " ++ show implicits
-       setAs (map Just (ns ++ map UN implicits)) [] tm
+       setAs (map Just (ns ++ map (UN . Basic) implicits)) [] tm
   where
     -- Takes the function application expression which is the lhs of a clause
     -- and decomposes it into the underlying function symbol and the variables
@@ -635,7 +635,7 @@ implicitsAs n defs ns tm
             = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
                  case es of
                    -- Explicits were skipped, therefore all explicits are given anyway
-                   Just (UN "_") :: _ => findImps ns es [] body
+                   Just (UN Underscore) :: _ => findImps ns es [] body
                    -- Explicits weren't skipped, so we need to check
                    _ => case updateNs x es of
                           Nothing => pure [] -- explicit wasn't given
@@ -659,9 +659,9 @@ implicitsAs n defs ns tm
 
         impAs : FC -> List (Name, PiInfo RawImp) -> RawImp -> RawImp
         impAs loc' [] tm = tm
-        impAs loc' ((UN n, AutoImplicit) :: ns) tm
+        impAs loc' ((nm@(UN (Basic n)), AutoImplicit) :: ns) tm
             = impAs loc' ns $
-                 INamedApp loc' tm (UN n) (IBindVar loc' n)
+                 INamedApp loc' tm nm (IBindVar loc' n)
 
         impAs loc' ((n, Implicit) :: ns) tm
             = impAs loc' ns $
@@ -694,7 +694,6 @@ definedInBlock ns decls =
            UN _ => NS ns n
            MN _ _ => NS ns n
            DN _ _ => NS ns n
-           RF _ => NS ns n
            _ => n
 
     defName : Namespace -> ImpDecl -> List Name
@@ -711,7 +710,7 @@ definedInBlock ns decls =
         fldns' = maybe ns (\ f => ns <.> mkNamespace f) fldns
 
         toRF : Name -> Name
-        toRF (UN n) = RF n
+        toRF (UN (Basic n)) = UN (Field n)
         toRF n = n
 
         fnsUN : List Name

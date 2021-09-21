@@ -385,8 +385,8 @@ mutual
                 | Nothing => undefinedName fc fn_in
            let fn = fullname gdef
            log "totality.termination.sizechange" 10 $ "Looking under " ++ show !(toFullNames fn)
-           aSmaller <- resolved (gamma defs) (NS builtinNS (UN "assert_smaller"))
-           cond [(fn == NS builtinNS (UN "assert_total"), pure [])
+           aSmaller <- resolved (gamma defs) (NS builtinNS (UN $ Basic "assert_smaller"))
+           cond [(fn == NS builtinNS (UN $ Basic "assert_total"), pure [])
                 ,(caseFn fn,
                     do scs1 <- traverse (findSC defs env g pats) args
                        mps  <- getCasePats defs fn pats args

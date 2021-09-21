@@ -88,6 +88,12 @@ p {
   padding: 0;
 }
 
+pre {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
 .code {
   font-family: "Lucida Console", Monaco, monospace;
   font-size: 10pt;
@@ -170,28 +176,32 @@ dd.fixity {
   font-weight: bold;
 }
 
+/* The following colours are taken from the conservative 8 color palette given
+   in http://mkweb.bcgsc.ca/colorblind/palettes.mhtml
+*/
+
 a.function {
-  color: #00ba00;
+  color: rgb(53, 155, 115);
 }
 
 .function {
-  color: #007c21;
+  color: rgb(53, 155, 115);
 }
 
 a.constructor {
-  color: #f00;
+  color: rgb(213, 94, 0);
 }
 
 .constructor {
-  color: #bf3030;
+  color: rgb(213, 94, 0);
 }
 
 a.type {
-  color: #00f;
+  color: rgb(61, 183, 233);
 }
 
 .type {
-  color: #050599;
+  color: rgb(61, 183, 233);
 }
 
 .keyword {
@@ -199,7 +209,7 @@ a.type {
 }
 
 .boundvar {
-  color: #bf30bf; /* Too much colour makes it hard to differ the rest of the colours */
+  color: rgb(247, 72, 165); /* Too much colour makes it hard to differ the rest of the colours */
   color: inherit;
 }
 

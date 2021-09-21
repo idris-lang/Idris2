@@ -35,6 +35,6 @@ TrailingLam:3:9--3:22
  3 | f k = f \n => k (S n)
              ^^^^^^^^^^^^^
 
-Main> 1 hole: Main.a
+Main> 1 hole: Main.a : Nat -> Nat
 Main> 
 Bye for now!

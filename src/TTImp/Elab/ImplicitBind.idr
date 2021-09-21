@@ -401,7 +401,7 @@ checkBindVar : {vars : _} ->
                {auto e : Ref EST (EState vars)} ->
                RigCount -> ElabInfo ->
                NestedNames vars -> Env Term vars ->
-               FC -> String -> -- string is base of the pattern name
+               FC -> UserName -> -- username is base of the pattern name
                Maybe (Glued vars) ->
                Core (Term vars, Glued vars)
 checkBindVar rig elabinfo nest env fc str topexp

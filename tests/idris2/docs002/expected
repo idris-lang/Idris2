@@ -7,6 +7,8 @@ a : SimpleRec -> Int
 b : SimpleRec -> String
 hello : Int -> Int
 world : Nat -> Nat
+.a : SimpleRec -> Int
+.b : SimpleRec -> String
 Doc> Doc.NS.NestedNS.Foo : Type
   A type of Foo
   
@@ -17,6 +19,6 @@ Doc> record Doc.SimpleRec : Type
   Totality: total
   Constructor: MkSimpleRec : Int -> String -> SimpleRec
   Projections:
-    a : SimpleRec -> Int
-    b : SimpleRec -> String
+    .a : SimpleRec -> Int
+    .b : SimpleRec -> String
 Doc> Bye for now!

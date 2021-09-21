@@ -42,6 +42,7 @@ data IdrisDocAnn
   | Declarations
   | Decl Name
   | DocStringBody
+  | UserDocString
   | Syntax IdrisSyntax
 
 export
@@ -56,6 +57,7 @@ styleAnn Header        = underline
 styleAnn Declarations  = []
 styleAnn (Decl{})      = []
 styleAnn DocStringBody = []
+styleAnn UserDocString = []
 styleAnn (Syntax syn)  = syntaxAnn syn
 
 export
@@ -120,8 +122,10 @@ prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
 
 prettyName : Name -> Doc IdrisDocAnn
 prettyName n =
-      let root = nameRoot n in
-      if isOpName n then parens (pretty root) else pretty root
+  case userNameRoot n of
+    -- shouldn't happen: we only show UN anyways...
+    Nothing => pretty (nameRoot n)
+    Just un => if isOpUserName un then parens (pretty un) else pretty un
 
 prettyKindedName : Maybe String -> Doc IdrisDocAnn -> Doc IdrisDocAnn
 prettyKindedName Nothing   nm = nm
@@ -179,15 +183,15 @@ getDocsForName fc n config
     = do syn <- get Syn
          defs <- get Ctxt
          let extra = case nameRoot n of
-                       "-" => [NS numNS (UN "negate")]
+                       "-" => [NS numNS (UN $ Basic "negate")]
                        _ => []
          resolved <- lookupCtxtName n (gamma defs)
          let all@(_ :: _) = extra ++ map fst resolved
              | _ => undefinedName fc n
          let ns@(_ :: _) = concatMap (\n => lookupName n (defDocstrings syn)) all
-             | [] => pure $ pretty ("No documentation for " ++ show n)
+             | [] => pure emptyDoc
          docs <- traverse (showDoc config) ns
-         pure $ vcat (punctuate Line docs)
+         pure $ vcat docs
   where
 
     showDoc : Config -> (Name, String) -> Core (Doc IdrisDocAnn)
@@ -216,7 +220,9 @@ getDocsForName fc n config
                [(n, "")] => pure conWithTypeDoc
                [(n, str)] => pure $ vcat
                     [ conWithTypeDoc
-                    , annotate DocStringBody $ vcat $ reflowDoc str
+                    , annotate DocStringBody
+                    $ annotate UserDocString
+                    $ vcat $ reflowDoc str
                     ]
                _ => pure conWithTypeDoc
 
@@ -237,7 +243,9 @@ getDocsForName fc n config
 
     getInfixDoc : Name -> Core (List (Doc IdrisDocAnn))
     getInfixDoc n
-        = do let Just (fixity, assoc) = S.lookupName n (infixes !(get Syn))
+        = do let Just (Basic n) = userNameRoot n
+                    | _ => pure []
+             let Just (fixity, assoc) = S.lookup n (infixes !(get Syn))
                     | Nothing => pure []
              pure $ pure $ hsep
                   [ pretty (show fixity)
@@ -248,7 +256,9 @@ getDocsForName fc n config
 
     getPrefixDoc : Name -> Core (List (Doc IdrisDocAnn))
     getPrefixDoc n
-        = do let Just assoc = S.lookupName n (prefixes !(get Syn))
+        = do let Just (Basic n) = userNameRoot n
+                    | _ => pure []
+             let Just assoc = S.lookup n (prefixes !(get Syn))
                     | Nothing => pure []
              pure $ ["prefix operator, level" <++> pretty (show assoc)]
 
@@ -302,7 +312,9 @@ getDocsForName fc n config
                 [(_, "")] => pure projDecl
                 [(_, str)] =>
                   pure $ vcat [ projDecl
-                              , annotate DocStringBody $ vcat (reflowDoc str)
+                              , annotate DocStringBody
+                              $ annotate UserDocString
+                              $ vcat $ reflowDoc str
                               ]
                 _ => pure projDecl
 
@@ -374,10 +386,17 @@ getDocsForName fc n config
              let docDecl = annotate (Decl n) (hsep [nm, colon, prettyTerm ty])
 
              -- Finally add the user-provided docstring
-             let docText = reflowDoc str
+             let docText = let docs = reflowDoc str in
+                           annotate UserDocString (vcat docs)
+                           <$ guard (not $ null docs)
              fixes <- getFixityDoc n
-             let docBody = annotate DocStringBody $ vcat $ docText ++ (map (indent 2) (extra ++ fixes))
-             pure (vcat [docDecl, docBody])
+             let docBody =
+                  let docs = maybe id (::) docText
+                           $ map (indent 2) (extra ++ fixes)
+                  in annotate DocStringBody
+                     (concatWith (\l, r => l <+> hardline <+> r) docs)
+                     <$ guard (not (null docs))
+             pure (vcat (docDecl :: docBody))
 
 export
 getDocsForPTerm : {auto o : Ref ROpts REPLOpts} ->

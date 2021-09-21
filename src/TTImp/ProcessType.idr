@@ -91,7 +91,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
                 then collectDDeps sc'
                 else do aty <- quote empty [] nty
                         -- Get names depended on by nty
-                        let deps = keys (getRefs (UN "_") aty)
+                        let deps = keys (getRefs (UN Underscore) aty)
                         rest <- collectDDeps sc'
                         pure (rest ++ deps)
     collectDDeps _ = pure []
@@ -184,7 +184,7 @@ getFnString : {auto c : Ref Ctxt Defs} ->
               RawImp -> Core String
 getFnString (IPrimVal _ (Str st)) = pure st
 getFnString tm
-    = do inidx <- resolveName (UN "[foreign]")
+    = do inidx <- resolveName (UN $ Basic "[foreign]")
          let fc = getFC tm
          let gstr = gnf [] (PrimVal fc StringType)
          etm <- checkTerm inidx InExpr [] (MkNested []) [] tm gstr

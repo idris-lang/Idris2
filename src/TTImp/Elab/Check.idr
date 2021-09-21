@@ -20,7 +20,7 @@ import Data.Either
 import Libraries.Data.IntMap
 import Data.List
 import Libraries.Data.NameMap
-import Libraries.Data.StringMap
+import Libraries.Data.UserNameMap
 
 %default covering
 
@@ -143,7 +143,7 @@ record EState (vars : List Name) where
   linearUsed : List (Var vars)
   saveHoles : NameMap () -- things we'll need to save to TTC, even if solved
 
-  unambiguousNames : StringMap (Name, Int, GlobalDef)
+  unambiguousNames : UserNameMap (Name, Int, GlobalDef)
                   -- Mapping from userNameRoot to fully resolved names.
                   -- For names in this mapping, we don't run disambiguation.
                   -- Used in with-expressions.
@@ -547,7 +547,7 @@ successful allowCons ((tm, elab) :: elabs)
          defs <- branch
          catch (do -- Run the elaborator
                    logC "elab" 5 $
-                            do tm' <- maybe (pure (UN "__"))
+                            do tm' <- maybe (pure (UN $ Basic "__"))
                                              toFullNames tm
                                pure ("Running " ++ show tm')
                    res <- elab
@@ -567,7 +567,7 @@ successful allowCons ((tm, elab) :: elabs)
                    put MD md
                    put Ctxt defs
                    logC "elab" 5 $
-                            do tm' <- maybe (pure (UN "__"))
+                            do tm' <- maybe (pure (UN $ Basic "__"))
                                             toFullNames tm
                                pure ("Success " ++ show tm' ++
                                      " (" ++ show ncons' ++ " - "

@@ -181,33 +181,33 @@ magic ms e = go ms e where
 %inline
 magic__integerToNat : FC -> FC -> forall vars. Vect 1 (CExp vars) -> CExp vars
 magic__integerToNat fc fc' [k]
-  = CApp fc (CRef fc' (NS typesNS (UN "prim__integerToNat"))) [k]
+  = CApp fc (CRef fc' (NS typesNS (UN $ Basic "prim__integerToNat"))) [k]
 
 magic__natMinus : FC -> FC -> forall vars. Vect 2 (CExp vars) -> CExp vars
 magic__natMinus fc fc' [m,n]
   = magic__integerToNat fc fc'
-    [CApp fc (CRef fc' (UN "prim__sub_Integer")) [m, n]]
+    [CApp fc (CRef fc' (UN $ Basic "prim__sub_Integer")) [m, n]]
 
 -- We don't reuse natMinus here because we assume that unsuc will only be called
 -- on S-headed numbers so we do not need the truncating integerToNat call!
 magic__natUnsuc : FC -> FC -> forall vars. Vect 1 (CExp vars) -> CExp vars
 magic__natUnsuc fc fc' [m]
-  = CApp fc (CRef fc' (UN "prim__sub_Integer")) [m, CPrimVal fc (BI 1)]
+  = CApp fc (CRef fc' (UN $ Basic "prim__sub_Integer")) [m, CPrimVal fc (BI 1)]
 
 -- TODO: next release remove this and use %builtin pragma
 natHack : List Magic
 natHack =
-    [ MagicCRef (NS typesNS (UN "natToInteger")) 1 (\ _, _, [k] => k)
-    , MagicCRef (NS typesNS (UN "integerToNat")) 1 magic__integerToNat
-    , MagicCRef (NS typesNS (UN "plus")) 2
-         (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__add_Integer")) [m, n])
-    , MagicCRef (NS typesNS (UN "mult")) 2
-         (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__mul_Integer")) [m, n])
-    , MagicCRef (NS typesNS (UN "minus")) 2 magic__natMinus
-    , MagicCRef (NS typesNS (UN "equalNat")) 2
-         (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__eq_Integer")) [m, n])
-    , MagicCRef (NS typesNS (UN "compareNat")) 2
-         (\ fc, fc', [m,n] => CApp fc (CRef fc' (NS eqOrdNS (UN "compareInteger"))) [m, n])
+    [ MagicCRef (NS typesNS (UN $ Basic "natToInteger")) 1 (\ _, _, [k] => k)
+    , MagicCRef (NS typesNS (UN $ Basic "integerToNat")) 1 magic__integerToNat
+    , MagicCRef (NS typesNS (UN $ Basic "plus")) 2
+         (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN $ Basic "prim__add_Integer")) [m, n])
+    , MagicCRef (NS typesNS (UN $ Basic "mult")) 2
+         (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN $ Basic "prim__mul_Integer")) [m, n])
+    , MagicCRef (NS typesNS (UN $ Basic "minus")) 2 magic__natMinus
+    , MagicCRef (NS typesNS (UN $ Basic "equalNat")) 2
+         (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN $ Basic "prim__eq_Integer")) [m, n])
+    , MagicCRef (NS typesNS (UN $ Basic "compareNat")) 2
+         (\ fc, fc', [m,n] => CApp fc (CRef fc' (NS eqOrdNS (UN $ Basic "compareInteger"))) [m, n])
     ]
 
 -- get all transformation from %builtin pragmas
@@ -321,8 +321,9 @@ mutual
                           (CLet fc x True !(toCExp m n val) sc')
                           rig
   toCExpTm m n (Bind fc x (Pi _ c e ty) sc)
-      = pure $ CCon fc (UN "->") TYCON Nothing [!(toCExp m n ty),
-                                    CLam fc x !(toCExp m n sc)]
+      = pure $ CCon fc (UN (Basic "->")) TYCON Nothing
+                       [ !(toCExp m n ty)
+                       , CLam fc x !(toCExp m n sc)]
   toCExpTm m n (Bind fc x b tm) = pure $ CErased fc
   -- We'd expect this to have been dealt with in toCExp, but for completeness...
   toCExpTm m n (App fc tm arg)
@@ -339,9 +340,9 @@ mutual
       = let t = constTag c in
             if t == 0
                then pure $ CPrimVal fc c
-               else pure $ CCon fc (UN (show c)) TYCON Nothing []
+               else pure $ CCon fc (UN $ Basic $ show c) TYCON Nothing []
   toCExpTm m n (Erased fc _) = pure $ CErased fc
-  toCExpTm m n (TType fc) = pure $ CCon fc (UN "Type") TYCON Nothing []
+  toCExpTm m n (TType fc) = pure $ CCon fc (UN (Basic "Type")) TYCON Nothing []
 
   toCExp : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
@@ -576,15 +577,15 @@ getFieldArgs defs cl
 
 getNArgs : {auto c : Ref Ctxt Defs} ->
            Defs -> Name -> List (Closure []) -> Core NArgs
-getNArgs defs (NS _ (UN "IORes")) [arg] = pure $ NIORes arg
-getNArgs defs (NS _ (UN "Ptr")) [arg] = pure NPtr
-getNArgs defs (NS _ (UN "AnyPtr")) [] = pure NPtr
-getNArgs defs (NS _ (UN "GCPtr")) [arg] = pure NGCPtr
-getNArgs defs (NS _ (UN "GCAnyPtr")) [] = pure NGCPtr
-getNArgs defs (NS _ (UN "Buffer")) [] = pure NBuffer
-getNArgs defs (NS _ (UN "ForeignObj")) [] = pure NForeignObj
-getNArgs defs (NS _ (UN "Unit")) [] = pure NUnit
-getNArgs defs (NS _ (UN "Struct")) [n, args]
+getNArgs defs (NS _ (UN $ Basic "IORes")) [arg] = pure $ NIORes arg
+getNArgs defs (NS _ (UN $ Basic "Ptr")) [arg] = pure NPtr
+getNArgs defs (NS _ (UN $ Basic "AnyPtr")) [] = pure NPtr
+getNArgs defs (NS _ (UN $ Basic "GCPtr")) [arg] = pure NGCPtr
+getNArgs defs (NS _ (UN $ Basic "GCAnyPtr")) [] = pure NGCPtr
+getNArgs defs (NS _ (UN $ Basic "Buffer")) [] = pure NBuffer
+getNArgs defs (NS _ (UN $ Basic "ForeignObj")) [] = pure NForeignObj
+getNArgs defs (NS _ (UN $ Basic "Unit")) [] = pure NUnit
+getNArgs defs (NS _ (UN $ Basic "Struct")) [n, args]
     = do NPrimVal _ (Str n') <- evalClosure defs n
              | nf => throw (GenericMsg (getLoc nf) "Unknown name for struct")
          pure (Struct n' !(getFieldArgs defs args))
@@ -641,9 +642,9 @@ nfToCFType _ s (NTCon fc n_in _ _ args)
                    carg <- nfToCFType fc s narg
                    pure (CFIORes carg)
 nfToCFType _ s (NType _)
-    = pure (CFUser (UN "Type") [])
+    = pure (CFUser (UN (Basic "Type")) [])
 nfToCFType _ s (NErased _ _)
-    = pure (CFUser (UN "__") [])
+    = pure (CFUser (UN (Basic "__")) [])
 nfToCFType fc s t
     = do defs <- get Ctxt
          ty <- quote defs [] t
@@ -766,7 +767,7 @@ compileExp : {auto c : Ref Ctxt Defs} ->
 compileExp tm
     = do m <- builtinMagic
          s <- newRef NextSucc 0
-         exp <- toCExp m (UN "main") tm
+         exp <- toCExp m (UN $ Basic "main") tm
          pure exp
 
 ||| Given a name, look up an expression, and compile it to a CExp in the environment
