@@ -1285,11 +1285,18 @@ identifyUnreachableDefaults fc defs nfty cs
         = let (rest', extra') = dropRep rest extra
           in  (c :: rest', extra')
 
-findExtra : {auto c : Ref Ctxt Defs} ->
-            {vars : _} ->
-            FC -> Defs -> CaseTree vars ->
-            Core (List Int)
-findExtra fc defs ctree@(Case {name = var} idx el ty altsIn)
+||| Find unreachable default paths through the tree for each clause.
+||| This is accomplished by expanding default clases into all concrete constructions
+||| and then listing the clauses reached.
+||| This list of clauses can be substracted from the list of "reachable" clauses
+||| and if it turns out that the number of unreachable ways to use a clause is equal
+||| to the number of ways to reach a RHS for that clause then the clause is totally
+||| superfluous (it will never be reached).
+findExtraDefaults : {auto c : Ref Ctxt Defs} ->
+                   {vars : _} ->
+                   FC -> Defs -> CaseTree vars ->
+                   Core (List Int)
+findExtraDefaults fc defs ctree@(Case {name = var} idx el ty altsIn)
   = do let fenv = freeEnv fc _
        nfty <- nf defs fenv ty
        extraCases <- identifyUnreachableDefaults fc defs nfty altsIn
@@ -1297,13 +1304,13 @@ findExtra fc defs ctree@(Case {name = var} idx el ty altsIn)
        pure (extraCases ++ extraCases')
   where
     findExtraAlts : CaseAlt vars -> Core (List Int)
-    findExtraAlts (ConCase x tag args ctree') = findExtra fc defs ctree'
-    findExtraAlts (DelayCase x arg ctree') = findExtra fc defs ctree'
-    findExtraAlts (ConstCase x ctree') = findExtra fc defs ctree'
+    findExtraAlts (ConCase x tag args ctree') = findExtraDefaults fc defs ctree'
+    findExtraAlts (DelayCase x arg ctree') = findExtraDefaults fc defs ctree'
+    findExtraAlts (ConstCase x ctree') = findExtraDefaults fc defs ctree'
     -- already handled defaults by elaborating them to all possible cons
     findExtraAlts (DefaultCase ctree') = pure []
 
-findExtra fc defs ctree = pure []
+findExtraDefaults fc defs ctree = pure []
 
 -- Returns the case tree, and a list of the clauses that aren't reachable
 export
@@ -1333,8 +1340,8 @@ getPMDef fc phase fn ty clauses
          let reached = findReached t
          log "compile.casetree.clauses" 25 $
            "Reached clauses: " ++ (show reached)
-         extra <- findExtra fc defs t
-         let unreachable = getUnreachable 0 (reached \\ extra) clauses
+         extraDefaults <- findExtraDefaults fc defs t
+         let unreachable = getUnreachable 0 (reached \\ extraDefaults) clauses
          pure (_ ** (t, unreachable))
   where
     getUnreachable : Int -> List Int -> List Clause -> List Clause
