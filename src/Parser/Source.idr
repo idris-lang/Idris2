@@ -20,13 +20,15 @@ runParserTo : {e : _} ->
               String -> Grammar SemanticDecorations Token e ty ->
               Either Error (List Warning, SemanticDecorations, ty)
 runParserTo origin lit reject str p
-    = do str    <- mapFst (fromLitError origin) $ unlit lit str
-         toks   <- mapFst (fromLexError origin) $ lexTo reject str
+    = do str        <- mapFst (fromLitError origin) $ unlit lit str
+         (cs, toks) <- mapFst (fromLexError origin) $ lexTo reject str
          (decs, ws, (parsed, _)) <- mapFst (fromParsingErrors origin) $ parseWith p toks
+         let cs : SemanticDecorations
+                = cs <&> \ c => ((origin, start c, end c), Comment, Nothing)
          let ws = ws <&> \ (mb, warn) =>
                     let mkFC = \ b => MkFC origin (startBounds b) (endBounds b)
                     in ParserWarning (maybe EmptyFC mkFC mb) warn
-         Right (ws, decs, parsed)
+         Right (ws, cs ++ decs, parsed)
 
 export
 runParser : {e : _} ->

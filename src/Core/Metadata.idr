@@ -21,6 +21,7 @@ import Libraries.Utils.Binary
 
 public export
 data Decoration : Type where
+  Comment   : Decoration
   Typ       : Decoration
   Function  : Decoration
   Data      : Decoration
@@ -54,6 +55,7 @@ SemanticDecorations = List ASemanticDecoration
 
 public export
 Eq Decoration where
+  Comment   == Comment   = True
   Typ       == Typ       = True
   Function  == Function  = True
   Data      == Data      = True
@@ -69,6 +71,7 @@ Eq Decoration where
 -- break the IDE mode.
 public export
 Show Decoration where
+  show Comment   = "comment"
   show Typ       = "type"
   show Function  = "function"
   show Data      = "data"
@@ -87,6 +90,7 @@ TTC Decoration where
   toBuf b Namespace = tag 5
   toBuf b Postulate = tag 6
   toBuf b Module    = tag 7
+  toBuf b Comment   = tag 8
   fromBuf b
     = case !getTag of
         0 => pure Typ
@@ -97,6 +101,7 @@ TTC Decoration where
         5 => pure Namespace
         6 => pure Postulate
         7 => pure Module
+        8 => pure Comment
         _ => corrupt "Decoration"
 
 public export
