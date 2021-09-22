@@ -1,0 +1,5 @@
+1/1: Building Test (Test.idr)
+Main> "This is TT"
+Main> "This is FF"
+Main> "This is a number : S S S 0"
+Main> Bye for now!

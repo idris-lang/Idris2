@@ -525,7 +525,7 @@ mutual
       concatStr a b =
         let aFC = virtualiseFC (getFC a)
             bFC = virtualiseFC (getFC b)
-        in IApp aFC (IApp bFC (IVar bFC (UN $ Basic "++")) a) b
+        in IApp aFC (IApp bFC (IVar bFC (UN $ Basic "concatInterp")) a) b
 
   trimMultiline : FC -> Nat -> List (List PStr) -> Core (List PStr)
   trimMultiline fc indent lines
