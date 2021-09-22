@@ -44,38 +44,17 @@ public export
 UsageMap : Type
 UsageMap = SortedMap (Integer, CExp []) (Name, Integer)
 
---------------------------------------------------------------------------------
---          Size of Expressions
---------------------------------------------------------------------------------
+public export
+data Count = One | C Integer
 
-mutual
-  -- comparison for `Nat` is (or used to be?) O(n),
-  -- therefore, we use `Integer`
-  size : CExp ns -> Integer
-  size (CLocal _ _)         = 1
-  size (CRef _ _)           = 1
-  size (CLam _ _ y)         = size y + 1
-  size (CLet _ _ _ y z)     = size y + size z + 1
-  size (CApp _ _ xs)        = sum (map size xs) + 1
-  size (CCon _ _ _ _ xs)    = sum (map size xs) + 1
-  size (COp _ _ xs)         = sum (map size xs) + 1
-  size (CExtPrim _ _ xs)    = sum (map size xs) + 1
-  size (CForce _ _ y)       = size y + 1
-  size (CDelay _ _ y)       = size y + 1
-  size (CPrimVal _ _)       = 1
-  size (CErased _)          = 1
-  size (CCrash _ _)         = 1
-  size (CConCase _ sc xs x) =
-    size sc + sum (map sizeConAlt xs) + sum (map size x) + 1
-
-  size (CConstCase _ sc xs x) =
-    size sc + sum (map sizeConstAlt xs) + sum (map size x) + 1
-
-  sizeConAlt : CConAlt ns -> Integer
-  sizeConAlt (MkConAlt _ _ _ _ z) = 1 + size z
-
-  sizeConstAlt : CConstAlt ns -> Integer
-  sizeConstAlt (MkConstAlt _ y) = 1 + size y
+||| After common subexpression analysis we get a mapping
+||| from `Name`s to the closed expressions they replace.
+||| We use this mapping for substituting the names back
+||| to the corresponding expressions, iff the expression
+||| appears in several places.
+public export
+ReplaceMap : Type
+ReplaceMap = SortedMap Name (CExp [], Count)
 
 --------------------------------------------------------------------------------
 --          State
@@ -91,21 +70,20 @@ record St where
 -- adds a new closed expression to the `UsageMap`
 -- returning the actual count of occurences.
 -- very small expressions are being ignored.
-store : Ref Sts St => CExp [] -> Core Integer
-store exp =
-  let sz = size exp
-   in if sz < 5
-         then pure 0
-         else do
-           (MkSt map idx)    <- get Sts
+store : Ref Sts St => Integer -> CExp [] -> Core (Maybe Name)
+store sz exp =
+  if sz < 5
+     then pure Nothing
+     else do
+       (MkSt map idx)    <- get Sts
 
-           (name,count,idx2) <-
-             case lookup (sz,exp) map of
-               Just (nm,cnt) => pure (nm, cnt+1, idx)
-               Nothing       => pure (MN "csegen" idx, 1, idx + 1)
+       (name,count,idx2) <-
+         case lookup (sz,exp) map of
+           Just (nm,cnt) => pure (nm, cnt+1, idx)
+           Nothing       => pure (MN "csegen" idx, 1, idx + 1)
 
-           put Sts $ MkSt (insert (sz,exp) (name, count) map) idx2
-           pure count
+       put Sts $ MkSt (insert (sz,exp) (name, count) map) idx2
+       pure (Just name)
 
 --------------------------------------------------------------------------------
 --          Strengthening of Expressions
@@ -185,7 +163,7 @@ mutual
   -- exactly once for each closed term, otherwise they might
   -- be counted as additional common subexpressions although they are not.
   export
-  analyze : Ref Sts St => CExp ns -> Core ()
+  analyze : Ref Sts St => CExp ns -> Core (Integer, CExp ns)
 
   -- We ignore prim ops here, since moving them to the toplevel
   -- might interfere with other optimizations, for instance
@@ -199,47 +177,99 @@ mutual
   analyze c@(CForce _ _ _)   = analyzeSubExp c
   analyze c@(CDelay _ _ _)   = analyzeSubExp c
 
-  analyze exp = case dropEnv {pre = []} exp of
-    Just e0 => do
-      count <- store e0
-      -- only analyze subexpressions of closed terms once
-      when (count == 1) $ analyzeSubExp exp
-    Nothing => analyzeSubExp exp
+  analyze exp = do
+    (sze, exp') <- analyzeSubExp exp
+    case dropEnv {pre = []} exp' of
+      Just e0 => do
+        Just nm <- store sze e0
+          | Nothing => pure (sze, exp')
+        pure (sze, CRef EmptyFC nm)
+      Nothing => pure (sze, exp')
 
-  analyzeSubExp : Ref Sts St => CExp ns -> Core ()
-  analyzeSubExp (CLocal _ _)         = pure ()
-  analyzeSubExp (CRef _ _)           = pure ()
-  analyzeSubExp (CLam _ _ y)         = analyze y
-  analyzeSubExp (CLet _ _ _ y z)     = analyze y >> analyze z
-  analyzeSubExp (CApp fc x xs)       = analyze x >> traverse_ analyze xs
-  analyzeSubExp (CCon _ _ _ _ [])    = pure ()
-  analyzeSubExp (CCon _ _ _ _ xs)    = traverse_ analyze xs
-  analyzeSubExp (COp _ _ xs)         = ignore $ traverseVect analyze xs
-  analyzeSubExp (CExtPrim _ _ xs)    = traverse_ analyze xs
-  analyzeSubExp (CForce _ _ y)       = analyze y
-  analyzeSubExp (CDelay _ _ y)       = analyze y
-  analyzeSubExp (CConCase _ sc xs x) =
-    analyze sc                     >>
-    traverse_ analyzeConAlt xs     >>
-    ignore (traverseOpt analyze x)
+  analyzeList : Ref Sts St => List (CExp ns) -> Core (Integer, List (CExp ns))
+  analyzeList es = do
+    (sizes, exps) <- unzip <$> traverse analyze es
+    pure (sum sizes, exps)
 
-  analyzeSubExp (CConstCase _ sc xs x) =
-    analyze sc                     >>
-    traverse_ analyzeConstAlt xs   >>
-    ignore (traverseOpt analyze x)
+  analyzeMaybe : Ref Sts St => Maybe (CExp ns) -> Core (Integer, Maybe (CExp ns))
+  analyzeMaybe Nothing  = pure (0, Nothing)
+  analyzeMaybe (Just e) = do
+    (se,e') <- analyze e
+    pure (se, Just e')
 
-  analyzeSubExp (CPrimVal _ _) = pure ()
-  analyzeSubExp (CErased _)    = pure ()
-  analyzeSubExp (CCrash _ _)   = pure ()
+  analyzeVect : Ref Sts St => Vect n (CExp ns) -> Core (Integer, Vect n (CExp ns))
+  analyzeVect es = do
+    (sizes, exps) <- unzip <$> traverseVect analyze es
+    pure (sum sizes, exps)
 
-  analyzeConAlt : { auto c : Ref Sts St } -> CConAlt ns -> Core ()
-  analyzeConAlt (MkConAlt _ _ _ _ z) = analyze z
 
-  analyzeConstAlt : Ref Sts St => CConstAlt ns -> Core ()
-  analyzeConstAlt (MkConstAlt _ y) = analyze y
+  analyzeSubExp : Ref Sts St => CExp ns -> Core (Integer, CExp ns)
+  analyzeSubExp e@(CLocal _ _)         = pure (1, e)
+  analyzeSubExp e@(CRef _ _)           = pure (1, e)
+  analyzeSubExp (CLam f n y)  = do
+    (sy, y') <- analyze y
+    pure (sy + 1, CLam f n y')
+  
+  analyzeSubExp (CLet f n i y z) = do
+    (sy, y') <- analyze y
+    (sz, z') <- analyze z
+    pure (sy + sz + 1, CLet f n i y' z')
+
+  analyzeSubExp (CApp fc x xs) = do
+    (sx, x')   <- analyze x
+    (sxs, xs') <- analyzeList xs
+    pure (sx + sxs + 1, CApp fc x' xs')
+
+  analyzeSubExp (CCon f n c t xs) = do 
+    (sxs, xs') <- analyzeList xs
+    pure (sxs + 1, CCon f n c t xs')
+
+  analyzeSubExp (COp f n xs) = do
+    (sxs, xs') <- analyzeVect xs
+    pure (sxs + 1, COp f n xs')
+
+  analyzeSubExp (CExtPrim f n xs) = do
+    (sxs, xs') <- analyzeList xs
+    pure (sxs + 1, CExtPrim f n xs')
+
+  analyzeSubExp (CForce f r y) = do
+    (sy, y') <- analyze y
+    pure (sy + 1, CForce f r y')
+
+  analyzeSubExp (CDelay f r y) = do
+    (sy, y') <- analyze y
+    pure (sy + 1, CDelay f r y')
+
+  analyzeSubExp (CConCase f sc xs x) = do
+    (ssc, sc') <- analyze sc
+    (sxs, xs') <- unzip <$> traverse analyzeConAlt xs
+    (sx, x')   <- analyzeMaybe x
+    pure (ssc + sum sxs + sx + 1, CConCase f sc' xs' x')
+
+  analyzeSubExp (CConstCase f sc xs x) = do
+    (ssc, sc') <- analyze sc
+    (sxs, xs') <- unzip <$> traverse analyzeConstAlt xs
+    (sx, x')   <- analyzeMaybe x
+    pure (ssc + sum sxs + sx + 1, CConstCase f sc' xs' x')
+
+  analyzeSubExp c@(CPrimVal _ _) = pure (1, c)
+  analyzeSubExp c@(CErased _)    = pure (1, c)
+  analyzeSubExp c@(CCrash _ _)   = pure (1, c)
+
+  analyzeConAlt :  { auto c : Ref Sts St }
+                -> CConAlt ns
+                -> Core (Integer, CConAlt ns)
+  analyzeConAlt (MkConAlt n c t as z) = do
+    (sz, z') <- analyze z
+    pure (sz + 1, MkConAlt n c t as z')
+
+  analyzeConstAlt : Ref Sts St => CConstAlt ns -> Core (Integer, CConstAlt ns)
+  analyzeConstAlt (MkConstAlt c y) = do
+    (sy, y') <- analyze y
+    pure (sy + 1, MkConstAlt c y')
 
 analyzeDef : Ref Sts St => CDef -> Core ()
-analyzeDef (MkFun args x)    = analyze x
+analyzeDef (MkFun args x)    = ignore $ analyze x
 analyzeDef (MkCon _ _ _)     = pure ()
 analyzeDef (MkForeign _ _ _) = pure ()
 analyzeDef (MkError _)       = pure ()
@@ -253,6 +283,65 @@ analyzeName fn = do
         | Nothing => pure ()
     analyzeDef cexp
 
+--------------------------------------------------------------------------------
+--          Adjusting Counts
+--------------------------------------------------------------------------------
+
+mutual
+  adjCountExp :  Ref Sts UsageMap
+              => (parentCount : Integer)
+              -> CExp ns
+              -> Core ()
+
+  adjCountSubExp :  Ref Sts UsageMap
+                 => (parentCount : Integer)
+                 -> CExp ns
+                 -> Core ()
+  adjCountSubExp _ (CLocal _ _) = pure ()
+  adjCountSubExp _ (CRef _ _)   = pure ()
+  adjCountSubExp pc (CLam _ _ y) = adjCountExp pc y
+  adjCountSubExp pc (CLet _ _ _ y z) = adjCountExp pc y >> adjCountExp pc z
+  adjCountSubExp pc (CApp _ x xs) =
+    adjCountExp pc x >> traverse_ (adjCountExp pc) xs
+  adjCountSubExp pc (CCon _ _ _ _ xs) = traverse_ (adjCountExp pc) xs
+  adjCountSubExp pc (COp _ _ xs) = ignore $ traverseVect (adjCountExp pc) xs
+  adjCountSubExp pc (CExtPrim _ _ xs) = traverse_ (adjCountExp pc) xs
+  adjCountSubExp pc (CForce _ _ y) = adjCountExp pc y
+  adjCountSubExp pc (CDelay _ _ y) = adjCountExp pc y
+  adjCountSubExp pc (CConCase _ sc xs x) =
+    adjCountExp pc sc >>
+    traverse_ (adjCountConAlt pc) xs >>
+    ignore (traverseOpt (adjCountExp pc) x)
+
+  adjCountSubExp pc (CConstCase _ sc xs x) =
+    adjCountExp pc sc >>
+    traverse_ (adjCountConstAlt pc) xs >>
+    ignore (traverseOpt (adjCountExp pc) x)
+
+  adjCountSubExp _ (CPrimVal _ _) = pure ()
+  adjCountSubExp _ (CErased _)    = pure ()
+  adjCountSubExp _ (CCrash _ _)   = pure ()
+
+  adjCountConAlt :  Ref Sts UsageMap
+                 => (parentCount : Integer)
+                 -> CConAlt ns
+                 -> Core ()
+  adjCountConAlt pc (MkConAlt _ _ _ _ z) = adjCountExp pc z
+
+  adjCountConstAlt :  Ref Sts UsageMap
+                   => (parentCount : Integer)
+                   -> CConstAlt ns
+                   -> Core ()
+  adjCountConstAlt pc (MkConstAlt _ z) = adjCountExp pc z
+
+adjCounts : UsageMap -> Core UsageMap
+adjCounts um = 
+  let exps = (\((_,e),(_,c)) => (c,e)) <$> SortedMap.toList um
+   in do
+    s <- newRef Sts $ um
+    traverse_ (uncurry adjCountExp) exps
+    get Sts
+
 ||| Generates a `UsageMap` (a mapping from closed terms
 ||| to their number of occurences plus newly generated
 ||| name in case they will be lifted to the toplevel)
@@ -265,18 +354,17 @@ analyzeNames cns = do
   MkSt res _ <- get Sts
   let filtered = reverse
                . sortBy (comparing $ snd . snd)
-               . filter ((> 1) . snd . snd)
                $ SortedMap.toList res
 
   log "compiler.cse" 10 $ unlines $
-    "Selected the following definitions:"
+    "Found the following definitions:"
     ::  map (\((sz,_),(name,cnt)) =>
                   show name ++
                   ": count " ++ show cnt ++
                   ", size " ++ show sz
            ) filtered
 
-  pure $ fromList filtered
+  adjCounts res
 
 --------------------------------------------------------------------------------
 --          Adjusting Expressions
@@ -333,25 +421,25 @@ mutual
 ||| (newly introduced) zero-argument toplevel functions.
 export
 adjustDef : UsageMap -> CDef -> CDef
-adjustDef um (MkFun args x)      = MkFun args $ adjust um x
-adjustDef um d@(MkCon _ _ _)     = d
-adjustDef um d@(MkForeign _ _ _) = d
-adjustDef um d@(MkError _)       = d
+-- adjustDef um (MkFun args x)      = MkFun args $ adjust um x
+-- adjustDef um d@(MkCon _ _ _)     = d
+-- adjustDef um d@(MkForeign _ _ _) = d
+-- adjustDef um d@(MkError _)       = d
 
 export
 cseDef :  {auto c : Ref Ctxt Defs}
        -> UsageMap
        -> Name
        -> Core (Maybe (Name, FC, CDef))
-cseDef um n = do
-  defs <- get Ctxt
-  Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure Nothing
-  let Just cexpr =  compexpr def             | Nothing => pure Nothing
-  pure $ Just (n, location def, adjustDef um cexpr)
+-- cseDef um n = do
+--   defs <- get Ctxt
+--   Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure Nothing
+--   let Just cexpr =  compexpr def             | Nothing => pure Nothing
+--   pure $ Just (n, location def, adjustDef um cexpr)
 
 export
 cseNewToplevelDefs : UsageMap -> List (Name, FC, CDef)
-cseNewToplevelDefs um = map toDef $ SortedMap.toList um
-  where toDef : ((Integer, CExp[]),(Name,Integer)) -> (Name, FC, CDef)
-        toDef ((_,exp),(nm,_)) =
-          (nm, EmptyFC, MkFun [] $ adjustSubExp um exp)
+-- cseNewToplevelDefs um = map toDef $ SortedMap.toList um
+--   where toDef : ((Integer, CExp[]),(Name,Integer)) -> (Name, FC, CDef)
+--         toDef ((_,exp),(nm,_)) =
+--           (nm, EmptyFC, MkFun [] $ adjustSubExp um exp)
