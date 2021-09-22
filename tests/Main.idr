@@ -21,7 +21,7 @@ ttimpTests = MkTestPool "TTImp" [] Nothing
      , "lazy001"
      , "nest001", "nest002"
      , "perf001", "perf002", "perf003"
-     , "record001", "record002", "record003"
+     , "record001", "record002", "record003", "record004"
      , "qtt001", "qtt003"
      , "total001", "total002", "total003"
      ]
