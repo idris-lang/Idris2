@@ -19,12 +19,16 @@ import Libraries.Data.String.Extra
 %default total
 
 public export
+BRule : Bool -> Type -> Type
+BRule = Grammar SemanticDecorations Token
+
+public export
 Rule : Type -> Type
-Rule ty = Grammar SemanticDecorations Token True ty
+Rule = BRule True
 
 public export
 EmptyRule : Type -> Type
-EmptyRule ty = Grammar SemanticDecorations Token False ty
+EmptyRule = BRule False
 
 export
 eoi : EmptyRule ()
@@ -192,15 +196,17 @@ operatorCandidate
                  _ => Nothing
 
 export
-operator : Rule Name
-operator
+unqualifiedOperatorName : Rule String
+unqualifiedOperatorName
     = terminal "Expected operator" $
                \case
-                 Symbol s =>
-                   if s `elem` reservedSymbols
-                   then Nothing
-                   else Just (UN $ Basic s) -- TODO: have an operator construct?
+                 Symbol s => s <$ guard (not $ s `elem` reservedSymbols)
                  _ => Nothing
+
+export
+operator : Rule Name
+operator = UN . Basic <$> unqualifiedOperatorName
+               -- ^ TODO: add an operator constructor?
 
 identPart : Rule String
 identPart
