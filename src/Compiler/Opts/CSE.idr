@@ -13,14 +13,18 @@
 ||| iterate over all toplevel definitions once, trying to
 ||| convert every subexpression to a closed one (no free
 ||| variables). Closed terms are then stored in a `SortedMap`
-||| together with their size and count.
+||| together with their size and count. In order to only use
+||| linear space w.r.t. term size, we start this analysis at the
+||| leaves and substitute closed terms with the machine generated
+||| names before analyzing parent terms.
 |||
-||| This map is then pruned: Expressions with a count of 1 are removed,
-||| as are very small terms (some experiments showed, that a
-||| cut-off size of 5 is a good heuristic). The remaining duplicate
-||| expressions are then introduced as new zero-argument toplevel
-||| functions and replaced accordingly in all function definitions
-||| (including larger extracted subexpressions, if any).
+||| In a second step, we compare the count of each machine
+||| generated name with the count of its parent expression.
+||| If they are the same, the name is dropped and replaces with
+||| a CSE optimized version of the original expression, otherwise
+||| the name is kept and a new zero argumet function of the
+||| given name is added to the toplevel, thus eliminating the
+||| duplicate expressions.
 module Compiler.Opts.CSE
 
 import Core.CompileExpr
@@ -305,7 +309,7 @@ analyzeName fn = do
     pure $ Just (fn, location def, cexp')
 
 --------------------------------------------------------------------------------
---          Adjusting Counts
+--          Replacing Expressions
 --------------------------------------------------------------------------------
 
 mutual
@@ -459,9 +463,8 @@ undefinedCount (_, _, Once) = False
 undefinedCount (_, _, Many) = False
 undefinedCount (_, _, C x)  = True
 
-||| Generates a `UsageMap` (a mapping from closed terms
-||| to their number of occurences plus newly generated
-||| name in case they will be lifted to the toplevel)
+||| Runs the CSE alorithm on all provided names and
+||| the given main expression.
 export
 cse :  Ref Ctxt Defs
     => (definitionNames : List Name)
@@ -483,96 +486,3 @@ cse defs me = do
                   show name ++ ": count " ++ show cnt
            ) filtered
   pure (newToplevelDefs replaceMap ++ replacedDefs, replacedMain)
-
---   MkSt res _ <- get Sts
---   let filtered = reverse
---                . sortBy (comparing $ snd . snd)
---                $ SortedMap.toList res
---
---   log "compiler.cse" 10 $ unlines $
---     "Found the following definitions:"
---     ::  map (\((sz,_),(name,cnt)) =>
---                   show name ++
---                   ": count " ++ show cnt ++
---                   ", size " ++ show sz
---            ) filtered
---
---   adjCounts res
-
---------------------------------------------------------------------------------
---          Adjusting Expressions
---------------------------------------------------------------------------------
-
--- mutual
---   export
---   adjust : UsageMap -> CExp ns -> CExp ns
---  adjust um exp = case dropEnv {pre = []} exp of
---    Nothing => adjustSubExp um exp
---    Just e0 => case lookup (size e0, e0) um of
---      Just (nm,_) => CApp EmptyFC (CRef EmptyFC nm) []
---      Nothing     => adjustSubExp um exp
---
---  adjustSubExp : UsageMap -> CExp ns -> CExp ns
---  adjustSubExp um e@(CLocal _ _) = e
---  adjustSubExp um e@(CRef _ _) = e
---  adjustSubExp um e@(CPrimVal _ _) = e
---  adjustSubExp um e@(CErased _) = e
---  adjustSubExp um e@(CCrash _ _) = e
---  adjustSubExp um (CLam fc x y) = CLam fc x $ adjust um y
---  adjustSubExp um (CLet fc x inlineOK y z) =
---    CLet fc x inlineOK (adjust um y) (adjust um z)
---
---  adjustSubExp um (CApp fc x xs) =
---    CApp fc (adjust um x) (map (adjust um) xs)
---
---  adjustSubExp um (CCon fc x y tag xs) =
---    CCon fc x y tag $ map (adjust um) xs
---
---  adjustSubExp um (COp fc x xs) = COp fc x $ map (adjust um) xs
---
---  adjustSubExp um (CExtPrim fc p xs) = CExtPrim fc p $ map (adjust um) xs
---
---  adjustSubExp um (CForce fc x y) = CForce fc x $ adjust um y
---
---  adjustSubExp um (CDelay fc x y) = CDelay fc x $ adjust um y
---
---  adjustSubExp um (CConCase fc sc xs x) =
---    CConCase fc (adjust um sc) (map (adjustConAlt um) xs) (map (adjust um) x)
---
---  adjustSubExp um (CConstCase fc sc xs x) =
---    CConstCase fc (adjust um sc) (map (adjustConstAlt um) xs) (map (adjust um) x)
---
---  adjustConAlt : UsageMap -> CConAlt ns -> CConAlt ns
---  adjustConAlt um (MkConAlt x y tag args z) =
---    MkConAlt x y tag args $ adjust um z
---
---  adjustConstAlt : UsageMap -> CConstAlt ns -> CConstAlt ns
---  adjustConstAlt um (MkConstAlt x y) = MkConstAlt x $ adjust um y
-
--- ||| Converts occurences of common subexpressions in toplevel
--- ||| definitions to invocations of the corresponding
--- ||| (newly introduced) zero-argument toplevel functions.
--- export
--- adjustDef : UsageMap -> CDef -> CDef
--- adjustDef um (MkFun args x)      = MkFun args $ adjust um x
--- adjustDef um d@(MkCon _ _ _)     = d
--- adjustDef um d@(MkForeign _ _ _) = d
--- adjustDef um d@(MkError _)       = d
-
--- export
--- cseDef :  {auto c : Ref Ctxt Defs}
---        -> UsageMap
---        -> Name
---        -> Core (Maybe (Name, FC, CDef))
--- cseDef um n = do
---   defs <- get Ctxt
---   Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure Nothing
---   let Just cexpr =  compexpr def             | Nothing => pure Nothing
---   pure $ Just (n, location def, adjustDef um cexpr)
-
--- export
--- cseNewToplevelDefs : UsageMap -> List (Name, FC, CDef)
--- cseNewToplevelDefs um = map toDef $ SortedMap.toList um
---   where toDef : ((Integer, CExp[]),(Name,Integer)) -> (Name, FC, CDef)
---         toDef ((_,exp),(nm,_)) =
---           (nm, EmptyFC, MkFun [] $ adjustSubExp um exp)
