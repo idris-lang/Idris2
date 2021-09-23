@@ -332,41 +332,60 @@ mutual
   -- We therefore compare the count of each child expression
   -- with the count of their parent expression, lifting
   -- a child only if it was counted mor often than its parent.
-  replaceRef : Ref ReplaceMap ReplaceMap
+  replaceRef :  Ref ReplaceMap ReplaceMap
+             => Ref Ctxt Defs
              => (parentCount : Integer)
              -> FC
              -> Name
              -> Core (CExp ns)
   replaceRef pc fc n = do
-    rm <- get ReplaceMap
-    case lookup n rm of
+    log "compiler.cse" 10 $ "Trying to replace " ++ show n ++ ": "
+    res <- lookup n <$> get ReplaceMap
+    case res of
       -- not a name generated during CSE
-      Nothing          => pure (CRef fc n)
+      Nothing          => do
+        log "compiler.cse" 10 $ "  not a name generated durin CSE"
+        pure (CRef fc n)
 
       -- Expression count has already been checked and occurs
       -- several times. Replace it with the machine generated name.
-      Just (exp, Many) => pure (CRef fc n)
+      Just (exp, Many) => do
+        log "compiler.cse" 10 $ "  already replaced: Occurs many times"
+        pure (CApp EmptyFC (CRef fc n) [])
+
 
       -- Expression count has already been checked and occurs
       -- only once. Substitute the machine generated name with
       -- the original (but CSE optimized) exp
-      Just (exp, Once) => pure (embed exp)
+      Just (exp, Once) => do
+        log "compiler.cse" 10 $ "  already replaced: Occurs many times"
+        pure (embed exp)
 
       -- Expression count has not yet been compared with the
       -- parent count. Do this now.
       Just (exp, C c)  => do
+        log "compiler.cse" 10 $  "  expression of unknown quantity ("
+                              ++ show c
+                              ++ " occurences)"
         -- We first have to replace all child expressions.
         exp' <- replaceExp c exp
         if c > pc
            -- This is a common subexpression. We set its count to `Many`
            -- and replace it with the machine generated name.
-           then put ReplaceMap (insert n (exp', Many) rm) >> pure (CRef fc n)
+           then do
+             log "compiler.cse" 10 $ show n ++ " assigned quantity \"Many\""
+             update ReplaceMap (insert n (exp', Many))
+             pure (CApp EmptyFC (CRef fc n) [])
 
            -- This expression occurs only once. We set its count to `Once`
            -- and keep it.
-           else put ReplaceMap (insert n (exp', Once) rm) >> pure (embed exp')
+           else do
+             log "compiler.cse" 10 $ show n ++ " assigned quantity \"Once\""
+             update ReplaceMap (insert n (exp', Once))
+             pure (embed exp')
 
   replaceExp :  Ref ReplaceMap ReplaceMap
+             => Ref Ctxt Defs
              => (parentCount : Integer)
              -> CExp ns
              -> Core (CExp ns)
@@ -404,6 +423,7 @@ mutual
   replaceExp _ c@(CCrash _ _)   = pure c
 
   replaceConAlt :  Ref ReplaceMap ReplaceMap
+                => Ref Ctxt Defs
                 => (parentCount : Integer)
                 -> CConAlt ns
                 -> Core (CConAlt ns)
@@ -411,6 +431,7 @@ mutual
     MkConAlt n c t as <$> replaceExp pc z
 
   replaceConstAlt :  Ref ReplaceMap ReplaceMap
+                  => Ref Ctxt Defs
                   => (parentCount : Integer)
                   -> CConstAlt ns
                   -> Core (CConstAlt ns)
@@ -418,6 +439,7 @@ mutual
     MkConstAlt c <$> replaceExp pc y
 
 replaceDef :  Ref ReplaceMap ReplaceMap
+           => Ref Ctxt Defs
            => (Name, FC, CDef)
            -> Core (Name, FC, CDef)
 replaceDef (n, fc, MkFun args x) =
@@ -454,14 +476,11 @@ cse defs me = do
   replacedDefs <- traverse replaceDef analyzedDefs
   replacedMain <- replaceExp 1 me
   replaceMap   <- get ReplaceMap
-  let filtered = filter undefinedCount
-               $ SortedMap.toList replaceMap
+  let filtered = SortedMap.toList replaceMap
   log "compiler.cse" 10 $ unlines $
     "Found the following unadjusted subexpressions:"
-    ::  map (\(name,(exp,cnt)) =>
-                  show name ++
-                  ": count " ++ show cnt ++
-                  ": exp " ++ show exp
+    ::  map (\(name,(_,cnt)) =>
+                  show name ++ ": count " ++ show cnt
            ) filtered
   pure (newToplevelDefs replaceMap ++ replacedDefs, replacedMain)
 
