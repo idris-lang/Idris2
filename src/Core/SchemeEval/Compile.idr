@@ -490,7 +490,7 @@ compileBody redok n (PMDef pminfo args treeCT treeRT pats)
          let blk = blockedAppWith n (varObjs argvs)
          body <- compileCase blk argvs treeCT
          let body' = if redok
-                        then If (Apply (Var "ct-blockAll") []) blk body
+                        then If (Apply (Var "ct-isBlockAll") []) blk body
                         else blk
          -- If it arose from a hole, we need to take an extra argument for
          -- the arity since that's what Meta gets applied to
@@ -540,7 +540,9 @@ compileBody _ n Delayed = pure $ blockedMetaApp n
 export
 compileDef : {auto c : Ref Ctxt Defs} -> SchemeMode -> Name -> Core ()
 compileDef mode n_in
-    = do n <- toFullNames n_in -- change to Resolved for performance later
+    = do n <- toFullNames n_in -- this is handy for readability of generated names
+                     -- we used resolved names for blocked names, though, as
+                     -- that's a bit better for performance
          defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (UndefinedName emptyFC n)
@@ -581,6 +583,18 @@ initEvalWith "chez"
                        put Ctxt (record { schemeEvalLoaded = True } defs)
                        pure True)
                 (\err => pure False)
+initEvalWith "racket"
+    = do defs <- get Ctxt
+         if defs.schemeEvalLoaded
+            then pure True
+            else
+             catch (do f <- readDataFile "racket/ct-support.rkt"
+                       Just _ <- coreLift $ evalSchemeStr $ "(begin " ++ f ++ ")"
+                            | Nothing => pure False
+                       put Ctxt (record { schemeEvalLoaded = True } defs)
+                       pure True)
+                (\err => do coreLift $ printLn err
+                            pure False)
 initEvalWith _ = pure False -- only works on Chez for now
 
 -- Initialise the internal functions we need to build/extend blocked

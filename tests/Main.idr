@@ -180,6 +180,10 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
        "total011", "total012"
       ]
 
+idrisTestsSchemeEval : TestPool
+idrisTestsSchemeEval = MkTestPool "Scheme Evaluator" [Chez] (Just Chez)
+     ["schemeeval001", "schemeeval002", "schemeeval003"]
+
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
        -- Documentation strings
@@ -320,6 +324,7 @@ main = runner $
   , testPaths "idris2" idrisTestsBuiltin
   , testPaths "idris2" idrisTestsEvaluator
   , testPaths "idris2" idrisTestsTotality
+  , testPaths "idris2" idrisTestsSchemeEval
   , testPaths "idris2" idrisTests
   , !typeddTests
   , !ideModeTests

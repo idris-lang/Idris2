@@ -5,7 +5,7 @@
 ### REPL changes
 
 * New experimental Scheme based evaluator (only available if compiled via
-  Chez scheme). To access this at the REPL, set the evaluator mode to
+  Chez scheme or Racket). To access this at the REPL, set the evaluator mode to
   the scheme based evaluator with `:set eval scheme`.
 * New option `evaltiming` to time how long an evaluation takes at the REPL,
   set with `:set evaltiming`.

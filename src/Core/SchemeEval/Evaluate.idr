@@ -115,6 +115,7 @@ mutual
   -- We don't use decodeObj because then we have to traverse the term twice.
   -- Instead, decode the ForeignObj directly, which is uglier but faster.
   quoteVector : Ref Sym Integer =>
+                Ref Ctxt Defs =>
                 SchVars (outer ++ vars) ->
                 Integer -> List ForeignObj ->
                 Core (Term (outer ++ vars))
@@ -131,7 +132,10 @@ mutual
            let arity : Nat = cast arity_in
            let argList = getArgList args_in
            args <- traverse (quote' svs) argList
-           pure (apply emptyFC (Meta emptyFC fname 0 (take arity args))
+           defs <- get Ctxt
+           fnameF <- toFullNames fname
+           (idx, _) <- getPosition fname (gamma defs)
+           pure (apply emptyFC (Meta emptyFC fnameF idx (take arity args))
                                (drop arity args))
   quoteVector svs (-11) [_, loc_in, args_in] -- Blocked local var application
       = do loc <- quote' svs loc_in
@@ -157,7 +161,7 @@ mutual
            pure (TDelayed emptyFC r ty)
   quoteVector svs (-4) [_, r_in, fc_in, ty_in, tm_in] -- Delay
       = do -- Block further reduction under tm_in
-           Just _ <- coreLift $ evalSchemeStr "(ct-blockAll #t)"
+           Just _ <- coreLift $ evalSchemeStr "(ct-setBlockAll #t)"
                 | Nothing => invalid
            let Procedure tmproc = decodeObj tm_in
                 | _ => invalid
@@ -166,7 +170,7 @@ mutual
            tm <- quote' svs (unsafeForce tmproc)
            ty <- quote' svs (unsafeForce typroc)
            -- Turn blocking off again
-           Just _ <- coreLift $ evalSchemeStr "(ct-blockAll #f)"
+           Just _ <- coreLift $ evalSchemeStr "(ct-setBlockAll #f)"
                 | Nothing => invalid
            let fc = case fromScheme (decodeObj fc_in) of
                          Just fc => fc
@@ -305,6 +309,7 @@ mutual
   quoteVector _ _ _ = invalid
 
   quotePiInfo : Ref Sym Integer =>
+                Ref Ctxt Defs =>
                 SchVars (outer ++ vars) ->
                 ForeignObj ->
                 Core (PiInfo (Term (outer ++ vars)))
@@ -321,6 +326,7 @@ mutual
            else pure Explicit
 
   quoteBinder : Ref Sym Integer =>
+                Ref Ctxt Defs =>
                 SchVars (outer ++ vars) ->
                 (forall ty . FC -> RigCount -> PiInfo ty -> ty -> Binder ty) ->
                 ForeignObj -> -- body of binder, represented as a function
@@ -341,6 +347,7 @@ mutual
                       sc')
 
   quotePLet : Ref Sym Integer =>
+              Ref Ctxt Defs =>
               SchVars (outer ++ vars) ->
               ForeignObj -> -- body of binder, represented as a function
               RigCount ->
@@ -360,6 +367,7 @@ mutual
                       sc')
 
   quote' : Ref Sym Integer =>
+           Ref Ctxt Defs =>
            SchVars (outer ++ vars) -> ForeignObj ->
            Core (Term (outer ++ vars))
   quote' svs obj
@@ -403,7 +411,8 @@ quoteObj (MkSObj val schEnv)
          quote' {outer = []} schEnv val
 
 mutual
-  snfVector : SchVars vars ->
+  snfVector : Ref Ctxt Defs =>
+              SchVars vars ->
               Integer -> List ForeignObj ->
               Core (SNF vars)
   snfVector svs (-2) [_, fname_in, args_in] -- Blocked application
@@ -417,7 +426,10 @@ mutual
                     | _ => invalidS
            let arity : Nat = cast arity_in
            let args = map (snf' svs) (getArgList args_in)
-           pure (SApp emptyFC (SMeta fname 0 (take arity args))
+           defs <- get Ctxt
+           fnameF <- toFullNames fname
+           (idx, _) <- getPosition fnameF (gamma defs)
+           pure (SApp emptyFC (SMeta fnameF idx (take arity args))
                                (drop arity args))
   snfVector svs (-11) [_, loc_in, args_in] -- Blocked local var application
       = do SApp fc loc args <- snf' svs loc_in
@@ -446,10 +458,10 @@ mutual
            let Procedure typroc = decodeObj ty_in
                 | _ => invalidS
            -- Block further reduction under tm_in
-           let tm = do Just _ <- coreLift $ evalSchemeStr "(ct-blockAll #t)"
+           let tm = do Just _ <- coreLift $ evalSchemeStr "(ct-setBlockAll #t)"
                             | Nothing => invalidS
                        res <- snf' svs (unsafeForce tmproc)
-                       Just _ <- coreLift $ evalSchemeStr "(ct-blockAll #f)"
+                       Just _ <- coreLift $ evalSchemeStr "(ct-setBlockAll #f)"
                             | Nothing => invalidS
                        pure res
            let ty = snf' svs (unsafeForce typroc)
@@ -591,7 +603,8 @@ mutual
            else invalidS
   snfVector _ _ _ = invalidS
 
-  snfPiInfo : SchVars vars ->
+  snfPiInfo : Ref Ctxt Defs =>
+              SchVars vars ->
               ForeignObj ->
               Core (PiInfo (SNF vars))
   snfPiInfo svs obj
@@ -606,7 +619,8 @@ mutual
                            pure (DefImplicit t')
            else pure Explicit
 
-  snfBinder : SchVars vars ->
+  snfBinder : Ref Ctxt Defs =>
+              SchVars vars ->
               (forall ty . FC -> RigCount -> PiInfo ty -> ty -> Binder ty) ->
               ForeignObj -> -- body of binder, represented as a function
               RigCount ->
@@ -622,7 +636,8 @@ mutual
                                   let sc = unsafeApply proc arg
                                   snf' svs sc))
 
-  snfPLet : SchVars vars ->
+  snfPLet : Ref Ctxt Defs =>
+            SchVars vars ->
             ForeignObj -> -- body of binder, represented as a function
             RigCount ->
             SNF vars -> -- decoded type
@@ -637,7 +652,8 @@ mutual
                                   let sc = unsafeApply proc arg
                                   snf' svs sc))
 
-  snf' : SchVars vars -> ForeignObj ->
+  snf' : Ref Ctxt Defs =>
+         SchVars vars -> ForeignObj ->
          Core (SNF vars)
   snf' svs obj
       = if isVector obj
@@ -670,6 +686,6 @@ mutual
                else unsafeVectorRef obj i :: readVector len (i + 1) obj
 
 export
-toSNF : {auto c : Ref Ctxt Defs} ->
+toSNF : Ref Ctxt Defs =>
         SObj vars -> Core (SNF vars)
 toSNF (MkSObj val schEnv) = snf' schEnv val

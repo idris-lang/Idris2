@@ -1,12 +1,12 @@
 ; Block all reductions (e.g. needed when quoting under a 'delay')
 (define ct-blockAll
-  (make-thread-parameter #f))
+  (make-thread-cell #f))
 
 (define (ct-isBlockAll)
-  (ct-blockAll))
+  (thread-cell-ref ct-blockAll))
 
 (define (ct-setBlockAll x)
-  (ct-blockAll x))
+  (thread-cell-set! ct-blockAll x))
 
 ; Check encodings of normal forms
 (define (ct-isDataCon val)
