@@ -260,10 +260,7 @@ getCompileData doLazyAnnots phase_in tm_in
          logTime "++ Fix arity" $ traverse_ fixArityDef rcns
          compiledtm <- fixArityExp !(compileExp tm)
 
-         (cseDefs, csetm) <- logTime "++ CSE" $ do
-           um      <- analyzeNames rcns
-           defs    <- catMaybes <$> traverse (cseDef um) rcns
-           pure $ (cseNewToplevelDefs um ++ defs, adjust um compiledtm)
+         (cseDefs, csetm) <- logTime "++ CSE" $ cse rcns compiledtm
 
          namedDefs <- logTime "++ Forget names" $
            traverse getNamedDef cseDefs
@@ -316,6 +313,13 @@ compileTerm tm_in
     = do tm <- toFullNames tm_in
          fixArityExp !(compileExp tm)
 
+compDef : {auto c : Ref Ctxt Defs} -> Name -> Core (Maybe (Name, FC, CDef))
+compDef n = do
+  defs <- get Ctxt
+  Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure Nothing
+  let Just cexpr =  compexpr def             | Nothing => pure Nothing
+  pure $ Just (n, location def, cexpr)
+
 export
 getIncCompileData : {auto c : Ref Ctxt Defs} -> (doLazyAnnots : Bool) ->
                     UsePhase -> Core CompileData
@@ -326,7 +330,7 @@ getIncCompileData doLazyAnnots phase
          let ns = keys (toIR defs)
          cns <- traverse toFullNames ns
          rcns <- filterM nonErased cns
-         cseDefs <- catMaybes <$> traverse (cseDef empty) rcns
+         cseDefs <- catMaybes <$> traverse compDef rcns
 
          namedDefs <- traverse getNamedDef cseDefs
 
