@@ -87,7 +87,8 @@ elabRecord {vars} eopts fc env nest newns vis tn_in params conName_in fields
     mkTy ((fc, n, c, imp, argty) :: args) ret
         = IPi fc c imp n argty (mkTy args ret)
 
-    recTy : Name -> RawImp
+    recTy : (tn : Name) -> -- fully qualified name of the record type
+            RawImp
     recTy tn = apply (IVar (virtualiseFC fc) tn) (map (\(n, c, p, tm) => (n, IVar EmptyFC n, p)) params)
       where
         ||| Apply argument to list of explicit or implicit named arguments
@@ -96,7 +97,9 @@ elabRecord {vars} eopts fc env nest newns vis tn_in params conName_in fields
         apply f ((n, arg, Explicit) :: xs) = apply (IApp         (getFC f) f          arg) xs
         apply f ((n, arg, _       ) :: xs) = apply (INamedApp (getFC f) f n arg) xs
 
-    elabAsData : Name -> Name -> Core ()
+    elabAsData : (tn : Name) -> -- fully qualified name of the record type
+                 (conName : Name) -> -- fully qualified name of the record type constructor
+                 Core ()
     elabAsData tn cname
         = do let fc = virtualiseFC fc
              let conty = mkTy paramTelescope $
@@ -120,8 +123,8 @@ elabRecord {vars} eopts fc env nest newns vis tn_in params conName_in fields
     --          you probably will have to adjust TTImp.TTImp.definedInBlock.
     --
     elabGetters : {vs : _} ->
-                  Name ->
-                  Name ->
+                  (tn : Name) -> -- fully qualified name of the record type
+                  (conName : Name) -> -- fully qualified name of the record type constructor
                   (done : Nat) -> -- number of explicit fields processed
                   List (Name, RawImp) -> -- names to update in types
                     -- (for dependent records, where a field's type may depend
