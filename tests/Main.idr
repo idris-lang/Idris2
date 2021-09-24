@@ -41,7 +41,7 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic046", "basic047",             "basic049", "basic050",
        "basic051", "basic052", "basic053", "basic054", "basic055",
        "basic056", "basic057", "basic058", "basic059", "basic060",
-       "basic061",
+       "basic061", "basic062",
        "interpolation001", "interpolation002"]
 
 idrisTestsCoverage : TestPool
