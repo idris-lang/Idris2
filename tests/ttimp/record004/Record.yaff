@@ -1,0 +1,15 @@
+data Nat : Type where
+  Z : Nat
+  S : Nat -> Nat
+
+namespace A
+  public export
+  record Dup where
+    constructor MkDup
+    label : Nat
+
+namespace B
+  public export
+  record Dup where
+    constructor MkDup
+    label : Nat
