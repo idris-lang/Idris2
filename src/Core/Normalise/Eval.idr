@@ -274,7 +274,7 @@ parameters (defs : Defs, topopts : EvalOpts)
              pure def
     evalRef env meta fc nt@Func n stk def
         = do -- logC "eval.ref.func" 50 $ do n' <- toFullNames n
-             --                             pure $ "Found function: " ++ show n'
+             --                             pure $ "Fouand function: " ++ show n'
              Just res <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure def
              let redok1 = evalAll topopts

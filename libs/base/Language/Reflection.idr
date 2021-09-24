@@ -61,26 +61,26 @@ Monad Elab where
   (>>=) = Bind
 
 ||| Report an error in elaboration
-export
+public export
 fail : String -> Elab a
 fail = Fail EmptyFC
 
-export
+public export
 failAt : FC -> String -> Elab a
 failAt = Fail
 
 ||| Write a log message, if the log level is >= the given level
-export
+public export
 logMsg : String -> Nat -> String -> Elab ()
 logMsg = LogMsg
 
 ||| Write a log message and a rendered term, if the log level is >= the given level
-export
+public export
 logTerm : String -> Nat -> String -> TTImp -> Elab ()
 logTerm = LogTerm
 
 ||| Log the current goal type, if the log level is >= the given level
-export
+public export
 logGoal : String -> Nat -> String -> Elab ()
 logGoal str n msg
     = do g <- Goal
@@ -90,58 +90,58 @@ logGoal str n msg
 
 ||| Check that some TTImp syntax has the expected type
 ||| Returns the type checked value
-export
+public export
 check : TTImp -> Elab expected
 check = Check
 
 ||| Return TTImp syntax of a given value
-export
+public export
 quote : (0 _ : val) -> Elab TTImp
 quote = Quote
 
 ||| Build a lambda expression
-export
+public export
 lambda : (0 x : Type) ->
          {0 ty : x -> Type} ->
          ((val : x) -> Elab (ty val)) -> Elab ((val : x) -> (ty val))
 lambda = Lambda
 
 ||| Get the goal type of the current elaboration
-export
+public export
 goal : Elab (Maybe TTImp)
 goal = Goal
 
 ||| Get the names of the local variables in scope
-export
+public export
 localVars : Elab (List Name)
 localVars = LocalVars
 
 ||| Generate a new unique name
-export
+public export
 genSym : String -> Elab Name
 genSym = GenSym
 
 ||| Given a name, return the name decorated with the current namespace
-export
+public export
 inCurrentNS : Name -> Elab Name
 inCurrentNS = InCurrentNS
 
 ||| Given a possibly ambiguous name, get all the matching names and their types
-export
+public export
 getType : Name -> Elab (List (Name, TTImp))
 getType = GetType
 
 ||| Get the type of a local variable
-export
+public export
 getLocalType : Name -> Elab TTImp
 getLocalType = GetLocalType
 
 ||| Get the constructors of a fully qualified data type name
-export
+public export
 getCons : Name -> Elab (List Name)
 getCons = GetCons
 
 ||| Make some top level declarations
-export
+public export
 declare : List Decl -> Elab ()
 declare = Declare
