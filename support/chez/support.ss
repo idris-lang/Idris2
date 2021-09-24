@@ -499,7 +499,10 @@
 ; read a scheme string and evaluate it, returning 'Just result' on success
 ; TODO: catch exception!
 (define (blodwen-eval-scheme str)
-  (box (eval (read (open-input-string str))))) ; box == Just
+  (guard
+     (x [#t '()]) ; Nothing on failure
+     (box (eval (read (open-input-string str)))))
+  ); box == Just
 
 (define (blodwen-eval-okay obj)
   (if (null? obj)

@@ -19,6 +19,7 @@ import Core.TTC
 import Libraries.Data.IOArray
 import Libraries.Data.SortedMap
 import Libraries.Utils.Path
+import Libraries.Utils.Scheme
 
 import Data.List
 import Data.List1
@@ -146,7 +147,7 @@ getMinimalDef (Coded ns bin)
              = MkGlobalDef fc name (Erased fc False) [] [] [] [] mul
                            [] Public (MkTotality Unchecked IsCovering)
                            [] Nothing refsR False False True
-                           None cdef []
+                           None cdef Nothing [] Nothing
          pure (def, Just (ns, bin))
 
 -- ||| Recursively get all calls in a function definition
