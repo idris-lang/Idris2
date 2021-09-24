@@ -289,19 +289,19 @@ getCompileData doLazyAnnots phase_in tm_in
          defs <- get Ctxt
          whenJust (dumpcases sopts) $ \ f =>
             do coreLift $ putStrLn $ "Dumping case trees to " ++ f
-               dumpIR {def=NamedDef} f (map (\(n, _, def) => (n, def)) namedDefs)
+               dumpIR f (map (\(n, _, def) => (n, def)) namedDefs)
 
          whenJust (dumplifted sopts) $ \ f =>
             do coreLift $ putStrLn $ "Dumping lambda lifted defs to " ++ f
-               dumpIR {def=LiftedDef} f lifted
+               dumpIR f lifted
 
          whenJust (dumpanf sopts) $ \ f =>
             do coreLift $ putStrLn $ "Dumping ANF defs to " ++ f
-               dumpIR {def=ANFDef} f anf
+               dumpIR f anf
 
          whenJust (dumpvmcode sopts) $ \ f =>
             do coreLift $ putStrLn $ "Dumping VM defs to " ++ f
-               dumpIR {def=VMDef} f vmcode
+               dumpIR f vmcode
 
          -- We're done with our minimal context now, so put it back the way
          -- it was. Back ends shouldn't look at the global context, because
