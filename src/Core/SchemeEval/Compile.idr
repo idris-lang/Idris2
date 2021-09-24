@@ -368,7 +368,7 @@ compileCase blk svs (Case idx p scTy xs)
         = do let var = getSchVar p svs
              alts' <- traverse (makeAlt var) alts
              caseblock <- addPiMatch var alts
-                      -- work on the name, so the 2nd arg    
+                      -- work on the name, so the 2nd arg
                             (Case (Apply (Var "vector-ref") [Var var, IntegerVal 2])
                                (mapMaybe id alts')
                                (Just !(makeDefault alts)))
@@ -471,12 +471,12 @@ mkArgs (x :: xs)
     = pure $ Bound (schVarName x) :: !(mkArgs xs)
 
 bindArgs : Name ->
-           (todo : SchVars ns) -> 
+           (todo : SchVars ns) ->
            (done : List (SchemeObj Write)) ->
            SchemeObj Write -> SchemeObj Write
 bindArgs n [] done body = body
 bindArgs n (x :: xs) done body
-    = Vector (-9) [blockedAppWith n (reverse done), 
+    = Vector (-9) [blockedAppWith n (reverse done),
                    Lambda [show x]
                       (bindArgs n xs (Var (show x) :: done) body)]
 

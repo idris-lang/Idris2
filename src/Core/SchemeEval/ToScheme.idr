@@ -95,7 +95,7 @@ Scheme RigCount where
       = if isErased x then IntegerVal 0
         else if isLinear x then IntegerVal 1
         else IntegerVal 2
-  
+
   fromScheme (IntegerVal 0) = Just erased
   fromScheme (IntegerVal 1) = Just linear
   fromScheme _ = Just top

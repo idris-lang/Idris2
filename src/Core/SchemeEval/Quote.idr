@@ -107,7 +107,7 @@ mutual
            arg <- seval EvalAll env (Ref fc Bound var)
            sc' <- quoteGen q (Add n var bound) env !(sc arg)
            b' <- quoteBinder q bound env b
-           pure (Bind fc n b' sc') 
+           pure (Bind fc n b' sc')
   quoteGen q bound env (SApp fc f args)
       = do f' <- quoteHead q fc bound env f
            args' <- quoteArgs q bound env args

@@ -75,7 +75,7 @@ seval mode env tm
          let rs = addMetas ms tm
          names <- getAllNames empty (keys rs)
          traverse_ (compileDef mode) (keys names)
-         
+
          i <- newRef Sym 0
          (bind, schEnv) <- mkEnv env id
          stm <- compile schEnv !(toFullNames tm)
@@ -296,7 +296,7 @@ mutual
            pure $ PrimVal emptyFC (B64 x')
   quoteVector svs tag (_ :: cname_in :: fc_in :: args_in) -- DataCon
       = if tag >= 0
-           then do 
+           then do
              let Just cname = fromScheme (decodeObj cname_in)
                     | Nothing => invalid
              let fc = emptyFC -- case fromScheme (decodeObj fc_in) of
@@ -592,7 +592,7 @@ mutual
 
   snfVector svs tag (_ :: cname_in :: fc_in :: args_in) -- DataCon
       = if tag >= 0
-           then do 
+           then do
              let Just cname = fromScheme (decodeObj cname_in)
                     | Nothing => invalidS
              let fc = case fromScheme (decodeObj fc_in) of
