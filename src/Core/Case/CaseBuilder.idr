@@ -14,6 +14,7 @@ import Core.Value
 import Data.List
 import Data.Vect
 import Libraries.Data.LengthMatch
+import Libraries.Data.SortedSet
 
 import Decidable.Equality
 
@@ -1247,18 +1248,18 @@ mutual
 identifyUnreachableDefaults : {auto c : Ref Ctxt Defs} ->
                               {vars : _} ->
                               FC -> Defs -> NF vars -> List (CaseAlt vars) ->
-                              Core (List Int)
+                              Core (SortedSet Int)
 -- Leave it alone if it's a primitive type though, since we need the catch
 -- all case there
-identifyUnreachableDefaults fc defs (NPrimVal _ _) cs = pure []
-identifyUnreachableDefaults fc defs (NType _) cs = pure []
+identifyUnreachableDefaults fc defs (NPrimVal _ _) cs = pure empty
+identifyUnreachableDefaults fc defs (NType _) cs = pure empty
 identifyUnreachableDefaults fc defs nfty cs
     = do cs' <- traverse rep cs
-         let (cs'', extraClauseIdxs) = dropRep (concat cs') []
+         let (cs'', extraClauseIdxs) = dropRep (concat cs') empty
          let extraClauseIdxs' =
            if (length cs == (length cs'' + 1))
-              then nub extraClauseIdxs
-              else []
+              then extraClauseIdxs
+              else empty
          -- if a clause is unreachable under all the branches it can be found under
          -- then it is entirely unreachable.
          when (not $ null extraClauseIdxs') $
@@ -1272,15 +1273,15 @@ identifyUnreachableDefaults fc defs nfty cs
              pure (map (mkAlt fc sc . snd) allCons)
     rep c = pure [c]
 
-    dropRep : List (CaseAlt vars) -> List Int -> (List (CaseAlt vars), List Int)
+    dropRep : List (CaseAlt vars) -> SortedSet Int -> (List (CaseAlt vars), SortedSet Int)
     dropRep [] extra = ([], extra)
     dropRep (c@(ConCase n t args sc) :: rest) extra
           -- assumption is that there's no defaultcase in 'rest' because
           -- we've just removed it
         = let (filteredClauses, extraCases) = partition (not . tagIs t) rest
               extraClauses = extraCases >>= findReachedAlts
-              (rest', extra') = dropRep filteredClauses extraClauses
-          in  (c :: rest', extra ++ extra')
+              (rest', extra') = dropRep filteredClauses $ fromList extraClauses
+          in  (c :: rest', extra `union` extra')
     dropRep (c :: rest) extra
         = let (rest', extra') = dropRep rest extra
           in  (c :: rest', extra')
@@ -1301,7 +1302,7 @@ findExtraDefaults fc defs ctree@(Case {name = var} idx el ty altsIn)
        nfty <- nf defs fenv ty
        extraCases <- identifyUnreachableDefaults fc defs nfty altsIn
        extraCases' <- concat <$> traverse findExtraAlts altsIn
-       pure (extraCases ++ extraCases')
+       pure (SortedSet.toList extraCases ++ extraCases')
   where
     findExtraAlts : CaseAlt vars -> Core (List Int)
     findExtraAlts (ConCase x tag args ctree') = findExtraDefaults fc defs ctree'
