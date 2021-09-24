@@ -13,14 +13,18 @@
 ||| iterate over all toplevel definitions once, trying to
 ||| convert every subexpression to a closed one (no free
 ||| variables). Closed terms are then stored in a `SortedMap`
-||| together with their size and count.
+||| together with their size and count. In order to only use
+||| linear space w.r.t. term size, we start this analysis at the
+||| leaves and substitute closed terms with the machine generated
+||| names before analyzing parent terms.
 |||
-||| This map is then pruned: Expressions with a count of 1 are removed,
-||| as are very small terms (some experiments showed, that a
-||| cut-off size of 5 is a good heuristic). The remaining duplicate
-||| expressions are then introduced as new zero-argument toplevel
-||| functions and replaced accordingly in all function definitions
-||| (including larger extracted subexpressions, if any).
+||| In a second step, we compare the count of each machine
+||| generated name with the count of its parent expression.
+||| If they are the same, the name is dropped and replaces with
+||| a CSE optimized version of the original expression, otherwise
+||| the name is kept and a new zero argumet function of the
+||| given name is added to the toplevel, thus eliminating the
+||| duplicate expressions.
 module Compiler.Opts.CSE
 
 import Core.CompileExpr
@@ -44,38 +48,37 @@ public export
 UsageMap : Type
 UsageMap = SortedMap (Integer, CExp []) (Name, Integer)
 
---------------------------------------------------------------------------------
---          Size of Expressions
---------------------------------------------------------------------------------
+||| Number of appearances of a closed expression.
+|||
+|||  `Once` : The expression occurs exactly once.
+|||  `Many` : The expression occurs more than once.
+|||  `C n`  : The expression has been counted `n` times
+|||           but we will have to compare this value
+|||           with the number of occurences of its parent
+|||           expression to decide whether it occured
+|||           only once or several times.
+|||
+public export
+data Count = Once | Many | C Integer
 
-mutual
-  -- comparison for `Nat` is (or used to be?) O(n),
-  -- therefore, we use `Integer`
-  size : CExp ns -> Integer
-  size (CLocal _ _)         = 1
-  size (CRef _ _)           = 1
-  size (CLam _ _ y)         = size y + 1
-  size (CLet _ _ _ y z)     = size y + size z + 1
-  size (CApp _ _ xs)        = sum (map size xs) + 1
-  size (CCon _ _ _ _ xs)    = sum (map size xs) + 1
-  size (COp _ _ xs)         = sum (map size xs) + 1
-  size (CExtPrim _ _ xs)    = sum (map size xs) + 1
-  size (CForce _ _ y)       = size y + 1
-  size (CDelay _ _ y)       = size y + 1
-  size (CPrimVal _ _)       = 1
-  size (CErased _)          = 1
-  size (CCrash _ _)         = 1
-  size (CConCase _ sc xs x) =
-    size sc + sum (map sizeConAlt xs) + sum (map size x) + 1
+Show Count where
+  show Once  = "Once"
+  show Many  = "Many"
+  show (C n) = "C " ++ show n
 
-  size (CConstCase _ sc xs x) =
-    size sc + sum (map sizeConstAlt xs) + sum (map size x) + 1
+||| After common subexpression analysis we get a mapping
+||| from `Name`s to the closed expressions they replace.
+||| We use this mapping for substituting the names back
+||| to the corresponding expressions, if and only if
+||| the expression appears only in one place.
+public export
+ReplaceMap : Type
+ReplaceMap = SortedMap Name (CExp [], Count)
 
-  sizeConAlt : CConAlt ns -> Integer
-  sizeConAlt (MkConAlt _ _ _ _ z) = 1 + size z
-
-  sizeConstAlt : CConstAlt ns -> Integer
-  sizeConstAlt (MkConstAlt _ y) = 1 + size y
+toReplaceMap : UsageMap -> ReplaceMap
+toReplaceMap = SortedMap.fromList
+             . map (\((_,exp),(n,c)) => (n, (exp, C c)))
+             . SortedMap.toList
 
 --------------------------------------------------------------------------------
 --          State
@@ -88,24 +91,24 @@ record St where
   map : UsageMap
   idx : Int
 
--- adds a new closed expression to the `UsageMap`
--- returning the actual count of occurences.
--- very small expressions are being ignored.
-store : Ref Sts St => CExp [] -> Core Integer
-store exp =
-  let sz = size exp
-   in if sz < 5
-         then pure 0
-         else do
-           (MkSt map idx)    <- get Sts
+-- Adds a new closed expression to the `UsageMap`
+-- returning a new machine generated name to be used
+-- if the expression should be lifted to the toplevel.
+-- Very small expressions are being ignored.
+store : Ref Sts St => Integer -> CExp [] -> Core (Maybe Name)
+store sz exp =
+  if sz < 5
+     then pure Nothing
+     else do
+       (MkSt map idx)    <- get Sts
 
-           (name,count,idx2) <-
-             case lookup (sz,exp) map of
-               Just (nm,cnt) => pure (nm, cnt+1, idx)
-               Nothing       => pure (MN "csegen" idx, 1, idx + 1)
+       (name,count,idx2) <-
+         case lookup (sz,exp) map of
+           Just (nm,cnt) => pure (nm, cnt+1, idx)
+           Nothing       => pure (MN "csegen" idx, 1, idx + 1)
 
-           put Sts $ MkSt (insert (sz,exp) (name, count) map) idx2
-           pure count
+       put Sts $ MkSt (insert (sz,exp) (name, count) map) idx2
+       pure (Just name)
 
 --------------------------------------------------------------------------------
 --          Strengthening of Expressions
@@ -170,22 +173,18 @@ mutual
 --------------------------------------------------------------------------------
 
 mutual
-  -- Tries to convert an expression to a closed term (`CExp []`).
-  -- If this is successful, the expression's number of occurences
-  -- is increased by one, otherwise, its subexpressions are analyzed
-  -- in a similar manner.
+  -- Tries to convert an expression and its
+  -- sub-expression to closed terms (`CExp []`).
+  -- Every occurence of a closed term will be replaced by
+  -- a machine generated name and its count in the `UsageMap`
+  -- will be increased by one.
   --
-  -- We have to be careful here not to count subexpressions too
-  -- often. For instance, consider a case of `outerExp (innerExp)`,
-  -- where both `outerExp` and `innerExp` are closed terms. `innerExp`
-  -- should be added to the set of extracted subexpressions, if
-  -- and only if it appears somewhere else in the code,
-  -- unrelated to `outerExp`. We must
-  -- therefore make sure to analyze subexpressions of closed terms
-  -- exactly once for each closed term, otherwise they might
-  -- be counted as additional common subexpressions although they are not.
+  -- Because we start at the leafs and substitute all closed
+  -- expressions with machine generated names, we have to
+  -- keep track of the original expression's size, which
+  -- is returned in addition to the adjusted expressions.
   export
-  analyze : Ref Sts St => CExp ns -> Core ()
+  analyze : Ref Sts St => CExp ns -> Core (Integer, CExp ns)
 
   -- We ignore prim ops here, since moving them to the toplevel
   -- might interfere with other optimizations, for instance
@@ -199,159 +198,291 @@ mutual
   analyze c@(CForce _ _ _)   = analyzeSubExp c
   analyze c@(CDelay _ _ _)   = analyzeSubExp c
 
-  analyze exp = case dropEnv {pre = []} exp of
-    Just e0 => do
-      count <- store e0
-      -- only analyze subexpressions of closed terms once
-      when (count == 1) $ analyzeSubExp exp
-    Nothing => analyzeSubExp exp
+  analyze exp = do
+    (sze, exp') <- analyzeSubExp exp
+    case dropEnv {pre = []} exp' of
+      Just e0 => do
+        Just nm <- store sze e0
+          | Nothing => pure (sze, exp')
+        pure (sze, CRef EmptyFC nm)
+      Nothing => pure (sze, exp')
 
-  analyzeSubExp : Ref Sts St => CExp ns -> Core ()
-  analyzeSubExp (CLocal _ _)         = pure ()
-  analyzeSubExp (CRef _ _)           = pure ()
-  analyzeSubExp (CLam _ _ y)         = analyze y
-  analyzeSubExp (CLet _ _ _ y z)     = analyze y >> analyze z
-  analyzeSubExp (CApp fc x xs)       = analyze x >> traverse_ analyze xs
-  analyzeSubExp (CCon _ _ _ _ [])    = pure ()
-  analyzeSubExp (CCon _ _ _ _ xs)    = traverse_ analyze xs
-  analyzeSubExp (COp _ _ xs)         = ignore $ traverseVect analyze xs
-  analyzeSubExp (CExtPrim _ _ xs)    = traverse_ analyze xs
-  analyzeSubExp (CForce _ _ y)       = analyze y
-  analyzeSubExp (CDelay _ _ y)       = analyze y
-  analyzeSubExp (CConCase _ sc xs x) =
-    analyze sc                     >>
-    traverse_ analyzeConAlt xs     >>
-    ignore (traverseOpt analyze x)
+  analyzeList : Ref Sts St => List (CExp ns) -> Core (Integer, List (CExp ns))
+  analyzeList es = do
+    (sizes, exps) <- unzip <$> traverse analyze es
+    pure (sum sizes, exps)
 
-  analyzeSubExp (CConstCase _ sc xs x) =
-    analyze sc                     >>
-    traverse_ analyzeConstAlt xs   >>
-    ignore (traverseOpt analyze x)
+  analyzeMaybe : Ref Sts St => Maybe (CExp ns) -> Core (Integer, Maybe (CExp ns))
+  analyzeMaybe Nothing  = pure (0, Nothing)
+  analyzeMaybe (Just e) = do
+    (se,e') <- analyze e
+    pure (se, Just e')
 
-  analyzeSubExp (CPrimVal _ _) = pure ()
-  analyzeSubExp (CErased _)    = pure ()
-  analyzeSubExp (CCrash _ _)   = pure ()
+  analyzeVect : Ref Sts St => Vect n (CExp ns) -> Core (Integer, Vect n (CExp ns))
+  analyzeVect es = do
+    (sizes, exps) <- unzip <$> traverseVect analyze es
+    pure (sum sizes, exps)
 
-  analyzeConAlt : { auto c : Ref Sts St } -> CConAlt ns -> Core ()
-  analyzeConAlt (MkConAlt _ _ _ _ z) = analyze z
 
-  analyzeConstAlt : Ref Sts St => CConstAlt ns -> Core ()
-  analyzeConstAlt (MkConstAlt _ y) = analyze y
+  analyzeSubExp : Ref Sts St => CExp ns -> Core (Integer, CExp ns)
+  analyzeSubExp e@(CLocal _ _)         = pure (1, e)
+  analyzeSubExp e@(CRef _ _)           = pure (1, e)
+  analyzeSubExp (CLam f n y)  = do
+    (sy, y') <- analyze y
+    pure (sy + 1, CLam f n y')
 
-analyzeDef : Ref Sts St => CDef -> Core ()
-analyzeDef (MkFun args x)    = analyze x
-analyzeDef (MkCon _ _ _)     = pure ()
-analyzeDef (MkForeign _ _ _) = pure ()
-analyzeDef (MkError _)       = pure ()
+  analyzeSubExp (CLet f n i y z) = do
+    (sy, y') <- analyze y
+    (sz, z') <- analyze z
+    pure (sy + sz + 1, CLet f n i y' z')
 
-analyzeName : Ref Sts St => Ref Ctxt Defs => Name -> Core ()
+  analyzeSubExp (CApp fc x xs) = do
+    (sx, x')   <- analyze x
+    (sxs, xs') <- analyzeList xs
+    pure (sx + sxs + 1, CApp fc x' xs')
+
+  analyzeSubExp (CCon f n c t xs) = do
+    (sxs, xs') <- analyzeList xs
+    pure (sxs + 1, CCon f n c t xs')
+
+  analyzeSubExp (COp f n xs) = do
+    (sxs, xs') <- analyzeVect xs
+    pure (sxs + 1, COp f n xs')
+
+  analyzeSubExp (CExtPrim f n xs) = do
+    (sxs, xs') <- analyzeList xs
+    pure (sxs + 1, CExtPrim f n xs')
+
+  analyzeSubExp (CForce f r y) = do
+    (sy, y') <- analyze y
+    pure (sy + 1, CForce f r y')
+
+  analyzeSubExp (CDelay f r y) = do
+    (sy, y') <- analyze y
+    pure (sy + 1, CDelay f r y')
+
+  analyzeSubExp (CConCase f sc xs x) = do
+    (ssc, sc') <- analyze sc
+    (sxs, xs') <- unzip <$> traverse analyzeConAlt xs
+    (sx, x')   <- analyzeMaybe x
+    pure (ssc + sum sxs + sx + 1, CConCase f sc' xs' x')
+
+  analyzeSubExp (CConstCase f sc xs x) = do
+    (ssc, sc') <- analyze sc
+    (sxs, xs') <- unzip <$> traverse analyzeConstAlt xs
+    (sx, x')   <- analyzeMaybe x
+    pure (ssc + sum sxs + sx + 1, CConstCase f sc' xs' x')
+
+  analyzeSubExp c@(CPrimVal _ _) = pure (1, c)
+  analyzeSubExp c@(CErased _)    = pure (1, c)
+  analyzeSubExp c@(CCrash _ _)   = pure (1, c)
+
+  analyzeConAlt :  { auto c : Ref Sts St }
+                -> CConAlt ns
+                -> Core (Integer, CConAlt ns)
+  analyzeConAlt (MkConAlt n c t as z) = do
+    (sz, z') <- analyze z
+    pure (sz + 1, MkConAlt n c t as z')
+
+  analyzeConstAlt : Ref Sts St => CConstAlt ns -> Core (Integer, CConstAlt ns)
+  analyzeConstAlt (MkConstAlt c y) = do
+    (sy, y') <- analyze y
+    pure (sy + 1, MkConstAlt c y')
+
+analyzeDef : Ref Sts St => CDef -> Core CDef
+analyzeDef (MkFun args x)      = MkFun args . snd <$> analyze x
+analyzeDef d@(MkCon _ _ _)     = pure d
+analyzeDef d@(MkForeign _ _ _) = pure d
+analyzeDef d@(MkError _)       = pure d
+
+analyzeName :  Ref Sts St
+            => Ref Ctxt Defs
+            => Name
+            -> Core (Maybe (Name, FC, CDef))
 analyzeName fn = do
     defs <- get Ctxt
     Just def <- lookupCtxtExact fn (gamma defs)
-        | Nothing => pure ()
+        | Nothing => pure Nothing
     let Just cexp = compexpr def
-        | Nothing => pure ()
-    analyzeDef cexp
-
-||| Generates a `UsageMap` (a mapping from closed terms
-||| to their number of occurences plus newly generated
-||| name in case they will be lifted to the toplevel)
-export
-analyzeNames :  Ref Ctxt Defs => List Name -> Core UsageMap
-analyzeNames cns = do
-  log "compiler.cse" 10 $ "Analysing " ++ show (length cns) ++ " names"
-  s <- newRef Sts $ MkSt empty 0
-  traverse_ analyzeName cns
-  MkSt res _ <- get Sts
-  let filtered = reverse
-               . sortBy (comparing $ snd . snd)
-               . filter ((> 1) . snd . snd)
-               $ SortedMap.toList res
-
-  log "compiler.cse" 10 $ unlines $
-    "Selected the following definitions:"
-    ::  map (\((sz,_),(name,cnt)) =>
-                  show name ++
-                  ": count " ++ show cnt ++
-                  ", size " ++ show sz
-           ) filtered
-
-  pure $ fromList filtered
+        | Nothing => pure Nothing
+    cexp' <- analyzeDef cexp
+    pure $ Just (fn, location def, cexp')
 
 --------------------------------------------------------------------------------
---          Adjusting Expressions
+--          Replacing Expressions
 --------------------------------------------------------------------------------
 
 mutual
-  export
-  adjust : UsageMap -> CExp ns -> CExp ns
-  adjust um exp = case dropEnv {pre = []} exp of
-    Nothing => adjustSubExp um exp
-    Just e0 => case lookup (size e0, e0) um of
-      Just (nm,_) => CApp EmptyFC (CRef EmptyFC nm) []
-      Nothing     => adjustSubExp um exp
+  -- During the analysis step, we replaced every closed
+  -- expression with a machine generated name. We only
+  -- want to keep these substitutions, if a closed term
+  -- appears in several distinct locations in the code.
+  --
+  -- We therefore check for each machine generated name, if
+  -- the corresponding closed term has a count > 1. If that's
+  -- not the case, the machine generated name will be dropped
+  -- and replaces with the CSE-optimized original term.
+  --
+  -- However, during the analysis step, we might get counts > 1
+  -- for expressions that still are used only once.
+  -- Consider the following situation:
+  --
+  --    fun1 = exp1(exp2(exp3))
+  --    fun2 = exp4(exp2(exp3))
+  --
+  -- In the example above, `exp2` is a proper common subexpression
+  -- that should be lifted to the toplevel, but exp3 is not, although
+  -- it will also get a count of 2 in the `UsageMap`.
+  -- We therefore compare the count of each child expression
+  -- with the count of their parent expression, lifting
+  -- a child only if it was counted mor often than its parent.
+  replaceRef :  Ref ReplaceMap ReplaceMap
+             => Ref Ctxt Defs
+             => (parentCount : Integer)
+             -> FC
+             -> Name
+             -> Core (CExp ns)
+  replaceRef pc fc n = do
+    log "compiler.cse" 10 $ "Trying to replace " ++ show n ++ ": "
+    res <- lookup n <$> get ReplaceMap
+    case res of
+      -- not a name generated during CSE
+      Nothing          => do
+        log "compiler.cse" 10 $ "  not a name generated durin CSE"
+        pure (CRef fc n)
 
-  adjustSubExp : UsageMap -> CExp ns -> CExp ns
-  adjustSubExp um e@(CLocal _ _) = e
-  adjustSubExp um e@(CRef _ _) = e
-  adjustSubExp um e@(CPrimVal _ _) = e
-  adjustSubExp um e@(CErased _) = e
-  adjustSubExp um e@(CCrash _ _) = e
-  adjustSubExp um (CLam fc x y) = CLam fc x $ adjust um y
-  adjustSubExp um (CLet fc x inlineOK y z) =
-    CLet fc x inlineOK (adjust um y) (adjust um z)
+      -- Expression count has already been checked and occurs
+      -- several times. Replace it with the machine generated name.
+      Just (exp, Many) => do
+        log "compiler.cse" 10 $ "  already replaced: Occurs many times"
+        pure (CApp EmptyFC (CRef fc n) [])
 
-  adjustSubExp um (CApp fc x xs) =
-    CApp fc (adjust um x) (map (adjust um) xs)
 
-  adjustSubExp um (CCon fc x y tag xs) =
-    CCon fc x y tag $ map (adjust um) xs
+      -- Expression count has already been checked and occurs
+      -- only once. Substitute the machine generated name with
+      -- the original (but CSE optimized) exp
+      Just (exp, Once) => do
+        log "compiler.cse" 10 $ "  already replaced: Occurs many times"
+        pure (embed exp)
 
-  adjustSubExp um (COp fc x xs) = COp fc x $ map (adjust um) xs
+      -- Expression count has not yet been compared with the
+      -- parent count. Do this now.
+      Just (exp, C c)  => do
+        log "compiler.cse" 10 $  "  expression of unknown quantity ("
+                              ++ show c
+                              ++ " occurences)"
+        -- We first have to replace all child expressions.
+        exp' <- replaceExp c exp
+        if c > pc
+           -- This is a common subexpression. We set its count to `Many`
+           -- and replace it with the machine generated name.
+           then do
+             log "compiler.cse" 10 $ show n ++ " assigned quantity \"Many\""
+             update ReplaceMap (insert n (exp', Many))
+             pure (CApp EmptyFC (CRef fc n) [])
 
-  adjustSubExp um (CExtPrim fc p xs) = CExtPrim fc p $ map (adjust um) xs
+           -- This expression occurs only once. We set its count to `Once`
+           -- and keep it.
+           else do
+             log "compiler.cse" 10 $ show n ++ " assigned quantity \"Once\""
+             update ReplaceMap (insert n (exp', Once))
+             pure (embed exp')
 
-  adjustSubExp um (CForce fc x y) = CForce fc x $ adjust um y
+  replaceExp :  Ref ReplaceMap ReplaceMap
+             => Ref Ctxt Defs
+             => (parentCount : Integer)
+             -> CExp ns
+             -> Core (CExp ns)
+  replaceExp _ e@(CLocal _ _)  = pure e
+  replaceExp pc (CRef f n)     = replaceRef pc f n
+  replaceExp pc (CLam f n y)   = CLam f n <$> replaceExp pc y
+  replaceExp pc (CLet f n i y z) =
+    CLet f n i <$> replaceExp pc y <*> replaceExp pc z
+  replaceExp pc (CApp f x xs) =
+    CApp f <$> replaceExp pc x <*> traverse (replaceExp pc) xs
+  replaceExp pc (CCon f n c t xs) =
+    CCon f n c t <$> traverse (replaceExp pc) xs
+  replaceExp pc (COp f n xs) =
+    COp f n <$> traverseVect (replaceExp pc) xs
+  replaceExp pc (CExtPrim f n xs) =
+    CExtPrim f n <$> traverse (replaceExp pc) xs
+  replaceExp pc (CForce f r y) =
+    CForce f r <$> replaceExp pc y
+  replaceExp pc (CDelay f r y) =
+    CDelay f r <$> replaceExp pc y
+  replaceExp pc (CConCase f sc xs x) =
+    CConCase f                     <$>
+    replaceExp pc sc               <*>
+    traverse (replaceConAlt pc) xs <*>
+    traverseOpt (replaceExp pc) x
 
-  adjustSubExp um (CDelay fc x y) = CDelay fc x $ adjust um y
+  replaceExp pc (CConstCase f sc xs x) = do
+    CConstCase f                     <$>
+    replaceExp pc sc                 <*>
+    traverse (replaceConstAlt pc) xs <*>
+    traverseOpt (replaceExp pc) x
 
-  adjustSubExp um (CConCase fc sc xs x) =
-    CConCase fc (adjust um sc) (map (adjustConAlt um) xs) (map (adjust um) x)
+  replaceExp _ c@(CPrimVal _ _) = pure c
+  replaceExp _ c@(CErased _)    = pure c
+  replaceExp _ c@(CCrash _ _)   = pure c
 
-  adjustSubExp um (CConstCase fc sc xs x) =
-    CConstCase fc (adjust um sc) (map (adjustConstAlt um) xs) (map (adjust um) x)
+  replaceConAlt :  Ref ReplaceMap ReplaceMap
+                => Ref Ctxt Defs
+                => (parentCount : Integer)
+                -> CConAlt ns
+                -> Core (CConAlt ns)
+  replaceConAlt pc (MkConAlt n c t as z) =
+    MkConAlt n c t as <$> replaceExp pc z
 
-  adjustConAlt : UsageMap -> CConAlt ns -> CConAlt ns
-  adjustConAlt um (MkConAlt x y tag args z) =
-    MkConAlt x y tag args $ adjust um z
+  replaceConstAlt :  Ref ReplaceMap ReplaceMap
+                  => Ref Ctxt Defs
+                  => (parentCount : Integer)
+                  -> CConstAlt ns
+                  -> Core (CConstAlt ns)
+  replaceConstAlt pc (MkConstAlt c y) =
+    MkConstAlt c <$> replaceExp pc y
 
-  adjustConstAlt : UsageMap -> CConstAlt ns -> CConstAlt ns
-  adjustConstAlt um (MkConstAlt x y) = MkConstAlt x $ adjust um y
+replaceDef :  Ref ReplaceMap ReplaceMap
+           => Ref Ctxt Defs
+           => (Name, FC, CDef)
+           -> Core (Name, FC, CDef)
+replaceDef (n, fc, MkFun args x) =
+  (\x' => (n, fc, MkFun args x')) <$> replaceExp 1 x
+replaceDef (n, fc, d@(MkCon _ _ _))     = pure (n, fc, d)
+replaceDef (n, fc, d@(MkForeign _ _ _)) = pure (n, fc, d)
+replaceDef (n, fc, d@(MkError _))       = pure (n, fc, d)
 
-||| Converts occurences of common subexpressions in toplevel
-||| definitions to invocations of the corresponding
-||| (newly introduced) zero-argument toplevel functions.
+newToplevelDefs : ReplaceMap -> List (Name, FC, CDef)
+newToplevelDefs rm = mapMaybe toDef $ SortedMap.toList rm
+  where toDef : (Name,(CExp[],Count)) -> Maybe (Name, FC, CDef)
+        toDef (nm,(exp,Many)) = Just (nm, EmptyFC, MkFun [] exp)
+        toDef _               = Nothing
+
+undefinedCount : (Name, (CExp [], Count)) -> Bool
+undefinedCount (_, _, Once) = False
+undefinedCount (_, _, Many) = False
+undefinedCount (_, _, C x)  = True
+
+||| Runs the CSE alorithm on all provided names and
+||| the given main expression.
 export
-adjustDef : UsageMap -> CDef -> CDef
-adjustDef um (MkFun args x)      = MkFun args $ adjust um x
-adjustDef um d@(MkCon _ _ _)     = d
-adjustDef um d@(MkForeign _ _ _) = d
-adjustDef um d@(MkError _)       = d
-
-export
-cseDef :  {auto c : Ref Ctxt Defs}
-       -> UsageMap
-       -> Name
-       -> Core (Maybe (Name, FC, CDef))
-cseDef um n = do
-  defs <- get Ctxt
-  Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure Nothing
-  let Just cexpr =  compexpr def             | Nothing => pure Nothing
-  pure $ Just (n, location def, adjustDef um cexpr)
-
-export
-cseNewToplevelDefs : UsageMap -> List (Name, FC, CDef)
-cseNewToplevelDefs um = map toDef $ SortedMap.toList um
-  where toDef : ((Integer, CExp[]),(Name,Integer)) -> (Name, FC, CDef)
-        toDef ((_,exp),(nm,_)) =
-          (nm, EmptyFC, MkFun [] $ adjustSubExp um exp)
+cse :  Ref Ctxt Defs
+    => (definitionNames : List Name)
+    -> (mainExpr        : CExp ns)
+    -> Core (List (Name, FC, CDef), CExp ns)
+cse defs me = do
+  log "compiler.cse" 10 $ "Analysing " ++ show (length defs) ++ " names"
+  s            <- newRef Sts $ MkSt empty 0
+  analyzedDefs <- mapMaybe id <$> traverse analyzeName defs
+  MkSt um _    <- get Sts
+  srep         <- newRef ReplaceMap $ toReplaceMap um
+  replacedDefs <- traverse replaceDef analyzedDefs
+  replacedMain <- replaceExp 1 me
+  replaceMap   <- get ReplaceMap
+  let filtered = SortedMap.toList replaceMap
+  log "compiler.cse" 10 $ unlines $
+    "Found the following unadjusted subexpressions:"
+    ::  map (\(name,(_,cnt)) =>
+                  show name ++ ": count " ++ show cnt
+           ) filtered
+  pure (newToplevelDefs replaceMap ++ replacedDefs, replacedMain)
