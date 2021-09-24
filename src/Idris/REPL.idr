@@ -594,7 +594,8 @@ execExp ctm
               | Nothing =>
                    do iputStrLn (reflow "No such code generator available")
                       pure CompilationFailed
-         execute cg tm_erased
+         logTimeWhen !getEvalTiming "Execution" $
+           execute cg tm_erased
          pure $ Executed ctm
 
 
