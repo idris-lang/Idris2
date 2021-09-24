@@ -204,24 +204,8 @@ natHackNames
        UN (Basic "prim__mul_Integer"),
        NS typesNS (UN $ Basic "prim__integerToNat")]
 
--- Hmm, these dump functions are all very similar aren't they...
-dumpCases : String -> List (Name,FC,NamedDef) -> Core ()
-dumpCases fn defs
-    = do Right () <- coreLift $ writeFile fn
-                     (fastAppend $ map dumpCase defs)
-               | Left err => throw (FileErr fn err)
-         pure ()
-  where
-    fullShow : Name -> String
-    fullShow (DN _ n) = show n
-    fullShow n = show n
-
-    dumpCase : (Name,FC,NamedDef) -> String
-    dumpCase (n,_,def)
-        = fullShow n ++ " = " ++ show def ++ "\n"
-
-dumpLifted : String -> List (Name, LiftedDef) -> Core ()
-dumpLifted fn lns
+dumpIR : Show def => String -> List (Name, def) -> Core ()
+dumpIR fn lns
     = do let cstrs = map dumpDef lns
          Right () <- coreLift $ writeFile fn (fastAppend cstrs)
                | Left err => throw (FileErr fn err)
@@ -231,36 +215,9 @@ dumpLifted fn lns
     fullShow (DN _ n) = show n
     fullShow n = show n
 
-    dumpDef : (Name, LiftedDef) -> String
+    dumpDef : (Name, def) -> String
     dumpDef (n, d) = fullShow n ++ " = " ++ show d ++ "\n"
 
-dumpANF : String -> List (Name, ANFDef) -> Core ()
-dumpANF fn lns
-    = do let cstrs = map dumpDef lns
-         Right () <- coreLift $ writeFile fn (fastAppend cstrs)
-               | Left err => throw (FileErr fn err)
-         pure ()
-  where
-    fullShow : Name -> String
-    fullShow (DN _ n) = show n
-    fullShow n = show n
-
-    dumpDef : (Name, ANFDef) -> String
-    dumpDef (n, d) = fullShow n ++ " = " ++ show d ++ "\n"
-
-dumpVMCode : String -> List (Name, VMDef) -> Core ()
-dumpVMCode fn lns
-    = do let cstrs = map dumpDef lns
-         Right () <- coreLift $ writeFile fn (fastAppend cstrs)
-               | Left err => throw (FileErr fn err)
-         pure ()
-  where
-    fullShow : Name -> String
-    fullShow (DN _ n) = show n
-    fullShow n = show n
-
-    dumpDef : (Name, VMDef) -> String
-    dumpDef (n, d) = fullShow n ++ " = " ++ show d ++ "\n"
 
 export
 nonErased : {auto c : Ref Ctxt Defs} ->
@@ -332,19 +289,19 @@ getCompileData doLazyAnnots phase_in tm_in
          defs <- get Ctxt
          whenJust (dumpcases sopts) $ \ f =>
             do coreLift $ putStrLn $ "Dumping case trees to " ++ f
-               dumpCases f namedDefs
+               dumpIR f (map (\(n, _, def) => (n, def)) namedDefs)
 
          whenJust (dumplifted sopts) $ \ f =>
             do coreLift $ putStrLn $ "Dumping lambda lifted defs to " ++ f
-               dumpLifted f lifted
+               dumpIR f lifted
 
          whenJust (dumpanf sopts) $ \ f =>
             do coreLift $ putStrLn $ "Dumping ANF defs to " ++ f
-               dumpANF f anf
+               dumpIR f anf
 
          whenJust (dumpvmcode sopts) $ \ f =>
             do coreLift $ putStrLn $ "Dumping VM defs to " ++ f
-               dumpVMCode f vmcode
+               dumpIR f vmcode
 
          -- We're done with our minimal context now, so put it back the way
          -- it was. Back ends shouldn't look at the global context, because
