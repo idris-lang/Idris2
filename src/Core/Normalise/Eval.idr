@@ -277,26 +277,21 @@ parameters (defs : Defs, topopts : EvalOpts)
              --                             pure $ "Found function: " ++ show n'
              Just res <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure def
-             let redok1 = evalAll topopts
-             let redok2 = reducibleInAny (currentNS defs :: nestedNS defs)
-                                         (fullname res)
-                                         (visibility res)
+             let redok = reducibleInAny (currentNS defs :: nestedNS defs)
+                                        (fullname res)
+                                        (visibility res)
              -- want to shortcut that second check, if we're evaluating
              -- everything, so don't let bind unless we need that log!
-             let redok = redok1 || redok2
              checkTimer -- If we're going to time out anywhere, it'll be
                         -- when evaluating something recursive, so this is a
                         -- good place to check
-             unless redok2 $ logC "eval.stuck" 5 $ do n' <- toFullNames n
-                                                      pure $ "Stuck function: " ++ show n'
-             if redok
-                then do
-                   Just opts' <- updateLimit nt n topopts
-                        | Nothing => do log "eval.stuck" 10 $ "Function " ++ show n ++ " past reduction limit"
-                                        pure def -- name is past reduction limit
-                   evalDef env opts' meta fc
-                           (multiplicity res) (definition res) (flags res) stk def
-                else pure def
+             unless redok $ logC "eval.stuck" 5 $ do n' <- toFullNames n
+                                                     pure $ "Stuck function: " ++ show n'
+             Just opts' <- updateLimit nt n topopts
+                | Nothing => do log "eval.stuck" 10 $ "Function " ++ show n ++ " past reduction limit"
+                                pure def -- name is past reduction limit
+             evalDef env opts' meta fc
+                     (multiplicity res) (definition res) (flags res) stk def
 
     getCaseBound : List (Closure free) ->
                    (args : List Name) ->
