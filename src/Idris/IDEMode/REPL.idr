@@ -311,6 +311,7 @@ SExpable REPLEval where
   toSExp EvalTC = SymbolAtom "typecheck"
   toSExp NormaliseAll = SymbolAtom "normalise"
   toSExp Execute = SymbolAtom "execute"
+  toSExp Scheme = SymbolAtom "scheme"
 
 SExpable REPLOpt where
   toSExp (ShowImplicits impl) = SExpList [ SymbolAtom "show-implicits", toSExp impl ]
@@ -320,6 +321,7 @@ SExpable REPLOpt where
   toSExp (Editor editor) = SExpList [ SymbolAtom "editor", toSExp editor ]
   toSExp (CG str) = SExpList [ SymbolAtom "cg", toSExp str ]
   toSExp (Profile p) = SExpList [ SymbolAtom "profile", toSExp p ]
+  toSExp (EvalTiming p) = SExpList [ SymbolAtom "evaltiming", toSExp p ]
 
 
 displayIDEResult : {auto c : Ref Ctxt Defs} ->

@@ -523,7 +523,9 @@ addArityHash n
          Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
          let Just cexpr =  compexpr def             | Nothing => pure ()
          let MkFun args _ = cexpr                   | _ => pure ()
-         addHash (n, length args)
+         case visibility def of
+              Private => pure ()
+              _ => addHash (n, length args)
 
 export
 compileAndInlineAll : {auto c : Ref Ctxt Defs} ->

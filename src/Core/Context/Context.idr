@@ -20,6 +20,7 @@ import Libraries.Data.IOArray
 import Libraries.Data.NameMap
 import Libraries.Data.UserNameMap
 import Libraries.Utils.Binary
+import Libraries.Utils.Scheme
 
 public export
 data Ref : (l : label) -> Type -> Type where
@@ -279,6 +280,17 @@ Eq SCCall where
   x == y = fnCall x == fnCall y && fnArgs x == fnArgs y
 
 public export
+data SchemeMode
+        = EvalAll -- evaluate everything
+        | BlockExport -- compile 'export' names in other modules as blocked
+
+export
+Eq SchemeMode where
+   EvalAll == EvalAll = True
+   BlockExport == BlockExport = True
+   _ == _ = False
+
+public export
 record GlobalDef where
   constructor MkGlobalDef
   location : FC
@@ -306,7 +318,9 @@ record GlobalDef where
   linearChecked : Bool -- Flag whether we've already checked its linearity
   definition : Def
   compexpr : Maybe CDef
+  namedcompexpr : Maybe NamedDef
   sizeChange : List SCCall
+  schemeExpr : Maybe (SchemeMode, SchemeObj Write)
 
 export
 gDefKindedName : GlobalDef -> KindedName

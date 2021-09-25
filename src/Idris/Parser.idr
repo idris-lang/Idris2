@@ -1755,17 +1755,23 @@ parseMode
           pure EvalTC
    <|> do exactIdent "normalise"
           pure NormaliseAll
+   <|> do exactIdent "default"
+          pure NormaliseAll
+   <|> do exactIdent "normal"
+          pure NormaliseAll
    <|> do exactIdent "normalize" -- oh alright then
           pure NormaliseAll
    <|> do exactIdent "execute"
           pure Execute
    <|> do exactIdent "exec"
           pure Execute
+   <|> do exactIdent "scheme"
+          pure Scheme
 
 setVarOption : Rule REPLOpt
 setVarOption
     = do exactIdent "eval"
-         mode <- parseMode
+         mode <- option NormaliseAll parseMode
          pure (EvalMode mode)
   <|> do exactIdent "editor"
          e <- unqualifiedName
@@ -1784,6 +1790,8 @@ setOption set
          pure (ShowTypes set)
   <|> do exactIdent "profile"
          pure (Profile set)
+  <|> do exactIdent "evaltiming"
+         pure (EvalTiming set)
   <|> if set then setVarOption else fatalError "Unrecognised option"
 
 replCmd : List String -> Rule ()

@@ -12,6 +12,7 @@ import public Core.Options.Log
 import public Core.TT
 
 import Libraries.Utils.Binary
+import Libraries.Utils.Scheme
 
 import Data.Fin
 import Libraries.Data.IOArray
@@ -312,7 +313,9 @@ newDef fc n rig vars ty vis def
         , linearChecked = False
         , definition = def
         , compexpr = Nothing
+        , namedcompexpr = Nothing
         , sizeChange = []
+        , schemeExpr = Nothing
         }
 
 -- Rewrite rules, applied after type checking, for runtime code only
@@ -745,6 +748,7 @@ record Defs where
      -- timeout should be thrown
   warnings : List Warning
      -- ^ as yet unreported warnings
+  schemeEvalLoaded : Bool
 
 -- Label for context references
 export
@@ -792,6 +796,7 @@ initDefs
            , timings = empty
            , timer = Nothing
            , warnings = []
+           , schemeEvalLoaded = False
            }
 
 -- Reset the context, except for the options
@@ -1011,7 +1016,9 @@ addBuiltin n ty tot op
          , linearChecked = True
          , definition = Builtin op
          , compexpr = Nothing
+         , namedcompexpr = Nothing
          , sizeChange = []
+         , schemeExpr = Nothing
          }
 
 export
@@ -1023,7 +1030,8 @@ updateDef n fdef
              | Nothing => pure ()
          case fdef (definition gdef) of
               Nothing => pure ()
-              Just def' => ignore $ addDef n (record { definition = def' } gdef)
+              Just def' => ignore $ addDef n (record { definition = def',
+                                                       schemeExpr = Nothing } gdef)
 
 export
 updateTy : {auto c : Ref Ctxt Defs} ->

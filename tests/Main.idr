@@ -180,6 +180,13 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
        "total011", "total012"
       ]
 
+-- This will only work with an Idris compiled via Chez or Racket, but at
+-- least for the moment we're not officially supporting self hosting any
+-- other way. If we do, we'll need to have a way to disable these.
+idrisTestsSchemeEval : TestPool
+idrisTestsSchemeEval = MkTestPool "Scheme Evaluator" [] Nothing
+     ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004"]
+
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
        -- Documentation strings
@@ -320,6 +327,7 @@ main = runner $
   , testPaths "idris2" idrisTestsBuiltin
   , testPaths "idris2" idrisTestsEvaluator
   , testPaths "idris2" idrisTestsTotality
+  , testPaths "idris2" idrisTestsSchemeEval
   , testPaths "idris2" idrisTests
   , !typeddTests
   , !ideModeTests
