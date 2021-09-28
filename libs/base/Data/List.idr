@@ -514,10 +514,11 @@ foldl1 f xs = foldl1By f id xs
 ||| foldrI (\i => \x => (+) (i * x)) 0 [4,1,2,1]
 public export
 foldrI : (Nat -> elem -> acc -> acc) -> acc -> List elem -> acc
-foldrI f z vect = foldrI' Z vect where
-  foldrI' : Nat -> List elem -> acc
-  foldrI' _ [] = z
-  foldrI' i (x :: xs) = f i x (foldrI' (S i) xs)
+foldrI f z list = let (_, z') = foldrI' list in z' where
+  foldrI' : List elem -> (Nat, acc)
+  foldrI' [] = (Z, z)
+  foldrI' (x :: xs) = let (i, z') = foldrI' xs
+                      in (S i, f i x z')
 
 ||| Foldl with index parameter
 |||
@@ -526,7 +527,7 @@ foldrI f z vect = foldrI' Z vect where
 ||| ```
 public export
 foldlI : (acc -> Nat -> elem -> acc) -> acc -> List elem -> acc
-foldlI f z vect = foldlI' Z z vect where
+foldlI f z list = foldlI' Z z list where
   foldlI' : Nat -> acc -> List elem -> acc
   foldlI' _ z [] = z
   foldlI' i z (x :: xs) = foldlI' (S i) (f z i x) xs

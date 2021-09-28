@@ -449,10 +449,11 @@ foldl1 f (x::xs) = foldl f x xs
 ||| ```
 public export
 foldrI : (Nat -> elem -> acc -> acc) -> acc -> Vect len elem -> acc
-foldrI f z vect = foldrI' Z vect where
-  foldrI' : Nat -> Vect len' elem -> acc
-  foldrI' _ [] = z
-  foldrI' i (x :: xs) = f i x (foldrI' (S i) xs) 
+foldrI f z vect = let (_, z') = foldrI' vect in z' where
+  foldrI' : Vect len' elem -> (Nat, acc)
+  foldrI' [] = (Z, z)
+  foldrI' (x :: xs) = let (i, z') = foldrI' xs
+                      in (S i, f i x z')
 
 ||| Foldl with index parameter
 |||
