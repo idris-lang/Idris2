@@ -795,9 +795,9 @@ mutual
 
   record_ : OriginDesc -> IndentInfo -> Rule PTerm
   record_ fname indents
-      = do b <- bounds (do kw <- option False
+      = withWarning "Warning message" $ do b <- bounds (do kw <- option False
                                  (decoratedKeyword fname "record"
-                                   $> True) -- TODO deprecated
+                                   $> True)
                            decoratedSymbol fname "{"
                            commit
                            fs <- sepBy1 (decoratedSymbol fname ",") (field kw fname indents)
