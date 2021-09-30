@@ -434,16 +434,16 @@ const2Integer : Constant -> Integer -> Integer
 const2Integer c i =
     case c of
         (I x) => cast x
-        (I8 x) => x
-        (I16 x) => x
-        (I32 x) => x
-        (I64 x) => x
-        (BI x) => x
+        (I8 x) => cast x
+        (I16 x) => cast x
+        (I32 x) => cast x
+        (I64 x) => cast x
+        (BI x) => cast x
         (Ch x) => cast x
         (B8 x) => cast x
         (B16 x) => cast x
         (B32 x) => cast x
-        (B64 x) => x
+        (B64 x) => cast x
         _ => i
 
 

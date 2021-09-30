@@ -152,10 +152,10 @@ export
 TTC Constant where
   toBuf b (I x) = do tag 0; toBuf b x
   toBuf b (BI x) = do tag 1; toBuf b x
-  toBuf b (B8 x) = do tag 2; toBuf b x
-  toBuf b (B16 x) = do tag 3; toBuf b x
-  toBuf b (B32 x) = do tag 4; toBuf b x
-  toBuf b (B64 x) = do tag 5; toBuf b x
+  toBuf b (B8 x) = do tag 2; toBuf b $ cast {to = Int} x
+  toBuf b (B16 x) = do tag 3; toBuf b $ cast {to = Int} x
+  toBuf b (B32 x) = do tag 4; toBuf b $ cast {to = Integer} x
+  toBuf b (B64 x) = do tag 5; toBuf b $ cast {to = Integer} x
   toBuf b (Str x) = do tag 6; toBuf b x
   toBuf b (Ch x) = do tag 7; toBuf b x
   toBuf b (Db x) = do tag 8; toBuf b x
@@ -172,12 +172,12 @@ TTC Constant where
   toBuf b DoubleType = tag 18
   toBuf b WorldType = tag 19
 
-  toBuf b (I32 x) = do tag 20; toBuf b x
-  toBuf b (I64 x) = do tag 21; toBuf b x
+  toBuf b (I32 x) = do tag 20; toBuf b $ cast {to = Int} x
+  toBuf b (I64 x) = do tag 21; toBuf b $ cast {to = Integer} x
   toBuf b Int32Type = tag 22
   toBuf b Int64Type = tag 23
-  toBuf b (I8 x) = do tag 24; toBuf b x
-  toBuf b (I16 x) = do tag 25; toBuf b x
+  toBuf b (I8 x) = do tag 24; toBuf b $ cast {to = Int} x
+  toBuf b (I16 x) = do tag 25; toBuf b $ cast {to = Int} x
   toBuf b Int8Type = tag 26
   toBuf b Int16Type = tag 27
 
@@ -185,10 +185,10 @@ TTC Constant where
       = case !getTag of
              0 => do x <- fromBuf b; pure (I x)
              1 => do x <- fromBuf b; pure (BI x)
-             2 => do x <- fromBuf b; pure (B8 x)
-             3 => do x <- fromBuf b; pure (B16 x)
-             4 => do x <- fromBuf b; pure (B32 x)
-             5 => do x <- fromBuf b; pure (B64 x)
+             2 => do x <- fromBuf b; pure (B8 $ cast {from = Int} x)
+             3 => do x <- fromBuf b; pure (B16 $ cast {from = Int} x)
+             4 => do x <- fromBuf b; pure (B32 $ cast {from = Integer} x)
+             5 => do x <- fromBuf b; pure (B64 $ cast {from = Integer} x)
              6 => do x <- fromBuf b; pure (Str x)
              7 => do x <- fromBuf b; pure (Ch x)
              8 => do x <- fromBuf b; pure (Db x)
@@ -203,12 +203,12 @@ TTC Constant where
              17 => pure CharType
              18 => pure DoubleType
              19 => pure WorldType
-             20 => do x <- fromBuf b; pure (I32 x)
-             21 => do x <- fromBuf b; pure (I64 x)
+             20 => do x <- fromBuf b; pure (I32 $ cast {from = Int} x)
+             21 => do x <- fromBuf b; pure (I64 $ cast {from = Integer} x)
              22 => pure Int32Type
              23 => pure Int64Type
-             24 => do x <- fromBuf b; pure (I8 x)
-             25 => do x <- fromBuf b; pure (I16 x)
+             24 => do x <- fromBuf b; pure (I8 $ cast {from = Int} x)
+             25 => do x <- fromBuf b; pure (I16 $ cast {from = Int} x)
              26 => pure Int8Type
              27 => pure Int16Type
              _ => corrupt "Constant"
