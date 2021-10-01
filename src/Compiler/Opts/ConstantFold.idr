@@ -99,6 +99,7 @@ constFold (COp {arity} fc fn xs) =
   where
     toNF : CExp vars -> Maybe (NF vars)
     toNF (CPrimVal fc (I _)) = Nothing -- don't fold `Int` because it has varying widths
+    toNF (CPrimVal fc (Db _)) = Nothing
     toNF (CPrimVal fc c) = Just $ NPrimVal fc c
     toNF _ = Nothing
 
@@ -106,9 +107,19 @@ constFold (COp {arity} fc fn xs) =
     fromNF (NPrimVal fc c) = Just $ CPrimVal fc c
     fromNF _ = Nothing
 
+    commutative : Constant -> Bool
+    commutative DoubleType = False
+    commutative _ = True
+
     constRight : {ar : _} -> FC -> PrimFn ar -> Vect ar (CExp vars) -> CExp vars
-    constRight fc (Add ty) [x@(CPrimVal _ _), y] = COp fc (Add ty) [constFold y, x]
-    constRight fc (Mul ty) [x@(CPrimVal _ _), y] = COp fc (Mul ty) [constFold y, x]
+    constRight fc (Add ty) [x@(CPrimVal _ _), y] =
+        if commutative ty
+            then COp fc (Add ty) [y, x]
+            else COp fc (Add ty) [x, y]
+    constRight fc (Mul ty) [x@(CPrimVal _ _), y] =
+        if commutative ty
+            then COp fc (Mul ty) [y, x]
+            else COp fc (Mul ty) [x, y]
     constRight fc fn args = COp fc fn args
 
 constFold (CExtPrim fc p xs) = CExtPrim fc p $ constFold <$> xs
