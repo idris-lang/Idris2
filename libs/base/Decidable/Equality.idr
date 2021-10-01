@@ -131,8 +131,121 @@ DecEq a => DecEq (List1 a) where
 --------------------------------------------------------------------------------
 -- Int
 --------------------------------------------------------------------------------
+
 public export
 implementation DecEq Int where
+    decEq x y = case x == y of -- Blocks if x or y not concrete
+                     True => Yes primitiveEq
+                     False => No primitiveNotEq
+       where primitiveEq : forall x, y . x = y
+             primitiveEq = believe_me (Refl {x})
+             primitiveNotEq : forall x, y . Not (x = y)
+             primitiveNotEq prf = believe_me {b = Void} ()
+
+--------------------------------------------------------------------------------
+-- Bits8
+--------------------------------------------------------------------------------
+
+public export
+implementation DecEq Bits8 where
+    decEq x y = case x == y of -- Blocks if x or y not concrete
+                     True => Yes primitiveEq
+                     False => No primitiveNotEq
+       where primitiveEq : forall x, y . x = y
+             primitiveEq = believe_me (Refl {x})
+             primitiveNotEq : forall x, y . Not (x = y)
+             primitiveNotEq prf = believe_me {b = Void} ()
+
+--------------------------------------------------------------------------------
+-- Bits16
+--------------------------------------------------------------------------------
+
+public export
+implementation DecEq Bits16 where
+    decEq x y = case x == y of -- Blocks if x or y not concrete
+                     True => Yes primitiveEq
+                     False => No primitiveNotEq
+       where primitiveEq : forall x, y . x = y
+             primitiveEq = believe_me (Refl {x})
+             primitiveNotEq : forall x, y . Not (x = y)
+             primitiveNotEq prf = believe_me {b = Void} ()
+
+--------------------------------------------------------------------------------
+-- Bits32
+--------------------------------------------------------------------------------
+
+public export
+implementation DecEq Bits32 where
+    decEq x y = case x == y of -- Blocks if x or y not concrete
+                     True => Yes primitiveEq
+                     False => No primitiveNotEq
+       where primitiveEq : forall x, y . x = y
+             primitiveEq = believe_me (Refl {x})
+             primitiveNotEq : forall x, y . Not (x = y)
+             primitiveNotEq prf = believe_me {b = Void} ()
+
+--------------------------------------------------------------------------------
+-- Bits64
+--------------------------------------------------------------------------------
+
+public export
+implementation DecEq Bits64 where
+    decEq x y = case x == y of -- Blocks if x or y not concrete
+                     True => Yes primitiveEq
+                     False => No primitiveNotEq
+       where primitiveEq : forall x, y . x = y
+             primitiveEq = believe_me (Refl {x})
+             primitiveNotEq : forall x, y . Not (x = y)
+             primitiveNotEq prf = believe_me {b = Void} ()
+
+--------------------------------------------------------------------------------
+-- Int8
+--------------------------------------------------------------------------------
+
+public export
+implementation DecEq Int8 where
+    decEq x y = case x == y of -- Blocks if x or y not concrete
+                     True => Yes primitiveEq
+                     False => No primitiveNotEq
+       where primitiveEq : forall x, y . x = y
+             primitiveEq = believe_me (Refl {x})
+             primitiveNotEq : forall x, y . Not (x = y)
+             primitiveNotEq prf = believe_me {b = Void} ()
+
+--------------------------------------------------------------------------------
+-- Int16
+--------------------------------------------------------------------------------
+
+public export
+implementation DecEq Int16 where
+    decEq x y = case x == y of -- Blocks if x or y not concrete
+                     True => Yes primitiveEq
+                     False => No primitiveNotEq
+       where primitiveEq : forall x, y . x = y
+             primitiveEq = believe_me (Refl {x})
+             primitiveNotEq : forall x, y . Not (x = y)
+             primitiveNotEq prf = believe_me {b = Void} ()
+
+--------------------------------------------------------------------------------
+-- Int32
+--------------------------------------------------------------------------------
+
+public export
+implementation DecEq Int32 where
+    decEq x y = case x == y of -- Blocks if x or y not concrete
+                     True => Yes primitiveEq
+                     False => No primitiveNotEq
+       where primitiveEq : forall x, y . x = y
+             primitiveEq = believe_me (Refl {x})
+             primitiveNotEq : forall x, y . Not (x = y)
+             primitiveNotEq prf = believe_me {b = Void} ()
+
+--------------------------------------------------------------------------------
+-- Int64
+--------------------------------------------------------------------------------
+
+public export
+implementation DecEq Int64 where
     decEq x y = case x == y of -- Blocks if x or y not concrete
                      True => Yes primitiveEq
                      False => No primitiveNotEq

@@ -346,15 +346,6 @@ public export
 replaceOn : Eq a => a -> a -> List a -> List a
 replaceOn a = replaceWhen (== a)
 
-public export
-reverseOnto : List a -> List a -> List a
-reverseOnto acc [] = acc
-reverseOnto acc (x::xs) = reverseOnto (x::acc) xs
-
-public export
-reverse : List a -> List a
-reverse = reverseOnto []
-
 ||| Construct a list with `n` copies of `x`.
 ||| @ n how many copies
 ||| @ x the element to replicate
@@ -739,6 +730,36 @@ consInjective : forall x, xs, y, ys .
                 the (List a) (x :: xs) = the (List b) (y :: ys) -> (x = y, xs = ys)
 consInjective Refl = (Refl, Refl)
 
+reverseReverseOnto : (l, r : List a) -> reverse (reverseOnto l r) = reverseOnto r l
+reverseReverseOnto _ [] = Refl
+reverseReverseOnto l (x :: xs) = reverseReverseOnto (x :: l) xs
+
+||| List reverse applied twice yields the identity function.
+export
+reverseInvolutive : (xs : List a) -> reverse (reverse xs) = xs
+reverseInvolutive = reverseReverseOnto []
+
+consReverse : (x : a) -> (l, r : List a) -> x :: reverseOnto r l = reverseOnto r (reverseOnto [x] (reverse l))
+consReverse _ [] _ = Refl
+consReverse x (y::ys) r
+  = rewrite consReverse x ys (y :: r) in
+      rewrite cong (reverseOnto r . reverse) $ consReverse x ys [y] in
+        rewrite reverseInvolutive (y :: reverseOnto [x] (reverse ys)) in
+          Refl
+
+consTailRecAppend : (x : a) -> (l, r : List a) -> tailRecAppend (x :: l) r = x :: (tailRecAppend l r)
+consTailRecAppend x l r
+  = rewrite consReverse x (reverse l) r in
+      rewrite reverseInvolutive l in
+        Refl
+
+||| Proof that `(++)` and `tailRecAppend` do the same thing, so the %transform
+||| directive is safe.
+tailRecAppendIsAppend : (xs, ys : List a) -> tailRecAppend xs ys = xs ++ ys
+tailRecAppendIsAppend [] ys = Refl
+tailRecAppendIsAppend (x::xs) ys =
+  trans (consTailRecAppend x xs ys) (cong (x ::) $ tailRecAppendIsAppend xs ys)
+
 ||| The empty list is a right identity for append.
 export
 appendNilRightNeutral : (l : List a) -> l ++ [] = l
@@ -767,14 +788,6 @@ revAppend (v :: vs) ns
           rewrite sym (revAppend vs ns) in
             rewrite appendAssociative (reverse ns) (reverse vs) [v] in
               Refl
-
-||| List reverse applied twice yields the identity function.
-export
-reverseInvolutive : (xs : List a) -> reverse (reverse xs) = xs
-reverseInvolutive [] = Refl
-reverseInvolutive (x :: xs) = rewrite revOnto [x] xs in
-                                rewrite sym (revAppend (reverse xs) [x]) in
-                                  cong (x ::) $ reverseInvolutive xs
 
 export
 dropFusion : (n, m : Nat) -> (l : List t) -> drop n (drop m l) = drop (n+m) l

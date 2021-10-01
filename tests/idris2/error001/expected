@@ -1,5 +1,8 @@
 1/1: Building Error (Error.idr)
-Error: While processing right hand side of wrong. When unifying a and Vect ?k ?a.
+Error: While processing right hand side of wrong. When unifying:
+    a
+and:
+    Vect ?k ?a
 Mismatch between: a and Vect ?k ?a.
 
 Error:6:19--6:20

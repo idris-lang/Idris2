@@ -175,7 +175,8 @@ convertError : {vars : _} ->
 convertError loc env x y
     = do defs <- get Ctxt
          empty <- clearDefs defs
-         throw (CantConvert loc env !(quote empty env x)
+         throw (CantConvert loc (gamma defs)
+                                env !(quote empty env x)
                                     !(quote empty env y))
 
 convertErrorS : {vars : _} ->
@@ -1436,7 +1437,7 @@ retry mode c
                                      pure cs)
                       (\err => do defs <- get Ctxt
                                   empty <- clearDefs defs
-                                  throw (WhenUnifying loc env !(quote empty env x) !(quote empty env y) err))
+                                  throw (WhenUnifying loc (gamma defs) env !(quote empty env x) !(quote empty env y) err))
               Just (MkSeqConstraint loc env xsold ysold)
                   => do defs <- get Ctxt
                         xs <- traverse (continueNF defs env) xsold
@@ -1470,6 +1471,16 @@ forceMeta r (S k) (Bind fc n b sc)
     = Bind fc n b (forceMeta r k sc)
 forceMeta r envb tm = TForce (getLoc tm) r tm
 
+-- Check whether it's worth trying a search again, based on what went wrong
+recoverable : Error -> Bool
+recoverable (UndefinedName _ _) = False
+recoverable (InType _ _ err) = recoverable err
+recoverable (InCon _ _ err) = recoverable err
+recoverable (InLHS _ _ err) = recoverable err
+recoverable (InRHS _ _ err) = recoverable err
+recoverable (WhenUnifying _ _ _ _ _ err) = recoverable err
+recoverable _ = True
+
 -- Retry the given constraint, return True if progress was made
 retryGuess : {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
@@ -1502,8 +1513,11 @@ retryGuess mode smode (hid, (loc, hname))
                                       ("Search failed at " ++ show rig ++ " for " ++ show hname)
                                       [] (type def)
                             case smode of
-                                 LastChance => throw !(normaliseErr err)
-                                 _ => pure False -- Postpone again
+                                 LastChance => throw err
+                                 _ => if recoverable err
+                                         then pure False -- Postpone again
+                                         else throw (CantSolveGoal loc (gamma defs)
+                                                        [] (type def) (Just err))
                Guess tm envb [constr] =>
                  do let umode = case smode of
                                      MatchArgs => inMatch

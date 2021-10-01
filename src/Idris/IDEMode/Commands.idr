@@ -267,10 +267,6 @@ SExpable a => SExpable (Maybe a) where
   toSExp (Just x) = toSExp x
 
 export
-sym : String -> Name
-sym = UN
-
-export
 version : Int -> Int -> SExp
 version maj min = toSExp (SymbolAtom "protocol-version", maj, min)
 

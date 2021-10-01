@@ -39,7 +39,7 @@ findChez : IO String
 findChez
     = do Nothing <- idrisGetEnv "CHEZ"
             | Just chez => pure chez
-         path <- pathLookup ["chez", "chezscheme", "chezscheme9.5", "scheme"]
+         path <- pathLookup ["chez", "chezscheme", "chez-scheme", "chezscheme9.5", "scheme"]
          pure $ fromMaybe "/usr/bin/env scheme" path
 
 ||| Returns the chez scheme version for given executable
@@ -128,7 +128,7 @@ chezString cs = strCons '"' (showChezString (unpack cs) "\"")
 
 mutual
   handleRet : String -> String -> String
-  handleRet "void" op = op ++ " " ++ mkWorld (schConstructor chezString (UN "") (Just 0) [])
+  handleRet "void" op = op ++ " " ++ mkWorld (schConstructor chezString (UN $ Basic "") (Just 0) [])
   handleRet _ op = mkWorld op
 
   getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))

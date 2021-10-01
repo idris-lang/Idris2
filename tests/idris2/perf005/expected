@@ -1,6 +1,9 @@
 1/2: Building NoRegression (NoRegression.idr)
 2/2: Building Lambda (Lambda.idr)
-Error: While processing right hand side of term. When unifying Term ?g (TyFunc ?tyA (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat TyNat)))))))) and Term Empty (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat TyNat))))))).
+Error: While processing right hand side of term. When unifying:
+    Term ?g (TyFunc ?tyA (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat TyNat))))))))
+and:
+    Term Empty (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat TyNat)))))))
 Mismatch between: TyFunc TyNat TyNat and TyNat.
 
 Lambda:62:3--88:9

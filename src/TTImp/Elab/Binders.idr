@@ -174,7 +174,7 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                     -- We've already checked the argument and scope types,
                     -- so we just need to check multiplicities
                     when (rigb /= c) $
-                        throw (CantConvert fc env
+                        throw (CantConvert fc (gamma defs) env
                                   (Bind fc n (Pi fc' rigb info' tyv) !(getTerm scopet))
                                   (Bind fc bn (Pi fc' c info' pty) psc))
                     pure (Bind fc n (Lam fc' rigb info' tyv) scopev,

@@ -8,6 +8,17 @@
     [(i3nt ti3nt a6nt ta6nt) "windows"]
     [else "unknown"]))
 
+(define blodwen-lazy
+  (lambda (f)
+    (let ([evaluated #f] [res void])
+      (lambda ()
+        (if (not evaluated)
+            (begin (set! evaluated #t)
+                   (set! res (f))
+                   (set! f void))
+            (void))
+        res))))
+
 (define blodwen-toSignedInt
   (lambda (x bits)
     (if (logbit? bits x)
@@ -17,6 +28,7 @@
 (define blodwen-toUnsignedInt
   (lambda (x bits)
     (modulo x (ash 1 bits))))
+
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
@@ -487,7 +499,10 @@
 ; read a scheme string and evaluate it, returning 'Just result' on success
 ; TODO: catch exception!
 (define (blodwen-eval-scheme str)
-  (box (eval (read (open-input-string str))))) ; box == Just
+  (guard
+     (x [#t '()]) ; Nothing on failure
+     (box (eval (read (open-input-string str)))))
+  ); box == Just
 
 (define (blodwen-eval-okay obj)
   (if (null? obj)

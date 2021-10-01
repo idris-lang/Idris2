@@ -10,6 +10,7 @@ import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
 import Core.FC
+import Core.Hash
 import Core.Options
 import Core.TT
 
@@ -153,7 +154,7 @@ mutual
   -- whether they're safe to inline, but until then this gives such a huge
   -- boost by removing unnecessary lambdas that we'll keep the special case.
   eval rec env stk (CRef fc n)
-      = case (n == NS primIONS (UN "io_bind"), stk) of
+      = case (n == NS primIONS (UN $ Basic "io_bind"), stk) of
           (True, act :: cont :: world :: stk) =>
                  do xn <- genName "act"
                     sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
@@ -517,6 +518,18 @@ mergeLamDef n
                     setCompiled n !(mergeLam cexpr)
 
 export
+addArityHash : {auto c : Ref Ctxt Defs} ->
+               Name -> Core ()
+addArityHash n
+    = do defs <- get Ctxt
+         Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
+         let Just cexpr =  compexpr def             | Nothing => pure ()
+         let MkFun args _ = cexpr                   | _ => pure ()
+         case visibility def of
+              Private => pure ()
+              _ => addHash (n, length args)
+
+export
 compileAndInlineAll : {auto c : Ref Ctxt Defs} ->
                       Core ()
 compileAndInlineAll
@@ -530,6 +543,11 @@ compileAndInlineAll
                          -- This seems to be the point where not much useful
                          -- happens any more.
          traverse_ updateCallGraph cns
+         -- in incremental mode, add the arity of the definitions to the hash,
+         -- because if these change we need to recompile dependencies
+         -- accordingly
+         when (not (isNil (incrementalCGs !getSession))) $
+           traverse_ addArityHash cns
   where
     transform : Nat -> List Name -> Core ()
     transform Z cns = pure ()

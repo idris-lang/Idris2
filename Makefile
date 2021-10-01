@@ -13,8 +13,8 @@ TARGET = ${TARGETDIR}/${NAME}
 IDRIS2_CG ?= chez
 
 MAJOR=0
-MINOR=4
-PATCH=0
+MINOR=5
+PATCH=1
 
 GIT_SHA1=
 ifeq ($(shell git status >/dev/null 2>&1; echo $$?), 0)
@@ -186,7 +186,7 @@ install-support:
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/racket
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/gambit
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/js
-	install -m 644 support/docs/styles.css ${PREFIX}/${NAME_VERSION}/support/docs
+	install -m 644 support/docs/*.css ${PREFIX}/${NAME_VERSION}/support/docs
 	install -m 644 support/racket/* ${PREFIX}/${NAME_VERSION}/support/racket
 	install -m 644 support/gambit/* ${PREFIX}/${NAME_VERSION}/support/gambit
 	install -m 644 support/js/* ${PREFIX}/${NAME_VERSION}/support/js
@@ -209,7 +209,11 @@ install-with-src-libs:
 	${MAKE} -C libs/test install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 install-libdocs: libdocs
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/{prelude,base,contrib,network,test}
+	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/prelude
+	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/base
+	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/contrib
+	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/network
+	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/test
 	cp -r libs/prelude/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/prelude
 	cp -r libs/base/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/base
 	cp -r libs/contrib/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/contrib
