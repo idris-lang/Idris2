@@ -166,9 +166,10 @@ pwarning (UnreachableClause fc env tm)
     = pure $ errorDesc (reflow "Unreachable clause:"
         <++> code !(pshow env tm))
         <+> line <+> !(ploc fc)
-pwarning (ShadowingGlobalDefs _ ns)
+pwarning (ShadowingGlobalDefs fc ns)
     = pure $ vcat
-    $ reflow "We are about to implicitly bind the following lowercase names."
+    $ reflow "We are about to implicitly bind lowercase names that shadow global definitions at the following location."
+   :: !(ploc fc)
    :: reflow "You may be unintentionally shadowing the associated global definitions:"
    :: map (\ (n, ns) => indent 2 $ hsep $ pretty n
                             :: reflow "is shadowing"

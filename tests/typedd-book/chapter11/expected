@@ -5,7 +5,13 @@
  5/12: Building Greet (Greet.idr)
  6/12: Building InfIO (InfIO.idr)
  7/12: Building InfList (InfList.idr)
-Warning: We are about to implicitly bind the following lowercase names.
+Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
+
+InfList:2:6--2:10
+ 1 | data InfList : Type -> Type where
+ 2 |      (::) : (value : elem) -> Inf (InfList elem) -> InfList elem
+          ^^^^
+
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Prelude.Types.elem
  8/12: Building Label (Label.idr)

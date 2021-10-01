@@ -1,7 +1,16 @@
 1/4: Building DoorJam (DoorJam.idr)
 2/4: Building ATM (ATM.idr)
 3/4: Building Hangman (Hangman.idr)
-Warning: We are about to implicitly bind the following lowercase names.
+Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
+
+Hangman:28:3--28:8
+ 24 | 
+ 25 |   Won :  GameCmd () (Running (S guesses) 0) (const NotRunning)
+ 26 |   Lost : GameCmd () (Running 0 (S guesses)) (const NotRunning)
+ 27 | 
+ 28 |   Guess : (c : Char) ->
+        ^^^^^
+
 You may be unintentionally shadowing the associated global definitions:
   letters is shadowing Main.letters
 4/4: Building All (All.idr)
