@@ -330,7 +330,7 @@ mutual
       = do when br $
               do syn <- get Syn
                  let hole = UN (Hole holename)
-                 put Syn (record { bracketholes $= (hole ::) } syn)
+                 put Syn (record { bracketholes $= (holename ::) } syn)
            pure $ IHole fc holename
   desugarB side ps (PType fc) = pure $ IType fc
   desugarB side ps (PAs fc nameFC vname pattern)

@@ -191,7 +191,7 @@ process (AddMissing l n)
          pure $ REPL $ Edited $ DisplayEdit emptyDoc
 process (ExprSearch l n hs all)
     = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l)
-                     (UN $ Hole n) (map (UN . mkUserName) hs)))
+                   n (map (UN . mkUserName) hs)))
 process ExprSearchNext
     = replWrap $ Idris.REPL.process (Editing ExprSearchNext)
 process (GenerateDef l n)
@@ -199,7 +199,8 @@ process (GenerateDef l n)
 process GenerateDefNext
     = replWrap $ Idris.REPL.process (Editing GenerateDefNext)
 process (MakeLemma l n)
-    = replWrap $ Idris.REPL.process (Editing (MakeLemma False (fromInteger l) (UN $ mkUserName n)))
+    = replWrap $ Idris.REPL.process
+               $ Editing $ MakeLemma False (fromInteger l) n
 process (MakeCase l n)
     = replWrap $ Idris.REPL.process (Editing (MakeCase False (fromInteger l) (UN $ mkUserName n)))
 process (MakeWith l n)

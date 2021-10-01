@@ -1803,7 +1803,7 @@ editCmd
     = do replCmd ["typeat"]
          line <- intLit
          col <- intLit
-         n <- name
+         n <- name <|> (UN . Hole <$> holeName)
          pure (TypeAt (fromInteger line) (fromInteger col) n)
   <|> do replCmd ["cs"]
          upd <- option False (symbol "!" $> True)
@@ -1819,7 +1819,7 @@ editCmd
   <|> do replCmd ["ps", "proofsearch"]
          upd <- option False (symbol "!" $> True)
          line <- intLit
-         n <- name
+         n <- holeName
          pure (ExprSearch upd (fromInteger line) n [])
   <|> do replCmd ["psnext"]
          pure ExprSearchNext
@@ -1834,7 +1834,7 @@ editCmd
   <|> do replCmd ["ml", "makelemma"]
          upd <- option False (symbol "!" $> True)
          line <- intLit
-         n <- name
+         n <- holeName
          pure (MakeLemma upd (fromInteger line) n)
   <|> do replCmd ["mc", "makecase"]
          upd <- option False (symbol "!" $> True)

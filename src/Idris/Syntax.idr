@@ -566,11 +566,13 @@ data EditCmd : Type where
      TypeAt : Int -> Int -> Name -> EditCmd
      CaseSplit : Bool -> Int -> Int -> Name -> EditCmd
      AddClause : Bool -> Int -> Name -> EditCmd
-     ExprSearch : Bool -> Int -> Name -> List Name -> EditCmd
+     ExprSearch : Bool -> Int -> String -> List Name -> EditCmd
      ExprSearchNext : EditCmd
      GenerateDef : Bool -> Int -> Name -> Nat -> EditCmd
      GenerateDefNext : EditCmd
-     MakeLemma : Bool -> Int -> Name -> EditCmd
+     MakeLemma : Bool -> Int ->
+                 String -> -- hole name, without the question mark
+                 EditCmd
      MakeCase : Bool -> Int -> Name -> EditCmd
      MakeWith : Bool -> Int -> Name -> EditCmd
 
@@ -894,7 +896,7 @@ record SyntaxInfo where
   -- info about definitions
   saveDocstrings : NameMap () -- names defined in current session
   defDocstrings : ANameMap String
-  bracketholes : List Name -- hole names in argument position (so need
+  bracketholes : List String -- hole names in argument position (so need
                            -- to be bracketed when solved)
   usingImpl : List (Maybe Name, RawImp)
   startExpr : RawImp
@@ -975,12 +977,10 @@ HasNames a => HasNames (ANameMap a) where
 export
 HasNames SyntaxInfo where
   full gam syn
-      = pure $ record { ifaces = !(full gam (ifaces syn)),
-                        bracketholes = !(traverse (full gam) (bracketholes syn))
+      = pure $ record { ifaces = !(full gam (ifaces syn))
                       } syn
   resolved gam syn
-      = pure $ record { ifaces = !(resolved gam (ifaces syn)),
-                        bracketholes = !(traverse (resolved gam) (bracketholes syn))
+      = pure $ record { ifaces = !(resolved gam (ifaces syn))
                       } syn
 
 export

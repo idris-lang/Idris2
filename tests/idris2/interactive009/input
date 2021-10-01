@@ -1,5 +1,5 @@
 :cs 47 15 what
 :cs 55 16 res
-:t now_2
-:t now_3
+:t ?now_2
+:t ?now_3
 :q

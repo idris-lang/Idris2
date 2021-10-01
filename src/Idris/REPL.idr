@@ -269,8 +269,8 @@ caseSplit c Z (x :: xs) = rtrim c :: xs
 caseSplit c (S k) (x :: xs) = x :: caseSplit c k xs
 caseSplit c _ [] = [c]
 
-proofSearch : Name -> String -> Nat -> List String -> List String
-proofSearch n res Z (x :: xs) = replaceStr ("?" ++ show n) res x :: xs
+proofSearch : String -> String -> Nat -> List String -> List String
+proofSearch n res Z (x :: xs) = replaceStr ("?" ++ n) res x :: xs
   where
     replaceStr : String -> String -> String -> String
     replaceStr rep new "" = ""
@@ -282,16 +282,16 @@ proofSearch n res Z (x :: xs) = replaceStr ("?" ++ show n) res x :: xs
 proofSearch n res (S k) (x :: xs) = x :: proofSearch n res k xs
 proofSearch n res _ [] = []
 
-addMadeLemma : Maybe String -> Name -> String -> String -> Nat -> List String -> List String
+addMadeLemma : Maybe String -> String -> String -> String -> Nat -> List String -> List String
 addMadeLemma lit n ty app line content
     = addApp lit line [] (proofSearch n app line content)
   where
     -- Put n : ty in the first blank line
     insertInBlank : Maybe String -> List String -> List String
-    insertInBlank lit [] = [relit lit $ show n ++ " : " ++ ty ++ "\n"]
+    insertInBlank lit [] = [relit lit $ n ++ " : " ++ ty ++ "\n"]
     insertInBlank lit (x :: xs)
         = if trim x == ""
-             then ("\n" ++ (relit lit $ show n ++ " : " ++ ty ++ "\n")) :: xs
+             then ("\n" ++ (relit lit $ n ++ " : " ++ ty ++ "\n")) :: xs
              else x :: insertInBlank lit xs
 
     addApp : Maybe String -> Nat -> List String -> List String -> List String
@@ -313,7 +313,7 @@ addMadeCase lit wapp line content
 nextProofSearch : {auto c : Ref Ctxt Defs} ->
                   {auto u : Ref UST UState} ->
                   {auto o : Ref ROpts REPLOpts} ->
-                  Core (Maybe (Name, RawImp))
+                  Core (Maybe (String, RawImp))
 nextProofSearch
     = do opts <- get ROpts
          let Just (n, res) = psResult opts
@@ -417,10 +417,10 @@ processEdit (AddClause upd line name)
 processEdit (ExprSearch upd line name hints)
     = do defs <- get Ctxt
          syn <- get Syn
-         let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
-         case !(lookupDefName name (gamma defs)) of
+         let brack = elem name (bracketholes syn)
+         case !(lookupDefName (UN $ Hole name) (gamma defs)) of
               [(n, nidx, Hole locs _)] =>
-                  do let searchtm = exprSearch replFC name []
+                  do let searchtm = exprSearch replFC n []
                      ropts <- get ROpts
                      put ROpts (record { psResult = Just (name, searchtm) } ropts)
                      defs <- get Ctxt
@@ -449,9 +449,9 @@ processEdit ExprSearchNext
          syn <- get Syn
          Just (name, restm) <- nextProofSearch
               | Nothing => pure $ EditError "No more results"
-         [(n, nidx, Hole locs _)] <- lookupDefName name (gamma defs)
+         [(n, nidx, Hole locs _)] <- lookupDefName (UN $ Hole name) (gamma defs)
               | _ => pure $ EditError "Not a searchable hole"
-         let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
+         let brack = elem name (bracketholes syn)
          let tm' = dropLams locs restm
          itm <- pterm $ map defaultKindedName tm'
          let itm' = ifThenElse brack (addBracket replFC itm) itm
@@ -493,8 +493,8 @@ processEdit GenerateDefNext
 processEdit (MakeLemma upd line name)
     = do defs <- get Ctxt
          syn <- get Syn
-         let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
-         case !(lookupDefTyName name (gamma defs)) of
+         let brack = elem name (bracketholes syn)
+         case !(lookupDefTyName (UN $ Hole name) (gamma defs)) of
               [(n, nidx, Hole locs _, ty)] =>
                   do (lty, lapp) <- makeLemma replFC name locs ty
                      pty <- pterm $ map defaultKindedName lty -- hack
@@ -509,12 +509,12 @@ processEdit (MakeLemma upd line name)
                      if upd
                         then updateFile (addMadeLemma markM name (show pty) pappstr
                                                       (max 0 (integerToNat (cast (line - 1)))))
-                        else pure $ MadeLemma markM name pty pappstr
+                        else pure $ MadeLemma markM (UN (Basic name)) pty pappstr
               _ => pure $ EditError "Can't make lifted definition"
 processEdit (MakeCase upd line name)
     = do litStyle <- getLitStyle
          syn <- get Syn
-         let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
+         let brack = elemBy (\x, y => dropNS x == y) name (UN . Hole <$> bracketholes syn)
          Just src <- getSourceLine line
               | Nothing => pure (EditError "Source line not available")
          let Right l = unlit litStyle src
@@ -713,6 +713,15 @@ inferAndNormalize emode itm
     elabMode EvalTC = InType
     elabMode _ = InExpr
 
+checkPRef : {auto c : Ref Ctxt Defs} ->
+            {auto s : Ref Syn SyntaxInfo} ->
+            FC -> Name -> Core REPLResult
+checkPRef fc fn
+    = do defs <- get Ctxt
+         case !(lookupCtxtName fn (gamma defs)) of
+              [] => undefinedName fc fn
+              ts => do tys <- traverse (displayType defs) ts
+                       pure (Printed $ vsep tys)
 
 ||| Process a single `REPLCmd`
 |||
@@ -754,11 +763,9 @@ process (Check (PRef fc (UN (Basic "it"))))
               Nothing => throw (UndefinedName fc (UN $ Basic "it"))
               Just n => process (Check (PRef fc n))
 process (Check (PRef fc fn))
-    = do defs <- get Ctxt
-         case !(lookupCtxtName fn (gamma defs)) of
-              [] => undefinedName fc fn
-              ts => do tys <- traverse (displayType defs) ts
-                       pure (Printed $ vsep tys)
+    = checkPRef fc fn
+process (Check (PHole fc _ hn))
+    = checkPRef fc (UN (Hole hn))
 process (Check itm)
     = do (tm `WithType` ty) <- inferAndElab InExpr itm
          defs <- get Ctxt

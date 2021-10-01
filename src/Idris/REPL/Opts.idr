@@ -51,7 +51,7 @@ record REPLOpts where
   errorLine : Maybe Int
   idemode : OutputMode
   currentElabSource : String
-  psResult : Maybe (Name, Core (Search RawImp)) -- last proof search continuation (and name)
+  psResult : Maybe (String, Core (Search RawImp)) -- last proof search continuation (and name)
   gdResult : Maybe (Int, Core (Search (FC, List ImpClause))) -- last generate def continuation (and line number)
   evalResultName : Maybe Name
   -- TODO: Move extraCodegens from here, it doesn't belong, but there's nowhere

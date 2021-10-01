@@ -34,6 +34,22 @@ showInfo (n, _, d)
                    "\t" ++ show (definition d) ++ "\n" ++
                    "\t" ++ show (sizeChange d) ++ "\n")
 
+checkVar : {auto c : Ref Ctxt Defs} ->
+           Name -> Core Bool
+checkVar n
+    = do defs <- get Ctxt
+         ns <- lookupTyName n (gamma defs)
+         traverse_ printName ns
+         pure True
+  where
+    printName : (Name, Int, ClosedTerm) -> Core ()
+    printName (n, _, tyh)
+        = do defs <- get Ctxt
+             ty <- normaliseHoles defs [] tyh
+             coreLift_ $ putStrLn $ show n ++ " : " ++
+                                    show !(unelab [] ty)
+
+
 -- Returns 'True' if the REPL should continue
 process : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
@@ -46,18 +62,8 @@ process (Eval ttimp)
          tmnf <- normalise defs [] tm
          coreLift_ (printLn !(unelab [] tmnf))
          pure True
-process (Check (IVar _ n))
-    = do defs <- get Ctxt
-         ns <- lookupTyName n (gamma defs)
-         traverse_ printName ns
-         pure True
-  where
-    printName : (Name, Int, ClosedTerm) -> Core ()
-    printName (n, _, tyh)
-        = do defs <- get Ctxt
-             ty <- normaliseHoles defs [] tyh
-             coreLift_ $ putStrLn $ show n ++ " : " ++
-                                    show !(unelab [] ty)
+process (Check (IVar _ n))  = checkVar n
+process (Check (IHole _ n)) = checkVar (UN (Hole n))
 process (Check ttimp)
     = do (tm, gty) <- elabTerm 0 InExpr [] (MkNested []) [] ttimp Nothing
          defs <- get Ctxt
@@ -156,6 +162,7 @@ repl
     = do coreLift_ (putStr "Yaffle> ")
          inp <- coreLift getLine
          case runParser (Virtual Interactive) Nothing inp command of
-              Left err => do coreLift_ (printLn err)
+              Left err => do coreLift_ $ putStrLn "Argh"
+                             coreLift_ (printLn err)
                              repl
               Right (_, _, cmd) => when !(processCatch cmd) repl
