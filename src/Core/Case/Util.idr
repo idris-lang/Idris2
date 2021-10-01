@@ -16,7 +16,7 @@ getCons defs (NTCon _ tn _ _ _)
     = case !(lookupDefExact tn (gamma defs)) of
            Just (TCon _ _ _ _ _ _ cons _) =>
                 do cs' <- traverse addTy cons
-                   pure (mapMaybe id cs')
+                   pure (catMaybes cs')
            _ => throw (InternalError "Called `getCons` on something that is not a Type constructor")
   where
     addTy : Name -> Core (Maybe (NF [], Name, Int, Nat))
