@@ -283,7 +283,7 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
   -- to the tag we already know. Otherwise, add missing cases and filter out
   -- the ones it can't possibly be (the 'not') because a previous case
   -- has matched.
-    = do let fenv = freeEnv fc _
+    = do let fenv = mkEnv fc _
          nfty <- nf defs fenv ty
          alts <- replaceDefaults fc defs nfty altsIn
          let alts' = alts ++ !(getMissingAlts fc defs nfty alts)

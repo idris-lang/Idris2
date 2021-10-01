@@ -54,9 +54,3 @@ tagIs t (ConstCase _ _) = False
 tagIs t (DelayCase _ _ _) = False
 tagIs t (DefaultCase _) = True
 
--- Need this to get a NF from a Term; the names are free in any case
-export
-freeEnv : FC -> (vs : List Name) -> Env Term vs
-freeEnv fc [] = []
-freeEnv fc (n :: ns) = PVar fc top Explicit (Erased fc False) :: freeEnv fc ns
-

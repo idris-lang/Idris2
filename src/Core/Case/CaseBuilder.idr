@@ -1298,7 +1298,7 @@ findExtraDefaults : {auto c : Ref Ctxt Defs} ->
                    FC -> Defs -> CaseTree vars ->
                    Core (List Int)
 findExtraDefaults fc defs ctree@(Case {name = var} idx el ty altsIn)
-  = do let fenv = freeEnv fc _
+  = do let fenv = mkEnv fc _
        nfty <- nf defs fenv ty
        extraCases <- identifyUnreachableDefaults fc defs nfty altsIn
        extraCases' <- concat <$> traverse findExtraAlts altsIn
