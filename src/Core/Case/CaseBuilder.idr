@@ -387,7 +387,7 @@ data Group : List Name -> -- variables in scope
   show (ConstGroup c cs) = "Const " ++ show c ++ ": " ++ show cs
 
 data GroupMatch : ConType -> List Pat -> Group vars todo -> Type where
-  ConMatch : LengthMatch ps newargs ->
+  ConMatch : {tag : Int} -> LengthMatch ps newargs ->
              GroupMatch (CName n tag) ps
                (ConGroup {newargs} n tag (MkPatClause pvs pats pid rhs :: rest))
   DelayMatch : GroupMatch CDelay []
