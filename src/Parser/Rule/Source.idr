@@ -19,12 +19,16 @@ import Libraries.Data.String.Extra
 %default total
 
 public export
+BRule : Bool -> Type -> Type
+BRule = Grammar SemanticDecorations Token
+
+public export
 Rule : Type -> Type
-Rule ty = Grammar SemanticDecorations Token True ty
+Rule = BRule True
 
 public export
 EmptyRule : Type -> Type
-EmptyRule ty = Grammar SemanticDecorations Token False ty
+EmptyRule = BRule False
 
 export
 eoi : EmptyRule ()
@@ -41,7 +45,7 @@ constant
         CharLit c    =>  Ch <$> getCharLit c
         DoubleLit d  => Just (Db d)
         IntegerLit i => Just (BI i)
-        Ident s      => isConstantType (UN s) >>=
+        Ident s      => isConstantType (UN $ Basic s) >>=
                              \case WorldType => Nothing
                                    c         => Just c
         _            => Nothing
@@ -140,7 +144,7 @@ aDotIdent = terminal "Expected dot+identifier" $
 
 export
 postfixProj : Rule Name
-postfixProj = RF <$> aDotIdent
+postfixProj = UN . Field <$> aDotIdent
 
 export
 symbol : String -> Rule ()
@@ -188,19 +192,21 @@ operatorCandidate : Rule Name
 operatorCandidate
     = terminal "Expected operator" $
                \case
-                 Symbol s => Just (UN s)
+                 Symbol s => Just (UN $ Basic s) -- TODO: have an operator construct?
+                 _ => Nothing
+
+export
+unqualifiedOperatorName : Rule String
+unqualifiedOperatorName
+    = terminal "Expected operator" $
+               \case
+                 Symbol s => s <$ guard (not $ s `elem` reservedSymbols)
                  _ => Nothing
 
 export
 operator : Rule Name
-operator
-    = terminal "Expected operator" $
-               \case
-                 Symbol s =>
-                   if s `elem` reservedSymbols
-                   then Nothing
-                   else Just (UN s)
-                 _ => Nothing
+operator = UN . Basic <$> unqualifiedOperatorName
+               -- ^ TODO: add an operator constructor?
 
 identPart : Rule String
 identPart
@@ -296,7 +302,7 @@ nameWithCapital b = opNonNS <|> do
     let id = snd <$> nsx
     identWithCapital b id
     isNotReservedName id
-    pure $ uncurry mkNamespacedName nsx.val
+    pure $ uncurry mkNamespacedName (map Basic nsx.val)
 
   opNS : WithBounds (Maybe Namespace, String) -> Rule Name
   opNS nsx = do
@@ -325,7 +331,7 @@ capitalisedIdent = do
 
 export
 dataConstructorName : Rule Name
-dataConstructorName = opNonNS <|> UN <$> capitalisedIdent
+dataConstructorName = opNonNS <|> (UN . Basic) <$> capitalisedIdent
 
 export %inline
 dataTypeName : Rule Name

@@ -20,16 +20,31 @@ import Libraries.Data.String.Extra
 
 %default total
 
+namespace VerbosityLvl
+  public export
+  data VerbosityLvl =
+   ||| Suppress all message output to `stdout`.
+   NoneLvl |
+   ||| Keep only errors.
+   ErrorLvl |
+   ||| Keep everything.
+   InfoLvl
+
 public export
 data OutputMode
-  = IDEMode Integer File File
-  | REPL Bool -- quiet flag (ignore iputStrLn)
+  = IDEMode Integer File File |
+    ||| Given that we can divide elaboration messages into
+    ||| two categories: informational message and error message,
+    ||| `VerbosityLvl` applies a filter on the output,
+    |||  suppressing writes to `stdout` if the level condition isn't met.
+    REPL VerbosityLvl
 
 public export
 record REPLOpts where
   constructor MkREPLOpts
   showTypes : Bool
   evalMode : REPLEval
+  evalTiming : Bool
   mainfile : Maybe String
   literateStyle : Maybe LiterateStyle
   source : String
@@ -56,6 +71,7 @@ defaultOpts fname outmode cgs
     = MkREPLOpts
         { showTypes = False
         , evalMode = NormaliseAll
+        , evalTiming = False
         , mainfile = fname
         , literateStyle = litStyle fname
         , source = ""
@@ -193,3 +209,15 @@ export
 setSynHighlightOn : {auto o : Ref ROpts REPLOpts} -> Bool -> Core ()
 setSynHighlightOn b = do opts <- get ROpts
                          put ROpts (record { synHighlightOn = b } opts)
+
+export
+getEvalTiming : {auto o : Ref ROpts REPLOpts} -> Core Bool
+getEvalTiming
+    = do opts <- get ROpts
+         pure (evalTiming opts)
+
+export
+setEvalTiming : {auto o : Ref ROpts REPLOpts} -> Bool -> Core ()
+setEvalTiming b
+    = do opts <- get ROpts
+         put ROpts (record { evalTiming = b } opts)

@@ -328,7 +328,7 @@ preOptions (Profile :: opts)
     = do setSession (record { profile = True } !getSession)
          preOptions opts
 preOptions (Quiet :: opts)
-    = do setOutput (REPL True)
+    = do setOutput (REPL VerbosityLvl.ErrorLvl)
          preOptions opts
 preOptions (NoPrelude :: opts)
     = do setSession (record { noprelude = True } !getSession)
@@ -375,7 +375,7 @@ preOptions (AltErrorCount c :: opts)
     = do setSession (record { logErrorCount = c } !getSession)
          preOptions opts
 preOptions (RunREPL _ :: opts)
-    = do setOutput (REPL True)
+    = do setOutput (REPL VerbosityLvl.ErrorLvl)
          setSession (record { nobanner = True } !getSession)
          preOptions opts
 preOptions (FindIPKG :: opts)
@@ -413,7 +413,8 @@ preOptions (IgnoreShadowingWarnings :: opts)
     = do updateSession (record { showShadowingWarning = False })
          preOptions opts
 preOptions (HashesInsteadOfModTime :: opts)
-    = do updateSession (record { checkHashesInsteadOfModTime = True })
+    = do throw (InternalError "-Xcheck-hashes disabled (see issue #1935)")
+         updateSession (record { checkHashesInsteadOfModTime = True })
          preOptions opts
 preOptions (CaseTreeHeuristics :: opts)
     = do updateSession (record { caseTreeHeuristics = True })
@@ -451,11 +452,11 @@ postOptions res@(ErrorLoadingFile _ _) (OutputFile _ :: rest)
     = do ignore $ postOptions res rest
          pure False
 postOptions res (OutputFile outfile :: rest)
-    = do ignore $ compileExp (PRef EmptyFC (UN "main")) outfile
+    = do ignore $ compileExp (PRef EmptyFC (UN $ Basic "main")) outfile
          ignore $ postOptions res rest
          pure False
 postOptions res (ExecFn str :: rest)
-    = do ignore $ execExp (PRef EmptyFC (UN str))
+    = do ignore $ execExp (PRef EmptyFC (UN $ Basic str))
          ignore $ postOptions res rest
          pure False
 postOptions res (CheckOnly :: rest)

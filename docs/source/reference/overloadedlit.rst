@@ -38,7 +38,7 @@ the literal is suitable for the ``Fin n`` type. The restricted behaviour can be
 observed in the REPL, where the failure to construct a valid proof is caught during
 the type-checking phase and not at runtime:
 
-.. code-block::
+.. code-block:: idris
 
     Main> the (Fin 3) 2
     FS (FS FZ)

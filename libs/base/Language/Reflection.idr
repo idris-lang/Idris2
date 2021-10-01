@@ -18,9 +18,9 @@ data Elab : Type -> Type where
      LogTerm : String -> Nat -> String -> TTImp -> Elab ()
 
      -- Elaborate a TTImp term to a concrete value
-     Check : {expected : Type} -> TTImp -> Elab expected
+     Check : TTImp -> Elab expected
      -- Quote a concrete expression back to a TTImp
-     Quote : val -> Elab TTImp
+     Quote : (0 _ : val) -> Elab TTImp
 
      -- Elaborate under a lambda
      Lambda : (0 x : Type) ->
@@ -91,12 +91,12 @@ logGoal str n msg
 ||| Check that some TTImp syntax has the expected type
 ||| Returns the type checked value
 export
-check : {expected : Type} -> TTImp -> Elab expected
+check : TTImp -> Elab expected
 check = Check
 
 ||| Return TTImp syntax of a given value
 export
-quote : val -> Elab TTImp
+quote : (0 _ : val) -> Elab TTImp
 quote = Quote
 
 ||| Build a lambda expression

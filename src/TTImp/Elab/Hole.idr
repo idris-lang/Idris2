@@ -35,7 +35,7 @@ checkHole : {vars : _} ->
             {auto e : Ref EST (EState vars)} ->
             RigCount -> ElabInfo ->
             NestedNames vars -> Env Term vars ->
-            FC -> String -> Maybe (Glued vars) ->
+            FC -> UserName -> Maybe (Glued vars) ->
             Core (Term vars, Glued vars)
 checkHole rig elabinfo nest env fc n_in (Just gexpty)
     = do nm <- inCurrentNS (UN n_in)
@@ -58,7 +58,7 @@ checkHole rig elabinfo nest env fc n_in (Just gexpty)
          saveHole nm
          pure (metaval, gexpty)
 checkHole rig elabinfo nest env fc n_in exp
-    = do nmty <- genName ("type_of_" ++ n_in)
+    = do nmty <- genName ("type_of_" ++ show n_in)
          let env' = letToLam env
          ty <- metaVar fc erased env' nmty (TType fc)
          nm <- inCurrentNS (UN n_in)

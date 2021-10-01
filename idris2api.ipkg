@@ -1,5 +1,5 @@
 package idris2
-version = 0.4.0
+version = 0.5.1
 
 modules =
     Algebra,
@@ -45,10 +45,12 @@ modules =
 
     Core.AutoSearch,
     Core.Binary,
+    Core.Binary.Prims,
     Core.CaseBuilder,
     Core.CaseTree,
     Core.CompileExpr,
     Core.Context,
+    Core.Context.Context,
     Core.Context.Data,
     Core.Context.Log,
     Core.Core,
@@ -64,11 +66,15 @@ modules =
     Core.Name,
     Core.Name.Namespace,
     Core.Normalise,
+    Core.Normalise.Convert,
+    Core.Normalise.Eval,
+    Core.Normalise.Quote,
     Core.Options,
     Core.Options.Log,
     Core.Ord,
     Core.Primitives,
     Core.Reflect,
+    Core.SchemeEval,
     Core.Termination,
     Core.Transform,
     Core.TT,
@@ -76,6 +82,12 @@ modules =
     Core.Unify,
     Core.UnifyState,
     Core.Value,
+
+    Core.SchemeEval.Builtins,
+    Core.SchemeEval.Compile,
+    Core.SchemeEval.Evaluate,
+    Core.SchemeEval.Quote,
+    Core.SchemeEval.ToScheme,
 
     IdrisPaths,
 
@@ -145,6 +157,7 @@ modules =
     Libraries.Data.String.Iterator,
     Libraries.Data.StringMap,
     Libraries.Data.StringTrie,
+    Libraries.Data.UserNameMap,
     Libraries.Data.Version,
 
     Libraries.System.Directory.Tree,
@@ -172,6 +185,7 @@ modules =
     Libraries.Utils.Hex,
     Libraries.Utils.Octal,
     Libraries.Utils.Path,
+    Libraries.Utils.Scheme,
     Libraries.Utils.Shunting,
     Libraries.Utils.String,
     Libraries.Utils.Term,

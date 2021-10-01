@@ -79,7 +79,7 @@ getNameType rigc env fc x
 
                  when (isSourceName def.fullname) $
                    whenJust (isConcreteFC fc) $ \nfc => do
-                     let decor = nameTypeDecoration nt
+                     let decor = nameDecoration def.fullname nt
                      log "ide-mode.highlight" 7
                        $ "getNameType is adding " ++ show decor ++ ": " ++ show def.fullname
                      addSemanticDecorations [(nfc, decor, Just def.fullname)]
@@ -124,7 +124,7 @@ getVarType rigc nest env fc x
 
                                 when (isSourceName ndef.fullname) $
                                   whenJust (isConcreteFC fc) $ \nfc => do
-                                    let decor = nameTypeDecoration nt
+                                    let decor = nameDecoration ndef.fullname nt
                                     log "ide-mode.highlight" 7
                                        $ "getNameType is adding "++ show decor ++": "
                                                                  ++ show ndef.fullname
@@ -536,14 +536,14 @@ mutual
 
   export
   findBindAllExpPattern : List (Name, RawImp) -> Maybe RawImp
-  findBindAllExpPattern = lookup (UN "_")
+  findBindAllExpPattern = lookup (UN Underscore)
 
   isImplicitAs : RawImp -> Bool
   isImplicitAs (IAs _ _ UseLeft _ (Implicit _ _)) = True
   isImplicitAs _ = False
 
   isBindAllExpPattern : Name -> Bool
-  isBindAllExpPattern (UN "_") = True
+  isBindAllExpPattern (UN Underscore) = True
   isBindAllExpPattern _ = False
 
   -- Check an application of 'fntm', with type 'fnty' to the given list
@@ -598,7 +598,7 @@ mutual
                    then -- We are done
                         checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
                    else -- Some user defined binding is present while we are out of explicit arguments, that's an error
-                        throw (InvalidArgs fc env (map (const (UN "<auto>")) autoargs ++ map fst namedargs) tm)
+                        throw (InvalidArgs fc env (map (const (UN $ Basic "<auto>")) autoargs ++ map fst namedargs) tm)
   -- Function type is delayed, so force the term and continue
   checkAppWith' rig elabinfo nest env fc tm (NDelayed dfc r ty@(NBind _ _ (Pi _ _ _ _) sc)) argdata expargs autoargs namedargs kr expty
       = checkAppWith' rig elabinfo nest env fc (TForce dfc r tm) ty argdata expargs autoargs namedargs kr expty
@@ -710,7 +710,7 @@ mutual
       = do defs <- get Ctxt
            if all isImplicitAs (autoargs ++ map snd (filter (not . isBindAllExpPattern . fst) namedargs))
               then checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
-              else throw (InvalidArgs fc env (map (const (UN "<auto>")) autoargs ++ map fst namedargs) tm)
+              else throw (InvalidArgs fc env (map (const (UN $ Basic "<auto>")) autoargs ++ map fst namedargs) tm)
 
   ||| Entrypoint for checkAppWith: run the elaboration first and, if we're
   ||| on the LHS and the result is an under-applied constructor then insist
@@ -827,7 +827,7 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
     -- as an expression because we'll normalise the function away and match on
     -- the result
     updateElabInfo prims (InLHS _) n [IPrimVal fc c] elabinfo =
-        do if elem (dropNS !(getFullName n)) prims
+        do if isPrimName prims !(getFullName n)
               then pure (record { elabMode = InExpr } elabinfo)
               else pure elabinfo
     updateElabInfo _ _ _ _ info = pure info

@@ -15,13 +15,13 @@ ttimpTests : TestPool
 ttimpTests = MkTestPool "TTImp" [] Nothing
      [ "basic001", "basic002", "basic003", "basic004", "basic005"
      , "basic006"
-     , "coverage001", "coverage002"
+     , "coverage002"
      , "dot001"
-     , "eta001", "eta002"
+     , "eta001"
      , "lazy001"
      , "nest001", "nest002"
      , "perf001", "perf002", "perf003"
-     , "record001", "record002", "record003"
+     , "record001", "record002", "record003", "record004"
      , "qtt001", "qtt003"
      , "total001", "total002", "total003"
      ]
@@ -41,7 +41,7 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic046", "basic047",             "basic049", "basic050",
        "basic051", "basic052", "basic053", "basic054", "basic055",
        "basic056", "basic057", "basic058", "basic059", "basic060",
-       "basic061",
+       "basic061", "basic062",
        "interpolation001", "interpolation002"]
 
 idrisTestsCoverage : TestPool
@@ -51,7 +51,7 @@ idrisTestsCoverage = MkTestPool "Coverage checking" [] Nothing
        "coverage005", "coverage006", "coverage007", "coverage008",
        "coverage009", "coverage010", "coverage011", "coverage012",
        "coverage013", "coverage014", "coverage015", "coverage016",
-       "coverage017"]
+       "coverage017", "coverage018", "coverage019"]
 
 idrisTestsCasetree : TestPool
 idrisTestsCasetree = MkTestPool "Case tree building" [] Nothing
@@ -69,6 +69,7 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
        "error006", "error007", "error008", "error009", "error010",
        "error011", "error012", "error013", "error014", "error015",
        "error016", "error017", "error018", "error019", "error020",
+       "error021",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006", "perror007", "perror008", "perror009", "perror010",
@@ -85,7 +86,8 @@ idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
        "interactive021", "interactive022", "interactive023", "interactive024",
        "interactive025", "interactive026", "interactive027", "interactive028",
        "interactive029", "interactive030", "interactive031", "interactive032",
-       "interactive033", "interactive034", "interactive035", "interactive036"]
+       "interactive033", "interactive034", "interactive035", "interactive036",
+       "interactive037"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool "Interface" [] Nothing
@@ -119,7 +121,7 @@ idrisTestsPerformance = MkTestPool "Performance" [] Nothing
        -- Performance: things which have been slow in the past, or which
        -- pose interesting challenges for the elaborator
       ["perf001", "perf002", "perf003", "perf004", "perf005",
-       "perf007", "perf008"]
+       "perf007", "perf008", "perf009"]
 
 idrisTestsRegression : TestPool
 idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
@@ -130,7 +132,8 @@ idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
        "reg036", "reg037", "reg038", "reg039", "reg040", "reg041", "reg042",
-       "reg043", "reg044", "reg045", "reg046", "reg047", "reg048", "reg049"]
+       "reg043", "reg044", "reg045", "reg046", "reg047", "reg048", "reg049",
+       "reg050"]
 
 idrisTestsData : TestPool
 idrisTestsData = MkTestPool "Data and record types" [] Nothing
@@ -176,6 +179,13 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
        "total006", "total007", "total008", "total009", "total010",
        "total011", "total012"
       ]
+
+-- This will only work with an Idris compiled via Chez or Racket, but at
+-- least for the moment we're not officially supporting self hosting any
+-- other way. If we do, we'll need to have a way to disable these.
+idrisTestsSchemeEval : TestPool
+idrisTestsSchemeEval = MkTestPool "Scheme Evaluator" [] Nothing
+     ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004"]
 
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
@@ -224,6 +234,7 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "futures001"
     , "bitops"
     , "casts"
+    , "memo"
     , "newints"
     , "integers"
     , "semaphores001"
@@ -259,13 +270,16 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "args"
     , "bitops"
     , "casts"
+    , "memo"
     , "newints"
     , "reg001"
+    , "stringcast"
     , "syntax001"
     , "tailrec001"
     , "idiom001"
     , "integers"
     , "fix1839"
+    , "tailrec_libs"
     ]
 
 vmcodeInterpTests : IO TestPool
@@ -313,6 +327,7 @@ main = runner $
   , testPaths "idris2" idrisTestsBuiltin
   , testPaths "idris2" idrisTestsEvaluator
   , testPaths "idris2" idrisTestsTotality
+  , testPaths "idris2" idrisTestsSchemeEval
   , testPaths "idris2" idrisTests
   , !typeddTests
   , !ideModeTests

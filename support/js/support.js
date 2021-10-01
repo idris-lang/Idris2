@@ -55,10 +55,21 @@ const _idrisworld = Symbol('idrisworld')
 
 const _crashExp = x=>{throw new IdrisError(x)}
 
-const _bigIntOfString = s=>{
-  const idx = s.indexOf('.')
-  return idx === -1 ? BigInt(s) : BigInt(s.slice(0, idx))
+const _bigIntOfString = s=> {
+  try {
+    const idx = s.indexOf('.')
+    return idx === -1 ? BigInt(s) : BigInt(s.slice(0, idx))
+  } catch (e) { return 0n }
 }
+
+const _numberOfString = s=> {
+  try {
+    const res = Number(s);
+    return isNaN(res) ? 0 : res;
+  } catch (e) { return 0 }
+}
+
+const _intOfString = s=> Math.trunc(_numberOfString(s))
 
 const _truncToChar = x=> String.fromCodePoint(
   (x >= 0 && x <= 55295) || (x >= 57344 && x <= 1114111) ? x : 0

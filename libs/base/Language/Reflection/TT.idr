@@ -97,22 +97,32 @@ data Constant
     | WorldType
 
 public export
-data Name = UN String -- user defined name
+data UserName
+  = Basic String -- default name constructor       e.g. map
+  | Field String -- field accessor                 e.g. .fst
+  | Underscore   -- no name                        e.g. _
+
+public export
+data Name = NS Namespace Name -- name in a namespace
+          | UN UserName -- user defined name
           | MN String Int -- machine generated name
-          | NS Namespace Name -- name in a namespace
           | DN String Name -- a name and how to display it
-          | RF String -- record field name
           | Nested (Int, Int) Name -- nested function name
           | CaseBlock String Int -- case block nested in (resolved) name
           | WithBlock String Int -- with block nested in (resolved) name
 
 export
+Show UserName where
+  show (Basic n) = n
+  show (Field n) = "." ++ n
+  show Underscore = "_"
+
+export
 Show Name where
   show (NS ns n) = show ns ++ "." ++ show n
-  show (UN x) = x
+  show (UN x) = show x
   show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
   show (DN str y) = str
-  show (RF n) = "." ++ n
   show (Nested (outer, idx) inner)
       = show outer ++ ":" ++ show idx ++ ":" ++ show inner
   show (CaseBlock outer i) = "case block in " ++ show outer

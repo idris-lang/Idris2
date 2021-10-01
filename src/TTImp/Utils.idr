@@ -60,8 +60,8 @@ findBindableNames : (arg : Bool) -> List Name -> (used : List String) ->
 findBindableNamesQuot : List Name -> (used : List String) -> RawImp ->
                         List (String, String)
 
-findBindableNames True env used (IVar fc (UN n))
-    = if not (UN n `elem` env) && lowerFirst n
+findBindableNames True env used (IVar fc nm@(UN (Basic n)))
+    = if not (nm `elem` env) && lowerFirst n
          then [(n, getUnique used n)]
          else []
 findBindableNames arg env used (IPi fc rig p mn aty retty)
@@ -84,7 +84,7 @@ findBindableNames arg env used (IAutoApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
 findBindableNames arg env used (IWithApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
-findBindableNames arg env used (IAs fc _ _ (UN n) pat)
+findBindableNames arg env used (IAs fc _ _ (UN (Basic n)) pat)
     = (n, getUnique used n) :: findBindableNames arg env used pat
 findBindableNames arg env used (IAs fc _ _ n pat)
     = findBindableNames arg env used pat
@@ -184,7 +184,7 @@ findUniqueBindableNames fc arg env used t
          do defs <- get Ctxt
             let ctxt = gamma defs
             ns <- map catMaybes $ for assoc $ \ (n, _) => do
-                    ns <- lookupCtxtName (UN n) ctxt
+                    ns <- lookupCtxtName (UN (Basic n)) ctxt
                     let ns = flip mapMaybe ns $ \(n, _, d) =>
                                case definition d of
                                 -- do not warn about holes: `?a` is not actually
@@ -255,7 +255,7 @@ findIBindVars (IAutoApp fc fn av)
 findIBindVars (IWithApp fc fn av)
     = findIBindVars fn ++ findIBindVars av
 findIBindVars (IBindVar fc v)
-    = [UN v]
+    = [UN (Basic v)]
 findIBindVars (IDelayed fc r t)
     = findIBindVars t
 findIBindVars (IDelay fc t)
@@ -279,8 +279,8 @@ mutual
                      _ => IVar fc n
            else IVar fc n
   substNames' True bound ps (IBindVar fc n)
-      = if not (UN n `elem` bound)
-           then case lookup (UN n) ps of
+      = if not (UN (Basic n) `elem` bound)
+           then case lookup (UN $ Basic n) ps of
                      Just t => t
                      _ => IBindVar fc n
            else IBindVar fc n
@@ -331,13 +331,13 @@ mutual
   substNamesClause' : Bool -> List Name -> List (Name, RawImp) ->
                       ImpClause -> ImpClause
   substNamesClause' bvar bound ps (PatClause fc lhs rhs)
-      = let bound' = map UN (map snd (findBindableNames True bound [] lhs))
+      = let bound' = map (UN . Basic) (map snd (findBindableNames True bound [] lhs))
                      ++ findIBindVars lhs
                      ++ bound in
             PatClause fc (substNames' bvar [] [] lhs)
                          (substNames' bvar bound' ps rhs)
   substNamesClause' bvar bound ps (WithClause fc lhs wval prf flags cs)
-      = let bound' = map UN (map snd (findBindableNames True bound [] lhs))
+      = let bound' = map (UN . Basic) (map snd (findBindableNames True bound [] lhs))
                      ++ findIBindVars lhs
                      ++ bound in
             WithClause fc (substNames' bvar [] [] lhs)
@@ -483,7 +483,7 @@ uniqueName defs used n
   where
     usedName : Core Bool
     usedName
-        = pure $ case !(lookupTyName (UN n) (gamma defs)) of
+        = pure $ case !(lookupTyName (UN $ Basic n) (gamma defs)) of
                       [] => n `elem` used
                       _ => True
 

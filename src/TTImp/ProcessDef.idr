@@ -59,6 +59,27 @@ mutual
   mismatchNF defs (NDelayed _ _ x) (NDelayed _ _ y) = mismatchNF defs x y
   mismatchNF defs (NDelay _ _ _ x) (NDelay _ _ _ y)
       = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
+
+  -- NPrimVal is apart from NDCon, NTCon, NBind, and NType
+  mismatchNF defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
+  mismatchNF defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
+  mismatchNF defs (NPrimVal _ _) (NBind _ _ _ _) = pure True
+  mismatchNF defs (NBind _ _ _ _) (NPrimVal _ _) = pure True
+  mismatchNF defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure True
+  mismatchNF defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
+  mismatchNF defs (NPrimVal _ _) (NType _) = pure True
+  mismatchNF defs (NType _) (NPrimVal _ _) = pure True
+
+-- NTCon is apart from NBind, and NType
+  mismatchNF defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure True
+  mismatchNF defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure True
+  mismatchNF defs (NTCon _ _ _ _ _) (NType _) = pure True
+  mismatchNF defs (NType _) (NTCon _ _ _ _ _) = pure True
+
+-- NBind is apart from NType
+  mismatchNF defs (NBind _ _ _ _) (NType _) = pure True
+  mismatchNF defs (NType _) (NBind _ _ _ _) = pure True
+
   mismatchNF _ _ _ = pure False
 
   mismatch : {auto c : Ref Ctxt Defs} ->
@@ -75,39 +96,54 @@ impossibleOK : {auto c : Ref Ctxt Defs} ->
                {vars : _} ->
                Defs -> NF vars -> NF vars -> Core Bool
 impossibleOK defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
-    = if xn == yn
-         then anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
-         else pure False
+    = if xn /= yn
+         then pure True
+         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
 -- If it's a data constructor, any mismatch will do
 impossibleOK defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure True
          else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
 impossibleOK defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
-impossibleOK defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
+
+-- NPrimVal is apart from NDCon, NTCon, NBind, and NType
 impossibleOK defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
-impossibleOK defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
+impossibleOK defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
+impossibleOK defs (NPrimVal _ _) (NBind _ _ _ _) = pure True
+impossibleOK defs (NBind _ _ _ _) (NPrimVal _ _) = pure True
 impossibleOK defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure True
-impossibleOK defs (NTCon _ _ _ _ _) (NType _) = pure True
-impossibleOK defs (NType _) (NTCon _ _ _ _ _) = pure True
+impossibleOK defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
 impossibleOK defs (NPrimVal _ _) (NType _) = pure True
 impossibleOK defs (NType _) (NPrimVal _ _) = pure True
+
+-- NTCon is apart from NBind, and NType
+impossibleOK defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure True
+impossibleOK defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure True
+impossibleOK defs (NTCon _ _ _ _ _) (NType _) = pure True
+impossibleOK defs (NType _) (NTCon _ _ _ _ _) = pure True
+
+-- NBind is apart from NType
+impossibleOK defs (NBind _ _ _ _) (NType _) = pure True
+impossibleOK defs (NType _) (NBind _ _ _ _) = pure True
+
 impossibleOK defs x y = pure False
 
 export
 impossibleErrOK : {auto c : Ref Ctxt Defs} ->
                   Defs -> Error -> Core Bool
-impossibleErrOK defs (CantConvert fc env l r)
-    = impossibleOK defs !(nf defs env l)
-                        !(nf defs env r)
-impossibleErrOK defs (CantSolveEq fc env l r)
-    = impossibleOK defs !(nf defs env l)
-                        !(nf defs env r)
+impossibleErrOK defs (CantConvert fc gam env l r)
+    = do let defs = record { gamma = gam } defs
+         impossibleOK defs !(nf defs env l)
+                           !(nf defs env r)
+impossibleErrOK defs (CantSolveEq fc gam env l r)
+    = do let defs = record { gamma = gam } defs
+         impossibleOK defs !(nf defs env l)
+                           !(nf defs env r)
 impossibleErrOK defs (BadDotPattern _ _ ErasedArg _ _) = pure True
 impossibleErrOK defs (CyclicMeta _ _ _ _) = pure True
 impossibleErrOK defs (AllFailed errs)
     = anyM (impossibleErrOK defs) (map snd errs)
-impossibleErrOK defs (WhenUnifying _ _ _ _ err)
+impossibleErrOK defs (WhenUnifying _ _ _ _ _ err)
     = impossibleErrOK defs err
 impossibleErrOK defs _ = pure False
 
@@ -131,6 +167,9 @@ recoverable defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure False
 -- Type constructor vs. type
 recoverable defs (NTCon _ _ _ _ _) (NType _) = pure False
 recoverable defs (NType _) (NTCon _ _ _ _ _) = pure False
+-- Type constructor vs. binder
+recoverable defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure False
+recoverable defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure False
 
 recoverable defs (NTCon _ _ _ _ _) _ = pure True
 recoverable defs _ (NTCon _ _ _ _ _) = pure True
@@ -153,6 +192,9 @@ recoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
 
 -- PRIMITIVES
 recoverable defs (NPrimVal _ x) (NPrimVal _ y) = pure (x == y)
+-- primitive vs. binder
+recoverable defs (NPrimVal _ _) (NBind _ _ _ _) = pure False
+recoverable defs (NBind _ _ _ _) (NPrimVal _ _) = pure False
 
 -- OTHERWISE: no
 recoverable defs x y = pure False
@@ -160,8 +202,9 @@ recoverable defs x y = pure False
 export
 recoverableErr : {auto c : Ref Ctxt Defs} ->
                  Defs -> Error -> Core Bool
-recoverableErr defs (CantConvert fc env l r)
-  = do l <- nf defs env l
+recoverableErr defs (CantConvert fc gam env l r)
+  = do let defs = record { gamma = gam } defs
+       l <- nf defs env l
        r <- nf defs env r
        log "coverage.recover" 10 $ unlines
          [ "Recovering from CantConvert?"
@@ -171,14 +214,15 @@ recoverableErr defs (CantConvert fc env l r)
          ]
        recoverable defs l r
 
-recoverableErr defs (CantSolveEq fc env l r)
-    = recoverable defs !(nf defs env l)
-                       !(nf defs env r)
+recoverableErr defs (CantSolveEq fc gam env l r)
+  = do let defs = record { gamma = gam } defs
+       recoverable defs !(nf defs env l)
+                        !(nf defs env r)
 recoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure True
 recoverableErr defs (CyclicMeta _ _ _ _) = pure True
 recoverableErr defs (AllFailed errs)
     = anyM (recoverableErr defs) (map snd errs)
-recoverableErr defs (WhenUnifying _ _ _ _ err)
+recoverableErr defs (WhenUnifying _ _ _ _ _ err)
     = recoverableErr defs err
 recoverableErr defs _ = pure False
 
@@ -545,8 +589,8 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                       Nothing => []
                       Just _  =>
                        let fc = emptyFC in
-                       let refl = IVar fc (NS builtinNS (UN "Refl")) in
-                       [(mprf, INamedApp fc refl (UN "x") wval_raw)]
+                       let refl = IVar fc (NS builtinNS (UN $ Basic "Refl")) in
+                       [(mprf, INamedApp fc refl (UN $ Basic "x") wval_raw)]
 
          let rhs_in = gapply (IVar vfc wname)
                     $ map (\ nm => (Nothing, IVar vfc nm)) envns
@@ -606,7 +650,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
     bindWithArgs {xs} wvalTy (Just (name, wval)) wvalEnv = do
       defs <- get Ctxt
 
-      let eqName = NS builtinNS (UN "Equal")
+      let eqName = NS builtinNS (UN $ Basic "Equal")
       Just (TCon t ar _ _ _ _ _ _) <- lookupDefExact eqName (gamma defs)
         | _ => throw (InternalError "Cannot find builtin Equal")
       let eqTyCon = Ref vfc (TyCon t ar) !(toResolvedNames eqName)
@@ -786,7 +830,7 @@ mkRunTime fc n
 
     mkCrash : {vars : _} -> String -> Term vars
     mkCrash msg
-       = apply fc (Ref fc Func (NS builtinNS (UN "idris_crash")))
+       = apply fc (Ref fc Func (NS builtinNS (UN $ Basic "idris_crash")))
                [Erased fc False, PrimVal fc (Str msg)]
 
     matchAny : Term vars -> Term vars
@@ -910,7 +954,7 @@ processDef opts nest env fc n_in cs_in
          defs <- get Ctxt
          put Ctxt (record { toCompileCase $= (n ::) } defs)
 
-         atotal <- toResolvedNames (NS builtinNS (UN "assert_total"))
+         atotal <- toResolvedNames (NS builtinNS (UN $ Basic "assert_total"))
          when (not (InCase `elem` opts)) $
              do calcRefs False atotal (Resolved nidx)
                 sc <- calculateSizeChange fc n
