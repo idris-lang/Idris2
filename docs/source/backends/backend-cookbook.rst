@@ -394,6 +394,7 @@ data types the same way it does constructors, using special tags.
 This is called boxing.
 
 Official backends represent primitive data types as boxed ones.
+
 - RefC: Boxes the primitives, which makes them easy to put on the heap.
 - Scheme: Prints the values that are a ``Constant`` as Scheme literals.
 
