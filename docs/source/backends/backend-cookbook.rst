@@ -426,7 +426,7 @@ implemented outside the Idris program under compilation.
 The Foreign construction contains a list of Strings which are the snippets
 defined by the programmer, the type of the arguments and the return type of
 the foreign function. The custom back-end should generate a wrapper function.
-More on this on the :ref:`FFI section<How to implement the Foreign Function Interface?>`
+More on this on `How to implement the Foreign Function Interface?`_
 
 A top-level **error** definition represents holes in Idris programs, uses of
 ``idris_crash``, or unreachable branches in a case tree.
