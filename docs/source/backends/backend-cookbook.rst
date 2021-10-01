@@ -378,9 +378,9 @@ typechecker when they know something to be true even though it cannot be proven.
 For instance, assuming that Idris' primitives are correctly implemented, it
 should be true that if a boolean equality test on two ``Int`` ``i`` and ``j``
 returns ``True`` then ``i`` and ``j`` are equal.
-Such a theorem can be implemented by using ``believe_me`` to caset ``Refl``
+Such a theorem can be implemented by using ``believe_me`` to cast ``Refl``
 (the constructor for proofs of a propositional equality) from ``i === i`` to
-``i === j``. In this case, it should be safe to implement
+``i === j``. In this case, it should be safe to implement.
 
 Boxing
 ~~~~~~
@@ -426,7 +426,7 @@ implemented outside the Idris program under compilation.
 The Foreign construction contains a list of Strings which are the snippets
 defined by the programmer, the type of the arguments and the return type of
 the foreign function. The custom back-end should generate a wrapper function.
-More on this on the 'How to do do FFI' section.
+More on this on the :ref:`FFI section<How to implement the Foreign Function Interface?>`
 
 A top-level **error** definition represents holes in Idris programs, uses of
 ``idris_crash``, or unreachable branches in a case tree.
