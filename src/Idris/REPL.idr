@@ -282,9 +282,10 @@ proofSearch n res Z (x :: xs) = replaceStr ("?" ++ n) res x :: xs
 proofSearch n res (S k) (x :: xs) = x :: proofSearch n res k xs
 proofSearch n res _ [] = []
 
-addMadeLemma : Maybe String -> String -> String -> String -> Nat -> List String -> List String
+addMadeLemma : Maybe String -> String -> String ->
+               IPTerm -> Nat -> List String -> List String
 addMadeLemma lit n ty app line content
-    = addApp lit line [] (proofSearch n app line content)
+    = addApp lit line [] (proofSearch n (show app) line content)
   where
     -- Put n : ty in the first blank line
     insertInBlank : Maybe String -> List String -> List String
@@ -493,23 +494,19 @@ processEdit GenerateDefNext
 processEdit (MakeLemma upd line name)
     = do defs <- get Ctxt
          syn <- get Syn
-         let brack = elem name (bracketholes syn)
          case !(lookupDefTyName (UN $ Hole name) (gamma defs)) of
               [(n, nidx, Hole locs _, ty)] =>
                   do (lty, lapp) <- makeLemma replFC name locs ty
                      pty <- pterm $ map defaultKindedName lty -- hack
                      papp <- pterm $ map defaultKindedName lapp -- hack
                      opts <- get ROpts
-                     let pappstr = show (ifThenElse brack
-                                            (addBracket replFC papp)
-                                            papp)
                      Just srcLine <- getSourceLine line
                        | Nothing => pure (EditError "Source line not found")
                      let (markM,_) = isLitLine srcLine
                      if upd
-                        then updateFile (addMadeLemma markM name (show pty) pappstr
+                        then updateFile (addMadeLemma markM name (show pty) papp
                                                       (max 0 (integerToNat (cast (line - 1)))))
-                        else pure $ MadeLemma markM (UN (Basic name)) pty pappstr
+                        else pure $ MadeLemma markM (UN (Basic name)) pty (show papp)
               _ => pure $ EditError "Can't make lifted definition"
 processEdit (MakeCase upd line name)
     = do litStyle <- getLitStyle

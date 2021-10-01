@@ -195,16 +195,19 @@ process (ExprSearch l n hs all)
 process ExprSearchNext
     = replWrap $ Idris.REPL.process (Editing ExprSearchNext)
 process (GenerateDef l n)
-    = replWrap $ Idris.REPL.process (Editing (GenerateDef False (fromInteger l) (UN $ Hole n) 0))
+    = replWrap $ Idris.REPL.process
+    $ Editing (GenerateDef False (fromInteger l) (UN$ mkUserName n) 0)
 process GenerateDefNext
     = replWrap $ Idris.REPL.process (Editing GenerateDefNext)
 process (MakeLemma l n)
     = replWrap $ Idris.REPL.process
                $ Editing $ MakeLemma False (fromInteger l) n
 process (MakeCase l n)
-    = replWrap $ Idris.REPL.process (Editing (MakeCase False (fromInteger l) (UN $ mkUserName n)))
+    = replWrap $ Idris.REPL.process
+    $ Editing (MakeCase False (fromInteger l) (UN $ mkUserName n))
 process (MakeWith l n)
-    = replWrap $ Idris.REPL.process (Editing (MakeWith False (fromInteger l) (UN $ mkUserName n)))
+    = replWrap $ Idris.REPL.process
+    $ Editing (MakeWith False (fromInteger l) (UN $ mkUserName n))
 process (DocsFor n modeOpt)
     = replWrap $ Idris.REPL.process (Doc (PRef EmptyFC (UN $ mkUserName n)))
 process (Apropos n)
