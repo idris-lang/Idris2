@@ -187,7 +187,7 @@ getMissingAlts fc defs nfty alts
          logNF "coverage.missing" 20 "Getting constructors for" (mkEnv fc _) nfty
          allCons <- getCons defs nfty
          pure (filter (noneOf alts)
-                 (map (mkAlt fc (Unmatched "Coverage check") . snd) allCons))
+                 (map (mkAlt fc (Unmatched "Coverage check")) allCons))
   where
     -- Return whether the alternative c matches none of the given cases in alts
     noneOf : List (CaseAlt vars) -> CaseAlt vars -> Bool
@@ -255,7 +255,7 @@ replaceDefaults fc defs nfty cs
     rep : CaseAlt vars -> Core (List (CaseAlt vars))
     rep (DefaultCase sc)
         = do allCons <- getCons defs nfty
-             pure (map (mkAlt fc sc . snd) allCons)
+             pure (map (mkAlt fc sc) allCons)
     rep c = pure [c]
 
     dropRep : List (CaseAlt vars) -> List (CaseAlt vars)

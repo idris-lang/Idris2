@@ -6,12 +6,19 @@ import Core.Env
 import Core.Normalise
 import Core.Value
 
+public export
+record DataCon where
+  constructor MkDataCon
+  name  : Name
+  tag   : Int
+  arity : Nat
+
 ||| Given a normalised type, get all the possible constructors for that
 ||| type family, with their type, name, tag, and arity.
 export
 getCons : {auto c : Ref Ctxt Defs} ->
           {vars : _} ->
-          Defs -> NF vars -> Core (List (NF [], Name, Int, Nat))
+          Defs -> NF vars -> Core (List DataCon)
 getCons defs (NTCon _ tn _ _ _)
     = case !(lookupDefExact tn (gamma defs)) of
            Just (TCon _ _ _ _ _ _ cons _) =>
@@ -19,13 +26,13 @@ getCons defs (NTCon _ tn _ _ _)
                    pure (catMaybes cs')
            _ => throw (InternalError "Called `getCons` on something that is not a Type constructor")
   where
-    addTy : Name -> Core (Maybe (NF [], Name, Int, Nat))
+    addTy : Name -> Core (Maybe DataCon)
     addTy cn
         = do Just gdef <- lookupCtxtExact cn (gamma defs)
                   | _ => pure Nothing
-             case (definition gdef, type gdef) of
+             case (gdef.definition, gdef.type) of
                   (DCon t arity _, ty) =>
-                        pure (Just (!(nf defs [] ty), cn, t, arity))
+                        pure . Just $ MkDataCon cn t arity
                   _ => pure Nothing
 getCons defs _ = pure []
 
@@ -42,8 +49,8 @@ emptyRHS fc sc = sc
 
 export
 mkAlt : {vars : _} ->
-        FC -> CaseTree vars -> (Name, Int, Nat) -> CaseAlt vars
-mkAlt fc sc (cn, t, ar)
+        FC -> CaseTree vars -> DataCon -> CaseAlt vars
+mkAlt fc sc (MkDataCon cn t ar)
     = ConCase cn t (map (MN "m") (take ar [0..]))
               (weakenNs (map take) (emptyRHS fc sc))
 

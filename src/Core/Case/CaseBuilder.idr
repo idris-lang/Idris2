@@ -1270,7 +1270,7 @@ identifyUnreachableDefaults fc defs nfty cs
     rep : CaseAlt vars -> Core (List (CaseAlt vars))
     rep (DefaultCase sc)
         = do allCons <- getCons defs nfty
-             pure (map (mkAlt fc sc . snd) allCons)
+             pure (map (mkAlt fc sc) allCons)
     rep c = pure [c]
 
     dropRep : List (CaseAlt vars) -> SortedSet Int -> (List (CaseAlt vars), SortedSet Int)
