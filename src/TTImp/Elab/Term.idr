@@ -127,11 +127,7 @@ checkTerm rig elabinfo nest env (IVar fc n) exp
       -- application with no arguments
       checkApp rig elabinfo nest env fc (IVar fc n) [] [] [] exp
 checkTerm rig elabinfo nest env (IPi fc r p Nothing argTy retTy) exp
-    = do n <- case p of
-                   Explicit => genVarName "arg"
-                   Implicit => genVarName "impArg"
-                   AutoImplicit => genVarName "conArg"
-                   (DefImplicit _) => genVarName "defArg"
+    = do n <- genVarName "_"
          checkPi rig elabinfo nest env fc r p n argTy retTy exp
 checkTerm rig elabinfo nest env (IPi fc r p (Just (UN Underscore)) argTy retTy) exp
     = checkTerm rig elabinfo nest env (IPi fc r p Nothing argTy retTy) exp

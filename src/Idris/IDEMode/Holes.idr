@@ -78,7 +78,7 @@ extractHoleData defs env fn (S args) (Bind fc x (Let _ c val ty) sc)
   = extractHoleData defs env fn args (subst val sc)
 extractHoleData defs env fn (S args) (Bind fc x b sc)
   = do rest <- extractHoleData defs (b :: env) fn args sc
-       let True = showName x
+       let True = showName x || isLinear (multiplicity b)
          | False => do log "idemode.hole" 10 $ "Not showing name: " ++ show x
                        pure rest
        log "idemode.hole" 10 $ "Showing name: " ++ show x

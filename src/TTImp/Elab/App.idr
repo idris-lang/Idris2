@@ -233,13 +233,27 @@ mutual
       dropLinearUsed [] env = env
       dropLinearUsed (MkVar p :: us) env = dropLinearUsed us (toRig0 p env)
 
-      determining : Error -> Bool
-      determining (DeterminingArg{}) = True
-      determining _ = False
+      canDelaySearch : Error -> Bool
+      canDelaySearch (AmbiguousSearch{}) = False
+      -- If we couldn't solve it because we haven't got a thing to solve yet,
+      -- we can try again later. Otherwise we're stuck already.
+      canDelaySearch (CantSolveGoal _ _ _ top _)
+          = holeScope top
+        where
+          holeScope : {vs : _} -> Term vs -> Bool
+          holeScope (Bind _ _ (Pi _ _ _ _) sc) = holeScope sc
+          holeScope (Bind _ _ (Let _ _ _ _) sc) = holeScope sc
+          holeScope r
+              = case getFn r of
+                     Meta _ _ _ _ => True
+                     _ => False
+      canDelaySearch _ = True
 
       searchLinear : Nat -> Term vars -> Core (Term vars, Glued vars)
       searchLinear depth ty
-          = delayOnFailure fc rig env expty determining Ambiguity $
+          = -- Only possible errors are related to search failure, and more
+            -- information might help later
+            delayOnFailure fc rig env expty canDelaySearch Ambiguity $
               \delayed =>
                  do est <- get EST
                     logTermNF "elab" 5 ("Linear search " ++ show delayed) env ty

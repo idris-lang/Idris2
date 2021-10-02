@@ -1,0 +1,13 @@
+1/1: Building ImpLinear (ImpLinear.idr)
+1/1: Building ImpLinear2 (ImpLinear2.idr)
+ImpLinear2>    d : Door
+   ok : Opened
+ 1 _ : DoorIs CLOSED d
+------------------------------
+openOK : LIO () (\value => DoorIs CLOSED d)
+ImpLinear2>    d : Door
+ 1 _ : DoorIs CLOSED d
+   ok : Opened
+------------------------------
+openBad : LIO () (\value => DoorIs CLOSED d)
+ImpLinear2> Bye for now!

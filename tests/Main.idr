@@ -99,7 +99,7 @@ idrisTestsInterface = MkTestPool "Interface" [] Nothing
        "interface017", "interface018", "interface019", "interface020",
        "interface021", "interface022", "interface023", "interface024",
        "interface025", "interface026", "interface027", "interface028",
-       "interface029", "interface030"]
+       "interface029", "interface030", "interface031"]
 
 idrisTestsLinear : TestPool
 idrisTestsLinear = MkTestPool "Quantities" [] Nothing
