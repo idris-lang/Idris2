@@ -1,0 +1,16 @@
+1/1: Building linauto-bad (linauto-bad.idr)
+Error: While processing right hand side of twoDoors. Multiple solutions found in search of:
+    DoorIs CLOSED d
+
+linauto-bad:33:10--33:22
+ 29 |            (1 d1p : DoorIs CLOSED d) =>
+ 30 |            (1 d2p : DoorIs CLOSED d) =>
+ 31 |            L IO ()
+ 32 | twoDoors d
+ 33 |     = do deleteDoor d
+               ^^^^^^^^^^^^
+
+Possible correct results:
+    d1p
+    d2p
+1/1: Building linauto (linauto.idr)

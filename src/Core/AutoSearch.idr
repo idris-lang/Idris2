@@ -348,9 +348,7 @@ searchLocalVars fc rig defaults trying depth def top env target
     = do let elabs = map (\t => searchLocalWith fc rig defaults trying depth def
                                               top env t target)
                          (getUsableEnv fc rig zero env)
-         if isLinear rig
-            then anyOne fc env top elabs
-            else exactlyOne fc env top target elabs
+         exactlyOne fc env top target elabs
 
 isPairNF : {auto c : Ref Ctxt Defs} ->
            Env Term vars -> NF vars -> Defs -> Core Bool
