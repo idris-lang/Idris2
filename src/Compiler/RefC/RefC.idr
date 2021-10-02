@@ -80,8 +80,6 @@ cName (Nested i n) = "n__" ++ cCleanString (show i) ++ "_" ++ cName n
 cName (CaseBlock x y) = "case__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (WithBlock x y) = "with__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (Resolved i) = "fn__" ++ cCleanString (show i)
-cName n = assert_total $ idris_crash ("INTERNAL ERROR: Unsupported name in C backend " ++ show n)
--- not really total but this way this internal error does not contaminate everything else
 
 escapeChar : Char -> String
 escapeChar c = if isAlphaNum c || isNL c
@@ -135,8 +133,6 @@ cConstant Bits8Type = "Bits8"
 cConstant Bits16Type = "Bits16"
 cConstant Bits32Type = "Bits32"
 cConstant Bits64Type = "Bits64"
-cConstant n = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw constant in C backend: " ++ show n)
--- not really total but this way this internal error does not contaminate everything else
 
 extractConstant : Constant -> String
 extractConstant (I x) = show x

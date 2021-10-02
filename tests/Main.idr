@@ -56,7 +56,7 @@ idrisTestsCoverage = MkTestPool "Coverage checking" [] Nothing
 idrisTestsCasetree : TestPool
 idrisTestsCasetree = MkTestPool "Case tree building" [] Nothing
        -- Case tree building
-      ["casetree001"]
+      ["casetree001", "casetree002"]
 
 idrisTestsWarning : TestPool
 idrisTestsWarning = MkTestPool "Warnings" [] Nothing

@@ -1,6 +1,6 @@
 module Core.Context.Context
 
-import        Core.CaseTree
+import        Core.Case.CaseTree
 import        Core.CompileExpr
 import        Core.Env
 import        Core.Hash

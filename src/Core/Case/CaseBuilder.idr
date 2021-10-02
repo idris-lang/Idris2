@@ -1,6 +1,7 @@
-module Core.CaseBuilder
+module Core.Case.CaseBuilder
 
-import Core.CaseTree
+import Core.Case.CaseTree
+import Core.Case.Util
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -10,9 +11,10 @@ import Core.Options
 import Core.TT
 import Core.Value
 
-import Libraries.Data.LengthMatch
 import Data.List
 import Data.Vect
+import Libraries.Data.LengthMatch
+import Libraries.Data.SortedSet
 
 import Decidable.Equality
 
@@ -385,7 +387,7 @@ data Group : List Name -> -- variables in scope
   show (ConstGroup c cs) = "Const " ++ show c ++ ": " ++ show cs
 
 data GroupMatch : ConType -> List Pat -> Group vars todo -> Type where
-  ConMatch : LengthMatch ps newargs ->
+  ConMatch : {tag : Int} -> LengthMatch ps newargs ->
              GroupMatch (CName n tag) ps
                (ConGroup {newargs} n tag (MkPatClause pvs pats pid rhs :: rest))
   DelayMatch : GroupMatch CDelay []
@@ -1226,16 +1228,90 @@ simpleCase fc phase fn ty def clauses
          defs <- get Ctxt
          patCompile fc fn phase ty ps def
 
-findReached : CaseTree ns -> List Int
-findReached (Case _ _ _ alts) = concatMap findRAlts alts
+mutual
+  findReachedAlts : CaseAlt ns' -> List Int
+  findReachedAlts (ConCase _ _ _ t) = findReached t
+  findReachedAlts (DelayCase _ _ t) = findReached t
+  findReachedAlts (ConstCase _ t) = findReached t
+  findReachedAlts (DefaultCase t) = findReached t
+
+  findReached : CaseTree ns -> List Int
+  findReached (Case _ _ _ alts) = concatMap findReachedAlts alts
+  findReached (STerm i _) = [i]
+  findReached _ = []
+
+-- Replace a default case with explicit branches for the constructors.
+-- This is easier than checking whether a default is needed when traversing
+-- the tree (just one constructor lookup up front).
+-- Unreachable defaults are those that when replaced by all possible constructors
+-- followed by a removal of duplicate cases there is one _fewer_ total case alts.
+identifyUnreachableDefaults : {auto c : Ref Ctxt Defs} ->
+                              {vars : _} ->
+                              FC -> Defs -> NF vars -> List (CaseAlt vars) ->
+                              Core (SortedSet Int)
+-- Leave it alone if it's a primitive type though, since we need the catch
+-- all case there
+identifyUnreachableDefaults fc defs (NPrimVal _ _) cs = pure empty
+identifyUnreachableDefaults fc defs (NType _) cs = pure empty
+identifyUnreachableDefaults fc defs nfty cs
+    = do cs' <- traverse rep cs
+         let (cs'', extraClauseIdxs) = dropRep (concat cs') empty
+         let extraClauseIdxs' =
+           if (length cs == (length cs'' + 1))
+              then extraClauseIdxs
+              else empty
+         -- if a clause is unreachable under all the branches it can be found under
+         -- then it is entirely unreachable.
+         when (not $ null extraClauseIdxs') $
+           log "compile.casetree.clauses" 25 $
+             "Marking the following clause indices as unreachable under the current branch of the tree: " ++ (show extraClauseIdxs')
+         pure extraClauseIdxs'
   where
-    findRAlts : CaseAlt ns' -> List Int
-    findRAlts (ConCase _ _ _ t) = findReached t
-    findRAlts (DelayCase _ _ t) = findReached t
-    findRAlts (ConstCase _ t) = findReached t
-    findRAlts (DefaultCase t) = findReached t
-findReached (STerm i _) = [i]
-findReached _ = []
+    rep : CaseAlt vars -> Core (List (CaseAlt vars))
+    rep (DefaultCase sc)
+        = do allCons <- getCons defs nfty
+             pure (map (mkAlt fc sc) allCons)
+    rep c = pure [c]
+
+    dropRep : List (CaseAlt vars) -> SortedSet Int -> (List (CaseAlt vars), SortedSet Int)
+    dropRep [] extra = ([], extra)
+    dropRep (c@(ConCase n t args sc) :: rest) extra
+          -- assumption is that there's no defaultcase in 'rest' because
+          -- we've just removed it
+        = let (filteredClauses, extraCases) = partition (not . tagIs t) rest
+              extraClauses = extraCases >>= findReachedAlts
+              (rest', extra') = dropRep filteredClauses $ fromList extraClauses
+          in  (c :: rest', extra `union` extra')
+    dropRep (c :: rest) extra
+        = let (rest', extra') = dropRep rest extra
+          in  (c :: rest', extra')
+
+||| Find unreachable default paths through the tree for each clause.
+||| This is accomplished by expanding default clases into all concrete constructions
+||| and then listing the clauses reached.
+||| This list of clauses can be substracted from the list of "reachable" clauses
+||| and if it turns out that the number of unreachable ways to use a clause is equal
+||| to the number of ways to reach a RHS for that clause then the clause is totally
+||| superfluous (it will never be reached).
+findExtraDefaults : {auto c : Ref Ctxt Defs} ->
+                   {vars : _} ->
+                   FC -> Defs -> CaseTree vars ->
+                   Core (List Int)
+findExtraDefaults fc defs ctree@(Case {name = var} idx el ty altsIn)
+  = do let fenv = mkEnv fc _
+       nfty <- nf defs fenv ty
+       extraCases <- identifyUnreachableDefaults fc defs nfty altsIn
+       extraCases' <- concat <$> traverse findExtraAlts altsIn
+       pure (SortedSet.toList extraCases ++ extraCases')
+  where
+    findExtraAlts : CaseAlt vars -> Core (List Int)
+    findExtraAlts (ConCase x tag args ctree') = findExtraDefaults fc defs ctree'
+    findExtraAlts (DelayCase x arg ctree') = findExtraDefaults fc defs ctree'
+    findExtraAlts (ConstCase x ctree') = findExtraDefaults fc defs ctree'
+    -- already handled defaults by elaborating them to all possible cons
+    findExtraAlts (DefaultCase ctree') = pure []
+
+findExtraDefaults fc defs ctree = pure []
 
 -- Returns the case tree, and a list of the clauses that aren't reachable
 export
@@ -1263,7 +1339,11 @@ getPMDef fc phase fn ty clauses
          logC "compile.casetree.getpmdef" 20 $
            pure $ "Compiled to: " ++ show !(toFullNames t)
          let reached = findReached t
-         pure (_ ** (t, getUnreachable 0 reached clauses))
+         log "compile.casetree.clauses" 25 $
+           "Reached clauses: " ++ (show reached)
+         extraDefaults <- findExtraDefaults fc defs t
+         let unreachable = getUnreachable 0 (reached \\ extraDefaults) clauses
+         pure (_ ** (t, unreachable))
   where
     getUnreachable : Int -> List Int -> List Clause -> List Clause
     getUnreachable i is [] = []
