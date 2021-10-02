@@ -98,6 +98,14 @@ delayOnFailure fc rig env exp pred pri elab
                                             put UST (record { noSolve = nos' } ust)
                                             pure res))) :: ) }
                                          ust)
+                         -- Ideally we'd take an extra argument for postprocessing
+                         -- of the context based on error. Until we need that
+                         -- in general, I'm just doing this directly here. We
+                         -- might need it if a delayed search fails.
+                         case err of
+                              DeterminingArg _ n i _ _ =>
+                                 setInvertible fc (Resolved i)
+                              _ => pure ()
                          pure (dtm, expected)
                     else throw err)
   where

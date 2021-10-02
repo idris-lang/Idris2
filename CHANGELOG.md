@@ -4,13 +4,7 @@
 
 ### Language changes
 
-+ Auto implicit search can now use linear variables to resolve a search, but
-  only if they can be resolved immediately (so, if there are determining arguments
-  to be resolved first, the search will not work).
-  This is more limited than we'd like, but anything less restrictive is likely
-  to need more substantial changes to the elaborator to properly deal with
-  postponed searches on linear names, so will have to wait until some time in
-  the future.
++ Auto implicit search can now use linear variables to resolve a search.
 
 ### REPL changes
 

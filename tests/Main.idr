@@ -87,7 +87,7 @@ idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
        "interactive025", "interactive026", "interactive027", "interactive028",
        "interactive029", "interactive030", "interactive031", "interactive032",
        "interactive033", "interactive034", "interactive035", "interactive036",
-       "interactive037"]
+       "interactive037", "interactive038"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool "Interface" [] Nothing
@@ -99,7 +99,7 @@ idrisTestsInterface = MkTestPool "Interface" [] Nothing
        "interface017", "interface018", "interface019", "interface020",
        "interface021", "interface022", "interface023", "interface024",
        "interface025", "interface026", "interface027", "interface028",
-       "interface029"]
+       "interface029", "interface030"]
 
 idrisTestsLinear : TestPool
 idrisTestsLinear = MkTestPool "Quantities" [] Nothing

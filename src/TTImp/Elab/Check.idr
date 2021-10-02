@@ -417,36 +417,14 @@ searchVar : {vars : _} ->
             FC -> RigCount -> Nat -> Name ->
             Env Term vars -> NestedNames vars -> Name -> Term vars -> Core (Term vars)
 searchVar fc rig depth def env nest n ty
-    = if isLinear rig
-         then -- we have to be able to find the result with an autosearch
-              -- immediately, and flag the result as a 'linearUsed' to keep
-              -- the environment up to date for case etc and for future
-              -- searches
-              do est <- get EST
-                 let env' = dropLinearUsed (linearUsed est) env
-                 res <- search fc rig False 5 def ty env'
-                 case res of
-                      Local _ _ _ lv =>
-                        do est <- get EST
-                           put EST (record { linearUsed $= ((MkVar lv) :: ) } est)
-                      _ => pure ()
-                 pure res
-         else do defs <- get Ctxt
-                 (vars' ** (bind, env')) <- envHints (keys (localHints defs)) env
-                 -- Initial the search with an environment which binds the applied
-                 -- local hints
-                 (_, tm) <- newSearch fc rig depth def env' n
-                                      (weakenNs (mkSizeOf vars') ty)
-                 pure (bind tm)
+    = do defs <- get Ctxt
+         (vars' ** (bind, env')) <- envHints (keys (localHints defs)) env
+         -- Initial the search with an environment which binds the applied
+         -- local hints
+         (_, tm) <- newSearch fc rig depth def env' n
+                              (weakenNs (mkSizeOf vars') ty)
+         pure (bind tm)
   where
-    toRig0 : {idx : Nat} -> (0 p : IsVar nm idx vs) -> Env Term vs -> Env Term vs
-    toRig0 First (b :: bs) = setMultiplicity b erased :: bs
-    toRig0 (Later p) (b :: bs) = b :: toRig0 p bs
-
-    dropLinearUsed : List (Var vs) -> Env Term vs -> Env Term vs
-    dropLinearUsed [] env = env
-    dropLinearUsed (MkVar p :: us) env = dropLinearUsed us (toRig0 p env)
-
     useVars : {vars : _} ->
               List (Term vars) -> Term vars -> Term vars
     useVars [] sc = sc

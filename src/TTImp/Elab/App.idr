@@ -12,6 +12,7 @@ import Core.TT
 import Core.Value
 
 import TTImp.Elab.Check
+import TTImp.Elab.Delayed
 import TTImp.Elab.Dot
 import TTImp.TTImp
 
@@ -214,13 +215,43 @@ mutual
                    metaty <- quote defs env aty
                    est <- get EST
                    lim <- getAutoImplicitLimit
-                   metaval <- searchVar fc argRig lim (Resolved (defining est))
-                                        env nest nm metaty
+                   metaval <- if isLinear argRig
+                                 then do (tm, _) <- searchLinear lim metaty
+                                         pure tm
+                                 else searchVar fc argRig lim (Resolved (defining est))
+                                                env nest nm metaty
                    let fntm = App fc tm metaval
                    fnty <- sc defs (toClosure defaultOpts env metaval)
                    checkAppWith rig elabinfo nest env fc
                                 fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
     where
+      toRig0 : {idx : Nat} -> (0 p : IsVar nm idx vs) -> Env Term vs -> Env Term vs
+      toRig0 First (b :: bs) = setMultiplicity b erased :: bs
+      toRig0 (Later p) (b :: bs) = b :: toRig0 p bs
+
+      dropLinearUsed : List (Var vs) -> Env Term vs -> Env Term vs
+      dropLinearUsed [] env = env
+      dropLinearUsed (MkVar p :: us) env = dropLinearUsed us (toRig0 p env)
+
+      determining : Error -> Bool
+      determining (DeterminingArg{}) = True
+      determining _ = False
+
+      searchLinear : Nat -> Term vars -> Core (Term vars, Glued vars)
+      searchLinear depth ty
+          = delayOnFailure fc rig env expty determining Ambiguity $
+              \delayed =>
+                 do est <- get EST
+                    logTermNF "elab" 5 ("Linear search " ++ show delayed) env ty
+                    let env' = dropLinearUsed (linearUsed est) env
+                    res <- search fc rig False depth (Resolved (defining est)) ty env'
+                    case res of
+                         Local _ _ _ lv =>
+                           do est <- get EST
+                              put EST (record { linearUsed $= ((MkVar lv) :: ) } est)
+                         _ => pure ()
+                    pure (res, gnf env res)
+
       metavarImp : ElabMode -> Bool
       metavarImp (InLHS _) = True
       metavarImp InTransform = True

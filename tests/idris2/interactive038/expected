@@ -1,0 +1,15 @@
+1/1: Building linauto (linauto.idr)
+Main>    d : Door
+ 0 p : DoorIs CLOSED d
+   ok : Bool
+ 1 p' : DoorIs OPEN d
+------------------------------
+whatnow : L IO ()
+Main>    d : Door
+ 0 p : DoorIs CLOSED d
+   ok : Bool
+ 0 p' : DoorIs OPEN d
+ 1 p'' : DoorIs CLOSED d
+------------------------------
+whatnow2 : L IO ()
+Main> Bye for now!
