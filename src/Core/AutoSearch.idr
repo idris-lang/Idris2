@@ -170,11 +170,11 @@ exactlyOne {vars} fc env top target all
     normRes : (Term vars, Defs, UState) -> Core (Term vars)
     normRes (tm, defs, _) = normaliseHoles defs env tm
 
--- We can only resolve things which are at unrestricted multiplicity. Expression
--- search happens before linearity checking and we can't guarantee that just
--- because something is apparently available now, it will be available by the
--- time we get to linearity checking.
--- It's also fine to use anything if we're working at multiplicity 0
+-- We do allow resolving at linear multiplicity, but we assume that the
+-- elaborator will flag the result as used so that the result is valid for
+-- linearity checking. For linear names, we take the most recently bound
+-- name first. (It's a bit of a hack, unfortunately, which we should revisit
+-- some day)
 getUsableEnv : {vars : _} ->
                 FC -> RigCount ->
                 SizeOf done ->
@@ -183,13 +183,19 @@ getUsableEnv : {vars : _} ->
 getUsableEnv fc rigc p [] = []
 getUsableEnv {vars = v :: vs} {done} fc rigc p (b :: env)
    = let rest = getUsableEnv fc rigc (sucR p) env in
-         if (multiplicity b == top || isErased rigc)
+         if multOK (multiplicity b) rigc
             then let MkVar var = weakenVar p (MkVar First) in
                      (Local (binderLoc b) Nothing _ var,
                        rewrite appendAssociative done [v] vs in
                           weakenNs (sucR p) (binderType b)) ::
                                rewrite appendAssociative done [v] vs in rest
             else rewrite appendAssociative done [v] vs in rest
+  where
+    multOK : RigCount -> RigCount -> Bool
+    multOK binder target
+       = isErased target -- always okay if the target is erased
+         || binder == top -- always okay if we're looking for an unrestricted thing
+         || binder == target -- okay if both are the same (e.g. linear)
 
 -- A local is usable if it contains no holes in a determining argument position
 usableLocal : {vars : _} ->
@@ -342,7 +348,9 @@ searchLocalVars fc rig defaults trying depth def top env target
     = do let elabs = map (\t => searchLocalWith fc rig defaults trying depth def
                                               top env t target)
                          (getUsableEnv fc rig zero env)
-         exactlyOne fc env top target elabs
+         if isLinear rig
+            then anyOne fc env top elabs
+            else exactlyOne fc env top target elabs
 
 isPairNF : {auto c : Ref Ctxt Defs} ->
            Env Term vars -> NF vars -> Defs -> Core Bool

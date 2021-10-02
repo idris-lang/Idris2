@@ -1,0 +1,35 @@
+1/1: Building linauto-bad1 (linauto-bad1.idr)
+Error: While processing right hand side of prog. Can't find an implementation for DoorIs CLOSED d.
+
+linauto-bad1:25:22--25:32
+ 21 | 
+ 22 | prog : L IO ()
+ 23 | prog = do d # p <- newDoor
+ 24 |           ok # p' <- openDoor d
+ 25 |           ok # p' <- openDoor d
+                           ^^^^^^^^^^
+
+1/1: Building linauto-bad2 (linauto-bad2.idr)
+Error: While processing right hand side of prog. Can't find an implementation for DoorIs OPEN d.
+
+linauto-bad2:26:18--26:29
+ 22 | prog : L IO ()
+ 23 | prog = do d # p <- newDoor
+ 24 |           ok # p' <- openDoor d
+ 25 |           p'' <- closeDoor d
+ 26 |           p'' <- closeDoor d
+                       ^^^^^^^^^^^
+
+1/1: Building linauto-bad3 (linauto-bad3.idr)
+Error: While processing right hand side of prog. There are 0 uses of linear name p''. 
+
+linauto-bad3:25:11--25:14
+ 21 | 
+ 22 | prog : L IO ()
+ 23 | prog = do d # p <- newDoor
+ 24 |           ok # p' <- openDoor d
+ 25 |           p'' <- closeDoor d
+                ^^^
+
+Suggestion: linearly bounded variables must be used exactly once.
+1/1: Building linauto (linauto.idr)

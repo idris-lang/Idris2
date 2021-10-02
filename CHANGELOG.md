@@ -2,6 +2,16 @@
 
 ## [Next version]
 
+### Language changes
+
++ Auto implicit search can now use linear variables to resolve a search, but
+  only if they can be resolved immediately (so, if there are determining arguments
+  to be resolved first, the search will not work). It will always take the most
+  recently bound name that fits.
+  This is more limited than we'd like, but anything less restrictive is likely
+  to need more substantial changes to the elaborator, so will have to wait until
+  some time in the future.
+
 ### REPL changes
 
 * New experimental Scheme based evaluator (only available if compiled via

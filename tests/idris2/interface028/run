@@ -1,0 +1,6 @@
+rm -rf build
+
+$1 --no-banner --no-color --console-width 0 -p contrib -c linauto-bad1.idr
+$1 --no-banner --no-color --console-width 0 -p contrib -c linauto-bad2.idr
+$1 --no-banner --no-color --console-width 0 -p contrib -c linauto-bad3.idr
+$1 --no-banner --no-color --console-width 0 -p contrib -c linauto.idr
