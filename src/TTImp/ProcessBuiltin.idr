@@ -7,7 +7,7 @@ import Data.List
 import Libraries.Data.Fin as Libs
 import Libraries.Data.NameMap
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Core
 import Core.Context
 import Core.Context.Log

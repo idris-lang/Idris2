@@ -1,7 +1,7 @@
 module Core.TTC
 
 import Core.Binary.Prims
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.CompileExpr
 import Core.Context
 import Core.Core
