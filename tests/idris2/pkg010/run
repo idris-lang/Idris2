@@ -1,8 +1,15 @@
-./gen_expected.sh
+if [ "$OS" = "windows" ]; then
+    MY_PWD="$(cygpath -m "$(pwd)")\\\\"
+else
+    MY_PWD="$(pwd)/"
+fi
+
+MY_PWD="${MY_PWD}" ./gen_expected.sh
 
 export IDRIS2_PACKAGE_PATH=$IDRIS2_PREFIX/$NAME_VERSION
-export IDRIS2_PREFIX=$(pwd)/currently/nonexistent/dir/
+export IDRIS2_PREFIX=${MY_PWD}currently/nonexistent/dir/
 
 $1 --install ./testpkg.ipkg
 
-rm -r build currently
+# ../ is there for some extra safety for using rm -rf
+rm -rf ../pkg10/build ../pkg10/currently
