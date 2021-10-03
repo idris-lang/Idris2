@@ -73,6 +73,7 @@ insertImpLam {vars} env tm (Just ty) = bindLam tm ty
                Ref _ Func _ => pure Nothing -- might still be implicit
                TForce _ _ _ => pure Nothing
                Bind _ _ (Lam _ _ _ _) _ => pure Nothing
+               Bind _ _ (Let _ _ _ _) _ => pure Nothing
                _ => pure $ Just tm
 
     bindLamNF : RawImp -> NF vars -> Core RawImp
@@ -272,14 +273,9 @@ checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
 --         Core (Term vars, Glued vars)
 -- If we've just inserted an implicit coercion (in practice, that's either
 -- a force or delay) then check the term with any further insertions
+-- I think this might be left over from Blodwen, and maybe we can remove
+-- ICoerced?
 TTImp.Elab.Check.check rigc elabinfo nest env (ICoerced fc tm) exp
-    = checkImp rigc elabinfo nest env tm exp
--- Don't add implicits/coercions on local blocks or record updates
-TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILet _ _ _ _ _ _ _) exp
-    = checkImp rigc elabinfo nest env tm exp
-TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILocal _ _ _) exp
-    = checkImp rigc elabinfo nest env tm exp
-TTImp.Elab.Check.check rigc elabinfo nest env tm@(IUpdate _ _ _) exp
     = checkImp rigc elabinfo nest env tm exp
 TTImp.Elab.Check.check rigc elabinfo nest env tm_in exp
     = do defs <- get Ctxt
