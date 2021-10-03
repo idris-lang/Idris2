@@ -2,7 +2,9 @@
 LOG 0: [x, y]
 LOG 0: Left: ((Prelude.Types.plus x) y)
 LOG 0: Right: ((Prelude.Types.plus y) x)
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  any is shadowing Prelude.Interfaces.any
 
 refleq:5:1--5:15
  1 | import Language.Reflection
@@ -12,9 +14,9 @@ refleq:5:1--5:15
  5 | solveReflected : TTImp -> Elab any
      ^^^^^^^^^^^^^^
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   any is shadowing Prelude.Interfaces.any
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 refleq:15:1--15:6
  11 |     = do logTerm "" 0 "Goal" g
@@ -24,8 +26,6 @@ refleq:15:1--15:6
  15 | prove : Elab any
       ^^^^^
 
-You may be unintentionally shadowing the associated global definitions:
-  any is shadowing Prelude.Interfaces.any
 Error: While processing right hand side of commutes. Error during reflection: Not done
 
 refleq:24:16--24:21

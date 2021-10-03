@@ -168,13 +168,16 @@ pwarning (UnreachableClause fc env tm)
         <+> line <+> !(ploc fc)
 pwarning (ShadowingGlobalDefs fc ns)
     = pure $ vcat
-    $ reflow "We are about to implicitly bind lowercase names that shadow global definitions at the following location."
-   :: !(ploc fc)
+    $ reflow "We are about to implicitly bind the following lowercase names."
    :: reflow "You may be unintentionally shadowing the associated global definitions:"
-   :: map (\ (n, ns) => indent 2 $ hsep $ pretty n
-                            :: reflow "is shadowing"
-                            :: punctuate comma (map pretty (forget ns)))
-          (forget ns)
+   :: map pshadowing (forget ns)
+   `snoc` !(ploc fc)
+  where
+    pshadowing : (String, List1 Name) -> Doc IdrisAnn
+    pshadowing (n, ns) = indent 2 $ hsep $
+                           pretty n
+                        :: reflow "is shadowing"
+                        :: punctuate comma (map pretty (forget ns))
 
 pwarning (Deprecated s)
     = pure $ pretty "Deprecation warning:" <++> pretty s

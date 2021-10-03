@@ -37,7 +37,9 @@ Missing cases:
     test'' _
 
 1/1: Building Issue1366 (Issue1366.idr)
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  f is shadowing Main.f
 
 Issue1366:30:3--30:4
  26 |   uninhabited (Z _) impossible
@@ -47,9 +49,9 @@ Issue1366:30:3--30:4
  30 |   A : List a -> f a -> Funny a f
         ^
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   f is shadowing Main.f
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 Issue1366:31:3--31:4
  27 |   uninhabited (S _) impossible
@@ -59,9 +61,9 @@ Issue1366:31:3--31:4
  31 |   B : Funny a f
         ^
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   f is shadowing Main.f
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 Issue1366:33:1--33:7
  29 | data Funny : (a : Type) -> (f : Type -> Type) -> Type where
@@ -71,8 +73,6 @@ Issue1366:33:1--33:7
  33 | decode : NS [[List a, f a], []] -> Funny a f
       ^^^^^^
 
-You may be unintentionally shadowing the associated global definitions:
-  f is shadowing Main.f
 Error: decode is not covering.
 
 Issue1366:33:1--33:45

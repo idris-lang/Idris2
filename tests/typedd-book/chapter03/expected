@@ -1,6 +1,8 @@
 1/8: Building IsEven (IsEven.idr)
 2/8: Building Matrix (Matrix.idr)
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Data.Vect.elem, Prelude.Types.elem
 
 Matrix:3:1--3:14
  1 | import Data.Vect
@@ -8,9 +10,9 @@ Matrix:3:1--3:14
  3 | createEmpties : {n : _} -> Vect n (Vect 0 elem)
      ^^^^^^^^^^^^^
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Data.Vect.elem, Prelude.Types.elem
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 Matrix:7:1--7:16
  3 | createEmpties : {n : _} -> Vect n (Vect 0 elem)
@@ -20,9 +22,9 @@ Matrix:7:1--7:16
  7 | transposeHelper : (x : Vect n elem) -> (xs_trans : Vect n (Vect k elem)) -> Vect n (Vect (S k) elem)
      ^^^^^^^^^^^^^^^
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Data.Vect.elem, Prelude.Types.elem
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 Matrix:11:1--11:13
  07 | transposeHelper : (x : Vect n elem) -> (xs_trans : Vect n (Vect k elem)) -> Vect n (Vect (S k) elem)
@@ -32,10 +34,10 @@ Matrix:11:1--11:13
  11 | transposeMat : {n : _} -> Vect m (Vect n elem) -> Vect n (Vect m elem)
       ^^^^^^^^^^^^
 
+3/8: Building VecSort (VecSort.idr)
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Data.Vect.elem, Prelude.Types.elem
-3/8: Building VecSort (VecSort.idr)
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 VecSort:3:1--3:7
  1 | import Data.Vect
@@ -43,9 +45,9 @@ VecSort:3:1--3:7
  3 | insert : Ord elem => (x : elem) -> (xsSorted : Vect k elem) -> Vect (S k) elem
      ^^^^^^
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Data.Vect.elem, Prelude.Types.elem
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 VecSort:9:1--9:8
  5 | insert x (y :: xs) = case x < y of
@@ -55,8 +57,6 @@ VecSort:9:1--9:8
  9 | insSort : Ord elem => Vect n elem -> Vect n elem
      ^^^^^^^
 
-You may be unintentionally shadowing the associated global definitions:
-  elem is shadowing Data.Vect.elem, Prelude.Types.elem
 4/8: Building Vectors (Vectors.idr)
 5/8: Building WordLength (WordLength.idr)
 6/8: Building WordLength_vec (WordLength_vec.idr)

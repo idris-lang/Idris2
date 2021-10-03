@@ -1,5 +1,7 @@
 1/1: Building Fld (Fld.idr)
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R1.R1.a
 
 Fld:66:11--66:20
  62 | 
@@ -9,9 +11,9 @@ Fld:66:11--66:20
  66 |     {auto field : a}
                 ^^^^^^^^^
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
-  a is shadowing Main.R1.R1.a
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
+  a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
 Fld:74:1--79:38
  74 | interface Show a => (num : Num a) => MyIface a where -- Some interface with
@@ -21,9 +23,9 @@ Fld:74:1--79:38
  78 |   someFunc : a -> a                          -- Constraints are now elaborated as auto implicits (as one would expect)
  79 |   giveBack : {x : a} -> MyData x -> a        -- (previously as explicit arguments of the interface
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 Fld:74:1--79:38
  74 | interface Show a => (num : Num a) => MyIface a where -- Some interface with
@@ -33,17 +35,17 @@ Fld:74:1--79:38
  78 |   someFunc : a -> a                          -- Constraints are now elaborated as auto implicits (as one would expect)
  79 |   giveBack : {x : a} -> MyData x -> a        -- (previously as explicit arguments of the interface
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 Fld:83:1--84:37
  83 | data MyDataImpl : a -> Type where            -- implementation of MyData
  84 |   MkMyData : (x : a) -> MyDataImpl x
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 Fld:84:3--84:11
  80 |                                              -- constructor)
@@ -53,9 +55,9 @@ Fld:84:3--84:11
  84 |   MkMyData : (x : a) -> MyDataImpl x
         ^^^^^^^^
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 Fld:110:1--110:11
  106 | Show' String where
@@ -65,9 +67,10 @@ Fld:110:1--110:11
  110 | showMaybe' : Show' a => Show' (Maybe a)
        ^^^^^^^^^^
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
+  b is shadowing Main.Other.b
 
 Fld:139:3--139:10
  135 | setName : String -> OrdinaryDog -> OrdinaryDog
@@ -77,10 +80,10 @@ Fld:139:3--139:10
  139 |   MkThree : (x : a) -> (y : b) -> (z : c) -> Three a b c
          ^^^^^^^
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
   b is shadowing Main.Other.b
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 Fld:141:1--141:10
  137 | 
@@ -90,10 +93,9 @@ Fld:141:1--141:10
  141 | mapSetMap : (a -> a') -> b' -> (c -> c') -> Three a b c -> Three a' b' c'
        ^^^^^^^^^
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
-  b is shadowing Main.Other.b
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 Fld:217:15--217:21
  213 | dontCare2 : (x : Nat) -> Nat -> Nat -> Nat -> (y : Nat) -> x + y = y + x
@@ -103,9 +105,9 @@ Fld:217:15--217:21
  217 | data Tree a = Leaf a | Node (Tree a) a (Tree a)
                      ^^^^^^
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 Fld:217:24--217:48
  213 | dontCare2 : (x : Nat) -> Nat -> Nat -> Nat -> (y : Nat) -> x + y = y + x
@@ -115,9 +117,9 @@ Fld:217:24--217:48
  217 | data Tree a = Leaf a | Node (Tree a) a (Tree a)
                               ^^^^^^^^^^^^^^^^^^^^^^^^
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 Fld:219:1--219:7
  215 | -- dontCare2 _ _ _ _ _ = plusCommutative _ _
@@ -127,17 +129,17 @@ Fld:219:1--219:7
  219 | isNode : Tree a -> Bool
        ^^^^^^
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 Fld:223:1--224:24
  223 | data IsNode : Tree a -> Type where
  224 |   Is : IsNode (Node {})
 
+Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
-Warning: We are about to implicitly bind lowercase names that shadow global definitions at the following location.
 
 Fld:226:1--226:10
  222 | 
@@ -147,8 +149,6 @@ Fld:226:1--226:10
  226 | decIsNode : (x : Tree a) -> Dec (IsNode x)
        ^^^^^^^^^
 
-You may be unintentionally shadowing the associated global definitions:
-  a is shadowing Main.R2.R2.a, Main.R1.R1.a
 Error: While processing right hand side of r2_shouldNotTypecheck1. Ambiguous elaboration. Possible results:
     Main.R2.MkR
     Main.R1.MkR Type
