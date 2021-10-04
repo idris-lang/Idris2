@@ -1,10 +1,11 @@
 module Data.List.Extra
 
 import Data.List
+import Data.List.Elem
 
 %default total
 
-||| Enumerate a Vect with indicies of Nat
+||| Enumerate a List with indicies of Nat
 public export
 enumNat : List a -> List (Nat, a)
 enumNat l = h 0 l where
@@ -12,7 +13,7 @@ enumNat l = h 0 l where
   h _ [] = []
   h n (x :: xs) = (n, x) :: h (S n) xs
 
-||| Enumerate a Vect with indicies of Elem
+||| Enumerate a List with indicies of Elem
 public export
 enumElem : (l : List a) -> List (e : a ** Elem e l)
 enumElem [] = []

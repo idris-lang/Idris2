@@ -17,12 +17,12 @@ export
 mapId : (xs : Vect n a) -> map Prelude.id xs = xs
 mapId xs = vectorExtensionality _ _ $ \i => indexNaturality _ _ _
 
-||| `mapWtihPos f` represents post-composition the tabulated function `f`
+{-||| `mapWtihPos f` represents post-composition the tabulated function `f`
 export
-indexMapI : (f : Fin n -> a -> b) -> (xs : Vect n a) -> (i : Fin n)
-  -> index i (mapI f xs) = f i (index i xs)
-indexMapI f (x :: _ )  FZ    = Refl
-indexMapI f (_ :: xs) (FS i) = indexMapI _ _ _
+indexMapPos : (f : Fin n -> a -> b) -> (xs : Vect n a) -> (i : Fin n)
+  -> index i (map (uncurry f) (enumFin xs)) = f i (index i xs)
+indexMapPos f (x :: _ )  FZ    = Refl
+indexMapPos f (_ :: xs) (FS i) = indexMapPos _ _ _-}
 
 ||| `tabulate : (Fin n ->) -> Vect n` is a natural transformation
 export
