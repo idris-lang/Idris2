@@ -5,38 +5,17 @@ import Data.Vect
 import Data.Fin
 import Data.Vect.Elem
 
-||| Version of `map` with access to the current position
+||| Enumerate a Vect with indicies of Fin
 public export
-mapI : (f : Fin len -> a -> b) -> Vect len a -> Vect len b
-mapI f [] = []
-mapI f (x :: xs) = f 0 x :: mapI (f . FS) xs
+enumFin : Vect n a -> Vect n (Fin n, a)
+enumFin [] = []
+enumFin (x :: xs) = (FZ, x) :: map (\(n, s) => (FS n, s)) (enumFin xs)
 
-||| Version of `mapMaybe` with access to the current position
+||| Enumerate a Vect with indicies of Elem
 public export
-mapMaybeI : (f : Fin len -> a -> Maybe b) -> Vect len a -> (m : Nat ** Vect m b)
-mapMaybeI f []      = (_ ** [])
-mapMaybeI f (x :: xs) =
-  let (len ** ys) = mapMaybeI (f . FS) xs
-    in case f FZ x of
-       Just y  => (S len ** y :: ys)
-       Nothing => (  len **      ys)
-
-||| Version of `filter` with access to the current position
-public export
-filterI : (f : Fin len -> elem -> Bool) -> Vect len elem -> (m : Nat ** Vect m elem)
-filterI p []      = ( _ ** [] )
-filterI p (x :: xs) =
-  let (_ ** tail) = filterI (p . FS) xs
-   in if p FZ x then
-        (_ ** x :: tail)
-      else
-        (_ ** tail)
-
-||| Version of `foldl` with access to the current position
-public export
-foldlI : (f : acc -> Fin len -> elem -> acc) -> acc -> Vect len elem -> acc
-foldlI f z [] = z
-foldlI f z (x :: xs) = foldlI (flip (flip f . FS)) (f z 0 x) xs
+enumElem : (l : Vect n a) -> Vect n (e : a ** Elem e l)
+enumElem [] = []
+enumElem (x :: xs) = (x ** Here) :: map (\(s ** f) => (s ** There f)) (enumElem xs)
 
 ||| Version of `map` with runtime-irrelevant information that the
 ||| argument is an element of the vector
