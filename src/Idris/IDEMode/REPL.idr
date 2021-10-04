@@ -385,18 +385,6 @@ displayIDEResult outf i  (REPL $ CheckedTotal xs)
   = printIDEResult outf i
   $ StringAtom $ showSep "\n"
   $ map (\ (fn, tot) => (show fn ++ " is " ++ show tot)) xs
-displayIDEResult outf i  (REPL $ FoundHoles holes)
-  = printIDEResultWithHighlight outf i =<< case holes of
-      []  => pure (StringAtom "No holes", [])
-      [x] => do let hole = pretty x.name <++> colon <++> prettyTerm x.type
-                hlght <- renderWithDecorations syntaxToProperties
-                           $ "1 hole" <+> colon <++> hole
-                pure $ mapFst StringAtom hlght
-      xs => do let holes = xs <&> \ x => pretty x.name <++> colon <++> prettyTerm x.type
-               let header = pretty (length xs) <++> pretty "holes" <+> colon
-               hlght <- renderWithDecorations syntaxToProperties
-                           $ vcat (header :: map (indent 2) holes)
-               pure $ mapFst StringAtom hlght
 displayIDEResult outf i  (REPL $ LogLevelSet k)
   = printIDEResult outf i
   $ StringAtom $ "Set loglevel to " ++ show k
