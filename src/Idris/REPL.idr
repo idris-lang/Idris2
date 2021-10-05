@@ -360,14 +360,23 @@ dropLamsTm (S k) env (Bind _ _ b sc) = dropLamsTm k (b :: env) sc
 dropLamsTm _ env tm = (_ ** (env, tm))
 
 findInTree : FilePos -> Name -> PosMap (NonEmptyFC, Name) -> Maybe Name
-findInTree p hint m = map snd $ head' $ filter match $ sortBy (\x, y => cmp (measure x) (measure y)) $ searchPos p m
+findInTree p hint m
+  = map snd $ head'
+  $ filter match
+  $ sortBy (cmp `on` measure)
+  $ searchPos p m
+
   where
     cmp : FileRange -> FileRange -> Ordering
     cmp ((sr1, sc1), (er1, ec1)) ((sr2, sc2), (er2, ec2)) =
       compare (er1 - sr1, ec1 - sc1) (er2 - sr2, ec2 - sc2)
 
+    checkCandidate : Name -> Bool
+    checkCandidate = let str = displayUserName <$> userNameRoot hint in
+                     \ n => str == (displayUserName <$> userNameRoot n)
+
     match : (NonEmptyFC, Name) -> Bool
-    match (_, n) = matches hint n && userNameRoot n == userNameRoot hint
+    match (_, n) = matches hint n && checkCandidate n
 
 processEdit : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
@@ -381,7 +390,8 @@ processEdit (TypeAt line col name)
 
          -- Search the correct name by location for more precise search
          -- and fallback to given name if nothing found
-         let name = fromMaybe name $ findInTree (line - 1, col - 1) name (nameLocMap meta)
+         let name = fromMaybe name
+                  $ findInTree (line - 1, col - 1) name (nameLocMap meta)
 
          -- Lookup the name globally
          globals <- lookupCtxtName name (gamma defs)
@@ -398,7 +408,7 @@ processEdit (TypeAt line col name)
          case (globalResult, localResult) of
               -- Give precedence to the local name, as it shadows the others
               (_, Just (n, _, type)) => pure $ DisplayEdit $
-                pretty (nameRoot n) <++> colon <++> !(displayTerm defs type)
+                pretty n <++> colon <++> !(displayTerm defs type)
               (Just globalDoc, Nothing) => pure $ DisplayEdit $ globalDoc
               (Nothing, Nothing) => undefinedName replFC name
 
