@@ -360,14 +360,37 @@ dropLamsTm (S k) env (Bind _ _ b sc) = dropLamsTm k (b :: env) sc
 dropLamsTm _ env tm = (_ ** (env, tm))
 
 findInTree : FilePos -> Name -> PosMap (NonEmptyFC, Name) -> Maybe Name
-findInTree p hint m = map snd $ head' $ filter match $ sortBy (\x, y => cmp (measure x) (measure y)) $ searchPos p m
+findInTree p hint m
+  = map snd $ head'
+  $ sortBy (cmp `on` measure)
+  $ filter match
+  $ searchPos p m
+
   where
     cmp : FileRange -> FileRange -> Ordering
     cmp ((sr1, sc1), (er1, ec1)) ((sr2, sc2), (er2, ec2)) =
       compare (er1 - sr1, ec1 - sc1) (er2 - sr2, ec2 - sc2)
 
+    checkAsNamespace : String -> Name -> Bool
+    checkAsNamespace i (NS ns' n) = i `isInPathOf` ns'
+    checkAsNamespace _ _ = False
+
+    startsWithUpper : String -> Bool
+    startsWithUpper str = case strM str of
+       StrNil => False
+       StrCons c _ => isUpper c || c > chr 160
+
+    matchingRoots : Name -> Name -> Bool
+    matchingRoots = (==) `on` nameRoot
+
+    checkCandidate : Name -> Bool
+    checkCandidate cand = matchingRoots hint cand || case hint of
+      -- a basic user name: may actually be e.g. the `B` part of `A.B.C.val`
+      UN (Basic n) => startsWithUpper n && checkAsNamespace n cand
+      _ => False
+
     match : (NonEmptyFC, Name) -> Bool
-    match (_, n) = matches hint n && userNameRoot n == userNameRoot hint
+    match (_, n) = matches hint n && checkCandidate n
 
 processEdit : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
@@ -381,7 +404,8 @@ processEdit (TypeAt line col name)
 
          -- Search the correct name by location for more precise search
          -- and fallback to given name if nothing found
-         let name = fromMaybe name $ findInTree (line - 1, col - 1) name (nameLocMap meta)
+         let name = fromMaybe name
+                  $ findInTree (line-1, col) name (nameLocMap meta)
 
          -- Lookup the name globally
          globals <- lookupCtxtName name (gamma defs)
@@ -393,14 +417,27 @@ processEdit (TypeAt line col name)
                     pure $ Just (vsep tys)
 
          -- Lookup the name locally (The name at the specified position)
-         localResult <- findTypeAt $ anyAt $ within (line-1, col-1)
+         localResult <- findTypeAt $ anyAt $ within (line-1, col)
 
          case (globalResult, localResult) of
               -- Give precedence to the local name, as it shadows the others
               (_, Just (n, _, type)) => pure $ DisplayEdit $
-                pretty (nameRoot n) <++> colon <++> !(displayTerm defs type)
+                prettyLocalName n <++> colon <++> !(displayTerm defs type)
               (Just globalDoc, Nothing) => pure $ DisplayEdit $ globalDoc
               (Nothing, Nothing) => undefinedName replFC name
+
+  where
+
+    prettyLocalName : Name -> Doc IdrisAnn
+    -- already looks good
+    prettyLocalName nm@(UN _) = pretty nm
+    prettyLocalName nm@(NS _ (UN _)) = pretty nm
+    -- otherwise
+    prettyLocalName nm = case userNameRoot nm of
+      -- got rid of `Nested` or `PV`
+      Just nm => pretty nm
+      -- really bad case e.g. case block name
+      Nothing => pretty (nameRoot nm)
 
 processEdit (CaseSplit upd line col name)
     = do let find = if col > 0

@@ -166,6 +166,12 @@ isApproximationOf (MkNS ms) (MkNS ns)
   -- the other's.
   = isPrefixOf ms ns
 
+||| We can check whether a given string (assumed to be a valid Namespace ident)
+||| is in the path of a given namespace.
+export
+isInPathOf : (i : String) -> (candidate : Namespace) -> Bool
+isInPathOf i (MkNS ns) = i `elem` ns
+
 -------------------------------------------------------------------------------------
 -- INSTANCES
 -------------------------------------------------------------------------------------
