@@ -1,6 +1,6 @@
 1/1: Building TypeAtLocalVars (TypeAtLocalVars.idr)
 Main> z : Type
-Main> f : Nat -> Int -> Bool -> () -> z
+Main> Main.f : Nat -> Int -> Bool -> () -> z
 Main> a : Nat
 Main> b : Int
 Main> c : Bool
