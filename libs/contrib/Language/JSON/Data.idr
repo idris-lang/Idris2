@@ -137,3 +137,23 @@ format {curr} n json = indent curr $ formatValue curr n json
                                      _ :: _ => ",\n" ++ formatProps xs
                                      [] => "\n"
     formatValue _ _ x = stringify x
+
+public export
+Cast () JSON where
+  cast () = JNull
+
+public export
+Cast Bool JSON where
+  cast = JBoolean
+
+public export
+Cast Double JSON where
+  cast = JNumber
+
+public export
+Cast String JSON where
+  cast = JString
+
+public export
+Cast a JSON => Cast (List a) JSON where
+  cast xs = JArray $ map cast xs
