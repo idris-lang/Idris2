@@ -28,6 +28,17 @@ data IdrisSyntax
   | Keyword
   | Pragma
 
+public export
+Eq IdrisSyntax where
+  Hole    == Hole    = True
+  TCon xs == TCon ys = xs == ys
+  DCon xs == DCon ys = xs == ys
+  Fun f   == Fun g   = f  == g
+  Bound   == Bound   = True
+  Keyword == Keyword = True
+  Pragma  == Pragma  = True
+  _       == _       = False
+
 export
 syntaxToDecoration : IdrisSyntax -> Maybe Decoration
 syntaxToDecoration Hole     = Nothing
@@ -61,6 +72,17 @@ data IdrisAnn
   | Code
   | Meta
   | Syntax IdrisSyntax
+
+public export
+Eq IdrisAnn where
+  Warning   == Warning   = True
+  Error     == Error     = True
+  ErrorDesc == ErrorDesc = True
+  FileCtxt  == FileCtxt  = True
+  Code      == Code      = True
+  Meta      == Meta      = True
+  Syntax x  == Syntax y  = x == y
+  _         == _         = False
 
 export
 annToDecoration : IdrisAnn -> Maybe Decoration

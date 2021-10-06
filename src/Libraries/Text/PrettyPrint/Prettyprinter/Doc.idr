@@ -64,6 +64,12 @@ data Doc : Type -> Type where
   Annotated : ann -> Doc ann -> Doc ann
 
 export
+isEmptyDoc : Doc ann -> Bool
+isEmptyDoc = \case
+  Empty => True
+  _     => False
+
+export
 Semigroup (Doc ann) where
   (<+>) = Cat
 
