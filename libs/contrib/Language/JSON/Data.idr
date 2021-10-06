@@ -96,6 +96,15 @@ export
 Show JSON where
   show = stringify
 
+export
+[Idris] Show JSON where
+  showPrec d JNull = "JNull"
+  showPrec d (JBoolean x) = showCon d "JBoolean" $ showArg x
+  showPrec d (JNumber x) = showCon d "JNumber" $ showArg x
+  showPrec d (JString x) = showCon d "JString" $ showArg x
+  showPrec d (JArray xs) = assert_total $ showCon d "JArray" $ showArg xs
+  showPrec d (JObject xs) = assert_total $ showCon d "JObject" $ showArg xs
+
 ||| Format a JSON value, indenting by `n` spaces per nesting level.
 |||
 ||| @curr The current indentation amount, measured in spaces.
