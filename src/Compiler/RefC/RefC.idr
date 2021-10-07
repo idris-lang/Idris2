@@ -103,13 +103,23 @@ where
     showCString ('"'::cs) = ("\\\"" ++) . showCString cs
     showCString (c ::cs) = (showCChar c) . showCString cs
 
+-- deals with C not allowing `-9223372036854775808` as a literal
+showIntMin : Int -> String
+showIntMin x = if x == -9223372036854775808
+    then "INT64_MIN"
+    else "INT64_C("++ show x ++")"
+
+showIntegerMin : Integer -> String
+showIntegerMin x = if x == -9223372036854775808
+    then "INT64_MIN"
+    else "INT64_C("++ show x ++")"
 
 cConstant : Constant -> String
-cConstant (I x) = "(Value*)makeInt64("++ show x ++")"
-cConstant (I8 x) = "(Value*)makeInt8("++ show x ++")"
-cConstant (I16 x) = "(Value*)makeInt16("++ show x ++")"
-cConstant (I32 x) = "(Value*)makeInt32("++ show x ++")"
-cConstant (I64 x) = "(Value*)makeInt64("++ show x ++")"
+cConstant (I x) = "(Value*)makeInt64("++ showIntMin x ++")"
+cConstant (I8 x) = "(Value*)makeInt8(INT8_C("++ show x ++"))"
+cConstant (I16 x) = "(Value*)makeInt16(INT16_C("++ show x ++"))"
+cConstant (I32 x) = "(Value*)makeInt32(INT32_C("++ show x ++"))"
+cConstant (I64 x) = "(Value*)makeInt64("++ showIntegerMin x ++")"
 cConstant (BI x) = "(Value*)makeIntegerLiteral(\""++ show x ++"\")"
 cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
 cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
@@ -125,10 +135,10 @@ cConstant StringType = "string"
 cConstant CharType = "char"
 cConstant DoubleType = "double"
 cConstant WorldType = "f32"
-cConstant (B8 x)   = "(Value*)makeBits8("++ show x ++")"
-cConstant (B16 x)  = "(Value*)makeBits16("++ show x ++")"
-cConstant (B32 x)  = "(Value*)makeBits32("++ show x ++")"
-cConstant (B64 x)  = "(Value*)makeBits64("++ show x ++")"
+cConstant (B8 x)   = "(Value*)makeBits8(UINT8_C("++ show x ++"))"
+cConstant (B16 x)  = "(Value*)makeBits16(UINT16_C("++ show x ++"))"
+cConstant (B32 x)  = "(Value*)makeBits32(UINT32_C("++ show x ++"))"
+cConstant (B64 x)  = "(Value*)makeBits64(UINT64_C("++ show x ++"))"
 cConstant Bits8Type = "Bits8"
 cConstant Bits16Type = "Bits16"
 cConstant Bits32Type = "Bits32"
