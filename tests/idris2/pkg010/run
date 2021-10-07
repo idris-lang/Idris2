@@ -12,4 +12,4 @@ export IDRIS2_PREFIX=${MY_PWD}currently/nonexistent/dir/
 $1 --install ./testpkg.ipkg
 
 # ../ is there for some extra safety for using rm -rf
-rm -rf ../pkg10/build ../pkg10/currently
+rm -rf ../pkg010/build ../pkg010/currently
