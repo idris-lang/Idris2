@@ -669,6 +669,10 @@ record SizeOf {a : Type} (xs : List a) where
 namespace SizeOf
 
   export
+  0 theList : SizeOf {a} xs -> List a
+  theList _ = xs
+
+  export
   zero : SizeOf []
   zero = MkSizeOf Z Z
 
