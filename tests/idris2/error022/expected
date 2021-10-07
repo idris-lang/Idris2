@@ -1,0 +1,15 @@
+1/1: Building UpdateLoc (UpdateLoc.idr)
+Error: While processing right hand side of f. When unifying:
+    Nat
+and:
+    Double
+Mismatch between: Nat and Double.
+
+UpdateLoc:5:5--5:21
+ 1 | record Nat2 where
+ 2 |   nat : Nat
+ 3 | 
+ 4 | f : Nat2 -> Nat2
+ 5 | f = { nat $= floor }
+         ^^^^^^^^^^^^^^^^
+
