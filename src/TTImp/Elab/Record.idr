@@ -35,20 +35,13 @@ Show Rec where
   show (Constr mn n args)
       = "Constr " ++ show mn ++ " " ++ show n ++ " " ++ show args
 
-applyImp : RawImp -> List (Maybe Name, RawImp) -> RawImp
-applyImp f [] = f
-applyImp f ((Nothing, arg) :: xs)
-    = applyImp (IApp (getFC f) f arg) xs
-applyImp f ((Just n, arg) :: xs)
-    = applyImp (INamedApp (getFC f) f n arg) xs
-
 toLHS' : FC -> Rec -> (Maybe Name, RawImp)
 toLHS' loc (Field mn@(Just _) n _)
     = (mn, IAs loc EmptyFC UseRight (UN $ Basic n) (Implicit loc True))
 toLHS' loc (Field mn n _) = (mn, IBindVar EmptyFC n)
 toLHS' loc (Constr mn con args)
     = let args' = map (toLHS' loc . snd) args in
-          (mn, applyImp (IVar loc con) args')
+          (mn, gapply (IVar loc con) args')
 
 toLHS : FC -> Rec -> RawImp
 toLHS fc r = snd (toLHS' fc r)
@@ -57,7 +50,7 @@ toRHS' : FC -> Rec -> (Maybe Name, RawImp)
 toRHS' loc (Field mn _ val) = (mn, val)
 toRHS' loc (Constr mn con args)
     = let args' = map (toRHS' loc . snd) args in
-          (mn, applyImp (IVar loc con) args')
+          (mn, gapply (IVar loc con) args')
 
 toRHS : FC -> Rec -> RawImp
 toRHS fc r = snd (toRHS' fc r)
