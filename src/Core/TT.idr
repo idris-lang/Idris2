@@ -1116,6 +1116,20 @@ insertVar : SizeOf outer ->
             Var (outer ++ n :: inner)
 insertVar p (MkVar v) = let MkNVar v' = insertNVar p (MkNVar v) in MkVar v'
 
+
+||| The (partial) inverse to insertVar
+export
+removeVar : SizeOf outer ->
+            Var        (outer ++ [x] ++ inner) ->
+            Maybe (Var (outer        ++ inner))
+removeVar out var = case sizedView out of
+  Z => case var of
+          MkVar First     => Nothing
+          MkVar (Later p) => Just (MkVar p)
+  S out' => case var of
+              MkVar First     => Just (MkVar First)
+              MkVar (Later p) => later <$> removeVar out' (MkVar p)
+
 export
 weakenVar : SizeOf ns -> Var inner -> Var (ns ++ inner)
 weakenVar p (MkVar v) = let MkNVar v' = weakenNVar p (MkNVar v) in MkVar v'

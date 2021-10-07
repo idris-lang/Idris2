@@ -8,14 +8,11 @@ import Core.Value
 import Data.List
 import Data.Vect
 
-find : FC -> SizeOf outer -> CExp inner -> Var (outer ++ [x] ++ inner) -> CExp (outer ++ inner)
-find fc out val var = case sizedView out of
-    Z => case var of
-        MkVar {i=Z} First => val
-        MkVar {i=S _} (Later p) => CLocal fc p
-    S out' => case var of
-        MkVar {i=Z} First => CLocal fc First
-        MkVar {i=S _} (Later p) => weaken $ find fc out' val (MkVar p)
+find : FC -> SizeOf outer -> CExp inner ->
+       Var (outer ++ [x] ++ inner) -> CExp (outer ++ inner)
+find fc out val var = case removeVar out var of
+  Nothing => weakenNs out val
+  Just (MkVar p) => CLocal fc p
 
 namespace Inline
   mutual
