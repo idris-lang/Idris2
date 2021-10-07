@@ -238,7 +238,7 @@ addNameType loc n env tm
          n' <- getFullName n
 
          -- Add the name to the metadata if the file context is not empty
-         whenJust (isNonEmptyFC loc) $ \ neloc => do
+         whenJust (isConcreteFC loc) $ \ neloc => do
            put MD $ record { names $= ((neloc, (n', 0, substEnv loc env tm)) ::) } meta
            log "metadata.names" 7 $ show n' ++ " at line " ++ show (1 + startLine neloc)
 
@@ -262,7 +262,7 @@ addNameLoc : {auto m : Ref MD Metadata} ->
 addNameLoc loc n
     = do meta <- get MD
          n' <- getFullName n
-         whenJust (isNonEmptyFC loc) $ \neloc =>
+         whenJust (isConcreteFC loc) $ \neloc =>
            put MD $ record { nameLocMap $= insert (neloc, n') } meta
 
 export

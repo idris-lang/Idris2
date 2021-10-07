@@ -37,8 +37,8 @@ Show Rec where
 
 toLHS' : FC -> Rec -> (Maybe Name, RawImp)
 toLHS' loc (Field mn@(Just _) n _)
-    = (mn, IAs loc EmptyFC UseRight (UN $ Basic n) (Implicit loc True))
-toLHS' loc (Field mn n _) = (mn, IBindVar EmptyFC n)
+    = (mn, IAs loc (virtualiseFC loc) UseRight (UN $ Basic n) (Implicit loc True))
+toLHS' loc (Field mn n _) = (mn, IBindVar (virtualiseFC loc) n)
 toLHS' loc (Constr mn con args)
     = let args' = map (toLHS' loc . snd) args in
           (mn, gapply (IVar loc con) args')
@@ -122,7 +122,7 @@ findPath loc (p :: ps) full (Just tyn) val (Field mn n v)
         = do fldn <- genFieldName p
              args' <- mkArgs ps
              -- If it's an implicit argument, leave it as _ by default
-             let arg = maybe (IVar EmptyFC (UN $ Basic fldn))
+             let arg = maybe (IVar (virtualiseFC loc) (UN $ Basic fldn))
                              (const (Implicit loc False))
                              imp
              pure ((p, Field imp fldn arg) :: args')
@@ -148,7 +148,7 @@ getSides loc (ISetField path val) tyn orig rec
    = findPath loc path path (Just tyn) (const val) rec
 getSides loc (ISetFieldApp path val) tyn orig rec
    = findPath loc path path (Just tyn)
-      (\n => apply val [IVar EmptyFC (UN $ Basic n)]) rec
+      (\n => apply val [IVar (virtualiseFC loc) (UN $ Basic n)]) rec
 
 getAllSides : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
