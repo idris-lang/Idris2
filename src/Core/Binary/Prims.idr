@@ -447,25 +447,11 @@ modTime fname
        coreLift $ closeFile f
        pure t
 
+%foreign "C:idris2_hashFile, libidris2_support, idris_file.h"
+prim__hashFile : String -> PrimIO Bits64
+
 export
-hashFileWith : Maybe String -> String -> Core (Maybe String)
-hashFileWith Nothing _ = pure Nothing
-hashFileWith (Just sha256sum) fileName
-  = do Right fileHandle <- coreLift $ popen
-            (sha256sum ++ " \"" ++ osEscape fileName ++ "\"") Read
-         | Left _ => err
-       Right hashLine <- coreLift $ fGetLine fileHandle
-         | Left _ =>
-           do coreLift $ pclose fileHandle
-              err
-       coreLift $ pclose fileHandle
-       let w@(_::_) = words hashLine
-         | Nil => err
-       pure $ Just $ last w
-  where
-    err : Core a
-    err = coreFail $ InternalError ("Can't get " ++ sha256sum ++ " of " ++ fileName)
-    osEscape : String -> String
-    osEscape = if isWindows
-      then id
-      else escapeStringUnix
+hashFile : HasIO io => String -> io (Maybe Bits64)
+hashFile fileName
+  = do hash <- primIO $ prim__hashFile fileName
+       pure $ if hash == 0 then Nothing else Just $ hash

@@ -237,9 +237,9 @@ unchangedTime sourceFileName ttcFileName
 
 
 ||| If the source file hash hasn't changed
-unchangedHash : (hashFn : Maybe String) -> (sourceFileName : String) -> (ttcFileName : String) -> Core Bool
-unchangedHash hashFn sourceFileName ttcFileName
-  = do Just sourceCodeHash        <- hashFileWith hashFn sourceFileName
+unchangedHash : (sourceFileName : String) -> (ttcFileName : String) -> Core Bool
+unchangedHash sourceFileName ttcFileName
+  = do Just sourceCodeHash        <- coreLift $ hashFile sourceFileName
              | _ => pure False
        (Just storedSourceHash, _) <- readHashes ttcFileName
              | _ => pure False
@@ -308,7 +308,7 @@ processMod sourceFileName ttcFileName msg sourcecode origin
           show (sort storedImportInterfaceHashes)
 
         sourceUnchanged <- (if session.checkHashesInsteadOfModTime
-          then unchangedHash (defs.options.hashFn) else unchangedTime) sourceFileName ttcFileName
+          then unchangedHash else unchangedTime) sourceFileName ttcFileName
 
         -- If neither the source nor the interface hashes of imports have changed then no rebuilding is needed
         if (sourceUnchanged && sort importInterfaceHashes == sort storedImportInterfaceHashes)

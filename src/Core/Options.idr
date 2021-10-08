@@ -201,7 +201,6 @@ record Options where
   primnames : PrimNames
   extensions : List LangExt
   additionalCGs : List (String, CG)
-  hashFn : Maybe String
 
 export
 availableCGs : Options -> List (String, CG)
@@ -237,31 +236,12 @@ export
 defaultElab : ElabDirectives
 defaultElab = MkElabDirectives True True CoveringOnly 3 50 50 True
 
--- FIXME: This turns out not to be reliably portable, since different systems
--- may have tools with the same name but different required arugments. We
--- probably need another way (perhaps our own internal hash function, although
--- that's not going to be as good as sha256).
-export
-defaultHashFn : Core (Maybe String)
-defaultHashFn
-    = do Nothing <- coreLift $ pathLookup ["sha256sum", "gsha256sum"]
-           | Just p => pure $ Just $ p ++ " --tag"
-         Nothing <- coreLift $ pathLookup ["sha256"]
-           | Just p => pure $ Just p
-         Nothing <- coreLift $ pathLookup ["openssl"]
-           | Just p => pure $ Just $ p ++ " sha256"
-         pure Nothing
-
 export
 defaults : Core Options
 defaults
-    = do -- hashFn <- defaultHashFn
-         -- Temporarily disabling the hash function until we have a more
-         -- portable way of working out what to call, and allowing a way for
-         -- it to fail gracefully.
-         pure $ MkOptions
+    = do pure $ MkOptions
            defaultDirs defaultPPrint defaultSession defaultElab Nothing Nothing
-           (MkPrimNs Nothing Nothing Nothing Nothing) [] [] Nothing
+           (MkPrimNs Nothing Nothing Nothing Nothing) [] []
 
 -- Reset the options which are set by source files
 export

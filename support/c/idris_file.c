@@ -232,3 +232,26 @@ FILE* idris2_stdout() {
 FILE* idris2_stderr() {
     return stderr;
 }
+
+uint64_t idris2_hashFile(const char *path) {
+    FILE *fp;
+    char buf[16384];
+    size_t len = 0;
+    int c;
+    uint32_t hashA = 5381;
+    uint32_t hashB = 0;
+
+    if ((fp = fopen(path, "r")) == NULL) return 0;
+
+    while (len || ((len = fread(buf, 1, sizeof(buf), fp)) && !ferror(fp))) {
+        c = buf[--len];
+        hashA = (hashA << 5) + hashA + c;
+        hashB = c + (hashB << 6) + (hashB << 16) - hashB;
+    }
+
+    c = ferror(fp) || !feof(fp);
+    fclose(fp);
+    if (c) return 0;
+
+    return hashA | hashB ? (uint64_t)hashA << 32 | hashB : ~(uint64_t)0;
+}

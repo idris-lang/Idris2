@@ -43,3 +43,5 @@ int idris2_fileIsTTY(FILE* f);
 FILE* idris2_stdin();
 FILE* idris2_stdout();
 FILE* idris2_stderr();
+
+uint64_t idris2_hashFile(const char* path);

@@ -177,7 +177,7 @@ checkDepHashes : {auto c : Ref Ctxt Defs} ->
                  String -> Core Bool
 checkDepHashes depFileName
   = catch (do defs                   <- get Ctxt
-              Just depCodeHash       <- hashFileWith (defs.options.hashFn) depFileName
+              Just depCodeHash       <- coreLift $ hashFile depFileName
                     | _ => pure False
               depTTCFileName         <- getTTCFileName depFileName "ttc"
               (Just depStoredCodeHash, _) <- readHashes depTTCFileName
@@ -194,7 +194,7 @@ needsBuildingHash sourceFile ttcFile depFiles
   = do defs                <- get Ctxt
        -- If there's no hash available, either in the TTC or from the
        -- current source, then it needs building
-       Just codeHash       <- hashFileWith (defs.options.hashFn) sourceFile
+       Just codeHash       <- coreLift $ hashFile sourceFile
              | _ => pure True
        (Just storedCodeHash, _) <- readHashes ttcFile
              | _ => pure True

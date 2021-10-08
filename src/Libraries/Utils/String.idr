@@ -31,9 +31,5 @@ escapeGeneric esc toEscape = pack . foldr escape [] . unpack
         else (c :: cs)
 
 export
-escapeStringUnix : String -> String
-escapeStringUnix = escapeGeneric '\\' ['"', '\\']
-
-export
 escapeStringChez : String -> String
 escapeStringChez = escapeGeneric '\\' ['\'', '\\']

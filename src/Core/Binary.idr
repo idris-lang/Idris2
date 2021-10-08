@@ -33,7 +33,7 @@ import public Libraries.Utils.Binary
 ||| (Increment this when changing anything in the data format)
 export
 ttcVersion : Int
-ttcVersion = 65
+ttcVersion = 66
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -44,7 +44,7 @@ record TTCFile extra where
   constructor MkTTCFile
   version : Int
   totalReq : TotalReq
-  sourceHash : Maybe String
+  sourceHash : Maybe Bits64
   ifaceHash : Int
   importHashes : List (Namespace, Int)
   incData : List (CG, String, List String)
@@ -285,7 +285,7 @@ writeToTTC extradata sourceFileName ttcFileName
          defs <- get Ctxt
          ust <- get UST
          gdefs <- getSaveDefs (currentNS defs) (keys (toSave defs)) [] defs
-         sourceHash <- hashFileWith defs.options.hashFn sourceFileName
+         sourceHash <- coreLift $ hashFile sourceFileName
          totalReq <- getDefaultTotalityOption
          log "ttc.write" 5 $ unwords
            [ "Writing", ttcFileName
@@ -523,7 +523,7 @@ getImportHashes file b
          ver <- fromBuf @{Wasteful} b
          checkTTCVersion file ver ttcVersion
          totalReq <- fromBuf {a = TotalReq} b
-         sourceFileHash <- fromBuf {a = Maybe String} b
+         sourceFileHash <- fromBuf {a = Maybe Bits64} b
          interfaceHash <- fromBuf {a = Int} b
          fromBuf b
 
@@ -547,7 +547,7 @@ readTotalReq fileName
                (\err => pure Nothing)
 
 export
-getHashes : String -> Ref Bin Binary -> Core (Maybe String, Int)
+getHashes : String -> Ref Bin Binary -> Core (Maybe Bits64, Int)
 getHashes file b
     = do hdr <- fromBuf {a = String} b
          when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
@@ -560,7 +560,7 @@ getHashes file b
 
 export
 readHashes : (fileName : String) -> -- file containing the module
-                Core (Maybe String, Int)
+                Core (Maybe Bits64, Int)
 readHashes fileName
     = do Right buffer <- coreLift $ readFromFile fileName
             | Left err => pure (Nothing, 0)
