@@ -194,7 +194,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Eta equality
        "eta001",
        -- Modules and imports
-       "import001", "import002", "import003", "import004", "import005",
+       "import001", "import002", "import003", "import004", "import005", "import006",
        -- Implicit laziness, lazy evaluation
        "lazy001", "lazy002",
        -- Namespace blocks
