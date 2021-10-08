@@ -1,6 +1,6 @@
 module TTImp.Elab.Utils
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Core
 import Core.Env

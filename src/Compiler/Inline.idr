@@ -2,7 +2,9 @@ module Compiler.Inline
 
 import Compiler.CaseOpts
 import Compiler.CompileExpr
-import Compiler.Identity
+import Compiler.Opts.ConstantFold
+import Compiler.Opts.Identity
+import Compiler.Opts.InlineHeuristics
 
 import Core.CompileExpr
 import Core.Context
@@ -536,7 +538,7 @@ compileAndInlineAll
          cns <- filterM nonErased ns
 
          traverse_ compileDef cns
-         traverse_ setIdentity cns
+         traverse_ rewriteIdentityFlag cns
          transform 3 cns -- number of rounds to run transformations.
                          -- This seems to be the point where not much useful
                          -- happens any more.
@@ -554,6 +556,9 @@ compileAndInlineAll
              traverse_ mergeLamDef cns
              traverse_ caseLamDef cns
              traverse_ fixArityDef cns
+             traverse_ inlineHeuristics cns
+             traverse_ constantFold cns
+             traverse_ setIdentity cns
              transform k cns
 
     nonErased : Name -> Core Bool

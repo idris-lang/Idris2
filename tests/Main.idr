@@ -56,7 +56,7 @@ idrisTestsCoverage = MkTestPool "Coverage checking" [] Nothing
 idrisTestsCasetree : TestPool
 idrisTestsCasetree = MkTestPool "Case tree building" [] Nothing
        -- Case tree building
-      ["casetree001"]
+      ["casetree001", "casetree002"]
 
 idrisTestsWarning : TestPool
 idrisTestsWarning = MkTestPool "Warnings" [] Nothing
@@ -69,7 +69,7 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
        "error006", "error007", "error008", "error009", "error010",
        "error011", "error012", "error013", "error014", "error015",
        "error016", "error017", "error018", "error019", "error020",
-       "error021",
+       "error021", "error022",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006", "perror007", "perror008", "perror009", "perror010",
@@ -194,7 +194,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Eta equality
        "eta001",
        -- Modules and imports
-       "import001", "import002", "import003", "import004", "import005",
+       "import001", "import002", "import003", "import004", "import005", "import006",
        -- Implicit laziness, lazy evaluation
        "lazy001", "lazy002",
        -- Namespace blocks

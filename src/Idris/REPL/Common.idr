@@ -242,7 +242,6 @@ data REPLResult : Type where
   ProofFound : IPTerm -> REPLResult
   Missed : List MissedResult -> REPLResult
   CheckedTotal : List (Name, Totality) -> REPLResult
-  FoundHoles : List HoleData -> REPLResult
   OptionsSet : List REPLOpt -> REPLResult
   LogLevelSet : Maybe LogLevel -> REPLResult
   ConsoleWidthSet : Maybe Nat -> REPLResult

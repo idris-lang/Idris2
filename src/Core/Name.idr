@@ -118,8 +118,9 @@ isRF (UN (Field n)) = Just (emptyNS, n)
 isRF _ = Nothing
 
 export
-isUN : Name -> Maybe UserName
-isUN (UN un) = Just un
+isUN : Name -> Maybe (Namespace, UserName)
+isUN (UN un) = Just (emptyNS, un)
+isUN (NS ns n) = map (mapFst (ns <.>)) (isUN n)
 isUN _ = Nothing
 
 export

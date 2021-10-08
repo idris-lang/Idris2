@@ -612,8 +612,9 @@ mutual
            tm' <- desugarB side ps tm
            ty' <- desugarDo side ps ns ty
            rest' <- expandDo side ps topfc ns rest
-           whenJust (isConcreteFC lhsFC) $ \nfc => addSemanticDecorations [(nfc, Bound, Just n)]
-           let bind = ILet fc (virtualiseFC lhsFC) rig n ty' tm' rest'
+           whenJust (isConcreteFC lhsFC) $ \nfc =>
+             addSemanticDecorations [(nfc, Bound, Just n)]
+           let bind = ILet fc lhsFC rig n ty' tm' rest'
            bd <- get Bang
            pure $ bindBangs (bangNames bd) ns bind
   expandDo side ps topfc ns (DoLetPat fc pat ty tm alts :: rest)
