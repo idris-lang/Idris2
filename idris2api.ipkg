@@ -152,6 +152,7 @@ modules =
     Libraries.Data.List1,
     Libraries.Data.NameMap,
     Libraries.Data.PosMap,
+    Libraries.Data.Primitives,
     Libraries.Data.SortedMap,
     Libraries.Data.SortedSet,
     Libraries.Data.String.Extra,

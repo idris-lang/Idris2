@@ -306,6 +306,62 @@ Scheme Int where
   fromScheme _ = Nothing
 
 export
+Scheme Int8 where
+  toScheme x = IntegerVal (cast x)
+
+  fromScheme (IntegerVal x) = Just (cast x)
+  fromScheme _ = Nothing
+
+export
+Scheme Int16 where
+  toScheme x = IntegerVal (cast x)
+
+  fromScheme (IntegerVal x) = Just (cast x)
+  fromScheme _ = Nothing
+
+export
+Scheme Int32 where
+  toScheme x = IntegerVal (cast x)
+
+  fromScheme (IntegerVal x) = Just (cast x)
+  fromScheme _ = Nothing
+
+export
+Scheme Int64 where
+  toScheme x = IntegerVal (cast x)
+
+  fromScheme (IntegerVal x) = Just (cast x)
+  fromScheme _ = Nothing
+
+export
+Scheme Bits8 where
+  toScheme x = IntegerVal (cast x)
+
+  fromScheme (IntegerVal x) = Just (cast x)
+  fromScheme _ = Nothing
+
+export
+Scheme Bits16 where
+  toScheme x = IntegerVal (cast x)
+
+  fromScheme (IntegerVal x) = Just (cast x)
+  fromScheme _ = Nothing
+
+export
+Scheme Bits32 where
+  toScheme x = IntegerVal (cast x)
+
+  fromScheme (IntegerVal x) = Just (cast x)
+  fromScheme _ = Nothing
+
+export
+Scheme Bits64 where
+  toScheme x = IntegerVal (cast x)
+
+  fromScheme (IntegerVal x) = Just (cast x)
+  fromScheme _ = Nothing
+
+export
 Scheme String where
   toScheme x = StringVal x
 

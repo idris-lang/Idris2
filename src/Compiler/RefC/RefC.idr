@@ -109,8 +109,8 @@ showIntMin x = if x == -9223372036854775808
     then "INT64_MIN"
     else "INT64_C("++ show x ++")"
 
-showIntegerMin : Integer -> String
-showIntegerMin x = if x == -9223372036854775808
+showInt64Min : Int64 -> String
+showInt64Min x = if x == -9223372036854775808
     then "INT64_MIN"
     else "INT64_C("++ show x ++")"
 
@@ -119,7 +119,7 @@ cConstant (I x) = "(Value*)makeInt64("++ showIntMin x ++")"
 cConstant (I8 x) = "(Value*)makeInt8(INT8_C("++ show x ++"))"
 cConstant (I16 x) = "(Value*)makeInt16(INT16_C("++ show x ++"))"
 cConstant (I32 x) = "(Value*)makeInt32(INT32_C("++ show x ++"))"
-cConstant (I64 x) = "(Value*)makeInt64("++ showIntegerMin x ++")"
+cConstant (I64 x) = "(Value*)makeInt64("++ showInt64Min x ++")"
 cConstant (BI x) = "(Value*)makeIntegerLiteral(\""++ show x ++"\")"
 cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
 cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
@@ -440,16 +440,16 @@ const2Integer : Constant -> Integer -> Integer
 const2Integer c i =
     case c of
         (I x) => cast x
-        (I8 x) => x
-        (I16 x) => x
-        (I32 x) => x
-        (I64 x) => x
-        (BI x) => x
+        (I8 x) => cast x
+        (I16 x) => cast x
+        (I32 x) => cast x
+        (I64 x) => cast x
+        (BI x) => cast x
         (Ch x) => cast x
         (B8 x) => cast x
         (B16 x) => cast x
         (B32 x) => cast x
-        (B64 x) => x
+        (B64 x) => cast x
         _ => i
 
 

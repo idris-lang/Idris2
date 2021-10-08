@@ -33,6 +33,38 @@ Hashable Int where
   hash = id
 
 export
+Hashable Int8 where
+  hash = cast
+
+export
+Hashable Int16 where
+  hash = cast
+
+export
+Hashable Int32 where
+  hash = cast
+
+export
+Hashable Int64 where
+  hash = cast
+
+export
+Hashable Bits8 where
+  hash = cast
+
+export
+Hashable Bits16 where
+  hash = cast
+
+export
+Hashable Bits32 where
+  hash = cast
+
+export
+Hashable Bits64 where
+  hash = cast
+
+export
 Hashable Integer where
   hash = fromInteger
 
