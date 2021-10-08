@@ -202,6 +202,18 @@ replicate : (len : Nat) -> (x : elem) -> Vect len elem
 replicate Z     _ = []
 replicate (S k) x = x :: replicate k x
 
+||| Enumerate each element of the `Vect n a`
+||| ```idris example
+||| enumerate [1, 2, 3]
+||| ```
+public export
+enumerate : Vect n a -> Vect n (Nat, a)
+enumerate = enumerate' 0
+  where
+    enumerate' : Nat -> Vect m a -> Vect m (Nat, a)
+    enumerate' k [] = []
+    enumerate' k (x :: xs) = (k, x) :: enumerate' (S k) xs
+
 ||| Merge two ordered vectors
 |||
 ||| ```idris example

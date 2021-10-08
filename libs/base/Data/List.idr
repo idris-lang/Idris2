@@ -354,6 +354,19 @@ replicate : (n : Nat) -> (x : a) -> List a
 replicate Z     _ = []
 replicate (S n) x = x :: replicate n x
 
+||| Enumerate each element of the `List a`
+||| ```idris example
+||| enumerate [1, 2, 3]
+||| ```
+public export
+enumerate : List a -> List (Nat, a)
+enumerate = enumerate' 0
+  where
+    enumerate' : Nat -> List a -> List (Nat, a)
+    enumerate' k [] = []
+    enumerate' k (x :: xs) = (k, x) :: enumerate' (S k) xs
+
+
 ||| Compute the intersect of two lists by user-supplied equality predicate.
 export
 intersectBy : (a -> a -> Bool) -> List a -> List a -> List a
