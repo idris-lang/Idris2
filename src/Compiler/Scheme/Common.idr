@@ -38,6 +38,7 @@ startSchemePreamble appdir backend = """
         Darwin*)    OS=Mac;;
         CYGWIN*)    OS=Windows;;
         MINGW*)     OS=Windows;;
+        MSYS_NT*)   OS=Windows;;
         *)          OS=Unknown
   esac
 

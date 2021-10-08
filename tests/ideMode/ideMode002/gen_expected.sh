@@ -3,7 +3,7 @@
 INPUT=`cat`
 
 VERSION=`echo $INPUT | cut -d- -f1`
-TAG=`echo $INPUT | cut -s -d- -f2`
+TAG=`echo $INPUT | cut -s -d- -f2-`
 
 MAJOR=`echo $VERSION | cut -d. -f1`
 MINOR=`echo $VERSION | cut -d. -f2`

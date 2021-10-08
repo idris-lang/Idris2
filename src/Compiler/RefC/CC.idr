@@ -30,7 +30,7 @@ compileCObjectFile {asLibrary} sourceFile objectFile =
 
      let libraryFlag = if asLibrary then "-fpic " else ""
 
-     let runccobj = cc ++ " -Werror -c " ++ libraryFlag ++ sourceFile ++
+     let runccobj = cc ++ " -x c -Werror -c " ++ libraryFlag ++ sourceFile ++
                        " -o " ++ objectFile ++
                        " -I" ++ refcDir ++
                        " -I" ++ cDir

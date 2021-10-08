@@ -6,7 +6,7 @@ fi
 
 MY_PWD="${MY_PWD}" ./gen_expected.sh
 
-export IDRIS2_PACKAGE_PATH=$IDRIS2_PREFIX/$NAME_VERSION
+export IDRIS2_PACKAGE_PATH=${IDRIS2_PREFIX}/${IDRIS_INSTALL_DIR}
 export IDRIS2_PREFIX=${MY_PWD}currently/nonexistent/dir/
 
 $1 --install ./testpkg.ipkg

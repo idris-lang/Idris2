@@ -1,4 +1,4 @@
-||| TODO : This was interduced after v0.5.1. After the next minor release,
+||| TODO : This was introduced after v0.5.1. After the next release,
 |||        this can be removed and the instances from `base` can be used.
 module Libraries.Data.Primitives
 

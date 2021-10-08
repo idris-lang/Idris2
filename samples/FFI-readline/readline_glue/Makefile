@@ -1,4 +1,4 @@
-include ../../../config.mk
+include ../../../common.mk
 
 IDRIS := idris2
 INSTALLDIR = `${IDRIS} --libdir`/readline/lib

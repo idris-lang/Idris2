@@ -1,0 +1,25 @@
+##### Options which a user might set #####
+
+# Where to install idris2 binaries and libraries (must be an absolute path)
+PREFIX ?= $(HOME)/.idris2
+
+CHEZ ?= scheme
+
+# Racket's compiler called raco.
+RACKET_RACO ?= raco
+
+# Default code generator, aka CG. This is passed to the libraries for
+# incremental builds, but overridable via environment variables or
+# arguments to make: make IDRIS2_CG=racket
+IDRIS2_CG ?= chez
+
+# In the normal workflow you don't need to set this, but if you want
+# to use an external Idris executable to be used as stage 0, then you
+# can provide it here.
+#BOOTSTRAP_IDRIS=
+
+# For Windows targets. Set to 1 to support Windows 7.
+OLD_WIN ?= 0
+
+# When set to anything non-empty, it enables debug output from the makefile.
+DEBUG_IDRIS_BUILD_SYSTEM ?=

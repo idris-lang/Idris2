@@ -1,4 +1,4 @@
-include ../../config.mk
+include ../../common.mk
 
 TARGET = libidris2_support
 
@@ -53,8 +53,8 @@ cleandep: clean
 .PHONY: install
 
 install: build
-	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/lib
-	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/c
-	install -m 755 $(DYLIBTARGET) ${PREFIX}/idris2-${IDRIS2_VERSION}/lib
-	install -m 644 $(LIBTARGET)   ${PREFIX}/idris2-${IDRIS2_VERSION}/lib
-	install -m 644 *.h            ${PREFIX}/idris2-${IDRIS2_VERSION}/support/c
+	mkdir -p "$(PREFIX)/$(IDRIS_INSTALL_DIR)/lib"
+	mkdir -p "$(PREFIX)/$(IDRIS_INSTALL_DIR)/support/c"
+	install -m 755 $(DYLIBTARGET) "$(PREFIX)/$(IDRIS_INSTALL_DIR)/lib"
+	install -m 644 $(LIBTARGET)   "$(PREFIX)/$(IDRIS_INSTALL_DIR)/lib"
+	install -m 644 *.h            "$(PREFIX)/$(IDRIS_INSTALL_DIR)/support/c"

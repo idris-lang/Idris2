@@ -9,6 +9,7 @@
 , srcRev
 , gambit
 , nodejs
+, which
 , zsh
 }:
 
@@ -20,7 +21,7 @@ stdenv.mkDerivation rec {
   src = ../.;
 
   strictDeps = true;
-  nativeBuildInputs = [ makeWrapper clang chez ]
+  nativeBuildInputs = [ makeWrapper clang chez which ]
     ++ lib.optional stdenv.isDarwin [ zsh ];
   buildInputs = [ chez gmp ];
 
@@ -29,11 +30,15 @@ stdenv.mkDerivation rec {
     sed 's/''$(GIT_SHA1)/${srcRev}/' -i Makefile
   '';
 
-  makeFlags = [ "PREFIX=$(out)" ]
+  makeFlags = [ "PREFIX=$(out)"
+                "DEBUG_BUILD_SYSTEM=1"
+                # The name of the main executable of pkgs.chez is `scheme`
+                "CHEZ=scheme"
+                "IDRIS_VERSION=${idris2-version}"
+                "IDRIS_VERSION_TAG=${srcRev}" ]
     ++ lib.optional stdenv.isDarwin "OS=";
 
-  # The name of the main executable of pkgs.chez is `scheme`
-  buildFlags = [ "bootstrap" "SCHEME=scheme" ];
+  buildFlags = [ "bootstrap" ];
 
   checkInputs = [ gambit nodejs ]; # racket ];
   checkFlags = [ "INTERACTIVE=" ];
@@ -53,7 +58,7 @@ stdenv.mkDerivation rec {
     rm $out/bin/idris2
 
     # The only thing we need from idris2_app is the actual binary
-    mv $out/bin/idris2_app/idris2.so $out/bin/idris2
+    mv $out/bin/idris2_app/idris2 $out/bin/idris2
     rm $out/bin/idris2_app/*
     rmdir $out/bin/idris2_app
 

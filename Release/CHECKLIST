@@ -1,4 +1,3 @@
-[ ] Change version number (MAJOR, MINOR, PATCH) in Makefile
 [ ] Change version numbers in doc listings
 [ ] Change version numbers in prelude, base, contrib, network, and test ipkgs
 [ ] Change version number in idris2api.ipkg
@@ -9,4 +8,6 @@
 [ ] Remove __collect_safe from generated chez (to avoid need for chez >9.5)
 [ ] Tag on github with version number (in the form vX.Y.Z)
 [ ] make libdocs and upload to idris-lang.org
-[ ] Run release script
+[ ] Run make release
+[ ] Possibly adjust BOOTSTRAP_IDRIS_VERSION in ci-idris2.yml (to whichever is the oldest release that is sufficient to build/bootstrap the new release)
+[ ] Search for "next release" in the repo and get rid of any accummulated cruft

@@ -14,7 +14,7 @@
 idris2docs_venv
 /docs/build
 
-/libs/**/build
+/support/**/build
 
 /tests/**/build
 /tests/**/output*
@@ -26,11 +26,9 @@ idris2docs_venv
 /benchmark/**/build
 /benchmark/*.csv
 
-/bootstrap-build
-
 /src/IdrisPaths.idr
 
-/custom.mk
+/config.mk
 
 # NixOS
 /result

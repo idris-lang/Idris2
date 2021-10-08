@@ -1,277 +1,252 @@
-include config.mk
+include common.mk
 
-# Idris 2 executable used to bootstrap
-export IDRIS2_BOOT ?= idris2
+# Examples:
+#  - Build stage0 and then use it to build stage1 (as opposed to
+#    bootstrapping it from Scheme):
+#      make STAGE0_GIT_REF=v0.5.1 stage1
+#
+#  - Build stage1 using an external Idris binary, and prepare the
+#    bootstrap files for commit:
+#      make distclean
+#      make BOOTSTRAP_IDRIS=idris2-0.5.1 IDRIS2_CG=chez stage1 stage2 && make BOOTSTRAP_IDRIS=idris2-0.5.1 IDRIS2_CG=racket stage1 stage2 && make prepare-bootstrap-files
+#
+#  - Bootstrap stage1 from the checked in Scheme sources:
+#      make stage1 (its behavior depends on the config in the makefile)
+#      make bootstrap (run the bootstrap unconditionally)
 
-# Idris 2 executable we're building
-NAME = idris2
-TARGETDIR = ${CURDIR}/build/exec
-TARGET = ${TARGETDIR}/${NAME}
+BUILD ?= build
 
-# Default code generator. This is passed to the libraries for incremental
-# builds, but overridable via environment variables or arguments to make
-IDRIS2_CG ?= chez
+# When the STAGE0_GIT_REF variable is empty, then we will
+# automatically resort to taking a bootstrap shortcut as a means of
+# building stage 1 by using the CHEZ binary to compile the checked in
+# scheme output of the chez CG; i.e. stage 0 will be completely
+# skipped (and thus you won't be able to regenerate the bootstrap
+# shortcut files of stage 1 this way).
+#
+# It's better to keep this variable emtpy in the repo, and only edit
+# it locally when someone wants to regenerate the bootstrap shortcut
+# files. Rationale: most people who check out the repo don't want the
+# extra time to compile stage 0.
 
-MAJOR=0
-MINOR=5
-PATCH=1
+STAGE0_GIT_REF=
+#STAGE0_GIT_REF ?= v0.5.1
 
-GIT_SHA1=
-ifeq ($(shell git status >/dev/null 2>&1; echo $$?), 0)
-	# inside a git repo
-	ifneq ($(shell git describe --exact-match --tags >/dev/null 2>&1; echo $$?), 0)
-		# not tagged as a released version, so add sha1 of this build in between releases
-		GIT_SHA1 := $(shell git rev-parse --short=9 HEAD)
-	endif
-endif
-VERSION_TAG ?= $(GIT_SHA1)
-
-export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
-export NAME_VERSION := ${NAME}-${IDRIS2_VERSION}
-IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
-IDRIS2_APP_IPKG := idris2.ipkg
-IDRIS2_LIB_IPKG := idris2api.ipkg
-
-ifeq ($(OS), windows)
-	# This produces D:/../.. style paths
-	IDRIS2_PREFIX := $(shell cygpath -m ${PREFIX})
-	IDRIS2_CURDIR := $(shell cygpath -m ${CURDIR})
-	SEP := ;
+# We allow overriding STAGE0_IDRIS with an external executable.
+ifneq ($(BOOTSTRAP_IDRIS),)
+  # We were given an external binary
+  STAGE0=
+  STAGE0_IDRIS=
+  STAGE1_PREREQUISITES=
+else ifneq ($(STAGE0_GIT_REF),)
+  # We know how to build stage 0 from the git ref
+  STAGE0=$(BUILD)/stage0
+  STAGE0_IDRIS=$(STAGE0)/installed/bin/$(NAME)
+  STAGE1_PREREQUISITES=$(STAGE0_IDRIS)
 else
-	IDRIS2_PREFIX := ${PREFIX}
-	IDRIS2_CURDIR := ${CURDIR}
-	SEP := :
+  # The only way to get going is through the bootstrap target.
+  STAGE0=
+  STAGE0_IDRIS=
+  STAGE1_PREREQUISITES=
 endif
 
-TEST_PREFIX ?= ${IDRIS2_CURDIR}/build/env
+STAGE1 ?= $(BUILD)/stage1
+STAGE2 ?= $(BUILD)/stage2
+STAGE3 ?= $(BUILD)/stage3
 
-# Library and data paths for bootstrap-test
-IDRIS2_BOOT_PREFIX := ${IDRIS2_CURDIR}/bootstrap-build
+STAGE1_IDRIS ?= $(STAGE1)/installed/bin/$(NAME)
+STAGE2_IDRIS  = $(STAGE2)/installed/bin/$(NAME)
+STAGE3_IDRIS  = $(STAGE3)/installed/bin/$(NAME)
 
-# These are the library path in the build dir to be used during build
-export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS2_CURDIR}/libs/base/build/ttc${SEP}${IDRIS2_CURDIR}/libs/contrib/build/ttc${SEP}${IDRIS2_CURDIR}/libs/network/build/ttc${SEP}${IDRIS2_CURDIR}/libs/test/build/ttc${SEP}${IDRIS2_CURDIR}/libs/linear/build/ttc"
-
-export SCHEME
-
-
-.PHONY: all idris2-exec libdocs testenv testenv-clean support support-clean clean FORCE
-
-all: support ${TARGET} libs
-
-idris2-exec: ${TARGET}
-
-${TARGET}: src/IdrisPaths.idr
-	${IDRIS2_BOOT} --build ${IDRIS2_APP_IPKG}
-
-# We use FORCE to always rebuild IdrisPath so that the git SHA1 info is always up to date
-src/IdrisPaths.idr: FORCE
-	echo "-- @""generated" > src/IdrisPaths.idr
-	echo 'module IdrisPaths' >> src/IdrisPaths.idr
-	echo 'export idrisVersion : ((Nat,Nat,Nat), String); idrisVersion = ((${MAJOR},${MINOR},${PATCH}), "${VERSION_TAG}")' >> src/IdrisPaths.idr
-	echo 'export yprefix : String; yprefix="${IDRIS2_PREFIX}"' >> src/IdrisPaths.idr
-
-FORCE:
-
-prelude:
-	${MAKE} -C libs/prelude IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-
-base: prelude
-	${MAKE} -C libs/base IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-
-network: prelude
-	${MAKE} -C libs/network IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-
-contrib: base
-	${MAKE} -C libs/contrib IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-
-test-lib: contrib
-	${MAKE} -C libs/test IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-
-linear:
-	${MAKE} -C libs/linear IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-
-papers: contrib linear
-	${MAKE} -C libs/papers IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-
-libs : prelude base contrib network test-lib linear papers
-
-libdocs:
-	${MAKE} -C libs/prelude docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/base docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/contrib docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/network docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/test docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/linear docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-
-
-ifeq ($(OS), windows)
-${TEST_PREFIX}/${NAME_VERSION} :
-	${MAKE} install-support PREFIX=${TEST_PREFIX}
-	cp -rf ${IDRIS2_CURDIR}/libs/prelude/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/prelude-${IDRIS2_VERSION}
-	cp -rf ${IDRIS2_CURDIR}/libs/base/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/base-${IDRIS2_VERSION}
-	cp -rf ${IDRIS2_CURDIR}/libs/test/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/test-${IDRIS2_VERSION}
-	cp -rf ${IDRIS2_CURDIR}/libs/contrib/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/contrib-${IDRIS2_VERSION}
-	cp -rf ${IDRIS2_CURDIR}/libs/network/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/network-${IDRIS2_VERSION}
+# This is a descriptve tag. If e.g. git returns 'v0.5.1-19-g6bb9ddd0b-dirty'
+# then this var will contain '19-g6bb9ddd0b-dirty'.
+export IDRIS_VERSION_TAG ?= $(subst $(space),-,$(wordlist 2,10,$(subst -, ,$(shell git describe --tags --dirty))))
+# This extracts only the tag name, i.e. v1.2.3
+export IDRIS_VERSION     ?= $(shell git describe --tags --abbrev=0)
+ifeq ($(IDRIS_VERSION),)
+  $(error "Couldn't run the git binary to extract the version. Either build in a directory \
+with an intact .git/ database, and a functional git binary in the PATH, or set the following \
+variables by hand; e.g.: make all IDRIS_VERSION=v1.2.3 IDRIS_VERSION_TAG=")
 else
-${TEST_PREFIX}/${NAME_VERSION} :
-	${MAKE} install-support PREFIX=${TEST_PREFIX}
-	ln -sf ${IDRIS2_CURDIR}/libs/prelude/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/prelude-${IDRIS2_VERSION}
-	ln -sf ${IDRIS2_CURDIR}/libs/base/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/base-${IDRIS2_VERSION}
-	ln -sf ${IDRIS2_CURDIR}/libs/test/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/test-${IDRIS2_VERSION}
-	ln -sf ${IDRIS2_CURDIR}/libs/contrib/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/contrib-${IDRIS2_VERSION}
-	ln -sf ${IDRIS2_CURDIR}/libs/network/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/network-${IDRIS2_VERSION}
+  $(info Idris Makefile invoked; version [$(IDRIS_VERSION)], version tag [$(IDRIS_VERSION_TAG)].)
 endif
 
-.PHONY: ${TEST_PREFIX}/${NAME_VERSION}
+export IDRIS_FULL_VERSION := $(IDRIS_VERSION)$(if $(IDRIS_VERSION_TAG),-$(IDRIS_VERSION_TAG))
 
-testenv:
-	@${MAKE} ${TEST_PREFIX}/${NAME_VERSION}
-	@${MAKE} -C tests testbin IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
+define make-stage-generic
+  $(MAKE) --makefile one-stage.mk \
+    BOOTSTRAP_IDRIS="$(if $(1),$(abspath $(1)/bin/$(NAME)),$(BOOTSTRAP_IDRIS))" \
+    BUILD=$(2) \
+    PREFIX="$(3)" \
+    IDRIS2_CG=$(IDRIS2_CG) \
+    $(4) $(5) $(6) $(7) $(8)
+endef
 
-testenv-clean:
-	$(RM) -r ${TEST_PREFIX}/${NAME_VERSION}
+define make-stage
+  $(call make-stage-generic,$(if $(1),$(1)/installed),$(2),$(abspath $(2)/installed),$(3),$(4),$(5),$(6),$(7),$(8))
+endef
 
-test: testenv
-	@echo
-	@echo "NOTE: \`${MAKE} test\` does not rebuild Idris or the libraries packaged with it; to do that run \`${MAKE}\`"
-	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
-	@echo
-	@${MAKE} -C tests only=$(only) IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
+all: stage2
 
-retest: testenv
-	@echo
-	@echo "NOTE: \`${MAKE} retest\` does not rebuild Idris or the libraries packaged with it; to do that run \`${MAKE}\`"
-	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
-	@echo
-	@${MAKE} -C tests retest only=$(only) IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
+$(BUILD):
+	mkdir -p $@
 
-test-installed:
-	@${MAKE} -C tests testbin      IDRIS2=$(IDRIS2_PREFIX)/bin/idris2 IDRIS2_PREFIX=${IDRIS2_PREFIX}
-	@${MAKE} -C tests only=$(only) IDRIS2=$(IDRIS2_PREFIX)/bin/idris2 IDRIS2_PREFIX=${IDRIS2_PREFIX}
+$(STAGE0)/src-$(STAGE0_GIT_REF):
+	git worktree add --detach --force $@ $(STAGE0_GIT_REF)
 
-support:
-	@${MAKE} -C support/c
-	@${MAKE} -C support/refc
-	@${MAKE} -C support/chez
+stage0 $(STAGE0_IDRIS): $(STAGE0)/src-$(STAGE0_GIT_REF)
+	@echo -e "\n*** Building the bootstrap host (aka stage 0); STAGE0_GIT_REF=$(STAGE0_GIT_REF)\n"
+	$(MAKE) --directory $< SCHEME="$(CHEZ)" PREFIX="$(abspath $(STAGE0)/installed)" bootstrap install
+
+# We don't FORCE stage1, which means that it only gets rebuilt after a
+# make clean. Also note that stage0 is only part of the prerequisites
+# when we are not taking a bootstrap shortcut.
+stage1 $(STAGE1_IDRIS): $(STAGE1_PREREQUISITES)
+	@echo -e "\n*** Building stage 1 using [$(or $(STAGE0_GIT_REF),\
+$(BOOTSTRAP_IDRIS),bootstrap files)]\n"
+	$(if $(or $(STAGE0_GIT_REF),$(BOOTSTRAP_IDRIS)), \
+          $(call make-stage,$(STAGE0),$(STAGE1),all,install), \
+          $(MAKE) bootstrap)
+
+stage2 $(STAGE2_IDRIS): FORCE $(STAGE1_IDRIS)
+	@echo -e "\n*** Building stage 2\n"
+	$(call make-stage,$(STAGE1),$(STAGE2),all,install)
+
+stage3 $(STAGE3_IDRIS): FORCE $(STAGE2_IDRIS)
+	@echo -e "\n*** Building stage 3\n"
+	$(call make-stage,$(STAGE2),$(STAGE3),all,install)
+
+# ChezScheme's compile-file doesn't produce reproducible output, so we
+# need to skip *.so files for now.
+#
+# Note that this target is only meaningful if stage 1 is up to date,
+# i.e. only when not taking a bootstrap shortcut and stage 1 is the
+# result of compiling the latest in src/.
+check-reproducibility: $(STAGE3_IDRIS)
+	@if diff --recursive --new-file --exclude=*.so $(STAGE2) $(STAGE3); then \
+          @echo -e "\nstage2 and stage3 has the above listed differences.\n\
+Note, that the check-reproducibility target only makes sense when \
+stage1 has been freshly built by stage0 (as opposed to `make bootstrap`ped from \
+the potentially outdated Scheme sources checked into the repo); i.e. \
+1) make distclean && make BOOTSTRAP_IDRIS=idris2-0.5.1 stage1 \
+2) make distclean && make STAGE0_GIT_REF=v0.5.1 stage1\n" \
+          echo -e ""; \
+        fi
 
 support-clean:
-	@${MAKE} -C support/c clean
-	@${MAKE} -C support/refc clean
-	@${MAKE} -C support/chez clean
+	@$(MAKE) -C support/c    clean
+	@$(MAKE) -C support/refc clean
+	@$(MAKE) -C support/chez clean
 
-clean-libs:
-	${MAKE} -C libs/prelude clean
-	${MAKE} -C libs/base clean
-	${MAKE} -C libs/contrib clean
-	${MAKE} -C libs/network clean
-	${MAKE} -C libs/test clean
-	${MAKE} -C libs/linear clean
-	${MAKE} -C libs/papers clean
+test-clean:
+	$(RM) tests/failures
+	$(RM) -r tests/build
+	$(RM) -r tests/**/**/build
+	@find tests/ -type f -name 'output' -exec rm -rf {} \;
+	@find tests/ -type f -name '*.ttc' -exec rm -f {} \;
+	@find tests/ -type f -name '*.ttm' -exec rm -f {} \;
+	@find tests/ -type f -name '*.ibc' -exec rm -f {} \;
 
-clean: clean-libs support-clean testenv-clean
-	-${IDRIS2_BOOT} --clean ${IDRIS2_APP_IPKG}
-	$(RM) src/IdrisPaths.idr
-	${MAKE} -C tests clean
-	$(RM) -r build
+clean: support-clean test-clean
+	$(if $(or $(STAGE0_GIT_REF),$(BOOTSTRAP_IDRIS)),$(RM) -r $(STAGE1))
+	$(RM) -r $(STAGE2) $(STAGE3) $(RELEASE_DIR)
 
-install: install-idris2 install-support install-libs
+# Forward these blindly in the context of STAGE1.
+test retest idris2-exec libs libdocs support:
+	$(call make-stage,$(STAGE1),$(STAGE2),$(MAKECMDGOALS))
 
-install-api: src/IdrisPaths.idr
-	${IDRIS2_BOOT} --install ${IDRIS2_LIB_IPKG}
+# TODO it would be safer if all the sed calls below failed loudly when
+# a match was not found.
+bootstrap: FORCE
+	@echo -e "\nbootstrap target is initiated\n"
+# We need to cater for Windows here, hence the use of IDRIS2_CURDIR,
+# instead of using $(abspath $(STAGE1)/installed).
+	mkdir -p $(STAGE1)
+	cp -r bootstrap/* $(STAGE1)/
+	sed -i -e 's|__PREFIX__|$(IDRIS2_CURDIR)/$(STAGE1)/installed|g' \
+	  $(STAGE1)/$(NAME)_app/$(NAME).ss \
+	  $(STAGE1)/$(NAME)_app/$(NAME).rkt
+	sed -i -e 's|__CHEZ__ |$(CHEZ) |g; s|libidris2_support.so|libidris2_support$(SHLIB_SUFFIX)|g' \
+	  $(STAGE1)/$(NAME)_app/$(NAME).ss
+	$(call make-stage,$(STAGE0),$(STAGE1),bootstrap)
+	$(call make-stage,$(STAGE0),$(STAGE1),all,install)
+# We clear STAGE0_GIT_REF to make sure that stage0 is ignored.
+	$(MAKE) STAGE0_GIT_REF= $(STAGE2_IDRIS)
 
-install-with-src-api: src/IdrisPaths.idr
-	${IDRIS2_BOOT} --install-with-src ${IDRIS2_LIB_IPKG}
+# It takes a snapshot of the stage 2 build artifacts in the build dir
+# of stage 1, and prepares them for a git commit.
+prepare-bootstrap-files:
+	@echo -e "\nWARNING: this target depends on stage 2 but does not rebuild it \
+automatically. Make sure that you have built with all the CG's that you want to commit \
+(i.e. make IDRIS2_CG=racket stage2, etc.)\n"
+	cp $(STAGE2)/$(NAME) bootstrap/
+	cp $(STAGE2)/$(NAME)_app/$(NAME).* bootstrap/$(NAME)_app/
+	sed -i -e 's|$(IDRIS2_CURDIR)/$(STAGE2)/installed|__PREFIX__|' \
+	  bootstrap/$(NAME)_app/$(NAME).ss \
+	  bootstrap/$(NAME)_app/$(NAME).rkt
+	sed -i -e '1,2{s|^#!.*scheme --program|#!__CHEZ__ --program|}' \
+	  bootstrap/$(NAME)_app/$(NAME).ss
+	git add \
+	  bootstrap/$(NAME) \
+	  bootstrap/$(NAME)_app/$(NAME).ss \
+	  bootstrap/$(NAME)_app/$(NAME).rkt
+	@echo "The bootstrap shortcut files have been added to the git index, ready to be committed."
 
-install-idris2:
-	mkdir -p ${PREFIX}/bin/
-	install ${TARGET} ${PREFIX}/bin
-ifeq ($(OS), windows)
-	-install ${TARGET}.cmd ${PREFIX}/bin
-endif
-	mkdir -p ${PREFIX}/lib/
-	install support/c/${IDRIS2_SUPPORT} ${PREFIX}/lib
-	mkdir -p ${PREFIX}/bin/${NAME}_app
-	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
+RELEASE_DIR_NAME := Idris2-$(IDRIS_FULL_VERSION)
+RELEASE_DIR      := $(BUILD)/$(RELEASE_DIR_NAME)
+RELEASE_ARCHIVE  := idris2-$(IDRIS_FULL_VERSION).tgz
 
-install-support:
-	mkdir -p ${PREFIX}/${NAME_VERSION}/support/docs
-	mkdir -p ${PREFIX}/${NAME_VERSION}/support/racket
-	mkdir -p ${PREFIX}/${NAME_VERSION}/support/gambit
-	mkdir -p ${PREFIX}/${NAME_VERSION}/support/js
-	install -m 644 support/docs/*.css ${PREFIX}/${NAME_VERSION}/support/docs
-	install -m 644 support/racket/* ${PREFIX}/${NAME_VERSION}/support/racket
-	install -m 644 support/gambit/* ${PREFIX}/${NAME_VERSION}/support/gambit
-	install -m 644 support/js/* ${PREFIX}/${NAME_VERSION}/support/js
-	@${MAKE} -C support/c install
-	@${MAKE} -C support/refc install
-	@${MAKE} -C support/chez install
+$(RELEASE_DIR):
+	mkdir -p $(RELEASE_DIR)
+	git worktree add --detach --force $(RELEASE_DIR) HEAD
+        # Pin the version variables in config.mk, so that building the
+        # release tarball doesn't require git.
+	echo "IDRIS_VERSION:=$(IDRIS_VERSION)" >>$(RELEASE_DIR)/config.mk
+	echo "IDRIS_VERSION_TAG:=$(IDRIS_VERSION_TAG)" >>$(RELEASE_DIR)/config.mk
+	$(RM) -r $(RELEASE_DIR)/.git* $(RELEASE_DIR)/Release $(RELEASE_DIR)/benchmark
+	find $(RELEASE_DIR) -type f -name '.gitignore' -exec rm -f "{}" \;
 
-install-libs:
-	${MAKE} -C libs/prelude install IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/base install    IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/contrib install IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/network install IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/test  install   IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/linear  install   IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
+release $(BUILD)/$(RELEASE_ARCHIVE): $(RELEASE_DIR)
+	tar -C $(BUILD) -zcf $(RELEASE_ARCHIVE) $(RELEASE_DIR_NAME)
+	@echo -e "\n$(RELEASE_ARCHIVE) created.\n"
 
-install-with-src-libs:
-	${MAKE} -C libs/prelude install-with-src IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/base install-with-src    IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/contrib install-with-src IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/network install-with-src IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/test install-with-src    IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
-	${MAKE} -C libs/linear install-with-src    IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
+install install-with-src-libs install-libdocs:
+	$(call make-stage-generic,$(STAGE1)/installed,$(STAGE2),$(PREFIX),$(MAKECMDGOALS))
 
-install-libdocs: libdocs
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/prelude
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/base
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/contrib
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/network
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/test
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/linear
-	cp -r libs/prelude/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/prelude
-	cp -r libs/base/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/base
-	cp -r libs/contrib/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/contrib
-	cp -r libs/network/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/network
-	cp -r libs/test/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/test
-	cp -r libs/test/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/linear
-	install -m 644 support/docs/* ${PREFIX}/${NAME_VERSION}/docs
+# The API is the sources of the compiler, therefore the API targets
+# use BOOTSTRAP_IDRIS (i.e. stage n-1) for compilation.  Therefore we
+# must do a +1 shift here compared to the above install targets
+# (i.e. API is stage2->stage3, not stage1->stage2), so that the .ttc
+# files are produced by the latest version of the compiler (i.e. they
+# have the proper version, and we don't get a "TTC data is in an newer
+# format" error). This is needed because stage 1 may be a somewhat
+# older version than HEAD, depending on what version has been last
+# captured to be the bootstrap shortcut, or what state of the codebase
+# was compiled into a stage 1 binary.
+#
+# TODO FIXME KLUDGE this target requires that stage2 is already
+# installed into the same destination dir where we want to install the
+# API. It uses the installed binary and libs to compile and install
+# the API. See note in the stage makefile for the details of this
+# handicap.
+#
+# When this gets fixed then something like the following should suffice:
+# $(call make-stage-generic,$(STAGE2)/installed,$(STAGE3),$(PREFIX),$(MAKECMDGOALS))
+install-api install-with-src-api:
+# with the following line it's possible to invoke `make install-api` on a fresh checkout.
+#	$(call make-stage-generic,$(STAGE1)/installed,$(STAGE2),$(PREFIX),all,install)
+	@echo "\nWARNING: for now this target only works when Idris2 has already been \
+installed in the destination.\n"
+	$(call make-stage-generic,$(PREFIX),$(STAGE3),$(PREFIX),$(MAKECMDGOALS))
 
+distclean: clean
+	$(RM) -r $(BUILD) docs/build/
+	@find tests/ -type f -name '*.ttc' -exec rm -f {} \;
+	@find tests/ -type f -name '*.ttm' -exec rm -f {} \;
+	@find tests/ -type f -name '*.ibc' -exec rm -f {} \;
+# Let's also -print the matches, so that we notice when some build
+# output gets written into the source directories.
+	@find . -type f -name '*.ttc' -print -exec rm -f {} \;
+	@find . -type f -name '*.ttm' -print -exec rm -f {} \;
+	@find . -type f -name '*.ibc' -print -exec rm -f {} \;
 
-.PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
-
-# Bootstrapping using SCHEME
-bootstrap: support
-	@if [ "$$(echo '(threaded?)' | $(SCHEME) --quiet)" = "#f" ] ; then \
-		echo "ERROR: Chez is missing threading support" ; exit 1 ; fi
-	mkdir -p bootstrap-build/idris2_app
-	cp support/c/${IDRIS2_SUPPORT} bootstrap-build/idris2_app/
-	sed 's/libidris2_support.so/${IDRIS2_SUPPORT}/g; s|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
-		bootstrap/idris2_app/idris2.ss \
-		> bootstrap-build/idris2_app/idris2-boot.ss
-	$(SHELL) ./bootstrap-stage1-chez.sh
-	IDRIS2_CG="chez" $(SHELL) ./bootstrap-stage2.sh
-
-# Bootstrapping using racket
-bootstrap-racket: support
-	mkdir -p bootstrap-build/idris2_app
-	cp support/c/${IDRIS2_SUPPORT} bootstrap-build/idris2_app/
-	sed 's|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
-		bootstrap/idris2_app/idris2.rkt \
-		> bootstrap-build/idris2_app/idris2-boot.rkt
-	$(SHELL) ./bootstrap-stage1-racket.sh
-	IDRIS2_CG="racket" $(SHELL) ./bootstrap-stage2.sh
-
-bootstrap-test:
-	$(MAKE) test INTERACTIVE='' IDRIS2_PREFIX=${IDRIS2_BOOT_PREFIX}
-
-bootstrap-clean:
-	$(RM) -r bootstrap-build
-
-
-.PHONY: distclean
-
-distclean: clean bootstrap-clean
-	@find . -type f -name '*.ttc' -exec rm -f {} \;
-	@find . -type f -name '*.ttm' -exec rm -f {} \;
-	@find . -type f -name '*.ibc' -exec rm -f {} \;
+FORCE:

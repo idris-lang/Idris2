@@ -12,11 +12,11 @@ name: Bootstrap
 on:
   push:
     paths:
-      - 'bootstrap/idris2_app/idris2.ss'
+      - 'build/stage1/idris2_app/idris2.ss'
       - '.github/workflows/ci-bootstrap.yml'
   pull_request:
     paths:
-      - 'bootstrap/idris2_app/idris2.ss'
+      - 'build/stage1/idris2_app/idris2.ss'
       - '.github/workflows/ci-bootstrap.yml'
 
 jobs:
@@ -50,10 +50,14 @@ jobs:
       !contains(needs.initialise.outputs.commit_message, '[ci: skip]')
     env:
       IDRIS2_CG: chez
-      SCHEME: scheme
+      CHEZ: scheme
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          # We use git describe during the build, so let's fetch
+          # everything.
+          fetch-depth: 0
       - name: Install build dependencies (LTS versions)
         run: |
           sudo apt-get update

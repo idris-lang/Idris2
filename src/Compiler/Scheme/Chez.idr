@@ -453,16 +453,17 @@ compileToSS c prof appdir tm outfile
          coreLift_ $ chmodRaw outfile 0o755
 
 ||| Compile a Chez Scheme source file to an executable, daringly with runtime checks off.
-compileToSO : {auto c : Ref Ctxt Defs} ->
-              Bool -> -- profiling
-              String -> (appDirRel : String) -> (outSsAbs : String) -> Core ()
-compileToSO prof chez appDirRel outSsAbs
+compileToBinary : {auto c : Ref Ctxt Defs} ->
+                Bool -> -- profiling
+                String -> (appDirRel : String) -> (chezFileAbs : String) ->
+                (binaryFileAbs : String) -> Core ()
+compileToBinary prof chez appDirRel chezFileAbs binaryFileAbs
     = do let tmpFileAbs = appDirRel </> "compileChez"
          let build = "(parameterize ([optimize-level 3] "
                      ++ (if prof then "[compile-profile #t] "
                                 else "") ++
                      "[compile-file-message #f]) (compile-program " ++
-                    show outSsAbs ++ "))"
+                    show chezFileAbs ++ show binaryFileAbs ++ "))"
          Right () <- coreLift $ writeFile tmpFileAbs build
             | Left err => throw (FileErr tmpFileAbs err)
          coreLift_ $ chmodRaw tmpFileAbs 0o755
@@ -522,19 +523,19 @@ compileExprWhole makeitso c tmpDir outputDir tm outfile
          coreLift_ $ mkdirAll appDirGen
          Just cwd <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
-         let outSsFile = appDirRel </> outfile <.> "ss"
-         let outSoFile = appDirRel </> outfile <.> "so"
-         let outSsAbs = cwd </> outputDir </> outSsFile
-         let outSoAbs = cwd </> outputDir </> outSoFile
+         let chezFile      = appDirRel </> outfile <.> "ss"
+         let binaryFile    = appDirRel </> outfile
+         let chezFileAbs   = cwd </> outputDir </> chezFile
+         let binaryFileAbs = cwd </> outputDir </> binaryFile
          chez <- coreLift $ findChez
          let prof = profile !getSession
-         compileToSS c (makeitso && prof) appDirGen tm outSsAbs
-         logTime 2 "Make SO" $ when makeitso $
-           compileToSO prof chez appDirGen outSsAbs
+         compileToSS c (makeitso && prof) appDirGen tm chezFileAbs
+         logTime 2 "Make binary" $ when makeitso $
+           compileToBinary prof chez appDirGen chezFileAbs binaryFileAbs
          let outShRel = outputDir </> outfile
          if isWindows
-            then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile) "--program"
-            else makeSh outShRel appDirRel (if makeitso then outSoFile else outSsFile)
+            then makeShWindows chez outShRel appDirRel (if makeitso then binaryFile else chezFile) "--program"
+            else makeSh outShRel appDirRel (if makeitso then binaryFile else chezFile)
          coreLift_ $ chmodRaw outShRel 0o755
          pure (Just outShRel)
 
