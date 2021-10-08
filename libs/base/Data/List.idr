@@ -647,7 +647,7 @@ export
 isSuffixOf : Eq a => List a -> List a -> Bool
 isSuffixOf = isSuffixOfBy (==)
 
-||| The isInfixOf function takes two lists and returns True iff the first list
+||| The isInfixOf function takes two lists and returns True if the first list
 ||| is contained, wholly and intact, anywhere within the second.
 |||
 ||| ```idris example
