@@ -62,6 +62,7 @@ idris2-exec: ${TARGET}
 
 ${TARGET}: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --build ${IDRIS2_APP_IPKG}
+	install support/c/${IDRIS2_SUPPORT} ${TARGET}_app
 
 # We use FORCE to always rebuild IdrisPath so that the git SHA1 info is always up to date
 src/IdrisPaths.idr: FORCE
