@@ -5,6 +5,7 @@ import Data.String
 
 import public System.Escape
 import System.File
+import System.Info
 
 %default total
 
@@ -157,7 +158,8 @@ prim__system : String -> PrimIO Int
 ||| occurred.
 export
 system : HasIO io => String -> io Int
-system cmd = primIO (prim__system cmd)
+system cmd = primIO $ prim__system $
+  if isWindows then ";" ++ cmd else cmd
 
 namespace Escaped
   export

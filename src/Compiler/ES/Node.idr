@@ -23,7 +23,7 @@ findNode = do
    Nothing <- idrisGetEnv "NODE"
       | Just node => pure node
    path <- pathLookup ["node"]
-   pure $ fromMaybe "/usr/bin/env node" path
+   pure $ fromMaybe "node" path
 
 ||| Compile a TT expression to Node
 compileToNode : Ref Ctxt Defs -> ClosedTerm -> Core String
@@ -49,8 +49,7 @@ executeExpr c tmpDir tm =
      js <- compileToNode c tm
      Core.writeFile outn js
      node <- coreLift findNode
-     quoted_node <- pure $ "\"" ++ node ++ "\"" -- Windows often have a space in the path.
-     coreLift_ $ system (quoted_node ++ " " ++ outn)
+     coreLift_ $ system ("\"" ++ node ++ "\"" ++ " " ++ outn)
      pure ()
 
 ||| Codegen wrapper for Node implementation.

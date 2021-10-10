@@ -3,7 +3,7 @@
 set -e # exit on any error
 
 if [ -z "$SCHEME" ]; then
-    echo "Required SCHEME env is not set."
+    echo "Required SCHEME env is not set." >&2
     exit 1
 fi
 
@@ -19,4 +19,4 @@ fi
 export LD_LIBRARY_PATH="$DIR/idris2_app:$LD_LIBRARY_PATH"
 export DYLD_LIBRARY_PATH="$DIR/idris2_app:$DYLD_LIBRARY_PATH"
 
-${SCHEME} --script "$DIR/idris2_app/idris2-boot.so" "$@"
+"${SCHEME}" --script "$DIR/idris2_app/idris2-boot.so" "$@"

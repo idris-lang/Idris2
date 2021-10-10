@@ -37,7 +37,7 @@ findChez
     = do Nothing <- idrisGetEnv "CHEZ"
             | Just chez => pure chez
          path <- pathLookup ["chez", "chezscheme", "chez-scheme", "chezscheme9.5", "scheme"]
-         pure $ fromMaybe "/usr/bin/env scheme" path
+         pure $ fromMaybe "scheme" path
 
 ||| Returns the chez scheme version for given executable
 |||
@@ -55,7 +55,7 @@ chezVersion chez = do
     pure $ parseVersion output
   where
   cmd : String
-  cmd = chez ++ " --version 2>&1"
+  cmd = "\"" ++ chez ++ "\" --version 2>&1"
 
 unsupportedCallingConvention : Maybe Version -> Bool
 unsupportedCallingConvention Nothing = True
@@ -405,7 +405,7 @@ startChez chez progType appdir target = startChezPreamble ++ """
   export DYLD_LIBRARY_PATH="$DIR/\{ appdir }:$DYLD_LIBRARY_PATH"
   export IDRIS2_INC_SRC="$DIR/\{ appdir }"
 
-  \{ chez } \{ progType } "$DIR/\{ target }" "$@"
+  "\{ chez }" \{ progType } "$DIR/\{ target }" "$@"
   """
 
 startChezCmd : String -> String -> String -> String -> String
@@ -418,7 +418,7 @@ startChezCmd chez progType appdir target = """
   set PATH=%APPDIR%\{ appdir };%PATH%
   set IDRIS2_INC_SRC=%APPDIR%\{ appdir }
 
-  \{ chez } \{ progType } "%APPDIR%\{ target }" %*
+  "\{ chez }" \{ progType } "%APPDIR%\{ target }" %*
   """
 
 startChezWinSh : String -> String -> String -> String -> String
@@ -433,7 +433,7 @@ startChezWinSh chez progType appdir target = """
 
   export IDRIS2_INC_SRC="$DIR/\{ appdir }"
 
-  \{ chez } \{ progType } "$DIR/\{ target }" "$@"
+  "\{ chez }" \{ progType } "$DIR/\{ target }" "$@"
   """
 
 ||| Compile a TT expression to Chez Scheme
@@ -484,7 +484,7 @@ compileToSO prof chez appDirRel outSsAbs
          Right () <- coreLift $ writeFile tmpFile build
             | Left err => throw (FileErr tmpFile err)
          coreLift_ $ chmodRaw tmpFile 0o755
-         coreLift_ $ system (chez ++ " --script \"" ++ tmpFile ++ "\"")
+         coreLift_ $ system ("\"" ++ chez ++ "\" --script \"" ++ tmpFile ++ "\"")
          pure ()
 
 ||| Compile a TT expression to Chez Scheme using incremental module builds
@@ -631,7 +631,7 @@ incCompile c sourceFile
                           show ssFile ++ "))"
                Right () <- coreLift $ writeFile tmpFile build
                   | Left err => throw (FileErr tmpFile err)
-               coreLift_ $ system (chez ++ " --script \"" ++ tmpFile ++ "\"")
+               coreLift_ $ system ("\"" ++ chez ++ "\" --script \"" ++ tmpFile ++ "\"")
                pure (Just (soFilename, mapMaybe fst fgndefs))
 
 ||| Codegen wrapper for Chez scheme implementation.

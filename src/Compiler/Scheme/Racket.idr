@@ -30,12 +30,12 @@ import System.Info
 findRacket : IO String
 findRacket =
   do env <- idrisGetEnv "RACKET"
-     pure $ fromMaybe "/usr/bin/env racket" env
+     pure $ fromMaybe "racket" env
 
 findRaco : IO String
 findRaco =
   do env <- idrisGetEnv "RACKET_RACO"
-     pure $ fromMaybe "/usr/bin/env raco" env
+     pure $ fromMaybe "raco" env
 
 schHeader : Bool -> String -> String
 schHeader prof libs = """
@@ -443,7 +443,7 @@ compileExpr mkexec c tmpDir outputDir tm outfile
          ok <- the (Core Int) $ if mkexec
                   then logTime 1 "Build racket" $
                          coreLift $
-                           system (raco ++ " make " ++ outRktAbs)
+                           system ("\"" ++ raco ++ "\" make " ++ outRktAbs)
                   else pure 0
          if ok == 0
             then do -- TODO: add launcher script
