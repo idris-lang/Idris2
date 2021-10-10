@@ -440,20 +440,20 @@ compileExpr mkexec c tmpDir outputDir tm outfile
          raco <- coreLift findRaco
          racket <- coreLift findRacket
 
-         ok <- the (Core Int) $ if mkexec
+         exitCode <- the (Core Int) $ if mkexec
                   then logTime 1 "Build racket" $
                          coreLift $
                            system ("\"" ++ raco ++ "\" make " ++ outRktAbs)
                   else pure 0
-         if ok == 0
-            then do -- TODO: add launcher script
+         if exitCode /= 0
+            then throw (InternalError $ "Non-zero compiler exitCode: " ++ show exitCode)
+            else do
                     let outShRel = outputDir </> outfile
                     let makeScript = if isWindows then makeShWindows else makeSh
                     let target = if mkexec then outBinFile else outRktFile
                     makeScript racket outShRel appDirRel target
                     coreLift_ $ chmodRaw outShRel 0o755
                     pure (Just outShRel)
-            else pure Nothing
 
 executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c tmpDir tm

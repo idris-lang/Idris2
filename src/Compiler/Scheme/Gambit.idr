@@ -391,10 +391,9 @@ compileExpr c tmpDir outputDir tm outfile
                  Just _ => " -c"
          let cmd =
              "\"" ++ gsc ++ "\"" ++ gscCompileOpts ++ " -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
-         ok <- coreLift $ system cmd
-         if ok == 0
-            then pure (Just execPath)
-            else pure Nothing
+         0 <- coreLift $ system cmd
+            | exitCode => throw (InternalError $ "Non-zero compiler exitCode: " ++ show exitCode)
+         pure (Just execPath)
 
 executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c tmpDir tm

@@ -484,7 +484,8 @@ compileToSO prof chez appDirRel outSsAbs
          Right () <- coreLift $ writeFile tmpFile build
             | Left err => throw (FileErr tmpFile err)
          coreLift_ $ chmodRaw tmpFile 0o755
-         coreLift_ $ system ("\"" ++ chez ++ "\" --script \"" ++ tmpFile ++ "\"")
+         0 <- coreLift $ system ("\"" ++ chez ++ "\" --script \"" ++ tmpFile ++ "\"")
+            | exitCode => throw (InternalError $ "Non-zero compiler exitCode: " ++ show exitCode)
          pure ()
 
 ||| Compile a TT expression to Chez Scheme using incremental module builds
@@ -631,7 +632,8 @@ incCompile c sourceFile
                           show ssFile ++ "))"
                Right () <- coreLift $ writeFile tmpFile build
                   | Left err => throw (FileErr tmpFile err)
-               coreLift_ $ system ("\"" ++ chez ++ "\" --script \"" ++ tmpFile ++ "\"")
+               0 <- coreLift $ system ("\"" ++ chez ++ "\" --script \"" ++ tmpFile ++ "\"")
+                  | exitCode => throw (InternalError $ "Non-zero compiler exitCode: " ++ show exitCode)
                pure (Just (soFilename, mapMaybe fst fgndefs))
 
 ||| Codegen wrapper for Chez scheme implementation.

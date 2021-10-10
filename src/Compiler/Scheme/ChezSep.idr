@@ -95,8 +95,8 @@ startChezWinSh chez appDirSh targetSh = """
   """
 
 -- TODO: parallelise this
-compileChezLibraries : (chez : String) -> (libDir : String) -> (ssFiles : List String) -> Core ()
-compileChezLibraries chez libDir ssFiles = coreLift_ $ system $ unwords
+compileChezLibraries : (chez : String) -> (libDir : String) -> (ssFiles : List String) -> Core Int
+compileChezLibraries chez libDir ssFiles = coreLift $ system $ unwords
   [ "echo"
   , unwords
     [ "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ chezString ssFile ++ "))'"
@@ -108,16 +108,16 @@ compileChezLibraries chez libDir ssFiles = coreLift_ $ system $ unwords
   , "|", chez, "-q", "--libdirs", libDir
   ]
 
-compileChezLibrary : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
-compileChezLibrary chez libDir ssFile = coreLift_ $ system $ unwords
+compileChezLibrary : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core Int
+compileChezLibrary chez libDir ssFile = coreLift $ system $ unwords
   [ "echo"
   , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ chezString ssFile ++ "))'"
   , "'(delete-file " ++ chezString ssFile ++ ")'"
   , "|", chez, "-q", "--libdirs", libDir
   ]
 
-compileChezProgram : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
-compileChezProgram chez libDir ssFile = coreLift_ $ system $ unwords
+compileChezProgram : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core Int
+compileChezProgram chez libDir ssFile = coreLift $ system $ unwords
   [ "echo"
   , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++ chezString ssFile ++ "))'"
   , "'(delete-file " ++ chezString ssFile ++ ")'"
@@ -280,11 +280,14 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
     -- compile the support code
     when supportChanged $ do
       log "compiler.scheme.chez" 3 $ "Compiling support"
-      compileChezLibrary chez appDirRel (appDirRel </> "support.ss")
+      0 <- compileChezLibrary chez appDirRel (appDirRel </> "support.ss")
+        | exitCode => throw (InternalError $ "Non-zero compiler exitcode: " ++ show exitCode)
+      pure ()
 
     -- compile every compilation unit
-    compileChezLibraries chez appDirRel
-      [appDirRel </> lib.name <.> "ss" | lib <- chezLibs, lib.isOutdated]
+    0 <- compileChezLibraries chez appDirRel
+           [appDirRel </> lib.name <.> "ss" | lib <- chezLibs, lib.isOutdated]
+      | exitCode => throw (InternalError $ "Non-zero compiler exitcode: " ++ show exitCode)
 
     -- touch them in the right order to make the timestamps right
     -- even for the libraries that were not recompiled
@@ -293,7 +296,9 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
       touch (appDirRel </> lib.name <.> "so")
 
     -- compile the main program
-    compileChezProgram chez appDirRel (appDirRel </> "mainprog.ss")
+    0 <- compileChezProgram chez appDirRel (appDirRel </> "mainprog.ss")
+       | exitCode => throw (InternalError $ "Non-zero compiler exitCode: " ++ show exitCode)
+    pure ()
 
   -- generate the launch script
   let outShRel = outputDir </> outfile
