@@ -52,18 +52,20 @@ Make sure that:
 You can build from pre-built Chez Scheme source, as long as you have Chez Scheme
 installed (or, alternatively, Racket). To do this, enter one of the following:
 
-- `make bootstrap SCHEME=chez`
-- `make bootstrap-racket`
+- `make bootstrap CHEZ=chez-scheme`
+- `make bootstrap IDRIS2_CG=racket RACKET_RACO=raco`
 
-`chez` is the executable name of the Chez Scheme compiler. You may need to
+But it is recommended to edit `config.mk` to set the preferences permanently.
+
+`chez-scheme` is the executable name of the Chez Scheme compiler. You may need to
 replace this with the executable for Chez Scheme on your system. This could be
 `scheme`, `chezscheme` or `chezscheme9.5` or something else, depending on your
 system and the Chez Scheme version.
 
-This builds an Idris 2 compiler from scheme code output from a working Idris 2
-compiler (which isn't necessarily up to date, but is up to date enough to
-build the current repository). It then rebuilds using the result, and runs
-the tests.
+This builds an Idris 2 compiler from the scheme code output made by a
+working Idris 2 compiler previously (which isn't necessarily up to
+date, but is up to date enough to build the current repository). It
+then rebuilds using the result, and runs the tests.
 
 If all is well, to install, type:
 
@@ -71,10 +73,11 @@ If all is well, to install, type:
 
 ### 3: Installing with an existing Idris 2
 
-If you have the latest *released* version of Idris 2
-(0.4.0 at the time of writing) installed:
+If you have the latest *released* version of Idris 2 (0.5.1 at the
+time of writing) installed, then you can omit the variable as it
+defaults to `idris2` in the path:
 
-- `make all`
+- `make all BOOTSTRAP_IDRIS=/path/to/idris2-v0.4.0-binary`
 - `make install`
 
 ### 4: (Optional) Installing Idris 2 library documentation
@@ -90,7 +93,7 @@ that everything has worked correctly. Assuming that `idris2` is in your
 
 - `make clean` -- to make sure you're building everything with the new version
 - `make all && make install` -- OR
-`make all IDRIS2_BOOT='idris2 --codegen racket' && make install`
+`make all BOOTSTRAP_IDRIS='idris2 --codegen racket' && make install`
 if using Racket.
 
 ### 6: Running tests
