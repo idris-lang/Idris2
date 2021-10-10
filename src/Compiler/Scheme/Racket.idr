@@ -407,18 +407,18 @@ compileToRKT c appdir tm outfile
          pure ()
 
 makeSh : String -> String -> String -> String -> Core ()
-makeSh racket outShRel appdir outAbs
-    = do Right () <- coreLift $ writeFile outShRel (startRacket racket appdir outAbs)
+makeSh racket outShRel appdir target
+    = do Right () <- coreLift $ writeFile outShRel (startRacket racket appdir target)
             | Left err => throw (FileErr outShRel err)
          pure ()
 
 ||| Make Windows start scripts, one for bash environments and one batch file
 makeShWindows : String -> String -> String -> String -> Core ()
-makeShWindows racket outShRel appdir outAbs
+makeShWindows racket outShRel appdir target
     = do let cmdFile = outShRel ++ ".cmd"
-         Right () <- coreLift $ writeFile cmdFile (startRacketCmd racket appdir outAbs)
+         Right () <- coreLift $ writeFile cmdFile (startRacketCmd racket appdir target)
             | Left err => throw (FileErr cmdFile err)
-         Right () <- coreLift $ writeFile outShRel (startRacketWinSh racket appdir outAbs)
+         Right () <- coreLift $ writeFile outShRel (startRacketWinSh racket appdir target)
             | Left err => throw (FileErr outShRel err)
          pure ()
 
@@ -448,13 +448,9 @@ compileExpr mkexec c tmpDir outputDir tm outfile
          if ok == 0
             then do -- TODO: add launcher script
                     let outShRel = outputDir </> outfile
-                    if isWindows
-                       then if mkexec
-                               then makeShWindows racket outShRel appDirRel outBinFile
-                               else makeShWindows racket outShRel appDirRel outRktFile
-                       else if mkexec
-                               then makeSh racket outShRel appDirRel outBinFile
-                               else makeSh racket outShRel appDirRel outRktFile
+                    let makeScript = if isWindows then makeShWindows else makeSh
+                    let target = if mkexec then outBinFile else outRktFile
+                    makeScript racket outShRel appDirRel target
                     coreLift_ $ chmodRaw outShRel 0o755
                     pure (Just outShRel)
             else pure Nothing

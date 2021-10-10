@@ -298,9 +298,8 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
   -- generate the launch script
   let outShRel = outputDir </> outfile
   let launchTargetSh = appDirSh </> "mainprog" <.> (if makeitso then "so" else "ss")
-  if isWindows
-     then makeShWindows chez outShRel appDirSh launchTargetSh
-     else makeSh        chez outShRel appDirSh launchTargetSh
+  let makeScript = if isWindows then makeShWindows else makeSh
+  makeScript chez outShRel appDirSh launchTargetSh
   coreLift_ $ chmodRaw outShRel 0o755
   pure (Just outShRel)
 
