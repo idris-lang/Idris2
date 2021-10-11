@@ -611,3 +611,17 @@ pathLookup candidates
                                                 x <- candidates,
                                                 y <- extensions ]
          firstExists candidates
+
+||| Swaps from reverse solidus to solidus on windows.
+||| Warning: does not check for escapes (i.e. not for general use).
+export
+windowsToUnix : String -> String
+windowsToUnix target = if isWindows then replace target else target
+  where
+    replace : String -> String
+    replace str = pack $ replaceSlashes $ unpack str
+    where
+      replaceSlashes : List Char -> List Char
+      replaceSlashes [] = []
+      replaceSlashes ('\\' :: cs) = '/' :: replaceSlashes cs
+      replaceSlashes (c :: cs) = c :: replaceSlashes cs

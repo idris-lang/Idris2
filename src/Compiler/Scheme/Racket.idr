@@ -372,7 +372,7 @@ startRacketWinSh racket appdir target = """
   DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
   PATH="$DIR/\{ appdir }:$PATH"
 
-  "\{ racket }" "$DIR/\{ target }" "$@"
+  "\{ windowsToUnix racket }" "$DIR/\{ windowsToUnix target }" "$@"
   """
 
 compileToRKT : Ref Ctxt Defs ->

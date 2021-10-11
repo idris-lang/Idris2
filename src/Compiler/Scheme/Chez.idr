@@ -433,7 +433,7 @@ startChezWinSh chez progType appdir target = """
 
   export IDRIS2_INC_SRC="$DIR/\{ appdir }"
 
-  "\{ chez }" \{ progType } "$DIR/\{ target }" "$@"
+  "\{ windowsToUnix chez }" \{ progType } "$DIR/\{ windowsToUnix target }" "$@"
   """
 
 ||| Compile a TT expression to Chez Scheme

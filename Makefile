@@ -185,15 +185,15 @@ install-with-src-api: src/IdrisPaths.idr
 install-idris2:
 	mkdir -p ${PREFIX}/bin/${NAME}_app
 	install ${TARGET} ${PREFIX}/bin
-	install ${TARGET}_app/${IDRIS2_SUPPORT} ${PREFIX}/bin/${NAME}_app
 ifeq ($(OS), windows)
 	-install ${TARGET}.cmd ${PREFIX}/bin
 endif
-ifneq (, $(shell grep -s "/${NAME}_app/${NAME}\\.so" ${TARGET}))
+# TODO: simplify `[\\/]` to `/` when version 0.5.1 no longer supported
+ifneq (, $(shell grep -s '/${NAME}_app[\\/]${NAME}\.so' ${TARGET}))
 	@# Chez bytecode
 	install ${TARGET}_app/${NAME}.s* ${PREFIX}/bin/${NAME}_app
 	-install ${TARGET}_app/compileChez ${PREFIX}/bin/${NAME}_app
-else ifneq (, $(shell grep -s "/${NAME}_app/compiled/${NAME}_rkt" ${TARGET}))
+else ifneq (, $(shell grep -s '/${NAME}_app[\\/]compiled[\\/]${NAME}_rkt' ${TARGET}))
 	@# Racket bytecode
 	install ${TARGET}_app/${NAME}.rkt ${PREFIX}/bin/${NAME}_app
 	mkdir -p ${PREFIX}/bin/${NAME}_app/compiled
