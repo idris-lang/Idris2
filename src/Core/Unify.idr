@@ -649,31 +649,6 @@ isDefInvertible fc i
               | Nothing => throw (UndefinedName fc (Resolved i))
          pure (invertible gdef)
 
-tooBig : (counting : Bool) -> Nat -> List (Term vars) -> Term vars -> Bool
-tooBig _ Z _ _ = True
-tooBig c k stk (App _ f a)
-    = tooBig c k (a :: stk) f
-tooBig c (S k) stk (Bind _ _ _ sc)
-    = tooBig c (S k) [] sc || any (tooBig c k []) stk
-tooBig c (S k) stk (Meta _ _ _ as)
-    = any (tooBig c k []) as || any (tooBig c k []) stk
-tooBig c (S k) stk f
-    = if c || isFn f -- start counting, we're under a function
-         then tooBigArgs True k stk
-         else tooBigArgs c (S k) stk
-  where
-    isFn : Term vs -> Bool
-    isFn (Ref _ Func _) = True
-    isFn _ = False -- Don't count if it's not a function, because normalising
-                   -- won't help
-
-    tooBigArgs : Bool -> Nat -> List (Term vars) -> Bool
-    tooBigArgs c Z _ = True
-    tooBigArgs c k [] = False
-    tooBigArgs c (S k) (a :: as)
-       = tooBig c (if c then k else S k) [] a || tooBigArgs c k as
-tooBig _ _ _ _ = False
-
 mutual
   unifyIfEq : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
@@ -920,12 +895,11 @@ mutual
                          | _ => postponeS swap loc mode "Delayed hole" env
                                           (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
                                           tmnf
-                     tmq <- quote empty env tmnf
-                     tm <- if tooBig False
-                                     defs.options.elabDirectives.nfThreshold
-                                     [] tmq
-                              then quote defs env tmnf
-                              else pure tmq
+                     let qopts = MkQuoteOpts False False
+                                             (Just defs.options.elabDirectives.nfThreshold)
+                     tm <- catch (quoteOpts qopts
+                                            empty env tmnf)
+                                 (\err => quote defs env tmnf)
                      Just tm <- occursCheck loc env mode mname tm
                          | _ => postponeS swap loc mode "Occurs check failed" env
                                           (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
