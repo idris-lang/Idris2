@@ -814,7 +814,7 @@ process (Check itm)
          defs <- get Ctxt
          itm <- resugar [] !(normaliseHoles defs [] tm)
          -- ty <- getTerm gty
-         ity <- resugar [] !(normaliseScope defs [] ty)
+         ity <- resugar [] !(normalise defs [] ty)
          pure (TermChecked itm ity)
 process (CheckWithImplicits itm)
     = do showImplicits <- showImplicits <$> getPPrint
