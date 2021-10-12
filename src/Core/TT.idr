@@ -1748,3 +1748,33 @@ export
 {vars : _} -> Pretty (Term vars) where
   pretty = pretty . show
   -- TODO: prettier output
+
+export
+allGlobals : Term vars -> NameMap ()
+allGlobals (Local fc isLet idx p) = empty
+allGlobals (Ref fc x name) = singleton name ()
+allGlobals (Meta fc x y xs) = empty
+allGlobals (Bind fc x b scope) = allGlobals scope
+allGlobals (App fc fn arg) = allGlobals fn `merge` allGlobals arg
+allGlobals (As fc x as pat) = allGlobals as `merge` allGlobals pat
+allGlobals (TDelayed fc x y) = allGlobals y
+allGlobals (TDelay fc x ty arg) = allGlobals ty `merge` allGlobals arg
+allGlobals (TForce fc x y) = allGlobals y
+allGlobals (PrimVal fc c) = empty
+allGlobals (Erased fc imp) = empty
+allGlobals (TType fc) = empty
+
+export
+returnName : Term vars -> Maybe Name
+returnName (Local fc isLet idx p) = Nothing
+returnName (Ref fc x name) = pure name
+returnName (Meta fc x y xs) = Nothing
+returnName (Bind fc x b scope) = returnName scope
+returnName (App fc fn arg) = returnName fn
+returnName (As fc x as pat) = returnName pat
+returnName (TDelayed fc x y) = returnName y
+returnName (TDelay fc x ty arg) = returnName arg
+returnName (TForce fc x y) = returnName y
+returnName (PrimVal fc c) = Nothing
+returnName (Erased fc imp) = Nothing
+returnName (TType fc) = Nothing
