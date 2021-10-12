@@ -45,8 +45,8 @@ record TTCFile extra where
   version : Int
   totalReq : TotalReq
   sourceHash : Maybe String
-  ifaceHash : Int
-  importHashes : List (Namespace, Int)
+  ifaceHash : Bits64
+  importHashes : List (Namespace, Bits64)
   incData : List (CG, String, List String)
   context : List (Name, Binary)
   userHoles : List Name
@@ -446,7 +446,7 @@ readFromTTC : TTC extra =>
               (fname : String) -> -- file containing the module
               (modNS : ModuleIdent) -> -- module namespace
               (importAs : Namespace) -> -- namespace to import as
-              Core (Maybe (extra, Int,
+              Core (Maybe (extra, Bits64,
                            List (ModuleIdent, Bool, Namespace)))
 readFromTTC nestedns loc reexp fname modNS importAs
     = do defs <- get Ctxt
@@ -516,7 +516,7 @@ readFromTTC nestedns loc reexp fname modNS importAs
           || alreadyDone modns importAs rest
 
 getImportHashes : String -> Ref Bin Binary ->
-                  Core (List (Namespace, Int))
+                  Core (List (Namespace, Bits64))
 getImportHashes file b
     = do hdr <- fromBuf {a = String} b
          when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
@@ -524,7 +524,7 @@ getImportHashes file b
          checkTTCVersion file ver ttcVersion
          totalReq <- fromBuf {a = TotalReq} b
          sourceFileHash <- fromBuf {a = Maybe String} b
-         interfaceHash <- fromBuf {a = Int} b
+         interfaceHash <- fromBuf {a = Bits64} b
          fromBuf b
 
 export
@@ -547,7 +547,7 @@ readTotalReq fileName
                (\err => pure Nothing)
 
 export
-getHashes : String -> Ref Bin Binary -> Core (Maybe String, Int)
+getHashes : String -> Ref Bin Binary -> Core (Maybe String, Bits64)
 getHashes file b
     = do hdr <- fromBuf {a = String} b
          when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
@@ -560,7 +560,7 @@ getHashes file b
 
 export
 readHashes : (fileName : String) -> -- file containing the module
-                Core (Maybe String, Int)
+                Core (Maybe String, Bits64)
 readHashes fileName
     = do Right buffer <- coreLift $ readFromFile fileName
             | Left err => pure (Nothing, 0)
@@ -570,7 +570,7 @@ readHashes fileName
 
 export
 readImportHashes : (fname : String) -> -- file containing the module
-                   Core (List (Namespace, Int))
+                   Core (List (Namespace, Bits64))
 readImportHashes fname
     = do Right buffer <- coreLift $ readFromFile fname
             | Left err => pure []

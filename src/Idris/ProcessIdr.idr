@@ -133,7 +133,7 @@ addImport imp
 
 readImportMeta : {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
-                 Import -> Core (Bool, (Namespace, Int))
+                 Import -> Core (Bool, (Namespace, Bits64))
 readImportMeta imp
     = do Right ttcFileName <- nsToPath (loc imp) (path imp)
                | Left err => throw err
@@ -224,7 +224,7 @@ gc = primIO $ prim__gc 4
 
 export
 addPublicHash : {auto c : Ref Ctxt Defs} ->
-                (Bool, (Namespace, Int)) -> Core ()
+                (Bool, (Namespace, Bits64)) -> Core ()
 addPublicHash (True, (mod, h)) = do addHash mod; addHash h
 addPublicHash _ = pure ()
 

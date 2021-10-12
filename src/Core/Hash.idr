@@ -20,8 +20,8 @@ import Data.Vect
 
 public export
 interface Hashable a where
-  hash : a -> Int
-  hashWithSalt : Int -> a -> Int
+  hash : a -> Bits64
+  hashWithSalt : Bits64 -> a -> Bits64
 
   hash = hashWithSalt 5381
   hashWithSalt h i = h * 33 + hash i
@@ -30,7 +30,7 @@ infixl 5 `hashWithSalt`
 
 export
 Hashable Int where
-  hash = id
+  hash = cast
 
 export
 Hashable Int8 where
@@ -62,7 +62,7 @@ Hashable Bits32 where
 
 export
 Hashable Bits64 where
-  hash = cast
+  hash = id
 
 export
 Hashable Integer where

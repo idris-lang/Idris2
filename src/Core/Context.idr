@@ -711,8 +711,8 @@ record Defs where
      -- of that name
   saveTransforms : List (Name, Transform)
   namedirectives : NameMap (List String)
-  ifaceHash : Int
-  importHashes : List (Namespace, Int)
+  ifaceHash : Bits64
+  importHashes : List (Namespace, Bits64)
      -- ^ interface hashes of imported modules
   imported : List (ModuleIdent, Bool, Namespace)
      -- ^ imported modules, whether to rexport, as namespace
