@@ -226,6 +226,35 @@ getDocsForName fc n config
                     ]
                _ => pure conWithTypeDoc
 
+    ||| Look up the implementations corresponding to the type
+    getImplDocs : Name -> Core (List (Doc IdrisDocAnn))
+    getImplDocs nty
+        = do log "doc.data" 10 $ "Looking at \{show nty}"
+             defs <- get Ctxt
+             docss <- for (concat $ values $ typeHints defs) $ \ (impl, _) =>
+               do Just def <- lookupCtxtExact impl (gamma defs)
+                    | _ => pure []
+                  ty <- toFullNames !(normaliseHoles defs [] (type def))
+                  -- Check the return type is not the type itself to avoid
+                  -- the hints corresponding to the data constructors
+                  -- Alternatively we could verify the return name is an
+                  -- interface but hints are not limited to interfaces so...
+                  let Just rnm = returnName ty
+                    | _ => pure []
+                  let False = nty == rnm
+                    | _ => pure []
+                  let nms = allGlobals ty
+                  log "doc.data" 10 $ String.unlines
+                    [ "Candidate: " ++ show ty
+                    , "Containing names: " ++ show nms
+                    ]
+                  let Just _ = lookup nty nms
+                        | _ => pure []
+                  ty <- resugar [] ty
+                  pure [annotate (Decl n) $ prettyTerm ty]
+             pure $ concat docss
+
+    ||| The name corresponds to an implementation, typeset its type accordingly
     getImplDoc : Name -> Core (List (Doc IdrisDocAnn))
     getImplDoc n
         = do defs <- get Ctxt
@@ -357,7 +386,13 @@ getDocsForName fc n config
                                , [vcat [header "Constructors"
                                        , annotate Declarations $
                                            vcat $ map (indent 2) docs]])
-                pure (map (tot ++) cdoc)
+                let idoc = case !(getImplDocs n) of
+                             [] => []
+                             [doc] => [header "Hint" <++> annotate Declarations doc]
+                             docs  => [vcat [header "Hints"
+                                            , annotate Declarations $
+                                                vcat $ map (indent 2) docs]]
+                pure (map (\ cons => tot ++ cons ++ idoc) cdoc)
            _ => pure (Nothing, [])
 
     showDoc (MkConfig {longNames, dropFirst, getTotality}) (n, str)

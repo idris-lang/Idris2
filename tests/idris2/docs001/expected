@@ -11,6 +11,38 @@ Main> data Prelude.Nat : Type
       Zero.
     S : Nat -> Nat
       Successor.
+  Hints:
+    Cast Nat String
+    Cast Nat Integer
+    Cast Nat Int
+    Cast Nat Char
+    Cast Nat Double
+    Cast Nat Bits8
+    Cast Nat Bits16
+    Cast Nat Bits32
+    Cast Nat Bits64
+    Cast Nat Int8
+    Cast Nat Int16
+    Cast Nat Int32
+    Cast Nat Int64
+    Cast String Nat
+    Cast Double Nat
+    Cast Char Nat
+    Cast Int Nat
+    Cast Integer Nat
+    Cast Bits8 Nat
+    Cast Bits16 Nat
+    Cast Bits32 Nat
+    Cast Bits64 Nat
+    Cast Int8 Nat
+    Cast Int16 Nat
+    Cast Int32 Nat
+    Cast Int64 Nat
+    Eq Nat
+    Num Nat
+    Ord Nat
+    Range Nat
+    Show Nat
 Main> data Prelude.List : Type -> Type
   Generic lists.
   Totality: total
@@ -19,6 +51,18 @@ Main> data Prelude.List : Type -> Type
       Empty list
     (::) : a -> List a -> List a
       A non-empty list, consisting of a head element and the rest of the list.
+  Hints:
+    Alternative List
+    Applicative List
+    Eq a => Eq (List a)
+    Foldable List
+    Functor List
+    Monad List
+    Monoid (List a)
+    Ord a => Ord (List a)
+    Semigroup (List a)
+    Show a => Show (List a)
+    Traversable List
 Main> interface Prelude.Show : Type -> Type
   Things that have a canonical `String` representation.
   Parameters: ty

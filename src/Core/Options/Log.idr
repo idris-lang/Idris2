@@ -83,6 +83,7 @@ knownTopics = [
     ("declare.record.projection.prefix", Nothing),
     ("declare.type", Nothing),
     ("desugar.idiom", Nothing),
+    ("doc.data", Nothing),
     ("doc.record", Nothing),
     ("doc.module", Nothing),
     ("elab", Nothing),
