@@ -824,10 +824,11 @@ getFieldNames ctxt recNS
 
 -- Find similar looking names in the context
 export
-getSimilarNames : {auto c : Ref Ctxt Defs} -> Name -> Core (List String)
+getSimilarNames : {auto c : Ref Ctxt Defs} ->
+                   Name -> Core (Maybe (String, List (Name, Nat)))
 getSimilarNames nm = case show <$> userNameRoot nm of
-  Nothing => pure []
-  Just str => if length str <= 1 then pure [] else
+  Nothing => pure Nothing
+  Just str => if length str <= 1 then pure (Just (str, [])) else
     let threshold : Nat := max 1 (assert_total (divNat (length str) 3))
         test : Name -> IO (Maybe Nat) := \ nm => do
             let (Just str') = show <$> userNameRoot nm
@@ -836,9 +837,14 @@ getSimilarNames nm = case show <$> userNameRoot nm of
             pure (dist <$ guard (dist <= threshold))
     in do defs <- get Ctxt
           kept <- coreLift $ mapMaybeM test (resolvedAs (gamma defs))
-          let sorted = sortBy (\ x, y => compare (snd x) (snd y)) $ toList kept
-          let roots = mapMaybe (showNames nm str . fst) sorted
-          pure (nub roots)
+          pure $ Just (str, toList kept)
+
+export
+showSimilarNames : Name -> String -> List (Name, Nat) -> List String
+showSimilarNames nm str kept
+  = let sorted = sortBy (\ x, y => compare (snd x) (snd y)) kept
+        roots  = mapMaybe (showNames nm str . fst) sorted
+    in nub roots
 
   where
 
@@ -854,7 +860,9 @@ getSimilarNames nm = case show <$> userNameRoot nm of
 maybeMisspelling : {auto c : Ref Ctxt Defs} ->
                    Error -> Name -> Core a
 maybeMisspelling err nm = do
-  candidates <- getSimilarNames nm
+  Just (str, kept) <- getSimilarNames nm
+    | Nothing => throw err
+  let candidates = showSimilarNames nm str kept
   case candidates of
     [] => throw err
     (x::xs) => throw (MaybeMisspelling err (x ::: xs))

@@ -231,36 +231,16 @@ updateArg allvars var con (IAs fc nameFC s n p)
     = updateArg allvars var con p
 updateArg allvars var con tm = pure $ Implicit (getFC tm) True
 
-data ArgType
-    = Explicit FC RawImp
-    | Auto     FC RawImp
-    | Named    FC Name RawImp
-
 update : {auto c : Ref Ctxt Defs} ->
          List Name -> -- all the variable names
          (var : Name) -> (con : Name) ->
-         ArgType -> Core ArgType
+         Arg -> Core Arg
 update allvars var con (Explicit fc arg)
     = pure $ Explicit fc !(updateArg allvars var con arg)
 update allvars var con (Auto fc arg)
     = pure $ Auto fc !(updateArg allvars var con arg)
 update allvars var con (Named fc n arg)
     = pure $ Named fc n !(updateArg allvars var con arg)
-
-getFnArgs : RawImp -> List ArgType -> (RawImp, List ArgType)
-getFnArgs (IApp fc tm a) args
-    = getFnArgs tm (Explicit fc a :: args)
-getFnArgs (IAutoApp fc tm a) args
-    = getFnArgs tm (Auto fc a :: args)
-getFnArgs (INamedApp fc tm n a) args
-    = getFnArgs tm (Named fc n a :: args)
-getFnArgs tm args = (tm, args)
-
-apply : RawImp -> List ArgType -> RawImp
-apply f (Explicit fc a :: args) = apply (IApp fc f a) args
-apply f (Auto fc a :: args) = apply (IAutoApp fc f a) args
-apply f (Named fc n a :: args) = apply (INamedApp fc f n a) args
-apply f [] = f
 
 -- Return a new LHS to check, replacing 'var' with an application of 'con'
 -- Also replace any variables with '_' to allow elaboration to
