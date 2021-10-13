@@ -63,7 +63,7 @@ The ``CExp`` is closer in the compiling process to code generation.
 
 The custom code generation back-end gets
 a context of definitions,
-a template directory and an an output directory,
+a template directory and an output directory,
 a ``Core.TT.ClosedTerm`` to compile and a path to an output file.
 
 .. code-block:: idris
