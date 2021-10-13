@@ -19,3 +19,5 @@ helloWorld = unwords ["hello", "world"]
 
 test' : NoDeclaration.helloWorld === "hello world"
 test' = Refl
+
+cat x y = unwords [x, show {ty = Nat} y]

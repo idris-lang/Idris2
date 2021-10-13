@@ -890,17 +890,30 @@ warnUnreachable : {auto c : Ref Ctxt Defs} ->
 warnUnreachable (MkClause env lhs rhs)
     = recordWarning (UnreachableClause (getLoc lhs) env lhs)
 
+isAlias : RawImp -> Maybe ((FC, Name)                -- head symbol
+                          , List (FC, (FC, String))) -- pattern variables
+isAlias lhs
+  = do let (hd, apps) = getFnArgs lhs []
+       hd <- isIVar hd
+       args <- traverse (isExplicit >=> bitraverse pure isIBindVar) apps
+       pure (hd, args)
+
 lookupOrAddAlias : {vars : _} ->
                    {auto m : Ref MD Metadata} ->
                    {auto c : Ref Ctxt Defs} ->
                    {auto u : Ref UST UState} ->
                    List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
                    Name -> List ImpClause -> Core (Maybe GlobalDef)
-lookupOrAddAlias eopts nest env fc n [PatClause _ (IVar _ _) _]
+lookupOrAddAlias eopts nest env fc n [cl@(PatClause _ lhs _)]
   = do defs <- get Ctxt
+       log "declare.def.alias" 20 $ "Looking at \{show cl}"
        Nothing <- lookupCtxtExact n (gamma defs)
          | Just gdef => pure (Just gdef)
-       -- No prior declaration: add one with a unification variable as its type
+       -- No prior declaration:
+       --   1) check whether it has the shape of an alias
+       let Just (hd, args) = isAlias lhs
+         | Nothing => pure Nothing
+       --   2) check whether it could be a misspelling
        log "declare.def" 5 $
          "Missing type declaration for the alias "
          ++ show n
@@ -917,11 +930,21 @@ lookupOrAddAlias eopts nest env fc n [PatClause _ (IVar _ _) _]
                     pure (Just (cand, weight))
                 pure $ showSimilarNames n str $ catMaybes decls
           | (x :: xs) => throw (MaybeMisspelling (NoDeclaration fc n) (x ::: xs))
+       --   3) declare an alias
        log "declare.def" 5 "Not a misspelling: go ahead and declare it!"
        processType eopts nest env fc top Public []
-          $ MkImpTy fc fc n $ Implicit fc False
+          $ MkImpTy fc fc n $ holeyType (map snd args)
        defs <- get Ctxt
        lookupCtxtExact n (gamma defs)
+
+  where
+    holeyType : List (FC, String) -> RawImp
+    holeyType [] = Implicit fc False
+    holeyType ((xfc, x) :: xs)
+      = let xfc = virtualiseFC xfc in
+        IPi xfc top Explicit (Just (UN $ Basic x)) (Implicit xfc False)
+      $ holeyType xs
+
 lookupOrAddAlias _ _ _ fc n _
   = do defs <- get Ctxt
        lookupCtxtExact n (gamma defs)

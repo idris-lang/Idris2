@@ -70,6 +70,7 @@ knownTopics = [
     ("declare.data.constructor", Nothing),
     ("declare.data.parameters", Nothing),
     ("declare.def", Nothing),
+    ("declare.def.alias", Nothing),
     ("declare.def.clause", Nothing),
     ("declare.def.clause.impossible", Nothing),
     ("declare.def.clause.with", Nothing),
