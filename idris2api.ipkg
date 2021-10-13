@@ -79,6 +79,7 @@ modules =
     Core.Termination,
     Core.Transform,
     Core.TT,
+    Core.TT.Traversals,
     Core.TTC,
     Core.Unify,
     Core.UnifyState,

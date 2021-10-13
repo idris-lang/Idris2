@@ -6,6 +6,7 @@ import Core.Core
 import Core.Env
 import Core.Metadata
 import Core.TT
+import Core.TT.Traversals
 
 import Idris.Pretty
 import Idris.Pretty.Render
@@ -234,15 +235,12 @@ getDocsForName fc n config
              docss <- for (concat $ values $ typeHints defs) $ \ (impl, _) =>
                do Just def <- lookupCtxtExact impl (gamma defs)
                     | _ => pure []
+                  -- Only keep things that look like implementations.
+                  -- i.e. get rid of data constructors
+                  let Just Func = defNameType (definition def)
+                    | _ => pure []
+                  -- Check that the type mentions the name of interest
                   ty <- toFullNames !(normaliseHoles defs [] (type def))
-                  -- Check the return type is not the type itself to avoid
-                  -- the hints corresponding to the data constructors
-                  -- Alternatively we could verify the return name is an
-                  -- interface but hints are not limited to interfaces so...
-                  let Just rnm = returnName ty
-                    | _ => pure []
-                  let False = nty == rnm
-                    | _ => pure []
                   let nms = allGlobals ty
                   log "doc.data" 10 $ String.unlines
                     [ "Candidate: " ++ show ty
