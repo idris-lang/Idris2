@@ -128,9 +128,9 @@ Main> interface Prelude.Monad : (Type -> Type) -> Type
     Monad (Either e)
     Monad List
 Main> 1 : Integer
-  Primitive
+  Primitive value
 Main> String : Type
-  Primitive
+  Primitive type of strings
 Hints:
   Cast Int String
   Cast Integer String
@@ -164,7 +164,7 @@ Hints:
   Semigroup String
   Show String
 Main> Integer : Type
-  Primitive
+  Primitive type of unbounded signed integers
 Hints:
   Abs Integer
   Cast Integer String
@@ -200,7 +200,7 @@ Hints:
   Ord Integer
   Show Integer
 Main> Bits16 : Type
-  Primitive
+  Primitive type of 16 bits unsigned integers
 Hints:
   Abs Bits16
   Cast Bits16 String

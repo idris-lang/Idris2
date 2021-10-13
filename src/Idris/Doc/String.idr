@@ -195,12 +195,45 @@ getDocsForPrimitive : {auto c : Ref Ctxt Defs} ->
                       Constant -> Core (Doc IdrisDocAnn)
 getDocsForPrimitive constant = do
     let (_, type) = checkPrim EmptyFC constant
-    let typeString = pretty (show constant)
-                   <++> colon <++> prettyTerm !(resugar [] type)
+    let typeString = prettyTerm (PPrimVal EmptyFC constant)
+                     <++> colon
+                     <++> prettyTerm !(resugar [] type)
     hintsDoc <- getHintsForPrimitive constant
     pure $ vcat $ typeString
-               :: indent 2 "Primitive"
+               :: indent 2 (primDoc constant)
                :: hintsDoc
+
+  where
+  primDoc : Constant -> Doc IdrisDocAnn
+  primDoc (I i) = "Primitive value"
+  primDoc (I8 i) = "Primitive value"
+  primDoc (I16 i) = "Primitive value"
+  primDoc (I32 i) = "Primitive value"
+  primDoc (I64 i) = "Primitive value"
+  primDoc (BI i) = "Primitive value"
+  primDoc (B8 i) = "Primitive value"
+  primDoc (B16 i) = "Primitive value"
+  primDoc (B32 i) = "Primitive value"
+  primDoc (B64 i) = "Primitive value"
+  primDoc (Str s) = "Primitive value"
+  primDoc (Ch c) = "Primitive value"
+  primDoc (Db d) = "Primitive value"
+  primDoc WorldVal = "Primitive value"
+
+  primDoc IntType = "Primitive type of bounded signed integers (backend dependent size)"
+  primDoc Int8Type = "Primitive type of 8 bits signed integers"
+  primDoc Int16Type = "Primitive type of 16 bits signed integers"
+  primDoc Int32Type = "Primitive type of 32 bits signed integers"
+  primDoc Int64Type = "Primitive type of 64 bits signed integers"
+  primDoc IntegerType = "Primitive type of unbounded signed integers"
+  primDoc Bits8Type = "Primitive type of 8 bits unsigned integers"
+  primDoc Bits16Type = "Primitive type of 16 bits unsigned integers"
+  primDoc Bits32Type = "Primitive type of 32 bits unsigned integers"
+  primDoc Bits64Type = "Primitive type of 64 bits unsigned integers"
+  primDoc StringType = "Primitive type of strings"
+  primDoc CharType = "Primitive type of characters"
+  primDoc DoubleType = "Primitive type of double-precision floating-points"
+  primDoc WorldType = "Primitive token for IO actions"
 
 public export
 data Config : Type where
