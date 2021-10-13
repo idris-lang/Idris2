@@ -670,6 +670,7 @@ TTC ConInfo where
   toBuf b RECORD = tag 7
   toBuf b ZERO = tag 8
   toBuf b SUCC = tag 9
+  toBuf b UNIT = tag 10
 
   fromBuf b
       = case !getTag of
@@ -683,6 +684,7 @@ TTC ConInfo where
              7 => pure RECORD
              8 => pure ZERO
              9 => pure SUCC
+             10 => pure UNIT
              _ => corrupt "ConInfo"
 
 mutual

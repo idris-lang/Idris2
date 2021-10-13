@@ -436,6 +436,7 @@ Hashable ConInfo where
     RECORD => h `hashWithSalt` 7
     ZERO => h `hashWithSalt` 8
     SUCC => h `hashWithSalt` 9
+    UNIT => h `hashWithSalt` 10
 
 mutual
   export
