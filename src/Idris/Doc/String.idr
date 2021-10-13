@@ -25,6 +25,7 @@ import Data.String
 
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
+import Libraries.Data.SortedSet
 import Libraries.Data.SortedMap
 import Libraries.Data.StringMap as S
 import Libraries.Data.String.Extra
@@ -133,6 +134,61 @@ prettyKindedName Nothing   nm = nm
 prettyKindedName (Just kw) nm
   = annotate (Syntax Keyword) (pretty kw) <++> nm
 
+||| Look up implementations
+getImplDocs : {auto c : Ref Ctxt Defs} ->
+              {auto s : Ref Syn SyntaxInfo} ->
+              (keep : Term [] -> Core Bool) ->
+              Core (List (Doc IdrisDocAnn))
+getImplDocs keep
+    = do defs <- get Ctxt
+         docss <- for (concat $ values $ typeHints defs) $ \ (impl, _) =>
+           do Just def <- lookupCtxtExact impl (gamma defs)
+                | _ => pure []
+              -- Only keep things that look like implementations.
+              -- i.e. get rid of data constructors
+              let Just Func = defNameType (definition def)
+                | _ => pure []
+              -- Check that the type mentions the name of interest
+              ty <- toFullNames !(normaliseHoles defs [] (type def))
+              True <- keep ty
+                | False => pure []
+              ty <- resugar [] ty
+              pure [annotate (Decl impl) $ prettyTerm ty]
+         pure $ case concat docss of
+           [] => []
+           [doc] => [header "Hint" <++> annotate Declarations doc]
+           docs  => [vcat [header "Hints"
+                    , annotate Declarations $
+                        vcat $ map (indent 2) docs]]
+
+||| Look up implementations corresponding to the named type
+getHintsForType : {auto c : Ref Ctxt Defs} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
+                  Name -> Core (List (Doc IdrisDocAnn))
+getHintsForType nty
+    = do log "doc.data" 10 $ "Looking at \{show nty}"
+         getImplDocs $ \ ty =>
+           do let nms = allGlobals ty
+              log "doc.data" 10 $ String.unlines
+                [ "Candidate: " ++ show ty
+                , "Containing names: " ++ show nms
+                ]
+              pure $ isJust (lookup nty nms)
+
+||| Look up implementations corresponding to the primitive type
+getHintsForPrimitive : {auto c : Ref Ctxt Defs} ->
+                       {auto s : Ref Syn SyntaxInfo} ->
+                       Constant -> Core (List (Doc IdrisDocAnn))
+getHintsForPrimitive c
+    = do log "doc.data" 10 $ "Looking at \{show c}"
+         getImplDocs $ \ ty =>
+           do let nms = allConstants ty
+              log "doc.data" 10 $ String.unlines
+                [ "Candidate: " ++ show ty
+                , "Containing constants: " ++ show nms
+                ]
+              pure $ contains c nms
+
 export
 getDocsForPrimitive : {auto c : Ref Ctxt Defs} ->
                       {auto s : Ref Syn SyntaxInfo} ->
@@ -141,7 +197,10 @@ getDocsForPrimitive constant = do
     let (_, type) = checkPrim EmptyFC constant
     let typeString = pretty (show constant)
                    <++> colon <++> prettyTerm !(resugar [] type)
-    pure (typeString <+> Line <+> indent 2 "Primitive")
+    hintsDoc <- getHintsForPrimitive constant
+    pure $ vcat $ typeString
+               :: indent 2 "Primitive"
+               :: hintsDoc
 
 public export
 data Config : Type where
@@ -226,31 +285,6 @@ getDocsForName fc n config
                     $ vcat $ reflowDoc str
                     ]
                _ => pure conWithTypeDoc
-
-    ||| Look up the implementations corresponding to the type
-    getImplDocs : Name -> Core (List (Doc IdrisDocAnn))
-    getImplDocs nty
-        = do log "doc.data" 10 $ "Looking at \{show nty}"
-             defs <- get Ctxt
-             docss <- for (concat $ values $ typeHints defs) $ \ (impl, _) =>
-               do Just def <- lookupCtxtExact impl (gamma defs)
-                    | _ => pure []
-                  -- Only keep things that look like implementations.
-                  -- i.e. get rid of data constructors
-                  let Just Func = defNameType (definition def)
-                    | _ => pure []
-                  -- Check that the type mentions the name of interest
-                  ty <- toFullNames !(normaliseHoles defs [] (type def))
-                  let nms = allGlobals ty
-                  log "doc.data" 10 $ String.unlines
-                    [ "Candidate: " ++ show ty
-                    , "Containing names: " ++ show nms
-                    ]
-                  let Just _ = lookup nty nms
-                        | _ => pure []
-                  ty <- resugar [] ty
-                  pure [annotate (Decl n) $ prettyTerm ty]
-             pure $ concat docss
 
     ||| The name corresponds to an implementation, typeset its type accordingly
     getImplDoc : Name -> Core (List (Doc IdrisDocAnn))
@@ -384,12 +418,7 @@ getDocsForName fc n config
                                , [vcat [header "Constructors"
                                        , annotate Declarations $
                                            vcat $ map (indent 2) docs]])
-                let idoc = case !(getImplDocs n) of
-                             [] => []
-                             [doc] => [header "Hint" <++> annotate Declarations doc]
-                             docs  => [vcat [header "Hints"
-                                            , annotate Declarations $
-                                                vcat $ map (indent 2) docs]]
+                idoc <- getHintsForType n
                 pure (map (\ cons => tot ++ cons ++ idoc) cdoc)
            _ => pure (Nothing, [])
 

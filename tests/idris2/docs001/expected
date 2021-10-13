@@ -129,4 +129,110 @@ Main> interface Prelude.Monad : (Type -> Type) -> Type
     Monad List
 Main> 1 : Integer
   Primitive
+Main> String : Type
+  Primitive
+Hints:
+  Cast Int String
+  Cast Integer String
+  Cast Char String
+  Cast Double String
+  Cast Nat String
+  Cast Int8 String
+  Cast Int16 String
+  Cast Int32 String
+  Cast Int64 String
+  Cast Bits8 String
+  Cast Bits16 String
+  Cast Bits32 String
+  Cast Bits64 String
+  Cast String Integer
+  Cast String Int
+  Cast String Double
+  Cast String Bits8
+  Cast String Bits16
+  Cast String Bits32
+  Cast String Bits64
+  Cast String Int8
+  Cast String Int16
+  Cast String Int32
+  Cast String Int64
+  Cast String Nat
+  Eq String
+  FromString String
+  Monoid String
+  Ord String
+  Semigroup String
+  Show String
+Main> Integer : Type
+  Primitive
+Hints:
+  Abs Integer
+  Cast Integer String
+  Cast Int Integer
+  Cast Char Integer
+  Cast Double Integer
+  Cast String Integer
+  Cast Nat Integer
+  Cast Bits8 Integer
+  Cast Bits16 Integer
+  Cast Bits32 Integer
+  Cast Bits64 Integer
+  Cast Int8 Integer
+  Cast Int16 Integer
+  Cast Int32 Integer
+  Cast Int64 Integer
+  Cast Integer Int
+  Cast Integer Char
+  Cast Integer Double
+  Cast Integer Bits8
+  Cast Integer Bits16
+  Cast Integer Bits32
+  Cast Integer Bits64
+  Cast Integer Int8
+  Cast Integer Int16
+  Cast Integer Int32
+  Cast Integer Int64
+  Cast Integer Nat
+  Eq Integer
+  Integral Integer
+  Neg Integer
+  Num Integer
+  Ord Integer
+  Show Integer
+Main> Bits16 : Type
+  Primitive
+Hints:
+  Abs Bits16
+  Cast Bits16 String
+  Cast Bits16 Integer
+  Cast Bits16 Int
+  Cast Bits16 Char
+  Cast Bits16 Double
+  Cast Bits16 Bits8
+  Cast Int Bits16
+  Cast Integer Bits16
+  Cast Bits8 Bits16
+  Cast Bits32 Bits16
+  Cast Bits64 Bits16
+  Cast String Bits16
+  Cast Double Bits16
+  Cast Char Bits16
+  Cast Nat Bits16
+  Cast Int8 Bits16
+  Cast Int16 Bits16
+  Cast Int32 Bits16
+  Cast Int64 Bits16
+  Cast Bits16 Bits32
+  Cast Bits16 Bits64
+  Cast Bits16 Int8
+  Cast Bits16 Int16
+  Cast Bits16 Int32
+  Cast Bits16 Int64
+  Cast Bits16 Nat
+  Eq Bits16
+  Integral Bits16
+  Neg Bits16
+  Num Bits16
+  Ord Bits16
+  Show Bits16
 Main> Bye for now!
