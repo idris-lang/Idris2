@@ -1,10 +1,12 @@
 module Core.TT.Traversals
 
 import Core.TT
+import Core.Ord
 
 import Data.DPair
 import Data.SnocList
 import Libraries.Data.NameMap
+import Libraries.Data.SortedSet
 
 %default covering
 
@@ -43,6 +45,34 @@ export
 allGlobals : Term vars -> NameMap ()
 allGlobals = onPRefs (\ n => singleton n ())
 
+export
+onConstants : Monoid m =>
+          (Constant  -> m) ->
+          (Term vars -> m)
+onConstants f = go neutral where
+
+  go  : m -> Term vars' -> m
+  gos : m -> List (Term vars') -> m
+
+  go acc (Local fc isLet idx p) = acc
+  go acc (Ref fc x name) = acc
+  go acc (Meta fc x y xs) = gos acc xs
+  go acc (Bind fc x b scope) = go (acc <+> concatMap (onConstants f) b) scope
+  go acc (App fc fn arg) = go (go acc fn) arg
+  go acc (As fc x as pat) = go (go acc as) pat
+  go acc (TDelayed fc x y) = go acc y
+  go acc (TDelay fc x ty arg) = go (go acc ty) arg
+  go acc (TForce fc x y) = go acc y
+  go acc (PrimVal fc c) = acc <+> f c
+  go acc (Erased fc imp) = acc
+  go acc (TType fc) = acc
+
+  gos acc [] = acc
+  gos acc (x :: xs) = gos (go acc x) xs
+
+export
+allConstants : Term vars -> SortedSet Constant
+allConstants = onConstants @{MkMonoid @{MkSemigroup union} empty} singleton
 
 export
 mapTermM : Monad m =>
