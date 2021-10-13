@@ -1,10 +1,10 @@
 module Core.GetType
 
-import Core.CaseTree
-import Core.TT
+import Core.Case.CaseTree
 import Core.Context
 import Core.Env
 import Core.Normalise
+import Core.TT
 import Core.Value
 
 %default covering

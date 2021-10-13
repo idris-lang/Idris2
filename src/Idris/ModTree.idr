@@ -85,11 +85,14 @@ mkModTree loc done modFP mod
                            do file <- maybe (nsToSource loc mod) pure modFP
                               modInfo <- readHeader file mod
                               let imps = map path (imports modInfo)
-                              ms <- traverse (mkModTree loc (mod :: done) Nothing) imps
-                              let mt = MkModTree mod (Just file) ms
-                              all <- get AllMods
-                              put AllMods ((mod, mt) :: all)
-                              pure mt
+                              if mod `elem` imps
+                                then coreFail $ CyclicImports [mod, mod]
+                                else do
+                                  ms <- traverse (mkModTree loc (mod :: done) Nothing) imps
+                                  let mt = MkModTree mod (Just file) ms
+                                  all <- get AllMods
+                                  put AllMods ((mod, mt) :: all)
+                                  pure mt
                          Just m => pure m)
                 -- Couldn't find source, assume it's in a package directory
                 (\err =>
@@ -174,9 +177,11 @@ checkDepHashes : {auto c : Ref Ctxt Defs} ->
                  String -> Core Bool
 checkDepHashes depFileName
   = catch (do defs                   <- get Ctxt
-              depCodeHash            <- hashFileWith (defs.options.hashFn) depFileName
+              Just depCodeHash       <- hashFileWith (defs.options.hashFn) depFileName
+                    | _ => pure False
               depTTCFileName         <- getTTCFileName depFileName "ttc"
-              (depStoredCodeHash, _) <- readHashes depTTCFileName
+              (Just depStoredCodeHash, _) <- readHashes depTTCFileName
+                    | _ => pure False
               pure $ depCodeHash /= depStoredCodeHash)
           (\error => pure False)
 
@@ -186,11 +191,15 @@ needsBuildingHash : {auto c : Ref Ctxt Defs} ->
                     (sourceFile : String) -> (ttcFile : String) ->
                     (depFiles : List String) -> Core Bool
 needsBuildingHash sourceFile ttcFile depFiles
-  = do  defs                <- get Ctxt
-        codeHash            <- hashFileWith (defs.options.hashFn) sourceFile
-        (storedCodeHash, _) <- readHashes ttcFile
-        depFilesHashDiffers <- any id <$> traverse checkDepHashes depFiles
-        pure $ codeHash /= storedCodeHash || depFilesHashDiffers
+  = do defs                <- get Ctxt
+       -- If there's no hash available, either in the TTC or from the
+       -- current source, then it needs building
+       Just codeHash       <- hashFileWith (defs.options.hashFn) sourceFile
+             | _ => pure True
+       (Just storedCodeHash, _) <- readHashes ttcFile
+             | _ => pure True
+       depFilesHashDiffers <- any id <$> traverse checkDepHashes depFiles
+       pure $ codeHash /= storedCodeHash || depFilesHashDiffers
 
 export
 needsBuilding :

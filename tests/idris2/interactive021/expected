@@ -1,5 +1,5 @@
 1/1: Building TypeAtDoNotation (TypeAtDoNotation.idr)
-Main> f : Maybe Nat -> Nat -> Maybe Nat
+Main> Main.f : Maybe Nat -> Nat -> Maybe Nat
 Main> Main.f : Maybe Nat -> Nat -> Maybe Nat
 Main> x : Maybe Nat
 Main> y : Nat

@@ -64,19 +64,22 @@ cCleanString : String -> String
 cCleanString cs = showcCleanString (unpack cs) ""
 
 export
+cUserName : UserName -> String
+cUserName (Basic n) = cCleanString n
+cUserName (Field n) = "rec__" ++ cCleanString n
+cUserName Underscore = cCleanString "_"
+
+export
 cName : Name -> String
 cName (NS ns n) = cCleanString (showNSWithSep "_" ns) ++ "_" ++ cName n
-cName (UN n) = cCleanString n
+cName (UN n) = cUserName n
 cName (MN n i) = cCleanString n ++ "_" ++ cCleanString (show i)
 cName (PV n d) = "pat__" ++ cName n
 cName (DN _ n) = cName n
-cName (RF n) = "rec__" ++ cCleanString n
 cName (Nested i n) = "n__" ++ cCleanString (show i) ++ "_" ++ cName n
 cName (CaseBlock x y) = "case__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (WithBlock x y) = "with__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (Resolved i) = "fn__" ++ cCleanString (show i)
-cName n = assert_total $ idris_crash ("INTERNAL ERROR: Unsupported name in C backend " ++ show n)
--- not really total but this way this internal error does not contaminate everything else
 
 escapeChar : Char -> String
 escapeChar c = if isAlphaNum c || isNL c
@@ -100,13 +103,23 @@ where
     showCString ('"'::cs) = ("\\\"" ++) . showCString cs
     showCString (c ::cs) = (showCChar c) . showCString cs
 
+-- deals with C not allowing `-9223372036854775808` as a literal
+showIntMin : Int -> String
+showIntMin x = if x == -9223372036854775808
+    then "INT64_MIN"
+    else "INT64_C("++ show x ++")"
+
+showInt64Min : Int64 -> String
+showInt64Min x = if x == -9223372036854775808
+    then "INT64_MIN"
+    else "INT64_C("++ show x ++")"
 
 cConstant : Constant -> String
-cConstant (I x) = "(Value*)makeInt64("++ show x ++")"
-cConstant (I8 x) = "(Value*)makeInt8("++ show x ++")"
-cConstant (I16 x) = "(Value*)makeInt16("++ show x ++")"
-cConstant (I32 x) = "(Value*)makeInt32("++ show x ++")"
-cConstant (I64 x) = "(Value*)makeInt64("++ show x ++")"
+cConstant (I x) = "(Value*)makeInt64("++ showIntMin x ++")"
+cConstant (I8 x) = "(Value*)makeInt8(INT8_C("++ show x ++"))"
+cConstant (I16 x) = "(Value*)makeInt16(INT16_C("++ show x ++"))"
+cConstant (I32 x) = "(Value*)makeInt32(INT32_C("++ show x ++"))"
+cConstant (I64 x) = "(Value*)makeInt64("++ showInt64Min x ++")"
 cConstant (BI x) = "(Value*)makeIntegerLiteral(\""++ show x ++"\")"
 cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
 cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
@@ -122,16 +135,14 @@ cConstant StringType = "string"
 cConstant CharType = "char"
 cConstant DoubleType = "double"
 cConstant WorldType = "f32"
-cConstant (B8 x)   = "(Value*)makeBits8("++ show x ++")"
-cConstant (B16 x)  = "(Value*)makeBits16("++ show x ++")"
-cConstant (B32 x)  = "(Value*)makeBits32("++ show x ++")"
-cConstant (B64 x)  = "(Value*)makeBits64("++ show x ++")"
+cConstant (B8 x)   = "(Value*)makeBits8(UINT8_C("++ show x ++"))"
+cConstant (B16 x)  = "(Value*)makeBits16(UINT16_C("++ show x ++"))"
+cConstant (B32 x)  = "(Value*)makeBits32(UINT32_C("++ show x ++"))"
+cConstant (B64 x)  = "(Value*)makeBits64(UINT64_C("++ show x ++"))"
 cConstant Bits8Type = "Bits8"
 cConstant Bits16Type = "Bits16"
 cConstant Bits32Type = "Bits32"
 cConstant Bits64Type = "Bits64"
-cConstant n = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw constant in C backend: " ++ show n)
--- not really total but this way this internal error does not contaminate everything else
 
 extractConstant : Constant -> String
 extractConstant (I x) = show x
@@ -228,20 +239,20 @@ Show ExtPrim where
 ||| Match on a user given name to get the scheme primitive
 toPrim : Name -> ExtPrim
 toPrim pn@(NS _ n)
-    = cond [(n == UN "prim__newIORef", NewIORef),
-            (n == UN "prim__readIORef", ReadIORef),
-            (n == UN "prim__writeIORef", WriteIORef),
-            (n == UN "prim__newArray", NewArray),
-            (n == UN "prim__arrayGet", ArrayGet),
-            (n == UN "prim__arraySet", ArraySet),
-            (n == UN "prim__getField", GetField),
-            (n == UN "prim__setField", SetField),
-            (n == UN "void", VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
-            (n == UN "prim__void", VoidElim),
-            (n == UN "prim__os", SysOS),
-            (n == UN "prim__codegen", SysCodegen),
-            (n == UN "prim__onCollect", OnCollect),
-            (n == UN "prim__onCollectAny", OnCollectAny)
+    = cond [(n == UN (Basic "prim__newIORef"), NewIORef),
+            (n == UN (Basic "prim__readIORef"), ReadIORef),
+            (n == UN (Basic "prim__writeIORef"), WriteIORef),
+            (n == UN (Basic "prim__newArray"), NewArray),
+            (n == UN (Basic "prim__arrayGet"), ArrayGet),
+            (n == UN (Basic "prim__arraySet"), ArraySet),
+            (n == UN (Basic "prim__getField"), GetField),
+            (n == UN (Basic "prim__setField"), SetField),
+            (n == UN (Basic "void"), VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
+            (n == UN (Basic "prim__void"), VoidElim),
+            (n == UN (Basic "prim__os"), SysOS),
+            (n == UN (Basic "prim__codegen"), SysCodegen),
+            (n == UN (Basic "prim__onCollect"), OnCollect),
+            (n == UN (Basic "prim__onCollectAny"), OnCollectAny)
             ]
            (Unknown pn)
 toPrim pn = assert_total $ idris_crash ("INTERNAL ERROR: Unknown primitive: " ++ cName pn)
@@ -429,16 +440,16 @@ const2Integer : Constant -> Integer -> Integer
 const2Integer c i =
     case c of
         (I x) => cast x
-        (I8 x) => x
-        (I16 x) => x
-        (I32 x) => x
-        (I64 x) => x
-        (BI x) => x
+        (I8 x) => cast x
+        (I16 x) => cast x
+        (I32 x) => cast x
+        (I64 x) => cast x
+        (BI x) => cast x
         (Ch x) => cast x
         (B8 x) => cast x
         (B16 x) => cast x
         (B32 x) => cast x
-        (B64 x) => x
+        (B64 x) => cast x
         _ => i
 
 
@@ -911,8 +922,8 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
                          else CLangC
           let isStandardFFI = Prelude.elem lang ["RefC", "C"]
           let fctName = if isStandardFFI
-                           then UN fctForeignName
-                           else UN $ lang ++ "_" ++ fctForeignName
+                           then UN $ Basic $ fctForeignName
+                           else UN $ Basic $ lang ++ "_" ++ fctForeignName
           if isStandardFFI
              then case extLibOpts of
                       [lib, header] => addHeader header

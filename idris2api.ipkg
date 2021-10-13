@@ -1,5 +1,5 @@
 package idris2
-version = 0.4.0
+version = 0.5.1
 
 modules =
     Algebra,
@@ -12,12 +12,15 @@ modules =
     Compiler.Common,
     Compiler.CompileExpr,
     Compiler.Generated,
-    Compiler.Identity,
     Compiler.Inline,
     Compiler.LambdaLift,
     Compiler.Opts.CSE,
     Compiler.Separate,
     Compiler.VMCode,
+
+    Compiler.Opts.ConstantFold,
+    Compiler.Opts.Identity,
+    Compiler.Opts.InlineHeuristics,
 
     Compiler.ES.Ast,
     Compiler.ES.Codegen,
@@ -42,10 +45,13 @@ modules =
 
     Core.AutoSearch,
     Core.Binary,
-    Core.CaseBuilder,
-    Core.CaseTree,
+    Core.Binary.Prims,
+    Core.Case.CaseBuilder,
+    Core.Case.CaseTree,
+    Core.Case.Util,
     Core.CompileExpr,
     Core.Context,
+    Core.Context.Context,
     Core.Context.Data,
     Core.Context.Log,
     Core.Core,
@@ -61,18 +67,29 @@ modules =
     Core.Name,
     Core.Name.Namespace,
     Core.Normalise,
+    Core.Normalise.Convert,
+    Core.Normalise.Eval,
+    Core.Normalise.Quote,
     Core.Options,
     Core.Options.Log,
     Core.Ord,
     Core.Primitives,
     Core.Reflect,
+    Core.SchemeEval,
     Core.Termination,
     Core.Transform,
     Core.TT,
+    Core.TT.Traversals,
     Core.TTC,
     Core.Unify,
     Core.UnifyState,
     Core.Value,
+
+    Core.SchemeEval.Builtins,
+    Core.SchemeEval.Compile,
+    Core.SchemeEval.Evaluate,
+    Core.SchemeEval.Quote,
+    Core.SchemeEval.ToScheme,
 
     IdrisPaths,
 
@@ -136,12 +153,14 @@ modules =
     Libraries.Data.List1,
     Libraries.Data.NameMap,
     Libraries.Data.PosMap,
+    Libraries.Data.Primitives,
     Libraries.Data.SortedMap,
     Libraries.Data.SortedSet,
     Libraries.Data.String.Extra,
     Libraries.Data.String.Iterator,
     Libraries.Data.StringMap,
     Libraries.Data.StringTrie,
+    Libraries.Data.UserNameMap,
     Libraries.Data.Version,
 
     Libraries.System.Directory.Tree,
@@ -169,6 +188,7 @@ modules =
     Libraries.Utils.Hex,
     Libraries.Utils.Octal,
     Libraries.Utils.Path,
+    Libraries.Utils.Scheme,
     Libraries.Utils.Shunting,
     Libraries.Utils.String,
     Libraries.Utils.Term,

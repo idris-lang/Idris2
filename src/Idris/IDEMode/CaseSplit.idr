@@ -44,7 +44,7 @@ Updates = List (RawName, String)
 toStrUpdate : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               (Name, RawImp) -> Core Updates
-toStrUpdate (UN n, term)
+toStrUpdate (UN (Basic n), term)
     = do clause <- pterm (map defaultKindedName term) -- hack
          pure [(n, show (bracket clause))]
   where
@@ -196,7 +196,7 @@ updateCase splits line col
     getIndent acc _ = acc
 
 fnName : Bool -> Name -> String
-fnName lhs (UN n)
+fnName lhs (UN (Basic n))
     = if isIdentNormal n then n
       else if lhs then "(" ++ n ++ ")"
       else "op"

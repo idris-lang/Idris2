@@ -75,6 +75,7 @@ docToProperties Header        = pure $ mkFormat Underline
 docToProperties Declarations  = Nothing
 docToProperties (Decl _)      = Nothing
 docToProperties DocStringBody = Nothing
+docToProperties UserDocString = Nothing
 docToProperties (Syntax syn)  = syntaxToProperties syn
 
 SExpable Decoration where

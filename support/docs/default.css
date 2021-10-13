@@ -1,0 +1,244 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  height: 100%;
+  font-family: "Trebuchet MS", Helvetica, sans-serif;
+  font-size: 11pt;
+  background-color: #fff;
+}
+
+a,
+a:active,
+a:visited {
+  text-decoration: none;
+  color: inherit;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+header {
+  padding: 5px 11px;
+  border-bottom: 3px solid #659fdb;
+  box-shadow: 0 -8px 22px 0;
+  background-color: #252525;
+  color: white;
+  font-size: 9pt;
+}
+
+.wrapper {
+  min-height: 100%;
+}
+
+header nav,
+header strong {
+  font-size: 11pt;
+}
+
+header nav {
+  float: right;
+}
+
+footer {
+  height: 30px;
+  width: 100%;
+  border-top: 1px solid #aaa;
+  margin-top: -31px;
+  text-align: center;
+  color: #666;
+  line-height: 30px;
+  font-size: 9pt;
+  background: none repeat scroll 0 0 #ddd;
+}
+
+.container {
+  padding: 10px 10px 41px 20px;
+}
+
+h1 {
+  margin: 0;
+  margin-bottom: 5px;
+  font-size: 14pt;
+  font-family: "Trebuchet MS", Helvetica, sans-serif;
+}
+
+#moduleHeader {
+  border-bottom: 1px solid #bbb;
+  padding-bottom: 2px;
+}
+
+ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+hr {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid #bbb;
+}
+
+p {
+  margin: 0;
+  padding: 0;
+}
+
+pre {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
+.code {
+  font-family: "Lucida Console", Monaco, monospace;
+  font-size: 10pt;
+}
+
+.decls {
+  margin-top: 5px;
+}
+
+.decls > dt {
+  font-family: "Lucida Console", Monaco, monospace;
+  font-size: 10pt;
+  line-height: 20px;
+  padding: 2px 6px;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+  display: table;
+  width: 100%;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+}
+
+.decls > dd {
+  margin: 10px 0 20px 20px;
+  font-family: Arial, sans-serif;
+  font-size: 10pt;
+}
+
+.decls > dd > p {
+  margin-bottom: 8px;
+}
+
+.decls > dd > dl:not(.decls):not(:first-child) {
+  padding-top: 5px;
+  border-top: 1px solid #eee;
+}
+
+.decls > dd > dl:not(.decls) > dt {
+  display: block;
+  min-width: 70px;
+  float: left;
+  font-weight: bold;
+}
+
+.decls > dd > dl:not(.decls) > dd {
+  margin-bottom: 2px;
+}
+
+.fixity {
+  font-style: italic;
+  font-weight: normal !important;
+}
+
+dd.fixity {
+  cursor: default;
+}
+
+.word {
+  display: table-cell;
+  white-space: nowrap;
+  width: 0;
+}
+
+.signature {
+  display: table-cell;
+  width: 100%;
+}
+
+.name {
+  white-space: nowrap;
+  width: 0;
+}
+
+.documented,
+.name {
+  cursor: default;
+}
+
+.documented {
+  font-weight: bold;
+}
+
+a.function {
+  color: #00ba00;
+}
+
+.function {
+  color: #007c21;
+}
+
+a.constructor {
+  color: #f00;
+}
+
+.constructor {
+  color: #bf3030;
+}
+
+a.type {
+  color: #00f;
+}
+
+.type {
+  color: #050599;
+}
+
+.keyword {
+  color: inherit;
+}
+
+.boundvar {
+  color: #bf30bf; /* Too much colour makes it hard to differ the rest of the colours */
+  color: inherit;
+}
+
+.boundvar.implicit {
+  text-decoration: underline;
+}
+
+ul.names {
+  border: 1px solid #666;
+}
+
+ul.names li {
+  padding-left: 5px;
+}
+
+ul.names li a {
+  display: inline-block;
+  width: 100%;
+  padding: 2px 0;
+}
+
+ul.names li:nth-child(odd) {
+  background-color: #eeeeef;
+}
+
+ul.names li:nth-child(even) {
+  background-color: white;
+}
+
+body.index .container a:visited {
+  color: #666;
+}
+
+body.index .container a:hover {
+  color: #04819e;
+}

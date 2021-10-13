@@ -106,11 +106,11 @@ unbracket tm = tm
 ||| Attempt to extract a constant natural number
 extractNat : Nat -> IPTerm -> Maybe Nat
 extractNat acc tm = case tm of
-  PRef _ (MkKindedName _ _ (NS ns (UN n))) =>
+  PRef _ (MkKindedName _ _ (NS ns (UN (Basic n)))) =>
     do guard (n == "Z")
        guard (ns == typesNS || ns == preludeNS)
        pure acc
-  PApp _ (PRef _ (MkKindedName _ _ (NS ns (UN n)))) k => case n of
+  PApp _ (PRef _ (MkKindedName _ _ (NS ns (UN (Basic n))))) k => case n of
     "S" => do guard (ns == typesNS || ns == preludeNS)
               extractNat (1 + acc) k
     "fromInteger" => extractNat acc k
@@ -188,9 +188,9 @@ sugarName x = show x
 
 toPRef : FC -> KindedName -> Core IPTerm
 toPRef fc kn@(MkKindedName nt fn nm) = case nm of
-  MN n _     => pure (sugarApp (PRef fc (MkKindedName nt fn $ UN n)))
+  MN n _     => pure (sugarApp (PRef fc (MkKindedName nt fn $ UN $ Basic n)))
   PV n _     => pure (sugarApp (PRef fc (MkKindedName nt fn $ n)))
-  DN n _     => pure (sugarApp (PRef fc (MkKindedName nt fn $ UN n)))
+  DN n _     => pure (sugarApp (PRef fc (MkKindedName nt fn $ UN $ Basic n)))
   Nested _ n => toPRef fc (MkKindedName nt fn n)
   _          => pure (sugarApp (PRef fc kn))
 
@@ -218,11 +218,11 @@ mutual
                       else toPTerm p ret
     where
       needsBind : Maybe Name -> Bool
-      needsBind (Just (UN t))
+      needsBind (Just nm@(UN (Basic t)))
           = let ret = map rawName ret
                 ns = findBindableNames False [] [] ret
                 allNs = findAllNames [] ret in
-                ((UN t) `elem` allNs) && not (t `elem` (map Builtin.fst ns))
+                (nm `elem` allNs) && not (t `elem` (map Builtin.fst ns))
       needsBind _ = False
   toPTerm p (IPi fc rig pt n arg ret)
       = do arg' <- toPTerm appPrec arg
@@ -231,7 +231,7 @@ mutual
            bracket p tyPrec (PPi fc rig pt' n arg' ret')
   toPTerm p (ILam fc rig pt mn arg sc)
       = do let n = case mn of
-                        Nothing => UN "_"
+                        Nothing => UN Underscore
                         Just n' => n'
            imp <- showImplicits
            arg' <- if imp then toPTerm tyPrec arg
@@ -262,8 +262,8 @@ mutual
       mkIf : IPTerm -> IPTerm
       mkIf tm@(PCase loc sc [MkPatClause _ (PRef _ tval) t [],
                              MkPatClause _ (PRef _ fval) f []])
-         = if dropNS (rawName tval) == UN "True"
-           && dropNS (rawName fval) == UN "False"
+         = if dropNS (rawName tval) == UN (Basic "True")
+           && dropNS (rawName fval) == UN (Basic "False")
               then PIfThenElse loc sc t f
               else tm
       mkIf tm = tm
@@ -304,7 +304,9 @@ mutual
   toPTerm p (IPrimVal fc c) = pure (PPrimVal fc c)
   toPTerm p (IHole fc str) = pure (PHole fc False str)
   toPTerm p (IType fc) = pure (PType fc)
-  toPTerm p (IBindVar fc v) = pure (PRef fc (MkKindedName (Just Bound) (UN v) (UN v)))
+  toPTerm p (IBindVar fc v)
+    = let nm = UN (Basic v) in
+      pure (PRef fc (MkKindedName (Just Bound) nm nm))
   toPTerm p (IBindHere fc _ tm) = toPTerm p tm
   toPTerm p (IAs fc nameFC _ n pat) = pure (PAs fc nameFC n !(toPTerm argPrec pat))
   toPTerm p (IMustUnify fc r pat) = pure (PDotted fc !(toPTerm argPrec pat))
@@ -495,19 +497,19 @@ cleanPTerm ptm
 
     cleanName : Name -> Core Name
     cleanName nm = case nm of
-      MN n _     => pure (UN n)
+      MN n _     => pure (UN $ mkUserName n) -- this may be "_"
       PV n _     => pure n
-      DN n _     => pure (UN n)
+      DN n _     => pure (UN $ mkUserName n) -- this may be "_"
       NS _ n     => cleanName n
       Nested _ n => cleanName n
-      RF n       => pure (RF n)
-      _          => UN <$> prettyName nm
+      UN n       => pure (UN n)
+      _          => UN . mkUserName <$> prettyName nm
 
     cleanKindedName : KindedName -> Core KindedName
     cleanKindedName (MkKindedName nt fn nm) = MkKindedName nt fn <$> cleanName nm
 
     cleanBinderName : PiInfo IPTerm -> Name -> Core (Maybe Name)
-    cleanBinderName AutoImplicit (UN "__con") = pure Nothing
+    cleanBinderName AutoImplicit (UN (Basic "__con")) = pure Nothing
     cleanBinderName _ nm = Just <$> cleanName nm
 
     cleanNode : IPTerm -> Core IPTerm

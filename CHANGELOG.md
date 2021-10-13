@@ -2,6 +2,16 @@
 
 ## [Next version]
 
+### REPL changes
+
+* New experimental Scheme based evaluator (only available if compiled via
+  Chez scheme or Racket). To access this at the REPL, set the evaluator mode to
+  the scheme based evaluator with `:set eval scheme`.
+* New option `evaltiming` to time how long an evaluation takes at the REPL,
+  set with `:set evaltiming`.
+
+## v0.5.0
+
 ### Language changes
 
 * Missing methods in implementations now give a compile time error. This was
@@ -11,11 +21,11 @@
   `where` clauses
 * The syntax for Name reflection has changed, and now requires a single brace
   instead of a double brace, e.g. `` `{x} ``
-* Raw string literals allows to write string while customising the escape
+* Raw string literals allows writing string while customising the escape
   sequence. Start a string with `#"` in order to change the escape characters
   to `\#`, close the string with `"#`. Remains compatible with multiline
   string literals.
-* Interpolated strings allows to insert expressions within string literals
+* Interpolated strings allows inserting expressions within string literals
   and avoid writing concatenation explicitly. Escape a left curly brace `\{`
   to start an interpolation slice and close it with a right curly brace `}` to
   resume writing the string literal. The enclosed expression must be of type
@@ -55,8 +65,11 @@ filter p (x :: xs) with (p x)
   and reverts to whole program compilation. Incremental compilation is currently
   supported only by the Chez Scheme back end.
   This is currently supported only on Unix-like platforms (not yet Windows)
+  - Note that you must set `IDRIS2_INC_CGS` when building and installing
+    all libraries you plan to link with an incremental build.
+  - Note also that this is experimental and not yet well tested!
 * The type checker now tries a lot harder to avoid reducing expressions where
-  it is not needed. This gives a huge performance improvement in programs
+  it is not needed. This can give a huge performance improvement in programs
   that potentially do a lot of compile time evaluation. However, sometimes
   reducing expressions can help in totality and quantity checking, so this may
   cause some programs not to type check which previously did - in these cases,

@@ -1,6 +1,6 @@
 module TTImp.Unelab
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Env
@@ -268,9 +268,6 @@ mutual
   unelabTy' umode nest env (PrimVal fc c) = pure (IPrimVal fc c, gErased fc)
   unelabTy' umode nest env (Erased fc _) = pure (Implicit fc True, gErased fc)
   unelabTy' umode nest env (TType fc) = pure (IType fc, gType fc)
-  unelabTy' umode nest _ tm
-      = let fc = getLoc tm in
-            pure (Implicit fc False, gErased fc)
 
   unelabPi : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
@@ -309,7 +306,7 @@ mutual
            let nm = if used 0 sctm || isNoSugar umode
                        then Just x
                        else if rig /= top || isDefImp p
-                               then Just (UN "_")
+                               then Just (UN Underscore)
                                else Nothing
            pure (IPi fc rig p' nm ty' sc, gType fc)
     where

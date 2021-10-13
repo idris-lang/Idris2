@@ -1,5 +1,6 @@
 module Idris.Pretty.Render
 
+import Core.Context
 import Core.Core
 
 import Idris.REPL.Opts

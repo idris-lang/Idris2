@@ -72,7 +72,7 @@
 0000db(:output (:ok (:highlight-source ((((:filename "SnocRainbow.idr") (:start 26 5) (:end 26 7)) ((:name "Nat") (:namespace "Prelude.Types") (:decor :type) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 0000d4(:output (:ok (:highlight-source ((((:filename "SnocRainbow.idr") (:start 27 1) (:end 27 1)) ((:name "m") (:namespace "Main") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000078(:output (:ok (:highlight-source ((((:filename "SnocRainbow.idr") (:start 27 3) (:end 27 3)) ((:decor :keyword)))))) 1)
-0000e1(:output (:ok (:highlight-source ((((:filename "SnocRainbow.idr") (:start 27 5) (:end 27 14)) ((:name "believe_me") (:namespace "Builtin") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
+0000e2(:output (:ok (:highlight-source ((((:filename "SnocRainbow.idr") (:start 27 5) (:end 27 14)) ((:name "believe_me") (:namespace "Builtin") (:decor :postulate) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000077(:output (:ok (:highlight-source ((((:filename "SnocRainbow.idr") (:start 27 16) (:end 27 23)) ((:decor :data)))))) 1)
 000079(:output (:ok (:highlight-source ((((:filename "SnocRainbow.idr") (:start 29 1) (:end 29 7)) ((:decor :function)))))) 1)
 000078(:output (:ok (:highlight-source ((((:filename "SnocRainbow.idr") (:start 29 9) (:end 29 9)) ((:decor :keyword)))))) 1)

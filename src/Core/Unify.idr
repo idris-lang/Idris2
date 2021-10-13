@@ -1,6 +1,6 @@
 module Core.Unify
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -175,7 +175,8 @@ convertError : {vars : _} ->
 convertError loc env x y
     = do defs <- get Ctxt
          empty <- clearDefs defs
-         throw (CantConvert loc env !(quote empty env x)
+         throw (CantConvert loc (gamma defs)
+                                env !(quote empty env x)
                                     !(quote empty env y))
 
 convertErrorS : {vars : _} ->
@@ -648,31 +649,6 @@ isDefInvertible fc i
               | Nothing => throw (UndefinedName fc (Resolved i))
          pure (invertible gdef)
 
-tooBig : (counting : Bool) -> Nat -> List (Term vars) -> Term vars -> Bool
-tooBig _ Z _ _ = True
-tooBig c k stk (App _ f a)
-    = tooBig c k (a :: stk) f
-tooBig c (S k) stk (Bind _ _ _ sc)
-    = tooBig c (S k) [] sc || any (tooBig c k []) stk
-tooBig c (S k) stk (Meta _ _ _ as)
-    = any (tooBig c k []) as || any (tooBig c k []) stk
-tooBig c (S k) stk f
-    = if c || isFn f -- start counting, we're under a function
-         then tooBigArgs True k stk
-         else tooBigArgs c (S k) stk
-  where
-    isFn : Term vs -> Bool
-    isFn (Ref _ Func _) = True
-    isFn _ = False -- Don't count if it's not a function, because normalising
-                   -- won't help
-
-    tooBigArgs : Bool -> Nat -> List (Term vars) -> Bool
-    tooBigArgs c Z _ = True
-    tooBigArgs c k [] = False
-    tooBigArgs c (S k) (a :: as)
-       = tooBig c (if c then k else S k) [] a || tooBigArgs c k as
-tooBig _ _ _ _ = False
-
 mutual
   unifyIfEq : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
@@ -919,12 +895,11 @@ mutual
                          | _ => postponeS swap loc mode "Delayed hole" env
                                           (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
                                           tmnf
-                     tmq <- quote empty env tmnf
-                     tm <- if tooBig False
-                                     defs.options.elabDirectives.nfThreshold
-                                     [] tmq
-                              then quote defs env tmnf
-                              else pure tmq
+                     let qopts = MkQuoteOpts False False
+                                             (Just defs.options.elabDirectives.nfThreshold)
+                     tm <- catch (quoteOpts qopts
+                                            empty env tmnf)
+                                 (\err => quote defs env tmnf)
                      Just tm <- occursCheck loc env mode mname tm
                          | _ => postponeS swap loc mode "Occurs check failed" env
                                           (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
@@ -1436,7 +1411,7 @@ retry mode c
                                      pure cs)
                       (\err => do defs <- get Ctxt
                                   empty <- clearDefs defs
-                                  throw (WhenUnifying loc env !(quote empty env x) !(quote empty env y) err))
+                                  throw (WhenUnifying loc (gamma defs) env !(quote empty env x) !(quote empty env y) err))
               Just (MkSeqConstraint loc env xsold ysold)
                   => do defs <- get Ctxt
                         xs <- traverse (continueNF defs env) xsold
@@ -1470,6 +1445,16 @@ forceMeta r (S k) (Bind fc n b sc)
     = Bind fc n b (forceMeta r k sc)
 forceMeta r envb tm = TForce (getLoc tm) r tm
 
+-- Check whether it's worth trying a search again, based on what went wrong
+recoverable : Error -> Bool
+recoverable (UndefinedName _ _) = False
+recoverable (InType _ _ err) = recoverable err
+recoverable (InCon _ _ err) = recoverable err
+recoverable (InLHS _ _ err) = recoverable err
+recoverable (InRHS _ _ err) = recoverable err
+recoverable (WhenUnifying _ _ _ _ _ err) = recoverable err
+recoverable _ = True
+
 -- Retry the given constraint, return True if progress was made
 retryGuess : {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
@@ -1502,8 +1487,11 @@ retryGuess mode smode (hid, (loc, hname))
                                       ("Search failed at " ++ show rig ++ " for " ++ show hname)
                                       [] (type def)
                             case smode of
-                                 LastChance => throw !(normaliseErr err)
-                                 _ => pure False -- Postpone again
+                                 LastChance => throw err
+                                 _ => if recoverable err
+                                         then pure False -- Postpone again
+                                         else throw (CantSolveGoal loc (gamma defs)
+                                                        [] (type def) (Just err))
                Guess tm envb [constr] =>
                  do let umode = case smode of
                                      MatchArgs => inMatch

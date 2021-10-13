@@ -1,7 +1,7 @@
 
 module Core.UnifyState
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -12,12 +12,12 @@ import Core.Options
 import Core.TT
 import Core.TTC
 import Core.Value
-import Libraries.Utils.Binary
 
-import Libraries.Data.IntMap
 import Data.List
+import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.StringMap
+import Libraries.Utils.Binary
 
 %default covering
 
@@ -166,9 +166,8 @@ export
 genMVName : {auto c : Ref Ctxt Defs} ->
             {auto u : Ref UST UState} ->
             Name -> Core Name
-genMVName (UN str) = genName str
+genMVName (UN str) = genName (displayUserName str)
 genMVName (MN str _) = genName str
-genMVName (RF str) = genName str
 genMVName n
     = do ust <- get UST
          put UST (record { nextName $= (+1) } ust)
@@ -636,7 +635,7 @@ checkValidHole base (idx, (fc, n))
                   do defs <- get Ctxt
                      Just ty <- lookupTyExact n (gamma defs)
                           | Nothing => pure ()
-                     throw (CantSolveGoal fc [] ty)
+                     throw (CantSolveGoal fc (gamma defs) [] ty Nothing)
               Guess tm envb (con :: _) =>
                   do ust <- get UST
                      let Just c = lookup con (constraints ust)
@@ -647,13 +646,13 @@ checkValidHole base (idx, (fc, n))
                                 empty <- clearDefs defs
                                 xnf <- quote empty env x
                                 ynf <- quote empty env y
-                                throw (CantSolveEq fc env xnf ynf)
+                                throw (CantSolveEq fc (gamma defs) env xnf ynf)
                           MkSeqConstraint fc env (x :: _) (y :: _) =>
                              do put UST (record { guesses = empty } ust)
                                 empty <- clearDefs defs
                                 xnf <- quote empty env x
                                 ynf <- quote empty env y
-                                throw (CantSolveEq fc env xnf ynf)
+                                throw (CantSolveEq fc (gamma defs) env xnf ynf)
                           _ => pure ()
               _ => traverse_ checkRef !(traverse getFullName
                                         ((keys (getRefs (Resolved (-1)) (type gdef)))))
