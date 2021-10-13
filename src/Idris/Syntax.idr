@@ -491,6 +491,11 @@ isStrInterp (StrInterp fc _) = Just fc
 isStrInterp (StrLiteral _ _) = Nothing
 
 export
+isStrLiteral : PStr -> Maybe (FC, String)
+isStrLiteral (StrInterp _ _) = Nothing
+isStrLiteral (StrLiteral fc str) = Just (fc, str)
+
+export
 isPDef : PDecl -> Maybe (FC, List PClause)
 isPDef (PDef annot cs) = Just (annot, cs)
 isPDef _ = Nothing
