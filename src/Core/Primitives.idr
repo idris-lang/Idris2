@@ -47,162 +47,85 @@ castString _ = Nothing
 
 castInteger : Vect 1 (NF vars) -> Maybe (NF vars)
 castInteger [NPrimVal fc (I i)] = Just (NPrimVal fc (BI (cast i)))
-castInteger [NPrimVal fc (I8 i)] = Just (NPrimVal fc (BI i))
-castInteger [NPrimVal fc (I16 i)] = Just (NPrimVal fc (BI i))
-castInteger [NPrimVal fc (I32 i)] = Just (NPrimVal fc (BI i))
-castInteger [NPrimVal fc (I64 i)] = Just (NPrimVal fc (BI i))
+castInteger [NPrimVal fc (I8 i)] = Just (NPrimVal fc (BI (cast i)))
+castInteger [NPrimVal fc (I16 i)] = Just (NPrimVal fc (BI (cast i)))
+castInteger [NPrimVal fc (I32 i)] = Just (NPrimVal fc (BI (cast i)))
+castInteger [NPrimVal fc (I64 i)] = Just (NPrimVal fc (BI (cast i)))
 castInteger [NPrimVal fc (B8 i)] = Just (NPrimVal fc (BI (cast i)))
 castInteger [NPrimVal fc (B16 i)] = Just (NPrimVal fc (BI (cast i)))
 castInteger [NPrimVal fc (B32 i)] = Just (NPrimVal fc (BI (cast i)))
-castInteger [NPrimVal fc (B64 i)] = Just (NPrimVal fc (BI i))
+castInteger [NPrimVal fc (B64 i)] = Just (NPrimVal fc (BI (cast i)))
 castInteger [NPrimVal fc (Ch i)] = Just (NPrimVal fc (BI (cast (cast {to=Int} i))))
 castInteger [NPrimVal fc (Db i)] = Just (NPrimVal fc (BI (cast i)))
 castInteger [NPrimVal fc (Str i)] = Just (NPrimVal fc (BI (cast i)))
 castInteger _ = Nothing
 
 castInt : Vect 1 (NF vars) -> Maybe (NF vars)
-castInt [NPrimVal fc (I8 i)] = Just (NPrimVal fc (I (fromInteger i)))
-castInt [NPrimVal fc (I16 i)] = Just (NPrimVal fc (I (fromInteger i)))
-castInt [NPrimVal fc (I32 i)] = Just (NPrimVal fc (I (fromInteger i)))
-castInt [NPrimVal fc (I64 i)] = Just (NPrimVal fc (I (fromInteger i)))
-castInt [NPrimVal fc (BI i)] = Just (NPrimVal fc (I (fromInteger i)))
-castInt [NPrimVal fc (B8 i)] = Just (NPrimVal fc (I i))
-castInt [NPrimVal fc (B16 i)] = Just (NPrimVal fc (I i))
-castInt [NPrimVal fc (B32 i)] = Just (NPrimVal fc (I i))
-castInt [NPrimVal fc (B64 i)] = Just (NPrimVal fc (I (fromInteger i)))
+castInt [NPrimVal fc (I8 i)] = Just (NPrimVal fc (I (cast i)))
+castInt [NPrimVal fc (I16 i)] = Just (NPrimVal fc (I (cast i)))
+castInt [NPrimVal fc (I32 i)] = Just (NPrimVal fc (I (cast i)))
+castInt [NPrimVal fc (I64 i)] = Just (NPrimVal fc (I (cast i)))
+castInt [NPrimVal fc (BI i)] = Just (NPrimVal fc (I (cast i)))
+castInt [NPrimVal fc (B8 i)] = Just (NPrimVal fc (I (cast i)))
+castInt [NPrimVal fc (B16 i)] = Just (NPrimVal fc (I (cast i)))
+castInt [NPrimVal fc (B32 i)] = Just (NPrimVal fc (I (cast i)))
+castInt [NPrimVal fc (B64 i)] = Just (NPrimVal fc (I (cast i)))
 castInt [NPrimVal fc (Db i)] = Just (NPrimVal fc (I (cast i)))
 castInt [NPrimVal fc (Ch i)] = Just (NPrimVal fc (I (cast i)))
 castInt [NPrimVal fc (Str i)] = Just (NPrimVal fc (I (cast i)))
 castInt _ = Nothing
 
-b8max : Int
-b8max = 0x100
-
-b16max : Int
-b16max = 0x10000
-
-b32max : Int
-b32max = 0x100000000
-
-b64max : Integer
-b64max = 18446744073709551616 -- 0x10000000000000000
-
-bitCastWrap : Ord a => Integral a => (i : a) -> (max : a) -> a
-bitCastWrap i max
-    = if i >= 0 -- oops, we don't have `rem` yet!
-        then i `mod` max
-        else max + i `mod` max
-
-bit8CastWrap : (i : Int) -> Int
-bit8CastWrap i = bitCastWrap i b8max
-
-bit16CastWrap : (i : Int) -> Int
-bit16CastWrap i = bitCastWrap i b16max
-
-bit32CastWrap : (i : Int) -> Int
-bit32CastWrap i = bitCastWrap i b32max
-
-bit64CastWrap : (i : Integer) -> Integer
-bit64CastWrap i = bitCastWrap i b64max
-
-int8max : Integer
-int8max = 0x80
-
-int16max : Integer
-int16max = 0x8000
-
-int32max : Integer
-int32max = 0x80000000
-
-int64max : Integer
-int64max = 0x8000000000000000
-
-intCastWrap : (i : Integer) -> (max : Integer) -> Integer
-intCastWrap i max =
-  let max2 = 2*max
-      i2   = i `mod` max2
-      i3   = if i2 < 0 then i2 + max2 else i2
-   in if i3 >= max then i3 - max2 else i3
-
-int8CastWrap : (i : Integer) -> Integer
-int8CastWrap i = intCastWrap i int8max
-
-int16CastWrap : (i : Integer) -> Integer
-int16CastWrap i = intCastWrap i int16max
-
-int32CastWrap : (i : Integer) -> Integer
-int32CastWrap i = intCastWrap i int32max
-
-int64CastWrap : (i : Integer) -> Integer
-int64CastWrap i = intCastWrap i int64max
-
 constantIntegerValue : Constant -> Maybe Integer
 constantIntegerValue (I i)   = Just $ cast i
-constantIntegerValue (I8 i)   = Just i
-constantIntegerValue (I16 i)   = Just i
-constantIntegerValue (I32 i)   = Just i
-constantIntegerValue (I64 i)   = Just i
+constantIntegerValue (I8 i)   = Just $ cast i
+constantIntegerValue (I16 i)   = Just $ cast i
+constantIntegerValue (I32 i)   = Just $ cast i
+constantIntegerValue (I64 i)   = Just $ cast i
 constantIntegerValue (BI i)  = Just i
 constantIntegerValue (B8 i)  = Just $ cast i
 constantIntegerValue (B16 i) = Just $ cast i
 constantIntegerValue (B32 i) = Just $ cast i
-constantIntegerValue (B64 i) = Just i
+constantIntegerValue (B64 i) = Just $ cast i
 constantIntegerValue _       = Nothing
 
 castBits8 : Vect 1 (NF vars) -> Maybe (NF vars)
-castBits8 [NPrimVal fc constant] = do
-    value <- constantIntegerValue constant
-    let wrapped = bitCastWrap value (cast b8max)
-    pure (NPrimVal fc (B8 (cast wrapped)))
+castBits8 [NPrimVal fc constant] =
+    NPrimVal fc . B8 . cast <$> constantIntegerValue constant
 castBits8 _ = Nothing
 
 castBits16 : Vect 1 (NF vars) -> Maybe (NF vars)
-castBits16 [NPrimVal fc constant] = do
-    value <- constantIntegerValue constant
-    let wrapped = bitCastWrap value (cast b16max)
-    pure (NPrimVal fc (B16 (cast wrapped)))
+castBits16 [NPrimVal fc constant] =
+    NPrimVal fc . B16 . cast <$> constantIntegerValue constant
 castBits16 _ = Nothing
 
 castBits32 : Vect 1 (NF vars) -> Maybe (NF vars)
-castBits32 [NPrimVal fc constant] = do
-    value <- constantIntegerValue constant
-    let wrapped = bitCastWrap value (cast b32max)
-    pure (NPrimVal fc (B32 (cast wrapped)))
+castBits32 [NPrimVal fc constant] =
+    NPrimVal fc . B32 . cast <$> constantIntegerValue constant
 castBits32 _ = Nothing
 
 castBits64 : Vect 1 (NF vars) -> Maybe (NF vars)
-castBits64 [NPrimVal fc constant] = do
-    value <- constantIntegerValue constant
-    let wrapped = bitCastWrap value b64max
-    pure (NPrimVal fc (B64 wrapped))
+castBits64 [NPrimVal fc constant] =
+    NPrimVal fc . B64 . cast <$> constantIntegerValue constant
 castBits64 _ = Nothing
 
 castInt8 : Vect 1 (NF vars) -> Maybe (NF vars)
-castInt8 [NPrimVal fc constant] = do
-    value <- constantIntegerValue constant
-    let wrapped = int8CastWrap value
-    pure (NPrimVal fc (I8 wrapped))
+castInt8 [NPrimVal fc constant] =
+    NPrimVal fc . I8 . cast <$> constantIntegerValue constant
 castInt8 _ = Nothing
 
 castInt16 : Vect 1 (NF vars) -> Maybe (NF vars)
-castInt16 [NPrimVal fc constant] = do
-    value <- constantIntegerValue constant
-    let wrapped = int16CastWrap value
-    pure (NPrimVal fc (I16 wrapped))
+castInt16 [NPrimVal fc constant] =
+    NPrimVal fc . I16 . cast <$> constantIntegerValue constant
 castInt16 _ = Nothing
 
 castInt32 : Vect 1 (NF vars) -> Maybe (NF vars)
-castInt32 [NPrimVal fc constant] = do
-    value <- constantIntegerValue constant
-    let wrapped = int32CastWrap value
-    pure (NPrimVal fc (I32 wrapped))
+castInt32 [NPrimVal fc constant] =
+    NPrimVal fc . I32 . cast <$> constantIntegerValue constant
 castInt32 _ = Nothing
 
 castInt64 : Vect 1 (NF vars) -> Maybe (NF vars)
-castInt64 [NPrimVal fc constant] = do
-    value <- constantIntegerValue constant
-    let wrapped = int64CastWrap value
-    pure (NPrimVal fc (I64 wrapped))
+castInt64 [NPrimVal fc constant] =
+    NPrimVal fc . I64 . cast <$> constantIntegerValue constant
 castInt64 _ = Nothing
 
 castDouble : Vect 1 (NF vars) -> Maybe (NF vars)
@@ -211,12 +134,25 @@ castDouble [NPrimVal fc (I8 i)] = Just (NPrimVal fc (Db (cast i)))
 castDouble [NPrimVal fc (I16 i)] = Just (NPrimVal fc (Db (cast i)))
 castDouble [NPrimVal fc (I32 i)] = Just (NPrimVal fc (Db (cast i)))
 castDouble [NPrimVal fc (I64 i)] = Just (NPrimVal fc (Db (cast i)))
+castDouble [NPrimVal fc (B8 i)] = Just (NPrimVal fc (Db (cast i)))
+castDouble [NPrimVal fc (B16 i)] = Just (NPrimVal fc (Db (cast i)))
+castDouble [NPrimVal fc (B32 i)] = Just (NPrimVal fc (Db (cast i)))
+castDouble [NPrimVal fc (B64 i)] = Just (NPrimVal fc (Db (cast i)))
 castDouble [NPrimVal fc (BI i)] = Just (NPrimVal fc (Db (cast i)))
 castDouble [NPrimVal fc (Str i)] = Just (NPrimVal fc (Db (cast i)))
 castDouble _ = Nothing
 
 castChar : Vect 1 (NF vars) -> Maybe (NF vars)
 castChar [NPrimVal fc (I i)] = Just (NPrimVal fc (Ch (cast i)))
+castChar [NPrimVal fc (I8 i)] = Just (NPrimVal fc (Ch (cast i)))
+castChar [NPrimVal fc (I16 i)] = Just (NPrimVal fc (Ch (cast i)))
+castChar [NPrimVal fc (I32 i)] = Just (NPrimVal fc (Ch (cast i)))
+castChar [NPrimVal fc (I64 i)] = Just (NPrimVal fc (Ch (cast i)))
+castChar [NPrimVal fc (B8 i)] = Just (NPrimVal fc (Ch (cast i)))
+castChar [NPrimVal fc (B16 i)] = Just (NPrimVal fc (Ch (cast i)))
+castChar [NPrimVal fc (B32 i)] = Just (NPrimVal fc (Ch (cast i)))
+castChar [NPrimVal fc (B64 i)] = Just (NPrimVal fc (Ch (cast i)))
+castChar [NPrimVal fc (BI i)] = Just (NPrimVal fc (Ch (cast i)))
 castChar _ = Nothing
 
 strLength : Vect 1 (NF vars) -> Maybe (NF vars)
@@ -266,14 +202,14 @@ strSubstr _ = Nothing
 add : Constant -> Constant -> Maybe Constant
 add (BI x) (BI y) = pure $ BI (x + y)
 add (I x) (I y) = pure $ I (x + y)
-add (I8 x) (I8 y) = pure $ I8 (int8CastWrap $ x + y)
-add (I16 x) (I16 y) = pure $ I16 (int16CastWrap $ x + y)
-add (I32 x) (I32 y) = pure $ I32 (int32CastWrap $ x + y)
-add (I64 x) (I64 y) = pure $ I64 (int64CastWrap $ x + y)
-add (B8 x) (B8 y) = pure $ B8 $ (x + y) `mod` b8max
-add (B16 x) (B16 y) = pure $ B16 $ (x + y) `mod` b16max
-add (B32 x) (B32 y) = pure $ B32 $ (x + y) `mod` b32max
-add (B64 x) (B64 y) = pure $ B64 $ (x + y) `mod` b64max
+add (I8 x) (I8 y) = pure $ I8 (x + y)
+add (I16 x) (I16 y) = pure $ I16 (x + y)
+add (I32 x) (I32 y) = pure $ I32 (x + y)
+add (I64 x) (I64 y) = pure $ I64 (x + y)
+add (B8 x) (B8 y) = pure $ B8 (x + y)
+add (B16 x) (B16 y) = pure $ B16 (x + y)
+add (B32 x) (B32 y) = pure $ B32 (x + y)
+add (B64 x) (B64 y) = pure $ B64 (x + y)
 add (Ch x) (Ch y) = pure $ Ch (cast (cast {to=Int} x + cast y))
 add (Db x) (Db y) = pure $ Db (x + y)
 add _ _ = Nothing
@@ -281,29 +217,29 @@ add _ _ = Nothing
 sub : Constant -> Constant -> Maybe Constant
 sub (BI x) (BI y) = pure $ BI (x - y)
 sub (I x) (I y) = pure $ I (x - y)
-sub (I8 x) (I8 y) = pure $ I8 (int8CastWrap $ x - y)
-sub (I16 x) (I16 y) = pure $ I16 (int16CastWrap $ x - y)
-sub (I32 x) (I32 y) = pure $ I32 (int32CastWrap $ x - y)
-sub (I64 x) (I64 y) = pure $ I64 (int64CastWrap $ x - y)
-sub (B8 x) (B8 y) = pure $ B8 (bit8CastWrap $ x - y)
-sub (B16 x) (B16 y) = pure $ B16 (bit16CastWrap $ x - y)
-sub (B32 x) (B32 y) = pure $ B32 (bit32CastWrap $ x - y)
-sub (B64 x) (B64 y) = pure $ B64 (bit64CastWrap $ x - y)
+sub (I8 x) (I8 y) = pure $ I8 (x - y)
+sub (I16 x) (I16 y) = pure $ I16 (x - y)
+sub (I32 x) (I32 y) = pure $ I32 (x - y)
+sub (I64 x) (I64 y) = pure $ I64 (x - y)
+sub (B8 x) (B8 y) = pure $ B8 (x - y)
+sub (B16 x) (B16 y) = pure $ B16 (x - y)
+sub (B32 x) (B32 y) = pure $ B32 (x - y)
+sub (B64 x) (B64 y) = pure $ B64 (x - y)
 sub (Ch x) (Ch y) = pure $ Ch (cast (cast {to=Int} x - cast y))
 sub (Db x) (Db y) = pure $ Db (x - y)
 sub _ _ = Nothing
 
 mul : Constant -> Constant -> Maybe Constant
 mul (BI x) (BI y) = pure $ BI (x * y)
-mul (B8 x) (B8 y) = pure $ B8 $ (x * y) `mod` b8max
-mul (B16 x) (B16 y) = pure $ B16 $ (x * y) `mod` b16max
-mul (B32 x) (B32 y) = pure $ B32 $ (x * y) `mod` b32max
-mul (B64 x) (B64 y) = pure $ B64 $ (x * y) `mod` b64max
+mul (B8 x) (B8 y) = pure $ B8 (x * y)
+mul (B16 x) (B16 y) = pure $ B16 (x * y)
+mul (B32 x) (B32 y) = pure $ B32 (x * y)
+mul (B64 x) (B64 y) = pure $ B64 (x * y)
 mul (I x) (I y) = pure $ I (x * y)
-mul (I8 x) (I8 y) = pure $ I8 (int8CastWrap $ x * y)
-mul (I16 x) (I16 y) = pure $ I16 (int16CastWrap $ x * y)
-mul (I32 x) (I32 y) = pure $ I32 (int32CastWrap $ x * y)
-mul (I64 x) (I64 y) = pure $ I64 (int64CastWrap $ x * y)
+mul (I8 x) (I8 y) = pure $ I8 (x * y)
+mul (I16 x) (I16 y) = pure $ I16 (x * y)
+mul (I32 x) (I32 y) = pure $ I32 (x * y)
+mul (I64 x) (I64 y) = pure $ I64 (x * y)
 mul (Db x) (Db y) = pure $ Db (x * y)
 mul _ _ = Nothing
 
@@ -313,21 +249,21 @@ div (BI x) (BI y) = pure $ BI (assert_total (x `div` y))
 div (I x) (I 0) = Nothing
 div (I x) (I y) = pure $ I (assert_total (x `div` y))
 div (I8 x) (I8 0) = Nothing
-div (I8 x) (I8 y) = pure $ I8 (int8CastWrap $ assert_total (x `div` y))
+div (I8 x) (I8 y) = pure $ I8 (assert_total (x `div` y))
 div (I16 x) (I16 0) = Nothing
-div (I16 x) (I16 y) = pure $ I16 (int16CastWrap $ assert_total (x `div` y))
+div (I16 x) (I16 y) = pure $ I16 (assert_total (x `div` y))
 div (I32 x) (I32 0) = Nothing
-div (I32 x) (I32 y) = pure $ I32 (int32CastWrap $ assert_total (x `div` y))
+div (I32 x) (I32 y) = pure $ I32 (assert_total (x `div` y))
 div (I64 x) (I64 0) = Nothing
-div (I64 x) (I64 y) = pure $ I64 (int64CastWrap $ assert_total (x `div` y))
+div (I64 x) (I64 y) = pure $ I64 (assert_total (x `div` y))
 div (B8 x) (B8 0) = Nothing
-div (B8 x) (B8 y) = pure $ B8 (bit8CastWrap $ assert_total (x `div` y))
+div (B8 x) (B8 y) = pure $ B8 (assert_total (x `div` y))
 div (B16 x) (B16 0) = Nothing
-div (B16 x) (B16 y) = pure $ B16 (bit16CastWrap $ assert_total (x `div` y))
+div (B16 x) (B16 y) = pure $ B16 (assert_total (x `div` y))
 div (B32 x) (B32 0) = Nothing
-div (B32 x) (B32 y) = pure $ B32 (bit32CastWrap $ assert_total (x `div` y))
+div (B32 x) (B32 y) = pure $ B32 (assert_total (x `div` y))
 div (B64 x) (B64 0) = Nothing
-div (B64 x) (B64 y) = pure $ B64 (bit64CastWrap $ assert_total (x `div` y))
+div (B64 x) (B64 y) = pure $ B64 (assert_total (x `div` y))
 div (Db x) (Db y) = pure $ Db (x / y)
 div _ _ = Nothing
 
@@ -337,109 +273,98 @@ mod (BI x) (BI y) = pure $ BI (assert_total (x `mod` y))
 mod (I x) (I 0) = Nothing
 mod (I x) (I y) = pure $ I (assert_total (x `mod` y))
 mod (I8 x) (I8 0) = Nothing
-mod (I8 x) (I8 y) = pure $ I8 (int8CastWrap $ assert_total (x `mod` y))
+mod (I8 x) (I8 y) = pure $ I8 (assert_total (x `mod` y))
 mod (I16 x) (I16 0) = Nothing
-mod (I16 x) (I16 y) = pure $ I16 (int16CastWrap $ assert_total (x `mod` y))
+mod (I16 x) (I16 y) = pure $ I16 (assert_total (x `mod` y))
 mod (I32 x) (I32 0) = Nothing
-mod (I32 x) (I32 y) = pure $ I32 (int32CastWrap $ assert_total (x `mod` y))
+mod (I32 x) (I32 y) = pure $ I32 (assert_total (x `mod` y))
 mod (I64 x) (I64 0) = Nothing
-mod (I64 x) (I64 y) = pure $ I64 (int64CastWrap $ assert_total (x `mod` y))
+mod (I64 x) (I64 y) = pure $ I64 (assert_total (x `mod` y))
 mod (B8 x) (B8 0) = Nothing
-mod (B8 x) (B8 y) = pure $ B8 (bit8CastWrap $ assert_total (x `mod` y))
+mod (B8 x) (B8 y) = pure $ B8 (assert_total (x `mod` y))
 mod (B16 x) (B16 0) = Nothing
-mod (B16 x) (B16 y) = pure $ B16 (bit16CastWrap $ assert_total (x `mod` y))
+mod (B16 x) (B16 y) = pure $ B16 (assert_total (x `mod` y))
 mod (B32 x) (B32 0) = Nothing
-mod (B32 x) (B32 y) = pure $ B32 (bit32CastWrap $ assert_total (x `mod` y))
+mod (B32 x) (B32 y) = pure $ B32 (assert_total (x `mod` y))
 mod (B64 x) (B64 0) = Nothing
-mod (B64 x) (B64 y) = pure $ B64 (bit64CastWrap $ assert_total (x `mod` y))
+mod (B64 x) (B64 y) = pure $ B64 (assert_total (x `mod` y))
 mod _ _ = Nothing
-
--- Make sure a signed integer stays within bounds after a
--- bitwise shift operation. If, after the shift, the highest bit
--- is set, treat the result as a negative number, computing its
--- twos complement, otherwise treat it as a positive number,
--- truncating all bits above the highest one.
-signedShift : (i : Integer) -> (max : Integer) -> Integer
-signedShift i max =
-  if prim__and_Integer i max == 0
-     then prim__and_Integer i (max - 1) -- treat as positive number: highest bit unset
-     else prim__or_Integer i (-max)     -- treat as negative number: highest bit set
 
 shiftl : Constant -> Constant -> Maybe Constant
 shiftl (I x) (I y) = pure $ I (prim__shl_Int x y)
-shiftl (I8 x) (I8 y) = pure $ I8 (signedShift (prim__shl_Integer x y) int8max)
-shiftl (I16 x) (I16 y) = pure $ I16 (signedShift (prim__shl_Integer x y) int16max)
-shiftl (I32 x) (I32 y) = pure $ I32 (signedShift (prim__shl_Integer x y) int32max)
-shiftl (I64 x) (I64 y) = pure $ I64 (signedShift (prim__shl_Integer x y) int64max)
+shiftl (I8 x) (I8 y) = pure $ I8 (prim__shl_Int8 x y)
+shiftl (I16 x) (I16 y) = pure $ I16 (prim__shl_Int16 x y)
+shiftl (I32 x) (I32 y) = pure $ I32 (prim__shl_Int32 x y)
+shiftl (I64 x) (I64 y) = pure $ I64 (prim__shl_Int64 x y)
 shiftl (BI x) (BI y) = pure $ BI (prim__shl_Integer x y)
-shiftl (B8 x) (B8 y) = pure $ B8 $ (prim__shl_Int x y) `mod` b8max
-shiftl (B16 x) (B16 y) = pure $ B16 $ (prim__shl_Int x y) `mod` b16max
-shiftl (B32 x) (B32 y) = pure $ B32 $ (prim__shl_Int x y) `mod` b32max
-shiftl (B64 x) (B64 y) = pure $ B64 $ (prim__shl_Integer x y) `mod` b64max
+shiftl (B8 x) (B8 y) = pure $ B8 (prim__shl_Bits8 x y)
+shiftl (B16 x) (B16 y) = pure $ B16 (prim__shl_Bits16 x y)
+shiftl (B32 x) (B32 y) = pure $ B32 (prim__shl_Bits32 x y)
+shiftl (B64 x) (B64 y) = pure $ B64 (prim__shl_Bits64 x y)
 shiftl _ _ = Nothing
 
 shiftr : Constant -> Constant -> Maybe Constant
 shiftr (I x) (I y) = pure $ I (prim__shr_Int x y)
-shiftr (I8 x) (I8 y) = pure $ I8 (signedShift (prim__shr_Integer x y) int8max)
-shiftr (I16 x) (I16 y) = pure $ I16 (signedShift (prim__shr_Integer x y) int16max)
-shiftr (I32 x) (I32 y) = pure $ I32 (signedShift (prim__shr_Integer x y) int32max)
-shiftr (I64 x) (I64 y) = pure $ I64 (signedShift (prim__shr_Integer x y) int64max)
-shiftr (B8 x) (B8 y) = pure $ B8 $ (prim__shr_Int x y)
-shiftr (B16 x) (B16 y) = pure $ B16 $ (prim__shr_Int x y)
-shiftr (B32 x) (B32 y) = pure $ B32 $ (prim__shr_Int x y)
-shiftr (B64 x) (B64 y) = pure $ B64 $ (prim__shr_Integer x y)
+shiftr (I8 x) (I8 y) = pure $ I8 (prim__shr_Int8 x y)
+shiftr (I16 x) (I16 y) = pure $ I16 (prim__shr_Int16 x y)
+shiftr (I32 x) (I32 y) = pure $ I32 (prim__shr_Int32 x y)
+shiftr (I64 x) (I64 y) = pure $ I64 (prim__shr_Int64 x y)
+shiftr (B8 x) (B8 y) = pure $ B8 $ (prim__shr_Bits8 x y)
+shiftr (B16 x) (B16 y) = pure $ B16 (prim__shr_Bits16 x y)
+shiftr (B32 x) (B32 y) = pure $ B32 (prim__shr_Bits32 x y)
+shiftr (B64 x) (B64 y) = pure $ B64 (prim__shr_Bits64 x y)
 shiftr _ _ = Nothing
 
 band : Constant -> Constant -> Maybe Constant
 band (I x) (I y) = pure $ I (prim__and_Int x y)
-band (I8 x) (I8 y) = pure $ I8 (prim__and_Integer x y)
-band (I16 x) (I16 y) = pure $ I16 (prim__and_Integer x y)
-band (I32 x) (I32 y) = pure $ I32 (prim__and_Integer x y)
-band (I64 x) (I64 y) = pure $ I64 (prim__and_Integer x y)
+band (I8 x) (I8 y) = pure $ I8 (prim__and_Int8 x y)
+band (I16 x) (I16 y) = pure $ I16 (prim__and_Int16 x y)
+band (I32 x) (I32 y) = pure $ I32 (prim__and_Int32 x y)
+band (I64 x) (I64 y) = pure $ I64 (prim__and_Int64 x y)
 band (BI x) (BI y) = pure $ BI (prim__and_Integer x y)
-band (B8 x) (B8 y) = pure $ B8 (prim__and_Int x y)
-band (B16 x) (B16 y) = pure $ B16 (prim__and_Int x y)
-band (B32 x) (B32 y) = pure $ B32 (prim__and_Int x y)
-band (B64 x) (B64 y) = pure $ B64 (prim__and_Integer x y)
+band (B8 x) (B8 y) = pure $ B8 (prim__and_Bits8 x y)
+band (B16 x) (B16 y) = pure $ B16 (prim__and_Bits16 x y)
+band (B32 x) (B32 y) = pure $ B32 (prim__and_Bits32 x y)
+band (B64 x) (B64 y) = pure $ B64 (prim__and_Bits64 x y)
 band _ _ = Nothing
 
 bor : Constant -> Constant -> Maybe Constant
 bor (I x) (I y) = pure $ I (prim__or_Int x y)
-bor (I8 x) (I8 y) = pure $ I8 (prim__or_Integer x y)
-bor (I16 x) (I16 y) = pure $ I16 (prim__or_Integer x y)
-bor (I32 x) (I32 y) = pure $ I32 (prim__or_Integer x y)
-bor (I64 x) (I64 y) = pure $ I64 (prim__or_Integer x y)
+bor (I8 x) (I8 y) = pure $ I8 (prim__or_Int8 x y)
+bor (I16 x) (I16 y) = pure $ I16 (prim__or_Int16 x y)
+bor (I32 x) (I32 y) = pure $ I32 (prim__or_Int32 x y)
+bor (I64 x) (I64 y) = pure $ I64 (prim__or_Int64 x y)
 bor (BI x) (BI y) = pure $ BI (prim__or_Integer x y)
-bor (B8 x) (B8 y) = pure $ B8 (prim__or_Int x y)
-bor (B16 x) (B16 y) = pure $ B16 (prim__or_Int x y)
-bor (B32 x) (B32 y) = pure $ B32 (prim__or_Int x y)
-bor (B64 x) (B64 y) = pure $ B64 (prim__or_Integer x y)
+bor (B8 x) (B8 y) = pure $ B8 (prim__or_Bits8 x y)
+bor (B16 x) (B16 y) = pure $ B16 (prim__or_Bits16 x y)
+bor (B32 x) (B32 y) = pure $ B32 (prim__or_Bits32 x y)
+bor (B64 x) (B64 y) = pure $ B64 (prim__or_Bits64 x y)
 bor _ _ = Nothing
 
 bxor : Constant -> Constant -> Maybe Constant
 bxor (I x) (I y) = pure $ I (prim__xor_Int x y)
-bxor (B8 x) (B8 y) = pure $ B8 (prim__xor_Int x y)
-bxor (B16 x) (B16 y) = pure $ B16 (prim__xor_Int x y)
-bxor (B32 x) (B32 y) = pure $ B32 (prim__xor_Int x y)
-bxor (B64 x) (B64 y) = pure $ B64 (prim__xor_Integer x y)
-bxor (I8 x) (I8 y) = pure $ I8 (prim__xor_Integer x y)
-bxor (I16 x) (I16 y) = pure $ I16 (prim__xor_Integer x y)
-bxor (I32 x) (I32 y) = pure $ I32 (prim__xor_Integer x y)
-bxor (I64 x) (I64 y) = pure $ I64 (prim__xor_Integer x y)
+bxor (B8 x) (B8 y) = pure $ B8 (prim__xor_Bits8 x y)
+bxor (B16 x) (B16 y) = pure $ B16 (prim__xor_Bits16 x y)
+bxor (B32 x) (B32 y) = pure $ B32 (prim__xor_Bits32 x y)
+bxor (B64 x) (B64 y) = pure $ B64 (prim__xor_Bits64 x y)
+bxor (I8 x) (I8 y) = pure $ I8 (prim__xor_Int8 x y)
+bxor (I16 x) (I16 y) = pure $ I16 (prim__xor_Int16 x y)
+bxor (I32 x) (I32 y) = pure $ I32 (prim__xor_Int32 x y)
+bxor (I64 x) (I64 y) = pure $ I64 (prim__xor_Int64 x y)
 bxor (BI x) (BI y) = pure $ BI (prim__xor_Integer x y)
 bxor _ _ = Nothing
 
 neg : Constant -> Maybe Constant
 neg (BI x) = pure $ BI (-x)
 neg (I x) = pure $ I (-x)
-neg (I8 x) = pure . I8 $ int8CastWrap (-x)
-neg (I16 x) = pure . I16 $ int16CastWrap (-x)
-neg (I32 x) = pure . I32 $ int32CastWrap (-x)
-neg (I64 x) = pure . I64 $ int64CastWrap (-x)
-neg (B8 x) = pure . B8 $ bit8CastWrap (-x)
-neg (B16 x) = pure . B16 $ bit16CastWrap (-x)
-neg (B32 x) = pure . B32 $ bit32CastWrap (-x)
-neg (B64 x) = pure . B64 $ bit64CastWrap (-x)
+neg (I8 x) = pure $ I8 (-x)
+neg (I16 x) = pure $ I16 (-x)
+neg (I32 x) = pure $ I32 (-x)
+neg (I64 x) = pure $ I64 (-x)
+neg (B8 x) = pure $ B8 (-x)
+neg (B16 x) = pure $ B16 (-x)
+neg (B32 x) = pure $ B32 (-x)
+neg (B64 x) = pure $ B64 (-x)
 neg (Db x) = pure $ Db (-x)
 neg _ = Nothing
 

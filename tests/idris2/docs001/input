@@ -5,4 +5,7 @@
 :doc show
 :doc Monad
 :doc 1
+:doc String
+:doc Integer
+:doc Bits16
 :q

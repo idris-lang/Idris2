@@ -85,11 +85,14 @@ mkModTree loc done modFP mod
                            do file <- maybe (nsToSource loc mod) pure modFP
                               modInfo <- readHeader file mod
                               let imps = map path (imports modInfo)
-                              ms <- traverse (mkModTree loc (mod :: done) Nothing) imps
-                              let mt = MkModTree mod (Just file) ms
-                              all <- get AllMods
-                              put AllMods ((mod, mt) :: all)
-                              pure mt
+                              if mod `elem` imps
+                                then coreFail $ CyclicImports [mod, mod]
+                                else do
+                                  ms <- traverse (mkModTree loc (mod :: done) Nothing) imps
+                                  let mt = MkModTree mod (Just file) ms
+                                  all <- get AllMods
+                                  put AllMods ((mod, mt) :: all)
+                                  pure mt
                          Just m => pure m)
                 -- Couldn't find source, assume it's in a package directory
                 (\err =>

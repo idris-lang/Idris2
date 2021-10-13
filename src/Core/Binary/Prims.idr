@@ -389,6 +389,46 @@ TTC Integer where
               _ => corrupt "Integer"
 
 export
+TTC Bits8 where
+  toBuf b x = toBuf b $ cast {to = Int} x
+  fromBuf b = cast {from = Int} <$> fromBuf b
+
+export
+TTC Bits16 where
+  toBuf b x = toBuf b $ cast {to = Int} x
+  fromBuf b = cast {from = Int} <$> fromBuf b
+
+export
+TTC Bits32 where
+  toBuf b x = toBuf b $ cast {to = Integer} x
+  fromBuf b = cast {from = Integer} <$> fromBuf b
+
+export
+TTC Bits64 where
+  toBuf b x = toBuf b $ cast {to = Integer} x
+  fromBuf b = cast {from = Integer} <$> fromBuf b
+
+export
+TTC Int8 where
+  toBuf b x = toBuf b $ cast {to = Int} x
+  fromBuf b = cast {from = Int} <$> fromBuf b
+
+export
+TTC Int16 where
+  toBuf b x = toBuf b $ cast {to = Int} x
+  fromBuf b = cast {from = Int} <$> fromBuf b
+
+export
+TTC Int32 where
+  toBuf b x = toBuf b $ cast {to = Int} x
+  fromBuf b = cast {from = Int} <$> fromBuf b
+
+export
+TTC Int64 where
+  toBuf b x = toBuf b $ cast {to = Integer} x
+  fromBuf b = cast {from = Integer} <$> fromBuf b
+
+export
 TTC Nat where
   toBuf b val = toBuf b (cast {to=Integer} val)
   fromBuf b
@@ -429,4 +469,3 @@ hashFileWith (Just sha256sum) fileName
     osEscape = if isWindows
       then id
       else escapeStringUnix
-

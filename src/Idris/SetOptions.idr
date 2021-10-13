@@ -182,7 +182,7 @@ dirOption dirs LibDir
 dirOption dirs BlodwenPaths
     = iputStrLn $ pretty (toString dirs)
 dirOption dirs Prefix
-    = coreLift $ putStrLn yprefix
+    = coreLift $ putStrLn (prefix_dir dirs)
 
 --------------------------------------------------------------------------------
 --          Bash Autocompletions

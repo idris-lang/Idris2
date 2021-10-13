@@ -128,12 +128,10 @@ DecEq a => DecEq (List1 a) where
 -- for computation in a higher order setting.
 
 
---------------------------------------------------------------------------------
--- Int
---------------------------------------------------------------------------------
-
+||| An unsafe decidable equality implementation based on boolean equality.
+||| Useful for builtin types.
 public export
-implementation DecEq Int where
+[FromEq] Eq a => DecEq a where
     decEq x y = case x == y of -- Blocks if x or y not concrete
                      True => Yes primitiveEq
                      False => No primitiveNotEq
@@ -141,154 +139,96 @@ implementation DecEq Int where
              primitiveEq = believe_me (Refl {x})
              primitiveNotEq : forall x, y . Not (x = y)
              primitiveNotEq prf = believe_me {b = Void} ()
+
+--------------------------------------------------------------------------------
+-- Int
+--------------------------------------------------------------------------------
+
+public export
+DecEq Int where
+    decEq = decEq @{FromEq}
 
 --------------------------------------------------------------------------------
 -- Bits8
 --------------------------------------------------------------------------------
 
 public export
-implementation DecEq Bits8 where
-    decEq x y = case x == y of -- Blocks if x or y not concrete
-                     True => Yes primitiveEq
-                     False => No primitiveNotEq
-       where primitiveEq : forall x, y . x = y
-             primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . Not (x = y)
-             primitiveNotEq prf = believe_me {b = Void} ()
+DecEq Bits8 where
+    decEq = decEq @{FromEq}
 
 --------------------------------------------------------------------------------
 -- Bits16
 --------------------------------------------------------------------------------
 
 public export
-implementation DecEq Bits16 where
-    decEq x y = case x == y of -- Blocks if x or y not concrete
-                     True => Yes primitiveEq
-                     False => No primitiveNotEq
-       where primitiveEq : forall x, y . x = y
-             primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . Not (x = y)
-             primitiveNotEq prf = believe_me {b = Void} ()
+DecEq Bits16 where
+    decEq = decEq @{FromEq}
 
 --------------------------------------------------------------------------------
 -- Bits32
 --------------------------------------------------------------------------------
 
 public export
-implementation DecEq Bits32 where
-    decEq x y = case x == y of -- Blocks if x or y not concrete
-                     True => Yes primitiveEq
-                     False => No primitiveNotEq
-       where primitiveEq : forall x, y . x = y
-             primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . Not (x = y)
-             primitiveNotEq prf = believe_me {b = Void} ()
+DecEq Bits32 where
+    decEq = decEq @{FromEq}
 
 --------------------------------------------------------------------------------
 -- Bits64
 --------------------------------------------------------------------------------
 
 public export
-implementation DecEq Bits64 where
-    decEq x y = case x == y of -- Blocks if x or y not concrete
-                     True => Yes primitiveEq
-                     False => No primitiveNotEq
-       where primitiveEq : forall x, y . x = y
-             primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . Not (x = y)
-             primitiveNotEq prf = believe_me {b = Void} ()
+DecEq Bits64 where
+    decEq = decEq @{FromEq}
 
 --------------------------------------------------------------------------------
 -- Int8
 --------------------------------------------------------------------------------
 
 public export
-implementation DecEq Int8 where
-    decEq x y = case x == y of -- Blocks if x or y not concrete
-                     True => Yes primitiveEq
-                     False => No primitiveNotEq
-       where primitiveEq : forall x, y . x = y
-             primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . Not (x = y)
-             primitiveNotEq prf = believe_me {b = Void} ()
+DecEq Int8 where
+    decEq = decEq @{FromEq}
 
 --------------------------------------------------------------------------------
 -- Int16
 --------------------------------------------------------------------------------
 
 public export
-implementation DecEq Int16 where
-    decEq x y = case x == y of -- Blocks if x or y not concrete
-                     True => Yes primitiveEq
-                     False => No primitiveNotEq
-       where primitiveEq : forall x, y . x = y
-             primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . Not (x = y)
-             primitiveNotEq prf = believe_me {b = Void} ()
+DecEq Int16 where
+    decEq = decEq @{FromEq}
 
 --------------------------------------------------------------------------------
 -- Int32
 --------------------------------------------------------------------------------
 
 public export
-implementation DecEq Int32 where
-    decEq x y = case x == y of -- Blocks if x or y not concrete
-                     True => Yes primitiveEq
-                     False => No primitiveNotEq
-       where primitiveEq : forall x, y . x = y
-             primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . Not (x = y)
-             primitiveNotEq prf = believe_me {b = Void} ()
+DecEq Int32 where
+    decEq = decEq @{FromEq}
 
 --------------------------------------------------------------------------------
 -- Int64
 --------------------------------------------------------------------------------
 
 public export
-implementation DecEq Int64 where
-    decEq x y = case x == y of -- Blocks if x or y not concrete
-                     True => Yes primitiveEq
-                     False => No primitiveNotEq
-       where primitiveEq : forall x, y . x = y
-             primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . Not (x = y)
-             primitiveNotEq prf = believe_me {b = Void} ()
+DecEq Int64 where
+    decEq = decEq @{FromEq}
 
 --------------------------------------------------------------------------------
 -- Char
 --------------------------------------------------------------------------------
 public export
-implementation DecEq Char where
-    decEq x y = case x == y of -- Blocks if x or y not concrete
-                     True => Yes primitiveEq
-                     False => No primitiveNotEq
-       where primitiveEq : forall x, y . x = y
-             primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . Not (x = y)
-             primitiveNotEq prf = believe_me {b = Void} ()
+DecEq Char where
+    decEq = decEq @{FromEq}
 
 --------------------------------------------------------------------------------
 -- Integer
 --------------------------------------------------------------------------------
 public export
-implementation DecEq Integer where
-    decEq x y = case x == y of -- Blocks if x or y not concrete
-                     True => Yes primitiveEq
-                     False => No primitiveNotEq
-       where primitiveEq : forall x, y . x = y
-             primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . Not (x = y)
-             primitiveNotEq prf = believe_me {b = Void} ()
+DecEq Integer where
+    decEq = decEq @{FromEq}
 
 --------------------------------------------------------------------------------
 -- String
 --------------------------------------------------------------------------------
 public export
-implementation DecEq String where
-    decEq x y = case x == y of -- Blocks if x or y not concrete
-                     True => Yes primitiveEq
-                     False => No primitiveNotEq
-       where primitiveEq : forall x, y . x = y
-             primitiveEq = believe_me (Refl {x})
-             primitiveNotEq : forall x, y . Not (x = y)
-             primitiveNotEq prf = believe_me {b = Void} ()
+DecEq String where
+    decEq = decEq @{FromEq}
