@@ -586,6 +586,23 @@ Functor Binder where
   map func (PLet fc c val ty) = PLet fc c (func val) (func ty)
   map func (PVTy fc c ty) = PVTy fc c (func ty)
 
+export
+Foldable Binder where
+  foldr f acc (Lam fc c x ty) = foldr f (f ty acc) x
+  foldr f acc (Let fc c val ty) = f val (f ty acc)
+  foldr f acc (Pi fc c x ty) = foldr f (f ty acc) x
+  foldr f acc (PVar fc c p ty) = foldr f (f ty acc) p
+  foldr f acc (PLet fc c val ty) = f val (f ty acc)
+  foldr f acc (PVTy fc c ty) = f ty acc
+
+export
+Traversable Binder where
+  traverse f (Lam fc c x ty) = Lam fc c <$> traverse f x <*> f ty
+  traverse f (Let fc c val ty) = Let fc c <$> f val <*> f ty
+  traverse f (Pi fc c x ty) = Pi fc c <$> traverse f x <*> f ty
+  traverse f (PVar fc c p ty) = PVar fc c <$> traverse f p <*> f ty
+  traverse f (PLet fc c val ty) = PLet fc c <$> f val <*> f ty
+  traverse f (PVTy fc c ty) = PVTy fc c <$> f ty
 
 public export
 data IsVar : Name -> Nat -> List Name -> Type where
@@ -1748,33 +1765,3 @@ export
 {vars : _} -> Pretty (Term vars) where
   pretty = pretty . show
   -- TODO: prettier output
-
-export
-allGlobals : Term vars -> NameMap ()
-allGlobals (Local fc isLet idx p) = empty
-allGlobals (Ref fc x name) = singleton name ()
-allGlobals (Meta fc x y xs) = empty
-allGlobals (Bind fc x b scope) = allGlobals scope
-allGlobals (App fc fn arg) = allGlobals fn `merge` allGlobals arg
-allGlobals (As fc x as pat) = allGlobals as `merge` allGlobals pat
-allGlobals (TDelayed fc x y) = allGlobals y
-allGlobals (TDelay fc x ty arg) = allGlobals ty `merge` allGlobals arg
-allGlobals (TForce fc x y) = allGlobals y
-allGlobals (PrimVal fc c) = empty
-allGlobals (Erased fc imp) = empty
-allGlobals (TType fc) = empty
-
-export
-returnName : Term vars -> Maybe Name
-returnName (Local fc isLet idx p) = Nothing
-returnName (Ref fc x name) = pure name
-returnName (Meta fc x y xs) = Nothing
-returnName (Bind fc x b scope) = returnName scope
-returnName (App fc fn arg) = returnName fn
-returnName (As fc x as pat) = returnName pat
-returnName (TDelayed fc x y) = returnName y
-returnName (TDelay fc x ty arg) = returnName arg
-returnName (TForce fc x y) = returnName y
-returnName (PrimVal fc c) = Nothing
-returnName (Erased fc imp) = Nothing
-returnName (TType fc) = Nothing
