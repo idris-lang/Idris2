@@ -1,6 +1,7 @@
 module Core.Coverage
 
-import Core.CaseTree
+import Core.Case.CaseTree
+import Core.Case.Util
 import Core.Context
 import Core.Context.Log
 import Core.Env
@@ -13,8 +14,8 @@ import Data.Maybe
 import Data.String
 
 import Libraries.Data.NameMap
-import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.String.Extra
+import Libraries.Text.PrettyPrint.Prettyprinter
 
 %hide Data.String.lines
 %hide Data.String.lines'
@@ -149,50 +150,6 @@ isEmpty defs env (NTCon fc n t a args)
             _ => pure False
 isEmpty defs env _ = pure False
 
--- Need this to get a NF from a Term; the names are free in any case
-freeEnv : FC -> (vs : List Name) -> Env Term vs
-freeEnv fc [] = []
-freeEnv fc (n :: ns) = PVar fc top Explicit (Erased fc False) :: freeEnv fc ns
-
--- Given a normalised type, get all the possible constructors for that
--- type family, with their type, name, tag, and arity
-getCons : {auto c : Ref Ctxt Defs} ->
-          {vars : _} ->
-          Defs -> NF vars -> Core (List (NF [], Name, Int, Nat))
-getCons defs (NTCon _ tn _ _ _)
-    = case !(lookupDefExact tn (gamma defs)) of
-           Just (TCon _ _ _ _ _ _ cons _) =>
-                do cs' <- traverse addTy cons
-                   pure (mapMaybe id cs')
-           _ => throw (InternalError "Called `getCons` on something that is not a Type constructor")
-  where
-    addTy : Name -> Core (Maybe (NF [], Name, Int, Nat))
-    addTy cn
-        = do Just gdef <- lookupCtxtExact cn (gamma defs)
-                  | _ => pure Nothing
-             case (definition gdef, type gdef) of
-                  (DCon t arity _, ty) =>
-                        pure (Just (!(nf defs [] ty), cn, t, arity))
-                  _ => pure Nothing
-getCons defs _ = pure []
-
-emptyRHS : FC -> CaseTree vars -> CaseTree vars
-emptyRHS fc (Case idx el sc alts) = Case idx el sc (map emptyRHSalt alts)
-  where
-    emptyRHSalt : CaseAlt vars -> CaseAlt vars
-    emptyRHSalt (ConCase n t args sc) = ConCase n t args (emptyRHS fc sc)
-    emptyRHSalt (DelayCase c arg sc) = DelayCase c arg (emptyRHS fc sc)
-    emptyRHSalt (ConstCase c sc) = ConstCase c (emptyRHS fc sc)
-    emptyRHSalt (DefaultCase sc) = DefaultCase (emptyRHS fc sc)
-emptyRHS fc (STerm i s) = STerm i (Erased fc False)
-emptyRHS fc sc = sc
-
-mkAlt : {vars : _} ->
-        FC -> CaseTree vars -> (Name, Int, Nat) -> CaseAlt vars
-mkAlt fc sc (cn, t, ar)
-    = ConCase cn t (map (MN "m") (take ar [0..]))
-              (weakenNs (map take) (emptyRHS fc sc))
-
 altMatch : CaseAlt vars -> CaseAlt vars -> Bool
 altMatch _ (DefaultCase _) = True
 altMatch (DelayCase _ _ t) (DelayCase _ _ t') = True
@@ -230,7 +187,7 @@ getMissingAlts fc defs nfty alts
          logNF "coverage.missing" 20 "Getting constructors for" (mkEnv fc _) nfty
          allCons <- getCons defs nfty
          pure (filter (noneOf alts)
-                 (map (mkAlt fc (Unmatched "Coverage check") . snd) allCons))
+                 (map (mkAlt fc (Unmatched "Coverage check")) allCons))
   where
     -- Return whether the alternative c matches none of the given cases in alts
     noneOf : List (CaseAlt vars) -> CaseAlt vars -> Bool
@@ -274,12 +231,6 @@ addNot v t ((v', ts) :: xs)
          then ((v', t :: ts) :: xs)
          else ((v', ts) :: addNot v t xs)
 
-tagIs : Int -> CaseAlt vars -> Bool
-tagIs t (ConCase _ t' _ _) = t == t'
-tagIs t (ConstCase _ _) = False
-tagIs t (DelayCase _ _ _) = False
-tagIs t (DefaultCase _) = True
-
 tagIsNot : List Int -> CaseAlt vars -> Bool
 tagIsNot ts (ConCase _ t' _ _) = not (t' `elem` ts)
 tagIsNot ts (ConstCase _ _) = True
@@ -304,7 +255,7 @@ replaceDefaults fc defs nfty cs
     rep : CaseAlt vars -> Core (List (CaseAlt vars))
     rep (DefaultCase sc)
         = do allCons <- getCons defs nfty
-             pure (map (mkAlt fc sc . snd) allCons)
+             pure (map (mkAlt fc sc) allCons)
     rep c = pure [c]
 
     dropRep : List (CaseAlt vars) -> List (CaseAlt vars)
@@ -332,7 +283,7 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
   -- to the tag we already know. Otherwise, add missing cases and filter out
   -- the ones it can't possibly be (the 'not') because a previous case
   -- has matched.
-    = do let fenv = freeEnv fc _
+    = do let fenv = mkEnv fc _
          nfty <- nf defs fenv ty
          alts <- replaceDefaults fc defs nfty altsIn
          let alts' = alts ++ !(getMissingAlts fc defs nfty alts)
@@ -353,8 +304,8 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
              buildArgs fc defs (weakenNs l ((MkVar el, t) :: known))
                                (weakenNs l not') ps' sc
     buildArgAlt not' (DelayCase t a sc)
-        = let l = mkSizeOf [t, a] in
-          let ps' = map (substName var (TDelay fc LUnknown
+        = let l = mkSizeOf [t, a]
+              ps' = map (substName var (TDelay fc LUnknown
                                              (Ref fc Bound t)
                                              (Ref fc Bound a))) ps in
               buildArgs fc defs (weakenNs l known) (weakenNs l not')

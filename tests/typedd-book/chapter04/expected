@@ -2,12 +2,34 @@
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Prelude.Types.elem
+
+BSTree:2:6--2:11
+ 1 | data BSTree : Type -> Type where
+ 2 |      Empty : Ord elem => BSTree elem
+          ^^^^^
+
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Prelude.Types.elem
+
+BSTree:3:6--3:10
+ 1 | data BSTree : Type -> Type where
+ 2 |      Empty : Ord elem => BSTree elem
+ 3 |      Node : Ord elem => (left : BSTree elem) -> (val : elem) ->
+          ^^^^
+
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Prelude.Types.elem
+
+BSTree:6:1--6:7
+ 2 |      Empty : Ord elem => BSTree elem
+ 3 |      Node : Ord elem => (left : BSTree elem) -> (val : elem) ->
+ 4 |                         (right : BSTree elem) -> BSTree elem
+ 5 | 
+ 6 | insert : elem -> BSTree elem -> BSTree elem
+     ^^^^^^
+
  2/12: Building DataStore (DataStore.idr)
  3/12: Building Direction (Direction.idr)
  4/12: Building Generic (Generic.idr)
@@ -18,16 +40,45 @@ You may be unintentionally shadowing the associated global definitions:
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Prelude.Types.elem
+
+Tree:1:18--1:23
+ 1 | data Tree elem = Empty
+                      ^^^^^
+
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Prelude.Types.elem
+
+Tree:2:18--2:51
+ 1 | data Tree elem = Empty
+ 2 |                | Node (Tree elem) elem (Tree elem)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Prelude.Types.elem
+
+Tree:6:1--6:7
+ 2 |                | Node (Tree elem) elem (Tree elem)
+ 3 | 
+ 4 | %name Tree tree, tree1
+ 5 | 
+ 6 | insert : Ord elem => elem -> Tree elem -> Tree elem
+     ^^^^^^
+
  9/12: Building TryIndex (TryIndex.idr)
 10/12: Building Vect (Vect.idr)
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Prelude.Types.elem
+
+Vect:7:1--7:7
+ 3 |      (::) : (x : a) -> (xs : Vect k a) -> Vect (S k) a
+ 4 | 
+ 5 | %name Vect xs, ys, zs
+ 6 | 
+ 7 | append : Vect n elem -> Vect m elem -> Vect (n + m) elem
+     ^^^^^^
+
 11/12: Building Vehicle (Vehicle.idr)
 12/12: Building All (All.idr)

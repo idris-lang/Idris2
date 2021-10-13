@@ -144,6 +144,7 @@ todoCmd cmdName = iputStrLn $ reflow $ cmdName ++ ": command not yet implemented
 data IDEResult
   = REPL REPLResult
   | NameList (List Name)
+  | FoundHoles (List HoleData)
   | Term String   -- should be a PTerm + metadata, or SExp.
   | TTTerm String -- should be a TT Term + metadata, or perhaps SExp
   | NameLocList (List (Name, FC))
@@ -243,7 +244,7 @@ process (EnableSyntax b)
 process Version
     = replWrap $ Idris.REPL.process ShowVersion
 process (Metavariables _)
-    = replWrap $ Idris.REPL.process Metavars
+    = FoundHoles <$> getUserHolesData
 process GetOptions
     = replWrap $ Idris.REPL.process GetOpts
 
@@ -311,6 +312,7 @@ SExpable REPLEval where
   toSExp EvalTC = SymbolAtom "typecheck"
   toSExp NormaliseAll = SymbolAtom "normalise"
   toSExp Execute = SymbolAtom "execute"
+  toSExp Scheme = SymbolAtom "scheme"
 
 SExpable REPLOpt where
   toSExp (ShowImplicits impl) = SExpList [ SymbolAtom "show-implicits", toSExp impl ]
@@ -320,6 +322,7 @@ SExpable REPLOpt where
   toSExp (Editor editor) = SExpList [ SymbolAtom "editor", toSExp editor ]
   toSExp (CG str) = SExpList [ SymbolAtom "cg", toSExp str ]
   toSExp (Profile p) = SExpList [ SymbolAtom "profile", toSExp p ]
+  toSExp (EvalTiming p) = SExpList [ SymbolAtom "evaltiming", toSExp p ]
 
 
 displayIDEResult : {auto c : Ref Ctxt Defs} ->
@@ -383,18 +386,6 @@ displayIDEResult outf i  (REPL $ CheckedTotal xs)
   = printIDEResult outf i
   $ StringAtom $ showSep "\n"
   $ map (\ (fn, tot) => (show fn ++ " is " ++ show tot)) xs
-displayIDEResult outf i  (REPL $ FoundHoles holes)
-  = printIDEResultWithHighlight outf i =<< case holes of
-      []  => pure (StringAtom "No holes", [])
-      [x] => do let hole = pretty x.name <++> colon <++> prettyTerm x.type
-                hlght <- renderWithDecorations syntaxToProperties
-                           $ "1 hole" <+> colon <++> hole
-                pure $ mapFst StringAtom hlght
-      xs => do let holes = xs <&> \ x => pretty x.name <++> colon <++> prettyTerm x.type
-               let header = pretty (length xs) <++> pretty "holes" <+> colon
-               hlght <- renderWithDecorations syntaxToProperties
-                           $ vcat (header :: map (indent 2) holes)
-               pure $ mapFst StringAtom hlght
 displayIDEResult outf i  (REPL $ LogLevelSet k)
   = printIDEResult outf i
   $ StringAtom $ "Set loglevel to " ++ show k
@@ -432,6 +423,8 @@ displayIDEResult outf i (REPL $ Edited (MadeWith lit wapp))
 displayIDEResult outf i (REPL $ (Edited (MadeCase lit cstr)))
   = printIDEResult outf i
   $ StringAtom $ showSep "\n" (map (relit lit) cstr)
+displayIDEResult outf i (FoundHoles holes)
+  = printIDEResult outf i $ SExpList $ map sexpHole holes
 displayIDEResult outf i (NameList ns)
   = printIDEResult outf i $ SExpList $ map toSExp ns
 displayIDEResult outf i (Term t)

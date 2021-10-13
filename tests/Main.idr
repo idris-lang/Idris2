@@ -21,7 +21,7 @@ ttimpTests = MkTestPool "TTImp" [] Nothing
      , "lazy001"
      , "nest001", "nest002"
      , "perf001", "perf002", "perf003"
-     , "record001", "record002", "record003"
+     , "record001", "record002", "record003", "record004"
      , "qtt001", "qtt003"
      , "total001", "total002", "total003"
      ]
@@ -56,7 +56,7 @@ idrisTestsCoverage = MkTestPool "Coverage checking" [] Nothing
 idrisTestsCasetree : TestPool
 idrisTestsCasetree = MkTestPool "Case tree building" [] Nothing
        -- Case tree building
-      ["casetree001"]
+      ["casetree001", "casetree002"]
 
 idrisTestsWarning : TestPool
 idrisTestsWarning = MkTestPool "Warnings" [] Nothing
@@ -69,7 +69,7 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
        "error006", "error007", "error008", "error009", "error010",
        "error011", "error012", "error013", "error014", "error015",
        "error016", "error017", "error018", "error019", "error020",
-       "error021",
+       "error021", "error022",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006", "perror007", "perror008", "perror009", "perror010",
@@ -121,7 +121,7 @@ idrisTestsPerformance = MkTestPool "Performance" [] Nothing
        -- Performance: things which have been slow in the past, or which
        -- pose interesting challenges for the elaborator
       ["perf001", "perf002", "perf003", "perf004", "perf005",
-       "perf007", "perf008", "perf009"]
+       "perf007", "perf008", "perf009", "perf010"]
 
 idrisTestsRegression : TestPool
 idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
@@ -180,6 +180,13 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
        "total011", "total012"
       ]
 
+-- This will only work with an Idris compiled via Chez or Racket, but at
+-- least for the moment we're not officially supporting self hosting any
+-- other way. If we do, we'll need to have a way to disable these.
+idrisTestsSchemeEval : TestPool
+idrisTestsSchemeEval = MkTestPool "Scheme Evaluator" [] Nothing
+     ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004"]
+
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
        -- Documentation strings
@@ -187,7 +194,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Eta equality
        "eta001",
        -- Modules and imports
-       "import001", "import002", "import003", "import004", "import005",
+       "import001", "import002", "import003", "import004", "import005", "import006",
        -- Implicit laziness, lazy evaluation
        "lazy001", "lazy002",
        -- Namespace blocks
@@ -265,7 +272,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "casts"
     , "memo"
     , "newints"
-    , "reg001"
+    , "reg001", "reg002"
     , "stringcast"
     , "syntax001"
     , "tailrec001"
@@ -320,6 +327,7 @@ main = runner $
   , testPaths "idris2" idrisTestsBuiltin
   , testPaths "idris2" idrisTestsEvaluator
   , testPaths "idris2" idrisTestsTotality
+  , testPaths "idris2" idrisTestsSchemeEval
   , testPaths "idris2" idrisTests
   , !typeddTests
   , !ideModeTests

@@ -11,7 +11,7 @@ import Compiler.RefC.RefC
 import Compiler.Inline
 
 import Core.AutoSearch
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
@@ -27,6 +27,8 @@ import Core.TT
 import Core.Termination
 import Core.Unify
 import Core.Value
+
+import Core.SchemeEval
 
 import Parser.Unlit
 
@@ -198,6 +200,8 @@ setOpt (CG e)
 setOpt (Profile t)
     = do pp <- getSession
          setSession (record { profile = t } pp)
+setOpt (EvalTiming t)
+    = setEvalTiming t
 
 getOptions : {auto c : Ref Ctxt Defs} ->
          {auto o : Ref ROpts REPLOpts} ->
@@ -356,14 +360,37 @@ dropLamsTm (S k) env (Bind _ _ b sc) = dropLamsTm k (b :: env) sc
 dropLamsTm _ env tm = (_ ** (env, tm))
 
 findInTree : FilePos -> Name -> PosMap (NonEmptyFC, Name) -> Maybe Name
-findInTree p hint m = map snd $ head' $ filter match $ sortBy (\x, y => cmp (measure x) (measure y)) $ searchPos p m
+findInTree p hint m
+  = map snd $ head'
+  $ sortBy (cmp `on` measure)
+  $ filter match
+  $ searchPos p m
+
   where
     cmp : FileRange -> FileRange -> Ordering
     cmp ((sr1, sc1), (er1, ec1)) ((sr2, sc2), (er2, ec2)) =
       compare (er1 - sr1, ec1 - sc1) (er2 - sr2, ec2 - sc2)
 
+    checkAsNamespace : String -> Name -> Bool
+    checkAsNamespace i (NS ns' n) = i `isInPathOf` ns'
+    checkAsNamespace _ _ = False
+
+    startsWithUpper : String -> Bool
+    startsWithUpper str = case strM str of
+       StrNil => False
+       StrCons c _ => isUpper c || c > chr 160
+
+    matchingRoots : Name -> Name -> Bool
+    matchingRoots = (==) `on` nameRoot
+
+    checkCandidate : Name -> Bool
+    checkCandidate cand = matchingRoots hint cand || case hint of
+      -- a basic user name: may actually be e.g. the `B` part of `A.B.C.val`
+      UN (Basic n) => startsWithUpper n && checkAsNamespace n cand
+      _ => False
+
     match : (NonEmptyFC, Name) -> Bool
-    match (_, n) = matches hint n && userNameRoot n == userNameRoot hint
+    match (_, n) = matches hint n && checkCandidate n
 
 processEdit : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
@@ -377,7 +404,8 @@ processEdit (TypeAt line col name)
 
          -- Search the correct name by location for more precise search
          -- and fallback to given name if nothing found
-         let name = fromMaybe name $ findInTree (line - 1, col - 1) name (nameLocMap meta)
+         let name = fromMaybe name
+                  $ findInTree (line-1, col) name (nameLocMap meta)
 
          -- Lookup the name globally
          globals <- lookupCtxtName name (gamma defs)
@@ -389,14 +417,27 @@ processEdit (TypeAt line col name)
                     pure $ Just (vsep tys)
 
          -- Lookup the name locally (The name at the specified position)
-         localResult <- findTypeAt $ anyAt $ within (line-1, col-1)
+         localResult <- findTypeAt $ anyAt $ within (line-1, col)
 
          case (globalResult, localResult) of
               -- Give precedence to the local name, as it shadows the others
               (_, Just (n, _, type)) => pure $ DisplayEdit $
-                pretty (nameRoot n) <++> colon <++> !(displayTerm defs type)
+                prettyLocalName n <++> colon <++> !(displayTerm defs type)
               (Just globalDoc, Nothing) => pure $ DisplayEdit $ globalDoc
               (Nothing, Nothing) => undefinedName replFC name
+
+  where
+
+    prettyLocalName : Name -> Doc IdrisAnn
+    -- already looks good
+    prettyLocalName nm@(UN _) = pretty nm
+    prettyLocalName nm@(NS _ (UN _)) = pretty nm
+    -- otherwise
+    prettyLocalName nm = case userNameRoot nm of
+      -- got rid of `Nested` or `PV`
+      Just nm => pretty nm
+      -- really bad case e.g. case block name
+      Nothing => pretty (nameRoot nm)
 
 processEdit (CaseSplit upd line col name)
     = do let find = if col > 0
@@ -590,7 +631,8 @@ execExp ctm
               | Nothing =>
                    do iputStrLn (reflow "No such code generator available")
                       pure CompilationFailed
-         execute cg tm_erased
+         logTimeWhen !getEvalTiming "Execution" $
+           execute cg tm_erased
          pure $ Executed ctm
 
 
@@ -731,9 +773,17 @@ process (Eval itm)
          let emode = evalMode opts
          case emode of
             Execute => do ignore (execExp itm); pure (Executed itm)
+            Scheme =>
+              do defs <- get Ctxt
+                 (tm `WithType` ty) <- inferAndElab InExpr itm
+                 qtm <- logTimeWhen !getEvalTiming "Evaluation" $
+                           (do nf <- snfAll [] tm
+                               quote [] nf)
+                 itm <- logTimeWhen False "resugar" $ resugar [] qtm
+                 pure (Evaluated itm Nothing)
             _ =>
-              do
-                 (ntm `WithType` ty) <- inferAndNormalize emode itm
+              do (ntm `WithType` ty) <- logTimeWhen !getEvalTiming "Evaluation" $
+                                           inferAndNormalize emode itm
                  itm <- resugar [] ntm
                  defs <- get Ctxt
                  opts <- get ROpts
@@ -764,7 +814,7 @@ process (Check itm)
          defs <- get Ctxt
          itm <- resugar [] !(normaliseHoles defs [] tm)
          -- ty <- getTerm gty
-         ity <- resugar [] !(normaliseScope defs [] ty)
+         ity <- resugar [] !(normalise defs [] ty)
          pure (TermChecked itm ity)
 process (CheckWithImplicits itm)
     = do showImplicits <- showImplicits <$> getPPrint
@@ -885,20 +935,8 @@ process (SetColor b)
     = do setColor b
          pure $ ColorSet b
 process Metavars
-    = do defs <- get Ctxt
-         let ctxt = gamma defs
-         ms  <- getUserHoles
-         let globs = concat !(traverse (\n => lookupCtxtName n ctxt) ms)
-         let holesWithArgs = mapMaybe (\(n, i, gdef) => do args <- isHole gdef
-                                                           pure (n, gdef, args))
-                                      globs
-         hData <-
-             traverse (\n_gdef_args =>
-                        -- Inference can't deal with this for now :/
-                        let (n, gdef, args) = the (Name, GlobalDef, Nat) n_gdef_args in
-                        holeData defs [] n args (type gdef))
-                      holesWithArgs
-         pure $ FoundHoles hData
+    = do hs <- getUserHolesData
+         pure $ Printed $ reAnnotate Syntax $ prettyHoles hs
 
 process (Editing cmd)
     = do ppopts <- getPPrint
@@ -1039,6 +1077,7 @@ mutual
       prompt EvalTC = "[tc] "
       prompt NormaliseAll = ""
       prompt Execute = "[exec] "
+      prompt Scheme = "[scheme] "
 
   export
   handleMissing' : MissedResult -> String
@@ -1092,14 +1131,6 @@ mutual
   displayResult (ProofFound x) = printResult (prettyTerm x)
   displayResult (Missed cases) = printResult $ vsep (handleMissing <$> cases)
   displayResult (CheckedTotal xs) = printResult (vsep (map (\(fn, tot) => pretty fn <++> pretty "is" <++> pretty tot) xs))
-  displayResult (FoundHoles []) = printResult (reflow "No holes")
-  displayResult (FoundHoles [x]) = do
-     let hole = pretty x.name <++> colon <++> prettyTerm x.type
-     printResult (reflow "1 hole" <+> colon <++> hole)
-  displayResult (FoundHoles xs) = do
-    let header = pretty (length xs) <++> pretty "holes" <+> colon
-    let holes  = xs <&> \ x => pretty x.name <++> colon <++> prettyTerm x.type
-    printResult $ vcat (header :: map (indent 2) holes)
   displayResult (LogLevelSet Nothing) = printResult (reflow "Logging turned off")
   displayResult (LogLevelSet (Just k)) = printResult (reflow "Set log level to" <++> pretty k)
   displayResult (ConsoleWidthSet (Just k)) = printResult (reflow "Set consolewidth to" <++> pretty k)

@@ -518,18 +518,21 @@ data REPLEval : Type where
      EvalTC : REPLEval -- Evaluate as if part of the typechecker
      NormaliseAll : REPLEval -- Normalise everything (default)
      Execute : REPLEval -- Evaluate then pass to an executer
+     Scheme : REPLEval -- Use the scheme evaluator
 
 export
 Show REPLEval where
   show EvalTC = "typecheck"
   show NormaliseAll = "normalise"
   show Execute = "execute"
+  show Scheme = "scheme"
 
 export
 Pretty REPLEval where
   pretty EvalTC = pretty "typecheck"
   pretty NormaliseAll = pretty "normalise"
   pretty Execute = pretty "execute"
+  pretty Scheme = pretty "scheme"
 
 public export
 data REPLOpt : Type where
@@ -540,6 +543,7 @@ data REPLOpt : Type where
      Editor : String -> REPLOpt
      CG : String -> REPLOpt
      Profile : Bool -> REPLOpt
+     EvalTiming : Bool -> REPLOpt
 
 export
 Show REPLOpt where
@@ -550,6 +554,7 @@ Show REPLOpt where
   show (Editor editor) = "editor = " ++ show editor
   show (CG str) = "cg = " ++ str
   show (Profile p) = "profile = " ++ show p
+  show (EvalTiming p) = "evaltiming = " ++ show p
 
 export
 Pretty REPLOpt where
@@ -560,6 +565,7 @@ Pretty REPLOpt where
   pretty (Editor editor) = pretty "editor" <++> equals <++> pretty editor
   pretty (CG str) = pretty "cg" <++> equals <++> pretty str
   pretty (Profile p) = pretty "profile" <++> equals <++> pretty p
+  pretty (EvalTiming p) = pretty "evaltiming" <++> equals <++> pretty p
 
 public export
 data EditCmd : Type where

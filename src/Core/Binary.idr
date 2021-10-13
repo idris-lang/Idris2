@@ -4,7 +4,7 @@
 module Core.Binary
 
 import public Core.Binary.Prims
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -33,7 +33,7 @@ import public Libraries.Utils.Binary
 ||| (Increment this when changing anything in the data format)
 export
 ttcVersion : Int
-ttcVersion = 64
+ttcVersion = 66
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()

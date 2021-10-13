@@ -1,7 +1,7 @@
 module Core.TTC
 
 import Core.Binary.Prims
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.CompileExpr
 import Core.Context
 import Core.Core
@@ -18,6 +18,7 @@ import Libraries.Data.IOArray
 import Data.Vect
 
 import Libraries.Utils.Binary
+import Libraries.Utils.Scheme
 
 %default covering
 
@@ -669,6 +670,7 @@ TTC ConInfo where
   toBuf b RECORD = tag 7
   toBuf b ZERO = tag 8
   toBuf b SUCC = tag 9
+  toBuf b UNIT = tag 10
 
   fromBuf b
       = case !getTag of
@@ -682,6 +684,7 @@ TTC ConInfo where
              7 => pure RECORD
              8 => pure ZERO
              9 => pure SUCC
+             10 => pure UNIT
              _ => corrupt "ConInfo"
 
 mutual
@@ -1115,10 +1118,10 @@ TTC GlobalDef where
                       sc <- fromBuf b
                       pure (MkGlobalDef loc name ty eargs seargs specargs iargs
                                         mul vars vis
-                                        tot fl refs refsR inv c True def cdef sc)
+                                        tot fl refs refsR inv c True def cdef Nothing sc Nothing)
               else pure (MkGlobalDef loc name (Erased loc False) [] [] [] []
                                      mul [] Public unchecked [] refs refsR
-                                     False False True def cdef [])
+                                     False False True def cdef Nothing [] Nothing)
 
 export
 TTC Transform where

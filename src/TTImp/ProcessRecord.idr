@@ -42,22 +42,23 @@ elabRecord : {vars : _} ->
              (conName : Name) ->
              List IField ->
              Core ()
-elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
-    = do conName <- inCurrentNS conName_in
-         elabAsData conName
+elabRecord {vars} eopts fc env nest newns vis tn_in params conName_in fields
+    = do tn <- inCurrentNS tn_in
+         conName <- inCurrentNS conName_in
+         elabAsData tn conName
          defs <- get Ctxt
          Just conty <- lookupTyExact conName (gamma defs)
              | Nothing => throw (InternalError ("Adding " ++ show tn ++ "failed"))
 
          -- Go into new namespace, if there is one, for getters
          case newns of
-              Nothing => elabGetters conName 0 [] [] conty
+              Nothing => elabGetters tn conName 0 [] [] conty
               Just ns =>
                    do let cns = currentNS defs
                       let nns = nestedNS defs
                       extendNS (mkNamespace ns)
                       newns <- getNS
-                      elabGetters conName 0 [] [] conty
+                      elabGetters tn conName 0 [] [] conty
                       defs <- get Ctxt
                       -- Record that the current namespace is allowed to look
                       -- at private names in the nested namespace
@@ -86,8 +87,9 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
     mkTy ((fc, n, c, imp, argty) :: args) ret
         = IPi fc c imp n argty (mkTy args ret)
 
-    recTy : RawImp
-    recTy = apply (IVar (virtualiseFC fc) tn) (map (\(n, c, p, tm) => (n, IVar EmptyFC n, p)) params)
+    recTy : (tn : Name) -> -- fully qualified name of the record type
+            RawImp
+    recTy tn = apply (IVar (virtualiseFC fc) tn) (map (\(n, c, p, tm) => (n, IVar EmptyFC n, p)) params)
       where
         ||| Apply argument to list of explicit or implicit named arguments
         apply : RawImp -> List (Name, RawImp, PiInfo RawImp) -> RawImp
@@ -95,11 +97,13 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
         apply f ((n, arg, Explicit) :: xs) = apply (IApp         (getFC f) f          arg) xs
         apply f ((n, arg, _       ) :: xs) = apply (INamedApp (getFC f) f n arg) xs
 
-    elabAsData : Name -> Core ()
-    elabAsData cname
+    elabAsData : (tn : Name) -> -- fully qualified name of the record type
+                 (conName : Name) -> -- fully qualified name of the record type constructor
+                 Core ()
+    elabAsData tn cname
         = do let fc = virtualiseFC fc
              let conty = mkTy paramTelescope $
-                         mkTy (map farg fields) recTy
+                         mkTy (map farg fields) (recTy tn)
              let con = MkImpTy EmptyFC EmptyFC cname !(bindTypeNames fc [] (map fst params ++
                                            map fname fields ++ vars) conty)
              let dt = MkImpData fc tn !(bindTypeNames fc [] (map fst params ++
@@ -119,18 +123,19 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
     --          you probably will have to adjust TTImp.TTImp.definedInBlock.
     --
     elabGetters : {vs : _} ->
-                  Name ->
+                  (tn : Name) -> -- fully qualified name of the record type
+                  (conName : Name) -> -- fully qualified name of the record type constructor
                   (done : Nat) -> -- number of explicit fields processed
                   List (Name, RawImp) -> -- names to update in types
                     -- (for dependent records, where a field's type may depend
                     -- on an earlier projection)
                   Env Term vs -> Term vs ->
                   Core ()
-    elabGetters con done upds tyenv (Bind bfc n b@(Pi _ rc imp ty_chk) sc)
+    elabGetters tn con done upds tyenv (Bind bfc n b@(Pi _ rc imp ty_chk) sc)
         = let rig = if isErased rc then erased else top
               isVis = projVis vis
           in if (n `elem` map fst params) || (n `elem` vars)
-             then elabGetters con
+             then elabGetters tn con
                               (if imp == Explicit && not (n `elem` vars)
                                   then S done else done)
                               upds (b :: tyenv) sc
@@ -152,7 +157,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    projTy <- bindTypeNames fc []
                                  (map fst params ++ map fname fields ++ vars) $
                                     mkTy paramTelescope $
-                                      IPi bfc top Explicit (Just rname) recTy ty'
+                                      IPi bfc top Explicit (Just rname) (recTy tn) ty'
 
                    let mkProjClaim = \ nm =>
                           let ty = MkImpTy EmptyFC EmptyFC nm projTy
@@ -201,12 +206,12 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    -- In upds, we use unNameNS (as opposed to rfNameNS or both)
                    -- because the field types will probably mention the UN versions of the projections.
                    let upds' = (n, IApp bfc (IVar bfc unNameNS) (IVar bfc rname)) :: upds
-                   elabGetters con
+                   elabGetters tn con
                                (if imp == Explicit
                                    then S done else done)
                                upds' (b :: tyenv) sc
 
-    elabGetters con done upds _ _ = pure ()
+    elabGetters tn con done upds _ _ = pure ()
 
 export
 processRecord : {vars : _} ->

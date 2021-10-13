@@ -357,11 +357,22 @@ calcNaty fc tyCon cs@[_, _]
             else pure False
 calcNaty _ _ _ = pure False
 
+-- has 1 constructor with 0 args (so skip case on it)
+calcUnity : {auto c : Ref Ctxt Defs} ->
+            FC -> Name -> List Constructor -> Core Bool
+calcUnity fc tyCon cs@[_]
+    = do Just mkUnit <- shaped (hasArgs 0) cs
+              | Nothing => pure False
+         setFlag fc mkUnit (ConType UNIT)
+         pure True
+calcUnity _ _ _ = pure False
 
 calcConInfo : {auto c : Ref Ctxt Defs} ->
               FC -> Name -> List Constructor -> Core ()
 calcConInfo fc type cons
    = do False <- calcNaty fc type cons
+           | True => pure ()
+        False <- calcUnity fc type cons
            | True => pure ()
         False <- calcListy fc cons
            | True => pure ()

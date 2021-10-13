@@ -1,0 +1,5 @@
+rm -rf build
+
+$1 --no-color --console-width 0 --cg refc Issue1843.idr -o test
+
+./build/exec/test

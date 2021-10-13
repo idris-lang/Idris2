@@ -151,7 +151,7 @@ getArgMatch : FC -> (side : ElabMode) -> (search : Bool) ->
               (arg : Maybe (PiInfo RawImp, Name)) -> RawImp
 getArgMatch ploc mode search warg ms Nothing = warg
 getArgMatch ploc mode True warg ms (Just (AutoImplicit, nm))
-    = case (isUN nm >>= \ un => isBasic un >>= \ n => lookup n ms) of
+    = case (isUN nm >>= \ (_, un) => isBasic un >>= \ n => lookup n ms) of
         Just tm => tm
         Nothing =>
           let arg = ISearch ploc 500 in
@@ -159,7 +159,7 @@ getArgMatch ploc mode True warg ms (Just (AutoImplicit, nm))
             then IAs ploc ploc UseLeft nm arg
              else arg
 getArgMatch ploc mode search warg ms (Just (_, nm))
-    = case (isUN nm >>= \ un => isBasic un >>= \ n => lookup n ms) of
+    = case (isUN nm >>= \ (_, un) => isBasic un >>= \ n => lookup n ms) of
         Just tm => tm
         Nothing =>
           let arg = Implicit ploc True in

@@ -1,7 +1,7 @@
 module Idris.REPL.FuzzySearch
 
 import Core.AutoSearch
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
@@ -11,8 +11,8 @@ import Core.LinearCheck
 import Core.Metadata
 import Core.Normalise
 import Core.Options
-import Core.Termination
 import Core.TT
+import Core.Termination
 import Core.Unify
 
 import Idris.Desugar

@@ -1,7 +1,7 @@
 module TTImp.ProcessDef
 
-import Core.CaseBuilder
-import Core.CaseTree
+import Core.Case.CaseBuilder
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
