@@ -188,21 +188,11 @@ install-idris2:
 ifeq ($(OS), windows)
 	-install ${TARGET}.cmd ${PREFIX}/bin
 endif
-# TODO: simplify `[\\/]` to `/` when version 0.5.1 no longer supported
-ifneq (, $(shell grep -s '/${NAME}_app[\\/]${NAME}\.so' ${TARGET}))
-	@# Chez bytecode
-	install ${TARGET}_app/${NAME}.s* ${PREFIX}/bin/${NAME}_app
-	-install ${TARGET}_app/compileChez ${PREFIX}/bin/${NAME}_app
-else ifneq (, $(shell grep -s '/${NAME}_app[\\/]compiled[\\/]${NAME}_rkt' ${TARGET}))
-	@# Racket bytecode
-	install ${TARGET}_app/${NAME}.rkt ${PREFIX}/bin/${NAME}_app
-	mkdir -p ${PREFIX}/bin/${NAME}_app/compiled
-	install ${TARGET}_app/compiled/* ${PREFIX}/bin/${NAME}_app/compiled
-else
-	@# Racket executable (TODO: remove when version 0.5.1 no longer supported)
-	install ${TARGET}_app/${NAME}.rkt ${PREFIX}/bin/${NAME}_app
-	install ${TARGET}_app/idris2* ${PREFIX}/bin/${NAME}_app
-endif
+	install $(filter-out ${TARGET}_app/compiled, $(wildcard ${TARGET}_app/*)) ${PREFIX}/bin/${NAME}_app
+	if [ -d ${TARGET}_app/compiled ]; then \
+		mkdir -p ${PREFIX}/bin/${NAME}_app/compiled; \
+		install ${TARGET}_app/compiled/* ${PREFIX}/bin/${NAME}_app/compiled; \
+	fi
 
 install-support:
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/docs
