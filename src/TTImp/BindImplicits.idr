@@ -21,7 +21,7 @@ renameIBinds : (renames : List String) ->
                RawImp -> State (List (String, String)) RawImp
 renameIBinds rs us (IPi fc c p (Just un@(UN (Basic n))) ty sc)
     = if n `elem` rs
-         then let n' = getUnique (rs ++ us) n
+         then let n' = genUniqueStr (rs ++ us) n
                   un' = UN (Basic n')
                   sc' = substNames (map (UN . Basic) (filter (/= n) us))
                                    [(un, IVar fc un')] sc in
@@ -64,7 +64,7 @@ renameIBinds rs us (IAlternative fc u alts)
     renameAlt u = pure u
 renameIBinds rs us (IBindVar fc n)
     = if n `elem` rs
-         then do let n' = getUnique (rs ++ us) n
+         then do let n' = genUniqueStr (rs ++ us) n
                  upds <- get
                  put ((n, n') :: upds)
                  pure $ IBindVar fc n'

@@ -13,9 +13,12 @@ import Libraries.Utils.String
 
 %default covering
 
+
+-- Appends the ' character to "x" until it is unique with respect to "xs".
 export
-getUnique : List String -> String -> String
-getUnique xs x = if x `elem` xs then getUnique xs (x ++ "'") else x
+genUniqueStr : (xs : List String) -> (x : String) -> String
+genUniqueStr xs x = if x `elem` xs then genUniqueStr xs (x ++ "'") else x
+
 
 -- Extract the RawImp pieces from a ImpDecl so they can be searched for unquotes
 -- Used in findBindableNames{,Quot}
@@ -50,10 +53,16 @@ rawImpFromDecl decl = case decl of
         getFromIField : IField -> List RawImp
         getFromIField (MkIField fc x y z w) = getFromPiInfo y ++ [w]
 
--- Bind lower case names in argument position
--- Don't go under case, let, or local bindings, or IAlternative
+
+-- Identify lower case names in argument position, which we can bind later.
+-- Don't go under case, let, or local bindings, or IAlternative.
+--
+-- arg: Is the current expression in argument position? (We don't want to implicitly
+--      bind funtions.)
+--
+-- env: Local names in scope. We only want to bind free variables, so we need this.
 export
-findBindableNames : (arg : Bool) -> List Name -> (used : List String) ->
+findBindableNames : (arg : Bool) -> (env : List Name) -> (used : List String) ->
                     RawImp -> List (String, String)
 
 -- Helper to traverse the inside of a quoted expression, looking for unquotes
@@ -62,7 +71,7 @@ findBindableNamesQuot : List Name -> (used : List String) -> RawImp ->
 
 findBindableNames True env used (IVar fc nm@(UN (Basic n)))
     = if not (nm `elem` env) && lowerFirst n
-         then [(n, getUnique used n)]
+         then [(n, genUniqueStr used n)]
          else []
 findBindableNames arg env used (IPi fc rig p mn aty retty)
     = let env' = case mn of
@@ -85,7 +94,7 @@ findBindableNames arg env used (IAutoApp fc fn av)
 findBindableNames arg env used (IWithApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
 findBindableNames arg env used (IAs fc _ _ (UN (Basic n)) pat)
-    = (n, getUnique used n) :: findBindableNames arg env used pat
+    = (n, genUniqueStr used n) :: findBindableNames arg env used pat
 findBindableNames arg env used (IAs fc _ _ n pat)
     = findBindableNames arg env used pat
 findBindableNames arg env used (IMustUnify fc r pat)
