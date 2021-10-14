@@ -13,6 +13,8 @@ import Core.TT
 import Core.Unify
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.Interactive.ExprSearch
@@ -36,6 +38,7 @@ showInfo (n, _, d)
 process : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           ImpREPL -> Core Bool
 process (Eval ttimp)
     = do (tm, _) <- elabTerm 0 InExpr [] (MkNested []) [] ttimp Nothing
@@ -136,6 +139,7 @@ process Quit
 processCatch : {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                ImpREPL -> Core Bool
 processCatch cmd
     = catch (process cmd)
@@ -146,6 +150,7 @@ export
 repl : {auto c : Ref Ctxt Defs} ->
        {auto m : Ref MD Metadata} ->
        {auto u : Ref UST UState} ->
+       {auto s : Ref Syn SyntaxInfo} ->
        Core ()
 repl
     = do coreLift_ (putStr "Yaffle> ")

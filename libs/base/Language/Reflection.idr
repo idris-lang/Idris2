@@ -16,8 +16,23 @@ data Elab : Type -> Type where
 
      Try : Elab a -> Elab a -> Elab a
 
+     ||| Log a message. Takes a
+     ||| * topic
+     ||| * level
+     ||| * message
      LogMsg : String -> Nat -> String -> Elab ()
+     ||| Print and log a term. Takes a
+     ||| * topic
+     ||| * level
+     ||| * message
+     ||| * term
      LogTerm : String -> Nat -> String -> TTImp -> Elab ()
+     ||| Resugar, print and log a term. Takes a
+     ||| * topic
+     ||| * level
+     ||| * message
+     ||| * term
+     LogSugaredTerm : String -> Nat -> String -> TTImp -> Elab ()
 
      -- Elaborate a TTImp term to a concrete value
      Check : TTImp -> Elab expected
@@ -86,6 +101,11 @@ logMsg = LogMsg
 export
 logTerm : String -> Nat -> String -> TTImp -> Elab ()
 logTerm = LogTerm
+
+||| Write a log message and a resugared & rendered term, if the log level is >= the given level
+export
+logSugaredTerm : String -> Nat -> String -> TTImp -> Elab ()
+logSugaredTerm = LogSugaredTerm
 
 ||| Log the current goal type, if the log level is >= the given level
 export

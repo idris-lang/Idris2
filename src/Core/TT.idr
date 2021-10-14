@@ -586,6 +586,23 @@ Functor Binder where
   map func (PLet fc c val ty) = PLet fc c (func val) (func ty)
   map func (PVTy fc c ty) = PVTy fc c (func ty)
 
+export
+Foldable Binder where
+  foldr f acc (Lam fc c x ty) = foldr f (f ty acc) x
+  foldr f acc (Let fc c val ty) = f val (f ty acc)
+  foldr f acc (Pi fc c x ty) = foldr f (f ty acc) x
+  foldr f acc (PVar fc c p ty) = foldr f (f ty acc) p
+  foldr f acc (PLet fc c val ty) = f val (f ty acc)
+  foldr f acc (PVTy fc c ty) = f ty acc
+
+export
+Traversable Binder where
+  traverse f (Lam fc c x ty) = Lam fc c <$> traverse f x <*> f ty
+  traverse f (Let fc c val ty) = Let fc c <$> f val <*> f ty
+  traverse f (Pi fc c x ty) = Pi fc c <$> traverse f x <*> f ty
+  traverse f (PVar fc c p ty) = PVar fc c <$> traverse f p <*> f ty
+  traverse f (PLet fc c val ty) = PLet fc c <$> f val <*> f ty
+  traverse f (PVTy fc c ty) = PVTy fc c <$> f ty
 
 public export
 data IsVar : Name -> Nat -> List Name -> Type where

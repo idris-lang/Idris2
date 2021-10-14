@@ -503,7 +503,14 @@ mutual
     = do xs <- traverse toRawImp (filter notEmpty $ mergeStrLit xs)
          pure $ case xs of
            [] => IPrimVal fc (Str "")
-           (_ :: _) => foldr1 concatStr xs
+           (_ :: _) =>
+             let vfc = virtualiseFC fc in
+             IApp vfc
+               (INamedApp vfc
+                 (IVar vfc (NS preludeNS $ UN $ Basic "concat"))
+                 (UN $ Basic "t")
+                 (IVar vfc (NS preludeNS $ UN $ Basic "List")))
+               (strInterpolate xs)
     where
       toRawImp : PStr -> Core RawImp
       toRawImp (StrLiteral fc str) = pure $ IPrimVal fc (Str str)
@@ -511,21 +518,29 @@ mutual
 
       -- merge neighbouring StrLiteral
       mergeStrLit : List PStr -> List PStr
-      mergeStrLit xs
-          = case List.spanBy (\case StrLiteral fc str => Just (fc, str); _ => Nothing) xs of
-                 ([], []) => []
-                 ([], x::xs) => x :: mergeStrLit xs
-                 (lits@(_::_), xs) => (StrLiteral (fst $ head lits) (fastConcat $ snd <$> lits)) :: mergeStrLit xs
+      mergeStrLit xs = case List.spanBy isStrLiteral xs of
+        ([], []) => []
+        ([], x::xs) => x :: mergeStrLit xs
+        (lits@(_::_), xs) =>
+          -- TODO: merge all the FCs of the merged literals!
+          let fc  = fst $ head lits in
+          let lit = fastConcat $ snd <$> lits in
+          StrLiteral fc lit :: mergeStrLit xs
 
       notEmpty : PStr -> Bool
       notEmpty (StrLiteral _ str) = str /= ""
       notEmpty (StrInterp _ _) = True
 
-      concatStr : RawImp -> RawImp -> RawImp
-      concatStr a b =
-        let aFC = virtualiseFC (getFC a)
-            bFC = virtualiseFC (getFC b)
-        in IApp aFC (IApp bFC (IVar bFC (UN $ Basic "++")) a) b
+      strInterpolate : List RawImp -> RawImp
+      strInterpolate []
+        = IVar EmptyFC (NS preludeNS $ UN $ Basic "Nil")
+      strInterpolate (x :: xs)
+        = let xFC = virtualiseFC (getFC x) in
+          apply (IVar xFC (NS preludeNS $ UN $ Basic "::"))
+          [ IApp xFC (IVar EmptyFC (UN $ Basic "interpolate"))
+                     x
+          , strInterpolate xs
+          ]
 
   trimMultiline : FC -> Nat -> List (List PStr) -> Core (List PStr)
   trimMultiline fc indent lines

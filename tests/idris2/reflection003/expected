@@ -1,47 +1,49 @@
 1/1: Building refprims (refprims.idr)
 LOG 0: Name: Prelude.Types.List.++
 LOG 0: Type: (%pi Rig0 Implicit (Just a) %type (%pi RigW Explicit (Just xs) (Prelude.Basics.List a) (%pi RigW Explicit (Just ys) (Prelude.Basics.List a) (Prelude.Basics.List a))))
+LOG 0: Pretty Type: (xs : List a) -> (ys : List a) -> List a
 LOG 0: Name: Prelude.Types.String.++
 LOG 0: Type: (%pi RigW Explicit (Just x) String (%pi RigW Explicit (Just y) String String))
+LOG 0: Pretty Type: (x : String) -> (y : String) -> String
 LOG 0: Resolved name: Prelude.Types.Nat
 LOG 0: Constructors: [Prelude.Types.Z, Prelude.Types.S]
 Error: While processing right hand side of dummy1. Error during reflection: Not really trying
 
-refprims:43:10--43:27
- 39 |         ns <- inCurrentNS n
- 40 |         fail $ "failed after generating " ++ censorDigits (show ns)
- 41 | 
- 42 | dummy1 : a
- 43 | dummy1 = %runElab logPrims
+refprims:45:10--45:27
+ 41 |         ns <- inCurrentNS n
+ 42 |         fail $ "failed after generating " ++ censorDigits (show ns)
+ 43 | 
+ 44 | dummy1 : a
+ 45 | dummy1 = %runElab logPrims
                ^^^^^^^^^^^^^^^^^
 
 Error: While processing right hand side of dummy2. Error during reflection: Still not trying
 
-refprims:46:10--46:30
- 42 | dummy1 : a
- 43 | dummy1 = %runElab logPrims
- 44 | 
- 45 | dummy2 : a
- 46 | dummy2 = %runElab logDataCons
+refprims:48:10--48:30
+ 44 | dummy1 : a
+ 45 | dummy1 = %runElab logPrims
+ 46 | 
+ 47 | dummy2 : a
+ 48 | dummy2 = %runElab logDataCons
                ^^^^^^^^^^^^^^^^^^^^
 
 Error: While processing right hand side of dummy3. Error during reflection: Undefined name
 
-refprims:49:10--49:25
- 45 | dummy2 : a
- 46 | dummy2 = %runElab logDataCons
- 47 | 
- 48 | dummy3 : a
- 49 | dummy3 = %runElab logBad
+refprims:51:10--51:25
+ 47 | dummy2 : a
+ 48 | dummy2 = %runElab logDataCons
+ 49 | 
+ 50 | dummy3 : a
+ 51 | dummy3 = %runElab logBad
                ^^^^^^^^^^^^^^^
 
 Error: While processing right hand side of dummy4. Error during reflection: failed after generating Main.{plus:XXXX}
 
-refprims:52:10--52:28
- 48 | dummy3 : a
- 49 | dummy3 = %runElab logBad
- 50 | 
- 51 | dummy4 : a
- 52 | dummy4 = %runElab tryGenSym
+refprims:54:10--54:28
+ 50 | dummy3 : a
+ 51 | dummy3 = %runElab logBad
+ 52 | 
+ 53 | dummy4 : a
+ 54 | dummy4 = %runElab tryGenSym
                ^^^^^^^^^^^^^^^^^^
 

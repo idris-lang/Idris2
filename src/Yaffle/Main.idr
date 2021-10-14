@@ -15,6 +15,8 @@ import Core.TT
 import Core.UnifyState
 import Libraries.Utils.Path
 
+import Idris.Syntax
+
 import TTImp.Parser
 import TTImp.ProcessDecls
 import TTImp.TTImp
@@ -51,6 +53,7 @@ yaffleMain sourceFileName args
          modIdent <- ctxtPathToNS sourceFileName
          m <- newRef MD (initMetadata (PhysicalIdrSrc modIdent))
          u <- newRef UST initUState
+         s <- newRef Syn initSyntax
          setLogTimings t
          addPrimitives
          case extension sourceFileName of
@@ -66,7 +69,7 @@ yaffleMain sourceFileName args
                             coreLift_ $ putStrLn "Written TTC"
          ust <- get UST
 
-         repl {c} {u}
+         repl {c} {u} {s}
 
 ymain : IO ()
 ymain

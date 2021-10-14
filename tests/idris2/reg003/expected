@@ -1,70 +1,24 @@
 1/1: Building Holes (Holes.idr)
-Error: While processing type of Vect_ext. Undefined name ~=~. 
+Warning: Unreachable clause: f True
 
-Holes:4:64--4:85
- 1 | import Data.Vect
- 2 | import Data.Fin
- 3 | 
- 4 | Vect_ext : (v : Vect n a) -> (w : Vect n a) -> ((i : Fin n) -> index i v = index i w)
-                                                                    ^^^^^^^^^^^^^^^^^^^^^
-
-Error: While processing type of Weird. Undefined name ~=~. 
-
-Holes:7:26--7:31
- 3 | 
- 4 | Vect_ext : (v : Vect n a) -> (w : Vect n a) -> ((i : Fin n) -> index i v = index i w)
- 5 |   -> v = w
- 6 | 
- 7 | Weird : (v: Vect n a) -> v = v
-                              ^^^^^
-
-Error: No type declaration for Main.Weird.
-
-Holes:8:1--8:41
- 4 | Vect_ext : (v : Vect n a) -> (w : Vect n a) -> ((i : Fin n) -> index i v = index i w)
- 5 |   -> v = w
- 6 | 
- 7 | Weird : (v: Vect n a) -> v = v
- 8 | Weird v =  Vect_ext ?hole0 ?hole1 ?hole2
-     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Error: While processing type of f. Undefined name Bool. 
-
-Holes:10:5--10:9
- 06 | 
- 07 | Weird : (v: Vect n a) -> v = v
- 08 | Weird v =  Vect_ext ?hole0 ?hole1 ?hole2
- 09 | 
- 10 | f : Bool -> Nat
-          ^^^^
-
-Error: No type declaration for Main.f.
-
-Holes:11:1--11:11
- 07 | Weird : (v: Vect n a) -> v = v
+Holes:12:1--12:7
  08 | Weird v =  Vect_ext ?hole0 ?hole1 ?hole2
  09 | 
  10 | f : Bool -> Nat
  11 | f True = 0
-      ^^^^^^^^^^
+ 12 | f True = ?help
+      ^^^^^^
 
-Main> Error: Undefined name help. 
-
-(Interactive):1:4--1:8
- 1 | :t help
-        ^^^^
-
-Main> Error: Undefined name hole0. 
-
-(Interactive):1:4--1:9
- 1 | :t hole0
-        ^^^^^
-
-Main> Error: Undefined name hole1. 
-
-(Interactive):1:4--1:9
- 1 | :t hole1
-        ^^^^^
-
-Main> Unknown name hole1
+Main> Main.help : Nat
+Main>  0 a : Type
+ 0 n : Nat
+   v : Vect n a
+------------------------------
+hole0 : Vect n a
+Main>  0 a : Type
+ 0 n : Nat
+   v : Vect n a
+------------------------------
+hole1 : Vect n a
+Main> v
 Main> Bye for now!

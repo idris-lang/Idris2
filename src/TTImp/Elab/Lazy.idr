@@ -9,6 +9,8 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
@@ -21,6 +23,7 @@ checkDelayed : {vars : _} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                RigCount -> ElabInfo ->
                NestedNames vars -> Env Term vars ->
                FC -> LazyReason -> RawImp -> Maybe (Glued vars) ->
@@ -35,6 +38,7 @@ checkDelay : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
              FC -> RawImp -> Maybe (Glued vars) ->
@@ -74,6 +78,7 @@ checkForce : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
              FC -> RawImp -> Maybe (Glued vars) ->

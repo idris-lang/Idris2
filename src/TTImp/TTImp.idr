@@ -733,6 +733,16 @@ definedInBlock ns decls =
     defName _ _ = []
 
 export
+isIVar : RawImp' nm -> Maybe (FC, nm)
+isIVar (IVar fc v) = Just (fc, v)
+isIVar _ = Nothing
+
+export
+isIBindVar : RawImp' nm -> Maybe (FC, String)
+isIBindVar (IBindVar fc v) = Just (fc, v)
+isIBindVar _ = Nothing
+
+export
 getFC : RawImp' nm -> FC
 getFC (IVar x _) = x
 getFC (IPi x _ _ _ _ _) = x
@@ -784,6 +794,53 @@ namespace ImpDecl
   getFC (IPragma _ _) = EmptyFC
   getFC (ILog _) = EmptyFC
   getFC (IBuiltin fc _ _) = fc
+
+public export
+data Arg' nm
+   = Explicit FC (RawImp' nm)
+   | Auto     FC (RawImp' nm)
+   | Named    FC Name (RawImp' nm)
+
+public export
+Arg : Type
+Arg = Arg' Name
+
+public export
+IArg : Type
+IArg = Arg' KindedName
+
+export
+isExplicit : Arg' nm -> Maybe (FC, RawImp' nm)
+isExplicit (Explicit fc t) = Just (fc, t)
+isExplicit _ = Nothing
+
+export
+unIArg : Arg' nm -> RawImp' nm
+unIArg (Explicit _ t) = t
+unIArg (Auto _ t) = t
+unIArg (Named _ _ t) = t
+
+export
+Show nm => Show (Arg' nm) where
+  show (Explicit fc t) = show t
+  show (Auto fc t) = "@{" ++ show t ++ "}"
+  show (Named fc n t) = "{" ++ show n ++ " = " ++ show t ++ "}"
+
+export
+getFnArgs : RawImp' nm -> List (Arg' nm) -> (RawImp' nm, List (Arg' nm))
+getFnArgs (IApp fc f arg) args = getFnArgs f (Explicit fc arg :: args)
+getFnArgs (INamedApp fc f n arg) args = getFnArgs f (Named fc n arg :: args)
+getFnArgs (IAutoApp fc f arg) args = getFnArgs f (Auto fc arg :: args)
+getFnArgs tm args = (tm, args)
+
+-- TODO: merge these definitions
+namespace Arg
+  export
+  apply : RawImp' nm -> List (Arg' nm) -> RawImp' nm
+  apply f (Explicit fc a :: args) = apply (IApp fc f a) args
+  apply f (Auto fc a :: args) = apply (IAutoApp fc f a) args
+  apply f (Named fc n a :: args) = apply (INamedApp fc f n a) args
+  apply f [] = f
 
 export
 apply : RawImp' nm -> List (RawImp' nm) -> RawImp' nm

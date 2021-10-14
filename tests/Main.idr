@@ -41,8 +41,8 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic046", "basic047",             "basic049", "basic050",
        "basic051", "basic052", "basic053", "basic054", "basic055",
        "basic056", "basic057", "basic058", "basic059", "basic060",
-       "basic061", "basic062",
-       "interpolation001", "interpolation002"]
+       "basic061", "basic062", "basic063",
+       "interpolation001", "interpolation002", "interpolation003"]
 
 idrisTestsCoverage : TestPool
 idrisTestsCoverage = MkTestPool "Coverage checking" [] Nothing
@@ -271,8 +271,9 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "bitops"
     , "casts"
     , "memo"
+    , "fastConcat"
     , "newints"
-    , "reg001"
+    , "reg001", "reg002"
     , "stringcast"
     , "syntax001"
     , "tailrec001"

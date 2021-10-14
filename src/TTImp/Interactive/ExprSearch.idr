@@ -23,6 +23,8 @@ import Core.TT
 import Core.Unify
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Interactive.CaseSplit
 import TTImp.TTImp
@@ -852,6 +854,7 @@ getLHSData defs (Just tm)
 firstLinearOK : {auto c : Ref Ctxt Defs} ->
                 {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
+                {auto s : Ref Syn SyntaxInfo} ->
                 FC -> Search (ClosedTerm, ExprDefs) ->
                 Core (Search RawImp)
 firstLinearOK fc NoMore = noResult
@@ -872,6 +875,7 @@ export
 exprSearchOpts : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  SearchOpts -> FC -> Name -> List Name ->
                  Core (Search RawImp)
 exprSearchOpts opts fc n_in hints
@@ -905,6 +909,7 @@ exprSearchOpts opts fc n_in hints
 exprSearch' : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               FC -> Name -> List Name ->
               Core (Search RawImp)
 exprSearch' = exprSearchOpts (initSearchOpts True 5)
@@ -913,6 +918,7 @@ export
 exprSearch : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              FC -> Name -> List Name ->
              Core (Search RawImp)
 exprSearch fc n hints
@@ -925,6 +931,7 @@ export
 exprSearchN : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               FC -> Nat -> Name -> List Name ->
               Core (List RawImp)
 exprSearchN fc max n hints

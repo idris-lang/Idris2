@@ -645,6 +645,8 @@ mutual
         registerVariableForAutomaticFreeing $ "var_" ++ (show var)
         bodyAssignment <- cStatementsFromANF body
         pure $ bodyAssignment
+    cStatementsFromANF (ACon fc n UNIT tag []) = do
+        pure $ MkRS "(Value*)NULL" "(Value*)NULL"
     cStatementsFromANF (ACon fc n _ tag args) = do
         c <- getNextCounter
         let constr = "constructor_" ++ (show c)

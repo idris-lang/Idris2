@@ -10,6 +10,8 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
@@ -34,6 +36,7 @@ checkPiInfo : {vars : _} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto e : Ref EST (EState vars)} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               RigCount -> ElabInfo -> NestedNames vars -> Env Term vars ->
               PiInfo RawImp -> (expTy : Maybe (Glued vars)) ->
               Core (PiInfo (Term vars))
@@ -50,6 +53,7 @@ checkPi : {vars : _} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
           {auto e : Ref EST (EState vars)} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           RigCount -> ElabInfo ->
           NestedNames vars -> Env Term vars ->
           FC ->
@@ -89,6 +93,7 @@ inferLambda : {vars : _} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto e : Ref EST (EState vars)} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               RigCount -> ElabInfo ->
               NestedNames vars -> Env Term vars ->
               FC ->
@@ -130,6 +135,7 @@ checkLambda : {vars : _} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto e : Ref EST (EState vars)} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               RigCount -> ElabInfo ->
               NestedNames vars -> Env Term vars ->
               FC ->
@@ -195,6 +201,7 @@ checkLet : {vars : _} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars ->
            FC -> (lhsFC : FC) -> RigCount -> (n : Name) ->
