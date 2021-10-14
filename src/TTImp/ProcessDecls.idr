@@ -10,6 +10,7 @@ import Core.Options
 import Core.Termination
 import Core.UnifyState
 
+import Idris.Syntax
 import Parser.Source
 
 import TTImp.BindImplicits
@@ -36,6 +37,7 @@ process : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           List ElabOpt ->
           NestedNames vars -> Env Term vars -> ImpDecl -> Core ()
 process eopts nest env (IClaim fc rig vis opts ty)
@@ -124,6 +126,7 @@ processDecls : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                NestedNames vars -> Env Term vars -> List ImpDecl -> Core Bool
 processDecls nest env decls
     = do traverse_ (processDecl [] nest env) decls
@@ -133,6 +136,7 @@ processTTImpDecls : {vars : _} ->
                     {auto c : Ref Ctxt Defs} ->
                     {auto m : Ref MD Metadata} ->
                     {auto u : Ref UST UState} ->
+                    {auto s : Ref Syn SyntaxInfo} ->
                     NestedNames vars -> Env Term vars -> List ImpDecl -> Core Bool
 processTTImpDecls {vars} nest env decls
     = do traverse_ (\d => do d' <- bindNames d
@@ -167,6 +171,7 @@ export
 processTTImpFile : {auto c : Ref Ctxt Defs} ->
                    {auto m : Ref MD Metadata} ->
                    {auto u : Ref UST UState} ->
+                   {auto s : Ref Syn SyntaxInfo} ->
                    String -> Core Bool
 processTTImpFile fname
     = do modIdent <- ctxtPathToNS fname

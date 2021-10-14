@@ -13,6 +13,9 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+import Idris.Resugar
+
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.Reflect
@@ -28,6 +31,7 @@ elabScript : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              FC -> NestedNames vars ->
              Env Term vars -> NF vars -> Maybe (Glued vars) ->
              Core (NF vars)
@@ -86,6 +90,15 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                      tm' <- evalClosure defs tm
                      pure $ !(reify defs str') ++ ": " ++
                              show (the RawImp !(reify defs tm'))
+             scriptRet ()
+    elabCon defs "LogSugaredTerm" [topic, verb, str, tm]
+        = do topic' <- evalClosure defs topic
+             verb' <- evalClosure defs verb
+             unverifiedLogC !(reify defs topic') !(reify defs verb') $
+                  do str' <- evalClosure defs str
+                     tm' <- reify defs !(evalClosure defs tm)
+                     ptm <- pterm (map defaultKindedName tm')
+                     pure $ !(reify defs str') ++ ": " ++ show ptm
              scriptRet ()
     elabCon defs "Check" [exp, ttimp]
         = do exp' <- evalClosure defs exp
@@ -181,6 +194,7 @@ checkRunElab : {vars : _} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                RigCount -> ElabInfo ->
                NestedNames vars -> Env Term vars ->
                FC -> RawImp -> Maybe (Glued vars) ->

@@ -9,6 +9,8 @@ import Core.Normalise
 import Core.UnifyState
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.BindImplicits
 import TTImp.Elab
 import TTImp.Elab.Check
@@ -35,6 +37,7 @@ elabRecord : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              List ElabOpt -> FC -> Env Term vars ->
              NestedNames vars -> Maybe String ->
              Visibility -> Name ->
@@ -218,6 +221,7 @@ processRecord : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
                 {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
+                {auto s : Ref Syn SyntaxInfo} ->
                 List ElabOpt -> NestedNames vars ->
                 Env Term vars -> Maybe String ->
                 Visibility -> ImpRecord -> Core ()

@@ -10,6 +10,8 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Reflect
 import TTImp.TTImp
@@ -171,6 +173,7 @@ bindUnqs : {vars : _} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            List (Name, FC, RawImp) ->
            RigCount -> ElabInfo -> NestedNames vars -> Env Term vars ->
            Term vars ->
@@ -197,6 +200,7 @@ checkQuote : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
              FC -> RawImp -> Maybe (Glued vars) ->
@@ -234,6 +238,7 @@ checkQuoteDecl : {vars : _} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> List ImpDecl -> Maybe (Glued vars) ->
