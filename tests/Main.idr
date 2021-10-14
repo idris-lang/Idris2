@@ -271,6 +271,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "bitops"
     , "casts"
     , "memo"
+    , "fastConcat"
     , "newints"
     , "reg001", "reg002"
     , "stringcast"
