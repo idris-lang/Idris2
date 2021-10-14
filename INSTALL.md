@@ -17,9 +17,11 @@ The requirements are:
   means on some systems the package you need to install will be named
   something more like `libgmp3-dev`.
 
-On Windows, it has been reported that installing via `MSYS2` works
-[MSYS2](https://www.msys2.org/). On Windows older than Windows 8, you may need to
-set an environment variable `OLD_WIN=1` or modify it in `config.mk`.
+On Windows, it has been reported that installing via
+[MSYS2](https://www.msys2.org/) works. Use the 'MSYS2 MinGW 64-bit' environment
+and install GCC by running `pacman -S mingw-w64-x86_64-gcc`.
+To support  Windows 7, you may need to set an environment variable `OLD_WIN=1`
+or add it to custom.mk (`echo OLD_WIN = 1 >> custom.mk`).
 
 On Raspberry Pi, you can bootstrap via Racket.
 
