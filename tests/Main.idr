@@ -210,7 +210,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Quotation and reflection
        "reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",
-       "reflection009","reflection010",
+       "reflection009", "reflection010", "reflection011",
        -- The 'with' rule
        "with001", "with002", "with004", "with005", "with006",
        -- with-disambiguation
