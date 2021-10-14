@@ -8,6 +8,8 @@ import Core.Metadata
 import Core.Normalise
 import Core.UnifyState
 
+import Idris.Syntax
+
 import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.ProcessDef -- for checking LHS
@@ -20,6 +22,7 @@ processTransform : {vars : _} ->
                    {auto c : Ref Ctxt Defs} ->
                    {auto m : Ref MD Metadata} ->
                    {auto u : Ref UST UState} ->
+                   {auto s : Ref Syn SyntaxInfo} ->
                    List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
                    Name -> RawImp -> RawImp -> Core ()
 processTransform eopts nest env fc tn_in lhs rhs

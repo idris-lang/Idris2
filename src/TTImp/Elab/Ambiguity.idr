@@ -11,6 +11,8 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
@@ -335,6 +337,7 @@ checkAlternative : {vars : _} ->
                    {auto m : Ref MD Metadata} ->
                    {auto u : Ref UST UState} ->
                    {auto e : Ref EST (EState vars)} ->
+                   {auto s : Ref Syn SyntaxInfo} ->
                    RigCount -> ElabInfo ->
                    NestedNames vars -> Env Term vars ->
                    FC -> AltType -> List RawImp -> Maybe (Glued vars) ->
