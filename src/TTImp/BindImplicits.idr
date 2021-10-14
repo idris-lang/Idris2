@@ -55,6 +55,12 @@ renameIBinds rs us (IDelay fc t)
     = pure $ IDelay fc !(renameIBinds rs us t)
 renameIBinds rs us (IForce fc t)
     = pure $ IForce fc !(renameIBinds rs us t)
+renameIBinds rs us (IUpdate fc updates tm)
+    = pure $ IUpdate fc !(traverse f updates) !(renameIBinds rs us tm)
+  where
+      f : IFieldUpdate -> State (List (String, String)) IFieldUpdate
+      f (ISetField path x)    = ISetField path <$> renameIBinds rs us x
+      f (ISetFieldApp path x) = ISetFieldApp path <$> renameIBinds rs us x
 renameIBinds rs us (IAlternative fc u alts)
     = pure $ IAlternative fc !(renameAlt u)
                              !(traverse (renameIBinds rs us) alts)
@@ -112,6 +118,8 @@ doBind ns (IUnquote fc tm)
     = IUnquote fc (doBind ns tm)
 doBind ns (IAlternative fc u alts)
     = IAlternative fc (mapAltType (doBind ns) u) (map (doBind ns) alts)
+doBind ns (IUpdate fc updates tm)
+    = IUpdate fc (map (mapFieldUpdateTerm $ doBind ns) updates) (doBind ns tm)
 doBind ns tm = tm
 
 export

@@ -70,6 +70,7 @@ findBindableNamesQuot : List Name -> (used : List String) -> RawImp ->
                         List (String, String)
 
 findBindableNames True env used (IVar fc nm@(UN (Basic n)))
+      -- If the identifier is not bound locally and begins with a lowercase letter..
     = if not (nm `elem` env) && lowerFirst n
          then [(n, genUniqueStr used n)]
          else []
@@ -111,6 +112,9 @@ findBindableNames arg env used (IQuoteDecl fc d)
     = findBindableNamesQuot env used !(rawImpFromDecl !d)
 findBindableNames arg env used (IAlternative fc u alts)
     = concatMap (findBindableNames arg env used) alts
+findBindableNames arg env used (IUpdate fc updates tm)
+    = findBindableNames arg env used tm ++
+      concatMap (findBindableNames arg env used . getFieldUpdateTerm) updates
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findBindableNames arg env used tm = []
@@ -146,10 +150,7 @@ findBindableNamesQuot env used (ICoerced fc x)
 findBindableNamesQuot env used (IBindHere fc x y)
     = findBindableNamesQuot env used y
 findBindableNamesQuot env used (IUpdate fc xs x)
-    = findBindableNamesQuot env used !(x :: map getRawImp xs)
-  where getRawImp : IFieldUpdate -> RawImp
-        getRawImp (ISetField path y) = y
-        getRawImp (ISetFieldApp path y) = y
+    = findBindableNamesQuot env used !(x :: map getFieldUpdateTerm xs)
 findBindableNamesQuot env used (IAs fc nfc x y z)
     = findBindableNamesQuot env used z
 findBindableNamesQuot env used (IDelayed fc x y)
@@ -243,6 +244,8 @@ findAllNames env (IUnquote fc t)
     = findAllNames env t
 findAllNames env (IAlternative fc u alts)
     = concatMap (findAllNames env) alts
+findAllNames env (IUpdate fc updates tm)
+    = findAllNames env tm ++ concatMap (findAllNames env . getFieldUpdateTerm) updates
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findAllNames env tm = []
@@ -273,6 +276,8 @@ findIBindVars (IForce fc t)
     = findIBindVars t
 findIBindVars (IAlternative fc u alts)
     = concatMap findIBindVars alts
+findIBindVars (IUpdate fc updates tm)
+    = findIBindVars tm ++ concatMap (findIBindVars . getFieldUpdateTerm) updates
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findIBindVars tm = []
@@ -335,6 +340,9 @@ mutual
       = IDelay fc (substNames' bvar bound ps t)
   substNames' bvar bound ps (IForce fc t)
       = IForce fc (substNames' bvar bound ps t)
+  substNames' bvar bound ps (IUpdate fc updates tm)
+      = IUpdate fc (map (mapFieldUpdateTerm $ substNames' bvar bound ps) updates)
+                   (substNames' bvar bound ps tm)
   substNames' bvar bound ps tm = tm
 
   substNamesClause' : Bool -> List Name -> List (Name, RawImp) ->
@@ -436,6 +444,9 @@ mutual
       = IDelay fc' (substLoc fc' t)
   substLoc fc' (IForce fc t)
       = IForce fc' (substLoc fc' t)
+  substLoc fc' (IUpdate fc updates tm)
+      = IUpdate fc' (map (mapFieldUpdateTerm $ substLoc fc') updates)
+                    (substLoc fc' tm)
   substLoc fc' tm = tm
 
   export
