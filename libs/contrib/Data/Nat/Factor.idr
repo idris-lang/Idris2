@@ -123,7 +123,7 @@ multOneSoleNeutral (S k) (S (S j)) prf =
         rewrite plusCommutative k j in
         rewrite sym $ plusAssociative j k (k * S j) in
         rewrite sym $ multRightSuccPlus k (S j) in
-        injective {f = S} $ injective prf
+        inj S $ injective prf
 
 ||| If a is a factor of b and b is a factor of a, then a = b.
 public export

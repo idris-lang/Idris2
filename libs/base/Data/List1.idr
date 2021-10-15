@@ -1,6 +1,7 @@
 module Data.List1
 
 import public Data.Zippable
+import Control.Function
 
 %default total
 
@@ -163,6 +164,16 @@ Ord a => Ord (List1 a) where
 export
 consInjective : (x ::: xs) === (y ::: ys) -> (x === y, xs === ys)
 consInjective Refl = (Refl, Refl)
+
+%hint
+export
+consHeadInj : {x : a} -> Injective (x :::)
+consHeadInj = MkInjective (\Refl => Refl)
+
+%hint
+export
+consTailInj : {ys : List a} -> Injective (::: ys)
+consTailInj = MkInjective (\Refl => Refl)
 
 ------------------------------------------------------------------------
 -- Zippable

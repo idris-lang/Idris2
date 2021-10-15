@@ -62,14 +62,18 @@ finToNat : Fin n -> Nat
 finToNat FZ = Z
 finToNat (FS k) = S $ finToNat k
 
-||| `finToNat` is injective
-export
 finToNatInjective : (fm : Fin k) -> (fn : Fin k) -> (finToNat fm) = (finToNat fn) -> fm = fn
 finToNatInjective FZ     FZ     _    = Refl
 finToNatInjective (FS _) FZ     Refl impossible
 finToNatInjective FZ     (FS _) Refl impossible
 finToNatInjective (FS m) (FS n) prf  =
   cong FS $ finToNatInjective m n $ injective prf
+
+||| `finToNat` is injective
+%hint
+export
+finToNatInj : Injective Fin.finToNat
+finToNatInj = MkInjective (finToNatInjective _ _)
 
 export
 Cast (Fin n) Nat where
