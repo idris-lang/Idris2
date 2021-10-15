@@ -113,8 +113,8 @@ findBindableNames arg env used (IQuoteDecl fc d)
 findBindableNames arg env used (IAlternative fc u alts)
     = concatMap (findBindableNames arg env used) alts
 findBindableNames arg env used (IUpdate fc updates tm)
-    = findBindableNames arg env used tm ++
-      concatMap (findBindableNames arg env used . getFieldUpdateTerm) updates
+    = findBindableNames True env used tm ++
+      concatMap (findBindableNames True env used . getFieldUpdateTerm) updates
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findBindableNames arg env used tm = []
