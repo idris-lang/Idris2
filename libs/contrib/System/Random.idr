@@ -27,7 +27,7 @@ Random Int32 where
     let maxInt    = 2147483647 --shiftL 1 31 - 1
         negMinInt = 2147483648 -- negate $ shiftL 1 31
         magnitude : Bits32 = maxInt + negMinInt
-    bits32 <- liftIO . randomBits32 $ cast magnitude
+    bits32 <- liftIO $ randomBits32 magnitude
     let int : Integer = cast bits32
     pure . cast $ int - (cast negMinInt)
 
