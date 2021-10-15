@@ -1,6 +1,7 @@
 module Data.List.Elem
 
 import Decidable.Equality
+import Control.Function
 
 %default total
 
@@ -24,9 +25,10 @@ export
 Uninhabited (There e = Here) where
   uninhabited Refl impossible
 
+%hint
 export
-thereInjective : {0 e1, e2 : Elem x xs} -> There e1 = There e2 -> e1 = e2
-thereInjective Refl = Refl
+thereInjective : Injective {a=Elem x xs} (There {x} {y} {xs})
+thereInjective = MkInjective (\Refl => Refl)
 
 export
 DecEq (Elem x xs) where
@@ -35,7 +37,7 @@ DecEq (Elem x xs) where
   decEq (There later) Here = No absurd
   decEq (There this) (There that) with (decEq this that)
     decEq (There this) (There this) | Yes Refl  = Yes Refl
-    decEq (There this) (There that) | No contra = No (contra . thereInjective)
+    decEq (There this) (There that) | No contra = No (contra . injective)
 
 export
 Uninhabited (Elem {a} x []) where
