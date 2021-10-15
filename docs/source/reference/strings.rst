@@ -85,14 +85,14 @@ If you need to escape characters you still can by using a ``\\`` followed by the
 ``#`` that you used for your string delimiters. In the following example we are using two
 ``#`` characters as our escape sequence and want to print a line return:
 
-.. code-block:: idris
+.. code-block::
 
     markdownExample : String
     markdownExample = ##"markdown titles look like this: \##n"# Title \##n body""##
 
 This last example could be implemented by combining raw string literals with multiline strings:
 
-.. code-block:: idris
+.. code-block::
 
     markdownExample : String
     markdownExample = ##"""
@@ -111,7 +111,7 @@ programs that evaluate to strings with a string literals in order to avoid manua
 the concatenation of those expressions. To use interpolated strings, use ``\{`` to start an
 interpolation slice in which you can write an idris expression. Close it with ``}``
 
-.. code-block:: idris
+.. code-block::
 
     print : Expr -> String
     print (Var name expr) = "let \{name} = \{print expr}"

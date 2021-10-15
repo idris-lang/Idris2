@@ -16,6 +16,8 @@ import Core.Transform
 import Core.Value
 import Core.UnifyState
 
+import Idris.Syntax
+
 import TTImp.BindImplicits
 import TTImp.Elab
 import TTImp.Elab.Check
@@ -24,6 +26,7 @@ import TTImp.Impossible
 import TTImp.PartialEval
 import TTImp.TTImp
 import TTImp.TTImp.Functor
+import TTImp.ProcessType
 import TTImp.Unelab
 import TTImp.Utils
 import TTImp.WithClause
@@ -358,6 +361,7 @@ checkLHS : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            Bool -> -- in transform
            (mult : RigCount) -> (hashit : Bool) ->
            Int -> List ElabOpt -> NestedNames vars -> Env Term vars ->
@@ -454,6 +458,7 @@ checkClause : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               (mult : RigCount) -> (vis : Visibility) ->
               (totreq : TotalReq) -> (hashit : Bool) ->
               Int -> List ElabOpt -> NestedNames vars -> Env Term vars ->
@@ -776,6 +781,7 @@ calcRefs rt at fn
 mkRunTime : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             FC -> Name -> Core ()
 mkRunTime fc n
     = do log "compile.casetree" 5 $ "Making run time definition for " ++ show !(toFullNames n)
@@ -871,6 +877,7 @@ mkRunTime fc n
 compileRunTime : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  FC -> Name -> Core ()
 compileRunTime fc atotal
     = do defs <- get Ctxt
@@ -889,18 +896,79 @@ warnUnreachable : {auto c : Ref Ctxt Defs} ->
 warnUnreachable (MkClause env lhs rhs)
     = recordWarning (UnreachableClause (getLoc lhs) env lhs)
 
+isAlias : RawImp -> Maybe ((FC, Name)                -- head symbol
+                          , List (FC, (FC, String))) -- pattern variables
+isAlias lhs
+  = do let (hd, apps) = getFnArgs lhs []
+       hd <- isIVar hd
+       args <- traverse (isExplicit >=> bitraverse pure isIBindVar) apps
+       pure (hd, args)
+
+lookupOrAddAlias : {vars : _} ->
+                   {auto m : Ref MD Metadata} ->
+                   {auto c : Ref Ctxt Defs} ->
+                   {auto u : Ref UST UState} ->
+                   {auto s : Ref Syn SyntaxInfo} ->
+                   List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
+                   Name -> List ImpClause -> Core (Maybe GlobalDef)
+lookupOrAddAlias eopts nest env fc n [cl@(PatClause _ lhs _)]
+  = do defs <- get Ctxt
+       log "declare.def.alias" 20 $ "Looking at \{show cl}"
+       Nothing <- lookupCtxtExact n (gamma defs)
+         | Just gdef => pure (Just gdef)
+       -- No prior declaration:
+       --   1) check whether it has the shape of an alias
+       let Just (hd, args) = isAlias lhs
+         | Nothing => pure Nothing
+       --   2) check whether it could be a misspelling
+       log "declare.def" 5 $
+         "Missing type declaration for the alias "
+         ++ show n
+         ++ ". Checking first whether it is a misspelling."
+       [] <- do -- get the candidates
+                Just (str, kept) <- getSimilarNames n
+                   | Nothing => pure []
+                -- only keep the ones that haven't been defined yet
+                decls <- for kept $ \ (cand, weight) => do
+                    Just gdef <- lookupCtxtExact cand (gamma defs)
+                      | Nothing => pure Nothing -- should be impossible
+                    let None = definition gdef
+                      | _ => pure Nothing
+                    pure (Just (cand, weight))
+                pure $ showSimilarNames n str $ catMaybes decls
+          | (x :: xs) => throw (MaybeMisspelling (NoDeclaration fc n) (x ::: xs))
+       --   3) declare an alias
+       log "declare.def" 5 "Not a misspelling: go ahead and declare it!"
+       processType eopts nest env fc top Public []
+          $ MkImpTy fc fc n $ holeyType (map snd args)
+       defs <- get Ctxt
+       lookupCtxtExact n (gamma defs)
+
+  where
+    holeyType : List (FC, String) -> RawImp
+    holeyType [] = Implicit fc False
+    holeyType ((xfc, x) :: xs)
+      = let xfc = virtualiseFC xfc in
+        IPi xfc top Explicit (Just (UN $ Basic x)) (Implicit xfc False)
+      $ holeyType xs
+
+lookupOrAddAlias _ _ _ fc n _
+  = do defs <- get Ctxt
+       lookupCtxtExact n (gamma defs)
+
 export
 processDef : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
              Name -> List ImpClause -> Core ()
 processDef opts nest env fc n_in cs_in
     = do n <- inCurrentNS n_in
          defs <- get Ctxt
-         Just gdef <- lookupCtxtExact n (gamma defs)
-              | Nothing => noDeclaration fc n
+         Just gdef <- lookupOrAddAlias opts nest env fc n cs_in
+           | Nothing => noDeclaration fc n
          let None = definition gdef
               | _ => throw (AlreadyDefined fc n)
          let ty = type gdef

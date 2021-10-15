@@ -11,6 +11,8 @@ import Core.Normalise
 import Core.Value
 import Core.UnifyState
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.TTImp
 import TTImp.TTImp.Functor
@@ -216,6 +218,7 @@ getReducible (n :: rest) refs defs
 mkSpecDef : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             FC -> GlobalDef ->
             Name -> List (Nat, ArgMode) -> Name -> List (FC, Term vars) ->
             Core (Term vars)
@@ -349,6 +352,7 @@ specialise : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              FC -> Env Term vars -> GlobalDef ->
              Name -> List (FC, Term vars) ->
              Core (Maybe (Term vars))
@@ -397,6 +401,7 @@ findSpecs : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             Env Term vars -> List (FC, Term vars) -> Term vars ->
             Core (Term vars)
 findSpecs env stk (Ref fc Func fn)
@@ -445,6 +450,7 @@ mutual
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               Ref QVar Int -> Defs -> Bounds bound ->
               Env Term free -> List (Closure free) ->
               Core (List (Term (bound ++ free)))
@@ -456,6 +462,7 @@ mutual
   quoteArgsWithFC : {auto c : Ref Ctxt Defs} ->
                     {auto m : Ref MD Metadata} ->
                     {auto u : Ref UST UState} ->
+                    {auto s : Ref Syn SyntaxInfo} ->
                     {bound, free : _} ->
                     Ref QVar Int -> Defs -> Bounds bound ->
                     Env Term free -> List (FC, Closure free) ->
@@ -467,6 +474,7 @@ mutual
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               Ref QVar Int -> Defs ->
               FC -> Bounds bound -> Env Term free -> NHead free ->
               Core (Term (bound ++ free))
@@ -505,6 +513,7 @@ mutual
             {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             Ref QVar Int -> Defs -> Bounds bound ->
             Env Term free -> PiInfo (Closure free) ->
             Core (PiInfo (Term (bound ++ free)))
@@ -519,6 +528,7 @@ mutual
                 {auto c : Ref Ctxt Defs} ->
                 {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
+                {auto s : Ref Syn SyntaxInfo} ->
                 Ref QVar Int -> Defs -> Bounds bound ->
                 Env Term free -> Binder (Closure free) ->
                 Core (Binder (Term (bound ++ free)))
@@ -550,6 +560,7 @@ mutual
                {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                Ref QVar Int ->
                Defs -> Bounds bound ->
                Env Term vars -> NF vars -> Core (Term (bound ++ vars))
@@ -630,6 +641,7 @@ evalRHS : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           Env Term vars -> NF vars -> Core (Term vars)
 evalRHS env nf
     = do q <- newRef QVar 0
@@ -641,6 +653,7 @@ applySpecialise : {vars : _} ->
                   {auto c : Ref Ctxt Defs} ->
                   {auto m : Ref MD Metadata} ->
                   {auto u : Ref UST UState} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
                   Env Term vars ->
                   Maybe (List (Name, Nat)) ->
                         -- ^ If we're specialising, names to reduce in the RHS

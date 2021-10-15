@@ -159,6 +159,7 @@ Hints:
   Cast String Nat
   Eq String
   FromString String
+  Interpolation String
   Monoid String
   Ord String
   Semigroup String
