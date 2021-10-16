@@ -25,7 +25,7 @@ record WriterT (w : Type) (m : Type -> Type) (a : Type) where
 ||| Construct an writer computation from a (result,output) computation.
 ||| (The inverse of `runWriterT`.)
 public export %inline
-writerT : (Functor m, Semigroup w) => m (a, w) -> WriterT w m a
+writerT : Semigroup w => Functor m => m (a, w) -> WriterT w m a
 writerT f = MkWriterT $ \w => (\(a,w') => (a,w <+> w')) <$> f
 
 ||| Unwrap a writer computation.
@@ -36,7 +36,7 @@ runWriterT m = unWriterT m neutral
 
 ||| Extract the output from a writer computation.
 public export %inline
-execWriterT : (Functor m, Monoid w) => WriterT w m a -> m w
+execWriterT : Monoid w => Functor m => WriterT w m a -> m w
 execWriterT = map snd . runWriterT
 
 ||| Map both the return value and output of a computation using

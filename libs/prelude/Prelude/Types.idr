@@ -105,7 +105,7 @@ natToInteger (S k) = 1 + natToInteger k
 
 ||| Counts the number of elements that satify a predicate.
 public export
-count : (Foldable t) => (predicate : a -> Bool) -> (t a) -> Nat
+count : Foldable t => (predicate : a -> Bool) -> t a -> Nat
 count predicate = foldMap @{%search} @{Additive} (\x => if predicate x then 1 else 0)
 
 -----------

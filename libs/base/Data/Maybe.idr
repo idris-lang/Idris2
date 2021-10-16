@@ -60,7 +60,7 @@ lowerMaybe (Just x) = x
 
 ||| Returns `Nothing` when applied to `neutral`, and `Just` the value otherwise.
 export
-raiseToMaybe : (Monoid a, Eq a) => a -> Maybe a
+raiseToMaybe : Monoid a => Eq a => a -> Maybe a
 raiseToMaybe x = if x == neutral then Nothing else Just x
 
 public export
