@@ -80,6 +80,11 @@ Applicative Elab where
   f <*> a = Bind f (<$> a)
 
 export
+Alternative Elab where
+  empty = Fail EmptyFC ""
+  l <|> r = Try l r
+
+export
 Monad Elab where
   (>>=) = Bind
 
