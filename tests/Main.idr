@@ -185,7 +185,8 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
 -- other way. If we do, we'll need to have a way to disable these.
 idrisTestsSchemeEval : TestPool
 idrisTestsSchemeEval = MkTestPool "Scheme Evaluator" [] Nothing
-     ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004"]
+     ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004",
+      "schemeeval005"]
 
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
