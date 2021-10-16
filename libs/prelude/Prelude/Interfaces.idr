@@ -230,6 +230,10 @@ public export
 guard : Alternative f => Bool -> f ()
 guard x = if x then pure () else empty
 
+public export
+backupWith : Alternative f => a -> f a -> f a
+backupWith v = (<|> pure v)
+
 ||| Conditionally execute an applicative expression when the boolean is true.
 public export
 when : Applicative f => Bool -> Lazy (f ()) -> f ()
