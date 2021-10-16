@@ -24,7 +24,7 @@
   is desugared into
 
   ```idris
-  concat ["hello ", intersperse world]
+  concat ["hello ", interpolate world]
   ```
 
   This allows you to write expressions within slices without having to call `show`
