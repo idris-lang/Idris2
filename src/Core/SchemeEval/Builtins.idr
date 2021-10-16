@@ -143,17 +143,17 @@ applyIntCast _ (Signed Unlimited) x = x
 applyIntCast (Signed m) k@(Signed (P n)) x
     = if P n >= m
          then x
-         else wrap k $ Apply (Var "ct-toSignedInt") [x, toScheme (n - 1)]
+         else wrap k $ Apply (Var "ct-cast-signed") [x, toScheme (n - 1)]
 applyIntCast (Unsigned m) k@(Signed (P n)) x
     = if n > m
          then x
-         else wrap k $ Apply (Var "ct-toSignedInt") [x, toScheme (n - 1)]
+         else wrap k $ Apply (Var "ct-cast-signed") [x, toScheme (n - 1)]
 applyIntCast (Signed _) k@(Unsigned n) x
-    = wrap k $ Apply (Var "ct-toUnsignedInt") [x, toScheme n]
+    = wrap k $ Apply (Var "ct-cast-unsigned") [x, toScheme n]
 applyIntCast (Unsigned m) (Unsigned n) x
     = if n >= m
          then x
-         else Apply (Var "ct-toUnsignedInt") [x, toScheme n]
+         else Apply (Var "ct-cast-unsigned") [x, toScheme n]
 
 applyCast : SchemeObj Write ->
             Constant -> Constant ->
