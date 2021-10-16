@@ -262,6 +262,16 @@
         (integer->char x)
         (integer->char 0)))))
 
+(define ct-cast-signed
+  (lambda (xin bits)
+    (let [(x (vector-ref xin 1))]
+      (ct-toSignedInt x bits))))
+
+(define ct-cast-unsigned
+  (lambda (xin bits)
+    (let [(x (vector-ref xin 1))]
+      (ct-toUnsignedInt x bits))))
+
 (define ct-cast-string-int
   (lambda (x)
     (exact-truncate (cast-num (string->number (destroy-prefix x))))))
