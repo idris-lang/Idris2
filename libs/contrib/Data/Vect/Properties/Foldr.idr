@@ -24,7 +24,7 @@ import Control.Order
 
 ||| Sum implemented with foldr
 public export
-sumR : (Foldable f, Num a) => f a -> a
+sumR : Num a => Foldable f => f a -> a
 sumR = foldr (+) 0
 
 %transform "sumR/sum" sumR = sum

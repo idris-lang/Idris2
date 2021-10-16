@@ -228,7 +228,7 @@ infix 7 \\
 ||| ```
 |||
 public export
-(\\) : (Eq a) => List a -> List a -> List a
+(\\) : Eq a => List a -> List a -> List a
 (\\) = foldl (flip delete)
 
 ||| The unionBy function returns the union of two lists by user-supplied equality predicate.

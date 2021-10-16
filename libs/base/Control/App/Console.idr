@@ -27,9 +27,9 @@ putCharLn : Console e => Char -> App {l} e ()
 putCharLn c = putStrLn $ strCons c ""
 
 export
-print : (Console e, Show a) => a -> App {l} e ()
+print : Show a => Console e => a -> App {l} e ()
 print x = putStr $ show x
 
 export
-printLn : (Console e, Show a) => a -> App {l} e ()
+printLn : Show a => Console e => a -> App {l} e ()
 printLn x = putStrLn $ show x
