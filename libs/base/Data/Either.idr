@@ -123,3 +123,13 @@ leftInjective Refl = Refl
 export
 rightInjective : Right x = Right y -> x = y
 rightInjective Refl = Refl
+
+export
+eitherMapFusion : (f : _) -> (g : _) -> (p : _) -> (e : Either a b) -> either f g (map p e) = either f (g . p) e
+eitherMapFusion f g p $ Left x  = Refl
+eitherMapFusion f g p $ Right x = Refl
+
+export
+eitherBimapFusion : (f : _) -> (g : _) -> (p : _) -> (q : _) -> (e : _) -> either f g (bimap p q e) = either (f . p) (g . q) e
+eitherBimapFusion f g p q $ Left z  = Refl
+eitherBimapFusion f g p q $ Right z = Refl
