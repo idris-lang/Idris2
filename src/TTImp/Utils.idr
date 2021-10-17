@@ -245,7 +245,9 @@ findAllNames env (IUnquote fc t)
 findAllNames env (IAlternative fc u alts)
     = concatMap (findAllNames env) alts
 findAllNames env (IUpdate fc updates tm)
-    = findAllNames env tm ++ concatMap (findAllNames env . getFieldUpdateTerm) updates
+    = findAllNames env tm
+    ++ concatMap (findAllNames env . getFieldUpdateTerm) updates
+    ++ concatMap (map (UN . Basic) . getFieldUpdatePath) updates
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findAllNames env tm = []

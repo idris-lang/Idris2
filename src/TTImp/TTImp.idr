@@ -445,6 +445,12 @@ getFieldUpdateTerm (ISetFieldApp _ term) = term
 
 
 export
+getFieldUpdatePath : IFieldUpdate' nm -> List String
+getFieldUpdatePath (ISetField    path _) = path
+getFieldUpdatePath (ISetFieldApp path _) = path
+
+
+export
 mapFieldUpdateTerm : (RawImp' nm -> RawImp' nm) -> IFieldUpdate' nm -> IFieldUpdate' nm
 mapFieldUpdateTerm f (ISetField    x term) = ISetField    x (f term)
 mapFieldUpdateTerm f (ISetFieldApp x term) = ISetFieldApp x (f term)
