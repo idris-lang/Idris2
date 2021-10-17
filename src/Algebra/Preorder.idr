@@ -29,3 +29,9 @@ public export
 interface Preorder a => Top a where
   top : a
   topAbs : {x : a} -> x <= top = True
+
+||| The least bound of a bounded lattice
+public export
+interface Preorder a => Bot a where
+  bot : a
+  botAbs : {x : a} -> bot <= x = True
