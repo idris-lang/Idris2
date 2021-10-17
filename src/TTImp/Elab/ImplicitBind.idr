@@ -5,6 +5,7 @@ module TTImp.Elab.ImplicitBind
 import Core.Context
 import Core.Context.Log
 import Core.Core
+import Core.Coverage
 import Core.Env
 import Core.Metadata
 import Core.Normalise
@@ -281,14 +282,7 @@ bindImplicits : {auto c : Ref Ctxt Defs} ->
                 Term vars -> Term vars -> Core (Term vars, Term vars)
 bindImplicits fc NONE defs env hs tm ty = pure (tm, ty)
 bindImplicits {vars} fc mode defs env hs tm ty
-   = do hs' <- traverse nHoles hs
-        pure $ liftImps mode $ bindImplVars fc mode defs env hs' tm ty
-  where
-    nHoles : (Name, ImplBinding vars) -> Core (Name, ImplBinding vars)
-    nHoles (n, NameBinding c p tm ty)
-        = pure (n, NameBinding c p tm !(normaliseHolesScope defs env ty))
-    nHoles (n, AsBinding c p tm ty pat)
-        = pure (n, AsBinding c p tm !(normaliseHolesScope defs env ty) pat)
+   = pure $ liftImps mode $ bindImplVars fc mode defs env hs tm ty
 
 export
 implicitBind : {auto c : Ref Ctxt Defs} ->
@@ -340,10 +334,20 @@ getToBind {vars} fc elabmode impmode env excepts
   where
     normBindingTy : Defs -> ImplBinding vars -> Core (ImplBinding vars)
     normBindingTy defs (NameBinding c p tm ty)
-        = pure $ NameBinding c p tm !(normaliseHoles defs env ty)
+        = do case impmode of
+                  COVERAGE => do tynf <- nf defs env ty
+                                 when !(isEmpty defs env tynf) $
+                                    throw (InternalError "Empty pattern in coverage check")
+                  _ => pure ()
+             pure $ NameBinding c p tm !(normaliseHoles defs env ty)
     normBindingTy defs (AsBinding c p tm ty pat)
-        = pure $ AsBinding c p tm !(normaliseHoles defs env ty)
-                                  !(normaliseHoles defs env pat)
+        = do case impmode of
+                  COVERAGE => do tynf <- nf defs env ty
+                                 when !(isEmpty defs env tynf) $
+                                    throw (InternalError "Empty pattern in coverage check")
+                  _ => pure ()
+             pure $ AsBinding c p tm !(normaliseHoles defs env ty)
+                                     !(normaliseHoles defs env pat)
 
     normImps : Defs -> List Name -> List (Name, ImplBinding vars) ->
                Core (List (Name, ImplBinding vars))

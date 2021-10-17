@@ -19,6 +19,7 @@ Reify BindMode where
                  => do c' <- reify defs !(evalClosure defs c)
                        pure (PI c')
              (UN (Basic "PATTERN"), _) => pure PATTERN
+             (UN (Basic "COVERAGE"), _) => pure COVERAGE
              (UN (Basic "NONE"), _) => pure NONE
              _ => cantReify val "BindMode"
   reify deva val = cantReify val "BindMode"
@@ -30,6 +31,8 @@ Reflect BindMode where
            appCon fc defs (reflectionttimp "PI") [c']
   reflect fc defs lhs env PATTERN
       = getCon fc defs (reflectionttimp "PATTERN")
+  reflect fc defs lhs env COVERAGE
+      = getCon fc defs (reflectionttimp "COVERAGE")
   reflect fc defs lhs env NONE
       = getCon fc defs (reflectionttimp "NONE")
 

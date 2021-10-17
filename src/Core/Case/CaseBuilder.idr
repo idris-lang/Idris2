@@ -130,7 +130,14 @@ substInPatInfo : {pvar, vars, todo : _} ->
                  Core (PatInfo pvar vars, NamedPats vars todo)
 substInPatInfo {pvar} {vars} fc n tm p ps
     = case argType p of
-           Known c ty => pure (record { argType = Known c (substName n tm ty) } p, ps)
+           Known c ty =>
+                do defs <- get Ctxt
+                   tynf <- nf defs (mkEnv fc _) ty
+                   case tynf of
+                        NApp _ _ _ =>
+                           pure (record { argType = Known c (substName n tm ty) } p, ps)
+                        -- Got a concrete type, and that's all we need, so stop
+                        _ => pure (p, ps)
            Stuck fty =>
              do defs <- get Ctxt
                 empty <- clearDefs defs

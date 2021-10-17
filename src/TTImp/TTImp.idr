@@ -43,7 +43,7 @@ Weaken NestedNames where
 -- do notation, etc, should elaborate via this, perhaps in some local
 -- context).
 public export
-data BindMode = PI RigCount | PATTERN | NONE
+data BindMode = PI RigCount | PATTERN | COVERAGE | NONE
 
 mutual
 
@@ -1077,6 +1077,7 @@ mutual
     toBuf b (PI r) = do tag 0; toBuf b r
     toBuf b PATTERN = tag 1
     toBuf b NONE = tag 2
+    toBuf b COVERAGE = tag 3
 
     fromBuf b
         = case !getTag of
@@ -1084,6 +1085,7 @@ mutual
                        pure (PI x)
                1 => pure PATTERN
                2 => pure NONE
+               3 => pure COVERAGE
                _ => corrupt "BindMode"
 
   export

@@ -7,7 +7,7 @@ import public Language.Reflection.TT
 -- Unchecked terms and declarations in the intermediate language
 mutual
   public export
-  data BindMode = PI Count | PATTERN | NONE
+  data BindMode = PI Count | PATTERN | COVERAGE | NONE
 
   -- For as patterns matching linear arguments, select which side is
   -- consumed
