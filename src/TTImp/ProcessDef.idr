@@ -989,7 +989,8 @@ processDef opts nest env fc n_in cs_in
          let pats = map toPats (rights cs)
 
          (cargs ** (tree_ct, unreachable)) <-
-             getPMDef fc (CompileTime mult) n ty (rights cs)
+             logTime ("+++ Building compile time case tree for " ++ show n) $
+                getPMDef fc (CompileTime mult) n ty (rights cs)
 
          traverse_ warnUnreachable unreachable
 
@@ -1023,7 +1024,8 @@ processDef opts nest env fc n_in cs_in
          put Ctxt (record { toCompileCase $= (n ::) } defs)
 
          atotal <- toResolvedNames (NS builtinNS (UN $ Basic "assert_total"))
-         when (not (InCase `elem` opts)) $
+         logTime ("+++ Building size change graphs " ++ show n) $
+           when (not (InCase `elem` opts)) $
              do calcRefs False atotal (Resolved nidx)
                 sc <- calculateSizeChange fc n
                 setSizeChange fc n sc
@@ -1081,14 +1083,14 @@ processDef opts nest env fc n_in cs_in
                    (_, lhstm) <- bindNames False itm
                    setUnboundImplicits autoimp
                    (lhstm, _) <- elabTerm n (InLHS mult) [] (MkNested []) []
-                                    (IBindHere fc PATTERN lhstm) Nothing
+                                    (IBindHere fc COVERAGE lhstm) Nothing
                    defs <- get Ctxt
                    lhs <- normaliseHoles defs [] lhstm
                    if !(hasEmptyPat defs [] lhs)
-                      then do log "declare.def.impossible" 5 "No empty pat"
+                      then do log "declare.def.impossible" 5 "Some empty pat"
                               put Ctxt ctxt
                               pure Nothing
-                      else do log "declare.def.impossible" 5 "Some empty pat"
+                      else do log "declare.def.impossible" 5 "No empty pat"
                               empty <- clearDefs ctxt
                               rtm <- closeEnv empty !(nf empty [] lhs)
                               put Ctxt ctxt

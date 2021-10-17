@@ -219,6 +219,7 @@ checkTerm rig elabinfo nest env (IUnifyLog fc lvl tm) exp
 checkTerm rig elabinfo nest env (Implicit fc b) (Just gexpty)
     = do nm <- genName "_"
          expty <- getTerm gexpty
+         defs <- get Ctxt
          metaval <- metaVar fc rig env nm expty
          -- Add to 'bindIfUnsolved' if 'b' set
          when (b && bindingVars elabinfo) $
