@@ -104,6 +104,17 @@ mkPatternHole {vars'} loc rig n topenv imode (Just expty_in)
 mkPatternHole loc rig n env _ _
     = throw (GenericMsg loc ("Unknown type for pattern variable " ++ show n))
 
+-- Ideally just normalise the holes, but if it gets too big, try normalising
+-- everything instead
+export
+normaliseType : {auto c : Ref Ctxt Defs} ->
+                {free : _} ->
+                Defs -> Env Term free -> Term free -> Core (Term free)
+normaliseType defs env tm
+    = catch (do tm' <- nfOpts withHoles defs env tm
+                quoteOpts (MkQuoteOpts False False (Just 5)) defs env tm')
+            (\err => normalise defs env tm)
+
 -- For any of the 'bindIfUnsolved' - these were added as holes during
 -- elaboration, but are as yet unsolved, so create a pattern variable for
 -- them and unify.
@@ -339,14 +350,14 @@ getToBind {vars} fc elabmode impmode env excepts
                                  when !(isEmpty defs env tynf) $
                                     throw (InternalError "Empty pattern in coverage check")
                   _ => pure ()
-             pure $ NameBinding c p tm !(normaliseHoles defs env ty)
+             pure $ NameBinding c p tm !(normaliseType defs env ty)
     normBindingTy defs (AsBinding c p tm ty pat)
         = do case impmode of
                   COVERAGE => do tynf <- nf defs env ty
                                  when !(isEmpty defs env tynf) $
                                     throw (InternalError "Empty pattern in coverage check")
                   _ => pure ()
-             pure $ AsBinding c p tm !(normaliseHoles defs env ty)
+             pure $ AsBinding c p tm !(normaliseType defs env ty)
                                      !(normaliseHoles defs env pat)
 
     normImps : Defs -> List Name -> List (Name, ImplBinding vars) ->
