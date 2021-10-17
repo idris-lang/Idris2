@@ -24,14 +24,14 @@
   is desugared into
 
   ```idris
-  concat ["hello ", interpolate world]
+  concat [interpolate "hello ", interpolate world]
   ```
 
   This allows you to write expressions within slices without having to call `show`
   but for this you need to implement the `Interpolation` interface for each type
   that you intend to use withing an interpolation slice. The reason for not reusing
   `Show` is that `Interpolation` and `Show` have conflicting semantics, typically
-  this is the case for `String`.
+  this is the case for `String` which adds double quotes around the string.
 
 
 ## v0.5.0

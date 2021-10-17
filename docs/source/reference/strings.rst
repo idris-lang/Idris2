@@ -145,7 +145,7 @@ is used within every interpolation slice to convert an arbitrary expression into
 be concatenated with the rest of the interpolated string.
 
 To go into more details, when you write ``"hello \{username}"`` the compiler translates the expression
-into ``concat ["hello ", interpolate username]`` so that the concatenation is fast and so that if
+into ``concat [interpolate "hello ", interpolate username]`` so that the concatenation is fast and so that if
 ``username`` implement the ``Interpolation`` interface, you don't have to convert it to a string manually.
 
 Here is an example where we reuse the ``Expr``
@@ -169,3 +169,11 @@ type but instead of implementing a ``print`` function we implement ``Interpolati
 
 As you can see we avoid repeated calls to ``print`` since the slices are automatically applied to
 ``interpolate``.
+
+We use ``Interpolation`` instead of ``Show`` for interpolation slices because the semantics of ``show``
+are not necessarily the same as ``interpolate``. Typically the implementation of ``show`` for ``String``
+adds double quotes around the text, but for ``interpolate`` what we want is to return the string as is.
+In the previous example, ``"hello \{username}"``, if we were to use ``show`` we would end up with the string
+``"hello "Susan`` which displays an extra pair of double quotes. That is why the implementation of
+``interpolate`` for ``String`` is the identity function: ``interpolate x = x``. This way the desugared
+code looks like: ``concat [id "hello ", interpolate username]``.
