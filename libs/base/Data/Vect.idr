@@ -26,6 +26,10 @@ length : (xs : Vect len elem) -> Nat
 length [] = 0
 length (_::xs) = 1 + length xs
 
+public export %inline
+(.length) : Vect n a -> Nat
+xs.length = length xs
+
 ||| Show that the length function on vectors in fact calculates the length
 export
 lengthCorrect : (xs : Vect len elem) -> length xs = len
@@ -285,7 +289,7 @@ public export
 fromList' : (xs : Vect len elem) -> (l : List elem) -> Vect (length l + len) elem
 fromList' ys [] = ys
 fromList' ys (x::xs) =
-  rewrite (plusSuccRightSucc (length xs) len) in
+  rewrite (plusSuccRightSucc xs.length len) in
   fromList' (x::ys) xs
 
 ||| Convert a list to a vector.
@@ -296,9 +300,9 @@ fromList' ys (x::xs) =
 ||| fromList [1,2,3,4]
 ||| ```
 public export
-fromList : (xs : List elem) -> Vect (length xs) elem
+fromList : (xs : List elem) -> Vect xs.length elem
 fromList l =
-  rewrite (sym $ plusZeroRightNeutral (length l)) in
+  rewrite sym $ plusZeroRightNeutral l.length in
   reverse $ fromList' [] l
 
 --------------------------------------------------------------------------------

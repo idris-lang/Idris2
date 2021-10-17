@@ -58,10 +58,10 @@ reverseSingletonId _ = Refl
 export
 reverseOntoLength : (xs, acc : List a) ->
   length (reverseOnto acc xs) = length acc + length xs
-reverseOntoLength [] acc = rewrite plusZeroRightNeutral (length acc) in Refl
+reverseOntoLength [] acc = rewrite plusZeroRightNeutral acc.length in Refl
 reverseOntoLength (x :: xs) acc =
   rewrite reverseOntoLength xs (x :: acc) in
-    plusSuccRightSucc (length acc) (length xs)
+    plusSuccRightSucc acc.length xs.length
 
 ||| Reversing preserves list length.
 export

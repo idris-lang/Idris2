@@ -43,7 +43,7 @@ public export
 data SplitBalanced : List a -> Type where
   MkSplitBal
     : {xs, ys : List a}
-    -> Balanced (length xs) (length ys)
+    -> Balanced xs.length ys.length
     -> SplitBalanced (xs ++ ys)
 
 private
@@ -57,22 +57,22 @@ splitBalancedHelper revLs rs [] prf = MkSplitBal balancedLeftsAndRights
   where
     lengthsEqual : length rs = length revLs
     lengthsEqual =
-      rewrite sym (plusZeroRightNeutral (length revLs)) in prf
-    balancedLeftsAndRights : Balanced (length (reverse revLs)) (length rs)
+      rewrite sym $ plusZeroRightNeutral revLs.length in prf
+    balancedLeftsAndRights : Balanced (reverse revLs).length rs.length
     balancedLeftsAndRights =
       rewrite reverseLength revLs in
         rewrite lengthsEqual in
           mkBalancedEq Refl
 splitBalancedHelper revLs [] (x :: xs) prf =
   absurd $
-    the (0 = S (plus (length revLs) (length xs))) $
-      rewrite plusSuccRightSucc (length revLs) (length xs) in
+    the (0 = S (plus revLs.length xs.length)) $
+      rewrite plusSuccRightSucc revLs.length xs.length in
         prf
 splitBalancedHelper revLs (x :: rs) [lastItem] prf =
   rewrite appendAssociative (reverse revLs) [x] rs in
     rewrite sym (reverseCons x revLs) in
       MkSplitBal $
-        the (Balanced (length (reverseOnto [x] revLs)) (length rs)) $
+        the (Balanced (reverseOnto [x] revLs).length rs.length) $
           rewrite reverseCons x revLs in
             rewrite lengthSnoc x (reverse revLs) in
               rewrite reverseLength revLs in
@@ -82,16 +82,16 @@ splitBalancedHelper revLs (x :: rs) [lastItem] prf =
     lengthsEqual : length rs = length revLs
     lengthsEqual =
       cong pred $
-        the (S (length rs) = S (length revLs)) $
-          rewrite plusCommutative 1 (length revLs) in prf
+        the (S rs.length = S revLs.length) $
+          rewrite plusCommutative 1 revLs.length in prf
 splitBalancedHelper revLs (x :: oneFurther) (_ :: (_ :: twoFurther)) prf =
   rewrite appendAssociative (reverse revLs) [x] oneFurther in
     rewrite sym (reverseCons x revLs) in
       splitBalancedHelper (x :: revLs) oneFurther twoFurther $
         cong pred $
-          the (S (length oneFurther) = S (S (plus (length revLs) (length twoFurther)))) $
-          rewrite plusSuccRightSucc (length revLs) (length twoFurther) in
-            rewrite plusSuccRightSucc (length revLs) (S (length twoFurther)) in
+          the (S oneFurther.length = S (S (plus revLs.length twoFurther.length))) $
+          rewrite plusSuccRightSucc revLs.length twoFurther.length in
+            rewrite plusSuccRightSucc revLs.length (S twoFurther.length) in
               prf
 
 ||| Covering function for the `SplitBalanced`
@@ -113,13 +113,13 @@ private
 toVList
   : (xs : List a)
   -> SnocList ys
-  -> Balanced (length xs) (length ys)
+  -> Balanced xs.length ys.length
   -> VList (xs ++ ys)
 toVList [] Empty BalancedZ = VNil
 toVList [x] Empty BalancedL = VOne
 toVList [] (Snoc x zs rec) prf =
   absurd $
-    the (Balanced 0 (S (length zs))) $
+    the (Balanced 0 (S zs.length)) $
       rewrite sym (lengthSnoc x zs) in prf
 toVList (x :: xs) (Snoc y ys srec) prf =
   rewrite appendAssociative xs ys [y] in

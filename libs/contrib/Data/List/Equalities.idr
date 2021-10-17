@@ -72,7 +72,7 @@ lengthDistributesOverAppend (x :: xs) ys =
 
 ||| Length of a snoc'd list is the same as Succ of length list.
 export
-lengthSnoc : (x : _) -> (xs : List a) -> length (snoc xs x) = S (length xs)
+lengthSnoc : (x : _) -> (xs : List a) -> length (snoc xs x) = S xs.length
 lengthSnoc x [] = Refl
 lengthSnoc x (_ :: xs) = cong S (lengthSnoc x xs)
 

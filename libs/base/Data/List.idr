@@ -32,6 +32,11 @@ drop Z     xs      = xs
 drop (S n) []      = []
 drop (S n) (_::xs) = drop n xs
 
+-- Nice syntax, very useful in complex types
+public export %inline
+(.length) : List a -> Nat
+xs.length = length xs
+
 ||| Satisfiable if `k` is a valid index into `xs`.
 |||
 ||| @ k  the potential index
@@ -71,7 +76,7 @@ index Z (x :: xs) {ok = InFirst} = x
 index (S k) (_ :: xs) {ok = InLater _} = index k xs
 
 public export
-index' : (xs : List a) -> Fin (length xs) -> a
+index' : (xs : List a) -> Fin xs.length -> a
 index' (x::_)  FZ     = x
 index' (_::xs) (FS i) = index' xs i
 
@@ -126,7 +131,7 @@ find p (x::xs) = if p x then Just x else find p xs
 ||| Find the index and proof of InBounds of the first element (if exists) of a
 ||| list that satisfies the given test, else `Nothing`.
 public export
-findIndex : (a -> Bool) -> (xs : List a) -> Maybe $ Fin (length xs)
+findIndex : (a -> Bool) -> (xs : List a) -> Maybe $ Fin xs.length
 findIndex _ [] = Nothing
 findIndex p (x :: xs) = if p x
   then Just FZ

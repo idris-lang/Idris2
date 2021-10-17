@@ -1,6 +1,7 @@
 module Data.List.AtIndex
 
 import Data.DPair
+import Data.List
 import Data.List.HasLength
 import Data.Nat
 import Decidable.Equality
@@ -81,7 +82,7 @@ lookup (S n) (x :: xs) = case lookup n xs of
 
 ||| An AtIndex proof implies that n is less than the length of the list indexed into
 public export
-inRange : (n : Nat) -> (xs : List a) -> (0 _ : AtIndex x xs n) -> LTE n (length xs)
+inRange : (n : Nat) -> (xs : List a) -> (0 _ : AtIndex x xs n) -> LTE n xs.length
 inRange n [] p = void (absurd p)
 inRange Z (x :: xs) p = LTEZero
 inRange (S n) (x :: xs) p = LTESucc (inRange n xs (inverseS p))

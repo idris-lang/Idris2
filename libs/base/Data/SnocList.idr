@@ -73,6 +73,10 @@ length : SnocList a -> Nat
 length Lin = Z
 length (sx :< x) = S $ length sx
 
+public export %inline
+(.length) : SnocList a -> Nat
+xs.length = length xs
+
 export
 Show a => Show (SnocList a) where
   show xs = concat ("[< " :: intersperse ", " (show' [] xs) ++ ["]"])
@@ -155,7 +159,7 @@ data InBounds : (k : Nat) -> (xs : SnocList a) -> Type where
 ||| Find the index and proof of InBounds of the first element (if exists) of a
 ||| snoc-list that satisfies the given test, else `Nothing`.
 public export
-findIndex : (a -> Bool) -> (xs : SnocList a) -> Maybe $ Fin (length xs)
+findIndex : (a -> Bool) -> (xs : SnocList a) -> Maybe $ Fin xs.length
 findIndex _ Lin = Nothing
 findIndex p (xs :< x) = if p x
   then Just FZ

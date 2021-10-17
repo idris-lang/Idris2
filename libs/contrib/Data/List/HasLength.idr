@@ -46,7 +46,7 @@ hasLengthUnique (S p) (S q) = cong S (hasLengthUnique p q)
 
 ||| This specification corresponds to the length function
 export
-hasLength : (xs : List a) -> HasLength xs (length xs)
+hasLength : (xs : List a) -> HasLength xs xs.length
 hasLength [] = Z
 hasLength (_ :: xs) = S (hasLength xs)
 
