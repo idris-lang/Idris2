@@ -372,8 +372,8 @@ checkRunElab rig elabinfo nest env fc reqExt script exp
              throw (GenericMsg fc "%language ElabReflection not enabled")
          let n = NS reflectionNS (UN $ Basic "Elab")
          elabtt <- appCon fc defs n [expected]
-         (stm, sty) <- runDelays (const True) $
-                           check rig elabinfo nest env script (Just (gnf env elabtt))
+         (stm, _) <- runDelays (const True) $
+                           check bot elabinfo nest env script (Just (gnf env elabtt))
          solveConstraints inTerm Normal
          defs <- get Ctxt -- checking might have resolved some holes
          ntm <- elabScript rig fc nest env

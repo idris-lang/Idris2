@@ -72,6 +72,14 @@ Top ZeroOneOmega where
   topAbs {x = Rig1} = Refl
   topAbs {x = RigW} = Refl
 
+||| The bottom value of a lattice
+export
+Bot ZeroOneOmega where
+  bot = Rig0
+  botAbs {x = Rig0} = Refl
+  botAbs {x = Rig1} = Refl
+  botAbs {x = RigW} = Refl
+
 ----------------------------------------
 
 rigPlusAssociative : (x, y, z : ZeroOneOmega) ->
