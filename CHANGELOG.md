@@ -33,8 +33,14 @@
   `Show` is that `Interpolation` and `Show` have conflicting semantics, typically
   this is the case for `String` which adds double quotes around the string.
 
+### Library changes
 
-## v0.5.0
+#### Contrib
+
+* `System.Random` support for `Int` changed to `Int32`; it already limited itself
+  to 32 bits but now that is codified. Javascript backends are now supported.
+
+## v0.5.0/0.5.1
 
 ### Language changes
 
