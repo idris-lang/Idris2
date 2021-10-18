@@ -169,8 +169,8 @@ mutual
                   | Nothing => pure (unload stk (CRef fc n))
                 let arity = getArity def
                 let gdefFlags = flags gdef
-                if (Inline `elem` gdefFlags) 
-                    && (not (n `elem` rec)) 
+                if (Inline `elem` gdefFlags)
+                    && (not (n `elem` rec))
                     && (not (NoInline `elem` gdefFlags))
                    then do ap <- tryApply (n :: rec) stk env def
                            pure $ fromMaybe (unloadApp arity stk (CRef fc n)) ap
