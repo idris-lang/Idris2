@@ -39,6 +39,8 @@ processFnOpt : {auto c : Ref Ctxt Defs} ->
                Name -> FnOpt -> Core ()
 processFnOpt fc _ ndef Inline
     = setFlag fc ndef Inline
+processFnOpt fc _ ndef NoInline
+    = setFlag fc ndef NoInline
 processFnOpt fc _ ndef TCInline
     = setFlag fc ndef TCInline
 processFnOpt fc True ndef (Hint d)

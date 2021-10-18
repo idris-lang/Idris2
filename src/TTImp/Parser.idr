@@ -112,6 +112,8 @@ fnDirectOpt
          pure (GlobalHint False)
   <|> do pragma "inline"
          pure Inline
+  <|> do pragma "noinline"
+         pure NoInline
   <|> do pragma "extern"
          pure ExternFn
 
