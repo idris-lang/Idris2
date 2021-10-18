@@ -276,6 +276,7 @@ mutual
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), args) of
                (UN (Basic "Inline"), _) => pure Inline
+               (UN (Basic "NoInline"), _) => pure NoInline
                (UN (Basic "TCInline"), _) => pure TCInline
                (UN (Basic "Hint"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
