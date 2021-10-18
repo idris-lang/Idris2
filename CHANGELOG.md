@@ -10,7 +10,14 @@
 * New option `evaltiming` to time how long an evaluation takes at the REPL,
   set with `:set evaltiming`.
 
-## v0.5.0
+### Library changes
+
+#### Contrib
+
+* `System.Random` support for `Int` changed to `Int32`; it already limited itself
+  to 32 bits but now that is codified. Javascript backends are now supported.
+
+## v0.5.0/0.5.1
 
 ### Language changes
 
