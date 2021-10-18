@@ -464,7 +464,7 @@ Traversable List where
 %foreign
   "scheme:string-concat"
   "RefC:fastConcat"
-  "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
+  "javascript:lambda:(xs)=>__prim_idris2js_array(xs).join('')"
 export
 fastConcat : List String -> String
 
@@ -592,7 +592,7 @@ pack (x :: xs) = strCons x (pack xs)
 %foreign
     "scheme:string-pack"
     "RefC:fastPack"
-    "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
+    "javascript:lambda:(xs)=>__prim_idris2js_array(xs).join('')"
 export
 fastPack : List Char -> String
 

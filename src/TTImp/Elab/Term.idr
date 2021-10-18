@@ -13,6 +13,8 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Ambiguity
 import TTImp.Elab.App
 import TTImp.Elab.As
@@ -118,6 +120,7 @@ checkTerm : {vars : _} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             {auto e : Ref EST (EState vars)} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             RigCount -> ElabInfo ->
             NestedNames vars -> Env Term vars -> RawImp -> Maybe (Glued vars) ->
             Core (Term vars, Glued vars)
@@ -216,6 +219,7 @@ checkTerm rig elabinfo nest env (IUnifyLog fc lvl tm) exp
 checkTerm rig elabinfo nest env (Implicit fc b) (Just gexpty)
     = do nm <- genName "_"
          expty <- getTerm gexpty
+         defs <- get Ctxt
          metaval <- metaVar fc rig env nm expty
          -- Add to 'bindIfUnsolved' if 'b' set
          when (b && bindingVars elabinfo) $

@@ -11,6 +11,8 @@ import Core.TT
 import Core.UnifyState
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.BindImplicits
 import TTImp.Elab.Check
 import TTImp.Elab.Utils
@@ -181,6 +183,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
 getFnString : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               RawImp -> Core String
 getFnString (IPrimVal _ (Str st)) = pure st
 getFnString tm
@@ -201,6 +204,7 @@ initDef : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           Name -> Env Term vars -> Term vars -> List FnOpt -> Core Def
 initDef n env ty []
     = do addUserHole False n
@@ -259,6 +263,7 @@ processType : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               List ElabOpt -> NestedNames vars -> Env Term vars ->
               FC -> RigCount -> Visibility ->
               List FnOpt -> ImpTy -> Core ()

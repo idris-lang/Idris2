@@ -10,6 +10,8 @@ import Core.Reflect
 import Core.UnifyState
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.Elab.RunElab
@@ -22,6 +24,7 @@ processRunElab : {vars : _} ->
                  {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
                  RawImp -> Core ()
 processRunElab eopts nest env fc tm

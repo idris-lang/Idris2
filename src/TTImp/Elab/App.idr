@@ -11,6 +11,8 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.Dot
 import TTImp.TTImp
@@ -151,6 +153,7 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  RigCount -> RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) ->
@@ -181,6 +184,7 @@ mutual
                      {auto m : Ref MD Metadata} ->
                      {auto u : Ref UST UState} ->
                      {auto e : Ref EST (EState vars)} ->
+                     {auto s : Ref Syn SyntaxInfo} ->
                      RigCount -> RigCount -> ElabInfo ->
                      NestedNames vars -> Env Term vars ->
                      FC -> (fntm : Term vars) ->
@@ -231,6 +235,7 @@ mutual
                     {auto m : Ref MD Metadata} ->
                     {auto u : Ref UST UState} ->
                     {auto e : Ref EST (EState vars)} ->
+                    {auto s : Ref Syn SyntaxInfo} ->
                     RigCount -> RigCount -> ElabInfo ->
                     NestedNames vars -> Env Term vars ->
                     FC -> (fntm : Term vars) ->
@@ -395,6 +400,7 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  RigCount -> RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) -> Name ->
@@ -554,6 +560,7 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) -> (fnty : NF vars) ->
@@ -720,6 +727,7 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) -> (fnty : NF vars) ->
@@ -754,6 +762,7 @@ checkApp : {vars : _} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars ->
            FC -> (fn : RawImp) ->

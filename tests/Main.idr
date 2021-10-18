@@ -185,7 +185,8 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
 -- other way. If we do, we'll need to have a way to disable these.
 idrisTestsSchemeEval : TestPool
 idrisTestsSchemeEval = MkTestPool "Scheme Evaluator" [] Nothing
-     ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004"]
+     ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004",
+      "schemeeval005"]
 
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
@@ -210,7 +211,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Quotation and reflection
        "reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",
-       "reflection009","reflection010",
+       "reflection009", "reflection010", "reflection011",
        -- The 'with' rule
        "with001", "with002", "with004", "with005", "with006",
        -- with-disambiguation
@@ -271,6 +272,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "bitops"
     , "casts"
     , "memo"
+    , "fastConcat"
     , "newints"
     , "reg001", "reg002"
     , "stringcast"

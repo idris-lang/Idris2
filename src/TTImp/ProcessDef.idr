@@ -16,6 +16,8 @@ import Core.Transform
 import Core.Value
 import Core.UnifyState
 
+import Idris.Syntax
+
 import TTImp.BindImplicits
 import TTImp.Elab
 import TTImp.Elab.Check
@@ -359,6 +361,7 @@ checkLHS : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            Bool -> -- in transform
            (mult : RigCount) -> (hashit : Bool) ->
            Int -> List ElabOpt -> NestedNames vars -> Env Term vars ->
@@ -455,6 +458,7 @@ checkClause : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               (mult : RigCount) -> (vis : Visibility) ->
               (totreq : TotalReq) -> (hashit : Bool) ->
               Int -> List ElabOpt -> NestedNames vars -> Env Term vars ->
@@ -777,6 +781,7 @@ calcRefs rt at fn
 mkRunTime : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             FC -> Name -> Core ()
 mkRunTime fc n
     = do log "compile.casetree" 5 $ "Making run time definition for " ++ show !(toFullNames n)
@@ -872,6 +877,7 @@ mkRunTime fc n
 compileRunTime : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  FC -> Name -> Core ()
 compileRunTime fc atotal
     = do defs <- get Ctxt
@@ -902,6 +908,7 @@ lookupOrAddAlias : {vars : _} ->
                    {auto m : Ref MD Metadata} ->
                    {auto c : Ref Ctxt Defs} ->
                    {auto u : Ref UST UState} ->
+                   {auto s : Ref Syn SyntaxInfo} ->
                    List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
                    Name -> List ImpClause -> Core (Maybe GlobalDef)
 lookupOrAddAlias eopts nest env fc n [cl@(PatClause _ lhs _)]
@@ -954,6 +961,7 @@ processDef : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
              Name -> List ImpClause -> Core ()
 processDef opts nest env fc n_in cs_in
@@ -981,7 +989,8 @@ processDef opts nest env fc n_in cs_in
          let pats = map toPats (rights cs)
 
          (cargs ** (tree_ct, unreachable)) <-
-             getPMDef fc (CompileTime mult) n ty (rights cs)
+             logTime ("+++ Building compile time case tree for " ++ show n) $
+                getPMDef fc (CompileTime mult) n ty (rights cs)
 
          traverse_ warnUnreachable unreachable
 
@@ -1015,7 +1024,8 @@ processDef opts nest env fc n_in cs_in
          put Ctxt (record { toCompileCase $= (n ::) } defs)
 
          atotal <- toResolvedNames (NS builtinNS (UN $ Basic "assert_total"))
-         when (not (InCase `elem` opts)) $
+         logTime ("+++ Building size change graphs " ++ show n) $
+           when (not (InCase `elem` opts)) $
              do calcRefs False atotal (Resolved nidx)
                 sc <- calculateSizeChange fc n
                 setSizeChange fc n sc
@@ -1073,14 +1083,14 @@ processDef opts nest env fc n_in cs_in
                    (_, lhstm) <- bindNames False itm
                    setUnboundImplicits autoimp
                    (lhstm, _) <- elabTerm n (InLHS mult) [] (MkNested []) []
-                                    (IBindHere fc PATTERN lhstm) Nothing
+                                    (IBindHere fc COVERAGE lhstm) Nothing
                    defs <- get Ctxt
                    lhs <- normaliseHoles defs [] lhstm
                    if !(hasEmptyPat defs [] lhs)
-                      then do log "declare.def.impossible" 5 "No empty pat"
+                      then do log "declare.def.impossible" 5 "Some empty pat"
                               put Ctxt ctxt
                               pure Nothing
-                      else do log "declare.def.impossible" 5 "Some empty pat"
+                      else do log "declare.def.impossible" 5 "No empty pat"
                               empty <- clearDefs ctxt
                               rtm <- closeEnv empty !(nf empty [] lhs)
                               put Ctxt ctxt
