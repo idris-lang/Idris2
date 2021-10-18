@@ -1,0 +1,14 @@
+1/1: Building PError1 (PError1.idr)
+Error: %inline and %noinline are mutually exclusive
+
+PError1:1:1--2:17
+ 1 | %inline %noinline
+ 2 | foo : Int -> Int
+
+1/1: Building PError2 (PError2.idr)
+Error: %noinline and %inline are mutually exclusive
+
+PError2:1:1--2:17
+ 1 | %noinline %inline
+ 2 | foo : Int -> Int
+
