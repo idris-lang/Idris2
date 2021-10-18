@@ -15,6 +15,7 @@ import Data.List.Views
 import Data.List1
 import Data.Maybe
 import Data.Nat
+import Data.SnocList
 import Data.String
 import Libraries.Utils.String
 
@@ -974,19 +975,23 @@ mutual
                             xs <- many $ bounds $ (interpBlock q fname idents) <||> strLitLines
                             endloc <- location
                             strEnd
-                            pure (endloc, toLines xs [] [])
+                            pure (endloc, toLines xs [<] [<])
            pure $ let ((_, col), xs) = b.val in
                       PMultiline (boundToFC fname b) (fromInteger $ cast col) xs
     where
-      toLines : List (WithBounds $ Either PTerm (List1 String)) -> List PStr -> List (List PStr) -> List (List PStr)
-      toLines [] line acc = acc `snoc` line
-      toLines (x::xs) line acc
-          = case x.val of
-                 Left tm => toLines xs (line `snoc` (StrInterp (boundToFC fname x) tm)) acc
-                 Right (str:::[]) => toLines xs (line `snoc` (StrLiteral (boundToFC fname x) str)) acc
-                 Right (str:::strs@(_::_)) => toLines xs [StrLiteral (boundToFC fname x) (last strs)]
-                                                         ((acc `snoc` (line `snoc` (StrLiteral (boundToFC fname x) str))) ++
-                                                               ((\str => [StrLiteral (boundToFC fname x) str]) <$> (init strs)))
+      toLines : List (WithBounds $ Either PTerm (List1 String)) ->
+                SnocList PStr -> SnocList (List PStr) -> List (List PStr)
+      toLines [] line acc = acc <>> [line <>> []]
+      toLines (x::xs) line acc = case x.val of
+        Left tm =>
+          toLines xs (line :< StrInterp (boundToFC fname x) tm) acc
+        Right (str:::[]) =>
+          toLines xs (line :< StrLiteral (boundToFC fname x) str) acc
+        Right (str:::strs@(_::_)) =>
+          let fc = boundToFC fname x in
+          toLines xs [< StrLiteral fc (last strs)]
+            $ acc :< (line <>> [StrLiteral fc str])
+            <>< map (\str => [StrLiteral fc str]) (init strs)
 
 visOption : OriginDesc ->  Rule Visibility
 visOption fname
