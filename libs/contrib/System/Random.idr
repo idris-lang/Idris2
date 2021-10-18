@@ -24,8 +24,8 @@ public export
 Random Int32 where
   -- Generate a random value within [-2^31, 2^31-1].
   randomIO = do
-    let maxInt    = 2147483647 --shiftL 1 31 - 1
-        negMinInt = 2147483648 -- negate $ shiftL 1 31
+    let maxInt : Bits32    = 2147483647 -- shiftL 1 31 - 1
+        negMinInt : Bits32 = 2147483648 -- negate $ shiftL 1 31
         magnitude : Bits32 = maxInt + negMinInt
     bits32 <- liftIO $ randomBits32 magnitude
     let int : Integer = cast bits32
