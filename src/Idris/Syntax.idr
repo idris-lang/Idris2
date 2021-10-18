@@ -586,6 +586,11 @@ data EditCmd : Type where
      MakeWith : Bool -> Int -> Name -> EditCmd
 
 public export
+data DocDirective : Type where
+  Keyword : String -> DocDirective
+  APTerm : PTerm -> DocDirective
+
+public export
 data REPLCmd : Type where
      NewDefn : List PDecl -> REPLCmd
      Eval : PTerm -> REPLCmd
@@ -609,7 +614,7 @@ data REPLCmd : Type where
      CWD: REPLCmd
      Missing : Name -> REPLCmd
      Total : Name -> REPLCmd
-     Doc : PTerm -> REPLCmd
+     Doc : DocDirective -> REPLCmd
      Browse : Namespace -> REPLCmd
      SetLog : Maybe LogLevel -> REPLCmd
      SetConsoleWidth : Maybe Nat -> REPLCmd

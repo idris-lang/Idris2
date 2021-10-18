@@ -910,8 +910,8 @@ process (Total n)
                              tot <- getTotality replFC fn >>= toFullNames
                              pure $ (fn, tot))
                                (map fst ts)
-process (Doc itm)
-    = do doc <- getDocsForPTerm itm
+process (Doc dir)
+    = do doc <- getDocs dir
          pure $ PrintedDoc doc
 process (Browse ns)
     = do doc <- getContents ns
