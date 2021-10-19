@@ -213,6 +213,7 @@ mutual
   public export
   data FnOpt' : Type -> Type where
        Inline : FnOpt' nm
+       NoInline : FnOpt' nm
        TCInline : FnOpt' nm
        -- Flag means the hint is a direct hint, not a function which might
        -- find the result (e.g. chasing parent interface dictionaries)
@@ -236,6 +237,7 @@ mutual
   export
   Show nm => Show (FnOpt' nm) where
     show Inline = "%inline"
+    show NoInline = "%noinline"
     show TCInline = "%tcinline"
     show (Hint t) = "%hint " ++ show t
     show (GlobalHint t) = "%globalhint " ++ show t
@@ -251,6 +253,7 @@ mutual
   export
   Eq FnOpt where
     Inline == Inline = True
+    NoInline == NoInline = True
     TCInline == TCInline = True
     (Hint x) == (Hint y) = x == y
     (GlobalHint x) == (GlobalHint y) = x == y
@@ -1198,6 +1201,7 @@ mutual
   export
   TTC FnOpt where
     toBuf b Inline = tag 0
+    toBuf b NoInline = tag 12
     toBuf b TCInline = tag 11
     toBuf b (Hint t) = do tag 1; toBuf b t
     toBuf b (GlobalHint t) = do tag 2; toBuf b t
@@ -1224,6 +1228,7 @@ mutual
                9 => pure Macro
                10 => do ns <- fromBuf b; pure (SpecArgs ns)
                11 => pure TCInline
+               12 => pure NoInline
                _ => corrupt "FnOpt"
 
   export
