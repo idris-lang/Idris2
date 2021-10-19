@@ -67,7 +67,9 @@ dirEntries : String -> IO (List String)
 dirEntries dname =
     do Right d <- openDir dname
          | Left err => pure []
-       getFiles d []
+       entries <- getFiles d []
+       closeDir d
+       pure entries
   where
     getFiles : Directory -> List String -> IO (List String)
     getFiles d acc
