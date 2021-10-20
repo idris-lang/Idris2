@@ -100,7 +100,7 @@ ifthenelse = vcat $
     The `if ... then ... else ...` construct is dependently typed. This means
     that if you are branching over a variable, the branches will have refined
     types where that variable has been replaced by either `True` or `False`.
-    For instance, in the following incomplete program:
+    For instance, in the following incomplete program
     """, "",
     """
     ```
@@ -109,7 +109,7 @@ ifthenelse = vcat $
     ```
     """, "",
     """
-    The two holes have respective types `True === True` and `False === False`.
+    the two holes have respective types `True === True` and `False === False`.
     """, "", "",
     """
     If you do not need the added power granted by dependently typed branches,
@@ -136,7 +136,36 @@ caseof : Doc IdrisDocAnn
 caseof = "`case ... of ...` construct"
 
 implicitarg : Doc IdrisDocAnn
-implicitarg = ""
+implicitarg = vcat $
+    header  "Implicit arguments" :: ""
+    :: map (indent 2) [
+    """
+    Implicit arguments can be solved using various strategies. By default
+    they will be filled in using unification but programmers can use various
+    keywords to change that.
+    """, "",
+    """
+    * `auto` will use the same mechanism as interface resolution to build the
+      argument. Users can add new hints to the database by adding a `%hint`
+      pragma to their declarations. By default all data constructors are hints.
+      For instance, the following function
+      ````
+      f : (n : Nat) -> {auto _ : n === Z} -> Nat
+      f n = n
+      ````
+      will only accepts arguments that can be automatically proven to be equal
+      to zero.
+    """, "",
+    """
+    * `default` takes a value of the appropriate type and if no argument is
+      explicitly passed at a call site, will use that default value.
+      For instance, the following function
+      ```
+      f : {default 0 n : Nat} -> Nat
+      f = n
+      ```
+      will return `0` if no argument is passed and its argument otherwise.
+    """]
 
 unused : Doc IdrisDocAnn
 unused = "Currently unused keyword"
