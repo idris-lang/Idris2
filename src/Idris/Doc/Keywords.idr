@@ -93,10 +93,47 @@ visibility = vcat $
     """]
 
 ifthenelse : Doc IdrisDocAnn
-ifthenelse = "`if ... then ... else ...` construct"
+ifthenelse = vcat $
+    header "if ... then ... else ..." :: ""
+    :: map (indent 2) [
+    """
+    The `if ... then ... else ...` construct is dependently typed. This means
+    that if you are branching over a variable, the branches will have refined
+    types where that variable has been replaced by either `True` or `False`.
+    For instance, in the following incomplete program:
+    """, "",
+    """
+    ```
+    notInvolutive : (b : Bool) -> not (not b) === b
+    notInvolutive b = if b then ?holeTrue else ?holeFalse
+    ```
+    """, "",
+    """
+    The two holes have respective types `True === True` and `False === False`.
+    """, "", "",
+    """
+    If you do not need the added power granted by dependently typed branches,
+    consider using the simpler `ifThenElse` function defined in `Prelude`.
+    """]
+
+impossibility : Doc IdrisDocAnn
+impossibility = vcat $
+    header  "Impossible branches" :: ""
+    :: map (indent 2) [
+    """
+    The `impossible` keyword can be used to dismiss a clause involving an
+    argument with an uninhabited type. For instance an assumption stating
+    that 0 is equal to 1:
+    """, "",
+    """
+    ```
+    zeroIsNotOne : 0 === 1 -> Void
+    zeroIsNotOne eq impossible
+    ```
+    """]
 
 caseof : Doc IdrisDocAnn
-caseof = ""
+caseof = "`case ... of ...` construct"
 
 implicitarg : Doc IdrisDocAnn
 implicitarg = ""
@@ -124,14 +161,7 @@ keywordsDoc =
   :: "parameters" ::= ""
   :: "with" ::= withabstraction
   :: "proof" ::= withabstraction
-  :: "impossible" ::= """
-                      Keyword to dismiss a clause involving an argument with an
-                      uninhabited type. For instance a proof that 0 is equal to 1:
-                      ```
-                      zeroIsNotOne : 0 === 1 -> Void
-                      zeroIsNotOne eq impossible
-                      ```
-                      """
+  :: "impossible" ::= impossibility
   :: "case" ::= caseof
   :: "of" ::= caseof
   :: "if" ::= ifthenelse
