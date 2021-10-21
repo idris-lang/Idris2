@@ -179,6 +179,16 @@ importing = vcat $
     Combined with `public` it also re-exports these definitions.
     """]
 
+forallquantifier : Doc IdrisDocAnn
+forallquantifier = vcat $
+    header "Forall quantifier" :: ""
+    :: map (indent 2) [
+    """
+    `forall` quantification is syntactic sugar for implicit runtime-irrelevant
+    universal quantification. That is to say that `forall x, y, z. ...`
+    desugars to `{0 x, y, z : _} -> ...`.
+    """]
+
 
 implicitarg : Doc IdrisDocAnn
 implicitarg = vcat $
@@ -241,7 +251,7 @@ keywordsDoc =
   :: "if" ::= ifthenelse
   :: "then" ::= ifthenelse
   :: "else" ::= ifthenelse
-  :: "forall" ::= ""
+  :: "forall" ::= forallquantifier
   :: "rewrite" ::= ""
   :: "using" ::= ""
   :: "interface" ::= ""
