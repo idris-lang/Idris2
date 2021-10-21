@@ -188,6 +188,7 @@ Show Clause where
 public export
 data DefFlag
     = Inline
+    | NoInline
     | Invertible -- assume safe to cancel arguments in unification
     | Overloadable -- allow ad-hoc overloads
     | TCInline -- always inline before totality checking
@@ -219,6 +220,7 @@ data DefFlag
 export
 Eq DefFlag where
     (==) Inline Inline = True
+    (==) NoInline NoInline = True
     (==) Invertible Invertible = True
     (==) Overloadable Overloadable = True
     (==) TCInline TCInline = True
@@ -234,6 +236,7 @@ Eq DefFlag where
 export
 Show DefFlag where
   show Inline = "inline"
+  show NoInline = "noinline"
   show Invertible = "invertible"
   show Overloadable = "overloadable"
   show TCInline = "tcinline"

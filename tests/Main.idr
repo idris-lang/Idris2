@@ -42,7 +42,8 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic051", "basic052", "basic053", "basic054", "basic055",
        "basic056", "basic057", "basic058", "basic059", "basic060",
        "basic061", "basic062", "basic063",
-       "interpolation001", "interpolation002", "interpolation003"]
+       "interpolation001", "interpolation002", "interpolation003",
+       "interpolation004"]
 
 idrisTestsCoverage : TestPool
 idrisTestsCoverage = MkTestPool "Coverage checking" [] Nothing
@@ -69,7 +70,7 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
        "error006", "error007", "error008", "error009", "error010",
        "error011", "error012", "error013", "error014", "error015",
        "error016", "error017", "error018", "error019", "error020",
-       "error021", "error022",
+       "error021", "error022", "error023",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006", "perror007", "perror008", "perror009", "perror010",
