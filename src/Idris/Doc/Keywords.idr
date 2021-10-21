@@ -23,23 +23,33 @@ fixity : Doc IdrisDocAnn
 fixity = ""
 
 datatypes : Doc IdrisDocAnn
-datatypes = vcat [ header "(Co)Data Types", "", indent 2
-                """
-                Keyword to introduce a (co)inductive type definition.
-                You can either use a BNF-style definition for simple types
-                ```
-                data List a = Nil | (::) a (List a)
-                ```
-                or a GADT-style definition for indexed types
-                ```
-                data Vect : Nat -> Type -> Type where
-                  Nil  : Vect 0 a
-                  (::) : a -> Vect n a -> Vect (S n) a
-                ```
-                Coinductive data is introduced using the same syntax except
-                that the type of potentially infinite subterms is wrapped in
-                an `Inf` type constructor.
-                """]
+datatypes = vcat $
+    header "(Co)Data Types" :: ""
+    :: map (indent 2) [
+    """
+    Keyword to introduce a (co)inductive type definition.
+    You can either use a BNF-style definition for simple types
+    """, "",
+    """
+    ```
+    data List a = Nil | (::) a (List a)
+    ```
+    """, "",
+    """
+    or a GADT-style definition for indexed types
+    """, "",
+    """
+    ```
+    data Vect : Nat -> Type -> Type where
+      Nil  : Vect 0 a
+      (::) : a -> Vect n a -> Vect (S n) a
+    ```
+    """, "",
+    """
+    Coinductive data is introduced using the same syntax except
+    that the type of potentially infinite subterms is wrapped in
+    an `Inf` type constructor.
+    """]
 
 totality : Doc IdrisDocAnn
 totality = vcat $
