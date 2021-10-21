@@ -501,7 +501,7 @@ toList1 [] impossible
 toList1 (x :: xs) = x ::: xs
 
 ||| Convert to a non-empty list, returning Nothing if the list is empty.
-export
+public export
 toList1' : (l : List a) -> Maybe (List1 a)
 toList1' [] = Nothing
 toList1' (x :: xs) = Just (x ::: xs)
