@@ -248,6 +248,7 @@ parametersblock = vcat $
       last [x] = x
       last (_ :: xs) = last xs
       last _ = dflt
+    ```
     """, "",
     """
     and their respective types outside of the parameters block are
