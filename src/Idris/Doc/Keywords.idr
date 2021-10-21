@@ -189,7 +189,6 @@ forallquantifier = vcat $
     desugars to `{0 x, y, z : _} -> ...`.
     """]
 
-
 implicitarg : Doc IdrisDocAnn
 implicitarg = vcat $
     header  "Implicit arguments" :: ""
@@ -208,7 +207,7 @@ implicitarg = vcat $
       f : (n : Nat) -> {auto _ : n === Z} -> Nat
       f n = n
       ````
-      will only accepts arguments that can be automatically proven to be equal
+      will only accept arguments that can be automatically proven to be equal
       to zero.
     """, "",
     """
@@ -224,6 +223,22 @@ implicitarg = vcat $
 
 unused : Doc IdrisDocAnn
 unused = "Currently unused keyword"
+
+whereblock : Doc IdrisDocAnn
+whereblock = vcat $
+    header "Where block" :: ""
+    :: map (indent 2) [
+    header "NB:" <++> """
+    `where` is used as a layout keyword in `data`, `record`, `interface`,
+    and `implementation` blocks. This documentation snippet focuses instead
+    on the `where` blocks introducing local definitions.
+    """, "",
+    """
+    A `where` block allows the introduction of local auxiliary definitions
+    that are parametrised over the variables bound on the left hand side of
+    the parent clause (cf. the doc for `parameters`).
+    """
+    ]
 
 parametersblock : Doc IdrisDocAnn
 parametersblock = vcat $
@@ -255,6 +270,41 @@ parametersblock = vcat $
     `head : a -> List a -> a` and `last : a -> List a -> a`.
     """]
 
+mutualblock : Doc IdrisDocAnn
+mutualblock = vcat $
+    header "Mutual block" :: ""
+    :: map (indent 2) [
+    """
+    Mutual blocks allow users to have inter-dependent declarations. For instance
+    we can define the `odd` and `even` checks in terms of each other like so:
+    ```
+    mutual
+      odd : Nat -> Bool
+      odd Z = False
+      odd (S n) = even n
+
+      even : Nat -> Bool
+      even Z = True
+      even (S n) = odd n
+    ```
+    """, "",
+    """
+    Internally this is implemented in terms of the more fundamental
+    forward-declaration feature: all the mutual declarations come first and then
+    their definitions. In other words, the earlier example using a `mutual` block
+    is equivalent to the following
+    ```
+    odd : Nat -> Bool
+    even : Nat -> Bool
+
+    odd Z = False
+    odd (S n) = even n
+
+    even Z = True
+    even (S n) = odd n
+    ```
+    """]
+
 withabstraction : Doc IdrisDocAnn
 withabstraction = ""
 
@@ -262,7 +312,7 @@ keywordsDoc : All DocFor Source.keywords
 keywordsDoc =
      "data" ::= datatypes
   :: "module" ::= "Keyword to start a module definition"
-  :: "where" ::= "Keyword"
+  :: "where" ::= whereblock
   :: "let" ::= "Keyword"
   :: "in" ::= "Used by `let` and `rewrite`. See either of them for more details."
   :: "do" ::= "Keyword"
@@ -270,7 +320,7 @@ keywordsDoc =
   :: "auto" ::= implicitarg
   :: "default" ::= implicitarg
   :: "implicit" ::= unused
-  :: "mutual" ::= "Keyword to start a block of mutually defined data types and functions"
+  :: "mutual" ::= mutualblock
   :: "namespace" ::= ""
   :: "parameters" ::= parametersblock
   :: "with" ::= withabstraction
