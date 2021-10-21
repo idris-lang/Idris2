@@ -231,13 +231,18 @@ doblock = vcat $
     #"""
     Do blocks are a popular way to structure (among other things) effectful code.
     They are desugared using `(>>=)` and `(>>)` respectively depending on whether
-    the result of a subcomputation is bound. For instance the following block
+    the result of a subcomputation is bound. Let bindings and local definitions
+    can be used (omitting `in` because the layout is already controlled by the
+    `do`-based indentation) and desugared to the corresponding `let` constructs.
+
+    For instance the following block
     ```
       do x <- e1
          e2
-         e3
+         let y = e3
+         e4
     ```
-    is equivalent to the expression `e1 >>= \ x => e2 >> e3`.
+    is equivalent to the expression `e1 >>= \ x => e2 >> let y = e3 in e4`.
     """#, "",
     """
     By default `(>>=)` and `(>>)` are then selected using the usual type
@@ -399,12 +404,45 @@ withabstraction = vcat $
     ```
     """]
 
+letbinding : Doc IdrisDocAnn
+letbinding = vcat $
+    header "Let binding" :: ""
+    :: map (indent 2) [
+    """
+    The `let` keyword is used for both local definitions and let bindings.
+    Local definitions are just like top-level definitions except that they are
+    defined in whatever extended context is available at the definition site.
+
+    Let bindings can be used to bind the result of intermediate computations.
+    They do not necessitate but can have a type annotation. They will not unfold
+    in the type of subsequent terms so may not be appropriate in all cases.
+
+    For instance, in the following definition the let-bound value `square`
+    ensures that `n * n` is only computed once:
+    ```
+    power4 : Nat -> Nat
+    power4 n = let square := n * n in square * square
+    ```
+
+    It is also possible to pattern-match on the result of the intermediate
+    computation. The main pattern is written in place of the variable and
+    an alternative list of clauses can be given using the `|` separator.
+    For instance, we can shortcut the `square * square` computation in case
+    the returned value is 0 like so:
+    ```
+    power4 : Nat -> Nat
+    power4 n = let square@(S _) := n *
+                     | Z => Z
+               in square * square
+    ```
+    """]
+
 keywordsDoc : All DocFor Source.keywords
 keywordsDoc =
      "data" ::= datatypes
   :: "module" ::= "Keyword to start a module definition"
   :: "where" ::= whereblock
-  :: "let" ::= "Keyword"
+  :: "let" ::= letbinding
   :: "in" ::= "Used by `let` and `rewrite`. See either of them for more details."
   :: "do" ::= doblock
   :: "record" ::= recordtypes
