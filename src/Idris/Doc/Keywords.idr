@@ -224,6 +224,28 @@ implicitarg = vcat $
 unused : Doc IdrisDocAnn
 unused = "Currently unused keyword"
 
+doblock : Doc IdrisDocAnn
+doblock = vcat $
+    header "Do block" :: ""
+    :: map (indent 2) [
+    #"""
+    Do blocks are a popular way to structure (among other things) effectful code.
+    They are desugared using `(>>=)` and `(>>)` respectively depending on whether
+    the result of a subcomputation is bound. For instance the following block
+    ```
+      do x <- e1
+         e2
+         e3
+    ```
+    is equivalent to the expression `e1 >>= \ x => e2 >> e3`.
+    """#, "",
+    """
+    By default `(>>=)` and `(>>)` are then selected using the usual type
+    directed disambiguation mechanisms. Users who want to bypass this implicit
+    disambiguation step can use a qualified `do`: by writing `M.do` they ensure
+    Idris will explicitly use `M.(>>=)` and `M.(>>)` during elaboration.
+    """ ]
+
 whereblock : Doc IdrisDocAnn
 whereblock = vcat $
     header "Where block" :: ""
@@ -369,7 +391,7 @@ keywordsDoc =
   :: "where" ::= whereblock
   :: "let" ::= "Keyword"
   :: "in" ::= "Used by `let` and `rewrite`. See either of them for more details."
-  :: "do" ::= "Keyword"
+  :: "do" ::= doblock
   :: "record" ::= recordtypes
   :: "auto" ::= implicitarg
   :: "default" ::= implicitarg
