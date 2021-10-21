@@ -135,6 +135,16 @@ impossibility = vcat $
 caseof : Doc IdrisDocAnn
 caseof = "`case ... of ...` construct"
 
+importing : Doc IdrisDocAnn
+importing = vcat $
+    header "Importing" :: ""
+    :: map (indent 2) [
+    """
+    Importing a module brings the definition it exports into scope.
+    Combined with `public` it also re-exports these definitions.
+    """]
+
+
 implicitarg : Doc IdrisDocAnn
 implicitarg = vcat $
     header  "Implicit arguments" :: ""
@@ -202,7 +212,7 @@ keywordsDoc =
   :: "interface" ::= ""
   :: "implementation" ::= ""
   :: "open" ::= unused
-  :: "import" ::= ""
+  :: "import" ::= importing
   :: "public" ::= visibility
   :: "export" ::= visibility
   :: "private" ::= visibility
