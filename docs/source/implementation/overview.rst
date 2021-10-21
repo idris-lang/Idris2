@@ -77,14 +77,14 @@ Term representation
 Terms in the core language are indexed by a list of the names in scope,
 most recently defined first:
 
-::
+.. code-block:: idris
 
     data Term : List Name -> Type
 
 This means that terms are always well scoped, and we can use the type system
 to keep us right when manipulating names. For example, we have:
 
-::
+.. code-block:: idris
 
     Local : FC -> (isLet : Maybe Bool) ->
             (idx : Nat) -> (0 p : IsVar name idx vars) -> Term vars
@@ -97,7 +97,7 @@ keeps track of the indices so that we don't have to think too hard!
 ``Core.TT`` contains various handy tools for manipulating terms with their
 indices, such as:
 
-::
+.. code-block:: idris
 
     weaken : Term vars -> Term (n :: vars) -- actually in an interface, Weaken
     embed : Term vars -> Term (ns ++ vars)
@@ -112,7 +112,7 @@ the core. In general, this isn't expensive at run time.
 
 Environments, defined in ``Core.Env``, map local variables to binders:
 
-::
+.. code-block:: idris
 
     data Env : (tm : List Name -> Type) -> List Name -> Type
 
@@ -123,20 +123,20 @@ Where we have a term, we usually also need an ``Env``.
 We also have values, which are in head normal form, and defined in
 ``Core.Value``:
 
-::
+.. code-block:: idris
 
     data NF : List Name -> Type
 
 We can convert a term to a value by normalising...
 
-::
+.. code-block:: idris
 
     nf : {vars : _} ->
          Defs -> Env Term vars -> Term vars -> Core (NF vars)
 
 ...and back again, by quoting:
 
-::
+.. code-block:: idris
 
     quote : {vars : _} ->
             Defs -> Env Term vars -> tm vars -> Core (Term vars)
@@ -160,7 +160,7 @@ things which are referred to by ``Meta`` in ``Term``. It is defined in
 ``Core.Unify``, as the top level unification function has the following
 type:
 
-::
+.. code-block:: idris
 
     unify : Unify tm =>
             {vars : _} ->
@@ -261,20 +261,20 @@ They are elaborated as holes, which may depend on the initial environment of
 the elaboration, and after elaboration they are converted to an implicit pi
 binding, with multiplicity 0. So, for example:
 
-::
+.. code-block:: idris
 
     map : {f : _} -> (a -> b) -> f a -> f b
 
 becomes:
 
-::
+.. code-block:: idris
 
     map : {f : _} -> {0 a : _} -> {0 b : _} -> (a -> b) -> f a -> f b
 
 Bindings are ordered according to dependency. It'll infer any additional
 names, e.g. in:
 
-::
+.. code-block:: idris
 
     lookup : HasType i xs t -> Env xs -> t
 
@@ -284,7 +284,7 @@ The ``%unbound_implicits`` directive means that it will no longer automatically
 bind names (that is, ``a`` and ``b`` in ``map`` above) but it will still
 infer the types for any additional names, e.g. if you write:
 
-::
+.. code-block:: idris
 
     lookup : forall i, x, t . HasType i xs t -> Env xs -> t
 
@@ -332,14 +332,14 @@ bind a new name (just like pattern matching on the lhs - i.e. it means match
 anything). If inference fails for ``?``, we leave it as a hole and try to fill
 it in later. As a result, we can say:
 
-::
+.. code-block:: idris
 
     foo : Vect ? Int
     foo = [1,2,3,4]
 
 ... and the ``?`` will be inferred to be 4. But if we say:
 
-::
+.. code-block:: idris
 
     foo : Vect _ Int
     foo = [1,2,3,4]
@@ -396,7 +396,7 @@ only one is possible.
 Names which are bound in types are also bound as @-patterns, meaning that
 functions have access to them. For example, we can say:
 
-::
+.. code-block:: idris
 
     vlength : {n : Nat} -> Vect n a -> Nat
     vlength [] = n
