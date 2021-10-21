@@ -353,6 +353,21 @@ namespaceblock = vcat $
     declared in a namespace is available outside of it.
     """]
 
+rewriteeq : Doc IdrisDocAnn
+rewriteeq = vcat $
+    header "Rewrite" :: ""
+    :: map (indent 2) [
+    """
+    Users can deploy an equality proof to adjust a type by replacing the value
+    on the left hand side of the equality by that on the right hand side.
+    For instance, if we know that the types `a` and `b` are propositionally
+    equal, we can return a value of type `a` as if it had type `b`:
+    ```
+    transport : a === b -> a -> b
+    transport eq x = rewrite sym eq in x
+    ```
+    """]
+
 withabstraction : Doc IdrisDocAnn
 withabstraction = vcat $
     header "With abstraction" :: ""
@@ -408,7 +423,7 @@ keywordsDoc =
   :: "then" ::= ifthenelse
   :: "else" ::= ifthenelse
   :: "forall" ::= forallquantifier
-  :: "rewrite" ::= ""
+  :: "rewrite" ::= rewriteeq
   :: "using" ::= ""
   :: "interface" ::= ""
   :: "implementation" ::= ""
