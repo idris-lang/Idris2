@@ -22,9 +22,34 @@ doc (_ ::= d) = d
 fixity : Doc IdrisDocAnn
 fixity = ""
 
+recordtypes : Doc IdrisDocAnn
+recordtypes = vcat $
+    header "Record types" :: ""
+    :: map (indent 2) [
+    """
+    Records are data types with a single constructor. Each of the constructor's
+    argument is given a name and the corresponding projections and record update
+    functions are automatically generated.
+    For instance, we can define a type of pairs of natural numbers
+    """, "",
+    """
+    ```
+    record Nat2 where
+      constructor MkNat2
+      fst : Nat
+      snd : Nat
+    ```
+    """, "",
+    """
+    and we can then immediately use all of `fst`, `snd`, `{ fst := ?h1 }`,
+    or `{snd $= ?h2 }` to respectively project values out of a record,
+    replace values, or update them.
+    """
+    ]
+
 datatypes : Doc IdrisDocAnn
 datatypes = vcat $
-    header "(Co)Data Types" :: ""
+    header "(Co)Data types" :: ""
     :: map (indent 2) [
     """
     Keyword to introduce a (co)inductive type definition.
@@ -201,7 +226,7 @@ keywordsDoc =
   :: "let" ::= "Keyword"
   :: "in" ::= "Keyword"
   :: "do" ::= "Keyword"
-  :: "record" ::= "Keyword"
+  :: "record" ::= recordtypes
   :: "auto" ::= implicitarg
   :: "default" ::= implicitarg
   :: "implicit" ::= unused
