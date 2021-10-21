@@ -225,6 +225,35 @@ implicitarg = vcat $
 unused : Doc IdrisDocAnn
 unused = "Currently unused keyword"
 
+parametersblock : Doc IdrisDocAnn
+parametersblock = vcat $
+    header "Parameters block" :: ""
+    :: map (indent 2) [
+    """
+    Definitions that share a common parameter can be grouped in a parameters
+    block to avoid having to explicitly pass it around. Outside of the block
+    all the definitions will take additional arguments corresponding to the
+    parameters. For instance the functions in the following block all use a
+    default value `dflt`
+    """, "",
+    """
+    ```
+    parameters (dflt : a)
+
+      head : List a -> a
+      head (x :: xs) = x
+      head _ = dflt
+
+      last : List a -> a
+      last [x] = x
+      last (_ :: xs) = last xs
+      last _ = dflt
+    """, "",
+    """
+    and their respective types outside of the parameters block are
+    `head : a -> List a -> a` and `last : a -> List a -> a`.
+    """]
+
 withabstraction : Doc IdrisDocAnn
 withabstraction = ""
 
@@ -242,7 +271,7 @@ keywordsDoc =
   :: "implicit" ::= unused
   :: "mutual" ::= "Keyword to start a block of mutually defined data types and functions"
   :: "namespace" ::= ""
-  :: "parameters" ::= ""
+  :: "parameters" ::= parametersblock
   :: "with" ::= withabstraction
   :: "proof" ::= withabstraction
   :: "impossible" ::= impossibility
