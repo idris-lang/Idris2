@@ -55,12 +55,12 @@ xs)`` goes beneath the ``with`` clause, followed by a vertical bar
 ``|``, followed by the deconstructed intermediate result ``( _ ** xs'
 )``. If the view refined argument pattern is unchanged from the
 original function argument pattern, then the left side of ``|`` is
-extraneous and may be omitted:
+extraneous and may be omitted with an underscore ``_``:
 
 .. code-block:: idris
 
     filter p (x :: xs) with (filter p xs)
-      | ( _ ** xs' ) = if (p x) then ( _ ** x :: xs' ) else ( _ ** xs' )
+      _ | ( _ ** xs' ) = if (p x) then ( _ ** x :: xs' ) else ( _ ** xs' )
 
 ``with`` clauses can also be nested:
 

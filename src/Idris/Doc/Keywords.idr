@@ -279,6 +279,7 @@ mutualblock = vcat $
     we can define the `odd` and `even` checks in terms of each other like so:
     ```
     mutual
+
       odd : Nat -> Bool
       odd Z = False
       odd (S n) = even n
@@ -331,7 +332,35 @@ namespaceblock = vcat $
     """]
 
 withabstraction : Doc IdrisDocAnn
-withabstraction = ""
+withabstraction = vcat $
+    header "With abstraction" :: ""
+    :: map (indent 2) [
+    """
+    We often need to match on the result of an intermediate computation.
+    When this intermediate computation additionally appears in the type of the
+    function being defined, the `with` construct allows us to capture these
+    occurences so that the observations made in the patterns will be reflected
+    in the type.
+    If we additionally need to remember that the link between the patterns and
+    the intermediate computation we can use the `proof` keyword to retain an
+    equality proof.
+    """, "",
+    """
+    In the following example we want to implement a `filter` function that not
+    only returns values that satisfy the input predicate but also proofs that
+    they do. The `with (p x)` construct introduces a value of type `Bool`
+    obtained by testing `x` with `p`. The additional `proof eq` part records in
+    `eq` an equality proof stating that the `True`/`False` patterns in the further
+    clauses are equal to the result of evaluating `p x`. This is the reason why
+    we can successfully form `(x ** eq)` in the `True` branch.
+    ```
+    filter : (p : a -> Bool) -> List a -> List (x : a ** p x === True)
+    filter p [] = []
+    filter p (x :: xs) with (p x) proof eq
+      _ | True = (x ** eq) :: filter p xs
+      _ | False = filter p xs
+    ```
+    """]
 
 keywordsDoc : All DocFor Source.keywords
 keywordsDoc =
