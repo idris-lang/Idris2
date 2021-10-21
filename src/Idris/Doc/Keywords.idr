@@ -305,6 +305,31 @@ mutualblock = vcat $
     ```
     """]
 
+namespaceblock : Doc IdrisDocAnn
+namespaceblock = vcat $
+    header "Namespace block" :: ""
+    :: map (indent 2) [
+    """
+    Attempting to declare two functions with the same name in a given module
+    will lead to a scope error. Putting each one in a different `namespace`
+    block can help bypass this issue by ensuring that they are assigned distinct
+    fully qualified names. For instance
+    ```
+    module M
+
+    namespace Zero
+      val : Nat
+      val = 0
+
+    namespace One
+      val : Nat
+      val = 1
+    ```
+    declares a module `M` containing two values `M.Zero.val` and `M.One.val`.
+    You can use `export` or `public export` to control whether a function
+    declared in a namespace is available outside of it.
+    """]
+
 withabstraction : Doc IdrisDocAnn
 withabstraction = ""
 
@@ -321,7 +346,7 @@ keywordsDoc =
   :: "default" ::= implicitarg
   :: "implicit" ::= unused
   :: "mutual" ::= mutualblock
-  :: "namespace" ::= ""
+  :: "namespace" ::= namespaceblock
   :: "parameters" ::= parametersblock
   :: "with" ::= withabstraction
   :: "proof" ::= withabstraction
