@@ -47,4 +47,4 @@ inlineHeuristics fn = do
     let True = inlineCDef fn cdef
         | False => pure ()
     log "compiler.inline.heuristic" 25 $ "inlining heuristic decided to inline: " ++ show fn
-    setFlag EmptyFC (Resolved fnIdx) Inline
+    unless (NoInline `elem` gdef.flags) $ setFlag EmptyFC (Resolved fnIdx) Inline
