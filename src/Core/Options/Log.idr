@@ -46,6 +46,7 @@ knownTopics = [
     ("builtin.NaturalToInteger.addTransforms", Nothing),
     ("builtin.IntegerToNatural", Nothing),
     ("builtin.IntegerToNatural.addTransforms", Nothing),
+    ("compile.execute", Nothing),
     ("compile.casetree", Nothing),
     ("compile.casetree.clauses", Nothing),
     ("compile.casetree.getpmdef", Nothing),

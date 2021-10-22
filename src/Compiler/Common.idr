@@ -120,7 +120,6 @@ execute {c} cg tm
          let tmpDir = execBuildDir d
          ensureDirectoryExists tmpDir
          executeExpr cg c tmpDir tm
-         pure ()
 
 export
 incCompile : {auto c : Ref Ctxt Defs} ->
@@ -166,7 +165,8 @@ getAllDesc (n@(Resolved i) :: rest) arr defs
   = do Nothing <- coreLift $ readArray arr i
            | Just _ => getAllDesc rest arr defs
        case !(lookupContextEntry n (gamma defs)) of
-            Nothing => getAllDesc rest arr defs
+            Nothing => do log "compile.execute" 20 $ "Couldn't find " ++ show n
+                          getAllDesc rest arr defs
             Just (_, entry) =>
               do (def, bin) <- getMinimalDef entry
                  ignore $ addDef n def
@@ -176,9 +176,13 @@ getAllDesc (n@(Resolved i) :: rest) arr defs
                             let refs = refersToRuntime def
                             refs' <- traverse toResolvedNames (keys refs)
                             getAllDesc (refs' ++ rest) arr defs
-                    else getAllDesc rest arr defs
+                    else do log "compile.execute" 20
+                               $ "Dropping " ++ show n ++ " because it's erased"
+                            getAllDesc rest arr defs
 getAllDesc (n :: rest) arr defs
-  = getAllDesc rest arr defs
+  = do log "compile.execute" 20 $
+         "Ignoring " ++ show n ++ " because it's not a Resolved name"
+       getAllDesc rest arr defs
 
 warnIfHole : Name -> NamedDef -> Core ()
 warnIfHole n (MkNmError _)
@@ -236,27 +240,61 @@ export
 getCompileData : {auto c : Ref Ctxt Defs} -> (doLazyAnnots : Bool) ->
                  UsePhase -> ClosedTerm -> Core CompileData
 getCompileData doLazyAnnots phase_in tm_in
-    = do defs <- get Ctxt
+    = do log "compile.execute" 10 $ "Getting compiled data for: " ++ show tm_in
          sopts <- getSession
          let phase = foldl {t=List} (flip $ maybe id max) phase_in $
-                         [Cases <$ dumpcases sopts, Lifted <$ dumplifted sopts, ANF <$ dumpanf sopts, VMCode <$ dumpvmcode sopts]
-         let ns = getRefs (Resolved (-1)) tm_in
+                       [ Cases <$ dumpcases sopts
+                       , Lifted <$ dumplifted sopts
+                       , ANF <$ dumpanf sopts
+                       , VMCode <$ dumpvmcode sopts
+                       ]
+
+         -- When we compile a REPL expression, there may be leftovers holes in it.
+         -- Turn these into runtime errors.
+         let metas = addMetas True empty tm_in
+         for_ (keys metas) $ \ metanm =>
+             do defs <- get Ctxt
+                Just gdef <- lookupCtxtExact metanm (gamma defs)
+                  | Nothing => log "compile.execute" 50 $ unwords
+                                    [ "Couldn't find"
+                                    , show metanm
+                                    , "(probably impossible)"]
+                let Hole _ _ = definition gdef
+                  | _ => pure ()
+                let fulln = fullname gdef
+                let cexp = MkError $ CCrash emptyFC
+                         $ "Encountered unimplemented hole " ++ show fulln
+                ignore $ addDef metanm ({ compexpr := Just cexp
+                                        , namedcompexpr := Just (forgetDef cexp)
+                                        } gdef)
+
+         let refs  = getRefs (Resolved (-1)) tm_in
+         let ns = mergeWith const metas refs
+         log "compile.execute" 70 $
+           "Found names: " ++ concat (intersperse ", " $ map show $ keys ns)
          tm <- toFullNames tm_in
          natHackNames' <- traverse toResolvedNames natHackNames
          -- make an array of Bools to hold which names we've found (quicker
          -- to check than a NameMap!)
          asize <- getNextEntry
          arr <- coreLift $ newArray asize
+
+         defs <- get Ctxt
          logTime "++ Get names" $ getAllDesc (natHackNames' ++ keys ns) arr defs
 
          let entries = catMaybes !(coreLift (toList arr))
          let allNs = map (Resolved . fst) entries
          cns <- traverse toFullNames allNs
+         log "compile.execute" 30 $
+           "All names: " ++ concat (intersperse ", " $ map show $ zip allNs cns)
 
          -- Do a round of merging/arity fixing for any names which were
          -- unknown due to cyclic modules (i.e. declared in one, defined in
          -- another)
          rcns <- filterM nonErased cns
+         log "compile.execute" 40 $
+           "Kept: " ++ concat (intersperse ", " $ map show rcns)
+
          logTime "++ Merge lambda" $ traverse_ mergeLamDef rcns
          logTime "++ Fix arity" $ traverse_ fixArityDef rcns
          compiledtm <- fixArityExp !(compileExp tm)
