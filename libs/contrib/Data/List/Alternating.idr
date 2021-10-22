@@ -88,6 +88,10 @@ mutual
         bitraverse f g [] = [| [] |]
         bitraverse f g (x :: xs) = [| f x :: bitraverse g f xs |]
 
+public export
+singleton : a -> Fence a b
+singleton x = [x]
+
 mutual
     namespace Fence
         public export
