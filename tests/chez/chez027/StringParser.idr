@@ -40,6 +40,13 @@ maybeParser = do res <- optional (string "abc")
                  ignore $ string "def"
                  pure $ isJust res
 
+-- test takeUntil
+takeUntilParser : Parser String
+takeUntilParser = do ignore $ string "<!--"
+                     res <- takeUntil "-->"
+                     eos -- To check that takeUntil consumes the stop string itself
+                     pure res
+
 main : IO ()
 main = do
     res <- parseT parseStuff "abcdef"
@@ -56,6 +63,9 @@ main = do
     showRes $ pureParsing "63553"
     s <- parseT (takeWhile isDigit) "887abc8993"
     showRes s
+    showRes $ parse takeUntilParser "<!--XML Comment-->"
+    showRes $ parse takeUntilParser "<!--<- Complicated -- XML -- Comment ->-->"
+    showRes $ parse takeUntilParser "<!--Unclosed XML Comment"
     res <- parseT optParser "123def"
     showRes res
     res <- parseT optParser "def"
