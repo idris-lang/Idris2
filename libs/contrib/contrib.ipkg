@@ -54,6 +54,7 @@ modules = Control.ANSI,
           Data.List.Palindrome,
           Data.List.HasLength,
           Data.List.AtIndex,
+          Data.List.Alternating,
 
           Data.List.Elem.Extra,
 

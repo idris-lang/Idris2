@@ -1,0 +1,16 @@
+1/1: Building AlternatingList (AlternatingList.idr)
+Main> [1.0, "Hello", 2.0, "world", 3.0]
+True
+False
+True
+True
+[2.0, "Hello!", 3.0, "world!", 4.0]
+(1.375, "Hello world")
+(2.125, "Hello world")
+1.0
+"Hello"
+2.0
+"world"
+3.0
+["1.0", "Hello", "2.0", "world", "3.0"]
+Main> Bye for now!
