@@ -53,7 +53,7 @@ schHeader prof libs = """
   (require rnrs/io/ports-6)              ; for files
   (require srfi/19)                      ; for file handling and data
   (require ffi/unsafe ffi/unsafe/define) ; for calling C
-  \{ (if prof then "(require profile)" else "") }
+  \{ ifThenElse prof "(require profile)" "" }
   (require racket/flonum)                ; for float-typed transcendental functions
   \{ libs }
   (let ()
@@ -335,9 +335,9 @@ getFgnCall : {auto f : Ref Done (List String) } ->
 getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
 
 startRacket : String -> String -> String -> String
-startRacket racket appdir target = #"""
+startRacket racket appdir target = """
   #!/bin/sh
-  # \#{ (generatedString "Racket") }
+  # \{ (generatedString "Racket") }
 
   set -e # exit on any error
 
@@ -347,36 +347,36 @@ startRacket racket appdir target = #"""
     DIR=$(dirname "$(readlink -f -- "$0")")
   fi
 
-  export LD_LIBRARY_PATH="$DIR/\#{ appdir }":$LD_LIBRARY_PATH
-  export DYLD_LIBRARY_PATH="$DIR/\#{ appdir }":$DYLD_LIBRARY_PATH
+  export LD_LIBRARY_PATH="$DIR/\{ appdir }":$LD_LIBRARY_PATH
+  export DYLD_LIBRARY_PATH="$DIR/\{ appdir }":$DYLD_LIBRARY_PATH
 
-  \#{ racket } "$DIR/\#{ target }" "$@"
-  """#
+  \{ racket } "$DIR/\{ target }" "$@"
+  """
 
 startRacketCmd : String -> String -> String -> String
-startRacketCmd racket appdir target = #"""
+startRacketCmd racket appdir target = """
   @echo off
 
-  rem \#{ (generatedString "Racket") }
+  rem \{ (generatedString "Racket") }
 
   set APPDIR=%~dp0
-  set PATH=%APPDIR%\#{ appdir };%PATH%
+  set PATH=%APPDIR%\{ appdir };%PATH%
 
-  \#{ racket } "%APPDIR%\#{ target }" %*
-  """#
+  \{ racket } "%APPDIR%\{ target }" %*
+  """
 
 startRacketWinSh : String -> String -> String -> String
-startRacketWinSh racket appdir target = #"""
+startRacketWinSh racket appdir target = """
   #!/bin/sh
-  # \#{ (generatedString "Racket") }
+  # \{ (generatedString "Racket") }
 
   set -e # exit on any error
 
   DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
-  PATH="$DIR/\#{ appdir }":$PATH
+  PATH="$DIR/\{ appdir }":$PATH
 
-  \#{ racket } "$DIR/\#{ target }" "$@"
-  """#
+  \{ racket } "$DIR/\{ target }" "$@"
+  """
 
 compileToRKT : Ref Ctxt Defs ->
                String -> ClosedTerm -> (outfile : String) -> Core ()

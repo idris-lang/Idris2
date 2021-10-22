@@ -41,12 +41,12 @@ outputDirWithDefault d = fromMaybe (build_dir d </> "exec") (output_dir d)
 public export
 toString : Dirs -> String
 toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs pdirs ldirs ddirs) = """
-  Working Directory:       \{ show wdir }
+  Working Directory:       \{ wdir }
   Source Directory:        \{ show sdir }
-  Build Directory:         \{ show bdir }
-  Local Depend Directory:  \{ show ldir }
-  Output Directory:        \{ show (outputDirWithDefault d) }
-  Installation Prefix:     \{ show dfix }
+  Build Directory:         \{ bdir }
+  Local Depend Directory:  \{ ldir }
+  Output Directory:        \{ (outputDirWithDefault d) }
+  Installation Prefix:     \{ dfix }
   Extra Directories:       \{ show edirs }
   Package Directories:     \{ show pdirs }
   CG Library Directories:  \{ show ldirs }

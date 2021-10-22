@@ -1001,9 +1001,9 @@ footer = do
       // main function
       int main(int argc, char *argv[])
       {
-          \{
-            (if contains "idris_support.h" !(get HeaderFiles)
-                then "idris2_setArgs(argc, argv);" else "")
+          \{ ifThenElse (contains "idris_support.h" !(get HeaderFiles))
+                        "idris2_setArgs(argc, argv);"
+                        ""
           }
           Value *mainExprVal = __mainExpression_0();
           trampoline(mainExprVal);
