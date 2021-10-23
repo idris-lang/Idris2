@@ -66,22 +66,8 @@ pkgDir str =
               . traverse parsePositive
               . split (== '.')
 
-dirEntries : String -> IO (List String)
-dirEntries dname =
-    do Right d <- openDir dname
-         | Left err => pure []
-       entries <- getFiles d []
-       closeDir d
-       pure entries
-  where
-    getFiles : Directory -> List String -> IO (List String)
-    getFiles d acc
-        = do Right str <- dirEntry d
-               | Left err => pure (reverse acc)
-             getFiles d (str :: acc)
-
 getPackageDirs : String -> IO (List PkgDir)
-getPackageDirs dname = map pkgDir <$> dirEntries dname
+getPackageDirs dname = map pkgDir . either (const []) id <$> listDir dname
 
 -- Get a list of all the candidate directories that match a package spec
 -- in a given path. Return an empty list on file error (e.g. path not existing)
@@ -194,7 +180,8 @@ findIpkg : {auto c : Ref Ctxt Defs} -> Core (List String)
 findIpkg =
   do Just srcdir <- coreLift currentDir
        | Nothing => throw (InternalError "Can't get current directory")
-     fs <- coreLift $ dirEntries srcdir
+     Right fs <- coreLift $ listDir srcdir
+       | Left err => pure []
      pure $ filter (".ipkg" `isSuffixOf`) fs
 
 -- keep only those Strings, of which `x` is a prefix
