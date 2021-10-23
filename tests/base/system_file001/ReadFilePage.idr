@@ -2,7 +2,7 @@ import System.File
 import Data.String
 
 putLines : List String -> IO ()
-putLines = putStrLn . fastAppend
+putLines = putStrLn . fastConcat
 
 total
 totalChecks : IO ()
