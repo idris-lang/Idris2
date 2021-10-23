@@ -191,14 +191,6 @@ print t = go [([], ".", Evidence root (pure t))] where
     go (zipWith (\ bs, (dir ** iot) => (bs, fileName dir, Evidence _ iot)) bss t.subTrees)
     go iots
 
--- This function is deprecated; to be removed after the next version bump
-export
-copyFile : HasIO io => String -> String -> io (Either FileError ())
-copyFile src dest
-    = do Right buf <- createBufferFromFile src
-             | Left err => pure (Left err)
-         writeBufferToFile dest buf !(rawSize buf)
-
 ||| Copy a directory and its contents recursively
 ||| Returns a FileError if the target directory already exists, or if any of
 ||| the source files fail to be copied.
@@ -211,7 +203,7 @@ copyDir src target = runEitherT $ do
   where
     copyFile' : (srcDir : Path) -> (targetDir : Path) -> (fileName : String) -> EitherT FileError io ()
     copyFile' srcDir targetDir fileName = do
-      MkEitherT $ Tree.copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
+      MkEitherT $ copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
 
     covering
     copyDirContents : {srcDir : Path} -> Tree srcDir -> (targetDir : Path) -> EitherT FileError io ()
