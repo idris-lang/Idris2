@@ -75,6 +75,21 @@ GTIsnotlte a b prf =
   notLteIsnotlte a b $ \contra =>
     succNotLTEpred $ transitive {rel = LTE} prf contra
 
+||| Given an LTE relationship, you can produce a third number that
+||| is the difference between the first two.
+export
+lteProducesDifference : {b : _} -> a `LTE` b -> (c ** a + c = b)
+lteProducesDifference LTEZero = (b ** Refl)
+lteProducesDifference (LTESucc x) = let (c' ** prf) = lteProducesDifference x
+                                    in  rewrite sym prf in (c' ** Refl)
+
+||| Given a GTE relationship, you can produce a third number that
+||| is the difference between the first two.
+export
+gteProducesDifference : {a : _} -> a `GTE` b -> (c ** a = b + c)
+gteProducesDifference x = let (c' ** prf) = lteProducesDifference x
+                          in  (c' ** sym prf)
+
 ||| Subtracting a number gives a smaller number
 export
 minusLTE : (a,b : Nat) -> (b `minus` a) `LTE` b
