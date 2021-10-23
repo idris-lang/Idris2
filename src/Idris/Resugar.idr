@@ -155,7 +155,7 @@ mutual
               _    => Nothing
   sugarAppM tm = case tm of
     PApp _ (PRef _ (MkKindedName _ _ (NS ns (UN (Basic n))))) (PPrimVal _ (BI k))
-      => if k < 0 && n == "fromInteger" && (ns == typesNS || ns == preludeNS)
+      => if k < 0 && n == "fromInteger" && ns == preludeNS
            then pure $ PPrimVal (getPTermLoc tm) (BI k)
            else refold tm
     _ => refold tm
@@ -175,10 +175,13 @@ mutual
                 "Nil" => pure $ PList     fc fc []
                 "Lin" => pure $ PSnocList fc fc []
                 _     => Nothing
-          PApp fc (PRef _ (MkKindedName nt _ (NS ns nm))) arg =>
+          PApp fc (PRef _ (MkKindedName _ _ (NS ns nm))) arg =>
             case nameRoot nm of
-              "rangeFrom" => pure $ PRangeStream fc (unbracket arg) Nothing
-              _           => Nothing
+              "rangeFrom"  => pure $ PRangeStream fc (unbracket arg) Nothing
+              "fromDouble" => do guard (ns == builtinNS)
+                                 let tm@(PPrimVal _ (Db _)) = arg | _ => Nothing
+                                 pure tm
+              _            => Nothing
           _ => Nothing
 
   ||| Put the special names (Nil, ::, Pair, Z, S, etc.) back as syntax

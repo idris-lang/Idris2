@@ -1,2 +1,3 @@
 Main> -42 : Integer
+Main> negate 4.2 : Double
 Main> Bye for now!
