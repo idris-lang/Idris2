@@ -249,7 +249,7 @@ Show LogLevel where
 
   show (MkLogLevel ps n) = case ps of
     [] => show n
-    _  => fastAppend (intersperse "." ps) ++ ":" ++ show n
+    _  => fastConcat (intersperse "." ps) ++ ":" ++ show n
 
 export
 Pretty LogLevel where

@@ -1036,7 +1036,7 @@ generateCSourceFile defs outn =
      header -- added after the definition traversal in order to add all encountered function defintions
      footer
      fileContent <- get OutfileText
-     let code = fastAppend (map (++ "\n") (reify fileContent))
+     let code = fastConcat (map (++ "\n") (reify fileContent))
 
      coreLift_ $ writeFile outn code
      log "compiler.refc" 10 $ "Generated C file " ++ outn
