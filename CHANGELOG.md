@@ -35,6 +35,10 @@
 
 ### Library changes
 
+#### Base
+
+* Deprecate `base`'s `Data.Nat.Order.decideLTE` in favor of `Data.Nat.isLTE`.
+
 #### Contrib
 
 * `System.Random` support for `Int` changed to `Int32`; it already limited itself
