@@ -153,26 +153,33 @@ mutual
               "rangeFromThen" => pure $ PRangeStream fc (unbracket l) (Just $ unbracket r)
 
               _    => Nothing
-  sugarAppM tm =
-  -- refolding natural numbers if the expression is a constant
-    case extractNat 0 tm of
-      Just k  => pure $ PPrimVal (getPTermLoc tm) (BI (cast k))
-      Nothing => case tm of
-        PRef fc (MkKindedName nt _ (NS ns nm)) =>
-          if builtinNS == ns
-             then case nameRoot nm of
-               "Unit"   => pure $ PUnit fc
-               "MkUnit" => pure $ PUnit fc
-               _           => Nothing
-             else case nameRoot nm of
-               "Nil" => pure $ PList fc fc []
-               "Lin" => pure $ PSnocList fc fc []
-               _     => Nothing
-        PApp fc (PRef _ (MkKindedName nt _ (NS ns nm))) arg =>
-          case nameRoot nm of
-            "rangeFrom" => pure $ PRangeStream fc (unbracket arg) Nothing
-            _           => Nothing
-        _ => Nothing
+  sugarAppM tm = case tm of
+    PApp _ (PRef _ (MkKindedName _ _ (NS ns (UN (Basic n))))) (PPrimVal _ (BI k))
+      => if k < 0
+           then pure $ PPrimVal (getPTermLoc tm) (BI k)
+           else refold tm
+    _ => refold tm
+    where
+      -- refolding natural numbers if the expression is a constant
+      refold : IPTerm -> Maybe IPTerm
+      refold tm = case extractNat 0 tm of
+        Just k  => pure $ PPrimVal (getPTermLoc tm) (BI (cast k))
+        Nothing => case tm of
+          PRef fc (MkKindedName nt _ (NS ns nm)) =>
+            if builtinNS == ns
+              then case nameRoot nm of
+                "Unit"   => pure $ PUnit fc
+                "MkUnit" => pure $ PUnit fc
+                _        => Nothing
+              else case nameRoot nm of
+                "Nil" => pure $ PList     fc fc []
+                "Lin" => pure $ PSnocList fc fc []
+                _     => Nothing
+          PApp fc (PRef _ (MkKindedName nt _ (NS ns nm))) arg =>
+            case nameRoot nm of
+              "rangeFrom" => pure $ PRangeStream fc (unbracket arg) Nothing
+              _           => Nothing
+          _ => Nothing
 
   ||| Put the special names (Nil, ::, Pair, Z, S, etc.) back as syntax
 
