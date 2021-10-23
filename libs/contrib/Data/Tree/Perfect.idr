@@ -3,7 +3,6 @@ module Data.Tree.Perfect
 import Control.WellFounded
 import Decidable.Order.Strict
 import Data.Monoid.Exponentiation
-import Data.Num.Implementations
 import Data.Nat.Views
 import Data.Nat
 import Data.Nat.Order
