@@ -155,7 +155,7 @@ mutual
               _    => Nothing
   sugarAppM tm = case tm of
     PApp _ (PRef _ (MkKindedName _ _ (NS ns (UN (Basic n))))) (PPrimVal _ (BI k))
-      => if k < 0
+      => if k < 0 && n == "fromInteger" && (ns == typesNS || ns == preludeNS)
            then pure $ PPrimVal (getPTermLoc tm) (BI k)
            else refold tm
     _ => refold tm
