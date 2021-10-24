@@ -33,12 +33,25 @@
   `Show` is that `Interpolation` and `Show` have conflicting semantics, typically
   this is the case for `String` which adds double quotes around the string.
 
+### Compiler changes
+
+* Removes deprecated support for `void` primitive. Now `void` is supported via
+  `prim__void`.
+
 ### Library changes
+
+#### Base
+
+* Deprecates `base`'s `Data.Nat.Order.decideLTE` in favor of `Data.Nat.isLTE`.
+* Removes `base`'s deprecated `System.Directory.dirEntry`. Use `nextDirEntry` instead.
+* Removes `base`'s deprecated `Data.String.fastAppend`. Use `fastConcat` instead.
 
 #### Contrib
 
 * `System.Random` support for `Int` changed to `Int32`; it already limited itself
   to 32 bits but now that is codified. Javascript backends are now supported.
+* Removes `contrib`'s deprecated `Data.Num.Implementations` module. See
+  `Prelude.Interfaces` instead.
 
 ## v0.5.0/0.5.1
 

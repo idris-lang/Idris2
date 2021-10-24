@@ -79,8 +79,6 @@ modules = Control.ANSI,
           Data.Nat.Order.Relation,
           Data.Nat.Properties,
 
-          Data.Num.Implementations,
-
           Data.OpenUnion,
 
           Data.Order,
