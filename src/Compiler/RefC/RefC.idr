@@ -983,7 +983,7 @@ header : {auto c : Ref Ctxt Defs}
 header = do
     let initLines = """
       #include <runtime.h>
-      /* \{ (generatedString "RefC") } */
+      /* \{ generatedString "RefC" } */
 
       """
     let headerFiles = Libraries.Data.SortedSet.toList !(get HeaderFiles)

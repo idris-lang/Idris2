@@ -44,7 +44,7 @@ findRacoExe =
 schHeader : Bool -> String -> String
 schHeader prof libs = """
   #lang racket/base
-  ;; \{ (generatedString "Racket") }
+  ;; \{ generatedString "Racket" }
   (require racket/async-channel)         ; for asynchronous channels
   (require racket/future)                ; for parallelism/concurrency
   (require racket/math)                  ; for math ops
@@ -337,7 +337,7 @@ getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
 startRacket : String -> String -> String -> String
 startRacket racket appdir target = """
   #!/bin/sh
-  # \{ (generatedString "Racket") }
+  # \{ generatedString "Racket" }
 
   set -e # exit on any error
 
@@ -357,7 +357,7 @@ startRacketCmd : String -> String -> String -> String
 startRacketCmd racket appdir target = """
   @echo off
 
-  rem \{ (generatedString "Racket") }
+  rem \{ generatedString "Racket" }
 
   set APPDIR=%~dp0
   set PATH=%APPDIR%\{ appdir };%PATH%
@@ -368,7 +368,7 @@ startRacketCmd racket appdir target = """
 startRacketWinSh : String -> String -> String -> String
 startRacketWinSh racket appdir target = """
   #!/bin/sh
-  # \{ (generatedString "Racket") }
+  # \{ generatedString "Racket" }
 
   set -e # exit on any error
 

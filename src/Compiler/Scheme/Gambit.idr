@@ -50,7 +50,7 @@ findGSCBackend =
 
 schHeader : String
 schHeader = """
-  ;; \{ (generatedString "Gambit") }
+  ;; \{ generatedString "Gambit" }
   (declare (block)
     (inlining-limit 450)
     (standard-bindings)

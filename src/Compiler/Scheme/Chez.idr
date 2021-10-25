@@ -88,7 +88,7 @@ schHeader chez libs whole
   = (if os /= "windows"
         then "#!" ++ chez ++ (if whole then " --program\n\n" else " --script\n\n")
         else "") ++ """
-    ;; \{ (generatedString "Chez") }
+    ;; \{ generatedString "Chez" }
     (import (chezscheme))
     (case (machine-type)
       [(i3fb ti3fb a6fb ta6fb) #f]
@@ -392,7 +392,7 @@ export
 startChezPreamble : String
 startChezPreamble = """
   #!/bin/sh
-  # \{ (generatedString "Chez") }
+  # \{ generatedString "Chez" }
 
   set -e # exit on any error
 
@@ -417,7 +417,7 @@ startChezCmd : String -> String -> String -> String -> String
 startChezCmd chez appdir target progType = """
   @echo off
 
-  rem \{ (generatedString "Chez") }
+  rem \{ generatedString "Chez" }
 
   set APPDIR=%~dp0
   set PATH=%APPDIR%\{ appdir };%PATH%
@@ -429,7 +429,7 @@ startChezCmd chez appdir target progType = """
 startChezWinSh : String -> String -> String -> String -> String
 startChezWinSh chez appdir target progType = """
   #!/bin/sh
-  # \{ (generatedString "Chez") }
+  # \{ generatedString "Chez" }
 
   set -e # exit on any error
 

@@ -73,7 +73,7 @@ startChezCmd : String -> String -> String -> String
 startChezCmd chez appDirSh targetSh = """
   @echo off
 
-  rem \{ (generatedString "ChezSep") }
+  rem \{ generatedString "ChezSep" }
 
   set APPDIR=%~dp0
   set PATH=%APPDIR%\{ appDirSh };%PATH%
@@ -87,7 +87,7 @@ startChezCmd chez appDirSh targetSh = """
 startChezWinSh : String -> String -> String -> String
 startChezWinSh chez appDirSh targetSh = """
   #!/bin/sh
-  # \{ (generatedString "ChezSep") }
+  # \{ generatedString "ChezSep" }
 
   set -e # exit on any error
 
