@@ -747,7 +747,9 @@ record Defs where
      -- ^ for timing and checking timeouts; the maximum time after which a
      -- timeout should be thrown
   warnings : List Warning
-     -- ^ as yet unreported warnings
+     -- ^ warnings for this file and all imported
+  saveWarnings : List Warning
+     -- ^ warnings for this file
   schemeEvalLoaded : Bool
 
 -- Label for context references
@@ -796,6 +798,7 @@ initDefs
            , timings = empty
            , timer = Nothing
            , warnings = []
+           , saveWarnings = []
            , schemeEvalLoaded = False
            }
 
@@ -2242,7 +2245,7 @@ recordWarning : {auto c : Ref Ctxt Defs} -> Warning -> Core ()
 recordWarning w
     = do defs <- get Ctxt
          session <- getSession
-         put Ctxt $ record { warnings $= (w ::) } defs
+         put Ctxt $ record { warnings $= (w ::), saveWarnings $= (w ::) } defs
 
 export
 getTime : Core Integer

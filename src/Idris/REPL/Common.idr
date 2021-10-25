@@ -161,7 +161,7 @@ emitWarnings : {auto c : Ref Ctxt Defs} ->
                Core (List Error)
 emitWarnings
     = do defs <- get Ctxt
-         let ws = reverse (warnings defs)
+         let ws = reverse (saveWarnings defs)
          session <- getSession
          if (session.warningsAsErrors)
            then let errs = WarningAsError <$> ws in

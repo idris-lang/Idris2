@@ -16,6 +16,7 @@ import Libraries.Data.PosMap
 
 import Libraries.Data.IOArray
 import Data.Vect
+import Data.List1
 
 import Libraries.Utils.Binary
 import Libraries.Utils.Scheme
@@ -1141,6 +1142,23 @@ TTC Transform where
            lhs <- fromBuf b
            rhs <- fromBuf b
            pure (MkTransform {vars} n env lhs rhs)
+
+export
+TTC Warning where
+  toBuf b (ParserWarning fc msg) = do tag 0; toBuf b fc; toBuf b msg
+  toBuf b (UnreachableClause {vars} fc env tm) = do tag 1; toBuf b vars; toBuf b fc; toBuf b env; toBuf b tm
+  toBuf b (ShadowingGlobalDefs fc ns) = do tag 2; toBuf b fc; toBuf b ns
+  toBuf b (Deprecated name) = do tag 3; toBuf b name
+  toBuf b (GenericWarn msg) = do tag 4; toBuf b msg
+
+  fromBuf b
+      = case !getTag of
+          0 => pure $ ParserWarning !(fromBuf b) !(fromBuf b)
+          1 => pure $ UnreachableClause {vars=(!(fromBuf b))} !(fromBuf b) !(fromBuf b) !(fromBuf b)
+          2 => pure $ ShadowingGlobalDefs !(fromBuf b) !(fromBuf b)
+          3 => pure $ Deprecated !(fromBuf b)
+          4 => pure $ GenericWarn !(fromBuf b)
+          _ => corrupt "Warning"
 
 -- decode : Context -> Int -> (update : Bool) -> ContextEntry -> Core GlobalDef
 Core.Context.decode gam idx update (Coded ns bin)

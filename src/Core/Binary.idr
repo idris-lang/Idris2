@@ -8,6 +8,7 @@ import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
+import Core.Env
 import Core.Hash
 import Core.Name.Namespace
 import Core.Normalise
@@ -18,6 +19,7 @@ import Core.UnifyState
 
 import Data.Buffer
 import Data.List
+import Data.List1
 import Data.String
 
 import System.File
@@ -33,7 +35,7 @@ import public Libraries.Utils.Binary
 ||| (Increment this when changing anything in the data format)
 export
 ttcVersion : Int
-ttcVersion = 66
+ttcVersion = 67
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -62,6 +64,7 @@ record TTCFile extra where
   namedirectives : List (Name, List String)
   cgdirectives : List (CG, String)
   transforms : List (Name, Transform)
+  warnings : List Warning
   extraData : extra
 
 HasNames a => HasNames (List a) where
@@ -95,13 +98,34 @@ HasNames (Name, Name, Bool) where
   full c (n1, n2, b) = pure (!(full c n1), !(full c n2), b)
   resolved c (n1, n2, b) = pure (!(resolved c n1), !(resolved c n2), b)
 
+HasNames a => HasNames (List1 a) where
+  full c (x ::: xs) = pure $ !(full c x) ::: !(full c xs)
+  resolved c (x ::: xs) = pure $ !(resolved c x) ::: pure !(resolved c x)
+
+HasNames (String, List1 Name) where
+  full c (s, nl) = pure $ (s, !(full c nl))
+  resolved c (s, nl) = pure $ (s, !(resolved c nl))
+
+HasNames Warning where
+  full gam (ParserWarning fc msg) = pure $ ParserWarning fc msg
+  full gam (UnreachableClause fc env tm) = pure $ UnreachableClause fc !(full gam env) !(full gam tm)
+  full gam (ShadowingGlobalDefs fc ns) = pure $ ShadowingGlobalDefs fc !(full gam ns)
+  full gam (Deprecated name) = pure $ Deprecated name
+  full gam (GenericWarn msg) = pure $ GenericWarn msg
+
+  resolved gam (ParserWarning fc msg) = pure $ ParserWarning fc msg
+  resolved gam (UnreachableClause fc env tm) = pure $ UnreachableClause fc !(resolved gam env) !(resolved gam tm)
+  resolved gam (ShadowingGlobalDefs fc ns) = pure $ ShadowingGlobalDefs fc !(resolved gam ns)
+  resolved gam (Deprecated name) = pure $ Deprecated name
+  resolved gam (GenericWarn msg) = pure $ GenericWarn msg
+
 HasNames e => HasNames (TTCFile e) where
   full gam (MkTTCFile version totalReq sourceHash ifaceHash iHashes incData
                       context userHoles
                       autoHints typeHints
                       imported nextVar currentNS nestedNS
                       pairnames rewritenames primnames
-                      namedirectives cgdirectives trans
+                      namedirectives cgdirectives trans warnings
                       extra)
       = pure $ MkTTCFile version totalReq sourceHash ifaceHash iHashes incData
                          context userHoles
@@ -114,6 +138,7 @@ HasNames e => HasNames (TTCFile e) where
                          !(full gam namedirectives)
                          cgdirectives
                          !(full gam trans)
+                         !(full gam warnings)
                          !(full gam extra)
     where
       fullPair : Context -> Maybe PairNames -> Core (Maybe PairNames)
@@ -139,7 +164,7 @@ HasNames e => HasNames (TTCFile e) where
                       autoHints typeHints
                       imported nextVar currentNS nestedNS
                       pairnames rewritenames primnames
-                      namedirectives cgdirectives trans
+                      namedirectives cgdirectives trans warnings
                       extra)
       = pure $ MkTTCFile version totalReq sourceHash ifaceHash iHashes incData
                          context userHoles
@@ -152,6 +177,7 @@ HasNames e => HasNames (TTCFile e) where
                          !(resolved gam namedirectives)
                          cgdirectives
                          !(resolved gam trans)
+                         !(resolved gam warnings)
                          !(resolved gam extra)
     where
       resolvedPair : Context -> Maybe PairNames -> Core (Maybe PairNames)
@@ -200,6 +226,7 @@ writeTTCFile b file_in
            toBuf b (namedirectives file)
            toBuf b (cgdirectives file)
            toBuf b (transforms file)
+           toBuf b (warnings file)
 
 readTTCFile : TTC extra =>
               {auto c : Ref Ctxt Defs} ->
@@ -226,7 +253,7 @@ readTTCFile readall file as b
                                    0 (mkNamespace "") [] Nothing
                                    Nothing
                                    (MkPrimNs Nothing Nothing Nothing Nothing)
-                                   [] [] [] ex)
+                                   [] [] [] [] ex)
               else do
                  defs <- fromBuf b
                  uholes <- fromBuf b
@@ -241,11 +268,12 @@ readTTCFile readall file as b
                  nds <- fromBuf b
                  cgds <- fromBuf b
                  trans <- fromBuf b
+                 warnings <- fromBuf b
                  pure (MkTTCFile ver totalReq
                                  sourceFileHash ifaceHash importHashes incData
                                  (map (replaceNS cns) defs) uholes
                                  autohs typehs imp nextv cns nns
-                                 pns rws prims nds cgds trans ex)
+                                 pns rws prims nds cgds trans warnings ex)
   where
     -- We don't store full names in 'defs' - we remove the namespace if it's
     -- the same as the current namespace. So, this puts it back.
@@ -311,6 +339,7 @@ writeToTTC extradata sourceFileName ttcFileName
                               (NameMap.toList (namedirectives defs))
                               (cgdirectives defs)
                               (saveTransforms defs)
+                              (saveWarnings defs)
                               extradata)
 
          Right ok <- coreLift $ writeToFile ttcFileName !(get Bin)
@@ -426,6 +455,11 @@ updateTransforms ((n, t) :: ts)
                   Just ts =>
                      put Ctxt (record { transforms $= insert n (t :: ts) } defs)
 
+export
+updateWarnings : {auto c : Ref Ctxt Defs} -> List Warning -> Core ()
+updateWarnings warnings = do
+  defs <- get Ctxt
+  put Ctxt (record { warnings $= (warnings++) } defs)
 
 getNSas : (String, (ModuleIdent, Bool, Namespace)) ->
           (ModuleIdent, Namespace)
@@ -493,6 +527,7 @@ readFromTTC nestedns loc reexp fname modNS importAs
                     updateNameDirectives (reverse (namedirectives ttc))
                     updateCGDirectives (cgdirectives ttc)
                     updateTransforms (transforms ttc)
+                    updateWarnings (warnings ttc)
 
                when (not reexp) clearSavedHints
                resetFirstEntry
