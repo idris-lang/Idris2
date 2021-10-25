@@ -879,6 +879,25 @@ noDeclaration : {auto c : Ref Ctxt Defs} ->
                 FC -> Name -> Core a
 noDeclaration loc nm = maybeMisspelling (NoDeclaration loc nm) nm
 
+export
+getVisibility : {auto c : Ref Ctxt Defs} ->
+                FC -> Name -> Core Visibility
+getVisibility fc n
+    = do defs <- get Ctxt
+         Just def <- lookupCtxtExact n (gamma defs)
+              | Nothing => undefinedName fc n
+         pure $ visibility def
+
+export
+ambiguousName : {auto c : Ref Ctxt Defs} -> FC
+             -> Name -> List Name
+             -> Core a
+ambiguousName fc n ns = do
+  ns <- filterM (\x => pure $ !(getVisibility fc x) /= Private) ns
+  throw $ case ns of
+    [] => UndefinedName fc n
+    ns => AmbiguousName fc ns
+
 -- Get the canonical name of something that might have been aliased via
 -- import as
 export
@@ -887,9 +906,8 @@ canonicalName : {auto c : Ref Ctxt Defs} ->
 canonicalName fc n
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of
-              [] => undefinedName fc n
               [(n, _, _)] => pure n
-              ns => throw (AmbiguousName fc (map fst ns))
+              ns => ambiguousName fc n (map fst ns)
 
 -- If the name is aliased, get the alias
 export
@@ -1257,8 +1275,7 @@ setNameFlag : {auto c : Ref Ctxt Defs} ->
 setNameFlag fc n fl
     = do defs <- get Ctxt
          [(n', i, def)] <- lookupCtxtName n (gamma defs)
-              | [] => undefinedName fc n
-              | res => throw (AmbiguousName fc (map fst res))
+              | res => ambiguousName fc n (map fst res)
          let flags' = fl :: filter (/= fl) (flags def)
          ignore $ addDef (Resolved i) (record { flags = flags' } def)
 
@@ -1352,18 +1369,8 @@ hide : {auto c : Ref Ctxt Defs} ->
 hide fc n
     = do defs <- get Ctxt
          [(nsn, _)] <- lookupCtxtName n (gamma defs)
-              | [] => undefinedName fc n
-              | res => throw (AmbiguousName fc (map fst res))
+              | res => ambiguousName fc n (map fst res)
          put Ctxt (record { gamma $= hideName nsn } defs)
-
-export
-getVisibility : {auto c : Ref Ctxt Defs} ->
-                FC -> Name -> Core Visibility
-getVisibility fc n
-    = do defs <- get Ctxt
-         Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => undefinedName fc n
-         pure $ visibility def
 
 public export
 record SearchData where
@@ -1936,9 +1943,8 @@ checkUnambig : {auto c : Ref Ctxt Defs} ->
 checkUnambig fc n
     = do defs <- get Ctxt
          case !(lookupDefName n (gamma defs)) of
-              [] => undefinedName fc n
               [(fulln, i, _)] => pure (Resolved i)
-              ns => throw (AmbiguousName fc (map fst ns))
+              ns => ambiguousName fc n (map fst ns)
 
 export
 lazyActive : {auto c : Ref Ctxt Defs} ->

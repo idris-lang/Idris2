@@ -149,8 +149,7 @@ getConsGDef fc cons = do
     let c = defs.gamma
     for cons $ \n => do
         [(n', _, gdef)] <- lookupCtxtName n c
-            | [] => undefinedName fc n
-            | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
+            | ns => ambiguousName fc n $ (\(n, _, _) => n) <$> ns
         pure (n', gdef)
 
 isNatural : Ref Ctxt Defs => FC ->Name -> Core Bool
@@ -225,8 +224,7 @@ processBuiltinNatural fc name = do
     ds <- get Ctxt
     log "builtin.Natural" 5 $ "Processing %builtin Natural " ++ show name ++ "."
     [(n, _, gdef)] <- lookupCtxtName name ds.gamma
-        | [] => undefinedName fc name
-        | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
+        | ns => ambiguousName fc name $ (\(n, _, _) => n) <$> ns
     False <- isNatural fc n
         | True => pure ()
     let TCon _ _ _ _ _ _ dcons _ = gdef.definition
@@ -244,8 +242,7 @@ processNatToInteger fc fn = do
     ds <- get Ctxt
     log "builtin.NaturalToInteger" 5 $ "Processing %builtin NaturalToInteger " ++ show_fn ++ "."
     [(_ , i, gdef)] <- lookupCtxtName fn ds.gamma
-        | [] => undefinedName fc fn
-        | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
+        | ns => ambiguousName fc fn $ (\(n, _, _) => n) <$> ns
     let PMDef _ args _ cases _ = gdef.definition
         | def => throw $ GenericMsg fc
             $ "Expected function definition, found " ++ showDefType def ++ "."
@@ -272,8 +269,7 @@ processIntegerToNat fc fn = do
     ds <- get Ctxt
     log "builtin.IntegerToNatural" 5 $ "Processing %builtin IntegerToNatural " ++ show_fn ++ "."
     [(_, i, gdef)] <- lookupCtxtName fn ds.gamma
-        | [] => undefinedName fc fn
-        | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
+        | ns => ambiguousName fc fn $ (\(n, _, _) => n) <$> ns
     type <- toFullNames gdef.type
     let PMDef _ _ _ _ _ = gdef.definition
         | def => throw $ GenericMsg fc

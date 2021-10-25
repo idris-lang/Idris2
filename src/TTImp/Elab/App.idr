@@ -69,8 +69,7 @@ getNameType rigc env fc x
            Nothing =>
               do defs <- get Ctxt
                  [(pname, i, def)] <- lookupCtxtName x (gamma defs)
-                      | [] => undefinedName fc x
-                      | ns => throw (AmbiguousName fc (map fst ns))
+                      | ns => ambiguousName fc x (map fst ns)
                  checkVisibleNS fc (fullname def) (visibility def)
                  rigSafe (multiplicity def) rigc
                  let nt = fromMaybe Func (defNameType $ definition def)
