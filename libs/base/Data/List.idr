@@ -217,7 +217,7 @@ nubBy = nubBy' []
 ||| boolean equality. In particular, it keeps only the first occurrence of each
 ||| element. It is a special case of `nubBy`, which allows the programmer to
 ||| supply their own equality test.
-||| O(n^2). 
+||| O(n^2).
 |||
 ||| ```idris example
 ||| nub (the (List _) [1,2,1,3])
