@@ -365,7 +365,8 @@ fence : Monad m
      => ParseT m a
      -> ParseT m b
      -> ParseT m (Fence a b)
-fence x y = (do pure $ !x :: !y :: !(fence x y)) <|> map singleton x
+fence x y = do vx <- x
+               (vx ::) <$> [| y :: fence x y |] <|> pure [vx]
 
 ||| Run the specified parser precisely `n` times, returning a vector
 ||| of successes.
