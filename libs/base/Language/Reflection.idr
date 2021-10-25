@@ -150,9 +150,7 @@ fail = failAt EmptyFC
 ||| Log the current goal type, if the log level is >= the given level
 export %inline
 logGoal : Elaboration m => String -> Nat -> String -> m ()
-logGoal str n msg = case !goal of
-  Nothing => pure ()
-  Just t  => logTerm str n msg t
+logGoal str n msg = whenJust !goal $ logTerm str n msg
 
 export
 Elaboration Elab where
