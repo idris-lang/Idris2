@@ -10,7 +10,50 @@
 * New option `evaltiming` to time how long an evaluation takes at the REPL,
   set with `:set evaltiming`.
 
-## v0.5.0
+### Language changes
+
+* Interpolated strings now make use of `concat` which is compiled into `fastConcat`
+  The interpolated slices now make use of the `Interpolation` interface available
+  in the prelude. It has only one method `interpolate` which is called for every
+  expression that appears within an interpolation slice.
+
+  ```idris
+  "hello \{world}"
+  ```
+
+  is desugared into
+
+  ```idris
+  concat [interpolate "hello ", interpolate world]
+  ```
+
+  This allows you to write expressions within slices without having to call `show`
+  but for this you need to implement the `Interpolation` interface for each type
+  that you intend to use within an interpolation slice. The reason for not reusing
+  `Show` is that `Interpolation` and `Show` have conflicting semantics, typically
+  this is the case for `String` which adds double quotes around the string.
+
+### Compiler changes
+
+* Removes deprecated support for `void` primitive. Now `void` is supported via
+  `prim__void`.
+
+### Library changes
+
+#### Base
+
+* Deprecates `base`'s `Data.Nat.Order.decideLTE` in favor of `Data.Nat.isLTE`.
+* Removes `base`'s deprecated `System.Directory.dirEntry`. Use `nextDirEntry` instead.
+* Removes `base`'s deprecated `Data.String.fastAppend`. Use `fastConcat` instead.
+
+#### Contrib
+
+* `System.Random` support for `Int` changed to `Int32`; it already limited itself
+  to 32 bits but now that is codified. Javascript backends are now supported.
+* Removes `contrib`'s deprecated `Data.Num.Implementations` module. See
+  `Prelude.Interfaces` instead.
+
+## v0.5.0/0.5.1
 
 ### Language changes
 

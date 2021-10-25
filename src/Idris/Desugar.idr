@@ -572,16 +572,17 @@ mutual
 
       trimLeft : Nat -> List PStr -> Core (List PStr)
       trimLeft indent [] = pure []
-      trimLeft indent [(StrLiteral fc str)]
+      trimLeft indent [StrLiteral fc str]
           = let (trimed, rest) = splitAt indent (fastUnpack str) in
-                if any (not . isSpace) trimed
-                   then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
-                   else pure $ [StrLiteral fc (fastPack rest)]
-      trimLeft indent ((StrLiteral fc str)::xs)
+            if any (not . isSpace) trimed
+              then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
+              else let str = if null rest then "\n" else fastPack rest in
+                   pure [StrLiteral fc str]
+      trimLeft indent (StrLiteral fc str :: xs)
           = let (trimed, rest) = splitAt indent (fastUnpack str) in
-                if any (not . isSpace) trimed || length trimed < indent
-                   then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
-                   else pure $ (StrLiteral fc (fastPack rest))::xs
+            if any (not . isSpace) trimed || length trimed < indent
+              then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
+             else pure $ (StrLiteral fc (fastPack rest))::xs
       trimLeft indent xs = throw $ BadMultiline fc "Line is less indented than the closing delimiter"
 
   expandDo : {auto s : Ref Syn SyntaxInfo} ->

@@ -1,0 +1,14 @@
+1/1: Building Error1 (Error1.idr)
+Error: %inline and %noinline are mutually exclusive
+
+Error1:1:1--2:17
+ 1 | %inline %noinline
+ 2 | foo : Int -> Int
+
+1/1: Building Error2 (Error2.idr)
+Error: %noinline and %inline are mutually exclusive
+
+Error2:1:1--2:17
+ 1 | %noinline %inline
+ 2 | foo : Int -> Int
+

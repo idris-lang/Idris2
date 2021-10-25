@@ -368,7 +368,7 @@ specialise {vars} fc env gdef fn stk
                let nhash = hash (mapMaybe getStatic (map snd sargs))
                               `hashWithSalt` fn -- add function name to hash to avoid namespace clashes
                let pename = NS partialEvalNS
-                            (UN $ Basic ("PE_" ++ nameRoot fnfull ++ "_" ++ asHex nhash))
+                            (UN $ Basic ("PE_" ++ nameRoot fnfull ++ "_" ++ asHex (cast nhash)))
                defs <- get Ctxt
                case lookup pename (peFailures defs) of
                     Nothing => Just <$> mkSpecDef fc gdef pename sargs fn stk

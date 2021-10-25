@@ -125,11 +125,12 @@ explore root = do
     | Left err => pure emptyTree
   assert_total (go dir emptyTree)
 
-go dir acc = case !(dirEntry dir) of
+go dir acc = case !(nextDirEntry dir) of
   -- If there is no next entry then we are done and can return the accumulator.
-  Left err => acc <$ closeDir dir
+  Left err      => acc <$ closeDir dir
+  Right Nothing => acc <$ closeDir dir
   -- Otherwise we have an entry and need to categorise it
-  Right entry => do
+  Right (Just entry) => do
     -- ignore aliases for current and parent directories
     let False = elem entry [".", ".."]
          | _ => assert_total (go dir acc)

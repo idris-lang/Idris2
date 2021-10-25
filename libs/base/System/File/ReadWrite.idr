@@ -143,8 +143,16 @@ readFile = (map $ map (fastConcat . snd)) . readFilePage 0 forever
 ||| Write a string to a file
 export
 writeFile : HasIO io =>
-            (filepath : String) -> (contents : String) ->
+            (filePath : String) -> (contents : String) ->
             io (Either FileError ())
 writeFile file contents
   = withFile file WriteTruncate pure $
-      (flip fPutStr contents)
+      flip fPutStr contents
+
+export
+appendFile : HasIO io =>
+             (filePath : String) -> (contents : String) ->
+             io (Either FileError ())
+appendFile file contents
+  = withFile file Append pure $
+      flip fPutStr contents

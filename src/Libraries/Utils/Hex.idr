@@ -1,11 +1,12 @@
 module Libraries.Utils.Hex
 
+import Data.Bits
 import Data.List
 import Data.Primitives.Views
 
 %default total
 
-hexDigit : Int -> Char
+hexDigit : Bits64 -> Char
 hexDigit 0 = '0'
 hexDigit 1 = '1'
 hexDigit 2 = '2'
@@ -24,19 +25,15 @@ hexDigit 14 = 'e'
 hexDigit 15 = 'f'
 hexDigit _ = 'X' -- TMP HACK: Ideally we'd have a bounds proof, generated below
 
-||| Convert a positive integer into a list of (lower case) hexadecimal characters
+||| Convert a Bits64 value into a list of (lower case) hexadecimal characters
 export
-asHex : Int -> String
-asHex n =
-  if n > 0
-    then pack $ asHex' n []
-    else "0"
+asHex : Bits64 -> String
+asHex 0 = "0"
+asHex n = pack $ asHex' n []
   where
-    asHex' : Int -> List Char -> List Char
+    asHex' : Bits64 -> List Char -> List Char
     asHex' 0 hex = hex
-    asHex' n hex with (n `divides` 16)
-      asHex' (16 * div + rem) hex | DivBy div rem _ =
-        asHex' (assert_smaller n div) (hexDigit rem :: hex)
+    asHex' n hex = asHex' (assert_smaller n (n `shiftR` fromNat 4)) (hexDigit (n .&. 0xf) :: hex)
 
 export
 leftPad : Char -> Nat -> String -> String

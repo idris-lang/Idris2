@@ -111,6 +111,7 @@ mutual
   export
   Functor FnOpt' where
     map f Inline = Inline
+    map f NoInline = NoInline
     map f TCInline = TCInline
     map f (Hint b) = Hint b
     map f (GlobalHint b) = GlobalHint b

@@ -5,6 +5,7 @@ module TTImp.Elab.ImplicitBind
 import Core.Context
 import Core.Context.Log
 import Core.Core
+import Core.Coverage
 import Core.Env
 import Core.Metadata
 import Core.Normalise
@@ -102,6 +103,17 @@ mkPatternHole {vars'} loc rig n topenv imode (Just expty_in)
 
 mkPatternHole loc rig n env _ _
     = throw (GenericMsg loc ("Unknown type for pattern variable " ++ show n))
+
+-- Ideally just normalise the holes, but if it gets too big, try normalising
+-- everything instead
+export
+normaliseType : {auto c : Ref Ctxt Defs} ->
+                {free : _} ->
+                Defs -> Env Term free -> Term free -> Core (Term free)
+normaliseType defs env tm
+    = catch (do tm' <- nfOpts withHoles defs env tm
+                quoteOpts (MkQuoteOpts False False (Just 5)) defs env tm')
+            (\err => normalise defs env tm)
 
 -- For any of the 'bindIfUnsolved' - these were added as holes during
 -- elaboration, but are as yet unsolved, so create a pattern variable for
@@ -281,14 +293,7 @@ bindImplicits : {auto c : Ref Ctxt Defs} ->
                 Term vars -> Term vars -> Core (Term vars, Term vars)
 bindImplicits fc NONE defs env hs tm ty = pure (tm, ty)
 bindImplicits {vars} fc mode defs env hs tm ty
-   = do hs' <- traverse nHoles hs
-        pure $ liftImps mode $ bindImplVars fc mode defs env hs' tm ty
-  where
-    nHoles : (Name, ImplBinding vars) -> Core (Name, ImplBinding vars)
-    nHoles (n, NameBinding c p tm ty)
-        = pure (n, NameBinding c p tm !(normaliseHolesScope defs env ty))
-    nHoles (n, AsBinding c p tm ty pat)
-        = pure (n, AsBinding c p tm !(normaliseHolesScope defs env ty) pat)
+   = pure $ liftImps mode $ bindImplVars fc mode defs env hs tm ty
 
 export
 implicitBind : {auto c : Ref Ctxt Defs} ->
@@ -340,10 +345,20 @@ getToBind {vars} fc elabmode impmode env excepts
   where
     normBindingTy : Defs -> ImplBinding vars -> Core (ImplBinding vars)
     normBindingTy defs (NameBinding c p tm ty)
-        = pure $ NameBinding c p tm !(normaliseHoles defs env ty)
+        = do case impmode of
+                  COVERAGE => do tynf <- nf defs env ty
+                                 when !(isEmpty defs env tynf) $
+                                    throw (InternalError "Empty pattern in coverage check")
+                  _ => pure ()
+             pure $ NameBinding c p tm !(normaliseType defs env ty)
     normBindingTy defs (AsBinding c p tm ty pat)
-        = pure $ AsBinding c p tm !(normaliseHoles defs env ty)
-                                  !(normaliseHoles defs env pat)
+        = do case impmode of
+                  COVERAGE => do tynf <- nf defs env ty
+                                 when !(isEmpty defs env tynf) $
+                                    throw (InternalError "Empty pattern in coverage check")
+                  _ => pure ()
+             pure $ AsBinding c p tm !(normaliseType defs env ty)
+                                     !(normaliseHoles defs env pat)
 
     normImps : Defs -> List Name -> List (Name, ImplBinding vars) ->
                Core (List (Name, ImplBinding vars))

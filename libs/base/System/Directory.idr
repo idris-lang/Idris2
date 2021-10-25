@@ -94,15 +94,6 @@ nextDirEntry (MkDir d)
                        then assert_total $ nextDirEntry (MkDir d)
                        else pure $ Right (Just n)
 
--- This function is deprecated; to be removed after the next version bump
-export
-dirEntry : HasIO io => Directory -> io (Either FileError String)
-dirEntry d = do r <- nextDirEntry d
-                pure $ case r of
-                         Left e         => Left e
-                         Right (Just n) => Right n
-                         Right Nothing  => Left FileNotFound
-
 collectDir : HasIO io => Directory -> io (Either FileError (List String))
 collectDir d
     = liftIO $ do let (>>=) : (IO . Either e) a -> (a -> (IO . Either e) b) -> (IO . Either e) b

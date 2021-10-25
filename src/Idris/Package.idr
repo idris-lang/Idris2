@@ -368,7 +368,7 @@ installFrom builddir destdir ns
                              [ "Can't make directories " ++ show modPath
                              , show err ]
          coreLift $ putStrLn $ "Installing " ++ ttcPath ++ " to " ++ destPath
-         Right _ <- coreLift $ Tree.copyFile ttcPath destFile
+         Right _ <- coreLift $ copyFile ttcPath destFile
              | Left err => throw $ InternalError $ unlines
                              [ "Can't copy file " ++ ttcPath ++ " to " ++ destPath
                              , show err ]
@@ -376,7 +376,7 @@ installFrom builddir destdir ns
          -- since some modules don't generate any code themselves.
          traverse_ (\ (obj, dest) =>
                       do coreLift $ putStrLn $ "Installing " ++ obj ++ " to " ++ destPath
-                         ignore $ coreLift $ Tree.copyFile obj dest)
+                         ignore $ coreLift $ copyFile obj dest)
                    objPaths
 
          pure ()
@@ -409,7 +409,7 @@ installSrcFrom wdir destdir (ns, srcRelPath)
              (MkPermissions [Read, Write] [Read, Write] [Read, Write])
              | Left err => throw $ UserError (show err)
            pure ()
-         Right _ <- coreLift $ Tree.copyFile srcPath destFile
+         Right _ <- coreLift $ copyFile srcPath destFile
              | Left err => throw $ InternalError $ unlines
                              [ "Can't copy file " ++ srcPath ++ " to " ++ destPath
                              , show err ]

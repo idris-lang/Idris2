@@ -4,6 +4,7 @@ import Data.Colist
 import Data.List
 import Data.List1
 import Data.Nat
+import Data.Stream
 import public Data.Zippable
 
 %default total
@@ -114,6 +115,11 @@ public export
 appendl : Colist1 a -> List a -> Colist1 a
 appendl (x ::: xs) ys = x ::: appendl xs ys
 
+||| Take a `Colist1` apart
+public export
+uncons : Colist1 a -> (a, Colist a)
+uncons (h ::: tl) = (h, tl)
+
 ||| Extract the first element from a `Colist1`
 public export
 head : Colist1 a -> a
@@ -212,61 +218,52 @@ Zippable Colist1 where
 -- Interleavings
 --------------------------------------------------------------------------------
 
--- zig, zag, and cantor are generalised version of the Stream functions
--- defined in the paper
+-- zig, zag, and cantor are taken from the paper
 -- Applications of Applicative Proof Search
 -- by Liam O'Connor
 
--- Unfortunately cannot be put in `Data.Colist` because it's using `Colist1`
--- internally.
+public export
+zig : List1 (Colist1 a) -> Colist (Colist1 a) -> Colist a
+
+public export
+zag : List1 a -> List (Colist1 a) -> Colist (Colist1 a) -> Colist a
+
+zig xs = zag (head <$> xs) (mapMaybe (fromColist . tail) $ forget xs)
+
+zag (x ::: []) [] [] = x :: []
+zag (x ::: []) (z :: zs) [] = x :: zig (z ::: zs) []
+zag (x ::: []) zs (l :: ls) = x :: zig (l ::: zs) ls
+zag (x ::: (y :: xs)) zs ls = x :: zag (y ::: xs) zs ls
+
+public export
+cantor : Colist1 (Colist1 a) -> Colist1 a
+cantor (xxs ::: []) = xxs
+cantor ((x ::: xs) ::: (yys :: zzss))
+  = x ::: zig (yys ::: mapMaybe fromColist [xs]) zzss
+
 namespace Colist
-
-  public export
-  zig : List1 (Colist1 a) -> List (Colist1 a) -> Colist a
-
-  public export
-  zag : List1 a -> List1 (Colist a) -> List (Colist1 a) -> Colist a
-
-  zig xs =
-    let (hds, tls) = unzipWith (\ (x ::: xs) => (x, xs)) xs in
-    zag hds tls
-
-  zag (x ::: []) zs [] = x ::
-    let Just zs = List.toList1' $ mapMaybe fromColist (forget zs)
-          | Nothing => []
-    in zig zs []
-  zag (x ::: []) zs (l :: ls) = x ::
-    let zs = mapMaybe fromColist (forget zs)
-    in zig (l ::: zs) ls
-  zag (x ::: (y :: xs)) zs ls = x :: zag (y ::: xs) zs ls
 
   public export
   cantor : List (Colist a) -> Colist a
   cantor xs =
     let Just (l ::: ls) = List.toList1' $ mapMaybe fromColist xs
           | Nothing => []
-    in zig (l ::: []) ls
+    in zig (l ::: []) (fromList ls)
 
-public export
-zig : List1 (Colist1 a) -> Colist (Colist1 a) -> Colist1 a
-
-public export
-zag : List1 a -> List1 (Colist a) -> Colist (Colist1 a) -> Colist1 a
-
-zig xs = zag (head <$> xs) (tail <$> xs)
-
-zag (x ::: []) zs [] = x :::
-  let Just zs = List.toList1' (mapMaybe fromColist (forget zs))
-        | Nothing => []
-  in Colist.zig zs []
-zag (x ::: []) zs (l :: ls) =  x :::
-  let zs = mapMaybe fromColist (forget zs)
-  in forgetInf (zig (l ::: zs) ls)
-zag (x ::: (y :: xs)) zs ls = x ::: forgetInf (zag (y ::: xs) zs ls)
-
-public export
-cantor : Colist1 (Colist1 a) -> Colist1 a
-cantor (l ::: ls) = zig (l ::: []) ls
+  -- Exploring the (truncated) Nat*Nat top right quadrant of the plane
+  -- using Cantor's zig-zag traversal:
+  example :
+     let nats : Colist Nat; nats = fromStream Stream.nats in
+     take 10 (Colist.cantor [ map (0,) nats
+                            , map (1,) nats
+                            , map (2,) nats
+                            , map (3,) nats])
+     === [ (0, 0)
+         , (1, 0), (0, 1)
+         , (2, 0), (1, 1), (0, 2)
+         , (3, 0), (2, 1), (1, 2), (0, 3)
+         ]
+  example = Refl
 
 namespace DPair
 
@@ -302,3 +299,19 @@ namespace Pair
   public export
   plane : Colist1 a -> (a -> Colist1 b) -> Colist1 (a, b)
   plane = Pair.planeWith (,)
+
+--------------------------------------------------------------------------------
+-- Example
+--------------------------------------------------------------------------------
+
+-- Exploring the Nat*Nat top right quadrant of the plane
+-- using Cantor's zig-zag traversal:
+example :
+     let nats1 = fromStream Stream.nats in
+     Colist1.take 10 (Pair.plane nats1 (const nats1))
+     === (0, 0) :::
+         [ (1, 0), (0, 1)
+         , (2, 0), (1, 1), (0, 2)
+         , (3, 0), (2, 1), (1, 2), (0, 3)
+         ]
+example = Refl

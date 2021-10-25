@@ -62,13 +62,13 @@
 ; primitives
 (define ct-toSignedInt
   (lambda (x bits)
-    (if (logbit? bits x)
-        (logor x (ash (- 1) bits))
-        (logand x (- (ash 1 bits) 1)))))
+    (if (bitwise-bit-set? x bits)
+        (bitwise-ior x (arithmetic-shift (- 1) bits))
+        (bitwise-and x (- (arithmetic-shift 1 bits) 1)))))
 
 (define ct-toUnsignedInt
   (lambda (x bits)
-    (modulo x (ash 1 bits))))
+    (modulo x (arithmetic-shift 1 bits))))
 
 (define ct-u+ (lambda (x y bits)
     (let [(tag (vector-ref x 0))
@@ -261,6 +261,16 @@
           (and (>= x #xe000) (<= x #x10ffff)))
         (integer->char x)
         (integer->char 0)))))
+
+(define ct-cast-signed
+  (lambda (xin bits)
+    (let [(x (vector-ref xin 1))]
+      (ct-toSignedInt x bits))))
+
+(define ct-cast-unsigned
+  (lambda (xin bits)
+    (let [(x (vector-ref xin 1))]
+      (ct-toUnsignedInt x bits))))
 
 (define ct-cast-string-int
   (lambda (x)
