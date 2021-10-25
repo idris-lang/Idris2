@@ -8,32 +8,36 @@ public export
 interface Random a where
   randomIO : HasIO io => io a
 
-  -- Takes a range (lo, hi), and returns a random value uniformly
-  -- distributed in the closed interval [lo, hi]. It is unspecified what
-  -- happens if lo > hi.
+  ||| Takes a range (lo, hi), and returns a random value uniformly
+  ||| distributed in the closed interval [lo, hi]. It is unspecified what
+  ||| happens if lo > hi.
   randomRIO : HasIO io => (a, a) -> io a
 
 %foreign "scheme:blodwen-random"
-prim__randomInt : Int -> PrimIO Int
+         "javascript:lambda:(max)=>Math.floor(Math.random() * max)"
+prim__randomBits32 : Bits32 -> PrimIO Bits32
 
-randomInt : Int -> IO Int
-randomInt upperBound = fromPrim (prim__randomInt upperBound)
+randomBits32 : Bits32 -> IO Bits32
+randomBits32 upperBound = fromPrim (prim__randomBits32 upperBound)
 
 public export
-Random Int where
+Random Int32 where
   -- Generate a random value within [-2^31, 2^31-1].
-  randomIO =
-    let maxInt = 2147483647  --shiftL 1 31 - 1
-        minInt = -2147483648 -- negate $ shiftL 1 31
-        range = maxInt - minInt
-     in map (+ minInt) $ liftIO $ randomInt range
+  randomIO = do
+    let maxInt : Bits32    = 2147483647 -- shiftL 1 31 - 1
+        negMinInt : Bits32 = 2147483648 -- negate $ shiftL 1 31
+        magnitude : Bits32 = maxInt + negMinInt
+    bits32 <- liftIO $ randomBits32 magnitude
+    let int : Integer = cast bits32
+    pure . cast $ int - (cast negMinInt)
 
   -- Generate a random value within [lo, hi].
   randomRIO (lo, hi) =
-    let range = hi - lo + 1
-     in map (+ lo) $ liftIO $ randomInt range
+    let range : Integer = (cast hi) - (cast lo) + 1
+     in pure . cast $ !(liftIO . randomBits32 $ cast range) + cast lo
 
 %foreign "scheme:blodwen-random"
+         "javascript:lambda:()=>Math.random()"
 prim__randomDouble : PrimIO Double
 
 randomDouble : IO Double
@@ -59,19 +63,20 @@ srand n = fromPrim (prim__srand n)
 |||
 ||| Note that rndFin k takes values 0, 1, ..., k.
 public export
-rndFin : (n : Nat) -> IO (Fin (S n))
+rndFin : HasIO io => (n : Nat) -> io (Fin (S n))
 rndFin 0 = pure FZ
 rndFin (S k) = do
-  let intBound = the Int (cast (S k))
+  let intBound = the Int32 (cast (S k))
   randomInt <- randomRIO (0, intBound)
   pure $ restrict (S k) (cast randomInt)
 
 ||| Select a random element from a vector
 public export
-rndSelect' : {k : Nat} -> Vect (S k) a -> IO a
+rndSelect' : HasIO io => {k : Nat} -> Vect (S k) a -> io a
 rndSelect' xs = pure $ Vect.index !(rndFin k) xs
 
 ||| Select a random element from a non-empty list
 public export
-rndSelect : (elems : List a) -> (0 _ : NonEmpty elems) => IO a
+rndSelect : HasIO io => (elems : List a) -> (0 _ : NonEmpty elems) => io a
 rndSelect (x :: xs) = rndSelect' $ fromList (x :: xs)
+

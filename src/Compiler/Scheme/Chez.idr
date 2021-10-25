@@ -449,7 +449,7 @@ compileToSS c prof appdir tm outfile
          loadlibs <- traverse (loadLib appdir) (mapMaybe fst fgndefs)
 
          compdefs <- traverse (getScheme chezExtPrim chezString) ndefs
-         let code = fastAppend (map snd fgndefs ++ compdefs)
+         let code = fastConcat (map snd fgndefs ++ compdefs)
          main <- schExp chezExtPrim chezString 0 ctm
          support <- readDataFile "chez/support.ss"
          extraRuntime <- getExtraRuntime ds
@@ -617,7 +617,7 @@ incCompile c sourceFile
                version <- coreLift $ chezVersion chez
                fgndefs <- traverse (getFgnCall version) ndefs
                compdefs <- traverse (getScheme chezExtPrim chezString) ndefs
-               let code = fastAppend (map snd fgndefs ++ compdefs)
+               let code = fastConcat (map snd fgndefs ++ compdefs)
                Right () <- coreLift $ writeFile ssFile code
                   | Left err => throw (FileErr ssFile err)
 

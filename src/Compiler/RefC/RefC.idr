@@ -247,7 +247,6 @@ toPrim pn@(NS _ n)
             (n == UN (Basic "prim__arraySet"), ArraySet),
             (n == UN (Basic "prim__getField"), GetField),
             (n == UN (Basic "prim__setField"), SetField),
-            (n == UN (Basic "void"), VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
             (n == UN (Basic "prim__void"), VoidElim),
             (n == UN (Basic "prim__os"), SysOS),
             (n == UN (Basic "prim__codegen"), SysCodegen),
@@ -1037,7 +1036,7 @@ generateCSourceFile defs outn =
      header -- added after the definition traversal in order to add all encountered function defintions
      footer
      fileContent <- get OutfileText
-     let code = fastAppend (map (++ "\n") (reify fileContent))
+     let code = fastConcat (map (++ "\n") (reify fileContent))
 
      coreLift_ $ writeFile outn code
      log "compiler.refc" 10 $ "Generated C file " ++ outn

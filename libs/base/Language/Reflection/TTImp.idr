@@ -7,7 +7,7 @@ import public Language.Reflection.TT
 -- Unchecked terms and declarations in the intermediate language
 mutual
   public export
-  data BindMode = PI Count | PATTERN | NONE
+  data BindMode = PI Count | PATTERN | COVERAGE | NONE
 
   -- For as patterns matching linear arguments, select which side is
   -- consumed
@@ -93,6 +93,7 @@ mutual
   public export
   data FnOpt : Type where
        Inline : FnOpt
+       NoInline : FnOpt
        TCInline : FnOpt
        -- Flag means the hint is a direct hint, not a function which might
        -- find the result (e.g. chasing parent interface dictionaries)

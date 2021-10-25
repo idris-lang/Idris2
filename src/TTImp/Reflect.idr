@@ -19,6 +19,7 @@ Reify BindMode where
                  => do c' <- reify defs !(evalClosure defs c)
                        pure (PI c')
              (UN (Basic "PATTERN"), _) => pure PATTERN
+             (UN (Basic "COVERAGE"), _) => pure COVERAGE
              (UN (Basic "NONE"), _) => pure NONE
              _ => cantReify val "BindMode"
   reify deva val = cantReify val "BindMode"
@@ -30,6 +31,8 @@ Reflect BindMode where
            appCon fc defs (reflectionttimp "PI") [c']
   reflect fc defs lhs env PATTERN
       = getCon fc defs (reflectionttimp "PATTERN")
+  reflect fc defs lhs env COVERAGE
+      = getCon fc defs (reflectionttimp "COVERAGE")
   reflect fc defs lhs env NONE
       = getCon fc defs (reflectionttimp "NONE")
 
@@ -273,6 +276,7 @@ mutual
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), args) of
                (UN (Basic "Inline"), _) => pure Inline
+               (UN (Basic "NoInline"), _) => pure NoInline
                (UN (Basic "TCInline"), _) => pure TCInline
                (UN (Basic "Hint"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
@@ -636,6 +640,7 @@ mutual
   export
   Reflect FnOpt where
     reflect fc defs lhs env Inline = getCon fc defs (reflectionttimp "Inline")
+    reflect fc defs lhs env NoInline = getCon fc defs (reflectionttimp "NoInline")
     reflect fc defs lhs env TCInline = getCon fc defs (reflectionttimp "TCInline")
     reflect fc defs lhs env (Hint x)
         = do x' <- reflect fc defs lhs env x

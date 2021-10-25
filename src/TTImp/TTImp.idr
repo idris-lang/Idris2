@@ -43,7 +43,7 @@ Weaken NestedNames where
 -- do notation, etc, should elaborate via this, perhaps in some local
 -- context).
 public export
-data BindMode = PI RigCount | PATTERN | NONE
+data BindMode = PI RigCount | PATTERN | COVERAGE | NONE
 
 mutual
 
@@ -213,6 +213,7 @@ mutual
   public export
   data FnOpt' : Type -> Type where
        Inline : FnOpt' nm
+       NoInline : FnOpt' nm
        TCInline : FnOpt' nm
        -- Flag means the hint is a direct hint, not a function which might
        -- find the result (e.g. chasing parent interface dictionaries)
@@ -236,6 +237,7 @@ mutual
   export
   Show nm => Show (FnOpt' nm) where
     show Inline = "%inline"
+    show NoInline = "%noinline"
     show TCInline = "%tcinline"
     show (Hint t) = "%hint " ++ show t
     show (GlobalHint t) = "%globalhint " ++ show t
@@ -251,6 +253,7 @@ mutual
   export
   Eq FnOpt where
     Inline == Inline = True
+    NoInline == NoInline = True
     TCInline == TCInline = True
     (Hint x) == (Hint y) = x == y
     (GlobalHint x) == (GlobalHint y) = x == y
@@ -1077,6 +1080,7 @@ mutual
     toBuf b (PI r) = do tag 0; toBuf b r
     toBuf b PATTERN = tag 1
     toBuf b NONE = tag 2
+    toBuf b COVERAGE = tag 3
 
     fromBuf b
         = case !getTag of
@@ -1084,6 +1088,7 @@ mutual
                        pure (PI x)
                1 => pure PATTERN
                2 => pure NONE
+               3 => pure COVERAGE
                _ => corrupt "BindMode"
 
   export
@@ -1196,6 +1201,7 @@ mutual
   export
   TTC FnOpt where
     toBuf b Inline = tag 0
+    toBuf b NoInline = tag 12
     toBuf b TCInline = tag 11
     toBuf b (Hint t) = do tag 1; toBuf b t
     toBuf b (GlobalHint t) = do tag 2; toBuf b t
@@ -1222,6 +1228,7 @@ mutual
                9 => pure Macro
                10 => do ns <- fromBuf b; pure (SpecArgs ns)
                11 => pure TCInline
+               12 => pure NoInline
                _ => corrupt "FnOpt"
 
   export

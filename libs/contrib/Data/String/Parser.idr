@@ -74,7 +74,7 @@ export
 parseT : Functor m => ParseT m a -> String -> m (Either String (a, Int))
 parseT p str = map (\case
                        OK r s => Right (r, s.pos)
-                       Fail i err => Left $ fastAppend ["Parse failed at position ", show i, ": ", err])
+                       Fail i err => Left $ fastConcat ["Parse failed at position ", show i, ": ", err])
                    (p.runParser (S str 0 (strLength str)))
 
 ||| Run a parser in a pure function

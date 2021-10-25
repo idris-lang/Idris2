@@ -14,6 +14,8 @@ data Elab : Type -> Type where
      Bind : Elab a -> (a -> Elab b) -> Elab b
      Fail : FC -> String -> Elab a
 
+     Try : Elab a -> Elab a -> Elab a
+
      ||| Log a message. Takes a
      ||| * topic
      ||| * level
@@ -83,6 +85,12 @@ fail = Fail EmptyFC
 export
 failAt : FC -> String -> Elab a
 failAt = Fail
+
+||| Try the first elaborator. If it fails, reset the elaborator state and
+||| run the second
+export
+try : Elab a -> Elab a -> Elab a
+try = Try
 
 ||| Write a log message, if the log level is >= the given level
 export

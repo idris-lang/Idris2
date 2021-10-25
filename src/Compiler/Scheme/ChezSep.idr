@@ -224,7 +224,7 @@ compileToSS c chez appdir tm = do
 
       -- write the files
       log "compiler.scheme.chez" 3 $ "Generating code for " ++ chezLib
-      Core.writeFile (appdir </> chezLib <.> "ss") $ fastAppend $
+      Core.writeFile (appdir </> chezLib <.> "ss") $ fastConcat $
         [header]
         ++ map snd fgndefs  -- definitions using foreign libs
         ++ compdefs

@@ -75,6 +75,9 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                                x       => x
              throw (GenericMsg customFC ("Error during reflection: " ++
                                       !(reify defs msg')))
+    elabCon defs "Try" [_, elab1, elab2]
+        = tryUnify (elabScript fc nest env !(evalClosure defs elab1) exp)
+                   (elabScript fc nest env !(evalClosure defs elab2) exp)
     elabCon defs "LogMsg" [topic, verb, str]
         = do topic' <- evalClosure defs topic
              verb' <- evalClosure defs verb

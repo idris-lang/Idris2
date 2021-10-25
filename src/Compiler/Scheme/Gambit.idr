@@ -366,7 +366,7 @@ compileToSCM c tm outfile
          s <- newRef {t = List String} Structs []
          fgndefs <- traverse getFgnCall ndefs
          compdefs <- traverse (getScheme gambitPrim gambitString) ndefs
-         let code = fastAppend (map snd fgndefs ++ compdefs)
+         let code = fastConcat (map snd fgndefs ++ compdefs)
          main <- schExp gambitPrim gambitString 0 ctm
          support <- readDataFile "gambit/support.scm"
          ds <- getDirectives Gambit
