@@ -129,7 +129,7 @@ visibility = vcat $
 
 ifthenelse : Doc IdrisDocAnn
 ifthenelse = vcat $
-    header "if ... then ... else ..." :: ""
+    header "Boolean conditional" :: ""
     :: map (indent 2) [
     """
     The `if ... then ... else ...` construct is dependently typed. This means
@@ -168,7 +168,30 @@ impossibility = vcat $
     """]
 
 caseof : Doc IdrisDocAnn
-caseof = "`case ... of ...` construct"
+caseof = vcat $
+    header "Case block" :: ""
+    :: map (indent 2) [
+    """
+    The `case ... of ...` construct is dependently typed. This means that if you
+    are branching over a variable, the branches will have refined types where
+    that variable has been replaced by the appropriate pattern.
+    For instance, in the following program
+    """, "",
+    """
+    ```
+    assoc : (ma, mb, mc : Maybe a) ->
+            ((ma <|> mb) <|> mc) === (ma <|> (mb <|> mc))
+    assoc ma mb mc = case ma of
+      Nothing => Refl
+      Just a  => Refl
+    ```
+    """, "",
+    """
+    the branches typecheck because in their respective types `ma` has been replaced
+    either by `Nothing` or `Just a` and that was enough for them to compute to
+    `(mb <|> mc) === (mb <|> mc)` and `Just a === Just a` respectively. Both of
+    which can be discharged using `Refl`.
+    """]
 
 importing : Doc IdrisDocAnn
 importing = vcat $
@@ -223,6 +246,44 @@ implicitarg = vcat $
 
 unused : Doc IdrisDocAnn
 unused = "Currently unused keyword"
+
+interfacemechanism : Doc IdrisDocAnn
+interfacemechanism = vcat $
+    header "Interfaces" :: ""
+    :: map (indent 2) [
+    """
+    Interfaces offer ad-hoc polymorphism. Programmers can declare new
+    interfaces offering a set of methods (some of which may have default
+    implementations in terms of the interface's other methods) and write
+    programs generic over all types implementing the interface.
+    """, "",
+    """
+    In the following example we define a `Failing` interface that allows
+    users to abort in case a computation is doomed to fail. We implement
+    the `whenJust` construct using this interface and show a couple of
+    implementations:
+    """, "",
+    """
+    ```
+    interface Failing (0 a : Type) where
+      fail : a
+
+    whenJust : Failing ret => Maybe a -> (a -> ret) -> ret
+    whenJust (Just v) k = k v
+    whenJust Nothing  _ = fail
+
+    implementation Failing Bool where
+      fail = False
+
+    Failing (Maybe a) where
+      fail = Nothing
+    ```
+    """, "",
+    """
+    As you can see the `implementation` keyword is optional. Note that the
+    proof search machinery powering interface resolution works best if your
+    implementations are for specific type constructors (here `Bool` and `Maybe`).
+    """]
 
 doblock : Doc IdrisDocAnn
 doblock = vcat $
@@ -463,8 +524,8 @@ keywordsDoc =
   :: "forall" ::= forallquantifier
   :: "rewrite" ::= rewriteeq
   :: "using" ::= ""
-  :: "interface" ::= ""
-  :: "implementation" ::= ""
+  :: "interface" ::= interfacemechanism
+  :: "implementation" ::= interfacemechanism
   :: "open" ::= unused
   :: "import" ::= importing
   :: "public" ::= visibility
