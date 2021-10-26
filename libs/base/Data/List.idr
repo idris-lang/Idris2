@@ -20,6 +20,7 @@ isCons [] = False
 isCons _  = True
 
 ||| Add an element to the end of a list.
+||| O(n). See the `Data.SnocList` module if you need to perform `snoc` often.
 public export
 snoc : List a -> a -> List a
 snoc xs x = xs ++ [x]
@@ -100,6 +101,7 @@ iterate f x  = x :: case f x of
 
 ||| Given a function `f` which extracts an element of `b` and `b`'s
 ||| continuation, return the list consisting of the extracted elements.
+||| CAUTION: Only terminates if `f` eventually returns `Nothing`.
 |||
 ||| @ f  a function which provides an element of `b` and the rest of `b`
 ||| @ b  a structure contanining any number of elements
@@ -130,7 +132,8 @@ takeWhile : (p : a -> Bool) -> (xs : List a) -> List a
 takeWhile p []      = []
 takeWhile p (x::xs) = if p x then x :: takeWhile p xs else []
 
-||| Remove elements from the list until an element satisfies the predicate.
+||| Remove elements from the list until an element no longer satisfies the
+||| predicate.
 |||
 ||| @ p  a custom predicate for the elements of the list
 ||| @ xs the list of elements to remove from
@@ -396,7 +399,7 @@ replaceWhen : (p : a -> Bool) -> (b : a) -> (l : List a) -> List a
 replaceWhen p b l = map (\c => if p c then b else c) l
 
 ||| Replace the elements in the list that are equal to `e`, using boolean
-||| equality, with `b`. A special case of `splitOn`, using `== e` as the
+||| equality, with `b`. A special case of `replaceWhen`, using `== e` as the
 ||| predicate.
 |||
 ||| ```idris example
