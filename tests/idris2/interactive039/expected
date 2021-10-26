@@ -15,4 +15,20 @@ Main>             One => ?k_rhs_1
             (Two k) => ?k_rhs_2
             (Three x k) => ?k_rhs_3
             Four => ?k_rhs_4)
+Main> l n m = case n of foo => case toTest m of One => ?l_rhs_1
+                                          (Two k) => ?l_rhs_2
+                                          (Three x k) => ?l_rhs_3
+                                          Four => ?l_rhs_4
+Main> m n k = (case n of foo => case toTest k of One => ?m_rhs_1
+                                           (Two j) => ?m_rhs_2
+                                           (Three x j) => ?m_rhs_3
+                                           Four => ?m_rhs_4  )
+Main>                               One => ?n_rhs_1
+                              (Two j) => ?n_rhs_2
+                              (Three x j) => ?n_rhs_3
+                              Four => ?n_rhs_4
+Main>                                One => ?o_rhs_1
+                               (Two k) => ?o_rhs_2
+                               (Three x k) => ?o_rhs_3
+                               Four => ?o_rhs_4   )
 Main> Bye for now!

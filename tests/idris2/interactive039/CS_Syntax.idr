@@ -27,3 +27,17 @@ k : Nat -> Nat
 k n = (case toTest n of
             case_val => ?k_rhs)
 
+l : Nat -> Nat -> Unit
+l n m = case n of foo => case toTest m of case_val => ?l_rhs
+
+m : Nat -> Nat -> Unit
+m n k = (case n of foo => case toTest k of case_val => ?m_rhs  )
+
+n : Nat -> Nat -> Unit
+n k m = case k of foo => case toTest m of
+                              case_val => ?n_rhs
+
+o : Nat -> Nat -> Unit
+o n m = (case n of foo => case toTest m of
+                               case_val => ?o_rhs   )
+

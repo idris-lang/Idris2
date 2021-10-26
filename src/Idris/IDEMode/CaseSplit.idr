@@ -23,6 +23,7 @@ import Idris.Syntax
 import Data.List
 import Data.List1
 import Data.List.Views
+import Data.SnocList
 import Libraries.Data.List.Extra
 import Libraries.Data.String.Extra
 import Data.String
@@ -175,24 +176,31 @@ data CaseStmtType = Oneline Nat
 getCaseStmtType : (toks : List SourcePart) -> Maybe CaseStmtType
 getCaseStmtType toks
   = let nws = filter (not . isWhitespace) toks in
-        case reverse nws of
+        -- use SnocList of nws so we can express the pattern we're looking for
+        -- as it would appear
+        case Lin <>< nws of
              -- If the line ends with a right parenthesis followed by a
              -- `HoleName`, we're interested in what kind of `case` block it is
-             (Other ")") :: (HoleName _) :: _ =>
-                  -- try to find the index of a `Name "of"` in the reversed
-                  -- list; if we don't find one, the line must be a case hole on
-                  -- a new line, otherwise, it must be a oneline case statement
-                  -- and the index let's us calculate the indentation required!
-                  case findIndex isNameOf toks of
+             start :< HoleName _ :< Other ")" =>
+                  -- try to find the index of a `Name "of"` in the SnocList of
+                  -- all tokens, including whitespace; if we don't find one, the
+                  -- line must be a case hole on a new line, otherwise, it must
+                  -- be a oneline case statement and the index let's us
+                  -- calculate the indentation required!
+                  case findIndex isNameOf (Lin <>< toks) of
                        Nothing => Just HoleNameParen
-                       (Just ofIndex) =>
-                            Just $ OnelineParen (calcIndent (finToNat ofIndex) toks)
+                       (Just skotOfIndex) =>
+                            -- calculate the indentation, remembering that we
+                            -- constructed a SnocList so the index is backwards
+                            let ofIndex = minus (length toks) (finToNat skotOfIndex) in
+                                Just $ OnelineParen (calcIndent ofIndex toks)
              -- If the line ends with a `HoleName`, check if its a oneline `case` block
-             (HoleName _) :: _ =>
-                  case findIndex isNameOf toks of
+             start :< HoleName _ =>
+                  case findIndex isNameOf (Lin <>< toks) of
                        Nothing => Nothing
-                       (Just ofIndex) =>
-                            Just $ Oneline (calcIndent (finToNat ofIndex) toks)
+                       (Just skotOfIndex) =>
+                            let ofIndex = minus (length toks) (finToNat skotOfIndex) in
+                                Just $ Oneline (calcIndent ofIndex toks)
              -- If it doesn't, it's not a statement we're interested in
              _ => Nothing
     where
@@ -201,10 +209,9 @@ getCaseStmtType toks
       isNameOf _ = False
 
       calcIndent : Nat -> List SourcePart -> Nat
-      calcIndent caseIndex toks
-        = let (preCase, _) = splitAt caseIndex toks in
-              -- start at 3 to include "of " in the count
-              foldr (\e,a => a + (length . toString) e) 3 preCase
+      calcIndent ofIndex toks
+        = let (preOf, _) = splitAt ofIndex toks in
+              foldr (\e,a => a + (length . toString) e) 0 preOf
 
 
 ||| Given a list of characters reprsenting an update string, drop its last
