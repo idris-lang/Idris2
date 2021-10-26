@@ -1872,6 +1872,9 @@ data CmdArg : Type where
      ||| The command takes an expression.
      ExprArg : CmdArg
 
+     ||| The command takes a documentation directive.
+     DocArg : CmdArg
+
      ||| The command takes a list of declarations
      DeclsArg : CmdArg
 
@@ -1904,6 +1907,7 @@ Show CmdArg where
   show NoArg = ""
   show NameArg = "<name>"
   show ExprArg = "<expr>"
+  show DocArg = "<keyword|expr>"
   show DeclsArg = "<decls>"
   show NumberArg = "<number>"
   show AutoNumberArg = "<number|auto>"
@@ -1999,6 +2003,20 @@ exprArgCmd parseCmd command doc = (names, ExprArg, doc, parse)
       runParseCmd parseCmd
       tm <- mustWork $ typeExpr pdef (Virtual Interactive) init
       pure (command tm)
+
+docArgCmd : ParseCmd -> (DocDirective -> REPLCmd) -> String -> CommandDefinition
+docArgCmd parseCmd command doc = (names, DocArg, doc, parse)
+  where
+    names : List String
+    names = extractNames parseCmd
+
+    parse : Rule REPLCmd
+    parse = do
+      symbol ":"
+      runParseCmd parseCmd
+      dir <- mustWork $ Keyword <$> anyKeyword
+                    <|> APTerm <$> typeExpr pdef (Virtual Interactive) init
+      pure (command dir)
 
 declsArgCmd : ParseCmd -> (List PDecl -> REPLCmd) -> String -> CommandDefinition
 declsArgCmd parseCmd command doc = (names, DeclsArg, doc, parse)
@@ -2119,7 +2137,7 @@ parserCommandsForHelp =
   , noArgCmd (ParseREPLCmd ["e", "edit"]) Edit "Edit current file using $EDITOR or $VISUAL"
   , nameArgCmd (ParseREPLCmd ["miss", "missing"]) Missing "Show missing clauses"
   , nameArgCmd (ParseKeywordCmd "total") Total "Check the totality of a name"
-  , exprArgCmd (ParseIdentCmd "doc") Doc "Show documentation for a name or primitive"
+  , docArgCmd (ParseIdentCmd "doc") Doc "Show documentation for a keyword, a name, or a primitive"
   , moduleArgCmd (ParseIdentCmd "browse") (Browse . miAsNamespace) "Browse contents of a namespace"
   , loggingArgCmd (ParseREPLCmd ["log", "logging"]) SetLog "Set logging level"
   , autoNumberArgCmd (ParseREPLCmd ["consolewidth"]) SetConsoleWidth "Set the width of the console output (0 for unbounded) (auto by default)"
