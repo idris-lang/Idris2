@@ -20,7 +20,19 @@ doc : DocFor _ -> Doc IdrisDocAnn
 doc (_ ::= d) = d
 
 fixity : Doc IdrisDocAnn
-fixity = ""
+fixity = vcat $
+    header "Fixity declarations" :: ""
+    :: map (indent 2) [
+    """
+    Operators can be assigned a priority level and associativity. During parsing
+    operators with a higher priority will collect their arguments first and the
+    declared associativity will inform how subterms are grouped.
+
+    For instance the expression `a + b * c * d + e` is parsed as
+    `(a + ((b * c) * d)) + e` because:
+      `(+)` is at level 8 and associates to the left
+      `(*)` is at level 9 and associates to the left
+    """]
 
 recordtypes : Doc IdrisDocAnn
 recordtypes = vcat $
