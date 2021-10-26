@@ -379,8 +379,11 @@ HasNames (Term vars) where
       = do Just gdef <- lookupCtxtExact (Resolved i) gam
                 | Nothing => pure (Ref fc x (Resolved i))
            pure (Ref fc x (fullname gdef))
-  full gam (Meta fc x y xs)
-      = pure (Meta fc x y !(traverse (full gam) xs))
+  full gam (Meta fc x i xs)
+      = do xs <- traverse (full gam) xs
+           pure $ case !(lookupCtxtExact (Resolved i) gam) of
+             Nothing => Meta fc x i xs
+             Just gdef => Meta fc (fullname gdef) i xs
   full gam (Bind fc x b scope)
       = pure (Bind fc x !(traverse (full gam) b) !(full gam scope))
   full gam (App fc fn arg)
