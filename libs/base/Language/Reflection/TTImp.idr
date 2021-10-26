@@ -108,6 +108,7 @@ mutual
        Totality : TotalReq -> FnOpt
        Macro : FnOpt
        SpecArgs : List Name -> FnOpt
+       NoMangle : FnOpt
 
   public export
   data ITy : Type where

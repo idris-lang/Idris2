@@ -216,6 +216,8 @@ data DefFlag
     | Identity Nat
          -- Is it the identity function at runtime?
          -- The nat represents which argument the function evaluates to
+    | NoMangle String
+         -- use the user provided name directly
 
 export
 Eq DefFlag where
@@ -231,6 +233,7 @@ Eq DefFlag where
     (==) AllGuarded AllGuarded = True
     (==) (ConType x) (ConType y) = x == y
     (==) (Identity x) (Identity y) = x == y
+    (==) (NoMangle x) (NoMangle y) = x == y
     (==) _ _ = False
 
 export
@@ -247,6 +250,7 @@ Show DefFlag where
   show AllGuarded = "allguarded"
   show (ConType ci) = "contype " ++ show ci
   show (Identity x) = "identity " ++ show x
+  show (NoMangle _) = "nomangle"
 
 public export
 data SizeChange = Smaller | Same | Unknown

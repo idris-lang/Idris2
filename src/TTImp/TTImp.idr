@@ -228,6 +228,7 @@ mutual
        Totality : TotalReq -> FnOpt' nm
        Macro : FnOpt' nm
        SpecArgs : List Name -> FnOpt' nm
+       NoMangle : FnOpt' nm
 
   public export
   isTotalityReq : FnOpt' nm -> Bool
@@ -249,6 +250,7 @@ mutual
     show (Totality PartialOK) = "partial"
     show Macro = "%macro"
     show (SpecArgs ns) = "%spec " ++ showSep " " (map show ns)
+    show NoMangle = "%nomangle"
 
   export
   Eq FnOpt where
@@ -263,6 +265,7 @@ mutual
     (Totality tot_lhs) == (Totality tot_rhs) = tot_lhs == tot_rhs
     Macro == Macro = True
     (SpecArgs ns) == (SpecArgs ns') = ns == ns'
+    NoMangle == NoMangle = True
     _ == _ = False
 
   public export
@@ -1213,6 +1216,7 @@ mutual
     toBuf b (Totality PartialOK) = tag 8
     toBuf b Macro = tag 9
     toBuf b (SpecArgs ns) = do tag 10; toBuf b ns
+    toBuf b NoMangle = tag 13
 
     fromBuf b
         = case !getTag of
@@ -1229,6 +1233,7 @@ mutual
                10 => do ns <- fromBuf b; pure (SpecArgs ns)
                11 => pure TCInline
                12 => pure NoInline
+               13 => pure NoMangle
                _ => corrupt "FnOpt"
 
   export
