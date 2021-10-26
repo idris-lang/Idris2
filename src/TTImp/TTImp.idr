@@ -439,6 +439,26 @@ mutual
       _  => concat (intersperse "." topic) ++ " " ++ show lvl
     show (IBuiltin _ type name) = "%builtin " ++ show type ++ " " ++ show name
 
+
+-- Extract the RawImp term from a FieldUpdate.
+export
+getFieldUpdateTerm : IFieldUpdate' nm -> RawImp' nm
+getFieldUpdateTerm (ISetField    _ term) = term
+getFieldUpdateTerm (ISetFieldApp _ term) = term
+
+
+export
+getFieldUpdatePath : IFieldUpdate' nm -> List String
+getFieldUpdatePath (ISetField    path _) = path
+getFieldUpdatePath (ISetFieldApp path _) = path
+
+
+export
+mapFieldUpdateTerm : (RawImp' nm -> RawImp' nm) -> IFieldUpdate' nm -> IFieldUpdate' nm
+mapFieldUpdateTerm f (ISetField    x term) = ISetField    x (f term)
+mapFieldUpdateTerm f (ISetFieldApp x term) = ISetFieldApp x (f term)
+
+
 export
 isIPrimVal : RawImp' nm -> Maybe Constant
 isIPrimVal (IPrimVal _ c) = Just c
@@ -519,6 +539,8 @@ findIBinds (IUnquote fc tm) = findIBinds tm
 findIBinds (IRunElab fc tm) = findIBinds tm
 findIBinds (IBindHere _ _ tm) = findIBinds tm
 findIBinds (IBindVar _ n) = [n]
+findIBinds (IUpdate fc updates tm)
+    = findIBinds tm ++ concatMap (findIBinds . getFieldUpdateTerm) updates
 -- We've skipped lambda, case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findIBinds tm = []
@@ -552,6 +574,8 @@ findImplicits (IQuote fc tm) = findImplicits tm
 findImplicits (IUnquote fc tm) = findImplicits tm
 findImplicits (IRunElab fc tm) = findImplicits tm
 findImplicits (IBindVar _ n) = [n]
+findImplicits (IUpdate fc updates tm)
+    = findImplicits tm ++ concatMap (findImplicits . getFieldUpdateTerm) updates
 findImplicits tm = []
 
 -- Update the lhs of a clause so that any implicits named in the type are

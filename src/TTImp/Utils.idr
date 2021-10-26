@@ -13,9 +13,12 @@ import Libraries.Utils.String
 
 %default covering
 
+
+-- Appends the ' character to "x" until it is unique with respect to "xs".
 export
-getUnique : List String -> String -> String
-getUnique xs x = if x `elem` xs then getUnique xs (x ++ "'") else x
+genUniqueStr : (xs : List String) -> (x : String) -> String
+genUniqueStr xs x = if x `elem` xs then genUniqueStr xs (x ++ "'") else x
+
 
 -- Extract the RawImp pieces from a ImpDecl so they can be searched for unquotes
 -- Used in findBindableNames{,Quot}
@@ -50,10 +53,16 @@ rawImpFromDecl decl = case decl of
         getFromIField : IField -> List RawImp
         getFromIField (MkIField fc x y z w) = getFromPiInfo y ++ [w]
 
--- Bind lower case names in argument position
--- Don't go under case, let, or local bindings, or IAlternative
+
+-- Identify lower case names in argument position, which we can bind later.
+-- Don't go under case, let, or local bindings, or IAlternative.
+--
+-- arg: Is the current expression in argument position? (We don't want to implicitly
+--      bind funtions.)
+--
+-- env: Local names in scope. We only want to bind free variables, so we need this.
 export
-findBindableNames : (arg : Bool) -> List Name -> (used : List String) ->
+findBindableNames : (arg : Bool) -> (env : List Name) -> (used : List String) ->
                     RawImp -> List (String, String)
 
 -- Helper to traverse the inside of a quoted expression, looking for unquotes
@@ -61,8 +70,9 @@ findBindableNamesQuot : List Name -> (used : List String) -> RawImp ->
                         List (String, String)
 
 findBindableNames True env used (IVar fc nm@(UN (Basic n)))
+      -- If the identifier is not bound locally and begins with a lowercase letter..
     = if not (nm `elem` env) && lowerFirst n
-         then [(n, getUnique used n)]
+         then [(n, genUniqueStr used n)]
          else []
 findBindableNames arg env used (IPi fc rig p mn aty retty)
     = let env' = case mn of
@@ -85,7 +95,7 @@ findBindableNames arg env used (IAutoApp fc fn av)
 findBindableNames arg env used (IWithApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
 findBindableNames arg env used (IAs fc _ _ (UN (Basic n)) pat)
-    = (n, getUnique used n) :: findBindableNames arg env used pat
+    = (n, genUniqueStr used n) :: findBindableNames arg env used pat
 findBindableNames arg env used (IAs fc _ _ n pat)
     = findBindableNames arg env used pat
 findBindableNames arg env used (IMustUnify fc r pat)
@@ -102,6 +112,9 @@ findBindableNames arg env used (IQuoteDecl fc d)
     = findBindableNamesQuot env used !(rawImpFromDecl !d)
 findBindableNames arg env used (IAlternative fc u alts)
     = concatMap (findBindableNames arg env used) alts
+findBindableNames arg env used (IUpdate fc updates tm)
+    = findBindableNames True env used tm ++
+      concatMap (findBindableNames True env used . getFieldUpdateTerm) updates
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findBindableNames arg env used tm = []
@@ -137,10 +150,7 @@ findBindableNamesQuot env used (ICoerced fc x)
 findBindableNamesQuot env used (IBindHere fc x y)
     = findBindableNamesQuot env used y
 findBindableNamesQuot env used (IUpdate fc xs x)
-    = findBindableNamesQuot env used !(x :: map getRawImp xs)
-  where getRawImp : IFieldUpdate -> RawImp
-        getRawImp (ISetField path y) = y
-        getRawImp (ISetFieldApp path y) = y
+    = findBindableNamesQuot env used !(x :: map getFieldUpdateTerm xs)
 findBindableNamesQuot env used (IAs fc nfc x y z)
     = findBindableNamesQuot env used z
 findBindableNamesQuot env used (IDelayed fc x y)
@@ -234,6 +244,10 @@ findAllNames env (IUnquote fc t)
     = findAllNames env t
 findAllNames env (IAlternative fc u alts)
     = concatMap (findAllNames env) alts
+findAllNames env (IUpdate fc updates tm)
+    = findAllNames env tm
+    ++ concatMap (findAllNames env . getFieldUpdateTerm) updates
+    ++ concatMap (map (UN . Basic) . getFieldUpdatePath) updates
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findAllNames env tm = []
@@ -264,6 +278,8 @@ findIBindVars (IForce fc t)
     = findIBindVars t
 findIBindVars (IAlternative fc u alts)
     = concatMap findIBindVars alts
+findIBindVars (IUpdate fc updates tm)
+    = findIBindVars tm ++ concatMap (findIBindVars . getFieldUpdateTerm) updates
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findIBindVars tm = []
@@ -326,6 +342,9 @@ mutual
       = IDelay fc (substNames' bvar bound ps t)
   substNames' bvar bound ps (IForce fc t)
       = IForce fc (substNames' bvar bound ps t)
+  substNames' bvar bound ps (IUpdate fc updates tm)
+      = IUpdate fc (map (mapFieldUpdateTerm $ substNames' bvar bound ps) updates)
+                   (substNames' bvar bound ps tm)
   substNames' bvar bound ps tm = tm
 
   substNamesClause' : Bool -> List Name -> List (Name, RawImp) ->
@@ -427,6 +446,9 @@ mutual
       = IDelay fc' (substLoc fc' t)
   substLoc fc' (IForce fc t)
       = IForce fc' (substLoc fc' t)
+  substLoc fc' (IUpdate fc updates tm)
+      = IUpdate fc' (map (mapFieldUpdateTerm $ substLoc fc') updates)
+                    (substLoc fc' tm)
   substLoc fc' tm = tm
 
   export

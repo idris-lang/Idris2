@@ -142,7 +142,7 @@ idrisTestsData = MkTestPool "Data and record types" [] Nothing
        "data001",
        -- Records, access and dependent update
        "record001", "record002", "record003", "record004", "record005",
-       "record006", "record007", "record008", "record009"]
+       "record006", "record007", "record008", "record009", "record010"]
 
 idrisTestsBuiltin : TestPool
 idrisTestsBuiltin = MkTestPool "Builtin types and functions" [] Nothing
