@@ -8,6 +8,11 @@ js_export fn = ignore $ primIO $ prim__export fn
 foo : Int -> Int
 foo x = x + 1
 
+%nomangle
+continue : Int -> Int
+continue x = x + 1
+
 main : IO ()
 main = do
     js_export foo
+    js_export continue

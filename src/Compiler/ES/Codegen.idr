@@ -73,15 +73,18 @@ jsIdent s = concatMap okchar (unpack s)
                   then cast c
                   else "x" ++ asHex (cast c)
 
+jsReservedNames : List String
+jsReservedNames =
+  [ "var", "switch"
+  , "return", "const"
+  , "function", "break"
+  , "continue"
+  ]
+
 keywordSafe : String -> String
-keywordSafe "var"    = "var$"
-keywordSafe "switch" = "switch$"
-keywordSafe "return" = "return$"
-keywordSafe "const"  = "const$"
-keywordSafe "function" = "function$"
-keywordSafe "break"  = "break$"
-keywordSafe "continue" = "continue$"
-keywordSafe s = s
+keywordSafe s = if s `elem` jsReservedNames
+  then s ++ "$"
+  else s
 
 --------------------------------------------------------------------------------
 --          JS Name
@@ -744,7 +747,7 @@ tailRec = UN $ Basic "__tailRec"
 export
 compileToES : Ref Ctxt Defs -> (cg : CG) -> ClosedTerm -> List String -> Core String
 compileToES c cg tm ccTypes = do
-  _ <- initNoMangle
+  _ <- initNoMangle "javascript" (\name => not $ name `elem` jsReservedNames)
 
   cdata      <- getCompileData False Cases tm
 
