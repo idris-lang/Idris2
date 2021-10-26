@@ -10,4 +10,4 @@ Mod:5:16--5:19
  4 | main : IO ()
  5 | main = printLn foo
                     ^^^
-Did you mean any of: Mod1.foo, Mod2.foo, or for?
+Did you mean any of: for, Mod1.foo (not exported), or Mod2.foo (not exported)?

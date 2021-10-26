@@ -14,6 +14,7 @@ import public Core.TT
 import Libraries.Utils.Binary
 import Libraries.Utils.Scheme
 
+import Data.Either
 import Data.Fin
 import Libraries.Data.IOArray
 import Libraries.Data.IntMap
@@ -825,44 +826,68 @@ getFieldNames ctxt recNS
 -- Find similar looking names in the context
 export
 getSimilarNames : {auto c : Ref Ctxt Defs} ->
-                   Name -> Core (Maybe (String, List (Name, Nat)))
+                   Name -> Core (Maybe (String, List (Name, Visibility, Nat)))
 getSimilarNames nm = case show <$> userNameRoot nm of
   Nothing => pure Nothing
   Just str => if length str <= 1 then pure (Just (str, [])) else
-    let threshold : Nat := max 1 (assert_total (divNat (length str) 3))
-        test : Name -> IO (Maybe Nat) := \ nm => do
-            let (Just str') = show <$> userNameRoot nm
+    do defs <- get Ctxt
+       let threshold : Nat := max 1 (assert_total (divNat (length str) 3))
+       let test : Name -> Core (Maybe (Visibility, Nat)) := \ nm => do
+               let (Just str') = show <$> userNameRoot nm
                    | _ => pure Nothing
-            dist <- Levenshtein.compute str str'
-            pure (dist <$ guard (dist <= threshold))
-    in do defs <- get Ctxt
-          kept <- coreLift $ mapMaybeM test (resolvedAs (gamma defs))
-          pure $ Just (str, toList kept)
+               dist <- coreLift $ Levenshtein.compute str str'
+               let True = dist <= threshold
+                   | False => pure Nothing
+               Just def <- lookupCtxtExact nm (gamma defs)
+                   | Nothing => pure Nothing -- should be impossible
+               pure (Just (visibility def, dist))
+       kept <- mapMaybeM @{CORE} test (resolvedAs (gamma defs))
+       pure $ Just (str, toList kept)
 
 export
-showSimilarNames : Name -> String -> List (Name, Nat) -> List String
-showSimilarNames nm str kept
-  = let sorted = sortBy (\ x, y => compare (snd x) (snd y)) kept
-        roots  = mapMaybe (showNames nm str . fst) sorted
-    in nub roots
+showSimilarNames : Namespace -> Name -> String ->
+                   List (Name, Visibility, Nat) -> List String
+showSimilarNames ns nm str kept
+  = let (loc, priv) := partitionEithers $ kept <&> \ (nm', vis, n) =>
+                         let False = fst (splitNS nm') `isParentOf` ns
+                               | _ => Left (nm', n)
+                             Private = vis
+                               | _ => Left (nm', n)
+                         in Right (nm', n)
+        sorted      := sortBy (compare `on` snd)
+        roots1      := mapMaybe (showNames nm str False . fst) (sorted loc)
+        roots2      := mapMaybe (showNames nm str True  . fst) (sorted priv)
+    in nub roots1 ++ nub roots2
 
   where
 
-  showNames : Name -> String -> Name -> Maybe String
-  showNames target str nm = do
+  showNames : Name -> String -> Bool -> Name -> Maybe String
+  showNames target str priv nm = do
+    let adj  = if priv then " (not exported)" else ""
     let root = nameRoot nm
-    let True = str == root | _ => pure root
+    let True = str == root
+      | _ => pure (root ++ adj)
     let full = show nm
-    let True = str == full || show target == full | _ => pure full
+    let True = (str == full || show target == full) && not priv
+      | _ => pure (full ++ adj)
     Nothing
 
+
+getVisibility : {auto c : Ref Ctxt Defs} ->
+                FC -> Name -> Core Visibility
+getVisibility fc n
+    = do defs <- get Ctxt
+         Just def <- lookupCtxtExact n (gamma defs)
+              | Nothing => throw (UndefinedName fc n)
+         pure $ visibility def
 
 maybeMisspelling : {auto c : Ref Ctxt Defs} ->
                    Error -> Name -> Core a
 maybeMisspelling err nm = do
+  ns <- currentNS <$> get Ctxt
   Just (str, kept) <- getSimilarNames nm
     | Nothing => throw err
-  let candidates = showSimilarNames nm str kept
+  let candidates = showSimilarNames ns nm str kept
   case candidates of
     [] => throw err
     (x::xs) => throw (MaybeMisspelling err (x ::: xs))
@@ -878,15 +903,6 @@ export
 noDeclaration : {auto c : Ref Ctxt Defs} ->
                 FC -> Name -> Core a
 noDeclaration loc nm = maybeMisspelling (NoDeclaration loc nm) nm
-
-export
-getVisibility : {auto c : Ref Ctxt Defs} ->
-                FC -> Name -> Core Visibility
-getVisibility fc n
-    = do defs <- get Ctxt
-         Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => undefinedName fc n
-         pure $ visibility def
 
 export
 ambiguousName : {auto c : Ref Ctxt Defs} -> FC
