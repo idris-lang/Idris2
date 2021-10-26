@@ -23,7 +23,7 @@ logString str n msg = coreLift $ putStrLn
 export
 logString' : LogLevel -> String -> Core ()
 logString' lvl =
-  logString (fastAppend (intersperse "." (topics lvl)) ++ ":")
+  logString (fastConcat (intersperse "." (topics lvl)) ++ ":")
             (verbosity lvl)
 
 export

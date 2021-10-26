@@ -112,7 +112,7 @@ code generator. To do so, once everything is successfully installed, type:
 
 - `make install-api`
 
-The API will only work if you've completed the self-hosting step, step 4, since
+The API will only work if you've completed the self-hosting step (step 5), since
 the intermediate code versions need to be consistent throughout. Otherwise, you
 will get an `Error in TTC: TTC data is in an older format` error.
 

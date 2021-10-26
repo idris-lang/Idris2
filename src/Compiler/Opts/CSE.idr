@@ -302,9 +302,11 @@ analyzeName :  Ref Sts St
 analyzeName fn = do
     defs <- get Ctxt
     Just def <- lookupCtxtExact fn (gamma defs)
-        | Nothing => pure Nothing
+        | Nothing => do log "compile.execute" 50 $ "Couldn't find " ++ show fn
+                        pure Nothing
     let Just cexp = compexpr def
-        | Nothing => pure Nothing
+        | Nothing => do log "compile.execute" 50 $ "Couldn't compile " ++ show fn
+                        pure Nothing
     cexp' <- analyzeDef cexp
     pure $ Just (fn, location def, cexp')
 
@@ -348,7 +350,7 @@ mutual
     case res of
       -- not a name generated during CSE
       Nothing          => do
-        log "compiler.cse" 10 $ "  not a name generated durin CSE"
+        log "compiler.cse" 10 $ "  not a name generated during CSE"
         pure (CRef fc n)
 
       -- Expression count has already been checked and occurs
@@ -362,7 +364,7 @@ mutual
       -- only once. Substitute the machine generated name with
       -- the original (but CSE optimized) exp
       Just (exp, Once) => do
-        log "compiler.cse" 10 $ "  already replaced: Occurs many times"
+        log "compiler.cse" 10 $ "  already replaced: Occurs once"
         pure (embed exp)
 
       -- Expression count has not yet been compared with the
@@ -473,7 +475,7 @@ cse :  Ref Ctxt Defs
 cse defs me = do
   log "compiler.cse" 10 $ "Analysing " ++ show (length defs) ++ " names"
   s            <- newRef Sts $ MkSt empty 0
-  analyzedDefs <- mapMaybe id <$> traverse analyzeName defs
+  analyzedDefs <- catMaybes <$> traverse analyzeName defs
   MkSt um _    <- get Sts
   srep         <- newRef ReplaceMap $ toReplaceMap um
   replacedDefs <- traverse replaceDef analyzedDefs

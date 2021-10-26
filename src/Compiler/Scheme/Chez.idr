@@ -449,7 +449,7 @@ compileToSS c prof appdir tm outfile
          loadlibs <- traverse (loadLib appdir) (mapMaybe fst fgndefs)
 
          compdefs <- traverse (getScheme chezExtPrim chezString) ndefs
-         let code = fastAppend (map snd fgndefs ++ compdefs)
+         let code = fastConcat (map snd fgndefs ++ compdefs)
          main <- schExp chezExtPrim chezString 0 ctm
          support <- readDataFile "chez/support.ss"
          extraRuntime <- getExtraRuntime ds
@@ -461,7 +461,6 @@ compileToSS c prof appdir tm outfile
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)
          coreLift_ $ chmodRaw outfile 0o755
-         pure ()
 
 ||| Compile a Chez Scheme source file to an executable, daringly with runtime checks off.
 compileToSO : {auto c : Ref Ctxt Defs} ->
@@ -591,7 +590,6 @@ executeExpr c tmpDir tm
     = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpchez"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
          coreLift_ $ system sh
-         pure ()
 
 incCompile : Ref Ctxt Defs ->
              (sourceFile : String) -> Core (Maybe (String, List String))
@@ -617,7 +615,7 @@ incCompile c sourceFile
                version <- coreLift $ chezVersion chez
                fgndefs <- traverse (getFgnCall version) ndefs
                compdefs <- traverse (getScheme chezExtPrim chezString) ndefs
-               let code = fastAppend (map snd fgndefs ++ compdefs)
+               let code = fastConcat (map snd fgndefs ++ compdefs)
                Right () <- coreLift $ writeFile ssFile code
                   | Left err => throw (FileErr ssFile err)
 

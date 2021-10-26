@@ -1832,7 +1832,8 @@ editCmd
          upd <- option False (symbol "!" $> True)
          line <- intLit
          n <- name
-         pure (ExprSearch upd (fromInteger line) n [])
+         hints <- sepBy (symbol ",") name
+         pure (ExprSearch upd (fromInteger line) n hints)
   <|> do replCmd ["psnext"]
          pure ExprSearchNext
   <|> do replCmd ["gd"]

@@ -88,7 +88,7 @@ idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
        "interactive025", "interactive026", "interactive027", "interactive028",
        "interactive029", "interactive030", "interactive031", "interactive032",
        "interactive033", "interactive034", "interactive035", "interactive036",
-       "interactive037"]
+       "interactive037", "interactive038", "interactive039", "interactive040"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool "Interface" [] Nothing
@@ -142,7 +142,7 @@ idrisTestsData = MkTestPool "Data and record types" [] Nothing
        "data001",
        -- Records, access and dependent update
        "record001", "record002", "record003", "record004", "record005",
-       "record006", "record007", "record008", "record009"]
+       "record006", "record007", "record008", "record009", "record010"]
 
 idrisTestsBuiltin : TestPool
 idrisTestsBuiltin = MkTestPool "Builtin types and functions" [] Nothing
@@ -157,7 +157,7 @@ idrisTestsEvaluator = MkTestPool "Evaluation" [] Nothing
        "evaluator001", "evaluator002", "evaluator003",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
-       "interpreter005", "interpreter006", "interpreter007"]
+       "interpreter005", "interpreter006", "interpreter007", "interpreter008"]
 
 idrisTestsAllBackends : Requirement -> TestPool
 idrisTestsAllBackends cg = MkTestPool
@@ -197,6 +197,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "eta001",
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005", "import006",
+       "import007",
        -- Implicit laziness, lazy evaluation
        "lazy001", "lazy002",
        -- Namespace blocks

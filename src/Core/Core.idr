@@ -792,3 +792,23 @@ readFile fname =
   coreLift (readFile fname) >>= \case
     Right content => pure content
     Left err => throw $ FileErr fname err
+
+namespace Functor
+
+  export
+  [CORE] Functor Core where
+    map = Core.map
+
+namespace Applicative
+
+  export
+  [CORE] Applicative Core using Functor.CORE where
+    pure = Core.pure
+    (<*>) = Core.(<*>)
+
+namespace Monad
+
+  export
+  [CORE] Monad Core using Applicative.CORE where
+    (>>=) = Core.(>>=)
+    join mma = Core.(>>=) mma id

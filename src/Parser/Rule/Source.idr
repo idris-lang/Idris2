@@ -183,10 +183,7 @@ pragma : String -> Rule ()
 pragma n =
   terminal ("Expected pragma " ++ n) $
     \case
-      Pragma s =>
-        if s == n
-          then Just ()
-          else Nothing
+      Pragma s => guard (s == n)
       _ => Nothing
 
 export

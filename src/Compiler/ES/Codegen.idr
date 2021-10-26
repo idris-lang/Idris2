@@ -77,6 +77,8 @@ keywordSafe "switch" = "switch$"
 keywordSafe "return" = "return$"
 keywordSafe "const"  = "const$"
 keywordSafe "function" = "function$"
+keywordSafe "break"  = "break$"
+keywordSafe "continue" = "continue$"
 keywordSafe s = s
 
 --------------------------------------------------------------------------------

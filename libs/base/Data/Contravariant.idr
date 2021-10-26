@@ -16,7 +16,7 @@ interface Contravariant (0 f : Type -> Type) where
 ||| laws of each of those classes, it can't actually use its argument in any
 ||| meaningful capacity.
 public export %inline
-phantom : (Functor f, Contravariant f) => f a -> f b
+phantom : Contravariant f => Functor f => f a -> f b
 phantom fa = () >$ (fa $> ())
 
 ||| This is an infix alias for `contramap`.

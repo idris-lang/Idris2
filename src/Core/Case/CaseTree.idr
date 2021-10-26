@@ -282,7 +282,7 @@ addRefs at ns = getNames (addRefs False at) ns
 
 export
 getMetas : CaseTree vars -> NameMap Bool
-getMetas = getNames addMetas empty
+getMetas = getNames (addMetas False) empty
 
 export
 mkTerm : (vars : List Name) -> Pat -> Term vars
