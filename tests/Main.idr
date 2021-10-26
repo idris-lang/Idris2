@@ -157,7 +157,7 @@ idrisTestsEvaluator = MkTestPool "Evaluation" [] Nothing
        "evaluator001", "evaluator002", "evaluator003",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
-       "interpreter005", "interpreter006", "interpreter007"]
+       "interpreter005", "interpreter006", "interpreter007", "interpreter008"]
 
 idrisTestsAllBackends : Requirement -> TestPool
 idrisTestsAllBackends cg = MkTestPool

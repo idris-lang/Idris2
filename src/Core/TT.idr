@@ -1641,33 +1641,34 @@ substName x new (TForce fc r y)
 substName x new tm = tm
 
 export
-addMetas : NameMap Bool -> Term vars -> NameMap Bool
-addMetas ns (Local fc x idx y) = ns
-addMetas ns (Ref fc x name) = ns
-addMetas ns (Meta fc n i xs) = addMetaArgs (insert n False ns) xs
+addMetas : (usingResolved : Bool) -> NameMap Bool -> Term vars -> NameMap Bool
+addMetas res ns (Local fc x idx y) = ns
+addMetas res ns (Ref fc x name) = ns
+addMetas res ns (Meta fc n i xs)
+  = addMetaArgs (insert (ifThenElse res (Resolved i) n) False ns) xs
   where
     addMetaArgs : NameMap Bool -> List (Term vars) -> NameMap Bool
     addMetaArgs ns [] = ns
-    addMetaArgs ns (t :: ts) = addMetaArgs (addMetas ns t) ts
-addMetas ns (Bind fc x (Let _ c val ty) scope)
-    = addMetas (addMetas (addMetas ns val) ty) scope
-addMetas ns (Bind fc x b scope)
-    = addMetas (addMetas ns (binderType b)) scope
-addMetas ns (App fc fn arg)
-    = addMetas (addMetas ns fn) arg
-addMetas ns (As fc s as tm) = addMetas ns tm
-addMetas ns (TDelayed fc x y) = addMetas ns y
-addMetas ns (TDelay fc x t y)
-    = addMetas (addMetas ns t) y
-addMetas ns (TForce fc r x) = addMetas ns x
-addMetas ns (PrimVal fc c) = ns
-addMetas ns (Erased fc i) = ns
-addMetas ns (TType fc) = ns
+    addMetaArgs ns (t :: ts) = addMetaArgs (addMetas res ns t) ts
+addMetas res ns (Bind fc x (Let _ c val ty) scope)
+    = addMetas res (addMetas res (addMetas res ns val) ty) scope
+addMetas res ns (Bind fc x b scope)
+    = addMetas res (addMetas res ns (binderType b)) scope
+addMetas res ns (App fc fn arg)
+    = addMetas res (addMetas res ns fn) arg
+addMetas res ns (As fc s as tm) = addMetas res ns tm
+addMetas res ns (TDelayed fc x y) = addMetas res ns y
+addMetas res ns (TDelay fc x t y)
+    = addMetas res (addMetas res ns t) y
+addMetas res ns (TForce fc r x) = addMetas res ns x
+addMetas res ns (PrimVal fc c) = ns
+addMetas res ns (Erased fc i) = ns
+addMetas res ns (TType fc) = ns
 
 -- Get the metavariable names in a term
 export
 getMetas : Term vars -> NameMap Bool
-getMetas tm = addMetas empty tm
+getMetas tm = addMetas False empty tm
 
 export
 addRefs : (underAssert : Bool) -> (aTotal : Name) ->
@@ -1705,6 +1706,7 @@ addRefs ua at ns (TType fc) = ns
 export
 getRefs : (aTotal : Name) -> Term vars -> NameMap Bool
 getRefs at tm = addRefs False at empty tm
+
 
 export
 nameAt : {vars : _} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> Name

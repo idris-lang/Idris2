@@ -627,11 +627,11 @@ execExp : {auto c : Ref Ctxt Defs} ->
           {auto o : Ref ROpts REPLOpts} ->
           PTerm -> Core REPLResult
 execExp ctm
-    = do tm_erased <- prepareExp ctm
-         Just cg <- findCG
-              | Nothing =>
-                   do iputStrLn (reflow "No such code generator available")
-                      pure CompilationFailed
+    = do Just cg <- findCG
+           | Nothing =>
+              do iputStrLn (reflow "No such code generator available")
+                 pure CompilationFailed
+         tm_erased <- prepareExp ctm
          logTimeWhen !getEvalTiming "Execution" $
            execute cg tm_erased
          pure $ Executed ctm
@@ -662,11 +662,11 @@ compileExp : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
              PTerm -> String -> Core REPLResult
 compileExp ctm outfile
-    = do tm_erased <- prepareExp ctm
-         Just cg <- findCG
+    = do Just cg <- findCG
               | Nothing =>
                    do iputStrLn (reflow "No such code generator available")
                       pure CompilationFailed
+         tm_erased <- prepareExp ctm
          ok <- compile cg tm_erased outfile
          maybe (pure CompilationFailed)
                (pure . Compiled)
