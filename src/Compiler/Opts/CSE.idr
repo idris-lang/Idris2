@@ -348,7 +348,7 @@ mutual
     case res of
       -- not a name generated during CSE
       Nothing          => do
-        log "compiler.cse" 10 $ "  not a name generated durin CSE"
+        log "compiler.cse" 10 $ "  not a name generated during CSE"
         pure (CRef fc n)
 
       -- Expression count has already been checked and occurs
@@ -362,7 +362,7 @@ mutual
       -- only once. Substitute the machine generated name with
       -- the original (but CSE optimized) exp
       Just (exp, Once) => do
-        log "compiler.cse" 10 $ "  already replaced: Occurs many times"
+        log "compiler.cse" 10 $ "  already replaced: Occurs once"
         pure (embed exp)
 
       -- Expression count has not yet been compared with the

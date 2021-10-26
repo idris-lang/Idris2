@@ -146,7 +146,7 @@ natural = fromMaybe mkError parsePositive
 
 ||| Verify whether a String represents an Integer
 export
-integral : (Num a, Neg a, Monad m) => ValidatorT m String a
+integral : Num a => Neg a => Monad m => ValidatorT m String a
 integral = fromMaybe mkError parseInteger
     where
     mkError : String -> String
@@ -176,7 +176,7 @@ length l = MkValidator (validateVector l)
 
 ||| Verify that certain values are equal.
 export
-equal : (DecEq t, Monad m) => (a : t) -> PropValidator m t (\b => a = b)
+equal : Monad m => DecEq t => (a : t) -> PropValidator m t (\b => a = b)
 equal a = MkPropValidator $ \b => case decEq a b of
     Yes prf => pure prf
     No _ => left "Values are not equal."

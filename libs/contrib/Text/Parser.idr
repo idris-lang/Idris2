@@ -13,7 +13,7 @@ import public Text.Token
 
 ||| Parse a terminal based on a kind of token.
 export
-match : (Eq k, TokenKind k) =>
+match : TokenKind k => Eq k =>
         (kind : k) ->
         Grammar state (Token k) True (TokType kind)
 match k = terminal "Unrecognised input" $

@@ -295,7 +295,7 @@ parsePositive s = parsePosTrimmed (trim s)
 ||| parseInteger {a=Int} " -123"
 ||| ```
 public export
-parseInteger : (Num a, Neg a) => String -> Maybe a
+parseInteger : Num a => Neg a => String -> Maybe a
 parseInteger s = parseIntTrimmed (trim s)
   where
     parseIntTrimmed : String -> Maybe a
