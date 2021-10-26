@@ -197,6 +197,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "eta001",
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005", "import006",
+       "import007",
        -- Implicit laziness, lazy evaluation
        "lazy001", "lazy002",
        -- Namespace blocks

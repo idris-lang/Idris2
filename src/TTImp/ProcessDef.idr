@@ -935,7 +935,7 @@ lookupOrAddAlias eopts nest env fc n [cl@(PatClause _ lhs _)]
                     let None = definition gdef
                       | _ => pure Nothing
                     pure (Just (cand, weight))
-                pure $ showSimilarNames n str $ catMaybes decls
+                pure $ showSimilarNames (currentNS defs) n str $ catMaybes decls
           | (x :: xs) => throw (MaybeMisspelling (NoDeclaration fc n) (x ::: xs))
        --   3) declare an alias
        log "declare.def" 5 "Not a misspelling: go ahead and declare it!"
