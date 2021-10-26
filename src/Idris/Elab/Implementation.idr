@@ -139,8 +139,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
          inames <- lookupCtxtName iname (gamma defs)
          let [cndata] = concatMap (\n => lookupName n (ifaces syn))
                                   (map fst inames)
-             | [] => undefinedName vfc iname
-             | ns => throw (AmbiguousName vfc (map fst ns))
+             | ns => ambiguousName vfc iname (map fst ns)
          let cn : Name = fst cndata
          let cdata : IFaceInfo = snd cndata
 

@@ -68,8 +68,7 @@ process (Check ttimp)
 process (ProofSearch n_in)
     = do defs <- get Ctxt
          [(n, i, ty)] <- lookupTyName n_in (gamma defs)
-              | [] => undefinedName (justFC defaultFC) n_in
-              | ns => throw (AmbiguousName (justFC defaultFC) (map fst ns))
+              | ns => ambiguousName (justFC defaultFC) n_in (map fst ns)
          def <- search (justFC defaultFC) top False 1000 n ty []
          defs <- get Ctxt
          defnf <- normaliseHoles defs [] def
@@ -78,8 +77,7 @@ process (ProofSearch n_in)
 process (ExprSearch n_in)
     = do defs <- get Ctxt
          [(n, i, ty)] <- lookupTyName n_in (gamma defs)
-              | [] => undefinedName (justFC defaultFC) n_in
-              | ns => throw (AmbiguousName (justFC defaultFC) (map fst ns))
+              | ns => ambiguousName (justFC defaultFC) n_in (map fst ns)
          results <- exprSearchN (justFC defaultFC) 1 n []
          traverse_ (coreLift . printLn) results
          pure True

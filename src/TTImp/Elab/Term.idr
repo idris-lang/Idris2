@@ -265,9 +265,8 @@ checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
           ctxt <- get Ctxt
           rns <- lookupCtxtName n (gamma ctxt)
           case rns of
-            []   => undefinedName fc n
             [rn] => insert nRoot rn <$> resolveNames fc ns
-            _    => throw $ AmbiguousName fc (map fst rns)
+            rns  => ambiguousName fc n (map fst rns)
 
 -- Declared in TTImp.Elab.Check
 -- check : {vars : _} ->
