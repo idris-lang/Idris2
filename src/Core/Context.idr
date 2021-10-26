@@ -894,9 +894,9 @@ ambiguousName : {auto c : Ref Ctxt Defs} -> FC
              -> Core a
 ambiguousName fc n ns = do
   ns <- filterM (\x => pure $ !(getVisibility fc x) /= Private) ns
-  throw $ case ns of
-    [] => UndefinedName fc n
-    ns => AmbiguousName fc ns
+  case ns of
+    [] =>         undefinedName fc n
+    ns => throw $ AmbiguousName fc ns
 
 -- Get the canonical name of something that might have been aliased via
 -- import as
