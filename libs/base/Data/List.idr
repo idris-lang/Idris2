@@ -24,7 +24,7 @@ public export
 snoc : List a -> a -> List a
 snoc xs x = xs ++ [x]
 
-||| Take `n` many elements from `xs`, returning the whole list if
+||| Take `n` first elements from `xs`, returning the whole list if
 ||| `n` >= length `xs`.
 |||
 ||| @ n  the number of elements to take
@@ -34,7 +34,7 @@ take : (n : Nat) -> (xs : List a) -> List a
 take (S k) (x :: xs) = x :: take k xs
 take _ _ = []
 
-||| Remove `n` many elements from `xs`, returning the empty list if
+||| Remove `n` first elements from `xs`, returning the empty list if
 ||| `n >= length xs`
 |||
 ||| @ n  the number of elements to remove
@@ -110,7 +110,7 @@ unfoldr f c = case f c of
   Nothing     => []
   Just (a, n) => a :: unfoldr f n
 
-||| Returns the list of elements obtained by applying `f` to `x` `n` times,
+||| Returns the list of elements obtained by applying `f` to `x` `0` to `n-1` times,
 ||| starting with `x`.
 |||
 ||| @ n  the number of times to iterate `f` over `x`
@@ -425,7 +425,7 @@ export
 intersectBy : (a -> a -> Bool) -> List a -> List a -> List a
 intersectBy eq xs ys = [x | x <- xs, any (eq x) ys]
 
-||| Compute the intersect of two lists according to the `Eq` implementation for
+||| Compute the intersection of two lists according to the `Eq` implementation for
 ||| the elements.
 export
 intersect : Eq a => List a -> List a -> List a
@@ -441,7 +441,7 @@ intersectAllBy : (eq : a -> a -> Bool) -> (ls : List (List a)) -> List a
 intersectAllBy eq [] = []
 intersectAllBy eq (xs :: xss) = filter (\x => all (elemBy eq x) xss) xs
 
-||| Comput the intersect of all the lists in the given list of listts, according
+||| Compute the intersect of all the lists in the given list of lists, according
 ||| to boolean equality. A special case of `intersectAllBy`, using `==` as the
 ||| equality predicate.
 |||
