@@ -461,7 +461,7 @@ processEdit (ExprSearch upd line name hints)
          let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
          case !(lookupDefName name (gamma defs)) of
               [(n, nidx, Hole locs _)] =>
-                  do let searchtm = exprSearch replFC name []
+                  do let searchtm = exprSearch replFC name hints
                      ropts <- get ROpts
                      put ROpts (record { psResult = Just (name, searchtm) } ropts)
                      defs <- get Ctxt

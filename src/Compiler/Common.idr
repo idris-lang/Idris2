@@ -212,7 +212,7 @@ natHackNames
 dumpIR : Show def => String -> List (Name, def) -> Core ()
 dumpIR fn lns
     = do let cstrs = map dumpDef lns
-         Right () <- coreLift $ writeFile fn (fastAppend cstrs)
+         Right () <- coreLift $ writeFile fn (fastConcat cstrs)
                | Left err => throw (FileErr fn err)
          pure ()
   where

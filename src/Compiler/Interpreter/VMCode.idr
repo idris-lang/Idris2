@@ -246,8 +246,8 @@ parameters {auto c : Ref Ctxt Defs}
 
     callFunc : Ref State InterpState => Stack -> Name -> List Object -> Core Object
     callFunc stk fn args = saveLocals $ do
-        let ind = pack $ '|' <$ stk
         logCallStack <- logging "compiler.interpreter" 25
+        let ind = if logCallStack then pack $ '|' <$ stk else ""
         when logCallStack $ coreLift $ putStrLn $ ind ++ "Calling " ++ show fn ++ " with args: " ++ show args
         let stk' = fn :: stk
         defs <- defs <$> get State

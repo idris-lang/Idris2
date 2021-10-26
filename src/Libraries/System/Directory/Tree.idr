@@ -126,11 +126,12 @@ explore root = do
     | Left err => pure emptyTree
   assert_total (go dir emptyTree)
 
-go dir acc = case !(dirEntry dir) of
+go dir acc = case !(nextDirEntry dir) of
   -- If there is no next entry then we are done and can return the accumulator.
-  Left err => acc <$ closeDir dir
+  Left err      => acc <$ closeDir dir
+  Right Nothing => acc <$ closeDir dir
   -- Otherwise we have an entry and need to categorise it
-  Right entry => do
+  Right (Just entry) => do
     -- ignore aliases for current and parent directories
     let False = elem entry [".", ".."]
          | _ => assert_total (go dir acc)
@@ -191,14 +192,6 @@ print t = go [([], ".", Evidence root (pure t))] where
     go (zipWith (\ bs, (dir ** iot) => (bs, fileName dir, Evidence _ iot)) bss t.subTrees)
     go iots
 
--- This function is deprecated; to be removed after the next version bump
-export
-copyFile : HasIO io => String -> String -> io (Either FileError ())
-copyFile src dest
-    = do Right buf <- createBufferFromFile src
-             | Left err => pure (Left err)
-         writeBufferToFile dest buf !(rawSize buf)
-
 ||| Copy a directory and its contents recursively
 ||| Returns a FileError if the target directory already exists, or if any of
 ||| the source files fail to be copied.
@@ -211,7 +204,7 @@ copyDir src target = runEitherT $ do
   where
     copyFile' : (srcDir : Path) -> (targetDir : Path) -> (fileName : String) -> EitherT FileError io ()
     copyFile' srcDir targetDir fileName = do
-      MkEitherT $ Tree.copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
+      MkEitherT $ copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
 
     covering
     copyDirContents : {srcDir : Path} -> Tree srcDir -> (targetDir : Path) -> EitherT FileError io ()

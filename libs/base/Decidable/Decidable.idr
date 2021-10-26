@@ -43,7 +43,7 @@ interface Decidable k ts p where
 
 ||| Given a `Decidable` n-ary relation, provides a decision procedure for
 ||| this relation.
-decision : (ts : Vect k Type) -> (p : Rel ts) -> (Decidable k ts p) => liftRel ts p Dec
+decision : (ts : Vect k Type) -> (p : Rel ts) -> Decidable k ts p => liftRel ts p Dec
 decision ts p = decide {ts} {p}
 
 using (a : Type, x : a)
