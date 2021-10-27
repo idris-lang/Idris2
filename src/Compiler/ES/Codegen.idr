@@ -95,18 +95,18 @@ jsUserName (Basic n) = keywordSafe $ jsIdent n
 jsUserName (Field n) = "rf__" ++ jsIdent n
 jsUserName Underscore = keywordSafe $ jsIdent "_"
 
-parameters (noMangle : NoMangleMap)
-  jsMangleName : Name -> String
-  jsMangleName (NS ns n) = jsIdent (showNSWithSep "_" ns) ++ "_" ++ jsMangleName n
-  jsMangleName (UN n) = jsUserName n
-  jsMangleName (MN n i) = jsIdent n ++ "_" ++ show i
-  jsMangleName (PV n d) = "pat__" ++ jsMangleName n
-  jsMangleName (DN _ n) = jsMangleName n
-  jsMangleName (Nested (i, x) n) = "n__" ++ show i ++ "_" ++ show x ++ "_" ++ jsMangleName n
-  jsMangleName (CaseBlock x y) = "case__" ++ jsIdent x ++ "_" ++ show y
-  jsMangleName (WithBlock x y) = "with__" ++ jsIdent x ++ "_" ++ show y
-  jsMangleName (Resolved i) = "fn__" ++ show i
+jsMangleName : Name -> String
+jsMangleName (NS ns n) = jsIdent (showNSWithSep "_" ns) ++ "_" ++ jsMangleName n
+jsMangleName (UN n) = jsUserName n
+jsMangleName (MN n i) = jsIdent n ++ "_" ++ show i
+jsMangleName (PV n d) = "pat__" ++ jsMangleName n
+jsMangleName (DN _ n) = jsMangleName n
+jsMangleName (Nested (i, x) n) = "n__" ++ show i ++ "_" ++ show x ++ "_" ++ jsMangleName n
+jsMangleName (CaseBlock x y) = "case__" ++ jsIdent x ++ "_" ++ show y
+jsMangleName (WithBlock x y) = "with__" ++ jsIdent x ++ "_" ++ show y
+jsMangleName (Resolved i) = "fn__" ++ show i
 
+parameters (noMangle : NoMangleMap)
   jsName : Name -> String
   jsName n = case isNoMangle noMangle n of
     Just name => name

@@ -43,6 +43,7 @@ processFnOpt : {auto c : Ref Ctxt Defs} ->
                Name -> FnOpt -> Core ()
 processFnOpt fc _ ndef Inline
     = do throwIfHasFlag fc ndef NoInline "%noinline and %inline are mutually exclusive"
+         throwIfHasFlag fc ndef (NoMangle "") "%nomangle and %inline are mutually exclusive"
          setFlag fc ndef Inline
 processFnOpt fc _ ndef NoInline
     = do throwIfHasFlag fc ndef Inline "%inline and %noinline are mutually exclusive"
@@ -72,11 +73,13 @@ processFnOpt fc _ ndef (Totality tot)
     = setFlag fc ndef (SetTotal tot)
 processFnOpt fc _ ndef Macro
     = setFlag fc ndef Macro
-processFnOpt fc True ndef NoMangle = case userNameRoot !(getFullName ndef) of
-    Nothing => throw (GenericMsg fc "Unable to find user name root of \{show ndef}")
-    Just (Basic name) => setFlag fc ndef (NoMangle name)
-    Just (Field name) => setFlag fc ndef (NoMangle name)
-    Just Underscore => throw (GenericMsg fc "Unable to set '_' as %nomangle")
+processFnOpt fc True ndef NoMangle = do
+    throwIfHasFlag fc ndef Inline "%inline and %nomangle are mutually exclusive"
+    case userNameRoot !(getFullName ndef) of
+        Nothing => throw (GenericMsg fc "Unable to find user name root of \{show ndef}")
+        Just (Basic name) => setFlag fc ndef (NoMangle name)
+        Just (Field name) => setFlag fc ndef (NoMangle name)
+        Just Underscore => throw (GenericMsg fc "Unable to set '_' as %nomangle")
 processFnOpt fc False ndef NoMangle = throw (GenericMsg fc "Unable to set %nomangle for non-global functions")
 processFnOpt fc _ ndef (SpecArgs ns)
     = do defs <- get Ctxt

@@ -233,7 +233,7 @@ Eq DefFlag where
     (==) AllGuarded AllGuarded = True
     (==) (ConType x) (ConType y) = x == y
     (==) (Identity x) (Identity y) = x == y
-    (==) (NoMangle x) (NoMangle y) = x == y
+    (==) (NoMangle _) (NoMangle _) = True
     (==) _ _ = False
 
 export
