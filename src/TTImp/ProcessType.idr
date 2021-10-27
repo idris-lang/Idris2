@@ -77,8 +77,12 @@ processFnOpt fc True ndef NoMangle = do
     throwIfHasFlag fc ndef Inline "%inline and %nomangle are mutually exclusive"
     case userNameRoot !(getFullName ndef) of
         Nothing => throw (GenericMsg fc "Unable to find user name root of \{show ndef}")
-        Just (Basic name) => setFlag fc ndef (NoMangle name)
-        Just (Field name) => setFlag fc ndef (NoMangle name)
+        Just (Basic name) => do
+            setFlag fc ndef (NoMangle name)
+            setFlag fc ndef NoInline
+        Just (Field name) => do
+            setFlag fc ndef (NoMangle name)
+            setFlag fc ndef NoInline
         Just Underscore => throw (GenericMsg fc "Unable to set '_' as %nomangle")
 processFnOpt fc False ndef NoMangle = throw (GenericMsg fc "Unable to set %nomangle for non-global functions")
 processFnOpt fc _ ndef (SpecArgs ns)
