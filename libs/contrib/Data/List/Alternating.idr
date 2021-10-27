@@ -1,7 +1,10 @@
 module Data.List.Alternating
 
+import Data.Bifoldable
 import Data.List
-import Data.String
+
+infixl 5 +>
+infixr 5 <+
 
 mutual
     namespace Fence
@@ -89,8 +92,87 @@ mutual
         bitraverse f g (x :: xs) = [| f x :: bitraverse g f xs |]
 
 public export
+Functor (Fence a) where
+    map = mapSnd
+
+mutual
+    namespace Fence
+        public export
+        (++) : Fence a b -> Fence b a -> PairList a b
+        (x :: xs) ++ ys = x :: xs ++ ys
+
+    namespace PairListFence
+        public export
+        (++) : PairList a b -> Fence a b -> Fence a b
+        [] ++ ys = ys
+        (x :: xs) ++ ys = x :: xs ++ ys
+
+mutual
+    namespace PairList
+        public export
+        (++) : PairList a b -> PairList a b -> PairList a b
+        [] ++ ys = ys
+        (x :: xs) ++ ys = x :: xs ++ ys
+
+    namespace FencePairList
+        public export
+        (++) : Fence a b -> PairList b a -> Fence a b
+        (x :: xs) ++ ys = x :: xs ++ ys
+
+||| Glue together two fences by gluing together the inner-most fence-posts
+public export
+Semigroup a => Semigroup (Fence a b) where
+    [x] <+> (y :: ys) = (x <+> y) :: ys
+    (x :: y :: xs) <+> ys = x :: y :: xs <+> ys
+
+namespace Fence
+    public export
+    (+>) : Semigroup a => Fence a b -> a -> Fence a b
+    [x] +> z = [x <+> z]
+    x :: y :: xs +> z = x :: y :: (xs +> z)
+
+    public export
+    (<+) : Semigroup a => a -> Fence a b -> Fence a b
+    x <+ y :: ys = (x <+> y) :: ys
+
+public export
+Semigroup (PairList a b) where
+    (<+>) = (++)
+
+public export
+Monoid a => Monoid (Fence a b) where
+    neutral = [neutral]
+
+public export
+Monoid (PairList a b) where
+    neutral = []
+
+public export
+Foldable (Fence a) where
+    foldr = bifoldr (flip const)
+    foldl = bifoldl const
+
+public export
 singleton : a -> Fence a b
 singleton x = [x]
+
+public export
+Monoid a => Applicative (Fence a) where
+    pure x = [neutral, x, neutral]
+    fs <*> xs = biconcatMap singleton (flip map xs) fs
+
+public export
+Monoid a => Alternative (Fence a) where
+    empty = [neutral]
+    xs <|> ys = xs <+> ys
+
+public export
+Monoid a => Monad (Fence a) where
+    x >>= f = biconcatMap singleton f x
+
+public export
+Traversable (Fence a) where
+    traverse = bitraverse pure
 
 mutual
     namespace Fence

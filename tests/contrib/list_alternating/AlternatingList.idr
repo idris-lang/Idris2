@@ -20,6 +20,34 @@ main = do
 
     ignore $ bitraverse printLn printLn xs
 
+    printLn $ map (++ "!") xs
+
+    printLn $ the (Fence Double String) $ [1, "Hello"] ++ [2, "world", 3]
+    printLn $ the (Fence Double String) $ [1, "Hello", 2] ++ ["world", 3]
+
+    let us = the (Fence String Double) ["Hello", 0, "world", 1, "!"]
+    let vs = the (Fence String Double) ["Lorem", 1, "ipsum"]
+
+    printLn $ us <+> vs
+    printLn $ us +> "!"
+    printLn $ "Oh, " <+ us
+    printLn $ the (Fence String Double) neutral
+
+    printLn $ foldr avg 0 us
+    printLn $ foldl avg 0 us
+
+    printLn $ the (Fence String Double) $ pure 1
+    printLn $ the (Fence String Double) $ ["Hello", (+1), "world", (+10), "!"] <*> ["Lorem", 1, "ipsum", 2, "."]
+
+    printLn $ the (Fence String Double) empty
+    printLn $ us <|> vs
+
+    printLn $ do
+        x <- the (Fence String Double) ["Hello", 1, "world", 2, "!"]
+        [",", x + 1, " "]
+
+    ignore $ traverse printLn us
+
     printLn $ the (List String) $ forget $ mapFst show xs
   where
     avg : Double -> Double -> Double
