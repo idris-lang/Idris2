@@ -288,7 +288,7 @@ setIncrementalCG failOnError cgn
                          coreLift $ exitWith (ExitFailure 1)
                  else pure ()
 
--- Options to be processed before type checking. Return whether to continue.
+||| Options to be processed before type checking. Return whether to continue.
 export
 preOptions : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
