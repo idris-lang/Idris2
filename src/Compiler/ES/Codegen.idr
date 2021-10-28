@@ -742,12 +742,23 @@ foreign _                            = pure []
 tailRec : Name
 tailRec = UN $ Basic "__tailRec"
 
+validJSName : String -> Bool
+validJSName name =
+    not (name `elem` jsReservedNames)
+    && all validNameChar (unpack name)
+    && (case strM name of
+      StrNil => True
+      StrCons head _ => not $ isDigit head)
+  where
+    validNameChar : Char -> Bool
+    validNameChar c = isAlphaNum c || c == '_' || c == '$'
+
 ||| Compiles the given `ClosedTerm` for the list of supported
 ||| backends to JS code.
 export
 compileToES : Ref Ctxt Defs -> (cg : CG) -> ClosedTerm -> List String -> Core String
 compileToES c cg tm ccTypes = do
-  _ <- initNoMangle "javascript" (\name => not $ name `elem` jsReservedNames)
+  _ <- initNoMangle "javascript" validJSName
 
   cdata      <- getCompileData False Cases tm
 
