@@ -1400,7 +1400,8 @@ fnDirectOpt fname
          cs <- block (expr pdef fname)
          pure $ PForeign cs
   <|> do pragma "nomangle"
-         pure $ IFnOpt NoMangle
+         name <- optional (strBegin *> strLit <* strEnd)
+         pure $ IFnOpt (NoMangle name)
 
 builtinDecl : OriginDesc -> IndentInfo -> Rule PDecl
 builtinDecl fname indents

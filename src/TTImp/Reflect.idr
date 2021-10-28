@@ -296,7 +296,9 @@ mutual
                (UN (Basic "SpecArgs"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (SpecArgs x')
-               (UN (Basic "NoMangle"), _) => pure NoMangle
+               (UN (Basic "NoMangle"), [(_, n)])
+                    => do n' <- reify defs !(evalClosure defs n)
+                          pure (NoMangle n')
                _ => cantReify val "FnOpt"
     reify defs val = cantReify val "FnOpt"
 
@@ -661,7 +663,9 @@ mutual
     reflect fc defs lhs env (SpecArgs r)
         = do r' <- reflect fc defs lhs env r
              appCon fc defs (reflectionttimp "SpecArgs") [r']
-    reflect fc defs lhs env NoMangle = getCon fc defs (reflectionttimp "NoMangle")
+    reflect fc defs lhs env (NoMangle n)
+        = do n' <- reflect fc defs lhs env n
+             appCon fc defs (reflectionttimp "NoMangle") [n']
 
   export
   Reflect ImpTy where

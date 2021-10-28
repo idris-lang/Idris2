@@ -121,7 +121,7 @@ mutual
     map f (Totality tot) = Totality tot
     map f Macro = Macro
     map f (SpecArgs ns) = SpecArgs ns
-    map f NoMangle = NoMangle
+    map f (NoMangle name) = (NoMangle name)
 
   export
   Functor ImpTy' where

@@ -108,7 +108,9 @@ mutual
        Totality : TotalReq -> FnOpt
        Macro : FnOpt
        SpecArgs : List Name -> FnOpt
-       NoMangle : FnOpt
+       ||| Keep the user provided name during codegen
+       ||| @ name a custom name to use in codegen
+       NoMangle : (name : Maybe String) -> FnOpt
 
   public export
   data ITy : Type where
