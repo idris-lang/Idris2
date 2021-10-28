@@ -276,7 +276,7 @@ getCompileData doLazyAnnots phase_in tm_in
            "Found names: " ++ concat (intersperse ", " $ map show $ keys ns)
          tm <- toFullNames tm_in
          natHackNames' <- traverse toResolvedNames natHackNames
-         noMangleNames <- getAllNoMangle defs
+         noMangleNames <- getAllNoMangle
          -- make an array of Bools to hold which names we've found (quicker
          -- to check than a NameMap!)
          asize <- getNextEntry

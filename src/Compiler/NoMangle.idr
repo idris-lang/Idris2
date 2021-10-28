@@ -55,11 +55,13 @@ lookupNoMangle :
 lookupNoMangle n = pure $ isNoMangle !(get NoMangleMap) n
 
 export
-getAllNoMangle : Defs -> Core (List Name)
-getAllNoMangle defs = foldlNames addNames (pure []) defs.gamma.resolvedAs
+getAllNoMangle : {auto c : Ref Ctxt Defs} -> Core (List Name)
+getAllNoMangle = do
+    defs <- get Ctxt
+    foldlNames (addNames defs) (pure []) defs.gamma.resolvedAs
   where
-    addNames : Core (List Name) -> Name -> Int -> Core (List Name)
-    addNames acc _ res = do
+    addNames : Defs -> Core (List Name) -> Name -> Int -> Core (List Name)
+    addNames defs acc _ res = do
         Just gdef <- lookupCtxtExact (Resolved res) defs.gamma
             | Nothing => acc
         let Just name = findNoMangle gdef.flags
