@@ -59,10 +59,10 @@ getAllNoMangle : Defs -> Core (List Name)
 getAllNoMangle defs = foldlNames addNames (pure []) defs.gamma.resolvedAs
   where
     addNames : Core (List Name) -> Name -> Int -> Core (List Name)
-    addNames acc fn res = do
+    addNames acc _ res = do
         Just gdef <- lookupCtxtExact (Resolved res) defs.gamma
             | Nothing => acc
         let Just name = findNoMangle gdef.flags
             | Nothing => acc
         ns <- acc
-        pure $ fn :: ns
+        pure $ (Resolved res) :: ns

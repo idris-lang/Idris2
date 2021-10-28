@@ -152,6 +152,7 @@ getMinimalDef (Coded ns bin)
          pure (def, Just (ns, bin))
 
 -- ||| Recursively get all calls in a function definition
+-- ||| Note: this only checks resolved names
 getAllDesc : {auto c : Ref Ctxt Defs} ->
              List Name -> -- calls to check
              IOArray (Int, Maybe (Namespace, Binary)) ->
