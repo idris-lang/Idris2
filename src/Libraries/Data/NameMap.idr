@@ -383,3 +383,13 @@ export
 mapMaybeM : Monad m => (Name -> m (Maybe a)) -> NameMap v -> m (NameMap a)
 mapMaybeM test Empty = pure Empty
 mapMaybeM test (M _ t) = treeMapMaybeM test t
+
+treeFoldl : (acc -> Name -> v -> acc) -> acc -> Tree _ v -> acc
+treeFoldl f z (Leaf k v) = f z k v
+treeFoldl f z (Branch2 l _ r) = treeFoldl f (treeFoldl f z l) r
+treeFoldl f z (Branch3 l _ m _ r) = treeFoldl f (treeFoldl f (treeFoldl f z l) m) r
+
+export
+foldlNames : (acc -> Name -> v -> acc) -> acc -> NameMap v -> acc
+foldlNames f z Empty = z
+foldlNames f z (M _ t) = treeFoldl f z t

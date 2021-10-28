@@ -11,6 +11,11 @@ record NoMangleMap where
     constructor MkNMMap
     map : NameMap (Maybe String)
 
+findNoMangle : List DefFlag -> Maybe String
+findNoMangle [] = Nothing
+findNoMangle (NoMangle x :: _) = Just x
+findNoMangle (_ :: xs) = findNoMangle xs
+
 ||| Get a map of all %nomangle names
 ||| Errors for all invalid names, so the backend can skip checking
 ||| or adding escape characters.
@@ -37,11 +42,6 @@ initNoMangle backend valid = do
             pure $ Just name
         ) ctxt.resolvedAs
     newRef NoMangleMap $ MkNMMap map
-  where
-    findNoMangle : List DefFlag -> Maybe String
-    findNoMangle [] = Nothing
-    findNoMangle (NoMangle x :: _) = Just x
-    findNoMangle (_ :: xs) = findNoMangle xs
 
 export
 isNoMangle : NoMangleMap -> Name -> Maybe String
@@ -53,3 +53,16 @@ lookupNoMangle :
     Name ->
     Core (Maybe String)
 lookupNoMangle n = pure $ isNoMangle !(get NoMangleMap) n
+
+export
+getAllNoMangle : Defs -> Core (List Name)
+getAllNoMangle defs = foldlNames addNames (pure []) defs.gamma.resolvedAs
+  where
+    addNames : Core (List Name) -> Name -> Int -> Core (List Name)
+    addNames acc fn res = do
+        Just gdef <- lookupCtxtExact (Resolved res) defs.gamma
+            | Nothing => acc
+        let Just name = findNoMangle gdef.flags
+            | Nothing => acc
+        ns <- acc
+        pure $ fn :: ns

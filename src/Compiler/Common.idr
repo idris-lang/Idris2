@@ -5,6 +5,7 @@ import Compiler.ANF
 import Compiler.CompileExpr
 import Compiler.Inline
 import Compiler.LambdaLift
+import Compiler.NoMangle
 import Compiler.Opts.CSE
 import Compiler.VMCode
 
@@ -243,11 +244,12 @@ getCompileData doLazyAnnots phase_in tm_in
          let ns = getRefs (Resolved (-1)) tm_in
          tm <- toFullNames tm_in
          natHackNames' <- traverse toResolvedNames natHackNames
+         noMangleNames <- getAllNoMangle defs
          -- make an array of Bools to hold which names we've found (quicker
          -- to check than a NameMap!)
          asize <- getNextEntry
          arr <- coreLift $ newArray asize
-         logTime "++ Get names" $ getAllDesc (natHackNames' ++ keys ns) arr defs
+         logTime "++ Get names" $ getAllDesc (natHackNames' ++ noMangleNames ++ keys ns) arr defs
 
          let entries = catMaybes !(coreLift (toList arr))
          let allNs = map (Resolved . fst) entries
