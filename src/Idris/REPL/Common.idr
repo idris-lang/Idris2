@@ -10,7 +10,9 @@ import Core.TT
 import Core.Unify
 import Core.UnifyState
 
+import Idris.Doc.Annotations
 import Idris.Doc.String
+
 import Idris.Error
 import Idris.IDEMode.Commands
 import Idris.IDEMode.Holes

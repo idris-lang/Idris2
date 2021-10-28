@@ -115,8 +115,31 @@ extractNat acc tm = case tm of
               extractNat (1 + acc) k
     "fromInteger" => extractNat acc k
     _ => Nothing
-  PPrimVal _ (BI n) => pure (acc + integerToNat n)
+  PPrimVal _ (BI n) => do guard (0 <= n)
+                          pure (acc + integerToNat n)
   PBracketed _ k    => extractNat acc k
+  _                 => Nothing
+
+||| Attempt to extract a constant integer
+extractInteger : IPTerm -> Maybe Integer
+extractInteger tm = case tm of
+  PApp _ (PRef _ (MkKindedName _ _ (NS ns (UN (Basic n))))) k => case n of
+    "fromInteger" => extractInteger k
+    "negate"      => negate <$> extractInteger k
+    _ => Nothing
+  PPrimVal _ (BI i) => pure i
+  PBracketed _ t    => extractInteger t
+  _                 => Nothing
+
+||| Attempt to extract a constant double
+extractDouble : IPTerm -> Maybe Double
+extractDouble tm = case tm of
+  PApp _ (PRef _ (MkKindedName _ _ (NS ns (UN (Basic n))))) k => case n of
+    "fromDouble" => extractDouble k
+    "negate"     => negate <$> extractDouble k
+    _ => Nothing
+  PPrimVal _ (Db d) => pure d
+  PBracketed _ t    => extractDouble t
   _                 => Nothing
 
 mutual
@@ -155,9 +178,13 @@ mutual
               _    => Nothing
   sugarAppM tm =
   -- refolding natural numbers if the expression is a constant
-    case extractNat 0 tm of
-      Just k  => pure $ PPrimVal (getPTermLoc tm) (BI (cast k))
-      Nothing => case tm of
+    let Nothing = extractNat 0 tm
+          | Just k => pure $ PPrimVal (getPTermLoc tm) (BI (cast k))
+        Nothing = extractInteger tm
+          | Just k => pure $ PPrimVal (getPTermLoc tm) (BI k)
+        Nothing = extractDouble tm
+          | Just d => pure $ PPrimVal (getPTermLoc tm) (Db d)
+    in case tm of
         PRef fc (MkKindedName nt _ (NS ns nm)) =>
           if builtinNS == ns
              then case nameRoot nm of

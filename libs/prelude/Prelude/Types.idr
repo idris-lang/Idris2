@@ -379,21 +379,25 @@ Ord a => Ord (List a) where
             c => c
 
 namespace List
+  ||| Concatenate one list with another.
   public export
   (++) : (xs, ys : List a) -> List a
   [] ++ ys = ys
   (x :: xs) ++ ys = x :: xs ++ ys
 
+  ||| Returns the length of the list.
   public export
   length : List a -> Nat
   length []        = Z
   length (x :: xs) = S (length xs)
 
+  ||| Reverse the second list, prepending its elements to the first.
   public export
   reverseOnto : List a -> List a -> List a
   reverseOnto acc [] = acc
   reverseOnto acc (x::xs) = reverseOnto (x::acc) xs
 
+  ||| Reverses the given list.
   public export
   reverse : List a -> List a
   reverse = reverseOnto []

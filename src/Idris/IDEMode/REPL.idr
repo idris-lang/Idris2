@@ -205,7 +205,7 @@ process (MakeCase l n)
 process (MakeWith l n)
     = replWrap $ Idris.REPL.process (Editing (MakeWith False (fromInteger l) (UN $ mkUserName n)))
 process (DocsFor n modeOpt)
-    = replWrap $ Idris.REPL.process (Doc (PRef EmptyFC (UN $ mkUserName n)))
+    = replWrap $ Idris.REPL.process (Doc $ APTerm (PRef EmptyFC (UN $ mkUserName n)))
 process (Apropos n)
     = do todoCmd "apropros"
          pure $ REPL $ Printed emptyDoc

@@ -208,6 +208,9 @@ mkDirective : String -> Token
 mkDirective str = CGDirective (trim (substr 3 (length str) str))
 
 -- Reserved words
+-- NB: if you add a new keyword, please add the corresponding documentation in
+--     Idris.Doc.String
+public export
 keywords : List String
 keywords = ["data", "module", "where", "let", "in", "do", "record",
             "auto", "default", "implicit", "mutual", "namespace",

@@ -155,6 +155,14 @@ symbol req
                  _ => Nothing
 
 export
+anyKeyword : Rule String
+anyKeyword
+  = terminal ("Expected a keyword") $
+             \case
+               Keyword s => Just s
+               _ => Nothing
+
+export
 keyword : String -> Rule ()
 keyword req
     = terminal ("Expected '" ++ req ++ "'") $
@@ -175,10 +183,7 @@ pragma : String -> Rule ()
 pragma n =
   terminal ("Expected pragma " ++ n) $
     \case
-      Pragma s =>
-        if s == n
-          then Just ()
-          else Nothing
+      Pragma s => guard (s == n)
       _ => Nothing
 
 export

@@ -72,7 +72,7 @@ seval mode env tm
          -- since we last evaluated a name, and we might have evaluated the
          -- name in a different mode
          let ms = getRefs (MN "" 0) tm
-         let rs = addMetas ms tm
+         let rs = addMetas False ms tm
          names <- getAllNames empty (keys rs)
          traverse_ (compileDef mode) (keys names)
 
