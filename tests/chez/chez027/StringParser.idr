@@ -3,6 +3,7 @@ module Main
 import Control.Monad.Identity
 import Control.Monad.Trans
 
+import Data.List.Alternating
 import Data.Maybe
 import Data.Vect
 import Data.String.Parser
@@ -64,6 +65,8 @@ main = do
     res <- parseT maybeParser "def"
     showRes res
     res <- parseT (commaSep alphaNum) "a,1,b,2"
+    showRes res
+    res <- parseT (alternating letter natural) "a12b3c"
     showRes res
     res <- parseT (ntimes 4 letter) "abcd"
     showRes res

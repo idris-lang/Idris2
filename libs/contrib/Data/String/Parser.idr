@@ -6,6 +6,7 @@ import Control.Monad.Trans
 import Data.String
 import Data.Fin
 import Data.List
+import Data.List.Alternating
 import Data.List1
 import Data.Vect
 
@@ -352,6 +353,20 @@ export
 covering
 commaSep : Monad m => ParseT m a -> ParseT m (List a)
 commaSep p = p `sepBy` (char ',')
+
+||| Parses alternating occurrences of `a`s and `b`s.
+||| Can be thought of as parsing:
+||| - a list of `b`s, separated, and surrounded, by `a`s
+||| - a non-empty list of `a`s, separated by `b`s
+||| where we care about the separators
+export
+covering
+alternating : Monad m
+           => ParseT m a
+           -> ParseT m b
+           -> ParseT m (Odd a b)
+alternating x y = do vx <- x
+                     (vx ::) <$> [| y :: alternating x y |] <|> pure [vx]
 
 ||| Run the specified parser precisely `n` times, returning a vector
 ||| of successes.
