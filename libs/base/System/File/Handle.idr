@@ -15,16 +15,23 @@ prim__open : String -> String -> PrimIO FilePtr
          "node:lambda:(fp) => require('fs').closeSync(fp.fd)"
 prim__close : FilePtr -> PrimIO ()
 
+||| Open the given file name with the specified mode.
+|||
+||| @ f the file name to open
+||| @ m the mode to open the file with
 export
-openFile : HasIO io => String -> Mode -> io (Either FileError File)
+openFile : HasIO io => (f : String) -> (m : Mode) -> io (Either FileError File)
 openFile f m
     = do res <- primIO (prim__open f (modeStr m))
          if prim__nullAnyPtr res /= 0
             then returnError
             else ok (FHandle res)
 
+||| Close the given file handle.
+|||
+||| @ fh the file handle to close
 export
-closeFile : HasIO io => File -> io ()
+closeFile : HasIO io => (fh : File) -> io ()
 closeFile (FHandle f) = primIO (prim__close f)
 
 ||| Perform a given operation on successful file open
