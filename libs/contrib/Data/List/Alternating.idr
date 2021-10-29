@@ -7,47 +7,48 @@ infixl 5 +>
 infixr 5 <+
 
 mutual
-    namespace Fence
+    namespace Odd
         ||| Non-empty list, starting and ending with an a, where adjacent elements alternate
         ||| between types a and b.
         ||| We can think of this type as:
         ||| - A fence, with the `a`s as fence-posts, and the `b`s as panels.
         ||| - A non-empty list of `a`s, separated by `b`s
         ||| - A list of `b`s, separated by, and surrounded by, `a`s
+        ||| - The free extension of a monoid `a`, with variables in `b`
         public export
-        data Fence a b = (::) a (PairList b a)
+        data Odd a b = (::) a (Even b a)
 
-    namespace PairList
+    namespace Even
         ||| A list, starting with an a, and ending with a b; where adjacent elements
         ||| alternate between types a and b.
         ||| Equivalent to List (a, b)
         public export
-        data PairList a b = Nil | (::) a (Fence b a)
+        data Even a b = Nil | (::) a (Odd b a)
 
-%name Fence xs, ys, zs
-%name PairList xs, ys, zs
+%name Odd xs, ys, zs
+%name Even xs, ys, zs
 
 mutual
     public export
-    Eq a => Eq b => Eq (Fence a b) where
+    Eq a => Eq b => Eq (Odd a b) where
         x :: xs == y :: ys = x == y && xs == ys
 
     public export
-    Eq a => Eq b => Eq (PairList a b) where
+    Eq a => Eq b => Eq (Even a b) where
         [] == [] = True
         x :: xs == y :: ys = x == y && xs == ys
         _ == _ = False
 
 mutual
     public export
-    Ord a => Ord b => Ord (Fence a b) where
+    Ord a => Ord b => Ord (Odd a b) where
         compare (x :: xs) (y ::ys)
            = case compare x y of
                   EQ => compare xs ys
                   c => c
 
     public export
-    Ord a => Ord b => Ord (PairList a b) where
+    Ord a => Ord b => Ord (Even a b) where
         compare [] [] = EQ
         compare [] (x :: xs) = LT
         compare (x :: xs) [] = GT
@@ -58,23 +59,23 @@ mutual
 
 mutual
     public export
-    Bifunctor Fence where
+    Bifunctor Odd where
         bimap f g (x :: xs) = (f x) :: (bimap g f xs)
 
     public export
-    Bifunctor PairList where
+    Bifunctor Even where
         bimap f g [] = []
         bimap f g (x :: xs) = (f x) :: (bimap g f xs)
 
 mutual
     public export
-    Bifoldable Fence where
+    Bifoldable Odd where
         bifoldr f g acc (x :: xs) = f x (bifoldr g f acc xs)
 
         bifoldl f g acc (x :: xs) = bifoldl g f (f acc x) xs
 
     public export
-    Bifoldable PairList where
+    Bifoldable Even where
         bifoldr f g acc [] = acc
         bifoldr f g acc (x :: xs) = f x (bifoldr g f acc xs)
 
@@ -83,146 +84,147 @@ mutual
 
 mutual
     public export
-    Bitraversable Fence where
+    Bitraversable Odd where
         bitraverse f g (x :: xs) = [| f x :: bitraverse g f xs |]
 
     public export
-    Bitraversable PairList where
+    Bitraversable Even where
         bitraverse f g [] = [| [] |]
         bitraverse f g (x :: xs) = [| f x :: bitraverse g f xs |]
 
 namespace Snd
     public export
-    Functor (Fence a) where
+    Functor (Odd a) where
         map = mapSnd
 
 namespace Fst
     public export
-    [FstFunctor] Functor (\a => Fence a b) where
+    [FstFunctor] Functor (\a => Odd a b) where
         map = mapFst
 
 mutual
-    namespace Fence
+    namespace Odd
         public export
-        (++) : Fence a b -> Fence b a -> PairList a b
+        (++) : Odd a b -> Odd b a -> Even a b
         (x :: xs) ++ ys = x :: xs ++ ys
 
-    namespace PairListFence
+    namespace EvenOdd
         public export
-        (++) : PairList a b -> Fence a b -> Fence a b
+        (++) : Even a b -> Odd a b -> Odd a b
         [] ++ ys = ys
         (x :: xs) ++ ys = x :: xs ++ ys
 
 mutual
-    namespace PairList
+    namespace Even
         public export
-        (++) : PairList a b -> PairList a b -> PairList a b
+        (++) : Even a b -> Even a b -> Even a b
         [] ++ ys = ys
         (x :: xs) ++ ys = x :: xs ++ ys
 
-    namespace FencePairList
+    namespace OddEven
         public export
-        (++) : Fence a b -> PairList b a -> Fence a b
+        (++) : Odd a b -> Even b a -> Odd a b
         (x :: xs) ++ ys = x :: xs ++ ys
 
-||| Glue together two fences by gluing together the inner-most fence-posts
+||| The semigroup structure induced by treating Odd as the free extension of a
+||| monoid `a`, with variables in `b`
 public export
-Semigroup a => Semigroup (Fence a b) where
+Semigroup a => Semigroup (Odd a b) where
     [x] <+> (y :: ys) = (x <+> y) :: ys
     (x :: y :: xs) <+> ys = x :: y :: xs <+> ys
 
-namespace Fence
+namespace Odd
     public export
-    (+>) : Semigroup a => Fence a b -> a -> Fence a b
+    (+>) : Semigroup a => Odd a b -> a -> Odd a b
     [x] +> z = [x <+> z]
     x :: y :: xs +> z = x :: y :: (xs +> z)
 
     public export
-    (<+) : Semigroup a => a -> Fence a b -> Fence a b
+    (<+) : Semigroup a => a -> Odd a b -> Odd a b
     x <+ y :: ys = (x <+> y) :: ys
 
 public export
-Semigroup (PairList a b) where
+Semigroup (Even a b) where
     (<+>) = (++)
 
 public export
-Monoid a => Monoid (Fence a b) where
+Monoid a => Monoid (Odd a b) where
     neutral = [neutral]
 
 public export
-Monoid (PairList a b) where
+Monoid (Even a b) where
     neutral = []
 
 public export
-Foldable (Fence a) where
+Foldable (Odd a) where
     foldr = bifoldr (flip const)
     foldl = bifoldl const
 
 public export
-singleton : a -> Fence a b
+singleton : a -> Odd a b
 singleton x = [x]
 
 namespace Snd
     public export
-    Monoid a => Applicative (Fence a) where
+    Monoid a => Applicative (Odd a) where
         pure x = [neutral, x, neutral]
         fs <*> xs = biconcatMap singleton (flip map xs) fs
 
 public export
-flatten : Fence (Fence a b) b -> Fence a b
+flatten : Odd (Odd a b) b -> Odd a b
 flatten [x] = x
 flatten (x :: y :: xs) = x ++ (y :: flatten xs)
 
 namespace Fst
     public export
-    [FstApplicative] Applicative (\a => Fence a b) using FstFunctor where
+    [FstApplicative] Applicative (\a => Odd a b) using FstFunctor where
         pure x = [x]
         fs <*> xs = flatten $ bimap (flip mapFst xs) id fs
 
 public export
-Monoid a => Alternative (Fence a) where
+Monoid a => Alternative (Odd a) where
     empty = [neutral]
     xs <|> ys = xs <+> ys
 
 namespace Snd
     public export
-    [SndMonad] Monoid a => Monad (Fence a) where
+    [SndMonad] Monoid a => Monad (Odd a) where
         x >>= f = biconcatMap singleton f x
 
     public export
-    (>>=) : Monoid a => Fence a b -> (b -> Fence a c) -> Fence a c
+    (>>=) : Monoid a => Odd a b -> (b -> Odd a c) -> Odd a c
     (>>=) = (>>=) @{SndMonad}
 
 namespace Fst
     public export
-    [FstMonad] Monad (\a => Fence a b) using FstApplicative where
+    [FstMonad] Monad (\a => Odd a b) using FstApplicative where
         x >>= f = flatten $ mapFst f x
         join = flatten
 
     public export
-    (>>=) : Fence a c -> (a -> Fence b c) -> Fence b c
+    (>>=) : Odd a c -> (a -> Odd b c) -> Odd b c
     (>>=) = (>>=) @{FstMonad}
 
 public export
-Traversable (Fence a) where
+Traversable (Odd a) where
     traverse = bitraverse pure
 
 mutual
-    namespace Fence
+    namespace Odd
         public export
-        forget : Fence a a -> List a
+        forget : Odd a a -> List a
         forget (x :: xs) = x :: forget xs
 
-    namespace PairList
+    namespace Even
         public export
-        forget : PairList a a -> List a
+        forget : Even a a -> List a
         forget [] = []
         forget (x :: xs) = x :: forget xs
 
 export
-Show a => Show b => Show (Fence a b) where
+Show a => Show b => Show (Odd a b) where
     show xs = "[\{concat $ intersperse ", " $ forget $ bimap show show xs}]"
 
 export
-Show a => Show b => Show (PairList a b) where
+Show a => Show b => Show (Even a b) where
     show xs = "[\{concat $ intersperse ", " $ forget $ bimap show show xs}]"

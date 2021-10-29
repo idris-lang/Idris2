@@ -66,7 +66,7 @@ main = do
     showRes res
     res <- parseT (commaSep alphaNum) "a,1,b,2"
     showRes res
-    res <- parseT (fence letter natural) "a12b3c"
+    res <- parseT (alternating letter natural) "a12b3c"
     showRes res
     res <- parseT (ntimes 4 letter) "abcd"
     showRes res

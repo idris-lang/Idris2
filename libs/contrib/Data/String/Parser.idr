@@ -361,12 +361,12 @@ commaSep p = p `sepBy` (char ',')
 ||| where we care about the separators
 export
 covering
-fence : Monad m
-     => ParseT m a
-     -> ParseT m b
-     -> ParseT m (Fence a b)
-fence x y = do vx <- x
-               (vx ::) <$> [| y :: fence x y |] <|> pure [vx]
+alternating : Monad m
+           => ParseT m a
+           -> ParseT m b
+           -> ParseT m (Odd a b)
+alternating x y = do vx <- x
+                     (vx ::) <$> [| y :: alternating x y |] <|> pure [vx]
 
 ||| Run the specified parser precisely `n` times, returning a vector
 ||| of successes.
