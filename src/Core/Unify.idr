@@ -1453,6 +1453,7 @@ recoverable (InCon _ _ err) = recoverable err
 recoverable (InLHS _ _ err) = recoverable err
 recoverable (InRHS _ _ err) = recoverable err
 recoverable (WhenUnifying _ _ _ _ _ err) = recoverable err
+recoverable (MaybeMisspelling err _) = recoverable err
 recoverable _ = True
 
 -- Retry the given constraint, return True if progress was made
