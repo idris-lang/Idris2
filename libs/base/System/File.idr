@@ -13,8 +13,12 @@ import public System.File.ReadWrite
 import public System.File.Types
 import public System.File.Virtual
 
+||| Copy the file at the specified source to the given destination.
+|||
+||| @ src  the file to copy
+||| @ dest the place to copy the file to
 export
-copyFile : HasIO io => String -> String -> io (Either FileError ())
+copyFile : HasIO io => (src : String) -> (dest : String) -> io (Either FileError ())
 copyFile src dest
     = do Right buf <- createBufferFromFile src
              | Left err => pure (Left err)

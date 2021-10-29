@@ -38,6 +38,8 @@ prim__removeFile : String -> PrimIO Int
 ||| Seek through the next newline.
 ||| This is @fGetLine@ without the overhead of copying
 ||| any characters.
+|||
+||| @ h the file handle to seek through
 export
 fSeekLine : HasIO io => (h : File) -> io (Either FileError ())
 fSeekLine (FHandle f)
@@ -46,6 +48,10 @@ fSeekLine (FHandle f)
             then returnError
             else ok ()
 
+||| Get the next line from the given file handle, returning the empty string if
+||| nothing was read.
+|||
+||| @ h the file handle to get the line from
 export
 fGetLine : HasIO io => (h : File) -> io (Either FileError String)
 fGetLine (FHandle f)
@@ -54,14 +60,21 @@ fGetLine (FHandle f)
             then returnError
             else ok (prim__getString res)
 
+||| Get a number of characters from the given file handle.
+|||
+||| @ h   the file handle to read from
+||| @ max the number of characters to read
 export
-fGetChars : HasIO io => (h : File) -> Int -> io (Either FileError String)
+fGetChars : HasIO io => (h : File) -> (max : Int) -> io (Either FileError String)
 fGetChars (FHandle f) max
     = do res <- primIO (prim__readChars max f)
          if prim__nullPtr res /= 0
             then returnError
             else ok (prim__getString res)
 
+||| Get the next character from the given file handle.
+|||
+||| @ h the file handle to read from
 export
 fGetChar : HasIO io => (h : File) -> io (Either FileError Char)
 fGetChar h@(FHandle f)
@@ -71,36 +84,64 @@ fGetChar h@(FHandle f)
             then returnError
             else ok (cast c)
 
+||| Write the given string to the file handle.
+|||
+||| @ h   the file handle to write to
+||| @ str the string to write
 export
-fPutStr : HasIO io => (h : File) -> String -> io (Either FileError ())
+fPutStr : HasIO io => (h : File) -> (str : String) -> io (Either FileError ())
 fPutStr (FHandle f) str
     = do res <- primIO (prim__writeLine f str)
          if res == 0
             then returnError
             else ok ()
 
+||| Write the given string, followed by a newline, to the file handle.
+|||
+||| @ fh  the file handle to write to
+||| @ str the string to write
 export
-fPutStrLn : HasIO io => (h : File) -> String -> io (Either FileError ())
-fPutStrLn f str = fPutStr f (str ++ "\n")
+fPutStrLn : HasIO io => (fh : File) -> (str : String) -> io (Either FileError ())
+fPutStrLn fh str = fPutStr fh (str ++ "\n")
 
+||| Check whether the end-of-file indicator for the given file handle is set.
+|||
+||| @ h the file handle to check
 export
 fEOF : HasIO io => (h : File) -> io Bool
 fEOF (FHandle f)
     = do res <- primIO (prim__eof f)
          pure (res /= 0)
 
+||| Delete the file at the given name.
+|||
+||| @ fname the file to delete
 export
-removeFile : HasIO io => String -> io (Either FileError ())
+removeFile : HasIO io => (fname : String) -> io (Either FileError ())
 removeFile fname
     = do res <- primIO (prim__removeFile fname)
          if res == 0
             then ok ()
             else returnError
 
+||| Read a number of lines into an accumulator, optionally starting at an offset
+||| in the given file handle. Requires `Fuel` to run since the operation is
+||| total but may run indefinitely; the functions `limit` and `forever` help
+||| with providing `Fuel`.
+|||
+||| On success, returns a tuple of whether the EOF was reached (if it wasn't, we
+||| ran out of fuel first) and the lines accumulated.
+|||
+||| Note: each line will still have a newline character at the end.
+|||
+||| @ acc    the accumulator to read the lines onto
+||| @ offset the offset to start reading at
+||| @ fuel   an amount of `Fuel`
+||| @ h      the file handle to read from
 readLinesOnto : HasIO io => (acc : List String) ->
                             (offset : Nat) ->
                             (fuel : Fuel) ->
-                            File ->
+                            (h : File) ->
                             io (Either FileError (Bool, List String))
 readLinesOnto acc _ Dry h = pure (Right (False, reverse acc))
 readLinesOnto acc offset (More fuel) h
@@ -129,18 +170,32 @@ readLinesOnto acc offset (More fuel) h
 ||| Important: because we are chunking by lines, this
 ||| function's totality depends on the assumption that
 ||| no single line in the input file is infinite.
+|||
+||| @ offset the offset to start reading at
+||| @ until  the `Fuel` limiting how far we can read
+||| @ fname  the name of the file to read
 export
-readFilePage : HasIO io => (offset : Nat) -> (until : Fuel) -> String -> io (Either FileError (Bool, List String))
-readFilePage offset fuel file
-  = withFile file Read pure $
+readFilePage : HasIO io => (offset : Nat) -> (until : Fuel) -> (fname :  String) ->
+                           io (Either FileError (Bool, List String))
+readFilePage offset fuel fname
+  = withFile fname Read pure $
       readLinesOnto [] offset fuel
 
+||| Read the entire file at the given name. This function is `partial` since
+||| there is no guarantee that the given file isn't infinite.
+|||
+||| @ fname the name of the file to read
 export
 partial
-readFile : HasIO io => String -> io (Either FileError String)
+readFile : HasIO io => (fname : String) -> io (Either FileError String)
 readFile = (map $ map (fastConcat . snd)) . readFilePage 0 forever
 
-||| Write a string to a file
+||| Write the given string to the file at the specified name. Opens the file
+||| with the `WriteTruncate` mode.
+||| (If you have a file handle (a `File`), you may be looking for `fPutStr`.)
+|||
+||| @ filePath the file to write to
+||| @ contents the string to write to the file
 export
 writeFile : HasIO io =>
             (filePath : String) -> (contents : String) ->
@@ -149,6 +204,11 @@ writeFile file contents
   = withFile file WriteTruncate pure $
       flip fPutStr contents
 
+||| Append the given string to the file at the specified name. Opens the file in
+||| with the `Append` mode.
+|||
+||| @ filePath the file to write to
+||| @ contents the string to write to the file
 export
 appendFile : HasIO io =>
              (filePath : String) -> (contents : String) ->

@@ -1,3 +1,4 @@
+||| Functions for accessing file metadata.
 module System.File.Meta
 
 import System.File.Handle
@@ -42,6 +43,7 @@ firstExists : HasIO io => List String -> io (Maybe String)
 firstExists [] = pure Nothing
 firstExists (x :: xs) = if !(exists x) then pure (Just x) else firstExists xs
 
+||| Get the File's atime.
 export
 fileAccessTime : HasIO io => (h : File) -> io (Either FileError Int)
 fileAccessTime (FHandle f)
@@ -50,6 +52,7 @@ fileAccessTime (FHandle f)
             then ok res
             else returnError
 
+||| Get the File's mtime.
 export
 fileModifiedTime : HasIO io => (h : File) -> io (Either FileError Int)
 fileModifiedTime (FHandle f)
@@ -58,6 +61,7 @@ fileModifiedTime (FHandle f)
             then ok res
             else returnError
 
+||| Get the File's ctime.
 export
 fileStatusTime : HasIO io => (h : File) -> io (Either FileError Int)
 fileStatusTime (FHandle f)
@@ -66,6 +70,7 @@ fileStatusTime (FHandle f)
             then ok res
             else returnError
 
+||| Get the File's size.
 export
 fileSize : HasIO io => (h : File) -> io (Either FileError Int)
 fileSize (FHandle f)
@@ -74,6 +79,7 @@ fileSize (FHandle f)
             then ok res
             else returnError
 
+||| Check whether the given File's size is non-zero.
 export
 fPoll : HasIO io => File -> io Bool
 fPoll (FHandle f)

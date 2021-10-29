@@ -15,14 +15,18 @@ prim__error : FilePtr -> PrimIO Int
          "node:support:fileErrno,support_system_file"
 prim__fileErrno : PrimIO Int
 
+||| The types of errors that can occur during file operations.
 public export
-data FileError = GenericFileError Int -- errno
+data FileError = ||| A generic error with an errno
+                 GenericFileError Int
                | FileReadError
                | FileWriteError
                | FileNotFound
                | PermissionDenied
                | FileExists
 
+||| Return the `FileError` corresponding to the errno that was set when the
+||| function call before this one errored.
 export
 returnError : HasIO io => io (Either FileError a)
 returnError
@@ -45,6 +49,7 @@ Show FileError where
   show PermissionDenied = "Permission Denied"
   show FileExists = "File Exists"
 
+||| Check if the error indicator for the given file handle is set.
 export
 fileError : HasIO io => File -> io Bool
 fileError (FHandle f)

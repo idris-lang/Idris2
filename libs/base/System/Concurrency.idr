@@ -1,13 +1,14 @@
+||| Concurrency primitives, e.g. threads, mutexes, etc.
+|||
+||| N.B.: At the moment this is pretty fundamentally tied to the Scheme RTS.
+||| Given that different back ends will have entirely different threading
+||| models, it might be unavoidable, but we might want to think about possible
+||| primitives that back ends should support.
 module System.Concurrency
 
 import Data.IORef
 
 %default total
-
--- At the moment this is pretty fundamentally tied to the Scheme RTS.
--- Given that different back ends will have entirely different threading
--- models, it might be unavoidable, but we might want to think about possible
--- primitives that back ends should support.
 
 
 -- Thread mailboxes
@@ -17,10 +18,14 @@ prim__setThreadData : {a : Type} -> a -> PrimIO ()
 %foreign "scheme:blodwen-get-thread-data"
 prim__getThreadData : (a : Type) -> PrimIO a
 
+||| Set the data stored in a thread's parameter to the given value.
+||| Currently only supported under the scheme backends.
 export
 setThreadData : HasIO io => {a : Type} -> a -> io ()
 setThreadData val = primIO (prim__setThreadData val)
 
+||| Get the data stored in a thread's parameter.
+||| Currently only supported under the scheme backends.
 export
 getThreadData : HasIO io => (a : Type) -> io a
 getThreadData a = primIO (prim__getThreadData a)
@@ -163,8 +168,10 @@ prim__makeBarrier : Int -> PrimIO Barrier
 prim__barrierWait : Barrier -> PrimIO ()
 
 ||| Creates a new barrier that can block a given number of threads.
+|||
+||| @ numThreads the number of threads to block
 export
-makeBarrier : HasIO io => Int -> io Barrier
+makeBarrier : HasIO io => (numThreads : Int) -> io Barrier
 makeBarrier numThreads = primIO (prim__makeBarrier numThreads)
 
 ||| Blocks the current thread until all threads have rendezvoused here.
@@ -185,25 +192,35 @@ prim__channelGet : Channel a -> PrimIO a
 %foreign "scheme:blodwen-channel-put"
 prim__channelPut : Channel a -> a -> PrimIO ()
 
-||| Creates and returns a new channel. The channel can be used with channelGet
-||| to receive a value through the channel. The channel can be used with
-||| channelPut to send a value through the channel.
+||| Creates and returns a new `Channel`.
+|||
+||| The channel can be used with `channelGet` to receive a value through the
+||| channel.
+||| The channel can be used with `channelPut` to send a value through the
+||| channel.
 export
 makeChannel : HasIO io => io (Channel a)
 makeChannel = primIO prim__makeChannel
 
 ||| Blocks until a sender is ready to provide a value through `chan`. The result
 ||| is the sent value.
+|||
+||| @ chan the channel to receive on
 export
-channelGet : HasIO io => Channel a -> io a
+channelGet : HasIO io => (chan : Channel a) -> io a
 channelGet chan = primIO (prim__channelGet chan)
 
+||| Puts a value on the given channel.
+|||
 ||| CAUTION: Different behaviour under chez and racket:
 ||| - Chez: Puts a value on the channel. If there already is a value, blocks
 |||         until that value has been received.
 ||| - Racket: Blocks until a receiver is ready to accept the value `val` through
 |||           `chan`.
+|||
+||| @ chan the `Channel` to send the value over
+||| @ val  the value to send
 export
-channelPut : HasIO io => Channel a -> a -> io ()
+channelPut : HasIO io => (chan : Channel a) -> (val : a) -> io ()
 channelPut chan val = primIO (prim__channelPut chan val)
 
