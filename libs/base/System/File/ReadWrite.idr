@@ -207,7 +207,7 @@ writeFile file contents
 ||| Append the given string to the file at the specified name. Opens the file in
 ||| with the `Append` mode.
 |||
-||| @ filePath the file to write to 
+||| @ filePath the file to write to
 ||| @ contents the string to write to the file
 export
 appendFile : HasIO io =>
