@@ -1,5 +1,6 @@
 module System.File.Process
 
+import public System.Escape
 import public System.File.Error
 import public System.File.Mode
 import System.File.Support
@@ -33,6 +34,11 @@ popen cmd m = do
     if prim__nullAnyPtr ptr /= 0
         then returnError
         else pure (Right (FHandle ptr))
+
+namespace Escaped
+  export
+  popen : HasIO io => (cmd : List String) -> (m : Mode) -> io (Either FileError File)
+  popen = popen . escapeCmd
 
 ||| Wait for the process associated with the pipe to terminate.
 |||

@@ -1,0 +1,4 @@
+1/1: Building Popen (Popen.idr)
+Main> "Hello, world"
+"Hello, $PATH"
+Main> Bye for now!

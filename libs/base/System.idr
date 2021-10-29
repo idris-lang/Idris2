@@ -4,6 +4,9 @@ import public Data.So
 import Data.List
 import Data.String
 
+import public System.Escape
+import System.File.Process
+
 %default total
 
 ||| Shorthand for referring to the C support library
@@ -144,6 +147,11 @@ prim__system : String -> PrimIO Int
 export
 system : HasIO io => String -> io Int
 system cmd = primIO (prim__system cmd)
+
+namespace Escaped
+  export
+  system : HasIO io => List String -> io Int
+  system = system . escapeCmd
 
 %foreign support "idris2_time"
          "javascript:lambda:() => Math.floor(new Date().getTime() / 1000)"
