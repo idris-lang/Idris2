@@ -42,9 +42,13 @@ main = do
     printLn $ the (Fence String Double) empty
     printLn $ us <|> vs
 
-    printLn $ do
+    printLn $ Snd.do
         x <- the (Fence String Double) ["Hello", 1, "world", 2, "!"]
         [",", x + 1, " "]
+
+    printLn $ Fst.do
+        x <- the (Fence String Double) ["Hello", 1, "world", 2, "!"]
+        ["Um,", 3, x]
 
     ignore $ traverse printLn us
 

@@ -91,9 +91,15 @@ mutual
         bitraverse f g [] = [| [] |]
         bitraverse f g (x :: xs) = [| f x :: bitraverse g f xs |]
 
-public export
-Functor (Fence a) where
-    map = mapSnd
+namespace Snd
+    public export
+    Functor (Fence a) where
+        map = mapSnd
+
+namespace Fst
+    public export
+    [FstFunctor] Functor (\a => Fence a b) where
+        map = mapFst
 
 mutual
     namespace Fence
@@ -156,19 +162,46 @@ public export
 singleton : a -> Fence a b
 singleton x = [x]
 
+namespace Snd
+    public export
+    Monoid a => Applicative (Fence a) where
+        pure x = [neutral, x, neutral]
+        fs <*> xs = biconcatMap singleton (flip map xs) fs
+
 public export
-Monoid a => Applicative (Fence a) where
-    pure x = [neutral, x, neutral]
-    fs <*> xs = biconcatMap singleton (flip map xs) fs
+flatten : Fence (Fence a b) b -> Fence a b
+flatten [x] = x
+flatten (x :: y :: xs) = x ++ (y :: flatten xs)
+
+namespace Fst
+    public export
+    [FstApplicative] Applicative (\a => Fence a b) using FstFunctor where
+        pure x = [x]
+        fs <*> xs = flatten $ bimap (flip mapFst xs) id fs
 
 public export
 Monoid a => Alternative (Fence a) where
     empty = [neutral]
     xs <|> ys = xs <+> ys
 
-public export
-Monoid a => Monad (Fence a) where
-    x >>= f = biconcatMap singleton f x
+namespace Snd
+    public export
+    [SndMonad] Monoid a => Monad (Fence a) where
+        x >>= f = biconcatMap singleton f x
+
+    public export
+    (>>=) : Monoid a => Fence a b -> (b -> Fence a c) -> Fence a c
+    (>>=) = (>>=) @{SndMonad}
+
+namespace Fst
+    public export
+    [FstMonad] Monad (\a => Fence a b) using FstApplicative where
+        x >>= f = flatten $ mapFst f x
+        join = flatten
+
+    public export
+    (>>=) : Fence a c -> (a -> Fence b c) -> Fence b c
+    (>>=) = (>>=) @{FstMonad}
 
 public export
 Traversable (Fence a) where
