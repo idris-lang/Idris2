@@ -500,7 +500,7 @@ believeMe : Vect 3 (NF vars) -> Maybe (NF vars)
 believeMe [_, _, val@(NDCon _ _ _ _ _)] = Just val
 believeMe [_, _, val@(NTCon _ _ _ _ _)] = Just val
 believeMe [_, _, val@(NPrimVal _ _)] = Just val
-believeMe [_, _, NType fc] = Just (NType fc)
+believeMe [_, _, NType fc u] = Just (NType fc u)
 believeMe [_, _, val] = Nothing
 
 constTy : Constant -> Constant -> Constant -> ClosedTerm
@@ -534,14 +534,14 @@ pi x rig plic ty sc = Bind emptyFC (UN (Basic x)) (Pi emptyFC rig plic ty) sc
 
 believeMeTy : ClosedTerm
 believeMeTy
-    = pi "a" erased Explicit (TType emptyFC) $
-      pi "b" erased Explicit (TType emptyFC) $
+    = pi "a" erased Explicit (TType emptyFC (MN "top" 0)) $
+      pi "b" erased Explicit (TType emptyFC (MN "top" 0)) $
       pi "x" top    Explicit (Local emptyFC Nothing _ (Later First)) $
       Local emptyFC Nothing _ (Later First)
 
 crashTy : ClosedTerm
 crashTy
-    = pi "a" erased Explicit (TType emptyFC) $
+    = pi "a" erased Explicit (TType emptyFC (MN "top" 0)) $
       pi "msg" top Explicit (PrimVal emptyFC StringType) $
       Local emptyFC Nothing _ (Later First)
 

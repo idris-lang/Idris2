@@ -141,7 +141,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                   _ => pure (NForce fc r tm' stk)
     eval env locs (PrimVal fc c) stk = pure $ NPrimVal fc c
     eval env locs (Erased fc i) stk = pure $ NErased fc i
-    eval env locs (TType fc) stk = pure $ NType fc
+    eval env locs (TType fc u) stk = pure $ NType fc u
 
     -- Apply an evaluated argument (perhaps cached from an earlier evaluation)
     -- to a stack
@@ -190,7 +190,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                  _ => pure (NForce fc r tm' (args ++ stk))
     applyToStack env cont nf@(NPrimVal fc _) _ = pure nf
     applyToStack env cont nf@(NErased fc _) _ = pure nf
-    applyToStack env cont nf@(NType fc) _ = pure nf
+    applyToStack env cont nf@(NType fc _) _ = pure nf
 
     evalLocClosure : {auto c : Ref Ctxt Defs} ->
                      {free : _} ->
@@ -345,7 +345,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                    else pure NoMatch
              _ => pure NoMatch
     -- Type of type matching, in typecase
-    tryAlt env loc opts fc stk (NType _) (ConCase (UN (Basic "Type")) tag [] sc)
+    tryAlt env loc opts fc stk (NType _ _) (ConCase (UN (Basic "Type")) tag [] sc)
          = evalTree env loc opts fc stk sc
     -- Arrow matching, in typecase
     tryAlt {more}
@@ -372,7 +372,7 @@ parameters (defs : Defs, topopts : EvalOpts)
         concrete (NTCon _ _ _ _ _) = True
         concrete (NPrimVal _ _) = True
         concrete (NBind _ _ _ _) = True
-        concrete (NType _) = True
+        concrete (NType _ _) = True
         concrete _ = False
     tryAlt _ _ _ _ _ _ _ = pure GotStuck
 
@@ -546,8 +546,8 @@ gnfOpts opts env tm
                        nfOpts opts defs env tm)
 
 export
-gType : FC -> Glued vars
-gType fc = MkGlue True (pure (TType fc)) (const (pure (NType fc)))
+gType : FC -> Name -> Glued vars
+gType fc u = MkGlue True (pure (TType fc u)) (const (pure (NType fc u)))
 
 export
 gErased : FC -> Glued vars

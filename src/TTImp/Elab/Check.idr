@@ -315,7 +315,7 @@ concrete defs env (NBind fc _ (Pi _ _ _ _) sc)
 concrete defs env (NDCon _ _ _ _ _) = pure True
 concrete defs env (NTCon _ _ _ _ _) = pure True
 concrete defs env (NPrimVal _ _) = pure True
-concrete defs env (NType _) = pure True
+concrete defs env (NType _ _) = pure True
 concrete defs env _ = pure False
 
 export
@@ -410,6 +410,15 @@ argVar : {vars : _} ->
          Env Term vars -> Name -> Term vars -> Core (Int, Term vars)
 argVar fc rig env n ty
     = newMetaLets fc rig env n ty (Hole (length env) (holeInit False)) False True
+
+export
+uniVar : {auto c : Ref Ctxt Defs} ->
+         {auto u : Ref UST UState} ->
+         FC -> Core Name
+uniVar fc
+    = do n <- genName "u"
+         idx <- addDef n (newDef fc n erased [] (Erased fc False) Public None)
+         pure (Resolved idx)
 
 export
 searchVar : {vars : _} ->

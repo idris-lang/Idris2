@@ -289,11 +289,12 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
          Nothing <- lookupCtxtExact (Resolved idx) (gamma defs)
               | Just gdef => throw (AlreadyDefined fc n)
 
+         u <- uniVar fc
          ty <-
              wrapErrorC eopts (InType fc n) $
                    checkTerm idx InType (HolesOkay :: eopts) nest env
                              (IBindHere fc (PI erased) ty_raw)
-                             (gType fc)
+                             (gType fc u)
          logTermNF "declare.type" 3 ("Type of " ++ show n) [] (abstractFullEnvType tfc env ty)
 
          def <- initDef n env ty opts

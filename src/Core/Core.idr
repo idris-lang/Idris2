@@ -705,7 +705,7 @@ mapTermM f = goTerm where
     goTerm (TForce fc la t) = f =<< TForce fc la <$> goTerm t
     goTerm tm@(PrimVal _ _) = f tm
     goTerm tm@(Erased _ _) = f tm
-    goTerm tm@(TType _) = f tm
+    goTerm tm@(TType _ _) = f tm
 
 
 export

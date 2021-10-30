@@ -792,7 +792,8 @@ data Term : List Name -> Type where
      PrimVal : FC -> (c : Constant) -> Term vars
      Erased : FC -> (imp : Bool) -> -- True == impossible term, for coverage checker
               Term vars
-     TType : FC -> Term vars
+     TType : FC -> Name -> -- universe variable
+             Term vars
 
 -- Remove/restore the given namespace from all Refs. This is to allow
 -- writing terms and case trees to disk without repeating the same namespace
@@ -862,7 +863,7 @@ getLoc (TDelay fc _ _ _) = fc
 getLoc (TForce fc _ _) = fc
 getLoc (PrimVal fc _) = fc
 getLoc (Erased fc i) = fc
-getLoc (TType fc) = fc
+getLoc (TType fc _) = fc
 
 export
 Eq LazyReason where
@@ -916,10 +917,10 @@ Eq (Term vars) where
   (==) (TForce _ _ t) (TForce _ _ t') = t == t'
   (==) (PrimVal _ c) (PrimVal _ c') = c == c'
   (==) (Erased _ i) (Erased _ i') = i == i'
-  (==) (TType _) (TType _) = True
+  (==) (TType _ _) (TType _ _) = True
   (==) _ _ = False
 
--- Check equality, ignoring variable naming
+-- Check equality, ignoring variable naming and universes
 export
 total
 eqTerm : Term vs -> Term vs' -> Bool
@@ -936,7 +937,7 @@ eqTerm (TDelay _ _ t x) (TDelay _ _ t' x') = eqTerm t t' && eqTerm x x'
 eqTerm (TForce _ _ t) (TForce _ _ t') = eqTerm t t'
 eqTerm (PrimVal _ c) (PrimVal _ c') = c == c'
 eqTerm (Erased _ i) (Erased _ i') = i == i'
-eqTerm (TType _) (TType _) = True
+eqTerm (TType _ _) (TType _ _) = True
 eqTerm _ _ = False
 
 public export
@@ -1208,7 +1209,7 @@ insertNames out ns (TDelay fc r ty tm)
 insertNames out ns (TForce fc r tm) = TForce fc r (insertNames out ns tm)
 insertNames out ns (PrimVal fc c) = PrimVal fc c
 insertNames out ns (Erased fc i) = Erased fc i
-insertNames out ns (TType fc) = TType fc
+insertNames out ns (TType fc u) = TType fc u
 
 export
 Weaken Term where
@@ -1415,7 +1416,7 @@ mutual
      = Just (TForce fc r !(shrinkTerm x prf))
   shrinkTerm (PrimVal fc c) prf = Just (PrimVal fc c)
   shrinkTerm (Erased fc i) prf = Just (Erased fc i)
-  shrinkTerm (TType fc) prf = Just (TType fc)
+  shrinkTerm (TType fc u) prf = Just (TType fc u)
 
 varEmbedSub : SubVars small vars ->
               {idx : Nat} -> (0 p : IsVar n idx small) ->
@@ -1448,7 +1449,7 @@ embedSub sub (TDelay fc x t y)
 embedSub sub (TForce fc r x) = TForce fc r (embedSub sub x)
 embedSub sub (PrimVal fc c) = PrimVal fc c
 embedSub sub (Erased fc i) = Erased fc i
-embedSub sub (TType fc) = TType fc
+embedSub sub (TType fc u) = TType fc u
 
 namespace Bounds
   public export
@@ -1504,7 +1505,7 @@ mkLocals outer bs (TForce fc r x)
     = TForce fc r (mkLocals outer bs x)
 mkLocals outer bs (PrimVal fc c) = PrimVal fc c
 mkLocals outer bs (Erased fc i) = Erased fc i
-mkLocals outer bs (TType fc) = TType fc
+mkLocals outer bs (TType fc u) = TType fc u
 
 export
 refsToLocals : Bounds bound -> Term vars -> Term (bound ++ vars)
@@ -1605,7 +1606,7 @@ namespace SubstEnv
   substEnv outer env (TForce fc r x) = TForce fc r (substEnv outer env x)
   substEnv outer env (PrimVal fc c) = PrimVal fc c
   substEnv outer env (Erased fc i) = Erased fc i
-  substEnv outer env (TType fc) = TType fc
+  substEnv outer env (TType fc u) = TType fc u
 
   export
   substs : SubstEnv dropped vars -> Term (dropped ++ vars) -> Term vars
@@ -1663,7 +1664,7 @@ addMetas res ns (TDelay fc x t y)
 addMetas res ns (TForce fc r x) = addMetas res ns x
 addMetas res ns (PrimVal fc c) = ns
 addMetas res ns (Erased fc i) = ns
-addMetas res ns (TType fc) = ns
+addMetas res ns (TType fc u) = ns
 
 -- Get the metavariable names in a term
 export
@@ -1698,7 +1699,7 @@ addRefs ua at ns (TDelay fc x t y)
 addRefs ua at ns (TForce fc r x) = addRefs ua at ns x
 addRefs ua at ns (PrimVal fc c) = ns
 addRefs ua at ns (Erased fc i) = ns
-addRefs ua at ns (TType fc) = ns
+addRefs ua at ns (TType fc u) = ns
 
 -- As above, but for references. Also flag whether a name is under an
 -- 'assert_total' because we may need to know that in coverage/totality
@@ -1757,7 +1758,7 @@ export
       showApp (TForce _ _ tm) [] = "%Force " ++ show tm
       showApp (PrimVal _ c) [] = show c
       showApp (Erased _ _) [] = "[__]"
-      showApp (TType _) [] = "Type"
+      showApp (TType _ u) [] = "Type"
       showApp _ [] = "???"
       showApp f args = "(" ++ assert_total (show f) ++ " " ++
                         assert_total (showSep " " (map show args))

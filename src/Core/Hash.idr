@@ -176,8 +176,8 @@ mutual
         = h `hashWithSalt` 9 `hashWithSalt` (show c)
     hashWithSalt h (Erased fc _)
         = hashWithSalt h 10
-    hashWithSalt h (TType fc)
-        = hashWithSalt h 11
+    hashWithSalt h (TType fc u)
+        = hashWithSalt h 11 `hashWithSalt` u
 
   export
   Hashable Pat where

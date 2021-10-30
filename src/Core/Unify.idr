@@ -513,7 +513,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
     noMeta (Local _ _ _ _) _ = True
     noMeta (Ref _ _ _) _ = True
     noMeta (PrimVal _ _) _ = True
-    noMeta (TType _) _ = True
+    noMeta (TType _ _) _ = True
     noMeta _ _ = False
 
     isSimple : Term vs -> Bool
@@ -585,7 +585,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
         = Just (TForce fc r !(updateIVars ivs arg))
     updateIVars ivs (PrimVal fc c) = Just (PrimVal fc c)
     updateIVars ivs (Erased fc i) = Just (Erased fc i)
-    updateIVars ivs (TType fc) = Just (TType fc)
+    updateIVars ivs (TType fc u) = Just (TType fc u)
 
     mkDef : {vs, newvars : _} ->
             List (Var newvars) ->
@@ -959,7 +959,7 @@ mutual
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
   unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NPrimVal _ _)
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
-  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NType _)
+  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NType _ _)
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
   -- If they're already convertible without metavariables, we're done,
   -- otherwise postpone

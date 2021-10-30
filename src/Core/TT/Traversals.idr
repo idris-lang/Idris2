@@ -36,7 +36,7 @@ onPRefs f = go neutral where
   go acc (TForce fc x y) = go acc y
   go acc (PrimVal fc c) = acc
   go acc (Erased fc imp) = acc
-  go acc (TType fc) = acc
+  go acc (TType fc u) = acc
 
   gos acc [] = acc
   gos acc (x :: xs) = gos (go acc x) xs
@@ -65,7 +65,7 @@ onConstants f = go neutral where
   go acc (TForce fc x y) = go acc y
   go acc (PrimVal fc c) = acc <+> f c
   go acc (Erased fc imp) = acc
-  go acc (TType fc) = acc
+  go acc (TType fc u) = acc
 
   gos acc [] = acc
   gos acc (x :: xs) = gos (go acc x) xs
@@ -96,4 +96,4 @@ mapTermM f t = act t where
   go t@(TForce fc x y) = pure t
   go t@(PrimVal fc c) = pure t
   go t@(Erased fc imp) = pure t
-  go t@(TType fc) = pure t
+  go t@(TType fc u) = pure t

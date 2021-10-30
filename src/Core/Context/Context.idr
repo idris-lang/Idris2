@@ -118,6 +118,8 @@ data Def : Type where
                                -- we guessed the term
             (constraints : List Int) -> Def
     ImpBind : Def -- global name temporarily standing for an implicitly bound name
+    -- a name standing for a universe level in a Type
+    UniverseLevel : Integer -> Def
     -- A delayed elaboration. The elaborators themselves are stored in the
     -- unification state
     Delayed : Def
@@ -135,6 +137,7 @@ defNameType (Hole {}) = Just Func
 defNameType (BySearch {}) = Nothing
 defNameType (Guess {}) = Nothing
 defNameType ImpBind = Just Bound
+defNameType (UniverseLevel {}) = Nothing
 defNameType Delayed = Nothing
 
 export
@@ -158,6 +161,7 @@ Show Def where
   show (Hole _ p) = "Hole" ++ if implbind p then " [impl]" else ""
   show (BySearch c depth def) = "Search in " ++ show def
   show (Guess tm _ cs) = "Guess " ++ show tm ++ " when " ++ show cs
+  show (UniverseLevel i) = "Universe level #" ++ show i
   show ImpBind = "Bound name"
   show Delayed = "Delayed"
 

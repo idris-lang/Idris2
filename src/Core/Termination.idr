@@ -105,7 +105,7 @@ scEq (TDelay _ _ t x) (TDelay _ _ t' x') = scEq t t' && scEq x x'
 scEq (TForce _ _ t) (TForce _ _ t') = scEq t t'
 scEq (PrimVal _ c) (PrimVal _ c') = c == c'
 scEq (Erased _ _) (Erased _ _) = True
-scEq (TType _) (TType _) = True
+scEq (TType _ _) (TType _ _) = True
 scEq _ _ = False
 
 data Guardedness = Toplevel | Unguarded | Guarded | InDelay
@@ -338,7 +338,7 @@ mutual
                   (updateRHS (map (\vt => (weaken (fst vt), weaken (snd vt))) ms) sc)
           urhs (PrimVal fc c) = PrimVal fc c
           urhs (Erased fc i) = Erased fc i
-          urhs (TType fc) = TType fc
+          urhs (TType fc u) = TType fc u
 
           lookupTm : Term vs -> List (Term vs, Term vs') -> Maybe (Term vs')
           lookupTm tm [] = Nothing

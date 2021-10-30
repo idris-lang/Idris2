@@ -63,15 +63,19 @@ checkPi : {vars : _} ->
           Core (Term vars, Glued vars)
 checkPi rig elabinfo nest env fc rigf info n argTy retTy expTy
     = do let pirig = getRig (elabMode elabinfo)
+         tyu <- uniVar fc
          (tyv, tyt) <- check pirig elabinfo nest env argTy
-                             (Just (gType fc))
+                             (Just (gType fc tyu))
          info' <- checkPiInfo rigf elabinfo nest env info (Just (gnf env tyv))
          let env' : Env Term (n :: _) = Pi fc rigf info' tyv :: env
          let nest' = weaken (dropName n nest)
+         scu <- uniVar fc
          (scopev, scopet) <-
             inScope fc env' (\e' =>
-              check {e=e'} pirig elabinfo nest' env' retTy (Just (gType fc)))
-         checkExp rig elabinfo env fc (Bind fc n (Pi (getFC argTy) rigf info' tyv) scopev) (gType fc) expTy
+              check {e=e'} pirig elabinfo nest' env' retTy (Just (gType fc scu)))
+         -- TODO Cumulativity: tyu <= max, scu <= max
+         piu <- uniVar fc
+         checkExp rig elabinfo env fc (Bind fc n (Pi (getFC argTy) rigf info' tyv) scopev) (gType fc piu) expTy
   where
     -- Might want to match on the LHS, so use the context rig, otherwise
     -- it's always erased
@@ -104,7 +108,8 @@ inferLambda : {vars : _} ->
 inferLambda rig elabinfo nest env fc rigl info n argTy scope expTy
     = do rigb_in <- findLamRig expTy
          let rigb = rigb_in `glb` rigl
-         (tyv, tyt) <- check erased elabinfo nest env argTy (Just (gType fc))
+         u <- uniVar fc
+         (tyv, tyt) <- check erased elabinfo nest env argTy (Just (gType fc u))
          info' <- checkPiInfo rigl elabinfo nest env info (Just (gnf env tyv))
          let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
          let nest' = weaken (dropName n nest)
@@ -157,8 +162,9 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
          defs <- get Ctxt
          case exptynf of
               Bind bfc bn (Pi fc' c _ pty) psc =>
-                 do (tyv, tyt) <- check erased elabinfo nest env
-                                        argTy (Just (gType fc))
+                 do u <- uniVar fc'
+                    (tyv, tyt) <- check erased elabinfo nest env
+                                        argTy (Just (gType fc u))
                     info' <- checkPiInfo rigl elabinfo nest env info (Just (gnf env tyv))
                     let rigb = rigl `glb` c
                     let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
@@ -210,7 +216,8 @@ checkLet : {vars : _} ->
            Core (Term vars, Glued vars)
 checkLet rigc_in elabinfo nest env fc lhsFC rigl n nTy nVal scope expty {vars}
     = do let rigc = if isErased rigc_in then erased else linear
-         (tyv, tyt) <- check erased elabinfo nest env nTy (Just (gType fc))
+         u <- uniVar fc
+         (tyv, tyt) <- check erased elabinfo nest env nTy (Just (gType fc u))
          -- Try checking at the given multiplicity; if that doesn't work,
          -- try checking at Rig1 (meaning that we're using a linear variable
          -- so the resulting binding should be linear)
