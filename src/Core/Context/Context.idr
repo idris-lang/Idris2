@@ -216,8 +216,8 @@ data DefFlag
     | Identity Nat
          -- Is it the identity function at runtime?
          -- The nat represents which argument the function evaluates to
-    | NoMangle String
-         -- use the user provided name directly
+    | NoMangle (List (Maybe String, String))
+         -- use the user provided name directly (backend, name)
 
 export
 Eq DefFlag where

@@ -228,7 +228,7 @@ mutual
        Totality : TotalReq -> FnOpt' nm
        Macro : FnOpt' nm
        SpecArgs : List Name -> FnOpt' nm
-       NoMangle : Maybe String -> FnOpt' nm
+       NoMangle : List String -> FnOpt' nm
 
   public export
   isTotalityReq : FnOpt' nm -> Bool
@@ -250,8 +250,11 @@ mutual
     show (Totality PartialOK) = "partial"
     show Macro = "%macro"
     show (SpecArgs ns) = "%spec " ++ showSep " " (map show ns)
-    show (NoMangle Nothing) = "%nomangle"
-    show (NoMangle (Just name)) = "%nomangle \"\{name}\""
+    show (NoMangle []) = "%nomangle"
+    show (NoMangle ns) = "%nomangle \{showSep " " (map quote ns)}"
+      where
+        quote : String -> String
+        quote str = "\"\{str}\""
 
   export
   Eq FnOpt where
