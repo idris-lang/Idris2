@@ -359,7 +359,7 @@ mutual
            pure (As fc s as' pat', pty, u)
   lcheck rig erase env (TDelayed fc r ty)
       = do (ty', _, u) <- lcheck rig erase env ty
-           pure (TDelayed fc r ty', gType fc, u)
+           pure (TDelayed fc r ty', gType fc (MN "top" 0), u)
   lcheck rig erase env (TDelay fc r ty val)
       = do (ty', _, _) <- lcheck erased erase env ty
            (val', gty, u) <- lcheck rig erase env val
@@ -377,8 +377,9 @@ mutual
       = pure (PrimVal fc c, gErased fc, [])
   lcheck rig erase env (Erased fc i)
       = pure (Erased fc i, gErased fc, [])
-  lcheck rig erase env (TType fc)
-      = pure (TType fc, gType fc, [])
+  lcheck rig erase env (TType fc u)
+      -- Not universe checking here, just use the top of the hierarchy
+      = pure (TType fc u, gType fc (MN "top" 0), [])
 
   lcheckBinder : {vars : _} ->
                  {auto c : Ref Ctxt Defs} ->

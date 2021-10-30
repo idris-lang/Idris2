@@ -42,7 +42,7 @@ mutual
        SForce   : FC -> LazyReason -> SNF vars -> SNF vars
        SPrimVal : FC -> Constant -> SNF vars
        SErased  : FC -> (imp : Bool) -> SNF vars
-       SType    : FC -> SNF vars
+       SType    : FC -> Name -> SNF vars
 
 getAllNames : {auto c : Ref Ctxt Defs} ->
               NameMap () -> List Name -> Core (NameMap ())
@@ -198,11 +198,14 @@ mutual
                           Just imp => imp
                           _ => False
            pure (Erased fc imp)
-  quoteVector svs (-7) [_, fc_in] -- Type
+  quoteVector svs (-7) [_, fc_in, u_in] -- Type
       = do let fc = case fromScheme (decodeObj fc_in) of
                          Just fc => fc
                          _ => emptyFC
-           pure (TType fc)
+           let u = case fromScheme (decodeObj u_in) of
+                        Just u => u
+                        _ => MN "top" 0
+           pure (TType fc u)
   quoteVector svs (-8) [_, proc_in, rig_in, pi_in, ty_in, name_in] -- Lambda
       = do let name = case fromScheme (decodeObj name_in) of
                            Nothing => UN (Basic "x")
@@ -491,11 +494,14 @@ mutual
                           Just imp => imp
                           _ => False
            pure (SErased fc imp)
-  snfVector svs (-7) [_, fc_in] -- Type
+  snfVector svs (-7) [_, fc_in, u_in] -- Type
       = do let fc = case fromScheme (decodeObj fc_in) of
                          Just fc => fc
                          _ => emptyFC
-           pure (SType fc)
+           let u = case fromScheme (decodeObj u_in) of
+                        Just u => u
+                        _ => MN "top" 0
+           pure (SType fc u)
   snfVector svs (-8) [_, proc_in, rig_in, pi_in, ty_in, name_in] -- Lambda
       = do let name = case fromScheme (decodeObj name_in) of
                            Nothing => UN (Basic "x")

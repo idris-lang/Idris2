@@ -436,7 +436,7 @@ tryRecursive fc rig opts hints env ty topty rdata
       argDiff (PrimVal _ c) (PrimVal _ c') = c /= c'
       argDiff (Erased _ _) _ = False
       argDiff _ (Erased _ _) = False
-      argDiff (TType _) (TType _) = False
+      argDiff (TType _ _) (TType _ _) = False
       argDiff (As _ _ _ x) y = argDiff x y
       argDiff x (As _ _ _ y) = argDiff x y
       argDiff _ _ = True
@@ -664,7 +664,8 @@ tryIntermediateWith fc rig opts hints env ((p, pty) :: rest) ty topty
                                                 (Erased fc False)))
                  | False => noResult
              intnty <- genVarName "cty"
-             letty <- metaVar fc' erased env intnty (TType fc)
+             u <- uniVar fc
+             letty <- metaVar fc' erased env intnty (TType fc u)
              let opts' = record { inUnwrap = True } opts
              locsearch <- searchLocalWith fc True rig opts' hints env [(p, pty)]
                                           letty topty
@@ -705,7 +706,8 @@ tryIntermediateRec fc rig opts hints env ty topty (Just rd)
          True <- isSingleCon defs !(nf defs [] rty)
               | _ => noResult
          intnty <- genVarName "cty"
-         letty <- metaVar fc erased env intnty (TType fc)
+         u <- uniVar fc
+         letty <- metaVar fc erased env intnty (TType fc u)
          let opts' = record { inUnwrap = True,
                               recData = Nothing } opts
          logTerm "interaction.search" 10 "Trying recursive search for" ty

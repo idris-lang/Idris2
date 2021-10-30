@@ -38,10 +38,10 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
       = c /= c'
     clash (Ref _ t _) (PrimVal _ _) = isJust (isCon t)
     clash (PrimVal _ _) (Ref _ t _) = isJust (isCon t)
-    clash (Ref _ t _) (TType _) = isJust (isCon t)
-    clash (TType _) (Ref _ t _) = isJust (isCon t)
-    clash (TType _) (PrimVal _ _) = True
-    clash (PrimVal _ _) (TType _) = True
+    clash (Ref _ t _) (TType _ _) = isJust (isCon t)
+    clash (TType _ _) (Ref _ t _) = isJust (isCon t)
+    clash (TType _ _) (PrimVal _ _) = True
+    clash (PrimVal _ _) (TType _ _) = True
     clash _ _ = False
 
     findN : Nat -> Term vars -> Bool
@@ -176,7 +176,7 @@ getMissingAlts fc defs (NPrimVal _ c) alts
                  pure []
          else pure [DefaultCase (Unmatched "Coverage check")]
 -- Similarly for types
-getMissingAlts fc defs (NType _) alts
+getMissingAlts fc defs (NType _ _) alts
     = do log "coverage.missing" 50 "Looking for missing alts at type Type"
          if any isDefault alts
            then do log "coverage.missing" 20 "Found default"
@@ -247,7 +247,7 @@ replaceDefaults : {auto c : Ref Ctxt Defs} ->
 -- Leave it alone if it's a primitive type though, since we need the catch
 -- all case there
 replaceDefaults fc defs (NPrimVal _ _) cs = pure cs
-replaceDefaults fc defs (NType _) cs = pure cs
+replaceDefaults fc defs (NType _ _) cs = pure cs
 replaceDefaults fc defs nfty cs
     = do cs' <- traverse rep cs
          pure (dropRep (concat cs'))
@@ -404,7 +404,7 @@ match (TForce _ _ t) (TForce _ _ t') = match t t'
 match (PrimVal _ c) (PrimVal _ c') = c == c'
 match (Erased _ _) _ = True
 match _ (Erased _ _) = True
-match (TType _) (TType _) = True
+match (TType _ _) (TType _ _) = True
 match _ _ = False
 
 -- Erase according to argument position

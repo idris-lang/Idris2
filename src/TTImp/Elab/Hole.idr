@@ -60,7 +60,8 @@ checkHole rig elabinfo nest env fc n_in (Just gexpty)
 checkHole rig elabinfo nest env fc n_in exp
     = do nmty <- genName ("type_of_" ++ show n_in)
          let env' = letToLam env
-         ty <- metaVar fc erased env' nmty (TType fc)
+         u <- uniVar fc
+         ty <- metaVar fc erased env' nmty (TType fc u)
          nm <- inCurrentNS (UN n_in)
          defs <- get Ctxt
          mkPrecise !(nf defs env' ty)

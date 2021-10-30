@@ -223,4 +223,5 @@ checkRunElab rig elabinfo nest env fc script exp
     mkExpected (Just ty) = pure !(getTerm ty)
     mkExpected Nothing
         = do nm <- genName "scriptTy"
-             metaVar fc erased env nm (TType fc)
+             u <- uniVar fc
+             metaVar fc erased env nm (TType fc u)

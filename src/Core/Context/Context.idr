@@ -118,6 +118,8 @@ data Def : Type where
                                -- we guessed the term
             (constraints : List Int) -> Def
     ImpBind : Def -- global name temporarily standing for an implicitly bound name
+    -- a name standing for a universe level in a Type
+    UniverseLevel : Integer -> Def
     -- A delayed elaboration. The elaborators themselves are stored in the
     -- unification state
     Delayed : Def
@@ -135,6 +137,7 @@ defNameType (Hole {}) = Just Func
 defNameType (BySearch {}) = Nothing
 defNameType (Guess {}) = Nothing
 defNameType ImpBind = Just Bound
+defNameType (UniverseLevel {}) = Nothing
 defNameType Delayed = Nothing
 
 export
@@ -158,6 +161,7 @@ Show Def where
   show (Hole _ p) = "Hole" ++ if implbind p then " [impl]" else ""
   show (BySearch c depth def) = "Search in " ++ show def
   show (Guess tm _ cs) = "Guess " ++ show tm ++ " when " ++ show cs
+  show (UniverseLevel i) = "Universe level #" ++ show i
   show ImpBind = "Bound name"
   show Delayed = "Delayed"
 
@@ -364,6 +368,30 @@ data PossibleName : Type where
              Name -> Int -> -- real full name and resolved name, as above
              PossibleName
 
+public export
+data UConstraint : Type where
+     ULE : Name -> Name -> UConstraint
+     ULT : Name -> Name -> UConstraint
+
+export
+Eq UConstraint where
+  ULE x y == ULE x' y' = x == x' && y == y'
+  ULT x y == ULT x' y' = x == x' && y == y'
+  _ == _ = False
+
+export
+Ord UConstraint where
+  compare (ULE _ _) (ULT _ _) = LT
+  compare (ULT _ _) (ULE _ _) = GT
+  compare (ULE x y) (ULE x' y')
+      = case compare x x' of
+             EQ => compare y y'
+             t => t
+  compare (ULT x y) (ULT x' y')
+      = case compare x x' of
+             EQ => compare y y'
+             t => t
+
 -- All the GlobalDefs. We can only have one context, because name references
 -- point at locations in here, and if we have more than one the indices won't
 -- match up. So, this isn't polymorphic.
@@ -397,3 +425,4 @@ record Context where
                      -- features such as case splitting).
     inlineOnly : Bool -- only return things with the 'alwaysReduce' flag
     hidden : NameMap () -- Never return these
+    uconstraints : List UConstraint

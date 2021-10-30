@@ -246,7 +246,7 @@ mutual
            pure (IForce fc tm', gErased fc)
   unelabTy' umode nest env (PrimVal fc c) = pure (IPrimVal fc c, gErased fc)
   unelabTy' umode nest env (Erased fc _) = pure (Implicit fc True, gErased fc)
-  unelabTy' umode nest env (TType fc) = pure (IType fc, gType fc)
+  unelabTy' umode nest env (TType fc _) = pure (IType fc, gType fc (MN "top" 0))
 
   unelabPi : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
@@ -287,7 +287,7 @@ mutual
                        else if rig /= top || isDefImp p
                                then Just (UN Underscore)
                                else Nothing
-           pure (IPi fc rig p' nm ty' sc, gType fc)
+           pure (IPi fc rig p' nm ty' sc, gType fc (MN "top" 0))
     where
       isNoSugar : UnelabMode -> Bool
       isNoSugar (NoSugar _) = True
@@ -305,7 +305,7 @@ mutual
                     gnf env (Bind fc x (PLet fc' rig val ty) scty))
   unelabBinder umode nest fc env x (PVTy _ rig ty) sctm sc scty
       = do (ty', _) <- unelabTy umode nest env ty
-           pure (sc, gType fc)
+           pure (sc, gType fc (MN "top" 0))
 
 export
 unelabNoSugar : {vars : _} ->

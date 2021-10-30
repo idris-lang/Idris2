@@ -50,9 +50,10 @@ mkOuterHole loc rig n topenv Nothing
          let sub = subEnv est
          let env = outerEnv est
          nm <- genName ("type_of_" ++ nameRoot n)
-         ty <- metaVar loc erased env nm (TType loc)
+         u <- uniVar loc
+         ty <- metaVar loc erased env nm (TType loc u)
          log "elab.implicits" 10 $ "Made metavariable for type of " ++ show n ++ ": " ++ show nm
-         put EST (addBindIfUnsolved nm rig Explicit topenv (embedSub sub ty) (TType loc) est)
+         put EST (addBindIfUnsolved nm rig Explicit topenv (embedSub sub ty) (TType loc u) est)
          tm <- implBindVar loc rig env n ty
          pure (embedSub sub tm, embedSub sub ty)
 
@@ -202,7 +203,7 @@ swapVars (TDelay fc x ty tm) = TDelay fc x (swapVars ty) (swapVars tm)
 swapVars (TForce fc r tm) = TForce fc r (swapVars tm)
 swapVars (PrimVal fc c) = PrimVal fc c
 swapVars (Erased fc i) = Erased fc i
-swapVars (TType fc) = TType fc
+swapVars (TType fc u) = TType fc u
 
 -- Push an explicit pi binder as far into a term as it'll go. That is,
 -- move it under implicit binders that don't depend on it, and stop
@@ -223,7 +224,7 @@ push ofc n b tm = Bind ofc n b tm
 -- implicits, and we don't want to move any given by the programmer
 liftImps : {vars : _} ->
            BindMode -> (Term vars, Term vars) -> (Term vars, Term vars)
-liftImps (PI _) (tm, TType fc) = (liftImps' tm, TType fc)
+liftImps (PI _) (tm, TType fc u) = (liftImps' tm, TType fc u)
   where
     liftImps' : {vars : _} ->
                 Term vars -> Term vars
@@ -263,7 +264,7 @@ bindImplVars {vars} fc mode gam env imps_in scope scty
               case mode of
                    PI c =>
                       (Bind fc _ (Pi fc c Implicit bty') tm',
-                       TType fc)
+                       TType fc (MN "top" 0))
                    _ =>
                       (Bind fc _ (PVar fc c (map (weakenNs (sizeOf bs)) p) bty') tm',
                        Bind fc _ (PVTy fc c bty') ty')

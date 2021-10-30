@@ -29,7 +29,8 @@ checkDelayed : {vars : _} ->
                FC -> LazyReason -> RawImp -> Maybe (Glued vars) ->
                Core (Term vars, Glued vars)
 checkDelayed rig elabinfo nest env fc r tm exp
-    = do (tm', gty) <- check rig elabinfo nest env tm (Just (gType fc))
+    = do u <- uniVar fc
+         (tm', gty) <- check rig elabinfo nest env tm (Just (gType fc u))
          pure (TDelayed fc r tm', gty)
 
 export
@@ -45,7 +46,8 @@ checkDelay : {vars : _} ->
              Core (Term vars, Glued vars)
 checkDelay rig elabinfo nest env fc tm mexpected
     = do expected <- maybe (do nm <- genName "delayTy"
-                               ty <- metaVar fc erased env nm (TType fc)
+                               u <- uniVar fc
+                               ty <- metaVar fc erased env nm (TType fc u)
                                pure (gnf env ty))
                            pure mexpected
          let solvemode = case elabMode elabinfo of

@@ -240,7 +240,7 @@ mutual
                         pure $ applyWithFC (TForce fc r arg') args'
   quoteGenNF q opts defs bound env (NPrimVal fc c) = pure $ PrimVal fc c
   quoteGenNF q opts defs bound env (NErased fc i) = pure $ Erased fc i
-  quoteGenNF q opts defs bound env (NType fc) = pure $ TType fc
+  quoteGenNF q opts defs bound env (NType fc u) = pure $ TType fc u
 
 export
 Quote NF where
