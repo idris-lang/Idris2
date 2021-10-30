@@ -69,6 +69,7 @@ initCtxtS s
             , allPublic = False
             , inlineOnly = False
             , hidden = empty
+            , uconstraints = []
             }
 
 export
@@ -373,6 +374,22 @@ HasNames Name where
       = do let Just i = getNameID n gam
                     | Nothing => pure n
            pure (Resolved i)
+
+export
+HasNames UConstraint where
+  full gam (ULT x y)
+      = do x' <- full gam x; y' <- full gam y
+           pure (ULT x' y')
+  full gam (ULE x y)
+      = do x' <- full gam x; y' <- full gam y
+           pure (ULE x' y')
+
+  resolved gam (ULT x y)
+      = do x' <- resolved gam x; y' <- resolved gam y
+           pure (ULT x' y')
+  resolved gam (ULE x y)
+      = do x' <- resolved gam x; y' <- resolved gam y
+           pure (ULE x' y')
 
 export
 HasNames (Term vars) where
