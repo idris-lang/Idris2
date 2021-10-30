@@ -1,0 +1,4 @@
+rm -rf build
+
+$1 nomangle1.idr --no-color --no-banner --console-width 0 -o test --cg node
+$1 nomangle2.idr --no-color --no-banner --console-width 0 -o test --cg node

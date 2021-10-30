@@ -1,3 +1,5 @@
 rm -rf build
 
 $1 nomangle.idr --no-color --no-banner --console-width 0 -o test --cg node
+
+cat build/exec/test | grep -e foo -e baz -e another_name
