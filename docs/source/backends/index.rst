@@ -65,7 +65,7 @@ running ``:set profile`` at the REPL. The profile data generated will depend
 on the back end you are using. Currently, the Chez and Racket back ends
 support generating profile data.
 
-There are five code generators provided in Idris 2, and (later) there will be
+There are five code generators provided in Idris 2, and there is
 a system for plugging in new code generators for a variety of targets. The
 default is to compile via Chez Scheme, with an alternative via Racket or Gambit.
 You can set the code generator at the REPL with the `:set codegen` command,
@@ -86,3 +86,11 @@ There are also external code generators that aren't part of the main Idris 2
 repository and can be found on Idris 2 wiki:
 
 `External backends <https://github.com/idris-lang/Idris2/wiki/External-backends>`_
+
+There is work in progress support for generating
+libraries for other languages from idris2 code.
+
+.. toctree::
+   :maxdepth: 1
+
+   libraries
