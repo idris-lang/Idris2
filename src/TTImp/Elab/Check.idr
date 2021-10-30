@@ -627,8 +627,8 @@ exactlyOne' {vars} allowCons fc env all
                           [(_, res)] => Right res
                           _ => Left (map snd rs)
 
-    getRes : ((Term vars, Glued vars), st) -> Term vars
-    getRes ((tm, _), thisst) = tm
+    getRes : ((Term vars, Glued vars), Defs, st) -> (Context, Term vars)
+    getRes ((tm, _), defs, thisst) = (gamma defs, tm)
 
     getDepthError : Error -> Maybe Error
     getDepthError e@(AmbiguityTooDeep _ _ _) = Just e
@@ -642,7 +642,7 @@ exactlyOne' {vars} allowCons fc env all
     -- If they've all failed, collect all the errors
     -- If more than one succeeded, report the ambiguity
     altError : List (Maybe Name, Error) ->
-               List ((Term vars, Glued vars), st) ->
+               List ((Term vars, Glued vars), Defs, st) ->
                Error
     altError ls []
         = case depthError ls of

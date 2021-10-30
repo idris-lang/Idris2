@@ -440,4 +440,5 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                                   solveConstraints solvemode Normal
                                   solveConstraints solvemode Normal
                                   log "elab.ambiguous" 10 $ show (getName t) ++ " success"
+                                  logTermNF "elab.ambiguous" 10 "Result" env (fst res)
                                   pure res)) alts')

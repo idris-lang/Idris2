@@ -151,7 +151,7 @@ Fld:226:1--226:10
 
 Error: While processing right hand side of r2_shouldNotTypecheck1. Ambiguous elaboration. Possible results:
     Main.R2.MkR
-    Main.R1.MkR Type
+    Main.R1.MkR (Prelude.the Prelude.Nat 22)
 
 Fld:72:26--72:29
  68 | r1 : R1 -- explicit fields access
