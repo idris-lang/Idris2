@@ -770,7 +770,7 @@ compileToES c cg tm ccTypes = do
              else Pretty
 
   -- initialize the state used in the code generator
-  s <- newRef ESs $ init mode (isArg mode) isFun ccTypes
+  s <- newRef ESs $ init mode (isArg mode) isFun ccTypes !(get NoMangleMap)
 
   -- register the toplevel `__tailRec` function to make sure
   -- it is not mangled in `Minimal` mode

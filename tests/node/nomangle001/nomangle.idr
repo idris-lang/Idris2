@@ -1,16 +1,16 @@
 
 %nomangle
 foo : Int -> Int
-foo x = x + 1
+foo x = x
 
 %nomangle "$_baz"
 baz : Int -> Int
-baz x = x + 1
+baz x = x
 
 %nomangle "refc:idr_another_name"
           "javascript:another_name"
 anotherName : Int -> Int
-anotherName x = x + 1
+anotherName x = x
 
 main : IO ()
 main = pure ()
