@@ -110,7 +110,10 @@ mutual
        SpecArgs : List Name -> FnOpt
        ||| Keep the user provided name during codegen
        ||| @ name a custom name to use in codegen
-       NoMangle : (name : Maybe String) -> FnOpt
+       |||        [] - use the function name
+       |||        ["name"] - use provided name
+       |||        ["backend:name"] - use provided name only on specific backend
+       NoMangle : (names : List String) -> FnOpt
 
   public export
   data ITy : Type where
