@@ -59,6 +59,7 @@ schFooter = "(collect 4)\n(blodwen-run-finalisers)\n"
 startChez : String -> String -> String -> String
 startChez chez appDirSh targetSh = Chez.startChezPreamble ++ unlines
     [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appDirSh ++ ":$LD_LIBRARY_PATH\""
+    , "export DYLD_LIBRARY_PATH=\"$DIR/" ++ appDirSh ++ ":$DYLD_LIBRARY_PATH\""
     , "\"" ++ chez ++ "\" -q "
         ++ "--libdirs \"$DIR/" ++ appDirSh ++ "\" "
         ++ "--program \"$DIR/" ++ targetSh ++ "\" "
