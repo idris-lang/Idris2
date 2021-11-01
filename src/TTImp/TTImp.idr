@@ -144,7 +144,8 @@ mutual
        UniqueDefault : RawImp' nm -> AltType' nm
 
   export
-    Show nm => Show (RawImp' nm) where
+  covering
+  Show nm => Show (RawImp' nm) where
       show (IVar fc n) = show n
       show (IPi fc c p n arg ret)
          = "(%pi " ++ show c ++ " " ++ show p ++ " " ++
@@ -202,6 +203,7 @@ mutual
       show (IWithUnambigNames fc ns rhs) = "(%with " ++ show ns ++ " " ++ show rhs ++ ")"
 
   export
+  covering
   Show nm => Show (IFieldUpdate' nm) where
     show (ISetField p val) = showSep "->" p ++ " = " ++ show val
     show (ISetFieldApp p val) = showSep "->" p ++ " $= " ++ show val
@@ -235,6 +237,7 @@ mutual
   isTotalityReq _ = False
 
   export
+  covering
   Show nm => Show (FnOpt' nm) where
     show Inline = "%inline"
     show NoInline = "%noinline"
@@ -274,6 +277,7 @@ mutual
        MkImpTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : RawImp' nm) -> ImpTy' nm
 
   export
+  covering
   Show nm => Show (ImpTy' nm) where
     show (MkImpTy fc _ n ty) = "(%claim " ++ show n ++ " " ++ show ty ++ ")"
 
@@ -306,6 +310,7 @@ mutual
        MkImpLater : FC -> (n : Name) -> (tycon : RawImp' nm) -> ImpData' nm
 
   export
+  covering
   Show nm => Show (ImpData' nm) where
     show (MkImpData fc n tycon _ cons)
         = "(%data " ++ show n ++ " " ++ show tycon ++ " " ++
@@ -340,11 +345,13 @@ mutual
                      ImpRecord' nm
 
   export
+  covering
   Show nm => Show (IField' nm) where
     show (MkIField _ c Explicit n ty) = show n ++ " : " ++ show ty
     show (MkIField _ c _ n ty) = "{" ++ show n ++ " : " ++ show ty ++ "}"
 
   export
+  covering
   Show nm => Show (ImpRecord' nm) where
     show (MkImpRecord _ n params con fields)
         = "record " ++ show n ++ " " ++ show params ++
@@ -377,6 +384,7 @@ mutual
        ImpossibleClause : FC -> (lhs : RawImp' nm) -> ImpClause' nm
 
   export
+  covering
   Show nm => Show (ImpClause' nm) where
     show (PatClause fc lhs rhs)
        = show lhs ++ " = " ++ show rhs
@@ -417,6 +425,7 @@ mutual
        IBuiltin : FC -> BuiltinType -> Name -> ImpDecl' nm
 
   export
+  covering
   Show nm => Show (ImpDecl' nm) where
     show (IClaim _ c _ opts ty) = show opts ++ " " ++ show c ++ " " ++ show ty
     show (IData _ _ d) = show d
@@ -848,6 +857,7 @@ unIArg (Auto _ t) = t
 unIArg (Named _ _ t) = t
 
 export
+covering
 Show nm => Show (Arg' nm) where
   show (Explicit fc t) = show t
   show (Auto fc t) = "@{" ++ show t ++ "}"

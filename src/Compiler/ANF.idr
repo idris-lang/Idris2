@@ -67,6 +67,7 @@ mutual
     show ANull = "[__]"
 
   export
+  covering
   Show ANF where
     show (AV _ v) = show v
     show (AAppName fc lazy n args)
@@ -95,6 +96,7 @@ mutual
     show (ACrash _ x) = "%CRASH(" ++ show x ++ ")"
 
   export
+  covering
   Show AConAlt where
     show (MkAConAlt n _ t args sc)
         = "%conalt " ++ show n ++
@@ -104,11 +106,13 @@ mutual
         showArg i = "v" ++ show i
 
   export
+  covering
   Show AConstAlt where
     show (MkAConstAlt c sc)
         = "%constalt(" ++ show c ++ ") => " ++ show sc
 
 export
+covering
 Show ANFDef where
   show (MkAFun args exp) = show args ++ ": " ++ show exp
   show (MkACon tag arity nt)

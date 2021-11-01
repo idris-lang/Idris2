@@ -11,10 +11,13 @@ import Prelude.Ops
 ------------------------
 
 ||| The Eq interface defines inequality and equality.
+||| A minimal definition includes either `(==)` or `(/=)`.
 public export
 interface Eq ty where
   constructor MkEq
+  total
   (==) : ty -> ty -> Bool
+  total
   (/=) : ty -> ty -> Bool
 
   x == y = not (x /= y)
@@ -101,27 +104,35 @@ Eq Ordering where
   _  == _  = False
 
 ||| The Ord interface defines comparison operations on ordered data types.
+||| A minimal definition includes either `compare` or `(<)`.
 public export
 interface Eq ty => Ord ty where
   constructor MkOrd
+  total
   compare : ty -> ty -> Ordering
   compare x y = if x < y then LT else if x == y then EQ else GT
 
+  total
   (<) : ty -> ty -> Bool
   (<) x y = compare x y == LT
 
+  total
   (>) : ty -> ty -> Bool
   (>) x y = compare x y == GT
 
+  total
   (<=) : ty -> ty -> Bool
   (<=) x y = compare x y /= GT
 
+  total
   (>=) : ty -> ty -> Bool
   (>=) x y = compare x y /= LT
 
+  total
   max : ty -> ty -> ty
   max x y = if x > y then x else y
 
+  total
   min : ty -> ty -> ty
   min x y = if (x < y) then x else y
 

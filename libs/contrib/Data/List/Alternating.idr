@@ -6,6 +6,8 @@ import Data.List
 infixl 5 +>
 infixr 5 <+
 
+%default total
+
 mutual
     namespace Odd
         ||| Non-empty list, starting and ending with an a, where adjacent elements alternate
@@ -31,7 +33,7 @@ mutual
 mutual
     public export
     Eq a => Eq b => Eq (Odd a b) where
-        x :: xs == y :: ys = x == y && xs == ys
+        x :: xs == y :: ys = x == y && assert_total (xs == ys)
 
     public export
     Eq a => Eq b => Eq (Even a b) where
@@ -44,7 +46,7 @@ mutual
     Ord a => Ord b => Ord (Odd a b) where
         compare (x :: xs) (y ::ys)
            = case compare x y of
-                  EQ => compare xs ys
+                  EQ => assert_total (compare xs ys)
                   c => c
 
     public export
@@ -60,7 +62,7 @@ mutual
 mutual
     public export
     Bifunctor Odd where
-        bimap f g (x :: xs) = (f x) :: (bimap g f xs)
+        bimap f g (x :: xs) = (f x) :: assert_total (bimap g f xs)
 
     public export
     Bifunctor Even where
@@ -70,9 +72,9 @@ mutual
 mutual
     public export
     Bifoldable Odd where
-        bifoldr f g acc (x :: xs) = f x (bifoldr g f acc xs)
+        bifoldr f g acc (x :: xs) = f x (assert_total $ bifoldr g f acc xs)
 
-        bifoldl f g acc (x :: xs) = bifoldl g f (f acc x) xs
+        bifoldl f g acc (x :: xs) = assert_total $ bifoldl g f (f acc x) xs
 
     public export
     Bifoldable Even where
@@ -85,7 +87,7 @@ mutual
 mutual
     public export
     Bitraversable Odd where
-        bitraverse f g (x :: xs) = [| f x :: bitraverse g f xs |]
+        bitraverse f g (x :: xs) = [| f x :: assert_total (bitraverse g f xs) |]
 
     public export
     Bitraversable Even where
@@ -189,7 +191,7 @@ Monoid a => Alternative (Odd a) where
 namespace Snd
     public export
     [SndMonad] Monoid a => Monad (Odd a) where
-        x >>= f = biconcatMap singleton f x
+        x >>= f = assert_total $ biconcatMap singleton f x
 
     public export
     (>>=) : Monoid a => Odd a b -> (b -> Odd a c) -> Odd a c
