@@ -16,15 +16,13 @@
             (void))
         res))))
 
-(define blodwen-toSignedInt
-  (lambda (x bits)
-    (if (bitwise-bit-set? x bits)
-        (bitwise-ior x (arithmetic-shift -1 bits))
-        (bitwise-and x (sub1 (arithmetic-shift 1 bits))))))
+(define (blodwen-toSignedInt x bits)
+  (if (bitwise-bit-set? x bits)
+      (bitwise-ior x (arithmetic-shift (- 1) bits))
+      (bitwise-and x (sub1 (arithmetic-shift 1 bits)))))
 
-(define blodwen-toUnsignedInt
-  (lambda (x bits)
-    (bitwise-and x (sub1 (arithmetic-shift 1 bits)))))
+(define (blodwen-toUnsignedInt x bits)
+  (bitwise-and x (sub1 (arithmetic-shift 1 bits))))
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
@@ -45,17 +43,17 @@
 (define b* (lambda (x y bits) (remainder (* x y) (arithmetic-shift 1 bits))))
 (define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (arithmetic-shift 1 bits))))
 
-(define integer->bits8 (lambda (x) (bitwise-and x #xff)))
-(define integer->bits16 (lambda (x) (bitwise-and x #xffff)))
-(define integer->bits32 (lambda (x) (bitwise-and x #xffffffff)))
-(define integer->bits64 (lambda (x) (bitwise-and x #xffffffffffffffff)))
+(define (integer->bits8 x) (bitwise-and x #xff))
+(define (integer->bits16 x) (bitwise-and x #xffff))
+(define (integer->bits32 x) (bitwise-and x #xffffffff))
+(define (integer->bits64 x) (bitwise-and x #xffffffffffffffff))
 
-(define bits16->bits8 (lambda (x) (bitwise-and x #xff)))
-(define bits32->bits8 (lambda (x) (bitwise-and x #xff)))
-(define bits64->bits8 (lambda (x) (bitwise-and x #xff)))
-(define bits32->bits16 (lambda (x) (bitwise-and x #xffff)))
-(define bits64->bits16 (lambda (x) (bitwise-and x #xffff)))
-(define bits64->bits32 (lambda (x) (bitwise-and x #xffffffff)))
+(define (bits16->bits8 x) (bitwise-and x #xff))
+(define (bits32->bits8 x) (bitwise-and x #xff))
+(define (bits64->bits8 x) (bitwise-and x #xff))
+(define (bits32->bits16 x) (bitwise-and x #xffff))
+(define (bits64->bits16 x) (bitwise-and x #xffff))
+(define (bits64->bits32 x) (bitwise-and x #xffffffff))
 
 (define blodwen-bits-shl (lambda (x y bits) (remainder (arithmetic-shift x y) (arithmetic-shift 1 bits))))
 (define blodwen-shl (lambda (x y) (arithmetic-shift x y)))

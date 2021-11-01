@@ -60,15 +60,13 @@
         default))
 
 ; primitives
-(define ct-toSignedInt
-  (lambda (x bits)
-    (if (logbit? bits x)
-        (logor x (ash -1 bits))
-        (logand x (sub1 (ash 1 bits))))))
+(define (ct-toSignedInt x bits)
+  (if (logbit? bits x)
+      (logor x (ash -1 bits))
+      (logand x (sub1 (ash 1 bits)))))
 
-(define ct-toUnsignedInt
-  (lambda (x bits)
-    (logand x (sub1 (ash 1 bits)))))
+(define (ct-toUnsignedInt x bits)
+  (logand x (sub1 (ash 1 bits))))
 
 (define ct-u+ (lambda (x y bits)
     (let [(tag (vector-ref x 0))
