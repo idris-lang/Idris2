@@ -1019,6 +1019,7 @@ TTC TotalReq where
 TTC DefFlag where
   toBuf b Inline = tag 2
   toBuf b NoInline = tag 13
+  toBuf b Deprecate = tag 14
   toBuf b Invertible = tag 3
   toBuf b Overloadable = tag 4
   toBuf b TCInline = tag 5
@@ -1044,6 +1045,7 @@ TTC DefFlag where
              11 => do ci <- fromBuf b; pure (ConType ci)
              12 => do x <- fromBuf b; pure (Identity x)
              13 => pure NoInline
+             14 => pure Deprecate
              _ => corrupt "DefFlag"
 
 export

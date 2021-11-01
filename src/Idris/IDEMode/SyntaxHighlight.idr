@@ -61,13 +61,14 @@ syntaxToProperties syn = mkDecor <$> syntaxToDecoration syn
 
 export
 annToProperties : IdrisAnn -> Maybe Properties
-annToProperties Warning      = Nothing
-annToProperties Error        = Nothing
-annToProperties ErrorDesc    = Nothing
-annToProperties FileCtxt     = Nothing
-annToProperties Code         = Nothing
-annToProperties Meta         = Nothing
-annToProperties (Syntax syn) = syntaxToProperties syn
+annToProperties Warning       = Nothing
+annToProperties Error         = Nothing
+annToProperties ErrorDesc     = Nothing
+annToProperties FileCtxt      = Nothing
+annToProperties Code          = Nothing
+annToProperties Meta          = Nothing
+annToProperties (Syntax syn)  = syntaxToProperties syn
+annToProperties UserDocString = Nothing
 
 export
 docToProperties : IdrisDocAnn -> Maybe Properties
