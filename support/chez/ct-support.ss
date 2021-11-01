@@ -63,8 +63,8 @@
 (define ct-toSignedInt
   (lambda (x bits)
     (if (logbit? bits x)
-        (logor x (ash (- 1) bits))
-        (logand x (- (ash 1 bits) 1)))))
+        (logor x (ash -1 bits))
+        (logand x (sub1 (ash 1 bits))))))
 
 (define ct-toUnsignedInt
   (lambda (x bits)

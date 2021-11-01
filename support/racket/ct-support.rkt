@@ -63,8 +63,8 @@
 (define ct-toSignedInt
   (lambda (x bits)
     (if (bitwise-bit-set? x bits)
-        (bitwise-ior x (arithmetic-shift (- 1) bits))
-        (bitwise-and x (- (arithmetic-shift 1 bits) 1)))))
+        (bitwise-ior x (arithmetic-shift -1 bits))
+        (bitwise-and x (sub1 (arithmetic-shift 1 bits))))))
 
 (define ct-toUnsignedInt
   (lambda (x bits)

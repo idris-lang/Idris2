@@ -19,7 +19,7 @@
 (define blodwen-toSignedInt
   (lambda (x bits)
     (if (bitwise-bit-set? x bits)
-        (bitwise-ior x (arithmetic-shift (- 1) bits))
+        (bitwise-ior x (arithmetic-shift -1 bits))
         (bitwise-and x (sub1 (arithmetic-shift 1 bits))))))
 
 (define blodwen-toUnsignedInt
@@ -35,6 +35,10 @@
 (define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (quotient x y) bits)))
+
+; To match Chez
+(define (fxadd1 x) (unsafe-fx+ x 1))
+(define (fxsub1 x) (unsafe-fx- x 1))
 
 (define b+ (lambda (x y bits) (remainder (+ x y) (arithmetic-shift 1 bits))))
 (define b- (lambda (x y bits) (remainder (- x y) (arithmetic-shift 1 bits))))
