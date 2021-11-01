@@ -68,7 +68,7 @@
 
 (define ct-toUnsignedInt
   (lambda (x bits)
-    (modulo x (arithmetic-shift 1 bits))))
+    (bitwise-and x (sub1 (arithmetic-shift 1 bits)))))
 
 (define ct-u+ (lambda (x y bits)
     (let [(tag (vector-ref x 0))

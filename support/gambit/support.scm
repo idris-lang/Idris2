@@ -33,7 +33,7 @@
 
 (define blodwen-toUnsignedInt
   (lambda (x bits)
-    (modulo x (arithmetic-shift 1 bits))))
+    (bitwise-and x (sub1 (arithmetic-shift 1 bits)))))
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
@@ -62,17 +62,17 @@
       `(remainder (floor (/ ,x ,y)) ,(arithmetic-shift 1 bits))
       `(remainder (floor (/ ,x ,y)) (arithmetic-shift 1 ,bits))))
 
-(define integer->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
-(define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
+(define integer->bits8 (lambda (x) (bitwise-and x #xff)))
+(define integer->bits16 (lambda (x) (bitwise-and x #xffff)))
+(define integer->bits32 (lambda (x) (bitwise-and x #xffffffff)))
+(define integer->bits64 (lambda (x) (bitwise-and x #xffffffffffffffff)))
 
-(define bits16->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits32->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits32->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define bits64->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
+(define bits16->bits8 (lambda (x) (bitwise-and x #xff)))
+(define bits32->bits8 (lambda (x) (bitwise-and x #xff)))
+(define bits64->bits8 (lambda (x) (bitwise-and x #xff)))
+(define bits32->bits16 (lambda (x) (bitwise-and x #xffff)))
+(define bits64->bits16 (lambda (x) (bitwise-and x #xffff)))
+(define bits64->bits32 (lambda (x) (bitwise-and x #xffffffff)))
 
 (define blodwen-bits-shl-signed
   (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
