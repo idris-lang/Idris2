@@ -38,11 +38,6 @@
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (quotient x y) bits)))
 
-(define b+ (lambda (x y bits) (remainder (+ x y) (ash 1 bits))))
-(define b- (lambda (x y bits) (remainder (- x y) (ash 1 bits))))
-(define b* (lambda (x y bits) (remainder (* x y) (ash 1 bits))))
-(define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (ash 1 bits))))
-
 (define (integer->bits8 x) (logand x (sub1 (ash 1 8))))
 (define (integer->bits16 x) (logand x (sub1 (ash 1 16))))
 (define (integer->bits32 x) (logand x (sub1 (ash 1 32))))

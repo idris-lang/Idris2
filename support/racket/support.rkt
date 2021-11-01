@@ -38,11 +38,6 @@
 (define (fxadd1 x) (unsafe-fx+ x 1))
 (define (fxsub1 x) (unsafe-fx- x 1))
 
-(define b+ (lambda (x y bits) (remainder (+ x y) (arithmetic-shift 1 bits))))
-(define b- (lambda (x y bits) (remainder (- x y) (arithmetic-shift 1 bits))))
-(define b* (lambda (x y bits) (remainder (* x y) (arithmetic-shift 1 bits))))
-(define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (arithmetic-shift 1 bits))))
-
 (define (integer->bits8 x) (bitwise-and x #xff))
 (define (integer->bits16 x) (bitwise-and x #xffff))
 (define (integer->bits32 x) (bitwise-and x #xffffffff))
