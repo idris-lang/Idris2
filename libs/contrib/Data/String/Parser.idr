@@ -77,8 +77,18 @@ export
 parseT : Functor m => ParseT m a -> String -> m (Either String (a, Int))
 parseT p str = map (\case
                        OK r s => Right (r, s.pos)
-                       Fail i err => Left $ fastConcat ["Parse failed at position ", show i, ": ", err])
+                       Fail i err => Left $ let (line, col) = computePos i str in "Parse failed at position \{show line}-\{show col}: \{err}")
                    (p.runParser (S str 0 (strLength str)))
+  where
+    computePosAcc : Int -> List Char -> (Int, Int) -> (Int, Int)
+    computePosAcc 0 input acc = acc
+    computePosAcc n [] acc = acc
+    computePosAcc n ('\n' :: is) (line, col) = computePosAcc (n - 1) is (line + 1, 0)
+    computePosAcc n (i :: is) (line, col) = computePosAcc (n - 1) is (line, col + 1)
+
+    -- compute the position as line:col
+    computePos : Int -> String -> (Int, Int)
+    computePos pos input = computePosAcc pos (fastUnpack input) (0,0)
 
 ||| Run a parser in a pure function
 ||| Returns a tuple of the result and final position on success.
@@ -149,8 +159,8 @@ satisfy f = P $ \s => pure $ if s.pos < s.maxPos
                                   then let ch = assert_total $ strIndex s.input s.pos in
                                        if f ch
                                            then OK ch (S s.input (s.pos + 1) s.maxPos)
-                                           else Fail s.pos "satisfy"
-                                  else Fail s.pos "satisfy"
+                                           else Fail s.pos "could not satisfy predicate"
+                                  else Fail s.pos "could not satisfy predicate"
 
 ||| Succeeds if the string `str` follows.
 export
@@ -173,24 +183,24 @@ eos = P $ \s => pure $ if s.pos == s.maxPos
 ||| Succeeds if the next char is `c`
 export
 char : Applicative m => Char -> ParseT m Char
-char c = satisfy (== c) <?> "char " ++ show c
+char c = satisfy (== c) <?> "expected \{show c}"
 
 ||| Parses a space character
 export
 space : Applicative m => ParseT m Char
-space = satisfy isSpace <?> "space"
+space = satisfy isSpace <?> "expected space"
 
 ||| Parses a letter or digit (a character between \'0\' and \'9\').
 ||| Returns the parsed character.
 export
 alphaNum : Applicative m => ParseT m Char
-alphaNum = satisfy isAlphaNum <?> "letter or digit"
+alphaNum = satisfy isAlphaNum <?> "expected letter or digit"
 
 ||| Parses a letter (an upper case or lower case character). Returns the
 ||| parsed character.
 export
 letter : Applicative m => ParseT m Char
-letter = satisfy isAlpha <?> "letter"
+letter = satisfy isAlpha <?> "expected letter"
 
 mutual
     ||| Succeeds if `p` succeeds, will continue to match `p` until it fails
@@ -288,7 +298,7 @@ lexeme p = p <* spaces
 export
 covering
 token : Monad m => String -> ParseT m ()
-token s = lexeme (skip $ string s) <?> "token " ++ show s
+token s = lexeme (skip $ string s) <?> "expected token " ++ show s
 
 ||| Matches a single digit
 export
