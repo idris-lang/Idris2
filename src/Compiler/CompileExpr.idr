@@ -376,11 +376,7 @@ mutual
                    let res = expandToArity a f' args'
                    pure $ m res
     where
-      docs : Name -> String
-      docs x = ?docs_rhs
-
-      checkDeprecation : CExp vars ->
-                         Core ()
+      checkDeprecation : CExp vars -> Core ()
       checkDeprecation (CApp _ (CRef fc n) _) =
         do defs <- get Ctxt
            Just gdef <- lookupCtxtExact n (gamma defs)
