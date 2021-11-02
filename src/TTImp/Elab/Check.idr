@@ -68,6 +68,7 @@ data ImplBinding : List Name -> Type where
                  ImplBinding vars
 
 export
+covering
 Show (ImplBinding vars) where
   show (NameBinding c p tm ty) = show (tm, ty)
   show (AsBinding c p tm ty pat) = show (tm, ty) ++ "@" ++ show tm

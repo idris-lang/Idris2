@@ -138,6 +138,7 @@ record Metadata where
        semanticAliases : PosMap (NonEmptyFC, NonEmptyFC)
        semanticDefaults : PosMap ASemanticDecoration
 
+covering
 Show Metadata where
   show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap
                    fname semanticHighlighting semanticAliases semanticDefaults)

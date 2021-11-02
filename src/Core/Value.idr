@@ -137,6 +137,7 @@ Show (Closure free) where
   show _ = "[closure]"
 
 export
+covering
 {free : _} -> Show (NF free) where
   show (NBind _ x (Lam _ c info ty) _)
     = "\\" ++ withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++

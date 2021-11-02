@@ -79,6 +79,7 @@ showLazy = maybe "" $ (" " ++) . show
 
 mutual
   export
+  covering
   {vs : _} -> Show (Lifted vs) where
     show (LLocal {idx} _ p) = "!" ++ show (nameAt p)
     show (LAppName fc lazy n args)
@@ -107,17 +108,20 @@ mutual
     show (LCrash _ x) = "%CRASH(" ++ show x ++ ")"
 
   export
+  covering
   {vs : _} -> Show (LiftedConAlt vs) where
     show (MkLConAlt n _ t args sc)
         = "%conalt " ++ show n ++
              "(" ++ showSep ", " (map show args) ++ ") => " ++ show sc
 
   export
+  covering
   {vs : _} -> Show (LiftedConstAlt vs) where
     show (MkLConstAlt c sc)
         = "%constalt(" ++ show c ++ ") => " ++ show sc
 
 export
+covering
 Show LiftedDef where
   show (MkLFun args scope exp)
       = show args ++ show (reverse scope) ++ ": " ++ show exp

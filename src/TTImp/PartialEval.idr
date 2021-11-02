@@ -27,6 +27,7 @@ import Libraries.Data.NameMap
 
 data ArgMode = Static ClosedTerm | Dynamic
 
+covering
 Show ArgMode where
   show (Static tm) = "Static " ++ show tm
   show Dynamic = "Dynamic"
