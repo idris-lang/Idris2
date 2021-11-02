@@ -86,3 +86,16 @@ force a function to never be inlined when it is called, this pragma will force i
    foo : String -> String
    foo x = x ++ "!"
 
+``%name``
+====================
+
+Give the compiler some suggested names to use for a particular type when it is asked to generate names for values.
+You can specify any number of suggested names; they will be used in-order when more than one is needed for a single
+definition.
+
+.. code-block:: idris
+
+   data Foo = X | Y
+
+   %name Foo foo,bar
+
