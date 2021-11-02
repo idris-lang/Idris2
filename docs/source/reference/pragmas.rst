@@ -21,7 +21,7 @@ small niche of pragmas apply directly to one or more arguments instead of the co
 The ``%builtin Natural`` pragma converts recursive/unary representations of natural numbers
 into primitive ``Integer`` representations.
 
-This pragma is defined in detail on its own page. For more, see :ref:`builtins`.
+This pragma is explained in detail on its own page. For more, see :ref:`builtins`.
 
 ``%deprecate``
 ====================
