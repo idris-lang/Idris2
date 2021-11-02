@@ -38,7 +38,8 @@ warning.
    bar : String
    bar = foo "hello"
 
-.. code-block::
+.. code-block:: none
+
    Warning: Deprecation warning: Man.foo is deprecated and will be removed in a future version.
 
 You can use code documentation (triple vertical bar `||| docs`) to suggest a strategy for removing the
@@ -54,7 +55,8 @@ deprecated function call and that documentation will be displayed alongside the 
    bar : String
    bar = foo "hello"
 
-.. code-block::
+.. code-block:: none
+
    Warning: Deprecation warning: Man.foo is deprecated and will be removed in a future version.
      Please use the @altFoo@ function from now on.
 
