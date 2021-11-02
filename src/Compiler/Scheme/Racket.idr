@@ -343,6 +343,7 @@ startRacket racket appdir target = unlines
     , "fi"
     , ""
     , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ ":$LD_LIBRARY_PATH\""
+    , "export DYLD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ ":$DYLD_LIBRARY_PATH\""
     , racket ++ "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
