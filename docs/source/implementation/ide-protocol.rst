@@ -108,6 +108,7 @@ They are compatible with Version 1 and 2.0 of the protocol unless otherwise stat
   ``(:proof-search LINE NAME HINTS)``
     Attempt to fill out the holes on ``LINE`` named ``NAME`` by proof search.
     ``HINTS`` is a possibly-empty list of additional things to try while searching.
+    This operation is also called ``ExprSearch`` in the Idris 2 API.
 
   ``(:docs-for NAME [MODE])``
     Look up the documentation for ``NAME``, and return it as a highlighted string.
