@@ -259,7 +259,7 @@ takeUntil stop = do
         skip $ char s <?> "end of string reached - \{show stop} not found"
         case !(succeeds $ string top) of
              False => takeUntil' s top $ acc :< (init +> s)
-             True => pure $ concat {t = List} $ cast $ acc :< init
+             True => pure $ concat $ acc :< init
 
 ||| Parses zero or more space characters
 export
