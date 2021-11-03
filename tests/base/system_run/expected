@@ -1,0 +1,5 @@
+1/1: Building Run (Run.idr)
+Main> "Hello, world"
+"Hello, $PATH"
+("", 17)
+Main> Bye for now!

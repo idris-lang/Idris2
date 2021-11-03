@@ -5,7 +5,7 @@ import Data.List
 import Data.String
 
 import public System.Escape
-import System.File.Process
+import System.File
 
 %default total
 
@@ -152,6 +152,24 @@ namespace Escaped
   export
   system : HasIO io => List String -> io Int
   system = system . escapeCmd
+
+||| Run a shell command, returning its stdout, and exit code.
+export
+covering
+run : HasIO io => (cmd : String) -> io (String, Int)
+run cmd = do
+    Right f <- popen cmd Read
+        | Left err => pure ("", 1)
+    Right resp <- fRead f
+        | Left err => pure ("", 1)
+    exitCode <- pclose f
+    pure (resp, exitCode)
+
+namespace Escaped
+  export
+  covering
+  run : HasIO io => (cmd : List String) -> io (String, Int)
+  run = run . escapeCmd
 
 %foreign support "idris2_time"
          "javascript:lambda:() => Math.floor(new Date().getTime() / 1000)"
