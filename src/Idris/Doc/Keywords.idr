@@ -504,7 +504,7 @@ letbinding = vcat $
     the returned value is 0 like so:
     ```
     power4 : Nat -> Nat
-    power4 n = let square@(S _) := n *
+    power4 n = let square@(S _) := n * n
                      | Z => Z
                in square * square
     ```
