@@ -4,3 +4,9 @@ Warning: Deprecation warning: Foo.dep1 is deprecated and will be removed in a fu
 
 Warning: Deprecation warning: Foo.dep2 is deprecated and will be removed in a future version.
   Just use the string "world" directly from now on.
+Foo> Imported module Foo
+Foo> =DEPRECATED=
+Foo.dep1 : String
+  
+Foo> 
+Bye for now!

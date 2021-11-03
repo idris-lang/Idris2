@@ -453,7 +453,9 @@ getDocsForName fc n config
              let cat = showCategory Syntax def
              let nm = prettyKindedName typ $ cat
                     $ ifThenElse longNames (pretty (show nm)) (prettyName nm)
-             let docDecl = annotate (Decl n) (hsep [nm, colon, prettyTerm ty])
+             let deprecated = if Deprecate `elem` def.flags
+                                 then annotate Deprecation "=DEPRECATED=" <+> line else emptyDoc
+             let docDecl = deprecated <+> annotate (Decl n) (hsep [nm, colon, prettyTerm ty])
 
              -- Finally add the user-provided docstring
              let docText = let docs = reflowDoc str in

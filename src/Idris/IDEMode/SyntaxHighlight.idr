@@ -73,6 +73,7 @@ annToProperties UserDocString = Nothing
 export
 docToProperties : IdrisDocAnn -> Maybe Properties
 docToProperties Header        = pure $ mkFormat Underline
+docToProperties Deprecation   = pure $ mkFormat Bold
 docToProperties Declarations  = Nothing
 docToProperties (Decl _)      = Nothing
 docToProperties DocStringBody = Nothing
