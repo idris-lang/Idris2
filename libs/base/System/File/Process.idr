@@ -11,7 +11,7 @@ prim__flush : FilePtr -> PrimIO Int
 %foreign support "idris2_popen"
 prim__popen : String -> String -> PrimIO FilePtr
 %foreign support "idris2_pclose"
-prim__pclose : FilePtr -> PrimIO ()
+prim__pclose : FilePtr -> PrimIO Int
 
 ||| Force a write of all user-space buffered data for the given `File`.
 |||
@@ -44,5 +44,5 @@ namespace Escaped
 |||
 ||| @ fh the file handle to the stream to close/wait on
 export
-pclose : HasIO io => (fh : File) -> io ()
+pclose : HasIO io => (fh : File) -> io Int
 pclose (FHandle h) = primIO (prim__pclose h)

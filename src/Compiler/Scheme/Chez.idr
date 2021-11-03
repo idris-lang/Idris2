@@ -54,7 +54,7 @@ chezVersion chez = do
         | Left err => pure Nothing
     Right output <- fGetLine fh
         | Left err => pure Nothing
-    pclose fh
+    ignore $ pclose fh
     pure $ parseVersion output
   where
   cmd : String

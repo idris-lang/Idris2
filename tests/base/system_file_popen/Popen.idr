@@ -10,6 +10,8 @@ main = do
     Right contents <- fGetLine f
         | Left err => printLn err
     printLn $ trim contents
+    0 <- pclose f
+        | n => printLn n
 
     let cmd : List String = if not isWindows
                                then ["printf", "Hello, %s", "$PATH"]
@@ -19,3 +21,9 @@ main = do
     Right contents <- fGetLine f
         | Left err => printLn err
     printLn $ (ifThenElse isWindows trim id) contents
+    0 <- pclose f
+        | n => printLn n
+
+    Right f <- popen ["exit", "17"] Read
+        | Left err => printLn err
+    printLn !(pclose f)
