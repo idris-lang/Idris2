@@ -825,10 +825,12 @@ parameters {0 nm : Type} (toName : nm -> Name)
     else "`" ++ showPrec d op ++ "`"
 
 export
+covering
 Show PTerm where
   showPrec = showPTermPrec id
 
 export
+covering
 Show IPTerm where
   showPrec = showPTermPrec rawName
 
@@ -841,6 +843,7 @@ record Method where
   type     : RawImp
 
 export
+covering
 Show Method where
   show (MkMethod n c treq ty)
     = "[" ++ show treq ++ "] " ++ show c ++ " " ++ show n ++ " : " ++ show ty

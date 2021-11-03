@@ -1723,6 +1723,7 @@ withPiInfo (DefImplicit t) tm = "{default " ++ show t ++ " " ++ tm ++ "}"
 
 
 export
+covering
 {vars : _} -> Show (Term vars) where
   show tm = let (fn, args) = getFnArgs tm in showApp fn args
     where

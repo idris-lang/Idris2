@@ -4,10 +4,12 @@ import public Control.Monad.Identity
 import Control.Monad.Trans
 
 import Data.String
+import Data.String.Extra
 import Data.Fin
 import Data.List
 import Data.List.Alternating
 import Data.List1
+import Data.SnocList
 import Data.Vect
 
 %default total
@@ -240,6 +242,24 @@ export
 covering
 takeWhile1 : Monad m => (Char -> Bool) -> ParseT m String
 takeWhile1 f = pack <$> some (satisfy f)
+
+||| Takes from the input until the `stop` string is found.
+||| Fails if the `stop` string cannot be found.
+export
+covering
+takeUntil : Monad m => (stop : String) -> ParseT m String
+takeUntil stop = do
+    let StrCons s top = strM stop
+      | StrNil => pure ""
+    takeUntil' s top [<]
+  where
+    takeUntil' : Monad m' => (s : Char) -> (top : String) -> (acc : SnocList String) -> ParseT m' String
+    takeUntil' s top acc = do
+        init <- takeWhile (/= s)
+        skip $ char s <?> "end of string reached - \{show stop} not found"
+        case !(succeeds $ string top) of
+             False => takeUntil' s top $ acc :< (init +> s)
+             True => pure $ concat {t = List} $ cast $ acc :< init
 
 ||| Parses zero or more space characters
 export

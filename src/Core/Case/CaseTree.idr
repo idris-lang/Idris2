@@ -132,14 +132,14 @@ showCA indent (DefaultCase sc)
         = "_ => " ++ showCT indent sc
 
 export
+covering
 {vars : _} -> Show (CaseTree vars) where
   show = showCT ""
 
 export
+covering
 {vars : _} -> Show (CaseAlt vars) where
   show = showCA ""
-
-
 
 mutual
   export
@@ -191,6 +191,7 @@ mutual
   eqAlt _ _ = False
 
 export
+covering
 Show Pat where
   show (PAs _ n p) = show n ++ "@(" ++ show p ++ ")"
   show (PCon _ n i _ args) = show n ++ " " ++ show i ++ " " ++ assert_total (show args)

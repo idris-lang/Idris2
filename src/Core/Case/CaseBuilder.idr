@@ -48,6 +48,7 @@ HasNames (ArgType vars) where
   resolved gam (Stuck ty) = Stuck <$> resolved gam ty
   resolved gam Unknown = pure Unknown
 
+covering
 {ns : _} -> Show (ArgType ns) where
   show (Known c t) = "Known " ++ show c ++ " " ++ show t
   show (Stuck t) = "Stuck " ++ show t
@@ -62,6 +63,7 @@ record PatInfo (pvar : Name) (vars : List Name) where
   argType : ArgType vars -- Type of the argument being inspected (i.e.
                          -- *not* refined by this particular pattern)
 
+covering
 {vars : _} -> Show (PatInfo n vars) where
   show pi = show (pat pi) ++ " : " ++ show (argType pi)
 
@@ -180,6 +182,7 @@ HasNames (NamedPats vars todo) where
   resolved gam [] = pure []
   resolved gam (x::xs) = [| (::) (resolved gam x) (resolved gam xs) |]
 
+covering
 {vars : _} -> {todo : _} -> Show (NamedPats vars todo) where
   show xs = "[" ++ showAll xs ++ "]"
     where
@@ -244,6 +247,7 @@ data PatClause : (vars : List Name) -> (todo : List Name) -> Type where
 getNPs : PatClause vars todo -> NamedPats vars todo
 getNPs (MkPatClause _ lhs pid rhs) = lhs
 
+covering
 {vars : _} -> {todo : _} -> Show (PatClause vars todo) where
   show (MkPatClause _ ps pid rhs)
      = show ps ++ " => " ++ show rhs
@@ -277,6 +281,7 @@ data Partitions : List (PatClause vars todo) -> Type where
                   Partitions ps -> Partitions (vs ++ ps)
      NoClauses : Partitions []
 
+covering
 {ps : _} -> Show (Partitions ps) where
   show (ConClauses cs rest)
     = unlines ("CON" :: map (("  " ++) . show) cs)
@@ -388,6 +393,7 @@ data Group : List Name -> -- variables in scope
      ConstGroup : Constant -> List (PatClause vars todo) ->
                   Group vars todo
 
+covering
 {vars : _} -> {todo : _} -> Show (Group vars todo) where
   show (ConGroup c t cs) = "Con " ++ show c ++ ": " ++ show cs
   show (DelayGroup cs) = "Delay: " ++ show cs

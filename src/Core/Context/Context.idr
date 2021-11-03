@@ -141,6 +141,7 @@ defNameType (UniverseLevel {}) = Nothing
 defNameType Delayed = Nothing
 
 export
+covering
 Show Def where
   show None = "undefined"
   show (PMDef _ args ct rt pats)
@@ -185,6 +186,7 @@ data Clause : Type where
                 (lhs : Term vars) -> (rhs : Term vars) -> Clause
 
 export
+covering
 Show Clause where
   show (MkClause {vars} env lhs rhs)
       = show vars ++ ": " ++ show lhs ++ " = " ++ show rhs

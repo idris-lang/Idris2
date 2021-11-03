@@ -40,11 +40,13 @@ Ord Prec where
   compare x        y        = compare (precCon x) (precCon y)
 
 ||| Things that have a canonical `String` representation.
+||| A minimal implementation includes either `show` or `showPrec`.
 public export
 interface Show ty where
   constructor MkShow
   ||| Convert a value to its `String` representation.
   ||| @ x the value to convert
+  total
   show : (x : ty) -> String
   show x = showPrec Open x
 
@@ -60,6 +62,7 @@ interface Show ty where
   ||| their own bracketing, like `Pair` and `List`.
   ||| @ d the precedence context.
   ||| @ x the value to convert
+  total
   showPrec : (d : Prec) -> (x : ty) -> String
   showPrec _ x = show x
 

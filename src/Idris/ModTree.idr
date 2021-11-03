@@ -40,6 +40,7 @@ record ModTree where
   sourceFile : Maybe String
   deps : List ModTree
 
+covering
 Show ModTree where
   show t = show (sourceFile t) ++ " " ++ show (nspace t) ++ "<-" ++ show (deps t)
 

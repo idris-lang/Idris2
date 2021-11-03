@@ -31,6 +31,7 @@ data Rec : Type where
      Constr : Maybe Name -> -- implicit argument name, if any
               Name -> List (String, Rec) -> Rec
 
+covering
 Show Rec where
   show (Field mn n ty)
       = "Field " ++ show mn ++ "; " ++ show n ++ " : " ++ show ty

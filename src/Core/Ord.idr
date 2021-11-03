@@ -184,6 +184,7 @@ Ord (Var vars) where
 
 mutual
     export
+    covering
     Eq (CExp vars) where
         CLocal {idx=x1} _ _ == CLocal {idx=x2} _ _ = x1 == x2
         CRef _ n1 == CRef _ n2 = n1 == n2
@@ -209,17 +210,20 @@ mutual
         _ == _ = False
 
     export
+    covering
     Eq (CConAlt vars) where
         MkConAlt n1 _ t1 a1 e1 == MkConAlt n2 _ t2 a2 e2 = t1 == t2 && n1 == n2 && case namesEq a1 a2 of
             Just Refl => e1 == e2
             Nothing => False
 
     export
+    covering
     Eq (CConstAlt vars) where
         MkConstAlt c1 e1 == MkConstAlt c2 e2 = c1 == c2 && e1 == e2
 
 mutual
     export
+    covering
     Ord (CExp vars) where
         CLocal {idx=x1} _ _ `compare` CLocal {idx=x2} _ _ = x1 `compare` x2
         CRef _ n1 `compare` CRef _ n2 = n1 `compare` n2
@@ -262,6 +266,7 @@ mutual
             tag (CCrash _ _) = 14
 
     export
+    covering
     Ord (CConAlt vars) where
         MkConAlt n1 _ t1 a1 e1 `compare` MkConAlt n2 _ t2 a2 e2 =
             compare t1 t2 `thenCmp` compare n1 n2 `thenCmp` case namesEq a1 a2 of
@@ -269,5 +274,6 @@ mutual
                 Nothing => compare a1 a2
 
     export
+    covering
     Ord (CConstAlt vars) where
         MkConstAlt c1 e1 `compare` MkConstAlt c2 e2 = compare c1 c2 `thenCmp` compare e1 e2
