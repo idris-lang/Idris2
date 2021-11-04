@@ -406,8 +406,8 @@ startChezPreamble = """
 
 startChez : String -> String -> String
 startChez appdir target = startChezPreamble ++ """
-  export LD_LIBRARY_PATH="$DIR/\{ appdir }":$LD_LIBRARY_PATH
-  export DYLD_LIBRARY_PATH="$DIR/\{ appdir }":$DYLD_LIBRARY_PATH
+  export LD_LIBRARY_PATH="$DIR/\{ appdir }:$LD_LIBRARY_PATH"
+  export DYLD_LIBRARY_PATH="$DIR/\{ appdir }:$DYLD_LIBRARY_PATH"
   export IDRIS2_INC_SRC="$DIR/\{ appdir }"
 
   "$DIR/\{ target }" "$@"
@@ -434,7 +434,7 @@ startChezWinSh chez appdir target progType = """
   set -e # exit on any error
 
   DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
-  PATH="$DIR/\{ appdir }":$PATH
+  PATH="$DIR/\{ appdir }:$PATH"
 
   export IDRIS2_INC_SRC="$DIR/\{ appdir }"
 

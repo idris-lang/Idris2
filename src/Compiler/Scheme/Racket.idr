@@ -347,8 +347,8 @@ startRacket racket appdir target = """
     DIR=$(dirname "$(readlink -f -- "$0")")
   fi
 
-  export LD_LIBRARY_PATH="$DIR/\{ appdir }":$LD_LIBRARY_PATH
-  export DYLD_LIBRARY_PATH="$DIR/\{ appdir }":$DYLD_LIBRARY_PATH
+  export LD_LIBRARY_PATH="$DIR/\{ appdir }:$LD_LIBRARY_PATH"
+  export DYLD_LIBRARY_PATH="$DIR/\{ appdir }:$DYLD_LIBRARY_PATH"
 
   \{ racket } "$DIR/\{ target }" "$@"
   """
@@ -373,7 +373,7 @@ startRacketWinSh racket appdir target = """
   set -e # exit on any error
 
   DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
-  PATH="$DIR/\{ appdir }":$PATH
+  PATH="$DIR/\{ appdir }:$PATH"
 
   \{ racket } "$DIR/\{ target }" "$@"
   """

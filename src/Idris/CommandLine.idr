@@ -408,7 +408,6 @@ usage = """
 
   Available options:
   \{ optsUsage }
-
   Environment variables:
   \{ envsUsage }
   """
