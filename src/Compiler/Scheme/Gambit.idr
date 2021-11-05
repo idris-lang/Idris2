@@ -26,23 +26,23 @@ import System.Directory
 %default covering
 
 -- TODO Look for gsi-script, then gsi
-findGSI : IO String
+findGSI : IO (List String)
 findGSI =
   do env <- idrisGetEnv "GAMBIT_GSI"
-     pure $ fromMaybe "/usr/bin/env gsi" env
+     pure $ maybe ["/usr/bin/env", "gsi"] singleton env
 
 -- TODO Look for gsc-script, then gsc
-findGSC : IO String
+findGSC : IO (List String)
 findGSC =
   do env <- idrisGetEnv "GAMBIT_GSC"
-     pure $ fromMaybe "/usr/bin/env gsc" env
+     pure $ maybe ["/usr/bin/env", "gsc"] singleton env
 
-findGSCBackend : IO String
+findGSCBackend : IO (List String)
 findGSCBackend =
   do env <- idrisGetEnv "GAMBIT_GSC_BACKEND"
      pure $ case env of
-              Nothing => ""
-              Just e => " -cc " ++ e
+              Nothing => []
+              Just e => ["-cc", e]
 
 schHeader : String
 schHeader = """
@@ -390,11 +390,9 @@ compileExpr c s tmpDir outputDir tm outfile
          ds <- getDirectives Gambit
          let gscCompileOpts =
              case find (== "C") ds of
-                 Nothing => gscBackend ++ " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
-                   (showSep " " libsfile) ++ "\""
-                 Just _ => " -c"
-         let cmd =
-             gsc ++ gscCompileOpts ++ " -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
+                 Nothing => gscBackend ++ ["-exe", "-cc-options", "-Wno-implicit-function-declaration", "-ld-options"] ++ libsfile
+                 Just _ => ["-c"]
+         let cmd = gsc ++ gscCompileOpts ++ ["-o", execPath, srcPath]
          ok <- coreLift $ system cmd
          if ok == 0
             then pure (Just execPath)
@@ -407,7 +405,7 @@ executeExpr :
 executeExpr c s tmpDir tm
     = do Just sh <- compileExpr c s tmpDir tmpDir tm "_tmpgambit"
            | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system sh -- TODO: on windows, should add exe extension
+         coreLift_ $ system [sh] -- TODO: on windows, should add exe extension
          pure ()
 
 export
