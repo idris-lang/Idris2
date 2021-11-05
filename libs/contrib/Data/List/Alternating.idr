@@ -214,6 +214,30 @@ Traversable (Odd a) where
 mutual
     namespace Odd
         public export
+        odds : Odd a b -> List a
+        odds (x :: xs) = x :: evens xs
+
+    namespace Even
+        public export
+        evens : Even a b -> List b
+        evens [] = []
+        evens (x :: xs) = odds xs
+
+mutual
+    namespace Odd
+        public export
+        evens : Odd a b -> List b
+        evens (x :: xs) = odds xs
+
+    namespace Even
+        public export
+        odds : Even a b -> List a
+        odds [] = []
+        odds (x :: xs) = x :: evens xs
+
+mutual
+    namespace Odd
+        public export
         forget : Odd a a -> List a
         forget (x :: xs) = x :: forget xs
 
