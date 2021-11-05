@@ -29,5 +29,7 @@ True
 ["Um,", 3.0, "Hello", 1.0, "Um,", 3.0, "world", 2.0, "Um,", 3.0, "!"]
 0.0
 1.0
+[1.0, 2.0, 3.0]
+["Hello", "world"]
 ["1.0", "Hello", "2.0", "world", "3.0"]
 Main> Bye for now!

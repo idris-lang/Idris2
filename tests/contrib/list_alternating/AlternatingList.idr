@@ -52,6 +52,8 @@ main = do
 
     ignore $ traverse printLn us
 
+    printLn $ odds xs
+    printLn $ evens xs
     printLn $ the (List String) $ forget $ mapFst show xs
   where
     avg : Double -> Double -> Double
