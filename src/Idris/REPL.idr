@@ -965,8 +965,8 @@ process Edit
          case mainfile opts of
               Nothing => pure NoFileLoaded
               Just f =>
-                do let line = maybe "" (\i => " +" ++ show (i + 1)) (errorLine opts)
-                   coreLift_ $ system (editor opts ++ " \"" ++ f ++ "\"" ++ line)
+                do let line = maybe [] (\i => ["+" ++ show (i + 1)]) (errorLine opts)
+                   coreLift_ $ system $ [editor opts, f] ++ line
                    loadMainFile f
 process (Compile ctm outfile)
     = compileExp ctm outfile
