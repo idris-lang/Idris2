@@ -452,6 +452,8 @@ const2Integer c i =
         _ => i
 
 
+
+
 -- we return for each of the ANF a set of statements and two possible return statements
 -- The first one for non-tail statements, the second one for tail statements
 -- this way, we can deal with tail calls and tail recursion.
@@ -542,6 +544,7 @@ mutual
         constBlockSwitch alts retValVar (i+1)
 
 
+
     constDefaultBlock : {auto a : Ref ArgCounter Nat}
                      -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                      -> {auto oft : Ref OutfileText Output}
@@ -560,6 +563,7 @@ mutual
         freeTmpVars
         decreaseIndentation
         emit EmptyFC "  }"
+
 
 
     makeNonIntSwitchStatementConst :
@@ -722,6 +726,9 @@ mutual
     cStatementsFromANF (ACrash fc x) = do
         emit fc $ "// CRASH"
         pure $ MkRS "NULL" "NULL"
+
+
+
 
 
 addCommaToList : List String -> List String
