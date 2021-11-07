@@ -70,18 +70,18 @@ mutual
   mismatchNF defs (NBind _ _ _ _) (NPrimVal _ _) = pure True
   mismatchNF defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure True
   mismatchNF defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
-  mismatchNF defs (NPrimVal _ _) (NType _) = pure True
-  mismatchNF defs (NType _) (NPrimVal _ _) = pure True
+  mismatchNF defs (NPrimVal _ _) (NType _ _) = pure True
+  mismatchNF defs (NType _ _) (NPrimVal _ _) = pure True
 
 -- NTCon is apart from NBind, and NType
   mismatchNF defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure True
   mismatchNF defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure True
-  mismatchNF defs (NTCon _ _ _ _ _) (NType _) = pure True
-  mismatchNF defs (NType _) (NTCon _ _ _ _ _) = pure True
+  mismatchNF defs (NTCon _ _ _ _ _) (NType _ _) = pure True
+  mismatchNF defs (NType _ _) (NTCon _ _ _ _ _) = pure True
 
 -- NBind is apart from NType
-  mismatchNF defs (NBind _ _ _ _) (NType _) = pure True
-  mismatchNF defs (NType _) (NBind _ _ _ _) = pure True
+  mismatchNF defs (NBind _ _ _ _) (NType _ _) = pure True
+  mismatchNF defs (NType _ _) (NBind _ _ _ _) = pure True
 
   mismatchNF _ _ _ = pure False
 
@@ -116,18 +116,18 @@ impossibleOK defs (NPrimVal _ _) (NBind _ _ _ _) = pure True
 impossibleOK defs (NBind _ _ _ _) (NPrimVal _ _) = pure True
 impossibleOK defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure True
 impossibleOK defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
-impossibleOK defs (NPrimVal _ _) (NType _) = pure True
-impossibleOK defs (NType _) (NPrimVal _ _) = pure True
+impossibleOK defs (NPrimVal _ _) (NType _ _) = pure True
+impossibleOK defs (NType _ _) (NPrimVal _ _) = pure True
 
 -- NTCon is apart from NBind, and NType
 impossibleOK defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure True
 impossibleOK defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure True
-impossibleOK defs (NTCon _ _ _ _ _) (NType _) = pure True
-impossibleOK defs (NType _) (NTCon _ _ _ _ _) = pure True
+impossibleOK defs (NTCon _ _ _ _ _) (NType _ _) = pure True
+impossibleOK defs (NType _ _) (NTCon _ _ _ _ _) = pure True
 
 -- NBind is apart from NType
-impossibleOK defs (NBind _ _ _ _) (NType _) = pure True
-impossibleOK defs (NType _) (NBind _ _ _ _) = pure True
+impossibleOK defs (NBind _ _ _ _) (NType _ _) = pure True
+impossibleOK defs (NType _ _) (NBind _ _ _ _) = pure True
 
 impossibleOK defs x y = pure False
 
@@ -168,8 +168,8 @@ recoverable defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
 recoverable defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure False
 recoverable defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure False
 -- Type constructor vs. type
-recoverable defs (NTCon _ _ _ _ _) (NType _) = pure False
-recoverable defs (NType _) (NTCon _ _ _ _ _) = pure False
+recoverable defs (NTCon _ _ _ _ _) (NType _ _) = pure False
+recoverable defs (NType _ _) (NTCon _ _ _ _ _) = pure False
 -- Type constructor vs. binder
 recoverable defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure False
 recoverable defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure False

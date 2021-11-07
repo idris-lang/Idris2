@@ -172,7 +172,8 @@ checkTerm rig elabinfo nest env (ISearch fc depth) (Just gexpty)
 checkTerm rig elabinfo nest env (ISearch fc depth) Nothing
     = do est <- get EST
          nmty <- genName "searchTy"
-         ty <- metaVar fc erased env nmty (TType fc)
+         u <- uniVar fc
+         ty <- metaVar fc erased env nmty (TType fc u)
          nm <- genName "search"
          sval <- searchVar fc rig depth (Resolved (defining est)) env nest nm ty
          pure (sval, gnf env ty)
@@ -210,8 +211,8 @@ checkTerm {vars} rig elabinfo nest env (IPrimVal fc c) exp
     = do let (cval, cty) = checkPrim {vars} fc c
          checkExp rig elabinfo env fc cval (gnf env cty) exp
 checkTerm rig elabinfo nest env (IType fc) exp
-    = checkExp rig elabinfo env fc (TType fc) (gType fc) exp
-
+    = do u <- uniVar fc
+         checkExp rig elabinfo env fc (TType fc u) (gType fc u) exp
 checkTerm rig elabinfo nest env (IHole fc str) exp
     = checkHole rig elabinfo nest env fc (Basic str) exp
 checkTerm rig elabinfo nest env (IUnifyLog fc lvl tm) exp
@@ -230,7 +231,8 @@ checkTerm rig elabinfo nest env (Implicit fc b) (Just gexpty)
          pure (metaval, gexpty)
 checkTerm rig elabinfo nest env (Implicit fc b) Nothing
     = do nmty <- genName "implicit_type"
-         ty <- metaVar fc erased env nmty (TType fc)
+         u <- uniVar fc
+         ty <- metaVar fc erased env nmty (TType fc u)
          nm <- genName "_"
          metaval <- metaVar fc rig env nm ty
          -- Add to 'bindIfUnsolved' if 'b' set

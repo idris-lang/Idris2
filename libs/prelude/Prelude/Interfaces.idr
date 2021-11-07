@@ -124,6 +124,7 @@ namespace Functor
 
 ||| Bifunctors
 ||| @f The action of the Bifunctor on pairs of objects
+||| A minimal definition includes either `bimap` or both `mapFst` and `mapSnd`.
 public export
 interface Bifunctor f where
   constructor MkBifunctor
@@ -133,6 +134,7 @@ interface Bifunctor f where
   ||| bimap (\x => x + 1) reverse (1, "hello") == (2, "olleh")
   ||| ````
   |||
+  total
   bimap : (a -> c) -> (b -> d) -> f a b -> f c d
   bimap f g = mapFst f . mapSnd g
 
@@ -142,6 +144,7 @@ interface Bifunctor f where
   ||| mapFst (\x => x + 1) (1, "hello") == (2, "hello")
   ||| ````
   |||
+  total
   mapFst : (a -> c) -> f a b -> f c b
   mapFst f = bimap f id
 
@@ -151,6 +154,7 @@ interface Bifunctor f where
   ||| mapSnd reverse (1, "hello") == (1, "olleh")
   ||| ````
   |||
+  total
   mapSnd : (b -> d) -> f a b -> f a d
   mapSnd = bimap id
 
@@ -184,19 +188,27 @@ namespace Applicative
       pure = pure . pure
       fun <*> x = [| fun <*> x |]
 
+||| An alternative functor has a notion of disjunction.
+||| @f is the underlying applicative functor
+||| We expect (f a, empty, (<|>)) to be a type family of monoids.
 public export
 interface Applicative f => Alternative f where
   constructor MkAlternative
   empty : f a
   (<|>) : f a -> Lazy (f a) -> f a
 
+||| Monad
+||| @m The underlying functor
+||| A minimal definition includes either `(>>=)` or `join`.
 public export
 interface Applicative m => Monad m where
   constructor MkMonad
   ||| Also called `bind`.
+  total
   (>>=) : m a -> (a -> m b) -> m b
 
   ||| Also called `flatten` or mu.
+  total
   join : m (m a) -> m a
 
   -- default implementations
@@ -249,6 +261,7 @@ unless = when . not
 ||| a parameterised type and combine the elements together, using a provided
 ||| function, into a single result.
 ||| @ t The type of the 'Foldable' parameterised type.
+||| A minimal definition includes `foldr`
 public export
 interface Foldable t where
   constructor MkFoldable
@@ -270,8 +283,8 @@ interface Foldable t where
 
   ||| Test whether the structure is empty.
   ||| @ acc The accumulator value which is specified to be lazy
-  null : t elem -> Lazy Bool
-  null = foldr {acc = Lazy Bool} (\ _,_ => False) True
+  null : t elem -> Bool
+  null xs = foldr {acc = Lazy Bool} (\ _,_ => False) True xs
 
   ||| Similar to `foldl`, but uses a function wrapping its result in a `Monad`.
   ||| Consequently, the final value is wrapped in the same `Monad`.
@@ -476,12 +489,13 @@ namespace Foldable
   [Compose] (Foldable t, Foldable f) => Foldable (t . f) where
     foldr = foldr . flip . foldr
     foldl = foldl . foldl
-    null tf = null tf || all (force . null) tf
+    null tf = null tf || all null tf
     foldMap = foldMap . foldMap
 
 ||| `Bifoldable` identifies foldable structures with two different varieties
 ||| of elements (as opposed to `Foldable`, which has one variety of element).
 ||| Common examples are `Either` and `Pair`.
+||| A minimal definition includes `bifoldr`
 public export
 interface Bifoldable p where
   constructor MkBifoldable
@@ -490,8 +504,8 @@ interface Bifoldable p where
   bifoldl : (acc -> a -> acc) -> (acc -> b -> acc) -> acc -> p a b -> acc
   bifoldl f g z t = bifoldr (flip (.) . flip f) (flip (.) . flip g) id t z
 
-  binull : p a b -> Lazy Bool
-  binull = bifoldr {acc = Lazy Bool} (\ _,_ => False) (\ _,_ => False) True
+  binull : p a b -> Bool
+  binull t = bifoldr {acc = Lazy Bool} (\ _,_ => False) (\ _,_ => False) True t
 
 public export
 interface (Functor t, Foldable t) => Traversable t where

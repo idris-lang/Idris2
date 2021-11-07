@@ -3,6 +3,7 @@ module Data.Fin
 import Data.List1
 import public Data.Maybe
 import public Data.Nat
+import public Data.So
 import Decidable.Equality.Core
 
 %default total
@@ -154,6 +155,13 @@ natToFinLT Z {prf = LTESucc _} = FZ
 natToFinLT (S k) {prf = LTESucc _} = FS $ natToFinLT k
 
 public export
+natToFinLt : (x : Nat) -> {n : Nat} ->
+             {auto 0 prf : So (x < n)} ->
+             Fin n
+natToFinLt Z     {n = S _} = FZ
+natToFinLt (S k) {n = S _} = FS $ natToFinLt k
+
+public export
 natToFin : Nat -> (n : Nat) -> Maybe (Fin n)
 natToFin x n = case isLT x n of
     Yes prf => Just $ natToFinLT x
@@ -181,9 +189,9 @@ maybeLT x y = maybeLTE (S x) y
 ||| @ prf an automatically-constructed proof that `x` is in bounds
 public export
 fromInteger : (x : Integer) -> {n : Nat} ->
-              {auto 0 prf : IsJust (maybeLT (fromInteger x) n)} ->
+              {auto 0 prf : So (fromInteger x < n)} ->
               Fin n
-fromInteger x = natToFinLT {prf = fromJust (maybeLT (fromInteger x) n)} $ fromInteger x
+fromInteger x = natToFinLt (fromInteger x)
 
 -- %builtin IntegerToNatural Data.Fin.fromInteger
 

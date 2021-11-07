@@ -171,14 +171,16 @@ stMain cgs opts
 
          finish <- showInfo opts
          when (not finish) $ do
+           -- start by going over the pre-options, and stop if we do not need to
+           -- continue
+           True <- preOptions opts
+              | False => pure ()
+
            -- If there's a --build or --install, just do that then quit
            done <- processPackageOpts opts
 
            when (not done) $ flip catch renderError $
-              do True <- preOptions opts
-                     | False => pure ()
-
-                 when (checkVerbose opts) $ -- override Quiet if implicitly set
+              do when (checkVerbose opts) $ -- override Quiet if implicitly set
                      setOutput (REPL InfoLvl)
                  u <- newRef UST initUState
                  origin <- maybe

@@ -53,7 +53,7 @@ checkIsType : {auto c : Ref Ctxt Defs} ->
 checkIsType loc n env nf
     = checkRetType env nf $
          \case
-           NType _ => pure ()
+           NType _ _ => pure ()
            _ => throw $ BadTypeConType loc n
 
 checkFamily : {auto c : Ref Ctxt Defs} ->
@@ -61,7 +61,7 @@ checkFamily : {auto c : Ref Ctxt Defs} ->
 checkFamily loc cn tn env nf
     = checkRetType env nf $
          \case
-           NType _ => throw $ BadDataConType loc cn tn
+           NType _ _ => throw $ BadDataConType loc cn tn
            NTCon _ n' _ _ _ =>
                  if tn == n'
                     then pure ()
@@ -100,11 +100,12 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc _ cn_in ty_raw)
          -- Check 'cn' is undefined
          Nothing <- lookupCtxtExact cn (gamma defs)
              | Just gdef => throw (AlreadyDefined fc cn)
+         u <- uniVar fc
          ty <-
              wrapErrorC opts (InCon fc cn) $
                    checkTerm !(resolveName cn) InType opts nest env
                               (IBindHere fc (PI erased) ty_raw)
-                              (gType fc)
+                              (gType fc u)
 
          -- Check 'ty' returns something in the right family
          checkFamily fc cn tn env !(nf defs env ty)
@@ -406,11 +407,12 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
          Nothing <- lookupCtxtExact n (gamma defs)
              | Just gdef => throw (AlreadyDefined fc n)
 
+         u <- uniVar fc
          (ty, _) <-
              wrapErrorC eopts (InCon fc n) $
                     elabTerm !(resolveName n) InType eopts nest env
                               (IBindHere fc (PI erased) ty_raw)
-                              (Just (gType dfc))
+                              (Just (gType dfc u))
          let fullty = abstractEnvType dfc env ty
          logTermNF "declare.data" 5 ("data " ++ show n) [] fullty
 
@@ -439,11 +441,12 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
 
          log "declare.data" 1 $ "Processing " ++ show n
          defs <- get Ctxt
+         u <- uniVar fc
          (ty, _) <-
              wrapErrorC eopts (InCon fc n) $
                     elabTerm !(resolveName n) InType eopts nest env
                               (IBindHere fc (PI erased) ty_raw)
-                              (Just (gType dfc))
+                              (Just (gType dfc u))
          let fullty = abstractEnvType dfc env ty
 
          -- If n exists, check it's the same type as we have here, and is

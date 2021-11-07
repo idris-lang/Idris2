@@ -27,6 +27,7 @@ import Libraries.Data.NameMap
 
 data ArgMode = Static ClosedTerm | Dynamic
 
+covering
 Show ArgMode where
   show (Static tm) = "Static " ++ show tm
   show Dynamic = "Dynamic"
@@ -635,7 +636,7 @@ mutual
                         pure $ applyWithFC (TForce fc r arg') args'
   quoteGenNF q defs bound env (NPrimVal fc c) = pure $ PrimVal fc c
   quoteGenNF q defs bound env (NErased fc i) = pure $ Erased fc i
-  quoteGenNF q defs bound env (NType fc) = pure $ TType fc
+  quoteGenNF q defs bound env (NType fc u) = pure $ TType fc u
 
 evalRHS : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->

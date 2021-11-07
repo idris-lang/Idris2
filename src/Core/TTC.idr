@@ -333,8 +333,8 @@ mutual
              toBuf b c
     toBuf b (Erased fc _)
         = tag 10
-    toBuf b (TType fc)
-        = tag 11
+    toBuf b (TType fc u)
+        = do tag 11; toBuf b u
 
     fromBuf {vars} b
         = case !getTag of
@@ -366,7 +366,7 @@ mutual
                9 => do c <- fromBuf b
                        pure (PrimVal emptyFC c)
                10 => pure (Erased emptyFC False)
-               11 => pure (TType emptyFC)
+               11 => do u <- fromBuf b; pure (TType emptyFC u)
                12 => do fn <- fromBuf b
                         args <- fromBuf b
                         pure (apply emptyFC fn args)
@@ -966,6 +966,7 @@ TTC Def where
       = do tag 8; toBuf b guess; toBuf b envb; toBuf b constraints
   toBuf b ImpBind = tag 9
   toBuf b Delayed = tag 10
+  toBuf b (UniverseLevel i) = do tag 11; toBuf b i
 
   fromBuf b
       = case !getTag of
@@ -998,6 +999,8 @@ TTC Def where
                      pure (Guess g envb cs)
              9 => pure ImpBind
              10 => pure Context.Delayed
+             11 => do l <- fromBuf b
+                      pure (UniverseLevel l)
              _ => corrupt "Def"
 
 export

@@ -48,6 +48,7 @@ HasNames (ArgType vars) where
   resolved gam (Stuck ty) = Stuck <$> resolved gam ty
   resolved gam Unknown = pure Unknown
 
+covering
 {ns : _} -> Show (ArgType ns) where
   show (Known c t) = "Known " ++ show c ++ " " ++ show t
   show (Stuck t) = "Stuck " ++ show t
@@ -62,6 +63,7 @@ record PatInfo (pvar : Name) (vars : List Name) where
   argType : ArgType vars -- Type of the argument being inspected (i.e.
                          -- *not* refined by this particular pattern)
 
+covering
 {vars : _} -> Show (PatInfo n vars) where
   show pi = show (pat pi) ++ " : " ++ show (argType pi)
 
@@ -180,6 +182,7 @@ HasNames (NamedPats vars todo) where
   resolved gam [] = pure []
   resolved gam (x::xs) = [| (::) (resolved gam x) (resolved gam xs) |]
 
+covering
 {vars : _} -> {todo : _} -> Show (NamedPats vars todo) where
   show xs = "[" ++ showAll xs ++ "]"
     where
@@ -244,6 +247,7 @@ data PatClause : (vars : List Name) -> (todo : List Name) -> Type where
 getNPs : PatClause vars todo -> NamedPats vars todo
 getNPs (MkPatClause _ lhs pid rhs) = lhs
 
+covering
 {vars : _} -> {todo : _} -> Show (PatClause vars todo) where
   show (MkPatClause _ ps pid rhs)
      = show ps ++ " => " ++ show rhs
@@ -277,6 +281,7 @@ data Partitions : List (PatClause vars todo) -> Type where
                   Partitions ps -> Partitions (vs ++ ps)
      NoClauses : Partitions []
 
+covering
 {ps : _} -> Show (Partitions ps) where
   show (ConClauses cs rest)
     = unlines ("CON" :: map (("  " ++) . show) cs)
@@ -388,6 +393,7 @@ data Group : List Name -> -- variables in scope
      ConstGroup : Constant -> List (PatClause vars todo) ->
                   Group vars todo
 
+covering
 {vars : _} -> {todo : _} -> Show (Group vars todo) where
   show (ConGroup c t cs) = "Con " ++ show c ++ ": " ++ show cs
   show (DelayGroup cs) = "Delay: " ++ show cs
@@ -517,9 +523,9 @@ groupCons fc fn pvars cs
     -- the same name in each of the clauses
     addConG {vars'} {todo'} n tag pargs pats pid rhs []
         = do cty <- if n == UN (Basic "->")
-                      then pure $ NBind fc (MN "_" 0) (Pi fc top Explicit (MkNFClosure defaultOpts (mkEnv fc vars') (NType fc))) $
+                      then pure $ NBind fc (MN "_" 0) (Pi fc top Explicit (MkNFClosure defaultOpts (mkEnv fc vars') (NType fc (MN "top" 0)))) $
                               (\d, a => pure $ NBind fc (MN "_" 1) (Pi fc top Explicit (MkNFClosure defaultOpts (mkEnv fc vars') (NErased fc False)))
-                                (\d, a => pure $ NType fc))
+                                (\d, a => pure $ NType fc (MN "top" 0)))
                       else do defs <- get Ctxt
                               Just t <- lookupTyExact n (gamma defs)
                                    | Nothing => pure (NErased fc False)
@@ -565,7 +571,7 @@ groupCons fc fn pvars cs
                 (acc : List (Group vars' todo')) ->
                 Core (List (Group vars' todo'))
     addDelayG {vars'} {todo'} pty parg pats pid rhs []
-        = do let dty = NBind fc (MN "a" 0) (Pi fc erased Explicit (MkNFClosure defaultOpts (mkEnv fc vars') (NType fc))) $
+        = do let dty = NBind fc (MN "a" 0) (Pi fc erased Explicit (MkNFClosure defaultOpts (mkEnv fc vars') (NType fc (MN "top" 0)))) $
                         (\d, a =>
                             do a' <- evalClosure d a
                                pure (NBind fc (MN "x" 0) (Pi fc top Explicit a)
@@ -818,7 +824,7 @@ sameType {ns} fc phase fn env (p :: xs)
     headEq (NBind _ _ (Pi _ _ _ _) _) (NBind _ _ (Pi _ _ _ _) _) _ = True
     headEq (NTCon _ n _ _ _) (NTCon _ n' _ _ _) _ = n == n'
     headEq (NPrimVal _ c) (NPrimVal _ c') _ = c == c'
-    headEq (NType _) (NType _) _ = True
+    headEq (NType _ _) (NType _ _) _ = True
     headEq (NApp _ (NRef _ n) _) (NApp _ (NRef _ n') _) RunTime = n == n'
     headEq (NErased _ _) _ RunTime = True
     headEq _ (NErased _ _) RunTime = True
@@ -1111,7 +1117,7 @@ mkPat args orig (PrimVal fc c)
     = pure $ if constTag c == 0
          then PConst fc c
          else PTyCon fc (UN (Basic $ show c)) 0 []
-mkPat args orig (TType fc) = pure $ PTyCon fc (UN $ Basic "Type") 0 []
+mkPat args orig (TType fc _) = pure $ PTyCon fc (UN $ Basic "Type") 0 []
 mkPat args orig tm
    = do log "compile.casetree" 10 $
           "Catchall: marking " ++ show tm ++ " as unmatchable"
@@ -1259,7 +1265,7 @@ identifyUnreachableDefaults : {auto c : Ref Ctxt Defs} ->
 -- Leave it alone if it's a primitive type though, since we need the catch
 -- all case there
 identifyUnreachableDefaults fc defs (NPrimVal _ _) cs = pure empty
-identifyUnreachableDefaults fc defs (NType _) cs = pure empty
+identifyUnreachableDefaults fc defs (NType _ _) cs = pure empty
 identifyUnreachableDefaults fc defs nfty cs
     = do cs' <- traverse rep cs
          let (cs'', extraClauseIdxs) = dropRep (concat cs') empty

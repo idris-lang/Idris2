@@ -1929,6 +1929,7 @@ data CmdArg : Type where
      Args : List CmdArg -> CmdArg
 
 export
+covering
 Show CmdArg where
   show NoArg = ""
   show NameArg = "<name>"

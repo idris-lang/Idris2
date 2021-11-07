@@ -351,7 +351,7 @@ mutual
                then pure $ CPrimVal fc c
                else pure $ CCon fc (UN $ Basic $ show c) TYCON Nothing []
   toCExpTm m n (Erased fc _) = pure $ CErased fc
-  toCExpTm m n (TType fc) = pure $ CCon fc (UN (Basic "Type")) TYCON Nothing []
+  toCExpTm m n (TType fc _) = pure $ CCon fc (UN (Basic "Type")) TYCON Nothing []
 
   toCExp : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
@@ -650,7 +650,7 @@ nfToCFType _ s (NTCon fc n_in _ _ args)
                 do narg <- evalClosure defs uarg
                    carg <- nfToCFType fc s narg
                    pure (CFIORes carg)
-nfToCFType _ s (NType _)
+nfToCFType _ s (NType _ _)
     = pure (CFUser (UN (Basic "Type")) [])
 nfToCFType _ s (NErased _ _)
     = pure (CFUser (UN (Basic "__")) [])

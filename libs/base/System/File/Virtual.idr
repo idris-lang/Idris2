@@ -1,3 +1,4 @@
+||| Magic/Virtual files
 module System.File.Virtual
 
 import System.File.Support
@@ -17,14 +18,17 @@ prim__stdout : FilePtr
          "node:lambda:x=>({fd:2, buffer: Buffer.alloc(0), name:'<stderr>', eof: false})"
 prim__stderr : FilePtr
 
+||| The standard input.
 export
 stdin : File
 stdin = FHandle prim__stdin
 
+||| The standard output.
 export
 stdout : File
 stdout = FHandle prim__stdout
 
+||| The standard error.
 export
 stderr : File
 stderr = FHandle prim__stderr

@@ -273,7 +273,7 @@ compileStk svs stk (TForce fc x tm)
                       Vector (-5) [toScheme x, toScheme fc, Lambda [] tm']]
 compileStk svs stk (PrimVal fc c) = pure $ compileConstant fc c
 compileStk svs stk (Erased fc imp) = pure $ Vector (-6) [toScheme fc, toScheme imp]
-compileStk svs stk (TType fc) = pure $ Vector (-7) [toScheme fc]
+compileStk svs stk (TType fc u) = pure $ Vector (-7) [toScheme fc, toScheme u]
 
 export
 compile : Ref Sym Integer =>
@@ -535,6 +535,7 @@ compileBody _ n (Hole numlocs x) = pure $ blockedMetaApp n
 compileBody _ n (BySearch x maxdepth defining) = pure $ blockedMetaApp n
 compileBody _ n (Guess guess envbind constraints) = pure $ blockedMetaApp n
 compileBody _ n ImpBind = pure $ blockedMetaApp n
+compileBody _ n (UniverseLevel _) = pure $ blockedMetaApp n
 compileBody _ n Delayed = pure $ blockedMetaApp n
 
 export

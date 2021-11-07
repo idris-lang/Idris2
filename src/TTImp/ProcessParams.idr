@@ -45,8 +45,9 @@ processParams {vars} {c} {m} {u} nest env fc ps ds
          let pty_raw = mkParamTy ps
          pty_imp <- bindTypeNames fc [] vars (IBindHere fc (PI erased) pty_raw)
          log "declare.param" 10 $ "Checking " ++ show pty_imp
+         u <- uniVar fc
          pty <- checkTerm (-1) InType []
-                          nest env pty_imp (gType fc)
+                          nest env pty_imp (gType fc u)
          let (vs ** (prf, env', nest')) = extend env SubRefl nest pty
          logEnv "declare.param" 5 "Param env" env'
 

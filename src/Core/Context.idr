@@ -69,6 +69,7 @@ initCtxtS s
             , allPublic = False
             , inlineOnly = False
             , hidden = empty
+            , uconstraints = []
             }
 
 export
@@ -375,6 +376,22 @@ HasNames Name where
            pure (Resolved i)
 
 export
+HasNames UConstraint where
+  full gam (ULT x y)
+      = do x' <- full gam x; y' <- full gam y
+           pure (ULT x' y')
+  full gam (ULE x y)
+      = do x' <- full gam x; y' <- full gam y
+           pure (ULE x' y')
+
+  resolved gam (ULT x y)
+      = do x' <- resolved gam x; y' <- resolved gam y
+           pure (ULT x' y')
+  resolved gam (ULE x y)
+      = do x' <- resolved gam x; y' <- resolved gam y
+           pure (ULE x' y')
+
+export
 HasNames (Term vars) where
   full gam (Ref fc x (Resolved i))
       = do Just gdef <- lookupCtxtExact (Resolved i) gam
@@ -397,6 +414,10 @@ HasNames (Term vars) where
       = pure (TDelay fc x !(full gam t) !(full gam y))
   full gam (TForce fc r y)
       = pure (TForce fc r !(full gam y))
+  full gam (TType fc (Resolved i))
+      = do Just gdef <- lookupCtxtExact (Resolved i) gam
+                | Nothing => pure (TType fc (Resolved i))
+           pure (TType fc (fullname gdef))
   full gam tm = pure tm
 
   resolved gam (Ref fc x n)
@@ -420,6 +441,10 @@ HasNames (Term vars) where
       = pure (TDelay fc x !(resolved gam t) !(resolved gam y))
   resolved gam (TForce fc r y)
       = pure (TForce fc r !(resolved gam y))
+  resolved gam (TType fc n)
+      = do let Just i = getNameID n gam
+                | Nothing => pure (TType fc n)
+           pure (TType fc (Resolved i))
   resolved gam tm = pure tm
 
 export

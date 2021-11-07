@@ -38,6 +38,7 @@ data ClauseUpdate : Type where
      Invalid : ClauseUpdate
 
 export
+covering
 Show ClauseUpdate where
   show (Valid lhs updates) = "Valid: " ++ show lhs ++ "\n" ++ "Updates: " ++ show updates
   show (Impossible lhs) = "Impossible: " ++ show lhs

@@ -1,0 +1,33 @@
+1/1: Building AlternatingList (AlternatingList.idr)
+Main> [1.0, "Hello", 2.0, "world", 3.0]
+True
+False
+True
+True
+[2.0, "Hello!", 3.0, "world!", 4.0]
+(1.375, "Hello world")
+(2.125, "Hello world")
+1.0
+"Hello"
+2.0
+"world"
+3.0
+[1.0, "Hello!", 2.0, "world!", 3.0]
+[1.0, "Hello", 2.0, "world", 3.0]
+[1.0, "Hello", 2.0, "world", 3.0]
+["Hello", 0.0, "world", 1.0, "!Lorem", 1.0, "ipsum"]
+["Hello", 0.0, "world", 1.0, "!!"]
+["Oh, Hello", 0.0, "world", 1.0, "!"]
+[""]
+0.25
+0.5
+["", 1.0, ""]
+["HelloLorem", 2.0, "ipsum", 3.0, ".worldLorem", 11.0, "ipsum", 12.0, ".!"]
+[""]
+["Hello", 0.0, "world", 1.0, "!Lorem", 1.0, "ipsum"]
+["Hello,", 2.0, " world,", 3.0, " !"]
+["Um,", 3.0, "Hello", 1.0, "Um,", 3.0, "world", 2.0, "Um,", 3.0, "!"]
+0.0
+1.0
+["1.0", "Hello", "2.0", "world", "3.0"]
+Main> Bye for now!

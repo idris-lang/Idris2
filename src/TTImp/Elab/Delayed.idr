@@ -105,7 +105,8 @@ delayOnFailure fc rig env exp pred pri elab
     mkExpected (Just ty) = pure ty
     mkExpected Nothing
         = do nm <- genName "delayTy"
-             ty <- metaVar fc erased env nm (TType fc)
+             u <- uniVar fc
+             ty <- metaVar fc erased env nm (TType fc u)
              pure (gnf env ty)
 
 export
@@ -146,7 +147,8 @@ delayElab {vars} fc rig env exp pri elab
     mkExpected (Just ty) = pure ty
     mkExpected Nothing
         = do nm <- genName "delayTy"
-             ty <- metaVar fc erased env nm (TType fc)
+             u <- uniVar fc
+             ty <- metaVar fc erased env nm (TType fc u)
              pure (gnf env ty)
 
 export
