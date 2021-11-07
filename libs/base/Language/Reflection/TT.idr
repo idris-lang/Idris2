@@ -129,6 +129,11 @@ Show Name where
   show (WithBlock outer i) = "with block in " ++ show outer
 
 public export
+record NameInfo where
+  constructor MkNameInfo
+  nametype : NameType
+
+public export
 data Count = M0 | M1 | MW
 
 public export
