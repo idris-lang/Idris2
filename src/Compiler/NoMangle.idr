@@ -11,7 +11,7 @@ record NoMangleMap where
     constructor MkNMMap
     map : NameMap (Maybe String)
 
-findNoMangle : List DefFlag -> Maybe (List (Maybe String, String))
+findNoMangle : List DefFlag -> Maybe NoMangleDirective
 findNoMangle [] = Nothing
 findNoMangle (NoMangle x :: _) = Just x
 findNoMangle (_ :: xs) = findNoMangle xs
@@ -37,18 +37,22 @@ initNoMangle backend valid = do
                 | Nothing => pure Nothing
             let Just ns = findNoMangle gdef.flags
                 | Nothing => pure Nothing
-            let Just name = lookupBackend ns
-                | Nothing => throw (InternalError "missing %nomangle name for \{show nm} on \{backend} backend")
+            name <- case ns of
+                CommonName name => pure name
+                BackendNames ns =>
+                    maybe
+                        (throw (InternalError "missing %nomangle name for \{show nm} on \{backend} backend"))
+                        pure
+                        (lookupBackend ns)
             let True = valid name
                 | False => throw (InternalError "\{show name} is not a valid name on the \{backend} backend")
             pure $ Just name
         ) ctxt.resolvedAs
     newRef NoMangleMap $ MkNMMap map
   where
-    lookupBackend : List (Maybe String, String) -> Maybe String
+    lookupBackend : List (String, String) -> Maybe String
     lookupBackend [] = Nothing
-    lookupBackend ((Just b, n) :: ns) = if b == backend then Just n else lookupBackend ns
-    lookupBackend ((Nothing, n) :: _) = Just n
+    lookupBackend ((b, n) :: ns) = if b == backend then Just n else lookupBackend ns
 
 export
 isNoMangle : NoMangleMap -> Name -> Maybe String

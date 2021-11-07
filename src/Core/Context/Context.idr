@@ -186,6 +186,11 @@ Show Clause where
       = show vars ++ ": " ++ show lhs ++ " = " ++ show rhs
 
 public export
+data NoMangleDirective : Type where
+    CommonName : String -> NoMangleDirective
+    BackendNames : List (String, String) -> NoMangleDirective
+
+public export
 data DefFlag
     = Inline
     | NoInline
@@ -216,7 +221,7 @@ data DefFlag
     | Identity Nat
          -- Is it the identity function at runtime?
          -- The nat represents which argument the function evaluates to
-    | NoMangle (List (Maybe String, String))
+    | NoMangle NoMangleDirective
          -- use the user provided name directly (backend, name)
 
 export

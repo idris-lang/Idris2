@@ -91,6 +91,11 @@ mutual
        UniqueDefault : TTImp -> AltType
 
   public export
+  data NoMangleDirective : Type where
+     CommonName : String -> NoMangleDirective
+     BackendNames : List (String, String) -> NoMangleDirective
+
+  public export
   data FnOpt : Type where
        Inline : FnOpt
        NoInline : FnOpt
@@ -109,11 +114,7 @@ mutual
        Macro : FnOpt
        SpecArgs : List Name -> FnOpt
        ||| Keep the user provided name during codegen
-       ||| @ name a custom name to use in codegen
-       |||        [] - use the function name
-       |||        ["name"] - use provided name
-       |||        ["backend:name"] - use provided name only on specific backend
-       NoMangle : (names : List String) -> FnOpt
+       NoMangle : NoMangleDirective -> FnOpt
 
   public export
   data ITy : Type where

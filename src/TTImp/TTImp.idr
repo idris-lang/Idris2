@@ -228,12 +228,17 @@ mutual
        Totality : TotalReq -> FnOpt' nm
        Macro : FnOpt' nm
        SpecArgs : List Name -> FnOpt' nm
-       NoMangle : List String -> FnOpt' nm
+       NoMangle : Maybe NoMangleDirective -> FnOpt' nm
 
   public export
   isTotalityReq : FnOpt' nm -> Bool
   isTotalityReq (Totality _) = True
   isTotalityReq _ = False
+
+  export
+  Show NoMangleDirective where
+    show (CommonName name) = "\"\{name}\""
+    show (BackendNames ns) = showSep " " (map (\(b, n) => "\"\{b}:\{n}\"") ns)
 
   export
   Show nm => Show (FnOpt' nm) where
@@ -250,11 +255,14 @@ mutual
     show (Totality PartialOK) = "partial"
     show Macro = "%macro"
     show (SpecArgs ns) = "%spec " ++ showSep " " (map show ns)
-    show (NoMangle []) = "%nomangle"
-    show (NoMangle ns) = "%nomangle \{showSep " " (map quote ns)}"
-      where
-        quote : String -> String
-        quote str = "\"\{str}\""
+    show (NoMangle Nothing) = "%nomangle"
+    show (NoMangle (Just ns)) = "%nomangle \{show ns}"
+
+  export
+  Eq NoMangleDirective where
+    CommonName x == CommonName y = x == y
+    BackendNames xs == BackendNames ys = xs == ys
+    _ == _ = False
 
   export
   Eq FnOpt where
@@ -1228,6 +1236,19 @@ mutual
         = do fc <- fromBuf b; n <- fromBuf b; ps <- fromBuf b
              con <- fromBuf b; fs <- fromBuf b
              pure (MkImpRecord fc n ps con fs)
+
+  export
+  TTC NoMangleDirective where
+    toBuf b (CommonName n)
+        = do tag 0; toBuf b n
+    toBuf b (BackendNames ns)
+        = do tag 1; toBuf b ns
+
+    fromBuf b
+        = case !getTag of
+               0 => do n <- fromBuf b; pure (CommonName n)
+               1 => do ns <- fromBuf b; pure (BackendNames ns)
+               _ => corrupt "NoMangleDirective"
 
   export
   TTC FnOpt where

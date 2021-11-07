@@ -1013,6 +1013,16 @@ TTC TotalReq where
              2 => pure PartialOK
              _ => corrupt "TotalReq"
 
+TTC NoMangleDirective where
+  toBuf b (CommonName n) = do tag 0; toBuf b n
+  toBuf b (BackendNames ns) = do tag 1; toBuf b ns
+
+  fromBuf b
+      = case !getTag of
+             0 => do n <- fromBuf b; pure (CommonName n)
+             1 => do ns <- fromBuf b; pure (BackendNames ns)
+             _ => corrupt "NoMangleDirective"
+
 TTC DefFlag where
   toBuf b Inline = tag 2
   toBuf b NoInline = tag 13

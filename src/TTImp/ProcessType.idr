@@ -44,7 +44,7 @@ processFnOpt : {auto c : Ref Ctxt Defs} ->
                Name -> FnOpt -> Core ()
 processFnOpt fc _ ndef Inline
     = do throwIfHasFlag fc ndef NoInline "%noinline and %inline are mutually exclusive"
-         throwIfHasFlag fc ndef (NoMangle []) "%nomangle and %inline are mutually exclusive"
+         throwIfHasFlag fc ndef (NoMangle (CommonName "")) "%nomangle and %inline are mutually exclusive"
          setFlag fc ndef Inline
 processFnOpt fc _ ndef NoInline
     = do throwIfHasFlag fc ndef Inline "%inline and %noinline are mutually exclusive"
@@ -77,19 +77,14 @@ processFnOpt fc _ ndef Macro
 processFnOpt fc True ndef (NoMangle mname) = do
     throwIfHasFlag fc ndef Inline "%inline and %nomangle are mutually exclusive"
     name <- case mname of
-        [] => case userNameRoot !(getFullName ndef) of
+        Nothing => case userNameRoot !(getFullName ndef) of
             Nothing => throw (GenericMsg fc "Unable to find user name root of \{show ndef}")
-            Just (Basic name) => pure [(Nothing, name)]
-            Just (Field name) => pure [(Nothing, name)]
+            Just (Basic name) => pure $ CommonName name
+            Just (Field name) => pure $ CommonName name
             Just Underscore => throw (GenericMsg fc "Unable to set '_' as %nomangle")
-        ns => pure $ parseNames ns
+        Just name => pure name
     setFlag fc ndef (NoMangle name)
     setFlag fc ndef NoInline
-  where
-    parseNames : List String -> List (Maybe String, String)
-    parseNames = map (\x => case split (== ':') x of
-        name ::: [] => (Nothing, name)
-        bck ::: ns => (Just bck, concat ns))
 processFnOpt fc False ndef (NoMangle _) = throw (GenericMsg fc "Unable to set %nomangle for non-global functions")
 processFnOpt fc _ ndef (SpecArgs ns)
     = do defs <- get Ctxt
