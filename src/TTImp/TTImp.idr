@@ -230,11 +230,17 @@ mutual
        Totality : TotalReq -> FnOpt' nm
        Macro : FnOpt' nm
        SpecArgs : List Name -> FnOpt' nm
+       NoMangle : Maybe NoMangleDirective -> FnOpt' nm
 
   public export
   isTotalityReq : FnOpt' nm -> Bool
   isTotalityReq (Totality _) = True
   isTotalityReq _ = False
+
+  export
+  Show NoMangleDirective where
+    show (CommonName name) = "\"\{name}\""
+    show (BackendNames ns) = showSep " " (map (\(b, n) => "\"\{b}:\{n}\"") ns)
 
   export
   covering
@@ -252,6 +258,14 @@ mutual
     show (Totality PartialOK) = "partial"
     show Macro = "%macro"
     show (SpecArgs ns) = "%spec " ++ showSep " " (map show ns)
+    show (NoMangle Nothing) = "%nomangle"
+    show (NoMangle (Just ns)) = "%nomangle \{show ns}"
+
+  export
+  Eq NoMangleDirective where
+    CommonName x == CommonName y = x == y
+    BackendNames xs == BackendNames ys = xs == ys
+    _ == _ = False
 
   export
   Eq FnOpt where
@@ -266,6 +280,7 @@ mutual
     (Totality tot_lhs) == (Totality tot_rhs) = tot_lhs == tot_rhs
     Macro == Macro = True
     (SpecArgs ns) == (SpecArgs ns') = ns == ns'
+    (NoMangle x) == (NoMangle y) = x == y
     _ == _ = False
 
   public export
@@ -1233,6 +1248,19 @@ mutual
              pure (MkImpRecord fc n ps con fs)
 
   export
+  TTC NoMangleDirective where
+    toBuf b (CommonName n)
+        = do tag 0; toBuf b n
+    toBuf b (BackendNames ns)
+        = do tag 1; toBuf b ns
+
+    fromBuf b
+        = case !getTag of
+               0 => do n <- fromBuf b; pure (CommonName n)
+               1 => do ns <- fromBuf b; pure (BackendNames ns)
+               _ => corrupt "NoMangleDirective"
+
+  export
   TTC FnOpt where
     toBuf b Inline = tag 0
     toBuf b NoInline = tag 12
@@ -1247,6 +1275,7 @@ mutual
     toBuf b (Totality PartialOK) = tag 8
     toBuf b Macro = tag 9
     toBuf b (SpecArgs ns) = do tag 10; toBuf b ns
+    toBuf b (NoMangle name) = do tag 13; toBuf b name
 
     fromBuf b
         = case !getTag of
@@ -1263,6 +1292,7 @@ mutual
                10 => do ns <- fromBuf b; pure (SpecArgs ns)
                11 => pure TCInline
                12 => pure NoInline
+               13 => do name <- fromBuf b; pure (NoMangle name)
                _ => corrupt "FnOpt"
 
   export

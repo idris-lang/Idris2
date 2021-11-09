@@ -1399,6 +1399,32 @@ fnDirectOpt fname
   <|> do pragma "foreign"
          cs <- block (expr pdef fname)
          pure $ PForeign cs
+  <|> do pragma "nomangle"
+         commit
+         ns <- many (strBegin *> strLit <* strEnd)
+         ns' <- parseNoMangle ns
+         pure $ IFnOpt (NoMangle ns')
+  where
+    parseNames : List String -> List (Maybe String, String)
+    parseNames = map
+        (\x => case split (== ':') x of
+            name ::: [] => (Nothing, name)
+            bck ::: ns => (Just bck, concat ns))
+
+    parseNoMangle : List String -> EmptyRule (Maybe NoMangleDirective)
+    parseNoMangle [] = pure Nothing
+    parseNoMangle ns = case parseNames ns of
+        [(Nothing, name)] => pure $ Just $ CommonName name
+        ns =>
+            let ns = the (Either String (List (String, String))) $
+                    traverse
+                    (\case
+                        (Nothing, _) => Left "expected backend specifier and name, found name"
+                        (Just b, name) => Right (b, name))
+                    ns
+             in case ns of
+                Left msg => fail msg
+                Right ns => pure $ Just $ BackendNames ns
 
 builtinDecl : OriginDesc -> IndentInfo -> Rule PDecl
 builtinDecl fname indents

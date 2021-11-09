@@ -21,6 +21,7 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Data.List
+import Data.List1
 import Data.String
 import Libraries.Data.NameMap
 
@@ -43,6 +44,7 @@ processFnOpt : {auto c : Ref Ctxt Defs} ->
                Name -> FnOpt -> Core ()
 processFnOpt fc _ ndef Inline
     = do throwIfHasFlag fc ndef NoInline "%noinline and %inline are mutually exclusive"
+         throwIfHasFlag fc ndef (NoMangle (CommonName "")) "%nomangle and %inline are mutually exclusive"
          setFlag fc ndef Inline
 processFnOpt fc _ ndef NoInline
     = do throwIfHasFlag fc ndef Inline "%inline and %noinline are mutually exclusive"
@@ -72,6 +74,18 @@ processFnOpt fc _ ndef (Totality tot)
     = setFlag fc ndef (SetTotal tot)
 processFnOpt fc _ ndef Macro
     = setFlag fc ndef Macro
+processFnOpt fc True ndef (NoMangle mname) = do
+    throwIfHasFlag fc ndef Inline "%inline and %nomangle are mutually exclusive"
+    name <- case mname of
+        Nothing => case userNameRoot !(getFullName ndef) of
+            Nothing => throw (GenericMsg fc "Unable to find user name root of \{show ndef}")
+            Just (Basic name) => pure $ CommonName name
+            Just (Field name) => pure $ CommonName name
+            Just Underscore => throw (GenericMsg fc "Unable to set '_' as %nomangle")
+        Just name => pure name
+    setFlag fc ndef (NoMangle name)
+    setFlag fc ndef NoInline
+processFnOpt fc False ndef (NoMangle _) = throw (GenericMsg fc "Unable to set %nomangle for non-global functions")
 processFnOpt fc _ ndef (SpecArgs ns)
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact ndef (gamma defs)
