@@ -12,9 +12,11 @@ import Compiler.ES.Doc
 import Compiler.ES.ToAst
 import Compiler.ES.TailRec
 import Compiler.ES.State
+import Compiler.NoMangle
 import Libraries.Data.SortedMap
 import Libraries.Utils.Hex
 import Libraries.Data.String.Extra
+import Libraries.Data.NameMap
 
 import Data.Vect
 
@@ -71,15 +73,18 @@ jsIdent s = concatMap okchar (unpack s)
                   then cast c
                   else "x" ++ asHex (cast c)
 
+jsReservedNames : List String
+jsReservedNames =
+  [ "var", "switch"
+  , "return", "const"
+  , "function", "break"
+  , "continue"
+  ]
+
 keywordSafe : String -> String
-keywordSafe "var"    = "var$"
-keywordSafe "switch" = "switch$"
-keywordSafe "return" = "return$"
-keywordSafe "const"  = "const$"
-keywordSafe "function" = "function$"
-keywordSafe "break"  = "break$"
-keywordSafe "continue" = "continue$"
-keywordSafe s = s
+keywordSafe s = if s `elem` jsReservedNames
+  then s ++ "$"
+  else s
 
 --------------------------------------------------------------------------------
 --          JS Name
@@ -90,19 +95,25 @@ jsUserName (Basic n) = keywordSafe $ jsIdent n
 jsUserName (Field n) = "rf__" ++ jsIdent n
 jsUserName Underscore = keywordSafe $ jsIdent "_"
 
-jsName : Name -> String
-jsName (NS ns n) = jsIdent (showNSWithSep "_" ns) ++ "_" ++ jsName n
-jsName (UN n) = jsUserName n
-jsName (MN n i) = jsIdent n ++ "_" ++ show i
-jsName (PV n d) = "pat__" ++ jsName n
-jsName (DN _ n) = jsName n
-jsName (Nested (i, x) n) = "n__" ++ show i ++ "_" ++ show x ++ "_" ++ jsName n
-jsName (CaseBlock x y) = "case__" ++ jsIdent x ++ "_" ++ show y
-jsName (WithBlock x y) = "with__" ++ jsIdent x ++ "_" ++ show y
-jsName (Resolved i) = "fn__" ++ show i
+jsMangleName : Name -> String
+jsMangleName (NS ns n) = jsIdent (showNSWithSep "_" ns) ++ "_" ++ jsMangleName n
+jsMangleName (UN n) = jsUserName n
+jsMangleName (MN n i) = jsIdent n ++ "_" ++ show i
+jsMangleName (PV n d) = "pat__" ++ jsMangleName n
+jsMangleName (DN _ n) = jsMangleName n
+jsMangleName (Nested (i, x) n) = "n__" ++ show i ++ "_" ++ show x ++ "_" ++ jsMangleName n
+jsMangleName (CaseBlock x y) = "case__" ++ jsIdent x ++ "_" ++ show y
+jsMangleName (WithBlock x y) = "with__" ++ jsIdent x ++ "_" ++ show y
+jsMangleName (Resolved i) = "fn__" ++ show i
 
-jsNameDoc : Name -> Doc
-jsNameDoc = Text . jsName
+parameters (noMangle : NoMangleMap)
+  jsName : Name -> String
+  jsName n = case isNoMangle noMangle n of
+    Just name => name
+    Nothing => jsMangleName n
+
+  jsNameDoc : Name -> Doc
+  jsNameDoc = Text . jsName
 
 mainExpr : Name
 mainExpr = MN "__mainExpression" 0
@@ -111,14 +122,15 @@ mainExpr = MN "__mainExpression" 0
 --          Pretty Printing
 --------------------------------------------------------------------------------
 
-var : Var -> Doc
-var (VName x) = jsNameDoc x
-var (VLoc x)  = Text $ "$" ++ asHex (cast x)
-var (VRef x)  = Text $ "$R" ++ asHex (cast x)
+parameters (noMangle : NoMangleMap)
+  var : Var -> Doc
+  var (VName x) = jsNameDoc noMangle x
+  var (VLoc x)  = Text $ "$" ++ asHex (cast x)
+  var (VRef x)  = Text $ "$R" ++ asHex (cast x)
 
-minimal : Minimal -> Doc
-minimal (MVar v)          = var v
-minimal (MProjection n v) = minimal v <+> ".a" <+> shown n
+  minimal : Minimal -> Doc
+  minimal (MVar v)          = var v
+  minimal (MProjection n v) = minimal v <+> ".a" <+> shown n
 
 tag2es : Either Int Name -> Doc
 tag2es (Left x)  = shown x
@@ -472,11 +484,12 @@ searchForeign knownBackends decls =
 -- generate a toplevel function definition.
 makeForeign :  {auto d : Ref Ctxt Defs}
             -> {auto c : Ref ESs ESSt}
+            -> {auto nm : Ref NoMangleMap NoMangleMap}
             -> (name : Name)
             -> (ffDecl : String)
             -> Core Doc
 makeForeign n x = do
-  nd <- var <$> getOrRegisterRef n
+  nd <- var !(get NoMangleMap) <$> getOrRegisterRef n
   let (ty, def) = readCCPart x
   case ty of
     "lambda" => pure . constant nd . paren $ Text def
@@ -506,6 +519,7 @@ makeForeign n x = do
 -- to extract a declaration for one of the supported backends.
 foreignDecl :  {auto d : Ref Ctxt Defs}
             -> {auto c : Ref ESs ESSt}
+            -> {auto nm : Ref NoMangleMap NoMangleMap}
             -> Name
             -> List String
             -> Core Doc
@@ -602,9 +616,9 @@ switch sc alts def =
 -- creates an argument list for a (possibly multi-argument)
 -- anonymous function. An empty argument list is treated
 -- as a delayed computation (prefixed by `() =>`).
-lambdaArgs : List Var -> Doc
-lambdaArgs [] = "()" <+> lambdaArrow
-lambdaArgs xs = hcat $ (<+> lambdaArrow) . var <$> xs
+lambdaArgs : (noMangle : NoMangleMap) -> List Var -> Doc
+lambdaArgs noMangle [] = "()" <+> lambdaArrow
+lambdaArgs noMangle xs = hcat $ (<+> lambdaArrow) . var noMangle <$> xs
 
 insertBreak : (r : Effect) -> (Doc, Doc) -> (Doc, Doc)
 insertBreak Returns x = x
@@ -612,12 +626,20 @@ insertBreak (ErrorWithout _) (pat, exp) = (pat, vcat [exp, "break;"])
 
 mutual
   -- converts an `Exp` to JS code
-  exp : {auto c : Ref ESs ESSt} -> Exp -> Core Doc
-  exp (EMinimal x) = pure $ minimal x
-  exp (ELam xs (Return $ y@(ECon _ _ _))) =
-     map (\e => lambdaArgs xs <+> paren e) (exp y)
-  exp (ELam xs (Return $ y)) = (lambdaArgs xs <+> ) <$> exp y
-  exp (ELam xs y) = (lambdaArgs xs <+>) . block <$> stmt y
+  exp :  {auto c : Ref ESs ESSt}
+      -> {auto nm : Ref NoMangleMap NoMangleMap}
+      -> Exp
+      -> Core Doc
+  exp (EMinimal x) = pure $ minimal !(get NoMangleMap) x
+  exp (ELam xs (Return $ y@(ECon _ _ _))) = do
+     nm <- get NoMangleMap
+     map (\e => lambdaArgs nm xs <+> paren e) (exp y)
+  exp (ELam xs (Return $ y)) = do
+     nm <- get NoMangleMap
+     (lambdaArgs nm xs <+> ) <$> exp y
+  exp (ELam xs y) = do
+     nm <- get NoMangleMap
+     (lambdaArgs nm xs <+>) . block <$> stmt y
   exp (EApp x xs) = do
     o    <- exp x
     args <- traverse exp xs
@@ -631,18 +653,27 @@ mutual
   exp EErased = pure "undefined"
 
   -- converts a `Stmt e` to JS code.
-  stmt : {e : _} -> {auto c : Ref ESs ESSt} -> Stmt e -> Core Doc
+  stmt :  {e : _}
+       -> {auto c : Ref ESs ESSt}
+       -> {auto nm : Ref NoMangleMap NoMangleMap}
+       -> Stmt e
+       -> Core Doc
   stmt (Return y) = (\e => "return" <++> e <+> ";") <$> exp y
-  stmt (Const v x) = constant (var v) <$> exp x
-  stmt (Declare v s) =
-    (\d => vcat ["let" <++> var v <+> ";",d]) <$> stmt s
-  stmt (Assign v x) =
-    (\d => hcat [var v,softEq,d,";"]) <$> exp x
+  stmt (Const v x) = do
+    nm <- get NoMangleMap
+    constant (var nm v) <$> exp x
+  stmt (Declare v s) = do
+    nm <- get NoMangleMap
+    (\d => vcat ["let" <++> var nm v <+> ";",d]) <$> stmt s
+  stmt (Assign v x) = do
+    nm <- get NoMangleMap
+    (\d => hcat [var nm v,softEq,d,";"]) <$> exp x
 
   stmt (ConSwitch r sc alts def) = do
     as <- traverse (map (insertBreak r) . alt) alts
     d  <- traverseOpt stmt def
-    pure $  switch (minimal sc <+> ".h") as d
+    nm <- get NoMangleMap
+    pure $  switch (minimal nm sc <+> ".h") as d
     where
         alt : {r : _} -> EConAlt r -> Core (Doc,Doc)
         alt (MkEConAlt _ RECORD b)  = ("undefined",) <$> stmt b
@@ -678,7 +709,10 @@ printDoc Compact y = compact y
 printDoc Minimal y = compact y
 
 -- generate code for the given toplevel function.
-def : {auto c : Ref ESs ESSt} -> Function -> Core String
+def :  {auto c : Ref ESs ESSt}
+    -> {auto nm : Ref NoMangleMap NoMangleMap}
+    -> Function
+    -> Core String
 def (MkFunction n as body) = do
   reset
   ref  <- getOrRegisterRef n
@@ -689,14 +723,15 @@ def (MkFunction n as body) = do
     -- zero argument toplevel functions are converted to
     -- lazily evaluated constants.
     [] => pure $ printDoc mde $
-      constant (var ref) (
+      constant (var !(get NoMangleMap) ref) (
         "__lazy(" <+> function neutral [] b <+> ")"
       )
-    _  => pure $ printDoc mde $ function (var ref) (map var args) b
+    _  => pure $ printDoc mde $ function (var !(get NoMangleMap) ref) (map (var !(get NoMangleMap)) args) b
 
 -- generate code for the given foreign function definition
 foreign :  {auto c : Ref ESs ESSt}
         -> {auto d : Ref Ctxt Defs}
+        -> {auto nm : Ref NoMangleMap NoMangleMap}
         -> (Name,FC,NamedDef)
         -> Core (List String)
 foreign (n, _, MkNmForeign path _ _) = pure . pretty <$> foreignDecl n path
@@ -707,11 +742,24 @@ foreign _                            = pure []
 tailRec : Name
 tailRec = UN $ Basic "__tailRec"
 
+validJSName : String -> Bool
+validJSName name =
+    not (name `elem` jsReservedNames)
+    && all validNameChar (unpack name)
+    && (case strM name of
+      StrNil => True
+      StrCons head _ => not $ isDigit head)
+  where
+    validNameChar : Char -> Bool
+    validNameChar c = isAlphaNum c || c == '_' || c == '$'
+
 ||| Compiles the given `ClosedTerm` for the list of supported
 ||| backends to JS code.
 export
 compileToES : Ref Ctxt Defs -> (cg : CG) -> ClosedTerm -> List String -> Core String
 compileToES c cg tm ccTypes = do
+  _ <- initNoMangle "javascript" validJSName
+
   cdata      <- getCompileData False Cases tm
 
   -- read a derive the codegen mode to use from
@@ -722,7 +770,7 @@ compileToES c cg tm ccTypes = do
              else Pretty
 
   -- initialize the state used in the code generator
-  s <- newRef ESs $ init mode (isArg mode) isFun ccTypes
+  s <- newRef ESs $ init mode (isArg mode) isFun ccTypes !(get NoMangleMap)
 
   -- register the toplevel `__tailRec` function to make sure
   -- it is not mangled in `Minimal` mode
@@ -743,7 +791,7 @@ compileToES c cg tm ccTypes = do
   foreigns <- concat <$> traverse foreign allDefs
 
   -- lookup the (possibly mangled) name of the main function
-  mainName <- compact . var <$> getOrRegisterRef mainExpr
+  mainName <- compact . var !(get NoMangleMap) <$> getOrRegisterRef mainExpr
 
   -- main function and list of all declarations
   let main =  "try{"

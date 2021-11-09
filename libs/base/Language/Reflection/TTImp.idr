@@ -91,6 +91,11 @@ mutual
        UniqueDefault : TTImp -> AltType
 
   public export
+  data NoMangleDirective : Type where
+     CommonName : String -> NoMangleDirective
+     BackendNames : List (String, String) -> NoMangleDirective
+
+  public export
   data FnOpt : Type where
        Inline : FnOpt
        NoInline : FnOpt
@@ -109,6 +114,8 @@ mutual
        Totality : TotalReq -> FnOpt
        Macro : FnOpt
        SpecArgs : List Name -> FnOpt
+       ||| Keep the user provided name during codegen
+       NoMangle : NoMangleDirective -> FnOpt
 
   public export
   data ITy : Type where
