@@ -212,9 +212,14 @@ mutual
                                 fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
            else do defs <- get Ctxt
                    nm <- genMVName x
-                   -- We need the full normal form to check determining arguments
-                   -- so we might as well calculate the whole thing now
-                   metaty <- quote defs env aty
+                   empty <- clearDefs defs
+                   -- Normalise fully, but only if it's cheap enough.
+                   -- We have to get the normal form eventually anyway, but
+                   -- it might be too early to do it now if something is
+                   -- blocking it and we're not yet ready to search.
+                   metaty <- catch (quoteOpts (MkQuoteOpts False False (Just 10))
+                                              defs env aty)
+                                   (\err => quote empty env aty)
                    est <- get EST
                    lim <- getAutoImplicitLimit
                    metaval <- searchVar fc argRig lim (Resolved (defining est))
