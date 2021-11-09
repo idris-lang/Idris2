@@ -141,18 +141,19 @@ record Metadata where
 covering
 Show Metadata where
   show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap
-                   fname semanticHighlighting semanticAliases semanticDefaults)
-    = "Metadata:\n" ++
-      " lhsApps: " ++ show apps ++ "\n" ++
-      " names: " ++ show names ++ "\n" ++
-      " type declarations: " ++ show tydecls ++ "\n" ++
-      " current LHS: " ++ show currentLHS ++ "\n" ++
-      " holes: " ++ show holeLHS ++ "\n" ++
-      " nameLocMap: " ++ show nameLocMap ++ "\n" ++
-      " sourceIdent: " ++ show fname ++
-      " semanticHighlighting: " ++ show semanticHighlighting ++
-      " semanticAliases: " ++ show semanticAliases ++
-      " semanticDefaults: " ++ show semanticDefaults
+                   fname semanticHighlighting semanticAliases semanticDefaults) = """
+    Metadata:
+     lhsApps: \{ show apps }
+     names: \{ show names }
+     type declarations: \{ show tydecls }
+     current LHS: \{ show currentLHS }
+     holes: \{ show holeLHS }
+     nameLocMap: \{ show nameLocMap }
+     sourceIdent: \{ show fname }
+     semanticHighlighting: \{ show semanticHighlighting }
+     semanticAliases: \{ show semanticAliases }
+     semanticDefaults: \{ show semanticDefaults }
+    """
 
 export
 initMetadata : OriginDesc -> Metadata
