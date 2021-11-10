@@ -871,8 +871,8 @@ lengthPlusIsLengthPlus n (x::xs) =
   (lengthPlusIsLengthPlus (S n) xs)
   (plusSuccRightSucc n (length xs))
 
-tailRecLengthIsLength : (xs : List a) -> tailRecLength xs = length xs
-tailRecLengthIsLength = lengthPlusIsLengthPlus Z
+lengthTRIsLength : (xs : List a) -> lengthTR xs = length xs
+lengthTRIsLength = lengthPlusIsLengthPlus Z
 
 ||| List `reverse` applied to `reverseOnto` is equivalent to swapping the
 ||| arguments of `reverseOnto`.

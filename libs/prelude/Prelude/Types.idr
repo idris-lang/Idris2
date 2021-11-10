@@ -419,13 +419,13 @@ namespace List
   lengthPlus n (x::xs) = lengthPlus (S n) xs
 
   ||| `length` implementation that uses tail recursion. Exported so
-  ||| tailRecLengthIsLength can see it.
+  ||| lengthTRIsLength can see it.
   public export
-  tailRecLength : List a -> Nat
-  tailRecLength = lengthPlus Z
+  lengthTR : List a -> Nat
+  lengthTR = lengthPlus Z
 
-  -- Data.List.tailRecLengthIsLength proves these are equivalent.
-  %transform "tailRecLength" length = tailRecLength
+  -- Data.List.lengthTRIsLength proves these are equivalent.
+  %transform "tailRecLength" length = lengthTR
 
 public export
 Functor List where
