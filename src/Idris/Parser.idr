@@ -23,15 +23,15 @@ import Idris.Parser.Let
 
 %default covering
 
-decorate : OriginDesc -> Decoration -> Rule a -> Rule a
-decorate fname decor rule = do
-  res <- bounds rule
-  act [((fname, (start res, end res)), decor, Nothing)]
-  pure res.val
-
 decorationFromBounded : OriginDesc -> Decoration -> WithBounds a -> ASemanticDecoration
 decorationFromBounded fname decor bnds
    = ((fname, start bnds, end bnds), decor, Nothing)
+
+decorate : OriginDesc -> Decoration -> Rule a -> Rule a
+decorate fname decor rule = do
+  res <- bounds rule
+  act [decorationFromBounded fname decor res]
+  pure res.val
 
 boundedNameDecoration : OriginDesc -> Decoration -> WithBounds Name -> ASemanticDecoration
 boundedNameDecoration fname decor bstr = ((fname, start bstr, end bstr)
@@ -1007,7 +1007,7 @@ visibility fname
 tyDecls : Rule Name -> String -> OriginDesc -> IndentInfo -> Rule (List1 PTypeDecl)
 tyDecls declName predoc fname indents
     = do bs <- do docns <- sepBy1 (decoratedSymbol fname ",")
-                                  [| (option "" documentation, bounds declName) |]
+                                  [| (optDocumentation fname, bounds declName) |]
                   b <- bounds $ decoratedSymbol fname ":"
                   mustWorkBecause b.bounds "Expected a type declaration" $ do
                     ty  <- typeExpr pdef fname indents
@@ -1111,7 +1111,7 @@ mkDataConType _ _ _ -- with and named applications not allowed in simple ADTs
 
 simpleCon : OriginDesc -> PTerm -> IndentInfo -> Rule PTypeDecl
 simpleCon fname ret indents
-    = do b <- bounds (do cdoc   <- option "" documentation
+    = do b <- bounds (do cdoc   <- optDocumentation fname
                          cname  <- bounds $ decoratedDataConstructorName fname
                          params <- many (argExpr plhs fname indents)
                          pure (cdoc, cname.val, boundToFC fname cname, params))
@@ -1176,7 +1176,7 @@ dataDeclBody fname indents
 
 dataDecl : OriginDesc -> IndentInfo -> Rule PDecl
 dataDecl fname indents
-    = do b <- bounds (do doc   <- option "" documentation
+    = do b <- bounds (do doc   <- optDocumentation fname
                          vis   <- visibility fname
                          dat   <- dataDeclBody fname indents
                          pure (doc, vis, dat))
@@ -1320,7 +1320,7 @@ namespaceHead fname
 
 namespaceDecl : OriginDesc -> IndentInfo -> Rule PDecl
 namespaceDecl fname indents
-    = do b <- bounds (do doc   <- option "" documentation
+    = do b <- bounds (do doc   <- optDocumentation fname
                          col   <- column
                          ns    <- namespaceHead fname
                          ds    <- blockAfter col (topDecl fname)
@@ -1503,7 +1503,7 @@ ifaceParam fname indents
 
 ifaceDecl : OriginDesc -> IndentInfo -> Rule PDecl
 ifaceDecl fname indents
-    = do b <- bounds (do doc   <- option "" documentation
+    = do b <- bounds (do doc   <- optDocumentation fname
                          vis   <- visibility fname
                          col   <- column
                          decoratedKeyword fname "interface"
@@ -1522,7 +1522,7 @@ ifaceDecl fname indents
 
 implDecl : OriginDesc -> IndentInfo -> Rule PDecl
 implDecl fname indents
-    = do b <- bounds (do doc     <- option "" documentation
+    = do b <- bounds (do doc     <- optDocumentation fname
                          visOpts <- many (visOpt fname)
                          vis     <- getVisibility Nothing visOpts
                          let opts = mapMaybe getRight visOpts
@@ -1546,7 +1546,7 @@ implDecl fname indents
 
 fieldDecl : OriginDesc -> IndentInfo -> Rule (List PField)
 fieldDecl fname indents
-      = do doc <- option "" documentation
+      = do doc <- optDocumentation fname
            decoratedSymbol fname "{"
            commit
            impl <- option Implicit (AutoImplicit <$ decoratedKeyword fname "auto")
@@ -1554,7 +1554,7 @@ fieldDecl fname indents
            decoratedSymbol fname "}"
            atEnd indents
            pure fs
-    <|> do doc <- option "" documentation
+    <|> do doc <- optDocumentation fname
            fs <- fieldBody doc Explicit
            atEnd indents
            pure fs
@@ -1592,7 +1592,7 @@ recordParam fname indents
 
 recordDecl : OriginDesc -> IndentInfo -> Rule PDecl
 recordDecl fname indents
-    = do b <- bounds (do doc   <- option "" documentation
+    = do b <- bounds (do doc   <- optDocumentation fname
                          vis   <- visibility fname
                          col   <- column
                          decoratedKeyword fname "record"
@@ -1636,7 +1636,7 @@ paramDecls fname indents
 claims : OriginDesc -> IndentInfo -> Rule (List1 PDecl)
 claims fname indents
     = do bs <- bounds (do
-                  doc     <- option "" documentation
+                  doc     <- optDocumentation fname
                   visOpts <- many (visOpt fname)
                   vis     <- getVisibility Nothing visOpts
                   let opts = mapMaybe getRight visOpts
@@ -1757,7 +1757,7 @@ import_ fname indents
 export
 prog : OriginDesc -> EmptyRule Module
 prog fname
-    = do b <- bounds (do doc    <- option "" documentation
+    = do b <- bounds (do doc    <- optDocumentation fname
                          nspace <- option (nsAsModuleIdent mainNS)
                                      (do decoratedKeyword fname "module"
                                          decorate fname Module $ mustWork moduleIdent)
@@ -1771,7 +1771,7 @@ prog fname
 export
 progHdr : OriginDesc -> EmptyRule Module
 progHdr fname
-    = do b <- bounds (do doc    <- option "" documentation
+    = do b <- bounds (do doc    <- optDocumentation fname
                          nspace <- option (nsAsModuleIdent mainNS)
                                      (do decoratedKeyword fname "module"
                                          mustWork moduleIdent)

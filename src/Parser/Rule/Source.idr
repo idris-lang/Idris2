@@ -56,9 +56,15 @@ documentation' = terminal "Expected documentation comment" $
                             DocComment d => Just d
                             _ => Nothing
 
+documentation : OriginDesc -> Rule String
+documentation fname
+  = do b <- bounds (some documentation')
+       act [((fname, start b, end b), Comment, Nothing)]
+       pure (unlines $ forget b.val)
+
 export
-documentation : Rule String
-documentation = (unlines . forget) <$> some documentation'
+optDocumentation : OriginDesc -> EmptyRule String
+optDocumentation fname = option "" (documentation fname)
 
 export
 intLit : Rule Integer
