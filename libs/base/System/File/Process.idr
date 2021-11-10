@@ -1,5 +1,6 @@
 module System.File.Process
 
+import public System.Escape
 import public System.File.Error
 import public System.File.Mode
 import System.File.Support
@@ -10,7 +11,7 @@ prim__flush : FilePtr -> PrimIO Int
 %foreign support "idris2_popen"
 prim__popen : String -> String -> PrimIO FilePtr
 %foreign support "idris2_pclose"
-prim__pclose : FilePtr -> PrimIO ()
+prim__pclose : FilePtr -> PrimIO Int
 
 ||| Force a write of all user-space buffered data for the given `File`.
 |||
@@ -34,9 +35,14 @@ popen cmd m = do
         then returnError
         else pure (Right (FHandle ptr))
 
+namespace Escaped
+  export
+  popen : HasIO io => (cmd : List String) -> (m : Mode) -> io (Either FileError File)
+  popen = popen . escapeCmd
+
 ||| Wait for the process associated with the pipe to terminate.
 |||
 ||| @ fh the file handle to the stream to close/wait on
 export
-pclose : HasIO io => (fh : File) -> io ()
+pclose : HasIO io => (fh : File) -> io Int
 pclose (FHandle h) = primIO (prim__pclose h)

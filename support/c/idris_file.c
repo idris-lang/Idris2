@@ -107,13 +107,16 @@ void *idris2_popen(const char *cmd, const char *mode) {
     return f;
 }
 
-void idris2_pclose(void *stream) {
+int idris2_pclose(void *stream) {
 #ifdef _WIN32
     int r = _pclose(stream);
+    IDRIS2_VERIFY(r != -1, "pclose failed");
+    return r;
 #else
     int r = pclose(stream);
+    IDRIS2_VERIFY(WIFEXITED(r), "pclose failed");
+    return WEXITSTATUS(r);
 #endif
-    IDRIS2_VERIFY(r != -1, "pclose failed");
 }
 
 // seek through the next newline, consuming and
