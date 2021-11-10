@@ -319,6 +319,10 @@ break : (a -> Bool) -> List a -> (List a, List a)
 break p xs = span (not . p) xs
 
 public export
+singleton : a -> List a
+singleton x = [x]
+
+public export
 split : (a -> Bool) -> List a -> List1 (List a)
 split p xs =
   case break p xs of

@@ -1,3 +1,4 @@
+import Data.List
 import Data.Nat
 
 namespace MaybeList
@@ -7,7 +8,7 @@ namespace MaybeList
 
   public export
   pure : a -> (Maybe . List) a
-  pure = Just . (:: Nil)
+  pure = Just . singleton
 
   public export
   guard : Bool -> (Maybe . List) ()
@@ -25,7 +26,7 @@ namespace ListMaybe
 
   public export
   pure : a -> (List . Maybe) a
-  pure = (:: Nil) . Just
+  pure = singleton . Just
 
   public export
   guard : Bool -> (List . Maybe) ()
