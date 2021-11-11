@@ -105,7 +105,6 @@ getNameType elabMode rigc env fc x
              Deprecated
                "\{show gdef.fullname} is deprecated and will be removed in a future version."
                (Just (fc, gdef.fullname))
-    checkDeprecation _ _ = pure ()
 
 -- Get the type of a variable, looking it up in the nested names first.
 getVarType : {vars : _} ->
