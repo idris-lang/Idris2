@@ -78,7 +78,7 @@ showParens True  s = "(" ++ s ++ ")"
 |||
 ||| Apply `showCon` to the precedence context, the constructor name, and the
 ||| args shown with `showArg` and concatenated.  Example:
-||| ```
+||| ```idris example
 ||| data Ann a = MkAnn String a
 |||
 ||| Show a => Show (Ann a) where
