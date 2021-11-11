@@ -45,7 +45,7 @@ recordtypes = vcat $
     For instance, we can define a type of pairs of natural numbers
     """, "",
     """
-    ```
+    ```idris
     record Nat2 where
       constructor MkNat2
       fst : Nat
@@ -68,7 +68,7 @@ datatypes = vcat $
     You can either use a BNF-style definition for simple types
     """, "",
     """
-    ```
+    ```idris
     data List a = Nil | (::) a (List a)
     ```
     """, "",
@@ -76,7 +76,7 @@ datatypes = vcat $
     or a GADT-style definition for indexed types
     """, "",
     """
-    ```
+    ```idris
     data Vect : Nat -> Type -> Type where
       Nil  : Vect 0 a
       (::) : a -> Vect n a -> Vect (S n) a
@@ -150,7 +150,7 @@ ifthenelse = vcat $
     For instance, in the following incomplete program
     """, "",
     """
-    ```
+    ```idris
     notInvolutive : (b : Bool) -> not (not b) === b
     notInvolutive b = if b then ?holeTrue else ?holeFalse
     ```
@@ -173,7 +173,7 @@ impossibility = vcat $
     that 0 is equal to 1:
     """, "",
     """
-    ```
+    ```idris
     zeroIsNotOne : 0 === 1 -> Void
     zeroIsNotOne eq impossible
     ```
@@ -190,7 +190,7 @@ caseof = vcat $
     For instance, in the following program
     """, "",
     """
-    ```
+    ```idris
     assoc : (ma, mb, mc : Maybe a) ->
             ((ma <|> mb) <|> mc) === (ma <|> (mb <|> mc))
     assoc ma mb mc = case ma of
@@ -238,10 +238,10 @@ implicitarg = vcat $
       argument. Users can add new hints to the database by adding a `%hint`
       pragma to their declarations. By default all data constructors are hints.
       For instance, the following function
-      ````
+      ```idris
       f : (n : Nat) -> {auto _ : n === Z} -> Nat
       f n = n
-      ````
+      ```
       will only accept arguments that can be automatically proven to be equal
       to zero.
     """, "",
@@ -249,7 +249,7 @@ implicitarg = vcat $
     * `default` takes a value of the appropriate type and if no argument is
       explicitly passed at a call site, will use that default value.
       For instance, the following function
-      ```
+      ```idris
       f : {default 0 n : Nat} -> Nat
       f = n
       ```
@@ -276,7 +276,7 @@ interfacemechanism = vcat $
     implementations:
     """, "",
     """
-    ```
+    ```idris
     interface Failing (0 a : Type) where
       fail : a
 
@@ -309,7 +309,7 @@ doblock = vcat $
     `do`-based indentation) and desugared to the corresponding `let` constructs.
 
     For instance the following block
-    ```
+    ```idris
       do x <- e1
          e2
          let y = e3
@@ -352,7 +352,7 @@ parametersblock = vcat $
     default value `dflt`
     """, "",
     """
-    ```
+    ```idris
     parameters (dflt : a)
 
       head : List a -> a
@@ -377,7 +377,7 @@ mutualblock = vcat $
     """
     Mutual blocks allow users to have inter-dependent declarations. For instance
     we can define the `odd` and `even` checks in terms of each other like so:
-    ```
+    ```idris
     mutual
 
       odd : Nat -> Bool
@@ -394,7 +394,7 @@ mutualblock = vcat $
     forward-declaration feature: all the mutual declarations come first and then
     their definitions. In other words, the earlier example using a `mutual` block
     is equivalent to the following
-    ```
+    ```idris
     odd : Nat -> Bool
     even : Nat -> Bool
 
@@ -415,7 +415,7 @@ namespaceblock = vcat $
     will lead to a scope error. Putting each one in a different `namespace`
     block can help bypass this issue by ensuring that they are assigned distinct
     fully qualified names. For instance
-    ```
+    ```idris
     module M
 
     namespace Zero
@@ -440,7 +440,7 @@ rewriteeq = vcat $
     on the left hand side of the equality by that on the right hand side.
     For instance, if we know that the types `a` and `b` are propositionally
     equal, we can return a value of type `a` as if it had type `b`:
-    ```
+    ```idris
     transport : a === b -> a -> b
     transport eq x = rewrite sym eq in x
     ```
@@ -468,7 +468,7 @@ withabstraction = vcat $
     `eq` an equality proof stating that the `True`/`False` patterns in the further
     clauses are equal to the result of evaluating `p x`. This is the reason why
     we can successfully form `(x ** eq)` in the `True` branch.
-    ```
+    ```idris
     filter : (p : a -> Bool) -> List a -> List (x : a ** p x === True)
     filter p [] = []
     filter p (x :: xs) with (p x) proof eq
@@ -492,7 +492,7 @@ letbinding = vcat $
 
     For instance, in the following definition the let-bound value `square`
     ensures that `n * n` is only computed once:
-    ```
+    ```idris
     power4 : Nat -> Nat
     power4 n = let square := n * n in square * square
     ```
@@ -502,7 +502,7 @@ letbinding = vcat $
     an alternative list of clauses can be given using the `|` separator.
     For instance, we can shortcut the `square * square` computation in case
     the returned value is 0 like so:
-    ```
+    ```idris
     power4 : Nat -> Nat
     power4 n = let square@(S _) := n * n
                      | Z => Z

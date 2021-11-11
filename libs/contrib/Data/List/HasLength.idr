@@ -6,12 +6,12 @@
 ||| depends on the length of said lists.
 |||
 ||| Instead of writing:
-||| ```
+||| ```idris example
 ||| f0 : (xs : List a) -> P xs
 ||| ```
 |||
 ||| We would write either of:
-||| ```
+||| ```idris example
 ||| f1 : (n : Nat) -> (0 _ : HasLength xs n) -> P xs
 ||| f2 : (n : Subset n (HasLength xs)) -> P xs
 ||| ```
