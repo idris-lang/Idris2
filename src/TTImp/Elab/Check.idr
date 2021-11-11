@@ -34,6 +34,7 @@ isLHS : ElabMode -> Maybe RigCount
 isLHS (InLHS w) = Just w
 isLHS _ = Nothing
 
+export
 Show ElabMode where
   show InType = "InType"
   show (InLHS c) = "InLHS " ++ show c

@@ -365,7 +365,6 @@ mutual
                 do args' <- traverse (toCExp m n) args
                    defs <- get Ctxt
                    f' <- toCExpTm m n f
-                   checkDeprecation f'
                    Arity a <- numArgs defs f
                       | NewTypeBy arity pos =>
                             do let res = applyNewType arity pos f' args'
@@ -375,18 +374,6 @@ mutual
                                pure $ m res
                    let res = expandToArity a f' args'
                    pure $ m res
-    where
-      checkDeprecation : CExp vars -> Core ()
-      checkDeprecation (CApp _ (CRef fc n) _) =
-        do defs <- get Ctxt
-           Just gdef <- lookupCtxtExact n (gamma defs)
-             | Nothing => pure ()
-           when (Deprecate `elem` gdef.flags) $
-             recordWarning $
-               Deprecated
-                 "\{show gdef.fullname} is deprecated and will be removed in a future version."
-                 (Just (fc, n))
-      checkDeprecation _ = pure ()
 
 mutual
   conCases : {vars : _} ->
