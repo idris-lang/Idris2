@@ -77,7 +77,7 @@ renderHtml (STText _ text) = pure $ htmlEscape text
 renderHtml (STLine _) = pure "<br>"
 renderHtml (STAnn Declarations rest)
   = pure $ "<dl class=\"decls\">" <+> !(renderHtml rest) <+> "</dl>"
-renderHtml (STAnn (Decl n) rest) = pure $ "<dt id=\"" ++ (htmlEscape $ show n) ++ "\">" <+> !(renderHtml rest) <+> "</dt>"
+renderHtml (STAnn (Decl n) rest) = pure $ "<dt id=\"" ++ (htmlEscape $ show n) ++ "\"><code>" <+> !(renderHtml rest) <+> "</code></dt>"
 renderHtml (STAnn DocStringBody rest)
   = pure $ "<dd>" <+> !(renderHtml rest) <+> "</dd>"
 renderHtml (STAnn UserDocString rest)
