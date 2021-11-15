@@ -1,14 +1,14 @@
 1/1: Building StringParser (StringParser.idr)
 Main> hiya
 2
-Parse failed at position 0: satisfy
-Parse failed at position 0: Not good
+Parse failed at position 0-0: could not satisfy predicate
+Parse failed at position 0-0: Not good
 ['7', '6', '6', '7', '7', '5']
 ['6', '3', '5', '5', '3']
 "887"
 "XML Comment"
 "<- Complicated -- XML -- Comment ->"
-Parse failed at position 24: end of string reached - "-->" not found
+Parse failed at position 0-24: end of string reached - "-->" not found
 "123"
 ""
 True
@@ -17,5 +17,5 @@ False
 ['a', 12, 'b', 3, 'c']
 ['a', 'b', 'c', 'd']
 ()
-Parse failed at position 0: Purposefully changed OK to Fail
+Parse failed at position 0-0: Purposefully changed OK to Fail
 Main> Bye for now!
