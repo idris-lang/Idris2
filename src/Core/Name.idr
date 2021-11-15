@@ -1,8 +1,6 @@
 module Core.Name
 
-import Data.List
 import Data.String
-import Data.Maybe
 import Decidable.Equality
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util

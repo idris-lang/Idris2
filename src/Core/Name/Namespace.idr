@@ -5,7 +5,6 @@ import Data.List1
 import Data.String
 import Decidable.Equality
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Utils.Path
 
 %default total

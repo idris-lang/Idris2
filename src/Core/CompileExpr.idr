@@ -7,7 +7,6 @@ import Core.Name
 import Core.TT
 
 import Data.List
-import Libraries.Data.NameMap
 import Data.Vect
 
 %default covering

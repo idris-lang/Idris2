@@ -27,7 +27,6 @@ import Libraries.Data.StringMap
 import Libraries.Data.UserNameMap
 import Libraries.Text.Distance.Levenshtein
 
-import System
 import System.Clock
 import System.Directory
 

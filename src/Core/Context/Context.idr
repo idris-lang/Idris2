@@ -3,17 +3,11 @@ module Core.Context.Context
 import        Core.Case.CaseTree
 import        Core.CompileExpr
 import        Core.Env
-import        Core.Hash
 import public Core.Name
 import public Core.Options.Log
 import public Core.TT
 
-import Data.Fin
 import Data.IORef
-import Data.List
-import Data.List1
-import Data.Maybe
-import Data.Nat
 
 import Libraries.Data.IntMap
 import Libraries.Data.IOArray
