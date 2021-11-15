@@ -1,6 +1,5 @@
 module TTImp.Elab.Local
 
-import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -9,12 +8,10 @@ import Core.Metadata
 import Core.Normalise
 import Core.Unify
 import Core.TT
-import Core.Value
 
 import Idris.Syntax
 
 import TTImp.Elab.Check
-import TTImp.Elab.Utils
 import TTImp.TTImp
 
 import Libraries.Data.NameMap

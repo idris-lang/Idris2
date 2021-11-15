@@ -1,15 +1,11 @@
 module Idris.CommandLine
 
-import IdrisPaths
-
 import Idris.Env
 import Idris.Version
 
-import Core.Name.Namespace
 import Core.Options
 
 import Data.List
-import Data.List1
 import Data.Maybe
 import Data.String
 import Data.Either

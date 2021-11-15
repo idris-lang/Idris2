@@ -3,7 +3,6 @@ module Compiler.Scheme.Chez
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Generated
-import Compiler.Inline
 import Compiler.Scheme.Common
 
 import Core.Context
@@ -25,10 +24,8 @@ import Idris.Env
 
 import System
 import System.Directory
-import System.File
 import System.Info
 
-import Libraries.Data.NameMap
 import Libraries.Data.Version
 import Libraries.Utils.String
 

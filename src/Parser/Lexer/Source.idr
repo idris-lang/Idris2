@@ -3,7 +3,6 @@ module Parser.Lexer.Source
 import public Parser.Lexer.Common
 
 import Data.Either
-import Data.List1
 import Data.List
 import Data.Maybe
 import Data.String

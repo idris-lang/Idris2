@@ -17,7 +17,6 @@ import TTImp.Elab.Delayed
 import TTImp.TTImp
 
 import Data.List
-import Data.Maybe
 
 %default covering
 

@@ -32,7 +32,6 @@ import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
-import Data.Either
 import Data.List
 
 %default covering

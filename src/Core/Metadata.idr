@@ -4,11 +4,9 @@ import Core.Binary
 import Core.Context
 import Core.Context.Log
 import Core.Core
-import Core.Directory
 import Core.Env
 import Core.FC
 import Core.Normalise
-import Core.Options
 import Core.TT
 import Core.TTC
 

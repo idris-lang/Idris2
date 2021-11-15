@@ -5,12 +5,10 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.Env
-import Core.Options
 import Core.Primitives
 import Core.TT
 import Core.Value
 
-import Libraries.Data.IntMap
 import Data.List
 import Data.Maybe
 import Data.Nat

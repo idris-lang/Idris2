@@ -2,7 +2,6 @@ module Libraries.Utils.Hex
 
 import Data.Bits
 import Data.List
-import Data.Primitives.Views
 
 %default total
 

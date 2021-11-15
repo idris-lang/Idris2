@@ -12,7 +12,6 @@ import Core.TT
 import Core.Value
 
 import TTImp.Elab.Check
-import TTImp.TTImp
 
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap

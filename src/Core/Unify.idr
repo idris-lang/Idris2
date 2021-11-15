@@ -13,7 +13,6 @@ import public Core.UnifyState
 import Core.Value
 
 import Data.List
-import Data.List.Views
 import Data.Maybe
 
 import Libraries.Data.IntMap

@@ -5,9 +5,6 @@ import Core.Name
 
 import Idris.Pretty
 
-import Libraries.Control.ANSI.SGR
-import Libraries.Text.PrettyPrint.Prettyprinter
-
 %default total
 
 public export

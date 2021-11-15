@@ -12,7 +12,6 @@ import Core.Value
 
 import Data.List
 import Data.Maybe
-import Libraries.Data.NameMap
 import Data.Vect
 
 %default covering

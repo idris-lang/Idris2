@@ -14,12 +14,9 @@ import Core.Context
 import Core.Context.Log
 import Core.Directory
 import Core.Options
-import Core.Ord
 import Core.TT
 import Core.TTC
 import Libraries.Data.IOArray
-import Libraries.Data.SortedMap
-import Libraries.Utils.Path
 import Libraries.Utils.Scheme
 
 import Data.List
@@ -31,7 +28,6 @@ import Idris.Env
 
 import System.Directory
 import System.Info
-import System.File
 
 %default covering
 

@@ -9,7 +9,6 @@ import Core.Metadata
 import Core.Normalise
 import Core.UnifyState
 import Core.Unify
-import Core.Value
 
 import Idris.Syntax
 
@@ -17,7 +16,6 @@ import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.Elab.Term
 import TTImp.TTImp
-import TTImp.Unelab
 
 import Data.List
 import Data.Maybe

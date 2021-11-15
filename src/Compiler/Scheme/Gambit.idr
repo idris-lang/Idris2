@@ -3,7 +3,6 @@ module Compiler.Scheme.Gambit
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Generated
-import Compiler.Inline
 import Compiler.Scheme.Common
 
 import Core.Context
@@ -16,16 +15,12 @@ import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Libraries.Data.NameMap
-import Data.String
 import Data.Vect
 
 import Idris.Env
 
 import System
 import System.Directory
-import System.File
-import System.Info
 
 %default covering
 

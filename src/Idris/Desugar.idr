@@ -1,6 +1,5 @@
 module Idris.Desugar
 
-import Core.Binary
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -10,11 +9,8 @@ import Core.Options
 import Core.TT
 import Core.Unify
 
-import Data.Maybe
-
 import Libraries.Data.List.Extra
 import Libraries.Data.StringMap
-import Libraries.Data.String.Extra
 import Libraries.Data.ANameMap
 import Libraries.Data.SortedMap
 
@@ -36,11 +32,9 @@ import TTImp.Utils
 import Libraries.Data.IMaybe
 import Libraries.Utils.Shunting
 
-import Control.Monad.State
 import Data.Maybe
 import Data.List
 import Data.List.Views
-import Data.List1
 import Data.String
 import Libraries.Data.String.Extra
 

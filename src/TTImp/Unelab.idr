@@ -5,12 +5,10 @@ import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise
-import Core.Options
 import Core.Value
 import Core.TT
 
 import TTImp.TTImp
-import TTImp.Utils
 
 import Data.List
 import Data.String

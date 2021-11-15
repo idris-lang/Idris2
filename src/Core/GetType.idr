@@ -1,6 +1,5 @@
 module Core.GetType
 
-import Core.Case.CaseTree
 import Core.Context
 import Core.Env
 import Core.Normalise

@@ -4,21 +4,13 @@ import public Core.Normalise.Convert
 import public Core.Normalise.Eval
 import public Core.Normalise.Quote
 
-import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Options
-import Core.Primitives
 import Core.TT
 import Core.Value
-
-import Libraries.Data.IntMap
-import Data.List
-import Data.Maybe
-import Data.Nat
-import Data.Vect
 
 %default covering
 

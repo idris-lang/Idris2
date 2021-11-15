@@ -4,7 +4,6 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.Env
-import Core.GetType
 import Core.Metadata
 import Core.Normalise
 import Core.Options
@@ -22,7 +21,6 @@ import TTImp.Reflect
 import TTImp.TTImp
 import TTImp.TTImp.Functor
 import TTImp.Unelab
-import TTImp.Utils
 
 %default covering
 

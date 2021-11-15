@@ -25,7 +25,6 @@ module Libraries.Text.Literate
 
 import Libraries.Text.Lexer
 
-import Data.List
 import Data.List1
 import Data.List.Views
 import Data.String

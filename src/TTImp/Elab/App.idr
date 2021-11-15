@@ -1,6 +1,5 @@
 module TTImp.Elab.App
 
-import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -18,7 +17,6 @@ import TTImp.Elab.Dot
 import TTImp.TTImp
 
 import Data.List
-import Data.List1
 import Data.Maybe
 
 %default covering

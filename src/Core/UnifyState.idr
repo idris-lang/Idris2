@@ -1,7 +1,6 @@
 
 module Core.UnifyState
 
-import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -16,8 +15,6 @@ import Core.Value
 import Data.List
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
-import Libraries.Data.StringMap
-import Libraries.Utils.Binary
 
 %default covering
 

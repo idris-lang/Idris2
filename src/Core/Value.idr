@@ -5,9 +5,6 @@ import Core.Core
 import Core.Env
 import Core.TT
 
-import Libraries.Data.IntMap
-import Libraries.Data.NameMap
-
 %default covering
 
 public export

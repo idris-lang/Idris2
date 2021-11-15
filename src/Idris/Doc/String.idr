@@ -4,12 +4,10 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.Env
-import Core.Metadata
 import Core.TT
 import Core.TT.Traversals
 
 import Idris.Pretty
-import Idris.Pretty.Render
 import Idris.REPL.Opts
 import Idris.Resugar
 import Idris.Syntax
@@ -30,7 +28,6 @@ import Libraries.Data.SortedMap
 import Libraries.Data.StringMap as S
 import Libraries.Data.String.Extra
 
-import Libraries.Control.ANSI.SGR
 import public Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
