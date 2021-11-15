@@ -5,11 +5,17 @@ import Data.Vect
 import Data.Fin
 import Data.Vect.Elem
 
-||| Version of `map` with access to the current position
+||| Enumerate a Vect with indicies of Fin
 public export
-mapWithPos : (f : Fin n -> a -> b) -> Vect n a -> Vect n b
-mapWithPos f [] = []
-mapWithPos f (x :: xs) = f 0 x :: mapWithPos (f . FS) xs
+enumFin : Vect n a -> Vect n (Fin n, a)
+enumFin [] = []
+enumFin (x :: xs) = (FZ, x) :: map (\(n, s) => (FS n, s)) (enumFin xs)
+
+||| Enumerate a Vect with indicies of Elem
+public export
+enumElem : (l : Vect n a) -> Vect n (e : a ** Elem e l)
+enumElem [] = []
+enumElem (x :: xs) = (x ** Here) :: map (\(s ** f) => (s ** There f)) (enumElem xs)
 
 ||| Version of `map` with runtime-irrelevant information that the
 ||| argument is an element of the vector

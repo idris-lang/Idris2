@@ -1,22 +1,23 @@
 module Data.List.Extra
 
 import Data.List
+import Data.List.Elem
 
 %default total
 
-||| Analogous to `map` for `List`, but the function is applied to the index of
-||| the element as first argument (counting from 0), and the element itself as
-||| second argument.
+||| Enumerate a List with indicies of Nat
 public export
-mapi : ((n : Nat) -> (a -> b))
-    -> (xs : List a)
-    -> List b
-mapi = h 0 where
-  h : Nat -> ((n : Nat) -> (a -> b))
-   -> (xs : List a)
-   -> List b
-  h i f [] = []
-  h i f (x :: xs) = f i x :: h (S i) f xs
+enumNat : List a -> List (Nat, a)
+enumNat l = h 0 l where
+  h : Nat -> List a -> List (Nat, a)
+  h _ [] = []
+  h n (x :: xs) = (n, x) :: h (S n) xs
+
+||| Enumerate a List with indicies of Elem
+public export
+enumElem : (l : List a) -> List (e : a ** Elem e l)
+enumElem [] = []
+enumElem (x :: xs) = (x ** Here) :: map (\(s ** f) => (s ** There f)) (enumElem xs) 
 
 ||| Applied to a predicate and a list, returns the list of those elements that
 ||| satisfy the predicate with corresponding indices in a stand-alone list.

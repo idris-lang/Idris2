@@ -361,6 +361,34 @@ mapMaybe f (x::xs) =
        Just y  => (S len ** y :: ys)
        Nothing => (  len **      ys)
 
+||| Map with index parameter
+|||
+||| ```idris example
+||| mapI (*) [4,1,2,1]
+||| ```
+export
+mapI : (Nat -> a -> b) -> Vect len a -> Vect len b
+mapI f vect = mapI' Z vect where
+  mapI' : Nat -> Vect len' a -> Vect len' b
+  mapI' _ [] = []
+  mapI' i (x::xs) = f i x :: mapI' (S i) xs
+
+||| MapMaybe with index parameter
+|||
+||| ```idris example
+||| mapMaybeI (\i => \x => if i /= x then Just (i * x) else Nothing) [4,1,2,1]
+||| ```
+export
+mapMaybeI : (Nat -> a -> Maybe b) -> Vect len a -> (m : Nat ** Vect m b)
+mapMaybeI f vect = mapMaybeI' Z vect where
+  mapMaybeI' : Nat -> Vect len' a -> (m' : Nat ** Vect m' b)
+  mapMaybeI' _ []      = (_ ** [])
+  mapMaybeI' i (x::xs) =
+    let (len ** ys) = mapMaybeI' (S i) xs
+    in case f i x of
+         Just y  => (S len ** y :: ys)
+         Nothing => (  len **      ys)
+
 --------------------------------------------------------------------------------
 -- Folds
 --------------------------------------------------------------------------------
@@ -413,6 +441,32 @@ foldr1 f (x::y::xs) = f x (foldr1 f (y::xs))
 public export
 foldl1 : (t -> t -> t) -> Vect (S n) t -> t
 foldl1 f (x::xs) = foldl f x xs
+
+||| Foldr with index parameter
+|||
+||| ```idris example
+||| foldrI (\i => \x => (+) (i * x)) 0 [4,1,2,1]
+||| ```
+public export
+foldrI : (Nat -> elem -> acc -> acc) -> acc -> Vect len elem -> acc
+foldrI f z vect = let (_, z') = foldrI' vect in z' where
+  foldrI' : Vect len' elem -> (Nat, acc)
+  foldrI' [] = (Z, z)
+  foldrI' (x :: xs) = let (i, z') = foldrI' xs
+                      in (S i, f i x z')
+
+||| Foldl with index parameter
+|||
+||| ```idris example
+||| foldlI (\res => \i => \x => res + i * x) 0 [4,1,2,1]
+||| ```
+public export
+foldlI : (acc -> Nat -> elem -> acc) -> acc -> Vect len elem -> acc
+foldlI f z vect = foldlI' Z z vect where
+  foldlI' : Nat -> acc -> Vect len' elem -> acc
+  foldlI' _ z [] = z
+  foldlI' i z (x :: xs) = foldlI' (S i) (f z i x) xs
+
 --------------------------------------------------------------------------------
 -- Scans
 --------------------------------------------------------------------------------
@@ -603,6 +657,23 @@ filter p (x::xs) =
         (_ ** x::tail)
       else
         (_ ** tail)
+
+||| Filter with index as extra parameter for the predicate
+|||
+||| ```idris example
+||| filterI (==) [4,1,2,1]
+||| ```
+public export
+filterI : (Nat -> elem -> Bool) -> Vect len elem -> (p ** Vect p elem)
+filterI p vect = filterI' Z vect where
+  filterI' : Nat -> Vect len' elem -> (p' ** Vect p' elem)
+  filterI' _ []      = ( _ ** [] )
+  filterI' i (x::xs) =
+    let (_ ** tail) = filterI' (S i) xs
+     in if p i x then
+          (_ ** x::tail)
+        else
+          (_ ** tail)
 
 ||| Make the elements of some vector unique by some test
 |||
