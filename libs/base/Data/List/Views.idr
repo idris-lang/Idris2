@@ -4,7 +4,6 @@ import Control.Relation
 import Control.WellFounded
 import Data.List
 import Data.Nat
-import Data.Nat.Views
 
 %default total
 

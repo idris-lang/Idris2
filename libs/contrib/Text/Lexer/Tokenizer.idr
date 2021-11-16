@@ -1,15 +1,10 @@
 module Text.Lexer.Tokenizer
 
 import Data.List
-import Data.Either
-import Data.Nat
-import Data.String
 
-import Data.String.Extra
 import Text.Lexer.Core
 import Text.Lexer
 import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
 
 import public Control.Delayed
 import public Text.Bounded

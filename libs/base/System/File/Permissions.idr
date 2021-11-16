@@ -1,7 +1,6 @@
 module System.File.Permissions
 
 import public System.File.Error
-import System.File.Meta
 import System.File.Support
 import public System.File.Types
 

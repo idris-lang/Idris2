@@ -1,7 +1,6 @@
 ||| A Reversed List
 module Data.SnocList
 
-import Decidable.Equality
 import Data.List
 import Data.Fin
 

@@ -3,8 +3,6 @@ module Data.Nat.Order.Strict
 
 import Data.Nat
 import Decidable.Order.Strict
-import Decidable.Equality
-import Data.Nat.Order
 
 %default total
 

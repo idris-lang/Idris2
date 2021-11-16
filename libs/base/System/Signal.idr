@@ -9,7 +9,6 @@ module System.Signal
 
 import Data.Fuel
 import Data.List
-import Data.List.Elem
 import System.Errno
 
 %default total

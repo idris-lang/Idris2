@@ -1,7 +1,6 @@
 module Prelude.Types
 
 import Builtin
-import PrimIO
 import Prelude.Basics
 import Prelude.EqOrd
 import Prelude.Interfaces

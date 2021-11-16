@@ -1,6 +1,5 @@
 module Data.Monoid.Exponentiation
 
-import Control.Algebra
 import Data.Nat.Views
 import Syntax.PreorderReasoning
 

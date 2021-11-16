@@ -1,7 +1,6 @@
 module System.Path
 
 import Data.List
-import Data.List1
 import Data.Maybe
 import Data.Nat
 import Data.String

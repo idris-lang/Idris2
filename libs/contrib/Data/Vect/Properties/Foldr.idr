@@ -15,12 +15,9 @@ import Data.Vect
 import Data.Vect.Elem
 import Data.Fin
 import Data.Nat
-import Data.Nat.Order
 
 import Syntax.PreorderReasoning
 import Syntax.PreorderReasoning.Generic
-
-import Control.Order
 
 ||| Sum implemented with foldr
 public export

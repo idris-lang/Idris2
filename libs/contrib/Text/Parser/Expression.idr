@@ -1,7 +1,6 @@
 module Text.Parser.Expression
 
 import Text.Parser
-import Data.List1
 
 public export
 data Assoc

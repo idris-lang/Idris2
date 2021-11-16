@@ -1,13 +1,8 @@
 ||| Additional properties/lemmata of Nats involving order
 module Data.Nat.Order.Properties
 
-import Syntax.PreorderReasoning
 import Syntax.PreorderReasoning.Generic
 import Data.Nat
-import Data.Nat.Order
-import Data.Nat.Order.Strict
-import Decidable.Equality
-import Decidable.Order.Strict
 import Data.Bool.Decidable
 
 

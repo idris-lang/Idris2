@@ -6,8 +6,6 @@
 ||| primitives that back ends should support.
 module System.Concurrency
 
-import Data.IORef
-
 %default total
 
 

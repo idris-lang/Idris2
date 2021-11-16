@@ -2,7 +2,6 @@ module Language.JSON.Lexer
 
 import Language.JSON.String
 import Text.Lexer
-import Text.Token
 
 import public Language.JSON.Tokens
 
