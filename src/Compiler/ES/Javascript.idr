@@ -4,19 +4,13 @@ module Compiler.ES.Javascript
 import Compiler.ES.Codegen
 
 import Compiler.Common
-import Compiler.CompileExpr
 
 import Core.Context
 import Core.TT
 import Core.Options
 import Libraries.Utils.Path
 
-import System
-import System.File
-
-import Data.Maybe
 import Data.String
-import Libraries.Data.String.Extra
 
 %default covering
 

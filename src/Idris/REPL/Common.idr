@@ -5,7 +5,6 @@ import Core.Directory
 import Core.Env
 import Core.InitPrimitives
 import Core.Metadata
-import Core.Primitives
 import Core.TT
 import Core.Unify
 import Core.UnifyState
@@ -15,7 +14,6 @@ import Idris.Doc.String
 
 import Idris.Error
 import Idris.IDEMode.Commands
-import Idris.IDEMode.Holes
 import Idris.Pretty
 import public Idris.REPL.Opts
 import Idris.Resugar
@@ -23,9 +21,7 @@ import Idris.Syntax
 import Idris.Version
 
 import Libraries.Data.ANameMap
-import Libraries.Text.PrettyPrint.Prettyprinter
 
-import Data.List
 import Data.String
 import System.File
 

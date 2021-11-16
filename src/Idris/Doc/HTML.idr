@@ -6,8 +6,6 @@ import Core.Directory
 
 import Data.String
 
-import Parser.Lexer.Source
-
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML
 import Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree

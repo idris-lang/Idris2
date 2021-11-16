@@ -14,7 +14,6 @@ import Core.Directory
 import Data.List
 import Libraries.Data.DList
 import Data.Nat
-import Data.String
 import Libraries.Data.SortedSet
 import Data.Vect
 

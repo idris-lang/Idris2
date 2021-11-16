@@ -1,32 +1,15 @@
 module Idris.IDEMode.REPL
 
-import Compiler.Scheme.Chez
-import Compiler.Scheme.Racket
-import Compiler.Scheme.Gambit
-import Compiler.Common
-
-import Core.AutoSearch
-import Core.CompileExpr
 import Core.Context
 import Core.Directory
-import Core.InitPrimitives
 import Core.Metadata
-import Core.Normalise
 import Core.Options
-import Core.TT
 import Core.Unify
 
-import Data.List
-import Data.So
-import Data.String
-
-import Idris.Desugar
 import Idris.Error
-import Idris.ModTree
 import Idris.Package
 import Idris.Parser
 import Idris.Pretty
-import Idris.Resugar
 import Idris.REPL
 import Idris.Syntax
 import Idris.Version
@@ -36,11 +19,6 @@ import Idris.IDEMode.Commands
 import Idris.IDEMode.Holes
 import Idris.IDEMode.Parser
 import Idris.IDEMode.SyntaxHighlight
-
-import TTImp.Interactive.CaseSplit
-import TTImp.Elab
-import TTImp.TTImp
-import TTImp.ProcessDecls
 
 import Libraries.Utils.Hex
 import Libraries.Utils.Path

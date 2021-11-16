@@ -12,7 +12,6 @@ import System.Directory
 
 import Libraries.Utils.Path
 import Libraries.System.Directory.Tree
-import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default total
 

@@ -2,7 +2,6 @@ module Parser.Rule.Package
 
 import public Parser.Lexer.Package
 
-import Data.List
 import Data.List1
 
 import Core.Name.Namespace

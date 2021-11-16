@@ -12,7 +12,6 @@ import Idris.Pretty
 import Idris.IDEMode.Commands
 
 import Libraries.Data.String.Extra as L
-import Libraries.Utils.Term
 
 %default covering
 

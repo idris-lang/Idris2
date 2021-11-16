@@ -21,7 +21,6 @@ import TTImp.Interactive.ExprSearch
 import TTImp.ProcessDecls
 import TTImp.ProcessDef
 import TTImp.TTImp
-import TTImp.Unelab
 import TTImp.Utils
 
 import Data.List

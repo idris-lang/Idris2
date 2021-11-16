@@ -4,14 +4,12 @@ import Core.Options
 import Core.Metadata
 import Idris.Syntax
 import public Parser.Source
-import Parser.Lexer.Source
 import TTImp.TTImp
 
 import public Libraries.Text.Parser
 import Data.Either
 import Libraries.Data.IMaybe
 import Data.List
-import Data.List.Views
 import Data.List1
 import Data.Maybe
 import Data.Nat

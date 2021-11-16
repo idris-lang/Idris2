@@ -7,12 +7,9 @@ import Core.Core
 import Core.Directory
 import Core.Metadata
 import Core.Options
-import Core.Primitives
 import Core.InitPrimitives
 import Core.UnifyState
 
-import Idris.Desugar
-import Idris.Error
 import Idris.Parser
 import Idris.ProcessIdr
 import Idris.REPL.Common
@@ -23,14 +20,10 @@ import Data.List
 import Data.Either
 import Data.String
 
-import System
 import System.Directory
-import System.File
 
 import Libraries.Data.StringMap
 import Libraries.Data.String.Extra as Extra
-
-import Debug.Trace
 
 %default covering
 
