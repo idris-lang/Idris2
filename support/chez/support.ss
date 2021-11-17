@@ -19,15 +19,13 @@
             (void))
         res))))
 
-(define blodwen-toSignedInt
-  (lambda (x bits)
-    (if (logbit? bits x)
-        (logor x (ash (- 1) bits))
-        (logand x (- (ash 1 bits) 1)))))
+(define (blodwen-toSignedInt x bits)
+  (if (logbit? bits x)
+      (logor x (ash -1 bits))
+      (logand x (sub1 (ash 1 bits)))))
 
-(define blodwen-toUnsignedInt
-  (lambda (x bits)
-    (modulo x (ash 1 bits))))
+(define (blodwen-toUnsignedInt x bits)
+  (logand x (sub1 (ash 1 bits))))
 
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
@@ -40,26 +38,21 @@
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (quotient x y) bits)))
 
-(define b+ (lambda (x y bits) (remainder (+ x y) (ash 1 bits))))
-(define b- (lambda (x y bits) (remainder (- x y) (ash 1 bits))))
-(define b* (lambda (x y bits) (remainder (* x y) (ash 1 bits))))
-(define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (ash 1 bits))))
+(define (integer->bits8 x) (logand x (sub1 (ash 1 8))))
+(define (integer->bits16 x) (logand x (sub1 (ash 1 16))))
+(define (integer->bits32 x) (logand x (sub1 (ash 1 32))))
+(define (integer->bits64 x) (logand x (sub1 (ash 1 64))))
 
-(define integer->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
-(define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
+(define (bits16->bits8 x) (logand x (sub1 (ash 1 8))))
+(define (bits32->bits8 x) (logand x (sub1 (ash 1 8))))
+(define (bits64->bits8 x) (logand x (sub1 (ash 1 8))))
+(define (bits32->bits16 x) (logand x (sub1 (ash 1 16))))
+(define (bits64->bits16 x) (logand x (sub1 (ash 1 16))))
+(define (bits64->bits32 x) (logand x (sub1 (ash 1 32))))
 
-(define bits16->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits32->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits32->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define bits64->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
+(define (blodwen-bits-shl-signed x y bits) (blodwen-toSignedInt (ash x y) bits))
 
-(define blodwen-bits-shl-signed (lambda (x y bits) (blodwen-toSignedInt (ash x y) bits)))
-
-(define blodwen-bits-shl (lambda (x y bits) (remainder (ash x y) (ash 1 bits))))
+(define (blodwen-bits-shl x y bits) (logand (ash x y) (sub1 (ash 1 bits))))
 
 (define blodwen-shl (lambda (x y) (ash x y)))
 (define blodwen-shr (lambda (x y) (ash x (- y))))

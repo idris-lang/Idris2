@@ -49,6 +49,7 @@ schHeader prof libs = """
   (require racket/future)                ; for parallelism/concurrency
   (require racket/math)                  ; for math ops
   (require racket/system)                ; for system
+  (require racket/unsafe/ops)            ; for fast fixnum ops
   (require rnrs/bytevectors-6)           ; for buffers
   (require rnrs/io/ports-6)              ; for files
   (require srfi/19)                      ; for file handling and data

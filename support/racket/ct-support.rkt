@@ -60,15 +60,13 @@
         default))
 
 ; primitives
-(define ct-toSignedInt
-  (lambda (x bits)
-    (if (bitwise-bit-set? x bits)
-        (bitwise-ior x (arithmetic-shift (- 1) bits))
-        (bitwise-and x (- (arithmetic-shift 1 bits) 1)))))
+(define (ct-toSignedInt x bits)
+  (if (bitwise-bit-set? x bits)
+      (bitwise-ior x (arithmetic-shift (- 1) bits))
+      (bitwise-and x (sub1 (arithmetic-shift 1 bits)))))
 
-(define ct-toUnsignedInt
-  (lambda (x bits)
-    (modulo x (arithmetic-shift 1 bits))))
+(define (ct-toUnsignedInt x bits)
+  (bitwise-and x (sub1 (arithmetic-shift 1 bits))))
 
 (define ct-u+ (lambda (x y bits)
     (let [(tag (vector-ref x 0))
