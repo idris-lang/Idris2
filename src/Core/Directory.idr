@@ -126,7 +126,7 @@ export
 mbPathToNS : String -> Maybe String -> String -> Maybe ModuleIdent
 mbPathToNS wdir sdir fname =
   let
-    sdir = fromMaybe "" sdir
+    sdir = fromMaybe "" $ filter (/= ".") sdir
     base = if isAbsolute fname then wdir </> sdir else sdir
   in
     unsafeFoldModuleIdent . reverse . splitPath . Path.dropExtension
