@@ -354,10 +354,12 @@ forgetDef (MkForeign ccs fargs ty) = MkNmForeign ccs fargs ty
 forgetDef (MkError err) = MkNmError (forget err)
 
 export
+covering
 {vars : _} -> Show (CExp vars) where
   show exp = show (forget exp)
 
 export
+covering
 Show CFType where
   show CFUnit = "Unit"
   show CFInt = "Int"
@@ -384,6 +386,7 @@ Show CFType where
   show (CFUser n args) = show n ++ " " ++ showSep " " (map show args)
 
 export
+covering
 Show CDef where
   show (MkFun args exp) = show args ++ ": " ++ show exp
   show (MkCon tag arity pos)
@@ -395,6 +398,7 @@ Show CDef where
   show (MkError exp) = "Error: " ++ show exp
 
 export
+covering
 Show NamedDef where
   show (MkNmFun args exp) = show args ++ ": " ++ show exp
   show (MkNmCon tag arity pos)

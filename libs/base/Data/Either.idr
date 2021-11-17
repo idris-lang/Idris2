@@ -31,6 +31,24 @@ isRight : Either a b -> Bool
 isRight (Left _)  = False
 isRight (Right _) = True
 
+||| Proof that an `Either` is actually a Right value
+public export
+data IsRight : Either a b -> Type where
+  ItIsRight : IsRight (Right x)
+
+export
+Uninhabited (IsRight (Left x)) where
+  uninhabited ItIsRight impossible
+
+||| Proof that an `Either` is actually a Left value
+public export
+data IsLeft : Either a b -> Type where
+  ItIsLeft : IsLeft (Left x)
+
+export
+Uninhabited (IsLeft (Right x)) where
+  uninhabited ItIsLeft impossible
+
 --------------------------------------------------------------------------------
 -- Grouping values
 

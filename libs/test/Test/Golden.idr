@@ -196,9 +196,6 @@ normalize str =
 Result : Type
 Result = Either String String
 
-guardPath : String -> String
-guardPath s = "\"" ++ s ++ "\""
-
 ||| Run the specified Golden test with the supplied options.
 ||| See the module documentation for more information.
 ||| @testPath the directory that contains the test.
@@ -208,7 +205,7 @@ runTest opts testPath = forkIO $ do
   start <- clockTime UTC
   let cg = maybe "" (" --cg " ++) (codegen opts)
   let exe = "\"" ++ exeUnderTest opts ++ cg ++ "\""
-  ignore $ system $ "cd " ++ guardPath testPath ++ " && " ++
+  ignore $ system $ "cd " ++ escapeArg testPath ++ " && " ++
     "sh ./run " ++ exe ++ " | tr -d '\\r' > output"
   end <- clockTime UTC
 
@@ -229,11 +226,9 @@ runTest opts testPath = forkIO $ do
   let time = timeDifference end start
 
   if result
-    then printTiming (timing opts) time testPath $
-      (if opts.color then show . colored BrightGreen else id) "success"
+    then printTiming opts.timing time testPath $ maybeColored BrightGreen "success"
     else do
-      printTiming (timing opts) time testPath $
-        (if opts.color then show . colored BrightRed else id) "FAILURE"
+      printTiming opts.timing time testPath $ maybeColored BrightRed "FAILURE"
       if interactive opts
         then mayOverwrite (Just exp) out
         else putStr . unlines $ expVsOut exp out
@@ -252,21 +247,24 @@ runTest opts testPath = forkIO $ do
         _   => do putStrLn "Invalid answer."
                   getAnswer
 
+    maybeColored : Color -> String -> String
+    maybeColored c = if opts.color then show . colored c else id
+
     expVsOut : String -> String -> List String
-    expVsOut exp out = ["Expected:", exp, "Given:", out]
+    expVsOut exp out = ["Expected:", maybeColored Green exp, "Given:", maybeColored Red out]
 
     mayOverwrite : Maybe String -> String -> IO ()
     mayOverwrite mexp out = do
       case mexp of
         Nothing => putStr $ unlines
           [ "Golden value missing. I computed the following result:"
-          , out
+          , maybeColored BrightBlue out
           , "Accept new golden value? [y/N]"
           ]
         Just exp => do
           code <- system $ "git diff --no-index --exit-code " ++
             (if opts.color then  "--word-diff=color " else "") ++
-            guardPath testPath ++ "/expected " ++ guardPath testPath ++ "/output"
+            escapeArg testPath ++ "/expected " ++ escapeArg testPath ++ "/output"
           putStr . unlines $
             ["Golden value differs from actual value."] ++
             (if (code < 0) then expVsOut exp out else []) ++

@@ -4,6 +4,7 @@ module Compiler.ES.State
 
 import Core.Context
 import Compiler.ES.Ast
+import Compiler.NoMangle
 import Libraries.Data.SortedMap
 
 %default total
@@ -105,6 +106,9 @@ record ESSt where
   ||| `["browser","javascript"]`.
   ccTypes  : List String
 
+  ||| %nomangle names
+  noMangleMap : NoMangleMap
+
 --------------------------------------------------------------------------------
 --          Local Variables
 --------------------------------------------------------------------------------
@@ -174,10 +178,12 @@ nextRef = do
   put ESs $ record { ref $= (+1) } st
   pure $ VRef st.ref
 
-registerRef : {auto c : Ref ESs ESSt} -> (name : Name) -> Core Var
+registerRef :  {auto c : Ref ESs ESSt}
+            -> (name : Name)
+            -> Core Var
 registerRef n = do
   st <- get ESs
-  if keepRefName n st.mode
+  if keepRefName n st.mode || isJust (isNoMangle st.noMangleMap n)
      then let v = VName n in addRef n v >> pure v
      else do v <- nextRef
              addRef n v
@@ -188,7 +194,9 @@ registerRef n = do
 ||| The name will be replace with an index if the current
 ||| `GCMode` is set to `Minimal`.
 export
-getOrRegisterRef : {auto c : Ref ESs ESSt} -> Name -> Core Var
+getOrRegisterRef :  {auto c : Ref ESs ESSt}
+                 -> Name
+                 -> Core Var
 getOrRegisterRef n = do
   Nothing <- lookup n . refs <$> get ESs
     | Just v => pure v
@@ -226,9 +234,10 @@ init :  (mode  : CGMode)
      -> (isArg : Exp -> Bool)
      -> (isFun : Exp -> Bool)
      -> (types : List String)
+     -> (noMangle : NoMangleMap)
      -> ESSt
-init mode isArg isFun ccs =
-  MkESSt mode isArg isFun 0 0 empty empty empty ccs
+init mode isArg isFun ccs noMangle =
+  MkESSt mode isArg isFun 0 0 empty empty empty ccs noMangle
 
 ||| Reset the local state before defining a new toplevel
 ||| function.

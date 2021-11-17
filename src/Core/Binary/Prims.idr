@@ -456,9 +456,9 @@ hashFileWith (Just sha256sum) fileName
          | Left _ => err
        Right hashLine <- coreLift $ fGetLine fileHandle
          | Left _ =>
-           do coreLift $ pclose fileHandle
+           do ignore $ coreLift $ pclose fileHandle
               err
-       coreLift $ pclose fileHandle
+       ignore $ coreLift $ pclose fileHandle
        let w@(_::_) = words hashLine
          | Nil => err
        pure $ Just $ last w

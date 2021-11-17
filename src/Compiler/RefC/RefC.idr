@@ -989,29 +989,35 @@ header : {auto c : Ref Ctxt Defs}
       -> {auto h : Ref HeaderFiles (SortedSet String)}
       -> Core ()
 header = do
-    let initLines = [ "#include <runtime.h>"
-                    , "/* " ++ (generatedString "RefC") ++" */"]
+    let initLines = """
+      #include <runtime.h>
+      /* \{ generatedString "RefC" } */
+
+      """
     let headerFiles = Libraries.Data.SortedSet.toList !(get HeaderFiles)
     let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
     fns <- get FunctionDefinitions
-    update OutfileText (appendL (initLines ++ headerLines ++ ["\n// function definitions"] ++ fns))
+    update OutfileText (appendL ([initLines] ++ headerLines ++ ["\n// function definitions"] ++ fns))
 
 footer : {auto il : Ref IndentLevel Nat}
       -> {auto f : Ref OutfileText Output}
       -> {auto h : Ref HeaderFiles (SortedSet String)}
       -> Core ()
 footer = do
-    emit EmptyFC ""
-    emit EmptyFC " // main function"
-    emit EmptyFC "int main(int argc, char *argv[])"
-    emit EmptyFC "{"
-    if contains "idris_support.h" !(get HeaderFiles)
-       then emit EmptyFC "   idris2_setArgs(argc, argv);"
-       else pure ()
-    emit EmptyFC "   Value *mainExprVal = __mainExpression_0();"
-    emit EmptyFC "   trampoline(mainExprVal);"
-    emit EmptyFC "   return 0; // bye bye"
-    emit EmptyFC "}"
+    emit EmptyFC """
+
+      // main function
+      int main(int argc, char *argv[])
+      {
+          \{ ifThenElse (contains "idris_support.h" !(get HeaderFiles))
+                        "idris2_setArgs(argc, argv);"
+                        ""
+          }
+          Value *mainExprVal = __mainExpression_0();
+          trampoline(mainExprVal);
+          return 0; // bye bye
+      }
+      """
 
 export
 executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()

@@ -64,7 +64,7 @@ implementation Foldable (SortedMap k) where
   foldr f z = foldr f z . values
   foldl f z = foldl f z . values
 
-  null = delay . null . unM
+  null = null . unM
 
   foldMap f = foldMap f . values
 

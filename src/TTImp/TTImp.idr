@@ -144,7 +144,8 @@ mutual
        UniqueDefault : RawImp' nm -> AltType' nm
 
   export
-    Show nm => Show (RawImp' nm) where
+  covering
+  Show nm => Show (RawImp' nm) where
       show (IVar fc n) = show n
       show (IPi fc c p n arg ret)
          = "(%pi " ++ show c ++ " " ++ show p ++ " " ++
@@ -202,6 +203,7 @@ mutual
       show (IWithUnambigNames fc ns rhs) = "(%with " ++ show ns ++ " " ++ show rhs ++ ")"
 
   export
+  covering
   Show nm => Show (IFieldUpdate' nm) where
     show (ISetField p val) = showSep "->" p ++ " = " ++ show val
     show (ISetFieldApp p val) = showSep "->" p ++ " $= " ++ show val
@@ -228,6 +230,7 @@ mutual
        Totality : TotalReq -> FnOpt' nm
        Macro : FnOpt' nm
        SpecArgs : List Name -> FnOpt' nm
+       NoMangle : Maybe NoMangleDirective -> FnOpt' nm
 
   public export
   isTotalityReq : FnOpt' nm -> Bool
@@ -235,6 +238,12 @@ mutual
   isTotalityReq _ = False
 
   export
+  Show NoMangleDirective where
+    show (CommonName name) = "\"\{name}\""
+    show (BackendNames ns) = showSep " " (map (\(b, n) => "\"\{b}:\{n}\"") ns)
+
+  export
+  covering
   Show nm => Show (FnOpt' nm) where
     show Inline = "%inline"
     show NoInline = "%noinline"
@@ -249,6 +258,14 @@ mutual
     show (Totality PartialOK) = "partial"
     show Macro = "%macro"
     show (SpecArgs ns) = "%spec " ++ showSep " " (map show ns)
+    show (NoMangle Nothing) = "%nomangle"
+    show (NoMangle (Just ns)) = "%nomangle \{show ns}"
+
+  export
+  Eq NoMangleDirective where
+    CommonName x == CommonName y = x == y
+    BackendNames xs == BackendNames ys = xs == ys
+    _ == _ = False
 
   export
   Eq FnOpt where
@@ -263,6 +280,7 @@ mutual
     (Totality tot_lhs) == (Totality tot_rhs) = tot_lhs == tot_rhs
     Macro == Macro = True
     (SpecArgs ns) == (SpecArgs ns') = ns == ns'
+    (NoMangle x) == (NoMangle y) = x == y
     _ == _ = False
 
   public export
@@ -274,6 +292,7 @@ mutual
        MkImpTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : RawImp' nm) -> ImpTy' nm
 
   export
+  covering
   Show nm => Show (ImpTy' nm) where
     show (MkImpTy fc _ n ty) = "(%claim " ++ show n ++ " " ++ show ty ++ ")"
 
@@ -306,6 +325,7 @@ mutual
        MkImpLater : FC -> (n : Name) -> (tycon : RawImp' nm) -> ImpData' nm
 
   export
+  covering
   Show nm => Show (ImpData' nm) where
     show (MkImpData fc n tycon _ cons)
         = "(%data " ++ show n ++ " " ++ show tycon ++ " " ++
@@ -340,11 +360,13 @@ mutual
                      ImpRecord' nm
 
   export
+  covering
   Show nm => Show (IField' nm) where
     show (MkIField _ c Explicit n ty) = show n ++ " : " ++ show ty
     show (MkIField _ c _ n ty) = "{" ++ show n ++ " : " ++ show ty ++ "}"
 
   export
+  covering
   Show nm => Show (ImpRecord' nm) where
     show (MkImpRecord _ n params con fields)
         = "record " ++ show n ++ " " ++ show params ++
@@ -377,6 +399,7 @@ mutual
        ImpossibleClause : FC -> (lhs : RawImp' nm) -> ImpClause' nm
 
   export
+  covering
   Show nm => Show (ImpClause' nm) where
     show (PatClause fc lhs rhs)
        = show lhs ++ " = " ++ show rhs
@@ -417,6 +440,7 @@ mutual
        IBuiltin : FC -> BuiltinType -> Name -> ImpDecl' nm
 
   export
+  covering
   Show nm => Show (ImpDecl' nm) where
     show (IClaim _ c _ opts ty) = show opts ++ " " ++ show c ++ " " ++ show ty
     show (IData _ _ d) = show d
@@ -848,6 +872,7 @@ unIArg (Auto _ t) = t
 unIArg (Named _ _ t) = t
 
 export
+covering
 Show nm => Show (Arg' nm) where
   show (Explicit fc t) = show t
   show (Auto fc t) = "@{" ++ show t ++ "}"
@@ -1223,6 +1248,19 @@ mutual
              pure (MkImpRecord fc n ps con fs)
 
   export
+  TTC NoMangleDirective where
+    toBuf b (CommonName n)
+        = do tag 0; toBuf b n
+    toBuf b (BackendNames ns)
+        = do tag 1; toBuf b ns
+
+    fromBuf b
+        = case !getTag of
+               0 => do n <- fromBuf b; pure (CommonName n)
+               1 => do ns <- fromBuf b; pure (BackendNames ns)
+               _ => corrupt "NoMangleDirective"
+
+  export
   TTC FnOpt where
     toBuf b Inline = tag 0
     toBuf b NoInline = tag 12
@@ -1237,6 +1275,7 @@ mutual
     toBuf b (Totality PartialOK) = tag 8
     toBuf b Macro = tag 9
     toBuf b (SpecArgs ns) = do tag 10; toBuf b ns
+    toBuf b (NoMangle name) = do tag 13; toBuf b name
 
     fromBuf b
         = case !getTag of
@@ -1253,6 +1292,7 @@ mutual
                10 => do ns <- fromBuf b; pure (SpecArgs ns)
                11 => pure TCInline
                12 => pure NoInline
+               13 => do name <- fromBuf b; pure (NoMangle name)
                _ => corrupt "FnOpt"
 
   export

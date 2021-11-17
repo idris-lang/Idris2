@@ -23,7 +23,7 @@ int idris2_fileSize(FILE* h);
 int idris2_fpoll(FILE* f);
 
 void *idris2_popen(const char *cmd, const char *mode);
-void idris2_pclose(void *stream);
+int idris2_pclose(void *stream);
 
 // Seek through the next newline without
 // saving anything along the way

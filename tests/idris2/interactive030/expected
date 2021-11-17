@@ -18,6 +18,9 @@ Main> Prelude.<$> : Functor f => (a -> b) -> f a -> f b
   Totality: total
   Fixity Declaration: infixr operator, level 4
 Main> interface Prelude.Monad : (Type -> Type) -> Type
+  Monad
+  @m The underlying functor
+  A minimal definition includes either `(>>=)` or `join`.
   Parameters: m
   Constraints: Applicative m
   Constructor: MkMonad

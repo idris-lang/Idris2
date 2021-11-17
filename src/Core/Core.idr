@@ -194,6 +194,7 @@ Show Warning where
 
 
 export
+covering
 Show Error where
   show (Fatal err) = show err
   show (CantConvert fc _ env x y)

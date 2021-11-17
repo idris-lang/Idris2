@@ -5,6 +5,7 @@ import Compiler.ANF
 import Compiler.CompileExpr
 import Compiler.Inline
 import Compiler.LambdaLift
+import Compiler.NoMangle
 import Compiler.Opts.CSE
 import Compiler.VMCode
 
@@ -150,6 +151,7 @@ getMinimalDef (Coded ns bin)
          pure (def, Just (ns, bin))
 
 -- ||| Recursively get all calls in a function definition
+-- ||| Note: this only checks resolved names
 getAllDesc : {auto c : Ref Ctxt Defs} ->
              List Name -> -- calls to check
              IOArray (Int, Maybe (Namespace, Binary)) ->
@@ -274,13 +276,14 @@ getCompileData doLazyAnnots phase_in tm_in
            "Found names: " ++ concat (intersperse ", " $ map show $ keys ns)
          tm <- toFullNames tm_in
          natHackNames' <- traverse toResolvedNames natHackNames
+         noMangleNames <- getAllNoMangle
          -- make an array of Bools to hold which names we've found (quicker
          -- to check than a NameMap!)
          asize <- getNextEntry
          arr <- coreLift $ newArray asize
 
          defs <- get Ctxt
-         logTime "++ Get names" $ getAllDesc (natHackNames' ++ keys ns) arr defs
+         logTime "++ Get names" $ getAllDesc (natHackNames' ++ noMangleNames ++ keys ns) arr defs
 
          let entries = catMaybes !(coreLift (toList arr))
          let allNs = map (Resolved . fst) entries

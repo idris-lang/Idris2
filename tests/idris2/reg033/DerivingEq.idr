@@ -47,5 +47,6 @@ genEq typeName = do
 data TreeOne a = BranchOne (TreeOne a) a (TreeOne a)
                | Leaf
 
+covering
 Eq a => Eq (TreeOne a) where
   (==) = %runElab genEq `{ TreeOne }

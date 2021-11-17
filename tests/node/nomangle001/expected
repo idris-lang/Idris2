@@ -1,0 +1,6 @@
+function foo($0) {
+function $_baz($0) {
+function another_name($0) {
+function foo($0){return $0;}
+function $_baz($0){return $0;}
+function another_name($0){return $0;}

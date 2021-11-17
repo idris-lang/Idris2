@@ -63,6 +63,8 @@ data Elab : Type -> Type where
      -- There may be ambiguities - returns a list of fully explicit names
      -- and their types. If there's no results, the name is undefined.
      GetType : Name -> Elab (List (Name, TTImp))
+     -- Get the metadata associated with a name
+     GetInfo : Name -> Elab (List (Name, NameInfo))
      -- Get the type of a local variable
      GetLocalType : Name -> Elab TTImp
      -- Get the constructors of a data type. The name must be fully resolved.
@@ -138,6 +140,9 @@ interface Monad m => Elaboration m where
   ||| Given a possibly ambiguous name, get all the matching names and their types
   getType : Name -> m (List (Name, TTImp))
 
+  ||| Get the metadata associated with a name. Returns all matching namea and their types
+  getInfo : Name -> m (List (Name, NameInfo))
+
   ||| Get the type of a local variable
   getLocalType : Name -> m TTImp
 
@@ -172,6 +177,7 @@ Elaboration Elab where
   genSym         = GenSym
   inCurrentNS    = InCurrentNS
   getType        = GetType
+  getInfo        = GetInfo
   getLocalType   = GetLocalType
   getCons        = GetCons
   declare        = Declare
@@ -191,6 +197,7 @@ Elaboration m => MonadTrans t => Monad (t m) => Elaboration (t m) where
   genSym              = lift . genSym
   inCurrentNS         = lift . inCurrentNS
   getType             = lift . getType
+  getInfo             = lift . getInfo
   getLocalType        = lift . getLocalType
   getCons             = lift . getCons
   declare             = lift . declare

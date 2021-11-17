@@ -65,6 +65,7 @@ Main> data Prelude.List : Type -> Type
     Traversable List
 Main> interface Prelude.Show : Type -> Type
   Things that have a canonical `String` representation.
+  A minimal implementation includes either `show` or `showPrec`.
   Parameters: ty
   Constructor: MkShow
   Methods:
@@ -112,6 +113,9 @@ Main> Prelude.show : Show ty => ty -> String
   @ x the value to convert
   Totality: total
 Main> interface Prelude.Monad : (Type -> Type) -> Type
+  Monad
+  @m The underlying functor
+  A minimal definition includes either `(>>=)` or `join`.
   Parameters: m
   Constraints: Applicative m
   Constructor: MkMonad
