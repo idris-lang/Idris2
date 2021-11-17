@@ -2,9 +2,11 @@
 
 #include "cBackend.h"
 
-Value *newValue(void);
+Value *newValue(size_t size);
 Value *newReference(Value *source);
 void removeReference(Value *source);
+
+#define IDRIS2_NEW_VALUE(t) ((t*) newValue(sizeof(t)))
 
 Value_Arglist *newArglist(int missing, int total);
 Value_Constructor *newConstructor(int total, int tag, const char *name);

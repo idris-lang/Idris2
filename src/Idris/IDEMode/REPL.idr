@@ -17,7 +17,6 @@ import Core.TT
 import Core.Unify
 
 import Data.List
-import Data.List1
 import Data.So
 import Data.String
 
@@ -31,7 +30,7 @@ import Idris.Resugar
 import Idris.REPL
 import Idris.Syntax
 import Idris.Version
-import Idris.Pretty
+import Idris.Doc.String
 
 import Idris.IDEMode.Commands
 import Idris.IDEMode.Holes
@@ -55,13 +54,14 @@ import Network.Socket.Data
 
 %default covering
 
-%foreign "C:fdopen,libc 6"
-prim__fdopen : Int -> String -> PrimIO AnyPtr
+||| TODO: use the version in `Network.FFI` in network after the next release.
+%foreign "C:idrnet_fdopen, libidris2_support, idris_net.h"
+prim__idrnet_fdopen : Int -> String -> PrimIO AnyPtr
 
 export
 socketToFile : Socket -> IO (Either String File)
 socketToFile (MkSocket f _ _ _) = do
-  file <- FHandle <$> primIO (prim__fdopen f "r+")
+  file <- FHandle <$> primIO (prim__idrnet_fdopen f "r+")
   if !(fileError file)
     then pure (Left "Failed to fdopen socket file descriptor")
     else pure (Right file)
@@ -144,6 +144,7 @@ todoCmd cmdName = iputStrLn $ reflow $ cmdName ++ ": command not yet implemented
 data IDEResult
   = REPL REPLResult
   | NameList (List Name)
+  | FoundHoles (List HoleData)
   | Term String   -- should be a PTerm + metadata, or SExp.
   | TTTerm String -- should be a TT Term + metadata, or perhaps SExp
   | NameLocList (List (Name, FC))
@@ -166,40 +167,45 @@ process (LoadFile fname_in _)
          replWrap $ Idris.REPL.process (Load fname) >>= outputSyntaxHighlighting fname
 process (NameAt name Nothing)
     = do defs <- get Ctxt
-         glob <- lookupCtxtName (UN name) (gamma defs)
+         glob <- lookupCtxtName (UN (mkUserName name)) (gamma defs)
          let dat = map (\(name, _, gdef) => (name, gdef.location)) glob
          pure (NameLocList dat)
 process (NameAt n (Just _))
     = do todoCmd "name-at <name> <line> <column>"
          pure $ REPL $ Edited $ DisplayEdit emptyDoc
 process (TypeOf n Nothing)
-    = replWrap $ Idris.REPL.process (Check (PRef replFC (UN n)))
+    = replWrap $ Idris.REPL.process (Check (PRef replFC (UN $ mkUserName n)))
 process (TypeOf n (Just (l, c)))
-    = replWrap $ Idris.REPL.process (Editing (TypeAt (fromInteger l) (fromInteger c) (UN n)))
+    = replWrap $ Idris.REPL.process
+               $ Editing (TypeAt (fromInteger l) (fromInteger c) (UN $ mkUserName n))
 process (CaseSplit l c n)
-    = replWrap $ Idris.REPL.process (Editing (CaseSplit False (fromInteger l) (fromInteger c) (UN n)))
+    = replWrap $ Idris.REPL.process
+    $ Editing $ CaseSplit False (fromInteger l) (fromInteger c)
+    $ UN $ mkUserName n
 process (AddClause l n)
-    = replWrap $ Idris.REPL.process (Editing (AddClause False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process
+    $ Editing $ AddClause False (fromInteger l)
+    $ UN $ mkUserName n
 process (AddMissing l n)
     = do todoCmd "add-missing"
          pure $ REPL $ Edited $ DisplayEdit emptyDoc
 process (ExprSearch l n hs all)
-    = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l) (UN n)
-                                                 (map UN hs)))
+    = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l)
+                     (UN $ Basic n) (map (UN . Basic) hs)))
 process ExprSearchNext
     = replWrap $ Idris.REPL.process (Editing ExprSearchNext)
 process (GenerateDef l n)
-    = replWrap $ Idris.REPL.process (Editing (GenerateDef False (fromInteger l) (UN n) 0))
+    = replWrap $ Idris.REPL.process (Editing (GenerateDef False (fromInteger l) (UN $ Basic n) 0))
 process GenerateDefNext
     = replWrap $ Idris.REPL.process (Editing GenerateDefNext)
 process (MakeLemma l n)
-    = replWrap $ Idris.REPL.process (Editing (MakeLemma False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process (Editing (MakeLemma False (fromInteger l) (UN $ mkUserName n)))
 process (MakeCase l n)
-    = replWrap $ Idris.REPL.process (Editing (MakeCase False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process (Editing (MakeCase False (fromInteger l) (UN $ mkUserName n)))
 process (MakeWith l n)
-    = replWrap $ Idris.REPL.process (Editing (MakeWith False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process (Editing (MakeWith False (fromInteger l) (UN $ mkUserName n)))
 process (DocsFor n modeOpt)
-    = replWrap $ Idris.REPL.process (Doc (PRef EmptyFC (UN n)))
+    = replWrap $ Idris.REPL.process (Doc $ APTerm (PRef EmptyFC (UN $ mkUserName n)))
 process (Apropos n)
     = do todoCmd "apropros"
          pure $ REPL $ Printed emptyDoc
@@ -238,7 +244,7 @@ process (EnableSyntax b)
 process Version
     = replWrap $ Idris.REPL.process ShowVersion
 process (Metavariables _)
-    = replWrap $ Idris.REPL.process Metavars
+    = FoundHoles <$> getUserHolesData
 process GetOptions
     = replWrap $ Idris.REPL.process GetOpts
 
@@ -273,12 +279,31 @@ returnFromIDE outf i msg
     = do send outf (SExpList [SymbolAtom "return", msg, toSExp i])
 
 printIDEResult : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
-printIDEResult outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "ok", toSExp msg])
+printIDEResult outf i msg
+  = returnFromIDE outf i
+  $ SExpList [ SymbolAtom "ok"
+             , toSExp msg
+             ]
 
-printIDEResultWithHighlight : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
-printIDEResultWithHighlight outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "ok", toSExp msg
-                                                                        -- TODO return syntax highlighted result
-                                                                        , SExpList []])
+export
+SExpable a => SExpable (Span a) where
+  toSExp (MkSpan start width ann)
+    = SExpList [ IntegerAtom (cast start)
+               , IntegerAtom (cast width)
+               , toSExp ann
+               ]
+
+printIDEResultWithHighlight :
+  {auto c : Ref Ctxt Defs} ->
+  File -> Integer -> (SExp, List (Span Properties)) ->
+  Core ()
+printIDEResultWithHighlight outf i (msg, spans) = do
+--  log "ide-mode.highlight" 10 $ show spans
+  returnFromIDE outf i
+    $ SExpList [ SymbolAtom "ok"
+               , msg
+               , toSExp spans
+               ]
 
 printIDEError : Ref ROpts REPLOpts => {auto c : Ref Ctxt Defs} -> File -> Integer -> Doc IdrisAnn -> Core ()
 printIDEError outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "error", toSExp !(renderWithoutColor msg) ])
@@ -287,6 +312,7 @@ SExpable REPLEval where
   toSExp EvalTC = SymbolAtom "typecheck"
   toSExp NormaliseAll = SymbolAtom "normalise"
   toSExp Execute = SymbolAtom "execute"
+  toSExp Scheme = SymbolAtom "scheme"
 
 SExpable REPLOpt where
   toSExp (ShowImplicits impl) = SExpList [ SymbolAtom "show-implicits", toSExp impl ]
@@ -296,6 +322,7 @@ SExpable REPLOpt where
   toSExp (Editor editor) = SExpList [ SymbolAtom "editor", toSExp editor ]
   toSExp (CG str) = SExpList [ SymbolAtom "cg", toSExp str ]
   toSExp (Profile p) = SExpList [ SymbolAtom "profile", toSExp p ]
+  toSExp (EvalTiming p) = SExpList [ SymbolAtom "evaltiming", toSExp p ]
 
 
 displayIDEResult : {auto c : Ref Ctxt Defs} ->
@@ -311,16 +338,26 @@ displayIDEResult outf i  (REPL RequestedHelp  )
   $ StringAtom $ displayHelp
 displayIDEResult outf i  (REPL $ Evaluated x Nothing)
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ show x
+  $ mapFst StringAtom
+   !(renderWithDecorations syntaxToProperties $ prettyTerm x)
 displayIDEResult outf i  (REPL $ Evaluated x (Just y))
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ show x ++ " : " ++ show y
+  $ mapFst StringAtom
+   !(renderWithDecorations syntaxToProperties
+     $ prettyTerm x <++> ":" <++> prettyTerm y)
 displayIDEResult outf i  (REPL $ Printed xs)
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ !(renderWithoutColor xs)
+  $ mapFst StringAtom
+  $ !(renderWithDecorations annToProperties xs)
+displayIDEResult outf i (REPL (PrintedDoc xs))
+  = printIDEResultWithHighlight outf i
+  $ mapFst StringAtom
+  $ !(renderWithDecorations docToProperties xs)
 displayIDEResult outf i  (REPL $ TermChecked x y)
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ show x ++ " : " ++ show y
+  $ mapFst StringAtom
+   !(renderWithDecorations syntaxToProperties
+     $ prettyTerm x <++> ":" <++> prettyTerm y)
 displayIDEResult outf i  (REPL $ FileLoaded x)
   = printIDEResult outf i $ SExpList []
 displayIDEResult outf i  (REPL $ ErrorLoadingFile x err)
@@ -349,8 +386,6 @@ displayIDEResult outf i  (REPL $ CheckedTotal xs)
   = printIDEResult outf i
   $ StringAtom $ showSep "\n"
   $ map (\ (fn, tot) => (show fn ++ " is " ++ show tot)) xs
-displayIDEResult outf i  (REPL $ FoundHoles holes)
-  = printIDEResult outf i $ SExpList $ map sexpHole holes
 displayIDEResult outf i  (REPL $ LogLevelSet k)
   = printIDEResult outf i
   $ StringAtom $ "Set loglevel to " ++ show k
@@ -378,13 +413,18 @@ displayIDEResult outf i (REPL $ Edited (EditError x))
   = printIDEError outf i x
 displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr))
   = printIDEResult outf i
-  $ StringAtom $ (relit lit $ show name ++ " : " ++ show pty ++ "\n") ++ pappstr
+  $ SExpList [ SymbolAtom "metavariable-lemma"
+             , SExpList [ SymbolAtom "replace-metavariable", StringAtom pappstr ]
+             , SExpList [ SymbolAtom "definition-type", StringAtom $ relit lit $ show name ++ " : " ++ show pty ]
+             ]
 displayIDEResult outf i (REPL $ Edited (MadeWith lit wapp))
   = printIDEResult outf i
   $ StringAtom $ showSep "\n" (map (relit lit) wapp)
 displayIDEResult outf i (REPL $ (Edited (MadeCase lit cstr)))
   = printIDEResult outf i
   $ StringAtom $ showSep "\n" (map (relit lit) cstr)
+displayIDEResult outf i (FoundHoles holes)
+  = printIDEResult outf i $ SExpList $ map sexpHole holes
 displayIDEResult outf i (NameList ns)
   = printIDEResult outf i $ SExpList $ map toSExp ns
 displayIDEResult outf i (Term t)
@@ -432,8 +472,15 @@ displayIDEResult outf i (NameLocList dat)
                  , IntegerAtom $ cast $ endLine
                  , IntegerAtom $ cast $ endCol
                  ]
-
-displayIDEResult outf i  _ = pure ()
+-- do not use a catchall so that we are warned about missing cases when adding a
+-- new construtor to the enumeration.
+displayIDEResult _ _ (REPL Done) = pure ()
+displayIDEResult _ _ (REPL (Executed _)) = pure ()
+displayIDEResult _ _ (REPL (ModuleLoaded _)) = pure ()
+displayIDEResult _ _ (REPL (ErrorLoadingModule _ _)) = pure ()
+displayIDEResult _ _ (REPL (ColorSet _)) = pure ()
+displayIDEResult _ _ (REPL DefDeclared) = pure ()
+displayIDEResult _ _ (REPL Exited) = pure ()
 
 
 handleIDEResult : {auto c : Ref Ctxt Defs} ->

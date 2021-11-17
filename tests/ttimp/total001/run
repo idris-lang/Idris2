@@ -1,3 +1,4 @@
+rm -rf build
+
 $1 --yaffle Vect.yaff < input
 
-rm -rf build

@@ -111,10 +111,6 @@ showInfo : {auto c : Ref Ctxt Defs}
         -> List CLOpt
         -> Core Bool
 showInfo Nil = pure False
-showInfo (BlodwenPaths :: _)
-    = do defs <- get Ctxt
-         iputStrLn $ pretty (toString (dirs (options defs)))
-         pure True
 showInfo (_::rest) = showInfo rest
 
 tryYaffle : List CLOpt -> Core Bool
@@ -136,13 +132,15 @@ tryTTM (c :: cs) = tryTTM cs
 
 
 banner : String
-banner = "     ____    __     _         ___                                           \n" ++
-         "    /  _/___/ /____(_)____   |__ \\                                          \n" ++
-         "    / // __  / ___/ / ___/   __/ /     Version " ++ showVersion True version ++ "\n" ++
-         "  _/ // /_/ / /  / (__  )   / __/      https://www.idris-lang.org           \n" ++
-         " /___/\\__,_/_/  /_/____/   /____/      Type :? for help                     \n" ++
-         "\n" ++
-         "Welcome to Idris 2.  Enjoy yourself!"
+banner = #"""
+       ____    __     _         ___
+      /  _/___/ /____(_)____   |__ \
+      / // __  / ___/ / ___/   __/ /     Version \#{ showVersion True version }
+    _/ // /_/ / /  / (__  )   / __/      https://www.idris-lang.org
+   /___/\__,_/_/  /_/____/   /____/      Type :? for help
+
+  Welcome to Idris 2.  Enjoy yourself!
+  """#
 
 checkVerbose : List CLOpt -> Bool
 checkVerbose [] = False
@@ -168,22 +166,24 @@ stMain cgs opts
 
          let ide = ideMode opts
          let ideSocket = ideModeSocket opts
-         let outmode = if ide then IDEMode 0 stdin stdout else REPL False
+         let outmode = if ide then IDEMode 0 stdin stdout else REPL InfoLvl
          let fname = findInput opts
          o <- newRef ROpts (REPL.Opts.defaultOpts fname outmode cgs)
          updateEnv
 
          finish <- showInfo opts
          when (not finish) $ do
+           -- start by going over the pre-options, and stop if we do not need to
+           -- continue
+           True <- preOptions opts
+              | False => pure ()
+
            -- If there's a --build or --install, just do that then quit
            done <- processPackageOpts opts
 
            when (not done) $ flip catch renderError $
-              do True <- preOptions opts
-                     | False => pure ()
-
-                 when (checkVerbose opts) $ -- override Quiet if implicitly set
-                     setOutput (REPL False)
+              do when (checkVerbose opts) $ -- override Quiet if implicitly set
+                     setOutput (REPL InfoLvl)
                  u <- newRef UST initUState
                  origin <- maybe
                    (pure $ Virtual Interactive) (\fname => do
@@ -265,8 +265,8 @@ quitOpts (Help Nothing :: _)
 quitOpts (Help (Just HelpLogging) :: _)
     = do putStrLn helpTopics
          pure False
-quitOpts (ShowPrefix :: _)
-    = do putStrLn yprefix
+quitOpts (Help (Just HelpPragma) :: _)
+    = do putStrLn pragmaTopics
          pure False
 quitOpts (_ :: opts) = quitOpts opts
 

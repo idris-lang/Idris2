@@ -1,7 +1,7 @@
 module Idris.REPL.FuzzySearch
 
 import Core.AutoSearch
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
@@ -11,8 +11,8 @@ import Core.LinearCheck
 import Core.Metadata
 import Core.Normalise
 import Core.Options
-import Core.Termination
 import Core.TT
+import Core.Termination
 import Core.Unify
 
 import Idris.Desugar
@@ -91,7 +91,7 @@ fuzzySearch expr = do
        filterM (\def => fuzzyMatch neg pos def.type) allDefs
   put Ctxt defs
   doc <- traverse (docsOrSignature EmptyFC) $ fullname <$> filteredDefs
-  pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
+  pure $ PrintedDoc $ vsep doc
  where
 
   data NameOrConst = AName Name
@@ -195,7 +195,7 @@ fuzzySearch expr = do
   doFind ns (PrimVal fc c) =
     fromMaybe [] ((:: []) <$> parseNameOrConst (PPrimVal fc c)) ++ ns
   doFind ns (Erased fc i) = ns
-  doFind ns (TType fc) = AType :: ns
+  doFind ns (TType fc _) = AType :: ns
 
   toFullNames' : NameOrConst -> Core NameOrConst
   toFullNames' (AName x) = AName <$> toFullNames x

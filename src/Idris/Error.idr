@@ -1,9 +1,10 @@
 module Idris.Error
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Core
 import Core.Context
 import Core.Env
+import Core.Metadata
 import Core.Options
 import Core.Value
 
@@ -38,7 +39,7 @@ import System.File
 %default covering
 
 keyword : Doc IdrisAnn -> Doc IdrisAnn
-keyword = annotate (Syntax SynKeyword)
+keyword = annotate (Syntax Keyword)
 
 -- | Add binding site information if the term is simply a machine-inserted name
 pShowMN : {vars : _} -> Term vars -> Env t vars -> Doc IdrisAnn -> Doc IdrisAnn
@@ -159,18 +160,24 @@ pwarning : {auto c : Ref Ctxt Defs} ->
            {auto s : Ref Syn SyntaxInfo} ->
            {auto o : Ref ROpts REPLOpts} ->
            Warning -> Core (Doc IdrisAnn)
+pwarning (ParserWarning fc msg)
+    = pure $ pretty msg <+> line <+> !(ploc fc)
 pwarning (UnreachableClause fc env tm)
     = pure $ errorDesc (reflow "Unreachable clause:"
         <++> code !(pshow env tm))
         <+> line <+> !(ploc fc)
-pwarning (ShadowingGlobalDefs _ ns)
+pwarning (ShadowingGlobalDefs fc ns)
     = pure $ vcat
     $ reflow "We are about to implicitly bind the following lowercase names."
    :: reflow "You may be unintentionally shadowing the associated global definitions:"
-   :: map (\ (n, ns) => indent 2 $ hsep $ pretty n
-                            :: reflow "is shadowing"
-                            :: punctuate comma (map pretty (forget ns)))
-          (forget ns)
+   :: map pshadowing (forget ns)
+   `snoc` !(ploc fc)
+  where
+    pshadowing : (String, List1 Name) -> Doc IdrisAnn
+    pshadowing (n, ns) = indent 2 $ hsep $
+                           pretty n
+                        :: reflow "is shadowing"
+                        :: punctuate comma (map pretty (forget ns))
 
 pwarning (Deprecated s)
     = pure $ pretty "Deprecation warning:" <++> pretty s
@@ -183,18 +190,26 @@ perror : {auto c : Ref Ctxt Defs} ->
          {auto o : Ref ROpts REPLOpts} ->
          Error -> Core (Doc IdrisAnn)
 perror (Fatal err) = perror err
-perror (CantConvert fc env l r)
-    = pure $ errorDesc (hsep [ reflow "Mismatch between" <+> colon
+perror (CantConvert fc gam env l r)
+    = do defs <- get Ctxt
+         setCtxt gam
+         let res = errorDesc (hsep [ reflow "Mismatch between" <+> colon
                   , code !(pshow env l)
                   , "and"
                   , code !(pshow env r) <+> dot
                   ]) <+> line <+> !(ploc fc)
-perror (CantSolveEq fc env l r)
-    = pure $ errorDesc (hsep [ reflow "Can't solve constraint between" <+> colon
-                  , code !(pshow env l)
-                  , "and"
-                  , code !(pshow env r) <+> dot
-                  ]) <+> line <+> !(ploc fc)
+         put Ctxt defs
+         pure res
+perror (CantSolveEq fc gam env l r)
+    = do defs <- get Ctxt
+         setCtxt gam
+         let res = errorDesc (hsep [ reflow "Can't solve constraint between" <+> colon
+                      , code !(pshow env l)
+                      , "and"
+                      , code !(pshow env r) <+> dot
+                      ]) <+> line <+> !(ploc fc)
+         put Ctxt defs
+         pure res
 perror (PatternVariableUnifies fc env n tm)
     = do let (min, max) = order fc (getLoc tm)
          pure $ errorDesc (hsep [ reflow "Pattern variable"
@@ -217,9 +232,14 @@ perror (PatternVariableUnifies fc env n tm)
 perror (CyclicMeta fc env n tm)
     = pure $ errorDesc (reflow "Cycle detected in solution of metavariable" <++> meta (pretty !(prettyName n)) <++> equals
         <++> code !(pshow env tm)) <+> line <+> !(ploc fc)
-perror (WhenUnifying _ env x y err)
-    = pure $ errorDesc (reflow "When unifying" <++> code !(pshow env x) <++> "and"
-        <++> code !(pshow env y)) <+> dot <+> line <+> !(perror err)
+perror (WhenUnifying _ gam env x y err)
+    = do defs <- get Ctxt
+         setCtxt gam
+         let res = errorDesc (reflow "When unifying:" <+> line
+                   <+> "    " <+> code !(pshow env x) <+> line <+> "and:" <+> line
+                   <+> "    " <+> code !(pshow env y)) <+> line <+> !(perror err)
+         put Ctxt defs
+         pure res
 perror (ValidCase fc env (Left tm))
     = pure $ errorDesc (code !(pshow env tm) <++> reflow "is not a valid impossible case.")
         <+> line <+> !(ploc fc)
@@ -292,11 +312,17 @@ perror (BorrowPartialType fc env tm)
 perror (AmbiguousName fc ns)
     = pure $ errorDesc (reflow "Ambiguous name" <++> code (pretty ns))
         <+> line <+> !(ploc fc)
-perror (AmbiguousElab fc env ts)
+perror (AmbiguousElab fc env ts_in)
     = do pp <- getPPrint
          setPPrint (record { fullNamespace = True } pp)
+         ts_show <- traverse (\ (gam, t) =>
+                                  do defs <- get Ctxt
+                                     setCtxt gam
+                                     res <- pshow env t
+                                     put Ctxt defs
+                                     pure res) ts_in
          let res = vsep [ errorDesc (reflow "Ambiguous elaboration. Possible results" <+> colon)
-                        , indent 4 (vsep !(traverse (pshow env) ts))
+                        , indent 4 (vsep ts_show)
                         ] <+> line <+> !(ploc fc)
          setPPrint pp
          pure res
@@ -360,10 +386,18 @@ perror (TryWithImplicits fc env imps)
 perror (BadUnboundImplicit fc env n ty)
     = pure $ errorDesc (reflow "Can't bind name" <++> code (pretty (nameRoot n)) <++> reflow "with type" <++> code !(pshow env ty)
         <+> colon) <+> line <+> !(ploc fc) <+> line <+> reflow "Suggestion: try an explicit bind."
-perror (CantSolveGoal fc env g)
-    = let (_ ** (env', g')) = dropEnv env g in
-          pure $ errorDesc (reflow "Can't find an implementation for" <++> code !(pshow env' g')
-            <+> dot) <+> line <+> !(ploc fc)
+perror (CantSolveGoal fc gam env g reason)
+    = do defs <- get Ctxt
+         setCtxt gam
+         let (_ ** (env', g')) = dropEnv env g
+         let res = errorDesc (reflow "Can't find an implementation for" <++> code !(pshow env' g')
+                     <+> dot) <+> line <+> !(ploc fc)
+         put Ctxt defs
+         case reason of
+              Nothing => pure res
+              Just r => do rdesc <- perror r
+                           pure (res <+> line <+>
+                                 (reflow "Possible cause:" <++> rdesc))
   where
     -- For display, we don't want to see the full top level type; just the
     -- return type
@@ -452,8 +486,21 @@ perror (LitFail fc)
     = pure $ errorDesc (reflow "Can't parse literate.") <+> line <+> !(ploc fc)
 perror (LexFail fc msg)
     = pure $ errorDesc (pretty msg) <+> line <+> !(ploc fc)
-perror (ParseFail fc msg)
+perror (ParseFail ((fc, msg) ::: Nil))
     = pure $ errorDesc (pretty msg) <+> line <+> !(ploc fc)
+perror (ParseFail errs)
+    = pure $ errorDesc (reflow "Couldn't parse any alternatives" <+> colon) <+> line <+> !listErrors
+  where
+    prettyErrors : Nat -> Nat -> List (FC, String) -> Core (Doc IdrisAnn)
+    prettyErrors showCount _ []   = pure emptyDoc
+    prettyErrors showCount 0 errs = pure $ meta (pretty "... (\{show $ length errs} others)")
+    prettyErrors showCount (S k) ((fc, msg) :: hs)
+        = do let idx = show $ showCount `minus` k
+             pure $ warning (pretty "\{idx}: \{msg}") <+> line <+> !(ploc fc) <+> !(prettyErrors showCount k hs)
+
+    listErrors : Core (Doc IdrisAnn)
+    listErrors = do showCount <- logErrorCount . session . options <$> get Ctxt
+                    prettyErrors showCount showCount . nub . reverse $ forget errs
 perror (ModuleNotFound fc ns)
     = pure $ errorDesc ("Module" <++> annotate FileCtxt (pretty ns) <++> reflow "not found") <+> line <+> !(ploc fc)
 perror (CyclicImports ns)

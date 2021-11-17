@@ -2,6 +2,7 @@ module Language.JSON.Tokens
 
 import Language.JSON.String
 import Text.Token
+import Text.Bounded
 
 %default total
 
@@ -76,6 +77,6 @@ TokenKind JSONTokenKind where
   tokValue JTIgnore _ = ()
 
 export
-ignored : JSONToken -> Bool
-ignored (Tok JTIgnore _) = True
+ignored : WithBounds JSONToken -> Bool
+ignored (MkBounded (Tok JTIgnore _) _ _) = True
 ignored _ = False

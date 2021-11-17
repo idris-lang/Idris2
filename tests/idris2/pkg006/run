@@ -1,7 +1,8 @@
+rm -rf build
+
 $1 --build test1.ipkg
 $1 --build test2.ipkg
 $1 --build test3.ipkg
 $1 --build test4.ipkg
 $1 --build test5.ipkg
 
-rm -rf build

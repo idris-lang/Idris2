@@ -1,7 +1,8 @@
+rm -rf build
+
 $1 --build hello.ipkg
 $1 --build test.ipkg
 
 ./build/exec/runtests ../build/exec/hello --no-colour
 
 
-rm -rf build

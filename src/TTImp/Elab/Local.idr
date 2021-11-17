@@ -1,6 +1,6 @@
 module TTImp.Elab.Local
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -10,6 +10,8 @@ import Core.Normalise
 import Core.Unify
 import Core.TT
 import Core.Value
+
+import Idris.Syntax
 
 import TTImp.Elab.Check
 import TTImp.Elab.Utils
@@ -26,6 +28,7 @@ localHelper : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              NestedNames vars -> Env Term vars ->
              List ImpDecl -> (NestedNames vars -> Core a) ->
              Core a
@@ -156,6 +159,7 @@ checkLocal : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
              FC -> List ImpDecl -> (scope : RawImp) ->
@@ -183,6 +187,7 @@ checkCaseLocal : {vars : _} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> Name -> Name -> List Name -> RawImp ->
@@ -192,11 +197,8 @@ checkCaseLocal {vars} rig elabinfo nest env fc uname iname args sc expty
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact iname (gamma defs)
               | Nothing => check rig elabinfo nest env sc expty
-         let name = case definition def of
-                         PMDef _ _ _ _ _ => Ref fc Func iname
-                         DCon t a _ => Ref fc (DataCon t a) iname
-                         TCon t a _ _ _ _ _ _ => Ref fc (TyCon t a) iname
-                         _ => Ref fc Func iname
+         let nt = fromMaybe Func (defNameType $ definition def)
+         let name = Ref fc nt iname
          (app, args) <- getLocalTerm fc env name args
          log "elab.local" 5 $ "Updating case local " ++ show uname ++ " " ++ show args
          logTermNF "elab.local" 5 "To" env app

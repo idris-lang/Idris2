@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "idris_util.h"
+
 #ifndef _WIN32
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -56,14 +58,6 @@ struct sockaddr_un get_sockaddr_unix(char* host) {
     return addr;
 }
 
-void* idrnet_malloc(int size) {
-    return malloc(size);
-}
-
-void idrnet_free(void* ptr) {
-    free(ptr);
-}
-
 unsigned int idrnet_peek(void *ptr, unsigned int offset) {
   unsigned char *buf_c = (unsigned char*) ptr;
   return (unsigned int) buf_c[offset];
@@ -90,6 +84,14 @@ int idrnet_socket(int domain, int type, int protocol) {
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
 	perror("setsockopt(SO_REUSEADDR) failed");
     return sockfd;
+}
+
+int idrnet_close(int fd) {
+#ifdef _WIN32
+    return _close(fd);
+#else
+    return close(fd);
+#endif
 }
 
 // Get the address family constants out of C and into Idris
@@ -204,6 +206,18 @@ int idrnet_connect(int sockfd, int family, int socket_type, char* host, int port
     }
     freeaddrinfo(remote_host);
     return 0;
+}
+
+int idrnet_listen(int socket, int backlog) {
+    return listen(socket, backlog);
+}
+
+FILE* idrnet_fdopen(int fd, const char* mode) {
+#ifdef _WIN32
+    return _fdopen(fd, mode);
+#else
+    return fdopen(fd, mode);
+#endif
 }
 
 

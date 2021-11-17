@@ -11,6 +11,7 @@ import Core.TT
 import Core.Unify
 import Core.Value
 
+import Idris.Syntax
 import Parser.Lexer.Source
 
 import TTImp.Elab
@@ -28,7 +29,7 @@ import Data.List
 %default covering
 
 fnName : Bool -> Name -> String
-fnName lhs (UN n)
+fnName lhs (UN (Basic n))
     = if isIdentNormal n then n
       else if lhs then "(" ++ n ++ ")"
       else "op"
@@ -53,6 +54,7 @@ uniqueRHS c = pure c
 expandClause : {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                FC -> SearchOpts -> Int -> ImpClause ->
                Core (Search (List ImpClause))
 expandClause loc opts n c
@@ -89,7 +91,7 @@ expandClause loc opts n c
 
 splittableNames : RawImp -> List Name
 splittableNames (IApp _ f (IBindVar _ n))
-    = splittableNames f ++ [UN n]
+    = splittableNames f ++ [UN $ Basic n]
 splittableNames (IApp _ f _)
     = splittableNames f
 splittableNames (IAutoApp _ f _)
@@ -101,6 +103,7 @@ splittableNames _ = []
 trySplit : {auto m : Ref MD Metadata} ->
            {auto c : Ref Ctxt Defs} ->
            {auto u : Ref UST UState} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            FC -> RawImp -> ClosedTerm -> RawImp -> Name ->
            Core (Name, List ImpClause)
 trySplit loc lhsraw lhs rhs n
@@ -114,7 +117,7 @@ trySplit loc lhsraw lhs rhs n
     valid _ = Nothing
 
     fixNames : RawImp -> RawImp
-    fixNames (IVar loc' (UN n)) = IBindVar loc' n
+    fixNames (IVar loc' (UN (Basic n))) = IBindVar loc' n
     fixNames (IVar loc' (MN _ _)) = Implicit loc' True
     fixNames (IApp loc' f a) = IApp loc' (fixNames f) (fixNames a)
     fixNames (IAutoApp loc' f a) = IAutoApp loc' (fixNames f) (fixNames a)
@@ -127,7 +130,7 @@ trySplit loc lhsraw lhs rhs n
                Nothing => IVar loc' n
                Just tm => fixNames tm
     updateLHS ups (IBindVar loc' n)
-        = case lookup (UN n) ups of
+        = case lookup (UN (Basic n)) ups of
                Nothing => IBindVar loc' n
                Just tm => fixNames tm
     updateLHS ups (IApp loc' f a) = IApp loc' (updateLHS ups f) (updateLHS ups a)
@@ -139,6 +142,7 @@ trySplit loc lhsraw lhs rhs n
 generateSplits : {auto m : Ref MD Metadata} ->
                  {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  FC -> SearchOpts -> Int -> ImpClause ->
                  Core (List (Name, List ImpClause))
 generateSplits loc opts fn (ImpossibleClause fc lhs) = pure []
@@ -165,6 +169,7 @@ mutual
   tryAllSplits : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  FC -> SearchOpts -> Int ->
                  List (Name, List ImpClause) ->
                  Core (Search (List ImpClause))
@@ -180,6 +185,7 @@ mutual
   mkSplits : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              FC -> SearchOpts -> Int -> ImpClause ->
              Core (Search (List ImpClause))
   -- If the clause works, use it. Otherwise, split on one of the splittable
@@ -198,6 +204,7 @@ export
 makeDefFromType : {auto c : Ref Ctxt Defs} ->
                   {auto m : Ref MD Metadata} ->
                   {auto u : Ref UST UState} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
                   FC ->
                   SearchOpts ->
                   Name -> -- function name to generate
@@ -232,6 +239,7 @@ export
 makeDef : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
           Name -> Core (Search (FC, List ImpClause))
 makeDef p n
@@ -279,6 +287,7 @@ export
 makeDefSort : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
               Nat -> (List ImpClause -> List ImpClause -> Ordering) ->
               Name -> Core (Search (FC, List ImpClause))
@@ -289,6 +298,7 @@ export
 makeDefN : {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
            Nat -> Name -> Core (List (FC, List ImpClause))
 makeDefN p max n

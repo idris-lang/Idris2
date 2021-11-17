@@ -4,6 +4,7 @@ import Core.Core
 import Core.Name
 import public Core.Options.Log
 import Core.TT
+
 import Libraries.Utils.Binary
 import Libraries.Utils.Path
 
@@ -39,17 +40,18 @@ outputDirWithDefault d = fromMaybe (build_dir d </> "exec") (output_dir d)
 
 public export
 toString : Dirs -> String
-toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs pdirs ldirs ddirs) =
-  unlines [ "+ Working Directory      :: " ++ show wdir
-          , "+ Source Directory       :: " ++ show sdir
-          , "+ Build Directory        :: " ++ show bdir
-          , "+ Local Depend Directory :: " ++ show ldir
-          , "+ Output Directory       :: " ++ show (outputDirWithDefault d)
-          , "+ Installation Prefix    :: " ++ show dfix
-          , "+ Extra Directories      :: " ++ show edirs
-          , "+ Package Directories    :: " ++ show pdirs
-          , "+ CG Library Directories :: " ++ show ldirs
-          , "+ Data Directories       :: " ++ show ddirs]
+toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs pdirs ldirs ddirs) = """
+  + Working Directory      :: \{ show wdir }
+  + Source Directory       :: \{ show sdir }
+  + Build Directory        :: \{ show bdir }
+  + Local Depend Directory :: \{ show ldir }
+  + Output Directory       :: \{ show $ outputDirWithDefault d }
+  + Installation Prefix    :: \{ show dfix }
+  + Extra Directories      :: \{ show edirs }
+  + Package Directories    :: \{ show pdirs }
+  + CG Library Directories :: \{ show ldirs }
+  + Data Directories       :: \{ show ddirs }
+  """
 
 public export
 data CG = Chez
@@ -59,6 +61,7 @@ data CG = Chez
         | Node
         | Javascript
         | RefC
+        | VMCodeInterp
         | Other String
 
 export
@@ -70,6 +73,7 @@ Eq CG where
   Node == Node = True
   Javascript == Javascript = True
   RefC == RefC = True
+  VMCodeInterp == VMCodeInterp = True
   Other s == Other t = s == t
   _ == _ = False
 
@@ -82,6 +86,7 @@ Show CG where
   show Node = "node"
   show Javascript = "javascript"
   show RefC = "refc"
+  show VMCodeInterp = "vmcode-interp"
   show (Other s) = s
 
 public export
@@ -140,28 +145,35 @@ public export
 record Session where
   constructor MkSessionOpts
   noprelude : Bool
+  totalReq : TotalReq
   nobanner : Bool
   findipkg : Bool
   codegen : CG
   directives : List String
+  searchTimeout : Integer -- maximum number of milliseconds to run
+                          -- expression/program search
+  ignoreMissingPkg : Bool -- fail silently on missing packages. This is because
+          -- while we're bootstrapping, we find modules by a different route
+          -- but we still want to have the dependencies listed properly
+
+  -- Troubleshooting
   logEnabled : Bool -- do we check logging flags at all? This is 'False' until
                     -- any logging is enabled.
   logLevel : LogLevels
   logTimings : Bool
-  ignoreMissingPkg : Bool -- fail silently on missing packages. This is because
-          -- while we're bootstrapping, we find modules by a different route
-          -- but we still want to have the dependencies listed properly
   debugElabCheck : Bool -- do conversion check to verify results of elaborator
   dumpcases : Maybe String -- file to output compiled case trees
   dumplifted : Maybe String -- file to output lambda lifted definitions
   dumpanf : Maybe String -- file to output ANF definitions
   dumpvmcode : Maybe String -- file to output VM code definitions
   profile : Bool -- generate profiling information, if supported
-  searchTimeout : Integer -- maximum number of milliseconds to run
-                          -- expression/program search
+  logErrorCount : Nat -- when parsing alternatives fails, how many errors
+                      -- should be shown.
+
   -- Warnings
   warningsAsErrors : Bool
   showShadowingWarning : Bool
+
   -- Experimental
   checkHashesInsteadOfModTime : Bool
   incrementalCGs : List CG
@@ -169,6 +181,7 @@ record Session where
      -- Use whole program compilation for executables, no matter what
      -- incremental CGs are set (intended for overriding any environment
      -- variables that set incremental compilation)
+  caseTreeHeuristics : Bool -- apply heuristics to pick matches for case tree building
 
 public export
 record PPrinter where
@@ -189,7 +202,7 @@ record Options where
   primnames : PrimNames
   extensions : List LangExt
   additionalCGs : List (String, CG)
-
+  hashFn : Maybe String
 
 export
 availableCGs : Options -> List (String, CG)
@@ -200,7 +213,8 @@ availableCGs o
        ("node", Node),
        ("javascript", Javascript),
        ("refc", RefC),
-       ("gambit", Gambit)] ++ additionalCGs o
+       ("gambit", Gambit),
+       ("vmcode-interp", VMCodeInterp)] ++ additionalCGs o
 
 export
 getCG : Options -> String -> Maybe CG
@@ -215,21 +229,40 @@ defaultPPrint = MkPPOpts False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez [] False defaultLogLevel
-                               False False False Nothing Nothing
-                               Nothing Nothing False 1000 False True
-                               False [] False
+defaultSession = MkSessionOpts False CoveringOnly False False Chez [] 1000 False False
+                               defaultLogLevel False False Nothing Nothing
+                               Nothing Nothing False 1 False True
+                               False [] False False
 
 export
 defaultElab : ElabDirectives
-defaultElab = MkElabDirectives True True CoveringOnly 3 50 50 True
+defaultElab = MkElabDirectives True True CoveringOnly 3 50 25 True
+
+-- FIXME: This turns out not to be reliably portable, since different systems
+-- may have tools with the same name but different required arugments. We
+-- probably need another way (perhaps our own internal hash function, although
+-- that's not going to be as good as sha256).
+export
+defaultHashFn : Core (Maybe String)
+defaultHashFn
+    = do Nothing <- coreLift $ pathLookup ["sha256sum", "gsha256sum"]
+           | Just p => pure $ Just $ p ++ " --tag"
+         Nothing <- coreLift $ pathLookup ["sha256"]
+           | Just p => pure $ Just p
+         Nothing <- coreLift $ pathLookup ["openssl"]
+           | Just p => pure $ Just $ p ++ " sha256"
+         pure Nothing
 
 export
-defaults : Options
-defaults = MkOptions defaultDirs defaultPPrint defaultSession
-                     defaultElab Nothing Nothing
-                     (MkPrimNs Nothing Nothing Nothing Nothing) []
-                     []
+defaults : Core Options
+defaults
+    = do -- hashFn <- defaultHashFn
+         -- Temporarily disabling the hash function until we have a more
+         -- portable way of working out what to call, and allowing a way for
+         -- it to fail gracefully.
+         pure $ MkOptions
+           defaultDirs defaultPPrint defaultSession defaultElab Nothing Nothing
+           (MkPrimNs Nothing Nothing Nothing Nothing) [] [] Nothing
 
 -- Reset the options which are set by source files
 export

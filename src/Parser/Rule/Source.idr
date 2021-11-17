@@ -19,12 +19,16 @@ import Libraries.Data.String.Extra
 %default total
 
 public export
+BRule : Bool -> Type -> Type
+BRule = Grammar SemanticDecorations Token
+
+public export
 Rule : Type -> Type
-Rule ty = Grammar SemanticDecorations Token True ty
+Rule = BRule True
 
 public export
 EmptyRule : Type -> Type
-EmptyRule ty = Grammar SemanticDecorations Token False ty
+EmptyRule = BRule False
 
 export
 eoi : EmptyRule ()
@@ -37,30 +41,35 @@ eoi = ignore $ nextIs "Expected end of input" isEOI
 export
 constant : Rule Constant
 constant
-    = terminal "Expected constant"
-               \case
-                 CharLit c    =>  map Ch $ getCharLit c
-                 DoubleLit d  => Just (Db d)
-                 IntegerLit i => Just (BI i)
-                 Ident s      => isConstantType (UN s) >>=
-                                 \case WorldType => Nothing
-                                       c         => Just c
-                 _            => Nothing
+    = terminal "Expected constant" $ \case
+        CharLit c    =>  Ch <$> getCharLit c
+        DoubleLit d  => Just (Db d)
+        IntegerLit i => Just (BI i)
+        Ident s      => isConstantType (UN $ Basic s) >>=
+                             \case WorldType => Nothing
+                                   c         => Just c
+        _            => Nothing
 
 documentation' : Rule String
-documentation' = terminal "Expected documentation comment"
+documentation' = terminal "Expected documentation comment" $
                           \case
                             DocComment d => Just d
                             _ => Nothing
 
+documentation : OriginDesc -> Rule String
+documentation fname
+  = do b <- bounds (some documentation')
+       act [((fname, start b, end b), Comment, Nothing)]
+       pure (unlines $ forget b.val)
+
 export
-documentation : Rule String
-documentation = (unlines . forget) <$> some documentation'
+optDocumentation : OriginDesc -> EmptyRule String
+optDocumentation fname = option "" (documentation fname)
 
 export
 intLit : Rule Integer
 intLit
-    = terminal "Expected integer literal"
+    = terminal "Expected integer literal" $
                \case
                  IntegerLit i => Just i
                  _ => Nothing
@@ -68,7 +77,7 @@ intLit
 export
 onOffLit : Rule Bool
 onOffLit
-    = terminal "Expected on or off"
+    = terminal "Expected on or off" $
                \case
                  Ident "on" => Just True
                  Ident "off" => Just False
@@ -77,7 +86,7 @@ onOffLit
 export
 strLit : Rule String
 strLit
-    = terminal "Expected string literal"
+    = terminal "Expected string literal" $
                \case
                  StringLit n s => escape n s
                  _ => Nothing
@@ -86,7 +95,7 @@ strLit
 export
 strLitLines : Rule (List1 String)
 strLitLines
-    = terminal "Expected string literal"
+    = terminal "Expected string literal" $
                \case
                  StringLit n s =>
                    traverse (escape n . fastPack)
@@ -95,35 +104,35 @@ strLitLines
 
 export
 strBegin : Rule ()
-strBegin = terminal "Expected string begin"
+strBegin = terminal "Expected string begin" $
                     \case
-                      StringBegin False => Just ()
+                      StringBegin Single => Just ()
                       _ => Nothing
 
 export
 multilineBegin : Rule ()
-multilineBegin = terminal "Expected multiline string begin"
+multilineBegin = terminal "Expected multiline string begin" $
                           \case
-                            StringBegin True => Just ()
+                            StringBegin Multi => Just ()
                             _ => Nothing
 
 export
 strEnd : Rule ()
-strEnd = terminal "Expected string end"
+strEnd = terminal "Expected string end" $
                   \case
                     StringEnd => Just ()
                     _ => Nothing
 
 export
 interpBegin : Rule ()
-interpBegin = terminal "Expected string interp begin"
+interpBegin = terminal "Expected string interp begin" $
                        \case
                          InterpBegin => Just ()
                          _ => Nothing
 
 export
 interpEnd : Rule ()
-interpEnd = terminal "Expected string interp end"
+interpEnd = terminal "Expected string interp end" $
                      \case
                        InterpEnd => Just ()
                        _ => Nothing
@@ -134,27 +143,35 @@ simpleStr = strBegin *> commit *> (option "" strLit) <* strEnd
 
 export
 aDotIdent : Rule String
-aDotIdent = terminal "Expected dot+identifier"
+aDotIdent = terminal "Expected dot+identifier" $
                      \case
                        DotIdent s => Just s
                        _ => Nothing
 
 export
 postfixProj : Rule Name
-postfixProj = RF <$> aDotIdent
+postfixProj = UN . Field <$> aDotIdent
 
 export
 symbol : String -> Rule ()
 symbol req
-    = terminal ("Expected '" ++ req ++ "'")
+    = terminal ("Expected '" ++ req ++ "'") $
                \case
                  Symbol s => if s == req then Just () else Nothing
                  _ => Nothing
 
 export
+anyKeyword : Rule String
+anyKeyword
+  = terminal ("Expected a keyword") $
+             \case
+               Keyword s => Just s
+               _ => Nothing
+
+export
 keyword : String -> Rule ()
 keyword req
-    = terminal ("Expected '" ++ req ++ "'")
+    = terminal ("Expected '" ++ req ++ "'") $
                \case
                  Keyword s => if s == req then Just () else Nothing
                  _ => Nothing
@@ -162,7 +179,7 @@ keyword req
 export
 exactIdent : String -> Rule ()
 exactIdent req
-    = terminal ("Expected " ++ req)
+    = terminal ("Expected " ++ req) $
                \case
                  Ident s => if s == req then Just () else Nothing
                  _ => Nothing
@@ -170,12 +187,9 @@ exactIdent req
 export
 pragma : String -> Rule ()
 pragma n =
-  terminal ("Expected pragma " ++ n)
+  terminal ("Expected pragma " ++ n) $
     \case
-      Pragma s =>
-        if s == n
-          then Just ()
-          else Nothing
+      Pragma s => guard (s == n)
       _ => Nothing
 
 export
@@ -185,20 +199,29 @@ builtinType =
     <|> NaturalToInteger <$ exactIdent "NaturalToInteger"
     <|> IntegerToNatural <$ exactIdent "IntegerToNatural"
 
+operatorCandidate : Rule Name
+operatorCandidate
+    = terminal "Expected operator" $
+               \case
+                 Symbol s => Just (UN $ Basic s) -- TODO: have an operator construct?
+                 _ => Nothing
+
+export
+unqualifiedOperatorName : Rule String
+unqualifiedOperatorName
+    = terminal "Expected operator" $
+               \case
+                 Symbol s => s <$ guard (not $ s `elem` reservedSymbols)
+                 _ => Nothing
+
 export
 operator : Rule Name
-operator
-    = terminal "Expected operator"
-               \case
-                 Symbol s =>
-                   if s `elem` reservedSymbols
-                     then Nothing
-                     else Just (UN s)
-                 _ => Nothing
+operator = UN . Basic <$> unqualifiedOperatorName
+               -- ^ TODO: add an operator constructor?
 
 identPart : Rule String
 identPart
-    = terminal "Expected name"
+    = terminal "Expected name" $
                \case
                  Ident str => Just str
                  _ => Nothing
@@ -206,7 +229,7 @@ identPart
 export
 namespacedIdent : Rule (Maybe Namespace, String)
 namespacedIdent
-    = terminal "Expected namespaced name"
+    = terminal "Expected namespaced name" $
                \case
                  DotSepIdent ns n => Just (Just ns, n)
                  Ident i => Just (Nothing, i)
@@ -241,7 +264,7 @@ unqualifiedName = identPart
 export
 holeName : Rule String
 holeName
-    = terminal "Expected hole name"
+    = terminal "Expected hole name" $
                \case
                  HoleIdent str => Just str
                  _ => Nothing
@@ -253,15 +276,27 @@ reservedNames
       , "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"
       ]
 
-isNotReservedIdent : WithBounds String -> EmptyRule ()
-isNotReservedIdent x
+isNotReservedName : WithBounds String -> EmptyRule ()
+isNotReservedName x
     = if x.val `elem` reservedNames
-      then failLoc x.bounds $ "can't use reserved name " ++ x.val
+      then failLoc x.bounds $ "Can't use reserved name \{x.val}"
+      else pure ()
+
+isNotReservedSymbol : WithBounds String -> EmptyRule ()
+isNotReservedSymbol x
+    = if x.val `elem` reservedSymbols
+      then failLoc x.bounds $ "Can't use reserved symbol \{x.val}"
       else pure ()
 
 export
 opNonNS : Rule Name
-opNonNS = symbol "(" *> (operator <|> postfixProj) <* symbol ")"
+opNonNS = do
+  symbol "("
+  commit
+  id <- bounds (operatorCandidate <|> postfixProj)
+  isNotReservedSymbol (nameRoot <$> id)
+  symbol ")"
+  pure id.val
 
 identWithCapital : (capitalised : Bool) -> WithBounds String ->
                    EmptyRule ()
@@ -277,8 +312,8 @@ nameWithCapital b = opNonNS <|> do
   nameNS nsx = do
     let id = snd <$> nsx
     identWithCapital b id
-    isNotReservedIdent id
-    pure $ uncurry mkNamespacedName nsx.val
+    isNotReservedName id
+    pure $ uncurry mkNamespacedName (map Basic nsx.val)
 
   opNS : WithBounds (Maybe Namespace, String) -> Rule Name
   opNS nsx = do
@@ -302,12 +337,12 @@ capitalisedIdent : Rule String
 capitalisedIdent = do
   id <- bounds identPart
   isCapitalisedIdent id
-  isNotReservedIdent id
+  isNotReservedName id
   pure id.val
 
 export
 dataConstructorName : Rule Name
-dataConstructorName = opNonNS <|> UN <$> capitalisedIdent
+dataConstructorName = opNonNS <|> (UN . Basic) <$> capitalisedIdent
 
 export %inline
 dataTypeName : Rule Name
@@ -381,6 +416,7 @@ isTerminator (Keyword "in") = True
 isTerminator (Keyword "then") = True
 isTerminator (Keyword "else") = True
 isTerminator (Keyword "where") = True
+isTerminator InterpEnd = True
 isTerminator EndInput = True
 isTerminator _ = False
 

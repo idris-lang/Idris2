@@ -1,6 +1,7 @@
 module Core.TTC
 
-import Core.CaseTree
+import Core.Binary.Prims
+import Core.Case.CaseTree
 import Core.CompileExpr
 import Core.Context
 import Core.Core
@@ -12,9 +13,12 @@ import Core.TT
 
 import Libraries.Data.NameMap
 import Libraries.Data.PosMap
+
+import Libraries.Data.IOArray
 import Data.Vect
 
 import Libraries.Utils.Binary
+import Libraries.Utils.Scheme
 
 %default covering
 
@@ -31,7 +35,6 @@ TTC ModuleIdent where
 export
 TTC VirtualIdent where
   toBuf b Interactive = tag 0
-
   fromBuf b =
     case !getTag of
       0 => pure Interactive
@@ -71,17 +74,20 @@ TTC FC where
 
 export
 TTC Name where
+  -- for efficiency reasons we do not encode UserName separately
+  -- hence the nested pattern matches on UN (Basic/Hole/Field)
   toBuf b (NS xs x) = do tag 0; toBuf b xs; toBuf b x
-  toBuf b (UN x) = do tag 1; toBuf b x
+  toBuf b (UN (Basic x)) = do tag 1; toBuf b x
   toBuf b (MN x y) = do tag 2; toBuf b x; toBuf b y
   toBuf b (PV x y) = do tag 3; toBuf b x; toBuf b y
   toBuf b (DN x y) = do tag 4; toBuf b x; toBuf b y
-  toBuf b (RF x) = do tag 5; toBuf b x
+  toBuf b (UN (Field x)) = do tag 5; toBuf b x
   toBuf b (Nested x y) = do tag 6; toBuf b x; toBuf b y
   toBuf b (CaseBlock x y) = do tag 7; toBuf b x; toBuf b y
   toBuf b (WithBlock x y) = do tag 8; toBuf b x; toBuf b y
   toBuf b (Resolved x)
       = throw (InternalError ("Can't write resolved name " ++ show x))
+  toBuf b (UN Underscore) = tag 9
 
   fromBuf b
       = case !getTag of
@@ -89,7 +95,7 @@ TTC Name where
                      x <- fromBuf b
                      pure (NS xs x)
              1 => do x <- fromBuf b
-                     pure (UN x)
+                     pure (UN $ Basic x)
              2 => do x <- fromBuf b
                      y <- fromBuf b
                      pure (MN x y)
@@ -100,7 +106,7 @@ TTC Name where
                      y <- fromBuf b
                      pure (DN x y)
              5 => do x <- fromBuf b
-                     pure (RF x)
+                     pure (UN $ Field x)
              6 => do x <- fromBuf b
                      y <- fromBuf b
                      pure (Nested x y)
@@ -110,6 +116,7 @@ TTC Name where
              8 => do x <- fromBuf b
                      y <- fromBuf b
                      pure (WithBlock x y)
+             9 => pure (UN Underscore)
              _ => corrupt "Name"
 
 export
@@ -326,8 +333,8 @@ mutual
              toBuf b c
     toBuf b (Erased fc _)
         = tag 10
-    toBuf b (TType fc)
-        = tag 11
+    toBuf b (TType fc u)
+        = do tag 11; toBuf b u
 
     fromBuf {vars} b
         = case !getTag of
@@ -359,7 +366,7 @@ mutual
                9 => do c <- fromBuf b
                        pure (PrimVal emptyFC c)
                10 => pure (Erased emptyFC False)
-               11 => pure (TType emptyFC)
+               11 => do u <- fromBuf b; pure (TType emptyFC u)
                12 => do fn <- fromBuf b
                         args <- fromBuf b
                         pure (apply emptyFC fn args)
@@ -574,6 +581,7 @@ export
 
   toBuf b DoubleExp = tag 19
   toBuf b DoubleLog = tag 20
+  toBuf b DoublePow = tag 21
   toBuf b DoubleSin = tag 22
   toBuf b DoubleCos = tag 23
   toBuf b DoubleTan = tag 24
@@ -634,6 +642,7 @@ export
                  14 => pure StrIndex
                  15 => pure StrCons
                  16 => pure StrAppend
+                 21 => pure DoublePow
                  35 => do ty <- fromBuf b; pure (ShiftL ty)
                  36 => do ty <- fromBuf b; pure (ShiftR ty)
                  37 => do ty <- fromBuf b; pure (BAnd ty)
@@ -659,6 +668,9 @@ TTC ConInfo where
   toBuf b NOTHING = tag 5
   toBuf b JUST = tag 6
   toBuf b RECORD = tag 7
+  toBuf b ZERO = tag 8
+  toBuf b SUCC = tag 9
+  toBuf b UNIT = tag 10
 
   fromBuf b
       = case !getTag of
@@ -670,6 +682,9 @@ TTC ConInfo where
              5 => pure NOTHING
              6 => pure JUST
              7 => pure RECORD
+             8 => pure ZERO
+             9 => pure SUCC
+             10 => pure UNIT
              _ => corrupt "ConInfo"
 
 mutual
@@ -783,6 +798,8 @@ TTC CFType where
   toBuf b CFInt16 = tag 18
   toBuf b CFInt32 = tag 19
   toBuf b CFInt64 = tag 20
+  toBuf b CFForeignObj = tag 21
+  toBuf b CFInteger = tag 22
 
   fromBuf b
       = case !getTag of
@@ -807,6 +824,8 @@ TTC CFType where
              18 => pure CFInt16
              19 => pure CFInt32
              20 => pure CFInt64
+             21 => pure CFForeignObj
+             22 => pure CFInteger
              _ => corrupt "CFType"
 
 export
@@ -838,6 +857,7 @@ TTC CG where
   toBuf b Node = tag 5
   toBuf b Javascript = tag 6
   toBuf b RefC = tag 7
+  toBuf b VMCodeInterp = tag 8
 
   fromBuf b
       = case !getTag of
@@ -850,6 +870,7 @@ TTC CG where
              5 => pure Node
              6 => pure Javascript
              7 => pure RefC
+             8 => pure VMCodeInterp
              _ => corrupt "CG"
 
 export
@@ -945,6 +966,7 @@ TTC Def where
       = do tag 8; toBuf b guess; toBuf b envb; toBuf b constraints
   toBuf b ImpBind = tag 9
   toBuf b Delayed = tag 10
+  toBuf b (UniverseLevel i) = do tag 11; toBuf b i
 
   fromBuf b
       = case !getTag of
@@ -977,6 +999,8 @@ TTC Def where
                      pure (Guess g envb cs)
              9 => pure ImpBind
              10 => pure Context.Delayed
+             11 => do l <- fromBuf b
+                      pure (UniverseLevel l)
              _ => corrupt "Def"
 
 export
@@ -992,8 +1016,19 @@ TTC TotalReq where
              2 => pure PartialOK
              _ => corrupt "TotalReq"
 
+TTC NoMangleDirective where
+  toBuf b (CommonName n) = do tag 0; toBuf b n
+  toBuf b (BackendNames ns) = do tag 1; toBuf b ns
+
+  fromBuf b
+      = case !getTag of
+             0 => do n <- fromBuf b; pure (CommonName n)
+             1 => do ns <- fromBuf b; pure (BackendNames ns)
+             _ => corrupt "NoMangleDirective"
+
 TTC DefFlag where
   toBuf b Inline = tag 2
+  toBuf b NoInline = tag 13
   toBuf b Invertible = tag 3
   toBuf b Overloadable = tag 4
   toBuf b TCInline = tag 5
@@ -1003,6 +1038,8 @@ TTC DefFlag where
   toBuf b (PartialEval x) = tag 9 -- names not useful any more
   toBuf b AllGuarded = tag 10
   toBuf b (ConType ci) = do tag 11; toBuf b ci
+  toBuf b (Identity x) = do tag 12; toBuf b x
+  toBuf b (NoMangle x) = do tag 14; toBuf b x
 
   fromBuf b
       = case !getTag of
@@ -1016,6 +1053,9 @@ TTC DefFlag where
              9 => pure (PartialEval [])
              10 => pure AllGuarded
              11 => do ci <- fromBuf b; pure (ConType ci)
+             12 => do x <- fromBuf b; pure (Identity x)
+             13 => pure NoInline
+             14 => do x <- fromBuf b; pure (NoMangle x)
              _ => corrupt "DefFlag"
 
 export
@@ -1095,10 +1135,10 @@ TTC GlobalDef where
                       sc <- fromBuf b
                       pure (MkGlobalDef loc name ty eargs seargs specargs iargs
                                         mul vars vis
-                                        tot fl refs refsR inv c True def cdef Nothing sc)
+                                        tot fl refs refsR inv c True def cdef Nothing sc Nothing)
               else pure (MkGlobalDef loc name (Erased loc False) [] [] [] []
                                      mul [] Public unchecked [] refs refsR
-                                     False False True def cdef Nothing [])
+                                     False False True def cdef Nothing [] Nothing)
 
 export
 TTC Transform where

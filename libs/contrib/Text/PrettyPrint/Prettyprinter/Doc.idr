@@ -282,7 +282,7 @@ punctuate _ [d] = [d]
 punctuate p (d :: ds) = (d <+> p) :: punctuate p ds
 
 export
-plural : (Num amount, Eq amount) => doc -> doc -> amount -> doc
+plural : Num amount => Eq amount => doc -> doc -> amount -> doc
 plural one multiple n = if n == 1 then one else multiple
 
 ||| Encloses the document between two other documents using `(<+>)`.
@@ -360,7 +360,7 @@ interface Pretty a where
 export
 Pretty String where
   pretty str = let str' = if "\n" `isSuffixOf` str then dropLast 1 str else str in
-                   vsep $ map unsafeTextWithoutNewLines $ forget $ lines str'
+                   vsep $ map unsafeTextWithoutNewLines $ lines str'
 
 public export
 FromString (Doc ann) where

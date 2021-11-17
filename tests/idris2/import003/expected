@@ -1,7 +1,7 @@
 1/2: Building A (A.idr)
 2/2: Building B (B.idr)
-B> 1 hole: A.defA
+B> 1 hole: A.defA : Int -> Int
 B> Bye for now!
 2/2: Building C (C.idr)
-C> 1 hole: C.newHole
+C> 1 hole: C.newHole : Int -> Int
 C> Bye for now!

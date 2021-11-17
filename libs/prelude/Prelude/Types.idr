@@ -39,6 +39,8 @@ integerToNat x
        then Z
        else S (assert_total (integerToNat (prim__sub_Integer x 1)))
 
+-- %builtin IntegerToNatural Prelude.Types.integerToNat
+
 -- Define separately so we can spot the name when optimising Nats
 ||| Add two natural numbers.
 ||| @ x the number to case-split on
@@ -99,9 +101,11 @@ natToInteger (S k) = 1 + natToInteger k
                          -- integer (+) may be non-linear in second
                          -- argument
 
+-- %builtin NaturalToInteger Prelude.Types.natToInteger
+
 ||| Counts the number of elements that satify a predicate.
 public export
-count : (Foldable t) => (predicate : a -> Bool) -> (t a) -> Nat
+count : Foldable t => (predicate : a -> Bool) -> t a -> Nat
 count predicate = foldMap @{%search} @{Additive} (\x => if predicate x then 1 else 0)
 
 -----------
@@ -246,7 +250,7 @@ data Dec : Type -> Type where
 
   ||| The case where the property holding would be a contradiction.
   ||| @ contra a demonstration that prop would be a contradiction
-  No  : (contra : prop -> Void) -> Dec prop
+  No  : (contra : Not prop) -> Dec prop
 
 export Uninhabited (Yes p === No q) where uninhabited eq impossible
 export Uninhabited (No p === Yes q) where uninhabited eq impossible
@@ -375,15 +379,39 @@ Ord a => Ord (List a) where
             c => c
 
 namespace List
+  ||| Concatenate one list with another.
   public export
   (++) : (xs, ys : List a) -> List a
   [] ++ ys = ys
   (x :: xs) ++ ys = x :: xs ++ ys
 
+  ||| Returns the length of the list.
   public export
   length : List a -> Nat
   length []        = Z
   length (x :: xs) = S (length xs)
+
+  ||| Reverse the second list, prepending its elements to the first.
+  public export
+  reverseOnto : List a -> List a -> List a
+  reverseOnto acc [] = acc
+  reverseOnto acc (x::xs) = reverseOnto (x::acc) xs
+
+  ||| Reverses the given list.
+  public export
+  reverse : List a -> List a
+  reverse = reverseOnto []
+
+  ||| Tail-recursive append. Uses of (++) are automatically transformed to
+  ||| this. The only reason this is exported is that the proof of equivalence
+  ||| lives in a different module.
+  public export
+  tailRecAppend : (xs, ys : List a) -> List a
+  tailRecAppend xs ys = reverseOnto ys (reverse xs)
+
+  -- Always use tailRecAppend at runtime. Data.List.tailRecAppendIsAppend
+  -- proves these are equivalent.
+  %transform "tailRecAppend" (++) = tailRecAppend
 
 public export
 Functor List where
@@ -440,7 +468,7 @@ Traversable List where
 %foreign
   "scheme:string-concat"
   "RefC:fastConcat"
-  "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
+  "javascript:lambda:(xs)=>__prim_idris2js_array(xs).join('')"
 export
 fastConcat : List String -> String
 
@@ -568,7 +596,7 @@ pack (x :: xs) = strCons x (pack xs)
 %foreign
     "scheme:string-pack"
     "RefC:fastPack"
-    "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
+    "javascript:lambda:(xs)=>__prim_idris2js_array(xs).join('')"
 export
 fastPack : List Char -> String
 
@@ -588,7 +616,7 @@ unpack str = unpack' (prim__cast_IntegerInt (natToInteger (length str)) - 1) str
     unpack' pos str acc
         = if pos < 0
              then acc
-             else assert_total $ unpack' (pos - 1) str (assert_total (prim__strIndex str pos)::acc)
+             else unpack' (assert_smaller pos (pos - 1)) str $ (assert_total $ prim__strIndex str pos) :: acc
 
 -- This function runs fast when compiled but won't compute at compile time.
 -- If you need to unpack strings at compile time, use Prelude.unpack.
@@ -725,7 +753,7 @@ log x = prim__doubleLog x
 
 public export
 pow : Double -> Double -> Double
-pow x y = exp (y * log x)
+pow x y = exp (y * log x) -- prim__doublePow x y
 
 public export
 sin : Double -> Double
@@ -820,7 +848,7 @@ Range Nat where
     EQ => pure x
     GT => assert_total $ takeUntil (<= y) (countFrom x (\n => minus n 1))
   rangeFromThenTo x y z = case compare x y of
-    LT => if z > x
+    LT => if z >= x
              then assert_total $ takeBefore (> z) (countFrom x (plus (minus y x)))
              else Nil
     EQ => if x == z then pure x else Nil

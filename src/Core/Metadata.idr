@@ -21,18 +21,29 @@ import Libraries.Utils.Binary
 
 public export
 data Decoration : Type where
-  Typ : Decoration
-  Function : Decoration
-  Data : Decoration
-  Keyword : Decoration
-  Bound : Decoration
+  Comment   : Decoration
+  Typ       : Decoration
+  Function  : Decoration
+  Data      : Decoration
+  Keyword   : Decoration
+  Bound     : Decoration
+  Namespace : Decoration
+  Postulate : Decoration
+  Module    : Decoration
 
 export
-nameTypeDecoration : NameType -> Decoration
-nameTypeDecoration Bound         = Bound
-nameTypeDecoration Func          = Function
-nameTypeDecoration (DataCon _ _) = Data
-nameTypeDecoration (TyCon _ _  ) = Typ
+nameDecoration : Name -> NameType -> Decoration
+nameDecoration nm nt
+  = ifThenElse (isUnsafeBuiltin nm) Postulate (nameTypeDecoration nt)
+
+  where
+
+  nameTypeDecoration : NameType -> Decoration
+  nameTypeDecoration Bound         = Bound
+  nameTypeDecoration Func          = Function
+  nameTypeDecoration (DataCon _ _) = Data
+  nameTypeDecoration (TyCon _ _  ) = Typ
+
 
 public export
 ASemanticDecoration : Type
@@ -44,27 +55,42 @@ SemanticDecorations = List ASemanticDecoration
 
 public export
 Eq Decoration where
-  Typ      == Typ      = True
-  Function == Function = True
-  Data     == Data     = True
-  Keyword  == Keyword  = True
-  Bound    == Bound    = True
-  _        == _        = False
+  Comment   == Comment   = True
+  Typ       == Typ       = True
+  Function  == Function  = True
+  Data      == Data      = True
+  Keyword   == Keyword   = True
+  Bound     == Bound     = True
+  Namespace == Namespace = True
+  Postulate == Postulate = True
+  Module    == Module    = True
+  _         == _         = False
 
+-- CAREFUL: this instance is used in SExpable Decoration. If you change
+-- it then you need to fix the SExpable implementation in order not to
+-- break the IDE mode.
 public export
 Show Decoration where
-  show Typ      = "type"
-  show Function = "function"
-  show Data     = "data"
-  show Keyword  = "keyword"
-  show Bound    = "bound"
+  show Comment   = "comment"
+  show Typ       = "type"
+  show Function  = "function"
+  show Data      = "data"
+  show Keyword   = "keyword"
+  show Bound     = "bound"
+  show Namespace = "namespace"
+  show Postulate = "postulate"
+  show Module    = "module"
 
 TTC Decoration where
-  toBuf b Typ      = tag 0
-  toBuf b Function = tag 1
-  toBuf b Data     = tag 2
-  toBuf b Keyword  = tag 3
-  toBuf b Bound    = tag 4
+  toBuf b Typ       = tag 0
+  toBuf b Function  = tag 1
+  toBuf b Data      = tag 2
+  toBuf b Keyword   = tag 3
+  toBuf b Bound     = tag 4
+  toBuf b Namespace = tag 5
+  toBuf b Postulate = tag 6
+  toBuf b Module    = tag 7
+  toBuf b Comment   = tag 8
   fromBuf b
     = case !getTag of
         0 => pure Typ
@@ -72,6 +98,10 @@ TTC Decoration where
         2 => pure Data
         3 => pure Keyword
         4 => pure Bound
+        5 => pure Namespace
+        6 => pure Postulate
+        7 => pure Module
+        8 => pure Comment
         _ => corrupt "Decoration"
 
 public export
@@ -108,20 +138,22 @@ record Metadata where
        semanticAliases : PosMap (NonEmptyFC, NonEmptyFC)
        semanticDefaults : PosMap ASemanticDecoration
 
+covering
 Show Metadata where
   show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap
-                   fname semanticHighlighting semanticAliases semanticDefaults)
-    = "Metadata:\n" ++
-      " lhsApps: " ++ show apps ++ "\n" ++
-      " names: " ++ show names ++ "\n" ++
-      " type declarations: " ++ show tydecls ++ "\n" ++
-      " current LHS: " ++ show currentLHS ++ "\n" ++
-      " holes: " ++ show holeLHS ++ "\n" ++
-      " nameLocMap: " ++ show nameLocMap ++ "\n" ++
-      " sourceIdent: " ++ show fname ++
-      " semanticHighlighting: " ++ show semanticHighlighting ++
-      " semanticAliases: " ++ show semanticAliases ++
-      " semanticDefaults: " ++ show semanticDefaults
+                   fname semanticHighlighting semanticAliases semanticDefaults) = """
+    Metadata:
+     lhsApps: \{ show apps }
+     names: \{ show names }
+     type declarations: \{ show tydecls }
+     current LHS: \{ show currentLHS }
+     holes: \{ show holeLHS }
+     nameLocMap: \{ show nameLocMap }
+     sourceIdent: \{ show fname }
+     semanticHighlighting: \{ show semanticHighlighting }
+     semanticAliases: \{ show semanticAliases }
+     semanticDefaults: \{ show semanticDefaults }
+    """
 
 export
 initMetadata : OriginDesc -> Metadata
@@ -208,7 +240,7 @@ addNameType loc n env tm
          n' <- getFullName n
 
          -- Add the name to the metadata if the file context is not empty
-         whenJust (isNonEmptyFC loc) $ \ neloc => do
+         whenJust (isConcreteFC loc) $ \ neloc => do
            put MD $ record { names $= ((neloc, (n', 0, substEnv loc env tm)) ::) } meta
            log "metadata.names" 7 $ show n' ++ " at line " ++ show (1 + startLine neloc)
 
@@ -232,7 +264,7 @@ addNameLoc : {auto m : Ref MD Metadata} ->
 addNameLoc loc n
     = do meta <- get MD
          n' <- getFullName n
-         whenJust (isNonEmptyFC loc) $ \neloc =>
+         whenJust (isConcreteFC loc) $ \neloc =>
            put MD $ record { nameLocMap $= insert (neloc, n') } meta
 
 export

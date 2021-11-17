@@ -14,6 +14,17 @@
       (cons (vector-ref desc 2)
             (blodwen-read-args (vector-ref desc 3)))))
 
+(define blodwen-lazy
+  (lambda (f)
+    (let ([evaluated #f] [res void])
+      (lambda ()
+        (if (not evaluated)
+            (begin (set! evaluated #t)
+                   (set! res (f))
+                   (set! f void))
+            (void))
+        res))))
+
 (define blodwen-toSignedInt
   (lambda (x bits)
     (if (bit-set? bits x)
@@ -192,7 +203,7 @@
   (let ((data (thread-specific (current-thread))))
     (if (eq? data #!void) #f data)))
 
-(define (blodwen-set-thread-data a)
+(define (blodwen-set-thread-data ty a)
   (thread-specific-set! (current-thread) a))
 
 (define blodwen-mutex make-mutex)
@@ -212,9 +223,6 @@
 
 (define blodwen-sleep thread-sleep!)
 (define (blodwen-usleep s) (thread-sleep! (/ s 1e6)))
-
-(define (blodwen-time)
-  (exact-floor (time->seconds (current-time))))
 
 
 (define (blodwen-arg-count)

@@ -109,7 +109,7 @@ We treat files with an extension of ``.md`` and ``.markdown`` as CommonMark styl
 
     Compare
 
-    ```
+    ```idris
     map : (f : a -> b)
        -> List a
        -> List b

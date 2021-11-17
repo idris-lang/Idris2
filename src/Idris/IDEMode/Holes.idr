@@ -3,6 +3,8 @@ module Idris.IDEMode.Holes
 import Core.Env
 import Core.Context.Log
 
+import Data.String
+
 import Idris.Resugar
 import Idris.Syntax
 import Idris.Pretty
@@ -18,7 +20,7 @@ public export
 record HolePremise where
   constructor MkHolePremise
   name         : Name
-  type         : PTerm
+  type         : IPTerm
   multiplicity : RigCount
   isImplicit   : Bool
 
@@ -27,8 +29,23 @@ public export
 record HoleData where
   constructor MkHoleData
   name : Name
-  type : PTerm
+  type : IPTerm
   context : List HolePremise
+
+export
+prettyHoles : List HoleData -> Doc IdrisSyntax
+prettyHoles holes = case holes of
+  []  => "No holes"
+  [x] => "1 hole" <+> colon <++> prettyHole x
+  xs  => vcat $ (pretty (length xs) <++> pretty "holes" <+> colon)
+              :: map (indent 2 . prettyHole) xs
+
+  where
+
+   prettyHole : HoleData -> Doc IdrisSyntax
+   prettyHole x = pretty x.name <++> colon <++> prettyTerm x.type
+
+
 
 ||| If input is a hole, return number of locals in scope at binding
 ||| point
@@ -48,7 +65,7 @@ isHole def
 
 -- Bring these back into REPL.idr
 showName : Name -> Bool
-showName (UN "_") = False
+showName (UN Underscore) = False
 showName (MN _ _) = False
 showName _ = True
 
@@ -116,6 +133,24 @@ holeData gam env fn args ty
              then            dropShadows rest
              else premise :: dropShadows rest
 
+export
+getUserHolesData :
+  {auto c : Ref Ctxt Defs} ->
+  {auto s : Ref Syn SyntaxInfo} ->
+  Core (List HoleData)
+getUserHolesData
+    = do defs <- get Ctxt
+         let ctxt = gamma defs
+         ms  <- getUserHoles
+         let globs = concat !(traverse (\n => lookupCtxtName n ctxt) ms)
+         let holesWithArgs = mapMaybe (\(n, i, gdef) => do args <- isHole gdef
+                                                           pure (n, gdef, args))
+                                      globs
+         traverse (\n_gdef_args =>
+                     -- Inference can't deal with this for now :/
+                     let (n, gdef, args) = the (Name, GlobalDef, Nat) n_gdef_args in
+                     holeData defs [] n args (type gdef))
+                  holesWithArgs
 
 export
 showHole : {vars : _} ->

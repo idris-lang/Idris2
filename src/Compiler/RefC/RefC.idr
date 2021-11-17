@@ -5,6 +5,7 @@ import Compiler.RefC.CC
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.ANF
+import Compiler.Generated
 
 import Core.Context
 import Core.Context.Log
@@ -63,19 +64,22 @@ cCleanString : String -> String
 cCleanString cs = showcCleanString (unpack cs) ""
 
 export
+cUserName : UserName -> String
+cUserName (Basic n) = cCleanString n
+cUserName (Field n) = "rec__" ++ cCleanString n
+cUserName Underscore = cCleanString "_"
+
+export
 cName : Name -> String
 cName (NS ns n) = cCleanString (showNSWithSep "_" ns) ++ "_" ++ cName n
-cName (UN n) = cCleanString n
+cName (UN n) = cUserName n
 cName (MN n i) = cCleanString n ++ "_" ++ cCleanString (show i)
 cName (PV n d) = "pat__" ++ cName n
 cName (DN _ n) = cName n
-cName (RF n) = "rec__" ++ cCleanString n
 cName (Nested i n) = "n__" ++ cCleanString (show i) ++ "_" ++ cName n
 cName (CaseBlock x y) = "case__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (WithBlock x y) = "with__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (Resolved i) = "fn__" ++ cCleanString (show i)
-cName n = assert_total $ idris_crash ("INTERNAL ERROR: Unsupported name in C backend " ++ show n)
--- not really total but this way this internal error does not contaminate everything else
 
 escapeChar : Char -> String
 escapeChar c = if isAlphaNum c || isNL c
@@ -99,13 +103,23 @@ where
     showCString ('"'::cs) = ("\\\"" ++) . showCString cs
     showCString (c ::cs) = (showCChar c) . showCString cs
 
+-- deals with C not allowing `-9223372036854775808` as a literal
+showIntMin : Int -> String
+showIntMin x = if x == -9223372036854775808
+    then "INT64_MIN"
+    else "INT64_C("++ show x ++")"
+
+showInt64Min : Int64 -> String
+showInt64Min x = if x == -9223372036854775808
+    then "INT64_MIN"
+    else "INT64_C("++ show x ++")"
 
 cConstant : Constant -> String
-cConstant (I x) = "(Value*)makeInt64("++ show x ++")"
-cConstant (I8 x) = "(Value*)makeInt8("++ show x ++")"
-cConstant (I16 x) = "(Value*)makeInt16("++ show x ++")"
-cConstant (I32 x) = "(Value*)makeInt32("++ show x ++")"
-cConstant (I64 x) = "(Value*)makeInt64("++ show x ++")"
+cConstant (I x) = "(Value*)makeInt64("++ showIntMin x ++")"
+cConstant (I8 x) = "(Value*)makeInt8(INT8_C("++ show x ++"))"
+cConstant (I16 x) = "(Value*)makeInt16(INT16_C("++ show x ++"))"
+cConstant (I32 x) = "(Value*)makeInt32(INT32_C("++ show x ++"))"
+cConstant (I64 x) = "(Value*)makeInt64("++ showInt64Min x ++")"
 cConstant (BI x) = "(Value*)makeIntegerLiteral(\""++ show x ++"\")"
 cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
 cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
@@ -121,16 +135,14 @@ cConstant StringType = "string"
 cConstant CharType = "char"
 cConstant DoubleType = "double"
 cConstant WorldType = "f32"
-cConstant (B8 x)   = "(Value*)makeBits8("++ show x ++")"
-cConstant (B16 x)  = "(Value*)makeBits16("++ show x ++")"
-cConstant (B32 x)  = "(Value*)makeBits32("++ show x ++")"
-cConstant (B64 x)  = "(Value*)makeBits64("++ show x ++")"
+cConstant (B8 x)   = "(Value*)makeBits8(UINT8_C("++ show x ++"))"
+cConstant (B16 x)  = "(Value*)makeBits16(UINT16_C("++ show x ++"))"
+cConstant (B32 x)  = "(Value*)makeBits32(UINT32_C("++ show x ++"))"
+cConstant (B64 x)  = "(Value*)makeBits64(UINT64_C("++ show x ++"))"
 cConstant Bits8Type = "Bits8"
 cConstant Bits16Type = "Bits16"
 cConstant Bits32Type = "Bits32"
 cConstant Bits64Type = "Bits64"
-cConstant n = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw constant in C backend: " ++ show n)
--- not really total but this way this internal error does not contaminate everything else
 
 extractConstant : Constant -> String
 extractConstant (I x) = show x
@@ -164,6 +176,7 @@ cOp StrReverse    [x]       = "reverse(" ++ x ++ ")"
 cOp (Cast i o)    [x]       = "cast_" ++ (cConstant i) ++ "_to_" ++ (cConstant o) ++ "(" ++ x ++ ")"
 cOp DoubleExp     [x]       = "(Value*)makeDouble(exp(unpackDouble(" ++ x ++ ")))"
 cOp DoubleLog     [x]       = "(Value*)makeDouble(log(unpackDouble(" ++ x ++ ")))"
+cOp DoublePow     [x, y]    = "(Value*)makeDouble(pow(unpackDouble(" ++ x ++ "), unpackDouble(" ++ y ++ ")))"
 cOp DoubleSin     [x]       = "(Value*)makeDouble(sin(unpackDouble(" ++ x ++ ")))"
 cOp DoubleCos     [x]       = "(Value*)makeDouble(cos(unpackDouble(" ++ x ++ ")))"
 cOp DoubleTan     [x]       = "(Value*)makeDouble(tan(unpackDouble(" ++ x ++ ")))"
@@ -226,20 +239,19 @@ Show ExtPrim where
 ||| Match on a user given name to get the scheme primitive
 toPrim : Name -> ExtPrim
 toPrim pn@(NS _ n)
-    = cond [(n == UN "prim__newIORef", NewIORef),
-            (n == UN "prim__readIORef", ReadIORef),
-            (n == UN "prim__writeIORef", WriteIORef),
-            (n == UN "prim__newArray", NewArray),
-            (n == UN "prim__arrayGet", ArrayGet),
-            (n == UN "prim__arraySet", ArraySet),
-            (n == UN "prim__getField", GetField),
-            (n == UN "prim__setField", SetField),
-            (n == UN "void", VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
-            (n == UN "prim__void", VoidElim),
-            (n == UN "prim__os", SysOS),
-            (n == UN "prim__codegen", SysCodegen),
-            (n == UN "prim__onCollect", OnCollect),
-            (n == UN "prim__onCollectAny", OnCollectAny)
+    = cond [(n == UN (Basic "prim__newIORef"), NewIORef),
+            (n == UN (Basic "prim__readIORef"), ReadIORef),
+            (n == UN (Basic "prim__writeIORef"), WriteIORef),
+            (n == UN (Basic "prim__newArray"), NewArray),
+            (n == UN (Basic "prim__arrayGet"), ArrayGet),
+            (n == UN (Basic "prim__arraySet"), ArraySet),
+            (n == UN (Basic "prim__getField"), GetField),
+            (n == UN (Basic "prim__setField"), SetField),
+            (n == UN (Basic "prim__void"), VoidElim),
+            (n == UN (Basic "prim__os"), SysOS),
+            (n == UN (Basic "prim__codegen"), SysCodegen),
+            (n == UN (Basic "prim__onCollect"), OnCollect),
+            (n == UN (Basic "prim__onCollectAny"), OnCollectAny)
             ]
            (Unknown pn)
 toPrim pn = assert_total $ idris_crash ("INTERNAL ERROR: Unknown primitive: " ++ cName pn)
@@ -427,16 +439,16 @@ const2Integer : Constant -> Integer -> Integer
 const2Integer c i =
     case c of
         (I x) => cast x
-        (I8 x) => x
-        (I16 x) => x
-        (I32 x) => x
-        (I64 x) => x
-        (BI x) => x
+        (I8 x) => cast x
+        (I16 x) => cast x
+        (I32 x) => cast x
+        (I64 x) => cast x
+        (BI x) => cast x
         (Ch x) => cast x
         (B8 x) => cast x
         (B16 x) => cast x
         (B32 x) => cast x
-        (B64 x) => x
+        (B64 x) => cast x
         _ => i
 
 
@@ -632,6 +644,8 @@ mutual
         registerVariableForAutomaticFreeing $ "var_" ++ (show var)
         bodyAssignment <- cStatementsFromANF body
         pure $ bodyAssignment
+    cStatementsFromANF (ACon fc n UNIT tag []) = do
+        pure $ MkRS "(Value*)NULL" "(Value*)NULL"
     cStatementsFromANF (ACon fc n _ tag args) = do
         c <- getNextCounter
         let constr = "constructor_" ++ (show c)
@@ -785,30 +799,34 @@ emitFDef funcName ((varType, varName, varCFType) :: xs) = do
     decreaseIndentation
     emit EmptyFC ")"
 
-extractValue : (cfType:CFType) -> (varName:String) -> String
-extractValue CFUnit          varName = "void"
-extractValue CFInt           varName = "((Value_Int64*)" ++ varName ++ ")->i64"
-extractValue CFInt8          varName = "((Value_Int8*)" ++ varName ++ ")->i8"
-extractValue CFInt16         varName = "((Value_Int16*)" ++ varName ++ ")->i16"
-extractValue CFInt32         varName = "((Value_Int32*)" ++ varName ++ ")->i32"
-extractValue CFInt64         varName = "((Value_Int64*)" ++ varName ++ ")->i64"
-extractValue CFUnsigned8     varName = "((Value_Bits8*)" ++ varName ++ ")->ui8"
-extractValue CFUnsigned16    varName = "((Value_Bits16*)" ++ varName ++ ")->ui16"
-extractValue CFUnsigned32    varName = "((Value_Bits32*)" ++ varName ++ ")->ui32"
-extractValue CFUnsigned64    varName = "((Value_Bits64*)" ++ varName ++ ")->ui64"
-extractValue CFString        varName = "((Value_String*)" ++ varName ++ ")->str"
-extractValue CFDouble        varName = "((Value_Double*)" ++ varName ++ ")->d"
-extractValue CFChar          varName = "((Value_Char*)" ++ varName ++ ")->c"
-extractValue CFPtr           varName = "((Value_Pointer*)" ++ varName ++ ")->p"
-extractValue CFGCPtr         varName = "((Value_GCPointer*)" ++ varName ++ ")->p->p"
-extractValue CFBuffer        varName = "((Value_Buffer*)" ++ varName ++ ")->buffer"
-extractValue CFWorld         varName = "(Value_World*)" ++ varName
-extractValue (CFFun x y)     varName = "(Value_Closure*)" ++ varName
-extractValue (CFIORes x)     varName = extractValue x varName
-extractValue (CFStruct x xs) varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
+-- Generic C parameter or RefC specific parameter
+data CLang = CLangC | CLangRefC
+
+extractValue : (cLang : CLang) -> (cfType:CFType) -> (varName:String) -> String
+extractValue _ CFUnit           varName = "void"
+extractValue _ CFInt            varName = "((Value_Int64*)" ++ varName ++ ")->i64"
+extractValue _ CFInt8           varName = "((Value_Int8*)" ++ varName ++ ")->i8"
+extractValue _ CFInt16          varName = "((Value_Int16*)" ++ varName ++ ")->i16"
+extractValue _ CFInt32          varName = "((Value_Int32*)" ++ varName ++ ")->i32"
+extractValue _ CFInt64          varName = "((Value_Int64*)" ++ varName ++ ")->i64"
+extractValue _ CFUnsigned8      varName = "((Value_Bits8*)" ++ varName ++ ")->ui8"
+extractValue _ CFUnsigned16     varName = "((Value_Bits16*)" ++ varName ++ ")->ui16"
+extractValue _ CFUnsigned32     varName = "((Value_Bits32*)" ++ varName ++ ")->ui32"
+extractValue _ CFUnsigned64     varName = "((Value_Bits64*)" ++ varName ++ ")->ui64"
+extractValue _ CFString         varName = "((Value_String*)" ++ varName ++ ")->str"
+extractValue _ CFDouble         varName = "((Value_Double*)" ++ varName ++ ")->d"
+extractValue _ CFChar           varName = "((Value_Char*)" ++ varName ++ ")->c"
+extractValue _ CFPtr            varName = "((Value_Pointer*)" ++ varName ++ ")->p"
+extractValue _ CFGCPtr          varName = "((Value_GCPointer*)" ++ varName ++ ")->p->p"
+extractValue CLangC    CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer->data"
+extractValue CLangRefC CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer"
+extractValue _ CFWorld          varName = "(Value_World*)" ++ varName
+extractValue _ (CFFun x y)      varName = "(Value_Closure*)" ++ varName
+extractValue c (CFIORes x)      varName = extractValue c x varName
+extractValue _ (CFStruct x xs)  varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
 -- not really total but this way this internal error does not contaminate everything else
-extractValue (CFUser x xs)   varName = "(Value*)" ++ varName
-extractValue n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw FFI type in C backend: " ++ show n)
+extractValue _ (CFUser x xs)    varName = "(Value*)" ++ varName
+extractValue _ n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw FFI type in C backend: " ++ show n)
 
 packCFType : (cfType:CFType) -> (varName:String) -> String
 packCFType CFUnit          varName = "NULL"
@@ -898,10 +916,13 @@ createCFunctions n (MkACon tag arity nt) = do
 createCFunctions n (MkAForeign ccs fargs ret) = do
   case parseCC (additionalFFILangs ++ ["RefC", "C"]) ccs of
       Just (lang, fctForeignName :: extLibOpts) => do
+          let cLang = if lang == "RefC"
+                         then CLangRefC
+                         else CLangC
           let isStandardFFI = Prelude.elem lang ["RefC", "C"]
           let fctName = if isStandardFFI
-                           then UN fctForeignName
-                           else UN $ lang ++ "_" ++ fctForeignName
+                           then UN $ Basic $ fctForeignName
+                           else UN $ Basic $ lang ++ "_" ++ fctForeignName
           if isStandardFFI
              then case extLibOpts of
                       [lib, header] => addHeader header
@@ -937,19 +958,19 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
               CFIORes CFUnit => do
                   emit EmptyFC $ cName fctName
                               ++ "("
-                              ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) (discardLastArgument typeVarNameArgList))
+                              ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   emit EmptyFC "return NULL;"
               CFIORes ret => do
                   emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
-                              ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) (discardLastArgument typeVarNameArgList))
+                              ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
               _ => do
                   emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
-                              ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) typeVarNameArgList)
+                              ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) typeVarNameArgList)
                               ++ ");"
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
 
@@ -968,29 +989,35 @@ header : {auto c : Ref Ctxt Defs}
       -> {auto h : Ref HeaderFiles (SortedSet String)}
       -> Core ()
 header = do
-    let initLines = [ "#include <runtime.h>"
-                    , "/* automatically generated using the Idris2 C Backend */"]
+    let initLines = """
+      #include <runtime.h>
+      /* \{ generatedString "RefC" } */
+
+      """
     let headerFiles = Libraries.Data.SortedSet.toList !(get HeaderFiles)
     let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
     fns <- get FunctionDefinitions
-    update OutfileText (appendL (initLines ++ headerLines ++ ["\n// function definitions"] ++ fns))
+    update OutfileText (appendL ([initLines] ++ headerLines ++ ["\n// function definitions"] ++ fns))
 
 footer : {auto il : Ref IndentLevel Nat}
       -> {auto f : Ref OutfileText Output}
       -> {auto h : Ref HeaderFiles (SortedSet String)}
       -> Core ()
 footer = do
-    emit EmptyFC ""
-    emit EmptyFC " // main function"
-    emit EmptyFC "int main(int argc, char *argv[])"
-    emit EmptyFC "{"
-    if contains "idris_support.h" !(get HeaderFiles)
-       then emit EmptyFC "   idris2_setArgs(argc, argv);"
-       else pure ()
-    emit EmptyFC "   Value *mainExprVal = __mainExpression_0();"
-    emit EmptyFC "   trampoline(mainExprVal);"
-    emit EmptyFC "   return 0; // bye bye"
-    emit EmptyFC "}"
+    emit EmptyFC """
+
+      // main function
+      int main(int argc, char *argv[])
+      {
+          \{ ifThenElse (contains "idris_support.h" !(get HeaderFiles))
+                        "idris2_setArgs(argc, argv);"
+                        ""
+          }
+          Value *mainExprVal = __mainExpression_0();
+          trampoline(mainExprVal);
+          return 0; // bye bye
+      }
+      """
 
 export
 executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
@@ -1015,7 +1042,7 @@ generateCSourceFile defs outn =
      header -- added after the definition traversal in order to add all encountered function defintions
      footer
      fileContent <- get OutfileText
-     let code = fastAppend (map (++ "\n") (reify fileContent))
+     let code = fastConcat (map (++ "\n") (reify fileContent))
 
      coreLift_ $ writeFile outn code
      log "compiler.refc" 10 $ "Generated C file " ++ outn

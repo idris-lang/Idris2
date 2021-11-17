@@ -17,7 +17,7 @@ public export
 interface Array arr => MArray arr where
   newArray : (size : Int) -> (1 _ : (1 _ : arr t) -> a) -> a
   -- Array is unchanged if the index is out of bounds
-  write : (1 _ : arr t) -> Int -> t -> arr t
+  write : (1 _ : arr t) -> Int -> t -> Res Bool (const (arr t))
 
   mread : (1 _ : arr t) -> Int -> Res (Maybe t) (const (arr t))
   msize : (1 _ : arr t) -> Res Int (const (arr t))
@@ -45,8 +45,8 @@ MArray LinArray where
   newArray size k = k (MkLinArray (unsafePerformIO (newArray size)))
 
   write (MkLinArray a) i el
-      = unsafePerformIO (do writeArray a i el
-                            pure (MkLinArray a))
+      = unsafePerformIO (do ok <- writeArray a i el
+                            pure (ok # MkLinArray a))
   msize (MkLinArray a) = max a # MkLinArray a
   mread (MkLinArray a) i
       = unsafePerformIO (readArray a i) # MkLinArray a
@@ -71,5 +71,6 @@ copyArray newsize a
              else let val # a = mread a pos
                       1 a' = case val of
                                   Nothing => a'
-                                  Just v => write a' pos v in
+                                  Just v => let (ok # a') = write a' pos v in
+                                            a' in
                       copyContent (pos - 1) a a'

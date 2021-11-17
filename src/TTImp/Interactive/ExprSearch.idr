@@ -11,7 +11,7 @@ module TTImp.Interactive.ExprSearch
 -- depth.
 
 import Core.AutoSearch
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Env
@@ -19,13 +19,16 @@ import Core.LinearCheck
 import Core.Metadata
 import Core.Normalise
 import Core.Options
-import Core.Unify
 import Core.TT
+import Core.Unify
 import Core.Value
+
+import Idris.Syntax
 
 import TTImp.Elab.Check
 import TTImp.Interactive.CaseSplit
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
@@ -169,7 +172,7 @@ search : {auto c : Ref Ctxt Defs} ->
          {auto m : Ref MD Metadata} ->
          {auto u : Ref UST UState} ->
          FC -> RigCount ->
-         SearchOpts -> ClosedTerm ->
+         SearchOpts -> List Name -> ClosedTerm ->
          Name -> Core (Search (ClosedTerm, ExprDefs))
 
 getAllEnv : {vars : _} -> FC ->
@@ -197,10 +200,10 @@ searchIfHole : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
-               FC -> SearchOpts -> ClosedTerm ->
+               FC -> SearchOpts -> List Name -> ClosedTerm ->
                Env Term vars -> ArgInfo vars ->
                Core (Search (Term vars, ExprDefs))
-searchIfHole fc opts topty env arg
+searchIfHole fc opts hints topty env arg
     = case depth opts of
            Z => noResult
            S k =>
@@ -213,7 +216,7 @@ searchIfHole fc opts topty env arg
                       | _ => one (!(normaliseHoles defs env (metaApp arg)), [])
                                 -- already solved
                  res <- search fc rig (record { depth = k,
-                                                inArg = True } opts)
+                                                inArg = True } opts) hints
                                topty (Resolved hole)
                  -- When we solve an argument, we're also building a lambda
                  -- expression for its environment, so we need to apply it to
@@ -304,11 +307,11 @@ searchName : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
-             FC -> RigCount -> SearchOpts ->
+             FC -> RigCount -> SearchOpts -> List Name ->
              Env Term vars -> NF vars -> ClosedTerm ->
              (Name, GlobalDef) ->
              Core (Search (Term vars, ExprDefs))
-searchName fc rigc opts env target topty (n, ndef)
+searchName fc rigc opts hints env target topty (n, ndef)
     = do defs <- get Ctxt
          checkTimer
          let True = visibleInAny (!getNS :: !getNestedNS)
@@ -331,9 +334,9 @@ searchName fc rigc opts env target topty (n, ndef)
          let [] = constraints ures
              | _ => noResult
          -- Search the explicit arguments first, they may resolve other holes
-         traverse_ (searchIfHole fc opts topty env)
+         traverse_ (searchIfHole fc opts hints topty env)
                    (filter explicit args)
-         args' <- traverse (searchIfHole fc opts topty env)
+         args' <- traverse (searchIfHole fc opts hints topty env)
                            args
          mkCandidates fc (Ref fc namety n) [] args'
   where
@@ -363,7 +366,7 @@ getSuccessful {vars} fc rig opts mkHole env ty topty all
                                             (\r => nameRoot (recname r) ++ "_rhs")
                                             (recData opts)
                            hn <- uniqueName defs (map nameRoot vars) base
-                           (idx, tm) <- newMeta fc rig env (UN hn) ty
+                           (idx, tm) <- newMeta fc rig env (UN $ Basic hn) ty
                                                 (Hole (length env) (holeInit False))
                                                 False
                            one (tm, [])
@@ -374,12 +377,12 @@ searchNames : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
-              FC -> RigCount -> SearchOpts -> Env Term vars ->
+              FC -> RigCount -> SearchOpts -> List Name -> Env Term vars ->
               Term vars -> ClosedTerm ->
               List Name -> Core (Search (Term vars, ExprDefs))
-searchNames fc rig opts env ty topty []
+searchNames fc rig opts hints env ty topty []
     = noResult
-searchNames fc rig opts env ty topty (n :: ns)
+searchNames fc rig opts hints env ty topty (n :: ns)
     = do defs <- get Ctxt
          checkTimer
          vis <- traverse (visible (gamma defs) (currentNS defs :: nestedNS defs)) (n :: ns)
@@ -387,7 +390,7 @@ searchNames fc rig opts env ty topty (n :: ns)
          nfty <- nf defs env ty
          logTerm "interaction.search" 10 ("Searching " ++ show (map fst visns) ++ " for ") ty
          getSuccessful fc rig opts False env ty topty
-            (map (searchName fc rig opts env nfty topty) visns)
+            (map (searchName fc rig opts hints env nfty topty) visns)
   where
     visible : Context -> List Namespace -> Name ->
               Core (Maybe (Name, GlobalDef))
@@ -402,15 +405,15 @@ tryRecursive : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
-               FC -> RigCount -> SearchOpts ->
+               FC -> RigCount -> SearchOpts -> List Name ->
                Env Term vars -> Term vars -> ClosedTerm ->
                RecData -> Core (Search (Term vars, ExprDefs))
-tryRecursive fc rig opts env ty topty rdata
+tryRecursive fc rig opts hints env ty topty rdata
     = do defs <- get Ctxt
          case !(lookupCtxtExact (recname rdata) (gamma defs)) of
               Nothing => noResult
               Just def =>
-                do res <- searchName fc rig (record { recData = Nothing } opts)
+                do res <- searchName fc rig (record { recData = Nothing } opts) hints
                                      env !(nf defs env ty)
                                      topty (recname rdata, def)
                    defs <- get Ctxt
@@ -433,7 +436,7 @@ tryRecursive fc rig opts env ty topty rdata
       argDiff (PrimVal _ c) (PrimVal _ c') = c /= c'
       argDiff (Erased _ _) _ = False
       argDiff _ (Erased _ _) = False
-      argDiff (TType _) (TType _) = False
+      argDiff (TType _ _) (TType _ _) = False
       argDiff (As _ _ _ x) y = argDiff x y
       argDiff x (As _ _ _ y) = argDiff x y
       argDiff _ _ = True
@@ -473,19 +476,19 @@ searchLocalWith : {vars : _} ->
                   {auto m : Ref MD Metadata} ->
                   {auto u : Ref UST UState} ->
                   FC -> Bool ->
-                  RigCount -> SearchOpts -> Env Term vars ->
+                  RigCount -> SearchOpts -> List Name -> Env Term vars ->
                   List (Term vars, Term vars) ->
                   Term vars -> ClosedTerm ->
                   Core (Search (Term vars, ExprDefs))
-searchLocalWith fc nofn rig opts env [] ty topty
+searchLocalWith fc nofn rig opts hints env [] ty topty
     = noResult
-searchLocalWith {vars} fc nofn rig opts env ((p, pty) :: rest) ty topty
+searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
     = do defs <- get Ctxt
          checkTimer
          nty <- nf defs env ty
          getSuccessful fc rig opts False env ty topty
                        [findPos defs p id !(nf defs env pty) nty,
-                        searchLocalWith fc nofn rig opts env rest ty
+                        searchLocalWith fc nofn rig opts hints env rest ty
                                         topty]
   where
     findDirect : Defs -> Term vars ->
@@ -509,7 +512,7 @@ searchLocalWith {vars} fc nofn rig opts env ((p, pty) :: rest) ty topty
                     (do ures <- unify inTerm fc env ty appTy
                         let [] = constraints ures
                             | _ => noResult
-                        args' <- traverse (searchIfHole fc opts topty env)
+                        args' <- traverse (searchIfHole fc opts hints topty env)
                                           args
                         mkCandidates fc (f prf) [] args')
                 else noResult
@@ -552,14 +555,14 @@ searchLocal : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
-              FC -> RigCount -> SearchOpts ->
+              FC -> RigCount -> SearchOpts -> List Name ->
               Env Term vars -> Term vars -> ClosedTerm ->
               Core (Search (Term vars, ExprDefs))
-searchLocal fc rig opts env ty topty
+searchLocal fc rig opts hints env ty topty
     = -- Reverse the environment so we try the patterns left to right.
       -- This heuristic is just so arguments appear the same order in
       -- recursive calls
-      searchLocalWith fc False rig opts env (reverse (getAllEnv fc zero env))
+      searchLocalWith fc False rig opts hints env (reverse (getAllEnv fc zero env))
                       ty topty
 
 makeHelper : {vars : _} ->
@@ -630,16 +633,16 @@ tryIntermediateWith : {vars : _} ->
                       {auto c : Ref Ctxt Defs} ->
                       {auto m : Ref MD Metadata} ->
                       {auto u : Ref UST UState} ->
-                      FC -> RigCount -> SearchOpts ->
+                      FC -> RigCount -> SearchOpts -> List Name ->
                       Env Term vars -> List (Term vars, Term vars) ->
                       Term vars -> ClosedTerm ->
                       Core (Search (Term vars, ExprDefs))
-tryIntermediateWith fc rig opts env [] ty topty = noResult
-tryIntermediateWith fc rig opts env ((p, pty) :: rest) ty topty
+tryIntermediateWith fc rig opts hints env [] ty topty = noResult
+tryIntermediateWith fc rig opts hints env ((p, pty) :: rest) ty topty
     = do defs <- get Ctxt
          getSuccessful fc rig opts False env ty topty
                        [applyLocal defs p !(nf defs env pty) ty,
-                        tryIntermediateWith fc rig opts env rest ty
+                        tryIntermediateWith fc rig opts hints env rest ty
                                             topty]
   where
     matchable : Defs -> NF vars -> Core Bool
@@ -661,9 +664,10 @@ tryIntermediateWith fc rig opts env ((p, pty) :: rest) ty topty
                                                 (Erased fc False)))
                  | False => noResult
              intnty <- genVarName "cty"
-             letty <- metaVar fc' erased env intnty (TType fc)
+             u <- uniVar fc
+             letty <- metaVar fc' erased env intnty (TType fc u)
              let opts' = record { inUnwrap = True } opts
-             locsearch <- searchLocalWith fc True rig opts' env [(p, pty)]
+             locsearch <- searchLocalWith fc True rig opts' hints env [(p, pty)]
                                           letty topty
              makeHelper fc rig opts env letty targetty locsearch
     applyLocal defs tm _ _ = noResult
@@ -675,11 +679,11 @@ tryIntermediate : {vars : _} ->
                   {auto c : Ref Ctxt Defs} ->
                   {auto m : Ref MD Metadata} ->
                   {auto u : Ref UST UState} ->
-                  FC -> RigCount -> SearchOpts ->
+                  FC -> RigCount -> SearchOpts -> List Name ->
                   Env Term vars -> Term vars -> ClosedTerm ->
                   Core (Search (Term vars, ExprDefs))
-tryIntermediate fc rig opts env ty topty
-    = tryIntermediateWith fc rig opts env (reverse (getAllEnv fc zero env))
+tryIntermediate fc rig opts hints env ty topty
+    = tryIntermediateWith fc rig opts hints env (reverse (getAllEnv fc zero env))
                           ty topty
 
 -- Try making a recursive call and unpacking the result. Only do this if
@@ -690,25 +694,26 @@ tryIntermediateRec : {vars : _} ->
                      {auto c : Ref Ctxt Defs} ->
                      {auto m : Ref MD Metadata} ->
                      {auto u : Ref UST UState} ->
-                     FC -> RigCount -> SearchOpts ->
+                     FC -> RigCount -> SearchOpts -> List Name ->
                      Env Term vars ->
                      Term vars -> ClosedTerm ->
                      Maybe RecData -> Core (Search (Term vars, ExprDefs))
-tryIntermediateRec fc rig opts env ty topty Nothing = noResult
-tryIntermediateRec fc rig opts env ty topty (Just rd)
+tryIntermediateRec fc rig opts hints env ty topty Nothing = noResult
+tryIntermediateRec fc rig opts hints env ty topty (Just rd)
     = do defs <- get Ctxt
          Just rty <- lookupTyExact (recname rd) (gamma defs)
               | Nothing => noResult
          True <- isSingleCon defs !(nf defs [] rty)
               | _ => noResult
          intnty <- genVarName "cty"
-         letty <- metaVar fc erased env intnty (TType fc)
+         u <- uniVar fc
+         letty <- metaVar fc erased env intnty (TType fc u)
          let opts' = record { inUnwrap = True,
                               recData = Nothing } opts
          logTerm "interaction.search" 10 "Trying recursive search for" ty
          log "interaction.search" 10 $ show !(toFullNames (recname rd))
          logTerm "interaction.search" 10 "LHS" !(toFullNames (lhsapp rd))
-         recsearch <- tryRecursive fc rig opts' env letty topty rd
+         recsearch <- tryRecursive fc rig opts' hints env letty topty rd
          makeHelper fc rig opts' env letty ty recsearch
   where
     isSingleCon : Defs -> NF [] -> Core Bool
@@ -725,33 +730,33 @@ searchType : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
-             FC -> RigCount -> SearchOpts -> Env Term vars ->
+             FC -> RigCount -> SearchOpts -> List Name -> Env Term vars ->
              ClosedTerm ->
              Nat -> Term vars -> Core (Search (Term vars, ExprDefs))
-searchType fc rig opts env topty (S k) (Bind bfc n b@(Pi fc' c info ty) sc)
+searchType fc rig opts hints env topty (S k) (Bind bfc n b@(Pi fc' c info ty) sc)
     = do let env' : Env Term (n :: _) = b :: env
          log "interaction.search" 10 $ "Introduced lambda, search for " ++ show sc
-         scVal <- searchType fc rig opts env' topty k sc
+         scVal <- searchType fc rig opts hints env' topty k sc
          pure (map (\ (sc, ds) => (Bind bfc n (Lam fc' c info ty) sc, ds)) scVal)
-searchType {vars} fc rig opts env topty Z (Bind bfc n b@(Pi fc' c info ty) sc)
+searchType {vars} fc rig opts hints env topty Z (Bind bfc n b@(Pi fc' c info ty) sc)
     = -- try a local before creating a lambda...
       getSuccessful fc rig opts False env ty topty
-           [searchLocal fc rig opts env (Bind bfc n b sc) topty,
+           [searchLocal fc rig opts hints env (Bind bfc n b sc) topty,
             (do defs <- get Ctxt
-                let n' = UN !(getArgName defs n [] vars !(nf defs env ty))
+                let n' = UN $ Basic !(getArgName defs n [] vars !(nf defs env ty))
                 let env' : Env Term (n' :: _) = b :: env
                 let sc' = renameTop n' sc
                 log "interaction.search" 10 $ "Introduced lambda, search for " ++ show sc'
-                scVal <- searchType fc rig opts env' topty Z sc'
+                scVal <- searchType fc rig opts hints env' topty Z sc'
                 pure (map (\ (sc, ds) =>
                              (Bind bfc n' (Lam fc' c info ty) sc, ds)) scVal))]
-searchType fc rig opts env topty _ ty
+searchType fc rig opts hints env topty _ ty
     = case getFnArgs ty of
            (Ref rfc (TyCon t ar) n, args) =>
                 do defs <- get Ctxt
                    if length args == ar
                      then do sd <- getSearchData fc False n
-                             let allHints = concat (map snd (hintGroups sd))
+                             let allHints = concat (map snd (hintGroups sd)) ++ hints
                              -- Solutions is either:
                              -- First try the locals,
                              -- Then try the hints in order
@@ -759,18 +764,18 @@ searchType fc rig opts env topty _ ty
                              log "interaction.search" 10 $ "Hints found for " ++ show n ++ " "
                                          ++ show allHints
                              let tries =
-                                   [searchLocal fc rig opts env ty topty,
-                                    searchNames fc rig opts env ty topty allHints]
+                                   [searchLocal fc rig opts hints env ty topty,
+                                    searchNames fc rig opts hints env ty topty allHints]
                              let tryRec =
                                    case recData opts of
                                         Nothing => []
-                                        Just rd => [tryRecursive fc rig opts env ty topty rd]
+                                        Just rd => [tryRecursive fc rig opts hints env ty topty rd]
                              let tryIntRec =
                                    if doneSplit opts
-                                      then [tryIntermediateRec fc rig opts env ty topty (recData opts)]
+                                      then [tryIntermediateRec fc rig opts hints env ty topty (recData opts)]
                                       else []
                              let tryInt = if not (inUnwrap opts)
-                                             then [tryIntermediate fc rig opts env ty topty]
+                                             then [tryIntermediate fc rig opts hints env ty topty]
                                              else []
                              -- if we're in an argument, try the recursive call
                              -- first. We're more likely to want that than nested
@@ -783,40 +788,40 @@ searchType fc rig opts env topty _ ty
                      else noResult
            _ => do logTerm "interaction.search" 10 "Searching locals only at" ty
                    let tryInt = if not (inUnwrap opts)
-                                   then [tryIntermediate fc rig opts env ty topty]
+                                   then [tryIntermediate fc rig opts hints env ty topty]
                                    else []
                    let tryIntRec = if inArg opts || not (doneSplit opts)
                                       then []
-                                      else [tryIntermediateRec fc rig opts env ty topty (recData opts)]
+                                      else [tryIntermediateRec fc rig opts hints env ty topty (recData opts)]
                    getSuccessful fc rig opts True env ty topty
-                           (tryInt ++ [searchLocal fc rig opts env ty topty]
+                           (tryInt ++ [searchLocal fc rig opts hints env ty topty]
                              ++ case recData opts of
                                      Nothing => []
-                                     Just rd => [tryRecursive fc rig opts env ty topty rd]
+                                     Just rd => [tryRecursive fc rig opts hints env ty topty rd]
                              ++ tryIntRec)
 
 searchHole : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
-             FC -> RigCount -> SearchOpts -> Name ->
+             FC -> RigCount -> SearchOpts -> List Name -> Name ->
              Nat -> ClosedTerm ->
              Defs -> GlobalDef -> Core (Search (ClosedTerm, ExprDefs))
-searchHole fc rig opts n locs topty defs glob
+searchHole fc rig opts hints n locs topty defs glob
     = do searchty <- normalise defs [] (type glob)
          logTerm "interaction.search" 10 "Normalised type" searchty
          checkTimer
-         searchType fc rig opts [] topty locs searchty
+         searchType fc rig opts hints [] topty locs searchty
 
 -- Declared at the top
-search fc rig opts topty n_in
+search fc rig opts hints topty n_in
     = do defs <- get Ctxt
          case !(lookupHoleName n_in (gamma defs)) of
               Just (n, i, gdef) =>
                    -- The definition should be 'BySearch' at this stage,
                    -- if it's arising from an auto implicit
                    case definition gdef of
-                        Hole locs _ => searchHole fc rig opts n locs topty defs gdef
-                        BySearch _ _ _ => searchHole fc rig opts n
+                        Hole locs _ => searchHole fc rig opts hints n locs topty defs gdef
+                        BySearch _ _ _ => searchHole fc rig opts hints n
                                                    !(getArity defs [] (type gdef))
                                                    topty defs gdef
                         _ => do log "interaction.search" 10 $ show n_in ++ " not a hole"
@@ -851,6 +856,7 @@ getLHSData defs (Just tm)
 firstLinearOK : {auto c : Ref Ctxt Defs} ->
                 {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
+                {auto s : Ref Syn SyntaxInfo} ->
                 FC -> Search (ClosedTerm, ExprDefs) ->
                 Core (Search RawImp)
 firstLinearOK fc NoMore = noResult
@@ -862,7 +868,7 @@ firstLinearOK fc (Result (t, ds) next)
                 defs <- get Ctxt
                 nft <- normaliseHoles defs [] t
                 raw <- unelab [] !(toFullNames nft)
-                pure (Result raw (firstLinearOK fc !next)))
+                pure (Result (map rawName raw) (firstLinearOK fc !next)))
             (\err =>
                 do next' <- next
                    firstLinearOK fc next')
@@ -871,6 +877,7 @@ export
 exprSearchOpts : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  SearchOpts -> FC -> Name -> List Name ->
                  Core (Search RawImp)
 exprSearchOpts opts fc n_in hints
@@ -882,7 +889,7 @@ exprSearchOpts opts fc n_in hints
          let Hole _ _ = definition gdef
              | PMDef pi [] (STerm _ tm) _ _
                  => do raw <- unelab [] !(toFullNames !(normaliseHoles defs [] tm))
-                       one raw
+                       one (map rawName raw)
              | _ => throw (GenericMsg fc "Name is already defined")
          lhs <- findHoleLHS !(getFullName (Resolved idx))
          log "interaction.search" 10 $ "LHS hole data " ++ show (n, lhs)
@@ -890,7 +897,11 @@ exprSearchOpts opts fc n_in hints
                      then do d <- getLHSData defs lhs
                              pure (record { recData = d } opts)
                      else pure opts
-         res <- search fc (multiplicity gdef) opts' (type gdef) n
+         validHints <- concat <$> for hints (\hint => do
+           defs <- get Ctxt
+           entries <- lookupCtxtName hint (gamma defs)
+           pure $ map (Resolved . fst . snd) entries)
+         res <- search fc (multiplicity gdef) opts' validHints (type gdef) n
          firstLinearOK fc res
   where
     lookupHoleName : Name -> Defs -> Core (Maybe (Name, Int, GlobalDef))
@@ -904,6 +915,7 @@ exprSearchOpts opts fc n_in hints
 exprSearch' : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               FC -> Name -> List Name ->
               Core (Search RawImp)
 exprSearch' = exprSearchOpts (initSearchOpts True 5)
@@ -912,6 +924,7 @@ export
 exprSearch : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              FC -> Name -> List Name ->
              Core (Search RawImp)
 exprSearch fc n hints
@@ -924,6 +937,7 @@ export
 exprSearchN : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               FC -> Nat -> Name -> List Name ->
               Core (List RawImp)
 exprSearchN fc max n hints

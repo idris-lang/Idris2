@@ -85,13 +85,13 @@ runK (Bind {u_act = Unrestricted} act next) k = runK act (\x => runK (next x) k)
 ||| Run a linear program exactly once, with unrestricted return value in the
 ||| underlying context
 export
-run : (Applicative io, LinearBind io) =>
+run : Applicative io => LinearBind io =>
       (1 _ : L io a) -> io a
 run prog = runK prog pure
 
 export
 Functor io => Functor (L io) where
-  map fn act = Bind act \a' => PureW (fn a')
+  map fn act = Bind act $ \a' => PureW (fn a')
 
 export
 Applicative io => Applicative (L io) where

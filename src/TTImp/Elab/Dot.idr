@@ -9,6 +9,8 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.ImplicitBind
 import TTImp.TTImp
@@ -40,6 +42,7 @@ checkDot : {vars : _} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars ->
            FC -> DotReason -> RawImp -> Maybe (Glued vars) ->

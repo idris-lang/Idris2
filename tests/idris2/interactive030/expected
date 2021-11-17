@@ -5,7 +5,6 @@ Main> Prelude.negate : Neg ty => ty -> ty
   The underlying of unary minus. `-5` desugars to `negate (fromInteger 5)`.
   Totality: total
   Fixity Declaration: prefix operator, level 10
-
 Prelude.- : Neg ty => ty -> ty -> ty
   Totality: total
   Fixity Declarations:
@@ -18,12 +17,17 @@ Main> Prelude.<$> : Functor f => (a -> b) -> f a -> f b
   @ func the function to apply
   Totality: total
   Fixity Declaration: infixr operator, level 4
-Main> Prelude.Monad : (Type -> Type) -> Type
+Main> interface Prelude.Monad : (Type -> Type) -> Type
+  Monad
+  @m The underlying functor
+  A minimal definition includes either `(>>=)` or `join`.
   Parameters: m
   Constraints: Applicative m
+  Constructor: MkMonad
   Methods:
     (>>=) : m a -> (a -> m b) -> m b
       Also called `bind`.
+      Fixity Declaration: infixl operator, level 1
     join : m (m a) -> m a
       Also called `flatten` or mu.
   Implementations:

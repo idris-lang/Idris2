@@ -4,17 +4,15 @@ TARGET = libidris2_refc
 
 LIBTARGET = $(TARGET).a
 
-CFLAGS += -O2
-
-SRCS = $(wildcard *.c)
-ifeq ($(OS), windows)
-	LDFLAGS += -lws2_32
-ifeq ($(OLD_WIN), 1)
-	CFLAGS += -D_OLD_WIN
-endif
-endif
+SRCS := $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 DEPS = $(OBJS:.o=.d)
+
+CFLAGS += -O2
+
+ifeq ($(OLD_WIN), 1)
+	CPPFLAGS += -D_OLD_WIN
+endif
 
 
 all: build
@@ -46,4 +44,4 @@ cleandep: clean
 
 install: build
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/refc
-	install $(LIBTARGET) *.h ${PREFIX}/idris2-${IDRIS2_VERSION}/refc
+	install -m 644 $(LIBTARGET) *.h ${PREFIX}/idris2-${IDRIS2_VERSION}/refc

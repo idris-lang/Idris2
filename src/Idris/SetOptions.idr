@@ -12,6 +12,7 @@ import Libraries.Data.List.Extra
 
 import Idris.CommandLine
 import Idris.Package.Types
+import Idris.Pretty
 import Idris.ProcessIdr
 import Idris.REPL
 import Idris.Syntax
@@ -30,6 +31,8 @@ import System
 import System.Directory
 
 %default covering
+
+%hide Libraries.Data.String.Extra.unlines
 
 ||| Dissected information about a package directory
 record PkgDir where
@@ -63,20 +66,8 @@ pkgDir str =
               . traverse parsePositive
               . split (== '.')
 
-dirEntries : String -> IO (List String)
-dirEntries dname =
-    do Right d <- openDir dname
-         | Left err => pure []
-       getFiles d []
-  where
-    getFiles : Directory -> List String -> IO (List String)
-    getFiles d acc
-        = do Right str <- dirEntry d
-               | Left err => pure (reverse acc)
-             getFiles d (str :: acc)
-
 getPackageDirs : String -> IO (List PkgDir)
-getPackageDirs dname = map pkgDir <$> dirEntries dname
+getPackageDirs dname = map pkgDir . either (const []) id <$> listDir dname
 
 -- Get a list of all the candidate directories that match a package spec
 -- in a given path. Return an empty list on file error (e.g. path not existing)
@@ -91,17 +82,27 @@ candidateDirs dname pkg bounds =
           do guard (pkgName == pkg && inBounds ver bounds)
              pure ((dname </> dirName), ver)
 
+globalPackageDir : {auto c : Ref Ctxt Defs} -> Core String
+globalPackageDir
+    = do defs <- get Ctxt
+         pure $ prefix_dir (dirs (options defs)) </>
+                  "idris2-" ++ showVersion False version
+
+localPackageDir : {auto c : Ref Ctxt Defs} -> Core String
+localPackageDir
+    = do defs <- get Ctxt
+         Just srcdir <- coreLift currentDir
+             | Nothing => throw (InternalError "Can't get current directory")
+         let depends = depends_dir (dirs (options defs))
+         pure $ srcdir </> depends
+
 export
 addPkgDir : {auto c : Ref Ctxt Defs} ->
             String -> PkgVersionBounds -> Core ()
 addPkgDir p bounds
     = do defs <- get Ctxt
-         let globaldir = prefix_dir (dirs (options defs)) </>
-                               "idris2-" ++ showVersion False version
-         let depends = depends_dir (dirs (options defs))
-         Just srcdir <- coreLift currentDir
-             | Nothing => throw (InternalError "Can't get current directory")
-         let localdir = srcdir </> depends
+         globaldir <- globalPackageDir
+         localdir <- localPackageDir
 
          -- Get candidate directories from the global install location,
          -- and the local package directory
@@ -127,10 +128,49 @@ addPkgDir p bounds
                        else throw (CantFindPackage (p ++ " (" ++ show bounds ++ ")"))
               ((p, _) :: ps) => addExtraDir p
 
-dirOption : Dirs -> DirCommand -> Core ()
+visiblePackages : String -> IO (List PkgDir)
+visiblePackages dir = filter viable <$> getPackageDirs dir
+  where notHidden : PkgDir -> Bool
+        notHidden = not . isPrefixOf "." . pkgName
+
+        notDenylisted : PkgDir -> Bool
+        notDenylisted = not . flip elem ["include", "lib", "support", "refc"] . pkgName
+
+        viable : PkgDir -> Bool
+        viable p = notHidden p && notDenylisted p
+
+findPackages : {auto c : Ref Ctxt Defs} -> Core (List PkgDir)
+findPackages
+    = do -- global packages
+         defs <- get Ctxt
+         globalPkgs <- coreLift $ visiblePackages !globalPackageDir
+         -- additional packages in directories specified
+         let pkgDirs = (options defs).dirs.package_dirs
+         additionalPkgs <- coreLift $ traverse (\d => visiblePackages d) pkgDirs
+         -- local packages
+         localPkgs <- coreLift $ visiblePackages !localPackageDir
+         pure $ globalPkgs ++ (join additionalPkgs) ++ localPkgs
+
+listPackages : {auto c : Ref Ctxt Defs} ->
+               {auto o : Ref ROpts REPLOpts} ->
+               Core ()
+listPackages
+    = do pkgs <- sortBy (compare `on` pkgName) <$> findPackages
+         traverse_ (iputStrLn . pkgDesc) pkgs
+  where
+    pkgDesc : PkgDir -> Doc IdrisAnn
+    pkgDesc (MkPkgDir _ pkgName version) = pretty pkgName <++> parens (pretty version)
+
+dirOption : {auto c : Ref Ctxt Defs} ->
+            {auto o : Ref ROpts REPLOpts} ->
+            Dirs -> DirCommand -> Core ()
 dirOption dirs LibDir
     = coreLift $ putStrLn
          (prefix_dir dirs </> "idris2-" ++ showVersion False version)
+dirOption dirs BlodwenPaths
+    = iputStrLn $ pretty (toString dirs)
+dirOption dirs Prefix
+    = coreLift $ putStrLn (prefix_dir dirs)
 
 --------------------------------------------------------------------------------
 --          Bash Autocompletions
@@ -140,30 +180,9 @@ findIpkg : {auto c : Ref Ctxt Defs} -> Core (List String)
 findIpkg =
   do Just srcdir <- coreLift currentDir
        | Nothing => throw (InternalError "Can't get current directory")
-     fs <- coreLift $ dirEntries srcdir
+     Right fs <- coreLift $ listDir srcdir
+       | Left err => pure []
      pure $ filter (".ipkg" `isSuffixOf`) fs
-
-packageNames : String -> IO (List String)
-packageNames dir = filter notHidden . map pkgName <$> getPackageDirs dir
-  where notHidden : String -> Bool
-        notHidden = not . isPrefixOf "."
-
-
-findPackages : {auto c : Ref Ctxt Defs} -> Core (List String)
-findPackages =
-  do defs <- get Ctxt
-     let globaldir = prefix_dir (dirs (options defs)) </>
-                           "idris2-" ++ showVersion False version
-     let depends = depends_dir (dirs (options defs))
-     Just srcdir <- coreLift currentDir
-         | Nothing => throw (InternalError "Can't get current directory")
-     let localdir = srcdir </> depends
-
-     -- Get candidate directories from the global install location,
-     -- and the local package directory
-     locFiles <- coreLift $ packageNames localdir
-     globFiles <- coreLift $ packageNames globaldir
-     pure $ locFiles ++ globFiles
 
 -- keep only those Strings, of which `x` is a prefix
 prefixOnly : String -> List String -> List String
@@ -199,8 +218,8 @@ opts x "--cg"      = prefixOnlyIfNonEmpty x <$> codegens
 opts x "--codegen" = prefixOnlyIfNonEmpty x <$> codegens
 
 -- packages
-opts x "-p"        = prefixOnlyIfNonEmpty x <$> findPackages
-opts x "--package" = prefixOnlyIfNonEmpty x <$> findPackages
+opts x "-p"        = prefixOnlyIfNonEmpty x . (map pkgName) <$> findPackages
+opts x "--package" = prefixOnlyIfNonEmpty x . (map pkgName) <$> findPackages
 
 -- logging
 opts x "--log"     = pure $ prefixOnlyIfNonEmpty x logLevels
@@ -229,16 +248,15 @@ opts x _ = pure $ if (x `elem` optionFlags)
 
 -- bash autocompletion script using the given function name
 completionScript : (fun : String) -> String
-completionScript fun =
-  let fun' = "_" ++ fun
-   in unlines [ fun' ++ "()"
-              , "{"
-              , "  ED=$([ -z $2 ] && echo \"--\" || echo $2)"
-              , "  COMPREPLY=($(idris2 --bash-completion $ED $3))"
-              , "}"
-              , ""
-              , "complete -F " ++ fun' ++ " -o dirnames idris2"
-              ]
+completionScript fun = let fun' = "_" ++ fun in """
+  \{ fun' }()
+  {
+    ED=$([ -z $2 ] && echo "--" || echo $2)
+    COMPREPLY=($(idris2 --bash-completion $ED $3))
+  }
+
+  complete -F \{ fun' } -o default idris2
+  """
 
 --------------------------------------------------------------------------------
 --          Processing Options
@@ -269,7 +287,7 @@ setIncrementalCG failOnError cgn
                          coreLift $ exitWith (ExitFailure 1)
                  else pure ()
 
--- Options to be processed before type checking. Return whether to continue.
+||| Options to be processed before type checking. Return whether to continue.
 export
 preOptions : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
@@ -298,7 +316,7 @@ preOptions (Profile :: opts)
     = do setSession (record { profile = True } !getSession)
          preOptions opts
 preOptions (Quiet :: opts)
-    = do setOutput (REPL True)
+    = do setOutput (REPL VerbosityLvl.ErrorLvl)
          preOptions opts
 preOptions (NoPrelude :: opts)
     = do setSession (record { noprelude = True } !getSession)
@@ -332,14 +350,20 @@ preOptions (Directory d :: opts)
     = do defs <- get Ctxt
          dirOption (dirs (options defs)) d
          pure False
+preOptions (ListPackages :: opts)
+    = do listPackages
+         pure False
 preOptions (Timing :: opts)
     = do setLogTimings True
          preOptions opts
 preOptions (DebugElabCheck :: opts)
     = do setDebugElabCheck True
          preOptions opts
+preOptions (AltErrorCount c :: opts)
+    = do setSession (record { logErrorCount = c } !getSession)
+         preOptions opts
 preOptions (RunREPL _ :: opts)
-    = do setOutput (REPL True)
+    = do setOutput (REPL VerbosityLvl.ErrorLvl)
          setSession (record { nobanner = True } !getSession)
          preOptions opts
 preOptions (FindIPKG :: opts)
@@ -371,20 +395,24 @@ preOptions (Color b :: opts)
     = do setColor b
          preOptions opts
 preOptions (WarningsAsErrors :: opts)
-    = do setSession (record { warningsAsErrors = True } !getSession)
+    = do updateSession (record { warningsAsErrors = True })
          preOptions opts
 preOptions (IgnoreShadowingWarnings :: opts)
-    = do setSession (record { showShadowingWarning = False } !getSession)
+    = do updateSession (record { showShadowingWarning = False })
          preOptions opts
 preOptions (HashesInsteadOfModTime :: opts)
-    = do setSession (record { checkHashesInsteadOfModTime = True } !getSession)
+    = do throw (InternalError "-Xcheck-hashes disabled (see issue #1935)")
+         updateSession (record { checkHashesInsteadOfModTime = True })
+         preOptions opts
+preOptions (CaseTreeHeuristics :: opts)
+    = do updateSession (record { caseTreeHeuristics = True })
          preOptions opts
 preOptions (IncrementalCG e :: opts)
     = do defs <- get Ctxt
          setIncrementalCG True e
          preOptions opts
 preOptions (WholeProgram :: opts)
-    = do setSession (record { wholeProgram = True } !getSession)
+    = do updateSession (record { wholeProgram = True })
          preOptions opts
 preOptions (BashCompletion a b :: _)
     = do os <- opts a b
@@ -393,6 +421,9 @@ preOptions (BashCompletion a b :: _)
 preOptions (BashCompletionScript fun :: _)
     = do coreLift $ putStrLn $ completionScript fun
          pure False
+preOptions (Total :: opts)
+    = do updateSession (record { totalReq = Total })
+         preOptions opts
 preOptions (_ :: opts) = preOptions opts
 
 -- Options to be processed after type checking. Returns whether execution
@@ -409,11 +440,11 @@ postOptions res@(ErrorLoadingFile _ _) (OutputFile _ :: rest)
     = do ignore $ postOptions res rest
          pure False
 postOptions res (OutputFile outfile :: rest)
-    = do ignore $ compileExp (PRef EmptyFC (UN "main")) outfile
+    = do ignore $ compileExp (PRef EmptyFC (UN $ Basic "main")) outfile
          ignore $ postOptions res rest
          pure False
 postOptions res (ExecFn str :: rest)
-    = do ignore $ execExp (PRef EmptyFC (UN str))
+    = do ignore $ execExp (PRef EmptyFC (UN $ Basic str))
          ignore $ postOptions res rest
          pure False
 postOptions res (CheckOnly :: rest)

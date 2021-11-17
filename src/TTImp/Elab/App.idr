@@ -1,6 +1,6 @@
 module TTImp.Elab.App
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -10,6 +10,8 @@ import Core.Normalise
 import Core.Unify
 import Core.TT
 import Core.Value
+
+import Idris.Syntax
 
 import TTImp.Elab.Check
 import TTImp.Elab.Dot
@@ -59,7 +61,7 @@ getNameType rigc env fc x
                      $ "getNameType is trying to add Bound: "
                       ++ show x ++ " (" ++ show fc ++ ")"
                  when (isSourceName x) $
-                   whenJust (isConcreteFC fc) \nfc => do
+                   whenJust (isConcreteFC fc) $ \nfc => do
                      log "ide-mode.highlight" 7 $ "getNameType is adding Bound: " ++ show x
                      addSemanticDecorations [(nfc, Bound, Just x)]
 
@@ -67,23 +69,18 @@ getNameType rigc env fc x
            Nothing =>
               do defs <- get Ctxt
                  [(pname, i, def)] <- lookupCtxtName x (gamma defs)
-                      | [] => undefinedName fc x
-                      | ns => throw (AmbiguousName fc (map fst ns))
+                      | ns => ambiguousName fc x (map fst ns)
                  checkVisibleNS fc (fullname def) (visibility def)
                  rigSafe (multiplicity def) rigc
-                 let nt = case definition def of
-                               PMDef _ _ _ _ _ => Func
-                               DCon t a _ => DataCon t a
-                               TCon t a _ _ _ _ _ _ => TyCon t a
-                               _ => Func
+                 let nt = fromMaybe Func (defNameType $ definition def)
 
                  log "ide-mode.highlight" 8
                      $ "getNameType is trying to add something for: "
                       ++ show def.fullname ++ " (" ++ show fc ++ ")"
 
                  when (isSourceName def.fullname) $
-                   whenJust (isConcreteFC fc) \nfc => do
-                     let decor = nameTypeDecoration nt
+                   whenJust (isConcreteFC fc) $ \nfc => do
+                     let decor = nameDecoration def.fullname nt
                      log "ide-mode.highlight" 7
                        $ "getNameType is adding " ++ show decor ++ ": " ++ show def.fullname
                      addSemanticDecorations [(nfc, decor, Just def.fullname)]
@@ -113,11 +110,7 @@ getVarType rigc nest env fc x
                  case !(lookupCtxtExact n' (gamma defs)) of
                       Nothing => undefinedName fc n'
                       Just ndef =>
-                         let nt = case definition ndef of
-                                       PMDef _ _ _ _ _ => Func
-                                       DCon t a _ => DataCon t a
-                                       TCon t a _ _ _ _ _ _ => TyCon t a
-                                       _ => Func
+                         let nt = fromMaybe Func (defNameType $ definition ndef)
                              tm = tmf fc nt
                              tyenv = useVars (getArgs tm)
                                              (embed (type ndef)) in
@@ -131,8 +124,8 @@ getVarType rigc nest env fc x
                                 addNameType fc x env tyenv
 
                                 when (isSourceName ndef.fullname) $
-                                  whenJust (isConcreteFC fc) \nfc => do
-                                    let decor = nameTypeDecoration nt
+                                  whenJust (isConcreteFC fc) $ \nfc => do
+                                    let decor = nameDecoration ndef.fullname nt
                                     log "ide-mode.highlight" 7
                                        $ "getNameType is adding "++ show decor ++": "
                                                                  ++ show ndef.fullname
@@ -159,10 +152,11 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  RigCount -> RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) ->
-                 Name -> NF vars -> (Defs -> Closure vars -> Core (NF vars)) ->
+                 Name -> Closure vars -> (Defs -> Closure vars -> Core (NF vars)) ->
                  (argdata : (Maybe Name, Nat)) ->
                  (expargs : List RawImp) ->
                  (autoargs : List RawImp) ->
@@ -189,10 +183,11 @@ mutual
                      {auto m : Ref MD Metadata} ->
                      {auto u : Ref UST UState} ->
                      {auto e : Ref EST (EState vars)} ->
+                     {auto s : Ref Syn SyntaxInfo} ->
                      RigCount -> RigCount -> ElabInfo ->
                      NestedNames vars -> Env Term vars ->
                      FC -> (fntm : Term vars) ->
-                     Name -> NF vars -> (Defs -> Closure vars -> Core (NF vars)) ->
+                     Name -> Closure vars -> (Defs -> Closure vars -> Core (NF vars)) ->
                      (argpos : (Maybe Name, Nat)) ->
                      (expargs : List RawImp) ->
                      (autoargs : List RawImp) ->
@@ -217,9 +212,14 @@ mutual
                                 fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
            else do defs <- get Ctxt
                    nm <- genMVName x
-                   -- We need the full normal form to check determining arguments
-                   -- so we might as well calculate the whole thing now
-                   metaty <- quote defs env aty
+                   empty <- clearDefs defs
+                   -- Normalise fully, but only if it's cheap enough.
+                   -- We have to get the normal form eventually anyway, but
+                   -- it might be too early to do it now if something is
+                   -- blocking it and we're not yet ready to search.
+                   metaty <- catch (quoteOpts (MkQuoteOpts False False (Just 10))
+                                              defs env aty)
+                                   (\err => quote empty env aty)
                    est <- get EST
                    lim <- getAutoImplicitLimit
                    metaval <- searchVar fc argRig lim (Resolved (defining est))
@@ -239,10 +239,11 @@ mutual
                     {auto m : Ref MD Metadata} ->
                     {auto u : Ref UST UState} ->
                     {auto e : Ref EST (EState vars)} ->
+                    {auto s : Ref Syn SyntaxInfo} ->
                     RigCount -> RigCount -> ElabInfo ->
                     NestedNames vars -> Env Term vars ->
                     FC -> (fntm : Term vars) ->
-                    Name -> NF vars -> NF vars ->
+                    Name -> Closure vars -> Closure vars ->
                     (Defs -> Closure vars -> Core (NF vars)) ->
                     (argpos : (Maybe Name, Nat)) ->
                     (expargs : List RawImp) ->
@@ -345,21 +346,22 @@ mutual
            Bind _ _ (Lam _ _ _ _)  _ => registerDot rig env fc NotConstructor tm ty
            _ => pure (tm, ty)
 
-  dotErased : {auto c : Ref Ctxt Defs} -> (argty : NF vars) ->
+  dotErased : {vars : _} ->
+              {auto c : Ref Ctxt Defs} -> (argty : Closure vars) ->
               Maybe Name -> Nat -> ElabMode -> RigCount -> RawImp -> Core RawImp
   dotErased argty mn argpos (InLHS lrig ) rig tm
       = if not (isErased lrig) && isErased rig
           then do
             -- if the argument type aty has a single constructor, there's no need
             -- to dot it
-            mconsCount <- countConstructors argty
+            defs <- get Ctxt
+            mconsCount <- countConstructors !(evalClosure defs argty)
             if mconsCount == Just 1 || mconsCount == Just 0
               then pure tm
               else
                 -- if argpos is an erased position of 'n', leave it, otherwise dot if
                 -- necessary
-                do defs <- get Ctxt
-                   Just gdef <- maybe (pure Nothing) (\n => lookupCtxtExact n (gamma defs)) mn
+                do Just gdef <- maybe (pure Nothing) (\n => lookupCtxtExact n (gamma defs)) mn
                         | Nothing => pure (dotTerm tm)
                    if argpos `elem` safeErase gdef
                       then pure tm
@@ -402,10 +404,11 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  RigCount -> RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) -> Name ->
-                 (aty : NF vars) -> (sc : Defs -> Closure vars -> Core (NF vars)) ->
+                 (aty : Closure vars) -> (sc : Defs -> Closure vars -> Core (NF vars)) ->
                  (argdata : (Maybe Name, Nat)) ->
                  (arg : RawImp) ->
                  (expargs : List RawImp) ->
@@ -422,13 +425,35 @@ mutual
                    then pure True
                    else do sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
                            concrete defs env sc'
-          if (isHole aty && kr) || !(needsDelay (elabMode elabinfo) kr arg_in) then do
+          -- In theory we can check the arguments in any order. But it turns
+          -- out that it's sometimes better to do the rightmost arguments
+          -- first to give ambiguity resolution more to work with. So
+          -- we do that if the target type is unknown, or if we see that
+          -- the raw term is otherwise worth delaying.
+          if (isHole !(evalClosure defs aty) && kr) || !(needsDelay (elabMode elabinfo) kr arg_in)
+             then handle (checkRtoL kr arg)
+                  -- if the type isn't resolved, we might encounter an
+                  -- implicit that we can't use yet because we don't know
+                  -- about it. In that case, revert to LtoR
+                    (\err => if invalidArg err
+                                then checkLtoR kr arg
+                                else throw err)
+             else checkLtoR kr arg
+    where
+      invalidArg : Error -> Bool
+      invalidArg (InvalidArgs{}) = True
+      invalidArg _ = False
+
+      checkRtoL : Bool -> -- return type is known
+                  RawImp -> -- argument currently being checked
+                  Core (Term vars, Glued vars)
+      checkRtoL kr arg
+        = do defs <- get Ctxt
              nm <- genMVName x
              empty <- clearDefs defs
              metaty <- quote empty env aty
              (idx, metaval) <- argVar (getFC arg) argRig env nm metaty
              let fntm = App fc tm metaval
-             logNF "elab" 10 ("Delaying " ++ show nm ++ " " ++ show arg) env aty
              logTerm "elab" 10 "...as" metaval
              fnty <- sc defs (toClosure defaultOpts env metaval)
              (tm, gty) <- checkAppWith rig elabinfo nest env fc
@@ -469,11 +494,13 @@ mutual
              -- If there's a constraint, make a constant, but otherwise
              -- just return the term as expected
              tm <- if not ok
-                      then do res <- convert fc elabinfo env (gnf env metaval)
+                      then do res <- convert fc elabinfo env
+                                                 (gnf env metaval)
                                                  (gnf env argv)
                               let [] = constraints res
                                   | cs => do tmty <- getTerm gty
                                              newConstant fc rig env tm tmty cs
+                              ignore $ updateSolution env metaval argv
                               pure tm
                       else pure tm
              case elabMode elabinfo of
@@ -483,8 +510,12 @@ mutual
                   _ => pure ()
              removeHole idx
              pure (tm, gty)
-           else do
-             logNF "elab" 10 ("Argument type " ++ show x) env aty
+
+      checkLtoR : Bool -> -- return type is known
+                  RawImp -> -- argument currently being checked
+                  Core (Term vars, Glued vars)
+      checkLtoR kr arg
+        = do defs <- get Ctxt
              logNF "elab" 10 ("Full function type") env
                       (NBind fc x (Pi fc argRig Explicit aty) sc)
              logC "elab" 10
@@ -493,7 +524,7 @@ mutual
                                      expty
                          pure ("Overall expected type: " ++ show ety))
              res <- check argRig (record { topLevel = False } elabinfo)
-                                   nest env arg (Just (glueBack defs env aty))
+                                   nest env arg (Just (glueClosure defs env aty))
              (argv, argt) <-
                if not (onLHS (elabMode elabinfo))
                  then pure res
@@ -515,14 +546,14 @@ mutual
 
   export
   findBindAllExpPattern : List (Name, RawImp) -> Maybe RawImp
-  findBindAllExpPattern = lookup (UN "_")
+  findBindAllExpPattern = lookup (UN Underscore)
 
   isImplicitAs : RawImp -> Bool
   isImplicitAs (IAs _ _ UseLeft _ (Implicit _ _)) = True
   isImplicitAs _ = False
 
   isBindAllExpPattern : Name -> Bool
-  isBindAllExpPattern (UN "_") = True
+  isBindAllExpPattern (UN Underscore) = True
   isBindAllExpPattern _ = False
 
   -- Check an application of 'fntm', with type 'fnty' to the given list
@@ -533,6 +564,7 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) -> (fnty : NF vars) ->
@@ -577,7 +609,7 @@ mutual
                    then -- We are done
                         checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
                    else -- Some user defined binding is present while we are out of explicit arguments, that's an error
-                        throw (InvalidArgs fc env (map (const (UN "<auto>")) autoargs ++ map fst namedargs) tm)
+                        throw (InvalidArgs fc env (map (const (UN $ Basic "<auto>")) autoargs ++ map fst namedargs) tm)
   -- Function type is delayed, so force the term and continue
   checkAppWith' rig elabinfo nest env fc tm (NDelayed dfc r ty@(NBind _ _ (Pi _ _ _ _) sc)) argdata expargs autoargs namedargs kr expty
       = checkAppWith' rig elabinfo nest env fc (TForce dfc r tm) ty argdata expargs autoargs namedargs kr expty
@@ -664,11 +696,12 @@ mutual
            logTerm "elab.with" 10 "Function " tm
            argn <- genName "argTy"
            retn <- genName "retTy"
-           argTy <- metaVar fc erased env argn (TType fc)
+           u <- uniVar fc
+           argTy <- metaVar fc erased env argn (TType fc u)
            let argTyG = gnf env argTy
            retTy <- metaVar -- {vars = argn :: vars}
                             fc erased env -- (Pi RigW Explicit argTy :: env)
-                            retn (TType fc)
+                            retn (TType fc u)
            (argv, argt) <- check rig elabinfo
                                  nest env arg (Just argTyG)
            let fntm = App fc tm argv
@@ -689,7 +722,7 @@ mutual
       = do defs <- get Ctxt
            if all isImplicitAs (autoargs ++ map snd (filter (not . isBindAllExpPattern . fst) namedargs))
               then checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
-              else throw (InvalidArgs fc env (map (const (UN "<auto>")) autoargs ++ map fst namedargs) tm)
+              else throw (InvalidArgs fc env (map (const (UN $ Basic "<auto>")) autoargs ++ map fst namedargs) tm)
 
   ||| Entrypoint for checkAppWith: run the elaboration first and, if we're
   ||| on the LHS and the result is an under-applied constructor then insist
@@ -699,6 +732,7 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) -> (fnty : NF vars) ->
@@ -733,6 +767,7 @@ checkApp : {vars : _} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars ->
            FC -> (fn : RawImp) ->
@@ -806,7 +841,7 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
     -- as an expression because we'll normalise the function away and match on
     -- the result
     updateElabInfo prims (InLHS _) n [IPrimVal fc c] elabinfo =
-        do if elem (dropNS !(getFullName n)) prims
+        do if isPrimName prims !(getFullName n)
               then pure (record { elabMode = InExpr } elabinfo)
               else pure elabinfo
     updateElabInfo _ _ _ _ info = pure info

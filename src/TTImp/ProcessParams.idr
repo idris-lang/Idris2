@@ -8,6 +8,8 @@ import Core.Unify
 import Core.Metadata
 import Core.Normalise
 
+import Idris.Syntax
+
 import TTImp.BindImplicits
 import TTImp.Elab
 import TTImp.Elab.Check
@@ -22,7 +24,7 @@ extend : {extvs : _} ->
          NestedNames extvs ->
          Term extvs ->
          (vars' ** (SubVars vs vars', Env Term vars', NestedNames vars'))
-extend env p nest (Bind fc n b@(Pi _ _ _ _) sc)
+extend env p nest (Bind _ n b@(Pi fc c pi ty) sc)
     = extend (b :: env) (DropCons p) (weaken nest) sc
 extend env p nest tm = (_ ** (p, env, nest))
 
@@ -31,6 +33,7 @@ processParams : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
                 {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
+                {auto s : Ref Syn SyntaxInfo} ->
                 NestedNames vars ->
                 Env Term vars ->
                 FC -> List (Name, RigCount, PiInfo RawImp, RawImp) -> List ImpDecl ->
@@ -42,8 +45,9 @@ processParams {vars} {c} {m} {u} nest env fc ps ds
          let pty_raw = mkParamTy ps
          pty_imp <- bindTypeNames fc [] vars (IBindHere fc (PI erased) pty_raw)
          log "declare.param" 10 $ "Checking " ++ show pty_imp
+         u <- uniVar fc
          pty <- checkTerm (-1) InType []
-                          nest env pty_imp (gType fc)
+                          nest env pty_imp (gType fc u)
          let (vs ** (prf, env', nest')) = extend env SubRefl nest pty
          logEnv "declare.param" 5 "Param env" env'
 

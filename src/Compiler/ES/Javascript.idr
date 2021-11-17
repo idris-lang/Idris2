@@ -1,13 +1,14 @@
 ||| The `Javascript` code generator.
 module Compiler.ES.Javascript
 
-import Compiler.ES.ES
+import Compiler.ES.Codegen
 
 import Compiler.Common
 import Compiler.CompileExpr
 
 import Core.Context
 import Core.TT
+import Core.Options
 import Libraries.Utils.Path
 
 import System
@@ -22,25 +23,26 @@ import Libraries.Data.String.Extra
 ||| Compile a TT expression to Javascript
 compileToJS : Ref Ctxt Defs ->
               ClosedTerm -> Core String
-compileToJS c tm =
-  compileToES c tm ["browser", "javascript"]
+compileToJS c tm = compileToES c Javascript tm ["browser", "javascript"]
 
 htmlHeader : String
-htmlHeader = concat $ the (List String) $
-           [ "<html>\n"
-           , " <head>\n"
-           , "  <meta charset='utf-8'>\n"
-           , " </head>\n"
-           , " <body>\n"
-           , "  <script type='text/javascript'>\n"
-           ]
+htmlHeader = """
+  <html>
+    <head>
+      <meta charset='utf-8'>
+    </head>
+    <body>
+      <script type='text/javascript'>
+
+  """
 
 htmlFooter : String
-htmlFooter = concat $ the (List String) $
-           [ "\n  </script>\n"
-           , " </body>\n"
-           , "</html>"
-           ]
+htmlFooter = """
+
+      </script>
+    </body>
+  </html>
+  """
 
 addHeaderAndFooter : String -> String -> String
 addHeaderAndFooter outfile es =

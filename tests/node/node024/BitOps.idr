@@ -24,12 +24,11 @@ b32max = 0xffffffff
 b64max : Bits64
 b64max = 18446744073709551615
 
--- the only way to create -2^63
 intmin : Int
-intmin = shl1 63
+intmin = -0x8000000
 
 intmax : Int
-intmax = 0x7fffffffffffffff
+intmax = 0x7fffffff
 
 powsOf2 : Num a => Nat -> List a
 powsOf2 n = take n (iterate (*2) 1)
@@ -54,10 +53,10 @@ shiftRInteger : List Integer
 shiftRInteger = map (`prim__shr_Integer` 1) (powsOf2 128)
 
 shiftRInt : List Int
-shiftRInt = map (`prim__shr_Int` 1) (powsOf2 63 ++ [intmax])
+shiftRInt = map (`prim__shr_Int` 1) (powsOf2 31 ++ [intmax])
 
 shiftRNegativeInt : List Int
-shiftRNegativeInt = map (`prim__shr_Int` 1) (map negate (powsOf2 63) ++ [intmin])
+shiftRNegativeInt = map (`prim__shr_Int` 1) (map negate (powsOf2 31) ++ [intmin])
 
 --------------------------------------------------------------------------------
 --          shiftL
@@ -79,10 +78,10 @@ shiftLInteger : List Integer
 shiftLInteger = map (`prim__shl_Integer` 1) (0 :: powsOf2 127)
 
 shiftLInt : List Int
-shiftLInt = map (`prim__shl_Int` 1) (0 :: powsOf2 62)
+shiftLInt = map (`prim__shl_Int` 1) (0 :: powsOf2 31)
 
 shiftLNegativeInt : List Int
-shiftLNegativeInt = map (`prim__shl_Int` 1) (map negate (powsOf2 62))
+shiftLNegativeInt = map (`prim__shl_Int` 1) (map negate (powsOf2 31))
 
 
 --------------------------------------------------------------------------------

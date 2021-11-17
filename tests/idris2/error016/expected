@@ -8,7 +8,7 @@ Issue1230:9:1--9:15
  8 | mkRec2 : R
  9 | myRec2 = MkR 3
      ^^^^^^^^^^^^^^
-Did you mean any of: mkRec2, or myRec1?
+Did you mean: mkRec2?
 Main> Error: Undefined name nap. 
 
 (Interactive):1:4--1:7

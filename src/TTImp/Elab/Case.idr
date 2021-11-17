@@ -1,6 +1,6 @@
 module TTImp.Elab.Case
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -11,6 +11,8 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.Elab.ImplicitBind
@@ -20,6 +22,7 @@ import TTImp.Utils
 
 import Data.List
 import Data.Maybe
+import Data.String
 import Libraries.Data.NameMap
 
 %default covering
@@ -156,6 +159,7 @@ caseBlock : {vars : _} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             {auto e : Ref EST (EState vars)} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             RigCount ->
             ElabInfo -> FC ->
             NestedNames vars ->
@@ -183,7 +187,8 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- (esp. in the scrutinee!) are set to 0 in the case type
          let env = updateMults (linearUsed est) env
          defs <- get Ctxt
-         let vis = case !(lookupCtxtExact (Resolved (defining est)) (gamma defs)) of
+         parentDef <- lookupCtxtExact (Resolved (defining est)) (gamma defs)
+         let vis = case parentDef of
                         Just gdef =>
                              if visibility gdef == Public
                                 then Public
@@ -198,19 +203,26 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
                            Just ty => getTerm ty
                            _ =>
                               do nmty <- genName "caseTy"
-                                 metaVar fc erased env nmty (TType fc)
+                                 u <- uniVar fc
+                                 metaVar fc erased env nmty (TType fc u)
 
+         u <- uniVar fc
          (caseretty, _) <- bindImplicits fc (implicitMode elabinfo) defs env
-                                         fullImps caseretty_in (TType fc)
+                                         fullImps caseretty_in (TType fc u)
          let casefnty
                = abstractFullEnvType fc (allow splitOn (explicitPi env))
                             (maybe (Bind fc scrn (Pi fc caseRig Explicit scrty)
                                        (weaken caseretty))
                                    (const caseretty) splitOn)
+         -- If we can normalise the type without the result being excessively
+         -- big do it. It's the depth of stuck applications - 10 is already
+         -- pretty much unreadable!
+         casefnty <- normaliseSizeLimit defs 10 [] casefnty
          (erasedargs, _) <- findErased casefnty
 
          logEnv "elab.case" 10 "Case env" env
          logTermNF "elab.case" 2 ("Case function type: " ++ show casen) [] casefnty
+         traverse_ addToSave (keys (getMetas casefnty))
 
          -- If we've had to add implicits to the case type (because there
          -- were unbound implicits) then we're in a bit of a mess. Easiest
@@ -222,9 +234,13 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
                                 (newDef fc casen (if isErased rigc then erased else top)
                                       [] casefnty vis None))
 
-         -- don't worry about totality of the case block; it'll be handled
-         -- by the totality of the parent function
-         setFlag fc (Resolved cidx) (SetTotal PartialOK)
+         -- set the totality of the case block to be the same as that
+         -- of the parent function
+         let tot = fromMaybe PartialOK $ do findSetTotal (flags !parentDef)
+         log "elab.case" 5 $
+           unwords [ "Setting totality requirement for", show casen
+                   , "to", show tot]
+         setFlag fc (Resolved cidx) (SetTotal tot)
          let caseRef : Term vars = Ref fc Func (Resolved cidx)
 
          let applyEnv = applyToFull fc caseRef env
@@ -277,7 +293,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
     -- so that it applies to the right original variable
     getBindName : Int -> Name -> List Name -> (Name, Name)
     getBindName idx n@(UN un) vs
-       = if n `elem` vs then (n, MN un idx) else (n, n)
+       = if n `elem` vs then (n, MN (displayUserName un) idx) else (n, n)
     getBindName idx n vs
        = if n `elem` vs then (n, MN "_cn" idx) else (n, n)
 
@@ -316,7 +332,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
     -- Names used in the pattern we're matching on, so don't bind them
     -- in the generated case block
     usedIn : RawImp -> List Name
-    usedIn (IBindVar _ n) = [UN n]
+    usedIn (IBindVar _ n) = [UN $ Basic n]
     usedIn (IApp _ f a) = usedIn f ++ usedIn a
     usedIn (IAs _ _ _ n a) = n :: usedIn a
     usedIn (IAlternative _ _ alts) = concatMap usedIn alts
@@ -363,18 +379,20 @@ checkCase : {vars : _} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             {auto e : Ref EST (EState vars)} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             RigCount -> ElabInfo ->
             NestedNames vars -> Env Term vars ->
             FC -> (scr : RawImp) -> (ty : RawImp) -> List ImpClause ->
             Maybe (Glued vars) ->
             Core (Term vars, Glued vars)
 checkCase rig elabinfo nest env fc scr scrty_in alts exp
-    = delayElab fc rig env exp 0 $
+    = delayElab fc rig env exp CaseBlock $
         do scrty_exp <- case scrty_in of
                              Implicit _ _ => guessScrType alts
                              _ => pure scrty_in
+           u <- uniVar fc
            (scrtyv, scrtyt) <- check erased elabinfo nest env scrty_exp
-                                     (Just (gType fc))
+                                     (Just (gType fc u))
            logTerm "elab.case" 10 "Expected scrutinee type" scrtyv
            -- Try checking at the given multiplicity; if that doesn't work,
            -- try checking at Rig1 (meaning that we're using a linear variable
@@ -383,12 +401,12 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
            log "elab.case" 5 $ "Checking " ++ show scr ++ " at " ++ show chrig
 
            (scrtm_in, gscrty, caseRig) <- handle
-              (do c <- runDelays 10 $ check chrig elabinfo nest env scr (Just (gnf env scrtyv))
+              (do c <- runDelays (const True) $ check chrig elabinfo nest env scr (Just (gnf env scrtyv))
                   pure (fst c, snd c, chrig))
-              \case
+            $ \case
                 e@(LinearMisuse _ _ r _)
                   => branchOne
-                     (do c <- runDelays 10 $ check linear elabinfo nest env scr
+                     (do c <- runDelays (const True) $ check linear elabinfo nest env scr
                               (Just (gnf env scrtyv))
                          pure (fst c, snd c, linear))
                      (throw e)
@@ -406,7 +424,7 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
     -- type of the case block. But (TODO) consider delaying on failure?
     checkConcrete : NF vs -> Core ()
     checkConcrete (NApp _ (NMeta n i _) _)
-        = throw (GenericMsg (getFC scr) "Can't infer type for case scrutinee")
+        = throw (GenericMsg fc "Can't infer type for case scrutinee")
     checkConcrete _ = pure ()
 
     applyTo : Defs -> RawImp -> NF [] -> Core RawImp

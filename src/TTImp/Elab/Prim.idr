@@ -4,6 +4,9 @@ import Core.TT
 
 %default covering
 
+ttype : FC -> Term vars
+ttype fc = TType fc (MN "top" 0)
+
 export
 checkPrim : FC -> Constant -> (Term vars, Term vars)
 checkPrim fc (I i) = (PrimVal fc (I i), PrimVal fc IntType)
@@ -21,17 +24,17 @@ checkPrim fc (Ch c) = (PrimVal fc (Ch c), PrimVal fc CharType)
 checkPrim fc (Db d) = (PrimVal fc (Db d), PrimVal fc DoubleType)
 checkPrim fc WorldVal = (PrimVal fc WorldVal, PrimVal fc WorldType)
 
-checkPrim fc IntType = (PrimVal fc IntType, TType fc)
-checkPrim fc Int8Type = (PrimVal fc Int8Type, TType fc)
-checkPrim fc Int16Type = (PrimVal fc Int16Type, TType fc)
-checkPrim fc Int32Type = (PrimVal fc Int32Type, TType fc)
-checkPrim fc Int64Type = (PrimVal fc Int64Type, TType fc)
-checkPrim fc IntegerType = (PrimVal fc IntegerType, TType fc)
-checkPrim fc Bits8Type = (PrimVal fc Bits8Type, TType fc)
-checkPrim fc Bits16Type = (PrimVal fc Bits16Type, TType fc)
-checkPrim fc Bits32Type = (PrimVal fc Bits32Type, TType fc)
-checkPrim fc Bits64Type = (PrimVal fc Bits64Type, TType fc)
-checkPrim fc StringType = (PrimVal fc StringType, TType fc)
-checkPrim fc CharType = (PrimVal fc CharType, TType fc)
-checkPrim fc DoubleType = (PrimVal fc DoubleType, TType fc)
-checkPrim fc WorldType = (PrimVal fc WorldType, TType fc)
+checkPrim fc IntType = (PrimVal fc IntType, ttype fc)
+checkPrim fc Int8Type = (PrimVal fc Int8Type, ttype fc)
+checkPrim fc Int16Type = (PrimVal fc Int16Type, ttype fc)
+checkPrim fc Int32Type = (PrimVal fc Int32Type, ttype fc)
+checkPrim fc Int64Type = (PrimVal fc Int64Type, ttype fc)
+checkPrim fc IntegerType = (PrimVal fc IntegerType, ttype fc)
+checkPrim fc Bits8Type = (PrimVal fc Bits8Type, ttype fc)
+checkPrim fc Bits16Type = (PrimVal fc Bits16Type, ttype fc)
+checkPrim fc Bits32Type = (PrimVal fc Bits32Type, ttype fc)
+checkPrim fc Bits64Type = (PrimVal fc Bits64Type, ttype fc)
+checkPrim fc StringType = (PrimVal fc StringType, ttype fc)
+checkPrim fc CharType = (PrimVal fc CharType, ttype fc)
+checkPrim fc DoubleType = (PrimVal fc DoubleType, ttype fc)
+checkPrim fc WorldType = (PrimVal fc WorldType, ttype fc)

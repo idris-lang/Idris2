@@ -2,18 +2,18 @@ const support_system_file_fs = require('fs')
 
 
 function support_system_file_fileErrno(){
-  const n = process.__lasterr.errno || 0
+  const n = process.__lasterr===undefined?0:process.__lasterr.errno || 0
   if (process.platform == 'win32') {
     // TODO: Add the error codes for the other errors
     switch(n) {
-      case -4058: return 2n
-      case -4075: return 4n
-      default: return -BigInt(n)
+      case -4058: return 2
+      case -4075: return 4
+      default: return -n
     }
   } else {
     switch(n){
-      case -17: return 4n
-      default: return -BigInt(n)
+      case -17: return 4
+      default: return -n
     }
   }
 }
@@ -29,13 +29,13 @@ function support_system_file_seekLine (file_ptr) {
     if (bytesRead === 0) {
       file_ptr.eof = true
       file_ptr.buffer = Buffer.alloc(0)
-      return 0n
+      return 0
     }
     file_ptr.buffer = Buffer.concat([file_ptr.buffer, readBuf.slice(0, bytesRead)])
     lineEnd = file_ptr.buffer.indexOf(LF)
   }
   file_ptr.buffer = file_ptr.buffer.slice(lineEnd + 1)
-  return 0n
+  return 0
 }
 
 function support_system_file_readLine (file_ptr) {
@@ -74,10 +74,10 @@ function support_system_file_openFile (n, m) {
 
 function support_system_file_chmod (filename, mode) {
   try {
-    support_system_file_fs.chmodSync(filename, Number(mode))
-    return 0n
+    support_system_file_fs.chmodSync(filename, mode)
+    return 0
   } catch (e) {
     process.__lasterr = e
-    return 1n
+    return 1
   }
 }

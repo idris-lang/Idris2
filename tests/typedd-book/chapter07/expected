@@ -6,13 +6,40 @@
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Prelude.Types.elem
+
+Tree:1:18--1:23
+ 1 | data Tree elem = Empty
+                      ^^^^^
+
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Prelude.Types.elem
+
+Tree:2:18--2:51
+ 1 | data Tree elem = Empty
+ 2 |                | Node (Tree elem) elem (Tree elem)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Prelude.Types.elem
+
+Tree:4:1--8:21
+ 4 | Eq elem => Eq (Tree elem) where
+ 5 |     (==) Empty Empty = True
+ 6 |     (==) (Node left e right) (Node left' e' right')
+ 7 |           = left == left' && e == e' && right == right'
+ 8 |     (==) _ _ = False
+
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Prelude.Types.elem
+
+Tree:4:1--8:21
+ 4 | Eq elem => Eq (Tree elem) where
+ 5 |     (==) Empty Empty = True
+ 6 |     (==) (Node left e right) (Node left' e' right')
+ 7 |           = left == left' && e == e' && right == right'
+ 8 |     (==) _ _ = False
+
 6/6: Building All (All.idr)

@@ -36,7 +36,7 @@ match nty (n, i, rty)
     sameRet (NErased _ _) _ = pure True
     sameRet (NTCon _ n _ _ _) (NTCon _ n' _ _ _) = pure (n == n')
     sameRet (NPrimVal _ c) (NPrimVal _ c') = pure (c == c')
-    sameRet (NType _) (NType _) = pure True
+    sameRet (NType _ _) (NType _ _) = pure True
     sameRet nf (NBind fc _ (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
@@ -122,7 +122,7 @@ mutual
 
   buildApp : {auto c : Ref Ctxt Defs} ->
              {auto q : Ref QVar Int} ->
-             FC -> Name -> Maybe (NF []) ->
+             FC -> Name -> Maybe (Closure []) ->
              (expargs : List RawImp) ->
              (autoargs : List RawImp) ->
              (namedargs : List (Name, RawImp)) ->
@@ -134,9 +134,8 @@ mutual
                throw (InternalError "Can't deal with constants here yet")
 
            gdefs <- lookupNameBy id n (gamma defs)
-           [(n', i, gdef)] <- dropNoMatch mty gdefs
-              | [] => undefinedName fc n
-              | ts => throw (AmbiguousName fc (map fst ts))
+           [(n', i, gdef)] <- dropNoMatch !(traverseOpt (evalClosure defs) mty) gdefs
+              | ts => ambiguousName fc n (map fst ts)
            tynf <- nf defs [] (type gdef)
            -- #899 we need to make sure that type & data constructors are marked
            -- as such so that the coverage checker actually uses the matches in
@@ -152,7 +151,7 @@ mutual
 
   mkTerm : {auto c : Ref Ctxt Defs} ->
            {auto q : Ref QVar Int} ->
-           RawImp -> Maybe (NF []) ->
+           RawImp -> Maybe (Closure []) ->
            (expargs : List RawImp) ->
            (autoargs : List RawImp) ->
            (namedargs : List (Name, RawImp)) ->

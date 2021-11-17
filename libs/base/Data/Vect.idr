@@ -87,12 +87,23 @@ take : (n  : Nat)
 take 0 xs = Nil
 take (S k) (x :: xs) = x :: take k xs
 
+namespace Stream
+  ||| Take precisely n elements from the stream.
+  ||| @ n how many elements to take
+  ||| @ xs the stream
+  public export
+  take : (n : Nat) -> (xs : Stream a) -> Vect n a
+  take Z xs = []
+  take (S k) (x :: xs) = x :: take k xs
+
 ||| Drop the first `n` elements of a Vect.
+public export
 drop : (n : Nat) -> Vect (n + m) elem -> Vect m elem
 drop 0 xs = xs
 drop (S k) (x :: xs) = drop k xs
 
 ||| Drop up to the first `n` elements of a Vect.
+public export
 drop' : (n : Nat) -> Vect l elem -> Vect (l `minus` n) elem
 drop' 0 xs = rewrite minusZeroRight l in xs
 drop' (S k) [] = rewrite minusZeroLeft (S k) in []
@@ -524,7 +535,7 @@ find p (x::xs) = if p x then Just x else find p xs
 public export
 findIndex : (elem -> Bool) -> Vect len elem -> Maybe (Fin len)
 findIndex p []        = Nothing
-findIndex p (x :: xs) = if p x then Just FZ else map FS (findIndex p xs)
+findIndex p (x :: xs) = if p x then Just FZ else FS <$> findIndex p xs
 
 ||| Find the indices of all elements that satisfy some test
 |||
@@ -535,7 +546,7 @@ public export
 findIndices : (elem -> Bool) -> Vect m elem -> List (Fin m)
 findIndices p []        = []
 findIndices p (x :: xs)
-     = let is = map FS $ findIndices p xs in
+     = let is = FS <$> findIndices p xs in
            if p x then FZ :: is else is
 
 ||| Find the index of the first element of the vector that satisfies some test
@@ -856,6 +867,7 @@ implementation {k : Nat} -> Applicative (Vect k) where
 
 -- ||| This monad is different from the List monad, (>>=)
 -- ||| uses the diagonal.
+public export
 implementation {k : Nat} -> Monad (Vect k) where
     m >>= f = diag (map f m)
 
@@ -863,6 +875,18 @@ public export
 implementation Traversable (Vect k) where
     traverse f []        = pure []
     traverse f (x :: xs) = [| f x :: traverse f xs |]
+
+--------------------------------------------------------------------------------
+-- Semigroup/Monoid
+--------------------------------------------------------------------------------
+
+public export
+Semigroup a => Semigroup (Vect k a) where
+  (<+>) = zipWith (<+>)
+
+public export
+{k : Nat} -> Monoid a => Monoid (Vect k a) where
+  neutral = replicate k neutral
 
 --------------------------------------------------------------------------------
 -- Show

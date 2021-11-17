@@ -1,6 +1,7 @@
 module Syntax.PreorderReasoning.Generic
 
-import Decidable.Order
+import Control.Relation
+import Control.Order
 infixl 0  ~~
 infixl 0  <~
 prefix 1  |~
@@ -19,8 +20,8 @@ data FastDerivation : (leq : a -> a -> Type) -> (x : a) -> (y : a) -> Type where
 
 public export
 CalcWith : Preorder dom leq => {0 x : dom} -> {0 y : dom} -> FastDerivation leq x y -> x `leq` y
-CalcWith (|~ x) = reflexive x
-CalcWith ((<~) der (z ... step)) = transitive {po = leq} _ _ _ (CalcWith der) step
+CalcWith (|~ x) = reflexive {rel = leq}
+CalcWith ((<~) der (z ... step)) = transitive {rel = leq} (CalcWith der) step
 
 public export
 (~~) : {0 x : dom} -> {0 y : dom}

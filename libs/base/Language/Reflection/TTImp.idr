@@ -7,7 +7,7 @@ import public Language.Reflection.TT
 -- Unchecked terms and declarations in the intermediate language
 mutual
   public export
-  data BindMode = PI Count | PATTERN | NONE
+  data BindMode = PI Count | PATTERN | COVERAGE | NONE
 
   -- For as patterns matching linear arguments, select which side is
   -- consumed
@@ -66,7 +66,7 @@ mutual
        -- Quasiquotation
        IQuote : FC -> TTImp -> TTImp
        IQuoteName : FC -> Name -> TTImp
-       IQuoteDecl : FC -> TTImp -> TTImp
+       IQuoteDecl : FC -> List Decl -> TTImp
        IUnquote : FC -> TTImp -> TTImp
 
        IPrimVal : FC -> (c : Constant) -> TTImp
@@ -91,8 +91,14 @@ mutual
        UniqueDefault : TTImp -> AltType
 
   public export
+  data NoMangleDirective : Type where
+     CommonName : String -> NoMangleDirective
+     BackendNames : List (String, String) -> NoMangleDirective
+
+  public export
   data FnOpt : Type where
        Inline : FnOpt
+       NoInline : FnOpt
        TCInline : FnOpt
        -- Flag means the hint is a direct hint, not a function which might
        -- find the result (e.g. chasing parent interface dictionaries)
@@ -107,6 +113,8 @@ mutual
        Totality : TotalReq -> FnOpt
        Macro : FnOpt
        SpecArgs : List Name -> FnOpt
+       ||| Keep the user provided name during codegen
+       NoMangle : NoMangleDirective -> FnOpt
 
   public export
   data ITy : Type where
@@ -116,9 +124,9 @@ mutual
   data DataOpt : Type where
        SearchBy : List Name -> DataOpt -- determining arguments
        NoHints : DataOpt -- Don't generate search hints for constructors
-       UniqueSearch : DataOpt
-       External : DataOpt
-       NoNewtype : DataOpt
+       UniqueSearch : DataOpt -- auto implicit search must check result is unique
+       External : DataOpt -- implemented externally
+       NoNewtype : DataOpt -- don't apply newtype optimisation
 
   public export
   data Data : Type where
@@ -135,15 +143,19 @@ mutual
   public export
   data Record : Type where
        MkRecord : FC -> (n : Name) ->
-                  (params : List (Name, TTImp)) ->
+                  (params : List (Name, Count, PiInfo TTImp, TTImp)) ->
                   (conName : Name) ->
                   (fields : List IField) ->
                   Record
 
   public export
+  data WithFlag = Syntactic
+
+  public export
   data Clause : Type where
        PatClause : FC -> (lhs : TTImp) -> (rhs : TTImp) -> Clause
        WithClause : FC -> (lhs : TTImp) -> (wval : TTImp) ->
+                    (prf : Maybe Name) -> (flags : List WithFlag) ->
                     List Clause -> Clause
        ImpossibleClause : FC -> (lhs : TTImp) -> Clause
 
@@ -153,9 +165,46 @@ mutual
                 ITy -> Decl
        IData : FC -> Visibility -> Data -> Decl
        IDef : FC -> Name -> List Clause -> Decl
-       IParameters : FC -> List (Name, TTImp) ->
+       IParameters : FC -> List (Name, Count, PiInfo TTImp, TTImp) ->
                      List Decl -> Decl
-       IRecord : FC -> Visibility -> Record -> Decl
+       IRecord : FC ->
+                 Maybe String -> -- nested namespace
+                 Visibility -> Record -> Decl
        INamespace : FC -> Namespace -> List Decl -> Decl
        ITransform : FC -> Name -> TTImp -> TTImp -> Decl
-       ILog : Nat -> Decl
+       IRunElabDecl : FC -> TTImp -> Decl
+       ILog : Maybe (List String, Nat) -> Decl
+       IBuiltin : FC -> BuiltinType -> Name -> Decl
+
+public export
+getFC : TTImp -> FC
+getFC (IVar fc y)                = fc
+getFC (IPi fc _ _ _ _ _)         = fc
+getFC (ILam fc _ _ _ _ _)        = fc
+getFC (ILet fc _ _ _ _ _ _)      = fc
+getFC (ICase fc _ _ _)           = fc
+getFC (ILocal fc _ _)            = fc
+getFC (IUpdate fc _ _)           = fc
+getFC (IApp fc _ _)              = fc
+getFC (INamedApp fc _ _ _)       = fc
+getFC (IAutoApp fc _ _)          = fc
+getFC (IWithApp fc _ _)          = fc
+getFC (ISearch fc _)             = fc
+getFC (IAlternative fc _ _)      = fc
+getFC (IRewrite fc _ _)          = fc
+getFC (IBindHere fc _ _)         = fc
+getFC (IBindVar fc _)            = fc
+getFC (IAs fc _ _ _ _)           = fc
+getFC (IMustUnify fc _ _)        = fc
+getFC (IDelayed fc _ _)          = fc
+getFC (IDelay fc _)              = fc
+getFC (IForce fc _)              = fc
+getFC (IQuote fc _)              = fc
+getFC (IQuoteName fc _)          = fc
+getFC (IQuoteDecl fc _)          = fc
+getFC (IUnquote fc _)            = fc
+getFC (IPrimVal fc _)            = fc
+getFC (IType fc)                 = fc
+getFC (IHole fc _)               = fc
+getFC (Implicit fc _)            = fc
+getFC (IWithUnambigNames fc _ _) = fc

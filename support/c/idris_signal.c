@@ -1,93 +1,32 @@
 #include "idris_signal.h"
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <assert.h>
+#include <errno.h>
+#include <limits.h>
 #include <signal.h>
+#include <stdatomic.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#ifdef _WIN32
-#include <windows.h>
-HANDLE ghMutex;
-#else
-#include <pthread.h>
-static pthread_mutex_t sig_mutex = PTHREAD_MUTEX_INITIALIZER;
-#endif
+#include "idris_util.h"
 
-// ring buffer style storage for collected
-// signals.
-static int signal_buf_cap = 0;
-static int signals_in_buf = 0;
-static int signal_buf_next_read_idx = 0;
-static int *signal_buf = NULL;
+static_assert(ATOMIC_LONG_LOCK_FREE == 2,
+  "when not lock free, atomic functions are not async-signal-safe");
 
-void _init_buf() {
-  if (signal_buf == NULL) {
-    signal_buf_cap = 10;
-    signal_buf = malloc(sizeof(int) * signal_buf_cap);
-  }
-}
+#define N_SIGNALS 32
+static atomic_uint_fast32_t signals;
 
-// returns truthy or falsey (1 or 0)
-int _lock() {
-#ifdef _WIN32
-  if (ghMutex == NULL) {
-    ghMutex = CreateMutex(
-      NULL,
-      FALSE,
-      NULL);
-  }
+void _collect_signal(int signum) {
+  IDRIS2_VERIFY(signum >= 0 && signum < N_SIGNALS, "signal number out of range: %d", signum);
 
-  DWORD dwWaitResult = WaitForSingleObject(
-    ghMutex,
-    INFINITE);
-
-  switch (dwWaitResult) 
-    {
-       case WAIT_OBJECT_0: 
-         return 1;
-
-       case WAIT_ABANDONED: 
-         return 0;
-    }
-#else
-  pthread_mutex_lock(&sig_mutex);
-  return 1;
-#endif
-}
-
-void _unlock() {
-#ifdef _WIN32
-  ReleaseMutex(ghMutex);
-#else
-  pthread_mutex_unlock(&sig_mutex);
-#endif
-}
-
-void _collect_signal(int signum);
-
-void _collect_signal_core(int signum) {
-  _init_buf();
-
-  // FIXME: allow for adjusting capacity of signal buffer
-  // instead of ignoring new signals when at capacity.
-  if (signals_in_buf == signal_buf_cap) {
-    return;
-  }
-
-  int write_idx = (signal_buf_next_read_idx + signals_in_buf) % signal_buf_cap;
-  signal_buf[write_idx] = signum;
-  signals_in_buf += 1;
+  atomic_fetch_or(&signals, (uint32_t) 1 << signum);
 
 #ifdef _WIN32
   //re-instate signal handler
-  signal(signum, _collect_signal);
+  IDRIS2_VERIFY(signal(signum, _collect_signal) != SIG_ERR, "signal failed: %s", strerror(errno));
 #endif
-}
-
-void _collect_signal(int signum) {
-  if (_lock()) {
-    _collect_signal_core(signum);
-    _unlock();
-  }
 }
 
 #ifndef _WIN32
@@ -130,18 +69,18 @@ int collect_signal(int signum) {
 }
 
 int handle_next_collected_signal() {
-  if (_lock()) {
-    if (signals_in_buf == 0) {
-      _unlock();
-      return -1;
-    }
-    int next = signal_buf[signal_buf_next_read_idx];
-    signal_buf_next_read_idx = (signal_buf_next_read_idx + 1) % signal_buf_cap;
-    signals_in_buf -= 1;
-    _unlock();
-    return next;
+  uint32_t signals_snapshot = atomic_load(&signals);
+  if (signals_snapshot == 0) {
+    return -1;
   }
-  return -1;
+  for (uint32_t signum = 0; signum != N_SIGNALS; ++signum) {
+    uint32_t mask = (uint32_t) 1 << signum;
+    if ((signals_snapshot & mask) != 0) {
+      atomic_fetch_and(&signals, ~mask);
+      return signum;
+    }
+  }
+  abort();
 }
 
 int raise_signal(int signum) {
@@ -150,6 +89,7 @@ int raise_signal(int signum) {
 
 int send_signal(int pid, int signum) {
 #ifdef _WIN32
+  // TODO: ignores pid
   return raise_signal(signum);
 #else
   return kill(pid, signum);

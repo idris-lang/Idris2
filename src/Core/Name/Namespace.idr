@@ -166,6 +166,12 @@ isApproximationOf (MkNS ms) (MkNS ns)
   -- the other's.
   = isPrefixOf ms ns
 
+||| We can check whether a given string (assumed to be a valid Namespace ident)
+||| is in the path of a given namespace.
+export
+isInPathOf : (i : String) -> (candidate : Namespace) -> Bool
+isInPathOf i (MkNS ns) = i `elem` ns
+
 -------------------------------------------------------------------------------------
 -- INSTANCES
 -------------------------------------------------------------------------------------
@@ -181,6 +187,10 @@ Eq ModuleIdent where
 export
 Ord Namespace where
     compare (MkNS ms) (MkNS ns) = compare ms ns
+
+export
+Ord ModuleIdent where
+    compare (MkMI ms) (MkMI ns) = compare ms ns
 
 mkNSInjective : MkNS ms === MkNS ns -> ms === ns
 mkNSInjective Refl = Refl
@@ -264,6 +274,10 @@ eqOrdNS = mkNamespace "Prelude.EqOrd"
 export
 primIONS : Namespace
 primIONS = mkNamespace "PrimIO"
+
+export
+ioNS : Namespace
+ioNS = mkNamespace "Prelude.IO"
 
 export
 reflectionNS : Namespace

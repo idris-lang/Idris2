@@ -97,14 +97,18 @@ fmtOpt : OptDescr a -> List (String,String,String)
 fmtOpt (MkOpt sos los ad descr) =
   let sosFmt = concat $ intersperse ", " (map (fmtShort ad) sos)
       losFmt = concat $ intersperse ", " (map (fmtLong ad) los)
-      (h ::: t) = lines descr in
+      (h ::: t) = lines1 descr in
       (sosFmt,losFmt,h) :: map (\s => ("","",s)) t
+  where lines1 : String -> List1 String
+        lines1 s = case lines s of
+                        [] => "" ::: []
+                        (x :: xs) => x ::: xs
 
 ||| Return a string describing the usage of a command, derived from
 ||| the header (first argument) and the options described by the
 ||| second argument.
 public export
-usageInfo : (header : String) -> List $ OptDescr a -> String
+usageInfo : (header : String) -> List (OptDescr a) -> String
 usageInfo header optDescr =
   let (ss,ls,ds)   = (unzip3 . concatMap fmtOpt) optDescr
       paste        = \x,y,z => "  " ++ x ++ "  " ++ y ++ "  " ++ z
@@ -122,7 +126,7 @@ usageInfo header optDescr =
 --          Error Formatting
 --------------------------------------------------------------------------------
 
-errAmbig : List $ OptDescr a -> (optStr : String) -> OptKind a
+errAmbig : List (OptDescr a) -> (optStr : String) -> OptKind a
 errAmbig ods s = let h = "option `" ++ s ++ "' is ambiguous; could be one of:"
                   in OptErr (usageInfo h ods)
 
@@ -163,7 +167,7 @@ Functor Result where
   map f = record { options $= map f }
 
 OptFun : Type -> Type
-OptFun a = List String -> List $ OptDescr a -> (OptKind a,List String)
+OptFun a = List String -> List (OptDescr a) -> (OptKind a,List String)
 
 longOpt : String -> OptFun a
 longOpt ls rs descs =
@@ -227,13 +231,13 @@ getNext a              r _        = (NonOpt $ pack a,r)
 |||   `System.getArgs`).
 export
 getOpt :  ArgOrder a                         -- non-option handling
-       -> List $ OptDescr a                  -- option descriptors
+       -> List (OptDescr a)                  -- option descriptors
        -> (args : List String)               -- the command-line arguments
        -> Result a
 getOpt _        _        []         =  emptyRes
 getOpt ordering descs (arg::args)   =
   let (opt,rest) = getNext (unpack arg) args descs
-      res        = getOpt ordering descs rest
+      res        = getOpt ordering descs (assert_smaller args rest)
    in case (opt,ordering) of
            (Opt x, _)                   => {options $= (x::)} res
            (UnreqOpt x, _)              => {unrecognized $= (x::)} res

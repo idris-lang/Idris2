@@ -83,7 +83,7 @@ int64 : IntType Int64
 int64 = intType True "Int64" 64
 
 int : IntType Int
-int = intType True "Int" 64
+int = intType True "Int" 32
 
 record Op a where
   constructor MkOp

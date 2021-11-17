@@ -178,7 +178,7 @@ options args = case args of
                  | Nothing => pure (Just opts)
            Right only <- readFile fp
              | Left err => fail (show err)
-           pure $ Just $ record { onlyNames $= (forget (lines only) ++) } opts
+           pure $ Just $ record { onlyNames $= ((lines only) ++) } opts
 
 ||| Normalise strings between different OS.
 |||
@@ -197,9 +197,7 @@ Result : Type
 Result = Either String String
 
 ||| Run the specified Golden test with the supplied options.
-|||
 ||| See the module documentation for more information.
-|||
 ||| @testPath the directory that contains the test.
 export
 runTest : Options -> (testPath : String) -> IO (Future Result)
@@ -207,7 +205,7 @@ runTest opts testPath = forkIO $ do
   start <- clockTime UTC
   let cg = maybe "" (" --cg " ++) (codegen opts)
   let exe = "\"" ++ exeUnderTest opts ++ cg ++ "\""
-  ignore $ system $ "cd " ++ testPath ++ " && " ++
+  ignore $ system $ "cd " ++ escapeArg testPath ++ " && " ++
     "sh ./run " ++ exe ++ " | tr -d '\\r' > output"
   end <- clockTime UTC
 
@@ -228,14 +226,12 @@ runTest opts testPath = forkIO $ do
   let time = timeDifference end start
 
   if result
-    then printTiming (timing opts) time testPath $
-      (if opts.color then show . colored BrightGreen else id) "success"
+    then printTiming opts.timing time testPath $ maybeColored BrightGreen "success"
     else do
-      printTiming (timing opts) time testPath $
-        (if opts.color then show . colored BrightRed else id) "FAILURE"
+      printTiming opts.timing time testPath $ maybeColored BrightRed "FAILURE"
       if interactive opts
         then mayOverwrite (Just exp) out
-        else putStrLn . unlines $ expVsOut exp out
+        else putStr . unlines $ expVsOut exp out
 
   pure $ if result then Right testPath else Left testPath
 
@@ -246,26 +242,30 @@ runTest opts testPath = forkIO $ do
       case str of
         "y" => pure True
         "n" => pure False
+        "N" => pure False
         ""  => pure False
         _   => do putStrLn "Invalid answer."
                   getAnswer
 
+    maybeColored : Color -> String -> String
+    maybeColored c = if opts.color then show . colored c else id
+
     expVsOut : String -> String -> List String
-    expVsOut exp out = ["Expected:", exp, "Given:", out]
+    expVsOut exp out = ["Expected:", maybeColored Green exp, "Given:", maybeColored Red out]
 
     mayOverwrite : Maybe String -> String -> IO ()
     mayOverwrite mexp out = do
       case mexp of
         Nothing => putStr $ unlines
           [ "Golden value missing. I computed the following result:"
-          , out
+          , maybeColored BrightBlue out
           , "Accept new golden value? [y/N]"
           ]
         Just exp => do
           code <- system $ "git diff --no-index --exit-code " ++
             (if opts.color then  "--word-diff=color " else "") ++
-            testPath ++ "/expected " ++ testPath ++ "/output"
-          putStrLn . unlines $
+            escapeArg testPath ++ "/expected " ++ escapeArg testPath ++ "/output"
+          putStr . unlines $
             ["Golden value differs from actual value."] ++
             (if (code < 0) then expVsOut exp out else []) ++
             ["Accept actual value as new golden value? [y/N]"]
@@ -330,7 +330,7 @@ checkRequirement req
   where
     requirement : Requirement -> (String, List String)
     requirement C = ("CC", ["cc"])
-    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "chezscheme", "scheme"])
+    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "chezscheme", "chez-scheme", "scheme"])
     requirement Node = ("NODE", ["node"])
     requirement Racket = ("RACKET", ["racket"])
     requirement Gambit = ("GAMBIT", ["gsc"])
@@ -378,6 +378,34 @@ record TestPool where
   constraints : List Requirement
   codegen : Codegen
   testCases : List String
+
+||| Find all the test in the given directory.
+export
+testsInDir : (dirName : String) -> (testNameFilter : String -> Bool) -> (poolName : String) -> List Requirement -> Codegen -> IO TestPool
+testsInDir dirName testNameFilter poolName reqs cg = do
+  Right names <- listDir dirName
+    | Left e => do putStrLn ("failed to list " ++ dirName ++ ": " ++ show e)
+                   exitFailure
+  let names = [n | n <- names, testNameFilter n]
+  let testNames = [dirName ++ "/" ++ n | n <- names]
+  testNames <- filter testNames
+  when (length testNames == 0) $ do
+    putStrLn ("no tests found in " ++ dirName)
+    exitFailure
+  pure $ MkTestPool poolName reqs cg testNames
+    where
+      -- Directory without `run` file is not a test
+      isTest : (path : String) -> IO Bool
+      isTest path = exists (path ++ "/run")
+
+      filter : (testPaths : List String) -> IO (List String)
+      filter [] = pure []
+      filter (p :: ps) =
+          do rem <- filter ps
+             case !(isTest p) of
+               True  => pure $ p :: rem
+               False => pure rem
+
 
 ||| Only keep the tests that have been asked for
 export
@@ -453,7 +481,7 @@ poolRunner opts pool
     banner msgs = fastUnlines
         $ [ "", separator, pool.poolName ]
        ++ msgs
-       ++ [ separator, "" ]
+       ++ [ separator ]
 
     loop : Options -> Summary -> List String -> IO Summary
     loop opts acc [] = pure acc
@@ -488,7 +516,7 @@ runner tests
          let list = fastUnlines res.failure
          when (nfail > 0) $
            do putStrLn "Failing tests:"
-              putStrLn list
+              putStr list
          -- always overwrite the failure file, if it is given
          whenJust opts.failureFile $ \ path =>
            do Right _ <- writeFile path list

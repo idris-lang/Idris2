@@ -1,4 +1,5 @@
 #include "stringOps.h"
+#include "refc_util.h"
 
 Value *stringLength(Value *s)
 {
@@ -8,7 +9,7 @@ Value *stringLength(Value *s)
 
 Value *head(Value *str)
 {
-    Value_Char *c = (Value_Char *)newValue();
+    Value_Char *c = IDRIS2_NEW_VALUE(Value_Char);
     c->header.tag = CHAR_TAG;
     c->c = ((Value_String *)str)->str[0];
     return (Value *)c;
@@ -16,13 +17,14 @@ Value *head(Value *str)
 
 Value *tail(Value *input)
 {
-    Value_String *tailStr = (Value_String *)newValue();
+    Value_String *tailStr = IDRIS2_NEW_VALUE(Value_String);
     tailStr->header.tag = STRING_TAG;
     Value_String *s = (Value_String *)input;
     int l = strlen(s->str);
     if(l != 0)
     {
         tailStr->str = malloc(l);
+        IDRIS2_REFC_VERIFY(tailStr->str, "malloc failed");
         memset(tailStr->str, 0, l);
         memcpy(tailStr->str, s->str + 1, l - 1);
         return (Value *)tailStr;
@@ -30,6 +32,7 @@ Value *tail(Value *input)
     else
     {
         tailStr->str = malloc(1);
+        IDRIS2_REFC_VERIFY(tailStr->str, "malloc failed");
         tailStr->str[0] = '\0';
         return (Value *)tailStr;
     }
@@ -37,11 +40,12 @@ Value *tail(Value *input)
 
 Value *reverse(Value *str)
 {
-    Value_String *retVal = (Value_String *)newValue();
+    Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
     retVal->header.tag = STRING_TAG;
     Value_String *input = (Value_String *)str;
     int l = strlen(input->str);
     retVal->str = malloc(l + 1);
+    IDRIS2_REFC_VERIFY(retVal->str, "malloc failed");
     memset(retVal->str, 0, l + 1);
     char *p = retVal->str;
     char *q = input->str + (l - 1);
@@ -190,6 +194,7 @@ Value *stringIteratorNew(char *str)
     int l = strlen(str);
 
     String_Iterator *it = (String_Iterator *)malloc(sizeof(String_Iterator));
+    IDRIS2_REFC_VERIFY(it, "malloc failed");
     it->str = (char *)malloc(l + 1);
     it->pos = 0;
     memcpy(it->str, str, l + 1); // Take a copy of str, in case it gets GCed

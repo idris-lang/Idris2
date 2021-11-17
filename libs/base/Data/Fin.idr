@@ -2,7 +2,8 @@ module Data.Fin
 
 import Data.List1
 import public Data.Maybe
-import Data.Nat
+import public Data.Nat
+import public Data.So
 import Decidable.Equality.Core
 
 %default total
@@ -60,11 +61,6 @@ finToNat : Fin n -> Nat
 finToNat FZ = Z
 finToNat (FS k) = S $ finToNat k
 
-
-export
-Show (Fin n) where
-  show = show . finToNat
-
 ||| `finToNat` is injective
 export
 finToNatInjective : (fm : Fin k) -> (fn : Fin k) -> (finToNat fm) = (finToNat fn) -> fm = fn
@@ -83,6 +79,12 @@ public export
 finToInteger : Fin n -> Integer
 finToInteger FZ     = 0
 finToInteger (FS k) = 1 + finToInteger k
+
+-- %builtin NaturalToInteger Data.Fin.finToInteger
+
+export
+Show (Fin n) where
+  show = show . finToInteger
 
 export
 Cast (Fin n) Integer where
@@ -146,10 +148,24 @@ Ord (Fin n) where
   compare (FS x) (FS y) = compare x y
 
 public export
+natToFinLT : (x : Nat) -> {0 n : Nat} ->
+             {auto 0 prf : x `LT` n} ->
+             Fin n
+natToFinLT Z {prf = LTESucc _} = FZ
+natToFinLT (S k) {prf = LTESucc _} = FS $ natToFinLT k
+
+public export
+natToFinLt : (x : Nat) -> {n : Nat} ->
+             {auto 0 prf : So (x < n)} ->
+             Fin n
+natToFinLt Z     {n = S _} = FZ
+natToFinLt (S k) {n = S _} = FS $ natToFinLt k
+
+public export
 natToFin : Nat -> (n : Nat) -> Maybe (Fin n)
-natToFin Z     (S _) = Just FZ
-natToFin (S k) (S j) = map FS $ natToFin k j
-natToFin _ _ = Nothing
+natToFin x n = case isLT x n of
+    Yes prf => Just $ natToFinLT x
+    No contra => Nothing
 
 ||| Convert an `Integer` to a `Fin`, provided the integer is within bounds.
 ||| @n The upper bound of the Fin
@@ -158,15 +174,26 @@ integerToFin : Integer -> (n : Nat) -> Maybe (Fin n)
 integerToFin x Z = Nothing -- make sure 'n' is concrete, to save reduction!
 integerToFin x n = if x >= 0 then natToFin (fromInteger x) n else Nothing
 
+public export
+maybeLTE : (x : Nat) -> (y : Nat) -> Maybe (x `LTE` y)
+maybeLTE Z _ = Just LTEZero
+maybeLTE (S x) (S y) = LTESucc <$> maybeLTE x y
+maybeLTE _ _ = Nothing
+
+public export
+maybeLT : (x : Nat) -> (y : Nat) -> Maybe (x `LT` y)
+maybeLT x y = maybeLTE (S x) y
+
 ||| Allow overloading of Integer literals for Fin.
 ||| @ x the Integer that the user typed
 ||| @ prf an automatically-constructed proof that `x` is in bounds
 public export
 fromInteger : (x : Integer) -> {n : Nat} ->
-              {auto 0 prf : (IsJust (integerToFin x n))} ->
+              {auto 0 prf : So (fromInteger x < n)} ->
               Fin n
-fromInteger {n} x {prf} with (integerToFin x n)
-  fromInteger {n} x {prf = ItIsJust} | Just y = y
+fromInteger x = natToFinLt (fromInteger x)
+
+-- %builtin IntegerToNatural Data.Fin.fromInteger
 
 ||| Convert an Integer to a Fin in the required bounds/
 ||| This is essentially a composition of `mod` and `fromInteger`

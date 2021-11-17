@@ -3,6 +3,7 @@ module Idris.Package
 import Compiler.Common
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Directory
 import Core.Env
@@ -19,13 +20,14 @@ import Data.These
 import Parser.Package
 import System
 import System.Directory
+import Libraries.System.Directory.Tree
 import System.File
 
+import Libraries.Data.SortedMap
 import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
 import Libraries.Text.Parser
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Utils.Binary
 import Libraries.Utils.String
 import Libraries.Utils.Path
 
@@ -329,17 +331,11 @@ build pkg opts
               Just exec =>
                    do let Just (mainNS, mainFile) = mainmod pkg
                                | Nothing => throw (GenericMsg emptyFC "No main module given")
-                      let mainName = NS (miAsNamespace mainNS) (UN "main")
+                      let mainName = NS (miAsNamespace mainNS) (UN $ Basic "main")
                       compileMain mainName mainFile exec
 
          runScript (postbuild pkg)
          pure []
-
-copyFile : String -> String -> IO (Either FileError ())
-copyFile src dest
-    = do Right buf <- readFromFile src
-             | Left err => pure (Left err)
-         writeToFile dest buf
 
 installFrom : {auto o : Ref ROpts REPLOpts} ->
               {auto c : Ref Ctxt Defs} ->
@@ -439,8 +435,7 @@ install pkg opts installSrc -- not used but might be in the future
          let toInstall = maybe (modules pkg)
                                (:: modules pkg)
                                (mainmod pkg)
-         Just wdir <- coreLift currentDir
-             | Nothing => throw (InternalError "Can't get current directory")
+         wdir <- getWorkingDir
          -- Make the package installation directory
          let targetDir = prefix_dir (dirs (options defs)) </>
                              "idris2-" ++ showVersion False version </>
@@ -493,19 +488,37 @@ makeDoc pkg opts =
        Right () <- coreLift $ mkdirAll docDir
          | Left err => fileError docDir err
        u <- newRef UST initUState
-       setPPrint (MkPPOpts False False True)
+       setPPrint (MkPPOpts False False False)
 
        [] <- concat <$> for (modules pkg) (\(mod, filename) => do
+           -- load dependencies
            let ns = miAsNamespace mod
            addImport (MkImport emptyFC False mod ns)
+
+           -- generate docs for all visible names
            defs <- get Ctxt
            names <- allNames (gamma defs)
            let allInNamespace = filter (inNS ns) names
            visibleNames <- filterM (visible defs) allInNamespace
 
            let outputFilePath = docDir </> (show mod ++ ".html")
-           allDocs <- annotate Declarations <$> vcat <$> for (sort visibleNames) (getDocsForName emptyFC)
-           Right () <- coreLift $ writeFile outputFilePath !(renderModuleDoc mod allDocs)
+           allDocs <- for (sort visibleNames) $ \ nm =>
+                        getDocsForName emptyFC nm shortNamesConfig
+           let allDecls = annotate Declarations $ vcat allDocs
+
+           -- grab module header doc
+           syn  <- get Syn
+           let modDoc = lookup mod (modDocstrings syn)
+           log "doc.module" 10 $ unwords
+             [ "Looked up doc for"
+             , show mod
+             , "and got:"
+             , show modDoc
+             ]
+           log "doc.module" 15 $ "from: " ++ show (modDocstrings syn)
+
+           Right () <- do doc <- renderModuleDoc mod modDoc allDecls
+                          coreLift $ writeFile outputFilePath doc
              | Left err => fileError (docBase </> "index.html") err
 
            pure $ the (List Error) []
@@ -515,9 +528,15 @@ makeDoc pkg opts =
        Right () <- coreLift $ writeFile (docBase </> "index.html") $ renderDocIndex pkg
          | Left err => fileError (docBase </> "index.html") err
 
-       css <- readDataFile "docs/styles.css"
-       Right () <- coreLift $ writeFile (docBase </> "styles.css") css
-         | Left err => fileError (docBase </> "styles.css") err
+       errs <- for cssFiles $ \ cssFile => do
+          let fn = cssFile.filename ++ ".css"
+          css <- readDataFile ("docs/" ++ fn)
+          Right () <- coreLift $ writeFile (docBase </> fn) css
+            | Left err => fileError (docBase </> fn) err
+          pure (the (List Error) [])
+
+       let [] = concat errs
+           | err => pure err
 
        runScript (postbuild pkg)
        pure []
@@ -580,8 +599,7 @@ clean pkg opts -- `opts` is not used but might be in the future
                                        [] => Nothing
                                        (x :: xs) => Just(xs, x))
                           pkgmods
-         Just srcdir <- coreLift currentDir
-              | Nothing => throw (InternalError "Can't get current directory")
+         srcdir <- getWorkingDir
          let d = dirs (options defs)
          let builddir = srcdir </> build_dir d </> "ttc"
          let outputdir = srcdir </> outputDirWithDefault d
@@ -649,24 +667,38 @@ parsePkgFile file = do
       | Left err => throw err
   addFields fs (initPkgDesc pname)
 
+||| If the user did not provide a package file we can look in the working
+||| directory. If there is exactly one `.ipkg` file then use that!
+localPackageFile : Maybe String -> Core String
+localPackageFile (Just fp) = pure fp
+localPackageFile Nothing
+  = do wdir <- getWorkingDir
+       tree <- coreLift (explore $ parse wdir)
+       let candidates = map fileName tree.files
+       case filter (".ipkg" `isSuffixOf`) candidates of
+         [fp] => pure fp
+         [] => throw $ UserError "No .ipkg file supplied and none could be found in the working directory."
+         _ => throw $ UserError "No .ipkg file supplied and the working directory contains more than one."
+
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  {auto o : Ref ROpts REPLOpts} ->
                  List CLOpt ->
-                 (PkgCommand, String) ->
+                 (PkgCommand, Maybe String) ->
                  Core ()
-processPackage opts (cmd, file)
+processPackage opts (cmd, mfile)
     = withCtxt . withSyn . withROpts $ case cmd of
         Init =>
           do pkg <- coreLift interactive
-             let fp = if file == "" then pkg.name ++ ".ipkg" else file
+             let fp = fromMaybe (pkg.name ++ ".ipkg") mfile
              False <- coreLift (exists fp)
                | _ => throw (GenericMsg emptyFC ("File " ++ fp ++ " already exists"))
              Right () <- coreLift $ writeFile fp (show $ the (Doc ()) $ pretty pkg)
                | Left err => throw (FileErr fp err)
              pure ()
         _ =>
-          do let Just (dir, filename) = splitParent file
+          do file <- localPackageFile mfile
+             let Just (dir, filename) = splitParent file
                  | _ => throw $ InternalError "Tried to split empty string"
              let True = isSuffixOf ".ipkg" filename
                  | _ => do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
@@ -704,7 +736,7 @@ processPackage opts (cmd, file)
 
 record PackageOpts where
   constructor MkPFR
-  pkgDetails : List (PkgCommand, String)
+  pkgDetails : List (PkgCommand, Maybe String)
   oopts : List CLOpt
   hasError : Bool
 
@@ -712,7 +744,7 @@ partitionOpts : List CLOpt -> PackageOpts
 partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
   where
     data OptType : Type where
-      PPackage : PkgCommand -> String -> OptType
+      PPackage : PkgCommand -> Maybe String -> OptType
       POpt : OptType
       PIgnore : OptType
       PErr : OptType
@@ -722,6 +754,7 @@ partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
     optType Verbose                = POpt
     optType Timing                 = POpt
     optType (Logging l)            = POpt
+    optType CaseTreeHeuristics     = POpt
     optType (DumpCases f)          = POpt
     optType (DumpLifted f)         = POpt
     optType (DumpVMCode f)         = POpt

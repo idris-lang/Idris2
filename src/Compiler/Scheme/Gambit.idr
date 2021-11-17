@@ -2,6 +2,7 @@ module Compiler.Scheme.Gambit
 
 import Compiler.Common
 import Compiler.CompileExpr
+import Compiler.Generated
 import Compiler.Inline
 import Compiler.Scheme.Common
 
@@ -48,14 +49,16 @@ findGSCBackend =
               Just e => " -cc " ++ e
 
 schHeader : String
-schHeader =
-    "; @" ++ "generated\n" ++
-    "(declare (block)\n" ++
-    "(inlining-limit 450)\n" ++
-    "(standard-bindings)\n" ++
-    "(extended-bindings)\n" ++
-    "(not safe)\n" ++
-    "(optimize-dead-definitions))\n"
+schHeader = """
+  ;; \{ generatedString "Gambit" }
+  (declare (block)
+    (inlining-limit 450)
+    (standard-bindings)
+    (extended-bindings)
+    (not safe)
+    (optimize-dead-definitions))
+
+  """
 
 showGambitChar : Char -> String -> String
 showGambitChar '\\' = ("\\\\" ++)
@@ -74,7 +77,7 @@ gambitString cs = strCons '"' (showGambitString (unpack cs) "\"")
 
 mutual
   handleRet : String -> String -> String
-  handleRet "void" op = op ++ " " ++ mkWorld (schConstructor gambitString (UN "") (Just 0) [])
+  handleRet "void" op = op ++ " " ++ mkWorld (schConstructor gambitString (UN $ Basic "") (Just 0) [])
   handleRet _ op = mkWorld op
 
   getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))
@@ -365,7 +368,7 @@ compileToSCM c tm outfile
          s <- newRef {t = List String} Structs []
          fgndefs <- traverse getFgnCall ndefs
          compdefs <- traverse (getScheme gambitPrim gambitString) ndefs
-         let code = fastAppend (map snd fgndefs ++ compdefs)
+         let code = fastConcat (map snd fgndefs ++ compdefs)
          main <- schExp gambitPrim gambitString 0 ctm
          support <- readDataFile "gambit/support.scm"
          ds <- getDirectives Gambit

@@ -1,5 +1,5 @@
 package contrib
-version = 0.4.0
+version = 0.5.1
 
 opts = "--ignore-missing-ipkg -Wno-shadowing"
 
@@ -48,11 +48,13 @@ modules = Control.ANSI,
           Data.List.Algebra,
           Data.List.TailRec,
           Data.List.Equalities,
+          Data.List.Extra,
           Data.List.Reverse,
           Data.List.Views.Extra,
           Data.List.Palindrome,
           Data.List.HasLength,
           Data.List.AtIndex,
+          Data.List.Alternating,
 
           Data.List.Elem.Extra,
 
@@ -75,9 +77,8 @@ modules = Control.ANSI,
           Data.Nat.Fib,
           Data.Nat.Order.Strict,
           Data.Nat.Order.Properties,
+          Data.Nat.Order.Relation,
           Data.Nat.Properties,
-
-          Data.Num.Implementations,
 
           Data.OpenUnion,
 
@@ -90,6 +91,7 @@ modules = Control.ANSI,
           Data.Rel.Complement,
 
           Data.SortedMap,
+          Data.SortedMap.Dependent,
           Data.SortedSet,
 
           Data.Stream.Extra,
@@ -157,17 +159,21 @@ modules = Control.ANSI,
           System.Random,
           System.Path,
 
-          Text.Token,
-          Text.Quantity,
-          Text.Parser,
+          Text.Bounded,
           Text.Lexer,
-          Text.Parser.Core,
           Text.Lexer.Core,
+          Text.Lexer.Tokenizer,
+          Text.Literate,
+          Text.Parser,
+          Text.Parser.Core,
+          Text.Parser.Expression,
           Text.PrettyPrint.Prettyprinter,
           Text.PrettyPrint.Prettyprinter.Doc,
-          Text.PrettyPrint.Prettyprinter.Symbols,
-          Text.PrettyPrint.Prettyprinter.Util,
-          Text.PrettyPrint.Prettyprinter.SimpleDocTree,
           Text.PrettyPrint.Prettyprinter.Render.HTML,
           Text.PrettyPrint.Prettyprinter.Render.String,
-          Text.PrettyPrint.Prettyprinter.Render.Terminal
+          Text.PrettyPrint.Prettyprinter.Render.Terminal,
+          Text.PrettyPrint.Prettyprinter.SimpleDocTree,
+          Text.PrettyPrint.Prettyprinter.Symbols,
+          Text.PrettyPrint.Prettyprinter.Util,
+          Text.Quantity,
+          Text.Token

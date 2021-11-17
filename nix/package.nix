@@ -6,7 +6,7 @@
 , fetchFromGitHub
 , makeWrapper
 , idris2-version
-, racket
+, srcRev
 , gambit
 , nodejs
 , zsh
@@ -24,8 +24,10 @@ stdenv.mkDerivation rec {
     ++ lib.optional stdenv.isDarwin [ zsh ];
   buildInputs = [ chez gmp ];
 
-  prePatch = ''
+  prePatch = let match = "$\{GIT_SHA1}"; in
+  ''
     patchShebangs --build tests
+    sed 's/${match}/${srcRev}/' -i Makefile
   '';
 
   makeFlags = [ "PREFIX=$(out)" ]

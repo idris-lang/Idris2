@@ -42,21 +42,28 @@ Show PkgCommand where
 
 public export
 data DirCommand
-      = LibDir -- show top level package directory
+      = LibDir | -- show top level package directory
+         ||| Show the installation prefix
+        Prefix |
+        BlodwenPaths
 
 export
 Show DirCommand where
   show LibDir = "--libdir"
+  show Prefix = "--prefix"
+  show BlodwenPaths = "--paths"
 
 ||| Help topics
 public export
 data HelpTopic
-  =
-    ||| Interactive debugging topics
-   HelpLogging
+  = ||| Interactive debugging topics
+    HelpLogging
+  | ||| The various pragmas
+    HelpPragma
 
 recogniseHelpTopic : String -> Maybe HelpTopic
-recogniseHelpTopic "logging" = pure HelpLogging
+recogniseHelpTopic "logging"   = pure HelpLogging
+recogniseHelpTopic "pragma" = pure HelpPragma
 recogniseHelpTopic _ = Nothing
 
 ||| CLOpt - possible command line options
@@ -83,8 +90,6 @@ data CLOpt
   OutputDir String |
    ||| Generate profile data when compiling (backend dependent)
   Profile |
-   ||| Show the installation prefix
-  ShowPrefix |
    ||| Display Idris version
   Version |
    ||| Display help text
@@ -103,8 +108,10 @@ data CLOpt
   Logging LogLevel |
    ||| Add a package as a dependency
   PkgPath String |
+   ||| List installed packages
+  ListPackages |
    ||| Build or install a given package, depending on PkgCommand
-  Package PkgCommand String |
+  Package PkgCommand (Maybe String) |
    ||| Show locations of data/library directories
   Directory DirCommand |
    ||| The input Idris file
@@ -131,22 +138,28 @@ data CLOpt
   FindIPKG |
   Timing |
   DebugElabCheck |
-  BlodwenPaths |
-  ||| Treat warnings as errors
+  AltErrorCount Nat |
+   ||| Treat warnings as errors
   WarningsAsErrors |
-  ||| Do not print shadowing warnings
+   ||| Do not print shadowing warnings
   IgnoreShadowingWarnings |
-  ||| Use SHA256 hashes to determine if a source file needs rebuilding instead
-  ||| of modification time.
+   ||| Use SHA256 hashes to determine if a source file needs rebuilding instead
+   ||| of modification time.
   HashesInsteadOfModTime |
-  ||| Use incremental code generation, if the backend supports it
+   ||| Apply experimental heuristics to case tree generation that
+   ||| sometimes improves performance and reduces compiled code
+   ||| size.
+  CaseTreeHeuristics |
+   ||| Use incremental code generation, if the backend supports it
   IncrementalCG String |
-  ||| Use whole program compilation - overrides IncrementalCG if set
+   ||| Use whole program compilation - overrides IncrementalCG if set
   WholeProgram |
-  ||| Generate bash completion info
+   ||| Generate bash completion info
   BashCompletion String String |
-  ||| Generate bash completion script
-  BashCompletionScript String
+   ||| Generate bash completion script
+  BashCompletionScript String |
+   ||| Turn on %default total globally
+  Total
 
 ||| Extract the host and port to bind the IDE socket to
 export
@@ -231,6 +244,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Generate profile data when compiling, if supported"),
 
            optSeparator,
+           MkOpt ["--total"] [] [Total]
+              (Just "Require functions to be total by default"),
            MkOpt ["-Werror"] [] [WarningsAsErrors]
               (Just "Treat warnings as errors"),
            MkOpt ["-Wno-shadowing"] [] [IgnoreShadowingWarnings]
@@ -239,34 +254,42 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            optSeparator,
            MkOpt ["-Xcheck-hashes"] [] [HashesInsteadOfModTime]
              (Just "Use SHA256 hashes instead of modification time to determine if a source file needs rebuilding"),
+           MkOpt ["-Xcase-tree-opt"] [] [CaseTreeHeuristics]
+              (Just "Apply experimental optimizations to case tree generation"),
 
            optSeparator,
-           MkOpt ["--prefix"] [] [ShowPrefix]
+           MkOpt ["--prefix"] [] [Directory Prefix]
               (Just "Show installation prefix"),
-           MkOpt ["--paths"] [] [BlodwenPaths]
+           MkOpt ["--paths"] [] [Directory BlodwenPaths]
               (Just "Show paths"),
            MkOpt ["--libdir"] [] [Directory LibDir]
               (Just "Show library directory"),
+           MkOpt ["--list-packages"] [] [ListPackages]
+              (Just "List installed packages"),
 
            optSeparator,
            MkOpt ["--init"] [Optional "package file"]
-              (\ f => [Package Init (fromMaybe "" f)])
+              (\ f => [Package Init f])
               (Just "Interactively initialise a new project"),
 
-           MkOpt ["--build"] [Required "package file"] (\f => [Package Build f])
+           MkOpt ["--build"] [Optional "package file"]
+               (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),
-           MkOpt ["--install"] [Required "package file"] (\f => [Package Install f])
+           MkOpt ["--install"] [Optional "package file"]
+              (\f => [Package Install f])
               (Just "Install the given package"),
-           MkOpt ["--install-with-src"] [Required "package file"]
-                 (\f => [Package InstallWithSrc f])
+           MkOpt ["--install-with-src"] [Optional "package file"]
+              (\f => [Package InstallWithSrc f])
               (Just "Install the given package"),
-           MkOpt ["--mkdoc"] [Required "package file"] (\f => [Package MkDoc f])
+           MkOpt ["--mkdoc"] [Optional "package file"]
+              (\f => [Package MkDoc f])
               (Just "Build documentation for the given package"),
-           MkOpt ["--typecheck"] [Required "package file"] (\f => [Package Typecheck f])
+           MkOpt ["--typecheck"] [Optional "package file"]
+              (\f => [Package Typecheck f])
               (Just "Typechecks the given package without code generation"),
-           MkOpt ["--clean"] [Required "package file"] (\f => [Package Clean f])
+           MkOpt ["--clean"] [Optional "package file"] (\f => [Package Clean f])
               (Just "Clean intermediate files/executables for the given package"),
-           MkOpt ["--repl"] [Required "package file"] (\f => [Package REPL f])
+           MkOpt ["--repl"] [Optional "package file"] (\f => [Package REPL f])
               (Just "Build the given package and launch a REPL instance."),
            MkOpt ["--find-ipkg"] [] [FindIPKG]
               (Just "Find and use an .ipkg file in a parent directory."),
@@ -324,6 +347,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               Nothing, -- dump VM Code to the given file
            MkOpt ["--debug-elab-check"] [] [DebugElabCheck]
               Nothing, -- do more elaborator checks (currently conversion in LinearCheck)
+           MkOpt ["--alt-error-count"] [RequiredNat "alternative count"] (\c => [AltErrorCount c])
+              (Just "Outputs errors for the given number of alternative parsing attempts."),
 
            optSeparator,
            -- bash completion
@@ -377,13 +402,15 @@ versionMsg = "Idris 2, version " ++ show version
 
 export
 usage : String
-usage = versionMsg ++ "\n" ++
-        "Usage: idris2 [options] [input file]\n\n" ++
-        "Available options:\n" ++
-        optsUsage ++
-        "\n" ++
-        "Environment variables:\n" ++
-        envsUsage
+usage = """
+  \{ versionMsg }
+  Usage: idris2 [options] [input file]
+
+  Available options:
+  \{ optsUsage }
+  Environment variables:
+  \{ envsUsage }
+  """
 
 checkNat : Integer -> Maybe Nat
 checkNat n = toMaybe (n >= 0) (integerToNat n)

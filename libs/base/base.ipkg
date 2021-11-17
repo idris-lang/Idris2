@@ -1,5 +1,5 @@
 package base
-version = 0.4.0
+version = 0.5.1
 
 opts = "--ignore-missing-ipkg -Wno-shadowing"
 
@@ -29,6 +29,8 @@ modules = Control.App,
           Control.Monad.Writer.CPS,
           Control.Monad.Writer.Interface,
           Control.WellFounded,
+          Control.Relation,
+          Control.Order,
 
           Data.Bifoldable,
           Data.Bits,
@@ -68,6 +70,7 @@ modules = Control.App,
           Data.These,
           Data.Vect,
           Data.Vect.Elem,
+          Data.Vect.AtIndex,
           Data.Vect.Quantifiers,
           Data.Zippable,
 
@@ -76,7 +79,6 @@ modules = Control.App,
           Decidable.Decidable,
           Decidable.Equality,
           Decidable.Equality.Core,
-          Decidable.Order,
 
           Language.Reflection,
           Language.Reflection.TT,
@@ -86,8 +88,21 @@ modules = Control.App,
           System.Clock,
           System.Concurrency,
           System.Directory,
+          System.Errno,
+          System.Escape,
           System.FFI,
           System.File,
+          System.File.Buffer,
+          System.File.Error,
+          System.File.Handle,
+          System.File.Meta,
+          System.File.Mode,
+          System.File.Permissions,
+          System.File.Process,
+          System.File.ReadWrite,
+          System.File.Support,
+          System.File.Types,
+          System.File.Virtual,
           System.Info,
           System.REPL,
           System.Signal

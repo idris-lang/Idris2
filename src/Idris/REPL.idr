@@ -11,7 +11,7 @@ import Compiler.RefC.RefC
 import Compiler.Inline
 
 import Core.AutoSearch
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
@@ -27,6 +27,8 @@ import Core.TT
 import Core.Termination
 import Core.Unify
 import Core.Value
+
+import Core.SchemeEval
 
 import Parser.Unlit
 
@@ -48,6 +50,7 @@ import Idris.Version
 import public Idris.REPL.Common
 import Idris.REPL.FuzzySearch
 
+import TTImp.TTImp.Functor
 import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.Elab.Local
@@ -110,7 +113,7 @@ showInfo (n, idx, d)
                 coreLift_ $ putStrLn $
                         "Size change: " ++ showSep ", " scinfo
 
-prettyTerm : PTerm -> Doc IdrisAnn
+prettyTerm : IPTerm -> Doc IdrisAnn
 prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
 
 displayType : {auto c : Ref Ctxt Defs} ->
@@ -119,7 +122,9 @@ displayType : {auto c : Ref Ctxt Defs} ->
               Core (Doc IdrisAnn)
 displayType defs (n, i, gdef)
     = maybe (do tm <- resugar [] !(normaliseHoles defs [] (type gdef))
-                pure (pretty !(aliasName (fullname gdef)) <++> colon <++> prettyTerm tm))
+                nm <- aliasName (fullname gdef)
+                let ann = showCategory Syntax gdef
+                pure (ann (pretty nm) <++> colon <++> prettyTerm tm))
             (\num => reAnnotate Syntax <$> prettyHole defs [] n num (type gdef))
             (isHole gdef)
 
@@ -195,6 +200,8 @@ setOpt (CG e)
 setOpt (Profile t)
     = do pp <- getSession
          setSession (record { profile = t } pp)
+setOpt (EvalTiming t)
+    = setEvalTiming t
 
 getOptions : {auto c : Ref Ctxt Defs} ->
          {auto o : Ref ROpts REPLOpts} ->
@@ -215,12 +222,12 @@ printClause : {auto c : Ref Ctxt Defs} ->
               Maybe String -> Nat -> ImpClause ->
               Core String
 printClause l i (PatClause _ lhsraw rhsraw)
-    = do lhs <- pterm lhsraw
-         rhs <- pterm rhsraw
+    = do lhs <- pterm $ map defaultKindedName lhsraw -- hack
+         rhs <- pterm $ map defaultKindedName rhsraw -- hack
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " = " ++ show rhs))
 printClause l i (WithClause _ lhsraw wvraw prf flags csraw)
-    = do lhs <- pterm lhsraw
-         wval <- pterm wvraw
+    = do lhs <- pterm $ map defaultKindedName lhsraw -- hack
+         wval <- pterm $ map defaultKindedName wvraw -- hack
          cs <- traverse (printClause l (i + 2)) csraw
          pure (relit l ((pack (replicate i ' ')
                 ++ show lhs
@@ -229,7 +236,7 @@ printClause l i (WithClause _ lhsraw wvraw prf flags csraw)
                 ++ "\n"))
                ++ showSep "\n" cs)
 printClause l i (ImpossibleClause _ lhsraw)
-    = do lhs <- pterm lhsraw
+    = do lhs <- pterm $ map defaultKindedName lhsraw -- hack
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " impossible"))
 
 
@@ -340,7 +347,7 @@ nextGenDef reject
               Z => pure (Just (line, res))
               S k => nextGenDef k
 
-dropLams : Nat -> RawImp -> RawImp
+dropLams : Nat -> RawImp' nm -> RawImp' nm
 dropLams Z tm = tm
 dropLams (S k) (ILam _ _ _ _ _ sc) = dropLams k sc
 dropLams _ tm = tm
@@ -353,14 +360,37 @@ dropLamsTm (S k) env (Bind _ _ b sc) = dropLamsTm k (b :: env) sc
 dropLamsTm _ env tm = (_ ** (env, tm))
 
 findInTree : FilePos -> Name -> PosMap (NonEmptyFC, Name) -> Maybe Name
-findInTree p hint m = map snd $ head' $ filter match $ sortBy (\x, y => cmp (measure x) (measure y)) $ searchPos p m
+findInTree p hint m
+  = map snd $ head'
+  $ sortBy (cmp `on` measure)
+  $ filter match
+  $ searchPos p m
+
   where
     cmp : FileRange -> FileRange -> Ordering
     cmp ((sr1, sc1), (er1, ec1)) ((sr2, sc2), (er2, ec2)) =
       compare (er1 - sr1, ec1 - sc1) (er2 - sr2, ec2 - sc2)
 
+    checkAsNamespace : String -> Name -> Bool
+    checkAsNamespace i (NS ns' n) = i `isInPathOf` ns'
+    checkAsNamespace _ _ = False
+
+    startsWithUpper : String -> Bool
+    startsWithUpper str = case strM str of
+       StrNil => False
+       StrCons c _ => isUpper c || c > chr 160
+
+    matchingRoots : Name -> Name -> Bool
+    matchingRoots = (==) `on` nameRoot
+
+    checkCandidate : Name -> Bool
+    checkCandidate cand = matchingRoots hint cand || case hint of
+      -- a basic user name: may actually be e.g. the `B` part of `A.B.C.val`
+      UN (Basic n) => startsWithUpper n && checkAsNamespace n cand
+      _ => False
+
     match : (NonEmptyFC, Name) -> Bool
-    match (_, n) = matches hint n && userNameRoot n == userNameRoot hint
+    match (_, n) = matches hint n && checkCandidate n
 
 processEdit : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
@@ -374,7 +404,8 @@ processEdit (TypeAt line col name)
 
          -- Search the correct name by location for more precise search
          -- and fallback to given name if nothing found
-         let name = fromMaybe name $ findInTree (line - 1, col - 1) name (nameLocMap meta)
+         let name = fromMaybe name
+                  $ findInTree (line-1, col) name (nameLocMap meta)
 
          -- Lookup the name globally
          globals <- lookupCtxtName name (gamma defs)
@@ -386,14 +417,27 @@ processEdit (TypeAt line col name)
                     pure $ Just (vsep tys)
 
          -- Lookup the name locally (The name at the specified position)
-         localResult <- findTypeAt $ anyAt $ within (line-1, col-1)
+         localResult <- findTypeAt $ anyAt $ within (line-1, col)
 
          case (globalResult, localResult) of
               -- Give precedence to the local name, as it shadows the others
               (_, Just (n, _, type)) => pure $ DisplayEdit $
-                pretty (nameRoot n) <++> colon <++> !(displayTerm defs type)
+                prettyLocalName n <++> colon <++> !(displayTerm defs type)
               (Just globalDoc, Nothing) => pure $ DisplayEdit $ globalDoc
               (Nothing, Nothing) => undefinedName replFC name
+
+  where
+
+    prettyLocalName : Name -> Doc IdrisAnn
+    -- already looks good
+    prettyLocalName nm@(UN _) = pretty nm
+    prettyLocalName nm@(NS _ (UN _)) = pretty nm
+    -- otherwise
+    prettyLocalName nm = case userNameRoot nm of
+      -- got rid of `Nested` or `PV`
+      Just nm => pretty nm
+      -- really bad case e.g. case block name
+      Nothing => pretty (nameRoot nm)
 
 processEdit (CaseSplit upd line col name)
     = do let find = if col > 0
@@ -417,15 +461,15 @@ processEdit (ExprSearch upd line name hints)
          let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
          case !(lookupDefName name (gamma defs)) of
               [(n, nidx, Hole locs _)] =>
-                  do let searchtm = exprSearch replFC name []
+                  do let searchtm = exprSearch replFC name hints
                      ropts <- get ROpts
                      put ROpts (record { psResult = Just (name, searchtm) } ropts)
                      defs <- get Ctxt
                      Just (_, restm) <- nextProofSearch
                           | Nothing => pure $ EditError "No search results"
                      let tm' = dropLams locs restm
-                     itm <- pterm tm'
-                     let itm' : PTerm = if brack then addBracket replFC itm else itm
+                     itm <- pterm $ map defaultKindedName tm' -- hack
+                     let itm'  = ifThenElse brack (addBracket replFC itm) itm
                      if upd
                         then updateFile (proofSearch name (show itm') (integerToNat (cast (line - 1))))
                         else pure $ DisplayEdit (prettyTerm itm')
@@ -435,7 +479,7 @@ processEdit (ExprSearch upd line name hints)
                        SolvedHole locs =>
                           do let (_ ** (env, tm')) = dropLamsTm locs [] !(normaliseHoles defs [] tm)
                              itm <- resugar env tm'
-                             let itm' : PTerm = if brack then addBracket replFC itm else itm
+                             let itm'= ifThenElse brack (addBracket replFC itm) itm
                              if upd
                                 then updateFile (proofSearch name (show itm') (integerToNat (cast (line - 1))))
                                 else pure $ DisplayEdit (prettyTerm itm')
@@ -450,8 +494,8 @@ processEdit ExprSearchNext
               | _ => pure $ EditError "Not a searchable hole"
          let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
          let tm' = dropLams locs restm
-         itm <- pterm tm'
-         let itm' : PTerm = if brack then addBracket replFC itm else itm
+         itm <- pterm $ map defaultKindedName tm'
+         let itm' = ifThenElse brack (addBracket replFC itm) itm
          pure $ DisplayEdit (prettyTerm itm')
 
 processEdit (GenerateDef upd line name rej)
@@ -494,12 +538,12 @@ processEdit (MakeLemma upd line name)
          case !(lookupDefTyName name (gamma defs)) of
               [(n, nidx, Hole locs _, ty)] =>
                   do (lty, lapp) <- makeLemma replFC name locs ty
-                     pty <- pterm lty
-                     papp <- pterm lapp
+                     pty <- pterm $ map defaultKindedName lty -- hack
+                     papp <- pterm $ map defaultKindedName lapp -- hack
                      opts <- get ROpts
-                     let pappstr = show (the PTerm (if brack
-                                            then addBracket replFC papp
-                                            else papp))
+                     let pappstr = show (ifThenElse brack
+                                            (addBracket replFC papp)
+                                            papp)
                      Just srcLine <- getSourceLine line
                        | Nothing => pure (EditError "Source line not found")
                      let (markM,_) = isLitLine srcLine
@@ -540,7 +584,10 @@ getItDecls
     = do opts <- get ROpts
          case evalResultName opts of
             Nothing => pure []
-            Just n => pure [ IClaim replFC top Private [] (MkImpTy replFC EmptyFC (UN "it") (Implicit replFC False)), IDef replFC (UN "it") [PatClause replFC (IVar replFC (UN "it")) (IVar replFC n)]]
+            Just n =>
+              let it = UN $ Basic "it" in
+              pure [ IClaim replFC top Private [] (MkImpTy replFC EmptyFC it (Implicit replFC False))
+                  , IDef replFC it [PatClause replFC (IVar replFC it) (IVar replFC n)]]
 
 prepareExp :
     {auto c : Ref Ctxt Defs} ->
@@ -550,9 +597,9 @@ prepareExp :
     {auto o : Ref ROpts REPLOpts} ->
     PTerm -> Core ClosedTerm
 prepareExp ctm
-    = do ttimp <- desugar AnyExpr [] (PApp replFC (PRef replFC (UN "unsafePerformIO")) ctm)
+    = do ttimp <- desugar AnyExpr [] (PApp replFC (PRef replFC (UN $ Basic "unsafePerformIO")) ctm)
          let ttimpWithIt = ILocal replFC !getItDecls ttimp
-         inidx <- resolveName (UN "[input]")
+         inidx <- resolveName (UN $ Basic "[input]")
          (tm, ty) <- elabTerm inidx InExpr [] (MkNested [])
                                  [] ttimpWithIt Nothing
          tm_erased <- linearCheck replFC linear True [] tm
@@ -564,6 +611,7 @@ processLocal : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              List ElabOpt ->
              NestedNames vars -> Env Term vars ->
              List ImpDecl -> (scope : List ImpDecl) ->
@@ -579,12 +627,13 @@ execExp : {auto c : Ref Ctxt Defs} ->
           {auto o : Ref ROpts REPLOpts} ->
           PTerm -> Core REPLResult
 execExp ctm
-    = do tm_erased <- prepareExp ctm
-         Just cg <- findCG
-              | Nothing =>
-                   do iputStrLn (reflow "No such code generator available")
-                      pure CompilationFailed
-         execute cg tm_erased
+    = do Just cg <- findCG
+           | Nothing =>
+              do iputStrLn (reflow "No such code generator available")
+                 pure CompilationFailed
+         tm_erased <- prepareExp ctm
+         logTimeWhen !getEvalTiming "Execution" $
+           execute cg tm_erased
          pure $ Executed ctm
 
 
@@ -601,7 +650,7 @@ execDecls decls = do
     execDecl : PDecl -> Core ()
     execDecl decl = do
       i <- desugarDecl [] decl
-      inidx <- resolveName (UN "[defs]")
+      inidx <- resolveName (UN $ Basic "[defs]")
       _ <- newRef EST (initEStateSub inidx [] SubRefl)
       processLocal [] (MkNested []) [] !getItDecls i
 
@@ -613,11 +662,11 @@ compileExp : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
              PTerm -> String -> Core REPLResult
 compileExp ctm outfile
-    = do tm_erased <- prepareExp ctm
-         Just cg <- findCG
+    = do Just cg <- findCG
               | Nothing =>
                    do iputStrLn (reflow "No such code generator available")
                       pure CompilationFailed
+         tm_erased <- prepareExp ctm
          ok <- compile cg tm_erased outfile
          maybe (pure CompilationFailed)
                (pure . Compiled)
@@ -672,13 +721,13 @@ inferAndElab : {auto c : Ref Ctxt Defs} ->
 inferAndElab emode itm
   = do ttimp <- desugar AnyExpr [] itm
        let ttimpWithIt = ILocal replFC !getItDecls ttimp
-       inidx <- resolveName (UN "[input]")
+       inidx <- resolveName (UN $ Basic "[input]")
        -- a TMP HACK to prioritise list syntax for List: hide
        -- foreign argument lists. TODO: once the new FFI is fully
        -- up and running we won't need this. Also, if we add
        -- 'with' disambiguation we can use that instead.
-       catch (do hide replFC (NS primIONS (UN "::"))
-                 hide replFC (NS primIONS (UN "Nil")))
+       catch (do hide replFC (NS primIONS (UN $ Basic "::"))
+                 hide replFC (NS primIONS (UN $ Basic "Nil")))
              (\err => pure ())
        (tm , gty) <- elabTerm inidx emode [] (MkNested [])
                    [] ttimpWithIt Nothing
@@ -725,9 +774,17 @@ process (Eval itm)
          let emode = evalMode opts
          case emode of
             Execute => do ignore (execExp itm); pure (Executed itm)
+            Scheme =>
+              do defs <- get Ctxt
+                 (tm `WithType` ty) <- inferAndElab InExpr itm
+                 qtm <- logTimeWhen !getEvalTiming "Evaluation" $
+                           (do nf <- snfAll [] tm
+                               quote [] nf)
+                 itm <- logTimeWhen False "resugar" $ resugar [] qtm
+                 pure (Evaluated itm Nothing)
             _ =>
-              do
-                 (ntm `WithType` ty) <- inferAndNormalize emode itm
+              do (ntm `WithType` ty) <- logTimeWhen !getEvalTiming "Evaluation" $
+                                           inferAndNormalize emode itm
                  itm <- resugar [] ntm
                  defs <- get Ctxt
                  opts <- get ROpts
@@ -742,10 +799,10 @@ process (Eval itm)
                     then do ity <- resugar [] !(norm defs [] ty)
                             pure (Evaluated itm (Just ity))
                     else pure (Evaluated itm Nothing)
-process (Check (PRef fc (UN "it")))
+process (Check (PRef fc (UN (Basic "it"))))
     = do opts <- get ROpts
          case evalResultName opts of
-              Nothing => throw (UndefinedName fc (UN "it"))
+              Nothing => throw (UndefinedName fc (UN $ Basic "it"))
               Just n => process (Check (PRef fc n))
 process (Check (PRef fc fn))
     = do defs <- get Ctxt
@@ -758,7 +815,7 @@ process (Check itm)
          defs <- get Ctxt
          itm <- resugar [] !(normaliseHoles defs [] tm)
          -- ty <- getTerm gty
-         ity <- resugar [] !(normaliseScope defs [] ty)
+         ity <- resugar [] !(normalise defs [] ty)
          pure (TermChecked itm ity)
 process (CheckWithImplicits itm)
     = do showImplicits <- showImplicits <$> getPPrint
@@ -827,7 +884,7 @@ process (TypeSearch searchTerm)
               filterM (\def => equivTypes def.type ty') allDefs
          put Ctxt defs
          doc <- traverse (docsOrSignature replFC) $ fullname <$> filteredDefs
-         pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
+         pure $ PrintedDoc $ vsep doc
 process (Missing n)
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of
@@ -853,12 +910,12 @@ process (Total n)
                              tot <- getTotality replFC fn >>= toFullNames
                              pure $ (fn, tot))
                                (map fst ts)
-process (Doc itm)
-    = do doc <- getDocsForPTerm itm
-         pure $ Printed $ vsep $ pretty <$> doc
+process (Doc dir)
+    = do doc <- getDocs dir
+         pure $ PrintedDoc doc
 process (Browse ns)
     = do doc <- getContents ns
-         pure $ Printed $ vsep $ pretty <$> doc
+         pure $ PrintedDoc doc
 process (DebugInfo n)
     = do defs <- get Ctxt
          traverse_ showInfo !(lookupCtxtName n (gamma defs))
@@ -879,20 +936,8 @@ process (SetColor b)
     = do setColor b
          pure $ ColorSet b
 process Metavars
-    = do defs <- get Ctxt
-         let ctxt = gamma defs
-         ms  <- getUserHoles
-         let globs = concat !(traverse (\n => lookupCtxtName n ctxt) ms)
-         let holesWithArgs = mapMaybe (\(n, i, gdef) => do args <- isHole gdef
-                                                           pure (n, gdef, args))
-                                      globs
-         hData <-
-             traverse (\n_gdef_args =>
-                        -- Inference can't deal with this for now :/
-                        let (n, gdef, args) = the (Name, GlobalDef, Nat) n_gdef_args in
-                        holeData defs [] n args (type gdef))
-                      holesWithArgs
-         pure $ FoundHoles hData
+    = do hs <- getUserHolesData
+         pure $ Printed $ reAnnotate Syntax $ prettyHoles hs
 
 process (Editing cmd)
     = do ppopts <- getPPrint
@@ -925,7 +970,7 @@ process (ImportPackage package) = do
   let packageDirPath = parse packageDir
   tree <- coreLift $ explore packageDirPath
   fentries <- coreLift $ toPaths (toRelative tree)
-  errs <- for fentries \entry => do
+  errs <- for fentries $ \entry => do
     let entry' = dropExtension entry
     let sp = forget $ split (== dirSeparator) entry'
     let ns = concat $ intersperse "." sp
@@ -977,7 +1022,7 @@ parseRepl : String -> Either Error (Maybe REPLCmd)
 parseRepl inp
     = case runParser (Virtual Interactive) Nothing inp (parseEmptyCmd <|> parseCmd) of
         Left err => Left err
-        Right (decor, result) => Right result
+        Right (_, _, result) => Right result
 
 export
 interpret : {auto c : Ref Ctxt Defs} ->
@@ -1033,6 +1078,7 @@ mutual
       prompt EvalTC = "[tc] "
       prompt NormaliseAll = ""
       prompt Execute = "[exec] "
+      prompt Scheme = "[scheme] "
 
   export
   handleMissing' : MissedResult -> String
@@ -1068,28 +1114,24 @@ mutual
          {auto s : Ref Syn SyntaxInfo} ->
          {auto m : Ref MD Metadata} ->
          {auto o : Ref ROpts REPLOpts} -> REPLResult -> Core ()
-  displayResult (REPLError err) = printError err
+  displayResult (REPLError err) = printResult err
   displayResult (Evaluated x Nothing) = printResult $ prettyTerm x
-  displayResult (Evaluated x (Just y)) = printResult (prettyTerm x <++> colon <++> code (prettyTerm y))
+  displayResult (Evaluated x (Just y)) = printResult (prettyTerm x <++> colon <++> prettyTerm y)
   displayResult (Printed xs) = printResult xs
-  displayResult (TermChecked x y) = printResult (prettyTerm x <++> colon <++> code (prettyTerm y))
+  displayResult (PrintedDoc xs) = printDocResult xs
+  displayResult (TermChecked x y) = printResult (prettyTerm x <++> colon <++> prettyTerm y)
   displayResult (FileLoaded x) = printResult (reflow "Loaded file" <++> pretty x)
   displayResult (ModuleLoaded x) = printResult (reflow "Imported module" <++> pretty x)
   displayResult (ErrorLoadingModule x err) = printResult (reflow "Error loading module" <++> pretty x <+> colon <++> !(perror err))
   displayResult (ErrorLoadingFile x err) = printResult (reflow "Error loading file" <++> pretty x <+> colon <++> pretty (show err))
   displayResult (ErrorsBuildingFile x errs) = printResult (reflow "Error(s) building file" <++> pretty x) -- messages already displayed while building
-  displayResult NoFileLoaded = printError (reflow "No file can be reloaded")
+  displayResult NoFileLoaded = printResult (reflow "No file can be reloaded")
   displayResult (CurrentDirectory dir) = printResult (reflow "Current working directory is" <++> dquotes (pretty dir))
-  displayResult CompilationFailed = printError (reflow "Compilation failed")
+  displayResult CompilationFailed = printResult (reflow "Compilation failed")
   displayResult (Compiled f) = printResult (pretty "File" <++> pretty f <++> pretty "written")
   displayResult (ProofFound x) = printResult (prettyTerm x)
   displayResult (Missed cases) = printResult $ vsep (handleMissing <$> cases)
   displayResult (CheckedTotal xs) = printResult (vsep (map (\(fn, tot) => pretty fn <++> pretty "is" <++> pretty tot) xs))
-  displayResult (FoundHoles []) = printResult (reflow "No holes")
-  displayResult (FoundHoles [x]) = printResult (reflow "1 hole" <+> colon <++> pretty x.name)
-  displayResult (FoundHoles xs) = do
-    let holes = concatWith (surround (pretty ", ")) (pretty . name <$> xs)
-    printResult (pretty (length xs) <++> pretty "holes" <+> colon <++> holes)
   displayResult (LogLevelSet Nothing) = printResult (reflow "Logging turned off")
   displayResult (LogLevelSet (Just k)) = printResult (reflow "Set log level to" <++> pretty k)
   displayResult (ConsoleWidthSet (Just k)) = printResult (reflow "Set consolewidth to" <++> pretty k)
@@ -1099,12 +1141,18 @@ mutual
   displayResult (RequestedHelp) = printResult (pretty displayHelp)
   displayResult (Edited (DisplayEdit Empty)) = pure ()
   displayResult (Edited (DisplayEdit xs)) = printResult xs
-  displayResult (Edited (EditError x)) = printError x
-  displayResult (Edited (MadeLemma lit name pty pappstr)) = printResult $ pretty (relit lit (show name ++ " : " ++ show pty ++ "\n") ++ pappstr)
+  displayResult (Edited (EditError x)) = printResult x
+  displayResult (Edited (MadeLemma lit name pty pappstr))
+    = printResult $ pretty (relit lit (show name ++ " : " ++ show pty ++ "\n") ++ pappstr)
   displayResult (Edited (MadeWith lit wapp)) = printResult $ pretty $ showSep "\n" (map (relit lit) wapp)
   displayResult (Edited (MadeCase lit cstr)) = printResult $ pretty $ showSep "\n" (map (relit lit) cstr)
   displayResult (OptionsSet opts) = printResult (vsep (pretty <$> opts))
-  displayResult _ = pure ()
+
+  -- do not use a catchall so that we are warned when a new constructor is added
+  displayResult Done = pure ()
+  displayResult (Executed _) = pure ()
+  displayResult DefDeclared = pure ()
+  displayResult Exited = pure ()
 
   export
   displayHelp : String

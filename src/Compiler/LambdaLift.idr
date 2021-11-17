@@ -79,6 +79,7 @@ showLazy = maybe "" $ (" " ++) . show
 
 mutual
   export
+  covering
   {vs : _} -> Show (Lifted vs) where
     show (LLocal {idx} _ p) = "!" ++ show (nameAt p)
     show (LAppName fc lazy n args)
@@ -107,17 +108,20 @@ mutual
     show (LCrash _ x) = "%CRASH(" ++ show x ++ ")"
 
   export
+  covering
   {vs : _} -> Show (LiftedConAlt vs) where
     show (MkLConAlt n _ t args sc)
         = "%conalt " ++ show n ++
              "(" ++ showSep ", " (map show args) ++ ") => " ++ show sc
 
   export
+  covering
   {vs : _} -> Show (LiftedConstAlt vs) where
     show (MkLConstAlt c sc)
         = "%constalt(" ++ show c ++ ") => " ++ show sc
 
 export
+covering
 Show LiftedDef where
   show (MkLFun args scope exp)
       = show args ++ show (reverse scope) ++ ": " ++ show exp
@@ -148,7 +152,7 @@ genName
   where
     mkName : Name -> Int -> Name
     mkName (NS ns b) i = NS ns (mkName b i)
-    mkName (UN n) i = MN n i
+    mkName (UN n) i = MN (displayUserName n) i
     mkName (DN _ n) i = mkName n i
     mkName (CaseBlock outer inner) i = MN ("case block in " ++ outer ++ " (" ++ show inner ++ ")") i
     mkName (WithBlock outer inner) i = MN ("with block in " ++ outer ++ " (" ++ show inner ++ ")") i
@@ -412,6 +416,7 @@ liftBody n tm
          ldata <- get Lifts
          pure (tml, defs ldata)
 
+export
 lambdaLiftDef : (doLazyAnnots : Bool) -> Name -> CDef -> Core (List (Name, LiftedDef))
 lambdaLiftDef doLazyAnnots n (MkFun args exp)
     = do (expl, defs) <- liftBody {doLazyAnnots} n exp
@@ -428,11 +433,8 @@ lambdaLiftDef doLazyAnnots n (MkError exp)
 -- An empty list an error, because on success you will always get at least
 -- one definition, the lifted definition for the given name.
 export
-lambdaLift : {auto c : Ref Ctxt Defs} ->
-             (doLazyAnnots : Bool) ->
-             Name -> Core (List (Name, LiftedDef))
-lambdaLift doLazyAnnots n
-    = do defs <- get Ctxt
-         Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure []
-         let Just cexpr = compexpr def              | Nothing => pure []
-         lambdaLiftDef doLazyAnnots n cexpr
+lambdaLift :  {auto c : Ref Ctxt Defs}
+           -> (doLazyAnnots : Bool)
+           -> (Name,FC,CDef)
+           -> Core (List (Name, LiftedDef))
+lambdaLift doLazyAnnots (n,_,def) = lambdaLiftDef doLazyAnnots n def

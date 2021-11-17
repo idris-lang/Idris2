@@ -2,10 +2,7 @@ Idris 2
 =======
 
 [![Documentation Status](https://readthedocs.org/projects/idris2/badge/?version=latest)](https://idris2.readthedocs.io/en/latest/?badge=latest)
-[![Windows Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-windows.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-windows.yml)
-[![Ubuntu Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-ubuntu-combined.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-ubuntu-combined.yml)
-[![macOS Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-macos-combined.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-macos-combined.yml)
-[![Nix Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-nix.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-nix.yml)
+[![Build Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-idris2.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-idris2.yml)
 
 [Idris 2](https://idris-lang.org/) is a purely functional programming language
 with first class types.
@@ -95,18 +92,14 @@ lists the current plugins available for common text editors and their features.
 Things still missing
 --------------------
 
-+ Disambiguation via 'with'
 + Cumulativity (so we currently have Type : Type! Bear that in mind when you
   think you've proved something :))
 + 'rewrite' doesn't yet work on dependent types
-+ Parts of the ide-mode, particularly syntax highlighting
-+ Documentation strings and HTML documentation generation
-+ ':search' and ':apropos' at the REPL
-+ Metaprogramming (reflection, partial evaluation)
 
 Contributions wanted
 -------------------
 
++ [Contribution guidelines](CONTRIBUTING.md)
 + [Good first issues](https://github.com/idris-lang/Idris2/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
 + [Contributors wanted](https://github.com/idris-lang/Idris2/wiki/Contributions-wanted)
 

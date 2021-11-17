@@ -12,6 +12,8 @@ import Core.Normalise
 import Core.UnifyState
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.BindImplicits
 import TTImp.Elab.Check
 import TTImp.Elab.Utils
@@ -19,6 +21,7 @@ import TTImp.Elab
 import TTImp.TTImp
 import TTImp.Utils
 
+import Data.DPair
 import Data.List
 import Libraries.Data.NameMap
 
@@ -48,17 +51,17 @@ checkRetType env nf chk = chk nf
 checkIsType : {auto c : Ref Ctxt Defs} ->
               FC -> Name -> Env Term vars -> NF vars -> Core ()
 checkIsType loc n env nf
-    = checkRetType env nf
+    = checkRetType env nf $
          \case
-           NType _ => pure ()
+           NType _ _ => pure ()
            _ => throw $ BadTypeConType loc n
 
 checkFamily : {auto c : Ref Ctxt Defs} ->
               FC -> Name -> Name -> Env Term vars -> NF vars -> Core ()
 checkFamily loc cn tn env nf
-    = checkRetType env nf
+    = checkRetType env nf $
          \case
-           NType _ => throw $ BadDataConType loc cn tn
+           NType _ _ => throw $ BadDataConType loc cn tn
            NTCon _ n' _ _ _ =>
                  if tn == n'
                     then pure ()
@@ -83,6 +86,7 @@ checkCon : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            List ElabOpt -> NestedNames vars ->
            Env Term vars -> Visibility -> (orig : Name) -> (resolved : Name) ->
            ImpTy -> Core Constructor
@@ -96,11 +100,12 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc _ cn_in ty_raw)
          -- Check 'cn' is undefined
          Nothing <- lookupCtxtExact cn (gamma defs)
              | Just gdef => throw (AlreadyDefined fc cn)
+         u <- uniVar fc
          ty <-
              wrapErrorC opts (InCon fc cn) $
                    checkTerm !(resolveName cn) InType opts nest env
                               (IBindHere fc (PI erased) ty_raw)
-                              (gType fc)
+                              (gType fc u)
 
          -- Check 'ty' returns something in the right family
          checkFamily fc cn tn env !(nf defs env ty)
@@ -116,9 +121,6 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc _ cn_in ty_raw)
                            addHashWithNames fullty
               _ => pure ()
          pure (MkCon fc cn !(getArity defs [] fullty) fullty)
-
-conName : Constructor -> Name
-conName (MkCon _ cn _ _) = cn
 
 -- Get the indices of the constructor type (with non-constructor parts erased)
 getIndexPats : {auto c : Ref Ctxt Defs} ->
@@ -203,12 +205,13 @@ getDetags fc tys
                 else pure rest
 
 -- If exactly one argument is unerased, return its position
-getRelevantArg : Defs -> Nat -> Maybe Nat -> Bool -> NF [] ->
+getRelevantArg : {auto c : Ref Ctxt Defs} ->
+                 Defs -> Nat -> Maybe Nat -> Bool -> NF [] ->
                  Core (Maybe (Bool, Nat))
 getRelevantArg defs i rel world (NBind fc _ (Pi _ rig _ val) sc)
     = branchZero (getRelevantArg defs (1 + i) rel world
                               !(sc defs (toClosure defaultOpts [] (Erased fc False))))
-                 (case val of
+                 (case !(evalClosure defs val) of
                        -- %World is never inspected, so might as well be deleted from data types,
                        -- although it needs care when compiling to ensure that the function that
                        -- returns the IO/%World type isn't erased
@@ -236,7 +239,7 @@ findNewtype [con]
     = do defs <- get Ctxt
          Just arg <- getRelevantArg defs 0 Nothing True !(nf defs [] (type con))
               | Nothing => pure ()
-         updateDef (name con)
+         updateDef (name con) $
                \case
                  DCon t a _ => Just $ DCon t a $ Just arg
                  _ => Nothing
@@ -253,6 +256,19 @@ hasArgs Z (Bind _ _ (Pi _ c _ _) sc)
          then hasArgs Z sc
          else False
 hasArgs Z _ = True
+
+-- get the first non-erased argument
+firstArg : Term vs -> Maybe (Exists Term)
+firstArg (Bind _ _ (Pi _ c _ val) sc)
+    = if isErased c
+         then firstArg sc
+         else Just $ Evidence _ val
+firstArg tm = Nothing
+
+typeCon : Term vs -> Maybe Name
+typeCon (Ref _ (TyCon _ _) n) = Just n
+typeCon (App _ fn _) = typeCon fn
+typeCon _ = Nothing
 
 shaped : {auto c : Ref Ctxt Defs} ->
          (forall vs . Term vs -> Bool) ->
@@ -322,10 +338,47 @@ calcRecord fc [c]
          pure True
 calcRecord _ _ = pure False
 
+-- has two constructors
+-- - ZERO: 0 args
+-- - SUCC: 1 arg, of same type
+calcNaty : {auto c : Ref Ctxt Defs} ->
+           FC -> Name -> List Constructor -> Core Bool
+calcNaty fc tyCon cs@[_, _]
+    = do Just zero <- shaped (hasArgs 0) cs
+              | Nothing => pure False
+         Just succ <- shaped (hasArgs 1) cs
+              | Nothing => pure False
+         let Just succCon = find (\con => name con == succ) cs
+              | Nothing => pure False
+         let Just (Evidence _ succArgTy) = firstArg (type succCon)
+              | Nothing => pure False
+         let Just succArgCon = typeCon succArgTy
+              | Nothing => pure False
+         if succArgCon == tyCon
+            then do setFlag fc zero (ConType ZERO)
+                    setFlag fc succ (ConType SUCC)
+                    pure True
+            else pure False
+calcNaty _ _ _ = pure False
+
+-- has 1 constructor with 0 args (so skip case on it)
+calcUnity : {auto c : Ref Ctxt Defs} ->
+            FC -> Name -> List Constructor -> Core Bool
+calcUnity fc tyCon cs@[_]
+    = do Just mkUnit <- shaped (hasArgs 0) cs
+              | Nothing => pure False
+         setFlag fc mkUnit (ConType UNIT)
+         pure True
+calcUnity _ _ _ = pure False
+
 calcConInfo : {auto c : Ref Ctxt Defs} ->
-              FC -> List Constructor -> Core ()
-calcConInfo fc cons
-   = do False <- calcListy fc cons
+              FC -> Name -> List Constructor -> Core ()
+calcConInfo fc type cons
+   = do False <- calcNaty fc type cons
+           | True => pure ()
+        False <- calcUnity fc type cons
+           | True => pure ()
+        False <- calcListy fc cons
            | True => pure ()
         False <- calcMaybe fc cons
            | True => pure ()
@@ -341,6 +394,7 @@ processData : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               List ElabOpt -> NestedNames vars ->
               Env Term vars -> FC -> Visibility ->
               ImpData -> Core ()
@@ -353,11 +407,12 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
          Nothing <- lookupCtxtExact n (gamma defs)
              | Just gdef => throw (AlreadyDefined fc n)
 
+         u <- uniVar fc
          (ty, _) <-
              wrapErrorC eopts (InCon fc n) $
                     elabTerm !(resolveName n) InType eopts nest env
                               (IBindHere fc (PI erased) ty_raw)
-                              (Just (gType dfc))
+                              (Just (gType dfc u))
          let fullty = abstractEnvType dfc env ty
          logTermNF "declare.data" 5 ("data " ++ show n) [] fullty
 
@@ -386,11 +441,12 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
 
          log "declare.data" 1 $ "Processing " ++ show n
          defs <- get Ctxt
+         u <- uniVar fc
          (ty, _) <-
              wrapErrorC eopts (InCon fc n) $
                     elabTerm !(resolveName n) InType eopts nest env
                               (IBindHere fc (PI erased) ty_raw)
-                              (Just (gType dfc))
+                              (Just (gType dfc u))
          let fullty = abstractEnvType dfc env ty
 
          -- If n exists, check it's the same type as we have here, and is
@@ -455,9 +511,9 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
          addToSave n
          log "declare.data" 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
 
-         let connames = map conName cons
+         let connames = map name cons
          unless (NoHints `elem` opts) $
               traverse_ (\x => addHintFor fc (Resolved tidx) x True False) connames
 
-         calcConInfo fc cons
+         calcConInfo fc (Resolved tidx) cons
          traverse_ updateErasable (Resolved tidx :: connames)

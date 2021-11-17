@@ -1,9 +1,20 @@
 (define (blodwen-os)
   (case (system-type 'os)
     [(unix) "unix"]
-    [(osx) "darwin"]
+    [(macosx) "darwin"]
     [(windows) "windows"]
     [else "unknown"]))
+
+(define blodwen-lazy
+  (lambda (f)
+    (let ([evaluated #f] [res void])
+      (lambda ()
+        (if (not evaluated)
+            (begin (set! evaluated #t)
+                   (set! res (f))
+                   (set! f void))
+            (void))
+        res))))
 
 (define blodwen-toSignedInt
   (lambda (x bits)
@@ -249,7 +260,7 @@
 (define (blodwen-get-thread-data ty)
   (thread-cell-ref blodwen-thread-data))
 
-(define (blodwen-set-thread-data a)
+(define (blodwen-set-thread-data ty a)
   (thread-cell-set! blodwen-thread-data a))
 
 ;; Semaphores
@@ -432,8 +443,6 @@
 (define (blodwen-sleep s) (sleep s))
 (define (blodwen-usleep us) (sleep (* 0.000001 us)))
 
-(define (blodwen-time) (current-seconds))
-
 (define (blodwen-clock-time-utc) (current-time 'time-utc))
 (define (blodwen-clock-time-monotonic) (current-time 'time-monotonic))
 (define (blodwen-clock-time-duration) (current-time 'time-duration))
@@ -473,3 +482,86 @@
 (define (blodwen-register-object obj proc)
    (register-finalizer obj (lambda (ptr) ((proc ptr) 'erased)))
    obj)
+
+;; For creating and reading back scheme objects
+
+(define ns (make-base-namespace))
+
+; read a scheme string and evaluate it, returning 'Just result' on success
+; TODO: catch exception!
+(define (blodwen-eval-scheme str)
+  (with-handlers ([exn:fail? (lambda (x) '())]) ; Nothing on failure
+     (box (eval (read (open-input-string str)) ns))) ; box == Just
+)
+
+(define (blodwen-eval-okay obj)
+  (if (null? obj)
+      0
+      1))
+
+(define (blodwen-get-eval-result obj)
+  (unbox obj))
+
+(define (blodwen-debug-scheme obj)
+  (display obj) (newline))
+
+(define (blodwen-is-number obj)
+  (if (number? obj) 1 0))
+
+(define (blodwen-is-integer obj)
+  (if (and (number? obj) (exact? obj)) 1 0))
+
+(define (blodwen-is-float obj)
+  (if (flonum? obj) 1 0))
+
+(define (blodwen-is-char obj)
+  (if (char? obj) 1 0))
+
+(define (blodwen-is-string obj)
+  (if (string? obj) 1 0))
+
+(define (blodwen-is-procedure obj)
+  (if (procedure? obj) 1 0))
+
+(define (blodwen-is-symbol obj)
+  (if (symbol? obj) 1 0))
+
+(define (blodwen-is-vector obj)
+  (if (vector? obj) 1 0))
+
+(define (blodwen-is-nil obj)
+  (if (null? obj) 1 0))
+
+(define (blodwen-is-pair obj)
+  (if (pair? obj) 1 0))
+
+(define (blodwen-is-box obj)
+  (if (box? obj) 1 0))
+
+(define (blodwen-make-symbol str)
+  (string->symbol str))
+
+; The below rely on checking that the objects are the right type first.
+
+(define (blodwen-vector-ref obj i)
+  (vector-ref obj i))
+
+(define (blodwen-vector-length obj)
+  (vector-length obj))
+
+(define (blodwen-vector-list obj)
+  (vector->list obj))
+
+(define (blodwen-unbox obj)
+  (unbox obj))
+
+(define (blodwen-apply obj arg)
+  (obj arg))
+
+(define (blodwen-force obj)
+  (obj))
+
+(define (blodwen-read-symbol sym)
+  (symbol->string sym))
+
+(define (blodwen-id x) x)

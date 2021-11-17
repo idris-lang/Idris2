@@ -1,7 +1,7 @@
 
 module Core.UnifyState
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -12,12 +12,12 @@ import Core.Options
 import Core.TT
 import Core.TTC
 import Core.Value
-import Libraries.Utils.Binary
 
-import Libraries.Data.IntMap
 import Data.List
+import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.StringMap
+import Libraries.Utils.Binary
 
 %default covering
 
@@ -55,6 +55,43 @@ data PolyConstraint : Type where
                         (expty : NF vars) ->
                         (argty : NF vars) -> PolyConstraint
 
+-- Explanation for why an elaborator has been delayed. It's helpful to know
+-- the reason for a delay (I wish airlines and train companies knew this)
+-- because it means we can choose to run only a subset (e.g. it's sometimes
+-- useful to just retry the case blocks) and because we can run them in the
+-- order that prioritises the best error messages.
+public export
+data DelayReason
+      = CaseBlock
+      | Ambiguity
+      | RecordUpdate
+      | Rewrite
+      | LazyDelay
+
+public export
+Eq DelayReason where
+  CaseBlock == CaseBlock = True
+  Ambiguity == Ambiguity = True
+  RecordUpdate == RecordUpdate = True
+  Rewrite == Rewrite = True
+  LazyDelay == LazyDelay = True
+  _ == _ = False
+
+public export
+Ord DelayReason where
+  compare x y = compare (tag x) (tag y)
+    where
+      -- The ordering here is chosen to give the most likely useful error
+      -- messages first. For example, often the real reason for a strange error
+      -- is because there's an ambiguity that can't be resolved.
+      tag : DelayReason -> Int
+      tag CaseBlock = 1 -- we can often proceed even if there's still some
+                        -- ambiguity
+      tag Ambiguity = 2
+      tag LazyDelay = 3
+      tag RecordUpdate = 4
+      tag Rewrite = 5
+
 public export
 record UState where
   constructor MkUState
@@ -78,11 +115,10 @@ record UState where
   dotConstraints : List (Name, DotReason, Constraint) -- dot pattern constraints
   nextName : Int
   nextConstraint : Int
-  delayedElab : List (Nat, Int, NameMap (), Core ClosedTerm)
+  delayedElab : List (DelayReason, Int, NameMap (), Core ClosedTerm)
                 -- Elaborators which we need to try again later, because
                 -- we didn't have enough type information to elaborate
                 -- successfully yet.
-                -- 'Nat' is the priority (lowest first)
                 -- The 'Int' is the resolved name.
                 -- NameMap () is the set of local hints at the point of delay
   logging : Bool
@@ -130,9 +166,8 @@ export
 genMVName : {auto c : Ref Ctxt Defs} ->
             {auto u : Ref UST UState} ->
             Name -> Core Name
-genMVName (UN str) = genName str
+genMVName (UN str) = genName (displayUserName str)
 genMVName (MN str _) = genName str
-genMVName (RF str) = genName str
 genMVName n
     = do ust <- get UST
          put UST (record { nextName $= (+1) } ust)
@@ -600,7 +635,7 @@ checkValidHole base (idx, (fc, n))
                   do defs <- get Ctxt
                      Just ty <- lookupTyExact n (gamma defs)
                           | Nothing => pure ()
-                     throw (CantSolveGoal fc [] ty)
+                     throw (CantSolveGoal fc (gamma defs) [] ty Nothing)
               Guess tm envb (con :: _) =>
                   do ust <- get UST
                      let Just c = lookup con (constraints ust)
@@ -611,13 +646,13 @@ checkValidHole base (idx, (fc, n))
                                 empty <- clearDefs defs
                                 xnf <- quote empty env x
                                 ynf <- quote empty env y
-                                throw (CantSolveEq fc env xnf ynf)
+                                throw (CantSolveEq fc (gamma defs) env xnf ynf)
                           MkSeqConstraint fc env (x :: _) (y :: _) =>
                              do put UST (record { guesses = empty } ust)
                                 empty <- clearDefs defs
                                 xnf <- quote empty env x
                                 ynf <- quote empty env y
-                                throw (CantSolveEq fc env xnf ynf)
+                                throw (CantSolveEq fc (gamma defs) env xnf ynf)
                           _ => pure ()
               _ => traverse_ checkRef !(traverse getFullName
                                         ((keys (getRefs (Resolved (-1)) (type gdef)))))

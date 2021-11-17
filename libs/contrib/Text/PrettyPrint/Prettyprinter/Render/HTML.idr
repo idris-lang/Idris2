@@ -3,9 +3,11 @@ module Text.PrettyPrint.Prettyprinter.Render.HTML
 import Data.List
 import Data.String
 
+%default covering
+
 export
 htmlEscape : String -> String
-htmlEscape s = fastAppend $ reverse $ go [] s
+htmlEscape s = fastConcat $ reverse $ go [] s
   where
     isSafe : Char -> Bool
     isSafe '"' = False
