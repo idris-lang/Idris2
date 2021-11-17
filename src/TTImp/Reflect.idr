@@ -290,6 +290,7 @@ mutual
         = case (dropAllNS !(full (gamma defs) n), args) of
                (UN (Basic "Inline"), _) => pure Inline
                (UN (Basic "NoInline"), _) => pure NoInline
+               (UN (Basic "Deprecate"), _) => pure Deprecate
                (UN (Basic "TCInline"), _) => pure TCInline
                (UN (Basic "Hint"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
@@ -666,6 +667,7 @@ mutual
   Reflect FnOpt where
     reflect fc defs lhs env Inline = getCon fc defs (reflectionttimp "Inline")
     reflect fc defs lhs env NoInline = getCon fc defs (reflectionttimp "NoInline")
+    reflect fc defs lhs env Deprecate = getCon fc defs (reflectionttimp "Deprecate")
     reflect fc defs lhs env TCInline = getCon fc defs (reflectionttimp "TCInline")
     reflect fc defs lhs env (Hint x)
         = do x' <- reflect fc defs lhs env x

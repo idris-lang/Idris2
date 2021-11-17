@@ -210,7 +210,7 @@ addField : {auto c : Ref Ctxt Defs} ->
            DescField -> PkgDesc -> Core PkgDesc
 addField (PVersion fc n)     pkg = pure $ record { version = Just n } pkg
 addField (PVersionDep fc n)  pkg
-    = do emitWarning (Deprecated "version numbers must now be of the form x.y.z")
+    = do emitWarning (Deprecated "version numbers must now be of the form x.y.z" Nothing)
          pure pkg
 addField (PAuthors fc a)     pkg = pure $ record { authors = Just a } pkg
 addField (PMaintainers fc a) pkg = pure $ record { maintainers = Just a } pkg

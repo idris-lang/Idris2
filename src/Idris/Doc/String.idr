@@ -201,10 +201,12 @@ getDocsForPrimitive constant = do
 public export
 data Config : Type where
   ||| Configuration of the printer for a name
+  ||| @ showType    Do we show the type?
   ||| @ longNames   Do we print qualified names?
   ||| @ dropFirst   Do we drop the first argument in the type?
   ||| @ getTotality Do we print the totality status of the function?
-  MkConfig : {default True  longNames   : Bool} ->
+  MkConfig : {default True  showType    : Bool} ->
+             {default True  longNames   : Bool} ->
              {default False dropFirst   : Bool} ->
              {default True  getTotality : Bool} ->
              Config
@@ -219,16 +221,26 @@ data Config : Type where
 export
 methodsConfig : Config
 methodsConfig
-  = MkConfig {longNames = False}
+  = MkConfig {showType = True}
+             {longNames = False}
              {dropFirst = True}
              {getTotality = False}
 
 export
 shortNamesConfig : Config
 shortNamesConfig
-  = MkConfig {longNames = False}
+  = MkConfig {showType = True}
+             {longNames = False}
              {dropFirst = False}
              {getTotality = True}
+
+export
+justUserDoc : Config
+justUserDoc
+  = MkConfig {showType = False}
+             {longNames = False}
+             {dropFirst = True}
+             {getTotality = False}
 
 export
 getDocsForName : {auto o : Ref ROpts REPLOpts} ->
@@ -418,7 +430,7 @@ getDocsForName fc n config
                 pure (map (\ cons => tot ++ cons ++ idoc) cdoc)
            _ => pure (Nothing, [])
 
-    showDoc (MkConfig {longNames, dropFirst, getTotality}) (n, str)
+    showDoc (MkConfig {showType, longNames, dropFirst, getTotality}) (n, str)
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => undefinedName fc n
@@ -441,7 +453,9 @@ getDocsForName fc n config
              let cat = showCategory Syntax def
              let nm = prettyKindedName typ $ cat
                     $ ifThenElse longNames (pretty (show nm)) (prettyName nm)
-             let docDecl = annotate (Decl n) (hsep [nm, colon, prettyTerm ty])
+             let deprecated = if Deprecate `elem` def.flags
+                                 then annotate Deprecation "=DEPRECATED=" <+> line else emptyDoc
+             let docDecl = deprecated <+> annotate (Decl n) (hsep [nm, colon, prettyTerm ty])
 
              -- Finally add the user-provided docstring
              let docText = let docs = reflowDoc str in
@@ -454,7 +468,8 @@ getDocsForName fc n config
                   in annotate DocStringBody
                      (concatWith (\l, r => l <+> hardline <+> r) docs)
                      <$ guard (not (null docs))
-             pure (vcat (docDecl :: docBody))
+             let maybeDocDecl = [docDecl | showType]
+             pure . vcat . catMaybes $ maybeDocDecl :: (map Just $ docBody)
 
 export
 getDocsForPTerm : {auto o : Ref ROpts REPLOpts} ->

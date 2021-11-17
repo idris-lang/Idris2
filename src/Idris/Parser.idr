@@ -1386,6 +1386,9 @@ fnDirectOpt fname
   <|> do pragma "noinline"
          commit
          pure $ IFnOpt NoInline
+  <|> do pragma "deprecate"
+         commit
+         pure $ IFnOpt Deprecate
   <|> do pragma "tcinline"
          commit
          pure $ IFnOpt TCInline

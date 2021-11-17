@@ -61,6 +61,7 @@ data IdrisAnn
   | Code
   | Meta
   | Syntax IdrisSyntax
+  | UserDocString
 
 export
 annToDecoration : IdrisAnn -> Maybe Decoration
@@ -86,6 +87,7 @@ colorAnn FileCtxt = color BrightBlue
 colorAnn Code = color Magenta
 colorAnn Meta = color Green
 colorAnn (Syntax syn) = syntaxAnn syn
+colorAnn UserDocString = []
 
 export
 warning : Doc IdrisAnn -> Doc IdrisAnn

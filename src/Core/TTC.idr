@@ -1029,6 +1029,7 @@ TTC NoMangleDirective where
 TTC DefFlag where
   toBuf b Inline = tag 2
   toBuf b NoInline = tag 13
+  toBuf b Deprecate = tag 15
   toBuf b Invertible = tag 3
   toBuf b Overloadable = tag 4
   toBuf b TCInline = tag 5
@@ -1056,6 +1057,7 @@ TTC DefFlag where
              12 => do x <- fromBuf b; pure (Identity x)
              13 => pure NoInline
              14 => do x <- fromBuf b; pure (NoMangle x)
+             15 => pure Deprecate
              _ => corrupt "DefFlag"
 
 export

@@ -68,7 +68,9 @@ data Warning : Type where
      UnreachableClause : {vars : _} ->
                          FC -> Env Term vars -> Term vars -> Warning
      ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
-     Deprecated : String -> Warning
+     ||| A warning about a deprecated definition. Supply an FC and Name to
+     ||| have the documentation for the definition printed with the warning.
+     Deprecated : String -> Maybe (FC, Name) -> Warning
      GenericWarn : String -> Warning
 
 -- All possible errors, carrying a location
@@ -189,7 +191,7 @@ Show Warning where
     show (ParserWarning _ msg) = msg
     show (UnreachableClause _ _ _) = ":Unreachable clause"
     show (ShadowingGlobalDefs _ _) = ":Shadowing names"
-    show (Deprecated name) = ":Deprecated " ++ name
+    show (Deprecated name _) = ":Deprecated " ++ name
     show (GenericWarn msg) = msg
 
 
@@ -368,7 +370,7 @@ getWarningLoc : Warning -> Maybe FC
 getWarningLoc (ParserWarning fc _) = Just fc
 getWarningLoc (UnreachableClause fc _ _) = Just fc
 getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
-getWarningLoc (Deprecated _) = Nothing
+getWarningLoc (Deprecated _ fcAndName) = fst <$> fcAndName
 getWarningLoc (GenericWarn _) = Nothing
 
 export

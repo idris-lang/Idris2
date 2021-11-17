@@ -99,6 +99,7 @@ mutual
   data FnOpt : Type where
        Inline : FnOpt
        NoInline : FnOpt
+       Deprecate : FnOpt
        TCInline : FnOpt
        -- Flag means the hint is a direct hint, not a function which might
        -- find the result (e.g. chasing parent interface dictionaries)

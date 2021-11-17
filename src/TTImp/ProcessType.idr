@@ -49,6 +49,8 @@ processFnOpt fc _ ndef Inline
 processFnOpt fc _ ndef NoInline
     = do throwIfHasFlag fc ndef Inline "%inline and %noinline are mutually exclusive"
          setFlag fc ndef NoInline
+processFnOpt fc _ ndef Deprecate
+    =  setFlag fc ndef Deprecate
 processFnOpt fc _ ndef TCInline
     = setFlag fc ndef TCInline
 processFnOpt fc True ndef (Hint d)

@@ -37,6 +37,7 @@
 
 * Removes deprecated support for `void` primitive. Now `void` is supported via
   `prim__void`.
+* Adds `%deprecate` pragma that can be used to warn when deprecated functions are used.
 
 ### Library changes
 

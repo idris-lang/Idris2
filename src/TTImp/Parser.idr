@@ -114,6 +114,8 @@ fnDirectOpt
          pure Inline
   <|> do pragma "noinline"
          pure NoInline
+  <|> do pragma "deprecate"
+         pure Deprecate
   <|> do pragma "extern"
          pure ExternFn
 

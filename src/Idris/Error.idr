@@ -8,6 +8,7 @@ import Core.Metadata
 import Core.Options
 import Core.Value
 
+import Idris.Doc.String
 import Idris.REPL.Opts
 import Idris.Resugar
 import Idris.Syntax
@@ -179,8 +180,11 @@ pwarning (ShadowingGlobalDefs fc ns)
                         :: reflow "is shadowing"
                         :: punctuate comma (map pretty (forget ns))
 
-pwarning (Deprecated s)
-    = pure $ pretty "Deprecation warning:" <++> pretty s
+pwarning (Deprecated s fcAndName)
+    = do docs <- traverseOpt (\(fc, name) => getDocsForName fc name justUserDoc) fcAndName
+         pure . vsep $ catMaybes [ Just $ pretty "Deprecation warning:" <++> pretty s
+                                 , map (const UserDocString) <$> docs
+                                 ]
 pwarning (GenericWarn s)
     = pure $ pretty s
 

@@ -216,6 +216,8 @@ mutual
   data FnOpt' : Type -> Type where
        Inline : FnOpt' nm
        NoInline : FnOpt' nm
+       ||| Mark a function as deprecated.
+       Deprecate : FnOpt' nm
        TCInline : FnOpt' nm
        -- Flag means the hint is a direct hint, not a function which might
        -- find the result (e.g. chasing parent interface dictionaries)
@@ -247,6 +249,7 @@ mutual
   Show nm => Show (FnOpt' nm) where
     show Inline = "%inline"
     show NoInline = "%noinline"
+    show Deprecate = "%deprecate"
     show TCInline = "%tcinline"
     show (Hint t) = "%hint " ++ show t
     show (GlobalHint t) = "%globalhint " ++ show t
@@ -271,6 +274,7 @@ mutual
   Eq FnOpt where
     Inline == Inline = True
     NoInline == NoInline = True
+    Deprecate == Deprecate = True
     TCInline == TCInline = True
     (Hint x) == (Hint y) = x == y
     (GlobalHint x) == (GlobalHint y) = x == y
@@ -1265,6 +1269,7 @@ mutual
     toBuf b Inline = tag 0
     toBuf b NoInline = tag 12
     toBuf b TCInline = tag 11
+    toBuf b Deprecate = tag 14
     toBuf b (Hint t) = do tag 1; toBuf b t
     toBuf b (GlobalHint t) = do tag 2; toBuf b t
     toBuf b ExternFn = tag 3
@@ -1293,6 +1298,7 @@ mutual
                11 => pure TCInline
                12 => pure NoInline
                13 => do name <- fromBuf b; pure (NoMangle name)
+               14 => pure Deprecate
                _ => corrupt "FnOpt"
 
   export

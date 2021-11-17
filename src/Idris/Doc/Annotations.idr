@@ -13,6 +13,7 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 public export
 data IdrisDocAnn
   = Header
+  | Deprecation
   | Declarations
   | Decl Name
   | DocStringBody
@@ -28,6 +29,7 @@ docToDecoration _ = Nothing
 export
 styleAnn : IdrisDocAnn -> AnsiStyle
 styleAnn Header        = underline
+styleAnn Deprecation   = bold
 styleAnn Declarations  = []
 styleAnn (Decl{})      = []
 styleAnn DocStringBody = []
