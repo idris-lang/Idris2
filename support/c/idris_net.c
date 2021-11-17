@@ -75,14 +75,14 @@ int idrnet_socket(int domain, int type, int protocol) {
         return -1;
     }
 #endif
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) 
+    int sockfd = socket(domain, type, protocol);
+    if (sockfd < 0)
          return sockfd;
 
-    // This allows us to reopen the socket immediately on restart if the process didn't
-    // close the socket cleanly on the last exit.
+    // This allows us to reopen the socket immediately on restart
+    // if the process didn't close the socket cleanly on the last exit.
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
-	perror("setsockopt(SO_REUSEADDR) failed");
+      perror("setsockopt(SO_REUSEADDR) failed");
     return sockfd;
 }
 
