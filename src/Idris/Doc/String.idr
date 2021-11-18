@@ -165,20 +165,20 @@ getDocsForPrimitive constant = do
 
   where
   primDoc : Constant -> Doc IdrisDocAnn
-  primDoc (I i) = "Primitive value"
-  primDoc (I8 i) = "Primitive value"
-  primDoc (I16 i) = "Primitive value"
-  primDoc (I32 i) = "Primitive value"
-  primDoc (I64 i) = "Primitive value"
-  primDoc (BI i) = "Primitive value"
-  primDoc (B8 i) = "Primitive value"
-  primDoc (B16 i) = "Primitive value"
-  primDoc (B32 i) = "Primitive value"
-  primDoc (B64 i) = "Primitive value"
-  primDoc (Str s) = "Primitive value"
-  primDoc (Ch c) = "Primitive value"
-  primDoc (Db d) = "Primitive value"
-  primDoc WorldVal = "Primitive value"
+  primDoc (I i) = "Primitive signed int value (backend-dependent precision)"
+  primDoc (I8 i) = "Primitive signed 8 bits value"
+  primDoc (I16 i) = "Primitive signed 16 bits value"
+  primDoc (I32 i) = "Primitive signed 32 bits value"
+  primDoc (I64 i) = "Primitive signed 64 bits value"
+  primDoc (BI i) = "Primitive unsigned int value (backend-dependent precision)"
+  primDoc (B8 i) = "Primitive unsigned 8 bits value"
+  primDoc (B16 i) = "Primitive unsigned 16 bits value"
+  primDoc (B32 i) = "Primitive unsigned 32 bits value"
+  primDoc (B64 i) = "Primitive unsigned 64 bits value"
+  primDoc (Str s) = "Primitive string value"
+  primDoc (Ch c) = "Primitive character value"
+  primDoc (Db d) = "Primitive double value"
+  primDoc WorldVal = "Primitive token for IO actions"
 
   primDoc IntType = "Primitive type of bounded signed integers (backend dependent size)"
   primDoc Int8Type = "Primitive type of 8 bits signed integers"
@@ -193,7 +193,7 @@ getDocsForPrimitive constant = do
   primDoc StringType = "Primitive type of strings"
   primDoc CharType = "Primitive type of characters"
   primDoc DoubleType = "Primitive type of double-precision floating-points"
-  primDoc WorldType = "Primitive token for IO actions"
+  primDoc WorldType = "Primitive type of tokens for IO actions"
 
 public export
 data Config : Type where
@@ -489,7 +489,7 @@ getDocsForPTerm (PList _ _ _) = pure $ vcat
   ]
 getDocsForPTerm (PSnocList _ _ _) = pure $ vcat
   [ "SnocList Literal"
-  , indent 2 "Desugars to (:<) and Empty"
+  , indent 2 "Desugars to (:<) and Lin"
   ]
 getDocsForPTerm (PPair _ _ _) = pure $ vcat
   [ "Pair Literal"
@@ -512,6 +512,7 @@ getDocs : {auto o : Ref ROpts REPLOpts} ->
           {auto s : Ref Syn SyntaxInfo} ->
           DocDirective -> Core (Doc IdrisDocAnn)
 getDocs (APTerm ptm) = getDocsForPTerm ptm
+getDocs (Symbol k) = pure $ getDocsForSymbol k
 getDocs (Keyword k) = pure $ getDocsForKeyword k
 
 

@@ -255,8 +255,8 @@ implicitarg = vcat $
       will return `0` if no argument is passed and its argument otherwise.
     """]
 
-unused : Doc IdrisDocAnn
-unused = "Currently unused keyword"
+unusedKeyword : Doc IdrisDocAnn
+unusedKeyword = "Currently unused keyword"
 
 interfacemechanism : Doc IdrisDocAnn
 interfacemechanism = vcat $
@@ -520,7 +520,7 @@ keywordsDoc =
   :: "record" ::= recordtypes
   :: "auto" ::= implicitarg
   :: "default" ::= implicitarg
-  :: "implicit" ::= unused
+  :: "implicit" ::= unusedKeyword
   :: "mutual" ::= mutualblock
   :: "namespace" ::= namespaceblock
   :: "parameters" ::= parametersblock
@@ -537,7 +537,7 @@ keywordsDoc =
   :: "using" ::= ""
   :: "interface" ::= interfacemechanism
   :: "implementation" ::= interfacemechanism
-  :: "open" ::= unused
+  :: "open" ::= unusedKeyword
   :: "import" ::= importing
   :: "public" ::= visibility
   :: "export" ::= visibility
@@ -556,3 +556,137 @@ getDocsForKeyword : String -> Doc IdrisDocAnn
 getDocsForKeyword k
   = maybe (annotate (Syntax Keyword) $ pretty k) doc
   $ lookup k keywordsDoc
+
+
+unusedSymbol : Doc IdrisDocAnn
+unusedSymbol = "Currently unused symbol"
+
+lambdaAbstraction : Doc IdrisDocAnn
+lambdaAbstraction = """
+  An anonymous function is introduced using a lambda `\\` and binds a
+  comma-separated list of either variable names or irrefutable patterns
+  before returning a right hand side using `=>`.
+
+  For instance we can implement `transport` like so:
+  ```
+  transport : a === b -> a -> b
+  transport = \ Refl, v => v
+  ```
+  """
+
+fatArrow : Doc IdrisDocAnn
+fatArrow = vcat
+  [ """
+    Used for an interface constraint in a type signature or as part of a
+    lambda abstraction or case block.
+
+    1. Interface constraint
+    """
+  , indent 2 """
+    `a => b` corresponds to `{auto _ : a} -> b`
+    """, ""
+  , """
+    2. Lambda abstraction
+    """
+  , indent 2 lambdaAbstraction
+  , "", """
+    3. Case block
+    """
+  ]
+
+bang : Doc IdrisDocAnn
+bang = """
+  Directive to lift the following effectful expression to the nearest enclosing
+  (potentially implicit) `do` block. In the following definition for instance
+
+  ```
+  anyM : Monad m => (a -> m Bool) -> List a -> m (Maybe a)
+  anyM p [] = pure Nothing
+  anyM p (x :: xs) = if !(p x) then pure (Just x) else anyM p xs
+  ```
+
+  the expression `if !(p x) then pure (Just x) else anyM p xs` is equivalent to
+  the following `do` block:
+
+  ```
+  do b <- p x
+     if b then pure (Just x) else anyM p xs
+  ```
+  """
+
+asPattern : Doc IdrisDocAnn
+asPattern = """
+  An as pattern `@` can be used to both pattern match on a variable
+  and retain a name for the compound expression. E.g. instead of writing
+  ```
+  last : List a -> Maybe a
+  last [] = Nothing
+  last [x] = Just x
+  last (x :: y :: ys) = last (y :: ys)
+  ```
+
+  where, in the last clasue, we take `y :: ys` apart on the left hand side
+  before reconstructing it on the right hand side, we can write:
+
+  ```
+  last (x :: xs@(_ :: _)) = last xs
+  ```
+  """
+
+tupleSyntax : Doc IdrisDocAnn
+tupleSyntax = "Used to build dependent pairs together with parentheses"
+
+rangeSyntax : Doc IdrisDocAnn
+rangeSyntax = """
+  The ellipsis `..` can be used to generate lists or streams of values for
+  types that implement the `Range` interface.
+
+  Lists can be generated using an initial value, an (optional) second value
+  and a final one. For instance, we can generate lists of integers like so:
+    1. `[1..5]`   evaluates to `[1,2,3,4,5]`
+    2. `[1,3..5]` evaluates to `[1, 3, 5]`
+
+  Streams can be generated using an initial value and an optional second value.
+  For instance the following streams of integers:
+    1. `[1..]`   for all positive integers
+    2. `[1,3..]` for all positive odds
+  """
+
+symbolsDoc : All DocFor Source.reservedSymbols
+symbolsDoc
+  = "," ::= ""
+  :: ";" ::= ""
+  :: "_" ::= """
+             An implicit value either solved by unification or bound
+             as a pattern or type variable.
+             """
+  :: "`" ::= ""
+  :: tabulate (::= "Grouping symbol (opening token)") ?
+  ++ tabulate (::= "Grouping symbol (closing token)") ?
+  ++ "%" ::= "Start of a pragma"
+  :: "\\" ::= lambdaAbstraction
+  :: ":" ::= """
+             Type declaration, for instance `id : a -> a`
+             declares a new definition `id` of type `a -> a`.
+             """
+  :: "=" ::= "Definition or equality type"
+  :: ":=" ::= "Let binding"
+  :: "|" ::= "Additional patterns showing up in a `with` clause"
+  :: "|||" ::= "Document string attached to the following definition"
+  :: "<-" ::= "Bind in a do block"
+  :: "->" ::= "Function type"
+  :: "=>" ::= fatArrow
+  :: "?" ::= "An implicit value solved by unification."
+  :: "!" ::= bang
+  :: "&" ::= unusedSymbol
+  :: "**" ::= tupleSyntax
+  :: ".." ::= rangeSyntax
+  :: "~" ::= ""
+  :: "@" ::= asPattern
+  :: []
+
+export
+getDocsForSymbol : String -> Doc IdrisDocAnn
+getDocsForSymbol k
+  = maybe (annotate (Syntax Keyword) $ pretty k) doc
+  $ lookup k symbolsDoc

@@ -584,8 +584,12 @@ data EditCmd : Type where
 
 public export
 data DocDirective : Type where
+  ||| A reserved keyword
   Keyword : String -> DocDirective
-  APTerm : PTerm -> DocDirective
+  ||| A reserved symbol
+  Symbol  : String -> DocDirective
+  ||| An arbitrary PTerm
+  APTerm  : PTerm -> DocDirective
 
 public export
 data REPLCmd : Type where
