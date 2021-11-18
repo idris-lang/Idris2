@@ -65,7 +65,7 @@ export
 foldl1 : (func : a -> a -> a) -> (l : List1 a) -> a
 foldl1 f = foldl1By f id
 
-export
+public export
 length : List1 a -> Nat
 length (_ ::: xs) = S (length xs)
 
