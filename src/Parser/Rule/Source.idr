@@ -161,6 +161,14 @@ symbol req
                  _ => Nothing
 
 export
+anyReservedSymbol : Rule String
+anyReservedSymbol
+  = terminal ("Expected a reserved symbol") $
+               \case
+                 Symbol s => s <$ guard (s `elem` reservedSymbols)
+                 _ => Nothing
+
+export
 anyKeyword : Rule String
 anyKeyword
   = terminal ("Expected a keyword") $
