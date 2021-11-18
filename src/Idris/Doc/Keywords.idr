@@ -617,7 +617,7 @@ bang = """
 
 asPattern : Doc IdrisDocAnn
 asPattern = """
-  An as pattern (@) can be used to both pattern match on a variable
+  An as pattern `@` can be used to both pattern match on a variable
   and retain a name for the compound expression. E.g. instead of writing
   ```
   last : List a -> Maybe a
@@ -639,7 +639,7 @@ tupleSyntax = "Used to build dependent pairs together with parentheses"
 
 rangeSyntax : Doc IdrisDocAnn
 rangeSyntax = """
-  The ellipsis (..) can be used to generate lists or streams of values for
+  The ellipsis `..` can be used to generate lists or streams of values for
   types that implement the `Range` interface.
 
   Lists can be generated using an initial value, an (optional) second value

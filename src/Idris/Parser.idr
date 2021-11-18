@@ -2046,6 +2046,7 @@ docArgCmd parseCmd command doc = (names, DocArg, doc, parse)
       runParseCmd parseCmd
       dir <- mustWork $ Keyword <$> anyKeyword
                     <|> Symbol <$> anyReservedSymbol
+                               <* eoi -- needed so that we don't capture `(<$)`
                     <|> APTerm <$> typeExpr pdef (Virtual Interactive) init
       pure (command dir)
 
