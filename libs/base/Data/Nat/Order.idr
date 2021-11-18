@@ -1,12 +1,10 @@
 ||| Implementation of ordering relations for `Nat`ural numbers
 module Data.Nat.Order
 
-import Control.Relation
 import Data.Nat
 import Data.Fun
 import Data.Rel
 import Decidable.Decidable
-import Decidable.Equality
 
 %default total
 

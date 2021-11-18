@@ -19,7 +19,6 @@ import TTImp.Elab.Check
 import TTImp.Elab.Utils
 import TTImp.Elab
 import TTImp.TTImp
-import TTImp.Utils
 
 import Data.DPair
 import Data.List

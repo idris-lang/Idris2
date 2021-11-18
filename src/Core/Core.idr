@@ -4,18 +4,14 @@ import Core.Context.Context
 import Core.Env
 import Core.TT
 
-import Data.List
 import Data.List1
-import Data.String
 import Data.Vect
 
 import Libraries.Data.IMaybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import Libraries.Utils.Binary
 
 import public Data.IORef
-import System
 import System.File
 
 %default covering

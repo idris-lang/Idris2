@@ -4,17 +4,13 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.FC
-import Core.Name
 import Core.Options
 import Libraries.Utils.Path
 
 import Data.List
-import Data.String
 import Data.Maybe
 
 import System.Directory
-import System.File
-import System.Info
 
 %default total
 

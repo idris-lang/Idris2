@@ -1,31 +1,20 @@
 module Yaffle.Main
 
-import Parser.Source
-
 import Core.Binary
 import Core.Context
 import Core.Directory
-import Core.Env
 import Core.FC
 import Core.InitPrimitives
 import Core.Metadata
-import Core.Normalise
-import Core.Options
-import Core.TT
 import Core.UnifyState
 import Libraries.Utils.Path
 
 import Idris.Syntax
 
-import TTImp.Parser
 import TTImp.ProcessDecls
-import TTImp.TTImp
 
 import Yaffle.REPL
 
-import Data.List
-import Data.So
-import Data.String
 import System
 
 %default covering

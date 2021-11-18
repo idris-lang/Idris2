@@ -2,7 +2,6 @@ module Data.List.Quantifiers
 
 import Data.DPair
 
-import Data.List
 import Data.List.Elem
 
 %default total

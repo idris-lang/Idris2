@@ -1,6 +1,6 @@
 module Libraries.Data.List.Extra
 
-import Data.List
+import public Data.List
 import Data.List1
 
 %default total

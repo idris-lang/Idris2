@@ -3,7 +3,6 @@ module Compiler.Scheme.ChezSep
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Generated
-import Compiler.Inline
 import Compiler.Scheme.Common
 import Compiler.Scheme.Chez
 import Compiler.Separate
@@ -13,26 +12,20 @@ import Core.Hash
 import Core.Context
 import Core.Context.Log
 import Core.Directory
-import Core.Name
 import Core.Options
 import Core.TT
-import Libraries.Utils.Hex
 import Libraries.Utils.Path
 
 import Data.List
 import Data.List1
-import Data.Maybe
 import Data.String
-import Data.Vect
 
 import Idris.Env
 
 import System
 import System.Directory
-import System.File
 import System.Info
 
-import Libraries.Data.NameMap
 import Libraries.Data.Version
 import Libraries.Utils.String
 

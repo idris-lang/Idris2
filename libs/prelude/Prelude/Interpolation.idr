@@ -1,8 +1,5 @@
 module Prelude.Interpolation
 
-import Prelude.Ops
-import Prelude.Types
-
 ||| Interpolated strings are of the form `"xxxx \{ expr } yyyy"`.
 ||| In this example the string `"xxxx "` is concatenated with `expr` and
 ||| `" yyyy"`, since `expr` is not necessarily a string, the generated

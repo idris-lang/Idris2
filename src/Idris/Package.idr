@@ -6,7 +6,6 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.Directory
-import Core.Env
 import Core.Metadata
 import Core.Name.Namespace
 import Core.Options
@@ -27,8 +26,6 @@ import Libraries.Data.SortedMap
 import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
 import Libraries.Text.Parser
-import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Utils.String
 import Libraries.Utils.Path
 
 import Idris.CommandLine
@@ -42,7 +39,6 @@ import Idris.REPL.Opts
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
-import IdrisPaths
 
 import public Idris.Package.Types
 import Idris.Package.Init

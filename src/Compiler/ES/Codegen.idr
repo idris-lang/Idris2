@@ -16,7 +16,6 @@ import Compiler.NoMangle
 import Libraries.Data.SortedMap
 import Libraries.Utils.Hex
 import Libraries.Data.String.Extra
-import Libraries.Data.NameMap
 
 import Data.Vect
 

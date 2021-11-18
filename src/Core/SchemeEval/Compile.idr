@@ -11,8 +11,6 @@ Advanced TODO (possibly not worth it...):
 
 -}
 
-import Algebra.ZeroOneOmega
-
 import Core.Case.CaseTree
 import Core.Context
 import Core.Core

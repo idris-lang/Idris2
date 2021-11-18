@@ -35,11 +35,9 @@ import Core.TT
 
 import Core.Ord
 import Data.List
-import Data.Nat
 import Data.String
 import Data.Vect
 import Libraries.Data.SortedMap
-import Libraries.Data.NameMap
 
 ||| Maping from a pairing of closed terms together with
 ||| their size (for efficiency) to the number of

@@ -2,7 +2,6 @@ module Core.Context.Log
 
 import Core.Context
 import Core.Options
-import Data.String
 
 import Libraries.Data.StringMap
 

@@ -15,14 +15,11 @@ import TTImp.TTImp
 import Libraries.Data.ANameMap
 import Data.List
 import Data.Maybe
-import Data.String
 import Libraries.Data.NameMap
 import Libraries.Data.SortedMap
 import Libraries.Data.String.Extra
 import Libraries.Data.StringMap
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 
 import Parser.Lexer.Source
 

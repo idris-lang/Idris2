@@ -4,7 +4,6 @@ import Control.Monad.Either
 import Data.DPair
 import Data.List
 import Data.Nat
-import Data.String
 import System.Directory
 import System.File
 import System.Path

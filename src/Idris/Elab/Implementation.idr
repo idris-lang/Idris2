@@ -1,6 +1,5 @@
 module Idris.Elab.Implementation
 
-import Core.Binary
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -9,11 +8,9 @@ import Core.Metadata
 import Core.TT
 import Core.Unify
 
-import Idris.Resugar
 import Idris.Syntax
 
 import TTImp.BindImplicits
-import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.ProcessDecls
 import TTImp.TTImp
@@ -22,8 +19,8 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Control.Monad.State
-import Libraries.Data.ANameMap
 import Data.List
+import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 
 %default covering

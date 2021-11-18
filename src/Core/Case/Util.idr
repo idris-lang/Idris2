@@ -2,8 +2,6 @@ module Core.Case.Util
 
 import Core.Case.CaseTree
 import Core.Context
-import Core.Env
-import Core.Normalise
 import Core.Value
 
 public export

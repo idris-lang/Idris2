@@ -8,7 +8,6 @@ import Core.Normalise
 import Core.Reflect
 import Core.Unify
 import Core.TT
-import Core.Value
 
 import Idris.Syntax
 

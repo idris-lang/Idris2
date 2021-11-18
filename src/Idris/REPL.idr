@@ -1,16 +1,8 @@
 module Idris.REPL
 
-import Compiler.Scheme.Chez
-import Compiler.Scheme.ChezSep
-import Compiler.Scheme.Racket
-import Compiler.Scheme.Gambit
-import Compiler.ES.Node
-import Compiler.ES.Javascript
 import Compiler.Common
-import Compiler.RefC.RefC
 import Compiler.Inline
 
-import Core.AutoSearch
 import Core.Case.CaseTree
 import Core.CompileExpr
 import Core.Context
@@ -18,7 +10,6 @@ import Core.Context.Log
 import Core.Directory
 import Core.Env
 import Core.FC
-import Core.InitPrimitives
 import Core.LinearCheck
 import Core.Metadata
 import Core.Normalise
@@ -65,23 +56,18 @@ import TTImp.ProcessDecls
 import Data.List
 import Data.List1
 import Data.Maybe
-import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Libraries.Data.PosMap
 import Data.Stream
 import Data.String
-import Data.DPair
 import Libraries.Data.String.Extra
 import Libraries.Data.List.Extra
-import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
 import Libraries.Utils.Path
 import Libraries.System.Directory.Tree
 
 import System
 import System.File
-import System.Directory
 
 %hide Data.String.lines
 %hide Data.String.lines'

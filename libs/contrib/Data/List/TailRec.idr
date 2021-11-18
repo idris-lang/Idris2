@@ -21,8 +21,6 @@ import Syntax.WithProof
 
 import Data.List
 import Data.List1
-import Data.Vect
-import Data.Nat
 
 total
 lengthAcc : List a -> Nat -> Nat

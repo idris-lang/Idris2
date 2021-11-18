@@ -38,11 +38,10 @@ import Idris.Pretty
 import Idris.Doc.String
 
 import Data.List
-import Libraries.Data.NameMap
 import Libraries.Data.SortedMap
 import Libraries.Utils.Path
+import Libraries.Data.SortedSet
 
-import System
 import System.File
 
 %default covering

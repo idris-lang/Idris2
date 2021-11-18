@@ -1,15 +1,11 @@
 module Core.SchemeEval.Quote
 
 import Core.Context
-import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.SchemeEval.Compile
 import Core.SchemeEval.Evaluate
 import Core.TT
-
-import Libraries.Data.NameMap
-import Libraries.Utils.Scheme
 
 mutual
   quoteArgs : {auto c : Ref Ctxt Defs} ->

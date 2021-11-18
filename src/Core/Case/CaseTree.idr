@@ -2,7 +2,6 @@ module Core.Case.CaseTree
 
 import Core.TT
 
-import Data.Bool
 import Data.List
 
 import Libraries.Data.NameMap

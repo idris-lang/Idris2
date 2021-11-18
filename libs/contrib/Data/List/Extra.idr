@@ -1,7 +1,5 @@
 module Data.List.Extra
 
-import Data.List
-
 %default total
 
 ||| Analogous to `map` for `List`, but the function is applied to the index of

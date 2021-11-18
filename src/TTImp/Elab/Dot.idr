@@ -7,15 +7,11 @@ import Core.Metadata
 import Core.Normalise
 import Core.Unify
 import Core.TT
-import Core.Value
 
 import Idris.Syntax
 
 import TTImp.Elab.Check
-import TTImp.Elab.ImplicitBind
 import TTImp.TTImp
-
-import Libraries.Data.NameMap
 
 %default covering
 

@@ -5,14 +5,11 @@ import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
-import Core.Normalise
 import Core.UnifyState
-import Core.Value
 
 import Idris.Syntax
 
 import TTImp.BindImplicits
-import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.TTImp
 import TTImp.TTImp.Functor

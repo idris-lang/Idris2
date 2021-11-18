@@ -4,25 +4,20 @@
 module Core.Binary
 
 import public Core.Binary.Prims
-import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
-import Core.Hash
 import Core.Name.Namespace
-import Core.Normalise
 import Core.Options
 import Core.TT
 import Core.TTC
 import Core.UnifyState
 
-import Data.Buffer
 import Data.List
 import Data.String
 
 import System.File
 
-import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 
 import public Libraries.Utils.Binary

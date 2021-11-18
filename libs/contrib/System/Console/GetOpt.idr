@@ -4,12 +4,8 @@
 ||| (http://hackage.haskell.org/package/base-4.14.1.0/docs/System-Console-GetOpt.html)).
 module System.Console.GetOpt
 
-import Control.Monad.Reader
-import Control.Monad.State
-
 import Data.List
 import Data.List1
-import Data.Maybe
 import Data.String
 
 %default total

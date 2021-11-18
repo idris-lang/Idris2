@@ -5,7 +5,6 @@ import Core.Env
 import Core.Metadata
 import Core.Normalise
 import Core.TT
-import Core.Value
 
 import TTImp.Unelab
 import TTImp.TTImp

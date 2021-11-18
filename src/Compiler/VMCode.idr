@@ -4,7 +4,6 @@ import Compiler.ANF
 
 import Core.CompileExpr
 import Core.Context
-import Core.Core
 import Core.TT
 
 import Libraries.Data.IntMap

@@ -15,8 +15,6 @@ import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.TTImp
 
-import Data.List
-
 %default covering
 
 extend : {extvs : _} ->

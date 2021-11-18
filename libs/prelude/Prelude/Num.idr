@@ -1,9 +1,7 @@
 module Prelude.Num
 
-import Builtin
 import Prelude.Basics
 import Prelude.EqOrd
-import Prelude.Ops
 
 %default total
 

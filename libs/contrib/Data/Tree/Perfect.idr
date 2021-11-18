@@ -1,15 +1,11 @@
 module Data.Tree.Perfect
 
 import Control.WellFounded
-import Decidable.Order.Strict
 import Data.Monoid.Exponentiation
 import Data.Nat.Views
 import Data.Nat
-import Data.Nat.Order
-import Data.Nat.Order.Strict
 import Data.Nat.Order.Properties
 import Data.Nat.Exponentiation
-import Data.DPair
 import Syntax.WithProof
 import Syntax.PreorderReasoning.Generic
 

@@ -10,7 +10,6 @@ import TTImp.TTImp
 import TTImp.Elab.App
 
 import Data.List
-import Data.List1
 
 %default covering
 

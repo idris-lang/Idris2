@@ -1,6 +1,5 @@
 module Data.Bool.Decidable
 
-import Decidable.Equality
 import Data.Void
 
 public export

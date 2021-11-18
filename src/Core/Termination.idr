@@ -1,14 +1,11 @@
 module Core.Termination
 
-import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise
 import Core.TT
 import Core.Value
-
-import Control.Monad.State
 
 import Libraries.Data.NameMap
 import Libraries.Data.SortedMap

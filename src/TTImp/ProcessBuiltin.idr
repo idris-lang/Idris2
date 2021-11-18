@@ -4,18 +4,12 @@ module TTImp.ProcessBuiltin
 
 import Data.List
 
-import Libraries.Data.Fin as Libs
-import Libraries.Data.NameMap
-
-import Core.Case.CaseTree
 import Core.Core
 import Core.Context
 import Core.Context.Log
 import Core.CompileExpr
 import Core.Env
-import Core.Metadata
 import Core.TT
-import Core.UnifyState
 
 import TTImp.TTImp
 

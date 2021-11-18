@@ -13,15 +13,12 @@ import Core.Value
 
 import Idris.Syntax
 
-import TTImp.BindImplicits
 import TTImp.Elab.Check
 import TTImp.Elab.Utils
 import TTImp.Elab
 import TTImp.TTImp
-import TTImp.Utils
 
 import Data.List
-import Data.List1
 import Data.String
 import Libraries.Data.NameMap
 

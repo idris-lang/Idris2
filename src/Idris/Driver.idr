@@ -12,7 +12,6 @@ import Core.Unify
 import Idris.CommandLine
 import Idris.Env
 import Idris.IDEMode.REPL
-import Idris.ModTree
 import Idris.Package
 import Idris.ProcessIdr
 import Idris.REPL
@@ -25,12 +24,9 @@ import Idris.Error
 import IdrisPaths
 
 import Data.List
-import Data.List1
-import Data.So
 import Data.String
 import System
 import System.Directory
-import System.File
 import Libraries.Utils.Path
 import Libraries.Utils.Term
 

@@ -1,7 +1,6 @@
 module Text.Parser
 
 import Data.Bool
-import Data.List
 import Data.Nat
 import public Data.List1
 

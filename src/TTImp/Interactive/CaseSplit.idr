@@ -6,7 +6,6 @@ import Core.Core
 import Core.Env
 import Core.Metadata
 import Core.Normalise
-import Core.Options
 import Core.TT
 import Core.UnifyState
 import Core.Value

@@ -2,7 +2,6 @@ module System.File.ReadWrite
 
 import public Data.Fuel
 
-import Data.List
 import Data.SnocList
 
 import System.File.Handle

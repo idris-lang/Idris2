@@ -2,9 +2,7 @@ module Compiler.ES.Ast
 
 import Core.CompileExpr
 import Core.Context
-import Compiler.Common
 import Data.List1
-import Data.Nat
 import Data.Vect
 
 %default total

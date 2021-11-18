@@ -2,16 +2,11 @@
 ||| to a sequence of imperative statements.
 module Compiler.ES.ToAst
 
-import Data.DPair
-import Data.Nat
-import Data.List1
 import Data.Vect
-import Compiler.Common
 import Core.CompileExpr
 import Core.Context
 import Compiler.ES.Ast
 import Compiler.ES.State
-import Libraries.Data.SortedMap
 
 --------------------------------------------------------------------------------
 --          Converting NamedCExp

@@ -11,7 +11,6 @@ import Core.Normalise
 import Core.Termination
 import Core.TT
 import Core.Unify
-import Core.Value
 
 import Idris.Syntax
 

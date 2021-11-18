@@ -5,8 +5,6 @@ import Data.List
 
 import System.File
 
-import Libraries.Utils.String
-
 -- Serialising data as binary. Provides an interface TTC which allows
 -- reading and writing to chunks of memory, "Binary", which can be written
 -- to and read from files.

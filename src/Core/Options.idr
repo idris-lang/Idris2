@@ -5,14 +5,11 @@ import Core.Name
 import public Core.Options.Log
 import Core.TT
 
-import Libraries.Utils.Binary
 import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
 import Data.String
-
-import System.Info
 
 %default total
 

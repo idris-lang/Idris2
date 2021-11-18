@@ -29,7 +29,6 @@ import Data.List
 import Data.List1
 import Data.List.Views
 import Data.String
-import Data.String.Extra
 
 %default total
 

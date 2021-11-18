@@ -1,6 +1,5 @@
 module Text.PrettyPrint.Prettyprinter.Render.HTML
 
-import Data.List
 import Data.String
 
 %default covering

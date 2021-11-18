@@ -1,19 +1,14 @@
 module TTImp.Parser
 
 import Core.Context
-import Core.Core
 import Core.Metadata
-import Core.Env
 import Core.TT
 import Parser.Source
 import TTImp.TTImp
 
 import public Libraries.Text.Parser
 import Data.List
-import Data.List.Views
 import Data.List1
-import Data.Maybe
-import Data.String
 
 topDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 -- All the clauses get parsed as one-clause definitions. Collect any

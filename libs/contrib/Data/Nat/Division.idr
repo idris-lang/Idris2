@@ -6,7 +6,6 @@ import Syntax.PreorderReasoning
 import Syntax.PreorderReasoning.Generic
 import Data.Nat
 import Data.Nat.Equational
-import Data.Nat.Order
 import Data.Nat.Order.Strict
 import Data.Nat.Order.Properties
 import Decidable.Order.Strict

@@ -1,57 +1,20 @@
 module Idris.REPL.FuzzySearch
 
-import Core.AutoSearch
-import Core.Case.CaseTree
-import Core.CompileExpr
 import Core.Context
-import Core.Context.Log
-import Core.Env
-import Core.InitPrimitives
-import Core.LinearCheck
 import Core.Metadata
-import Core.Normalise
-import Core.Options
 import Core.TT
-import Core.Termination
 import Core.Unify
 
-import Idris.Desugar
 import Idris.Doc.String
-import Idris.Error
-import Idris.IDEMode.CaseSplit
 import Idris.IDEMode.Commands
-import Idris.IDEMode.MakeClause
-import Idris.IDEMode.Holes
-import Idris.ModTree
-import Idris.Parser
 import Idris.Pretty
-import Idris.ProcessIdr
-import Idris.Resugar
 import Idris.Syntax
-import Idris.Version
 
 import public Idris.REPL.Common
 
 import Data.List
-import Data.List1
 import Data.Maybe
-import Libraries.Data.ANameMap
-import Libraries.Data.NameMap
-import Libraries.Data.PosMap
-import Data.Stream
-import Data.String
-import Data.DPair
-import Libraries.Data.String.Extra
 import Libraries.Data.List.Extra
-import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
-import Libraries.Utils.Path
-import Libraries.System.Directory.Tree
-
-import System
-import System.File
-import System.Directory
 
 %default covering
 

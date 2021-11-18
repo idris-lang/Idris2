@@ -5,7 +5,6 @@ import Data.Fin
 import Data.Fin.Extra
 import Data.Nat
 import Data.Nat.Equational
-import Syntax.PreorderReasoning
 
 %default total
 

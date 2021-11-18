@@ -3,8 +3,6 @@ module Data.Nat.Exponentiation
 import Data.Nat as Nat
 import Data.Nat.Properties
 import Data.Monoid.Exponentiation as Mon
-import Data.Nat.Views
-import Data.Nat.Order
 import Syntax.PreorderReasoning
 import Syntax.PreorderReasoning.Generic
 

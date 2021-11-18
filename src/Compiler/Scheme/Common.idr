@@ -2,16 +2,12 @@ module Compiler.Scheme.Common
 
 import Compiler.Common
 import Compiler.CompileExpr
-import Compiler.Inline
 
 import Core.Context
 import Core.Name
 import Core.TT
 
-import Data.List
 import Data.Vect
-
-import System.Info
 
 %default covering
 

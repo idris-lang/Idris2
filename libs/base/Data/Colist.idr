@@ -1,6 +1,5 @@
 module Data.Colist
 
-import Data.Maybe
 import Data.List
 import Data.List1
 import public Data.Zippable

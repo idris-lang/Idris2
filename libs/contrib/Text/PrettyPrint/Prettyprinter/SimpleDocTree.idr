@@ -1,7 +1,6 @@
 module Text.PrettyPrint.Prettyprinter.SimpleDocTree
 
 import Text.PrettyPrint.Prettyprinter.Doc
-import Text.Parser
 
 %default total
 

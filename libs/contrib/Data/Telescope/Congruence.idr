@@ -1,7 +1,6 @@
 ||| N-ary congruence for reasoning
 module Data.Telescope.Congruence
 
-import Data.Fin
 import Data.Telescope.Telescope
 import Data.Telescope.Segment
 import Data.Telescope.SimpleFun

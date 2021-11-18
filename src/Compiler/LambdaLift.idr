@@ -7,7 +7,6 @@ import Core.TT
 
 import Data.List
 import Data.Vect
-import Data.Maybe
 
 %default covering
 

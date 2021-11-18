@@ -7,8 +7,6 @@ import Core.Core
 import Core.Env
 import Core.Metadata
 import Core.Normalise
-import Core.Options
-import Core.Reflect
 import Core.Unify
 import Core.TT
 import Core.Value
@@ -31,7 +29,6 @@ import TTImp.Elab.Quote
 import TTImp.Elab.Record
 import TTImp.Elab.Rewrite
 import TTImp.Elab.RunElab
-import TTImp.Reflect
 import TTImp.TTImp
 
 %default covering

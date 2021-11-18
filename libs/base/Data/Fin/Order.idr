@@ -7,7 +7,6 @@ import Data.Fin
 import Data.Fun
 import Data.Rel
 import Data.Nat
-import Data.Nat.Order
 import Decidable.Decidable
 
 %default total

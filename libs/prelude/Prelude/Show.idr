@@ -5,7 +5,6 @@ import Prelude.Basics
 import Prelude.EqOrd
 import Prelude.Num
 import Prelude.Types
-import Prelude.Interpolation
 
 %default total
 
