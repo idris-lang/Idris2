@@ -132,7 +132,7 @@ Main> interface Prelude.Monad : (Type -> Type) -> Type
     Monad (Either e)
     Monad List
 Main> 1 : Integer
-  Primitive value
+  Primitive unsigned int value (backend-dependent precision)
 Main> String : Type
   Primitive type of strings
 Hints:
