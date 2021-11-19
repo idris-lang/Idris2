@@ -1,0 +1,6 @@
+1/1: Building Issue2072 (Issue2072.idr)
+Main> 2 holes:
+  Main.Types : (0 a : Type) -> Eq a => List Type
+  Main.body : {auto 0 conArg : Eq t1} -> {auto 0 _ : Elem Bool (Types t1)} -> (obj : t1) -> obj == obj = maybe (Delay True) (Delay (const False)) (if obj == obj then pure (let x = True in ()) else empty)
+Main> 
+Bye for now!
