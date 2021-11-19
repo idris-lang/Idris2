@@ -107,6 +107,7 @@ data Error : Type where
      AllFailed : List (Maybe Name, Error) -> Error
      RecordTypeNeeded : {vars : _} ->
                         FC -> Env Term vars -> Error
+     DuplicatedRecordUpdatePath : FC -> List (List String) -> Error
      NotRecordField : FC -> String -> Maybe Name -> Error
      NotRecordType : FC -> Name -> Error
      IncompatibleFieldUpdate : FC -> List String -> Error
@@ -265,6 +266,8 @@ Show Error where
   show (AllFailed ts) = "No successful elaboration: " ++ assert_total (show ts)
   show (RecordTypeNeeded fc env)
       = show fc ++ ":Can't infer type of record to update"
+  show (DuplicatedRecordUpdatePath fc ps)
+      = show fc ++ ":Duplicated record update paths: " ++ show ps
   show (NotRecordField fc fld Nothing)
       = show fc ++ ":" ++ fld ++ " is not part of a record type"
   show (NotRecordField fc fld (Just ty))
@@ -395,6 +398,7 @@ getErrorLoc (AmbiguityTooDeep loc _ _) = Just loc
 getErrorLoc (AllFailed ((_, x) :: _)) = getErrorLoc x
 getErrorLoc (AllFailed []) = Nothing
 getErrorLoc (RecordTypeNeeded loc _) = Just loc
+getErrorLoc (DuplicatedRecordUpdatePath loc _) = Just loc
 getErrorLoc (NotRecordField loc _ _) = Just loc
 getErrorLoc (NotRecordType loc _) = Just loc
 getErrorLoc (IncompatibleFieldUpdate loc _) = Just loc

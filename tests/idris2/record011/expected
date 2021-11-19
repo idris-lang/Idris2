@@ -1,0 +1,23 @@
+1/1: Building Issue2095 (Issue2095.idr)
+Error: While processing right hand side of foo1. a is not a valid argument in MkFoo 1 3.
+
+Issue2095:7:8--11:4
+ 07 | foo1 = MkFoo
+ 08 |   { a = 1
+ 09 |   , a = 2
+ 10 |   , b = 3
+ 11 |   }
+
+Error: While processing right hand side of foo2. Duplicated record update paths:
+  a
+  b
+
+
+Issue2095:14:8--19:9
+ 14 | foo2 = record
+ 15 |   { a = 3
+ 16 |   , a = 4
+ 17 |   , b = 2
+ 18 |   , b = 1
+ 19 |   } foo1
+
