@@ -17,6 +17,7 @@ import TTImp.Elab.Delayed
 import TTImp.TTImp
 
 import Data.List
+import Libraries.Data.SortedSet
 
 %default covering
 
@@ -161,6 +162,16 @@ getAllSides loc [] tyn orig rec = pure rec
 getAllSides loc (u :: upds) tyn orig rec
     = getAllSides loc upds tyn orig !(getSides loc u tyn orig rec)
 
+checkForDuplicates :
+  List IFieldUpdate ->
+  (seen, dups : SortedSet (List String)) ->
+  SortedSet (List String)
+checkForDuplicates [] seen dups = dups
+checkForDuplicates (x :: xs) seen dups
+  = let path = getFieldUpdatePath x
+        dups = ifThenElse (contains path seen) (insert path dups) dups
+    in checkForDuplicates xs (insert path seen) dups
+
 -- Convert the collection of high level field accesses into a case expression
 -- which does the updates all in one go
 export
@@ -174,7 +185,10 @@ recUpdate : {vars : _} ->
             (rec : RawImp) -> (grecty : Glued vars) ->
             Core RawImp
 recUpdate rigc elabinfo iloc nest env flds rec grecty
-      = do defs <- get Ctxt
+      = do let dups = checkForDuplicates flds empty empty
+           unless (null dups) $
+             throw (DuplicatedRecordUpdatePath iloc $ SortedSet.toList dups)
+           defs <- get Ctxt
            rectynf <- getNF grecty
            let Just rectyn = getRecordType env rectynf
                     | Nothing => throw (RecordTypeNeeded iloc env)
