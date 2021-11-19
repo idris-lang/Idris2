@@ -1,0 +1,4 @@
+$1 --build testpkg.ipkg
+rm -rf  build/
+$1 --check --find-ipkg Main.idr
+rm -rf  build/
