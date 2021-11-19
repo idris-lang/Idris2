@@ -1,8 +1,8 @@
 1/1: Building Eta (Eta.idr)
 Error: While processing right hand side of etaBad. When unifying:
-    \x, y => MkTest x y = \x, y => MkTest x y
+    (\x, y => MkTest x y) = (\x, y => MkTest x y)
 and:
-    MkTest = \x, y => MkTest x y
+    MkTest = (\x, y => MkTest x y)
 Mismatch between: Nat and Integer.
 
 Eta:14:10--14:14
@@ -15,9 +15,9 @@ Eta:14:10--14:14
 
 1/1: Building Eta2 (Eta2.idr)
 Error: While processing right hand side of test. When unifying:
-    \x => S x = \x => S x
+    (\x => S x) = (\x => S x)
 and:
-    S = \x => S x
+    S = (\x => S x)
 Mismatch between: a and Nat.
 
 Eta2:2:8--2:12
@@ -26,9 +26,9 @@ Eta2:2:8--2:12
             ^^^^
 
 Error: While processing right hand side of test2. When unifying:
-    \x => S x = \x => S x
+    (\x => S x) = (\x => S x)
 and:
-    S = \x => S x
+    S = (\x => S x)
 Mismatch between: a and Nat.
 
 Eta2:5:44--5:48
