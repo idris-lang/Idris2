@@ -226,8 +226,8 @@ isHidden : Name -> Context -> Bool
 isHidden fulln ctxt = isJust $ lookup fulln (hidden ctxt)
 
 export
-lookupCtxtName : Name -> Context -> Core (List (Name, Int, GlobalDef))
-lookupCtxtName n ctxt
+lookupCtxtName' : Bool -> Name -> Context -> Core (List (Name, Int, GlobalDef))
+lookupCtxtName' allow_hidden n ctxt
     = case userNameRoot n of
            Nothing => do Just (i, res) <- lookupCtxtExactI n ctxt
                               | Nothing => pure []
@@ -241,12 +241,17 @@ lookupCtxtName n ctxt
     resn : (Name, Int, GlobalDef) -> Int
     resn (_, i, _) = i
 
+    hlookup : Name -> NameMap () -> Maybe ()
+    hlookup fulln hiddens = if allow_hidden 
+      then Nothing
+      else lookup fulln hiddens
+
     lookupPossibles : List (Name, Int, GlobalDef) -> -- accumulator
                       List PossibleName ->
                       Core (List (Name, Int, GlobalDef))
     lookupPossibles acc [] = pure (reverse acc)
     lookupPossibles acc (Direct fulln i :: ps)
-       = case lookup fulln (hidden ctxt) of
+       = case (hlookup fulln (hidden ctxt)) of
               Nothing =>
                 do Just res <- lookupCtxtExact (Resolved i) ctxt
                         | Nothing => lookupPossibles acc ps
@@ -255,7 +260,7 @@ lookupCtxtName n ctxt
                       else lookupPossibles acc ps
               _ => lookupPossibles acc ps
     lookupPossibles acc (Alias asn fulln i :: ps)
-       = case lookup fulln (hidden ctxt) of
+       = case (hlookup fulln (hidden ctxt)) of
               Nothing =>
                 do Just res <- lookupCtxtExact (Resolved i) ctxt
                         | Nothing => lookupPossibles acc ps
@@ -264,8 +269,19 @@ lookupCtxtName n ctxt
                       else lookupPossibles acc ps
               _ => lookupPossibles acc ps
 
+export
+lookupCtxtName : Name -> Context -> Core (List (Name, Int, GlobalDef))
+lookupCtxtName = lookupCtxtName' False
+
+export
+lookupHiddenCtxtName : Name -> Context -> Core (List (Name, Int, GlobalDef))
+lookupHiddenCtxtName = lookupCtxtName' True
+
 hideName : Name -> Context -> Context
 hideName n ctxt = record { hidden $= insert n () } ctxt
+
+unhideName : Name -> Context -> Context
+unhideName n ctxt = record { hidden $= delete n } ctxt
 
 branchCtxt : Context -> Core Context
 branchCtxt ctxt = pure (record { branchDepth $= S } ctxt)
@@ -1414,6 +1430,16 @@ hide fc n
          [(nsn, _)] <- lookupCtxtName n (gamma defs)
               | res => ambiguousName fc n (map fst res)
          put Ctxt (record { gamma $= hideName nsn } defs)
+
+-- Set a name as Public that was previously hidden
+export
+unhide : {auto c : Ref Ctxt Defs} ->
+       FC -> Name -> Core ()
+unhide fc n
+    = do defs <- get Ctxt
+         [(nsn, _)] <- lookupHiddenCtxtName n (gamma defs)
+              | res => ambiguousName fc n (map fst res)
+         put Ctxt (record { gamma $= unhideName nsn } defs)
 
 public export
 record SearchData where
