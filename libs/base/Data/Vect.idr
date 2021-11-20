@@ -235,6 +235,51 @@ replaceAtDiffIndexPreserves (_::_) FZ     (FS _) _  _ = Refl
 replaceAtDiffIndexPreserves (_::_) (FS _) FZ     _  _ = Refl
 replaceAtDiffIndexPreserves (_::_) (FS z) (FS w) co y = replaceAtDiffIndexPreserves _ z w (co . cong FS) y
 
+public export
+least : (a -> a -> Bool) -> {n : Nat} -> Vect (S n) a -> (Fin (S n), a)
+least f (x :: xs) = h {m = 0} FZ FZ x xs where
+  h : {m, n : Nat} -> Fin (S m) -> Fin (S m) -> a
+   -> Vect n a -> (Fin (S m + n), a)
+  h cur acc i []        = rewrite plusZeroRightNeutral m in (cur, i)
+  h cur acc i (x :: xs) = case f i x of
+    False => mapFst (coerce $ cong S $ plusSucc) $ h (FS acc)     (FS acc) x xs
+    True  => mapFst (coerce $ cong S $ plusSucc) $ h (weaken cur) (FS acc) i xs
+      where
+        plusSucc : {m, n : Nat} -> S (m + n) = m + (S n)
+        plusSucc {m} {n} = plusSuccRightSucc m n
+
+||| The least element of a non-empty vector and its first occur index, using
+||| some arbitrary comparison predicate.
+||| @ cmp how to compare elements
+public export
+minimumBy : Ord a => (a -> a -> Ordering) -> {n : Nat} -> Vect (S n) a -> (Fin (S n), a)
+minimumBy cmp = least (\x, y => GT /= cmp x y)
+
+||| The least element of a non-empty vector and its first occur index.
+|||
+||| ```idris example
+||| index (fst $ minimum xs) xs == snd (minimum xs)
+||| ```
+public export
+minimum : Ord a => {n : Nat} -> Vect (S n) a -> (Fin (S n), a)
+minimum = minimumBy compare
+
+||| The largest element of a non-empty vector and its first occur index, using
+||| some arbitrary comparison predicate.
+||| @ cmp how to compare elements
+public export
+maximumBy : Ord a => (a -> a -> Ordering) -> {n : Nat} -> Vect (S n) a -> (Fin (S n), a)
+maximumBy cmp = least (\x, y => LT /= cmp x y)
+
+||| The largest element of a non-empty vector and its first occur index.
+|||
+||| ```idris example
+||| index (fst $ maximum xs) xs == snd (maximum xs)
+||| ```
+public export
+maximum : Ord a => {n : Nat} -> Vect (S n) a -> (Fin (S n), a)
+maximum = maximumBy compare
+
 --------------------------------------------------------------------------------
 -- Transformations
 --------------------------------------------------------------------------------
