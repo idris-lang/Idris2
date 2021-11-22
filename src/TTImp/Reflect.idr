@@ -633,7 +633,7 @@ mutual
         = do fc' <- reflect fc defs lhs env tfc
              ns' <- reflect fc defs lhs env ns
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "WithUnambigNames") [fc', ns', t']
+             appCon fc defs (reflectionttimp "IWithUnambigNames") [fc', ns', t']
 
   export
   Reflect IFieldUpdate where
