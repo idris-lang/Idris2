@@ -73,38 +73,33 @@ interface (Reflexive ty rel, Transitive ty rel, Symmetric ty rel) => Equivalence
 ||| Every reflexive relation is dense.
 public export
 Reflexive ty rel => Dense ty rel where
-  dense {x} xy = (x ** (reflexive {x}, xy))
+  dense xy = (x ** (reflexive, xy))
 
 ||| Every reflexive relation is serial.
 public export
 Reflexive ty rel => Serial ty rel where
-  serial {x} = (x ** reflexive {x})
+  serial = (x ** reflexive)
 
 ||| A transitive symmetric serial relation is reflexive.
 public export
 (Transitive ty rel, Symmetric ty rel, Serial ty rel) => Reflexive ty rel where
-  reflexive {x} =
-    let (y ** xy) = serial {x} in
-      transitive {x} xy $ symmetric {x} xy
+  reflexive = let (y ** xy) = serial in transitive xy $ symmetric xy
 
 ||| A reflexive euclidean relation is symmetric.
 public export
 [RES] (Reflexive ty rel, Euclidean ty rel) => Symmetric ty rel where
-  symmetric {x} xy =
-    euclidean {x} xy $ reflexive {x}
+  symmetric xy = euclidean xy $ reflexive
 
 ||| A reflexive euclidean relation is transitive.
 public export
 [RET] (Reflexive ty rel, Euclidean ty rel) =>
       Transitive ty rel using RES where
-  transitive {rel} xy yz =
-    symmetric {rel} $ euclidean {rel} yz $ symmetric {rel} xy
+  transitive xy yz = symmetric $ euclidean yz $ symmetric xy
 
 ||| A transitive symmetrics relation is euclidean.
 public export
 [TSE] (Transitive ty rel, Symmetric ty rel) => Euclidean ty rel where
-  euclidean {rel} xy xz =
-    transitive {rel} (symmetric {rel} xy) xz
+  euclidean xy xz = transitive (symmetric xy) xz
 
 ----------------------------------------
 
@@ -122,7 +117,7 @@ Transitive ty Equal where
 
 public export
 Euclidean ty Equal where
-  euclidean = euclidean {rel = Equal} @{TSE}
+  euclidean = euclidean @{TSE}
 
 public export
 Tolerance ty Equal where

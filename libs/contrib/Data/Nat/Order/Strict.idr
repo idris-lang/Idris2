@@ -14,8 +14,7 @@ Irreflexive Nat LT where
 
 public export
 Transitive Nat LT where
-  transitive {x} {y} xy yz =
-    transitive {rel = LTE} (lteSuccRight xy) yz
+  transitive xy yz = transitive (lteSuccRight xy) yz
 
 public export
 StrictPreorder Nat LT where
