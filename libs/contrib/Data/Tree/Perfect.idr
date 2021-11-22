@@ -47,7 +47,7 @@ toNat {n = S n} (Right p) = toNat p + pow2 n
 
 export
 toNatBounded : (n : Nat) -> (p : Path n) -> toNat p `LT` pow2 n
-toNatBounded Z Here = reflexive {rel = LTE}
+toNatBounded Z Here = reflexive
 toNatBounded (S n) (Left p) = CalcWith $
   |~ S (toNat p)
   <~ pow2 n          ...( toNatBounded n p )

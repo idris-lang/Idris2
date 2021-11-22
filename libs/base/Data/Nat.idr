@@ -86,13 +86,13 @@ Uninhabited (LTE m n) => Uninhabited (LTE (S m) (S n)) where
 public export
 Reflexive Nat LTE where
   reflexive {x = Z} = LTEZero
-  reflexive {x = S k} = LTESucc $ reflexive {x = k}
+  reflexive {x = S _} = LTESucc $ reflexive
 
 public export
 Transitive Nat LTE where
   transitive LTEZero _ = LTEZero
   transitive (LTESucc xy) (LTESucc yz) =
-    LTESucc $ transitive {rel = LTE} xy yz
+    LTESucc $ transitive xy yz
 
 public export
 Antisymmetric Nat LTE where
@@ -105,7 +105,7 @@ Connex Nat LTE where
   connex {x = Z} _ = Left LTEZero
   connex {y = Z} _ = Right LTEZero
   connex {x = S _} {y = S _} prf =
-    case connex {rel = LTE} $ prf . (cong S) of
+    case connex $ prf . (cong S) of
       Left jk => Left $ LTESucc jk
       Right kj => Right $ LTESucc kj
 
@@ -481,7 +481,7 @@ export
 plusLteMonotone : {m, n, p, q : Nat} -> m `LTE` n -> p `LTE` q ->
                   (m + p) `LTE` (n + q)
 plusLteMonotone left right =
-  transitive {rel=LTE}
+  transitive
     (plusLteMonotoneLeft m p q right)
     (plusLteMonotoneRight q m n left)
 

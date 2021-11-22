@@ -20,11 +20,11 @@ using (k : Nat)
   public export
   Transitive (Fin k) FinLTE where
     transitive (FromNatPrf xy) (FromNatPrf yz) =
-      FromNatPrf $ transitive {rel = LTE} xy yz
+      FromNatPrf $ transitive xy yz
 
   public export
   Reflexive (Fin k) FinLTE where
-    reflexive = FromNatPrf $ reflexive {rel = LTE}
+    reflexive = FromNatPrf $ reflexive
 
   public export
   Preorder (Fin k) FinLTE where
@@ -33,7 +33,7 @@ using (k : Nat)
   Antisymmetric (Fin k) FinLTE where
     antisymmetric {x} {y} (FromNatPrf xy) (FromNatPrf yx) =
       finToNatInjective x y $
-        antisymmetric {rel = LTE} xy yx
+        antisymmetric xy yx
 
   public export
   PartialOrder (Fin k) FinLTE where
