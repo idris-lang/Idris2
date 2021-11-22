@@ -229,6 +229,8 @@ install-libdocs: libdocs
 
 # Bootstrapping using SCHEME
 bootstrap: support
+	@if [ "$$(echo '(threaded?)' | $(SCHEME) --quiet)" = "#f" ] ; then \
+		echo "ERROR: Chez is missing threading support" ; exit 1 ; fi
 	mkdir -p bootstrap-build/idris2_app
 	cp support/c/${IDRIS2_SUPPORT} bootstrap-build/idris2_app/
 	sed 's/libidris2_support.so/${IDRIS2_SUPPORT}/g; s|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
