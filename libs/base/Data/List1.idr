@@ -165,15 +165,13 @@ export
 consInjective : (x ::: xs) === (y ::: ys) -> (x === y, xs === ys)
 consInjective Refl = (Refl, Refl)
 
-%hint
 export
-consHeadInj : {x : a} -> Injective (x :::)
-consHeadInj = MkInjective (\Refl => Refl)
+{x : a} -> Injective (x :::) where
+  injective Refl = Refl
 
-%hint
 export
-consTailInj : {ys : List a} -> Injective (::: ys)
-consTailInj = MkInjective (\Refl => Refl)
+{ys : List a} -> Injective (::: ys) where
+  injective Refl = Refl
 
 ------------------------------------------------------------------------
 -- Zippable

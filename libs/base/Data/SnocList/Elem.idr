@@ -25,10 +25,9 @@ Uninhabited (Elem {a} x [<]) where
   uninhabited Here impossible
   uninhabited (There p) impossible
 
-%hint
 export
-thereInjective : Injective {a=Elem x sx} (There {x} {y} {sx})
-thereInjective = MkInjective (\Refl => Refl)
+Injective (There {x} {y} {sx}) where
+  injective Refl = Refl
 
 export
 DecEq (x `Elem` sx) where

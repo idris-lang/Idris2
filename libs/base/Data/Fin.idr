@@ -70,10 +70,9 @@ finToNatInjective (FS m) (FS n) prf  =
   cong FS $ finToNatInjective m n $ injective prf
 
 ||| `finToNat` is injective
-%hint
 export
-finToNatInj : Injective Fin.finToNat
-finToNatInj = MkInjective (finToNatInjective _ _)
+Injective Fin.finToNat where
+ injective = (finToNatInjective _ _)
 
 export
 Cast (Fin n) Nat where

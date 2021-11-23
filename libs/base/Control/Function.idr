@@ -6,5 +6,5 @@ interface Injective (f : a -> b) where
   injective : {x, y : a} -> f x = f y -> x = y
 
 public export
-inj : (f : a -> b) -> Injective f => {x, y : a} -> f x = f y -> x = y
-inj _ = injective
+inj : (0 f : a -> b) -> Injective f => {0 x, y : a} -> (0 _ : f x = f y) -> x = y
+inj _ eq = irrelevantEq (injective eq)

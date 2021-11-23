@@ -37,15 +37,13 @@ lengthCorrect (_ :: xs) = rewrite lengthCorrect xs in Refl
 vectInjective : {0 xs : Vect n a} -> {0 ys : Vect m b} -> x::xs = y::ys -> (x = y, xs = ys)
 vectInjective Refl = (Refl, Refl)
 
-%hint
 export
-consVectHeadInj : {x : a} -> Injective (Vect.(::) x)
-consVectHeadInj = MkInjective (\Refl => Refl)
+{x : a} -> Injective (Vect.(::) x) where
+  injective Refl = Refl
 
-%hint
 export
-consVectTailInj : {xs : Vect n a} -> Injective (\x => Vect.(::) x xs)
-consVectTailInj = MkInjective (\Refl => Refl)
+{xs : Vect n a} -> Injective (\x => Vect.(::) x xs) where
+  injective Refl = Refl
 
 --------------------------------------------------------------------------------
 -- Indexing into vectors
