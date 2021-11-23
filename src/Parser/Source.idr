@@ -17,8 +17,8 @@ export
 runParserTo : {e : _} ->
               (origin : OriginDesc) ->
               Maybe LiterateStyle -> Lexer ->
-              String -> Grammar SemanticDecorations Token e ty ->
-              Either Error (List Warning, SemanticDecorations, ty)
+              String -> Grammar State Token e ty ->
+              Either Error (List Warning, State, ty)
 runParserTo origin lit reject str p
     = do str        <- mapFst (fromLitError origin) $ unlit lit str
          (cs, toks) <- mapFst (fromLexError origin) $ lexTo reject str
@@ -28,20 +28,20 @@ runParserTo origin lit reject str p
          let ws = ws <&> \ (mb, warn) =>
                     let mkFC = \ b => MkFC origin (startBounds b) (endBounds b)
                     in ParserWarning (maybe EmptyFC mkFC mb) warn
-         Right (ws, cs ++ decs, parsed)
+         Right (ws, { decorations $= (cs ++) } decs, parsed)
 
 export
 runParser : {e : _} ->
             (origin : OriginDesc) -> Maybe LiterateStyle -> String ->
-            Grammar SemanticDecorations Token e ty ->
-            Either Error (List Warning, SemanticDecorations, ty)
+            Grammar State Token e ty ->
+            Either Error (List Warning, State, ty)
 runParser origin lit = runParserTo origin lit (pred $ const False)
 
 export covering
 parseFile : (fname : String)
          -> (origin : OriginDesc)
          -> Rule ty
-         -> IO (Either Error (List Warning, SemanticDecorations, ty))
+         -> IO (Either Error (List Warning, State, ty))
 parseFile fname origin p
     = do Right str <- readFile fname
              | Left err => pure (Left (FileErr fname err))

@@ -21,14 +21,10 @@ import Idris.Parser.Let
 
 %default covering
 
-decorationFromBounded : OriginDesc -> Decoration -> WithBounds a -> ASemanticDecoration
-decorationFromBounded fname decor bnds
-   = ((fname, start bnds, end bnds), decor, Nothing)
-
 decorate : OriginDesc -> Decoration -> Rule a -> Rule a
 decorate fname decor rule = do
   res <- bounds rule
-  act [decorationFromBounded fname decor res]
+  actD (decorationFromBounded fname decor res)
   pure res.val
 
 boundedNameDecoration : OriginDesc -> Decoration -> WithBounds Name -> ASemanticDecoration
@@ -37,18 +33,20 @@ boundedNameDecoration fname decor bstr = ((fname, start bstr, end bstr)
                                          , Just bstr.val)
 
 decorateBoundedNames : OriginDesc -> Decoration -> List (WithBounds Name) -> EmptyRule ()
-decorateBoundedNames fname decor bns = act $ map (boundedNameDecoration fname decor) bns
+decorateBoundedNames fname decor bns
+  = act $ MkState (map (boundedNameDecoration fname decor) bns) []
 
 decorateBoundedName : OriginDesc -> Decoration -> WithBounds Name -> EmptyRule ()
-decorateBoundedName fname decor bn = act [boundedNameDecoration fname decor bn]
+decorateBoundedName fname decor bn = actD (boundedNameDecoration fname decor bn)
 
 decorateKeywords : OriginDesc -> List (WithBounds a) -> EmptyRule ()
-decorateKeywords fname = act . map (decorationFromBounded fname Keyword)
+decorateKeywords fname xs
+  = act $ MkState (map (decorationFromBounded fname Keyword) xs) []
 
 dependentDecorate : OriginDesc -> Rule a -> (a -> Decoration) -> Rule a
 dependentDecorate fname rule decor = do
   res <- bounds rule
-  act [((fname, (start res, end res)), decor res.val, Nothing)]
+  actD (decorationFromBounded fname (decor res.val) res)
   pure res.val
 
 decoratedKeyword : OriginDesc -> String -> Rule ()
@@ -130,6 +128,7 @@ atom fname
   <|> do x <- bounds $ symbol "?"
          pure (PInfer (boundToFC fname x))
   <|> do x <- bounds $ holeName
+         actH x.val -- record the hole name in the parser
          pure (PHole (boundToFC fname x) False x.val)
   <|> do x <- bounds $ decorate fname Data $ pragma "MkWorld"
          pure (PPrimVal (boundToFC fname x) WorldVal)
@@ -343,14 +342,14 @@ mutual
                            continueWithDecorated fname indents ")"
                            pure (op, e))
            (op, e) <- pure b.val
-           act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
+           actD (toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)
            let fc = boundToFC fname (mergeBounds s b)
            let opFC = boundToFC fname op
            pure (PSectionL fc opFC op.val e)
     <|> do  -- (.y.z)  -- section of projection (chain)
            b <- bounds $ forget <$> some (bounds postfixProj)
            decoratedSymbol fname ")"
-           act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
+           actD (toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)
            let projs = map (\ proj => (boundToFC fname proj, proj.val)) b.val
            pure $ PPostfixAppPartial (boundToFC fname b) projs
       -- unit type/value
@@ -358,7 +357,7 @@ mutual
            pure (PUnit (boundToFC fname (mergeBounds s b)))
       -- dependent pairs with type annotation (so, the type form)
     <|> do dpairType fname s indents <* (decorate fname Typ $ symbol ")")
-                                     <* act [(toNonEmptyFC $ boundToFC fname s, Typ, Nothing)]
+                                     <* actD (toNonEmptyFC $ boundToFC fname s, Typ, Nothing)
     <|> do e <- bounds (typeExpr pdef fname indents)
            -- dependent pairs with no type annotation
            (do loc <- bounds (symbol "**")
@@ -370,7 +369,7 @@ mutual
                             rest.val)) <|>
              -- right sections
              ((do op <- bounds (bounds iOperator <* decoratedSymbol fname ")")
-                  act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
+                  actD (toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)
                   let fc = boundToFC fname (mergeBounds s op)
                   let opFC = boundToFC fname op.val
                   pure (PSectionR fc opFC e.val op.val.val)
@@ -450,7 +449,7 @@ mutual
                              exp <- optional (typeExpr pdef fname indents)
                              pure (boundToFC fname b, exp)
            end <- continueWithDecorated fname indents ")"
-           act [(toNonEmptyFC (boundToFC fname s), Keyword, Nothing)]
+           actD (toNonEmptyFC (boundToFC fname s), Keyword, Nothing)
            pure $ let (start ::: rest) = vals in
                   buildOutput (fst start) (mergePairs 0 start rest)
     where
@@ -484,7 +483,7 @@ mutual
   tuple fname s indents e
      =   nonEmptyTuple fname s indents e
      <|> do end <- bounds (continueWithDecorated fname indents ")")
-            act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
+            actD (toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)
             pure (PBracketed (boundToFC fname (mergeBounds s end)) e)
 
   simpleExpr : OriginDesc -> IndentInfo -> Rule PTerm

@@ -19,8 +19,23 @@ import Libraries.Data.String.Extra
 %default total
 
 public export
+record State where
+  constructor MkState
+  decorations : SemanticDecorations
+  holeNames : List String
+
+export
+Semigroup State where
+  MkState decs1 hs1 <+> MkState decs2 hs2
+    = MkState (decs1 ++ decs2) (hs1 ++ hs2)
+
+export
+Monoid State where
+  neutral = MkState [] []
+
+public export
 BRule : Bool -> Type -> Type
-BRule = Grammar SemanticDecorations Token
+BRule = Grammar State Token
 
 public export
 Rule : Type -> Type
@@ -29,6 +44,14 @@ Rule = BRule True
 public export
 EmptyRule : Type -> Type
 EmptyRule = BRule False
+
+export
+actD : ASemanticDecoration -> EmptyRule ()
+actD s = act (MkState [s] [])
+
+export
+actH : String -> EmptyRule ()
+actH s = act (MkState [] [s])
 
 export
 eoi : EmptyRule ()
@@ -56,10 +79,15 @@ documentation' = terminal "Expected documentation comment" $
                             DocComment d => Just d
                             _ => Nothing
 
+export
+decorationFromBounded : OriginDesc -> Decoration -> WithBounds a -> ASemanticDecoration
+decorationFromBounded fname decor bnds
+   = ((fname, start bnds, end bnds), decor, Nothing)
+
 documentation : OriginDesc -> Rule String
 documentation fname
   = do b <- bounds (some documentation')
-       act [((fname, start b, end b), Comment, Nothing)]
+       actD (decorationFromBounded fname Comment b)
        pure (unlines $ forget b.val)
 
 export

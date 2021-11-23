@@ -9,6 +9,8 @@ import Data.List
 import Data.List1
 import Data.String
 
+import Idris.Syntax
+
 import Libraries.Utils.String
 
 %default covering
@@ -487,20 +489,26 @@ mutual
       = INamespace fc' ns (map (substLocDecl fc') ds)
   substLocDecl fc' d = d
 
-nameNum : String -> (String, Int)
-nameNum str
-    = case span isDigit (reverse str) of
-           ("", _) => (str, 0)
-           (nums, pre)
-              => case unpack pre of
-                      ('_' :: rest) => (reverse (pack rest), cast (reverse nums))
-                      _ => (str, 0)
+nameNum : String -> (String, Maybe Int)
+nameNum str = case span isDigit (reverse str) of
+  ("", _) => (str, Nothing)
+  (nums, pre) => case unpack pre of
+    ('_' :: rest) => (reverse (pack rest), Just $ cast (reverse nums))
+    _ => (str, Nothing)
+
+nextNameNum : (String, Maybe Int) -> (String, Maybe Int)
+nextNameNum (str, mn) = (str, Just $ maybe 0 (1+) mn)
+
+unNameNum : (String, Maybe Int) -> String
+unNameNum (str, Nothing) = str
+unNameNum (str, Just n) = fastConcat [str, "_", show n]
+
 
 export
-uniqueName : Defs -> List String -> String -> Core String
-uniqueName defs used n
+uniqueBasicName : Defs -> List String -> String -> Core String
+uniqueBasicName defs used n
     = if !usedName
-         then uniqueName defs used (next n)
+         then uniqueBasicName defs used (next n)
          else pure n
   where
     usedName : Core Bool
@@ -510,6 +518,11 @@ uniqueName defs used n
                       _ => True
 
     next : String -> String
-    next str
-        = let (n, i) = nameNum str in
-              n ++ "_" ++ show (i + 1)
+    next = unNameNum . nextNameNum . nameNum
+
+export
+uniqueHoleName : {auto s : Ref Syn SyntaxInfo} ->
+                 Defs -> List String -> String -> Core String
+uniqueHoleName defs used n
+    = do syn <- get Syn
+         uniqueBasicName defs (used ++ holeNames syn) n

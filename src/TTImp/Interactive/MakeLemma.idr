@@ -6,6 +6,8 @@ import Core.Metadata
 import Core.Normalise
 import Core.TT
 
+import Idris.Syntax
+
 import TTImp.Unelab
 import TTImp.TTImp
 import TTImp.TTImp.Functor
@@ -41,12 +43,13 @@ bindableArg p _ = False
 
 getArgs : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           Env Term vars -> Nat -> Term vars ->
           Core (List (Name, Maybe Name, PiInfo RawImp, RigCount, RawImp), RawImp)
 getArgs {vars} env (S k) (Bind _ x b@(Pi _ c _ ty) sc)
     = do defs <- get Ctxt
          ty' <- map (map rawName) $ unelab env !(normalise defs env ty)
-         let x' = UN $ Basic !(uniqueName defs (map nameRoot vars) (nameRoot x))
+         let x' = UN $ Basic !(uniqueBasicName defs (map nameRoot vars) (nameRoot x))
          (sc', ty) <- getArgs (b :: env) k (renameTop x' sc)
          -- Don't need to use the name if it's not used in the scope type
          let mn = if c == top
@@ -84,6 +87,7 @@ mkApp loc n args
 export
 makeLemma : {auto m : Ref MD Metadata} ->
             {auto c : Ref Ctxt Defs} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             FC -> Name -> Nat -> ClosedTerm ->
             Core (RawImp, RawImp)
 makeLemma loc n nlocs ty
