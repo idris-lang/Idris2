@@ -1,21 +1,11 @@
 module Core.Normalise.Quote
 
-import Core.CaseTree
 import Core.Context
-import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Normalise.Eval
-import Core.Options
-import Core.Primitives
 import Core.TT
 import Core.Value
-
-import Libraries.Data.IntMap
-import Data.List
-import Data.Maybe
-import Data.Nat
-import Data.Vect
 
 %default covering
 
@@ -240,7 +230,7 @@ mutual
                         pure $ applyWithFC (TForce fc r arg') args'
   quoteGenNF q opts defs bound env (NPrimVal fc c) = pure $ PrimVal fc c
   quoteGenNF q opts defs bound env (NErased fc i) = pure $ Erased fc i
-  quoteGenNF q opts defs bound env (NType fc) = pure $ TType fc
+  quoteGenNF q opts defs bound env (NType fc u) = pure $ TType fc u
 
 export
 Quote NF where

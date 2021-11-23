@@ -111,6 +111,8 @@ mutual
   export
   Functor FnOpt' where
     map f Inline = Inline
+    map f NoInline = NoInline
+    map f Deprecate = Deprecate
     map f TCInline = TCInline
     map f (Hint b) = Hint b
     map f (GlobalHint b) = GlobalHint b
@@ -120,6 +122,7 @@ mutual
     map f (Totality tot) = Totality tot
     map f Macro = Macro
     map f (SpecArgs ns) = SpecArgs ns
+    map f (NoMangle name) = (NoMangle name)
 
   export
   Functor ImpTy' where

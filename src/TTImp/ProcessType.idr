@@ -11,12 +11,12 @@ import Core.TT
 import Core.UnifyState
 import Core.Value
 
-import TTImp.BindImplicits
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.Utils
 import TTImp.Elab
 import TTImp.TTImp
-import TTImp.Utils
 
 import Data.List
 import Data.String
@@ -32,11 +32,22 @@ getRetTy defs ty
     = throw (GenericMsg (getLoc ty)
              "Can only add hints for concrete return types")
 
+throwIfHasFlag : {auto c : Ref Ctxt Defs} -> FC -> Name -> DefFlag -> String -> Core ()
+throwIfHasFlag fc ndef fl msg
+    = when !(hasFlag fc ndef fl) $ throw (GenericMsg fc msg)
+
 processFnOpt : {auto c : Ref Ctxt Defs} ->
                FC -> Bool -> -- ^ top level name?
                Name -> FnOpt -> Core ()
 processFnOpt fc _ ndef Inline
-    = setFlag fc ndef Inline
+    = do throwIfHasFlag fc ndef NoInline "%noinline and %inline are mutually exclusive"
+         throwIfHasFlag fc ndef (NoMangle (CommonName "")) "%nomangle and %inline are mutually exclusive"
+         setFlag fc ndef Inline
+processFnOpt fc _ ndef NoInline
+    = do throwIfHasFlag fc ndef Inline "%inline and %noinline are mutually exclusive"
+         setFlag fc ndef NoInline
+processFnOpt fc _ ndef Deprecate
+    =  setFlag fc ndef Deprecate
 processFnOpt fc _ ndef TCInline
     = setFlag fc ndef TCInline
 processFnOpt fc True ndef (Hint d)
@@ -62,6 +73,19 @@ processFnOpt fc _ ndef (Totality tot)
     = setFlag fc ndef (SetTotal tot)
 processFnOpt fc _ ndef Macro
     = setFlag fc ndef Macro
+processFnOpt fc True ndef (NoMangle mname) = do
+    throwIfHasFlag fc ndef Inline "%inline and %nomangle are mutually exclusive"
+    name <- case mname of
+        Nothing => case userNameRoot !(getFullName ndef) of
+            Nothing => throw (GenericMsg fc "Unable to find user name root of \{show ndef}")
+            Just (Basic name) => pure $ CommonName name
+            Just (Field name) => pure $ CommonName name
+            Just (Hole name) => throw (GenericMsg fc "Unable to set '?\{name}' as %nomangle")
+            Just Underscore => throw (GenericMsg fc "Unable to set '_' as %nomangle")
+        Just name => pure name
+    setFlag fc ndef (NoMangle name)
+    setFlag fc ndef NoInline
+processFnOpt fc False ndef (NoMangle _) = throw (GenericMsg fc "Unable to set %nomangle for non-global functions")
 processFnOpt fc _ ndef (SpecArgs ns)
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact ndef (gamma defs)
@@ -181,6 +205,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
 getFnString : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               RawImp -> Core String
 getFnString (IPrimVal _ (Str st)) = pure st
 getFnString tm
@@ -201,6 +226,7 @@ initDef : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           Name -> Env Term vars -> Term vars -> List FnOpt -> Core Def
 initDef n env ty []
     = do addUserHole False n
@@ -259,6 +285,7 @@ processType : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               List ElabOpt -> NestedNames vars -> Env Term vars ->
               FC -> RigCount -> Visibility ->
               List FnOpt -> ImpTy -> Core ()
@@ -276,11 +303,12 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
          Nothing <- lookupCtxtExact (Resolved idx) (gamma defs)
               | Just gdef => throw (AlreadyDefined fc n)
 
+         u <- uniVar fc
          ty <-
              wrapErrorC eopts (InType fc n) $
                    checkTerm idx InType (HolesOkay :: eopts) nest env
                              (IBindHere fc (PI erased) ty_raw)
-                             (gType fc)
+                             (gType fc u)
          logTermNF "declare.type" 3 ("Type of " ++ show n) [] (abstractFullEnvType tfc env ty)
 
          def <- initDef n env ty opts

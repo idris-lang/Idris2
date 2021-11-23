@@ -19,6 +19,7 @@ Reify BindMode where
                  => do c' <- reify defs !(evalClosure defs c)
                        pure (PI c')
              (UN (Basic "PATTERN"), _) => pure PATTERN
+             (UN (Basic "COVERAGE"), _) => pure COVERAGE
              (UN (Basic "NONE"), _) => pure NONE
              _ => cantReify val "BindMode"
   reify deva val = cantReify val "BindMode"
@@ -30,6 +31,8 @@ Reflect BindMode where
            appCon fc defs (reflectionttimp "PI") [c']
   reflect fc defs lhs env PATTERN
       = getCon fc defs (reflectionttimp "PATTERN")
+  reflect fc defs lhs env COVERAGE
+      = getCon fc defs (reflectionttimp "COVERAGE")
   reflect fc defs lhs env NONE
       = getCon fc defs (reflectionttimp "NONE")
 
@@ -269,10 +272,25 @@ mutual
     reify defs val = cantReify val "AltType"
 
   export
+  Reify NoMangleDirective where
+    reify defs val@(NDCon _ n _ _ args)
+        = case (dropAllNS !(full (gamma defs) n), args) of
+               (UN (Basic "CommonName"), [(_, name)])
+                    => do n <- reify defs !(evalClosure defs name)
+                          pure $ CommonName n
+               (UN (Basic "BackendNames"), [(_, names)])
+                    => do ns <- reify defs !(evalClosure defs names)
+                          pure $ BackendNames ns
+               _ => cantReify val "NoMangleDirective"
+    reify defs val = cantReify val "NoMangleDirective"
+
+  export
   Reify FnOpt where
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), args) of
                (UN (Basic "Inline"), _) => pure Inline
+               (UN (Basic "NoInline"), _) => pure NoInline
+               (UN (Basic "Deprecate"), _) => pure Deprecate
                (UN (Basic "TCInline"), _) => pure TCInline
                (UN (Basic "Hint"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
@@ -292,6 +310,9 @@ mutual
                (UN (Basic "SpecArgs"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (SpecArgs x')
+               (UN (Basic "NoMangle"), [(_, n)])
+                    => do ds <- reify defs !(evalClosure defs n)
+                          pure (NoMangle ds)
                _ => cantReify val "FnOpt"
     reify defs val = cantReify val "FnOpt"
 
@@ -634,8 +655,19 @@ mutual
              appCon fc defs (reflectionttimp "UniqueDefault") [x']
 
   export
+  Reflect NoMangleDirective where
+    reflect fc defs lhs env (CommonName n)
+        = do n' <- reflect fc defs lhs env n
+             appCon fc defs (reflectionttimp "CommonName") [n']
+    reflect fc defs lhs env (BackendNames ns)
+        = do ns' <- reflect fc defs lhs env ns
+             appCon fc defs (reflectionttimp "BackendNames") [ns']
+
+  export
   Reflect FnOpt where
     reflect fc defs lhs env Inline = getCon fc defs (reflectionttimp "Inline")
+    reflect fc defs lhs env NoInline = getCon fc defs (reflectionttimp "NoInline")
+    reflect fc defs lhs env Deprecate = getCon fc defs (reflectionttimp "Deprecate")
     reflect fc defs lhs env TCInline = getCon fc defs (reflectionttimp "TCInline")
     reflect fc defs lhs env (Hint x)
         = do x' <- reflect fc defs lhs env x
@@ -655,6 +687,9 @@ mutual
     reflect fc defs lhs env (SpecArgs r)
         = do r' <- reflect fc defs lhs env r
              appCon fc defs (reflectionttimp "SpecArgs") [r']
+    reflect fc defs lhs env (NoMangle n)
+        = do n' <- reflect fc defs lhs env n
+             appCon fc defs (reflectionttimp "NoMangle") [n']
 
   export
   Reflect ImpTy where

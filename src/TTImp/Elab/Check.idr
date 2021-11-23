@@ -14,6 +14,8 @@ import Core.UnifyState
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.TTImp
 
 import Data.Either
@@ -32,6 +34,7 @@ isLHS : ElabMode -> Maybe RigCount
 isLHS (InLHS w) = Just w
 isLHS _ = Nothing
 
+export
 Show ElabMode where
   show InType = "InType"
   show (InLHS c) = "InLHS " ++ show c
@@ -66,6 +69,7 @@ data ImplBinding : List Name -> Type where
                  ImplBinding vars
 
 export
+covering
 Show (ImplBinding vars) where
   show (NameBinding c p tm ty) = show (tm, ty)
   show (AsBinding c p tm ty pat) = show (tm, ty) ++ "@" ++ show tm
@@ -313,7 +317,7 @@ concrete defs env (NBind fc _ (Pi _ _ _ _) sc)
 concrete defs env (NDCon _ _ _ _ _) = pure True
 concrete defs env (NTCon _ _ _ _ _) = pure True
 concrete defs env (NPrimVal _ _) = pure True
-concrete defs env (NType _) = pure True
+concrete defs env (NType _ _) = pure True
 concrete defs env _ = pure False
 
 export
@@ -408,6 +412,15 @@ argVar : {vars : _} ->
          Env Term vars -> Name -> Term vars -> Core (Int, Term vars)
 argVar fc rig env n ty
     = newMetaLets fc rig env n ty (Hole (length env) (holeInit False)) False True
+
+export
+uniVar : {auto c : Ref Ctxt Defs} ->
+         {auto u : Ref UST UState} ->
+         FC -> Core Name
+uniVar fc
+    = do n <- genName "u"
+         idx <- addDef n (newDef fc n erased [] (Erased fc False) Public None)
+         pure (Resolved idx)
 
 export
 searchVar : {vars : _} ->
@@ -625,8 +638,8 @@ exactlyOne' {vars} allowCons fc env all
                           [(_, res)] => Right res
                           _ => Left (map snd rs)
 
-    getRes : ((Term vars, Glued vars), st) -> Term vars
-    getRes ((tm, _), thisst) = tm
+    getRes : ((Term vars, Glued vars), Defs, st) -> (Context, Term vars)
+    getRes ((tm, _), defs, thisst) = (gamma defs, tm)
 
     getDepthError : Error -> Maybe Error
     getDepthError e@(AmbiguityTooDeep _ _ _) = Just e
@@ -640,7 +653,7 @@ exactlyOne' {vars} allowCons fc env all
     -- If they've all failed, collect all the errors
     -- If more than one succeeded, report the ambiguity
     altError : List (Maybe Name, Error) ->
-               List ((Term vars, Glued vars), st) ->
+               List ((Term vars, Glued vars), Defs, st) ->
                Error
     altError ls []
         = case depthError ls of
@@ -679,6 +692,7 @@ check : {vars : _} ->
         {auto m : Ref MD Metadata} ->
         {auto u : Ref UST UState} ->
         {auto e : Ref EST (EState vars)} ->
+        {auto s : Ref Syn SyntaxInfo} ->
         RigCount -> ElabInfo ->
         NestedNames vars -> Env Term vars -> RawImp ->
         Maybe (Glued vars) ->
@@ -691,6 +705,7 @@ checkImp : {vars : _} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars -> RawImp -> Maybe (Glued vars) ->
            Core (Term vars, Glued vars)
@@ -701,6 +716,7 @@ processDecl : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               List ElabOpt -> NestedNames vars ->
               Env Term vars -> ImpDecl -> Core ()
 

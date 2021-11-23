@@ -7,7 +7,6 @@ import Core.Name
 import Core.TT
 
 import Data.List
-import Libraries.Data.NameMap
 import Data.Vect
 
 %default covering
@@ -24,8 +23,9 @@ data ConInfo = DATACON -- normal data constructor
              | NOTHING -- nothing of an option shaped thing
              | JUST -- just of an option shaped thing
              | RECORD -- record constructor (no tag)
-             | ZERO
-             | SUCC
+             | ZERO -- zero of a nat-like type
+             | SUCC -- successor of a nat-like type
+             | UNIT -- unit
 
 export
 Show ConInfo where
@@ -39,6 +39,7 @@ Show ConInfo where
   show RECORD  = "[record]"
   show ZERO    = "[zero]"
   show SUCC    = "[succ]"
+  show UNIT    = "[unit]"
 
 export
 Eq ConInfo where
@@ -52,6 +53,7 @@ Eq ConInfo where
   RECORD == RECORD = True
   ZERO == ZERO = True
   SUCC == SUCC = True
+  UNIT == UNIT = True
   _ == _ = False
 
 mutual
@@ -351,10 +353,12 @@ forgetDef (MkForeign ccs fargs ty) = MkNmForeign ccs fargs ty
 forgetDef (MkError err) = MkNmError (forget err)
 
 export
+covering
 {vars : _} -> Show (CExp vars) where
   show exp = show (forget exp)
 
 export
+covering
 Show CFType where
   show CFUnit = "Unit"
   show CFInt = "Int"
@@ -381,6 +385,7 @@ Show CFType where
   show (CFUser n args) = show n ++ " " ++ showSep " " (map show args)
 
 export
+covering
 Show CDef where
   show (MkFun args exp) = show args ++ ": " ++ show exp
   show (MkCon tag arity pos)
@@ -392,6 +397,7 @@ Show CDef where
   show (MkError exp) = "Error: " ++ show exp
 
 export
+covering
 Show NamedDef where
   show (MkNmFun args exp) = show args ++ ": " ++ show exp
   show (MkNmCon tag arity pos)

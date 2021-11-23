@@ -3,9 +3,7 @@ module Idris.IDEMode.SyntaxHighlight
 import Core.Context
 import Core.Context.Log
 import Core.Directory
-import Core.InitPrimitives
 import Core.Metadata
-import Core.TT
 
 import Idris.REPL
 import Idris.Syntax
@@ -14,7 +12,6 @@ import Idris.Doc.String
 import Idris.IDEMode.Commands
 
 import Data.List
-import Data.Maybe
 
 import Libraries.Data.PosMap
 
@@ -61,20 +58,23 @@ syntaxToProperties syn = mkDecor <$> syntaxToDecoration syn
 
 export
 annToProperties : IdrisAnn -> Maybe Properties
-annToProperties Warning      = Nothing
-annToProperties Error        = Nothing
-annToProperties ErrorDesc    = Nothing
-annToProperties FileCtxt     = Nothing
-annToProperties Code         = Nothing
-annToProperties Meta         = Nothing
-annToProperties (Syntax syn) = syntaxToProperties syn
+annToProperties Warning       = Nothing
+annToProperties Error         = Nothing
+annToProperties ErrorDesc     = Nothing
+annToProperties FileCtxt      = Nothing
+annToProperties Code          = Nothing
+annToProperties Meta          = Nothing
+annToProperties (Syntax syn)  = syntaxToProperties syn
+annToProperties UserDocString = Nothing
 
 export
 docToProperties : IdrisDocAnn -> Maybe Properties
 docToProperties Header        = pure $ mkFormat Underline
+docToProperties Deprecation   = pure $ mkFormat Bold
 docToProperties Declarations  = Nothing
 docToProperties (Decl _)      = Nothing
 docToProperties DocStringBody = Nothing
+docToProperties UserDocString = Nothing
 docToProperties (Syntax syn)  = syntaxToProperties syn
 
 SExpable Decoration where

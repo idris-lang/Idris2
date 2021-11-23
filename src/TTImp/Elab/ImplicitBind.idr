@@ -5,6 +5,7 @@ module TTImp.Elab.ImplicitBind
 import Core.Context
 import Core.Context.Log
 import Core.Core
+import Core.Coverage
 import Core.Env
 import Core.Metadata
 import Core.Normalise
@@ -12,6 +13,8 @@ import Core.Unify
 import Core.UnifyState
 import Core.TT
 import Core.Value
+
+import Idris.Syntax
 
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
@@ -47,9 +50,10 @@ mkOuterHole loc rig n topenv Nothing
          let sub = subEnv est
          let env = outerEnv est
          nm <- genName ("type_of_" ++ nameRoot n)
-         ty <- metaVar loc erased env nm (TType loc)
+         u <- uniVar loc
+         ty <- metaVar loc erased env nm (TType loc u)
          log "elab.implicits" 10 $ "Made metavariable for type of " ++ show n ++ ": " ++ show nm
-         put EST (addBindIfUnsolved nm rig Explicit topenv (embedSub sub ty) (TType loc) est)
+         put EST (addBindIfUnsolved nm rig Explicit topenv (embedSub sub ty) (TType loc u) est)
          tm <- implBindVar loc rig env n ty
          pure (embedSub sub tm, embedSub sub ty)
 
@@ -100,6 +104,17 @@ mkPatternHole {vars'} loc rig n topenv imode (Just expty_in)
 
 mkPatternHole loc rig n env _ _
     = throw (GenericMsg loc ("Unknown type for pattern variable " ++ show n))
+
+-- Ideally just normalise the holes, but if it gets too big, try normalising
+-- everything instead
+export
+normaliseType : {auto c : Ref Ctxt Defs} ->
+                {free : _} ->
+                Defs -> Env Term free -> Term free -> Core (Term free)
+normaliseType defs env tm
+    = catch (do tm' <- nfOpts withHoles defs env tm
+                quoteOpts (MkQuoteOpts False False (Just 5)) defs env tm')
+            (\err => normalise defs env tm)
 
 -- For any of the 'bindIfUnsolved' - these were added as holes during
 -- elaboration, but are as yet unsolved, so create a pattern variable for
@@ -188,7 +203,7 @@ swapVars (TDelay fc x ty tm) = TDelay fc x (swapVars ty) (swapVars tm)
 swapVars (TForce fc r tm) = TForce fc r (swapVars tm)
 swapVars (PrimVal fc c) = PrimVal fc c
 swapVars (Erased fc i) = Erased fc i
-swapVars (TType fc) = TType fc
+swapVars (TType fc u) = TType fc u
 
 -- Push an explicit pi binder as far into a term as it'll go. That is,
 -- move it under implicit binders that don't depend on it, and stop
@@ -209,7 +224,7 @@ push ofc n b tm = Bind ofc n b tm
 -- implicits, and we don't want to move any given by the programmer
 liftImps : {vars : _} ->
            BindMode -> (Term vars, Term vars) -> (Term vars, Term vars)
-liftImps (PI _) (tm, TType fc) = (liftImps' tm, TType fc)
+liftImps (PI _) (tm, TType fc u) = (liftImps' tm, TType fc u)
   where
     liftImps' : {vars : _} ->
                 Term vars -> Term vars
@@ -249,7 +264,7 @@ bindImplVars {vars} fc mode gam env imps_in scope scty
               case mode of
                    PI c =>
                       (Bind fc _ (Pi fc c Implicit bty') tm',
-                       TType fc)
+                       TType fc (MN "top" 0))
                    _ =>
                       (Bind fc _ (PVar fc c (map (weakenNs (sizeOf bs)) p) bty') tm',
                        Bind fc _ (PVTy fc c bty') ty')
@@ -279,14 +294,7 @@ bindImplicits : {auto c : Ref Ctxt Defs} ->
                 Term vars -> Term vars -> Core (Term vars, Term vars)
 bindImplicits fc NONE defs env hs tm ty = pure (tm, ty)
 bindImplicits {vars} fc mode defs env hs tm ty
-   = do hs' <- traverse nHoles hs
-        pure $ liftImps mode $ bindImplVars fc mode defs env hs' tm ty
-  where
-    nHoles : (Name, ImplBinding vars) -> Core (Name, ImplBinding vars)
-    nHoles (n, NameBinding c p tm ty)
-        = pure (n, NameBinding c p tm !(normaliseHolesScope defs env ty))
-    nHoles (n, AsBinding c p tm ty pat)
-        = pure (n, AsBinding c p tm !(normaliseHolesScope defs env ty) pat)
+   = pure $ liftImps mode $ bindImplVars fc mode defs env hs tm ty
 
 export
 implicitBind : {auto c : Ref Ctxt Defs} ->
@@ -338,10 +346,20 @@ getToBind {vars} fc elabmode impmode env excepts
   where
     normBindingTy : Defs -> ImplBinding vars -> Core (ImplBinding vars)
     normBindingTy defs (NameBinding c p tm ty)
-        = pure $ NameBinding c p tm !(normaliseHoles defs env ty)
+        = do case impmode of
+                  COVERAGE => do tynf <- nf defs env ty
+                                 when !(isEmpty defs env tynf) $
+                                    throw (InternalError "Empty pattern in coverage check")
+                  _ => pure ()
+             pure $ NameBinding c p tm !(normaliseType defs env ty)
     normBindingTy defs (AsBinding c p tm ty pat)
-        = pure $ AsBinding c p tm !(normaliseHoles defs env ty)
-                                  !(normaliseHoles defs env pat)
+        = do case impmode of
+                  COVERAGE => do tynf <- nf defs env ty
+                                 when !(isEmpty defs env tynf) $
+                                    throw (InternalError "Empty pattern in coverage check")
+                  _ => pure ()
+             pure $ AsBinding c p tm !(normaliseType defs env ty)
+                                     !(normaliseHoles defs env pat)
 
     normImps : Defs -> List Name -> List (Name, ImplBinding vars) ->
                Core (List (Name, ImplBinding vars))
@@ -399,6 +417,7 @@ checkBindVar : {vars : _} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                RigCount -> ElabInfo ->
                NestedNames vars -> Env Term vars ->
                FC -> UserName -> -- username is base of the pattern name
@@ -491,7 +510,6 @@ checkPolyConstraint (MkPolyConstraint fc env arg x y)
                                  throw (MatchTooSpecific fc env arg)
                          else pure ()
               _ => pure ()
-checkPolyConstraint _ = pure ()
 
 solvePolyConstraint :
             {auto c : Ref Ctxt Defs} ->
@@ -514,6 +532,7 @@ checkBindHere : {vars : _} ->
                 {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
                 {auto e : Ref EST (EState vars)} ->
+                {auto s : Ref Syn SyntaxInfo} ->
                 RigCount -> ElabInfo ->
                 NestedNames vars -> Env Term vars ->
                 FC -> BindMode -> RawImp ->

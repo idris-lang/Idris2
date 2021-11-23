@@ -43,7 +43,7 @@ Weaken NestedNames where
 -- do notation, etc, should elaborate via this, perhaps in some local
 -- context).
 public export
-data BindMode = PI RigCount | PATTERN | NONE
+data BindMode = PI RigCount | PATTERN | COVERAGE | NONE
 
 mutual
 
@@ -144,7 +144,8 @@ mutual
        UniqueDefault : RawImp' nm -> AltType' nm
 
   export
-    Show nm => Show (RawImp' nm) where
+  covering
+  Show nm => Show (RawImp' nm) where
       show (IVar fc n) = show n
       show (IPi fc c p n arg ret)
          = "(%pi " ++ show c ++ " " ++ show p ++ " " ++
@@ -202,6 +203,7 @@ mutual
       show (IWithUnambigNames fc ns rhs) = "(%with " ++ show ns ++ " " ++ show rhs ++ ")"
 
   export
+  covering
   Show nm => Show (IFieldUpdate' nm) where
     show (ISetField p val) = showSep "->" p ++ " = " ++ show val
     show (ISetFieldApp p val) = showSep "->" p ++ " $= " ++ show val
@@ -213,6 +215,9 @@ mutual
   public export
   data FnOpt' : Type -> Type where
        Inline : FnOpt' nm
+       NoInline : FnOpt' nm
+       ||| Mark a function as deprecated.
+       Deprecate : FnOpt' nm
        TCInline : FnOpt' nm
        -- Flag means the hint is a direct hint, not a function which might
        -- find the result (e.g. chasing parent interface dictionaries)
@@ -227,6 +232,7 @@ mutual
        Totality : TotalReq -> FnOpt' nm
        Macro : FnOpt' nm
        SpecArgs : List Name -> FnOpt' nm
+       NoMangle : Maybe NoMangleDirective -> FnOpt' nm
 
   public export
   isTotalityReq : FnOpt' nm -> Bool
@@ -234,8 +240,16 @@ mutual
   isTotalityReq _ = False
 
   export
+  Show NoMangleDirective where
+    show (CommonName name) = "\"\{name}\""
+    show (BackendNames ns) = showSep " " (map (\(b, n) => "\"\{b}:\{n}\"") ns)
+
+  export
+  covering
   Show nm => Show (FnOpt' nm) where
     show Inline = "%inline"
+    show NoInline = "%noinline"
+    show Deprecate = "%deprecate"
     show TCInline = "%tcinline"
     show (Hint t) = "%hint " ++ show t
     show (GlobalHint t) = "%globalhint " ++ show t
@@ -247,10 +261,20 @@ mutual
     show (Totality PartialOK) = "partial"
     show Macro = "%macro"
     show (SpecArgs ns) = "%spec " ++ showSep " " (map show ns)
+    show (NoMangle Nothing) = "%nomangle"
+    show (NoMangle (Just ns)) = "%nomangle \{show ns}"
+
+  export
+  Eq NoMangleDirective where
+    CommonName x == CommonName y = x == y
+    BackendNames xs == BackendNames ys = xs == ys
+    _ == _ = False
 
   export
   Eq FnOpt where
     Inline == Inline = True
+    NoInline == NoInline = True
+    Deprecate == Deprecate = True
     TCInline == TCInline = True
     (Hint x) == (Hint y) = x == y
     (GlobalHint x) == (GlobalHint y) = x == y
@@ -260,6 +284,7 @@ mutual
     (Totality tot_lhs) == (Totality tot_rhs) = tot_lhs == tot_rhs
     Macro == Macro = True
     (SpecArgs ns) == (SpecArgs ns') = ns == ns'
+    (NoMangle x) == (NoMangle y) = x == y
     _ == _ = False
 
   public export
@@ -271,6 +296,7 @@ mutual
        MkImpTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : RawImp' nm) -> ImpTy' nm
 
   export
+  covering
   Show nm => Show (ImpTy' nm) where
     show (MkImpTy fc _ n ty) = "(%claim " ++ show n ++ " " ++ show ty ++ ")"
 
@@ -303,6 +329,7 @@ mutual
        MkImpLater : FC -> (n : Name) -> (tycon : RawImp' nm) -> ImpData' nm
 
   export
+  covering
   Show nm => Show (ImpData' nm) where
     show (MkImpData fc n tycon _ cons)
         = "(%data " ++ show n ++ " " ++ show tycon ++ " " ++
@@ -337,11 +364,13 @@ mutual
                      ImpRecord' nm
 
   export
+  covering
   Show nm => Show (IField' nm) where
     show (MkIField _ c Explicit n ty) = show n ++ " : " ++ show ty
     show (MkIField _ c _ n ty) = "{" ++ show n ++ " : " ++ show ty ++ "}"
 
   export
+  covering
   Show nm => Show (ImpRecord' nm) where
     show (MkImpRecord _ n params con fields)
         = "record " ++ show n ++ " " ++ show params ++
@@ -374,6 +403,7 @@ mutual
        ImpossibleClause : FC -> (lhs : RawImp' nm) -> ImpClause' nm
 
   export
+  covering
   Show nm => Show (ImpClause' nm) where
     show (PatClause fc lhs rhs)
        = show lhs ++ " = " ++ show rhs
@@ -414,6 +444,7 @@ mutual
        IBuiltin : FC -> BuiltinType -> Name -> ImpDecl' nm
 
   export
+  covering
   Show nm => Show (ImpDecl' nm) where
     show (IClaim _ c _ opts ty) = show opts ++ " " ++ show c ++ " " ++ show ty
     show (IData _ _ d) = show d
@@ -435,6 +466,26 @@ mutual
       [] => show lvl
       _  => concat (intersperse "." topic) ++ " " ++ show lvl
     show (IBuiltin _ type name) = "%builtin " ++ show type ++ " " ++ show name
+
+
+-- Extract the RawImp term from a FieldUpdate.
+export
+getFieldUpdateTerm : IFieldUpdate' nm -> RawImp' nm
+getFieldUpdateTerm (ISetField    _ term) = term
+getFieldUpdateTerm (ISetFieldApp _ term) = term
+
+
+export
+getFieldUpdatePath : IFieldUpdate' nm -> List String
+getFieldUpdatePath (ISetField    path _) = path
+getFieldUpdatePath (ISetFieldApp path _) = path
+
+
+export
+mapFieldUpdateTerm : (RawImp' nm -> RawImp' nm) -> IFieldUpdate' nm -> IFieldUpdate' nm
+mapFieldUpdateTerm f (ISetField    x term) = ISetField    x (f term)
+mapFieldUpdateTerm f (ISetFieldApp x term) = ISetFieldApp x (f term)
+
 
 export
 isIPrimVal : RawImp' nm -> Maybe Constant
@@ -516,6 +567,8 @@ findIBinds (IUnquote fc tm) = findIBinds tm
 findIBinds (IRunElab fc tm) = findIBinds tm
 findIBinds (IBindHere _ _ tm) = findIBinds tm
 findIBinds (IBindVar _ n) = [n]
+findIBinds (IUpdate fc updates tm)
+    = findIBinds tm ++ concatMap (findIBinds . getFieldUpdateTerm) updates
 -- We've skipped lambda, case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findIBinds tm = []
@@ -549,6 +602,8 @@ findImplicits (IQuote fc tm) = findImplicits tm
 findImplicits (IUnquote fc tm) = findImplicits tm
 findImplicits (IRunElab fc tm) = findImplicits tm
 findImplicits (IBindVar _ n) = [n]
+findImplicits (IUpdate fc updates tm)
+    = findImplicits tm ++ concatMap (findImplicits . getFieldUpdateTerm) updates
 findImplicits tm = []
 
 -- Update the lhs of a clause so that any implicits named in the type are
@@ -733,6 +788,16 @@ definedInBlock ns decls =
     defName _ _ = []
 
 export
+isIVar : RawImp' nm -> Maybe (FC, nm)
+isIVar (IVar fc v) = Just (fc, v)
+isIVar _ = Nothing
+
+export
+isIBindVar : RawImp' nm -> Maybe (FC, String)
+isIBindVar (IBindVar fc v) = Just (fc, v)
+isIBindVar _ = Nothing
+
+export
 getFC : RawImp' nm -> FC
 getFC (IVar x _) = x
 getFC (IPi x _ _ _ _ _) = x
@@ -784,6 +849,54 @@ namespace ImpDecl
   getFC (IPragma _ _) = EmptyFC
   getFC (ILog _) = EmptyFC
   getFC (IBuiltin fc _ _) = fc
+
+public export
+data Arg' nm
+   = Explicit FC (RawImp' nm)
+   | Auto     FC (RawImp' nm)
+   | Named    FC Name (RawImp' nm)
+
+public export
+Arg : Type
+Arg = Arg' Name
+
+public export
+IArg : Type
+IArg = Arg' KindedName
+
+export
+isExplicit : Arg' nm -> Maybe (FC, RawImp' nm)
+isExplicit (Explicit fc t) = Just (fc, t)
+isExplicit _ = Nothing
+
+export
+unIArg : Arg' nm -> RawImp' nm
+unIArg (Explicit _ t) = t
+unIArg (Auto _ t) = t
+unIArg (Named _ _ t) = t
+
+export
+covering
+Show nm => Show (Arg' nm) where
+  show (Explicit fc t) = show t
+  show (Auto fc t) = "@{" ++ show t ++ "}"
+  show (Named fc n t) = "{" ++ show n ++ " = " ++ show t ++ "}"
+
+export
+getFnArgs : RawImp' nm -> List (Arg' nm) -> (RawImp' nm, List (Arg' nm))
+getFnArgs (IApp fc f arg) args = getFnArgs f (Explicit fc arg :: args)
+getFnArgs (INamedApp fc f n arg) args = getFnArgs f (Named fc n arg :: args)
+getFnArgs (IAutoApp fc f arg) args = getFnArgs f (Auto fc arg :: args)
+getFnArgs tm args = (tm, args)
+
+-- TODO: merge these definitions
+namespace Arg
+  export
+  apply : RawImp' nm -> List (Arg' nm) -> RawImp' nm
+  apply f (Explicit fc a :: args) = apply (IApp fc f a) args
+  apply f (Auto fc a :: args) = apply (IAutoApp fc f a) args
+  apply f (Named fc n a :: args) = apply (INamedApp fc f n a) args
+  apply f [] = f
 
 export
 apply : RawImp' nm -> List (RawImp' nm) -> RawImp' nm
@@ -1020,6 +1133,7 @@ mutual
     toBuf b (PI r) = do tag 0; toBuf b r
     toBuf b PATTERN = tag 1
     toBuf b NONE = tag 2
+    toBuf b COVERAGE = tag 3
 
     fromBuf b
         = case !getTag of
@@ -1027,6 +1141,7 @@ mutual
                        pure (PI x)
                1 => pure PATTERN
                2 => pure NONE
+               3 => pure COVERAGE
                _ => corrupt "BindMode"
 
   export
@@ -1137,9 +1252,24 @@ mutual
              pure (MkImpRecord fc n ps con fs)
 
   export
+  TTC NoMangleDirective where
+    toBuf b (CommonName n)
+        = do tag 0; toBuf b n
+    toBuf b (BackendNames ns)
+        = do tag 1; toBuf b ns
+
+    fromBuf b
+        = case !getTag of
+               0 => do n <- fromBuf b; pure (CommonName n)
+               1 => do ns <- fromBuf b; pure (BackendNames ns)
+               _ => corrupt "NoMangleDirective"
+
+  export
   TTC FnOpt where
     toBuf b Inline = tag 0
+    toBuf b NoInline = tag 12
     toBuf b TCInline = tag 11
+    toBuf b Deprecate = tag 14
     toBuf b (Hint t) = do tag 1; toBuf b t
     toBuf b (GlobalHint t) = do tag 2; toBuf b t
     toBuf b ExternFn = tag 3
@@ -1150,6 +1280,7 @@ mutual
     toBuf b (Totality PartialOK) = tag 8
     toBuf b Macro = tag 9
     toBuf b (SpecArgs ns) = do tag 10; toBuf b ns
+    toBuf b (NoMangle name) = do tag 13; toBuf b name
 
     fromBuf b
         = case !getTag of
@@ -1165,6 +1296,9 @@ mutual
                9 => pure Macro
                10 => do ns <- fromBuf b; pure (SpecArgs ns)
                11 => pure TCInline
+               12 => pure NoInline
+               13 => do name <- fromBuf b; pure (NoMangle name)
+               14 => pure Deprecate
                _ => corrupt "FnOpt"
 
   export

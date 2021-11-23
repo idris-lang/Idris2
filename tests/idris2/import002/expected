@@ -11,14 +11,13 @@ Test:5:9--5:12
  5 | thing : Nat -> Nat
              ^^^
 
-Error: No type declaration for Test.thing.
+Error: While processing right hand side of thing. Undefined name plus. 
 
-Test:6:1--6:28
+Test:6:19--6:23
  2 | 
  3 | import Mult
  4 | 
  5 | thing : Nat -> Nat
  6 | thing x = mult x (plus x x)
-     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                       ^^^^
 
-Test> Bye for now!

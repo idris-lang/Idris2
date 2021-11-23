@@ -9,6 +9,7 @@ import Data.Vect
 import Decidable.Equality
 
 import Libraries.Data.NameMap
+import Libraries.Data.Primitives
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
@@ -45,20 +46,19 @@ Show KindedName where show = show . rawName
 
 public export
 data Constant
-    = I Int
-    | I8 Integer -- reuse code from I64 with fewer casts
-    | I16 Integer
-    | I32 Integer
-    | I64 Integer
-    | BI Integer
-    | B8 Int -- For now, since we don't have Bits types. We need to
-                -- make sure the Integer remains in range
-    | B16 Int
-    | B32 Int
-    | B64 Integer
+    = I   Int
+    | I8  Int8
+    | I16 Int16
+    | I32 Int32
+    | I64 Int64
+    | BI  Integer
+    | B8  Bits8
+    | B16 Bits16
+    | B32 Bits32
+    | B64 Bits64
     | Str String
-    | Ch Char
-    | Db Double
+    | Ch  Char
+    | Db  Double
     | WorldVal
 
     | IntType
@@ -128,21 +128,35 @@ isPrimType CharType    = True
 isPrimType DoubleType  = True
 isPrimType WorldType   = True
 
+-- TODO : The `TempXY` instances can be removed after the next release
+--        (see also `Libraries.Data.Primitives`)
 export
 constantEq : (x, y : Constant) -> Maybe (x = y)
 constantEq (I x) (I y) = case decEq x y of
                               Yes Refl => Just Refl
                               No contra => Nothing
-constantEq (I8 x) (I8 y) = case decEq x y of
+constantEq (I8 x) (I8 y) = case decEq @{TempI8} x y of
                                   Yes Refl => Just Refl
                                   No contra => Nothing
-constantEq (I16 x) (I16 y) = case decEq x y of
+constantEq (I16 x) (I16 y) = case decEq @{TempI16} x y of
                                   Yes Refl => Just Refl
                                   No contra => Nothing
-constantEq (I32 x) (I32 y) = case decEq x y of
+constantEq (I32 x) (I32 y) = case decEq @{TempI32} x y of
                                   Yes Refl => Just Refl
                                   No contra => Nothing
-constantEq (I64 x) (I64 y) = case decEq x y of
+constantEq (I64 x) (I64 y) = case decEq @{TempI64} x y of
+                                  Yes Refl => Just Refl
+                                  No contra => Nothing
+constantEq (B8 x) (B8 y) = case decEq @{TempB8} x y of
+                                  Yes Refl => Just Refl
+                                  No contra => Nothing
+constantEq (B16 x) (B16 y) = case decEq @{TempB16} x y of
+                                  Yes Refl => Just Refl
+                                  No contra => Nothing
+constantEq (B32 x) (B32 y) = case decEq @{TempB32} x y of
+                                  Yes Refl => Just Refl
+                                  No contra => Nothing
+constantEq (B64 x) (B64 y) = case decEq @{TempB64} x y of
                                   Yes Refl => Just Refl
                                   No contra => Nothing
 constantEq (BI x) (BI y) = case decEq x y of
@@ -572,6 +586,23 @@ Functor Binder where
   map func (PLet fc c val ty) = PLet fc c (func val) (func ty)
   map func (PVTy fc c ty) = PVTy fc c (func ty)
 
+export
+Foldable Binder where
+  foldr f acc (Lam fc c x ty) = foldr f (f ty acc) x
+  foldr f acc (Let fc c val ty) = f val (f ty acc)
+  foldr f acc (Pi fc c x ty) = foldr f (f ty acc) x
+  foldr f acc (PVar fc c p ty) = foldr f (f ty acc) p
+  foldr f acc (PLet fc c val ty) = f val (f ty acc)
+  foldr f acc (PVTy fc c ty) = f ty acc
+
+export
+Traversable Binder where
+  traverse f (Lam fc c x ty) = Lam fc c <$> traverse f x <*> f ty
+  traverse f (Let fc c val ty) = Let fc c <$> f val <*> f ty
+  traverse f (Pi fc c x ty) = Pi fc c <$> traverse f x <*> f ty
+  traverse f (PVar fc c p ty) = PVar fc c <$> traverse f p <*> f ty
+  traverse f (PLet fc c val ty) = PLet fc c <$> f val <*> f ty
+  traverse f (PVTy fc c ty) = PVTy fc c <$> f ty
 
 public export
 data IsVar : Name -> Nat -> List Name -> Type where
@@ -669,6 +700,10 @@ record SizeOf {a : Type} (xs : List a) where
 namespace SizeOf
 
   export
+  0 theList : SizeOf {a} xs -> List a
+  theList _ = xs
+
+  export
   zero : SizeOf []
   zero = MkSizeOf Z Z
 
@@ -757,7 +792,8 @@ data Term : List Name -> Type where
      PrimVal : FC -> (c : Constant) -> Term vars
      Erased : FC -> (imp : Bool) -> -- True == impossible term, for coverage checker
               Term vars
-     TType : FC -> Term vars
+     TType : FC -> Name -> -- universe variable
+             Term vars
 
 -- Remove/restore the given namespace from all Refs. This is to allow
 -- writing terms and case trees to disk without repeating the same namespace
@@ -827,7 +863,7 @@ getLoc (TDelay fc _ _ _) = fc
 getLoc (TForce fc _ _) = fc
 getLoc (PrimVal fc _) = fc
 getLoc (Erased fc i) = fc
-getLoc (TType fc) = fc
+getLoc (TType fc _) = fc
 
 export
 Eq LazyReason where
@@ -881,10 +917,10 @@ Eq (Term vars) where
   (==) (TForce _ _ t) (TForce _ _ t') = t == t'
   (==) (PrimVal _ c) (PrimVal _ c') = c == c'
   (==) (Erased _ i) (Erased _ i') = i == i'
-  (==) (TType _) (TType _) = True
+  (==) (TType _ _) (TType _ _) = True
   (==) _ _ = False
 
--- Check equality, ignoring variable naming
+-- Check equality, ignoring variable naming and universes
 export
 total
 eqTerm : Term vs -> Term vs' -> Bool
@@ -901,7 +937,7 @@ eqTerm (TDelay _ _ t x) (TDelay _ _ t' x') = eqTerm t t' && eqTerm x x'
 eqTerm (TForce _ _ t) (TForce _ _ t') = eqTerm t t'
 eqTerm (PrimVal _ c) (PrimVal _ c') = c == c'
 eqTerm (Erased _ i) (Erased _ i') = i == i'
-eqTerm (TType _) (TType _) = True
+eqTerm (TType _ _) (TType _ _) = True
 eqTerm _ _ = False
 
 public export
@@ -1116,6 +1152,20 @@ insertVar : SizeOf outer ->
             Var (outer ++ n :: inner)
 insertVar p (MkVar v) = let MkNVar v' = insertNVar p (MkNVar v) in MkVar v'
 
+
+||| The (partial) inverse to insertVar
+export
+removeVar : SizeOf outer ->
+            Var        (outer ++ [x] ++ inner) ->
+            Maybe (Var (outer        ++ inner))
+removeVar out var = case sizedView out of
+  Z => case var of
+          MkVar First     => Nothing
+          MkVar (Later p) => Just (MkVar p)
+  S out' => case var of
+              MkVar First     => Just (MkVar First)
+              MkVar (Later p) => later <$> removeVar out' (MkVar p)
+
 export
 weakenVar : SizeOf ns -> Var inner -> Var (ns ++ inner)
 weakenVar p (MkVar v) = let MkNVar v' = weakenNVar p (MkNVar v) in MkVar v'
@@ -1159,7 +1209,7 @@ insertNames out ns (TDelay fc r ty tm)
 insertNames out ns (TForce fc r tm) = TForce fc r (insertNames out ns tm)
 insertNames out ns (PrimVal fc c) = PrimVal fc c
 insertNames out ns (Erased fc i) = Erased fc i
-insertNames out ns (TType fc) = TType fc
+insertNames out ns (TType fc u) = TType fc u
 
 export
 Weaken Term where
@@ -1366,7 +1416,7 @@ mutual
      = Just (TForce fc r !(shrinkTerm x prf))
   shrinkTerm (PrimVal fc c) prf = Just (PrimVal fc c)
   shrinkTerm (Erased fc i) prf = Just (Erased fc i)
-  shrinkTerm (TType fc) prf = Just (TType fc)
+  shrinkTerm (TType fc u) prf = Just (TType fc u)
 
 varEmbedSub : SubVars small vars ->
               {idx : Nat} -> (0 p : IsVar n idx small) ->
@@ -1399,7 +1449,7 @@ embedSub sub (TDelay fc x t y)
 embedSub sub (TForce fc r x) = TForce fc r (embedSub sub x)
 embedSub sub (PrimVal fc c) = PrimVal fc c
 embedSub sub (Erased fc i) = Erased fc i
-embedSub sub (TType fc) = TType fc
+embedSub sub (TType fc u) = TType fc u
 
 namespace Bounds
   public export
@@ -1455,7 +1505,7 @@ mkLocals outer bs (TForce fc r x)
     = TForce fc r (mkLocals outer bs x)
 mkLocals outer bs (PrimVal fc c) = PrimVal fc c
 mkLocals outer bs (Erased fc i) = Erased fc i
-mkLocals outer bs (TType fc) = TType fc
+mkLocals outer bs (TType fc u) = TType fc u
 
 export
 refsToLocals : Bounds bound -> Term vars -> Term (bound ++ vars)
@@ -1556,7 +1606,7 @@ namespace SubstEnv
   substEnv outer env (TForce fc r x) = TForce fc r (substEnv outer env x)
   substEnv outer env (PrimVal fc c) = PrimVal fc c
   substEnv outer env (Erased fc i) = Erased fc i
-  substEnv outer env (TType fc) = TType fc
+  substEnv outer env (TType fc u) = TType fc u
 
   export
   substs : SubstEnv dropped vars -> Term (dropped ++ vars) -> Term vars
@@ -1592,33 +1642,34 @@ substName x new (TForce fc r y)
 substName x new tm = tm
 
 export
-addMetas : NameMap Bool -> Term vars -> NameMap Bool
-addMetas ns (Local fc x idx y) = ns
-addMetas ns (Ref fc x name) = ns
-addMetas ns (Meta fc n i xs) = addMetaArgs (insert n False ns) xs
+addMetas : (usingResolved : Bool) -> NameMap Bool -> Term vars -> NameMap Bool
+addMetas res ns (Local fc x idx y) = ns
+addMetas res ns (Ref fc x name) = ns
+addMetas res ns (Meta fc n i xs)
+  = addMetaArgs (insert (ifThenElse res (Resolved i) n) False ns) xs
   where
     addMetaArgs : NameMap Bool -> List (Term vars) -> NameMap Bool
     addMetaArgs ns [] = ns
-    addMetaArgs ns (t :: ts) = addMetaArgs (addMetas ns t) ts
-addMetas ns (Bind fc x (Let _ c val ty) scope)
-    = addMetas (addMetas (addMetas ns val) ty) scope
-addMetas ns (Bind fc x b scope)
-    = addMetas (addMetas ns (binderType b)) scope
-addMetas ns (App fc fn arg)
-    = addMetas (addMetas ns fn) arg
-addMetas ns (As fc s as tm) = addMetas ns tm
-addMetas ns (TDelayed fc x y) = addMetas ns y
-addMetas ns (TDelay fc x t y)
-    = addMetas (addMetas ns t) y
-addMetas ns (TForce fc r x) = addMetas ns x
-addMetas ns (PrimVal fc c) = ns
-addMetas ns (Erased fc i) = ns
-addMetas ns (TType fc) = ns
+    addMetaArgs ns (t :: ts) = addMetaArgs (addMetas res ns t) ts
+addMetas res ns (Bind fc x (Let _ c val ty) scope)
+    = addMetas res (addMetas res (addMetas res ns val) ty) scope
+addMetas res ns (Bind fc x b scope)
+    = addMetas res (addMetas res ns (binderType b)) scope
+addMetas res ns (App fc fn arg)
+    = addMetas res (addMetas res ns fn) arg
+addMetas res ns (As fc s as tm) = addMetas res ns tm
+addMetas res ns (TDelayed fc x y) = addMetas res ns y
+addMetas res ns (TDelay fc x t y)
+    = addMetas res (addMetas res ns t) y
+addMetas res ns (TForce fc r x) = addMetas res ns x
+addMetas res ns (PrimVal fc c) = ns
+addMetas res ns (Erased fc i) = ns
+addMetas res ns (TType fc u) = ns
 
 -- Get the metavariable names in a term
 export
 getMetas : Term vars -> NameMap Bool
-getMetas tm = addMetas empty tm
+getMetas tm = addMetas False empty tm
 
 export
 addRefs : (underAssert : Bool) -> (aTotal : Name) ->
@@ -1648,7 +1699,7 @@ addRefs ua at ns (TDelay fc x t y)
 addRefs ua at ns (TForce fc r x) = addRefs ua at ns x
 addRefs ua at ns (PrimVal fc c) = ns
 addRefs ua at ns (Erased fc i) = ns
-addRefs ua at ns (TType fc) = ns
+addRefs ua at ns (TType fc u) = ns
 
 -- As above, but for references. Also flag whether a name is under an
 -- 'assert_total' because we may need to know that in coverage/totality
@@ -1656,6 +1707,7 @@ addRefs ua at ns (TType fc) = ns
 export
 getRefs : (aTotal : Name) -> Term vars -> NameMap Bool
 getRefs at tm = addRefs False at empty tm
+
 
 export
 nameAt : {vars : _} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> Name
@@ -1671,6 +1723,7 @@ withPiInfo (DefImplicit t) tm = "{default " ++ show t ++ " " ++ tm ++ "}"
 
 
 export
+covering
 {vars : _} -> Show (Term vars) where
   show tm = let (fn, args) = getFnArgs tm in showApp fn args
     where
@@ -1706,7 +1759,7 @@ export
       showApp (TForce _ _ tm) [] = "%Force " ++ show tm
       showApp (PrimVal _ c) [] = show c
       showApp (Erased _ _) [] = "[__]"
-      showApp (TType _) [] = "Type"
+      showApp (TType _ u) [] = "Type"
       showApp _ [] = "???"
       showApp f args = "(" ++ assert_total (show f) ++ " " ++
                         assert_total (showSep " " (map show args))

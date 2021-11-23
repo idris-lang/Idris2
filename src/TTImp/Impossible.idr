@@ -10,7 +10,6 @@ import TTImp.TTImp
 import TTImp.Elab.App
 
 import Data.List
-import Data.List1
 
 %default covering
 
@@ -36,7 +35,7 @@ match nty (n, i, rty)
     sameRet (NErased _ _) _ = pure True
     sameRet (NTCon _ n _ _ _) (NTCon _ n' _ _ _) = pure (n == n')
     sameRet (NPrimVal _ c) (NPrimVal _ c') = pure (c == c')
-    sameRet (NType _) (NType _) = pure True
+    sameRet (NType _ _) (NType _ _) = pure True
     sameRet nf (NBind fc _ (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
@@ -135,8 +134,7 @@ mutual
 
            gdefs <- lookupNameBy id n (gamma defs)
            [(n', i, gdef)] <- dropNoMatch !(traverseOpt (evalClosure defs) mty) gdefs
-              | [] => undefinedName fc n
-              | ts => throw (AmbiguousName fc (map fst ts))
+              | ts => ambiguousName fc n (map fst ts)
            tynf <- nf defs [] (type gdef)
            -- #899 we need to make sure that type & data constructors are marked
            -- as such so that the coverage checker actually uses the matches in

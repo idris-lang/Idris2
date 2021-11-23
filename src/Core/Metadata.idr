@@ -4,11 +4,9 @@ import Core.Binary
 import Core.Context
 import Core.Context.Log
 import Core.Core
-import Core.Directory
 import Core.Env
 import Core.FC
 import Core.Normalise
-import Core.Options
 import Core.TT
 import Core.TTC
 
@@ -21,6 +19,7 @@ import Libraries.Utils.Binary
 
 public export
 data Decoration : Type where
+  Comment   : Decoration
   Typ       : Decoration
   Function  : Decoration
   Data      : Decoration
@@ -54,6 +53,7 @@ SemanticDecorations = List ASemanticDecoration
 
 public export
 Eq Decoration where
+  Comment   == Comment   = True
   Typ       == Typ       = True
   Function  == Function  = True
   Data      == Data      = True
@@ -69,6 +69,7 @@ Eq Decoration where
 -- break the IDE mode.
 public export
 Show Decoration where
+  show Comment   = "comment"
   show Typ       = "type"
   show Function  = "function"
   show Data      = "data"
@@ -87,6 +88,7 @@ TTC Decoration where
   toBuf b Namespace = tag 5
   toBuf b Postulate = tag 6
   toBuf b Module    = tag 7
+  toBuf b Comment   = tag 8
   fromBuf b
     = case !getTag of
         0 => pure Typ
@@ -97,6 +99,7 @@ TTC Decoration where
         5 => pure Namespace
         6 => pure Postulate
         7 => pure Module
+        8 => pure Comment
         _ => corrupt "Decoration"
 
 public export
@@ -133,20 +136,22 @@ record Metadata where
        semanticAliases : PosMap (NonEmptyFC, NonEmptyFC)
        semanticDefaults : PosMap ASemanticDecoration
 
+covering
 Show Metadata where
   show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap
-                   fname semanticHighlighting semanticAliases semanticDefaults)
-    = "Metadata:\n" ++
-      " lhsApps: " ++ show apps ++ "\n" ++
-      " names: " ++ show names ++ "\n" ++
-      " type declarations: " ++ show tydecls ++ "\n" ++
-      " current LHS: " ++ show currentLHS ++ "\n" ++
-      " holes: " ++ show holeLHS ++ "\n" ++
-      " nameLocMap: " ++ show nameLocMap ++ "\n" ++
-      " sourceIdent: " ++ show fname ++
-      " semanticHighlighting: " ++ show semanticHighlighting ++
-      " semanticAliases: " ++ show semanticAliases ++
-      " semanticDefaults: " ++ show semanticDefaults
+                   fname semanticHighlighting semanticAliases semanticDefaults) = """
+    Metadata:
+     lhsApps: \{ show apps }
+     names: \{ show names }
+     type declarations: \{ show tydecls }
+     current LHS: \{ show currentLHS }
+     holes: \{ show holeLHS }
+     nameLocMap: \{ show nameLocMap }
+     sourceIdent: \{ show fname }
+     semanticHighlighting: \{ show semanticHighlighting }
+     semanticAliases: \{ show semanticAliases }
+     semanticDefaults: \{ show semanticDefaults }
+    """
 
 export
 initMetadata : OriginDesc -> Metadata
@@ -233,7 +238,7 @@ addNameType loc n env tm
          n' <- getFullName n
 
          -- Add the name to the metadata if the file context is not empty
-         whenJust (isNonEmptyFC loc) $ \ neloc => do
+         whenJust (isConcreteFC loc) $ \ neloc => do
            put MD $ record { names $= ((neloc, (n', 0, substEnv loc env tm)) ::) } meta
            log "metadata.names" 7 $ show n' ++ " at line " ++ show (1 + startLine neloc)
 
@@ -257,7 +262,7 @@ addNameLoc : {auto m : Ref MD Metadata} ->
 addNameLoc loc n
     = do meta <- get MD
          n' <- getFullName n
-         whenJust (isNonEmptyFC loc) $ \neloc =>
+         whenJust (isConcreteFC loc) $ \neloc =>
            put MD $ record { nameLocMap $= insert (neloc, n') } meta
 
 export

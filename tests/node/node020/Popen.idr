@@ -22,7 +22,7 @@ main = do
     putStrLn "opened"
     Right output <- fGetLine fh
         | Left err => printLn err
-    pclose fh
+    ignore $ pclose fh
     putStrLn "closed"
     let [idris2, _] = split ((==) ',') output
         | _ => printLn "Unexpected result"

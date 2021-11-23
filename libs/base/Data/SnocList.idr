@@ -1,7 +1,6 @@
 ||| A Reversed List
 module Data.SnocList
 
-import Decidable.Equality
 import Data.List
 import Data.Fin
 
@@ -29,6 +28,8 @@ Cast (SnocList a) (List a) where
 export
 Cast (List a) (SnocList a) where
   cast xs = Lin <>< xs
+
+%transform "fastConcat" concat {t = SnocList} {a = String} = fastConcat . cast
 
 ||| Transform to a list but keeping the contents in the spine order (term depth).
 public export

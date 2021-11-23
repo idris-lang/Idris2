@@ -1,16 +1,14 @@
 module TTImp.Unelab
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise
-import Core.Options
 import Core.Value
 import Core.TT
 
 import TTImp.TTImp
-import TTImp.Utils
 
 import Data.List
 import Data.String
@@ -31,27 +29,6 @@ used idx (TDelayed _ _ tm) = used idx tm
 used idx (TDelay _ _ _ tm) = used idx tm
 used idx (TForce _ _ tm) = used idx tm
 used idx _ = False
-
-data IArg
-   = Exp FC IRawImp
-   | Auto FC IRawImp
-   | Named FC Name IRawImp
-
-unIArg : IArg -> IRawImp
-unIArg (Exp _ t) = t
-unIArg (Auto _ t) = t
-unIArg (Named _ _ t) = t
-
-Show IArg where
-  show (Exp fc t) = show t
-  show (Auto fc t) = "@{" ++ show t ++ "}"
-  show (Named fc n t) = "{" ++ show n ++ " = " ++ show t ++ "}"
-
-getFnArgs : IRawImp -> List IArg -> (IRawImp, List IArg)
-getFnArgs (IApp fc f arg) args = getFnArgs f (Exp fc arg :: args)
-getFnArgs (INamedApp fc f n arg) args = getFnArgs f (Named fc n arg :: args)
-getFnArgs (IAutoApp fc f arg) args = getFnArgs f (Auto fc arg :: args)
-getFnArgs tm args = (tm, args)
 
 data UnelabMode
      = Full
@@ -116,7 +93,7 @@ mutual
       mkCase : List (vs ** (Env Term vs, Term vs, Term vs)) ->
                Nat -> Nat -> List IArg -> Core IRawImp
       mkCase pats (S k) dropped (_ :: args) = mkCase pats k (S dropped) args
-      mkCase pats Z dropped (Exp fc tm :: _)
+      mkCase pats Z dropped (Explicit fc tm :: _)
           = do pats' <- traverse (mkClause fc dropped) pats
                pure $ ICase fc tm (Implicit fc False) pats'
       mkCase _ _ _ _ = pure orig
@@ -154,7 +131,7 @@ mutual
     where
       apply : IRawImp -> List IArg -> IRawImp
       apply tm [] = tm
-      apply tm (Exp fc a :: args) = apply (IApp fc tm a) args
+      apply tm (Explicit fc a :: args) = apply (IApp fc tm a) args
       apply tm (Auto fc a :: args) = apply (IAutoApp fc tm a) args
       apply tm (Named fc n a :: args) = apply (INamedApp fc tm n a) args
 
@@ -267,10 +244,7 @@ mutual
            pure (IForce fc tm', gErased fc)
   unelabTy' umode nest env (PrimVal fc c) = pure (IPrimVal fc c, gErased fc)
   unelabTy' umode nest env (Erased fc _) = pure (Implicit fc True, gErased fc)
-  unelabTy' umode nest env (TType fc) = pure (IType fc, gType fc)
-  unelabTy' umode nest _ tm
-      = let fc = getLoc tm in
-            pure (Implicit fc False, gErased fc)
+  unelabTy' umode nest env (TType fc _) = pure (IType fc, gType fc (MN "top" 0))
 
   unelabPi : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
@@ -311,7 +285,7 @@ mutual
                        else if rig /= top || isDefImp p
                                then Just (UN Underscore)
                                else Nothing
-           pure (IPi fc rig p' nm ty' sc, gType fc)
+           pure (IPi fc rig p' nm ty' sc, gType fc (MN "top" 0))
     where
       isNoSugar : UnelabMode -> Bool
       isNoSugar (NoSugar _) = True
@@ -329,7 +303,7 @@ mutual
                     gnf env (Bind fc x (PLet fc' rig val ty) scty))
   unelabBinder umode nest fc env x (PVTy _ rig ty) sctm sc scty
       = do (ty', _) <- unelabTy umode nest env ty
-           pure (sc, gType fc)
+           pure (sc, gType fc (MN "top" 0))
 
 export
 unelabNoSugar : {vars : _} ->

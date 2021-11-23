@@ -4,17 +4,13 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.FC
-import Core.Name
 import Core.Options
 import Libraries.Utils.Path
 
 import Data.List
-import Data.String
 import Data.Maybe
 
 import System.Directory
-import System.File
-import System.Info
 
 %default total
 
@@ -126,11 +122,15 @@ export
 mbPathToNS : String -> Maybe String -> String -> Maybe ModuleIdent
 mbPathToNS wdir sdir fname =
   let
+    cleanPath : String -> String
+      := show
+       . the (Path -> Path) { hasTrailSep := False, body $= filter (/= CurDir) }
+       . parse
     sdir = fromMaybe "" sdir
     base = if isAbsolute fname then wdir </> sdir else sdir
   in
     unsafeFoldModuleIdent . reverse . splitPath . Path.dropExtension
-      <$> Path.dropBase base fname
+      <$> (Path.dropBase `on` cleanPath) base fname
 
 export
 corePathToNS : String -> Maybe String -> String -> Core ModuleIdent
@@ -226,21 +226,6 @@ getExecFileName efile
     = do d <- getDirs
          pure $ build_dir d </> efile
 
-getEntries : Directory -> IO (List String)
-getEntries d
-    = do Right f <- dirEntry d
-             | Left err => pure []
-         ds <- assert_total $ getEntries d
-         pure (f :: ds)
-
-dirEntries : String -> IO (Either FileError (List String))
-dirEntries dir
-    = do Right d <- openDir dir
-             | Left err => pure (Left err)
-         ds <- getEntries d
-         closeDir d
-         pure (Right ds)
-
 -- Find an ipkg file in any of the directories above this one
 -- returns the directory, the ipkg file name, and the directories we've
 -- gone up
@@ -256,7 +241,7 @@ findIpkgFile
     covering
     findIpkgFile' : String -> String -> IO (Maybe (String, String, String))
     findIpkgFile' dir up
-        = do Right files <- dirEntries dir
+        = do Right files <- listDir dir
                  | Left err => pure Nothing
              let Just f = find (\f => extension f == Just "ipkg") files
                  | Nothing => case splitParent dir of

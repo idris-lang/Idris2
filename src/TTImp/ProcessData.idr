@@ -12,12 +12,13 @@ import Core.Normalise
 import Core.UnifyState
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.BindImplicits
 import TTImp.Elab.Check
 import TTImp.Elab.Utils
 import TTImp.Elab
 import TTImp.TTImp
-import TTImp.Utils
 
 import Data.DPair
 import Data.List
@@ -51,7 +52,7 @@ checkIsType : {auto c : Ref Ctxt Defs} ->
 checkIsType loc n env nf
     = checkRetType env nf $
          \case
-           NType _ => pure ()
+           NType _ _ => pure ()
            _ => throw $ BadTypeConType loc n
 
 checkFamily : {auto c : Ref Ctxt Defs} ->
@@ -59,7 +60,7 @@ checkFamily : {auto c : Ref Ctxt Defs} ->
 checkFamily loc cn tn env nf
     = checkRetType env nf $
          \case
-           NType _ => throw $ BadDataConType loc cn tn
+           NType _ _ => throw $ BadDataConType loc cn tn
            NTCon _ n' _ _ _ =>
                  if tn == n'
                     then pure ()
@@ -84,6 +85,7 @@ checkCon : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            List ElabOpt -> NestedNames vars ->
            Env Term vars -> Visibility -> (orig : Name) -> (resolved : Name) ->
            ImpTy -> Core Constructor
@@ -97,11 +99,12 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc _ cn_in ty_raw)
          -- Check 'cn' is undefined
          Nothing <- lookupCtxtExact cn (gamma defs)
              | Just gdef => throw (AlreadyDefined fc cn)
+         u <- uniVar fc
          ty <-
              wrapErrorC opts (InCon fc cn) $
                    checkTerm !(resolveName cn) InType opts nest env
                               (IBindHere fc (PI erased) ty_raw)
-                              (gType fc)
+                              (gType fc u)
 
          -- Check 'ty' returns something in the right family
          checkFamily fc cn tn env !(nf defs env ty)
@@ -357,11 +360,22 @@ calcNaty fc tyCon cs@[_, _]
             else pure False
 calcNaty _ _ _ = pure False
 
+-- has 1 constructor with 0 args (so skip case on it)
+calcUnity : {auto c : Ref Ctxt Defs} ->
+            FC -> Name -> List Constructor -> Core Bool
+calcUnity fc tyCon cs@[_]
+    = do Just mkUnit <- shaped (hasArgs 0) cs
+              | Nothing => pure False
+         setFlag fc mkUnit (ConType UNIT)
+         pure True
+calcUnity _ _ _ = pure False
 
 calcConInfo : {auto c : Ref Ctxt Defs} ->
               FC -> Name -> List Constructor -> Core ()
 calcConInfo fc type cons
    = do False <- calcNaty fc type cons
+           | True => pure ()
+        False <- calcUnity fc type cons
            | True => pure ()
         False <- calcListy fc cons
            | True => pure ()
@@ -379,6 +393,7 @@ processData : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               List ElabOpt -> NestedNames vars ->
               Env Term vars -> FC -> Visibility ->
               ImpData -> Core ()
@@ -391,11 +406,12 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
          Nothing <- lookupCtxtExact n (gamma defs)
              | Just gdef => throw (AlreadyDefined fc n)
 
+         u <- uniVar fc
          (ty, _) <-
              wrapErrorC eopts (InCon fc n) $
                     elabTerm !(resolveName n) InType eopts nest env
                               (IBindHere fc (PI erased) ty_raw)
-                              (Just (gType dfc))
+                              (Just (gType dfc u))
          let fullty = abstractEnvType dfc env ty
          logTermNF "declare.data" 5 ("data " ++ show n) [] fullty
 
@@ -424,11 +440,12 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
 
          log "declare.data" 1 $ "Processing " ++ show n
          defs <- get Ctxt
+         u <- uniVar fc
          (ty, _) <-
              wrapErrorC eopts (InCon fc n) $
                     elabTerm !(resolveName n) InType eopts nest env
                               (IBindHere fc (PI erased) ty_raw)
-                              (Just (gType dfc))
+                              (Just (gType dfc u))
          let fullty = abstractEnvType dfc env ty
 
          -- If n exists, check it's the same type as we have here, and is

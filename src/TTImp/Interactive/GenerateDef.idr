@@ -12,7 +12,6 @@ import Core.Unify
 import Core.Value
 
 import Idris.Syntax
-
 import Parser.Lexer.Source
 
 import TTImp.Elab
@@ -22,7 +21,6 @@ import TTImp.Interactive.ExprSearch
 import TTImp.ProcessDecls
 import TTImp.ProcessDef
 import TTImp.TTImp
-import TTImp.Unelab
 import TTImp.Utils
 
 import Data.List
@@ -105,6 +103,7 @@ splittableNames _ = []
 trySplit : {auto m : Ref MD Metadata} ->
            {auto c : Ref Ctxt Defs} ->
            {auto u : Ref UST UState} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            FC -> RawImp -> ClosedTerm -> RawImp -> Name ->
            Core (Name, List ImpClause)
 trySplit loc lhsraw lhs rhs n
@@ -143,6 +142,7 @@ trySplit loc lhsraw lhs rhs n
 generateSplits : {auto m : Ref MD Metadata} ->
                  {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  FC -> SearchOpts -> Int -> ImpClause ->
                  Core (List (Name, List ImpClause))
 generateSplits loc opts fn (ImpossibleClause fc lhs) = pure []

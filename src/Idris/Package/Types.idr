@@ -3,8 +3,6 @@ module Idris.Package.Types
 import Core.FC
 import Core.Name.Namespace
 import Data.Maybe
-import Data.String
-import Idris.CommandLine
 import Idris.Version
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
@@ -243,3 +241,20 @@ Pretty PkgDesc where
     seqField nm xs = pretty nm
                 <++> equals
                 <++> align (sep (punctuate comma (map pretty xs)))
+
+
+------------------------------------------------------------------------------
+-- CSS files (used in --mkdoc)
+
+public export
+record CSS where
+  constructor MkCSS
+  stylename : String
+  filename  : String
+
+export
+cssFiles : List CSS
+cssFiles = [ MkCSS "Default"       "default"
+           , MkCSS "Alternative"   "alternative"
+           , MkCSS "Black & White" "blackandwhite"
+           ]

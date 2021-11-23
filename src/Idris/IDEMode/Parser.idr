@@ -9,16 +9,13 @@ import Core.Name
 import Core.Metadata
 import Core.FC
 
-import Data.Maybe
 import Data.List
-import Data.String
 import Parser.Lexer.Source
 import Parser.Source
 import Parser.Support
 import Libraries.Text.Lexer
 import Libraries.Text.Lexer.Tokenizer
 import Libraries.Text.Parser
-import Libraries.Utils.String
 
 %default total
 

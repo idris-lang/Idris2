@@ -1,3 +1,4 @@
+||| Types and functions for reasoning about time.
 module System.Clock
 
 import Data.Nat
@@ -9,13 +10,20 @@ import PrimIO
 ||| The various types of system clock available.
 public export
 data ClockType
-  = UTC       -- The time elapsed since the "epoch:" 00:00:00 UTC, January 1, 1970
-  | Monotonic -- The time elapsed since some arbitrary point in the past
-  | Duration  -- Representing a time duration.
-  | Process   -- The amount of CPU time used by the current process.
-  | Thread    -- The amount of CPU time used by the current thread.
-  | GCCPU     -- The current process's CPU time consumed by the garbage collector.
-  | GCReal    -- The current process's real time consumed by the garbage collector.
+  = ||| The time elapsed since the "epoch:" 00:00:00 UTC, January 1, 1970
+    UTC
+  | ||| The time elapsed since some arbitrary point in the past
+    Monotonic
+  | ||| Representing a time duration.
+    Duration
+  | ||| The amount of CPU time used by the current process.
+    Process
+  | ||| The amount of CPU time used by the current thread.
+    Thread
+  | ||| The current process's CPU time consumed by the garbage collector.
+    GCCPU
+  | ||| The current process's real time consumed by the garbage collector.
+    GCReal
 
 export
 Show ClockType where
@@ -27,6 +35,8 @@ Show ClockType where
   show GCCPU     = "gcCPU"
   show GCReal    = "gcReal"
 
+||| A clock recording some time in seconds and nanoseconds. The "type" of time
+||| recorded is indicated by the given `ClockType`.
 public export
 data Clock : (type : ClockType) -> Type where
   MkClock
@@ -53,8 +63,14 @@ Show (Clock type) where
   show (MkClock {type} seconds nanoseconds) =
     show type ++ ": " ++ show seconds ++ "s " ++ show nanoseconds ++ "ns"
 
+||| Display a `Clock`'s content, padding the seconds and nanoseconds as
+||| appropriate.
+|||
+||| @ s   the number of digits used to display the seconds
+||| @ ns  the number of digits used to display the nanosecondns
+||| @ clk the Clock whose contents to display
 export
-showTime : (s, ns : Nat) -> Clock type -> String
+showTime : (s, ns : Nat) -> (clk : Clock type) -> String
 showTime s ns (MkClock seconds nanoseconds) =
   let seconds = show seconds
       quotient : Integer = cast $ 10 `power` minus 9 ns
@@ -76,20 +92,25 @@ nanoseconds : Clock type -> Integer
 nanoseconds (MkClock _ ns) = ns
 
 ||| Make a duration value.
+|||
+||| @ s  the number of seconds in the duration
+||| @ ns the number of nanoseconds in the duration
 public export
-makeDuration : Integer -> Integer -> Clock Duration
+makeDuration : (s : Integer) -> (ns : Integer) -> Clock Duration
 makeDuration = MkClock
 
 ||| Opaque clock value manipulated by the back-end.
 data OSClock : Type where [external]
 
-||| Note: Back-ends are required to implement UTC, monotonic time, CPU time
-||| in current process/thread, and time duration; the rest are optional.
+||| Note: Backends are required to implement UTC, monotonic time, CPU time in
+||| current process/thread, and time duration; the rest are optional.
 export
 data ClockTypeMandatory
   = Mandatory
   | Optional
 
+||| Determine whether the specified `ClockType` is required to be implemented by
+||| all backends.
 public export
 isClockMandatory : ClockType -> ClockTypeMandatory
 isClockMandatory GCCPU  = Optional
@@ -100,6 +121,7 @@ isClockMandatory _      = Mandatory
          "RefC:clockTimeMonotonic"
 prim__clockTimeMonotonic : PrimIO OSClock
 
+||| Get the current backend's monotonic time.
 clockTimeMonotonic : IO OSClock
 clockTimeMonotonic = fromPrim prim__clockTimeMonotonic
 
@@ -107,6 +129,7 @@ clockTimeMonotonic = fromPrim prim__clockTimeMonotonic
          "RefC:clockTimeUtc"
 prim__clockTimeUtc : PrimIO OSClock
 
+||| Get the current UTC time.
 clockTimeUtc : IO OSClock
 clockTimeUtc = fromPrim prim__clockTimeUtc
 
@@ -114,6 +137,7 @@ clockTimeUtc = fromPrim prim__clockTimeUtc
          "RefC:clockTimeProcess"
 prim__clockTimeProcess : PrimIO OSClock
 
+||| Get the amount of time used by the current process.
 clockTimeProcess : IO OSClock
 clockTimeProcess = fromPrim prim__clockTimeProcess
 
@@ -121,6 +145,7 @@ clockTimeProcess = fromPrim prim__clockTimeProcess
          "RefC:clockTimeThread"
 prim__clockTimeThread : PrimIO OSClock
 
+||| Get the amount of time used by the current thread.
 clockTimeThread : IO OSClock
 clockTimeThread = fromPrim prim__clockTimeThread
 
@@ -128,6 +153,8 @@ clockTimeThread = fromPrim prim__clockTimeThread
          "RefC:clockTimeGcCpu"
 prim__clockTimeGcCpu : PrimIO OSClock
 
+||| Get the amount of the current process's CPU time consumed by the garbage
+||| collector.
 clockTimeGcCpu : IO OSClock
 clockTimeGcCpu = fromPrim prim__clockTimeGcCpu
 
@@ -135,6 +162,8 @@ clockTimeGcCpu = fromPrim prim__clockTimeGcCpu
          "RefC:clockTimeGcReal"
 prim__clockTimeGcReal : PrimIO OSClock
 
+||| Get the amount of the current process's real-time consumed by the garbage
+||| collector.
 clockTimeGcReal : IO OSClock
 clockTimeGcReal = fromPrim prim__clockTimeGcReal
 
@@ -159,6 +188,7 @@ osClockValid clk = fromPrim (prim__osClockValid clk)
          "RefC:clockSecond"
 prim__osClockSecond : OSClock -> PrimIO Bits64
 
+||| Get the second of time from the given `OSClock`.
 osClockSecond : OSClock -> IO Bits64
 osClockSecond clk = fromPrim (prim__osClockSecond clk)
 
@@ -166,9 +196,11 @@ osClockSecond clk = fromPrim (prim__osClockSecond clk)
          "RefC:clockNanosecond"
 prim__osClockNanosecond : OSClock -> PrimIO Bits64
 
+||| Get the nanosecond of time from the given `OSClock`.
 osClockNanosecond : OSClock -> IO Bits64
 osClockNanosecond clk = fromPrim (prim__osClockNanosecond clk)
 
+||| Convert an `OSClock` to an Idris `Clock`.
 fromOSClock : {type : ClockType} -> OSClock -> IO (Clock type)
 fromOSClock clk =
   pure $
@@ -177,6 +209,10 @@ fromOSClock clk =
       (cast !(osClockSecond clk))
       (cast !(osClockNanosecond clk))
 
+||| The return type of a function using a `Clock` depends on the type of
+||| `Clock`:
+||| * `Optional` clocks may not be implemented, so we might not return anything
+||| * `Mandatory` clocks have to be implemented, so we _will_ return something
 public export
 clockTimeReturnType : (typ : ClockType) -> Type
 clockTimeReturnType typ with (isClockMandatory typ)
@@ -184,7 +220,7 @@ clockTimeReturnType typ with (isClockMandatory typ)
   clockTimeReturnType typ | Mandatory = Clock typ
 
 ||| Fetch the system clock of a given kind. If the clock is mandatory,
-||| we return a (Clock type) else (Maybe (Clock type)).
+||| we return a `Clock type` else, we return a `Maybe (Clock type)`.
 public export
 clockTime : (typ : ClockType) -> IO (clockTimeReturnType typ)
 clockTime clockType with (isClockMandatory clockType)
@@ -196,12 +232,16 @@ clockTime clockType with (isClockMandatory clockType)
       then map Just $ fromOSClock clk
       else pure Nothing
 
+||| Convert the time in the given clock to nanoseconds.
 toNano : Clock type -> Integer
 toNano (MkClock seconds nanoseconds) =
   let scale = 1000000000
    in scale * seconds + nanoseconds
 
-fromNano : {type : ClockType} -> Integer -> Clock type
+||| Convert some time in nanoseconds to a `Clock` containing that time.
+|||
+||| @ n the time in nanoseconds
+fromNano : {type : ClockType} -> (n : Integer) -> Clock type
 fromNano n =
   let scale       = 1000000000
       seconds     = n `div` scale

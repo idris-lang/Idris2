@@ -2,8 +2,6 @@ module Text.Lexer.Core
 
 import Data.List
 import Data.Maybe
-import Data.Nat
-import Data.String
 
 import public Control.Delayed
 import public Text.Bounded

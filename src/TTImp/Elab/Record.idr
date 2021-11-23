@@ -10,12 +10,14 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
 
 import Data.List
-import Data.Maybe
+import Libraries.Data.SortedSet
 
 %default covering
 
@@ -29,26 +31,20 @@ data Rec : Type where
      Constr : Maybe Name -> -- implicit argument name, if any
               Name -> List (String, Rec) -> Rec
 
+covering
 Show Rec where
   show (Field mn n ty)
       = "Field " ++ show mn ++ "; " ++ show n ++ " : " ++ show ty
   show (Constr mn n args)
       = "Constr " ++ show mn ++ " " ++ show n ++ " " ++ show args
 
-applyImp : RawImp -> List (Maybe Name, RawImp) -> RawImp
-applyImp f [] = f
-applyImp f ((Nothing, arg) :: xs)
-    = applyImp (IApp (getFC f) f arg) xs
-applyImp f ((Just n, arg) :: xs)
-    = applyImp (INamedApp (getFC f) f n arg) xs
-
 toLHS' : FC -> Rec -> (Maybe Name, RawImp)
 toLHS' loc (Field mn@(Just _) n _)
-    = (mn, IAs loc EmptyFC UseRight (UN $ Basic n) (Implicit loc True))
-toLHS' loc (Field mn n _) = (mn, IBindVar EmptyFC n)
+    = (mn, IAs loc (virtualiseFC loc) UseRight (UN $ Basic n) (Implicit loc True))
+toLHS' loc (Field mn n _) = (mn, IBindVar (virtualiseFC loc) n)
 toLHS' loc (Constr mn con args)
     = let args' = map (toLHS' loc . snd) args in
-          (mn, applyImp (IVar loc con) args')
+          (mn, gapply (IVar loc con) args')
 
 toLHS : FC -> Rec -> RawImp
 toLHS fc r = snd (toLHS' fc r)
@@ -57,7 +53,7 @@ toRHS' : FC -> Rec -> (Maybe Name, RawImp)
 toRHS' loc (Field mn _ val) = (mn, val)
 toRHS' loc (Constr mn con args)
     = let args' = map (toRHS' loc . snd) args in
-          (mn, applyImp (IVar loc con) args')
+          (mn, gapply (IVar loc con) args')
 
 toRHS : FC -> Rec -> RawImp
 toRHS fc r = snd (toRHS' fc r)
@@ -129,7 +125,7 @@ findPath loc (p :: ps) full (Just tyn) val (Field mn n v)
         = do fldn <- genFieldName p
              args' <- mkArgs ps
              -- If it's an implicit argument, leave it as _ by default
-             let arg = maybe (IVar EmptyFC (UN $ Basic fldn))
+             let arg = maybe (IVar (virtualiseFC loc) (UN $ Basic fldn))
                              (const (Implicit loc False))
                              imp
              pure ((p, Field imp fldn arg) :: args')
@@ -155,7 +151,7 @@ getSides loc (ISetField path val) tyn orig rec
    = findPath loc path path (Just tyn) (const val) rec
 getSides loc (ISetFieldApp path val) tyn orig rec
    = findPath loc path path (Just tyn)
-      (\n => apply val [IVar EmptyFC (UN $ Basic n)]) rec
+      (\n => apply val [IVar (virtualiseFC loc) (UN $ Basic n)]) rec
 
 getAllSides : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
@@ -165,6 +161,16 @@ getAllSides : {auto c : Ref Ctxt Defs} ->
 getAllSides loc [] tyn orig rec = pure rec
 getAllSides loc (u :: upds) tyn orig rec
     = getAllSides loc upds tyn orig !(getSides loc u tyn orig rec)
+
+checkForDuplicates :
+  List IFieldUpdate ->
+  (seen, dups : SortedSet (List String)) ->
+  SortedSet (List String)
+checkForDuplicates [] seen dups = dups
+checkForDuplicates (x :: xs) seen dups
+  = let path = getFieldUpdatePath x
+        dups = ifThenElse (contains path seen) (insert path dups) dups
+    in checkForDuplicates xs (insert path seen) dups
 
 -- Convert the collection of high level field accesses into a case expression
 -- which does the updates all in one go
@@ -179,7 +185,10 @@ recUpdate : {vars : _} ->
             (rec : RawImp) -> (grecty : Glued vars) ->
             Core RawImp
 recUpdate rigc elabinfo iloc nest env flds rec grecty
-      = do defs <- get Ctxt
+      = do let dups = checkForDuplicates flds empty empty
+           unless (null dups) $
+             throw (DuplicatedRecordUpdatePath iloc $ SortedSet.toList dups)
+           defs <- get Ctxt
            rectynf <- getNF grecty
            let Just rectyn = getRecordType env rectynf
                     | Nothing => throw (RecordTypeNeeded iloc env)
@@ -209,6 +218,7 @@ checkUpdate : {vars : _} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto e : Ref EST (EState vars)} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               RigCount -> ElabInfo ->
               NestedNames vars -> Env Term vars ->
               FC -> List IFieldUpdate -> RawImp -> Maybe (Glued vars) ->

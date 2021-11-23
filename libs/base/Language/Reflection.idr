@@ -3,7 +3,13 @@ module Language.Reflection
 import public Language.Reflection.TT
 import public Language.Reflection.TTImp
 
+import public Control.Monad.Trans
+
 %default total
+
+----------------------------------
+--- Elaboration data structure ---
+----------------------------------
 
 ||| Elaboration scripts
 ||| Where types/terms are returned, binders will have unique, if not
@@ -14,13 +20,30 @@ data Elab : Type -> Type where
      Bind : Elab a -> (a -> Elab b) -> Elab b
      Fail : FC -> String -> Elab a
 
+     Try : Elab a -> Elab a -> Elab a
+
+     ||| Log a message. Takes a
+     ||| * topic
+     ||| * level
+     ||| * message
      LogMsg : String -> Nat -> String -> Elab ()
+     ||| Print and log a term. Takes a
+     ||| * topic
+     ||| * level
+     ||| * message
+     ||| * term
      LogTerm : String -> Nat -> String -> TTImp -> Elab ()
+     ||| Resugar, print and log a term. Takes a
+     ||| * topic
+     ||| * level
+     ||| * message
+     ||| * term
+     LogSugaredTerm : String -> Nat -> String -> TTImp -> Elab ()
 
      -- Elaborate a TTImp term to a concrete value
-     Check : {expected : Type} -> TTImp -> Elab expected
+     Check : TTImp -> Elab expected
      -- Quote a concrete expression back to a TTImp
-     Quote : val -> Elab TTImp
+     Quote : (0 _ : val) -> Elab TTImp
 
      -- Elaborate under a lambda
      Lambda : (0 x : Type) ->
@@ -40,6 +63,8 @@ data Elab : Type -> Type where
      -- There may be ambiguities - returns a list of fully explicit names
      -- and their types. If there's no results, the name is undefined.
      GetType : Name -> Elab (List (Name, TTImp))
+     -- Get the metadata associated with a name
+     GetInfo : Name -> Elab (List (Name, NameInfo))
      -- Get the type of a local variable
      GetLocalType : Name -> Elab TTImp
      -- Get the constructors of a data type. The name must be fully resolved.
@@ -57,91 +82,122 @@ Applicative Elab where
   f <*> a = Bind f (<$> a)
 
 export
+Alternative Elab where
+  empty = Fail EmptyFC ""
+  l <|> r = Try l r
+
+export
 Monad Elab where
   (>>=) = Bind
 
+-----------------------------
+--- Elaboration interface ---
+-----------------------------
+
+public export
+interface Monad m => Elaboration m where
+
+  ||| Report an error in elaboration at some location
+  failAt : FC -> String -> m a
+
+  ||| Try the first elaborator. If it fails, reset the elaborator state and
+  ||| run the second
+  try : Elab a -> Elab a -> m a
+
+  ||| Write a log message, if the log level is >= the given level
+  logMsg : String -> Nat -> String -> m ()
+
+  ||| Write a log message and a rendered term, if the log level is >= the given level
+  logTerm : String -> Nat -> String -> TTImp -> m ()
+
+  ||| Write a log message and a resugared & rendered term, if the log level is >= the given level
+  logSugaredTerm : String -> Nat -> String -> TTImp -> m ()
+
+  ||| Check that some TTImp syntax has the expected type
+  ||| Returns the type checked value
+  check : TTImp -> m expected
+
+  ||| Return TTImp syntax of a given value
+  quote : (0 _ : val) -> m TTImp
+
+  ||| Build a lambda expression
+  lambda : (0 x : Type) ->
+           {0 ty : x -> Type} ->
+           ((val : x) -> Elab (ty val)) -> m ((val : x) -> (ty val))
+
+  ||| Get the goal type of the current elaboration
+  goal : m (Maybe TTImp)
+
+  ||| Get the names of the local variables in scope
+  localVars : m (List Name)
+
+  ||| Generate a new unique name
+  genSym : String -> m Name
+
+  ||| Given a name, return the name decorated with the current namespace
+  inCurrentNS : Name -> m Name
+
+  ||| Given a possibly ambiguous name, get all the matching names and their types
+  getType : Name -> m (List (Name, TTImp))
+
+  ||| Get the metadata associated with a name. Returns all matching namea and their types
+  getInfo : Name -> m (List (Name, NameInfo))
+
+  ||| Get the type of a local variable
+  getLocalType : Name -> m TTImp
+
+  ||| Get the constructors of a fully qualified data type name
+  getCons : Name -> m (List Name)
+
+  ||| Make some top level declarations
+  declare : List Decl -> m ()
+
+export %inline
 ||| Report an error in elaboration
-export
-fail : String -> Elab a
-fail = Fail EmptyFC
-
-export
-failAt : FC -> String -> Elab a
-failAt = Fail
-
-||| Write a log message, if the log level is >= the given level
-export
-logMsg : String -> Nat -> String -> Elab ()
-logMsg = LogMsg
-
-||| Write a log message and a rendered term, if the log level is >= the given level
-export
-logTerm : String -> Nat -> String -> TTImp -> Elab ()
-logTerm = LogTerm
+fail : Elaboration m => String -> m a
+fail = failAt EmptyFC
 
 ||| Log the current goal type, if the log level is >= the given level
-export
-logGoal : String -> Nat -> String -> Elab ()
-logGoal str n msg
-    = do g <- Goal
-         case g of
-              Nothing => pure ()
-              Just t => logTerm str n msg t
+export %inline
+logGoal : Elaboration m => String -> Nat -> String -> m ()
+logGoal str n msg = whenJust !goal $ logTerm str n msg
 
-||| Check that some TTImp syntax has the expected type
-||| Returns the type checked value
 export
-check : {expected : Type} -> TTImp -> Elab expected
-check = Check
+Elaboration Elab where
+  failAt         = Fail
+  try            = Try
+  logMsg         = LogMsg
+  logTerm        = LogTerm
+  logSugaredTerm = LogSugaredTerm
+  check          = Check
+  quote          = Quote
+  lambda         = Lambda
+  goal           = Goal
+  localVars      = LocalVars
+  genSym         = GenSym
+  inCurrentNS    = InCurrentNS
+  getType        = GetType
+  getInfo        = GetInfo
+  getLocalType   = GetLocalType
+  getCons        = GetCons
+  declare        = Declare
 
-||| Return TTImp syntax of a given value
-export
-quote : val -> Elab TTImp
-quote = Quote
-
-||| Build a lambda expression
-export
-lambda : (0 x : Type) ->
-         {0 ty : x -> Type} ->
-         ((val : x) -> Elab (ty val)) -> Elab ((val : x) -> (ty val))
-lambda = Lambda
-
-||| Get the goal type of the current elaboration
-export
-goal : Elab (Maybe TTImp)
-goal = Goal
-
-||| Get the names of the local variables in scope
-export
-localVars : Elab (List Name)
-localVars = LocalVars
-
-||| Generate a new unique name
-export
-genSym : String -> Elab Name
-genSym = GenSym
-
-||| Given a name, return the name decorated with the current namespace
-export
-inCurrentNS : Name -> Elab Name
-inCurrentNS = InCurrentNS
-
-||| Given a possibly ambiguous name, get all the matching names and their types
-export
-getType : Name -> Elab (List (Name, TTImp))
-getType = GetType
-
-||| Get the type of a local variable
-export
-getLocalType : Name -> Elab TTImp
-getLocalType = GetLocalType
-
-||| Get the constructors of a fully qualified data type name
-export
-getCons : Name -> Elab (List Name)
-getCons = GetCons
-
-||| Make some top level declarations
-export
-declare : List Decl -> Elab ()
-declare = Declare
+public export
+Elaboration m => MonadTrans t => Monad (t m) => Elaboration (t m) where
+  failAt              = lift .: failAt
+  try                 = lift .: try
+  logMsg s            = lift .: logMsg s
+  logTerm s n         = lift .: logTerm s n
+  logSugaredTerm s n  = lift .: logSugaredTerm s n
+  check               = lift . check
+  quote v             = lift $ quote v
+  lambda x            = lift . lambda x
+  goal                = lift goal
+  localVars           = lift localVars
+  genSym              = lift . genSym
+  inCurrentNS         = lift . inCurrentNS
+  getType             = lift . getType
+  getInfo             = lift . getInfo
+  getLocalType        = lift . getLocalType
+  getCons             = lift . getCons
+  declare             = lift . declare

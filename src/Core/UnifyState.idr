@@ -1,7 +1,6 @@
 
 module Core.UnifyState
 
-import Core.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -12,12 +11,10 @@ import Core.Options
 import Core.TT
 import Core.TTC
 import Core.Value
-import Libraries.Utils.Binary
 
-import Libraries.Data.IntMap
 import Data.List
+import Libraries.Data.IntMap
 import Libraries.Data.NameMap
-import Libraries.Data.StringMap
 
 %default covering
 
@@ -635,7 +632,7 @@ checkValidHole base (idx, (fc, n))
                   do defs <- get Ctxt
                      Just ty <- lookupTyExact n (gamma defs)
                           | Nothing => pure ()
-                     throw (CantSolveGoal fc (gamma defs) [] ty)
+                     throw (CantSolveGoal fc (gamma defs) [] ty Nothing)
               Guess tm envb (con :: _) =>
                   do ust <- get UST
                      let Just c = lookup con (constraints ust)

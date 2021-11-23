@@ -7,7 +7,6 @@
 module Libraries.Data.PosMap
 
 import Core.FC
-import Core.Name.Namespace
 
 import Data.List
 

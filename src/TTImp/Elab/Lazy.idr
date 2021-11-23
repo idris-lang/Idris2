@@ -9,6 +9,8 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
@@ -21,12 +23,14 @@ checkDelayed : {vars : _} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                RigCount -> ElabInfo ->
                NestedNames vars -> Env Term vars ->
                FC -> LazyReason -> RawImp -> Maybe (Glued vars) ->
                Core (Term vars, Glued vars)
 checkDelayed rig elabinfo nest env fc r tm exp
-    = do (tm', gty) <- check rig elabinfo nest env tm (Just (gType fc))
+    = do u <- uniVar fc
+         (tm', gty) <- check rig elabinfo nest env tm (Just (gType fc u))
          pure (TDelayed fc r tm', gty)
 
 export
@@ -35,13 +39,15 @@ checkDelay : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
              FC -> RawImp -> Maybe (Glued vars) ->
              Core (Term vars, Glued vars)
 checkDelay rig elabinfo nest env fc tm mexpected
     = do expected <- maybe (do nm <- genName "delayTy"
-                               ty <- metaVar fc erased env nm (TType fc)
+                               u <- uniVar fc
+                               ty <- metaVar fc erased env nm (TType fc u)
                                pure (gnf env ty))
                            pure mexpected
          let solvemode = case elabMode elabinfo of
@@ -74,6 +80,7 @@ checkForce : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
              FC -> RawImp -> Maybe (Glued vars) ->

@@ -38,11 +38,10 @@ import Idris.Pretty
 import Idris.Doc.String
 
 import Data.List
-import Libraries.Data.NameMap
 import Libraries.Data.SortedMap
 import Libraries.Utils.Path
+import Libraries.Data.SortedSet
 
-import System
 import System.File
 
 %default covering
@@ -237,10 +236,12 @@ unchangedTime sourceFileName ttcFileName
 
 
 ||| If the source file hash hasn't changed
-unchangedHash : (hashFn : String) -> (sourceFileName : String) -> (ttcFileName : String) -> Core Bool
+unchangedHash : (hashFn : Maybe String) -> (sourceFileName : String) -> (ttcFileName : String) -> Core Bool
 unchangedHash hashFn sourceFileName ttcFileName
-  = do sourceCodeHash        <- hashFileWith hashFn sourceFileName
-       (storedSourceHash, _) <- readHashes ttcFileName
+  = do Just sourceCodeHash        <- hashFileWith hashFn sourceFileName
+             | _ => pure False
+       (Just storedSourceHash, _) <- readHashes ttcFileName
+             | _ => pure False
        pure $ sourceCodeHash == storedSourceHash
 
 export

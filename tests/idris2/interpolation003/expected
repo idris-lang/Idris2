@@ -1,0 +1,8 @@
+1/1: Building Test (Test.idr)
+Main> "This is TT"
+Main> "This is FF"
+Main> "This is a number : S S S 0"
+Main> "2TT: TTTT"
+Main> Main.test : String
+test = concat [interpolate 2, interpolate True, interpolate ": ", interpolate True, interpolate True]
+Main> Bye for now!

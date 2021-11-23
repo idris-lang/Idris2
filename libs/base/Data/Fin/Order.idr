@@ -7,7 +7,6 @@ import Data.Fin
 import Data.Fun
 import Data.Rel
 import Data.Nat
-import Data.Nat.Order
 import Decidable.Decidable
 
 %default total
@@ -50,6 +49,6 @@ using (k : Nat)
 
   public export
   Decidable 2 [Fin k, Fin k] FinLTE where
-    decide m n with (decideLTE (finToNat m) (finToNat n))
+    decide m n with (isLTE (finToNat m) (finToNat n))
       decide m n | Yes prf    = Yes (FromNatPrf prf)
       decide m n | No  disprf = No (\ (FromNatPrf prf) => disprf prf)

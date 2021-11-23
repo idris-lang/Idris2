@@ -5,9 +5,6 @@ import Core.Core
 import Core.Env
 import Core.TT
 
-import Libraries.Data.IntMap
-import Libraries.Data.NameMap
-
 %default covering
 
 public export
@@ -101,11 +98,13 @@ mutual
        NForce   : FC -> LazyReason -> NF vars -> List (FC, Closure vars) -> NF vars
        NPrimVal : FC -> Constant -> NF vars
        NErased  : FC -> (imp : Bool) -> NF vars
-       NType    : FC -> NF vars
+       NType    : FC -> Name -> NF vars
 
 export
 ntCon : FC -> Name -> Int -> Nat -> List (FC, Closure vars) -> NF vars
-ntCon fc (UN (Basic "Type")) tag Z [] = NType fc
+-- Part of the machinery for matching on types - I believe this won't affect
+-- universe checking so put a dummy name.
+ntCon fc (UN (Basic "Type")) tag Z [] = NType fc (MN "top" 0)
 ntCon fc n tag Z [] = case isConstantType n of
   Just c => NPrimVal fc c
   Nothing => NTCon fc n tag Z []
@@ -123,7 +122,7 @@ getLoc (NDelay fc _ _ _) = fc
 getLoc (NForce fc _ _ _) = fc
 getLoc (NPrimVal fc _) = fc
 getLoc (NErased fc i) = fc
-getLoc (NType fc) = fc
+getLoc (NType fc _) = fc
 
 export
 {free : _} -> Show (NHead free) where
@@ -135,6 +134,7 @@ Show (Closure free) where
   show _ = "[closure]"
 
 export
+covering
 {free : _} -> Show (NF free) where
   show (NBind _ x (Lam _ c info ty) _)
     = "\\" ++ withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
@@ -163,4 +163,4 @@ export
   show (NForce _ _ tm args) = "%Force " ++ show tm ++ " [" ++ show (length args) ++ " closures]"
   show (NPrimVal _ c) = show c
   show (NErased _ _) = "[__]"
-  show (NType _) = "Type"
+  show (NType _ _) = "Type"

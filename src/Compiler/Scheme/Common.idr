@@ -2,16 +2,12 @@ module Compiler.Scheme.Common
 
 import Compiler.Common
 import Compiler.CompileExpr
-import Compiler.Inline
 
 import Core.Context
 import Core.Name
 import Core.TT
 
-import Data.List
 import Data.Vect
-
-import System.Info
 
 %default covering
 
@@ -236,7 +232,6 @@ toPrim pn@(NS _ n)
             (n == UN (Basic "prim__arraySet"), ArraySet),
             (n == UN (Basic "prim__getField"), GetField),
             (n == UN (Basic "prim__setField"), SetField),
-            (n == UN (Basic "void"), VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
             (n == UN (Basic "prim__void"), VoidElim),
             (n == UN (Basic "prim__os"), SysOS),
             (n == UN (Basic "prim__codegen"), SysCodegen),

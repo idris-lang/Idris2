@@ -1,7 +1,6 @@
 module Data.List.Palindrome
 
 import Data.List
-import Data.List.Views
 import Data.List.Views.Extra
 import Data.List.Reverse
 import Data.List.Equalities

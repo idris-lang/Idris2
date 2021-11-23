@@ -4,25 +4,20 @@
 module Core.Binary
 
 import public Core.Binary.Prims
-import Core.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
-import Core.Hash
 import Core.Name.Namespace
-import Core.Normalise
 import Core.Options
 import Core.TT
 import Core.TTC
 import Core.UnifyState
 
-import Data.Buffer
 import Data.List
 import Data.String
 
 import System.File
 
-import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 
 import public Libraries.Utils.Binary
@@ -33,7 +28,7 @@ import public Libraries.Utils.Binary
 ||| (Increment this when changing anything in the data format)
 export
 ttcVersion : Int
-ttcVersion = 64
+ttcVersion = 70
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -44,7 +39,7 @@ record TTCFile extra where
   constructor MkTTCFile
   version : Int
   totalReq : TotalReq
-  sourceHash : String
+  sourceHash : Maybe String
   ifaceHash : Int
   importHashes : List (Namespace, Int)
   incData : List (CG, String, List String)
@@ -289,12 +284,13 @@ writeToTTC extradata sourceFileName ttcFileName
          totalReq <- getDefaultTotalityOption
          log "ttc.write" 5 $ unwords
            [ "Writing", ttcFileName
-           , "with source hash", sourceHash
+           , "with source hash", show sourceHash
            , "and interface hash", show (ifaceHash defs)
            ]
          writeTTCFile bin
                    (MkTTCFile ttcVersion totalReq
-                              sourceHash (ifaceHash defs) (importHashes defs)
+                              sourceHash
+                              (ifaceHash defs) (importHashes defs)
                               (incData defs)
                               gdefs
                               (keys (userHoles defs))
@@ -522,7 +518,7 @@ getImportHashes file b
          ver <- fromBuf @{Wasteful} b
          checkTTCVersion file ver ttcVersion
          totalReq <- fromBuf {a = TotalReq} b
-         sourceFileHash <- fromBuf {a = String} b
+         sourceFileHash <- fromBuf {a = Maybe String} b
          interfaceHash <- fromBuf {a = Int} b
          fromBuf b
 
@@ -546,7 +542,7 @@ readTotalReq fileName
                (\err => pure Nothing)
 
 export
-getHashes : String -> Ref Bin Binary -> Core (String, Int)
+getHashes : String -> Ref Bin Binary -> Core (Maybe String, Int)
 getHashes file b
     = do hdr <- fromBuf {a = String} b
          when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
@@ -559,13 +555,13 @@ getHashes file b
 
 export
 readHashes : (fileName : String) -> -- file containing the module
-                Core (String, Int)
+                Core (Maybe String, Int)
 readHashes fileName
     = do Right buffer <- coreLift $ readFromFile fileName
-            | Left err => pure ("", 0)
+            | Left err => pure (Nothing, 0)
          b <- newRef Bin buffer
          catch (getHashes fileName b)
-               (\err => pure ("", 0))
+               (\err => pure (Nothing, 0))
 
 export
 readImportHashes : (fname : String) -> -- file containing the module

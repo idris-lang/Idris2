@@ -1,7 +1,6 @@
 module Language.JSON.String.Tokens
 
 import Data.List
-import Data.String
 import Data.String.Extra
 import Text.Token
 

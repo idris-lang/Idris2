@@ -2,7 +2,6 @@ module Core.Transform
 
 import Core.Context
 import Core.Env
-import Core.Normalise
 import Core.TT
 
 import Libraries.Data.NameMap
@@ -81,7 +80,7 @@ tryReplace ms (TForce fc r tm)
          pure (TForce fc r tm')
 tryReplace ms (PrimVal fc c) = pure (PrimVal fc c)
 tryReplace ms (Erased fc i) = pure (Erased fc i)
-tryReplace ms (TType fc) = pure (TType fc)
+tryReplace ms (TType fc u) = pure (TType fc u)
 
 covering
 tryApply : Transform -> Term vs -> Maybe (Term vs)

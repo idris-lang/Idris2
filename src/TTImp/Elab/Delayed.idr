@@ -1,6 +1,6 @@
 module TTImp.Elab.Delayed
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -12,7 +12,6 @@ import Core.TT
 import Core.Value
 
 import TTImp.Elab.Check
-import TTImp.TTImp
 
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
@@ -105,7 +104,8 @@ delayOnFailure fc rig env exp pred pri elab
     mkExpected (Just ty) = pure ty
     mkExpected Nothing
         = do nm <- genName "delayTy"
-             ty <- metaVar fc erased env nm (TType fc)
+             u <- uniVar fc
+             ty <- metaVar fc erased env nm (TType fc u)
              pure (gnf env ty)
 
 export
@@ -146,7 +146,8 @@ delayElab {vars} fc rig env exp pri elab
     mkExpected (Just ty) = pure ty
     mkExpected Nothing
         = do nm <- genName "delayTy"
-             ty <- metaVar fc erased env nm (TType fc)
+             u <- uniVar fc
+             ty <- metaVar fc erased env nm (TType fc u)
              pure (gnf env ty)
 
 export

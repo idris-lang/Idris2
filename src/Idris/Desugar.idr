@@ -1,6 +1,5 @@
 module Idris.Desugar
 
-import Core.Binary
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -10,11 +9,8 @@ import Core.Options
 import Core.TT
 import Core.Unify
 
-import Data.Maybe
-
 import Libraries.Data.List.Extra
 import Libraries.Data.StringMap
-import Libraries.Data.String.Extra
 import Libraries.Data.ANameMap
 import Libraries.Data.SortedMap
 
@@ -36,11 +32,9 @@ import TTImp.Utils
 import Libraries.Data.IMaybe
 import Libraries.Utils.Shunting
 
-import Control.Monad.State
 import Data.Maybe
 import Data.List
 import Data.List.Views
-import Data.List1
 import Data.String
 import Libraries.Data.String.Extra
 
@@ -91,7 +85,7 @@ extendSyn newsyn
          put Syn (record { infixes $= mergeLeft (infixes newsyn),
                            prefixes $= mergeLeft (prefixes newsyn),
                            ifaces $= merge (ifaces newsyn),
-                           modDocstrings $= merge (modDocstrings newsyn),
+                           modDocstrings $= mergeLeft (modDocstrings newsyn),
                            defDocstrings $= merge (defDocstrings newsyn),
                            bracketholes $= ((bracketholes newsyn) ++) }
                   syn)
@@ -504,7 +498,14 @@ mutual
     = do xs <- traverse toRawImp (filter notEmpty $ mergeStrLit xs)
          pure $ case xs of
            [] => IPrimVal fc (Str "")
-           (_ :: _) => foldr1 concatStr xs
+           (_ :: _) =>
+             let vfc = virtualiseFC fc in
+             IApp vfc
+               (INamedApp vfc
+                 (IVar vfc (NS preludeNS $ UN $ Basic "concat"))
+                 (UN $ Basic "t")
+                 (IVar vfc (NS preludeNS $ UN $ Basic "List")))
+               (strInterpolate xs)
     where
       toRawImp : PStr -> Core RawImp
       toRawImp (StrLiteral fc str) = pure $ IPrimVal fc (Str str)
@@ -512,21 +513,29 @@ mutual
 
       -- merge neighbouring StrLiteral
       mergeStrLit : List PStr -> List PStr
-      mergeStrLit xs
-          = case List.spanBy (\case StrLiteral fc str => Just (fc, str); _ => Nothing) xs of
-                 ([], []) => []
-                 ([], x::xs) => x :: mergeStrLit xs
-                 (lits@(_::_), xs) => (StrLiteral (fst $ head lits) (fastConcat $ snd <$> lits)) :: mergeStrLit xs
+      mergeStrLit xs = case List.spanBy isStrLiteral xs of
+        ([], []) => []
+        ([], x::xs) => x :: mergeStrLit xs
+        (lits@(_::_), xs) =>
+          -- TODO: merge all the FCs of the merged literals!
+          let fc  = fst $ head lits in
+          let lit = fastConcat $ snd <$> lits in
+          StrLiteral fc lit :: mergeStrLit xs
 
       notEmpty : PStr -> Bool
       notEmpty (StrLiteral _ str) = str /= ""
       notEmpty (StrInterp _ _) = True
 
-      concatStr : RawImp -> RawImp -> RawImp
-      concatStr a b =
-        let aFC = virtualiseFC (getFC a)
-            bFC = virtualiseFC (getFC b)
-        in IApp aFC (IApp bFC (IVar bFC (UN $ Basic "++")) a) b
+      strInterpolate : List RawImp -> RawImp
+      strInterpolate []
+        = IVar EmptyFC (NS preludeNS $ UN $ Basic "Nil")
+      strInterpolate (x :: xs)
+        = let xFC = virtualiseFC (getFC x) in
+          apply (IVar xFC (NS preludeNS $ UN $ Basic "::"))
+          [ IApp xFC (IVar EmptyFC (UN $ Basic "interpolate"))
+                     x
+          , strInterpolate xs
+          ]
 
   trimMultiline : FC -> Nat -> List (List PStr) -> Core (List PStr)
   trimMultiline fc indent lines
@@ -558,16 +567,17 @@ mutual
 
       trimLeft : Nat -> List PStr -> Core (List PStr)
       trimLeft indent [] = pure []
-      trimLeft indent [(StrLiteral fc str)]
+      trimLeft indent [StrLiteral fc str]
           = let (trimed, rest) = splitAt indent (fastUnpack str) in
-                if any (not . isSpace) trimed
-                   then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
-                   else pure $ [StrLiteral fc (fastPack rest)]
-      trimLeft indent ((StrLiteral fc str)::xs)
+            if any (not . isSpace) trimed
+              then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
+              else let str = if null rest then "\n" else fastPack rest in
+                   pure [StrLiteral fc str]
+      trimLeft indent (StrLiteral fc str :: xs)
           = let (trimed, rest) = splitAt indent (fastUnpack str) in
-                if any (not . isSpace) trimed || length trimed < indent
-                   then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
-                   else pure $ (StrLiteral fc (fastPack rest))::xs
+            if any (not . isSpace) trimed || length trimed < indent
+              then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
+             else pure $ (StrLiteral fc (fastPack rest))::xs
       trimLeft indent xs = throw $ BadMultiline fc "Line is less indented than the closing delimiter"
 
   expandDo : {auto s : Ref Syn SyntaxInfo} ->
@@ -613,8 +623,9 @@ mutual
            tm' <- desugarB side ps tm
            ty' <- desugarDo side ps ns ty
            rest' <- expandDo side ps topfc ns rest
-           whenJust (isConcreteFC lhsFC) $ \nfc => addSemanticDecorations [(nfc, Bound, Just n)]
-           let bind = ILet fc (virtualiseFC lhsFC) rig n ty' tm' rest'
+           whenJust (isConcreteFC lhsFC) $ \nfc =>
+             addSemanticDecorations [(nfc, Bound, Just n)]
+           let bind = ILet fc lhsFC rig n ty' tm' rest'
            bd <- get Bang
            pure $ bindBangs (bangNames bd) ns bind
   expandDo side ps topfc ns (DoLetPat fc pat ty tm alts :: rest)

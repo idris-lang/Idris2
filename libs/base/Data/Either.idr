@@ -31,6 +31,24 @@ isRight : Either a b -> Bool
 isRight (Left _)  = False
 isRight (Right _) = True
 
+||| Proof that an `Either` is actually a Right value
+public export
+data IsRight : Either a b -> Type where
+  ItIsRight : IsRight (Right x)
+
+export
+Uninhabited (IsRight (Left x)) where
+  uninhabited ItIsRight impossible
+
+||| Proof that an `Either` is actually a Left value
+public export
+data IsLeft : Either a b -> Type where
+  ItIsLeft : IsLeft (Left x)
+
+export
+Uninhabited (IsLeft (Right x)) where
+  uninhabited ItIsLeft impossible
+
 --------------------------------------------------------------------------------
 -- Grouping values
 
@@ -123,3 +141,13 @@ leftInjective Refl = Refl
 export
 rightInjective : Right x = Right y -> x = y
 rightInjective Refl = Refl
+
+export
+eitherMapFusion : (f : _) -> (g : _) -> (p : _) -> (e : Either a b) -> either f g (map p e) = either f (g . p) e
+eitherMapFusion f g p $ Left x  = Refl
+eitherMapFusion f g p $ Right x = Refl
+
+export
+eitherBimapFusion : (f : _) -> (g : _) -> (p : _) -> (q : _) -> (e : _) -> either f g (bimap p q e) = either (f . p) (g . q) e
+eitherBimapFusion f g p q $ Left z  = Refl
+eitherBimapFusion f g p q $ Right z = Refl

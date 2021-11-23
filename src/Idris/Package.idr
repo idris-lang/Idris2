@@ -6,7 +6,6 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.Directory
-import Core.Env
 import Core.Metadata
 import Core.Name.Namespace
 import Core.Options
@@ -27,8 +26,6 @@ import Libraries.Data.SortedMap
 import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
 import Libraries.Text.Parser
-import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Utils.String
 import Libraries.Utils.Path
 
 import Idris.CommandLine
@@ -42,7 +39,6 @@ import Idris.REPL.Opts
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
-import IdrisPaths
 
 import public Idris.Package.Types
 import Idris.Package.Init
@@ -210,7 +206,7 @@ addField : {auto c : Ref Ctxt Defs} ->
            DescField -> PkgDesc -> Core PkgDesc
 addField (PVersion fc n)     pkg = pure $ record { version = Just n } pkg
 addField (PVersionDep fc n)  pkg
-    = do emitWarning (Deprecated "version numbers must now be of the form x.y.z")
+    = do emitWarning (Deprecated "version numbers must now be of the form x.y.z" Nothing)
          pure pkg
 addField (PAuthors fc a)     pkg = pure $ record { authors = Just a } pkg
 addField (PMaintainers fc a) pkg = pure $ record { maintainers = Just a } pkg
@@ -368,7 +364,7 @@ installFrom builddir destdir ns
                              [ "Can't make directories " ++ show modPath
                              , show err ]
          coreLift $ putStrLn $ "Installing " ++ ttcPath ++ " to " ++ destPath
-         Right _ <- coreLift $ Tree.copyFile ttcPath destFile
+         Right _ <- coreLift $ copyFile ttcPath destFile
              | Left err => throw $ InternalError $ unlines
                              [ "Can't copy file " ++ ttcPath ++ " to " ++ destPath
                              , show err ]
@@ -376,7 +372,7 @@ installFrom builddir destdir ns
          -- since some modules don't generate any code themselves.
          traverse_ (\ (obj, dest) =>
                       do coreLift $ putStrLn $ "Installing " ++ obj ++ " to " ++ destPath
-                         ignore $ coreLift $ Tree.copyFile obj dest)
+                         ignore $ coreLift $ copyFile obj dest)
                    objPaths
 
          pure ()
@@ -409,7 +405,7 @@ installSrcFrom wdir destdir (ns, srcRelPath)
              (MkPermissions [Read, Write] [Read, Write] [Read, Write])
              | Left err => throw $ UserError (show err)
            pure ()
-         Right _ <- coreLift $ Tree.copyFile srcPath destFile
+         Right _ <- coreLift $ copyFile srcPath destFile
              | Left err => throw $ InternalError $ unlines
                              [ "Can't copy file " ++ srcPath ++ " to " ++ destPath
                              , show err ]
@@ -528,9 +524,15 @@ makeDoc pkg opts =
        Right () <- coreLift $ writeFile (docBase </> "index.html") $ renderDocIndex pkg
          | Left err => fileError (docBase </> "index.html") err
 
-       css <- readDataFile "docs/styles.css"
-       Right () <- coreLift $ writeFile (docBase </> "styles.css") css
-         | Left err => fileError (docBase </> "styles.css") err
+       errs <- for cssFiles $ \ cssFile => do
+          let fn = cssFile.filename ++ ".css"
+          css <- readDataFile ("docs/" ++ fn)
+          Right () <- coreLift $ writeFile (docBase </> fn) css
+            | Left err => fileError (docBase </> fn) err
+          pure (the (List Error) [])
+
+       let [] = concat errs
+           | err => pure err
 
        runScript (postbuild pkg)
        pure []

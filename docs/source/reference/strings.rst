@@ -85,14 +85,14 @@ If you need to escape characters you still can by using a ``\\`` followed by the
 ``#`` that you used for your string delimiters. In the following example we are using two
 ``#`` characters as our escape sequence and want to print a line return:
 
-.. code-block:: idris
+.. code-block::
 
     markdownExample : String
     markdownExample = ##"markdown titles look like this: \##n"# Title \##n body""##
 
 This last example could be implemented by combining raw string literals with multiline strings:
 
-.. code-block:: idris
+.. code-block::
 
     markdownExample : String
     markdownExample = ##"""
@@ -111,7 +111,7 @@ programs that evaluate to strings with a string literals in order to avoid manua
 the concatenation of those expressions. To use interpolated strings, use ``\{`` to start an
 interpolation slice in which you can write an idris expression. Close it with ``}``
 
-.. code-block:: idris
+.. code-block::
 
     print : Expr -> String
     print (Var name expr) = "let \{name} = \{print expr}"
@@ -133,5 +133,47 @@ string, since interpolated strings require the first ``{`` to be escaped, an int
 in a raw string uses ``\#{`` as starting delimiter.
 
 Additionally multiline strings can also be combined with string interpolation in the way you
-expect, as shown with ``Decl``. Finally all three features can be combined together in the
-last example, where a multiline string has a custom escape sequence and includes an interpolated slice.
+expect, as shown with the ``Decl`` pattern. Finally all three features can be combined together in the
+last branch of the example, where a multiline string has a custom escape sequence and includes an
+interpolated slice.
+
+Interpolation Interface
+-----------------------
+
+The Prelude exposes an ``Interpolation`` interface with one function ``interpolate``. This function
+is used within every interpolation slice to convert an arbitrary expression into a string that can
+be concatenated with the rest of the interpolated string.
+
+To go into more details, when you write ``"hello \{username}"`` the compiler translates the expression
+into ``concat [interpolate "hello ", interpolate username]`` so that the concatenation is fast and so that if
+``username`` implement the ``Interpolation`` interface, you don't have to convert it to a string manually.
+
+Here is an example where we reuse the ``Expr``
+type but instead of implementing a ``print`` function we implement ``Interpolation``:
+
+.. code-block::
+
+  Interpolation Expr where
+      interpolate (Var name expr) = "let \{name} = \{expr}"
+      interpolate (Lam arg body) = #"\\#{arg} => \#{body}"#
+      interpolate (Decl fname fargs body) = """
+          func \{fname}(\{commasep fargs}) {
+              \{unlines (map interpolate body)}
+          }
+          """
+      interpolate (Multi lns) = #"""
+          """
+          \#{unlines lns}
+          """
+          """#
+
+As you can see we avoid repeated calls to ``print`` since the slices are automatically applied to
+``interpolate``.
+
+We use ``Interpolation`` instead of ``Show`` for interpolation slices because the semantics of ``show``
+are not necessarily the same as ``interpolate``. Typically the implementation of ``show`` for ``String``
+adds double quotes around the text, but for ``interpolate`` what we want is to return the string as is.
+In the previous example, ``"hello \{username}"``, if we were to use ``show`` we would end up with the string
+``"hello "Susan`` which displays an extra pair of double quotes. That is why the implementation of
+``interpolate`` for ``String`` is the identity function: ``interpolate x = x``. This way the desugared
+code looks like: ``concat [id "hello ", interpolate username]``.

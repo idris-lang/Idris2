@@ -1,0 +1,6 @@
+package testpkg
+
+sourcedir = "./src/"
+
+modules = Main
+opts = "--no-color --console-width 0"

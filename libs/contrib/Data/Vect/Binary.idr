@@ -8,7 +8,6 @@ import Data.Binary
 import Data.IMaybe
 import Data.Nat
 import Data.Nat.Exponentiation
-import Data.Nat.Properties
 import Data.Tree.Perfect
 
 %default total

@@ -7,7 +7,9 @@ logPrims
     = do ns <- getType `{ (++) }
          traverse_ (\ (n, ty) =>
                         do logMsg "" 0 ("Name: " ++ show n)
-                           logTerm "" 0 "Type" ty) ns
+                           logTerm "" 0 "Type" ty
+                           logSugaredTerm "" 0 "Pretty Type" ty
+                   ) ns
          fail "Not really trying"
 
 logDataCons : Elab a

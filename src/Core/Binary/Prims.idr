@@ -389,6 +389,46 @@ TTC Integer where
               _ => corrupt "Integer"
 
 export
+TTC Bits8 where
+  toBuf b x = toBuf b $ cast {to = Int} x
+  fromBuf b = cast {from = Int} <$> fromBuf b
+
+export
+TTC Bits16 where
+  toBuf b x = toBuf b $ cast {to = Int} x
+  fromBuf b = cast {from = Int} <$> fromBuf b
+
+export
+TTC Bits32 where
+  toBuf b x = toBuf b $ cast {to = Integer} x
+  fromBuf b = cast {from = Integer} <$> fromBuf b
+
+export
+TTC Bits64 where
+  toBuf b x = toBuf b $ cast {to = Integer} x
+  fromBuf b = cast {from = Integer} <$> fromBuf b
+
+export
+TTC Int8 where
+  toBuf b x = toBuf b $ cast {to = Int} x
+  fromBuf b = cast {from = Int} <$> fromBuf b
+
+export
+TTC Int16 where
+  toBuf b x = toBuf b $ cast {to = Int} x
+  fromBuf b = cast {from = Int} <$> fromBuf b
+
+export
+TTC Int32 where
+  toBuf b x = toBuf b $ cast {to = Int} x
+  fromBuf b = cast {from = Int} <$> fromBuf b
+
+export
+TTC Int64 where
+  toBuf b x = toBuf b $ cast {to = Integer} x
+  fromBuf b = cast {from = Integer} <$> fromBuf b
+
+export
 TTC Nat where
   toBuf b val = toBuf b (cast {to=Integer} val)
   fromBuf b
@@ -408,24 +448,24 @@ modTime fname
        pure t
 
 export
-hashFileWith : String -> String -> Core String
-hashFileWith sha256sum fileName
+hashFileWith : Maybe String -> String -> Core (Maybe String)
+hashFileWith Nothing _ = pure Nothing
+hashFileWith (Just sha256sum) fileName
   = do Right fileHandle <- coreLift $ popen
             (sha256sum ++ " \"" ++ osEscape fileName ++ "\"") Read
          | Left _ => err
        Right hashLine <- coreLift $ fGetLine fileHandle
          | Left _ =>
-           do coreLift $ pclose fileHandle
+           do ignore $ coreLift $ pclose fileHandle
               err
-       coreLift $ pclose fileHandle
+       ignore $ coreLift $ pclose fileHandle
        let w@(_::_) = words hashLine
          | Nil => err
-       pure $ last w
+       pure $ Just $ last w
   where
-    err : Core String
+    err : Core a
     err = coreFail $ InternalError ("Can't get " ++ sha256sum ++ " of " ++ fileName)
     osEscape : String -> String
     osEscape = if isWindows
       then id
       else escapeStringUnix
-

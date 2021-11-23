@@ -3,7 +3,6 @@ module Compiler.Scheme.ChezSep
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Generated
-import Compiler.Inline
 import Compiler.Scheme.Common
 import Compiler.Scheme.Chez
 import Compiler.Separate
@@ -13,84 +12,87 @@ import Core.Hash
 import Core.Context
 import Core.Context.Log
 import Core.Directory
-import Core.Name
 import Core.Options
 import Core.TT
-import Libraries.Utils.Hex
 import Libraries.Utils.Path
 
 import Data.List
 import Data.List1
-import Data.Maybe
 import Data.String
-import Data.Vect
 
 import Idris.Env
 
 import System
 import System.Directory
-import System.File
 import System.Info
 
-import Libraries.Data.NameMap
 import Libraries.Data.Version
 import Libraries.Utils.String
 
 %default covering
 
 schHeader : List String -> List String -> String
-schHeader libs compilationUnits = unlines
-  [ "(import (chezscheme) (support) "
-      ++ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits]
-      ++ ")"
-  , "(case (machine-type)"
-  , "  [(i3le ti3le a6le ta6le tarm64le) (load-shared-object \"libc.so.6\")]"
-  , "  [(i3osx ti3osx a6osx ta6osx tarm64osx) (load-shared-object \"libc.dylib\")]"
-  , "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")"
-  , "                           (load-shared-object \"ws2_32.dll\")]"
-  , "  [else (load-shared-object \"libc.so\")]"
-  , unlines ["  (load-shared-object \"" ++ escapeStringChez lib ++ "\")" | lib <- libs]
-  , ")"
-  ]
+schHeader libs compilationUnits = """
+  (import (chezscheme) (support)
+      \{ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits] })
+  (case (machine-type)
+    [(i3le ti3le a6le ta6le tarm64le) (load-shared-object "libc.so.6")]
+    [(i3osx ti3osx a6osx ta6osx tarm64osx) (load-shared-object "libc.dylib")]
+    [(i3nt ti3nt a6nt ta6nt) (load-shared-object "msvcrt.dll")]
+    [else (load-shared-object "libc.so")]
+  \{ unlines ["  (load-shared-object \"" ++ escapeStringChez lib ++ "\")" | lib <- libs] })
+
+  """
 
 schFooter : String
-schFooter = "(collect 4)\n(blodwen-run-finalisers)\n"
+schFooter = """
+
+  (collect 4)
+  (blodwen-run-finalisers)
+  """
 
 startChez : String -> String -> String -> String
-startChez chez appDirSh targetSh = Chez.startChezPreamble ++ unlines
-    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appDirSh ++ ":$LD_LIBRARY_PATH\""
-    , "\"" ++ chez ++ "\" -q "
-        ++ "--libdirs \"$DIR/" ++ appDirSh ++ "\" "
-        ++ "--program \"$DIR/" ++ targetSh ++ "\" "
-        ++ "\"$@\""
-    ]
+startChez chez appDirSh targetSh = Chez.startChezPreamble ++ """
+  export LD_LIBRARY_PATH="$DIR/\{ appDirSh }:$LD_LIBRARY_PATH"
+  export DYLD_LIBRARY_PATH="$DIR/\{ appDirSh }:$DYLD_LIBRARY_PATH"
+
+  "\{ chez }" -q \
+    --libdirs "$DIR/\{ appDirSh }" \
+    --program "$DIR/\{ targetSh }" \
+    "$@"
+  """
 
 startChezCmd : String -> String -> String -> String
-startChezCmd chez appDirSh targetSh = unlines
-    [ "@echo off"
-    , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%" ++ appDirSh ++ ";%PATH%"
-    , "\"" ++ chez ++ "\" -q "
-        ++ "--libdirs \"%APPDIR%" ++ appDirSh ++ "\" "
-        ++ "--program \"%APPDIR%" ++ targetSh ++ "\" "
-        ++ "%*"
-    ]
+startChezCmd chez appDirSh targetSh = """
+  @echo off
+
+  rem \{ generatedString "ChezSep" }
+
+  set APPDIR=%~dp0
+  set PATH=%APPDIR%\{ appDirSh };%PATH%
+
+  "\{ chez }" -q \
+    --libdirs "%APPDIR%\{ appDirSh }" \
+    --program "%APPDIR%\{ targetSh }" \
+    %*
+  """
 
 startChezWinSh : String -> String -> String -> String
-startChezWinSh chez appDirSh targetSh = unlines
-    [ "#!/bin/sh"
-    , "# " ++ (generatedString "Chez")
-    , ""
-    , "set -e # exit on any error"
-    , ""
-    , "DIR=$(dirname \"$(readlink -f -- \"$0\" || cygpath -a -- \"$0\")\")"
-    , "PATH=\"$DIR/" ++ appDirSh ++ ":$PATH\""
-    , "\"" ++ chez ++ "\" --program \"$DIR/" ++ targetSh ++ "\" \"$@\""
-    , "\"" ++ chez ++ "\" -q "
-        ++ "--libdirs \"$DIR/" ++ appDirSh ++ "\" "
-        ++ "--program \"$DIR/" ++ targetSh ++ "\" "
-        ++ "\"$@\""
-    ]
+startChezWinSh chez appDirSh targetSh = """
+  #!/bin/sh
+  # \{ generatedString "ChezSep" }
+
+  set -e # exit on any error
+
+  DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
+  PATH="$DIR/\{ appDirSh }:$PATH"
+
+  "\{ chez }" --program "$DIR/\{ targetSh }" "$@"
+  "\{ chez }" -q \
+    --libdirs "$DIR/\{ appDirSh }" \
+    --program "$DIR/\{ targetSh }" \
+    "$@"
+  """
 
 -- TODO: parallelise this
 compileChezLibraries : (chez : String) -> (libDir : String) -> (ssFiles : List String) -> Core ()
@@ -224,7 +226,7 @@ compileToSS c chez appdir tm = do
 
       -- write the files
       log "compiler.scheme.chez" 3 $ "Generating code for " ++ chezLib
-      Core.writeFile (appdir </> chezLib <.> "ss") $ fastAppend $
+      Core.writeFile (appdir </> chezLib <.> "ss") $ fastConcat $
         [header]
         ++ map snd fgndefs  -- definitions using foreign libs
         ++ compdefs

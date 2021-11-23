@@ -4,18 +4,14 @@ import Core.Context.Context
 import Core.Env
 import Core.TT
 
-import Data.List
 import Data.List1
-import Data.String
 import Data.Vect
 
 import Libraries.Data.IMaybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import Libraries.Utils.Binary
 
 import public Data.IORef
-import System
 import System.File
 
 %default covering
@@ -68,7 +64,9 @@ data Warning : Type where
      UnreachableClause : {vars : _} ->
                          FC -> Env Term vars -> Term vars -> Warning
      ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
-     Deprecated : String -> Warning
+     ||| A warning about a deprecated definition. Supply an FC and Name to
+     ||| have the documentation for the definition printed with the warning.
+     Deprecated : String -> Maybe (FC, Name) -> Warning
      GenericWarn : String -> Warning
 
 -- All possible errors, carrying a location
@@ -102,13 +100,14 @@ data Error : Type where
                          FC -> Env Term vars -> Term vars -> Error
      AmbiguousName : FC -> List Name -> Error
      AmbiguousElab : {vars : _} ->
-                     FC -> Env Term vars -> List (Term vars) -> Error
+                     FC -> Env Term vars -> List (Context, Term vars) -> Error
      AmbiguousSearch : {vars : _} ->
                        FC -> Env Term vars -> Term vars -> List (Term vars) -> Error
      AmbiguityTooDeep : FC -> Name -> List Name -> Error
      AllFailed : List (Maybe Name, Error) -> Error
      RecordTypeNeeded : {vars : _} ->
                         FC -> Env Term vars -> Error
+     DuplicatedRecordUpdatePath : FC -> List (List String) -> Error
      NotRecordField : FC -> String -> Maybe Name -> Error
      NotRecordType : FC -> Name -> Error
      IncompatibleFieldUpdate : FC -> List String -> Error
@@ -119,7 +118,8 @@ data Error : Type where
      BadUnboundImplicit : {vars : _} ->
                           FC -> Env Term vars -> Name -> Term vars -> Error
      CantSolveGoal : {vars : _} ->
-                     FC -> Context -> Env Term vars -> Term vars -> Error
+                     FC -> Context -> Env Term vars -> Term vars ->
+                     Maybe Error -> Error
      DeterminingArg : {vars : _} ->
                       FC -> Name -> Int -> Env Term vars -> Term vars -> Error
      UnsolvedHoles : List (FC, Name) -> Error
@@ -188,11 +188,12 @@ Show Warning where
     show (ParserWarning _ msg) = msg
     show (UnreachableClause _ _ _) = ":Unreachable clause"
     show (ShadowingGlobalDefs _ _) = ":Shadowing names"
-    show (Deprecated name) = ":Deprecated " ++ name
+    show (Deprecated name _) = ":Deprecated " ++ name
     show (GenericWarn msg) = msg
 
 
 export
+covering
 Show Error where
   show (Fatal err) = show err
   show (CantConvert fc _ env x y)
@@ -258,13 +259,15 @@ Show Error where
       = show fc ++ ":" ++ show t ++ " borrows, so must return a concrete type"
 
   show (AmbiguousName fc ns) = show fc ++ ":Ambiguous name " ++ show ns
-  show (AmbiguousElab fc env ts) = show fc ++ ":Ambiguous elaboration " ++ show ts
+  show (AmbiguousElab fc env ts) = show fc ++ ":Ambiguous elaboration " ++ show (map snd ts)
   show (AmbiguousSearch fc env tgt ts) = show fc ++ ":Ambiguous search " ++ show ts
   show (AmbiguityTooDeep fc n ns)
       = show fc ++ ":Ambiguity too deep in " ++ show n ++ " " ++ show ns
   show (AllFailed ts) = "No successful elaboration: " ++ assert_total (show ts)
   show (RecordTypeNeeded fc env)
       = show fc ++ ":Can't infer type of record to update"
+  show (DuplicatedRecordUpdatePath fc ps)
+      = show fc ++ ":Duplicated record update paths: " ++ show ps
   show (NotRecordField fc fld Nothing)
       = show fc ++ ":" ++ fld ++ " is not part of a record type"
   show (NotRecordField fc fld (Just ty))
@@ -282,7 +285,7 @@ Show Error where
   show (BadUnboundImplicit fc env n ty)
       = show fc ++ ":Can't bind name " ++ nameRoot n ++
                    " with type " ++ show ty
-  show (CantSolveGoal fc gam env g)
+  show (CantSolveGoal fc gam env g cause)
       = show fc ++ ":Can't solve goal " ++ assert_total (show g)
   show (DeterminingArg fc n i env g)
       = show fc ++ ":Can't solve goal " ++ assert_total (show g) ++
@@ -366,7 +369,7 @@ getWarningLoc : Warning -> Maybe FC
 getWarningLoc (ParserWarning fc _) = Just fc
 getWarningLoc (UnreachableClause fc _ _) = Just fc
 getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
-getWarningLoc (Deprecated _) = Nothing
+getWarningLoc (Deprecated _ fcAndName) = fst <$> fcAndName
 getWarningLoc (GenericWarn _) = Nothing
 
 export
@@ -395,13 +398,14 @@ getErrorLoc (AmbiguityTooDeep loc _ _) = Just loc
 getErrorLoc (AllFailed ((_, x) :: _)) = getErrorLoc x
 getErrorLoc (AllFailed []) = Nothing
 getErrorLoc (RecordTypeNeeded loc _) = Just loc
+getErrorLoc (DuplicatedRecordUpdatePath loc _) = Just loc
 getErrorLoc (NotRecordField loc _ _) = Just loc
 getErrorLoc (NotRecordType loc _) = Just loc
 getErrorLoc (IncompatibleFieldUpdate loc _) = Just loc
 getErrorLoc (InvalidArgs loc _ _ _) = Just loc
 getErrorLoc (TryWithImplicits loc _ _) = Just loc
 getErrorLoc (BadUnboundImplicit loc _ _ _) = Just loc
-getErrorLoc (CantSolveGoal loc _ _ _) = Just loc
+getErrorLoc (CantSolveGoal loc _ _ _ _) = Just loc
 getErrorLoc (DeterminingArg loc _ _ _ _) = Just loc
 getErrorLoc (UnsolvedHoles ((loc, _) :: _)) = Just loc
 getErrorLoc (UnsolvedHoles []) = Nothing
@@ -704,7 +708,7 @@ mapTermM f = goTerm where
     goTerm (TForce fc la t) = f =<< TForce fc la <$> goTerm t
     goTerm tm@(PrimVal _ _) = f tm
     goTerm tm@(Erased _ _) = f tm
-    goTerm tm@(TType _) = f tm
+    goTerm tm@(TType _ _) = f tm
 
 
 export
@@ -791,3 +795,23 @@ readFile fname =
   coreLift (readFile fname) >>= \case
     Right content => pure content
     Left err => throw $ FileErr fname err
+
+namespace Functor
+
+  export
+  [CORE] Functor Core where
+    map = Core.map
+
+namespace Applicative
+
+  export
+  [CORE] Applicative Core using Functor.CORE where
+    pure = Core.pure
+    (<*>) = Core.(<*>)
+
+namespace Monad
+
+  export
+  [CORE] Monad Core using Applicative.CORE where
+    (>>=) = Core.(>>=)
+    join mma = Core.(>>=) mma id

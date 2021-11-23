@@ -2,7 +2,7 @@ module Parser.Lexer.Source
 
 import public Parser.Lexer.Common
 
-import Data.List1
+import Data.Either
 import Data.List
 import Data.Maybe
 import Data.String
@@ -41,6 +41,8 @@ data Token
   | DotSepIdent Namespace String -- ident.ident
   | DotIdent String               -- .ident
   | Symbol String
+  -- Whitespace
+  | Space
   -- Comments
   | Comment
   | DocComment String
@@ -70,6 +72,8 @@ Show Token where
   show (DotSepIdent ns n) = "namespaced identifier " ++ show ns ++ "." ++ show n
   show (DotIdent x) = "dot+identifier " ++ x
   show (Symbol x) = "symbol " ++ x
+  -- Whitespace
+  show Space = "whitespace"
   -- Comments
   show Comment = "comment"
   show (DocComment c) = "doc comment: \"" ++ c ++ "\""
@@ -99,6 +103,8 @@ Pretty Token where
   pretty (DotSepIdent ns n) = reflow "namespaced identifier" <++> pretty ns <+> dot <+> pretty n
   pretty (DotIdent x) = pretty "dot+identifier" <++> pretty x
   pretty (Symbol x) = pretty "symbol" <++> pretty x
+  -- Whitespace
+  pretty Space = pretty "space"
   -- Comments
   pretty Comment = pretty "comment"
   pretty (DocComment c) = reflow "doc comment:" <++> dquotes (pretty c)
@@ -201,6 +207,9 @@ mkDirective : String -> Token
 mkDirective str = CGDirective (trim (substr 3 (length str) str))
 
 -- Reserved words
+-- NB: if you add a new keyword, please add the corresponding documentation in
+--     Idris.Doc.String
+public export
 keywords : List String
 keywords = ["data", "module", "where", "let", "in", "do", "record",
             "auto", "default", "implicit", "mutual", "namespace",
@@ -215,7 +224,7 @@ keywords = ["data", "module", "where", "let", "in", "do", "record",
 special : List String
 special = ["%lam", "%pi", "%imppi", "%let"]
 
-export
+public export
 symbols : List String
 symbols = [",", ";", "_", "`"]
 
@@ -263,7 +272,7 @@ validSymbol : Lexer
 validSymbol = some (pred isOpChar)
 
 -- Valid symbols which have a special meaning so can't be operators
-export
+public export
 reservedSymbols : List String
 reservedSymbols
     = symbols ++ groupSymbols ++ (groupClose <$> groupSymbols) ++
@@ -352,7 +361,7 @@ mutual
       <|> match namespacedIdent parseNamespace
       <|> match identNormal parseIdent
       <|> match pragma (\x => Pragma (assert_total $ strTail x))
-      <|> match space (const Comment)
+      <|> match space (const Space)
       <|> match validSymbol Symbol
       <|> match symbol Unrecognised
     where
@@ -378,20 +387,37 @@ mutual
 
 export
 lexTo : Lexer ->
-        String -> Either (StopReason, Int, Int, String) (List (WithBounds Token))
+        String ->
+        Either (StopReason, Int, Int, String)
+               ( List (WithBounds ())     -- bounds of comments
+               , List (WithBounds Token)) -- tokens
 lexTo reject str
     = case lexTo reject rawTokens str of
-           -- Add the EndInput token so that we'll have a line and column
-           -- number to read when storing spans in the file
-           (tok, (EndInput, l, c, _)) => Right (filter notComment tok ++
-                                      [MkBounded EndInput False (MkBounds l c l c)])
+           (toks, (EndInput, l, c, _)) =>
+             -- Add the EndInput token so that we'll have a line and column
+             -- number to read when storing spans in the file
+             let end = [MkBounded EndInput False (MkBounds l c l c)] in
+             Right $ map (++ end)
+                   $ partitionEithers
+                   $ map spotComment
+                   $ filter isNotSpace toks
            (_, fail) => Left fail
     where
-      notComment : WithBounds Token -> Bool
-      notComment t = case t.val of
-                          Comment => False
-                          _ => True
+
+      isNotSpace : WithBounds Token -> Bool
+      isNotSpace t = case t.val of
+        Space => False
+        _ => True
+
+      spotComment : WithBounds Token ->
+                    Either (WithBounds ()) (WithBounds Token)
+      spotComment t = case t.val of
+        Comment => Left (() <$ t)
+        _ => Right t
 
 export
-lex : String -> Either (StopReason, Int, Int, String) (List (WithBounds Token))
+lex : String ->
+      Either (StopReason, Int, Int, String)
+             ( List (WithBounds ())     -- bounds of comments
+             , List (WithBounds Token)) -- tokens
 lex = lexTo (pred $ const False)

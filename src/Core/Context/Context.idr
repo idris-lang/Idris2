@@ -1,25 +1,20 @@
 module Core.Context.Context
 
-import        Core.CaseTree
+import        Core.Case.CaseTree
 import        Core.CompileExpr
 import        Core.Env
-import        Core.Hash
 import public Core.Name
 import public Core.Options.Log
 import public Core.TT
 
-import Data.Fin
 import Data.IORef
-import Data.List
-import Data.List1
-import Data.Maybe
-import Data.Nat
 
 import Libraries.Data.IntMap
 import Libraries.Data.IOArray
 import Libraries.Data.NameMap
 import Libraries.Data.UserNameMap
 import Libraries.Utils.Binary
+import Libraries.Utils.Scheme
 
 public export
 data Ref : (l : label) -> Type -> Type where
@@ -117,6 +112,8 @@ data Def : Type where
                                -- we guessed the term
             (constraints : List Int) -> Def
     ImpBind : Def -- global name temporarily standing for an implicitly bound name
+    -- a name standing for a universe level in a Type
+    UniverseLevel : Integer -> Def
     -- A delayed elaboration. The elaborators themselves are stored in the
     -- unification state
     Delayed : Def
@@ -134,9 +131,11 @@ defNameType (Hole {}) = Just Func
 defNameType (BySearch {}) = Nothing
 defNameType (Guess {}) = Nothing
 defNameType ImpBind = Just Bound
+defNameType (UniverseLevel {}) = Nothing
 defNameType Delayed = Nothing
 
 export
+covering
 Show Def where
   show None = "undefined"
   show (PMDef _ args ct rt pats)
@@ -157,6 +156,7 @@ Show Def where
   show (Hole _ p) = "Hole" ++ if implbind p then " [impl]" else ""
   show (BySearch c depth def) = "Search in " ++ show def
   show (Guess tm _ cs) = "Guess " ++ show tm ++ " when " ++ show cs
+  show (UniverseLevel i) = "Universe level #" ++ show i
   show ImpBind = "Bound name"
   show Delayed = "Delayed"
 
@@ -180,13 +180,22 @@ data Clause : Type where
                 (lhs : Term vars) -> (rhs : Term vars) -> Clause
 
 export
+covering
 Show Clause where
   show (MkClause {vars} env lhs rhs)
       = show vars ++ ": " ++ show lhs ++ " = " ++ show rhs
 
 public export
+data NoMangleDirective : Type where
+    CommonName : String -> NoMangleDirective
+    BackendNames : List (String, String) -> NoMangleDirective
+
+public export
 data DefFlag
     = Inline
+    | NoInline
+    | ||| A definition has been marked as deprecated
+      Deprecate
     | Invertible -- assume safe to cancel arguments in unification
     | Overloadable -- allow ad-hoc overloads
     | TCInline -- always inline before totality checking
@@ -214,10 +223,14 @@ data DefFlag
     | Identity Nat
          -- Is it the identity function at runtime?
          -- The nat represents which argument the function evaluates to
+    | NoMangle NoMangleDirective
+         -- use the user provided name directly (backend, name)
 
 export
 Eq DefFlag where
     (==) Inline Inline = True
+    (==) NoInline NoInline = True
+    (==) Deprecate Deprecate = True
     (==) Invertible Invertible = True
     (==) Overloadable Overloadable = True
     (==) TCInline TCInline = True
@@ -228,11 +241,14 @@ Eq DefFlag where
     (==) AllGuarded AllGuarded = True
     (==) (ConType x) (ConType y) = x == y
     (==) (Identity x) (Identity y) = x == y
+    (==) (NoMangle _) (NoMangle _) = True
     (==) _ _ = False
 
 export
 Show DefFlag where
   show Inline = "inline"
+  show NoInline = "noinline"
+  show Deprecate = "deprecate"
   show Invertible = "invertible"
   show Overloadable = "overloadable"
   show TCInline = "tcinline"
@@ -243,6 +259,7 @@ Show DefFlag where
   show AllGuarded = "allguarded"
   show (ConType ci) = "contype " ++ show ci
   show (Identity x) = "identity " ++ show x
+  show (NoMangle _) = "nomangle"
 
 public export
 data SizeChange = Smaller | Same | Unknown
@@ -279,6 +296,17 @@ Eq SCCall where
   x == y = fnCall x == fnCall y && fnArgs x == fnArgs y
 
 public export
+data SchemeMode
+        = EvalAll -- evaluate everything
+        | BlockExport -- compile 'export' names in other modules as blocked
+
+export
+Eq SchemeMode where
+   EvalAll == EvalAll = True
+   BlockExport == BlockExport = True
+   _ == _ = False
+
+public export
 record GlobalDef where
   constructor MkGlobalDef
   location : FC
@@ -306,7 +334,9 @@ record GlobalDef where
   linearChecked : Bool -- Flag whether we've already checked its linearity
   definition : Def
   compexpr : Maybe CDef
+  namedcompexpr : Maybe NamedDef
   sizeChange : List SCCall
+  schemeExpr : Maybe (SchemeMode, SchemeObj Write)
 
 export
 gDefKindedName : GlobalDef -> KindedName
@@ -347,6 +377,30 @@ data PossibleName : Type where
              Name -> Int -> -- real full name and resolved name, as above
              PossibleName
 
+public export
+data UConstraint : Type where
+     ULE : Name -> Name -> UConstraint
+     ULT : Name -> Name -> UConstraint
+
+export
+Eq UConstraint where
+  ULE x y == ULE x' y' = x == x' && y == y'
+  ULT x y == ULT x' y' = x == x' && y == y'
+  _ == _ = False
+
+export
+Ord UConstraint where
+  compare (ULE _ _) (ULT _ _) = LT
+  compare (ULT _ _) (ULE _ _) = GT
+  compare (ULE x y) (ULE x' y')
+      = case compare x x' of
+             EQ => compare y y'
+             t => t
+  compare (ULT x y) (ULT x' y')
+      = case compare x x' of
+             EQ => compare y y'
+             t => t
+
 -- All the GlobalDefs. We can only have one context, because name references
 -- point at locations in here, and if we have more than one the indices won't
 -- match up. So, this isn't polymorphic.
@@ -380,3 +434,4 @@ record Context where
                      -- features such as case splitting).
     inlineOnly : Bool -- only return things with the 'alwaysReduce' flag
     hidden : NameMap () -- Never return these
+    uconstraints : List UConstraint

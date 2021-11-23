@@ -3,7 +3,6 @@ module Data.Vect.Properties.Map
 
 import Data.Vect.Properties.Tabulate
 import Data.Vect.Properties.Index
-import Data.Vect.Properties.Foldr
 
 import Data.Vect
 import Data.Vect.Elem

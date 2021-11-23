@@ -1,0 +1,13 @@
+1/3: Building Mod1 (Mod1.idr)
+2/3: Building Mod2 (Mod2.idr)
+3/3: Building Mod (Mod.idr)
+Error: While processing right hand side of main. Undefined name foo. 
+
+Mod:5:16--5:19
+ 1 | import Mod1
+ 2 | import Mod2
+ 3 | 
+ 4 | main : IO ()
+ 5 | main = printLn foo
+                    ^^^
+Did you mean any of: for, Mod1.foo (not exported), or Mod2.foo (not exported)?

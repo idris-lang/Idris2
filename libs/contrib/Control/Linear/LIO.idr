@@ -85,7 +85,7 @@ runK (Bind {u_act = Unrestricted} act next) k = runK act (\x => runK (next x) k)
 ||| Run a linear program exactly once, with unrestricted return value in the
 ||| underlying context
 export
-run : (Applicative io, LinearBind io) =>
+run : Applicative io => LinearBind io =>
       (1 _ : L io a) -> io a
 run prog = runK prog pure
 

@@ -8,5 +8,6 @@ import DerivingEq
 data TreeTwo a = BranchTwo (TreeTwo a) a (TreeTwo a)
                | Leaf
 
+covering
 Eq a => Eq (TreeTwo a) where
   (==) = %runElab genEq `{ TreeTwo }

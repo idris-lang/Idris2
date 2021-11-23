@@ -1,13 +1,11 @@
 module Idris.Error
 
-import Core.CaseTree
 import Core.Core
 import Core.Context
 import Core.Env
-import Core.Metadata
 import Core.Options
-import Core.Value
 
+import Idris.Doc.String
 import Idris.REPL.Opts
 import Idris.Resugar
 import Idris.Syntax
@@ -17,16 +15,11 @@ import Parser.Source
 
 import Data.List
 import Data.List1
-import Data.Maybe
-import Data.Stream
 import Data.String
 
 import Libraries.Data.List.Extra
 import Libraries.Data.List1 as Lib
-import Libraries.Data.String.Extra
-import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import Libraries.Utils.String
 import Libraries.Data.String.Extra
 
 import System.File
@@ -166,17 +159,24 @@ pwarning (UnreachableClause fc env tm)
     = pure $ errorDesc (reflow "Unreachable clause:"
         <++> code !(pshow env tm))
         <+> line <+> !(ploc fc)
-pwarning (ShadowingGlobalDefs _ ns)
+pwarning (ShadowingGlobalDefs fc ns)
     = pure $ vcat
     $ reflow "We are about to implicitly bind the following lowercase names."
    :: reflow "You may be unintentionally shadowing the associated global definitions:"
-   :: map (\ (n, ns) => indent 2 $ hsep $ pretty n
-                            :: reflow "is shadowing"
-                            :: punctuate comma (map pretty (forget ns)))
-          (forget ns)
+   :: map pshadowing (forget ns)
+   `snoc` !(ploc fc)
+  where
+    pshadowing : (String, List1 Name) -> Doc IdrisAnn
+    pshadowing (n, ns) = indent 2 $ hsep $
+                           pretty n
+                        :: reflow "is shadowing"
+                        :: punctuate comma (map pretty (forget ns))
 
-pwarning (Deprecated s)
-    = pure $ pretty "Deprecation warning:" <++> pretty s
+pwarning (Deprecated s fcAndName)
+    = do docs <- traverseOpt (\(fc, name) => getDocsForName fc name justUserDoc) fcAndName
+         pure . vsep $ catMaybes [ Just $ pretty "Deprecation warning:" <++> pretty s
+                                 , map (const UserDocString) <$> docs
+                                 ]
 pwarning (GenericWarn s)
     = pure $ pretty s
 
@@ -308,11 +308,17 @@ perror (BorrowPartialType fc env tm)
 perror (AmbiguousName fc ns)
     = pure $ errorDesc (reflow "Ambiguous name" <++> code (pretty ns))
         <+> line <+> !(ploc fc)
-perror (AmbiguousElab fc env ts)
+perror (AmbiguousElab fc env ts_in)
     = do pp <- getPPrint
          setPPrint (record { fullNamespace = True } pp)
+         ts_show <- traverse (\ (gam, t) =>
+                                  do defs <- get Ctxt
+                                     setCtxt gam
+                                     res <- pshow env t
+                                     put Ctxt defs
+                                     pure res) ts_in
          let res = vsep [ errorDesc (reflow "Ambiguous elaboration. Possible results" <+> colon)
-                        , indent 4 (vsep !(traverse (pshow env) ts))
+                        , indent 4 (vsep ts_show)
                         ] <+> line <+> !(ploc fc)
          setPPrint pp
          pure res
@@ -348,6 +354,11 @@ perror (AllFailed ts)
     allUndefined _ = Nothing
 perror (RecordTypeNeeded fc _)
     = pure $ errorDesc (reflow "Can't infer type for this record update.") <+> line <+> !(ploc fc)
+perror (DuplicatedRecordUpdatePath fc ps)
+    = pure $ vcat $
+      errorDesc (reflow "Duplicated record update paths:")
+      :: map (indent 2 . concatWith (surround (pretty "->")) . map pretty) ps
+      ++ [line <+> !(ploc fc)]
 perror (NotRecordField fc fld Nothing)
     = pure $ errorDesc (code (pretty fld) <++> reflow "is not part of a record type.") <+> line <+> !(ploc fc)
 perror (NotRecordField fc fld (Just ty))
@@ -376,14 +387,18 @@ perror (TryWithImplicits fc env imps)
 perror (BadUnboundImplicit fc env n ty)
     = pure $ errorDesc (reflow "Can't bind name" <++> code (pretty (nameRoot n)) <++> reflow "with type" <++> code !(pshow env ty)
         <+> colon) <+> line <+> !(ploc fc) <+> line <+> reflow "Suggestion: try an explicit bind."
-perror (CantSolveGoal fc gam env g)
+perror (CantSolveGoal fc gam env g reason)
     = do defs <- get Ctxt
          setCtxt gam
          let (_ ** (env', g')) = dropEnv env g
          let res = errorDesc (reflow "Can't find an implementation for" <++> code !(pshow env' g')
                      <+> dot) <+> line <+> !(ploc fc)
          put Ctxt defs
-         pure res
+         case reason of
+              Nothing => pure res
+              Just r => do rdesc <- perror r
+                           pure (res <+> line <+>
+                                 (reflow "Possible cause:" <++> rdesc))
   where
     -- For display, we don't want to see the full top level type; just the
     -- return type

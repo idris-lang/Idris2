@@ -1,7 +1,6 @@
 module Prelude.Types
 
 import Builtin
-import PrimIO
 import Prelude.Basics
 import Prelude.EqOrd
 import Prelude.Interfaces
@@ -105,7 +104,7 @@ natToInteger (S k) = 1 + natToInteger k
 
 ||| Counts the number of elements that satify a predicate.
 public export
-count : (Foldable t) => (predicate : a -> Bool) -> (t a) -> Nat
+count : Foldable t => (predicate : a -> Bool) -> t a -> Nat
 count predicate = foldMap @{%search} @{Additive} (\x => if predicate x then 1 else 0)
 
 -----------
@@ -379,15 +378,39 @@ Ord a => Ord (List a) where
             c => c
 
 namespace List
+  ||| Concatenate one list with another.
   public export
   (++) : (xs, ys : List a) -> List a
   [] ++ ys = ys
   (x :: xs) ++ ys = x :: xs ++ ys
 
+  ||| Returns the length of the list.
   public export
   length : List a -> Nat
   length []        = Z
   length (x :: xs) = S (length xs)
+
+  ||| Reverse the second list, prepending its elements to the first.
+  public export
+  reverseOnto : List a -> List a -> List a
+  reverseOnto acc [] = acc
+  reverseOnto acc (x::xs) = reverseOnto (x::acc) xs
+
+  ||| Reverses the given list.
+  public export
+  reverse : List a -> List a
+  reverse = reverseOnto []
+
+  ||| Tail-recursive append. Uses of (++) are automatically transformed to
+  ||| this. The only reason this is exported is that the proof of equivalence
+  ||| lives in a different module.
+  public export
+  tailRecAppend : (xs, ys : List a) -> List a
+  tailRecAppend xs ys = reverseOnto ys (reverse xs)
+
+  -- Always use tailRecAppend at runtime. Data.List.tailRecAppendIsAppend
+  -- proves these are equivalent.
+  %transform "tailRecAppend" (++) = tailRecAppend
 
 public export
 Functor List where
@@ -444,7 +467,7 @@ Traversable List where
 %foreign
   "scheme:string-concat"
   "RefC:fastConcat"
-  "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
+  "javascript:lambda:(xs)=>__prim_idris2js_array(xs).join('')"
 export
 fastConcat : List String -> String
 
@@ -572,7 +595,7 @@ pack (x :: xs) = strCons x (pack xs)
 %foreign
     "scheme:string-pack"
     "RefC:fastPack"
-    "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
+    "javascript:lambda:(xs)=>__prim_idris2js_array(xs).join('')"
 export
 fastPack : List Char -> String
 

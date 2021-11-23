@@ -9,7 +9,6 @@ import Data.String
 import Data.These
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 
 %default total
 
@@ -40,12 +39,10 @@ public export
 knownTopics : List (String, Maybe String)
 knownTopics = [
     ("auto", Nothing),
-    ("builtin.Natural", Nothing),
-    ("builtin.Natural.addTransform", Nothing),
-    ("builtin.NaturalToInteger", Nothing),
-    ("builtin.NaturalToInteger.addTransforms", Nothing),
-    ("builtin.IntegerToNatural", Nothing),
-    ("builtin.IntegerToNatural.addTransforms", Nothing),
+    ("builtin.Natural", Just "Log each encountered %builtin Natural declaration."),
+    ("builtin.NaturalToInteger", Just "Log each encountered %builtin NaturalToInteger declaration."),
+    ("builtin.IntegerToNatural", Just "Log each encountered %builtin IntegerToNatural declaration."),
+    ("compile.execute", Nothing),
     ("compile.casetree", Nothing),
     ("compile.casetree.clauses", Nothing),
     ("compile.casetree.getpmdef", Nothing),
@@ -53,10 +50,12 @@ knownTopics = [
     ("compile.casetree.measure", Just "Log the node counts of each runtime case tree."),
     ("compile.casetree.pick", Nothing),
     ("compile.casetree.partition", Nothing),
-    ("compiler.cse", Nothing),
-    ("compiler.identity", Nothing),
-    ("compiler.inline.eval", Nothing),
-    ("compiler.interpreter", Nothing),
+    ("compiler.const-fold", Just "Log definitions before and after constant folding."),
+    ("compiler.cse", Just "Log information about common sub-expression elimination."),
+    ("compiler.identity", Just "Log definitions that are equivalent to identity at runtime."),
+    ("compiler.inline.eval", Just "Log function definitions before and after inlining."),
+    ("compiler.inline.heuristic", Just "Log names the inlining heuristic(s) have decided to inline."),
+    ("compiler.interpreter", Just "Log the call-stack of the VMCode interpreter."),
     ("compiler.refc", Nothing),
     ("compiler.refc.cc", Nothing),
     ("compiler.scheme.chez", Nothing),
@@ -68,6 +67,7 @@ knownTopics = [
     ("declare.data.constructor", Nothing),
     ("declare.data.parameters", Nothing),
     ("declare.def", Nothing),
+    ("declare.def.alias", Nothing),
     ("declare.def.clause", Nothing),
     ("declare.def.clause.impossible", Nothing),
     ("declare.def.clause.with", Nothing),
@@ -81,6 +81,7 @@ knownTopics = [
     ("declare.record.projection.prefix", Nothing),
     ("declare.type", Nothing),
     ("desugar.idiom", Nothing),
+    ("doc.data", Nothing),
     ("doc.record", Nothing),
     ("doc.module", Nothing),
     ("elab", Nothing),
@@ -245,7 +246,7 @@ Show LogLevel where
 
   show (MkLogLevel ps n) = case ps of
     [] => show n
-    _  => fastAppend (intersperse "." ps) ++ ":" ++ show n
+    _  => fastConcat (intersperse "." ps) ++ ":" ++ show n
 
 export
 Pretty LogLevel where

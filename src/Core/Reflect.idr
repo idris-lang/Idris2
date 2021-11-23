@@ -104,6 +104,78 @@ Reflect Int where
   reflect fc defs lhs env x = pure (PrimVal fc (I x))
 
 export
+Reify Int8 where
+  reify defs (NPrimVal _ (I8 v)) = pure v
+  reify defs val = cantReify val "Int8"
+
+export
+Reflect Int8 where
+  reflect fc defs lhs env x = pure (PrimVal fc (I8 x))
+
+export
+Reify Int16 where
+  reify defs (NPrimVal _ (I16 v)) = pure v
+  reify defs val = cantReify val "Int16"
+
+export
+Reflect Int16 where
+  reflect fc defs lhs env x = pure (PrimVal fc (I16 x))
+
+export
+Reify Int32 where
+  reify defs (NPrimVal _ (I32 v)) = pure v
+  reify defs val = cantReify val "Int32"
+
+export
+Reflect Int32 where
+  reflect fc defs lhs env x = pure (PrimVal fc (I32 x))
+
+export
+Reify Int64 where
+  reify defs (NPrimVal _ (I64 v)) = pure v
+  reify defs val = cantReify val "Int64"
+
+export
+Reflect Int64 where
+  reflect fc defs lhs env x = pure (PrimVal fc (I64 x))
+
+export
+Reify Bits8 where
+  reify defs (NPrimVal _ (B8 v)) = pure v
+  reify defs val = cantReify val "Bits8"
+
+export
+Reflect Bits8 where
+  reflect fc defs lhs env x = pure (PrimVal fc (B8 x))
+
+export
+Reify Bits16 where
+  reify defs (NPrimVal _ (B16 v)) = pure v
+  reify defs val = cantReify val "Bits16"
+
+export
+Reflect Bits16 where
+  reflect fc defs lhs env x = pure (PrimVal fc (B16 x))
+
+export
+Reify Bits32 where
+  reify defs (NPrimVal _ (B32 v)) = pure v
+  reify defs val = cantReify val "Bits32"
+
+export
+Reflect Bits32 where
+  reflect fc defs lhs env x = pure (PrimVal fc (B32 x))
+
+export
+Reify Bits64 where
+  reify defs (NPrimVal _ (B64 v)) = pure v
+  reify defs val = cantReify val "Bits64"
+
+export
+Reflect Bits64 where
+  reflect fc defs lhs env x = pure (PrimVal fc (B64 x))
+
+export
 Reify Integer where
   reify defs (NPrimVal _ (BI v)) = pure v
   reify defs val = cantReify val "Integer"

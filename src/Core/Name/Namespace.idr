@@ -5,7 +5,6 @@ import Data.List1
 import Data.String
 import Decidable.Equality
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Utils.Path
 
 %default total
@@ -165,6 +164,12 @@ isApproximationOf (MkNS ms) (MkNS ns)
   -- the end of another if its representation as a list of identifiers is a prefix of
   -- the other's.
   = isPrefixOf ms ns
+
+||| We can check whether a given string (assumed to be a valid Namespace ident)
+||| is in the path of a given namespace.
+export
+isInPathOf : (i : String) -> (candidate : Namespace) -> Bool
+isInPathOf i (MkNS ns) = i `elem` ns
 
 -------------------------------------------------------------------------------------
 -- INSTANCES

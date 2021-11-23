@@ -2,7 +2,6 @@ module Language.JSON.Parser
 
 import Language.JSON.Data
 import Text.Parser
-import Text.Token
 import Data.List
 
 import public Language.JSON.Tokens

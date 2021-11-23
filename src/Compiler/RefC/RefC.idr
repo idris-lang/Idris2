@@ -14,7 +14,6 @@ import Core.Directory
 import Data.List
 import Libraries.Data.DList
 import Data.Nat
-import Data.String
 import Libraries.Data.SortedSet
 import Data.Vect
 
@@ -81,8 +80,6 @@ cName (Nested i n) = "n__" ++ cCleanString (show i) ++ "_" ++ cName n
 cName (CaseBlock x y) = "case__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (WithBlock x y) = "with__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (Resolved i) = "fn__" ++ cCleanString (show i)
-cName n = assert_total $ idris_crash ("INTERNAL ERROR: Unsupported name in C backend " ++ show n)
--- not really total but this way this internal error does not contaminate everything else
 
 escapeChar : Char -> String
 escapeChar c = if isAlphaNum c || isNL c
@@ -106,13 +103,23 @@ where
     showCString ('"'::cs) = ("\\\"" ++) . showCString cs
     showCString (c ::cs) = (showCChar c) . showCString cs
 
+-- deals with C not allowing `-9223372036854775808` as a literal
+showIntMin : Int -> String
+showIntMin x = if x == -9223372036854775808
+    then "INT64_MIN"
+    else "INT64_C("++ show x ++")"
+
+showInt64Min : Int64 -> String
+showInt64Min x = if x == -9223372036854775808
+    then "INT64_MIN"
+    else "INT64_C("++ show x ++")"
 
 cConstant : Constant -> String
-cConstant (I x) = "(Value*)makeInt64("++ show x ++")"
-cConstant (I8 x) = "(Value*)makeInt8("++ show x ++")"
-cConstant (I16 x) = "(Value*)makeInt16("++ show x ++")"
-cConstant (I32 x) = "(Value*)makeInt32("++ show x ++")"
-cConstant (I64 x) = "(Value*)makeInt64("++ show x ++")"
+cConstant (I x) = "(Value*)makeInt64("++ showIntMin x ++")"
+cConstant (I8 x) = "(Value*)makeInt8(INT8_C("++ show x ++"))"
+cConstant (I16 x) = "(Value*)makeInt16(INT16_C("++ show x ++"))"
+cConstant (I32 x) = "(Value*)makeInt32(INT32_C("++ show x ++"))"
+cConstant (I64 x) = "(Value*)makeInt64("++ showInt64Min x ++")"
 cConstant (BI x) = "(Value*)makeIntegerLiteral(\""++ show x ++"\")"
 cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
 cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
@@ -128,16 +135,14 @@ cConstant StringType = "string"
 cConstant CharType = "char"
 cConstant DoubleType = "double"
 cConstant WorldType = "f32"
-cConstant (B8 x)   = "(Value*)makeBits8("++ show x ++")"
-cConstant (B16 x)  = "(Value*)makeBits16("++ show x ++")"
-cConstant (B32 x)  = "(Value*)makeBits32("++ show x ++")"
-cConstant (B64 x)  = "(Value*)makeBits64("++ show x ++")"
+cConstant (B8 x)   = "(Value*)makeBits8(UINT8_C("++ show x ++"))"
+cConstant (B16 x)  = "(Value*)makeBits16(UINT16_C("++ show x ++"))"
+cConstant (B32 x)  = "(Value*)makeBits32(UINT32_C("++ show x ++"))"
+cConstant (B64 x)  = "(Value*)makeBits64(UINT64_C("++ show x ++"))"
 cConstant Bits8Type = "Bits8"
 cConstant Bits16Type = "Bits16"
 cConstant Bits32Type = "Bits32"
 cConstant Bits64Type = "Bits64"
-cConstant n = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw constant in C backend: " ++ show n)
--- not really total but this way this internal error does not contaminate everything else
 
 extractConstant : Constant -> String
 extractConstant (I x) = show x
@@ -242,7 +247,6 @@ toPrim pn@(NS _ n)
             (n == UN (Basic "prim__arraySet"), ArraySet),
             (n == UN (Basic "prim__getField"), GetField),
             (n == UN (Basic "prim__setField"), SetField),
-            (n == UN (Basic "void"), VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
             (n == UN (Basic "prim__void"), VoidElim),
             (n == UN (Basic "prim__os"), SysOS),
             (n == UN (Basic "prim__codegen"), SysCodegen),
@@ -435,16 +439,16 @@ const2Integer : Constant -> Integer -> Integer
 const2Integer c i =
     case c of
         (I x) => cast x
-        (I8 x) => x
-        (I16 x) => x
-        (I32 x) => x
-        (I64 x) => x
-        (BI x) => x
+        (I8 x) => cast x
+        (I16 x) => cast x
+        (I32 x) => cast x
+        (I64 x) => cast x
+        (BI x) => cast x
         (Ch x) => cast x
         (B8 x) => cast x
         (B16 x) => cast x
         (B32 x) => cast x
-        (B64 x) => x
+        (B64 x) => cast x
         _ => i
 
 
@@ -640,6 +644,8 @@ mutual
         registerVariableForAutomaticFreeing $ "var_" ++ (show var)
         bodyAssignment <- cStatementsFromANF body
         pure $ bodyAssignment
+    cStatementsFromANF (ACon fc n UNIT tag []) = do
+        pure $ MkRS "(Value*)NULL" "(Value*)NULL"
     cStatementsFromANF (ACon fc n _ tag args) = do
         c <- getNextCounter
         let constr = "constructor_" ++ (show c)
@@ -983,29 +989,35 @@ header : {auto c : Ref Ctxt Defs}
       -> {auto h : Ref HeaderFiles (SortedSet String)}
       -> Core ()
 header = do
-    let initLines = [ "#include <runtime.h>"
-                    , "/* " ++ (generatedString "RefC") ++" */"]
+    let initLines = """
+      #include <runtime.h>
+      /* \{ generatedString "RefC" } */
+
+      """
     let headerFiles = Libraries.Data.SortedSet.toList !(get HeaderFiles)
     let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
     fns <- get FunctionDefinitions
-    update OutfileText (appendL (initLines ++ headerLines ++ ["\n// function definitions"] ++ fns))
+    update OutfileText (appendL ([initLines] ++ headerLines ++ ["\n// function definitions"] ++ fns))
 
 footer : {auto il : Ref IndentLevel Nat}
       -> {auto f : Ref OutfileText Output}
       -> {auto h : Ref HeaderFiles (SortedSet String)}
       -> Core ()
 footer = do
-    emit EmptyFC ""
-    emit EmptyFC " // main function"
-    emit EmptyFC "int main(int argc, char *argv[])"
-    emit EmptyFC "{"
-    if contains "idris_support.h" !(get HeaderFiles)
-       then emit EmptyFC "   idris2_setArgs(argc, argv);"
-       else pure ()
-    emit EmptyFC "   Value *mainExprVal = __mainExpression_0();"
-    emit EmptyFC "   trampoline(mainExprVal);"
-    emit EmptyFC "   return 0; // bye bye"
-    emit EmptyFC "}"
+    emit EmptyFC """
+
+      // main function
+      int main(int argc, char *argv[])
+      {
+          \{ ifThenElse (contains "idris_support.h" !(get HeaderFiles))
+                        "idris2_setArgs(argc, argv);"
+                        ""
+          }
+          Value *mainExprVal = __mainExpression_0();
+          trampoline(mainExprVal);
+          return 0; // bye bye
+      }
+      """
 
 export
 executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
@@ -1030,7 +1042,7 @@ generateCSourceFile defs outn =
      header -- added after the definition traversal in order to add all encountered function defintions
      footer
      fileContent <- get OutfileText
-     let code = fastAppend (map (++ "\n") (reify fileContent))
+     let code = fastConcat (map (++ "\n") (reify fileContent))
 
      coreLift_ $ writeFile outn code
      log "compiler.refc" 10 $ "Generated C file " ++ outn

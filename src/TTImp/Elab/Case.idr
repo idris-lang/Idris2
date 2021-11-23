@@ -1,6 +1,5 @@
 module TTImp.Elab.Case
 
-import Core.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -10,6 +9,8 @@ import Core.Normalise
 import Core.Unify
 import Core.TT
 import Core.Value
+
+import Idris.Syntax
 
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
@@ -157,6 +158,7 @@ caseBlock : {vars : _} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             {auto e : Ref EST (EState vars)} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             RigCount ->
             ElabInfo -> FC ->
             NestedNames vars ->
@@ -200,10 +202,12 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
                            Just ty => getTerm ty
                            _ =>
                               do nmty <- genName "caseTy"
-                                 metaVar fc erased env nmty (TType fc)
+                                 u <- uniVar fc
+                                 metaVar fc erased env nmty (TType fc u)
 
+         u <- uniVar fc
          (caseretty, _) <- bindImplicits fc (implicitMode elabinfo) defs env
-                                         fullImps caseretty_in (TType fc)
+                                         fullImps caseretty_in (TType fc u)
          let casefnty
                = abstractFullEnvType fc (allow splitOn (explicitPi env))
                             (maybe (Bind fc scrn (Pi fc caseRig Explicit scrty)
@@ -374,6 +378,7 @@ checkCase : {vars : _} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             {auto e : Ref EST (EState vars)} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             RigCount -> ElabInfo ->
             NestedNames vars -> Env Term vars ->
             FC -> (scr : RawImp) -> (ty : RawImp) -> List ImpClause ->
@@ -384,8 +389,9 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
         do scrty_exp <- case scrty_in of
                              Implicit _ _ => guessScrType alts
                              _ => pure scrty_in
+           u <- uniVar fc
            (scrtyv, scrtyt) <- check erased elabinfo nest env scrty_exp
-                                     (Just (gType fc))
+                                     (Just (gType fc u))
            logTerm "elab.case" 10 "Expected scrutinee type" scrtyv
            -- Try checking at the given multiplicity; if that doesn't work,
            -- try checking at Rig1 (meaning that we're using a linear variable

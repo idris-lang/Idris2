@@ -9,13 +9,13 @@ import Core.Metadata
 import Core.Normalise
 import Core.UnifyState
 import Core.Unify
-import Core.Value
+
+import Idris.Syntax
 
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.Elab.Term
 import TTImp.TTImp
-import TTImp.Unelab
 
 import Data.List
 import Data.Maybe
@@ -95,6 +95,7 @@ elabTermSub : {inner, vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               Int -> ElabMode -> List ElabOpt ->
               NestedNames vars -> Env Term vars ->
               Env Term inner -> SubVars inner vars ->
@@ -214,6 +215,7 @@ elabTerm : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            Int -> ElabMode -> List ElabOpt ->
            NestedNames vars -> Env Term vars ->
            RawImp -> Maybe (Glued vars) ->
@@ -226,6 +228,7 @@ checkTermSub : {inner, vars : _} ->
                {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                Int -> ElabMode -> List ElabOpt ->
                NestedNames vars -> Env Term vars ->
                Env Term inner -> SubVars inner vars ->
@@ -278,6 +281,7 @@ checkTerm : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             Int -> ElabMode -> List ElabOpt ->
             NestedNames vars -> Env Term vars ->
             RawImp -> Glued vars ->

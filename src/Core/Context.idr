@@ -1,6 +1,6 @@
 module Core.Context
 
-import        Core.CaseTree
+import        Core.Case.CaseTree
 import        Core.CompileExpr
 import public Core.Context.Context
 import public Core.Core
@@ -12,7 +12,9 @@ import public Core.Options.Log
 import public Core.TT
 
 import Libraries.Utils.Binary
+import Libraries.Utils.Scheme
 
+import Data.Either
 import Data.Fin
 import Libraries.Data.IOArray
 import Libraries.Data.IntMap
@@ -25,7 +27,6 @@ import Libraries.Data.StringMap
 import Libraries.Data.UserNameMap
 import Libraries.Text.Distance.Levenshtein
 
-import System
 import System.Clock
 import System.Directory
 
@@ -67,6 +68,7 @@ initCtxtS s
             , allPublic = False
             , inlineOnly = False
             , hidden = empty
+            , uconstraints = []
             }
 
 export
@@ -312,7 +314,9 @@ newDef fc n rig vars ty vis def
         , linearChecked = False
         , definition = def
         , compexpr = Nothing
+        , namedcompexpr = Nothing
         , sizeChange = []
+        , schemeExpr = Nothing
         }
 
 -- Rewrite rules, applied after type checking, for runtime code only
@@ -371,13 +375,32 @@ HasNames Name where
            pure (Resolved i)
 
 export
+HasNames UConstraint where
+  full gam (ULT x y)
+      = do x' <- full gam x; y' <- full gam y
+           pure (ULT x' y')
+  full gam (ULE x y)
+      = do x' <- full gam x; y' <- full gam y
+           pure (ULE x' y')
+
+  resolved gam (ULT x y)
+      = do x' <- resolved gam x; y' <- resolved gam y
+           pure (ULT x' y')
+  resolved gam (ULE x y)
+      = do x' <- resolved gam x; y' <- resolved gam y
+           pure (ULE x' y')
+
+export
 HasNames (Term vars) where
   full gam (Ref fc x (Resolved i))
       = do Just gdef <- lookupCtxtExact (Resolved i) gam
                 | Nothing => pure (Ref fc x (Resolved i))
            pure (Ref fc x (fullname gdef))
-  full gam (Meta fc x y xs)
-      = pure (Meta fc x y !(traverse (full gam) xs))
+  full gam (Meta fc x i xs)
+      = do xs <- traverse (full gam) xs
+           pure $ case !(lookupCtxtExact (Resolved i) gam) of
+             Nothing => Meta fc x i xs
+             Just gdef => Meta fc (fullname gdef) i xs
   full gam (Bind fc x b scope)
       = pure (Bind fc x !(traverse (full gam) b) !(full gam scope))
   full gam (App fc fn arg)
@@ -390,6 +413,10 @@ HasNames (Term vars) where
       = pure (TDelay fc x !(full gam t) !(full gam y))
   full gam (TForce fc r y)
       = pure (TForce fc r !(full gam y))
+  full gam (TType fc (Resolved i))
+      = do Just gdef <- lookupCtxtExact (Resolved i) gam
+                | Nothing => pure (TType fc (Resolved i))
+           pure (TType fc (fullname gdef))
   full gam tm = pure tm
 
   resolved gam (Ref fc x n)
@@ -413,6 +440,10 @@ HasNames (Term vars) where
       = pure (TDelay fc x !(resolved gam t) !(resolved gam y))
   resolved gam (TForce fc r y)
       = pure (TForce fc r !(resolved gam y))
+  resolved gam (TType fc n)
+      = do let Just i = getNameID n gam
+                | Nothing => pure (TType fc n)
+           pure (TType fc (Resolved i))
   resolved gam tm = pure tm
 
 export
@@ -745,6 +776,7 @@ record Defs where
      -- timeout should be thrown
   warnings : List Warning
      -- ^ as yet unreported warnings
+  schemeEvalLoaded : Bool
 
 -- Label for context references
 export
@@ -792,6 +824,7 @@ initDefs
            , timings = empty
            , timer = Nothing
            , warnings = []
+           , schemeEvalLoaded = False
            }
 
 -- Reset the context, except for the options
@@ -819,37 +852,69 @@ getFieldNames ctxt recNS
 
 -- Find similar looking names in the context
 export
-getSimilarNames : {auto c : Ref Ctxt Defs} -> Name -> Core (List String)
+getSimilarNames : {auto c : Ref Ctxt Defs} ->
+                   Name -> Core (Maybe (String, List (Name, Visibility, Nat)))
 getSimilarNames nm = case show <$> userNameRoot nm of
-  Nothing => pure []
-  Just str => if length str <= 1 then pure [] else
-    let threshold : Nat := max 1 (assert_total (divNat (length str) 3))
-        test : Name -> IO (Maybe Nat) := \ nm => do
-            let (Just str') = show <$> userNameRoot nm
+  Nothing => pure Nothing
+  Just str => if length str <= 1 then pure (Just (str, [])) else
+    do defs <- get Ctxt
+       let threshold : Nat := max 1 (assert_total (divNat (length str) 3))
+       let test : Name -> Core (Maybe (Visibility, Nat)) := \ nm => do
+               let (Just str') = show <$> userNameRoot nm
                    | _ => pure Nothing
-            dist <- Levenshtein.compute str str'
-            pure (dist <$ guard (dist <= threshold))
-    in do defs <- get Ctxt
-          kept <- coreLift $ mapMaybeM test (resolvedAs (gamma defs))
-          let sorted = sortBy (\ x, y => compare (snd x) (snd y)) $ toList kept
-          let roots = mapMaybe (showNames nm str . fst) sorted
-          pure (nub roots)
+               dist <- coreLift $ Levenshtein.compute str str'
+               let True = dist <= threshold
+                   | False => pure Nothing
+               Just def <- lookupCtxtExact nm (gamma defs)
+                   | Nothing => pure Nothing -- should be impossible
+               pure (Just (visibility def, dist))
+       kept <- mapMaybeM @{CORE} test (resolvedAs (gamma defs))
+       pure $ Just (str, toList kept)
+
+export
+showSimilarNames : Namespace -> Name -> String ->
+                   List (Name, Visibility, Nat) -> List String
+showSimilarNames ns nm str kept
+  = let (loc, priv) := partitionEithers $ kept <&> \ (nm', vis, n) =>
+                         let False = fst (splitNS nm') `isParentOf` ns
+                               | _ => Left (nm', n)
+                             Private = vis
+                               | _ => Left (nm', n)
+                         in Right (nm', n)
+        sorted      := sortBy (compare `on` snd)
+        roots1      := mapMaybe (showNames nm str False . fst) (sorted loc)
+        roots2      := mapMaybe (showNames nm str True  . fst) (sorted priv)
+    in nub roots1 ++ nub roots2
 
   where
 
-  showNames : Name -> String -> Name -> Maybe String
-  showNames target str nm = do
+  showNames : Name -> String -> Bool -> Name -> Maybe String
+  showNames target str priv nm = do
+    let adj  = if priv then " (not exported)" else ""
     let root = nameRoot nm
-    let True = str == root | _ => pure root
+    let True = str == root
+      | _ => pure (root ++ adj)
     let full = show nm
-    let True = str == full || show target == full | _ => pure full
+    let True = (str == full || show target == full) && not priv
+      | _ => pure (full ++ adj)
     Nothing
 
+
+getVisibility : {auto c : Ref Ctxt Defs} ->
+                FC -> Name -> Core Visibility
+getVisibility fc n
+    = do defs <- get Ctxt
+         Just def <- lookupCtxtExact n (gamma defs)
+              | Nothing => throw (UndefinedName fc n)
+         pure $ visibility def
 
 maybeMisspelling : {auto c : Ref Ctxt Defs} ->
                    Error -> Name -> Core a
 maybeMisspelling err nm = do
-  candidates <- getSimilarNames nm
+  ns <- currentNS <$> get Ctxt
+  Just (str, kept) <- getSimilarNames nm
+    | Nothing => throw err
+  let candidates = showSimilarNames ns nm str kept
   case candidates of
     [] => throw err
     (x::xs) => throw (MaybeMisspelling err (x ::: xs))
@@ -866,6 +931,16 @@ noDeclaration : {auto c : Ref Ctxt Defs} ->
                 FC -> Name -> Core a
 noDeclaration loc nm = maybeMisspelling (NoDeclaration loc nm) nm
 
+export
+ambiguousName : {auto c : Ref Ctxt Defs} -> FC
+             -> Name -> List Name
+             -> Core a
+ambiguousName fc n ns = do
+  ns <- filterM (\x => pure $ !(getVisibility fc x) /= Private) ns
+  case ns of
+    [] =>         undefinedName fc n
+    ns => throw $ AmbiguousName fc ns
+
 -- Get the canonical name of something that might have been aliased via
 -- import as
 export
@@ -874,9 +949,8 @@ canonicalName : {auto c : Ref Ctxt Defs} ->
 canonicalName fc n
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of
-              [] => undefinedName fc n
               [(n, _, _)] => pure n
-              ns => throw (AmbiguousName fc (map fst ns))
+              ns => ambiguousName fc n (map fst ns)
 
 -- If the name is aliased, get the alias
 export
@@ -1011,7 +1085,9 @@ addBuiltin n ty tot op
          , linearChecked = True
          , definition = Builtin op
          , compexpr = Nothing
+         , namedcompexpr = Nothing
          , sizeChange = []
+         , schemeExpr = Nothing
          }
 
 export
@@ -1023,7 +1099,8 @@ updateDef n fdef
              | Nothing => pure ()
          case fdef (definition gdef) of
               Nothing => pure ()
-              Just def' => ignore $ addDef n (record { definition = def' } gdef)
+              Just def' => ignore $ addDef n (record { definition = def',
+                                                       schemeExpr = Nothing } gdef)
 
 export
 updateTy : {auto c : Ref Ctxt Defs} ->
@@ -1241,8 +1318,7 @@ setNameFlag : {auto c : Ref Ctxt Defs} ->
 setNameFlag fc n fl
     = do defs <- get Ctxt
          [(n', i, def)] <- lookupCtxtName n (gamma defs)
-              | [] => undefinedName fc n
-              | res => throw (AmbiguousName fc (map fst res))
+              | res => ambiguousName fc n (map fst res)
          let flags' = fl :: filter (/= fl) (flags def)
          ignore $ addDef (Resolved i) (record { flags = flags' } def)
 
@@ -1336,18 +1412,8 @@ hide : {auto c : Ref Ctxt Defs} ->
 hide fc n
     = do defs <- get Ctxt
          [(nsn, _)] <- lookupCtxtName n (gamma defs)
-              | [] => undefinedName fc n
-              | res => throw (AmbiguousName fc (map fst res))
+              | res => ambiguousName fc n (map fst res)
          put Ctxt (record { gamma $= hideName nsn } defs)
-
-export
-getVisibility : {auto c : Ref Ctxt Defs} ->
-                FC -> Name -> Core Visibility
-getVisibility fc n
-    = do defs <- get Ctxt
-         Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => undefinedName fc n
-         pure $ visibility def
 
 public export
 record SearchData where
@@ -1920,9 +1986,8 @@ checkUnambig : {auto c : Ref Ctxt Defs} ->
 checkUnambig fc n
     = do defs <- get Ctxt
          case !(lookupDefName n (gamma defs)) of
-              [] => undefinedName fc n
               [(fulln, i, _)] => pure (Resolved i)
-              ns => throw (AmbiguousName fc (map fst ns))
+              ns => ambiguousName fc n (map fst ns)
 
 export
 lazyActive : {auto c : Ref Ctxt Defs} ->
@@ -2231,7 +2296,7 @@ recordWarning w
 export
 getTime : Core Integer
 getTime
-    = do clock <- coreLift (clockTime Process)
+    = do clock <- coreLift (clockTime Monotonic)
          pure (seconds clock * nano + nanoseconds clock)
   where
     nano : Integer

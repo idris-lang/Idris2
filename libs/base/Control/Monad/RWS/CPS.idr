@@ -24,19 +24,19 @@ runRWST m r s = unRWST m r s neutral
 
 ||| Construct an RWST computation from a function. (The inverse of `runRWST`.)
 public export %inline
-rwsT : (Functor m, Semigroup w) => (r -> s -> m (a, s, w)) -> RWST r w s m a
+rwsT : Semigroup w => Functor m => (r -> s -> m (a, s, w)) -> RWST r w s m a
 rwsT f = MkRWST $ \r,s,w => (\(a,s',w') => (a,s',w <+> w')) <$> f r s
 
 ||| Evaluate a computation with the given initial state and environment,
 ||| returning the final value and output, discarding the final state.
 public export %inline
-evalRWST : (Functor m, Monoid w) => RWST r w s m a -> r -> s -> m (a,w)
+evalRWST : Monoid w => Functor m => RWST r w s m a -> r -> s -> m (a,w)
 evalRWST m r s = (\(a,_,w) => (a,w)) <$> runRWST m r s
 
 ||| Evaluate a computation with the given initial state and environment,
 ||| returning the final state and output, discarding the final value.
 public export %inline
-execRWST : (Functor m, Monoid w) => RWST r w s m a -> r -> s -> m (s,w)
+execRWST : Monoid w => Functor m => RWST r w s m a -> r -> s -> m (s,w)
 execRWST m r s = (\(_,s',w) => (s',w)) <$> runRWST m r s
 
 ||| Map the inner computation using the given function.

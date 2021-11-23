@@ -1,15 +1,11 @@
 module Idris.CommandLine
 
-import IdrisPaths
-
 import Idris.Env
 import Idris.Version
 
-import Core.Name.Namespace
 import Core.Options
 
 import Data.List
-import Data.List1
 import Data.Maybe
 import Data.String
 import Data.Either
@@ -402,13 +398,15 @@ versionMsg = "Idris 2, version " ++ show version
 
 export
 usage : String
-usage = versionMsg ++ "\n" ++
-        "Usage: idris2 [options] [input file]\n\n" ++
-        "Available options:\n" ++
-        optsUsage ++
-        "\n" ++
-        "Environment variables:\n" ++
-        envsUsage
+usage = """
+  \{ versionMsg }
+  Usage: idris2 [options] [input file]
+
+  Available options:
+  \{ optsUsage }
+  Environment variables:
+  \{ envsUsage }
+  """
 
 checkNat : Integer -> Maybe Nat
 checkNat n = toMaybe (n >= 0) (integerToNat n)

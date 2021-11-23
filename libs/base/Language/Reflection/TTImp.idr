@@ -7,7 +7,7 @@ import public Language.Reflection.TT
 -- Unchecked terms and declarations in the intermediate language
 mutual
   public export
-  data BindMode = PI Count | PATTERN | NONE
+  data BindMode = PI Count | PATTERN | COVERAGE | NONE
 
   -- For as patterns matching linear arguments, select which side is
   -- consumed
@@ -91,8 +91,15 @@ mutual
        UniqueDefault : TTImp -> AltType
 
   public export
+  data NoMangleDirective : Type where
+     CommonName : String -> NoMangleDirective
+     BackendNames : List (String, String) -> NoMangleDirective
+
+  public export
   data FnOpt : Type where
        Inline : FnOpt
+       NoInline : FnOpt
+       Deprecate : FnOpt
        TCInline : FnOpt
        -- Flag means the hint is a direct hint, not a function which might
        -- find the result (e.g. chasing parent interface dictionaries)
@@ -107,6 +114,8 @@ mutual
        Totality : TotalReq -> FnOpt
        Macro : FnOpt
        SpecArgs : List Name -> FnOpt
+       ||| Keep the user provided name during codegen
+       NoMangle : NoMangleDirective -> FnOpt
 
   public export
   data ITy : Type where

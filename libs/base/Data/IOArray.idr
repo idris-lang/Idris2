@@ -1,7 +1,6 @@
 module Data.IOArray
 
 import Data.IOArray.Prims
-import Data.List
 
 %default total
 

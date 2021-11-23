@@ -1,6 +1,6 @@
 module Core.Unify
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -13,7 +13,6 @@ import public Core.UnifyState
 import Core.Value
 
 import Data.List
-import Data.List.Views
 import Data.Maybe
 
 import Libraries.Data.IntMap
@@ -513,7 +512,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
     noMeta (Local _ _ _ _) _ = True
     noMeta (Ref _ _ _) _ = True
     noMeta (PrimVal _ _) _ = True
-    noMeta (TType _) _ = True
+    noMeta (TType _ _) _ = True
     noMeta _ _ = False
 
     isSimple : Term vs -> Bool
@@ -585,7 +584,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
         = Just (TForce fc r !(updateIVars ivs arg))
     updateIVars ivs (PrimVal fc c) = Just (PrimVal fc c)
     updateIVars ivs (Erased fc i) = Just (Erased fc i)
-    updateIVars ivs (TType fc) = Just (TType fc)
+    updateIVars ivs (TType fc u) = Just (TType fc u)
 
     mkDef : {vs, newvars : _} ->
             List (Var newvars) ->
@@ -648,31 +647,6 @@ isDefInvertible fc i
          Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
               | Nothing => throw (UndefinedName fc (Resolved i))
          pure (invertible gdef)
-
-tooBig : (counting : Bool) -> Nat -> List (Term vars) -> Term vars -> Bool
-tooBig _ Z _ _ = True
-tooBig c k stk (App _ f a)
-    = tooBig c k (a :: stk) f
-tooBig c (S k) stk (Bind _ _ _ sc)
-    = tooBig c (S k) [] sc || any (tooBig c k []) stk
-tooBig c (S k) stk (Meta _ _ _ as)
-    = any (tooBig c k []) as || any (tooBig c k []) stk
-tooBig c (S k) stk f
-    = if c || isFn f -- start counting, we're under a function
-         then tooBigArgs True k stk
-         else tooBigArgs c (S k) stk
-  where
-    isFn : Term vs -> Bool
-    isFn (Ref _ Func _) = True
-    isFn _ = False -- Don't count if it's not a function, because normalising
-                   -- won't help
-
-    tooBigArgs : Bool -> Nat -> List (Term vars) -> Bool
-    tooBigArgs c Z _ = True
-    tooBigArgs c k [] = False
-    tooBigArgs c (S k) (a :: as)
-       = tooBig c (if c then k else S k) [] a || tooBigArgs c k as
-tooBig _ _ _ _ = False
 
 mutual
   unifyIfEq : {auto c : Ref Ctxt Defs} ->
@@ -920,12 +894,11 @@ mutual
                          | _ => postponeS swap loc mode "Delayed hole" env
                                           (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
                                           tmnf
-                     tmq <- quote empty env tmnf
-                     tm <- if tooBig False
-                                     defs.options.elabDirectives.nfThreshold
-                                     [] tmq
-                              then quote defs env tmnf
-                              else pure tmq
+                     let qopts = MkQuoteOpts False False
+                                             (Just defs.options.elabDirectives.nfThreshold)
+                     tm <- catch (quoteOpts qopts
+                                            empty env tmnf)
+                                 (\err => quote defs env tmnf)
                      Just tm <- occursCheck loc env mode mname tm
                          | _ => postponeS swap loc mode "Occurs check failed" env
                                           (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
@@ -985,7 +958,7 @@ mutual
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
   unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NPrimVal _ _)
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
-  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NType _)
+  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NType _ _)
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
   -- If they're already convertible without metavariables, we're done,
   -- otherwise postpone
@@ -1471,6 +1444,17 @@ forceMeta r (S k) (Bind fc n b sc)
     = Bind fc n b (forceMeta r k sc)
 forceMeta r envb tm = TForce (getLoc tm) r tm
 
+-- Check whether it's worth trying a search again, based on what went wrong
+recoverable : Error -> Bool
+recoverable (UndefinedName _ _) = False
+recoverable (InType _ _ err) = recoverable err
+recoverable (InCon _ _ err) = recoverable err
+recoverable (InLHS _ _ err) = recoverable err
+recoverable (InRHS _ _ err) = recoverable err
+recoverable (WhenUnifying _ _ _ _ _ err) = recoverable err
+recoverable (MaybeMisspelling err _) = recoverable err
+recoverable _ = True
+
 -- Retry the given constraint, return True if progress was made
 retryGuess : {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
@@ -1504,7 +1488,10 @@ retryGuess mode smode (hid, (loc, hname))
                                       [] (type def)
                             case smode of
                                  LastChance => throw err
-                                 _ => pure False -- Postpone again
+                                 _ => if recoverable err
+                                         then pure False -- Postpone again
+                                         else throw (CantSolveGoal loc (gamma defs)
+                                                        [] (type def) (Just err))
                Guess tm envb [constr] =>
                  do let umode = case smode of
                                      MatchArgs => inMatch

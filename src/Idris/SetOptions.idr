@@ -3,7 +3,6 @@ module Idris.SetOptions
 import Compiler.Common
 
 import Core.Context
-import Core.Directory
 import Core.Metadata
 import Core.Options
 import Core.Unify
@@ -18,11 +17,8 @@ import Idris.REPL
 import Idris.Syntax
 import Idris.Version
 
-import IdrisPaths
-
 import Data.List
 import Data.List1
-import Data.So
 import Data.String
 
 import Libraries.Data.List1 as Lib
@@ -66,20 +62,8 @@ pkgDir str =
               . traverse parsePositive
               . split (== '.')
 
-dirEntries : String -> IO (List String)
-dirEntries dname =
-    do Right d <- openDir dname
-         | Left err => pure []
-       getFiles d []
-  where
-    getFiles : Directory -> List String -> IO (List String)
-    getFiles d acc
-        = do Right str <- dirEntry d
-               | Left err => pure (reverse acc)
-             getFiles d (str :: acc)
-
 getPackageDirs : String -> IO (List PkgDir)
-getPackageDirs dname = map pkgDir <$> dirEntries dname
+getPackageDirs dname = map pkgDir . either (const []) id <$> listDir dname
 
 -- Get a list of all the candidate directories that match a package spec
 -- in a given path. Return an empty list on file error (e.g. path not existing)
@@ -182,7 +166,7 @@ dirOption dirs LibDir
 dirOption dirs BlodwenPaths
     = iputStrLn $ pretty (toString dirs)
 dirOption dirs Prefix
-    = coreLift $ putStrLn yprefix
+    = coreLift $ putStrLn (prefix_dir dirs)
 
 --------------------------------------------------------------------------------
 --          Bash Autocompletions
@@ -192,7 +176,8 @@ findIpkg : {auto c : Ref Ctxt Defs} -> Core (List String)
 findIpkg =
   do Just srcdir <- coreLift currentDir
        | Nothing => throw (InternalError "Can't get current directory")
-     fs <- coreLift $ dirEntries srcdir
+     Right fs <- coreLift $ listDir srcdir
+       | Left err => pure []
      pure $ filter (".ipkg" `isSuffixOf`) fs
 
 -- keep only those Strings, of which `x` is a prefix
@@ -259,16 +244,15 @@ opts x _ = pure $ if (x `elem` optionFlags)
 
 -- bash autocompletion script using the given function name
 completionScript : (fun : String) -> String
-completionScript fun =
-  let fun' = "_" ++ fun
-   in unlines [ fun' ++ "()"
-              , "{"
-              , "  ED=$([ -z $2 ] && echo \"--\" || echo $2)"
-              , "  COMPREPLY=($(idris2 --bash-completion $ED $3))"
-              , "}"
-              , ""
-              , "complete -F " ++ fun' ++ " -o default idris2"
-              ]
+completionScript fun = let fun' = "_" ++ fun in """
+  \{ fun' }()
+  {
+    ED=$([ -z $2 ] && echo "--" || echo $2)
+    COMPREPLY=($(idris2 --bash-completion $ED $3))
+  }
+
+  complete -F \{ fun' } -o default idris2
+  """
 
 --------------------------------------------------------------------------------
 --          Processing Options
@@ -299,7 +283,7 @@ setIncrementalCG failOnError cgn
                          coreLift $ exitWith (ExitFailure 1)
                  else pure ()
 
--- Options to be processed before type checking. Return whether to continue.
+||| Options to be processed before type checking. Return whether to continue.
 export
 preOptions : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
@@ -413,7 +397,8 @@ preOptions (IgnoreShadowingWarnings :: opts)
     = do updateSession (record { showShadowingWarning = False })
          preOptions opts
 preOptions (HashesInsteadOfModTime :: opts)
-    = do updateSession (record { checkHashesInsteadOfModTime = True })
+    = do throw (InternalError "-Xcheck-hashes disabled (see issue #1935)")
+         updateSession (record { checkHashesInsteadOfModTime = True })
          preOptions opts
 preOptions (CaseTreeHeuristics :: opts)
     = do updateSession (record { caseTreeHeuristics = True })

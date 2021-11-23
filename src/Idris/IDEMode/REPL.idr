@@ -1,47 +1,24 @@
 module Idris.IDEMode.REPL
 
-import Compiler.Scheme.Chez
-import Compiler.Scheme.Racket
-import Compiler.Scheme.Gambit
-import Compiler.Common
-
-import Core.AutoSearch
-import Core.CompileExpr
 import Core.Context
 import Core.Directory
-import Core.InitPrimitives
 import Core.Metadata
-import Core.Normalise
 import Core.Options
-import Core.TT
 import Core.Unify
 
-import Data.List
-import Data.So
-import Data.String
-
-import Idris.Desugar
 import Idris.Error
-import Idris.ModTree
 import Idris.Package
 import Idris.Parser
 import Idris.Pretty
-import Idris.Resugar
 import Idris.REPL
 import Idris.Syntax
 import Idris.Version
-import Idris.Pretty
 import Idris.Doc.String
 
 import Idris.IDEMode.Commands
 import Idris.IDEMode.Holes
 import Idris.IDEMode.Parser
 import Idris.IDEMode.SyntaxHighlight
-
-import TTImp.Interactive.CaseSplit
-import TTImp.Elab
-import TTImp.TTImp
-import TTImp.ProcessDecls
 
 import Libraries.Utils.Hex
 import Libraries.Utils.Path
@@ -145,6 +122,7 @@ todoCmd cmdName = iputStrLn $ reflow $ cmdName ++ ": command not yet implemented
 data IDEResult
   = REPL REPLResult
   | NameList (List Name)
+  | FoundHoles (List HoleData)
   | Term String   -- should be a PTerm + metadata, or SExp.
   | TTTerm String -- should be a TT Term + metadata, or perhaps SExp
   | NameLocList (List (Name, FC))
@@ -209,7 +187,7 @@ process (MakeWith l n)
     = replWrap $ Idris.REPL.process
     $ Editing (MakeWith False (fromInteger l) (UN $ mkUserName n))
 process (DocsFor n modeOpt)
-    = replWrap $ Idris.REPL.process (Doc (PRef EmptyFC (UN $ mkUserName n)))
+    = replWrap $ Idris.REPL.process (Doc $ APTerm (PRef EmptyFC (UN $ mkUserName n)))
 process (Apropos n)
     = do todoCmd "apropros"
          pure $ REPL $ Printed emptyDoc
@@ -248,7 +226,7 @@ process (EnableSyntax b)
 process Version
     = replWrap $ Idris.REPL.process ShowVersion
 process (Metavariables _)
-    = replWrap $ Idris.REPL.process Metavars
+    = FoundHoles <$> getUserHolesData
 process GetOptions
     = replWrap $ Idris.REPL.process GetOpts
 
@@ -316,6 +294,7 @@ SExpable REPLEval where
   toSExp EvalTC = SymbolAtom "typecheck"
   toSExp NormaliseAll = SymbolAtom "normalise"
   toSExp Execute = SymbolAtom "execute"
+  toSExp Scheme = SymbolAtom "scheme"
 
 SExpable REPLOpt where
   toSExp (ShowImplicits impl) = SExpList [ SymbolAtom "show-implicits", toSExp impl ]
@@ -325,6 +304,7 @@ SExpable REPLOpt where
   toSExp (Editor editor) = SExpList [ SymbolAtom "editor", toSExp editor ]
   toSExp (CG str) = SExpList [ SymbolAtom "cg", toSExp str ]
   toSExp (Profile p) = SExpList [ SymbolAtom "profile", toSExp p ]
+  toSExp (EvalTiming p) = SExpList [ SymbolAtom "evaltiming", toSExp p ]
 
 
 displayIDEResult : {auto c : Ref Ctxt Defs} ->
@@ -388,8 +368,6 @@ displayIDEResult outf i  (REPL $ CheckedTotal xs)
   = printIDEResult outf i
   $ StringAtom $ showSep "\n"
   $ map (\ (fn, tot) => (show fn ++ " is " ++ show tot)) xs
-displayIDEResult outf i  (REPL $ FoundHoles holes)
-  = printIDEResult outf i $ SExpList $ map sexpHole holes
 displayIDEResult outf i  (REPL $ LogLevelSet k)
   = printIDEResult outf i
   $ StringAtom $ "Set loglevel to " ++ show k
@@ -427,6 +405,8 @@ displayIDEResult outf i (REPL $ Edited (MadeWith lit wapp))
 displayIDEResult outf i (REPL $ (Edited (MadeCase lit cstr)))
   = printIDEResult outf i
   $ StringAtom $ showSep "\n" (map (relit lit) cstr)
+displayIDEResult outf i (FoundHoles holes)
+  = printIDEResult outf i $ SExpList $ map sexpHole holes
 displayIDEResult outf i (NameList ns)
   = printIDEResult outf i $ SExpList $ map toSExp ns
 displayIDEResult outf i (Term t)

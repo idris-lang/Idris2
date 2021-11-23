@@ -5,15 +5,11 @@ import public Libraries.Text.Lexer
 import public Libraries.Text.Parser
 import Libraries.Data.String.Extra
 import public Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import Core.TT
 import Core.Core
 import Data.List
-import Data.List.Views
-import Data.String
 import Parser.Unlit
-import System.File
 
 %default total
 

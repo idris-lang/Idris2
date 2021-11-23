@@ -1,12 +1,10 @@
 ||| Implementation of ordering relations for `Nat`ural numbers
 module Data.Nat.Order
 
-import Control.Relation
 import Data.Nat
 import Data.Fun
 import Data.Rel
 import Decidable.Decidable
-import Decidable.Equality
 
 %default total
 
@@ -24,15 +22,11 @@ ltesuccinjective : {0 n, m : Nat} -> Not (LTE n m) -> Not (LTE (S n) (S m))
 ltesuccinjective disprf (LTESucc nLTEm) = void (disprf nLTEm)
 ltesuccinjective disprf LTEZero         impossible
 
+-- Remove any time after release of 0.6.0
+||| Deprecated. Use `Nat.isLTE`.
 public export
 decideLTE : (n : Nat) -> (m : Nat) -> Dec (LTE n m)
-decideLTE    Z      y  = Yes LTEZero
-decideLTE (S x)     Z  = No  zeroNeverGreater
-decideLTE (S x)   (S y) with (decEq (S x) (S y))
-  decideLTE (S x)   (S y) | Yes eq      = rewrite eq in Yes (reflexive {rel = LTE})
-  decideLTE (S x)   (S y) | No _ with (decideLTE x y)
-    decideLTE (S x)   (S y) | No _   | Yes nLTEm = Yes (LTESucc nLTEm)
-    decideLTE (S x)   (S y) | No _   | No  nGTm  = No (ltesuccinjective nGTm)
+decideLTE = isLTE
 
 public export
 Decidable 2 [Nat,Nat] LTE where

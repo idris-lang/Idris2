@@ -42,6 +42,7 @@ idris2docs_venv
 
 # Vim swap file
 *~
+*.*.swp
 # Emacs swap file
 .\#*
 # VS Code

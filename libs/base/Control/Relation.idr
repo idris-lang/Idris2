@@ -16,57 +16,57 @@ Rel ty = ty -> ty -> Type
 
 ||| A relation is reflexive if x ~ x for every x.
 public export
-interface Reflexive ty rel where
+interface Reflexive ty rel | rel where
   constructor MkReflexive
   reflexive : {x : ty} -> rel x x
 
 ||| A relation is transitive if x ~ z when x ~ y and y ~ z.
 public export
-interface Transitive ty rel where
+interface Transitive ty rel | rel where
   constructor MkTransitive
   transitive : {x, y, z : ty} -> rel x y -> rel y z -> rel x z
 
 ||| A relation is symmetric if y ~ x when x ~ y.
 public export
-interface Symmetric ty rel where
+interface Symmetric ty rel | rel where
   constructor MkSymmetric
   symmetric : {x, y : ty} -> rel x y -> rel y x
 
 ||| A relation is antisymmetric if no two distinct elements bear the relation to each other.
 public export
-interface Antisymmetric ty rel where
+interface Antisymmetric ty rel | rel where
   constructor MkAntisymmetric
   antisymmetric : {x, y : ty} -> rel x y -> rel y x -> x = y
 
 ||| A relation is dense if when x ~ y there is z such that x ~ z and z ~ y.
 public export
-interface Dense ty rel where
+interface Dense ty rel | rel where
   constructor MkDense
   dense : {x, y : ty} -> rel x y -> (z : ty ** (rel x z, rel z y))
 
 ||| A relation is serial if for all x there is a y such that x ~ y.
 public export
-interface Serial ty rel where
+interface Serial ty rel | rel where
   constructor MkSerial
   serial : {x : ty} -> (y : ty ** rel x y)
 
 ||| A relation is euclidean if y ~ z when x ~ y and x ~ z.
 public export
-interface Euclidean ty rel where
+interface Euclidean ty rel | rel where
   constructor MkEuclidean
   euclidean : {x, y, z : ty} -> rel x y -> rel x z -> rel y z
 
 ||| A tolerance relation is reflexive and symmetric.
 public export
-interface (Reflexive ty rel, Symmetric ty rel) => Tolerance ty rel where
+interface (Reflexive ty rel, Symmetric ty rel) => Tolerance ty rel | rel where
 
 ||| A partial equivalence is transitive and symmetric.
 public export
-interface (Transitive ty rel, Symmetric ty rel) => PartialEquivalence ty rel where
+interface (Transitive ty rel, Symmetric ty rel) => PartialEquivalence ty rel | rel where
 
 ||| An equivalence relation is transitive, symmetric, and reflexive.
 public export
-interface (Reflexive ty rel, Transitive ty rel, Symmetric ty rel) => Equivalence ty rel where
+interface (Reflexive ty rel, Transitive ty rel, Symmetric ty rel) => Equivalence ty rel | rel where
 
 ----------------------------------------
 

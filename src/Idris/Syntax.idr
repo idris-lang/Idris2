@@ -15,14 +15,11 @@ import TTImp.TTImp
 import Libraries.Data.ANameMap
 import Data.List
 import Data.Maybe
-import Data.String
 import Libraries.Data.NameMap
 import Libraries.Data.SortedMap
 import Libraries.Data.String.Extra
 import Libraries.Data.StringMap
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 
 import Parser.Lexer.Source
 
@@ -491,6 +488,11 @@ isStrInterp (StrInterp fc _) = Just fc
 isStrInterp (StrLiteral _ _) = Nothing
 
 export
+isStrLiteral : PStr -> Maybe (FC, String)
+isStrLiteral (StrInterp _ _) = Nothing
+isStrLiteral (StrLiteral fc str) = Just (fc, str)
+
+export
 isPDef : PDecl -> Maybe (FC, List PClause)
 isPDef (PDef annot cs) = Just (annot, cs)
 isPDef _ = Nothing
@@ -518,18 +520,21 @@ data REPLEval : Type where
      EvalTC : REPLEval -- Evaluate as if part of the typechecker
      NormaliseAll : REPLEval -- Normalise everything (default)
      Execute : REPLEval -- Evaluate then pass to an executer
+     Scheme : REPLEval -- Use the scheme evaluator
 
 export
 Show REPLEval where
   show EvalTC = "typecheck"
   show NormaliseAll = "normalise"
   show Execute = "execute"
+  show Scheme = "scheme"
 
 export
 Pretty REPLEval where
   pretty EvalTC = pretty "typecheck"
   pretty NormaliseAll = pretty "normalise"
   pretty Execute = pretty "execute"
+  pretty Scheme = pretty "scheme"
 
 public export
 data REPLOpt : Type where
@@ -540,6 +545,7 @@ data REPLOpt : Type where
      Editor : String -> REPLOpt
      CG : String -> REPLOpt
      Profile : Bool -> REPLOpt
+     EvalTiming : Bool -> REPLOpt
 
 export
 Show REPLOpt where
@@ -550,6 +556,7 @@ Show REPLOpt where
   show (Editor editor) = "editor = " ++ show editor
   show (CG str) = "cg = " ++ str
   show (Profile p) = "profile = " ++ show p
+  show (EvalTiming p) = "evaltiming = " ++ show p
 
 export
 Pretty REPLOpt where
@@ -560,6 +567,7 @@ Pretty REPLOpt where
   pretty (Editor editor) = pretty "editor" <++> equals <++> pretty editor
   pretty (CG str) = pretty "cg" <++> equals <++> pretty str
   pretty (Profile p) = pretty "profile" <++> equals <++> pretty p
+  pretty (EvalTiming p) = pretty "evaltiming" <++> equals <++> pretty p
 
 public export
 data EditCmd : Type where
@@ -575,6 +583,15 @@ data EditCmd : Type where
                  EditCmd
      MakeCase : Bool -> Int -> Name -> EditCmd
      MakeWith : Bool -> Int -> Name -> EditCmd
+
+public export
+data DocDirective : Type where
+  ||| A reserved keyword
+  Keyword : String -> DocDirective
+  ||| A reserved symbol
+  Symbol  : String -> DocDirective
+  ||| An arbitrary PTerm
+  APTerm  : PTerm -> DocDirective
 
 public export
 data REPLCmd : Type where
@@ -600,7 +617,7 @@ data REPLCmd : Type where
      CWD: REPLCmd
      Missing : Name -> REPLCmd
      Total : Name -> REPLCmd
-     Doc : PTerm -> REPLCmd
+     Doc : DocDirective -> REPLCmd
      Browse : Namespace -> REPLCmd
      SetLog : Maybe LogLevel -> REPLCmd
      SetConsoleWidth : Maybe Nat -> REPLCmd
@@ -811,10 +828,12 @@ parameters {0 nm : Type} (toName : nm -> Name)
     else "`" ++ showPrec d op ++ "`"
 
 export
+covering
 Show PTerm where
   showPrec = showPTermPrec id
 
 export
+covering
 Show IPTerm where
   showPrec = showPTermPrec rawName
 
@@ -827,6 +846,7 @@ record Method where
   type     : RawImp
 
 export
+covering
 Show Method where
   show (MkMethod n c treq ty)
     = "[" ++ show treq ++ "] " ++ show c ++ " " ++ show n ++ " : " ++ show ty

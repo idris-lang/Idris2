@@ -13,6 +13,7 @@ on:
       - '*.md'
       - 'CONTRIBUTORS'
       - 'LICENSE'
+      - '.github/workflows/ci-bootstrap.yml'
       - '.github/workflows/ci-lint.yml'
       - '.github/workflows/ci-sphinx.yml'
       - '.github/workflows/ci-super-linter.yml'
@@ -22,15 +23,17 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'icons/**'
+      - 'Release/**'
       - '*.md'
       - 'CONTRIBUTORS'
       - 'LICENSE'
+      - '.github/workflows/ci-bootstrap.yml'
       - '.github/workflows/ci-lint.yml'
       - '.github/workflows/ci-sphinx.yml'
       - '.github/workflows/ci-super-linter.yml'
 
 env:
-  IDRIS2_VERSION: 0.4.0 # For previous-version build
+  IDRIS2_VERSION: 0.5.0 # For previous-version build
 
 jobs:
 
@@ -248,9 +251,10 @@ jobs:
     needs: quick-check
     runs-on: ubuntu-latest
     if: |
-      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      false
+      && (!contains(needs.initialise.outputs.commit_message, '[ci:')
       || contains(needs.initialise.outputs.commit_message, '[ci: ubuntu]')
-      || contains(needs.initialise.outputs.commit_message, '[ci: racket]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: racket]'))
 
     env:
       IDRIS2_CG: racket
@@ -334,6 +338,7 @@ jobs:
   ubuntu-self-host-racket:
     needs: ubuntu-bootstrap-racket
     runs-on: ubuntu-latest
+    if: false
     env:
       IDRIS2_CG: racket
     steps:

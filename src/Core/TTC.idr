@@ -1,7 +1,7 @@
 module Core.TTC
 
 import Core.Binary.Prims
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.CompileExpr
 import Core.Context
 import Core.Core
@@ -12,12 +12,12 @@ import Core.Options
 import Core.TT
 
 import Libraries.Data.NameMap
-import Libraries.Data.PosMap
 
 import Libraries.Data.IOArray
 import Data.Vect
 
 import Libraries.Utils.Binary
+import Libraries.Utils.Scheme
 
 %default covering
 
@@ -335,8 +335,8 @@ mutual
              toBuf b c
     toBuf b (Erased fc _)
         = tag 10
-    toBuf b (TType fc)
-        = tag 11
+    toBuf b (TType fc u)
+        = do tag 11; toBuf b u
 
     fromBuf {vars} b
         = case !getTag of
@@ -368,7 +368,7 @@ mutual
                9 => do c <- fromBuf b
                        pure (PrimVal emptyFC c)
                10 => pure (Erased emptyFC False)
-               11 => pure (TType emptyFC)
+               11 => do u <- fromBuf b; pure (TType emptyFC u)
                12 => do fn <- fromBuf b
                         args <- fromBuf b
                         pure (apply emptyFC fn args)
@@ -672,6 +672,7 @@ TTC ConInfo where
   toBuf b RECORD = tag 7
   toBuf b ZERO = tag 8
   toBuf b SUCC = tag 9
+  toBuf b UNIT = tag 10
 
   fromBuf b
       = case !getTag of
@@ -685,6 +686,7 @@ TTC ConInfo where
              7 => pure RECORD
              8 => pure ZERO
              9 => pure SUCC
+             10 => pure UNIT
              _ => corrupt "ConInfo"
 
 mutual
@@ -966,6 +968,7 @@ TTC Def where
       = do tag 8; toBuf b guess; toBuf b envb; toBuf b constraints
   toBuf b ImpBind = tag 9
   toBuf b Delayed = tag 10
+  toBuf b (UniverseLevel i) = do tag 11; toBuf b i
 
   fromBuf b
       = case !getTag of
@@ -998,6 +1001,8 @@ TTC Def where
                      pure (Guess g envb cs)
              9 => pure ImpBind
              10 => pure Context.Delayed
+             11 => do l <- fromBuf b
+                      pure (UniverseLevel l)
              _ => corrupt "Def"
 
 export
@@ -1013,8 +1018,20 @@ TTC TotalReq where
              2 => pure PartialOK
              _ => corrupt "TotalReq"
 
+TTC NoMangleDirective where
+  toBuf b (CommonName n) = do tag 0; toBuf b n
+  toBuf b (BackendNames ns) = do tag 1; toBuf b ns
+
+  fromBuf b
+      = case !getTag of
+             0 => do n <- fromBuf b; pure (CommonName n)
+             1 => do ns <- fromBuf b; pure (BackendNames ns)
+             _ => corrupt "NoMangleDirective"
+
 TTC DefFlag where
   toBuf b Inline = tag 2
+  toBuf b NoInline = tag 13
+  toBuf b Deprecate = tag 15
   toBuf b Invertible = tag 3
   toBuf b Overloadable = tag 4
   toBuf b TCInline = tag 5
@@ -1025,6 +1042,7 @@ TTC DefFlag where
   toBuf b AllGuarded = tag 10
   toBuf b (ConType ci) = do tag 11; toBuf b ci
   toBuf b (Identity x) = do tag 12; toBuf b x
+  toBuf b (NoMangle x) = do tag 14; toBuf b x
 
   fromBuf b
       = case !getTag of
@@ -1039,6 +1057,9 @@ TTC DefFlag where
              10 => pure AllGuarded
              11 => do ci <- fromBuf b; pure (ConType ci)
              12 => do x <- fromBuf b; pure (Identity x)
+             13 => pure NoInline
+             14 => do x <- fromBuf b; pure (NoMangle x)
+             15 => pure Deprecate
              _ => corrupt "DefFlag"
 
 export
@@ -1118,10 +1139,10 @@ TTC GlobalDef where
                       sc <- fromBuf b
                       pure (MkGlobalDef loc name ty eargs seargs specargs iargs
                                         mul vars vis
-                                        tot fl refs refsR inv c True def cdef sc)
+                                        tot fl refs refsR inv c True def cdef Nothing sc Nothing)
               else pure (MkGlobalDef loc name (Erased loc False) [] [] [] []
                                      mul [] Public unchecked [] refs refsR
-                                     False False True def cdef [])
+                                     False False True def cdef Nothing [] Nothing)
 
 export
 TTC Transform where

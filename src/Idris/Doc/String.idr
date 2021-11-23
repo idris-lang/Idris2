@@ -4,11 +4,10 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.Env
-import Core.Metadata
 import Core.TT
+import Core.TT.Traversals
 
 import Idris.Pretty
-import Idris.Pretty.Render
 import Idris.REPL.Opts
 import Idris.Resugar
 import Idris.Syntax
@@ -24,56 +23,21 @@ import Data.String
 
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
+import Libraries.Data.SortedSet
 import Libraries.Data.SortedMap
 import Libraries.Data.StringMap as S
 import Libraries.Data.String.Extra
 
-import Libraries.Control.ANSI.SGR
 import public Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import Parser.Lexer.Source
 
+import public Idris.Doc.Annotations
+import Idris.Doc.Keywords
+
+
 %default covering
-
-public export
-data IdrisDocAnn
-  = Header
-  | Declarations
-  | Decl Name
-  | DocStringBody
-  | Syntax IdrisSyntax
-
-export
--- TODO: how can we deal with bold & so on?
-docToDecoration : IdrisDocAnn -> Maybe Decoration
-docToDecoration (Syntax syn) = syntaxToDecoration syn
-docToDecoration _ = Nothing
-
-export
-styleAnn : IdrisDocAnn -> AnsiStyle
-styleAnn Header        = underline
-styleAnn Declarations  = []
-styleAnn (Decl{})      = []
-styleAnn DocStringBody = []
-styleAnn (Syntax syn)  = syntaxAnn syn
-
-export
-tCon : Name -> Doc IdrisDocAnn -> Doc IdrisDocAnn
-tCon n = annotate (Syntax $ TCon (Just n))
-
-export
-dCon : Name -> Doc IdrisDocAnn -> Doc IdrisDocAnn
-dCon n = annotate (Syntax $ DCon (Just n))
-
-export
-fun : Name -> Doc IdrisDocAnn -> Doc IdrisDocAnn
-fun n = annotate (Syntax $ Fun n)
-
-export
-header : Doc IdrisDocAnn -> Doc IdrisDocAnn
-header d = annotate Header d <+> colon
-
 
 -- Add a doc string for a module name
 export
@@ -130,23 +94,116 @@ prettyKindedName Nothing   nm = nm
 prettyKindedName (Just kw) nm
   = annotate (Syntax Keyword) (pretty kw) <++> nm
 
+||| Look up implementations
+getImplDocs : {auto c : Ref Ctxt Defs} ->
+              {auto s : Ref Syn SyntaxInfo} ->
+              (keep : Term [] -> Core Bool) ->
+              Core (List (Doc IdrisDocAnn))
+getImplDocs keep
+    = do defs <- get Ctxt
+         docss <- for (concat $ values $ typeHints defs) $ \ (impl, _) =>
+           do Just def <- lookupCtxtExact impl (gamma defs)
+                | _ => pure []
+              -- Only keep things that look like implementations.
+              -- i.e. get rid of data constructors
+              let Just Func = defNameType (definition def)
+                | _ => pure []
+              -- Check that the type mentions the name of interest
+              ty <- toFullNames !(normaliseHoles defs [] (type def))
+              True <- keep ty
+                | False => pure []
+              ty <- resugar [] ty
+              pure [annotate (Decl impl) $ prettyTerm ty]
+         pure $ case concat docss of
+           [] => []
+           [doc] => [header "Hint" <++> annotate Declarations doc]
+           docs  => [vcat [header "Hints"
+                    , annotate Declarations $
+                        vcat $ map (indent 2) docs]]
+
+||| Look up implementations corresponding to the named type
+getHintsForType : {auto c : Ref Ctxt Defs} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
+                  Name -> Core (List (Doc IdrisDocAnn))
+getHintsForType nty
+    = do log "doc.data" 10 $ "Looking at \{show nty}"
+         getImplDocs $ \ ty =>
+           do let nms = allGlobals ty
+              log "doc.data" 10 $ String.unlines
+                [ "Candidate: " ++ show ty
+                , "Containing names: " ++ show nms
+                ]
+              pure $ isJust (lookup nty nms)
+
+||| Look up implementations corresponding to the primitive type
+getHintsForPrimitive : {auto c : Ref Ctxt Defs} ->
+                       {auto s : Ref Syn SyntaxInfo} ->
+                       Constant -> Core (List (Doc IdrisDocAnn))
+getHintsForPrimitive c
+    = do log "doc.data" 10 $ "Looking at \{show c}"
+         getImplDocs $ \ ty =>
+           do let nms = allConstants ty
+              log "doc.data" 10 $ String.unlines
+                [ "Candidate: " ++ show ty
+                , "Containing constants: " ++ show nms
+                ]
+              pure $ contains c nms
+
 export
 getDocsForPrimitive : {auto c : Ref Ctxt Defs} ->
                       {auto s : Ref Syn SyntaxInfo} ->
                       Constant -> Core (Doc IdrisDocAnn)
 getDocsForPrimitive constant = do
     let (_, type) = checkPrim EmptyFC constant
-    let typeString = pretty (show constant)
-                   <++> colon <++> prettyTerm !(resugar [] type)
-    pure (typeString <+> Line <+> indent 2 "Primitive")
+    let typeString = prettyTerm (PPrimVal EmptyFC constant)
+                     <++> colon
+                     <++> prettyTerm !(resugar [] type)
+    hintsDoc <- getHintsForPrimitive constant
+    pure $ vcat $ typeString
+               :: indent 2 (primDoc constant)
+               :: hintsDoc
+
+  where
+  primDoc : Constant -> Doc IdrisDocAnn
+  primDoc (I i) = "Primitive signed int value (backend-dependent precision)"
+  primDoc (I8 i) = "Primitive signed 8 bits value"
+  primDoc (I16 i) = "Primitive signed 16 bits value"
+  primDoc (I32 i) = "Primitive signed 32 bits value"
+  primDoc (I64 i) = "Primitive signed 64 bits value"
+  primDoc (BI i) = "Primitive unsigned int value (backend-dependent precision)"
+  primDoc (B8 i) = "Primitive unsigned 8 bits value"
+  primDoc (B16 i) = "Primitive unsigned 16 bits value"
+  primDoc (B32 i) = "Primitive unsigned 32 bits value"
+  primDoc (B64 i) = "Primitive unsigned 64 bits value"
+  primDoc (Str s) = "Primitive string value"
+  primDoc (Ch c) = "Primitive character value"
+  primDoc (Db d) = "Primitive double value"
+  primDoc WorldVal = "Primitive token for IO actions"
+
+  primDoc IntType = "Primitive type of bounded signed integers (backend dependent size)"
+  primDoc Int8Type = "Primitive type of 8 bits signed integers"
+  primDoc Int16Type = "Primitive type of 16 bits signed integers"
+  primDoc Int32Type = "Primitive type of 32 bits signed integers"
+  primDoc Int64Type = "Primitive type of 64 bits signed integers"
+  primDoc IntegerType = "Primitive type of unbounded signed integers"
+  primDoc Bits8Type = "Primitive type of 8 bits unsigned integers"
+  primDoc Bits16Type = "Primitive type of 16 bits unsigned integers"
+  primDoc Bits32Type = "Primitive type of 32 bits unsigned integers"
+  primDoc Bits64Type = "Primitive type of 64 bits unsigned integers"
+  primDoc StringType = "Primitive type of strings"
+  primDoc CharType = "Primitive type of characters"
+  primDoc DoubleType = "Primitive type of double-precision floating-points"
+  primDoc WorldType = "Primitive type of tokens for IO actions"
 
 public export
 data Config : Type where
   ||| Configuration of the printer for a name
+  ||| @ showType    Do we show the type?
   ||| @ longNames   Do we print qualified names?
   ||| @ dropFirst   Do we drop the first argument in the type?
   ||| @ getTotality Do we print the totality status of the function?
-  MkConfig : {default True  longNames   : Bool} ->
+  MkConfig : {default True  showType    : Bool} ->
+             {default True  longNames   : Bool} ->
              {default False dropFirst   : Bool} ->
              {default True  getTotality : Bool} ->
              Config
@@ -161,16 +218,26 @@ data Config : Type where
 export
 methodsConfig : Config
 methodsConfig
-  = MkConfig {longNames = False}
+  = MkConfig {showType = True}
+             {longNames = False}
              {dropFirst = True}
              {getTotality = False}
 
 export
 shortNamesConfig : Config
 shortNamesConfig
-  = MkConfig {longNames = False}
+  = MkConfig {showType = True}
+             {longNames = False}
              {dropFirst = False}
              {getTotality = True}
+
+export
+justUserDoc : Config
+justUserDoc
+  = MkConfig {showType = False}
+             {longNames = False}
+             {dropFirst = True}
+             {getTotality = False}
 
 export
 getDocsForName : {auto o : Ref ROpts REPLOpts} ->
@@ -187,9 +254,9 @@ getDocsForName fc n config
          let all@(_ :: _) = extra ++ map fst resolved
              | _ => undefinedName fc n
          let ns@(_ :: _) = concatMap (\n => lookupName n (defDocstrings syn)) all
-             | [] => pure $ pretty ("No documentation for " ++ show n)
+             | [] => pure emptyDoc
          docs <- traverse (showDoc config) ns
-         pure $ vcat (punctuate Line docs)
+         pure $ vcat docs
   where
 
     showDoc : Config -> (Name, String) -> Core (Doc IdrisDocAnn)
@@ -218,10 +285,13 @@ getDocsForName fc n config
                [(n, "")] => pure conWithTypeDoc
                [(n, str)] => pure $ vcat
                     [ conWithTypeDoc
-                    , annotate DocStringBody $ vcat $ reflowDoc str
+                    , annotate DocStringBody
+                    $ annotate UserDocString
+                    $ vcat $ reflowDoc str
                     ]
                _ => pure conWithTypeDoc
 
+    ||| The name corresponds to an implementation, typeset its type accordingly
     getImplDoc : Name -> Core (List (Doc IdrisDocAnn))
     getImplDoc n
         = do defs <- get Ctxt
@@ -308,7 +378,9 @@ getDocsForName fc n config
                 [(_, "")] => pure projDecl
                 [(_, str)] =>
                   pure $ vcat [ projDecl
-                              , annotate DocStringBody $ vcat (reflowDoc str)
+                              , annotate DocStringBody
+                              $ annotate UserDocString
+                              $ vcat $ reflowDoc str
                               ]
                 _ => pure projDecl
 
@@ -351,10 +423,11 @@ getDocsForName fc n config
                                , [vcat [header "Constructors"
                                        , annotate Declarations $
                                            vcat $ map (indent 2) docs]])
-                pure (map (tot ++) cdoc)
+                idoc <- getHintsForType n
+                pure (map (\ cons => tot ++ cons ++ idoc) cdoc)
            _ => pure (Nothing, [])
 
-    showDoc (MkConfig {longNames, dropFirst, getTotality}) (n, str)
+    showDoc (MkConfig {showType, longNames, dropFirst, getTotality}) (n, str)
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => undefinedName fc n
@@ -377,13 +450,23 @@ getDocsForName fc n config
              let cat = showCategory Syntax def
              let nm = prettyKindedName typ $ cat
                     $ ifThenElse longNames (pretty (show nm)) (prettyName nm)
-             let docDecl = annotate (Decl n) (hsep [nm, colon, prettyTerm ty])
+             let deprecated = if Deprecate `elem` def.flags
+                                 then annotate Deprecation "=DEPRECATED=" <+> line else emptyDoc
+             let docDecl = deprecated <+> annotate (Decl n) (hsep [nm, colon, prettyTerm ty])
 
              -- Finally add the user-provided docstring
-             let docText = reflowDoc str
+             let docText = let docs = reflowDoc str in
+                           annotate UserDocString (vcat docs)
+                           <$ guard (not $ null docs)
              fixes <- getFixityDoc n
-             let docBody = annotate DocStringBody $ vcat $ docText ++ (map (indent 2) (extra ++ fixes))
-             pure (vcat [docDecl, docBody])
+             let docBody =
+                  let docs = maybe id (::) docText
+                           $ map (indent 2) (extra ++ fixes)
+                  in annotate DocStringBody
+                     (concatWith (\l, r => l <+> hardline <+> r) docs)
+                     <$ guard (not (null docs))
+             let maybeDocDecl = [docDecl | showType]
+             pure . vcat . catMaybes $ maybeDocDecl :: (map Just $ docBody)
 
 export
 getDocsForPTerm : {auto o : Ref ROpts REPLOpts} ->
@@ -406,7 +489,7 @@ getDocsForPTerm (PList _ _ _) = pure $ vcat
   ]
 getDocsForPTerm (PSnocList _ _ _) = pure $ vcat
   [ "SnocList Literal"
-  , indent 2 "Desugars to (:<) and Empty"
+  , indent 2 "Desugars to (:<) and Lin"
   ]
 getDocsForPTerm (PPair _ _ _) = pure $ vcat
   [ "Pair Literal"
@@ -422,6 +505,16 @@ getDocsForPTerm (PUnit _) = pure $ vcat
   ]
 getDocsForPTerm pterm = pure $
   "Docs not implemented for" <++> pretty (show pterm) <++> "yet"
+
+export
+getDocs : {auto o : Ref ROpts REPLOpts} ->
+          {auto c : Ref Ctxt Defs} ->
+          {auto s : Ref Syn SyntaxInfo} ->
+          DocDirective -> Core (Doc IdrisDocAnn)
+getDocs (APTerm ptm) = getDocsForPTerm ptm
+getDocs (Symbol k) = pure $ getDocsForSymbol k
+getDocs (Keyword k) = pure $ getDocsForKeyword k
+
 
 summarise : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->

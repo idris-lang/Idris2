@@ -12,7 +12,6 @@ import Core.Unify
 import Idris.CommandLine
 import Idris.Env
 import Idris.IDEMode.REPL
-import Idris.ModTree
 import Idris.Package
 import Idris.ProcessIdr
 import Idris.REPL
@@ -25,12 +24,9 @@ import Idris.Error
 import IdrisPaths
 
 import Data.List
-import Data.List1
-import Data.So
 import Data.String
 import System
 import System.Directory
-import System.File
 import Libraries.Utils.Path
 import Libraries.Utils.Term
 
@@ -132,13 +128,15 @@ tryTTM (c :: cs) = tryTTM cs
 
 
 banner : String
-banner = "     ____    __     _         ___                                           \n" ++
-         "    /  _/___/ /____(_)____   |__ \\                                          \n" ++
-         "    / // __  / ___/ / ___/   __/ /     Version " ++ showVersion True version ++ "\n" ++
-         "  _/ // /_/ / /  / (__  )   / __/      https://www.idris-lang.org           \n" ++
-         " /___/\\__,_/_/  /_/____/   /____/      Type :? for help                     \n" ++
-         "\n" ++
-         "Welcome to Idris 2.  Enjoy yourself!"
+banner = #"""
+       ____    __     _         ___
+      /  _/___/ /____(_)____   |__ \
+      / // __  / ___/ / ___/   __/ /     Version \#{ showVersion True version }
+    _/ // /_/ / /  / (__  )   / __/      https://www.idris-lang.org
+   /___/\__,_/_/  /_/____/   /____/      Type :? for help
+
+  Welcome to Idris 2.  Enjoy yourself!
+  """#
 
 checkVerbose : List CLOpt -> Bool
 checkVerbose [] = False
@@ -171,14 +169,16 @@ stMain cgs opts
 
          finish <- showInfo opts
          when (not finish) $ do
+           -- start by going over the pre-options, and stop if we do not need to
+           -- continue
+           True <- preOptions opts
+              | False => pure ()
+
            -- If there's a --build or --install, just do that then quit
            done <- processPackageOpts opts
 
            when (not done) $ flip catch renderError $
-              do True <- preOptions opts
-                     | False => pure ()
-
-                 when (checkVerbose opts) $ -- override Quiet if implicitly set
+              do when (checkVerbose opts) $ -- override Quiet if implicitly set
                      setOutput (REPL InfoLvl)
                  u <- newRef UST initUState
                  origin <- maybe

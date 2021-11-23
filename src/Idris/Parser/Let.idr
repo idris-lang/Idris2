@@ -6,8 +6,6 @@ import Libraries.Text.Bounded
 import Data.Either
 import Data.List1
 
-import Libraries.Utils.String
-
 %default total
 
 ------------------------------------------------------------------------

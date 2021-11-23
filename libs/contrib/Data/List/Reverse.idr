@@ -3,7 +3,6 @@ module Data.List.Reverse
 
 import Data.Nat
 import Data.List
-import Data.List.Equalities
 
 -- Additional properties coming out of base's Data.List
 --  - revAppend (i.e. reverse xs ++ reverse ys = reverse (ys ++ xs)

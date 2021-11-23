@@ -11,6 +11,8 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
@@ -212,7 +214,7 @@ mutual
            else pure NoMatch
   mightMatch defs (NPrimVal _ x) (NPrimVal _ y)
       = if x == y then pure Concrete else pure NoMatch
-  mightMatch defs (NType _) (NType _) = pure Concrete
+  mightMatch defs (NType _ _) (NType _ _) = pure Concrete
   mightMatch defs (NApp _ _ _) _ = pure Poly
   mightMatch defs (NErased _ _) _ = pure Poly
   mightMatch defs _ (NApp _ _ _) = pure Poly
@@ -252,7 +254,7 @@ couldBe {vars} defs ty@(NPrimVal _ _) app
           Concrete => pure $ Just (True, app)
           Poly => pure $ Just (False, app)
           NoMatch => pure Nothing
-couldBe {vars} defs ty@(NType _) app
+couldBe {vars} defs ty@(NType _ _) app
    = case !(couldBeFn {vars} defs ty (getFn app)) of
           Concrete => pure $ Just (True, app)
           Poly => pure $ Just (False, app)
@@ -335,6 +337,7 @@ checkAlternative : {vars : _} ->
                    {auto m : Ref MD Metadata} ->
                    {auto u : Ref UST UState} ->
                    {auto e : Ref EST (EState vars)} ->
+                   {auto s : Ref Syn SyntaxInfo} ->
                    RigCount -> ElabInfo ->
                    NestedNames vars -> Env Term vars ->
                    FC -> AltType -> List RawImp -> Maybe (Glued vars) ->
@@ -342,7 +345,8 @@ checkAlternative : {vars : _} ->
 checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
     = do checkAmbigDepth fc elabinfo
          expected <- maybe (do nm <- genName "altTy"
-                               ty <- metaVar fc erased env nm (TType fc)
+                               u <- uniVar fc
+                               ty <- metaVar fc erased env nm (TType fc u)
                                pure (gnf env ty))
                            pure mexpected
          let solvemode = case elabMode elabinfo of
@@ -395,7 +399,8 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
            [alt] => checkImp rig elabinfo nest env alt mexpected
            _ =>
              do expected <- maybe (do nm <- genName "altTy"
-                                      ty <- metaVar fc erased env nm (TType fc)
+                                      u <- uniVar fc
+                                      ty <- metaVar fc erased env nm (TType fc u)
                                       pure (gnf env ty))
                                   pure mexpected
                 let solvemode = case elabMode elabinfo of
@@ -437,4 +442,5 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                                   solveConstraints solvemode Normal
                                   solveConstraints solvemode Normal
                                   log "elab.ambiguous" 10 $ show (getName t) ++ " success"
+                                  logTermNF "elab.ambiguous" 10 "Result" env (fst res)
                                   pure res)) alts')

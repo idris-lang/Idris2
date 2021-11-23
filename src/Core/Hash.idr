@@ -1,13 +1,10 @@
 module Core.Hash
 
-import Core.CaseTree
-import Core.TT
+import Core.Case.CaseTree
 import Core.CompileExpr
+import Core.TT
 
-import Data.List
 import Data.List1
-import Libraries.Data.List.Lazy
-import Data.String
 import Libraries.Data.String.Iterator
 import Data.Vect
 
@@ -31,6 +28,38 @@ infixl 5 `hashWithSalt`
 export
 Hashable Int where
   hash = id
+
+export
+Hashable Int8 where
+  hash = cast
+
+export
+Hashable Int16 where
+  hash = cast
+
+export
+Hashable Int32 where
+  hash = cast
+
+export
+Hashable Int64 where
+  hash = cast
+
+export
+Hashable Bits8 where
+  hash = cast
+
+export
+Hashable Bits16 where
+  hash = cast
+
+export
+Hashable Bits32 where
+  hash = cast
+
+export
+Hashable Bits64 where
+  hash = cast
 
 export
 Hashable Integer where
@@ -144,8 +173,8 @@ mutual
         = h `hashWithSalt` 9 `hashWithSalt` (show c)
     hashWithSalt h (Erased fc _)
         = hashWithSalt h 10
-    hashWithSalt h (TType fc)
-        = hashWithSalt h 11
+    hashWithSalt h (TType fc u)
+        = hashWithSalt h 11 `hashWithSalt` u
 
   export
   Hashable Pat where
@@ -404,6 +433,7 @@ Hashable ConInfo where
     RECORD => h `hashWithSalt` 7
     ZERO => h `hashWithSalt` 8
     SUCC => h `hashWithSalt` 9
+    UNIT => h `hashWithSalt` 10
 
 mutual
   export

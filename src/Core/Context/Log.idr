@@ -2,7 +2,6 @@ module Core.Context.Log
 
 import Core.Context
 import Core.Options
-import Data.String
 
 import Libraries.Data.StringMap
 
@@ -23,7 +22,7 @@ logString str n msg = coreLift $ putStrLn
 export
 logString' : LogLevel -> String -> Core ()
 logString' lvl =
-  logString (fastAppend (intersperse "." (topics lvl)) ++ ":")
+  logString (fastConcat (intersperse "." (topics lvl)) ++ ":")
             (verbosity lvl)
 
 export

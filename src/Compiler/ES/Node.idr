@@ -6,7 +6,6 @@ import Idris.Env
 import Compiler.ES.Codegen
 
 import Compiler.Common
-import Compiler.CompileExpr
 
 import Core.Context
 import Core.Options
@@ -14,7 +13,6 @@ import Core.TT
 import Libraries.Utils.Path
 
 import System
-import System.File
 
 import Data.Maybe
 

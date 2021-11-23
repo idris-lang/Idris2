@@ -46,12 +46,6 @@ fastUnlines = fastConcat . unlines'
         unlines' [] = []
         unlines' (x :: xs) = x :: "\n" :: unlines' xs
 
--- This is a deprecated alias for fastConcat for backwards compatibility
--- (unfortunately, we don't have %deprecated yet).
-export
-fastAppend : List String -> String
-fastAppend = fastConcat
-
 ||| Splits a character list into a list of whitespace separated character lists.
 |||
 ||| ```idris example
@@ -301,7 +295,7 @@ parsePositive s = parsePosTrimmed (trim s)
 ||| parseInteger {a=Int} " -123"
 ||| ```
 public export
-parseInteger : (Num a, Neg a) => String -> Maybe a
+parseInteger : Num a => Neg a => String -> Maybe a
 parseInteger s = parseIntTrimmed (trim s)
   where
     parseIntTrimmed : String -> Maybe a

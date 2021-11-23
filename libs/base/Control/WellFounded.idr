@@ -2,7 +2,6 @@ module Control.WellFounded
 
 import Control.Relation
 import Data.Nat
-import Data.List
 
 %default total
 

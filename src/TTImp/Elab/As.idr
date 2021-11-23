@@ -8,14 +8,14 @@ import Core.Metadata
 import Core.Normalise
 import Core.Unify
 import Core.TT
-import Core.Value
+
+import Idris.Syntax
 
 import TTImp.Elab.Check
 import TTImp.Elab.ImplicitBind
 import TTImp.TTImp
 
 import Data.List
-import Libraries.Data.NameMap
 
 %default covering
 
@@ -25,6 +25,7 @@ checkAs : {vars : _} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
           {auto e : Ref EST (EState vars)} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           RigCount -> ElabInfo ->
           NestedNames vars -> Env Term vars ->
           FC -> (nameFC : FC) -> UseSide -> Name -> RawImp -> Maybe (Glued vars) ->

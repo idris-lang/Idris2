@@ -3,7 +3,6 @@ module Compiler.Scheme.Gambit
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Generated
-import Compiler.Inline
 import Compiler.Scheme.Common
 
 import Core.Context
@@ -16,16 +15,12 @@ import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Libraries.Data.NameMap
-import Data.String
 import Data.Vect
 
 import Idris.Env
 
 import System
 import System.Directory
-import System.File
-import System.Info
 
 %default covering
 
@@ -49,14 +44,16 @@ findGSCBackend =
               Just e => " -cc " ++ e
 
 schHeader : String
-schHeader =
-    "; " ++ (generatedString "Gambit") ++ "\n" ++
-    "(declare (block)\n" ++
-    "(inlining-limit 450)\n" ++
-    "(standard-bindings)\n" ++
-    "(extended-bindings)\n" ++
-    "(not safe)\n" ++
-    "(optimize-dead-definitions))\n"
+schHeader = """
+  ;; \{ generatedString "Gambit" }
+  (declare (block)
+    (inlining-limit 450)
+    (standard-bindings)
+    (extended-bindings)
+    (not safe)
+    (optimize-dead-definitions))
+
+  """
 
 showGambitChar : Char -> String -> String
 showGambitChar '\\' = ("\\\\" ++)
@@ -366,7 +363,7 @@ compileToSCM c tm outfile
          s <- newRef {t = List String} Structs []
          fgndefs <- traverse getFgnCall ndefs
          compdefs <- traverse (getScheme gambitPrim gambitString) ndefs
-         let code = fastAppend (map snd fgndefs ++ compdefs)
+         let code = fastConcat (map snd fgndefs ++ compdefs)
          main <- schExp gambitPrim gambitString 0 ctm
          support <- readDataFile "gambit/support.scm"
          ds <- getDirectives Gambit

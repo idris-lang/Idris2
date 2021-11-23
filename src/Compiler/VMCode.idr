@@ -4,7 +4,6 @@ import Compiler.ANF
 
 import Core.CompileExpr
 import Core.Context
-import Core.Core
 import Core.TT
 
 import Libraries.Data.IntMap
@@ -69,6 +68,7 @@ Show Reg where
   show Discard = "DISCARD"
 
 export
+covering
 Show VMInst where
   show (DECLARE r) = "DECLARE " ++ show r
   show START = "START"
@@ -102,6 +102,7 @@ Show VMInst where
   show (ERROR str) = "ERROR " ++ show str
 
 export
+covering
 Show VMDef where
   show (MkVMFun args body) = show args ++ ": " ++ show body
   show (MkVMForeign ccs args ret)

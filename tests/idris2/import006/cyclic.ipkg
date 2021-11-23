@@ -1,0 +1,3 @@
+package cyclic
+
+modules = A.B, A.C
