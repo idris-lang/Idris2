@@ -38,6 +38,7 @@ fnName lhs n = nameRoot n
 
 -- Make the hole on the RHS have a unique name
 uniqueRHS : {auto c : Ref Ctxt Defs} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             ImpClause -> Core ImpClause
 uniqueRHS (PatClause fc lhs rhs)
     = pure $ PatClause fc lhs !(mkUniqueName rhs)
@@ -45,7 +46,7 @@ uniqueRHS (PatClause fc lhs rhs)
     mkUniqueName : RawImp -> Core RawImp
     mkUniqueName (IHole fc' rhsn)
         = do defs <- get Ctxt
-             rhsn' <- uniqueName defs [] rhsn
+             rhsn' <- uniqueHoleName defs [] rhsn
              pure (IHole fc' rhsn')
     mkUniqueName tm = pure tm -- it'll be a hole, but this is needed for covering
 uniqueRHS c = pure c
@@ -220,7 +221,7 @@ makeDefFromType loc opts n envlen ty
              -- We won't try splitting on these
              let pre_env = replicate envlen (Implicit loc True)
 
-             rhshole <- uniqueName defs [] (fnName False n ++ "_rhs")
+             rhshole <- uniqueHoleName defs [] (fnName False n ++ "_rhs")
              let initcs = PatClause loc
                                 (apply (IVar loc n) (pre_env ++ (map (IBindVar loc) argns)))
                                 (IHole loc rhshole)

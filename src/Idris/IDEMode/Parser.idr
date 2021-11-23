@@ -75,7 +75,7 @@ sexp
          pure (SExpList xs)
 
 ideParser : {e : _} ->
-            String -> Grammar SemanticDecorations Token e ty -> Either Error ty
+            String -> Grammar State Token e ty -> Either Error ty
 ideParser str p
     = do toks   <- mapFst (fromLexError (Virtual Interactive)) $ idelex str
          (_, _, (parsed, _)) <- mapFst (fromParsingErrors (Virtual Interactive)) $ parseWith p toks
