@@ -54,9 +54,9 @@ makeWith n srcline
               showRHSName n ++ "_rhs"
 
 export
-makeCase : Bool -> Name -> String -> String
+makeCase : Bool -> String -> String -> String
 makeCase brack n srcline
-    = let capp = ("case _ of", "case_val => ?" ++ show n) in
+    = let capp = ("case _ of", "case_val => ?" ++ n) in
           newLines capp
   where
     addBrackets : Bool -> String -> String
@@ -78,4 +78,4 @@ makeCase brack n srcline
                                       (prim__strTail str))
 
     newLines : (String, String) -> String
-    newLines capp = replaceStr 0 ("?" ++ show n) capp srcline
+    newLines capp = replaceStr 0 ("?" ++ n) capp srcline

@@ -581,7 +581,9 @@ data EditCmd : Type where
      MakeLemma : Bool -> Int ->
                  String -> -- hole name, without the question mark
                  EditCmd
-     MakeCase : Bool -> Int -> Name -> EditCmd
+     MakeCase : Bool -> Int ->
+                String -> --hole name, without the question mark
+                EditCmd
      MakeWith : Bool -> Int -> Name -> EditCmd
 
 public export

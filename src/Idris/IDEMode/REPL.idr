@@ -182,7 +182,7 @@ process (MakeLemma l n)
                $ Editing $ MakeLemma False (fromInteger l) n
 process (MakeCase l n)
     = replWrap $ Idris.REPL.process
-    $ Editing (MakeCase False (fromInteger l) (UN $ mkUserName n))
+    $ Editing (MakeCase False (fromInteger l) n)
 process (MakeWith l n)
     = replWrap $ Idris.REPL.process
     $ Editing (MakeWith False (fromInteger l) (UN $ mkUserName n))

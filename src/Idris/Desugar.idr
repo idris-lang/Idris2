@@ -323,7 +323,6 @@ mutual
   desugarB side ps (PHole fc br holename)
       = do when br $
               do syn <- get Syn
-                 let hole = UN (Hole holename)
                  put Syn (record { bracketholes $= (holename ::) } syn)
            pure $ IHole fc holename
   desugarB side ps (PType fc) = pure $ IType fc

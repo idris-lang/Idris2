@@ -538,7 +538,7 @@ processEdit (MakeLemma upd line name)
 processEdit (MakeCase upd line name)
     = do litStyle <- getLitStyle
          syn <- get Syn
-         let brack = elemBy (\x, y => dropNS x == y) name (UN . Hole <$> bracketholes syn)
+         let brack = name `elem` bracketholes syn
          Just src <- getSourceLine line
               | Nothing => pure (EditError "Source line not available")
          let Right l = unlit litStyle src

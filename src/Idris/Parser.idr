@@ -1878,7 +1878,7 @@ editCmd
   <|> do replCmd ["mc", "makecase"]
          upd <- option False (symbol "!" $> True)
          line <- intLit
-         n <- name
+         n <- holeName
          pure (MakeCase upd (fromInteger line) n)
   <|> do replCmd ["mw", "makewith"]
          upd <- option False (symbol "!" $> True)
