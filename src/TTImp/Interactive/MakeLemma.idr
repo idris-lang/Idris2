@@ -88,9 +88,11 @@ export
 makeLemma : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto s : Ref Syn SyntaxInfo} ->
-            FC -> Name -> Nat -> ClosedTerm ->
+            FC ->
+            (holeName : String) ->
+            Nat -> ClosedTerm ->
             Core (RawImp, RawImp)
 makeLemma loc n nlocs ty
     = do defs <- get Ctxt
          (args, ret) <- getArgs [] nlocs !(normalise defs [] ty)
-         pure (mkType loc args ret, mkApp loc n args)
+         pure (mkType loc args ret, mkApp loc (UN $ Basic n) args)
