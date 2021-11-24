@@ -21,10 +21,6 @@ import Idris.Parser.Let
 
 %default covering
 
-decorationFromBounded : OriginDesc -> Decoration -> WithBounds a -> ASemanticDecoration
-decorationFromBounded fname decor bnds
-   = ((fname, start bnds, end bnds), decor, Nothing)
-
 decorate : OriginDesc -> Decoration -> Rule a -> Rule a
 decorate fname decor rule = do
   res <- bounds rule
@@ -38,19 +34,19 @@ boundedNameDecoration fname decor bstr = ((fname, start bstr, end bstr)
 
 decorateBoundedNames : OriginDesc -> Decoration -> List (WithBounds Name) -> EmptyRule ()
 decorateBoundedNames fname decor bns
- = act $ MkState (map (boundedNameDecoration fname decor) bns) []
+  = act $ MkState (map (boundedNameDecoration fname decor) bns) []
 
 decorateBoundedName : OriginDesc -> Decoration -> WithBounds Name -> EmptyRule ()
 decorateBoundedName fname decor bn = actD (boundedNameDecoration fname decor bn)
 
 decorateKeywords : OriginDesc -> List (WithBounds a) -> EmptyRule ()
-decorateKeywords fname xs =
-  act $ MkState (map (decorationFromBounded fname Keyword) xs) []
+decorateKeywords fname xs
+  = act $ MkState (map (decorationFromBounded fname Keyword) xs) []
 
 dependentDecorate : OriginDesc -> Rule a -> (a -> Decoration) -> Rule a
 dependentDecorate fname rule decor = do
   res <- bounds rule
-  actD ((fname, (start res, end res)), decor res.val, Nothing)
+  actD (decorationFromBounded fname (decor res.val) res)
   pure res.val
 
 decoratedKeyword : OriginDesc -> String -> Rule ()

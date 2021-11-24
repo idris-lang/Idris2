@@ -368,7 +368,7 @@ getSuccessful {vars} fc rig opts mkHole env ty topty all
                            let base = maybe "arg"
                                             (\r => nameRoot (recname r) ++ "_rhs")
                                             (recData opts)
-                           hn <- uniqueName (map nameRoot vars) base
+                           hn <- uniqueHoleName defs (mapMaybe userNameRoot vars) base
                            (idx, tm) <- newMeta fc rig env (UN $ Hole hn) ty
                                                 (Hole (length env) (holeInit False))
                                                 False

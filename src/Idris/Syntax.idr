@@ -713,11 +713,6 @@ parameters {0 nm : Type} (toName : nm -> Name)
         = "let " ++ showCount rig ++ showPTermPrec d n ++ " : " ++ showPTermPrec d ty ++ " = "
                  ++ showPTermPrec d val ++ concatMap showAlt alts ++
                  " in " ++ showPTermPrec d sc
-      where
-        showAlt : PClause' nm -> String
-        showAlt (MkPatClause _ lhs rhs _) = " | " ++ showPTerm lhs ++ " => " ++ showPTerm rhs ++ ";"
-        showAlt (MkWithClause _ lhs rhs prf flags _) = " | <<with alts not possible>>"
-        showAlt (MkImpossible _ lhs) = " | " ++ showPTerm lhs ++ " impossible;"
   showPTermPrec _ (PCase _ tm cs)
         = "case " ++ showPTerm tm ++ " of { " ++
             showSep " ; " (map showCase cs) ++ " }"
@@ -997,11 +992,11 @@ HasNames a => HasNames (ANameMap a) where
 export
 HasNames SyntaxInfo where
   full gam syn
-      = pure $ record { ifaces = !(full gam (ifaces syn))
-                      } syn
+      = pure $ { ifaces := !(full gam (ifaces syn))
+               } syn
   resolved gam syn
-      = pure $ record { ifaces = !(resolved gam (ifaces syn))
-                      } syn
+      = pure $ { ifaces := !(resolved gam (ifaces syn))
+               } syn
 
 export
 initSyntax : SyntaxInfo

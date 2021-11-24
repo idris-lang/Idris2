@@ -79,10 +79,15 @@ documentation' = terminal "Expected documentation comment" $
                             DocComment d => Just d
                             _ => Nothing
 
+export
+decorationFromBounded : OriginDesc -> Decoration -> WithBounds a -> ASemanticDecoration
+decorationFromBounded fname decor bnds
+   = ((fname, start bnds, end bnds), decor, Nothing)
+
 documentation : OriginDesc -> Rule String
 documentation fname
   = do b <- bounds (some documentation')
-       actD ((fname, start b, end b), Comment, Nothing)
+       actD (decorationFromBounded fname Comment b)
        pure (unlines $ forget b.val)
 
 export

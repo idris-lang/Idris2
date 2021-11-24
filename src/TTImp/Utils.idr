@@ -10,6 +10,8 @@ import Data.List
 import Data.List1
 import Data.String
 
+import Idris.Syntax
+
 import Libraries.Utils.String
 
 %default covering
@@ -489,13 +491,11 @@ mutual
   substLocDecl fc' d = d
 
 nameNum : String -> (String, Maybe Int)
-nameNum str
-    = case span isDigit (reverse str) of
-           ("", _) => (str, Nothing)
-           (nums, pre)
-              => case unpack pre of
-                      ('_' :: rest) => (reverse (pack rest), Just $ cast (reverse nums))
-                      _ => (str, Nothing)
+nameNum str = case span isDigit (reverse str) of
+  ("", _) => (str, Nothing)
+  (nums, pre) => case unpack pre of
+    ('_' :: rest) => (reverse (pack rest), Just $ cast (reverse nums))
+    _ => (str, Nothing)
 
 nextNameNum : (String, Maybe Int) -> (String, Maybe Int)
 nextNameNum (str, mn) = (str, Just $ maybe 0 (1+) mn)
@@ -505,32 +505,24 @@ unNameNum (str, Nothing) = str
 unNameNum (str, Just n) = fastConcat [str, "_", show n]
 
 export
-uniqueName : {auto s : Ref Syn SyntaxInfo} ->
-             List String -> String -> Core String
-uniqueName used n
-    = do syn <- get Syn
-         pure $ loop (holeNames syn ++ used) (nameNum n)
-  where
+uniqueUN : Defs -> (String -> UserName) ->
+           List UserName -> String -> Core String
+uniqueUN defs un used = loop . nameNum where
 
-    loop : List String -> (String, Maybe Int) -> String
-    loop used nm =
-      let candidate = unNameNum nm in
-      if candidate `elem` used
-         then loop used (nextNameNum nm)
-         else candidate
+  loop : (String, Maybe Int) -> Core String
+  loop nn = do
+    let candidate = unNameNum nn
+    let n = un candidate
+    let test = case !(lookupTyName (UN n) (gamma defs)) of
+                 [] => n `elem` used
+                 _ => True
+    ifThenElse test
+      (loop $ nextNameNum nn)
+      (pure candidate)
 
 export
-uniqueUN : Defs -> List String -> String -> Core String
-uniqueUN defs used n
-    = if !usedName
-         then uniqueUN defs used (next n)
-         else pure n
-   where
-    usedName : Core Bool
-    usedName
-        = pure $ case !(lookupTyName (UN $ Basic n) (gamma defs)) of
-                      [] => n `elem` used
-                      _ => True
-
-    next : String -> String
-    next = unNameNum . nextNameNum . nameNum
+uniqueHoleName : {auto s : Ref Syn SyntaxInfo} ->
+                 Defs -> List UserName -> String -> Core String
+uniqueHoleName defs used n
+    = do syn <- get Syn
+         uniqueUN defs Hole (used ++ map Hole (holeNames syn)) n

@@ -523,7 +523,7 @@ processEdit (MakeLemma upd line name)
          syn <- get Syn
          case !(lookupDefTyName (UN $ Hole name) (gamma defs)) of
               [(n, nidx, Hole locs _, ty)] =>
-                  do (lty, lapp) <- makeLemma replFC name locs ty
+                  do (lty, lapp) <- makeLemma replFC n locs ty
                      pty <- pterm $ map defaultKindedName lty -- hack
                      papp <- pterm $ map defaultKindedName lapp -- hack
                      opts <- get ROpts

@@ -75,8 +75,8 @@ isWhitespace _              = False
 ||| and a list of tokens to update, work out the updates to do, apply them, and
 ||| return the result.
 doUpdates : {auto c : Ref Ctxt Defs} ->
-            {auto u : Ref UPD (List String)} ->
             {auto s : Ref Syn SyntaxInfo} ->
+            {auto u : Ref UPD (List String)} ->
             Defs -> Updates -> List SourcePart ->
             Core (List SourcePart)
 doUpdates defs ups [] = pure []   -- no more tokens to update, so we are done
@@ -121,7 +121,7 @@ doUpdates defs ups (Name n :: xs)
 -- and change the hole's name to the new one
 doUpdates defs ups (HoleName n :: xs)
     = do used <- get UPD
-         n' <- uniqueName used n
+         n' <- uniqueHoleName defs (Hole <$> used) n
          log "interaction.casesplit" 10 $ unlines
            [ "Used names: " ++ show used
            , "Used holes: " ++ show !(holeNames <$> get Syn)
@@ -137,8 +137,8 @@ doUpdates defs ups (x :: xs)
 -- Update the token list with the string replacements for each match, and return
 -- the newly generated strings.
 updateAll : {auto c : Ref Ctxt Defs} ->
-            {auto u : Ref UPD (List String)} ->
             {auto s : Ref Syn SyntaxInfo} ->
+            {auto u : Ref UPD (List String)} ->
             Defs -> List SourcePart -> List Updates ->
             Core (List String)
 updateAll defs l [] = pure []

@@ -609,7 +609,7 @@ mutual
     reflect fc defs lhs env (IUnquote tfc t)
         = throw (InternalError "Can't reflect an unquote: escapes should be lifted out")
     reflect fc defs lhs env (IRunElab tfc t)
-        = throw (InternalError "Can't reflect a %runelab")
+        = throw (InternalError "Can't reflect a %runElab")
     reflect fc defs lhs env (IPrimVal tfc t)
         = do fc' <- reflect fc defs lhs env tfc
              t' <- reflect fc defs lhs env t
@@ -633,7 +633,7 @@ mutual
         = do fc' <- reflect fc defs lhs env tfc
              ns' <- reflect fc defs lhs env ns
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "WithUnambigNames") [fc', ns', t']
+             appCon fc defs (reflectionttimp "IWithUnambigNames") [fc', ns', t']
 
   export
   Reflect IFieldUpdate where
