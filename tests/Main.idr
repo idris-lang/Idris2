@@ -188,7 +188,7 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
 idrisTestsSchemeEval : TestPool
 idrisTestsSchemeEval = MkTestPool "Scheme Evaluator" [] Nothing
      ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004",
-      "schemeeval005"]
+      "schemeeval005", "schemeeval006"]
 
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
