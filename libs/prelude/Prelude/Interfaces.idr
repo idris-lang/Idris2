@@ -375,9 +375,6 @@ any = foldMap @{%search} @{Any}
 public export
 all : Foldable t => (a -> Bool) -> t a -> Bool
 all = foldMap @{%search} @{All}
-  where
-    monoid : Monoid Bool
-    monoid = MkMonoid @{MkSemigroup (\x, y => x && y)} True
 
 namespace Num
   namespace Semigroup
