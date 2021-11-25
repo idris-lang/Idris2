@@ -20,13 +20,13 @@ data Fin : (n : Nat) -> Type where
 
 ||| Coerce between Fins with equal indices
 public export
-coerce : {n : Nat} -> (0 eq : m = n) -> Fin m -> Fin n
+coerce : {n : Nat} -> (0 eq : m = n) -> Fin m -> Fin n -- TODO: make linear
 coerce {n = S _} eq FZ = FZ
 coerce {n = Z} eq FZ impossible
 coerce {n = S _} eq (FS k) = FS (coerce (succInjective _ _ eq) k)
 coerce {n = Z} eq (FS k) impossible
 
-%transform "coerce-identity" coerce = replace {p = Fin}
+%transform "coerce-identity" coerce eq k = replace {p = Fin} eq k
 
 export
 Uninhabited (Fin Z) where
