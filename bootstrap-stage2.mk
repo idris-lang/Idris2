@@ -2,7 +2,7 @@ BOOTSTRAP_PREFIX = $(PWD)/bootstrap-build
 
 ifeq ($(OS), windows)
 	# IDRIS_PREFIX is only used to build IDRIS2_BOOT_PATH
-	IDRIS_PREFIX = $(cygpath -m "$BOOTSTRAP_PREFIX")
+	IDRIS_PREFIX = $(cygpath -m $(BOOTSTRAP_PREFIX))
 	SEP = ";"
 else
 	IDRIS_PREFIX = $(BOOTSTRAP_PREFIX)
