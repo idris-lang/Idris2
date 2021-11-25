@@ -78,11 +78,11 @@ prelude:
 base: prelude
 	${MAKE} -C libs/base IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
-network: prelude
-	${MAKE} -C libs/network IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-
 contrib: base
 	${MAKE} -C libs/contrib IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+
+network: contrib
+	${MAKE} -C libs/network IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 test-lib: contrib
 	${MAKE} -C libs/test IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
@@ -237,7 +237,7 @@ bootstrap: support
 		bootstrap/idris2_app/idris2.ss \
 		> bootstrap-build/idris2_app/idris2-boot.ss
 	$(SHELL) ./bootstrap-stage1-chez.sh
-	IDRIS2_CG="chez" $(SHELL) ./bootstrap-stage2.sh
+	$(MAKE) -f bootstrap-stage2.mk IDRIS2_CG="chez"
 
 # Bootstrapping using racket
 bootstrap-racket: support
@@ -247,7 +247,7 @@ bootstrap-racket: support
 		bootstrap/idris2_app/idris2.rkt \
 		> bootstrap-build/idris2_app/idris2-boot.rkt
 	$(SHELL) ./bootstrap-stage1-racket.sh
-	IDRIS2_CG="racket" $(SHELL) ./bootstrap-stage2.sh
+	$(MAKE) -f bootstrap-stage2.mk IDRIS2_CG="racket"
 
 bootstrap-test:
 	$(MAKE) test INTERACTIVE='' IDRIS2_PREFIX=${IDRIS2_BOOT_PREFIX}
