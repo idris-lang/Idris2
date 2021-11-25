@@ -1,0 +1,5 @@
+1/1: Building Issue1741 (Issue1741.idr)
+Main> foo n@(_) FZ = ?foo_rhs_0
+foo n@(_) (FS x) = ?foo_rhs_1
+Main> 
+Bye for now!
