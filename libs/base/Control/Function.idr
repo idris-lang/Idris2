@@ -2,7 +2,7 @@ module Control.Function
 
 ||| An injective function maps distinct elements to distinct elements.
 public export
-interface Injective (f : a -> b) where
+interface Injective (f : a -> b) | f where
   constructor MkInjective
   injective : {x, y : a} -> f x = f y -> x = y
 
