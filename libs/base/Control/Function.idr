@@ -1,5 +1,6 @@
 module Control.Function
 
+||| An injective function maps distinct elements to distinct elements.
 public export
 interface Injective (f : a -> b) where
   constructor MkInjective
