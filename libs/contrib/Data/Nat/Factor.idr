@@ -8,7 +8,6 @@ import Data.Nat.Equational
 
 %default total
 
-
 ||| Factor n p is a witness that p is indeed a factor of n,
 ||| i.e. there exists a q such that p * q = n.
 public export
@@ -80,7 +79,7 @@ oneSoleFactorOfOne (S (S k)) (CofactorExists Z prf) =
 oneSoleFactorOfOne (S (S k)) (CofactorExists (S j) prf) =
   absurd . uninhabited $
     trans
-      (succInjective 0 (j + S (j + (k * S j))) prf)
+      (injective prf)
       (plusCommutative j (S (j + (k * S j))))
 
 ||| Every natural number is factor of itself.
@@ -123,8 +122,7 @@ multOneSoleNeutral (S k) (S (S j)) prf =
         rewrite plusCommutative k j in
         rewrite sym $ plusAssociative j k (k * S j) in
         rewrite sym $ multRightSuccPlus k (S j) in
-        succInjective k (j + (S (S (j + (k * (S (S j))))))) $
-        succInjective (S k) (S (j + (S (S (j + (k * (S (S j)))))))) prf
+        inj S $ injective prf
 
 ||| If a is a factor of b and b is a factor of a, then a = b.
 public export

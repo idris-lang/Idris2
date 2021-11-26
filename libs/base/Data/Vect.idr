@@ -7,6 +7,7 @@ import public Data.Fin
 import public Data.Zippable
 
 import Decidable.Equality
+import Control.Function
 
 %default total
 
@@ -33,9 +34,16 @@ lengthCorrect []        = Refl
 lengthCorrect (_ :: xs) = rewrite lengthCorrect xs in Refl
 
 ||| If two vectors are equal, their heads and tails are equal
-export
 vectInjective : {0 xs : Vect n a} -> {0 ys : Vect m b} -> x::xs = y::ys -> (x = y, xs = ys)
 vectInjective Refl = (Refl, Refl)
+
+export
+{x : a} -> Injective (Vect.(::) x) where
+  injective Refl = Refl
+
+export
+{xs : Vect n a} -> Injective (\x => Vect.(::) x xs) where
+  injective Refl = Refl
 
 --------------------------------------------------------------------------------
 -- Indexing into vectors
