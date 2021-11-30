@@ -23,3 +23,7 @@ public export
 [InjFromComp] {f : a -> b} -> {g : b -> c} ->
   Injective (g . f) => Injective f where
     injective prf = injective {f = (g . f)} $ cong g prf
+
+public export
+[IdInjective] Injective Prelude.id where
+  injective = id
