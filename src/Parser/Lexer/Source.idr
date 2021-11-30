@@ -272,11 +272,18 @@ validSymbol = some (pred isOpChar)
 
 -- Valid symbols which have a special meaning so can't be operators
 public export
+reservedInfixSymbols : List String
+reservedInfixSymbols
+    = ["%", "\\", ":", "=", ":=", "$=", "|", "|||", "<-", "->", "=>", "?", "!",
+       "&", "**", "..", "~", "@"]
+
+-- Valid symbols which have a special meaning so can't be operators
+public export
 reservedSymbols : List String
 reservedSymbols
-    = symbols ++ groupSymbols ++ (groupClose <$> groupSymbols) ++
-      ["%", "\\", ":", "=", ":=", "|", "|||", "<-", "->", "=>", "?", "!",
-       "&", "**", "..", "~", "@"]
+    = symbols
+    ++ groupSymbols ++ (groupClose <$> groupSymbols)
+    ++ reservedInfixSymbols
 
 fromBinLit : String -> Integer
 fromBinLit str

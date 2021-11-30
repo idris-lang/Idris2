@@ -2041,10 +2041,11 @@ docArgCmd parseCmd command doc = (names, DocArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      dir <- mustWork $ Keyword <$> anyKeyword
-                    <|> Symbol <$> anyReservedSymbol
-                               <* eoi -- needed so that we don't capture `(<$)`
-                    <|> APTerm <$> typeExpr pdef (Virtual Interactive) init
+      dir <- mustWork $
+        Keyword <$> anyKeyword
+        <|> Symbol <$> (anyReservedSymbol <* eoi
+                       <|> parens (Virtual Interactive) anyReservedSymbol <* eoi)
+        <|> APTerm <$> typeExpr pdef (Virtual Interactive) init
       pure (command dir)
 
 declsArgCmd : ParseCmd -> (List PDecl -> REPLCmd) -> String -> CommandDefinition
