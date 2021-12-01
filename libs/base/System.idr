@@ -220,3 +220,8 @@ exitFailure = exitWith (ExitFailure 1)
 export
 exitSuccess : HasIO io => io a
 exitSuccess = exitWith ExitSuccess
+
+||| Print the error message and call exitFailure
+export
+die : HasIO io => String -> io a
+die str = do putStrLn str; exitFailure
