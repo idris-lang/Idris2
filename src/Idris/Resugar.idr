@@ -166,10 +166,10 @@ mutual
               "::" => case sugarApp (unbracket r) of
                 PList fc nilFC xs => pure $ PList fc nilFC ((opFC, unbracketApp l) :: xs)
                 _           => Nothing
-              ":<" => case sugarApp (unbracket r) of
+              ":<" => case sugarApp (unbracket l) of
                         PSnocList fc nilFC xs => pure $ PSnocList fc nilFC
                                                   -- use a snoc list here in a future version
-                                                  (xs ++ [(opFC, unbracketApp l)])
+                                                  (xs ++ [(opFC, unbracketApp r)])
                         _                     => Nothing
               "rangeFromTo" => pure $ PRange fc (unbracket l) Nothing (unbracket r)
               "rangeFromThen" => pure $ PRangeStream fc (unbracket l) (Just $ unbracket r)
