@@ -435,10 +435,10 @@ mutual
            {- TODO: reverse ranges -}
            b <- bounds (symbol "]")
            pure $
-             let xs : List (WithBounds PTerm)
+             let xs : SnocList (WithBounds PTerm)
                     = case mHeadTail of
-                        Nothing      => []
-                        Just (hd,tl) => hd ++ [ tl <$ b]
+                        Nothing      => [<]
+                        Just (hd,tl) => ([<] <>< hd) :< (tl <$ b)
                  fc = boundToFC fname (mergeBounds s b)
                  nilFC = ifThenElse (null xs) fc (boundToFC fname s)
              in PSnocList fc nilFC (map (\ t => (boundToFC fname t, t.val)) xs) --)

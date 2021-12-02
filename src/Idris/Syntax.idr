@@ -14,6 +14,7 @@ import TTImp.TTImp
 
 import Libraries.Data.ANameMap
 import Data.List
+import Data.SnocList
 import Data.Maybe
 import Libraries.Data.NameMap
 import Libraries.Data.SortedMap
@@ -115,7 +116,7 @@ mutual
        PIdiom : FC -> PTerm' nm -> PTerm' nm
        PList : (full, nilFC : FC) -> List (FC, PTerm' nm) -> PTerm' nm
                                         -- ^   v location of the conses/snocs
-       PSnocList : (full, nilFC : FC) -> List ((FC, PTerm' nm)) -> PTerm' nm
+       PSnocList : (full, nilFC : FC) -> SnocList ((FC, PTerm' nm)) -> PTerm' nm
        PPair : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
        PDPair : (full, opFC : FC) -> PTerm' nm -> PTerm' nm -> PTerm' nm -> PTerm' nm
        PUnit : FC -> PTerm' nm
@@ -776,7 +777,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (PList _ _ xs)
         = "[" ++ showSep ", " (map (showPTermPrec d . snd) xs) ++ "]"
   showPTermPrec d (PSnocList _ _ xs)
-        = "[<" ++ showSep ", " (map (showPTermPrec d . snd) xs) ++ "]"
+        = "[<" ++ showSep ", " (map (showPTermPrec d . snd) (xs <>> [])) ++ "]"
   showPTermPrec d (PPair _ l r) = "(" ++ showPTermPrec d l ++ ", " ++ showPTermPrec d r ++ ")"
   showPTermPrec d (PDPair _ _ l (PImplicit _) r) = "(" ++ showPTermPrec d l ++ " ** " ++ showPTermPrec d r ++ ")"
   showPTermPrec d (PDPair _ _ l ty r) = "(" ++ showPTermPrec d l ++ " : " ++ showPTermPrec d ty ++
@@ -1168,7 +1169,7 @@ mapPTermM f = goPTerm where
       PList fc nilFC <$> goPairedPTerms xs
       >>= f
     goPTerm (PSnocList fc nilFC xs) =
-      PSnocList fc nilFC <$> goPairedPTerms xs
+      PSnocList fc nilFC <$> goPairedSnocPTerms xs
       >>= f
     goPTerm (PPair fc x y) =
       PPair fc <$> goPTerm x
@@ -1335,6 +1336,12 @@ mapPTermM f = goPTerm where
     goPairedPTerms ((a, t) :: ts) =
        (::) . MkPair a <$> goPTerm t
                        <*> goPairedPTerms ts
+
+    goPairedSnocPTerms : SnocList (x, PTerm' nm) -> Core (SnocList (x, PTerm' nm))
+    goPairedSnocPTerms [<]            = pure [<]
+    goPairedSnocPTerms (ts :< (a, t)) =
+       (:<) <$> goPairedSnocPTerms ts
+            <*> MkPair a <$> goPTerm t
 
     go3TupledPTerms : List (x, y, PTerm' nm) -> Core (List (x, y, PTerm' nm))
     go3TupledPTerms [] = pure []

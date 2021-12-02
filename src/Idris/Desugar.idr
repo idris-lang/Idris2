@@ -368,7 +368,7 @@ mutual
   desugarB side ps (PList fc nilFC args)
       = expandList side ps nilFC args
   desugarB side ps (PSnocList fc nilFC args)
-      = expandSnocList side ps nilFC (reverse args)
+      = expandSnocList side ps nilFC args
   desugarB side ps (PPair fc l r)
       = do l' <- desugarB side ps l
            r' <- desugarB side ps r
@@ -472,9 +472,10 @@ mutual
                {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto m : Ref MD Metadata} ->
-               Side -> List Name -> (nilFC : FC) -> List (FC, PTerm) -> Core RawImp
-  expandSnocList side ps nilFC [] = pure (IVar nilFC (UN $ Basic "Lin"))
-  expandSnocList side ps nilFC ((consFC, x) :: xs)
+               Side -> List Name -> (nilFC : FC) ->
+               SnocList (FC, PTerm) -> Core RawImp
+  expandSnocList side ps nilFC [<] = pure (IVar nilFC (UN $ Basic "Lin"))
+  expandSnocList side ps nilFC (xs :< (consFC, x))
       = pure $ apply (IVar consFC (UN $ Basic ":<"))
                 [!(expandSnocList side ps nilFC xs) , !(desugarB side ps x)]
 
