@@ -2,5 +2,4 @@
 Main> Main.MkANat : {default 0 _ : Nat} -> ANat
 Main> Main.ANat.theNat : ANat -> Nat
 Main> 0
-Main> 
-Bye for now!
+Main> Bye for now!
