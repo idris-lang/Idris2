@@ -211,6 +211,7 @@ modules =
 
     Protocol.IDE,
     Protocol.Hex,
+    Protocol.SExp,
 
     TTImp.BindImplicits,
     TTImp.Elab,
