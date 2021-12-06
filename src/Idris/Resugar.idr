@@ -497,7 +497,7 @@ mutual
                 (mapMaybe id ds')))
   toPDecl (IRecord fc _ vis r)
       = do (n, ps, con, fs) <- toPRecord r
-           pure (Just (PRecord fc "" vis n ps con fs))
+           pure (Just (PRecord fc "" vis Nothing n ps con fs))     -- TODO: totality req ???
   toPDecl (INamespace fc ns ds)
       = do ds' <- traverse toPDecl ds
            pure (Just (PNamespace fc ns (mapMaybe id ds')))

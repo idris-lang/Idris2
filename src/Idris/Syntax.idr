@@ -270,6 +270,12 @@ mutual
        MkPLater : FC -> (tyname : Name) -> (tycon : PTerm' nm) -> PDataDecl' nm
 
   export
+  addDataOpt : DataOpt -> PDataDecl' a -> PDataDecl' a
+  addDataOpt opt (MkPData fc tyname tycon       opts  datacons) =
+                  MkPData fc tyname tycon (opt::opts) datacons
+  addDataOpt opt later@(MkPLater _ _ _) = later
+
+  export
   getPDataDeclLoc : PDataDecl' nm -> FC
   getPDataDeclLoc (MkPData fc _ _ _ _) = fc
   getPDataDeclLoc (MkPLater fc _ _) = fc
@@ -447,7 +453,7 @@ mutual
                          PDecl' nm
        PRecord : FC ->
                  (doc : String) ->
-                 Visibility ->
+                 Visibility -> Maybe TotalReq ->
                  Name ->
                  (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
                  (conName : Maybe Name) ->
@@ -474,7 +480,7 @@ mutual
   getPDeclLoc (PReflect fc _) = fc
   getPDeclLoc (PInterface fc _ _ _ _ _ _ _ _) = fc
   getPDeclLoc (PImplementation fc _ _ _ _ _ _ _ _ _ _) = fc
-  getPDeclLoc (PRecord fc _ _ _ _ _ _) = fc
+  getPDeclLoc (PRecord fc _ _ _ _ _ _ _) = fc
   getPDeclLoc (PMutual fc _) = fc
   getPDeclLoc (PFixity fc _ _ _) = fc
   getPDeclLoc (PNamespace fc _ _) = fc
@@ -1284,10 +1290,10 @@ mapPTermM f = goPTerm where
                                   <*> pure mn
                                   <*> pure ns
                                   <*> goMPDecls mps
-    goPDecl (PRecord fc doc v n nts mn fs) =
-      PRecord fc doc v n <$> go4TupledPTerms nts
-                         <*> pure mn
-                         <*> goPFields fs
+    goPDecl (PRecord fc doc v tot n nts mn fs) =
+      PRecord fc doc v tot n <$> go4TupledPTerms nts
+                             <*> pure mn
+                             <*> goPFields fs
     goPDecl (PMutual fc ps) = PMutual fc <$> goPDecls ps
     goPDecl p@(PFixity _ _ _ _) = pure p
     goPDecl (PNamespace fc strs ps) = PNamespace fc strs <$> goPDecls ps

@@ -38,6 +38,8 @@ processDataOpt fc ndef External
     = setExternal fc ndef True
 processDataOpt fc ndef NoNewtype
     = pure ()
+processDataOpt fc ndef (DataTotalReq treq)
+    = setFlag fc ndef (SetTotal treq)
 
 checkRetType : {auto c : Ref Ctxt Defs} ->
                Env Term vars -> NF vars ->

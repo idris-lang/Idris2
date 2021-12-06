@@ -307,6 +307,7 @@ mutual
        UniqueSearch : DataOpt -- auto implicit search must check result is unique
        External : DataOpt -- implemented externally
        NoNewtype : DataOpt -- don't apply newtype optimisation
+       DataTotalReq : TotalReq -> DataOpt -- totality requirement
 
   export
   Eq DataOpt where
@@ -315,6 +316,7 @@ mutual
     (==) UniqueSearch UniqueSearch = True
     (==) External External = True
     (==) NoNewtype NoNewtype = True
+    (==) (DataTotalReq treq1) (DataTotalReq treq2) = treq1 == treq2
     (==) _ _ = False
 
   public export
@@ -355,6 +357,7 @@ mutual
   ImpRecord : Type
   ImpRecord = ImpRecord' Name
 
+  -- TODO: add totality req here ????
   public export
   data ImpRecord' : Type -> Type where
        MkImpRecord : FC -> (n : Name) ->
@@ -1201,6 +1204,8 @@ mutual
     toBuf b UniqueSearch = tag 2
     toBuf b External = tag 3
     toBuf b NoNewtype = tag 4
+    toBuf b (DataTotalReq treq)
+        = do tag 5 ; toBuf b treq
 
     fromBuf b
         = case !getTag of
@@ -1210,6 +1215,9 @@ mutual
                2 => pure UniqueSearch
                3 => pure External
                4 => pure NoNewtype
+               5 => do
+                      treq <- fromBuf b
+                      pure (DataTotalReq treq)
                _ => corrupt "DataOpt"
 
   export

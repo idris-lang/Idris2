@@ -859,6 +859,15 @@ mutual
 
   desugarDecl ps (PData fc doc vis ddecl)
       = pure [IData fc vis !(desugarData ps doc ddecl)]
+{-
+  desugarDecl ps (PData fc doc vis mbtot ddecl) = case mbtot of
+    Nothing  => pure [IData fc vis !(desugarData ps doc ddecl)]
+    Just tot => do
+      -- #1404: Totality annotation for data type definitions
+      pdatadecl <- (desugarData ps doc ddecl)
+      pure [IData fc vis (addDataOpt (DataTotalReq tot) pdatadecl)]
+-}
+
   desugarDecl ps (PParameters fc params pds)
       = do pds' <- traverse (desugarDecl (ps ++ map fst params)) pds
            params' <- traverse (\(n, rig, i, ntm) => do tm' <- desugar AnyExpr ps ntm
@@ -971,7 +980,8 @@ mutual
       isNamed Nothing = False
       isNamed (Just _) = True
 
-  desugarDecl ps (PRecord fc doc vis tn params conname_in fields)
+  -- TODO: handle totality annotation on records, too
+  desugarDecl ps (PRecord fc doc vis mbtot tn params conname_in fields)
       = do addDocString tn doc
            params' <- traverse (\ (n,c,p,tm) =>
                           do tm' <- desugar AnyExpr ps tm
