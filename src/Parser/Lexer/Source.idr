@@ -161,7 +161,7 @@ mutual
         ]
 
 blockComment : Lexer
-blockComment = is '{' <+> is '-' <+> (eof <|> toEndComment 1)
+blockComment = is '{' <+> is '-' <+> many (is '-') <+> (eof <|> toEndComment 1)
 
 docComment : Lexer
 docComment = is '|' <+> is '|' <+> is '|' <+> many (isNot '\n')
