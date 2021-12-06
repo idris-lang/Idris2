@@ -5,55 +5,15 @@ import Core.Context
 import Core.Context.Log
 import Core.Name
 import public Idris.REPL.Opts
-import Libraries.Utils.Hex
+import Protocol.Hex
 
 import System.File
 
+import public Protocol.IDE
+import public Protocol.SExp
+
 %default total
 
-public export
-data SExp = SExpList (List SExp)
-          | StringAtom String
-          | BoolAtom Bool
-          | IntegerAtom Integer
-          | SymbolAtom String
-
-public export
-data DocMode = Overview | Full
-
-public export
-data IDECommand
-     = Interpret String
-     | LoadFile String (Maybe Integer)
-     | TypeOf String (Maybe (Integer, Integer))
-     | NameAt String (Maybe (Integer, Integer))
-     | CaseSplit Integer Integer String
-     | AddClause Integer String
-     -- deprecated: | AddProofClause
-     | AddMissing Integer String
-     | ExprSearch Integer String (List String) Bool
-     | ExprSearchNext
-     | GenerateDef Integer String
-     | GenerateDefNext
-     | MakeLemma Integer String
-     | MakeCase Integer String
-     | MakeWith Integer String
-     | DocsFor String (Maybe DocMode)
-     | Directive String
-     | Apropos String
-     | Metavariables Integer
-     | WhoCalls String
-     | CallsWho String
-     | BrowseNamespace String
-     | NormaliseTerm     String -- TODO: implement a Binary lib
-     | ShowTermImplicits String -- and implement Binary (Term)
-     | HideTermImplicits String -- for these four defintions,
-     | ElaborateTerm     String -- then change String to Term, as in idris1
-     | PrintDefinition String
-     | ReplCompletions String
-     | EnableSyntax Bool
-     | Version
-     | GetOptions
 
 readHints : List SExp -> Maybe (List String)
 readHints [] = Just []
@@ -196,26 +156,6 @@ getMsg (SExpList [cmdexp, IntegerAtom num])
    = do cmd <- getIDECommand cmdexp
         pure (cmd, num)
 getMsg _ = Nothing
-
-escape : String -> String
-escape = pack . concatMap escapeChar . unpack
-  where
-    escapeChar : Char -> List Char
-    escapeChar '\\' = ['\\', '\\']
-    escapeChar '"'  = ['\\', '\"']
-    escapeChar c    = [c]
-
-export
-Show SExp where
-  show (SExpList xs) = assert_total $ "(" ++ showSep " " (map show xs) ++ ")"
-  show (StringAtom str) = "\"" ++ escape str ++ "\""
-  show (BoolAtom b) = ":" ++ show b
-  show (IntegerAtom i) = show i
-  show (SymbolAtom s) = ":" ++ s
-
-public export
-interface SExpable a where
-  toSExp : a -> SExp
 
 export
 SExpable IDECommand where

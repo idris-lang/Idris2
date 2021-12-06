@@ -21,37 +21,6 @@ import Libraries.Data.PosMap
 -- Text properties supported by the IDE mode
 ------------------------------------------------------------------------
 
-data Formatting : Type where
-  Bold      : Formatting
-  Italic    : Formatting
-  Underline : Formatting
-
--- CAREFUL: this instance is used in SExpable Formatting. If you change
--- it then you need to fix the SExpable implementation in order not to
--- break the IDE mode.
-Show Formatting where
-  show Bold = "bold"
-  show Italic = "italic"
-  show Underline = "underline"
-
--- At most one decoration & one formatting
--- (We could use `These` to guarantee non-emptiness but I am not
--- convinced this will stay being just 2 fields e.g. the emacs mode
--- has support for tagging things as errors, adding links, etc.)
-public export
-record Properties where
-  constructor MkProperties
-  decor  : Maybe Decoration
-  format : Maybe Formatting
-
-export
-mkDecor : Decoration -> Properties
-mkDecor dec = MkProperties (Just dec) Nothing
-
-export
-mkFormat : Formatting -> Properties
-mkFormat = MkProperties Nothing . Just
-
 export
 syntaxToProperties : IdrisSyntax -> Maybe Properties
 syntaxToProperties syn = mkDecor <$> syntaxToDecoration syn
@@ -94,7 +63,10 @@ SExpable Properties where
     , toSExp <$> dec
     ]
 
-
+-- TODO: refactor into Protocol.IDE
+-- issue: think about the `location` field, since we don't want
+-- to introduce a dependency of Protocol.IDE on Core.FC
+-- We'll probably need to have another filename type and a conversion into it
 record Highlight where
   constructor MkHighlight
   location : NonEmptyFC

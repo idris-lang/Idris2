@@ -190,7 +190,6 @@ modules =
     Libraries.Text.Token,
 
     Libraries.Utils.Binary,
-    Libraries.Utils.Hex,
     Libraries.Utils.Octal,
     Libraries.Utils.Path,
     Libraries.Utils.Scheme,
@@ -209,6 +208,9 @@ modules =
 
     Parser.Rule.Package,
     Parser.Rule.Source,
+
+    Protocol.IDE,
+    Protocol.Hex,
 
     TTImp.BindImplicits,
     TTImp.Elab,

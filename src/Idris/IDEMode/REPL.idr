@@ -20,7 +20,7 @@ import Idris.IDEMode.Holes
 import Idris.IDEMode.Parser
 import Idris.IDEMode.SyntaxHighlight
 
-import Libraries.Utils.Hex
+import Protocol.Hex
 import Libraries.Utils.Path
 
 import Data.List

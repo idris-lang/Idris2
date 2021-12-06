@@ -1,0 +1,11 @@
+package idris-protocols
+version = 0.0.1
+
+modules
+  = Protocol.Hex
+  , Protocol.IDE
+  , Protocol.SExp
+
+--depends =
+
+sourcedir = "src"
