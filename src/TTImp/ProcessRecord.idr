@@ -205,12 +205,12 @@ elabRecord {vars} eopts fc env nest newns vis tn_in params conName_in fields
                    --
                    -- In upds, we use unNameNS (as opposed to rfNameNS or both)
                    -- because the field types will probably mention the UN versions of the projections;
-                   -- but only when prefix record projections are enabled, otherwise 
+                   -- but only when prefix record projections are enabled, otherwise
                    -- dependent records won't typecheck!
                    --
-                   -- With the braching on this flag, this change of using `rfNamesNS` remains backward compatible 
+                   -- With the braching on this flag, this change of using `rfNamesNS` remains backward compatible
                    -- (though the only difference I'm aware is in the output of the `:doc` command)
-                   prefix_flag <- isPrefixRecordProjections 
+                   prefix_flag <- isPrefixRecordProjections
                    let upds' = if prefix_flag
                          then (n, IApp bfc (IVar bfc unNameNS) (IVar bfc rname)) :: upds
                          else (n, IApp bfc (IVar bfc rfNameNS) (IVar bfc rname)) :: upds
