@@ -32,7 +32,7 @@ asHex n = pack $ asHex' n []
   where
     asHex' : Bits64 -> List Char -> List Char
     asHex' 0 hex = hex
-    asHex' n hex = asHex' (assert_smaller n (n `shiftR` fromNat 4)) (hexDigit (n .&. 0xf) :: hex)
+    asHex' n hex = asHex' (assert_smaller n (n `shiftR` 4)) (hexDigit (n .&. 0xf) :: hex)
 
 export
 leftPad : Char -> Nat -> String -> String
