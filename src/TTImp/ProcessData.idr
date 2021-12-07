@@ -449,13 +449,6 @@ processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in ty_raw opts c
                               (Just (gType dfc u))
          let fullty = abstractEnvType dfc env ty
 
-         -- #1404
-         case mbtot of
-           Nothing  => pure ()
-           Just tot => do
-             log "declare.data" 5 $ "setting totality flag for " ++ show n
-             setFlag fc n (SetTotal tot)
-
          -- If n exists, check it's the same type as we have here, and is
          -- a data constructor.
          -- When looking up, note the data types which were undefined at the
@@ -524,3 +517,10 @@ processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in ty_raw opts c
 
          calcConInfo fc (Resolved tidx) cons
          traverse_ updateErasable (Resolved tidx :: connames)
+
+         -- #1404
+         case mbtot of
+           Nothing  => pure ()
+           Just tot => do
+             log "declare.data" 5 $ "setting totality flag for " ++ show n
+             setFlag fc n (SetTotal tot)
