@@ -252,6 +252,7 @@ idePutStrLn outf i msg
     = send outf (SExpList [SymbolAtom "write-string",
                 toSExp msg, toSExp i])
 
+-- TODO: refactor SExp argument into `Protocol.IDE.Result`
 returnFromIDE : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
 returnFromIDE outf i msg
     = do send outf (SExpList [SymbolAtom "return", msg, toSExp i])
@@ -262,14 +263,6 @@ printIDEResult outf i msg
   $ SExpList [ SymbolAtom "ok"
              , toSExp msg
              ]
-
-export
-SExpable a => SExpable (Span a) where
-  toSExp (MkSpan start width ann)
-    = SExpList [ IntegerAtom (cast start)
-               , IntegerAtom (cast width)
-               , toSExp ann
-               ]
 
 printIDEResultWithHighlight :
   {auto c : Ref Ctxt Defs} ->
@@ -283,6 +276,7 @@ printIDEResultWithHighlight outf i (msg, spans) = do
                , toSExp spans
                ]
 
+-- TODO: refactor to construct an error response
 printIDEError : Ref ROpts REPLOpts => {auto c : Ref Ctxt Defs} -> File -> Integer -> Doc IdrisAnn -> Core ()
 printIDEError outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "error", toSExp !(renderWithoutColor msg) ])
 

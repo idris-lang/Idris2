@@ -90,6 +90,8 @@ SExpable Highlight where
                           ]
                ]
 
+-- TODO: delete these once we refactor into Intermediate messages
+-- So that it takes `msg : ReplyPayload`
 ||| Output some data using current dialog index
 export
 printOutput : {auto c : Ref Ctxt Defs} ->

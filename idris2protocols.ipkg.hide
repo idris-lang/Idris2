@@ -7,6 +7,7 @@ modules
   , Protocol.IDE.Command
   , Protocol.IDE.Decoration
   , Protocol.SExp
+  , Libraries.Data.Span
 
 --depends =
 
