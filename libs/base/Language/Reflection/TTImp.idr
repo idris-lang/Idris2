@@ -164,13 +164,13 @@ mutual
   data Decl : Type where
        IClaim : FC -> Count -> Visibility -> List FnOpt ->
                 ITy -> Decl
-       IData : FC -> Visibility -> Data -> Decl
+       IData : FC -> Visibility -> Data -> Maybe TotalReq -> Decl
        IDef : FC -> Name -> List Clause -> Decl
        IParameters : FC -> List (Name, Count, PiInfo TTImp, TTImp) ->
                      List Decl -> Decl
        IRecord : FC ->
                  Maybe String -> -- nested namespace
-                 Visibility -> Record -> Decl
+                 Visibility -> Maybe TotalReq -> Record -> Decl
        INamespace : FC -> Namespace -> List Decl -> Decl
        ITransform : FC -> Name -> TTImp -> TTImp -> Decl
        IRunElabDecl : FC -> TTImp -> Decl
