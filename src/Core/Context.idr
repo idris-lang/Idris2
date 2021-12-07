@@ -220,14 +220,16 @@ lookupContextEntry n ctxt
                   | Nothing => pure Nothing
          lookupContextEntry (Resolved idx) ctxt
 
-||| Check if the name has been hidden by the `%hide` directive.
+||| Checks if the given name has been hidden by the `%hide` directive.
 export
 isHidden : Name -> Context -> Bool
 isHidden fulln ctxt = isJust $ lookup fulln (hidden ctxt)
 
+||| Looks up up a possibly hidden name in the context. The first `Bool` argument
+||| controls wether names hidden by `%hide` are returned too (True=yes, False=no).
 export
 lookupCtxtName' : Bool -> Name -> Context -> Core (List (Name, Int, GlobalDef))
-lookupCtxtName' allow_hidden n ctxt
+lookupCtxtName' allowHidden n ctxt
     = case userNameRoot n of
            Nothing => do Just (i, res) <- lookupCtxtExactI n ctxt
                               | Nothing => pure []
@@ -242,7 +244,7 @@ lookupCtxtName' allow_hidden n ctxt
     resn (_, i, _) = i
 
     hlookup : Name -> NameMap () -> Maybe ()
-    hlookup fulln hiddens = if allow_hidden 
+    hlookup fulln hiddens = if allowHidden
       then Nothing
       else lookup fulln hiddens
 
@@ -269,10 +271,12 @@ lookupCtxtName' allow_hidden n ctxt
                       else lookupPossibles acc ps
               _ => lookupPossibles acc ps
 
+||| Looks up a name in the context, ignoring names hidden by `%hide`.
 export
 lookupCtxtName : Name -> Context -> Core (List (Name, Int, GlobalDef))
 lookupCtxtName = lookupCtxtName' False
 
+||| Looks up a (possible hidden) name in the context.
 export
 lookupHiddenCtxtName : Name -> Context -> Core (List (Name, Int, GlobalDef))
 lookupHiddenCtxtName = lookupCtxtName' True
