@@ -355,7 +355,6 @@ mutual
   ImpRecord : Type
   ImpRecord = ImpRecord' Name
 
-  -- TODO: add totality req here ????
   public export
   data ImpRecord' : Type -> Type where
        MkImpRecord : FC -> (n : Name) ->
