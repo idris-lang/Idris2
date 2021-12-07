@@ -164,7 +164,7 @@ mutual
   data Decl : Type where
        IClaim : FC -> Count -> Visibility -> List FnOpt ->
                 ITy -> Decl
-       IData : FC -> Visibility -> Data -> Maybe TotalReq -> Decl
+       IData : FC -> Visibility -> Maybe TotalReq -> Data -> Decl
        IDef : FC -> Name -> List Clause -> Decl
        IParameters : FC -> List (Name, Count, PiInfo TTImp, TTImp) ->
                      List Decl -> Decl
