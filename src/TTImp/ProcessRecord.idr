@@ -51,11 +51,9 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params conName_in fiel
              | Nothing => throw (InternalError ("Adding " ++ show tn ++ "failed"))
 
          -- #1404
-         case mbtot of
-           Nothing  => pure ()
-           Just tot => do
-             log "declare.record" 5 $ "setting totality flag for " ++ show tn
-             setFlag fc tn (SetTotal tot)
+         whenJust mbtot $ \tot => do
+           log "declare.record" 5 $ "setting totality flag for " ++ show tn
+           setFlag fc tn (SetTotal tot)
 
          -- Go into new namespace, if there is one, for getters
          case newns of

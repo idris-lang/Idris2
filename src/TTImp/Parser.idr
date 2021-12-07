@@ -93,7 +93,7 @@ totalityOpt
 
 dataVisOpt : EmptyRule (Visibility, Maybe TotalReq)
 dataVisOpt
-    = do { vis <- visOption   ; mbtot <- option Nothing (Just <$> totalityOpt) ; pure (vis, mbtot) }
+    = do { vis <- visOption   ; mbtot <- optional totalityOpt ; pure (vis, mbtot) }
   <|> do { tot <- totalityOpt ; vis <- visibility ; pure (vis, Just tot) }
   <|> pure (Private, Nothing)
 
