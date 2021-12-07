@@ -433,7 +433,8 @@ mutual
                      List (ImpDecl' nm) -> ImpDecl' nm
        IRecord : FC ->
                  Maybe String -> -- nested namespace
-                 Visibility -> ImpRecord' nm -> ImpDecl' nm
+                 Visibility -> Maybe TotalReq ->
+                 ImpRecord' nm -> ImpDecl' nm
        INamespace : FC -> Namespace -> List (ImpDecl' nm) -> ImpDecl' nm
        ITransform : FC -> Name -> RawImp' nm -> RawImp' nm -> ImpDecl' nm
        IRunElabDecl : FC -> RawImp' nm -> ImpDecl' nm
@@ -455,7 +456,7 @@ mutual
     show (IParameters _ ps ds)
         = "parameters " ++ show ps ++ "\n\t" ++
           showSep "\n\t" (assert_total $ map show ds)
-    show (IRecord _ _ _ d) = show d
+    show (IRecord _ _ _ _ d) = show d
     show (INamespace _ ns decls)
         = "namespace " ++ show ns ++
           showSep "\n" (assert_total $ map show decls)
@@ -761,7 +762,7 @@ definedInBlock ns decls =
     defName ns (IData _ _ (MkImpLater _ n _)) = [expandNS ns n]
     defName ns (IParameters _ _ pds) = concatMap (defName ns) pds
     defName ns (INamespace _ n nds) = concatMap (defName (ns <.> n)) nds
-    defName ns (IRecord _ fldns _ (MkImpRecord _ n _ con flds))
+    defName ns (IRecord _ fldns _ _ (MkImpRecord _ n _ con flds))
         = expandNS ns con :: all
       where
         fldns' : Namespace
@@ -845,7 +846,7 @@ namespace ImpDecl
   getFC (IData fc _ _) = fc
   getFC (IDef fc _ _) = fc
   getFC (IParameters fc _ _) = fc
-  getFC (IRecord fc _ _ _ ) = fc
+  getFC (IRecord fc _ _ _ _) = fc
   getFC (INamespace fc _ _) = fc
   getFC (ITransform fc _ _ _) = fc
   getFC (IRunElabDecl fc _) = fc
@@ -1319,8 +1320,8 @@ mutual
         = do tag 2; toBuf b fc; toBuf b n; toBuf b xs
     toBuf b (IParameters fc vis d)
         = do tag 3; toBuf b fc; toBuf b vis; toBuf b d
-    toBuf b (IRecord fc ns vis r)
-        = do tag 4; toBuf b fc; toBuf b ns; toBuf b vis; toBuf b r
+    toBuf b (IRecord fc ns vis mbtot r)
+        = do tag 4; toBuf b fc; toBuf b ns; toBuf b vis; toBuf b mbtot; toBuf b r
     toBuf b (INamespace fc xs ds)
         = do tag 5; toBuf b fc; toBuf b xs; toBuf b ds
     toBuf b (ITransform fc n lhs rhs)
@@ -1349,8 +1350,9 @@ mutual
                        d <- fromBuf b
                        pure (IParameters fc vis d)
                4 => do fc <- fromBuf b; ns <- fromBuf b;
-                       vis <- fromBuf b; r <- fromBuf b
-                       pure (IRecord fc ns vis r)
+                       vis <- fromBuf b; mbtot <- fromBuf b;
+                       r <- fromBuf b
+                       pure (IRecord fc ns vis mbtot r)
                5 => do fc <- fromBuf b; xs <- fromBuf b
                        ds <- fromBuf b
                        pure (INamespace fc xs ds)

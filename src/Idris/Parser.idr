@@ -1181,7 +1181,7 @@ totalityOpt fname
 dataVisOpt : OriginDesc -> EmptyRule (Visibility, Maybe TotalReq)
 dataVisOpt fname
     = do { vis <- visOption   fname ; mbtot <- option Nothing (Just <$> totalityOpt fname) ; pure (vis, mbtot) }
-  <|> do { tot <- totalityOpt fname ; vis <- visOption fname ; pure (vis, Just tot) }
+  <|> do { tot <- totalityOpt fname ; vis <- visibility fname ; pure (vis, Just tot) }
   <|> pure (Private, Nothing)
 
 dataDecl : OriginDesc -> IndentInfo -> Rule PDecl
@@ -1613,9 +1613,7 @@ recordParam fname indents
 recordDecl : OriginDesc -> IndentInfo -> Rule PDecl
 recordDecl fname indents
     = do b <- bounds (do doc         <- optDocumentation fname
-                         --(vis,mbtot) <- dataVisOpt fname
-                         vis <- visibility fname
-                         let mbtot = Nothing
+                         (vis,mbtot) <- dataVisOpt fname
                          col         <- column
                          decoratedKeyword fname "record"
                          n       <- mustWork (decoratedDataTypeName fname)

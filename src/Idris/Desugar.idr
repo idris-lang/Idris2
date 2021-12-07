@@ -980,7 +980,6 @@ mutual
       isNamed Nothing = False
       isNamed (Just _) = True
 
-  -- TODO: handle totality annotation on records, too
   desugarDecl ps (PRecord fc doc vis mbtot tn params conname_in fields)
       = do addDocString tn doc
            params' <- traverse (\ (n,c,p,tm) =>
@@ -1010,7 +1009,7 @@ mutual
            let conname = maybe (mkConName tn) id conname_in
            let _ = the Name conname
            pure [IRecord fc (Just recName)
-                         vis (MkImpRecord fc tn paramsb conname fields')]
+                         vis mbtot (MkImpRecord fc tn paramsb conname fields')]
     where
       fname : PField -> Name
       fname (MkField _ _ _ _ n _) = n

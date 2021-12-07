@@ -495,9 +495,9 @@ mutual
                                tpe' <- toPTerm startPrec tpe
                                pure (n, rig, info', tpe')) ps)
                 (mapMaybe id ds')))
-  toPDecl (IRecord fc _ vis r)
+  toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, con, fs) <- toPRecord r
-           pure (Just (PRecord fc "" vis Nothing n ps con fs))     -- TODO: totality req ???
+           pure (Just (PRecord fc "" vis mbtot n ps con fs))
   toPDecl (INamespace fc ns ds)
       = do ds' <- traverse toPDecl ds
            pure (Just (PNamespace fc ns (mapMaybe id ds')))

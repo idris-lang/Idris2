@@ -37,18 +37,25 @@ elabRecord : {vars : _} ->
              {auto s : Ref Syn SyntaxInfo} ->
              List ElabOpt -> FC -> Env Term vars ->
              NestedNames vars -> Maybe String ->
-             Visibility -> Name ->
+             Visibility -> Maybe TotalReq -> Name ->
              (params : List (Name, RigCount, PiInfo RawImp, RawImp)) ->
              (conName : Name) ->
              List IField ->
              Core ()
-elabRecord {vars} eopts fc env nest newns vis tn_in params conName_in fields
+elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params conName_in fields
     = do tn <- inCurrentNS tn_in
          conName <- inCurrentNS conName_in
          elabAsData tn conName
          defs <- get Ctxt
          Just conty <- lookupTyExact conName (gamma defs)
              | Nothing => throw (InternalError ("Adding " ++ show tn ++ "failed"))
+
+         -- #1404
+         case mbtot of
+           Nothing  => pure ()
+           Just tot => do
+             log "declare.record" 5 $ "setting totality flag for " ++ show tn
+             setFlag fc tn (SetTotal tot)
 
          -- Go into new namespace, if there is one, for getters
          case newns of
@@ -64,6 +71,7 @@ elabRecord {vars} eopts fc env nest newns vis tn_in params conName_in fields
                       -- at private names in the nested namespace
                       put Ctxt (record { currentNS = cns,
                                          nestedNS = newns :: nns } defs)
+
   where
     paramTelescope : List (FC, Maybe Name, RigCount, PiInfo RawImp, RawImp)
     paramTelescope = map jname params
@@ -230,6 +238,7 @@ processRecord : {vars : _} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 List ElabOpt -> NestedNames vars ->
                 Env Term vars -> Maybe String ->
-                Visibility -> ImpRecord -> Core ()
-processRecord eopts nest env newns vis (MkImpRecord fc n ps cons fs)
-    = elabRecord eopts fc env nest newns vis n ps cons fs
+                Visibility -> Maybe TotalReq ->
+                ImpRecord -> Core ()
+processRecord eopts nest env newns vis mbtot (MkImpRecord fc n ps cons fs)
+    = elabRecord eopts fc env nest newns vis mbtot n ps cons fs

@@ -159,8 +159,8 @@ mutual
     where
       unqTuple : (Name, RigCount, PiInfo RawImp, RawImp) -> Core (Name, RigCount, PiInfo RawImp, RawImp)
       unqTuple (n, rig, i, t) = pure (n, rig, i, !(getUnquote t))
-  getUnquoteDecl (IRecord fc ns v d)
-      = pure $ IRecord fc ns v !(getUnquoteRecord d)
+  getUnquoteDecl (IRecord fc ns v mbt d)
+      = pure $ IRecord fc ns v mbt !(getUnquoteRecord d)
   getUnquoteDecl (INamespace fc ns ds)
       = pure $ INamespace fc ns !(traverse getUnquoteDecl ds)
   getUnquoteDecl (ITransform fc n l r)

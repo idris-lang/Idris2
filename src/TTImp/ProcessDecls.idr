@@ -48,8 +48,8 @@ process eopts nest env (IDef fc fname def)
     = processDef eopts nest env fc fname def
 process eopts nest env (IParameters fc ps decls)
     = processParams nest env fc ps decls
-process eopts nest env (IRecord fc ns vis rec)
-    = processRecord eopts nest env ns vis rec
+process eopts nest env (IRecord fc ns vis mbtot rec)
+    = processRecord eopts nest env ns vis mbtot rec
 process eopts nest env (INamespace fc ns decls)
     = withExtendedNS ns $
          traverse_ (processDecl eopts nest env) decls
