@@ -519,8 +519,6 @@ processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in ty_raw opts c
          traverse_ updateErasable (Resolved tidx :: connames)
 
          -- #1404
-         case mbtot of
-           Nothing  => pure ()
-           Just tot => do
+         whenJust mbtot $ \ tot => do
              log "declare.data" 5 $ "setting totality flag for " ++ show n
              setFlag fc n (SetTotal tot)
