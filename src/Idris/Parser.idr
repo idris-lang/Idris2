@@ -1180,7 +1180,7 @@ totalityOpt fname
 -- a data declaration can have a visibility and an optional totality (#1404)
 dataVisOpt : OriginDesc -> EmptyRule (Visibility, Maybe TotalReq)
 dataVisOpt fname
-    = do { vis <- visOption   fname ; mbtot <- option Nothing (Just <$> totalityOpt fname) ; pure (vis, mbtot) }
+    = do { vis <- visOption   fname ; mbtot <- optional (totalityOpt fname) ; pure (vis, mbtot) }
   <|> do { tot <- totalityOpt fname ; vis <- visibility fname ; pure (vis, Just tot) }
   <|> pure (Private, Nothing)
 
