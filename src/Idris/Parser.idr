@@ -1191,10 +1191,7 @@ dataDecl fname indents
                          dat         <- dataDeclBody fname indents
                          pure (doc, vis, mbTot, dat))
          (doc, vis, mbTot, dat) <- pure b.val
-         let dat' = case mbTot of
-               Nothing   => dat
-               Just treq => addDataOpt (DataTotalReq treq) dat
-         pure (PData (boundToFC fname b) doc vis dat')
+         pure (PData (boundToFC fname b) doc vis mbTot dat)
 
 stripBraces : String -> String
 stripBraces str = pack (drop '{' (reverse (drop '}' (reverse (unpack str)))))

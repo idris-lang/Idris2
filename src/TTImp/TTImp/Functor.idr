@@ -90,8 +90,8 @@ mutual
   Functor ImpDecl' where
     map f (IClaim fc rig vis opts ty)
       = IClaim fc rig vis (map (map f) opts) (map f ty)
-    map f (IData fc vis dt)
-      = IData fc vis (map f dt)
+    map f (IData fc vis mbtot dt)
+      = IData fc vis mbtot (map f dt)
     map f (IDef fc nm cls)
       = IDef fc nm (map (map f) cls)
     map f (IParameters fc ps ds)

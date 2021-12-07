@@ -148,8 +148,8 @@ mutual
                    Core ImpDecl
   getUnquoteDecl (IClaim fc c v opts ty)
       = pure $ IClaim fc c v opts !(getUnquoteTy ty)
-  getUnquoteDecl (IData fc v d)
-      = pure $ IData fc v !(getUnquoteData d)
+  getUnquoteDecl (IData fc v mbt d)
+      = pure $ IData fc v mbt !(getUnquoteData d)
   getUnquoteDecl (IDef fc v d)
       = pure $ IDef fc v !(traverse getUnquoteClause d)
   getUnquoteDecl (IParameters fc ps ds)

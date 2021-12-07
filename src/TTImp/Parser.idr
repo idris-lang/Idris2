@@ -641,7 +641,6 @@ fieldDecl fname indents
 recordDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 recordDecl fname indents
     = do start <- location
-         -- vis <- visibility
          (vis,mbtot) <- dataVisOpt
          col <- column
          keyword "record"
@@ -709,10 +708,10 @@ directive fname indents
 -- topDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 topDecl fname indents
     = do start <- location
-         vis <- visibility
+         (vis,mbtot) <- dataVisOpt
          dat <- dataDecl fname indents
          end <- location
-         pure (IData (MkFC fname start end) vis dat)
+         pure (IData (MkFC fname start end) vis mbtot dat)
   <|> do start <- location
          ns <- namespaceDecl
          ds <- assert_total (nonEmptyBlock (topDecl fname))

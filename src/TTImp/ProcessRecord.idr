@@ -118,7 +118,7 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params conName_in fiel
                                            map fname fields ++ vars)
                                          (mkDataTy fc params)) [] [con]
              log "declare.record" 5 $ "Record data type " ++ show dt
-             processDecl [] nest env (IData fc vis dt)
+             processDecl [] nest env (IData fc vis mbtot dt)
 
     countExp : Term vs -> Nat
     countExp (Bind _ _ (Pi _ _ Explicit _) sc) = S (countExp sc)

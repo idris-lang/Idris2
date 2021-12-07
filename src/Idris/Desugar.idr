@@ -857,16 +857,8 @@ mutual
       toIDef nm (ImpossibleClause fc lhs)
           = pure $ IDef fc nm [ImpossibleClause fc lhs]
 
-  desugarDecl ps (PData fc doc vis ddecl)
-      = pure [IData fc vis !(desugarData ps doc ddecl)]
-{-
-  desugarDecl ps (PData fc doc vis mbtot ddecl) = case mbtot of
-    Nothing  => pure [IData fc vis !(desugarData ps doc ddecl)]
-    Just tot => do
-      -- #1404: Totality annotation for data type definitions
-      pdatadecl <- (desugarData ps doc ddecl)
-      pure [IData fc vis (addDataOpt (DataTotalReq tot) pdatadecl)]
--}
+  desugarDecl ps (PData fc doc vis mbtot ddecl)
+      = pure [IData fc vis mbtot !(desugarData ps doc ddecl)]
 
   desugarDecl ps (PParameters fc params pds)
       = do pds' <- traverse (desugarDecl (ps ++ map fst params)) pds

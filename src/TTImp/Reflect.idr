@@ -434,11 +434,12 @@ mutual
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
                           pure (IClaim v' w' x' y' z')
-               (UN (Basic "IData"), [x,y,z])
+               (UN (Basic "IData"), [x,y,z,w])
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (IData x' y' z')
+                          w' <- reify defs !(evalClosure defs w)
+                          pure (IData x' y' z' w')
                (UN (Basic "IDef"), [x,y,z])
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
@@ -710,9 +711,6 @@ mutual
     reflect fc defs lhs env UniqueSearch = getCon fc defs (reflectionttimp "UniqueSearch")
     reflect fc defs lhs env External = getCon fc defs (reflectionttimp "External")
     reflect fc defs lhs env NoNewtype = getCon fc defs (reflectionttimp "NoNewtype")
-    reflect fc defs lhs env (DataTotalReq treq)
-        = do treq' <- reflect fc defs lhs env treq
-             appCon fc defs (reflectionttimp "DataTotalReq") [treq']
 
   export
   Reflect ImpData where
@@ -783,11 +781,12 @@ mutual
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
              appCon fc defs (reflectionttimp "IClaim") [v', w', x', y', z']
-    reflect fc defs lhs env (IData x y z)
+    reflect fc defs lhs env (IData x y z w)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "IData") [x', y', z']
+             w' <- reflect fc defs lhs env w
+             appCon fc defs (reflectionttimp "IData") [x', y', z', w']
     reflect fc defs lhs env (IDef x y z)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y

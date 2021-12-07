@@ -483,8 +483,8 @@ mutual
   toPDecl (IClaim fc rig vis opts ty)
       = do opts' <- traverse toPFnOpt opts
            pure (Just (PClaim fc rig vis opts' !(toPTypeDecl ty)))
-  toPDecl (IData fc vis d)
-      = pure (Just (PData fc "" vis !(toPData d)))
+  toPDecl (IData fc vis mbtot d)
+      = pure (Just (PData fc "" vis mbtot !(toPData d)))
   toPDecl (IDef fc n cs)
       = pure (Just (PDef fc !(traverse toPClause cs)))
   toPDecl (IParameters fc ps ds)

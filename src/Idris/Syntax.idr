@@ -270,12 +270,6 @@ mutual
        MkPLater : FC -> (tyname : Name) -> (tycon : PTerm' nm) -> PDataDecl' nm
 
   export
-  addDataOpt : DataOpt -> PDataDecl' a -> PDataDecl' a
-  addDataOpt opt (MkPData fc tyname tycon       opts  datacons) =
-                  MkPData fc tyname tycon (opt::opts) datacons
-  addDataOpt opt later@(MkPLater _ _ _) = later
-
-  export
   getPDataDeclLoc : PDataDecl' nm -> FC
   getPDataDeclLoc (MkPData fc _ _ _ _) = fc
   getPDataDeclLoc (MkPLater fc _ _) = fc
@@ -424,7 +418,7 @@ mutual
   data PDecl' : Type -> Type where
        PClaim : FC -> RigCount -> Visibility -> List (PFnOpt' nm) -> PTypeDecl' nm -> PDecl' nm
        PDef : FC -> List (PClause' nm) -> PDecl' nm
-       PData : FC -> (doc : String) -> Visibility -> PDataDecl' nm -> PDecl' nm
+       PData : FC -> (doc : String) -> Visibility -> Maybe TotalReq -> PDataDecl' nm -> PDecl' nm
        PParameters : FC ->
                      List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm) ->
                      List (PDecl' nm) -> PDecl' nm
@@ -474,7 +468,7 @@ mutual
   getPDeclLoc : PDecl' nm -> FC
   getPDeclLoc (PClaim fc _ _ _ _) = fc
   getPDeclLoc (PDef fc _) = fc
-  getPDeclLoc (PData fc _ _ _) = fc
+  getPDeclLoc (PData fc _ _ _ _) = fc
   getPDeclLoc (PParameters fc _ _) = fc
   getPDeclLoc (PUsing fc _ _) = fc
   getPDeclLoc (PReflect fc _) = fc
@@ -516,7 +510,7 @@ export
 definedIn : List PDecl -> List Name
 definedIn [] = []
 definedIn (PClaim _ _ _ _ (MkPTy _ _ n _ _) :: ds) = n :: definedIn ds
-definedIn (PData _ _ _ d :: ds) = definedInData d ++ definedIn ds
+definedIn (PData _ _ _ _ d :: ds) = definedInData d ++ definedIn ds
 definedIn (PParameters _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PUsing _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PNamespace _ _ ns :: ds) = definedIn ns ++ definedIn ds
@@ -1266,7 +1260,7 @@ mapPTermM f = goPTerm where
       PClaim fc c v <$> goPFnOpts opts
                     <*> goPTypeDecl tdecl
     goPDecl (PDef fc cls) = PDef fc <$> goPClauses cls
-    goPDecl (PData fc doc v d) = PData fc doc v <$> goPDataDecl d
+    goPDecl (PData fc doc v mbt d) = PData fc doc v mbt <$> goPDataDecl d
     goPDecl (PParameters fc nts ps) =
       PParameters fc <$> go4TupledPTerms nts
                      <*> goPDecls ps

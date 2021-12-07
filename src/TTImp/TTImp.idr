@@ -307,7 +307,6 @@ mutual
        UniqueSearch : DataOpt -- auto implicit search must check result is unique
        External : DataOpt -- implemented externally
        NoNewtype : DataOpt -- don't apply newtype optimisation
-       DataTotalReq : TotalReq -> DataOpt -- totality requirement
 
   export
   Eq DataOpt where
@@ -316,7 +315,6 @@ mutual
     (==) UniqueSearch UniqueSearch = True
     (==) External External = True
     (==) NoNewtype NoNewtype = True
-    (==) (DataTotalReq treq1) (DataTotalReq treq2) = treq1 == treq2
     (==) _ _ = False
 
   public export
@@ -426,7 +424,7 @@ mutual
   data ImpDecl' : Type -> Type where
        IClaim : FC -> RigCount -> Visibility -> List (FnOpt' nm) ->
                 ImpTy' nm -> ImpDecl' nm
-       IData : FC -> Visibility -> ImpData' nm -> ImpDecl' nm
+       IData : FC -> Visibility -> Maybe TotalReq -> ImpData' nm -> ImpDecl' nm
        IDef : FC -> Name -> List (ImpClause' nm) -> ImpDecl' nm
        IParameters : FC ->
                      List (ImpParameter' nm) ->
@@ -451,7 +449,7 @@ mutual
   covering
   Show nm => Show (ImpDecl' nm) where
     show (IClaim _ c _ opts ty) = show opts ++ " " ++ show c ++ " " ++ show ty
-    show (IData _ _ d) = show d
+    show (IData _ _ _ d) = show d
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"
     show (IParameters _ ps ds)
         = "parameters " ++ show ps ++ "\n\t" ++
@@ -757,9 +755,9 @@ definedInBlock ns decls =
 
     defName : Namespace -> ImpDecl -> List Name
     defName ns (IClaim _ _ _ _ ty) = [expandNS ns (getName ty)]
-    defName ns (IData _ _ (MkImpData _ n _ _ cons))
+    defName ns (IData _ _ _ (MkImpData _ n _ _ cons))
         = expandNS ns n :: map (expandNS ns) (map getName cons)
-    defName ns (IData _ _ (MkImpLater _ n _)) = [expandNS ns n]
+    defName ns (IData _ _ _ (MkImpLater _ n _)) = [expandNS ns n]
     defName ns (IParameters _ _ pds) = concatMap (defName ns) pds
     defName ns (INamespace _ n nds) = concatMap (defName (ns <.> n)) nds
     defName ns (IRecord _ fldns _ _ (MkImpRecord _ n _ con flds))
@@ -843,7 +841,7 @@ namespace ImpDecl
   public export
   getFC : ImpDecl' nm -> FC
   getFC (IClaim fc _ _ _ _) = fc
-  getFC (IData fc _ _) = fc
+  getFC (IData fc _ _ _) = fc
   getFC (IDef fc _ _) = fc
   getFC (IParameters fc _ _) = fc
   getFC (IRecord fc _ _ _ _) = fc
@@ -1205,8 +1203,6 @@ mutual
     toBuf b UniqueSearch = tag 2
     toBuf b External = tag 3
     toBuf b NoNewtype = tag 4
-    toBuf b (DataTotalReq treq)
-        = do tag 5 ; toBuf b treq
 
     fromBuf b
         = case !getTag of
@@ -1216,9 +1212,6 @@ mutual
                2 => pure UniqueSearch
                3 => pure External
                4 => pure NoNewtype
-               5 => do
-                      treq <- fromBuf b
-                      pure (DataTotalReq treq)
                _ => corrupt "DataOpt"
 
   export
@@ -1314,8 +1307,8 @@ mutual
   TTC ImpDecl where
     toBuf b (IClaim fc c vis xs d)
         = do tag 0; toBuf b fc; toBuf b c; toBuf b vis; toBuf b xs; toBuf b d
-    toBuf b (IData fc vis d)
-        = do tag 1; toBuf b fc; toBuf b vis; toBuf b d
+    toBuf b (IData fc vis mbtot d)
+        = do tag 1; toBuf b fc; toBuf b vis; toBuf b mbtot; toBuf b d
     toBuf b (IDef fc n xs)
         = do tag 2; toBuf b fc; toBuf b n; toBuf b xs
     toBuf b (IParameters fc vis d)
@@ -1341,8 +1334,8 @@ mutual
                        xs <- fromBuf b; d <- fromBuf b
                        pure (IClaim fc c vis xs d)
                1 => do fc <- fromBuf b; vis <- fromBuf b
-                       d <- fromBuf b
-                       pure (IData fc vis d)
+                       mbtot <- fromBuf b; d <- fromBuf b
+                       pure (IData fc vis mbtot d)
                2 => do fc <- fromBuf b; n <- fromBuf b
                        xs <- fromBuf b
                        pure (IDef fc n xs)

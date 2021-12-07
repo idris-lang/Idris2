@@ -128,13 +128,13 @@ localHelper {vars} nest env nestdecls_in func
          = IClaim loc' r vis fnopts (updateTyName nest ty)
     updateName nest (IDef loc' n cs)
          = IDef loc' (newName nest n) cs
-    updateName nest (IData loc' vis d)
-         = IData loc' vis (updateDataName nest d)
+    updateName nest (IData loc' vis mbt d)
+         = IData loc' vis mbt (updateDataName nest d)
     updateName nest i = i
 
     setPublic : ImpDecl -> ImpDecl
     setPublic (IClaim fc c _ opts ty) = IClaim fc c Public opts ty
-    setPublic (IData fc _ d) = IData fc Public d
+    setPublic (IData fc _ mbt d) = IData fc Public mbt d
     setPublic (IRecord fc c _ mbt r) = IRecord fc c Public mbt r
     setPublic (IParameters fc ps decls)
         = IParameters fc ps (map setPublic decls)

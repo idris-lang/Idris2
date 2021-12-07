@@ -38,8 +38,6 @@ processDataOpt fc ndef External
     = setExternal fc ndef True
 processDataOpt fc ndef NoNewtype
     = pure ()
-processDataOpt fc ndef (DataTotalReq treq)
-    = setFlag fc ndef (SetTotal treq)
 
 checkRetType : {auto c : Ref Ctxt Defs} ->
                Env Term vars -> NF vars ->
@@ -397,9 +395,10 @@ processData : {vars : _} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
               List ElabOpt -> NestedNames vars ->
-              Env Term vars -> FC -> Visibility ->
+              Env Term vars -> FC ->
+              Visibility -> Maybe TotalReq ->
               ImpData -> Core ()
-processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
+processData {vars} eopts nest env fc vis mbtot (MkImpLater dfc n_in ty_raw)
     = do n <- inCurrentNS n_in
          ty_raw <- bindTypeNames fc [] vars ty_raw
 
@@ -436,7 +435,7 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
               _ => do addHashWithNames n
                       addHashWithNames fullty
 
-processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_raw)
+processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in ty_raw opts cons_raw)
     = do n <- inCurrentNS n_in
          ty_raw <- bindTypeNames fc [] vars ty_raw
 
@@ -449,6 +448,13 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
                               (IBindHere fc (PI erased) ty_raw)
                               (Just (gType dfc u))
          let fullty = abstractEnvType dfc env ty
+
+         -- #1404
+         case mbtot of
+           Nothing  => pure ()
+           Just tot => do
+             log "declare.data" 5 $ "setting totality flag for " ++ show n
+             setFlag fc n (SetTotal tot)
 
          -- If n exists, check it's the same type as we have here, and is
          -- a data constructor.
