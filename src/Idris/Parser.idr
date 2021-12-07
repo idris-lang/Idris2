@@ -1203,9 +1203,9 @@ totalityOpt fname
   <|> (decoratedKeyword fname "total" $> Total)
   <|> (decoratedKeyword fname "covering" $> CoveringOnly)
 
-logLevel : Rule (Maybe LogLevel)
-logLevel
-  = (Nothing <$ exactIdent "off")
+logLevel : OriginDesc -> Rule (Maybe LogLevel)
+logLevel fname
+  = (Nothing <$ decorate fname Keyword (exactIdent "off"))
     <|> do topic <- optional (split ('.' ==) <$> simpleStr)
            lvl <- intLit
            pure (Just (mkLogLevel' topic (fromInteger lvl)))
@@ -1222,7 +1222,7 @@ directive fname indents
 --          atEnd indents
 --          pure (Hide True n)
   <|> do decorate fname Keyword $ pragma "logging"
-         lvl <- logLevel
+         lvl <- logLevel fname
          atEnd indents
          pure (Logging lvl)
   <|> do decorate fname Keyword $ pragma "auto_lazy"
@@ -1757,7 +1757,7 @@ import_ fname indents
                          reexp <- option False (decoratedKeyword fname "public" $> True)
                          ns <- decorate fname Module $ mustWork moduleIdent
                          nsAs <- option (miAsNamespace ns)
-                                        (do exactIdent "as"
+                                        (do decorate fname Keyword $ exactIdent "as"
                                             decorate fname Namespace $ mustWork namespaceId)
                          pure (reexp, ns, nsAs))
          atEnd indents
@@ -2151,7 +2151,7 @@ loggingArgCmd parseCmd command doc = (names, Args [StringArg, NumberArg], doc, p
   parse = do
     symbol ":"
     runParseCmd parseCmd
-    lvl <- mustWork logLevel
+    lvl <- mustWork $ logLevel (Virtual Interactive)
     pure (command lvl)
 
 parserCommandsForHelp : CommandTable
