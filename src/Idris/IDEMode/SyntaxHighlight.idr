@@ -46,23 +46,6 @@ docToProperties DocStringBody = Nothing
 docToProperties UserDocString = Nothing
 docToProperties (Syntax syn)  = syntaxToProperties syn
 
-SExpable Decoration where
-  toSExp decor = SExpList [ SymbolAtom "decor"
-                          , SymbolAtom (show decor)
-                          ]
-
-SExpable Formatting where
-  toSExp format = SExpList [ SymbolAtom "text-formatting"
-                           , SymbolAtom (show format)
-                           ]
-
-export
-SExpable Properties where
-  toSExp (MkProperties dec form)  = SExpList $ catMaybes
-    [ toSExp <$> form
-    , toSExp <$> dec
-    ]
-
 -- TODO: refactor into Protocol.IDE
 -- issue: think about the `location` field, since we don't want
 -- to introduce a dependency of Protocol.IDE on Core.FC

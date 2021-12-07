@@ -32,3 +32,44 @@ Show SExp where
 public export
 interface SExpable a where
   toSExp : a -> SExp
+
+export
+SExpable SExp where
+  toSExp = id
+
+export
+SExpable Bool where
+  toSExp = BoolAtom
+
+export
+SExpable String where
+  toSExp = StringAtom
+
+export
+SExpable Integer where
+  toSExp = IntegerAtom
+
+export
+SExpable Int where
+  toSExp = IntegerAtom . cast
+
+export
+SExpable Nat where
+  toSExp = IntegerAtom . cast
+
+export
+(SExpable a, SExpable b) => SExpable (a, b) where
+  toSExp (x, y)
+      = case toSExp y of
+             SExpList xs => SExpList (toSExp x :: xs)
+             y' => SExpList [toSExp x, y']
+
+export
+SExpable a => SExpable (List a) where
+  toSExp xs
+      = SExpList (map toSExp xs)
+
+export
+SExpable a => SExpable (Maybe a) where
+  toSExp Nothing = SExpList []
+  toSExp (Just x) = toSExp x
