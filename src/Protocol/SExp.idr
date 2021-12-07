@@ -33,6 +33,11 @@ public export
 interface SExpable a where
   toSExp : a -> SExp
 
+-- TODO: Merge these into 1 interface later
+public export
+interface FromSExpable a where
+  fromSExp : SExp -> Maybe a
+
 export
 SExpable SExp where
   toSExp = id
@@ -44,6 +49,11 @@ SExpable Bool where
 export
 SExpable String where
   toSExp = StringAtom
+
+export
+FromSExpable String where
+  fromSExp (StringAtom s) = Just s
+  fromSExp _ = Nothing
 
 export
 SExpable Integer where
@@ -68,6 +78,11 @@ export
 SExpable a => SExpable (List a) where
   toSExp xs
       = SExpList (map toSExp xs)
+
+export
+FromSExpable a => FromSExpable (List a) where
+  fromSExp (SExpList sexps) = traverse fromSExp sexps
+  fromSExp _ = Nothing
 
 export
 SExpable a => SExpable (Maybe a) where

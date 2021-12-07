@@ -210,6 +210,8 @@ modules =
     Parser.Rule.Source,
 
     Protocol.IDE,
+    Protocol.IDE.Command,
+    Protocol.IDE.Decoration,
     Protocol.Hex,
     Protocol.SExp,
 

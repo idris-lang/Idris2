@@ -169,7 +169,7 @@ process (AddMissing l n)
          pure $ REPL $ Edited $ DisplayEdit emptyDoc
 process (ExprSearch l n hs all)
     = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l)
-                     (UN $ Basic n) (map (UN . Basic) hs)))
+                     (UN $ Basic n) (map (UN . Basic) hs.list)))
 process ExprSearchNext
     = replWrap $ Idris.REPL.process (Editing ExprSearchNext)
 process (GenerateDef l n)

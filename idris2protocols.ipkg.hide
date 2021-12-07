@@ -4,6 +4,8 @@ version = 0.0.1
 modules
   = Protocol.Hex
   , Protocol.IDE
+  , Protocol.IDE.Command
+  , Protocol.IDE.Decoration
   , Protocol.SExp
 
 --depends =
