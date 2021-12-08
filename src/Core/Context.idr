@@ -1435,6 +1435,11 @@ hide fc n
               | res => ambiguousName fc n (map fst res)
          put Ctxt (record { gamma $= hideName nsn } defs)
 
+-- `unhide` tries to use `recordWarning`, which is defined below
+-- so I have to forward-declare it here...
+export
+recordWarning : {auto c : Ref Ctxt Defs} -> Warning -> Core ()
+
 -- Set a name as Public that was previously hidden
 export
 unhide : {auto c : Ref Ctxt Defs} ->
@@ -1444,6 +1449,8 @@ unhide fc n
          [(nsn, _)] <- lookupHiddenCtxtName n (gamma defs)
               | res => ambiguousName fc n (map fst res)
          put Ctxt (record { gamma $= unhideName nsn } defs)
+         unless (isHidden nsn (gamma defs)) $ do
+           recordWarning $ GenericWarn $ "Trying to %unhide `" ++ show nsn ++ "`, which was not hidden in the first place"
 
 public export
 record SearchData where
@@ -2316,8 +2323,9 @@ updateSession : {auto c : Ref Ctxt Defs} ->
                 (Session -> Session) -> Core ()
 updateSession f = setSession (f !getSession)
 
-export
-recordWarning : {auto c : Ref Ctxt Defs} -> Warning -> Core ()
+-- NOTE: this was forward-declared above
+-- export
+-- recordWarning : {auto c : Ref Ctxt Defs} -> Warning -> Core ()
 recordWarning w
     = do defs <- get Ctxt
          session <- getSession
