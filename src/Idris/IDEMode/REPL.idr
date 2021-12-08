@@ -492,5 +492,5 @@ replIDE
          case res of
               REPL _ => printError $ reflow "Running idemode but output isn't"
               IDEMode _ inf outf => do
-                send outf (version 2 0)
+                send outf (version 2 1) -- TODO: Move this info somewhere more central
                 loop
