@@ -123,6 +123,39 @@ localHelper {vars} nest env nestdecls_in func
     updateDataName nest (MkImpLater loc' n tycons)
         = MkImpLater loc' (newName nest n) tycons
 
+--    -- ??? I have no idea if something like this is the right thing to do or not ???
+--    updateRawImp : NestedNames vars -> RawImp -> RawImp
+--    updateRawImp nest (IVar fc n) = IVar fc (newName nest n)
+--    updateRawImp nest rawimp      = rawimp
+
+    -- recall that ImpParameter' nm = (Name, RigCount, PiInfo (RawImp' nm), RawImp' nm)
+    updateImpParameter : NestedNames vars -> ImpParameter -> ImpParameter
+    updateImpParameter nest (nm, rigc, piinfo, rawimp)
+        = ( newName nest nm
+          , rigc
+          , piinfo -- map (updateRawImp nest) piinfo
+          , rawimp -- updateRawImp nest rawimp
+          )
+
+    updateFieldName : NestedNames vars -> IField -> IField
+    updateFieldName nest (MkIField fc rigc piinfo n rawimp)
+        = MkIField fc rigc piinfo -- (map (updateRawImp nest) piinfo)
+                           (newName nest n)
+                           rawimp -- (updateRawImp nest rawimp)
+
+    updateRecordName : NestedNames vars -> ImpRecord -> ImpRecord
+    updateRecordName nest (MkImpRecord fc n params conName fields)
+        = MkImpRecord fc (newName nest n)
+                         (map (updateImpParameter nest) params)
+                         (newName nest conName)
+                         (map (updateFieldName nest) fields)
+
+    -- I'm not sure about this implementation...
+    -- The whole record thing is a mess and should be refactored though...
+    updateRecordNS : NestedNames vars -> Maybe String -> Maybe String
+    updateRecordNS _    Nothing   = Nothing
+    updateRecordNS nest (Just ns) = Just $ show $ newName nest (UN $ mkUserName ns)
+
     updateName : NestedNames vars -> ImpDecl -> ImpDecl
     updateName nest (IClaim loc' r vis fnopts ty)
          = IClaim loc' r vis fnopts (updateTyName nest ty)
@@ -130,6 +163,8 @@ localHelper {vars} nest env nestdecls_in func
          = IDef loc' (newName nest n) cs
     updateName nest (IData loc' vis mbt d)
          = IData loc' vis mbt (updateDataName nest d)
+    updateName nest (IRecord loc' ns vis mbt imprecord)
+         = IRecord loc' (updateRecordNS nest ns) vis mbt (updateRecordName nest imprecord)
     updateName nest i = i
 
     setPublic : ImpDecl -> ImpDecl
