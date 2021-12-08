@@ -545,3 +545,32 @@ jobs:
         run: |
           make
           make test
+
+  ubuntu-test-elab:
+    needs: ubuntu-self-host-previous-version
+    runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
+    env:
+      IDRIS2_CG: chez
+    steps:
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
+      - name: Install build dependencies
+        run: |
+          echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
+          sudo apt-get update
+          sudo apt-get install -y -t hirsute chezscheme
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: 'stefan-hoeck/idris2-elab-util'
+      - name: Build idris2-elab-util
+        run: |
+          make all
