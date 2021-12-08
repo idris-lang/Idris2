@@ -510,25 +510,35 @@ readFromTTC nestedns loc reexp fname modNS importAs
           || (modns == m && miAsNamespace modns == importAs)
           || alreadyDone modns importAs rest
 
-getImportHashes : String -> Ref Bin Binary ->
-                  Core (List (Namespace, Int))
-getImportHashes file b
-    = do hdr <- fromBuf {a = String} b
-         when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
-         ver <- fromBuf @{Wasteful} b
-         checkTTCVersion file ver ttcVersion
-         totalReq <- fromBuf {a = TotalReq} b
-         sourceFileHash <- fromBuf {a = Maybe String} b
-         interfaceHash <- fromBuf {a = Int} b
-         fromBuf b
-
+-- Implements a portion of @readTTCFile@ from the beginning until
+-- when the totality requirement is read out.
+-- The fields must be read in order.
 export
 getTotalReq : String -> Ref Bin Binary -> Core TotalReq
 getTotalReq file b
     = do hdr <- fromBuf {a = String} b
-         when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
+         when (hdr /= "TT2") $
+           corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
          ver <- fromBuf @{Wasteful} b
          checkTTCVersion file ver ttcVersion
+         fromBuf b
+
+-- Implements a portion of @readTTCFile@ from where @getTotalReq@ leaves off.
+-- The fields must be read in order.
+export
+getHashes : String -> Ref Bin Binary -> Core (Maybe String, Int)
+getHashes file b
+    = do totReq <- getTotalReq file b
+         sourceFileHash <- fromBuf b
+         interfaceHash <- fromBuf b
+         pure (sourceFileHash, interfaceHash)
+
+-- Implements a portion of @readTTCFile@ from where @getHashes@ leaves off.
+-- The next field is the import hashes. The fields must be read in order.
+getImportHashes : String -> Ref Bin Binary ->
+                  Core (List (Namespace, Int))
+getImportHashes file b
+    = do (sourceFileHash, interfaceHash) <- getHashes file b
          fromBuf b
 
 export
@@ -540,18 +550,6 @@ readTotalReq fileName
          b <- newRef Bin buffer
          catch (Just <$> getTotalReq fileName b)
                (\err => pure Nothing)
-
-export
-getHashes : String -> Ref Bin Binary -> Core (Maybe String, Int)
-getHashes file b
-    = do hdr <- fromBuf {a = String} b
-         when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
-         ver <- fromBuf @{Wasteful} b
-         checkTTCVersion file ver ttcVersion
-         totReq <- fromBuf {a = TotalReq} b
-         sourceFileHash <- fromBuf b
-         interfaceHash <- fromBuf b
-         pure (sourceFileHash, interfaceHash)
 
 export
 readHashes : (fileName : String) -> -- file containing the module

@@ -118,6 +118,7 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc _ cn_in ty_raw)
          case vis of
               Public => do addHashWithNames cn
                            addHashWithNames fullty
+                           log "module.hash" 15 "Adding hash for data constructor: \{show cn}"
               _ => pure ()
          pure (MkCon fc cn !(getArity defs [] fullty) fullty)
 
@@ -433,6 +434,7 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
               Private => pure ()
               _ => do addHashWithNames n
                       addHashWithNames fullty
+                      log "module.hash" 15 "Adding hash for data declaration with name \{show n}"
 
 processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_raw)
     = do n <- inCurrentNS n_in
@@ -478,6 +480,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
               Private => pure ()
               _ => do addHashWithNames n
                       addHashWithNames fullty
+                      log "module.hash" 15 "Adding hash for data declaration with name \{show n}"
 
          -- Constructors are private if the data type as a whole is
          -- export

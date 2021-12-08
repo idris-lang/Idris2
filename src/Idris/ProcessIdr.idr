@@ -224,7 +224,9 @@ gc = primIO $ prim__gc 4
 export
 addPublicHash : {auto c : Ref Ctxt Defs} ->
                 (Bool, (Namespace, Int)) -> Core ()
-addPublicHash (True, (mod, h)) = do addHash mod; addHash h
+addPublicHash (True, (mod, h)) = do addHash mod
+                                    addHash h
+                                    log "module.hash" 15 "Adding hash for a public import of \{show mod}"
 addPublicHash _ = pure ()
 
 ||| If the source file is older
@@ -300,7 +302,7 @@ processMod sourceFileName ttcFileName msg sourcecode origin
 
         defs <- get Ctxt
         log "module.hash" 5 $ "Interface hash of " ++ show ns ++ ": " ++ show (ifaceHash defs)
-        log "module.hash" 5 $ "Interface hashes of " ++ show ns ++ " hashes:\n" ++
+        log "module.hash" 5 $ "Import Interface hashes of " ++ show ns ++ " hashes:\n" ++
           show (sort importInterfaceHashes)
         storedImportInterfaceHashes <- readImportHashes ttcFileName
         log "module.hash" 5 $ "Stored interface hashes of " ++ ttcFileName ++ ":\n" ++

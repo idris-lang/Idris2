@@ -503,6 +503,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
          when hashit $
            do addHashWithNames lhstm'
               addHashWithNames rhstm
+              log "module.hash" 15 "Adding hash for def."
 
          -- If the rhs is a hole, record the lhs in the metadata because we
          -- might want to split it interactively
