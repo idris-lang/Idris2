@@ -13,6 +13,7 @@ import public Protocol.IDE.Formatting  as Protocol.IDE
 import public Protocol.IDE.FileContext as Protocol.IDE
 import public Protocol.IDE.Holes       as Protocol.IDE
 import public Protocol.IDE.Result      as Protocol.IDE
+import public Protocol.IDE.Highlight   as Protocol.IDE
 
 ------------------------------------------------------------------------
 
@@ -36,11 +37,18 @@ SExpable a => SExpable (Span a) where
 public export
 data ReplyPayload =
     OK    Result Highlighting
+  | HighlightSource (List SourceHighlight)
   | Error String Highlighting
 
 export
 SExpable ReplyPayload where
   toSExp (OK    result hl) = SExpList (SymbolAtom "ok" :: toSExp result :: map toSExp hl)
+  toSExp (HighlightSource hls) = SExpList
+    [ SymbolAtom "ok"
+    , SExpList
+      [ SymbolAtom "highlight-source"
+      , toSExp hls]
+    ]
   toSExp (Error msg    hl) = SExpList (SymbolAtom "error" :: toSExp msg :: map toSExp hl)
 
 public export

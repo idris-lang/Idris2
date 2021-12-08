@@ -8,6 +8,12 @@ modules
   , Protocol.IDE.Decoration
   , Protocol.SExp
   , Libraries.Data.Span
+  , Protocol.IDE.FileContext
+  , Protocol.IDE.Formatting
+  , Protocol.IDE.Holes
+  , Protocol.IDE.Result
+  , Protocol.IDE.Highlight
+
 
 --depends =
 

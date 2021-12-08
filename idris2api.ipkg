@@ -213,6 +213,11 @@ modules =
     Protocol.IDE,
     Protocol.IDE.Command,
     Protocol.IDE.Decoration,
+    Protocol.IDE.FileContext,
+    Protocol.IDE.Formatting,
+    Protocol.IDE.Holes,
+    Protocol.IDE.Result,
+    Protocol.IDE.Highlight,
     Protocol.Hex,
     Protocol.SExp,
 

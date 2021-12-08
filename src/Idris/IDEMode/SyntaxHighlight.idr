@@ -46,92 +46,38 @@ docToProperties DocStringBody = Nothing
 docToProperties UserDocString = Nothing
 docToProperties (Syntax syn)  = syntaxToProperties syn
 
--- TODO: refactor into Protocol.IDE
--- issue: think about the `location` field, since we don't want
--- to introduce a dependency of Protocol.IDE on Core.FC
--- We'll probably need to have another filename type and a conversion into it
-record Highlight where
-  constructor MkHighlight
-  location : NonEmptyFC --FileRange
-  filename : String
-  name : String
-  isImplicit : Bool
-  key : String
-  decor : Decoration
-  docOverview : String
-  typ : String
-  ns : String
 
-SExpable (FileName, FC) where
-  toSExp (fname, fc) = case isNonEmptyFC fc of
-    Just (origin, (startLine, startCol), (endLine, endCol)) =>
-      SExpList [ SExpList [ SymbolAtom "filename", StringAtom fname ]
-               , SExpList [ SymbolAtom "start"
-                          , IntegerAtom (cast startLine)
-                          , IntegerAtom (cast startCol)
-                          ]
-               , SExpList [ SymbolAtom "end"
-                          , IntegerAtom (cast endLine)
-                          , IntegerAtom (cast endCol)
-                          ]
-               ]
-    Nothing => toSExp (the (List Integer) [])
+Cast (FileName, NonEmptyFC) FileContext where
+  cast (filename, _, (startLine, startCol), (endLine, endCol)) =
+    MkFileContext
+      { file  = filename
+      , range = MkBounds {startLine, startCol, endLine, endCol}
+      }
 
-SExpable Highlight where
-  toSExp (MkHighlight loc fname nam impl k dec doc t ns)
-    = SExpList [ toSExp $ (fname, justFC loc)
-               , SExpList [ SExpList [ SymbolAtom "name", StringAtom nam ]
-                          , SExpList [ SymbolAtom "namespace", StringAtom ns ]
-                          , toSExp dec
-                          , SExpList [ SymbolAtom "implicit", toSExp impl ]
-                          , SExpList [ SymbolAtom "key", StringAtom k ]
-                          , SExpList [ SymbolAtom "doc-overview", StringAtom doc ]
-                          , SExpList [ SymbolAtom "type", StringAtom t ]
-                          ]
-               ]
-
--- TODO: delete these once we refactor into Intermediate messages
--- So that it takes `msg : ReplyPayload`
 ||| Output some data using current dialog index
 export
 printOutput : {auto c : Ref Ctxt Defs} ->
               {auto o : Ref ROpts REPLOpts} ->
-              SExp -> Core ()
-printOutput msg
+              SourceHighlight -> Core ()
+printOutput highlight
   =  do opts <- get ROpts
         case idemode opts of
           REPL _ => pure ()
           IDEMode i _ f =>
-            send f (SExpList [SymbolAtom "output",
-                              msg, toSExp i])
-
+            send f (toSExp $ Intermediate (HighlightSource [highlight]) $ cast i)
 
 outputHighlight : {auto c : Ref Ctxt Defs} ->
                   {auto opts : Ref ROpts REPLOpts} ->
                   Highlight -> Core ()
-outputHighlight h =
-  printOutput $ SExpList [ SymbolAtom "ok"
-                         , SExpList [ SymbolAtom "highlight-source"
-                                    , toSExp hlt
-                                    ]
-                         ]
-  where
-    hlt : List Highlight
-    hlt = [h]
+outputHighlight hl =
+  printOutput $ Full hl
 
 lwOutputHighlight :
   {auto c : Ref Ctxt Defs} ->
   {auto opts : Ref ROpts REPLOpts} ->
   (FileName, NonEmptyFC, Decoration) -> Core ()
 lwOutputHighlight (fname, nfc, decor) =
-  printOutput $ SExpList [ SymbolAtom "ok"
-                         , SExpList [ SymbolAtom "highlight-source"
-                                    , toSExp $ the (List _) [
-                                    SExpList [ toSExp $ (fname, justFC nfc)
-               , SExpList [ toSExp decor]
-               ]]]]
-
-
+  printOutput $ Lw $ MkLwHighlight {location = cast (fname, nfc), decor}
 
 outputNameSyntax : {auto c : Ref Ctxt Defs} ->
                    {auto s : Ref Syn SyntaxInfo} ->
@@ -145,9 +91,8 @@ outputNameSyntax (fname, nfc, decor, nm) = do
       let fc = justFC nfc
       let (mns, name) = displayName nm
       outputHighlight $ MkHighlight
-         { location = nfc
+         { location = cast (fname, nfc)
          , name
-         , filename = fname
          , isImplicit = False
          , key = ""
          , decor
