@@ -1759,10 +1759,15 @@ import_ fname indents
                          nsAs <- option (miAsNamespace ns)
                                         (do decorate fname Keyword $ exactIdent "as"
                                             decorate fname Namespace $ mustWork namespaceId)
-                         pure (reexp, ns, nsAs))
+                         imports <- optional $ do
+                                    decoratedKeyword fname "using"
+                                    parens fname $
+                                      sepBy1 (decoratedSymbol fname ",")
+                                      name
+                         pure (reexp, ns, nsAs, imports))
          atEnd indents
-         (reexp, ns, nsAs) <- pure b.val
-         pure (MkImport (boundToFC fname b) reexp ns nsAs)
+         (reexp, ns, nsAs, imports) <- pure b.val
+         pure (MkImport (boundToFC fname b) reexp ns nsAs imports)
 
 export
 prog : OriginDesc -> EmptyRule Module

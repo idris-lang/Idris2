@@ -192,15 +192,17 @@ idrisTestsSchemeEval = MkTestPool "Scheme Evaluator" [] Nothing
      ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004",
       "schemeeval005", "schemeeval006"]
 
+idrisImportTests : TestPool
+idrisImportTests = MkTestPool "Imports" [] Nothing
+  [ "import001", "import002", "import003", "import004", "import005",
+    "import006", "import007", "import008"]
+
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
        -- Documentation strings
       ["docs001", "docs002", "docs003",
        -- Eta equality
        "eta001",
-       -- Modules and imports
-       "import001", "import002", "import003", "import004", "import005", "import006",
-       "import007",
        -- Implicit laziness, lazy evaluation
        "lazy001", "lazy002",
        -- Namespace blocks
@@ -337,6 +339,7 @@ main = runner $
   , testPaths "idris2" idrisTestsEvaluator
   , testPaths "idris2" idrisTestsTotality
   , testPaths "idris2" idrisTestsSchemeEval
+  , testPaths "idris2" idrisImportTests
   , testPaths "idris2" idrisTests
   , !typeddTests
   , !ideModeTests

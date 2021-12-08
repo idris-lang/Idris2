@@ -14,6 +14,7 @@ import Core.TTC
 import Core.UnifyState
 
 import Data.List
+import Data.List1
 import Data.String
 
 import System.File
@@ -28,7 +29,7 @@ import public Libraries.Utils.Binary
 ||| (Increment this when changing anything in the data format)
 export
 ttcVersion : Int
-ttcVersion = 70
+ttcVersion = 71
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -47,7 +48,7 @@ record TTCFile extra where
   userHoles : List Name
   autoHints : List (Name, Bool)
   typeHints : List (Name, Name, Bool)
-  imported : List (ModuleIdent, Bool, Namespace)
+  imported : List (ModuleIdent, Bool, Namespace, Maybe (List1 Name))
   nextVar : Int
   currentNS : Namespace
   nestedNS : List Namespace
@@ -426,24 +427,64 @@ getNSas : (String, (ModuleIdent, Bool, Namespace)) ->
           (ModuleIdent, Namespace)
 getNSas (a, (b, c, d)) = (b, d)
 
--- Add definitions from a binary file to the current context
--- Returns the "extra" section of the file (user defined data), the interface
--- hash and the list of additional TTCs that need importing
+
+addUsedGlobalDefs :
+  {auto c : Ref Ctxt Defs} ->
+  List (Name, Binary) ->
+  ModuleIdent ->
+  (cns : Namespace) ->
+  (as : Maybe Namespace) ->
+  List Name ->
+  Core ()
+addUsedGlobalDefs defs modNS cns as imps
+  = do missing@(_ :: _) <- go [] defs
+         | _ => pure ()
+       recordWarning
+         $ GenericWarn
+         $ "Could not find requested names in module \{show modNS}: "
+         ++ showSep "," (map show missing)
+
+  where
+
+    -- returns the list of missing imports
+    go : List Name -> List (Name, Binary) -> Core (List Name)
+    go acc [] = pure (imps \\ acc)
+    go acc (entry@(entryName, _) :: defs) =
+       case find (\ nm => nameRoot nm == nameRoot entryName
+                       && matches nm entryName)
+                 imps of
+         Nothing => go acc defs
+         Just nm => do addGlobalDef modNS cns as entry
+                       go (nm :: acc) defs
+
+||| Add definitions from a binary file to the current context
+||| @ nestedns Set nested namespaces (for records, to use at the REPL)
+||| @ publicly Importing as public
+||| @ fname    File containing the module
+||| @ modNS    Module namespace
+||| @ importAs Namespace to import as
+||| @ imports  Explicit list of names to import (optional)
+|||
+||| Also returns
+||| 1. the extra section of the file (user defined data)
+||| 2. the interface hash
+||| 3. and the list of additional TTCs that need importing
 -- (we need to return these, rather than do it here, because after loading
 -- the data that's when we process the extra data...)
 export
 readFromTTC : TTC extra =>
               {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
-              Bool -> -- set nested namespaces (for records, to use at the REPL)
+              (nestedns : Bool) ->
               FC ->
-              Bool -> -- importing as public
-              (fname : String) -> -- file containing the module
-              (modNS : ModuleIdent) -> -- module namespace
-              (importAs : Namespace) -> -- namespace to import as
+              (publicly : Bool) ->
+              (fname : String) ->
+              (modNS : ModuleIdent) ->
+              (importAs : Namespace) ->
+              (imports : Maybe (List1 Name)) ->
               Core (Maybe (extra, Int,
-                           List (ModuleIdent, Bool, Namespace)))
-readFromTTC nestedns loc reexp fname modNS importAs
+                           List (ModuleIdent, Bool, Namespace, Maybe (List1 Name))))
+readFromTTC nestedns loc reexp fname modNS importAs imports
     = do defs <- get Ctxt
          -- If it's already in the context, with the same visibility flag,
          -- don't load it again (we do need to load it again if it's visible
@@ -467,7 +508,9 @@ readFromTTC nestedns loc reexp fname modNS importAs
             else do
                ttc <- readTTCFile True fname bin
                let ex = extraData ttc
-               traverse_ (addGlobalDef modNS (currentNS ttc) as) (context ttc)
+               elim_ imports
+                 (for_ (context ttc) (addGlobalDef modNS (currentNS ttc) as))
+                 (addUsedGlobalDefs (context ttc) modNS (currentNS ttc) as . forget)
                traverse_ (addUserHole True) (userHoles ttc)
                setNS (currentNS ttc)
                when nestedns $ setNestedNS (nestedNS ttc)

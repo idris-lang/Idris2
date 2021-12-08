@@ -655,6 +655,13 @@ export
 for_ : List a -> (a -> Core ()) -> Core ()
 for_ = flip traverse_
 
+namespace Maybe
+
+  export
+  elim_ : Maybe a -> Core () -> (a -> Core ()) -> Core ()
+  elim_ Nothing m _ = m
+  elim_ (Just v) _ k = k v
+
 %inline
 export
 sequence : List (Core a) -> Core (List a)

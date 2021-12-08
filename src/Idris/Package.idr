@@ -489,7 +489,7 @@ makeDoc pkg opts =
        [] <- concat <$> for (modules pkg) (\(mod, filename) => do
            -- load dependencies
            let ns = miAsNamespace mod
-           addImport (MkImport emptyFC False mod ns)
+           addImport (MkImport emptyFC False mod ns Nothing)
 
            -- generate docs for all visible names
            defs <- get Ctxt

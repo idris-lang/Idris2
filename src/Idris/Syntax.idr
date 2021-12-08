@@ -633,9 +633,16 @@ public export
 record Import where
   constructor MkImport
   loc : FC
+  ||| Whether to re-export the imported definitions
   reexport : Bool
+  ||| The module to import
   path : ModuleIdent
+  ||| The namespace to put the imports in
   nameAs : Namespace
+  ||| The (optional) explicit list of names to import.
+  ||| 1. Nothing   means import without restrictions
+  ||| 2. (Just ns) means only import those `ns`
+  imports : Maybe (List1 Name)
 
 public export
 record Module where

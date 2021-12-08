@@ -81,34 +81,40 @@ processDecls decls
          errs <- logTime ("+++ Totality check overall") getTotalityErrors
          pure (xs ++ errs)
 
+||| Read a module and pour its definitions into the context
+||| @ full    Load everything transitively (needed for REPL and compiling)?
+||| @ visible Is the import visible to the top level module?
+||| @ imp     Module name to import
+||| @ as      Namespace to pour the definitions of imp into
+||| @ imports Explicit list of names to import (optional)
 readModule : {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
              {auto s : Ref Syn SyntaxInfo} ->
-             (full : Bool) -> -- load everything transitively (needed for REPL and compiling)
+             (full : Bool) ->
              FC ->
-             (visible : Bool) -> -- Is import visible to top level module?
-             (imp : ModuleIdent) -> -- Module name to import
-             (as : Namespace) -> -- Namespace to import into
+             (visible : Bool) ->
+             (imp : ModuleIdent) ->
+             (as : Namespace) ->
+             (imports : Maybe (List1 Name)) ->
              Core ()
-readModule full loc vis imp as
+readModule full loc vis imp as imports
     = do defs <- get Ctxt
          let False = (imp, vis, as) `elem` map snd (allImported defs)
              | True => when vis (setVisible (miAsNamespace imp))
          Right fname <- nsToPath loc imp
-               | Left err => throw err
-         Just (syn, hash, more) <- readFromTTC False {extra = SyntaxInfo}
-                                                  loc vis fname imp as
-              | Nothing => when vis (setVisible (miAsNamespace imp)) -- already loaded, just set visibility
+             | Left err => throw err
+         Just (syn, hash, more) <- readFromTTC False {extra = SyntaxInfo} loc vis fname imp as imports
+             | Nothing => when vis (setVisible (miAsNamespace imp))
+                           --  already loaded, just set visibility
          extendSyn syn
 
          defs <- get Ctxt
          modNS <- getNS
          when vis $ setVisible (miAsNamespace imp)
-         traverse_ (\ mimp =>
-                       do let m = fst mimp
-                          let reexp = fst (snd mimp)
-                          let as = snd (snd mimp)
-                          when (reexp || full) $ readModule full loc reexp m as) more
+         for_ more $ \ (m, reexp, as, imports) =>
+           do when (reexp || full) $
+                readModule full loc reexp m as imports
+
          setNS modNS
 
 readImport : {auto c : Ref Ctxt Defs} ->
@@ -116,8 +122,8 @@ readImport : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              Bool -> Import -> Core ()
 readImport full imp
-    = do readModule full (loc imp) True (path imp) (nameAs imp)
-         addImported (path imp, reexport imp, nameAs imp)
+    = do readModule full (loc imp) True (path imp) (nameAs imp) (imports imp)
+         addImported (path imp, reexport imp, nameAs imp, imports imp)
 
 ||| Adds new import to the namespace without changing the current top-level namespace
 export
@@ -141,7 +147,7 @@ readImportMeta imp
 
 prelude : Import
 prelude = MkImport (MkFC (Virtual Interactive) (0, 0) (0, 0)) False
-                     (nsAsModuleIdent preludeNS) preludeNS
+                     (nsAsModuleIdent preludeNS) preludeNS Nothing
 
 export
 readPrelude : {auto c : Ref Ctxt Defs} ->
@@ -160,7 +166,7 @@ readAsMain : {auto c : Ref Ctxt Defs} ->
              (fname : String) -> Core ()
 readAsMain fname
     = do Just (syn, _, more) <- readFromTTC {extra = SyntaxInfo}
-                                             True EmptyFC True fname (nsAsModuleIdent emptyNS) emptyNS
+                                             True EmptyFC True fname (nsAsModuleIdent emptyNS) emptyNS Nothing
               | Nothing => throw (InternalError "Already loaded")
 
          replNS <- getNS
@@ -170,16 +176,14 @@ readAsMain fname
          -- Read the main file's top level imported modules, so we have access
          -- to their names (and any of their public imports)
          ustm <- get UST
-         traverse_ (\ mimp =>
-                       do let m = fst mimp
-                          let as = snd (snd mimp)
-                          readModule True emptyFC True m as
-                          addImported (m, True, as)) more
+         for_ more $ \ (m, _, as, _) =>
+           do readModule True emptyFC True m as Nothing
+              addImported (m, True, as, Nothing)
 
          -- also load the prelude, if required, so that we have access to it
          -- at the REPL.
          when (not (noprelude !getSession)) $
-              readModule True emptyFC True (nsAsModuleIdent preludeNS) preludeNS
+              readModule True emptyFC True (nsAsModuleIdent preludeNS) preludeNS Nothing
 
          -- We're in the namespace from the first TTC, so use the next name
          -- from that for the fresh metavariable name generation

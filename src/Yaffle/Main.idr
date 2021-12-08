@@ -7,6 +7,7 @@ import Core.FC
 import Core.InitPrimitives
 import Core.Metadata
 import Core.UnifyState
+import Data.List1
 import Libraries.Utils.Path
 
 import Idris.Syntax
@@ -47,7 +48,7 @@ yaffleMain sourceFileName args
          addPrimitives
          case extension sourceFileName of
               Just "ttc" => do coreLift_ $ putStrLn "Processing as TTC"
-                               ignore $ readFromTTC {extra = ()} True emptyFC True sourceFileName (nsAsModuleIdent emptyNS) emptyNS
+                               ignore $ readFromTTC {extra = ()} True emptyFC True sourceFileName (nsAsModuleIdent emptyNS) emptyNS Nothing
                                coreLift_ $ putStrLn "Read TTC"
               _ => do coreLift_ $ putStrLn "Processing as TTImp"
                       ok <- processTTImpFile sourceFileName
