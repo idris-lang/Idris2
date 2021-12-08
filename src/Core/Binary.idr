@@ -198,9 +198,9 @@ writeTTCFile b file_in
 
 readTTCFile : TTC extra =>
               {auto c : Ref Ctxt Defs} ->
-              Bool -> String -> Maybe (Namespace) ->
+              Bool -> String ->
               Ref Bin Binary -> Core (TTCFile extra)
-readTTCFile readall file as b
+readTTCFile readall file b
       = do hdr <- fromBuf b
            chunk <- get Bin
            when (hdr /= "TT2") $
@@ -455,19 +455,17 @@ readFromTTC nestedns loc reexp fname modNS importAs
          Right buffer <- coreLift $ readFromFile fname
                | Left err => throw (InternalError (fname ++ ": " ++ show err))
          bin <- newRef Bin buffer -- for reading the file into
-         let as = if importAs == miAsNamespace modNS
-                     then Nothing
-                     else Just importAs
+         let as = importAs <$ guard (importAs /= miAsNamespace modNS)
 
          -- If it's already imported, but without reexporting, then all we're
          -- interested in is returning which other modules to load.
          -- Otherwise, add the data
          if alreadyDone modNS importAs (allImported defs)
-            then do ttc <- readTTCFile False fname as bin
+            then do ttc <- readTTCFile False fname bin
                     let ex = extraData ttc
                     pure (Just (ex, ifaceHash ttc, imported ttc))
             else do
-               ttc <- readTTCFile True fname as bin
+               ttc <- readTTCFile True fname bin
                let ex = extraData ttc
                traverse_ (addGlobalDef modNS (currentNS ttc) as) (context ttc)
                traverse_ (addUserHole True) (userHoles ttc)
