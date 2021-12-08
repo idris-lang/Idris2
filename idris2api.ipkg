@@ -159,6 +159,7 @@ modules =
     Libraries.Data.NameMap.Traversable,
     Libraries.Data.PosMap,
     Libraries.Data.Primitives,
+    Libraries.Data.Span,
     Libraries.Data.SortedMap,
     Libraries.Data.SortedSet,
     Libraries.Data.String.Extra,
