@@ -27,7 +27,7 @@ SExpable Name where
 
 export
 version : Int -> Int -> SExp
-version maj min = toSExp $ Version maj min
+version maj min = toSExp $ ProtocolVersion maj min
 
 sendStr : File -> String -> IO ()
 sendStr f st =

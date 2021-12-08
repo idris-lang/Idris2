@@ -15,7 +15,7 @@ import System.File
 import Libraries.Data.PosMap
 import Libraries.Utils.Binary
 
-import public Protocol.IDE
+import public Protocol.IDE.Decoration as Protocol.IDE
 
 %default covering
 

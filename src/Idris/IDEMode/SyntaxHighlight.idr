@@ -52,7 +52,7 @@ docToProperties (Syntax syn)  = syntaxToProperties syn
 -- We'll probably need to have another filename type and a conversion into it
 record Highlight where
   constructor MkHighlight
-  location : NonEmptyFC
+  location : NonEmptyFC --FileRange
   filename : String
   name : String
   isImplicit : Bool
@@ -67,15 +67,15 @@ SExpable (FileName, FC) where
     Just (origin, (startLine, startCol), (endLine, endCol)) =>
       SExpList [ SExpList [ SymbolAtom "filename", StringAtom fname ]
                , SExpList [ SymbolAtom "start"
-                          , IntegerAtom (cast startLine + 1)
-                          , IntegerAtom (cast startCol + 1)
+                          , IntegerAtom (cast startLine)
+                          , IntegerAtom (cast startCol)
                           ]
                , SExpList [ SymbolAtom "end"
-                          , IntegerAtom (cast endLine + 1)
+                          , IntegerAtom (cast endLine)
                           , IntegerAtom (cast endCol)
                           ]
                ]
-    Nothing => SExpList []
+    Nothing => toSExp (the (List Integer) [])
 
 SExpable Highlight where
   toSExp (MkHighlight loc fname nam impl k dec doc t ns)
