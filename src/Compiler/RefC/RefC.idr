@@ -464,6 +464,11 @@ record ReturnStatement where
     nonTailCall : String
     tailCall : String
 
+data TailPositionStatus = InTailPosition | NotInTailPosition
+
+callByPosition : TailPositionStatus -> ReturnStatement -> String
+callByPosition InTailPosition = tailCall
+callByPosition NotInTailPosition = nonTailCall
 
 mutual
     copyConstructors : {auto a : Ref ArgCounter Nat}
@@ -496,21 +501,22 @@ mutual
              -> List AConAlt
              -> (returnValueVariable:String)
              -> (nrConBlock:Nat)
+             -> TailPositionStatus
              -> Core ()
-    conBlocks _ [] _ _ = pure ()
-    conBlocks sc ((MkAConAlt n _ mTag args body) :: xs) retValVar k = do
+    conBlocks _ [] _ _ _ = pure ()
+    conBlocks sc ((MkAConAlt n _ mTag args body) :: xs) retValVar k tailStatus = do
         emit EmptyFC $ "  case " ++ show k ++ ":"
         emit EmptyFC $ "  {"
         increaseIndentation
         newTemporaryVariableLevel
         varBindLines sc args Z
-        assignment <- cStatementsFromANF body
-        emit EmptyFC $ retValVar ++ " = " ++ nonTailCall assignment ++ ";"
+        assignment <- cStatementsFromANF body tailStatus
+        emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         freeTmpVars
         emit EmptyFC $ "break;"
         decreaseIndentation
         emit EmptyFC $ "  }"
-        conBlocks sc xs retValVar (S k)
+        conBlocks sc xs retValVar (S k) tailStatus
     where
         varBindLines : String -> (args : List Int) -> Nat -> Core ()
         varBindLines _ [] _ = pure ()
@@ -527,21 +533,22 @@ mutual
                        -> (alts:List AConstAlt)
                        -> (retValVar:String)
                        -> (alternativeIntMatcher:Integer)
+                       -> TailPositionStatus
                        -> Core ()
-    constBlockSwitch [] _ _ = pure ()
-    constBlockSwitch ((MkAConstAlt c' caseBody) :: alts) retValVar i = do
+    constBlockSwitch [] _ _ _ = pure ()
+    constBlockSwitch ((MkAConstAlt c' caseBody) :: alts) retValVar i tailStatus = do
         let c = const2Integer c' i
         emit EmptyFC $ "  case " ++ show c ++ " :"
         emit EmptyFC "  {"
         increaseIndentation
         newTemporaryVariableLevel
-        assignment <- cStatementsFromANF caseBody
-        emit EmptyFC $ retValVar ++ " = " ++ nonTailCall assignment ++ ";"
+        assignment <- cStatementsFromANF caseBody tailStatus
+        emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         freeTmpVars
         emit EmptyFC "break;"
         decreaseIndentation
         emit EmptyFC "  }"
-        constBlockSwitch alts retValVar (i+1)
+        constBlockSwitch alts retValVar (i+1) tailStatus
 
 
 
@@ -551,15 +558,16 @@ mutual
                      -> {auto il : Ref IndentLevel Nat}
                      -> (def:Maybe ANF)
                      -> (retValVar:String)
+                     -> TailPositionStatus
                      -> Core ()
-    constDefaultBlock Nothing _ = pure ()
-    constDefaultBlock (Just defaultBody) retValVar = do
+    constDefaultBlock Nothing _ _ = pure ()
+    constDefaultBlock (Just defaultBody) retValVar tailStatus = do
         emit EmptyFC "  default :"
         emit EmptyFC "  {"
         increaseIndentation
         newTemporaryVariableLevel
-        assignment <- cStatementsFromANF defaultBody
-        emit EmptyFC $ retValVar ++ " = " ++ nonTailCall assignment ++ ";"
+        assignment <- cStatementsFromANF defaultBody tailStatus
+        emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         freeTmpVars
         decreaseIndentation
         emit EmptyFC "  }"
@@ -606,11 +614,12 @@ mutual
                       -> {auto oft : Ref OutfileText Output}
                       -> {auto il : Ref IndentLevel Nat}
                       -> ANF
+                      -> TailPositionStatus
                       -> Core ReturnStatement
-    cStatementsFromANF (AV fc x) = do
+    cStatementsFromANF (AV fc x) _ = do
         let returnLine = "newReference(" ++ varName x  ++ ")"
         pure $ MkRS returnLine returnLine
-    cStatementsFromANF (AAppName fc _ n args) = do
+    cStatementsFromANF (AAppName fc _ n args) _ = do
         emit fc $ ("// start " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
         arglist <- makeArglist 0 args
         c <- getNextCounter
@@ -626,7 +635,7 @@ mutual
                ++ ");"
         emit fc $ ("// end   " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
         pure $ MkRS ("trampoline(" ++ closure_name ++ ")") closure_name
-    cStatementsFromANF (AUnderApp fc n missing args) = do
+    cStatementsFromANF (AUnderApp fc n missing args) _ = do
         arglist <- makeArglist missing args
         c <- getNextCounter
         let f_ptr_name = "closure_" ++ show c
@@ -634,18 +643,18 @@ mutual
         emit fc f_ptr
         let returnLine = "(Value*)makeClosureFromArglist(" ++ f_ptr_name  ++ ", " ++ arglist ++ ")"
         pure $ MkRS returnLine returnLine
-    cStatementsFromANF (AApp fc _ closure arg) =
+    cStatementsFromANF (AApp fc _ closure arg) _ =
         pure $ MkRS ("apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
                     ("tailcall_apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
-    cStatementsFromANF (ALet fc var value body) = do
-        valueAssignment <- cStatementsFromANF value
+    cStatementsFromANF (ALet fc var value body) tailPosition = do
+        valueAssignment <- cStatementsFromANF value NotInTailPosition
         emit fc $ "Value * var_" ++ (show var) ++ " = " ++ nonTailCall valueAssignment ++ ";"
         registerVariableForAutomaticFreeing $ "var_" ++ (show var)
-        bodyAssignment <- cStatementsFromANF body
+        bodyAssignment <- cStatementsFromANF body tailPosition
         pure $ bodyAssignment
-    cStatementsFromANF (ACon fc n UNIT tag []) = do
+    cStatementsFromANF (ACon fc n UNIT tag []) _ = do
         pure $ MkRS "(Value*)NULL" "(Value*)NULL"
-    cStatementsFromANF (ACon fc n _ tag args) = do
+    cStatementsFromANF (ACon fc n _ tag args) _ = do
         c <- getNextCounter
         let constr = "constructor_" ++ (show c)
         emit fc $ "Value_Constructor* "
@@ -658,15 +667,15 @@ mutual
 
         fillConstructorArgs constr args 0
         pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
-    cStatementsFromANF (AOp fc _ op args) = do
+    cStatementsFromANF (AOp fc _ op args) _ = do
         argsVec <- cArgsVectANF args
         let opStatement = cOp op argsVec
         pure $ MkRS opStatement opStatement
-    cStatementsFromANF (AExtPrim fc _ p args) = do
+    cStatementsFromANF (AExtPrim fc _ p args) _ = do
         emit fc $ "// call to external primitive " ++ cName p
         let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")")
         pure $ MkRS returnLine returnLine
-    cStatementsFromANF (AConCase fc sc alts mDef) = do
+    cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
         c <- getNextCounter
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
         let newValueLine = "Value * " ++ switchReturnVar ++ " = NULL;"
@@ -684,7 +693,7 @@ mutual
         emit fc constructorFieldLine
         copyConstructors (varName sc) alts constructorField switchReturnVar 0
         emit fc switchLine
-        conBlocks (varName sc) alts switchReturnVar 0
+        conBlocks (varName sc) alts switchReturnVar 0 tailPosition
         case mDef of
             Nothing => do
                 emit EmptyFC $ "}"
@@ -694,36 +703,36 @@ mutual
                 emit EmptyFC $ "  default : {"
                 increaseIndentation
                 newTemporaryVariableLevel
-                defaultAssignment <- cStatementsFromANF d
-                emit EmptyFC $ switchReturnVar ++ " = " ++ nonTailCall defaultAssignment ++ ";"
+                defaultAssignment <- cStatementsFromANF d tailPosition
+                emit EmptyFC $ switchReturnVar ++ " = " ++ callByPosition tailPosition defaultAssignment ++ ";"
                 freeTmpVars
                 decreaseIndentation
                 emit EmptyFC $ "  }"
                 emit EmptyFC $ "}"
                 emit EmptyFC $ "free(" ++ constructorField ++ ");"
                 pure $ MkRS switchReturnVar switchReturnVar
-    cStatementsFromANF (AConstCase fc sc alts def) = do
+    cStatementsFromANF (AConstCase fc sc alts def) tailPosition = do
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
         let newValueLine = "Value * " ++ switchReturnVar ++ " = NULL;"
         emit fc newValueLine
         case integer_switch alts of
             True => do
                 emit fc $ "switch(extractInt(" ++ varName sc ++")){"
-                constBlockSwitch alts switchReturnVar 0
-                constDefaultBlock def switchReturnVar
+                constBlockSwitch alts switchReturnVar 0 tailPosition
+                constDefaultBlock def switchReturnVar tailPosition
                 emit EmptyFC "}"
                 pure $ MkRS switchReturnVar switchReturnVar
             False => do
                 (compareField, compareFunction) <- makeNonIntSwitchStatementConst alts 0 "" ""
                 emit fc $ "switch("++ compareFunction ++ "(" ++ varName sc ++ ", " ++ show (length alts) ++ ", " ++ compareField ++ ")){"
-                constBlockSwitch alts switchReturnVar 0
-                constDefaultBlock def switchReturnVar
+                constBlockSwitch alts switchReturnVar 0 tailPosition
+                constDefaultBlock def switchReturnVar tailPosition
                 emit EmptyFC "}"
                 emit EmptyFC $ "free(" ++ compareField ++ ");"
                 pure $ MkRS switchReturnVar switchReturnVar
-    cStatementsFromANF (APrimVal fc c) = pure $ MkRS (cConstant c) (cConstant c)
-    cStatementsFromANF (AErased fc) = pure $ MkRS "NULL" "NULL"
-    cStatementsFromANF (ACrash fc x) = do
+    cStatementsFromANF (APrimVal fc c) _ = pure $ MkRS (cConstant c) (cConstant c)
+    cStatementsFromANF (AErased fc) _ = pure $ MkRS "NULL" "NULL"
+    cStatementsFromANF (ACrash fc x) _ = do
         emit fc $ "// CRASH"
         pure $ MkRS "NULL" "NULL"
 
@@ -883,7 +892,7 @@ createCFunctions n (MkAFun args anf) = do
     emit EmptyFC fn
     emit EmptyFC "{"
     increaseIndentation
-    assignment <- cStatementsFromANF anf
+    assignment <- cStatementsFromANF anf InTailPosition
     emit EmptyFC $ "Value *returnValue = " ++ tailCall assignment ++ ";"
     freeTmpVars
     emit EmptyFC $ "return returnValue;"
