@@ -42,6 +42,7 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic051", "basic052", "basic053", "basic054", "basic055",
        "basic056", "basic057", "basic058", "basic059", "basic060",
        "basic061", "basic062", "basic063", "basic064", "basic065",
+       "basic066", "basic067",
        "interpolation001", "interpolation002", "interpolation003",
        "interpolation004"]
 
@@ -144,7 +145,7 @@ idrisTestsData = MkTestPool "Data and record types" [] Nothing
        -- Records, access and dependent update
        "record001", "record002", "record003", "record004", "record005",
        "record006", "record007", "record008", "record009", "record010",
-       "record011", "record012", "record013" ]
+       "record011", "record012", "record013", "record014" ]
 
 idrisTestsBuiltin : TestPool
 idrisTestsBuiltin = MkTestPool "Builtin types and functions" [] Nothing
@@ -180,7 +181,7 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
-       "total011", "total012"
+       "total011", "total012", "total013"
       ]
 
 -- This will only work with an Idris compiled via Chez or Racket, but at
@@ -216,7 +217,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",
        "reflection009", "reflection010", "reflection011", "reflection012",
-       "reflection013",
+       "reflection013", "reflection014",
        -- The 'with' rule
        "with001", "with002", "with004", "with005", "with006",
        -- with-disambiguation

@@ -1171,14 +1171,27 @@ dataDeclBody fname indents
          (col, n) <- pure b.val
          simpleData fname b n indents <|> gadtData fname col b n indents
 
+totalityOpt : OriginDesc -> Rule TotalReq
+totalityOpt fname
+    = (decoratedKeyword fname "partial" $> PartialOK)
+  <|> (decoratedKeyword fname "total" $> Total)
+  <|> (decoratedKeyword fname "covering" $> CoveringOnly)
+
+-- a data declaration can have a visibility and an optional totality (#1404)
+dataVisOpt : OriginDesc -> EmptyRule (Visibility, Maybe TotalReq)
+dataVisOpt fname
+    = do { vis <- visOption   fname ; mbtot <- optional (totalityOpt fname) ; pure (vis, mbtot) }
+  <|> do { tot <- totalityOpt fname ; vis <- visibility fname ; pure (vis, Just tot) }
+  <|> pure (Private, Nothing)
+
 dataDecl : OriginDesc -> IndentInfo -> Rule PDecl
 dataDecl fname indents
-    = do b <- bounds (do doc   <- optDocumentation fname
-                         vis   <- visibility fname
-                         dat   <- dataDeclBody fname indents
-                         pure (doc, vis, dat))
-         (doc, vis, dat) <- pure b.val
-         pure (PData (boundToFC fname b) doc vis dat)
+    = do b <- bounds (do doc         <- optDocumentation fname
+                         (vis,mbTot) <- dataVisOpt fname
+                         dat         <- dataDeclBody fname indents
+                         pure (doc, vis, mbTot, dat))
+         (doc, vis, mbTot, dat) <- pure b.val
+         pure (PData (boundToFC fname b) doc vis mbTot dat)
 
 stripBraces : String -> String
 stripBraces str = pack (drop '{' (reverse (drop '}' (reverse (unpack str)))))
@@ -1197,15 +1210,9 @@ extension
     = (exactIdent "ElabReflection" $> ElabReflection)
   <|> (exactIdent "Borrowing" $> Borrowing)
 
-totalityOpt : OriginDesc -> Rule TotalReq
-totalityOpt fname
-    = (decoratedKeyword fname "partial" $> PartialOK)
-  <|> (decoratedKeyword fname "total" $> Total)
-  <|> (decoratedKeyword fname "covering" $> CoveringOnly)
-
-logLevel : Rule (Maybe LogLevel)
-logLevel
-  = (Nothing <$ exactIdent "off")
+logLevel : OriginDesc -> Rule (Maybe LogLevel)
+logLevel fname
+  = (Nothing <$ decorate fname Keyword (exactIdent "off"))
     <|> do topic <- optional (split ('.' ==) <$> simpleStr)
            lvl <- intLit
            pure (Just (mkLogLevel' topic (fromInteger lvl)))
@@ -1222,7 +1229,7 @@ directive fname indents
 --          atEnd indents
 --          pure (Hide True n)
   <|> do decorate fname Keyword $ pragma "logging"
-         lvl <- logLevel
+         lvl <- logLevel fname
          atEnd indents
          pure (Logging lvl)
   <|> do decorate fname Keyword $ pragma "auto_lazy"
@@ -1602,9 +1609,9 @@ recordParam fname indents
 
 recordDecl : OriginDesc -> IndentInfo -> Rule PDecl
 recordDecl fname indents
-    = do b <- bounds (do doc   <- optDocumentation fname
-                         vis   <- visibility fname
-                         col   <- column
+    = do b <- bounds (do doc         <- optDocumentation fname
+                         (vis,mbtot) <- dataVisOpt fname
+                         col         <- column
                          decoratedKeyword fname "record"
                          n       <- mustWork (decoratedDataTypeName fname)
                          paramss <- many (recordParam fname indents)
@@ -1613,7 +1620,7 @@ recordDecl fname indents
                          dcflds <- blockWithOptHeaderAfter col
                                       (\ idt => recordConstructor fname <* atEnd idt)
                                       (fieldDecl fname)
-                         pure (\fc : FC => PRecord fc doc vis n params (fst dcflds) (concat (snd dcflds))))
+                         pure (\fc : FC => PRecord fc doc vis mbtot n params (fst dcflds) (concat (snd dcflds))))
          pure (b.val (boundToFC fname b))
 
 paramDecls : OriginDesc -> IndentInfo -> Rule PDecl
@@ -1757,7 +1764,7 @@ import_ fname indents
                          reexp <- option False (decoratedKeyword fname "public" $> True)
                          ns <- decorate fname Module $ mustWork moduleIdent
                          nsAs <- option (miAsNamespace ns)
-                                        (do exactIdent "as"
+                                        (do decorate fname Keyword $ exactIdent "as"
                                             decorate fname Namespace $ mustWork namespaceId)
                          pure (reexp, ns, nsAs))
          atEnd indents
@@ -2151,7 +2158,7 @@ loggingArgCmd parseCmd command doc = (names, Args [StringArg, NumberArg], doc, p
   parse = do
     symbol ":"
     runParseCmd parseCmd
-    lvl <- mustWork logLevel
+    lvl <- mustWork $ logLevel (Virtual Interactive)
     pure (command lvl)
 
 parserCommandsForHelp : CommandTable

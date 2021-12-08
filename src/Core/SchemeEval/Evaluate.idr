@@ -111,7 +111,38 @@ getArgList obj
          then unsafeFst obj :: getArgList (unsafeSnd obj)
          else []
 
+quoteFC : ForeignObj -> FC
+quoteFC fc_in = fromMaybe emptyFC (fromScheme (decodeObj fc_in))
+
+quoteLazyReason : ForeignObj -> LazyReason
+quoteLazyReason r_in = fromMaybe LUnknown (fromScheme (decodeObj r_in))
+
+quoteTypeLevel : ForeignObj -> Name
+quoteTypeLevel u_in = fromMaybe (MN "top" 0) (fromScheme (decodeObj u_in))
+
+quoteRigCount : ForeignObj -> RigCount
+quoteRigCount rig_in = fromMaybe top (fromScheme (decodeObj rig_in))
+
+quoteBinderName : ForeignObj -> Name
+quoteBinderName nm_in
+  = fromMaybe (UN (Basic "x")) (fromScheme (decodeObj nm_in))
+
+quoteOrInvalid : Scheme x =>
+              ForeignObj -> (x -> Core (Term vars)) -> Core (Term vars)
+quoteOrInvalid obj_in k = do
+  let Just obj = fromScheme (decodeObj obj_in)
+    | Nothing => invalid
+  k obj
+
+quoteOrInvalidS : Scheme x =>
+                 ForeignObj -> (x -> Core (SNF vars)) -> Core (SNF vars)
+quoteOrInvalidS obj_in k = do
+  let Just obj = fromScheme (decodeObj obj_in)
+    | Nothing => invalidS
+  k obj
+
 mutual
+
   -- We don't use decodeObj because then we have to traverse the term twice.
   -- Instead, decode the ForeignObj directly, which is uglier but faster.
   quoteVector : Ref Sym Integer =>
@@ -120,15 +151,12 @@ mutual
                 Integer -> List ForeignObj ->
                 Core (Term (outer ++ vars))
   quoteVector svs (-2) [_, fname_in, args_in] -- Blocked app
-      = do let Just fname = fromScheme (decodeObj fname_in)
-                    | _ => invalid
+      = quoteOrInvalid fname_in $ \ fname => do
            let argList = getArgList args_in
            args <- traverse (quote' svs) argList
            pure (apply emptyFC (Ref emptyFC Func fname) args)
   quoteVector svs (-10) [_, fn_arity, args_in] -- Blocked meta app
-      = do let Just (fname, arity_in) = the (Maybe (Name, Integer)) $
-                                            fromScheme (decodeObj fn_arity)
-                    | _ => invalid
+      = quoteOrInvalid {x = (Name, Integer)} fn_arity $ \ (fname, arity_in) => do
            let arity : Nat = cast arity_in
            let argList = getArgList args_in
            args <- traverse (quote' svs) argList
@@ -143,21 +171,15 @@ mutual
            args <- traverse (quote' svs) argList
            pure (apply emptyFC loc args)
   quoteVector svs (-1) (_ :: tag_in :: strtag :: cname_in :: fc_in :: args_in) -- TyCon
-      = do let Just cname = fromScheme (decodeObj cname_in)
-                    | Nothing => invalid
-           let Just tag = the (Maybe Integer) $ fromScheme (decodeObj tag_in)
-                    | Nothing => invalid
-           let fc = emptyFC -- case fromScheme (decodeObj fc_in) of
---                            Just fc => fc
---                            _ => emptyFC
+      = quoteOrInvalid cname_in $ \ cname =>
+        quoteOrInvalid {x = Integer} tag_in $ \ tag => do
+           let fc = emptyFC -- quoteFC fc_in
            args <- traverse (quote' svs) args_in
            pure (apply fc (Ref fc (TyCon (cast tag) (length args)) cname)
                            args)
   quoteVector svs (-15) [_, r_in, ty_in] -- Delayed
       = do ty <- quote' svs ty_in
-           let r = case fromScheme (decodeObj r_in) of
-                        Just r => r
-                        _ => LUnknown
+           let r = quoteLazyReason r_in
            pure (TDelayed emptyFC r ty)
   quoteVector svs (-4) [_, r_in, fc_in, ty_in, tm_in] -- Delay
       = do -- Block further reduction under tm_in
@@ -172,139 +194,81 @@ mutual
            -- Turn blocking off again
            Just _ <- coreLift $ evalSchemeStr "(ct-setBlockAll #f)"
                 | Nothing => invalid
-           let fc = case fromScheme (decodeObj fc_in) of
-                         Just fc => fc
-                         _ => emptyFC
-           let r = case fromScheme (decodeObj r_in) of
-                        Just r => r
-                        _ => LUnknown
+           let fc = quoteFC fc_in
+           let r = quoteLazyReason r_in
            pure (TDelay fc r ty tm)
   quoteVector svs (-5) [_, r_in, fc_in, tm_in] -- Force
       = do -- The thing we were trying to force was stuck. Corresponding to
            -- Core.Normalise, reduce it anyway here (so no ct-blockAll like above)
            tm <- quote' svs tm_in
-           let fc = case fromScheme (decodeObj fc_in) of
-                         Just fc => fc
-                         _ => emptyFC
-           let r = case fromScheme (decodeObj r_in) of
-                        Just r => r
-                        _ => LUnknown
+           let fc = quoteFC fc_in
+           let r = quoteLazyReason r_in
            pure (TForce fc r tm)
   quoteVector svs (-6) [_, fc_in, imp_in] -- Erased
-      = do let fc = case fromScheme (decodeObj fc_in) of
-                         Just fc => fc
-                         _ => emptyFC
+      = do let fc = quoteFC fc_in
            let imp = case fromScheme (decodeObj imp_in) of
                           Just imp => imp
                           _ => False
            pure (Erased fc imp)
   quoteVector svs (-7) [_, fc_in, u_in] -- Type
-      = do let fc = case fromScheme (decodeObj fc_in) of
-                         Just fc => fc
-                         _ => emptyFC
-           let u = case fromScheme (decodeObj u_in) of
-                        Just u => u
-                        _ => MN "top" 0
+      = do let fc = quoteFC fc_in
+           let u = quoteTypeLevel u_in
            pure (TType fc u)
   quoteVector svs (-8) [_, proc_in, rig_in, pi_in, ty_in, name_in] -- Lambda
-      = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN (Basic "x")
-                           Just n' => n'
-           let rig = case fromScheme (decodeObj rig_in) of
-                          Nothing => top
-                          Just r => r
+      = do let name = quoteBinderName name_in
+           let rig = quoteRigCount rig_in
            ty <- quote' svs ty_in
            pi <- quotePiInfo svs pi_in
            quoteBinder svs Lam proc_in rig pi ty name
   quoteVector svs (-3) [_, proc_in, rig_in, pi_in, ty_in, name_in] -- Pi
-      = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN (Basic "x")
-                           Just n' => n'
-           let rig = case fromScheme (decodeObj rig_in) of
-                          Nothing => top
-                          Just r => r
+      = do let name = quoteBinderName name_in
+           let rig = quoteRigCount rig_in
            ty <- quote' svs ty_in
            pi <- quotePiInfo svs pi_in
            quoteBinder svs Pi proc_in rig pi ty name
   quoteVector svs (-12) [_, proc_in, rig_in, pi_in, ty_in, name_in] -- PVar
-      = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN (Basic "x")
-                           Just n' => n'
-           let rig = case fromScheme (decodeObj rig_in) of
-                          Nothing => top
-                          Just r => r
+      = do let name = quoteBinderName name_in
+           let rig = quoteRigCount rig_in
            ty <- quote' svs ty_in
            pi <- quotePiInfo svs pi_in
            quoteBinder svs PVar proc_in rig pi ty name
   quoteVector svs (-13) [_, proc_in, rig_in, ty_in, name_in] -- PVTy
-      = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN (Basic "x")
-                           Just n' => n'
-           let rig = case fromScheme (decodeObj rig_in) of
-                          Nothing => top
-                          Just r => r
+      = do let name = quoteBinderName name_in
+           let rig = quoteRigCount rig_in
            ty <- quote' svs ty_in
            quoteBinder svs (\fc, r, p, t => PVTy fc r t) proc_in rig Explicit ty name
   quoteVector svs (-14) [_, proc_in, rig_in, val_in, ty_in, name_in] -- PLet
-      = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN (Basic "x")
-                           Just n' => n'
-           let rig = case fromScheme (decodeObj rig_in) of
-                          Nothing => top
-                          Just r => r
+      = do let name = quoteBinderName name_in
+           let rig = quoteRigCount rig_in
            ty <- quote' svs ty_in
            val <- quote' svs val_in
            quotePLet svs proc_in rig val ty name
   quoteVector svs (-9) [_, blocked, _] -- Blocked top level lambda
       = quote' svs blocked
   quoteVector svs (-100) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalid
-           pure $ PrimVal emptyFC (I x')
+      = quoteOrInvalid x $ \ x' => pure $ PrimVal emptyFC (I x')
   quoteVector svs (-101) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalid
-           pure $ PrimVal emptyFC (I8 x')
+      = quoteOrInvalid x $ \ x' => pure $ PrimVal emptyFC (I8 x')
   quoteVector svs (-102) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalid
-           pure $ PrimVal emptyFC (I16 x')
+      = quoteOrInvalid x $ \ x' => pure $ PrimVal emptyFC (I16 x')
   quoteVector svs (-103) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalid
-           pure $ PrimVal emptyFC (I32 x')
+      = quoteOrInvalid x $ \ x' => pure $ PrimVal emptyFC (I32 x')
   quoteVector svs (-104) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalid
-           pure $ PrimVal emptyFC (I64 x')
+      = quoteOrInvalid x $ \ x' => pure $ PrimVal emptyFC (I64 x')
   quoteVector svs (-105) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalid
-           pure $ PrimVal emptyFC (BI x')
+      = quoteOrInvalid x $ \ x' => pure $ PrimVal emptyFC (BI x')
   quoteVector svs (-106) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalid
-           pure $ PrimVal emptyFC (B8 x')
+      = quoteOrInvalid x $ \ x' => pure $ PrimVal emptyFC (B8 x')
   quoteVector svs (-107) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalid
-           pure $ PrimVal emptyFC (B16 x')
+      = quoteOrInvalid x $ \ x' => pure $ PrimVal emptyFC (B16 x')
   quoteVector svs (-108) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalid
-           pure $ PrimVal emptyFC (B32 x')
+      = quoteOrInvalid x $ \ x' => pure $ PrimVal emptyFC (B32 x')
   quoteVector svs (-109) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalid
-           pure $ PrimVal emptyFC (B64 x')
+      = quoteOrInvalid x $ \ x' => pure $ PrimVal emptyFC (B64 x')
   quoteVector svs tag (_ :: cname_in :: fc_in :: args_in) -- DataCon
       = if tag >= 0
-           then do
-             let Just cname = fromScheme (decodeObj cname_in)
-                    | Nothing => invalid
-             let fc = emptyFC -- case fromScheme (decodeObj fc_in) of
---                            Just fc => fc
---                            _ => emptyFC
+           then quoteOrInvalid cname_in $ \ cname =>  do
+             let fc = emptyFC -- quoteFC fc_in
              args <- traverse (quote' svs) args_in
              pure (apply fc (Ref fc (DataCon (cast tag) (length args)) cname)
                             args)
@@ -419,14 +383,11 @@ mutual
               Integer -> List ForeignObj ->
               Core (SNF vars)
   snfVector svs (-2) [_, fname_in, args_in] -- Blocked application
-      = do let Just fname = fromScheme (decodeObj fname_in)
-                    | _ => invalidS
+      = quoteOrInvalidS fname_in $ \ fname => do
            let args = map (snf' svs) (getArgList args_in)
            pure (SApp emptyFC (SRef Func fname) args)
   snfVector svs (-10) [_, fn_arity, args_in] -- Block meta app
-      = do let Just (fname, arity_in) = the (Maybe (Name, Integer)) $
-                                            fromScheme (decodeObj fn_arity)
-                    | _ => invalidS
+      = quoteOrInvalidS {x = (Name, Integer)} fn_arity $ \ (fname, arity_in) => do
            let arity : Nat = cast arity_in
            let args = map (snf' svs) (getArgList args_in)
            defs <- get Ctxt
@@ -440,20 +401,14 @@ mutual
            let args' = map (snf' svs) (getArgList args_in)
            pure (SApp fc loc (args ++ args'))
   snfVector svs (-1) (_ :: tag_in :: strtag :: cname_in :: fc_in :: args_in) -- TyCon
-      = do let Just cname = fromScheme (decodeObj cname_in)
-                    | Nothing => invalidS
-           let Just tag = the (Maybe Integer) $ fromScheme (decodeObj tag_in)
-                    | Nothing => invalidS
-           let fc = case fromScheme (decodeObj fc_in) of
-                         Just fc => fc
-                         _ => emptyFC
+      = quoteOrInvalidS cname_in $ \ cname =>
+        quoteOrInvalidS {x = Integer} tag_in $ \ tag => do
+           let fc = quoteFC fc_in
            let args = map (snf' svs) args_in
            pure (STCon fc cname (cast tag) (length args) args)
   snfVector svs (-15) [_, r_in, ty_in] -- Delayed
       = do ty <- snf' svs ty_in
-           let r = case fromScheme (decodeObj r_in) of
-                        Just r => r
-                        _ => LUnknown
+           let r = quoteLazyReason r_in
            pure (SDelayed emptyFC r ty)
   snfVector svs (-4) [_, r_in, fc_in, ty_in, tm_in] -- Delay
       = do let Procedure tmproc = decodeObj tm_in
@@ -468,86 +423,52 @@ mutual
                             | Nothing => invalidS
                        pure res
            let ty = snf' svs (unsafeForce typroc)
-           let fc = case fromScheme (decodeObj fc_in) of
-                         Just fc => fc
-                         _ => emptyFC
-           let r = case fromScheme (decodeObj r_in) of
-                        Just r => r
-                        _ => LUnknown
+           let fc = quoteFC fc_in
+           let r = quoteLazyReason r_in
            pure (SDelay fc r ty tm)
   snfVector svs (-5) [_, r_in, fc_in, tm_in] -- Force
       = do -- The thing we were trying to force was stuck. Corresponding to
            -- Core.Normalise, reduce it anyway here (so no ct-blockAll like above)
            tm <- snf' svs tm_in
-           let fc = case fromScheme (decodeObj fc_in) of
-                         Just fc => fc
-                         _ => emptyFC
-           let r = case fromScheme (decodeObj r_in) of
-                        Just r => r
-                        _ => LUnknown
+           let fc = quoteFC fc_in
+           let r = quoteLazyReason r_in
            pure (SForce fc r tm)
   snfVector svs (-6) [_, fc_in, imp_in] -- Erased
-      = do let fc = case fromScheme (decodeObj fc_in) of
-                         Just fc => fc
-                         _ => emptyFC
+      = do let fc = quoteFC fc_in
            let imp = case fromScheme (decodeObj imp_in) of
                           Just imp => imp
                           _ => False
            pure (SErased fc imp)
   snfVector svs (-7) [_, fc_in, u_in] -- Type
-      = do let fc = case fromScheme (decodeObj fc_in) of
-                         Just fc => fc
-                         _ => emptyFC
-           let u = case fromScheme (decodeObj u_in) of
-                        Just u => u
-                        _ => MN "top" 0
+      = do let fc = quoteFC fc_in
+           let u = quoteTypeLevel u_in
            pure (SType fc u)
   snfVector svs (-8) [_, proc_in, rig_in, pi_in, ty_in, name_in] -- Lambda
-      = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN (Basic "x")
-                           Just n' => n'
-           let rig = case fromScheme (decodeObj rig_in) of
-                          Nothing => top
-                          Just r => r
+      = do let name = quoteBinderName name_in
+           let rig = quoteRigCount rig_in
            ty <- snf' svs ty_in
            pi <- snfPiInfo svs pi_in
            snfBinder svs Lam proc_in rig pi ty name
   snfVector svs (-3) [_, proc_in, rig_in, pi_in, ty_in, name_in] -- Pi
-      = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN (Basic "x")
-                           Just n' => n'
-           let rig = case fromScheme (decodeObj rig_in) of
-                          Nothing => top
-                          Just r => r
+      = do let name = quoteBinderName name_in
+           let rig = quoteRigCount rig_in
            ty <- snf' svs ty_in
            pi <- snfPiInfo svs pi_in
            snfBinder svs Pi proc_in rig pi ty name
   snfVector svs (-12) [_, proc_in, rig_in, pi_in, ty_in, name_in] -- PVar
-      = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN (Basic "x")
-                           Just n' => n'
-           let rig = case fromScheme (decodeObj rig_in) of
-                          Nothing => top
-                          Just r => r
+      = do let name = quoteBinderName name_in
+           let rig = quoteRigCount rig_in
            ty <- snf' svs ty_in
            pi <- snfPiInfo svs pi_in
            snfBinder svs PVar proc_in rig pi ty name
   snfVector svs (-13) [_, proc_in, rig_in, ty_in, name_in] -- PVTy
-      = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN (Basic "x")
-                           Just n' => n'
-           let rig = case fromScheme (decodeObj rig_in) of
-                          Nothing => top
-                          Just r => r
+      = do let name = quoteBinderName name_in
+           let rig = quoteRigCount rig_in
            ty <- snf' svs ty_in
            snfBinder svs (\fc, r, p, t => PVTy fc r t) proc_in rig Explicit ty name
   snfVector svs (-14) [_, proc_in, rig_in, val_in, ty_in, name_in] -- PLet
-      = do let name = case fromScheme (decodeObj name_in) of
-                           Nothing => UN (Basic "x")
-                           Just n' => n'
-           let rig = case fromScheme (decodeObj rig_in) of
-                          Nothing => top
-                          Just r => r
+      = do let name = quoteBinderName name_in
+           let rig = quoteRigCount rig_in
            ty <- snf' svs ty_in
            val <- snf' svs val_in
            snfPLet svs proc_in rig val ty name
@@ -556,54 +477,30 @@ mutual
 
   -- constants here
   snfVector svs (-100) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalidS
-           pure $ SPrimVal emptyFC (I x')
+      = quoteOrInvalidS x $ \ x' => pure $ SPrimVal emptyFC (I x')
   snfVector svs (-101) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalidS
-           pure $ SPrimVal emptyFC (I8 x')
+      = quoteOrInvalidS x $ \ x' => pure $ SPrimVal emptyFC (I8 x')
   snfVector svs (-102) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalidS
-           pure $ SPrimVal emptyFC (I16 x')
+      = quoteOrInvalidS x $ \ x' => pure $ SPrimVal emptyFC (I16 x')
   snfVector svs (-103) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalidS
-           pure $ SPrimVal emptyFC (I32 x')
+      = quoteOrInvalidS x $ \ x' => pure $ SPrimVal emptyFC (I32 x')
   snfVector svs (-104) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalidS
-           pure $ SPrimVal emptyFC (I64 x')
+      = quoteOrInvalidS x $ \ x' => pure $ SPrimVal emptyFC (I64 x')
   snfVector svs (-105) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalidS
-           pure $ SPrimVal emptyFC (BI x')
+      = quoteOrInvalidS x $ \ x' => pure $ SPrimVal emptyFC (BI x')
   snfVector svs (-106) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalidS
-           pure $ SPrimVal emptyFC (B8 x')
+      = quoteOrInvalidS x $ \ x' => pure $ SPrimVal emptyFC (B8 x')
   snfVector svs (-107) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalidS
-           pure $ SPrimVal emptyFC (B16 x')
+      = quoteOrInvalidS x $ \ x' => pure $ SPrimVal emptyFC (B16 x')
   snfVector svs (-108) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalidS
-           pure $ SPrimVal emptyFC (B32 x')
+      = quoteOrInvalidS x $ \ x' => pure $ SPrimVal emptyFC (B32 x')
   snfVector svs (-109) [_, x]
-      = do let Just x' = fromScheme (decodeObj x)
-                 | Nothing => invalidS
-           pure $ SPrimVal emptyFC (B64 x')
+      = quoteOrInvalidS x $ \ x' => pure $ SPrimVal emptyFC (B64 x')
 
   snfVector svs tag (_ :: cname_in :: fc_in :: args_in) -- DataCon
       = if tag >= 0
-           then do
-             let Just cname = fromScheme (decodeObj cname_in)
-                    | Nothing => invalidS
-             let fc = case fromScheme (decodeObj fc_in) of
-                           Just fc => fc
-                           _ => emptyFC
+           then quoteOrInvalidS cname_in $ \ cname => do
+             let fc = quoteFC fc_in
              let args = map (snf' svs) args_in
              pure (SDCon fc cname (cast tag) (length args) args)
            else invalidS

@@ -1,0 +1,48 @@
+unclosed1.idr
+1/1: Building unclosed1 (unclosed1.idr)
+Main> Main.fun1 : a -> a
+Main> Error: Undefined name fun2. 
+
+(Interactive):1:4--1:8
+ 1 | :t fun2
+        ^^^^
+Did you mean: fun1?
+Main> Error: Undefined name fun3. 
+
+(Interactive):1:4--1:8
+ 1 | :t fun3
+        ^^^^
+Did you mean: fun1?
+Main> Bye for now!
+unclosed2.idr
+1/1: Building unclosed2 (unclosed2.idr)
+Main> Main.fun1 : a -> a
+Main> Error: Undefined name fun2. 
+
+(Interactive):1:4--1:8
+ 1 | :t fun2
+        ^^^^
+Did you mean: fun1?
+Main> Error: Undefined name fun3. 
+
+(Interactive):1:4--1:8
+ 1 | :t fun3
+        ^^^^
+Did you mean: fun1?
+Main> Bye for now!
+unclosed3.idr
+1/1: Building unclosed3 (unclosed3.idr)
+Main> Main.fun1 : a -> a
+Main> Error: Undefined name fun2. 
+
+(Interactive):1:4--1:8
+ 1 | :t fun2
+        ^^^^
+Did you mean: fun1?
+Main> Error: Undefined name fun3. 
+
+(Interactive):1:4--1:8
+ 1 | :t fun3
+        ^^^^
+Did you mean: fun1?
+Main> Bye for now!

@@ -42,14 +42,14 @@ process : {vars : _} ->
           NestedNames vars -> Env Term vars -> ImpDecl -> Core ()
 process eopts nest env (IClaim fc rig vis opts ty)
     = processType eopts nest env fc rig vis opts ty
-process eopts nest env (IData fc vis ddef)
-    = processData eopts nest env fc vis ddef
+process eopts nest env (IData fc vis mbtot ddef)
+    = processData eopts nest env fc vis mbtot ddef
 process eopts nest env (IDef fc fname def)
     = processDef eopts nest env fc fname def
 process eopts nest env (IParameters fc ps decls)
     = processParams nest env fc ps decls
-process eopts nest env (IRecord fc ns vis rec)
-    = processRecord eopts nest env ns vis rec
+process eopts nest env (IRecord fc ns vis mbtot rec)
+    = processRecord eopts nest env ns vis mbtot rec
 process eopts nest env (INamespace fc ns decls)
     = withExtendedNS ns $
          traverse_ (processDecl eopts nest env) decls
@@ -162,9 +162,9 @@ processTTImpDecls {vars} nest env decls
     bindNames (IClaim fc c vis opts (MkImpTy tfc nameFC n ty))
         = do ty' <- bindTypeNames fc [] vars ty
              pure (IClaim fc c vis opts (MkImpTy tfc nameFC n ty'))
-    bindNames (IData fc vis d)
+    bindNames (IData fc vis mbtot d)
         = do d' <- bindDataNames d
-             pure (IData fc vis d')
+             pure (IData fc vis mbtot d')
     bindNames d = pure d
 
 export

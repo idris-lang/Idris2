@@ -483,8 +483,8 @@ mutual
   toPDecl (IClaim fc rig vis opts ty)
       = do opts' <- traverse toPFnOpt opts
            pure (Just (PClaim fc rig vis opts' !(toPTypeDecl ty)))
-  toPDecl (IData fc vis d)
-      = pure (Just (PData fc "" vis !(toPData d)))
+  toPDecl (IData fc vis mbtot d)
+      = pure (Just (PData fc "" vis mbtot !(toPData d)))
   toPDecl (IDef fc n cs)
       = pure (Just (PDef fc !(traverse toPClause cs)))
   toPDecl (IParameters fc ps ds)
@@ -495,9 +495,9 @@ mutual
                                tpe' <- toPTerm startPrec tpe
                                pure (n, rig, info', tpe')) ps)
                 (mapMaybe id ds')))
-  toPDecl (IRecord fc _ vis r)
+  toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, con, fs) <- toPRecord r
-           pure (Just (PRecord fc "" vis n ps con fs))
+           pure (Just (PRecord fc "" vis mbtot n ps con fs))
   toPDecl (INamespace fc ns ds)
       = do ds' <- traverse toPDecl ds
            pure (Just (PNamespace fc ns (mapMaybe id ds')))
