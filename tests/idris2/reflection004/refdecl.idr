@@ -21,7 +21,7 @@ mkPoint : (n : Nat) -> {auto gt : GT n 0} -> {auto lte : LTE n 4} -> Decl
 mkPoint n
     = let type = "Point" ++ show n ++ "D" in
       let mkMainUN = NS (MkNS ["Main"]) . UN . Basic in
-      IRecord emptyFC Nothing Public
+      IRecord emptyFC Nothing Public Nothing
       (MkRecord emptyFC (mkMainUN type) [] (mkMainUN ("Mk" ++ type))
         (toList $ map (\axis => MkIField emptyFC MW ExplicitArg (UN (Field axis)) `(Double)) (axes n)))
 
