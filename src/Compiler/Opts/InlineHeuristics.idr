@@ -46,5 +46,14 @@ inlineHeuristics fn = do
         | Nothing => pure ()
     let True = inlineCDef fn cdef
         | False => pure ()
-    log "compiler.inline.heuristic" 25 $ "inlining heuristic decided to inline: " ++ show fn
-    unless (NoInline `elem` gdef.flags) $ setFlag EmptyFC (Resolved fnIdx) Inline
+    -- we can't inline non-public defs (unless they are marked as Inline by developer)
+    -- because we may be crossing module boundaries and changes to the given def will
+    -- not modify the source module's interface hash so you can get stuck with an old
+    -- def inlined into the destination module. we could lift this restriction if we
+    -- checked that the source def was _either public OR the destination was the same module
+    -- as the source_.
+    let Public = gdef.visibility
+        | _ => pure ()
+    unless (NoInline `elem` gdef.flags) $ do
+      log "compiler.inline.heuristic" 25 $ "inlining heuristic decided to inline: " ++ show fn
+      setFlag EmptyFC (Resolved fnIdx) Inline
