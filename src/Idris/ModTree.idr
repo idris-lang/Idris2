@@ -142,12 +142,19 @@ getBuildMods loc done fname
                  mkBuildMods {d=dm} {o} t
                  pure (reverse !(get BuildOrder))
 
-needsBuildingTime : (sourceFile : String) -> (ttcFile : String) ->
+needsBuildingTime : {auto c : Ref Ctxt Defs} ->
+                    (sourceFile : String) -> (ttcFile : String) ->
                     (depFiles : List String) -> Core Bool
 needsBuildingTime sourceFile ttcFile depFiles
   = do ttcTime  <- modTime ttcFile
        srcTime  <- modTime sourceFile
        depTimes <- traverse modTime depFiles
+       log "module.hash" 20 $
+         unwords $
+           [ "Checking whether source code mod times are newer than \{show ttcTime};"
+           , "src time: \{show srcTime}, dep times:"
+           , show depTimes
+           ]
        pure $ any (>= ttcTime) (srcTime :: depTimes)
 
 checkTotalReq : {auto c : Ref Ctxt Defs} ->
@@ -206,13 +213,14 @@ needsBuilding sourceFile ttcFile depFiles
        True <- coreLift $ exists ttcFile
          | False => pure True
        -- check if hash match
-       False <- ifThenElse (checkHashesInsteadOfModTime !getSession)
+       checkHashesInsteadOfTime <- checkHashesInsteadOfModTime <$> getSession
+       False <- ifThenElse checkHashesInsteadOfTime
                            needsBuildingHash
                            needsBuildingTime
                   sourceFile ttcFile depFiles
          | True => pure True
 
-       log "import" 20 $ "Hashes still valid for " ++ sourceFile
+       log "import" 20 $ "\{ifThenElse checkHashesInsteadOfTime "Hashes" "Mod Times"} still valid for " ++ sourceFile
 
        -- in case we're loading the main file, make sure the TTC is
        -- using the appropriate default totality requirement
@@ -253,11 +261,12 @@ buildMod loc num len mod
         depFilesE <- traverse (nsToPath loc) (imports mod)
         let (ferrs, depFiles) = partitionEithers depFilesE
 
-        log "import" 20 $ unwords
+        log "import" 20 $ unwords $
           [ "Checking whether to rebuild "
           , sourceFile
           , "(" ++ ttcFile ++ ")"
-          ]
+          , "with dependencies:"
+          ] ++ depFiles
         rebuild <- needsBuilding sourceFile ttcFile depFiles
 
         u <- newRef UST initUState
