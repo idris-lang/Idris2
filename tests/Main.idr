@@ -343,7 +343,7 @@ main = runner $
   , testPaths "idris2" idrisTestsEvaluator
   , testPaths "idris2" idrisTestsTotality
   , testPaths "idris2" idrisTestsSchemeEval
-  , testPaths "idris2" idrisTestsReflection 
+  , testPaths "idris2" idrisTestsReflection
   , testPaths "idris2" idrisTests
   , !typeddTests
   , !ideModeTests
