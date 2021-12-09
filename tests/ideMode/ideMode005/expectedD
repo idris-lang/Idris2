@@ -1,4 +1,4 @@
-000018(:protocol-version 2 0)
+000018(:protocol-version 2 1)
 000038(:write-string "1/1: Building Rewrite (Rewrite.idr)" 1)
 000073(:output (:ok (:highlight-source ((((:filename "Rewrite.idr") (:start 0 0) (:end 0 9)) ((:decor :function)))))) 1)
 000074(:output (:ok (:highlight-source ((((:filename "Rewrite.idr") (:start 0 10) (:end 0 11)) ((:decor :keyword)))))) 1)

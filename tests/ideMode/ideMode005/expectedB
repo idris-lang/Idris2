@@ -1,4 +1,4 @@
-000018(:protocol-version 2 0)
+000018(:protocol-version 2 1)
 000046(:write-string "1/1: Building StringLiterals (StringLiterals.idr)" 1)
 000079(:output (:ok (:highlight-source ((((:filename "StringLiterals.idr") (:start 0 0) (:end 0 6)) ((:decor :keyword)))))) 1)
 000079(:output (:ok (:highlight-source ((((:filename "StringLiterals.idr") (:start 0 7) (:end 0 21)) ((:decor :module)))))) 1)

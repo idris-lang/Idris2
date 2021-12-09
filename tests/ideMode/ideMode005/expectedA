@@ -1,4 +1,4 @@
-000018(:protocol-version 2 0)
+000018(:protocol-version 2 1)
 000036(:write-string "1/1: Building Ranges (Ranges.idr)" 1)
 000072(:output (:ok (:highlight-source ((((:filename "Ranges.idr") (:start 0 0) (:end 0 5)) ((:decor :function)))))) 1)
 000071(:output (:ok (:highlight-source ((((:filename "Ranges.idr") (:start 0 6) (:end 0 7)) ((:decor :keyword)))))) 1)

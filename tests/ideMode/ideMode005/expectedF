@@ -1,4 +1,4 @@
-000018(:protocol-version 2 0)
+000018(:protocol-version 2 1)
 000036(:write-string "1/1: Building Tuples (Tuples.idr)" 1)
 000072(:output (:ok (:highlight-source ((((:filename "Tuples.idr") (:start 0 0) (:end 0 4)) ((:decor :function)))))) 1)
 000071(:output (:ok (:highlight-source ((((:filename "Tuples.idr") (:start 0 5) (:end 0 6)) ((:decor :keyword)))))) 1)

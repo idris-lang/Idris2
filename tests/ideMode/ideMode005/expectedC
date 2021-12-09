@@ -1,4 +1,4 @@
-000018(:protocol-version 2 0)
+000018(:protocol-version 2 1)
 000038(:write-string "1/1: Building WithApp (WithApp.idr)" 1)
 0000d1(:output (:ok (:highlight-source ((((:filename "WithApp.idr") (:start 10 2) (:end 10 4)) ((:name "id") (:namespace "Main") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 0000d1(:output (:ok (:highlight-source ((((:filename "WithApp.idr") (:start 11 2) (:end 11 4)) ((:name "id") (:namespace "Main") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)

@@ -1,4 +1,4 @@
-000018(:protocol-version 2 0)
+000018(:protocol-version 2 1)
 00004c(:write-string "1/1: Building RecordProjections (RecordProjections.idr)" 1)
 00007c(:output (:ok (:highlight-source ((((:filename "RecordProjections.idr") (:start 0 0) (:end 0 6)) ((:decor :keyword)))))) 1)
 00007a(:output (:ok (:highlight-source ((((:filename "RecordProjections.idr") (:start 0 7) (:end 0 11)) ((:decor :type)))))) 1)

@@ -1,4 +1,4 @@
-000018(:protocol-version 2 0)
+000018(:protocol-version 2 1)
 000040(:write-string "1/1: Building SnocRainbow (SnocRainbow.idr)" 1)
 00007a(:output (:ok (:highlight-source ((((:filename "SnocRainbow.idr") (:start 0 10) (:end 0 12)) ((:decor :namespace)))))) 1)
 000076(:output (:ok (:highlight-source ((((:filename "SnocRainbow.idr") (:start 1 2) (:end 1 8)) ((:decor :keyword)))))) 1)

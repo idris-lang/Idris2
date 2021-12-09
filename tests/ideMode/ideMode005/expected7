@@ -1,4 +1,4 @@
-000018(:protocol-version 2 0)
+000018(:protocol-version 2 1)
 000032(:write-string "1/1: Building Case (Case.idr)" 1)
 00006f(:output (:ok (:highlight-source ((((:filename "Case.idr") (:start 0 0) (:end 0 6)) ((:decor :keyword)))))) 1)
 00006f(:output (:ok (:highlight-source ((((:filename "Case.idr") (:start 0 7) (:end 0 11)) ((:decor :module)))))) 1)
