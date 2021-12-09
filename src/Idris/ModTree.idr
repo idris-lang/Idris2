@@ -165,16 +165,12 @@ needsBuildingTime : {auto c : Ref Ctxt Defs} ->
 needsBuildingTime sourceFile ttcFile depFiles
   = isTTCOutdated ttcFile (sourceFile :: depFiles)
 
-checkDepHashes : {auto c : Ref Ctxt Defs} ->
+needsBuildingDepHash : {auto c : Ref Ctxt Defs} ->
                  String -> Core Bool
-checkDepHashes depFileName
+needsBuildingDepHash depFileName
   = catch (do defs                   <- get Ctxt
-              Just depCodeHash       <- hashFileWith (defs.options.hashFn) depFileName
-                    | _ => pure False
               depTTCFileName         <- getTTCFileName depFileName "ttc"
-              (Just depStoredCodeHash, _) <- readHashes depTTCFileName
-                    | _ => pure False
-              pure $ depCodeHash /= depStoredCodeHash)
+              not <$> unchangedHash defs.options.hashFn depTTCFileName depFileName)
           (\error => pure False)
 
 ||| Build from source if any of the dependencies, or the associated source file,
@@ -185,7 +181,7 @@ needsBuildingHash : {auto c : Ref Ctxt Defs} ->
 needsBuildingHash sourceFile ttcFile depFiles
   = do defs                <- get Ctxt
        sourceUnchanged <- unchangedHash defs.options.hashFn ttcFile sourceFile
-       depFilesHashDiffers <- any id <$> traverse checkDepHashes depFiles
+       depFilesHashDiffers <- any id <$> traverse needsBuildingDepHash depFiles
        pure $ (not sourceUnchanged) || depFilesHashDiffers
 
 export
