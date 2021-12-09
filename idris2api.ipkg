@@ -129,6 +129,7 @@ modules =
     Idris.IDEMode.Holes,
     Idris.IDEMode.MakeClause,
     Idris.IDEMode.Parser,
+    Idris.IDEMode.Pretty,
     Idris.IDEMode.REPL,
     Idris.IDEMode.SyntaxHighlight,
     Idris.IDEMode.TokenLine,

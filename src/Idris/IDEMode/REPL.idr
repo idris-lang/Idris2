@@ -19,6 +19,7 @@ import Idris.IDEMode.Commands
 import Idris.IDEMode.Holes
 import Idris.IDEMode.Parser
 import Idris.IDEMode.SyntaxHighlight
+import Idris.IDEMode.Pretty
 
 import Protocol.Hex
 import Libraries.Utils.Path
@@ -249,33 +250,30 @@ processCatch cmd
 
 idePutStrLn : {auto c : Ref Ctxt Defs} -> File -> Integer -> String -> Core ()
 idePutStrLn outf i msg
-    = send outf (SExpList [SymbolAtom "write-string",
-                toSExp msg, toSExp i])
+    = send outf $ WriteString msg i
 
 -- TODO: refactor SExp argument into `Protocol.IDE.Result`
-returnFromIDE : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
-returnFromIDE outf i msg
-    = do send outf (SExpList [SymbolAtom "return", msg, toSExp i])
+returnFromIDE : {auto c : Ref Ctxt Defs} -> File -> Integer -> IDE.ReplyPayload -> Core ()
+returnFromIDE outf i payload
+    = do send outf (Immediate payload i)
 
 printIDEResult : {auto c : Ref Ctxt Defs} -> File -> Integer -> IDE.Result -> Core ()
 printIDEResult outf i result
-  = returnFromIDE outf i $ toSExp (OK result [])
+  = returnFromIDE outf i $ OK result []
 
 printIDEResultWithHighlight :
   {auto c : Ref Ctxt Defs} ->
-  File -> Integer -> (SExp, List (Span Properties)) ->
+  File -> Integer -> (Result, List (Span Properties)) ->
   Core ()
-printIDEResultWithHighlight outf i (msg, spans) = do
+printIDEResultWithHighlight outf i (result, spans) = do
 --  log "ide-mode.highlight" 10 $ show spans
   returnFromIDE outf i
-    $ SExpList [ SymbolAtom "ok"
-               , msg
-               , toSExp spans
-               ]
+    $ OK result spans
 
 -- TODO: refactor to construct an error response
 printIDEError : Ref ROpts REPLOpts => {auto c : Ref Ctxt Defs} -> File -> Integer -> Doc IdrisAnn -> Core ()
-printIDEError outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "error", toSExp !(renderWithoutColor msg) ])
+printIDEError outf i msg = returnFromIDE outf i $
+  uncurry IDE.Error !(renderWithDecorations annToProperties msg)
 
 Cast REPLEval String where
   cast EvalTC = "typecheck"
@@ -306,24 +304,24 @@ displayIDEResult outf i  (REPL RequestedHelp  )
   = printIDEResult outf i $ AString displayHelp
 displayIDEResult outf i  (REPL $ Evaluated x Nothing)
   = printIDEResultWithHighlight outf i
-  $ mapFst StringAtom
+  $ mapFst AString
    !(renderWithDecorations syntaxToProperties $ prettyTerm x)
 displayIDEResult outf i  (REPL $ Evaluated x (Just y))
   = printIDEResultWithHighlight outf i
-  $ mapFst StringAtom
+  $ mapFst AString
    !(renderWithDecorations syntaxToProperties
      $ prettyTerm x <++> ":" <++> prettyTerm y)
 displayIDEResult outf i  (REPL $ Printed xs)
   = printIDEResultWithHighlight outf i
-  $ mapFst StringAtom
+  $ mapFst AString
   $ !(renderWithDecorations annToProperties xs)
 displayIDEResult outf i (REPL (PrintedDoc xs))
   = printIDEResultWithHighlight outf i
-  $ mapFst StringAtom
+  $ mapFst AString
   $ !(renderWithDecorations docToProperties xs)
 displayIDEResult outf i  (REPL $ TermChecked x y)
   = printIDEResultWithHighlight outf i
-  $ mapFst StringAtom
+  $ mapFst AString
    !(renderWithDecorations syntaxToProperties
      $ prettyTerm x <++> ":" <++> prettyTerm y)
 displayIDEResult outf i  (REPL $ FileLoaded x)
@@ -492,5 +490,5 @@ replIDE
          case res of
               REPL _ => printError $ reflow "Running idemode but output isn't"
               IDEMode _ inf outf => do
-                send outf (version 2 1) -- TODO: Move this info somewhere more central
+                send outf (ProtocolVersion 2 1) -- TODO: Move this info somewhere more central
                 loop

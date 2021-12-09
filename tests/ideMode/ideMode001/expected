@@ -64,6 +64,6 @@
 0000ca(:output (:ok (:highlight-source ((((:filename "LocType.idr") (:start 6 34) (:end 6 36)) ((:name "xs") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 0000ca(:output (:ok (:highlight-source ((((:filename "LocType.idr") (:start 6 37) (:end 6 39)) ((:name "ys") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000015(:return (:ok ()) 1)
-000040(:return (:ok "Syntax highlight option changed to False" ()) 2)
+00003d(:return (:ok "Syntax highlight option changed to False") 2)
 000015(:return (:ok ()) 3)
 Alas the file is done, aborting

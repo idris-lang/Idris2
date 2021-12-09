@@ -42,24 +42,29 @@ data ReplyPayload =
 
 export
 SExpable ReplyPayload where
-  toSExp (OK    result hl) = SExpList (SymbolAtom "ok" :: toSExp result :: map toSExp hl)
+  toSExp (OK    result hl) = SExpList (SymbolAtom "ok" :: toSExp result ::
+    case hl of
+      [] => []
+      _ => [SExpList (map toSExp hl)])
   toSExp (HighlightSource hls) = SExpList
     [ SymbolAtom "ok"
     , SExpList
       [ SymbolAtom "highlight-source"
       , toSExp hls]
     ]
-  toSExp (Error msg    hl) = SExpList (SymbolAtom "error" :: toSExp msg :: map toSExp hl)
+  toSExp (Error msg    hl) = SExpList (SymbolAtom "error" :: toSExp msg ::
+    case hl of
+      [] => []
+      _  => [SExpList (map toSExp hl)])
 
 public export
 data Reply =
     ProtocolVersion Int Int
-  | Immediate    ReplyPayload Int
-  | Intermediate ReplyPayload Int
-  -- TODO:
-  -- | WriteString
-  -- | SetPrompt
-  -- | Warning
+  | Immediate    ReplyPayload Integer
+  | Intermediate ReplyPayload Integer
+  | WriteString String Integer
+  | SetPrompt   String Integer
+  | Warning FileContext String Highlighting Integer
 
 public export
 data Request =
@@ -72,7 +77,15 @@ SExpable Reply where
                                                       toSExp payload, toSExp id]
   toSExp (Intermediate payload id) = SExpList [SymbolAtom "output",
                                                       toSExp payload, toSExp id]
-
+  toSExp (WriteString str id) = SExpList [SymbolAtom "write-string", toSExp str, toSExp id]
+  toSExp (SetPrompt str   id) = SExpList [SymbolAtom "set-prompt"  , toSExp str, toSExp id]
+  toSExp (Warning fc str spans id) = SExpList [SymbolAtom "warning",
+    SExpList $ toSExp fc.file :: toSExp (fc.range.startLine, fc.range.startCol)
+                              :: toSExp (fc.range.endLine  , fc.range.endCol  )
+                              :: toSExp str :: case spans of
+      [] => []
+      _  => [SExpList (map toSExp spans)]
+      , toSExp id]
 export
 SExpable Request where
   toSExp (Cmd cmd) = toSExp cmd

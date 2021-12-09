@@ -15,6 +15,14 @@ import public Protocol.SExp
 %default total
 
 export
+Cast (FileName, NonEmptyFC) FileContext where
+  cast (filename, _, (startLine, startCol), (endLine, endCol)) =
+    MkFileContext
+      { file  = filename
+      , range = MkBounds {startLine, startCol, endLine, endCol}
+      }
+
+export
 getMsg : SExp -> Maybe (IDECommand, Integer)
 getMsg (SExpList [cmdexp, IntegerAtom num])
    = do cmd <- fromSExp cmdexp
@@ -25,16 +33,12 @@ export
 SExpable Name where
   toSExp = SymbolAtom . show
 
-export
-version : Int -> Int -> SExp
-version maj min = toSExp $ ProtocolVersion maj min
-
 sendStr : File -> String -> IO ()
 sendStr f st =
   map (const ()) (fPutStr f st)
 
 export                          -- v---- ought to become a message
-send : {auto c : Ref Ctxt Defs} -> SExpable a => File -> a -> Core ()
+send : {auto c : Ref Ctxt Defs} -> File -> Reply -> Core ()
 send f resp
     = do let r = show (toSExp resp) ++ "\n"
          log "ide-mode.send" 20 r
