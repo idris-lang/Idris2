@@ -188,14 +188,35 @@ public export
 maybeLT : (x : Nat) -> (y : Nat) -> Maybe (x `LT` y)
 maybeLT x y = maybeLTE (S x) y
 
+public export
+natFromInteger : (x : Integer) -> {n : Nat} ->
+                 {auto 0 prf : So (fromInteger x < n)} ->
+                 Fin n
+natFromInteger x = natToFinLt (fromInteger x)
+
+-- Direct comparison between `Integer` and `Nat`.
+-- We cannot convert the `Nat` to `Integer`, because that will not work with open terms;
+-- but we cannot convert the `Integer` to `Nat` either, because that slows down typechecking
+-- even when the function is unused (issue #2032)
+public export
+(<) : Integer -> Nat -> Bool
+(<) x n with (x < the Integer 0)
+  (<) _ _     | True  = True           -- if `x < 0` then `x < n` for any `n : Nat`
+  (<) x (S m) | False = (x-1) < m      -- recursive case
+  (<) x Z     | False = False          -- `x >= 0` contradicts `x < Z`
+
 ||| Allow overloading of Integer literals for Fin.
 ||| @ x the Integer that the user typed
 ||| @ prf an automatically-constructed proof that `x` is in bounds
 public export
 fromInteger : (x : Integer) -> {n : Nat} ->
-              {auto 0 prf : So (fromInteger x < n)} ->
+              {auto 0 prf : So (x < n)} ->
               Fin n
-fromInteger x = natToFinLt (fromInteger x)
+fromInteger x = natFromInteger x {prf = lemma prf} where
+  -- to be minimally invasive, we just call the previous implementation.
+  -- however, having a different proof obligation resolves #2032
+  0 lemma : {x : Integer} -> {n : Nat} -> So (x < n) -> So (fromInteger {ty=Nat} x < n)
+  lemma oh = believe_me oh
 
 -- %builtin IntegerToNatural Data.Fin.fromInteger
 
