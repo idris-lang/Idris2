@@ -199,23 +199,23 @@ natFromInteger x = natToFinLt (fromInteger x)
 -- but we cannot convert the `Integer` to `Nat` either, because that slows down typechecking
 -- even when the function is unused (issue #2032)
 public export
-(<) : Integer -> Nat -> Bool
-(<) x n with (x < the Integer 0)
-  (<) _ _     | True  = True           -- if `x < 0` then `x < n` for any `n : Nat`
-  (<) x (S m) | False = (x-1) < m      -- recursive case
-  (<) x Z     | False = False          -- `x >= 0` contradicts `x < Z`
+integerLessThanNat : Integer -> Nat -> Bool
+integerLessThanNat x n with (x < the Integer 0)
+  integerLessThanNat _ _     | True  = True                            -- if `x < 0` then `x < n` for any `n : Nat`
+  integerLessThanNat x (S m) | False = integerLessThanNat (x-1) m      -- recursive case
+  integerLessThanNat x Z     | False = False                           -- `x >= 0` contradicts `x < Z`
 
 ||| Allow overloading of Integer literals for Fin.
 ||| @ x the Integer that the user typed
 ||| @ prf an automatically-constructed proof that `x` is in bounds
 public export
 fromInteger : (x : Integer) -> {n : Nat} ->
-              {auto 0 prf : So (x < n)} ->
+              {auto 0 prf : So (integerLessThanNat x n)} ->
               Fin n
 fromInteger x = natFromInteger x {prf = lemma prf} where
   -- to be minimally invasive, we just call the previous implementation.
   -- however, having a different proof obligation resolves #2032
-  0 lemma : {x : Integer} -> {n : Nat} -> So (x < n) -> So (fromInteger {ty=Nat} x < n)
+  0 lemma : {x : Integer} -> {n : Nat} -> So (integerLessThanNat x n) -> So (fromInteger {ty=Nat} x < n)
   lemma oh = believe_me oh
 
 -- %builtin IntegerToNatural Data.Fin.fromInteger
