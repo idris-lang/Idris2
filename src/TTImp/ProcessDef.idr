@@ -362,14 +362,14 @@ checkLHS : {vars : _} ->
            {auto u : Ref UST UState} ->
            {auto s : Ref Syn SyntaxInfo} ->
            Bool -> -- in transform
-           (mult : RigCount) -> (hashit : Bool) ->
+           (mult : RigCount) ->
            Int -> List ElabOpt -> NestedNames vars -> Env Term vars ->
            FC -> RawImp ->
            Core (RawImp, -- checked LHS with implicits added
                  (vars' ** (SubVars vars vars',
                            Env Term vars', NestedNames vars',
                            Term vars', Term vars')))
-checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
+checkLHS {vars} trans mult n opts nest env fc lhs_in
     = do defs <- get Ctxt
          logRaw "declare.def.lhs" 30 "Raw LHS: " lhs_in
          lhs_raw <- if trans
@@ -489,7 +489,7 @@ checkClause mult vis totreq hashit n opts nest env (ImpossibleClause fc lhs)
                               else throw (ValidCase fc env (Right err)))
 checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in rhs)
     = do (_, (vars'  ** (sub', env', nest', lhstm', lhsty'))) <-
-             checkLHS False mult hashit n opts nest env fc lhs_in
+             checkLHS False mult n opts nest env fc lhs_in
          let rhsMode = if isErased mult then InType else InExpr
          log "declare.def.clause" 5 $ "Checking RHS " ++ show rhs
          logEnv "declare.def.clause" 5 "In env" env'
@@ -517,7 +517,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
 checkClause {vars} mult vis totreq hashit n opts nest env
     (WithClause ifc lhs_in wval_raw mprf flags cs)
     = do (lhs, (vars'  ** (sub', env', nest', lhspat, reqty))) <-
-             checkLHS False mult hashit n opts nest env ifc lhs_in
+             checkLHS False mult n opts nest env ifc lhs_in
          let wmode
                = if isErased mult then InType else InExpr
 
@@ -972,7 +972,11 @@ processDef opts nest env fc n_in cs_in
          let None = definition gdef
               | _ => throw (AlreadyDefined fc n)
          let ty = type gdef
-         let hashit = visibility gdef == Public
+         -- a module's interface hash (what determines when the module has changed)
+         -- should include the definition (RHS) of anything that is public (available
+         -- at compile time for elaboration) _or_ inlined (dropped into destination definitions
+         -- during compilation).
+         let hashit = visibility gdef == Public || (Inline `elem` gdef.flags)
          let mult = if isErased (multiplicity gdef)
                        then erased
                        else linear
