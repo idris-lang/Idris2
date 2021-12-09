@@ -29,14 +29,14 @@ compileCObjectFile : {auto c : Ref Ctxt Defs}
 compileCObjectFile {asLibrary} sourceFile objectFile =
   do cc <- coreLift findCC
      refcDir <- findDataFile "refc"
-     includeDir <- findDataFile "include"
+     cDir <- findDataFile "c"
 
      let libraryFlag = if asLibrary then "-fpic " else ""
 
      let runccobj = cc ++ " -Werror -c " ++ libraryFlag ++ sourceFile ++
                        " -o " ++ objectFile ++
                        " -I" ++ refcDir ++
-                       " -I" ++ includeDir
+                       " -I" ++ cDir
 
      log "compiler.refc.cc" 10 runccobj
      0 <- coreLift $ system runccobj
