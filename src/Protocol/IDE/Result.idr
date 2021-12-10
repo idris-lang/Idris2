@@ -38,14 +38,36 @@ SExpable REPLOption where
     ]
 
 public export
+record MetaVarLemma where
+  constructor MkMetaVarLemma
+  application, lemma : String
+
+public export
+record IdrisVersion where
+  constructor MkIdrisVersion
+  major, minor, patch : Nat
+  tag : Maybe String
+
+export
+SExpable IdrisVersion where
+  toSExp version = SExpList
+    [ SExpList (map toSExp [version.major, version.minor, version.patch])
+    , SExpList [StringAtom $ fromMaybe "" version.tag]
+    ]
+
+export
+SExpable MetaVarLemma where
+  toSExp mvl =  SExpList [ SymbolAtom "metavariable-lemma"
+             , SExpList [ SymbolAtom "replace-metavariable", StringAtom mvl.application ]
+             , SExpList [ SymbolAtom "definition-type", StringAtom mvl.lemma ]
+             ]
+
+public export
 data Result =
     AString String
   | AUnit
-  | ||| arguments: maj min patch tag
-    AVersion Nat Nat Nat (Maybe String)
-  | ||| arguments: replacement metavariable application
-    |||            code for the new top-level lemma
-    AMetaVarLemma String String
+  | AVersion IdrisVersion
+  | AMetaVarLemma MetaVarLemma
   | ANameLocList (List (String, FileContext))
   | AHoleList (List HoleData)
   | ANameList (List String)
@@ -55,17 +77,8 @@ export
 SExpable Result where
   toSExp (AString s) = toSExp s
   toSExp (AUnit    ) = toSExp (the (List Int) [])
-  toSExp (AVersion
-            maj min
-            patch
-            tag    ) = SExpList [ SExpList (map toSExp [maj, min, patch])
-                                , SExpList [StringAtom $ fromMaybe "" tag]
-                                ]
-  toSExp (AMetaVarLemma app newdef) =
-    SExpList [ SymbolAtom "metavariable-lemma"
-             , SExpList [ SymbolAtom "replace-metavariable", StringAtom app ]
-             , SExpList [ SymbolAtom "definition-type", StringAtom newdef ]
-             ]
+  toSExp (AVersion version) = toSExp version
+  toSExp (AMetaVarLemma mvl) = toSExp mvl
   toSExp (ANameLocList fcs) = toSExp fcs
   toSExp (AHoleList holes) = toSExp holes
   toSExp (ANameList names) = SExpList (map SymbolAtom names)

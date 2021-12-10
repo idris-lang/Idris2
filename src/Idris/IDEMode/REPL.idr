@@ -355,17 +355,18 @@ displayIDEResult outf i  (REPL $ LogLevelSet k)
 displayIDEResult outf i  (REPL $ OptionsSet opts)
   = printIDEResult outf i $ AnOptionList $ map cast opts
 displayIDEResult outf i  (REPL $ VersionIs x)
-  = let (maj, min, patch) = semVer x
-    in printIDEResult outf i $ AVersion maj min patch (versionTag x)
-
+  = let (major, minor, patch) = semVer x
+    in printIDEResult outf i $ AVersion $ MkIdrisVersion
+      {major, minor, patch, tag = versionTag x}
 displayIDEResult outf i (REPL $ Edited (DisplayEdit xs))
   = printIDEResult outf i $ AString $ show xs
 displayIDEResult outf i (REPL $ Edited (EditError x))
   = printIDEError outf i x
 displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr))
-  = printIDEResult outf i $ AMetaVarLemma
-      pappstr $
-      relit lit $ show name ++ " : " ++ show pty
+  = printIDEResult outf i $ AMetaVarLemma $ MkMetaVarLemma
+      { application = pappstr
+      , lemma = relit lit $ show name ++ " : " ++ show pty
+      }
 displayIDEResult outf i (REPL $ Edited (MadeWith lit wapp))
   = printIDEResult outf i
   $ AString $ showSep "\n" (map (relit lit) wapp)

@@ -29,9 +29,6 @@ SExpable a => SExpable (Span a) where
                , toSExp ann
                ]
 
--- TODO: A REPL Option type, see
--- TODO: A MetaVarLemma record
--- TODO: an IdrisVersion record
 ------------------------------------------------------------------------
 
 public export
