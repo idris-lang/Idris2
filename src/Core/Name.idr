@@ -40,6 +40,14 @@ data Name : Type where
      WithBlock : String -> Int -> Name -- with block nested in (resolved) name
      Resolved : Int -> Name -- resolved, index into context
 
+||| Name management in imports (this cannot be in Idris.Syntax because that
+||| would create a circular dependency with Core.Binary).
+public export
+data ImportDirective : Type where
+  Using    : List1 Name         -> ImportDirective
+  Hiding   : List1 Name         -> ImportDirective
+--  Renaming : List1 (Name, Name) -> ImportDirective
+
 export
 mkNamespacedName : Maybe Namespace -> UserName -> Name
 mkNamespacedName Nothing nm = UN nm

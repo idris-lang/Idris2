@@ -48,7 +48,7 @@ record TTCFile extra where
   userHoles : List Name
   autoHints : List (Name, Bool)
   typeHints : List (Name, Name, Bool)
-  imported : List (ModuleIdent, Bool, Namespace, Maybe (List1 Name))
+  imported : List (ModuleIdent, Bool, Namespace, Maybe ImportDirective)
   nextVar : Int
   currentNS : Namespace
   nestedNS : List Namespace
@@ -434,9 +434,9 @@ addUsedGlobalDefs :
   ModuleIdent ->
   (cns : Namespace) ->
   (as : Maybe Namespace) ->
-  List Name ->
+  ImportDirective ->
   Core ()
-addUsedGlobalDefs defs modNS cns as imps
+addUsedGlobalDefs defs modNS cns as (Using imps)
   = do missing@(_ :: _) <- go [] defs
          | _ => pure ()
        recordWarning
@@ -448,14 +448,35 @@ addUsedGlobalDefs defs modNS cns as imps
 
     -- returns the list of missing imports
     go : List Name -> List (Name, Binary) -> Core (List Name)
-    go acc [] = pure (imps \\ acc)
+    go acc [] = pure (forget imps \\ acc)
     go acc (entry@(entryName, _) :: defs) =
        case find (\ nm => nameRoot nm == nameRoot entryName
                        && matches nm entryName)
-                 imps of
+                 (forget imps) of
          Nothing => go acc defs
          Just nm => do addGlobalDef modNS cns as entry
                        go (nm :: acc) defs
+
+addUsedGlobalDefs defs modNS cns as (Hiding imps)
+  = do missing@(_ :: _) <- go [] defs
+         | _ => pure ()
+       recordWarning
+         $ GenericWarn
+         $ "Could not find requested names in module \{show modNS}: "
+         ++ showSep "," (map show missing)
+
+  where
+
+    -- returns the list of missing hiddens
+    go : List Name -> List (Name, Binary) -> Core (List Name)
+    go acc [] = pure (forget imps \\ acc)
+    go acc (entry@(entryName, _) :: defs) =
+       case find (\ nm => nameRoot nm == nameRoot entryName
+                       && matches nm entryName)
+                 (forget imps) of
+         Nothing => do addGlobalDef modNS cns as entry
+                       go acc defs
+         Just nm => go (nm :: acc) defs
 
 ||| Add definitions from a binary file to the current context
 ||| @ nestedns Set nested namespaces (for records, to use at the REPL)
@@ -481,9 +502,9 @@ readFromTTC : TTC extra =>
               (fname : String) ->
               (modNS : ModuleIdent) ->
               (importAs : Namespace) ->
-              (imports : Maybe (List1 Name)) ->
+              (imports : Maybe ImportDirective) ->
               Core (Maybe (extra, Int,
-                           List (ModuleIdent, Bool, Namespace, Maybe (List1 Name))))
+                           List (ModuleIdent, Bool, Namespace, Maybe ImportDirective)))
 readFromTTC nestedns loc reexp fname modNS importAs imports
     = do defs <- get Ctxt
          -- If it's already in the context, with the same visibility flag,
@@ -510,7 +531,7 @@ readFromTTC nestedns loc reexp fname modNS importAs imports
                let ex = extraData ttc
                elim_ imports
                  (for_ (context ttc) (addGlobalDef modNS (currentNS ttc) as))
-                 (addUsedGlobalDefs (context ttc) modNS (currentNS ttc) as . forget)
+                 (addUsedGlobalDefs (context ttc) modNS (currentNS ttc) as)
                traverse_ (addUserHole True) (userHoles ttc)
                setNS (currentNS ttc)
                when nestedns $ setNestedNS (nestedNS ttc)

@@ -742,7 +742,7 @@ record Defs where
   ifaceHash : Int
   importHashes : List (Namespace, Int)
      -- ^ interface hashes of imported modules
-  imported : List (ModuleIdent, Bool, Namespace, Maybe (List1 Name))
+  imported : List (ModuleIdent, Bool, Namespace, Maybe ImportDirective)
      -- ^ imported modules, whether to rexport, as namespace
   allImported : List (String, (ModuleIdent, Bool, Namespace))
      -- ^ all imported filenames/namespaces, just to avoid loading something
@@ -1687,7 +1687,7 @@ getNestedNS
 -- "import X as [current namespace]")
 export
 addImported : {auto c : Ref Ctxt Defs} ->
-              (ModuleIdent, Bool, Namespace, Maybe (List1 Name)) -> Core ()
+              (ModuleIdent, Bool, Namespace, Maybe ImportDirective) -> Core ()
 addImported mod
     = do defs <- get Ctxt
          put Ctxt (record { imported $= (mod ::) } defs)

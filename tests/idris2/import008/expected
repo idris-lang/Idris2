@@ -2,11 +2,17 @@
 Warning: Could not find requested names in module Data.List: lenght
 Error: While processing right hand side of g. Undefined name sort. 
 
-ImportList:7:5--7:9
- 3 | f : Ord a => List a -> List a
- 4 | f = take 1
- 5 | 
- 6 | g : Ord a => List a -> List a
- 7 | g = sort
+ImportList:8:5--8:9
+ 4 | f : List a -> List a
+ 5 | f = take 1
+ 6 | 
+ 7 | g : Ord a => List a -> List a
+ 8 | g = sort
          ^^^^
 Did you mean: sqrt?
+Main> Data.List.find : (a -> Bool) -> List a -> Maybe a
+Main> Data.Vect.reverse : Vect len elem -> Vect len elem
+Prelude.List.reverse : List a -> List a
+Prelude.reverse : String -> String
+Main> 
+Bye for now!

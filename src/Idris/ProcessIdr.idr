@@ -95,7 +95,7 @@ readModule : {auto c : Ref Ctxt Defs} ->
              (visible : Bool) ->
              (imp : ModuleIdent) ->
              (as : Namespace) ->
-             (imports : Maybe (List1 Name)) ->
+             (imports : Maybe ImportDirective) ->
              Core ()
 readModule full loc vis imp as imports
     = do defs <- get Ctxt

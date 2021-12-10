@@ -445,6 +445,24 @@ rewriteeq = vcat $
     ```
     """]
 
+importDirectives : Doc IdrisDocAnn
+importDirectives = vcat $
+    header "Import directives" :: ""
+    :: map (indent 2) [
+    """
+    When importing a module, users can control whether some definitions come
+    into scope by either listing the ones they want to include (with the `using`
+    keyword) or the ones they want to exclude (with `hiding` keyword).
+
+    For instance after the following imports:
+    ```idris
+    import Data.List using (find)
+    import Data.Vect hiding (find)
+    ```
+    the `find` and `drop` functions are both in scope and unambiguously resolves
+    to `Data.List.find` and `Data.Vect.drop` respectively.
+    """]
+
 withabstraction : Doc IdrisDocAnn
 withabstraction = vcat $
     header "With abstraction" :: ""
@@ -534,7 +552,8 @@ keywordsDoc =
   :: "else" ::= ifthenelse
   :: "forall" ::= forallquantifier
   :: "rewrite" ::= rewriteeq
-  :: "using" ::= ""
+  :: "using" ::= importDirectives
+  :: "hiding" ::= importDirectives
   :: "interface" ::= interfacemechanism
   :: "implementation" ::= interfacemechanism
   :: "open" ::= unusedKeyword

@@ -642,7 +642,7 @@ record Import where
   ||| The (optional) explicit list of names to import.
   ||| 1. Nothing   means import without restrictions
   ||| 2. (Just ns) means only import those `ns`
-  imports : Maybe (List1 Name)
+  imports : Maybe ImportDirective
 
 public export
 record Module where

@@ -14,6 +14,7 @@ import Core.TT
 import Libraries.Data.NameMap
 
 import Libraries.Data.IOArray
+import Data.List1
 import Data.Vect
 
 import Libraries.Utils.Binary
@@ -117,6 +118,16 @@ TTC Name where
                      pure (WithBlock x y)
              9 => pure (UN Underscore)
              _ => corrupt "Name"
+
+export
+TTC ImportDirective where
+  toBuf b (Using xs) = do tag 0; toBuf b xs
+  toBuf b (Hiding xs) = do tag 1; toBuf b xs
+
+  fromBuf b = case !getTag of
+    0 => Using <$> fromBuf b
+    1 => Hiding <$> fromBuf b
+    _ => corrupt "ImportDirective"
 
 export
 TTC RigCount where
