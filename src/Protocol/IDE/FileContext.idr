@@ -24,3 +24,24 @@ SExpable FileContext where
                         , IntegerAtom (cast fc.range.endCol)
                         ]
              ]
+
+export
+FromSExpable FileContext where
+  fromSExp (SExpList [ SExpList
+               [ SymbolAtom "filename", filenameSExp ]
+             , SExpList [ SymbolAtom "start"
+                        , IntegerAtom startLine
+                        , IntegerAtom startCol
+                        ]
+             , SExpList [ SymbolAtom "end"
+                        , IntegerAtom endLine
+                        , IntegerAtom endCol
+                        ]
+             ]) = do file <- fromSExp filenameSExp
+                     pure $ MkFileContext {file, range = MkBounds
+                       { startLine = cast startLine
+                       , startCol  = cast startCol
+                       , endLine   = cast endLine
+                       , endCol    = cast endCol
+                       }}
+  fromSExp _ = Nothing

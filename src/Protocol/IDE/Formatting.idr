@@ -32,6 +32,19 @@ SExpable Formatting where
     display Italic    = "italic"
     display Underline = "underline"
 
+
+export
+FromSExpable Formatting where
+  fromSExp (SExpList [ SymbolAtom "text-formatting"
+                           , SymbolAtom format
+                     ]) =
+    case format of
+       "bold"      => Just Bold
+       "italic"    => Just Italic
+       "underline" => Just Underline
+       _           => Nothing
+  fromSExp _ = Nothing
+
 -- At most one decoration & one formatting
 -- (We could use `These` to guarantee non-emptiness but I am not
 -- convinced this will stay being just 2 fields e.g. the emacs mode
@@ -56,3 +69,21 @@ SExpable Properties where
     [ toSExp <$> form
     , toSExp <$> dec
     ]
+
+export
+FromSExpable Properties where
+  fromSExp (SExpList props) =
+    case props of
+      []  => Just $ MkProperties {decor = Nothing, format = Nothing}
+      [prop] => do
+        let Nothing = fromSExp prop
+          | Just decor => Just $ mkDecor decor
+        format <- fromSExp prop
+        pure $ mkFormat format
+      [prop1, prop2] => -- assume the same order as in toSExp
+                        -- not part of the protocol though
+        do let format = Just !(fromSExp prop1)
+           let decor  = Just !(fromSExp prop2)
+           pure $ MkProperties {format, decor}
+      _ => Nothing
+  fromSExp _ = Nothing

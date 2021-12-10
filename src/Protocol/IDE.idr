@@ -63,10 +63,6 @@ data Reply =
   | SetPrompt   String Integer
   | Warning FileContext String Highlighting Integer
 
-public export
-data Request =
-    Cmd IDECommand
-
 export
 SExpable Reply where
   toSExp (ProtocolVersion maj min) =  toSExp (SymbolAtom "protocol-version", maj, min)
@@ -83,6 +79,15 @@ SExpable Reply where
       [] => []
       _  => [SExpList (map toSExp spans)]
       , toSExp id]
+
+public export
+data Request =
+    Cmd IDECommand
+
 export
 SExpable Request where
   toSExp (Cmd cmd) = toSExp cmd
+
+export
+FromSExpable Request where
+  fromSExp cmd = do pure $ Cmd !(fromSExp cmd)

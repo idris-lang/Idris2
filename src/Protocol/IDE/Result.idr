@@ -37,10 +37,39 @@ SExpable REPLOption where
     , sexpOptionVal opt.val
     ]
 
+export
+FromSExpable REPLOption where
+  fromSExp (SExpList
+    [ SymbolAtom name
+    , val
+    ]) = do
+    let Nothing = fromSExp val
+      | Just val => Just $ MkOption {name, type = BOOL, val}
+    let Nothing = fromSExp val
+      | Just val => Just $ MkOption {name, type = STRING, val}
+    val <- fromSExp val
+    Just $ MkOption {name, type = ATOM, val}
+  fromSExp _ = Nothing
+
 public export
 record MetaVarLemma where
   constructor MkMetaVarLemma
   application, lemma : String
+
+export
+SExpable MetaVarLemma where
+  toSExp mvl =  SExpList [ SymbolAtom "metavariable-lemma"
+             , SExpList [ SymbolAtom "replace-metavariable", StringAtom mvl.application ]
+             , SExpList [ SymbolAtom "definition-type", StringAtom mvl.lemma ]
+             ]
+
+export
+FromSExpable MetaVarLemma where
+  fromSExp (SExpList [ SymbolAtom "metavariable-lemma"
+             , SExpList [ SymbolAtom "replace-metavariable", StringAtom application ]
+             , SExpList [ SymbolAtom "definition-type", StringAtom lemma ]
+             ]) = Just $ MkMetaVarLemma {application, lemma}
+  fromSExp _ = Nothing
 
 public export
 record IdrisVersion where
@@ -56,11 +85,18 @@ SExpable IdrisVersion where
     ]
 
 export
-SExpable MetaVarLemma where
-  toSExp mvl =  SExpList [ SymbolAtom "metavariable-lemma"
-             , SExpList [ SymbolAtom "replace-metavariable", StringAtom mvl.application ]
-             , SExpList [ SymbolAtom "definition-type", StringAtom mvl.lemma ]
-             ]
+FromSExpable IdrisVersion where
+  fromSExp (SExpList
+    [ SExpList [majorSExp, minorSExp, patchSExp]
+    , SExpList [StringAtom tagSExp]
+    ]) = do pure $ MkIdrisVersion
+              { major = !(fromSExp majorSExp)
+              , minor = !(fromSExp minorSExp)
+              , patch = !(fromSExp patchSExp)
+              , tag = case tagSExp of
+                  "" => Nothing
+                  str => Just str}
+  fromSExp _ = Nothing
 
 public export
 data Result =

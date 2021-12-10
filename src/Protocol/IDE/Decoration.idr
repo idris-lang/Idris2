@@ -60,3 +60,19 @@ SExpable Decoration where
     display Namespace = "namespace"
     display Postulate = "postulate"
     display Module    = "module"
+
+export
+FromSExpable Decoration where
+  fromSExp (SExpList [SymbolAtom "decor", SymbolAtom decor]) =
+    case decor of
+      "comment"   => Just Comment
+      "type"      => Just Typ
+      "function"  => Just Function
+      "data"      => Just Data
+      "keyword"   => Just Keyword
+      "bound"     => Just Bound
+      "namespace" => Just Namespace
+      "postulate" => Just Postulate
+      "module"    => Just Module
+      _ => Nothing
+  fromSExp _ = Nothing

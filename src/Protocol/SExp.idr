@@ -47,6 +47,11 @@ SExpable Bool where
   toSExp = BoolAtom
 
 export
+FromSExpable Bool where
+  fromSExp (BoolAtom b) = Just b
+  fromSExp _ = Nothing
+
+export
 SExpable String where
   toSExp = StringAtom
 
@@ -60,12 +65,25 @@ SExpable Integer where
   toSExp = IntegerAtom
 
 export
+FromSExpable Integer where
+  fromSExp (IntegerAtom a) = Just a
+  fromSExp _ = Nothing
+
+export
 SExpable Int where
   toSExp = IntegerAtom . cast
 
 export
+FromSExpable Int where
+  fromSExp a = do Just $ cast {from = Integer }$ !(fromSExp a)
+
+export
 SExpable Nat where
   toSExp = IntegerAtom . cast
+
+export
+FromSExpable Nat where
+  fromSExp a = do Just $ cast {from = Integer }$ !(fromSExp a)
 
 export
 (SExpable a, SExpable b) => SExpable (a, b) where

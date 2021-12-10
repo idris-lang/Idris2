@@ -17,6 +17,15 @@ SExpable HolePremise where
              , SExpList [] -- TODO: metadata
              ]
 
+export
+FromSExpable HolePremise where
+  fromSExp (SExpList [ StringAtom name
+             , StringAtom type
+             , SExpList [] -- TODO: metadata
+             ]) = do pure $ MkHolePremise
+                      {name, type}
+  fromSExp _ = Nothing
+
 public export
 record HoleData where
   constructor MkHoleData
@@ -32,3 +41,13 @@ SExpable HoleData where
     , SExpList [ toSExp hole.type   -- Conclusion
                , SExpList[]]        -- TODO: Highlighting information
     ]
+
+export
+FromSExpable HoleData where
+  fromSExp (SExpList
+    [ StringAtom name
+    , context
+    , SExpList [ conclusion
+               , SExpList[]]        -- TODO: Highlighting information
+    ]) = do pure $ MkHoleData {name, type = !(fromSExp conclusion), context = !(fromSExp context)}
+  fromSExp _ = Nothing
