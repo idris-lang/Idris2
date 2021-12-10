@@ -38,6 +38,7 @@ import Idris.Pretty
 import Idris.Doc.String
 
 import Data.List
+import Data.These
 import Libraries.Data.SortedMap
 import Libraries.Utils.Path
 import Libraries.Data.SortedSet

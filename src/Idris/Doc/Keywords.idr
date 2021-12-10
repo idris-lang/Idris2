@@ -452,15 +452,19 @@ importDirectives = vcat $
     """
     When importing a module, users can control whether some definitions come
     into scope by either listing the ones they want to include (with the `using`
-    keyword) or the ones they want to exclude (with `hiding` keyword).
+    keyword) or the ones they want to exclude (with the `hiding` keyword).
+    They can also rename existing definitions on the fly (with the `renaming`
+    keyword).
 
     For instance after the following imports:
     ```idris
-    import Data.List using (find)
-    import Data.Vect hiding (find)
+    import Data.List using  (find) renaming (snoc to listSnoc)
+    import Data.Vect hiding (find) renaming (snoc to vectSnoc)
     ```
-    the `find` and `drop` functions are both in scope and unambiguously resolves
-    to `Data.List.find` and `Data.Vect.drop` respectively.
+    1. the `find` and `drop` functions are both in scope and unambiguously
+       resolve to `Data.List.find` and `Data.Vect.drop` respectively.
+    2. the `snoc` functions are not in scope but both `listSnoc` and
+       `vectSnoc` are unambiguous names for them.
     """]
 
 withabstraction : Doc IdrisDocAnn
@@ -554,6 +558,7 @@ keywordsDoc =
   :: "rewrite" ::= rewriteeq
   :: "using" ::= importDirectives
   :: "hiding" ::= importDirectives
+  :: "renaming" ::= importDirectives
   :: "interface" ::= interfacemechanism
   :: "implementation" ::= interfacemechanism
   :: "open" ::= unusedKeyword

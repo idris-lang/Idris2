@@ -22,6 +22,7 @@ import Data.List
 import Data.List1
 import Data.Maybe
 import Data.Nat
+import Data.These
 import Libraries.Data.NameMap
 import Libraries.Data.StringMap
 import Libraries.Data.UserNameMap

@@ -1,2 +1,5 @@
 :t find
 :t reverse
+:t listSnoc
+:t vectSnoc
+:t snoc

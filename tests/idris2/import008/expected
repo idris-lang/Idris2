@@ -1,18 +1,40 @@
 1/1: Building ImportList (ImportList.idr)
-Warning: Could not find requested names in module Data.List: lenght
+Warning: Could not find requested names in module Data.List: lentgh
 Error: While processing right hand side of g. Undefined name sort. 
 
-ImportList:8:5--8:9
- 4 | f : List a -> List a
- 5 | f = take 1
- 6 | 
- 7 | g : Ord a => List a -> List a
- 8 | g = sort
-         ^^^^
+ImportList:10:5--10:9
+ 06 | f : List a -> List a
+ 07 | f = take 1
+ 08 | 
+ 09 | g : Ord a => List a -> List a
+ 10 | g = sort
+          ^^^^
 Did you mean: sqrt?
+Error: While processing right hand side of h. When unifying:
+    (a -> Bool) -> List a -> Maybe a
+and:
+    (a -> Bool) -> Vect n a -> Maybe a
+Mismatch between: List a and Vect n a.
+
+ImportList:13:5--13:9
+ 09 | g : Ord a => List a -> List a
+ 10 | g = sort
+ 11 | 
+ 12 | h : (a -> Bool) -> Vect n a -> Maybe a
+ 13 | h = find
+          ^^^^
+
 Main> Data.List.find : (a -> Bool) -> List a -> Maybe a
 Main> Data.Vect.reverse : Vect len elem -> Vect len elem
 Prelude.List.reverse : List a -> List a
 Prelude.reverse : String -> String
+Main> Data.List.snoc : List a -> a -> List a
+Main> Data.Vect.snoc : Vect n a -> a -> Vect (S n) a
+Main> Error: Undefined name snoc. 
+
+(Interactive):1:4--1:8
+ 1 | :t snoc
+        ^^^^
+
 Main> 
 Bye for now!

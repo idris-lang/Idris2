@@ -9,6 +9,7 @@ import Data.List.Elem
 import Data.List1
 import Data.Nat
 import Data.String
+import Data.These
 import Data.Vect
 
 import Libraries.Data.PosMap
@@ -244,6 +245,18 @@ export
      = do x <- fromBuf b
           y <- fromBuf b
           pure (x, y)
+
+export
+(TTC a, TTC b) => TTC (These a b) where
+  toBuf b (This x) = do tag 0; toBuf b x
+  toBuf b (That y) = do tag 1; toBuf b y
+  toBuf b (Both x y) = do tag 2; toBuf b x; toBuf b y
+
+  fromBuf b = case !getTag of
+     0 => This <$> fromBuf b
+     1 => That <$> fromBuf b
+     2 => Both <$> fromBuf b <*> fromBuf b
+     _ => corrupt "These"
 
 export
 TTC () where

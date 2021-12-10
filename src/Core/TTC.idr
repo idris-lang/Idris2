@@ -15,6 +15,7 @@ import Libraries.Data.NameMap
 
 import Libraries.Data.IOArray
 import Data.List1
+import Data.These
 import Data.Vect
 
 import Libraries.Utils.Binary
@@ -120,7 +121,7 @@ TTC Name where
              _ => corrupt "Name"
 
 export
-TTC ImportDirective where
+TTC ImportRestriction where
   toBuf b (Using xs) = do tag 0; toBuf b xs
   toBuf b (Hiding xs) = do tag 1; toBuf b xs
 

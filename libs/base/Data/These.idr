@@ -10,6 +10,12 @@ fromEither : Either a b -> These a b
 fromEither = either This That
 
 public export
+fromMaybes : Maybe a -> Maybe b -> Maybe (These a b)
+fromMaybes (Just a) mb = pure $ maybe (This a) (Both a) mb
+fromMaybes ma (Just b) = pure $ maybe (That b) (flip Both b) ma
+fromMaybes Nothing Nothing = Nothing
+
+public export
 fromThis : These a b -> Maybe a
 fromThis (This a) = Just a
 fromThis (That _) = Nothing

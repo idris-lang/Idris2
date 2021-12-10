@@ -1,6 +1,7 @@
 module Core.Name
 
 import Data.String
+import Data.These
 import Decidable.Equality
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
@@ -40,13 +41,25 @@ data Name : Type where
      WithBlock : String -> Int -> Name -- with block nested in (resolved) name
      Resolved : Int -> Name -- resolved, index into context
 
-||| Name management in imports (this cannot be in Idris.Syntax because that
-||| would create a circular dependency with Core.Binary).
+------------------------------------------------------------------------------
+-- Name management in imports
+-- This cannot be in Idris.Syntax because that would create a circular
+-- dependency with Core.Binary
+
+||| An ImportRestriction filters out
+||| 1. either the declarations that were not explicitly listed (Using)
+||| 2. or the declarations that were explicitly listed (Hiding)
 public export
-data ImportDirective : Type where
-  Using    : List1 Name         -> ImportDirective
-  Hiding   : List1 Name         -> ImportDirective
---  Renaming : List1 (Name, Name) -> ImportDirective
+data ImportRestriction : Type where
+  Using  : List1 Name -> ImportRestriction
+  Hiding : List1 Name -> ImportRestriction
+
+||| An ImportDirective is the combination of at least one of:
+||| 1. an import restriction
+||| 2. a renaming directive
+public export
+ImportDirective : Type
+ImportDirective = These ImportRestriction (List1 (Name, Name))
 
 export
 mkNamespacedName : Maybe Namespace -> UserName -> Name

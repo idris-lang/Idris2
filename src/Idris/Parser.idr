@@ -15,6 +15,9 @@ import Data.Maybe
 import Data.Nat
 import Data.SnocList
 import Data.String
+import Data.These
+
+import Libraries.Data.These as Lib
 import Libraries.Utils.String
 
 import Idris.Parser.Let
@@ -1751,8 +1754,8 @@ collectDefs (d :: ds)
     = d :: collectDefs ds
 
 export
-importDirective : OriginDesc -> Rule ImportDirective
-importDirective fname
+importRestriction : OriginDesc -> Rule ImportRestriction
+importRestriction fname
     = (do decoratedKeyword fname "using"
           map Using $ mustWork $ parens fname $
             sepBy1 (decoratedSymbol fname ",") name
@@ -1763,6 +1766,17 @@ importDirective fname
       )
 
 export
+importDirective : OriginDesc -> EmptyRule (Maybe ImportDirective)
+importDirective fname
+  = do mres <- optional (importRestriction fname)
+       mren <- optional $ do
+         decoratedKeyword fname "renaming"
+         mustWork $ parens fname $
+           sepBy1 (decoratedSymbol fname ",") $
+             (,) <$> name <* exactIdent "to" <*> name
+       pure (Lib.fromMaybes mres mren)
+
+export
 import_ : OriginDesc -> IndentInfo -> Rule Import
 import_ fname indents
     = do b <- bounds (do decoratedKeyword fname "import"
@@ -1771,7 +1785,7 @@ import_ fname indents
                          nsAs <- option (miAsNamespace ns)
                                         (do decorate fname Keyword $ exactIdent "as"
                                             decorate fname Namespace $ mustWork namespaceId)
-                         imports <- optional $ importDirective fname
+                         imports <- importDirective fname
                          pure (reexp, ns, nsAs, imports))
          atEnd indents
          (reexp, ns, nsAs, imports) <- pure b.val

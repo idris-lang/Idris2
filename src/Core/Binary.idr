@@ -16,6 +16,7 @@ import Core.UnifyState
 import Data.List
 import Data.List1
 import Data.String
+import Data.These
 
 import System.File
 
@@ -427,7 +428,6 @@ getNSas : (String, (ModuleIdent, Bool, Namespace)) ->
           (ModuleIdent, Namespace)
 getNSas (a, (b, c, d)) = (b, d)
 
-
 addUsedGlobalDefs :
   {auto c : Ref Ctxt Defs} ->
   List (Name, Binary) ->
@@ -436,47 +436,77 @@ addUsedGlobalDefs :
   (as : Maybe Namespace) ->
   ImportDirective ->
   Core ()
-addUsedGlobalDefs defs modNS cns as (Using imps)
-  = do missing@(_ :: _) <- go [] defs
-         | _ => pure ()
-       recordWarning
+addUsedGlobalDefs defs modNS cns as dir
+  = do (ures, uren) <- go [] [] (fromThis dir) (forget <$> fromThat dir) defs
+       -- Complain when we have restrictions that do not match any of the
+       -- declarations present in the module
+       whenCons ures $ \ x, xs =>
+         recordWarning
          $ GenericWarn
          $ "Could not find requested names in module \{show modNS}: "
-         ++ showSep "," (map show missing)
+         ++ showSep "," (map show (x :: xs))
+       -- Complain when we have renaming rules that do not match any of the
+       -- declarations present in the module
+       whenCons uren $ \ x, xs =>
+         recordWarning
+         $ GenericWarn
+         $ "Could not find requested names in module \{show modNS}: "
+         ++ showSep "," (map (show . fst) (x :: xs))
 
   where
 
-    -- returns the list of missing imports
-    go : List Name -> List (Name, Binary) -> Core (List Name)
-    go acc [] = pure (forget imps \\ acc)
-    go acc (entry@(entryName, _) :: defs) =
-       case find (\ nm => nameRoot nm == nameRoot entryName
-                       && matches nm entryName)
-                 (forget imps) of
-         Nothing => go acc defs
-         Just nm => do addGlobalDef modNS cns as entry
-                       go (nm :: acc) defs
+  shouldKeep : Name -> ImportRestriction -> (Bool, Maybe Name)
+  shouldKeep entry (Using includes)
+    = let check = find (\ nm => nameRoot nm == nameRoot entry
+                             && matches nm entry)
+                       (forget includes)
+      in (isJust check, check)
+  shouldKeep entry (Hiding excludes)
+    = let check = find (\ nm => nameRoot nm == nameRoot entry
+                             && matches nm entry)
+                       (forget excludes)
+      in (isNothing check, check)
 
-addUsedGlobalDefs defs modNS cns as (Hiding imps)
-  = do missing@(_ :: _) <- go [] defs
-         | _ => pure ()
-       recordWarning
-         $ GenericWarn
-         $ "Could not find requested names in module \{show modNS}: "
-         ++ showSep "," (map show missing)
+  shouldRename : Name -> List (Name, Name) -> Maybe (Name, Name)
+  shouldRename entry renamings
+    = find (\ (src, _) => nameRoot src == nameRoot entry
+                       && matches src entry)
+           renamings
 
-  where
-
-    -- returns the list of missing hiddens
-    go : List Name -> List (Name, Binary) -> Core (List Name)
-    go acc [] = pure (forget imps \\ acc)
-    go acc (entry@(entryName, _) :: defs) =
-       case find (\ nm => nameRoot nm == nameRoot entryName
-                       && matches nm entryName)
-                 (forget imps) of
-         Nothing => do addGlobalDef modNS cns as entry
-                       go acc defs
-         Just nm => go (nm :: acc) defs
+  go : List Name -> List (Name, Name) ->
+       Maybe ImportRestriction ->
+       Maybe (List (Name, Name)) ->
+       List (Name, Binary) -> Core (List Name, List (Name, Name))
+  go ures uren mres mren [] =
+    let res = case mres of
+                Nothing => []
+                Just (Using nms) => forget nms
+                Just (Hiding nms) => forget nms
+        ren = fromMaybe [] mren
+    in pure (res \\ ures, ren \\ uren)
+  go ures uren mres mren (entry@(entryName, entryCode) :: defs) =
+    let check : (Bool, Maybe Name)
+      --         ^      ^--- whether this decision was caused by a rule
+      --          `---- whether to keep the definition
+      -- So (True, Just _)  means a `using` led to this being kept
+      --    (True, Nothing) means it's due to not being caught by a `hiding`
+      := maybe (True, Nothing) (shouldKeep entryName) mres
+    in case check of
+      -- filtered in
+      (True, Just nm) => do addGlobalDef modNS cns as entry
+                            go (nm :: ures) uren mres mren defs
+      -- filtered out
+      (False, Just nm) => go (nm :: ures) uren mres mren defs
+      -- falling through: is it renamed? In which case it may be retained.
+      -- Indeed in `import A using (b) renaming (c to d)` we should still
+      -- re-export c as d even though it's not in `using`!
+      (b, Nothing) => do
+        let check : Maybe (Name, Name) := shouldRename entryName =<< mren
+        let Just r@(src, tgt) = check
+              | Nothing => do when b $ addGlobalDef modNS cns as entry
+                              go ures uren mres mren defs
+        addGlobalDef modNS cns as (tgt, entryCode)
+        go ures (r :: uren) mres mren defs
 
 ||| Add definitions from a binary file to the current context
 ||| @ nestedns Set nested namespaces (for records, to use at the REPL)

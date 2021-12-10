@@ -573,6 +573,11 @@ iunless : (b : Bool) -> Lazy (Core a) -> Core (IMaybe (not b) a)
 iunless b f = iwhen (not b) f
 
 export %inline
+whenCons : List a -> (a -> List a -> Core ()) -> Core ()
+whenCons (a :: as) k = k a as
+whenCons [] k = pure ()
+
+export %inline
 whenJust : Maybe a -> (a -> Core ()) -> Core ()
 whenJust (Just a) k = k a
 whenJust Nothing k = pure ()

@@ -14,8 +14,10 @@ import TTImp.TTImp
 
 import Libraries.Data.ANameMap
 import Data.List
-import Data.SnocList
 import Data.Maybe
+import Data.SnocList
+import Data.These
+
 import Libraries.Data.NameMap
 import Libraries.Data.SortedMap
 import Libraries.Data.String.Extra
