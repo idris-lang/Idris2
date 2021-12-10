@@ -93,6 +93,14 @@ export
              y' => SExpList [toSExp x, y']
 
 export
+(FromSExpable a, FromSExpable b) => FromSExpable (a, b) where
+  fromSExp (SExpList xs) = case xs of
+    [x,y] => do pure $ (!(fromSExp x), !(fromSExp y))
+    (x :: xs) => do pure $ (!(fromSExp x), !(fromSExp $ SExpList xs))
+    _ => Nothing
+  fromSExp _ = Nothing
+
+export
 SExpable a => SExpable (List a) where
   toSExp xs
       = SExpList (map toSExp xs)

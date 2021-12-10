@@ -119,3 +119,26 @@ SExpable Result where
   toSExp (AHoleList holes) = toSExp holes
   toSExp (ANameList names) = SExpList (map SymbolAtom names)
   toSExp (AnOptionList opts) = toSExp opts
+
+
+-- This code is not efficient. Usually the client knows what kind of
+-- result to expect based on the request it issued.
+export
+FromSExpable Result where
+  fromSExp (SExpList []) = Just AUnit -- resolve ambiguity somewhat arbitrarily...
+  fromSExp sexp = do
+  let Nothing = fromSExp sexp
+    | Just str => pure $ AString str
+  let Nothing = fromSExp sexp
+    | Just version => pure $ AVersion version
+  let Nothing = fromSExp sexp
+    | Just mvl => pure $ AMetaVarLemma mvl
+  let Nothing = fromSExp sexp
+    | Just nll => pure $ ANameLocList nll
+  let Nothing = fromSExp sexp
+    | Just hl => pure $ AHoleList hl
+  let Nothing = fromSExp sexp
+    | Just nl => pure $ ANameList nl
+  let Nothing = fromSExp sexp
+    | Just optl => pure $ AnOptionList optl
+  Nothing
