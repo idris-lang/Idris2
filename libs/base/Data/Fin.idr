@@ -189,10 +189,10 @@ maybeLT : (x : Nat) -> (y : Nat) -> Maybe (x `LT` y)
 maybeLT x y = maybeLTE (S x) y
 
 public export
-natFromInteger : (x : Integer) -> {n : Nat} ->
+finFromInteger : (x : Integer) -> {n : Nat} ->
                  {auto 0 prf : So (fromInteger x < n)} ->
                  Fin n
-natFromInteger x = natToFinLt (fromInteger x)
+finFromInteger x = natToFinLt (fromInteger x)
 
 -- Direct comparison between `Integer` and `Nat`.
 -- We cannot convert the `Nat` to `Integer`, because that will not work with open terms;
@@ -212,7 +212,7 @@ public export
 fromInteger : (x : Integer) -> {n : Nat} ->
               {auto 0 prf : So (integerLessThanNat x n)} ->
               Fin n
-fromInteger x = natFromInteger x {prf = lemma prf} where
+fromInteger x = finFromInteger x {prf = lemma prf} where
   -- to be minimally invasive, we just call the previous implementation.
   -- however, having a different proof obligation resolves #2032
   0 lemma : {x : Integer} -> {n : Nat} -> So (integerLessThanNat x n) -> So (fromInteger {ty=Nat} x < n)
