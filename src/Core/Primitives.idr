@@ -535,7 +535,7 @@ believeMeTy : ClosedTerm
 believeMeTy
     = pi "a" erased Explicit (TType emptyFC (MN "top" 0)) $
       pi "b" erased Explicit (TType emptyFC (MN "top" 0)) $
-      pi "x" top    Explicit (Local emptyFC Nothing _ (Later First)) $
+      pi "x" linear Explicit (Local emptyFC Nothing _ (Later First)) $
       Local emptyFC Nothing _ (Later First)
 
 crashTy : ClosedTerm

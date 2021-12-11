@@ -179,7 +179,7 @@ findIndices p = h 0 where
 
 ||| Find associated information in a list using a custom comparison.
 public export
-lookupBy : (a -> a -> Bool) -> a -> List (a, b) -> Maybe b
+lookupBy : (a -> b -> Bool) -> a -> List (b, v) -> Maybe v
 lookupBy p e []      = Nothing
 lookupBy p e ((l, r) :: xs) =
   if p e l then
@@ -194,7 +194,7 @@ lookup = lookupBy (==)
 
 ||| Check if something is a member of a list using a custom comparison.
 public export
-elemBy : (a -> a -> Bool) -> a -> List a -> Bool
+elemBy : (a -> b -> Bool) -> a -> List b -> Bool
 elemBy p e []      = False
 elemBy p e (x::xs) = p e x || elemBy p e xs
 
@@ -231,7 +231,7 @@ nub = nubBy (==)
 
 ||| The deleteBy function behaves like delete, but takes a user-supplied equality predicate.
 public export
-deleteBy : (a -> a -> Bool) -> a -> List a -> List a
+deleteBy : (a -> b -> Bool) -> a -> List b -> List b
 deleteBy _  _ []      = []
 deleteBy eq x (y::ys) = if x `eq` y then ys else y :: deleteBy eq x ys
 
@@ -254,7 +254,7 @@ delete = deleteBy (==)
 ||| @ source       The list to delete elements from.
 ||| @ undesirables The list of elements to delete.
 public export
-deleteFirstsBy : (p : a -> a -> Bool) -> (source : List a) -> (undesirables : List a) -> List a
+deleteFirstsBy : (p : a -> b -> Bool) -> (source : List b) -> (undesirables : List a) -> List b
 deleteFirstsBy p = foldl (flip (deleteBy p))
 
 infix 7 \\
@@ -732,7 +732,8 @@ sort = sortBy compare
 ||| @ left  the list which might be a prefix of `right`
 ||| @ right the list of elements to compare againts
 export
-isPrefixOfBy : (eq : a -> a -> Bool) -> (left, right : List a) -> Bool
+isPrefixOfBy : (eq : a -> b -> Bool) ->
+               (left : List a) -> (right : List b) -> Bool
 isPrefixOfBy p [] _            = True
 isPrefixOfBy p _ []            = False
 isPrefixOfBy p (x::xs) (y::ys) = p x y && isPrefixOfBy p xs ys
@@ -750,7 +751,8 @@ isPrefixOf = isPrefixOfBy (==)
 ||| @ left  the list which might be a suffix of `right`
 ||| @ right the list of elements to compare againts
 export
-isSuffixOfBy : (eq : a -> a -> Bool) -> (left, right : List a) -> Bool
+isSuffixOfBy : (eq : a -> b -> Bool) ->
+               (left : List a) -> (right : List b) -> Bool
 isSuffixOfBy p left right = isPrefixOfBy p (reverse left) (reverse right)
 
 ||| The isSuffixOf function takes two lists and returns True iff the first list
@@ -947,4 +949,3 @@ export
 lengthMap : (xs : List a) -> length (map f xs) = length xs
 lengthMap [] = Refl
 lengthMap (x :: xs) = cong S (lengthMap xs)
-

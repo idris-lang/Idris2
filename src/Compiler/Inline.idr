@@ -196,6 +196,15 @@ mutual
                       sc' <- eval rec (CRef fc xn :: env) stk sc
                       val' <- eval rec env [] val
                       pure (CLet fc x True val' (refToLocal xn x sc'))
+  eval rec env stk (CApp fc f@(CRef nfc n) args)
+      = do -- If we don't know 'n' leave the arity alone, because it's
+           -- a name from another module where the job is already done
+           defs <- get Ctxt
+           Just gdef <- lookupCtxtExact n (gamma defs)
+                | Nothing => do args' <- traverse (eval rec env []) args
+                                pure (unload stk
+                                          (CApp fc (CRef nfc n) args'))
+           eval rec env (!(traverse (eval rec env []) args) ++ stk) f
   eval rec env stk (CApp fc f args)
       = eval rec env (!(traverse (eval rec env []) args) ++ stk) f
   eval rec env stk (CCon fc n ci t args)
@@ -332,6 +341,13 @@ fixArityTm (CLam fc x sc) args
 fixArityTm (CLet fc x inl val sc) args
     = pure $ expandToArity Z
                  (CLet fc x inl !(fixArityTm val []) !(fixArityTm sc [])) args
+fixArityTm outf@(CApp fc f@(CRef _ n) fargs) args
+    = do defs <- get Ctxt
+         -- If we don't know 'n' leave the arity alone, because it's
+         -- a name from another module where the job is already done
+         Just gdef <- lookupCtxtExact n (gamma defs)
+              | Nothing => pure (unload args outf)
+         fixArityTm f (!(traverse (\tm => fixArityTm tm []) fargs) ++ args)
 fixArityTm (CApp fc f fargs) args
     = fixArityTm f (!(traverse (\tm => fixArityTm tm []) fargs) ++ args)
 fixArityTm (CCon fc n ci t args) []

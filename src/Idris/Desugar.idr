@@ -368,7 +368,7 @@ mutual
   desugarB side ps (PList fc nilFC args)
       = expandList side ps nilFC args
   desugarB side ps (PSnocList fc nilFC args)
-      = expandSnocList side ps nilFC (reverse args)
+      = expandSnocList side ps nilFC args
   desugarB side ps (PPair fc l r)
       = do l' <- desugarB side ps l
            r' <- desugarB side ps r
@@ -472,9 +472,10 @@ mutual
                {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto m : Ref MD Metadata} ->
-               Side -> List Name -> (nilFC : FC) -> List (FC, PTerm) -> Core RawImp
-  expandSnocList side ps nilFC [] = pure (IVar nilFC (UN $ Basic "Lin"))
-  expandSnocList side ps nilFC ((consFC, x) :: xs)
+               Side -> List Name -> (nilFC : FC) ->
+               SnocList (FC, PTerm) -> Core RawImp
+  expandSnocList side ps nilFC [<] = pure (IVar nilFC (UN $ Basic "Lin"))
+  expandSnocList side ps nilFC (xs :< (consFC, x))
       = pure $ apply (IVar consFC (UN $ Basic ":<"))
                 [!(expandSnocList side ps nilFC xs) , !(desugarB side ps x)]
 
@@ -856,8 +857,9 @@ mutual
       toIDef nm (ImpossibleClause fc lhs)
           = pure $ IDef fc nm [ImpossibleClause fc lhs]
 
-  desugarDecl ps (PData fc doc vis ddecl)
-      = pure [IData fc vis !(desugarData ps doc ddecl)]
+  desugarDecl ps (PData fc doc vis mbtot ddecl)
+      = pure [IData fc vis mbtot !(desugarData ps doc ddecl)]
+
   desugarDecl ps (PParameters fc params pds)
       = do pds' <- traverse (desugarDecl (ps ++ map fst params)) pds
            params' <- traverse (\(n, rig, i, ntm) => do tm' <- desugar AnyExpr ps ntm
@@ -970,7 +972,7 @@ mutual
       isNamed Nothing = False
       isNamed (Just _) = True
 
-  desugarDecl ps (PRecord fc doc vis tn params conname_in fields)
+  desugarDecl ps (PRecord fc doc vis mbtot tn params conname_in fields)
       = do addDocString tn doc
            params' <- traverse (\ (n,c,p,tm) =>
                           do tm' <- desugar AnyExpr ps tm
@@ -999,7 +1001,7 @@ mutual
            let conname = maybe (mkConName tn) id conname_in
            let _ = the Name conname
            pure [IRecord fc (Just recName)
-                         vis (MkImpRecord fc tn paramsb conname fields')]
+                         vis mbtot (MkImpRecord fc tn paramsb conname fields')]
     where
       fname : PField -> Name
       fname (MkField _ _ _ _ n _) = n

@@ -53,7 +53,7 @@ recordtypes = vcat $
     """, "",
     """
     and we can then immediately use all of `fst`, `snd`, `{ fst := ?h1 }`,
-    or `{snd $= ?h2 }` to respectively project values out of a record,
+    or `{ snd $= ?h2 }` to respectively project values out of a record,
     replace values, or update them.
     """
     ]
@@ -652,7 +652,24 @@ rangeSyntax = """
     2. `[1,3..]` for all positive odds
   """
 
-symbolsDoc : All DocFor Source.reservedSymbols
+recordUpdate : Doc IdrisDocAnn
+recordUpdate = vcat $ header "Record updates" :: ""
+  :: map (indent 2) [
+  """
+  If a record `r` has a field `n` of type `Nat`, it is possible to either
+
+  1. overwrite the current value with `0` by using the assignment symbol `:=`
+     like so: `{ n := 0 } r`
+
+  2. modify the current value by adding `2` by using the modification symbol `$=`
+     like so: `{ n $= (2 +) } r`.
+
+  Multiple updates can be combined in a single update by grouping a comma-separated
+  list of assignments and/or modifications like so: `{ a := Z, b $= S } r`.
+  """
+  ]
+
+symbolsDoc : All DocFor (Source.symbols ++ Source.reservedInfixSymbols)
 symbolsDoc
   = "," ::= ""
   :: ";" ::= ""
@@ -661,16 +678,15 @@ symbolsDoc
              as a pattern or type variable.
              """
   :: "`" ::= ""
-  :: tabulate (::= "Grouping symbol (opening token)") ?
-  ++ tabulate (::= "Grouping symbol (closing token)") ?
-  ++ "%" ::= "Start of a pragma"
+  :: "%" ::= "Start of a pragma"
   :: "\\" ::= lambdaAbstraction
   :: ":" ::= """
              Type declaration, for instance `id : a -> a`
-             declares a new definition `id` of type `a -> a`.
+             declares a new toplevel definition `id` of type `a -> a`.
              """
   :: "=" ::= "Definition or equality type"
-  :: ":=" ::= "Let binding"
+  :: ":=" ::= "Let binding or record assignment"
+  :: "$=" ::= recordUpdate
   :: "|" ::= "Additional patterns showing up in a `with` clause"
   :: "|||" ::= "Document string attached to the following definition"
   :: "<-" ::= "Bind in a do block"

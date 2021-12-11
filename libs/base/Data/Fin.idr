@@ -1,5 +1,6 @@
 module Data.Fin
 
+import Control.Function
 import Data.List1
 import public Data.Maybe
 import public Data.Nat
@@ -20,13 +21,13 @@ data Fin : (n : Nat) -> Type where
 
 ||| Coerce between Fins with equal indices
 public export
-coerce : {n : Nat} -> (0 eq : m = n) -> Fin m -> Fin n
+coerce : {n : Nat} -> (0 eq : m = n) -> Fin m -> Fin n -- TODO: make linear
 coerce {n = S _} eq FZ = FZ
 coerce {n = Z} eq FZ impossible
-coerce {n = S _} eq (FS k) = FS (coerce (succInjective _ _ eq) k)
+coerce {n = S _} eq (FS k) = FS (coerce (injective eq) k)
 coerce {n = Z} eq (FS k) impossible
 
-%transform "coerce-identity" coerce = replace {p = Fin}
+%transform "coerce-identity" coerce eq k = replace {p = Fin} eq k
 
 export
 Uninhabited (Fin Z) where
@@ -46,8 +47,8 @@ Uninhabited (n = m) => Uninhabited (FS n = FS m) where
   uninhabited Refl @{nm} = uninhabited Refl @{nm}
 
 export
-fsInjective : FS m = FS n -> m = n
-fsInjective Refl = Refl
+Injective FS where
+  injective Refl = Refl
 
 export
 Eq (Fin n) where
@@ -61,14 +62,17 @@ finToNat : Fin n -> Nat
 finToNat FZ = Z
 finToNat (FS k) = S $ finToNat k
 
-||| `finToNat` is injective
-export
 finToNatInjective : (fm : Fin k) -> (fn : Fin k) -> (finToNat fm) = (finToNat fn) -> fm = fn
 finToNatInjective FZ     FZ     _    = Refl
 finToNatInjective (FS _) FZ     Refl impossible
 finToNatInjective FZ     (FS _) Refl impossible
 finToNatInjective (FS m) (FS n) prf  =
-  cong FS $ finToNatInjective m n $ succInjective (finToNat m) (finToNat n) prf
+  cong FS $ finToNatInjective m n $ injective prf
+
+||| `finToNat` is injective
+export
+Injective Fin.finToNat where
+ injective = (finToNatInjective _ _)
 
 export
 Cast (Fin n) Nat where
@@ -218,7 +222,7 @@ DecEq (Fin n) where
   decEq (FS f) (FS f')
       = case decEq f f' of
              Yes p => Yes $ cong FS p
-             No p => No $ p . fsInjective
+             No p => No $ p . injective
 
 namespace Equality
 

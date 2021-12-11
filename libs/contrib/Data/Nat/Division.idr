@@ -37,7 +37,7 @@ fuelLemma numer predDenom fuel enough recurse =
                           (LTESucc LTEZero)
                           denom_lte_numer)
       succenough : S numer' `LTE` S fuel
-      succenough = transitive {rel = LTE} numer'_lt_numer enough
+      succenough = transitive numer'_lt_numer enough
   in fromLteSucc succenough
 
 -- equivalence between the duplicate definitions in Data.Nar  ---
@@ -106,7 +106,7 @@ boundModNatNZ : (numer, denom : Nat) -> (0 denom_nz : NonZero denom)
 boundModNatNZ numer (S predDenom) denom_nz =
   LTESucc $
     rewrite sym $ mod''_eq_mod' numer numer predDenom in
-      bound_mod'' numer numer predDenom $ reflexive {rel = LTE}
+      bound_mod'' numer numer predDenom $ reflexive
 divisionTheorem' : (numer, predDenom : Nat)
                 -> (fuel : Nat) -> (enough : numer `LTE` fuel)
                 -> numer = (mod'' fuel numer predDenom) + (div'' fuel numer predDenom) * (S predDenom)
@@ -151,7 +151,7 @@ DivisionTheoremDivMod : (numer, denom : Nat)  -> (0 prf : NonZero denom)
                -> numer = snd ( divmodNatNZ numer denom prf)
                        + (fst $ divmodNatNZ numer denom prf)*denom
 DivisionTheoremDivMod numer (S predDenom) prf
-  = divisionTheorem' numer predDenom numer $ reflexive {rel = LTE}
+  = divisionTheorem' numer predDenom numer reflexive
 
 export
 DivisionTheorem : (numer, denom : Nat) -> (0 prf1, prf2 : NonZero denom)
@@ -296,7 +296,7 @@ addMultipleMod' (S fuel1) fuel2 predn a (S k) enough1 enough2 =
 addMultipleMod : (a, b, n : Nat) -> (0 n_neq_z1, n_neq_z2 : NonZero n)
               -> snd (divmodNatNZ (a*n + b) n n_neq_z1) = snd (divmodNatNZ b n n_neq_z2)
 addMultipleMod a b n@(S predn) n_neq_z1  n_neq_z2 =
-  addMultipleMod' (a*n + b) b predn b a (reflexive {rel = LTE}) (reflexive {rel = LTE})
+  addMultipleMod' (a*n + b) b predn b a reflexive reflexive
 
 modBelowDenom : (r, n : Nat) -> (0 n_neq_z : NonZero n)
              -> (r `LT` n)

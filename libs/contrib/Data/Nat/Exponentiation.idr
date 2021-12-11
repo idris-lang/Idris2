@@ -53,7 +53,7 @@ unfoldPow2 = irrelevantEq $ Calc $
 
 export
 lteLpow2 : {m : Nat} -> 1 `LTE` lpow2 m
-lteLpow2 {m = Z} = reflexive {rel = LTE}
+lteLpow2 {m = Z} = reflexive
 lteLpow2 {m = S m} = CalcWith $
   let ih = lteLpow2 {m} in
   |~ 1

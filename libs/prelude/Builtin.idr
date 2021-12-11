@@ -148,7 +148,7 @@ public export
 %inline
 public export
 rewrite__impl : {0 x, y : a} -> (0 p : _) ->
-                (0 rule : x = y) -> (val : p y) -> p x
+                (0 rule : x = y) -> (1 val : p y) -> p x
 rewrite__impl p Refl prf = prf
 
 %rewrite Equal rewrite__impl
@@ -156,7 +156,7 @@ rewrite__impl p Refl prf = prf
 ||| Perform substitution in a term according to some equality.
 %inline
 public export
-replace : forall x, y, p . (0 rule : x = y) -> p x -> p y
+replace : forall x, y, p . (0 rule : x = y) -> (1 _ : p x) -> p y
 replace Refl prf = prf
 
 ||| Symmetry of propositional equality.
@@ -185,8 +185,8 @@ mkDPairInjectiveSnd Refl = Refl
 ||| in the type checker.  Use it with care - it can result in segfaults or
 ||| worse!
 public export
-believe_me : a -> b
-believe_me = prim__believe_me _ _
+believe_me : a -> b -- TODO: make linear
+believe_me v = prim__believe_me _ _ v
 
 ||| Assert to the usage checker that the given function uses its argument linearly.
 public export

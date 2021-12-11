@@ -434,11 +434,12 @@ mutual
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
                           pure (IClaim v' w' x' y' z')
-               (UN (Basic "IData"), [x,y,z])
+               (UN (Basic "IData"), [x,y,z,w])
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (IData x' y' z')
+                          w' <- reify defs !(evalClosure defs w)
+                          pure (IData x' y' z' w')
                (UN (Basic "IDef"), [x,y,z])
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
@@ -449,12 +450,13 @@ mutual
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
                           pure (IParameters x' y' z')
-               (UN (Basic "IRecord"), [w, x,y,z])
+               (UN (Basic "IRecord"), [w,x,y,z,u])
                     => do w' <- reify defs !(evalClosure defs w)
                           x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (IRecord w' x' y' z')
+                          u' <- reify defs !(evalClosure defs u)
+                          pure (IRecord w' x' y' z' u')
                (UN (Basic "INamespace"), [w,x,y])
                     => do w' <- reify defs !(evalClosure defs w)
                           x' <- reify defs !(evalClosure defs x)
@@ -779,11 +781,12 @@ mutual
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
              appCon fc defs (reflectionttimp "IClaim") [v', w', x', y', z']
-    reflect fc defs lhs env (IData x y z)
+    reflect fc defs lhs env (IData x y z w)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "IData") [x', y', z']
+             w' <- reflect fc defs lhs env w
+             appCon fc defs (reflectionttimp "IData") [x', y', z', w']
     reflect fc defs lhs env (IDef x y z)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
@@ -794,12 +797,13 @@ mutual
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
              appCon fc defs (reflectionttimp "IParameters") [x', y', z']
-    reflect fc defs lhs env (IRecord w x y z)
+    reflect fc defs lhs env (IRecord w x y z u)
         = do w' <- reflect fc defs lhs env w
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "IRecord") [w', x', y', z']
+             u' <- reflect fc defs lhs env u
+             appCon fc defs (reflectionttimp "IRecord") [w', x', y', z', u']
     reflect fc defs lhs env (INamespace x y z)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y

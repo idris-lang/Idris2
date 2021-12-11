@@ -110,6 +110,9 @@ doUpdates defs ups (LBrace :: xs)
                              )
           -- not a special case: proceed as normal
           _ => pure (LBrace :: [] ++ !(doUpdates defs ups xs))
+-- if we have a name that acts as an as-pattern then do not update it
+doUpdates defs ups (Name n :: AsPattern :: xs)
+    = pure $ Name n :: AsPattern :: !(doUpdates defs ups xs)
 -- if we have a name, look up if it's a name we're updating. If it isn't, keep
 -- the old name, otherwise update the name, i.e. replace with the new name
 doUpdates defs ups (Name n :: xs)

@@ -166,10 +166,9 @@ mutual
               "::" => case sugarApp (unbracket r) of
                 PList fc nilFC xs => pure $ PList fc nilFC ((opFC, unbracketApp l) :: xs)
                 _           => Nothing
-              ":<" => case sugarApp (unbracket r) of
+              ":<" => case sugarApp (unbracket l) of
                         PSnocList fc nilFC xs => pure $ PSnocList fc nilFC
-                                                  -- use a snoc list here in a future version
-                                                  (xs ++ [(opFC, unbracketApp l)])
+                                                  (xs :< (opFC, unbracketApp r))
                         _                     => Nothing
               "rangeFromTo" => pure $ PRange fc (unbracket l) Nothing (unbracket r)
               "rangeFromThen" => pure $ PRangeStream fc (unbracket l) (Just $ unbracket r)
@@ -192,7 +191,7 @@ mutual
                _           => Nothing
              else case nameRoot nm of
                "Nil" => pure $ PList fc fc []
-               "Lin" => pure $ PSnocList fc fc []
+               "Lin" => pure $ PSnocList fc fc [<]
                _     => Nothing
         PApp fc (PRef _ (MkKindedName nt _ (NS ns nm))) arg =>
           case nameRoot nm of
@@ -484,8 +483,8 @@ mutual
   toPDecl (IClaim fc rig vis opts ty)
       = do opts' <- traverse toPFnOpt opts
            pure (Just (PClaim fc rig vis opts' !(toPTypeDecl ty)))
-  toPDecl (IData fc vis d)
-      = pure (Just (PData fc "" vis !(toPData d)))
+  toPDecl (IData fc vis mbtot d)
+      = pure (Just (PData fc "" vis mbtot !(toPData d)))
   toPDecl (IDef fc n cs)
       = pure (Just (PDef fc !(traverse toPClause cs)))
   toPDecl (IParameters fc ps ds)
@@ -496,9 +495,9 @@ mutual
                                tpe' <- toPTerm startPrec tpe
                                pure (n, rig, info', tpe')) ps)
                 (mapMaybe id ds')))
-  toPDecl (IRecord fc _ vis r)
+  toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, con, fs) <- toPRecord r
-           pure (Just (PRecord fc "" vis n ps con fs))
+           pure (Just (PRecord fc "" vis mbtot n ps con fs))
   toPDecl (INamespace fc ns ds)
       = do ds' <- traverse toPDecl ds
            pure (Just (PNamespace fc ns (mapMaybe id ds')))

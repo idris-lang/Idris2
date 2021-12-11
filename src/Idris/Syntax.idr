@@ -14,6 +14,7 @@ import TTImp.TTImp
 
 import Libraries.Data.ANameMap
 import Data.List
+import Data.SnocList
 import Data.Maybe
 import Libraries.Data.NameMap
 import Libraries.Data.SortedMap
@@ -115,7 +116,7 @@ mutual
        PIdiom : FC -> PTerm' nm -> PTerm' nm
        PList : (full, nilFC : FC) -> List (FC, PTerm' nm) -> PTerm' nm
                                         -- ^   v location of the conses/snocs
-       PSnocList : (full, nilFC : FC) -> List ((FC, PTerm' nm)) -> PTerm' nm
+       PSnocList : (full, nilFC : FC) -> SnocList ((FC, PTerm' nm)) -> PTerm' nm
        PPair : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
        PDPair : (full, opFC : FC) -> PTerm' nm -> PTerm' nm -> PTerm' nm -> PTerm' nm
        PUnit : FC -> PTerm' nm
@@ -417,7 +418,7 @@ mutual
   data PDecl' : Type -> Type where
        PClaim : FC -> RigCount -> Visibility -> List (PFnOpt' nm) -> PTypeDecl' nm -> PDecl' nm
        PDef : FC -> List (PClause' nm) -> PDecl' nm
-       PData : FC -> (doc : String) -> Visibility -> PDataDecl' nm -> PDecl' nm
+       PData : FC -> (doc : String) -> Visibility -> Maybe TotalReq -> PDataDecl' nm -> PDecl' nm
        PParameters : FC ->
                      List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm) ->
                      List (PDecl' nm) -> PDecl' nm
@@ -446,7 +447,7 @@ mutual
                          PDecl' nm
        PRecord : FC ->
                  (doc : String) ->
-                 Visibility ->
+                 Visibility -> Maybe TotalReq ->
                  Name ->
                  (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
                  (conName : Maybe Name) ->
@@ -467,13 +468,13 @@ mutual
   getPDeclLoc : PDecl' nm -> FC
   getPDeclLoc (PClaim fc _ _ _ _) = fc
   getPDeclLoc (PDef fc _) = fc
-  getPDeclLoc (PData fc _ _ _) = fc
+  getPDeclLoc (PData fc _ _ _ _) = fc
   getPDeclLoc (PParameters fc _ _) = fc
   getPDeclLoc (PUsing fc _ _) = fc
   getPDeclLoc (PReflect fc _) = fc
   getPDeclLoc (PInterface fc _ _ _ _ _ _ _ _) = fc
   getPDeclLoc (PImplementation fc _ _ _ _ _ _ _ _ _ _) = fc
-  getPDeclLoc (PRecord fc _ _ _ _ _ _) = fc
+  getPDeclLoc (PRecord fc _ _ _ _ _ _ _) = fc
   getPDeclLoc (PMutual fc _) = fc
   getPDeclLoc (PFixity fc _ _ _) = fc
   getPDeclLoc (PNamespace fc _ _) = fc
@@ -509,7 +510,7 @@ export
 definedIn : List PDecl -> List Name
 definedIn [] = []
 definedIn (PClaim _ _ _ _ (MkPTy _ _ n _ _) :: ds) = n :: definedIn ds
-definedIn (PData _ _ _ d :: ds) = definedInData d ++ definedIn ds
+definedIn (PData _ _ _ _ d :: ds) = definedInData d ++ definedIn ds
 definedIn (PParameters _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PUsing _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PNamespace _ _ ns :: ds) = definedIn ns ++ definedIn ds
@@ -776,7 +777,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (PList _ _ xs)
         = "[" ++ showSep ", " (map (showPTermPrec d . snd) xs) ++ "]"
   showPTermPrec d (PSnocList _ _ xs)
-        = "[<" ++ showSep ", " (map (showPTermPrec d . snd) xs) ++ "]"
+        = "[<" ++ showSep ", " (map (showPTermPrec d . snd) (xs <>> [])) ++ "]"
   showPTermPrec d (PPair _ l r) = "(" ++ showPTermPrec d l ++ ", " ++ showPTermPrec d r ++ ")"
   showPTermPrec d (PDPair _ _ l (PImplicit _) r) = "(" ++ showPTermPrec d l ++ " ** " ++ showPTermPrec d r ++ ")"
   showPTermPrec d (PDPair _ _ l ty r) = "(" ++ showPTermPrec d l ++ " : " ++ showPTermPrec d ty ++
@@ -1168,7 +1169,7 @@ mapPTermM f = goPTerm where
       PList fc nilFC <$> goPairedPTerms xs
       >>= f
     goPTerm (PSnocList fc nilFC xs) =
-      PSnocList fc nilFC <$> goPairedPTerms xs
+      PSnocList fc nilFC <$> goPairedSnocPTerms xs
       >>= f
     goPTerm (PPair fc x y) =
       PPair fc <$> goPTerm x
@@ -1259,7 +1260,7 @@ mapPTermM f = goPTerm where
       PClaim fc c v <$> goPFnOpts opts
                     <*> goPTypeDecl tdecl
     goPDecl (PDef fc cls) = PDef fc <$> goPClauses cls
-    goPDecl (PData fc doc v d) = PData fc doc v <$> goPDataDecl d
+    goPDecl (PData fc doc v mbt d) = PData fc doc v mbt <$> goPDataDecl d
     goPDecl (PParameters fc nts ps) =
       PParameters fc <$> go4TupledPTerms nts
                      <*> goPDecls ps
@@ -1283,10 +1284,10 @@ mapPTermM f = goPTerm where
                                   <*> pure mn
                                   <*> pure ns
                                   <*> goMPDecls mps
-    goPDecl (PRecord fc doc v n nts mn fs) =
-      PRecord fc doc v n <$> go4TupledPTerms nts
-                         <*> pure mn
-                         <*> goPFields fs
+    goPDecl (PRecord fc doc v tot n nts mn fs) =
+      PRecord fc doc v tot n <$> go4TupledPTerms nts
+                             <*> pure mn
+                             <*> goPFields fs
     goPDecl (PMutual fc ps) = PMutual fc <$> goPDecls ps
     goPDecl p@(PFixity _ _ _ _) = pure p
     goPDecl (PNamespace fc strs ps) = PNamespace fc strs <$> goPDecls ps
@@ -1335,6 +1336,12 @@ mapPTermM f = goPTerm where
     goPairedPTerms ((a, t) :: ts) =
        (::) . MkPair a <$> goPTerm t
                        <*> goPairedPTerms ts
+
+    goPairedSnocPTerms : SnocList (x, PTerm' nm) -> Core (SnocList (x, PTerm' nm))
+    goPairedSnocPTerms [<]            = pure [<]
+    goPairedSnocPTerms (ts :< (a, t)) =
+       (:<) <$> goPairedSnocPTerms ts
+            <*> MkPair a <$> goPTerm t
 
     go3TupledPTerms : List (x, y, PTerm' nm) -> Core (List (x, y, PTerm' nm))
     go3TupledPTerms [] = pure []

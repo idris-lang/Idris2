@@ -395,9 +395,10 @@ processData : {vars : _} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
               List ElabOpt -> NestedNames vars ->
-              Env Term vars -> FC -> Visibility ->
+              Env Term vars -> FC ->
+              Visibility -> Maybe TotalReq ->
               ImpData -> Core ()
-processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
+processData {vars} eopts nest env fc vis mbtot (MkImpLater dfc n_in ty_raw)
     = do n <- inCurrentNS n_in
          ty_raw <- bindTypeNames fc [] vars ty_raw
 
@@ -434,7 +435,7 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
               _ => do addHashWithNames n
                       addHashWithNames fullty
 
-processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_raw)
+processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in ty_raw opts cons_raw)
     = do n <- inCurrentNS n_in
          ty_raw <- bindTypeNames fc [] vars ty_raw
 
@@ -516,3 +517,8 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
 
          calcConInfo fc (Resolved tidx) cons
          traverse_ updateErasable (Resolved tidx :: connames)
+
+         -- #1404
+         whenJust mbtot $ \ tot => do
+             log "declare.data" 5 $ "setting totality flag for " ++ show n
+             setFlag fc n (SetTotal tot)

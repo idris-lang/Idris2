@@ -2,6 +2,7 @@ module Data.Nat
 
 import public Control.Relation
 import public Control.Order
+import public Control.Function
 
 %default total
 
@@ -86,13 +87,13 @@ Uninhabited (LTE m n) => Uninhabited (LTE (S m) (S n)) where
 public export
 Reflexive Nat LTE where
   reflexive {x = Z} = LTEZero
-  reflexive {x = S k} = LTESucc $ reflexive {x = k}
+  reflexive {x = S _} = LTESucc $ reflexive
 
 public export
 Transitive Nat LTE where
   transitive LTEZero _ = LTEZero
   transitive (LTESucc xy) (LTESucc yz) =
-    LTESucc $ transitive {rel = LTE} xy yz
+    LTESucc $ transitive xy yz
 
 public export
 Antisymmetric Nat LTE where
@@ -105,7 +106,7 @@ Connex Nat LTE where
   connex {x = Z} _ = Left LTEZero
   connex {y = Z} _ = Right LTEZero
   connex {x = S _} {y = S _} prf =
-    case connex {rel = LTE} $ prf . (cong S) of
+    case connex $ prf . (cong S) of
       Left jk => Left $ LTESucc jk
       Right kj => Right $ LTESucc kj
 
@@ -275,8 +276,8 @@ eqSucc : (0 left, right : Nat) -> left = right -> S left = S right
 eqSucc _ _ Refl = Refl
 
 export
-succInjective : (0 left, right : Nat) -> S left = S right -> left = right
-succInjective _ _ Refl = Refl
+Injective S where
+  injective Refl = Refl
 
 ||| A definition of non-zero with a better behaviour than `Not (x = Z)`
 ||| This is amenable to proof search and `NonZero Z` is more readily
@@ -445,7 +446,7 @@ plusLeftCancel : (left, right, right' : Nat) ->
   left + right = left + right' -> right = right'
 plusLeftCancel Z _ _ p = p
 plusLeftCancel (S left) right right' p =
-    plusLeftCancel left right right' (succInjective _ _ p)
+    plusLeftCancel left right right' $ injective p
 
 export
 plusRightCancel : (left, left', right : Nat) ->
@@ -481,7 +482,7 @@ export
 plusLteMonotone : {m, n, p, q : Nat} -> m `LTE` n -> p `LTE` q ->
                   (m + p) `LTE` (n + q)
 plusLteMonotone left right =
-  transitive {rel=LTE}
+  transitive
     (plusLteMonotoneLeft m p q right)
     (plusLteMonotoneRight q m n left)
 
