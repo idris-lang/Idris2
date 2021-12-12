@@ -1224,6 +1224,10 @@ directive fname indents
          n <- name
          atEnd indents
          pure (Hide n)
+  <|> do decorate fname Keyword $ pragma "unhide"
+         n <- name
+         atEnd indents
+         pure (Unhide n)
 --   <|> do pragma "hide_export"
 --          n <- name
 --          atEnd indents

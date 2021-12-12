@@ -1043,6 +1043,7 @@ mutual
   desugarDecl ps (PDirective fc d)
       = case d of
              Hide n => pure [IPragma [] (\nest, env => hide fc n)]
+             Unhide n => pure [IPragma [] (\nest, env => unhide fc n)]
              Logging i => pure [ILog ((\ i => (topics i, verbosity i)) <$> i)]
              LazyOn a => pure [IPragma [] (\nest, env => lazyActive a)]
              UnboundImplicits a => do

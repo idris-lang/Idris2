@@ -220,14 +220,16 @@ lookupContextEntry n ctxt
                   | Nothing => pure Nothing
          lookupContextEntry (Resolved idx) ctxt
 
-||| Check if the name has been hidden by the `%hide` directive.
+||| Check if the given name has been hidden by the `%hide` directive.
 export
 isHidden : Name -> Context -> Bool
 isHidden fulln ctxt = isJust $ lookup fulln (hidden ctxt)
 
+||| Look up a possibly hidden name in the context. The first (boolean) argument
+||| controls whether names hidden by `%hide` are returned too (True=yes, False=no).
 export
-lookupCtxtName : Name -> Context -> Core (List (Name, Int, GlobalDef))
-lookupCtxtName n ctxt
+lookupCtxtName' : Bool -> Name -> Context -> Core (List (Name, Int, GlobalDef))
+lookupCtxtName' allowHidden n ctxt
     = case userNameRoot n of
            Nothing => do Just (i, res) <- lookupCtxtExactI n ctxt
                               | Nothing => pure []
@@ -241,12 +243,17 @@ lookupCtxtName n ctxt
     resn : (Name, Int, GlobalDef) -> Int
     resn (_, i, _) = i
 
+    hlookup : Name -> NameMap () -> Maybe ()
+    hlookup fulln hiddens = if allowHidden
+      then Nothing
+      else lookup fulln hiddens
+
     lookupPossibles : List (Name, Int, GlobalDef) -> -- accumulator
                       List PossibleName ->
                       Core (List (Name, Int, GlobalDef))
     lookupPossibles acc [] = pure (reverse acc)
     lookupPossibles acc (Direct fulln i :: ps)
-       = case lookup fulln (hidden ctxt) of
+       = case (hlookup fulln (hidden ctxt)) of
               Nothing =>
                 do Just res <- lookupCtxtExact (Resolved i) ctxt
                         | Nothing => lookupPossibles acc ps
@@ -255,7 +262,7 @@ lookupCtxtName n ctxt
                       else lookupPossibles acc ps
               _ => lookupPossibles acc ps
     lookupPossibles acc (Alias asn fulln i :: ps)
-       = case lookup fulln (hidden ctxt) of
+       = case (hlookup fulln (hidden ctxt)) of
               Nothing =>
                 do Just res <- lookupCtxtExact (Resolved i) ctxt
                         | Nothing => lookupPossibles acc ps
@@ -264,8 +271,21 @@ lookupCtxtName n ctxt
                       else lookupPossibles acc ps
               _ => lookupPossibles acc ps
 
+||| Look up a name in the context, ignoring names hidden by `%hide`.
+export
+lookupCtxtName : Name -> Context -> Core (List (Name, Int, GlobalDef))
+lookupCtxtName = lookupCtxtName' False
+
+||| Look up a (possible hidden) name in the context.
+export
+lookupHiddenCtxtName : Name -> Context -> Core (List (Name, Int, GlobalDef))
+lookupHiddenCtxtName = lookupCtxtName' True
+
 hideName : Name -> Context -> Context
 hideName n ctxt = record { hidden $= insert n () } ctxt
+
+unhideName : Name -> Context -> Context
+unhideName n ctxt = record { hidden $= delete n } ctxt
 
 branchCtxt : Context -> Core Context
 branchCtxt ctxt = pure (record { branchDepth $= S } ctxt)
@@ -1404,17 +1424,6 @@ setVisibility fc n vis
               | Nothing => undefinedName fc n
          ignore $ addDef n (record { visibility = vis } def)
 
--- Set a name as Private that was previously visible (and, if 'everywhere' is
--- set, hide in any modules imported by this one)
-export
-hide : {auto c : Ref Ctxt Defs} ->
-       FC -> Name -> Core ()
-hide fc n
-    = do defs <- get Ctxt
-         [(nsn, _)] <- lookupCtxtName n (gamma defs)
-              | res => ambiguousName fc n (map fst res)
-         put Ctxt (record { gamma $= hideName nsn } defs)
-
 public export
 record SearchData where
   constructor MkSearchData
@@ -2381,3 +2390,28 @@ setIncData : {auto c : Ref Ctxt Defs} ->
 setIncData cg res
     = do defs <- get Ctxt
          put Ctxt (record { incData $= ((cg, res) :: )} defs)
+
+-- Set a name as Private that was previously visible (and, if 'everywhere' is
+-- set, hide in any modules imported by this one)
+export
+hide : {auto c : Ref Ctxt Defs} ->
+       FC -> Name -> Core ()
+hide fc n
+    = do defs <- get Ctxt
+         [(nsn, _)] <- lookupCtxtName n (gamma defs)
+              | res => ambiguousName fc n (map fst res)
+         put Ctxt (record { gamma $= hideName nsn } defs)
+
+-- Set a name as Public that was previously hidden
+-- Note: this is here at the bottom only becuase `recordWarning` is defined just above.
+export
+unhide : {auto c : Ref Ctxt Defs} ->
+       FC -> Name -> Core ()
+unhide fc n
+    = do defs <- get Ctxt
+         [(nsn, _)] <- lookupHiddenCtxtName n (gamma defs)
+              | res => ambiguousName fc n (map fst res)
+         put Ctxt (record { gamma $= unhideName nsn } defs)
+         unless (isHidden nsn (gamma defs)) $ do
+           recordWarning $ GenericWarn $
+             "Trying to %unhide `" ++ show nsn ++ "`, which was not hidden in the first place"
