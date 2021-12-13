@@ -793,15 +793,27 @@ mutual
 
   record_ : OriginDesc -> IndentInfo -> Rule PTerm
   record_ fname indents
-      = do b <- bounds (do kw <- option False
-                                 (decoratedKeyword fname "record"
-                                   $> True) -- TODO deprecated
-                           decoratedSymbol fname "{"
-                           commit
-                           fs <- sepBy1 (decoratedSymbol fname ",") (field kw fname indents)
-                           decoratedSymbol fname "}"
-                           pure $ forget fs)
+      = do
+           b <- (
+               withWarning oldSyntaxWarning (
+                 bounds (do
+                   decoratedKeyword fname "record"
+                   body True
+                 ))
+             <|>
+               bounds (body False))
            pure (PUpdate (boundToFC fname b) b.val)
+    where
+      oldSyntaxWarning : String
+      oldSyntaxWarning = "DEPRECATED: old record update syntax. Use \"{ f := v } p\" instead of \"{ f = v } p\""
+
+      body : Bool -> Rule (List PFieldUpdate)
+      body kw = do
+        decoratedSymbol fname "{"
+        commit
+        fs <- sepBy1 (decoratedSymbol fname ",") (field kw fname indents)
+        decoratedSymbol fname "}"
+        pure $ forget fs
 
   field : Bool -> OriginDesc -> IndentInfo -> Rule PFieldUpdate
   field kw fname indents
