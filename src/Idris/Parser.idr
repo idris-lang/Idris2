@@ -87,10 +87,10 @@ record ParseOpts where
   withOK : Bool -- = with applications are parseable
 
 peq : ParseOpts -> ParseOpts
-peq = record { eqOK = True }
+peq = { eqOK := True }
 
 pnoeq : ParseOpts -> ParseOpts
-pnoeq = record { eqOK = False }
+pnoeq = { eqOK := False }
 
 export
 pdef : ParseOpts
@@ -223,7 +223,7 @@ mutual
     <|> if withOK q
            then do continue indents
                    decoratedSymbol fname "|"
-                   arg <- expr (record {withOK = False} q) fname indents
+                   arg <- expr ({withOK := False} q) fname indents
                    pure [WithArg arg]
            else fail "| not allowed here"
     where

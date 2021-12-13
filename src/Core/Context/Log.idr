@@ -162,7 +162,7 @@ logTimeRecord' key act
          let tot = case lookup key (timings defs) of
                         Nothing => 0
                         Just (_, t) => t
-         put Ctxt (record { timings $= insert key (False, tot + time) } defs)
+         put Ctxt ({ timings $= insert key (False, tot + time) } defs)
          pure res
 
 -- for ad-hoc profiling, record the time the action takes and add it
@@ -176,7 +176,7 @@ logTimeRecord key act
          case lookup key (timings defs) of
               Just (True, t) => act
               Just (False, t)
-                => do put Ctxt (record { timings $= insert key (True, t) } defs)
+                => do put Ctxt ({ timings $= insert key (True, t) } defs)
                       logTimeRecord' key act
               Nothing
                 => logTimeRecord' key act

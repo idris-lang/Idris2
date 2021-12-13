@@ -299,8 +299,8 @@ updateIfaceSyn iname cn impps ps cs ms ds
     = do syn <- get Syn
          ms' <- traverse totMeth ms
          let info = MkIFaceInfo cn impps ps cs ms' ds
-         put Syn (record { ifaces $= addName iname info,
-                           saveIFaces $= (iname :: ) } syn)
+         put Syn ({ ifaces $= addName iname info,
+                    saveIFaces $= (iname :: ) } syn)
  where
     findSetTotal : List FnOpt -> Maybe TotalReq
     findSetTotal [] = Nothing
@@ -355,7 +355,7 @@ elabInterface {vars} ifc vis env nest constraints iname params dets mcon body
          ds <- traverse (elabDefault meth_decls) defaults
 
          ns_meths <- traverse (\mt => do n <- inCurrentNS mt.name
-                                         pure (record { name = n } mt)) meth_decls
+                                         pure ({ name := n } mt)) meth_decls
          defs <- get Ctxt
          Just ty <- lookupTyExact ns_iname (gamma defs)
               | Nothing => undefinedName ifc iname

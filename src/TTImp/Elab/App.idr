@@ -59,7 +59,7 @@ getNameType elabMode rigc env fc x
                  when (isLinear rigb) $
                       do est <- get EST
                          put EST
-                            (record { linearUsed $= ((MkVar lv) :: ) } est)
+                            ({ linearUsed $= ((MkVar lv) :: ) } est)
                  log "ide-mode.highlight" 8
                      $ "getNameType is trying to add Bound: "
                       ++ show x ++ " (" ++ show fc ++ ")"
@@ -482,7 +482,7 @@ mutual
                                   | Nothing => pure ()
                              when (isErased (multiplicity gdef)) $ addNoSolve i
                      _ => pure ()
-             res <- check argRig (record { topLevel = False } elabinfo) nest env arg (Just $ glueBack defs env aty')
+             res <- check argRig ({ topLevel := False } elabinfo) nest env arg (Just $ glueBack defs env aty')
              when (onLHS (elabMode elabinfo)) $
                 case aty' of
                      NApp _ (NMeta _ i _) _ => removeNoSolve i
@@ -533,7 +533,7 @@ mutual
                                      (\t => pure (Just !(toFullNames!(getTerm t))))
                                      expty
                          pure ("Overall expected type: " ++ show ety))
-             res <- check argRig (record { topLevel = False } elabinfo)
+             res <- check argRig ({ topLevel := False } elabinfo)
                                    nest env arg (Just (glueClosure defs env aty))
              (argv, argt) <-
                if not (onLHS (elabMode elabinfo))
@@ -852,7 +852,7 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
     -- the result
     updateElabInfo prims (InLHS _) n [IPrimVal fc c] elabinfo =
         do if isPrimName prims !(getFullName n)
-              then pure (record { elabMode = InExpr } elabinfo)
+              then pure ({ elabMode := InExpr } elabinfo)
               else pure elabinfo
     updateElabInfo _ _ _ _ info = pure info
 

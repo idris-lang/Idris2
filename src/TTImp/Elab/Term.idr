@@ -241,14 +241,14 @@ checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
     = do -- enter the scope -> add unambiguous names
          est <- get EST
          rns <- resolveNames fc ns
-         put EST $ record { unambiguousNames = mergeLeft rns (unambiguousNames est) } est
+         put EST $ { unambiguousNames := mergeLeft rns (unambiguousNames est) } est
 
          -- inside the scope -> check the RHS
          result <- check rig elabinfo nest env rhs exp
 
          -- exit the scope -> restore unambiguous names
          newEST <- get EST
-         put EST $ record { unambiguousNames = unambiguousNames est } newEST
+         put EST $ { unambiguousNames := unambiguousNames est } newEST
 
          pure result
   where

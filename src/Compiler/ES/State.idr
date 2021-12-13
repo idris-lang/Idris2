@@ -116,14 +116,14 @@ record ESSt where
 ||| Map a local name to the given minimal expression
 export
 addLocal : { auto c : Ref ESs ESSt } -> Name -> Minimal -> Core ()
-addLocal n v = update ESs $ record { locals $= insert n v }
+addLocal n v = update ESs $ { locals $= insert n v }
 
 ||| Get and bump the local var index
 export
 nextLocal : { auto c : Ref ESs ESSt } -> Core Var
 nextLocal = do
   st <- get ESs
-  put ESs $ record { loc $= (+1) } st
+  put ESs $ { loc $= (+1) } st
   pure $ VLoc st.loc
 
 ||| Register a `Name` as a local variable. The name is kept
@@ -168,14 +168,14 @@ projections sc xs =
 ||| Map a toplevel function name to the given `Var`
 export
 addRef : { auto c : Ref ESs ESSt } -> Name -> Var -> Core ()
-addRef n v = update ESs $ record { refs $= insert n v }
+addRef n v = update ESs $ { refs $= insert n v }
 
 ||| Get and bump the local ref index
 export
 nextRef : { auto c : Ref ESs ESSt } -> Core Var
 nextRef = do
   st <- get ESs
-  put ESs $ record { ref $= (+1) } st
+  put ESs $ { ref $= (+1) } st
   pure $ VRef st.ref
 
 registerRef :  {auto c : Ref ESs ESSt}
@@ -216,7 +216,7 @@ addToPreamble :  {auto c : Ref ESs ESSt}
 addToPreamble name def = do
   s <- get ESs
   case lookup name (preamble s) of
-    Nothing => put ESs $ record { preamble $= insert name def } s
+    Nothing => put ESs $ { preamble $= insert name def } s
     Just x =>
       unless (x == def) $ do
         errorConcat
@@ -243,4 +243,4 @@ init mode isArg isFun ccs noMangle =
 ||| function.
 export
 reset : {auto c : Ref ESs ESSt} -> Core ()
-reset = update ESs $ record { loc = 0, locals = empty }
+reset = update ESs $ { loc := 0, locals := empty }

@@ -41,11 +41,11 @@ withArgHoles = MkEvalOpts False True False False False Nothing [] CBN
 
 export
 tcOnly : EvalOpts
-tcOnly = record { tcInline = True } withArgHoles
+tcOnly = { tcInline := True } withArgHoles
 
 export
 onLHS : EvalOpts
-onLHS = record { removeAs = False } defaultOpts
+onLHS = { removeAs := False } defaultOpts
 
 export
 cbn : EvalOpts
@@ -53,7 +53,7 @@ cbn = defaultOpts
 
 export
 cbv : EvalOpts
-cbv = record { strategy = CBV } defaultOpts
+cbv = { strategy := CBV } defaultOpts
 
 mutual
   public export

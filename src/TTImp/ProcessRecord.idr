@@ -67,8 +67,8 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params conName_in fiel
                       defs <- get Ctxt
                       -- Record that the current namespace is allowed to look
                       -- at private names in the nested namespace
-                      put Ctxt (record { currentNS = cns,
-                                         nestedNS = newns :: nns } defs)
+                      put Ctxt ({ currentNS := cns,
+                                  nestedNS := newns :: nns } defs)
 
   where
     paramTelescope : List (FC, Maybe Name, RigCount, PiInfo RawImp, RawImp)

@@ -310,7 +310,7 @@ perror (AmbiguousName fc ns)
         <+> line <+> !(ploc fc)
 perror (AmbiguousElab fc env ts_in)
     = do pp <- getPPrint
-         setPPrint (record { fullNamespace = True } pp)
+         setPPrint ({ fullNamespace := True } pp)
          ts_show <- traverse (\ (gam, t) =>
                                   do defs <- get Ctxt
                                      setCtxt gam
