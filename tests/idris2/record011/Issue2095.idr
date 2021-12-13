@@ -11,9 +11,9 @@ foo1 = MkFoo
   }
 
 foo2 : Foo
-foo2 = record
-  { a = 3
-  , a = 4
-  , b = 2
-  , b = 1
+foo2 =
+  { a := 3
+  , a := 4
+  , b := 2
+  , b := 1
   } foo1

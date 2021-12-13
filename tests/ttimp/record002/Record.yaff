@@ -20,13 +20,13 @@ testPair = MkMyDPair _ (Cons 1 (Cons 2 (Cons 3 Nil)))
 
 cons : t -> MyDPair Nat (\n => Vect n t) -> MyDPair Nat (\n => Vect n t)
 cons val xs
-    = { dfst := S (dfst xs),
-        dsnd := Cons val (dsnd xs) } xs
+    = record { dfst = S (dfst xs),
+               dsnd = Cons val (dsnd xs) } xs
 
 cons' : t -> MyDPair Nat (\n => Vect n t) -> MyDPair Nat (\n => Vect n t)
 cons' val xs
-    = { dfst $= S,
-        dsnd $= Cons val } xs
+    = record { dfst $= S,
+               dsnd $= Cons val } xs
 
 record Stats where
   constructor MkStats
@@ -43,4 +43,4 @@ testPerson : Person
 testPerson = MkPerson "Fred" 1337 10 (MkStats 10 10)
 
 grow : Person -> Person
-grow p = { more->height $= prim__add_Integer 1 } p
+grow p = record { more->height $= prim__add_Integer 1 } p
