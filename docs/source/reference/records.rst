@@ -179,7 +179,7 @@ Finally, the examples:
       printLn $ ({ topLeft.x := 3 } rect).topLeft.x
 
       -- but for compatibility, we support the old syntax, too
-      printLn $ ({ topLeft->x = 3 } rect).topLeft.x
+      printLn $ ({ topLeft->x := 3 } rect).topLeft.x
 
       -- prints 2.1
       printLn $ ({ topLeft.x $= (+1) } rect).topLeft.x
