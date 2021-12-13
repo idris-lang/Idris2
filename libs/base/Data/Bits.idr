@@ -41,6 +41,7 @@ interface Bits a where
 
   ||| Returns the bitwise complement of a value.
   complement : a -> a
+  complement = xor oneBits
 
   ||| The value with all bits set..
   oneBits : a
@@ -72,7 +73,6 @@ Bits Bits8 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Bits8 x . cast . finToNat
   shiftL x    = prim__shl_Bits8 x . cast . finToNat
-  complement  = xor 0xff
   oneBits     = 0xff
 
 public export %inline
@@ -86,7 +86,6 @@ Bits Bits16 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Bits16 x . cast . finToNat
   shiftL x    = prim__shl_Bits16 x . cast . finToNat
-  complement  = xor 0xffff
   oneBits     = 0xffff
 
 public export %inline
@@ -100,7 +99,6 @@ Bits Bits32 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Bits32 x . cast . finToNat
   shiftL x    = prim__shl_Bits32 x . cast . finToNat
-  complement  = xor 0xffffffff
   oneBits     = 0xffffffff
 
 public export %inline
@@ -114,7 +112,6 @@ Bits Bits64 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Bits64 x . cast . finToNat
   shiftL x    = prim__shl_Bits64 x . cast . finToNat
-  complement  = xor 0xffffffffffffffff
   oneBits     = 0xffffffffffffffff
 
 public export %inline
@@ -128,7 +125,6 @@ Bits Int where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Int x . cast . finToNat
   shiftL x    = prim__shl_Int x . cast . finToNat
-  complement  = xor (-1)
   oneBits     = (-1)
 
 public export %inline
@@ -142,7 +138,6 @@ Bits Int8 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Int8 x . cast . finToNat
   shiftL x    = prim__shl_Int8 x . cast . finToNat
-  complement  = xor (-1)
   oneBits     = (-1)
 
 public export %inline
@@ -156,7 +151,6 @@ Bits Int16 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Int16 x . cast . finToNat
   shiftL x    = prim__shl_Int16 x . cast . finToNat
-  complement  = xor (-1)
   oneBits     = (-1)
 
 public export %inline
@@ -170,7 +164,6 @@ Bits Int32 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Int32 x . cast . finToNat
   shiftL x    = prim__shl_Int32 x . cast . finToNat
-  complement  = xor (-1)
   oneBits     = (-1)
 
 public export %inline
@@ -184,7 +177,6 @@ Bits Int64 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Int64 x . cast . finToNat
   shiftL x    = prim__shl_Int64 x . cast . finToNat
-  complement  = xor (-1)
   oneBits     = (-1)
 
 public export %inline
@@ -198,7 +190,6 @@ Bits Integer where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Integer x . natToInteger
   shiftL x    = prim__shl_Integer x . natToInteger
-  complement  = xor (-1)
   oneBits     = (-1)
 
 --------------------------------------------------------------------------------
