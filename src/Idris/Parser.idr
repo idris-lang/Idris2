@@ -798,6 +798,7 @@ mutual
                withWarning oldSyntaxWarning (
                  bounds (do
                    decoratedKeyword fname "record"
+                   commit
                    body True
                  ))
              <|>
@@ -805,7 +806,7 @@ mutual
            pure (PUpdate (boundToFC fname b) b.val)
     where
       oldSyntaxWarning : String
-      oldSyntaxWarning = "DEPRECATED: old record update syntax. Use \"{ f := v } p\" instead of \"{ f = v } p\""
+      oldSyntaxWarning = "DEPRECATED: old record update syntax. Use \"{ f := v } p\" instead of \"record { f = v } p\""
 
       body : Bool -> Rule (List PFieldUpdate)
       body kw = do
