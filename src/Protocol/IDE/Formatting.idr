@@ -6,6 +6,8 @@ import Protocol.IDE.Decoration
 import Data.Maybe
 import Data.List
 
+%default total
+
 public export
 data Formatting : Type where
   Bold      : Formatting
