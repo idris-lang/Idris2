@@ -137,11 +137,9 @@ getIDECommand (SymbolAtom "version") = Just Version
 getIDECommand (SExpList [SymbolAtom "get-options"]) = Just GetOptions
 getIDECommand _ = Nothing
 
--- TODO: extend the SExpable interface with a fromSExp method
--- and then declare an instance
 export
-fromSExp : SExp -> Maybe IDECommand
-fromSExp = getIDECommand
+FromSExpable IDECommand where
+  fromSExp = getIDECommand
 
 putIDECommand : IDECommand -> SExp
 putIDECommand (Interpret cmd)                 = (SExpList [SymbolAtom "interpret", StringAtom cmd])
