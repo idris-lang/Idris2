@@ -4,7 +4,7 @@ record TestRecord where
   constructor MkTestRecord
   recField : Int
 
-testRec : TestRecord 
+testRec : TestRecord
 testRec = MkTestRecord 0
 
 updatedRec : TestRecord
