@@ -2,7 +2,7 @@
 Warning: DEPRECATED: old record update syntax. Use "{ f := v } p" instead of "record { f = v } p"
 
 Main:11:14--11:37
- 07 | testRec : TestRecord 
+ 07 | testRec : TestRecord
  08 | testRec = MkTestRecord 0
  09 | 
  10 | updatedRec : TestRecord
