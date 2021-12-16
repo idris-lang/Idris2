@@ -1753,23 +1753,33 @@ collectDefs (PMutual annot nds :: ds)
 collectDefs (d :: ds)
     = d :: collectDefs ds
 
+||| Import restriction
+||| @ start is the column where `import` was
 export
-importRestriction : OriginDesc -> Rule ImportRestriction
-importRestriction fname
-    = (do decoratedKeyword fname "using"
-          map Using $ mustWork $ parens fname $
-            sepBy1 (decoratedSymbol fname ",") name
-      ) <|>
-      (do decoratedKeyword fname "hiding"
-          map Hiding $ mustWork $ parens fname $
-            sepBy1 (decoratedSymbol fname ",") name
-      )
+importRestriction : OriginDesc -> (start : Int) ->
+                    Rule ImportRestriction
+importRestriction fname start = do
+    col <- column
+    unless (start < col) $
+      fail "Import restrictions are in a relative block."
+    (do decoratedKeyword fname "using"
+        map Using $ mustWork $ parens fname $
+          sepBy1 (decoratedSymbol fname ",") name
+     ) <|>
+     (do decoratedKeyword fname "hiding"
+         map Hiding $ mustWork $ parens fname $
+           sepBy1 (decoratedSymbol fname ",") name
+     )
 
 export
-importDirective : OriginDesc -> EmptyRule (Maybe ImportDirective)
-importDirective fname
-  = do mres <- optional (importRestriction fname)
+importDirective : OriginDesc -> (start : Int) ->
+                  EmptyRule (Maybe ImportDirective)
+importDirective fname start
+  = do mres <- optional (importRestriction fname start)
        mren <- optional $ do
+         col <- column
+         unless (start < col) $
+           fail "Import directives are in a relative block."
          decoratedKeyword fname "renaming"
          mustWork $ parens fname $
            sepBy1 (decoratedSymbol fname ",") $
@@ -1779,13 +1789,14 @@ importDirective fname
 export
 import_ : OriginDesc -> IndentInfo -> Rule Import
 import_ fname indents
-    = do b <- bounds (do decoratedKeyword fname "import"
+    = do b <- bounds (do col <- column
+                         decoratedKeyword fname "import"
                          reexp <- option False (decoratedKeyword fname "public" $> True)
                          ns <- decorate fname Module $ mustWork moduleIdent
                          nsAs <- option (miAsNamespace ns)
                                         (do decorate fname Keyword $ exactIdent "as"
                                             decorate fname Namespace $ mustWork namespaceId)
-                         imports <- importDirective fname
+                         imports <- importDirective fname col
                          pure (reexp, ns, nsAs, imports))
          atEnd indents
          (reexp, ns, nsAs, imports) <- pure b.val
