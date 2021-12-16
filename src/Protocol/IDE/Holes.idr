@@ -2,6 +2,8 @@ module Protocol.IDE.Holes
 
 import Protocol.SExp
 
+%default total
+
 public export
 record HolePremise where
   constructor MkHolePremise
