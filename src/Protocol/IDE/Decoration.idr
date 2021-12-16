@@ -2,6 +2,7 @@ module Protocol.IDE.Decoration
 
 import Protocol.SExp
 
+%default total
 
 public export
 data Decoration : Type where
