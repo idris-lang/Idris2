@@ -40,7 +40,7 @@ b16ToHexString n =
     14 => "E"
     15 => "F"
     other => assert_total $
-               b16ToHexString (n `shiftR` fromNat 4) ++
+               b16ToHexString (n `shiftR` 4) ++
                b16ToHexString (n .&. 15)
 
 private

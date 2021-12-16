@@ -126,7 +126,7 @@ mutual
   toEndComment Z = empty
   toEndComment (S k)
                = some (pred (\c => c /= '-' && c /= '{' && c /= '"'))
-                        <+> toEndComment (S k)
+                        <+> (eof <|> toEndComment (S k))
              <|> is '{' <+> singleBrace k
              <|> is '-' <+> singleDash k
              <|> stringLit <+> toEndComment (S k)
@@ -136,9 +136,10 @@ mutual
   ||| binder).
   singleBrace : (k : Nat) -> Lexer
   singleBrace k
-     =  is '-' <+> many (is '-')    -- opening delimiter
-               <+> singleDash (S k) -- handles the {----} special case
-    <|> toEndComment (S k)          -- not a valid comment
+     =  is '-' <+> many (is '-')              -- opening delimiter
+               <+> (eof <|> singleDash (S k)) -- `singleDash` handles the {----} special case
+                                              -- `eof` handles the file ending with {---
+    <|> toEndComment (S k)                    -- not a valid comment
 
   ||| After reading a single dash, we may either find another one,
   ||| meaning we may have started reading a line comment, or find
@@ -160,7 +161,7 @@ mutual
         ]
 
 blockComment : Lexer
-blockComment = is '{' <+> is '-' <+> toEndComment 1
+blockComment = is '{' <+> is '-' <+> many (is '-') <+> (eof <|> toEndComment 1)
 
 docComment : Lexer
 docComment = is '|' <+> is '|' <+> is '|' <+> many (isNot '\n')

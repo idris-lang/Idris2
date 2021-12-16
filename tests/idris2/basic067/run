@@ -1,0 +1,8 @@
+rm -rf build
+
+echo "unclosed1.idr"
+$1 --no-color --console-width 0 --no-banner unclosed1.idr < input
+echo "unclosed2.idr"
+$1 --no-color --console-width 0 --no-banner unclosed2.idr < input
+echo "unclosed3.idr"
+$1 --no-color --console-width 0 --no-banner unclosed3.idr < input

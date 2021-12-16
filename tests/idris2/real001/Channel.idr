@@ -83,15 +83,15 @@ newQueue : RawMsgQueue
 newQueue = MkRawMsgQueue [] []
 
 enqueue : (1 val : a) -> RawMsgQueue -> RawMsgQueue
-enqueue item q = record { inputStack $= (Entry item ::) } q
+enqueue item q = { inputStack $= (Entry item ::) } q
 
 dequeue : RawMsgQueue -> Maybe (RawMsgQueue, QueueEntry)
 dequeue q
     = case outputStack q of
            [] => case reverse (inputStack q) of
                       [] => Nothing
-                      (x :: xs) => Just (record { outputStack = xs, inputStack = [] } q, x)
-           (x :: xs) => Just (record { outputStack = xs } q, x)
+                      (x :: xs) => Just ({ outputStack := xs, inputStack := [] } q, x)
+           (x :: xs) => Just ({ outputStack := xs } q, x)
 
 public export
 data Channel : {p : Protocol b} -> Actions a -> Type where

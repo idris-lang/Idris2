@@ -329,7 +329,7 @@ addAmbig : List alts -> Maybe Name -> ElabInfo -> ElabInfo
 addAmbig _ Nothing = id
 addAmbig [] _ = id
 addAmbig [_] _ = id
-addAmbig _ (Just n) = record { ambigTries $= (n ::) }
+addAmbig _ (Just n) = { ambigTries $= (n ::) }
 
 export
 checkAlternative : {vars : _} ->

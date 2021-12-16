@@ -87,10 +87,10 @@ record ParseOpts where
   withOK : Bool -- = with applications are parseable
 
 peq : ParseOpts -> ParseOpts
-peq = record { eqOK = True }
+peq = { eqOK := True }
 
 pnoeq : ParseOpts -> ParseOpts
-pnoeq = record { eqOK = False }
+pnoeq = { eqOK := False }
 
 export
 pdef : ParseOpts
@@ -223,7 +223,7 @@ mutual
     <|> if withOK q
            then do continue indents
                    decoratedSymbol fname "|"
-                   arg <- expr (record {withOK = False} q) fname indents
+                   arg <- expr ({withOK := False} q) fname indents
                    pure [WithArg arg]
            else fail "| not allowed here"
     where
@@ -793,15 +793,28 @@ mutual
 
   record_ : OriginDesc -> IndentInfo -> Rule PTerm
   record_ fname indents
-      = do b <- bounds (do kw <- option False
-                                 (decoratedKeyword fname "record"
-                                   $> True) -- TODO deprecated
-                           decoratedSymbol fname "{"
-                           commit
-                           fs <- sepBy1 (decoratedSymbol fname ",") (field kw fname indents)
-                           decoratedSymbol fname "}"
-                           pure $ forget fs)
+      = do
+           b <- (
+               withWarning oldSyntaxWarning (
+                 bounds (do
+                   decoratedKeyword fname "record"
+                   commit
+                   body True
+                 ))
+             <|>
+               bounds (body False))
            pure (PUpdate (boundToFC fname b) b.val)
+    where
+      oldSyntaxWarning : String
+      oldSyntaxWarning = "DEPRECATED: old record update syntax. Use \"{ f := v } p\" instead of \"record { f = v } p\""
+
+      body : Bool -> Rule (List PFieldUpdate)
+      body kw = do
+        decoratedSymbol fname "{"
+        commit
+        fs <- sepBy1 (decoratedSymbol fname ",") (field kw fname indents)
+        decoratedSymbol fname "}"
+        pure $ forget fs
 
   field : Bool -> OriginDesc -> IndentInfo -> Rule PFieldUpdate
   field kw fname indents
@@ -1171,14 +1184,27 @@ dataDeclBody fname indents
          (col, n) <- pure b.val
          simpleData fname b n indents <|> gadtData fname col b n indents
 
+totalityOpt : OriginDesc -> Rule TotalReq
+totalityOpt fname
+    = (decoratedKeyword fname "partial" $> PartialOK)
+  <|> (decoratedKeyword fname "total" $> Total)
+  <|> (decoratedKeyword fname "covering" $> CoveringOnly)
+
+-- a data declaration can have a visibility and an optional totality (#1404)
+dataVisOpt : OriginDesc -> EmptyRule (Visibility, Maybe TotalReq)
+dataVisOpt fname
+    = do { vis <- visOption   fname ; mbtot <- optional (totalityOpt fname) ; pure (vis, mbtot) }
+  <|> do { tot <- totalityOpt fname ; vis <- visibility fname ; pure (vis, Just tot) }
+  <|> pure (Private, Nothing)
+
 dataDecl : OriginDesc -> IndentInfo -> Rule PDecl
 dataDecl fname indents
-    = do b <- bounds (do doc   <- optDocumentation fname
-                         vis   <- visibility fname
-                         dat   <- dataDeclBody fname indents
-                         pure (doc, vis, dat))
-         (doc, vis, dat) <- pure b.val
-         pure (PData (boundToFC fname b) doc vis dat)
+    = do b <- bounds (do doc         <- optDocumentation fname
+                         (vis,mbTot) <- dataVisOpt fname
+                         dat         <- dataDeclBody fname indents
+                         pure (doc, vis, mbTot, dat))
+         (doc, vis, mbTot, dat) <- pure b.val
+         pure (PData (boundToFC fname b) doc vis mbTot dat)
 
 stripBraces : String -> String
 stripBraces str = pack (drop '{' (reverse (drop '}' (reverse (unpack str)))))
@@ -1197,15 +1223,9 @@ extension
     = (exactIdent "ElabReflection" $> ElabReflection)
   <|> (exactIdent "Borrowing" $> Borrowing)
 
-totalityOpt : OriginDesc -> Rule TotalReq
-totalityOpt fname
-    = (decoratedKeyword fname "partial" $> PartialOK)
-  <|> (decoratedKeyword fname "total" $> Total)
-  <|> (decoratedKeyword fname "covering" $> CoveringOnly)
-
-logLevel : Rule (Maybe LogLevel)
-logLevel
-  = (Nothing <$ exactIdent "off")
+logLevel : OriginDesc -> Rule (Maybe LogLevel)
+logLevel fname
+  = (Nothing <$ decorate fname Keyword (exactIdent "off"))
     <|> do topic <- optional (split ('.' ==) <$> simpleStr)
            lvl <- intLit
            pure (Just (mkLogLevel' topic (fromInteger lvl)))
@@ -1217,12 +1237,16 @@ directive fname indents
          n <- name
          atEnd indents
          pure (Hide n)
+  <|> do decorate fname Keyword $ pragma "unhide"
+         n <- name
+         atEnd indents
+         pure (Unhide n)
 --   <|> do pragma "hide_export"
 --          n <- name
 --          atEnd indents
 --          pure (Hide True n)
   <|> do decorate fname Keyword $ pragma "logging"
-         lvl <- logLevel
+         lvl <- logLevel fname
          atEnd indents
          pure (Logging lvl)
   <|> do decorate fname Keyword $ pragma "auto_lazy"
@@ -1549,7 +1573,7 @@ fieldDecl fname indents
       = do doc <- optDocumentation fname
            decoratedSymbol fname "{"
            commit
-           impl <- option Implicit (AutoImplicit <$ decoratedKeyword fname "auto")
+           impl <- option Implicit (autoImplicitField <|> defImplicitField)
            fs <- fieldBody doc impl
            decoratedSymbol fname "}"
            atEnd indents
@@ -1559,6 +1583,16 @@ fieldDecl fname indents
            atEnd indents
            pure fs
   where
+    autoImplicitField : Rule (PiInfo t)
+    autoImplicitField = AutoImplicit <$ decoratedKeyword fname "auto"
+
+    defImplicitField : Rule (PiInfo PTerm)
+    defImplicitField = do
+      decoratedKeyword fname "default"
+      commit
+      t <- simpleExpr fname indents
+      pure (DefImplicit t)
+
     fieldBody : String -> PiInfo PTerm -> Rule (List PField)
     fieldBody doc p
         = do b <- bounds (do rig <- multiplicity fname
@@ -1592,9 +1626,9 @@ recordParam fname indents
 
 recordDecl : OriginDesc -> IndentInfo -> Rule PDecl
 recordDecl fname indents
-    = do b <- bounds (do doc   <- optDocumentation fname
-                         vis   <- visibility fname
-                         col   <- column
+    = do b <- bounds (do doc         <- optDocumentation fname
+                         (vis,mbtot) <- dataVisOpt fname
+                         col         <- column
                          decoratedKeyword fname "record"
                          n       <- mustWork (decoratedDataTypeName fname)
                          paramss <- many (recordParam fname indents)
@@ -1603,7 +1637,7 @@ recordDecl fname indents
                          dcflds <- blockWithOptHeaderAfter col
                                       (\ idt => recordConstructor fname <* atEnd idt)
                                       (fieldDecl fname)
-                         pure (\fc : FC => PRecord fc doc vis n params (fst dcflds) (concat (snd dcflds))))
+                         pure (\fc : FC => PRecord fc doc vis mbtot n params (fst dcflds) (concat (snd dcflds))))
          pure (b.val (boundToFC fname b))
 
 paramDecls : OriginDesc -> IndentInfo -> Rule PDecl
@@ -1747,7 +1781,7 @@ import_ fname indents
                          reexp <- option False (decoratedKeyword fname "public" $> True)
                          ns <- decorate fname Module $ mustWork moduleIdent
                          nsAs <- option (miAsNamespace ns)
-                                        (do exactIdent "as"
+                                        (do decorate fname Keyword $ exactIdent "as"
                                             decorate fname Namespace $ mustWork namespaceId)
                          pure (reexp, ns, nsAs))
          atEnd indents
@@ -2141,7 +2175,7 @@ loggingArgCmd parseCmd command doc = (names, Args [StringArg, NumberArg], doc, p
   parse = do
     symbol ":"
     runParseCmd parseCmd
-    lvl <- mustWork logLevel
+    lvl <- mustWork $ logLevel (Virtual Interactive)
     pure (command lvl)
 
 parserCommandsForHelp : CommandTable
@@ -2152,6 +2186,7 @@ parserCommandsForHelp =
   , exprArgCmd (ParseREPLCmd ["s", "search"]) TypeSearch "Search for values by type"
   , nameArgCmd (ParseIdentCmd "di") DebugInfo "Show debugging information for a name"
   , moduleArgCmd (ParseKeywordCmd "module") ImportMod "Import an extra module"
+  , stringArgCmd (ParseREPLCmd ["package"]) ImportPackage "Import every module of the package"
   , noArgCmd (ParseREPLCmd ["q", "quit", "exit"]) Quit "Exit the Idris system"
   , noArgCmd (ParseREPLCmd ["cwd"]) CWD "Displays the current working directory"
   , stringArgCmd (ParseREPLCmd ["cd"]) CD "Change the current working directory"
@@ -2176,7 +2211,6 @@ parserCommandsForHelp =
   , noArgCmd (ParseREPLCmd ["version"]) ShowVersion "Display the Idris version"
   , noArgCmd (ParseREPLCmd ["?", "h", "help"]) Help "Display this help text"
   , declsArgCmd (ParseKeywordCmd "let") NewDefn "Define a new value"
-  , stringArgCmd (ParseREPLCmd ["lp", "loadpackage"]) ImportPackage "Load all modules of the package"
   , exprArgCmd (ParseREPLCmd ["fs", "fsearch"]) FuzzyTypeSearch "Search for global definitions by sketching the names distribution of the wanted type(s)."
   ]
 

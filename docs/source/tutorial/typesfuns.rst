@@ -1074,13 +1074,13 @@ updated):
 
 .. code-block:: bash
 
-    *Record> record { firstName = "Jim" } fred
+    *Record> { firstName := "Jim" } fred
     MkPerson "Jim" "Joe" "Bloggs" 30 : Person
-    *Record> record { firstName = "Jim", age $= (+ 1) } fred
+    *Record> { firstName := "Jim", age $= (+ 1) } fred
     MkPerson "Jim" "Joe" "Bloggs" 31 : Person
 
-The syntax ``record { field = val, ... }`` generates a function which
-updates the given fields in a record. ``=`` assigns a new value to a field,
+The syntax ``{ field := val, ... }`` generates a function which
+updates the given fields in a record. ``:=`` assigns a new value to a field,
 and ``$=`` applies a function to update its value.
 
 Each record is defined in its own namespace, which means that field names
@@ -1103,7 +1103,7 @@ length because it will not affect the type of the record:
 .. code-block:: idris
 
     addStudent : Person -> Class -> Class
-    addStudent p c = record { students = p :: students c } c
+    addStudent p c = { students := p :: students c } c
 
 ::
 
@@ -1115,7 +1115,7 @@ We could also use ``$=`` to define ``addStudent`` more concisely:
 .. code-block:: idris
 
     addStudent' : Person -> Class -> Class
-    addStudent' p c = record { students $= (p ::) } c
+    addStudent' p c = { students $= (p ::) } c
 
 Nested record projection
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1150,11 +1150,11 @@ syntax:
 
 .. code-block:: idris
 
-    record { a.b.c = val } x
+    { a.b.c := val } x
 
 This returns a new record, with the field accessed by the path
-``a.b.c`` set to ``val``. The syntax is first class, i.e. ``record {
-a.b.c = val }`` itself has a function type.
+``a.b.c`` set to ``val``. The syntax is first class, i.e. ``{
+a.b.c := val }`` itself has a function type.
 
 The ``$=`` notation is also valid for nested record updates.
 
@@ -1191,7 +1191,7 @@ is added:
 .. code-block:: idris
 
     addStudent : Person -> SizedClass n -> SizedClass (S n)
-    addStudent p c = record { students = p :: students c } c
+    addStudent p c = { students := p :: students c } c
 
 In fact, the dependent pair type we have just seen is, in practice, defined
 as a record, with fields ``fst`` and ``snd`` which allow projecting values
@@ -1211,8 +1211,8 @@ that all related fields are updated at once. For example:
 
     cons : t -> (x : Nat ** Vect x t) -> (x : Nat ** Vect x t)
     cons val xs
-        = record { fst = S (fst xs),
-                   snd = (val :: snd xs) } xs
+        = { fst := S (fst xs),
+            snd := (val :: snd xs) } xs
 
 Or even:
 
@@ -1220,8 +1220,8 @@ Or even:
 
     cons' : t -> (x : Nat ** Vect x t) -> (x : Nat ** Vect x t)
     cons' val
-        = record { fst $= S,
-                   snd $= (val ::) }
+        = { fst $= S,
+            snd $= (val ::) }
 
 .. _sect-more-expr:
 

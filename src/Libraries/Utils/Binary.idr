@@ -41,7 +41,7 @@ appended i (MkBin b loc s used) = MkBin b (loc+i) s (used + i)
 
 export
 incLoc : Int -> Binary -> Binary
-incLoc i c = record { loc $= (+i) } c
+incLoc i c = { loc $= (+i) } c
 
 export
 dumpBin : Binary -> IO ()

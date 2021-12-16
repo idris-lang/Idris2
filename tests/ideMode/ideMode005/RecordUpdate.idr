@@ -5,9 +5,9 @@ record Attributes where
   size : Nat
 
 bigMono : Attributes -> Attributes
-bigMono = record { font $= (++ "Mono")
-                 , size = 20
-                 }
+bigMono = { font $= (++ "Mono")
+          , size := 20
+          }
 
 smallMono : Attributes -> Attributes
 smallMono = { size := 5 } . bigMono
