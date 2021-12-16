@@ -1,6 +1,7 @@
 module Protocol.IDE.Command
 import Protocol.SExp
 
+%default total
 
 -- TODO: introduce SExpable DocMode and refactor below to use it
 public export

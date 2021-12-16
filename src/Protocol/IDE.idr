@@ -15,6 +15,7 @@ import public Protocol.IDE.Holes       as Protocol.IDE
 import public Protocol.IDE.Result      as Protocol.IDE
 import public Protocol.IDE.Highlight   as Protocol.IDE
 
+%default total
 ------------------------------------------------------------------------
 
 public export

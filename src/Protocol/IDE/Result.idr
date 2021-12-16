@@ -7,6 +7,8 @@ import Protocol.IDE.FileContext
 
 import Data.Maybe
 
+%default total
+
 public export
 data OptionType = BOOL | STRING | ATOM
 

@@ -4,6 +4,8 @@ import Protocol.SExp
 
 import public Libraries.Text.Bounded
 
+%default total
+
 public export
 record FileContext where
   constructor MkFileContext

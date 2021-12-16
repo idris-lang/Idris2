@@ -5,6 +5,8 @@ import Protocol.SExp
 import Protocol.IDE.FileContext
 import Protocol.IDE.Decoration
 
+%default total
+
 public export
 record Highlight where
   constructor MkHighlight
