@@ -9,6 +9,7 @@
   the scheme based evaluator with `:set eval scheme`.
 * New option `evaltiming` to time how long an evaluation takes at the REPL,
   set with `:set evaltiming`.
+* Renames `:lp/loadpackage` to `:package`.
 
 ### Language changes
 
