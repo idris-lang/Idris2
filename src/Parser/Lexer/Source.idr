@@ -12,7 +12,7 @@ import Libraries.Text.Lexer.Tokenizer
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
-import Libraries.Utils.Hex
+import Protocol.Hex
 import Libraries.Utils.Octal
 import Libraries.Utils.String
 

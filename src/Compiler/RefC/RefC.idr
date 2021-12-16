@@ -20,7 +20,7 @@ import Data.Vect
 import System
 import System.File
 
-import Libraries.Utils.Hex
+import Protocol.Hex
 import Libraries.Utils.Path
 
 %default covering
