@@ -273,7 +273,7 @@ recordUpdate : {auto u : Ref UPD Updates} ->
 recordUpdate fc n tm
     = do u <- get UPD
          let nupdates = map (\x => (fst x, IVar fc (snd x))) (namemap u)
-         put UPD (record { updates $= ((n, substNames [] nupdates tm) ::) } u)
+         put UPD ({ updates $= ((n, substNames [] nupdates tm) ::) } u)
 
 findUpdates : {auto u : Ref UPD Updates} ->
               Defs -> RawImp -> RawImp -> Core ()
@@ -283,8 +283,8 @@ findUpdates defs (IVar fc n) (IVar _ n')
            Nothing =>
               do u <- get UPD
                  case lookup n' (namemap u) of
-                      Nothing => put UPD (record { namemap $= ((n', n) ::) } u)
-                      Just nm => put UPD (record { updates $= ((n, IVar fc nm) ::) } u)
+                      Nothing => put UPD ({ namemap $= ((n', n) ::) } u)
+                      Just nm => put UPD ({ updates $= ((n, IVar fc nm) ::) } u)
 findUpdates defs (IVar fc n) tm = recordUpdate fc n tm
 findUpdates defs (IApp _ f a) (IApp _ f' a')
     = do findUpdates defs f f'
@@ -349,7 +349,7 @@ mkCase {c} {u} fn orig lhs_raw
                   put UST ust
                   case err of
                        WhenUnifying _ gam env l r err
-                         => do let defs = record { gamma = gam } defs
+                         => do let defs = { gamma := gam } defs
                                if !(impossibleOK defs !(nf defs env l)
                                                       !(nf defs env r))
                                   then pure (Impossible lhs_raw)

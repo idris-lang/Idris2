@@ -184,10 +184,10 @@ updateErrorLine : {auto o : Ref ROpts REPLOpts} ->
                   List Error -> Core ()
 updateErrorLine []
     = do opts <- get ROpts
-         put ROpts (record { errorLine = Nothing } opts)
+         put ROpts ({ errorLine := Nothing } opts)
 updateErrorLine (e :: _)
     = do opts <- get ROpts
-         put ROpts (record { errorLine = (getErrorLoc e) >>= getFCLine } opts)
+         put ROpts ({ errorLine := (getErrorLoc e) >>= getFCLine } opts)
 
 export
 resetContext : {auto c : Ref Ctxt Defs} ->
@@ -198,7 +198,7 @@ resetContext : {auto c : Ref Ctxt Defs} ->
                Core ()
 resetContext origin
     = do defs <- get Ctxt
-         put Ctxt (record { options = clearNames (options defs) } !initDefs)
+         put Ctxt ({ options := clearNames (options defs) } !initDefs)
          addPrimitives
          put UST initUState
          put Syn initSyntax

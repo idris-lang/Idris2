@@ -88,7 +88,7 @@ getReg stk RVal = do
 getReg stk Discard = pure Null
 
 setReg : Ref State InterpState => Stack -> Reg -> Object -> Core ()
-setReg stk RVal obj = update State $ record { returnObj = Just obj }
+setReg stk RVal obj = update State $ { returnObj := Just obj }
 setReg stk (Loc i) obj = do
     ls <- locals <$> get State
     when (i >= max ls) $ interpError stk $ "Attempt to set register: " ++ show i ++ ", size of locals: " ++ show (max ls)
@@ -162,7 +162,7 @@ beginFunction args (DECLARE _ :: is) maxLoc = beginFunction args is maxLoc
 beginFunction args (START :: is) maxLoc = do
     locals <- coreLift $ newArray (maxLoc + 1)
     ignore $ traverse (\(idx, arg) => coreLift $ writeArray locals idx arg) args
-    update State $ record { locals = locals, returnObj = Nothing }
+    update State $ { locals := locals, returnObj := Nothing }
     pure is
 beginFunction args is maxLoc = pure is
 

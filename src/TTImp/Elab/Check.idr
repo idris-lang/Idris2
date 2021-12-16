@@ -184,7 +184,7 @@ saveHole : {auto e : Ref EST (EState vars)} ->
            Name -> Core ()
 saveHole n
     = do est <- get EST
-         put EST (record { saveHoles $= insert n () } est)
+         put EST ({ saveHoles $= insert n () } est)
 
 weakenedEState : {n, vars : _} ->
                  {auto e : Ref EST (EState vars)} ->
@@ -192,12 +192,12 @@ weakenedEState : {n, vars : _} ->
 weakenedEState {e}
     = do est <- get EST
          eref <- newRef EST $
-                   record { subEnv $= DropCons
-                          , boundNames $= map wknTms
-                          , toBind $= map wknTms
-                          , linearUsed $= map weaken
-                          , polyMetavars = [] -- no binders on LHS
-                          } est
+                   { subEnv $= DropCons
+                   , boundNames $= map wknTms
+                   , toBind $= map wknTms
+                   , linearUsed $= map weaken
+                   , polyMetavars := [] -- no binders on LHS
+                   } est
          pure eref
   where
     wknTms : (Name, ImplBinding vs) ->
@@ -218,12 +218,12 @@ strengthenedEState {n} {vars} c e fc env
          svs <- dropSub (subEnv est)
          bns <- traverse (strTms defs) (boundNames est)
          todo <- traverse (strTms defs) (toBind est)
-         pure $ record { subEnv = svs
-                       , boundNames = bns
-                       , toBind = todo
-                       , linearUsed $= mapMaybe dropTop
-                       , polyMetavars = [] -- no binders on LHS
-                       } est
+         pure $ { subEnv := svs
+                , boundNames := bns
+                , toBind := todo
+                , linearUsed $= mapMaybe dropTop
+                , polyMetavars := [] -- no binders on LHS
+                } est
 
   where
     dropSub : SubVars xs (y :: ys) -> Core (SubVars xs ys)
@@ -304,7 +304,7 @@ mustBePoly : {auto e : Ref EST (EState vars)} ->
              Term vars -> Term vars -> Core ()
 mustBePoly fc env tm ty
     = do est <- get EST
-         put EST (record { polyMetavars $= ((fc, env, tm, ty) :: ) } est)
+         put EST ({ polyMetavars $= ((fc, env, tm, ty) :: ) } est)
 
 -- Return whether we already know the return type of the given function
 -- type. If we know this, we can possibly infer some argument types before
@@ -328,10 +328,10 @@ updateEnv : {new : _} ->
                               Term vars', Term vars', SubVars new vars'))) ->
             EState vars -> EState vars
 updateEnv env sub bif st
-    = record { outerEnv = env
-             , subEnv = sub
-             , bindIfUnsolved = bif
-             } st
+    = { outerEnv := env
+      , subEnv := sub
+      , bindIfUnsolved := bif
+      } st
 
 export
 addBindIfUnsolved : {vars : _} ->
@@ -339,11 +339,11 @@ addBindIfUnsolved : {vars : _} ->
                     Env Term vars -> Term vars -> Term vars ->
                     EState vars -> EState vars
 addBindIfUnsolved hn r p env tm ty st
-    = record { bindIfUnsolved $=
-                ((hn, r, (_ ** (env, p, tm, ty, subEnv st))) ::)} st
+    = { bindIfUnsolved $=
+         ((hn, r, (_ ** (env, p, tm, ty, subEnv st))) ::)} st
 
 clearBindIfUnsolved : EState vars -> EState vars
-clearBindIfUnsolved = record { bindIfUnsolved = [] }
+clearBindIfUnsolved = { bindIfUnsolved := [] }
 
 -- Clear the 'toBind' list, except for the names given
 export
@@ -351,15 +351,15 @@ clearToBind : {auto e : Ref EST (EState vars)} ->
               (excepts : List Name) -> Core ()
 clearToBind excepts
     = do est <- get EST
-         put EST (record { toBind $= filter (\x => fst x `elem` excepts) }
-                         (clearBindIfUnsolved est))
+         put EST ({ toBind $= filter (\x => fst x `elem` excepts) }
+                  (clearBindIfUnsolved est))
 
 export
 noteLHSPatVar : {auto e : Ref EST (EState vars)} ->
                 ElabMode -> Name -> Core ()
 noteLHSPatVar (InLHS _) n
     = do est <- get EST
-         put EST (record { lhsPatVars $= (n ::) } est)
+         put EST ({ lhsPatVars $= (n ::) } est)
 noteLHSPatVar _ _ = pure ()
 
 export
@@ -367,7 +367,7 @@ notePatVar : {auto e : Ref EST (EState vars)} ->
              Name -> Core ()
 notePatVar n
     = do est <- get EST
-         put EST (record { allPatVars $= (n ::) } est)
+         put EST ({ allPatVars $= (n ::) } est)
 
 export
 metaVar : {vars : _} ->
@@ -400,7 +400,7 @@ metaVarI fc rig env n ty
          tynf <- nf defs env ty
          let hinf = case tynf of
                          NApp _ (NMeta _ _ _) _ =>
-                              record { precisetype = True } (holeInit False)
+                              { precisetype := True } (holeInit False)
                          _ => holeInit False
          newMeta fc rig env n ty (Hole (length env) hinf) True
 
@@ -513,7 +513,7 @@ tryError elab
                            put EST est
                            put MD md
                            defs' <- get Ctxt
-                           put Ctxt (record { timings = timings defs' } defs)
+                           put Ctxt ({ timings := timings defs' } defs)
                            pure (Left err))
 
 export

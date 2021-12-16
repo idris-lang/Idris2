@@ -46,8 +46,8 @@ addModDocString : {auto s : Ref Syn SyntaxInfo} ->
                   Core ()
 addModDocString mi doc
     = do syn <- get Syn
-         put Syn (record { saveMod $= (mi ::)
-                         , modDocstrings $= insert mi doc } syn)
+         put Syn ({ saveMod $= (mi ::)
+                  , modDocstrings $= insert mi doc } syn)
 
 -- Add a doc string for a name in the current namespace
 export
@@ -60,8 +60,8 @@ addDocString n_in doc
          log "doc.record" 50 $
            "Adding doc for " ++ show n_in ++ " (aka " ++ show n ++ " in current NS)"
          syn <- get Syn
-         put Syn (record { defDocstrings $= addName n doc,
-                           saveDocstrings $= insert n () } syn)
+         put Syn ({ defDocstrings $= addName n doc,
+                    saveDocstrings $= insert n () } syn)
 
 -- Add a doc string for a name, in an extended namespace (e.g. for
 -- record getters)
@@ -76,8 +76,8 @@ addDocStringNS ns n_in doc
                        NS old root => NS (old <.> ns) root
                        root => NS ns root
          syn <- get Syn
-         put Syn (record { defDocstrings $= addName n' doc,
-                           saveDocstrings $= insert n' () } syn)
+         put Syn ({ defDocstrings $= addName n' doc,
+                    saveDocstrings $= insert n' () } syn)
 
 prettyTerm : IPTerm -> Doc IdrisDocAnn
 prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm

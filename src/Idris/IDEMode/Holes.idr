@@ -100,7 +100,7 @@ extractHoleData defs env fn (S args) (Bind fc x b sc)
        log "idemode.hole" 10 $ "Showing name: " ++ show x
        ity <- resugar env !(normalise defs env (binderType b))
        let premise = MkHolePremise x ity (multiplicity b) (isImplicit b)
-       pure $ record { context $= (premise ::)  } rest
+       pure $ { context $= (premise ::)  } rest
 extractHoleData defs env fn args ty
   = do nty <- normalise defs env ty
        ity <- resugar env nty
@@ -123,7 +123,7 @@ holeData gam env fn args ty
        pp <- getPPrint
        pure $ if showImplicits pp
               then hdata
-              else record { context $= dropShadows } hdata
+              else { context $= dropShadows } hdata
   where
     dropShadows : List HolePremise -> List HolePremise
     dropShadows [] = []

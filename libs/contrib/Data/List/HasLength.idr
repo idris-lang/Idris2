@@ -130,7 +130,7 @@ covering
 notListTerminating : (p : Subset Nat (HasLength xs)) -> P xs
 notListTerminating p = case view p of
   Z => PNil
-  S p => PCon (notListTerminating {xs = map id (tail xs)} (record { snd $= map id } p))
+  S p => PCon (notListTerminating {xs = map id (tail xs)} ({ snd $= map id } p))
 
 natTerminating : (n : Nat) -> (0 p : HasLength xs n) -> P xs
 natTerminating n p = case view n p of

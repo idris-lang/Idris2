@@ -87,10 +87,10 @@ record ParseOpts where
   withOK : Bool -- = with applications are parseable
 
 peq : ParseOpts -> ParseOpts
-peq = record { eqOK = True }
+peq = { eqOK := True }
 
 pnoeq : ParseOpts -> ParseOpts
-pnoeq = record { eqOK = False }
+pnoeq = { eqOK := False }
 
 export
 pdef : ParseOpts
@@ -223,7 +223,7 @@ mutual
     <|> if withOK q
            then do continue indents
                    decoratedSymbol fname "|"
-                   arg <- expr (record {withOK = False} q) fname indents
+                   arg <- expr ({withOK := False} q) fname indents
                    pure [WithArg arg]
            else fail "| not allowed here"
     where
@@ -793,15 +793,28 @@ mutual
 
   record_ : OriginDesc -> IndentInfo -> Rule PTerm
   record_ fname indents
-      = do b <- bounds (do kw <- option False
-                                 (decoratedKeyword fname "record"
-                                   $> True) -- TODO deprecated
-                           decoratedSymbol fname "{"
-                           commit
-                           fs <- sepBy1 (decoratedSymbol fname ",") (field kw fname indents)
-                           decoratedSymbol fname "}"
-                           pure $ forget fs)
+      = do
+           b <- (
+               withWarning oldSyntaxWarning (
+                 bounds (do
+                   decoratedKeyword fname "record"
+                   commit
+                   body True
+                 ))
+             <|>
+               bounds (body False))
            pure (PUpdate (boundToFC fname b) b.val)
+    where
+      oldSyntaxWarning : String
+      oldSyntaxWarning = "DEPRECATED: old record update syntax. Use \"{ f := v } p\" instead of \"record { f = v } p\""
+
+      body : Bool -> Rule (List PFieldUpdate)
+      body kw = do
+        decoratedSymbol fname "{"
+        commit
+        fs <- sepBy1 (decoratedSymbol fname ",") (field kw fname indents)
+        decoratedSymbol fname "}"
+        pure $ forget fs
 
   field : Bool -> OriginDesc -> IndentInfo -> Rule PFieldUpdate
   field kw fname indents

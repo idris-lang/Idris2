@@ -70,7 +70,7 @@ normaliseHoleTypes
     updateType defs i def
         = do ty' <- catch (tryNormaliseSizeLimit defs 10 [] (type def))
                           (\err => normaliseHoles defs [] (type def))
-             ignore $ addDef (Resolved i) (record { type = ty' } def)
+             ignore $ addDef (Resolved i) ({ type := ty' } def)
 
     normaliseH : Defs -> Int -> Core ()
     normaliseH defs i
@@ -113,7 +113,7 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
                      else pure empty
          ust <- get UST
          let olddelayed = delayedElab ust
-         put UST (record { delayedElab = [] } ust)
+         put UST ({ delayedElab := [] } ust)
          constart <- getNextEntry
 
          defs <- get Ctxt
@@ -136,10 +136,10 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
                                        (delayedElab ust)))
                  (\err =>
                     do ust <- get UST
-                       put UST (record { delayedElab = olddelayed } ust)
+                       put UST ({ delayedElab := olddelayed } ust)
                        throw err)
          ust <- get UST
-         put UST (record { delayedElab = olddelayed } ust)
+         put UST ({ delayedElab := olddelayed } ust)
          solveConstraintsAfter constart solvemode MatchArgs
 
          -- As long as we're not in the RHS of a case block,

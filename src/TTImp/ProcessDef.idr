@@ -134,11 +134,11 @@ export
 impossibleErrOK : {auto c : Ref Ctxt Defs} ->
                   Defs -> Error -> Core Bool
 impossibleErrOK defs (CantConvert fc gam env l r)
-    = do let defs = record { gamma = gam } defs
+    = do let defs = { gamma := gam } defs
          impossibleOK defs !(nf defs env l)
                            !(nf defs env r)
 impossibleErrOK defs (CantSolveEq fc gam env l r)
-    = do let defs = record { gamma = gam } defs
+    = do let defs = { gamma := gam } defs
          impossibleOK defs !(nf defs env l)
                            !(nf defs env r)
 impossibleErrOK defs (BadDotPattern _ _ ErasedArg _ _) = pure True
@@ -205,7 +205,7 @@ export
 recoverableErr : {auto c : Ref Ctxt Defs} ->
                  Defs -> Error -> Core Bool
 recoverableErr defs (CantConvert fc gam env l r)
-  = do let defs = record { gamma = gam } defs
+  = do let defs = { gamma := gam } defs
        l <- nf defs env l
        r <- nf defs env r
        log "coverage.recover" 10 $ unlines
@@ -217,7 +217,7 @@ recoverableErr defs (CantConvert fc gam env l r)
        recoverable defs l r
 
 recoverableErr defs (CantSolveEq fc gam env l r)
-  = do let defs = record { gamma = gam } defs
+  = do let defs = { gamma := gam } defs
        recoverable defs !(nf defs env l)
                         !(nf defs env r)
 recoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure True
@@ -582,7 +582,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
          log "declare.def.clause.with" 5 $ "Argument names " ++ show wargNames
 
          wname <- genWithName !(prettyName !(toFullNames (Resolved n)))
-         widx <- addDef wname (record {flags $= (SetTotal totreq ::)}
+         widx <- addDef wname ({flags $= (SetTotal totreq ::)}
                                     (newDef vfc wname (if isErased mult then erased else top)
                                       vars wtype vis None))
 
@@ -611,7 +611,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
 
          -- Elaborate the new definition here
          nestname <- applyEnv env wname
-         let nest'' = record { names $= (nestname ::) } nest
+         let nest'' = { names $= (nestname ::) } nest
 
          let wdef = IDef ifc wname cs'
          processDecl [] nest'' env wdef
@@ -762,8 +762,8 @@ calcRefs rt at fn
                     (dropErased (keys refs_all) refs_all)
                     (pure refs_all)
          ignore $ ifThenElse rt
-            (addDef fn (record { refersToRuntimeM = Just refs } gdef))
-            (addDef fn (record { refersToM = Just refs } gdef))
+            (addDef fn ({ refersToRuntimeM := Just refs } gdef))
+            (addDef fn ({ refersToM := Just refs } gdef))
          traverse_ (calcRefs rt at) (keys refs)
   where
     dropErased : List Name -> NameMap Bool -> Core (NameMap Bool)
@@ -815,8 +815,8 @@ mkRunTime fc n
            let Just Refl = nameListEq cargs rargs
                    | Nothing => throw (InternalError "WAT")
            ignore $ addDef n $
-                       record { definition = PMDef r rargs tree_ct tree_rt pats
-                              } gdef
+                       { definition := PMDef r rargs tree_ct tree_rt pats
+                       } gdef
            -- If it's a case block, and not already set as inlinable,
            -- check if it's safe to inline
            when (caseName !(toFullNames n) && noInline (flags gdef)) $
@@ -884,7 +884,7 @@ compileRunTime fc atotal
          traverse_ (calcRefs True atotal) (toCompileCase defs)
 
          defs <- get Ctxt
-         put Ctxt (record { toCompileCase = [] } defs)
+         put Ctxt ({ toCompileCase := [] } defs)
 
 toPats : Clause -> (vs ** (Env Term vs, Term vs, Term vs))
 toPats (MkClause {vars} env lhs rhs)
@@ -1001,13 +1001,13 @@ processDef opts nest env fc n_in cs_in
          defs <- get Ctxt
          let pi = case lookup n (userHoles defs) of
                         Nothing => defaultPI
-                        Just e => record { externalDecl = e } defaultPI
+                        Just e => { externalDecl := e } defaultPI
          -- Add compile time tree as a placeholder for the runtime tree,
          -- but we'll rebuild that in a later pass once all the case
          -- blocks etc are resolved
          ignore $ addDef (Resolved nidx)
-                  (record { definition = PMDef pi cargs tree_ct tree_ct pats
-                          } gdef)
+                  ({ definition := PMDef pi cargs tree_ct tree_ct pats
+                   } gdef)
 
          when (visibility gdef == Public) $
              do let rmetas = getMetas tree_ct
@@ -1020,7 +1020,7 @@ processDef opts nest env fc n_in cs_in
 
          -- Flag this name as one which needs compiling
          defs <- get Ctxt
-         put Ctxt (record { toCompileCase $= (n ::) } defs)
+         put Ctxt ({ toCompileCase $= (n ::) } defs)
 
          atotal <- toResolvedNames (NS builtinNS (UN $ Basic "assert_total"))
          logTime ("+++ Building size change graphs " ++ show n) $

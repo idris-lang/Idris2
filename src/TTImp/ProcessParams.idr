@@ -54,7 +54,7 @@ processParams {vars} {c} {m} {u} nest env fc ps ds
          defs <- get Ctxt
          let defNames = definedInBlock (currentNS defs) ds
          names' <- traverse (applyEnv env') defNames
-         let nestBlock = record { names $= (names' ++) } nest'
+         let nestBlock = { names $= (names' ++) } nest'
          traverse_ (processDecl [] nestBlock env') ds
   where
     mkParamTy : List (Name, RigCount, PiInfo RawImp, RawImp) -> RawImp

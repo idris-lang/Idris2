@@ -539,7 +539,7 @@ Language changes:
   be at least `covering`
   + That is, `%default covering` is the default status.
 * Fields of records can be accessed (and updated) using the dot syntax,
-  such as `r.field1.field2` or `record { field1.field2 = 42 }`.
+  such as `r.field1.field2` or `{ field1.field2 := 42 }`.
   For details, see [the "records" entry in the user manual](https://idris2.readthedocs.io/en/latest/reference/records.html)
 * New function flag `%tcinline` which means that the function should be
   inlined for the purposes of totality checking (but otherwise not inlined).

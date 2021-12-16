@@ -51,7 +51,7 @@ inSearch : UnifyInfo
 inSearch = MkUnifyInfo True InSearch
 
 lower : UnifyInfo -> UnifyInfo
-lower = record { atTop = False }
+lower = { atTop := False }
 
 Eq UnifyMode where
    InLHS == InLHS = True
@@ -485,9 +485,9 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
          let simpleDef = MkPMDefInfo (SolvedHole num)
                                      (not (isUserName mname) && isSimple rhs)
                                      False
-         let newdef = record { definition =
-                                 PMDef simpleDef [] (STerm 0 rhs) (STerm 0 rhs) []
-                             } mdef
+         let newdef = { definition :=
+                          PMDef simpleDef [] (STerm 0 rhs) (STerm 0 rhs) []
+                      } mdef
          ignore $ addDef (Resolved mref) newdef
          removeHole mref
          pure True
@@ -1290,10 +1290,10 @@ mutual
             -- what the expected type turns out to be
             then postpone loc mode "Postponing in lazy" env x tmy
             else do vs <- unify (lower mode) loc env tmx tmy
-                    pure (record { addLazy = AddForce r } vs)
+                    pure ({ addLazy := AddForce r } vs)
     unifyWithLazyD _ _ mode loc env tmx (NDelayed _ r tmy)
        = do vs <- unify (lower mode) loc env tmx tmy
-            pure (record { addLazy = AddDelay r } vs)
+            pure ({ addLazy := AddDelay r } vs)
     unifyWithLazyD _ _ mode loc env tmx tmy
        = unify mode loc env tmx tmy
 
@@ -1366,7 +1366,7 @@ setInvertible fc n
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => undefinedName fc n
-         ignore $ addDef n (record { invertible = True } gdef)
+         ignore $ addDef n ({ invertible := True } gdef)
 
 public export
 data SolveMode = Normal -- during elaboration: unifies and searches
@@ -1470,7 +1470,7 @@ retryGuess mode smode (hid, (loc, hname))
                   handleUnify
                      (do tm <- search loc rig (smode == Defaults) depth defining
                                       (type def) []
-                         let gdef = record { definition = PMDef defaultPI [] (STerm 0 tm) (STerm 0 tm) [] } def
+                         let gdef = { definition := PMDef defaultPI [] (STerm 0 tm) (STerm 0 tm) [] } def
                          logTermNF "unify.retry" 5 ("Solved " ++ show hname) [] tm
                          ignore $ addDef (Resolved hid) gdef
                          removeGuess hid
@@ -1505,8 +1505,8 @@ retryGuess mode smode (hid, (loc, hname))
                                               do ty <- getType [] tm
                                                  logTerm "unify.retry" 5 "Retry Delay" tm
                                                  pure $ delayMeta r envb !(getTerm ty) tm
-                                  let gdef = record { definition = PMDef (MkPMDefInfo NotHole True False)
-                                                                         [] (STerm 0 tm') (STerm 0 tm') [] } def
+                                  let gdef = { definition := PMDef (MkPMDefInfo NotHole True False)
+                                                                   [] (STerm 0 tm') (STerm 0 tm') [] } def
                                   logTerm "unify.retry" 5 ("Resolved " ++ show hname) tm'
                                   ignore $ addDef (Resolved hid) gdef
                                   removeGuess hid
@@ -1518,7 +1518,7 @@ retryGuess mode smode (hid, (loc, hname))
                                               do ty <- getType [] tm
                                                  logTerm "unify.retry" 5 "Retry Delay (constrained)" tm
                                                  pure $ delayMeta r envb !(getTerm ty) tm
-                                     let gdef = record { definition = Guess tm' envb newcs } def
+                                     let gdef = { definition := Guess tm' envb newcs } def
                                      ignore $ addDef (Resolved hid) gdef
                                      pure False
                Guess tm envb constrs =>
@@ -1531,13 +1531,13 @@ retryGuess mode smode (hid, (loc, hname))
                          -- All constraints resolved, so turn into a
                          -- proper definition and remove it from the
                          -- hole list
-                         [] => do let gdef = record { definition = PMDef (MkPMDefInfo NotHole True False)
-                                                                         [] (STerm 0 tm) (STerm 0 tm) [] } def
+                         [] => do let gdef = { definition := PMDef (MkPMDefInfo NotHole True False)
+                                                                   [] (STerm 0 tm) (STerm 0 tm) [] } def
                                   logTerm "unify.retry" 5 ("Resolved " ++ show hname) tm
                                   ignore $ addDef (Resolved hid) gdef
                                   removeGuess hid
                                   pure (holesSolved csAll)
-                         newcs => do let gdef = record { definition = Guess tm envb newcs } def
+                         newcs => do let gdef = { definition := Guess tm envb newcs } def
                                      ignore $ addDef (Resolved hid) gdef
                                      pure False
                _ => pure False
@@ -1624,7 +1624,7 @@ checkDots
          traverse_ checkConstraint (reverse (dotConstraints ust))
          hs <- getCurrentHoles
          ust <- get UST
-         put UST (record { dotConstraints = [] } ust)
+         put UST ({ dotConstraints := [] } ust)
   where
     getHoleName : Term [] -> Core (Maybe Name)
     getHoleName tm
@@ -1686,11 +1686,11 @@ checkDots
                               logTermNF "unify.constraint" 5 "Dot type" [] dty
                               -- Clear constraints so we don't report again
                               -- later
-                              put UST (record { dotConstraints = [] } ust)
+                              put UST ({ dotConstraints := [] } ust)
                               empty <- clearDefs defs
                               throw (BadDotPattern fc env reason
                                       !(quote empty env x)
                                       !(quote empty env y))
-                         _ => do put UST (record { dotConstraints = [] } ust)
+                         _ => do put UST ({ dotConstraints := [] } ust)
                                  throw err)
     checkConstraint _ = pure ()

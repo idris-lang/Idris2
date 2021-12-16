@@ -66,7 +66,7 @@ updateLimit Func n opts
                    Nothing => Nothing
                    Just Z => Nothing
                    Just (S k) =>
-                      Just (record { reduceLimit $= set n k } opts)
+                      Just ({ reduceLimit $= set n k } opts)
   where
     set : Name -> Nat -> List (Name, Nat) -> List (Name, Nat)
     set n v [] = []
@@ -410,7 +410,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                                pure (Result res)
                  Just Z => pure GotStuck
                  Just (S k) =>
-                      do let opts' = record { fuel = Just k } opts
+                      do let opts' = { fuel := Just k } opts
                          res <- evalWithOpts defs opts' env loc (embed tm) stk
                          pure (Result res)
     evalTree env loc opts fc stk _ = pure GotStuck

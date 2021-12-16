@@ -197,8 +197,8 @@ mutual
               else expandClause loc opts n c)
           (do cs <- generateSplits loc opts n c
               log "interaction.generate" 5 $ "Splits: " ++ show cs
-              tryAllSplits loc (record { mustSplit = False,
-                                         doneSplit = True } opts) n cs)
+              tryAllSplits loc ({ mustSplit := False,
+                                  doneSplit := True } opts) n cs)
 
 export
 makeDefFromType : {auto c : Ref Ctxt Defs} ->
@@ -247,7 +247,7 @@ makeDef p n
             | Nothing => noResult
          n <- getFullName nidx
          logTerm "interaction.generate" 5 ("Searching for " ++ show n) ty
-         let opts = record { genExpr = Just (makeDefFromType (justFC loc)) }
+         let opts = { genExpr := Just (makeDefFromType (justFC loc)) }
                            (initSearchOpts True 5)
          makeDefFromType (justFC loc) opts n envlen ty
 

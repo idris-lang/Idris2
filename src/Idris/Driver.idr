@@ -138,14 +138,14 @@ stMain cgs opts
             | True => pure ()
          defs <- initDefs
          let updated = foldl (\o, (s, _) => addCG (s, Other s) o) (options defs) cgs
-         c <- newRef Ctxt (record { options = updated } defs)
+         c <- newRef Ctxt ({ options := updated } defs)
          s <- newRef Syn initSyntax
          setCG {c} $ maybe Chez (Other . fst) (head' cgs)
          addPrimitives
 
          setWorkingDir "."
          when (ignoreMissingIpkg opts) $
-            setSession (record { ignoreMissingPkg = True } !getSession)
+            setSession ({ ignoreMissingPkg := True } !getSession)
 
          let ide = ideMode opts
          let ideSocket = ideModeSocket opts
