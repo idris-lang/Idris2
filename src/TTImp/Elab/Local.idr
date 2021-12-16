@@ -55,14 +55,14 @@ localHelper {vars} nest env nestdecls_in func
          names' <- traverse (applyEnv f)
                             (nub defNames) -- binding names must be unique
                                            -- fixes bug #115
-         let nest' = record { names $= (names' ++) } nest
+         let nest' = { names $= (names' ++) } nest
          let env' = dropLinear env
          -- We don't want to keep rechecking delayed elaborators in the
          -- locals  block, because they're not going to make progress until
          -- we come out again, so save them
          ust <- get UST
          let olddelayed = delayedElab ust
-         put UST (record { delayedElab = [] } ust)
+         put UST ({ delayedElab := [] } ust)
          defs <- get Ctxt
          -- store the local hints, so we can reset them after we've elaborated
          -- everything
@@ -73,11 +73,11 @@ localHelper {vars} nest env nestdecls_in func
 
          traverse_ (processDecl [] nest' env') nestdecls
          ust <- get UST
-         put UST (record { delayedElab = olddelayed } ust)
+         put UST ({ delayedElab := olddelayed } ust)
          defs <- get Ctxt
          res <- func nest'
          defs <- get Ctxt
-         put Ctxt (record { localHints = oldhints } defs)
+         put Ctxt ({ localHints := oldhints } defs)
          pure res
   where
     -- For the local definitions, don't allow access to linear things
@@ -95,7 +95,7 @@ localHelper {vars} nest env nestdecls_in func
                Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))
     applyEnv outer inner
           = do ust <- get UST
-               put UST (record { nextName $= (+1) } ust)
+               put UST ({ nextName $= (+1) } ust)
                let nestedName_in = Nested (outer, nextName ust) inner
                nestedName <- inCurrentNS nestedName_in
                n' <- addName nestedName
@@ -128,14 +128,14 @@ localHelper {vars} nest env nestdecls_in func
          = IClaim loc' r vis fnopts (updateTyName nest ty)
     updateName nest (IDef loc' n cs)
          = IDef loc' (newName nest n) cs
-    updateName nest (IData loc' vis d)
-         = IData loc' vis (updateDataName nest d)
+    updateName nest (IData loc' vis mbt d)
+         = IData loc' vis mbt (updateDataName nest d)
     updateName nest i = i
 
     setPublic : ImpDecl -> ImpDecl
     setPublic (IClaim fc c _ opts ty) = IClaim fc c Public opts ty
-    setPublic (IData fc _ d) = IData fc Public d
-    setPublic (IRecord fc c _ r) = IRecord fc c Public r
+    setPublic (IData fc _ mbt d) = IData fc Public mbt d
+    setPublic (IRecord fc c _ mbt r) = IRecord fc c Public mbt r
     setPublic (IParameters fc ps decls)
         = IParameters fc ps (map setPublic decls)
     setPublic (INamespace fc ps decls)
@@ -199,7 +199,7 @@ checkCaseLocal {vars} rig elabinfo nest env fc uname iname args sc expty
          (app, args) <- getLocalTerm fc env name args
          log "elab.local" 5 $ "Updating case local " ++ show uname ++ " " ++ show args
          logTermNF "elab.local" 5 "To" env app
-         let nest' = record { names $= ((uname, (Just iname, args,
-                                                (\fc, nt => app))) :: ) }
-                            nest
+         let nest' = { names $= ((uname, (Just iname, args,
+                                         (\fc, nt => app))) :: ) }
+                     nest
          check rig elabinfo nest' env sc expty

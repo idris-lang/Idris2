@@ -274,7 +274,7 @@ setIncrementalCG failOnError cgn
                                then do coreLift $ putStrLn $ cgn ++ " does not support incremental builds"
                                        coreLift $ exitWith (ExitFailure 1)
                                else pure ()
-                  setSession (record { incrementalCGs $= (cg :: )} !getSession)
+                  setSession ({ incrementalCGs $= (cg :: )} !getSession)
            Nothing =>
               if failOnError
                  then do coreLift $ putStrLn "No such code generator"
@@ -290,32 +290,32 @@ preOptions : {auto c : Ref Ctxt Defs} ->
              List CLOpt -> Core Bool
 preOptions [] = pure True
 preOptions (NoBanner :: opts)
-    = do setSession (record { nobanner = True } !getSession)
+    = do setSession ({ nobanner := True } !getSession)
          preOptions opts
 -- These things are processed later, but imply nobanner too
 preOptions (OutputFile _ :: opts)
-    = do setSession (record { nobanner = True } !getSession)
+    = do setSession ({ nobanner := True } !getSession)
          preOptions opts
 preOptions (ExecFn _ :: opts)
-    = do setSession (record { nobanner = True } !getSession)
+    = do setSession ({ nobanner := True } !getSession)
          preOptions opts
 preOptions (IdeMode :: opts)
-    = do setSession (record { nobanner = True } !getSession)
+    = do setSession ({ nobanner := True } !getSession)
          preOptions opts
 preOptions (IdeModeSocket _ :: opts)
-    = do setSession (record { nobanner = True } !getSession)
+    = do setSession ({ nobanner := True } !getSession)
          preOptions opts
 preOptions (CheckOnly :: opts)
-    = do setSession (record { nobanner = True } !getSession)
+    = do setSession ({ nobanner := True } !getSession)
          preOptions opts
 preOptions (Profile :: opts)
-    = do setSession (record { profile = True } !getSession)
+    = do setSession ({ profile := True } !getSession)
          preOptions opts
 preOptions (Quiet :: opts)
     = do setOutput (REPL VerbosityLvl.ErrorLvl)
          preOptions opts
 preOptions (NoPrelude :: opts)
-    = do setSession (record { noprelude = True } !getSession)
+    = do setSession ({ noprelude := True } !getSession)
          preOptions opts
 preOptions (SetCG e :: opts)
     = do defs <- get Ctxt
@@ -328,7 +328,7 @@ preOptions (SetCG e :: opts)
                                  showSep ", " (map fst (availableCGs (options defs)))
                  coreLift $ exitWith (ExitFailure 1)
 preOptions (Directive d :: opts)
-    = do setSession (record { directives $= (d::) } !getSession)
+    = do setSession ({ directives $= (d::) } !getSession)
          preOptions opts
 preOptions (PkgPath p :: opts)
     = do addPkgDir p anyBounds
@@ -356,33 +356,33 @@ preOptions (DebugElabCheck :: opts)
     = do setDebugElabCheck True
          preOptions opts
 preOptions (AltErrorCount c :: opts)
-    = do setSession (record { logErrorCount = c } !getSession)
+    = do setSession ({ logErrorCount := c } !getSession)
          preOptions opts
 preOptions (RunREPL _ :: opts)
     = do setOutput (REPL VerbosityLvl.ErrorLvl)
-         setSession (record { nobanner = True } !getSession)
+         setSession ({ nobanner := True } !getSession)
          preOptions opts
 preOptions (FindIPKG :: opts)
-    = do setSession (record { findipkg = True } !getSession)
+    = do setSession ({ findipkg := True } !getSession)
          preOptions opts
 preOptions (IgnoreMissingIPKG :: opts)
-    = do setSession (record { ignoreMissingPkg = True } !getSession)
+    = do setSession ({ ignoreMissingPkg := True } !getSession)
          preOptions opts
 preOptions (DumpCases f :: opts)
-    = do setSession (record { dumpcases = Just f } !getSession)
+    = do setSession ({ dumpcases := Just f } !getSession)
          preOptions opts
 preOptions (DumpLifted f :: opts)
-    = do setSession (record { dumplifted = Just f } !getSession)
+    = do setSession ({ dumplifted := Just f } !getSession)
          preOptions opts
 preOptions (DumpANF f :: opts)
-    = do setSession (record { dumpanf = Just f } !getSession)
+    = do setSession ({ dumpanf := Just f } !getSession)
          preOptions opts
 preOptions (DumpVMCode f :: opts)
-    = do setSession (record { dumpvmcode = Just f } !getSession)
+    = do setSession ({ dumpvmcode := Just f } !getSession)
          preOptions opts
 preOptions (Logging n :: opts)
-    = do setSession (record { logEnabled = True,
-                              logLevel $= insertLogLevel n } !getSession)
+    = do setSession ({ logEnabled := True,
+                       logLevel $= insertLogLevel n } !getSession)
          preOptions opts
 preOptions (ConsoleWidth n :: opts)
     = do setConsoleWidth n
@@ -391,24 +391,24 @@ preOptions (Color b :: opts)
     = do setColor b
          preOptions opts
 preOptions (WarningsAsErrors :: opts)
-    = do updateSession (record { warningsAsErrors = True })
+    = do updateSession ({ warningsAsErrors := True })
          preOptions opts
 preOptions (IgnoreShadowingWarnings :: opts)
-    = do updateSession (record { showShadowingWarning = False })
+    = do updateSession ({ showShadowingWarning := False })
          preOptions opts
 preOptions (HashesInsteadOfModTime :: opts)
     = do throw (InternalError "-Xcheck-hashes disabled (see issue #1935)")
-         updateSession (record { checkHashesInsteadOfModTime = True })
+         updateSession ({ checkHashesInsteadOfModTime := True })
          preOptions opts
 preOptions (CaseTreeHeuristics :: opts)
-    = do updateSession (record { caseTreeHeuristics = True })
+    = do updateSession ({ caseTreeHeuristics := True })
          preOptions opts
 preOptions (IncrementalCG e :: opts)
     = do defs <- get Ctxt
          setIncrementalCG True e
          preOptions opts
 preOptions (WholeProgram :: opts)
-    = do updateSession (record { wholeProgram = True })
+    = do updateSession ({ wholeProgram := True })
          preOptions opts
 preOptions (BashCompletion a b :: _)
     = do os <- opts a b
@@ -418,7 +418,7 @@ preOptions (BashCompletionScript fun :: _)
     = do coreLift $ putStrLn $ completionScript fun
          pure False
 preOptions (Total :: opts)
-    = do updateSession (record { totalReq = Total })
+    = do updateSession ({ totalReq := Total })
          preOptions opts
 preOptions (_ :: opts) = preOptions opts
 

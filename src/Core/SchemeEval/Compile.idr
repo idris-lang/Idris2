@@ -567,7 +567,7 @@ compileDef mode n_in
               | Nothing => throw (InternalError ("Compiling " ++ show n ++ " failed"))
 
          -- Record that this one is done
-         ignore $ addDef n (record { schemeExpr = Just (mode, schdef) } def)
+         ignore $ addDef n ({ schemeExpr := Just (mode, schdef) } def)
 
 initEvalWith : {auto c : Ref Ctxt Defs} ->
                String -> Core Bool
@@ -579,7 +579,7 @@ initEvalWith "chez"
              catch (do f <- readDataFile "chez/ct-support.ss"
                        Just _ <- coreLift $ evalSchemeStr $ "(begin " ++ f ++ ")"
                             | Nothing => pure False
-                       put Ctxt (record { schemeEvalLoaded = True } defs)
+                       put Ctxt ({ schemeEvalLoaded := True } defs)
                        pure True)
                 (\err => pure False)
 initEvalWith "racket"
@@ -590,7 +590,7 @@ initEvalWith "racket"
              catch (do f <- readDataFile "racket/ct-support.rkt"
                        Just _ <- coreLift $ evalSchemeStr $ "(begin " ++ f ++ ")"
                             | Nothing => pure False
-                       put Ctxt (record { schemeEvalLoaded = True } defs)
+                       put Ctxt ({ schemeEvalLoaded := True } defs)
                        pure True)
                 (\err => do coreLift $ printLn err
                             pure False)

@@ -14,7 +14,7 @@ import Compiler.ES.TailRec
 import Compiler.ES.State
 import Compiler.NoMangle
 import Libraries.Data.SortedMap
-import Libraries.Utils.Hex
+import Protocol.Hex
 import Libraries.Data.String.Extra
 
 import Data.Vect

@@ -17,7 +17,7 @@ import TTImp.TTImp
 import TTImp.TTImp.Functor
 import TTImp.Unelab
 
-import Libraries.Utils.Hex
+import Protocol.Hex
 
 import Data.List
 import Libraries.Data.NameMap
@@ -290,7 +290,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            do log "specialise" 1 $ "Partial evaluation of " ++ show !(toFullNames fn) ++ " failed" ++
                       "\n" ++ show err
               defs <- get Ctxt
-              put Ctxt (record { peFailures $= insert pename () } defs)
+              put Ctxt ({ peFailures $= insert pename () } defs)
               pure (applyWithFC (Ref fc Func fn) stk))
   where
     getAllRefs : NameMap Bool -> List ArgMode -> NameMap Bool

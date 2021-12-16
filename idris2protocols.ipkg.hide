@@ -1,0 +1,20 @@
+package idris-protocols
+version = 0.0.1
+
+modules
+  = Protocol.Hex
+  , Protocol.IDE
+  , Protocol.IDE.Command
+  , Protocol.IDE.Decoration
+  , Protocol.SExp
+  , Libraries.Data.Span
+  , Protocol.IDE.FileContext
+  , Protocol.IDE.Formatting
+  , Protocol.IDE.Holes
+  , Protocol.IDE.Result
+  , Protocol.IDE.Highlight
+
+
+--depends =
+
+sourcedir = "src"

@@ -91,6 +91,12 @@ totalityOpt
   <|> do keyword "covering"
          pure CoveringOnly
 
+dataVisOpt : EmptyRule (Visibility, Maybe TotalReq)
+dataVisOpt
+    = do { vis <- visOption   ; mbtot <- optional totalityOpt ; pure (vis, mbtot) }
+  <|> do { tot <- totalityOpt ; vis <- visibility ; pure (vis, Just tot) }
+  <|> pure (Private, Nothing)
+
 fnOpt : Rule FnOpt
 fnOpt = do x <- totalityOpt
            pure $ Totality x
@@ -635,7 +641,7 @@ fieldDecl fname indents
 recordDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 recordDecl fname indents
     = do start <- location
-         vis <- visibility
+         (vis,mbtot) <- dataVisOpt
          col <- column
          keyword "record"
          commit
@@ -648,7 +654,7 @@ recordDecl fname indents
          flds <- assert_total (blockAfter col (fieldDecl fname))
          end <- location
          pure (let fc = MkFC fname start end in
-                   IRecord fc Nothing vis
+                   IRecord fc Nothing vis mbtot
                            (MkImpRecord fc n params dc (concat flds)))
 
 namespaceDecl : Rule Namespace
@@ -702,10 +708,10 @@ directive fname indents
 -- topDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 topDecl fname indents
     = do start <- location
-         vis <- visibility
+         (vis,mbtot) <- dataVisOpt
          dat <- dataDecl fname indents
          end <- location
-         pure (IData (MkFC fname start end) vis dat)
+         pure (IData (MkFC fname start end) vis mbtot dat)
   <|> do start <- location
          ns <- namespaceDecl
          ds <- assert_total (nonEmptyBlock (topDecl fname))

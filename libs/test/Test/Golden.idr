@@ -155,17 +155,17 @@ options args = case args of
     go : List String -> Maybe String -> Options -> Maybe (Maybe String, Options)
     go rest only opts = case rest of
       []                            => pure (only, opts)
-      ("--timing" :: xs)            => go xs only (record { timing = True} opts)
-      ("--interactive" :: xs)       => go xs only (record { interactive = True } opts)
-      ("--color"  :: xs)            => go xs only (record { color = True } opts)
-      ("--colour" :: xs)            => go xs only (record { color = True } opts)
-      ("--no-color"  :: xs)         => go xs only (record { color = False } opts)
-      ("--no-colour" :: xs)         => go xs only (record { color = False } opts)
-      ("--cg" :: cg :: xs)          => go xs only (record { codegen = Just cg } opts)
+      ("--timing" :: xs)            => go xs only ({ timing := True} opts)
+      ("--interactive" :: xs)       => go xs only ({ interactive := True } opts)
+      ("--color"  :: xs)            => go xs only ({ color := True } opts)
+      ("--colour" :: xs)            => go xs only ({ color := True } opts)
+      ("--no-color"  :: xs)         => go xs only ({ color := False } opts)
+      ("--no-colour" :: xs)         => go xs only ({ color := False } opts)
+      ("--cg" :: cg :: xs)          => go xs only ({ codegen := Just cg } opts)
       ("--threads" :: n :: xs)      => do let pos : Nat = !(parsePositive n)
-                                          go xs only (record { threads = pos } opts)
-      ("--failure-file" :: p :: xs) => go  xs only (record { failureFile = Just p } opts)
-      ("--only" :: xs)              => pure (only, record { onlyNames = xs } opts)
+                                          go xs only ({ threads := pos } opts)
+      ("--failure-file" :: p :: xs) => go  xs only ({ failureFile := Just p } opts)
+      ("--only" :: xs)              => pure (only, { onlyNames := xs } opts)
       ("--only-file" :: p :: xs)    => go xs (Just p) opts
       _ => Nothing
 
@@ -178,7 +178,7 @@ options args = case args of
                  | Nothing => pure (Just opts)
            Right only <- readFile fp
              | Left err => fail (show err)
-           pure $ Just $ record { onlyNames $= ((lines only) ++) } opts
+           pure $ Just $ { onlyNames $= ((lines only) ++) } opts
 
 ||| Normalise strings between different OS.
 |||
@@ -501,7 +501,7 @@ runner tests
                       putStrLn usage
          -- if no CG has been set, find a sensible default based on what is available
          opts <- case codegen opts of
-                   Nothing => pure $ record { codegen = !findCG } opts
+                   Nothing => pure $ { codegen := !findCG } opts
                    Just _ => pure opts
          -- run the tests
          res <- concat <$> traverse (poolRunner opts) tests

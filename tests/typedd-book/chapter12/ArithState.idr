@@ -24,14 +24,14 @@ initState : GameState
 initState = MkGameState (MkScore 0 0) 12
 
 addWrong : GameState -> GameState
-addWrong = record { score.attempted $= (+1) }
+addWrong = { score.attempted $= (+1) }
 
 addCorrect : GameState -> GameState
-addCorrect = record { score.correct $= (+1),
-                      score.attempted $= (+1) }
+addCorrect = { score.correct $= (+1),
+               score.attempted $= (+1) }
 
 setDifficulty : Int -> GameState -> GameState
-setDifficulty newDiff state = record { difficulty = newDiff } state
+setDifficulty newDiff state = { difficulty := newDiff } state
 
 export
 data Command : Type -> Type where
@@ -71,7 +71,7 @@ namespace CommandDo
 
 randoms : Int -> Stream Int
 randoms seed = let seed' = 1664525 * seed + 1013904223 in
-                   (seed' `shiftR` fromNat 2) :: randoms seed'
+                   (seed' `shiftR` 2) :: randoms seed'
 
 runCommand : Stream Int -> GameState -> Command a ->
              IO (a, Stream Int, GameState)

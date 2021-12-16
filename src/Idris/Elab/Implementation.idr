@@ -246,7 +246,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                -- Update nested names so we elaborate the body in the right
                -- environment
                names' <- traverse applyEnv (impName :: mtops)
-               let nest' = record { names $= (names' ++) } nest
+               let nest' = { names $= (names' ++) } nest
 
                traverse_ (processDecl [] nest' env) [impFn]
                unsetFlag vfc impName BlockedHint

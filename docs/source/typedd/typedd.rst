@@ -333,7 +333,7 @@ now uses a safer type for the number of shifts:
 
     randoms : Int -> Stream Int
     randoms seed = let seed' = 1664525 * seed + 1013904223 in
-                       (seed' `shiftR` fromNat 2) :: randoms seed'
+                       (seed' `shiftR` 2) :: randoms seed'
 
 
 In ``ArithCmd.idr``, update ``DivBy``, ``randoms``, and ``import Data.Bits``

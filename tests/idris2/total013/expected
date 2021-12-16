@@ -1,0 +1,7 @@
+1/1: Building Issue1404 (Issue1404.idr)
+Error: Foo is not total, not strictly positive
+
+Issue1404:3:1--4:30
+ 3 | data Foo : Type where
+ 4 |   MkFoo : (Foo -> Foo) -> Foo
+

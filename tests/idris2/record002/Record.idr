@@ -9,13 +9,13 @@ record MyDPair a p where
 
 cons : t -> MyDPair Nat (\n => Vect n t) -> MyDPair Nat (\n => Vect n t)
 cons val xs
-    = record { dfst = S (dfst xs),
-               dsnd = val :: dsnd xs } xs
+    = { dfst := S (dfst xs),
+        dsnd := val :: dsnd xs } xs
 
 cons' : t -> MyDPair Nat (\n => Vect n t) -> MyDPair Nat (\n => Vect n t)
 cons' val
-    = record { dfst $= S,
-               dsnd $= (val ::) }
+    = { dfst $= S,
+        dsnd $= (val ::) }
 
 record Stats where
   constructor MkStats
@@ -35,4 +35,4 @@ testPerson : Person
 testPerson = MkPerson "Fred" 1337 10 (MkStats 10 10)
 
 grow : Person -> Person
-grow = record { more.height $= (+1) }
+grow = { more.height $= (+1) }

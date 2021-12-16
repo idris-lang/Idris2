@@ -4,7 +4,7 @@ Main> Couldn't parse any alternatives:
 (Interactive):1:4--1:5
  1 | :t (3 : Nat)
         ^
-... (52 others)
+... (53 others)
 Main> Expected string begin.
 
 (Interactive):1:5--1:7

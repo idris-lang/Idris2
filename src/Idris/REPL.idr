@@ -165,19 +165,19 @@ setOpt : {auto c : Ref Ctxt Defs} ->
          REPLOpt -> Core ()
 setOpt (ShowImplicits t)
     = do pp <- getPPrint
-         setPPrint (record { showImplicits = t } pp)
+         setPPrint ({ showImplicits := t } pp)
 setOpt (ShowNamespace t)
     = do pp <- getPPrint
-         setPPrint (record { fullNamespace = t } pp)
+         setPPrint ({ fullNamespace := t } pp)
 setOpt (ShowTypes t)
     = do opts <- get ROpts
-         put ROpts (record { showTypes = t } opts)
+         put ROpts ({ showTypes := t } opts)
 setOpt (EvalMode m)
     = do opts <- get ROpts
-         put ROpts (record { evalMode = m } opts)
+         put ROpts ({ evalMode := m } opts)
 setOpt (Editor e)
     = do opts <- get ROpts
-         put ROpts (record { editor = e } opts)
+         put ROpts ({ editor := e } opts)
 setOpt (CG e)
     = do defs <- get Ctxt
          case getCG (options defs) e of
@@ -185,7 +185,7 @@ setOpt (CG e)
             Nothing => iputStrLn (reflow "No such code generator available")
 setOpt (Profile t)
     = do pp <- getSession
-         setSession (record { profile = t } pp)
+         setSession ({ profile := t } pp)
 setOpt (EvalTiming t)
     = setEvalTiming t
 
@@ -310,9 +310,9 @@ nextProofSearch
               | Nothing => pure Nothing
          Just (res, next) <- nextResult res
               | Nothing =>
-                    do put ROpts (record { psResult = Nothing } opts)
+                    do put ROpts ({ psResult := Nothing } opts)
                        pure Nothing
-         put ROpts (record { psResult = Just (n, next) } opts)
+         put ROpts ({ psResult := Just (n, next) } opts)
          pure (Just (n, res))
 
 nextGenDef : {auto c : Ref Ctxt Defs} ->
@@ -326,9 +326,9 @@ nextGenDef reject
               | Nothing => pure Nothing
          Just (res, next) <- nextResult res
               | Nothing =>
-                    do put ROpts (record { gdResult = Nothing } opts)
+                    do put ROpts ({ gdResult := Nothing } opts)
                        pure Nothing
-         put ROpts (record { gdResult = Just (line, next) } opts)
+         put ROpts ({ gdResult := Just (line, next) } opts)
          case reject of
               Z => pure (Just (line, res))
               S k => nextGenDef k
@@ -449,7 +449,7 @@ processEdit (ExprSearch upd line name hints)
               [(n, nidx, Hole locs _)] =>
                   do let searchtm = exprSearch replFC name hints
                      ropts <- get ROpts
-                     put ROpts (record { psResult = Just (name, searchtm) } ropts)
+                     put ROpts ({ psResult := Just (name, searchtm) } ropts)
                      defs <- get Ctxt
                      Just (_, restm) <- nextProofSearch
                           | Nothing => pure $ EditError "No search results"
@@ -493,7 +493,7 @@ processEdit (GenerateDef upd line name rej)
                  do let searchdef = makeDefSort (\p, n => onLine (line - 1) p)
                                                 16 mostUsed n'
                     ropts <- get ROpts
-                    put ROpts (record { gdResult = Just (line, searchdef) } ropts)
+                    put ROpts ({ gdResult := Just (line, searchdef) } ropts)
                     Just (_, (fc, cs)) <- nextGenDef rej
                          | Nothing => pure (EditError "No search results")
 
@@ -667,7 +667,7 @@ loadMainFile : {auto c : Ref Ctxt Defs} ->
                String -> Core REPLResult
 loadMainFile f
     = do opts <- get ROpts
-         put ROpts (record { evalResultName = Nothing } opts)
+         put ROpts ({ evalResultName := Nothing } opts)
          modIdent <- ctxtPathToNS f
          resetContext (PhysicalIdrSrc modIdent)
          Right res <- coreLift (readFile f)
@@ -687,7 +687,7 @@ loadMainFile f
 replEval : {auto c : Ref Ctxt Defs} ->
   {vs : _} ->
   REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
-replEval NormaliseAll = normaliseOpts (record { strategy = CBV } withAll)
+replEval NormaliseAll = normaliseOpts ({ strategy := CBV } withAll)
 replEval _ = normalise
 
 record TermWithType where
@@ -780,7 +780,7 @@ process (Eval itm)
                    $ newDef replFC evalResultName top [] ty Private
                    $ PMDef defaultPI [] (STerm 0 ntm) (STerm 0 ntm) []
                  addToSave evalResultName
-                 put ROpts (record { evalResultName = Just evalResultName } opts)
+                 put ROpts ({ evalResultName := Just evalResultName } opts)
                  if showTypes opts
                     then do ity <- resugar [] !(norm defs [] ty)
                             pure (Evaluated itm (Just ity))
@@ -822,7 +822,7 @@ process Reload
               Just f => loadMainFile f
 process (Load f)
     = do opts <- get ROpts
-         put ROpts (record { mainfile = Just f } opts)
+         put ROpts ({ mainfile := Just f } opts)
          -- Clear the context and load again
          loadMainFile f
 process (ImportMod m)
@@ -930,12 +930,12 @@ process (Editing cmd)
          -- Since we're working in a local environment, don't do the usual
          -- thing of printing out the full environment for parameterised
          -- calls or calls in where blocks
-         setPPrint (record { showFullEnv = False } ppopts)
+         setPPrint ({ showFullEnv := False } ppopts)
          res <- processEdit cmd
          setPPrint ppopts
          pure $ Edited res
 process (CGDirective str)
-    = do setSession (record { directives $= (str::) } !getSession)
+    = do setSession ({ directives $= (str::) } !getSession)
          pure Done
 process (RunShellCommand cmd)
     = do coreLift_ (system cmd)
