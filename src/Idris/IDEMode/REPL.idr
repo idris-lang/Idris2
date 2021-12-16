@@ -252,7 +252,6 @@ idePutStrLn : {auto c : Ref Ctxt Defs} -> File -> Integer -> String -> Core ()
 idePutStrLn outf i msg
     = send outf $ WriteString msg i
 
--- TODO: refactor SExp argument into `Protocol.IDE.Result`
 returnFromIDE : {auto c : Ref Ctxt Defs} -> File -> Integer -> IDE.ReplyPayload -> Core ()
 returnFromIDE outf i payload
     = do send outf (Immediate payload i)
