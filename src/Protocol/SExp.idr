@@ -2,6 +2,8 @@ module Protocol.SExp
 
 import Data.List
 
+%default total
+
 -- should be in base somewhere!
 join : String -> List String -> String
 join sep xs = concat $ intersperse sep xs
