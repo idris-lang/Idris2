@@ -39,6 +39,9 @@ findInput [] = Nothing
 findInput (InputFile f :: fs) = Just f
 findInput (_ :: fs) = findInput fs
 
+splitPaths : String -> List1 String
+splitPaths = map trim . split (==pathSeparator)
+
 -- Add extra data from the "IDRIS2_x" environment variables
 updateEnv : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
@@ -46,37 +49,23 @@ updateEnv : {auto c : Ref Ctxt Defs} ->
 updateEnv
     = do defs <- get Ctxt
          bprefix <- coreLift $ idrisGetEnv "IDRIS2_PREFIX"
-         case bprefix of
-              Just p => setPrefix p
-              Nothing => setPrefix yprefix
+         setPrefix (fromMaybe yprefix bprefix)
          bpath <- coreLift $ idrisGetEnv "IDRIS2_PATH"
-         case bpath of
-              Just path => do traverseList1_ addExtraDir (map trim (split (==pathSeparator) path))
-              Nothing => pure ()
+         whenJust bpath $ traverseList1_ addExtraDir . splitPaths
          bdata <- coreLift $ idrisGetEnv "IDRIS2_DATA"
-         case bdata of
-              Just path => do traverseList1_ addDataDir (map trim (split (==pathSeparator) path))
-              Nothing => pure ()
+         whenJust bdata $ traverseList1_ addDataDir . splitPaths
          blibs <- coreLift $ idrisGetEnv "IDRIS2_LIBS"
-         case blibs of
-              Just path => do traverseList1_ addLibDir (map trim (split (==pathSeparator) path))
-              Nothing => pure ()
+         whenJust blibs $ traverseList1_ addLibDir . splitPaths
          pdirs <- coreLift $ idrisGetEnv "IDRIS2_PACKAGE_PATH"
-         case pdirs of
-              Just path => do traverseList1_ addPackageDir (map trim (split (==pathSeparator) path))
-              Nothing => pure ()
+         whenJust pdirs $ traverseList1_ addPackageDir . splitPaths
          cg <- coreLift $ idrisGetEnv "IDRIS2_CG"
-         case cg of
-              Just e => case getCG (options defs) e of
-                             Just cg => setCG cg
-                             Nothing => throw (InternalError ("Unknown code generator " ++ show e))
-              Nothing => pure ()
+         whenJust cg $ \ e => case getCG (options defs) e of
+           Just cg => setCG cg
+           Nothing => throw (InternalError ("Unknown code generator " ++ show e))
          inccgs <- coreLift $ idrisGetEnv "IDRIS2_INC_CGS"
-         case inccgs of
-              Just cgs =>
-                   traverse_ (setIncrementalCG False) $
-                       map trim (toList (split (==',') cgs))
-              Nothing => pure ()
+         whenJust inccgs $ \ cgs =>
+           traverseList1_ (setIncrementalCG False) $
+             map trim (split (==',') cgs)
          -- IDRIS2_PATH goes first so that it overrides this if there's
          -- any conflicts. In particular, that means that setting IDRIS2_PATH
          -- for the tests means they test the local version not the installed
@@ -98,9 +87,7 @@ updateREPLOpts : {auto o : Ref ROpts REPLOpts} ->
 updateREPLOpts
     = do opts <- get ROpts
          ed <- coreLift $ idrisGetEnv "EDITOR"
-         case ed of
-              Just e => put ROpts ({ editor := e } opts)
-              Nothing => pure ()
+         whenJust ed $ \ e => put ROpts ({ editor := e } opts)
 
 showInfo : {auto c : Ref Ctxt Defs}
         -> {auto o : Ref ROpts REPLOpts}
@@ -232,9 +219,8 @@ stMain cgs opts
                       -- just exit
                     do ropts <- get ROpts
                        showTimeRecord
-                       case errorLine ropts of
-                         Nothing => pure ()
-                         Just _ => coreLift $ exitWith (ExitFailure 1)
+                       whenJust (errorLine ropts) $ \ _ =>
+                         coreLift $ exitWith (ExitFailure 1)
 
   where
 
