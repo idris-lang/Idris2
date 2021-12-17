@@ -69,47 +69,66 @@ gr3 = 5 where
     field2 : String
 
 --------------------------------------------------------------------------------
+-- record with parameter
+
+fr4 : Int
+fr4 = 5 where
+  record X (a : Type) where
+    constructor MkX
+    field1 : Int
+    field2 : a
+
+gr4 : Int
+gr4 = 5 where
+  record X (a : Type) where
+    constructor MkX
+    field1 : a
+    field2 : String
+
+--------------------------------------------------------------------------------
 -- complex example
 
-fr4 : List Int
-fr4 = fun k where
+fr5 : List Int
+fr5 = fun k where
 
   k : Int
   k = 5
 
-  record X where
+  record X (a : Type) where
     constructor MkX
     xfield1 : Int
-    xfield2 : (X -> Int)
+    xfield2 : (X a -> Int)
+    xfield3 : a
 
-  rec : X
-  rec = MkX (k+1) (const (k+2))
+  rec : X Int
+  rec = MkX (k+1) (const (k+2)) 3
 
   fun : Int -> List Int
-  fun n = n :: rec.xfield1 :: rec.xfield2 rec :: []
+  fun n = n :: rec.xfield1 :: rec.xfield2 rec :: rec.xfield3 :: []
 
-gr4 : List Int
-gr4 = fun k where
+gr5 : List Int
+gr5 = fun k where
 
   k : Int
-  k = 5
+  k = 6
 
-  record X where
+  record X (a : Type) where
     constructor MkX
     xfield1 : Int
-    xfield2 : (X -> Int)
+    xfield2 : (X a -> Int)
+    xfield3 : a
 
-  rec : X
-  rec = MkX (k+3) (const (k+4))
+  rec : X Int
+  rec = MkX (k+3) (const (k+4)) 5
 
   fun : Int -> List Int
-  fun n = n :: rec.xfield1 :: rec.xfield2 rec :: []
+  fun n = n :: rec.xfield1 :: rec.xfield2 rec :: rec.xfield3 :: []
 
 --------------------------------------------------------------------------------
 
 main : IO ()
 main = do
-  printLn $ fr4
-  printLn $ gr4
+  printLn $ fr5
+  printLn $ gr5
 
 --------------------------------------------------------------------------------
