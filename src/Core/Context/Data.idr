@@ -109,7 +109,7 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
                                   defaultFlags [] (map name datacons) Nothing)
          (idx, gam') <- addCtxt tyn tydef (gamma defs)
          gam'' <- addDataConstructors 0 datacons gam'
-         put Ctxt (record { gamma = gam'' } defs)
+         put Ctxt ({ gamma := gam'' } defs)
          pure idx
   where
     allDet : Nat -> List Nat

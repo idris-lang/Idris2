@@ -292,9 +292,9 @@ append' left right =
   if isAbsolute' right || isJust right.volume then
     right
   else if hasRoot right then
-    record { volume = left.volume } right
+    { volume := left.volume } right
   else
-    record { body = left.body ++ right.body, hasTrailSep = right.hasTrailSep } left
+    { body := left.body ++ right.body, hasTrailSep := right.hasTrailSep } left
 
 splitPath' : Path -> List Path
 splitPath' path =
@@ -319,7 +319,7 @@ splitParent' path =
     [] => Nothing
     (x::xs) =>
       let
-        parent = record { body = init (x::xs), hasTrailSep = False } path
+        parent = { body := init (x::xs), hasTrailSep := False } path
         child = MkPath Nothing False [last (x::xs)] path.hasTrailSep
       in
         Just (parent, child)

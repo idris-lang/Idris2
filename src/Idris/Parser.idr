@@ -87,10 +87,10 @@ record ParseOpts where
   withOK : Bool -- = with applications are parseable
 
 peq : ParseOpts -> ParseOpts
-peq = record { eqOK = True }
+peq = { eqOK := True }
 
 pnoeq : ParseOpts -> ParseOpts
-pnoeq = record { eqOK = False }
+pnoeq = { eqOK := False }
 
 export
 pdef : ParseOpts
@@ -223,7 +223,7 @@ mutual
     <|> if withOK q
            then do continue indents
                    decoratedSymbol fname "|"
-                   arg <- expr (record {withOK = False} q) fname indents
+                   arg <- expr ({withOK := False} q) fname indents
                    pure [WithArg arg]
            else fail "| not allowed here"
     where
@@ -793,15 +793,28 @@ mutual
 
   record_ : OriginDesc -> IndentInfo -> Rule PTerm
   record_ fname indents
-      = do b <- bounds (do kw <- option False
-                                 (decoratedKeyword fname "record"
-                                   $> True) -- TODO deprecated
-                           decoratedSymbol fname "{"
-                           commit
-                           fs <- sepBy1 (decoratedSymbol fname ",") (field kw fname indents)
-                           decoratedSymbol fname "}"
-                           pure $ forget fs)
+      = do
+           b <- (
+               withWarning oldSyntaxWarning (
+                 bounds (do
+                   decoratedKeyword fname "record"
+                   commit
+                   body True
+                 ))
+             <|>
+               bounds (body False))
            pure (PUpdate (boundToFC fname b) b.val)
+    where
+      oldSyntaxWarning : String
+      oldSyntaxWarning = "DEPRECATED: old record update syntax. Use \"{ f := v } p\" instead of \"record { f = v } p\""
+
+      body : Bool -> Rule (List PFieldUpdate)
+      body kw = do
+        decoratedSymbol fname "{"
+        commit
+        fs <- sepBy1 (decoratedSymbol fname ",") (field kw fname indents)
+        decoratedSymbol fname "}"
+        pure $ forget fs
 
   field : Bool -> OriginDesc -> IndentInfo -> Rule PFieldUpdate
   field kw fname indents
@@ -1224,6 +1237,10 @@ directive fname indents
          n <- name
          atEnd indents
          pure (Hide n)
+  <|> do decorate fname Keyword $ pragma "unhide"
+         n <- name
+         atEnd indents
+         pure (Unhide n)
 --   <|> do pragma "hide_export"
 --          n <- name
 --          atEnd indents
@@ -2169,6 +2186,7 @@ parserCommandsForHelp =
   , exprArgCmd (ParseREPLCmd ["s", "search"]) TypeSearch "Search for values by type"
   , nameArgCmd (ParseIdentCmd "di") DebugInfo "Show debugging information for a name"
   , moduleArgCmd (ParseKeywordCmd "module") ImportMod "Import an extra module"
+  , stringArgCmd (ParseREPLCmd ["package"]) ImportPackage "Import every module of the package"
   , noArgCmd (ParseREPLCmd ["q", "quit", "exit"]) Quit "Exit the Idris system"
   , noArgCmd (ParseREPLCmd ["cwd"]) CWD "Displays the current working directory"
   , stringArgCmd (ParseREPLCmd ["cd"]) CD "Change the current working directory"
@@ -2193,7 +2211,6 @@ parserCommandsForHelp =
   , noArgCmd (ParseREPLCmd ["version"]) ShowVersion "Display the Idris version"
   , noArgCmd (ParseREPLCmd ["?", "h", "help"]) Help "Display this help text"
   , declsArgCmd (ParseKeywordCmd "let") NewDefn "Define a new value"
-  , stringArgCmd (ParseREPLCmd ["lp", "loadpackage"]) ImportPackage "Load all modules of the package"
   , exprArgCmd (ParseREPLCmd ["fs", "fsearch"]) FuzzyTypeSearch "Search for global definitions by sketching the names distribution of the wanted type(s)."
   ]
 

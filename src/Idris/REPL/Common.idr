@@ -14,6 +14,7 @@ import Idris.Doc.String
 
 import Idris.Error
 import Idris.IDEMode.Commands
+import Idris.IDEMode.Pretty
 import Idris.Pretty
 import public Idris.REPL.Opts
 import Idris.Resugar
@@ -42,9 +43,9 @@ iputStrLn msg
               -- output silenced
               REPL _ => pure ()
               IDEMode i _ f =>
-                send f (SExpList [SymbolAtom "write-string",
-                                 toSExp !(renderWithoutColor msg), toSExp i])
-
+                send f (WriteString
+                          !(renderWithoutColor msg)
+                          i)
 
 ||| Sampled against `VerbosityLvl`.
 public export
@@ -114,7 +115,7 @@ emitProblem a replDocCreator idemodeDocCreator getFC status
                      -- TODO: Display a better message when the error doesn't contain a location
                      case map toNonEmptyFC (getFC a) of
                           Nothing => iputStrLn msg
-                          Just (origin, startPos, endPos) => do
+                          Just nfc@(origin, startPos, endPos) => do
                             fname <- case origin of
                               PhysicalIdrSrc ident => do
                                 -- recover the file name relative to the working directory.
@@ -125,17 +126,9 @@ emitProblem a replDocCreator idemodeDocCreator getFC status
                                 pure fname
                               Virtual Interactive =>
                                 pure "(Interactive)"
-                            send f (SExpList [SymbolAtom "warning",
-                                   SExpList [toSExp {a = String} fname,
-                                            toSExp (addOne startPos),
-                                              toSExp (addOne endPos),
-                                              toSExp !(renderWithoutColor msg),
-                                              -- highlighting; currently blank
-                                              SExpList []],
-                                    toSExp i])
-  where
-    addOne : (Int, Int) -> (Int, Int)
-    addOne (l, c) = (l + 1, c + 1)
+                            let (str,spans) = !(renderWithDecorations annToProperties msg)
+                            send f (Warning (cast (the String fname, nfc)) str spans
+                                            i)
 
 -- Display an error message from checking a source file
 export
@@ -184,10 +177,10 @@ updateErrorLine : {auto o : Ref ROpts REPLOpts} ->
                   List Error -> Core ()
 updateErrorLine []
     = do opts <- get ROpts
-         put ROpts (record { errorLine = Nothing } opts)
+         put ROpts ({ errorLine := Nothing } opts)
 updateErrorLine (e :: _)
     = do opts <- get ROpts
-         put ROpts (record { errorLine = (getErrorLoc e) >>= getFCLine } opts)
+         put ROpts ({ errorLine := (getErrorLoc e) >>= getFCLine } opts)
 
 export
 resetContext : {auto c : Ref Ctxt Defs} ->
@@ -198,7 +191,7 @@ resetContext : {auto c : Ref Ctxt Defs} ->
                Core ()
 resetContext origin
     = do defs <- get Ctxt
-         put Ctxt (record { options = clearNames (options defs) } !initDefs)
+         put Ctxt ({ options := clearNames (options defs) } !initDefs)
          addPrimitives
          put UST initUState
          put Syn initSyntax

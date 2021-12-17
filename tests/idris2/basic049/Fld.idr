@@ -142,7 +142,7 @@ mapSetMap : (a -> a') -> b' -> (c -> c') -> Three a b c -> Three a' b' c'
 mapSetMap f y' g = {x $= f, y := y', z $= g}
 
 setNameOld : String -> OrdinaryDog -> OrdinaryDog
-setNameOld name' = record {name = name'}
+setNameOld name' = {name := name'}
 
 -------------------------------------
 

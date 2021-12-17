@@ -40,7 +40,7 @@ tarjan {cuid} deps = loop initial (SortedMap.keys deps)
               Nothing => ts'  -- no edges
               Just edgeSet => loop ts' (SortedSet.toList edgeSet)
           in case SortedMap.lookup v ts''.vertices of
-              Nothing => record { impossibleHappened = True } ts''
+              Nothing => { impossibleHappened := True } ts''
               Just vtv =>
                 if vtv.index == vtv.lowlink
                   then createComponent ts'' v []
@@ -49,14 +49,14 @@ tarjan {cuid} deps = loop initial (SortedMap.keys deps)
         createComponent : TarjanState cuid -> cuid -> List cuid -> TarjanState cuid
         createComponent ts v acc =
           case ts.stack of
-            [] => record { impossibleHappened = True } ts
+            [] => { impossibleHappened := True } ts
             w :: ws =>
-              let ts' : TarjanState cuid = record {
-                      vertices $= SortedMap.adjust w record{ inStack = False },
-                      stack = ws
+              let ts' : TarjanState cuid = {
+                      vertices $= SortedMap.adjust w { inStack := False },
+                      stack := ws
                     } ts
                 in if w == v
-                  then record { components $= ((v ::: acc) ::) } ts'  -- that's it
+                  then { components $= ((v ::: acc) ::) } ts'  -- that's it
                   else createComponent ts' v (w :: acc)
 
         loop : TarjanState cuid -> List cuid -> TarjanState cuid
@@ -66,16 +66,16 @@ tarjan {cuid} deps = loop initial (SortedMap.keys deps)
             case SortedMap.lookup w ts.vertices of
               Nothing => let ts' = strongConnect ts w in
                 case SortedMap.lookup w ts'.vertices of
-                  Nothing => record { impossibleHappened = True } ts'
-                  Just wtv => record { vertices $= SortedMap.adjust v record{ lowlink $= min wtv.lowlink } } ts'
+                  Nothing => { impossibleHappened := True } ts'
+                  Just wtv => { vertices $= SortedMap.adjust v { lowlink $= min wtv.lowlink } } ts'
 
               Just wtv => case wtv.inStack of
                 False => ts  -- nothing to do
-                True => record { vertices $= SortedMap.adjust v record{ lowlink $= min wtv.index } } ts
+                True => { vertices $= SortedMap.adjust v { lowlink $= min wtv.index } } ts
           ) ws
 
         ts' : TarjanState cuid
-        ts' = record {
+        ts' = {
             vertices  $= SortedMap.insert v (TV ts.nextIndex ts.nextIndex True),
             stack     $= (v ::),
             nextIndex $= (1+)

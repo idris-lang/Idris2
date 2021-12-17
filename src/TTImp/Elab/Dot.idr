@@ -50,7 +50,7 @@ checkDot rig elabinfo nest env fc reason tm (Just gexpty)
     = case elabMode elabinfo of
         InLHS _ =>
           do (wantedTm, wantedTy) <- check rig
-                                              (record { elabMode = InExpr }
+                                              ({ elabMode := InExpr }
                                                   elabinfo)
                                               nest env
                                               tm (Just gexpty)

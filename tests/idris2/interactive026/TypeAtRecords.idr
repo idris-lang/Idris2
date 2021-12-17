@@ -10,7 +10,7 @@ record Person animal where
 -- Record update syntax with the record keyword
 
 singleFieldUpdate : Person a -> Person a
-singleFieldUpdate p = record { age $= (+one) } p
+singleFieldUpdate p = { age $= (+one) } p
 -- Not making it point free to keep a var here ^
   where
     -- A variable to use in the update
@@ -18,7 +18,7 @@ singleFieldUpdate p = record { age $= (+one) } p
     one = 1
 
 multiFieldUpdate : Person a -> Person a
-multiFieldUpdate p = record { name = emptyString, age = zero } p
+multiFieldUpdate p = { name := emptyString, age := zero } p
 -- Not point free just like above, in order to have a var here ^
   where
     -- Variables to use in the update

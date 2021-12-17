@@ -3,4 +3,4 @@ record R (a : Type) where
   x : a
 
 rmap : (a -> b) -> R a -> R b
-rmap f = record { x $= f }
+rmap f = { x $= f }

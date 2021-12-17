@@ -114,7 +114,7 @@ updatePats {todo = pvar :: ns} env (NBind fc _ (Pi _ c _ farg) fsc) (p :: ps)
          Unknown =>
             do defs <- get Ctxt
                empty <- clearDefs defs
-               pure (record { argType = Known c !(quote empty env farg) } p
+               pure ({ argType := Known c !(quote empty env farg) } p
                           :: !(updatePats env !(fsc defs (toClosure defaultOpts env (Ref fc Bound pvar))) ps))
          _ => pure (p :: ps)
 updatePats env nf (p :: ps)
@@ -122,7 +122,7 @@ updatePats env nf (p :: ps)
          Unknown =>
             do defs <- get Ctxt
                empty <- clearDefs defs
-               pure (record { argType = Stuck !(quote empty env nf) } p :: ps)
+               pure ({ argType := Stuck !(quote empty env nf) } p :: ps)
          _ => pure (p :: ps)
 
 substInPatInfo : {pvar, vars, todo : _} ->
@@ -137,7 +137,7 @@ substInPatInfo {pvar} {vars} fc n tm p ps
                    tynf <- nf defs (mkEnv fc _) ty
                    case tynf of
                         NApp _ _ _ =>
-                           pure (record { argType = Known c (substName n tm ty) } p, ps)
+                           pure ({ argType := Known c (substName n tm ty) } p, ps)
                         -- Got a concrete type, and that's all we need, so stop
                         _ => pure (p, ps)
            Stuck fty =>
@@ -146,7 +146,7 @@ substInPatInfo {pvar} {vars} fc n tm p ps
                 let env = mkEnv fc vars
                 case !(nf defs env (substName n tm fty)) of
                      NBind pfc _ (Pi _ c _ farg) fsc =>
-                       pure (record { argType = Known c !(quote empty env farg) } p,
+                       pure ({ argType := Known c !(quote empty env farg) } p,
                                  !(updatePats env
                                        !(fsc defs (toClosure defaultOpts env
                                              (Ref pfc Bound pvar))) ps))
@@ -472,7 +472,7 @@ newPats : (pargs : List Pat) -> LengthMatch pargs ns ->
           NamedPats vars ns
 newPats [] NilMatch rest = []
 newPats (newpat :: xs) (ConsMatch w) (pi :: rest)
-  = record { pat = newpat} pi :: newPats xs w rest
+  = { pat := newpat} pi :: newPats xs w rest
 
 updateNames : List (Name, Pat) -> List (Name, Name)
 updateNames = mapMaybe update
@@ -484,7 +484,7 @@ updateNames = mapMaybe update
 updatePatNames : List (Name, Name) -> NamedPats vars todo -> NamedPats vars todo
 updatePatNames _ [] = []
 updatePatNames ns (pi :: ps)
-    = record { pat $= update } pi :: updatePatNames ns ps
+    = { pat $= update } pi :: updatePatNames ns ps
   where
     update : Pat -> Pat
     update (PAs fc n p)

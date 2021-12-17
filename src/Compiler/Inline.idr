@@ -512,7 +512,7 @@ updateCallGraph n
          Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
          let Just cexpr =  compexpr def             | Nothing => pure ()
          let refs = getRefs cexpr
-         ignore $ addDef n (record { refersToRuntimeM = Just refs } def)
+         ignore $ addDef n ({ refersToRuntimeM := Just refs } def)
 
 export
 fixArityDef : {auto c : Ref Ctxt Defs} ->

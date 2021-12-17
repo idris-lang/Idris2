@@ -186,7 +186,7 @@ readAsMain fname
          -- TODO: Maybe we should record this per namespace, since this is
          -- a little bit of a hack? Or maybe that will have too much overhead.
          ust <- get UST
-         put UST (record { nextName = nextName ustm } ust)
+         put UST ({ nextName := nextName ustm } ust)
 
          setNS replNS
          setNestedNS replNestedNS
@@ -370,7 +370,7 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                 -- If they haven't changed next time, and the source
                 -- file hasn't changed, no need to rebuild.
                 defs <- get Ctxt
-                put Ctxt (record { importHashes = importInterfaceHashes } defs)
+                put Ctxt ({ importHashes := importInterfaceHashes } defs)
                 pure (Just errs))
           (\err => pure (Just [err]))
 

@@ -160,13 +160,13 @@ field fname
 
     mkBound : List Bound -> PkgVersionBounds -> EmptyRule PkgVersionBounds
     mkBound (LT b i :: bs) pkgbs
-        = maybe (mkBound bs (record { upperBound = Just b,
-                                      upperInclusive = i } pkgbs))
+        = maybe (mkBound bs ({ upperBound := Just b,
+                               upperInclusive := i } pkgbs))
                 (\_ => fail "Dependency already has an upper bound")
                 pkgbs.upperBound
     mkBound (GT b i :: bs) pkgbs
-        = maybe (mkBound bs (record { lowerBound = Just b,
-                                      lowerInclusive = i } pkgbs))
+        = maybe (mkBound bs ({ lowerBound := Just b,
+                               lowerInclusive := i } pkgbs))
                 (\_ => fail "Dependency already has a lower bound")
                 pkgbs.lowerBound
     mkBound [] pkgbs = pure pkgbs
@@ -204,36 +204,36 @@ addField : {auto c : Ref Ctxt Defs} ->
            {auto p : Ref ParsedMods (List (FC, ModuleIdent))} ->
            {auto m : Ref MainMod (Maybe (FC, ModuleIdent))} ->
            DescField -> PkgDesc -> Core PkgDesc
-addField (PVersion fc n)     pkg = pure $ record { version = Just n } pkg
+addField (PVersion fc n)     pkg = pure $ { version := Just n } pkg
 addField (PVersionDep fc n)  pkg
     = do emitWarning (Deprecated "version numbers must now be of the form x.y.z" Nothing)
          pure pkg
-addField (PAuthors fc a)     pkg = pure $ record { authors = Just a } pkg
-addField (PMaintainers fc a) pkg = pure $ record { maintainers = Just a } pkg
-addField (PLicense fc a)     pkg = pure $ record { license = Just a } pkg
-addField (PBrief fc a)       pkg = pure $ record { brief = Just a } pkg
-addField (PReadMe fc a)      pkg = pure $ record { readme = Just a } pkg
-addField (PHomePage fc a)    pkg = pure $ record { homepage = Just a } pkg
-addField (PSourceLoc fc a)   pkg = pure $ record { sourceloc = Just a } pkg
-addField (PBugTracker fc a)  pkg = pure $ record { bugtracker = Just a } pkg
-addField (PDepends ds)       pkg = pure $ record { depends = ds } pkg
+addField (PAuthors fc a)     pkg = pure $ { authors := Just a } pkg
+addField (PMaintainers fc a) pkg = pure $ { maintainers := Just a } pkg
+addField (PLicense fc a)     pkg = pure $ { license := Just a } pkg
+addField (PBrief fc a)       pkg = pure $ { brief := Just a } pkg
+addField (PReadMe fc a)      pkg = pure $ { readme := Just a } pkg
+addField (PHomePage fc a)    pkg = pure $ { homepage := Just a } pkg
+addField (PSourceLoc fc a)   pkg = pure $ { sourceloc := Just a } pkg
+addField (PBugTracker fc a)  pkg = pure $ { bugtracker := Just a } pkg
+addField (PDepends ds)       pkg = pure $ { depends := ds } pkg
 -- we can't resolve source files for modules without knowing the source directory,
 -- so we save them for the second pass
 addField (PModules ms)       pkg = do put ParsedMods ms
                                       pure pkg
 addField (PMainMod loc n)    pkg = do put MainMod (Just (loc, n))
                                       pure pkg
-addField (PExec e)           pkg = pure $ record { executable = Just e } pkg
-addField (POpts fc e)        pkg = pure $ record { options = Just (fc, e) } pkg
-addField (PSourceDir fc a)   pkg = pure $ record { sourcedir = Just a } pkg
-addField (PBuildDir fc a)    pkg = pure $ record { builddir = Just a } pkg
-addField (POutputDir fc a)   pkg = pure $ record { outputdir = Just a } pkg
-addField (PPrebuild fc e)    pkg = pure $ record { prebuild = Just (fc, e) } pkg
-addField (PPostbuild fc e)   pkg = pure $ record { postbuild = Just (fc, e) } pkg
-addField (PPreinstall fc e)  pkg = pure $ record { preinstall = Just (fc, e) } pkg
-addField (PPostinstall fc e) pkg = pure $ record { postinstall = Just (fc, e) } pkg
-addField (PPreclean fc e)    pkg = pure $ record { preclean = Just (fc, e) } pkg
-addField (PPostclean fc e)   pkg = pure $ record { postclean = Just (fc, e) } pkg
+addField (PExec e)           pkg = pure $ { executable := Just e } pkg
+addField (POpts fc e)        pkg = pure $ { options := Just (fc, e) } pkg
+addField (PSourceDir fc a)   pkg = pure $ { sourcedir := Just a } pkg
+addField (PBuildDir fc a)    pkg = pure $ { builddir := Just a } pkg
+addField (POutputDir fc a)   pkg = pure $ { outputdir := Just a } pkg
+addField (PPrebuild fc e)    pkg = pure $ { prebuild := Just (fc, e) } pkg
+addField (PPostbuild fc e)   pkg = pure $ { postbuild := Just (fc, e) } pkg
+addField (PPreinstall fc e)  pkg = pure $ { preinstall := Just (fc, e) } pkg
+addField (PPostinstall fc e) pkg = pure $ { postinstall := Just (fc, e) } pkg
+addField (PPreclean fc e)    pkg = pure $ { preclean := Just (fc, e) } pkg
+addField (PPostclean fc e)   pkg = pure $ { postclean := Just (fc, e) } pkg
 
 addFields : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
@@ -245,9 +245,9 @@ addFields xs desc = do p <- newRef ParsedMods []
                        setSourceDir (sourcedir added)
                        ms <- get ParsedMods
                        mmod <- get MainMod
-                       pure $ record { modules = !(traverse toSource ms)
-                                     , mainmod = !(traverseOpt toSource mmod)
-                                     } added
+                       pure $ { modules := !(traverse toSource ms)
+                              , mainmod := !(traverseOpt toSource mmod)
+                              } added
   where
     toSource : (FC, ModuleIdent) -> Core (ModuleIdent, String)
     toSource (loc, ns) = pure (ns, !(nsToSource loc ns))
@@ -769,10 +769,10 @@ partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
 
     pOptUpdate : CLOpt -> (PackageOpts -> PackageOpts)
     pOptUpdate opt with (optType opt)
-      pOptUpdate opt | (PPackage cmd f) = record {pkgDetails $= ((cmd, f)::)}
-      pOptUpdate opt | POpt    = record {oopts $= (opt::)}
+      pOptUpdate opt | (PPackage cmd f) = {pkgDetails $= ((cmd, f)::)}
+      pOptUpdate opt | POpt    = {oopts $= (opt::)}
       pOptUpdate opt | PIgnore = id
-      pOptUpdate opt | PErr    = record {hasError = True}
+      pOptUpdate opt | PErr    = {hasError := True}
 
 errorMsg : String
 errorMsg = unlines
@@ -835,7 +835,7 @@ findIpkg fname
                 do let src' = up </> srcpath
                    setSource src'
                    opts <- get ROpts
-                   put ROpts (record { mainfile = Just src' } opts)
+                   put ROpts ({ mainfile := Just src' } opts)
                    pure (Just src')
   where
     dropHead : String -> List String -> List String

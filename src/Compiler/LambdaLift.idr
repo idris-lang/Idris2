@@ -146,7 +146,7 @@ genName : {auto l : Ref Lifts LDefs} ->
 genName
     = do ldefs <- get Lifts
          let i = nextName ldefs
-         put Lifts (record { nextName = i + 1 } ldefs)
+         put Lifts ({ nextName := i + 1 } ldefs)
          pure $ mkName (basename ldefs) i
   where
     mkName : Name -> Int -> Name
@@ -235,7 +235,7 @@ mutual
                scl' = dropUnused {outer=bound} unused scl
            n <- genName
            ldefs <- get Lifts
-           put Lifts (record { defs $= ((n, MkLFun (dropped vars unused) bound scl') ::) } ldefs)
+           put Lifts ({ defs $= ((n, MkLFun (dropped vars unused) bound scl') ::) } ldefs)
            pure $ LUnderApp fc n (length bound) (allVars fc vars unused)
     where
         allPrfs : (vs : List Name) -> (unused : Vect (length vs) Bool) -> List (Var vs)

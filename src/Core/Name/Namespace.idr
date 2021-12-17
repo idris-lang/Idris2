@@ -204,9 +204,7 @@ DecEq Namespace where
 -- TODO: move somewhere more appropriate
 export
 showSep : String -> List String -> String
-showSep sep [] = ""
-showSep sep [x] = x
-showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
+showSep sep = Libraries.Data.String.Extra.join sep
 
 export
 showNSWithSep : String -> Namespace -> String

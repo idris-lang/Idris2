@@ -82,12 +82,12 @@ extendSyn newsyn
            , "New (" ++ unwords (map show $ saveMod newsyn) ++ "): "
               ++ show (modDocstrings newsyn)
            ]
-         put Syn (record { infixes $= mergeLeft (infixes newsyn),
-                           prefixes $= mergeLeft (prefixes newsyn),
-                           ifaces $= merge (ifaces newsyn),
-                           modDocstrings $= mergeLeft (modDocstrings newsyn),
-                           defDocstrings $= merge (defDocstrings newsyn),
-                           bracketholes $= ((bracketholes newsyn) ++) }
+         put Syn ({ infixes $= mergeLeft (infixes newsyn),
+                    prefixes $= mergeLeft (prefixes newsyn),
+                    ifaces $= merge (ifaces newsyn),
+                    modDocstrings $= mergeLeft (modDocstrings newsyn),
+                    defDocstrings $= merge (defDocstrings newsyn),
+                    bracketholes $= ((bracketholes newsyn) ++) }
                   syn)
 
 mkPrec : Fixity -> Nat -> OpPrec
@@ -323,7 +323,7 @@ mutual
   desugarB side ps (PHole fc br holename)
       = do when br $
               do syn <- get Syn
-                 put Syn (record { bracketholes $= ((UN (Basic holename)) ::) } syn)
+                 put Syn ({ bracketholes $= ((UN (Basic holename)) ::) } syn)
            pure $ IHole fc holename
   desugarB side ps (PType fc) = pure $ IType fc
   desugarB side ps (PAs fc nameFC vname pattern)
@@ -355,9 +355,9 @@ mutual
       = do itm <- desugarB side ps term
            bs <- get Bang
            let bn = MN "bind" (nextName bs)
-           put Bang (record { nextName $= (+1),
-                              bangNames $= ((bn, fc, itm) ::)
-                            } bs)
+           put Bang ({ nextName $= (+1),
+                       bangNames $= ((bn, fc, itm) ::)
+                     } bs)
            pure (IVar EmptyFC bn)
   desugarB side ps (PIdiom fc term)
       = do itm <- desugarB side ps term
@@ -880,10 +880,10 @@ mutual
            uimpls' <- traverse (\ ntm => do tm' <- desugar AnyExpr ps (snd ntm)
                                             btm <- bindTypeNames fc oldu ps tm'
                                             pure (fst ntm, btm)) uimpls
-           put Syn (record { usingImpl = uimpls' ++ oldu } syn)
+           put Syn ({ usingImpl := uimpls' ++ oldu } syn)
            uds' <- traverse (desugarDecl ps) uds
            syn <- get Syn
-           put Syn (record { usingImpl = oldu } syn)
+           put Syn ({ usingImpl := oldu } syn)
            pure (concat uds')
   desugarDecl ps (PReflect fc tm)
       = throw (GenericMsg fc "Reflection not implemented yet")
@@ -1017,11 +1017,11 @@ mutual
 
   desugarDecl ps (PFixity fc Prefix prec (UN (Basic n)))
       = do syn <- get Syn
-           put Syn (record { prefixes $= insert n prec } syn)
+           put Syn ({ prefixes $= insert n prec } syn)
            pure []
   desugarDecl ps (PFixity fc fix prec (UN (Basic n)))
       = do syn <- get Syn
-           put Syn (record { infixes $= insert n (fix, prec) } syn)
+           put Syn ({ infixes $= insert n (fix, prec) } syn)
            pure []
   desugarDecl ps (PFixity fc _ _ _)
       = throw (GenericMsg fc "Fixity declarations must be for unqualified names")
@@ -1043,6 +1043,7 @@ mutual
   desugarDecl ps (PDirective fc d)
       = case d of
              Hide n => pure [IPragma [] (\nest, env => hide fc n)]
+             Unhide n => pure [IPragma [] (\nest, env => unhide fc n)]
              Logging i => pure [ILog ((\ i => (topics i, verbosity i)) <$> i)]
              LazyOn a => pure [IPragma [] (\nest, env => lazyActive a)]
              UnboundImplicits a => do
