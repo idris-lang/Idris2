@@ -17,7 +17,7 @@ export
 runParserTo : {e : _} ->
               (origin : OriginDesc) ->
               Maybe LiterateStyle -> Lexer ->
-              String -> Grammar State Token e ty ->
+              String -> Grammar ParsingState Token e ty ->
               Either Error (List Warning, State, ty)
 runParserTo origin lit reject str p
     = do str        <- mapFst (fromLitError origin) $ unlit lit str
@@ -28,12 +28,14 @@ runParserTo origin lit reject str p
          let ws = ws <&> \ (mb, warn) =>
                     let mkFC = \ b => MkFC origin (startBounds b) (endBounds b)
                     in ParserWarning (maybe EmptyFC mkFC mb) warn
-         Right (ws, { decorations $= (cs ++) } decs, parsed)
+         let state : State
+             state = { decorations $= (cs++) } (toState decs)
+         pure (ws, state, parsed)
 
 export
 runParser : {e : _} ->
             (origin : OriginDesc) -> Maybe LiterateStyle -> String ->
-            Grammar State Token e ty ->
+            Grammar ParsingState Token e ty ->
             Either Error (List Warning, State, ty)
 runParser origin lit = runParserTo origin lit (pred $ const False)
 
