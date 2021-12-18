@@ -46,10 +46,10 @@ deeper : {auto e : Ref EST (EState vars)} ->
 deeper elab
     = do est <- get EST
          let d = delayDepth est
-         put EST (record { delayDepth = 1 + d } est)
+         put EST ({ delayDepth := 1 + d } est)
          res <- elab
          est <- get EST
-         put EST (record { delayDepth = d } est)
+         put EST ({ delayDepth := d } est)
          pure res
 
 -- Try the given elaborator; if it fails, and the error matches the
@@ -85,16 +85,16 @@ delayOnFailure fc rig env exp pred pri elab
                          log "elab.delay" 10 ("Due to error " ++ show err)
                          ust <- get UST
                          defs <- get Ctxt
-                         put UST (record { delayedElab $=
+                         put UST ({ delayedElab $=
                                  ((pri, ci, localHints defs,
                                    mkClosedElab fc env
                                       (deeper
                                         (do ust <- get UST
                                             let nos' = noSolve ust
-                                            put UST (record { noSolve = nos } ust)
+                                            put UST ({ noSolve := nos } ust)
                                             res <- elab True
                                             ust <- get UST
-                                            put UST (record { noSolve = nos' } ust)
+                                            put UST ({ noSolve := nos' } ust)
                                             pure res))) :: ) }
                                          ust)
                          pure (dtm, expected)
@@ -130,14 +130,14 @@ delayElab {vars} fc rig env exp pri elab
                       " for") env expected
          ust <- get UST
          defs <- get Ctxt
-         put UST (record { delayedElab $=
+         put UST ({ delayedElab $=
                  ((pri, ci, localHints defs, mkClosedElab fc env
                                               (do ust <- get UST
                                                   let nos' = noSolve ust
-                                                  put UST (record { noSolve = nos } ust)
+                                                  put UST ({ noSolve := nos } ust)
                                                   res <- elab
                                                   ust <- get UST
-                                                  put UST (record { noSolve = nos' } ust)
+                                                  put UST ({ noSolve := nos' } ust)
                                                   pure res)) :: ) }
                          ust)
          pure (dtm, expected)
@@ -210,11 +210,11 @@ recoverable : {auto c : Ref Ctxt Defs} ->
               Error -> Core Bool
 recoverable (CantConvert _ gam env l r)
    = do defs <- get Ctxt
-        let defs = record { gamma = gam } defs
+        let defs = { gamma := gam } defs
         pure $ not !(contra defs !(nf defs env l) !(nf defs env r))
 recoverable (CantSolveEq _ gam env l r)
    = do defs <- get Ctxt
-        let defs = record { gamma = gam } defs
+        let defs = { gamma := gam } defs
         pure $ not !(contra defs !(nf defs env l) !(nf defs env r))
 recoverable (UndefinedName _ _) = pure False
 recoverable (LinearMisuse _ _ _ _) = pure False
@@ -256,9 +256,9 @@ retryDelayed' errmode p acc (d@(_, i, hints, elab) :: ds)
                log "elab.retry" 5 (show (delayDepth est) ++ ": Retrying delayed hole " ++ show !(getFullName (Resolved i)))
                -- elab itself might have delays internally, so keep track of them
                ust <- get UST
-               put UST (record { delayedElab = [] } ust)
+               put UST ({ delayedElab := [] } ust)
                defs <- get Ctxt
-               put Ctxt (record { localHints = hints } defs)
+               put Ctxt ({ localHints := hints } defs)
 
                tm <- elab
                ust <- get UST
@@ -317,16 +317,16 @@ runDelays : {vars : _} ->
 runDelays pri elab
     = do ust <- get UST
          let olddelayed = delayedElab ust
-         put UST (record { delayedElab = [] } ust)
+         put UST ({ delayedElab := [] } ust)
          tm <- elab
          ust <- get UST
          log "elab.delay" 2 $ "Rerunning delayed in elaborator"
          handle (do ignore $ retryDelayed' AllErrors False []
                        (reverse (filter hasPri (delayedElab ust))))
-                (\err => do put UST (record { delayedElab = olddelayed } ust)
+                (\err => do put UST ({ delayedElab := olddelayed } ust)
                             throw err)
          ust <- get UST
-         put UST (record { delayedElab $= (++ olddelayed) } ust)
+         put UST ({ delayedElab $= (++ olddelayed) } ust)
          pure tm
   where
     hasPri : (DelayReason, d) -> Bool

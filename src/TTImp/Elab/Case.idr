@@ -229,7 +229,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- actually bound! This is rather hacky, but a lot less fiddly than
          -- the alternative of fixing up the environment
          when (not (isNil fullImps)) $ findImpsIn fc [] [] casefnty
-         cidx <- addDef casen (record { eraseArgs = erasedargs }
+         cidx <- addDef casen ({ eraseArgs := erasedargs }
                                 (newDef fc casen (if isErased rigc then erased else top)
                                       [] casefnty vis None))
 
@@ -261,7 +261,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- case block, because they're not going to make progress until
          -- we come out again, so save them
          let olddelayed = delayedElab ust
-         put UST (record { delayedElab = [] } ust)
+         put UST ({ delayedElab := [] } ust)
          processDecl [InCase] nest' [] (IDef fc casen alts')
 
          -- If there's no duplication of the scrutinee in the block,
@@ -275,7 +275,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          when inlineOK $ setFlag fc casen Inline
 
          ust <- get UST
-         put UST (record { delayedElab = olddelayed } ust)
+         put UST ({ delayedElab := olddelayed } ust)
 
          pure (appTm, gnf env caseretty)
   where

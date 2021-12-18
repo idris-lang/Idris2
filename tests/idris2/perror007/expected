@@ -6,7 +6,7 @@ StrError1:2:24--2:25
  1 | foo : String
  2 | foo = "empty interp: \{}"
                             ^
-... (40 others)
+... (41 others)
 1/1: Building StrError2 (StrError2.idr)
 Error: Couldn't parse any alternatives:
 1: Expected 'case', 'if', 'do', application or operator expression.
@@ -15,7 +15,7 @@ StrError2:2:19--2:20
  1 | foo : String
  2 | foo = "nested: \{ " \{ 1 +  } " }"
                        ^
-... (28 others)
+... (29 others)
 1/1: Building StrError3 (StrError3.idr)
 Error: Couldn't parse any alternatives:
 1: Expected 'case', 'if', 'do', application or operator expression.
@@ -24,7 +24,7 @@ StrError3:2:7--2:8
  1 | foo : String
  2 | foo = "incomplete: \{ a <+> }"
            ^
-... (29 others)
+... (30 others)
 1/1: Building StrError4 (StrError4.idr)
 Error: Bracket is not properly closed.
 

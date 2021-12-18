@@ -355,37 +355,37 @@ addAutoHint (hintn_in, d)
     = do defs <- get Ctxt
          hintn <- toResolvedNames hintn_in
 
-         put Ctxt (record { autoHints $= insert hintn d } defs)
+         put Ctxt ({ autoHints $= insert hintn d } defs)
 
 export
 updatePair : {auto c : Ref Ctxt Defs} ->
              Maybe PairNames -> Core ()
 updatePair p
     = do defs <- get Ctxt
-         put Ctxt (record { options->pairnames $= (p <+>) } defs)
+         put Ctxt ({ options->pairnames $= (p <+>) } defs)
 
 export
 updateRewrite : {auto c : Ref Ctxt Defs} ->
                 Maybe RewriteNames -> Core ()
 updateRewrite r
     = do defs <- get Ctxt
-         put Ctxt (record { options->rewritenames $= (r <+>) } defs)
+         put Ctxt ({ options->rewritenames $= (r <+>) } defs)
 
 export
 updatePrimNames : PrimNames -> PrimNames -> PrimNames
 updatePrimNames p
-    = record { fromIntegerName $= ((fromIntegerName p) <+>),
-               fromStringName $= ((fromStringName p) <+>),
-               fromCharName $= ((fromCharName p) <+>),
-               fromDoubleName $= ((fromDoubleName p) <+>)
-             }
+    = { fromIntegerName $= ((fromIntegerName p) <+>),
+        fromStringName $= ((fromStringName p) <+>),
+        fromCharName $= ((fromCharName p) <+>),
+        fromDoubleName $= ((fromDoubleName p) <+>)
+      }
 
 export
 updatePrims : {auto c : Ref Ctxt Defs} ->
               PrimNames -> Core ()
 updatePrims p
     = do defs <- get Ctxt
-         put Ctxt (record { options->primnames $= updatePrimNames p } defs)
+         put Ctxt ({ options->primnames $= updatePrimNames p } defs)
 
 export
 updateNameDirectives : {auto c : Ref Ctxt Defs} ->
@@ -393,7 +393,7 @@ updateNameDirectives : {auto c : Ref Ctxt Defs} ->
 updateNameDirectives [] = pure ()
 updateNameDirectives ((t, ns) :: nds)
     = do defs <- get Ctxt
-         put Ctxt (record { namedirectives $= insert t ns } defs)
+         put Ctxt ({ namedirectives $= insert t ns } defs)
          updateNameDirectives nds
 
 export
@@ -402,7 +402,7 @@ updateCGDirectives : {auto c : Ref Ctxt Defs} ->
 updateCGDirectives cgs
     = do defs <- get Ctxt
          let cgs' = nub (cgs ++ cgdirectives defs)
-         put Ctxt (record { cgdirectives = cgs' } defs)
+         put Ctxt ({ cgdirectives := cgs' } defs)
 
 export
 updateTransforms : {auto c : Ref Ctxt Defs} ->
@@ -417,9 +417,9 @@ updateTransforms ((n, t) :: ts)
         = do defs <- get Ctxt
              case lookup n (transforms defs) of
                   Nothing =>
-                     put Ctxt (record { transforms $= insert n [t] } defs)
+                     put Ctxt ({ transforms $= insert n [t] } defs)
                   Just ts =>
-                     put Ctxt (record { transforms $= insert n (t :: ts) } defs)
+                     put Ctxt ({ transforms $= insert n (t :: ts) } defs)
 
 
 getNSas : (String, (ModuleIdent, Bool, Namespace)) ->
@@ -450,7 +450,7 @@ readFromTTC nestedns loc reexp fname modNS importAs
          -- this time, because we need to reexport the dependencies.)
          let False = (modNS, reexp, importAs) `elem` map snd (allImported defs)
               | True => pure Nothing
-         put Ctxt (record { allImported $= ((fname, (modNS, reexp, importAs)) :: ) } defs)
+         put Ctxt ({ allImported $= ((fname, (modNS, reexp, importAs)) :: ) } defs)
 
          Right buffer <- coreLift $ readFromFile fname
                | Left err => throw (InternalError (fname ++ ": " ++ show err))
@@ -495,7 +495,7 @@ readFromTTC nestedns loc reexp fname modNS importAs
                -- Finally, update the unification state with the holes from the
                -- ttc
                ust <- get UST
-               put UST (record { nextName = nextVar ttc } ust)
+               put UST ({ nextName := nextVar ttc } ust)
                pure (Just (ex, ifaceHash ttc, imported ttc))
   where
     alreadyDone : ModuleIdent -> Namespace ->

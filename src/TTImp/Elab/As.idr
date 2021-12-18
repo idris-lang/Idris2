@@ -49,9 +49,9 @@ checkAs rig elabinfo nest env fc nameFC side n_in pat topexp
                     defs <- get Ctxt
                     est <- get EST
                     put EST
-                        (record { boundNames $= ((n, AsBinding rigAs Explicit tm exp pattm) :: ),
-                                  toBind $= ((n, AsBinding rigAs Explicit tm bty pattm) ::) }
-                                est)
+                        ({ boundNames $= ((n, AsBinding rigAs Explicit tm exp pattm) :: ),
+                           toBind $= ((n, AsBinding rigAs Explicit tm bty pattm) ::) }
+                         est)
                     (ntm, nty) <- checkExp rig elabinfo env nameFC tm (gnf env exp)
                                            (Just patty)
 

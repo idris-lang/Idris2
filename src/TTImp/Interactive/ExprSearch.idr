@@ -214,8 +214,8 @@ searchIfHole fc opts hints topty env arg
                  let Hole _ _ = definition gdef
                       | _ => one (!(normaliseHoles defs env (metaApp arg)), [])
                                 -- already solved
-                 res <- search fc rig (record { depth = k,
-                                                inArg = True } opts) hints
+                 res <- search fc rig ({ depth := k,
+                                         inArg := True } opts) hints
                                topty (Resolved hole)
                  -- When we solve an argument, we're also building a lambda
                  -- expression for its environment, so we need to apply it to
@@ -412,7 +412,7 @@ tryRecursive fc rig opts hints env ty topty rdata
          case !(lookupCtxtExact (recname rdata) (gamma defs)) of
               Nothing => noResult
               Just def =>
-                do res <- searchName fc rig (record { recData = Nothing } opts) hints
+                do res <- searchName fc rig ({ recData := Nothing } opts) hints
                                      env !(nf defs env ty)
                                      topty (recname rdata, def)
                    defs <- get Ctxt
@@ -606,11 +606,11 @@ makeHelper fc rig opts env letty targetty (Result (locapp, ds) next)
          -- added first.
          -- There must be at least one case split.
          ((helper :: _), nextdef) <-
-                    searchN 1 $ gendef (record { getRecData = False,
-                                                 inUnwrap = True,
-                                                 depth = depth',
-                                                 ltor = False,
-                                                 mustSplit = True } opts)
+                    searchN 1 $ gendef ({ getRecData := False,
+                                          inUnwrap := True,
+                                          depth := depth',
+                                          ltor := False,
+                                          mustSplit := True } opts)
                                        helpern 0 ty
               | _ => do log "interaction.search" 10 "No results"
                         noResult
@@ -665,7 +665,7 @@ tryIntermediateWith fc rig opts hints env ((p, pty) :: rest) ty topty
              intnty <- genVarName "cty"
              u <- uniVar fc
              letty <- metaVar fc' erased env intnty (TType fc u)
-             let opts' = record { inUnwrap = True } opts
+             let opts' = { inUnwrap := True } opts
              locsearch <- searchLocalWith fc True rig opts' hints env [(p, pty)]
                                           letty topty
              makeHelper fc rig opts env letty targetty locsearch
@@ -707,8 +707,8 @@ tryIntermediateRec fc rig opts hints env ty topty (Just rd)
          intnty <- genVarName "cty"
          u <- uniVar fc
          letty <- metaVar fc erased env intnty (TType fc u)
-         let opts' = record { inUnwrap = True,
-                              recData = Nothing } opts
+         let opts' = { inUnwrap := True,
+                       recData := Nothing } opts
          logTerm "interaction.search" 10 "Trying recursive search for" ty
          log "interaction.search" 10 $ show !(toFullNames (recname rd))
          logTerm "interaction.search" 10 "LHS" !(toFullNames (lhsapp rd))
@@ -894,7 +894,7 @@ exprSearchOpts opts fc n_in hints
          log "interaction.search" 10 $ "LHS hole data " ++ show (n, lhs)
          opts' <- if getRecData opts
                      then do d <- getLHSData defs lhs
-                             pure (record { recData = d } opts)
+                             pure ({ recData := d } opts)
                      else pure opts
          validHints <- concat <$> for hints (\hint => do
            defs <- get Ctxt

@@ -15,7 +15,7 @@ quiz (num1 :: num2 :: nums) score
 
 randoms : Int -> Stream Int
 randoms seed = let seed' = 1664525 * seed + 1013904223 in
-                   (seed' `shiftR` fromNat 2) :: randoms seed'
+                   (seed' `shiftR` 2) :: randoms seed'
 
 arithInputs : Int -> Stream Int
 arithInputs seed = map bound (randoms seed)

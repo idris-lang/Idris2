@@ -6,6 +6,7 @@ import Data.Maybe
 import Data.SnocList
 import Data.String
 import public Libraries.Data.String.Extra
+import public Libraries.Data.Span
 
 %hide Data.String.lines
 %hide Data.String.lines'
@@ -773,33 +774,6 @@ Show (Doc ann) where
 ------------------------------------------------------------------------
 -- Turn the document into a string, and a list of annotation spans
 ------------------------------------------------------------------------
-
-public export
-record Span (a : Type) where
-  constructor MkSpan
-  start    : Nat
-  length   : Nat
-  property : a
-
-export
-Functor Span where
-  map f = { property $= f }
-
-export
-Foldable Span where
-  foldr c n span = c span.property n
-
-export
-Traversable Span where
-  traverse f (MkSpan start width prop)
-    = MkSpan start width <$> f prop
-
-export
-Show a => Show (Span a) where
-  show (MkSpan start width prop)
-    = concat {t = List} [ "[", show start, "-", show width, "]"
-                        , show prop
-                        ]
 
 export
 displaySpans : SimpleDocStream a -> (String, List (Span a))
