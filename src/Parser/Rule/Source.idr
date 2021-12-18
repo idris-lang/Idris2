@@ -7,10 +7,10 @@ import Core.Context
 import Core.TT
 import Core.Metadata
 import Data.List1
+import Data.SnocList
 import Data.String
 import Libraries.Data.List.Extra
 import Libraries.Data.String.Extra
-import Data.SnocList
 
 %hide Data.String.lines
 %hide Data.String.lines'
@@ -42,7 +42,7 @@ State = ParserState List
 
 export
 toState : ParsingState -> State
-toState (MkState decs hs) = MkState (asList decs) hs
+toState (MkState decs hs) = MkState (cast decs) hs
 
 -- To help prevent concatenation slow downs, we only
 -- provide Semigroup and Monoid for the efficient
