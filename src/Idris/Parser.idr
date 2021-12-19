@@ -1869,26 +1869,19 @@ replCmd (c :: cs)
   <|> symbol c
   <|> replCmd cs
 
+addClauseCmd : Rule EditCmd
+addClauseCmd =
+  (do
+      upd <- option False (symbol "!" $> True)
+      line <- intLit
+      n <- name
+      pure (AddClause upd (fromInteger line) n)
+  ) <|> fail "Bad \":addclause\" semantics"
+
 export
 editCmd : Rule EditCmd
 editCmd
-    = do replCmd ["typeat"]
-         line <- intLit
-         col <- intLit
-         n <- name
-         pure (TypeAt (fromInteger line) (fromInteger col) n)
-  <|> do replCmd ["cs"]
-         upd <- option False (symbol "!" $> True)
-         line <- intLit
-         col <- intLit
-         n <- name
-         pure (CaseSplit upd (fromInteger line) (fromInteger col) n)
-  <|> do replCmd ["ac"]
-         upd <- option False (symbol "!" $> True)
-         line <- intLit
-         n <- name
-         pure (AddClause upd (fromInteger line) n)
-  <|> do replCmd ["ps", "proofsearch"]
+    = do replCmd ["ps", "proofsearch"]
          upd <- option False (symbol "!" $> True)
          line <- intLit
          n <- name
@@ -1904,21 +1897,6 @@ editCmd
          pure (GenerateDef upd (fromInteger line) n (fromInteger nreject))
   <|> do replCmd ["gdnext"]
          pure GenerateDefNext
-  <|> do replCmd ["ml", "makelemma"]
-         upd <- option False (symbol "!" $> True)
-         line <- intLit
-         n <- name
-         pure (MakeLemma upd (fromInteger line) n)
-  <|> do replCmd ["mc", "makecase"]
-         upd <- option False (symbol "!" $> True)
-         line <- intLit
-         n <- name
-         pure (MakeCase upd (fromInteger line) n)
-  <|> do replCmd ["mw", "makewith"]
-         upd <- option False (symbol "!" $> True)
-         line <- intLit
-         n <- name
-         pure (MakeWith upd (fromInteger line) n)
   <|> fatalError "Unrecognised command"
 
 export
@@ -1959,25 +1937,45 @@ data CmdArg : Type where
      ||| The command takes a on or off.
      OnOffArg : CmdArg
 
+     ||| The command takes an argument documenting it's name
+     NamedCmdArg : String -> CmdArg -> CmdArg
+
+     ||| The command takes an argument documenting it's default value
+     WithDefaultArg : String -> CmdArg -> CmdArg
+
+     ||| The command takes arguments separated by ","
+     ListArg : CmdArg -> CmdArg
+
      ||| The command takes multiple arguments.
      Args : List CmdArg -> CmdArg
 
-export
-covering
-Show CmdArg where
-  show NoArg = ""
-  show NameArg = "<name>"
-  show ExprArg = "<expr>"
-  show DocArg = "<keyword|expr>"
-  show DeclsArg = "<decls>"
-  show NumberArg = "<number>"
-  show AutoNumberArg = "<number|auto>"
-  show OptionArg = "<option>"
-  show FileArg = "<file>"
-  show ModuleArg = "<module>"
-  show StringArg = "<string>"
-  show OnOffArg = "(on|off)"
-  show (Args args) = showSep " " (map show args)
+mutual
+  covering
+  showCmdArg : CmdArg -> String
+  showCmdArg NoArg = ""
+  showCmdArg NameArg = "name"
+  showCmdArg ExprArg = "expr"
+  showCmdArg DocArg = "keyword|expr"
+  showCmdArg DeclsArg = "decls"
+  showCmdArg NumberArg = "number"
+  showCmdArg AutoNumberArg = "number|auto"
+  showCmdArg OptionArg = "option"
+  showCmdArg FileArg = "file"
+  showCmdArg ModuleArg = "module"
+  showCmdArg StringArg = "string"
+  showCmdArg OnOffArg = "(on|off)"
+  showCmdArg (ListArg arg) = "[" ++ showCmdArg arg ++ "]"
+  showCmdArg (WithDefaultArg value arg) = showCmdArg arg ++ "|" ++ value
+  showCmdArg (NamedCmdArg name arg) = name ++ ":" ++ showCmdArg arg
+  showCmdArg args@(Args _) = show args
+
+  export
+  covering
+  Show CmdArg where
+    show NoArg = ""
+    show OnOffArg = "(on|off)"
+    show (Args args) = showSep " " (map show args)
+    show arg = "<" ++ showCmdArg arg ++ ">"
 
 export
 data ParseCmd : Type where
@@ -2000,6 +1998,7 @@ runParseCmd : ParseCmd -> Rule ()
 runParseCmd (ParseREPLCmd names) = replCmd names
 runParseCmd (ParseKeywordCmd keyword') = keyword keyword'
 runParseCmd (ParseIdentCmd ident) = exactIdent ident
+
 
 noArgCmd : ParseCmd -> REPLCmd -> String -> CommandDefinition
 noArgCmd parseCmd command doc = (names, NoArg, doc, parse)
@@ -2178,6 +2177,99 @@ loggingArgCmd parseCmd command doc = (names, Args [StringArg, NumberArg], doc, p
     lvl <- mustWork $ logLevel (Virtual Interactive)
     pure (command lvl)
 
+editLineNameArgCmd : ParseCmd -> (Bool -> Int -> Name -> EditCmd) -> String -> CommandDefinition
+editLineNameArgCmd parseCmd command doc = (names, Args [NamedCmdArg "l" NumberArg, NamedCmdArg "n" StringArg], doc, parse) where
+
+  names : List String
+  names = extractNames parseCmd
+
+  parse : Rule REPLCmd
+  parse = do
+    symbol ":"
+    runParseCmd parseCmd
+    upd <- option False (symbol "!" $> True)
+    line <- fromInteger <$> mustWork intLit
+    n <- mustWork name
+    pure (Editing $ command upd line n)
+
+editLineColNameArgCmd : ParseCmd -> (Bool -> Int -> Int -> Name -> EditCmd) -> String -> CommandDefinition
+editLineColNameArgCmd parseCmd command doc = 
+  ( names
+  , Args [ NamedCmdArg "l" NumberArg
+         , NamedCmdArg "c" NumberArg
+         , NamedCmdArg "n" StringArg
+         ]
+  , doc
+  , parse
+  ) where
+
+  names : List String
+  names = extractNames parseCmd
+
+  parse : Rule REPLCmd
+  parse = do
+    symbol ":"
+    runParseCmd parseCmd
+    upd <- option False (symbol "!" $> True)
+    line <- fromInteger <$> mustWork intLit
+    col <- fromInteger <$> mustWork intLit
+    n <- mustWork name
+    pure (Editing $ command upd line col n)
+
+editLineNameListArgCmd : ParseCmd 
+                       -> (Bool -> Int -> Name -> List Name -> EditCmd)
+                       -> String 
+                       -> CommandDefinition
+editLineNameListArgCmd parseCmd command doc = 
+  ( names
+  , Args [ NamedCmdArg "l" NumberArg
+         , NamedCmdArg "n" StringArg
+         , NamedCmdArg "h" (ListArg NameArg)
+         ]
+  , doc
+  , parse
+  ) where
+
+  names : List String
+  names = extractNames parseCmd
+
+  parse : Rule REPLCmd
+  parse = do
+    symbol ":"
+    runParseCmd parseCmd
+    upd <- option False (symbol "!" $> True)
+    line <- fromInteger <$> mustWork intLit
+    n <- mustWork name
+    hints <- mustWork $ sepBy (symbol ",") name
+    pure (Editing $ command upd line n hints)
+
+editLineNameOptionArgCmd : ParseCmd 
+                        -> (Bool -> Int -> Name -> Nat -> EditCmd)
+                        -> String 
+                        -> CommandDefinition
+editLineNameOptionArgCmd parseCmd command doc = 
+  ( names
+  , Args [ NamedCmdArg "l" NumberArg
+         , NamedCmdArg "n" StringArg
+         , NamedCmdArg "r" (WithDefaultArg "0" NumberArg)
+         ]
+  , doc
+  , parse
+  ) where
+
+  names : List String
+  names = extractNames parseCmd
+
+  parse : Rule REPLCmd
+  parse = do
+    symbol ":"
+    runParseCmd parseCmd
+    upd <- option False (symbol "!" $> True)
+    line <- fromInteger <$> mustWork intLit
+    n <- mustWork name
+    nreject <- fromInteger <$> option 0 intLit
+    pure (Editing $ command upd line n nreject)
+
 parserCommandsForHelp : CommandTable
 parserCommandsForHelp =
   [ exprArgCmd (ParseREPLCmd ["t", "type"]) Check "Check the type of an expression"
@@ -2208,6 +2300,16 @@ parserCommandsForHelp =
   , autoNumberArgCmd (ParseREPLCmd ["consolewidth"]) SetConsoleWidth "Set the width of the console output (0 for unbounded) (auto by default)"
   , onOffArgCmd (ParseREPLCmd ["color", "colour"]) SetColor "Whether to use color for the console output (enabled by default)"
   , noArgCmd (ParseREPLCmd ["m", "metavars"]) Metavars "Show remaining proof obligations (metavariables or holes)"
+  , editLineColNameArgCmd (ParseREPLCmd ["typeat"]) (\_,l,c,n => TypeAt l c n) "Show type of term <n> defined on line <l> and column <c>"
+  , editLineColNameArgCmd (ParseREPLCmd ["cs", "casesplit"]) CaseSplit "Case split term <n> defined on line <l> and column <c>"
+  , editLineNameArgCmd (ParseREPLCmd ["ac", "addclause"]) AddClause "Add clause to term <n> defined on line <l>"
+  , editLineNameArgCmd (ParseREPLCmd ["ml", "makelemma"]) MakeLemma "Make lemma for term <n> defined on line <l>"
+  , editLineNameArgCmd (ParseREPLCmd ["mc", "makecase"]) MakeCase "Make case on term <n> defined on line <l>"
+  , editLineNameArgCmd (ParseREPLCmd ["mw", "makewith"]) MakeWith "Add with expression on term <n> defined on line <l>"
+  , editLineNameListArgCmd (ParseREPLCmd ["ps", "proofsearch"]) ExprSearch "Search for a proof"
+  , noArgCmd (ParseREPLCmd ["psnext"]) (Editing ExprSearchNext) "Show next proof"
+  , editLineNameOptionArgCmd (ParseREPLCmd ["gs"]) GenerateDef "Search for a proof"
+  , noArgCmd (ParseREPLCmd ["gdnext"]) (Editing GenerateDefNext) "Show next definition"
   , noArgCmd (ParseREPLCmd ["version"]) ShowVersion "Display the Idris version"
   , noArgCmd (ParseREPLCmd ["?", "h", "help"]) Help "Display this help text"
   , declsArgCmd (ParseKeywordCmd "let") NewDefn "Define a new value"
