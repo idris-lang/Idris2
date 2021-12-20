@@ -2172,7 +2172,7 @@ editLineNameArgCmd parseCmd command doc = (names, Args [NamedCmdArg "l" NumberAr
     pure (Editing $ command upd line n)
 
 editLineColNameArgCmd : ParseCmd -> (Bool -> Int -> Int -> Name -> EditCmd) -> String -> CommandDefinition
-editLineColNameArgCmd parseCmd command doc = 
+editLineColNameArgCmd parseCmd command doc =
   ( names
   , Args [ NamedCmdArg "l" NumberArg
          , NamedCmdArg "c" NumberArg
@@ -2195,11 +2195,11 @@ editLineColNameArgCmd parseCmd command doc =
     n <- mustWork name
     pure (Editing $ command upd line col n)
 
-editLineNameListArgCmd : ParseCmd 
+editLineNameListArgCmd : ParseCmd
                        -> (Bool -> Int -> Name -> List Name -> EditCmd)
-                       -> String 
+                       -> String
                        -> CommandDefinition
-editLineNameListArgCmd parseCmd command doc = 
+editLineNameListArgCmd parseCmd command doc =
   ( names
   , Args [ NamedCmdArg "l" NumberArg
          , NamedCmdArg "n" StringArg
@@ -2222,11 +2222,11 @@ editLineNameListArgCmd parseCmd command doc =
     hints <- mustWork $ sepBy (symbol ",") name
     pure (Editing $ command upd line n hints)
 
-editLineNameOptionArgCmd : ParseCmd 
+editLineNameOptionArgCmd : ParseCmd
                         -> (Bool -> Int -> Name -> Nat -> EditCmd)
-                        -> String 
+                        -> String
                         -> CommandDefinition
-editLineNameOptionArgCmd parseCmd command doc = 
+editLineNameOptionArgCmd parseCmd command doc =
   ( names
   , Args [ NamedCmdArg "l" NumberArg
          , NamedCmdArg "n" StringArg
