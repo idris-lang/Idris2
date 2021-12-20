@@ -2287,7 +2287,7 @@ parserCommandsForHelp =
   , editLineNameArgCmd (ParseREPLCmd ["mw", "makewith"]) MakeWith "Add with expression on term <n> defined on line <l>"
   , editLineNameListArgCmd (ParseREPLCmd ["ps", "proofsearch"]) ExprSearch "Search for a proof"
   , noArgCmd (ParseREPLCmd ["psnext"]) (Editing ExprSearchNext) "Show next proof"
-  , editLineNameOptionArgCmd (ParseREPLCmd ["gs"]) GenerateDef "Search for a proof"
+  , editLineNameOptionArgCmd (ParseREPLCmd ["gd"]) GenerateDef "Search for a proof"
   , noArgCmd (ParseREPLCmd ["gdnext"]) (Editing GenerateDefNext) "Show next definition"
   , noArgCmd (ParseREPLCmd ["version"]) ShowVersion "Display the Idris version"
   , noArgCmd (ParseREPLCmd ["?", "h", "help"]) Help "Display this help text"
