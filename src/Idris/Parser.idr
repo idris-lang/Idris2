@@ -1879,27 +1879,6 @@ addClauseCmd =
   ) <|> fail "Bad \":addclause\" semantics"
 
 export
-editCmd : Rule EditCmd
-editCmd
-    = do replCmd ["ps", "proofsearch"]
-         upd <- option False (symbol "!" $> True)
-         line <- intLit
-         n <- name
-         hints <- sepBy (symbol ",") name
-         pure (ExprSearch upd (fromInteger line) n hints)
-  <|> do replCmd ["psnext"]
-         pure ExprSearchNext
-  <|> do replCmd ["gd"]
-         upd <- option False (symbol "!" $> True)
-         line <- intLit
-         n <- name
-         nreject <- option 0 intLit
-         pure (GenerateDef upd (fromInteger line) n (fromInteger nreject))
-  <|> do replCmd ["gdnext"]
-         pure GenerateDefNext
-  <|> fatalError "Unrecognised command"
-
-export
 data CmdArg : Type where
      ||| The command takes no arguments.
      NoArg : CmdArg
@@ -2337,5 +2316,4 @@ command
     = eoi $> NOP
   <|> nonEmptyCommand
   <|> symbol ":?" $> Help -- special case, :? doesn't fit into above scheme
-  <|> symbol ":" *> Editing <$> editCmd
   <|> eval
