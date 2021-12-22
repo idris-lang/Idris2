@@ -180,6 +180,7 @@ time : HasIO io => io Integer
 time = pure $ cast !(primIO prim__time)
 
 %foreign support "idris2_getPID"
+         "node:lambda:() => process.pid"
 prim__getPID : PrimIO Int
 
 ||| Get the ID of the currently running process.
