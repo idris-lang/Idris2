@@ -244,6 +244,48 @@ The export rules, ``public export`` and ``export``, are *per namespace*,
 not *per file*, so the two ``test`` definitions above need the ``export``
 flag to be visible outside their own namespaces.
 
+Explicit namespaces inside functions
+------------------------------------
+
+Explicit namespaces can be defined inside ``where``-blocks of functions.
+Unlike other definitions (e.g. ``data`` or ``record``),
+such namespace definitions are understood as belonging to the scope of the function definition itself.
+
+For example, the following code should typecheck.
+
+.. code-block:: idris
+
+    withNSInside : Nat
+    withNSInside = g where
+      namespace X
+        export
+        g : Nat
+        g = 5
+
+    useNSFromOutside : Nat
+    useNSFromOutside = X.g
+
+Notice that if a function that contains namespace definition has parameters,
+then definitions inside this namespace will have these parameters too.
+This is done because such definitions have access to values of the parameters.
+
+These parameters must be passed explicitly when accessing namespaced definitions from outside the function where they are declared,
+and must not be passed when accessed from the inside.
+This behaviour is similar to parameterised blocks described below.
+Look at the following example.
+
+.. code-block:: idris
+
+    withNSInside' : String -> Nat
+    withNSInside' str = String.length g where
+      namespace Y
+        export
+        g : String
+        g = str ++ "a"
+
+    useNSFromOutside' : String
+    useNSFromOutside' = Y.g "x" -- value is "xa"
+
 Parameterised blocks
 ====================
 
