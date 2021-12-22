@@ -1,0 +1,23 @@
+package papers
+version = 0.5.1
+
+options = "--ignore-missing-ipkg"
+
+depends = contrib
+
+modules = Data.Container,
+
+          Data.InductionRecursion.DybjerSetzer,
+
+          Data.OpenUnion,
+
+          Data.Recursion.Free,
+
+          Data.Tree.Perfect,
+
+          Data.Vect.Binary,
+
+          Search.Generator,
+          Search.HDecidable,
+          Search.Negation,
+          Search.Properties

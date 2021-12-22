@@ -28,16 +28,12 @@ modules = Control.ANSI,
           Data.Bool.Algebra,
           Data.Bool.Decidable,
 
-          Data.Container,
-
           Data.Fin.Extra,
 
           Data.Fun.Extra,
           Data.Fun.Graph,
 
           Data.IMaybe,
-
-          Data.InductionRecursion.DybjerSetzer,
 
           Data.Int.Order,
 
@@ -80,13 +76,9 @@ modules = Control.ANSI,
           Data.Nat.Order.Relation,
           Data.Nat.Properties,
 
-          Data.OpenUnion,
-
           Data.Order,
 
           Data.Path,
-
-          Data.Recursion.Free,
 
           Data.Rel.Complement,
 
@@ -110,11 +102,8 @@ modules = Control.ANSI,
           Data.Telescope.SimpleFun,
           Data.Telescope.Congruence,
 
-          Data.Tree.Perfect,
-
           Data.Validated,
 
-          Data.Vect.Binary,
           Data.Vect.Properties,
           Data.Vect.Properties.Tabulate,
           Data.Vect.Properties.Index,
@@ -143,11 +132,6 @@ modules = Control.ANSI,
           Language.JSON.String.Parser,
           Language.JSON.String.Tokens,
           Language.JSON.Tokens,
-
-          Search.Generator,
-          Search.HDecidable,
-          Search.Negation,
-          Search.Properties,
 
           Syntax.WithProof,
           Syntax.PreorderReasoning,
