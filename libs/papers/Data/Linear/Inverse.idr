@@ -1,0 +1,106 @@
+||| This module is based on the content of the functional pearl
+||| How to Take the Inverse of a Type
+||| by Daniel Marshall and Dominic Orchard
+
+module Data.Linear.Inverse
+
+import Data.INTEGER
+import Data.Linear.LMaybe
+import Data.Linear.LVect
+import Data.Linear.Notation
+
+%default total
+
+||| Inverse is a shorthand for 'multiplicative skew inverse'
+Inverse : Type -> Type
+Inverse a = (1 _ : a) -> ()
+
+||| And this is the morphism witnessing the multiplicative skew inverse
+divide : a -@ Inverse a -@ ()
+divide x u = u x
+
+doubleNegation : a -@ Inverse (Inverse a)
+doubleNegation = divide
+
+||| We only use the inverse of a if the LMaybe is actually Just.m
+maybeNeg : LMaybe a -@ Inverse a -@ LMaybe (Inverse a)
+maybeNeg Nothing u = Just u
+maybeNeg (Just n) u = divide n u `seq` Nothing
+
+||| Linear version of Either
+data LEither : Type -> Type -> Type where
+  Left : a -@ LEither a b
+  Right : b -@ LEither a b
+
+lid : a -@ a
+lid x = x
+
+lcompose : (b -@ c) -@ (a -@ b) -@ (a -@ c)
+lcompose g f = \ 1 x => g (f x)
+
+comap : (b -@ a) -@ Inverse a -@ Inverse b
+comap f u = lcompose u f
+
+comapId : (u : Inverse a) -> Inverse.comap Inverse.lid u === Inverse.lid u
+comapId u = Refl
+
+comapComp : (u : Inverse a) ->
+  Inverse.comap (lcompose g f) u
+  === lcompose (Inverse.comap f) (Inverse.comap g) u
+comapComp u = Refl
+
+munit : () -@ Inverse ()
+munit u = u `seq` lid
+
+mmult : Inverse a -@ Inverse b -@ Inverse (LPair a b)
+mmult ua ub (a # b) = divide a ua `seq` divide b ub
+
+Pow : Type -> INTEGER -> Type
+Pow a Z = ()
+Pow a (PS n) = LVect (S n) a
+Pow a (NS n) = LVect (S n) (Inverse a)
+
+powPositiveL : (m, n : Nat) -> Pow a (cast $ m + n) -@
+          LPair (Pow a (cast m)) (Pow a (cast n))
+powPositiveL Z n as = (() # as)
+powPositiveL 1 Z [a] = ([a] # ())
+powPositiveL 1 (S n) (a :: as) = ([a] # as)
+powPositiveL (S m@(S _)) n (a :: as)
+  = let (xs # ys) = powPositiveL m n as in (a :: xs # ys)
+
+powPositiveR : (m, n : Nat) -> Pow a (cast m) -@ Pow a (cast n) -@
+           Pow a (cast $ m + n)
+powPositiveR 0 n xs ys = xs `seq` ys
+powPositiveR 1 0 xs ys = ys `seq` xs
+powPositiveR 1 (S n) [a] ys = a :: ys
+powPositiveR (S m@(S _)) n (x :: xs) ys = x :: powPositiveR m n xs ys
+
+powNegateL : (m : Nat) -> Pow a (- cast m) -> Pow (Inverse a) (cast m)
+powNegateL Z as = as
+powNegateL (S m) as = as
+
+powNegateR : (m : Nat) -> Pow (Inverse a) (cast m) -> Pow a (- cast m)
+powNegateR Z as = as
+powNegateR (S m) as = as
+
+powNegativeL : (m, n : Nat) -> Pow a (- cast (m + n)) -@
+            LPair (Pow a (- cast m)) (Pow a (- cast n))
+powNegativeL Z n as = (() # as)
+powNegativeL 1 Z [a] = ([a] # ())
+powNegativeL 1 (S n) (a :: as) = ([a] # as)
+powNegativeL (S m@(S _)) n (a :: as)
+  = let (xs # ys) = powNegativeL m n as in (a :: xs # ys)
+
+powNegativeR : (m, n : Nat) -> Pow a (- cast m) -@ Pow a (- cast n) -@
+           Pow a (- cast (m + n))
+powNegativeR 0 n xs ys = xs `seq` ys
+powNegativeR 1 0 xs ys = ys `seq` xs
+powNegativeR 1 (S n) [a] ys = a :: ys
+powNegativeR (S m@(S _)) n (x :: xs) ys = x :: powNegativeR m n xs ys
+
+powMinus : (m, n : Nat) -> Pow a (cast m) -@ Pow a (- cast n) -@
+           Pow a (cast m - cast n)
+powMinus 0 n as us = as `seq` us
+powMinus (S k) 0 as us = us `seq` as
+powMinus (S k) (S j) (a :: as) (u :: us)
+  = divide a u `seq` ?a_5 -- annoying

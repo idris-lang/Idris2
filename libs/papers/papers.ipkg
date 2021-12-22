@@ -1,13 +1,17 @@
 package papers
 version = 0.5.1
 
-options = "--ignore-missing-ipkg"
+depends = contrib, linear
 
-depends = contrib
+options = "--ignore-missing-ipkg"
 
 modules = Data.Container,
 
           Data.InductionRecursion.DybjerSetzer,
+
+          Data.INTEGER,
+
+          Data.Linear.Inverse,
 
           Data.OpenUnion,
 

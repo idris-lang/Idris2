@@ -1,0 +1,11 @@
+package linear
+version = 0.5.1
+
+depends = contrib
+
+options = "--ignore-missing-ipkg"
+
+modules = Data.Linear.LMaybe,
+          Data.Linear.LVect,
+          Data.Linear.Notation,
+          Data.Linear.Pow
