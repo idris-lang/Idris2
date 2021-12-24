@@ -2,11 +2,11 @@
   "nodes": {
     "flake-utils": {
       "locked": {
-        "lastModified": 1614513358,
-        "narHash": "sha256-LakhOx3S1dRjnh0b5Dg3mbZyH0ToC9I8Y2wKSkBaTzU=",
+        "lastModified": 1638122382,
+        "narHash": "sha256-sQzZzAbvKEqN9s0bzWuYmRaA03v40gaJ4+iL1LXjaeI=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "5466c5bbece17adaab2d82fae80b46e807611bf3",
+        "rev": "74f7e4319258e287b0f9cb95426c9853b282730b",
         "type": "github"
       },
       "original": {
@@ -18,11 +18,11 @@
     "idris-emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1613351183,
-        "narHash": "sha256-ngg48SzrR2LCtjle3WR3BOK86USRB0ZXmgXWu9EzQbo=",
+        "lastModified": 1640162726,
+        "narHash": "sha256-blfl73dUC3dagL6PIK2+0979DGH4ZnMMHsd6U1yD+LM=",
         "owner": "redfish64",
         "repo": "idris2-mode",
-        "rev": "77390611a934f13e03a45e9f8a4e476dd17a9c5b",
+        "rev": "f56118aa09f5562815d3295d2fd160152bdef967",
         "type": "github"
       },
       "original": {
@@ -33,30 +33,15 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1614810944,
-        "narHash": "sha256-mDpk7kP5nRRMhXZDjGQUIoq+3mUgixPXt93md0fI46E=",
+        "lastModified": 1640348409,
+        "narHash": "sha256-TrV1MmmwqkWvnDUoHMeJ4el3yRsz/ryz+PoE7iAR2Xw=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "d485a4db259470c19872ef6bf13ef4a0c5b2bb3c",
+        "rev": "ec9e6999fe6cb53d15caca2bfb1abf8e708f22b2",
         "type": "github"
       },
       "original": {
-        "id": "nixpkgs",
-        "type": "indirect"
-      }
-    },
-    "nixpkgs-chez-racket": {
-      "locked": {
-        "lastModified": 1627484694,
-        "narHash": "sha256-UsEb5G0ZJ8l/2y9u9FNj2akXx2PC5QAan24U3t32cfI=",
-        "owner": "L-as",
-        "repo": "nixpkgs",
-        "rev": "9b3c4bee8cee477ac03b0cfd4ebca40954c66106",
-        "type": "github"
-      },
-      "original": {
-        "owner": "L-as",
-        "ref": "chez-racket",
+        "owner": "NixOS",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -65,8 +50,7 @@
       "inputs": {
         "flake-utils": "flake-utils",
         "idris-emacs-src": "idris-emacs-src",
-        "nixpkgs": "nixpkgs",
-        "nixpkgs-chez-racket": "nixpkgs-chez-racket"
+        "nixpkgs": "nixpkgs"
       }
     }
   },
