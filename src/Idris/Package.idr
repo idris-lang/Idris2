@@ -373,7 +373,11 @@ installFrom builddir destdir ns
          traverse_ (\ (obj, dest) =>
                       do coreLift $ putStrLn $ "Installing " ++ obj ++ " to " ++ destPath
                          Right () <- coreLift $ copyFile obj dest
-                               | Left err => throw $ FileErr obj err
+                               | Left FileNotFound => pure ()
+                               | Left err => throw $ InternalError $ unlines
+                                               [ "Can't copy file " ++ obj ++ " to " ++ destPath
+                                               , show err
+                                               ]
                          pure ())
                    objPaths
 
