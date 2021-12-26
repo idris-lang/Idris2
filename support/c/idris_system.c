@@ -1,4 +1,9 @@
 #include <stdlib.h>
+
+#ifndef _WIN32
+#include <sys/wait.h>
+#endif
+
 #include "idris_system.h"
 
 int idris2_system(const char* command) {
