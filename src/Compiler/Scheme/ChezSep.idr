@@ -13,6 +13,7 @@ import Core.Context
 import Core.Context.Log
 import Core.Directory
 import Core.Options
+import Core.System
 import Core.TT
 import Libraries.Utils.Path
 
@@ -96,7 +97,7 @@ startChezWinSh chez appDirSh targetSh = """
 
 -- TODO: parallelise this
 compileChezLibraries : (chez : String) -> (libDir : String) -> (ssFiles : List String) -> Core ()
-compileChezLibraries chez libDir ssFiles = coreLift_ $ system $ unwords
+compileChezLibraries chez libDir ssFiles = system_ $ unwords
   [ "echo"
   , unwords
     [ "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ chezString ssFile ++ "))'"
@@ -109,7 +110,7 @@ compileChezLibraries chez libDir ssFiles = coreLift_ $ system $ unwords
   ]
 
 compileChezLibrary : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
-compileChezLibrary chez libDir ssFile = coreLift_ $ system $ unwords
+compileChezLibrary chez libDir ssFile = system_ $ unwords
   [ "echo"
   , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ chezString ssFile ++ "))'"
   , "'(delete-file " ++ chezString ssFile ++ ")'"
@@ -117,7 +118,7 @@ compileChezLibrary chez libDir ssFile = coreLift_ $ system $ unwords
   ]
 
 compileChezProgram : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
-compileChezProgram chez libDir ssFile = coreLift_ $ system $ unwords
+compileChezProgram chez libDir ssFile = system_ $ unwords
   [ "echo"
   , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++ chezString ssFile ++ "))'"
   , "'(delete-file " ++ chezString ssFile ++ ")'"
@@ -142,7 +143,7 @@ chezLibraryName cu = chezNS (min1 cu.namespaces)
 
 -- TODO: use a proper exec function without shell injection
 touch : String -> Core ()
-touch s = coreLift_ $ system ("touch \"" ++ s ++ "\"")
+touch s = system_ ("touch \"" ++ s ++ "\"")
 
 record ChezLib where
   constructor MkChezLib
@@ -269,7 +270,8 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
   let appDirSh  = outfile ++ "_app"  -- relative to the launcher shell script
   let appDirRel = outputDir </> appDirSh  -- relative to CWD
   let appDirAbs = cwd </> appDirRel
-  coreLift_ $ mkdirAll appDirRel
+  Right () <- coreLift $ mkdirAll appDirRel
+       | Left err => throw (FileErr appDirRel err)
 
   -- generate the code
   chez <- coreLift $ findChez
@@ -301,7 +303,7 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
   if isWindows
      then makeShWindows chez outShRel appDirSh launchTargetSh
      else makeSh        chez outShRel appDirSh launchTargetSh
-  coreLift_ $ chmodRaw outShRel 0o755
+  chmodRaw_ outShRel 0o755
   pure (Just outShRel)
 
 ||| Chez Scheme implementation of the `executeExpr` interface.
@@ -310,7 +312,7 @@ executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c tmpDir tm
     = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpchez"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system sh
+         system_ sh
 
 ||| Codegen wrapper for Chez scheme implementation.
 export

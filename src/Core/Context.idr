@@ -1953,7 +1953,10 @@ export
 setWorkingDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
 setWorkingDir dir
     = do defs <- get Ctxt
-         coreLift_ $ changeDir dir
+         when (dir /= "") $ do
+           True <- coreLift $ changeDir dir
+                | False => throw $ InternalError $ "setWorkingDir: Can't change to directory '" ++ dir ++ "'"
+           pure ()
          Just cdir <- coreLift $ currentDir
               | Nothing => throw (InternalError "Can't get current directory")
          put Ctxt ({ options->dirs->working_dir := cdir } defs)
@@ -1971,7 +1974,9 @@ withCtxt = wrapRef Ctxt resetCtxt
   where
     resetCtxt : Defs -> Core ()
     resetCtxt defs = do let dir = defs.options.dirs.working_dir
-                        coreLift_ $ changeDir dir
+                        True <- coreLift $ changeDir dir
+                             | False => throw $ InternalError $ "withCtxt: Can't change to directory '" ++ dir ++ "'"
+                        pure ()
 
 export
 setPrefix : {auto c : Ref Ctxt Defs} -> String -> Core ()

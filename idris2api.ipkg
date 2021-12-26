@@ -77,6 +77,7 @@ modules =
     Core.Primitives,
     Core.Reflect,
     Core.SchemeEval,
+    Core.System,
     Core.Termination,
     Core.Transform,
     Core.TT,

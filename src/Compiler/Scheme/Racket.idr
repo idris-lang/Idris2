@@ -10,6 +10,7 @@ import Core.Context
 import Core.Context.Log
 import Core.Directory
 import Core.Name
+import Core.System
 import Core.TT
 import Protocol.Hex
 import Libraries.Utils.Path
@@ -403,7 +404,7 @@ compileToRKT c appdir tm outfile
                    runmain ++ schFooter
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)
-         coreLift_ $ chmodRaw outfile 0o755
+         chmodRaw_ outfile 0o755
          pure ()
 
 makeSh : String -> String -> String -> String -> Core ()
@@ -427,7 +428,8 @@ compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String)
 compileExpr mkexec c tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
-         coreLift_ $ mkdirAll appDirGen
+         Right () <- coreLift $ mkdirAll appDirGen
+              | Left err => throw (FileErr appDirGen err)
          Just cwd <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
 
@@ -456,7 +458,7 @@ compileExpr mkexec c tmpDir outputDir tm outfile
                        else if mkexec
                                then makeSh "" outShRel appDirRel outBinFile
                                else makeSh (racket ++ " ") outShRel appDirRel outRktFile
-                    coreLift_ $ chmodRaw outShRel 0o755
+                    chmodRaw_ outShRel 0o755
                     pure (Just outShRel)
             else pure Nothing
 
@@ -464,7 +466,7 @@ executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c tmpDir tm
     = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpracket"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system sh
+         system_ sh
 
 export
 codegenRacket : Codegen

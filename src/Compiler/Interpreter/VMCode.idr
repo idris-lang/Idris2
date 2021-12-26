@@ -141,7 +141,7 @@ knownForeign = fromList
     ]
   where
     prim_putChar : Ref State InterpState => Stack -> Vect 2 Object -> Core Object
-    prim_putChar _ [Const (Ch c), Const WorldVal] = ioRes unit <$ coreLift_ (putChar c)
+    prim_putChar _ [Const (Ch c), Const WorldVal] = ioRes unit <$ coreLift (putChar c)
     prim_putChar stk as = argError stk as
     prim_getChar : Ref State InterpState => Stack -> Vect 1 Object -> Core Object
     prim_getChar _ [Const WorldVal] = ioRes . Const . Ch <$> coreLift getChar
@@ -150,7 +150,7 @@ knownForeign = fromList
     prim_getStr _ [Const WorldVal] = Const . Str <$> coreLift getLine
     prim_getStr stk as = argError stk as
     prim_putStr : Ref State InterpState => Stack -> Vect 2 Object -> Core Object
-    prim_putStr _ [Const (Str s), Const WorldVal] = ioRes unit <$ coreLift_ (putStr s)
+    prim_putStr _ [Const (Str s), Const WorldVal] = ioRes unit <$ coreLift (putStr s)
     prim_putStr stk as = argError stk as
 
 knownExtern : NameMap (ar ** (Ref State InterpState => Stack -> Vect ar Object -> Core Object))

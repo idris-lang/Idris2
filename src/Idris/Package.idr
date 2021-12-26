@@ -372,7 +372,9 @@ installFrom builddir destdir ns
          -- since some modules don't generate any code themselves.
          traverse_ (\ (obj, dest) =>
                       do coreLift $ putStrLn $ "Installing " ++ obj ++ " to " ++ destPath
-                         ignore $ coreLift $ copyFile obj dest)
+                         Right () <- coreLift $ copyFile obj dest
+                               | Left err => throw $ FileErr obj err
+                         pure ())
                    objPaths
 
          pure ()
@@ -448,7 +450,8 @@ install pkg opts installSrc -- not used but might be in the future
          traverse_ (installFrom (wdir </> build) targetDir . fst) toInstall
          when installSrc $ do
            traverse_ (installSrcFrom wdir targetDir) toInstall
-         coreLift_ $ changeDir wdir
+         True <- coreLift $ changeDir wdir
+             | False => throw $ InternalError $ "Can't change directory to " ++ wdir
 
          runScript (postinstall pkg)
 
@@ -817,7 +820,8 @@ findIpkg : {auto c : Ref Ctxt Defs} ->
 findIpkg fname
    = do Just (dir, ipkgn, up) <- coreLift findIpkgFile
              | Nothing => pure fname
-        coreLift_ $ changeDir dir
+        True <- coreLift $ changeDir dir
+             | False => throw $ InternalError $ "findIpkg: Can't change to directory '" ++ dir ++ "'"
         setWorkingDir dir
         Right (pname, fs) <- coreLift $ parseFile ipkgn
                                  (do desc <- parsePkgDesc ipkgn

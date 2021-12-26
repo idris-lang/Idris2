@@ -9,6 +9,7 @@ import Core.Context
 import Core.Directory
 import Core.Name
 import Core.Options
+import Core.System
 import Core.TT
 import Protocol.Hex
 import Libraries.Utils.Path
@@ -400,7 +401,7 @@ executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c tmpDir tm
     = do Just sh <- compileExpr c tmpDir tmpDir tm "_tmpgambit"
            | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system sh -- TODO: on windows, should add exe extension
+         system_ sh -- TODO: on windows, should add exe extension
          pure ()
 
 export

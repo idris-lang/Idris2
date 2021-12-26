@@ -9,6 +9,7 @@ import Compiler.Common
 
 import Core.Context
 import Core.Options
+import Core.System
 import Core.TT
 import Libraries.Utils.Path
 
@@ -50,7 +51,7 @@ executeExpr c tmpDir tm =
      Core.writeFile outn js
      node <- coreLift findNode
      quoted_node <- pure $ "\"" ++ node ++ "\"" -- Windows often have a space in the path.
-     coreLift_ $ system (quoted_node ++ " " ++ outn)
+     system_ (quoted_node ++ " " ++ outn)
      pure ()
 
 ||| Codegen wrapper for Node implementation.

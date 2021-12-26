@@ -10,6 +10,7 @@ import Compiler.Generated
 import Core.Context
 import Core.Context.Log
 import Core.Directory
+import Core.System
 
 import Data.List
 import Libraries.Data.DList
@@ -1021,8 +1022,8 @@ footer = do
 export
 executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
 executeExpr c _ tm
-    = do coreLift_ $ putStrLn "Execute expression not yet implemented for refc"
-         coreLift_ $ system "false"
+    = do coreLift $ putStrLn "Execute expression not yet implemented for refc"
+         system_ "false"
 
 export
 generateCSourceFile : {auto c : Ref Ctxt Defs}
@@ -1043,7 +1044,8 @@ generateCSourceFile defs outn =
      fileContent <- get OutfileText
      let code = fastConcat (map (++ "\n") (reify fileContent))
 
-     coreLift_ $ writeFile outn code
+     Right () <- coreLift $ writeFile outn code
+          | Left err => throw (FileErr outn err)
      log "compiler.refc" 10 $ "Generated C file " ++ outn
 
 export
@@ -1059,7 +1061,8 @@ compileExpr ANF c _ outputDir tm outfile =
      let outobj = outputDir </> outfile ++ ".o"
      let outexec = outputDir </> outfile
 
-     coreLift_ $ mkdirAll outputDir
+     Right () <- coreLift $ mkdirAll outputDir
+          | Left err => throw (FileErr outputDir err)
      cdata <- getCompileData False ANF tm
      let defs = anf cdata
 
