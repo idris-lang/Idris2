@@ -796,7 +796,7 @@ processPackageOpts opts
     = do (MkPFR cmds@(_::_) opts' err) <- pure $ partitionOpts opts
              | (MkPFR Nil opts' _) => pure False
          if err
-           then coreLift $ putStrLn (errorMsg ++ "\n")
+           then coreLift $ putStrLn errorMsg
            else traverse_ (processPackage opts') cmds
          pure True
 
