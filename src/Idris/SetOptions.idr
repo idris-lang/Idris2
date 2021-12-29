@@ -28,8 +28,6 @@ import System.Directory
 
 %default covering
 
-%hide Libraries.Data.String.Extra.unlines
-
 ||| Dissected information about a package directory
 record PkgDir where
   constructor MkPkgDir

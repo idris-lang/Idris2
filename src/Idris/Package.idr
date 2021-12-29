@@ -43,11 +43,6 @@ import Idris.Version
 import public Idris.Package.Types
 import Idris.Package.Init
 
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
-
 %default covering
 
 installDir : PkgDesc -> String

@@ -12,6 +12,7 @@ import Core.TT
 import Core.Value
 
 import Data.List
+import Data.String
 import Data.Vect
 import Libraries.Data.LengthMatch
 import Libraries.Data.SortedSet
