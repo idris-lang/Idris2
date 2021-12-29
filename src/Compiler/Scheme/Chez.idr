@@ -385,28 +385,8 @@ getFgnCall : {auto c : Ref Ctxt Defs} ->
              Core (Maybe String, String)
 getFgnCall version (n, fc, d) = schFgnDef fc n d version
 
-export
-startChezPreamble : String
-startChezPreamble = """
-  #!/bin/sh
-  # \{ generatedString "Chez" }
-
-  set -e # exit on any error
-
-  if [ "$(uname)" = Darwin ]; then
-    DIR=$(zsh -c 'printf %s "$0:A:h"' "$0")
-  else
-    DIR=$(dirname "$(readlink -f -- "$0")")
-  fi
-
-  """
-
 startChez : String -> String -> String
-startChez appdir target = startChezPreamble ++ """
-  export LD_LIBRARY_PATH="$DIR/\{ appdir }:$LD_LIBRARY_PATH"
-  export DYLD_LIBRARY_PATH="$DIR/\{ appdir }:$DYLD_LIBRARY_PATH"
-  export IDRIS2_INC_SRC="$DIR/\{ appdir }"
-
+startChez appdir target = (startSchemePreamble appdir "Chez") ++ """
   "$DIR/\{ target }" "$@"
   """
 

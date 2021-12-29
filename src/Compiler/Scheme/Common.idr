@@ -2,6 +2,7 @@ module Compiler.Scheme.Common
 
 import Compiler.Common
 import Compiler.CompileExpr
+import Compiler.Generated
 
 import Core.Context
 import Core.Name
@@ -23,6 +24,37 @@ schString s = concatMap okchar (unpack s)
     okchar c = if isAlphaNum c || c =='_'
                   then cast c
                   else "C-" ++ show (cast {to=Int} c)
+
+export
+startSchemePreamble : String -> String -> String
+startSchemePreamble appdir backend = """
+  #!/bin/sh
+  # \{ generatedString backend }
+
+  set -e # exit on any error
+
+  case "$(uname -s)" in
+        Linux*)     OS=Linux;;
+        Darwin*)    OS=Mac;;
+        CYGWIN*)    OS=Windows;;
+        MINGW*)     OS=Windows;;
+        *)          OS=Unknown
+  esac
+
+  if [ ${OS} = Windows ]; then
+    DIR=$(dirname "$(readlink -f -- \"$0\" || cygpath -a -- \"$0\")")
+    PATH=$DIR/idris2_app:$PATH # The Windows equivalent of LD_LIBRARY_PATH is PATH.
+  elif [ ${OS} = Mac ]; then
+    DIR=$(zsh -c 'printf %s "$0:A:h"' "$0")
+  else
+    DIR=$(dirname "$(readlink -f -- "$0")")
+  fi
+
+  export LD_LIBRARY_PATH="$DIR/\{ appdir }:$LD_LIBRARY_PATH"
+  export DYLD_LIBRARY_PATH="$DIR/\{ appdir }:$DYLD_LIBRARY_PATH"
+  export IDRIS2_INC_SRC="$DIR/\{ appdir }"
+
+  """
 
 export
 schUserName : UserName -> String
