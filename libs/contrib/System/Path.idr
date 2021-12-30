@@ -248,8 +248,8 @@ export
 tryParse : String -> Maybe Path
 tryParse str =
   case parse parsePath (lexPath str) of
-      Right (path, []) => Just path
-      _ => Nothing
+    Right (path, []) => Just path
+    _ => Nothing
 
 ||| Parses a String into Path.
 |||
