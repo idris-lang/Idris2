@@ -251,7 +251,6 @@ tryParse str =
       Right (path, []) => Just path
       _ => Nothing
 
-
 ||| Parses a String into Path.
 |||
 ||| The string is parsed as much as possible from left to right, and the invalid
