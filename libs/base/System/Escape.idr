@@ -1,7 +1,6 @@
 module System.Escape
 
 import Data.List
-import Data.String
 
 import System.Info
 
