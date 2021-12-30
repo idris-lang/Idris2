@@ -2,8 +2,6 @@
 module Protocol.IDE
 
 import Protocol.SExp
-import Data.List
-import Data.Maybe
 
 import public Libraries.Data.Span
 

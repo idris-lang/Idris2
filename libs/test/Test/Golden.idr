@@ -82,7 +82,6 @@ import Data.String
 import System
 import System.Clock
 import System.Directory
-import System.File
 import System.Future
 import System.Info
 import System.Path

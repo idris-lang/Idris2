@@ -5,8 +5,6 @@ module Idris.IDEMode.Parser
 
 import Idris.IDEMode.Commands
 import Core.Core
-import Core.Name
-import Core.Metadata
 import Core.FC
 
 import Data.List
