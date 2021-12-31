@@ -1,5 +1,6 @@
 module Data.String
 
+import Data.String.Extra
 import Data.List
 import Data.List1
 
@@ -86,7 +87,7 @@ unwords' ws = assert_total (foldr1 addSpace ws) where
 ||| ```
 export
 unwords : List String -> String
-unwords = pack . unwords' . map unpack
+unwords = join " "
 
 ||| Splits a character list into a list of newline separated character lists.
 |||
@@ -132,7 +133,8 @@ unlines' (l::ls) = l ++ '\n' :: unlines' ls
 ||| ```
 export
 unlines : List String -> String
-unlines = pack . unlines' . map unpack
+unlines [""] = "\n"
+unlines = join "\n"
 
 %transform "fastUnlines" unlines = fastUnlines
 
