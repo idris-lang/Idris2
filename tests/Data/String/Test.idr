@@ -1,9 +1,7 @@
 module Data.String.Test
 
+import Data.String
 import Data.String.Extra
-
-unlines : List String -> String
-unlines = join "\n"
 
 empty_string_equal : "" = ""
 empty_string_equal = Refl
@@ -15,7 +13,7 @@ unlines_empty_list_helper : unlines [] = ""
 unlines_empty_list_helper = Refl
 
 unlines_is_distributive : (a, b : List String) -> unlines (a ++ b) = unlines a ++ unlines b 
-unlines_is_distributive [] [] = unlines_empty_list_helper
+unlines_is_distributive [] [] = Refl
 unlines_is_distributive a b = Refl
 
 main : IO ()
