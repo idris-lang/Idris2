@@ -33,7 +33,7 @@ on:
       - '.github/workflows/ci-super-linter.yml'
 
 env:
-  IDRIS2_VERSION: 0.5.0 # For previous-version build
+  IDRIS2_VERSION: 0.5.1 # For previous-version build
 
 jobs:
 
@@ -50,9 +50,9 @@ jobs:
         id: get_commit_message
         run: |
           if   [[ '${{ github.event_name }}' == 'push' ]]; then
-            echo ::set-output name=commit_message::$(git log --format=%B -n 1 HEAD)
+            echo "::set-output name=commit_message::$(git log --format=%B -n 1 HEAD)"
           elif [[ '${{ github.event_name }}' == 'pull_request' ]]; then
-            echo ::set-output name=commit_message::$(git log --format=%B -n 1 HEAD^2)
+            echo "::set-output name=commit_message::$(git log --format=%B -n 1 HEAD^2)"
           fi
 
     outputs:
@@ -82,7 +82,7 @@ jobs:
           echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y -t hirsute chezscheme
-          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
 
       # Get our hands on the released version either by using the cache
       # or by rebuilding it if necessary.
@@ -95,14 +95,14 @@ jobs:
       - name : Build previous version
         if: steps.previous-version-cache.outputs.cache-hit != 'true'
         run: |
-          wget https://www.idris-lang.org/idris2-src/idris2-$IDRIS2_VERSION.tgz
-          tar zxvf idris2-$IDRIS2_VERSION.tgz
-          cd Idris2-$IDRIS2_VERSION
+          wget "https://www.idris-lang.org/idris2-src/idris2-$IDRIS2_VERSION.tgz"
+          tar zxvf "idris2-$IDRIS2_VERSION.tgz"
+          cd "Idris2-$IDRIS2_VERSION"
           make bootstrap
           cd ..
       - name: Install previous version
         run: |
-          cd Idris2-$IDRIS2_VERSION
+          cd "Idris2-$IDRIS2_VERSION"
           make install
           cd ..
 
@@ -140,7 +140,7 @@ jobs:
           echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y -t hirsute chezscheme
-          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Make bootstrap folder readonly
         run: chmod -R a-w bootstrap
       - name: Build from bootstrap
@@ -167,7 +167,7 @@ jobs:
         run: |
           brew install chezscheme
           brew install coreutils
-          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Make bootstrap folder readonly
         run: chmod -R a-w bootstrap
       - name: Build Idris 2 from bootstrap
@@ -264,7 +264,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get install -y racket
-          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Make bootstrap folder readonly
         run: chmod -R a-w bootstrap
       - name: Build from bootstrap
@@ -300,8 +300,8 @@ jobs:
           echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y -t hirsute chezscheme
-          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
-          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build self-hosted
         run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted
@@ -324,8 +324,8 @@ jobs:
         run: |
           brew install chezscheme
           brew install coreutils
-          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
-          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build self-hosted
         run: make all IDRIS2_BOOT="idris2 -Werror" && make install
         shell: bash
@@ -352,8 +352,8 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get install -y racket
-          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
-          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build self-hosted
         run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted
@@ -381,8 +381,8 @@ jobs:
           echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y -t hirsute chezscheme
-          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
-          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build self-hosted from previous version
         run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted from previous version
@@ -471,8 +471,8 @@ jobs:
           echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y -t hirsute chezscheme
-          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
-          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build API
         run: make install-api
         shell: bash
@@ -506,8 +506,8 @@ jobs:
           echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y -t hirsute chezscheme
-          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
-          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
         uses: actions/checkout@v2
         with:
@@ -535,8 +535,8 @@ jobs:
           echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y -t hirsute chezscheme
-          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
-          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
         uses: actions/checkout@v2
         with:
@@ -565,8 +565,8 @@ jobs:
           echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
           sudo apt-get install -y -t hirsute chezscheme
-          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
-          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
         uses: actions/checkout@v2
         with:

@@ -82,7 +82,6 @@ import Data.String
 import System
 import System.Clock
 import System.Directory
-import System.File
 import System.Future
 import System.Info
 import System.Path
@@ -253,6 +252,9 @@ runTest opts testPath = forkIO $ do
     expVsOut : String -> String -> List String
     expVsOut exp out = ["Expected:", maybeColored Green exp, "Given:", maybeColored Red out]
 
+    badSystemExitCode : Int -> Bool
+    badSystemExitCode code = code < 0 || code == 127 {- 127 means shell couldn't start -}
+
     mayOverwrite : Maybe String -> String -> IO ()
     mayOverwrite mexp out = do
       case mexp of
@@ -267,7 +269,7 @@ runTest opts testPath = forkIO $ do
             escapeArg testPath ++ "/expected " ++ escapeArg testPath ++ "/output"
           putStr . unlines $
             ["Golden value differs from actual value."] ++
-            (if (code < 0) then expVsOut exp out else []) ++
+            (if badSystemExitCode code then expVsOut exp out else []) ++
             ["Accept actual value as new golden value? [y/N]"]
       b <- getAnswer
       when b $ do Right _ <- writeFile (testPath ++ "/expected") out
