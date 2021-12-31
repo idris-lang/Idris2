@@ -221,6 +221,7 @@ modules =
     Protocol.IDE.Highlight,
     Protocol.Hex,
     Protocol.SExp,
+    Protocol.SExp.Parser,
 
     TTImp.BindImplicits,
     TTImp.Elab,
