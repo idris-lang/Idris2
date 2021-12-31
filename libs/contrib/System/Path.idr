@@ -244,6 +244,13 @@ parsePath =
                 (x::xs) => x :: delete CurDir xs
     pure $ MkPath vol (isJust root) body (isJust trailSep)
 
+export
+tryParse : String -> Maybe Path
+tryParse str =
+  case parse parsePath (lexPath str) of
+    Right (path, []) => Just path
+    _ => Nothing
+
 ||| Parses a String into Path.
 |||
 ||| The string is parsed as much as possible from left to right, and the invalid
