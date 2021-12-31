@@ -55,8 +55,8 @@
 
   This changes behaviour from previous versions of the protocol.
   Matching PRs in the emacs modes:
-  + idris2-mode: https://github.com/idris-community/idris2-mode/pull/11
-  + idris-mode: https://github.com/idris-hackers/idris-mode/pull/547
+  + idris2-mode [PR#11](https://github.com/idris-community/idris2-mode/pull/11)
+  + idris-mode [PR#547](https://github.com/idris-hackers/idris-mode/pull/547)
 
 ### Library changes
 
