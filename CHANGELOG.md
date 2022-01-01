@@ -315,7 +315,7 @@ Added
   it also leads to shorter compilation times in large codebases where only some
   files have changed -- for example when developing Idris2 code generators. The
   codegen has a large parallelisation potential but at the moment, it is
-  significantly slower for a full rebuild of a large code base (the code
+  significantly slower for a full rebuild of a large codebase (the code
   generation stage takes about 3x longer).
 
 ### API changes
