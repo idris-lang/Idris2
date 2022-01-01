@@ -146,7 +146,7 @@ unlines' (l::ls) = l ++ '\n' :: unlines' ls
 export
 unlines : List String -> String
 unlines [] = ""
-unlines (x::xs) = (x ++ "\n") ++ (unlines xs)
+unlines (x::xs) = x ++ "\n" ++ unlines xs
 
 %transform "fastUnlines" unlines = fastUnlines
 
