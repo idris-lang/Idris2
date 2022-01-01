@@ -53,12 +53,6 @@ takeLast n str with (length str)
     takeLast n str | len | Yes prf = substr (len `minus` n) len str
     takeLast n str | len | No contra = str
 
-||| Remove the first `n` characters from a string. Returns the empty string if
-||| the input string is too short.
-public export
-drop : (n : Nat) -> (input : String) -> String
-drop n str = substr n (length str) str
-
 ||| Remove the last `n` characters from a string. Returns the empty string if
 ||| the input string is too short.
 public export

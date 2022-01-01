@@ -38,6 +38,11 @@ partial
 foldl1 : (a -> a -> a) -> List a -> a
 foldl1 f (x::xs) = foldl f x xs
 
+||| Remove the first `n` characters from a string. Returns the empty string if
+||| the input string is too short.
+public export
+drop : (n : Nat) -> (input : String) -> String
+drop n str = substr n (length str) str
 
 ||| Concatenate the strings from a `Foldable` containing strings, separated by
 ||| the given string.
@@ -140,8 +145,8 @@ unlines' (l::ls) = l ++ '\n' :: unlines' ls
 ||| ```
 export
 unlines : List String -> String
-unlines [""] = "\n"
-unlines = join "\n"
+unlines [] = ""
+unlines (x::xs) = (x ++ "\n") ++ (unlines xs)
 
 %transform "fastUnlines" unlines = fastUnlines
 
