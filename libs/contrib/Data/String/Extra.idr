@@ -71,13 +71,6 @@ public export
 shrink : (n : Nat) -> (input : String) -> String
 shrink n str = dropLast n (drop n str)
 
-||| Concatenate the strings from a `Foldable` containing strings, separated by
-||| the given string.
-public export
-join : (sep : String) -> Foldable t => (xs : t String) -> String
-join sep xs = drop (length sep)
-                   (foldl (\acc, x => acc ++ sep ++ x) "" xs)
-
 ||| Get a character from a string if the string is long enough.
 public export
 index : (n : Nat) -> (input : String) -> Maybe Char

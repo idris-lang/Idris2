@@ -1,6 +1,5 @@
 module Data.String
 
-import Data.String.Extra
 import Data.List
 import Data.List1
 
@@ -38,6 +37,14 @@ foldr1 f (x::xs) = f x (foldr1 f xs)
 partial
 foldl1 : (a -> a -> a) -> List a -> a
 foldl1 f (x::xs) = foldl f x xs
+
+
+||| Concatenate the strings from a `Foldable` containing strings, separated by
+||| the given string.
+public export
+join : (sep : String) -> Foldable t => (xs : t String) -> String
+join sep xs = drop (length sep)
+                   (foldl (\acc, x => acc ++ sep ++ x) "" xs)
 
 -- This uses fastConcat internally so it won't compute at compile time.
 export

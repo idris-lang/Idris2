@@ -1,7 +1,6 @@
 module Data.String.Test
 
 import Data.String
-import Data.String.Extra
 
 empty_string_equal : "" = ""
 empty_string_equal = Refl
