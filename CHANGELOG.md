@@ -56,7 +56,7 @@
 #### Contrib
 
 * `System.Random` support for `Int` changed to `Int32`; it already limited itself
-  to 32 bits but now that is codified. Javascript backends are now supported.
+  to 32 bits but now that is codified. JavaScript backends are now supported.
 * Removes `contrib`'s deprecated `Data.Num.Implementations` module. See
   `Prelude.Interfaces` instead.
 
@@ -192,7 +192,7 @@ Changed
   list-shaped types, and enumerations, so generated code will often be slightly
   faster.
 * Added `--profile` flag, which generates profile data if supported by a back
-  end. Currently supported by the Chez and Racket back ends.
+  end. Currently supported by the Chez and Racket backends.
 * New `%builtin` pragma for compiling user defined natural numbers to primitive
   `Integer`s (see the
   [docs](https://idris2.readthedocs.io/en/latest/reference/builtins.html))
@@ -295,7 +295,7 @@ Added
   `broadcast` at the cost of losing `wait-timeout` due to increased complexity
   of their internals and interactions between their associated functions.
 
-#### Javascript
+#### JavaScript
 
 * Now use `Number` to represent up to 32 bit precision signed and unsigned
   integers. `Int32` still goes via `BigInt` for multiplication to avoid
@@ -315,7 +315,7 @@ Added
   it also leads to shorter compilation times in large codebases where only some
   files have changed -- for example when developing Idris2 code generators. The
   codegen has a large parallelisation potential but at the moment, it is
-  significantly slower for a full rebuild of a large code base (the code
+  significantly slower for a full rebuild of a large codebase (the code
   generation stage takes about 3x longer).
 
 ### API changes
@@ -388,7 +388,7 @@ Library changes:
     [Implementing Condition Variables with Semaphores](https://www.microsoft.com/en-us/research/wp-content/uploads/2004/12/ImplementingCVs.pdf) by Andrew Birrell
 
   - Removed `threadID` and `blodwen-thisthread`. Formerly, in the Chez Scheme
-    backend, this function returned "the thread id of the current thread" as a
+    backend, this function returned "the thread ID of the current thread" as a
     value of type `ThreadID`. However, `fork` returned a "thread object" as a
     value of type `ThreadID`. These are *different kinds of values* in Chez
     Scheme. As there was nothing one could do with a value of type `ThreadID`, I
@@ -448,7 +448,7 @@ REPL/IDE mode changes:
 
 * Added `:color (on|off)` option for colored terminal output.
 * Added `:consolewidth (auto|n)` option for printing margins.  Mirrors the
-  command line option.
+  command-line option.
 
 ## v0.2.1
 
