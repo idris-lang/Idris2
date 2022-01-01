@@ -311,6 +311,9 @@ templateTests = testsInDir "templates" (const True) "Test templates" [] Nothing
 baseLibraryTests : IO TestPool
 baseLibraryTests = testsInDir "base" (const True) "Base library" [Chez, Node] Nothing
 
+dataTests : IO TestPool
+dataTests = testsInDir "Data" (const True) "Data Structures" [] Nothing
+
 -- same behavior as `baseLibraryTests`
 contribLibraryTests : IO TestPool
 contribLibraryTests = testsInDir "contrib" (const True) "Contrib library" [Chez, Node] Nothing
@@ -341,6 +344,7 @@ main = runner $
   , !typeddTests
   , !ideModeTests
   , !preludeTests
+  , !dataTests
   , !baseLibraryTests
   , !contribLibraryTests
   , testPaths "chez" chezTests
