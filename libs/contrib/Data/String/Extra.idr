@@ -63,19 +63,19 @@ drop n str = substr n (length str) str
 ||| the input string is too short.
 public export
 dropLast : (n : Nat) -> (input : String) -> String
-dropLast n str = reverse (drop n (reverse str))
+dropLast n str = reverse (Libraries.Data.String.Extra.drop n (reverse str))
 
 ||| Remove the first and last `n` characters from a string. Returns the empty
 ||| string if the input string is too short.
 public export
 shrink : (n : Nat) -> (input : String) -> String
-shrink n str = dropLast n (drop n str)
+shrink n str = dropLast n (Libraries.Data.String.Extra.drop n str)
 
 ||| Concatenate the strings from a `Foldable` containing strings, separated by
 ||| the given string.
 public export
 join : (sep : String) -> Foldable t => (xs : t String) -> String
-join sep xs = drop (length sep)
+join sep xs = Libraries.Data.String.Extra.drop (length sep)
                    (foldl (\acc, x => acc ++ sep ++ x) "" xs)
 
 ||| Get a character from a string if the string is long enough.
