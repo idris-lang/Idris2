@@ -1397,6 +1397,8 @@ fnDirectOpt : OriginDesc -> Rule PFnOpt
 fnDirectOpt fname
     = do pragma "hint"
          pure $ IFnOpt (Hint True)
+  <|> do pragma "chaser"
+         pure $ IFnOpt (Hint False)
   <|> do pragma "globalhint"
          pure $ IFnOpt (GlobalHint False)
   <|> do pragma "defaulthint"
