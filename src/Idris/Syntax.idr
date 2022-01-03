@@ -770,8 +770,8 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (PSectionR _ _ x op) = "(" ++ showPTermPrec d x ++ " " ++ showOpPrec d op ++ ")"
   showPTermPrec d (PEq fc l r) = showPTermPrec d l ++ " = " ++ showPTermPrec d r
   showPTermPrec d (PBracketed _ tm) = "(" ++ showPTermPrec d tm ++ ")"
-  showPTermPrec d (PString _ xs) = join " ++ " $ showPStr <$> xs
-  showPTermPrec d (PMultiline _ indent xs) = "multiline (" ++ (join " ++ " $ showPStr <$> concat xs) ++ ")"
+  showPTermPrec d (PString _ xs) = Libraries.Data.String.Extra.join " ++ " $ showPStr <$> xs
+  showPTermPrec d (PMultiline _ indent xs) = "multiline (" ++ (Libraries.Data.String.Extra.join " ++ " $ showPStr <$> concat xs) ++ ")"
   showPTermPrec d (PDoBlock _ ns ds)
         = "do " ++ showSep " ; " (map showDo ds)
   showPTermPrec d (PBang _ tm) = "!" ++ showPTermPrec d tm
