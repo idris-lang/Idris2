@@ -91,7 +91,7 @@ unwords = pack . unwords' . map unpack
 ||| Splits a character list into a list of newline separated character lists.
 |||
 ||| The emptry string becomes an empty list. The last newline, if not followed by
-||| any additional characters, is eaten (there will never be an empt string last element
+||| any additional characters, is eaten (there will never be an empty string last element
 ||| in the result).
 |||
 ||| ```idris example
