@@ -22,7 +22,7 @@
   and
 
   ```idris
-  { field = value } r
+  { field := value } r
   ```
 
   The former is now deprecated in favour of the latter syntax.
