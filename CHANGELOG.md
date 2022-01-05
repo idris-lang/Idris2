@@ -13,6 +13,21 @@
 
 ### Language changes
 
+* There were two versions of record syntax used when updating records:
+
+  ```idris
+  record { field = value } r
+  ```
+
+  and
+
+  ```idris
+  { field := value } r
+  ```
+
+  The former is now deprecated in favour of the latter syntax.
+  The compiler will issue a warning when using the `record` keyword.
+
 * Interpolated strings now make use of `concat` which is compiled into `fastConcat`
   The interpolated slices now make use of the `Interpolation` interface available
   in the prelude. It has only one method `interpolate` which is called for every
@@ -540,7 +555,7 @@ Language changes:
   be at least `covering`
   + That is, `%default covering` is the default status.
 * Fields of records can be accessed (and updated) using the dot syntax,
-  such as `r.field1.field2` or `{ field1.field2 := 42 }`.
+  such as `r.field1.field2` or `record { field1.field2 = 42 }`.
   For details, see [the "records" entry in the user manual](https://idris2.readthedocs.io/en/latest/reference/records.html)
 * New function flag `%tcinline` which means that the function should be
   inlined for the purposes of totality checking (but otherwise not inlined).
