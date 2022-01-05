@@ -111,7 +111,7 @@ lines' s = linesHelp [] s
 
 ||| Splits a string into a list of newline separated strings.
 |||
-||| The emptry string becomes an empty list. The last newline, if not followed by
+||| The empty string becomes an empty list. The last newline, if not followed by
 ||| any additional characters, is eaten (there will never be an empty string last element
 ||| in the result).
 |||
