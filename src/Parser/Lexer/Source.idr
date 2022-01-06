@@ -65,7 +65,7 @@ Show Token where
   show StringEnd = "string end"
   show InterpBegin = "string interp begin"
   show InterpEnd = "string interp end"
-  show (StringLit n x) = "string" ++ Extra.replicate n '#' ++ " " ++ show x
+  show (StringLit n x) = "string" ++ replicate n '#' ++ " " ++ show x
   -- Identifiers
   show (HoleIdent x) = "hole identifier " ++ x
   show (Ident x) = "identifier " ++ x
@@ -96,7 +96,7 @@ Pretty Token where
   pretty StringEnd = reflow "string end"
   pretty InterpBegin = reflow "string interp begin"
   pretty InterpEnd = reflow "string interp end"
-  pretty (StringLit n x) = pretty ("string" ++ Extra.replicate n '#') <++> dquotes (pretty x)
+  pretty (StringLit n x) = pretty ("string" ++ replicate n '#') <++> dquotes (pretty x)
   -- Identifiers
   pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
   pretty (Ident x) = pretty "identifier" <++> pretty x
@@ -184,14 +184,14 @@ stringBegin : Lexer
 stringBegin = many (is '#') <+> (is '"')
 
 stringEnd : Nat -> String
-stringEnd hashtag = "\"" ++ Extra.replicate hashtag '#'
+stringEnd hashtag = "\"" ++ replicate hashtag '#'
 
 multilineBegin : Lexer
 multilineBegin = many (is '#') <+> (exact "\"\"\"") <+>
                     manyUntil newline space <+> newline
 
 multilineEnd : Nat -> String
-multilineEnd hashtag = "\"\"\"" ++ Extra.replicate hashtag '#'
+multilineEnd hashtag = "\"\"\"" ++ replicate hashtag '#'
 
 -- Do this as an entire token, because the contents will be processed by
 -- a specific back end
@@ -319,7 +319,7 @@ fromOctLit str
 mutual
   stringTokens : Bool -> Nat -> Tokenizer Token
   stringTokens multi hashtag
-      = let escapeChars = "\\" ++ Extra.replicate hashtag '#'
+      = let escapeChars = "\\" ++ replicate hashtag '#'
             interpStart = escapeChars ++ "{"
             escapeLexer = escape (exact escapeChars) any
             charLexer = non $ exact (if multi then multilineEnd hashtag else stringEnd hashtag)

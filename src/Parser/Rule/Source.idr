@@ -9,12 +9,6 @@ import Core.Metadata
 import Data.List1
 import Data.String
 import Libraries.Data.List.Extra
-import Libraries.Data.String.Extra
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
 
 %default total
 
