@@ -19,15 +19,10 @@ import Data.String
 
 import Libraries.Data.List.Extra
 import Libraries.Data.List1 as Lib
-import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Data.String.Extra
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import System.File
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
 
 %default covering
 
@@ -70,10 +65,10 @@ ploc fc = do
     let (er, ec) = mapHom (fromInteger . cast) e
     let nsize = length $ show (er + 1)
     let head = annotate FileCtxt (pretty fc)
-    source <- (forget . lines) <$> getCurrentElabSource
+    source <- lines <$> getCurrentElabSource
     if sr == er
        then do
-         let emph = spaces (cast $ nsize + sc + 4) <+> annotate Error (pretty (Extra.replicate (ec `minus` sc) '^'))
+         let emph = spaces (cast $ nsize + sc + 4) <+> annotate Error (pretty (replicate (ec `minus` sc) '^'))
          let firstr = er `minus` 4
          pure $ vsep ([emptyDoc, head] ++ (addLineNumbers nsize firstr (pretty <$> extractRange firstr er source)) ++ [emph]) <+> line
        else pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr (pretty <$> extractRange sr (Prelude.min er (sr + 5)) source)) <+> line
@@ -81,7 +76,7 @@ ploc fc = do
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
     pad : Nat -> String -> String
-    pad size s = Extra.replicate (size `minus` length s) '0' ++ s
+    pad size s = replicate (size `minus` length s) '0' ++ s
     addLineNumbers : Nat -> Nat -> List (Doc IdrisAnn) -> List (Doc IdrisAnn)
     addLineNumbers size st xs =
       snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
@@ -103,18 +98,18 @@ ploc2 fc1 fc2 =
           else do let nsize = length $ show (er2 + 1)
                   let head = annotate FileCtxt (pretty $ MkFC fn1 s1 e2)
                   let firstRow = annotate FileCtxt (spaces (cast $ nsize + 2) <+> pipe)
-                  source <- (forget . lines) <$> getCurrentElabSource
+                  source <- lines <$> getCurrentElabSource
                   case (sr1 == er1, sr2 == er2, sr1 == sr2) of
                        (True, True, True) => do
                          let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
-                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (Extra.replicate (ec1 `minus` sc1) '^'))
-                                      <+> spaces (cast $ sc2 `minus` ec1) <+> error (pretty (Extra.replicate (ec2 `minus` sc2) '^'))
+                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (replicate (ec1 `minus` sc1) '^'))
+                                      <+> spaces (cast $ sc2 `minus` ec1) <+> error (pretty (replicate (ec2 `minus` sc2) '^'))
                          pure $ vsep [emptyDoc, head, firstRow, fileCtxt (space <+> pretty (sr1 + 1)) <++> align (vsep [line, emph]), emptyDoc]
                        (True, True, False) => do
                          let line1 = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
-                         let emph1 = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (Extra.replicate (ec1 `minus` sc1) '^'))
+                         let emph1 = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (replicate (ec1 `minus` sc1) '^'))
                          let line2 = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr2)
-                         let emph2 = fileCtxt pipe <++> spaces (cast sc2) <+> error (pretty (Extra.replicate (ec2 `minus` sc2) '^'))
+                         let emph2 = fileCtxt pipe <++> spaces (cast sc2) <+> error (pretty (replicate (ec2 `minus` sc2) '^'))
                          let numbered = if (sr2 `minus` er1) == 1
                                            then []
                                            else addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) er1 source)
@@ -123,27 +118,27 @@ ploc2 fc1 fc2 =
                             ++ [fileCtxt (space <+> pretty (sr2 + 1)) <++> align (vsep [line2, emph2]), emptyDoc]
                        (True, False, _) => do
                          let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
-                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (Extra.replicate (ec1 `minus` sc1) '^'))
+                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (replicate (ec1 `minus` sc1) '^'))
                          pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> pretty (sr1 + 1)) <++> align (vsep [line, emph])]
                             ++ addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) (Prelude.max er1 er2) source)
                             ++ [emptyDoc]
                        (False, True, True) => do
                          let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
-                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (Extra.replicate (ec1 `minus` sc1) '^'))
+                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (replicate (ec1 `minus` sc1) '^'))
                          pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> pretty (sr1 + 1)) <++> align (vsep [line, emph])]
                             ++ addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) (Prelude.max er1 er2) source)
                             ++ [emptyDoc]
                        (False, True, False) => do
                          let top = addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) er1 source)
                          let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
-                         let emph = fileCtxt pipe <++> spaces (cast sc2) <+> error (pretty (Extra.replicate (ec2 `minus` sc2) '^'))
+                         let emph = fileCtxt pipe <++> spaces (cast sc2) <+> error (pretty (replicate (ec2 `minus` sc2) '^'))
                          pure $ vsep $ [emptyDoc, head, firstRow] ++ top ++ [fileCtxt (space <+> pretty (sr2 + 1)) <++> align (vsep [line, emph]), emptyDoc]
                        (_, _, _) => pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr1 (pretty <$> extractRange sr1 er2 source)) <+> line
   where
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
     pad : Nat -> String -> String
-    pad size s = Extra.replicate (size `minus` length s) '0' ++ s
+    pad size s = replicate (size `minus` length s) '0' ++ s
     addLineNumbers : Nat -> Nat -> List (Doc IdrisAnn) -> List (Doc IdrisAnn)
     addLineNumbers size st xs =
       snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs

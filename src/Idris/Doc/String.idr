@@ -36,7 +36,6 @@ import Parser.Lexer.Source
 import public Idris.Doc.Annotations
 import Idris.Doc.Keywords
 
-
 %default covering
 
 -- Add a doc string for a module name
@@ -129,7 +128,7 @@ getHintsForType nty
     = do log "doc.data" 10 $ "Looking at \{show nty}"
          getImplDocs $ \ ty =>
            do let nms = allGlobals ty
-              log "doc.data" 10 $ String.unlines
+              log "doc.data" 10 $ unlines
                 [ "Candidate: " ++ show ty
                 , "Containing names: " ++ show nms
                 ]
@@ -143,7 +142,7 @@ getHintsForPrimitive c
     = do log "doc.data" 10 $ "Looking at \{show c}"
          getImplDocs $ \ ty =>
            do let nms = allConstants ty
-              log "doc.data" 10 $ String.unlines
+              log "doc.data" 10 $ unlines
                 [ "Candidate: " ++ show ty
                 , "Containing constants: " ++ show nms
                 ]
@@ -261,10 +260,8 @@ getDocsForName fc n config
 
     showDoc : Config -> (Name, String) -> Core (Doc IdrisDocAnn)
 
-    -- Avoid generating too much whitespace by not returning a single empty line
     reflowDoc : String -> List (Doc IdrisDocAnn)
-    reflowDoc "" = []
-    reflowDoc str = map (indent 2 . reflow) (forget $ Extra.lines str)
+    reflowDoc str = map (indent 2 . reflow) (lines str)
 
     showTotal : Name -> Totality -> Doc IdrisDocAnn
     showTotal n tot

@@ -7,9 +7,6 @@ import Core.Directory
 
 import System
 
-import Idris.Version
-import Libraries.Utils.Path
-
 %default total
 
 findCC : IO String

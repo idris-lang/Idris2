@@ -43,11 +43,6 @@ import Idris.Version
 import public Idris.Package.Types
 import Idris.Package.Init
 
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
-
 %default covering
 
 installDir : PkgDesc -> String
@@ -801,7 +796,7 @@ processPackageOpts opts
     = do (MkPFR cmds@(_::_) opts' err) <- pure $ partitionOpts opts
              | (MkPFR Nil opts' _) => pure False
          if err
-           then coreLift $ putStrLn (errorMsg ++ "\n")
+           then coreLift $ putStrLn errorMsg
            else traverse_ (processPackage opts') cmds
          pure True
 

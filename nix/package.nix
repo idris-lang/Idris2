@@ -24,10 +24,9 @@ stdenv.mkDerivation rec {
     ++ lib.optional stdenv.isDarwin [ zsh ];
   buildInputs = [ chez gmp ];
 
-  prePatch = let match = "$\{GIT_SHA1}"; in
-  ''
+  prePatch = ''
     patchShebangs --build tests
-    sed 's/${match}/${srcRev}/' -i Makefile
+    sed 's/''$(GIT_SHA1)/${srcRev}/' -i Makefile
   '';
 
   makeFlags = [ "PREFIX=$(out)" ]
@@ -66,10 +65,11 @@ stdenv.mkDerivation rec {
     #       overriding LD_LIBRARY_PATH is unnecessary
     wrapProgram "$out/bin/idris2" \
       --set-default CHEZ "${chez}/bin/scheme" \
-      --set-default IDRIS2_PREFIX "~/.idris2" \
+      --run 'export IDRIS2_PREFIX=''${IDRIS2_PREFIX-"$HOME/.idris2"}' \
       --suffix IDRIS2_LIBS ':' "$out/${name}/lib" \
       --suffix IDRIS2_DATA ':' "$out/${name}/support" \
       --suffix IDRIS2_PACKAGE_PATH ':' "${globalLibrariesPath}" \
+      --suffix DYLD_LIBRARY_PATH ':' "$out/${name}/lib" \
       --suffix LD_LIBRARY_PATH ':' "$out/${name}/lib"
   '';
 }

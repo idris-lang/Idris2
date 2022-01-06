@@ -13,7 +13,6 @@ module Search.Generator
 import Data.Colist
 import Data.Colist1
 import Data.Fin
-import Data.List
 import Data.Stream
 import Data.Vect
 

@@ -6,7 +6,6 @@ module Network.Socket
 
 import public Network.Socket.Data
 import Network.Socket.Raw
-import Data.List
 import Network.FFI
 
 -- ----------------------------------------------------- [ Network Socket API. ]

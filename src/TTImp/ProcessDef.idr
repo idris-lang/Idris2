@@ -36,12 +36,6 @@ import Libraries.Data.NameMap
 import Data.String
 import Data.Maybe
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Data.String.Extra
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
 
 %default covering
 

@@ -189,7 +189,7 @@ prettyHole defs env fn args ty
                             map (\premise => prettyRigHole premise.multiplicity
                                     <+> prettyImpBracket premise.isImplicit (prettyName premise.name <++> colon <++> prettyTerm premise.type))
                                     hdata.context) <+> hardline
-                    <+> (pretty $ L.replicate 30 '-') <+> hardline
+                    <+> (pretty $ replicate 30 '-') <+> hardline
                     <+> pretty (nameRoot $ hdata.name) <++> colon <++> prettyTerm hdata.type
 
 

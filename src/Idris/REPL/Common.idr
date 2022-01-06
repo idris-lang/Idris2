@@ -22,6 +22,7 @@ import Idris.Syntax
 import Idris.Version
 
 import Libraries.Data.ANameMap
+import Libraries.Data.String.Extra
 
 import Data.String
 import System.File

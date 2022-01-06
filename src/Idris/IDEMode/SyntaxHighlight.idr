@@ -7,8 +7,6 @@ import Core.Metadata
 
 import Idris.REPL
 import Idris.Syntax
-import Idris.Pretty
-import Idris.Doc.String
 import Idris.IDEMode.Commands
 
 import Data.List

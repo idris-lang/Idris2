@@ -10,7 +10,7 @@ singleton : Char -> String
 singleton c = strCons c ""
 
 ||| Create a string by using n copies of a character
-export
+public export
 replicate : Nat -> Char -> String
 replicate n c = pack (replicate n c)
 
@@ -90,6 +90,10 @@ unwords = pack . unwords' . map unpack
 
 ||| Splits a character list into a list of newline separated character lists.
 |||
+||| The empty string becomes an empty list. The last newline, if not followed by
+||| any additional characters, is eaten (there will never be an empty string last element
+||| in the result).
+|||
 ||| ```idris example
 ||| lines' (unpack "\rA BC\nD\r\nE\n")
 ||| ```
@@ -106,6 +110,10 @@ lines' s = linesHelp [] s
 
 
 ||| Splits a string into a list of newline separated strings.
+|||
+||| The empty string becomes an empty list. The last newline, if not followed by
+||| any additional characters, is eaten (there will never be an empty string last element
+||| in the result).
 |||
 ||| ```idris example
 ||| lines  "\rA BC\nD\r\nE\n"
