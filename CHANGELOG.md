@@ -55,6 +55,24 @@
   `prim__void`.
 * Adds `%deprecate` pragma that can be used to warn when deprecated functions are used.
 
+### IDE protocol changes
+
+* The IDE protocol and its serialisation to S-Expressions are factored
+  into a separate module hierarchy Protocol.{Hex, SExp, IDE}.
+
+* File context ranges sent in the IDE protocol follow the same
+  convention as Bounds values in the parser:
+  + all offsets (line and column) are 0-based.
+  + Lines: start and end are within the bounds
+  + Column:
+    + start column is within the bounds;
+    + end   column is after the bounds.
+
+  This changes behaviour from previous versions of the protocol.
+  Matching PRs in the emacs modes:
+  + idris2-mode [PR#11](https://github.com/idris-community/idris2-mode/pull/11)
+  + idris-mode [PR#547](https://github.com/idris-hackers/idris-mode/pull/547)
+
 ### Library changes
 
 #### Base
