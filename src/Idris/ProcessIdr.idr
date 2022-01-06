@@ -43,8 +43,6 @@ import Libraries.Data.SortedMap
 
 import System.File
 
-%hide Libraries.Data.String.Extra.unlines
-
 %default covering
 
 processDecls : {auto c : Ref Ctxt Defs} ->
