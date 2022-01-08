@@ -1,0 +1,4 @@
+$1 --no-color --console-width 0 --no-banner --cg node EvenOdd.idr -o app.js
+$1 --no-color --console-width 0 --no-banner Main.idr -x main
+rm -rf build
+
