@@ -284,6 +284,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "stringcast"
     , "syntax001"
     , "tailrec001"
+    , "tailrec002"
     , "idiom001"
     , "integers"
     , "fix1839"
