@@ -72,7 +72,7 @@ Pretty PkgVersionBounds where
       operator : (greater : Bool) -> (inclusive : Bool) -> Doc ann
       operator greater inclusive = pretty $ the String
                                      (if greater then ">" else "<") ++ (if inclusive then "=" else "")
-     
+
       bounds : (greater : Bool) -> (inclusive : Bool) -> Maybe PkgVersion -> Maybe (Doc ann)
       bounds greater inclusive Nothing = Nothing
       bounds greater inclusive (Just v) = Just $ operator greater inclusive <++> pretty v
@@ -118,7 +118,7 @@ namespace Version
        maybe True (\v' => if bounds.upperInclusive
                              then v < v' || (v == v' && tag == Nothing)
                              else v < v' || (v == v' && tag /= Nothing)) bounds.upperBound
-  
+
   -- "0.1.0-abcd" > "0.1.0"
   inBoundsBecauseOfTag : inBounds (MkVersion (0,1,0) (Just "abcd"))
                                   (MkPkgVersionBounds (Just $ MkPkgVersion (0 ::: [1,0])) False
