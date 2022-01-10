@@ -114,10 +114,10 @@ namespace Version
      = let v = MkPkgVersion (maj ::: [min, patch]) in
        maybe True (\v' => if bounds.lowerInclusive
                              then v >= v'
-                             else v > v || (v == v' && tag /= Nothing)) bounds.lowerBound &&
+                             else v > v' || (v == v' && tag /= Nothing)) bounds.lowerBound &&
        maybe True (\v' => if bounds.upperInclusive
-                             then (v <= v' && tag == Nothing)
-                             else v < v') bounds.upperBound
+                             then v < v' || (v == v' && tag == Nothing)
+                             else v < v' || (v == v' && tag /= Nothing)) bounds.upperBound
   
   -- "0.1.0-abcd" > "0.1.0"
   inBoundsBecauseOfTag : inBounds (MkVersion (0,1,0) (Just "abcd"))
