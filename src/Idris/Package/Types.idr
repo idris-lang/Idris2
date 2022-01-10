@@ -193,7 +193,7 @@ export
 Show PkgDesc where
   show pkg = "Package: " ++ name pkg ++ "\n" ++
              maybe "" (\m => "Version: "     ++ m ++ "\n") (show <$> version pkg) ++
-             maybe "" (\lvs => "Language Version: " ++ lvs ++ "\n") (show <$> pkg.langversion) ++
+             maybe "" (\v => "Language Version: " ++ v ++ "\n") (show <$> langversion pkg) ++
              maybe "" (\m => "Authors: "     ++ m ++ "\n") (authors pkg)     ++
              maybe "" (\m => "Maintainers: " ++ m ++ "\n") (maintainers pkg) ++
              maybe "" (\m => "License: "     ++ m ++ "\n") (license pkg)     ++
