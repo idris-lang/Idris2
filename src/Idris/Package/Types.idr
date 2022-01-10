@@ -56,7 +56,7 @@ Show PkgVersionBounds where
       noBounds = isNothing p.lowerBound && isNothing p.upperBound
 
       lowerBounds : Maybe String
-      lowerBounds = p.lowerBound <&> \v => (if p.lowerInclusive then ">= " else "> ") ++ show v ++ " "
+      lowerBounds = p.lowerBound <&> \v => (if p.lowerInclusive then ">= " else "> ") ++ show v
 
       upperBounds : Maybe String
       upperBounds = p.upperBound <&> \v => (if p.upperInclusive then "<= " else "< ") ++ show v
