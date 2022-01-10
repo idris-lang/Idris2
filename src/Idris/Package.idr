@@ -39,7 +39,6 @@ import Idris.REPL.Opts
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
-import IdrisPaths
 
 import public Idris.Package.Types
 import Idris.Package.Init
