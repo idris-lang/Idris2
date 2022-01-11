@@ -1,5 +1,0 @@
-package testpkg
-
-langversion < 0.1.0
-modules = Main
-opts = "--no-color --console-width 0"

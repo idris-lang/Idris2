@@ -1,9 +1,1 @@
-too-low
-Uncaught error: EmptyFC:testpkg requires Idris2 > 99.99.99 but the installed version of Idris2 is 0.5.1-c71e3ad02.
-1/1: Building Main (Main.idr)
-too-high
-Uncaught error: EmptyFC:testpkg requires Idris2 < 0.1.0 but the installed version of Idris2 is 0.5.1-c71e3ad02.
-1/1: Building Main (Main.idr)
-just-right
-1/1: Building Main (Main.idr)
 1/1: Building Main (Main.idr)
