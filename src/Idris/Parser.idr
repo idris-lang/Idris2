@@ -34,14 +34,14 @@ boundedNameDecoration fname decor bstr = ((fname, start bstr, end bstr)
 
 decorateBoundedNames : OriginDesc -> Decoration -> List (WithBounds Name) -> EmptyRule ()
 decorateBoundedNames fname decor bns
-  = act $ MkState (map (boundedNameDecoration fname decor) bns) []
+  = act $ MkState (cast (map (boundedNameDecoration fname decor) bns)) []
 
 decorateBoundedName : OriginDesc -> Decoration -> WithBounds Name -> EmptyRule ()
 decorateBoundedName fname decor bn = actD (boundedNameDecoration fname decor bn)
 
 decorateKeywords : OriginDesc -> List (WithBounds a) -> EmptyRule ()
 decorateKeywords fname xs
-  = act $ MkState (map (decorationFromBounded fname Keyword) xs) []
+  = act $ MkState (cast (map (decorationFromBounded fname Keyword) xs)) []
 
 dependentDecorate : OriginDesc -> Rule a -> (a -> Decoration) -> Rule a
 dependentDecorate fname rule decor = do
@@ -421,7 +421,7 @@ mutual
                      pure $
                        let fc = boundToFC fname (mergeBounds s b)
                            nilFC = if null xs then fc else boundToFC fname b
-                       in PList fc nilFC (map (\ t => (boundToFC fname t, t.val)) xs))
+                       in PList fc nilFC (cast (map (\ t => (boundToFC fname t, t.val)) xs)))
 
   snocListExpr : OriginDesc -> WithBounds () -> IndentInfo -> Rule PTerm
   snocListExpr fname s indents
