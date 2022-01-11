@@ -4,6 +4,7 @@ import Data.List
 import Data.List1
 import Data.String
 import Decidable.Equality
+import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Utils.Path
 

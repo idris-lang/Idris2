@@ -25,15 +25,9 @@ import Data.List1
 import Data.List.Views
 import Data.SnocList
 import Libraries.Data.List.Extra
-import Libraries.Data.String.Extra
 import Data.String
 import System.File
 import Data.Fin
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
 
 %default covering
 
@@ -238,7 +232,7 @@ parenTrim = Idris.IDEMode.CaseSplit.rtrim . fastPack . dropLast . fastUnpack
 ||| just after the `of`.
 onelineIndent : Nat -> String -> String
 onelineIndent indentation
-  = (Data.String.indent indentation) . fastPack . (drop indentation) . fastUnpack
+  = (indent indentation) . fastPack . (drop indentation) . fastUnpack
 
 ||| An unbracketed, oneline `case` block just needs to have the last updates
 ||| indented to lign up with the statement after the `of`.
@@ -296,7 +290,7 @@ updateCase splits line col
               Just f =>
                 do Right file <- coreLift $ readFile f
                        | Left err => throw (FileErr f err)
-                   let thisline = elemAt (forget $ lines file) (integerToNat (cast line))
+                   let thisline = elemAt (lines file) (integerToNat (cast line))
                    case thisline of
                         Nothing => throw (InternalError "File too short!")
                         Just l =>

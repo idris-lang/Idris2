@@ -11,12 +11,6 @@ import Data.List1
 import Libraries.Data.List.Extra
 import Data.String
 import System.File
-import Libraries.Data.String.Extra
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
 
 %default total
 
@@ -146,7 +140,7 @@ getSourceLine : {auto o : Ref ROpts REPLOpts} ->
                 Int -> Core (Maybe String)
 getSourceLine l
     = do src <- getSource
-         pure $ elemAt (forget $ lines src) (integerToNat (cast (l-1)))
+         pure $ elemAt (lines src) (integerToNat (cast (l-1)))
 
 export
 getLitStyle : {auto o : Ref ROpts REPLOpts} ->

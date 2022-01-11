@@ -7,6 +7,8 @@ The Idris REPL has two modes of interaction: a human-readable syntax designed fo
 The IDE-Protocol is versioned separately from the Idris compiler.
 The first version of Idris (written in Haskell and is at v1.3.3) implements version one of the IDE Protocol, and Idris2 (self-hosting and is at v.0.3.0) implements version two of the IDE Protocol.
 
+The protocol and its serialisation/deserialisation routines are part of the `Protocol` submodule hierarchy and are packaged in the `idris2protocols.ipkg` package.
+
 
 Protocol Overview
 -----------------
@@ -173,20 +175,22 @@ Possible Replies
 
 Possible replies include a normal final reply:::
 
- (:return (:ok SEXP [HIGHLIGHTING]))
- (:return (:error String [HIGHLIGHTING]))
+ (:return (:ok SEXP [HIGHLIGHTING]) ID)
+ (:return (:error String [HIGHLIGHTING]) ID)
 
 A normal intermediate reply:::
 
- (:output (:ok SEXP [HIGHLIGHTING]))
- (:output (:error String [HIGHLIGHTING]))
+ (:output (:ok SEXP [HIGHLIGHTING]) ID)
+ (:output (:error String [HIGHLIGHTING]) ID)
 
 Informational and/or abnormal replies:::
 
-  (:write-string String)
-  (:set-prompt String)
-  (:warning (FilePath (LINE COL) (LINE COL) String [HIGHLIGHTING]))
+  (:write-string String ID)
+  (:set-prompt String ID)
+  (:warning (FilePath (LINE COL) (LINE COL) String [HIGHLIGHTING]) ID)
 
+
+Warnings include compiler errors that don't cause the compiler to stop.
 
 Output Highlighting
 -------------------
@@ -257,6 +261,6 @@ When elaborating source code or REPL input, Idris will locate regions of the sou
 These messages will arrive as replies to the command that caused elaboration to occur, such as ``:load-file`` or ``:interpret``.
 They have the format:::
 
-  (:output (:ok (:highlight-source POSNS)))
+  (:output (:ok (:highlight-source POSNS)) ID)
 
 where ``POSNS`` is a list of positions to highlight. Each of these is a two-element list whose first element is a position (encoded as for the ``source-loc`` property above) and whose second element is highlighting metadata in the same format used for output.

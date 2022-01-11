@@ -166,7 +166,7 @@ htmlPreamble title root class =
     <nav><a href="\{root}index.html">Index</a>
 
     <select id="\{cssSelectID}">
-      \{String.unlines $ flip map cssFiles $ \ css =>
+      \{unlines $ flip map cssFiles $ \ css =>
          #"<option value="\#{css.filename}">\#{css.stylename}</option>"#
       }
     </select>
