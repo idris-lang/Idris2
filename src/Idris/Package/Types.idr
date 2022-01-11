@@ -222,7 +222,6 @@ Pretty PkgDesc where
   pretty desc = vcat
     [ "package" <++> pretty desc.name
     , verField    "version"     desc.version
-    , verSeqField "langversion" desc.langversion
     , strField    "authors"     desc.authors
     , strField    "maintainers" desc.maintainers
     , strField    "license"     desc.license
@@ -231,6 +230,9 @@ Pretty PkgDesc where
     , strField    "homepage"    desc.homepage
     , strField    "sourceloc"   desc.sourceloc
     , strField    "bugtracker"  desc.bugtracker
+
+    , comment     "the Idris2 version required (e.g. langversion >= 0.5.1)"
+    , verSeqField "langversion" desc.langversion
 
     , comment     "packages to add to search path"
     , seqField    "depends"     desc.depends
