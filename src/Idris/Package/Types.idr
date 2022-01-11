@@ -117,7 +117,7 @@ namespace Version
                              else v > v' || (v == v' && tag /= Nothing)) bounds.lowerBound &&
        maybe True (\v' => if bounds.upperInclusive
                              then v < v' || (v == v' && tag == Nothing)
-                             else v < v' || (v == v' && tag /= Nothing)) bounds.upperBound
+                             else v < v') bounds.upperBound
 
   -- "0.1.0-abcd" > "0.1.0"
   inBoundsBecauseOfTag : inBounds (MkVersion (0,1,0) (Just "abcd"))
