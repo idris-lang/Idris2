@@ -221,52 +221,52 @@ export
 Pretty PkgDesc where
   pretty desc = vcat
     [ "package" <++> pretty desc.name
-    , verField    "version"     desc.version
-    , strField    "authors"     desc.authors
-    , strField    "maintainers" desc.maintainers
-    , strField    "license"     desc.license
-    , strField    "brief"       desc.brief
-    , strField    "readme"      desc.readme
-    , strField    "homepage"    desc.homepage
-    , strField    "sourceloc"   desc.sourceloc
-    , strField    "bugtracker"  desc.bugtracker
+    , verField "version"     desc.version
+    , strField "authors"     desc.authors
+    , strField "maintainers" desc.maintainers
+    , strField "license"     desc.license
+    , strField "brief"       desc.brief
+    , strField "readme"      desc.readme
+    , strField "homepage"    desc.homepage
+    , strField "sourceloc"   desc.sourceloc
+    , strField "bugtracker"  desc.bugtracker
 
-    , comment     "the Idris2 version required (e.g. langversion >= 0.5.1)"
+    , comment "the Idris2 version required (e.g. langversion >= 0.5.1)"
     , verSeqField "langversion" desc.langversion
 
-    , comment     "packages to add to search path"
-    , seqField    "depends"     desc.depends
+    , comment  "packages to add to search path"
+    , seqField "depends"     desc.depends
 
-    , comment     "modules to install"
-    , seqField    "modules"     (fst <$> desc.modules)
+    , comment "modules to install"
+    , seqField "modules"     (fst <$> desc.modules)
 
-    , comment     "main file (i.e. file to load at REPL)"
-    , field       "main"        (map (pretty . fst) desc.mainmod)
+    , comment "main file (i.e. file to load at REPL)"
+    , field    "main"        (map (pretty . fst) desc.mainmod)
 
-    , comment     "name of executable"
-    , strField    "executable"  desc.executable
-    , strField    "opts"        (snd <$> desc.options)
-    , strField    "sourcedir"   desc.sourcedir
-    , strField    "builddir"    desc.builddir
-    , strField    "outputdir"   desc.outputdir
+    , comment "name of executable"
+    , strField "executable"  desc.executable
+    , strField "opts"        (snd <$> desc.options)
+    , strField "sourcedir"   desc.sourcedir
+    , strField "builddir"    desc.builddir
+    , strField "outputdir"   desc.outputdir
 
-    , comment     "script to run before building"
-    , strField    "prebuild"    (snd <$> desc.prebuild)
+    , comment "script to run before building"
+    , strField "prebuild"    (snd <$> desc.prebuild)
 
-    , comment     "script to run after building"
-    , strField    "postbuild"   (snd <$> desc.postbuild)
+    , comment "script to run after building"
+    , strField "postbuild"   (snd <$> desc.postbuild)
 
-    , comment     "script to run after building, before installing"
-    , strField    "preinstall"  (snd <$> desc.preinstall)
+    , comment "script to run after building, before installing"
+    , strField "preinstall"  (snd <$> desc.preinstall)
 
-    , comment     "script to run after installing"
-    , strField    "postinstall" (snd <$> desc.postinstall)
+    , comment "script to run after installing"
+    , strField "postinstall" (snd <$> desc.postinstall)
 
-    , comment     "script to run before cleaning"
-    , strField    "preclean"    (snd <$> desc.preclean)
+    , comment "script to run before cleaning"
+    , strField "preclean"    (snd <$> desc.preclean)
 
-    , comment     "script to run after cleaning"
-    , strField    "postclean"   (snd <$> desc.postclean)
+    , comment "script to run after cleaning"
+    , strField "postclean"   (snd <$> desc.postclean)
     ]
 
   where
