@@ -187,3 +187,57 @@ pushOutInInverse [] = Refl
 pushOutInInverse (Element x p :: xs) with (pushOutInInverse xs)
   pushOutInInverse (Element x p :: xs) | subprf with (pullOut xs)
     pushOutInInverse (Element x p :: xs) | subprf | Element ss ps = rewrite subprf in Refl
+
+------------------------------------------------------------------------
+-- Partitioning lists according to All
+
+||| Elements of a list that's been split according to some property
+public export
+data Interleaving : (xs, ys, xys : List a) -> Type where
+  Nil   : Interleaving [] [] []  
+  Left  : Interleaving xs ys xys -> Interleaving (x :: xs) ys (x :: xys)
+  Right : Interleaving xs ys xys -> Interleaving xs (y :: ys) (y :: xys)
+
+||| A record for storing the result of splitting a list `xys` according to some
+||| property `p`.
+|||
+||| @ xys the list which has been split
+||| @ p   the property used for the split
+public export
+record Split {a : Type} (p : a -> Type) (xys : List a) where
+  constructor MkSplit
+  {xs, ys : List a}
+  {auto interleaving : Interleaving xs ys xys}
+  prfs    : All p xs
+  contras : All (Not . p) ys
+
+||| Split the list according to the given decidable property, using an
+||| accumulator.
+|||
+||| @ dec a function which returns a decidable property
+||| @ xs  a list of elements to split
+||| @ a   the accumulator
+public export
+splitInto :  (dec : (x : a) -> Dec (p x))
+          -> (xs : List a)
+          -> (a : Split p acc)
+          -> Split p (reverseOnto acc xs)
+splitInto dec [] a = a
+splitInto dec (x :: xs) (MkSplit prfs contras) =
+  case dec x of
+       (Yes prf) => splitInto dec xs (MkSplit (prf :: prfs) contras)
+       (No contra) => splitInto dec xs (MkSplit prfs (contra :: contras))
+
+||| Split the list according to the given decidable property, starting with an
+||| empty accumulator.
+||| Use `splitInto` if you want to specify the accumulator.
+|||
+||| @ dec a function which returns a decidable property
+||| @ xs  a list of elements to split
+||| @ a   the accumulator
+public export
+split :  (dec : (x : a) -> Dec (p x))
+      -> (xs : List a)
+      -> Split p (reverse xs)
+split dec xs = splitInto dec xs (MkSplit [] [])
+
