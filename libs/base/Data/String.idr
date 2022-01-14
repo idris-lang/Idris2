@@ -51,9 +51,8 @@ fastUnlines = fastConcat . unlines'
 ||| ```idris example
 ||| words' (unpack " A B C  D E   ")
 ||| ```
-covering
 words' : List Char -> List (List Char)
-words' s = case dropWhile isSpace s of
+words' s = assert_total $ case dropWhile isSpace s of
             [] => []
             s' => let (w, s'') = break isSpace s'
                   in w :: words' s''
@@ -64,7 +63,6 @@ words' s = case dropWhile isSpace s of
 ||| words " A B C  D E   "
 ||| ```
 export
-covering
 words : String -> List String
 words s = map pack (words' (unpack s))
 
