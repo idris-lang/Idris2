@@ -2,6 +2,7 @@ module Data.String
 
 import Data.List
 import Data.List1
+import Data.SnocList
 
 %default total
 
@@ -49,13 +50,20 @@ fastUnlines = fastConcat . unlines'
 ||| Splits a character list into a list of whitespace separated character lists.
 |||
 ||| ```idris example
-||| words' (unpack " A B C  D E   ")
+||| words' (unpack " A B C  D E   ") [<] [<]
 ||| ```
-words' : List Char -> List (List Char)
-words' s = assert_total $ case dropWhile isSpace s of
-            [] => []
-            s' => let (w, s'') = break isSpace s'
-                  in w :: words' s''
+words' :  List Char
+       -> SnocList Char
+       -> SnocList (List Char)
+       -> List (List Char)
+words' (c :: cs) sc css =
+  if isSpace c
+     then case sc of
+       [<] => words' cs [<] css
+       _   => words' cs [<] (css :< (sc <>> Nil))
+     else words' cs (sc :< c) css
+words' [] [<] css = css <>> Nil
+words' [] sc  css = (css :< (sc <>> Nil)) <>> Nil
 
 ||| Splits a string into a list of whitespace separated strings.
 |||
@@ -64,7 +72,7 @@ words' s = assert_total $ case dropWhile isSpace s of
 ||| ```
 export
 words : String -> List String
-words s = map pack (words' (unpack s))
+words s = map pack (words' (unpack s) [<] [<])
 
 ||| Joins the character lists by spaces into a single character list.
 |||
