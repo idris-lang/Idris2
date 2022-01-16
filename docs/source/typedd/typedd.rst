@@ -149,6 +149,9 @@ In ``ReverseVec.idr``, add ``import Data.Nat`` for the ``Nat`` proofs.
 In ``Void.idr``, since functions must now be ``covering`` by default, add
 a ``partial`` annotation to ``nohead`` and its helper function ``getHead``.
 
+In Exercise 2 of 8.2.5, the definition of ``reverse'`` should be changed to
+``reverse' : Vect k a -> Vect m a -> Vect (k + m) a``
+
 Chapter 9
 ---------
 
