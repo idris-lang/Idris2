@@ -308,7 +308,7 @@ getDocsForName fc n config
     getInfixDoc n
         = do let Just (Basic n) = userNameRoot n
                     | _ => pure []
-             let Just (fixity, assoc) = S.lookup n (infixes !(get Syn))
+             let Just (_, fixity, assoc) = S.lookup n (infixes !(get Syn))
                     | Nothing => pure []
              pure $ pure $ hsep
                   [ pretty (show fixity)
@@ -321,7 +321,7 @@ getDocsForName fc n config
     getPrefixDoc n
         = do let Just (Basic n) = userNameRoot n
                     | _ => pure []
-             let Just assoc = S.lookup n (prefixes !(get Syn))
+             let Just (_, assoc) = S.lookup n (prefixes !(get Syn))
                     | Nothing => pure []
              pure $ ["prefix operator, level" <++> pretty (show assoc)]
 
