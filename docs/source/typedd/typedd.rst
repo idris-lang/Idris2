@@ -150,7 +150,8 @@ In ``Void.idr``, since functions must now be ``covering`` by default, add
 a ``partial`` annotation to ``nohead`` and its helper function ``getHead``.
 
 In Exercise 2 of 8.2.5, the definition of ``reverse'`` should be changed to
-``reverse' : Vect k a -> Vect m a -> Vect (k + m) a``
+``reverse' : Vect k a -> Vect m a -> Vect (k + m) a``, because the ``n`` in ``reverse'`` 
+is otherwise bound to the same value as the ``n`` in the signature of ``myReverse``.
 
 Chapter 9
 ---------
