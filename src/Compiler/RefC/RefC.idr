@@ -921,7 +921,7 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
           let isStandardFFI = Prelude.elem lang ["RefC", "C"]
           let fctName = if isStandardFFI
                            then UN $ Basic $ fctForeignName
-                           else UN $ Basic $ lang ++ "_" ++ fctForeignName
+                           else NS (mkNamespace lang) n
           if isStandardFFI
              then case extLibOpts of
                       [lib, header] => addHeader header
