@@ -47,6 +47,11 @@ fastUnlines = fastConcat . unlines'
         unlines' [] = []
         unlines' (x :: xs) = x :: "\n" :: unlines' xs
 
+-- append a word to the list of words, only if it's non-empty
+wordsHelper : SnocList Char -> SnocList (List Char) -> SnocList (List Char)
+wordsHelper [<] css = css
+wordsHelper sc  css = css :< (sc <>> Nil)
+
 ||| Splits a character list into a list of whitespace separated character lists.
 |||
 ||| ```idris example
@@ -58,12 +63,9 @@ words' :  List Char
        -> List (List Char)
 words' (c :: cs) sc css =
   if isSpace c
-     then case sc of
-       [<] => words' cs [<] css
-       _   => words' cs [<] (css :< (sc <>> Nil))
+     then words' cs [<] (wordsHelper sc css)
      else words' cs (sc :< c) css
-words' [] [<] css = css <>> Nil
-words' [] sc  css = (css :< (sc <>> Nil)) <>> Nil
+words' [] sc css = wordsHelper sc css <>> Nil
 
 ||| Splits a string into a list of whitespace separated strings.
 |||
