@@ -11,8 +11,8 @@ import System.File
 ||| Shorthand for referring to the C support library
 |||
 ||| @ fn the function name to refer to in the C support library
-support : (fn : String) -> String
-support fn = "C:" ++ fn ++ ", libidris2_support, idris_support.h"
+supportC : (fn : String) -> String
+supportC fn = "C:" ++ fn ++ ", libidris2_support, idris_support.h"
 
 ||| Shorthand for referring to libc 6
 |||
@@ -24,11 +24,11 @@ libc fn = "C:" ++ fn ++ ", libc 6"
 -- reasons (see support/racket/support.rkt)
 
 %foreign "scheme,racket:blodwen-sleep"
-         support "idris2_sleep"
+         supportC "idris2_sleep"
 prim__sleep : Int -> PrimIO ()
 
 %foreign "scheme,racket:blodwen-usleep"
-         support "idris2_usleep"
+         supportC "idris2_usleep"
 prim__usleep : Int -> PrimIO ()
 
 ||| Sleep for the specified number of seconds or, if signals are supported,
@@ -53,13 +53,13 @@ usleep usec = primIO (prim__usleep usec)
 
 -- Get the number of arguments
 %foreign "scheme:blodwen-arg-count"
-         support "idris2_getArgCount"
+         supportC "idris2_getArgCount"
          "node:lambda:() => process.argv.length"
 prim__getArgCount : PrimIO Int
 
 -- Get argument number `n`
 %foreign "scheme:blodwen-arg"
-         support "idris2_getArg"
+         supportC "idris2_getArg"
          "node:lambda:n => process.argv[n]"
 prim__getArg : Int -> PrimIO String
 
@@ -76,11 +76,11 @@ getArgs = do
          "node:lambda: n => process.env[n]"
 prim__getEnv : String -> PrimIO (Ptr String)
 
-%foreign support "idris2_getEnvPair"
+%foreign supportC "idris2_getEnvPair"
 prim__getEnvPair : Int -> PrimIO (Ptr String)
-%foreign support "idris2_setenv"
+%foreign supportC "idris2_setenv"
 prim__setEnv : String -> String -> Int -> PrimIO Int
-%foreign support "idris2_unsetenv"
+%foreign supportC "idris2_unsetenv"
 prim__unsetEnv : String -> PrimIO Int
 
 ||| Retrieve the specified environment variable's value string, or `Nothing` if
@@ -139,6 +139,7 @@ unsetEnv var
         pure $ ok == 0
 
 %foreign "C:idris2_system, libidris2_support, idris_system.h"
+         "node:support:spawnSync,support_system"
 prim__system : String -> PrimIO Int
 
 ||| Execute a shell command, returning its termination status or -1 if an error
@@ -170,7 +171,7 @@ namespace Escaped
   run : HasIO io => (cmd : List String) -> io (String, Int)
   run = run . escapeCmd
 
-%foreign support "idris2_time"
+%foreign supportC "idris2_time"
          "javascript:lambda:() => Math.floor(new Date().getTime() / 1000)"
 prim__time : PrimIO Int
 
@@ -179,7 +180,7 @@ export
 time : HasIO io => io Integer
 time = pure $ cast !(primIO prim__time)
 
-%foreign support "idris2_getPID"
+%foreign supportC "idris2_getPID"
          "node:lambda:() => process.pid"
 prim__getPID : PrimIO Int
 

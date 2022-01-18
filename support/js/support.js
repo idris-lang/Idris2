@@ -27,7 +27,7 @@ function __lazy(thunk) {
   };
 };
 
-function __prim_stringIteratorNew(str) {
+function __prim_stringIteratorNew(_str) {
   return 0
 }
 
