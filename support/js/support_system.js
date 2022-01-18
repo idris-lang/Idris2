@@ -16,7 +16,7 @@ function support_system_setEnv(name, value, overwrite) {
 }
 
 function support_system_unsetEnv(name) {
-  process.env[name] = undefined
+  delete process.env[name]
   return 0
 }
 
