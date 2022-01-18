@@ -12,7 +12,13 @@ import System.File
 |||
 ||| @ fn the function name to refer to in the C support library
 supportC : (fn : String) -> String
-supportC fn = "C:" ++ fn ++ ", libidris2_support, idris_support.h"
+supportC fn = "C:\{fn}, libidris2_support, idris_support.h"
+
+||| Shorthand for referring to the Node system support library
+|||
+||| @ fn the function name to refer to in the js/system_support.js file
+supportNode : (fn : String) -> String
+supportNode fn = "node:support:\{fn},support_system"
 
 ||| Shorthand for referring to libc 6
 |||
@@ -79,8 +85,10 @@ prim__getEnv : String -> PrimIO (Ptr String)
 %foreign supportC "idris2_getEnvPair"
 prim__getEnvPair : Int -> PrimIO (Ptr String)
 %foreign supportC "idris2_setenv"
+         supportNode "setEnv"
 prim__setEnv : String -> String -> Int -> PrimIO Int
 %foreign supportC "idris2_unsetenv"
+         supportNode "unsetEnv"
 prim__unsetEnv : String -> PrimIO Int
 
 ||| Retrieve the specified environment variable's value string, or `Nothing` if
@@ -117,6 +125,9 @@ getEnvironment = getAllPairs 0 []
 
 ||| Add the specified variable with the given value string to the environment,
 ||| optionally overwriting any existing environment variable with the same name.
+||| Returns True whether the value is set, overwritten, or not overwritten because
+||| overwrite was 0. Returns False if a system error occurred. You can `getErrno`
+||| to check the error.
 |||
 ||| @ var       the name of the environment variable to set
 ||| @ val       the value string to set the environment variable to
@@ -131,7 +142,7 @@ setEnv var val overwrite
 
 ||| Delete the specified environment variable. Returns `True` either if the
 ||| value was deleted or if the value was not defined/didn't exist. Returns
-||| `False` if a system error occurred.
+||| `False` if a system error occurred. You can `getErrno` to check the error.
 export
 unsetEnv : HasIO io => (var : String) -> io Bool
 unsetEnv var
@@ -139,7 +150,7 @@ unsetEnv var
         pure $ ok == 0
 
 %foreign "C:idris2_system, libidris2_support, idris_system.h"
-         "node:support:spawnSync,support_system"
+         supportNode "spawnSync"
 prim__system : String -> PrimIO Int
 
 ||| Execute a shell command, returning its termination status or -1 if an error
