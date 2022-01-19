@@ -126,7 +126,7 @@ getEnvironment = getAllPairs 0 []
 ||| Add the specified variable with the given value string to the environment,
 ||| optionally overwriting any existing environment variable with the same name.
 ||| Returns True whether the value is set, overwritten, or not overwritten because
-||| overwrite was 0. Returns False if a system error occurred. You can `getErrno`
+||| overwrite was False. Returns False if a system error occurred. You can `getErrno`
 ||| to check the error.
 |||
 ||| @ var       the name of the environment variable to set
