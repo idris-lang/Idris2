@@ -38,7 +38,7 @@ main = do
         | Nothing => pure ()
     Right f <- openFile "testRead.buf" Read
         | Left err => put $ pure err
-    Right () <- readBufferData f readBuf 0 8
+    Right ok <- readBufferData f readBuf 0 8
         | Left err => put $ pure err
     put $ bufferData readBuf
 
