@@ -1,11 +1,11 @@
 rm -rf build
 
-# @system@ uses primitive functions with definitions for both
+# @getEnv@ and @setEnv@ use primitive functions with definitions for both
 # C (supported by most backends) and Node.
 $1 --cg chez -o test Test.idr
-./build/exec/test
+HELLO=hi ./build/exec/test
 
 rm -rf ./build
 
 $1 --cg node -o test.js Test.idr
-node ./build/exec/test.js
+HELLO=hi node ./build/exec/test.js
