@@ -200,9 +200,17 @@ copyDir src target = runEitherT $ do
     MkEitherT $ createDir $ show target
     copyDirContents !(liftIO $ explore src) target
   where
+    -- Glue for the new and old definition of copyFile
+    partial
+    extract_error : (a : Type) -> a -> FileError
+    extract_error (Pair FileError _) (x, _) = x
+    extract_error FileError x = x
+
     copyFile' : (srcDir : Path) -> (targetDir : Path) -> (fileName : String) -> EitherT FileError io ()
-    copyFile' srcDir targetDir fileName = do
-      MkEitherT $ copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
+    copyFile' srcDir targetDir fileName = MkEitherT $ do
+      Right ok <- copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
+      | Left err => pure $ Left (assert_total $ extract_error _ err)
+      pure (Right ok)
 
     covering
     copyDirContents : {srcDir : Path} -> Tree srcDir -> (targetDir : Path) -> EitherT FileError io ()
