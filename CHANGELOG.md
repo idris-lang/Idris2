@@ -86,6 +86,8 @@
 * Deprecates `base`'s `Data.Nat.Order.decideLTE` in favor of `Data.Nat.isLTE`.
 * Removes `base`'s deprecated `System.Directory.dirEntry`. Use `nextDirEntry` instead.
 * Removes `base`'s deprecated `Data.String.fastAppend`. Use `fastConcat` instead.
+* `System.File.Buffer.writeBufferData` now returns the number of bytes that have
+   been written when there is a write error.
 
 #### Contrib
 
