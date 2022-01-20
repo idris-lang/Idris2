@@ -101,9 +101,9 @@ toTokList (POp fc opFC opn l r)
                      then throw (GenericMsg fc $ "Unknown operator '" ++ op ++ "'")
                      else do rtoks <- toTokList r
                              pure (Expr l :: Op fc opFC opn backtickPrec :: rtoks)
-              Just (Prefix, _) =>
+              Just (_, Prefix, _) =>
                       throw (GenericMsg fc $ "'" ++ op ++ "' is a prefix operator")
-              Just (fix, prec) =>
+              Just (fixityFc, fix, prec) =>
                    do rtoks <- toTokList r
                       pure (Expr l :: Op fc opFC opn (mkPrec fix prec) :: rtoks)
   where
@@ -115,7 +115,7 @@ toTokList (PPrefixOp fc opFC opn arg)
          case lookup op (prefixes syn) of
               Nothing =>
                    throw (GenericMsg fc $ "'" ++ op ++ "' is not a prefix operator")
-              Just prec =>
+              Just (fixityFc, prec) =>
                    do rtoks <- toTokList arg
                       pure (Op fc opFC opn (Prefix prec) :: rtoks)
 toTokList t = pure [Expr t]
@@ -1011,11 +1011,11 @@ mutual
 
   desugarDecl ps (PFixity fc Prefix prec (UN (Basic n)))
       = do syn <- get Syn
-           put Syn ({ prefixes $= insert n prec } syn)
+           put Syn ({ prefixes $= insert n (fc, prec) } syn)
            pure []
   desugarDecl ps (PFixity fc fix prec (UN (Basic n)))
       = do syn <- get Syn
-           put Syn ({ infixes $= insert n (fix, prec) } syn)
+           put Syn ({ infixes $= insert n (fc, fix, prec) } syn)
            pure []
   desugarDecl ps (PFixity fc _ _ _)
       = throw (GenericMsg fc "Fixity declarations must be for unqualified names")
