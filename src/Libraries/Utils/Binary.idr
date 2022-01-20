@@ -3,7 +3,7 @@ module Libraries.Utils.Binary
 import Data.Buffer
 import Data.List
 
-import System.File
+import Libraries.System.File
 
 -- Serialising data as binary. Provides an interface TTC which allows
 -- reading and writing to chunks of memory, "Binary", which can be written
@@ -62,24 +62,12 @@ fromBuffer buf
     = do len <- rawSize buf
          pure (MkBin buf 0 len len)
 
--- Temporarily placed here to fix bootstrap until the next release
--- Glue for the new and old definition of writeBufferToFile
-writeBufferToFile' : HasIO io => (fn : String) -> (buf : Buffer) -> (size : Int) ->
-                                io (Either FileError ())
-writeBufferToFile' fn buf size = do
-  Right ok <- writeBufferToFile fn buf size
-  | Left err => pure $ Left (assert_total $ extract_error _ err)
-  pure (Right ok)
-  where
-    partial
-    extract_error : (a : Type) -> a -> FileError
-    extract_error (Pair FileError _) (x, _) = x
-    extract_error FileError x = x
-
 export
 writeToFile : (fname : String) -> Binary -> IO (Either FileError ())
 writeToFile fname c
-    = writeBufferToFile' fname (buf c) (used c)
+    = do Right ok <- writeBufferToFile fname (buf c) (used c)
+               | Left (err, size) => pure (Left err)
+         pure (Right ok)
 
 export
 readFromFile : (fname : String) -> IO (Either FileError Binary)

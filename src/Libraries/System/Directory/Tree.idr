@@ -5,8 +5,9 @@ import Data.DPair
 import Data.List
 import Data.Nat
 import System.Directory
-import System.File
 import Libraries.Utils.Path
+
+import Libraries.System.File as LibFile
 
 %default total
 
@@ -200,16 +201,10 @@ copyDir src target = runEitherT $ do
     MkEitherT $ createDir $ show target
     copyDirContents !(liftIO $ explore src) target
   where
-    -- Glue for the new and old definition of copyFile
-    partial
-    extract_error : (a : Type) -> a -> FileError
-    extract_error (Pair FileError _) (x, _) = x
-    extract_error FileError x = x
-
     copyFile' : (srcDir : Path) -> (targetDir : Path) -> (fileName : String) -> EitherT FileError io ()
     copyFile' srcDir targetDir fileName = MkEitherT $ do
-      Right ok <- copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
-      | Left err => pure $ Left (assert_total $ extract_error _ err)
+      Right ok <- LibFile.copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
+      | Left (err, size) => pure (Left err)
       pure (Right ok)
 
     covering
