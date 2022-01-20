@@ -121,6 +121,7 @@
 0000d2(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 22 16) (:end 22 20)) ((:name "ANat") (:namespace "Syntax") (:decor :type) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 0000d7(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 23 0) (:end 23 7)) ((:name "doBlock") (:namespace "Syntax") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000073(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 24 2) (:end 24 3)) ((:decor :keyword)))))) 1)
+000073(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 24 4) (:end 24 6)) ((:decor :keyword)))))) 1)
 000074(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 24 7) (:end 24 10)) ((:decor :keyword)))))) 1)
 0000ca(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 24 11) (:end 24 12)) ((:name "a") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000075(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 24 13) (:end 24 14)) ((:decor :keyword)))))) 1)
