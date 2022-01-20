@@ -54,6 +54,8 @@
 * Removes deprecated support for `void` primitive. Now `void` is supported via
   `prim__void`.
 * Adds `%deprecate` pragma that can be used to warn when deprecated functions are used.
+* Package files now support a `langversion` field that can be used to specify what versions of Idris a package supports. As with dependency versions, `>`, `<`, `>=`, and `<=` can all be used.
+  + For example, `langversion >= 0.5.1`.
 
 ### IDE protocol changes
 
