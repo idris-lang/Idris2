@@ -15,19 +15,9 @@ import System.File
 import Libraries.Data.PosMap
 import Libraries.Utils.Binary
 
-%default covering
+import public Protocol.IDE.Decoration as Protocol.IDE
 
-public export
-data Decoration : Type where
-  Comment   : Decoration
-  Typ       : Decoration
-  Function  : Decoration
-  Data      : Decoration
-  Keyword   : Decoration
-  Bound     : Decoration
-  Namespace : Decoration
-  Postulate : Decoration
-  Module    : Decoration
+%default covering
 
 export
 nameDecoration : Name -> NameType -> Decoration
@@ -50,34 +40,6 @@ ASemanticDecoration = (NonEmptyFC, Decoration, Maybe Name)
 public export
 SemanticDecorations : Type
 SemanticDecorations = List ASemanticDecoration
-
-public export
-Eq Decoration where
-  Comment   == Comment   = True
-  Typ       == Typ       = True
-  Function  == Function  = True
-  Data      == Data      = True
-  Keyword   == Keyword   = True
-  Bound     == Bound     = True
-  Namespace == Namespace = True
-  Postulate == Postulate = True
-  Module    == Module    = True
-  _         == _         = False
-
--- CAREFUL: this instance is used in SExpable Decoration. If you change
--- it then you need to fix the SExpable implementation in order not to
--- break the IDE mode.
-public export
-Show Decoration where
-  show Comment   = "comment"
-  show Typ       = "type"
-  show Function  = "function"
-  show Data      = "data"
-  show Keyword   = "keyword"
-  show Bound     = "bound"
-  show Namespace = "namespace"
-  show Postulate = "postulate"
-  show Module    = "module"
 
 TTC Decoration where
   toBuf b Typ       = tag 0

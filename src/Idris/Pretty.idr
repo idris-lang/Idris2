@@ -6,6 +6,7 @@ import Data.SnocList
 import Data.Maybe
 import Data.String
 import Libraries.Control.ANSI.SGR
+import Libraries.Data.String.Extra
 
 import Parser.Lexer.Source
 

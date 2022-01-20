@@ -17,11 +17,6 @@ import Libraries.Data.NameMap
 import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
-
 %default covering
 
 -- Return whether any of the name matches conflict
@@ -347,7 +342,7 @@ getMissing fc n ctree
         patss <- buildArgs fc defs [] [] psIn ctree
         let pats = concat patss
         unless (null pats) $
-          logC "coverage.missing" 20 $ map unlines $
+          logC "coverage.missing" 20 $ map (join "\n") $
             flip traverse pats $ \ pat =>
               show <$> toFullNames pat
         pure (map (apply fc (Ref fc Func n)) patss)

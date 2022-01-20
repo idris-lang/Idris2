@@ -1,4 +1,4 @@
-module Libraries.Utils.Hex
+module Protocol.Hex
 
 import Data.Bits
 import Data.List

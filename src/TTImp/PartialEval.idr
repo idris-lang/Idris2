@@ -17,7 +17,7 @@ import TTImp.TTImp
 import TTImp.TTImp.Functor
 import TTImp.Unelab
 
-import Libraries.Utils.Hex
+import Protocol.Hex
 
 import Data.List
 import Libraries.Data.NameMap
