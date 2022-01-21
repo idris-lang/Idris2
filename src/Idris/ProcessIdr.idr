@@ -254,12 +254,6 @@ unchangedHash hashFn ttcFileName sourceFileName
              | _ => pure False
        pure $ sourceCodeHash == storedSourceHash
 
-||| Determine if any of the given source files have changed.
-export
-unchangedHashes : (hashFn : Maybe String) -> (ttcFileName : String) -> (sourceFileNames : List String) -> Core Bool
-unchangedHashes hashFn ttcFileName
-  = map (all id) . traverse (unchangedHash hashFn ttcFileName)
-
 export
 getCG : {auto o : Ref ROpts REPLOpts} ->
         {auto c : Ref Ctxt Defs} ->
@@ -322,9 +316,10 @@ processMod sourceFileName ttcFileName msg sourcecode origin
         log "module.hash" 5 $ "Stored interface hashes of " ++ ttcFileName ++ ":\n" ++
           show (sort storedImportInterfaceHashes)
 
-        let sourceFileNames : List String = [sourceFileName]
-        sourceUnchanged <- (if session.checkHashesInsteadOfModTime
-          then unchangedHashes (defs.options.hashFn) else (map not .: isTTCOutdated)) ttcFileName sourceFileNames
+        let isUnchanged = if session.checkHashesInsteadOfModTime
+                             then unchangedHash (defs.options.hashFn)
+                             else (\ttc,src => not <$> (isTTCOutdated ttc [src]))
+        sourceUnchanged <- isUnchanged ttcFileName sourceFileName
 
         -- If neither the source nor the interface hashes of imports have changed then no rebuilding is needed
         if (sourceUnchanged && sort importInterfaceHashes == sort storedImportInterfaceHashes)
