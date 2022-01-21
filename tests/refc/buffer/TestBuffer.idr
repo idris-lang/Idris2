@@ -38,7 +38,8 @@ main = do
         | Nothing => pure ()
     Right f <- openFile "testRead.buf" Read
         | Left err => put $ pure err
-    Right ok <- readBufferData f readBuf 0 8
+    Right 8 <- readBufferData f readBuf 0 8
+        | Right size => put $ pure "\{show size} bytes have been read, 8 expected"
         | Left err => put $ pure err
     put $ bufferData readBuf
 
