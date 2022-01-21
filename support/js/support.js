@@ -3,7 +3,7 @@ class IdrisError extends Error { }
 function __prim_js2idris_array(x){
   let acc = { h:0 };
 
-  for (i = x.length-1; i>=0; i--) {
+  for (let i = x.length-1; i>=0; i--) {
       acc = { a1:x[i], a2:acc };
   }
   return acc;
