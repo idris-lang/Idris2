@@ -900,8 +900,12 @@ record SyntaxInfo where
   constructor MkSyntax
   -- Keep infix/prefix, then we can define operators which are both
   -- (most obviously, -)
-  infixes : StringMap (Fixity, Nat)
-  prefixes : StringMap Nat
+  ||| Infix operators as a map from their names to their fixity,
+  ||| precedence, and the file context where that fixity was defined.
+  infixes : StringMap (FC, Fixity, Nat)
+  ||| Prefix operators as a map from their names to their precedence
+  ||| and the file context where their fixity was defined.
+  prefixes : StringMap (FC, Nat)
   -- info about modules
   saveMod : List ModuleIdent -- current module name
   modDocstrings : SortedMap ModuleIdent String
@@ -1019,13 +1023,13 @@ initSyntax
 
   where
 
-    initInfix : StringMap (Fixity, Nat)
-    initInfix = insert "=" (Infix, 0) empty
+    initInfix : StringMap (FC, Fixity, Nat)
+    initInfix = insert "=" (EmptyFC, Infix, 0) empty
 
-    initPrefix : StringMap Nat
+    initPrefix : StringMap (FC, Nat)
     initPrefix = fromList
-      [ ("-", 10)
-      , ("negate", 10) -- for documentation purposes
+      [ ("-", (EmptyFC, 10))
+      , ("negate", (EmptyFC, 10)) -- for documentation purposes
       ]
 
     initDocStrings : ANameMap String

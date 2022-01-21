@@ -13,7 +13,7 @@ import Text.Quantity
 
 import System.Info
 
-infixr 5 </>, />
+infixl 5 </>, />
 infixr 7 <.>
 
 

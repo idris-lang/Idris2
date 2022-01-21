@@ -1,7 +1,6 @@
-%default total
+import Data.Singleton
 
-data Singleton : {a : Type} -> a -> Type where
-  Val : (x : a) -> Singleton x
+%default total
 
 -- data constructors
 f : Singleton (MkPair True) -> Bool

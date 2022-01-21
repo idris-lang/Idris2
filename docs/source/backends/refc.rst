@@ -84,9 +84,10 @@ This will generate stub FFI function pointers in the generated C file, which
 your backend should set to the appropriate C functions before ``main`` is
 called.
 
-Each ``%foreign "lang: funcName, opts"`` definition will produce a stub whose
-name is given by ``cName (UN $ lang ++ "_" ++ funcName)``, of the appropriate
-function pointer type.
+Each ``%foreign "lang: foreignFuncName, opts"`` definition for a function
+will produce a stub, of the appropriate function pointer type. This stub will
+be called ``cName $ NS (mkNamespace lang) funcName``, where ``funcName`` is the
+fully qualified Idris name of that function.
 
 So the ``%foreign`` function
 
@@ -95,9 +96,9 @@ So the ``%foreign`` function
     %foreign "python: abs"
     abs : Int -> Int
 
-produces a stub ``python_abs``, which can be backpatched in Python by:
+produces a stub ``python_Main_abs``, which can be backpatched in Python by:
 
 .. code-block:: python
 
     abs_ptr = ctypes.CFUNCTYPE(ctypes.c_int64, ctypes.c_int64)(abs)
-    ctypes.c_void_p.in_dll(cdll, "python_abs").value = ctypes.cast(abs_ptr, ctypes.c_void_p).value
+    ctypes.c_void_p.in_dll(cdll, "python_Main_abs").value = ctypes.cast(abs_ptr, ctypes.c_void_p).value

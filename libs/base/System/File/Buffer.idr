@@ -30,11 +30,11 @@ export
 readBufferData : HasIO io => (fh : File) -> (buf : Buffer) ->
                  (offset : Int) ->
                  (maxbytes : Int) ->
-                 io (Either FileError ())
+                 io (Either FileError Int)
 readBufferData (FHandle h) buf offset max
     = do read <- primIO (prim__readBufferData h buf offset max)
          if read >= 0
-            then pure (Right ())
+            then pure (Right read)
             else pure (Left FileReadError)
 
 ||| Write the data from the buffer to the given `File`.

@@ -3,13 +3,13 @@
 ||| we can reuse the standard stuff
 module Idris.IDEMode.Parser
 
+import Core.Core
+import Core.FC
+
 import Protocol.SExp
 import Protocol.SExp.Parser
 
 import Parser.Source
-
-import Core.Core
-import Core.FC
 
 Cast SExpError Error where
   cast (LexError    err) = fromLexError      (Virtual Interactive) err
