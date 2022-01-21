@@ -133,7 +133,24 @@ powMinusAux m m CmpEQ pos neg
     powAnnihilate (cast m) pos neg
 powMinusAux (_ + S m) n (CmpGT m) pos neg
   = let (pos1 # pos2) = powPositiveL n (S m) pos in
-    powAnnihilate n pos1 neg `seq`
-    rewrite castPlus n (S m) in
---    rewrite sym (plusAssociative (cast n) (NS m) (negate (cast n))) in
-    ?a
+    powAnnihilate n pos1 neg `seq` replace {p = Pow a} eq pos2
+
+  where
+
+  eq : PS m === cast (n + S m) - cast n
+  eq = sym $ Calc $
+    |~ cast (n + S m) - cast n
+    ~~ cast n + cast (S m) - cast n
+      ...( cong (+ - cast n) (castPlus n (S m)) )
+    ~~ cast n + (cast (S m) - cast n)
+      ...( sym (plusAssociative (cast n) (cast (S m)) (- cast n)) )
+    ~~ cast n + (- cast n + cast (S m))
+      ...( cong (cast n +) (plusCommutative (cast (S m)) (- cast n)) )
+    ~~ (cast n - cast n) + cast (S m)
+      ...( plusAssociative (cast n) (- cast n) (cast (S m)) )
+    ~~ cast (S m)
+      ...( cong (+ cast (S m)) (plusInverse (cast n)) )
+
+powMinus : (m, n : Nat) ->
+  Pow a (cast m) -@ Pow a (- cast n) -@ Pow a (cast m - cast n)
+powMinus m n = powMinusAux m n (cmp m n)
