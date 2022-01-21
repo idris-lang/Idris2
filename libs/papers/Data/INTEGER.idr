@@ -1,5 +1,7 @@
 module Data.INTEGER
 
+import Data.Nat
+
 %default total
 
 public export
@@ -67,3 +69,10 @@ Neg INTEGER where
   negate (NS n) = PS n
 
   m - n = add m (negate n)
+
+
+export
+addInverse : (m : INTEGER) -> add m (negate m) === Z
+addInverse Z      = Refl
+addInverse (PS k) = rewrite compareNatDiag k in Refl
+addInverse (NS k) = rewrite compareNatDiag k in Refl

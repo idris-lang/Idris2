@@ -9,6 +9,8 @@ import Data.Linear.LMaybe
 import Data.Linear.LVect
 import Data.Linear.Notation
 
+import Data.Nat
+
 %default total
 
 ||| Inverse is a shorthand for 'multiplicative skew inverse'
@@ -61,7 +63,7 @@ Pow a (PS n) = LVect (S n) a
 Pow a (NS n) = LVect (S n) (Inverse a)
 
 powPositiveL : (m, n : Nat) -> Pow a (cast $ m + n) -@
-          LPair (Pow a (cast m)) (Pow a (cast n))
+               LPair (Pow a (cast m)) (Pow a (cast n))
 powPositiveL Z n as = (() # as)
 powPositiveL 1 Z [a] = ([a] # ())
 powPositiveL 1 (S n) (a :: as) = ([a] # as)
@@ -98,9 +100,20 @@ powNegativeR 1 0 xs ys = ys `seq` xs
 powNegativeR 1 (S n) [a] ys = a :: ys
 powNegativeR (S m@(S _)) n (x :: xs) ys = x :: powNegativeR m n xs ys
 
-powMinus : (m, n : Nat) -> Pow a (cast m) -@ Pow a (- cast n) -@
-           Pow a (cast m - cast n)
-powMinus 0 n as us = as `seq` us
-powMinus (S k) 0 as us = us `seq` as
-powMinus (S k) (S j) (a :: as) (u :: us)
-  = divide a u `seq` ?a_5 -- annoying
+powAnnihilate : (m : Nat) -> Pow a (cast m) -@ Pow a (- cast m) -@ ()
+powAnnihilate 0         pos neg = pos `seq` neg
+powAnnihilate 1         [x] [u] = u x
+powAnnihilate (S (S k)) (x :: pos) (u :: neg)
+  = u x `seq` powAnnihilate (S k) pos neg
+
+powMinusAux : (m, n : Nat) -> CmpNat m n ->
+  Pow a (cast m) -@ Pow a (- cast n) -@ Pow a (cast m - cast n)
+powMinusAux m (m + S n) (CmpLT n) pos neg
+  = let (neg1 # neg2) = powNegativeL m (S n) neg in
+    powAnnihilate m pos neg1 `seq` ?a_0
+powMinusAux m m CmpEQ pos neg
+  = rewrite addInverse (cast m) in
+    powAnnihilate (cast m) pos neg
+powMinusAux (_ + S m) n (CmpGT m) pos neg
+  = let (pos1 # pos2) = powPositiveL n (S m) pos in
+    powAnnihilate n pos1 neg `seq` ?a
