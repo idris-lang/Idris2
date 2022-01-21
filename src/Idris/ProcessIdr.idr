@@ -239,11 +239,9 @@ isTTCOutdated ttcFile sourceFiles
   = do ttcTime  <- modTime ttcFile
        srcTimes <- traverse modTime sourceFiles
        log "module.hash" 20 $
-         unwords $
-           [ "Checking whether source code mod times are newer than \{show ttcTime};"
-           , "src times:"
-           , show srcTimes
-           ]
+         unlines $
+           "Checking whether source code mod times are newer than \{show ttcTime}; src times:"
+           :: zipWith (\ src, tm => "\{src} : \{show tm}") sourceFiles srcTimes
        pure $ any (>= ttcTime) srcTimes
 
 ||| If the source files hash hasn't changed
