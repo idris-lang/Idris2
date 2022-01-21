@@ -510,9 +510,8 @@ readFromTTC nestedns loc reexp fname modNS importAs
           || (modns == m && miAsNamespace modns == importAs)
           || alreadyDone modns importAs rest
 
--- Implements a portion of @readTTCFile@ from the beginning until
--- when the totality requirement is read out.
--- The fields must be read in order.
+-- Implements a portion of @readTTCFile@. The fields must be read in order.
+-- This reads everything up to and including `totalReq`.
 export
 getTotalReq : String -> Ref Bin Binary -> Core TotalReq
 getTotalReq file b
@@ -521,25 +520,25 @@ getTotalReq file b
            corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
          ver <- fromBuf @{Wasteful} b
          checkTTCVersion file ver ttcVersion
-         fromBuf b
+         fromBuf b -- `totalReq`
 
--- Implements a portion of @readTTCFile@ from where @getTotalReq@ leaves off.
--- The fields must be read in order.
+-- Implements a portion of @readTTCFile@. The fields must be read in order.
+-- This reads everything up to and including `interfaceHash`.
 export
 getHashes : String -> Ref Bin Binary -> Core (Maybe String, Int)
 getHashes file b
-    = do totReq <- getTotalReq file b
+    = do ignore $ getTotalReq file b
          sourceFileHash <- fromBuf b
          interfaceHash <- fromBuf b
          pure (sourceFileHash, interfaceHash)
 
--- Implements a portion of @readTTCFile@ from where @getHashes@ leaves off.
--- The next field is the import hashes. The fields must be read in order.
+-- Implements a portion of @readTTCFile@. The fields must be read in order.
+-- This reads everything up to and including `importHashes`.
 getImportHashes : String -> Ref Bin Binary ->
                   Core (List (Namespace, Int))
 getImportHashes file b
-    = do (sourceFileHash, interfaceHash) <- getHashes file b
-         fromBuf b
+    = do ignore $ getHashes file b
+         fromBuf b -- `importHashes`
 
 export
 readTotalReq : (fileName : String) -> -- file containing the module
