@@ -88,6 +88,8 @@
 * Deprecates `base`'s `Data.Nat.Order.decideLTE` in favor of `Data.Nat.isLTE`.
 * Removes `base`'s deprecated `System.Directory.dirEntry`. Use `nextDirEntry` instead.
 * Removes `base`'s deprecated `Data.String.fastAppend`. Use `fastConcat` instead.
+* `System.File.Buffer.readBufferData` now returns the number of bytes that have
+   been read into the buffer.
 
 #### Contrib
 
