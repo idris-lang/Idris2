@@ -11,6 +11,8 @@ import Data.Linear.Notation
 
 import Data.Nat
 
+import Syntax.PreorderReasoning
+
 %default total
 
 ||| Inverse is a shorthand for 'multiplicative skew inverse'
@@ -110,10 +112,28 @@ powMinusAux : (m, n : Nat) -> CmpNat m n ->
   Pow a (cast m) -@ Pow a (- cast n) -@ Pow a (cast m - cast n)
 powMinusAux m (m + S n) (CmpLT n) pos neg
   = let (neg1 # neg2) = powNegativeL m (S n) neg in
-    powAnnihilate m pos neg1 `seq` ?a_0
+    powAnnihilate m pos neg1 `seq` replace {p = Pow a} eq neg2
+
+  where
+
+  eq : NS n === cast m - cast (m + S n)
+  eq = sym $ Calc $
+     |~ cast m - cast (m + S n)
+     ~~ cast m - (cast m + cast (S n))
+        ...( cong (cast m -) (castPlus m (S n)) )
+     ~~ cast m + (- cast m - cast (S n))
+        ...( cong (cast m +) (negatePlus (cast m) (cast (S n))) )
+     ~~ (cast m - cast m) - cast (S n)
+        ...( plusAssociative (cast m) (- cast m) (- cast (S n)) )
+     ~~ - cast (S n)
+        ...( cong (+ - cast (S n)) (plusInverse (cast m)) )
+
 powMinusAux m m CmpEQ pos neg
-  = rewrite addInverse (cast m) in
+  = rewrite plusInverse (cast m) in
     powAnnihilate (cast m) pos neg
 powMinusAux (_ + S m) n (CmpGT m) pos neg
   = let (pos1 # pos2) = powPositiveL n (S m) pos in
-    powAnnihilate n pos1 neg `seq` ?a
+    powAnnihilate n pos1 neg `seq`
+    rewrite castPlus n (S m) in
+--    rewrite sym (plusAssociative (cast n) (NS m) (negate (cast n))) in
+    ?a
