@@ -190,8 +190,17 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
 -- other way. If we do, we'll need to have a way to disable these.
 idrisTestsSchemeEval : TestPool
 idrisTestsSchemeEval = MkTestPool "Scheme Evaluator" [] Nothing
-     ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004",
-      "schemeeval005", "schemeeval006"]
+      ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004",
+       "schemeeval005", "schemeeval006"]
+
+idrisTestsReflection : TestPool
+idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
+      ["reflection001", "reflection002", "reflection003", "reflection004",
+       "reflection005", "reflection006", "reflection007", "reflection008",
+       "reflection009", "reflection010", "reflection011", "reflection012",
+       "reflection013", "reflection014"
+      ]
+
 
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
@@ -214,11 +223,8 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",
-       -- Quotation and reflection
-       "reflection001", "reflection002", "reflection003", "reflection004",
-       "reflection005", "reflection006", "reflection007", "reflection008",
-       "reflection009", "reflection010", "reflection011", "reflection012",
-       "reflection013", "reflection014",
+       -- Inlining
+       "inlining001",
        -- The 'with' rule
        "with001", "with002", "with004", "with005", "with006",
        -- with-disambiguation
@@ -339,6 +345,7 @@ main = runner $
   , testPaths "idris2" idrisTestsEvaluator
   , testPaths "idris2" idrisTestsTotality
   , testPaths "idris2" idrisTestsSchemeEval
+  , testPaths "idris2" idrisTestsReflection
   , testPaths "idris2" idrisTests
   , !typeddTests
   , !ideModeTests

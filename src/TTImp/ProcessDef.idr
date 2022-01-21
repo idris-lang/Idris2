@@ -356,14 +356,14 @@ checkLHS : {vars : _} ->
            {auto u : Ref UST UState} ->
            {auto s : Ref Syn SyntaxInfo} ->
            Bool -> -- in transform
-           (mult : RigCount) -> (hashit : Bool) ->
+           (mult : RigCount) ->
            Int -> List ElabOpt -> NestedNames vars -> Env Term vars ->
            FC -> RawImp ->
            Core (RawImp, -- checked LHS with implicits added
                  (vars' ** (SubVars vars vars',
                            Env Term vars', NestedNames vars',
                            Term vars', Term vars')))
-checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
+checkLHS {vars} trans mult n opts nest env fc lhs_in
     = do defs <- get Ctxt
          logRaw "declare.def.lhs" 30 "Raw LHS: " lhs_in
          lhs_raw <- if trans
@@ -483,7 +483,7 @@ checkClause mult vis totreq hashit n opts nest env (ImpossibleClause fc lhs)
                               else throw (ValidCase fc env (Right err)))
 checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in rhs)
     = do (_, (vars'  ** (sub', env', nest', lhstm', lhsty'))) <-
-             checkLHS False mult hashit n opts nest env fc lhs_in
+             checkLHS False mult n opts nest env fc lhs_in
          let rhsMode = if isErased mult then InType else InExpr
          log "declare.def.clause" 5 $ "Checking RHS " ++ show rhs
          logEnv "declare.def.clause" 5 "In env" env'
@@ -497,6 +497,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
          when hashit $
            do addHashWithNames lhstm'
               addHashWithNames rhstm
+              log "module.hash" 15 "Adding hash for def."
 
          -- If the rhs is a hole, record the lhs in the metadata because we
          -- might want to split it interactively
@@ -510,7 +511,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
 checkClause {vars} mult vis totreq hashit n opts nest env
     (WithClause ifc lhs_in wval_raw mprf flags cs)
     = do (lhs, (vars'  ** (sub', env', nest', lhspat, reqty))) <-
-             checkLHS False mult hashit n opts nest env ifc lhs_in
+             checkLHS False mult n opts nest env ifc lhs_in
          let wmode
                = if isErased mult then InType else InExpr
 
@@ -811,14 +812,18 @@ mkRunTime fc n
            ignore $ addDef n $
                        { definition := PMDef r rargs tree_ct tree_rt pats
                        } gdef
-           -- If it's a case block, and not already set as inlinable,
-           -- check if it's safe to inline
+           -- If it's a case block, and not already set as inlinable or forced
+           -- to not be inlinable, check if it's safe to inline
            when (caseName !(toFullNames n) && noInline (flags gdef)) $
              do inl <- canInlineCaseBlock n
-                when inl $ setFlag fc n Inline
+                when inl $ do
+                  log "compiler.inline.eval" 5 "Marking \{show !(toFullNames n)} for inlining in runtime case tree."
+                  setFlag fc n Inline
   where
+    -- check if the flags contain explicit inline or noinline directives:
     noInline : List DefFlag -> Bool
-    noInline (Inline :: _) = False
+    noInline (Inline :: _)   = False
+    noInline (NoInline :: _) = False
     noInline (x :: xs) = noInline xs
     noInline _ = True
 
@@ -965,7 +970,11 @@ processDef opts nest env fc n_in cs_in
          let None = definition gdef
               | _ => throw (AlreadyDefined fc n)
          let ty = type gdef
-         let hashit = visibility gdef == Public
+         -- a module's interface hash (what determines when the module has changed)
+         -- should include the definition (RHS) of anything that is public (available
+         -- at compile time for elaboration) _or_ inlined (dropped into destination definitions
+         -- during compilation).
+         let hashit = visibility gdef == Public || (Inline `elem` gdef.flags)
          let mult = if isErased (multiplicity gdef)
                        then erased
                        else linear
