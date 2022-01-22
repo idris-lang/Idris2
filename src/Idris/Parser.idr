@@ -58,6 +58,14 @@ decoratedPragma fname prg = decorate fname Keyword (pragma prg)
 decoratedSymbol : OriginDesc -> String -> Rule ()
 decoratedSymbol fname smb = decorate fname Keyword (symbol smb)
 
+decoratedIdiomBracket : OriginDesc -> Rule (Maybe Namespace)
+decoratedIdiomBracket fname =
+  decorate fname Keyword $
+    terminal "Expected namespaced idiom bracket" $
+      \case NamespacedIdiom ns => Just (Just ns)
+            Symbol "[|"        => Just Nothing
+            _                  => Nothing
+
 parens : {b : _} -> OriginDesc -> BRule b a -> Rule a
 parens fname p
   = pure id <* decoratedSymbol fname "("
@@ -553,11 +561,11 @@ mutual
     <|> do b <- bounds (decoratedSymbol fname "!" *> simpleExpr fname indents)
            pure (PBang (virtualiseFC $ boundToFC fname b) b.val)
     <|> do b <- bounds $ do
-                  decoratedSymbol fname "[|"
-                  t <- expr pdef fname indents
+                  mns <- decoratedIdiomBracket fname
+                  t   <- expr pdef fname indents
                   decoratedSymbol fname "|]"
-                  pure t
-           pure (PIdiom (boundToFC fname b) b.val)
+                  pure (t, mns)
+           pure (PIdiom (boundToFC fname b) (snd b.val) (fst b.val))
     <|> do b <- bounds $ do decoratedPragma fname "logging"
                             topic <- optional (split (('.') ==) <$> simpleStr)
                             lvl   <- intLit
