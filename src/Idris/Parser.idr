@@ -2252,10 +2252,3 @@ command
   <|> symbol ":?" $> Help -- special case, :? doesn't fit into above scheme
   <|> symbol ":" *> Editing <$> editCmd
   <|> eval
-
-testParser : String -> Either Error PTerm
-testParser str =
-  let origin = Virtual Interactive
-   in case runParser origin Nothing str (simplerExpr origin init) of
-        Left err       => Left err
-        Right (_,_,pt) => Right pt
