@@ -276,7 +276,18 @@ plusAssociative (PS k) (NS j) (PS i) = Calc $
      ...( plusCommutative (PS i) (difference (S k) (S j)) )
   ~~ PS k + NS j + PS i
      ...( cong (+ PS i) (unfoldDifference (S k) (S j)) )
-plusAssociative (PS k) (NS j) (NS i) = ?a_8
+plusAssociative (PS k) (NS j) (NS i) = Calc $
+  |~ PS k + NS (S j + i)
+  ~~ difference (S k) (S (S j + i))
+     ...( sym (unfoldDifference (S k) (S (S j + i))) )
+  ~~ difference (S k) (S i + S j)
+     ...( cong (difference k) (plusCommutative (S j) i) )
+  ~~ NS i + difference (S k) (S j)
+     ...( sym (minusNatDifferenceRight (S i) (S k) (S j)) )
+  ~~ difference (S k) (S j) + NS i
+     ...( plusCommutative (NS i) (difference (S k) (S j)) )
+  ~~ (PS k + NS j) + NS i
+     ...( cong (+ NS i) (unfoldDifference (S k) (S j)) )
 plusAssociative (NS k) (PS j) (PS i) = Calc $
   |~ NS k + (PS j + PS i)
   ~~ (PS j + PS i) + NS k
@@ -293,8 +304,36 @@ plusAssociative (NS k) (PS j) (PS i) = Calc $
      ...( cong (+ PS i) (unfoldDifference (S j) (S k)) )
   ~~ (NS k + PS j) + PS i
      ...( cong (+ PS i) (plusCommutative (PS j) (NS k)) )
-plusAssociative (NS k) (PS j) (NS i) = ?a_9
-plusAssociative (NS k) (NS j) (PS i) = ?b_1
+plusAssociative (NS k) (PS j) (NS i) = Calc $
+  |~ NS k + (PS j + NS i)
+  ~~ NS k + difference (S j) (S i)
+     ...( cong (NS k +) (sym $ unfoldDifference (S j) (S i)) )
+  ~~ difference (S j) (S k + S i)
+     ...( minusNatDifferenceRight (S k) (S j) (S i) )
+  ~~ difference (S j) (S i + S k)
+     ...( cong (difference (S j)) (plusCommutative (S k) (S i)) )
+  ~~ NS i + difference (S j) (S k)
+     ...( sym (minusNatDifferenceRight (S i) (S j) (S k)) )
+  ~~ difference (S j) (S k) + NS i
+     ...( plusCommutative (NS i) (difference (S j) (S k)) )
+  ~~ (PS j + NS k) + NS i
+     ...( cong (+ NS i) (unfoldDifference (S j) (S k)) )
+  ~~ (NS k + PS j) + NS i
+     ...( cong (+ NS i) (plusCommutative (PS j) (NS k)) )
+plusAssociative (NS k) (NS j) (PS i) = Calc $
+  |~ NS k + (NS j + PS i)
+  ~~ NS k + (PS i + NS j)
+     ...( cong (NS k +) (plusCommutative (NS j) (PS i)) )
+  ~~ NS k + difference (S i) (S j)
+     ...( cong (NS k +) (sym $ unfoldDifference (S i) (S j)) )
+  ~~ difference (S i) (S k + S j)
+     ...( minusNatDifferenceRight (S k) (S i) (S j) )
+  ~~ difference (S i) (S (S (k + j)))
+     ...( cong (difference i) (sym $ plusSuccRightSucc k j) )
+  ~~ PS i + (NS k + NS j)
+     ...( unfoldDifference (S i) (S (S (k + j))) )
+  ~~ (NS k + NS j) + PS i
+     ...( plusCommutative (PS i) (NS k + NS j) )
 plusAssociative (NS k) (NS j) (NS i) = cong (NS . S) $ Calc $
   |~ k + S (j + i)
   ~~ S (k + (j + i)) ...( sym (plusSuccRightSucc k (j + i)) )
