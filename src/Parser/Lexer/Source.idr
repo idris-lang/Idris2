@@ -48,7 +48,6 @@ data Token
   | DocComment String
   -- Special
   | CGDirective String
-  | NamespacedIdiom Namespace
   | EndInput
   | Keyword String
   | Pragma String
@@ -81,7 +80,6 @@ Show Token where
   -- Special
   show (CGDirective x) = "CGDirective " ++ x
   show EndInput = "end of input"
-  show (NamespacedIdiom ns) = "namespaced idiom bracket " ++ show ns
   show (Keyword x) = x
   show (Pragma x) = "pragma " ++ x
   show (Unrecognised x) = "Unrecognised " ++ x
@@ -112,7 +110,6 @@ Pretty Token where
   pretty (DocComment c) = reflow "doc comment:" <++> dquotes (pretty c)
   -- Special
   pretty (CGDirective x) = pretty "CGDirective" <++> pretty x
-  pretty (NamespacedIdiom ns) = reflow "namespaced idiom" <++> pretty ns
   pretty EndInput = reflow "end of input"
   pretty (Keyword x) = pretty x
   pretty (Pragma x) = pretty "pragma" <++> pretty x
@@ -235,6 +232,7 @@ symbols = [",", ";", "_", "`"]
 export
 groupSymbols : List String
 groupSymbols = [".(", -- for things such as Foo.Bar.(+)
+    ".[|", -- for namespaced brackets such as Foo.Bar.[| x + y |]
     "@{", "[|", "(", "{", "[<", "[>", "[", "`(", "`{", "`["]
 
 export
@@ -242,6 +240,7 @@ groupClose : String -> String
 groupClose ".(" = ")"
 groupClose "@{" = "}"
 groupClose "[|" = "|]"
+groupClose ".[|" = "|]"
 groupClose "(" = ")"
 groupClose "[" = "]"
 groupClose "[<" = "]"
@@ -348,12 +347,6 @@ mutual
                   (\_ => rawTokens)
                   (exact . groupClose)
                   Symbol
-      <|> compose (namespacedIdent <+> exact ".[|")
-                  parseNamespace
-                  id
-                  (\_ => rawTokens)
-                  (\_ => exact "|]")
-                  Symbol
       <|> match (choice $ exact <$> symbols) Symbol
       <|> match doubleLit (DoubleLit . cast)
       <|> match binUnderscoredLit (IntegerLit . fromBinLit . removeUnderscores)
@@ -388,7 +381,6 @@ mutual
       parseNamespace : String -> Token
       parseNamespace ns = case mkNamespacedIdent ns of
                                (Nothing, ident) => parseIdent ident
-                               (Just ns, "[|")  => NamespacedIdiom ns
                                (Just ns, n)     => DotSepIdent ns n
 
       countHashtag : String -> Nat

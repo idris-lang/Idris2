@@ -58,13 +58,9 @@ decoratedPragma fname prg = decorate fname Keyword (pragma prg)
 decoratedSymbol : OriginDesc -> String -> Rule ()
 decoratedSymbol fname smb = decorate fname Keyword (symbol smb)
 
-decoratedIdiomBracket : OriginDesc -> Rule (Maybe Namespace)
-decoratedIdiomBracket fname =
-  decorate fname Keyword $
-    terminal "Expected namespaced idiom bracket" $
-      \case NamespacedIdiom ns => Just (Just ns)
-            Symbol "[|"        => Just Nothing
-            _                  => Nothing
+decoratedNamespacedSymbol : OriginDesc -> String -> Rule (Maybe Namespace)
+decoratedNamespacedSymbol fname smb =
+  decorate fname Keyword $ namespacedSymbol smb
 
 parens : {b : _} -> OriginDesc -> BRule b a -> Rule a
 parens fname p
@@ -521,6 +517,12 @@ mutual
                            pure (x, expr))
            (x, expr) <- pure b.val
            pure (PAs (boundToFC fname b) (boundToFC fname x) x.val expr)
+    <|> do b <- bounds $ do
+                  mns <- decoratedNamespacedSymbol fname "[|"
+                  t   <- expr pdef fname indents
+                  decoratedSymbol fname "|]"
+                  pure (t, mns)
+           pure (PIdiom (boundToFC fname b) (snd b.val) (fst b.val))
     <|> atom fname
     <|> record_ fname indents
     <|> singlelineStr pdef fname indents
@@ -560,12 +562,6 @@ mutual
            listExpr fname start indents
     <|> do b <- bounds (decoratedSymbol fname "!" *> simpleExpr fname indents)
            pure (PBang (virtualiseFC $ boundToFC fname b) b.val)
-    <|> do b <- bounds $ do
-                  mns <- decoratedIdiomBracket fname
-                  t   <- expr pdef fname indents
-                  decoratedSymbol fname "|]"
-                  pure (t, mns)
-           pure (PIdiom (boundToFC fname b) (snd b.val) (fst b.val))
     <|> do b <- bounds $ do decoratedPragma fname "logging"
                             topic <- optional (split (('.') ==) <$> simpleStr)
                             lvl   <- intLit
@@ -2256,3 +2252,10 @@ command
   <|> symbol ":?" $> Help -- special case, :? doesn't fit into above scheme
   <|> symbol ":" *> Editing <$> editCmd
   <|> eval
+
+testParser : String -> Either Error PTerm
+testParser str =
+  let origin = Virtual Interactive
+   in case runParser origin Nothing str (simplerExpr origin init) of
+        Left err       => Left err
+        Right (_,_,pt) => Right pt
