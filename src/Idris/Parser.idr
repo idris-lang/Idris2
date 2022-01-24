@@ -58,6 +58,10 @@ decoratedPragma fname prg = decorate fname Keyword (pragma prg)
 decoratedSymbol : OriginDesc -> String -> Rule ()
 decoratedSymbol fname smb = decorate fname Keyword (symbol smb)
 
+decoratedNamespacedSymbol : OriginDesc -> String -> Rule (Maybe Namespace)
+decoratedNamespacedSymbol fname smb =
+  decorate fname Keyword $ namespacedSymbol smb
+
 parens : {b : _} -> OriginDesc -> BRule b a -> Rule a
 parens fname p
   = pure id <* decoratedSymbol fname "("
@@ -513,6 +517,12 @@ mutual
                            pure (x, expr))
            (x, expr) <- pure b.val
            pure (PAs (boundToFC fname b) (boundToFC fname x) x.val expr)
+    <|> do b <- bounds $ do
+                  mns <- decoratedNamespacedSymbol fname "[|"
+                  t   <- expr pdef fname indents
+                  decoratedSymbol fname "|]"
+                  pure (t, mns)
+           pure (PIdiom (boundToFC fname b) (snd b.val) (fst b.val))
     <|> atom fname
     <|> record_ fname indents
     <|> singlelineStr pdef fname indents
@@ -552,12 +562,6 @@ mutual
            listExpr fname start indents
     <|> do b <- bounds (decoratedSymbol fname "!" *> simpleExpr fname indents)
            pure (PBang (virtualiseFC $ boundToFC fname b) b.val)
-    <|> do b <- bounds $ do
-                  decoratedSymbol fname "[|"
-                  t <- expr pdef fname indents
-                  decoratedSymbol fname "|]"
-                  pure t
-           pure (PIdiom (boundToFC fname b) b.val)
     <|> do b <- bounds $ do decoratedPragma fname "logging"
                             topic <- optional (split (('.') ==) <$> simpleStr)
                             lvl   <- intLit
