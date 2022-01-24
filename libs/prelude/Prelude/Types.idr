@@ -412,6 +412,21 @@ namespace List
   -- proves these are equivalent.
   %transform "tailRecAppend" (++) = tailRecAppend
 
+  ||| Returns the first argument plus the length of the second.
+  public export
+  lengthPlus : Nat -> List a -> Nat
+  lengthPlus n [] = n
+  lengthPlus n (x::xs) = lengthPlus (S n) xs
+
+  ||| `length` implementation that uses tail recursion. Exported so
+  ||| lengthTRIsLength can see it.
+  public export
+  lengthTR : List a -> Nat
+  lengthTR = lengthPlus Z
+
+  -- Data.List.lengthTRIsLength proves these are equivalent.
+  %transform "tailRecLength" length = lengthTR
+
 public export
 Functor List where
   map f [] = []

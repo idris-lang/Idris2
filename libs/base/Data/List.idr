@@ -863,6 +863,17 @@ consInjective : forall x, xs, y, ys .
                 the (List a) (x :: xs) = the (List b) (y :: ys) -> (x = y, xs = ys)
 consInjective Refl = (Refl, Refl)
 
+lengthPlusIsLengthPlus : (n : Nat) -> (xs : List a) ->
+                         lengthPlus n xs = n + length xs
+lengthPlusIsLengthPlus n [] = sym $ plusZeroRightNeutral n
+lengthPlusIsLengthPlus n (x::xs) =
+  trans
+  (lengthPlusIsLengthPlus (S n) xs)
+  (plusSuccRightSucc n (length xs))
+
+lengthTRIsLength : (xs : List a) -> lengthTR xs = length xs
+lengthTRIsLength = lengthPlusIsLengthPlus Z
+
 ||| List `reverse` applied to `reverseOnto` is equivalent to swapping the
 ||| arguments of `reverseOnto`.
 reverseReverseOnto : (l, r : List a) ->
