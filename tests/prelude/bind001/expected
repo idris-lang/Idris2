@@ -1,0 +1,4 @@
+1/1: Building bind (bind.idr)
+Main> [1, 2, 3, 3, 4, 5, 4, 5, 6, 7]
+12502500
+Main> Bye for now!
