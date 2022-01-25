@@ -11,6 +11,8 @@ modules = Data.Container,
 
           Data.INTEGER,
 
+          Data.Linear.Communications,
+          Data.Linear.Diff,
           Data.Linear.Inverse,
 
           Data.OpenUnion,
