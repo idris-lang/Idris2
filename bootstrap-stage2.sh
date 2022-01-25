@@ -4,15 +4,6 @@ set -e # exit on any error
 
 BOOTSTRAP_PREFIX=$PWD/bootstrap-build
 
-if [ "$OS" = "windows" ]; then
-    # IDRIS_PREFIX is only used to build IDRIS2_BOOT_PATH
-    IDRIS_PREFIX=$(cygpath -m "$BOOTSTRAP_PREFIX")
-    SEP=";"
-else
-    IDRIS_PREFIX=$BOOTSTRAP_PREFIX
-    SEP=":"
-fi
-
 IDRIS2_CG="${IDRIS2_CG-"chez"}"
 
 BOOT_PATH_BASE=$IDRIS_PREFIX/idris2-$IDRIS2_VERSION
