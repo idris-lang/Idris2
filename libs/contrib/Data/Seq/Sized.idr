@@ -138,19 +138,19 @@ update i a t = adjust (const a) i t
 
 ||| O(log(min(i, n-i))). Split a sequence at a given position.
 export
-splitAt : (i : Nat) -> Seq n a -> {auto ok : LT i n} -> (Seq i a, Seq (n `minus` i) a)
+splitAt : (i : Nat) -> Seq (i + j) a -> (Seq i a, Seq j a)
 splitAt i (MkSeq xs) = 
   let (l, r) = split i xs 
   in (MkSeq l, MkSeq r)
 
 ||| O(log(min(i, n-i))). The first i elements of a sequence.
 export 
-take : (i : Nat) -> Seq n a -> {auto ok : LT i n} -> Seq i a
+take : (i : Nat) -> Seq (i + j) a -> Seq i a
 take i seq = fst (splitAt i seq)
 
 ||| O(log(min(i, n-i))). Elements of a sequence after the first i.
 export 
-drop : (i : Nat) -> Seq n a -> {auto ok : LT i n} -> Seq (n `minus` i) a
+drop : (i : Nat) -> Seq (i + j) a -> Seq j a
 drop i seq = snd (splitAt i seq)
 
 ||| Dump the internal structure of the finger tree.
@@ -200,7 +200,7 @@ implementation Zippable (Seq n) where
   unzipWith3 f (MkSeq ws) = let (xs, ys, zs) = unzipWith3' f ws in (MkSeq xs, MkSeq ys, MkSeq zs)
 
 ||| This implementation works like a ZipList,
-||| and is differnt from that of Seq'.
+||| and is differnt from that of Seq.Unsized.
 public export
 implementation {n : Nat} -> Applicative (Seq n) where
   pure = replicate n
