@@ -3,6 +3,7 @@
 ||| This is implemented by finger tree.
 module Data.Seq.Unsized
 
+import Control.WellFounded
 import public Data.Zippable
 
 import Data.Seq.Internal

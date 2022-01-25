@@ -4,6 +4,8 @@
 ||| This is implemented by finger tree.
 module Data.Seq.Sized
 
+import Control.WellFounded
+
 import public Data.Fin
 import public Data.Nat
 import public Data.Vect

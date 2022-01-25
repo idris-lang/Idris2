@@ -10,6 +10,7 @@
 |||                      (c) Ross Paterson 2005
 module Data.Seq.Internal
 
+import Control.WellFounded
 import Data.Zippable
 
 %default total
@@ -24,10 +25,6 @@ prettyShow : Prec -> String -> String
 prettyShow p s = if p >= PrefixMinus
   then "(" ++ s ++ ")"
   else s
-
-interface Sized a where
-  size : a -> Nat
-
 
 -- Digit
 data Digit : (e : Type) -> Type where
@@ -71,7 +68,6 @@ implementation Show a => Show (Digit a) where
     "Three " ++ showApp a ++ " " ++ showApp b ++ " " ++ showApp c
   showPrec p (Four a b c d) = prettyShow p $
     "Four " ++ showApp a ++ " " ++ showApp b ++ " " ++ showApp c ++ " " ++ showApp d
-
 
 -- Node
 data Node : (e : Type) -> Type where
