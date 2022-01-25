@@ -82,6 +82,9 @@ modules = Control.ANSI,
 
           Data.Rel.Complement,
 
+          Data.Seq.Sized,
+          Data.Seq.Unsized,
+
           Data.SortedMap,
           Data.SortedMap.Dependent,
           Data.SortedSet,
