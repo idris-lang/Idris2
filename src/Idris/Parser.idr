@@ -1916,10 +1916,10 @@ data CmdArg : Type where
      ||| The command takes a on or off.
      OnOffArg : CmdArg
 
-     ||| The command takes an argument documenting it's name
+     ||| The command takes an argument documenting its name
      NamedCmdArg : String -> CmdArg -> CmdArg
 
-     ||| The command takes an argument documenting it's default value
+     ||| The command takes an argument documenting its default value
      WithDefaultArg : String -> CmdArg -> CmdArg
 
      ||| The command takes arguments separated by ","
