@@ -121,6 +121,7 @@ knownTopics = [
     ("interaction.generate", Nothing),
     ("interaction.search", Nothing),
     ("metadata.names", Nothing),
+    ("module", Nothing),
     ("module.hash", Nothing),
     ("quantity", Nothing),
     ("quantity.hole", Nothing),

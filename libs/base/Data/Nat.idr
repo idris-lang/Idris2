@@ -61,6 +61,19 @@ pred (S n) = n
 
 -- Comparisons
 
+export
+compareNatDiag : (k : Nat) -> compareNat k k === EQ
+compareNatDiag Z = Refl
+compareNatDiag (S k) = compareNatDiag k
+
+export
+compareNatFlip : (m, n : Nat) ->
+  flip Prelude.compareNat m n === contra (compareNat m n)
+compareNatFlip 0      0    = Refl
+compareNatFlip 0     (S n) = Refl
+compareNatFlip (S m) 0     = Refl
+compareNatFlip (S m) (S n) = compareNatFlip m n
+
 public export
 data NotBothZero : (n, m : Nat) -> Type where
   LeftIsNotZero  : NotBothZero (S n) m

@@ -232,6 +232,7 @@ symbols = [",", ";", "_", "`"]
 export
 groupSymbols : List String
 groupSymbols = [".(", -- for things such as Foo.Bar.(+)
+    ".[|", -- for namespaced brackets such as Foo.Bar.[| x + y |]
     "@{", "[|", "(", "{", "[<", "[>", "[", "`(", "`{", "`["]
 
 export
@@ -239,6 +240,7 @@ groupClose : String -> String
 groupClose ".(" = ")"
 groupClose "@{" = "}"
 groupClose "[|" = "|]"
+groupClose ".[|" = "|]"
 groupClose "(" = ")"
 groupClose "[" = "]"
 groupClose "[<" = "]"

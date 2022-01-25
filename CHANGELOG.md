@@ -54,6 +54,8 @@
 * Removes deprecated support for `void` primitive. Now `void` is supported via
   `prim__void`.
 * Adds `%deprecate` pragma that can be used to warn when deprecated functions are used.
+* Package files now support a `langversion` field that can be used to specify what versions of Idris a package supports. As with dependency versions, `>`, `<`, `>=`, and `<=` can all be used.
+  + For example, `langversion >= 0.5.1`.
 
 ### IDE protocol changes
 
@@ -88,6 +90,8 @@
 * Removes `base`'s deprecated `Data.String.fastAppend`. Use `fastConcat` instead.
 * `System.File.Buffer.writeBufferData` now returns the number of bytes that have
    been written when there is a write error.
+* `System.File.Buffer.readBufferData` now returns the number of bytes that have
+   been read into the buffer.
 
 #### Contrib
 

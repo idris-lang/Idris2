@@ -307,6 +307,14 @@ namespaceId = do
   pure (uncurry mkNestedNamespace nsid.val)
 
 export
+namespacedSymbol : String -> Rule (Maybe Namespace)
+namespacedSymbol req = do
+  (symbol req $> Nothing) <|> do
+    ns <- namespaceId
+    symbol ("." ++ req)
+    pure (Just ns)
+
+export
 moduleIdent : Rule ModuleIdent
 moduleIdent = nsAsModuleIdent <$> namespaceId
 
