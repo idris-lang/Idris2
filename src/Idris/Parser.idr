@@ -1869,15 +1869,6 @@ replCmd (c :: cs)
   <|> symbol c
   <|> replCmd cs
 
-addClauseCmd : Rule EditCmd
-addClauseCmd =
-  (do
-      upd <- option False (symbol "!" $> True)
-      line <- intLit
-      n <- name
-      pure (AddClause upd (fromInteger line) n)
-  ) <|> fail "Bad \":addclause\" semantics"
-
 export
 data CmdArg : Type where
      ||| The command takes no arguments.
@@ -1922,8 +1913,8 @@ data CmdArg : Type where
      ||| The command takes an argument documenting its default value
      WithDefaultArg : String -> CmdArg -> CmdArg
 
-     ||| The command takes arguments separated by ","
-     ListArg : CmdArg -> CmdArg
+     ||| The command takes arguments separated by commas
+     CSVArg : CmdArg -> CmdArg
 
      ||| The command takes multiple arguments.
      Args : List CmdArg -> CmdArg
@@ -1943,7 +1934,7 @@ mutual
   showCmdArg ModuleArg = "module"
   showCmdArg StringArg = "string"
   showCmdArg OnOffArg = "(on|off)"
-  showCmdArg (ListArg arg) = "[" ++ showCmdArg arg ++ "]"
+  showCmdArg (CSVArg arg) = "[" ++ showCmdArg arg ++ "]"
   showCmdArg (WithDefaultArg value arg) = showCmdArg arg ++ "|" ++ value
   showCmdArg (NamedCmdArg name arg) = name ++ ":" ++ showCmdArg arg
   showCmdArg args@(Args _) = show args
@@ -2195,15 +2186,15 @@ editLineColNameArgCmd parseCmd command doc =
     n <- mustWork name
     pure (Editing $ command upd line col n)
 
-editLineNameListArgCmd : ParseCmd
+editLineNameCSVArgCmd : ParseCmd
                        -> (Bool -> Int -> Name -> List Name -> EditCmd)
                        -> String
                        -> CommandDefinition
-editLineNameListArgCmd parseCmd command doc =
+editLineNameCSVArgCmd parseCmd command doc =
   ( names
   , Args [ NamedCmdArg "l" NumberArg
          , NamedCmdArg "n" StringArg
-         , NamedCmdArg "h" (ListArg NameArg)
+         , NamedCmdArg "h" (CSVArg NameArg)
          ]
   , doc
   , parse
@@ -2285,7 +2276,7 @@ parserCommandsForHelp =
   , editLineNameArgCmd (ParseREPLCmd ["ml", "makelemma"]) MakeLemma "Make lemma for term <n> defined on line <l>"
   , editLineNameArgCmd (ParseREPLCmd ["mc", "makecase"]) MakeCase "Make case on term <n> defined on line <l>"
   , editLineNameArgCmd (ParseREPLCmd ["mw", "makewith"]) MakeWith "Add with expression on term <n> defined on line <l>"
-  , editLineNameListArgCmd (ParseREPLCmd ["ps", "proofsearch"]) ExprSearch "Search for a proof"
+  , editLineNameCSVArgCmd (ParseREPLCmd ["ps", "proofsearch"]) ExprSearch "Search for a proof"
   , noArgCmd (ParseREPLCmd ["psnext"]) (Editing ExprSearchNext) "Show next proof"
   , editLineNameOptionArgCmd (ParseREPLCmd ["gd"]) GenerateDef "Search for a proof"
   , noArgCmd (ParseREPLCmd ["gdnext"]) (Editing GenerateDefNext) "Show next definition"
