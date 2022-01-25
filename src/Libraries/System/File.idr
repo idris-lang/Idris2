@@ -1,8 +1,7 @@
-module System.File
+module Libraries.System.File
 
 import Data.Buffer
 
-import public System.File.Buffer
 import public System.File.Error
 import public System.File.Handle
 import public System.File.Meta
@@ -12,6 +11,8 @@ import public System.File.Process
 import public System.File.ReadWrite
 import public System.File.Types
 import public System.File.Virtual
+
+import public Libraries.System.File.Buffer
 
 ||| Copy the file at the specified source to the given destination.
 ||| Returns the number of bytes that have been written upon a write error.

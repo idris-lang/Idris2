@@ -1,4 +1,4 @@
-module System.File.Buffer
+module Libraries.System.File.Buffer
 
 import public System.File.Error
 import System.File.Handle
@@ -30,11 +30,11 @@ export
 readBufferData : HasIO io => (fh : File) -> (buf : Buffer) ->
                  (offset : Int) ->
                  (maxbytes : Int) ->
-                 io (Either FileError Int)
+                 io (Either FileError ())
 readBufferData (FHandle h) buf offset max
     = do read <- primIO (prim__readBufferData h buf offset max)
          if read >= 0
-            then pure (Right read)
+            then pure (Right ())
             else pure (Left FileReadError)
 
 ||| Write the data from the buffer to the given `File`. Returns the number
