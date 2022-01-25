@@ -8,5 +8,7 @@ iterateTR n f = go n Lin
 
 main : IO ()
 main = do
-  printLn $ [1..4] >>= (\n => iterateTR n (+1) n)
+  -- this checks that *bind* still behaves correctly
+  printLn $ [1..4] >>= (\n => iterateTR n (+1) 1)
+  -- this verifies that *bind* runs in linear time
   printLn . length $ [1..5000] >>= (\n => iterateTR n (+1) n)
