@@ -2,7 +2,7 @@
 1/1: Building parambad (parambad.idr)
 Error: While processing right hand side of U. Name Main.X.foo is private.
 
-parambad.idr:7:7--7:10
+parambad:7:7--7:10
  3 |     foo : Bool
  4 |     foo = True
  5 | 

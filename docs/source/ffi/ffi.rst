@@ -48,6 +48,18 @@ general scheme specifier present that matches every flavor, e.g.
     If your backend (code generator) is not specified but defines a C FFI
     it will be able to make use of the ``C:malloc,libc`` specifier.
 
+C Sidenote
+----------
+
+The ``C`` language specifier is used for common functions that may be used by
+any backend which can, in turn, FFI out to C. For example, Scheme.
+
+The common C functions do no automatic memory management, deferring that to
+the individual backends.
+
+The standard C backend is known as "RefC", and uses the ``RefC`` language
+specifier.
+
 FFI Example
 -----------
 

@@ -1,0 +1,63 @@
+######################################################################
+# Unlike the main yml file this uses the LTS version of chezscheme,
+# not the hirsute one. The main purpose is to make sure that
+# `make bootstrap` does not rely on `__collect_safe`.
+#
+# Note that we are *not* running on ubuntu-latest so this needs manual
+# upgrades if we want to jump on a newer github actions environment.
+######################################################################
+
+name: Bootstrap
+
+on:
+  push:
+    paths:
+      - 'bootstrap/idris2_app/idris2.ss'
+      - '.github/workflows/ci-bootstrap.yml'
+  pull_request:
+    paths:
+      - 'bootstrap/idris2_app/idris2.ss'
+      - '.github/workflows/ci-bootstrap.yml'
+
+jobs:
+
+  initialise:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v2
+        with:
+          # for pull_request so we can do HEAD^2
+          fetch-depth: 2
+
+      - name: Get commit message
+        id: get_commit_message
+        run: |
+          if   [[ '${{ github.event_name }}' == 'push' ]]; then
+            echo ::set-output name=commit_message::$(git log --format=%B -n 1 HEAD)
+          elif [[ '${{ github.event_name }}' == 'pull_request' ]]; then
+            echo ::set-output name=commit_message::$(git log --format=%B -n 1 HEAD^2)
+          fi
+
+    outputs:
+      commit_message:
+        echo "${{ steps.get_commit_message.outputs.commit_message }}"
+
+  bootstrap:
+    needs: initialise
+    runs-on: ubuntu-20.04
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci: skip]')
+    env:
+      IDRIS2_CG: chez
+      SCHEME: scheme
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install build dependencies (LTS versions)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chezscheme
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+      - name: Build bootstrap
+        run: make bootstrap

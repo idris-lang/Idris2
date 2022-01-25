@@ -11,13 +11,16 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
 
-import Libraries.Data.Bool.Extra
 import Data.List
-import Libraries.Data.StringMap
+import Data.String
+
+import Libraries.Data.UserNameMap
 
 %default covering
 
@@ -30,7 +33,7 @@ expandAmbigName : {vars : _} ->
                   RawImp -> Maybe (Glued vars) -> Core RawImp
 expandAmbigName (InLHS _) nest env orig args (IBindVar fc n) exp
     = do est <- get EST
-         if UN n `elem` lhsPatVars est
+         if UN (Basic n) `elem` lhsPatVars est
             then pure $ IMustUnify fc NonLinearVar orig
             else pure $ orig
 expandAmbigName mode nest env orig args (IVar fc x) exp
@@ -67,7 +70,7 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
                                                       (uniqType primNs x args)
                                                       (map (mkAlt primApp est) nalts)
   where
-    lookupUN : Maybe String -> StringMap a -> Maybe a
+    lookupUN : Maybe UserName -> UserNameMap a -> Maybe a
     lookupUN Nothing _ = Nothing
     lookupUN (Just n) sm = lookup n sm
 
@@ -102,11 +105,6 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
         = buildAlt (IAutoApp fc' f a) as
     buildAlt f ((fc', Just (Just i), a) :: as)
         = buildAlt (INamedApp fc' f i a) as
-
-    isPrimName : List Name -> Name -> Bool
-    isPrimName [] fn = False
-    isPrimName (p :: ps) fn
-        = dropNS fn == p || isPrimName ps fn
 
     -- If it's not a constructor application, dot it
     wrapDot : Bool -> EState vars ->
@@ -203,6 +201,7 @@ mutual
                Defs -> NF vars -> NF [] -> Core TypeMatch
   mightMatch defs target (NBind fc n (Pi _ _ _ _) sc)
       = mightMatchD defs target !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+  mightMatch defs (NBind _ _ _ _) (NBind _ _ _ _) = pure Poly -- lambdas might match
   mightMatch defs (NTCon _ n t a args) (NTCon _ n' t' a' args')
       = if n == n'
            then do amatch <- mightMatchArgs defs (map snd args) (map snd args')
@@ -215,7 +214,7 @@ mutual
            else pure NoMatch
   mightMatch defs (NPrimVal _ x) (NPrimVal _ y)
       = if x == y then pure Concrete else pure NoMatch
-  mightMatch defs (NType _) (NType _) = pure Concrete
+  mightMatch defs (NType _ _) (NType _ _) = pure Concrete
   mightMatch defs (NApp _ _ _) _ = pure Poly
   mightMatch defs (NErased _ _) _ = pure Poly
   mightMatch defs _ (NApp _ _ _) = pure Poly
@@ -255,7 +254,7 @@ couldBe {vars} defs ty@(NPrimVal _ _) app
           Concrete => pure $ Just (True, app)
           Poly => pure $ Just (False, app)
           NoMatch => pure Nothing
-couldBe {vars} defs ty@(NType _) app
+couldBe {vars} defs ty@(NType _ _) app
    = case !(couldBeFn {vars} defs ty (getFn app)) of
           Concrete => pure $ Just (True, app)
           Poly => pure $ Just (False, app)
@@ -296,8 +295,8 @@ pruneByType env target alts
          matches_in <- traverse (couldBe defs (stripDelay target)) alts
          let matches = mapMaybe id matches_in
          logNF "elab.prune" 10 "Prune by" env target
-         log "elab.prun" 10 (show matches)
-         res <- if anyTrue (map fst matches)
+         log "elab.prune" 10 (show matches)
+         res <- if any Builtin.fst matches
                 -- if there's any concrete matches, drop the non-concrete
                 -- matches marked as '%allow_overloads' from the possible set
                    then do keep <- filterCore (notOverloadable defs) matches
@@ -330,7 +329,7 @@ addAmbig : List alts -> Maybe Name -> ElabInfo -> ElabInfo
 addAmbig _ Nothing = id
 addAmbig [] _ = id
 addAmbig [_] _ = id
-addAmbig _ (Just n) = record { ambigTries $= (n ::) }
+addAmbig _ (Just n) = { ambigTries $= (n ::) }
 
 export
 checkAlternative : {vars : _} ->
@@ -338,6 +337,7 @@ checkAlternative : {vars : _} ->
                    {auto m : Ref MD Metadata} ->
                    {auto u : Ref UST UState} ->
                    {auto e : Ref EST (EState vars)} ->
+                   {auto s : Ref Syn SyntaxInfo} ->
                    RigCount -> ElabInfo ->
                    NestedNames vars -> Env Term vars ->
                    FC -> AltType -> List RawImp -> Maybe (Glued vars) ->
@@ -345,13 +345,14 @@ checkAlternative : {vars : _} ->
 checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
     = do checkAmbigDepth fc elabinfo
          expected <- maybe (do nm <- genName "altTy"
-                               ty <- metaVar fc erased env nm (TType fc)
+                               u <- uniVar fc
+                               ty <- metaVar fc erased env nm (TType fc u)
                                pure (gnf env ty))
                            pure mexpected
          let solvemode = case elabMode elabinfo of
                               InLHS c => inLHS
                               _ => inTerm
-         delayOnFailure fc rig env expected ambiguous 5 $
+         delayOnFailure fc rig env (Just expected) ambiguous Ambiguity $
              \delayed =>
                do solveConstraints solvemode Normal
                   defs <- get Ctxt
@@ -363,12 +364,15 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
                                 then gnf env exp
                                 else expected
 
-                  logGlueNF "elab.ambiguous" 5 ("Ambiguous elaboration " ++ show alts ++
-                               " at " ++ show fc ++
-                               "\nWith default. Target type ") env exp'
+                  logGlueNF "elab.ambiguous" 5 (fastConcat
+                    [ "Ambiguous elaboration at ", show fc, ":\n"
+                    , unlines (map show alts)
+                    , "With default. Target type "
+                    ]) env exp'
                   alts' <- pruneByType env !(getNF exp') alts
-                  log "elab.prun" 5 ("Pruned alts (" ++ show (length alts') ++ ") " ++
-                          show alts')
+                  log "elab.prune" 5 $
+                    "Pruned " ++ show (minus (length alts) (length alts')) ++ " alts."
+                    ++ " Kept:\n" ++ unlines (map show alts')
 
                   if delayed -- use the default if there's still ambiguity
                      then try
@@ -378,7 +382,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
                                     checkImp rig (addAmbig alts' (getName t) elabinfo)
                                              nest env t
                                              (Just exp'))) alts'))
-                            (do log "elab" 5 "All failed, running default"
+                            (do log "elab.ambiguous" 5 "All failed, running default"
                                 checkImp rig (addAmbig alts' (getName def) elabinfo)
                                              nest env def (Just exp'))
                      else exactlyOne' True fc env
@@ -395,13 +399,14 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
            [alt] => checkImp rig elabinfo nest env alt mexpected
            _ =>
              do expected <- maybe (do nm <- genName "altTy"
-                                      ty <- metaVar fc erased env nm (TType fc)
+                                      u <- uniVar fc
+                                      ty <- metaVar fc erased env nm (TType fc u)
                                       pure (gnf env ty))
                                   pure mexpected
                 let solvemode = case elabMode elabinfo of
                                       InLHS c => inLHS
                                       _ => inTerm
-                delayOnFailure fc rig env expected ambiguous 5 $
+                delayOnFailure fc rig env (Just expected) ambiguous Ambiguity $
                      \delayed =>
                        do defs <- get Ctxt
                           exp <- getTerm expected
@@ -414,10 +419,15 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
 
                           alts' <- pruneByType env !(getNF exp') alts
 
-                          logGlueNF "elab.ambiguous" 5 ("Ambiguous elaboration " ++ show delayed ++ " " ++
-                                       show alts' ++
-                                       " at " ++ show fc ++
-                                       "\nTarget type ") env exp'
+                          logGlueNF "elab.ambiguous" 5 (fastConcat
+                              [ "Ambiguous elaboration"
+                              , " (kept ", show (length alts'), " out of "
+                              , show (length alts), " candidates)"
+                              , " (", if delayed then "" else "not ", "delayed)"
+                              , " at ", show fc, ":\n"
+                              , unlines (map show alts')
+                              , "Target type "
+                              ]) env exp'
                           let tryall = case uniq of
                                             FirstSuccess => anyOne fc
                                             _ => exactlyOne' (not delayed) fc env
@@ -431,5 +441,6 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                                   -- way that allows one pass)
                                   solveConstraints solvemode Normal
                                   solveConstraints solvemode Normal
-                                  log "elab" 10 $ show (getName t) ++ " success"
+                                  log "elab.ambiguous" 10 $ show (getName t) ++ " success"
+                                  logTermNF "elab.ambiguous" 10 "Result" env (fst res)
                                   pure res)) alts')

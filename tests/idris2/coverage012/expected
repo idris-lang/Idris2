@@ -1,7 +1,7 @@
 1/1: Building Issue899 (Issue899.idr)
 Error: zeroImpossible is not covering.
 
-Issue899.idr:3:1--3:46
+Issue899:3:1--3:46
  1 | %default total
  2 | 
  3 | zeroImpossible : (k : Nat) -> k === Z -> Void
@@ -13,7 +13,7 @@ Missing cases:
 1/1: Building Issue484 (Issue484.idr)
 Error: swap is not covering.
 
-Issue484.idr:10:1--10:41
+Issue484:10:1--10:41
  06 | getType Vrai = Unit
  07 | getType Faux = Unit
  08 | getType Indef = Void

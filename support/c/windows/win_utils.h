@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <io.h>
 
 #pragma once
 
@@ -11,5 +12,9 @@ void win32_sleep(int ms);
 int win32_modenv(const char* name, const char* value, int overwrite);
 
 int win32_getErrno();
+int win32_getPID();
 long win32_getNProcessors();
+
+int win32_getFileNo(FILE*);
+int win32_isTTY(int fd);
 

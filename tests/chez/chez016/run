@@ -1,8 +1,4 @@
-# This test needs to run `idris2` from a sub-folder. Get the absolute path.
-
-IDRIS2_EXEC="$(realpath "$1")"
-
 cd "folder with spaces" || exit
-
-"$IDRIS2_EXEC" --no-color --console-width 0 --no-banner Main.idr < ../input
 rm -rf build
+
+$1 --no-color --console-width 0 --no-banner Main.idr < ../input

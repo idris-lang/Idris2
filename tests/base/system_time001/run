@@ -1,0 +1,16 @@
+rm -rf build
+
+# @time@ uses a primitive function with definitions for both
+# C (supported by most backends) and Javascript (Node & Browsers).
+$1 --cg chez --no-color --console-width 0 --no-banner Time.idr < input
+$1 --cg node --no-color --console-width 0 --no-banner Time.idr < input
+
+# The following backends failed for reasons unrelated to this test. They can be
+# uncommented at a future date.
+# RACKET failed to find the builtin idris support library
+# $1 --cg racket --no-color --console-width 0 --no-banner ReadFilePage.idr < input
+# REFC doesn't support :exec yet
+# $1 --cg refc --no-color --console-width 0 --no-banner ReadFilePage.idr < input
+# GAMBIT hung seemingly indefinitely
+# $1 --cg gambit --no-color --console-width 0 --no-banner ReadFilePage.idr < input
+

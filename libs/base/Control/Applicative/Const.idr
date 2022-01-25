@@ -3,6 +3,8 @@ module Control.Applicative.Const
 import Data.Contravariant
 import Data.Bits
 
+%default total
+
 public export
 record Const (a : Type) (b : Type) where
   constructor MkConst
@@ -92,6 +94,8 @@ Foldable (Const a) where
   foldr _ acc _ = acc
   foldl _ acc _ = acc
   null _ = True
+  toList _ = []
+  foldMap _ _ = neutral
 
 public export
 Traversable (Const a) where

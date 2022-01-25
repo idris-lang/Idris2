@@ -11,7 +11,8 @@ import Core.Normalise
 import Core.Termination
 import Core.TT
 import Core.Unify
-import Core.Value
+
+import Idris.Syntax
 
 import TTImp.Elab
 import TTImp.Elab.Check
@@ -36,6 +37,7 @@ showInfo (n, _, d)
 process : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           ImpREPL -> Core Bool
 process (Eval ttimp)
     = do (tm, _) <- elabTerm 0 InExpr [] (MkNested []) [] ttimp Nothing
@@ -65,9 +67,8 @@ process (Check ttimp)
 process (ProofSearch n_in)
     = do defs <- get Ctxt
          [(n, i, ty)] <- lookupTyName n_in (gamma defs)
-              | [] => undefinedName toplevelFC n_in
-              | ns => throw (AmbiguousName toplevelFC (map fst ns))
-         def <- search toplevelFC top False 1000 n ty []
+              | ns => ambiguousName (justFC defaultFC) n_in (map fst ns)
+         def <- search (justFC defaultFC) top False 1000 n ty []
          defs <- get Ctxt
          defnf <- normaliseHoles defs [] def
          coreLift_ (printLn !(toFullNames defnf))
@@ -75,10 +76,9 @@ process (ProofSearch n_in)
 process (ExprSearch n_in)
     = do defs <- get Ctxt
          [(n, i, ty)] <- lookupTyName n_in (gamma defs)
-              | [] => undefinedName toplevelFC n_in
-              | ns => throw (AmbiguousName toplevelFC (map fst ns))
-         results <- exprSearchN toplevelFC 1 n []
-         traverse_ (\d => coreLift (printLn d)) results
+              | ns => ambiguousName (justFC defaultFC) n_in (map fst ns)
+         results <- exprSearchN (justFC defaultFC) 1 n []
+         traverse_ (coreLift . printLn) results
          pure True
 process (GenerateDef line name)
     = do defs <- get Ctxt
@@ -102,7 +102,7 @@ process (Missing n_in)
               [] => undefinedName emptyFC n_in
               ts => do traverse_ (\fn =>
                           do tot <- getTotality emptyFC fn
-                             the (Core ()) $ case isCovering tot of
+                             case isCovering tot of
                                   MissingCases cs =>
                                      coreLift_ (putStrLn (show fn ++ ":\n" ++
                                                  showSep "\n" (map show cs)))
@@ -136,6 +136,7 @@ process Quit
 processCatch : {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                ImpREPL -> Core Bool
 processCatch cmd
     = catch (process cmd)
@@ -146,11 +147,12 @@ export
 repl : {auto c : Ref Ctxt Defs} ->
        {auto m : Ref MD Metadata} ->
        {auto u : Ref UST UState} ->
+       {auto s : Ref Syn SyntaxInfo} ->
        Core ()
 repl
     = do coreLift_ (putStr "Yaffle> ")
          inp <- coreLift getLine
-         case runParser "(interactive)" Nothing inp command of
+         case runParser (Virtual Interactive) Nothing inp command of
               Left err => do coreLift_ (printLn err)
                              repl
-              Right (decor, cmd) => when !(processCatch cmd) repl
+              Right (_, _, cmd) => when !(processCatch cmd) repl

@@ -39,9 +39,6 @@ main
          ds <- bufferData buf2
          printLn ds
 
-         freeBuffer buf
-         freeBuffer buf2
-
 -- Put back when the File API is moved to C and these can work again
 --          Right f <- openBinaryFile "test.buf" Read
 --              | Left err => putStrLn "File error on read"

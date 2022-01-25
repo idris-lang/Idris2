@@ -1,3 +1,4 @@
+rm -rf build
+
 $1 --build dummy.ipkg
 
-rm -rf build

@@ -1,0 +1,3 @@
+:exec main
+:exec putStrLn ex
+:q

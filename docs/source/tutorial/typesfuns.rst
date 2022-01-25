@@ -82,13 +82,13 @@ follows:
                                         -- (zero and successor)
     data List a = Nil | (::) a (List a) -- Polymorphic lists
 
-The above declarations are taken from the standard library. Unary
-natural numbers can be either zero (``Z``), or the successor of
-another natural number (``S k``). Lists can either be empty (``Nil``)
-or a value added to the front of another list (``x :: xs``). In the
-declaration for ``List``, we used an infix operator ``::``. New
-operators such as this can be added using a fixity declaration, as
-follows:
+Data type names cannot begin with a lower case letter (we will see later
+why not!).  The above declarations are taken from the standard library. Unary
+natural numbers can be either zero (``Z``), or the successor of another natural
+number (``S k``). Lists can either be empty (``Nil``) or a value added to the
+front of another list (``x :: xs``). In the declaration for ``List``, we used
+an infix operator ``::``. New operators such as this can be added using a
+fixity declaration, as follows:
 
 ::
 
@@ -132,7 +132,7 @@ library:
 
 The standard arithmetic operators ``+`` and ``*`` are also overloaded
 for use by ``Nat``, and are implemented using the above functions.
-Unlike Haskell, there is no restriction on whether types and function
+Unlike Haskell, there is no restriction on whether function
 names must begin with a capital letter or not. Function names
 (``plus`` and ``mult`` above), data constructors (``Z``, ``S``,
 ``Nil`` and ``::``) and type constructors (``Nat`` and ``List``) are
@@ -505,7 +505,8 @@ arguments. Any name beginning with a lower case letter which appears
 as a parameter or index in a
 type declaration, which is not applied to any arguments, will
 *always* be automatically
-bound as an implicit argument. Implicit arguments can still be given
+bound as an implicit argument; this is why data type names cannot begin with
+a lower case letter. Implicit arguments can still be given
 explicitly in applications, using ``{a=value}`` and ``{n=value}``, for
 example:
 
@@ -554,6 +555,52 @@ In a ``mutual`` block, first all of the type declarations are added,
 then the function bodies. As a result, none of the function types can
 depend on the reduction behaviour of any of the functions in the
 block.
+
+Forward declarations can allow you to have more fine-grained control over the order
+in which mutually defined concepts are declared. This can be useful if you need to
+mention a datatype's constructor in the type of a mutually defined function, or need
+to rely on the behaviour of a mutually defined function for something to typecheck.
+
+.. code-block:: idris
+
+  data V : Type
+  T : V -> Type
+
+  data V : Type where
+    N : V
+    Pi : (a : V) -> (b : T a -> V) -> V
+
+  T N = Nat
+  T (Pi a b) = (x : T a) -> T (b x)
+
+.. code-block:: idris
+
+  data Even : Nat -> Type
+  data Odd  : Nat -> Type
+
+  data Even : Nat -> Type where
+    ZIsEven : Even Z
+    SOddisEven : Odd n -> Even (S k)
+
+  data Odd : Nat -> Type where
+    SEvenIsOdd : Even n -> Odd (S k)
+
+
+.. code-block:: idris
+
+  even : Nat -> Bool
+  odd  : Nat -> Bool
+
+  -- or just ``even, odd : Nat -> Bool``
+
+  even    Z  = True
+  even (S k) = odd k
+
+  odd    Z  = False
+  odd (S k) = even k
+
+Placing signature declarations forward can suggest Idris to detect
+their corresponding mutual definitions.
 
 I/O
 ===
@@ -1027,13 +1074,13 @@ updated):
 
 .. code-block:: bash
 
-    *Record> record { firstName = "Jim" } fred
+    *Record> { firstName := "Jim" } fred
     MkPerson "Jim" "Joe" "Bloggs" 30 : Person
-    *Record> record { firstName = "Jim", age $= (+ 1) } fred
+    *Record> { firstName := "Jim", age $= (+ 1) } fred
     MkPerson "Jim" "Joe" "Bloggs" 31 : Person
 
-The syntax ``record { field = val, ... }`` generates a function which
-updates the given fields in a record. ``=`` assigns a new value to a field,
+The syntax ``{ field := val, ... }`` generates a function which
+updates the given fields in a record. ``:=`` assigns a new value to a field,
 and ``$=`` applies a function to update its value.
 
 Each record is defined in its own namespace, which means that field names
@@ -1056,7 +1103,7 @@ length because it will not affect the type of the record:
 .. code-block:: idris
 
     addStudent : Person -> Class -> Class
-    addStudent p c = record { students = p :: students c } c
+    addStudent p c = { students := p :: students c } c
 
 ::
 
@@ -1068,7 +1115,7 @@ We could also use ``$=`` to define ``addStudent`` more concisely:
 .. code-block:: idris
 
     addStudent' : Person -> Class -> Class
-    addStudent' p c = record { students $= (p ::) } c
+    addStudent' p c = { students $= (p ::) } c
 
 Nested record projection
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1103,11 +1150,11 @@ syntax:
 
 .. code-block:: idris
 
-    record { a.b.c = val } x
+    { a.b.c := val } x
 
 This returns a new record, with the field accessed by the path
-``a.b.c`` set to ``val``. The syntax is first class, i.e. ``record {
-a.b.c = val }`` itself has a function type.
+``a.b.c`` set to ``val``. The syntax is first class, i.e. ``{
+a.b.c := val }`` itself has a function type.
 
 The ``$=`` notation is also valid for nested record updates.
 
@@ -1144,7 +1191,7 @@ is added:
 .. code-block:: idris
 
     addStudent : Person -> SizedClass n -> SizedClass (S n)
-    addStudent p c = record { students = p :: students c } c
+    addStudent p c = { students := p :: students c } c
 
 In fact, the dependent pair type we have just seen is, in practice, defined
 as a record, with fields ``fst`` and ``snd`` which allow projecting values
@@ -1164,8 +1211,8 @@ that all related fields are updated at once. For example:
 
     cons : t -> (x : Nat ** Vect x t) -> (x : Nat ** Vect x t)
     cons val xs
-        = record { fst = S (fst xs),
-                   snd = (val :: snd xs) } xs
+        = { fst := S (fst xs),
+            snd := (val :: snd xs) } xs
 
 Or even:
 
@@ -1173,14 +1220,16 @@ Or even:
 
     cons' : t -> (x : Nat ** Vect x t) -> (x : Nat ** Vect x t)
     cons' val
-        = record { fst $= S,
-                   snd $= (val ::) }
+        = { fst $= S,
+            snd $= (val ::) }
 
 .. _sect-more-expr:
 
 
 More Expressions
 ================
+
+.. _sect-let-bindings:
 
 ``let`` bindings
 ----------------
@@ -1204,6 +1253,49 @@ pattern matching at the top level:
     showPerson : Person -> String
     showPerson p = let MkPerson name age = p in
                        name ++ " is " ++ show age ++ " years old"
+
+These let bindings can be annotated with a type:
+
+.. code-block:: idris
+
+   mirror : List a -> List a
+   mirror xs = let xs' : List a = reverse xs in
+                   xs ++ xs'
+
+We can also use the symbol ``:=`` instead of ``=`` to, among other things,
+avoid ambiguities with propositional equality:
+
+.. code-block:: idris
+
+   Diag : a -> Type
+   Diag v = let ty : Type := v = v in ty
+
+Local definitions can also be introduced using ``let``. Just like top level
+ones and ones defined in a ``where`` clause you need to:
+
+1. declare the function and its type
+2. define the function by pattern matching
+
+.. code-block:: idris
+
+   foldMap : Monoid m => (a -> m) -> Vect n a -> m
+   foldMap f = let fo : m -> a -> m
+                   fo ac el = ac <+> f el
+                in foldl fo neutral
+
+The symbol ``:=`` cannot be used in a local function definition. Which means
+that it can be used to interleave let bindings and local definitions without
+introducing ambiguities.
+
+.. code-block:: idris
+
+   foldMap : Monoid m => (a -> m) -> Vect n a -> m
+   foldMap f = let fo : m -> a -> m
+                   fo ac el = ac <+> f el
+                   initial := neutral
+                    --     ^ this indicates that `initial` is a separate binding,
+                    -- not relevant to definition of `fo`
+                in foldl fo initial
 
 List comprehensions
 -------------------

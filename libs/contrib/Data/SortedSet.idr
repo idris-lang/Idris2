@@ -30,13 +30,16 @@ fromList l = SetWrapper (Data.SortedMap.fromList (map (\i => (i, ())) l))
 
 export
 toList : SortedSet k -> List k
-toList (SetWrapper m) = map (\(i, _) => i) (Data.SortedMap.toList m)
+toList (SetWrapper m) = keys m
 
 export
 Foldable SortedSet where
-  foldr f e xs = foldr f e (Data.SortedSet.toList xs)
+  foldr f z = foldr f z . Data.SortedSet.toList
+  foldl f z = foldl f z . Data.SortedSet.toList
 
   null (SetWrapper m) = null m
+
+  foldMap f = foldMap f . Data.SortedSet.toList
 
 ||| Set union. Inserts all elements of x into y
 export

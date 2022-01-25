@@ -4,21 +4,29 @@
     [(i3ob ti3ob a6ob ta6ob) "unix"]  ; OpenBSD
     [(i3fb ti3fb a6fb ta6fb) "unix"]  ; FreeBSD
     [(i3nb ti3nb a6nb ta6nb) "unix"]  ; NetBSD
-    [(i3osx ti3osx a6osx ta6osx) "darwin"]
+    [(i3osx ti3osx a6osx ta6osx tarm64osx) "darwin"]
     [(i3nt ti3nt a6nt ta6nt) "windows"]
     [else "unknown"]))
 
-(define blodwen-toSignedInt
-  (lambda (x bits)
-    (let ((ma (ash 1 bits)))
-      (if (or (< x (- 0 ma))
-              (>= x ma))
-          (remainder x ma)
-          x))))
+(define blodwen-lazy
+  (lambda (f)
+    (let ([evaluated #f] [res void])
+      (lambda ()
+        (if (not evaluated)
+            (begin (set! evaluated #t)
+                   (set! res (f))
+                   (set! f void))
+            (void))
+        res))))
 
-(define blodwen-toUnsignedInt
-  (lambda (x bits)
-    (modulo x (ash 1 bits))))
+(define (blodwen-toSignedInt x bits)
+  (if (logbit? bits x)
+      (logor x (ash -1 bits))
+      (logand x (sub1 (ash 1 bits)))))
+
+(define (blodwen-toUnsignedInt x bits)
+  (logand x (sub1 (ash 1 bits))))
+
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
@@ -30,32 +38,21 @@
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (quotient x y) bits)))
 
-(define b+ (lambda (x y bits) (remainder (+ x y) (ash 1 bits))))
-(define b- (lambda (x y bits) (remainder (- x y) (ash 1 bits))))
-(define b* (lambda (x y bits) (remainder (* x y) (ash 1 bits))))
-(define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (ash 1 bits))))
+(define (integer->bits8 x) (logand x (sub1 (ash 1 8))))
+(define (integer->bits16 x) (logand x (sub1 (ash 1 16))))
+(define (integer->bits32 x) (logand x (sub1 (ash 1 32))))
+(define (integer->bits64 x) (logand x (sub1 (ash 1 64))))
 
-(define integer->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
-(define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
+(define (bits16->bits8 x) (logand x (sub1 (ash 1 8))))
+(define (bits32->bits8 x) (logand x (sub1 (ash 1 8))))
+(define (bits64->bits8 x) (logand x (sub1 (ash 1 8))))
+(define (bits32->bits16 x) (logand x (sub1 (ash 1 16))))
+(define (bits64->bits16 x) (logand x (sub1 (ash 1 16))))
+(define (bits64->bits32 x) (logand x (sub1 (ash 1 32))))
 
-(define bits16->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits32->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits32->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define bits64->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
+(define (blodwen-bits-shl-signed x y bits) (blodwen-toSignedInt (ash x y) bits))
 
-(define truncate-bits
-  (lambda (x bits)
-    (if (logbit? bits x)
-        (logor x (ash (- 1) bits))
-        (logand x (- (ash 1 bits) 1)))))
-
-(define blodwen-bits-shl-signed (lambda (x y bits) (truncate-bits (ash x y) bits)))
-
-(define blodwen-bits-shl (lambda (x y bits) (remainder (ash x y) (ash 1 bits))))
+(define (blodwen-bits-shl x y bits) (logand (ash x y) (sub1 (ash 1 bits))))
 
 (define blodwen-shl (lambda (x y) (ash x y)))
 (define blodwen-shr (lambda (x y) (ash x (- y))))
@@ -186,9 +183,6 @@
 (define (blodwen-buffer-size buf)
   (bytevector-length buf))
 
-(define (blodwen-buffer-free buf)
-  (void))  ; Rely on built-in memory management
-
 (define (blodwen-buffer-setbyte buf loc val)
   (bytevector-u8-set! buf loc val))
 
@@ -268,7 +262,7 @@
 (define (blodwen-get-thread-data ty)
   (blodwen-thread-data))
 
-(define (blodwen-set-thread-data a)
+(define (blodwen-set-thread-data ty a)
   (blodwen-thread-data a))
 
 ;; Semaphore
@@ -315,33 +309,73 @@
       ))))
 
 ;; Channel
+; With thanks to Alain Zscheile (@zseri) for help with understanding condition
+; variables, and figuring out where the problems were and how to solve them.
 
-(define-record channel (box mutex semaphore-get semaphore-put))
+(define-record channel (read-mut read-cv read-box val-cv val-box))
 
 (define (blodwen-make-channel ty)
   (make-channel
-   (box '())
-   (make-mutex)
-   (blodwen-make-semaphore 0)
-   (blodwen-make-semaphore 0)))
+    (make-mutex)
+    (make-condition)
+    (box #t)
+    (make-condition)
+    (box '())
+    ))
 
-(define (blodwen-channel-get ty chan)
-  (blodwen-semaphore-post (channel-semaphore-get chan))
-  (blodwen-semaphore-wait (channel-semaphore-put chan))
-  (with-mutex (channel-mutex chan)
-    (let* [(chan-box (channel-box chan))
-           (chan-msg-queue (unbox chan-box))]
-      (set-box! chan-box (cdr chan-msg-queue))
-      (car chan-msg-queue)
+; block on the read status using read-cv until the value has been read
+(define (channel-put-while-helper chan)
+  (let ([read-mut (channel-read-mut chan)]
+        [read-box (channel-read-box chan)]
+        [read-cv  (channel-read-cv  chan)]
+        )
+    (if (unbox read-box)
+      (void)    ; val has been read, so everything is fine
+      (begin    ; otherwise, block/spin with cv
+        (condition-wait read-cv read-mut)
+        (channel-put-while-helper chan)
+        )
       )))
 
 (define (blodwen-channel-put ty chan val)
-  (with-mutex (channel-mutex chan)
-    (let* [(chan-box (channel-box chan))
-           (chan-msg-queue (unbox chan-box))]
-      (set-box! chan-box (append chan-msg-queue (list val)))))
-  (blodwen-semaphore-post (channel-semaphore-put chan))
-  (blodwen-semaphore-wait (channel-semaphore-get chan)))
+  (with-mutex (channel-read-mut chan)
+    (channel-put-while-helper chan)
+    (let ([read-box (channel-read-box chan)]
+          [val-box  (channel-val-box  chan)]
+          )
+      (set-box! val-box val)
+      (set-box! read-box #f)
+      ))
+  (condition-signal (channel-val-cv chan))
+  )
+
+; block on the value until it has been set
+(define (channel-get-while-helper chan)
+  (let ([read-mut (channel-read-mut chan)]
+        [read-box (channel-read-box chan)]
+        [val-cv   (channel-val-cv   chan)]
+        )
+    (if (unbox read-box)
+      (begin
+        (condition-wait val-cv read-mut)
+        (channel-get-while-helper chan)
+        )
+      (void)
+      )))
+
+(define (blodwen-channel-get ty chan)
+  (mutex-acquire (channel-read-mut chan))
+  (channel-get-while-helper chan)
+  (let* ([val-box  (channel-val-box  chan)]
+         [read-box (channel-read-box chan)]
+         [read-cv  (channel-read-cv  chan)]
+         [the-val  (unbox val-box)]
+         )
+    (set-box! val-box '())
+    (set-box! read-box #t)
+    (mutex-release (channel-read-mut chan))
+    (condition-signal read-cv)
+    the-val))
 
 ;; Mutex
 
@@ -392,7 +426,6 @@
         (micro (mod s 1000000)))
        (sleep (make-time 'time-duration (* 1000 micro) sec))))
 
-(define (blodwen-time) (time-second (current-time)))
 (define (blodwen-clock-time-utc) (current-time 'time-utc))
 (define (blodwen-clock-time-monotonic) (current-time 'time-monotonic))
 (define (blodwen-clock-time-duration) (current-time 'time-duration))
@@ -413,9 +446,6 @@
 
 (define (blodwen-hasenv var)
   (if (eq? (getenv var) #f) 0 1))
-
-(define (blodwen-system cmd)
-  (system cmd))
 
 ;; Randoms
 (define random-seed-register 0)
@@ -456,3 +486,85 @@
         (when x
           (((cdr x) (car x)) 'erased)
           (run))))))
+
+;; For creating and reading back scheme objects
+
+; read a scheme string and evaluate it, returning 'Just result' on success
+; TODO: catch exception!
+(define (blodwen-eval-scheme str)
+  (guard
+     (x [#t '()]) ; Nothing on failure
+     (box (eval (read (open-input-string str)))))
+  ); box == Just
+
+(define (blodwen-eval-okay obj)
+  (if (null? obj)
+      0
+      1))
+
+(define (blodwen-get-eval-result obj)
+  (unbox obj))
+
+(define (blodwen-debug-scheme obj)
+  (display obj) (newline))
+
+(define (blodwen-is-number obj)
+  (if (number? obj) 1 0))
+
+(define (blodwen-is-integer obj)
+  (if (and (number? obj) (exact? obj)) 1 0))
+
+(define (blodwen-is-float obj)
+  (if (flonum? obj) 1 0))
+
+(define (blodwen-is-char obj)
+  (if (char? obj) 1 0))
+
+(define (blodwen-is-string obj)
+  (if (string? obj) 1 0))
+
+(define (blodwen-is-procedure obj)
+  (if (procedure? obj) 1 0))
+
+(define (blodwen-is-symbol obj)
+  (if (symbol? obj) 1 0))
+
+(define (blodwen-is-vector obj)
+  (if (vector? obj) 1 0))
+
+(define (blodwen-is-nil obj)
+  (if (null? obj) 1 0))
+
+(define (blodwen-is-pair obj)
+  (if (pair? obj) 1 0))
+
+(define (blodwen-is-box obj)
+  (if (box? obj) 1 0))
+
+(define (blodwen-make-symbol str)
+  (string->symbol str))
+
+; The below rely on checking that the objects are the right type first.
+
+(define (blodwen-vector-ref obj i)
+  (vector-ref obj i))
+
+(define (blodwen-vector-length obj)
+  (vector-length obj))
+
+(define (blodwen-vector-list obj)
+  (vector->list obj))
+
+(define (blodwen-unbox obj)
+  (unbox obj))
+
+(define (blodwen-apply obj arg)
+  (obj arg))
+
+(define (blodwen-force obj)
+  (obj))
+
+(define (blodwen-read-symbol sym)
+  (symbol->string sym))
+
+(define (blodwen-id x) x)

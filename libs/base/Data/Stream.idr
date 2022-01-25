@@ -91,23 +91,6 @@ cycle (x :: xs) = x :: cycle' xs
         cycle' []        = x :: cycle' xs
         cycle' (y :: ys) = y :: cycle' ys
 
-public export
-partial
-takeUntil : (n -> Bool) -> Stream n -> List n
-takeUntil p (x :: xs)
-    = if p x
-         then [x]
-         else x :: takeUntil p xs
-
-public export
-partial
-takeBefore : (n -> Bool) -> Stream n -> List n
-takeBefore p (x :: xs)
-    = if p x
-         then []
-         else x :: takeBefore p xs
-
-
 --------------------------------------------------------------------------------
 -- Interleavings
 --------------------------------------------------------------------------------
@@ -130,20 +113,6 @@ zag (x ::: (y :: xs)) zs ls = x :: zag (y ::: xs) zs ls
 public export
 cantor : Stream (Stream a) -> Stream a
 cantor (l :: ls) = zig (l ::: []) ls
-
--- Exploring the Nat*Nat top right quadrant of the plane
--- using Cantor's zig-zag traversal:
-example :
-  let quadrant : Stream (Stream (Nat, Nat))
-      quadrant = map (\ i => map (i,) Stream.nats) Stream.nats
-  in
-     take 10 (cantor quadrant)
-     === [ (0, 0)
-         , (1, 0), (0, 1)
-         , (2, 0), (1, 1), (0, 2)
-         , (3, 0), (2, 1), (1, 2), (0, 3)
-         ]
-example = Refl
 
 namespace DPair
 
@@ -179,6 +148,21 @@ namespace Pair
   public export
   plane : Stream a -> (a -> Stream b) -> Stream (a, b)
   plane = Pair.planeWith (,)
+
+--------------------------------------------------------------------------------
+-- Example
+--------------------------------------------------------------------------------
+
+-- Exploring the Nat*Nat top right quadrant of the plane
+-- using Cantor's zig-zag traversal:
+example :
+     take 10 (plane Stream.nats (const Stream.nats))
+     === [ (0, 0)
+         , (1, 0), (0, 1)
+         , (2, 0), (1, 1), (0, 2)
+         , (3, 0), (2, 1), (1, 2), (0, 3)
+         ]
+example = Refl
 
 --------------------------------------------------------------------------------
 -- Implementations

@@ -9,27 +9,36 @@ import TTImp.TTImp
 import Data.List
 import Data.List1
 import Libraries.Data.List.Extra
-import Data.Strings
+import Data.String
 import System.File
-import Libraries.Data.String.Extra
-
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
 
 %default total
 
+namespace VerbosityLvl
+  public export
+  data VerbosityLvl =
+   ||| Suppress all message output to `stdout`.
+   NoneLvl |
+   ||| Keep only errors.
+   ErrorLvl |
+   ||| Keep everything.
+   InfoLvl
+
 public export
 data OutputMode
-  = IDEMode Integer File File
-  | REPL Bool -- quiet flag (ignore iputStrLn)
+  = IDEMode Integer File File |
+    ||| Given that we can divide elaboration messages into
+    ||| two categories: informational message and error message,
+    ||| `VerbosityLvl` applies a filter on the output,
+    |||  suppressing writes to `stdout` if the level condition isn't met.
+    REPL VerbosityLvl
 
 public export
 record REPLOpts where
   constructor MkREPLOpts
   showTypes : Bool
   evalMode : REPLEval
+  evalTiming : Bool
   mainfile : Maybe String
   literateStyle : Maybe LiterateStyle
   source : String
@@ -56,6 +65,7 @@ defaultOpts fname outmode cgs
     = MkREPLOpts
         { showTypes = False
         , evalMode = NormaliseAll
+        , evalTiming = False
         , mainfile = fname
         , literateStyle = litStyle fname
         , source = ""
@@ -84,15 +94,11 @@ withROpts : {auto o : Ref ROpts REPLOpts} -> Core a -> Core a
 withROpts = wrapRef ROpts (\_ => pure ())
 
 export
-replFC : FC
-replFC = MkFC "(interactive)" (0, 0) (0, 0)
-
-export
 setOutput : {auto o : Ref ROpts REPLOpts} ->
             OutputMode -> Core ()
 setOutput m
     = do opts <- get ROpts
-         put ROpts (record { idemode = m } opts)
+         put ROpts ({ idemode := m } opts)
 
 export
 getOutput : {auto o : Ref ROpts REPLOpts} -> Core OutputMode
@@ -104,23 +110,23 @@ setMainFile : {auto o : Ref ROpts REPLOpts} ->
               Maybe String -> Core ()
 setMainFile src
     = do opts <- get ROpts
-         put ROpts (record { mainfile = src,
-                             literateStyle = litStyle src } opts)
+         put ROpts ({ mainfile := src,
+                      literateStyle := litStyle src } opts)
 
 export
 resetProofState : {auto o : Ref ROpts REPLOpts} ->
                   Core ()
 resetProofState
     = do opts <- get ROpts
-         put ROpts (record { psResult = Nothing,
-                             gdResult = Nothing } opts)
+         put ROpts ({ psResult := Nothing,
+                      gdResult := Nothing } opts)
 
 export
 setSource : {auto o : Ref ROpts REPLOpts} ->
             String -> Core ()
 setSource src
     = do opts <- get ROpts
-         put ROpts (record { source = src } opts)
+         put ROpts ({ source := src } opts)
 
 export
 getSource : {auto o : Ref ROpts REPLOpts} ->
@@ -134,7 +140,7 @@ getSourceLine : {auto o : Ref ROpts REPLOpts} ->
                 Int -> Core (Maybe String)
 getSourceLine l
     = do src <- getSource
-         pure $ elemAt (forget $ lines src) (integerToNat (cast (l-1)))
+         pure $ elemAt (lines src) (integerToNat (cast (l-1)))
 
 export
 getLitStyle : {auto o : Ref ROpts REPLOpts} ->
@@ -148,7 +154,7 @@ setCurrentElabSource : {auto o : Ref ROpts REPLOpts} ->
                        String -> Core ()
 setCurrentElabSource src
     = do opts <- get ROpts
-         put ROpts (record { currentElabSource = src } opts)
+         put ROpts ({ currentElabSource := src } opts)
 
 export
 getCurrentElabSource : {auto o : Ref ROpts REPLOpts} ->
@@ -160,7 +166,7 @@ getCurrentElabSource
 addCodegen : {auto o : Ref ROpts REPLOpts} ->
              String -> Codegen -> Core ()
 addCodegen s cg = do opts <- get ROpts
-                     put ROpts (record { extraCodegens $= ((s,cg)::) } opts)
+                     put ROpts ({ extraCodegens $= ((s,cg)::) } opts)
 
 export
 getCodegen : {auto o : Ref ROpts REPLOpts} ->
@@ -176,7 +182,7 @@ getConsoleWidth = do opts <- get ROpts
 export
 setConsoleWidth : {auto o : Ref ROpts REPLOpts} -> Maybe Nat -> Core ()
 setConsoleWidth n = do opts <- get ROpts
-                       put ROpts (record { consoleWidth = n } opts)
+                       put ROpts ({ consoleWidth := n } opts)
 
 export
 getColor : {auto o : Ref ROpts REPLOpts} -> Core Bool
@@ -186,7 +192,7 @@ getColor = do opts <- get ROpts
 export
 setColor : {auto o : Ref ROpts REPLOpts} -> Bool -> Core ()
 setColor b = do opts <- get ROpts
-                put ROpts (record { color = b } opts)
+                put ROpts ({ color := b } opts)
 
 export
 getSynHighlightOn : {auto o : Ref ROpts REPLOpts} -> Core Bool
@@ -196,4 +202,16 @@ getSynHighlightOn = do opts <- get ROpts
 export
 setSynHighlightOn : {auto o : Ref ROpts REPLOpts} -> Bool -> Core ()
 setSynHighlightOn b = do opts <- get ROpts
-                         put ROpts (record { synHighlightOn = b } opts)
+                         put ROpts ({ synHighlightOn := b } opts)
+
+export
+getEvalTiming : {auto o : Ref ROpts REPLOpts} -> Core Bool
+getEvalTiming
+    = do opts <- get ROpts
+         pure (evalTiming opts)
+
+export
+setEvalTiming : {auto o : Ref ROpts REPLOpts} -> Bool -> Core ()
+setEvalTiming b
+    = do opts <- get ROpts
+         put ROpts ({ evalTiming := b } opts)

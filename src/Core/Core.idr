@@ -1,9 +1,9 @@
 module Core.Core
 
+import Core.Context.Context
 import Core.Env
 import Core.TT
 
-import Data.List
 import Data.List1
 import Data.Vect
 
@@ -12,7 +12,6 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import public Data.IORef
-import System
 import System.File
 
 %default covering
@@ -59,22 +58,34 @@ Pretty DotReason where
   pretty UnknownDot = reflow "Unknown reason"
   pretty UnderAppliedCon = reflow "Under-applied constructor"
 
+public export
+data Warning : Type where
+     ParserWarning : FC -> String -> Warning
+     UnreachableClause : {vars : _} ->
+                         FC -> Env Term vars -> Term vars -> Warning
+     ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
+     ||| A warning about a deprecated definition. Supply an FC and Name to
+     ||| have the documentation for the definition printed with the warning.
+     Deprecated : String -> Maybe (FC, Name) -> Warning
+     GenericWarn : String -> Warning
+
 -- All possible errors, carrying a location
 public export
 data Error : Type where
      Fatal : Error -> Error -- flag as unrecoverable (so don't postpone awaiting further info)
      CantConvert : {vars : _} ->
-                   FC -> Env Term vars -> Term vars -> Term vars -> Error
+                   FC -> Context -> Env Term vars -> Term vars -> Term vars -> Error
      CantSolveEq : {vars : _} ->
-                   FC -> Env Term vars -> Term vars -> Term vars -> Error
+                   FC -> Context -> Env Term vars -> Term vars -> Term vars -> Error
      PatternVariableUnifies : {vars : _} ->
                               FC -> Env Term vars -> Name -> Term vars -> Error
      CyclicMeta : {vars : _} ->
                   FC -> Env Term vars -> Name -> Term vars -> Error
      WhenUnifying : {vars : _} ->
-                    FC -> Env Term vars -> Term vars -> Term vars -> Error -> Error
+                    FC -> Context -> Env Term vars -> Term vars -> Term vars -> Error -> Error
      ValidCase : {vars : _} ->
                  FC -> Env Term vars -> Either (Term vars) Error -> Error
+
      UndefinedName : FC -> Name -> Error
      InvisibleName : FC -> Name -> Maybe Namespace -> Error
      BadTypeConType : FC -> Name -> Error
@@ -89,13 +100,14 @@ data Error : Type where
                          FC -> Env Term vars -> Term vars -> Error
      AmbiguousName : FC -> List Name -> Error
      AmbiguousElab : {vars : _} ->
-                     FC -> Env Term vars -> List (Term vars) -> Error
+                     FC -> Env Term vars -> List (Context, Term vars) -> Error
      AmbiguousSearch : {vars : _} ->
                        FC -> Env Term vars -> Term vars -> List (Term vars) -> Error
      AmbiguityTooDeep : FC -> Name -> List Name -> Error
      AllFailed : List (Maybe Name, Error) -> Error
      RecordTypeNeeded : {vars : _} ->
                         FC -> Env Term vars -> Error
+     DuplicatedRecordUpdatePath : FC -> List (List String) -> Error
      NotRecordField : FC -> String -> Maybe Name -> Error
      NotRecordType : FC -> Name -> Error
      IncompatibleFieldUpdate : FC -> List String -> Error
@@ -106,7 +118,8 @@ data Error : Type where
      BadUnboundImplicit : {vars : _} ->
                           FC -> Env Term vars -> Name -> Term vars -> Error
      CantSolveGoal : {vars : _} ->
-                     FC -> Env Term vars -> Term vars -> Error
+                     FC -> Context -> Env Term vars -> Term vars ->
+                     Maybe Error -> Error
      DeterminingArg : {vars : _} ->
                       FC -> Name -> Int -> Env Term vars -> Term vars -> Error
      UnsolvedHoles : List (FC, Name) -> Error
@@ -140,14 +153,16 @@ data Error : Type where
      CantFindPackage : String -> Error
      LitFail : FC -> Error
      LexFail : FC -> String -> Error
-     ParseFail : FC -> String -> Error
+     ParseFail : List1 (FC, String) -> Error
      ModuleNotFound : FC -> ModuleIdent -> Error
      CyclicImports : List ModuleIdent -> Error
      ForceNeeded : Error
      InternalError : String -> Error
      UserError : String -> Error
-     NoForeignCC : FC -> Error
+     ||| Contains list of specifiers for which foreign call cannot be resolved
+     NoForeignCC : FC -> List String -> Error
      BadMultiline : FC -> String -> Error
+     Timeout : String -> Error
 
      InType : FC -> Name -> Error -> Error
      InCon : FC -> Name -> Error -> Error
@@ -155,13 +170,7 @@ data Error : Type where
      InRHS : FC -> Name -> Error -> Error
 
      MaybeMisspelling : Error -> List1 String -> Error
-
-public export
-data Warning : Type where
-     UnreachableClause : {vars : _} ->
-                         FC -> Env Term vars -> Term vars -> Warning
-     ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
-     Deprecated : String -> Warning
+     WarningAsError : Warning -> Error
 
 export
 Show TTCErrorMsg where
@@ -173,19 +182,30 @@ Show TTCErrorMsg where
 
 -- Simplest possible display - higher level languages should unelaborate names
 -- and display annotations appropriately
+
 export
+Show Warning where
+    show (ParserWarning _ msg) = msg
+    show (UnreachableClause _ _ _) = ":Unreachable clause"
+    show (ShadowingGlobalDefs _ _) = ":Shadowing names"
+    show (Deprecated name _) = ":Deprecated " ++ name
+    show (GenericWarn msg) = msg
+
+
+export
+covering
 Show Error where
   show (Fatal err) = show err
-  show (CantConvert fc env x y)
+  show (CantConvert fc _ env x y)
       = show fc ++ ":Type mismatch: " ++ show x ++ " and " ++ show y
-  show (CantSolveEq fc env x y)
+  show (CantSolveEq fc _ env x y)
       = show fc ++ ":" ++ show x ++ " and " ++ show y ++ " are not equal"
   show (PatternVariableUnifies fc env n x)
       = show fc ++ ":Pattern variable " ++ show n ++ " unifies with " ++ show x
   show (CyclicMeta fc env n tm)
       = show fc ++ ":Cycle detected in metavariable solution " ++ show n
              ++ " = " ++ show tm
-  show (WhenUnifying fc _ x y err)
+  show (WhenUnifying fc _ _ x y err)
       = show fc ++ ":When unifying: " ++ show x ++ " and " ++ show y ++ "\n\t" ++ show err
   show (ValidCase fc _ prob)
       = show fc ++ ":" ++
@@ -239,13 +259,15 @@ Show Error where
       = show fc ++ ":" ++ show t ++ " borrows, so must return a concrete type"
 
   show (AmbiguousName fc ns) = show fc ++ ":Ambiguous name " ++ show ns
-  show (AmbiguousElab fc env ts) = show fc ++ ":Ambiguous elaboration " ++ show ts
+  show (AmbiguousElab fc env ts) = show fc ++ ":Ambiguous elaboration " ++ show (map snd ts)
   show (AmbiguousSearch fc env tgt ts) = show fc ++ ":Ambiguous search " ++ show ts
   show (AmbiguityTooDeep fc n ns)
       = show fc ++ ":Ambiguity too deep in " ++ show n ++ " " ++ show ns
   show (AllFailed ts) = "No successful elaboration: " ++ assert_total (show ts)
   show (RecordTypeNeeded fc env)
       = show fc ++ ":Can't infer type of record to update"
+  show (DuplicatedRecordUpdatePath fc ps)
+      = show fc ++ ":Duplicated record update paths: " ++ show ps
   show (NotRecordField fc fld Nothing)
       = show fc ++ ":" ++ fld ++ " is not part of a record type"
   show (NotRecordField fc fld (Just ty))
@@ -263,7 +285,7 @@ Show Error where
   show (BadUnboundImplicit fc env n ty)
       = show fc ++ ":Can't bind name " ++ nameRoot n ++
                    " with type " ++ show ty
-  show (CantSolveGoal fc env g)
+  show (CantSolveGoal fc gam env g cause)
       = show fc ++ ":Can't solve goal " ++ assert_total (show g)
   show (DeterminingArg fc n i env g)
       = show fc ++ ":Can't solve goal " ++ assert_total (show g) ++
@@ -310,7 +332,7 @@ Show Error where
   show (CantFindPackage fname) = "Can't find package " ++ fname
   show (LitFail fc) = show fc ++ ":Can't parse literate"
   show (LexFail fc err) = show fc ++ ":Lexer error (" ++ show err ++ ")"
-  show (ParseFail fc err) = "Parse error (" ++ show err ++ ")"
+  show (ParseFail errs) = "Parse errors (" ++ show errs ++ ")"
   show (ModuleNotFound fc ns)
       = show fc ++ ":" ++ show ns ++ " not found"
   show (CyclicImports ns)
@@ -318,9 +340,10 @@ Show Error where
   show ForceNeeded = "Internal error when resolving implicit laziness"
   show (InternalError str) = "INTERNAL ERROR: " ++ str
   show (UserError str) = "Error: " ++ str
-  show (NoForeignCC fc) = show fc ++
-       ":The given specifier was not accepted by any available backend."
+  show (NoForeignCC fc specs) = show fc ++
+       ":The given specifier " ++ show specs ++ " was not accepted by any available backend."
   show (BadMultiline fc str) = "Invalid multiline string: " ++ str
+  show (Timeout str) = "Timeout in " ++ str
 
   show (InType fc n err)
        = show fc ++ ":When elaborating type of " ++ show n ++ ":\n" ++
@@ -339,14 +362,24 @@ Show Error where
      = show err ++ "\nDid you mean" ++ case ns of
          (n ::: []) => ": " ++ n ++ "?"
          _ => " any of: " ++ showSep ", " (map show (forget ns)) ++ "?"
+  show (WarningAsError w) = show w
+
+export
+getWarningLoc : Warning -> Maybe FC
+getWarningLoc (ParserWarning fc _) = Just fc
+getWarningLoc (UnreachableClause fc _ _) = Just fc
+getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
+getWarningLoc (Deprecated _ fcAndName) = fst <$> fcAndName
+getWarningLoc (GenericWarn _) = Nothing
+
 export
 getErrorLoc : Error -> Maybe FC
 getErrorLoc (Fatal err) = getErrorLoc err
-getErrorLoc (CantConvert loc _ _ _) = Just loc
-getErrorLoc (CantSolveEq loc _ _ _) = Just loc
+getErrorLoc (CantConvert loc _ _ _ _) = Just loc
+getErrorLoc (CantSolveEq loc _ _ _ _) = Just loc
 getErrorLoc (PatternVariableUnifies loc _ _ _) = Just loc
 getErrorLoc (CyclicMeta loc _ _ _) = Just loc
-getErrorLoc (WhenUnifying loc _ _ _ _) = Just loc
+getErrorLoc (WhenUnifying loc _ _ _ _ _) = Just loc
 getErrorLoc (ValidCase loc _ _) = Just loc
 getErrorLoc (UndefinedName loc _) = Just loc
 getErrorLoc (InvisibleName loc _ _) = Just loc
@@ -365,13 +398,14 @@ getErrorLoc (AmbiguityTooDeep loc _ _) = Just loc
 getErrorLoc (AllFailed ((_, x) :: _)) = getErrorLoc x
 getErrorLoc (AllFailed []) = Nothing
 getErrorLoc (RecordTypeNeeded loc _) = Just loc
+getErrorLoc (DuplicatedRecordUpdatePath loc _) = Just loc
 getErrorLoc (NotRecordField loc _ _) = Just loc
 getErrorLoc (NotRecordType loc _) = Just loc
 getErrorLoc (IncompatibleFieldUpdate loc _) = Just loc
 getErrorLoc (InvalidArgs loc _ _ _) = Just loc
 getErrorLoc (TryWithImplicits loc _ _) = Just loc
 getErrorLoc (BadUnboundImplicit loc _ _ _) = Just loc
-getErrorLoc (CantSolveGoal loc _ _) = Just loc
+getErrorLoc (CantSolveGoal loc _ _ _ _) = Just loc
 getErrorLoc (DeterminingArg loc _ _ _ _) = Just loc
 getErrorLoc (UnsolvedHoles ((loc, _) :: _)) = Just loc
 getErrorLoc (UnsolvedHoles []) = Nothing
@@ -396,25 +430,21 @@ getErrorLoc (FileErr _ _) = Nothing
 getErrorLoc (CantFindPackage _) = Nothing
 getErrorLoc (LitFail loc) = Just loc
 getErrorLoc (LexFail loc _) = Just loc
-getErrorLoc (ParseFail loc _) = Just loc
+getErrorLoc (ParseFail ((loc, _) ::: _)) = Just loc
 getErrorLoc (ModuleNotFound loc _) = Just loc
 getErrorLoc (CyclicImports _) = Nothing
 getErrorLoc ForceNeeded = Nothing
 getErrorLoc (InternalError _) = Nothing
 getErrorLoc (UserError _) = Nothing
-getErrorLoc (NoForeignCC loc) = Just loc
+getErrorLoc (NoForeignCC loc _) = Just loc
 getErrorLoc (BadMultiline loc _) = Just loc
+getErrorLoc (Timeout _) = Nothing
 getErrorLoc (InType _ _ err) = getErrorLoc err
 getErrorLoc (InCon _ _ err) = getErrorLoc err
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
 getErrorLoc (InRHS _ _ err) = getErrorLoc err
 getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
-
-export
-getWarningLoc : Warning -> Maybe FC
-getWarningLoc (UnreachableClause fc _ _) = Just fc
-getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
-getWarningLoc (Deprecated _) = Nothing
+getErrorLoc (WarningAsError warn) = getWarningLoc warn
 
 -- Core is a wrapper around IO that is specialised for efficiency.
 export
@@ -434,11 +464,7 @@ coreFail e = MkCore (pure (Left e))
 
 export
 wrapError : (Error -> Error) -> Core a -> Core a
-wrapError fe (MkCore prog)
-    = MkCore (prog >>=
-                 (\x => case x of
-                             Left err => pure (Left (fe err))
-                             Right val => pure (Right val)))
+wrapError fe (MkCore prog) = MkCore $ mapFst fe <$> prog
 
 -- This would be better if we restrict it to a limited set of IO operations
 export
@@ -484,9 +510,9 @@ export %inline
 (>>=) : Core a -> (a -> Core b) -> Core b
 (>>=) (MkCore act) f
     = MkCore (act >>=
-                   (\x => case x of
-                               Left err => pure (Left err)
-                               Right val => runCore (f val)))
+                   \case
+                     Left err => pure $ Left err
+                     Right val => runCore $ f val)
 
 export %inline
 (>>) : Core () -> Core a -> Core a
@@ -563,6 +589,8 @@ interface Catchable m t | m where
     throw : {0 a : Type} -> t -> m a
     catch : m a -> (t -> m a) -> m a
 
+    breakpoint : m a -> m (Either t a)
+
 export
 Catchable Core Error where
   catch (MkCore prog) h
@@ -570,6 +598,7 @@ Catchable Core Error where
                     case p' of
                          Left e => let MkCore he = h e in he
                          Right val => pure (Right val))
+  breakpoint (MkCore prog) = MkCore (pure <$> prog)
   throw = coreFail
 
 -- Prelude.Monad.foldlM hand specialised for Core
@@ -679,7 +708,7 @@ mapTermM f = goTerm where
     goTerm (TForce fc la t) = f =<< TForce fc la <$> goTerm t
     goTerm tm@(PrimVal _ _) = f tm
     goTerm tm@(Erased _ _) = f tm
-    goTerm tm@(TType _) = f tm
+    goTerm tm@(TType _ _) = f tm
 
 
 export
@@ -706,11 +735,6 @@ filterM p (x :: xs)
          then do xs' <- filterM p xs
                  pure (x :: xs')
          else filterM p xs
-
-export
-data Ref : (l : label) -> Type -> Type where
-     [search l]
-     MkRef : IORef a -> Ref x a
 
 export
 newRef : (x : label) -> t -> Core (Ref x t)
@@ -761,13 +785,33 @@ condC ((x, y) :: xs) def
 export
 writeFile : (fname : String) -> (content : String) -> Core ()
 writeFile fname content =
-  coreLift (File.writeFile fname content) >>= \case
+  coreLift (writeFile fname content) >>= \case
     Right () => pure ()
     Left err => throw $ FileErr fname err
 
 export
 readFile : (fname : String) -> Core String
 readFile fname =
-  coreLift (File.readFile fname) >>= \case
+  coreLift (readFile fname) >>= \case
     Right content => pure content
     Left err => throw $ FileErr fname err
+
+namespace Functor
+
+  export
+  [CORE] Functor Core where
+    map = Core.map
+
+namespace Applicative
+
+  export
+  [CORE] Applicative Core using Functor.CORE where
+    pure = Core.pure
+    (<*>) = Core.(<*>)
+
+namespace Monad
+
+  export
+  [CORE] Monad Core using Applicative.CORE where
+    (>>=) = Core.(>>=)
+    join mma = Core.(>>=) mma id

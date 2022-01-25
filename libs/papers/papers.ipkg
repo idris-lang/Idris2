@@ -1,0 +1,29 @@
+package papers
+version = 0.5.1
+
+depends = contrib, linear
+
+options = "--ignore-missing-ipkg"
+
+modules = Data.Container,
+
+          Data.InductionRecursion.DybjerSetzer,
+
+          Data.INTEGER,
+
+          Data.Linear.Communications,
+          Data.Linear.Diff,
+          Data.Linear.Inverse,
+
+          Data.OpenUnion,
+
+          Data.Recursion.Free,
+
+          Data.Tree.Perfect,
+
+          Data.Vect.Binary,
+
+          Search.Generator,
+          Search.HDecidable,
+          Search.Negation,
+          Search.Properties

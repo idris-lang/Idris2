@@ -1,0 +1,9 @@
+1/1: Building ThreadData (ThreadData.idr)
+Main> parent data initialized to: 13
+parent data now: "hello"
+child data: "hello"
+child data now: 17
+parent data still: "hello"
+child exiting
+parent exiting
+Main> Bye for now!

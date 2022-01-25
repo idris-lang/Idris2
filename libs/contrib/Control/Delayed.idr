@@ -1,4 +1,4 @@
-||| Utilities functions for contitionally delaying values.
+||| Utilities functions for conditionally delaying values.
 module Control.Delayed
 
 ||| Type-level function for a conditionally infinite type.

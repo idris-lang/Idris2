@@ -1,5 +1,7 @@
 module Data.IORef
 
+%default total
+
 -- Implemented externally
 -- e.g., in Scheme, passed around as a box
 data Mut : Type -> Type where [external]

@@ -26,7 +26,8 @@
 --    range of [-2^(x-1),2^(x-1) - 1]. They support all the usual arithmetic
 --    operations: +,*,-,div, and mod. If the result `y` of an operation
 --    is outside the valid range, the signed remainder modulo 2^x of `y`
---    is returned instead. The same kind of truncation happens when
+--    is calculated and 2^x subtracted from the result if it
+--    is still out of bounds. The same kind of truncation happens when
 --    other numeric types are cast to one of the signed integer
 --    types.
 --
@@ -34,11 +35,11 @@
 --             example calculations. All numbers are considered to be of type `Int8`
 --             unless specified otherwise:
 --
---               127 + 7   = 6
---               3 * 64    = 64
---               2 * (-64) = (-128)
---               (-129)    = (-1)
---               7 - 10    = (-3)
+--               127 + 7   = -122
+--               3 * 64    = -64
+--               2 * (-64) = -128
+--               (-129)    = 127
+--               7 - 10    = -3
 --
 import Data.List
 import Data.Stream
@@ -82,7 +83,7 @@ int64 : IntType Int64
 int64 = intType True "Int64" 64
 
 int : IntType Int
-int = intType True "Int" 64
+int = intType True "Int" 32
 
 record Op a where
   constructor MkOp
@@ -109,10 +110,8 @@ mod = MkOp "mod" (mod) (mod) False
 
 
 pairs : List (Integer,Integer)
-pairs = let -- [1,2,4,8,16,...,18446744073709551616]
-            powsOf2  = take 65 (iterate (*2) 1)
+pairs = let powsOf2  = [1,2,4,8,128,256,32768,65536,2147483648,4294967296,9223372036854775808,18446744073709551616]
 
-            -- powsOf2 ++ [0,1,3,7,...,18446744073709551615]
             naturals = powsOf2 ++ map (\x => x-1) powsOf2
 
             -- positive and negative versions of naturals
@@ -120,12 +119,6 @@ pairs = let -- [1,2,4,8,16,...,18446744073709551616]
 
             -- naturals paired with ints
          in [| (,) ints naturals |]
-
-filterTailRec : (a -> Bool) -> List a -> List a
-filterTailRec p = run Nil
-  where run : List a -> List a -> List a
-        run res [] = res
-        run res (h :: t) = if p h then run (h :: res) t else run res t
 
 -- This check does the following: For a given binary operation `op`,
 -- calculate the result of applying the operation to all passed pairs
@@ -140,14 +133,18 @@ filterTailRec p = run Nil
 check :  (Num a, Cast a Integer) => Op a -> List String
 check (MkOp name op opInt allowZero $ MkIntType type signed bits mi ma) =
   let ps = if allowZero then pairs
-           else filterTailRec ((0 /=) . checkBounds . snd) pairs
+           else filter ((0 /=) . checkBounds . snd) pairs
    in mapMaybe failing ps
 
   where
+    trueMod : Integer -> Integer -> Integer
+    trueMod x y = let res = x `mod` y
+                   in if res < 0 then res + y else res
+
     checkBounds : Integer -> Integer
-    checkBounds n = let r1 = if n < mi || n > ma then n `mod` (ma + 1) else n
-                     in if not signed && r1 < 0
-                           then ma + r1 + 1
+    checkBounds n = let r1 = trueMod n (ma + 1 - mi)
+                     in if r1 > ma
+                           then r1 - (ma + 1 - mi)
                            else r1
 
     failing : (Integer,Integer) -> Maybe String
@@ -158,146 +155,6 @@ check (MkOp name op opInt allowZero $ MkIntType type signed bits mi ma) =
        in if resA == resMod
              then Nothing
              else Just #"Error when calculating \#{show x} \#{name} \#{show y} for \#{type}: Expected \#{show resMod} but got \#{show resA} (unrounded: \#{show resInteger})"#
-
---------------------------------------------------------------------------------
---          Int8
---------------------------------------------------------------------------------
-
-Show Int8 where
-  show = prim__cast_Int8String
-
-Cast Int8 Integer where
-  cast = prim__cast_Int8Integer
-
-Num Int8 where
-  (+) = prim__add_Int8
-  (*) = prim__mul_Int8
-  fromInteger = prim__cast_IntegerInt8
-
-Neg Int8 where
-  (-)    = prim__sub_Int8
-  negate = prim__sub_Int8 0
-
-Integral Int8 where
-  div = prim__div_Int8
-  mod = prim__mod_Int8
-
---------------------------------------------------------------------------------
---          Int16
---------------------------------------------------------------------------------
-
-Show Int16 where
-  show = prim__cast_Int16String
-
-Cast Int16 Integer where
-  cast = prim__cast_Int16Integer
-
-Num Int16 where
-  (+) = prim__add_Int16
-  (*) = prim__mul_Int16
-  fromInteger = prim__cast_IntegerInt16
-
-Neg Int16 where
-  (-)    = prim__sub_Int16
-  negate = prim__sub_Int16 0
-
-Integral Int16 where
-  div = prim__div_Int16
-  mod = prim__mod_Int16
-
---------------------------------------------------------------------------------
---          Int32
---------------------------------------------------------------------------------
-
-Show Int32 where
-  show = prim__cast_Int32String
-
-Cast Int32 Integer where
-  cast = prim__cast_Int32Integer
-
-Num Int32 where
-  (+) = prim__add_Int32
-  (*) = prim__mul_Int32
-  fromInteger = prim__cast_IntegerInt32
-
-Neg Int32 where
-  (-)    = prim__sub_Int32
-  negate = prim__sub_Int32 0
-
-Integral Int32 where
-  div = prim__div_Int32
-  mod = prim__mod_Int32
-
---------------------------------------------------------------------------------
---          Int64
---------------------------------------------------------------------------------
-
-Show Int64 where
-  show = prim__cast_Int64String
-
-Cast Int64 Integer where
-  cast = prim__cast_Int64Integer
-
-Num Int64 where
-  (+) = prim__add_Int64
-  (*) = prim__mul_Int64
-  fromInteger = prim__cast_IntegerInt64
-
-Neg Int64 where
-  (-)    = prim__sub_Int64
-  negate = prim__sub_Int64 0
-
-Integral Int64 where
-  div = prim__div_Int64
-  mod = prim__mod_Int64
-
---------------------------------------------------------------------------------
---          Bits8
---------------------------------------------------------------------------------
-
-Neg Bits8 where
-  (-)    = prim__sub_Bits8
-  negate = prim__sub_Bits8 0
-
-Integral Bits8 where
-  div = prim__div_Bits8
-  mod = prim__mod_Bits8
-
---------------------------------------------------------------------------------
---          Bits16
---------------------------------------------------------------------------------
-
-Neg Bits16 where
-  (-)    = prim__sub_Bits16
-  negate = prim__sub_Bits16 0
-
-Integral Bits16 where
-  div = prim__div_Bits16
-  mod = prim__mod_Bits16
-
---------------------------------------------------------------------------------
---          Bits32
---------------------------------------------------------------------------------
-
-Neg Bits32 where
-  (-)    = prim__sub_Bits32
-  negate = prim__sub_Bits32 0
-
-Integral Bits32 where
-  div = prim__div_Bits32
-  mod = prim__mod_Bits32
-
---------------------------------------------------------------------------------
---          Bits64
---------------------------------------------------------------------------------
-
-Neg Bits64 where
-  (-)    = prim__sub_Bits64
-  negate = prim__sub_Bits64 0
-
-Integral Bits64 where
-  div = prim__div_Bits64
-  mod = prim__mod_Bits64
 
 --------------------------------------------------------------------------------
 --          Main

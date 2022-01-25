@@ -11,11 +11,11 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
-
-import Data.List
 
 %default covering
 
@@ -52,7 +52,7 @@ rewriteErr (InType _ _ err) = rewriteErr err
 rewriteErr (InCon _ _ err) = rewriteErr err
 rewriteErr (InLHS _ _ err) = rewriteErr err
 rewriteErr (InRHS _ _ err) = rewriteErr err
-rewriteErr (WhenUnifying _ _ _ _ err) = rewriteErr err
+rewriteErr (WhenUnifying _ _ _ _ _ err) = rewriteErr err
 rewriteErr _ = False
 
 -- Returns the rewriting lemma to use, and the predicate for passing to the
@@ -101,6 +101,7 @@ checkRewrite : {vars : _} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                RigCount -> ElabInfo ->
                NestedNames vars -> Env Term vars ->
                FC -> RawImp -> RawImp -> Maybe (Glued vars) ->
@@ -108,7 +109,7 @@ checkRewrite : {vars : _} ->
 checkRewrite rigc elabinfo nest env fc rule tm Nothing
     = throw (GenericMsg fc "Can't infer a type for rewrite")
 checkRewrite {vars} rigc elabinfo nest env ifc rule tm (Just expected)
-    = delayOnFailure ifc rigc env expected rewriteErr 10 $ \delayed =>
+    = delayOnFailure ifc rigc env (Just expected) rewriteErr Rewrite $ \delayed =>
         do let vfc = virtualiseFC ifc
            (rulev, grulet) <- check erased elabinfo nest env rule Nothing
            rulet <- getTerm grulet

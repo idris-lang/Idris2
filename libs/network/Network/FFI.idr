@@ -5,22 +5,15 @@ module Network.FFI
 
 import Network.Socket.Data
 
--- From sys/socket.h
-
-%foreign "C:close, libc 6"
-export
-prim__socket_close : (sockdes : SocketDescriptor) -> PrimIO Int
-
-%foreign "C:listen, libc 6"
-export
-prim__socket_listen : (sockfd : SocketDescriptor) -> (backlog : Int) -> PrimIO Int
-
-
 -- From idris_net.h
 
 %foreign "C:idrnet_socket, libidris2_support, idris_net.h"
 export
 prim__idrnet_socket : (domain, type, protocol : Int) -> PrimIO Int
+
+%foreign "C:idrnet_close, libidris2_support, idris_net.h"
+export
+prim__idrnet_close : (sockdes : SocketDescriptor) -> PrimIO Int
 
 %foreign "C:idrnet_bind, libidris2_support, idris_net.h"
 export
@@ -31,6 +24,14 @@ prim__idrnet_bind : (sockfd : SocketDescriptor) -> (family, socket_type : Int) -
 export
 prim__idrnet_connect : (sockfd : SocketDescriptor) -> (family, socket_type : Int) ->
                        (host : String) -> (port : Port) -> PrimIO Int
+
+%foreign "C:idrnet_listen, libidris2_support, idris_net.h"
+export
+prim__idrnet_listen : (sockfd : SocketDescriptor) -> (backlog : Int) -> PrimIO Int
+
+%foreign "C:idrnet_fdopen, libidris2_support, idris_net.h"
+export
+prim__idrnet_fdopen : Int -> String -> PrimIO AnyPtr
 
 %foreign "C:idrnet_sockaddr_family, libidris2_support, idris_net.h"
 export
@@ -57,7 +58,8 @@ prim__idrnet_sockaddr_port : (sockfd : SocketDescriptor) -> PrimIO Int
 export
 prim__idrnet_create_sockaddr : PrimIO AnyPtr
 
-%foreign "C:idrnet_accept, libidris2_support, idris_net.h"
+%foreign "C__collect_safe:idrnet_accept, libidris2_support, idris_net.h"
+         "C:idrnet_accept, libidris2_support, idris_net.h"
 export
 prim__idrnet_accept : (sockfd : SocketDescriptor) -> (sockaddr : AnyPtr) -> PrimIO Int
 
@@ -70,11 +72,13 @@ export
 prim__idrnet_send_buf : (sockfd : SocketDescriptor) -> (dataBuffer : AnyPtr) -> (len : Int) -> PrimIO Int
 
 
-%foreign "C:idrnet_recv, libidris2_support, idris_net.h"
+%foreign "C__collect_safe:idrnet_recv, libidris2_support, idris_net.h"
+         "C:idrnet_recv, libidris2_support, idris_net.h"
 export
 prim__idrnet_recv : (sockfd : SocketDescriptor) -> (len : Int) -> PrimIO AnyPtr
 
-%foreign "C:idrnet_recv_buf, libidris2_support, idris_net.h"
+%foreign "C__collect_safe:idrnet_recv_buf, libidris2_support, idris_net.h"
+         "C:idrnet_recv_buf, libidris2_support, idris_net.h"
 export
 prim__idrnet_recv_buf : (sockfd : SocketDescriptor) -> (buf : AnyPtr) -> (len : Int) -> PrimIO Int
 
@@ -89,11 +93,13 @@ prim__idrnet_sendto_buf : (sockfd : SocketDescriptor) -> (dataBuf : AnyPtr) ->
                           (buf_len : Int) -> (host : String) -> (port : Port) ->
                           (family : Int) -> PrimIO Int
 
-%foreign "C:idrnet_recvfrom, libidris2_support, idris_net.h"
+%foreign "C__collect_safe:idrnet_recvfrom, libidris2_support, idris_net.h"
+         "C:idrnet_recvfrom, libidris2_support, idris_net.h"
 export
 prim__idrnet_recvfrom : (sockfd : SocketDescriptor) -> (len : Int) -> PrimIO AnyPtr
 
-%foreign "C:idrnet_recvfrom_buf, libidris2_support, idris_net.h"
+%foreign "C__collect_safe:idrnet_recvfrom_buf, libidris2_support, idris_net.h"
+         "C:idrnet_recvfrom_buf, libidris2_support, idris_net.h"
 export
 prim__idrnet_recvfrom_buf : (sockfd : SocketDescriptor) -> (buf : AnyPtr) -> (len : Int) -> PrimIO AnyPtr
 
@@ -133,14 +139,6 @@ prim__idrnet_geteagain : PrimIO Int
 %foreign "C:idrnet_errno, libidris2_support, idris_net.h"
 export
 prim__idrnet_errno : PrimIO Int
-
-%foreign "C:idrnet_malloc, libidris2_support, idris_net.h"
-export
-prim__idrnet_malloc : (size : Int) -> PrimIO AnyPtr
-
-%foreign "C:idrnet_free, libidris2_support, idris_net.h"
-export
-prim__idrnet_free : (ptr : AnyPtr) -> PrimIO ()
 
 %foreign "C:idrnet_peek, libidris2_support, idris_net.h"
 export

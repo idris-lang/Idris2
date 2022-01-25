@@ -16,10 +16,10 @@ record Class where
     className : String
 
 addStudent : Person -> Class -> Class
-addStudent p c = record { students = p :: students c } c
+addStudent p c = { students := p :: students c } c
 
 addStudent' : Person -> SizedClass n -> SizedClass (S n)
 addStudent' p c =  SizedClassInfo (p :: students c) (className c)
 
 addStudent'' : Person -> SizedClass n -> SizedClass (S n)
-addStudent'' p c = record { students = p :: students c } c
+addStudent'' p c = { students := p :: students c } c

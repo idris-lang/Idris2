@@ -1,0 +1,14 @@
+1/1: Building Postfix (Postfix.idr)
+Postfix> Postfix.val : Diag a -> a
+val diag = diag .fstt
+Postfix> Postfix.(.val') : Diag a -> a
+diag .val' = diag .sndd
+Postfix>  0 a : Type
+------------------------------
+a : (d : Diag a) -> d .fstt = d .sndd
+Postfix>  0 a : Type
+------------------------------
+b : (d : Diag a) -> d .fstt = d .sndd
+Postfix> Postfix.prf : (d : Diag a) -> val d = d .sndd
+Postfix> 
+Bye for now!

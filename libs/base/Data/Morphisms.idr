@@ -2,6 +2,8 @@ module Data.Morphisms
 
 import Data.Contravariant
 
+%default total
+
 public export
 record Morphism a b where
   constructor Mor
@@ -47,7 +49,7 @@ Semigroup a => Semigroup (Morphism r a) where
 
 export
 Monoid a => Monoid (Morphism r a) where
-  neutral = Mor \r => neutral
+  neutral = Mor $ \_ => neutral
 
 export
 Semigroup (Endomorphism a) where
@@ -75,16 +77,16 @@ Monad f => Monad (Kleislimorphism f a) where
 public export
 Contravariant (Op b) where
   contramap f (MkOp g) = MkOp (g . f)
-  v >$ (MkOp f) = MkOp \_ => f v
+  v >$ (MkOp f) = MkOp $ \_ => f v
 
 -- Applicative is a bit too strong, but there is no suitable superclass
 export
 (Semigroup a, Applicative f) => Semigroup (Kleislimorphism f r a) where
-  f <+> g = Kleisli \r => (<+>) <$> (applyKleisli f) r <*> (applyKleisli g) r
+  f <+> g = Kleisli $ \r => (<+>) <$> (applyKleisli f) r <*> (applyKleisli g) r
 
 export
 (Monoid a, Applicative f) => Monoid (Kleislimorphism f r a) where
-  neutral = Kleisli \r => pure neutral
+  neutral = Kleisli $ \_ => pure neutral
 
 export
 Cast (Endomorphism a) (Morphism a a) where

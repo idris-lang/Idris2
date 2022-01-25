@@ -1,5 +1,9 @@
 module Data.Maybe
 
+import Control.Function
+
+%default total
+
 public export
 isNothing : Maybe a -> Bool
 isNothing Nothing  = True
@@ -46,8 +50,8 @@ toMaybe True  j = Just j
 toMaybe False _ = Nothing
 
 export
-justInjective : Just x = Just y -> x = y
-justInjective Refl = Refl
+Injective Just where
+  injective Refl = Refl
 
 ||| Convert a `Maybe a` value to an `a` value, using `neutral` in the case
 ||| that the `Maybe` value is `Nothing`.
@@ -58,7 +62,7 @@ lowerMaybe (Just x) = x
 
 ||| Returns `Nothing` when applied to `neutral`, and `Just` the value otherwise.
 export
-raiseToMaybe : (Monoid a, Eq a) => a -> Maybe a
+raiseToMaybe : Monoid a => Eq a => a -> Maybe a
 raiseToMaybe x = if x == neutral then Nothing else Just x
 
 public export

@@ -5,6 +5,8 @@ import Control.Monad.Reader.Interface
 import Control.Monad.State.Interface
 import Control.Monad.Writer.Interface
 
+%default total
+
 public export
 interface (MonadReader r m, MonadWriter w m, MonadState s m) =>
   MonadRWS r w s m | m where

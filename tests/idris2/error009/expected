@@ -1,6 +1,6 @@
 Error: Module DoesntExist not found
 
-Exists.idr:1:1--1:19
+Exists:1:1--1:19
  1 | import DoesntExist
      ^^^^^^^^^^^^^^^^^^
 

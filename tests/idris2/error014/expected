@@ -1,7 +1,7 @@
 1/1: Building Issue735 (Issue735.idr)
 Error: While processing left hand side of isCons. Can't match on :: (Under-applied constructor).
 
-Issue735.idr:5:8--5:12
+Issue735:5:8--5:12
  1 | module Issue735
  2 | 
  3 | -- Not allowed to pattern-match on under-applied constructors
@@ -11,7 +11,7 @@ Issue735.idr:5:8--5:12
 
 Error: While processing left hand side of test. Can't match on A (Under-applied constructor).
 
-Issue735.idr:12:6--12:7
+Issue735:12:6--12:7
  08 | interface A a where
  09 | 
  10 | -- Not allowed to pattern-match on under-applied type constructors

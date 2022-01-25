@@ -14,7 +14,7 @@ import Prelude.Show
 
 public export
 Functor IO where
-  map f io = io_bind io (\b => io_pure (f b))
+  map f io = io_bind io $ io_pure . f
 
 %inline
 public export
@@ -62,12 +62,12 @@ prim__onCollectAny : AnyPtr -> (AnyPtr -> PrimIO ()) -> PrimIO GCAnyPtr
 prim__onCollect : Ptr t -> (Ptr t -> PrimIO ()) -> PrimIO (GCPtr t)
 
 export
-onCollectAny : AnyPtr -> (AnyPtr -> IO ()) -> IO GCAnyPtr
-onCollectAny ptr c = fromPrim (prim__onCollectAny ptr (\x => toPrim (c x)))
+onCollectAny : HasIO io => AnyPtr -> (AnyPtr -> IO ()) -> io GCAnyPtr
+onCollectAny ptr c = primIO (prim__onCollectAny ptr (\x => toPrim (c x)))
 
 export
-onCollect : Ptr t -> (Ptr t -> IO ()) -> IO (GCPtr t)
-onCollect ptr c = fromPrim (prim__onCollect ptr (\x => toPrim (c x)))
+onCollect : HasIO io => Ptr t -> (Ptr t -> IO ()) -> io (GCPtr t)
+onCollect ptr c = primIO (prim__onCollect ptr (\x => toPrim (c x)))
 
 %foreign "C:idris2_getString, libidris2_support, idris_support.h"
          "javascript:lambda:x=>x"
@@ -85,6 +85,7 @@ prim__getStr : PrimIO String
 
 %foreign "C:idris2_putStr, libidris2_support, idris_support.h"
          "node:lambda:x=>process.stdout.write(x)"
+         "browser:lambda:x=>console.log(x)"
 prim__putStr : String -> PrimIO ()
 
 ||| Output a string to stdout without a trailing newline.
@@ -132,10 +133,6 @@ prim__threadWait : (1 threadID : ThreadID) -> PrimIO ()
 export
 threadWait : (1 threadID : ThreadID) -> IO ()
 threadWait threadID = fromPrim (prim__threadWait threadID)
-
-%foreign "C:idris2_readString, libidris2_support, idris_support.h"
-export
-prim__getErrno : Int
 
 ||| Output something showable to stdout, without a trailing newline.
 export

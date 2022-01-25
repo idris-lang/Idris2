@@ -28,6 +28,12 @@ these l r lr (That b)   = r b
 these l r lr (Both a b) = lr a b
 
 public export
+swap : These a b -> These b a
+swap (This a)   = That a
+swap (That b)   = This b
+swap (Both a b) = Both b a
+
+public export
 (Show a, Show b) => Show (These a b) where
   showPrec d (This x)   = showCon d "This" $ showArg x
   showPrec d (That x)   = showCon d "That" $ showArg x

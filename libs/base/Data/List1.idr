@@ -1,6 +1,7 @@
 module Data.List1
 
 import public Data.Zippable
+import Control.Function
 
 %default total
 
@@ -65,6 +66,10 @@ export
 foldl1 : (func : a -> a -> a) -> (l : List1 a) -> a
 foldl1 f = foldl1By f id
 
+public export
+length : List1 a -> Nat
+length (_ ::: xs) = S (length xs)
+
 ------------------------------------------------------------------------
 -- Append
 
@@ -94,10 +99,12 @@ snoc xs x = xs ++ (singleton x)
 
 public export
 unsnoc : (xs : List1 a) -> (List a, a)
-unsnoc (h ::: Nil)       = (Nil, h)
-unsnoc (h ::: (x :: xs)) =
-  let (ini,lst) = unsnoc (x ::: xs)
-   in (h :: ini, lst)
+unsnoc (x ::: xs) = go x xs where
+
+  go : (x : a) -> (xs : List a) -> (List a, a)
+  go x [] = ([], x)
+  go x (y :: ys) = let (ini,lst) = go y ys
+                   in (x :: ini, lst)
 
 ------------------------------------------------------------------------
 -- Reverse
@@ -134,8 +141,10 @@ Monad List1 where
 export
 Foldable List1 where
   foldr c n (x ::: xs) = c x (foldr c n xs)
+  foldl f z (x ::: xs) = foldl f (f z x) xs
   null _ = False
   toList = forget
+  foldMap f (x ::: xs) = f x <+> foldMap f xs
 
 export
 Traversable List1 where
@@ -157,8 +166,16 @@ Ord a => Ord (List1 a) where
 -- Properties
 
 export
-consInjective : the (List1 a) (x ::: xs) === (y ::: ys) -> (x === y, xs === ys)
+consInjective : (x ::: xs) === (y ::: ys) -> (x === y, xs === ys)
 consInjective Refl = (Refl, Refl)
+
+export
+{x : a} -> Injective (x :::) where
+  injective Refl = Refl
+
+export
+{ys : List a} -> Injective (::: ys) where
+  injective Refl = Refl
 
 ------------------------------------------------------------------------
 -- Zippable
@@ -199,3 +216,7 @@ Zippable List1 where
       unzipWith3' (x :: xs) = let (b, c, d) = f x
                                   (bs, cs, ds) = unzipWith3' xs in
                                   (b :: bs, c :: cs, d :: ds)
+
+export
+Uninhabited a => Uninhabited (List1 a) where
+  uninhabited (hd ::: _) = uninhabited hd

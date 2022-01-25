@@ -1,4 +1,4 @@
-import Data.Strings
+import Data.String
 import Data.Vect
 
 StringOrInt : Bool -> Type

@@ -3,11 +3,11 @@ module Compiler.RefC.CC
 import Core.Context
 import Core.Context.Log
 import Core.Options
+import Core.Directory
 
 import System
 
-import Idris.Version
-import Libraries.Utils.Path
+%default total
 
 findCC : IO String
 findCC
@@ -17,10 +17,6 @@ findCC
            | Just cc => pure cc
          pure "cc"
 
-fullprefix_dir : Dirs -> String -> String
-fullprefix_dir dirs sub
-    = prefix_dir dirs </> "idris2-" ++ showVersion False version </> sub
-
 export
 compileCObjectFile : {auto c : Ref Ctxt Defs}
                   -> {default False asLibrary : Bool}
@@ -29,14 +25,15 @@ compileCObjectFile : {auto c : Ref Ctxt Defs}
                   -> Core (Maybe String)
 compileCObjectFile {asLibrary} sourceFile objectFile =
   do cc <- coreLift findCC
-     dirs <- getDirs
+     refcDir <- findDataFile "refc"
+     cDir <- findDataFile "c"
 
      let libraryFlag = if asLibrary then "-fpic " else ""
 
      let runccobj = cc ++ " -Werror -c " ++ libraryFlag ++ sourceFile ++
-                       " -o " ++ objectFile ++ " " ++
-                       "-I" ++ fullprefix_dir dirs "refc " ++
-                       "-I" ++ fullprefix_dir dirs "include"
+                       " -o " ++ objectFile ++
+                       " -I" ++ refcDir ++
+                       " -I" ++ cDir
 
      log "compiler.refc.cc" 10 runccobj
      0 <- coreLift $ system runccobj
@@ -53,16 +50,18 @@ compileCFile : {auto c : Ref Ctxt Defs}
 compileCFile {asShared} objectFile outFile =
   do cc <- coreLift findCC
      dirs <- getDirs
+     refcDir <- findDataFile "refc"
+     supportFile <- findLibraryFile "libidris2_support.a"
 
      let sharedFlag = if asShared then "-shared " else ""
 
      let runcc = cc ++ " -Werror " ++ sharedFlag ++ objectFile ++
                        " -o " ++ outFile ++ " " ++
-                       fullprefix_dir dirs "lib" </> "libidris2_support.a" ++ " " ++
+                       supportFile ++ " " ++
                        "-lidris2_refc " ++
-                       "-L" ++ fullprefix_dir dirs "refc " ++
+                       "-L" ++ refcDir ++ " " ++
                        clibdirs (lib_dirs dirs) ++
-                       "-lm"
+                       "-lgmp -lm"
 
      log "compiler.refc.cc" 10 runcc
      0 <- coreLift $ system runcc

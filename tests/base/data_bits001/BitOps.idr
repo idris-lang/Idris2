@@ -4,6 +4,8 @@ import Data.List
 import Data.Stream
 import Decidable.Equality
 
+import Data.Fin
+
 --------------------------------------------------------------------------------
 --          Utilities
 --------------------------------------------------------------------------------
@@ -38,38 +40,38 @@ powsOf2 n = take n (iterate (*2) 1)
 --------------------------------------------------------------------------------
 
 shiftRBits8 : List Bits8
-shiftRBits8 = map (`shiftR` fromNat 1) (powsOf2 8 ++ [b8max])
+shiftRBits8 = map (`shiftR` 1) (powsOf2 8 ++ [b8max])
 
 shiftRBits16 : List Bits16
-shiftRBits16 = map (`shiftR` fromNat 1) (powsOf2 16 ++ [b16max])
+shiftRBits16 = map (`shiftR` 1) (powsOf2 16 ++ [b16max])
 
 shiftRBits32 : List Bits32
-shiftRBits32 = map (`shiftR` fromNat 1) (powsOf2 32 ++ [b32max])
+shiftRBits32 = map (`shiftR` 1) (powsOf2 32 ++ [b32max])
 
 shiftRInt : List Int
-shiftRInt = map (`shiftR` fromNat 1) (powsOf2 63 ++ [intmax])
+shiftRInt = map (`shiftR` 1) (powsOf2 63 ++ [intmax])
 
 shiftRNegativeInt : List Int
-shiftRNegativeInt = map (`shiftR` fromNat 1) (map negate (powsOf2 63) ++ [intmin])
+shiftRNegativeInt = map (`shiftR` 1) (map negate (powsOf2 63) ++ [intmin])
 
 --------------------------------------------------------------------------------
 --          shiftL
 --------------------------------------------------------------------------------
 
 shiftLBits8 : List Bits8
-shiftLBits8 = map (`shiftL` fromNat 1) (0 :: powsOf2 7)
+shiftLBits8 = map (`shiftL` 1) (0 :: powsOf2 7)
 
 shiftLBits16 : List Bits16
-shiftLBits16 = map (`shiftL` fromNat 1) (0 :: powsOf2 15)
+shiftLBits16 = map (`shiftL` 1) (0 :: powsOf2 15)
 
 shiftLBits32 : List Bits32
-shiftLBits32 = map (`shiftL` fromNat 1) (0 :: powsOf2 31)
+shiftLBits32 = map (`shiftL` 1) (0 :: powsOf2 31)
 
 shiftLInt : List Int
-shiftLInt = map (`shiftL` fromNat 1) (0 :: powsOf2 62)
+shiftLInt = map (`shiftL` 1) (0 :: powsOf2 62)
 
 shiftLNegativeInt : List Int
-shiftLNegativeInt = map (`shiftL` fromNat 1) (map negate (powsOf2 62))
+shiftLNegativeInt = map (`shiftL` 1) (map negate (powsOf2 62))
 
 
 --------------------------------------------------------------------------------
@@ -238,70 +240,65 @@ xorNegativeInt = [ (-11) `xor` intmax
 --          bit
 --------------------------------------------------------------------------------
 
-fromNatMay : (n : Nat) -> (k : Nat) -> Maybe (Subset Nat (`Nat.LT` n))
-fromNatMay n k with (decEq (lt k n) True)
-  fromNatMay n k | (Yes refl)  = Just $ fromNat k
-  fromNatMay n k | (No _)      = Nothing
-
 bitBits8 : List Bits8
-bitBits8 = map bit $ mapMaybe (fromNatMay 8) [0..7]
+bitBits8 = map bit $ mapMaybe (`natToFin` 8) [0..7]
 
 bitBits16 : List Bits16
-bitBits16 = map bit $ mapMaybe (fromNatMay 16) [0..15]
+bitBits16 = map bit $ mapMaybe (`natToFin` 16) [0..15]
 
 bitBits32 : List Bits32
-bitBits32 = map bit $ mapMaybe (fromNatMay 32) [0..31]
+bitBits32 = map bit $ mapMaybe (`natToFin` 32) [0..31]
 
 bitInt : List Int
-bitInt = map bit $ mapMaybe (fromNatMay 64) [0..63]
+bitInt = map bit $ mapMaybe (`natToFin` 64) [0..63]
 
 --------------------------------------------------------------------------------
 --          complementBit
 --------------------------------------------------------------------------------
 
 complementBitBits8 : List Bits8
-complementBitBits8 = map (`complementBit` fromNat 1) bitBits8
+complementBitBits8 = map (`complementBit` 1) bitBits8
 
 complementBitBits16 : List Bits16
-complementBitBits16 = map (`complementBit` fromNat 1) bitBits16
+complementBitBits16 = map (`complementBit` 1) bitBits16
 
 complementBitBits32 : List Bits32
-complementBitBits32 = map (`complementBit` fromNat 1) bitBits32
+complementBitBits32 = map (`complementBit` 1) bitBits32
 
 complementBitInt : List Int
-complementBitInt = map (`complementBit` fromNat 1) bitInt
+complementBitInt = map (`complementBit` 1) bitInt
 
 --------------------------------------------------------------------------------
 --          clearBit
 --------------------------------------------------------------------------------
 
 clearBitBits8 : List Bits8
-clearBitBits8 = map (`clearBit` fromNat 5) bitBits8
+clearBitBits8 = map (`clearBit` 5) bitBits8
 
 clearBitBits16 : List Bits16
-clearBitBits16 = map (`clearBit` fromNat 5) bitBits16
+clearBitBits16 = map (`clearBit` 5) bitBits16
 
 clearBitBits32 : List Bits32
-clearBitBits32 = map (`clearBit` fromNat 5) bitBits32
+clearBitBits32 = map (`clearBit` 5) bitBits32
 
 clearBitInt : List Int
-clearBitInt = map (`clearBit` fromNat 5) bitInt
+clearBitInt = map (`clearBit` 5) bitInt
 
 --------------------------------------------------------------------------------
 --          setBit
 --------------------------------------------------------------------------------
 
 setBitBits8 : List Bits8
-setBitBits8 = map (`setBit` fromNat 1) bitBits8
+setBitBits8 = map (`setBit` 1) bitBits8
 
 setBitBits16 : List Bits16
-setBitBits16 = map (`setBit` fromNat 1) bitBits16
+setBitBits16 = map (`setBit` 1) bitBits16
 
 setBitBits32 : List Bits32
-setBitBits32 = map (`setBit` fromNat 1) bitBits32
+setBitBits32 = map (`setBit` 1) bitBits32
 
 setBitInt : List Int
-setBitInt = map (`setBit` fromNat 1) bitInt
+setBitInt = map (`setBit` 1) bitInt
 
 --------------------------------------------------------------------------------
 --          testBit
@@ -309,23 +306,23 @@ setBitInt = map (`setBit` fromNat 1) bitInt
 
 testBitBits8 : List Bool
 testBitBits8 = map (testBit (the Bits8 0xaa))
-             $ mapMaybe (fromNatMay 8) [0..7]
+             $ mapMaybe (`natToFin` 8) [0..7]
 
 testBitBits16 : List Bool
 testBitBits16 = map (testBit (the Bits16 0xaaaa))
-              $ mapMaybe (fromNatMay 16) [0..15]
+              $ mapMaybe (`natToFin` 16) [0..15]
 
 testBitBits32 : List Bool
 testBitBits32 = map (testBit (the Bits32 0xaaaaaaaa))
-              $ mapMaybe (fromNatMay 32) [0..31]
+              $ mapMaybe (`natToFin` 32) [0..31]
 
 testBitInt : List Bool
 testBitInt = map (testBit (the Int 0xaaaaaaaaaaaaaaa))
-           $ mapMaybe (fromNatMay 64) [0..63]
+           $ mapMaybe (`natToFin` 64) [0..63]
 
 testBitNegInt : List Bool
 testBitNegInt = map (testBit (negate $ the Int 0xaaaaaaaaaaaaaaa))
-              $ mapMaybe (fromNatMay 64) [0..63]
+              $ mapMaybe (`natToFin` 64) [0..63]
 
 --------------------------------------------------------------------------------
 --          popCount

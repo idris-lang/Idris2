@@ -13,7 +13,7 @@ module Control.Validation
 import Control.Monad.Identity
 import Control.Monad.Error.Either
 import Data.Nat
-import Data.Strings
+import Data.String
 import Data.Vect
 import Decidable.Equality
 
@@ -104,12 +104,14 @@ export
 left >>> right = MkValidator (validateT left >=> validateT right)
 
 Monad m => Alternative (ValidatorT m a) where
-    left <|> right = MkValidator \x => MkEitherT $ do
+    left <|> right = MkValidator $ \x => MkEitherT $ do
         case !(runEitherT $ validateT left x) of
             (Right r) => pure $ Right r
             (Left e) => case !(runEitherT $ validateT right x) of
                 (Right r) => pure $ Right r
                 (Left e') => pure $ Left (e <+> " / " <+> e')
+
+    empty = MkValidator $ \x => MkEitherT $ pure (Left "invalid")
 
 ||| Alter the input before validation using given function.
 export
@@ -122,7 +124,7 @@ contramap f v = MkValidator (validateT v . f)
 ||| raw input in case it was helpful.
 export
 decide : Monad m => (t -> String) -> ((x : t) -> Dec (p x)) -> PropValidator m t p
-decide msg dec = MkPropValidator \x => case dec x of
+decide msg dec = MkPropValidator $ \x => case dec x of
     Yes prf => pure prf
     No _ => left (msg x)
 
@@ -130,7 +132,7 @@ decide msg dec = MkPropValidator \x => case dec x of
 ||| converting it into b.
 export
 fromMaybe : Monad m => (a -> String) -> (a -> Maybe b) -> ValidatorT m a b
-fromMaybe e f = MkValidator \a => case f a of
+fromMaybe e f = MkValidator $ \a => case f a of
     Nothing => left $ e a
     Just b => pure b
 
@@ -144,7 +146,7 @@ natural = fromMaybe mkError parsePositive
 
 ||| Verify whether a String represents an Integer
 export
-integral : (Num a, Neg a, Monad m) => ValidatorT m String a
+integral : Num a => Neg a => Monad m => ValidatorT m String a
 integral = fromMaybe mkError parseInteger
     where
     mkError : String -> String
@@ -174,8 +176,8 @@ length l = MkValidator (validateVector l)
 
 ||| Verify that certain values are equal.
 export
-equal : (DecEq t, Monad m) => (a : t) -> PropValidator m t (\b => a = b)
-equal a = MkPropValidator \b => case decEq a b of
+equal : Monad m => DecEq t => (a : t) -> PropValidator m t (\b => a = b)
+equal a = MkPropValidator $ \b => case decEq a b of
     Yes prf => pure prf
     No _ => left "Values are not equal."
 

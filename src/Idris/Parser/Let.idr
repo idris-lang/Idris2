@@ -6,8 +6,6 @@ import Libraries.Text.Bounded
 import Data.Either
 import Data.List1
 
-import Libraries.Utils.String
-
 %default total
 
 ------------------------------------------------------------------------
@@ -52,11 +50,11 @@ letFactory letBind letDeclare blocks scope = foldr mkLet scope groups where
     in letDeclare (concatMap val letDecls <$ bounds)
 
 export
-mkLets : FileName ->
+mkLets : OriginDesc ->
          List1 (WithBounds (Either LetBinder LetDecl)) ->
          PTerm -> PTerm
-mkLets fname = letFactory buildLets
-  (\ decls, scope => PLocal (virtualiseFC $ boundToFC fname decls) decls.val scope)
+mkLets origin = letFactory buildLets
+  (\ decls, scope => PLocal (virtualiseFC $ boundToFC origin decls) decls.val scope)
 
   where
 
@@ -64,16 +62,16 @@ mkLets fname = letFactory buildLets
     buildLets [] sc = sc
     buildLets (b :: rest) sc
       = let (MkLetBinder rig pat ty val alts) = b.val
-            fc = virtualiseFC $ boundToFC fname b
+            fc = virtualiseFC $ boundToFC origin b
         in PLet fc rig pat ty val (buildLets rest sc) alts
 
 export
-mkDoLets : FileName ->
+mkDoLets : OriginDesc ->
            List1 (WithBounds (Either LetBinder LetDecl)) ->
            List PDo
-mkDoLets fname lets = letFactory
+mkDoLets origin lets = letFactory
     (\ binds, rest => buildDoLets binds ++ rest)
-    (\ decls, rest => DoLetLocal (boundToFC fname decls) decls.val :: rest)
+    (\ decls, rest => DoLetLocal (boundToFC origin decls) decls.val :: rest)
     lets
     []
 
@@ -81,10 +79,13 @@ mkDoLets fname lets = letFactory
 
     buildDoLets : List (WithBounds LetBinder) -> List PDo
     buildDoLets [] = []
-    buildDoLets (b :: rest) = let fc = boundToFC fname b in case b.val of
-      (MkLetBinder rig (PRef fc' (UN n)) ty val []) =>
-         (if lowerFirst n
-            then DoLet fc fc' (UN n) rig ty val
-            else DoLetPat fc (PRef fc' (UN n)) ty val []
+    buildDoLets (b :: rest) = let fc = boundToFC origin b in case b.val of
+      (MkLetBinder rig (PRef fc' (UN un)) ty val []) =>
+         (if isPatternVariable un
+            then DoLet fc fc' (UN un) rig ty val
+            else DoLetPat fc (PRef fc' (UN un)) ty val []
          ) :: buildDoLets rest
-      (MkLetBinder rig pat ty val alts) => DoLetPat fc pat ty val alts :: buildDoLets rest
+      (MkLetBinder rig (PImplicit fc') ty val []) =>
+        DoLet fc fc' (UN Underscore) rig ty val :: buildDoLets rest
+      (MkLetBinder rig pat ty val alts) =>
+        DoLetPat fc pat ty val alts :: buildDoLets rest

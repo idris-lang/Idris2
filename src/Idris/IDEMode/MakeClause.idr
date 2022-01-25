@@ -6,7 +6,7 @@ import Parser.Unlit
 
 import Data.List
 import Data.Nat
-import Data.Strings
+import Data.String
 
 %default total
 

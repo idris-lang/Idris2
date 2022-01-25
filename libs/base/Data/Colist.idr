@@ -1,6 +1,5 @@
 module Data.Colist
 
-import Data.Maybe
 import Data.List
 import Data.List1
 import public Data.Zippable
@@ -204,6 +203,10 @@ Uninhabited (Data.Colist.InBounds k []) where
   uninhabited InFirst impossible
   uninhabited (InLater _) impossible
 
+export
+Uninhabited (Colist.InBounds k xs) => Uninhabited (Colist.InBounds (S k) (x::xs)) where
+  uninhabited (InLater y) = uninhabited y
+
 ||| Decide whether `k` is a valid index into Colist `xs`
 public export
 inBounds : (k : Nat) -> (xs : Colist a) -> Dec (InBounds k xs)
@@ -211,7 +214,7 @@ inBounds k [] = No uninhabited
 inBounds Z (x::xs) = Yes InFirst
 inBounds (S k) (x::xs) = case inBounds k xs of
   Yes p => Yes $ InLater p
-  No up => No \(InLater p) => up p
+  No up => No $ \(InLater p) => up p
 
 ||| Find a particular element of a Colist using InBounds
 |||

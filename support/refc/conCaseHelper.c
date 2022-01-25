@@ -1,8 +1,10 @@
 #include "conCaseHelper.h"
+#include "refc_util.h"
 
 AConAlt *newConstructorField(int nr)
 {
     AConAlt *retVal = (AConAlt *)malloc(nr * sizeof(AConAlt));
+    IDRIS2_REFC_VERIFY(retVal, "malloc failed");
     for (int i = 0; i < nr; i++)
     {
         retVal[i].tag = -1;

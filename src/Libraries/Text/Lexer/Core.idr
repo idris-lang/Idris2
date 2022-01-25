@@ -1,11 +1,9 @@
 module Libraries.Text.Lexer.Core
 
-import public Libraries.Control.Delayed
-import Libraries.Data.Bool.Extra
 import Data.List
 import Data.Maybe
-import Data.Nat
-import Data.Strings
+
+import public Libraries.Control.Delayed
 import public Libraries.Text.Bounded
 
 %default total
@@ -17,6 +15,7 @@ export
 data Recognise : (consumes : Bool) -> Type where
      Empty : Recognise False
      Fail : Recognise c
+     EOF : Recognise False
      Lookahead : (positive : Bool) -> Recognise c -> Recognise False
      Pred : (Char -> Bool) -> Recognise True
      SeqEat : Recognise True -> Inf (Recognise e) -> Recognise True
@@ -52,6 +51,11 @@ fail = Fail
 export
 empty : Recognise False
 empty = Empty
+
+||| Recognise end of input
+export
+eof : Recognise False
+eof = EOF
 
 ||| Recognise a character that matches a predicate
 export
@@ -101,6 +105,8 @@ export
 scan : Recognise c -> List Char -> List Char -> Maybe (List Char, List Char)
 scan Empty tok str = pure (tok, str)
 scan Fail tok str = Nothing
+scan EOF tok [] = Just (tok,[])
+scan EOF tok (_::_) = Nothing
 scan (Lookahead positive r) tok str
     = if isJust (scan r tok str) == positive
          then pure (tok, str)

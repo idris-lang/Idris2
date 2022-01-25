@@ -1,7 +1,7 @@
 module TTImp.ProcessDef
 
-import Core.CaseBuilder
-import Core.CaseTree
+import Core.Case.CaseBuilder
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -16,6 +16,8 @@ import Core.Transform
 import Core.Value
 import Core.UnifyState
 
+import Idris.Syntax
+
 import TTImp.BindImplicits
 import TTImp.Elab
 import TTImp.Elab.Check
@@ -23,22 +25,17 @@ import TTImp.Elab.Utils
 import TTImp.Impossible
 import TTImp.PartialEval
 import TTImp.TTImp
+import TTImp.TTImp.Functor
+import TTImp.ProcessType
 import TTImp.Unelab
-import TTImp.Utils
 import TTImp.WithClause
 
 import Data.Either
 import Data.List
 import Libraries.Data.NameMap
-import Data.Strings
+import Data.String
 import Data.Maybe
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Data.String.Extra
-
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
 
 %default covering
 
@@ -58,6 +55,27 @@ mutual
   mismatchNF defs (NDelayed _ _ x) (NDelayed _ _ y) = mismatchNF defs x y
   mismatchNF defs (NDelay _ _ _ x) (NDelay _ _ _ y)
       = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
+
+  -- NPrimVal is apart from NDCon, NTCon, NBind, and NType
+  mismatchNF defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
+  mismatchNF defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
+  mismatchNF defs (NPrimVal _ _) (NBind _ _ _ _) = pure True
+  mismatchNF defs (NBind _ _ _ _) (NPrimVal _ _) = pure True
+  mismatchNF defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure True
+  mismatchNF defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
+  mismatchNF defs (NPrimVal _ _) (NType _ _) = pure True
+  mismatchNF defs (NType _ _) (NPrimVal _ _) = pure True
+
+-- NTCon is apart from NBind, and NType
+  mismatchNF defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure True
+  mismatchNF defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure True
+  mismatchNF defs (NTCon _ _ _ _ _) (NType _ _) = pure True
+  mismatchNF defs (NType _ _) (NTCon _ _ _ _ _) = pure True
+
+-- NBind is apart from NType
+  mismatchNF defs (NBind _ _ _ _) (NType _ _) = pure True
+  mismatchNF defs (NType _ _) (NBind _ _ _ _) = pure True
+
   mismatchNF _ _ _ = pure False
 
   mismatch : {auto c : Ref Ctxt Defs} ->
@@ -74,39 +92,54 @@ impossibleOK : {auto c : Ref Ctxt Defs} ->
                {vars : _} ->
                Defs -> NF vars -> NF vars -> Core Bool
 impossibleOK defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
-    = if xn == yn
-         then anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
-         else pure False
+    = if xn /= yn
+         then pure True
+         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
 -- If it's a data constructor, any mismatch will do
 impossibleOK defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure True
          else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
 impossibleOK defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
-impossibleOK defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
+
+-- NPrimVal is apart from NDCon, NTCon, NBind, and NType
 impossibleOK defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
-impossibleOK defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
+impossibleOK defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
+impossibleOK defs (NPrimVal _ _) (NBind _ _ _ _) = pure True
+impossibleOK defs (NBind _ _ _ _) (NPrimVal _ _) = pure True
 impossibleOK defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure True
-impossibleOK defs (NTCon _ _ _ _ _) (NType _) = pure True
-impossibleOK defs (NType _) (NTCon _ _ _ _ _) = pure True
-impossibleOK defs (NPrimVal _ _) (NType _) = pure True
-impossibleOK defs (NType _) (NPrimVal _ _) = pure True
+impossibleOK defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
+impossibleOK defs (NPrimVal _ _) (NType _ _) = pure True
+impossibleOK defs (NType _ _) (NPrimVal _ _) = pure True
+
+-- NTCon is apart from NBind, and NType
+impossibleOK defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure True
+impossibleOK defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure True
+impossibleOK defs (NTCon _ _ _ _ _) (NType _ _) = pure True
+impossibleOK defs (NType _ _) (NTCon _ _ _ _ _) = pure True
+
+-- NBind is apart from NType
+impossibleOK defs (NBind _ _ _ _) (NType _ _) = pure True
+impossibleOK defs (NType _ _) (NBind _ _ _ _) = pure True
+
 impossibleOK defs x y = pure False
 
 export
 impossibleErrOK : {auto c : Ref Ctxt Defs} ->
                   Defs -> Error -> Core Bool
-impossibleErrOK defs (CantConvert fc env l r)
-    = impossibleOK defs !(nf defs env l)
-                        !(nf defs env r)
-impossibleErrOK defs (CantSolveEq fc env l r)
-    = impossibleOK defs !(nf defs env l)
-                        !(nf defs env r)
+impossibleErrOK defs (CantConvert fc gam env l r)
+    = do let defs = { gamma := gam } defs
+         impossibleOK defs !(nf defs env l)
+                           !(nf defs env r)
+impossibleErrOK defs (CantSolveEq fc gam env l r)
+    = do let defs = { gamma := gam } defs
+         impossibleOK defs !(nf defs env l)
+                           !(nf defs env r)
 impossibleErrOK defs (BadDotPattern _ _ ErasedArg _ _) = pure True
 impossibleErrOK defs (CyclicMeta _ _ _ _) = pure True
 impossibleErrOK defs (AllFailed errs)
     = anyM (impossibleErrOK defs) (map snd errs)
-impossibleErrOK defs (WhenUnifying _ _ _ _ err)
+impossibleErrOK defs (WhenUnifying _ _ _ _ _ err)
     = impossibleErrOK defs err
 impossibleErrOK defs _ = pure False
 
@@ -128,8 +161,11 @@ recoverable defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
 recoverable defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure False
 recoverable defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure False
 -- Type constructor vs. type
-recoverable defs (NTCon _ _ _ _ _) (NType _) = pure False
-recoverable defs (NType _) (NTCon _ _ _ _ _) = pure False
+recoverable defs (NTCon _ _ _ _ _) (NType _ _) = pure False
+recoverable defs (NType _ _) (NTCon _ _ _ _ _) = pure False
+-- Type constructor vs. binder
+recoverable defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure False
+recoverable defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure False
 
 recoverable defs (NTCon _ _ _ _ _) _ = pure True
 recoverable defs _ (NTCon _ _ _ _ _) = pure True
@@ -152,6 +188,9 @@ recoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
 
 -- PRIMITIVES
 recoverable defs (NPrimVal _ x) (NPrimVal _ y) = pure (x == y)
+-- primitive vs. binder
+recoverable defs (NPrimVal _ _) (NBind _ _ _ _) = pure False
+recoverable defs (NBind _ _ _ _) (NPrimVal _ _) = pure False
 
 -- OTHERWISE: no
 recoverable defs x y = pure False
@@ -159,8 +198,9 @@ recoverable defs x y = pure False
 export
 recoverableErr : {auto c : Ref Ctxt Defs} ->
                  Defs -> Error -> Core Bool
-recoverableErr defs (CantConvert fc env l r)
-  = do l <- nf defs env l
+recoverableErr defs (CantConvert fc gam env l r)
+  = do let defs = { gamma := gam } defs
+       l <- nf defs env l
        r <- nf defs env r
        log "coverage.recover" 10 $ unlines
          [ "Recovering from CantConvert?"
@@ -170,14 +210,15 @@ recoverableErr defs (CantConvert fc env l r)
          ]
        recoverable defs l r
 
-recoverableErr defs (CantSolveEq fc env l r)
-    = recoverable defs !(nf defs env l)
-                       !(nf defs env r)
+recoverableErr defs (CantSolveEq fc gam env l r)
+  = do let defs = { gamma := gam } defs
+       recoverable defs !(nf defs env l)
+                        !(nf defs env r)
 recoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure True
 recoverableErr defs (CyclicMeta _ _ _ _) = pure True
 recoverableErr defs (AllFailed errs)
     = anyM (recoverableErr defs) (map snd errs)
-recoverableErr defs (WhenUnifying _ _ _ _ err)
+recoverableErr defs (WhenUnifying _ _ _ _ _ err)
     = recoverableErr defs err
 recoverableErr defs _ = pure False
 
@@ -313,15 +354,16 @@ checkLHS : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            Bool -> -- in transform
-           (mult : RigCount) -> (hashit : Bool) ->
+           (mult : RigCount) ->
            Int -> List ElabOpt -> NestedNames vars -> Env Term vars ->
            FC -> RawImp ->
            Core (RawImp, -- checked LHS with implicits added
                  (vars' ** (SubVars vars vars',
                            Env Term vars', NestedNames vars',
                            Term vars', Term vars')))
-checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
+checkLHS {vars} trans mult n opts nest env fc lhs_in
     = do defs <- get Ctxt
          logRaw "declare.def.lhs" 30 "Raw LHS: " lhs_in
          lhs_raw <- if trans
@@ -386,8 +428,8 @@ checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
 hasEmptyPat : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               Defs -> Env Term vars -> Term vars -> Core Bool
-hasEmptyPat defs env (Bind fc x b@(PVar _ _ _ ty) sc)
-   = pure $ !(isEmpty defs env !(nf defs env ty))
+hasEmptyPat defs env (Bind fc x b sc)
+   = pure $ !(isEmpty defs env !(nf defs env (binderType b)))
             || !(hasEmptyPat defs (b :: env) sc)
 hasEmptyPat defs env _ = pure False
 
@@ -409,6 +451,7 @@ checkClause : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               (mult : RigCount) -> (vis : Visibility) ->
               (totreq : TotalReq) -> (hashit : Bool) ->
               Int -> List ElabOpt -> NestedNames vars -> Env Term vars ->
@@ -440,7 +483,7 @@ checkClause mult vis totreq hashit n opts nest env (ImpossibleClause fc lhs)
                               else throw (ValidCase fc env (Right err)))
 checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in rhs)
     = do (_, (vars'  ** (sub', env', nest', lhstm', lhsty'))) <-
-             checkLHS False mult hashit n opts nest env fc lhs_in
+             checkLHS False mult n opts nest env fc lhs_in
          let rhsMode = if isErased mult then InType else InExpr
          log "declare.def.clause" 5 $ "Checking RHS " ++ show rhs
          logEnv "declare.def.clause" 5 "In env" env'
@@ -454,6 +497,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
          when hashit $
            do addHashWithNames lhstm'
               addHashWithNames rhstm
+              log "module.hash" 15 "Adding hash for def."
 
          -- If the rhs is a hole, record the lhs in the metadata because we
          -- might want to split it interactively
@@ -467,7 +511,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
 checkClause {vars} mult vis totreq hashit n opts nest env
     (WithClause ifc lhs_in wval_raw mprf flags cs)
     = do (lhs, (vars'  ** (sub', env', nest', lhspat, reqty))) <-
-             checkLHS False mult hashit n opts nest env ifc lhs_in
+             checkLHS False mult n opts nest env ifc lhs_in
          let wmode
                = if isErased mult then InType else InExpr
 
@@ -512,6 +556,13 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                                  (weakenNs (mkSizeOf wargs) notreqty))
          let bNotReq = binder wtyScope
 
+         -- The environment has some implicit and some explcit args, potentially,
+         -- which is inconvenient since we have to know which is which when
+         -- elaborating the application of the rhs function. So it's easier
+         -- if we just make them all explicit - this type isn't visible to
+         -- users anyway!
+         let env' = mkExplicit env'
+
          let Just (reqns, envns, wtype) = bindReq vfc env' withSub [] bNotReq
              | Nothing => throw (InternalError "Impossible happened: With abstraction failure #4")
 
@@ -526,7 +577,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
          log "declare.def.clause.with" 5 $ "Argument names " ++ show wargNames
 
          wname <- genWithName !(prettyName !(toFullNames (Resolved n)))
-         widx <- addDef wname (record {flags $= (SetTotal totreq ::)}
+         widx <- addDef wname ({flags $= (SetTotal totreq ::)}
                                     (newDef vfc wname (if isErased mult then erased else top)
                                       vars wtype vis None))
 
@@ -537,8 +588,8 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                       Nothing => []
                       Just _  =>
                        let fc = emptyFC in
-                       let refl = IVar fc (NS builtinNS (UN "Refl")) in
-                       [(mprf, INamedApp fc refl (UN "x") wval_raw)]
+                       let refl = IVar fc (NS builtinNS (UN $ Basic "Refl")) in
+                       [(mprf, INamedApp fc refl (UN $ Basic "x") wval_raw)]
 
          let rhs_in = gapply (IVar vfc wname)
                     $ map (\ nm => (Nothing, IVar vfc nm)) envns
@@ -555,7 +606,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
 
          -- Elaborate the new definition here
          nestname <- applyEnv env wname
-         let nest'' = record { names $= (nestname ::) } nest
+         let nest'' = { names $= (nestname ::) } nest
 
          let wdef = IDef ifc wname cs'
          processDecl [] nest'' env wdef
@@ -564,6 +615,11 @@ checkClause {vars} mult vis totreq hashit n opts nest env
   where
     vfc : FC
     vfc = virtualiseFC ifc
+
+    mkExplicit : forall vs . Env Term vs -> Env Term vs
+    mkExplicit [] = []
+    mkExplicit (Pi fc c _ ty :: env) = Pi fc c Explicit ty :: mkExplicit env
+    mkExplicit (b :: env) = b :: mkExplicit env
 
     bindWithArgs :
        (wvalTy : Term xs) -> Maybe (Name, Term xs) ->
@@ -593,7 +649,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
     bindWithArgs {xs} wvalTy (Just (name, wval)) wvalEnv = do
       defs <- get Ctxt
 
-      let eqName = NS builtinNS (UN "Equal")
+      let eqName = NS builtinNS (UN $ Basic "Equal")
       Just (TCon t ar _ _ _ _ _ _) <- lookupDefExact eqName (gamma defs)
         | _ => throw (InternalError "Cannot find builtin Equal")
       let eqTyCon = Ref vfc (TyCon t ar) !(toResolvedNames eqName)
@@ -701,8 +757,8 @@ calcRefs rt at fn
                     (dropErased (keys refs_all) refs_all)
                     (pure refs_all)
          ignore $ ifThenElse rt
-            (addDef fn (record { refersToRuntimeM = Just refs } gdef))
-            (addDef fn (record { refersToM = Just refs } gdef))
+            (addDef fn ({ refersToRuntimeM := Just refs } gdef))
+            (addDef fn ({ refersToM := Just refs } gdef))
          traverse_ (calcRefs rt at) (keys refs)
   where
     dropErased : List Name -> NameMap Bool -> Core (NameMap Bool)
@@ -719,6 +775,7 @@ calcRefs rt at fn
 mkRunTime : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             FC -> Name -> Core ()
 mkRunTime fc n
     = do log "compile.casetree" 5 $ "Making run time definition for " ++ show !(toFullNames n)
@@ -748,20 +805,25 @@ mkRunTime fc n
              , show (indent 2 $ pretty {ann = ()} !(toFullNames tree_rt))
              ]
            log "compile.casetree" 10 $ show tree_rt
+           log "compile.casetree.measure" 15 $ show (measure tree_rt)
 
            let Just Refl = nameListEq cargs rargs
                    | Nothing => throw (InternalError "WAT")
            ignore $ addDef n $
-                       record { definition = PMDef r rargs tree_ct tree_rt pats
-                              } gdef
-           -- If it's a case block, and not already set as inlinable,
-           -- check if it's safe to inline
+                       { definition := PMDef r rargs tree_ct tree_rt pats
+                       } gdef
+           -- If it's a case block, and not already set as inlinable or forced
+           -- to not be inlinable, check if it's safe to inline
            when (caseName !(toFullNames n) && noInline (flags gdef)) $
              do inl <- canInlineCaseBlock n
-                when inl $ setFlag fc n Inline
+                when inl $ do
+                  log "compiler.inline.eval" 5 "Marking \{show !(toFullNames n)} for inlining in runtime case tree."
+                  setFlag fc n Inline
   where
+    -- check if the flags contain explicit inline or noinline directives:
     noInline : List DefFlag -> Bool
-    noInline (Inline :: _) = False
+    noInline (Inline :: _)   = False
+    noInline (NoInline :: _) = False
     noInline (x :: xs) = noInline xs
     noInline _ = True
 
@@ -772,7 +834,7 @@ mkRunTime fc n
 
     mkCrash : {vars : _} -> String -> Term vars
     mkCrash msg
-       = apply fc (Ref fc Func (NS builtinNS (UN "idris_crash")))
+       = apply fc (Ref fc Func (NS builtinNS (UN $ Basic "idris_crash")))
                [Erased fc False, PrimVal fc (Str msg)]
 
     matchAny : Term vars -> Term vars
@@ -813,6 +875,7 @@ mkRunTime fc n
 compileRunTime : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  FC -> Name -> Core ()
 compileRunTime fc atotal
     = do defs <- get Ctxt
@@ -820,7 +883,7 @@ compileRunTime fc atotal
          traverse_ (calcRefs True atotal) (toCompileCase defs)
 
          defs <- get Ctxt
-         put Ctxt (record { toCompileCase = [] } defs)
+         put Ctxt ({ toCompileCase := [] } defs)
 
 toPats : Clause -> (vs ** (Env Term vs, Term vs, Term vs))
 toPats (MkClause {vars} env lhs rhs)
@@ -831,22 +894,87 @@ warnUnreachable : {auto c : Ref Ctxt Defs} ->
 warnUnreachable (MkClause env lhs rhs)
     = recordWarning (UnreachableClause (getLoc lhs) env lhs)
 
+isAlias : RawImp -> Maybe ((FC, Name)                -- head symbol
+                          , List (FC, (FC, String))) -- pattern variables
+isAlias lhs
+  = do let (hd, apps) = getFnArgs lhs []
+       hd <- isIVar hd
+       args <- traverse (isExplicit >=> bitraverse pure isIBindVar) apps
+       pure (hd, args)
+
+lookupOrAddAlias : {vars : _} ->
+                   {auto m : Ref MD Metadata} ->
+                   {auto c : Ref Ctxt Defs} ->
+                   {auto u : Ref UST UState} ->
+                   {auto s : Ref Syn SyntaxInfo} ->
+                   List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
+                   Name -> List ImpClause -> Core (Maybe GlobalDef)
+lookupOrAddAlias eopts nest env fc n [cl@(PatClause _ lhs _)]
+  = do defs <- get Ctxt
+       log "declare.def.alias" 20 $ "Looking at \{show cl}"
+       Nothing <- lookupCtxtExact n (gamma defs)
+         | Just gdef => pure (Just gdef)
+       -- No prior declaration:
+       --   1) check whether it has the shape of an alias
+       let Just (hd, args) = isAlias lhs
+         | Nothing => pure Nothing
+       --   2) check whether it could be a misspelling
+       log "declare.def" 5 $
+         "Missing type declaration for the alias "
+         ++ show n
+         ++ ". Checking first whether it is a misspelling."
+       [] <- do -- get the candidates
+                Just (str, kept) <- getSimilarNames n
+                   | Nothing => pure []
+                -- only keep the ones that haven't been defined yet
+                decls <- for kept $ \ (cand, weight) => do
+                    Just gdef <- lookupCtxtExact cand (gamma defs)
+                      | Nothing => pure Nothing -- should be impossible
+                    let None = definition gdef
+                      | _ => pure Nothing
+                    pure (Just (cand, weight))
+                pure $ showSimilarNames (currentNS defs) n str $ catMaybes decls
+          | (x :: xs) => throw (MaybeMisspelling (NoDeclaration fc n) (x ::: xs))
+       --   3) declare an alias
+       log "declare.def" 5 "Not a misspelling: go ahead and declare it!"
+       processType eopts nest env fc top Public []
+          $ MkImpTy fc fc n $ holeyType (map snd args)
+       defs <- get Ctxt
+       lookupCtxtExact n (gamma defs)
+
+  where
+    holeyType : List (FC, String) -> RawImp
+    holeyType [] = Implicit fc False
+    holeyType ((xfc, x) :: xs)
+      = let xfc = virtualiseFC xfc in
+        IPi xfc top Explicit (Just (UN $ Basic x)) (Implicit xfc False)
+      $ holeyType xs
+
+lookupOrAddAlias _ _ _ fc n _
+  = do defs <- get Ctxt
+       lookupCtxtExact n (gamma defs)
+
 export
 processDef : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
              Name -> List ImpClause -> Core ()
 processDef opts nest env fc n_in cs_in
     = do n <- inCurrentNS n_in
          defs <- get Ctxt
-         Just gdef <- lookupCtxtExact n (gamma defs)
-              | Nothing => noDeclaration fc n
+         Just gdef <- lookupOrAddAlias opts nest env fc n cs_in
+           | Nothing => noDeclaration fc n
          let None = definition gdef
               | _ => throw (AlreadyDefined fc n)
          let ty = type gdef
-         let hashit = visibility gdef == Public
+         -- a module's interface hash (what determines when the module has changed)
+         -- should include the definition (RHS) of anything that is public (available
+         -- at compile time for elaboration) _or_ inlined (dropped into destination definitions
+         -- during compilation).
+         let hashit = visibility gdef == Public || (Inline `elem` gdef.flags)
          let mult = if isErased (multiplicity gdef)
                        then erased
                        else linear
@@ -854,6 +982,7 @@ processDef opts nest env fc n_in cs_in
 
          -- Dynamically rebind default totality requirement to this function's totality requirement
          -- and use this requirement when processing `with` blocks
+         log "declare.def" 5 $ "Traversing clauses of " ++ show n ++ " with mult " ++ show mult
          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
          cs <- withTotality treq $
                traverse (checkClause mult (visibility gdef) treq
@@ -862,7 +991,8 @@ processDef opts nest env fc n_in cs_in
          let pats = map toPats (rights cs)
 
          (cargs ** (tree_ct, unreachable)) <-
-             getPMDef fc (CompileTime mult) n ty (rights cs)
+             logTime ("+++ Building compile time case tree for " ++ show n) $
+                getPMDef fc (CompileTime mult) n ty (rights cs)
 
          traverse_ warnUnreachable unreachable
 
@@ -870,12 +1000,17 @@ processDef opts nest env fc n_in cs_in
                  do t <- toFullNames tree_ct
                     pure ("Case tree for " ++ show n ++ ": " ++ show t)
 
+         -- check whether the name was declared in a different source file
+         defs <- get Ctxt
+         let pi = case lookup n (userHoles defs) of
+                        Nothing => defaultPI
+                        Just e => { externalDecl := e } defaultPI
          -- Add compile time tree as a placeholder for the runtime tree,
          -- but we'll rebuild that in a later pass once all the case
          -- blocks etc are resolved
          ignore $ addDef (Resolved nidx)
-                  (record { definition = PMDef defaultPI cargs tree_ct tree_ct pats
-                          } gdef)
+                  ({ definition := PMDef pi cargs tree_ct tree_ct pats
+                   } gdef)
 
          when (visibility gdef == Public) $
              do let rmetas = getMetas tree_ct
@@ -888,10 +1023,11 @@ processDef opts nest env fc n_in cs_in
 
          -- Flag this name as one which needs compiling
          defs <- get Ctxt
-         put Ctxt (record { toCompileCase $= (n ::) } defs)
+         put Ctxt ({ toCompileCase $= (n ::) } defs)
 
-         atotal <- toResolvedNames (NS builtinNS (UN "assert_total"))
-         when (not (InCase `elem` opts)) $
+         atotal <- toResolvedNames (NS builtinNS (UN $ Basic "assert_total"))
+         logTime ("+++ Building size change graphs " ++ show n) $
+           when (not (InCase `elem` opts)) $
              do calcRefs False atotal (Resolved nidx)
                 sc <- calculateSizeChange fc n
                 setSizeChange fc n sc
@@ -940,6 +1076,7 @@ processDef opts nest env fc n_in cs_in
                       Core (Maybe ClosedTerm)
     checkImpossible n mult tm
         = do itm <- unelabNoPatvars [] tm
+             let itm = map rawName itm
              handleUnify
                (do ctxt <- get Ctxt
                    log "declare.def.impossible" 3 $ "Checking for impossibility: " ++ show itm
@@ -948,14 +1085,14 @@ processDef opts nest env fc n_in cs_in
                    (_, lhstm) <- bindNames False itm
                    setUnboundImplicits autoimp
                    (lhstm, _) <- elabTerm n (InLHS mult) [] (MkNested []) []
-                                    (IBindHere fc PATTERN lhstm) Nothing
+                                    (IBindHere fc COVERAGE lhstm) Nothing
                    defs <- get Ctxt
                    lhs <- normaliseHoles defs [] lhstm
                    if !(hasEmptyPat defs [] lhs)
-                      then do log "declare.def.impossible" 5 "No empty pat"
+                      then do log "declare.def.impossible" 5 "Some empty pat"
                               put Ctxt ctxt
                               pure Nothing
-                      else do log "declare.def.impossible" 5 "Some empty pat"
+                      else do log "declare.def.impossible" 5 "No empty pat"
                               empty <- clearDefs ctxt
                               rtm <- closeEnv empty !(nf empty [] lhs)
                               put Ctxt ctxt
@@ -1005,7 +1142,7 @@ processDef opts nest env fc n_in cs_in
              -- Filter out the ones which are actually matched (perhaps having
              -- come up due to some overlapping patterns)
              missMatch <- traverse (checkMatched covcs) (mapMaybe id missImp)
-             let miss = mapMaybe id missMatch
+             let miss = catMaybes missMatch
              if isNil miss
                 then do [] <- getNonCoveringRefs fc (Resolved n)
                            | ns => toFullNames (NonCoveringCall ns)

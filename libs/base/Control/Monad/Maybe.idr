@@ -14,6 +14,8 @@ module Control.Monad.Maybe
 import Control.Monad.Trans
 import Data.Maybe
 
+%default total
+
 public export
 data MaybeT : (m : Type -> Type) -> (a : Type) -> Type where
   MkMaybeT : m (Maybe a) -> MaybeT m a
@@ -128,7 +130,9 @@ Monad m => Monad (MaybeT m) where
 public export
 Monad m => Alternative (MaybeT m) where
   empty = nothing
-  a <|> b = a <+> b
+  MkMaybeT x <|> my = MkMaybeT $ x >>= \case
+    r@(Just _) => pure r
+    Nothing    => runMaybeT my
 
 public export
 MonadTrans MaybeT where

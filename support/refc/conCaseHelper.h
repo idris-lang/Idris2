@@ -1,5 +1,4 @@
-#ifndef __CON_CASE_HELPER_H__
-#define __CON_CASE_HELPER_H__
+#pragma once
 
 #include "cBackend.h"
 
@@ -16,5 +15,3 @@ void freeConstructorField(AConAlt *);
 
 int multiStringCompare(Value *, int, char **);
 int multiDoubleCompare(Value *, int, double *);
-
-#endif

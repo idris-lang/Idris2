@@ -1,0 +1,6 @@
+1/1: Building Holes (Holes.idr)
+Holes> 3 holes:
+  Holes.a : Int
+  Holes.b : Nat
+  Holes.c : integerToNat (prim__cast_IntInteger ?a) = ?b
+Holes> Bye for now!

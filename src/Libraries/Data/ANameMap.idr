@@ -5,7 +5,7 @@ import Core.Name
 
 import Data.List
 import Libraries.Data.NameMap
-import Libraries.Data.StringMap
+import Libraries.Data.UserNameMap
 
 %default total
 
@@ -16,7 +16,7 @@ record ANameMap a where
      exactNames : NameMap a
      -- for looking up by name root or partially qualified (so possibly
      -- ambiguous) names. This doesn't store machine generated names.
-     hierarchy : StringMap (List (Name, a))
+     hierarchy : UserNameMap (List (Name, a))
 
 export
 empty : ANameMap a
@@ -39,7 +39,7 @@ lookupName n dict
                           Just ns => filter (matches n . fst) ns
 
 addToHier : Name -> a ->
-            StringMap (List (Name, a)) -> StringMap (List (Name, a))
+            UserNameMap (List (Name, a)) -> UserNameMap (List (Name, a))
 addToHier n val hier
      -- Only add user defined names. Machine generated names can only be
      -- found with the exactNames

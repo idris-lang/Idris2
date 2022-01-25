@@ -23,13 +23,13 @@ filter p (x :: xs)
 
 cons : t -> (x : Nat ** Vect x t) -> (x : Nat ** Vect x t)
 cons val xs
-    = record { fst = S (fst xs),
-               snd = (val :: snd xs) } xs
+    = { fst := S (fst xs),
+        snd := (val :: snd xs) } xs
 
 cons' : t -> (x : Nat ** Vect x t) -> (x : Nat ** Vect x t)
 cons' val
-    = record { fst $= S,
-               snd $= (val ::) }
+    = { fst $= S,
+        snd $= (val ::) }
 
 Show a => Show (Vect n a) where
     show xs = "[" ++ show' xs ++ "]" where

@@ -1,7 +1,7 @@
 1/1: Building LocalHints (LocalHints.idr)
 Error: While processing right hand side of bug. Can't find an implementation for Gnu.
 
-LocalHints.idr:48:17--48:22
+LocalHints:48:17--48:22
  44 | bug {a} x = let M : More
  45 |                 M = MkMore a
  46 |                 %hint arg : Gnat (Ty M)

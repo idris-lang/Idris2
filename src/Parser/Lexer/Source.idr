@@ -2,17 +2,17 @@ module Parser.Lexer.Source
 
 import public Parser.Lexer.Common
 
-import Data.List1
+import Data.Either
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Libraries.Data.String.Extra
 import public Libraries.Text.Bounded
 import Libraries.Text.Lexer.Tokenizer
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
-import Libraries.Utils.Hex
+import Protocol.Hex
 import Libraries.Utils.Octal
 import Libraries.Utils.String
 
@@ -21,13 +21,16 @@ import Core.Name
 %default total
 
 public export
+data IsMultiline = Multi | Single
+
+public export
 data Token
   -- Literals
   = CharLit String
   | DoubleLit Double
   | IntegerLit Integer
   -- String
-  | StringBegin Bool -- Whether is multiline string
+  | StringBegin IsMultiline -- Whether is multiline string
   | StringEnd
   | InterpBegin
   | InterpEnd
@@ -38,6 +41,8 @@ data Token
   | DotSepIdent Namespace String -- ident.ident
   | DotIdent String               -- .ident
   | Symbol String
+  -- Whitespace
+  | Space
   -- Comments
   | Comment
   | DocComment String
@@ -55,8 +60,8 @@ Show Token where
   show (DoubleLit x) = "double " ++ show x
   show (IntegerLit x) = "literal " ++ show x
   -- String
-  show (StringBegin True) = "string begin"
-  show (StringBegin False) = "multiline string begin"
+  show (StringBegin Single) = "string begin"
+  show (StringBegin Multi) = "multiline string begin"
   show StringEnd = "string end"
   show InterpBegin = "string interp begin"
   show InterpEnd = "string interp end"
@@ -67,6 +72,8 @@ Show Token where
   show (DotSepIdent ns n) = "namespaced identifier " ++ show ns ++ "." ++ show n
   show (DotIdent x) = "dot+identifier " ++ x
   show (Symbol x) = "symbol " ++ x
+  -- Whitespace
+  show Space = "whitespace"
   -- Comments
   show Comment = "comment"
   show (DocComment c) = "doc comment: \"" ++ c ++ "\""
@@ -84,18 +91,20 @@ Pretty Token where
   pretty (DoubleLit x) = pretty "double" <++> pretty x
   pretty (IntegerLit x) = pretty "literal" <++> pretty x
   -- String
-  pretty (StringBegin True) = reflow "string begin"
-  pretty (StringBegin False) = reflow "multiline string begin"
+  pretty (StringBegin Single) = reflow "string begin"
+  pretty (StringBegin Multi) = reflow "multiline string begin"
   pretty StringEnd = reflow "string end"
   pretty InterpBegin = reflow "string interp begin"
   pretty InterpEnd = reflow "string interp end"
-  pretty (StringLit n x) = pretty ("string" ++ String.Extra.replicate n '#') <++> dquotes (pretty x)
+  pretty (StringLit n x) = pretty ("string" ++ replicate n '#') <++> dquotes (pretty x)
   -- Identifiers
   pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
   pretty (Ident x) = pretty "identifier" <++> pretty x
   pretty (DotSepIdent ns n) = reflow "namespaced identifier" <++> pretty ns <+> dot <+> pretty n
   pretty (DotIdent x) = pretty "dot+identifier" <++> pretty x
   pretty (Symbol x) = pretty "symbol" <++> pretty x
+  -- Whitespace
+  pretty Space = pretty "space"
   -- Comments
   pretty Comment = pretty "comment"
   pretty (DocComment c) = reflow "doc comment:" <++> dquotes (pretty c)
@@ -117,7 +126,7 @@ mutual
   toEndComment Z = empty
   toEndComment (S k)
                = some (pred (\c => c /= '-' && c /= '{' && c /= '"'))
-                        <+> toEndComment (S k)
+                        <+> (eof <|> toEndComment (S k))
              <|> is '{' <+> singleBrace k
              <|> is '-' <+> singleDash k
              <|> stringLit <+> toEndComment (S k)
@@ -127,9 +136,10 @@ mutual
   ||| binder).
   singleBrace : (k : Nat) -> Lexer
   singleBrace k
-     =  is '-' <+> many (is '-')    -- opening delimiter
-               <+> singleDash (S k) -- handles the {----} special case
-    <|> toEndComment (S k)          -- not a valid comment
+     =  is '-' <+> many (is '-')              -- opening delimiter
+               <+> (eof <|> singleDash (S k)) -- `singleDash` handles the {----} special case
+                                              -- `eof` handles the file ending with {---
+    <|> toEndComment (S k)                    -- not a valid comment
 
   ||| After reading a single dash, we may either find another one,
   ||| meaning we may have started reading a line comment, or find
@@ -151,7 +161,7 @@ mutual
         ]
 
 blockComment : Lexer
-blockComment = is '{' <+> is '-' <+> toEndComment 1
+blockComment = is '{' <+> is '-' <+> many (is '-') <+> (eof <|> toEndComment 1)
 
 docComment : Lexer
 docComment = is '|' <+> is '|' <+> is '|' <+> many (isNot '\n')
@@ -198,6 +208,9 @@ mkDirective : String -> Token
 mkDirective str = CGDirective (trim (substr 3 (length str) str))
 
 -- Reserved words
+-- NB: if you add a new keyword, please add the corresponding documentation in
+--     Idris.Doc.String
+public export
 keywords : List String
 keywords = ["data", "module", "where", "let", "in", "do", "record",
             "auto", "default", "implicit", "mutual", "namespace",
@@ -212,27 +225,29 @@ keywords = ["data", "module", "where", "let", "in", "do", "record",
 special : List String
 special = ["%lam", "%pi", "%imppi", "%let"]
 
-export
+public export
 symbols : List String
 symbols = [",", ";", "_", "`"]
 
 export
 groupSymbols : List String
 groupSymbols = [".(", -- for things such as Foo.Bar.(+)
-    "@{", "[|", "(", "{", "[<", "[>", "[", "`(", "`{{", "`["]
+    ".[|", -- for namespaced brackets such as Foo.Bar.[| x + y |]
+    "@{", "[|", "(", "{", "[<", "[>", "[", "`(", "`{", "`["]
 
 export
 groupClose : String -> String
 groupClose ".(" = ")"
 groupClose "@{" = "}"
 groupClose "[|" = "|]"
+groupClose ".[|" = "|]"
 groupClose "(" = ")"
 groupClose "[" = "]"
 groupClose "[<" = "]"
 groupClose "[>" = "]"
 groupClose "{" = "}"
 groupClose "`(" = ")"
-groupClose "`{{" = "}}"
+groupClose "`{" = "}"
 groupClose "`[" = "]"
 groupClose _ = ""
 
@@ -242,23 +257,36 @@ isOpChar c = c `elem` (unpack ":!#$%&*+./<=>?@\\^|-~")
 
 export
 ||| Test whether a user name begins with an operator symbol.
-isOpName : Name -> Bool
-isOpName n = fromMaybe False $ do
-   n <- userNameRoot n
+isOpUserName : UserName -> Bool
+isOpUserName (Basic n) = fromMaybe False $ do
    c <- fst <$> strUncons n
    guard (isOpChar c)
    pure True
+isOpUserName (Field _) = False
+isOpUserName Underscore = False
+
+export
+||| Test whether a name begins with an operator symbol.
+isOpName : Name -> Bool
+isOpName = maybe False isOpUserName . userNameRoot
 
 validSymbol : Lexer
 validSymbol = some (pred isOpChar)
 
 -- Valid symbols which have a special meaning so can't be operators
-export
+public export
+reservedInfixSymbols : List String
+reservedInfixSymbols
+    = ["%", "\\", ":", "=", ":=", "$=", "|", "|||", "<-", "->", "=>", "?", "!",
+       "&", "**", "..", "~", "@"]
+
+-- Valid symbols which have a special meaning so can't be operators
+public export
 reservedSymbols : List String
 reservedSymbols
-    = symbols ++ groupSymbols ++ (groupClose <$> groupSymbols) ++
-      ["%", "\\", ":", "=", ":=", "|", "|||", "<-", "->", "=>", "?", "!",
-       "&", "**", "..", "~"]
+    = symbols
+    ++ groupSymbols ++ (groupClose <$> groupSymbols)
+    ++ reservedInfixSymbols
 
 fromBinLit : String -> Integer
 fromBinLit str
@@ -320,63 +348,85 @@ mutual
                   (exact . groupClose)
                   Symbol
       <|> match (choice $ exact <$> symbols) Symbol
-      <|> match doubleLit (\x => DoubleLit (cast x))
-      <|> match binLit (\x => IntegerLit (fromBinLit x))
-      <|> match hexLit (\x => IntegerLit (fromHexLit x))
-      <|> match octLit (\x => IntegerLit (fromOctLit x))
-      <|> match digits (\x => IntegerLit (cast x))
+      <|> match doubleLit (DoubleLit . cast)
+      <|> match binUnderscoredLit (IntegerLit . fromBinLit . removeUnderscores)
+      <|> match hexUnderscoredLit (IntegerLit . fromHexLit . removeUnderscores)
+      <|> match octUnderscoredLit (IntegerLit . fromOctLit . removeUnderscores)
+      <|> match digitsUnderscoredLit (IntegerLit . cast . removeUnderscores)
       <|> compose multilineBegin
-                  (const $ StringBegin True)
+                  (const $ StringBegin Multi)
                   countHashtag
                   (stringTokens True)
                   (exact . multilineEnd)
                   (const StringEnd)
       <|> compose stringBegin
-                  (const $ StringBegin False)
+                  (const $ StringBegin Single)
                   countHashtag
                   (stringTokens False)
                   (\hashtag => exact (stringEnd hashtag) <+> reject (is '"'))
                   (const StringEnd)
-      <|> match charLit (\x => CharLit (stripQuotes x))
+      <|> match charLit (CharLit . stripQuotes)
       <|> match dotIdent (\x => DotIdent (assert_total $ strTail x))
       <|> match namespacedIdent parseNamespace
       <|> match identNormal parseIdent
       <|> match pragma (\x => Pragma (assert_total $ strTail x))
-      <|> match space (const Comment)
+      <|> match space (const Space)
       <|> match validSymbol Symbol
       <|> match symbol Unrecognised
     where
       parseIdent : String -> Token
       parseIdent x = if x `elem` keywords then Keyword x
                      else Ident x
+
       parseNamespace : String -> Token
       parseNamespace ns = case mkNamespacedIdent ns of
                                (Nothing, ident) => parseIdent ident
                                (Just ns, n)     => DotSepIdent ns n
+
       countHashtag : String -> Nat
       countHashtag = count (== '#') . unpack
 
       removeOptionalLeadingSpace : String -> String
       removeOptionalLeadingSpace str = case strM str of
-        StrCons ' ' tail => tail
-        _ => str
+                                            StrCons ' ' tail => tail
+                                            _ => str
+
+      removeUnderscores : String -> String
+      removeUnderscores s = fastPack $ filter (/= '_') (fastUnpack s)
 
 export
 lexTo : Lexer ->
-        String -> Either (StopReason, Int, Int, String) (List (WithBounds Token))
+        String ->
+        Either (StopReason, Int, Int, String)
+               ( List (WithBounds ())     -- bounds of comments
+               , List (WithBounds Token)) -- tokens
 lexTo reject str
     = case lexTo reject rawTokens str of
-           -- Add the EndInput token so that we'll have a line and column
-           -- number to read when storing spans in the file
-           (tok, (EndInput, l, c, _)) => Right (filter notComment tok ++
-                                      [MkBounded EndInput False (MkBounds l c l c)])
+           (toks, (EndInput, l, c, _)) =>
+             -- Add the EndInput token so that we'll have a line and column
+             -- number to read when storing spans in the file
+             let end = [MkBounded EndInput False (MkBounds l c l c)] in
+             Right $ map (++ end)
+                   $ partitionEithers
+                   $ map spotComment
+                   $ filter isNotSpace toks
            (_, fail) => Left fail
     where
-      notComment : WithBounds Token -> Bool
-      notComment t = case t.val of
-                          Comment => False
-                          _ => True
+
+      isNotSpace : WithBounds Token -> Bool
+      isNotSpace t = case t.val of
+        Space => False
+        _ => True
+
+      spotComment : WithBounds Token ->
+                    Either (WithBounds ()) (WithBounds Token)
+      spotComment t = case t.val of
+        Comment => Left (() <$ t)
+        _ => Right t
 
 export
-lex : String -> Either (StopReason, Int, Int, String) (List (WithBounds Token))
+lex : String ->
+      Either (StopReason, Int, Int, String)
+             ( List (WithBounds ())     -- bounds of comments
+             , List (WithBounds Token)) -- tokens
 lex = lexTo (pred $ const False)

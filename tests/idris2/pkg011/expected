@@ -1,0 +1,14 @@
+dot
+1/1: Building Main (./Main.idr)
+1/1: Building Main (Main.idr)
+dot-slash
+1/1: Building Main (./Main.idr)
+1/1: Building Main (Main.idr)
+dot-slash-dot
+1/1: Building Main (./Main.idr)
+1/1: Building Main (Main.idr)
+dot-slash-name-slash
+1/1: Building Main (./src/Main.idr)
+1/1: Building Main (src/Main.idr)
+sibling/pkg
+1/1: Building Main (../src/Main.idr)

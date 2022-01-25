@@ -1,7 +1,7 @@
 #include "clock.h"
 
 #define NSEC_PER_SEC 1000000000
-#define CLOCKS_PER_NSEC ((float)(CLOCKS_PER_SEC / NSEC_PER_SEC))
+#define CLOCKS_PER_NSEC ((float)CLOCKS_PER_SEC / NSEC_PER_SEC)
 
 Value *clockTimeMonotonic()
 {
@@ -10,13 +10,13 @@ Value *clockTimeMonotonic()
 
 Value *clockTimeUtc()
 {
-    return (Value *)makeInt64(time(NULL) * NSEC_PER_SEC);
+    return (Value *)makeBits64(time(NULL) * NSEC_PER_SEC);
 }
 
 Value *clockTimeProcess()
 {
     uint64_t time_ns = clock() / CLOCKS_PER_NSEC;
-    return (Value *)makeInt64(time_ns);
+    return (Value *)makeBits64(time_ns);
 }
 
 Value *clockTimeThread()
@@ -41,12 +41,12 @@ int clockValid(Value *clock)
 
 uint64_t clockSecond(Value *clock)
 {
-    uint64_t totalNano = ((Value_Int64 *)clock)->i64;
+    uint64_t totalNano = ((Value_Bits64 *)clock)->ui64;
     return totalNano / NSEC_PER_SEC;
 }
 
 uint64_t clockNanosecond(Value *clock)
 {
-    uint64_t totalNano = ((Value_Int64 *)clock)->i64;
+    uint64_t totalNano = ((Value_Bits64 *)clock)->ui64;
     return totalNano % NSEC_PER_SEC;
 }

@@ -1,7 +1,9 @@
 #include <io.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <windows.h>
+#include <process.h>
 
 // THis file exists to avoid clashes between windows.h and idris_rts.h
 //
@@ -81,6 +83,10 @@ int win32_modenv(const char* name, const char* value, int overwrite) {
 
 int win32_getErrno() {
     return GetLastError();
+}
+
+int win32_getPID() {
+    return _getpid();
 }
 
 typedef BOOL (WINAPI *LPFN_GLPI)(
@@ -171,5 +177,13 @@ long win32_getNProcessors() {
     return nPhysicalProcessors == nSMTProcessors ? nPhysicalProcessors
                                                  : nSMTProcessors
                                                  ;
+}
+
+int win32_getFileNo(FILE* f) {
+    return _fileno(f);
+}
+
+int win32_isTTY(int fd) {
+    return _isatty(fd);
 }
 

@@ -55,12 +55,12 @@ xs)`` goes beneath the ``with`` clause, followed by a vertical bar
 ``|``, followed by the deconstructed intermediate result ``( _ ** xs'
 )``. If the view refined argument pattern is unchanged from the
 original function argument pattern, then the left side of ``|`` is
-extraneous and may be omitted:
+extraneous and may be omitted with an underscore ``_``:
 
 .. code-block:: idris
 
     filter p (x :: xs) with (filter p xs)
-      | ( _ ** xs' ) = if (p x) then ( _ ** x :: xs' ) else ( _ ** xs' )
+      _ | ( _ ** xs' ) = if (p x) then ( _ ** x :: xs' ) else ( _ ** xs' )
 
 ``with`` clauses can also be nested:
 
@@ -72,6 +72,19 @@ extraneous and may be omitted:
         foo _ _ | 2 | 3 = True
         foo _ _ | 2 | _ = False
       foo _ _ | _ = False
+
+and left hand sides that are the same as their parent's can be skipped by
+using ``_`` to focus on the patterns for the most local ``with``. Meaning
+that the above ``foo`` can be rewritten as follows:
+
+.. code-block:: idris
+
+    foo : Int -> Int -> Bool
+    foo n m with (n + 1)
+      _ | 2 with (m + 1)
+        _ | 3 = True
+        _ | _ = False
+      _ | _ = False
 
 If the intermediate computation itself has a dependent type, then the
 result can affect the forms of other arguments — we can learn the form

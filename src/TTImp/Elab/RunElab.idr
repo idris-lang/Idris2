@@ -4,7 +4,6 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.Env
-import Core.GetType
 import Core.Metadata
 import Core.Normalise
 import Core.Options
@@ -13,18 +12,45 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+import Idris.Resugar
+
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.Reflect
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Unelab
-import TTImp.Utils
+
+%default covering
+
+record NameInfo where
+  constructor MkNameInfo
+  nametype : NameType
+
+lookupNameInfo : Name -> Context -> Core (List (Name, NameInfo))
+lookupNameInfo n ctxt
+    = do res <- lookupCtxtName n ctxt
+         pure (map (\ (n, i, gd) =>
+                      (n, MkNameInfo { nametype = getNameType (definition gd) } ))
+                   res)
+  where
+    getNameType : Def -> NameType
+    getNameType (DCon t a _) = DataCon t a
+    getNameType (TCon t a _ _ _ _ _ _) = TyCon t a
+    getNameType _ = Func
+
+Reflect NameInfo where
+  reflect fc defs lhs env inf
+      = do nt <- reflect fc defs lhs env (nametype inf)
+           appCon fc defs (reflectiontt "MkNameInfo") [nt]
 
 export
 elabScript : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              FC -> NestedNames vars ->
              Env Term vars -> NF vars -> Maybe (Glued vars) ->
              Core (NF vars)
@@ -32,7 +58,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
     = do defs <- get Ctxt
          fnm <- toFullNames nm
          case fnm of
-              NS ns (UN n)
+              NS ns (UN (Basic n))
                  => if ns == reflectionNS
                       then elabCon defs n (map snd args)
                       else failWith defs $ "bad reflection namespace " ++ show ns
@@ -61,10 +87,16 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                               !(sc defs (toClosure withAll env
                                               !(quote defs env act'))) exp
                   x => failWith defs $ "non-function RHS of a Bind: " ++ show x
-    elabCon defs "Fail" [_,msg]
+    elabCon defs "Fail" [_, mbfc, msg]
         = do msg' <- evalClosure defs msg
-             throw (GenericMsg fc ("Error during reflection: " ++
+             let customFC = case !(evalClosure defs mbfc >>= reify defs) of
+                               EmptyFC => fc
+                               x       => x
+             throw (GenericMsg customFC ("Error during reflection: " ++
                                       !(reify defs msg')))
+    elabCon defs "Try" [_, elab1, elab2]
+        = tryUnify (elabScript fc nest env !(evalClosure defs elab1) exp)
+                   (elabScript fc nest env !(evalClosure defs elab2) exp)
     elabCon defs "LogMsg" [topic, verb, str]
         = do topic' <- evalClosure defs topic
              verb' <- evalClosure defs verb
@@ -81,12 +113,21 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                      pure $ !(reify defs str') ++ ": " ++
                              show (the RawImp !(reify defs tm'))
              scriptRet ()
+    elabCon defs "LogSugaredTerm" [topic, verb, str, tm]
+        = do topic' <- evalClosure defs topic
+             verb' <- evalClosure defs verb
+             unverifiedLogC !(reify defs topic') !(reify defs verb') $
+                  do str' <- evalClosure defs str
+                     tm' <- reify defs !(evalClosure defs tm)
+                     ptm <- pterm (map defaultKindedName tm')
+                     pure $ !(reify defs str') ++ ": " ++ show ptm
+             scriptRet ()
     elabCon defs "Check" [exp, ttimp]
         = do exp' <- evalClosure defs exp
              ttimp' <- evalClosure defs ttimp
-             tidx <- resolveName (UN "[elaborator script]")
+             tidx <- resolveName (UN $ Basic "[elaborator script]")
              e <- newRef EST (initEState tidx env)
-             (checktm, _) <- runDelays 0 $
+             (checktm, _) <- runDelays (const True) $
                      check top (initElabInfo InExpr) nest env !(reify defs ttimp')
                            (Just (glueBack defs env exp'))
              empty <- clearDefs defs
@@ -95,7 +136,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
         = do tm' <- evalClosure defs tm
              defs <- get Ctxt
              empty <- clearDefs defs
-             scriptRet !(unelabUniqueBinders env !(quote empty env tm'))
+             scriptRet $ map rawName !(unelabUniqueBinders env !(quote empty env tm'))
     elabCon defs "Lambda" [x, _, scope]
         = do empty <- clearDefs defs
              NBind bfc x (Lam fc' c p ty) sc <- evalClosure defs scope
@@ -112,7 +153,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                                  !(nf defs env' lamsc) Nothing -- (map weaken exp)
              nf empty env (Bind bfc x (Lam fc' c qp qty) !(quote empty env' runsc))
        where
-         quotePi : PiInfo (NF vars) -> Core (PiInfo (Term vars))
+         quotePi : PiInfo (Closure vars) -> Core (PiInfo (Term vars))
          quotePi Explicit = pure Explicit
          quotePi Implicit = pure Implicit
          quotePi AutoImplicit = pure AutoImplicit
@@ -122,7 +163,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                  | Nothing => nfOpts withAll defs env
                                      !(reflect fc defs False env (the (Maybe RawImp) Nothing))
              ty <- getTerm gty
-             scriptRet (Just !(unelabUniqueBinders env ty))
+             scriptRet (Just $ map rawName $ !(unelabUniqueBinders env ty))
     elabCon defs "LocalVars" []
         = scriptRet vars
     elabCon defs "GenSym" [str]
@@ -140,7 +181,11 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
       where
         unelabType : (Name, Int, ClosedTerm) -> Core (Name, RawImp)
         unelabType (n, _, ty)
-            = pure (n, !(unelabUniqueBinders [] ty))
+            = pure (n, map rawName !(unelabUniqueBinders [] ty))
+    elabCon defs "GetInfo" [n]
+        = do n' <- evalClosure defs n
+             res <- lookupNameInfo !(reify defs n') (gamma defs)
+             scriptRet res
     elabCon defs "GetLocalType" [n]
         = do n' <- evalClosure defs n
              n <- reify defs n'
@@ -148,7 +193,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                   Just (MkIsDefined rigb lv) =>
                        do let binder = getBinder lv env
                           let bty = binderType binder
-                          scriptRet !(unelabUniqueBinders env bty)
+                          scriptRet $ map rawName !(unelabUniqueBinders env bty)
                   _ => throw (GenericMsg fc (show n ++ " is not a local variable"))
     elabCon defs "GetCons" [n]
         = do n' <- evalClosure defs n
@@ -175,6 +220,7 @@ checkRunElab : {vars : _} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                RigCount -> ElabInfo ->
                NestedNames vars -> Env Term vars ->
                FC -> RawImp -> Maybe (Glued vars) ->
@@ -184,10 +230,10 @@ checkRunElab rig elabinfo nest env fc script exp
          defs <- get Ctxt
          unless (isExtension ElabReflection defs) $
              throw (GenericMsg fc "%language ElabReflection not enabled")
-         let n = NS reflectionNS (UN "Elab")
+         let n = NS reflectionNS (UN $ Basic "Elab")
          let ttn = reflectiontt "TT"
          elabtt <- appCon fc defs n [expected]
-         (stm, sty) <- runDelays 0 $
+         (stm, sty) <- runDelays (const True) $
                            check rig elabinfo nest env script (Just (gnf env elabtt))
          defs <- get Ctxt -- checking might have resolved some holes
          ntm <- elabScript fc nest env
@@ -200,4 +246,5 @@ checkRunElab rig elabinfo nest env fc script exp
     mkExpected (Just ty) = pure !(getTerm ty)
     mkExpected Nothing
         = do nm <- genName "scriptTy"
-             metaVar fc erased env nm (TType fc)
+             u <- uniVar fc
+             metaVar fc erased env nm (TType fc u)

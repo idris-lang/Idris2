@@ -1,6 +1,5 @@
 module TTImp.Elab.Local
 
-import Core.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -9,10 +8,10 @@ import Core.Metadata
 import Core.Normalise
 import Core.Unify
 import Core.TT
-import Core.Value
+
+import Idris.Syntax
 
 import TTImp.Elab.Check
-import TTImp.Elab.Utils
 import TTImp.TTImp
 
 import Libraries.Data.NameMap
@@ -26,6 +25,7 @@ localHelper : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              NestedNames vars -> Env Term vars ->
              List ImpDecl -> (NestedNames vars -> Core a) ->
              Core a
@@ -33,43 +33,51 @@ localHelper {vars} nest env nestdecls_in func
     = do est <- get EST
          let f = defining est
          defs <- get Ctxt
-         let vis = case !(lookupCtxtExact (Resolved (defining est)) (gamma defs)) of
-                        Just gdef => visibility gdef
-                        Nothing => Public
+         gdef <- lookupCtxtExact (Resolved (defining est)) (gamma defs)
+         let vis  = maybe Public visibility gdef
+         let mult = maybe linear GlobalDef.multiplicity gdef
+
          -- If the parent function is public, the nested definitions need
          -- to be public too
-         let nestdecls =
+         let nestdeclsVis =
                if vis == Public
                   then map setPublic nestdecls_in
                   else nestdecls_in
 
-         let defNames = definedInBlock emptyNS nestdecls
+         -- If the parent function is erased, then the nested definitions
+         -- will be erased too
+         let nestdeclsMult =
+           if mult == erased
+              then map setErased nestdeclsVis
+              else nestdeclsVis
+
+         let defNames = definedInBlock emptyNS nestdeclsMult
          names' <- traverse (applyEnv f)
                             (nub defNames) -- binding names must be unique
                                            -- fixes bug #115
-         let nest' = record { names $= (names' ++) } nest
+         let nest' = { names $= (names' ++) } nest
          let env' = dropLinear env
          -- We don't want to keep rechecking delayed elaborators in the
          -- locals  block, because they're not going to make progress until
          -- we come out again, so save them
          ust <- get UST
          let olddelayed = delayedElab ust
-         put UST (record { delayedElab = [] } ust)
+         put UST ({ delayedElab := [] } ust)
          defs <- get Ctxt
          -- store the local hints, so we can reset them after we've elaborated
          -- everything
          let oldhints = localHints defs
 
-         let nestdecls = map (updateName nest') nestdecls
+         let nestdecls = map (updateName nest') nestdeclsMult
          log "elab.def.local" 20 $ show nestdecls
 
          traverse_ (processDecl [] nest' env') nestdecls
          ust <- get UST
-         put UST (record { delayedElab = olddelayed } ust)
+         put UST ({ delayedElab := olddelayed } ust)
          defs <- get Ctxt
          res <- func nest'
          defs <- get Ctxt
-         put Ctxt (record { localHints = oldhints } defs)
+         put Ctxt ({ localHints := oldhints } defs)
          pure res
   where
     -- For the local definitions, don't allow access to linear things
@@ -87,7 +95,7 @@ localHelper {vars} nest env nestdecls_in func
                Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))
     applyEnv outer inner
           = do ust <- get UST
-               put UST (record { nextName $= (+1) } ust)
+               put UST ({ nextName $= (+1) } ust)
                let nestedName_in = Nested (outer, nextName ust) inner
                nestedName <- inCurrentNS nestedName_in
                n' <- addName nestedName
@@ -120,19 +128,27 @@ localHelper {vars} nest env nestdecls_in func
          = IClaim loc' r vis fnopts (updateTyName nest ty)
     updateName nest (IDef loc' n cs)
          = IDef loc' (newName nest n) cs
-    updateName nest (IData loc' vis d)
-         = IData loc' vis (updateDataName nest d)
+    updateName nest (IData loc' vis mbt d)
+         = IData loc' vis mbt (updateDataName nest d)
     updateName nest i = i
 
     setPublic : ImpDecl -> ImpDecl
     setPublic (IClaim fc c _ opts ty) = IClaim fc c Public opts ty
-    setPublic (IData fc _ d) = IData fc Public d
-    setPublic (IRecord fc c _ r) = IRecord fc c Public r
+    setPublic (IData fc _ mbt d) = IData fc Public mbt d
+    setPublic (IRecord fc c _ mbt r) = IRecord fc c Public mbt r
     setPublic (IParameters fc ps decls)
         = IParameters fc ps (map setPublic decls)
     setPublic (INamespace fc ps decls)
         = INamespace fc ps (map setPublic decls)
     setPublic d = d
+
+    setErased : ImpDecl -> ImpDecl
+    setErased (IClaim fc _ v opts ty) = IClaim fc erased v opts ty
+    setErased (IParameters fc ps decls)
+        = IParameters fc ps (map setErased decls)
+    setErased (INamespace fc ps decls)
+        = INamespace fc ps (map setErased decls)
+    setErased d = d
 
 export
 checkLocal : {vars : _} ->
@@ -140,6 +156,7 @@ checkLocal : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
              FC -> List ImpDecl -> (scope : RawImp) ->
@@ -167,6 +184,7 @@ checkCaseLocal : {vars : _} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> Name -> Name -> List Name -> RawImp ->
@@ -176,15 +194,12 @@ checkCaseLocal {vars} rig elabinfo nest env fc uname iname args sc expty
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact iname (gamma defs)
               | Nothing => check rig elabinfo nest env sc expty
-         let name = case definition def of
-                         PMDef _ _ _ _ _ => Ref fc Func iname
-                         DCon t a _ => Ref fc (DataCon t a) iname
-                         TCon t a _ _ _ _ _ _ => Ref fc (TyCon t a) iname
-                         _ => Ref fc Func iname
+         let nt = fromMaybe Func (defNameType $ definition def)
+         let name = Ref fc nt iname
          (app, args) <- getLocalTerm fc env name args
          log "elab.local" 5 $ "Updating case local " ++ show uname ++ " " ++ show args
          logTermNF "elab.local" 5 "To" env app
-         let nest' = record { names $= ((uname, (Just iname, args,
-                                                (\fc, nt => app))) :: ) }
-                            nest
+         let nest' = { names $= ((uname, (Just iname, args,
+                                         (\fc, nt => app))) :: ) }
+                     nest
          check rig elabinfo nest' env sc expty

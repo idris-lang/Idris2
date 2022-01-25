@@ -1,48 +1,28 @@
 module Idris.IDEMode.REPL
 
-import Compiler.Scheme.Chez
-import Compiler.Scheme.Racket
-import Compiler.Scheme.Gambit
-import Compiler.Common
-
-import Core.AutoSearch
-import Core.CompileExpr
 import Core.Context
-import Core.InitPrimitives
+import Core.Directory
 import Core.Metadata
-import Core.Normalise
 import Core.Options
-import Core.TT
 import Core.Unify
 
-import Data.List
-import Data.List1
-import Data.So
-import Data.Strings
-
-import Idris.Desugar
 import Idris.Error
-import Idris.ModTree
 import Idris.Package
 import Idris.Parser
 import Idris.Pretty
-import Idris.Resugar
 import Idris.REPL
 import Idris.Syntax
 import Idris.Version
-import Idris.Pretty
+import Idris.Doc.String
 
 import Idris.IDEMode.Commands
 import Idris.IDEMode.Holes
 import Idris.IDEMode.Parser
 import Idris.IDEMode.SyntaxHighlight
+import Idris.IDEMode.Pretty
 
-import TTImp.Interactive.CaseSplit
-import TTImp.Elab
-import TTImp.TTImp
-import TTImp.ProcessDecls
-
-import Libraries.Utils.Hex
+import Protocol.Hex
+import Libraries.Utils.Path
 
 import Data.List
 import System
@@ -53,13 +33,14 @@ import Network.Socket.Data
 
 %default covering
 
-%foreign "C:fdopen,libc 6"
-prim__fdopen : Int -> String -> PrimIO AnyPtr
+||| TODO: use the version in `Network.FFI` in network after the next release.
+%foreign "C:idrnet_fdopen, libidris2_support, idris_net.h"
+prim__idrnet_fdopen : Int -> String -> PrimIO AnyPtr
 
 export
 socketToFile : Socket -> IO (Either String File)
 socketToFile (MkSocket f _ _ _) = do
-  file <- FHandle <$> primIO (prim__fdopen f "r+")
+  file <- FHandle <$> primIO (prim__idrnet_fdopen f "r+")
   if !(fileError file)
     then pure (Left "Failed to fdopen socket file descriptor")
     else pure (Right file)
@@ -142,6 +123,7 @@ todoCmd cmdName = iputStrLn $ reflow $ cmdName ++ ": command not yet implemented
 data IDEResult
   = REPL REPLResult
   | NameList (List Name)
+  | FoundHoles (List Holes.Data)
   | Term String   -- should be a PTerm + metadata, or SExp.
   | TTTerm String -- should be a TT Term + metadata, or perhaps SExp
   | NameLocList (List (Name, FC))
@@ -164,40 +146,45 @@ process (LoadFile fname_in _)
          replWrap $ Idris.REPL.process (Load fname) >>= outputSyntaxHighlighting fname
 process (NameAt name Nothing)
     = do defs <- get Ctxt
-         glob <- lookupCtxtName (UN name) (gamma defs)
+         glob <- lookupCtxtName (UN (mkUserName name)) (gamma defs)
          let dat = map (\(name, _, gdef) => (name, gdef.location)) glob
          pure (NameLocList dat)
 process (NameAt n (Just _))
     = do todoCmd "name-at <name> <line> <column>"
          pure $ REPL $ Edited $ DisplayEdit emptyDoc
 process (TypeOf n Nothing)
-    = replWrap $ Idris.REPL.process (Check (PRef replFC (UN n)))
+    = replWrap $ Idris.REPL.process (Check (PRef replFC (UN $ mkUserName n)))
 process (TypeOf n (Just (l, c)))
-    = replWrap $ Idris.REPL.process (Editing (TypeAt (fromInteger l) (fromInteger c) (UN n)))
+    = replWrap $ Idris.REPL.process
+               $ Editing (TypeAt (fromInteger l) (fromInteger c) (UN $ mkUserName n))
 process (CaseSplit l c n)
-    = replWrap $ Idris.REPL.process (Editing (CaseSplit False (fromInteger l) (fromInteger c) (UN n)))
+    = replWrap $ Idris.REPL.process
+    $ Editing $ CaseSplit False (fromInteger l) (fromInteger c)
+    $ UN $ mkUserName n
 process (AddClause l n)
-    = replWrap $ Idris.REPL.process (Editing (AddClause False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process
+    $ Editing $ AddClause False (fromInteger l)
+    $ UN $ mkUserName n
 process (AddMissing l n)
     = do todoCmd "add-missing"
          pure $ REPL $ Edited $ DisplayEdit emptyDoc
 process (ExprSearch l n hs all)
-    = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l) (UN n)
-                                                 (map UN hs)))
+    = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l)
+                     (UN $ Basic n) (map (UN . Basic) hs.list)))
 process ExprSearchNext
     = replWrap $ Idris.REPL.process (Editing ExprSearchNext)
 process (GenerateDef l n)
-    = replWrap $ Idris.REPL.process (Editing (GenerateDef False (fromInteger l) (UN n) 0))
+    = replWrap $ Idris.REPL.process (Editing (GenerateDef False (fromInteger l) (UN $ Basic n) 0))
 process GenerateDefNext
     = replWrap $ Idris.REPL.process (Editing GenerateDefNext)
 process (MakeLemma l n)
-    = replWrap $ Idris.REPL.process (Editing (MakeLemma False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process (Editing (MakeLemma False (fromInteger l) (UN $ mkUserName n)))
 process (MakeCase l n)
-    = replWrap $ Idris.REPL.process (Editing (MakeCase False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process (Editing (MakeCase False (fromInteger l) (UN $ mkUserName n)))
 process (MakeWith l n)
-    = replWrap $ Idris.REPL.process (Editing (MakeWith False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process (Editing (MakeWith False (fromInteger l) (UN $ mkUserName n)))
 process (DocsFor n modeOpt)
-    = replWrap $ Idris.REPL.process (Doc (PRef EmptyFC (UN n)))
+    = replWrap $ Idris.REPL.process (Doc $ APTerm (PRef EmptyFC (UN $ mkUserName n)))
 process (Apropos n)
     = do todoCmd "apropros"
          pure $ REPL $ Printed emptyDoc
@@ -236,7 +223,7 @@ process (EnableSyntax b)
 process Version
     = replWrap $ Idris.REPL.process ShowVersion
 process (Metavariables _)
-    = replWrap $ Idris.REPL.process Metavars
+    = FoundHoles <$> getUserHolesData
 process GetOptions
     = replWrap $ Idris.REPL.process GetOpts
 
@@ -263,37 +250,45 @@ processCatch cmd
 
 idePutStrLn : {auto c : Ref Ctxt Defs} -> File -> Integer -> String -> Core ()
 idePutStrLn outf i msg
-    = send outf (SExpList [SymbolAtom "write-string",
-                toSExp msg, toSExp i])
+    = send outf $ WriteString msg i
 
-returnFromIDE : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
-returnFromIDE outf i msg
-    = do send outf (SExpList [SymbolAtom "return", msg, toSExp i])
+returnFromIDE : {auto c : Ref Ctxt Defs} -> File -> Integer -> IDE.ReplyPayload -> Core ()
+returnFromIDE outf i payload
+    = do send outf (Immediate payload i)
 
-printIDEResult : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
-printIDEResult outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "ok", toSExp msg])
+printIDEResult : {auto c : Ref Ctxt Defs} -> File -> Integer -> IDE.Result -> Core ()
+printIDEResult outf i result
+  = returnFromIDE outf i $ OK result []
 
-printIDEResultWithHighlight : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
-printIDEResultWithHighlight outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "ok", toSExp msg
-                                                                        -- TODO return syntax highlighted result
-                                                                        , SExpList []])
+printIDEResultWithHighlight :
+  {auto c : Ref Ctxt Defs} ->
+  File -> Integer -> (Result, List (Span Properties)) ->
+  Core ()
+printIDEResultWithHighlight outf i (result, spans) = do
+--  log "ide-mode.highlight" 10 $ show spans
+  returnFromIDE outf i
+    $ OK result spans
 
+-- TODO: refactor to construct an error response
 printIDEError : Ref ROpts REPLOpts => {auto c : Ref Ctxt Defs} -> File -> Integer -> Doc IdrisAnn -> Core ()
-printIDEError outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "error", toSExp !(renderWithoutColor msg) ])
+printIDEError outf i msg = returnFromIDE outf i $
+  uncurry IDE.Error !(renderWithDecorations annToProperties msg)
 
-SExpable REPLEval where
-  toSExp EvalTC = SymbolAtom "typecheck"
-  toSExp NormaliseAll = SymbolAtom "normalise"
-  toSExp Execute = SymbolAtom "execute"
+Cast REPLEval String where
+  cast EvalTC = "typecheck"
+  cast NormaliseAll = "normalise"
+  cast Execute = "execute"
+  cast Scheme = "scheme"
 
-SExpable REPLOpt where
-  toSExp (ShowImplicits impl) = SExpList [ SymbolAtom "show-implicits", toSExp impl ]
-  toSExp (ShowNamespace ns) = SExpList [ SymbolAtom "show-namespace", toSExp ns ]
-  toSExp (ShowTypes typs) = SExpList [ SymbolAtom "show-types", toSExp typs ]
-  toSExp (EvalMode mod) = SExpList [ SymbolAtom "eval", toSExp mod ]
-  toSExp (Editor editor) = SExpList [ SymbolAtom "editor", toSExp editor ]
-  toSExp (CG str) = SExpList [ SymbolAtom "cg", toSExp str ]
-  toSExp (Profile p) = SExpList [ SymbolAtom "profile", toSExp p ]
+Cast REPLOpt REPLOption where
+  cast (ShowImplicits impl) = MkOption "show-implicits" BOOL impl
+  cast (ShowNamespace ns)   = MkOption "show-namespace" BOOL ns
+  cast (ShowTypes typs)     = MkOption "show-types"     BOOL typs
+  cast (EvalMode mod)       = MkOption "eval"           ATOM $ cast mod
+  cast (Editor editor)      = MkOption "editor"         STRING editor
+  cast (CG str)             = MkOption "cg"             STRING str
+  cast (Profile p)          = MkOption "profile"        BOOL p
+  cast (EvalTiming p)       = MkOption "evaltiming"     BOOL p
 
 
 displayIDEResult : {auto c : Ref Ctxt Defs} ->
@@ -305,22 +300,31 @@ displayIDEResult : {auto c : Ref Ctxt Defs} ->
 displayIDEResult outf i  (REPL $ REPLError err)
   = printIDEError outf i err
 displayIDEResult outf i  (REPL RequestedHelp  )
-  = printIDEResult outf i
-  $ StringAtom $ displayHelp
+  = printIDEResult outf i $ AString displayHelp
 displayIDEResult outf i  (REPL $ Evaluated x Nothing)
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ show x
+  $ mapFst AString
+   !(renderWithDecorations syntaxToProperties $ prettyTerm x)
 displayIDEResult outf i  (REPL $ Evaluated x (Just y))
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ show x ++ " : " ++ show y
+  $ mapFst AString
+   !(renderWithDecorations syntaxToProperties
+     $ prettyTerm x <++> ":" <++> prettyTerm y)
 displayIDEResult outf i  (REPL $ Printed xs)
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ !(renderWithoutColor xs)
+  $ mapFst AString
+  $ !(renderWithDecorations annToProperties xs)
+displayIDEResult outf i (REPL (PrintedDoc xs))
+  = printIDEResultWithHighlight outf i
+  $ mapFst AString
+  $ !(renderWithDecorations docToProperties xs)
 displayIDEResult outf i  (REPL $ TermChecked x y)
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ show x ++ " : " ++ show y
+  $ mapFst AString
+   !(renderWithDecorations syntaxToProperties
+     $ prettyTerm x <++> ":" <++> prettyTerm y)
 displayIDEResult outf i  (REPL $ FileLoaded x)
-  = printIDEResult outf i $ SExpList []
+  = printIDEResult outf i $ AUnit
 displayIDEResult outf i  (REPL $ ErrorLoadingFile x err)
   = printIDEError outf i $ reflow "Error loading file" <++> pretty x <+> colon <++> pretty (show err)
 displayIDEResult outf i  (REPL $ ErrorsBuildingFile x errs)
@@ -329,85 +333,104 @@ displayIDEResult outf i  (REPL $ ErrorsBuildingFile x errs)
 displayIDEResult outf i  (REPL $ NoFileLoaded)
   = printIDEError outf i $ reflow "No file can be reloaded"
 displayIDEResult outf i  (REPL $ CurrentDirectory dir)
-  = printIDEResult outf i
-  $ StringAtom $ "Current working directory is \"" ++ dir ++ "\""
+  = printIDEResult outf i $ AString $ "Current working directory is \"\{dir}\""
 displayIDEResult outf i  (REPL CompilationFailed)
   = printIDEError outf i $ reflow "Compilation failed"
 displayIDEResult outf i  (REPL $ Compiled f)
-  = printIDEResult outf i $ StringAtom
-  $ "File " ++ f ++ " written"
+  = printIDEResult outf i $ AString "File \{f} written"
 displayIDEResult outf i  (REPL $ ProofFound x)
-  = printIDEResult outf i
-  $ StringAtom $ show x
+  = printIDEResult outf i $ AString $ show x
 displayIDEResult outf i  (REPL $ Missed cases)
   = printIDEResult outf i
-  $ StringAtom $ showSep "\n"
+  $ AString $ showSep "\n"
   $ map handleMissing' cases
 displayIDEResult outf i  (REPL $ CheckedTotal xs)
   = printIDEResult outf i
-  $ StringAtom $ showSep "\n"
+  $ AString $ showSep "\n"
   $ map (\ (fn, tot) => (show fn ++ " is " ++ show tot)) xs
-displayIDEResult outf i  (REPL $ FoundHoles holes)
-  = printIDEResult outf i $ SExpList $ map sexpHole holes
 displayIDEResult outf i  (REPL $ LogLevelSet k)
   = printIDEResult outf i
-  $ StringAtom $ "Set loglevel to " ++ show k
+  $ AString $ "Set loglevel to " ++ show k
 displayIDEResult outf i  (REPL $ OptionsSet opts)
-  = printIDEResult outf i optionsSexp
-  where
-    optionsSexp : SExp
-    optionsSexp = SExpList $ map toSExp opts
+  = printIDEResult outf i $ AnOptionList $ map cast opts
 displayIDEResult outf i  (REPL $ VersionIs x)
-  = printIDEResult outf i versionSExp
-  where
-  semverSexp : SExp
-  semverSexp = case (semVer x) of
-                  (maj, min, patch) => SExpList (map toSExp [maj, min, patch])
-  tagSexp : SExp
-  tagSexp = case versionTag x of
-              Nothing => SExpList [ StringAtom "" ]
-              Just t => SExpList [ StringAtom t ]
-  versionSExp : SExp
-  versionSExp = SExpList [ semverSexp, tagSexp ]
-
+  = let (major, minor, patch) = semVer x
+    in printIDEResult outf i $ AVersion $ MkIdrisVersion
+      {major, minor, patch, tag = versionTag x}
 displayIDEResult outf i (REPL $ Edited (DisplayEdit xs))
-  = printIDEResult outf i $ StringAtom $ show xs
+  = printIDEResult outf i $ AString $ show xs
 displayIDEResult outf i (REPL $ Edited (EditError x))
   = printIDEError outf i x
 displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr))
-  = printIDEResult outf i
-  $ StringAtom $ (relit lit $ show name ++ " : " ++ show pty ++ "\n") ++ pappstr
+  = printIDEResult outf i $ AMetaVarLemma $ MkMetaVarLemma
+      { application = pappstr
+      , lemma = relit lit $ show name ++ " : " ++ show pty
+      }
 displayIDEResult outf i (REPL $ Edited (MadeWith lit wapp))
   = printIDEResult outf i
-  $ StringAtom $ showSep "\n" (map (relit lit) wapp)
+  $ AString $ showSep "\n" (map (relit lit) wapp)
 displayIDEResult outf i (REPL $ (Edited (MadeCase lit cstr)))
   = printIDEResult outf i
-  $ StringAtom $ showSep "\n" (map (relit lit) cstr)
+  $ AString $ showSep "\n" (map (relit lit) cstr)
+displayIDEResult outf i (FoundHoles holes)
+  = printIDEResult outf i $ AHoleList $ map holeIDE holes
 displayIDEResult outf i (NameList ns)
-  = printIDEResult outf i $ SExpList $ map toSExp ns
+  = printIDEResult outf i $ ANameList $ map show ns
 displayIDEResult outf i (Term t)
-  = printIDEResult outf i $ StringAtom t
+  = printIDEResult outf i $ AString t
 displayIDEResult outf i (TTTerm t)
-  = printIDEResult outf i $ StringAtom t
+  = printIDEResult outf i $ AString t
 displayIDEResult outf i (REPL $ ConsoleWidthSet mn)
   = let width = case mn of
                     Just k  => show k
                     Nothing => "auto"
-    in printIDEResult outf i $ StringAtom $ "Set consolewidth to " ++ width
+    in printIDEResult outf i $ AString $ "Set consolewidth to " ++ width
 displayIDEResult outf i (NameLocList dat)
-  = printIDEResult outf i $ SExpList !(traverse (constructSExp . map toNonEmptyFC) dat)
+  = printIDEResult outf i $ ANameLocList $
+       !(traverse (constructFileContext . map toNonEmptyFC) dat)
   where
-    constructSExp : (Name, NonEmptyFC) -> Core SExp
-    constructSExp (name, fname, (startLine, startCol), (endLine, endCol)) = pure $
-        SExpList [ StringAtom !(render $ pretty name)
-                 , StringAtom fname
-                 , IntegerAtom $ cast $ startLine
-                 , IntegerAtom $ cast $ startCol
-                 , IntegerAtom $ cast $ endLine
-                 , IntegerAtom $ cast $ endCol
-                 ]
+    -- In order to recover the full path to the module referenced by FC,
+    -- which stores a module identifier as opposed to a full path,
+    -- we need to check the project's source folder and all the library directories
+    -- for the relevant source file.
+    -- (!) Always returns the *absolute* path.
+    sexpOriginDesc : OriginDesc -> Core String
+    sexpOriginDesc (PhysicalIdrSrc modIdent) = do
+      defs <- get Ctxt
+      let wdir = defs.options.dirs.working_dir
+      let pkg_dirs = filter (/= ".") defs.options.dirs.extra_dirs
+      let exts = map show listOfExtensions
+      Just fname <- catch
+          (Just . (wdir </>) <$> nsToSource replFC modIdent) -- Try local source first
+          -- if not found, try looking for the file amongst the loaded packages.
+          (const $ firstAvailable $ do
+            pkg_dir <- pkg_dirs
+            let pkg_dir_abs = ifThenElse (isRelative pkg_dir) (wdir </> pkg_dir) pkg_dir
+            ext <- exts
+            pure (pkg_dir_abs </> ModuleIdent.toPath modIdent <.> ext))
+        | _ => pure "(File-Not-Found)"
+      pure fname
+    sexpOriginDesc (PhysicalPkgSrc fname) = pure fname
+    sexpOriginDesc (Virtual Interactive) = pure "(Interactive)"
 
-displayIDEResult outf i  _ = pure ()
+    constructFileContext : (Name, NonEmptyFC) -> Core (String, FileContext)
+    constructFileContext (name, origin, (startLine, startCol), (endLine, endCol)) = pure $
+        -- TODO: fix the emacs mode to use the more structured SExpr representation
+        (!(render $ pretty name)
+        , MkFileContext
+          { file  = !(sexpOriginDesc origin)
+          , range = MkBounds {startCol, startLine, endCol, endLine}
+          })
+
+-- do not use a catchall so that we are warned about missing cases when adding a
+-- new construtor to the enumeration.
+displayIDEResult _ _ (REPL Done) = pure ()
+displayIDEResult _ _ (REPL (Executed _)) = pure ()
+displayIDEResult _ _ (REPL (ModuleLoaded _)) = pure ()
+displayIDEResult _ _ (REPL (ErrorLoadingModule _ _)) = pure ()
+displayIDEResult _ _ (REPL (ColorSet _)) = pure ()
+displayIDEResult _ _ (REPL DefDeclared) = pure ()
+displayIDEResult _ _ (REPL Exited) = pure ()
 
 
 handleIDEResult : {auto c : Ref Ctxt Defs} ->
@@ -467,5 +490,5 @@ replIDE
          case res of
               REPL _ => printError $ reflow "Running idemode but output isn't"
               IDEMode _ inf outf => do
-                send outf (version 2 0)
+                send outf (ProtocolVersion 2 1) -- TODO: Move this info somewhere more central
                 loop

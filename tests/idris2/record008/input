@@ -1,0 +1,6 @@
+:printdef val
+:printdef (.val')
+:t a
+:t b
+:t prf
+:t equal

@@ -25,7 +25,7 @@ of modules to be installed. For example, a library ``test`` which has two module
 ``Foo.idr`` and ``Bar.idr`` as source files would be written as follows::
 
     package test
-    version = 0.1
+    version = 0.0.1
 
     modules = Foo, Bar
 
@@ -44,8 +44,11 @@ The added fields are:
 + ``brief = "<text>"``, a string literal containing a brief description
   of the package.
 
-+ ``version = <version number>``, a version number, which must be in the form
-  of integers separated by dots (e.g. ``1.0``, ``0.3.0``, ``3.1.4.1.5`` etc)
++ ``version = <version number>``, a semantic version number, which must be in the form
+  of integers separated by dots (e.g. ``1.0.0``, ``0.3.0``, ``3.1.4`` etc)
+
++ ``langversion <version constraints>``, see ``depends`` below for a list of allowable
+  constraints. For example, ``langversion >= 0.5.1 && < 1.0.0``
 
 + ``readme = "<file>"``, location of the README file.
 
@@ -129,6 +132,9 @@ Given an Idris package file ``test.ipkg`` it can be used with the Idris compiler
   library modules.
 
 + ``idris2 --clean test.ipkg`` will clean the intermediate build files.
+
++ ``idris2 --mkdoc test.ipkg`` will generate HTML documentation for the
+  package, output to ``build/docs``
 
 Once the test package has been installed, the command line option
 ``--package test`` makes it accessible (abbreviated to ``-p test``).

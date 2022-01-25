@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "idris_util.h"
+
 #ifndef _WIN32
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -56,14 +58,6 @@ struct sockaddr_un get_sockaddr_unix(char* host) {
     return addr;
 }
 
-void* idrnet_malloc(int size) {
-    return malloc(size);
-}
-
-void idrnet_free(void* ptr) {
-    free(ptr);
-}
-
 unsigned int idrnet_peek(void *ptr, unsigned int offset) {
   unsigned char *buf_c = (unsigned char*) ptr;
   return (unsigned int) buf_c[offset];
@@ -82,6 +76,14 @@ int idrnet_socket(int domain, int type, int protocol) {
     }
 #endif
     return socket(domain, type, protocol);
+}
+
+int idrnet_close(int fd) {
+#ifdef _WIN32
+    return _close(fd);
+#else
+    return close(fd);
+#endif
 }
 
 // Get the address family constants out of C and into Idris
@@ -160,14 +162,14 @@ int idrnet_getsockname(int sockfd, void *address, void *len) {
 }
 
 int idrnet_sockaddr_port(int sockfd) {
-  struct sockaddr address;
-  socklen_t addrlen = sizeof(struct sockaddr);
-  int res = getsockname(sockfd, &address, &addrlen);
+  struct sockaddr_storage address;
+  socklen_t addrlen = sizeof(struct sockaddr_storage);
+  int res = getsockname(sockfd, (struct sockaddr*)&address, &addrlen);
   if(res < 0) {
     return -1;
   }
 
-  switch(address.sa_family) {
+  switch(address.ss_family) {
   case AF_INET:
     return ntohs(((struct sockaddr_in*)&address)->sin_port);
   case AF_INET6:
@@ -196,6 +198,18 @@ int idrnet_connect(int sockfd, int family, int socket_type, char* host, int port
     }
     freeaddrinfo(remote_host);
     return 0;
+}
+
+int idrnet_listen(int socket, int backlog) {
+    return listen(socket, backlog);
+}
+
+FILE* idrnet_fdopen(int fd, const char* mode) {
+#ifdef _WIN32
+    return _fdopen(fd, mode);
+#else
+    return fdopen(fd, mode);
+#endif
 }
 
 

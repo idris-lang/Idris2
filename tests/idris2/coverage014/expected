@@ -2,7 +2,7 @@
 Error: Impossible pattern gives an error:
 Can't solve constraint between: ?_ ++ [?_] and ?x :: ?xs.
 
-Issue794.idr:15:7--15:17
+Issue794:15:7--15:17
  11 | empty Empty impossible
  12 | 
  13 | 
@@ -12,7 +12,7 @@ Issue794.idr:15:7--15:17
 
 Error: empty is not covering.
 
-Issue794.idr:10:1--10:32
+Issue794:10:1--10:32
  06 |      Empty : SnocList []
  07 |      Snoc : (x : a) -> (xs : List a) ->
  08 |             (rec : SnocList xs) -> SnocList (xs ++ [x])

@@ -4,7 +4,6 @@ import Compiler.CompileExpr
 
 import Core.Context
 import Core.Primitives
-import Core.TT
 
 %default covering
 

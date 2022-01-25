@@ -1,7 +1,7 @@
 1/1: Building Dummy (Dummy.idr)
 Dummy> Error: Undefined name undefined. 
 
-(interactive):1:4--1:13
+(Interactive):1:4--1:13
  1 | :t undefined
         ^^^^^^^^^
 

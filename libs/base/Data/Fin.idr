@@ -1,8 +1,10 @@
 module Data.Fin
 
+import Control.Function
 import Data.List1
 import public Data.Maybe
-import Data.Nat
+import public Data.Nat
+import public Data.So
 import Decidable.Equality.Core
 
 %default total
@@ -17,13 +19,15 @@ data Fin : (n : Nat) -> Type where
     FZ : Fin (S k)
     FS : Fin k -> Fin (S k)
 
-||| Cast between Fins with equal indices
+||| Coerce between Fins with equal indices
 public export
-cast : {n : Nat} -> (0 eq : m = n) -> Fin m -> Fin n
-cast {n = S _} eq FZ = FZ
-cast {n = Z} eq FZ impossible
-cast {n = S _} eq (FS k) = FS (cast (succInjective _ _ eq) k)
-cast {n = Z} eq (FS k) impossible
+coerce : {n : Nat} -> (0 eq : m = n) -> Fin m -> Fin n -- TODO: make linear
+coerce {n = S _} eq FZ = FZ
+coerce {n = Z} eq FZ impossible
+coerce {n = S _} eq (FS k) = FS (coerce (injective eq) k)
+coerce {n = Z} eq (FS k) impossible
+
+%transform "coerce-identity" coerce eq k = replace {p = Fin} eq k
 
 export
 Uninhabited (Fin Z) where
@@ -39,8 +43,12 @@ Uninhabited (FS k = FZ) where
   uninhabited Refl impossible
 
 export
-fsInjective : FS m = FS n -> m = n
-fsInjective Refl = Refl
+Uninhabited (n = m) => Uninhabited (FS n = FS m) where
+  uninhabited Refl @{nm} = uninhabited Refl @{nm}
+
+export
+Injective FS where
+  injective Refl = Refl
 
 export
 Eq (Fin n) where
@@ -54,14 +62,17 @@ finToNat : Fin n -> Nat
 finToNat FZ = Z
 finToNat (FS k) = S $ finToNat k
 
-||| `finToNat` is injective
-export
 finToNatInjective : (fm : Fin k) -> (fn : Fin k) -> (finToNat fm) = (finToNat fn) -> fm = fn
 finToNatInjective FZ     FZ     _    = Refl
 finToNatInjective (FS _) FZ     Refl impossible
 finToNatInjective FZ     (FS _) Refl impossible
 finToNatInjective (FS m) (FS n) prf  =
-  cong FS $ finToNatInjective m n $ succInjective (finToNat m) (finToNat n) prf
+  cong FS $ finToNatInjective m n $ injective prf
+
+||| `finToNat` is injective
+export
+Injective Fin.finToNat where
+ injective = (finToNatInjective _ _)
 
 export
 Cast (Fin n) Nat where
@@ -72,6 +83,12 @@ public export
 finToInteger : Fin n -> Integer
 finToInteger FZ     = 0
 finToInteger (FS k) = 1 + finToInteger k
+
+-- %builtin NaturalToInteger Data.Fin.finToInteger
+
+export
+Show (Fin n) where
+  show = show . finToInteger
 
 export
 Cast (Fin n) Integer where
@@ -98,14 +115,14 @@ weakenLTE  FZ    (LTESucc _) = FZ
 weakenLTE (FS x) (LTESucc y) = FS $ weakenLTE x y
 
 ||| Attempt to tighten the bound on a Fin.
-||| Return `Left` if the bound could not be tightened, or `Right` if it could.
+||| Return the tightened bound if there is one, else nothing.
 export
-strengthen : {n : _} -> Fin (S n) -> Either (Fin (S n)) (Fin n)
-strengthen {n = S _} FZ = Right FZ
-strengthen {n = S _} (FS i) with (strengthen i)
-  strengthen (FS _) | Left x  = Left $ FS x
-  strengthen (FS _) | Right x = Right $ FS x
-strengthen f = Left f
+strengthen : {n : _} -> Fin (S n) -> Maybe (Fin n)
+strengthen {n = S _} FZ = Just FZ
+strengthen {n = S _} (FS p) with (strengthen p)
+  strengthen (FS _) | Nothing = Nothing
+  strengthen (FS _) | Just q  = Just $ FS q
+strengthen _ = Nothing
 
 ||| Add some natural number to a Fin, extending the bound accordingly
 ||| @ n the previous bound
@@ -115,11 +132,25 @@ shift : (m : Nat) -> Fin n -> Fin (m + n)
 shift Z f = f
 shift (S m) f = FS $ shift m f
 
+||| Increment a Fin, wrapping on overflow
+public export
+finS : {n : Nat} -> Fin n -> Fin n
+finS {n = S _} x = case strengthen x of
+    Nothing => FZ
+    Just y => FS y
+
 ||| The largest element of some Fin type
 public export
 last : {n : _} -> Fin (S n)
 last {n=Z} = FZ
 last {n=S _} = FS last
+
+||| The finite complement of some Fin.
+||| The number as far along as the input, but starting from the other end.
+public export
+complement : {n : Nat} -> Fin n -> Fin n
+complement {n = S _} FZ = last
+complement {n = S _} (FS x) = weaken $ complement x
 
 ||| All of the Fin elements
 public export
@@ -135,13 +166,24 @@ Ord (Fin n) where
   compare (FS x) (FS y) = compare x y
 
 public export
+natToFinLT : (x : Nat) -> {0 n : Nat} ->
+             {auto 0 prf : x `LT` n} ->
+             Fin n
+natToFinLT Z {prf = LTESucc _} = FZ
+natToFinLT (S k) {prf = LTESucc _} = FS $ natToFinLT k
+
+public export
+natToFinLt : (x : Nat) -> {n : Nat} ->
+             {auto 0 prf : So (x < n)} ->
+             Fin n
+natToFinLt Z     {n = S _} = FZ
+natToFinLt (S k) {n = S _} = FS $ natToFinLt k
+
+public export
 natToFin : Nat -> (n : Nat) -> Maybe (Fin n)
-natToFin Z     (S _) = Just FZ
-natToFin (S k) (S j)
-    = case natToFin k j of
-           Just k' => Just (FS k')
-           Nothing => Nothing
-natToFin _ _ = Nothing
+natToFin x n = case isLT x n of
+    Yes prf => Just $ natToFinLT x
+    No contra => Nothing
 
 ||| Convert an `Integer` to a `Fin`, provided the integer is within bounds.
 ||| @n The upper bound of the Fin
@@ -150,15 +192,47 @@ integerToFin : Integer -> (n : Nat) -> Maybe (Fin n)
 integerToFin x Z = Nothing -- make sure 'n' is concrete, to save reduction!
 integerToFin x n = if x >= 0 then natToFin (fromInteger x) n else Nothing
 
+public export
+maybeLTE : (x : Nat) -> (y : Nat) -> Maybe (x `LTE` y)
+maybeLTE Z _ = Just LTEZero
+maybeLTE (S x) (S y) = LTESucc <$> maybeLTE x y
+maybeLTE _ _ = Nothing
+
+public export
+maybeLT : (x : Nat) -> (y : Nat) -> Maybe (x `LT` y)
+maybeLT x y = maybeLTE (S x) y
+
+public export
+finFromInteger : (x : Integer) -> {n : Nat} ->
+                 {auto 0 prf : So (fromInteger x < n)} ->
+                 Fin n
+finFromInteger x = natToFinLt (fromInteger x)
+
+-- Direct comparison between `Integer` and `Nat`.
+-- We cannot convert the `Nat` to `Integer`, because that will not work with open terms;
+-- but we cannot convert the `Integer` to `Nat` either, because that slows down typechecking
+-- even when the function is unused (issue #2032)
+public export
+integerLessThanNat : Integer -> Nat -> Bool
+integerLessThanNat x n with (x < the Integer 0)
+  integerLessThanNat _ _     | True  = True                            -- if `x < 0` then `x < n` for any `n : Nat`
+  integerLessThanNat x (S m) | False = integerLessThanNat (x-1) m      -- recursive case
+  integerLessThanNat x Z     | False = False                           -- `x >= 0` contradicts `x < Z`
+
 ||| Allow overloading of Integer literals for Fin.
 ||| @ x the Integer that the user typed
 ||| @ prf an automatically-constructed proof that `x` is in bounds
 public export
 fromInteger : (x : Integer) -> {n : Nat} ->
-              {auto 0 prf : (IsJust (integerToFin x n))} ->
+              {auto 0 prf : So (integerLessThanNat x n)} ->
               Fin n
-fromInteger {n} x {prf} with (integerToFin x n)
-  fromInteger {n} x {prf = ItIsJust} | Just y = y
+fromInteger x = finFromInteger x {prf = lemma prf} where
+  -- to be minimally invasive, we just call the previous implementation.
+  -- however, having a different proof obligation resolves #2032
+  0 lemma : {x : Integer} -> {n : Nat} -> So (integerLessThanNat x n) -> So (fromInteger {ty=Nat} x < n)
+  lemma oh = believe_me oh
+
+-- %builtin IntegerToNatural Data.Fin.fromInteger
 
 ||| Convert an Integer to a Fin in the required bounds/
 ||| This is essentially a composition of `mod` and `fromInteger`
@@ -172,6 +246,26 @@ restrict n val = let val' = assert_total (abs (mod val (cast (S n)))) in
                          {prf = believe_me {a=IsJust (Just val')} ItIsJust}
 
 --------------------------------------------------------------------------------
+-- Num
+--------------------------------------------------------------------------------
+
+public export
+{n : Nat} -> Num (Fin (S n)) where
+  FZ + y = y
+  (+) {n = S _} (FS x) y = finS $ assert_smaller x (weaken x) + y
+
+  FZ * y = FZ
+  (FS x) * y = y + (assert_smaller x $ weaken x) * y
+
+  fromInteger = restrict n
+
+public export
+{n : Nat} -> Neg (Fin (S n)) where
+  negate = finS . complement
+
+  x - y = x + (negate y)
+
+--------------------------------------------------------------------------------
 -- DecEq
 --------------------------------------------------------------------------------
 
@@ -183,7 +277,7 @@ DecEq (Fin n) where
   decEq (FS f) (FS f')
       = case decEq f f' of
              Yes p => Yes $ cong FS p
-             No p => No $ p . fsInjective
+             No p => No $ p . injective
 
 namespace Equality
 
@@ -221,19 +315,21 @@ namespace Equality
   transitive FZ FZ = FZ
   transitive (FS prf) (FS prg) = FS (transitive prf prg)
 
-  ||| Pointwise equality is compatible with cast
+  ||| Pointwise equality is compatible with coerce
   export
-  castEq : {k : Fin m} -> (0 eq : m = n) -> cast eq k ~~~ k
-  castEq {k = FZ} Refl = FZ
-  castEq {k = FS k} Refl = FS (castEq _)
+  coerceEq : {k : Fin m} -> (0 eq : m = n) -> coerce eq k ~~~ k
+  coerceEq {k = FZ} Refl = FZ
+  coerceEq {k = FS k} Refl = FS (coerceEq _)
 
-  ||| The actual proof used by cast is irrelevant
+  ||| The actual proof used by coerce is irrelevant
   export
-  congCast : {0 n, q : Nat} -> {k : Fin m} -> {l : Fin p} ->
-             {0 eq1 : m = n} -> {0 eq2 : p = q} ->
-             k ~~~ l ->
-             cast eq1 k ~~~ cast eq2 l
-  congCast eq = transitive (castEq _) (transitive eq $ symmetric $ castEq _)
+  congCoerce : {0 n, q : Nat} -> {k : Fin m} -> {l : Fin p} ->
+               {0 eq1 : m = n} -> {0 eq2 : p = q} ->
+               k ~~~ l ->
+               coerce eq1 k ~~~ coerce eq2 l
+  congCoerce eq
+    = transitive (coerceEq _)
+    $ transitive eq $ symmetric $ coerceEq _
 
   ||| Last is congruent wrt index equality
   export

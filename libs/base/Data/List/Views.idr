@@ -1,9 +1,9 @@
 module Data.List.Views
 
+import Control.Relation
 import Control.WellFounded
 import Data.List
 import Data.Nat
-import Data.Nat.Views
 
 %default total
 
@@ -14,7 +14,7 @@ lengthSuc (x :: xs) y ys = cong S (lengthSuc xs y ys)
 
 lengthLT : (xs : List a) -> (ys : List a) ->
            LTE (length xs) (length (ys ++ xs))
-lengthLT xs [] = lteRefl
+lengthLT xs [] = reflexive {x = length xs}
 lengthLT xs (x :: ys) = lteSuccRight (lengthLT _ _)
 
 smallerLeft : (ys : List a) -> (y : a) -> (zs : List a) ->

@@ -1,6 +1,6 @@
 module Libraries.Text.Lexer
 
-import Libraries.Data.Bool.Extra
+import Data.Bool
 import Data.List
 import Data.Nat
 
@@ -379,6 +379,22 @@ hexLit = approx "0x" <+> hexDigits
 export
 octLit : Lexer
 octLit = exact "0o" <+> octDigits
+
+export
+digitsUnderscoredLit : Lexer
+digitsUnderscoredLit = digits <+> many (is '_' <+> digits)
+
+export
+binUnderscoredLit : Lexer
+binUnderscoredLit = binLit <+> many (is '_' <+> binDigits)
+
+export
+hexUnderscoredLit : Lexer
+hexUnderscoredLit = hexLit <+> many (is '_' <+> hexDigits)
+
+export
+octUnderscoredLit : Lexer
+octUnderscoredLit = octLit <+> many (is '_' <+> octDigits)
 
 ||| Recognise `start`, then recognise all input until a newline is encountered,
 ||| and consume the newline. Will succeed if end-of-input is encountered before

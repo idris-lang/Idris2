@@ -34,6 +34,8 @@ Eq a => Eq (List a) where
 (Eq a, Eq b) => Eq (a, b) where
    (==) (x, y) (x', y') = x == x' && y == y'
 
+   (/=) x y = not (x == y)
+
 [alsoSilly] Eq a => Eq (List a) where
    (==) [] [] = False
    (==) (x :: xs) (y :: ys) = x == y && xs == ys
@@ -79,3 +81,5 @@ v2 = MkDPair _ [Z, Z]
        = case decEq l l' of
               Yes Refl => ?foo
               No _ => False
+
+   (/=) x y = not (x == y)

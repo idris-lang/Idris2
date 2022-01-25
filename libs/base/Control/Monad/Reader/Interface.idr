@@ -8,6 +8,8 @@ import Control.Monad.RWS.CPS
 import Control.Monad.Trans
 import Control.Monad.Writer.CPS
 
+%default total
+
 ||| A computation which runs in a static context and produces an output
 public export
 interface Monad m => MonadReader stateType m | m where
@@ -15,7 +17,7 @@ interface Monad m => MonadReader stateType m | m where
   ask : m stateType
 
   ||| `local f c` runs the computation `c` in an environment modified by `f`.
-  local : MonadReader stateType m => (stateType -> stateType) -> m a -> m a
+  local : (stateType -> stateType) -> m a -> m a
 
 
 ||| Evaluate a function in the context held by this computation
@@ -35,8 +37,8 @@ Monad m => MonadReader stateType (ReaderT stateType m) where
 
 public export %inline
 Monad m => MonadReader r (RWST r w s m) where
-  ask       = MkRWST \r,s,w => pure (r,s,w)
-  local f m = MkRWST \r,s,w => unRWST m (f r) s w
+  ask       = MkRWST $ \r,s,w => pure (r,s,w)
+  local f m = MkRWST $ \r,s,w => unRWST m (f r) s w
 
 public export %inline
 MonadReader r m => MonadReader r (EitherT e m) where
@@ -62,4 +64,4 @@ MonadReader r m => MonadReader r (WriterT w m) where
   -- this should require a Monoid instance to further
   -- accumulate values, while the implementation of
   -- MonadReader for RWST does no such thing.
-  local f (MkWriterT m) = MkWriterT \w => local f (m w)
+  local f (MkWriterT m) = MkWriterT $ \w => local f (m w)

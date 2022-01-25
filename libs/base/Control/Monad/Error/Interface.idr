@@ -9,6 +9,8 @@ import Control.Monad.State.State
 import Control.Monad.Trans
 import Control.Monad.Writer.CPS
 
+%default total
+
 ||| The strategy of combining computations that can throw exceptions
 ||| by bypassing bound functions
 ||| from the point an exception is thrown to the point that it is handled.
@@ -92,22 +94,22 @@ public export
 MonadError e m => MonadError e (ReaderT r m) where
   throwError = lift . throwError
   catchError (MkReaderT m) f =
-    MkReaderT \e => catchError (m e) (runReaderT e . f)
+    MkReaderT $ \e => catchError (m e) (runReaderT e . f)
 
 public export
 MonadError e m => MonadError e (StateT r m) where
   throwError = lift . throwError
   catchError (ST m) f =
-    ST \s => catchError (m s) (runStateT s . f)
+    ST $ \s => catchError (m s) (runStateT s . f)
 
 public export
 MonadError e m => MonadError e (RWST r w s m) where
   throwError = lift . throwError
   catchError (MkRWST m) f =
-    MkRWST \r,w,s => catchError (m r w s) (\e => unRWST (f e) r w s)
+    MkRWST $ \r,w,s => catchError (m r w s) (\e => unRWST (f e) r w s)
 
 public export
 MonadError e m => MonadError e (WriterT w m) where
   throwError = lift . throwError
   catchError (MkWriterT m) f =
-    MkWriterT \w => catchError (m w) (\e => unWriterT (f e) w)
+    MkWriterT $ \w => catchError (m w) (\e => unWriterT (f e) w)

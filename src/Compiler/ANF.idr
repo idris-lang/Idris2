@@ -67,6 +67,7 @@ mutual
     show ANull = "[__]"
 
   export
+  covering
   Show ANF where
     show (AV _ v) = show v
     show (AAppName fc lazy n args)
@@ -95,6 +96,7 @@ mutual
     show (ACrash _ x) = "%CRASH(" ++ show x ++ ")"
 
   export
+  covering
   Show AConAlt where
     show (MkAConAlt n _ t args sc)
         = "%conalt " ++ show n ++
@@ -104,11 +106,13 @@ mutual
         showArg i = "v" ++ show i
 
   export
+  covering
   Show AConstAlt where
     show (MkAConstAlt c sc)
         = "%constalt(" ++ show c ++ ") => " ++ show sc
 
 export
+covering
 Show ANFDef where
   show (MkAFun args exp) = show args ++ ": " ++ show exp
   show (MkACon tag arity nt)
@@ -187,10 +191,10 @@ mutual
   anf vs (LUnderApp fc n m args)
       = anfArgs fc vs args (AUnderApp fc n m)
   anf vs (LApp fc lazy f a)
-      = anfArgs fc vs [f, a]
-                (\args => case args of
-                               [fvar, avar] => AApp fc lazy fvar avar
-                               _ => ACrash fc "Can't happen (AApp)")
+      = anfArgs fc vs [f, a] $
+                \case
+                  [fvar, avar] => AApp fc lazy fvar avar
+                  _ => ACrash fc "Can't happen (AApp)"
   anf vs (LLet fc x val sc)
       = do i <- nextVar
            let vs' = i :: vs

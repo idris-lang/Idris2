@@ -3,11 +3,14 @@ module TTImp.ProcessDecls
 import Core.Context
 import Core.Context.Log
 import Core.Core
+import Core.Directory
 import Core.Env
 import Core.Metadata
+import Core.Options
 import Core.Termination
 import Core.UnifyState
 
+import Idris.Syntax
 import Parser.Source
 
 import TTImp.BindImplicits
@@ -34,18 +37,19 @@ process : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           List ElabOpt ->
           NestedNames vars -> Env Term vars -> ImpDecl -> Core ()
 process eopts nest env (IClaim fc rig vis opts ty)
     = processType eopts nest env fc rig vis opts ty
-process eopts nest env (IData fc vis ddef)
-    = processData eopts nest env fc vis ddef
+process eopts nest env (IData fc vis mbtot ddef)
+    = processData eopts nest env fc vis mbtot ddef
 process eopts nest env (IDef fc fname def)
     = processDef eopts nest env fc fname def
 process eopts nest env (IParameters fc ps decls)
     = processParams nest env fc ps decls
-process eopts nest env (IRecord fc ns vis rec)
-    = processRecord eopts nest env ns vis rec
+process eopts nest env (IRecord fc ns vis mbtot rec)
+    = processRecord eopts nest env ns vis mbtot rec
 process eopts nest env (INamespace fc ns decls)
     = withExtendedNS ns $
          traverse_ (processDecl eopts nest env) decls
@@ -122,6 +126,7 @@ processDecls : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                NestedNames vars -> Env Term vars -> List ImpDecl -> Core Bool
 processDecls nest env decls
     = do traverse_ (processDecl [] nest env) decls
@@ -131,6 +136,7 @@ processTTImpDecls : {vars : _} ->
                     {auto c : Ref Ctxt Defs} ->
                     {auto m : Ref MD Metadata} ->
                     {auto u : Ref UST UState} ->
+                    {auto s : Ref Syn SyntaxInfo} ->
                     NestedNames vars -> Env Term vars -> List ImpDecl -> Core Bool
 processTTImpDecls {vars} nest env decls
     = do traverse_ (\d => do d' <- bindNames d
@@ -156,23 +162,27 @@ processTTImpDecls {vars} nest env decls
     bindNames (IClaim fc c vis opts (MkImpTy tfc nameFC n ty))
         = do ty' <- bindTypeNames fc [] vars ty
              pure (IClaim fc c vis opts (MkImpTy tfc nameFC n ty'))
-    bindNames (IData fc vis d)
+    bindNames (IData fc vis mbtot d)
         = do d' <- bindDataNames d
-             pure (IData fc vis d')
+             pure (IData fc vis mbtot d')
     bindNames d = pure d
 
 export
 processTTImpFile : {auto c : Ref Ctxt Defs} ->
                    {auto m : Ref MD Metadata} ->
                    {auto u : Ref UST UState} ->
+                   {auto s : Ref Syn SyntaxInfo} ->
                    String -> Core Bool
 processTTImpFile fname
-    = do Right (decor, tti) <- logTime "Parsing" $ coreLift $ parseFile fname
-                            (do decls <- prog fname
+    = do modIdent <- ctxtPathToNS fname
+         Right (ws, decor, tti) <- logTime "Parsing" $
+                            coreLift $ parseFile fname (PhysicalIdrSrc modIdent)
+                            (do decls <- prog (PhysicalIdrSrc modIdent)
                                 eoi
                                 pure decls)
                | Left err => do coreLift (putStrLn (show err))
                                 pure False
+         traverse_ recordWarning ws
          logTime "Elaboration" $
             catch (do ignore $ processTTImpDecls (MkNested []) [] tti
                       Nothing <- checkDelayedHoles

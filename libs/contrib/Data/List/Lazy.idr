@@ -98,6 +98,9 @@ Foldable LazyList where
   null []     = True
   null (_::_) = False
 
+  foldMap f [] = neutral
+  foldMap f (x :: xs) = f x <+> foldMap f xs
+
 public export
 Functor LazyList where
   map f [] = []

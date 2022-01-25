@@ -8,7 +8,8 @@ import Core.Normalise
 import Core.Reflect
 import Core.Unify
 import Core.TT
-import Core.Value
+
+import Idris.Syntax
 
 import TTImp.Elab.Check
 import TTImp.Reflect
@@ -147,8 +148,8 @@ mutual
                    Core ImpDecl
   getUnquoteDecl (IClaim fc c v opts ty)
       = pure $ IClaim fc c v opts !(getUnquoteTy ty)
-  getUnquoteDecl (IData fc v d)
-      = pure $ IData fc v !(getUnquoteData d)
+  getUnquoteDecl (IData fc v mbt d)
+      = pure $ IData fc v mbt !(getUnquoteData d)
   getUnquoteDecl (IDef fc v d)
       = pure $ IDef fc v !(traverse getUnquoteClause d)
   getUnquoteDecl (IParameters fc ps ds)
@@ -158,8 +159,8 @@ mutual
     where
       unqTuple : (Name, RigCount, PiInfo RawImp, RawImp) -> Core (Name, RigCount, PiInfo RawImp, RawImp)
       unqTuple (n, rig, i, t) = pure (n, rig, i, !(getUnquote t))
-  getUnquoteDecl (IRecord fc ns v d)
-      = pure $ IRecord fc ns v !(getUnquoteRecord d)
+  getUnquoteDecl (IRecord fc ns v mbt d)
+      = pure $ IRecord fc ns v mbt !(getUnquoteRecord d)
   getUnquoteDecl (INamespace fc ns ds)
       = pure $ INamespace fc ns !(traverse getUnquoteDecl ds)
   getUnquoteDecl (ITransform fc n l r)
@@ -171,6 +172,7 @@ bindUnqs : {vars : _} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            List (Name, FC, RawImp) ->
            RigCount -> ElabInfo -> NestedNames vars -> Env Term vars ->
            Term vars ->
@@ -197,13 +199,14 @@ checkQuote : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
              FC -> RawImp -> Maybe (Glued vars) ->
              Core (Term vars, Glued vars)
 checkQuote rig elabinfo nest env fc tm exp
     = do defs <- get Ctxt
-         q <- newRef Unq (the (List (Name, FC, RawImp)) [])
+         q <- newRef Unq []
          tm' <- getUnquote tm
          qtm <- reflect fc defs (onLHS (elabMode elabinfo)) env tm'
          unqs <- get Unq
@@ -234,13 +237,14 @@ checkQuoteDecl : {vars : _} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> List ImpDecl -> Maybe (Glued vars) ->
                  Core (Term vars, Glued vars)
 checkQuoteDecl rig elabinfo nest env fc ds exp
     = do defs <- get Ctxt
-         q <- newRef Unq (the (List (Name, FC, RawImp)) [])
+         q <- newRef Unq []
          ds' <- traverse getUnquoteDecl ds
          qds <- reflect fc defs (onLHS (elabMode elabinfo)) env ds'
          unqs <- get Unq

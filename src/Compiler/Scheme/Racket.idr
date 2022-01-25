@@ -2,7 +2,7 @@ module Compiler.Scheme.Racket
 
 import Compiler.Common
 import Compiler.CompileExpr
-import Compiler.Inline
+import Compiler.Generated
 import Compiler.Scheme.Common
 
 import Core.Options
@@ -11,21 +11,18 @@ import Core.Context.Log
 import Core.Directory
 import Core.Name
 import Core.TT
-import Libraries.Utils.Hex
+import Protocol.Hex
 import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Libraries.Data.NameMap
-import Data.Nat
-import Data.Strings
+import Data.String
 import Data.Vect
 
 import Idris.Env
 
 import System
 import System.Directory
-import System.File
 import System.Info
 
 %default covering
@@ -41,24 +38,30 @@ findRacoExe =
      pure $ (fromMaybe "/usr/bin/env raco" env) ++ " exe"
 
 schHeader : Bool -> String -> String
-schHeader prof libs
-  = "#lang racket/base\n" ++
-    "; @generated\n" ++
-    "(require racket/async-channel)\n" ++ -- for asynchronous channels
-    "(require racket/future)\n" ++ -- for parallelism/concurrency
-    "(require racket/math)\n" ++ -- for math ops
-    "(require racket/system)\n" ++ -- for system
-    "(require rnrs/bytevectors-6)\n" ++ -- for buffers
-    "(require rnrs/io/ports-6)\n" ++ -- for files
-    "(require srfi/19)\n" ++ -- for file handling and data
-    "(require ffi/unsafe ffi/unsafe/define)\n" ++ -- for calling C
-    (if prof then "(require profile)\n" else "") ++
-    "(require racket/flonum)" ++ -- for float-typed transcendental functions
-    libs ++
-    "(let ()\n"
+schHeader prof libs = """
+  #lang racket/base
+  ;; \{ generatedString "Racket" }
+  (require racket/async-channel)         ; for asynchronous channels
+  (require racket/future)                ; for parallelism/concurrency
+  (require racket/math)                  ; for math ops
+  (require racket/system)                ; for system
+  (require racket/unsafe/ops)            ; for fast fixnum ops
+  (require rnrs/bytevectors-6)           ; for buffers
+  (require rnrs/io/ports-6)              ; for files
+  (require srfi/19)                      ; for file handling and data
+  (require ffi/unsafe ffi/unsafe/define) ; for calling C
+  \{ ifThenElse prof "(require profile)" "" }
+  (require racket/flonum)                ; for float-typed transcendental functions
+  \{ libs }
+  (let ()
+
+  """
 
 schFooter : String
-schFooter = ") (collect-garbage)"
+schFooter = """
+  )
+  (collect-garbage)
+  """
 
 showRacketChar : Char -> String -> String
 showRacketChar '\\' = ("\\\\" ++)
@@ -119,6 +122,10 @@ data Done : Type where
 cftySpec : FC -> CFType -> Core String
 cftySpec fc CFUnit = pure "_void"
 cftySpec fc CFInt = pure "_int"
+cftySpec fc CFInt8 = pure "_int8"
+cftySpec fc CFInt16 = pure "_int16"
+cftySpec fc CFInt32 = pure "_int32"
+cftySpec fc CFInt64 = pure "_int64"
 cftySpec fc CFUnsigned8 = pure "_uint8"
 cftySpec fc CFUnsigned16 = pure "_uint16"
 cftySpec fc CFUnsigned32 = pure "_uint32"
@@ -144,7 +151,7 @@ cftySpec fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t +
                          " to foreign function"))
 
 loadlib : String -> String -> String
-loadlib "libc" _ = "(define-ffi-definer define-libc (ffi-lib #f))"
+loadlib "libc" _ = "(define-ffi-definer define-libc (ffi-lib #f))\n"
 loadlib libn ver
     = "(define-ffi-definer define-" ++ libn ++
       " (ffi-lib \"" ++ libn ++ "\" " ++ ver ++ "))\n"
@@ -168,7 +175,7 @@ rktToC CFChar op = "(char->integer " ++ op ++ ")"
 rktToC _ op = op
 
 handleRet : CFType -> String -> String
-handleRet CFUnit op = op ++ " " ++ mkWorld (schConstructor racketString (UN "") (Just 0) [])
+handleRet CFUnit op = op ++ " " ++ mkWorld (schConstructor racketString (UN $ Basic "") (Just 0) [])
 handleRet ret op = mkWorld (cToRkt ret op)
 
 cCall : {auto f : Ref Done (List String) } ->
@@ -263,7 +270,7 @@ useCC : {auto f : Ref Done (List String) } ->
         String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
 useCC appdir fc ccs args ret
     = case parseCC ["scheme,racket", "scheme", "C"] ccs of
-           Nothing => throw (NoForeignCC fc)
+           Nothing => throw (NoForeignCC fc ccs)
            Just ("scheme,racket", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure ("", body)
@@ -272,7 +279,7 @@ useCC appdir fc ccs args ret
                   pure ("", body)
            Just ("C", [cfn, clib]) => cCall appdir fc cfn clib args ret
            Just ("C", [cfn, clib, chdr]) => cCall appdir fc cfn clib args ret
-           _ => throw (NoForeignCC fc)
+           _ => throw (NoForeignCC fc ccs)
 
 -- For every foreign arg type, return a name, and whether to pass it to the
 -- foreign call (we don't pass '%World')
@@ -325,39 +332,48 @@ getFgnCall : {auto f : Ref Done (List String) } ->
 getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
 
 startRacket : String -> String -> String -> String
-startRacket racket appdir target = unlines
-    [ "#!/bin/sh"
-    , ""
-    , "set -e # exit on any error"
-    , ""
-    , "if [ \"$(uname)\" = Darwin ]; then"
-    , "  DIR=$(zsh -c 'printf %s \"$0:A:h\"' \"$0\")"
-    , "else"
-    , "  DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
-    , "fi"
-    , ""
-    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
-    , racket ++ "\"$DIR/" ++ target ++ "\" \"$@\""
-    ]
+startRacket racket appdir target = """
+  #!/bin/sh
+  # \{ generatedString "Racket" }
+
+  set -e # exit on any error
+
+  if [ "$(uname)" = Darwin ]; then
+    DIR=$(zsh -c 'printf %s "$0:A:h"' "$0")
+  else
+    DIR=$(dirname "$(readlink -f -- "$0")")
+  fi
+
+  export LD_LIBRARY_PATH="$DIR/\{ appdir }:$LD_LIBRARY_PATH"
+  export DYLD_LIBRARY_PATH="$DIR/\{ appdir }:$DYLD_LIBRARY_PATH"
+
+  \{ racket } "$DIR/\{ target }" "$@"
+  """
 
 startRacketCmd : String -> String -> String -> String
-startRacketCmd racket appdir target = unlines
-    [ "@echo off"
-    , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%\\" ++ appdir ++ ";%PATH%"
-    , racket ++ "\"" ++ target ++ "\" %*"
-    ]
+startRacketCmd racket appdir target = """
+  @echo off
+
+  rem \{ generatedString "Racket" }
+
+  set APPDIR=%~dp0
+  set PATH=%APPDIR%\{ appdir };%PATH%
+
+  \{ racket } "%APPDIR%\{ target }" %*
+  """
 
 startRacketWinSh : String -> String -> String -> String
-startRacketWinSh racket appdir target = unlines
-    [ "#!/bin/sh"
-    , ""
-    , "set -e # exit on any error"
-    , ""
-    , "DIR=$(dirname \"$(realpath \"$0\")\")"
-    , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
-    , racket ++ "\"" ++ target ++ "\" \"$@\""
-    ]
+startRacketWinSh racket appdir target = """
+  #!/bin/sh
+  # \{ generatedString "Racket" }
+
+  set -e # exit on any error
+
+  DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
+  PATH="$DIR/\{ appdir }:$PATH"
+
+  \{ racket } "$DIR/\{ target }" "$@"
+  """
 
 compileToRKT : Ref Ctxt Defs ->
                String -> ClosedTerm -> (outfile : String) -> Core ()
@@ -372,7 +388,7 @@ compileToRKT c appdir tm outfile
          s <- newRef {t = List String} Structs []
          fgndefs <- traverse (getFgnCall appdir) ndefs
          compdefs <- traverse (getScheme racketPrim racketString) ndefs
-         let code = fastAppend (map snd fgndefs ++ compdefs)
+         let code = fastConcat (map snd fgndefs ++ compdefs)
          main <- schExp racketPrim racketString 0 ctm
          support <- readDataFile "racket/support.rkt"
          ds <- getDirectives Racket
@@ -433,7 +449,7 @@ compileExpr mkexec c tmpDir outputDir tm outfile
          if ok == 0
             then do -- TODO: add launcher script
                     let outShRel = outputDir </> outfile
-                    the (Core ()) $ if isWindows
+                    if isWindows
                        then if mkexec
                                then makeShWindows "" outShRel appDirRel outBinFile
                                else makeShWindows (racket ++ " ") outShRel appDirRel outRktFile
@@ -452,4 +468,4 @@ executeExpr c tmpDir tm
 
 export
 codegenRacket : Codegen
-codegenRacket = MkCG (compileExpr True) executeExpr
+codegenRacket = MkCG (compileExpr True) executeExpr Nothing Nothing

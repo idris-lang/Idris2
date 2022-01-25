@@ -1,3 +1,4 @@
+rm -rf build
+
 $1 --check fixity.idr
 
-rm -rf build

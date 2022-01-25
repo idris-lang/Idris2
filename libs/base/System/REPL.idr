@@ -2,11 +2,14 @@ module System.REPL
 
 import System.File
 
+%default covering
+
 ||| A basic read-eval-print loop, maintaining a state
-||| @ state the input state
-||| @ prompt the prompt to show
+|||
+||| @ state   the input state
+||| @ prompt  the prompt to show
 ||| @ onInput the function to run on reading input, returning a String to
-||| output and a new state. Returns Nothing if the repl should exit
+|||           output and a new state. Returns Nothing if the repl should exit
 export
 replWith : HasIO io =>
            (state : a) -> (prompt : String) ->
@@ -25,9 +28,10 @@ replWith acc prompt fn
                        Nothing => pure ()
 
 ||| A basic read-eval-print loop
-||| @ prompt the prompt to show
+|||
+||| @ prompt  the prompt to show
 ||| @ onInput the function to run on reading input, returning a String to
-||| output
+|||           output
 export
 repl : HasIO io =>
        (prompt : String) -> (onInput : String -> String) -> io ()

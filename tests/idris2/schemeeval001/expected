@@ -1,0 +1,5 @@
+Main> [scheme] Main> \x, y => plus x y
+[scheme] Main> \x, y => plus y x
+[scheme] Main> \x => S (S (plus x x))
+[scheme] Main> \x => plus x (S (S x))
+[scheme] Main> Bye for now!

@@ -25,7 +25,7 @@ bad val
             xfn ~(val))
 
 names : List Name
-names = [ `{{ names }}, `{{ Prelude.(+) }} ]
+names = [ `{ names }, `{ Prelude.(+) } ]
 
 noExtension : Elab ()
 noExtension = fail "Should not print this message"

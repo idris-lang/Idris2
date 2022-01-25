@@ -7,7 +7,6 @@ module Data.Telescope.Telescope
 import Data.DPair
 import Data.Nat
 import Data.Fin
-import Syntax.PreorderReasoning
 
 %default total
 

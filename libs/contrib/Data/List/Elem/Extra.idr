@@ -26,7 +26,7 @@ elemAppLorR : (xs, ys : List a)
 elemAppLorR [] [] prf = absurd prf
 elemAppLorR [] _ prf = Right prf
 elemAppLorR (x :: xs) [] prf =
-  Left rewrite sym $ appendNilRightNeutral xs in prf
+  Left $ rewrite sym $ appendNilRightNeutral xs in prf
 elemAppLorR (x :: xs) _ Here = Left Here
 elemAppLorR (x :: xs) ys (There prf) = mapFst There $ elemAppLorR xs ys prf
 
@@ -36,11 +36,11 @@ public export
 notElemAppLeft : (xs, ys : List a)
               -> (prf : Not (Elem x (xs ++ ys)))
               -> Not (Elem x xs)
-notElemAppLeft xs ys prf val = prf $ elemAppLeft xs ys val
+notElemAppLeft xs ys prf = prf . elemAppLeft xs ys
 
 ||| Proof that x is not in (xs ++ ys) implies proof that x is not in ys.
 public export
 notElemAppRight : (ys, xs : List a)
                -> (prf : Not (Elem x (xs ++ ys)))
                -> Not (Elem x ys)
-notElemAppRight ys xs prf val = prf $ elemAppRight xs ys val
+notElemAppRight ys xs prf = prf . elemAppRight xs ys

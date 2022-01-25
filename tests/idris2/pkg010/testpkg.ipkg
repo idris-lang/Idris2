@@ -1,0 +1,4 @@
+package testpkg
+main = Main
+
+modules = Main

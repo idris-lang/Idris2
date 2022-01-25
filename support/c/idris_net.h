@@ -1,8 +1,11 @@
-#ifndef IDRISNET_H
-#define IDRISNET_H
+#pragma once
+
+#include <stdio.h>
+#include <sys/stat.h>
 
 // Includes used by the idris-file.
 #ifdef _WIN32
+#include <io.h>
 #include <winsock2.h>
 #include <Ws2tcpip.h>
 #else
@@ -39,9 +42,6 @@ struct sockaddr_un {
 };
 #endif
 
-// Memory management functions
-void* idrnet_malloc(int size);
-void idrnet_free(void* ptr);
 unsigned int idrnet_peek(void *ptr, unsigned int offset);
 void idrnet_poke(void *ptr, unsigned int offset, char val);
 
@@ -49,6 +49,7 @@ void idrnet_poke(void *ptr, unsigned int offset, char val);
 int idrnet_errno();
 
 int idrnet_socket(int domain, int type, int protocol);
+int idrnet_close(int fd);
 
 // Address family accessors
 int idrnet_af_unspec(void);
@@ -64,6 +65,10 @@ int idrnet_getsockname(int sockfd, void *address, void *len);
 
 // Connect
 int idrnet_connect(int sockfd, int family, int socket_type, char* host, int port);
+
+// Listen
+int idrnet_listen(int socket, int backlog);
+FILE* idrnet_fdopen(int fd, const char* mode);
 
 // Accessor functions for struct_sockaddr
 int idrnet_sockaddr_family(void* sockaddr);
@@ -114,5 +119,3 @@ int idrnet_getaddrinfo(struct addrinfo** address_res, char* host,
 int idrnet_geteagain();
 
 int isNull(void* ptr);
-
-#endif

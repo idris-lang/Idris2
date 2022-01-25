@@ -57,23 +57,31 @@
 ||| When compiled to an executable the expected usage is:
 |||
 |||```sh
-|||runtests <path to executable under test> [--timing] [--interactive] [--cg CODEGEN] [--threads N] [--only [NAMES]]
+||| runtests <path to executable under test>
+|||   [--timing]
+|||   [--interactive]
+|||   [--only-file PATH]
+|||   [--failure-file PATH]
+|||   [--threads N]
+|||   [--cg CODEGEN]
+|||   [--only [NAMES]]
 |||```
 |||
 ||| assuming that the test runner is compiled to an executable named `runtests`.
 
 module Test.Golden
 
+import Control.ANSI
+
 import Data.Either
 import Data.Maybe
 import Data.List
 import Data.List1
-import Data.Strings
+import Data.String
 
 import System
 import System.Clock
 import System.Directory
-import System.File
 import System.Future
 import System.Info
 import System.Path
@@ -92,31 +100,35 @@ record Options where
   onlyNames    : List String
   ||| Should we run the test suite interactively?
   interactive  : Bool
+  ||| Should we use colors?
+  color        : Bool
   ||| Should we time and display the tests
   timing       : Bool
   ||| How many threads should we use?
   threads      : Nat
-  ||| Should we write the list of failing cases from a file?
+  ||| Should we write the list of failing cases to a file?
   failureFile     : Maybe String
 
 export
-initOptions : String -> Options
-initOptions exe
+initOptions : String -> Bool -> Options
+initOptions exe color
   = MkOptions exe
               Nothing
               []
               False
+              color
               False
               1
               Nothing
 
 export
-usage : String -> String
-usage exe = unwords
-  ["Usage:", exe
+usage : String
+usage = unwords
+  ["Usage:"
   , "runtests <path>"
   , "[--timing]"
   , "[--interactive]"
+  , "[--[no-]color, --[no-]colour]"
   , "[--cg CODEGEN]"
   , "[--threads N]"
   , "[--failure-file PATH]"
@@ -142,25 +154,30 @@ options args = case args of
     go : List String -> Maybe String -> Options -> Maybe (Maybe String, Options)
     go rest only opts = case rest of
       []                            => pure (only, opts)
-      ("--timing" :: xs)            => go xs only (record { timing = True} opts)
-      ("--interactive" :: xs)       => go xs only (record { interactive = True } opts)
-      ("--cg" :: cg :: xs)          => go xs only (record { codegen = Just cg } opts)
+      ("--timing" :: xs)            => go xs only ({ timing := True} opts)
+      ("--interactive" :: xs)       => go xs only ({ interactive := True } opts)
+      ("--color"  :: xs)            => go xs only ({ color := True } opts)
+      ("--colour" :: xs)            => go xs only ({ color := True } opts)
+      ("--no-color"  :: xs)         => go xs only ({ color := False } opts)
+      ("--no-colour" :: xs)         => go xs only ({ color := False } opts)
+      ("--cg" :: cg :: xs)          => go xs only ({ codegen := Just cg } opts)
       ("--threads" :: n :: xs)      => do let pos : Nat = !(parsePositive n)
-                                          go xs only (record { threads = pos } opts)
-      ("--failure-file" :: p :: xs) => go  xs only (record { failureFile = Just p } opts)
-      ("--only" :: xs)              => pure (only, record { onlyNames = xs } opts)
+                                          go xs only ({ threads := pos } opts)
+      ("--failure-file" :: p :: xs) => go  xs only ({ failureFile := Just p } opts)
+      ("--only" :: xs)              => pure (only, { onlyNames := xs } opts)
       ("--only-file" :: p :: xs)    => go xs (Just p) opts
       _ => Nothing
 
     mkOptions : String -> List String -> IO (Maybe Options)
     mkOptions exe rest
-      = do let Just (mfp, opts) = go rest Nothing (initOptions exe)
+      = do color <- (Just "DUMB" /=) <$> getEnv "TERM"
+           let Just (mfp, opts) = go rest Nothing (initOptions exe color)
                  | Nothing => pure Nothing
            let Just fp = mfp
                  | Nothing => pure (Just opts)
            Right only <- readFile fp
              | Left err => fail (show err)
-           pure $ Just $ record { onlyNames $= (forget (lines only) ++) } opts
+           pure $ Just $ { onlyNames $= ((lines only) ++) } opts
 
 ||| Normalise strings between different OS.
 |||
@@ -179,44 +196,41 @@ Result : Type
 Result = Either String String
 
 ||| Run the specified Golden test with the supplied options.
-|||
 ||| See the module documentation for more information.
-|||
 ||| @testPath the directory that contains the test.
 export
-runTest : Options -> String -> IO (Future Result)
+runTest : Options -> (testPath : String) -> IO (Future Result)
 runTest opts testPath = forkIO $ do
-  start <- clockTime Thread
-  let cg = case codegen opts of
-         Nothing => ""
-         Just cg => "env IDRIS2_TESTS_CG=" ++ cg ++ " "
-  ignore $ system $ "cd " ++ testPath ++ " && " ++
-    cg ++ "sh ./run " ++ exeUnderTest opts ++ " | tr -d '\\r' > output"
-  end <- clockTime Thread
+  start <- clockTime UTC
+  let cg = maybe "" (" --cg " ++) (codegen opts)
+  let exe = "\"" ++ exeUnderTest opts ++ cg ++ "\""
+  ignore $ system $ "cd " ++ escapeArg testPath ++ " && " ++
+    "sh ./run " ++ exe ++ " | tr -d '\\r' > output"
+  end <- clockTime UTC
 
   Right out <- readFile $ testPath ++ "/output"
-    | Left err => do print err
+    | Left err => do putStrLn $ (testPath ++ "/output") ++ ": " ++ show err
                      pure (Left testPath)
 
   Right exp <- readFile $ testPath ++ "/expected"
     | Left FileNotFound => do
         if interactive opts
           then mayOverwrite Nothing out
-          else print FileNotFound
+          else putStrLn $ (testPath ++ "/expected") ++ ": " ++ show FileNotFound
         pure (Left testPath)
-    | Left err => do print err
+    | Left err => do putStrLn $ (testPath ++ "/expected") ++ ": " ++ show err
                      pure (Left testPath)
 
   let result = normalize out == normalize exp
   let time = timeDifference end start
 
   if result
-    then printTiming (timing opts) time $ testPath ++ ": success"
+    then printTiming opts.timing time testPath $ maybeColored BrightGreen "success"
     else do
-      printTiming (timing opts) time $ testPath ++ ": FAILURE"
+      printTiming opts.timing time testPath $ maybeColored BrightRed "FAILURE"
       if interactive opts
         then mayOverwrite (Just exp) out
-        else putStrLn . unlines $ expVsOut exp out
+        else putStr . unlines $ expVsOut exp out
 
   pure $ if result then Right testPath else Left testPath
 
@@ -227,35 +241,51 @@ runTest opts testPath = forkIO $ do
       case str of
         "y" => pure True
         "n" => pure False
-        _   => do putStrLn "Invalid Answer."
+        "N" => pure False
+        ""  => pure False
+        _   => do putStrLn "Invalid answer."
                   getAnswer
 
+    maybeColored : Color -> String -> String
+    maybeColored c = if opts.color then show . colored c else id
+
     expVsOut : String -> String -> List String
-    expVsOut exp out = ["Expected:", exp, "Given:", out]
+    expVsOut exp out = ["Expected:", maybeColored Green exp, "Given:", maybeColored Red out]
+
+    badSystemExitCode : Int -> Bool
+    badSystemExitCode code = code < 0 || code == 127 {- 127 means shell couldn't start -}
 
     mayOverwrite : Maybe String -> String -> IO ()
     mayOverwrite mexp out = do
       case mexp of
         Nothing => putStr $ unlines
           [ "Golden value missing. I computed the following result:"
-          , out
-          , "Accept new golden value? [yn]"
+          , maybeColored BrightBlue out
+          , "Accept new golden value? [y/N]"
           ]
         Just exp => do
-          code <- system $ "git diff --no-index --exit-code --word-diff=color " ++
-            testPath ++ "/expected " ++ testPath ++ "/output"
-          putStrLn . unlines $
+          code <- system $ "git diff --no-index --exit-code " ++
+            (if opts.color then  "--word-diff=color " else "") ++
+            escapeArg testPath ++ "/expected " ++ escapeArg testPath ++ "/output"
+          putStr . unlines $
             ["Golden value differs from actual value."] ++
-            (if (code < 0) then expVsOut exp out else []) ++
-            ["Accept actual value as new golden value? [yn]"]
+            (if badSystemExitCode code then expVsOut exp out else []) ++
+            ["Accept actual value as new golden value? [y/N]"]
       b <- getAnswer
       when b $ do Right _ <- writeFile (testPath ++ "/expected") out
-                    | Left err => print err
+                    | Left err => putStrLn $ (testPath ++ "/expected") ++ ": " ++ show err
                   pure ()
 
-    printTiming : Bool -> Clock type -> String -> IO ()
-    printTiming True  clock msg = putStrLn (unwords [msg, show clock])
-    printTiming False _     msg = putStrLn msg
+    printTiming : Bool -> Clock type -> String -> String -> IO ()
+    printTiming False _     path msg = putStrLn $ concat [path, ": ", msg]
+    printTiming True  clock path msg =
+      let time  = showTime 2 3 clock
+          -- We use 9 instead of `String.length msg` because:
+          -- 1. ": success" and ": FAILURE" have the same length
+          -- 2. ANSI escape codes make the msg look longer than it is
+          spent = String.length time + String.length path + 9
+          pad   = pack $ replicate (minus 72 spent) ' '
+      in putStrLn $ concat [path, ": ", msg, pad, time]
 
 ||| Find the first occurrence of an executable on `PATH`.
 export
@@ -284,6 +314,14 @@ Show Requirement where
   show Gambit = "gambit"
 
 export
+[CG] Show Requirement where
+  show C = "refc"
+  show Chez = "chez"
+  show Node = "node"
+  show Racket = "racket"
+  show Gambit = "gambit"
+
+export
 checkRequirement : Requirement -> IO (Maybe String)
 checkRequirement req
   = if platformSupport req
@@ -294,7 +332,7 @@ checkRequirement req
   where
     requirement : Requirement -> (String, List String)
     requirement C = ("CC", ["cc"])
-    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "scheme"])
+    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "chezscheme", "chez-scheme", "scheme"])
     requirement Node = ("NODE", ["node"])
     requirement Racket = ("RACKET", ["racket"])
     requirement Gambit = ("GAMBIT", ["gsc"])
@@ -314,15 +352,62 @@ findCG
        Nothing <- checkRequirement C       | p => pure (Just "refc")
        pure Nothing
 
+||| A choice of a codegen
+public export
+data Codegen
+  = ||| Do NOT pass a cg argument to the executable being tested
+    Nothing
+  | ||| Use whatever the test runner was passed at the toplevel,
+    ||| and if nothing was passed guess a sensible default using findCG
+    Default
+  | ||| Use exactly the given requirement
+    Just Requirement
+
+export
+toList : Codegen -> List Requirement
+toList (Just r) = [r]
+toList _ = []
+
 ||| A test pool is characterised by
+|||  + a name
 |||  + a list of requirement
+|||  + a choice of codegen (overriding the default)
 |||  + and a list of directory paths
 public export
 record TestPool where
   constructor MkTestPool
   poolName : String
   constraints : List Requirement
+  codegen : Codegen
   testCases : List String
+
+||| Find all the test in the given directory.
+export
+testsInDir : (dirName : String) -> (testNameFilter : String -> Bool) -> (poolName : String) -> List Requirement -> Codegen -> IO TestPool
+testsInDir dirName testNameFilter poolName reqs cg = do
+  Right names <- listDir dirName
+    | Left e => do putStrLn ("failed to list " ++ dirName ++ ": " ++ show e)
+                   exitFailure
+  let names = [n | n <- names, testNameFilter n]
+  let testNames = [dirName ++ "/" ++ n | n <- names]
+  testNames <- filter testNames
+  when (length testNames == 0) $ do
+    putStrLn ("no tests found in " ++ dirName)
+    exitFailure
+  pure $ MkTestPool poolName reqs cg testNames
+    where
+      -- Directory without `run` file is not a test
+      isTest : (path : String) -> IO Bool
+      isTest path = exists (path ++ "/run")
+
+      filter : (testPaths : List String) -> IO (List String)
+      filter [] = pure []
+      filter (p :: ps) =
+          do rem <- filter ps
+             case !(isTest p) of
+               True  => pure $ p :: rem
+               False => pure rem
+
 
 ||| Only keep the tests that have been asked for
 export
@@ -367,32 +452,45 @@ poolRunner opts pool
        let tests = filterTests opts (testCases pool)
        let (_ :: _) = tests
              | [] => pure initSummary
-       putStrLn banner
        -- if so make sure the constraints are satisfied
-       cs <- for (constraints pool) $ \ req => do
+       cs <- for (toList (codegen pool) ++ constraints pool) $ \ req => do
           mfp <- checkRequirement req
-          putStrLn $ case mfp of
-            Nothing => show req ++ " not found"
-            Just fp => "Found " ++ show req ++ " at " ++ fp
-          pure mfp
+          let msg = case mfp of
+                      Nothing => "✗ " ++ show req ++ " not found"
+                      Just fp => "✓ Found " ++ show req ++ " at " ++ fp
+          pure (mfp, msg)
+       let (cs, msgs) = unzip cs
+
+       putStrLn (banner msgs)
+
        let Just _ = the (Maybe (List String)) (sequence cs)
              | Nothing => pure initSummary
+
+       -- if the test pool requires a specific codegen then use that
+       let opts = case codegen pool of
+                    Nothing => { codegen := Nothing } opts
+                    Just cg => { codegen := Just (show @{CG} cg) } opts
+                    Default => opts
        -- if so run them all!
-       loop initSummary tests
+       loop opts initSummary tests
 
   where
 
-    banner : String
-    banner =
-      let separator = fastPack $ replicate 72 '-' in
-      fastUnlines [ "", separator, pool.poolName, separator, "" ]
+    separator : String
+    separator = fastPack $ replicate 72 '-'
 
-    loop : Summary -> List String -> IO Summary
-    loop acc [] = pure acc
-    loop acc tests
+    banner : List String -> String
+    banner msgs = fastUnlines
+        $ [ "", separator, pool.poolName ]
+       ++ msgs
+       ++ [ separator ]
+
+    loop : Options -> Summary -> List String -> IO Summary
+    loop opts acc [] = pure acc
+    loop opts acc tests
       = do let (now, later) = splitAt opts.threads tests
            bs <- map await <$> traverse (runTest opts) now
-           loop (updateSummary bs acc) later
+           loop opts (updateSummary bs acc) later
 
 
 ||| A runner for a whole test suite
@@ -401,11 +499,11 @@ runner : List TestPool -> IO ()
 runner tests
     = do args <- getArgs
          Just opts <- options args
-            | _ => do print args
-                      putStrLn (usage "runtests")
+            | _ => do printLn args
+                      putStrLn usage
          -- if no CG has been set, find a sensible default based on what is available
          opts <- case codegen opts of
-                   Nothing => pure $ record { codegen = !findCG } opts
+                   Nothing => pure $ { codegen := !findCG } opts
                    Just _ => pure opts
          -- run the tests
          res <- concat <$> traverse (poolRunner opts) tests
@@ -420,7 +518,7 @@ runner tests
          let list = fastUnlines res.failure
          when (nfail > 0) $
            do putStrLn "Failing tests:"
-              putStrLn list
+              putStr list
          -- always overwrite the failure file, if it is given
          whenJust opts.failureFile $ \ path =>
            do Right _ <- writeFile path list
@@ -431,5 +529,3 @@ runner tests
          if nfail == 0
            then exitWith ExitSuccess
            else exitWith (ExitFailure 1)
-
--- [ EOF ]

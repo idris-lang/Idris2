@@ -1,7 +1,7 @@
 import System
 import System.File
 import System.Info
-import Data.Strings
+import Data.String
 
 windowsPath : String -> String
 windowsPath path =
@@ -22,7 +22,7 @@ main = do
     putStrLn "opened"
     Right output <- fGetLine fh
         | Left err => printLn err
-    pclose fh
+    ignore $ pclose fh
     putStrLn "closed"
     let [idris2, _] = split ((==) ',') output
         | _ => printLn "Unexpected result"

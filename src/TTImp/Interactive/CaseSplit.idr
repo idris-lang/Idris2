@@ -6,16 +6,18 @@ import Core.Core
 import Core.Env
 import Core.Metadata
 import Core.Normalise
-import Core.Options
 import Core.TT
 import Core.UnifyState
 import Core.Value
+
+import Idris.Syntax
 
 import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.ProcessDef
 import TTImp.ProcessDecls
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
@@ -35,6 +37,7 @@ data ClauseUpdate : Type where
      Invalid : ClauseUpdate
 
 export
+covering
 Show ClauseUpdate where
   show (Valid lhs updates) = "Valid: " ++ show lhs ++ "\n" ++ "Updates: " ++ show updates
   show (Impossible lhs) = "Impossible: " ++ show lhs
@@ -121,7 +124,7 @@ unique : List String -> List String -> Int -> List Name -> String
 unique [] supply suff usedns = unique supply supply (suff + 1) usedns
 unique (str :: next) supply suff usedns
     = let var = mkVarN str suff in
-          if UN var `elem` usedns
+          if UN (Basic var) `elem` usedns
              then unique next supply suff usedns
              else var
   where
@@ -133,7 +136,8 @@ defaultNames : List String
 defaultNames = ["x", "y", "z", "w", "v", "s", "t", "u"]
 
 export
-getArgName : {auto c : Ref Ctxt Defs} ->
+getArgName : {vars : _} ->
+             {auto c : Ref Ctxt Defs} ->
              Defs -> Name ->
              List Name -> -- explicitly bound names (possibly coming later),
                           -- so we don't invent a default
@@ -152,7 +156,7 @@ getArgName defs x bound allvars ty
              else lookupName n ts
 
     notBound : String -> Bool
-    notBound x = not $ UN x `elem` bound
+    notBound x = not $ UN (Basic x) `elem` bound
 
     findNames : NF vars -> Core (List String)
     findNames (NBind _ x (Pi _ _ _ _) _)
@@ -164,19 +168,20 @@ getArgName defs x bound allvars ty
     findNames ty = pure (filter notBound defaultNames)
 
     getName : Name -> List String -> List Name -> String
-    getName (UN n) defs used = unique (n :: defs) (n :: defs) 0 used
+    getName (UN (Basic n)) defs used = unique (n :: defs) (n :: defs) 0 used
     getName _ defs used = unique defs defs 0 used
 
 export
-getArgNames : {auto c : Ref Ctxt Defs} ->
+getArgNames : {vars : _} ->
+              {auto c : Ref Ctxt Defs} ->
               Defs -> List Name -> List Name -> Env Term vars -> NF vars ->
               Core (List String)
 getArgNames defs bound allvars env (NBind fc x (Pi _ _ p ty) sc)
     = do ns <- case p of
-                    Explicit => pure [!(getArgName defs x bound allvars ty)]
+                    Explicit => pure [!(getArgName defs x bound allvars !(evalClosure defs ty))]
                     _ => pure []
          sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
-         pure $ ns ++ !(getArgNames defs bound (map UN ns ++ allvars) env sc')
+         pure $ ns ++ !(getArgNames defs bound (map (UN . Basic) ns ++ allvars) env sc')
 getArgNames defs bound allvars env val = pure []
 
 export
@@ -228,36 +233,16 @@ updateArg allvars var con (IAs fc nameFC s n p)
     = updateArg allvars var con p
 updateArg allvars var con tm = pure $ Implicit (getFC tm) True
 
-data ArgType
-    = Explicit FC RawImp
-    | Auto     FC RawImp
-    | Named    FC Name RawImp
-
 update : {auto c : Ref Ctxt Defs} ->
          List Name -> -- all the variable names
          (var : Name) -> (con : Name) ->
-         ArgType -> Core ArgType
+         Arg -> Core Arg
 update allvars var con (Explicit fc arg)
     = pure $ Explicit fc !(updateArg allvars var con arg)
 update allvars var con (Auto fc arg)
     = pure $ Auto fc !(updateArg allvars var con arg)
 update allvars var con (Named fc n arg)
     = pure $ Named fc n !(updateArg allvars var con arg)
-
-getFnArgs : RawImp -> List ArgType -> (RawImp, List ArgType)
-getFnArgs (IApp fc tm a) args
-    = getFnArgs tm (Explicit fc a :: args)
-getFnArgs (IAutoApp fc tm a) args
-    = getFnArgs tm (Auto fc a :: args)
-getFnArgs (INamedApp fc tm n a) args
-    = getFnArgs tm (Named fc n a :: args)
-getFnArgs tm args = (tm, args)
-
-apply : RawImp -> List ArgType -> RawImp
-apply f (Explicit fc a :: args) = apply (IApp fc f a) args
-apply f (Auto fc a :: args) = apply (IAutoApp fc f a) args
-apply f (Named fc n a :: args) = apply (INamedApp fc f n a) args
-apply f [] = f
 
 -- Return a new LHS to check, replacing 'var' with an application of 'con'
 -- Also replace any variables with '_' to allow elaboration to
@@ -288,7 +273,7 @@ recordUpdate : {auto u : Ref UPD Updates} ->
 recordUpdate fc n tm
     = do u <- get UPD
          let nupdates = map (\x => (fst x, IVar fc (snd x))) (namemap u)
-         put UPD (record { updates $= ((n, substNames [] nupdates tm) ::) } u)
+         put UPD ({ updates $= ((n, substNames [] nupdates tm) ::) } u)
 
 findUpdates : {auto u : Ref UPD Updates} ->
               Defs -> RawImp -> RawImp -> Core ()
@@ -298,8 +283,8 @@ findUpdates defs (IVar fc n) (IVar _ n')
            Nothing =>
               do u <- get UPD
                  case lookup n' (namemap u) of
-                      Nothing => put UPD (record { namemap $= ((n', n) ::) } u)
-                      Just nm => put UPD (record { updates $= ((n, IVar fc nm) ::) } u)
+                      Nothing => put UPD ({ namemap $= ((n', n) ::) } u)
+                      Just nm => put UPD ({ updates $= ((n, IVar fc nm) ::) } u)
 findUpdates defs (IVar fc n) tm = recordUpdate fc n tm
 findUpdates defs (IApp _ f a) (IApp _ f' a')
     = do findUpdates defs f f'
@@ -328,9 +313,10 @@ getUpdates defs orig updated
 
 mkCase : {auto c : Ref Ctxt Defs} ->
          {auto u : Ref UST UState} ->
+         {auto s : Ref Syn SyntaxInfo} ->
          Int -> RawImp -> RawImp -> Core ClauseUpdate
 mkCase {c} {u} fn orig lhs_raw
-    = do m <- newRef MD (initMetadata "(interactive)")
+    = do m <- newRef MD (initMetadata $ Virtual Interactive)
          defs <- get Ctxt
          ust <- get UST
          catch
@@ -338,6 +324,7 @@ mkCase {c} {u} fn orig lhs_raw
                -- Fixes Issue #74. The problem is that if the function is defined in a sub module,
                -- then the current namespace (accessed by calling getNS) differs from the function
                -- namespace, therefore it is not considered visible by TTImp.Elab.App.checkVisibleNS
+               -- FIXME: Causes issue #1385
                setAllPublic True
 
                -- Use 'Rig0' since it might be a type level function, or it might
@@ -351,7 +338,7 @@ mkCase {c} {u} fn orig lhs_raw
                setAllPublic False
                put Ctxt defs -- reset the context, we don't want any updates
                put UST ust
-               lhs' <- unelabNoSugar [] lhs
+               lhs' <- map (map rawName) $ unelabNoSugar [] lhs
 
                log "interaction.casesplit" 3 $ "Original LHS: " ++ show orig
                log "interaction.casesplit" 3 $ "New LHS: " ++ show lhs'
@@ -361,11 +348,12 @@ mkCase {c} {u} fn orig lhs_raw
                do put Ctxt defs
                   put UST ust
                   case err of
-                       WhenUnifying _ env l r err
-                          => if !(impossibleOK defs !(nf defs env l)
-                                                    !(nf defs env r))
-                                then pure (Impossible lhs_raw)
-                                else pure Invalid
+                       WhenUnifying _ gam env l r err
+                         => do let defs = { gamma := gam } defs
+                               if !(impossibleOK defs !(nf defs env l)
+                                                      !(nf defs env r))
+                                  then pure (Impossible lhs_raw)
+                                  else pure Invalid
                        _ => pure Invalid)
 
 substLets : {vars : _} ->
@@ -386,6 +374,7 @@ export
 getSplitsLHS : {auto m : Ref MD Metadata} ->
                {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                FC -> Nat -> ClosedTerm -> Name ->
                Core (SplitResult (List ClauseUpdate))
 getSplitsLHS fc envlen lhs_in n
@@ -398,12 +387,13 @@ getSplitsLHS fc envlen lhs_in n
          OK (fn, tyn, cons) <- findCons n lhs
             | SplitFail err => pure (SplitFail err)
 
-         rawlhs <- unelabNoSugar [] lhs
+         rawlhs <- map (map rawName) $ unelabNoSugar [] lhs
          trycases <- traverse (\c => newLHS fc envlen usedns n c rawlhs) cons
 
          let Just idx = getNameID fn (gamma defs)
              | Nothing => undefinedName fc fn
          cases <- traverse (mkCase idx rawlhs) trycases
+         log "interaction.casesplit" 3 $ "Found cases: " ++ show cases
 
          pure (combine cases [])
 
@@ -411,6 +401,7 @@ export
 getSplits : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             (NonEmptyFC -> ClosedTerm -> Bool) -> Name ->
             Core (SplitResult (List ClauseUpdate))
 getSplits p n

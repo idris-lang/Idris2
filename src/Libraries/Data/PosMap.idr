@@ -6,8 +6,9 @@
 ||| [1] https://www.staff.city.ac.uk/~ross/papers/FingerTree.pdf
 module Libraries.Data.PosMap
 
-import Data.List
 import Core.FC
+
+import Data.List
 
 %default total
 

@@ -1,6 +1,6 @@
 module TTImp.Elab.Utils
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Core
 import Core.Env
@@ -40,7 +40,7 @@ findErasedFrom defs pos (NBind fc x (Pi _ c _ aty) scf)
          -- argument position is available
          sc <- scf defs (toClosure defaultOpts [] (Erased fc (isErased c)))
          (erest, dtrest) <- findErasedFrom defs (1 + pos) sc
-         let dt' = if !(detagSafe defs aty)
+         let dt' = if !(detagSafe defs !(evalClosure defs aty))
                       then (pos :: dtrest) else dtrest
          pure $ if isErased c
                    then (pos :: erest, dt')
@@ -65,9 +65,9 @@ updateErasable n
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure ()
          (es, dtes) <- findErased (type gdef)
-         ignore $ addDef n $ record
-                    { eraseArgs = es,
-                      safeErase = dtes } gdef
+         ignore $ addDef n $
+                    { eraseArgs := es,
+                      safeErase := dtes } gdef
 
 export
 wrapErrorC : List ElabOpt -> (Error -> Error) -> Core a -> Core a

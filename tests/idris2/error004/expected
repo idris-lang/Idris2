@@ -1,7 +1,7 @@
 1/1: Building Error1 (Error1.idr)
 Error: While processing right hand side of wrong. Can't find an implementation for Show (Vect 4 Integer).
 
-Error1.idr:8:9--8:40
+Error1:8:9--8:40
  4 |      Nil : Vect Z a
  5 |      (::) : a -> Vect k a -> Vect (S k) a
  6 | 
@@ -13,7 +13,7 @@ Error1.idr:8:9--8:40
 Error: While processing right hand side of show. Multiple solutions found in search of:
     Show (Vect k Integer)
 
-Error2.idr:13:38--13:45
+Error2:13:38--13:45
  09 |   show (x :: xs) = show x ++ ", " ++ show xs
  10 | 
  11 | Show (Vect n Integer) where
@@ -22,12 +22,12 @@ Error2.idr:13:38--13:45
                                            ^^^^^^^
 
 Possible correct results:
-    Show implementation at Error2.idr:11:1--13:45
-    Show implementation at Error2.idr:7:1--9:45
+    Show implementation at Error2:11:1--13:45
+    Show implementation at Error2:7:1--9:45
 Error: While processing right hand side of wrong. Multiple solutions found in search of:
     Show (Vect 1 Integer)
 
-Error2.idr:16:9--16:34
+Error2:16:9--16:34
  12 |   show [] = "END"
  13 |   show (x :: xs) = show x ++ ", " ++ show xs
  14 | 
@@ -36,5 +36,5 @@ Error2.idr:16:9--16:34
               ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Possible correct results:
-    Show implementation at Error2.idr:11:1--13:45
-    Show implementation at Error2.idr:7:1--9:45
+    Show implementation at Error2:11:1--13:45
+    Show implementation at Error2:7:1--9:45
