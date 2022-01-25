@@ -244,14 +244,12 @@ install-libdocs: libdocs
 	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/network
 	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/test
 	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/linear
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/papers
 	cp -r libs/prelude/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/prelude
 	cp -r libs/base/build/docs/*    ${PREFIX}/${NAME_VERSION}/docs/base
 	cp -r libs/contrib/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/contrib
 	cp -r libs/network/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/network
 	cp -r libs/test/build/docs/*    ${PREFIX}/${NAME_VERSION}/docs/test
 	cp -r libs/linear/build/docs/*  ${PREFIX}/${NAME_VERSION}/docs/linear
-	cp -r libs/papers/build/docs/*  ${PREFIX}/${NAME_VERSION}/docs/papers
 	install -m 644 support/docs/*   ${PREFIX}/${NAME_VERSION}/docs
 
 
