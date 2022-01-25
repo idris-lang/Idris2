@@ -63,13 +63,13 @@ implementation Sized e => Sized (Digit e) where
   size = foldr (\a, z => size a + z) 0
 
 implementation Show a => Show (Digit a) where
-  showPrec p (One a)        = prettyShow p $ 
+  showPrec p (One a)        = prettyShow p $
     "One " ++ showApp a
-  showPrec p (Two a b)      = prettyShow p $ 
+  showPrec p (Two a b)      = prettyShow p $
     "Two " ++ showApp a ++ " " ++ showApp b
-  showPrec p (Three a b c)  = prettyShow p $ 
+  showPrec p (Three a b c)  = prettyShow p $
     "Three " ++ showApp a ++ " " ++ showApp b ++ " " ++ showApp c
-  showPrec p (Four a b c d) = prettyShow p $ 
+  showPrec p (Four a b c d) = prettyShow p $
     "Four " ++ showApp a ++ " " ++ showApp b ++ " " ++ showApp c ++ " " ++ showApp d
 
 
@@ -98,9 +98,9 @@ implementation Sized e => Sized (Node e) where
   size (Node3 s _ _ _) = s
 
 implementation Show a => Show (Node a) where
-  showPrec p (Node2 _ a b)   = prettyShow p $ 
+  showPrec p (Node2 _ a b)   = prettyShow p $
     "Node2 " ++ showApp a ++ " " ++ showApp b
-  showPrec p (Node3 _ a b c) = prettyShow p $ 
+  showPrec p (Node3 _ a b c) = prettyShow p $
     "Node3 " ++ showApp a ++ " " ++ showApp b ++ " " ++ showApp c
 
 -- Smart Constructors
@@ -189,17 +189,17 @@ lookupDigit i (One a) = (i, a)
 lookupDigit i (Two a b) =
   let sa = size a
   in if i < sa
-    then (i, a) 
+    then (i, a)
     else (i `minus` sa, b)
-lookupDigit i (Three a b c) = 
+lookupDigit i (Three a b c) =
   let sa  = size a
       sab = sa + size b
-  in if i < sa  
+  in if i < sa
     then (i, a)
-    else if i < sab 
+    else if i < sab
       then (i `minus` sa, b)
       else ((i `minus` sa) `minus` sab, c)
-lookupDigit i (Four a b c d) = 
+lookupDigit i (Four a b c d) =
   let sa   = size a
       sab  = sa + size b
       sabc = sab + size c
@@ -230,13 +230,13 @@ export
 lookupTree : Sized a => Nat -> FingerTree a -> (Nat, a)
 lookupTree _ Empty = err "lookupTree of empty tree"
 lookupTree i (Single x) = (i, x)
-lookupTree i (Deep _ pr m sf) = 
+lookupTree i (Deep _ pr m sf) =
   let spr = size pr
       spm = spr + size m
-  in if i < spr  
+  in if i < spr
     then lookupDigit i pr
-    else if i < spm  
-      then let (i', xs) = lookupTree (i `minus` spr) m 
+    else if i < spm
+      then let (i', xs) = lookupTree (i `minus` spr) m
            in lookupNode i' xs
       else lookupDigit (i `minus` spm) sf
 
@@ -287,7 +287,7 @@ export
 adjustTree : Sized a => (Nat -> a -> a) -> Nat -> FingerTree a -> FingerTree a
 adjustTree _ _ Empty = err "adjustTree of empty tree"
 adjustTree f i (Single x) = Single (f i x)
-adjustTree f i (Deep s pr m sf) = 
+adjustTree f i (Deep s pr m sf) =
   let spr = size pr
       spm = spr + size m
   in if i < spr
@@ -331,8 +331,8 @@ export
 viewRTree  : Sized a => FingerTree a -> Maybe (FingerTree a, a)
 viewRTree Empty = Nothing
 viewRTree (Single z) = Just (Empty, z)
-viewRTree (Deep s pr m (One z)) = 
-  let tr = 
+viewRTree (Deep s pr m (One z)) =
+  let tr =
     case viewRTree m of
         Nothing      => digitToTree pr
         Just (m', y) => Deep (s `minus` size z) pr m' (nodeToDigit y)
@@ -372,12 +372,12 @@ data Split t a = MkSplit t a t
 
 splitDigit : Sized a => Nat -> Digit a -> Split (Maybe (Digit a)) a
 splitDigit i (One a) = MkSplit Nothing a Nothing
-splitDigit i (Two a b) = 
+splitDigit i (Two a b) =
   let sa = size a
   in if i < sa
     then MkSplit Nothing a (Just (One b))
     else MkSplit (Just (One a)) b Nothing
-splitDigit i (Three a b c) = 
+splitDigit i (Three a b c) =
   let sa  = size a
       sab = sa + size b
   in if i < sa
@@ -385,7 +385,7 @@ splitDigit i (Three a b c) =
     else if i < sab
       then MkSplit (Just (One a)) b (Just (One c))
       else MkSplit (Just (Two a b)) c Nothing
-splitDigit i (Four a b c d) = 
+splitDigit i (Four a b c d) =
   let sa   = size a
       sab  = sa + size b
       sabc = sab + size c
@@ -636,7 +636,7 @@ implementation Show a => Show (FingerTree a) where
 public export
 implementation Sized a => Eq a => Eq (FingerTree a) where
   x == y = case (viewLTree x, viewLTree y) of
-    (Just (x1, xs), Just (y1, ys)) => if x1 == y1 
+    (Just (x1, xs), Just (y1, ys)) => if x1 == y1
       then assert_total (xs == ys)
       else False
     (Nothing, Nothing) => True
@@ -645,7 +645,7 @@ implementation Sized a => Eq a => Eq (FingerTree a) where
 public export
 implementation Sized a => Ord a => Ord (FingerTree a) where
   compare x y = case (viewLTree x, viewLTree y) of
-    (Just (x1, xs), Just (y1, ys)) => 
+    (Just (x1, xs), Just (y1, ys)) =>
       let res = compare x1 y1
       in if res == EQ
         then assert_total (compare xs ys)
@@ -676,12 +676,12 @@ unzipWith' f zs = foldr app (Empty, Empty) zs
     app (MkElem z) (xs, ys) = let (x, y) = f z in (MkElem x `consTree` xs, MkElem y `consTree` ys)
 
 export
-unzipWith3' : (a -> (b, c, d)) -> FingerTree (Elem a) 
-            -> (FingerTree (Elem b), FingerTree (Elem c), FingerTree (Elem d)) 
+unzipWith3' : (a -> (b, c, d)) -> FingerTree (Elem a)
+            -> (FingerTree (Elem b), FingerTree (Elem c), FingerTree (Elem d))
 unzipWith3' f ws = foldr app (Empty, Empty, Empty) ws
   where
-    app : Elem a -> (FingerTree (Elem b), FingerTree (Elem c), FingerTree (Elem d)) 
+    app : Elem a -> (FingerTree (Elem b), FingerTree (Elem c), FingerTree (Elem d))
         -> (FingerTree (Elem b), FingerTree (Elem c), FingerTree (Elem d))
-    app (MkElem w) (xs, ys, zs) = 
-      let (x, y, z) = f w 
+    app (MkElem w) (xs, ys, zs) =
+      let (x, y, z) = f w
       in (MkElem x `consTree` xs, MkElem y `consTree` ys, MkElem z `consTree` zs)

@@ -1,4 +1,4 @@
-||| General purpose two-end finite sequences, 
+||| General purpose two-end finite sequences,
 ||| with length in its type.
 |||
 ||| This is implemented by finger tree.
@@ -34,7 +34,7 @@ singleton a = MkSeq (Single (MkElem a))
 ||| O(n). A sequence of length n with a the value of every element.
 export
 replicate : (n : Nat) -> (a : e) -> Seq n e
-replicate n a = MkSeq (replicate' n a)    
+replicate n a = MkSeq (replicate' n a)
 
 ||| O(1). The number of elements in the sequence.
 export
@@ -111,7 +111,7 @@ fromList xs = fromVect (Vect.fromList xs)
 export
 toVect : {n :Nat} -> Seq n a -> Vect n a
 toVect _  {n = 0}   = []
-toVect ft {n = S _} = 
+toVect ft {n = S _} =
   let (x, ft') = viewl ft
   in x :: toVect ft'
 
@@ -139,17 +139,17 @@ update i a t = adjust (const a) i t
 ||| O(log(min(i, n-i))). Split a sequence at a given position.
 export
 splitAt : (i : Nat) -> Seq (i + j) a -> (Seq i a, Seq j a)
-splitAt i (MkSeq xs) = 
-  let (l, r) = split i xs 
+splitAt i (MkSeq xs) =
+  let (l, r) = split i xs
   in (MkSeq l, MkSeq r)
 
 ||| O(log(min(i, n-i))). The first i elements of a sequence.
-export 
+export
 take : (i : Nat) -> Seq (i + j) a -> Seq i a
 take i seq = fst (splitAt i seq)
 
 ||| O(log(min(i, n-i))). Elements of a sequence after the first i.
-export 
+export
 drop : (i : Nat) -> Seq (i + j) a -> Seq j a
 drop i seq = snd (splitAt i seq)
 
@@ -193,10 +193,10 @@ public export
 implementation Zippable (Seq n) where
   zipWith f (MkSeq x) (MkSeq y) = MkSeq (zipWith' f x y)
 
-  zipWith3 f (MkSeq x) (MkSeq y) (MkSeq z) = MkSeq (zipWith3' f x y z) 
+  zipWith3 f (MkSeq x) (MkSeq y) (MkSeq z) = MkSeq (zipWith3' f x y z)
 
   unzipWith f (MkSeq zs) = let (xs, ys) = unzipWith' f zs in (MkSeq xs, MkSeq ys)
-      
+
   unzipWith3 f (MkSeq ws) = let (xs, ys, zs) = unzipWith3' f ws in (MkSeq xs, MkSeq ys, MkSeq zs)
 
 ||| This implementation works like a ZipList,

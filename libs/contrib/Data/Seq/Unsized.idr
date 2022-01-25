@@ -27,7 +27,7 @@ singleton a = MkSeq (Single (MkElem a))
 ||| O(n). A sequence of length n with a the value of every element.
 export
 replicate : (n : Nat) -> (a : e) -> Seq e
-replicate n a = MkSeq (replicate' n a)    
+replicate n a = MkSeq (replicate' n a)
 
 ||| O(1). The number of elements in the sequence.
 export
@@ -127,19 +127,19 @@ update i a t = adjust (const a) i t
 export
 splitAt : Nat -> Seq a -> (Seq a, Seq a)
 splitAt i s@(MkSeq t) = if i < length' t
-  then let (l, r) = split i t 
+  then let (l, r) = split i t
        in (MkSeq l, MkSeq r)
   else (s, empty)
 
 ||| O(log(min(i,n-i))). The first i elements of a sequence.
 ||| If the sequence contains fewer than i elements, the whole sequence is returned.
-export 
+export
 take : Nat -> Seq a -> Seq a
 take i seq = fst (splitAt i seq)
 
 ||| O(log(min(i,n-i))). Elements of a sequence after the first i.
 ||| If the sequence contains fewer than i elements, the empty sequence is returned.
-export 
+export
 drop : Nat -> Seq a -> Seq a
 drop i seq = snd (splitAt i seq)
 
@@ -183,10 +183,10 @@ public export
 implementation Zippable Seq where
   zipWith f (MkSeq x) (MkSeq y) = MkSeq (zipWith' f x y)
 
-  zipWith3 f (MkSeq x) (MkSeq y) (MkSeq z) = MkSeq (zipWith3' f x y z) 
+  zipWith3 f (MkSeq x) (MkSeq y) (MkSeq z) = MkSeq (zipWith3' f x y z)
 
   unzipWith f (MkSeq zs) = let (xs, ys) = unzipWith' f zs in (MkSeq xs, MkSeq ys)
-      
+
   unzipWith3 f (MkSeq ws) = let (xs, ys, zs) = unzipWith3' f ws in (MkSeq xs, MkSeq ys, MkSeq zs)
 
 public export
