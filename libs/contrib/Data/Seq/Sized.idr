@@ -2,7 +2,7 @@
 ||| with length in its type.
 |||
 ||| This is implemented by finger tree.
-module Data.Seq
+module Data.Seq.Sized
 
 import public Data.Fin
 import public Data.Nat
