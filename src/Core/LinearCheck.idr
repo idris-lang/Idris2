@@ -1,6 +1,6 @@
 module Core.LinearCheck
 
-import Core.CaseTree
+import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -223,7 +223,7 @@ mutual
                                 _ => False)
                           rig
            logC "quantity" 10 $ do
-             def <- the (Core String) $ case definition gdef of
+             def <- case definition gdef of
                          PMDef _ _ (STerm _ tm) _ _ =>
                               do tm' <- toFullNames tm
                                  pure (show tm')
@@ -335,10 +335,10 @@ mutual
                       opts <- getSession
                       when (debugElabCheck opts) $ do
                         aty <- getNF gaty
-                        when (not !(convert defs env aty ty)) $
+                        when (not !(convert defs env aty !(evalClosure defs ty))) $
                            do ty' <- quote defs env ty
                               aty' <- quote defs env aty
-                              throw (CantConvert fc env ty' aty')
+                              throw (CantConvert fc (gamma defs) env ty' aty')
                       pure (App fc f' aerased,
                             glueBack defs env sc',
                             fused ++ aused)
@@ -346,12 +346,12 @@ mutual
                       do Just _ <- lookupCtxtExact n (gamma defs)
                               | _ => undefinedName fc n
                          tfty <- getTerm gfty
-                         throw (GenericMsg fc ("Linearity checking failed on " ++ show f' ++
-                              " (" ++ show tfty ++ " not a function type)"))
+                         throw (GenericMsg fc ("Linearity checking failed on " ++ show !(toFullNames f') ++
+                              " (" ++ show !(toFullNames tfty) ++ " not a function type)"))
 
                 _ => do tfty <- getTerm gfty
-                        throw (GenericMsg fc ("Linearity checking failed on " ++ show f' ++
-                              " (" ++ show tfty ++ " not a function type)"))
+                        throw (GenericMsg fc ("Linearity checking failed on " ++ show !(toFullNames f') ++
+                              " (" ++ show !(toFullNames tfty) ++ " not a function type)"))
 
   lcheck rig erase env (As fc s as pat)
       = do (as', _, _) <- lcheck rig erase env as
@@ -359,7 +359,7 @@ mutual
            pure (As fc s as' pat', pty, u)
   lcheck rig erase env (TDelayed fc r ty)
       = do (ty', _, u) <- lcheck rig erase env ty
-           pure (TDelayed fc r ty', gType fc, u)
+           pure (TDelayed fc r ty', gType fc (MN "top" 0), u)
   lcheck rig erase env (TDelay fc r ty val)
       = do (ty', _, _) <- lcheck erased erase env ty
            (val', gty, u) <- lcheck rig erase env val
@@ -377,8 +377,9 @@ mutual
       = pure (PrimVal fc c, gErased fc, [])
   lcheck rig erase env (Erased fc i)
       = pure (Erased fc i, gErased fc, [])
-  lcheck rig erase env (TType fc)
-      = pure (TType fc, gType fc, [])
+  lcheck rig erase env (TType fc u)
+      -- Not universe checking here, just use the top of the hierarchy
+      = pure (TType fc u, gType fc (MN "top" 0), [])
 
   lcheckBinder : {vars : _} ->
                  {auto c : Ref Ctxt Defs} ->
@@ -671,7 +672,7 @@ mutual
            empty <- clearDefs defs
            ty <- quote empty env nty
            throw (GenericMsg fc ("Linearity checking failed on metavar "
-                      ++ show n ++ " (" ++ show ty
+                      ++ show !(toFullNames n) ++ " (" ++ show !(toFullNames ty)
                       ++ " not a function type)"))
   lcheckMeta rig erase env fc n idx [] chk nty
       = do defs <- get Ctxt

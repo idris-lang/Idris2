@@ -1,5 +1,9 @@
 module Data.Nat
 
+import public Control.Relation
+import public Control.Order
+import public Control.Function
+
 %default total
 
 export
@@ -9,6 +13,10 @@ Uninhabited (Z = S n) where
 export
 Uninhabited (S n = Z) where
   uninhabited Refl impossible
+
+export
+Uninhabited (a = b) => Uninhabited (S a = S b) where
+  uninhabited Refl @{ab} = uninhabited @{ab} Refl
 
 public export
 isZero : Nat -> Bool
@@ -53,6 +61,19 @@ pred (S n) = n
 
 -- Comparisons
 
+export
+compareNatDiag : (k : Nat) -> compareNat k k === EQ
+compareNatDiag Z = Refl
+compareNatDiag (S k) = compareNatDiag k
+
+export
+compareNatFlip : (m, n : Nat) ->
+  flip Prelude.compareNat m n === contra (compareNat m n)
+compareNatFlip 0      0    = Refl
+compareNatFlip 0     (S n) = Refl
+compareNatFlip (S m) 0     = Refl
+compareNatFlip (S m) (S n) = compareNatFlip m n
+
 public export
 data NotBothZero : (n, m : Nat) -> Type where
   LeftIsNotZero  : NotBothZero (S n) m
@@ -75,6 +96,41 @@ Uninhabited (LTE (S n) Z) where
 export
 Uninhabited (LTE m n) => Uninhabited (LTE (S m) (S n)) where
   uninhabited (LTESucc lte) = uninhabited lte
+
+public export
+Reflexive Nat LTE where
+  reflexive {x = Z} = LTEZero
+  reflexive {x = S _} = LTESucc $ reflexive
+
+public export
+Transitive Nat LTE where
+  transitive LTEZero _ = LTEZero
+  transitive (LTESucc xy) (LTESucc yz) =
+    LTESucc $ transitive xy yz
+
+public export
+Antisymmetric Nat LTE where
+  antisymmetric LTEZero LTEZero = Refl
+  antisymmetric (LTESucc xy) (LTESucc yx) =
+    cong S $ antisymmetric xy yx
+
+public export
+Connex Nat LTE where
+  connex {x = Z} _ = Left LTEZero
+  connex {y = Z} _ = Right LTEZero
+  connex {x = S _} {y = S _} prf =
+    case connex $ prf . (cong S) of
+      Left jk => Left $ LTESucc jk
+      Right kj => Right $ LTESucc kj
+
+public export
+Preorder Nat LTE where
+
+public export
+PartialOrder Nat LTE where
+
+public export
+LinearOrder Nat LTE where
 
 public export
 GTE : Nat -> Nat -> Type
@@ -118,6 +174,11 @@ export
 fromLteSucc : LTE (S m) (S n) -> LTE m n
 fromLteSucc (LTESucc x) = x
 
+export
+succNotLTEpred : {x : Nat} -> Not $ LTE (S x) x
+succNotLTEpred {x =   0} prf = succNotLTEzero prf
+succNotLTEpred {x = S _} prf = succNotLTEpred $ fromLteSucc prf
+
 public export
 isLTE : (m, n : Nat) -> Dec (LTE m n)
 isLTE Z n = Yes LTEZero
@@ -140,11 +201,6 @@ isGT : (m, n : Nat) -> Dec (GT m n)
 isGT m n = isLT n m
 
 export
-lteRefl : {n : Nat} -> LTE n n
-lteRefl {n = Z}   = LTEZero
-lteRefl {n = S k} = LTESucc lteRefl
-
-export
 lteSuccRight : LTE n m -> LTE n (S m)
 lteSuccRight LTEZero     = LTEZero
 lteSuccRight (LTESucc x) = LTESucc (lteSuccRight x)
@@ -154,11 +210,6 @@ lteSuccLeft : LTE (S n) m -> LTE n m
 lteSuccLeft (LTESucc x) = lteSuccRight x
 
 export
-lteTransitive : LTE n m -> LTE m p -> LTE n p
-lteTransitive LTEZero y = LTEZero
-lteTransitive (LTESucc x) (LTESucc y) = LTESucc (lteTransitive x y)
-
-public export
 lteAddRight : (n : Nat) -> LTE n (n + m)
 lteAddRight Z = LTEZero
 lteAddRight (S k) {m} = LTESucc (lteAddRight {m} k)
@@ -238,8 +289,8 @@ eqSucc : (0 left, right : Nat) -> left = right -> S left = S right
 eqSucc _ _ Refl = Refl
 
 export
-succInjective : (0 left, right : Nat) -> S left = S right -> left = right
-succInjective _ _ Refl = Refl
+Injective S where
+  injective Refl = Refl
 
 ||| A definition of non-zero with a better behaviour than `Not (x = Z)`
 ||| This is amenable to proof search and `NonZero Z` is more readily
@@ -408,7 +459,7 @@ plusLeftCancel : (left, right, right' : Nat) ->
   left + right = left + right' -> right = right'
 plusLeftCancel Z _ _ p = p
 plusLeftCancel (S left) right right' p =
-    plusLeftCancel left right right' (succInjective _ _ p)
+    plusLeftCancel left right right' $ injective p
 
 export
 plusRightCancel : (left, left', right : Nat) ->
@@ -443,10 +494,10 @@ plusLteMonotoneLeft p q r p_lt_q
 export
 plusLteMonotone : {m, n, p, q : Nat} -> m `LTE` n -> p `LTE` q ->
                   (m + p) `LTE` (n + q)
-plusLteMonotone left right
-  = lteTransitive
-      (plusLteMonotoneLeft m p q right)
-      (plusLteMonotoneRight q m n left)
+plusLteMonotone left right =
+  transitive
+    (plusLteMonotoneLeft m p q right)
+    (plusLteMonotoneRight q m n left)
 
 zeroPlusLeftZero : (a,b : Nat) -> (0 = a + b) -> a = 0
 zeroPlusLeftZero 0 0 Refl = Refl

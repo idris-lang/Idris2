@@ -4,17 +4,13 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.FC
-import Core.Name
 import Core.Options
 import Libraries.Utils.Path
 
 import Data.List
-import Data.Strings
 import Data.Maybe
 
 import System.Directory
-import System.File
-import System.Info
 
 %default total
 
@@ -106,8 +102,8 @@ nsToPath loc ns
             | Nothing => pure (Left (ModuleNotFound loc ns))
          pure (Right f)
 
--- Given a namespace, return the full path to the source module (if it
--- exists in the working directory)
+-- Given a namespace, return the path to the source module relative
+-- to the working directory, if the module exists.
 export
 nsToSource : {auto c : Ref Ctxt Defs} ->
              FC -> ModuleIdent -> Core String
@@ -126,11 +122,15 @@ export
 mbPathToNS : String -> Maybe String -> String -> Maybe ModuleIdent
 mbPathToNS wdir sdir fname =
   let
+    cleanPath : String -> String
+      := show
+       . the (Path -> Path) { hasTrailSep := False, body $= filter (/= CurDir) }
+       . parse
     sdir = fromMaybe "" sdir
     base = if isAbsolute fname then wdir </> sdir else sdir
   in
     unsafeFoldModuleIdent . reverse . splitPath . Path.dropExtension
-      <$> Path.dropBase base fname
+      <$> (Path.dropBase `on` cleanPath) base fname
 
 export
 corePathToNS : String -> Maybe String -> String -> Core ModuleIdent
@@ -207,27 +207,24 @@ getTTCFileName inp ext
          let bdir = build_dir d
          pure $ bdir </> "ttc" </> fname
 
+-- Given a source file, return the name of the corresponding object file.
+-- As above, but without the build directory
+export
+getObjFileName : {auto c : Ref Ctxt Defs} ->
+                 String -> String -> Core String
+getObjFileName inp ext
+    = do -- Get its namespace from the file relative to the working directory
+         -- and generate the ttc file from that
+         ns <- ctxtPathToNS inp
+         let fname = ModuleIdent.toPath ns <.> ext
+         pure $ fname
+
 -- Given a root executable name, return the name in the build directory
 export
 getExecFileName : {auto c : Ref Ctxt Defs} -> String -> Core String
 getExecFileName efile
     = do d <- getDirs
          pure $ build_dir d </> efile
-
-getEntries : Directory -> IO (List String)
-getEntries d
-    = do Right f <- dirEntry d
-             | Left err => pure []
-         ds <- assert_total $ getEntries d
-         pure (f :: ds)
-
-dirEntries : String -> IO (Either FileError (List String))
-dirEntries dir
-    = do Right d <- openDir dir
-             | Left err => pure (Left err)
-         ds <- getEntries d
-         closeDir d
-         pure (Right ds)
 
 -- Find an ipkg file in any of the directories above this one
 -- returns the directory, the ipkg file name, and the directories we've
@@ -244,7 +241,7 @@ findIpkgFile
     covering
     findIpkgFile' : String -> String -> IO (Maybe (String, String, String))
     findIpkgFile' dir up
-        = do Right files <- dirEntries dir
+        = do Right files <- listDir dir
                  | Left err => pure Nothing
              let Just f = find (\f => extension f == Just "ipkg") files
                  | Nothing => case splitParent dir of

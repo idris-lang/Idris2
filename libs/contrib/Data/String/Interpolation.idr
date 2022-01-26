@@ -2,8 +2,6 @@
 ||| Not as fancy
 module Data.String.Interpolation
 
-import Data.Strings
-
 namespace Data.String.Interpolation.Basic
   %inline
   public export

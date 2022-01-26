@@ -1,7 +1,6 @@
 module Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree
 
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc
-import Libraries.Text.Parser
 
 %default total
 
@@ -56,7 +55,8 @@ traverse f (STLine i) = pure $ STLine i
 traverse f (STAnn ann rest) = STAnn <$> f ann <*> traverse f rest
 traverse f (STConcat xs) = assert_total $ STConcat <$> Prelude.traverse (traverse f) xs
 
-sdocToTreeParser : SimpleDocStream ann -> (Maybe (SimpleDocTree ann), Maybe (SimpleDocStream ann))
+sdocToTreeParser : SimpleDocStream ann ->
+  (Maybe (SimpleDocTree ann), Maybe (SimpleDocStream ann))
 sdocToTreeParser SEmpty = (Just STEmpty, Nothing)
 sdocToTreeParser (SChar c rest) = case sdocToTreeParser rest of
   (Just tree, rest') => (Just $ STConcat [STChar c, tree], rest')
@@ -70,10 +70,10 @@ sdocToTreeParser (SLine i rest) = case sdocToTreeParser rest of
 sdocToTreeParser (SAnnPush ann rest) = case sdocToTreeParser rest of
   (tree, Nothing) => (Nothing, Nothing)
   (Just tree, Nothing) => (Just $ STAnn ann tree, Nothing)
-  (Just tree, Just rest') => case sdocToTreeParser rest' of
+  (Just tree, Just rest') => case sdocToTreeParser (assert_smaller rest rest') of
     (Just tree', rest'') => (Just $ STConcat [STAnn ann tree, tree'], rest'')
     (Nothing, rest'') => (Just $ STAnn ann tree, rest'')
-  (Nothing, Just rest') => assert_total $ sdocToTreeParser rest'
+  (Nothing, Just rest') => sdocToTreeParser (assert_smaller rest rest')
   (Nothing, Nothing) => (Nothing, Nothing)
 sdocToTreeParser (SAnnPop rest) = (Nothing, Just rest)
 

@@ -1,14 +1,8 @@
 ||| Additional properties/lemmata of Nats involving order
 module Data.Nat.Order.Properties
 
-import Syntax.PreorderReasoning
 import Syntax.PreorderReasoning.Generic
 import Data.Nat
-import Data.Nat.Order
-import Data.Nat.Order.Strict
-import Decidable.Equality
-import Decidable.Order
-import Decidable.Order.Strict
 import Data.Bool.Decidable
 
 
@@ -22,7 +16,7 @@ LTESuccInjectiveMonotone m n (RFalse not_m_lte_n) = RFalse $ \case
 export
 lteReflection : (a, b : Nat) -> Reflects (a `LTE` b) (a `lte` b)
 lteReflection 0 b = RTrue LTEZero
-lteReflection (S k) 0 = RFalse \sk_lte_z => absurd sk_lte_z
+lteReflection (S k) 0 = RFalse $ \sk_lte_z => absurd sk_lte_z
 lteReflection (S a) (S b) = LTESuccInjectiveMonotone a b (lteReflection a b)
 
 export
@@ -49,7 +43,7 @@ notltIsNotLT a = notlteIsNotLTE (S a)
 
 export
 notlteIsLT : (a, b : Nat) -> a `lte` b = False -> b `LT` a
-notlteIsLT a b prf = notLTImpliesGTE
+notlteIsLT a b prf = notLTImpliesGTE $
                        \prf' =>
                          (invert $ replace {p = Reflects (S a `LTE` S b)} prf
                                  $ lteReflection (S a) (S b)) prf'
@@ -72,22 +66,19 @@ notLteIsnotlte a b not_a_lte_b = reflect (lteReflection a b) not_a_lte_b
 -- The converse to lteIsLTE:
 export
 GTIsnotlte : (a, b : Nat) -> b `LT` a -> a `lte` b = False
-GTIsnotlte a b b_lt_a =
-  let not_a_lte_b : Not (a `LTE` b)
-      not_a_lte_b = \a_lte_b => irreflexive {spo = Nat.LT} a $ CalcWith {leq = LTE} $
-        |~ 1 + a
-        <~ 1 + b ...(plusLteMonotoneLeft 1 a b a_lte_b)
-        <~ a     ...(b_lt_a)
-  in notLteIsnotlte a b not_a_lte_b
+GTIsnotlte a b prf =
+  notLteIsnotlte a b $ \contra =>
+    succNotLTEpred $ transitive prf contra
 
 ||| Subtracting a number gives a smaller number
 export
 minusLTE : (a,b : Nat) -> (b `minus` a) `LTE` b
 minusLTE a      0    = LTEZero
-minusLTE 0     (S b) = reflexive (S b)
-minusLTE (S a) (S b) = transitive (minus b a) b (S b)
-                         (minusLTE a b)
-                         (lteSuccRight (reflexive b))
+minusLTE 0     (S _) = reflexive
+minusLTE (S a) (S b) =
+  transitive
+    (minusLTE a b)
+    (lteSuccRight reflexive)
 
 ||| Subtracting a positive number gives a strictly smaller number
 export

@@ -18,6 +18,7 @@ data SourcePart
   | LBrace
   | RBrace
   | Equal
+  | AsPattern
   | Other String
 
 ------------------------------------------------------------------------
@@ -32,6 +33,7 @@ toString (HoleName n) = "?" ++ n
 toString LBrace = "{"
 toString RBrace = "}"
 toString Equal = "="
+toString AsPattern = "@"
 toString (Other str) = str
 
 ------------------------------------------------------------------------
@@ -49,6 +51,7 @@ srcTokens =
      (is '{', const LBrace),
      (is '}', const RBrace),
      (is '=', const Equal),
+     (is '@', const AsPattern),
      (any, Other)]
 
 export

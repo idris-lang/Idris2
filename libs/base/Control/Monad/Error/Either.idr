@@ -130,10 +130,10 @@ Monad m => Monad (EitherT e m) where
 public export
 (Monad m, Monoid e) => Alternative (EitherT e m) where
   empty = left neutral
-  MkEitherT x <|> MkEitherT y = MkEitherT $ do
+  MkEitherT x <|> my = MkEitherT $ do
     Left l <- x
       | Right r => pure (Right r)
-    Left l' <- y
+    Left l' <- runEitherT my
       | Right r => pure (Right r)
     pure (Left (l <+> l'))
 

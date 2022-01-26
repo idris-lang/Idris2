@@ -520,7 +520,7 @@ Value *cast_string_to_Integer(Value *input)
 
 Value *cast_string_to_double(Value *input)
 {
-    Value_Double *retVal = (Value_Double *)newValue();
+    Value_Double *retVal = IDRIS2_NEW_VALUE(Value_Double);
     retVal->header.tag = DOUBLE_TAG;
     Value_String *from = (Value_String *)input;
     retVal->d = atof(from->str);
@@ -530,7 +530,7 @@ Value *cast_string_to_double(Value *input)
 
 Value *cast_string_to_char(Value *input)
 {
-    Value_Char *retVal = (Value_Char *)newValue();
+    Value_Char *retVal = IDRIS2_NEW_VALUE(Value_Char);
     retVal->header.tag = CHAR_TAG;
     Value_String *from = (Value_String *)input;
     retVal->c = from->str[0];
@@ -917,7 +917,7 @@ Value *cast_Integer_to_string(Value *input)
 {
     Value_Integer *from = (Value_Integer *)input;
 
-    Value_String *retVal = (Value_String *)newValue();
+    Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
     retVal->header.tag = STRING_TAG;
     retVal->str = mpz_get_str(NULL, 10, from->i);
 

@@ -1,7 +1,7 @@
 1/1: Building Main (Main.idr)
 Main> Error: Ambiguous elaboration. Possible results:
-    Main.myPrintLn "foo" Prelude.>> ?arg
-    Main.myPrintLn "foo" Main.Other.>> ?arg
+    Main.myPrintLn "foo" Prelude.>> Delay (Main.myPrintLn "boo" Main.Other.>> (Prelude.map (\{arg:0} => {arg:0} Prelude.+ ?delayed) (Main.myPrintLn "woo") Main.Other.>> (Main.myPrintLn "goo" Main.Other.>> Main.myPrintLn "foo")))
+    Main.myPrintLn "foo" Main.Other.>> (Main.myPrintLn "boo" Main.Other.>> (Prelude.map (\{arg:0} => {arg:0} Prelude.+ ?delayed) (Main.myPrintLn "woo") Main.Other.>> (Main.myPrintLn "goo" Main.Other.>> Main.myPrintLn "foo")))
 
 (Interactive):1:4--1:19
  1 | do myPrintLn "foo"; myPrintLn "boo"; map (+1) (myPrintLn "woo"); myPrintLn "goo"; myPrintLn "foo"
@@ -23,7 +23,10 @@ Main> Error: Ambiguous elaboration. Possible results:
 
 Main> [] : Vect 0 ?elem
 Main> [] : List ?a
-Main> Error: When unifying Vect 0 ?elem and List ?a.
+Main> Error: When unifying:
+    Vect 0 ?elem
+and:
+    List ?a
 Mismatch between: Vect 0 ?elem and List ?a.
 
 (Interactive):1:40--1:41
@@ -31,10 +34,11 @@ Mismatch between: Vect 0 ?elem and List ?a.
                                             ^
 
 Main> the (Maybe Integer) (pure 4) : Maybe Integer
-Main> Expected 'case', 'if', 'do', application or operator expression.
+Main> Couldn't parse any alternatives:
+1: Expected 'case', 'if', 'do', application or operator expression.
 
-(Interactive):1:4--1:5
+(Interactive):1:4--1:8
  1 | :t with [] 4
-        ^
-
+        ^^^^
+... (45 others)
 Main> Bye for now!

@@ -8,5 +8,12 @@ sourcedir = "src"
 -- (Currently supported by Racket and Chez back ends, others ignore it)
 -- opts = "--profile"
 
+-- Set if you want incremental builds. This is good for development, since
+-- small changes compile faster, but bad for deployment since the resulting
+-- executable runs at around half the speed.
+-- (Alternatively: set the environment variable IDRIS2_INC_CGS=chez)
+-- For this to work, you need to do the initial incremental build from clean.
+-- opts = "--inc chez"
+
 main = Idris.Main
 executable = idris2

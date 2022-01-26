@@ -1,3 +1,4 @@
+rm -rf build
+
 $1 --yaffle Id.yaff < input
 
-rm -rf build

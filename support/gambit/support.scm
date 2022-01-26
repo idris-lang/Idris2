@@ -14,15 +14,24 @@
       (cons (vector-ref desc 2)
             (blodwen-read-args (vector-ref desc 3)))))
 
-(define blodwen-toSignedInt
-  (lambda (x bits)
-    (if (bit-set? bits x)
-        (bitwise-ior x (arithmetic-shift (- 1) bits))
-        (bitwise-and x (- (arithmetic-shift 1 bits) 1)))))
+(define blodwen-lazy
+  (lambda (f)
+    (let ([evaluated #f] [res void])
+      (lambda ()
+        (if (not evaluated)
+            (begin (set! evaluated #t)
+                   (set! res (f))
+                   (set! f void))
+            (void))
+        res))))
 
-(define blodwen-toUnsignedInt
-  (lambda (x bits)
-    (modulo x (arithmetic-shift 1 bits))))
+(define (blodwen-toSignedInt x bits)
+  (if (bit-set? bits x)
+      (bitwise-ior x (arithmetic-shift -1 bits))
+      (bitwise-and x (- (arithmetic-shift 1 bits) 1))))
+
+(define (blodwen-toUnsignedInt x bits)
+  (bitwise-and x (sub1 (arithmetic-shift 1 bits))))
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
@@ -34,34 +43,23 @@
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (quotient x y) bits)))
 
-(define-macro (b+ x y bits)
-  (if (exact-integer? bits)
-      `(remainder (+ ,x ,y) ,(arithmetic-shift 1 bits))
-      `(remainder (+ ,x ,y) (arithmetic-shift 1 ,bits))))
-(define-macro (b- x y bits)
-  (if (exact-integer? bits)
-      `(remainder (- ,x ,y) ,(arithmetic-shift 1 bits))
-      `(remainder (- ,x ,y) (arithmetic-shift 1 ,bits))))
-(define-macro (b* x y bits)
-  (if (exact-integer? bits)
-      `(remainder (* ,x ,y) ,(arithmetic-shift 1 bits))
-      `(remainder (* ,x ,y) (arithmetic-shift 1 ,bits))))
-(define-macro (b/ x y bits)
-  (if (exact-integer? bits)
-      `(remainder (floor (/ ,x ,y)) ,(arithmetic-shift 1 bits))
-      `(remainder (floor (/ ,x ,y)) (arithmetic-shift 1 ,bits))))
+; To match Chez
+(define (add1 x) (+ x 1))
+(define (sub1 x) (- x 1))
+(define (fxsub1 x) (fx- x 1))
+(define (fxsub1 x) (fx- x 1))
 
-(define integer->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
-(define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
+(define (integer->bits8 x) (bitwise-and x #xff))
+(define (integer->bits16 x) (bitwise-and x #xffff))
+(define (integer->bits32 x) (bitwise-and x #xffffffff))
+(define (integer->bits64 x) (bitwise-and x #xffffffffffffffff))
 
-(define bits16->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits32->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits32->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define bits64->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
+(define (bits16->bits8 x) (bitwise-and x #xff))
+(define (bits32->bits8 x) (bitwise-and x #xff))
+(define (bits64->bits8 x) (bitwise-and x #xff))
+(define (bits32->bits16 x) (bitwise-and x #xffff))
+(define (bits64->bits16 x) (bitwise-and x #xffff))
+(define (bits64->bits32 x) (bitwise-and x #xffffffff))
 
 (define blodwen-bits-shl-signed
   (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
@@ -192,7 +190,7 @@
   (let ((data (thread-specific (current-thread))))
     (if (eq? data #!void) #f data)))
 
-(define (blodwen-set-thread-data a)
+(define (blodwen-set-thread-data ty a)
   (thread-specific-set! (current-thread) a))
 
 (define blodwen-mutex make-mutex)
@@ -213,9 +211,6 @@
 (define blodwen-sleep thread-sleep!)
 (define (blodwen-usleep s) (thread-sleep! (/ s 1e6)))
 
-(define (blodwen-time)
-  (exact-floor (time->seconds (current-time))))
-
 
 (define (blodwen-arg-count)
   (length (command-line)))
@@ -225,6 +220,3 @@
 
 (define (blodwen-hasenv var)
   (if (getenv var #f) 1 0))
-
-(define (blodwen-system cmd)
-  (fxarithmetic-shift-right (shell-command cmd) 8))

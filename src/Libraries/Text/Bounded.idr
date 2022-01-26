@@ -6,9 +6,13 @@ module Libraries.Text.Bounded
 public export
 record Bounds where
   constructor MkBounds
+  ||| 0-based first line
   startLine : Int
+  ||| 0-based first col
   startCol : Int
+  ||| 0-based last line of bound
   endLine : Int
+  ||| 0-based first column after bound
   endCol : Int
 
 Show Bounds where

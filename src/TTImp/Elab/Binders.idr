@@ -10,6 +10,8 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
@@ -21,7 +23,7 @@ import TTImp.TTImp
 -- bound name.
 export
 dropName : Name -> NestedNames vars -> NestedNames vars
-dropName n nest = record { names $= drop } nest
+dropName n nest = { names $= drop } nest
   where
     drop : List (Name, a) -> List (Name, a)
     drop [] = []
@@ -34,6 +36,7 @@ checkPiInfo : {vars : _} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto e : Ref EST (EState vars)} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               RigCount -> ElabInfo -> NestedNames vars -> Env Term vars ->
               PiInfo RawImp -> (expTy : Maybe (Glued vars)) ->
               Core (PiInfo (Term vars))
@@ -50,6 +53,7 @@ checkPi : {vars : _} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
           {auto e : Ref EST (EState vars)} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           RigCount -> ElabInfo ->
           NestedNames vars -> Env Term vars ->
           FC ->
@@ -59,15 +63,19 @@ checkPi : {vars : _} ->
           Core (Term vars, Glued vars)
 checkPi rig elabinfo nest env fc rigf info n argTy retTy expTy
     = do let pirig = getRig (elabMode elabinfo)
+         tyu <- uniVar fc
          (tyv, tyt) <- check pirig elabinfo nest env argTy
-                             (Just (gType fc))
+                             (Just (gType fc tyu))
          info' <- checkPiInfo rigf elabinfo nest env info (Just (gnf env tyv))
          let env' : Env Term (n :: _) = Pi fc rigf info' tyv :: env
          let nest' = weaken (dropName n nest)
+         scu <- uniVar fc
          (scopev, scopet) <-
             inScope fc env' (\e' =>
-              check {e=e'} pirig elabinfo nest' env' retTy (Just (gType fc)))
-         checkExp rig elabinfo env fc (Bind fc n (Pi (getFC argTy) rigf info' tyv) scopev) (gType fc) expTy
+              check {e=e'} pirig elabinfo nest' env' retTy (Just (gType fc scu)))
+         -- TODO Cumulativity: tyu <= max, scu <= max
+         piu <- uniVar fc
+         checkExp rig elabinfo env fc (Bind fc n (Pi (getFC argTy) rigf info' tyv) scopev) (gType fc piu) expTy
   where
     -- Might want to match on the LHS, so use the context rig, otherwise
     -- it's always erased
@@ -89,6 +97,7 @@ inferLambda : {vars : _} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto e : Ref EST (EState vars)} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               RigCount -> ElabInfo ->
               NestedNames vars -> Env Term vars ->
               FC ->
@@ -99,7 +108,8 @@ inferLambda : {vars : _} ->
 inferLambda rig elabinfo nest env fc rigl info n argTy scope expTy
     = do rigb_in <- findLamRig expTy
          let rigb = rigb_in `glb` rigl
-         (tyv, tyt) <- check erased elabinfo nest env argTy (Just (gType fc))
+         u <- uniVar fc
+         (tyv, tyt) <- check erased elabinfo nest env argTy (Just (gType fc u))
          info' <- checkPiInfo rigl elabinfo nest env info (Just (gnf env tyv))
          let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
          let nest' = weaken (dropName n nest)
@@ -130,6 +140,7 @@ checkLambda : {vars : _} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto e : Ref EST (EState vars)} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               RigCount -> ElabInfo ->
               NestedNames vars -> Env Term vars ->
               FC ->
@@ -141,7 +152,7 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope Nothing
     = let rig = if isErased rig_in then erased else linear in
           inferLambda rig elabinfo nest env fc rigl info n argTy scope Nothing
 checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
-    = do let rig = the RigCount $ if isErased rig_in then erased else linear
+    = do let rig = if isErased rig_in then erased else linear
          let solvemode = case elabMode elabinfo of
                               InLHS _ => inLHS
                               _ => inTerm
@@ -151,8 +162,9 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
          defs <- get Ctxt
          case exptynf of
               Bind bfc bn (Pi fc' c _ pty) psc =>
-                 do (tyv, tyt) <- check erased elabinfo nest env
-                                        argTy (Just (gType fc))
+                 do u <- uniVar fc'
+                    (tyv, tyt) <- check erased elabinfo nest env
+                                        argTy (Just (gType fc u))
                     info' <- checkPiInfo rigl elabinfo nest env info (Just (gnf env tyv))
                     let rigb = rigl `glb` c
                     let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
@@ -174,7 +186,7 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                     -- We've already checked the argument and scope types,
                     -- so we just need to check multiplicities
                     when (rigb /= c) $
-                        throw (CantConvert fc env
+                        throw (CantConvert fc (gamma defs) env
                                   (Bind fc n (Pi fc' rigb info' tyv) !(getTerm scopet))
                                   (Bind fc bn (Pi fc' c info' pty) psc))
                     pure (Bind fc n (Lam fc' rigb info' tyv) scopev,
@@ -195,6 +207,7 @@ checkLet : {vars : _} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars ->
            FC -> (lhsFC : FC) -> RigCount -> (n : Name) ->
@@ -202,22 +215,22 @@ checkLet : {vars : _} ->
            (expTy : Maybe (Glued vars)) ->
            Core (Term vars, Glued vars)
 checkLet rigc_in elabinfo nest env fc lhsFC rigl n nTy nVal scope expty {vars}
-    = do let rigc = the RigCount $ if isErased rigc_in then erased else linear
-         (tyv, tyt) <- check erased elabinfo nest env nTy (Just (gType fc))
+    = do let rigc = if isErased rigc_in then erased else linear
+         u <- uniVar fc
+         (tyv, tyt) <- check erased elabinfo nest env nTy (Just (gType fc u))
          -- Try checking at the given multiplicity; if that doesn't work,
          -- try checking at Rig1 (meaning that we're using a linear variable
          -- so the resulting binding should be linear)
          -- Also elaborate any case blocks in the value via runDelays
-         -- (0 is the highest priority delays only)
          (valv, valt, rigb) <- handle
-              (do c <- runDelays 0 $ check (rigl |*| rigc)
-                             (record { preciseInf = True } elabinfo)
+              (do c <- runDelays (==CaseBlock) $ check (rigl |*| rigc)
+                             ({ preciseInf := True } elabinfo)
                              nest env nVal (Just (gnf env tyv))
                   pure (fst c, snd c, rigl |*| rigc))
               (\err => case linearErr err of
                             Just r
                               => do branchOne
-                                     (do c <- runDelays 0 $ check linear elabinfo
+                                     (do c <- runDelays (==CaseBlock) $ check linear elabinfo
                                                   nest env nVal (Just (gnf env tyv))
                                          pure (fst c, snd c, linear))
                                      (do c <- check (rigl |*| rigc)

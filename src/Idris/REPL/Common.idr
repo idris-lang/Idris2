@@ -1,18 +1,20 @@
 module Idris.REPL.Common
 
-import Core.Env
 import Core.Context.Log
+import Core.Directory
+import Core.Env
 import Core.InitPrimitives
 import Core.Metadata
-import Core.Primitives
 import Core.TT
 import Core.Unify
 import Core.UnifyState
 
+import Idris.Doc.Annotations
 import Idris.Doc.String
+
 import Idris.Error
 import Idris.IDEMode.Commands
-import Idris.IDEMode.Holes
+import Idris.IDEMode.Pretty
 import Idris.Pretty
 import public Idris.REPL.Opts
 import Idris.Resugar
@@ -20,14 +22,17 @@ import Idris.Syntax
 import Idris.Version
 
 import Libraries.Data.ANameMap
-import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Data.String.Extra
 
-import Data.List
+import Data.String
 import System.File
 
 %default covering
 
--- Output informational messages, unless quiet flag is set
+||| Output informational messages, unless suppressed by a flag.
+||| This function should only be called with informational
+||| messages, an unhandled error is an example of what should
+||| *not* end up here.
 export
 iputStrLn : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
@@ -35,31 +40,62 @@ iputStrLn : {auto c : Ref Ctxt Defs} ->
 iputStrLn msg
     = do opts <- get ROpts
          case idemode opts of
-              REPL False => coreLift $ putStrLn !(render msg)
+              REPL InfoLvl  => coreLift $ putStrLn !(render msg)
+              -- output silenced
               REPL _ => pure ()
               IDEMode i _ f =>
-                send f (SExpList [SymbolAtom "write-string",
-                                 toSExp !(renderWithoutColor msg), toSExp i])
+                send f (WriteString
+                          !(renderWithoutColor msg)
+                          i)
 
+||| Sampled against `VerbosityLvl`.
+public export
+data MsgStatus = MsgStatusNone | MsgStatusError | MsgStatusInfo
+
+doPrint : MsgStatus -> VerbosityLvl -> Bool
+doPrint MsgStatusNone  InfoLvl  = True
+doPrint MsgStatusNone  ErrorLvl = True
+doPrint MsgStatusNone  NoneLvl  = True
+doPrint MsgStatusError InfoLvl  = True
+doPrint MsgStatusError ErrorLvl = True
+doPrint MsgStatusError NoneLvl  = False
+doPrint MsgStatusInfo  InfoLvl  = True
+doPrint MsgStatusInfo  ErrorLvl = False
+doPrint MsgStatusInfo  NoneLvl  = False
 
 printWithStatus : {auto o : Ref ROpts REPLOpts} ->
-                  Doc IdrisAnn -> Doc IdrisAnn -> Core ()
-printWithStatus status msg
-    = do opts <- get ROpts
-         case idemode opts of
-              REPL _ => coreLift $ putStrLn !(render msg)
-              _      => pure () -- this function should never be called in IDE Mode
+                  (Doc ann -> Core String) ->
+                  (Doc ann -> MsgStatus -> Core ())
+printWithStatus render msg status
+  = do opts <- get ROpts
+       case idemode opts of
+         REPL verbosityLvl =>
+           case doPrint status verbosityLvl of
+             True   => coreLift $ putStrLn !(render msg)
+             False  => pure ()
+         IDEMode {} => pure () -- this function should never be called in IDE Mode
 
+||| Print REPL result.
 export
 printResult : {auto o : Ref ROpts REPLOpts} ->
               Doc IdrisAnn -> Core ()
-printResult msg = printWithStatus (pretty "ok") msg
+printResult x = printWithStatus render x MsgStatusNone
+ --                                      ^^^^^^^^^^^^^
+ -- "results" are printed no matter the verbosity level
+
+||| Print REPL result.
+export
+printDocResult : {auto o : Ref ROpts REPLOpts} ->
+                 Doc IdrisDocAnn -> Core ()
+printDocResult x = printWithStatus (render styleAnn) x MsgStatusNone
+ --                                                    ^^^^^^^^^^^^^
+ -- "results" are printed no matter the verbosity level
 
 -- Return that a protocol request failed somehow
 export
 printError : {auto o : Ref ROpts REPLOpts} ->
              Doc IdrisAnn -> Core ()
-printError msg = printWithStatus (pretty "error") msg
+printError msg = printWithStatus render msg MsgStatusError
 
 DocCreator : Type -> Type
 DocCreator a = a -> Core (Doc IdrisAnn)
@@ -68,30 +104,32 @@ export
 emitProblem : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
             {auto s : Ref Syn SyntaxInfo} ->
-            a -> (DocCreator a) -> (DocCreator a) -> (a -> Maybe FC) -> Core ()
-emitProblem a replDocCreator idemodeDocCreator getFC
+            a -> (DocCreator a) -> (DocCreator a) -> (a -> Maybe FC) -> MsgStatus -> Core ()
+emitProblem a replDocCreator idemodeDocCreator getFC status
     = do opts <- get ROpts
          case idemode opts of
               REPL _ =>
-                  do msg <- replDocCreator a >>= render
-                     coreLift $ putStrLn msg
+                  do msg <- replDocCreator a
+                     printWithStatus render msg status
               IDEMode i _ f =>
                   do msg <- idemodeDocCreator a
                      -- TODO: Display a better message when the error doesn't contain a location
                      case map toNonEmptyFC (getFC a) of
                           Nothing => iputStrLn msg
-                          Just (file, startPos, endPos) =>
-                            send f (SExpList [SymbolAtom "warning",
-                                   SExpList [toSExp (show file),
-                                            toSExp (addOne startPos),
-                                              toSExp (addOne endPos),
-                                              toSExp !(renderWithoutColor msg),
-                                              -- highlighting; currently blank
-                                              SExpList []],
-                                    toSExp i])
-  where
-    addOne : (Int, Int) -> (Int, Int)
-    addOne (l, c) = (l + 1, c + 1)
+                          Just nfc@(origin, startPos, endPos) => do
+                            fname <- case origin of
+                              PhysicalIdrSrc ident => do
+                                -- recover the file name relative to the working directory.
+                                -- (This is what idris2-mode expects)
+                                let fc = MkFC (PhysicalIdrSrc ident) startPos endPos
+                                catch (nsToSource fc ident) (const $ pure "(File-Not-Found)")
+                              PhysicalPkgSrc fname =>
+                                pure fname
+                              Virtual Interactive =>
+                                pure "(Interactive)"
+                            let (str,spans) = !(renderWithDecorations annToProperties msg)
+                            send f (Warning (cast (the String fname, nfc)) str spans
+                                            i)
 
 -- Display an error message from checking a source file
 export
@@ -99,14 +137,14 @@ emitError : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
             {auto s : Ref Syn SyntaxInfo} ->
             Error -> Core ()
-emitError e = emitProblem e display perror getErrorLoc
+emitError e = emitProblem e display perror getErrorLoc MsgStatusError
 
 export
 emitWarning : {auto c : Ref Ctxt Defs} ->
               {auto o : Ref ROpts REPLOpts} ->
               {auto s : Ref Syn SyntaxInfo} ->
               Warning -> Core ()
-emitWarning w = emitProblem w displayWarning pwarning getWarningLoc
+emitWarning w = emitProblem w displayWarning pwarning getWarningLoc MsgStatusInfo
 
 export
 emitWarnings : {auto c : Ref Ctxt Defs} ->
@@ -140,10 +178,10 @@ updateErrorLine : {auto o : Ref ROpts REPLOpts} ->
                   List Error -> Core ()
 updateErrorLine []
     = do opts <- get ROpts
-         put ROpts (record { errorLine = Nothing } opts)
+         put ROpts ({ errorLine := Nothing } opts)
 updateErrorLine (e :: _)
     = do opts <- get ROpts
-         put ROpts (record { errorLine = (getErrorLoc e) >>= getFCLine } opts)
+         put ROpts ({ errorLine := (getErrorLoc e) >>= getFCLine } opts)
 
 export
 resetContext : {auto c : Ref Ctxt Defs} ->
@@ -154,7 +192,7 @@ resetContext : {auto c : Ref Ctxt Defs} ->
                Core ()
 resetContext origin
     = do defs <- get Ctxt
-         put Ctxt (record { options = clearNames (options defs) } !initDefs)
+         put Ctxt ({ options := clearNames (options defs) } !initDefs)
          addPrimitives
          put UST initUState
          put Syn initSyntax
@@ -164,7 +202,7 @@ public export
 data EditResult : Type where
   DisplayEdit : Doc IdrisAnn -> EditResult
   EditError : Doc IdrisAnn -> EditResult
-  MadeLemma : Maybe String -> Name -> PTerm -> String -> EditResult
+  MadeLemma : Maybe String -> Name -> IPTerm -> String -> EditResult
   MadeWith : Maybe String -> List String -> EditResult
   MadeCase : Maybe String -> List String -> EditResult
 
@@ -180,9 +218,10 @@ data REPLResult : Type where
   REPLError : Doc IdrisAnn -> REPLResult
   Executed : PTerm -> REPLResult
   RequestedHelp : REPLResult
-  Evaluated : PTerm -> (Maybe PTerm) -> REPLResult
+  Evaluated : IPTerm -> Maybe IPTerm -> REPLResult
   Printed : Doc IdrisAnn -> REPLResult
-  TermChecked : PTerm -> PTerm -> REPLResult
+  PrintedDoc : Doc IdrisDocAnn -> REPLResult
+  TermChecked : IPTerm -> IPTerm -> REPLResult
   FileLoaded : String -> REPLResult
   ModuleLoaded : String -> REPLResult
   ErrorLoadingModule : String -> Error -> REPLResult
@@ -192,10 +231,9 @@ data REPLResult : Type where
   CurrentDirectory : String -> REPLResult
   CompilationFailed: REPLResult
   Compiled : String -> REPLResult
-  ProofFound : PTerm -> REPLResult
+  ProofFound : IPTerm -> REPLResult
   Missed : List MissedResult -> REPLResult
   CheckedTotal : List (Name, Totality) -> REPLResult
-  FoundHoles : List HoleData -> REPLResult
   OptionsSet : List REPLOpt -> REPLResult
   LogLevelSet : Maybe LogLevel -> REPLResult
   ConsoleWidthSet : Maybe Nat -> REPLResult
@@ -205,26 +243,29 @@ data REPLResult : Type where
   Exited : REPLResult
   Edited : EditResult -> REPLResult
 
+prettyTerm : IPTerm -> Doc IdrisDocAnn
+prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
+
 export
 docsOrSignature : {auto o : Ref ROpts REPLOpts} ->
                   {auto c : Ref Ctxt Defs} ->
                   {auto s : Ref Syn SyntaxInfo} ->
-                  FC -> Name -> Core (List String)
+                  FC -> Name -> Core (Doc IdrisDocAnn)
 docsOrSignature fc n
     = do syn  <- get Syn
          defs <- get Ctxt
          all@(_ :: _) <- lookupCtxtName n (gamma defs)
              | _ => undefinedName fc n
-         let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn))
+         let ns@(_ :: _) = concatMap (\n => lookupName n (defDocstrings syn))
                                      (map fst all)
              | [] => typeSummary defs
-         pure [!(render styleAnn !(getDocsForName fc n))]
+         getDocsForName fc n MkConfig
   where
-    typeSummary : Defs -> Core (List String)
+    typeSummary : Defs -> Core (Doc IdrisDocAnn)
     typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
-                            | Nothing => pure []
-                          ty <- normaliseHoles defs [] (type def)
-                          pure [(show n) ++ " : " ++ (show !(resugar [] ty))]
+                            | Nothing => pure ""
+                          ty <- resugar [] !(normaliseHoles defs [] (type def))
+                          pure $ pretty n <++> ":" <++> prettyTerm ty
 
 export
 equivTypes : {auto c : Ref Ctxt Defs} ->

@@ -1,22 +1,25 @@
 module Libraries.Utils.Path
 
+import Idris.Env
+
 import Data.List
 import Data.List1
 import Data.Maybe
 import Data.Nat
-import Data.Strings
-import Libraries.Data.String.Extra
+import Data.String
 
+import Libraries.Data.String.Extra
 import Libraries.Text.Token
 import Libraries.Text.Lexer
 import Libraries.Text.Parser
 import Libraries.Text.Quantity
 
 import System.Info
+import System.File
 
 %default total
 
-infixr 5 </>, />
+infixl 5 </>, />
 infixr 7 <.>
 
 
@@ -110,14 +113,14 @@ Show Body where
 export
 Show Volume where
   show (UNC server share) = "\\\\" ++ server ++ "\\" ++ share
-  show (Disk disk) = Strings.singleton disk ++ ":"
+  show (Disk disk) = String.singleton disk ++ ":"
 
 ||| Displays the path in the format of this platform.
 export
 Show Path where
   show path =
     let
-      sep = Strings.singleton dirSeparator
+      sep = String.singleton dirSeparator
       showVol = maybe "" show path.volume
       showRoot = if path.hasRoot then sep else ""
       showBody = join sep $ map show path.body
@@ -273,7 +276,7 @@ export
 parse : String -> Path
 parse str =
   case parse parsePath (lexPath str) of
-    Right (path, _) => path
+    Right (_, path, _) => path
     _ => emptyPath
 
 --------------------------------------------------------------------------------
@@ -295,9 +298,9 @@ append' left right =
   if isAbsolute' right || isJust right.volume then
     right
   else if hasRoot right then
-    record { volume = left.volume } right
+    { volume := left.volume } right
   else
-    record { body = left.body ++ right.body, hasTrailSep = right.hasTrailSep } left
+    { body := left.body ++ right.body, hasTrailSep := right.hasTrailSep } left
 
 splitPath' : Path -> List Path
 splitPath' path =
@@ -322,7 +325,7 @@ splitParent' path =
     [] => Nothing
     (x::xs) =>
       let
-        parent = record { body = init (x::xs), hasTrailSep = False } path
+        parent = { body := init (x::xs), hasTrailSep := False } path
         child = MkPath Nothing False [last (x::xs)] path.hasTrailSep
       in
         Just (parent, child)
@@ -572,3 +575,15 @@ export
 export
 dropExtension : String -> String
 dropExtension path = path <.> ""
+
+||| Looks up an executable from a list of candidate names in the PATH
+export
+pathLookup : List String -> IO (Maybe String)
+pathLookup candidates
+    = do path <- idrisGetEnv "PATH"
+         let extensions = if isWindows then [".exe", ".cmd", ".bat", ""] else [""]
+         let pathList = forget $ String.split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
+         let candidates = [p ++ "/" ++ x ++ y | p <- pathList,
+                                                x <- candidates,
+                                                y <- extensions ]
+         firstExists candidates

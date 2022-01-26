@@ -1,6 +1,6 @@
 ##### Options which a user might set before building go here #####
 
-# Where to install idris2 binaries and libraries
+# Where to install idris2 binaries and libraries (must be an absolute path)
 PREFIX ?= $(HOME)/.idris2
 
 # For Windows targets. Set to 1 to support Windows 7.
@@ -27,24 +27,27 @@ else ifneq (,$(findstring windows, $(MACHINE)))
 else ifneq (,$(findstring darwin, $(MACHINE)))
 	OS := darwin
 	SHLIB_SUFFIX := .dylib
-	CFLAGS += -fPIC
 else ifneq (, $(findstring bsd, $(MACHINE)))
 	OS := bsd
 	SHLIB_SUFFIX := .so
-	CFLAGS += -fPIC
 else
 	OS := linux
 	SHLIB_SUFFIX := .so
-	CFLAGS += -fPIC
 endif
-export OS
+
+ifneq ($(OS),windows)
+	CFLAGS += -fPIC
+else ifneq (, $(findstring NT-6.1,$(shell uname)))
+	OLD_WIN = 1
+endif
 
 ifeq ($(OS),bsd)
 	MAKE := gmake
 else
 	MAKE := make
 endif
-export MAKE
+
+export OS MAKE OLD_WIN
 
 # Add a custom.mk file to override any of the configurations
 -include custom.mk

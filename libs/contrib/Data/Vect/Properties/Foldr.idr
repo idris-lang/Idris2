@@ -15,16 +15,13 @@ import Data.Vect
 import Data.Vect.Elem
 import Data.Fin
 import Data.Nat
-import Data.Nat.Order
 
 import Syntax.PreorderReasoning
 import Syntax.PreorderReasoning.Generic
 
-import Decidable.Order
-
 ||| Sum implemented with foldr
 public export
-sumR : (Foldable f, Num a) => f a -> a
+sumR : Num a => Foldable f => f a -> a
 sumR = foldr (+) 0
 
 %transform "sumR/sum" sumR = sum

@@ -108,7 +108,7 @@ namespace LT
   ||| to a canonical form (unless the built-in function (<) is buggy).
   export
   irrefl : Not (LT a a)
-  irrefl p = strictLT p $ the Void
+  irrefl p = strictLT p
            $ assert_total $ idris_crash "IMPOSSIBLE: LT is irreflexive"
 
 ------------------------------------------------------------------------

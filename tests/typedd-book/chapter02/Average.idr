@@ -1,6 +1,6 @@
 module Average
 
-import Data.Strings
+import Data.String
 import Data.List
 
 ||| Calculate the average length of words in a string.

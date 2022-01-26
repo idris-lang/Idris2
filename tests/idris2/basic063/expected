@@ -1,0 +1,7 @@
+1/1: Building NoDeclaration (NoDeclaration.idr)
+NoDeclaration> NoDeclaration.idNat : Nat -> Nat
+NoDeclaration> NoDeclaration.double : Nat -> Nat
+NoDeclaration> NoDeclaration.helloWorld : String
+NoDeclaration> NoDeclaration.cat : String -> Nat -> String
+NoDeclaration> 
+Bye for now!

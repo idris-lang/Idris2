@@ -1,19 +1,28 @@
 (define (blodwen-os)
   (case (system-type 'os)
     [(unix) "unix"]
-    [(osx) "darwin"]
+    [(macosx) "darwin"]
     [(windows) "windows"]
     [else "unknown"]))
 
-(define blodwen-toSignedInt
-  (lambda (x bits)
-    (if (bitwise-bit-set? x bits)
-        (bitwise-ior x (arithmetic-shift (- 1) bits))
-        (bitwise-and x (- (arithmetic-shift 1 bits) 1)))))
+(define blodwen-lazy
+  (lambda (f)
+    (let ([evaluated #f] [res void])
+      (lambda ()
+        (if (not evaluated)
+            (begin (set! evaluated #t)
+                   (set! res (f))
+                   (set! f void))
+            (void))
+        res))))
 
-(define blodwen-toUnsignedInt
-  (lambda (x bits)
-    (modulo x (arithmetic-shift 1 bits))))
+(define (blodwen-toSignedInt x bits)
+  (if (bitwise-bit-set? x bits)
+      (bitwise-ior x (arithmetic-shift (- 1) bits))
+      (bitwise-and x (sub1 (arithmetic-shift 1 bits)))))
+
+(define (blodwen-toUnsignedInt x bits)
+  (bitwise-and x (sub1 (arithmetic-shift 1 bits))))
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
@@ -25,22 +34,21 @@
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (quotient x y) bits)))
 
-(define b+ (lambda (x y bits) (remainder (+ x y) (arithmetic-shift 1 bits))))
-(define b- (lambda (x y bits) (remainder (- x y) (arithmetic-shift 1 bits))))
-(define b* (lambda (x y bits) (remainder (* x y) (arithmetic-shift 1 bits))))
-(define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (arithmetic-shift 1 bits))))
+; To match Chez
+(define (fxadd1 x) (unsafe-fx+ x 1))
+(define (fxsub1 x) (unsafe-fx- x 1))
 
-(define integer->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
-(define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
+(define (integer->bits8 x) (bitwise-and x #xff))
+(define (integer->bits16 x) (bitwise-and x #xffff))
+(define (integer->bits32 x) (bitwise-and x #xffffffff))
+(define (integer->bits64 x) (bitwise-and x #xffffffffffffffff))
 
-(define bits16->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits32->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits32->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define bits64->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
+(define (bits16->bits8 x) (bitwise-and x #xff))
+(define (bits32->bits8 x) (bitwise-and x #xff))
+(define (bits64->bits8 x) (bitwise-and x #xff))
+(define (bits32->bits16 x) (bitwise-and x #xffff))
+(define (bits64->bits16 x) (bitwise-and x #xffff))
+(define (bits64->bits32 x) (bitwise-and x #xffffffff))
 
 (define blodwen-bits-shl (lambda (x y bits) (remainder (arithmetic-shift x y) (arithmetic-shift 1 bits))))
 (define blodwen-shl (lambda (x y) (arithmetic-shift x y)))
@@ -249,7 +257,7 @@
 (define (blodwen-get-thread-data ty)
   (thread-cell-ref blodwen-thread-data))
 
-(define (blodwen-set-thread-data a)
+(define (blodwen-set-thread-data ty a)
   (thread-cell-set! blodwen-thread-data a))
 
 ;; Semaphores
@@ -432,8 +440,6 @@
 (define (blodwen-sleep s) (sleep s))
 (define (blodwen-usleep us) (sleep (* 0.000001 us)))
 
-(define (blodwen-time) (current-seconds))
-
 (define (blodwen-clock-time-utc) (current-time 'time-utc))
 (define (blodwen-clock-time-monotonic) (current-time 'time-monotonic))
 (define (blodwen-clock-time-duration) (current-time 'time-duration))
@@ -455,11 +461,6 @@
         (vector-ref (current-command-line-arguments) (- n 1)))
      (else "")))
 
-(define (blodwen-system cmd)
-  (if (system cmd)
-      0
-      1))
-
 ;; Randoms
 (random-seed (date*-nanosecond (current-date))) ; initialize random seed
 
@@ -478,3 +479,86 @@
 (define (blodwen-register-object obj proc)
    (register-finalizer obj (lambda (ptr) ((proc ptr) 'erased)))
    obj)
+
+;; For creating and reading back scheme objects
+
+(define ns (make-base-namespace))
+
+; read a scheme string and evaluate it, returning 'Just result' on success
+; TODO: catch exception!
+(define (blodwen-eval-scheme str)
+  (with-handlers ([exn:fail? (lambda (x) '())]) ; Nothing on failure
+     (box (eval (read (open-input-string str)) ns))) ; box == Just
+)
+
+(define (blodwen-eval-okay obj)
+  (if (null? obj)
+      0
+      1))
+
+(define (blodwen-get-eval-result obj)
+  (unbox obj))
+
+(define (blodwen-debug-scheme obj)
+  (display obj) (newline))
+
+(define (blodwen-is-number obj)
+  (if (number? obj) 1 0))
+
+(define (blodwen-is-integer obj)
+  (if (and (number? obj) (exact? obj)) 1 0))
+
+(define (blodwen-is-float obj)
+  (if (flonum? obj) 1 0))
+
+(define (blodwen-is-char obj)
+  (if (char? obj) 1 0))
+
+(define (blodwen-is-string obj)
+  (if (string? obj) 1 0))
+
+(define (blodwen-is-procedure obj)
+  (if (procedure? obj) 1 0))
+
+(define (blodwen-is-symbol obj)
+  (if (symbol? obj) 1 0))
+
+(define (blodwen-is-vector obj)
+  (if (vector? obj) 1 0))
+
+(define (blodwen-is-nil obj)
+  (if (null? obj) 1 0))
+
+(define (blodwen-is-pair obj)
+  (if (pair? obj) 1 0))
+
+(define (blodwen-is-box obj)
+  (if (box? obj) 1 0))
+
+(define (blodwen-make-symbol str)
+  (string->symbol str))
+
+; The below rely on checking that the objects are the right type first.
+
+(define (blodwen-vector-ref obj i)
+  (vector-ref obj i))
+
+(define (blodwen-vector-length obj)
+  (vector-length obj))
+
+(define (blodwen-vector-list obj)
+  (vector->list obj))
+
+(define (blodwen-unbox obj)
+  (unbox obj))
+
+(define (blodwen-apply obj arg)
+  (obj arg))
+
+(define (blodwen-force obj)
+  (obj))
+
+(define (blodwen-read-symbol sym)
+  (symbol->string sym))
+
+(define (blodwen-id x) x)

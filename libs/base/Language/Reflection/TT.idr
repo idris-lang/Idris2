@@ -68,10 +68,14 @@ public export
 data Constant
     = I Int
     | BI Integer
-    | B8 Int
-    | B16 Int
-    | B32 Int
-    | B64 Integer
+    | I8 Int8
+    | I16 Int16
+    | I32 Int32
+    | I64 Int64
+    | B8 Bits8
+    | B16 Bits16
+    | B32 Bits32
+    | B64 Bits64
     | Str String
     | Ch Char
     | Db Double
@@ -79,6 +83,10 @@ data Constant
 
     | IntType
     | IntegerType
+    | Int8Type
+    | Int16Type
+    | Int32Type
+    | Int64Type
     | Bits8Type
     | Bits16Type
     | Bits32Type
@@ -89,19 +97,41 @@ data Constant
     | WorldType
 
 public export
-data Name = UN String -- user defined name
+data UserName
+  = Basic String -- default name constructor       e.g. map
+  | Field String -- field accessor                 e.g. .fst
+  | Underscore   -- no name                        e.g. _
+
+public export
+data Name = NS Namespace Name -- name in a namespace
+          | UN UserName -- user defined name
           | MN String Int -- machine generated name
-          | NS Namespace Name -- name in a namespace
           | DN String Name -- a name and how to display it
-          | RF String -- record field name
+          | Nested (Int, Int) Name -- nested function name
+          | CaseBlock String Int -- case block nested in (resolved) name
+          | WithBlock String Int -- with block nested in (resolved) name
+
+export
+Show UserName where
+  show (Basic n) = n
+  show (Field n) = "." ++ n
+  show Underscore = "_"
 
 export
 Show Name where
   show (NS ns n) = show ns ++ "." ++ show n
-  show (UN x) = x
+  show (UN x) = show x
   show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
   show (DN str y) = str
-  show (RF n) = "." ++ n
+  show (Nested (outer, idx) inner)
+      = show outer ++ ":" ++ show idx ++ ":" ++ show inner
+  show (CaseBlock outer i) = "case block in " ++ show outer
+  show (WithBlock outer i) = "with block in " ++ show outer
+
+public export
+record NameInfo where
+  constructor MkNameInfo
+  nametype : NameType
 
 public export
 data Count = M0 | M1 | MW
@@ -146,3 +176,6 @@ data TotalReq = Total | CoveringOnly | PartialOK
 
 public export
 data Visibility = Private | Export | Public
+
+public export
+data BuiltinType = BuiltinNatural | NaturalToInteger | IntegerToNatural

@@ -1,6 +1,7 @@
 #include <io.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <windows.h>
 #include <process.h>
 
@@ -176,5 +177,13 @@ long win32_getNProcessors() {
     return nPhysicalProcessors == nSMTProcessors ? nPhysicalProcessors
                                                  : nSMTProcessors
                                                  ;
+}
+
+int win32_getFileNo(FILE* f) {
+    return _fileno(f);
+}
+
+int win32_isTTY(int fd) {
+    return _isatty(fd);
 }
 

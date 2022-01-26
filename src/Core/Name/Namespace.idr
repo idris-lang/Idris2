@@ -2,10 +2,10 @@ module Core.Name.Namespace
 
 import Data.List
 import Data.List1
-import Data.Strings
+import Data.String
 import Decidable.Equality
+import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Utils.Path
 
 %default total
@@ -166,6 +166,12 @@ isApproximationOf (MkNS ms) (MkNS ns)
   -- the other's.
   = isPrefixOf ms ns
 
+||| We can check whether a given string (assumed to be a valid Namespace ident)
+||| is in the path of a given namespace.
+export
+isInPathOf : (i : String) -> (candidate : Namespace) -> Bool
+isInPathOf i (MkNS ns) = i `elem` ns
+
 -------------------------------------------------------------------------------------
 -- INSTANCES
 -------------------------------------------------------------------------------------
@@ -182,6 +188,10 @@ export
 Ord Namespace where
     compare (MkNS ms) (MkNS ns) = compare ms ns
 
+export
+Ord ModuleIdent where
+    compare (MkMI ms) (MkMI ns) = compare ms ns
+
 mkNSInjective : MkNS ms === MkNS ns -> ms === ns
 mkNSInjective Refl = Refl
 
@@ -195,9 +205,7 @@ DecEq Namespace where
 -- TODO: move somewhere more appropriate
 export
 showSep : String -> List String -> String
-showSep sep [] = ""
-showSep sep [x] = x
-showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
+showSep sep = Libraries.Data.String.Extra.join sep
 
 export
 showNSWithSep : String -> Namespace -> String
@@ -264,6 +272,10 @@ eqOrdNS = mkNamespace "Prelude.EqOrd"
 export
 primIONS : Namespace
 primIONS = mkNamespace "PrimIO"
+
+export
+ioNS : Namespace
+ioNS = mkNamespace "Prelude.IO"
 
 export
 reflectionNS : Namespace

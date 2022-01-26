@@ -11,7 +11,7 @@ build: support-sep.ss
 
 install: build
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
-	install *.ss ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
+	install -m 644 *.ss ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
 
 support-sep.ss: support.ss
 	# start library header

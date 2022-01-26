@@ -39,11 +39,13 @@ Ord Prec where
   compare x        y        = compare (precCon x) (precCon y)
 
 ||| Things that have a canonical `String` representation.
+||| A minimal implementation includes either `show` or `showPrec`.
 public export
 interface Show ty where
   constructor MkShow
   ||| Convert a value to its `String` representation.
   ||| @ x the value to convert
+  total
   show : (x : ty) -> String
   show x = showPrec Open x
 
@@ -59,6 +61,7 @@ interface Show ty where
   ||| their own bracketing, like `Pair` and `List`.
   ||| @ d the precedence context.
   ||| @ x the value to convert
+  total
   showPrec : (d : Prec) -> (x : ty) -> String
   showPrec _ x = show x
 
@@ -74,7 +77,7 @@ showParens True  s = "(" ++ s ++ ")"
 |||
 ||| Apply `showCon` to the precedence context, the constructor name, and the
 ||| args shown with `showArg` and concatenated.  Example:
-||| ```
+||| ```idris example
 ||| data Ann a = MkAnn String a
 |||
 ||| Show a => Show (Ann a) where
@@ -123,6 +126,22 @@ Show Bits32 where
 export
 Show Bits64 where
   showPrec = primNumShow prim__cast_Bits64String
+
+export
+Show Int8 where
+  showPrec = primNumShow prim__cast_Int8String
+
+export
+Show Int16 where
+  showPrec = primNumShow prim__cast_Int16String
+
+export
+Show Int32 where
+  showPrec = primNumShow prim__cast_Int32String
+
+export
+Show Int64 where
+  showPrec = primNumShow prim__cast_Int64String
 
 export
 Show Double where
@@ -180,6 +199,10 @@ Show Bool where
   show False = "False"
 
 export
+Show Void where
+  show v impossible
+
+export
 Show () where
   show () = "()"
 
@@ -209,3 +232,9 @@ export
 (Show a, Show b) => Show (Either a b) where
   showPrec d (Left x)  = showCon d "Left" $ showArg x
   showPrec d (Right x) = showCon d "Right" $ showArg x
+
+export
+Show Ordering where
+  show LT = "LT"
+  show EQ = "EQ"
+  show GT = "GT"

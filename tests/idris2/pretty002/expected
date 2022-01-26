@@ -1,0 +1,6 @@
+1/1: Building SnocList (SnocList.idr)
+Main> [<1, 2, 3, 4]
+Main> [<[<1, 2], [<3, 4]]
+Main> [<1, 2, 3, 4]
+Main> 
+Bye for now!

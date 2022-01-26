@@ -3,7 +3,7 @@ module Text.PrettyPrint.Prettyprinter.Doc
 import Data.List
 import public Data.List1
 import Data.Maybe
-import Data.Strings
+import Data.String
 import public Data.String.Extra
 
 %default total
@@ -282,7 +282,7 @@ punctuate _ [d] = [d]
 punctuate p (d :: ds) = (d <+> p) :: punctuate p ds
 
 export
-plural : (Num amount, Eq amount) => doc -> doc -> amount -> doc
+plural : Num amount => Eq amount => doc -> doc -> amount -> doc
 plural one multiple n = if n == 1 then one else multiple
 
 ||| Encloses the document between two other documents using `(<+>)`.
@@ -360,7 +360,7 @@ interface Pretty a where
 export
 Pretty String where
   pretty str = let str' = if "\n" `isSuffixOf` str then dropLast 1 str else str in
-                   vsep $ map unsafeTextWithoutNewLines $ forget $ lines str'
+                   vsep $ map unsafeTextWithoutNewLines $ lines str'
 
 public export
 FromString (Doc ann) where
@@ -418,6 +418,10 @@ export Pretty Bits8 where pretty = unsafeTextWithoutNewLines . show
 export Pretty Bits16 where pretty = unsafeTextWithoutNewLines . show
 export Pretty Bits32 where pretty = unsafeTextWithoutNewLines . show
 export Pretty Bits64 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int8 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int16 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int32 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int64 where pretty = unsafeTextWithoutNewLines . show
 
 export
 (Pretty a, Pretty b) => Pretty (a, b) where

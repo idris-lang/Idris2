@@ -1,7 +1,4 @@
-amount
-equalAmounts
-addr
-equalAddrs
-equalFlags
-equalOctals
+:printdef bound
+:printdef ignored
+:printdef seqd
 :q

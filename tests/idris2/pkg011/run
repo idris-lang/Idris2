@@ -1,0 +1,23 @@
+for t in dot dot-slash dot-slash-dot; do
+    cd $t
+    echo $t
+    $1 --build testpkg.ipkg
+    rm -rf  build/
+    $1 --check --find-ipkg Main.idr
+    rm -rf  build/
+    cd ..
+done
+
+echo dot-slash-name-slash
+cd dot-slash-name-slash
+$1 --build testpkg.ipkg
+rm -rf build/
+$1 --check --find-ipkg src/Main.idr
+rm -rf build/
+cd ..
+
+echo sibling/pkg
+cd sibling/pkg
+$1 --build testpkg.ipkg
+rm -rf build/
+cd ../..

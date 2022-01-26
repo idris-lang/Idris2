@@ -1,5 +1,8 @@
 1/1: Building lets (lets.idr)
-Error: While processing right hand side of dolet2. When unifying Maybe Int and Maybe String.
+Error: While processing right hand side of dolet2. When unifying:
+    Maybe Int
+and:
+    Maybe String
 Mismatch between: Int and String.
 
 lets:22:39--22:40

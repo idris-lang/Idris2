@@ -1,17 +1,17 @@
 module TTImp.Elab.Term
 
-import Libraries.Data.StringMap
+import Libraries.Data.UserNameMap
 
 import Core.Context
 import Core.Core
 import Core.Env
 import Core.Metadata
 import Core.Normalise
-import Core.Options
-import Core.Reflect
 import Core.Unify
 import Core.TT
 import Core.Value
+
+import Idris.Syntax
 
 import TTImp.Elab.Ambiguity
 import TTImp.Elab.App
@@ -29,7 +29,6 @@ import TTImp.Elab.Quote
 import TTImp.Elab.Record
 import TTImp.Elab.Rewrite
 import TTImp.Elab.RunElab
-import TTImp.Reflect
 import TTImp.TTImp
 
 %default covering
@@ -118,6 +117,7 @@ checkTerm : {vars : _} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             {auto e : Ref EST (EState vars)} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             RigCount -> ElabInfo ->
             NestedNames vars -> Env Term vars -> RawImp -> Maybe (Glued vars) ->
             Core (Term vars, Glued vars)
@@ -133,7 +133,7 @@ checkTerm rig elabinfo nest env (IPi fc r p Nothing argTy retTy) exp
                    AutoImplicit => genVarName "conArg"
                    (DefImplicit _) => genVarName "defArg"
          checkPi rig elabinfo nest env fc r p n argTy retTy exp
-checkTerm rig elabinfo nest env (IPi fc r p (Just (UN "_")) argTy retTy) exp
+checkTerm rig elabinfo nest env (IPi fc r p (Just (UN Underscore)) argTy retTy) exp
     = checkTerm rig elabinfo nest env (IPi fc r p Nothing argTy retTy) exp
 checkTerm rig elabinfo nest env (IPi fc r p (Just n) argTy retTy) exp
     = checkPi rig elabinfo nest env fc r p n argTy retTy exp
@@ -169,7 +169,8 @@ checkTerm rig elabinfo nest env (ISearch fc depth) (Just gexpty)
 checkTerm rig elabinfo nest env (ISearch fc depth) Nothing
     = do est <- get EST
          nmty <- genName "searchTy"
-         ty <- metaVar fc erased env nmty (TType fc)
+         u <- uniVar fc
+         ty <- metaVar fc erased env nmty (TType fc u)
          nm <- genName "search"
          sval <- searchVar fc rig depth (Resolved (defining est)) env nest nm ty
          pure (sval, gnf env ty)
@@ -182,7 +183,7 @@ checkTerm rig elabinfo nest env (ICoerced fc tm) exp
 checkTerm rig elabinfo nest env (IBindHere fc binder sc) exp
     = checkBindHere rig elabinfo nest env fc binder sc exp
 checkTerm rig elabinfo nest env (IBindVar fc n) exp
-    = checkBindVar rig elabinfo nest env fc n exp
+    = checkBindVar rig elabinfo nest env fc (Basic n) exp
 checkTerm rig elabinfo nest env (IAs fc nameFC side n_in tm) exp
     = checkAs rig elabinfo nest env fc nameFC side n_in tm exp
 checkTerm rig elabinfo nest env (IMustUnify fc reason tm) exp
@@ -207,15 +208,16 @@ checkTerm {vars} rig elabinfo nest env (IPrimVal fc c) exp
     = do let (cval, cty) = checkPrim {vars} fc c
          checkExp rig elabinfo env fc cval (gnf env cty) exp
 checkTerm rig elabinfo nest env (IType fc) exp
-    = checkExp rig elabinfo env fc (TType fc) (gType fc) exp
-
+    = do u <- uniVar fc
+         checkExp rig elabinfo env fc (TType fc u) (gType fc u) exp
 checkTerm rig elabinfo nest env (IHole fc str) exp
-    = checkHole rig elabinfo nest env fc str exp
+    = checkHole rig elabinfo nest env fc (Basic str) exp
 checkTerm rig elabinfo nest env (IUnifyLog fc lvl tm) exp
     = withLogLevel lvl $ check rig elabinfo nest env tm exp
 checkTerm rig elabinfo nest env (Implicit fc b) (Just gexpty)
     = do nm <- genName "_"
          expty <- getTerm gexpty
+         defs <- get Ctxt
          metaval <- metaVar fc rig env nm expty
          -- Add to 'bindIfUnsolved' if 'b' set
          when (b && bindingVars elabinfo) $
@@ -226,7 +228,8 @@ checkTerm rig elabinfo nest env (Implicit fc b) (Just gexpty)
          pure (metaval, gexpty)
 checkTerm rig elabinfo nest env (Implicit fc b) Nothing
     = do nmty <- genName "implicit_type"
-         ty <- metaVar fc erased env nmty (TType fc)
+         u <- uniVar fc
+         ty <- metaVar fc erased env nmty (TType fc u)
          nm <- genName "_"
          metaval <- metaVar fc rig env nm ty
          -- Add to 'bindIfUnsolved' if 'b' set
@@ -238,18 +241,18 @@ checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
     = do -- enter the scope -> add unambiguous names
          est <- get EST
          rns <- resolveNames fc ns
-         put EST $ record { unambiguousNames = mergeLeft rns (unambiguousNames est) } est
+         put EST $ { unambiguousNames := mergeLeft rns (unambiguousNames est) } est
 
          -- inside the scope -> check the RHS
          result <- check rig elabinfo nest env rhs exp
 
          -- exit the scope -> restore unambiguous names
          newEST <- get EST
-         put EST $ record { unambiguousNames = unambiguousNames est } newEST
+         put EST $ { unambiguousNames := unambiguousNames est } newEST
 
          pure result
   where
-    resolveNames : FC -> List Name -> Core (StringMap (Name, Int, GlobalDef))
+    resolveNames : FC -> List Name -> Core (UserNameMap (Name, Int, GlobalDef))
     resolveNames fc [] = pure empty
     resolveNames fc (n :: ns) =
       case userNameRoot n of
@@ -261,9 +264,8 @@ checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
           ctxt <- get Ctxt
           rns <- lookupCtxtName n (gamma ctxt)
           case rns of
-            []   => undefinedName fc n
             [rn] => insert nRoot rn <$> resolveNames fc ns
-            _    => throw $ AmbiguousName fc (map fst rns)
+            rns  => ambiguousName fc n (map fst rns)
 
 -- Declared in TTImp.Elab.Check
 -- check : {vars : _} ->

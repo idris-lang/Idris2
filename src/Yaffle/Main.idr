@@ -1,29 +1,20 @@
 module Yaffle.Main
 
-import Parser.Source
-
 import Core.Binary
 import Core.Context
 import Core.Directory
-import Core.Env
 import Core.FC
 import Core.InitPrimitives
 import Core.Metadata
-import Core.Normalise
-import Core.Options
-import Core.TT
 import Core.UnifyState
 import Libraries.Utils.Path
 
-import TTImp.Parser
+import Idris.Syntax
+
 import TTImp.ProcessDecls
-import TTImp.TTImp
 
 import Yaffle.REPL
 
-import Data.List
-import Data.So
-import Data.Strings
 import System
 
 %default covering
@@ -51,6 +42,7 @@ yaffleMain sourceFileName args
          modIdent <- ctxtPathToNS sourceFileName
          m <- newRef MD (initMetadata (PhysicalIdrSrc modIdent))
          u <- newRef UST initUState
+         s <- newRef Syn initSyntax
          setLogTimings t
          addPrimitives
          case extension sourceFileName of
@@ -66,7 +58,7 @@ yaffleMain sourceFileName args
                             coreLift_ $ putStrLn "Written TTC"
          ust <- get UST
 
-         repl {c} {u}
+         repl {c} {u} {s}
 
 ymain : IO ()
 ymain

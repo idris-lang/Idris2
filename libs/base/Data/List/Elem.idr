@@ -1,6 +1,7 @@
 module Data.List.Elem
 
 import Decidable.Equality
+import Control.Function
 
 %default total
 
@@ -25,8 +26,8 @@ Uninhabited (There e = Here) where
   uninhabited Refl impossible
 
 export
-thereInjective : {0 e1, e2 : Elem x xs} -> There e1 = There e2 -> e1 = e2
-thereInjective Refl = Refl
+Injective (There {x} {y} {xs}) where
+  injective Refl = Refl
 
 export
 DecEq (Elem x xs) where
@@ -35,12 +36,17 @@ DecEq (Elem x xs) where
   decEq (There later) Here = No absurd
   decEq (There this) (There that) with (decEq this that)
     decEq (There this) (There this) | Yes Refl  = Yes Refl
-    decEq (There this) (There that) | No contra = No (contra . thereInjective)
+    decEq (There this) (There that) | No contra = No (contra . injective)
 
 export
 Uninhabited (Elem {a} x []) where
   uninhabited Here impossible
   uninhabited (There p) impossible
+
+export
+Uninhabited (x = z) => Uninhabited (Elem z xs) => Uninhabited (Elem z $ x::xs) where
+  uninhabited Here @{xz} = uninhabited Refl @{xz}
+  uninhabited (There y) = uninhabited y
 
 ||| An item not in the head and not in the tail is not in the list at all.
 export

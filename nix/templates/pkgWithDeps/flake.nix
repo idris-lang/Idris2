@@ -1,14 +1,14 @@
 {
   description = "My Idris 2 package";
 
-  inputs.flake-utils.url = github:numtide/flake-utils;
+  inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.idris = {
-    url = github:idris-lang/Idris2;
+    url = "github:idris-lang/Idris2";
     inputs.nixpkgs.follows = "nixpkgs";
     inputs.flake-utils.follows = "flake-utils";
   };
   inputs.pkg = {
-    url = github:idris-lang/pkg;
+    url = "github:idris-lang/pkg";
     inputs.flake-utils.follows = "flake-utils";
     inputs.idris.follows = "idris";
   };

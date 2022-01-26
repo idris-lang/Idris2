@@ -21,7 +21,7 @@ genEq typeName = do
   let and : TTImp -> TTImp -> TTImp
       and x y = `(~(x) && ~(y))
       compareEq : String -> String -> TTImp
-      compareEq x y = `(~(IVar pos $ UN x) == ~(IVar pos $ UN y))
+      compareEq x y = `(~(IVar pos $ UN (Basic x)) == ~(IVar pos $ UN (Basic y)))
       makeClause : Name -> Elab Clause
       makeClause constr = do
         [(_, ty)] <- getType constr
@@ -47,5 +47,6 @@ genEq typeName = do
 data TreeOne a = BranchOne (TreeOne a) a (TreeOne a)
                | Leaf
 
+covering
 Eq a => Eq (TreeOne a) where
-  (==) = %runElab genEq `{{ TreeOne }}
+  (==) = %runElab genEq `{ TreeOne }

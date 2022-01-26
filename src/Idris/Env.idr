@@ -27,6 +27,7 @@ envs = [
          MkEnvDesc "IDRIS2_DATA"   "Places Idris2 looks for data files",
          MkEnvDesc "IDRIS2_LIBS"   "Places Idris2 looks for libraries (for code generation)",
          MkEnvDesc "IDRIS2_CG"     "Codegen backend",
+         MkEnvDesc "IDRIS2_INC_CGS" "Code generators to use (comma separated) when compiling modules incrementally",
          MkEnvDesc "CHEZ"          "chez executable used in Chez codegen",
          MkEnvDesc "RACKET"        "racket executable used in Racket codegen",
          MkEnvDesc "RACKET_RACO"   "raco executable used in Racket codegen",

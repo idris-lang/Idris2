@@ -1,10 +1,10 @@
 module Idris.Pretty.Render
 
+import Core.Context
 import Core.Core
 
 import Idris.REPL.Opts
 
-import Libraries.Control.ANSI.SGR
 import Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
 import Libraries.Utils.Term
@@ -47,3 +47,13 @@ renderWithoutColor doc = do
   let opts = MkLayoutOptions pageWidth
   let layout = layoutPretty opts doc
   pure $ renderString $ unAnnotateS layout
+
+export
+renderWithSpans : {auto o : Ref ROpts REPLOpts} ->
+  Doc ann ->
+  Core (String, List (Span ann))
+renderWithSpans doc = do
+  pageWidth <- getPageWidth
+  let opts = MkLayoutOptions pageWidth
+  let layout = layoutPretty opts doc
+  pure $ displaySpans layout

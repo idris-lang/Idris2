@@ -2,7 +2,6 @@ module Language.JSON.Lexer
 
 import Language.JSON.String
 import Text.Lexer
-import Text.Token
 
 import public Language.JSON.Tokens
 
@@ -34,8 +33,8 @@ jsonTokenMap = toTokenMap $
   ]
 
 export
-lexJSON : String -> Maybe (List JSONToken)
+lexJSON : String -> Maybe (List (WithBounds JSONToken))
 lexJSON str
   = case lex jsonTokenMap str of
-         (tokens, _, _, "") => Just $ map TokenData.tok tokens
+         (tokens, _, _, "") => Just $ tokens
          _ => Nothing

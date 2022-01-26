@@ -5,11 +5,11 @@ module Data.Bifoldable
 
 ||| Left associative monadic bifold over a structure.
 public export
-bifoldlM :  (Bifoldable p, Monad m)
-         => (f: a -> b -> m a)
-         -> (g: a -> c -> m a)
-         -> (init: a)
-         -> (input: p b c) -> m a
+bifoldlM : Monad m => Bifoldable p =>
+          (f: a -> b -> m a) ->
+          (g: a -> c -> m a) ->
+          (init: a) ->
+          (input: p b c) -> m a
 bifoldlM f g a0 = bifoldl (\ma,b => ma >>= flip f b)
                           (\ma,c => ma >>= flip g c)
                           (pure a0)
@@ -17,18 +17,18 @@ bifoldlM f g a0 = bifoldl (\ma,b => ma >>= flip f b)
 ||| Combines the elements of a structure,
 ||| given ways of mapping them to a common monoid.
 public export
-bifoldMap : (Bifoldable p, Monoid m) => (a -> m) -> (b -> m) -> p a b -> m
+bifoldMap : Monoid m => Bifoldable p => (a -> m) -> (b -> m) -> p a b -> m
 bifoldMap f g = bifoldr ((<+>) . f) ((<+>) . g) neutral
 
 ||| Combines the elements of a structure using a monoid.
 public export
-biconcat : (Bifoldable p, Monoid m) => p m m -> m
+biconcat : Monoid m => Bifoldable p => p m m -> m
 biconcat = bifoldr (<+>) (<+>) neutral
 
 ||| Combines the elements of a structure,
 ||| given ways of mapping them to a common monoid.
 public export
-biconcatMap : (Bifoldable p, Monoid m) => (a -> m) -> (b -> m) -> p a b -> m
+biconcatMap : Monoid m => Bifoldable p => (a -> m) -> (b -> m) -> p a b -> m
 biconcatMap f g = bifoldr ((<+>) . f) ((<+>) . g) neutral
 
 ||| The conjunction of all elements of a structure containing lazy boolean
@@ -59,24 +59,24 @@ biall f g = bifoldl (\x,y => x && f y) (\x,y => x && g y) True
 
 ||| Add together all the elements of a structure.
 public export
-bisum : (Bifoldable p, Num a) => p a a -> a
+bisum : Num a => Bifoldable p => p a a -> a
 bisum = bifoldr (+) (+) 0
 
 ||| Add together all the elements of a structure.
 ||| Same as `bisum` but tail recursive.
 export
-bisum' : (Bifoldable p, Num a) => p a a -> a
+bisum' : Num a => Bifoldable p => p a a -> a
 bisum' = bifoldl (+) (+) 0
 
 ||| Multiply together all elements of a structure.
 public export
-biproduct : (Bifoldable p, Num a) => p a a -> a
+biproduct : Num a => Bifoldable p => p a a -> a
 biproduct = bifoldr (*) (*) 1
 
 ||| Multiply together all elements of a structure.
 ||| Same as `product` but tail recursive.
 export
-biproduct' : (Bifoldable p, Num a) => p a a -> a
+biproduct' : Num a => Bifoldable p => p a a -> a
 biproduct' = bifoldl (*) (*) 1
 
 ||| Map each element of a structure to a computation, evaluate those
@@ -91,7 +91,7 @@ bitraverse_ f g = bifoldr ((*>) . f) ((*>) . g) (pure ())
 
 ||| Evaluate each computation in a structure and discard the results.
 public export
-bisequence_ : (Bifoldable p, Applicative f) => p (f a) (f b) -> f ()
+bisequence_ : Applicative f => Bifoldable p => p (f a) (f b) -> f ()
 bisequence_ = bifoldr (*>) (*>) (pure ())
 
 ||| Like `bitraverse_` but with the arguments flipped.
@@ -109,7 +109,7 @@ bifor_ p f g = bitraverse_ f g p
 ||| left-biased choice from a list of alternatives, which means that it
 ||| evaluates to the left-most non-`empty` alternative.
 public export
-bichoice : (Bifoldable p, Alternative f) => p (Lazy (f a)) (Lazy (f a)) -> f a
+bichoice : Alternative f => Bifoldable p => p (Lazy (f a)) (Lazy (f a)) -> f a
 bichoice t = bifoldr {a = Lazy (f a)} {b = Lazy (f a)} {acc = Lazy (f a)}
                  (\ x, xs => x <|> xs)
                  (\ x, xs => x <|> xs)

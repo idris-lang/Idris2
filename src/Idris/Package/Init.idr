@@ -5,14 +5,13 @@ import Core.Name.Namespace
 
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 
 import Idris.Package.Types
 import System.Directory
 
 import Libraries.Utils.Path
 import Libraries.System.Directory.Tree
-import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default total
 

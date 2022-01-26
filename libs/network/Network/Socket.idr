@@ -6,7 +6,6 @@ module Network.Socket
 
 import public Network.Socket.Data
 import Network.Socket.Raw
-import Data.List
 import Network.FFI
 
 -- ----------------------------------------------------- [ Network Socket API. ]
@@ -29,7 +28,7 @@ socket sf st pn = do
 ||| Close a socket
 export
 close : HasIO io => Socket -> io ()
-close sock = do _ <- primIO $ prim__socket_close $ descriptor sock
+close sock = do _ <- primIO $ prim__idrnet_close $ descriptor sock
                 pure ()
 
 ||| Binds a socket to the given socket address and port.
@@ -78,7 +77,7 @@ connect sock addr port = do
 export
 listen : HasIO io => (sock : Socket) -> io Int
 listen sock = do
-  listen_res <- primIO $ prim__socket_listen (descriptor sock) BACKLOG
+  listen_res <- primIO $ prim__idrnet_listen (descriptor sock) BACKLOG
   if listen_res == (-1)
     then getErrno
     else pure 0

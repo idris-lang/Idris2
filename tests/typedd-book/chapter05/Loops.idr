@@ -1,6 +1,6 @@
 module Main
 
-import Data.Strings
+import Data.String
 import System
 
 countdown : (secs : Nat) -> IO ()

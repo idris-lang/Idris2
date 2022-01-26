@@ -1,3 +1,4 @@
+rm -rf build
+
 $1 --yaffle Bad.yaff < input
 
-rm -rf build

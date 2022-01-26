@@ -2,12 +2,33 @@ module Data.String
 
 import Data.List
 import Data.List1
+import Data.SnocList
 
 %default total
 
 export
 singleton : Char -> String
 singleton c = strCons c ""
+
+||| Create a string by using n copies of a character
+public export
+replicate : Nat -> Char -> String
+replicate n c = pack (replicate n c)
+
+||| Indent a given string by `n` spaces.
+public export
+indent : (n : Nat) -> String -> String
+indent n x = replicate n ' ' ++ x
+
+||| Pad a string on the left
+export
+padLeft : Nat -> Char -> String -> String
+padLeft n c str = replicate (minus n (String.length str)) c ++ str
+
+||| Pad a string on the right
+export
+padRight : Nat -> Char -> String -> String
+padRight n c str = str ++ replicate (minus n (String.length str)) c
 
 partial
 foldr1 : (a -> a -> a) -> List a -> a
@@ -21,25 +42,30 @@ foldl1 f (x::xs) = foldl f x xs
 -- This uses fastConcat internally so it won't compute at compile time.
 export
 fastUnlines : List String -> String
-fastUnlines = fastConcat . intersperse "\n"
+fastUnlines = fastConcat . unlines'
+  where unlines' : List String -> List String
+        unlines' [] = []
+        unlines' (x :: xs) = x :: "\n" :: unlines' xs
 
--- This is a deprecated alias for fastConcat for backwards compatibility
--- (unfortunately, we don't have %deprecated yet).
-export
-fastAppend : List String -> String
-fastAppend = fastConcat
+-- append a word to the list of words, only if it's non-empty
+wordsHelper : SnocList Char -> SnocList (List Char) -> SnocList (List Char)
+wordsHelper [<] css = css
+wordsHelper sc  css = css :< (sc <>> Nil)
 
 ||| Splits a character list into a list of whitespace separated character lists.
 |||
 ||| ```idris example
-||| words' (unpack " A B C  D E   ")
+||| words' (unpack " A B C  D E   ") [<] [<]
 ||| ```
-covering
-words' : List Char -> List (List Char)
-words' s = case dropWhile isSpace s of
-            [] => []
-            s' => let (w, s'') = break isSpace s'
-                  in w :: words' s''
+words' :  List Char
+       -> SnocList Char
+       -> SnocList (List Char)
+       -> List (List Char)
+words' (c :: cs) sc css =
+  if isSpace c
+     then words' cs [<] (wordsHelper sc css)
+     else words' cs (sc :< c) css
+words' [] sc css = wordsHelper sc css <>> Nil
 
 ||| Splits a string into a list of whitespace separated strings.
 |||
@@ -47,9 +73,8 @@ words' s = case dropWhile isSpace s of
 ||| words " A B C  D E   "
 ||| ```
 export
-covering
 words : String -> List String
-words s = map pack (words' (unpack s))
+words s = map pack (words' (unpack s) [<] [<])
 
 ||| Joins the character lists by spaces into a single character list.
 |||
@@ -73,27 +98,40 @@ unwords = pack . unwords' . map unpack
 
 ||| Splits a character list into a list of newline separated character lists.
 |||
+||| The empty string becomes an empty list. The last newline, if not followed by
+||| any additional characters, is eaten (there will never be an empty string last element
+||| in the result).
+|||
 ||| ```idris example
 ||| lines' (unpack "\rA BC\nD\r\nE\n")
 ||| ```
 export
-lines' : List Char -> List1 (List Char)
-lines' [] = singleton []
-lines' s  = case break isNL s of
-                 (l, s') => l ::: case s' of
-                                       [] => []
-                                       _ :: s'' => forget $ lines' (assert_smaller s s'')
+lines' : List Char -> List (List Char)
+lines' s = linesHelp [] s
+  where linesHelp : List Char -> List Char -> List (List Char)
+        linesHelp [] [] = []
+        linesHelp acc [] = [reverse acc]
+        linesHelp acc ('\n' :: xs) = reverse acc :: linesHelp [] xs
+        linesHelp acc ('\r' :: '\n' :: xs) = reverse acc :: linesHelp [] xs
+        linesHelp acc ('\r' :: xs) = reverse acc :: linesHelp [] xs
+        linesHelp acc (c :: xs) = linesHelp (c :: acc) xs
+
 
 ||| Splits a string into a list of newline separated strings.
+|||
+||| The empty string becomes an empty list. The last newline, if not followed by
+||| any additional characters, is eaten (there will never be an empty string last element
+||| in the result).
 |||
 ||| ```idris example
 ||| lines  "\rA BC\nD\r\nE\n"
 ||| ```
 export
-lines : String -> List1 String
+lines : String -> List String
 lines s = map pack (lines' (unpack s))
 
-||| Joins the character lists by newlines into a single character list.
+||| Joins the character lists by a single character list by appending a newline
+||| to each line.
 |||
 ||| ```idris example
 ||| unlines' [['l','i','n','e'], ['l','i','n','e','2'], ['l','n','3'], ['D']]
@@ -101,10 +139,9 @@ lines s = map pack (lines' (unpack s))
 export
 unlines' : List (List Char) -> List Char
 unlines' [] = []
-unlines' [l] = l
 unlines' (l::ls) = l ++ '\n' :: unlines' ls
 
-||| Joins the strings by newlines into a single string.
+||| Joins the strings into a single string by appending a newline to each string.
 |||
 ||| ```idris example
 ||| unlines ["line", "line2", "ln3", "D"]
@@ -274,7 +311,7 @@ parsePositive s = parsePosTrimmed (trim s)
 ||| parseInteger {a=Int} " -123"
 ||| ```
 public export
-parseInteger : (Num a, Neg a) => String -> Maybe a
+parseInteger : Num a => Neg a => String -> Maybe a
 parseInteger s = parseIntTrimmed (trim s)
   where
     parseIntTrimmed : String -> Maybe a
@@ -356,3 +393,7 @@ parseDouble = mkDouble . wfe . trim
                        pure (w, if w < 0 then (-f) else f, 0)
                    _ => Nothing
                _ => Nothing
+
+public export
+null : String -> Bool
+null = (== "")

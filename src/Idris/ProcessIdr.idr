@@ -1,6 +1,15 @@
 module Idris.ProcessIdr
 
+import Compiler.RefC.RefC
+import Compiler.Scheme.Chez
+import Compiler.Scheme.ChezSep
+import Compiler.Scheme.Racket
+import Compiler.Scheme.Gambit
+import Compiler.ES.Node
+import Compiler.ES.Javascript
+import Compiler.Common
 import Compiler.Inline
+import Compiler.Interpreter.VMCode
 
 import Core.Binary
 import Core.Context
@@ -26,9 +35,11 @@ import Idris.REPL.Common
 import Idris.REPL.Opts
 import Idris.Syntax
 import Idris.Pretty
+import Idris.Doc.String
 
 import Data.List
-import Libraries.Data.NameMap
+import Data.String
+import Libraries.Data.SortedMap
 
 import System.File
 
@@ -150,6 +161,7 @@ readAsMain fname
     = do Just (syn, _, more) <- readFromTTC {extra = SyntaxInfo}
                                              True EmptyFC True fname (nsAsModuleIdent emptyNS) emptyNS
               | Nothing => throw (InternalError "Already loaded")
+
          replNS <- getNS
          replNestedNS <- getNestedNS
          extendSyn syn
@@ -173,7 +185,7 @@ readAsMain fname
          -- TODO: Maybe we should record this per namespace, since this is
          -- a little bit of a hack? Or maybe that will have too much overhead.
          ust <- get UST
-         put UST (record { nextName = nextName ustm } ust)
+         put UST ({ nextName := nextName ustm } ust)
 
          setNS replNS
          setNestedNS replNestedNS
@@ -194,8 +206,12 @@ readHeader path origin
          -- Stop at the first :, that's definitely not part of the header, to
          -- save lexing the whole file unnecessarily
          setCurrentElabSource res -- for error printing purposes
-         let Right (decor, mod) = runParserTo (PhysicalIdrSrc origin) (isLitFile path) (is ':') res (progHdr (PhysicalIdrSrc origin))
+         let Right (ws, decor, mod)
+            = runParserTo (PhysicalIdrSrc origin)
+                          (isLitFile path) (is ':') res
+                          (progHdr (PhysicalIdrSrc origin))
             | Left err => throw err
+         traverse_ recordWarning ws
          pure mod
 
 %foreign "scheme:collect"
@@ -207,24 +223,57 @@ gc = primIO $ prim__gc 4
 export
 addPublicHash : {auto c : Ref Ctxt Defs} ->
                 (Bool, (Namespace, Int)) -> Core ()
-addPublicHash (True, (mod, h)) = do addHash mod; addHash h
+addPublicHash (True, (mod, h)) = do addHash mod
+                                    addHash h
+                                    log "module.hash" 15 "Adding hash for a public import of \{show mod}"
 addPublicHash _ = pure ()
 
-||| If the source file is older
-unchangedTime : (sourceFileName : String) -> (ttcFileName : String) -> Core Bool
-unchangedTime sourceFileName ttcFileName
-  = do srcTime <- modTime sourceFileName
-       ttcTime <- modTime ttcFileName
-       pure $ srcTime <= ttcTime
+||| Determine if the TTC is outdated based on any of the given
+||| source or dependency source file names.
+export
+isTTCOutdated : {auto c : Ref Ctxt Defs} ->
+                (ttcFile : String) ->
+                (sourceFiles : List String) ->
+                Core Bool
+isTTCOutdated ttcFile sourceFiles
+  = do ttcTime  <- modTime ttcFile
+       srcTimes <- traverse modTime sourceFiles
+       log "module.hash" 20 $
+         unlines $
+           "Checking whether source code mod times are newer than \{show ttcTime}; src times:"
+           :: zipWith (\ src, tm => "\{src} : \{show tm}") sourceFiles srcTimes
+       pure $ any (>= ttcTime) srcTimes
 
-
-||| If the source file hash hasn't changed
-unchangedHash : (sourceFileName : String) -> (ttcFileName : String) -> Core Bool
-unchangedHash sourceFileName ttcFileName
-  = do sourceCodeHash        <- hashFile sourceFileName
-       (storedSourceHash, _) <- readHashes ttcFileName
+||| If the source files hash hasn't changed
+export
+unchangedHash : (hashFn : Maybe String) -> (ttcFileName : String) -> (sourceFileName : String) -> Core Bool
+unchangedHash hashFn ttcFileName sourceFileName
+  = do Just sourceCodeHash        <- hashFileWith hashFn sourceFileName
+             | _ => pure False
+       (Just storedSourceHash, _) <- readHashes ttcFileName
+             | _ => pure False
        pure $ sourceCodeHash == storedSourceHash
 
+export
+getCG : {auto o : Ref ROpts REPLOpts} ->
+        {auto c : Ref Ctxt Defs} ->
+        CG -> Core (Maybe Codegen)
+getCG Chez = pure $ Just codegenChez
+getCG ChezSep = pure $ Just codegenChezSep
+getCG Racket = pure $ Just codegenRacket
+getCG Gambit = pure $ Just codegenGambit
+getCG Node = pure $ Just codegenNode
+getCG Javascript = pure $ Just codegenJavascript
+getCG RefC = pure $ Just codegenRefC
+getCG VMCodeInterp = pure $ Just codegenVMCodeInterp
+getCG (Other s) = getCodegen s
+
+export
+findCG : {auto o : Ref ROpts REPLOpts} ->
+         {auto c : Ref Ctxt Defs} -> Core (Maybe Codegen)
+findCG
+    = do defs <- get Ctxt
+         getCG (codegen (session (options defs)))
 
 ||| Process everything in the module; return the syntax information which
 ||| needs to be written to the TTC (e.g. exported infix operators)
@@ -261,14 +310,16 @@ processMod sourceFileName ttcFileName msg sourcecode origin
 
         defs <- get Ctxt
         log "module.hash" 5 $ "Interface hash of " ++ show ns ++ ": " ++ show (ifaceHash defs)
-        log "module.hash" 5 $ "Interface hashes of " ++ show ns ++ " hashes:\n" ++
+        log "module.hash" 5 $ "Import Interface hashes of " ++ show ns ++ " hashes:\n" ++
           show (sort importInterfaceHashes)
         storedImportInterfaceHashes <- readImportHashes ttcFileName
         log "module.hash" 5 $ "Stored interface hashes of " ++ ttcFileName ++ ":\n" ++
           show (sort storedImportInterfaceHashes)
 
-        sourceUnchanged <- (if session.checkHashesInsteadOfModTime
-          then unchangedHash else unchangedTime) sourceFileName ttcFileName
+        let isUnchanged = if session.checkHashesInsteadOfModTime
+                             then unchangedHash (defs.options.hashFn)
+                             else (\ttc,src => not <$> (isTTCOutdated ttc [src]))
+        sourceUnchanged <- isUnchanged ttcFileName sourceFileName
 
         -- If neither the source nor the interface hashes of imports have changed then no rebuilding is needed
         if (sourceUnchanged && sort importInterfaceHashes == sort storedImportInterfaceHashes)
@@ -278,10 +329,26 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                    pure Nothing
            else -- needs rebuilding
              do iputStrLn msg
-                Right (decor, mod) <- logTime ("++ Parsing " ++ sourceFileName) $
-                            pure (runParser (PhysicalIdrSrc origin) (isLitFile sourceFileName) sourcecode (do p <- prog (PhysicalIdrSrc origin); eoi; pure p))
-                      | Left err => pure (Just [err])
+                Right (ws, MkState decor hnames, mod) <-
+                    logTime ("++ Parsing " ++ sourceFileName) $
+                      pure $ runParser (PhysicalIdrSrc origin)
+                                       (isLitFile sourceFileName)
+                                       sourcecode
+                                       (do p <- prog (PhysicalIdrSrc origin); eoi; pure p)
+                  | Left err => pure (Just [err])
+                traverse_ recordWarning ws
+                -- save the doc string for the current module
+                log "doc.module" 10 $ unlines
+                  [ "Recording doc"
+                  , documentation mod
+                  , "for module " ++ show (moduleNS mod)
+                  ]
+                addModDocString (moduleNS mod) (documentation mod)
+
                 addSemanticDecorations decor
+                syn <- get Syn
+                put Syn ({ holeNames := hnames } syn)
+
                 initHash
                 traverse_ addPublicHash (sort importMetas)
                 resetNextVar
@@ -308,13 +375,14 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                             processDecls (decls mod)
 --                 coreLift $ gc
 
-                logTime "++ Compile defs" $ compileAndInlineAll
+                when (isNil errs) $
+                   logTime "++ Compile defs" $ compileAndInlineAll
 
                 -- Save the import hashes for the imports we just read.
                 -- If they haven't changed next time, and the source
                 -- file hasn't changed, no need to rebuild.
                 defs <- get Ctxt
-                put Ctxt (record { importHashes = importInterfaceHashes } defs)
+                put Ctxt ({ importHashes := importInterfaceHashes } defs)
                 pure (Just errs))
           (\err => pure (Just [err]))
 
@@ -326,21 +394,36 @@ process : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto o : Ref ROpts REPLOpts} ->
-          Doc IdrisAnn -> FileName ->
+          (msgPrefix : Doc IdrisAnn) ->
+          (buildMsg : Doc IdrisAnn) ->
+          FileName ->
           (moduleIdent : ModuleIdent) ->
           Core (List Error)
-process buildmsg sourceFileName ident
+process msgPrefix buildMsg sourceFileName ident
     = do Right res <- coreLift (readFile sourceFileName)
                | Left err => pure [FileErr sourceFileName err]
          catch (do ttcFileName <- getTTCFileName sourceFileName "ttc"
                    Just errs <- logTime ("+ Elaborating " ++ sourceFileName) $
-                                   processMod sourceFileName ttcFileName buildmsg res ident
-                        | Nothing => pure [] -- skipped it
+                                   processMod sourceFileName ttcFileName
+                                              (msgPrefix <++> pretty "Building" <++> buildMsg)
+                                              res ident
+                     | Nothing => do log "module" 10 $ show $ msgPrefix <++> pretty "Skipping" <++> buildMsg
+                                     pure [] -- skipped it
                    if isNil errs
                       then
                         do defs <- get Ctxt
                            ns <- ctxtPathToNS sourceFileName
                            makeBuildDirectory ns
+                           traverse_
+                              (\cg =>
+                                  do Just cgdata <- getCG cg
+                                          | Nothing =>
+                                              coreLift $ putStrLn $ "No incremental code generator for " ++ show cg
+                                     Just res <- incCompile cgdata sourceFileName
+                                          | Nothing => pure ()
+                                     setIncData cg res)
+                              (incrementalCGs !getSession)
+
                            writeToTTC !(get Syn) sourceFileName ttcFileName
                            ttmFileName <- getTTCFileName sourceFileName "ttm"
                            writeToTTM ttmFileName

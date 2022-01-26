@@ -9,13 +9,13 @@ import Core.Metadata
 import Core.Normalise
 import Core.UnifyState
 import Core.Unify
-import Core.Value
+
+import Idris.Syntax
 
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.Elab.Term
 import TTImp.TTImp
-import TTImp.Unelab
 
 import Data.List
 import Data.Maybe
@@ -68,8 +68,9 @@ normaliseHoleTypes
   where
     updateType : Defs -> Int -> GlobalDef -> Core ()
     updateType defs i def
-        = do ty' <- normaliseHoles defs [] (type def)
-             ignore $ addDef (Resolved i) (record { type = ty' } def)
+        = do ty' <- catch (tryNormaliseSizeLimit defs 10 [] (type def))
+                          (\err => normaliseHoles defs [] (type def))
+             ignore $ addDef (Resolved i) ({ type := ty' } def)
 
     normaliseH : Defs -> Int -> Core ()
     normaliseH defs i
@@ -94,6 +95,7 @@ elabTermSub : {inner, vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
               Int -> ElabMode -> List ElabOpt ->
               NestedNames vars -> Env Term vars ->
               Env Term inner -> SubVars inner vars ->
@@ -111,7 +113,7 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
                      else pure empty
          ust <- get UST
          let olddelayed = delayedElab ust
-         put UST (record { delayedElab = [] } ust)
+         put UST ({ delayedElab := [] } ust)
          constart <- getNextEntry
 
          defs <- get Ctxt
@@ -129,14 +131,15 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
          solveConstraints solvemode Normal
          logTerm "elab" 5 "Looking for delayed in " chktm
          ust <- get UST
-         catch (retryDelayed (sortBy (\x, y => compare (fst x) (fst y))
+         catch (retryDelayed solvemode
+                             (sortBy (\x, y => compare (fst x) (fst y))
                                        (delayedElab ust)))
                  (\err =>
                     do ust <- get UST
-                       put UST (record { delayedElab = olddelayed } ust)
+                       put UST ({ delayedElab := olddelayed } ust)
                        throw err)
          ust <- get UST
-         put UST (record { delayedElab = olddelayed } ust)
+         put UST ({ delayedElab := olddelayed } ust)
          solveConstraintsAfter constart solvemode MatchArgs
 
          -- As long as we're not in the RHS of a case block,
@@ -160,7 +163,7 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
 
          -- Linearity and hole checking.
          -- on the LHS, all holes need to have been solved
-         chktm <- the (Core (Term vars)) $ case mode of
+         chktm <- case mode of
               InLHS _ => do when (not incase) $ checkUserHolesAfter constart True
                             pure chktm
               InTransform => do when (not incase) $ checkUserHolesAfter constart True
@@ -212,6 +215,7 @@ elabTerm : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            Int -> ElabMode -> List ElabOpt ->
            NestedNames vars -> Env Term vars ->
            RawImp -> Maybe (Glued vars) ->
@@ -224,13 +228,14 @@ checkTermSub : {inner, vars : _} ->
                {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
+               {auto s : Ref Syn SyntaxInfo} ->
                Int -> ElabMode -> List ElabOpt ->
                NestedNames vars -> Env Term vars ->
                Env Term inner -> SubVars inner vars ->
                RawImp -> Glued vars ->
                Core (Term vars)
 checkTermSub defining mode opts nest env env' sub tm ty
-    = do defs <- the (Core Defs) $ case mode of
+    = do defs <- case mode of
                       InType => branch -- might need to backtrack if there's
                                        -- a case in the type
                       _ => get Ctxt
@@ -240,7 +245,7 @@ checkTermSub defining mode opts nest env env' sub tm ty
             catch {t = Error}
                   (elabTermSub defining mode opts nest
                                env env' sub tm (Just ty))
-                  \case
+                  $ \case
                     TryWithImplicits loc benv ns
                       => do put Ctxt defs
                             put UST ust
@@ -276,6 +281,7 @@ checkTerm : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             Int -> ElabMode -> List ElabOpt ->
             NestedNames vars -> Env Term vars ->
             RawImp -> Glued vars ->

@@ -2,8 +2,6 @@ module Control.App.FileIO
 
 import Control.App
 
-import Data.List
-import Data.Strings
 import System.File
 
 %default covering
@@ -37,7 +35,7 @@ readFile : FileIO e => String -> App e String
 readFile f
     = withFile f Read throw $ \h =>
         do content <- read [] h
-           pure (fastAppend content)
+           pure (fastConcat content)
   where
     read : List String -> File -> App e (List String)
     read acc h
@@ -70,7 +68,7 @@ Has [PrimIO, Exception IOError] e => FileIO e where
 
   fPutStr f str = fileOp (fPutStr f str)
 
-  fPutStrLn f str = fileOp (File.fPutStrLn f str)
+  fPutStrLn f str = fileOp (File.ReadWrite.fPutStrLn f str)
 
   fflush f = primIO $ fflush f
 

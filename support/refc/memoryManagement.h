@@ -1,10 +1,12 @@
-#ifndef __MEMORY_MANAGEMENT_H__
-#define __MEMORY_MANAGEMENT_H__
+#pragma once
+
 #include "cBackend.h"
 
-Value *newValue(void);
+Value *newValue(size_t size);
 Value *newReference(Value *source);
 void removeReference(Value *source);
+
+#define IDRIS2_NEW_VALUE(t) ((t*) newValue(sizeof(t)))
 
 Value_Arglist *newArglist(int missing, int total);
 Value_Constructor *newConstructor(int total, int tag, const char *name);
@@ -33,5 +35,3 @@ Value_GCPointer *makeGCPointer(void *ptr_Raw, Value_Closure *onCollectFct);
 Value_Buffer *makeBuffer(void *buf);
 Value_Array *makeArray(int length);
 Value_World *makeWorld(void);
-
-#endif

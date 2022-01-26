@@ -16,8 +16,21 @@ data Elem : a -> Vect k a -> Type where
   There : (later : Elem x xs) -> Elem x (y::xs)
 
 export
+Uninhabited (Here = There e) where
+  uninhabited Refl impossible
+
+export
+Uninhabited (There e = Here) where
+  uninhabited Refl impossible
+
+export
 Uninhabited (Elem x []) where
   uninhabited Here impossible
+
+export
+Uninhabited (x = z) => Uninhabited (Elem z xs) => Uninhabited (Elem z $ x::xs) where
+  uninhabited Here @{xz} = uninhabited Refl @{xz}
+  uninhabited (There y) = uninhabited y
 
 ||| An item not in the head and not in the tail is not in the Vect at all
 export

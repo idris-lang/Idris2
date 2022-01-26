@@ -4,7 +4,6 @@ import Builtin
 import Prelude.Basics
 import Prelude.EqOrd
 import Prelude.Num
-import Prelude.Ops
 
 %default total
 
@@ -43,6 +42,14 @@ Semigroup () where
 public export
 Monoid () where
   neutral = ()
+
+public export
+Semigroup a => Semigroup b => Semigroup (a, b) where
+  (x, y) <+> (v, w) = (x <+> v, y <+> w)
+
+public export
+Monoid a => Monoid b => Monoid (a, b) where
+  neutral = (neutral, neutral)
 
 public export
 Semigroup Ordering where
@@ -116,6 +123,7 @@ namespace Functor
 
 ||| Bifunctors
 ||| @f The action of the Bifunctor on pairs of objects
+||| A minimal definition includes either `bimap` or both `mapFst` and `mapSnd`.
 public export
 interface Bifunctor f where
   constructor MkBifunctor
@@ -125,6 +133,7 @@ interface Bifunctor f where
   ||| bimap (\x => x + 1) reverse (1, "hello") == (2, "olleh")
   ||| ````
   |||
+  total
   bimap : (a -> c) -> (b -> d) -> f a b -> f c d
   bimap f g = mapFst f . mapSnd g
 
@@ -134,6 +143,7 @@ interface Bifunctor f where
   ||| mapFst (\x => x + 1) (1, "hello") == (2, "hello")
   ||| ````
   |||
+  total
   mapFst : (a -> c) -> f a b -> f c b
   mapFst f = bimap f id
 
@@ -143,6 +153,7 @@ interface Bifunctor f where
   ||| mapSnd reverse (1, "hello") == (1, "olleh")
   ||| ````
   |||
+  total
   mapSnd : (b -> d) -> f a b -> f a d
   mapSnd = bimap id
 
@@ -176,19 +187,27 @@ namespace Applicative
       pure = pure . pure
       fun <*> x = [| fun <*> x |]
 
+||| An alternative functor has a notion of disjunction.
+||| @f is the underlying applicative functor
+||| We expect (f a, empty, (<|>)) to be a type family of monoids.
 public export
 interface Applicative f => Alternative f where
   constructor MkAlternative
   empty : f a
   (<|>) : f a -> Lazy (f a) -> f a
 
+||| Monad
+||| @m The underlying functor
+||| A minimal definition includes either `(>>=)` or `join`.
 public export
 interface Applicative m => Monad m where
   constructor MkMonad
   ||| Also called `bind`.
+  total
   (>>=) : m a -> (a -> m b) -> m b
 
   ||| Also called `flatten` or mu.
+  total
   join : m (m a) -> m a
 
   -- default implementations
@@ -241,6 +260,7 @@ unless = when . not
 ||| a parameterised type and combine the elements together, using a provided
 ||| function, into a single result.
 ||| @ t The type of the 'Foldable' parameterised type.
+||| A minimal definition includes `foldr`
 public export
 interface Foldable t where
   constructor MkFoldable
@@ -262,8 +282,8 @@ interface Foldable t where
 
   ||| Test whether the structure is empty.
   ||| @ acc The accumulator value which is specified to be lazy
-  null : t elem -> Lazy Bool
-  null = foldr {acc = Lazy Bool} (\ _,_ => False) True
+  null : t elem -> Bool
+  null xs = foldr {acc = Lazy Bool} (\ _,_ => False) True xs
 
   ||| Similar to `foldl`, but uses a function wrapping its result in a `Monad`.
   ||| Consequently, the final value is wrapped in the same `Monad`.
@@ -283,13 +303,13 @@ interface Foldable t where
 
 ||| Combine each element of a structure into a monoid.
 public export
-concat : (Foldable t, Monoid a) => t a -> a
+concat : Monoid a => Foldable t => t a -> a
 concat = foldMap id
 
 ||| Combine into a monoid the collective results of applying a function to each
 ||| element of a structure.
 public export
-concatMap : (Foldable t, Monoid m) => (a -> m) -> t a -> m
+concatMap : Monoid m => Foldable t => (a -> m) -> t a -> m
 concatMap = foldMap
 
 namespace Bool.Lazy
@@ -316,14 +336,14 @@ namespace Bool.Lazy
 ||| element is `False` or no elements remain.
 public export
 and : Foldable t => t (Lazy Bool) -> Bool
-and = force . concat @{(%search, All)}
+and = force . concat @{All}
 
 ||| The disjunction of all elements of a structure containing lazy boolean
 ||| values.  `or` short-circuits from left to right, evaluating either until an
 ||| element is `True` or no elements remain.
 public export
 or : Foldable t => t (Lazy Bool) -> Bool
-or = force . concat @{(%search, Any)}
+or = force . concat @{Any}
 
 namespace Bool
   namespace Semigroup
@@ -355,9 +375,6 @@ any = foldMap @{%search} @{Any}
 public export
 all : Foldable t => (a -> Bool) -> t a -> Bool
 all = foldMap @{%search} @{All}
-  where
-    monoid : Monoid Bool
-    monoid = MkMonoid @{MkSemigroup (\x, y => x && y)} True
 
 namespace Num
   namespace Semigroup
@@ -380,40 +397,40 @@ namespace Num
 
 ||| Add together all the elements of a structure.
 public export
-sum : (Foldable t, Num a) => t a -> a
-sum = concat @{(%search, Additive)}
+sum : Num a => Foldable t => t a -> a
+sum = concat @{Additive}
 
 ||| Add together all the elements of a structure.
 ||| Same as `sum` but tail recursive.
 export
-sum' : (Foldable t, Num a) => t a -> a
+sum' : Num a => Foldable t => t a -> a
 sum' = sum
 
 ||| Multiply together all elements of a structure.
 public export
-product : (Foldable t, Num a) => t a -> a
-product = concat @{(%search, Multiplicative)}
+product : Num a => Foldable t => t a -> a
+product = concat @{Multiplicative}
 
 ||| Multiply together all elements of a structure.
 ||| Same as `product` but tail recursive.
 export
-product' : (Foldable t, Num a) => t a -> a
+product' : Num a => Foldable t => t a -> a
 product' = product
 
 ||| Map each element of a structure to a computation, evaluate those
 ||| computations and discard the results.
 public export
-traverse_ : (Foldable t, Applicative f) => (a -> f b) -> t a -> f ()
+traverse_ : Applicative f => Foldable t => (a -> f b) -> t a -> f ()
 traverse_ f = foldr ((*>) . f) (pure ())
 
 ||| Evaluate each computation in a structure and discard the results.
 public export
-sequence_ : (Foldable t, Applicative f) => t (f a) -> f ()
+sequence_ : Applicative f => Foldable t => t (f a) -> f ()
 sequence_ = foldr (*>) (pure ())
 
 ||| Like `traverse_` but with the arguments flipped.
 public export
-for_ : (Foldable t, Applicative f) => t a -> (a -> f b) -> f ()
+for_ : Applicative f => Foldable t => t a -> (a -> f b) -> f ()
 for_ = flip traverse_
 
 namespace Lazy
@@ -454,12 +471,12 @@ public export
 |||
 ||| Note: In Haskell, `choice` is called `asum`.
 public export
-choice : (Foldable t, Alternative f) => t (Lazy (f a)) -> f a
-choice = force . concat @{(%search, Lazy.MonoidAlternative)}
+choice : Alternative f => Foldable t => t (Lazy (f a)) -> f a
+choice = force . concat @{Lazy.MonoidAlternative}
 
 ||| A fused version of `choice` and `map`.
 public export
-choiceMap : (Foldable t, Alternative f) => (a -> f b) -> t a -> f b
+choiceMap : Alternative f => Foldable t => (a -> f b) -> t a -> f b
 choiceMap = foldMap @{%search} @{MonoidAlternative}
 
 namespace Foldable
@@ -468,12 +485,13 @@ namespace Foldable
   [Compose] (Foldable t, Foldable f) => Foldable (t . f) where
     foldr = foldr . flip . foldr
     foldl = foldl . foldl
-    null tf = null tf || all (force . null) tf
+    null tf = null tf || all null tf
     foldMap = foldMap . foldMap
 
 ||| `Bifoldable` identifies foldable structures with two different varieties
 ||| of elements (as opposed to `Foldable`, which has one variety of element).
 ||| Common examples are `Either` and `Pair`.
+||| A minimal definition includes `bifoldr`
 public export
 interface Bifoldable p where
   constructor MkBifoldable
@@ -482,8 +500,8 @@ interface Bifoldable p where
   bifoldl : (acc -> a -> acc) -> (acc -> b -> acc) -> acc -> p a b -> acc
   bifoldl f g z t = bifoldr (flip (.) . flip f) (flip (.) . flip g) id t z
 
-  binull : p a b -> Lazy Bool
-  binull = bifoldr {acc = Lazy Bool} (\ _,_ => False) (\ _,_ => False) True
+  binull : p a b -> Bool
+  binull t = bifoldr {acc = Lazy Bool} (\ _,_ => False) (\ _,_ => False) True t
 
 public export
 interface (Functor t, Foldable t) => Traversable t where
@@ -494,12 +512,12 @@ interface (Functor t, Foldable t) => Traversable t where
 
 ||| Evaluate each computation in a structure and collect the results.
 public export
-sequence : (Traversable t, Applicative f) => t (f a) -> f (t a)
+sequence : Applicative f => Traversable t => t (f a) -> f (t a)
 sequence = traverse id
 
 ||| Like `traverse` but with the arguments flipped.
 public export
-for : (Traversable t, Applicative f) => t a -> (a -> f b) -> f (t b)
+for : Applicative f => Traversable t => t a -> (a -> f b) -> f (t b)
 for = flip traverse
 
 public export
@@ -511,12 +529,12 @@ interface (Bifunctor p, Bifoldable p) => Bitraversable p where
 
 ||| Evaluate each computation in a structure and collect the results.
 public export
-bisequence : (Bitraversable p, Applicative f) => p (f a) (f b) -> f (p a b)
+bisequence : Applicative f => Bitraversable p => p (f a) (f b) -> f (p a b)
 bisequence = bitraverse id id
 
 ||| Like `bitraverse` but with the arguments flipped.
 public export
-bifor :  (Bitraversable p, Applicative f)
+bifor :  Applicative f => Bitraversable p
       => p a b
       -> (a -> f c)
       -> (b -> f d)

@@ -1,15 +1,10 @@
 module Libraries.Text.Lexer.Tokenizer
 
 import Data.List
-import Data.Either
-import Data.Nat
-import Data.Strings
 
-import Libraries.Data.String.Extra
 import Libraries.Text.Lexer.Core
 import Libraries.Text.Lexer
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import public Libraries.Control.Delayed
 import public Libraries.Text.Bounded
@@ -121,7 +116,7 @@ tokenise reject tokenizer line col acc str
               end = endFn tag
               beginTok'' = MkBounded (mapBegin beginTok') False (MkBounds line col line' col')
               (midToks, (reason, line'', col'', rest'')) =
-                    tokenise end middle line' col' [] rest
+                    assert_total $ tokenise end middle line' col' [] rest
            in case reason of
                    (ComposeNotClosing _ _) => Left reason
                    _ => let Just (endTok', lineEnd, colEnd, restEnd) =

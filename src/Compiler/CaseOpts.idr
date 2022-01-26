@@ -6,7 +6,6 @@ import Compiler.CompileExpr
 
 import Core.CompileExpr
 import Core.Context
-import Core.Context.Log
 import Core.FC
 import Core.TT
 

@@ -1,5 +1,7 @@
 module Data.DPair
 
+import Decidable.Equality
+
 %default total
 
 namespace DPair
@@ -15,6 +17,12 @@ namespace DPair
   public export
   bimap : {0 p : a -> Type} -> {0 q : b -> Type} -> (f : a -> b) -> (forall x. p x -> q (f x)) -> (x : a ** p x) -> (y : b ** q y)
   bimap f g (x ** y) = (f x ** g y)
+
+  public export
+  DecEq k => ({x : k} -> Eq (v x)) => Eq (DPair k v) where
+    (k1 ** v1) == (k2 ** v2) = case decEq k1 k2 of
+                                 Yes Refl => v1 == v2
+                                 No _     => False
 
 namespace Exists
 

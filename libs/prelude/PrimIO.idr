@@ -73,7 +73,7 @@ toPrim : (1 act : IO a) -> PrimIO a
 toPrim (MkIO fn) = fn
 
 %foreign "C:idris2_isNull, libidris2_support, idris_support.h"
-         "javascript:lambda:x=>x===undefined||x===null?1n:0n"
+         "javascript:lambda:x=>x===undefined||x===null?1:0"
 export
 prim__nullAnyPtr : AnyPtr -> Int
 

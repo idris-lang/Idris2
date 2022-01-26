@@ -7,6 +7,8 @@ The Idris REPL has two modes of interaction: a human-readable syntax designed fo
 The IDE-Protocol is versioned separately from the Idris compiler.
 The first version of Idris (written in Haskell and is at v1.3.3) implements version one of the IDE Protocol, and Idris2 (self-hosting and is at v.0.3.0) implements version two of the IDE Protocol.
 
+The protocol and its serialisation/deserialisation routines are part of the `Protocol` submodule hierarchy and are packaged in the `idris2protocols.ipkg` package.
+
 
 Protocol Overview
 -----------------
@@ -66,11 +68,11 @@ They are compatible with Version 1 and 2.0 of the protocol unless otherwise stat
 
   ``(:load-file FILENAME [LINE])``
     Load the named file.  If a ``LINE`` number is provided, the file is only loaded up to that line.  Otherwise, the entire file is loaded.
-    Version 2 of the IDE Protocol Requires that the file name is quoted.
+    Version 2 of the IDE Protocol requires that the file name be a quoted string, as in ``(:load-file "MyFile.idr")`` and not ``(:load-file MyFile.idr)``.
 
   ``(:cd FILEPATH)``
-    Change the working direction to the given ``FILEPATH``
-    Version 2 of the IDE Protocol Requires that the path is quoted.
+    Change the working direction to the given ``FILEPATH``.
+    Version 2 of the IDE Protocol requires that the path is quoted, as in ``(:cd "a/b/c")`` and not ``(:cd a/b/c)``.
 
   ``(:interpret STRING)``
     Interpret ``STRING`` at the Idris REPL, returning a highlighted result.
@@ -108,15 +110,18 @@ They are compatible with Version 1 and 2.0 of the protocol unless otherwise stat
   ``(:proof-search LINE NAME HINTS)``
     Attempt to fill out the holes on ``LINE`` named ``NAME`` by proof search.
     ``HINTS`` is a possibly-empty list of additional things to try while searching.
+    This operation is also called ``ExprSearch`` in the Idris 2 API.
 
   ``(:docs-for NAME [MODE])``
-    Look up the documentation for ``NAME``, and return it as a highlighted string. If ``MODE`` is ``:overview``, only the first paragraph of documentation is provided for ``NAME``.  If ``MODE`` is ``:full``, or omitted, the full documentation is returned for ``NAME``.
+    Look up the documentation for ``NAME``, and return it as a highlighted string.
+    If ``MODE`` is ``:overview``, only the first paragraph of documentation is provided for ``NAME``.
+    If ``MODE`` is ``:full``, or omitted, the full documentation is returned for ``NAME``.
 
   ``(:apropos STRING)``
     Search the documentation for mentions of ``STRING``, and return any found as a list of highlighted strings.
 
   ``(:metavariables WIDTH)``
-    List the currently-active holes, with their types pretty-printed with ``WIDTH`` columns.
+    List the currently-active holes, with their types pretty-printed in ``WIDTH`` columns.
 
   ``(:who-calls NAME)``
     Get a list of callers of ``NAME``.
@@ -131,13 +136,16 @@ They are compatible with Version 1 and 2.0 of the protocol unless otherwise stat
     Return a highlighted string consisting of the results of normalising the serialised term ``TM`` (which would previously have been sent as the ``tt-term`` property of a string).
 
   ``(:show-term-implicits TM)``
-    Return a highlighted string consisting of the results of making all arguments in serialised term ``TM`` (which would previously have been sent as the ``tt-term`` property of a string) explicit.
+    Return a highlighted string, consisting of the results of making all arguments in serialised term ``TM`` explicit.
+    The arguments in ``TM`` would previously have been sent as the ``tt-term`` property of a string.
 
   ``(:hide-term-implicits TM)``
-    Return a highlighted string consisting of the results of making all arguments in serialised term ``TM`` (which would previously have been sent as the ``tt-term`` property of a string) follow their usual implicitness setting.
+    Return a highlighted string, consisting of the results of making all arguments in serialised term ``TM`` follow their usual implicitness setting.
+    The arguments in ``TM`` would previously have been sent as the ``tt-term`` property of a string.
 
   ``(:elaborate-term TM)``
-    Return a highlighted string consisting of the core language term corresponding to serialised term ``TM`` (which would previously have been sent as the ``tt-term`` property of a string).
+    Return a highlighted string, consisting of the core language term corresponding to serialised term ``TM``.
+    The arguments in ``TM`` would previously have been sent as the ``tt-term`` property of a string.
 
   ``(:print-definition NAME)``
     Return the definition of ``NAME`` as a highlighted string.
@@ -154,33 +162,35 @@ New For Version 2
 New in Version 2 of the protocol are:
 
   ``(:generate-def LINE NAME)``
-    Generate a definition
+    Attempt to generate a complete definition from a type.
 
   ``(:generate-def-next)``
-    Replace the previous generated definition with next definition.
+    Replace the previous generated definition with the next generated definition.
 
   ``(:proof-search-next)``
-    Replace the previous proof search result with the next one.
+    Replace the previous proof search result with the next proof search result.
 
 Possible Replies
 ----------------
 
 Possible replies include a normal final reply:::
 
- (:return (:ok SEXP [HIGHLIGHTING]))
- (:return (:error String [HIGHLIGHTING]))
+ (:return (:ok SEXP [HIGHLIGHTING]) ID)
+ (:return (:error String [HIGHLIGHTING]) ID)
 
 A normal intermediate reply:::
 
- (:output (:ok SEXP [HIGHLIGHTING]))
- (:output (:error String [HIGHLIGHTING]))
+ (:output (:ok SEXP [HIGHLIGHTING]) ID)
+ (:output (:error String [HIGHLIGHTING]) ID)
 
 Informational and/or abnormal replies:::
 
-  (:write-string String)
-  (:set-prompt String)
-  (:warning (FilePath (LINE COL) (LINE COL) String [HIGHLIGHTING]))
+  (:write-string String ID)
+  (:set-prompt String ID)
+  (:warning (FilePath (LINE COL) (LINE COL) String [HIGHLIGHTING]) ID)
 
+
+Warnings include compiler errors that don't cause the compiler to stop.
 
 Output Highlighting
 -------------------
@@ -251,6 +261,6 @@ When elaborating source code or REPL input, Idris will locate regions of the sou
 These messages will arrive as replies to the command that caused elaboration to occur, such as ``:load-file`` or ``:interpret``.
 They have the format:::
 
-  (:output (:ok (:highlight-source POSNS)))
+  (:output (:ok (:highlight-source POSNS)) ID)
 
 where ``POSNS`` is a list of positions to highlight. Each of these is a two-element list whose first element is a position (encoded as for the ``source-loc`` property above) and whose second element is highlighting metadata in the same format used for output.

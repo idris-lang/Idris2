@@ -1,5 +1,4 @@
-#ifndef __CASTS_H__
-#define __CASTS_H__
+#pragma once
 
 #include "cBackend.h"
 #include <stdio.h>
@@ -149,5 +148,3 @@ Value *cast_Integer_to_Int64(Value *input);
 Value *cast_Integer_to_double(Value *input);
 Value *cast_Integer_to_char(Value *input);
 Value *cast_Integer_to_string(Value *input);
-
-#endif

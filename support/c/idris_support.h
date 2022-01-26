@@ -1,5 +1,4 @@
-#ifndef __IDRIS_SUPPORT_H
-#define __IDRIS_SUPPORT_H
+#pragma once
 
 // Return non-zero if the pointer is null
 int idris2_isNull(void*);
@@ -9,6 +8,7 @@ void *idris2_getNull();
 // to be non-null
 char* idris2_getString(void *p);
 int idris2_getErrno();
+char* idris2_strerror(int errnum);
 
 char* idris2_getStr();
 void idris2_putStr(char* f);
@@ -25,5 +25,3 @@ char* idris2_getEnvPair(int i);
 int idris2_getPID();
 
 long idris2_getNProcessors();
-
-#endif

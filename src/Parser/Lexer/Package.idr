@@ -7,8 +7,7 @@ import public Libraries.Text.Bounded
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 import Data.List
-import Data.List1
-import Data.Strings
+import Data.String
 import Libraries.Data.String.Extra
 import Libraries.Utils.String
 

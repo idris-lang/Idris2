@@ -1,11 +1,5 @@
 module TestIntegers
 
-import IntBits
-import IntCasts
-import IntEqOrd
-import IntNum
-import IntShow
-
 import Data.Bits
 import Data.List.Quantifiers
 
@@ -21,31 +15,31 @@ interface Num a => Bits a => SomeBits a where
     one : Index {a}
 
 SomeBits Bits8 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Bits16 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Bits32 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Bits64 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int8 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int16 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int32 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int64 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int where
-    one = fromNat 1
+    one = 1
 
 SomeBits Integer where
     one = 1
@@ -81,9 +75,9 @@ main = do
         the Int64 $ -9223372036854775808, -- Int64 min
         the Int64 1000000000000000000,
         the Int64 9223372036854775807, -- Int64 max
-        the Int $ -9223372036854775808, -- Int min
-        the Int 1000000000000000000,
-        the Int 9223372036854775807, -- Int max
+        the Int $ -2147483648, -- Int min
+        the Int 500000000,
+        the Int 2147483647, -- Int max
         the Integer $ -9223372036854775809, -- Int min - 1
         the Integer 0,
         the Integer 9223372036854775808 -- Int max + 1

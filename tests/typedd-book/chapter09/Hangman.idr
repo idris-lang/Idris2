@@ -1,4 +1,4 @@
-import Data.Strings
+import Data.String
 import Data.Vect
 import Data.Vect.Elem
 import Decidable.Equality

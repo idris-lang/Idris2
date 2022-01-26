@@ -1,6 +1,6 @@
 module Tail
 
-import Data.Strings
+import Data.String
 
 main : IO ()
 main = assert_total $ do

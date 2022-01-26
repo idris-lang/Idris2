@@ -6,7 +6,7 @@ Main> Error: Undefined name fromMaybe.
 
 Main> Imported module Data.Maybe
 Main> "test"
-Main> Imported module Data.Strings
+Main> Imported module Data.String
 Main> "hello"
 Main> True
 Main> Error loading module DoesNotExists: Module DoesNotExists not found

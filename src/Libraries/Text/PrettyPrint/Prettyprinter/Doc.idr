@@ -3,19 +3,16 @@ module Libraries.Text.PrettyPrint.Prettyprinter.Doc
 import Data.List
 import public Data.List1
 import Data.Maybe
-import Data.Strings
-import public Libraries.Data.String.Extra
-
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+import Data.SnocList
+import Data.String
+import public Libraries.Data.Span
+import Libraries.Data.String.Extra
 
 %default total
 
 export
 textSpaces : Int -> String
-textSpaces n = replicate (integerToNat $ cast n) ' '
+textSpaces n = String.replicate (integerToNat $ cast n) ' '
 
 ||| Maximum number of characters that fit in one line.
 public export
@@ -365,7 +362,7 @@ interface Pretty a where
 export
 Pretty String where
   pretty str = let str' = if "\n" `isSuffixOf` str then dropLast 1 str else str in
-                   vsep $ map unsafeTextWithoutNewLines $ forget $ lines str'
+                   vsep $ map unsafeTextWithoutNewLines $ lines str'
 
 public export
 FromString (Doc ann) where
@@ -423,6 +420,10 @@ export Pretty Bits8 where pretty = unsafeTextWithoutNewLines . show
 export Pretty Bits16 where pretty = unsafeTextWithoutNewLines . show
 export Pretty Bits32 where pretty = unsafeTextWithoutNewLines . show
 export Pretty Bits64 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int8 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int16 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int32 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int64 where pretty = unsafeTextWithoutNewLines . show
 
 export
 (Pretty a, Pretty b) => Pretty (a, b) where
@@ -747,6 +748,11 @@ layoutCompact doc = scan 0 [doc]
     scan col s@((Nesting f) :: ds) = scan col $ assert_smaller s (f 0 :: ds)
     scan col s@((Annotated _ x) :: ds) = scan col $ assert_smaller s (x :: ds)
 
+
+------------------------------------------------------------------------
+-- Turn the document into a string
+------------------------------------------------------------------------
+
 export
 renderShow : SimpleDocStream ann -> (String -> String)
 renderShow SEmpty = id
@@ -759,3 +765,37 @@ renderShow (SAnnPop x) = renderShow x
 export
 Show (Doc ann) where
   show doc = renderShow (layoutPretty defaultLayoutOptions doc) ""
+
+------------------------------------------------------------------------
+-- Turn the document into a string, and a list of annotation spans
+------------------------------------------------------------------------
+
+export
+displaySpans : SimpleDocStream a -> (String, List (Span a))
+displaySpans p =
+  let (bits, anns) = go Z [<] [<] [] p in
+  (concat bits, anns)
+
+  where
+
+    go : (index : Nat) ->
+         (doc   : SnocList String) ->
+         (spans : SnocList (Span a)) ->
+         (ann : List (Nat, a)) -> -- starting index, < current
+         SimpleDocStream a ->
+         (List String, List (Span a))
+    go index doc spans ann SEmpty = (doc <>> [], spans <>> [])
+    go index doc spans ann (SChar c rest)
+      = go (S index) (doc :< cast c) spans ann rest
+    go index doc spans ann (SText len text rest)
+      = go (integerToNat (cast len) + index) (doc :< text) spans ann rest
+    go index doc spans ann (SLine i rest)
+      = let text = strCons '\n' (textSpaces i) in
+        go (S (integerToNat $ cast i) + index) (doc :< text) spans ann rest
+    go index doc spans ann (SAnnPush a rest)
+      = go index doc spans ((index, a) :: ann) rest
+    go index doc spans ((start, a) :: ann) (SAnnPop rest)
+      = let span = MkSpan start (minus index start) a in
+        go index doc (spans :< span) ann rest
+    go index doc spans [] (SAnnPop rest)
+      = go index doc spans [] rest

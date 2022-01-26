@@ -1,10 +1,11 @@
 module System.Directory.Tree
 
+import Control.Monad.Either
 import Data.DPair
 import Data.List
 import Data.Nat
-import Data.Strings
 import System.Directory
+import System.File
 import System.Path
 
 %default total
@@ -123,11 +124,12 @@ explore root = do
     | Left err => pure emptyTree
   assert_total (go dir emptyTree)
 
-go dir acc = case !(dirEntry dir) of
+go dir acc = case !(nextDirEntry dir) of
   -- If there is no next entry then we are done and can return the accumulator.
-  Left err => acc <$ closeDir dir
+  Left err      => acc <$ closeDir dir
+  Right Nothing => acc <$ closeDir dir
   -- Otherwise we have an entry and need to categorise it
-  Right entry => do
+  Right (Just entry) => do
     -- ignore aliases for current and parent directories
     let False = elem entry [".", ".."]
          | _ => assert_total (go dir acc)
@@ -199,3 +201,29 @@ print t = go [([], ".", Evidence root (pure t))] where
     let bss = map (:: bs) (prefixes (length t.subTrees))
     go (zipWith (\ bs, (dir ** iot) => (bs, fileName dir, Evidence _ iot)) bss t.subTrees)
     go iots
+
+||| Copy a directory and its contents recursively
+||| Returns a FileError if the target directory already exists, or if any of
+||| the source files fail to be copied.
+export
+covering
+copyDir : HasIO io => (src : Path) -> (target : Path) -> io (Either FileError ())
+copyDir src target = runEitherT $ do
+    MkEitherT $ createDir $ show target
+    copyDirContents !(liftIO $ explore src) target
+  where
+    copyFile' : (srcDir : Path) -> (targetDir : Path) -> (fileName : String) -> EitherT FileError io ()
+    copyFile' srcDir targetDir fileName = MkEitherT $ do
+      Right ok <- copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
+      | Left (err, size) => pure (Left err)
+      pure (Right ok)
+
+    covering
+    copyDirContents : {srcDir : Path} -> Tree srcDir -> (targetDir : Path) -> EitherT FileError io ()
+    copyDirContents (MkTree files subTrees) targetDir = do
+      traverse_ (copyFile' srcDir targetDir) (map fileName files)
+      traverse_ (\(subDir ** subDirTree) => do
+          let targetSubDir = targetDir /> fileName subDir
+          MkEitherT $ createDir $ show $ targetSubDir
+          copyDirContents !(liftIO subDirTree) targetSubDir
+        ) subTrees

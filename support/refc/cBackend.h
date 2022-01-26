@@ -1,5 +1,5 @@
-#ifndef __C_BACKEND_H__
-#define __C_BACKEND_H__
+#pragma once
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,5 +15,3 @@
 #include "casts.h"
 #include "conCaseHelper.h"
 #include "prim.h"
-
-#endif

@@ -350,7 +350,7 @@ which reads a number from the console, returning a value of the form
 
 .. code-block:: idris
 
-    import Data.Strings
+    import Data.String
 
     readNumber : IO (Maybe Nat)
     readNumber = do

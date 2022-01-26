@@ -1,5 +1,4 @@
-#ifndef __IDRIS_CLOCK_H__
-#define __IDRIS_CLOCK_H__
+#pragma once
 
 #include <time.h>
 
@@ -15,5 +14,3 @@ Value *clockTimeGcReal();
 int clockValid(Value *clock);
 uint64_t clockSecond(Value *clock);
 uint64_t clockNanosecond(Value *clock);
-
-#endif

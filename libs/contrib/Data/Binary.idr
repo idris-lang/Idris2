@@ -1,6 +1,5 @@
 module Data.Binary
 
-import Data.Nat
 import Data.Nat.Properties
 import Data.Binary.Digit
 import Syntax.PreorderReasoning

@@ -2,7 +2,7 @@ module Compiler.Scheme.Gambit
 
 import Compiler.Common
 import Compiler.CompileExpr
-import Compiler.Inline
+import Compiler.Generated
 import Compiler.Scheme.Common
 
 import Core.Context
@@ -10,21 +10,17 @@ import Core.Directory
 import Core.Name
 import Core.Options
 import Core.TT
-import Libraries.Utils.Hex
+import Protocol.Hex
 import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Libraries.Data.NameMap
-import Data.Strings
 import Data.Vect
 
 import Idris.Env
 
 import System
 import System.Directory
-import System.File
-import System.Info
 
 %default covering
 
@@ -48,14 +44,16 @@ findGSCBackend =
               Just e => " -cc " ++ e
 
 schHeader : String
-schHeader =
-    "; @generated\n" ++
-    "(declare (block)\n" ++
-    "(inlining-limit 450)\n" ++
-    "(standard-bindings)\n" ++
-    "(extended-bindings)\n" ++
-    "(not safe)\n" ++
-    "(optimize-dead-definitions))\n"
+schHeader = """
+  ;; \{ generatedString "Gambit" }
+  (declare (block)
+    (inlining-limit 450)
+    (standard-bindings)
+    (extended-bindings)
+    (not safe)
+    (optimize-dead-definitions))
+
+  """
 
 showGambitChar : Char -> String -> String
 showGambitChar '\\' = ("\\\\" ++)
@@ -73,24 +71,8 @@ gambitString : String -> String
 gambitString cs = strCons '"' (showGambitString (unpack cs) "\"")
 
 mutual
-  -- Primitive types have been converted to names for the purpose of matching
-  -- on types
-  tySpec : NamedCExp -> Core String
-  tySpec (NmCon fc (UN "Int") _ _ []) = pure "int"
-  tySpec (NmCon fc (UN "String") _ _ []) = pure "UTF-8-string"
-  tySpec (NmCon fc (UN "Double") _ _ []) = pure "double"
-  tySpec (NmCon fc (UN "Char") _ _ []) = pure "char"
-  tySpec (NmCon fc (NS _ n) _ _ [_])
-     = cond [(n == UN "Ptr", pure "(pointer void)")]
-          (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
-  tySpec (NmCon fc (NS _ n) _ _ [])
-     = cond [(n == UN "Unit", pure "void"),
-             (n == UN "AnyPtr", pure "(pointer void)")]
-          (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
-  tySpec ty = throw (GenericMsg (getFC ty) ("Can't pass argument of type " ++ show ty ++ " to foreign function"))
-
   handleRet : String -> String -> String
-  handleRet "void" op = op ++ " " ++ mkWorld (schConstructor gambitString (UN "") (Just 0) [])
+  handleRet "void" op = op ++ " " ++ mkWorld (schConstructor gambitString (UN $ Basic "") (Just 0) [])
   handleRet _ op = mkWorld op
 
   getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))
@@ -381,7 +363,7 @@ compileToSCM c tm outfile
          s <- newRef {t = List String} Structs []
          fgndefs <- traverse getFgnCall ndefs
          compdefs <- traverse (getScheme gambitPrim gambitString) ndefs
-         let code = fastAppend (map snd fgndefs ++ compdefs)
+         let code = fastConcat (map snd fgndefs ++ compdefs)
          main <- schExp gambitPrim gambitString 0 ctm
          support <- readDataFile "gambit/support.scm"
          ds <- getDirectives Gambit
@@ -423,4 +405,4 @@ executeExpr c tmpDir tm
 
 export
 codegenGambit : Codegen
-codegenGambit = MkCG compileExpr executeExpr
+codegenGambit = MkCG compileExpr executeExpr Nothing Nothing

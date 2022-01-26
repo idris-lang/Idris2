@@ -6,7 +6,10 @@ Main> 4.2
 Main> 4.2
 Main> 17.64
 Main> [1.1, 4.2]
-Main> Error: When unifying (?a -> ?b) -> ?f ?a -> ?f ?b and Point.
+Main> Error: When unifying:
+    (?a -> ?b) -> ?f ?a -> ?f ?b
+and:
+    Point
 Mismatch between: (?a -> ?b) -> ?f ?a -> ?f ?b and Point.
 
 (Interactive):1:1--1:4

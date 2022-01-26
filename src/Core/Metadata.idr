@@ -4,11 +4,9 @@ import Core.Binary
 import Core.Context
 import Core.Context.Log
 import Core.Core
-import Core.Directory
 import Core.Env
 import Core.FC
 import Core.Normalise
-import Core.Options
 import Core.TT
 import Core.TTC
 
@@ -17,22 +15,23 @@ import System.File
 import Libraries.Data.PosMap
 import Libraries.Utils.Binary
 
+import public Protocol.IDE.Decoration as Protocol.IDE
+
 %default covering
 
-public export
-data Decoration : Type where
-  Typ : Decoration
-  Function : Decoration
-  Data : Decoration
-  Keyword : Decoration
-  Bound : Decoration
-
 export
-nameTypeDecoration : NameType -> Decoration
-nameTypeDecoration Bound         = Bound
-nameTypeDecoration Func          = Function
-nameTypeDecoration (DataCon _ _) = Data
-nameTypeDecoration (TyCon _ _  ) = Typ
+nameDecoration : Name -> NameType -> Decoration
+nameDecoration nm nt
+  = ifThenElse (isUnsafeBuiltin nm) Postulate (nameTypeDecoration nt)
+
+  where
+
+  nameTypeDecoration : NameType -> Decoration
+  nameTypeDecoration Bound         = Bound
+  nameTypeDecoration Func          = Function
+  nameTypeDecoration (DataCon _ _) = Data
+  nameTypeDecoration (TyCon _ _  ) = Typ
+
 
 public export
 ASemanticDecoration : Type
@@ -42,29 +41,16 @@ public export
 SemanticDecorations : Type
 SemanticDecorations = List ASemanticDecoration
 
-public export
-Eq Decoration where
-  Typ      == Typ      = True
-  Function == Function = True
-  Data     == Data     = True
-  Keyword  == Keyword  = True
-  Bound    == Bound    = True
-  _        == _        = False
-
-public export
-Show Decoration where
-  show Typ      = "type"
-  show Function = "function"
-  show Data     = "data"
-  show Keyword  = "keyword"
-  show Bound    = "bound"
-
 TTC Decoration where
-  toBuf b Typ      = tag 0
-  toBuf b Function = tag 1
-  toBuf b Data     = tag 2
-  toBuf b Keyword  = tag 3
-  toBuf b Bound    = tag 4
+  toBuf b Typ       = tag 0
+  toBuf b Function  = tag 1
+  toBuf b Data      = tag 2
+  toBuf b Keyword   = tag 3
+  toBuf b Bound     = tag 4
+  toBuf b Namespace = tag 5
+  toBuf b Postulate = tag 6
+  toBuf b Module    = tag 7
+  toBuf b Comment   = tag 8
   fromBuf b
     = case !getTag of
         0 => pure Typ
@@ -72,6 +58,10 @@ TTC Decoration where
         2 => pure Data
         3 => pure Keyword
         4 => pure Bound
+        5 => pure Namespace
+        6 => pure Postulate
+        7 => pure Module
+        8 => pure Comment
         _ => corrupt "Decoration"
 
 public export
@@ -108,20 +98,22 @@ record Metadata where
        semanticAliases : PosMap (NonEmptyFC, NonEmptyFC)
        semanticDefaults : PosMap ASemanticDecoration
 
+covering
 Show Metadata where
   show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap
-                   fname semanticHighlighting semanticAliases semanticDefaults)
-    = "Metadata:\n" ++
-      " lhsApps: " ++ show apps ++ "\n" ++
-      " names: " ++ show names ++ "\n" ++
-      " type declarations: " ++ show tydecls ++ "\n" ++
-      " current LHS: " ++ show currentLHS ++ "\n" ++
-      " holes: " ++ show holeLHS ++ "\n" ++
-      " nameLocMap: " ++ show nameLocMap ++ "\n" ++
-      " sourceIdent: " ++ show fname ++
-      " semanticHighlighting: " ++ show semanticHighlighting ++
-      " semanticAliases: " ++ show semanticAliases ++
-      " semanticDefaults: " ++ show semanticDefaults
+                   fname semanticHighlighting semanticAliases semanticDefaults) = """
+    Metadata:
+     lhsApps: \{ show apps }
+     names: \{ show names }
+     type declarations: \{ show tydecls }
+     current LHS: \{ show currentLHS }
+     holes: \{ show holeLHS }
+     nameLocMap: \{ show nameLocMap }
+     sourceIdent: \{ show fname }
+     semanticHighlighting: \{ show semanticHighlighting }
+     semanticAliases: \{ show semanticAliases }
+     semanticDefaults: \{ show semanticDefaults }
+    """
 
 export
 initMetadata : OriginDesc -> Metadata
@@ -176,7 +168,7 @@ addLHS loc outerenvlen env tm
          tm' <- toFullNames (bindEnv loc (toPat env) tm)
          -- Put the lhs on the metadata if it's not empty
          whenJust (isNonEmptyFC loc) $ \ neloc =>
-           put MD $ record { lhsApps $= ((neloc, outerenvlen, tm') ::) } meta
+           put MD $ { lhsApps $= ((neloc, outerenvlen, tm') ::) } meta
 
   where
     toPat : Env Term vs -> Env Term vs
@@ -208,8 +200,8 @@ addNameType loc n env tm
          n' <- getFullName n
 
          -- Add the name to the metadata if the file context is not empty
-         whenJust (isNonEmptyFC loc) $ \ neloc => do
-           put MD $ record { names $= ((neloc, (n', 0, substEnv loc env tm)) ::) } meta
+         whenJust (isConcreteFC loc) $ \ neloc => do
+           put MD $ { names $= ((neloc, (n', 0, substEnv loc env tm)) ::) } meta
            log "metadata.names" 7 $ show n' ++ " at line " ++ show (1 + startLine neloc)
 
 export
@@ -223,7 +215,7 @@ addTyDecl loc n env tm
 
          -- Add the type declaration to the metadata if the file context is not empty
          whenJust (isNonEmptyFC loc) $ \ neloc =>
-           put MD $ record { tydecls $= ( (neloc, (n', length env, bindEnv loc env tm)) ::) } meta
+           put MD $ { tydecls $= ( (neloc, (n', length env, bindEnv loc env tm)) ::) } meta
 
 export
 addNameLoc : {auto m : Ref MD Metadata} ->
@@ -232,22 +224,22 @@ addNameLoc : {auto m : Ref MD Metadata} ->
 addNameLoc loc n
     = do meta <- get MD
          n' <- getFullName n
-         whenJust (isNonEmptyFC loc) $ \neloc =>
-           put MD $ record { nameLocMap $= insert (neloc, n') } meta
+         whenJust (isConcreteFC loc) $ \neloc =>
+           put MD $ { nameLocMap $= insert (neloc, n') } meta
 
 export
 setHoleLHS : {auto m : Ref MD Metadata} ->
              ClosedTerm -> Core ()
 setHoleLHS tm
     = do meta <- get MD
-         put MD (record { currentLHS = Just tm } meta)
+         put MD ({ currentLHS := Just tm } meta)
 
 export
 clearHoleLHS : {auto m : Ref MD Metadata} ->
                Core ()
 clearHoleLHS
     = do meta <- get MD
-         put MD (record { currentLHS = Nothing } meta)
+         put MD ({ currentLHS := Nothing } meta)
 
 export
 withCurrentLHS : {auto c : Ref Ctxt Defs} ->
@@ -257,7 +249,7 @@ withCurrentLHS n
     = do meta <- get MD
          n' <- getFullName n
          maybe (pure ())
-               (\lhs => put MD (record { holeLHS $= ((n', lhs) ::) } meta))
+               (\lhs => put MD ({ holeLHS $= ((n', lhs) ::) } meta))
                (currentLHS meta)
 
 findEntryWith : (NonEmptyFC -> a -> Bool) -> List (NonEmptyFC, a) -> Maybe (NonEmptyFC, a)
@@ -325,8 +317,8 @@ addSemanticDecorations decors
          unless (isNil droppedDecors)
            $ log "ide-mode.highlight" 19 $ "ignored adding decorations to "
                ++ show meta.sourceIdent ++ ": " ++ show droppedDecors
-         put MD $ record {semanticHighlighting
-                            = (fromList newDecors) `union` posmap} meta
+         put MD $ {semanticHighlighting
+                     := (fromList newDecors) `union` posmap} meta
 
 
 -- Normalise all the types of the names, since they might have had holes
@@ -338,7 +330,7 @@ normaliseTypes
     = do meta <- get MD
          defs <- get Ctxt
          ns' <- traverse (nfType defs) (names meta)
-         put MD (record { names = ns' } meta)
+         put MD ({ names := ns' } meta)
   where
     nfType : Defs -> (NonEmptyFC, (Name, Nat, ClosedTerm)) ->
              Core (NonEmptyFC, (Name, Nat, ClosedTerm))
@@ -366,13 +358,13 @@ TTC TTMFile where
 
 HasNames Metadata where
   full gam md
-      = pure $ record { lhsApps = !(traverse fullLHS $ md.lhsApps)
-                      , names   = !(traverse fullTy $ md.names)
-                      , tydecls = !(traverse fullTy $ md.tydecls)
-                      , currentLHS = Nothing
-                      , holeLHS = !(traverse fullHLHS $ md.holeLHS)
-                      , nameLocMap = fromList !(traverse fullDecls (toList $ md.nameLocMap))
-                      } md
+      = pure $ { lhsApps := !(traverse fullLHS $ md.lhsApps)
+               , names   := !(traverse fullTy $ md.names)
+               , tydecls := !(traverse fullTy $ md.tydecls)
+               , currentLHS := Nothing
+               , holeLHS := !(traverse fullHLHS $ md.holeLHS)
+               , nameLocMap := fromList !(traverse fullDecls (toList $ md.nameLocMap))
+               } md
     where
       fullLHS : (NonEmptyFC, (Nat, ClosedTerm)) -> Core (NonEmptyFC, (Nat, ClosedTerm))
       fullLHS (fc, (i, tm)) = pure (fc, (i, !(full gam tm)))

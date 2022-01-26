@@ -6,6 +6,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 int _argc;
@@ -39,6 +40,10 @@ int idris2_getErrno() {
 #endif
 }
 
+char* idris2_strerror(int errnum) {
+    return strerror(errnum);
+}
+
 char* idris2_getStr() {
     char *inp = idris2_readLine(stdin);
     // Remove trailing newline; easier to do this than in PrimIO which
@@ -63,6 +68,8 @@ void idris2_sleep(int sec) {
     t.tv_sec = sec;
     t.tv_nsec = 0;
 
+    // TODO: `nanosleep` can fail
+    // TODO: `nanosleep` can return early due to interrupt
     nanosleep(&t, NULL);
 #endif
 }

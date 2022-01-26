@@ -1,0 +1,4 @@
+:set eval scheme
+[1..]
+take 10 [1..]
+:q
