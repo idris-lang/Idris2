@@ -82,6 +82,7 @@ modules = Control.ANSI,
 
           Data.Rel.Complement,
 
+          Data.Seq.Internal,
           Data.Seq.Sized,
           Data.Seq.Unsized,
 
