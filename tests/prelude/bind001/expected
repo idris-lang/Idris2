@@ -1,4 +1,7 @@
 1/1: Building bind (bind.idr)
 Main> [1, 1, 2, 1, 2, 3, 1, 2, 3, 4]
 12502500
+2001000
+2001000
+2001000
 Main> Bye for now!

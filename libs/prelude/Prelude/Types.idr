@@ -456,11 +456,18 @@ Foldable List where
   foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
 
 -- tail recursive O(n) implementation of `(>>=)` for `List`
+public export
 listBind : List a -> (a -> List b) -> List b
 listBind as f = go Nil as
   where go : List b -> List a -> List b
         go xs []        = reverse xs
         go xs (y :: ys) = go (reverseOnto xs (f y)) ys
+
+%transform "listFoldMap" foldMap {t = List} {m = List _} = flip listBind
+
+%transform "listConcatMap" concatMap {t = List} {m = List _} = flip listBind
+
+%transform "listConcat" concat {t = List} {a = List _} = flip listBind id
 
 public export
 Applicative List where
