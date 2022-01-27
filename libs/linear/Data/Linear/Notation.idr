@@ -8,6 +8,11 @@ public export
 (-@) : Type -> Type -> Type
 a -@ b = (1 _ : a) -> b
 
+||| Linear function composition
+public export
+(.) : (b -@ c) -@ (a -@ b) -@ (a -@ c)
+(.) f g v = f (g v)
+
 ||| An interface for consumable types
 public export
 interface Consumable a where
