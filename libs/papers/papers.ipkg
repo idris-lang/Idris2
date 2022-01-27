@@ -23,6 +23,8 @@ modules = Data.Container,
 
           Data.Vect.Binary,
 
+          Language.Tagless,
+
           Search.Generator,
           Search.HDecidable,
           Search.Negation,
