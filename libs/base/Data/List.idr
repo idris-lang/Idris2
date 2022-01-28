@@ -192,12 +192,6 @@ public export
 lookup : Eq a => a -> List (a, b) -> Maybe b
 lookup = lookupBy (==)
 
-||| Check if something is a member of a list using a custom comparison.
-public export
-elemBy : (a -> b -> Bool) -> a -> List b -> Bool
-elemBy p e []      = False
-elemBy p e (x::xs) = p e x || elemBy p e xs
-
 ||| Remove duplicate elements from a list using a custom comparison. The general
 ||| case of `nub`.
 ||| O(n^2).
