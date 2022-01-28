@@ -324,10 +324,7 @@ addGlobalDef modns filens asm (n, def)
          codedentry <- lookupContextEntry n (gamma defs)
          -- Don't update the coded entry because some names might not be
          -- resolved yet
-         entry <- maybe (pure Nothing)
-                        (\ p => do x <- decode (gamma defs) (fst p) False (snd p)
-                                   pure (Just x))
-                        codedentry
+         entry <- traverseOpt (\ (p, q) => decode (gamma defs) p False q) codedentry
          unless (completeDef entry) $
            ignore $ addContextEntry filens n def
 
@@ -460,7 +457,7 @@ addUsedGlobalDefs defs modNS cns as dir
   shouldKeep entry (Using includes)
     = let check = find (\ nm => nameRoot nm == nameRoot entry
                              && matches nm entry)
-                       (forget includes)
+                       includes
       in (isJust check, check)
   shouldKeep entry (Hiding excludes)
     = let check = find (\ nm => nameRoot nm == nameRoot entry
@@ -481,11 +478,12 @@ addUsedGlobalDefs defs modNS cns as dir
   go ures uren mres mren [] =
     let res = case mres of
                 Nothing => []
-                Just (Using nms) => forget nms
+                Just (Using nms) => nms
                 Just (Hiding nms) => forget nms
         ren = fromMaybe [] mren
     in pure (res \\ ures, ren \\ uren)
   go ures uren mres mren (entry@(entryName, entryCode) :: defs) =
+    let logctx = "Importing \{show modNS}:" in
     let check : (Bool, Maybe Name)
       --         ^      ^--- whether this decision was caused by a rule
       --          `---- whether to keep the definition
@@ -494,18 +492,24 @@ addUsedGlobalDefs defs modNS cns as dir
       := maybe (True, Nothing) (shouldKeep entryName) mres
     in case check of
       -- filtered in
-      (True, Just nm) => do addGlobalDef modNS cns as entry
+      (True, Just nm) => do log "import.directive.using" 10 $ "\{logctx} kept \{show entryName}"
+                            addGlobalDef modNS cns as entry
                             go (nm :: ures) uren mres mren defs
       -- filtered out
-      (False, Just nm) => go (nm :: ures) uren mres mren defs
+      (False, Just nm) => do log "import.directive.hiding" 10 $ "\{logctx} rejected \{show entryName}"
+                             go (nm :: ures) uren mres mren defs
       -- falling through: is it renamed? In which case it may be retained.
       -- Indeed in `import A using (b) renaming (c to d)` we should still
       -- re-export c as d even though it's not in `using`!
       (b, Nothing) => do
         let check : Maybe (Name, Name) := shouldRename entryName =<< mren
         let Just r@(src, tgt) = check
-              | Nothing => do when b $ addGlobalDef modNS cns as entry
+              | Nothing => do log "import.directive.renaming" 20 $ "\{logctx} \{show entryName} not renamed"
+                              when b $ do
+                                log "import.directive" 10 $ "\{logctx} No `using` so keeping \{show entryName}"
+                                addGlobalDef modNS cns as entry
                               go ures uren mres mren defs
+        log "import.directive.renaming" 10 $ "\{logctx} renaming \{show entryName} to \{show tgt}"
         addGlobalDef modNS cns as (tgt, entryCode)
         go ures (r :: uren) mres mren defs
 

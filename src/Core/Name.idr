@@ -52,7 +52,8 @@ data Name : Type where
 ||| 2. or the declarations that were explicitly listed (Hiding)
 public export
 data ImportRestriction : Type where
-  Using  : List1 Name -> ImportRestriction
+  -- If the list is empty, it means we are not importing anything unrenamed
+  Using  : List Name -> ImportRestriction
   Hiding : List1 Name -> ImportRestriction
 
 ||| An ImportDirective is the combination of at least one of:

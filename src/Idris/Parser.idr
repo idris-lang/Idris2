@@ -1803,7 +1803,7 @@ importRestriction fname start = do
       fail "Import restrictions are in a relative block."
     (do decoratedKeyword fname "using"
         map Using $ mustWork $ parens fname $
-          sepBy1 (decoratedSymbol fname ",") name
+          sepBy (decoratedSymbol fname ",") name
      ) <|>
      (do decoratedKeyword fname "hiding"
          map Hiding $ mustWork $ parens fname $
