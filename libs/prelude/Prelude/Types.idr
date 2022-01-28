@@ -463,12 +463,6 @@ listBind as f = go Nil as
         go xs []        = reverse xs
         go xs (y :: ys) = go (reverseOnto xs (f y)) ys
 
-%transform "listFoldMap" foldMap {t = List} {m = List _} = flip listBind
-
-%transform "listConcatMap" concatMap {t = List} {m = List _} = flip listBind
-
-%transform "listConcat" concat {t = List} {a = List _} = flip listBind id
-
 public export
 Applicative List where
   pure x = [x]
