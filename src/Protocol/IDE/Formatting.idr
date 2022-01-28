@@ -3,7 +3,6 @@ module Protocol.IDE.Formatting
 import Protocol.SExp
 import Protocol.IDE.Decoration
 
-import Data.Maybe
 import Data.List
 
 %default total

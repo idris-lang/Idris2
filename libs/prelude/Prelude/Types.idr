@@ -412,6 +412,21 @@ namespace List
   -- proves these are equivalent.
   %transform "tailRecAppend" (++) = tailRecAppend
 
+  ||| Returns the first argument plus the length of the second.
+  public export
+  lengthPlus : Nat -> List a -> Nat
+  lengthPlus n [] = n
+  lengthPlus n (x::xs) = lengthPlus (S n) xs
+
+  ||| `length` implementation that uses tail recursion. Exported so
+  ||| lengthTRIsLength can see it.
+  public export
+  lengthTR : List a -> Nat
+  lengthTR = lengthPlus Z
+
+  -- Data.List.lengthTRIsLength proves these are equivalent.
+  %transform "tailRecLength" length = lengthTR
+
 public export
 Functor List where
   map f [] = []
@@ -440,10 +455,18 @@ Foldable List where
 
   foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
 
+-- tail recursive O(n) implementation of `(>>=)` for `List`
+public export
+listBind : List a -> (a -> List b) -> List b
+listBind as f = go Nil as
+  where go : List b -> List a -> List b
+        go xs []        = reverse xs
+        go xs (y :: ys) = go (reverseOnto xs (f y)) ys
+
 public export
 Applicative List where
   pure x = [x]
-  fs <*> vs = concatMap (\f => map f vs) fs
+  fs <*> vs = listBind fs (\f => map f vs)
 
 public export
 Alternative List where
@@ -452,7 +475,7 @@ Alternative List where
 
 public export
 Monad List where
-  m >>= f = concatMap f m
+  (>>=) = listBind
 
 public export
 Traversable List where

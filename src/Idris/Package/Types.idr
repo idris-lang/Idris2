@@ -2,6 +2,7 @@ module Idris.Package.Types
 
 import Core.FC
 import Core.Name.Namespace
+import Data.List
 import Data.Maybe
 import Idris.Version
 import Libraries.Text.PrettyPrint.Prettyprinter
@@ -47,22 +48,34 @@ record PkgVersionBounds where
 
 export
 Show PkgVersionBounds where
-  show p = if noBounds then "any" else lowerBounds ++ upperBounds
+  show p = if noBounds then "any" else concat . intersperse " && " $ catMaybes [lowerBounds, upperBounds]
 
     where
 
       noBounds : Bool
       noBounds = isNothing p.lowerBound && isNothing p.upperBound
 
-      lowerBounds : String
-      lowerBounds = case p.lowerBound of
-        Nothing => ""
-        Just v  => (if p.lowerInclusive then ">= " else "> ") ++ show v ++ " "
+      lowerBounds : Maybe String
+      lowerBounds = p.lowerBound <&> \v => (if p.lowerInclusive then ">= " else "> ") ++ show v
 
-      upperBounds : String
-      upperBounds = case p.upperBound of
-        Nothing => ""
-        Just v  => (if p.upperInclusive then "<= " else "< ") ++ show v
+      upperBounds : Maybe String
+      upperBounds = p.upperBound <&> \v => (if p.upperInclusive then "<= " else "< ") ++ show v
+
+export
+Pretty PkgVersionBounds where
+  pretty (MkPkgVersionBounds lowerBound lowerInclusive upperBound upperInclusive)
+      = concatWith (\b1,b2 => b1 <++> pretty "&&" <++> b2) $
+          catMaybes [ bounds True lowerInclusive lowerBound
+                    , bounds False upperInclusive upperBound
+                    ]
+    where
+      operator : (greater : Bool) -> (inclusive : Bool) -> Doc ann
+      operator greater inclusive = pretty $ the String
+                                     (if greater then ">" else "<") ++ (if inclusive then "=" else "")
+
+      bounds : (greater : Bool) -> (inclusive : Bool) -> Maybe PkgVersion -> Maybe (Doc ann)
+      bounds greater inclusive Nothing = Nothing
+      bounds greater inclusive (Just v) = Just $ operator greater inclusive <++> pretty v
 
 export
 anyBounds : PkgVersionBounds
@@ -84,6 +97,39 @@ inBounds mv bounds
      maybe True (\v' => if bounds.upperInclusive
                            then v <= v'
                            else v < v') bounds.upperBound
+
+namespace Version
+  ||| Check if a Version is within the bounds of a PkgVersionBounds.
+  |||
+  ||| In addition to comparing major, minor, and patch version numbers,
+  ||| a Version with a tag is always considered larger than one with the
+  ||| same major, minor, and patch numbers but no tag.
+  |||
+  ||| Therefore, Version 0.1.0-abcd will be within the bounds >0.1.0 && <0.2.0.
+  ||| Similarly, Version 0.2.0-abcd will be _outside_ the bounds
+  ||| >0.1.0 && <=0.2.0.
+  export
+  inBounds : Version -> PkgVersionBounds -> Bool
+  inBounds (MkVersion (maj, min, patch) tag) bounds
+     = let v = MkPkgVersion (maj ::: [min, patch]) in
+       maybe True (\v' => if bounds.lowerInclusive
+                             then v >= v'
+                             else v > v' || (v == v' && tag /= Nothing)) bounds.lowerBound &&
+       maybe True (\v' => if bounds.upperInclusive
+                             then v < v' || (v == v' && tag == Nothing)
+                             else v < v') bounds.upperBound
+
+  -- "0.1.0-abcd" > "0.1.0"
+  inBoundsBecauseOfTag : inBounds (MkVersion (0,1,0) (Just "abcd"))
+                                  (MkPkgVersionBounds (Just $ MkPkgVersion (0 ::: [1,0])) False
+                                  (Just $ MkPkgVersion (0 ::: [2,0])) False) = True
+  inBoundsBecauseOfTag = Refl
+
+  -- not ("0.2.0-abcd" <= "0.2.0")
+  outOfBoundsBecauseOfTag : inBounds (MkVersion (0,2,0) (Just "abcd"))
+                                     (MkPkgVersionBounds (Just $ MkPkgVersion (0 ::: [1,0])) False
+                                     (Just $ MkPkgVersion (0 ::: [2,0])) True) = False
+  outOfBoundsBecauseOfTag = Refl
 
 ------------------------------------------------------------------------------
 -- Dependencies
@@ -110,6 +156,7 @@ record PkgDesc where
   constructor MkPkgDesc
   name : String
   version : Maybe PkgVersion
+  langversion : Maybe PkgVersionBounds
   authors : Maybe String
   maintainers : Maybe String
   license : Maybe String
@@ -136,7 +183,7 @@ record PkgDesc where
 export
 initPkgDesc : String -> PkgDesc
 initPkgDesc pname
-    = MkPkgDesc pname Nothing Nothing Nothing Nothing
+    = MkPkgDesc pname Nothing Nothing Nothing Nothing Nothing
                 Nothing Nothing Nothing Nothing Nothing
                 [] []
                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
@@ -146,6 +193,7 @@ export
 Show PkgDesc where
   show pkg = "Package: " ++ name pkg ++ "\n" ++
              maybe "" (\m => "Version: "     ++ m ++ "\n") (show <$> version pkg) ++
+             maybe "" (\v => "Language Version: " ++ v ++ "\n") (show <$> langversion pkg) ++
              maybe "" (\m => "Authors: "     ++ m ++ "\n") (authors pkg)     ++
              maybe "" (\m => "Maintainers: " ++ m ++ "\n") (maintainers pkg) ++
              maybe "" (\m => "License: "     ++ m ++ "\n") (license pkg)     ++
@@ -182,6 +230,9 @@ Pretty PkgDesc where
     , strField "homepage"    desc.homepage
     , strField "sourceloc"   desc.sourceloc
     , strField "bugtracker"  desc.bugtracker
+
+    , comment "the Idris2 version required (e.g. langversion >= 0.5.1)"
+    , verSeqField "langversion" desc.langversion
 
     , comment  "packages to add to search path"
     , seqField "depends"     desc.depends
@@ -226,12 +277,15 @@ Pretty PkgDesc where
       let commSoftLine = Union (Chara ' ') (hcat [Line, pretty "-- "]) in
       Line <+> concatWith (\x, y => x <+> commSoftLine <+> y) ws
 
-    field : String -> Maybe (Doc ann) -> Doc ann
-    field nm Nothing = hsep [ pretty "--", pretty nm, equals ]
-    field nm (Just d) = hsep [ pretty nm, equals, d ]
+    field : {default True printEquals : Bool} -> String -> Maybe (Doc ann) -> Doc ann
+    field {printEquals} nm Nothing = hsep $ catMaybes [ Just $ pretty "--", Just $ pretty nm, (guard printEquals *> Just equals) ]
+    field {printEquals} nm (Just d) = hsep $ catMaybes [ Just $ pretty nm, (guard printEquals *> Just equals), Just d ]
 
     verField : String -> Maybe PkgVersion -> Doc ann
     verField nm = field nm . map pretty
+
+    verSeqField : String -> Maybe PkgVersionBounds -> Doc ann
+    verSeqField nm = field {printEquals=False} nm . map pretty
 
     strField : String -> Maybe String -> Doc ann
     strField nm = field nm . map (pretty . show)

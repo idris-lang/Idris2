@@ -115,7 +115,7 @@ mutual
        PMultiline : FC -> (indent : Nat) -> List (List (PStr' nm)) -> PTerm' nm
        PDoBlock : FC -> Maybe Namespace -> List (PDo' nm) -> PTerm' nm
        PBang : FC -> PTerm' nm -> PTerm' nm
-       PIdiom : FC -> PTerm' nm -> PTerm' nm
+       PIdiom : FC -> Maybe Namespace -> PTerm' nm -> PTerm' nm
        PList : (full, nilFC : FC) -> List (FC, PTerm' nm) -> PTerm' nm
                                         -- ^   v location of the conses/snocs
        PSnocList : (full, nilFC : FC) -> SnocList ((FC, PTerm' nm)) -> PTerm' nm
@@ -179,7 +179,7 @@ mutual
   getPTermLoc (PMultiline fc _ _) = fc
   getPTermLoc (PDoBlock fc _ _) = fc
   getPTermLoc (PBang fc _) = fc
-  getPTermLoc (PIdiom fc _) = fc
+  getPTermLoc (PIdiom fc _ _) = fc
   getPTermLoc (PList fc _ _) = fc
   getPTermLoc (PSnocList fc _ _) = fc
   getPTermLoc (PPair fc _ _) = fc
@@ -784,7 +784,8 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (PDoBlock _ ns ds)
         = "do " ++ showSep " ; " (map showDo ds)
   showPTermPrec d (PBang _ tm) = "!" ++ showPTermPrec d tm
-  showPTermPrec d (PIdiom _ tm) = "[|" ++ showPTermPrec d tm ++ "|]"
+  showPTermPrec d (PIdiom _ Nothing tm) = "[|" ++ showPTermPrec d tm ++ "|]"
+  showPTermPrec d (PIdiom _ (Just ns) tm) = show ns ++ ".[|" ++ showPTermPrec d tm ++ "|]"
   showPTermPrec d (PList _ _ xs)
         = "[" ++ showSep ", " (map (showPTermPrec d . snd) xs) ++ "]"
   showPTermPrec d (PSnocList _ _ xs)
@@ -909,8 +910,12 @@ record SyntaxInfo where
   constructor MkSyntax
   -- Keep infix/prefix, then we can define operators which are both
   -- (most obviously, -)
-  infixes : StringMap (Fixity, Nat)
-  prefixes : StringMap Nat
+  ||| Infix operators as a map from their names to their fixity,
+  ||| precedence, and the file context where that fixity was defined.
+  infixes : StringMap (FC, Fixity, Nat)
+  ||| Prefix operators as a map from their names to their precedence
+  ||| and the file context where their fixity was defined.
+  prefixes : StringMap (FC, Nat)
   -- info about modules
   saveMod : List ModuleIdent -- current module name
   modDocstrings : SortedMap ModuleIdent String
@@ -1028,13 +1033,13 @@ initSyntax
 
   where
 
-    initInfix : StringMap (Fixity, Nat)
-    initInfix = insert "=" (Infix, 0) empty
+    initInfix : StringMap (FC, Fixity, Nat)
+    initInfix = insert "=" (EmptyFC, Infix, 0) empty
 
-    initPrefix : StringMap Nat
+    initPrefix : StringMap (FC, Nat)
     initPrefix = fromList
-      [ ("-", 10)
-      , ("negate", 10) -- for documentation purposes
+      [ ("-", (EmptyFC, 10))
+      , ("negate", (EmptyFC, 10)) -- for documentation purposes
       ]
 
     initDocStrings : ANameMap String
@@ -1173,8 +1178,8 @@ mapPTermM f = goPTerm where
     goPTerm (PBang fc x) =
       PBang fc <$> goPTerm x
       >>= f
-    goPTerm (PIdiom fc x) =
-      PIdiom fc <$> goPTerm x
+    goPTerm (PIdiom fc ns x) =
+      PIdiom fc ns <$> goPTerm x
       >>= f
     goPTerm (PList fc nilFC xs) =
       PList fc nilFC <$> goPairedPTerms xs

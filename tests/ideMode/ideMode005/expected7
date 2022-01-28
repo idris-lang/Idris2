@@ -78,6 +78,7 @@
 0000c8(:output (:ok (:highlight-source ((((:filename "Case.idr") (:start 13 14) (:end 13 15)) ((:name "q") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 0000c9(:output (:ok (:highlight-source ((((:filename "Case.idr") (:start 13 16) (:end 13 18)) ((:name "xs") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000071(:output (:ok (:highlight-source ((((:filename "Case.idr") (:start 14 2) (:end 14 3)) ((:decor :keyword)))))) 1)
+000071(:output (:ok (:highlight-source ((((:filename "Case.idr") (:start 14 4) (:end 14 6)) ((:decor :keyword)))))) 1)
 0000c6(:output (:ok (:highlight-source ((((:filename "Case.idr") (:start 14 7) (:end 14 8)) ((:name "x") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000072(:output (:ok (:highlight-source ((((:filename "Case.idr") (:start 14 9) (:end 14 11)) ((:decor :keyword)))))) 1)
 0000c9(:output (:ok (:highlight-source ((((:filename "Case.idr") (:start 14 12) (:end 14 14)) ((:name "xs") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)

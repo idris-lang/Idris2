@@ -41,6 +41,7 @@ prim__removeFile : String -> PrimIO Int
 |||
 ||| @ h the file handle to seek through
 export
+covering
 fSeekLine : HasIO io => (h : File) -> io (Either FileError ())
 fSeekLine (FHandle f)
     = do res <- primIO (prim__seekLine f)
@@ -53,6 +54,7 @@ fSeekLine (FHandle f)
 |||
 ||| @ h the file handle to get the line from
 export
+covering
 fGetLine : HasIO io => (h : File) -> io (Either FileError String)
 fGetLine (FHandle f)
     = do res <- primIO (prim__readLine f)

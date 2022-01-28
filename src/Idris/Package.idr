@@ -43,11 +43,6 @@ import Idris.Version
 import public Idris.Package.Types
 import Idris.Package.Init
 
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
-
 %default covering
 
 installDir : PkgDesc -> String
@@ -55,31 +50,32 @@ installDir p = name p
             ++ "-"
             ++ show (fromMaybe (MkPkgVersion (0 ::: [])) (version p))
 
-data DescField : Type where
-  PVersion     : FC -> PkgVersion -> DescField
-  PVersionDep  : FC -> String -> DescField
-  PAuthors     : FC -> String -> DescField
-  PMaintainers : FC -> String -> DescField
-  PLicense     : FC -> String -> DescField
-  PBrief       : FC -> String -> DescField
-  PReadMe      : FC -> String -> DescField
-  PHomePage    : FC -> String -> DescField
-  PSourceLoc   : FC -> String -> DescField
-  PBugTracker  : FC -> String -> DescField
-  PDepends     : List Depends -> DescField
-  PModules     : List (FC, ModuleIdent) -> DescField
-  PMainMod     : FC -> ModuleIdent -> DescField
-  PExec        : String -> DescField
-  POpts        : FC -> String -> DescField
-  PSourceDir   : FC -> String -> DescField
-  PBuildDir    : FC -> String -> DescField
-  POutputDir   : FC -> String -> DescField
-  PPrebuild    : FC -> String -> DescField
-  PPostbuild   : FC -> String -> DescField
-  PPreinstall  : FC -> String -> DescField
-  PPostinstall : FC -> String -> DescField
-  PPreclean    : FC -> String -> DescField
-  PPostclean   : FC -> String -> DescField
+data DescField  : Type where
+  PVersion      : FC -> PkgVersion -> DescField
+  PLangVersions : FC -> PkgVersionBounds -> DescField
+  PVersionDep   : FC -> String -> DescField
+  PAuthors      : FC -> String -> DescField
+  PMaintainers  : FC -> String -> DescField
+  PLicense      : FC -> String -> DescField
+  PBrief        : FC -> String -> DescField
+  PReadMe       : FC -> String -> DescField
+  PHomePage     : FC -> String -> DescField
+  PSourceLoc    : FC -> String -> DescField
+  PBugTracker   : FC -> String -> DescField
+  PDepends      : List Depends -> DescField
+  PModules      : List (FC, ModuleIdent) -> DescField
+  PMainMod      : FC -> ModuleIdent -> DescField
+  PExec         : String -> DescField
+  POpts         : FC -> String -> DescField
+  PSourceDir    : FC -> String -> DescField
+  PBuildDir     : FC -> String -> DescField
+  POutputDir    : FC -> String -> DescField
+  PPrebuild     : FC -> String -> DescField
+  PPostbuild    : FC -> String -> DescField
+  PPreinstall   : FC -> String -> DescField
+  PPostinstall  : FC -> String -> DescField
+  PPreclean     : FC -> String -> DescField
+  PPostclean    : FC -> String -> DescField
 
 field : String -> Rule DescField
 field fname
@@ -109,6 +105,11 @@ field fname
            end <- location
            pure (PVersion (MkFC (PhysicalPkgSrc fname) start end)
                           (MkPkgVersion (fromInteger <$> vs)))
+    <|> do start <- location
+           ignore $ exactProperty "langversion"
+           lvs <- langversions
+           end <- location
+           pure (PLangVersions (MkFC (PhysicalPkgSrc fname) start end) lvs)
     <|> do start <- location
            ignore $ exactProperty "version"
            equals
@@ -171,6 +172,10 @@ field fname
                 pkgbs.lowerBound
     mkBound [] pkgbs = pure pkgbs
 
+    langversions : EmptyRule PkgVersionBounds
+    langversions
+        = do bs <- sepBy andop bound
+             mkBound (concat bs) anyBounds
 
     depends : Rule Depends
     depends
@@ -204,8 +209,9 @@ addField : {auto c : Ref Ctxt Defs} ->
            {auto p : Ref ParsedMods (List (FC, ModuleIdent))} ->
            {auto m : Ref MainMod (Maybe (FC, ModuleIdent))} ->
            DescField -> PkgDesc -> Core PkgDesc
-addField (PVersion fc n)     pkg = pure $ { version := Just n } pkg
-addField (PVersionDep fc n)  pkg
+addField (PVersion fc n)       pkg = pure $ { version := Just n } pkg
+addField (PLangVersions fc bs) pkg = pure $ { langversion := Just bs } pkg
+addField (PVersionDep fc n)   pkg
     = do emitWarning (Deprecated "version numbers must now be of the form x.y.z" Nothing)
          pure pkg
 addField (PAuthors fc a)     pkg = pure $ { authors := Just a } pkg
@@ -312,6 +318,13 @@ prepareCompilation pkg opts =
                         (mainmod pkg)
     buildAll toBuild
 
+assertIdrisCompatibility : PkgDesc -> Core ()
+assertIdrisCompatibility pkg
+    = do let Just requiredBounds = pkg.langversion
+           | Nothing => pure ()
+         unless (inBounds version requiredBounds) $
+           throw (GenericMsg emptyFC "\{pkg.name} requires Idris2 \{show requiredBounds} but the installed version of Idris2 is \{show Version.version}.")
+
 build : {auto c : Ref Ctxt Defs} ->
         {auto s : Ref Syn SyntaxInfo} ->
         {auto o : Ref ROpts REPLOpts} ->
@@ -319,7 +332,8 @@ build : {auto c : Ref Ctxt Defs} ->
         List CLOpt ->
         Core (List Error)
 build pkg opts
-    = do [] <- prepareCompilation pkg opts
+    = do assertIdrisCompatibility pkg
+         [] <- prepareCompilation pkg opts
             | errs => pure errs
 
          case executable pkg of
@@ -460,12 +474,12 @@ check : {auto c : Ref Ctxt Defs} ->
         List CLOpt ->
         Core (List Error)
 check pkg opts =
-  do
-    [] <- prepareCompilation pkg opts
-      | errs => pure errs
+  do assertIdrisCompatibility pkg
+     [] <- prepareCompilation pkg opts
+       | errs => pure errs
 
-    runScript (postbuild pkg)
-    pure []
+     runScript (postbuild pkg)
+     pure []
 
 makeDoc : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
@@ -801,7 +815,7 @@ processPackageOpts opts
     = do (MkPFR cmds@(_::_) opts' err) <- pure $ partitionOpts opts
              | (MkPFR Nil opts' _) => pure False
          if err
-           then coreLift $ putStrLn (errorMsg ++ "\n")
+           then coreLift $ putStrLn errorMsg
            else traverse_ (processPackage opts') cmds
          pure True
 

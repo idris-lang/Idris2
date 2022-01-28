@@ -19,7 +19,7 @@ import System.File
 
 %default total
 
-infixr 5 </>, />
+infixl 5 </>, />
 infixr 7 <.>
 
 

@@ -3,6 +3,7 @@ module Core.Name
 import Data.String
 import Data.These
 import Decidable.Equality
+import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Utils.String

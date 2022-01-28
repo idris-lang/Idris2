@@ -5,11 +5,6 @@ import Data.List1
 import Data.Nat
 import Data.String
 
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
-
 %default total
 
 infixl 5 +>
@@ -93,62 +88,12 @@ index n str with (unpack str)
   index Z str | (x :: xs) = Just x
   index (S n) str | (x :: xs) = index n str | xs
 
-||| Produce a string by repeating the character `c` `n` times.
-public export
-replicate : (n : Nat) -> (c : Char) -> String
-replicate n c = pack $ replicate n c
-
--- lines and unlines are cloned from Data.String for compatible reason, should be removed
--- once v0.4.0 is released.
-
-||| Splits a character list into a list of newline separated character lists.
-|||
-||| ```idris example
-||| lines' (unpack "\rA BC\nD\r\nE\n")
-||| ```
-export
-lines' : List Char -> List1 (List Char)
-lines' [] = singleton []
-lines' s  = case break isNL s of
-                 (l, s') => l ::: case s' of
-                                       [] => []
-                                       _ :: s'' => forget $ lines' (assert_smaller s s'')
-
-||| Splits a string into a list of newline separated strings.
-|||
-||| ```idris example
-||| lines  "\rA BC\nD\r\nE\n"
-||| ```
-export
-lines : String -> List1 String
-lines s = map pack (lines' (unpack s))
-
-||| Joins the character lists by newlines into a single character list.
-|||
-||| ```idris example
-||| unlines' [['l','i','n','e'], ['l','i','n','e','2'], ['l','n','3'], ['D']]
-||| ```
-export
-unlines' : List (List Char) -> List Char
-unlines' [] = []
-unlines' [l] = l
-unlines' (l::ls) = l ++ '\n' :: unlines' ls
-
-||| Joins the strings by newlines into a single string.
-|||
-||| ```idris example
-||| unlines ["line", "line2", "ln3", "D"]
-||| ```
-export
-unlines : List String -> String
-unlines = pack . unlines' . map unpack
-
 ||| Indent a given string by `n` spaces.
 public export
 indent : (n : Nat) -> String -> String
-indent n x = Extra.replicate n ' ' ++ x
+indent n x = replicate n ' ' ++ x
 
 ||| Indent each line of a given string by `n` spaces.
 public export
 indentLines : (n : Nat) -> String -> String
-indentLines n str = unlines $ map (Extra.indent n) $ forget $ lines str
+indentLines n str = (join "\n") $ map (Extra.indent n) $ lines str
