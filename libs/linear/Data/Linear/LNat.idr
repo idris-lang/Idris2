@@ -19,7 +19,7 @@ toNat (Succ n) = S (toNat n)
 export
 Consumable LNat where
   consume Zero = ()
-  consume (Succ n) = let () = consume n in ()
+  consume (Succ n) = consume n
 
 ||| Add two linear numbers
 export
