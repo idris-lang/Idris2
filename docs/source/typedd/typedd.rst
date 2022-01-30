@@ -353,20 +353,25 @@ also have to be ``export``. Also, update ``randoms`` and ``import Data.Bits`` as
 
 In ``StreamFail.idr``, add a ``partial`` annotation to ``labelWith``.
 
-When implementing ``(>>=)`` to support ``do`` notation for custom types, like ``RunIO``, you must now add an extra data constructor ``(>>)`` to help desugaring. See this `test <https://github.com/edwinb/Idris2/tree/master/tests/typedd-book/chapter11/RunIO.idr>`_ or this `pull request <https://github.com/idris-lang/Idris2/pull/1095#issue-812492593>`_ for more details.
+In order to support ``do`` notation for custom types (like ``RunIO``), you need to implement ``(>>=)`` for binding values in a ``do`` block and ``(>>)`` for sequencing computations without binding values. See  `tests <https://github.com/idris-lang/Idris2/tree/master/tests/typedd-book/chapter11>`_ for complete implementations.
+
+For instance, the following do block is desugared to ``foo >>= (\x => bar >>= (\y => baz x y))``:
 
 .. code-block:: idris
 
-    data RunIO : Type -> Type where
-         Quit : a -> RunIO a
-         Do : IO a -> (a -> Inf (RunIO b)) -> RunIO b
-         Seq : IO () -> Inf (RunIO b) -> RunIO b
+    do
+      x <- foo
+      y <- bar
+      baz x y
 
-    (>>=) : IO a -> (a -> Inf (RunIO b)) -> RunIO b
-    (>>=) = Do
+while the following is converted to ``foo >> bar >> baz``:
 
-    (>>) : IO () -> Inf (RunIO b) -> RunIO b
-    (>>) = Seq
+.. code-block:: idris
+
+      do
+        foo
+        bar
+        baz
 
 Chapter 12
 ----------
