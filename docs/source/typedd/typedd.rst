@@ -353,6 +353,21 @@ also have to be ``export``. Also, update ``randoms`` and ``import Data.Bits`` as
 
 In ``StreamFail.idr``, add a ``partial`` annotation to ``labelWith``.
 
+When implementing ``(>>=)`` to support ``do`` notation for custom types, like ``RunIO``, you must now add an extra data constructor ``(>>)`` to help desugaring. See this `test <https://github.com/edwinb/Idris2/tree/master/tests/typedd-book/chapter11/RunIO.idr>`_ or this `pull request <https://github.com/idris-lang/Idris2/pull/1095#issue-812492593>`_ for more details.
+
+.. code-block:: idris
+
+    data RunIO : Type -> Type where
+         Quit : a -> RunIO a
+         Do : IO a -> (a -> Inf (RunIO b)) -> RunIO b
+         Seq : IO () -> Inf (RunIO b) -> RunIO b
+
+    (>>=) : IO a -> (a -> Inf (RunIO b)) -> RunIO b
+    (>>=) = Do
+
+    (>>) : IO () -> Inf (RunIO b) -> RunIO b
+    (>>) = Seq
+
 Chapter 12
 ----------
 
