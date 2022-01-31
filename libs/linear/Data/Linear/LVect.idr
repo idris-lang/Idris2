@@ -1,8 +1,8 @@
 module Data.Linear.LVect
 
 import Data.Linear.Bifunctor
+import Data.Linear.Interface
 import Data.Linear.Notation
-import Data.Linear.Copies
 import Data.Linear.LNat
 import Data.Linear.LList
 
@@ -56,9 +56,9 @@ Consumable a => Consumable (LVect n a) where
   consume (x :: xs) = x `seq` consume xs
 
 export
-Duplicate a => Duplicate (LVect n a) where
-  dup [] = [] # []
-  dup (x :: xs) = let x1 # x2 = Notation.dup x in bimap (x1 ::) (x2 ::) (Notation.dup xs)
+Duplicable a => Duplicable (LVect n a) where
+  duplicate [] = [[], []]
+  duplicate (x :: xs) = (::) <$> duplicate x <*> duplicate xs
 
 ||| Map a linear vector
 export
@@ -79,9 +79,9 @@ foldl _ {fns = []} acc [] = acc
 foldl f {fns = f :: fs} acc (x :: xs) = foldl f {fns = fs} (f acc x) xs
 
 export
-replicate : (1 n : Nat) -> (0 v : a) -> {auto 1 vs : n `Copies` v} -> LVect n a
-replicate 0 v {vs = []} = []
-replicate (S n) v {vs = (v :: vs)} = v :: replicate n v {vs}
+replicate : (1 n : LNat) -> (0 v : a) -> {auto 1 vs : toNat n `Copies` v} -> LVect (toNat n) a
+replicate Zero v {vs = []} = []
+replicate (Succ n) v {vs = (v :: vs)} = v :: replicate n v {vs}
 
 ||| Bind a linear vector.
 export

@@ -9,4 +9,3 @@ import Data.Linear.Notation
 export
 bimap : (a -@ x) -@ (b -@ y) -@ (LPair a b) -@ (LPair x y)
 bimap f g (a # b) = f a # g b
-

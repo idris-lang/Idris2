@@ -1,6 +1,7 @@
 module Data.Linear.LMaybe
 
 import Data.Linear.Bifunctor
+import Data.Linear.Interface
 import Data.Linear.Notation
 
 %default total
@@ -22,6 +23,6 @@ Consumable a => Consumable (LMaybe a) where
   consume (Just a) = consume a
 
 export
-Duplicate a => Duplicate (LMaybe a) where
-  dup Nothing = Nothing # Nothing
-  dup (Just a) = bimap Just Just (Notation.dup a)
+Duplicable a => Duplicable (LMaybe a) where
+  duplicate Nothing = [Nothing, Nothing]
+  duplicate (Just a) = Just <$> duplicate a

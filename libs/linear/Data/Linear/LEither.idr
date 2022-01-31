@@ -1,7 +1,8 @@
 module Data.Linear.LEither
 
-import Data.Linear.Notation
 import Data.Linear.Bifunctor
+import Data.Linear.Interface
+import Data.Linear.Notation
 
 %default total
 
@@ -16,6 +17,6 @@ export
   consume (Right b) = consume b
 
 export
-(Duplicate a, Duplicate b) => Duplicate (LEither a b) where
-  dup (Left a) = bimap Left Left (Notation.dup a)
-  dup (Right b) = bimap Right Right (Notation.dup b)
+(Duplicable a, Duplicable b) => Duplicable (LEither a b) where
+  duplicate (Left a) = Left <$> duplicate a
+  duplicate (Right b) = Right <$> duplicate b

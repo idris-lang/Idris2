@@ -1,6 +1,7 @@
 module Data.Linear.LList
 
 import Data.Linear.Bifunctor
+import Data.Linear.Interface
 import Data.Linear.Notation
 import Data.Linear.LNat
 
@@ -22,6 +23,6 @@ Consumable a => Consumable (LList a) where
   consume (x :: xs) = x `seq` consume xs
 
 export
-Duplicate a => Duplicate (LList a) where
-  dup [] = [] # []
-  dup (x :: xs) = let x1 # x2 = Notation.dup x in bimap (x1 ::) (x2 ::) (Notation.dup xs)
+Duplicable a => Duplicable (LList a) where
+  duplicate [] = [[], []]
+  duplicate (x :: xs) = (::) <$> duplicate x <*> duplicate xs

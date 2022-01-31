@@ -1,8 +1,8 @@
 module Data.Linear.LNat
 
 import Data.Linear.Bifunctor
-import Data.Linear.Copies
 import Data.Linear.Notation
+import Data.Linear.Interface
 
 ||| Linear Nat
 public export
@@ -23,9 +23,9 @@ Consumable LNat where
   consume (Succ n) = consume n
 
 export
-Duplicate LNat where
-  dup Zero = Zero # Zero
-  dup (Succ n) = bimap Succ Succ (Notation.dup n)
+Duplicable LNat where
+  duplicate Zero = [Zero, Zero]
+  duplicate (Succ n) = Succ <$> duplicate n
 
 ||| Add two linear numbers
 export
