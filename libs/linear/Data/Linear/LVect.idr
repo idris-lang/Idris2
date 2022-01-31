@@ -54,32 +54,36 @@ Consumable a => Consumable (LVect n a) where
   consume [] = ()
   consume (x :: xs) = x `seq` consume xs
 
-||| map a linear vector
+||| Map a linear vector
 export
 map : (0 f : a -@ b) -> {auto 1 fns : n `Copies` f} -> LVect n a -@ LVect n b
-map f {fns=[]} [] = []
-map f {fns=(f :: fs)} (x :: xs) = f x :: map f {fns=fs} xs
+map f {fns = []} [] = []
+map f {fns = f :: fs} (x :: xs) = f x :: map f {fns = fs} xs
 
+||| Extract all
 export
 length : Consumable a => LVect n a -@ LNat
 length [] = Zero
 length (x :: xs) = let () = consume x in Succ (length xs)
 
+||| Fold a linear vector.
 export
-foldl : {0 f : acc -@ elem -@ acc} -> n `Copies` f -@ acc -@ (LVect n elem) -@ acc
-foldl [] acc [] = acc
-foldl (f :: fs) acc (x :: xs) = foldl fs (f acc x) xs
+foldl : (0 f : acc -@ elem -@ acc) -> {auto 1 fns : n `Copies` f} -> acc -@ (LVect n elem) -@ acc
+foldl _ {fns = []} acc [] = acc
+foldl f {fns = f :: fs} acc (x :: xs) = foldl f {fns = fs} (f acc x) xs
 
 export
 replicate : (1 n : Nat) -> (0 v : a) -> {auto 1 vs : n `Copies` v} -> LVect n a
 replicate 0 v {vs = []} = []
 replicate (S n) v {vs = (v :: vs)} = v :: replicate n v {vs}
 
+||| Bind a linear vector.
 export
-(>>=) : LVect n a -@ ((0 f : a -@ LVect m b) -> {1 fs : n `Copies` f} -> LVect (n * m) b)
-(>>=) [] f {fs = []} = []
-(>>=) (v :: xs) f {fs = (f :: fs)} = f v ++ (>>=) {fs} xs f
+(>>=) : LVect n a -@ ((0 f : a -@ LVect m b) -> {1 fns : n `Copies` f} -> LVect (n * m) b)
+(>>=) [] _ {fns = []} = []
+(>>=) (v :: xs) f {fns = f :: fs} = f v ++ (>>=) {fns = fs} xs f
 
+||| Extract all the copies into a vector of the same length as the number of copies.
 export
 copiesToVect : {0 v : a} -> n `Copies` v -@ LVect n a
 copiesToVect [] = []

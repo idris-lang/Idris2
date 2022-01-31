@@ -25,13 +25,13 @@ Consumable LNat where
 export
 add : LNat -@ LNat -@ LNat
 add Zero x = x
-add (Succ v) x = Succ (add  v x)
+add (Succ v) x = Succ (add v x)
 
 ||| Multiply two linear numbers
 export
 mult : (1 n : LNat) -> (0 l : LNat) -> {auto 1 ls : toNat n `Copies` l} -> LNat
 mult Zero x {ls = []} = Zero
-mult (Succ v) x {ls = (x :: ls)} = add x (mult {ls} v x)
+mult (Succ v) x {ls = x :: ls} = add x (mult {ls} v x)
 
 ||| Square a linear number
 export

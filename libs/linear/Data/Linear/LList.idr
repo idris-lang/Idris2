@@ -11,7 +11,6 @@ data LList : Type -> Type where
 %name LList xs, ys, zs, ws
 
 export
-length : (c : Consumable a) => LList a -@ LNat
+length : Consumable a => LList a -@ LNat
 length [] = Zero
-length (x :: xs) = let () = consume x in
-                    Succ (Linear.LList.length @{c} xs)
+length (x :: xs) = consume x `seq` length xs
