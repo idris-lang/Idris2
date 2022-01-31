@@ -44,3 +44,32 @@ infixr 5 `seq`
 export
 seq : Consumable a => a -@ b -@ b
 a `seq` b = let 1 () = consume a in b
+
+public export
+interface Duplicate a where
+  dup : a -@ LPair a a
+
+||| Comonoid is the dual of Monoid, it can consume a value linearly and duplicate a value linearly
+public export
+interface Comonoid a where
+  counit : a -@ ()
+  comult : a -@ LPair a a
+
+export
+Consumable a => Duplicate a => Comonoid a where
+  counit = consume
+  comult = dup
+
+prefix 5 !*
+
+||| Prefix notation for the linear unrestricted modality
+public export
+record (!*) (a : Type) where
+  constructor MkBang
+  unrestricted : a
+
+export
+Comonoid (!* a) where
+  counit (MkBang _) = ()
+  comult (MkBang v) = MkBang v # MkBang v
+

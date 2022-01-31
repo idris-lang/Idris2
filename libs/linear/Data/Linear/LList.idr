@@ -1,5 +1,6 @@
 module Data.Linear.LList
 
+import Data.Linear.Bifunctor
 import Data.Linear.Notation
 import Data.Linear.LNat
 
@@ -14,3 +15,13 @@ export
 length : Consumable a => LList a -@ LNat
 length [] = Zero
 length (x :: xs) = consume x `seq` length xs
+
+export
+Consumable a => Consumable (LList a) where
+  consume [] = ()
+  consume (x :: xs) = x `seq` consume xs
+
+export
+Duplicate a => Duplicate (LList a) where
+  dup [] = [] # []
+  dup (x :: xs) = let x1 # x2 = Notation.dup x in bimap (x1 ::) (x2 ::) (Notation.dup xs)

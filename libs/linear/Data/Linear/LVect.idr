@@ -1,5 +1,6 @@
 module Data.Linear.LVect
 
+import Data.Linear.Bifunctor
 import Data.Linear.Notation
 import Data.Linear.Copies
 import Data.Linear.LNat
@@ -53,6 +54,11 @@ export
 Consumable a => Consumable (LVect n a) where
   consume [] = ()
   consume (x :: xs) = x `seq` consume xs
+
+export
+Duplicate a => Duplicate (LVect n a) where
+  dup [] = [] # []
+  dup (x :: xs) = let x1 # x2 = Notation.dup x in bimap (x1 ::) (x2 ::) (Notation.dup xs)
 
 ||| Map a linear vector
 export

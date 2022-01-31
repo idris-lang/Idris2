@@ -28,7 +28,7 @@ export
 [] ++ ys = ys
 (x :: xs) ++ ys = x :: (xs ++ ys)
 
-||| Copies of pairs are liek pairs of copies
+||| Copies of pairs are like pairs of copies
 export
 unzip : Copies m (Builtin.(#) x y) -@ LPair (Copies m x) (Copies m y)
 unzip [] = [] # []
