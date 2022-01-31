@@ -725,7 +725,7 @@ sort = sortBy compare
 ||| @ eq    a custom equality function for comparing the elements
 ||| @ left  the list which might be a prefix of `right`
 ||| @ right the list of elements to compare againts
-export
+public export
 isPrefixOfBy : (eq : a -> b -> Bool) ->
                (left : List a) -> (right : List b) -> Bool
 isPrefixOfBy p [] _            = True
@@ -734,7 +734,7 @@ isPrefixOfBy p (x::xs) (y::ys) = p x y && isPrefixOfBy p xs ys
 
 ||| The isPrefixOf function takes two lists and returns True iff the first list
 ||| is a prefix of the second when comparing elements using `==`.
-export
+public export
 isPrefixOf : Eq a => List a -> List a -> Bool
 isPrefixOf = isPrefixOfBy (==)
 
@@ -744,14 +744,14 @@ isPrefixOf = isPrefixOfBy (==)
 ||| @ eq    a custom equality function for comparing the elements
 ||| @ left  the list which might be a suffix of `right`
 ||| @ right the list of elements to compare againts
-export
+public export
 isSuffixOfBy : (eq : a -> b -> Bool) ->
                (left : List a) -> (right : List b) -> Bool
 isSuffixOfBy p left right = isPrefixOfBy p (reverse left) (reverse right)
 
 ||| The isSuffixOf function takes two lists and returns True iff the first list
 ||| is a suffix of the second when comparing elements using `==`.
-export
+public export
 isSuffixOf : Eq a => List a -> List a -> Bool
 isSuffixOf = isSuffixOfBy (==)
 
@@ -765,7 +765,7 @@ isSuffixOf = isSuffixOfBy (==)
 ||| isInfixOf ['b','d'] ['a', 'b', 'c', 'd']
 ||| ```
 |||
-export
+public export
 isInfixOf : Eq a => List a -> List a -> Bool
 isInfixOf n h = any (isPrefixOf n) (tails h)
 

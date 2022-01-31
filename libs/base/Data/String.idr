@@ -1,12 +1,12 @@
 module Data.String
 
-import Data.List
+import public Data.List
 import Data.List1
-import Data.SnocList
+import public Data.SnocList
 
 %default total
 
-export
+public export
 singleton : Char -> String
 singleton c = strCons c ""
 
@@ -21,23 +21,14 @@ indent : (n : Nat) -> String -> String
 indent n x = replicate n ' ' ++ x
 
 ||| Pad a string on the left
-export
+public export
 padLeft : Nat -> Char -> String -> String
 padLeft n c str = replicate (minus n (String.length str)) c ++ str
 
 ||| Pad a string on the right
-export
+public export
 padRight : Nat -> Char -> String -> String
 padRight n c str = str ++ replicate (minus n (String.length str)) c
-
-partial
-foldr1 : (a -> a -> a) -> List a -> a
-foldr1 _ [x] = x
-foldr1 f (x::xs) = f x (foldr1 f xs)
-
-partial
-foldl1 : (a -> a -> a) -> List a -> a
-foldl1 f (x::xs) = foldl f x xs
 
 -- This uses fastConcat internally so it won't compute at compile time.
 export
@@ -47,54 +38,55 @@ fastUnlines = fastConcat . unlines'
         unlines' [] = []
         unlines' (x :: xs) = x :: "\n" :: unlines' xs
 
--- append a word to the list of words, only if it's non-empty
-wordsHelper : SnocList Char -> SnocList (List Char) -> SnocList (List Char)
-wordsHelper [<] css = css
-wordsHelper sc  css = css :< (sc <>> Nil)
-
-||| Splits a character list into a list of whitespace separated character lists.
-|||
-||| ```idris example
-||| words' (unpack " A B C  D E   ") [<] [<]
-||| ```
-words' :  List Char
-       -> SnocList Char
-       -> SnocList (List Char)
-       -> List (List Char)
-words' (c :: cs) sc css =
-  if isSpace c
-     then words' cs [<] (wordsHelper sc css)
-     else words' cs (sc :< c) css
-words' [] sc css = wordsHelper sc css <>> Nil
-
 ||| Splits a string into a list of whitespace separated strings.
 |||
 ||| ```idris example
 ||| words " A B C  D E   "
 ||| ```
-export
+public export
 words : String -> List String
 words s = map pack (words' (unpack s) [<] [<])
+  where
+    -- append a word to the list of words, only if it's non-empty
+    wordsHelper : SnocList Char -> SnocList (List Char) -> SnocList (List Char)
+    wordsHelper [<] css = css
+    wordsHelper sc  css = css :< (sc <>> Nil)
 
-||| Joins the character lists by spaces into a single character list.
-|||
-||| ```idris example
-||| unwords' [['A'], ['B', 'C'], ['D'], ['E']]
-||| ```
-unwords' : List (List Char) -> List Char
-unwords' [] = []
-unwords' ws = assert_total (foldr1 addSpace ws) where
-  addSpace : List Char -> List Char -> List Char
-  addSpace w s = w ++ (' ' :: s)
+    ||| Splits a character list into a list of whitespace separated character lists.
+    |||
+    ||| ```idris example
+    ||| words' (unpack " A B C  D E   ") [<] [<]
+    ||| ```
+    words' :  List Char
+           -> SnocList Char
+           -> SnocList (List Char)
+           -> List (List Char)
+    words' (c :: cs) sc css =
+      if isSpace c
+         then words' cs [<] (wordsHelper sc css)
+         else words' cs (sc :< c) css
+    words' [] sc css = wordsHelper sc css <>> Nil
 
 ||| Joins the strings by spaces into a single string.
 |||
 ||| ```idris example
 ||| unwords ["A", "BC", "D", "E"]
 ||| ```
-export
+public export
 unwords : List String -> String
 unwords = pack . unwords' . map unpack
+  where
+    addSpace : List Char -> List Char -> List Char
+    addSpace w s = w ++ (' ' :: s)
+
+    ||| Joins the character lists by spaces into a single character list.
+    |||
+    ||| ```idris example
+    ||| unwords' [['A'], ['B', 'C'], ['D'], ['E']]
+    ||| ```
+    unwords' : List (List Char) -> List Char
+    unwords' [] = []
+    unwords' (ws :: wss) = foldl addSpace ws wss
 
 ||| Splits a character list into a list of newline separated character lists.
 |||
@@ -105,7 +97,7 @@ unwords = pack . unwords' . map unpack
 ||| ```idris example
 ||| lines' (unpack "\rA BC\nD\r\nE\n")
 ||| ```
-export
+public export
 lines' : List Char -> List (List Char)
 lines' s = linesHelp [] s
   where linesHelp : List Char -> List Char -> List (List Char)
@@ -126,7 +118,7 @@ lines' s = linesHelp [] s
 ||| ```idris example
 ||| lines  "\rA BC\nD\r\nE\n"
 ||| ```
-export
+public export
 lines : String -> List String
 lines s = map pack (lines' (unpack s))
 
@@ -136,7 +128,7 @@ lines s = map pack (lines' (unpack s))
 ||| ```idris example
 ||| unlines' [['l','i','n','e'], ['l','i','n','e','2'], ['l','n','3'], ['D']]
 ||| ```
-export
+public export
 unlines' : List (List Char) -> List Char
 unlines' [] = []
 unlines' (l::ls) = l ++ '\n' :: unlines' ls
@@ -146,7 +138,7 @@ unlines' (l::ls) = l ++ '\n' :: unlines' ls
 ||| ```idris example
 ||| unlines ["line", "line2", "ln3", "D"]
 ||| ```
-export
+public export
 unlines : List String -> String
 unlines = pack . unlines' . map unpack
 
@@ -183,14 +175,14 @@ asList str with (strM str)
   asList str@(strCons x xs) | StrCons _ _ = x :: asList (assert_smaller str xs)
 
 ||| Trim whitespace on the left of the string
-export
+public export
 ltrim : String -> String
 ltrim str with (asList str)
   ltrim ""  | [] = ""
   ltrim str@_ | x :: xs = if isSpace x then ltrim _ | xs else str
 
 ||| Trim whitespace on both sides of the string
-export
+public export
 trim : String -> String
 trim = ltrim . reverse . ltrim . reverse
 
@@ -203,7 +195,7 @@ trim = ltrim . reverse . ltrim . reverse
 ||| ```idris example
 ||| span (/= 'C') "EFGH"
 ||| ```
-export
+public export
 span : (Char -> Bool) -> String -> (String, String)
 span p xs
     = case span p (unpack xs) of
@@ -233,43 +225,43 @@ public export
 split : (Char -> Bool) -> String -> List1 String
 split p xs = map pack (split p (unpack xs))
 
-export
+public export
 stringToNatOrZ : String -> Nat
 stringToNatOrZ = fromInteger . prim__cast_StringInteger
 
-export
+public export
 toUpper : String -> String
 toUpper str = pack (map toUpper (unpack str))
 
-export
+public export
 toLower : String -> String
 toLower str = pack (map toLower (unpack str))
 
-export partial
+public export partial
 strIndex : String -> Int -> Char
 strIndex = prim__strIndex
 
-export partial
+public export partial
 strLength : String -> Int
 strLength = prim__strLength
 
-export partial
+public export partial
 strSubstr : Int -> Int -> String -> String
 strSubstr = prim__strSubstr
 
-export partial
+public export partial
 strTail : String -> String
 strTail = prim__strTail
 
-export
+public export
 isPrefixOf : String -> String -> Bool
 isPrefixOf a b = isPrefixOf (unpack a) (unpack b)
 
-export
+public export
 isSuffixOf : String -> String -> Bool
 isSuffixOf a b = isSuffixOf (unpack a) (unpack b)
 
-export
+public export
 isInfixOf : String -> String -> Bool
 isInfixOf a b = isInfixOf (unpack a) (unpack b)
 
