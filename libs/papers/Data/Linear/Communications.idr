@@ -4,8 +4,8 @@
 
 module Data.Linear.Communications
 
+import Data.Linear
 import Data.Linear.Inverse
-import Data.Linear.Notation
 
 %default total
 
