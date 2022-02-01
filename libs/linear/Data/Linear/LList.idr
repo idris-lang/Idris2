@@ -5,6 +5,8 @@ import Data.Linear.Interface
 import Data.Linear.Notation
 import Data.Linear.LNat
 
+%default total
+
 public export
 data LList : Type -> Type where
   Nil : LList a

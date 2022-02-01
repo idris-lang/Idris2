@@ -1,7 +1,10 @@
 module Data.Linear.Copies
 
+import Data.Linear.Bifunctor
 import Data.Linear.Notation
 import Data.Nat
+
+%default total
 
 infix 1 `Copies`
 
@@ -40,11 +43,15 @@ pure : {1 n : Nat} -> (x : a) -> Copies n x
 pure {n = Z} x = []
 pure {n = S n} x = x :: pure x
 
+||| Applies m copies of a linear function to m arguments, resulting in m copies
+||| of the result.
 export
 (<*>) : Copies {a = a -@ b} m f -@ Copies m x -@ Copies m (f x)
 [] <*> [] = []
 (f :: fs) <*> (x :: xs) = f x :: (fs <*> xs)
 
+||| Apply f to `m` copies of `x`, resulting in `m` copies of `f x`.
+|||
 ||| Note that this is not quite `pure f <*> xs` because we don't actually
 ||| need to know `m` to be able to define `(<$>)` as we can proceed by
 ||| induction on xs.
@@ -58,3 +65,12 @@ export
 zip : Copies m x -@ Copies m y -@ Copies m (Builtin.(#) x y)
 zip as bs = (#) <$> as <*> bs
 
+||| If we have a single copy, we can extract its value
+export
+extract : {0 x : a} -> 1 `Copies` x -@ a
+extract [x] = x
+
+||| Extract 2 copies into a linear pair
+export
+pair : {0 x : a} -> 2 `Copies` x -@ LPair a a
+pair y = bimap extract extract (splitAt 1 y)

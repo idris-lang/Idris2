@@ -1,7 +1,10 @@
 module Data.Linear.Interface
 
 import Data.Linear.Notation
+import Data.Linear.Bifunctor
 import public Data.Linear.Copies
+
+%default total
 
 ||| An interface for consumable types
 public export
@@ -48,18 +51,25 @@ Duplicable () where
   duplicate () = [(), ()]
 
 ||| Comonoid is the dual of Monoid, it can consume a value linearly and duplicate a value linearly
+||| `comult` returns a pair instead of 2 copies, because we do not guarantee that the two values
+||| are identical, unlike with `duplicate`. For example if we build a comonoid out of a group, with
+||| comult returning both the element given and its inverse:
+||| comult x = x # inverse x
+||| It is not necessarily the case that x equals its inverse. For example the finite groupe of size
+||| 3, has 1 and 2 as inverses of each other wrt to addition, but are not the same.
 public export
 interface Comonoid a where
   counit : a -@ ()
-  comult : (1 v : a) -> 2 `Copies` v
+  comult : a -@ LPair a a
 
+||| If a value is consumable and duplicable we can make an instance of Comonoid for it
 export
 Consumable a => Duplicable a => Comonoid a where
   counit = consume
-  comult = duplicate
+  comult x = pair (duplicate x)
 
 export
 Comonoid (!* a) where
   counit (MkBang _) = ()
-  comult (MkBang v) = [MkBang v , MkBang v]
+  comult (MkBang v) = MkBang v # MkBang v
 

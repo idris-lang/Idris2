@@ -4,6 +4,8 @@ import Data.Linear.Bifunctor
 import Data.Linear.Notation
 import Data.Linear.Interface
 
+%default total
+
 ||| Linear Nat
 public export
 data LNat : Type where
