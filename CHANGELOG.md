@@ -77,6 +77,11 @@
 
 ### Library changes
 
+#### Prelude
+
+* `elemBy` and `elem` are now defined for any `Foldable` structure. The specialised
+  versions defined in `Data.(List/SnocList/Vect)` have been removed.
+
 #### Base
 
 * Adds `System.run`, which runs a shell command, and returns the stdout and
