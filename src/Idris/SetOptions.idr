@@ -128,7 +128,7 @@ visiblePackages dir = filter viable <$> getPackageDirs dir
         notHidden = not . isPrefixOf "." . pkgName
 
         notDenylisted : PkgDir -> Bool
-        notDenylisted = not . flip elem ["include", "lib", "support", "refc"] . pkgName
+        notDenylisted = not . flip elem (the (List String) ["include", "lib", "support", "refc"]) . pkgName
 
         viable : PkgDir -> Bool
         viable p = notHidden p && notDenylisted p

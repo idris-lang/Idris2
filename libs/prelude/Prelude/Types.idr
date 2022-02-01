@@ -496,11 +496,15 @@ fastConcat : List String -> String
 
 %transform "fastConcat" concat {t = List} {a = String} = fastConcat
 
+||| Check if something is a member of a list using a custom comparison.
+public export
+elemBy : Foldable t => (a -> a -> Bool) -> a -> t a -> Bool
+elemBy p e = any (p e)
+
 ||| Check if something is a member of a list using the default Boolean equality.
 public export
-elem : Eq a => a -> List a -> Bool
-x `elem` [] = False
-x `elem` (y :: ys) = x == y ||  elem x ys
+elem : Foldable t => Eq a => a -> t a -> Bool
+elem = elemBy (==)
 
 ||| Lookup a value at a given position
 export

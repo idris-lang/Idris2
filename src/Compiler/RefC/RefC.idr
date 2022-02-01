@@ -927,7 +927,7 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
           let cLang = if lang == "RefC"
                          then CLangRefC
                          else CLangC
-          let isStandardFFI = Prelude.elem lang ["RefC", "C"]
+          let isStandardFFI = elem lang $ the (List String) ["RefC", "C"]
           let fctName = if isStandardFFI
                            then UN $ Basic $ fctForeignName
                            else NS (mkNamespace lang) n
