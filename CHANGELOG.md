@@ -98,6 +98,13 @@
 * `System.File.Buffer.readBufferData` now returns the number of bytes that have
    been read into the buffer.
 
+#### Test
+
+* Refactors `Test.Golden.runTest` to use `System.Concurrency` from the base
+  libraries instead of `System.Future` from `contrib`. In addition to reducing
+  the dependency on `contrib` in the core of Idris2, this also seems to provide
+  a small performance improvement for `make test`.
+
 #### Contrib
 
 * `System.Random` support for `Int` changed to `Int32`; it already limited itself
