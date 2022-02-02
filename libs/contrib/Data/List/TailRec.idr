@@ -117,19 +117,16 @@ break_ext : (p : a -> Bool) -> (xs : List a) ->
   Data.List.break p xs = Data.List.TailRec.break p xs
 break_ext p xs = span_ext (not . p) xs
 
-covering
 splitOnto : List (List a) -> (a -> Bool) -> List a -> List1 (List a)
 splitOnto acc p xs =
   case Data.List.break p xs of
     (chunk, []       ) => reverseOnto (chunk ::: []) acc
-    (chunk, (c::rest)) => splitOnto (chunk::acc) p rest
+    (chunk, (c::rest)) => splitOnto (chunk::acc) p $ assert_smaller xs rest
 
 export
-covering
 split : (a -> Bool) -> List a -> List1 (List a)
 split p xs = splitOnto [] p xs
 
-covering
 splitOnto_ext : (acc : List (List a)) -> (p : a -> Bool) -> (xs : List a) ->
               reverseOnto (Data.List.split p xs) acc
               = Data.List.TailRec.splitOnto acc p xs
@@ -139,11 +136,10 @@ splitOnto_ext  acc p xs with (@@(Data.List.break p xs))
    Refl
  splitOnto_ext acc p xs | ((chunk, c::rest)**pf) =
    rewrite pf in
-   rewrite splitOnto_ext (chunk::acc) p rest in
+   rewrite splitOnto_ext (chunk::acc) p $ assert_smaller xs rest in
    Refl
 
 export
-covering
 split_ext : (p : a -> Bool) -> (xs : List a) ->
   Data.List.split p xs = Data.List.TailRec.split p xs
 split_ext p xs = splitOnto_ext [] p xs
