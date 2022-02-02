@@ -74,7 +74,7 @@ length (x :: xs) = let () = consume x in Succ (length xs)
 
 ||| Fold a linear vector.
 export
-foldl : (0 f : acc -@ elem -@ acc) -> {auto 1 fns : n `Copies` f} -> acc -@ (LVect n elem) -@ acc
+foldl : (0 f : acc -@ a -@ acc) -> {auto 1 fns : n `Copies` f} -> acc -@ (LVect n a) -@ acc
 foldl _ {fns = []} acc [] = acc
 foldl f {fns = f :: fs} acc (x :: xs) = foldl f {fns = fs} (f acc x) xs
 
@@ -94,4 +94,3 @@ export
 copiesToVect : {0 v : a} -> n `Copies` v -@ LVect n a
 copiesToVect [] = []
 copiesToVect (v :: copies) = v :: copiesToVect copies
-
