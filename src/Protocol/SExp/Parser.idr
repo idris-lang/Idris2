@@ -86,7 +86,7 @@ data SExpError =
   | ParseErrors (List1 $ ParsingError Token)
 
 ideParser : {e : _} ->
-            String -> Grammar State Token e ty -> Either SExpError ty
+            String -> Grammar ParsingState Token e ty -> Either SExpError ty
 ideParser str p
     = do toks   <- mapFst LexError $ idelex str
          (_, _, (parsed, _)) <- mapFst ParseErrors $ parseWith p toks

@@ -128,7 +128,7 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
     mkTerm prim est n def
         = let tm = wrapDot prim est mode n (map (snd . snd) args)
                        (definition def) (buildAlt (IVar fc n) args) in
-              if Macro `elem` flags def
+              if Context.Macro `elem` flags def
                  then case mode of
                            InLHS _ => tm
                            _ => IRunElab fc (ICoerced fc tm)

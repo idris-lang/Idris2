@@ -142,14 +142,6 @@ getBuildMods loc done fname
                  mkBuildMods {d=dm} {o} t
                  pure (reverse !(get BuildOrder))
 
-needsBuildingTime : (sourceFile : String) -> (ttcFile : String) ->
-                    (depFiles : List String) -> Core Bool
-needsBuildingTime sourceFile ttcFile depFiles
-  = do ttcTime  <- modTime ttcFile
-       srcTime  <- modTime sourceFile
-       depTimes <- traverse modTime depFiles
-       pure $ any (>= ttcTime) (srcTime :: depTimes)
-
 checkTotalReq : {auto c : Ref Ctxt Defs} ->
                 String -> String -> TotalReq -> Core Bool
 checkTotalReq sourceFile ttcFile expected
@@ -167,16 +159,18 @@ checkTotalReq sourceFile ttcFile expected
               pure (got < expected))
           (\error => pure False)
 
-checkDepHashes : {auto c : Ref Ctxt Defs} ->
+needsBuildingTime : {auto c : Ref Ctxt Defs} ->
+                    (sourceFile : String) -> (ttcFile : String) ->
+                    (depFiles : List String) -> Core Bool
+needsBuildingTime sourceFile ttcFile depFiles
+  = isTTCOutdated ttcFile (sourceFile :: depFiles)
+
+needsBuildingDepHash : {auto c : Ref Ctxt Defs} ->
                  String -> Core Bool
-checkDepHashes depFileName
+needsBuildingDepHash depFileName
   = catch (do defs                   <- get Ctxt
-              Just depCodeHash       <- hashFileWith (defs.options.hashFn) depFileName
-                    | _ => pure False
               depTTCFileName         <- getTTCFileName depFileName "ttc"
-              (Just depStoredCodeHash, _) <- readHashes depTTCFileName
-                    | _ => pure False
-              pure $ depCodeHash /= depStoredCodeHash)
+              not <$> unchangedHash defs.options.hashFn depTTCFileName depFileName)
           (\error => pure False)
 
 ||| Build from source if any of the dependencies, or the associated source file,
@@ -186,14 +180,9 @@ needsBuildingHash : {auto c : Ref Ctxt Defs} ->
                     (depFiles : List String) -> Core Bool
 needsBuildingHash sourceFile ttcFile depFiles
   = do defs                <- get Ctxt
-       -- If there's no hash available, either in the TTC or from the
-       -- current source, then it needs building
-       Just codeHash       <- hashFileWith (defs.options.hashFn) sourceFile
-             | _ => pure True
-       (Just storedCodeHash, _) <- readHashes ttcFile
-             | _ => pure True
-       depFilesHashDiffers <- any id <$> traverse checkDepHashes depFiles
-       pure $ codeHash /= storedCodeHash || depFilesHashDiffers
+       sourceUnchanged <- unchangedHash defs.options.hashFn ttcFile sourceFile
+       depFilesHashDiffers <- any id <$> traverse needsBuildingDepHash depFiles
+       pure $ (not sourceUnchanged) || depFilesHashDiffers
 
 export
 needsBuilding :
@@ -206,13 +195,14 @@ needsBuilding sourceFile ttcFile depFiles
        True <- coreLift $ exists ttcFile
          | False => pure True
        -- check if hash match
-       False <- ifThenElse (checkHashesInsteadOfModTime !getSession)
+       checkHashesInsteadOfTime <- checkHashesInsteadOfModTime <$> getSession
+       False <- ifThenElse checkHashesInsteadOfTime
                            needsBuildingHash
                            needsBuildingTime
                   sourceFile ttcFile depFiles
          | True => pure True
 
-       log "import" 20 $ "Hashes still valid for " ++ sourceFile
+       log "import" 20 $ "\{ifThenElse checkHashesInsteadOfTime "Hashes" "Mod Times"} still valid for " ++ sourceFile
 
        -- in case we're loading the main file, make sure the TTC is
        -- using the appropriate default totality requirement
@@ -253,11 +243,12 @@ buildMod loc num len mod
         depFilesE <- traverse (nsToPath loc) (imports mod)
         let (ferrs, depFiles) = partitionEithers depFilesE
 
-        log "import" 20 $ unwords
+        log "import" 20 $ unwords $
           [ "Checking whether to rebuild "
           , sourceFile
           , "(" ++ ttcFile ++ ")"
-          ]
+          , "with dependencies:"
+          ] ++ depFiles
         rebuild <- needsBuilding sourceFile ttcFile depFiles
 
         u <- newRef UST initUState
@@ -266,13 +257,14 @@ buildMod loc num len mod
 
         errs <- ifThenElse (not rebuild) (pure []) $
            do let pad = minus (length $ show len) (length $ show num)
-              let msg : Doc IdrisAnn
+              let msgPrefix : Doc IdrisAnn
                   = pretty (replicate pad ' ') <+> pretty num
                     <+> slash <+> pretty len <+> colon
-                    <++> pretty "Building" <++> pretty mod.buildNS
+              let buildMsg : Doc IdrisAnn
+                  = pretty mod.buildNS
                     <++> parens (pretty sourceFile)
               log "import.file" 10 $ "Processing " ++ sourceFile
-              process {u} {m} msg sourceFile modNamespace
+              process {u} {m} msgPrefix buildMsg sourceFile modNamespace
 
         defs <- get Ctxt
         ws <- emitWarningsAndErrors (if null errs then ferrs else errs)

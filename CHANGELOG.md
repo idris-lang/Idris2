@@ -54,6 +54,8 @@
 * Removes deprecated support for `void` primitive. Now `void` is supported via
   `prim__void`.
 * Adds `%deprecate` pragma that can be used to warn when deprecated functions are used.
+* Package files now support a `langversion` field that can be used to specify what versions of Idris a package supports. As with dependency versions, `>`, `<`, `>=`, and `<=` can all be used.
+  + For example, `langversion >= 0.5.1`.
 
 ### IDE protocol changes
 
@@ -75,6 +77,11 @@
 
 ### Library changes
 
+#### Prelude
+
+* `elemBy` and `elem` are now defined for any `Foldable` structure. The specialised
+  versions defined in `Data.(List/SnocList/Vect)` have been removed.
+
 #### Base
 
 * Adds `System.run`, which runs a shell command, and returns the stdout and
@@ -86,6 +93,17 @@
 * Deprecates `base`'s `Data.Nat.Order.decideLTE` in favor of `Data.Nat.isLTE`.
 * Removes `base`'s deprecated `System.Directory.dirEntry`. Use `nextDirEntry` instead.
 * Removes `base`'s deprecated `Data.String.fastAppend`. Use `fastConcat` instead.
+* `System.File.Buffer.writeBufferData` now returns the number of bytes that have
+   been written when there is a write error.
+* `System.File.Buffer.readBufferData` now returns the number of bytes that have
+   been read into the buffer.
+
+#### Test
+
+* Refactors `Test.Golden.runTest` to use `System.Concurrency` from the base
+  libraries instead of `System.Future` from `contrib`. In addition to reducing
+  the dependency on `contrib` in the core of Idris2, this also seems to provide
+  a small performance improvement for `make test`.
 
 #### Contrib
 

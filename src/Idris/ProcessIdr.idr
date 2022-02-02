@@ -223,20 +223,31 @@ gc = primIO $ prim__gc 4
 export
 addPublicHash : {auto c : Ref Ctxt Defs} ->
                 (Bool, (Namespace, Int)) -> Core ()
-addPublicHash (True, (mod, h)) = do addHash mod; addHash h
+addPublicHash (True, (mod, h)) = do addHash mod
+                                    addHash h
+                                    log "module.hash" 15 "Adding hash for a public import of \{show mod}"
 addPublicHash _ = pure ()
 
-||| If the source file is older
-unchangedTime : (sourceFileName : String) -> (ttcFileName : String) -> Core Bool
-unchangedTime sourceFileName ttcFileName
-  = do srcTime <- modTime sourceFileName
-       ttcTime <- modTime ttcFileName
-       pure $ srcTime <= ttcTime
+||| Determine if the TTC is outdated based on any of the given
+||| source or dependency source file names.
+export
+isTTCOutdated : {auto c : Ref Ctxt Defs} ->
+                (ttcFile : String) ->
+                (sourceFiles : List String) ->
+                Core Bool
+isTTCOutdated ttcFile sourceFiles
+  = do ttcTime  <- modTime ttcFile
+       srcTimes <- traverse modTime sourceFiles
+       log "module.hash" 20 $
+         unlines $
+           "Checking whether source code mod times are newer than \{show ttcTime}; src times:"
+           :: zipWith (\ src, tm => "\{src} : \{show tm}") sourceFiles srcTimes
+       pure $ any (>= ttcTime) srcTimes
 
-
-||| If the source file hash hasn't changed
-unchangedHash : (hashFn : Maybe String) -> (sourceFileName : String) -> (ttcFileName : String) -> Core Bool
-unchangedHash hashFn sourceFileName ttcFileName
+||| If the source files hash hasn't changed
+export
+unchangedHash : (hashFn : Maybe String) -> (ttcFileName : String) -> (sourceFileName : String) -> Core Bool
+unchangedHash hashFn ttcFileName sourceFileName
   = do Just sourceCodeHash        <- hashFileWith hashFn sourceFileName
              | _ => pure False
        (Just storedSourceHash, _) <- readHashes ttcFileName
@@ -299,14 +310,16 @@ processMod sourceFileName ttcFileName msg sourcecode origin
 
         defs <- get Ctxt
         log "module.hash" 5 $ "Interface hash of " ++ show ns ++ ": " ++ show (ifaceHash defs)
-        log "module.hash" 5 $ "Interface hashes of " ++ show ns ++ " hashes:\n" ++
+        log "module.hash" 5 $ "Import Interface hashes of " ++ show ns ++ " hashes:\n" ++
           show (sort importInterfaceHashes)
         storedImportInterfaceHashes <- readImportHashes ttcFileName
         log "module.hash" 5 $ "Stored interface hashes of " ++ ttcFileName ++ ":\n" ++
           show (sort storedImportInterfaceHashes)
 
-        sourceUnchanged <- (if session.checkHashesInsteadOfModTime
-          then unchangedHash (defs.options.hashFn) else unchangedTime) sourceFileName ttcFileName
+        let isUnchanged = if session.checkHashesInsteadOfModTime
+                             then unchangedHash (defs.options.hashFn)
+                             else (\ttc,src => not <$> (isTTCOutdated ttc [src]))
+        sourceUnchanged <- isUnchanged ttcFileName sourceFileName
 
         -- If neither the source nor the interface hashes of imports have changed then no rebuilding is needed
         if (sourceUnchanged && sort importInterfaceHashes == sort storedImportInterfaceHashes)
@@ -381,16 +394,21 @@ process : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto o : Ref ROpts REPLOpts} ->
-          Doc IdrisAnn -> FileName ->
+          (msgPrefix : Doc IdrisAnn) ->
+          (buildMsg : Doc IdrisAnn) ->
+          FileName ->
           (moduleIdent : ModuleIdent) ->
           Core (List Error)
-process buildmsg sourceFileName ident
+process msgPrefix buildMsg sourceFileName ident
     = do Right res <- coreLift (readFile sourceFileName)
                | Left err => pure [FileErr sourceFileName err]
          catch (do ttcFileName <- getTTCFileName sourceFileName "ttc"
                    Just errs <- logTime ("+ Elaborating " ++ sourceFileName) $
-                                   processMod sourceFileName ttcFileName buildmsg res ident
-                        | Nothing => pure [] -- skipped it
+                                   processMod sourceFileName ttcFileName
+                                              (msgPrefix <++> pretty "Building" <++> buildMsg)
+                                              res ident
+                     | Nothing => do log "module" 10 $ show $ msgPrefix <++> pretty "Skipping" <++> buildMsg
+                                     pure [] -- skipped it
                    if isNil errs
                       then
                         do defs <- get Ctxt

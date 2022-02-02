@@ -384,7 +384,8 @@ mutual
       go d (PMultiline _ indent xs) = "multiline" <++> (parenthesise (d > startPrec) $ hsep $ punctuate "++" (prettyString <$> concat xs))
       go d (PDoBlock _ ns ds) = parenthesise (d > startPrec) $ group $ align $ hang 2 $ do_ <++> (vsep $ punctuate semi (prettyDo <$> ds))
       go d (PBang _ tm) = "!" <+> go d tm
-      go d (PIdiom _ tm) = enclose (pretty "[|") (pretty "|]") (go startPrec tm)
+      go d (PIdiom _ Nothing tm) = enclose (pretty "[|") (pretty "|]") (go startPrec tm)
+      go d (PIdiom _ (Just ns) tm) = enclose (pretty ns <+> pretty ".[|") (pretty "|]") (go startPrec tm)
       go d (PList _ _ xs) = brackets (group $ align $ vsep $ punctuate comma (go startPrec . snd <$> xs))
       go d (PSnocList _ _ xs)
         = brackets {ldelim = "[<"}

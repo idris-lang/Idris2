@@ -46,5 +46,17 @@ inlineHeuristics fn = do
         | Nothing => pure ()
     let True = inlineCDef fn cdef
         | False => pure ()
-    log "compiler.inline.heuristic" 25 $ "inlining heuristic decided to inline: " ++ show fn
-    unless (NoInline `elem` gdef.flags) $ setFlag EmptyFC (Resolved fnIdx) Inline
+    -- We can't determine based on heuristics that something should be inlined unless
+    -- it is publicly exported because we may be crossing module boundaries and changes
+    -- to the given def will not modify the source module's interface hash so you can get
+    -- stuck with an old def inlined into the destination module. This is only a problem
+    -- when determining to inline based on heuristics, though -- if the definition was
+    -- explicitly marked for inlining by the programmer, it will be inlined without any
+    -- intervention by this function.
+    -- We could lift this public restriction if we checked that the source def was _either
+    -- public OR the destination was the same module as the source_.
+    let Public = gdef.visibility
+        | _ => pure ()
+    unless (NoInline `elem` gdef.flags) $ do
+      log "compiler.inline.heuristic" 25 $ "inlining heuristic decided to inline: " ++ show fn
+      setFlag EmptyFC (Resolved fnIdx) Inline

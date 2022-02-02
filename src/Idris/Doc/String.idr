@@ -308,7 +308,7 @@ getDocsForName fc n config
     getInfixDoc n
         = do let Just (Basic n) = userNameRoot n
                     | _ => pure []
-             let Just (fixity, assoc) = S.lookup n (infixes !(get Syn))
+             let Just (_, fixity, assoc) = S.lookup n (infixes !(get Syn))
                     | Nothing => pure []
              pure $ pure $ hsep
                   [ pretty (show fixity)
@@ -321,7 +321,7 @@ getDocsForName fc n config
     getPrefixDoc n
         = do let Just (Basic n) = userNameRoot n
                     | _ => pure []
-             let Just assoc = S.lookup n (prefixes !(get Syn))
+             let Just (_, assoc) = S.lookup n (prefixes !(get Syn))
                     | Nothing => pure []
              pure $ ["prefix operator, level" <++> pretty (show assoc)]
 
@@ -447,7 +447,7 @@ getDocsForName fc n config
              let cat = showCategory Syntax def
              let nm = prettyKindedName typ $ cat
                     $ ifThenElse longNames (pretty (show nm)) (prettyName nm)
-             let deprecated = if Deprecate `elem` def.flags
+             let deprecated = if Context.Deprecate `elem` def.flags
                                  then annotate Deprecation "=DEPRECATED=" <+> line else emptyDoc
              let docDecl = deprecated <+> annotate (Decl n) (hsep [nm, colon, prettyTerm ty])
 

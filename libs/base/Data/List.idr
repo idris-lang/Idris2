@@ -192,12 +192,6 @@ public export
 lookup : Eq a => a -> List (a, b) -> Maybe b
 lookup = lookupBy (==)
 
-||| Check if something is a member of a list using a custom comparison.
-public export
-elemBy : (a -> b -> Bool) -> a -> List b -> Bool
-elemBy p e []      = False
-elemBy p e (x::xs) = p e x || elemBy p e xs
-
 ||| Remove duplicate elements from a list using a custom comparison. The general
 ||| case of `nub`.
 ||| O(n^2).
@@ -862,6 +856,17 @@ export
 consInjective : forall x, xs, y, ys .
                 the (List a) (x :: xs) = the (List b) (y :: ys) -> (x = y, xs = ys)
 consInjective Refl = (Refl, Refl)
+
+lengthPlusIsLengthPlus : (n : Nat) -> (xs : List a) ->
+                         lengthPlus n xs = n + length xs
+lengthPlusIsLengthPlus n [] = sym $ plusZeroRightNeutral n
+lengthPlusIsLengthPlus n (x::xs) =
+  trans
+  (lengthPlusIsLengthPlus (S n) xs)
+  (plusSuccRightSucc n (length xs))
+
+lengthTRIsLength : (xs : List a) -> lengthTR xs = length xs
+lengthTRIsLength = lengthPlusIsLengthPlus Z
 
 ||| List `reverse` applied to `reverseOnto` is equivalent to swapping the
 ||| arguments of `reverseOnto`.
