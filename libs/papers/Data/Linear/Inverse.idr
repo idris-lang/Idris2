@@ -5,10 +5,11 @@
 module Data.Linear.Inverse
 
 import Data.INTEGER
+
+import Data.Linear
 import Data.Linear.LEither
 import Data.Linear.LMaybe
 import Data.Linear.LVect
-import Data.Linear.Notation
 
 import Data.Nat
 

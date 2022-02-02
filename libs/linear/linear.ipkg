@@ -3,8 +3,14 @@ version = 0.5.1
 
 options = "--ignore-missing-ipkg"
 
-modules = Data.Linear.LEither,
+modules = Data.Linear,
+          Data.Linear.Bifunctor,
+          Data.Linear.Copies,
+          Data.Linear.Interface,
+          Data.Linear.LEither,
+          Data.Linear.LList,
           Data.Linear.LMaybe,
+          Data.Linear.LNat,
           Data.Linear.LVect,
-          Data.Linear.Notation,
-          Data.Linear.Pow
+          Data.Linear.Notation
+

@@ -455,10 +455,18 @@ Foldable List where
 
   foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
 
+-- tail recursive O(n) implementation of `(>>=)` for `List`
+public export
+listBind : List a -> (a -> List b) -> List b
+listBind as f = go Nil as
+  where go : List b -> List a -> List b
+        go xs []        = reverse xs
+        go xs (y :: ys) = go (reverseOnto xs (f y)) ys
+
 public export
 Applicative List where
   pure x = [x]
-  fs <*> vs = concatMap (\f => map f vs) fs
+  fs <*> vs = listBind fs (\f => map f vs)
 
 public export
 Alternative List where
@@ -467,7 +475,7 @@ Alternative List where
 
 public export
 Monad List where
-  m >>= f = concatMap f m
+  (>>=) = listBind
 
 public export
 Traversable List where
@@ -488,11 +496,15 @@ fastConcat : List String -> String
 
 %transform "fastConcat" concat {t = List} {a = String} = fastConcat
 
+||| Check if something is a member of a list using a custom comparison.
+public export
+elemBy : Foldable t => (a -> a -> Bool) -> a -> t a -> Bool
+elemBy p e = any (p e)
+
 ||| Check if something is a member of a list using the default Boolean equality.
 public export
-elem : Eq a => a -> List a -> Bool
-x `elem` [] = False
-x `elem` (y :: ys) = x == y ||  elem x ys
+elem : Foldable t => Eq a => a -> t a -> Bool
+elem = elemBy (==)
 
 ||| Lookup a value at a given position
 export

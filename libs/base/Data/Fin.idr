@@ -1,6 +1,7 @@
 module Data.Fin
 
 import Control.Function
+import public Control.Ord
 import Data.List1
 import public Data.Maybe
 import public Data.Nat
@@ -164,6 +165,16 @@ Ord (Fin n) where
   compare  FZ    (FS _) = LT
   compare (FS _)  FZ    = GT
   compare (FS x) (FS y) = compare x y
+
+namespace Monoid
+
+  public export
+  [Minimum] {n : Nat} -> Monoid (Fin $ S n) using Semigroup.Minimum where
+    neutral = last
+
+  public export
+  [Maximum] Monoid (Fin $ S n) using Semigroup.Maximum where
+    neutral = FZ
 
 public export
 natToFinLT : (x : Nat) -> {0 n : Nat} ->

@@ -31,6 +31,7 @@ modules = Control.App,
           Control.WellFounded,
           Control.Function,
           Control.Relation,
+          Control.Ord,
           Control.Order,
 
           Data.Bifoldable,

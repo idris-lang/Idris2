@@ -4,8 +4,8 @@
 
 module Data.Linear.Diff
 
+import Data.Linear
 import Data.Linear.Inverse
-import Data.Linear.Notation
 import Data.Linear.LEither
 
 %default total

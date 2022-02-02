@@ -130,12 +130,6 @@ Alternative SnocList where
   empty = Lin
   xs <|> ys = xs ++ ys
 
-||| Check if something is a member of a snoc-list using the default Boolean equality.
-public export
-elem : Eq a => a -> SnocList a -> Bool
-elem x Lin = False
-elem x (sx :< y) = x == y || elem x sx
-
 ||| Find the first element of the snoc-list that satisfies the predicate.
 public export
 find : (a -> Bool) -> SnocList a -> Maybe a

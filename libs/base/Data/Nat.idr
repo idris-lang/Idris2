@@ -1,6 +1,7 @@
 module Data.Nat
 
 import public Control.Relation
+import public Control.Ord
 import public Control.Order
 import public Control.Function
 
@@ -799,16 +800,6 @@ sucMinR Z = Refl
 sucMinR (S l) = cong S $ sucMinR l
 
 -- Algebra -----------------------------
-
-namespace Semigroup
-
-  public export
-  [Maximum] Semigroup Nat where
-    (<+>) = max
-
-  public export
-  [Minimum] Semigroup Nat where
-    (<+>) = min
 
 namespace Monoid
 
