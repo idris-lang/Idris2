@@ -231,8 +231,8 @@ splitOnto :  (dec : (x : a) -> Dec (p x))
 splitOnto dec [] a = a
 splitOnto dec (x :: xs) (MkSplit prfs contras) =
   case dec x of
-       (Yes prf) => splitInto dec xs (MkSplit (prf :: prfs) contras)
-       (No contra) => splitInto dec xs (MkSplit prfs (contra :: contras))
+       (Yes prf) => splitOnto dec xs (MkSplit (prf :: prfs) contras)
+       (No contra) => splitOnto dec xs (MkSplit prfs (contra :: contras))
 
 ||| Split the list according to the given decidable property, starting with an
 ||| empty accumulator.
