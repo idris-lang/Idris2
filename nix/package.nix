@@ -9,6 +9,7 @@
 , srcRev
 , gambit
 , nodejs
+, which
 , zsh
 }:
 
@@ -20,9 +21,9 @@ stdenv.mkDerivation rec {
   src = ../.;
 
   strictDeps = true;
-  nativeBuildInputs = [ makeWrapper clang chez ]
+  nativeBuildInputs = [ makeWrapper clang chez which ]
     ++ lib.optional stdenv.isDarwin [ zsh ];
-  buildInputs = [ chez gmp ];
+  buildInputs = [ chez gmp which ];
 
   prePatch = ''
     patchShebangs --build tests
