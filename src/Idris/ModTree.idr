@@ -84,8 +84,7 @@ mkModTree loc done modFP mod
                                 else do
                                   ms <- traverse (mkModTree loc (mod :: done) Nothing) imps
                                   let mt = MkModTree mod (Just file) ms
-                                  all <- get AllMods
-                                  put AllMods ((mod, mt) :: all)
+                                  update AllMods ((mod, mt) ::)
                                   pure mt
                          Just m => pure m)
                 -- Couldn't find source, assume it's in a package directory
@@ -114,12 +113,10 @@ mkBuildMods mod
                        do -- build dependencies
                           traverse_ mkBuildMods (deps mod)
                           -- build it now
-                          bo <- get BuildOrder
-                          put BuildOrder
-                                (MkBuildMod sf (nspace mod)
-                                            (map nspace (deps mod)) :: bo)
-                          done <- get DoneMod
-                          put DoneMod (insert sf () done)
+                          update BuildOrder
+                                   (MkBuildMod sf mod.nspace
+                                               (map nspace mod.deps) ::)
+                          update DoneMod $ insert sf ()
 
 -- Given a main file name, return the list of modules that need to be
 -- built for that main file, in the order they need to be built
@@ -266,7 +263,6 @@ buildMod loc num len mod
               log "import.file" 10 $ "Processing " ++ sourceFile
               process {u} {m} msgPrefix buildMsg sourceFile modNamespace
 
-        defs <- get Ctxt
         ws <- emitWarningsAndErrors (if null errs then ferrs else errs)
         pure (ws ++ if null errs then ferrs else ferrs ++ errs)
 

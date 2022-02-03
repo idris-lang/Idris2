@@ -96,44 +96,32 @@ withROpts = wrapRef ROpts (\_ => pure ())
 export
 setOutput : {auto o : Ref ROpts REPLOpts} ->
             OutputMode -> Core ()
-setOutput m
-    = do opts <- get ROpts
-         put ROpts ({ idemode := m } opts)
+setOutput m = update ROpts { idemode := m }
 
 export
 getOutput : {auto o : Ref ROpts REPLOpts} -> Core OutputMode
-getOutput = do opts <- get ROpts
-               pure (idemode opts)
+getOutput = idemode <$> get ROpts
 
 export
 setMainFile : {auto o : Ref ROpts REPLOpts} ->
               Maybe String -> Core ()
-setMainFile src
-    = do opts <- get ROpts
-         put ROpts ({ mainfile := src,
-                      literateStyle := litStyle src } opts)
+setMainFile src = update ROpts { mainfile      := src,
+                                 literateStyle := litStyle src }
 
 export
-resetProofState : {auto o : Ref ROpts REPLOpts} ->
-                  Core ()
-resetProofState
-    = do opts <- get ROpts
-         put ROpts ({ psResult := Nothing,
-                      gdResult := Nothing } opts)
+resetProofState : {auto o : Ref ROpts REPLOpts} -> Core ()
+resetProofState = update ROpts { psResult := Nothing,
+                                 gdResult := Nothing }
 
 export
 setSource : {auto o : Ref ROpts REPLOpts} ->
             String -> Core ()
-setSource src
-    = do opts <- get ROpts
-         put ROpts ({ source := src } opts)
+setSource src = update ROpts { source := src }
 
 export
 getSource : {auto o : Ref ROpts REPLOpts} ->
             Core String
-getSource
-    = do opts <- get ROpts
-         pure (source opts)
+getSource = source <$> get ROpts
 
 export
 getSourceLine : {auto o : Ref ROpts REPLOpts} ->
@@ -145,73 +133,55 @@ getSourceLine l
 export
 getLitStyle : {auto o : Ref ROpts REPLOpts} ->
               Core (Maybe LiterateStyle)
-getLitStyle
-    = do opts <- get ROpts
-         pure (literateStyle opts)
+getLitStyle = literateStyle <$> get ROpts
 
 export
 setCurrentElabSource : {auto o : Ref ROpts REPLOpts} ->
                        String -> Core ()
-setCurrentElabSource src
-    = do opts <- get ROpts
-         put ROpts ({ currentElabSource := src } opts)
+setCurrentElabSource src = update ROpts { currentElabSource := src }
 
 export
 getCurrentElabSource : {auto o : Ref ROpts REPLOpts} ->
                        Core String
-getCurrentElabSource
-     = do opts <- get ROpts
-          pure (currentElabSource opts)
+getCurrentElabSource = currentElabSource <$> get ROpts
 
 addCodegen : {auto o : Ref ROpts REPLOpts} ->
              String -> Codegen -> Core ()
-addCodegen s cg = do opts <- get ROpts
-                     put ROpts ({ extraCodegens $= ((s,cg)::) } opts)
+addCodegen s cg = update ROpts { extraCodegens $= ((s,cg)::) }
 
 export
 getCodegen : {auto o : Ref ROpts REPLOpts} ->
              String -> Core (Maybe Codegen)
-getCodegen s = do opts <- get ROpts
-                  pure $ lookup s (extraCodegens opts)
+getCodegen s = lookup s . extraCodegens <$> get ROpts
 
 export
 getConsoleWidth : {auto o : Ref ROpts REPLOpts} -> Core (Maybe Nat)
-getConsoleWidth = do opts <- get ROpts
-                     pure $ opts.consoleWidth
+getConsoleWidth = consoleWidth <$> get ROpts
 
 export
 setConsoleWidth : {auto o : Ref ROpts REPLOpts} -> Maybe Nat -> Core ()
-setConsoleWidth n = do opts <- get ROpts
-                       put ROpts ({ consoleWidth := n } opts)
+setConsoleWidth n = update ROpts { consoleWidth := n }
 
 export
 getColor : {auto o : Ref ROpts REPLOpts} -> Core Bool
-getColor = do opts <- get ROpts
-              pure $ opts.color
+getColor = color <$> get ROpts
 
 export
 setColor : {auto o : Ref ROpts REPLOpts} -> Bool -> Core ()
-setColor b = do opts <- get ROpts
-                put ROpts ({ color := b } opts)
+setColor b = update ROpts { color := b }
 
 export
 getSynHighlightOn : {auto o : Ref ROpts REPLOpts} -> Core Bool
-getSynHighlightOn = do opts <- get ROpts
-                       pure $ opts.synHighlightOn
+getSynHighlightOn = synHighlightOn <$> get ROpts
 
 export
 setSynHighlightOn : {auto o : Ref ROpts REPLOpts} -> Bool -> Core ()
-setSynHighlightOn b = do opts <- get ROpts
-                         put ROpts ({ synHighlightOn := b } opts)
+setSynHighlightOn b = update ROpts { synHighlightOn := b }
 
 export
 getEvalTiming : {auto o : Ref ROpts REPLOpts} -> Core Bool
-getEvalTiming
-    = do opts <- get ROpts
-         pure (evalTiming opts)
+getEvalTiming = evalTiming <$> get ROpts
 
 export
 setEvalTiming : {auto o : Ref ROpts REPLOpts} -> Bool -> Core ()
-setEvalTiming b
-    = do opts <- get ROpts
-         put ROpts ({ evalTiming := b } opts)
+setEvalTiming b = update ROpts { evalTiming := b }

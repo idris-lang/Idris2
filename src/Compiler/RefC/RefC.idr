@@ -366,9 +366,7 @@ freeTmpVars = do
 addHeader : {auto h : Ref HeaderFiles (SortedSet String)}
          -> String
          -> Core ()
-addHeader header = do
-    headerFiles <- get HeaderFiles
-    put HeaderFiles $ insert header headerFiles
+addHeader = update HeaderFiles . insert
 
 
 
@@ -885,8 +883,7 @@ createCFunctions : {auto c : Ref Ctxt Defs}
 createCFunctions n (MkAFun args anf) = do
     fn <- functionDefSignature n args
     fn' <- functionDefSignatureArglist n
-    otherDefs <- get FunctionDefinitions
-    put FunctionDefinitions ((fn ++ ";\n") :: (fn' ++ ";\n") :: otherDefs)
+    update FunctionDefinitions $ \otherDefs => (fn ++ ";\n") :: (fn' ++ ";\n") :: otherDefs
     newTemporaryVariableLevel
     let argsNrs = getArgsNrList args Z
     emit EmptyFC fn
@@ -936,10 +933,9 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
                       [lib, header] => addHeader header
                       _ => pure ()
              else emit EmptyFC $ additionalFFIStub fctName fargs ret
-          otherDefs <- get FunctionDefinitions
           let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Value *") ++ ");"
           fn_arglist <- functionDefSignatureArglist n
-          put FunctionDefinitions ((fnDef ++ "\n") :: (fn_arglist ++ ";\n") :: otherDefs)
+          update FunctionDefinitions $ \otherDefs => (fnDef ++ "\n") :: (fn_arglist ++ ";\n") :: otherDefs
           typeVarNameArgList <- createFFIArgList fargs
 
           emit EmptyFC fn_arglist

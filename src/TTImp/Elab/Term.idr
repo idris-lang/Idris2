@@ -217,14 +217,12 @@ checkTerm rig elabinfo nest env (IUnifyLog fc lvl tm) exp
 checkTerm rig elabinfo nest env (Implicit fc b) (Just gexpty)
     = do nm <- genName "_"
          expty <- getTerm gexpty
-         defs <- get Ctxt
          metaval <- metaVar fc rig env nm expty
          -- Add to 'bindIfUnsolved' if 'b' set
          when (b && bindingVars elabinfo) $
-            do est <- get EST
-               expty <- getTerm gexpty
+            do expty <- getTerm gexpty
                -- Explicit because it's an explicitly given thing!
-               put EST (addBindIfUnsolved nm rig Explicit env metaval expty est)
+               update EST $ addBindIfUnsolved nm rig Explicit env metaval expty
          pure (metaval, gexpty)
 checkTerm rig elabinfo nest env (Implicit fc b) Nothing
     = do nmty <- genName "implicit_type"
@@ -234,8 +232,7 @@ checkTerm rig elabinfo nest env (Implicit fc b) Nothing
          metaval <- metaVar fc rig env nm ty
          -- Add to 'bindIfUnsolved' if 'b' set
          when (b && bindingVars elabinfo) $
-            do est <- get EST
-               put EST (addBindIfUnsolved nm rig Explicit env metaval ty est)
+            update EST $ addBindIfUnsolved nm rig Explicit env metaval ty
          pure (metaval, gnf env ty)
 checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
     = do -- enter the scope -> add unambiguous names
@@ -288,9 +285,7 @@ TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILocal _ _ _) exp
 TTImp.Elab.Check.check rigc elabinfo nest env tm@(IUpdate _ _ _) exp
     = checkImp rigc elabinfo nest env tm exp
 TTImp.Elab.Check.check rigc elabinfo nest env tm_in exp
-    = do defs <- get Ctxt
-         est <- get EST
-         tm <- expandAmbigName (elabMode elabinfo) nest env tm_in [] tm_in exp
+    = do tm <- expandAmbigName (elabMode elabinfo) nest env tm_in [] tm_in exp
          case elabMode elabinfo of
               InLHS _ => -- Don't expand implicit lambda on lhs
                  checkImp rigc elabinfo nest env tm exp

@@ -262,7 +262,6 @@ mutual
                               _ => env
                          else env
            (sc', sct, usedsc) <- lcheck rig erase (b' :: env') sc
-           defs <- get Ctxt
 
            let used_in = count 0 usedsc
            holeFound <- if not erase && isLinear (multiplicity b)

@@ -234,8 +234,7 @@ mutual
                unused = getUnused unusedContracted
                scl' = dropUnused {outer=bound} unused scl
            n <- genName
-           ldefs <- get Lifts
-           put Lifts ({ defs $= ((n, MkLFun (dropped vars unused) bound scl') ::) } ldefs)
+           update Lifts { defs $= ((n, MkLFun (dropped vars unused) bound scl') ::) }
            pure $ LUnderApp fc n (length bound) (allVars fc vars unused)
     where
         allPrfs : (vs : List Name) -> (unused : Vect (length vs) Bool) -> List (Var vs)

@@ -165,14 +165,11 @@ setOpt (ShowNamespace t)
     = do pp <- getPPrint
          setPPrint ({ fullNamespace := t } pp)
 setOpt (ShowTypes t)
-    = do opts <- get ROpts
-         put ROpts ({ showTypes := t } opts)
+    = update ROpts { showTypes := t }
 setOpt (EvalMode m)
-    = do opts <- get ROpts
-         put ROpts ({ evalMode := m } opts)
+    = update ROpts { evalMode := m }
 setOpt (Editor e)
-    = do opts <- get ROpts
-         put ROpts ({ editor := e } opts)
+    = update ROpts { editor := e }
 setOpt (CG e)
     = do defs <- get Ctxt
          case getCG (options defs) e of
@@ -443,9 +440,7 @@ processEdit (ExprSearch upd line name hints)
          case !(lookupDefName name (gamma defs)) of
               [(n, nidx, Hole locs _)] =>
                   do let searchtm = exprSearch replFC name hints
-                     ropts <- get ROpts
-                     put ROpts ({ psResult := Just (name, searchtm) } ropts)
-                     defs <- get Ctxt
+                     update ROpts { psResult := Just (name, searchtm) }
                      Just (_, restm) <- nextProofSearch
                           | Nothing => pure $ EditError "No search results"
                      let tm' = dropLams locs restm
@@ -487,8 +482,7 @@ processEdit (GenerateDef upd line name rej)
               Just None =>
                  do let searchdef = makeDefSort (\p, n => onLine (line - 1) p)
                                                 16 mostUsed n'
-                    ropts <- get ROpts
-                    put ROpts ({ gdResult := Just (line, searchdef) } ropts)
+                    update ROpts { gdResult := Just (line, searchdef) }
                     Just (_, (fc, cs)) <- nextGenDef rej
                          | Nothing => pure (EditError "No search results")
 
@@ -521,7 +515,6 @@ processEdit (MakeLemma upd line name)
                   do (lty, lapp) <- makeLemma replFC name locs ty
                      pty <- pterm $ map defaultKindedName lty -- hack
                      papp <- pterm $ map defaultKindedName lapp -- hack
-                     opts <- get ROpts
                      let pappstr = show (ifThenElse brack
                                             (addBracket replFC papp)
                                             papp)
@@ -661,8 +654,7 @@ loadMainFile : {auto c : Ref Ctxt Defs} ->
                {auto o : Ref ROpts REPLOpts} ->
                String -> Core REPLResult
 loadMainFile f
-    = do opts <- get ROpts
-         put ROpts ({ evalResultName := Nothing } opts)
+    = do update ROpts { evalResultName := Nothing }
          modIdent <- ctxtPathToNS f
          resetContext (PhysicalIdrSrc modIdent)
          Right res <- coreLift (readFile f)
@@ -756,8 +748,7 @@ process (Eval itm)
          case emode of
             Execute => do ignore (execExp itm); pure (Executed itm)
             Scheme =>
-              do defs <- get Ctxt
-                 (tm `WithType` ty) <- inferAndElab InExpr itm
+              do (tm `WithType` ty) <- inferAndElab InExpr itm
                  qtm <- logTimeWhen !getEvalTiming "Evaluation" $
                            (do nf <- snfAll [] tm
                                quote [] nf)
@@ -816,8 +807,7 @@ process Reload
               Nothing => pure NoFileLoaded
               Just f => loadMainFile f
 process (Load f)
-    = do opts <- get ROpts
-         put ROpts ({ mainfile := Just f } opts)
+    = do update ROpts { mainfile := Just f }
          -- Clear the context and load again
          loadMainFile f
 process (ImportMod m)

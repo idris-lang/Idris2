@@ -1160,15 +1160,14 @@ mutual
       = do gam <- get Ctxt
            if tagx == tagy
              then
-                  do ust <- get UST
-                     -- Constantly checking the log setting appears to have
+                  do -- Constantly checking the log setting appears to have
                      -- a bit of overhead, but I'm keeping this here because it
                      -- may prove useful again...
                      {-
+                     ust <- get UST
                      when (logging ust) $
                         do log "unify" 20 $ "Constructor " ++ show !(toFullNames x) ++ " " ++ show loc
                            log "unify" 20 "ARGUMENTS:"
-                           defs <- get Ctxt
                            traverse_ (dumpArg env) xs
                            log "unify" 20 "WITH:"
                            traverse_ (dumpArg env) ys
@@ -1623,8 +1622,7 @@ checkDots
          hs <- getCurrentHoles
          traverse_ checkConstraint (reverse (dotConstraints ust))
          hs <- getCurrentHoles
-         ust <- get UST
-         put UST ({ dotConstraints := [] } ust)
+         update UST { dotConstraints := [] }
   where
     getHoleName : Term [] -> Core (Maybe Name)
     getHoleName tm
