@@ -176,6 +176,16 @@ run cmd = do
     exitCode <- pclose f
     pure (resp, exitCode)
 
+||| Locate a command, returning its absolute path if it was found
+export covering
+which : HasIO io => (cmd : String) -> io (Maybe String)
+which cmd = do
+  (cmd, i) <- run #"which "\#{cmd}""#
+  pure $ do guard (i == 0)
+            let [cmd] = lines cmd
+              | _ => Nothing
+            pure cmd
+
 namespace Escaped
   export
   covering

@@ -12,11 +12,9 @@ import Core.Name
 import Core.Options
 import Core.TT
 import Protocol.Hex
-import Libraries.Utils.Path
 
 import Data.List
 import Data.List1
-import Data.Maybe
 import Data.String
 import Data.Vect
 
@@ -27,17 +25,17 @@ import System.Directory
 import System.Info
 
 import Libraries.Data.Version
+import Libraries.Utils.Path
 import Libraries.Utils.String
 
 %default covering
 
 export
 findChez : IO String
-findChez
-    = do Nothing <- idrisGetEnv "CHEZ"
-            | Just chez => pure chez
-         path <- pathLookup ["chez", "chezscheme", "chez-scheme", "chezscheme9.5", "scheme"]
-         pure $ fromMaybe "/usr/bin/env scheme" path
+findChez = findExecutable
+  "CHEZ"
+  ["chez", "chezscheme", "chez-scheme", "chezscheme9.5", "scheme"]
+  "/usr/bin/env scheme"
 
 ||| Returns the chez scheme version for given executable
 |||

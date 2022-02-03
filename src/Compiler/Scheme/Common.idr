@@ -7,9 +7,29 @@ import Core.Context
 import Core.Name
 import Core.TT
 
+import Data.Maybe
 import Data.Vect
 
+import Idris.Env
+import Libraries.Utils.Path
+import System
+
 %default covering
+
+||| findExecutable is used to find a command
+||| @var  the ENV variable users can set to pick this executable
+||| @cmds the list of default names we look for
+||| @dft  the default value to use if all else fails
+export
+findExecutable : (var : String) -> {auto known : IsJust (find (var ==) Env.envNames)} ->
+                 (cmds : List String) ->
+                 (dft : String) ->
+                 IO String
+findExecutable var cmds dft
+    = do Nothing <- (idrisGetEnv var >>= maybe (pure Nothing) which)
+            | Just exe => pure exe
+         path <- pathLookup cmds
+         pure $ fromMaybe dft path
 
 export
 firstExists : List String -> IO (Maybe String)
