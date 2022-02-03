@@ -241,11 +241,11 @@ public export partial
 strIndex : String -> Int -> Char
 strIndex = prim__strIndex
 
-public export partial
+public export covering
 strLength : String -> Int
 strLength = prim__strLength
 
-public export partial
+public export covering
 strSubstr : Int -> Int -> String -> String
 strSubstr = prim__strSubstr
 

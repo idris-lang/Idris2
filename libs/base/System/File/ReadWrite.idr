@@ -203,7 +203,7 @@ readFilePage offset fuel fname
 |||
 ||| @ fname the name of the file to read
 export
-partial
+covering
 readFile : HasIO io => (fname : String) -> io (Either FileError String)
 readFile = (map $ map (fastConcat . snd)) . readFilePage 0 forever
 

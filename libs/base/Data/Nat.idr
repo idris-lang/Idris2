@@ -348,7 +348,8 @@ export partial
 divNat : Nat -> Nat -> Nat
 divNat left (S right) = divNatNZ left (S right) SIsNonZero
 
-export partial
+export
+covering
 divCeilNZ : Nat -> (y: Nat) -> (0 _ : NonZero y) -> Nat
 divCeilNZ x y p = case (modNatNZ x y p) of
   Z   => divNatNZ x y p
@@ -379,7 +380,8 @@ Integral Nat where
   div = divNat
   mod = modNat
 
-export partial
+export
+covering
 gcd : (a: Nat) -> (b: Nat) -> {auto ok: NotBothZero a b} -> Nat
 gcd a Z     = a
 gcd Z b     = b

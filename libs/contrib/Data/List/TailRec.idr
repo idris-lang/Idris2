@@ -22,21 +22,21 @@ import Syntax.WithProof
 import Data.List
 import Data.List1
 
-total
+%default total
+
 lengthAcc : List a -> Nat -> Nat
 lengthAcc [] acc = acc
 lengthAcc (_::xs) acc = lengthAcc xs $ S acc
 
-export total
+export
 length : List a -> Nat
 length xs = lengthAcc xs Z
 
-total
 lengthAccSucc : (xs : List a) -> (n : Nat) -> lengthAcc xs (S n) = S (lengthAcc xs n)
 lengthAccSucc [] _ = Refl
 lengthAccSucc (_::xs) n = rewrite lengthAccSucc xs (S n) in cong S Refl
 
-export total
+export
 length_ext : (xs : List a) -> List.length xs = Data.List.TailRec.length xs
 length_ext [] = Refl
 length_ext (_::xs) = rewrite length_ext xs in sym $ lengthAccSucc xs Z
@@ -121,7 +121,7 @@ splitOnto : List (List a) -> (a -> Bool) -> List a -> List1 (List a)
 splitOnto acc p xs =
   case Data.List.break p xs of
     (chunk, []       ) => reverseOnto (chunk ::: []) acc
-    (chunk, (c::rest)) => splitOnto (chunk::acc) p rest
+    (chunk, (c::rest)) => splitOnto (chunk::acc) p $ assert_smaller xs rest
 
 export
 split : (a -> Bool) -> List a -> List1 (List a)
@@ -136,7 +136,7 @@ splitOnto_ext  acc p xs with (@@(Data.List.break p xs))
    Refl
  splitOnto_ext acc p xs | ((chunk, c::rest)**pf) =
    rewrite pf in
-   rewrite splitOnto_ext (chunk::acc) p rest in
+   rewrite splitOnto_ext (chunk::acc) p $ assert_smaller xs rest in
    Refl
 
 export
@@ -272,6 +272,7 @@ sorted  (x :: xs@(y :: ys)) = case (x <= y) of
                                 True  => Data.List.TailRec.sorted xs
 
 export
+covering
 sorted_ext : Ord a => (xs : List a) ->
   Data.List.sorted xs = Data.List.TailRec.sorted xs
 sorted_ext []  = Refl
@@ -289,6 +290,7 @@ mergeByOnto acc order left@(x::xs) right@(y::ys) =
     LT => mergeByOnto (x :: acc) order (assert_smaller left xs)   right
     _  => mergeByOnto (y :: acc) order left                       (assert_smaller right ys)
 
+covering
 mergeByOnto_ext : (acc : List a)
                -> (order : a -> a -> Ordering)
                -> (left, right : List a)
@@ -313,6 +315,7 @@ mergeBy : (a -> a -> Ordering) -> List a -> List a -> List a
 mergeBy order left right = mergeByOnto [] order left right
 
 export
+covering
 mergeBy_ext : (order : a -> a -> Ordering) -> (left, right : List a) ->
   Data.List.mergeBy order left right =
   Data.List.TailRec.mergeBy order left right
@@ -323,6 +326,7 @@ merge : Ord a => List a -> List a -> List a
 merge = Data.List.TailRec.mergeBy compare
 
 export
+covering
 merge_ext : Ord a => (left, right : List a) ->
   Data.List.merge left right = Data.List.TailRec.merge left right
 merge_ext left right = mergeBy_ext compare left right
