@@ -5,6 +5,7 @@ import Data.String
 
 import public System.Escape
 import System.File
+import System.Info
 
 %default total
 
@@ -180,7 +181,8 @@ run cmd = do
 export covering
 which : HasIO io => (cmd : String) -> io (Maybe String)
 which cmd = do
-  (cmd, i) <- run #"which "\#{cmd}""#
+  let which = ifThenElse isWindows "where.exe" "which"
+  (cmd, i) <- run #"\#{which} "\#{cmd}""#
   pure $ do guard (i == 0)
             let [cmd] = lines cmd
               | _ => Nothing

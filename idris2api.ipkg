@@ -170,8 +170,11 @@ modules =
     Libraries.Data.UserNameMap,
     Libraries.Data.Version,
 
+
+    Libraries.System,
     Libraries.System.File,
     Libraries.System.File.Buffer,
+    Libraries.System.File.ReadWrite,
     Libraries.System.Directory.Tree,
 
     Libraries.Text.Bounded,
