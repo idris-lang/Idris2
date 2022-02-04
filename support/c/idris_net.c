@@ -252,6 +252,10 @@ int idrnet_send(int sockfd, char* data) {
     return send(sockfd, (void*) data, len, 0);
 }
 
+int idrnet_send_bytes(int sockfd, void* data, int len) {
+    return send(sockfd, (void*) data, len, 0);
+}
+
 int idrnet_send_buf(int sockfd, void* data, int len) {
     void* buf_cpy = malloc(len);
     memset(buf_cpy, 0, len);
@@ -275,6 +279,10 @@ void* idrnet_recv(int sockfd, int len) {
     }
     res_struct->payload = buf;
     return (void*) res_struct;
+}
+
+int idrnet_recv_bytes(int sockfd, void* buf, int len) {
+    return recv(sockfd, buf, len, 0);
 }
 
 int idrnet_recv_buf(int sockfd, void* buf, int len) {

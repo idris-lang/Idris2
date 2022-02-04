@@ -85,12 +85,14 @@ int idrnet_accept(int sockfd, void* sockaddr);
 // Send
 int idrnet_send(int sockfd, char* data);
 int idrnet_send_buf(int sockfd, void* data, int len);
+int idrnet_send_bytes(int sockfd, void* data, int len);
 
 // Receive
 // Creates a result structure containing result and payload
 void* idrnet_recv(int sockfd, int len);
 // Receives directly into a buffer
 int idrnet_recv_buf(int sockfd, void* buf, int len);
+int idrnet_recv_bytes(int sockfd, void* buf, int len);
 
 // UDP Send
 int idrnet_sendto(int sockfd, char* data, char* host, int port, int family);
