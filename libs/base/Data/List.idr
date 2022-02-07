@@ -957,7 +957,7 @@ lengthMap (x :: xs) = cong S (lengthMap xs)
 
 ||| Proof that replicate produces a list of the requested length.
 export
-replicateLength : (n : Nat) -> length (replicate n x) = n
-replicateLength 0 = Refl
-replicateLength (S k) = cong S (replicateLength k)
+lengthReplicate : (n : Nat) -> length (replicate n x) = n
+lengthReplicate 0 = Refl
+lengthReplicate (S k) = cong S (lengthReplicate k)
 
