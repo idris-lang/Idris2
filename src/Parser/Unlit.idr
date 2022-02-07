@@ -2,6 +2,7 @@ module Parser.Unlit
 
 import public Libraries.Text.Literate
 import        Data.String
+import        Data.List
 import        Data.Maybe
 
 %default total
@@ -36,6 +37,42 @@ styleTeX = MkLitStyle
               [("\\begin{code}", "\\end{code}"), ("\\begin{hidden}", "\\end{hidden}")]
               Nil
               [".tex", ".ltx"]
+
+
+||| Return the list of extensions used for literate files.
+export
+listOfExtensionsLiterate : List String
+listOfExtensionsLiterate
+  = concatMap file_extensions
+              [ styleBird
+              , styleOrg
+              , styleCMark
+              , styleTeX
+              ]
+
+||| Are we dealing with a valid literate file name, if so return the base name and used extension.
+export
+hasLitFileExt : (fname : String)
+                     -> Maybe (String, String)
+hasLitFileExt fname
+      = find listOfExtensionsLiterate
+
+  where
+    rp : String -> List Char
+    rp = (reverse . unpack)
+
+    pr : List Char -> String
+    pr = (pack . reverse)
+
+    find : List String -> Maybe (String, String)
+    find Nil
+      = Nothing
+
+    find (ext::xs)
+      = if (isSuffixOf fname ext)
+          then let bname_r = (deleteFirstsBy (==) (rp fname) (rp ext))
+               in Just (pr bname_r, ext)
+          else find xs
 
 ||| Are we dealing with a valid literate file name, if so return the identified style.
 export
