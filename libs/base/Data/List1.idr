@@ -177,6 +177,12 @@ export
 {ys : List a} -> Injective (::: ys) where
   injective Refl = Refl
 
+||| Proof that the length of a List1 is the same as the length
+||| of the List it represents.
+export
+listLength : (xs : List1 a) -> length xs = length (forget xs)
+listLength (head ::: tail) = Refl
+
 ------------------------------------------------------------------------
 -- Zippable
 

@@ -954,3 +954,10 @@ export
 lengthMap : (xs : List a) -> length (map f xs) = length xs
 lengthMap [] = Refl
 lengthMap (x :: xs) = cong S (lengthMap xs)
+
+||| Proof that replicate produces a list of the requested length.
+export
+lengthReplicate : (n : Nat) -> length (replicate n x) = n
+lengthReplicate 0 = Refl
+lengthReplicate (S k) = cong S (lengthReplicate k)
+
