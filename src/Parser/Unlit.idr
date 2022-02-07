@@ -1,7 +1,8 @@
 module Parser.Unlit
 
 import public Libraries.Text.Literate
-import Data.String
+import        Data.String
+import        Data.Maybe
 
 %default total
 
@@ -36,16 +37,14 @@ styleTeX = MkLitStyle
               Nil
               [".tex", ".ltx"]
 
+||| Are we dealing with a valid literate file name, if so return the identified style.
 export
 isLitFile : String -> Maybe LiterateStyle
-isLitFile fname =
-    case isStyle styleBird of
-      Just s => Just s
-      Nothing => case isStyle styleOrg of
-                     Just s => Just s
-                     Nothing => case isStyle styleCMark of
-                                     Just s => Just s
-                                     Nothing => isStyle styleTeX
+isLitFile fname
+    =   isStyle styleBird
+    <|> isStyle styleOrg
+    <|> isStyle styleCMark
+    <|> isStyle styleTeX
 
   where
    hasSuffix : String -> Bool
@@ -57,18 +56,24 @@ isLitFile fname =
       then Just style
       else Nothing
 
+||| Check if the line is that from a literate style.
 export
 isLitLine : String -> (Maybe String, String)
-isLitLine str =
-  case isLiterateLine styleBird str of
-     (Just l, s) => (Just l, s)
-     otherwise => case isLiterateLine styleOrg str of
-                    (Just l, s) => (Just l, s)
-                    otherwise => case isLiterateLine styleCMark str of
-                                   (Just l, s) => (Just l, s)
-                                   otherwise => case isLiterateLine styleTeX str of
-                                                   (Just l, s) => (Just l, s)
-                                                   otherwise => (Nothing, str)
+isLitLine str
+    = maybe (Nothing, str) id walk
+  where
+    try : LiterateStyle -> Maybe (Maybe String, String)
+    try style
+      = case isLiterateLine style str of
+          (Just l, s) => Just (Just l, s)
+          _           => Nothing
+
+    walk : Maybe (Maybe String, String)
+    walk
+      =   try styleBird
+      <|> try styleOrg
+      <|> try styleCMark
+      <|> try styleTeX
 
 export
 unlit : Maybe LiterateStyle -> String -> Either LiterateError String
