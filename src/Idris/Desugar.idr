@@ -763,11 +763,11 @@ mutual
 
            pure (nm, PatClause fc lhs' rhs')
 
-  desugarClause ps arg (MkWithClause fc lhs wval prf flags cs)
+  desugarClause ps arg (MkWithClause fc lhs rig wval prf flags cs)
       = do cs' <- traverse (map snd . desugarClause ps arg) cs
            (nm, bound, lhs') <- desugarLHS ps arg lhs
            wval' <- desugar AnyExpr (bound ++ ps) wval
-           pure (nm, WithClause fc lhs' wval' prf flags cs')
+           pure (nm, WithClause fc lhs' rig wval' prf flags cs')
 
   desugarClause ps arg (MkImpossible fc lhs)
       = do (nm, _, lhs') <- desugarLHS ps arg lhs
@@ -848,8 +848,8 @@ mutual
       toIDef : Name -> ImpClause -> Core ImpDecl
       toIDef nm (PatClause fc lhs rhs)
           = pure $ IDef fc nm [PatClause fc lhs rhs]
-      toIDef nm (WithClause fc lhs rhs prf flags cs)
-          = pure $ IDef fc nm [WithClause fc lhs rhs prf flags cs]
+      toIDef nm (WithClause fc lhs rig rhs prf flags cs)
+          = pure $ IDef fc nm [WithClause fc lhs rig rhs prf flags cs]
       toIDef nm (ImpossibleClause fc lhs)
           = pure $ IDef fc nm [ImpossibleClause fc lhs]
 
