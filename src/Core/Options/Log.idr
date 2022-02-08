@@ -87,6 +87,7 @@ knownTopics = [
     ("elab", Nothing),
     ("elab.ambiguous", Nothing),
     ("elab.app.var", Nothing),
+    ("elab.app.dot", Just "Dealing with forced expressions when elaborating applications"),
     ("elab.app.lhs", Nothing),
     ("elab.as", Nothing),
     ("elab.bindnames", Nothing),

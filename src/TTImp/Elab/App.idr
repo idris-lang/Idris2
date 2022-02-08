@@ -365,7 +365,12 @@ mutual
             -- if the argument type aty has a single constructor, there's no need
             -- to dot it
             defs <- get Ctxt
-            mconsCount <- countConstructors !(evalClosure defs argty)
+            nfargty <- evalClosure defs argty
+            mconsCount <- countConstructors nfargty
+            logNF "elab.app.dot" 50
+              "Found \{show mconsCount} constructors for type"
+              (mkEnv emptyFC vars)
+              nfargty
             if mconsCount == Just 1 || mconsCount == Just 0
               then pure tm
               else
@@ -378,6 +383,8 @@ mutual
                       else pure $ dotTerm tm
           else pure tm
     where
+      -- TODO: this seems too conservative. If we get back an expression stuck on a
+      -- meta, shouldn't we delay the check instead of declaring the tm dotted?
       ||| Count the constructors of a fully applied concrete datatype
       countConstructors : NF vars -> Core (Maybe Nat)
       countConstructors (NTCon _ tycName _ n args) =
