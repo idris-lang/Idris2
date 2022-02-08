@@ -5,6 +5,8 @@
 
 module Search.Tychonoff
 
+import Data.DPair
+
 %default total
 
 Extensionality : Type
@@ -58,17 +60,11 @@ Searchable Bool where
           Left xa' => \ pxa' => absurd (npxa (prfa xa' pxa'))
           Right xb' => \ pxb' => absurd (npxb (prfb xb' pxb'))
 
-choiceAxiom :
-   {0 p : a -> b -> Type} ->
-   ((x : a) -> (b ** p x b)) ->
-   (f : (a -> b) ** (x : a) -> p x (f x))
-choiceAxiom pr = ((\ x => fst (pr x)) ** \ x => snd (pr x))
-
 ||| Searchable is closed under finite product
 (Searchable a, Searchable b) => Searchable (a, b) where
   search p pdec =
-    -- How cool is that use of choiceAxiom?
-    let (fb ** prfb) = choiceAxiom $ \ a => search (p . (a,)) (\ b => pdec (a, b)) in
+    -- How cool is that use of choice?
+    let (fb ** prfb) = Pair.choice $ \ a => search (p . (a,)) (\ b => pdec (a, b)) in
     let (xa ** prfa) = search (\ a => p (a, fb a)) (\ xa => pdec (xa, fb xa)) in
     MkDPair (xa, fb xa) $ \ (xa', xb'), pxab' => prfa xa' (prfb xa' xb' pxab')
 
