@@ -206,13 +206,13 @@ printClause l i (PatClause _ lhsraw rhsraw)
     = do lhs <- pterm $ map defaultKindedName lhsraw -- hack
          rhs <- pterm $ map defaultKindedName rhsraw -- hack
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " = " ++ show rhs))
-printClause l i (WithClause _ lhsraw wvraw prf flags csraw)
+printClause l i (WithClause _ lhsraw rig wvraw prf flags csraw)
     = do lhs <- pterm $ map defaultKindedName lhsraw -- hack
          wval <- pterm $ map defaultKindedName wvraw -- hack
          cs <- traverse (printClause l (i + 2)) csraw
          pure (relit l ((pack (replicate i ' ')
                 ++ show lhs
-                ++ " with (" ++ show wval ++ ")"
+                ++ " with " ++ elimSemi "0 " "1 " (const "") rig ++ "(" ++ show wval ++ ")"
                 ++ maybe "" (\ nm => " proof " ++ show nm) prf
                 ++ "\n"))
                ++ showSep "\n" cs)

@@ -1059,16 +1059,17 @@ mutual
      <|> do b <- bounds (do decoratedKeyword fname "with"
                             commit
                             flags <- withFlags fname
+                            rig <- multiplicity fname
                             start <- bounds (decoratedSymbol fname "(")
                             wval <- bracketedExpr fname start indents
                             prf <- optional (decoratedKeyword fname "proof"
                                              *> UN . Basic <$> decoratedSimpleBinderName fname)
                             ws <- mustWork $ nonEmptyBlockAfter col
                                            $ clause (S withArgs) (Just lhs) fname
-                            pure (prf, flags, wval, forget ws))
-            (prf, flags, wval, ws) <- pure b.val
+                            pure (prf, flags, rig, wval, forget ws))
+            (prf, flags, rig, wval, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
-            pure (MkWithClause fc (uncurry applyArgs lhs) wval prf flags ws)
+            pure (MkWithClause fc (uncurry applyArgs lhs) rig wval prf flags ws)
      <|> do end <- bounds (decoratedKeyword fname "impossible")
             atEnd indents
             pure $ let fc = boundToFC fname (mergeBounds start end) in

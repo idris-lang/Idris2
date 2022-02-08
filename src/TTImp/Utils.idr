@@ -47,7 +47,7 @@ rawImpFromDecl decl = case decl of
         getFromTy (MkImpTy _ _ _ ty) = ty
         getFromClause : ImpClause -> List RawImp
         getFromClause (PatClause fc1 lhs rhs) = [lhs, rhs]
-        getFromClause (WithClause fc1 lhs wval prf flags ys) = [wval, lhs] ++ getFromClause !ys
+        getFromClause (WithClause fc1 lhs rig wval prf flags ys) = [wval, lhs] ++ getFromClause !ys
         getFromClause (ImpossibleClause fc1 lhs) = [lhs]
         getFromPiInfo : PiInfo RawImp -> List RawImp
         getFromPiInfo (DefImplicit x) = [x]
@@ -131,7 +131,7 @@ findBindableNamesQuot env used (ICase fc x ty xs)
     = findBindableNamesQuot env used !([x, ty] ++ getRawImp !xs)
   where getRawImp : ImpClause -> List RawImp
         getRawImp (PatClause fc1 lhs rhs) = [lhs, rhs]
-        getRawImp (WithClause fc1 lhs wval prf flags ys) = [wval, lhs] ++ getRawImp !ys
+        getRawImp (WithClause fc1 lhs rig wval prf flags ys) = [wval, lhs] ++ getRawImp !ys
         getRawImp (ImpossibleClause fc1 lhs) = [lhs]
 findBindableNamesQuot env used (ILocal fc xs x)
     = findBindableNamesQuot env used !(x :: rawImpFromDecl !xs)
@@ -357,11 +357,11 @@ mutual
                      ++ bound in
             PatClause fc (substNames' bvar [] [] lhs)
                          (substNames' bvar bound' ps rhs)
-  substNamesClause' bvar bound ps (WithClause fc lhs wval prf flags cs)
+  substNamesClause' bvar bound ps (WithClause fc lhs rig wval prf flags cs)
       = let bound' = map (UN . Basic) (map snd (findBindableNames True bound [] lhs))
                      ++ findIBindVars lhs
                      ++ bound in
-            WithClause fc (substNames' bvar [] [] lhs)
+            WithClause fc (substNames' bvar [] [] lhs) rig
                           (substNames' bvar bound' ps wval) prf flags cs
   substNamesClause' bvar bound ps (ImpossibleClause fc lhs)
       = ImpossibleClause fc (substNames' bvar bound [] lhs)
@@ -458,8 +458,8 @@ mutual
   substLocClause fc' (PatClause fc lhs rhs)
       = PatClause fc' (substLoc fc' lhs)
                       (substLoc fc' rhs)
-  substLocClause fc' (WithClause fc lhs wval prf flags cs)
-      = WithClause fc' (substLoc fc' lhs)
+  substLocClause fc' (WithClause fc lhs rig wval prf flags cs)
+      = WithClause fc' (substLoc fc' lhs) rig
                        (substLoc fc' wval)
                        prf
                        flags

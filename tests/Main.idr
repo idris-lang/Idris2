@@ -227,7 +227,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Inlining
        "inlining001",
        -- The 'with' rule
-       "with001", "with002", "with004", "with005", "with006",
+       "with001", "with002", "with004", "with005", "with006", "with007",
        -- with-disambiguation
        "with003",
        -- pretty printing

@@ -155,8 +155,10 @@ mutual
   public export
   data Clause : Type where
        PatClause : FC -> (lhs : TTImp) -> (rhs : TTImp) -> Clause
-       WithClause : FC -> (lhs : TTImp) -> (wval : TTImp) ->
-                    (prf : Maybe Name) -> (flags : List WithFlag) ->
+       WithClause : FC -> (lhs : TTImp) ->
+                    (rig : Count) -> (wval : TTImp) -> -- with'd expression (& quantity)
+                    (prf : Maybe Name) -> -- optional name for the proof
+                    (flags : List WithFlag) ->
                     List Clause -> Clause
        ImpossibleClause : FC -> (lhs : TTImp) -> Clause
 

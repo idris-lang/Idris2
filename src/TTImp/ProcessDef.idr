@@ -509,17 +509,17 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
          pure (Right (MkClause env' lhstm' rhstm))
 -- TODO: (to decide) With is complicated. Move this into its own module?
 checkClause {vars} mult vis totreq hashit n opts nest env
-    (WithClause ifc lhs_in wval_raw mprf flags cs)
+    (WithClause ifc lhs_in rig wval_raw mprf flags cs)
     = do (lhs, (vars'  ** (sub', env', nest', lhspat, reqty))) <-
              checkLHS False mult n opts nest env ifc lhs_in
          let wmode
-               = if isErased mult then InType else InExpr
+               = if isErased mult || isErased rig then InType else InExpr
 
          (wval, gwvalTy) <- wrapErrorC opts (InRHS ifc !(getFullName (Resolved n))) $
                 elabTermSub n wmode opts nest' env' env sub' wval_raw Nothing
          clearHoleLHS
 
-         logTerm "declare.def.clause.with" 5 "With value" wval
+         logTerm "declare.def.clause.with" 5 "With value (at quantity \{show rig})" wval
          logTerm "declare.def.clause.with" 3 "Required type" reqty
          wvalTy <- getTerm gwvalTy
          defs <- get Ctxt
@@ -541,7 +541,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
 
          -- Abstracting over 'wval' in the scope of bNotReq in order
          -- to get the 'magic with' behaviour
-         (wargs ** (scenv, var, binder)) <- bindWithArgs wvalTy ((,wval) <$> mprf) wvalEnv
+         (wargs ** (scenv, var, binder)) <- bindWithArgs rig wvalTy ((,wval) <$> mprf) wvalEnv
 
          let bnr = bindNotReq vfc 0 env' withSub [] reqty
          let notreqns = fst bnr
@@ -622,14 +622,14 @@ checkClause {vars} mult vis totreq hashit n opts nest env
     mkExplicit (b :: env) = b :: mkExplicit env
 
     bindWithArgs :
-       (wvalTy : Term xs) -> Maybe (Name, Term xs) ->
+       (rig : RigCount) -> (wvalTy : Term xs) -> Maybe (Name, Term xs) ->
        (wvalEnv : Env Term xs) ->
        Core (ext : List Name
          ** ( Env Term (ext ++ xs)
             , Term (ext ++ xs)
             , (Term (ext ++ xs) -> Term xs)
             ))
-    bindWithArgs {xs} wvalTy Nothing wvalEnv =
+    bindWithArgs {xs} rig wvalTy Nothing wvalEnv =
       let wargn : Name
           wargn = MN "warg" 0
           wargs : List Name
@@ -642,11 +642,11 @@ checkClause {vars} mult vis totreq hashit n opts nest env
               := Local vfc (Just False) Z First
 
           binder : Term (wargs ++ xs) -> Term xs
-                 := Bind vfc wargn (Pi vfc top Explicit wvalTy)
+                 := Bind vfc wargn (Pi vfc rig Explicit wvalTy)
 
       in pure (wargs ** (scenv, var, binder))
 
-    bindWithArgs {xs} wvalTy (Just (name, wval)) wvalEnv = do
+    bindWithArgs {xs} rig wvalTy (Just (name, wval)) wvalEnv = do
       defs <- get Ctxt
 
       let eqName = NS builtinNS (UN $ Basic "Equal")
@@ -677,8 +677,8 @@ checkClause {vars} mult vis totreq hashit n opts nest env
               := Local vfc (Just False) (S Z) (Later First)
 
           binder : Term (wargs ++ xs) -> Term xs
-                 := \ t => Bind vfc wargn (Pi vfc top Explicit wvalTy)
-                         $ Bind vfc name  (Pi vfc top Implicit eqTy) t
+                 := \ t => Bind vfc wargn (Pi vfc rig Explicit wvalTy)
+                         $ Bind vfc name  (Pi vfc rig Implicit eqTy) t
 
       pure (wargs ** (scenv, var, binder))
 
@@ -715,12 +715,12 @@ checkClause {vars} mult vis totreq hashit n opts nest env
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              newrhs <- withRHS ploc drop wname wargnames rhs lhs
              pure (PatClause ploc newlhs newrhs)
-    mkClauseWith drop wname wargnames lhs (WithClause ploc patlhs rhs prf flags ws)
+    mkClauseWith drop wname wargnames lhs (WithClause ploc patlhs rig wval prf flags ws)
         = do log "declare.def.clause.with" 20 "WithClause"
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
-             newrhs <- withRHS ploc drop wname wargnames rhs lhs
+             newwval <- withRHS ploc drop wname wargnames wval lhs
              ws' <- traverse (mkClauseWith (S drop) wname wargnames lhs) ws
-             pure (WithClause ploc newlhs newrhs prf flags ws')
+             pure (WithClause ploc newlhs rig newwval prf flags ws')
     mkClauseWith drop wname wargnames lhs (ImpossibleClause ploc patlhs)
         = do log "declare.def.clause.with" 20 "ImpossibleClause"
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs

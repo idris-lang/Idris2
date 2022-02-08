@@ -397,7 +397,8 @@ mutual
   data ImpClause' : Type -> Type where
        PatClause : FC -> (lhs : RawImp' nm) -> (rhs : RawImp' nm) -> ImpClause' nm
        WithClause : FC -> (lhs : RawImp' nm) ->
-                    (wval : RawImp' nm) -> (prf : Maybe Name) ->
+                    (rig : RigCount) -> (wval : RawImp' nm) -> -- with'd expression (& quantity)
+                    (prf : Maybe Name) -> -- optional name for the proof
                     (flags : List WithFlag) ->
                     List (ImpClause' nm) -> ImpClause' nm
        ImpossibleClause : FC -> (lhs : RawImp' nm) -> ImpClause' nm
@@ -407,9 +408,9 @@ mutual
   Show nm => Show (ImpClause' nm) where
     show (PatClause fc lhs rhs)
        = show lhs ++ " = " ++ show rhs
-    show (WithClause fc lhs wval prf flags block)
+    show (WithClause fc lhs rig wval prf flags block)
        = show lhs
-       ++ " with " ++ show wval
+       ++ " with (" ++ show rig ++ " " ++ show wval ++ ")"
        ++ maybe "" (\ nm => " proof " ++ show nm) prf
        ++ "\n\t" ++ show block
     show (ImpossibleClause fc lhs)
@@ -1173,10 +1174,11 @@ mutual
         = do tag 0; toBuf b fc; toBuf b lhs; toBuf b rhs
     toBuf b (ImpossibleClause fc lhs)
         = do tag 1; toBuf b fc; toBuf b lhs
-    toBuf b (WithClause fc lhs wval prf flags cs)
+    toBuf b (WithClause fc lhs rig wval prf flags cs)
         = do tag 2
              toBuf b fc
              toBuf b lhs
+             toBuf b rig
              toBuf b wval
              toBuf b prf
              toBuf b cs
@@ -1189,9 +1191,10 @@ mutual
                1 => do fc <- fromBuf b; lhs <- fromBuf b;
                        pure (ImpossibleClause fc lhs)
                2 => do fc <- fromBuf b; lhs <- fromBuf b;
-                       wval <- fromBuf b; prf <- fromBuf b;
+                       rig <- fromBuf b; wval <- fromBuf b;
+                       prf <- fromBuf b;
                        cs <- fromBuf b
-                       pure (WithClause fc lhs wval prf [] cs)
+                       pure (WithClause fc lhs rig wval prf [] cs)
                _ => corrupt "ImpClause"
 
   export
