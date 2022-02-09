@@ -1,5 +1,7 @@
 module Data.Linear.LVect
 
+import Data.Fin
+
 import Data.Linear.Bifunctor
 import Data.Linear.Interface
 import Data.Linear.Notation
@@ -14,6 +16,11 @@ data LVect : Nat -> Type -> Type where
   (::) : a -@ LVect n a -@ LVect (S n) a
 
 %name LVect xs, ys, zs, ws
+
+export
+lookup : Fin (S n) -@ LVect (S n) a -@ LPair a (LVect n a)
+lookup FZ     (v :: vs) = (v # vs)
+lookup (FS k) (v :: vs@(_ :: _)) = bimap id (v ::) (lookup k vs)
 
 export
 (<$>) : (f : a -@ b) -> LVect n a -@ LVect n b
