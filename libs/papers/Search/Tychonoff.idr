@@ -30,6 +30,20 @@ IsSearchable a
   = (0 p : Pred a) -> Decidable p ->
     (x : a ** (x0 : a) -> p x0 -> p x)
 
+infix 0 <->
+record (<->) (a, b : Type) where
+  constructor MkIso
+  forwards  : a -> b
+  backwards : b -> a
+  inverseL  : (x : a) -> backwards (forwards x) === x
+  inverseR  : (y : b) -> forwards (backwards y) === y
+
+||| Searchable is closed under isomorphisms
+map : (a <-> b) -> IsSearchable a -> IsSearchable b
+map (MkIso f g _ inv) search p pdec =
+  let (xa ** prfa) = search (p . f) (\ x => pdec (f x)) in
+  (f xa ** \ xb, pxb => prfa (g xb) $ replace {p} (sym $ inv xb) pxb)
+
 interface Searchable (0 a : Type) where
   search : IsSearchable a
 
@@ -39,15 +53,25 @@ Inhabited a = a
 SearchableIsInhabited : IsSearchable a -> Inhabited a
 SearchableIsInhabited search = fst (search (\ _ => ()) (\ _ => Yes ()))
 
-||| Finite types are trivially searchable
+-- Finite types are trivially searchable
+
+||| Unit is searchable
+Searchable () where
+  search p pdef = (() ** \ (), prf => prf)
+
+||| Bool is searchable
 Searchable Bool where
   search p pdec = case pdec True of
+    -- if p True holds we're done
     Yes prf   => MkDPair True $ \ _, _ => prf
+    -- otherwise p False is our best bet
     No contra => MkDPair False $ \case
       False => id
       True  => absurd . contra
 
 ||| Searchable is closed under finite sum
+-- Note that this would enable us to go back and prove Bool searchable
+-- via the iso Bool <-> Either () ()
 (Searchable a, Searchable b) => Searchable (Either a b) where
   search p pdec =
     let (xa ** prfa) = search (p . Left) (\ xa => pdec (Left xa)) in
