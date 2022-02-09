@@ -9,8 +9,8 @@ modules = Data.Linear,
           Data.Linear.Interface,
           Data.Linear.LEither,
           Data.Linear.LList,
+          Data.Linear.List.LQuantifiers,
           Data.Linear.LMaybe,
           Data.Linear.LNat,
           Data.Linear.LVect,
           Data.Linear.Notation
-
