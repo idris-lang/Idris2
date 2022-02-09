@@ -44,11 +44,16 @@ interface Duplicable a where
 
 export
 Duplicable Void where
-  duplicate Void impossible
+  duplicate v impossible
 
 export
 Duplicable () where
   duplicate () = [(), ()]
+
+export
+Duplicable Bool where
+  duplicate True  = [True, True]
+  duplicate False = [False, False]
 
 ||| Comonoid is the dual of Monoid, it can consume a value linearly and duplicate a value linearly
 ||| `comult` returns a pair instead of 2 copies, because we do not guarantee that the two values
@@ -72,4 +77,3 @@ export
 Comonoid (!* a) where
   counit (MkBang _) = ()
   comult (MkBang v) = MkBang v # MkBang v
-
