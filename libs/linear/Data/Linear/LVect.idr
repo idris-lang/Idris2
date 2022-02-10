@@ -58,6 +58,20 @@ export
 (x :: xs) ++ ys = x :: (xs ++ ys)
 
 export
+lfoldr : (0 p : Nat -> Type) -> (forall n. a -@ p n -@ p (S n)) -> p Z -@ LVect n a -@ p n
+lfoldr p c n [] = n
+lfoldr p c n (x :: xs) = c x (lfoldr p c n xs)
+
+export
+lfoldl : (0 p : Nat -> Type) -> (forall n. a -@ p n -@ p (S n)) -> p Z -@ LVect n a -@ p n
+lfoldl p c n [] = n
+lfoldl p c n (x :: xs) = lfoldl (p . S) c (c x n) xs
+
+export
+reverse : LVect m a -@ LVect m a
+reverse = lfoldl (\ m => LVect m a) (::) []
+
+export
 Consumable a => Consumable (LVect n a) where
   consume [] = ()
   consume (x :: xs) = x `seq` consume xs
