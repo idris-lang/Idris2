@@ -6,6 +6,7 @@
 module Search.Tychonoff
 
 import Data.DPair
+import Data.Nat
 
 %default total
 
@@ -112,6 +113,15 @@ LPOIsSearchable : LPO' a -> Inhabited a -> IsSearchable a
 LPOIsSearchable lpo inh p pdec = case lpo p pdec of
   Left (x ** px) => (x ** \ _, _ => px)
   Right contra   => (inh ** \ x, px => absurd (contra x px))
+
+EqualUntil : (m : Nat) -> (a, b : Nat -> x) -> Type
+EqualUntil m a b = (k : Nat) -> k `LTE` m -> a k === b k
+
+record UniformlyContinuous {x : Type} (p : (Nat -> x) -> Type) where
+  constructor MkUC
+  uniformBound : Nat
+  uniformContinuity : (a, b : Nat -> x) -> EqualUntil uniformBound a b -> p a -> p b
+
 
 
 -- parameters (fext : Extensionality)
