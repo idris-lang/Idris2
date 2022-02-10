@@ -61,10 +61,9 @@ splitIdrisFileName fname
   where
     isPureCode : Maybe (String, String)
     isPureCode
-      = let (bname, ext) = splitFileName fname
-        in if ext == "idr"
-             then Just (bname, "." ++ ext)
-             else Nothing
+      = let (bname, ext) = splitFileName fname in
+        do guard (ext == "idr")
+           pure (bname, ".idr")
 
 
 -- Return the name of the first file available in the list
