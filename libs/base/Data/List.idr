@@ -232,7 +232,7 @@ nub = nubBy (==)
 ||| @ idx The index of the value to delete.
 ||| @ xs The list to delete the value from.
 public export
-deleteAt : (idx : Nat) -> (xs : List a) -> {auto prf : InBounds idx xs} -> List a
+deleteAt : (idx : Nat) -> (xs : List a) -> {auto 0 prf : InBounds idx xs} -> List a
 deleteAt {prf=InFirst} Z (_ :: xs) = xs
 deleteAt {prf=InLater _} (S k) (x :: xs) = x :: deleteAt k xs
 
