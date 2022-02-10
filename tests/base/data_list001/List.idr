@@ -11,4 +11,4 @@ deleteAt = [
   ]
 
 main : IO ()
-main = do printLn takeFromStream
+main = do printLn deleteAt
