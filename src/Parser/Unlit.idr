@@ -97,7 +97,7 @@ isLitFile fname
 export
 isLitLine : String -> (Maybe String, String)
 isLitLine str
-    = maybe (Nothing, str) id walk
+    = fromMaybe (Nothing, str) walk
   where
     try : LiterateStyle -> Maybe (Maybe String, String)
     try style
