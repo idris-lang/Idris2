@@ -131,7 +131,6 @@ public export
 suffixOfBy : (match : a -> b -> Maybe m) ->
              (left : List a) -> (right : List b) ->
              Maybe (List b, List m)
-suffixOfBy match left right = map swap $ prefixOfBy match (reverse left) (reverse right)
-  where
-    swap : forall a, b. (a, b) -> (b, a)
-    swap (x, y) = (y, x)
+suffixOfBy match left right
+  = do (ms, bs) <- Extra.prefixOfBy match (reverse left) (reverse right)
+       pure (reverse bs, reverse ms)

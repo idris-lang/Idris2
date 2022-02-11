@@ -764,7 +764,9 @@ public export
 suffixOfBy : (match : a -> b -> Maybe m) ->
              (left : List a) -> (right : List b) ->
              Maybe (List b, List m)
-suffixOfBy match left right = map swap $ prefixOfBy match (reverse left) (reverse right)
+suffixOfBy match left right
+  = do (ms, bs) <- prefixOfBy match (reverse left) (reverse right)
+       pure (reverse bs, reverse ms)
 
 ||| Check whether the `left` is a suffix of the `right` one, using the provided
 ||| equality function to compare elements.
