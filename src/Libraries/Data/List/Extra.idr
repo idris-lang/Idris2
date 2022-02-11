@@ -118,11 +118,11 @@ prefixOfBy : (match : a -> b -> Maybe m) ->
              (left : List a) -> (right : List b) ->
              Maybe (List m, List b)
 prefixOfBy p = go [<] where
-  (<>>) : forall a. SnocList a -> List a -> List a
-  [<] <>> xs = xs
-  (xz :< x) <>> xs = xz <>> (x :: xs)
+  chips : forall a. SnocList a -> List a -> List a
+  chips [<] xs = xs
+  chips (xz :< x) xs = chips xz (x :: xs)
   go : SnocList m -> List a -> List b -> Maybe (List m, List b)
-  go sm [] bs = pure (sm <>> [], bs)
+  go sm [] bs = pure (chips sm [], bs)
   go sm as [] = Nothing
   go sm (a :: as) (b :: bs) = go (sm :< !(p a b)) as bs
 
