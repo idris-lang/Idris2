@@ -97,6 +97,9 @@
    been written when there is a write error.
 * `System.File.Buffer.readBufferData` now returns the number of bytes that have
    been read into the buffer.
+* Adds the `Data.List.Quantifiers.Interleaving` and
+  `Data.List.Quantifiers.Split` datatypes, used for provably splitting a list
+  into a list of proofs and a list of counter-proofs for a given property.
 
 #### Test
 
