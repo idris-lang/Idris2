@@ -8,6 +8,11 @@ public export
 (-@) : Type -> Type -> Type
 a -@ b = (1 _ : a) -> b
 
+||| Linear identity function
+public export
+id : a -@ a
+id x = x
+
 ||| Linear function composition
 public export
 (.) : (b -@ c) -@ (a -@ b) -@ (a -@ c)

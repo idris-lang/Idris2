@@ -1,5 +1,7 @@
 module Data.Linear.LVect
 
+import Data.Fin
+
 import Data.Linear.Bifunctor
 import Data.Linear.Interface
 import Data.Linear.Notation
@@ -14,6 +16,11 @@ data LVect : Nat -> Type -> Type where
   (::) : a -@ LVect n a -@ LVect (S n) a
 
 %name LVect xs, ys, zs, ws
+
+export
+lookup : Fin (S n) -@ LVect (S n) a -@ LPair a (LVect n a)
+lookup FZ     (v :: vs) = (v # vs)
+lookup (FS k) (v :: vs@(_ :: _)) = bimap id (v ::) (lookup k vs)
 
 export
 (<$>) : (f : a -@ b) -> LVect n a -@ LVect n b
@@ -49,6 +56,20 @@ export
 (++) : LVect m a -@ LVect n a -@ LVect (m + n) a
 [] ++ ys = ys
 (x :: xs) ++ ys = x :: (xs ++ ys)
+
+export
+lfoldr : (0 p : Nat -> Type) -> (forall n. a -@ p n -@ p (S n)) -> p Z -@ LVect n a -@ p n
+lfoldr p c n [] = n
+lfoldr p c n (x :: xs) = c x (lfoldr p c n xs)
+
+export
+lfoldl : (0 p : Nat -> Type) -> (forall n. a -@ p n -@ p (S n)) -> p Z -@ LVect n a -@ p n
+lfoldl p c n [] = n
+lfoldl p c n (x :: xs) = lfoldl (p . S) c (c x n) xs
+
+export
+reverse : LVect m a -@ LVect m a
+reverse = lfoldl (\ m => LVect m a) (::) []
 
 export
 Consumable a => Consumable (LVect n a) where

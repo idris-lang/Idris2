@@ -17,6 +17,22 @@ Consumable Void where consume v impossible
 
 export
 Consumable () where consume u = u
+
+||| Unions can be consumed by pattern matching
+export
+Consumable Bool where
+  consume True = ()
+  consume False = ()
+
+export
+Consumable (!* a) where
+  consume (MkBang v) = ()
+
+||| We can cheat to make built-in types consumable
+export
+Consumable Int where
+  consume = believe_me (\ 0 i : Int => ())
+
 -- But crucially we don't have `Consumable World` or `Consumable Handle`.
 
 infixr 5 `seq`
@@ -27,28 +43,26 @@ export
 seq : Consumable a => a -@ b -@ b
 a `seq` b = let 1 () = consume a in b
 
-||| Unions can be consumed by pattern matching
-export
-Consumable Bool where
-  consume True = ()
-  consume False = ()
-
-||| We can cheat to make built-in types consumable
-export
-Consumable Int where
-  consume = believe_me (\ 0 i : Int => ())
-
 public export
 interface Duplicable a where
   duplicate : (1 v : a) -> 2 `Copies` v
 
 export
 Duplicable Void where
-  duplicate Void impossible
+  duplicate v impossible
 
 export
 Duplicable () where
   duplicate () = [(), ()]
+
+export
+Duplicable Bool where
+  duplicate True  = [True, True]
+  duplicate False = [False, False]
+
+export
+Duplicable (!* a) where
+  duplicate (MkBang v) = [MkBang v, MkBang v]
 
 ||| Comonoid is the dual of Monoid, it can consume a value linearly and duplicate a value linearly
 ||| `comult` returns a pair instead of 2 copies, because we do not guarantee that the two values
@@ -64,7 +78,7 @@ interface Comonoid a where
 
 ||| If a value is consumable and duplicable we can make an instance of Comonoid for it
 export
-Consumable a => Duplicable a => Comonoid a where
+[AutoComonoid] Consumable a => Duplicable a => Comonoid a where
   counit = consume
   comult x = pair (duplicate x)
 
@@ -72,4 +86,3 @@ export
 Comonoid (!* a) where
   counit (MkBang _) = ()
   comult (MkBang v) = MkBang v # MkBang v
-
