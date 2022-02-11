@@ -223,6 +223,19 @@ public export
 nub : Eq a => List a -> List a
 nub = nubBy (==)
 
+||| Construct a new list consisting of all but the indicated element.
+|||
+||| ```idris example
+||| deleteAt 3 [5, 6, 7, 8, 9]
+||| ```
+|||
+||| @ idx The index of the value to delete.
+||| @ xs The list to delete the value from.
+public export
+deleteAt : (idx : Nat) -> (xs : List a) -> {auto 0 prf : InBounds idx xs} -> List a
+deleteAt {prf=InFirst} Z (_ :: xs) = xs
+deleteAt {prf=InLater _} (S k) (x :: xs) = x :: deleteAt k xs
+
 ||| The deleteBy function behaves like delete, but takes a user-supplied equality predicate.
 public export
 deleteBy : (a -> b -> Bool) -> a -> List b -> List b
@@ -960,4 +973,3 @@ export
 lengthReplicate : (n : Nat) -> length (replicate n x) = n
 lengthReplicate 0 = Refl
 lengthReplicate (S k) = cong S (lengthReplicate k)
-
