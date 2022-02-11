@@ -2142,7 +2142,7 @@ isPrimName prims given = let (ns, nm) = splitNS given in go ns nm prims where
 export
 addLogLevel : {auto c : Ref Ctxt Defs} ->
               Maybe LogLevel -> Core ()
-addLogLevel Nothing  = update Ctxt { options->session->logEnabled := True, options->session->logLevel := defaultLogLevel }
+addLogLevel Nothing  = update Ctxt { options->session->logEnabled := False, options->session->logLevel := defaultLogLevel }
 addLogLevel (Just l) = update Ctxt { options->session->logEnabled := True, options->session->logLevel $= insertLogLevel l }
 
 export
