@@ -817,7 +817,7 @@ public export
 tanh : Double -> Double
 tanh x = let inf = 1.0 / 0.0 in
   if x == inf then 1.0 else
-  if x == -inf then 1.0
+  if x == -inf then -1.0
   else sinh x / cosh x
 
 public export
