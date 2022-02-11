@@ -7,6 +7,8 @@ import Data.List
 import Data.List1
 import Data.Maybe
 
+import Libraries.Data.List.Extra as Lib
+
 %default total
 
 public export
@@ -54,27 +56,30 @@ listOfExtensionsLiterate
 
 ||| Are we dealing with a valid literate file name, if so return the base name and used extension.
 export
-hasLitFileExt : (fname : String)
-                     -> Maybe (String, String)
-hasLitFileExt fname
-      = find listOfExtensionsLiterate
+hasLitFileExt : (fname : String) -> Maybe (String, String)
+hasLitFileExt fname =
+  do let toExtension = concatMap ("." ++)
+     -- split the extensions off a file
+     -- e.g. "Cool.shared.org.lidr" becomes ("Cool", ["shared", "org", "lidr"])
+     let (bn, exts) = splitExtensions fname
+     flip choiceMap listOfExtensionsLiterate $ \ candidate =>
+       do -- take candidate apart e.g. ".org.lidr" becomes ["org", "lidr"]
+          -- we assume the candidate starts with a "." and so the first string
+          -- should be empty
+          let ("" ::: chunks) = map pack $ split ('.' ==) (unpack candidate)
+            | _ => err
+          -- check ["org", "lidr"] is a suffix of the files' extensions and get
+          -- back (["shared"], ["org", "lidr"])
+          (nm, exts) <- Lib.suffixOfBy (\ v, w => v <$ guard (v == w)) chunks exts
+          -- return the basename extended with the leftover extensions, paired with the match
+          -- e.g. ("Cool.shared", ".org.lidr")
+          pure (bn ++ toExtension nm, toExtension exts)
 
   where
-    rp : String -> List Char
-    rp = (reverse . unpack)
 
-    pr : List Char -> String
-    pr = (pack . reverse)
-
-    find : List String -> Maybe (String, String)
-    find Nil
-      = Nothing
-
-    find (ext::xs)
-      = if (isSuffixOf fname ext)
-          then let bname_r = (deleteFirstsBy (==) (rp fname) (rp ext))
-               in Just (pr bname_r, ext)
-          else find xs
+    err : a
+    err = assert_total
+        $ idris_crash #"Internal error: all literate extensions should start with a ".""#
 
 ||| Are we dealing with a valid literate file name, if so return the identified style.
 export
