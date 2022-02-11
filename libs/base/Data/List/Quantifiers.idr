@@ -208,14 +208,14 @@ data Interleaving : (xs, ys, xys : List a) -> Type where
 public export
 record Split {a : Type} (p : a -> Type) (xys : List a) where
   constructor MkSplit
-  {xs, ys : List a}
-  {auto interleaving : Interleaving xs ys xys}
-  ||| A proof that all elements in `xs` satisfies the property used for the
+  {ayes, naws : List a}
+  {auto interleaving : Interleaving ayes naws xys}
+  ||| A proof that all elements in `ayes` satisfies the property used for the
   ||| split.
-  prfs    : All p xs
-  ||| A proof that all elements in `ys` do not satisfy the property used for the
-  ||| split.
-  contras : All (Not . p) ys
+  prfs    : All p ayes
+  ||| A proof that all elements in `naws` do not satisfy the property used for
+  ||| the split.
+  contras : All (Not . p) naws
 
 ||| Split the list according to the given decidable property, putting the
 ||| resulting proofs and contras in an accumulator.
