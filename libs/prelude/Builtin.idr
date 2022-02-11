@@ -66,6 +66,11 @@ public export
 snd : {0 a, b : Type} -> (a, b) -> b
 snd (x, y) = y
 
+||| Swap the elements in a pair
+public export
+swap : (a, b) -> (b, a)
+swap (x, y) = (y, x)
+
 -- This directive tells auto implicit search what to use to look inside pairs
 %pair Pair fst snd
 

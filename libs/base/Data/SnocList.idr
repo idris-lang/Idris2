@@ -6,21 +6,6 @@ import Data.Fin
 
 %default total
 
-infixl 7 <><
-infixr 6 <>>
-
-||| 'fish': Action of lists on snoc-lists
-public export
-(<><) : SnocList a -> List a -> SnocList a
-sx <>< [] = sx
-sx <>< (x :: xs) = sx :< x <>< xs
-
-||| 'chips': Action of snoc-lists on lists
-public export
-(<>>) : SnocList a -> List a -> List a
-Lin       <>> xs = xs
-(sx :< x) <>> xs = sx <>> x :: xs
-
 export
 Cast (SnocList a) (List a) where
   cast sx = sx <>> []
