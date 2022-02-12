@@ -182,9 +182,7 @@ initEState n env = initEStateSub n env SubRefl
 export
 saveHole : {auto e : Ref EST (EState vars)} ->
            Name -> Core ()
-saveHole n
-    = do est <- get EST
-         put EST ({ saveHoles $= insert n () } est)
+saveHole n = update EST { saveHoles $= insert n () }
 
 weakenedEState : {n, vars : _} ->
                  {auto e : Ref EST (EState vars)} ->
@@ -302,9 +300,7 @@ export
 mustBePoly : {auto e : Ref EST (EState vars)} ->
              FC -> Env Term vars ->
              Term vars -> Term vars -> Core ()
-mustBePoly fc env tm ty
-    = do est <- get EST
-         put EST ({ polyMetavars $= ((fc, env, tm, ty) :: ) } est)
+mustBePoly fc env tm ty = update EST { polyMetavars $= ((fc, env, tm, ty) :: ) }
 
 -- Return whether we already know the return type of the given function
 -- type. If we know this, we can possibly infer some argument types before
@@ -349,25 +345,19 @@ clearBindIfUnsolved = { bindIfUnsolved := [] }
 export
 clearToBind : {auto e : Ref EST (EState vars)} ->
               (excepts : List Name) -> Core ()
-clearToBind excepts
-    = do est <- get EST
-         put EST ({ toBind $= filter (\x => fst x `elem` excepts) }
-                  (clearBindIfUnsolved est))
+clearToBind excepts =
+  update EST $ { toBind $= filter (\x => fst x `elem` excepts) } . clearBindIfUnsolved
 
 export
 noteLHSPatVar : {auto e : Ref EST (EState vars)} ->
                 ElabMode -> Name -> Core ()
-noteLHSPatVar (InLHS _) n
-    = do est <- get EST
-         put EST ({ lhsPatVars $= (n ::) } est)
-noteLHSPatVar _ _ = pure ()
+noteLHSPatVar (InLHS _) n = update EST { lhsPatVars $= (n ::) }
+noteLHSPatVar _         _ = pure ()
 
 export
 notePatVar : {auto e : Ref EST (EState vars)} ->
              Name -> Core ()
-notePatVar n
-    = do est <- get EST
-         put EST ({ allPatVars $= (n ::) } est)
+notePatVar n = update EST { allPatVars $= (n ::) }
 
 export
 metaVar : {vars : _} ->
@@ -757,8 +747,7 @@ convertWithLazy withLazy fc elabinfo env x y
                     solveConstraints umode Normal
                 pure vs)
             (\err =>
-               do defs <- get Ctxt
-                  xtm <- getTerm x
+               do xtm <- getTerm x
                   ytm <- getTerm y
                   -- See if we can improve the error message by
                   -- resolving any more constraints

@@ -270,11 +270,8 @@ runScript (Just (fc, s))
          when (res /= 0) $
             throw (GenericMsg fc "Script failed")
 
-addDeps : {auto c : Ref Ctxt Defs} ->
-          PkgDesc -> Core ()
-addDeps pkg
-    = do defs <- get Ctxt
-         traverse_ (\p => addPkgDir p.pkgname p.pkgbounds) (depends pkg)
+addDeps : {auto c : Ref Ctxt Defs} -> PkgDesc -> Core ()
+addDeps pkg = traverse_ (\p => addPkgDir p.pkgname p.pkgbounds) (depends pkg)
 
 processOptions : {auto c : Ref Ctxt Defs} ->
                  {auto o : Ref ROpts REPLOpts} ->
@@ -304,8 +301,6 @@ prepareCompilation : {auto c : Ref Ctxt Defs} ->
                      Core (List Error)
 prepareCompilation pkg opts =
   do
-    defs <- get Ctxt
-
     processOptions (options pkg)
     addDeps pkg
 
@@ -848,8 +843,7 @@ findIpkg fname
              Just srcpath  =>
                 do let src' = up </> srcpath
                    setSource src'
-                   opts <- get ROpts
-                   put ROpts ({ mainfile := Just src' } opts)
+                   update ROpts { mainfile := Just src' }
                    pure (Just src')
   where
     dropHead : String -> List String -> List String

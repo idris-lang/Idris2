@@ -71,8 +71,7 @@ mutual
       = pure $ IQuote fc !(getUnquote t)
   getUnquote (IUnquote fc tm)
       = do qv <- genVarName "q"
-           unqs <- get Unq
-           put Unq ((qv, fc, tm) :: unqs)
+           update Unq ((qv, fc, tm) ::)
            pure (IUnquote fc (IVar fc qv)) -- turned into just qv when reflecting
   getUnquote tm = pure tm
 

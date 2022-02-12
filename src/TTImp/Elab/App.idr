@@ -56,10 +56,7 @@ getNameType elabMode rigc env fc x
                  log "metadata.names" 7 $ "getNameType is adding ↓"
                  addNameType fc x env bty
 
-                 when (isLinear rigb) $
-                      do est <- get EST
-                         put EST
-                            ({ linearUsed $= ((MkVar lv) :: ) } est)
+                 when (isLinear rigb) $ update EST { linearUsed $= ((MkVar lv) :: ) }
                  log "ide-mode.highlight" 8
                      $ "getNameType is trying to add Bound: "
                       ++ show x ++ " (" ++ show fc ++ ")"
@@ -186,9 +183,7 @@ mutual
            metaval <- metaVar fc argRig env nm metaty
            let fntm = App fc tm metaval
            fnty <- sc defs (toClosure defaultOpts env metaval)
-           when (bindingVars elabinfo) $
-                do est <- get EST
-                   put EST (addBindIfUnsolved nm argRig Implicit env metaval metaty est)
+           when (bindingVars elabinfo) $ update EST $ addBindIfUnsolved nm argRig Implicit env metaval metaty
            checkAppWith rig elabinfo nest env fc
                         fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
 
@@ -220,8 +215,7 @@ mutual
                    metaval <- metaVar fc argRig env nm metaty
                    let fntm = App fc tm metaval
                    fnty <- sc defs (toClosure defaultOpts env metaval)
-                   est <- get EST
-                   put EST (addBindIfUnsolved nm argRig AutoImplicit env metaval metaty est)
+                   update EST $ addBindIfUnsolved nm argRig AutoImplicit env metaval metaty
                    checkAppWith rig elabinfo nest env fc
                                 fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
            else do defs <- get Ctxt
@@ -277,8 +271,7 @@ mutual
                    metaval <- metaVar fc argRig env nm metaty
                    let fntm = App fc tm metaval
                    fnty <- sc defs (toClosure defaultOpts env metaval)
-                   est <- get EST
-                   put EST (addBindIfUnsolved nm argRig AutoImplicit env metaval metaty est)
+                   update EST $ addBindIfUnsolved nm argRig AutoImplicit env metaval metaty
                    checkAppWith rig elabinfo nest env fc
                                 fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
            else do defs <- get Ctxt

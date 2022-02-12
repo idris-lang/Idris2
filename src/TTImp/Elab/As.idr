@@ -47,11 +47,8 @@ checkAs rig elabinfo nest env fc nameFC side n_in pat topexp
                                             topexp
                     log "elab.as" 5 $ "Added as pattern name " ++ show (n, (rigAs, tm, exp, bty))
                     defs <- get Ctxt
-                    est <- get EST
-                    put EST
-                        ({ boundNames $= ((n, AsBinding rigAs Explicit tm exp pattm) :: ),
-                           toBind $= ((n, AsBinding rigAs Explicit tm bty pattm) ::) }
-                         est)
+                    update EST { boundNames $= ((n, AsBinding rigAs Explicit tm exp pattm) :: ),
+                                 toBind $= ((n, AsBinding rigAs Explicit tm bty pattm) ::) }
                     (ntm, nty) <- checkExp rig elabinfo env nameFC tm (gnf env exp)
                                            (Just patty)
 

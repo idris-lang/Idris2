@@ -184,8 +184,7 @@ readAsMain fname
          -- from that for the fresh metavariable name generation
          -- TODO: Maybe we should record this per namespace, since this is
          -- a little bit of a hack? Or maybe that will have too much overhead.
-         ust <- get UST
-         put UST ({ nextName := nextName ustm } ust)
+         update UST { nextName := nextName ustm }
 
          setNS replNS
          setNestedNS replNestedNS
@@ -346,8 +345,7 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                 addModDocString (moduleNS mod) (documentation mod)
 
                 addSemanticDecorations decor
-                syn <- get Syn
-                put Syn ({ holeNames := hnames } syn)
+                update Syn { holeNames := hnames }
 
                 initHash
                 traverse_ addPublicHash (sort importMetas)
@@ -381,8 +379,7 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                 -- Save the import hashes for the imports we just read.
                 -- If they haven't changed next time, and the source
                 -- file hasn't changed, no need to rebuild.
-                defs <- get Ctxt
-                put Ctxt ({ importHashes := importInterfaceHashes } defs)
+                update Ctxt { importHashes := importInterfaceHashes }
                 pure (Just errs))
           (\err => pure (Just [err]))
 
@@ -411,8 +408,7 @@ process msgPrefix buildMsg sourceFileName ident
                                      pure [] -- skipped it
                    if isNil errs
                       then
-                        do defs <- get Ctxt
-                           ns <- ctxtPathToNS sourceFileName
+                        do ns <- ctxtPathToNS sourceFileName
                            makeBuildDirectory ns
                            traverse_
                               (\cg =>

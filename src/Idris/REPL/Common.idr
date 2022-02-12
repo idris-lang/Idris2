@@ -174,14 +174,9 @@ getFCLine : FC -> Maybe Int
 getFCLine = map startLine . isNonEmptyFC
 
 export
-updateErrorLine : {auto o : Ref ROpts REPLOpts} ->
-                  List Error -> Core ()
-updateErrorLine []
-    = do opts <- get ROpts
-         put ROpts ({ errorLine := Nothing } opts)
-updateErrorLine (e :: _)
-    = do opts <- get ROpts
-         put ROpts ({ errorLine := (getErrorLoc e) >>= getFCLine } opts)
+updateErrorLine : {auto o : Ref ROpts REPLOpts} -> List Error -> Core ()
+updateErrorLine []       = update ROpts { errorLine := Nothing }
+updateErrorLine (e :: _) = update ROpts { errorLine := getErrorLoc e >>= getFCLine }
 
 export
 resetContext : {auto c : Ref Ctxt Defs} ->

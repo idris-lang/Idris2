@@ -882,8 +882,7 @@ compileRunTime fc atotal
          traverse_ (mkRunTime fc) (toCompileCase defs)
          traverse_ (calcRefs True atotal) (toCompileCase defs)
 
-         defs <- get Ctxt
-         put Ctxt ({ toCompileCase := [] } defs)
+         update Ctxt { toCompileCase := [] }
 
 toPats : Clause -> (vs ** (Env Term vs, Term vs, Term vs))
 toPats (MkClause {vars} env lhs rhs)
@@ -1022,8 +1021,7 @@ processDef opts nest env fc n_in cs_in
          addToSave n
 
          -- Flag this name as one which needs compiling
-         defs <- get Ctxt
-         put Ctxt ({ toCompileCase $= (n ::) } defs)
+         update Ctxt { toCompileCase $= (n ::) }
 
          atotal <- toResolvedNames (NS builtinNS (UN $ Basic "assert_total"))
          logTime ("+++ Building size change graphs " ++ show n) $

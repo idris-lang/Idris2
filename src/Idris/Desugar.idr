@@ -317,9 +317,7 @@ mutual
   desugarB side ps (PRunElab fc tm)
       = pure $ IRunElab fc !(desugarB side ps tm)
   desugarB side ps (PHole fc br holename)
-      = do when br $
-              do syn <- get Syn
-                 put Syn ({ bracketholes $= ((UN (Basic holename)) ::) } syn)
+      = do when br $ update Syn { bracketholes $= ((UN (Basic holename)) ::) }
            pure $ IHole fc holename
   desugarB side ps (PType fc) = pure $ IType fc
   desugarB side ps (PAs fc nameFC vname pattern)
@@ -589,7 +587,6 @@ mutual
   expandDo side ps topfc ns (DoExp fc tm :: rest)
       = do tm' <- desugarDo side ps ns tm
            rest' <- expandDo side ps topfc ns rest
-           gam <- get Ctxt
            pure $ seqFun fc ns tm' rest'
   expandDo side ps topfc ns (DoBind fc nameFC n tm :: rest)
       = do tm' <- desugarDo side ps ns tm
@@ -878,8 +875,7 @@ mutual
                                             pure (fst ntm, btm)) uimpls
            put Syn ({ usingImpl := uimpls' ++ oldu } syn)
            uds' <- traverse (desugarDecl ps) uds
-           syn <- get Syn
-           put Syn ({ usingImpl := oldu } syn)
+           update Syn { usingImpl := oldu }
            pure (concat uds')
   desugarDecl ps (PReflect fc tm)
       = throw (GenericMsg fc "Reflection not implemented yet")
@@ -1012,12 +1008,10 @@ mutual
       mapDesugarPiInfo ps = traverse (desugar AnyExpr ps)
 
   desugarDecl ps (PFixity fc Prefix prec (UN (Basic n)))
-      = do syn <- get Syn
-           put Syn ({ prefixes $= insert n (fc, prec) } syn)
+      = do update Syn { prefixes $= insert n (fc, prec) }
            pure []
   desugarDecl ps (PFixity fc fix prec (UN (Basic n)))
-      = do syn <- get Syn
-           put Syn ({ infixes $= insert n (fc, fix, prec) } syn)
+      = do update Syn { infixes $= insert n (fc, fix, prec) }
            pure []
   desugarDecl ps (PFixity fc _ _ _)
       = throw (GenericMsg fc "Fixity declarations must be for unqualified names")

@@ -296,11 +296,10 @@ updateIfaceSyn : {auto c : Ref Ctxt Defs} ->
                  List Declaration -> List (Name, List ImpClause) ->
                  Core ()
 updateIfaceSyn iname cn impps ps cs ms ds
-    = do syn <- get Syn
-         ms' <- traverse totMeth ms
+    = do ms' <- traverse totMeth ms
          let info = MkIFaceInfo cn impps ps cs ms' ds
-         put Syn ({ ifaces $= addName iname info,
-                    saveIFaces $= (iname :: ) } syn)
+         update Syn { ifaces     $= addName iname info,
+                      saveIFaces $= (iname :: ) }
  where
     findSetTotal : List FnOpt -> Maybe TotalReq
     findSetTotal [] = Nothing

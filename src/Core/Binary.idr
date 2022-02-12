@@ -203,7 +203,6 @@ readTTCFile : TTC extra =>
               Ref Bin Binary -> Core (TTCFile extra)
 readTTCFile readall file as b
       = do hdr <- fromBuf b
-           chunk <- get Bin
            when (hdr /= "TT2") $
              corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
            ver <- fromBuf @{Wasteful} b
@@ -350,60 +349,44 @@ addTypeHint fc (tyn, hintn, d)
                             show !(getFullName tyn)))
         addHintFor fc tyn hintn d True
 
-addAutoHint : {auto c : Ref Ctxt Defs} ->
-              (Name, Bool) -> Core ()
+addAutoHint : {auto c : Ref Ctxt Defs} -> (Name, Bool) -> Core ()
 addAutoHint (hintn_in, d)
-    = do defs <- get Ctxt
-         hintn <- toResolvedNames hintn_in
-
-         put Ctxt ({ autoHints $= insert hintn d } defs)
+    = do hintn <- toResolvedNames hintn_in
+         update Ctxt { autoHints $= insert hintn d }
 
 export
-updatePair : {auto c : Ref Ctxt Defs} ->
-             Maybe PairNames -> Core ()
-updatePair p
-    = do defs <- get Ctxt
-         put Ctxt ({ options->pairnames $= (p <+>) } defs)
+updatePair : {auto c : Ref Ctxt Defs} -> Maybe PairNames -> Core ()
+updatePair p = update Ctxt { options->pairnames $= (p <+>) }
 
 export
-updateRewrite : {auto c : Ref Ctxt Defs} ->
-                Maybe RewriteNames -> Core ()
-updateRewrite r
-    = do defs <- get Ctxt
-         put Ctxt ({ options->rewritenames $= (r <+>) } defs)
+updateRewrite : {auto c : Ref Ctxt Defs} -> Maybe RewriteNames -> Core ()
+updateRewrite r = update Ctxt { options->rewritenames $= (r <+>) }
 
 export
 updatePrimNames : PrimNames -> PrimNames -> PrimNames
 updatePrimNames p
-    = { fromIntegerName $= ((fromIntegerName p) <+>),
-        fromStringName $= ((fromStringName p) <+>),
-        fromCharName $= ((fromCharName p) <+>),
-        fromDoubleName $= ((fromDoubleName p) <+>)
+    = { fromIntegerName $= (p.fromIntegerName <+>),
+        fromStringName  $= (p.fromStringName  <+>),
+        fromCharName    $= (p.fromCharName    <+>),
+        fromDoubleName  $= (p.fromDoubleName  <+>)
       }
 
 export
-updatePrims : {auto c : Ref Ctxt Defs} ->
-              PrimNames -> Core ()
-updatePrims p
-    = do defs <- get Ctxt
-         put Ctxt ({ options->primnames $= updatePrimNames p } defs)
+updatePrims : {auto c : Ref Ctxt Defs} -> PrimNames -> Core ()
+updatePrims p = update Ctxt { options->primnames $= updatePrimNames p }
 
 export
 updateNameDirectives : {auto c : Ref Ctxt Defs} ->
                        List (Name, List String) -> Core ()
 updateNameDirectives [] = pure ()
 updateNameDirectives ((t, ns) :: nds)
-    = do defs <- get Ctxt
-         put Ctxt ({ namedirectives $= insert t ns } defs)
+    = do update Ctxt { namedirectives $= insert t ns }
          updateNameDirectives nds
 
 export
 updateCGDirectives : {auto c : Ref Ctxt Defs} ->
                      List (CG, String) -> Core ()
-updateCGDirectives cgs
-    = do defs <- get Ctxt
-         let cgs' = nub (cgs ++ cgdirectives defs)
-         put Ctxt ({ cgdirectives := cgs' } defs)
+updateCGDirectives cgs = update Ctxt { cgdirectives $= nub . (cgs ++) }
 
 export
 updateTransforms : {auto c : Ref Ctxt Defs} ->
@@ -481,7 +464,6 @@ readFromTTC nestedns loc reexp fname modNS importAs
                  do traverse_ (addTypeHint loc) (typeHints ttc)
                     traverse_ addAutoHint (autoHints ttc)
                     addImportedInc modNS (incData ttc)
-                    defs <- get Ctxt
                     -- Set up pair/rewrite etc names
                     updatePair (pairnames ttc)
                     updateRewrite (rewritenames ttc)
@@ -495,8 +477,7 @@ readFromTTC nestedns loc reexp fname modNS importAs
 
                -- Finally, update the unification state with the holes from the
                -- ttc
-               ust <- get UST
-               put UST ({ nextName := nextVar ttc } ust)
+               update UST { nextName := nextVar ttc }
                pure (Just (ex, ifaceHash ttc, imported ttc))
   where
     alreadyDone : ModuleIdent -> Namespace ->

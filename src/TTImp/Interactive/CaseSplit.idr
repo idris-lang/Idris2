@@ -272,7 +272,7 @@ recordUpdate : {auto u : Ref UPD Updates} ->
                FC -> Name -> RawImp -> Core ()
 recordUpdate fc n tm
     = do u <- get UPD
-         let nupdates = map (\x => (fst x, IVar fc (snd x))) (namemap u)
+         let nupdates = mapSnd (IVar fc) <$> namemap u
          put UPD ({ updates $= ((n, substNames [] nupdates tm) ::) } u)
 
 findUpdates : {auto u : Ref UPD Updates} ->

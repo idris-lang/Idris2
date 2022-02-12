@@ -44,9 +44,8 @@ addModDocString : {auto s : Ref Syn SyntaxInfo} ->
                   ModuleIdent -> String ->
                   Core ()
 addModDocString mi doc
-    = do syn <- get Syn
-         put Syn ({ saveMod $= (mi ::)
-                  , modDocstrings $= insert mi doc } syn)
+    = update Syn { saveMod $= (mi ::)
+                 , modDocstrings $= insert mi doc }
 
 -- Add a doc string for a name in the current namespace
 export
@@ -58,9 +57,8 @@ addDocString n_in doc
     = do n <- inCurrentNS n_in
          log "doc.record" 50 $
            "Adding doc for " ++ show n_in ++ " (aka " ++ show n ++ " in current NS)"
-         syn <- get Syn
-         put Syn ({ defDocstrings $= addName n doc,
-                    saveDocstrings $= insert n () } syn)
+         update Syn { defDocstrings  $= addName n doc,
+                      saveDocstrings $= insert n () }
 
 -- Add a doc string for a name, in an extended namespace (e.g. for
 -- record getters)
@@ -74,9 +72,8 @@ addDocStringNS ns n_in doc
          let n' = case n of
                        NS old root => NS (old <.> ns) root
                        root => NS ns root
-         syn <- get Syn
-         put Syn ({ defDocstrings $= addName n' doc,
-                    saveDocstrings $= insert n' () } syn)
+         update Syn { defDocstrings  $= addName n' doc,
+                      saveDocstrings $= insert n' () }
 
 prettyTerm : IPTerm -> Doc IdrisDocAnn
 prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
@@ -388,7 +385,6 @@ getDocsForName fc n config
            let recNS = ns <.> mkNamespace n
            defs <- get Ctxt
            let fields = getFieldNames (gamma defs) recNS
-           syn <- get Syn
            case fields of
              [] => pure Nothing
              [proj] => pure $ Just $ header "Projection" <++> annotate Declarations !(getFieldDoc proj)
@@ -517,8 +513,7 @@ summarise : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             Name -> Core (Doc IdrisDocAnn)
 summarise n -- n is fully qualified
-    = do syn <- get Syn
-         defs <- get Ctxt
+    = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
              | _ => pure ""
          ty <- normaliseHoles defs [] (type def)

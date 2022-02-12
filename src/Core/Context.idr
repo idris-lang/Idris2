@@ -996,34 +996,23 @@ aliasName fulln
 -- it'll be better to use addHashWithNames to make the hash independent
 -- of the internal numbering of names.
 export
-addHash : {auto c : Ref Ctxt Defs} ->
-          Hashable a => a -> Core ()
-addHash x
-    = do defs <- get Ctxt
-         put Ctxt ({ ifaceHash := hashWithSalt (ifaceHash defs) x } defs)
+addHash : {auto c : Ref Ctxt Defs} -> Hashable a => a -> Core ()
+addHash x = update Ctxt { ifaceHash $= flip hashWithSalt x }
 
 export
-initHash : {auto c : Ref Ctxt Defs} ->
-           Core ()
-initHash
-    = do defs <- get Ctxt
-         put Ctxt ({ ifaceHash := 5381 } defs)
+initHash : {auto c : Ref Ctxt Defs} -> Core ()
+initHash = update Ctxt { ifaceHash := 5381 }
 
 export
 addUserHole : {auto c : Ref Ctxt Defs} ->
               Bool -> -- defined in another module?
               Name -> -- hole name
               Core ()
-addUserHole ext n
-    = do defs <- get Ctxt
-         put Ctxt ({ userHoles $= insert n ext } defs)
+addUserHole ext n = update Ctxt { userHoles $= insert n ext }
 
 export
-clearUserHole : {auto c : Ref Ctxt Defs} ->
-                Name -> Core ()
-clearUserHole n
-    = do defs <- get Ctxt
-         put Ctxt ({ userHoles $= delete n } defs)
+clearUserHole : {auto c : Ref Ctxt Defs} -> Name -> Core ()
+clearUserHole n = update Ctxt { userHoles $= delete n }
 
 export
 getUserHoles : {auto c : Ref Ctxt Defs} ->
@@ -1153,9 +1142,7 @@ setLinearCheck i chk
 
 export
 setCtxt : {auto c : Ref Ctxt Defs} -> Context -> Core ()
-setCtxt gam
-  = do defs <- get Ctxt
-       put Ctxt ({ gamma := gam } defs)
+setCtxt gam = update Ctxt { gamma := gam }
 
 export
 resolveName : {auto c : Ref Ctxt Defs} ->
@@ -1500,16 +1487,12 @@ setMutWith fc tn tns
 export
 addMutData : {auto c : Ref Ctxt Defs} ->
              Name -> Core ()
-addMutData n
-    = do defs <- get Ctxt
-         put Ctxt ({ mutData $= (n ::) } defs)
+addMutData n = update Ctxt { mutData $= (n ::) }
 
 export
 dropMutData : {auto c : Ref Ctxt Defs} ->
               Name -> Core ()
-dropMutData n
-    = do defs <- get Ctxt
-         put Ctxt ({ mutData $= filter (/= n) } defs)
+dropMutData n = update Ctxt { mutData $= filter (/= n) }
 
 export
 setDetermining : {auto c : Ref Ctxt Defs} ->
@@ -1597,39 +1580,32 @@ export
 addGlobalHint : {auto c : Ref Ctxt Defs} ->
                 Name -> Bool -> Core ()
 addGlobalHint hintn_in isdef
-    = do defs <- get Ctxt
-         hintn <- toResolvedNames hintn_in
-
-         put Ctxt ({ autoHints $= insert hintn isdef,
-                     saveAutoHints $= ((hintn, isdef) ::) } defs)
+    = do hintn <- toResolvedNames hintn_in
+         update Ctxt { autoHints $= insert hintn isdef,
+                       saveAutoHints $= ((hintn, isdef) ::) }
 
 export
 addLocalHint : {auto c : Ref Ctxt Defs} ->
                Name -> Core ()
 addLocalHint hintn_in
-    = do defs <- get Ctxt
-         hintn <- toResolvedNames hintn_in
-         put Ctxt ({ localHints $= insert hintn () } defs)
+    = do hintn <- toResolvedNames hintn_in
+         update Ctxt { localHints $= insert hintn () }
 
 export
 addOpenHint : {auto c : Ref Ctxt Defs} -> Name -> Core ()
 addOpenHint hintn_in
-    = do defs <- get Ctxt
-         hintn <- toResolvedNames hintn_in
-         put Ctxt ({ openHints $= insert hintn () } defs)
+    = do hintn <- toResolvedNames hintn_in
+         update Ctxt { openHints $= insert hintn () }
 
 export
 dropOpenHint : {auto c : Ref Ctxt Defs} -> Name -> Core ()
 dropOpenHint hintn_in
-    = do defs <- get Ctxt
-         hintn <- toResolvedNames hintn_in
-         put Ctxt ({ openHints $= delete hintn } defs)
+    = do hintn <- toResolvedNames hintn_in
+         update Ctxt { openHints $= delete hintn }
 
 export
 setOpenHints : {auto c : Ref Ctxt Defs} -> NameMap () -> Core ()
-setOpenHints hs
-    = do d <- get Ctxt
-         put Ctxt ({ openHints := hs } d)
+setOpenHints hs = update Ctxt { openHints := hs }
 
 export
 addTransform : {auto c : Ref Ctxt Defs} ->
@@ -1653,26 +1629,18 @@ addTransform fc t_in
 
 export
 clearSavedHints : {auto c : Ref Ctxt Defs} -> Core ()
-clearSavedHints
-    = do defs <- get Ctxt
-         put Ctxt ({ saveTypeHints := [],
-                     saveAutoHints := [] } defs)
+clearSavedHints = update Ctxt { saveTypeHints := [], saveAutoHints := [] }
 
 -- Set the default namespace for new definitions
 export
-setNS : {auto c : Ref Ctxt Defs} ->
-        Namespace -> Core ()
-setNS ns
-    = do defs <- get Ctxt
-         put Ctxt ({ currentNS := ns } defs)
+setNS : {auto c : Ref Ctxt Defs} -> Namespace -> Core ()
+setNS ns = update Ctxt { currentNS := ns }
 
 -- Set the nested namespaces we're allowed to look inside
 export
 setNestedNS : {auto c : Ref Ctxt Defs} ->
               List Namespace -> Core ()
-setNestedNS ns
-    = do defs <- get Ctxt
-         put Ctxt ({ nestedNS := ns } defs)
+setNestedNS ns = update Ctxt { nestedNS := ns }
 
 -- Get the default namespace for new definitions
 export
@@ -1697,9 +1665,7 @@ getNestedNS
 export
 addImported : {auto c : Ref Ctxt Defs} ->
               (ModuleIdent, Bool, Namespace) -> Core ()
-addImported mod
-    = do defs <- get Ctxt
-         put Ctxt ({ imported $= (mod ::) } defs)
+addImported mod = update Ctxt { imported $= (mod ::) }
 
 export
 getImported : {auto c : Ref Ctxt Defs} ->
@@ -1743,11 +1709,8 @@ getNextTypeTag
 -- current namespace of "Prelude.List.Data"
 -- Inner namespaces go first, for ease of name lookup
 export
-extendNS : {auto c : Ref Ctxt Defs} ->
-           Namespace -> Core ()
-extendNS ns
-    = do defs <- get Ctxt
-         put Ctxt ({ currentNS $= (<.> ns) } defs)
+extendNS : {auto c : Ref Ctxt Defs} -> Namespace -> Core ()
+extendNS ns = update Ctxt { currentNS $= (<.> ns) }
 
 export
 withExtendedNS : {auto c : Ref Ctxt Defs} ->
@@ -1792,9 +1755,7 @@ inCurrentNS n = pure n
 export
 setVisible : {auto c : Ref Ctxt Defs} ->
              Namespace -> Core ()
-setVisible nspace
-    = do defs <- get Ctxt
-         put Ctxt ({ gamma->visibleNS $= (nspace ::) } defs)
+setVisible nspace = update Ctxt { gamma->visibleNS $= (nspace ::) }
 
 export
 getVisible : {auto c : Ref Ctxt Defs} ->
@@ -1809,9 +1770,7 @@ getVisible
 export
 setAllPublic : {auto c : Ref Ctxt Defs} ->
                (pub : Bool) -> Core ()
-setAllPublic pub
-    = do defs <- get Ctxt
-         put Ctxt ({ gamma->allPublic := pub } defs)
+setAllPublic pub = update Ctxt { gamma->allPublic := pub }
 
 export
 isAllPublic : {auto c : Ref Ctxt Defs} ->
@@ -1849,9 +1808,7 @@ getNextEntry
 export
 setNextEntry : {auto c : Ref Ctxt Defs} ->
                Int -> Core ()
-setNextEntry i
-    = do defs <- get Ctxt
-         put Ctxt ({ gamma->nextEntry := i } defs)
+setNextEntry i = update Ctxt { gamma->nextEntry := i }
 
 -- Set the 'first entry' index (i.e. the first entry in the current file)
 -- to the place we currently are in the context
@@ -1882,18 +1839,12 @@ getPPrint
          pure (printing (options defs))
 
 export
-setPPrint : {auto c : Ref Ctxt Defs} ->
-            PPrinter -> Core ()
-setPPrint ppopts
-    = do defs <- get Ctxt
-         put Ctxt ({ options->printing := ppopts } defs)
+setPPrint : {auto c : Ref Ctxt Defs} -> PPrinter -> Core ()
+setPPrint ppopts = update Ctxt { options->printing := ppopts }
 
 export
-setCG : {auto c : Ref Ctxt Defs} ->
-        CG -> Core ()
-setCG cg
-    = do defs <- get Ctxt
-         put Ctxt ({ options->session->codegen := cg } defs)
+setCG : {auto c : Ref Ctxt Defs} -> CG -> Core ()
+setCG cg = update Ctxt { options->session->codegen := cg }
 
 export
 getDirs : {auto c : Ref Ctxt Defs} -> Core Dirs
@@ -1903,60 +1854,43 @@ getDirs
 
 export
 addExtraDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-addExtraDir dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->extra_dirs $= (++ [dir]) } defs)
+addExtraDir dir = update Ctxt { options->dirs->extra_dirs $= (++ [dir]) }
 
 export
 addPackageDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-addPackageDir dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->package_dirs $= (++ [dir]) } defs)
+addPackageDir dir = update Ctxt { options->dirs->package_dirs $= (++ [dir]) }
 
 export
 addDataDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-addDataDir dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->data_dirs $= (++ [dir]) } defs)
+addDataDir dir = update Ctxt { options->dirs->data_dirs $= (++ [dir]) }
 
 export
 addLibDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-addLibDir dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->lib_dirs $= (++ [dir]) } defs)
+addLibDir dir = update Ctxt { options->dirs->lib_dirs $= (++ [dir]) }
 
 export
 setBuildDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-setBuildDir dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->build_dir := dir } defs)
+setBuildDir dir = update Ctxt { options->dirs->build_dir := dir }
 
 export
 setDependsDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-setDependsDir dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->depends_dir := dir } defs)
+setDependsDir dir = update Ctxt { options->dirs->depends_dir := dir }
 
 export
 setOutputDir : {auto c : Ref Ctxt Defs} -> Maybe String -> Core ()
-setOutputDir dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->output_dir := dir } defs)
+setOutputDir dir = update Ctxt { options->dirs->output_dir := dir }
 
 export
 setSourceDir : {auto c : Ref Ctxt Defs} -> Maybe String -> Core ()
-setSourceDir mdir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->source_dir := mdir } defs)
+setSourceDir mdir = update Ctxt { options->dirs->source_dir := mdir }
 
 export
 setWorkingDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
 setWorkingDir dir
-    = do defs <- get Ctxt
-         coreLift_ $ changeDir dir
+    = do coreLift_ $ changeDir dir
          Just cdir <- coreLift $ currentDir
               | Nothing => throw (InternalError "Can't get current directory")
-         put Ctxt ({ options->dirs->working_dir := cdir } defs)
+         update Ctxt { options->dirs->working_dir := cdir }
 
 export
 getWorkingDir : Core String
@@ -1975,15 +1909,11 @@ withCtxt = wrapRef Ctxt resetCtxt
 
 export
 setPrefix : {auto c : Ref Ctxt Defs} -> String -> Core ()
-setPrefix dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->prefix_dir := dir } defs)
+setPrefix dir = update Ctxt { options->dirs->prefix_dir := dir }
 
 export
 setExtension : {auto c : Ref Ctxt Defs} -> LangExt -> Core ()
-setExtension e
-    = do defs <- get Ctxt
-         put Ctxt ({ options $= setExtension e } defs)
+setExtension e = update Ctxt { options $= setExtension e }
 
 export
 isExtension : LangExt -> Defs -> Bool
@@ -1999,59 +1929,41 @@ checkUnambig fc n
               ns => ambiguousName fc n (map fst ns)
 
 export
-lazyActive : {auto c : Ref Ctxt Defs} ->
-             Bool -> Core ()
-lazyActive a
-    = do defs <- get Ctxt
-         put Ctxt ({ options->elabDirectives->lazyActive := a } defs)
+lazyActive : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
+lazyActive a = update Ctxt { options->elabDirectives->lazyActive := a }
 
 export
-setUnboundImplicits : {auto c : Ref Ctxt Defs} ->
-                Bool -> Core ()
-setUnboundImplicits a
-    = do defs <- get Ctxt
-         put Ctxt ({ options->elabDirectives->unboundImplicits := a } defs)
+setUnboundImplicits : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
+setUnboundImplicits a = update Ctxt { options->elabDirectives->unboundImplicits := a }
 
 export
 setPrefixRecordProjections : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
-setPrefixRecordProjections b = do
-  defs <- get Ctxt
-  put Ctxt ({ options->elabDirectives->prefixRecordProjections := b } defs)
+setPrefixRecordProjections b = update Ctxt { options->elabDirectives->prefixRecordProjections := b }
 
 export
 setDefaultTotalityOption : {auto c : Ref Ctxt Defs} ->
                            TotalReq -> Core ()
-setDefaultTotalityOption tot
-    = do defs <- get Ctxt
-         put Ctxt ({ options->elabDirectives->totality := tot } defs)
+setDefaultTotalityOption tot = update Ctxt { options->elabDirectives->totality := tot }
 
 export
 setAmbigLimit : {auto c : Ref Ctxt Defs} ->
                 Nat -> Core ()
-setAmbigLimit max
-    = do defs <- get Ctxt
-         put Ctxt ({ options->elabDirectives->ambigLimit := max } defs)
+setAmbigLimit max = update Ctxt { options->elabDirectives->ambigLimit := max }
 
 export
 setAutoImplicitLimit : {auto c : Ref Ctxt Defs} ->
                        Nat -> Core ()
-setAutoImplicitLimit max
-    = do defs <- get Ctxt
-         put Ctxt ({ options->elabDirectives->autoImplicitLimit := max } defs)
+setAutoImplicitLimit max = update Ctxt { options->elabDirectives->autoImplicitLimit := max }
 
 export
 setNFThreshold : {auto c : Ref Ctxt Defs} ->
                  Nat -> Core ()
-setNFThreshold max
-    = do defs <- get Ctxt
-         put Ctxt ({ options->elabDirectives->nfThreshold := max } defs)
+setNFThreshold max = update Ctxt { options->elabDirectives->nfThreshold := max }
 
 export
 setSearchTimeout : {auto c : Ref Ctxt Defs} ->
                    Integer -> Core ()
-setSearchTimeout t
-    = do defs <- get Ctxt
-         put Ctxt ({ options->session->searchTimeout := t } defs)
+setSearchTimeout t = update Ctxt { options->session->searchTimeout := t }
 
 export
 isLazyActive : {auto c : Ref Ctxt Defs} ->
@@ -2098,57 +2010,46 @@ setPair : {auto c : Ref Ctxt Defs} ->
           FC -> (pairType : Name) -> (fstn : Name) -> (sndn : Name) ->
           Core ()
 setPair fc ty f s
-    = do defs <- get Ctxt
-         ty' <- checkUnambig fc ty
+    = do ty' <- checkUnambig fc ty
          f' <- checkUnambig fc f
          s' <- checkUnambig fc s
-         put Ctxt ({ options $= setPair ty' f' s' } defs)
+         update Ctxt { options $= setPair ty' f' s' }
 
 export
 setRewrite : {auto c : Ref Ctxt Defs} ->
              FC -> (eq : Name) -> (rwlemma : Name) -> Core ()
 setRewrite fc eq rw
-    = do defs <- get Ctxt
-         rw' <- checkUnambig fc rw
+    = do rw' <- checkUnambig fc rw
          eq' <- checkUnambig fc eq
-         put Ctxt ({ options $= setRewrite eq' rw' } defs)
+         update Ctxt { options $= setRewrite eq' rw' }
 
 -- Don't check for ambiguity here; they're all meant to be overloadable
 export
 setFromInteger : {auto c : Ref Ctxt Defs} ->
                  Name -> Core ()
-setFromInteger n
-    = do defs <- get Ctxt
-         put Ctxt ({ options $= setFromInteger n } defs)
+setFromInteger n = update Ctxt { options $= setFromInteger n }
 
 export
 setFromString : {auto c : Ref Ctxt Defs} ->
                 Name -> Core ()
-setFromString n
-    = do defs <- get Ctxt
-         put Ctxt ({ options $= setFromString n } defs)
+setFromString n = update Ctxt { options $= setFromString n }
 
 export
 setFromChar : {auto c : Ref Ctxt Defs} ->
               Name -> Core ()
-setFromChar n
-    = do defs <- get Ctxt
-         put Ctxt ({ options $= setFromChar n } defs)
+setFromChar n = update Ctxt { options $= setFromChar n }
 
 export
 setFromDouble : {auto c : Ref Ctxt Defs} ->
               Name -> Core ()
-setFromDouble n
-    = do defs <- get Ctxt
-         put Ctxt ({ options $= setFromDouble n } defs)
+setFromDouble n = update Ctxt { options $= setFromDouble n }
 
 export
 addNameDirective : {auto c : Ref Ctxt Defs} ->
                    FC -> Name -> List String -> Core ()
 addNameDirective fc n ns
-    = do defs <- get Ctxt
-         n' <- checkUnambig fc n
-         put Ctxt ({ namedirectives $= insert n' ns  } defs)
+    = do n' <- checkUnambig fc n
+         update Ctxt { namedirectives $= insert n' ns  }
 
 -- Checking special names from Options
 
@@ -2241,13 +2142,8 @@ isPrimName prims given = let (ns, nm) = splitNS given in go ns nm prims where
 export
 addLogLevel : {auto c : Ref Ctxt Defs} ->
               Maybe LogLevel -> Core ()
-addLogLevel lvl
-    = do defs <- get Ctxt
-         case lvl of
-           Nothing => put Ctxt ({ options->session->logEnabled := True,
-                                  options->session->logLevel := defaultLogLevel } defs)
-           Just l  => put Ctxt ({ options->session->logEnabled := True,
-                                  options->session->logLevel $= insertLogLevel l } defs)
+addLogLevel Nothing  = update Ctxt { options->session->logEnabled := False, options->session->logLevel := defaultLogLevel }
+addLogLevel (Just l) = update Ctxt { options->session->logEnabled := True, options->session->logLevel $= insertLogLevel l }
 
 export
 withLogLevel : {auto c : Ref Ctxt Defs} ->
@@ -2262,18 +2158,12 @@ withLogLevel l comp = do
   pure r
 
 export
-setLogTimings : {auto c : Ref Ctxt Defs} ->
-                Bool -> Core ()
-setLogTimings b
-    = do defs <- get Ctxt
-         put Ctxt ({ options->session->logTimings := b } defs)
+setLogTimings : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
+setLogTimings b = update Ctxt { options->session->logTimings := b }
 
 export
-setDebugElabCheck : {auto c : Ref Ctxt Defs} ->
-                    Bool -> Core ()
-setDebugElabCheck b
-    = do defs <- get Ctxt
-         put Ctxt ({ options->session->debugElabCheck := b } defs)
+setDebugElabCheck : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
+setDebugElabCheck b = update Ctxt { options->session->debugElabCheck := b }
 
 export
 getSession : {auto c : Ref Ctxt Defs} ->
@@ -2283,11 +2173,8 @@ getSession
          pure (session (options defs))
 
 export
-setSession : {auto c : Ref Ctxt Defs} ->
-             Session -> Core ()
-setSession sopts
-    = do defs <- get Ctxt
-         put Ctxt ({ options->session := sopts } defs)
+setSession : {auto c : Ref Ctxt Defs} -> Session -> Core ()
+setSession sopts = update Ctxt { options->session := sopts }
 
 %inline
 export
@@ -2297,10 +2184,7 @@ updateSession f = setSession (f !getSession)
 
 export
 recordWarning : {auto c : Ref Ctxt Defs} -> Warning -> Core ()
-recordWarning w
-    = do defs <- get Ctxt
-         session <- getSession
-         put Ctxt $ { warnings $= (w ::) } defs
+recordWarning w = update Ctxt { warnings $= (w ::) }
 
 export
 getTime : Core Integer
@@ -2324,15 +2208,12 @@ startTimer : {auto c : Ref Ctxt Defs} ->
              Integer -> String -> Core ()
 startTimer tmax action
     = do t <- getTime
-         defs <- get Ctxt
-         put Ctxt $ { timer := Just (t + tmax * 1000000, action) } defs
+         update Ctxt { timer := Just (t + tmax * 1000000, action) }
 
 ||| Clear the timer
 export
 clearTimer : {auto c : Ref Ctxt Defs} -> Core ()
-clearTimer
-    = do defs <- get Ctxt
-         put Ctxt $ { timer := Nothing } defs
+clearTimer = update Ctxt { timer := Nothing }
 
 ||| If the timer was started more than t milliseconds ago, throw an exception
 export
@@ -2387,9 +2268,7 @@ addImportedInc modNS inc
 export
 setIncData : {auto c : Ref Ctxt Defs} ->
              CG -> (String, List String) -> Core ()
-setIncData cg res
-    = do defs <- get Ctxt
-         put Ctxt ({ incData $= ((cg, res) :: )} defs)
+setIncData cg res = update Ctxt { incData $= ((cg, res) :: )}
 
 -- Set a name as Private that was previously visible (and, if 'everywhere' is
 -- set, hide in any modules imported by this one)

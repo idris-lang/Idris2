@@ -85,9 +85,8 @@ updateEnv
 updateREPLOpts : {auto o : Ref ROpts REPLOpts} ->
                  Core ()
 updateREPLOpts
-    = do opts <- get ROpts
-         ed <- coreLift $ idrisGetEnv "EDITOR"
-         whenJust ed $ \ e => put ROpts ({ editor := e } opts)
+    = do ed <- coreLift $ idrisGetEnv "EDITOR"
+         whenJust ed $ \ e => update ROpts { editor := e }
 
 showInfo : {auto c : Ref Ctxt Defs}
         -> {auto o : Ref ROpts REPLOpts}
