@@ -433,6 +433,14 @@ public export
 for_ : Applicative f => Foldable t => t a -> (a -> f b) -> f ()
 for_ = flip traverse_
 
+public export
+[SemigroupApplicative] Applicative f => Semigroup a => Semigroup (f a) where
+  x <+> y = [| x <+> y |]
+
+public export
+[MonoidApplicative] Applicative f => Monoid a => Monoid (f a) using SemigroupApplicative where
+  neutral = pure neutral
+
 namespace Lazy
   public export
   [SemigroupAlternative] Alternative f => Semigroup (Lazy (f a)) where
