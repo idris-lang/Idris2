@@ -9,6 +9,7 @@ import Network.Socket.Raw
 import Network.FFI
 import Data.Buffer
 import Data.List
+import Data.SnocList
 
 -- ----------------------------------------------------- [ Network Socket API. ]
 
@@ -166,11 +167,11 @@ recv sock len = do
            freeRecvStruct (RSPtr recv_struct_ptr)
            pure $ Right (payload, recv_res)
 
-recvAllRec : (Monoid a, HasIO io) => io (Either SocketError a) -> List a -> io (Either SocketError a)
+recvAllRec : (Monoid a, HasIO io) => io (Either SocketError a) -> SnocList a -> io (Either SocketError a)
 recvAllRec recv_from_socket acc = case !recv_from_socket of
-  Left 0 => pure (Right $ concat $ reverse acc)
+  Left 0 => pure (Right $ concat acc)
   Left c => pure (Left c)
-  Right str => recvAllRec recv_from_socket (str :: acc)
+  Right str => recvAllRec recv_from_socket (acc :< str)
 
 ||| Receive all the remaining data on the specified socket.
 |||
@@ -180,7 +181,7 @@ recvAllRec recv_from_socket acc = case !recv_from_socket of
 ||| @sock The socket on which to receive the message.
 export
 recvAll : HasIO io => (sock : Socket) -> io (Either SocketError String)
-recvAll sock = recvAllRec {a=String} (mapSnd fst <$> recv sock 65536) []
+recvAll sock = recvAllRec {a=String} (mapSnd fst <$> recv sock 65536) [<]
 
 ||| Send a message.
 |||
@@ -293,4 +294,4 @@ recvBytes sock max_size = do
 ||| @sock The socket on which to receive the message.
 export
 recvAllBytes : HasIO io => (sock : Socket) -> io (Either SocketError (List Bits8))
-recvAllBytes sock = recvAllRec {a=List Bits8} (recvBytes sock 65536) []
+recvAllBytes sock = recvAllRec {a=List Bits8} (recvBytes sock 65536) [<]
