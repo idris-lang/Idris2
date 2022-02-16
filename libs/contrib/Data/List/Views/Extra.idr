@@ -146,7 +146,7 @@ data LazyFilterRec : List a -> Type where
 
 ||| Covering function for the LazyFilterRec view.
 ||| Constructs the view lazily in linear time.
-total export
+export
 lazyFilterRec : (pred : (a -> Bool)) -> (xs : List a) -> LazyFilterRec xs
 lazyFilterRec pred [] = Exhausted []
 lazyFilterRec pred (x :: xs) with (pred x)

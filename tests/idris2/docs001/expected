@@ -108,6 +108,7 @@ Main> interface Prelude.Show : Type -> Type
     Show a => Show (List a)
     Show a => Show (Maybe a)
     (Show a, Show b) => Show (Either a b)
+    Show Ordering
 Main> Prelude.show : Show ty => ty -> String
   Convert a value to its `String` representation.
   @ x the value to convert

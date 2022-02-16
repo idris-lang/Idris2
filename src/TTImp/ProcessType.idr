@@ -354,3 +354,5 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
          when (vis /= Private) $
               do addHashWithNames n
                  addHashWithNames ty
+                 log "module.hash" 15 "Adding hash for type with name \{show n}"
+

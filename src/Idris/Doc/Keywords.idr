@@ -9,6 +9,7 @@ import Idris.Doc.Annotations
 import Idris.Pretty
 
 import Libraries.Data.List.Quantifiers.Extra
+import Libraries.Data.String.Extra
 
 
 infix 10 ::=

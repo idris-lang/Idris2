@@ -60,19 +60,14 @@ import Libraries.Data.NameMap
 import Libraries.Data.PosMap
 import Data.Stream
 import Data.String
-import Libraries.Data.String.Extra
 import Libraries.Data.List.Extra
+import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Utils.Path
 import Libraries.System.Directory.Tree
 
 import System
 import System.File
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
 
 %default covering
 
@@ -170,14 +165,11 @@ setOpt (ShowNamespace t)
     = do pp <- getPPrint
          setPPrint ({ fullNamespace := t } pp)
 setOpt (ShowTypes t)
-    = do opts <- get ROpts
-         put ROpts ({ showTypes := t } opts)
+    = update ROpts { showTypes := t }
 setOpt (EvalMode m)
-    = do opts <- get ROpts
-         put ROpts ({ evalMode := m } opts)
+    = update ROpts { evalMode := m }
 setOpt (Editor e)
-    = do opts <- get ROpts
-         put ROpts ({ editor := e } opts)
+    = update ROpts { editor := e }
 setOpt (CG e)
     = do defs <- get Ctxt
          case getCG (options defs) e of
@@ -211,13 +203,13 @@ printClause l i (PatClause _ lhsraw rhsraw)
     = do lhs <- pterm $ map defaultKindedName lhsraw -- hack
          rhs <- pterm $ map defaultKindedName rhsraw -- hack
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " = " ++ show rhs))
-printClause l i (WithClause _ lhsraw wvraw prf flags csraw)
+printClause l i (WithClause _ lhsraw rig wvraw prf flags csraw)
     = do lhs <- pterm $ map defaultKindedName lhsraw -- hack
          wval <- pterm $ map defaultKindedName wvraw -- hack
          cs <- traverse (printClause l (i + 2)) csraw
          pure (relit l ((pack (replicate i ' ')
                 ++ show lhs
-                ++ " with (" ++ show wval ++ ")"
+                ++ " with " ++ elimSemi "0 " "1 " (const "") rig ++ "(" ++ show wval ++ ")"
                 ++ maybe "" (\ nm => " proof " ++ show nm) prf
                 ++ "\n"))
                ++ showSep "\n" cs)
@@ -239,7 +231,7 @@ updateFile update
          Right content <- coreLift $ readFile f
                | Left err => throw (FileErr f err)
          coreLift_ $ writeFile (f ++ "~") content
-         coreLift_ $ writeFile f (unlines (update (forget $ lines content)))
+         coreLift_ $ writeFile f (unlines (update (lines content)))
          pure (DisplayEdit emptyDoc)
 
 rtrim : String -> String
@@ -448,9 +440,7 @@ processEdit (ExprSearch upd line name hints)
          case !(lookupDefName name (gamma defs)) of
               [(n, nidx, Hole locs _)] =>
                   do let searchtm = exprSearch replFC name hints
-                     ropts <- get ROpts
-                     put ROpts ({ psResult := Just (name, searchtm) } ropts)
-                     defs <- get Ctxt
+                     update ROpts { psResult := Just (name, searchtm) }
                      Just (_, restm) <- nextProofSearch
                           | Nothing => pure $ EditError "No search results"
                      let tm' = dropLams locs restm
@@ -492,8 +482,7 @@ processEdit (GenerateDef upd line name rej)
               Just None =>
                  do let searchdef = makeDefSort (\p, n => onLine (line - 1) p)
                                                 16 mostUsed n'
-                    ropts <- get ROpts
-                    put ROpts ({ gdResult := Just (line, searchdef) } ropts)
+                    update ROpts { gdResult := Just (line, searchdef) }
                     Just (_, (fc, cs)) <- nextGenDef rej
                          | Nothing => pure (EditError "No search results")
 
@@ -526,7 +515,6 @@ processEdit (MakeLemma upd line name)
                   do (lty, lapp) <- makeLemma replFC name locs ty
                      pty <- pterm $ map defaultKindedName lty -- hack
                      papp <- pterm $ map defaultKindedName lapp -- hack
-                     opts <- get ROpts
                      let pappstr = show (ifThenElse brack
                                             (addBracket replFC papp)
                                             papp)
@@ -547,7 +535,7 @@ processEdit (MakeCase upd line name)
          let Right l = unlit litStyle src
               | Left err => pure (EditError "Invalid literate Idris")
          let (markM, _) = isLitLine src
-         let c = forget $ lines $ makeCase brack name l
+         let c = lines $ makeCase brack name l
          if upd
             then updateFile (addMadeCase markM c (max 0 (integerToNat (cast (line - 1)))))
             else pure $ MadeCase markM c
@@ -558,7 +546,7 @@ processEdit (MakeWith upd line name)
          let Right l = unlit litStyle src
               | Left err => pure (EditError "Invalid literate Idris")
          let (markM, _) = isLitLine src
-         let w = forget $ lines $ makeWith name l
+         let w = lines $ makeWith name l
          if upd
             then updateFile (addMadeCase markM w (max 0 (integerToNat (cast (line - 1)))))
             else pure $ MadeWith markM w
@@ -666,8 +654,7 @@ loadMainFile : {auto c : Ref Ctxt Defs} ->
                {auto o : Ref ROpts REPLOpts} ->
                String -> Core REPLResult
 loadMainFile f
-    = do opts <- get ROpts
-         put ROpts ({ evalResultName := Nothing } opts)
+    = do update ROpts { evalResultName := Nothing }
          modIdent <- ctxtPathToNS f
          resetContext (PhysicalIdrSrc modIdent)
          Right res <- coreLift (readFile f)
@@ -761,8 +748,7 @@ process (Eval itm)
          case emode of
             Execute => do ignore (execExp itm); pure (Executed itm)
             Scheme =>
-              do defs <- get Ctxt
-                 (tm `WithType` ty) <- inferAndElab InExpr itm
+              do (tm `WithType` ty) <- inferAndElab InExpr itm
                  qtm <- logTimeWhen !getEvalTiming "Evaluation" $
                            (do nf <- snfAll [] tm
                                quote [] nf)
@@ -821,8 +807,7 @@ process Reload
               Nothing => pure NoFileLoaded
               Just f => loadMainFile f
 process (Load f)
-    = do opts <- get ROpts
-         put ROpts ({ mainfile := Just f } opts)
+    = do update ROpts { mainfile := Just f }
          -- Clear the context and load again
          loadMainFile f
 process (ImportMod m)
@@ -1154,7 +1139,7 @@ mutual
         m ++ (makeSpace $ c2 `minus` length m) ++ r
 
       cmdInfo : (List String, CmdArg, String) -> String
-      cmdInfo (cmds, args, text) = " " ++ col 18 20 (showSep " " cmds) (show args) text
+      cmdInfo (cmds, args, text) = " " ++ col 18 36 (showSep " " cmds) (show args) text
 
   export
   displayErrors : {auto c : Ref Ctxt Defs} ->

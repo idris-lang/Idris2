@@ -72,12 +72,9 @@ localHelper {vars} nest env nestdecls_in func
          log "elab.def.local" 20 $ show nestdecls
 
          traverse_ (processDecl [] nest' env') nestdecls
-         ust <- get UST
-         put UST ({ delayedElab := olddelayed } ust)
-         defs <- get Ctxt
+         update UST { delayedElab := olddelayed }
          res <- func nest'
-         defs <- get Ctxt
-         put Ctxt ({ localHints := oldhints } defs)
+         update Ctxt { localHints := oldhints }
          pure res
   where
     -- For the local definitions, don't allow access to linear things

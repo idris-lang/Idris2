@@ -6,7 +6,6 @@ module Network.Socket
 
 import public Network.Socket.Data
 import Network.Socket.Raw
-import Data.List
 import Network.FFI
 
 -- ----------------------------------------------------- [ Network Socket API. ]
@@ -175,7 +174,7 @@ export
 recvAll : HasIO io => (sock : Socket) -> io (Either SocketError String)
 recvAll sock = recvRec sock [] 64
   where
-    partial
+    covering
     recvRec : Socket -> List String -> ByteLength -> io (Either SocketError String)
     recvRec sock acc n = do res <- recv sock n
                             case res of

@@ -1,6 +1,7 @@
 module Data.Fin
 
 import Control.Function
+import public Control.Ord
 import Data.List1
 import public Data.Maybe
 import public Data.Nat
@@ -132,11 +133,25 @@ shift : (m : Nat) -> Fin n -> Fin (m + n)
 shift Z f = f
 shift (S m) f = FS $ shift m f
 
+||| Increment a Fin, wrapping on overflow
+public export
+finS : {n : Nat} -> Fin n -> Fin n
+finS {n = S _} x = case strengthen x of
+    Nothing => FZ
+    Just y => FS y
+
 ||| The largest element of some Fin type
 public export
 last : {n : _} -> Fin (S n)
 last {n=Z} = FZ
 last {n=S _} = FS last
+
+||| The finite complement of some Fin.
+||| The number as far along as the input, but starting from the other end.
+public export
+complement : {n : Nat} -> Fin n -> Fin n
+complement {n = S _} FZ = last
+complement {n = S _} (FS x) = weaken $ complement x
 
 ||| All of the Fin elements
 public export
@@ -150,6 +165,16 @@ Ord (Fin n) where
   compare  FZ    (FS _) = LT
   compare (FS _)  FZ    = GT
   compare (FS x) (FS y) = compare x y
+
+namespace Monoid
+
+  public export
+  [Minimum] {n : Nat} -> Monoid (Fin $ S n) using Semigroup.Minimum where
+    neutral = last
+
+  public export
+  [Maximum] Monoid (Fin $ S n) using Semigroup.Maximum where
+    neutral = FZ
 
 public export
 natToFinLT : (x : Nat) -> {0 n : Nat} ->
@@ -230,6 +255,26 @@ restrict n val = let val' = assert_total (abs (mod val (cast (S n)))) in
                      -- in the right range
                      fromInteger {n = S n} val'
                          {prf = believe_me {a=IsJust (Just val')} ItIsJust}
+
+--------------------------------------------------------------------------------
+-- Num
+--------------------------------------------------------------------------------
+
+public export
+{n : Nat} -> Num (Fin (S n)) where
+  FZ + y = y
+  (+) {n = S _} (FS x) y = finS $ assert_smaller x (weaken x) + y
+
+  FZ * y = FZ
+  (FS x) * y = y + (assert_smaller x $ weaken x) * y
+
+  fromInteger = restrict n
+
+public export
+{n : Nat} -> Neg (Fin (S n)) where
+  negate = finS . complement
+
+  x - y = x + (negate y)
 
 --------------------------------------------------------------------------------
 -- DecEq

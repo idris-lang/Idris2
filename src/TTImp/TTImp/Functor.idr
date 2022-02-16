@@ -81,8 +81,8 @@ mutual
   Functor ImpClause' where
     map f (PatClause fc lhs rhs)
       = PatClause fc (map f lhs) (map f rhs)
-    map f (WithClause fc lhs wval prf flags xs)
-      = WithClause fc (map f lhs) (map f wval) prf flags (map (map f) xs)
+    map f (WithClause fc lhs rig wval prf flags xs)
+      = WithClause fc (map f lhs) rig (map f wval) prf flags (map (map f) xs)
     map f (ImpossibleClause fc lhs)
       = ImpossibleClause fc (map f lhs)
 

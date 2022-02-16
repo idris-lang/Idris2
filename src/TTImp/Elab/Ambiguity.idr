@@ -128,7 +128,7 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
     mkTerm prim est n def
         = let tm = wrapDot prim est mode n (map (snd . snd) args)
                        (definition def) (buildAlt (IVar fc n) args) in
-              if Macro `elem` flags def
+              if Context.Macro `elem` flags def
                  then case mode of
                            InLHS _ => tm
                            _ => IRunElab fc (ICoerced fc tm)
@@ -355,7 +355,6 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
          delayOnFailure fc rig env (Just expected) ambiguous Ambiguity $
              \delayed =>
                do solveConstraints solvemode Normal
-                  defs <- get Ctxt
                   exp <- getTerm expected
 
                   -- We can't just use the old NF on the second attempt,
@@ -408,8 +407,7 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                                       _ => inTerm
                 delayOnFailure fc rig env (Just expected) ambiguous Ambiguity $
                      \delayed =>
-                       do defs <- get Ctxt
-                          exp <- getTerm expected
+                       do exp <- getTerm expected
 
                           -- We can't just use the old NF on the second attempt,
                           -- because we might know more now, so recalculate it

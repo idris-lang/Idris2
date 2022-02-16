@@ -3,18 +3,34 @@ version = 0.0.1
 
 modules
   = Protocol.Hex
-  , Protocol.IDE
+  -- , Protocol.IDE
   , Protocol.IDE.Command
   , Protocol.IDE.Decoration
   , Protocol.SExp
+  -- TODO: want to add this module, but the parser library introduces
+  -- dependencies on core idris
+  -- , Protocol.SExp.Parser
   , Libraries.Data.Span
-  , Protocol.IDE.FileContext
-  , Protocol.IDE.Formatting
-  , Protocol.IDE.Holes
-  , Protocol.IDE.Result
-  , Protocol.IDE.Highlight
-
+  , Libraries.Text.Lexer
+  , Libraries.Control.Delayed
+  , Libraries.Text.Bounded
+  , Libraries.Text.Lexer.Core
+  , Libraries.Text.Quantity
+  , Libraries.Text.Token
+  , Libraries.Text.Lexer.Tokenizer
+  , Libraries.Data.String.Extra
+  , Libraries.Text.PrettyPrint.Prettyprinter.Doc
+  , Libraries.Text.PrettyPrint.Prettyprinter.Symbols
+  , Libraries.Text.PrettyPrint.Prettyprinter
+  , Libraries.Text.Parser.Core
+  , Libraries.Text.Parser
+  , Parser.Rule.Source
+  -- , Protocol.IDE.FileContext
+  -- , Protocol.IDE.Formatting
+  -- , Protocol.IDE.Holes
+  -- , Protocol.IDE.Result
+  -- , Protocol.IDE.Highlight
 
 --depends =
 
-sourcedir = "src"
+sourcedir = "../src"

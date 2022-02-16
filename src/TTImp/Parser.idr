@@ -1,7 +1,6 @@
 module TTImp.Parser
 
 import Core.Context
-import Core.Metadata
 import Core.TT
 import Parser.Source
 import TTImp.TTImp
@@ -515,6 +514,8 @@ mutual
            let fc = MkFC fname start end
            pure (!(getFn lhs), PatClause fc lhs rhs)
     <|> do keyword "with"
+           m <- multiplicity
+           rig <- getMult m
            wstart <- location
            symbol "("
            wval <- expr fname indents
@@ -523,7 +524,7 @@ mutual
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
-           pure (!(getFn lhs), WithClause fc lhs wval prf [] (forget $ map snd ws))
+           pure (!(getFn lhs), WithClause fc lhs rig wval prf [] (forget $ map snd ws))
 
     <|> do keyword "impossible"
            atEnd indents

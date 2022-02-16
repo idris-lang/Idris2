@@ -2,6 +2,9 @@ rm -rf build
 
 case "$(uname)" in
   Linux*) EXPECTED_OS=unix ;;
+  OpenBSD*) EXPECTED_OS=unix ;;
+  FreeBSD*) EXPECTED_OS=unix ;;
+  NetBSD*) EXPECTED_OS=unix ;;
   Darwin*) EXPECTED_OS=darwin ;;
   CYGWIN*) EXPECTED_OS=windows ;;
   MINGW*) EXPECTED_OS=windows ;;

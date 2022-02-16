@@ -672,7 +672,7 @@ mutual
     as <- traverse (map (insertBreak r) . alt) alts
     d  <- traverseOpt stmt def
     nm <- get NoMangleMap
-    pure $  switch (minimal nm sc <+> ".h") as d
+    pure $ switch (minimal nm sc <+> ".h") as d
     where
         alt : {r : _} -> EConAlt r -> Core (Doc,Doc)
         alt (MkEConAlt _ RECORD b)  = ("undefined",) <$> stmt b

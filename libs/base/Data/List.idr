@@ -192,12 +192,6 @@ public export
 lookup : Eq a => a -> List (a, b) -> Maybe b
 lookup = lookupBy (==)
 
-||| Check if something is a member of a list using a custom comparison.
-public export
-elemBy : (a -> b -> Bool) -> a -> List b -> Bool
-elemBy p e []      = False
-elemBy p e (x::xs) = p e x || elemBy p e xs
-
 ||| Remove duplicate elements from a list using a custom comparison. The general
 ||| case of `nub`.
 ||| O(n^2).
@@ -228,6 +222,19 @@ nubBy = nubBy' []
 public export
 nub : Eq a => List a -> List a
 nub = nubBy (==)
+
+||| Construct a new list consisting of all but the indicated element.
+|||
+||| ```idris example
+||| deleteAt 3 [5, 6, 7, 8, 9]
+||| ```
+|||
+||| @ idx The index of the value to delete.
+||| @ xs The list to delete the value from.
+public export
+deleteAt : (idx : Nat) -> (xs : List a) -> {auto 0 prf : InBounds idx xs} -> List a
+deleteAt {prf=InFirst} Z (_ :: xs) = xs
+deleteAt {prf=InLater _} (S k) (x :: xs) = x :: deleteAt k xs
 
 ||| The deleteBy function behaves like delete, but takes a user-supplied equality predicate.
 public export
@@ -731,7 +738,7 @@ sort = sortBy compare
 ||| @ eq    a custom equality function for comparing the elements
 ||| @ left  the list which might be a prefix of `right`
 ||| @ right the list of elements to compare againts
-export
+public export
 isPrefixOfBy : (eq : a -> b -> Bool) ->
                (left : List a) -> (right : List b) -> Bool
 isPrefixOfBy p [] _            = True
@@ -740,7 +747,7 @@ isPrefixOfBy p (x::xs) (y::ys) = p x y && isPrefixOfBy p xs ys
 
 ||| The isPrefixOf function takes two lists and returns True iff the first list
 ||| is a prefix of the second when comparing elements using `==`.
-export
+public export
 isPrefixOf : Eq a => List a -> List a -> Bool
 isPrefixOf = isPrefixOfBy (==)
 
@@ -750,14 +757,14 @@ isPrefixOf = isPrefixOfBy (==)
 ||| @ eq    a custom equality function for comparing the elements
 ||| @ left  the list which might be a suffix of `right`
 ||| @ right the list of elements to compare againts
-export
+public export
 isSuffixOfBy : (eq : a -> b -> Bool) ->
                (left : List a) -> (right : List b) -> Bool
 isSuffixOfBy p left right = isPrefixOfBy p (reverse left) (reverse right)
 
 ||| The isSuffixOf function takes two lists and returns True iff the first list
 ||| is a suffix of the second when comparing elements using `==`.
-export
+public export
 isSuffixOf : Eq a => List a -> List a -> Bool
 isSuffixOf = isSuffixOfBy (==)
 
@@ -771,7 +778,7 @@ isSuffixOf = isSuffixOfBy (==)
 ||| isInfixOf ['b','d'] ['a', 'b', 'c', 'd']
 ||| ```
 |||
-export
+public export
 isInfixOf : Eq a => List a -> List a -> Bool
 isInfixOf n h = any (isPrefixOf n) (tails h)
 
@@ -863,6 +870,17 @@ consInjective : forall x, xs, y, ys .
                 the (List a) (x :: xs) = the (List b) (y :: ys) -> (x = y, xs = ys)
 consInjective Refl = (Refl, Refl)
 
+lengthPlusIsLengthPlus : (n : Nat) -> (xs : List a) ->
+                         lengthPlus n xs = n + length xs
+lengthPlusIsLengthPlus n [] = sym $ plusZeroRightNeutral n
+lengthPlusIsLengthPlus n (x::xs) =
+  trans
+  (lengthPlusIsLengthPlus (S n) xs)
+  (plusSuccRightSucc n (length xs))
+
+lengthTRIsLength : (xs : List a) -> lengthTR xs = length xs
+lengthTRIsLength = lengthPlusIsLengthPlus Z
+
 ||| List `reverse` applied to `reverseOnto` is equivalent to swapping the
 ||| arguments of `reverseOnto`.
 reverseReverseOnto : (l, r : List a) ->
@@ -949,3 +967,9 @@ export
 lengthMap : (xs : List a) -> length (map f xs) = length xs
 lengthMap [] = Refl
 lengthMap (x :: xs) = cong S (lengthMap xs)
+
+||| Proof that replicate produces a list of the requested length.
+export
+lengthReplicate : (n : Nat) -> length (replicate n x) = n
+lengthReplicate 0 = Refl
+lengthReplicate (S k) = cong S (lengthReplicate k)

@@ -5,8 +5,9 @@ import Data.DPair
 import Data.List
 import Data.Nat
 import System.Directory
-import System.File
 import Libraries.Utils.Path
+
+import Libraries.System.File as LibFile
 
 %default total
 
@@ -201,8 +202,10 @@ copyDir src target = runEitherT $ do
     copyDirContents !(liftIO $ explore src) target
   where
     copyFile' : (srcDir : Path) -> (targetDir : Path) -> (fileName : String) -> EitherT FileError io ()
-    copyFile' srcDir targetDir fileName = do
-      MkEitherT $ copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
+    copyFile' srcDir targetDir fileName = MkEitherT $ do
+      Right ok <- LibFile.copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
+      | Left (err, size) => pure (Left err)
+      pure (Right ok)
 
     covering
     copyDirContents : {srcDir : Path} -> Tree srcDir -> (targetDir : Path) -> EitherT FileError io ()

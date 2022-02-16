@@ -5,19 +5,14 @@ import public Data.List1
 import Data.Maybe
 import Data.SnocList
 import Data.String
-import public Libraries.Data.String.Extra
 import public Libraries.Data.Span
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
+import Libraries.Data.String.Extra
 
 %default total
 
 export
 textSpaces : Int -> String
-textSpaces n = Extra.replicate (integerToNat $ cast n) ' '
+textSpaces n = String.replicate (integerToNat $ cast n) ' '
 
 ||| Maximum number of characters that fit in one line.
 public export
@@ -367,7 +362,7 @@ interface Pretty a where
 export
 Pretty String where
   pretty str = let str' = if "\n" `isSuffixOf` str then dropLast 1 str else str in
-                   vsep $ map unsafeTextWithoutNewLines $ forget $ lines str'
+                   vsep $ map unsafeTextWithoutNewLines $ lines str'
 
 public export
 FromString (Doc ann) where

@@ -296,11 +296,10 @@ updateIfaceSyn : {auto c : Ref Ctxt Defs} ->
                  List Declaration -> List (Name, List ImpClause) ->
                  Core ()
 updateIfaceSyn iname cn impps ps cs ms ds
-    = do syn <- get Syn
-         ms' <- traverse totMeth ms
+    = do ms' <- traverse totMeth ms
          let info = MkIFaceInfo cn impps ps cs ms' ds
-         put Syn ({ ifaces $= addName iname info,
-                    saveIFaces $= (iname :: ) } syn)
+         update Syn { ifaces     $= addName iname info,
+                      saveIFaces $= (iname :: ) }
  where
     findSetTotal : List FnOpt -> Maybe TotalReq
     findSetTotal [] = Nothing
@@ -496,9 +495,10 @@ elabInterface {vars} ifc vis env nest constraints iname params dets mcon body
         changeName : Name -> ImpClause -> Core ImpClause
         changeName dn (PatClause fc lhs rhs)
             = PatClause fc <$> changeNameTerm dn lhs <*> pure rhs
-        changeName dn (WithClause fc lhs wval prf flags cs)
+        changeName dn (WithClause fc lhs rig wval prf flags cs)
             = WithClause fc
                  <$> changeNameTerm dn lhs
+                 <*> pure rig
                  <*> pure wval
                  <*> pure prf
                  <*> pure flags

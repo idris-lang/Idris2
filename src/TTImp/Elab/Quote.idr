@@ -71,8 +71,7 @@ mutual
       = pure $ IQuote fc !(getUnquote t)
   getUnquote (IUnquote fc tm)
       = do qv <- genVarName "q"
-           unqs <- get Unq
-           put Unq ((qv, fc, tm) :: unqs)
+           update Unq ((qv, fc, tm) ::)
            pure (IUnquote fc (IVar fc qv)) -- turned into just qv when reflecting
   getUnquote tm = pure tm
 
@@ -83,10 +82,11 @@ mutual
                      Core ImpClause
   getUnquoteClause (PatClause fc l r)
       = pure $ PatClause fc !(getUnquote l) !(getUnquote r)
-  getUnquoteClause (WithClause fc l w prf flags cs)
+  getUnquoteClause (WithClause fc l rig w prf flags cs)
       = pure $ WithClause
                  fc
                  !(getUnquote l)
+                 rig
                  !(getUnquote w)
                  prf
                  flags

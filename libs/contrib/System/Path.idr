@@ -13,7 +13,7 @@ import Text.Quantity
 
 import System.Info
 
-infixr 5 </>, />
+infixl 5 </>, />
 infixr 7 <.>
 
 
@@ -243,6 +243,13 @@ parsePath =
                 [] => []
                 (x::xs) => x :: delete CurDir xs
     pure $ MkPath vol (isJust root) body (isJust trailSep)
+
+export
+tryParse : String -> Maybe Path
+tryParse str =
+  case parse parsePath (lexPath str) of
+    Right (path, []) => Just path
+    _ => Nothing
 
 ||| Parses a String into Path.
 |||

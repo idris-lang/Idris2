@@ -135,11 +135,9 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
                              (sortBy (\x, y => compare (fst x) (fst y))
                                        (delayedElab ust)))
                  (\err =>
-                    do ust <- get UST
-                       put UST ({ delayedElab := olddelayed } ust)
+                    do update UST { delayedElab := olddelayed }
                        throw err)
-         ust <- get UST
-         put UST ({ delayedElab := olddelayed } ust)
+         update UST { delayedElab := olddelayed }
          solveConstraintsAfter constart solvemode MatchArgs
 
          -- As long as we're not in the RHS of a case block,
