@@ -346,6 +346,10 @@ mutual
        MkIField : FC -> RigCount -> PiInfo (RawImp' nm) -> Name -> RawImp' nm ->
                   IField' nm
 
+  public export
+  ImpParameter : Type
+  ImpParameter = ImpParameter' Name
+
   -- TODO: turn into a proper datatype
   public export
   ImpParameter' : Type -> Type
