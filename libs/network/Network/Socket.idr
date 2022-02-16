@@ -7,6 +7,9 @@ module Network.Socket
 import public Network.Socket.Data
 import Network.Socket.Raw
 import Network.FFI
+import Data.Buffer
+import Data.List
+import Data.SnocList
 
 -- ----------------------------------------------------- [ Network Socket API. ]
 
@@ -164,6 +167,12 @@ recv sock len = do
            freeRecvStruct (RSPtr recv_struct_ptr)
            pure $ Right (payload, recv_res)
 
+recvAllRec : (Monoid a, HasIO io) => io (Either SocketError a) -> SnocList a -> io (Either SocketError a)
+recvAllRec recv_from_socket acc = case !recv_from_socket of
+  Left 0 => pure (Right $ concat acc)
+  Left c => pure (Left c)
+  Right str => recvAllRec recv_from_socket (acc :< str)
+
 ||| Receive all the remaining data on the specified socket.
 |||
 ||| Returns on failure a `SocketError`
@@ -172,16 +181,7 @@ recv sock len = do
 ||| @sock The socket on which to receive the message.
 export
 recvAll : HasIO io => (sock : Socket) -> io (Either SocketError String)
-recvAll sock = recvRec sock [] 64
-  where
-    covering
-    recvRec : Socket -> List String -> ByteLength -> io (Either SocketError String)
-    recvRec sock acc n = do res <- recv sock n
-                            case res of
-                              Left c => pure (Left c)
-                              Right (str, res) => let n' = min (n * 2) 65536 in
-                                                  if res < n then pure (Right $ concat $ reverse $ str :: acc)
-                                                  else recvRec sock (str :: acc) n'
+recvAll sock = recvAllRec {a=String} (mapSnd fst <$> recv sock 65536) [<]
 
 ||| Send a message.
 |||
@@ -243,3 +243,55 @@ recvFrom sock bl = do
           addr <- foreignGetRecvfromAddr recv_ptr'
           freeRecvfromStruct recv_ptr'
           pure $ Right (MkUDPAddrInfo addr port, payload, result)
+
+||| Send data on the specified socket.
+|||
+||| Returns on failure a `SocketError`.
+||| Returns on success the number of bytes sent.
+|||
+||| @sock   The socket on which to send the message.
+||| @bytes  The data to send.
+export
+sendBytes : HasIO m => Socket -> List Bits8 -> m (Either SocketError Int)
+sendBytes sock bytes = do
+  let len' = cast $ length bytes
+  Just buffer <- newBuffer len'
+  | Nothing => assert_total $ idris_crash "somehow newBuffer failed"
+  traverse_ (uncurry (setBits8 buffer)) (zip [0..len'] bytes)
+  ret <- primIO $ prim__idrnet_send_bytes sock.descriptor buffer len' 0
+  case ret < 0 of
+    True => pure $ Left ret
+    False => pure $ Right ret
+
+||| Receive data on the specified socket.
+|||
+||| Returns on failure a `SocketError`
+||| Returns on success a pairing of:
+||| + `List Bits8` :: The payload.
+||| + `ResultCode` :: The result of the underlying function.
+|||
+||| @sock     The socket on which to receive the message.
+||| @max_size How much of the data to receive at most.
+export
+recvBytes : HasIO m => Socket -> (max_size : ByteLength) -> m (Either SocketError (List Bits8))
+recvBytes sock max_size = do
+  Just buffer <- newBuffer max_size
+  | Nothing => pure $ Left (-1)
+  ret <- primIO $ prim__idrnet_recv_bytes sock.descriptor buffer max_size 0
+  case ret > 0 of
+    False => do
+      pure $ Left ret
+    True => do
+      bytes <- traverse (getBits8 buffer) [0..((cast ret)-1)]
+      pure $ Right $ toList bytes
+
+
+||| Receive all the remaining data on the specified socket.
+|||
+||| Returns on failure a `SocketError`
+||| Returns on success the payload `List Bits8`
+|||
+||| @sock The socket on which to receive the message.
+export
+recvAllBytes : HasIO io => (sock : Socket) -> io (Either SocketError (List Bits8))
+recvAllBytes sock = recvAllRec {a=List Bits8} (recvBytes sock 65536) [<]
