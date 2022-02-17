@@ -2064,6 +2064,7 @@ docArgCmd parseCmd command doc = (names, DocArg, doc, parse)
         Keyword <$> anyKeyword
         <|> Symbol <$> (anyReservedSymbol <* eoi
                        <|> parens (Virtual Interactive) anyReservedSymbol <* eoi)
+        <|> Bracket <$> (IdiomBrackets <$ symbol "[|" <* symbol "|]")
         <|> APTerm <$> typeExpr pdef (Virtual Interactive) init
       pure (command dir)
 
