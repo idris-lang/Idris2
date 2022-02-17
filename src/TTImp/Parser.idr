@@ -107,9 +107,9 @@ fnDirectOpt
   <|> do pragma "chaser"
          pure (Hint False)
   <|> do pragma "globalhint"
-         pure (GlobalHint True)
-  <|> do pragma "defaulthint"
          pure (GlobalHint False)
+  <|> do pragma "defaulthint"
+         pure (GlobalHint True)
   <|> do pragma "inline"
          pure Inline
   <|> do pragma "noinline"
