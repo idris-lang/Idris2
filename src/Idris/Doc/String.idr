@@ -506,6 +506,7 @@ getDocs : {auto o : Ref ROpts REPLOpts} ->
           DocDirective -> Core (Doc IdrisDocAnn)
 getDocs (APTerm ptm) = getDocsForPTerm ptm
 getDocs (Symbol k) = pure $ getDocsForSymbol k
+getDocs (Bracket IdiomBrackets) = pure "Idiom brackets (cf. manual)"
 getDocs (Keyword k) = pure $ getDocsForKeyword k
 
 

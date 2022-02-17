@@ -587,11 +587,16 @@ data EditCmd : Type where
      MakeWith : Bool -> Int -> Name -> EditCmd
 
 public export
+data BracketType = IdiomBrackets
+
+public export
 data DocDirective : Type where
   ||| A reserved keyword
   Keyword : String -> DocDirective
   ||| A reserved symbol
   Symbol  : String -> DocDirective
+  ||| A type of brackets
+  Bracket : BracketType -> DocDirective
   ||| An arbitrary PTerm
   APTerm  : PTerm -> DocDirective
 
