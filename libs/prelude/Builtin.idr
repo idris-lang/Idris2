@@ -225,7 +225,7 @@ public export
 FromString String where
   fromString s = s
 
-%defaulthint
+%defaultglobalhint
 %inline
 public export
 defaultString : FromString String
@@ -247,7 +247,7 @@ public export
 FromChar Char where
   fromChar s = s
 
-%defaulthint
+%defaultglobalhint
 %inline
 public export
 defaultChar : FromChar Char
@@ -269,7 +269,7 @@ public export
 FromDouble Double where
   fromDouble s = s
 
-%defaulthint
+%defaultglobalhint
 %inline
 public export
 defaultDouble : FromDouble Double
