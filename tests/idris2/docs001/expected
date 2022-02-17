@@ -164,6 +164,7 @@ Hints:
   Cast String Nat
   Eq String
   FromString String
+  FromString String
   Interpolation String
   Monoid String
   Ord String
@@ -202,6 +203,7 @@ Hints:
   Eq Integer
   Integral Integer
   Neg Integer
+  Num Integer
   Num Integer
   Ord Integer
   Show Integer

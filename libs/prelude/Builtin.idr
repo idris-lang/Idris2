@@ -225,7 +225,9 @@ public export
 FromString String where
   fromString s = s
 
-%defaultglobalhint
+-- TODO(andylokandy): rename %defaulthint to %defaultglobalhint once v0.6.0 is released
+-- See also: https://github.com/idris-lang/Idris2/pull/2247
+%defaulthint
 %inline
 public export
 defaultString : FromString String
@@ -247,7 +249,9 @@ public export
 FromChar Char where
   fromChar s = s
 
-%defaultglobalhint
+-- TODO(andylokandy): rename %defaulthint to %defaultglobalhint once v0.6.0 is released
+-- See also: https://github.com/idris-lang/Idris2/pull/2247
+%defaulthint
 %inline
 public export
 defaultChar : FromChar Char
@@ -269,7 +273,7 @@ public export
 FromDouble Double where
   fromDouble s = s
 
-%defaultglobalhint
+%defaulthint
 %inline
 public export
 defaultDouble : FromDouble Double
