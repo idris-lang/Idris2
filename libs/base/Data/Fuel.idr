@@ -14,7 +14,7 @@ limit (S n) = More (limit n)
 
 ||| Provide fuel indefinitely.
 ||| This function is fundamentally partial.
-partial
 export
+covering
 forever : Fuel
 forever = More forever

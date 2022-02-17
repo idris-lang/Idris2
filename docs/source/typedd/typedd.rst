@@ -149,6 +149,10 @@ In ``ReverseVec.idr``, add ``import Data.Nat`` for the ``Nat`` proofs.
 In ``Void.idr``, since functions must now be ``covering`` by default, add
 a ``partial`` annotation to ``nohead`` and its helper function ``getHead``.
 
+In Exercise 2 of 8.2.5, the definition of ``reverse'`` should be changed to
+``reverse' : Vect k a -> Vect m a -> Vect (k + m) a``, because the ``n`` in ``reverse'`` 
+is otherwise bound to the same value as the ``n`` in the signature of ``myReverse``.
+
 Chapter 9
 ---------
 
@@ -348,6 +352,26 @@ In ``ArithCmdDo.idr``, since ``(>>=)`` is ``export``, ``Command`` and ``ConsoleI
 also have to be ``export``. Also, update ``randoms`` and ``import Data.Bits`` as above.
 
 In ``StreamFail.idr``, add a ``partial`` annotation to ``labelWith``.
+
+In order to support ``do`` notation for custom types (like ``RunIO``), you need to implement ``(>>=)`` for binding values in a ``do`` block and ``(>>)`` for sequencing computations without binding values. See  `tests <https://github.com/idris-lang/Idris2/tree/master/tests/typedd-book/chapter11>`_ for complete implementations.
+
+For instance, the following do block is desugared to ``foo >>= (\x => bar >>= (\y => baz x y))``:
+
+.. code-block:: idris
+
+    do
+      x <- foo
+      y <- bar
+      baz x y
+
+while the following is converted to ``foo >> bar >> baz``:
+
+.. code-block:: idris
+
+      do
+        foo
+        bar
+        baz
 
 Chapter 12
 ----------

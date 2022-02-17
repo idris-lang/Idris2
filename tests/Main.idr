@@ -43,6 +43,7 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic056", "basic057", "basic058", "basic059", "basic060",
        "basic061", "basic062", "basic063", "basic064", "basic065",
        "basic066", "basic067", "basic068",
+       "idiom001",
        "interpolation001", "interpolation002", "interpolation003",
        "interpolation004"]
 
@@ -124,7 +125,8 @@ idrisTestsPerformance = MkTestPool "Performance" [] Nothing
        -- Performance: things which have been slow in the past, or which
        -- pose interesting challenges for the elaborator
       ["perf001", "perf002", "perf003", "perf004", "perf005",
-       "perf007", "perf008", "perf009", "perf010", "perf011"]
+       "perf007", "perf008", "perf009", "perf010", "perf011",
+       "perf2202"]
 
 idrisTestsRegression : TestPool
 idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
@@ -145,7 +147,7 @@ idrisTestsData = MkTestPool "Data and record types" [] Nothing
        -- Records, access and dependent update
        "record001", "record002", "record003", "record004", "record005",
        "record006", "record007", "record008", "record009", "record010",
-       "record011", "record012", "record013", "record014" ]
+       "record011", "record012", "record013", "record014", "record015" ]
 
 idrisTestsBuiltin : TestPool
 idrisTestsBuiltin = MkTestPool "Builtin types and functions" [] Nothing
@@ -189,8 +191,17 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
 -- other way. If we do, we'll need to have a way to disable these.
 idrisTestsSchemeEval : TestPool
 idrisTestsSchemeEval = MkTestPool "Scheme Evaluator" [] Nothing
-     ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004",
-      "schemeeval005", "schemeeval006"]
+      ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004",
+       "schemeeval005", "schemeeval006"]
+
+idrisTestsReflection : TestPool
+idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
+      ["reflection001", "reflection002", "reflection003", "reflection004",
+       "reflection005", "reflection006", "reflection007", "reflection008",
+       "reflection009", "reflection010", "reflection011", "reflection012",
+       "reflection013", "reflection014"
+      ]
+
 
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
@@ -209,17 +220,14 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "params001", "params002", "params003",
        -- Packages and ipkg files
        "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
-       "pkg008", "pkg009", "pkg010", "pkg011",
+       "pkg008", "pkg009", "pkg010", "pkg011", "pkg012",
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",
-       -- Quotation and reflection
-       "reflection001", "reflection002", "reflection003", "reflection004",
-       "reflection005", "reflection006", "reflection007", "reflection008",
-       "reflection009", "reflection010", "reflection011", "reflection012",
-       "reflection013", "reflection014",
+       -- Inlining
+       "inlining001",
        -- The 'with' rule
-       "with001", "with002", "with004", "with005", "with006",
+       "with001", "with002", "with004", "with005", "with006", "with007",
        -- with-disambiguation
        "with003",
        -- pretty printing
@@ -284,6 +292,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "stringcast"
     , "syntax001"
     , "tailrec001"
+    , "tailrec002"
     , "idiom001"
     , "integers"
     , "fix1839"
@@ -337,6 +346,7 @@ main = runner $
   , testPaths "idris2" idrisTestsEvaluator
   , testPaths "idris2" idrisTestsTotality
   , testPaths "idris2" idrisTestsSchemeEval
+  , testPaths "idris2" idrisTestsReflection
   , testPaths "idris2" idrisTests
   , !typeddTests
   , !ideModeTests

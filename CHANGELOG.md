@@ -13,6 +13,21 @@
 
 ### Language changes
 
+* There were two versions of record syntax used when updating records:
+
+  ```idris
+  record { field = value } r
+  ```
+
+  and
+
+  ```idris
+  { field := value } r
+  ```
+
+  The former is now deprecated in favour of the latter syntax.
+  The compiler will issue a warning when using the `record` keyword.
+
 * Interpolated strings now make use of `concat` which is compiled into `fastConcat`
   The interpolated slices now make use of the `Interpolation` interface available
   in the prelude. It has only one method `interpolate` which is called for every
@@ -39,8 +54,33 @@
 * Removes deprecated support for `void` primitive. Now `void` is supported via
   `prim__void`.
 * Adds `%deprecate` pragma that can be used to warn when deprecated functions are used.
+* Package files now support a `langversion` field that can be used to specify what versions of Idris a package supports. As with dependency versions, `>`, `<`, `>=`, and `<=` can all be used.
+  + For example, `langversion >= 0.5.1`.
+
+### IDE protocol changes
+
+* The IDE protocol and its serialisation to S-Expressions are factored
+  into a separate module hierarchy Protocol.{Hex, SExp, IDE}.
+
+* File context ranges sent in the IDE protocol follow the same
+  convention as Bounds values in the parser:
+  + all offsets (line and column) are 0-based.
+  + Lines: start and end are within the bounds
+  + Column:
+    + start column is within the bounds;
+    + end   column is after the bounds.
+
+  This changes behaviour from previous versions of the protocol.
+  Matching PRs in the emacs modes:
+  + idris2-mode [PR#11](https://github.com/idris-community/idris2-mode/pull/11)
+  + idris-mode [PR#547](https://github.com/idris-hackers/idris-mode/pull/547)
 
 ### Library changes
+
+#### Prelude
+
+* `elemBy` and `elem` are now defined for any `Foldable` structure. The specialised
+  versions defined in `Data.(List/SnocList/Vect)` have been removed.
 
 #### Base
 
@@ -48,10 +88,25 @@
   return code of that run.
 * Adds escaped versions of `System.system`, `Systen.File.popen`, and
   `System.run`, which take a list of arguments, and escapes them.
+* Adds the `Injective` interface in module `Control.Function`.
 * Changes `System.pclose` to return the return code of the closed process.
 * Deprecates `base`'s `Data.Nat.Order.decideLTE` in favor of `Data.Nat.isLTE`.
 * Removes `base`'s deprecated `System.Directory.dirEntry`. Use `nextDirEntry` instead.
 * Removes `base`'s deprecated `Data.String.fastAppend`. Use `fastConcat` instead.
+* `System.File.Buffer.writeBufferData` now returns the number of bytes that have
+   been written when there is a write error.
+* `System.File.Buffer.readBufferData` now returns the number of bytes that have
+   been read into the buffer.
+* Adds the `Data.List.Quantifiers.Interleaving` and
+  `Data.List.Quantifiers.Split` datatypes, used for provably splitting a list
+  into a list of proofs and a list of counter-proofs for a given property.
+
+#### Test
+
+* Refactors `Test.Golden.runTest` to use `System.Concurrency` from the base
+  libraries instead of `System.Future` from `contrib`. In addition to reducing
+  the dependency on `contrib` in the core of Idris2, this also seems to provide
+  a small performance improvement for `make test`.
 
 #### Contrib
 
@@ -539,7 +594,7 @@ Language changes:
   be at least `covering`
   + That is, `%default covering` is the default status.
 * Fields of records can be accessed (and updated) using the dot syntax,
-  such as `r.field1.field2` or `{ field1.field2 := 42 }`.
+  such as `r.field1.field2` or `record { field1.field2 = 42 }`.
   For details, see [the "records" entry in the user manual](https://idris2.readthedocs.io/en/latest/reference/records.html)
 * New function flag `%tcinline` which means that the function should be
   inlined for the purposes of totality checking (but otherwise not inlined).

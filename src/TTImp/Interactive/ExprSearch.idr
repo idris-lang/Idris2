@@ -415,7 +415,6 @@ tryRecursive fc rig opts hints env ty topty rdata
                 do res <- searchName fc rig ({ recData := Nothing } opts) hints
                                      env !(nf defs env ty)
                                      topty (recname rdata, def)
-                   defs <- get Ctxt
                    res' <- traverse (\ (t, ds) => pure (!(toFullNames t), ds)) res
                    filterS (structDiffTm (lhsapp rdata)) res'
   where
@@ -580,7 +579,6 @@ makeHelper fc rig opts env letty targetty (Result (locapp, ds) next)
          logTerm "interaction.search" 10 "Local app" locapp
          let Just gendef = genExpr opts
              | Nothing => noResult
-         defs <- get Ctxt
          intn <- genVarName "cval"
          helpern_in <- genCaseName "search"
          helpern <- inCurrentNS helpern_in

@@ -408,14 +408,15 @@ mutual
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
                           pure (PatClause x' y' z')
-               (UN (Basic "WithClause"), [u,v,w,x,y,z])
+               (UN (Basic "WithClause"), [u,v,w,x,y,z,a])
                     => do u' <- reify defs !(evalClosure defs u)
                           v' <- reify defs !(evalClosure defs v)
                           w' <- reify defs !(evalClosure defs w)
                           x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (WithClause u' v' w' x' y' z')
+                          a' <- reify defs !(evalClosure defs a)
+                          pure (WithClause u' v' w' x' y' z' a')
                (UN (Basic "ImpossibleClause"), [x,y])
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
@@ -759,14 +760,15 @@ mutual
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
              appCon fc defs (reflectionttimp "PatClause") [x', y', z']
-    reflect fc defs lhs env (WithClause u v w x y z)
+    reflect fc defs lhs env (WithClause u v w x y z a)
         = do u' <- reflect fc defs lhs env u
              v' <- reflect fc defs lhs env v
              w' <- reflect fc defs lhs env w
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "WithClause") [u', v', w', x', y', z']
+             a' <- reflect fc defs lhs env a
+             appCon fc defs (reflectionttimp "WithClause") [u', v', w', x', y', z', a']
     reflect fc defs lhs env (ImpossibleClause x y)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y

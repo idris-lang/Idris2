@@ -228,18 +228,12 @@ addNameLoc loc n
            put MD $ { nameLocMap $= insert (neloc, n') } meta
 
 export
-setHoleLHS : {auto m : Ref MD Metadata} ->
-             ClosedTerm -> Core ()
-setHoleLHS tm
-    = do meta <- get MD
-         put MD ({ currentLHS := Just tm } meta)
+setHoleLHS : {auto m : Ref MD Metadata} -> ClosedTerm -> Core ()
+setHoleLHS tm = update MD { currentLHS := Just tm }
 
 export
-clearHoleLHS : {auto m : Ref MD Metadata} ->
-               Core ()
-clearHoleLHS
-    = do meta <- get MD
-         put MD ({ currentLHS := Nothing } meta)
+clearHoleLHS : {auto m : Ref MD Metadata} -> Core ()
+clearHoleLHS = update MD { currentLHS := Nothing }
 
 export
 withCurrentLHS : {auto c : Ref Ctxt Defs} ->
@@ -289,16 +283,12 @@ findHoleLHS hn
 export
 addSemanticDefault : {auto m : Ref MD Metadata} ->
                      ASemanticDecoration -> Core ()
-addSemanticDefault asem
-  = do meta <- get MD
-       put MD $ { semanticDefaults $= insert asem } meta
+addSemanticDefault asem = update MD { semanticDefaults $= insert asem }
 
 export
 addSemanticAlias : {auto m : Ref MD Metadata} ->
                    NonEmptyFC -> NonEmptyFC -> Core ()
-addSemanticAlias from to
-  = do meta <- get MD
-       put MD $ { semanticAliases $= insert (from, to) } meta
+addSemanticAlias from to = update MD { semanticAliases $= insert (from, to) }
 
 export
 addSemanticDecorations : {auto m : Ref MD Metadata} ->
@@ -306,7 +296,6 @@ addSemanticDecorations : {auto m : Ref MD Metadata} ->
    SemanticDecorations -> Core ()
 addSemanticDecorations decors
     = do meta <- get MD
-         defs <- get Ctxt
          let posmap = meta.semanticHighlighting
          let (newDecors,droppedDecors) =
                span

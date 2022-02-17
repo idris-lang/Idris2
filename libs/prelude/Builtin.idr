@@ -69,7 +69,7 @@ snd (x, y) = y
 -- This directive tells auto implicit search what to use to look inside pairs
 %pair Pair fst snd
 
-infix 5 #
+infixr 5 #
 
 ||| A pair type where each component is linear
 public export

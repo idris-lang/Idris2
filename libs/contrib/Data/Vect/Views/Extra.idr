@@ -5,6 +5,7 @@ import Control.WellFounded
 import Data.Vect
 import Data.Nat
 
+%default total
 
 ||| View for splitting a vector in half, non-recursively
 public export
@@ -16,7 +17,6 @@ data Split : Vect n a -> Type where
                 (x : a) -> (xs : Vect n a) -> (y : a) -> (ys : Vect m a) ->
                 Split (x :: xs ++ y :: ys)
 
-total
 splitHelp : {n : Nat} -> (head : a) -> (zs : Vect n a) ->
             Nat -> Split (head :: zs)
 splitHelp head [] _ = SplitOne
@@ -29,7 +29,7 @@ splitHelp head (z :: zs) (S (S k))
 
 ||| Covering function for the `Split` view
 ||| Constructs the view in linear time
-export total
+export
 split : {n : Nat} -> (xs : Vect n a) -> Split xs
 split [] = SplitNil
 split {n = S k} (x :: xs) = splitHelp x xs k

@@ -36,7 +36,6 @@ import Parser.Lexer.Source
 import public Idris.Doc.Annotations
 import Idris.Doc.Keywords
 
-
 %default covering
 
 -- Add a doc string for a module name
@@ -45,9 +44,8 @@ addModDocString : {auto s : Ref Syn SyntaxInfo} ->
                   ModuleIdent -> String ->
                   Core ()
 addModDocString mi doc
-    = do syn <- get Syn
-         put Syn ({ saveMod $= (mi ::)
-                  , modDocstrings $= insert mi doc } syn)
+    = update Syn { saveMod $= (mi ::)
+                 , modDocstrings $= insert mi doc }
 
 -- Add a doc string for a name in the current namespace
 export
@@ -59,9 +57,8 @@ addDocString n_in doc
     = do n <- inCurrentNS n_in
          log "doc.record" 50 $
            "Adding doc for " ++ show n_in ++ " (aka " ++ show n ++ " in current NS)"
-         syn <- get Syn
-         put Syn ({ defDocstrings $= addName n doc,
-                    saveDocstrings $= insert n () } syn)
+         update Syn { defDocstrings  $= addName n doc,
+                      saveDocstrings $= insert n () }
 
 -- Add a doc string for a name, in an extended namespace (e.g. for
 -- record getters)
@@ -75,9 +72,8 @@ addDocStringNS ns n_in doc
          let n' = case n of
                        NS old root => NS (old <.> ns) root
                        root => NS ns root
-         syn <- get Syn
-         put Syn ({ defDocstrings $= addName n' doc,
-                    saveDocstrings $= insert n' () } syn)
+         update Syn { defDocstrings  $= addName n' doc,
+                      saveDocstrings $= insert n' () }
 
 prettyTerm : IPTerm -> Doc IdrisDocAnn
 prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
@@ -129,7 +125,7 @@ getHintsForType nty
     = do log "doc.data" 10 $ "Looking at \{show nty}"
          getImplDocs $ \ ty =>
            do let nms = allGlobals ty
-              log "doc.data" 10 $ String.unlines
+              log "doc.data" 10 $ unlines
                 [ "Candidate: " ++ show ty
                 , "Containing names: " ++ show nms
                 ]
@@ -143,7 +139,7 @@ getHintsForPrimitive c
     = do log "doc.data" 10 $ "Looking at \{show c}"
          getImplDocs $ \ ty =>
            do let nms = allConstants ty
-              log "doc.data" 10 $ String.unlines
+              log "doc.data" 10 $ unlines
                 [ "Candidate: " ++ show ty
                 , "Containing constants: " ++ show nms
                 ]
@@ -261,10 +257,8 @@ getDocsForName fc n config
 
     showDoc : Config -> (Name, String) -> Core (Doc IdrisDocAnn)
 
-    -- Avoid generating too much whitespace by not returning a single empty line
     reflowDoc : String -> List (Doc IdrisDocAnn)
-    reflowDoc "" = []
-    reflowDoc str = map (indent 2 . reflow) (forget $ Extra.lines str)
+    reflowDoc str = map (indent 2 . reflow) (lines str)
 
     showTotal : Name -> Totality -> Doc IdrisDocAnn
     showTotal n tot
@@ -311,7 +305,7 @@ getDocsForName fc n config
     getInfixDoc n
         = do let Just (Basic n) = userNameRoot n
                     | _ => pure []
-             let Just (fixity, assoc) = S.lookup n (infixes !(get Syn))
+             let Just (_, fixity, assoc) = S.lookup n (infixes !(get Syn))
                     | Nothing => pure []
              pure $ pure $ hsep
                   [ pretty (show fixity)
@@ -324,7 +318,7 @@ getDocsForName fc n config
     getPrefixDoc n
         = do let Just (Basic n) = userNameRoot n
                     | _ => pure []
-             let Just assoc = S.lookup n (prefixes !(get Syn))
+             let Just (_, assoc) = S.lookup n (prefixes !(get Syn))
                     | Nothing => pure []
              pure $ ["prefix operator, level" <++> pretty (show assoc)]
 
@@ -391,7 +385,6 @@ getDocsForName fc n config
            let recNS = ns <.> mkNamespace n
            defs <- get Ctxt
            let fields = getFieldNames (gamma defs) recNS
-           syn <- get Syn
            case fields of
              [] => pure Nothing
              [proj] => pure $ Just $ header "Projection" <++> annotate Declarations !(getFieldDoc proj)
@@ -450,7 +443,7 @@ getDocsForName fc n config
              let cat = showCategory Syntax def
              let nm = prettyKindedName typ $ cat
                     $ ifThenElse longNames (pretty (show nm)) (prettyName nm)
-             let deprecated = if Deprecate `elem` def.flags
+             let deprecated = if Context.Deprecate `elem` def.flags
                                  then annotate Deprecation "=DEPRECATED=" <+> line else emptyDoc
              let docDecl = deprecated <+> annotate (Decl n) (hsep [nm, colon, prettyTerm ty])
 
@@ -520,8 +513,7 @@ summarise : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             Name -> Core (Doc IdrisDocAnn)
 summarise n -- n is fully qualified
-    = do syn <- get Syn
-         defs <- get Ctxt
+    = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
              | _ => pure ""
          ty <- normaliseHoles defs [] (type def)
