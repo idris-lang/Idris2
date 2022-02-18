@@ -2,6 +2,7 @@ module Idris.Package.Init
 
 import Core.FC
 import Core.Name.Namespace
+import Core.Directory
 
 import Data.List
 import Data.Maybe
@@ -26,8 +27,9 @@ packageTree root = filter validFile validDirectory <$> explore root where
 
   validFile : {root : _} -> FileName root -> Bool
   validFile f
-    = let (fname, fext) = splitFileName (fileName f) in
-      isModuleIdent fname && elem fext ["idr", "lidr"]
+    = case splitIdrisFileName (fileName f) of
+        Nothing => False
+        Just (fname, fext) => isModuleIdent fname
 
   validDirectory : {root : _} -> FileName root -> Bool
   validDirectory = isModuleIdent . fileName

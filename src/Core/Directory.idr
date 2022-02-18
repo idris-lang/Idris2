@@ -5,6 +5,9 @@ import Core.Context.Log
 import Core.Core
 import Core.FC
 import Core.Options
+
+import Parser.Unlit
+
 import Libraries.Utils.Path
 
 import Data.List
@@ -34,9 +37,34 @@ Show IdrSrcExt where
   show E_org  = "org"
   show E_md   = "md"
 
+||| This does not include the complete set of literate extensions as supported by Idris.
 public export
 listOfExtensions : List IdrSrcExt
 listOfExtensions = [E_idr, E_lidr, E_yaff, E_org, E_md]
+
+||| List of valid extensions in Idris as strings.
+|||
+||| Extensions have a leading "." separator *and* may include multiple extensions to support literate mode extensions for the form ".org.idr".
+|||
+public export
+listOfExtensionsStr : List String
+listOfExtensionsStr = listOfExtensionsLiterate ++ [".yaff", ".idr"]
+
+||| Return the basename and extension used *if* given filename is a valid idris filename.
+|||
+||| Extensions are returned with a leading "." separator.
+export
+splitIdrisFileName : String -> Maybe (String, String)
+splitIdrisFileName fname
+    = hasLitFileExt fname <|> isPureCode
+
+  where
+    isPureCode : Maybe (String, String)
+    isPureCode
+      = let (bname, ext) = splitFileName fname in
+        do guard (ext == "idr")
+           pure (bname, ".idr")
+
 
 -- Return the name of the first file available in the list
 -- Used in LSP.
@@ -111,7 +139,7 @@ nsToSource loc ns
     = do d <- getDirs
          let fnameOrig = ModuleIdent.toPath ns
          let fnameBase = maybe fnameOrig (\srcdir => srcdir </> fnameOrig) (source_dir d)
-         let fs = map ((fnameBase <.>) . show) listOfExtensions
+         let fs = map ((fnameBase ++)) listOfExtensionsStr
          Just f <- firstAvailable fs
             | Nothing => throw (ModuleNotFound loc ns)
          pure f

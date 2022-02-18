@@ -399,7 +399,7 @@ displayIDEResult outf i (NameLocList dat)
       defs <- get Ctxt
       let wdir = defs.options.dirs.working_dir
       let pkg_dirs = filter (/= ".") defs.options.dirs.extra_dirs
-      let exts = map show listOfExtensions
+      let exts = listOfExtensionsStr
       Just fname <- catch
           (Just . (wdir </>) <$> nsToSource replFC modIdent) -- Try local source first
           -- if not found, try looking for the file amongst the loaded packages.

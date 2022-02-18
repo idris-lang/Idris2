@@ -27,7 +27,7 @@
 ||| as they are:
 |||
 ||| ```sh
-|||  git diff --no-index --exit-code --word-diff=color expected output
+|||  git diff --no-index --exit-code --word-diff-regex=. --color expected output
 ||| ```
 |||
 ||| If `git` fails then the runner will simply present the expected and 'given'
@@ -265,8 +265,8 @@ runTest opts testPath = do
           , "Accept new golden value? [y/N]"
           ]
         Just exp => do
-          code <- system $ "git diff --no-index --exit-code " ++
-            (if opts.color then  "--word-diff=color " else "") ++
+          code <- system $ "git diff --no-index --exit-code --word-diff-regex=. " ++
+            (if opts.color then  "--color " else "") ++
             escapeArg testPath ++ "/expected " ++ escapeArg testPath ++ "/output"
           putStr . unlines $
             ["Golden value differs from actual value."] ++

@@ -732,6 +732,22 @@ export
 sort : Ord a => List a -> List a
 sort = sortBy compare
 
+||| Check whether the `left` list is a prefix of the `right` one, according to
+||| `match`. Returns the matched prefix together with the leftover suffix.
+|||
+||| @ match a custom matching function for checking the elements are convertible
+||| @ left  the list which might be a prefix of `right`
+||| @ right the list of elements to compare against
+public export
+prefixOfBy : (match : a -> b -> Maybe m) ->
+             (left : List a) -> (right : List b) ->
+             Maybe (List m, List b)
+prefixOfBy p = go [<] where
+  go : SnocList m -> List a -> List b -> Maybe (List m, List b)
+  go sm [] bs = pure (sm <>> [], bs)
+  go sm as [] = Nothing
+  go sm (a :: as) (b :: bs) = go (sm :< !(p a b)) as bs
+
 ||| Check whether the `left` list is a prefix of the `right` one, using the
 ||| provided equality function to compare elements.
 |||
@@ -750,6 +766,20 @@ isPrefixOfBy p (x::xs) (y::ys) = p x y && isPrefixOfBy p xs ys
 public export
 isPrefixOf : Eq a => List a -> List a -> Bool
 isPrefixOf = isPrefixOfBy (==)
+
+||| Check whether the `left` is a suffix of the `right` one, according to
+||| `match`. Returns the matched suffix together with the leftover prefix.
+|||
+||| @ match a custom matching function for checking the elements are convertible
+||| @ left  the list which might be a prefix of `right`
+||| @ right the list of elements to compare against
+public export
+suffixOfBy : (match : a -> b -> Maybe m) ->
+             (left : List a) -> (right : List b) ->
+             Maybe (List b, List m)
+suffixOfBy match left right
+  = do (ms, bs) <- prefixOfBy match (reverse left) (reverse right)
+       pure (reverse bs, reverse ms)
 
 ||| Check whether the `left` is a suffix of the `right` one, using the provided
 ||| equality function to compare elements.
