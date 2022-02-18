@@ -202,6 +202,11 @@ isGT : (m, n : Nat) -> Dec (GT m n)
 isGT m n = isLT n m
 
 export
+lteSelf : (x : Nat) -> LTE x x
+lteSelf Z = LTEZero
+lteSelf (S k) = LTESucc (lteSelf k)
+
+export
 lteSuccRight : LTE n m -> LTE n (S m)
 lteSuccRight LTEZero     = LTEZero
 lteSuccRight (LTESucc x) = LTESucc (lteSuccRight x)
