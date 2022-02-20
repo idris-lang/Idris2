@@ -80,10 +80,6 @@ interface Arrow arr => ArrowChoice (0 arr : Type -> Type -> Type) where
 
   (\|/) : arr a b -> arr c b -> arr (Either a c) b
   f \|/ g = f +++ g >>> arrow fromEither
-    where
-    fromEither : Either b b -> b
-    fromEither (Left b) = b
-    fromEither (Right b) = b
 
 public export
 implementation Monad m => ArrowChoice (Kleislimorphism m) where
@@ -102,10 +98,10 @@ implementation Monad m => ArrowApply (Kleislimorphism m) where
 
 public export
 data ArrowMonad : (Type -> Type -> Type) -> Type -> Type where
-  MkArrowMonad : (runArrowMonad : arr (the Type ()) a) -> ArrowMonad arr a
+  MkArrowMonad : (runArrowMonad : arr Unit a) -> ArrowMonad arr a
 
 public export
-runArrowMonad : ArrowMonad arr a -> arr (the Type ()) a
+runArrowMonad : ArrowMonad arr a -> arr Unit a
 runArrowMonad (MkArrowMonad a) = a
 
 public export
