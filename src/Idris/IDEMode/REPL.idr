@@ -150,7 +150,7 @@ process (LoadFile fname_in _)
          --findIpkg keeps adding extra dirs everytime its run, so we need to reset
          --it back to what it was
          defs <- get Ctxt
-         put Ctxt (record { options->dirs->extra_dirs = extraDirs} defs)
+         put Ctxt ({ options->dirs->extra_dirs := extraDirs } defs)
          pure res
 
 process (NameAt name Nothing)
