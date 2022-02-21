@@ -140,10 +140,19 @@ process : {auto c : Ref Ctxt Defs} ->
 process (Interpret cmd)
     = replWrap $ interpret cmd
 process (LoadFile fname_in _)
-    = do let fname = case !(findIpkg (Just fname_in)) of
+    = do
+         defs <- get Ctxt
+         let extraDirs = defs.options.dirs.extra_dirs
+         let fname = case !(findIpkg (Just fname_in)) of
                           Nothing => fname_in
                           Just f' => f'
-         replWrap $ Idris.REPL.process (Load fname) >>= outputSyntaxHighlighting fname
+         res <- replWrap $ Idris.REPL.process (Load fname) >>= outputSyntaxHighlighting fname
+         --findIpkg keeps adding extra dirs everytime its run, so we need to reset
+         --it back to what it was
+         defs <- get Ctxt
+         put Ctxt ({ options->dirs->extra_dirs := extraDirs } defs)
+         pure res
+
 process (NameAt name Nothing)
     = do defs <- get Ctxt
          glob <- lookupCtxtName (UN (mkUserName name)) (gamma defs)
