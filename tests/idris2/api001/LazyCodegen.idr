@@ -1,3 +1,5 @@
+||| NOTE: Please keep this file in sync with the example in docs/source/backends/custom.rst
+
 module Main
 
 import Core.Context

@@ -65,7 +65,7 @@ record OptDescr a where
 
 export
 Functor OptDescr where
-  map f = record { argDescr $= map f }
+  map f = { argDescr $= map f }
 
 -- kind of cmd line arg (internal use only):
 data OptKind a
@@ -160,7 +160,7 @@ emptyRes = MkResult [] [] [] []
 
 export
 Functor Result where
-  map f = record { options $= map f }
+  map f = { options $= map f }
 
 OptFun : Type -> Type
 OptFun a = List String -> List (OptDescr a) -> (OptKind a,List String)

@@ -2,9 +2,11 @@ module Idris.Pretty
 
 import Core.Metadata
 import Data.List
+import Data.SnocList
 import Data.Maybe
 import Data.String
 import Libraries.Control.ANSI.SGR
+import Libraries.Data.String.Extra
 
 import Parser.Lexer.Source
 
@@ -168,7 +170,7 @@ mutual
   prettyAlt : PClause' KindedName -> Doc IdrisSyntax
   prettyAlt (MkPatClause _ lhs rhs _) =
     space <+> pipe <++> prettyTerm lhs <++> pretty "=>" <++> prettyTerm rhs <+> semi
-  prettyAlt (MkWithClause _ lhs wval prf flags cs) =
+  prettyAlt (MkWithClause _ lhs rig wval prf flags cs) =
     space <+> pipe <++> angles (angles (reflow "with alts not possible")) <+> semi
   prettyAlt (MkImpossible _ lhs) =
     space <+> pipe <++> prettyTerm lhs <++> impossible_ <+> semi
@@ -176,7 +178,7 @@ mutual
   prettyCase : PClause' KindedName -> Doc IdrisSyntax
   prettyCase (MkPatClause _ lhs rhs _) =
     prettyTerm lhs <++> pretty "=>" <++> prettyTerm rhs
-  prettyCase (MkWithClause _ lhs rhs prf flags _) =
+  prettyCase (MkWithClause _ lhs rig rhs prf flags _) =
     space <+> pipe <++> angles (angles (reflow "with alts not possible"))
   prettyCase (MkImpossible _ lhs) =
     prettyTerm lhs <++> impossible_
@@ -382,10 +384,13 @@ mutual
       go d (PMultiline _ indent xs) = "multiline" <++> (parenthesise (d > startPrec) $ hsep $ punctuate "++" (prettyString <$> concat xs))
       go d (PDoBlock _ ns ds) = parenthesise (d > startPrec) $ group $ align $ hang 2 $ do_ <++> (vsep $ punctuate semi (prettyDo <$> ds))
       go d (PBang _ tm) = "!" <+> go d tm
-      go d (PIdiom _ tm) = enclose (pretty "[|") (pretty "|]") (go startPrec tm)
+      go d (PIdiom _ Nothing tm) = enclose (pretty "[|") (pretty "|]") (go startPrec tm)
+      go d (PIdiom _ (Just ns) tm) = enclose (pretty ns <+> pretty ".[|") (pretty "|]") (go startPrec tm)
       go d (PList _ _ xs) = brackets (group $ align $ vsep $ punctuate comma (go startPrec . snd <$> xs))
-      go d (PSnocList _ _ xs) = brackets {ldelim = "[<"}
-                                   (group $ align $ vsep $ punctuate comma (go startPrec . snd <$> xs))
+      go d (PSnocList _ _ xs)
+        = brackets {ldelim = "[<"}
+        $ group $ align $ vsep $ punctuate comma
+        $ go startPrec . snd <$> (xs <>> [])
       go d (PPair _ l r) = group $ parens (go startPrec l <+> comma <+> line <+> go startPrec r)
       go d (PDPair _ _ l (PImplicit _) r) = group $ parens (go startPrec l <++> pretty "**" <+> line <+> go startPrec r)
       go d (PDPair _ _ l ty r) = group $ parens (go startPrec l <++> colon <++> go startPrec ty <++> pretty "**" <+> line <+> go startPrec r)

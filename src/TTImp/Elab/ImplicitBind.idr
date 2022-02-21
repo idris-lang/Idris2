@@ -144,11 +144,10 @@ bindUnsolved {vars} fc elabmode _
                Just exp' =>
                     do impn <- genVarName (nameRoot n)
                        tm <- metaVar fc rig env impn exp'
-                       est <- get EST
                        let p' : PiInfo (Term vars) = forgetDef p
-                       put EST (record { toBind $= ((impn, NameBinding rig p'
-                                                             (embedSub subvars tm)
-                                                             (embedSub subvars exp')) ::) } est)
+                       update EST { toBind $= ((impn, NameBinding rig p'
+                                                        (embedSub subvars tm)
+                                                        (embedSub subvars exp')) ::) }
                        pure (embedSub sub tm)
 
     mkImplicit : {outer : _} ->
@@ -452,9 +451,8 @@ checkBindVar rig elabinfo nest env fc str topexp
                         PI _ => setInvertible fc n
                         _ => pure ()
                    log "elab.implicits" 5 $ "Added Bound implicit " ++ show (n, (rig, tm, exp, bty))
-                   est <- get EST
-                   put EST (record { boundNames $= ((n, NameBinding rig Explicit tm exp) ::),
-                                     toBind $= ((n, NameBinding rig Explicit tm bty) :: ) } est)
+                   update EST { boundNames $= ((n, NameBinding rig Explicit tm exp) ::),
+                                toBind $= ((n, NameBinding rig Explicit tm bty) :: ) }
 
                    log "metadata.names" 7 $ "checkBindVar is adding ↓"
                    addNameType fc (UN str) env exp
@@ -548,9 +546,9 @@ checkBindHere rig elabinfo nest env fc bindmode tm exp
          -- implicits should have access to whatever is in scope here
          put EST (updateEnv env SubRefl [] est)
          constart <- getNextEntry
-         (tmv, tmt) <- check rig (record { implicitMode = bindmode,
-                                           bindingVars = True }
-                                         elabinfo)
+         (tmv, tmt) <- check rig ({ implicitMode := bindmode,
+                                    bindingVars := True }
+                                  elabinfo)
                              nest env tm exp
          let solvemode = case elabMode elabinfo of
                               InLHS c => inLHS
@@ -560,15 +558,14 @@ checkBindHere rig elabinfo nest env fc bindmode tm exp
          ust <- get UST
          catch (retryDelayed solvemode (delayedElab ust))
                (\err =>
-                  do ust <- get UST
-                     put UST (record { delayedElab = [] } ust)
+                  do update UST { delayedElab := [] }
                      throw err)
 
          -- Check all the patterns standing for polymorphic variables are
          -- indeed polymorphic
          ust <- get UST
          let cons = polyConstraints ust
-         put UST (record { polyConstraints = [] } ust)
+         put UST ({ polyConstraints := [] } ust)
          traverse_ solvePolyConstraint cons
          traverse_ checkPolyConstraint cons
 
@@ -584,9 +581,7 @@ checkBindHere rig elabinfo nest env fc bindmode tm exp
          argImps <- getToBind fc (elabMode elabinfo)
                               bindmode env dontbind
          clearToBind dontbind
-         est <- get EST
-         put EST (updateEnv oldenv oldsub oldbif
-                     (record { boundNames = [] } est))
+         update EST $ updateEnv oldenv oldsub oldbif . { boundNames := [] }
          ty <- getTerm tmt
          defs <- get Ctxt
          (bv, bt) <- bindImplicits fc bindmode

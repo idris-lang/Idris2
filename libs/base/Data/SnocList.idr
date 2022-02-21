@@ -6,21 +6,6 @@ import Data.Fin
 
 %default total
 
-infixl 7 <><
-infixr 6 <>>
-
-||| 'fish': Action of lists on snoc-lists
-public export
-(<><) : SnocList a -> List a -> SnocList a
-sx <>< [] = sx
-sx <>< (x :: xs) = sx :< x <>< xs
-
-||| 'chips': Action of snoc-lists on lists
-public export
-(<>>) : SnocList a -> List a -> List a
-Lin       <>> xs = xs
-(sx :< x) <>> xs = sx <>> x :: xs
-
 export
 Cast (SnocList a) (List a) where
   cast sx = sx <>> []
@@ -129,12 +114,6 @@ public export
 Alternative SnocList where
   empty = Lin
   xs <|> ys = xs ++ ys
-
-||| Check if something is a member of a snoc-list using the default Boolean equality.
-public export
-elem : Eq a => a -> SnocList a -> Bool
-elem x Lin = False
-elem x (sx :< y) = x == y || elem x sx
 
 ||| Find the first element of the snoc-list that satisfies the predicate.
 public export

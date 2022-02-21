@@ -1,7 +1,6 @@
 module TTImp.Parser
 
 import Core.Context
-import Core.Metadata
 import Core.TT
 import Parser.Source
 import TTImp.TTImp
@@ -90,6 +89,12 @@ totalityOpt
          pure Total
   <|> do keyword "covering"
          pure CoveringOnly
+
+dataVisOpt : EmptyRule (Visibility, Maybe TotalReq)
+dataVisOpt
+    = do { vis <- visOption   ; mbtot <- optional totalityOpt ; pure (vis, mbtot) }
+  <|> do { tot <- totalityOpt ; vis <- visibility ; pure (vis, Just tot) }
+  <|> pure (Private, Nothing)
 
 fnOpt : Rule FnOpt
 fnOpt = do x <- totalityOpt
@@ -509,6 +514,8 @@ mutual
            let fc = MkFC fname start end
            pure (!(getFn lhs), PatClause fc lhs rhs)
     <|> do keyword "with"
+           m <- multiplicity
+           rig <- getMult m
            wstart <- location
            symbol "("
            wval <- expr fname indents
@@ -517,7 +524,7 @@ mutual
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
-           pure (!(getFn lhs), WithClause fc lhs wval prf [] (forget $ map snd ws))
+           pure (!(getFn lhs), WithClause fc lhs rig wval prf [] (forget $ map snd ws))
 
     <|> do keyword "impossible"
            atEnd indents
@@ -635,7 +642,7 @@ fieldDecl fname indents
 recordDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 recordDecl fname indents
     = do start <- location
-         vis <- visibility
+         (vis,mbtot) <- dataVisOpt
          col <- column
          keyword "record"
          commit
@@ -648,7 +655,7 @@ recordDecl fname indents
          flds <- assert_total (blockAfter col (fieldDecl fname))
          end <- location
          pure (let fc = MkFC fname start end in
-                   IRecord fc Nothing vis
+                   IRecord fc Nothing vis mbtot
                            (MkImpRecord fc n params dc (concat flds)))
 
 namespaceDecl : Rule Namespace
@@ -702,10 +709,10 @@ directive fname indents
 -- topDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 topDecl fname indents
     = do start <- location
-         vis <- visibility
+         (vis,mbtot) <- dataVisOpt
          dat <- dataDecl fname indents
          end <- location
-         pure (IData (MkFC fname start end) vis dat)
+         pure (IData (MkFC fname start end) vis mbtot dat)
   <|> do start <- location
          ns <- namespaceDecl
          ds <- assert_total (nonEmptyBlock (topDecl fname))

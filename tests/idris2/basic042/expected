@@ -15,7 +15,7 @@ Main> Zero
 Main> One
 Main> Omega
 Main> FS (FS FZ)
-Main> Error: Can't find an implementation for So (== (compareNat 6 3) LT).
+Main> Error: Can't find an implementation for So (with block in integerLessThanNat 6 False 3).
 
 (Interactive):1:13--1:14
  1 | the (Fin 3) 6

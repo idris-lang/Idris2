@@ -1,5 +1,5 @@
 1/1: Building Door (Door.idr)
-Main>               (val # y) => ?now_4
+Main>               (val # y) => ?now_0
 Main>               (False # d) => ?now_4
               (True # d) => ?now_5
 Main>  0 m : Type -> Type

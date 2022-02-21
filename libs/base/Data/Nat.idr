@@ -1,7 +1,9 @@
 module Data.Nat
 
 import public Control.Relation
+import public Control.Ord
 import public Control.Order
+import public Control.Function
 
 %default total
 
@@ -60,6 +62,19 @@ pred (S n) = n
 
 -- Comparisons
 
+export
+compareNatDiag : (k : Nat) -> compareNat k k === EQ
+compareNatDiag Z = Refl
+compareNatDiag (S k) = compareNatDiag k
+
+export
+compareNatFlip : (m, n : Nat) ->
+  flip Prelude.compareNat m n === contra (compareNat m n)
+compareNatFlip 0      0    = Refl
+compareNatFlip 0     (S n) = Refl
+compareNatFlip (S m) 0     = Refl
+compareNatFlip (S m) (S n) = compareNatFlip m n
+
 public export
 data NotBothZero : (n, m : Nat) -> Type where
   LeftIsNotZero  : NotBothZero (S n) m
@@ -86,13 +101,13 @@ Uninhabited (LTE m n) => Uninhabited (LTE (S m) (S n)) where
 public export
 Reflexive Nat LTE where
   reflexive {x = Z} = LTEZero
-  reflexive {x = S k} = LTESucc $ reflexive {x = k}
+  reflexive {x = S _} = LTESucc $ reflexive
 
 public export
 Transitive Nat LTE where
   transitive LTEZero _ = LTEZero
   transitive (LTESucc xy) (LTESucc yz) =
-    LTESucc $ transitive {rel = LTE} xy yz
+    LTESucc $ transitive xy yz
 
 public export
 Antisymmetric Nat LTE where
@@ -105,7 +120,7 @@ Connex Nat LTE where
   connex {x = Z} _ = Left LTEZero
   connex {y = Z} _ = Right LTEZero
   connex {x = S _} {y = S _} prf =
-    case connex {rel = LTE} $ prf . (cong S) of
+    case connex $ prf . (cong S) of
       Left jk => Left $ LTESucc jk
       Right kj => Right $ LTESucc kj
 
@@ -275,8 +290,8 @@ eqSucc : (0 left, right : Nat) -> left = right -> S left = S right
 eqSucc _ _ Refl = Refl
 
 export
-succInjective : (0 left, right : Nat) -> S left = S right -> left = right
-succInjective _ _ Refl = Refl
+Injective S where
+  injective Refl = Refl
 
 ||| A definition of non-zero with a better behaviour than `Not (x = Z)`
 ||| This is amenable to proof search and `NonZero Z` is more readily
@@ -333,7 +348,8 @@ export partial
 divNat : Nat -> Nat -> Nat
 divNat left (S right) = divNatNZ left (S right) SIsNonZero
 
-export partial
+export
+covering
 divCeilNZ : Nat -> (y: Nat) -> (0 _ : NonZero y) -> Nat
 divCeilNZ x y p = case (modNatNZ x y p) of
   Z   => divNatNZ x y p
@@ -364,7 +380,8 @@ Integral Nat where
   div = divNat
   mod = modNat
 
-export partial
+export
+covering
 gcd : (a: Nat) -> (b: Nat) -> {auto ok: NotBothZero a b} -> Nat
 gcd a Z     = a
 gcd Z b     = b
@@ -445,7 +462,7 @@ plusLeftCancel : (left, right, right' : Nat) ->
   left + right = left + right' -> right = right'
 plusLeftCancel Z _ _ p = p
 plusLeftCancel (S left) right right' p =
-    plusLeftCancel left right right' (succInjective _ _ p)
+    plusLeftCancel left right right' $ injective p
 
 export
 plusRightCancel : (left, left', right : Nat) ->
@@ -481,7 +498,7 @@ export
 plusLteMonotone : {m, n, p, q : Nat} -> m `LTE` n -> p `LTE` q ->
                   (m + p) `LTE` (n + q)
 plusLteMonotone left right =
-  transitive {rel=LTE}
+  transitive
     (plusLteMonotoneLeft m p q right)
     (plusLteMonotoneRight q m n left)
 
@@ -785,16 +802,6 @@ sucMinR Z = Refl
 sucMinR (S l) = cong S $ sucMinR l
 
 -- Algebra -----------------------------
-
-namespace Semigroup
-
-  public export
-  [Maximum] Semigroup Nat where
-    (<+>) = max
-
-  public export
-  [Minimum] Semigroup Nat where
-    (<+>) = min
 
 namespace Monoid
 

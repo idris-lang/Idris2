@@ -7,20 +7,52 @@ import Core.Context
 import Core.TT
 import Core.Metadata
 import Data.List1
+import Data.SnocList
 import Data.String
 import Libraries.Data.List.Extra
-import Libraries.Data.String.Extra
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
 
 %default total
 
+||| This version of the Parser's state is parameterized over
+||| the container for SemanticDecorations. The parser should
+||| only work the ParsingState type below and after parsing
+||| is complete, use the regular State type.
+public export
+record ParserState (container : Type -> Type) where
+  constructor MkState
+  decorations : container ASemanticDecoration
+  holeNames : List String
+
+||| This state needs to provide efficient concatenation.
+public export
+ParsingState : Type
+ParsingState = ParserState SnocList
+
+||| This is the final state after parsing. We no longer
+||| need to support efficient concatenation.
+public export
+State : Type
+State = ParserState List
+
+export
+toState : ParsingState -> State
+toState (MkState decs hs) = MkState (cast decs) hs
+
+-- To help prevent concatenation slow downs, we only
+-- provide Semigroup and Monoid for the efficient
+-- version of the ParserState.
+export
+Semigroup ParsingState where
+  MkState decs1 hs1 <+> MkState decs2 hs2
+    = MkState (decs1 <+> decs2) (hs1 ++ hs2)
+
+export
+Monoid ParsingState where
+  neutral = MkState [<] []
+
 public export
 BRule : Bool -> Type -> Type
-BRule = Grammar SemanticDecorations Token
+BRule = Grammar ParsingState Token
 
 public export
 Rule : Type -> Type
@@ -29,6 +61,14 @@ Rule = BRule True
 public export
 EmptyRule : Type -> Type
 EmptyRule = BRule False
+
+export
+actD : ASemanticDecoration -> EmptyRule ()
+actD s = act (MkState [<s] [])
+
+export
+actH : String -> EmptyRule ()
+actH s = act (MkState [<] [s])
 
 export
 eoi : EmptyRule ()
@@ -56,10 +96,15 @@ documentation' = terminal "Expected documentation comment" $
                             DocComment d => Just d
                             _ => Nothing
 
+export
+decorationFromBounded : OriginDesc -> Decoration -> WithBounds a -> ASemanticDecoration
+decorationFromBounded fname decor bnds
+   = ((fname, start bnds, end bnds), decor, Nothing)
+
 documentation : OriginDesc -> Rule String
 documentation fname
   = do b <- bounds (some documentation')
-       act [((fname, start b, end b), Comment, Nothing)]
+       actD (decorationFromBounded fname Comment b)
        pure (unlines $ forget b.val)
 
 export
@@ -260,6 +305,14 @@ namespaceId = do
   nsid <- bounds namespacedIdent
   isCapitalisedIdent (snd <$> nsid)
   pure (uncurry mkNestedNamespace nsid.val)
+
+export
+namespacedSymbol : String -> Rule (Maybe Namespace)
+namespacedSymbol req = do
+  (symbol req $> Nothing) <|> do
+    ns <- namespaceId
+    symbol ("." ++ req)
+    pure (Just ns)
 
 export
 moduleIdent : Rule ModuleIdent

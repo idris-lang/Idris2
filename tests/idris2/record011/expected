@@ -13,11 +13,10 @@ Error: While processing right hand side of foo2. Duplicated record update paths:
   b
 
 
-Issue2095:14:8--19:9
- 14 | foo2 = record
- 15 |   { a = 3
- 16 |   , a = 4
- 17 |   , b = 2
- 18 |   , b = 1
+Issue2095:15:3--19:9
+ 15 |   { a := 3
+ 16 |   , a := 4
+ 17 |   , b := 2
+ 18 |   , b := 1
  19 |   } foo1
 

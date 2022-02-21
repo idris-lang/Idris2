@@ -1,40 +1,40 @@
 1/1: Building Spacing (Spacing.idr)
-Spacing> no {n = 0} = ?no_rhs_1
-no {n = (S k)} = ?no_rhs_2
-Spacing> spaced { n = 0 } = ?spaced_rhs_1
-spaced { n = (S k) } = ?spaced_rhs_2
-Spacing> s1 { n = 0} = ?s1_rhs_1
-s1 { n = (S k)} = ?s1_rhs_2
-Spacing> s2 {  n = 0} = ?s2_rhs_1
-s2 {  n = (S k)} = ?s2_rhs_2
-Spacing> s3 {   n = 0} = ?s3_rhs_1
-s3 {   n = (S k)} = ?s3_rhs_2
-Spacing> noSEq {n = 0} = ?noSEq_rhs_1
-noSEq {n = (S k)} = ?noSEq_rhs_2
-Spacing> spacedEq { n = 0 } = ?spacedEq_rhs_1
-spacedEq { n = (S k) } = ?spacedEq_rhs_2
-Spacing> s1Eq { n = 0} = ?s1Eq_rhs_1
-s1Eq { n = (S k)} = ?s1Eq_rhs_2
-Spacing> s2Eq {  n = 0} = ?s2Eq_rhs_1
-s2Eq {  n = (S k)} = ?s2Eq_rhs_2
-Spacing> s3Eq {   n = 0} = ?s3Eq_rhs_1
-s3Eq {   n = (S k)} = ?s3Eq_rhs_2
-Spacing> weirdNo {n = 0 } = ?weirdNo_rhs_1
-weirdNo {n = (S k) } = ?weirdNo_rhs_2
-Spacing> weird0a {n= 0} = ?weird0a_rhs_1
-weird0a {n= (S k)} = ?weird0a_rhs_2
-Spacing> weird0b {n =0} = ?weird0b_rhs_1
-weird0b {n =(S k)} = ?weird0b_rhs_2
-Spacing> weird1a { n= 0} = ?weird1a_rhs_1
-weird1a { n= (S k)} = ?weird1a_rhs_2
-Spacing> weird1b { n =0} = ?weird1b_rhs_1
-weird1b { n =(S k)} = ?weird1b_rhs_2
-Spacing> weird2a {  n=  0} = ?weird2a_rhs_1
-weird2a {  n=  (S k)} = ?weird2a_rhs_2
-Spacing> weird2b {  n  =0} = ?weird2b_rhs_1
-weird2b {  n  =(S k)} = ?weird2b_rhs_2
-Spacing> weirdSpacedA {  n= 0 } = ?weirdSpacedA_rhs_1
-weirdSpacedA {  n= (S k) } = ?weirdSpacedA_rhs_2
-Spacing> weirdSpacedB {  n =0 } = ?weirdSpacedB_rhs_1
-weirdSpacedB {  n =(S k) } = ?weirdSpacedB_rhs_2
+Spacing> no {n = 0} = ?no_rhs_0
+no {n = (S k)} = ?no_rhs_1
+Spacing> spaced { n = 0 } = ?spaced_rhs_0
+spaced { n = (S k) } = ?spaced_rhs_1
+Spacing> s1 { n = 0} = ?s1_rhs_0
+s1 { n = (S k)} = ?s1_rhs_1
+Spacing> s2 {  n = 0} = ?s2_rhs_0
+s2 {  n = (S k)} = ?s2_rhs_1
+Spacing> s3 {   n = 0} = ?s3_rhs_0
+s3 {   n = (S k)} = ?s3_rhs_1
+Spacing> noSEq {n = 0} = ?noSEq_rhs_0
+noSEq {n = (S k)} = ?noSEq_rhs_1
+Spacing> spacedEq { n = 0 } = ?spacedEq_rhs_0
+spacedEq { n = (S k) } = ?spacedEq_rhs_1
+Spacing> s1Eq { n = 0} = ?s1Eq_rhs_0
+s1Eq { n = (S k)} = ?s1Eq_rhs_1
+Spacing> s2Eq {  n = 0} = ?s2Eq_rhs_0
+s2Eq {  n = (S k)} = ?s2Eq_rhs_1
+Spacing> s3Eq {   n = 0} = ?s3Eq_rhs_0
+s3Eq {   n = (S k)} = ?s3Eq_rhs_1
+Spacing> weirdNo {n = 0 } = ?weirdNo_rhs_0
+weirdNo {n = (S k) } = ?weirdNo_rhs_1
+Spacing> weird0a {n= 0} = ?weird0a_rhs_0
+weird0a {n= (S k)} = ?weird0a_rhs_1
+Spacing> weird0b {n =0} = ?weird0b_rhs_0
+weird0b {n =(S k)} = ?weird0b_rhs_1
+Spacing> weird1a { n= 0} = ?weird1a_rhs_0
+weird1a { n= (S k)} = ?weird1a_rhs_1
+Spacing> weird1b { n =0} = ?weird1b_rhs_0
+weird1b { n =(S k)} = ?weird1b_rhs_1
+Spacing> weird2a {  n=  0} = ?weird2a_rhs_0
+weird2a {  n=  (S k)} = ?weird2a_rhs_1
+Spacing> weird2b {  n  =0} = ?weird2b_rhs_0
+weird2b {  n  =(S k)} = ?weird2b_rhs_1
+Spacing> weirdSpacedA {  n= 0 } = ?weirdSpacedA_rhs_0
+weirdSpacedA {  n= (S k) } = ?weirdSpacedA_rhs_1
+Spacing> weirdSpacedB {  n =0 } = ?weirdSpacedB_rhs_0
+weirdSpacedB {  n =(S k) } = ?weirdSpacedB_rhs_1
 Spacing> Bye for now!

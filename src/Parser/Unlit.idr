@@ -1,7 +1,13 @@
 module Parser.Unlit
 
+import Libraries.Utils.Path
 import public Libraries.Text.Literate
 import Data.String
+import Data.List
+import Data.List1
+import Data.Maybe
+
+import Libraries.Data.List.Extra as Lib
 
 %default total
 
@@ -36,16 +42,53 @@ styleTeX = MkLitStyle
               Nil
               [".tex", ".ltx"]
 
+
+||| Return the list of extensions used for literate files.
+export
+listOfExtensionsLiterate : List String
+listOfExtensionsLiterate
+  = concatMap file_extensions
+              [ styleBird
+              , styleOrg
+              , styleCMark
+              , styleTeX
+              ]
+
+||| Are we dealing with a valid literate file name, if so return the base name and used extension.
+export
+hasLitFileExt : (fname : String) -> Maybe (String, String)
+hasLitFileExt fname =
+  do let toExtension = concatMap ("." ++)
+     -- split the extensions off a file
+     -- e.g. "Cool.shared.org.lidr" becomes ("Cool", ["shared", "org", "lidr"])
+     let (bn, exts) = splitExtensions fname
+     flip choiceMap listOfExtensionsLiterate $ \ candidate =>
+       do -- take candidate apart e.g. ".org.lidr" becomes ["org", "lidr"]
+          -- we assume the candidate starts with a "." and so the first string
+          -- should be empty
+          let ("" ::: chunks) = map pack $ split ('.' ==) (unpack candidate)
+            | _ => err
+          -- check ["org", "lidr"] is a suffix of the files' extensions and get
+          -- back (["shared"], ["org", "lidr"])
+          (nm, exts) <- Lib.suffixOfBy (\ v, w => v <$ guard (v == w)) chunks exts
+          -- return the basename extended with the leftover extensions, paired with the match
+          -- e.g. ("Cool.shared", ".org.lidr")
+          pure (bn ++ toExtension nm, toExtension exts)
+
+  where
+
+    err : a
+    err = assert_total
+        $ idris_crash #"Internal error: all literate extensions should start with a ".""#
+
+||| Are we dealing with a valid literate file name, if so return the identified style.
 export
 isLitFile : String -> Maybe LiterateStyle
-isLitFile fname =
-    case isStyle styleBird of
-      Just s => Just s
-      Nothing => case isStyle styleOrg of
-                     Just s => Just s
-                     Nothing => case isStyle styleCMark of
-                                     Just s => Just s
-                                     Nothing => isStyle styleTeX
+isLitFile fname
+    =   isStyle styleBird
+    <|> isStyle styleOrg
+    <|> isStyle styleCMark
+    <|> isStyle styleTeX
 
   where
    hasSuffix : String -> Bool
@@ -57,18 +100,24 @@ isLitFile fname =
       then Just style
       else Nothing
 
+||| Check if the line is that from a literate style.
 export
 isLitLine : String -> (Maybe String, String)
-isLitLine str =
-  case isLiterateLine styleBird str of
-     (Just l, s) => (Just l, s)
-     otherwise => case isLiterateLine styleOrg str of
-                    (Just l, s) => (Just l, s)
-                    otherwise => case isLiterateLine styleCMark str of
-                                   (Just l, s) => (Just l, s)
-                                   otherwise => case isLiterateLine styleTeX str of
-                                                   (Just l, s) => (Just l, s)
-                                                   otherwise => (Nothing, str)
+isLitLine str
+    = fromMaybe (Nothing, str) walk
+  where
+    try : LiterateStyle -> Maybe (Maybe String, String)
+    try style
+      = case isLiterateLine style str of
+          (Just l, s) => Just (Just l, s)
+          _           => Nothing
+
+    walk : Maybe (Maybe String, String)
+    walk
+      =   try styleBird
+      <|> try styleOrg
+      <|> try styleCMark
+      <|> try styleTeX
 
 export
 unlit : Maybe LiterateStyle -> String -> Either LiterateError String

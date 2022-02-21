@@ -431,7 +431,7 @@ parseCC (target::ts) strs = findTarget target strs <|> parseCC ts strs
 export
 dylib_suffix : String
 dylib_suffix
-    = cond [(os `elem` ["windows", "mingw32", "cygwin32"], "dll"),
+    = cond [(elem os $ the (List String) ["windows", "mingw32", "cygwin32"], "dll"),
             (os == "darwin", "dylib")]
            "so"
 

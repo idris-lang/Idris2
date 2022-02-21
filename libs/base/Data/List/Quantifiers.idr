@@ -187,3 +187,63 @@ pushOutInInverse [] = Refl
 pushOutInInverse (Element x p :: xs) with (pushOutInInverse xs)
   pushOutInInverse (Element x p :: xs) | subprf with (pullOut xs)
     pushOutInInverse (Element x p :: xs) | subprf | Element ss ps = rewrite subprf in Refl
+
+------------------------------------------------------------------------
+-- Partitioning lists according to All
+
+||| Two lists, `xs` and `ys`, whose elements are interleaved in the list `xys`.
+public export
+data Interleaving : (xs, ys, xys : List a) -> Type where
+  Nil   : Interleaving [] [] []
+  Left  : Interleaving xs ys xys -> Interleaving (x :: xs) ys (x :: xys)
+  Right : Interleaving xs ys xys -> Interleaving xs (y :: ys) (y :: xys)
+
+||| A record for storing the result of splitting a list `xys` according to some
+||| property `p`.
+||| The `prfs` and `contras` are related to the original list (`xys`) via
+||| `Interleaving`.
+|||
+||| @ xys the list which has been split
+||| @ p   the property used for the split
+public export
+record Split {a : Type} (p : a -> Type) (xys : List a) where
+  constructor MkSplit
+  {ayes, naws : List a}
+  {auto interleaving : Interleaving ayes naws xys}
+  ||| A proof that all elements in `ayes` satisfies the property used for the
+  ||| split.
+  prfs    : All p ayes
+  ||| A proof that all elements in `naws` do not satisfy the property used for
+  ||| the split.
+  contras : All (Not . p) naws
+
+||| Split the list according to the given decidable property, putting the
+||| resulting proofs and contras in an accumulator.
+|||
+||| @ dec a function which returns a decidable property
+||| @ xs  a list of elements to split
+||| @ a   the accumulator
+public export
+splitOnto :  (dec : (x : a) -> Dec (p x))
+          -> (xs : List a)
+          -> (a : Split p acc)
+          -> Split p (reverseOnto acc xs)
+splitOnto dec [] a = a
+splitOnto dec (x :: xs) (MkSplit prfs contras) =
+  case dec x of
+       (Yes prf) => splitOnto dec xs (MkSplit (prf :: prfs) contras)
+       (No contra) => splitOnto dec xs (MkSplit prfs (contra :: contras))
+
+||| Split the list according to the given decidable property, starting with an
+||| empty accumulator.
+||| Use `splitOnto` if you want to specify the accumulator.
+|||
+||| @ dec a function which returns a decidable property
+||| @ xs  a list of elements to split
+||| @ a   the accumulator
+public export
+split :  (dec : (x : a) -> Dec (p x))
+      -> (xs : List a)
+      -> Split p (reverse xs)
+split dec xs = splitOnto dec xs (MkSplit [] [])
+

@@ -14,7 +14,7 @@ import Compiler.ES.TailRec
 import Compiler.ES.State
 import Compiler.NoMangle
 import Libraries.Data.SortedMap
-import Libraries.Utils.Hex
+import Protocol.Hex
 import Libraries.Data.String.Extra
 
 import Data.Vect
@@ -672,7 +672,7 @@ mutual
     as <- traverse (map (insertBreak r) . alt) alts
     d  <- traverseOpt stmt def
     nm <- get NoMangleMap
-    pure $  switch (minimal nm sc <+> ".h") as d
+    pure $ switch (minimal nm sc <+> ".h") as d
     where
         alt : {r : _} -> EConAlt r -> Core (Doc,Doc)
         alt (MkEConAlt _ RECORD b)  = ("undefined",) <$> stmt b

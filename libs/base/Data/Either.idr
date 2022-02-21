@@ -1,5 +1,6 @@
 module Data.Either
 
+import public Control.Function
 import Data.List1
 
 %default total
@@ -130,18 +131,6 @@ eitherToMaybe : Either e a -> Maybe a
 eitherToMaybe (Left _) = Nothing
 eitherToMaybe (Right x) = Just x
 
--- Injectivity of constructors
-
-||| Left is injective
-export
-leftInjective : Left x = Left y -> x = y
-leftInjective Refl = Refl
-
-||| Right is injective
-export
-rightInjective : Right x = Right y -> x = y
-rightInjective Refl = Refl
-
 export
 eitherMapFusion : (f : _) -> (g : _) -> (p : _) -> (e : Either a b) -> either f g (map p e) = either f (g . p) e
 eitherMapFusion f g p $ Left x  = Refl
@@ -151,3 +140,15 @@ export
 eitherBimapFusion : (f : _) -> (g : _) -> (p : _) -> (q : _) -> (e : _) -> either f g (bimap p q e) = either (f . p) (g . q) e
 eitherBimapFusion f g p q $ Left z  = Refl
 eitherBimapFusion f g p q $ Right z = Refl
+
+-- Injectivity of constructors
+
+||| Left is injective
+export
+Injective Left where
+  injective Refl = Refl
+
+||| Right is injective
+export
+Injective Right where
+  injective Refl = Refl

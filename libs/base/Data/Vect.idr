@@ -7,6 +7,7 @@ import public Data.Fin
 import public Data.Zippable
 
 import Decidable.Equality
+import Control.Function
 
 %default total
 
@@ -33,9 +34,16 @@ lengthCorrect []        = Refl
 lengthCorrect (_ :: xs) = rewrite lengthCorrect xs in Refl
 
 ||| If two vectors are equal, their heads and tails are equal
-export
 vectInjective : {0 xs : Vect n a} -> {0 ys : Vect m b} -> x::xs = y::ys -> (x = y, xs = ys)
 vectInjective Refl = (Refl, Refl)
+
+export
+{x : a} -> Injective (Vect.(::) x) where
+  injective Refl = Refl
+
+export
+{xs : Vect n a} -> Injective (\x => Vect.(::) x xs) where
+  injective Refl = Refl
 
 --------------------------------------------------------------------------------
 -- Indexing into vectors
@@ -444,30 +452,6 @@ scanl1 f (x::xs) = scanl f x xs
 --------------------------------------------------------------------------------
 -- Membership tests
 --------------------------------------------------------------------------------
-
-||| Search for an item using a user-provided test
-||| @ p the equality test
-||| @ e the item to search for
-||| @ xs the vector to search in
-|||
-||| ```idris example
-||| elemBy (==) 2 [1,2,3,4]
-||| ```
-public export
-elemBy : (p : elem -> elem -> Bool) -> (e : elem) -> (xs : Vect len elem) -> Bool
-elemBy p e []      = False
-elemBy p e (x::xs) = p e x || elemBy p e xs
-
-||| Use the default Boolean equality on elements to search for an item
-||| @ x what to search for
-||| @ xs where to search
-|||
-||| ```idris example
-||| elem 3 [1,2,3,4]
-||| ```
-public export
-elem : Eq elem => (x : elem) -> (xs : Vect len elem) -> Bool
-elem = elemBy (==)
 
 ||| Find the association of some key with a user-provided comparison
 ||| @ p the comparison operator for keys (True if they match)

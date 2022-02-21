@@ -2,6 +2,7 @@ module Idris.Package.Init
 
 import Core.FC
 import Core.Name.Namespace
+import Core.Directory
 
 import Data.List
 import Data.Maybe
@@ -9,6 +10,7 @@ import Data.String
 
 import Idris.Package.Types
 import System.Directory
+import Control.App.FileIO
 
 import Libraries.Utils.Path
 import Libraries.System.Directory.Tree
@@ -25,8 +27,9 @@ packageTree root = filter validFile validDirectory <$> explore root where
 
   validFile : {root : _} -> FileName root -> Bool
   validFile f
-    = let (fname, fext) = splitFileName (fileName f) in
-      isModuleIdent fname && elem fext ["idr", "lidr"]
+    = case splitIdrisFileName (fileName f) of
+        Nothing => False
+        Just (fname, fext) => isModuleIdent fname
 
   validDirectory : {root : _} -> FileName root -> Bool
   validDirectory = isModuleIdent . fileName
@@ -59,14 +62,17 @@ findModules start = do
                    (fileName dir :: path, (_ ** iot))
       go (mods ++ acc) (dirs ++ iots)
 
+prompt : String -> IO String
+prompt p = putStr p >> fflush stdout >> getLine
+
 export
 covering
 interactive : IO PkgDesc
 interactive = do
-  pname    <- putStr "Package name: " *> getLine
-  pauthors <- putStr "Package authors: " *> getLine
-  poptions <- putStr "Package options: " *> getLine
-  psource  <- putStr "Source directory: " *> getLine
+  pname    <- prompt "Package name: "
+  pauthors <- prompt "Package authors: "
+  poptions <- prompt "Package options: "
+  psource  <- prompt "Source directory: "
   let sourcedir = mstring psource
   modules  <- findModules sourcedir
   let pkg : PkgDesc =

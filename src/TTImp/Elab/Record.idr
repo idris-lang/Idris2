@@ -85,7 +85,7 @@ genFieldName : {auto u : Ref UST UState} ->
                String -> Core String
 genFieldName root
     = do ust <- get UST
-         put UST (record { nextName $= (+1) } ust)
+         put UST ({ nextName $= (+1) } ust)
          pure (root ++ show (nextName ust))
 
 -- There's probably a generic version of this in the prelude isn't

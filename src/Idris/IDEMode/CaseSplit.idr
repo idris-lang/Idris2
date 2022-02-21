@@ -25,15 +25,9 @@ import Data.List1
 import Data.List.Views
 import Data.SnocList
 import Libraries.Data.List.Extra
-import Libraries.Data.String.Extra
 import Data.String
 import System.File
 import Data.Fin
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
 
 %default covering
 
@@ -74,7 +68,8 @@ isWhitespace _              = False
 ||| Given a list of definitions, a list of mappings from `RawName` to `String`,
 ||| and a list of tokens to update, work out the updates to do, apply them, and
 ||| return the result.
-doUpdates : {auto u : Ref UPD (List String)} ->
+doUpdates : {auto s : Ref Syn SyntaxInfo} ->
+            {auto u : Ref UPD (List String)} ->
             Defs -> Updates -> List SourcePart ->
             Core (List SourcePart)
 doUpdates defs ups [] = pure []   -- no more tokens to update, so we are done
@@ -109,6 +104,9 @@ doUpdates defs ups (LBrace :: xs)
                              )
           -- not a special case: proceed as normal
           _ => pure (LBrace :: [] ++ !(doUpdates defs ups xs))
+-- if we have a name that acts as an as-pattern then do not update it
+doUpdates defs ups (Name n :: AsPattern :: xs)
+    = pure $ Name n :: AsPattern :: !(doUpdates defs ups xs)
 -- if we have a name, look up if it's a name we're updating. If it isn't, keep
 -- the old name, otherwise update the name, i.e. replace with the new name
 doUpdates defs ups (Name n :: xs)
@@ -119,7 +117,7 @@ doUpdates defs ups (Name n :: xs)
 -- and change the hole's name to the new one
 doUpdates defs ups (HoleName n :: xs)
     = do used <- get UPD
-         n' <- uniqueName defs used n
+         n' <- uniqueHoleName defs used n
          put UPD (n' :: used)
          pure $ HoleName n' :: !(doUpdates defs ups xs)
 -- if it's not a thing we update, leave it and continue working on the rest
@@ -129,7 +127,8 @@ doUpdates defs ups (x :: xs)
 -- State here is a list of new hole names we generated (so as not to reuse any).
 -- Update the token list with the string replacements for each match, and return
 -- the newly generated strings.
-updateAll : {auto u : Ref UPD (List String)} ->
+updateAll : {auto s : Ref Syn SyntaxInfo} ->
+            {auto u : Ref UPD (List String)} ->
             Defs -> List SourcePart -> List Updates ->
             Core (List String)
 updateAll defs l [] = pure []
@@ -233,7 +232,7 @@ parenTrim = Idris.IDEMode.CaseSplit.rtrim . fastPack . dropLast . fastUnpack
 ||| just after the `of`.
 onelineIndent : Nat -> String -> String
 onelineIndent indentation
-  = (Data.String.indent indentation) . fastPack . (drop indentation) . fastUnpack
+  = (indent indentation) . fastPack . (drop indentation) . fastUnpack
 
 ||| An unbracketed, oneline `case` block just needs to have the last updates
 ||| indented to lign up with the statement after the `of`.
@@ -291,7 +290,7 @@ updateCase splits line col
               Just f =>
                 do Right file <- coreLift $ readFile f
                        | Left err => throw (FileErr f err)
-                   let thisline = elemAt (forget $ lines file) (integerToNat (cast line))
+                   let thisline = elemAt (lines file) (integerToNat (cast line))
                    case thisline of
                         Nothing => throw (InternalError "File too short!")
                         Just l =>

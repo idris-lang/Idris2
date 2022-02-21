@@ -38,6 +38,7 @@ fnName lhs n = nameRoot n
 
 -- Make the hole on the RHS have a unique name
 uniqueRHS : {auto c : Ref Ctxt Defs} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             ImpClause -> Core ImpClause
 uniqueRHS (PatClause fc lhs rhs)
     = pure $ PatClause fc lhs !(mkUniqueName rhs)
@@ -45,7 +46,7 @@ uniqueRHS (PatClause fc lhs rhs)
     mkUniqueName : RawImp -> Core RawImp
     mkUniqueName (IHole fc' rhsn)
         = do defs <- get Ctxt
-             rhsn' <- uniqueName defs [] rhsn
+             rhsn' <- uniqueHoleName defs [] rhsn
              pure (IHole fc' rhsn')
     mkUniqueName tm = pure tm -- it'll be a hole, but this is needed for covering
 uniqueRHS c = pure c
@@ -79,8 +80,8 @@ expandClause loc opts n c
     updateRHS : ImpClause -> RawImp -> ImpClause
     updateRHS (PatClause fc lhs _) rhs = PatClause fc lhs rhs
     -- 'with' won't happen, include for completeness
-    updateRHS (WithClause fc lhs wval prf flags cs) rhs
-      = WithClause fc lhs wval prf flags cs
+    updateRHS (WithClause fc lhs rig wval prf flags cs) rhs
+      = WithClause fc lhs rig wval prf flags cs
     updateRHS (ImpossibleClause fc lhs) _ = ImpossibleClause fc lhs
 
     dropLams : Nat -> RawImp -> RawImp
@@ -145,7 +146,7 @@ generateSplits : {auto m : Ref MD Metadata} ->
                  FC -> SearchOpts -> Int -> ImpClause ->
                  Core (List (Name, List ImpClause))
 generateSplits loc opts fn (ImpossibleClause fc lhs) = pure []
-generateSplits loc opts fn (WithClause fc lhs wval prf flags cs) = pure []
+generateSplits loc opts fn (WithClause fc lhs rig wval prf flags cs) = pure []
 generateSplits loc opts fn (PatClause fc lhs rhs)
     = do (lhstm, _) <-
                 elabTerm fn (InLHS linear) [] (MkNested []) []
@@ -196,8 +197,8 @@ mutual
               else expandClause loc opts n c)
           (do cs <- generateSplits loc opts n c
               log "interaction.generate" 5 $ "Splits: " ++ show cs
-              tryAllSplits loc (record { mustSplit = False,
-                                         doneSplit = True } opts) n cs)
+              tryAllSplits loc ({ mustSplit := False,
+                                  doneSplit := True } opts) n cs)
 
 export
 makeDefFromType : {auto c : Ref Ctxt Defs} ->
@@ -220,7 +221,7 @@ makeDefFromType loc opts n envlen ty
              -- We won't try splitting on these
              let pre_env = replicate envlen (Implicit loc True)
 
-             rhshole <- uniqueName defs [] (fnName False n ++ "_rhs")
+             rhshole <- uniqueHoleName defs [] (fnName False n ++ "_rhs")
              let initcs = PatClause loc
                                 (apply (IVar loc n) (pre_env ++ (map (IBindVar loc) argns)))
                                 (IHole loc rhshole)
@@ -246,7 +247,7 @@ makeDef p n
             | Nothing => noResult
          n <- getFullName nidx
          logTerm "interaction.generate" 5 ("Searching for " ++ show n) ty
-         let opts = record { genExpr = Just (makeDefFromType (justFC loc)) }
+         let opts = { genExpr := Just (makeDefFromType (justFC loc)) }
                            (initSearchOpts True 5)
          makeDefFromType (justFC loc) opts n envlen ty
 

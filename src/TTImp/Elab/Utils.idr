@@ -65,9 +65,9 @@ updateErasable n
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure ()
          (es, dtes) <- findErased (type gdef)
-         ignore $ addDef n $ record
-                    { eraseArgs = es,
-                      safeErase = dtes } gdef
+         ignore $ addDef n $
+                    { eraseArgs := es,
+                      safeErase := dtes } gdef
 
 export
 wrapErrorC : List ElabOpt -> (Error -> Error) -> Core a -> Core a
@@ -156,9 +156,7 @@ data Used : Type where
 setUsed : {idx : _} ->
           {auto u : Ref Used (Usage vars)} ->
           (0 _ : IsVar n idx vars) -> Core ()
-setUsed p
-    = do used <- get Used
-         put Used (setUsedVar p used)
+setUsed p = update Used $ setUsedVar p
 
 extendUsed : ArgUsed -> (new : List Name) -> Usage vars -> Usage (new ++ vars)
 extendUsed a [] x = x

@@ -15,31 +15,31 @@ interface Num a => Bits a => SomeBits a where
     one : Index {a}
 
 SomeBits Bits8 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Bits16 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Bits32 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Bits64 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int8 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int16 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int32 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int64 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int where
-    one = fromNat 1
+    one = 1
 
 SomeBits Integer where
     one = 1

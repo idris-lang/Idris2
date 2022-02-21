@@ -37,18 +37,23 @@ elabRecord : {vars : _} ->
              {auto s : Ref Syn SyntaxInfo} ->
              List ElabOpt -> FC -> Env Term vars ->
              NestedNames vars -> Maybe String ->
-             Visibility -> Name ->
+             Visibility -> Maybe TotalReq -> Name ->
              (params : List (Name, RigCount, PiInfo RawImp, RawImp)) ->
              (conName : Name) ->
              List IField ->
              Core ()
-elabRecord {vars} eopts fc env nest newns vis tn_in params conName_in fields
+elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params conName_in fields
     = do tn <- inCurrentNS tn_in
          conName <- inCurrentNS conName_in
          elabAsData tn conName
          defs <- get Ctxt
          Just conty <- lookupTyExact conName (gamma defs)
              | Nothing => throw (InternalError ("Adding " ++ show tn ++ "failed"))
+
+         -- #1404
+         whenJust mbtot $ \tot => do
+           log "declare.record" 5 $ "setting totality flag for " ++ show tn
+           setFlag fc tn (SetTotal tot)
 
          -- Go into new namespace, if there is one, for getters
          case newns of
@@ -59,11 +64,11 @@ elabRecord {vars} eopts fc env nest newns vis tn_in params conName_in fields
                       extendNS (mkNamespace ns)
                       newns <- getNS
                       elabGetters tn conName 0 [] [] conty
-                      defs <- get Ctxt
                       -- Record that the current namespace is allowed to look
                       -- at private names in the nested namespace
-                      put Ctxt (record { currentNS = cns,
-                                         nestedNS = newns :: nns } defs)
+                      update Ctxt { currentNS := cns,
+                                    nestedNS := newns :: nns }
+
   where
     paramTelescope : List (FC, Maybe Name, RigCount, PiInfo RawImp, RawImp)
     paramTelescope = map jname params
@@ -110,7 +115,7 @@ elabRecord {vars} eopts fc env nest newns vis tn_in params conName_in fields
                                            map fname fields ++ vars)
                                          (mkDataTy fc params)) [] [con]
              log "declare.record" 5 $ "Record data type " ++ show dt
-             processDecl [] nest env (IData fc vis dt)
+             processDecl [] nest env (IData fc vis mbtot dt)
 
     countExp : Term vs -> Nat
     countExp (Bind _ _ (Pi _ _ Explicit _) sc) = S (countExp sc)
@@ -204,8 +209,17 @@ elabRecord {vars} eopts fc env nest newns vis tn_in params conName_in fields
                    -- Move on to the next getter.
                    --
                    -- In upds, we use unNameNS (as opposed to rfNameNS or both)
-                   -- because the field types will probably mention the UN versions of the projections.
-                   let upds' = (n, IApp bfc (IVar bfc unNameNS) (IVar bfc rname)) :: upds
+                   -- because the field types will probably mention the UN versions of the projections;
+                   -- but only when prefix record projections are enabled, otherwise
+                   -- dependent records won't typecheck!
+                   --
+                   -- With the braching on this flag, this change of using `rfNamesNS` remains backward compatible
+                   -- (though the only difference I'm aware is in the output of the `:doc` command)
+                   prefix_flag <- isPrefixRecordProjections
+                   let upds' = if prefix_flag
+                         then (n, IApp bfc (IVar bfc unNameNS) (IVar bfc rname)) :: upds
+                         else (n, IApp bfc (IVar bfc rfNameNS) (IVar bfc rname)) :: upds
+
                    elabGetters tn con
                                (if imp == Explicit
                                    then S done else done)
@@ -221,6 +235,7 @@ processRecord : {vars : _} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 List ElabOpt -> NestedNames vars ->
                 Env Term vars -> Maybe String ->
-                Visibility -> ImpRecord -> Core ()
-processRecord eopts nest env newns vis (MkImpRecord fc n ps cons fs)
-    = elabRecord eopts fc env nest newns vis n ps cons fs
+                Visibility -> Maybe TotalReq ->
+                ImpRecord -> Core ()
+processRecord eopts nest env newns vis mbtot (MkImpRecord fc n ps cons fs)
+    = elabRecord eopts fc env nest newns vis mbtot n ps cons fs

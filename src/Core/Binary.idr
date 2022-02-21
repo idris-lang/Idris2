@@ -25,10 +25,11 @@ import public Libraries.Utils.Binary
 %default covering
 
 ||| TTC files can only be compatible if the version number is the same
-||| (Increment this when changing anything in the data format)
+||| Update with the current date in YYYYMMDD format, or bump the auxiliary
+||| version number if you're changing the version more than once in the same day.
 export
 ttcVersion : Int
-ttcVersion = 69
+ttcVersion = 20220208 * 100 + 0
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -202,7 +203,6 @@ readTTCFile : TTC extra =>
               Ref Bin Binary -> Core (TTCFile extra)
 readTTCFile readall file as b
       = do hdr <- fromBuf b
-           chunk <- get Bin
            when (hdr /= "TT2") $
              corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
            ver <- fromBuf @{Wasteful} b
@@ -349,60 +349,44 @@ addTypeHint fc (tyn, hintn, d)
                             show !(getFullName tyn)))
         addHintFor fc tyn hintn d True
 
-addAutoHint : {auto c : Ref Ctxt Defs} ->
-              (Name, Bool) -> Core ()
+addAutoHint : {auto c : Ref Ctxt Defs} -> (Name, Bool) -> Core ()
 addAutoHint (hintn_in, d)
-    = do defs <- get Ctxt
-         hintn <- toResolvedNames hintn_in
-
-         put Ctxt (record { autoHints $= insert hintn d } defs)
+    = do hintn <- toResolvedNames hintn_in
+         update Ctxt { autoHints $= insert hintn d }
 
 export
-updatePair : {auto c : Ref Ctxt Defs} ->
-             Maybe PairNames -> Core ()
-updatePair p
-    = do defs <- get Ctxt
-         put Ctxt (record { options->pairnames $= (p <+>) } defs)
+updatePair : {auto c : Ref Ctxt Defs} -> Maybe PairNames -> Core ()
+updatePair p = update Ctxt { options->pairnames $= (p <+>) }
 
 export
-updateRewrite : {auto c : Ref Ctxt Defs} ->
-                Maybe RewriteNames -> Core ()
-updateRewrite r
-    = do defs <- get Ctxt
-         put Ctxt (record { options->rewritenames $= (r <+>) } defs)
+updateRewrite : {auto c : Ref Ctxt Defs} -> Maybe RewriteNames -> Core ()
+updateRewrite r = update Ctxt { options->rewritenames $= (r <+>) }
 
 export
 updatePrimNames : PrimNames -> PrimNames -> PrimNames
 updatePrimNames p
-    = record { fromIntegerName $= ((fromIntegerName p) <+>),
-               fromStringName $= ((fromStringName p) <+>),
-               fromCharName $= ((fromCharName p) <+>),
-               fromDoubleName $= ((fromDoubleName p) <+>)
-             }
+    = { fromIntegerName $= (p.fromIntegerName <+>),
+        fromStringName  $= (p.fromStringName  <+>),
+        fromCharName    $= (p.fromCharName    <+>),
+        fromDoubleName  $= (p.fromDoubleName  <+>)
+      }
 
 export
-updatePrims : {auto c : Ref Ctxt Defs} ->
-              PrimNames -> Core ()
-updatePrims p
-    = do defs <- get Ctxt
-         put Ctxt (record { options->primnames $= updatePrimNames p } defs)
+updatePrims : {auto c : Ref Ctxt Defs} -> PrimNames -> Core ()
+updatePrims p = update Ctxt { options->primnames $= updatePrimNames p }
 
 export
 updateNameDirectives : {auto c : Ref Ctxt Defs} ->
                        List (Name, List String) -> Core ()
 updateNameDirectives [] = pure ()
 updateNameDirectives ((t, ns) :: nds)
-    = do defs <- get Ctxt
-         put Ctxt (record { namedirectives $= insert t ns } defs)
+    = do update Ctxt { namedirectives $= insert t ns }
          updateNameDirectives nds
 
 export
 updateCGDirectives : {auto c : Ref Ctxt Defs} ->
                      List (CG, String) -> Core ()
-updateCGDirectives cgs
-    = do defs <- get Ctxt
-         let cgs' = nub (cgs ++ cgdirectives defs)
-         put Ctxt (record { cgdirectives = cgs' } defs)
+updateCGDirectives cgs = update Ctxt { cgdirectives $= nub . (cgs ++) }
 
 export
 updateTransforms : {auto c : Ref Ctxt Defs} ->
@@ -417,9 +401,9 @@ updateTransforms ((n, t) :: ts)
         = do defs <- get Ctxt
              case lookup n (transforms defs) of
                   Nothing =>
-                     put Ctxt (record { transforms $= insert n [t] } defs)
+                     put Ctxt ({ transforms $= insert n [t] } defs)
                   Just ts =>
-                     put Ctxt (record { transforms $= insert n (t :: ts) } defs)
+                     put Ctxt ({ transforms $= insert n (t :: ts) } defs)
 
 
 getNSas : (String, (ModuleIdent, Bool, Namespace)) ->
@@ -450,7 +434,7 @@ readFromTTC nestedns loc reexp fname modNS importAs
          -- this time, because we need to reexport the dependencies.)
          let False = (modNS, reexp, importAs) `elem` map snd (allImported defs)
               | True => pure Nothing
-         put Ctxt (record { allImported $= ((fname, (modNS, reexp, importAs)) :: ) } defs)
+         put Ctxt ({ allImported $= ((fname, (modNS, reexp, importAs)) :: ) } defs)
 
          Right buffer <- coreLift $ readFromFile fname
                | Left err => throw (InternalError (fname ++ ": " ++ show err))
@@ -480,7 +464,6 @@ readFromTTC nestedns loc reexp fname modNS importAs
                  do traverse_ (addTypeHint loc) (typeHints ttc)
                     traverse_ addAutoHint (autoHints ttc)
                     addImportedInc modNS (incData ttc)
-                    defs <- get Ctxt
                     -- Set up pair/rewrite etc names
                     updatePair (pairnames ttc)
                     updateRewrite (rewritenames ttc)
@@ -494,8 +477,7 @@ readFromTTC nestedns loc reexp fname modNS importAs
 
                -- Finally, update the unification state with the holes from the
                -- ttc
-               ust <- get UST
-               put UST (record { nextName = nextVar ttc } ust)
+               update UST { nextName := nextVar ttc }
                pure (Just (ex, ifaceHash ttc, imported ttc))
   where
     alreadyDone : ModuleIdent -> Namespace ->
@@ -510,26 +492,35 @@ readFromTTC nestedns loc reexp fname modNS importAs
           || (modns == m && miAsNamespace modns == importAs)
           || alreadyDone modns importAs rest
 
-getImportHashes : String -> Ref Bin Binary ->
-                  Core (List (Namespace, Int))
-getImportHashes file b
-    = do hdr <- fromBuf {a = String} b
-         when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
-         ver <- fromBuf @{Wasteful} b
-         checkTTCVersion file ver ttcVersion
-         totalReq <- fromBuf {a = TotalReq} b
-         sourceFileHash <- fromBuf {a = Maybe String} b
-         interfaceHash <- fromBuf {a = Int} b
-         fromBuf b
-
+-- Implements a portion of @readTTCFile@. The fields must be read in order.
+-- This reads everything up to and including `totalReq`.
 export
 getTotalReq : String -> Ref Bin Binary -> Core TotalReq
 getTotalReq file b
     = do hdr <- fromBuf {a = String} b
-         when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
+         when (hdr /= "TT2") $
+           corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
          ver <- fromBuf @{Wasteful} b
          checkTTCVersion file ver ttcVersion
-         fromBuf b
+         fromBuf b -- `totalReq`
+
+-- Implements a portion of @readTTCFile@. The fields must be read in order.
+-- This reads everything up to and including `interfaceHash`.
+export
+getHashes : String -> Ref Bin Binary -> Core (Maybe String, Int)
+getHashes file b
+    = do ignore $ getTotalReq file b
+         sourceFileHash <- fromBuf b
+         interfaceHash <- fromBuf b
+         pure (sourceFileHash, interfaceHash)
+
+-- Implements a portion of @readTTCFile@. The fields must be read in order.
+-- This reads everything up to and including `importHashes`.
+getImportHashes : String -> Ref Bin Binary ->
+                  Core (List (Namespace, Int))
+getImportHashes file b
+    = do ignore $ getHashes file b
+         fromBuf b -- `importHashes`
 
 export
 readTotalReq : (fileName : String) -> -- file containing the module
@@ -540,18 +531,6 @@ readTotalReq fileName
          b <- newRef Bin buffer
          catch (Just <$> getTotalReq fileName b)
                (\err => pure Nothing)
-
-export
-getHashes : String -> Ref Bin Binary -> Core (Maybe String, Int)
-getHashes file b
-    = do hdr <- fromBuf {a = String} b
-         when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
-         ver <- fromBuf @{Wasteful} b
-         checkTTCVersion file ver ttcVersion
-         totReq <- fromBuf {a = TotalReq} b
-         sourceFileHash <- fromBuf b
-         interfaceHash <- fromBuf b
-         pure (sourceFileHash, interfaceHash)
 
 export
 readHashes : (fileName : String) -> -- file containing the module

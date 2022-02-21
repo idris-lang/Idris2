@@ -1,6 +1,7 @@
 module Data.List1
 
 import public Data.Zippable
+import Control.Function
 
 %default total
 
@@ -167,6 +168,20 @@ Ord a => Ord (List1 a) where
 export
 consInjective : (x ::: xs) === (y ::: ys) -> (x === y, xs === ys)
 consInjective Refl = (Refl, Refl)
+
+export
+{x : a} -> Injective (x :::) where
+  injective Refl = Refl
+
+export
+{ys : List a} -> Injective (::: ys) where
+  injective Refl = Refl
+
+||| Proof that the length of a List1 is the same as the length
+||| of the List it represents.
+export
+listLength : (xs : List1 a) -> length xs = length (forget xs)
+listLength (head ::: tail) = Refl
 
 ------------------------------------------------------------------------
 -- Zippable

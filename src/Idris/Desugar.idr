@@ -36,12 +36,6 @@ import Data.Maybe
 import Data.List
 import Data.List.Views
 import Data.String
-import Libraries.Data.String.Extra
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
 
 -- Convert high level Idris declarations (PDecl from Idris.Syntax) into
 -- TTImp, recording any high level syntax info on the way (e.g. infix
@@ -82,12 +76,12 @@ extendSyn newsyn
            , "New (" ++ unwords (map show $ saveMod newsyn) ++ "): "
               ++ show (modDocstrings newsyn)
            ]
-         put Syn (record { infixes $= mergeLeft (infixes newsyn),
-                           prefixes $= mergeLeft (prefixes newsyn),
-                           ifaces $= merge (ifaces newsyn),
-                           modDocstrings $= mergeLeft (modDocstrings newsyn),
-                           defDocstrings $= merge (defDocstrings newsyn),
-                           bracketholes $= ((bracketholes newsyn) ++) }
+         put Syn ({ infixes $= mergeLeft (infixes newsyn),
+                    prefixes $= mergeLeft (prefixes newsyn),
+                    ifaces $= merge (ifaces newsyn),
+                    modDocstrings $= mergeLeft (modDocstrings newsyn),
+                    defDocstrings $= merge (defDocstrings newsyn),
+                    bracketholes $= ((bracketholes newsyn) ++) }
                   syn)
 
 mkPrec : Fixity -> Nat -> OpPrec
@@ -107,9 +101,9 @@ toTokList (POp fc opFC opn l r)
                      then throw (GenericMsg fc $ "Unknown operator '" ++ op ++ "'")
                      else do rtoks <- toTokList r
                              pure (Expr l :: Op fc opFC opn backtickPrec :: rtoks)
-              Just (Prefix, _) =>
+              Just (_, Prefix, _) =>
                       throw (GenericMsg fc $ "'" ++ op ++ "' is a prefix operator")
-              Just (fix, prec) =>
+              Just (fixityFc, fix, prec) =>
                    do rtoks <- toTokList r
                       pure (Expr l :: Op fc opFC opn (mkPrec fix prec) :: rtoks)
   where
@@ -121,7 +115,7 @@ toTokList (PPrefixOp fc opFC opn arg)
          case lookup op (prefixes syn) of
               Nothing =>
                    throw (GenericMsg fc $ "'" ++ op ++ "' is not a prefix operator")
-              Just prec =>
+              Just (fixityFc, prec) =>
                    do rtoks <- toTokList arg
                       pure (Op fc opFC opn (Prefix prec) :: rtoks)
 toTokList t = pure [Expr t]
@@ -157,17 +151,19 @@ bindBangs ((n, fc, btm) :: bs) ns tm
     $ bindFun fc ns btm
     $ ILam EmptyFC top Explicit (Just n) (Implicit fc False) tm
 
-idiomise : FC -> RawImp -> RawImp
-idiomise fc (IAlternative afc u alts)
-  = IAlternative afc (mapAltType (idiomise afc) u) (idiomise afc <$> alts)
-idiomise fc (IApp afc f a)
-    = let fc = virtualiseFC fc in
-      IApp fc (IApp fc (IVar fc (UN $ Basic "<*>"))
-                       (idiomise afc f))
-              a
-idiomise fc fn
-  = let fc = virtualiseFC fc in
-    IApp fc (IVar fc (UN $ Basic "pure")) fn
+idiomise : FC -> Maybe Namespace -> RawImp -> RawImp
+idiomise fc mns (IAlternative afc u alts)
+  = IAlternative afc (mapAltType (idiomise afc mns) u) (idiomise afc mns <$> alts)
+idiomise fc mns (IApp afc f a)
+  = let fc  = virtualiseFC fc
+        app = UN $ Basic "<*>"
+        nm  = maybe app (`NS` app) mns
+     in IApp fc (IApp fc (IVar fc nm) (idiomise afc mns f)) a
+idiomise fc mns fn
+  = let fc  = virtualiseFC fc
+        pur = UN $ Basic "pure"
+        nm  = maybe pur (`NS` pur) mns
+     in IApp fc (IVar fc nm) fn
 
 pairname : Name
 pairname = NS builtinNS (UN $ Basic "Pair")
@@ -321,9 +317,7 @@ mutual
   desugarB side ps (PRunElab fc tm)
       = pure $ IRunElab fc !(desugarB side ps tm)
   desugarB side ps (PHole fc br holename)
-      = do when br $
-              do syn <- get Syn
-                 put Syn (record { bracketholes $= ((UN (Basic holename)) ::) } syn)
+      = do when br $ update Syn { bracketholes $= ((UN (Basic holename)) ::) }
            pure $ IHole fc holename
   desugarB side ps (PType fc) = pure $ IType fc
   desugarB side ps (PAs fc nameFC vname pattern)
@@ -355,20 +349,20 @@ mutual
       = do itm <- desugarB side ps term
            bs <- get Bang
            let bn = MN "bind" (nextName bs)
-           put Bang (record { nextName $= (+1),
-                              bangNames $= ((bn, fc, itm) ::)
-                            } bs)
+           put Bang ({ nextName $= (+1),
+                       bangNames $= ((bn, fc, itm) ::)
+                     } bs)
            pure (IVar EmptyFC bn)
-  desugarB side ps (PIdiom fc term)
+  desugarB side ps (PIdiom fc ns term)
       = do itm <- desugarB side ps term
            logRaw "desugar.idiom" 10 "Desugaring idiom for" itm
-           let val = idiomise fc itm
+           let val = idiomise fc ns itm
            logRaw "desugar.idiom" 10 "Desugared to" val
            pure val
   desugarB side ps (PList fc nilFC args)
       = expandList side ps nilFC args
   desugarB side ps (PSnocList fc nilFC args)
-      = expandSnocList side ps nilFC (reverse args)
+      = expandSnocList side ps nilFC args
   desugarB side ps (PPair fc l r)
       = do l' <- desugarB side ps l
            r' <- desugarB side ps r
@@ -472,9 +466,10 @@ mutual
                {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto m : Ref MD Metadata} ->
-               Side -> List Name -> (nilFC : FC) -> List (FC, PTerm) -> Core RawImp
-  expandSnocList side ps nilFC [] = pure (IVar nilFC (UN $ Basic "Lin"))
-  expandSnocList side ps nilFC ((consFC, x) :: xs)
+               Side -> List Name -> (nilFC : FC) ->
+               SnocList (FC, PTerm) -> Core RawImp
+  expandSnocList side ps nilFC [<] = pure (IVar nilFC (UN $ Basic "Lin"))
+  expandSnocList side ps nilFC (xs :< (consFC, x))
       = pure $ apply (IVar consFC (UN $ Basic ":<"))
                 [!(expandSnocList side ps nilFC xs) , !(desugarB side ps x)]
 
@@ -592,7 +587,6 @@ mutual
   expandDo side ps topfc ns (DoExp fc tm :: rest)
       = do tm' <- desugarDo side ps ns tm
            rest' <- expandDo side ps topfc ns rest
-           gam <- get Ctxt
            pure $ seqFun fc ns tm' rest'
   expandDo side ps topfc ns (DoBind fc nameFC n tm :: rest)
       = do tm' <- desugarDo side ps ns tm
@@ -766,11 +760,11 @@ mutual
 
            pure (nm, PatClause fc lhs' rhs')
 
-  desugarClause ps arg (MkWithClause fc lhs wval prf flags cs)
+  desugarClause ps arg (MkWithClause fc lhs rig wval prf flags cs)
       = do cs' <- traverse (map snd . desugarClause ps arg) cs
            (nm, bound, lhs') <- desugarLHS ps arg lhs
            wval' <- desugar AnyExpr (bound ++ ps) wval
-           pure (nm, WithClause fc lhs' wval' prf flags cs')
+           pure (nm, WithClause fc lhs' rig wval' prf flags cs')
 
   desugarClause ps arg (MkImpossible fc lhs)
       = do (nm, _, lhs') <- desugarLHS ps arg lhs
@@ -851,13 +845,14 @@ mutual
       toIDef : Name -> ImpClause -> Core ImpDecl
       toIDef nm (PatClause fc lhs rhs)
           = pure $ IDef fc nm [PatClause fc lhs rhs]
-      toIDef nm (WithClause fc lhs rhs prf flags cs)
-          = pure $ IDef fc nm [WithClause fc lhs rhs prf flags cs]
+      toIDef nm (WithClause fc lhs rig rhs prf flags cs)
+          = pure $ IDef fc nm [WithClause fc lhs rig rhs prf flags cs]
       toIDef nm (ImpossibleClause fc lhs)
           = pure $ IDef fc nm [ImpossibleClause fc lhs]
 
-  desugarDecl ps (PData fc doc vis ddecl)
-      = pure [IData fc vis !(desugarData ps doc ddecl)]
+  desugarDecl ps (PData fc doc vis mbtot ddecl)
+      = pure [IData fc vis mbtot !(desugarData ps doc ddecl)]
+
   desugarDecl ps (PParameters fc params pds)
       = do pds' <- traverse (desugarDecl (ps ++ map fst params)) pds
            params' <- traverse (\(n, rig, i, ntm) => do tm' <- desugar AnyExpr ps ntm
@@ -878,10 +873,9 @@ mutual
            uimpls' <- traverse (\ ntm => do tm' <- desugar AnyExpr ps (snd ntm)
                                             btm <- bindTypeNames fc oldu ps tm'
                                             pure (fst ntm, btm)) uimpls
-           put Syn (record { usingImpl = uimpls' ++ oldu } syn)
+           put Syn ({ usingImpl := uimpls' ++ oldu } syn)
            uds' <- traverse (desugarDecl ps) uds
-           syn <- get Syn
-           put Syn (record { usingImpl = oldu } syn)
+           update Syn { usingImpl := oldu }
            pure (concat uds')
   desugarDecl ps (PReflect fc tm)
       = throw (GenericMsg fc "Reflection not implemented yet")
@@ -970,7 +964,7 @@ mutual
       isNamed Nothing = False
       isNamed (Just _) = True
 
-  desugarDecl ps (PRecord fc doc vis tn params conname_in fields)
+  desugarDecl ps (PRecord fc doc vis mbtot tn params conname_in fields)
       = do addDocString tn doc
            params' <- traverse (\ (n,c,p,tm) =>
                           do tm' <- desugar AnyExpr ps tm
@@ -999,7 +993,7 @@ mutual
            let conname = maybe (mkConName tn) id conname_in
            let _ = the Name conname
            pure [IRecord fc (Just recName)
-                         vis (MkImpRecord fc tn paramsb conname fields')]
+                         vis mbtot (MkImpRecord fc tn paramsb conname fields')]
     where
       fname : PField -> Name
       fname (MkField _ _ _ _ n _) = n
@@ -1014,12 +1008,10 @@ mutual
       mapDesugarPiInfo ps = traverse (desugar AnyExpr ps)
 
   desugarDecl ps (PFixity fc Prefix prec (UN (Basic n)))
-      = do syn <- get Syn
-           put Syn (record { prefixes $= insert n prec } syn)
+      = do update Syn { prefixes $= insert n (fc, prec) }
            pure []
   desugarDecl ps (PFixity fc fix prec (UN (Basic n)))
-      = do syn <- get Syn
-           put Syn (record { infixes $= insert n (fix, prec) } syn)
+      = do update Syn { infixes $= insert n (fc, fix, prec) }
            pure []
   desugarDecl ps (PFixity fc _ _ _)
       = throw (GenericMsg fc "Fixity declarations must be for unqualified names")
@@ -1041,6 +1033,7 @@ mutual
   desugarDecl ps (PDirective fc d)
       = case d of
              Hide n => pure [IPragma [] (\nest, env => hide fc n)]
+             Unhide n => pure [IPragma [] (\nest, env => unhide fc n)]
              Logging i => pure [ILog ((\ i => (topics i, verbosity i)) <$> i)]
              LazyOn a => pure [IPragma [] (\nest, env => lazyActive a)]
              UnboundImplicits a => do

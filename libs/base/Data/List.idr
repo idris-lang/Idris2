@@ -179,7 +179,7 @@ findIndices p = h 0 where
 
 ||| Find associated information in a list using a custom comparison.
 public export
-lookupBy : (a -> a -> Bool) -> a -> List (a, b) -> Maybe b
+lookupBy : (a -> b -> Bool) -> a -> List (b, v) -> Maybe v
 lookupBy p e []      = Nothing
 lookupBy p e ((l, r) :: xs) =
   if p e l then
@@ -191,12 +191,6 @@ lookupBy p e ((l, r) :: xs) =
 public export
 lookup : Eq a => a -> List (a, b) -> Maybe b
 lookup = lookupBy (==)
-
-||| Check if something is a member of a list using a custom comparison.
-public export
-elemBy : (a -> a -> Bool) -> a -> List a -> Bool
-elemBy p e []      = False
-elemBy p e (x::xs) = p e x || elemBy p e xs
 
 ||| Remove duplicate elements from a list using a custom comparison. The general
 ||| case of `nub`.
@@ -229,9 +223,22 @@ public export
 nub : Eq a => List a -> List a
 nub = nubBy (==)
 
+||| Construct a new list consisting of all but the indicated element.
+|||
+||| ```idris example
+||| deleteAt 3 [5, 6, 7, 8, 9]
+||| ```
+|||
+||| @ idx The index of the value to delete.
+||| @ xs The list to delete the value from.
+public export
+deleteAt : (idx : Nat) -> (xs : List a) -> {auto 0 prf : InBounds idx xs} -> List a
+deleteAt {prf=InFirst} Z (_ :: xs) = xs
+deleteAt {prf=InLater _} (S k) (x :: xs) = x :: deleteAt k xs
+
 ||| The deleteBy function behaves like delete, but takes a user-supplied equality predicate.
 public export
-deleteBy : (a -> a -> Bool) -> a -> List a -> List a
+deleteBy : (a -> b -> Bool) -> a -> List b -> List b
 deleteBy _  _ []      = []
 deleteBy eq x (y::ys) = if x `eq` y then ys else y :: deleteBy eq x ys
 
@@ -254,7 +261,7 @@ delete = deleteBy (==)
 ||| @ source       The list to delete elements from.
 ||| @ undesirables The list of elements to delete.
 public export
-deleteFirstsBy : (p : a -> a -> Bool) -> (source : List a) -> (undesirables : List a) -> List a
+deleteFirstsBy : (p : a -> b -> Bool) -> (source : List b) -> (undesirables : List a) -> List b
 deleteFirstsBy p = foldl (flip (deleteBy p))
 
 infix 7 \\
@@ -725,23 +732,54 @@ export
 sort : Ord a => List a -> List a
 sort = sortBy compare
 
+||| Check whether the `left` list is a prefix of the `right` one, according to
+||| `match`. Returns the matched prefix together with the leftover suffix.
+|||
+||| @ match a custom matching function for checking the elements are convertible
+||| @ left  the list which might be a prefix of `right`
+||| @ right the list of elements to compare against
+public export
+prefixOfBy : (match : a -> b -> Maybe m) ->
+             (left : List a) -> (right : List b) ->
+             Maybe (List m, List b)
+prefixOfBy p = go [<] where
+  go : SnocList m -> List a -> List b -> Maybe (List m, List b)
+  go sm [] bs = pure (sm <>> [], bs)
+  go sm as [] = Nothing
+  go sm (a :: as) (b :: bs) = go (sm :< !(p a b)) as bs
+
 ||| Check whether the `left` list is a prefix of the `right` one, using the
 ||| provided equality function to compare elements.
 |||
 ||| @ eq    a custom equality function for comparing the elements
 ||| @ left  the list which might be a prefix of `right`
 ||| @ right the list of elements to compare againts
-export
-isPrefixOfBy : (eq : a -> a -> Bool) -> (left, right : List a) -> Bool
+public export
+isPrefixOfBy : (eq : a -> b -> Bool) ->
+               (left : List a) -> (right : List b) -> Bool
 isPrefixOfBy p [] _            = True
 isPrefixOfBy p _ []            = False
 isPrefixOfBy p (x::xs) (y::ys) = p x y && isPrefixOfBy p xs ys
 
 ||| The isPrefixOf function takes two lists and returns True iff the first list
 ||| is a prefix of the second when comparing elements using `==`.
-export
+public export
 isPrefixOf : Eq a => List a -> List a -> Bool
 isPrefixOf = isPrefixOfBy (==)
+
+||| Check whether the `left` is a suffix of the `right` one, according to
+||| `match`. Returns the matched suffix together with the leftover prefix.
+|||
+||| @ match a custom matching function for checking the elements are convertible
+||| @ left  the list which might be a prefix of `right`
+||| @ right the list of elements to compare against
+public export
+suffixOfBy : (match : a -> b -> Maybe m) ->
+             (left : List a) -> (right : List b) ->
+             Maybe (List b, List m)
+suffixOfBy match left right
+  = do (ms, bs) <- prefixOfBy match (reverse left) (reverse right)
+       pure (reverse bs, reverse ms)
 
 ||| Check whether the `left` is a suffix of the `right` one, using the provided
 ||| equality function to compare elements.
@@ -749,13 +787,14 @@ isPrefixOf = isPrefixOfBy (==)
 ||| @ eq    a custom equality function for comparing the elements
 ||| @ left  the list which might be a suffix of `right`
 ||| @ right the list of elements to compare againts
-export
-isSuffixOfBy : (eq : a -> a -> Bool) -> (left, right : List a) -> Bool
+public export
+isSuffixOfBy : (eq : a -> b -> Bool) ->
+               (left : List a) -> (right : List b) -> Bool
 isSuffixOfBy p left right = isPrefixOfBy p (reverse left) (reverse right)
 
 ||| The isSuffixOf function takes two lists and returns True iff the first list
 ||| is a suffix of the second when comparing elements using `==`.
-export
+public export
 isSuffixOf : Eq a => List a -> List a -> Bool
 isSuffixOf = isSuffixOfBy (==)
 
@@ -769,7 +808,7 @@ isSuffixOf = isSuffixOfBy (==)
 ||| isInfixOf ['b','d'] ['a', 'b', 'c', 'd']
 ||| ```
 |||
-export
+public export
 isInfixOf : Eq a => List a -> List a -> Bool
 isInfixOf n h = any (isPrefixOf n) (tails h)
 
@@ -861,6 +900,17 @@ consInjective : forall x, xs, y, ys .
                 the (List a) (x :: xs) = the (List b) (y :: ys) -> (x = y, xs = ys)
 consInjective Refl = (Refl, Refl)
 
+lengthPlusIsLengthPlus : (n : Nat) -> (xs : List a) ->
+                         lengthPlus n xs = n + length xs
+lengthPlusIsLengthPlus n [] = sym $ plusZeroRightNeutral n
+lengthPlusIsLengthPlus n (x::xs) =
+  trans
+  (lengthPlusIsLengthPlus (S n) xs)
+  (plusSuccRightSucc n (length xs))
+
+lengthTRIsLength : (xs : List a) -> lengthTR xs = length xs
+lengthTRIsLength = lengthPlusIsLengthPlus Z
+
 ||| List `reverse` applied to `reverseOnto` is equivalent to swapping the
 ||| arguments of `reverseOnto`.
 reverseReverseOnto : (l, r : List a) ->
@@ -948,3 +998,8 @@ lengthMap : (xs : List a) -> length (map f xs) = length xs
 lengthMap [] = Refl
 lengthMap (x :: xs) = cong S (lengthMap xs)
 
+||| Proof that replicate produces a list of the requested length.
+export
+lengthReplicate : (n : Nat) -> length (replicate n x) = n
+lengthReplicate 0 = Refl
+lengthReplicate (S k) = cong S (lengthReplicate k)

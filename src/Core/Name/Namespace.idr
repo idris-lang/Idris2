@@ -4,6 +4,7 @@ import Data.List
 import Data.List1
 import Data.String
 import Decidable.Equality
+import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Utils.Path
 
@@ -204,9 +205,7 @@ DecEq Namespace where
 -- TODO: move somewhere more appropriate
 export
 showSep : String -> List String -> String
-showSep sep [] = ""
-showSep sep [x] = x
-showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
+showSep sep = Libraries.Data.String.Extra.join sep
 
 export
 showNSWithSep : String -> Namespace -> String

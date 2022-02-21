@@ -1,4 +1,4 @@
 1/1: Building casesplit (casesplit.idr)
-Main>   foo False = ?help_1
-  foo True = ?help_2
+Main>   foo False = ?help_0
+  foo True = ?help_1
 Main> Bye for now!

@@ -10,7 +10,7 @@ import Core.Directory
 import Core.Name
 import Core.Options
 import Core.TT
-import Libraries.Utils.Hex
+import Protocol.Hex
 import Libraries.Utils.Path
 
 import Data.List

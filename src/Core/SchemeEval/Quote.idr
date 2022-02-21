@@ -95,8 +95,7 @@ mutual
              Ref Sym Integer -> Bounds bound ->
              Env Term vars -> SNF vars -> Core (Term (bound ++ vars))
   quoteGen q bound env (SBind fc n b sc)
-      = do i <- get Sym
-           put Sym (i + 1)
+      = do i <- nextName
            let var = UN (Basic ("b-" ++ show (fromInteger i)))
            -- Ref Bound gets turned directly into a symbol by seval, which
            -- we can then read back when quoting the scope

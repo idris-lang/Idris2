@@ -1,0 +1,76 @@
+1/1: Building Inlining (Inlining.idr)
+Main> Main.leaveAlone ==> [{arg:0}];
+Compile time tree: [0] (Prelude.Types.String.++ {arg:0}[0] "!")
+Run time tree: Error: ""
+RigW
+Erasable args: []
+Detaggable arg types: []
+Specialise args: []
+Inferrable args: []
+Compiled: [{arg:0}]: (++ [!{arg:0}, "!"])
+Refers to: [Prelude.Types.String.++]
+Refers to (runtime): []
+Flags: [covering]
+Size change: Prelude.Types.String.++: [Just (0, Same), Nothing]
+Main> Main.forceInline ==> [{arg:0}];
+Compile time tree: [0] (Prelude.Num.+ Prelude.Types.Nat Prelude.Types.Num implementation at Prelude.Types:66:1--71:33 {arg:0}[0] (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))))))))))
+Run time tree: Error: ""
+RigW
+Erasable args: []
+Detaggable arg types: []
+Specialise args: []
+Inferrable args: []
+Compiled: [{arg:0}]: (+Integer [!{arg:0}, 10])
+Refers to: [Prelude.Types.Num implementation at Prelude.Types:66:1--71:33, Prelude.Types.Z, Prelude.Types.S, Prelude.Types.Nat, Prelude.Num.+]
+Refers to (runtime): []
+Flags: [covering, inline]
+Size change: Prelude.Num.+: [Nothing, Nothing, Just (0, Same), Nothing], Prelude.Types.Num implementation at Prelude.Types:66:1--71:33: []
+Main> Main.forceNoInline ==> [];
+Compile time tree: [0] (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z))))))))))
+Run time tree: Error: ""
+RigW
+Erasable args: []
+Detaggable arg types: []
+Specialise args: []
+Inferrable args: []
+Compiled: []: 10
+Refers to: [Prelude.Types.Z, Prelude.Types.S]
+Refers to (runtime): []
+Flags: [allguarded, covering, noinline]
+Main> Main.heuristicPublicInline ==> [];
+Compile time tree: [0] (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z))
+Run time tree: Error: ""
+RigW
+Erasable args: []
+Detaggable arg types: []
+Specialise args: []
+Inferrable args: []
+Compiled: []: 2
+Refers to: [Prelude.Types.Z, Prelude.Types.S]
+Refers to (runtime): []
+Flags: [inline, allguarded, covering]
+Main> Main.exportedForced ==> [];
+Compile time tree: [0] (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))))))))))))))))))))))))))))))))
+Run time tree: Error: ""
+RigW
+Erasable args: []
+Detaggable arg types: []
+Specialise args: []
+Inferrable args: []
+Compiled: []: 33
+Refers to: [Prelude.Types.Z, Prelude.Types.S]
+Refers to (runtime): []
+Flags: [allguarded, covering, inline]
+Main> Main.exportedUnforced ==> [];
+Compile time tree: [0] (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+Run time tree: Error: ""
+RigW
+Erasable args: []
+Detaggable arg types: []
+Specialise args: []
+Inferrable args: []
+Compiled: []: 66
+Refers to: [Prelude.Types.Z, Prelude.Types.S]
+Refers to (runtime): []
+Flags: [allguarded, covering]
+Main> Bye for now!
