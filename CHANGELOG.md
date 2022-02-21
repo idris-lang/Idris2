@@ -43,11 +43,14 @@
   concat [interpolate "hello ", interpolate world]
   ```
 
-  This allows you to write expressions within slices without having to call `show`
-  but for this you need to implement the `Interpolation` interface for each type
-  that you intend to use within an interpolation slice. The reason for not reusing
-  `Show` is that `Interpolation` and `Show` have conflicting semantics, typically
-  this is the case for `String` which adds double quotes around the string.
+  This allows you to write expressions within slices without having to call `show`.
+  The prelude provides a default `Interpolation` implementation for each type that
+  implments `Show`. The reason for not reusing `Show` is that `Interpolation` and
+  `Show` have conflicting semantics, typically this is the case for `String` which
+  adds double quotes around the string.
+
+  In case that you'd like to implement customized `Interpolation` to a type, you
+  may have to avoid ambiguous by `%hide interpDefault`.
 
 ### Compiler changes
 
