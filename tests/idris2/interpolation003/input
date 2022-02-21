@@ -1,6 +1,3 @@
-"This is \{True}"
-"This is \{False}"
-"This is a number : \{S (S (S Z))}"
 test
 :printdef test
 :q

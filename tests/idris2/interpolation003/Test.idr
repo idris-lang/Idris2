@@ -1,5 +1,10 @@
 import Data.String
 
+%hide interpDefault
+
+Interpolation String where
+  interpolate x = x
+
 Interpolation Bool where
   interpolate True = "TT"
   interpolate False = "FF"
@@ -11,5 +16,10 @@ Interpolation Nat where
 Interpolation Integer where
   interpolate = show
 
-test : String
-test = "\{2}\{True}: \{True}\{True}"
+test : List String
+test = [
+    "This is \{True}",
+    "This is \{False}",
+    "This is a number : \{S (S (S Z))}",
+    "\{2}\{True}: \{True}\{True}"
+  ]
