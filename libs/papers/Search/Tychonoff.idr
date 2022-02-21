@@ -7,6 +7,8 @@ module Search.Tychonoff
 
 import Data.DPair
 import Data.Nat
+import Data.So
+import Decidable.Equality
 
 %default total
 
@@ -122,6 +124,59 @@ record UniformlyContinuous {x : Type} (p : (Nat -> x) -> Type) where
   uniformBound : Nat
   uniformContinuity : (a, b : Nat -> x) -> EqualUntil uniformBound a b -> p a -> p b
 
+Discrete : Type -> Type
+Discrete = DecEq
 
+||| A decreasing sequence of booleans
+Decreasing : (Nat -> Bool) -> Type
+Decreasing f = (n : Nat) -> So (f (S n)) -> So (f n)
 
--- parameters (fext : Extensionality)
+||| Nat extended with a point at infinity
+NatInf : Type
+NatInf = (f : Nat -> Bool ** Decreasing f)
+
+repeat : x -> (Nat -> x)
+repeat v = const v
+
+Zero : NatInf
+Zero = (repeat False ** \ n, prf => ?zrogh)
+
+Omega : NatInf
+Omega = (repeat True ** \ n, prf => prf)
+
+(::) : x -> (Nat -> x) -> (Nat -> x)
+(v :: f) 0 = v
+(v :: f) (S n) = f n
+
+Succ : NatInf -> NatInf
+Succ (n ** prf) = (True :: n ** decr) where
+
+  decr : Decreasing (True :: n)
+  decr 0     = const Oh
+  decr (S n) = prf n
+
+fromNat : Nat -> NatInf
+fromNat 0 = Zero
+fromNat (S k) = Succ (fromNat k)
+
+LTE : (f, g : NatInf) -> Type
+f `LTE` g = (n : Nat) -> So (f .fst n) -> So (g .fst n)
+
+minimalZ : (f : NatInf) -> fromNat 0 `LTE` f
+minimalZ f n prf = absurd prf
+
+maximalInf : (f : NatInf) -> f `LTE` Omega
+maximalInf f n prf = Oh
+
+min : (f, g : NatInf) -> NatInf
+min (f ** prf) (g ** prg)
+  = MkDPair (\ n => f n && g n) $ \ n, prfg =>
+    let (l, r) = soAnd prfg in
+    andSo (prf n l, prg n r)
+
+max : (f, g : NatInf) -> NatInf
+max (f ** prf) (g ** prg)
+  = MkDPair (\ n => f n || g n) $ \ n, prfg =>
+    orSo $ case soOr prfg of
+      Left pr => Left (prf n pr)
+      Right pr => Right (prg n pr)
