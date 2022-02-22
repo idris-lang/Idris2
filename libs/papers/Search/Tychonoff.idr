@@ -10,6 +10,7 @@ import Data.Nat
 import Data.Nat.Order
 import Data.So
 import Decidable.Equality
+import Decidable.Decidable
 
 %default total
 
@@ -202,9 +203,7 @@ Discrete : Type -> Type
 Discrete = DecEq
 
 dc : Discrete x => (v, w : x) -> NatInf
-dc v w with (decEq v w)
-  _ | Yes pr = Omega
-  _ | No npr = Zero
+dc v w = ifThenElse (isYes $ decEq v w) Omega Zero
 
 dcIsClosenessFunction : Discrete x => ClosenessFunction x Tychonoff.dc
 dcIsClosenessFunction
@@ -245,5 +244,39 @@ dcIsClosenessFunction
 -- Discrete-sequence closeness function
 ------------------------------------------------------------------------------
 
-equalUntilDec : Discrete x => (f, g : Nat -> x) -> (n : Nat) -> Dec (EqualUntil n f g)
-equalUntilDec f g = decideLTEBounded (\ n => decEq (f n) (g n))
+decEqualUntil : Discrete x => (n : Nat) -> (f, g : Nat -> x) -> Dec (EqualUntil n f g)
+decEqualUntil n f g = decideLTEBounded (\ n => decEq (f n) (g n)) n
+
+fromYes : (d : Dec p) -> isYes d === True -> p
+fromYes (Yes prf) _ = prf
+
+decEqualUntilPred :
+  Discrete x => (n : Nat) -> (f, g : Nat -> x) ->
+  isYes (decEqualUntil (S n) f g) === True ->
+  isYes (decEqualUntil n     f g) === True
+decEqualUntilPred n f g eq with (decEqualUntil n f g)
+  _ | Yes prf = Refl
+  _ | No nprf = let prf = fromYes (decEqualUntil (S n) f g) eq in
+                absurd (nprf $ \ l, bnd => prf l (lteSuccRight bnd))
+
+dsc : Discrete x => (f, g : Nat -> x) -> NatInf
+dsc f g = (Meas ** decr) where
+
+  Meas : Nat -> Bool
+  Meas n = (ifThenElse (isYes $ decEqualUntil n f g) Omega Zero) .fst n
+
+  decr : Decreasing Meas
+  decr n with (decEqualUntil (S n) f g) proof eq
+    _ | Yes eqSn = rewrite decEqualUntilPred n f g (cong isYes eq) in id
+    _ | No neqSn = \case prf impossible
+
+0 Extensionality : Type
+Extensionality
+  = {0 a : Type} -> {0 b : a -> Type} ->
+    {f, g : (x : a) -> b x} ->
+    ((x : a) -> f x === g x) -> f === g
+
+parameters (fext : Extensionality)
+
+  seqEquals : {f, g : Nat -> x} -> ((i : Nat) -> f i === g i) -> f === g
+  seqEquals = fext
