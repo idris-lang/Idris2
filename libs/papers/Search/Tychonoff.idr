@@ -12,11 +12,9 @@ import Decidable.Equality
 
 %default total
 
-Extensionality : Type
-Extensionality
-  = {a : Type} -> {b : a -> Type} ->
-    {f, g : (x : a) -> b x} ->
-    ((x : a) -> f x === g x) -> f === g
+------------------------------------------------------------------------------
+-- Searchable types
+------------------------------------------------------------------------------
 
 Pred : Type -> Type
 Pred a = a -> Type
@@ -124,8 +122,9 @@ record UniformlyContinuous {x : Type} (p : (Nat -> x) -> Type) where
   uniformBound : Nat
   uniformContinuity : (a, b : Nat -> x) -> EqualUntil uniformBound a b -> p a -> p b
 
-Discrete : Type -> Type
-Discrete = DecEq
+------------------------------------------------------------------------------
+-- Closeness functions and extended naturals
+------------------------------------------------------------------------------
 
 ||| A decreasing sequence of booleans
 Decreasing : (Nat -> Bool) -> Type
@@ -174,9 +173,70 @@ min (f ** prf) (g ** prg)
     let (l, r) = soAnd prfg in
     andSo (prf n l, prg n r)
 
+minLTE : (f, g : NatInf) -> Tychonoff.min f g `LTE` f
+minLTE (f ** prf) (g ** prg)  n pr = fst (soAnd pr)
+
 max : (f, g : NatInf) -> NatInf
 max (f ** prf) (g ** prg)
   = MkDPair (\ n => f n || g n) $ \ n, prfg =>
     orSo $ case soOr prfg of
       Left pr => Left (prf n pr)
       Right pr => Right (prg n pr)
+
+maxLTE : (f, g : NatInf) -> f `LTE` Tychonoff.max f g
+maxLTE (f ** prf) (g ** prg) n pr = orSo (Left pr)
+
+record ClosenessFunction (0 x : Type) (c : (v, w : x) -> NatInf) where
+  constructor MkClosenessFunction
+  selfClose  : (v : x) -> c v v === Omega
+  closeSelf  : (v, w : x) -> c v w === Omega -> v === w
+  symmetric  : (v, w : x) -> c v w === c w v
+  ultrametic : (u, v, w : x) -> Tychonoff.min (c u v) (c v w) `LTE` c u w
+
+------------------------------------------------------------------------------
+-- Discrete closeness function
+------------------------------------------------------------------------------
+
+Discrete : Type -> Type
+Discrete = DecEq
+
+discreteCloseness : Discrete x => (v, w : x) -> NatInf
+discreteCloseness v w with (decEq v w)
+  _ | Yes pr = Omega
+  _ | No npr = Zero
+
+dcIsClosenessFunction : Discrete x => ClosenessFunction x Tychonoff.discreteCloseness
+dcIsClosenessFunction
+  = MkClosenessFunction selfClose closeSelf symmetric ultrametric
+
+  where
+
+  selfClose : (v : x) -> Tychonoff.discreteCloseness v v === Omega
+  selfClose v with (decEq v v)
+    _ | Yes pr = Refl
+    _ | No npr = absurd (npr Refl)
+
+  closeSelf : (v, w : x) -> Tychonoff.discreteCloseness v w === Omega -> v === w
+  closeSelf v w eq with (decEq v w)
+    _ | Yes pr = pr
+    _ | No npr = absurd (cong (($ 0) . fst) eq)
+
+  symmetric : (v, w : x) -> Tychonoff.discreteCloseness v w === Tychonoff.discreteCloseness w v
+  symmetric v w with (decEq v w)
+    symmetric v v | Yes Refl = rewrite decEqSelfIsYes {x = v} in Refl
+    _ | No nprf with (decEq w v)
+      _ | Yes prf = absurd (nprf (sym prf))
+      _ | No _ = Refl
+
+  ultrametric : (u, v, w : x) ->
+    Tychonoff.min (Tychonoff.discreteCloseness u v) (Tychonoff.discreteCloseness v w)
+    `LTE` Tychonoff.discreteCloseness u w
+  ultrametric u v w n with (decEq u w)
+    _ | Yes r = const Oh
+    _ | No nr with (decEq u v)
+      _ | Yes p with (decEq v w)
+        _ | Yes q = absurd (nr (trans p q))
+        _ | No nq = id
+      _ | No np with (decEq v w)
+        _ | Yes q = id
+        _ | No nq = id

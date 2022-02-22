@@ -236,6 +236,16 @@ Traversable Maybe where
   traverse f Nothing = pure Nothing
   traverse f (Just x) = Just <$> f x
 
+-----------------
+-- EQUIVALENCE --
+-----------------
+
+public export
+record (<=>) (a, b : Type) where
+  constructor MkEquivalence
+  leftToRight : a -> b
+  rightToLeft : b -> a
+
 ---------
 -- DEC --
 ---------
@@ -253,6 +263,11 @@ data Dec : Type -> Type where
 
 export Uninhabited (Yes p === No q) where uninhabited eq impossible
 export Uninhabited (No p === Yes q) where uninhabited eq impossible
+
+public export
+viaEquivalence : a <=> b -> Dec a -> Dec b
+viaEquivalence f (Yes a) = Yes (f .leftToRight a)
+viaEquivalence f (No na) = No (na . f .rightToLeft)
 
 ------------
 -- EITHER --
