@@ -7,6 +7,7 @@ module Search.Tychonoff
 
 import Data.DPair
 import Data.Nat
+import Data.Nat.Order
 import Data.So
 import Decidable.Equality
 
@@ -138,7 +139,7 @@ repeat : x -> (Nat -> x)
 repeat v = const v
 
 Zero : NatInf
-Zero = (repeat False ** \ n, prf => ?zrogh)
+Zero = (repeat False ** \ n, prf => prf)
 
 Omega : NatInf
 Omega = (repeat True ** \ n, prf => prf)
@@ -200,28 +201,28 @@ record ClosenessFunction (0 x : Type) (c : (v, w : x) -> NatInf) where
 Discrete : Type -> Type
 Discrete = DecEq
 
-discreteCloseness : Discrete x => (v, w : x) -> NatInf
-discreteCloseness v w with (decEq v w)
+dc : Discrete x => (v, w : x) -> NatInf
+dc v w with (decEq v w)
   _ | Yes pr = Omega
   _ | No npr = Zero
 
-dcIsClosenessFunction : Discrete x => ClosenessFunction x Tychonoff.discreteCloseness
+dcIsClosenessFunction : Discrete x => ClosenessFunction x Tychonoff.dc
 dcIsClosenessFunction
   = MkClosenessFunction selfClose closeSelf symmetric ultrametric
 
   where
 
-  selfClose : (v : x) -> Tychonoff.discreteCloseness v v === Omega
+  selfClose : (v : x) -> Tychonoff.dc v v === Omega
   selfClose v with (decEq v v)
     _ | Yes pr = Refl
     _ | No npr = absurd (npr Refl)
 
-  closeSelf : (v, w : x) -> Tychonoff.discreteCloseness v w === Omega -> v === w
+  closeSelf : (v, w : x) -> Tychonoff.dc v w === Omega -> v === w
   closeSelf v w eq with (decEq v w)
     _ | Yes pr = pr
     _ | No npr = absurd (cong (($ 0) . fst) eq)
 
-  symmetric : (v, w : x) -> Tychonoff.discreteCloseness v w === Tychonoff.discreteCloseness w v
+  symmetric : (v, w : x) -> Tychonoff.dc v w === Tychonoff.dc w v
   symmetric v w with (decEq v w)
     symmetric v v | Yes Refl = rewrite decEqSelfIsYes {x = v} in Refl
     _ | No nprf with (decEq w v)
@@ -229,8 +230,7 @@ dcIsClosenessFunction
       _ | No _ = Refl
 
   ultrametric : (u, v, w : x) ->
-    Tychonoff.min (Tychonoff.discreteCloseness u v) (Tychonoff.discreteCloseness v w)
-    `LTE` Tychonoff.discreteCloseness u w
+    Tychonoff.min (Tychonoff.dc u v) (Tychonoff.dc v w) `LTE` Tychonoff.dc u w
   ultrametric u v w n with (decEq u w)
     _ | Yes r = const Oh
     _ | No nr with (decEq u v)
@@ -240,3 +240,10 @@ dcIsClosenessFunction
       _ | No np with (decEq v w)
         _ | Yes q = id
         _ | No nq = id
+
+------------------------------------------------------------------------------
+-- Discrete-sequence closeness function
+------------------------------------------------------------------------------
+
+equalUntilDec : Discrete x => (f, g : Nat -> x) -> (n : Nat) -> Dec (EqualUntil n f g)
+equalUntilDec f g = decideLTEBounded (\ n => decEq (f n) (g n))
