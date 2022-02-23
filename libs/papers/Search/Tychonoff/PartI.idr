@@ -1,9 +1,9 @@
 ||| This module is based on Todd Waugh Ambridge's blog post series
 ||| "Search over uniformly continuous decidable predicates on
 ||| infinite collections of types"
-||| https://www.cs.bham.ac.uk/~txw467/tychonoff/InfiniteSearch1.html
+||| https://www.cs.bham.ac.uk/~txw467/tychonoff/
 
-module Search.Tychonoff
+module Search.Tychonoff.PartI
 
 import Data.DPair
 import Data.Nat
@@ -24,14 +24,18 @@ Pred a = a -> Type
 0 Decidable : Pred a -> Type
 Decidable p = (x : a) -> Dec (p x)
 
+||| Hilbert's epsilon is function that for a given predicate
+||| returns a value that satisfies it if any value exists that
+||| that would satisfy it.
+0 HilbertEpsilon : Pred x -> Type
+HilbertEpsilon p = (v : x ** (v0 : x) -> p v0 -> p v)
+
 ||| A type is searchable if for any
-||| p a decidable predicate over that type
-||| x can be found such that if there exists a
-||| x0 satisfying p then x also satisfies p
+||| @ p a decidable predicate over that type
+||| @ x can be found such that if there exists a
+||| @ x0 satisfying p then x also satisfies p
 0 IsSearchable : Type -> Type
-IsSearchable a
-  = (0 p : Pred a) -> Decidable p ->
-    (x : a ** (x0 : a) -> p x0 -> p x)
+IsSearchable x = (0 p : Pred x) -> Decidable p -> HilbertEpsilon p
 
 infix 0 <->
 record (<->) (a, b : Type) where
@@ -53,8 +57,8 @@ interface Searchable (0 a : Type) where
 Inhabited : Type -> Type
 Inhabited a = a
 
-SearchableIsInhabited : IsSearchable a -> Inhabited a
-SearchableIsInhabited search = fst (search (\ _ => ()) (\ _ => Yes ()))
+searchableIsInhabited : IsSearchable a -> Inhabited a
+searchableIsInhabited search = fst (search (\ _ => ()) (\ _ => Yes ()))
 
 -- Finite types are trivially searchable
 
@@ -118,11 +122,6 @@ LPOIsSearchable lpo inh p pdec = case lpo p pdec of
 
 EqUntil : (m : Nat) -> (a, b : Nat -> x) -> Type
 EqUntil m a b = (k : Nat) -> k `LTE` m -> a k === b k
-
-record UniformlyContinuous {x : Type} (p : (Nat -> x) -> Type) where
-  constructor MkUC
-  uniformBound : Nat
-  uniformContinuity : (a, b : Nat -> x) -> EqUntil uniformBound a b -> p a -> p b
 
 ------------------------------------------------------------------------------
 -- Closeness functions and extended naturals
@@ -217,7 +216,7 @@ Discrete = DecEq
 dc : Discrete x => (v, w : x) -> NatInf
 dc v w = ifThenElse (isYes $ decEq v w) Omega Zero
 
-dcIsClosenessFunction : Discrete x => ClosenessFunction x Tychonoff.dc
+dcIsClosenessFunction : Discrete x => ClosenessFunction x PartI.dc
 dcIsClosenessFunction
   = MkClosenessFunction selfClose closeSelf symmetric ultrametric
 
@@ -343,7 +342,7 @@ parameters {auto _ : Extensionality}
   NatInfEquals {f} eq with (seqEquals eq)
     _ | Refl = cong (MkNatInf f) (isSubSingleton ? ?)
 
-  dscIsClosenessFunction : Discrete x => ClosenessFunction (Nat -> x) Tychonoff.dsc
+  dscIsClosenessFunction : Discrete x => ClosenessFunction (Nat -> x) PartI.dsc
   dscIsClosenessFunction {x}
     = MkClosenessFunction
         selfClose
@@ -426,3 +425,136 @@ parameters {auto _ : Extensionality}
 ------------------------------------------------------------------------------
 -- Continuity and continuously searchable types
 ------------------------------------------------------------------------------
+
+||| Uniform modulus of continuity
+||| @ c   the notion of closeness used
+||| @ p   the predicate of interest
+||| @ mod the modulus being characterised
+0 IsUModFor : (c : (v, w : x) -> NatInf) -> (p : Pred x) -> (mod : Nat) -> Type
+IsUModFor c p mod = (v, w : x) -> fromNat mod `LTE` c v w -> p v -> p w
+
+||| Uniformly continuous predicate wrt a closeness function
+||| @ c the notion of closeness used
+||| @ p the uniformly continuous predicate
+record UContinuous {0 x : Type} (c : (v, w : x) -> NatInf) (p : Pred x) where
+  constructor MkUC
+  uModulus  : Nat
+  isUModFor : IsUModFor c p uModulus
+
+||| A type equipped with
+||| @ c a notion of closeness
+||| is continuously searchable if for any
+||| @ p a decidable predicate over that type
+||| @ x can be found such that if there exists a
+||| @ x0 satisfying p then x also satisfies p
+0 IsCSearchable : (x : Type) -> ((v, w : x) -> NatInf) -> Type
+IsCSearchable x c
+  = (0 p : Pred x) -> UContinuous c p -> Decidable p ->
+    HilbertEpsilon p
+
+interface CSearchable x (0 c : (v, w : x) -> NatInf) where
+  csearch : IsCSearchable x c
+
+[DEMOTE] Searchable x => CSearchable x c where
+  csearch p uc pdec = search p pdec
+
+CSearchable Bool (PartI.dc {x = Bool}) where
+  csearch = csearch @{DEMOTE}
+
+discreteIsUContinuous :
+  {0 p : Pred x} -> Discrete x =>
+  Decidable p -> UContinuous PartI.dc p
+discreteIsUContinuous pdec = MkUC 1 isUContinuous where
+
+  isUContinuous : IsUModFor PartI.dc p 1
+  isUContinuous v w hyp pv with (decEq v w)
+    _ | Yes eq = replace {p} eq pv
+    _ | No neq = absurd (hyp 0 Oh)
+
+[PROMOTE] Discrete x => CSearchable x PartI.dc => Searchable x where
+  search p pdec = csearch p (discreteIsUContinuous pdec) pdec
+
+------------------------------------------------------------------------------
+-- Main result
+------------------------------------------------------------------------------
+
+
+-- Lemma 1
+
+nullModHilbert :
+  Decidable p -> IsUModFor c p 0 ->
+  (v : x ** p v) -> (v : x) -> p v
+nullModHilbert pdec pmod0 (v0 ** pv0) v = pmod0 v0 v (\ n => absurd) pv0
+
+trivial : UContinuous c (const ())
+trivial = MkUC 0 (\ _, _, _, _ => ())
+
+-- Lemma 2
+
+
+0 tailPredicate : Pred (Nat -> x) -> x -> Pred (Nat -> x)
+tailPredicate p v = p . (v ::)
+
+parameters
+  {0 p : Pred (Nat -> x)}
+  {auto _ : Discrete x}
+  (pdec : Decidable p)
+
+  decTail : (v : x) -> Decidable (tailPredicate p v)
+  decTail v vs = pdec (v :: vs)
+
+  predModTail :
+    (mod : Nat) -> IsUModFor PartI.dsc p (S mod) ->
+    (v : x) -> IsUModFor PartI.dsc (tailPredicate p v) mod
+  predModTail mod hyp v f g prf pvf
+    = hyp (v :: f) (v :: g) (buildUp mod f g prf v) pvf
+
+[BYUCONTINUITY] Extensionality =>
+  Discrete x =>
+  CSearchable x PartI.dc =>
+  CSearchable (Nat -> x) (PartI.dsc {x}) where
+  csearch q quni qdec
+    = go (search @{PROMOTE})
+         qdec
+         (quni .uModulus)
+         (quni .isUModFor)
+
+    where
+
+    go : IsSearchable x ->
+         {0 p : Pred (Nat -> x)} -> Decidable p ->
+         (n : Nat) -> IsUModFor PartI.dsc p n ->
+         HilbertEpsilon p
+    go s pdec 0 hyp
+      = let f = const (searchableIsInhabited s) in
+        MkDPair f (\ v0, pv0 => nullModHilbert {c = dsc} pdec hyp (v0 ** pv0) f)
+    go s pdec (S mod) hyp
+      = let -- Stepping function generating a tail from the head
+            stepping : x -> (Nat -> x)
+            stepping i = fst (go s (decTail pdec i) mod (predModTail pdec mod hyp i))
+            -- Searching for the head
+            0 PH : Pred x
+            PH = \ v => p (v :: stepping v)
+            pHdec : Decidable PH
+            pHdec = \ v => pdec (v :: stepping v)
+            sH : HilbertEpsilon PH
+            sH = s PH pHdec
+            -- Searching for the tail given an arbitrary head
+            0 PT : x -> Pred (Nat -> x)
+            PT i = tailPredicate p i
+            pTdec : (v : x) -> Decidable (PT v)
+            pTdec i = decTail pdec i
+            sT : (v : x) -> HilbertEpsilon (PT v)
+            sT i = go s (pTdec i) mod (predModTail pdec mod hyp i)
+            -- build up the result
+            v : x; v = sH .fst
+            vs : Nat -> x; vs = (sT v) .fst
+         in MkDPair (v :: vs) $ \ vv0s, pvv0s =>
+             let v0 : x; v0 = head vv0s
+                 v0s : Nat -> x; v0s = tail vv0s
+             in sH .snd v0
+              $ (sT v0) .snd v0s
+              $ replace {p} (eta vv0s) pvv0s
+
+cantorIsCSearchable : Extensionality => IsCSearchable (Nat -> Bool) PartI.dsc
+cantorIsCSearchable = csearch @{BYUCONTINUITY}

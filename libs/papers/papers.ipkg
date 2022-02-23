@@ -30,4 +30,4 @@ modules = Data.Container,
           Search.Negation,
           Search.Properties,
 
-          Search.Tychonoff
+          Search.Tychonoff.PartI
