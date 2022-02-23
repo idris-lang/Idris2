@@ -116,13 +116,13 @@ LPOIsSearchable lpo inh p pdec = case lpo p pdec of
   Left (x ** px) => (x ** \ _, _ => px)
   Right contra   => (inh ** \ x, px => absurd (contra x px))
 
-EqualUntil : (m : Nat) -> (a, b : Nat -> x) -> Type
-EqualUntil m a b = (k : Nat) -> k `LTE` m -> a k === b k
+EqUntil : (m : Nat) -> (a, b : Nat -> x) -> Type
+EqUntil m a b = (k : Nat) -> k `LTE` m -> a k === b k
 
 record UniformlyContinuous {x : Type} (p : (Nat -> x) -> Type) where
   constructor MkUC
   uniformBound : Nat
-  uniformContinuity : (a, b : Nat -> x) -> EqualUntil uniformBound a b -> p a -> p b
+  uniformContinuity : (a, b : Nat -> x) -> EqUntil uniformBound a b -> p a -> p b
 
 ------------------------------------------------------------------------------
 -- Closeness functions and extended naturals
@@ -177,7 +177,7 @@ min (MkNatInf f prf) (MkNatInf g prg)
     let (l, r) = soAnd prfg in
     andSo (prf n l, prg n r)
 
-minLTE : (f, g : NatInf) -> Tychonoff.min f g `LTE` f
+minLTE : (f, g : NatInf) -> min f g `LTE` f
 minLTE (MkNatInf f prf) (MkNatInf g prg)  n pr = fst (soAnd pr)
 
 max : (f, g : NatInf) -> NatInf
@@ -187,7 +187,7 @@ max (MkNatInf f prf) (MkNatInf g prg)
       Left pr => Left (prf n pr)
       Right pr => Right (prg n pr)
 
-maxLTE : (f, g : NatInf) -> f `LTE` Tychonoff.max f g
+maxLTE : (f, g : NatInf) -> f `LTE` max f g
 maxLTE (MkNatInf f prf) (MkNatInf g prg) n pr = orSo (Left pr)
 
 record ClosenessFunction (0 x : Type) (c : (v, w : x) -> NatInf) where
@@ -195,7 +195,7 @@ record ClosenessFunction (0 x : Type) (c : (v, w : x) -> NatInf) where
   selfClose  : (v : x) -> c v v === Omega
   closeSelf  : (v, w : x) -> c v w === Omega -> v === w
   symmetric  : (v, w : x) -> c v w === c w v
-  ultrametic : (u, v, w : x) -> Tychonoff.min (c u v) (c v w) `LTE` c u w
+  ultrametic : (u, v, w : x) -> min (c u v) (c v w) `LTE` c u w
 
 ------------------------------------------------------------------------------
 -- Discrete closeness function
@@ -213,25 +213,24 @@ dcIsClosenessFunction
 
   where
 
-  selfClose : (v : x) -> Tychonoff.dc v v === Omega
+  selfClose : (v : x) -> dc v v === Omega
   selfClose v with (decEq v v)
     _ | Yes pr = Refl
     _ | No npr = absurd (npr Refl)
 
-  closeSelf : (v, w : x) -> Tychonoff.dc v w === Omega -> v === w
+  closeSelf : (v, w : x) -> dc v w === Omega -> v === w
   closeSelf v w eq with (decEq v w)
     _ | Yes pr = pr
     _ | No npr = absurd (cong (($ 0) . sequence) eq)
 
-  symmetric : (v, w : x) -> Tychonoff.dc v w === Tychonoff.dc w v
+  symmetric : (v, w : x) -> dc v w === dc w v
   symmetric v w with (decEq v w)
     symmetric v v | Yes Refl = rewrite decEqSelfIsYes {x = v} in Refl
     _ | No nprf with (decEq w v)
       _ | Yes prf = absurd (nprf (sym prf))
       _ | No _ = Refl
 
-  ultrametric : (u, v, w : x) ->
-    Tychonoff.min (Tychonoff.dc u v) (Tychonoff.dc v w) `LTE` Tychonoff.dc u w
+  ultrametric : (u, v, w : x) -> min (dc u v) (dc v w) `LTE` dc u w
   ultrametric u v w n with (decEq u w)
     _ | Yes r = const Oh
     _ | No nr with (decEq u v)
@@ -246,34 +245,38 @@ dcIsClosenessFunction
 -- Discrete-sequence closeness function
 ------------------------------------------------------------------------------
 
-decEqualUntil : Discrete x => (n : Nat) -> (f, g : Nat -> x) -> Dec (EqualUntil n f g)
-decEqualUntil n f g = decideLTEBounded (\ n => decEq (f n) (g n)) n
+decEqUntil : Discrete x => (n : Nat) -> (f, g : Nat -> x) -> Dec (EqUntil n f g)
+decEqUntil n f g = decideLTEBounded (\ n => decEq (f n) (g n)) n
 
 fromYes : (d : Dec p) -> isYes d === True -> p
 fromYes (Yes prf) _ = prf
 
-decEqualUntilPred :
+decEqUntilPred :
   Discrete x => (n : Nat) -> (f, g : Nat -> x) ->
-  isYes (decEqualUntil (S n) f g) === True ->
-  isYes (decEqualUntil n     f g) === True
-decEqualUntilPred n f g eq with (decEqualUntil n f g)
+  isYes (decEqUntil (S n) f g) === True ->
+  isYes (decEqUntil n     f g) === True
+decEqUntilPred n f g eq with (decEqUntil n f g)
   _ | Yes prf = Refl
-  _ | No nprf = let prf = fromYes (decEqualUntil (S n) f g) eq in
+  _ | No nprf = let prf = fromYes (decEqUntil (S n) f g) eq in
                 absurd (nprf $ \ l, bnd => prf l (lteSuccRight bnd))
 
+public export
 dsc : Discrete x => (f, g : Nat -> x) -> NatInf
 dsc f g = (MkNatInf Meas decr) where
 
   Meas : Nat -> Bool
-  Meas n = (ifThenElse (isYes $ decEqualUntil n f g) Omega Zero) .sequence n
+  Meas = \ n => (ifThenElse (isYes $ decEqUntil n f g) Omega Zero) .sequence n
 
   decr : Decreasing Meas
-  decr n with (decEqualUntil (S n) f g) proof eq
-    _ | Yes eqSn = rewrite decEqualUntilPred n f g (cong isYes eq) in id
+  decr n with (decEqUntil (S n) f g) proof eq
+    _ | Yes eqSn = rewrite decEqUntilPred n f g (cong isYes eq) in id
     _ | No neqSn = \case prf impossible
 
 interface IsSubSingleton x where
   isSubSingleton : (v, w : x) -> v === w
+
+IsSubSingleton Void where
+  isSubSingleton p q = absurd p
 
 IsSubSingleton () where
   isSubSingleton () () = Refl
@@ -288,15 +291,15 @@ IsSubSingleton (So b) where
 IsSubSingleton (v === w) where
   isSubSingleton Refl Refl = Refl
 
-infix 0 ~~
-0 (~~) : {0 b : a -> Type} -> (f, g : (x : a) ->  b x) -> Type
-f ~~ g = (x : a) -> f x === g x
+infix 0 ~~~
+0 (~~~) : {0 b : a -> Type} -> (f, g : (x : a) ->  b x) -> Type
+f ~~~ g = (x : a) -> f x === g x
 
 0 ExtensionalEquality : Type
 ExtensionalEquality
   = {0 a : Type} -> {0 b : a -> Type} ->
     {f, g : (x : a) -> b x} ->
-    f ~~ g -> f === g
+    f ~~~ g -> f === g
 
 interface Extensionality where
   functionalExt : ExtensionalEquality
@@ -307,14 +310,64 @@ interface Extensionality where
   IsSubSingleton ((x : a) -> p x) where
   isSubSingleton v w = functionalExt (\ x => isSubSingleton (v x) (w x))
 
+-- Extensionality is needed for the No/No case
+Extensionality => IsSubSingleton p => IsSubSingleton (Dec p) where
+  isSubSingleton (Yes p) (Yes q) = cong Yes (isSubSingleton p q)
+  isSubSingleton (Yes p) (No nq) = absurd (nq p)
+  isSubSingleton (No np) (Yes q) = absurd (np q)
+  isSubSingleton (No np) (No nq) = cong No (isSubSingleton np nq)
+
 parameters {auto _ : Extensionality}
 
-  seqEquals : {f, g : Nat -> x} -> f ~~ g -> f === g
+  seqEquals : {f, g : Nat -> x} -> f ~~~ g -> f === g
   seqEquals = functionalExt
+
+  decEqUntilSelfIsYes : Discrete x => (n : Nat) -> (f : Nat -> x) ->
+                           decEqUntil n f f === Yes (\ k, bnd => Refl)
+  decEqUntilSelfIsYes n f = isSubSingleton ? ?
 
   NatInfEquals : {f, g : Nat -> Bool} ->
                  {fdecr : Decreasing f} ->
                  {gdecr : Decreasing g} ->
-                 f ~~ g -> MkNatInf f fdecr === MkNatInf g gdecr
+                 f ~~~ g -> MkNatInf f fdecr === MkNatInf g gdecr
   NatInfEquals {f} eq with (seqEquals eq)
     _ | Refl = cong (MkNatInf f) (isSubSingleton ? ?)
+
+  dscIsClosenessFunction : Discrete x => ClosenessFunction (Nat -> x) Tychonoff.dsc
+  dscIsClosenessFunction {x}
+    = MkClosenessFunction
+        selfClose
+        (\ v, w, eq => seqEquals (closeSelf v w eq))
+        (\ v, w => NatInfEquals (symmetric v w))
+        ultrametric
+
+    where
+
+    selfClose : (v : Nat -> x) -> dsc v v === Omega
+    selfClose v = NatInfEquals $ \ n => rewrite decEqUntilSelfIsYes n v in Refl
+
+    closeSelf : (v, w : Nat -> x) -> dsc v w === Omega -> v ~~~ w
+    closeSelf v w eq n with (cong (\ f => f .sequence n) eq)
+      _ | prf with (decEqUntil n v w)
+        _ | Yes eqn = eqn n reflexive
+        _ | No neqn = absurd prf
+
+    symmetric : (v, w : Nat -> x) -> (dsc v w) .sequence ~~~ (dsc w v) .sequence
+    symmetric v w n with (decEqUntil n v w)
+      _ | Yes p with (decEqUntil n w v)
+        _ | Yes q = Refl
+        _ | No nq = absurd (nq $ \ k, bnd => sym (p k bnd))
+      _ | No np with (decEqUntil n w v)
+        _ | Yes q = absurd (np $ \ k, bnd => sym (q k bnd))
+        _ | No nq = Refl
+
+    ultrametric : (u, v, w : Nat -> x) -> min (dsc u v) (dsc v w) `LTE` dsc u w
+    ultrametric u v w n with (decEqUntil n u w)
+      _ | Yes r = const Oh
+      _ | No nr with (decEqUntil n u v)
+        _ | Yes p with (decEqUntil n v w)
+          _ | Yes q = absurd (nr (\ k, bnd => trans (p k bnd) (q k bnd)))
+          _ | No nq = id
+        _ | No np with (decEqUntil n v w)
+          _ | Yes q = id
+          _ | No nq = id
