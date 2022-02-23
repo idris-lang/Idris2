@@ -152,15 +152,25 @@ Omega = MkNatInf (repeat True) (\ n, prf => prf)
 (v :: f) (S n) = f n
 
 Succ : NatInf -> NatInf
-Succ (MkNatInf n prf) = MkNatInf (True :: n) decr where
+Succ f = MkNatInf (True :: f .sequence) decr where
 
-  decr : Decreasing (True :: n)
+  decr : Decreasing (True :: f .sequence)
   decr 0     = const Oh
-  decr (S n) = prf n
+  decr (S n) = f .isDecreasing n
 
 fromNat : Nat -> NatInf
 fromNat 0 = Zero
 fromNat (S k) = Succ (fromNat k)
+
+soFromNat : k `LT` n -> So ((fromNat n) .sequence k)
+soFromNat p = case view p of
+  LTZero => Oh
+  LTSucc p => soFromNat p
+
+fromNatSo : {k, n : Nat} -> So ((fromNat n) .sequence k) -> k `LT` n
+fromNatSo {n = 0} hyp = absurd hyp
+fromNatSo {k = 0} {n = S n} hyp = LTESucc LTEZero
+fromNatSo {k = S k} {n = S n} hyp = LTESucc (fromNatSo hyp)
 
 LTE : (f, g : NatInf) -> Type
 f `LTE` g = (n : Nat) -> So (f .sequence n) -> So (g .sequence n)
@@ -371,3 +381,25 @@ parameters {auto _ : Extensionality}
         _ | No np with (decEqUntil n v w)
           _ | Yes q = id
           _ | No nq = id
+
+closeImpliesEqUntil : Discrete x =>
+  (n : Nat) -> (f, g : Nat -> x) ->
+  fromNat (S n) `LTE` dsc f g ->
+  EqUntil n f g
+closeImpliesEqUntil n f g prf with (prf n)
+  _ | prfn with (decEqUntil n f g)
+    _ | Yes eqn = eqn
+    _ | No neqn = absurd (prfn (soFromNat reflexive))
+
+eqUntilImpliesClose : Discrete x =>
+  (n : Nat) -> (f, g : Nat -> x) ->
+  EqUntil n f g ->
+  fromNat (S n) `LTE` dsc f g
+eqUntilImpliesClose n f g prf k hyp with (decEqUntil k f g)
+  _ | Yes p = Oh
+  _ | No np = let klten = fromLteSucc $ fromNatSo {k} {n = S n} hyp in
+              absurd (np $ \ k', bnd => prf k' (transitive bnd klten))
+
+------------------------------------------------------------------------------
+-- Continuity and continuously searchable types
+------------------------------------------------------------------------------
