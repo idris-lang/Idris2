@@ -400,6 +400,29 @@ eqUntilImpliesClose n f g prf k hyp with (decEqUntil k f g)
   _ | No np = let klten = fromLteSucc $ fromNatSo {k} {n = S n} hyp in
               absurd (np $ \ k', bnd => prf k' (transitive bnd klten))
 
+buildUp : Discrete x => (n : Nat) -> (f, g : Nat -> x) ->
+  fromNat n `LTE` dsc f g ->
+  (v : x) ->
+  fromNat (S n) `LTE` dsc (v :: f) (v :: g)
+buildUp n f g hyp v
+  = eqUntilImpliesClose n (v :: f) (v :: g)
+  $ \ k, bnd => case bnd of
+    LTEZero => Refl
+    LTESucc bnd => closeImpliesEqUntil ? f g hyp ? bnd
+
+head : (Nat -> x) -> x
+head f = f Z
+
+tail : (Nat -> x) -> (Nat -> x)
+tail f = f . S
+
+parameters {auto _ : Extensionality}
+
+  eta : (f : Nat -> x) -> f === head f :: tail f
+  eta f = functionalExt $ \case
+            Z => Refl
+            S n => Refl
+
 ------------------------------------------------------------------------------
 -- Continuity and continuously searchable types
 ------------------------------------------------------------------------------
