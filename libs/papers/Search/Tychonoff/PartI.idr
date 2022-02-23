@@ -9,6 +9,7 @@ import Data.DPair
 import Data.Nat
 import Data.Nat.Order
 import Data.So
+import Data.Vect
 import Decidable.Equality
 import Decidable.Decidable
 
@@ -52,6 +53,7 @@ map (MkIso f g _ inv) search p pdec =
   (f xa ** \ xb, pxb => prfa (g xb) $ replace {p} (sym $ inv xb) pxb)
 
 interface Searchable (0 a : Type) where
+  constructor MkSearchable
   search : IsSearchable a
 
 Inhabited : Type -> Type
@@ -98,6 +100,20 @@ Searchable Bool where
     let (fb ** prfb) = Pair.choice $ \ a => search (p . (a,)) (\ b => pdec (a, b)) in
     let (xa ** prfa) = search (\ a => p (a, fb a)) (\ xa => pdec (xa, fb xa)) in
     MkDPair (xa, fb xa) $ \ (xa', xb'), pxab' => prfa xa' (prfb xa' xb' pxab')
+
+||| Searchable for Vect
+%hint
+searchVect : Searchable a => (n : Nat) -> Searchable (Vect n a)
+searchVect 0 = MkSearchable $ \ p, pdec => ([] ** \case [] => id)
+searchVect (S n) = MkSearchable $ \ p, pdec =>
+  let %hint ih : Searchable (Vect n a)
+      ih = searchVect n
+      0 P : Pred (a, Vect n a)
+      P = p . Prelude.uncurry (::)
+      Pdec : Decidable P
+      Pdec = \ (x, xs) => pdec (x :: xs)
+  in bimap (uncurry (::)) (\ prf => \case (v0 :: vs0) => prf (v0, vs0))
+   $ search P Pdec
 
 ||| The usual LPO is for Nat only
 0 LPO : Type -> Type
