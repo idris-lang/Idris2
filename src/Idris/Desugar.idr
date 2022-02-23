@@ -503,7 +503,9 @@ mutual
     where
       toRawImp : PStr -> Core RawImp
       toRawImp (StrLiteral fc str) = pure $ IPrimVal fc (Str str)
-      toRawImp (StrInterp fc tm) = desugarB side ps tm
+      toRawImp (StrInterp fc tm)
+        = let vfc = virtualiseFC fc in
+          pure $ IApp vfc (IVar EmptyFC (UN $ Basic "interpolate")) !(desugarB side ps tm)
 
       -- merge neighbouring StrLiteral
       mergeStrLit : List PStr -> List PStr
@@ -524,12 +526,8 @@ mutual
       strInterpolate []
         = IVar EmptyFC (NS preludeNS $ UN $ Basic "Nil")
       strInterpolate (x :: xs)
-        = let xFC = virtualiseFC (getFC x) in
-          apply (IVar xFC (NS preludeNS $ UN $ Basic "::"))
-          [ IApp xFC (IVar EmptyFC (UN $ Basic "interpolate"))
-                     x
-          , strInterpolate xs
-          ]
+        = let vFC = virtualiseFC (getFC x) in
+          apply (IVar vFC (NS preludeNS $ UN $ Basic "::")) [x, strInterpolate xs]
 
   trimMultiline : FC -> Nat -> List (List PStr) -> Core (List PStr)
   trimMultiline fc indent lines
