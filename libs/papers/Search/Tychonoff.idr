@@ -133,24 +133,26 @@ Decreasing : (Nat -> Bool) -> Type
 Decreasing f = (n : Nat) -> So (f (S n)) -> So (f n)
 
 ||| Nat extended with a point at infinity
-NatInf : Type
-NatInf = (f : Nat -> Bool ** Decreasing f)
+record NatInf where
+  constructor MkNatInf
+  sequence     : Nat -> Bool
+  isDecreasing : Decreasing sequence
 
 repeat : x -> (Nat -> x)
 repeat v = const v
 
 Zero : NatInf
-Zero = (repeat False ** \ n, prf => prf)
+Zero = MkNatInf (repeat False) (\ n, prf => prf)
 
 Omega : NatInf
-Omega = (repeat True ** \ n, prf => prf)
+Omega = MkNatInf (repeat True) (\ n, prf => prf)
 
 (::) : x -> (Nat -> x) -> (Nat -> x)
 (v :: f) 0 = v
 (v :: f) (S n) = f n
 
 Succ : NatInf -> NatInf
-Succ (n ** prf) = (True :: n ** decr) where
+Succ (MkNatInf n prf) = MkNatInf (True :: n) decr where
 
   decr : Decreasing (True :: n)
   decr 0     = const Oh
@@ -161,7 +163,7 @@ fromNat 0 = Zero
 fromNat (S k) = Succ (fromNat k)
 
 LTE : (f, g : NatInf) -> Type
-f `LTE` g = (n : Nat) -> So (f .fst n) -> So (g .fst n)
+f `LTE` g = (n : Nat) -> So (f .sequence n) -> So (g .sequence n)
 
 minimalZ : (f : NatInf) -> fromNat 0 `LTE` f
 minimalZ f n prf = absurd prf
@@ -170,23 +172,23 @@ maximalInf : (f : NatInf) -> f `LTE` Omega
 maximalInf f n prf = Oh
 
 min : (f, g : NatInf) -> NatInf
-min (f ** prf) (g ** prg)
-  = MkDPair (\ n => f n && g n) $ \ n, prfg =>
+min (MkNatInf f prf) (MkNatInf g prg)
+  = MkNatInf (\ n => f n && g n) $ \ n, prfg =>
     let (l, r) = soAnd prfg in
     andSo (prf n l, prg n r)
 
 minLTE : (f, g : NatInf) -> Tychonoff.min f g `LTE` f
-minLTE (f ** prf) (g ** prg)  n pr = fst (soAnd pr)
+minLTE (MkNatInf f prf) (MkNatInf g prg)  n pr = fst (soAnd pr)
 
 max : (f, g : NatInf) -> NatInf
-max (f ** prf) (g ** prg)
-  = MkDPair (\ n => f n || g n) $ \ n, prfg =>
+max (MkNatInf f prf) (MkNatInf g prg)
+  = MkNatInf (\ n => f n || g n) $ \ n, prfg =>
     orSo $ case soOr prfg of
       Left pr => Left (prf n pr)
       Right pr => Right (prg n pr)
 
 maxLTE : (f, g : NatInf) -> f `LTE` Tychonoff.max f g
-maxLTE (f ** prf) (g ** prg) n pr = orSo (Left pr)
+maxLTE (MkNatInf f prf) (MkNatInf g prg) n pr = orSo (Left pr)
 
 record ClosenessFunction (0 x : Type) (c : (v, w : x) -> NatInf) where
   constructor MkClosenessFunction
@@ -219,7 +221,7 @@ dcIsClosenessFunction
   closeSelf : (v, w : x) -> Tychonoff.dc v w === Omega -> v === w
   closeSelf v w eq with (decEq v w)
     _ | Yes pr = pr
-    _ | No npr = absurd (cong (($ 0) . fst) eq)
+    _ | No npr = absurd (cong (($ 0) . sequence) eq)
 
   symmetric : (v, w : x) -> Tychonoff.dc v w === Tychonoff.dc w v
   symmetric v w with (decEq v w)
@@ -260,23 +262,59 @@ decEqualUntilPred n f g eq with (decEqualUntil n f g)
                 absurd (nprf $ \ l, bnd => prf l (lteSuccRight bnd))
 
 dsc : Discrete x => (f, g : Nat -> x) -> NatInf
-dsc f g = (Meas ** decr) where
+dsc f g = (MkNatInf Meas decr) where
 
   Meas : Nat -> Bool
-  Meas n = (ifThenElse (isYes $ decEqualUntil n f g) Omega Zero) .fst n
+  Meas n = (ifThenElse (isYes $ decEqualUntil n f g) Omega Zero) .sequence n
 
   decr : Decreasing Meas
   decr n with (decEqualUntil (S n) f g) proof eq
     _ | Yes eqSn = rewrite decEqualUntilPred n f g (cong isYes eq) in id
     _ | No neqSn = \case prf impossible
 
-0 Extensionality : Type
-Extensionality
+interface IsSubSingleton x where
+  isSubSingleton : (v, w : x) -> v === w
+
+IsSubSingleton () where
+  isSubSingleton () () = Refl
+
+(IsSubSingleton a, IsSubSingleton b) => IsSubSingleton (a, b) where
+  isSubSingleton (p,q) (u,v) = cong2 (,) (isSubSingleton p u) (isSubSingleton q v)
+
+IsSubSingleton (So b) where
+  isSubSingleton Oh Oh = Refl
+
+-- K axiom
+IsSubSingleton (v === w) where
+  isSubSingleton Refl Refl = Refl
+
+infix 0 ~~
+0 (~~) : {0 b : a -> Type} -> (f, g : (x : a) ->  b x) -> Type
+f ~~ g = (x : a) -> f x === g x
+
+0 ExtensionalEquality : Type
+ExtensionalEquality
   = {0 a : Type} -> {0 b : a -> Type} ->
     {f, g : (x : a) -> b x} ->
-    ((x : a) -> f x === g x) -> f === g
+    f ~~ g -> f === g
 
-parameters (fext : Extensionality)
+interface Extensionality where
+  functionalExt : ExtensionalEquality
 
-  seqEquals : {f, g : Nat -> x} -> ((i : Nat) -> f i === g i) -> f === g
-  seqEquals = fext
+{0 p : a -> Type} ->
+  Extensionality =>
+  ((x : a) -> IsSubSingleton (p x)) =>
+  IsSubSingleton ((x : a) -> p x) where
+  isSubSingleton v w = functionalExt (\ x => isSubSingleton (v x) (w x))
+
+parameters {auto _ : Extensionality}
+
+  seqEquals : {f, g : Nat -> x} -> f ~~ g -> f === g
+  seqEquals = functionalExt
+
+  NatInfEquals : {f, g : Nat -> Bool} ->
+                 {fdecr : Decreasing f} ->
+                 {gdecr : Decreasing g} ->
+                 f ~~ g -> MkNatInf f fdecr === MkNatInf g gdecr
+  NatInfEquals {f} eq with (seqEquals eq)
+    _ | Refl = cong (MkNatInf f) (isSubSingleton ? ?)
