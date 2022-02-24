@@ -28,4 +28,6 @@ modules = Data.Container,
           Search.Generator,
           Search.HDecidable,
           Search.Negation,
-          Search.Properties
+          Search.Properties,
+
+          Search.Tychonoff.PartI

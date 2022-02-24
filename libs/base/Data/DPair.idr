@@ -4,18 +4,54 @@ import Decidable.Equality
 
 %default total
 
+namespace Pair
+
+  ||| Constructive choice: a function producing pairs of a value and a proof
+  ||| can be split into a function producing a value and a family of proofs
+  ||| for the images of that function.
+  public export
+  choice :
+     {0 p : a -> b -> Type} ->
+     ((x : a) -> (b ** p x b)) ->
+     (f : (a -> b) ** (x : a) -> p x (f x))
+  choice pr = ((\ x => fst (pr x)) ** \ x => snd (pr x))
+
 namespace DPair
 
+  ||| Constructive choice: a function producing pairs of a value and a proof
+  ||| can be split into a function producing a value and a family of proofs
+  ||| for the images of that function.
   public export
-  curry : {0 p : a -> Type} -> ((x : a ** p x) -> c) -> (x : a) -> p x -> c
+  choice :
+     {0 b : a -> Type} ->
+     {0 p : (x : a) -> b x -> Type} ->
+     ((x : a) -> (y : b x ** p x y)) ->
+     (f : ((x : a) -> b x) ** (x : a) -> p x (f x))
+  choice pr = ((\ x => fst (pr x)) ** \ x => snd (pr x))
+
+  ||| A function taking a pair of a value and a proof as an argument can be turned
+  ||| into a function taking a value and a proof as two separate arguments.
+  ||| Use `uncurry` to go in the other direction
+  public export
+  curry : {0 p : a -> Type} -> ((x : a ** p x) -> c) -> ((x : a) -> p x -> c)
   curry f x y = f (x ** y)
 
+  ||| A function taking a value and a proof as two separates arguments can be turned
+  ||| into a function taking a pair of that value and its proof as a single argument.
+  ||| Use `curry` to go in the other direction.
   public export
-  uncurry : {0 p : a -> Type} -> ((x : a) -> p x -> c) -> (x : a ** p x) -> c
+  uncurry : {0 p : a -> Type} -> ((x : a) -> p x -> c) -> ((x : a ** p x) -> c)
   uncurry f s = f s.fst s.snd
 
+  ||| Given a function on values and a family of proofs that this function takes
+  ||| p-respecting inputs to q-respecting outputs,
+  ||| we can turn:  a pair of a value and a proof it is p-respecting
+  ||| into:         a pair of a value and a proof it is q-respecting
   public export
-  bimap : {0 p : a -> Type} -> {0 q : b -> Type} -> (f : a -> b) -> (forall x. p x -> q (f x)) -> (x : a ** p x) -> (y : b ** q y)
+  bimap : {0 p : a -> Type} -> {0 q : b -> Type} ->
+          (f : a -> b) ->
+          (prf : forall x. p x -> q (f x)) ->
+          (x : a ** p x) -> (y : b ** q y)
   bimap f g (x ** y) = (f x ** g y)
 
   public export

@@ -13,6 +13,9 @@ infixr 4 ||
 infixr 7 ::, ++
 infixl 7 :<
 
+-- Equivalence
+infix 0 <=>
+
 -- Functor/Applicative/Monad/Algebra operators
 infixl 1 >>=, =<<, >>, >=>, <=<, <&>
 infixr 2 <|>
