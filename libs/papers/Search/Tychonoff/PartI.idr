@@ -25,9 +25,11 @@ Pred a = a -> Type
 0 Decidable : Pred a -> Type
 Decidable p = (x : a) -> Dec (p x)
 
-||| Hilbert's epsilon is function that for a given predicate
+||| Hilbert's epsilon is a function that for a given predicate
 ||| returns a value that satisfies it if any value exists that
 ||| that would satisfy it.
+-- NB: this is not in the original posts, it's me making potentially
+-- erroneous connections
 0 HilbertEpsilon : Pred x -> Type
 HilbertEpsilon p = (v : x ** (v0 : x) -> p v0 -> p v)
 
