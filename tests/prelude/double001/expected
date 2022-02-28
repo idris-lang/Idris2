@@ -1,0 +1,65 @@
+1/1: Building Types (Types.idr)
+Main> 0
+Main> 0
+Main> 0
+Main> 0.0 / 0.0
+Main> -1.0 / 0.0
+Main> -1.0 / 0.0
+Main> 0.0 / 0.0
+Main> 0.0 / 0.0
+Main> 0
+Main> -0.25
+Main> 0.0 / 0.0
+Main> 0
+Main> 0.0 / 0.0
+Main> 4
+Main> 0.0 / 0.0
+Main> 0.0 / 0.0
+Main> 0.0 / 0.0
+Main> 0.25
+Main> 0.0 / 0.0
+Main> 0
+Main> 0.0 / 0.0
+Main> 0.25
+Main> 0.0 / 0.0
+Main> 0.0 / 0.0
+Main> 1.0 / 0.0
+Main> 1.0 / 0.0
+Main> 1
+Main> 0
+Main> 0
+Main> 0.0 / 0.0
+Main> 0.0 / 0.0
+Main> 0
+Main> 4
+Main> 1.414213562373095
+Main> 1
+Main> 0.7071067811865476
+Main> 0.25
+Main> 0
+Main> 0.0 / 0.0
+Main> 0
+Main> 0.25
+Main> 0.7071067811865476
+Main> 0
+Main> 1.414213562373095
+Main> 4
+Main> 1.0 / 0.0
+Main> 0.0 / 0.0
+Main> 0
+Main> 0
+Main> 0
+Main> 0.0 / 0.0
+Main> 1.0 / 0.0
+Main> 1.0 / 0.0
+Main> 1.0 / 0.0
+Main> 0.0 / 0.0
+Main> 0.0 / 0.0
+Main> 0.0 / 0.0
+Main> 0.0 / 0.0
+Main> 0.0 / 0.0
+Main> 0.0 / 0.0
+Main> 0.0 / 0.0
+Main> 0.0 / 0.0
+Main> 0.0 / 0.0
+Main> Bye for now!
