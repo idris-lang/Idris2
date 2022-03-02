@@ -49,6 +49,15 @@ powDoubleCases = [
     pow 0.5 inf,
     pow 0.5 nan,
 
+    pow 1 (-inf),
+    pow 1 (-2),
+    pow 1 (-0.5),
+    pow 1 0,
+    pow 1 0.5,
+    pow 1 2,
+    pow 1 inf,
+    pow 1 nan,
+
     pow 2 (-inf),
     pow 2 (-2),
     pow 2 (-0.5),
