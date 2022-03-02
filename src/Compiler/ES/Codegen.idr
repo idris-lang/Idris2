@@ -281,6 +281,9 @@ truncateUnsigned isBigInt bits =
    let add = if isBigInt then "BigInt" else "Int"
     in callFun1 (esName "truncU" ++ add ++ show bits)
 
+integerOp : (op : String) -> (lhs : Doc) -> (rhs : Doc) -> Doc
+integerOp op x y = callFun (fastConcat ["_", op, "BigInt"]) [x,y]
+
 -- invokes an arithmetic operation for a bounded integral value.
 -- this is used to implement `boundedIntOp` and `boundedUIntOp`
 -- where the suffix is set to "s" or "u", respectively.
@@ -346,12 +349,22 @@ arithOp :  Maybe IntKind
         -> Doc
 arithOp (Just $ Signed $ P n) _   op = boundedIntOp n op
 arithOp (Just $ Unsigned n)   _   op = boundedUIntOp n op
+arithOp _                     ""  op = integerOp op
 arithOp _                     sym _  = binOp sym
 
 -- use 32bit signed integer for `Int`.
 jsIntKind : Constant -> Maybe IntKind
 jsIntKind IntType = Just . Signed   $ P 32
 jsIntKind x       = intKind x
+
+jsMod : Constant -> Doc -> Doc -> Doc
+jsMod ty x y = case jsIntKind ty of
+  (Just $ Signed $ P n) => case useBigInt' n of
+    True  => integerOp "mod" x y
+    False => callFun "_mod" [x,y]
+  (Just $ Unsigned n)   => binOp "%" x y
+  _                     => integerOp "mod" x y
+
 
 -- implementation of all kinds of cast from and / or to integral
 -- values.
@@ -413,8 +426,8 @@ jsOp : {0 arity : Nat} ->
 jsOp (Add ty) [x, y] = pure $ arithOp (jsIntKind ty) "+" "add" x y
 jsOp (Sub ty) [x, y] = pure $ arithOp (jsIntKind ty) "-" "sub" x y
 jsOp (Mul ty) [x, y] = pure $ arithOp (jsIntKind ty) "*" "mul" x y
-jsOp (Div ty) [x, y] = pure $ arithOp (jsIntKind ty) "/" "div" x y
-jsOp (Mod ty) [x, y] = pure $ binOp "%" x y
+jsOp (Div ty) [x, y] = pure $ arithOp (jsIntKind ty) ""  "div" x y
+jsOp (Mod ty) [x, y] = pure $ jsMod ty x y
 jsOp (Neg ty) [x] = pure $ "(-(" <+> x <+> "))"
 jsOp (ShiftL Int32Type) [x, y] = pure $ binOp "<<" x y
 jsOp (ShiftL IntType) [x, y] = pure $ binOp "<<" x y

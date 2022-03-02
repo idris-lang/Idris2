@@ -87,10 +87,34 @@ const _truncBigInt8 = x => {
   return res >= 0x80 ? res - 0x100 : res;
 }
 
+// Euclidian Division
+const _div = (a,b) => {
+  let q = Math.trunc(a / b)
+  let r = a % b
+  return r < 0 ? (b > 0 ? q - 1 : q + 1) : q
+}
+
+const _divBigInt = (a,b) => {
+  let q = a / b
+  let r = a % b
+  return r < 0n ? (b > 0n ? q - 1n : q + 1n) : q
+}
+
+// Euclidian Modulo
+const _mod = (a,b) => {
+  r = a % b
+  return r < 0 ? (b > 0 ? r + b : r - b) : r
+}
+
+const _modBigInt = (a,b) => {
+  r = a % b
+  return r < 0n ? (b > 0n ? r + b : r - b) : r
+}
+
 const _add8s = (a,b) => _truncInt8(a + b)
 const _sub8s = (a,b) => _truncInt8(a - b)
 const _mul8s = (a,b) => _truncInt8(a * b)
-const _div8s = (a,b) => _truncInt8(Math.trunc(a / b))
+const _div8s = (a,b) => _truncInt8(_div(a,b))
 const _shl8s = (a,b) => _truncInt8(a << b)
 const _shr8s = (a,b) => _truncInt8(a >> b)
 
@@ -108,7 +132,7 @@ const _truncBigInt16 = x => {
 const _add16s = (a,b) => _truncInt16(a + b)
 const _sub16s = (a,b) => _truncInt16(a - b)
 const _mul16s = (a,b) => _truncInt16(a * b)
-const _div16s = (a,b) => _truncInt16(Math.trunc(a / b))
+const _div16s = (a,b) => _truncInt16(_div(a,b))
 const _shl16s = (a,b) => _truncInt16(a << b)
 const _shr16s = (a,b) => _truncInt16(a >> b)
 
@@ -122,7 +146,7 @@ const _truncBigInt32 = x => {
 
 const _add32s = (a,b) => _truncInt32(a + b)
 const _sub32s = (a,b) => _truncInt32(a - b)
-const _div32s = (a,b) => _truncInt32(Math.trunc(a / b))
+const _div32s = (a,b) => _truncInt32(_div(a,b))
 
 const _mul32s = (a,b) => {
   const res = a * b;
@@ -142,7 +166,7 @@ const _truncBigInt64 = x => {
 const _add64s = (a,b) => _truncBigInt64(a + b)
 const _sub64s = (a,b) => _truncBigInt64(a - b)
 const _mul64s = (a,b) => _truncBigInt64(a * b)
-const _div64s = (a,b) => _truncBigInt64(a / b)
+const _div64s = (a,b) => _truncBigInt64(_divBigInt(a,b))
 const _shl64s = (a,b) => _truncBigInt64(a << b)
 const _shr64s = (a,b) => _truncBigInt64(a >> b)
 
