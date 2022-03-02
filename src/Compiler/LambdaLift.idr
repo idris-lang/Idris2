@@ -34,7 +34,7 @@ mutual
   data Lifted : (vars : List Name) -> Type where
 
        ||| A local variable in the lambda-lifted syntax tree.
-       ||| 
+       |||
        ||| @ idx is the index that the variable can be found at in the syntax
        |||   tree's current scope.
        ||| @ p is evidence that indexing into vars with idx will provide the
