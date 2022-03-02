@@ -233,9 +233,9 @@ nub = nubBy (==)
 ||| @x The value to insert.
 ||| @xs The list to insert the value into.
 public export
-insertAt : (idx : Nat) -> (x : a) -> (xs : List a) -> {auto 0 prf : idx `LTE` length xs} -> List a
+insertAt : (idx : Nat) -> (x : a) -> (xs : List a) -> {auto 0 ok : idx `LTE` length xs} -> List a
 insertAt Z x xs = x :: xs
-insertAt {prf=LTESucc _} (S n) x (y :: ys) = y :: (insertAt n x ys)
+insertAt {ok=LTESucc _} (S n) x (y :: ys) = y :: (insertAt n x ys)
 
 ||| Construct a new list consisting of all but the indicated element.
 |||
