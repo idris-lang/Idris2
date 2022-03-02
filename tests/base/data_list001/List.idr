@@ -10,5 +10,17 @@ deleteAtCases = [
     deleteAt 2 [3, 4, 5]
   ]
 
+replaceAtCases : List (List Nat)
+replaceAtCases = [
+    replaceAt 0 6 [3],
+    replaceAt 0 6 [3, 4],
+    replaceAt 1 6 [3, 4],
+    replaceAt 0 6 [3, 4, 5],
+    replaceAt 1 6 [3, 4, 5],
+    replaceAt 2 6 [3, 4, 5]
+  ]
+
 main : IO ()
-main = do printLn deleteAtCases
+main = do
+  printLn deleteAtCases
+  printLn replaceAtCases
