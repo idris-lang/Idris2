@@ -410,8 +410,8 @@ splitOn a = split (== a)
 ||| @xs The list in which to replace an element.
 public export
 replaceAt : (idx : Nat) -> a -> (xs : List a) -> {auto 0 ok : InBounds idx xs} -> List a
-replaceAt Z y (_ :: xs) {prf=InFirst} = y :: xs
-replaceAt (S k) y (x :: xs) {prf=InLater _} = x :: replaceAt k y xs
+replaceAt Z y (_ :: xs) {ok=InFirst} = y :: xs
+replaceAt (S k) y (x :: xs) {ok=InLater _} = x :: replaceAt k y xs
 
 ||| Replace the elements in the list that satisfy the predicate with the given
 ||| value. The general case of `replaceOn`.
