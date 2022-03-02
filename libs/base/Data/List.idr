@@ -402,8 +402,7 @@ splitOn a = split (== a)
 ||| Replace an element at a particlar index with another.
 |||
 ||| ```idris example
-||| > replaceAt 2 6 [1, 2, 3, 4].
-||| [1, 2, 6, 4]
+||| replaceAt 2 6 [1, 2, 3, 4]
 ||| ```
 |||
 ||| @idx The index of the value to replace.
