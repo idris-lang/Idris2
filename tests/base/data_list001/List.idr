@@ -1,4 +1,5 @@
 import Data.List
+import Data.Nat
 
 insertAtCases : List (List Nat)
 insertAtCases = [
