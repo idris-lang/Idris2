@@ -794,7 +794,7 @@ log x = prim__doubleLog x
 
 public export
 pow : Double -> Double -> Double
-pow x y = exp (y * log x) -- prim__doublePow x y
+pow x y = prim__doublePow x y
 
 public export
 sin : Double -> Double

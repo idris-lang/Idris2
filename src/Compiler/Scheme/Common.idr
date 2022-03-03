@@ -170,7 +170,7 @@ schOp StrSubstr [x, y, z] = pure $ op "string-substr" [x, y, z]
 -- `e` is Euler's number, which approximates to: 2.718281828459045
 schOp DoubleExp [x] = pure $ op "flexp" [x] -- Base is `e`. Same as: `pow(e, x)`
 schOp DoubleLog [x] = pure $ op "fllog" [x] -- Base is `e`.
-schOp DoublePow [x, y] = pure $ op "expt" [x, y]
+schOp DoublePow [x, y] = pure $ op "flexpt" [x, y]
 schOp DoubleSin [x] = pure $ op "flsin" [x]
 schOp DoubleCos [x] = pure $ op "flcos" [x]
 schOp DoubleTan [x] = pure $ op "fltan" [x]
