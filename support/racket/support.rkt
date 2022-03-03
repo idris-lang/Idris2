@@ -24,6 +24,19 @@
 (define (blodwen-toUnsignedInt x bits)
   (bitwise-and x (sub1 (arithmetic-shift 1 bits))))
 
+(define (blodwen-euclidDiv a b)
+  (let ((q (quotient a b))
+        (r (remainder a b)))
+    (if (< r 0)
+      (if (> b 0) (- q 1) (+ q 1))
+      q)))
+
+(define (blodwen-euclidMod a b)
+  (let ((r (remainder a b)))
+    (if (< r 0)
+      (if (> b 0) (+ r b) (- r b))
+      r)))
+
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
 (define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
@@ -32,7 +45,7 @@
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
 (define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
-(define bs/ (lambda (x y bits) (blodwen-toSignedInt (quotient x y) bits)))
+(define bs/ (lambda (x y bits) (blodwen-toSignedInt (blodwen-euclidDiv x y) bits)))
 
 ; To match Chez
 (define (fxadd1 x) (unsafe-fx+ x 1))
