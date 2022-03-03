@@ -6,8 +6,8 @@ insertAtCases = [
     insertAt 0 9 [6, 7, 8],
     insertAt 1 9 [6, 7, 8],
     insertAt 3 9 [6, 7, 8],
-    insertAt 0 9 [6]
-    insertAt 1 9 [6]
+    insertAt 0 9 [6],
+    insertAt 1 9 [6],
     insertAt 0 9 []
   ]
 
