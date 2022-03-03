@@ -27,6 +27,18 @@
 (define (blodwen-toUnsignedInt x bits)
   (logand x (sub1 (ash 1 bits))))
 
+(define (blodwen-euclidDiv a b)
+  (let ((q (quotient a b))
+        (r (remainder a b)))
+    (if (< r 0)
+      (if (> b 0) (- q 1) (+ q 1))
+      q)))
+
+(define (blodwen-euclidMod a b)
+  (let ((r (remainder a b)))
+    (if (< r 0)
+      (if (> b 0) (+ r b) (- r b))
+      r)))
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
@@ -36,7 +48,7 @@
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
 (define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
-(define bs/ (lambda (x y bits) (blodwen-toSignedInt (quotient x y) bits)))
+(define bs/ (lambda (x y bits) (blodwen-toSignedInt (blodwen-euclidDiv x y) bits)))
 
 (define (integer->bits8 x) (logand x (sub1 (ash 1 8))))
 (define (integer->bits16 x) (logand x (sub1 (ash 1 16))))

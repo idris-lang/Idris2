@@ -78,7 +78,7 @@ mul (Just $ Unsigned n)     x y = op "bu*" [x, y, show n]
 mul _                       x y = op "*" [x, y]
 
 div : Maybe IntKind -> String -> String -> String
-div (Just $ Signed Unlimited) x y = op "quotient" [x, y]
+div (Just $ Signed Unlimited) x y = op "blodwen-euclidDiv" [x, y]
 div (Just $ Signed $ P n)     x y = op "bs/" [x, y, show (n-1)]
 div (Just $ Unsigned n)       x y = op "bu/" [x, y, show n]
 div _                         x y = op "/" [x, y]
@@ -136,7 +136,7 @@ schOp (Add ty) [x, y] = pure $ add (intKind ty) x y
 schOp (Sub ty) [x, y] = pure $ sub (intKind ty) x y
 schOp (Mul ty) [x, y] = pure $ mul (intKind ty) x y
 schOp (Div ty) [x, y] = pure $ div (intKind ty) x y
-schOp (Mod ty) [x, y] = pure $ op "remainder" [x, y]
+schOp (Mod ty) [x, y] = pure $ op "blodwen-euclidMod" [x, y]
 schOp (Neg ty) [x] = pure $ op "-" [x]
 schOp (ShiftL ty) [x, y] = pure $ shl (intKind ty) x y
 schOp (ShiftR ty) [x, y] = pure $ op "blodwen-shr" [x, y]
