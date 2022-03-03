@@ -201,7 +201,7 @@ jobs:
       - name: Get Chez Scheme
         run: |
           git clone --depth 1 https://github.com/cisco/ChezScheme
-          c:\msys64\usr\bin\bash -l -c "pacman -S --noconfirm tar make"
+          c:\msys64\usr\bin\bash -l -c "pacman -S --noconfirm tar make mingw-w64-x86_64-gcc"
           echo "PWD=$(c:\msys64\usr\bin\cygpath -u $(pwd))" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Configure and Build Chez Scheme
         run: |
@@ -416,7 +416,7 @@ jobs:
       - name: Get Chez Scheme
         run: |
           git clone --depth 1 https://github.com/cisco/ChezScheme
-          c:\msys64\usr\bin\bash -l -c "pacman -S --noconfirm tar make"
+          c:\msys64\usr\bin\bash -l -c "pacman -S --noconfirm tar make mingw-w64-x86_64-gcc"
           echo "PWD=$(c:\msys64\usr\bin\cygpath -u $(pwd))" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Configure and Build Chez Scheme
         run: |
