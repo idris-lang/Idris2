@@ -399,6 +399,20 @@ public export
 splitOn : Eq a => a -> List a -> List1 (List a)
 splitOn a = split (== a)
 
+||| Replace an element at a particlar index with another.
+|||
+||| ```idris example
+||| replaceAt 2 6 [1, 2, 3, 4]
+||| ```
+|||
+||| @idx The index of the value to replace.
+||| @x The value to insert.
+||| @xs The list in which to replace an element.
+public export
+replaceAt : (idx : Nat) -> a -> (xs : List a) -> {auto 0 ok : InBounds idx xs} -> List a
+replaceAt Z y (_ :: xs) {ok=InFirst} = y :: xs
+replaceAt (S k) y (x :: xs) {ok=InLater _} = x :: replaceAt k y xs
+
 ||| Replace the elements in the list that satisfy the predicate with the given
 ||| value. The general case of `replaceOn`.
 |||
