@@ -26,8 +26,9 @@ displayType shortName defs (n, i, gdef)
   = maybe (do tm <- resugar [] !(normaliseHoles defs [] (type gdef))
               nm <- aliasName (fullname gdef)
               let nm = ifThenElse shortName (dropNS nm) nm
+              let prig = prettyRig gdef.multiplicity
               let ann = showCategory id gdef
-              pure (ann (prettyOp nm) <++> colon <++> prettyTerm tm))
+              pure (prig <+> ann (prettyOp nm) <++> colon <++> prettyTerm tm))
           (\num => prettyHole defs [] n num (type gdef))
           (isHole gdef)
 export

@@ -62,7 +62,7 @@ toList = foldr :: []
 foldMap : Monoid m => (a -> m) -> Either e a -> m
 foldMap f = foldr (<+> . f) neutral
 Main> Imported module Data.Bits
-Main> Index : Type
+Main> 0 Index : Type
 Index = Nat
 
 (.&.) : Integer -> Integer -> Integer

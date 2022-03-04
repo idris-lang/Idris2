@@ -161,8 +161,9 @@ pragma : Doc IdrisSyntax -> Doc IdrisSyntax
 pragma = annotate Pragma
 
 export
-prettyRig : RigCount -> Doc ann
-prettyRig = elimSemi (pretty '0' <+> space)
+prettyRig : RigCount -> Doc IdrisSyntax
+prettyRig = keyword
+          . elimSemi (pretty '0' <+> space)
                      (pretty '1' <+> space)
                      (const emptyDoc)
 

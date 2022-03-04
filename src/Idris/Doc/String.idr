@@ -440,14 +440,14 @@ getDocsForName fc n config
                         PPi _ _ AutoImplicit _ _ sc => sc
                         _ => ty
              nm <- aliasName n
-             -- when printing e.g. interface methods there is no point in
-             -- repeating the namespace the interface lives in
+             let prig = reAnnotate Syntax $ prettyRig def.multiplicity
              let cat = showCategory Syntax def
              let nm = prettyKindedName typ $ cat
                     $ ifThenElse longNames (pretty (show nm)) (prettyName nm)
              let deprecated = if Context.Deprecate `elem` def.flags
                                  then annotate Deprecation "=DEPRECATED=" <+> line else emptyDoc
-             let docDecl = deprecated <+> annotate (Decl n) (hsep [nm, colon, prettyTerm ty])
+             let docDecl = deprecated
+                     <+> annotate (Decl n) (hsep [prig <+> nm, colon, prettyTerm ty])
 
              -- Finally add the user-provided docstring
              let docText = let docs = reflowDoc str in
