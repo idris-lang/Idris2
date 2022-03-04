@@ -61,4 +61,46 @@ toList = foldr :: []
 
 foldMap : Monoid m => (a -> m) -> Either e a -> m
 foldMap f = foldr (<+> . f) neutral
+Main> Imported module Data.Bits
+Main> Index : Type
+Index = Nat
+
+(.&.) : Integer -> Integer -> Integer
+(.&.) = prim__and_Integer
+
+(.|.) : Integer -> Integer -> Integer
+(.|.) = prim__or_Integer
+
+xor : Integer -> Integer -> Integer
+xor = prim__xor_Integer
+
+shiftL : Integer -> Index -> Integer
+shiftL x = prim__shl_Integer x . natToInteger
+
+shiftR : Integer -> Index -> Integer
+shiftR x = prim__shr_Integer x . natToInteger
+
+bit : Index -> Integer
+bit = \{arg:0} => 1 `shiftL` arg
+
+zeroBits : Integer
+zeroBits = 0
+
+complement : Integer -> Integer
+complement = xor oneBits
+
+oneBits : Integer
+oneBits = -1
+
+complementBit : Integer -> Index -> Integer
+complementBit x i = x `xor` bit i
+
+clearBit : Integer -> Index -> Integer
+clearBit x i = x `xor` (bit i .&. x)
+
+testBit : Integer -> Index -> Bool
+testBit x i = (x .&. bit i) /= 0
+
+setBit : Integer -> Index -> Integer
+setBit x i = x .|. bit i
 Main> Bye for now!

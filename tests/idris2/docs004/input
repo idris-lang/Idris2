@@ -9,4 +9,6 @@
 :printdef Eq Double
 :printdef Functor Maybe
 :printdef Foldable (Either err)
+:module Data.Bits
+:printdef Bits Integer
 :q
