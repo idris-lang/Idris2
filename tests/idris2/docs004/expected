@@ -15,12 +15,23 @@ show cs = strCons '"' (showLitString (unpack cs) """)
 
 showPrec : Prec -> String -> String
 showPrec _ x = show x
+Main> Could not find an implementation for Show Type
+Main> (==) : Nat -> Nat -> Bool
+(==) = equalNat
+
+(/=) : Nat -> Nat -> Bool
+x /= y = not (x == y)
 Main> (==) : Eq a => List a -> List a -> Bool
 [] == [] = True
 (x :: xs) == (y :: ys) = (x == y) && Delay (xs == ys)
 _ == _ = False
 
 (/=) : Eq a => List a -> List a -> Bool
+x /= y = not (x == y)
+Main> (==) : Double -> Double -> Bool
+x == y = intToBool (prim__eq_Double x y)
+
+(/=) : Double -> Double -> Bool
 x /= y = not (x == y)
 Main> map : (a -> b) -> Maybe a -> Maybe b
 map f (Just x) = Just (f x)

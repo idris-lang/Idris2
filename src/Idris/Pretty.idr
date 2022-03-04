@@ -430,10 +430,7 @@ mutual
 
   export
   prettyTerm : IPTerm -> Doc IdrisSyntax
-  prettyTerm tm@(PRef _ op@(MkKindedName _ _ nm))
-    = if isOpName nm
-      then annotateM (kindAnn op) $ pretty nm
-      else go Open tm
+  prettyTerm (PRef _ op@(MkKindedName _ _ nm)) = annotateM (kindAnn op) $ prettyOp nm
   prettyTerm tm = go Open tm
 
 export
