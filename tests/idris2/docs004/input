@@ -1,11 +1,12 @@
 :doc Happy
-:doc Happy Bool
-:doc ((Happy Nat))
-:doc Show String
-:doc Show Type
-:doc Eq Nat
-:doc Eq (List a)
-:doc Eq Double
-:doc Functor Maybe
-:doc Foldable (Either err)
+:printdef Happy Bool
+:printdef ((Happy Nat))
+:printdef Show String
+:printdef Show Type
+:printdef Eq NAt
+:printdef Eq Nat
+:printdef Eq (List a)
+:printdef Eq Double
+:printdef Functor Maybe
+:printdef Foldable (Either err)
 :q

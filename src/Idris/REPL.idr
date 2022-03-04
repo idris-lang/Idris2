@@ -755,12 +755,16 @@ process (CheckWithImplicits itm)
          result <- process (Check itm)
          setOpt (ShowImplicits showImplicits)
          pure result
-process (PrintDef fn)
+process (PrintDef (PRef _ fn))
     = do defs <- get Ctxt
          case !(lookupCtxtName fn (gamma defs)) of
               [] => undefinedName replFC fn
               ts => do defs <- traverse (displayPats False defs) ts
                        pure (Printed $ vsep $ map (reAnnotate Syntax) defs)
+process (PrintDef t)
+    = case !(getDocsForImplementation t) of
+        Just d => pure (Printed $ reAnnotate Syntax d)
+        Nothing => pure (Printed $ pretty $ "Error: could not find definition of \{show t}")
 process Reload
     = do opts <- get ROpts
          case mainfile opts of

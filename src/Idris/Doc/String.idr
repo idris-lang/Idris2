@@ -467,7 +467,7 @@ export
 getDocsForImplementation :
   {auto s : Ref Syn SyntaxInfo} ->
   {auto c : Ref Ctxt Defs} ->
-  PTerm -> Core (Maybe (Doc IdrisDocAnn))
+  PTerm -> Core (Maybe (Doc IdrisSyntax))
 getDocsForImplementation t = do
   -- the term better be of the shape (I e1 e2 e3) where I is a name
   let (PRef fc intf, args) = getFnArgs t
@@ -499,7 +499,7 @@ getDocsForImplementation t = do
       -- retain implementations whose type is fully compatible.
 
       -- TODO: check the Args have the same shape before unArgging?
-      let ((PRef _ hd, _), (PRef _ chd, _)) = (getFnArgs (unArg arg), getFnArgs (unArg carg))
+      let ((PRef fc hd, _), (PRef _ chd, _)) = (getFnArgs (unArg arg), getFnArgs (unArg carg))
         | ((PPrimVal _ c, _), (PPrimVal _ c', _)) => pure (c == c')
         | ((PType _, _), (PType _, _)) => pure True
         | _ => pure False
@@ -515,7 +515,12 @@ getDocsForImplementation t = do
         , "checking whether \{show hd} exists:"
         , "\{show $ length existing} candidates"
         ]
-      pure (null existing)
+      let [] = existing
+        | _ => pure False
+      -- If the name starts with an uppercase letter it's probably a misspelt constructor name
+      whenJust ((isUN >=> (isBasic . snd) >=> strUncons >=> (guard . isUpper . fst)) hd) $ \ _ =>
+        undefinedName fc hd
+      pure True
     -- all arguments better be valid approximations
     let True = all id bs
       | False => pure Nothing
@@ -523,7 +528,7 @@ getDocsForImplementation t = do
   case impls of
     [] => pure $ Just $ "Could not find an implementation for" <++> pretty (show t)
     _ => do ds <- traverse (displayImpl defs) impls
-            pure $ Just $ vcat (map (reAnnotate Syntax) ds)
+            pure $ Just $ vcat ds
 
 export
 getDocsForPTerm : {auto o : Ref ROpts REPLOpts} ->
@@ -560,9 +565,7 @@ getDocsForPTerm (PUnit _) = pure $ vcat
   [ "Unit Literal"
   , indent 2 "Desugars to MkUnit or Unit"
   ]
-getDocsForPTerm pterm = case !(getDocsForImplementation pterm) of
-  Nothing => pure $ "Docs not implemented for" <++> pretty (show pterm) <++> "yet"
-  Just doc => pure doc
+getDocsForPTerm pterm = pure $ "Docs not implemented for" <++> pretty (show pterm) <++> "yet"
 
 export
 getDocs : {auto o : Ref ROpts REPLOpts} ->

@@ -606,7 +606,7 @@ data REPLCmd : Type where
      Eval : PTerm -> REPLCmd
      Check : PTerm -> REPLCmd
      CheckWithImplicits : PTerm -> REPLCmd
-     PrintDef : Name -> REPLCmd
+     PrintDef : PTerm -> REPLCmd
      Reload : REPLCmd
      Load : String -> REPLCmd
      ImportMod : ModuleIdent -> REPLCmd

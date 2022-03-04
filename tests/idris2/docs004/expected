@@ -16,6 +16,12 @@ show cs = strCons '"' (showLitString (unpack cs) """)
 showPrec : Prec -> String -> String
 showPrec _ x = show x
 Main> Could not find an implementation for Show Type
+Main> Error: Undefined name NAt. 
+
+(Interactive):1:14--1:17
+ 1 | :printdef Eq NAt
+                  ^^^
+Did you mean any of: Nat, or Not?
 Main> (==) : Nat -> Nat -> Bool
 (==) = equalNat
 
