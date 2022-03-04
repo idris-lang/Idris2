@@ -1,0 +1,8 @@
+:doc Happy
+:doc Happy Bool
+:doc ((Happy Nat))
+:doc Show String
+:doc Eq (List a)
+:doc Functor Maybe
+:doc Foldable (Either err)
+:q

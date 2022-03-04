@@ -32,11 +32,14 @@ unbracketApp tm = tm
 mkOp : {auto s : Ref Syn SyntaxInfo} ->
        IPTerm -> Core IPTerm
 mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
-    = do syn <- get Syn
-         let n = rawName kn
-         case StringMap.lookup (nameRoot n) (infixes syn) of
-              Nothing => pure tm
-              Just _ => pure (POp fc opFC kn (unbracketApp x) (unbracketApp y))
+  = do syn <- get Syn
+       let n = rawName kn
+       let asOp = POp fc opFC kn (unbracketApp x) (unbracketApp y)
+       case StringMap.lookup (snd $ displayName n) (infixes syn) of
+         Just _ => pure asOp
+         Nothing => case dropNS n of
+           DN str _ => pure $ ifThenElse (isOpUserName (Basic str)) asOp tm
+           _ => pure tm
 mkOp tm = pure tm
 
 export

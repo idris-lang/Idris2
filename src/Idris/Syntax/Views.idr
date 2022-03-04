@@ -25,13 +25,25 @@ getFnArgs fts = go fts [] where
   go (PAutoApp fc f t) = go f . (Auto fc t ::)
   go (PNamedApp fc f n t) = go f . (Named fc n t ::)
   go (PBracketed fc f) = go f
+  go (POp fc opFC op l r) = (PRef opFC op,) . (Explicit fc l ::) . (Explicit fc r ::)
   go f = (f,)
 
 export
-getPis : PTerm' nm -> (List (Maybe Name, Binder (PTerm' nm)), PTerm' nm)
-getPis abs = go abs [] where
+underPis : PTerm' nm -> (List (Maybe Name, Binder (PTerm' nm)), PTerm' nm)
+underPis abs = go abs [] where
 
   go : PTerm' nm -> List (Maybe Name, Binder (PTerm' nm)) ->
        (List (Maybe Name, Binder (PTerm' nm)), PTerm' nm)
   go (PPi fc rig pinfo mn a b) = go b . ((mn, Pi fc rig pinfo a) ::)
+  go (PBracketed fc abs) = go abs
   go abs = (, abs)
+
+export
+underLams : PTerm' nm -> (List (PTerm' nm, Binder (PTerm' nm)), PTerm' nm)
+underLams fs = go fs [] where
+
+  go : PTerm' nm -> List (PTerm' nm, Binder (PTerm' nm)) ->
+       (List (PTerm' nm, Binder (PTerm' nm)), PTerm' nm)
+  go (PBracketed fc f) = go f
+  go (PLam fc rig pinfo pat a sc) = go sc . ((pat, Lam fc rig pinfo a) ::)
+  go fs = (,fs)

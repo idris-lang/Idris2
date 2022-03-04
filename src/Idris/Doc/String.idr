@@ -487,7 +487,7 @@ getDocsForImplementation t = do
     Just (ix, def) <- lookupCtxtExactI hint (gamma defs)
       | Nothing => pure Nothing
     ty <- resugar [] =<< normaliseHoles defs [] (type def)
-    let (_, retTy) = getPis ty
+    let (_, retTy) = underPis ty
     -- try to see whether it approximates what we are looking for
     -- we throw the head away because it'll be the interface name (I)
     let (_, cargs) = getFnArgs retTy
@@ -523,7 +523,7 @@ getDocsForImplementation t = do
   case impls of
     [] => pure $ Just $ "Could not find an implementation for" <++> pretty (show t)
     _ => do ds <- traverse (displayImpl defs) impls
-            pure $ Just $ vcat ("Found:" :: map (indent 2 . reAnnotate Syntax) ds)
+            pure $ Just $ vcat (map (reAnnotate Syntax) ds)
 
 export
 getDocsForPTerm : {auto o : Ref ROpts REPLOpts} ->

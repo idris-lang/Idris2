@@ -25,6 +25,14 @@ data NameType : Type where
      TyCon   : (tag : Int) -> (arity : Nat) -> NameType
 
 export
+covering
+Show NameType where
+  showPrec d Bound = "Bound"
+  showPrec d Func = "Func"
+  showPrec d (DataCon tag ar) = showCon d "DataCon" $ showArg tag ++ showArg ar
+  showPrec d (TyCon tag ar) = showCon d "TyCon" $ showArg tag ++ showArg ar
+
+export
 isCon : NameType -> Maybe (Int, Nat)
 isCon (DataCon t a) = Just (t, a)
 isCon (TyCon t a) = Just (t, a)
@@ -43,6 +51,12 @@ defaultKindedName nm = MkKindedName Nothing nm nm
 
 export
 Show KindedName where show = show . rawName
+
+export
+covering
+[Raw] Show KindedName where
+  showPrec d (MkKindedName nm fn rn) =
+    showCon d "MkKindedName" $ showArg nm ++ showArg @{Raw} fn ++ showArg @{Raw} rn
 
 public export
 data Constant

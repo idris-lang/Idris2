@@ -351,7 +351,7 @@ processEdit (TypeAt line col name)
          -- Get the Doc for the result
          globalResult <- case globals of
            [] => pure Nothing
-           ts => do tys <- traverse (displayType defs) ts
+           ts => do tys <- traverse (displayType False defs) ts
                     pure $ Just (vsep $ map (reAnnotate Pretty.Syntax) tys)
 
          -- Lookup the name locally (The name at the specified position)
@@ -740,7 +740,7 @@ process (Check (PRef fc fn))
     = do defs <- get Ctxt
          case !(lookupCtxtName fn (gamma defs)) of
               [] => undefinedName fc fn
-              ts => do tys <- traverse (displayType defs) ts
+              ts => do tys <- traverse (displayType False defs) ts
                        pure (Printed $ vsep $ map (reAnnotate Syntax) tys)
 process (Check itm)
     = do (tm `WithType` ty) <- inferAndElab InExpr itm
@@ -759,7 +759,7 @@ process (PrintDef fn)
     = do defs <- get Ctxt
          case !(lookupCtxtName fn (gamma defs)) of
               [] => undefinedName replFC fn
-              ts => do defs <- traverse (displayPats defs) ts
+              ts => do defs <- traverse (displayPats False defs) ts
                        pure (Printed $ vsep $ map (reAnnotate Syntax) defs)
 process Reload
     = do opts <- get ROpts
