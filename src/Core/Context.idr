@@ -1414,23 +1414,24 @@ setVisibility fc n vis
 public export
 record SearchData where
   constructor MkSearchData
-  detArgs : List Nat -- determining argument positions
+  ||| determining argument positions
+  detArgs : List Nat
+  ||| Name of functions to use as hints, and whether ambiguity is allowed
+  |||
+  ||| In proof search, for every group of names
+  |||  * If exactly one succeeds, use it
+  |||  * If more than one succeeds, report an ambiguity error
+  |||  * If none succeed, move on to the next group
+  |||
+  ||| This allows us to prioritise some names (e.g. to declare 'open' hints,
+  ||| which we might us to open an implementation working as a module, or to
+  ||| declare a named implementation to be used globally), and to have names
+  ||| which are only used if all else fails (e.g. as a defaulting mechanism),
+  ||| while the proof search mechanism doesn't need to know about any of the
+  ||| details.
   hintGroups : List (Bool, List Name)
-       -- names of functions to use as hints, and whether ambiguity is allowed
-    {- In proof search, for every group of names
-        * If exactly one succeeds, use it
-        * If more than one succeeds, report an ambiguity error
-        * If none succeed, move on to the next group
 
-       This allows us to prioritise some names (e.g. to declare 'open' hints,
-       which we might us to open an implementation working as a module, or to
-       declare a named implementation to be used globally), and to have names
-       which are only used if all else fails (e.g. as a defaulting mechanism),
-       while the proof search mechanism doesn't need to know about any of the
-       details.
-    -}
-
--- Get the auto search data for a name.
+||| Get the auto search data for a name.
 export
 getSearchData : {auto c : Ref Ctxt Defs} ->
                 FC -> (defaults : Bool) -> Name ->

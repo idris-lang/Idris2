@@ -99,6 +99,7 @@ modules =
     Idris.Desugar.Mutual,
     Idris.Env,
     Idris.Doc.Annotations,
+    Idris.Doc.Display,
     Idris.Doc.Keywords,
     Idris.Doc.HTML,
     Idris.Doc.String,
@@ -119,6 +120,7 @@ modules =
     Idris.Resugar,
     Idris.SetOptions,
     Idris.Syntax,
+    Idris.Syntax.Views,
     Idris.Version,
 
     Idris.Elab.Implementation,
