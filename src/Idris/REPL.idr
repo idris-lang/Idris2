@@ -755,10 +755,10 @@ process (CheckWithImplicits itm)
          result <- process (Check itm)
          setOpt (ShowImplicits showImplicits)
          pure result
-process (PrintDef (PRef _ fn))
+process (PrintDef (PRef fc fn))
     = do defs <- get Ctxt
          case !(lookupCtxtName fn (gamma defs)) of
-              [] => undefinedName replFC fn
+              [] => undefinedName fc fn
               ts => do defs <- traverse (displayPats False defs) ts
                        pure (Printed $ vsep $ map (reAnnotate Syntax) defs)
 process (PrintDef t)
