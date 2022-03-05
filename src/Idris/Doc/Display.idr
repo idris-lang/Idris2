@@ -48,7 +48,7 @@ displayClause : {auto c : Ref Ctxt Defs} ->
 displayClause defs (vs ** (env, lhs, rhs))
   = do lhstm <- resugar env !(normaliseHoles defs env lhs)
        rhstm <- resugar env !(normaliseHoles defs env rhs)
-       pure (prettyTerm lhstm <++> equals <++> prettyTerm rhstm)
+       pure (prettyTerm lhstm <++> keyword equals <++> prettyTerm rhstm)
 
 export
 displayPats : {auto c : Ref Ctxt Defs} ->

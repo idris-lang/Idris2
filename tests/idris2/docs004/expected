@@ -104,3 +104,21 @@ testBit x i = (x .&. bit i) /= 0
 setBit : Integer -> Index -> Integer
 setBit x i = x .|. bit i
 Main> Bye for now!
+1/1: Building List (List.idr)
+List> interface List.Monoid : Type -> Type
+  Parameters: ty
+  Methods:
+    neutral : ty
+    (++) : ty -> ty -> ty
+      Fixity Declaration: infixr operator, level 5
+  Implementation: Monoid (List a)
+List> neutral : List a
+neutral = []
+
+(++) : List a -> List a -> List a
+xs ++ ys = case xs of
+  { [] => ys
+  ; x :: xs => let ih = xs ++ ys in x :: ih
+  }
+List> 
+Bye for now!

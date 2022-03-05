@@ -20,6 +20,9 @@ import Idris.Syntax
 
 %default covering
 
+%hide Symbols.equals
+%hide Symbols.semi
+
 public export
 data IdrisSyntax
   = Hole
@@ -135,6 +138,21 @@ case_ = keyword (pretty "case")
 of_ : Doc IdrisSyntax
 of_ = keyword (pretty "of")
 
+lcurly : Doc IdrisSyntax
+lcurly = keyword "{"
+
+semi : Doc IdrisSyntax
+semi = keyword ";"
+
+equals : Doc IdrisSyntax
+equals = keyword "="
+
+fatArrow : Doc IdrisSyntax
+fatArrow = keyword "=>"
+
+rcurly : Doc IdrisSyntax
+rcurly = keyword "}"
+
 do_ : Doc IdrisSyntax
 do_ = keyword (pretty "do")
 
@@ -170,7 +188,7 @@ prettyRig = keyword
 mutual
   prettyAlt : PClause' KindedName -> Doc IdrisSyntax
   prettyAlt (MkPatClause _ lhs rhs _) =
-    space <+> pipe <++> prettyTerm lhs <++> pretty "=>" <++> prettyTerm rhs <+> semi
+    space <+> pipe <++> prettyTerm lhs <++> fatArrow <++> prettyTerm rhs <+> semi
   prettyAlt (MkWithClause _ lhs rig wval prf flags cs) =
     space <+> pipe <++> angles (angles (reflow "with alts not possible")) <+> semi
   prettyAlt (MkImpossible _ lhs) =
@@ -178,7 +196,7 @@ mutual
 
   prettyCase : PClause' KindedName -> Doc IdrisSyntax
   prettyCase (MkPatClause _ lhs rhs _) =
-    prettyTerm lhs <++> pretty "=>" <++> prettyTerm rhs
+    prettyTerm lhs <++> fatArrow <++> prettyTerm rhs
   prettyCase (MkWithClause _ lhs rig rhs prf flags _) =
     space <+> pipe <++> angles (angles (reflow "with alts not possible"))
   prettyCase (MkImpossible _ lhs) =
@@ -248,7 +266,7 @@ mutual
   go d (PPi _ rig AutoImplicit Nothing arg ret) =
     parenthesise (d > startPrec) $ group $
       branchVal
-        (go startPrec arg <++> "=>" <+> softline <+> go startPrec ret)
+        (go startPrec arg <++> fatArrow <+> softline <+> go startPrec ret)
         (braces (auto_ <++> prettyRig rig <+> "_"
                 <++> colon <++> go startPrec arg)
                 <++> "->" <+> softline <+> go startPrec ret)
@@ -272,7 +290,7 @@ mutual
   go d (PLam _ rig _ n ty sc) =
       let (ns, sc) = getLamNames [(rig, n, ty)] sc in
           parenthesise (d > startPrec) $ group $
-            backslash <+> prettyBindings ns <++> "=>" <+> softline <+> go startPrec sc
+            backslash <+> prettyBindings ns <++> fatArrow <+> softline <+> go startPrec sc
     where
       getLamNames : List (RigCount, IPTerm, IPTerm) ->
                     IPTerm ->
@@ -322,11 +340,17 @@ mutual
 
   go d (PLet _ rig n ty val sc alts) =
     parenthesise (d > startPrec) $ group $ align $
-      let_ <++> (group $ align $ hang 2 $ prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty <++> equals <+> line <+> go startPrec val) <+> hardline
-        <+> hang 4 (fillSep (prettyAlt <$> alts)) <+> line <+> in_ <++> (group $ align $ hang 2 $ go startPrec sc)
+      let_ <++> (group $ align $ hang 2 $ prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty <++> equals <+> line <+> go startPrec val)
+        <+> case alts of
+             { [] => in_ <+> softline
+             ; _ => hardline <+> indent 4 (vsep (prettyAlt <$> alts)) <+> hardline <+> in_
+             }
+        <+> group (align $ hang 2 $ go startPrec sc)
   go d (PCase _ tm cs) =
-    parenthesise (d > startPrec) $ align $ case_ <++> go startPrec tm <++> of_ <+> line <+>
-      braces (vsep $ punctuate semi (prettyCase <$> cs))
+    parenthesise (d > startPrec) $
+      case_ <++> go startPrec tm <++> of_ <+> nest 2 (
+      let punctuation = lcurly :: (semi <$ fromMaybe [] (tail' [1..length cs])) in
+      line <+> (vsep $ zipWith (<++>) punctuation (prettyCase <$> cs) ++ [rcurly]))
   go d (PLocal _ ds sc) =
     parenthesise (d > startPrec) $ group $ align $
       let_ <++> braces (angles (angles "definitions")) <+> line <+> in_ <++> go startPrec sc
