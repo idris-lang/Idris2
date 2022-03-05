@@ -170,8 +170,9 @@ showHole defs env fn args ty
               ++ nameRoot (hdata.name) ++ " : " ++ show hdata.type
 
 export
-prettyRigHole : RigCount -> Doc ann
-prettyRigHole = elimSemi (pretty '0' <+> space)
+prettyRigHole : RigCount -> Doc IdrisSyntax
+prettyRigHole = keyword
+              . elimSemi (pretty '0' <+> space)
                          (pretty '1' <+> space)
                          (const $ space <+> space)
 
