@@ -364,7 +364,7 @@ Pretty String where
   pretty str = let str' = if "\n" `isSuffixOf` str then dropLast 1 str else str in
                    vsep $ map unsafeTextWithoutNewLines $ lines str'
 
-public export
+export
 FromString (Doc ann) where
   fromString = pretty
 
