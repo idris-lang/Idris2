@@ -84,10 +84,8 @@ public export
 Foldable SnocList where
   foldr f z = foldr f z . (<>> [])
 
-  foldl f z xs = h xs where
-    h : SnocList elem -> acc
-    h Lin = z
-    h (xs :< x) = f (h xs) x
+  foldl f z Lin = z
+  foldl f z (xs :< x) = f (foldl f z xs) x
 
   null Lin      = True
   null (_ :< _) = False
