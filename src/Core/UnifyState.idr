@@ -143,9 +143,7 @@ data UST : Type where
 export
 resetNextVar : {auto u : Ref UST UState} ->
                Core ()
-resetNextVar
-    = do ust <- get UST
-         put UST (record { nextName = 0 } ust)
+resetNextVar = update UST { nextName := 0 }
 
 -- Generate a global name based on the given root, in the current namespace
 export
@@ -154,7 +152,7 @@ genName : {auto c : Ref Ctxt Defs} ->
           String -> Core Name
 genName str
     = do ust <- get UST
-         put UST (record { nextName $= (+1) } ust)
+         put UST ({ nextName $= (+1) } ust)
          n <- inCurrentNS (MN str (nextName ust))
          pure n
 
@@ -167,7 +165,7 @@ genMVName (UN str) = genName (displayUserName str)
 genMVName (MN str _) = genName str
 genMVName n
     = do ust <- get UST
-         put UST (record { nextName $= (+1) } ust)
+         put UST ({ nextName $= (+1) } ust)
          mn <- inCurrentNS (MN (show n) (nextName ust))
          pure mn
 
@@ -178,7 +176,7 @@ genVarName : {auto c : Ref Ctxt Defs} ->
              String -> Core Name
 genVarName str
     = do ust <- get UST
-         put UST (record { nextName $= (+1) } ust)
+         put UST ({ nextName $= (+1) } ust)
          pure (MN str (nextName ust))
 
 -- Again, for case names
@@ -188,7 +186,7 @@ genCaseName : {auto c : Ref Ctxt Defs} ->
               String -> Core Name
 genCaseName root
     = do ust <- get UST
-         put UST (record { nextName $= (+1) } ust)
+         put UST ({ nextName $= (+1) } ust)
          inCurrentNS (CaseBlock root (nextName ust))
 
 export
@@ -197,30 +195,24 @@ genWithName : {auto c : Ref Ctxt Defs} ->
               String -> Core Name
 genWithName root
     = do ust <- get UST
-         put UST (record { nextName $= (+1) } ust)
+         put UST ({ nextName $= (+1) } ust)
          inCurrentNS (WithBlock root (nextName ust))
 
 addHoleName : {auto u : Ref UST UState} ->
               FC -> Name -> Int -> Core ()
-addHoleName fc n i
-    = do ust <- get UST
-         put UST (record { holes $= insert i (fc, n),
-                           currentHoles $= insert i (fc, n) } ust)
+addHoleName fc n i = update UST { holes $= insert i (fc, n),
+                                  currentHoles $= insert i (fc, n) }
 
 addGuessName : {auto u : Ref UST UState} ->
                FC -> Name -> Int -> Core ()
-addGuessName fc n i
-    = do ust <- get UST
-         put UST (record { guesses $= insert i (fc, n)  } ust)
+addGuessName fc n i = update UST { guesses $= insert i (fc, n) }
 
 export
 removeHole : {auto u : Ref UST UState} ->
              Int -> Core ()
-removeHole n
-    = do ust <- get UST
-         put UST (record { holes $= delete n,
-                           currentHoles $= delete n,
-                           delayedHoles $= delete n } ust)
+removeHole n = update UST { holes $= delete n,
+                            currentHoles $= delete n,
+                            delayedHoles $= delete n }
 
 export
 removeHoleName : {auto c : Ref Ctxt Defs} ->
@@ -228,98 +220,74 @@ removeHoleName : {auto c : Ref Ctxt Defs} ->
                  Name -> Core ()
 removeHoleName n
     = do defs <- get Ctxt
-         let Just i = getNameID n (gamma defs)
-             | Nothing => pure ()
-         removeHole i
+         whenJust (getNameID n defs.gamma) removeHole
 
 export
 addNoSolve : {auto u : Ref UST UState} ->
              Int -> Core ()
-addNoSolve i
-    = do ust <- get UST
-         put UST (record { noSolve $= insert i () } ust)
+addNoSolve i = update UST { noSolve $= insert i () }
 
 export
 removeNoSolve : {auto u : Ref UST UState} ->
                 Int -> Core ()
-removeNoSolve i
-    = do ust <- get UST
-         put UST (record { noSolve $= delete i } ust)
+removeNoSolve i = update UST { noSolve $= delete i }
 
 export
 saveHoles : {auto u : Ref UST UState} ->
             Core (IntMap (FC, Name))
 saveHoles
     = do ust <- get UST
-         put UST (record { currentHoles = empty } ust)
+         put UST ({ currentHoles := empty } ust)
          pure (currentHoles ust)
 
 export
 restoreHoles : {auto u : Ref UST UState} ->
                IntMap (FC, Name) -> Core ()
-restoreHoles hs
-    = do ust <- get UST
-         put UST (record { currentHoles = hs } ust)
+restoreHoles hs = update UST { currentHoles := hs }
 
 export
 removeGuess : {auto u : Ref UST UState} ->
               Int -> Core ()
-removeGuess n
-    = do ust <- get UST
-         put UST (record { guesses $= delete n } ust)
+removeGuess n = update UST { guesses $= delete n }
 
 -- Get all of the hole data
 export
 getHoles : {auto u : Ref UST UState} ->
            Core (IntMap (FC, Name))
-getHoles
-    = do ust <- get UST
-         pure (holes ust)
+getHoles = holes <$> get UST
 
 -- Get all of the guess data
 export
 getGuesses : {auto u : Ref UST UState} ->
            Core (IntMap (FC, Name))
-getGuesses
-    = do ust <- get UST
-         pure (guesses ust)
+getGuesses = guesses <$> get UST
 
 -- Get the hole data for holes in the current elaboration session
 -- (i.e. since the last 'saveHoles')
 export
 getCurrentHoles : {auto u : Ref UST UState} ->
                   Core (IntMap (FC, Name))
-getCurrentHoles
-    = do ust <- get UST
-         pure (currentHoles ust)
+getCurrentHoles = currentHoles <$> get UST
 
 export
 isHole : {auto u : Ref UST UState} ->
          Int -> Core Bool
-isHole i
-    = do ust <- get UST
-         pure (maybe False (const True) (lookup i (holes ust)))
+isHole i = isJust . lookup i <$> getHoles
 
 export
 isCurrentHole : {auto u : Ref UST UState} ->
                 Int -> Core Bool
-isCurrentHole i
-    = do ust <- get UST
-         pure (maybe False (const True) (lookup i (currentHoles ust)))
+isCurrentHole i = isJust . lookup i <$> getCurrentHoles
 
 export
 setConstraint : {auto u : Ref UST UState} ->
                 Int -> Constraint -> Core ()
-setConstraint cid c
-    = do ust <- get UST
-         put UST (record { constraints $= insert cid c } ust)
+setConstraint cid c = update UST { constraints $= insert cid c }
 
 export
 deleteConstraint : {auto u : Ref UST UState} ->
                 Int -> Core ()
-deleteConstraint cid
-    = do ust <- get UST
-         put UST (record { constraints $= delete cid } ust)
+deleteConstraint cid = update UST { constraints $= delete cid }
 
 export
 addConstraint : {auto u : Ref UST UState} ->
@@ -328,8 +296,8 @@ addConstraint : {auto u : Ref UST UState} ->
 addConstraint constr
     = do ust <- get UST
          let cid = nextConstraint ust
-         put UST (record { constraints $= insert cid constr,
-                           nextConstraint = cid+1 } ust)
+         put UST ({ constraints $= insert cid constr,
+                    nextConstraint := cid+1 } ust)
          pure cid
 
 export
@@ -339,13 +307,10 @@ addDot : {vars : _} ->
          FC -> Env Term vars -> Name -> Term vars -> DotReason -> Term vars ->
          Core ()
 addDot fc env dotarg x reason y
-    = do ust <- get UST
-         defs <- get Ctxt
+    = do defs <- get Ctxt
          xnf <- nf defs env x
          ynf <- nf defs env y
-         put UST (record { dotConstraints $=
-                             ((dotarg, reason, MkConstraint fc False env xnf ynf) ::)
-                         } ust)
+         update UST { dotConstraints $= ((dotarg, reason, MkConstraint fc False env xnf ynf) ::) }
 
 export
 addPolyConstraint : {vars : _} ->
@@ -353,8 +318,7 @@ addPolyConstraint : {vars : _} ->
                     FC -> Env Term vars -> Term vars -> NF vars -> NF vars ->
                     Core ()
 addPolyConstraint fc env arg x@(NApp _ (NMeta _ _ _) _) y
-    = do ust <- get UST
-         put UST (record { polyConstraints $= ((MkPolyConstraint fc env arg x y) ::) } ust)
+    = update UST { polyConstraints $= ((MkPolyConstraint fc env arg x y) ::) }
 addPolyConstraint fc env arg x y
     = pure ()
 
@@ -460,11 +424,10 @@ newMetaLets : {vars : _} ->
 newMetaLets {vars} fc rig env n ty def nocyc lets
     = do let hty = if lets then abstractFullEnvType fc env ty
                            else abstractEnvType fc env ty
-         let hole = record { noCycles = nocyc }
+         let hole = { noCycles := nocyc }
                            (newDef fc n rig [] hty Public def)
          log "unify.meta" 5 $ "Adding new meta " ++ show (n, fc, rig)
          logTerm "unify.meta" 10 ("New meta type " ++ show n) hty
-         defs <- get Ctxt
          idx <- addDef n hole
          addHoleName fc n idx
          pure (idx, Meta fc n idx envArgs)
@@ -573,7 +536,7 @@ tryErrorUnify elab
                    pure (Right res))
                (\err => do put UST ust
                            defs' <- get Ctxt
-                           put Ctxt (record { timings = timings defs' } defs)
+                           put Ctxt ({ timings := timings defs' } defs)
                            pure (Left err))
 
 export
@@ -599,9 +562,7 @@ handleUnify elab1 elab2
 export
 addDelayedHoleName : {auto u : Ref UST UState} ->
                      (Int, (FC, Name)) -> Core ()
-addDelayedHoleName (idx, h)
-    = do ust <- get UST
-         put UST (record { delayedHoles $= insert idx h } ust)
+addDelayedHoleName (idx, h) = update UST { delayedHoles $= insert idx h }
 
 export
 checkDelayedHoles : {auto u : Ref UST UState} ->
@@ -624,7 +585,6 @@ checkValidHole : {auto c : Ref Ctxt Defs} ->
 checkValidHole base (idx, (fc, n))
   = when (idx >= base) $
       do defs <- get Ctxt
-         ust <- get UST
          Just gdef <- lookupCtxtExact (Resolved idx) (gamma defs)
               | Nothing => pure ()
          case definition gdef of
@@ -639,13 +599,13 @@ checkValidHole base (idx, (fc, n))
                           | Nothing => pure ()
                      case c of
                           MkConstraint fc l env x y =>
-                             do put UST (record { guesses = empty } ust)
+                             do put UST ({ guesses := empty } ust)
                                 empty <- clearDefs defs
                                 xnf <- quote empty env x
                                 ynf <- quote empty env y
                                 throw (CantSolveEq fc (gamma defs) env xnf ynf)
                           MkSeqConstraint fc env (x :: _) (y :: _) =>
-                             do put UST (record { guesses = empty } ust)
+                             do put UST ({ guesses := empty } ust)
                                 empty <- clearDefs defs
                                 xnf <- quote empty env x
                                 ynf <- quote empty env y
@@ -707,8 +667,6 @@ dumpHole : {auto u : Ref UST UState} ->
            Nat -> (hole : Int) -> Core ()
 dumpHole str n hole
     = do ust <- get UST
-         defs <- get Ctxt
-         sopts <- getSession
          defs <- get Ctxt
          case !(lookupCtxtExact (Resolved hole) (gamma defs)) of
           Nothing => pure ()
@@ -776,7 +734,6 @@ dumpConstraints : {auto u : Ref UST UState} ->
 dumpConstraints str n all
     = do ust <- get UST
          defs <- get Ctxt
-         sopts <- getSession
          when !(logging str n) $ do
            let hs = toList (guesses ust) ++
                     toList (if all then holes ust else currentHoles ust)

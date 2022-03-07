@@ -13,7 +13,7 @@ import Text.Quantity
 
 import System.Info
 
-infixr 5 </>, />
+infixl 5 </>, />
 infixr 7 <.>
 
 
@@ -244,6 +244,13 @@ parsePath =
                 (x::xs) => x :: delete CurDir xs
     pure $ MkPath vol (isJust root) body (isJust trailSep)
 
+export
+tryParse : String -> Maybe Path
+tryParse str =
+  case parse parsePath (lexPath str) of
+    Right (path, []) => Just path
+    _ => Nothing
+
 ||| Parses a String into Path.
 |||
 ||| The string is parsed as much as possible from left to right, and the invalid
@@ -292,9 +299,9 @@ append' left right =
   if isAbsolute' right || isJust right.volume then
     right
   else if hasRoot right then
-    record { volume = left.volume } right
+    { volume := left.volume } right
   else
-    record { body = left.body ++ right.body, hasTrailSep = right.hasTrailSep } left
+    { body := left.body ++ right.body, hasTrailSep := right.hasTrailSep } left
 
 splitPath' : Path -> List Path
 splitPath' path =
@@ -319,7 +326,7 @@ splitParent' path =
     [] => Nothing
     (x::xs) =>
       let
-        parent = record { body = init (x::xs), hasTrailSep = False } path
+        parent = { body := init (x::xs), hasTrailSep := False } path
         child = MkPath Nothing False [last (x::xs)] path.hasTrailSep
       in
         Just (parent, child)
@@ -351,6 +358,19 @@ splitFileName name =
     (_, ['.']) => (name, "")
     (revExt, (dot :: revStem)) =>
       ((pack $ reverse revStem), (pack $ reverse revExt))
+
+||| Split a file name into a basename and a list of extensions.
+||| A leading dot is considered to be part of the basename.
+||| ```
+||| splitExtensions "Path.idr"           = ("Path", ["idr"])
+||| splitExtensions "file.latex.lidr"    = ("file", ["latex", "lidr"])
+||| splitExtensions ".hidden.latex.lidr" = (".hidden", ["latex", "lidr"])
+||| ```
+export
+splitExtensions : String -> (String, List String)
+splitExtensions name = case map pack $ split (== '.') (unpack name) of
+  ("" ::: base :: exts) => ("." ++ base, exts)
+  (base ::: exts) => (base, exts)
 
 --------------------------------------------------------------------------------
 -- Methods
@@ -524,6 +544,17 @@ export
 extension : String -> Maybe String
 extension path = fileName path >>=
   filter (/= "") . Just . snd . splitFileName
+
+||| Extracts the list of extensions of the file name in the path.
+||| The returned value is:
+|||
+||| - Nothing, if there is no file name;
+||| - Just [], if there is no embedded ".";
+||| - Just [], if the filename begins with a "." and has no other ".";
+||| - Just es, the portions between the "."s (excluding a potential leading one).
+export
+extensions : String -> Maybe (List String)
+extensions path = snd . splitExtensions <$> fileName path
 
 ||| Updates the file name in the path.
 |||

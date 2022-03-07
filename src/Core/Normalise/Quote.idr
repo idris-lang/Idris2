@@ -183,11 +183,11 @@ mutual
            opts' <- case sizeLimit opts of
                          Nothing => pure opts
                          Just Z => throw (InternalError "Size limit exceeded")
-                         Just (S k) => pure (record { sizeLimit = Just k } opts)
+                         Just (S k) => pure ({ sizeLimit := Just k } opts)
            args' <- if patterns opts && not (topLevel opts) && isRef f
                        then do empty <- clearDefs defs
                                quoteArgsWithFC q opts' empty bound env args
-                               else quoteArgsWithFC q (record { topLevel = False } opts')
+                               else quoteArgsWithFC q ({ topLevel := False } opts')
                                                     defs bound env args
            pure $ applyWithFC f' args'
     where
@@ -216,8 +216,8 @@ mutual
     where
       toHolesOnly : Closure vs -> Closure vs
       toHolesOnly (MkClosure opts locs env tm)
-          = MkClosure (record { holesOnly = True,
-                                argHolesOnly = True } opts)
+          = MkClosure ({ holesOnly := True,
+                         argHolesOnly := True } opts)
                       locs env tm
       toHolesOnly c = c
   quoteGenNF q opts defs bound env (NForce fc r arg args)

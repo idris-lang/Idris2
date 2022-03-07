@@ -43,5 +43,5 @@ cleandep: clean
 .PHONY: install
 
 install: build
-	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/refc
-	install -m 644 $(LIBTARGET) *.h ${PREFIX}/idris2-${IDRIS2_VERSION}/refc
+	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/refc
+	install -m 644 $(LIBTARGET) *.h ${PREFIX}/idris2-${IDRIS2_VERSION}/support/refc

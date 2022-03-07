@@ -4,6 +4,7 @@
 module Network.FFI
 
 import Network.Socket.Data
+import Data.Buffer
 
 -- From idris_net.h
 
@@ -67,6 +68,10 @@ prim__idrnet_accept : (sockfd : SocketDescriptor) -> (sockaddr : AnyPtr) -> Prim
 export
 prim__idrnet_send : (sockfd : SocketDescriptor) -> (dataString : String) -> PrimIO Int
 
+%foreign "C:idrnet_send_bytes, libidris2_support, idris_net.h"
+export
+prim__idrnet_send_bytes : (sockfd : SocketDescriptor) -> (content : Buffer) -> (nbytes : Int) -> (flags : Bits32) -> PrimIO Int
+
 %foreign "C:idrnet_send_buf, libidris2_support, idris_net.h"
 export
 prim__idrnet_send_buf : (sockfd : SocketDescriptor) -> (dataBuffer : AnyPtr) -> (len : Int) -> PrimIO Int
@@ -76,6 +81,10 @@ prim__idrnet_send_buf : (sockfd : SocketDescriptor) -> (dataBuffer : AnyPtr) -> 
          "C:idrnet_recv, libidris2_support, idris_net.h"
 export
 prim__idrnet_recv : (sockfd : SocketDescriptor) -> (len : Int) -> PrimIO AnyPtr
+
+%foreign "C:idrnet_recv_bytes, libidris2_support, idris_net.h"
+export
+prim__idrnet_recv_bytes : (sockfd : SocketDescriptor) -> (content : Buffer) -> (nbytes : Int) -> (flags : Bits32) -> PrimIO Int
 
 %foreign "C__collect_safe:idrnet_recv_buf, libidris2_support, idris_net.h"
          "C:idrnet_recv_buf, libidris2_support, idris_net.h"

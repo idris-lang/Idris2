@@ -13,6 +13,7 @@
 #include "windows/win_utils.h"
 #else
 #include <sys/select.h>
+#include <sys/wait.h>
 #endif
 
 #include "idris_util.h"

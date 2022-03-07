@@ -1,7 +1,7 @@
  1/10: Building AppendVec (AppendVec.idr)
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
-  elem is shadowing Data.Vect.elem, Prelude.Types.elem
+  elem is shadowing Prelude.Types.elem
 
 AppendVec:4:1--4:11
  1 | import Data.Nat
@@ -12,7 +12,7 @@ AppendVec:4:1--4:11
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
-  elem is shadowing Data.Vect.elem, Prelude.Types.elem
+  elem is shadowing Prelude.Types.elem
 
 AppendVec:7:1--7:10
  3 | 
@@ -24,7 +24,7 @@ AppendVec:7:1--7:10
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
-  elem is shadowing Data.Vect.elem, Prelude.Types.elem
+  elem is shadowing Prelude.Types.elem
 
 AppendVec:10:1--10:7
  06 | 

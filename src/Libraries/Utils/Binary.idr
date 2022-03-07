@@ -3,7 +3,7 @@ module Libraries.Utils.Binary
 import Data.Buffer
 import Data.List
 
-import System.File
+import Libraries.System.File
 
 -- Serialising data as binary. Provides an interface TTC which allows
 -- reading and writing to chunks of memory, "Binary", which can be written
@@ -41,7 +41,7 @@ appended i (MkBin b loc s used) = MkBin b (loc+i) s (used + i)
 
 export
 incLoc : Int -> Binary -> Binary
-incLoc i c = record { loc $= (+i) } c
+incLoc i c = { loc $= (+i) } c
 
 export
 dumpBin : Binary -> IO ()
@@ -65,7 +65,9 @@ fromBuffer buf
 export
 writeToFile : (fname : String) -> Binary -> IO (Either FileError ())
 writeToFile fname c
-    = writeBufferToFile fname (buf c) (used c)
+    = do Right ok <- writeBufferToFile fname (buf c) (used c)
+               | Left (err, size) => pure (Left err)
+         pure (Right ok)
 
 export
 readFromFile : (fname : String) -> IO (Either FileError Binary)

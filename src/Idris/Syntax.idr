@@ -68,7 +68,7 @@ mutual
        PRef : FC -> nm -> PTerm' nm
        PPi : FC -> RigCount -> PiInfo (PTerm' nm) -> Maybe Name ->
              (argTy : PTerm' nm) -> (retTy : PTerm' nm) -> PTerm' nm
-       PLam : FC -> RigCount -> PiInfo (PTerm' nm) -> PTerm' nm ->
+       PLam : FC -> RigCount -> PiInfo (PTerm' nm) -> (pat : PTerm' nm) ->
               (argTy : PTerm' nm) -> (scope : PTerm' nm) -> PTerm' nm
        PLet : FC -> RigCount -> (pat : PTerm' nm) ->
               (nTy : PTerm' nm) -> (nVal : PTerm' nm) -> (scope : PTerm' nm) ->
@@ -113,7 +113,7 @@ mutual
        PMultiline : FC -> (indent : Nat) -> List (List (PStr' nm)) -> PTerm' nm
        PDoBlock : FC -> Maybe Namespace -> List (PDo' nm) -> PTerm' nm
        PBang : FC -> PTerm' nm -> PTerm' nm
-       PIdiom : FC -> PTerm' nm -> PTerm' nm
+       PIdiom : FC -> Maybe Namespace -> PTerm' nm -> PTerm' nm
        PList : (full, nilFC : FC) -> List (FC, PTerm' nm) -> PTerm' nm
                                         -- ^   v location of the conses/snocs
        PSnocList : (full, nilFC : FC) -> SnocList ((FC, PTerm' nm)) -> PTerm' nm
@@ -177,7 +177,7 @@ mutual
   getPTermLoc (PMultiline fc _ _) = fc
   getPTermLoc (PDoBlock fc _ _) = fc
   getPTermLoc (PBang fc _) = fc
-  getPTermLoc (PIdiom fc _) = fc
+  getPTermLoc (PIdiom fc _ _) = fc
   getPTermLoc (PList fc _ _) = fc
   getPTermLoc (PSnocList fc _ _) = fc
   getPTermLoc (PPair fc _ _) = fc
@@ -283,19 +283,21 @@ mutual
        MkPatClause : FC -> (lhs : PTerm' nm) -> (rhs : PTerm' nm) ->
                      (whereblock : List (PDecl' nm)) -> PClause' nm
        MkWithClause : FC -> (lhs : PTerm' nm) ->
-                      (wval : PTerm' nm) -> (prf : Maybe Name) ->
+                      (rig : RigCount) -> (wval : PTerm' nm) -> -- with'd term (& quantity)
+                      (prf : Maybe Name) -> -- optional proof
                       List WithFlag -> List (PClause' nm) -> PClause' nm
        MkImpossible : FC -> (lhs : PTerm' nm) -> PClause' nm
 
   export
   getPClauseLoc : PClause -> FC
   getPClauseLoc (MkPatClause fc _ _ _) = fc
-  getPClauseLoc (MkWithClause fc _ _ _ _ _) = fc
+  getPClauseLoc (MkWithClause fc _ _ _ _ _ _) = fc
   getPClauseLoc (MkImpossible fc _) = fc
 
   public export
   data Directive : Type where
        Hide : Name -> Directive
+       Unhide : Name -> Directive
        Logging : Maybe LogLevel -> Directive
        LazyOn : Bool -> Directive
        UnboundImplicits : Bool -> Directive
@@ -319,7 +321,7 @@ mutual
 
   directiveList : List Directive
   directiveList =
-      [ (Hide ph), (Logging Nothing), (LazyOn False)
+      [ (Hide ph), (Unhide ph), (Logging Nothing), (LazyOn False)
       , (UnboundImplicits False), (AmbigDepth 0)
       , (PairNames ph ph ph), (RewriteName ph ph)
       , (PrimInteger ph), (PrimString ph), (PrimChar ph)
@@ -346,6 +348,7 @@ mutual
     where
       showDirective : Directive -> String
       showDirective (Hide _)             = "%hide name"
+      showDirective (Unhide _)           = "%unhide name"
       showDirective (Logging _)          = "%logging [topic] lvl"
       showDirective (LazyOn _)           = "%auto_lazy on|off"
       showDirective (UnboundImplicits _) = "%unbound_implicits"
@@ -418,7 +421,7 @@ mutual
   data PDecl' : Type -> Type where
        PClaim : FC -> RigCount -> Visibility -> List (PFnOpt' nm) -> PTypeDecl' nm -> PDecl' nm
        PDef : FC -> List (PClause' nm) -> PDecl' nm
-       PData : FC -> (doc : String) -> Visibility -> PDataDecl' nm -> PDecl' nm
+       PData : FC -> (doc : String) -> Visibility -> Maybe TotalReq -> PDataDecl' nm -> PDecl' nm
        PParameters : FC ->
                      List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm) ->
                      List (PDecl' nm) -> PDecl' nm
@@ -447,7 +450,7 @@ mutual
                          PDecl' nm
        PRecord : FC ->
                  (doc : String) ->
-                 Visibility ->
+                 Visibility -> Maybe TotalReq ->
                  Name ->
                  (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
                  (conName : Maybe Name) ->
@@ -468,13 +471,13 @@ mutual
   getPDeclLoc : PDecl' nm -> FC
   getPDeclLoc (PClaim fc _ _ _ _) = fc
   getPDeclLoc (PDef fc _) = fc
-  getPDeclLoc (PData fc _ _ _) = fc
+  getPDeclLoc (PData fc _ _ _ _) = fc
   getPDeclLoc (PParameters fc _ _) = fc
   getPDeclLoc (PUsing fc _ _) = fc
   getPDeclLoc (PReflect fc _) = fc
   getPDeclLoc (PInterface fc _ _ _ _ _ _ _ _) = fc
   getPDeclLoc (PImplementation fc _ _ _ _ _ _ _ _ _ _) = fc
-  getPDeclLoc (PRecord fc _ _ _ _ _ _) = fc
+  getPDeclLoc (PRecord fc _ _ _ _ _ _ _) = fc
   getPDeclLoc (PMutual fc _) = fc
   getPDeclLoc (PFixity fc _ _ _) = fc
   getPDeclLoc (PNamespace fc _ _) = fc
@@ -510,7 +513,7 @@ export
 definedIn : List PDecl -> List Name
 definedIn [] = []
 definedIn (PClaim _ _ _ _ (MkPTy _ _ n _ _) :: ds) = n :: definedIn ds
-definedIn (PData _ _ _ d :: ds) = definedInData d ++ definedIn ds
+definedIn (PData _ _ _ _ d :: ds) = definedInData d ++ definedIn ds
 definedIn (PParameters _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PUsing _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PNamespace _ _ ns :: ds) = definedIn ns ++ definedIn ds
@@ -584,11 +587,16 @@ data EditCmd : Type where
      MakeWith : Bool -> Int -> Name -> EditCmd
 
 public export
+data BracketType = IdiomBrackets
+
+public export
 data DocDirective : Type where
   ||| A reserved keyword
   Keyword : String -> DocDirective
   ||| A reserved symbol
   Symbol  : String -> DocDirective
+  ||| A type of brackets
+  Bracket : BracketType -> DocDirective
   ||| An arbitrary PTerm
   APTerm  : PTerm -> DocDirective
 
@@ -598,7 +606,7 @@ data REPLCmd : Type where
      Eval : PTerm -> REPLCmd
      Check : PTerm -> REPLCmd
      CheckWithImplicits : PTerm -> REPLCmd
-     PrintDef : Name -> REPLCmd
+     PrintDef : PTerm -> REPLCmd
      Reload : REPLCmd
      Load : String -> REPLCmd
      ImportMod : ModuleIdent -> REPLCmd
@@ -660,7 +668,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
 
   showAlt (MkPatClause _ lhs rhs _) =
     " | " ++ showPTerm lhs ++ " => " ++ showPTerm rhs ++ ";"
-  showAlt (MkWithClause _ lhs wval prf flags cs) = " | <<with alts not possible>>;"
+  showAlt (MkWithClause _ lhs rig wval prf flags cs) = " | <<with alts not possible>>;"
   showAlt (MkImpossible _ lhs) = " | " ++ showPTerm lhs ++ " impossible;"
 
   showDo (DoExp _ tm) = showPTerm tm
@@ -718,7 +726,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
       where
         showCase : PClause' nm -> String
         showCase (MkPatClause _ lhs rhs _) = showPTerm lhs ++ " => " ++ showPTerm rhs
-        showCase (MkWithClause _ lhs rhs _ flags _) = " | <<with alts not possible>>"
+        showCase (MkWithClause _ lhs rig wval _ flags _) = " | <<with alts not possible>>"
         showCase (MkImpossible _ lhs) = showPTerm lhs ++ " impossible"
   showPTermPrec d (PLocal _ ds sc) -- We'll never see this when displaying a normal form...
         = "let { << definitions >>  } in " ++ showPTermPrec d sc
@@ -773,7 +781,8 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (PDoBlock _ ns ds)
         = "do " ++ showSep " ; " (map showDo ds)
   showPTermPrec d (PBang _ tm) = "!" ++ showPTermPrec d tm
-  showPTermPrec d (PIdiom _ tm) = "[|" ++ showPTermPrec d tm ++ "|]"
+  showPTermPrec d (PIdiom _ Nothing tm) = "[|" ++ showPTermPrec d tm ++ "|]"
+  showPTermPrec d (PIdiom _ (Just ns) tm) = show ns ++ ".[|" ++ showPTermPrec d tm ++ "|]"
   showPTermPrec d (PList _ _ xs)
         = "[" ++ showSep ", " (map (showPTermPrec d . snd) xs) ++ "]"
   showPTermPrec d (PSnocList _ _ xs)
@@ -898,8 +907,12 @@ record SyntaxInfo where
   constructor MkSyntax
   -- Keep infix/prefix, then we can define operators which are both
   -- (most obviously, -)
-  infixes : StringMap (Fixity, Nat)
-  prefixes : StringMap Nat
+  ||| Infix operators as a map from their names to their fixity,
+  ||| precedence, and the file context where that fixity was defined.
+  infixes : StringMap (FC, Fixity, Nat)
+  ||| Prefix operators as a map from their names to their precedence
+  ||| and the file context where their fixity was defined.
+  prefixes : StringMap (FC, Nat)
   -- info about modules
   saveMod : List ModuleIdent -- current module name
   modDocstrings : SortedMap ModuleIdent String
@@ -1017,13 +1030,13 @@ initSyntax
 
   where
 
-    initInfix : StringMap (Fixity, Nat)
-    initInfix = insert "=" (Infix, 0) empty
+    initInfix : StringMap (FC, Fixity, Nat)
+    initInfix = insert "=" (EmptyFC, Infix, 0) empty
 
-    initPrefix : StringMap Nat
+    initPrefix : StringMap (FC, Nat)
     initPrefix = fromList
-      [ ("-", 10)
-      , ("negate", 10) -- for documentation purposes
+      [ ("-", (EmptyFC, 10))
+      , ("negate", (EmptyFC, 10)) -- for documentation purposes
       ]
 
     initDocStrings : ANameMap String
@@ -1162,8 +1175,8 @@ mapPTermM f = goPTerm where
     goPTerm (PBang fc x) =
       PBang fc <$> goPTerm x
       >>= f
-    goPTerm (PIdiom fc x) =
-      PIdiom fc <$> goPTerm x
+    goPTerm (PIdiom fc ns x) =
+      PIdiom fc ns <$> goPTerm x
       >>= f
     goPTerm (PList fc nilFC xs) =
       PList fc nilFC <$> goPairedPTerms xs
@@ -1247,8 +1260,9 @@ mapPTermM f = goPTerm where
       MkPatClause fc <$> goPTerm lhs
                      <*> goPTerm rhs
                      <*> goPDecls wh
-    goPClause (MkWithClause fc lhs wVal prf flags cls) =
+    goPClause (MkWithClause fc lhs rig wVal prf flags cls) =
       MkWithClause fc <$> goPTerm lhs
+                      <*> pure rig
                       <*> goPTerm wVal
                       <*> pure prf
                       <*> pure flags
@@ -1260,7 +1274,7 @@ mapPTermM f = goPTerm where
       PClaim fc c v <$> goPFnOpts opts
                     <*> goPTypeDecl tdecl
     goPDecl (PDef fc cls) = PDef fc <$> goPClauses cls
-    goPDecl (PData fc doc v d) = PData fc doc v <$> goPDataDecl d
+    goPDecl (PData fc doc v mbt d) = PData fc doc v mbt <$> goPDataDecl d
     goPDecl (PParameters fc nts ps) =
       PParameters fc <$> go4TupledPTerms nts
                      <*> goPDecls ps
@@ -1284,10 +1298,10 @@ mapPTermM f = goPTerm where
                                   <*> pure mn
                                   <*> pure ns
                                   <*> goMPDecls mps
-    goPDecl (PRecord fc doc v n nts mn fs) =
-      PRecord fc doc v n <$> go4TupledPTerms nts
-                         <*> pure mn
-                         <*> goPFields fs
+    goPDecl (PRecord fc doc v tot n nts mn fs) =
+      PRecord fc doc v tot n <$> go4TupledPTerms nts
+                             <*> pure mn
+                             <*> goPFields fs
     goPDecl (PMutual fc ps) = PMutual fc <$> goPDecls ps
     goPDecl p@(PFixity _ _ _ _) = pure p
     goPDecl (PNamespace fc strs ps) = PNamespace fc strs <$> goPDecls ps

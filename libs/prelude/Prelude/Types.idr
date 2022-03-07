@@ -236,6 +236,16 @@ Traversable Maybe where
   traverse f Nothing = pure Nothing
   traverse f (Just x) = Just <$> f x
 
+-----------------
+-- EQUIVALENCE --
+-----------------
+
+public export
+record (<=>) (a, b : Type) where
+  constructor MkEquivalence
+  leftToRight : a -> b
+  rightToLeft : b -> a
+
 ---------
 -- DEC --
 ---------
@@ -253,6 +263,11 @@ data Dec : Type -> Type where
 
 export Uninhabited (Yes p === No q) where uninhabited eq impossible
 export Uninhabited (No p === Yes q) where uninhabited eq impossible
+
+public export
+viaEquivalence : a <=> b -> Dec a -> Dec b
+viaEquivalence f (Yes a) = Yes (f .leftToRight a)
+viaEquivalence f (No na) = No (na . f .rightToLeft)
 
 ------------
 -- EITHER --
@@ -412,6 +427,21 @@ namespace List
   -- proves these are equivalent.
   %transform "tailRecAppend" (++) = tailRecAppend
 
+  ||| Returns the first argument plus the length of the second.
+  public export
+  lengthPlus : Nat -> List a -> Nat
+  lengthPlus n [] = n
+  lengthPlus n (x::xs) = lengthPlus (S n) xs
+
+  ||| `length` implementation that uses tail recursion. Exported so
+  ||| lengthTRIsLength can see it.
+  public export
+  lengthTR : List a -> Nat
+  lengthTR = lengthPlus Z
+
+  -- Data.List.lengthTRIsLength proves these are equivalent.
+  %transform "tailRecLength" length = lengthTR
+
 public export
 Functor List where
   map f [] = []
@@ -440,10 +470,18 @@ Foldable List where
 
   foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
 
+-- tail recursive O(n) implementation of `(>>=)` for `List`
+public export
+listBind : List a -> (a -> List b) -> List b
+listBind as f = go Nil as
+  where go : List b -> List a -> List b
+        go xs []        = reverse xs
+        go xs (y :: ys) = go (reverseOnto xs (f y)) ys
+
 public export
 Applicative List where
   pure x = [x]
-  fs <*> vs = concatMap (\f => map f vs) fs
+  fs <*> vs = listBind fs (\f => map f vs)
 
 public export
 Alternative List where
@@ -452,7 +490,7 @@ Alternative List where
 
 public export
 Monad List where
-  m >>= f = concatMap f m
+  (>>=) = listBind
 
 public export
 Traversable List where
@@ -473,11 +511,15 @@ fastConcat : List String -> String
 
 %transform "fastConcat" concat {t = List} {a = String} = fastConcat
 
+||| Check if something is a member of a list using a custom comparison.
+public export
+elemBy : Foldable t => (a -> a -> Bool) -> a -> t a -> Bool
+elemBy p e = any (p e)
+
 ||| Check if something is a member of a list using the default Boolean equality.
 public export
-elem : Eq a => a -> List a -> Bool
-x `elem` [] = False
-x `elem` (y :: ys) = x == y ||  elem x ys
+elem : Foldable t => Eq a => a -> t a -> Bool
+elem = elemBy (==)
 
 ||| Lookup a value at a given position
 export
@@ -752,7 +794,7 @@ log x = prim__doubleLog x
 
 public export
 pow : Double -> Double -> Double
-pow x y = exp (y * log x) -- prim__doublePow x y
+pow x y = prim__doublePow x y
 
 public export
 sin : Double -> Double

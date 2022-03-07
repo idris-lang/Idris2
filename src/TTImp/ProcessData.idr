@@ -118,6 +118,7 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc _ cn_in ty_raw)
          case vis of
               Public => do addHashWithNames cn
                            addHashWithNames fullty
+                           log "module.hash" 15 "Adding hash for data constructor: \{show cn}"
               _ => pure ()
          pure (MkCon fc cn !(getArity defs [] fullty) fullty)
 
@@ -395,9 +396,10 @@ processData : {vars : _} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
               List ElabOpt -> NestedNames vars ->
-              Env Term vars -> FC -> Visibility ->
+              Env Term vars -> FC ->
+              Visibility -> Maybe TotalReq ->
               ImpData -> Core ()
-processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
+processData {vars} eopts nest env fc vis mbtot (MkImpLater dfc n_in ty_raw)
     = do n <- inCurrentNS n_in
          ty_raw <- bindTypeNames fc [] vars ty_raw
 
@@ -433,8 +435,9 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
               Private => pure ()
               _ => do addHashWithNames n
                       addHashWithNames fullty
+                      log "module.hash" 15 "Adding hash for data declaration with name \{show n}"
 
-processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_raw)
+processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in ty_raw opts cons_raw)
     = do n <- inCurrentNS n_in
          ty_raw <- bindTypeNames fc [] vars ty_raw
 
@@ -478,6 +481,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
               Private => pure ()
               _ => do addHashWithNames n
                       addHashWithNames fullty
+                      log "module.hash" 15 "Adding hash for data declaration with name \{show n}"
 
          -- Constructors are private if the data type as a whole is
          -- export
@@ -516,3 +520,8 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
 
          calcConInfo fc (Resolved tidx) cons
          traverse_ updateErasable (Resolved tidx :: connames)
+
+         -- #1404
+         whenJust mbtot $ \ tot => do
+             log "declare.data" 5 $ "setting totality flag for " ++ show n
+             setFlag fc n (SetTotal tot)

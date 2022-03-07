@@ -23,7 +23,7 @@ import TTImp.TTImp
 -- bound name.
 export
 dropName : Name -> NestedNames vars -> NestedNames vars
-dropName n nest = record { names $= drop } nest
+dropName n nest = { names $= drop } nest
   where
     drop : List (Name, a) -> List (Name, a)
     drop [] = []
@@ -224,7 +224,7 @@ checkLet rigc_in elabinfo nest env fc lhsFC rigl n nTy nVal scope expty {vars}
          -- Also elaborate any case blocks in the value via runDelays
          (valv, valt, rigb) <- handle
               (do c <- runDelays (==CaseBlock) $ check (rigl |*| rigc)
-                             (record { preciseInf = True } elabinfo)
+                             ({ preciseInf := True } elabinfo)
                              nest env nVal (Just (gnf env tyv))
                   pure (fst c, snd c, rigl |*| rigc))
               (\err => case linearErr err of

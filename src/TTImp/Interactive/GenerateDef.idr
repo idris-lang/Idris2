@@ -80,8 +80,8 @@ expandClause loc opts n c
     updateRHS : ImpClause -> RawImp -> ImpClause
     updateRHS (PatClause fc lhs _) rhs = PatClause fc lhs rhs
     -- 'with' won't happen, include for completeness
-    updateRHS (WithClause fc lhs wval prf flags cs) rhs
-      = WithClause fc lhs wval prf flags cs
+    updateRHS (WithClause fc lhs rig wval prf flags cs) rhs
+      = WithClause fc lhs rig wval prf flags cs
     updateRHS (ImpossibleClause fc lhs) _ = ImpossibleClause fc lhs
 
     dropLams : Nat -> RawImp -> RawImp
@@ -146,7 +146,7 @@ generateSplits : {auto m : Ref MD Metadata} ->
                  FC -> SearchOpts -> Int -> ImpClause ->
                  Core (List (Name, List ImpClause))
 generateSplits loc opts fn (ImpossibleClause fc lhs) = pure []
-generateSplits loc opts fn (WithClause fc lhs wval prf flags cs) = pure []
+generateSplits loc opts fn (WithClause fc lhs rig wval prf flags cs) = pure []
 generateSplits loc opts fn (PatClause fc lhs rhs)
     = do (lhstm, _) <-
                 elabTerm fn (InLHS linear) [] (MkNested []) []
@@ -197,8 +197,8 @@ mutual
               else expandClause loc opts n c)
           (do cs <- generateSplits loc opts n c
               log "interaction.generate" 5 $ "Splits: " ++ show cs
-              tryAllSplits loc (record { mustSplit = False,
-                                         doneSplit = True } opts) n cs)
+              tryAllSplits loc ({ mustSplit := False,
+                                  doneSplit := True } opts) n cs)
 
 export
 makeDefFromType : {auto c : Ref Ctxt Defs} ->
@@ -247,7 +247,7 @@ makeDef p n
             | Nothing => noResult
          n <- getFullName nidx
          logTerm "interaction.generate" 5 ("Searching for " ++ show n) ty
-         let opts = record { genExpr = Just (makeDefFromType (justFC loc)) }
+         let opts = { genExpr := Just (makeDefFromType (justFC loc)) }
                            (initSearchOpts True 5)
          makeDefFromType (justFC loc) opts n envlen ty
 

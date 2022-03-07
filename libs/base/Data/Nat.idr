@@ -1,6 +1,7 @@
 module Data.Nat
 
 import public Control.Relation
+import public Control.Ord
 import public Control.Order
 import public Control.Function
 
@@ -60,6 +61,19 @@ pred Z     = Z
 pred (S n) = n
 
 -- Comparisons
+
+export
+compareNatDiag : (k : Nat) -> compareNat k k === EQ
+compareNatDiag Z = Refl
+compareNatDiag (S k) = compareNatDiag k
+
+export
+compareNatFlip : (m, n : Nat) ->
+  flip Prelude.compareNat m n === contra (compareNat m n)
+compareNatFlip 0      0    = Refl
+compareNatFlip 0     (S n) = Refl
+compareNatFlip (S m) 0     = Refl
+compareNatFlip (S m) (S n) = compareNatFlip m n
 
 public export
 data NotBothZero : (n, m : Nat) -> Type where
@@ -334,7 +348,8 @@ export partial
 divNat : Nat -> Nat -> Nat
 divNat left (S right) = divNatNZ left (S right) SIsNonZero
 
-export partial
+export
+covering
 divCeilNZ : Nat -> (y: Nat) -> (0 _ : NonZero y) -> Nat
 divCeilNZ x y p = case (modNatNZ x y p) of
   Z   => divNatNZ x y p
@@ -365,7 +380,8 @@ Integral Nat where
   div = divNat
   mod = modNat
 
-export partial
+export
+covering
 gcd : (a: Nat) -> (b: Nat) -> {auto ok: NotBothZero a b} -> Nat
 gcd a Z     = a
 gcd Z b     = b
@@ -786,16 +802,6 @@ sucMinR Z = Refl
 sucMinR (S l) = cong S $ sucMinR l
 
 -- Algebra -----------------------------
-
-namespace Semigroup
-
-  public export
-  [Maximum] Semigroup Nat where
-    (<+>) = max
-
-  public export
-  [Minimum] Semigroup Nat where
-    (<+>) = min
 
 namespace Monoid
 

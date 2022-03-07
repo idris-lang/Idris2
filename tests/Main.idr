@@ -42,6 +42,8 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic051", "basic052", "basic053", "basic054", "basic055",
        "basic056", "basic057", "basic058", "basic059", "basic060",
        "basic061", "basic062", "basic063", "basic064", "basic065",
+       "basic066", "basic067", "basic068",
+       "idiom001",
        "interpolation001", "interpolation002", "interpolation003",
        "interpolation004"]
 
@@ -61,7 +63,7 @@ idrisTestsCasetree = MkTestPool "Case tree building" [] Nothing
 
 idrisTestsWarning : TestPool
 idrisTestsWarning = MkTestPool "Warnings" [] Nothing
-     ["warning001", "warning002"]
+     ["warning001", "warning002", "warning003"]
 
 idrisTestsError : TestPool
 idrisTestsError = MkTestPool "Error messages" [] Nothing
@@ -116,14 +118,16 @@ idrisTestsLiterate = MkTestPool "Literate programming" [] Nothing
       ["literate001", "literate002", "literate003", "literate004",
        "literate005", "literate006", "literate007", "literate008",
        "literate009", "literate010", "literate011", "literate012",
-       "literate013", "literate014", "literate015", "literate016"]
+       "literate013", "literate014", "literate015", "literate016",
+       "literate017"]
 
 idrisTestsPerformance : TestPool
 idrisTestsPerformance = MkTestPool "Performance" [] Nothing
        -- Performance: things which have been slow in the past, or which
        -- pose interesting challenges for the elaborator
       ["perf001", "perf002", "perf003", "perf004", "perf005",
-       "perf007", "perf008", "perf009", "perf010", "perf011"]
+       "perf007", "perf008", "perf009", "perf010", "perf011",
+       "perf2202"]
 
 idrisTestsRegression : TestPool
 idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
@@ -144,7 +148,7 @@ idrisTestsData = MkTestPool "Data and record types" [] Nothing
        -- Records, access and dependent update
        "record001", "record002", "record003", "record004", "record005",
        "record006", "record007", "record008", "record009", "record010",
-       "record011"]
+       "record011", "record012", "record013", "record014", "record015" ]
 
 idrisTestsBuiltin : TestPool
 idrisTestsBuiltin = MkTestPool "Builtin types and functions" [] Nothing
@@ -180,7 +184,7 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
-       "total011", "total012"
+       "total011", "total012", "total013"
       ]
 
 -- This will only work with an Idris compiled via Chez or Racket, but at
@@ -188,13 +192,22 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
 -- other way. If we do, we'll need to have a way to disable these.
 idrisTestsSchemeEval : TestPool
 idrisTestsSchemeEval = MkTestPool "Scheme Evaluator" [] Nothing
-     ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004",
-      "schemeeval005", "schemeeval006"]
+      ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004",
+       "schemeeval005", "schemeeval006"]
+
+idrisTestsReflection : TestPool
+idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
+      ["reflection001", "reflection002", "reflection003", "reflection004",
+       "reflection005", "reflection006", "reflection007", "reflection008",
+       "reflection009", "reflection010", "reflection011", "reflection012",
+       "reflection013", "reflection014"
+      ]
+
 
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
        -- Documentation strings
-      ["docs001", "docs002", "docs003",
+      ["docs001", "docs002", "docs003", "docs004",
        -- Eta equality
        "eta001",
        -- Modules and imports
@@ -208,17 +221,14 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "params001", "params002", "params003",
        -- Packages and ipkg files
        "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
-       "pkg008", "pkg009", "pkg010", "pkg011",
+       "pkg008", "pkg009", "pkg010", "pkg011", "pkg012",
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",
-       -- Quotation and reflection
-       "reflection001", "reflection002", "reflection003", "reflection004",
-       "reflection005", "reflection006", "reflection007", "reflection008",
-       "reflection009", "reflection010", "reflection011", "reflection012",
-       "reflection013",
+       -- Inlining
+       "inlining001",
        -- The 'with' rule
-       "with001", "with002", "with004", "with005", "with006",
+       "with001", "with002", "with004", "with005", "with006", "with007",
        -- with-disambiguation
        "with003",
        -- pretty printing
@@ -270,7 +280,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     [ "node001", "node002", "node003", "node004", "node005", "node006"
     , "node007", "node008", "node009", "node011", "node012", "node015"
     , "node017", "node018", "node019", "node021", "node022", "node023"
-    , "node024", "node025", "node026"
+    , "node024", "node025", "node026", "node027"
     , "perf001"
     -- , "node14", "node020"
     , "args"
@@ -283,6 +293,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "stringcast"
     , "syntax001"
     , "tailrec001"
+    , "tailrec002"
     , "idiom001"
     , "integers"
     , "fix1839"
@@ -336,6 +347,7 @@ main = runner $
   , testPaths "idris2" idrisTestsEvaluator
   , testPaths "idris2" idrisTestsTotality
   , testPaths "idris2" idrisTestsSchemeEval
+  , testPaths "idris2" idrisTestsReflection
   , testPaths "idris2" idrisTests
   , !typeddTests
   , !ideModeTests
@@ -356,4 +368,4 @@ main = runner $
     where
 
     testPaths : String -> TestPool -> TestPool
-    testPaths dir = record { testCases $= map ((dir ++ "/") ++) }
+    testPaths dir = { testCases $= map ((dir ++ "/") ++) }

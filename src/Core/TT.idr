@@ -25,6 +25,14 @@ data NameType : Type where
      TyCon   : (tag : Int) -> (arity : Nat) -> NameType
 
 export
+covering
+Show NameType where
+  showPrec d Bound = "Bound"
+  showPrec d Func = "Func"
+  showPrec d (DataCon tag ar) = showCon d "DataCon" $ showArg tag ++ showArg ar
+  showPrec d (TyCon tag ar) = showCon d "TyCon" $ showArg tag ++ showArg ar
+
+export
 isCon : NameType -> Maybe (Int, Nat)
 isCon (DataCon t a) = Just (t, a)
 isCon (TyCon t a) = Just (t, a)
@@ -43,6 +51,12 @@ defaultKindedName nm = MkKindedName Nothing nm nm
 
 export
 Show KindedName where show = show . rawName
+
+export
+covering
+[Raw] Show KindedName where
+  showPrec d (MkKindedName nm fn rn) =
+    showCon d "MkKindedName" $ showArg nm ++ showArg @{Raw} fn ++ showArg @{Raw} rn
 
 public export
 data Constant
@@ -430,6 +444,13 @@ Show (PrimFn arity) where
 public export
 data PiInfo t = Implicit | Explicit | AutoImplicit | DefImplicit t
 
+namespace PiInfo
+
+  export
+  isImplicit : PiInfo t -> Bool
+  isImplicit Explicit = False
+  isImplicit _ = True
+
 export
 eqPiInfoBy : (t -> u -> Bool) -> PiInfo t -> PiInfo u -> Bool
 eqPiInfoBy eqT = go where
@@ -487,14 +508,6 @@ isLet (Let _ _ _ _) = True
 isLet _ = False
 
 export
-isImplicit : Binder t -> Bool
-isImplicit (Pi _ _ Explicit _) = False
-isImplicit (Pi _ _ _ _) = True
-isImplicit (Lam _ _ Explicit _) = False
-isImplicit (Lam _ _ _ _) = True
-isImplicit _ = False
-
-export
 binderLoc : Binder tm -> FC
 binderLoc (Lam fc _ x ty) = fc
 binderLoc (Let fc _ val ty) = fc
@@ -529,6 +542,10 @@ piInfo (Pi _ c x ty) = x
 piInfo (PVar _ c p ty) = p
 piInfo (PLet _ c val ty) = Explicit
 piInfo (PVTy _ c ty) = Explicit
+
+export
+isImplicit : Binder tm -> Bool
+isImplicit = PiInfo.isImplicit . piInfo
 
 export
 setMultiplicity : Binder tm -> RigCount -> Binder tm

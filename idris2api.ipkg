@@ -99,6 +99,7 @@ modules =
     Idris.Desugar.Mutual,
     Idris.Env,
     Idris.Doc.Annotations,
+    Idris.Doc.Display,
     Idris.Doc.Keywords,
     Idris.Doc.HTML,
     Idris.Doc.String,
@@ -119,6 +120,7 @@ modules =
     Idris.Resugar,
     Idris.SetOptions,
     Idris.Syntax,
+    Idris.Syntax.Views,
     Idris.Version,
 
     Idris.Elab.Implementation,
@@ -129,6 +131,7 @@ modules =
     Idris.IDEMode.Holes,
     Idris.IDEMode.MakeClause,
     Idris.IDEMode.Parser,
+    Idris.IDEMode.Pretty,
     Idris.IDEMode.REPL,
     Idris.IDEMode.SyntaxHighlight,
     Idris.IDEMode.TokenLine,
@@ -159,6 +162,7 @@ modules =
     Libraries.Data.NameMap.Traversable,
     Libraries.Data.PosMap,
     Libraries.Data.Primitives,
+    Libraries.Data.Span,
     Libraries.Data.SortedMap,
     Libraries.Data.SortedSet,
     Libraries.Data.String.Extra,
@@ -168,6 +172,8 @@ modules =
     Libraries.Data.UserNameMap,
     Libraries.Data.Version,
 
+    Libraries.System.File,
+    Libraries.System.File.Buffer,
     Libraries.System.Directory.Tree,
 
     Libraries.Text.Bounded,
@@ -190,7 +196,6 @@ modules =
     Libraries.Text.Token,
 
     Libraries.Utils.Binary,
-    Libraries.Utils.Hex,
     Libraries.Utils.Octal,
     Libraries.Utils.Path,
     Libraries.Utils.Scheme,
@@ -209,6 +214,18 @@ modules =
 
     Parser.Rule.Package,
     Parser.Rule.Source,
+
+    Protocol.IDE,
+    Protocol.IDE.Command,
+    Protocol.IDE.Decoration,
+    Protocol.IDE.FileContext,
+    Protocol.IDE.Formatting,
+    Protocol.IDE.Holes,
+    Protocol.IDE.Result,
+    Protocol.IDE.Highlight,
+    Protocol.Hex,
+    Protocol.SExp,
+    Protocol.SExp.Parser,
 
     TTImp.BindImplicits,
     TTImp.Elab,

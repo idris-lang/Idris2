@@ -96,6 +96,12 @@ public export
 data Ordering = LT | EQ | GT
 
 public export
+contra : Ordering -> Ordering
+contra LT = GT
+contra EQ = EQ
+contra GT = LT
+
+public export
 Eq Ordering where
   LT == LT = True
   EQ == EQ = True

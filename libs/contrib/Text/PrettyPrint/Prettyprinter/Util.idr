@@ -27,4 +27,4 @@ reflow = fillSep . words
 ||| Renders a document with a certain width.
 export
 putDocW : Nat -> Doc ann -> IO ()
-putDocW w = renderIO . layoutPretty (record { layoutPageWidth = AvailablePerLine (cast w) 1 } defaultLayoutOptions)
+putDocW w = renderIO . layoutPretty ({ layoutPageWidth := AvailablePerLine (cast w) 1 } defaultLayoutOptions)

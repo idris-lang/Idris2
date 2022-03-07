@@ -1,0 +1,3 @@
+Just ([("hello", 5), ("world", 5), ("!", 1)], ["Not", "seen"])
+Just (["hello", "world", "!"], [("Not", 3), ("seen", 4)])
+Just ([1, 2, 3], [\ _ => Nothing])

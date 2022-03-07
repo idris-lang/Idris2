@@ -801,8 +801,8 @@ correspondingly:
 .. code-block:: idris
 
     addEntry : String -> WrapVect String -> WrapVect String
-    addEntry val = record { length $= S,
-                            content $= (val :: ) }
+    addEntry val = { length $= S,
+                     content $= (val :: ) }
 
 Another novelty - new update syntax (previous one still functional):
 

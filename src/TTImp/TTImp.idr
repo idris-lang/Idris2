@@ -346,6 +346,10 @@ mutual
        MkIField : FC -> RigCount -> PiInfo (RawImp' nm) -> Name -> RawImp' nm ->
                   IField' nm
 
+  public export
+  ImpParameter : Type
+  ImpParameter = ImpParameter' Name
+
   -- TODO: turn into a proper datatype
   public export
   ImpParameter' : Type -> Type
@@ -397,7 +401,8 @@ mutual
   data ImpClause' : Type -> Type where
        PatClause : FC -> (lhs : RawImp' nm) -> (rhs : RawImp' nm) -> ImpClause' nm
        WithClause : FC -> (lhs : RawImp' nm) ->
-                    (wval : RawImp' nm) -> (prf : Maybe Name) ->
+                    (rig : RigCount) -> (wval : RawImp' nm) -> -- with'd expression (& quantity)
+                    (prf : Maybe Name) -> -- optional name for the proof
                     (flags : List WithFlag) ->
                     List (ImpClause' nm) -> ImpClause' nm
        ImpossibleClause : FC -> (lhs : RawImp' nm) -> ImpClause' nm
@@ -407,9 +412,9 @@ mutual
   Show nm => Show (ImpClause' nm) where
     show (PatClause fc lhs rhs)
        = show lhs ++ " = " ++ show rhs
-    show (WithClause fc lhs wval prf flags block)
+    show (WithClause fc lhs rig wval prf flags block)
        = show lhs
-       ++ " with " ++ show wval
+       ++ " with (" ++ show rig ++ " " ++ show wval ++ ")"
        ++ maybe "" (\ nm => " proof " ++ show nm) prf
        ++ "\n\t" ++ show block
     show (ImpossibleClause fc lhs)
@@ -423,14 +428,15 @@ mutual
   data ImpDecl' : Type -> Type where
        IClaim : FC -> RigCount -> Visibility -> List (FnOpt' nm) ->
                 ImpTy' nm -> ImpDecl' nm
-       IData : FC -> Visibility -> ImpData' nm -> ImpDecl' nm
+       IData : FC -> Visibility -> Maybe TotalReq -> ImpData' nm -> ImpDecl' nm
        IDef : FC -> Name -> List (ImpClause' nm) -> ImpDecl' nm
        IParameters : FC ->
                      List (ImpParameter' nm) ->
                      List (ImpDecl' nm) -> ImpDecl' nm
        IRecord : FC ->
                  Maybe String -> -- nested namespace
-                 Visibility -> ImpRecord' nm -> ImpDecl' nm
+                 Visibility -> Maybe TotalReq ->
+                 ImpRecord' nm -> ImpDecl' nm
        INamespace : FC -> Namespace -> List (ImpDecl' nm) -> ImpDecl' nm
        ITransform : FC -> Name -> RawImp' nm -> RawImp' nm -> ImpDecl' nm
        IRunElabDecl : FC -> RawImp' nm -> ImpDecl' nm
@@ -447,12 +453,12 @@ mutual
   covering
   Show nm => Show (ImpDecl' nm) where
     show (IClaim _ c _ opts ty) = show opts ++ " " ++ show c ++ " " ++ show ty
-    show (IData _ _ d) = show d
+    show (IData _ _ _ d) = show d
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"
     show (IParameters _ ps ds)
         = "parameters " ++ show ps ++ "\n\t" ++
           showSep "\n\t" (assert_total $ map show ds)
-    show (IRecord _ _ _ d) = show d
+    show (IRecord _ _ _ _ d) = show d
     show (INamespace _ ns decls)
         = "namespace " ++ show ns ++
           showSep "\n" (assert_total $ map show decls)
@@ -753,12 +759,12 @@ definedInBlock ns decls =
 
     defName : Namespace -> ImpDecl -> List Name
     defName ns (IClaim _ _ _ _ ty) = [expandNS ns (getName ty)]
-    defName ns (IData _ _ (MkImpData _ n _ _ cons))
+    defName ns (IData _ _ _ (MkImpData _ n _ _ cons))
         = expandNS ns n :: map (expandNS ns) (map getName cons)
-    defName ns (IData _ _ (MkImpLater _ n _)) = [expandNS ns n]
+    defName ns (IData _ _ _ (MkImpLater _ n _)) = [expandNS ns n]
     defName ns (IParameters _ _ pds) = concatMap (defName ns) pds
     defName ns (INamespace _ n nds) = concatMap (defName (ns <.> n)) nds
-    defName ns (IRecord _ fldns _ (MkImpRecord _ n _ con flds))
+    defName ns (IRecord _ fldns _ _ (MkImpRecord _ n _ con flds))
         = expandNS ns con :: all
       where
         fldns' : Namespace
@@ -839,10 +845,10 @@ namespace ImpDecl
   public export
   getFC : ImpDecl' nm -> FC
   getFC (IClaim fc _ _ _ _) = fc
-  getFC (IData fc _ _) = fc
+  getFC (IData fc _ _ _) = fc
   getFC (IDef fc _ _) = fc
   getFC (IParameters fc _ _) = fc
-  getFC (IRecord fc _ _ _ ) = fc
+  getFC (IRecord fc _ _ _ _) = fc
   getFC (INamespace fc _ _) = fc
   getFC (ITransform fc _ _ _) = fc
   getFC (IRunElabDecl fc _) = fc
@@ -1172,10 +1178,11 @@ mutual
         = do tag 0; toBuf b fc; toBuf b lhs; toBuf b rhs
     toBuf b (ImpossibleClause fc lhs)
         = do tag 1; toBuf b fc; toBuf b lhs
-    toBuf b (WithClause fc lhs wval prf flags cs)
+    toBuf b (WithClause fc lhs rig wval prf flags cs)
         = do tag 2
              toBuf b fc
              toBuf b lhs
+             toBuf b rig
              toBuf b wval
              toBuf b prf
              toBuf b cs
@@ -1188,9 +1195,10 @@ mutual
                1 => do fc <- fromBuf b; lhs <- fromBuf b;
                        pure (ImpossibleClause fc lhs)
                2 => do fc <- fromBuf b; lhs <- fromBuf b;
-                       wval <- fromBuf b; prf <- fromBuf b;
+                       rig <- fromBuf b; wval <- fromBuf b;
+                       prf <- fromBuf b;
                        cs <- fromBuf b
-                       pure (WithClause fc lhs wval prf [] cs)
+                       pure (WithClause fc lhs rig wval prf [] cs)
                _ => corrupt "ImpClause"
 
   export
@@ -1305,14 +1313,14 @@ mutual
   TTC ImpDecl where
     toBuf b (IClaim fc c vis xs d)
         = do tag 0; toBuf b fc; toBuf b c; toBuf b vis; toBuf b xs; toBuf b d
-    toBuf b (IData fc vis d)
-        = do tag 1; toBuf b fc; toBuf b vis; toBuf b d
+    toBuf b (IData fc vis mbtot d)
+        = do tag 1; toBuf b fc; toBuf b vis; toBuf b mbtot; toBuf b d
     toBuf b (IDef fc n xs)
         = do tag 2; toBuf b fc; toBuf b n; toBuf b xs
     toBuf b (IParameters fc vis d)
         = do tag 3; toBuf b fc; toBuf b vis; toBuf b d
-    toBuf b (IRecord fc ns vis r)
-        = do tag 4; toBuf b fc; toBuf b ns; toBuf b vis; toBuf b r
+    toBuf b (IRecord fc ns vis mbtot r)
+        = do tag 4; toBuf b fc; toBuf b ns; toBuf b vis; toBuf b mbtot; toBuf b r
     toBuf b (INamespace fc xs ds)
         = do tag 5; toBuf b fc; toBuf b xs; toBuf b ds
     toBuf b (ITransform fc n lhs rhs)
@@ -1332,8 +1340,8 @@ mutual
                        xs <- fromBuf b; d <- fromBuf b
                        pure (IClaim fc c vis xs d)
                1 => do fc <- fromBuf b; vis <- fromBuf b
-                       d <- fromBuf b
-                       pure (IData fc vis d)
+                       mbtot <- fromBuf b; d <- fromBuf b
+                       pure (IData fc vis mbtot d)
                2 => do fc <- fromBuf b; n <- fromBuf b
                        xs <- fromBuf b
                        pure (IDef fc n xs)
@@ -1341,8 +1349,9 @@ mutual
                        d <- fromBuf b
                        pure (IParameters fc vis d)
                4 => do fc <- fromBuf b; ns <- fromBuf b;
-                       vis <- fromBuf b; r <- fromBuf b
-                       pure (IRecord fc ns vis r)
+                       vis <- fromBuf b; mbtot <- fromBuf b;
+                       r <- fromBuf b
+                       pure (IRecord fc ns vis mbtot r)
                5 => do fc <- fromBuf b; xs <- fromBuf b
                        ds <- fromBuf b
                        pure (INamespace fc xs ds)

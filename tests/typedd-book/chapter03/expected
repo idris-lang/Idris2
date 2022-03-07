@@ -2,7 +2,7 @@
 2/8: Building Matrix (Matrix.idr)
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
-  elem is shadowing Data.Vect.elem, Prelude.Types.elem
+  elem is shadowing Prelude.Types.elem
 
 Matrix:3:1--3:14
  1 | import Data.Vect
@@ -12,7 +12,7 @@ Matrix:3:1--3:14
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
-  elem is shadowing Data.Vect.elem, Prelude.Types.elem
+  elem is shadowing Prelude.Types.elem
 
 Matrix:7:1--7:16
  3 | createEmpties : {n : _} -> Vect n (Vect 0 elem)
@@ -24,7 +24,7 @@ Matrix:7:1--7:16
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
-  elem is shadowing Data.Vect.elem, Prelude.Types.elem
+  elem is shadowing Prelude.Types.elem
 
 Matrix:11:1--11:13
  07 | transposeHelper : (x : Vect n elem) -> (xs_trans : Vect n (Vect k elem)) -> Vect n (Vect (S k) elem)
@@ -37,7 +37,7 @@ Matrix:11:1--11:13
 3/8: Building VecSort (VecSort.idr)
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
-  elem is shadowing Data.Vect.elem, Prelude.Types.elem
+  elem is shadowing Prelude.Types.elem
 
 VecSort:3:1--3:7
  1 | import Data.Vect
@@ -47,7 +47,7 @@ VecSort:3:1--3:7
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
-  elem is shadowing Data.Vect.elem, Prelude.Types.elem
+  elem is shadowing Prelude.Types.elem
 
 VecSort:9:1--9:8
  5 | insert x (y :: xs) = case x < y of

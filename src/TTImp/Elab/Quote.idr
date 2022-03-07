@@ -71,8 +71,7 @@ mutual
       = pure $ IQuote fc !(getUnquote t)
   getUnquote (IUnquote fc tm)
       = do qv <- genVarName "q"
-           unqs <- get Unq
-           put Unq ((qv, fc, tm) :: unqs)
+           update Unq ((qv, fc, tm) ::)
            pure (IUnquote fc (IVar fc qv)) -- turned into just qv when reflecting
   getUnquote tm = pure tm
 
@@ -83,10 +82,11 @@ mutual
                      Core ImpClause
   getUnquoteClause (PatClause fc l r)
       = pure $ PatClause fc !(getUnquote l) !(getUnquote r)
-  getUnquoteClause (WithClause fc l w prf flags cs)
+  getUnquoteClause (WithClause fc l rig w prf flags cs)
       = pure $ WithClause
                  fc
                  !(getUnquote l)
+                 rig
                  !(getUnquote w)
                  prf
                  flags
@@ -148,8 +148,8 @@ mutual
                    Core ImpDecl
   getUnquoteDecl (IClaim fc c v opts ty)
       = pure $ IClaim fc c v opts !(getUnquoteTy ty)
-  getUnquoteDecl (IData fc v d)
-      = pure $ IData fc v !(getUnquoteData d)
+  getUnquoteDecl (IData fc v mbt d)
+      = pure $ IData fc v mbt !(getUnquoteData d)
   getUnquoteDecl (IDef fc v d)
       = pure $ IDef fc v !(traverse getUnquoteClause d)
   getUnquoteDecl (IParameters fc ps ds)
@@ -159,8 +159,8 @@ mutual
     where
       unqTuple : (Name, RigCount, PiInfo RawImp, RawImp) -> Core (Name, RigCount, PiInfo RawImp, RawImp)
       unqTuple (n, rig, i, t) = pure (n, rig, i, !(getUnquote t))
-  getUnquoteDecl (IRecord fc ns v d)
-      = pure $ IRecord fc ns v !(getUnquoteRecord d)
+  getUnquoteDecl (IRecord fc ns v mbt d)
+      = pure $ IRecord fc ns v mbt !(getUnquoteRecord d)
   getUnquoteDecl (INamespace fc ns ds)
       = pure $ INamespace fc ns !(traverse getUnquoteDecl ds)
   getUnquoteDecl (ITransform fc n l r)

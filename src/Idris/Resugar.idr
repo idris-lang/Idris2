@@ -32,11 +32,14 @@ unbracketApp tm = tm
 mkOp : {auto s : Ref Syn SyntaxInfo} ->
        IPTerm -> Core IPTerm
 mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
-    = do syn <- get Syn
-         let n = rawName kn
-         case StringMap.lookup (nameRoot n) (infixes syn) of
-              Nothing => pure tm
-              Just _ => pure (POp fc opFC kn (unbracketApp x) (unbracketApp y))
+  = do syn <- get Syn
+       let n = rawName kn
+       let asOp = POp fc opFC kn (unbracketApp x) (unbracketApp y)
+       case StringMap.lookup (snd $ displayName n) (infixes syn) of
+         Just _ => pure asOp
+         Nothing => case dropNS n of
+           DN str _ => pure $ ifThenElse (isOpUserName (Basic str)) asOp tm
+           _ => pure tm
 mkOp tm = pure tm
 
 export
@@ -416,9 +419,10 @@ mutual
       = pure (MkPatClause fc !(toPTerm startPrec lhs)
                              !(toPTerm startPrec rhs)
                              [])
-  toPClause (WithClause fc lhs rhs prf flags cs)
+  toPClause (WithClause fc lhs rig wval prf flags cs)
       = pure (MkWithClause fc !(toPTerm startPrec lhs)
-                              !(toPTerm startPrec rhs)
+                              rig
+                              !(toPTerm startPrec wval)
                               prf
                               flags
                               !(traverse toPClause cs))
@@ -483,8 +487,8 @@ mutual
   toPDecl (IClaim fc rig vis opts ty)
       = do opts' <- traverse toPFnOpt opts
            pure (Just (PClaim fc rig vis opts' !(toPTypeDecl ty)))
-  toPDecl (IData fc vis d)
-      = pure (Just (PData fc "" vis !(toPData d)))
+  toPDecl (IData fc vis mbtot d)
+      = pure (Just (PData fc "" vis mbtot !(toPData d)))
   toPDecl (IDef fc n cs)
       = pure (Just (PDef fc !(traverse toPClause cs)))
   toPDecl (IParameters fc ps ds)
@@ -495,9 +499,9 @@ mutual
                                tpe' <- toPTerm startPrec tpe
                                pure (n, rig, info', tpe')) ps)
                 (mapMaybe id ds')))
-  toPDecl (IRecord fc _ vis r)
+  toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, con, fs) <- toPRecord r
-           pure (Just (PRecord fc "" vis n ps con fs))
+           pure (Just (PRecord fc "" vis mbtot n ps con fs))
   toPDecl (INamespace fc ns ds)
       = do ds' <- traverse toPDecl ds
            pure (Just (PNamespace fc ns (mapMaybe id ds')))
