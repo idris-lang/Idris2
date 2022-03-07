@@ -632,6 +632,16 @@ toList1' : (l : List a) -> Maybe (List1 a)
 toList1' [] = Nothing
 toList1' (x :: xs) = Just (x ::: xs)
 
+||| Interleave two lists.
+||| ```idris example
+||| > interleave ["a", "c", "e"]  ["b", "d", "f"]
+||| ["a", "b", "c", "d", "e", "f"]
+||| ```
+public export
+interleave : (xs, ys : List a) -> List a
+interleave [] ys = ys
+interleave (x :: xs) ys = x :: interleave ys xs
+
 ||| Prefix every element in the list with the given element.
 |||
 ||| @ sep the value to prefix
@@ -641,7 +651,7 @@ toList1' (x :: xs) = Just (x ::: xs)
 ||| > with List (mergeReplicate '>' ['a', 'b', 'c', 'd', 'e'])
 ||| ['>', 'a', '>', 'b', '>', 'c', '>', 'd', '>', 'e']
 ||| ```
-export
+public export
 mergeReplicate : (sep : a) -> (xs : List a) -> List a
 mergeReplicate sep []      = []
 mergeReplicate sep (y::ys) = sep :: y :: mergeReplicate sep ys
@@ -655,7 +665,7 @@ mergeReplicate sep (y::ys) = sep :: y :: mergeReplicate sep ys
 ||| > with List (intersperse ',' ['a', 'b', 'c', 'd', 'e'])
 ||| ['a', ',', 'b', ',', 'c', ',', 'd', ',', 'e']
 ||| ```
-export
+public export
 intersperse : (sep : a) -> (xs : List a) -> List a
 intersperse sep []      = []
 intersperse sep (x::xs) = x :: mergeReplicate sep xs
