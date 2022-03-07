@@ -207,7 +207,7 @@ idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
        -- Documentation strings
-      ["docs001", "docs002", "docs003",
+      ["docs001", "docs002", "docs003", "docs004",
        -- Eta equality
        "eta001",
        -- Modules and imports

@@ -1,0 +1,124 @@
+1/1: Building DocImpl (DocImpl.idr)
+Main> interface Main.Happy : Type -> Type
+  Parameters: t
+  Methods:
+    happy : t
+  Implementations:
+    Happy Nat
+    Happy Bool
+Main> happy : Bool
+happy = True
+Main> happy : Nat
+happy = 0
+Main> show : String -> String
+show cs = strCons '"' (showLitString (unpack cs) """)
+
+showPrec : Prec -> String -> String
+showPrec _ x = show x
+Main> Could not find an implementation for Show Type
+Main> Error: Undefined name NAt. 
+
+(Interactive):1:14--1:17
+ 1 | :printdef Eq NAt
+                  ^^^
+Did you mean any of: Nat, or Not?
+Main> (==) : Nat -> Nat -> Bool
+(==) = equalNat
+
+(/=) : Nat -> Nat -> Bool
+x /= y = not (x == y)
+Main> (==) : Eq a => List a -> List a -> Bool
+[] == [] = True
+(x :: xs) == (y :: ys) = (x == y) && Delay (xs == ys)
+_ == _ = False
+
+(/=) : Eq a => List a -> List a -> Bool
+x /= y = not (x == y)
+Main> (==) : Double -> Double -> Bool
+x == y = intToBool (prim__eq_Double x y)
+
+(/=) : Double -> Double -> Bool
+x /= y = not (x == y)
+Main> map : (a -> b) -> Maybe a -> Maybe b
+map f (Just x) = Just (f x)
+map f Nothing = Nothing
+Main> foldr : (elem -> acc -> acc) -> acc -> Either e elem -> acc
+foldr f acc (Left _) = acc
+foldr f acc (Right x) = f x acc
+
+foldl : (acc -> elem -> acc) -> acc -> Either e elem -> acc
+foldl f z t = foldr (flip . . flip f) id t z
+
+null : Either e elem -> Bool
+null (Left _) = True
+null (Right _) = False
+
+foldlM : Monad m => (acc -> elem -> m acc) -> acc -> Either e elem -> m acc
+foldlM fm a0 = foldl (\ma, b => ma >>= flip fm b) (pure a0)
+
+toList : Either e elem -> List elem
+toList = foldr :: []
+
+foldMap : Monoid m => (a -> m) -> Either e a -> m
+foldMap f = foldr (<+> . f) neutral
+Main> Imported module Data.Bits
+Main> 0 Index : Type
+Index = Nat
+
+(.&.) : Integer -> Integer -> Integer
+(.&.) = prim__and_Integer
+
+(.|.) : Integer -> Integer -> Integer
+(.|.) = prim__or_Integer
+
+xor : Integer -> Integer -> Integer
+xor = prim__xor_Integer
+
+shiftL : Integer -> Index -> Integer
+shiftL x = prim__shl_Integer x . natToInteger
+
+shiftR : Integer -> Index -> Integer
+shiftR x = prim__shr_Integer x . natToInteger
+
+bit : Index -> Integer
+bit = \{arg:0} => 1 `shiftL` arg
+
+zeroBits : Integer
+zeroBits = 0
+
+complement : Integer -> Integer
+complement = xor oneBits
+
+oneBits : Integer
+oneBits = -1
+
+complementBit : Integer -> Index -> Integer
+complementBit x i = x `xor` bit i
+
+clearBit : Integer -> Index -> Integer
+clearBit x i = x `xor` (bit i .&. x)
+
+testBit : Integer -> Index -> Bool
+testBit x i = (x .&. bit i) /= 0
+
+setBit : Integer -> Index -> Integer
+setBit x i = x .|. bit i
+Main> Bye for now!
+1/1: Building List (List.idr)
+List> interface List.Monoid : Type -> Type
+  Parameters: ty
+  Methods:
+    neutral : ty
+    (++) : ty -> ty -> ty
+      Fixity Declaration: infixr operator, level 5
+  Implementation: Monoid (List a)
+List> neutral : List a
+neutral = []
+
+(++) : List a -> List a -> List a
+xs ++ ys = case xs of
+  { [] => ys
+  ; x :: xs => let ih = xs ++ ys in x :: ih
+  }
+List> 
+Bye for now!

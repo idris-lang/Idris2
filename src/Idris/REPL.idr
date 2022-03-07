@@ -24,6 +24,7 @@ import Core.SchemeEval
 import Parser.Unlit
 
 import Idris.Desugar
+import Idris.Doc.Display
 import Idris.Doc.String
 import Idris.Error
 import Idris.IDEMode.CaseSplit
@@ -97,18 +98,6 @@ showInfo (n, idx, d)
 prettyTerm : IPTerm -> Doc IdrisAnn
 prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
 
-displayType : {auto c : Ref Ctxt Defs} ->
-              {auto s : Ref Syn SyntaxInfo} ->
-              Defs -> (Name, Int, GlobalDef) ->
-              Core (Doc IdrisAnn)
-displayType defs (n, i, gdef)
-    = maybe (do tm <- resugar [] !(normaliseHoles defs [] (type gdef))
-                nm <- aliasName (fullname gdef)
-                let ann = showCategory Syntax gdef
-                pure (ann (pretty nm) <++> colon <++> prettyTerm tm))
-            (\num => reAnnotate Syntax <$> prettyHole defs [] n num (type gdef))
-            (isHole gdef)
-
 getEnvTerm : {vars : _} ->
              List Name -> Env Term vars -> Term vars ->
              (vars' ** (Env Term vars', Term vars'))
@@ -118,14 +107,6 @@ getEnvTerm (n :: ns) env (Bind fc x b sc)
          else (_ ** (env, Bind fc x b sc))
 getEnvTerm _ env tm = (_ ** (env, tm))
 
-displayTerm : {auto c : Ref Ctxt Defs} ->
-              {auto s : Ref Syn SyntaxInfo} ->
-              Defs -> ClosedTerm ->
-              Core (Doc IdrisAnn)
-displayTerm defs tm
-    = do ptm <- resugar [] !(normaliseHoles defs [] tm)
-         pure (prettyTerm ptm)
-
 displayPatTerm : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  Defs -> ClosedTerm ->
@@ -133,27 +114,6 @@ displayPatTerm : {auto c : Ref Ctxt Defs} ->
 displayPatTerm defs tm
     = do ptm <- resugarNoPatvars [] !(normaliseHoles defs [] tm)
          pure (show ptm)
-
-displayClause : {auto c : Ref Ctxt Defs} ->
-                {auto s : Ref Syn SyntaxInfo} ->
-                Defs -> (vs ** (Env Term vs, Term vs, Term vs)) ->
-                Core (Doc IdrisAnn)
-displayClause defs (vs ** (env, lhs, rhs))
-    = do lhstm <- resugar env !(normaliseHoles defs env lhs)
-         rhstm <- resugar env !(normaliseHoles defs env rhs)
-         pure (prettyTerm lhstm <++> equals <++> prettyTerm rhstm)
-
-displayPats : {auto c : Ref Ctxt Defs} ->
-              {auto s : Ref Syn SyntaxInfo} ->
-              Defs -> (Name, Int, GlobalDef) ->
-              Core (Doc IdrisAnn)
-displayPats defs (n, idx, gdef)
-    = case definition gdef of
-           PMDef _ _ _ _ pats
-               => do ty <- displayType defs (n, idx, gdef)
-                     ps <- traverse (displayClause defs) pats
-                     pure (vsep (ty :: ps))
-           _ => pure (pretty n <++> reflow "is not a pattern matching definition")
 
 setOpt : {auto c : Ref Ctxt Defs} ->
          {auto o : Ref ROpts REPLOpts} ->
@@ -391,8 +351,8 @@ processEdit (TypeAt line col name)
          -- Get the Doc for the result
          globalResult <- case globals of
            [] => pure Nothing
-           ts => do tys <- traverse (displayType defs) ts
-                    pure $ Just (vsep tys)
+           ts => do tys <- traverse (displayType False defs) ts
+                    pure $ Just (vsep $ map (reAnnotate Pretty.Syntax) tys)
 
          -- Lookup the name locally (The name at the specified position)
          localResult <- findTypeAt $ anyAt $ within (line-1, col)
@@ -400,7 +360,7 @@ processEdit (TypeAt line col name)
          case (globalResult, localResult) of
               -- Give precedence to the local name, as it shadows the others
               (_, Just (n, _, type)) => pure $ DisplayEdit $
-                prettyLocalName n <++> colon <++> !(displayTerm defs type)
+                prettyLocalName n <++> colon <++> !(reAnnotate Syntax <$> displayTerm defs type)
               (Just globalDoc, Nothing) => pure $ DisplayEdit $ globalDoc
               (Nothing, Nothing) => undefinedName replFC name
 
@@ -780,8 +740,8 @@ process (Check (PRef fc fn))
     = do defs <- get Ctxt
          case !(lookupCtxtName fn (gamma defs)) of
               [] => undefinedName fc fn
-              ts => do tys <- traverse (displayType defs) ts
-                       pure (Printed $ vsep tys)
+              ts => do tys <- traverse (displayType False defs) ts
+                       pure (Printed $ vsep $ map (reAnnotate Syntax) tys)
 process (Check itm)
     = do (tm `WithType` ty) <- inferAndElab InExpr itm
          defs <- get Ctxt
@@ -795,12 +755,16 @@ process (CheckWithImplicits itm)
          result <- process (Check itm)
          setOpt (ShowImplicits showImplicits)
          pure result
-process (PrintDef fn)
+process (PrintDef (PRef fc fn))
     = do defs <- get Ctxt
          case !(lookupCtxtName fn (gamma defs)) of
-              [] => undefinedName replFC fn
-              ts => do defs <- traverse (displayPats defs) ts
-                       pure (Printed $ vsep defs)
+              [] => undefinedName fc fn
+              ts => do defs <- traverse (displayPats False defs) ts
+                       pure (Printed $ vsep $ map (reAnnotate Syntax) defs)
+process (PrintDef t)
+    = case !(getDocsForImplementation t) of
+        Just d => pure (Printed $ reAnnotate Syntax d)
+        Nothing => pure (Printed $ pretty $ "Error: could not find definition of \{show t}")
 process Reload
     = do opts <- get ROpts
          case mainfile opts of

@@ -251,25 +251,6 @@ groupClose "`{" = "}"
 groupClose "`[" = "]"
 groupClose _ = ""
 
-export
-isOpChar : Char -> Bool
-isOpChar c = c `elem` (unpack ":!#$%&*+./<=>?@\\^|-~")
-
-export
-||| Test whether a user name begins with an operator symbol.
-isOpUserName : UserName -> Bool
-isOpUserName (Basic n) = fromMaybe False $ do
-   c <- fst <$> strUncons n
-   guard (isOpChar c)
-   pure True
-isOpUserName (Field _) = False
-isOpUserName Underscore = False
-
-export
-||| Test whether a name begins with an operator symbol.
-isOpName : Name -> Bool
-isOpName = maybe False isOpUserName . userNameRoot
-
 validSymbol : Lexer
 validSymbol = some (pred isOpChar)
 

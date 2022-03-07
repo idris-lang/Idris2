@@ -82,6 +82,7 @@ knownTopics = [
     ("declare.type", Nothing),
     ("desugar.idiom", Nothing),
     ("doc.data", Nothing),
+    ("doc.implementation", Nothing),
     ("doc.record", Nothing),
     ("doc.module", Nothing),
     ("elab", Nothing),

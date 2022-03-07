@@ -68,7 +68,7 @@ mutual
        PRef : FC -> nm -> PTerm' nm
        PPi : FC -> RigCount -> PiInfo (PTerm' nm) -> Maybe Name ->
              (argTy : PTerm' nm) -> (retTy : PTerm' nm) -> PTerm' nm
-       PLam : FC -> RigCount -> PiInfo (PTerm' nm) -> PTerm' nm ->
+       PLam : FC -> RigCount -> PiInfo (PTerm' nm) -> (pat : PTerm' nm) ->
               (argTy : PTerm' nm) -> (scope : PTerm' nm) -> PTerm' nm
        PLet : FC -> RigCount -> (pat : PTerm' nm) ->
               (nTy : PTerm' nm) -> (nVal : PTerm' nm) -> (scope : PTerm' nm) ->
@@ -606,7 +606,7 @@ data REPLCmd : Type where
      Eval : PTerm -> REPLCmd
      Check : PTerm -> REPLCmd
      CheckWithImplicits : PTerm -> REPLCmd
-     PrintDef : Name -> REPLCmd
+     PrintDef : PTerm -> REPLCmd
      Reload : REPLCmd
      Load : String -> REPLCmd
      ImportMod : ModuleIdent -> REPLCmd

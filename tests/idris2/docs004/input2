@@ -1,0 +1,3 @@
+:doc Monoid
+:printdef (Monoid (List a))
+:q

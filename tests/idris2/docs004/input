@@ -1,0 +1,14 @@
+:doc Happy
+:printdef Happy Bool
+:printdef ((Happy Nat))
+:printdef Show String
+:printdef Show Type
+:printdef Eq NAt
+:printdef Eq Nat
+:printdef Eq (List a)
+:printdef Eq Double
+:printdef Functor Maybe
+:printdef Foldable (Either err)
+:module Data.Bits
+:printdef Bits Integer
+:q

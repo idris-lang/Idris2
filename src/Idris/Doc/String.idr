@@ -7,10 +7,12 @@ import Core.Env
 import Core.TT
 import Core.TT.Traversals
 
+import Idris.Doc.Display
 import Idris.Pretty
 import Idris.REPL.Opts
 import Idris.Resugar
 import Idris.Syntax
+import Idris.Syntax.Views
 
 import TTImp.TTImp
 import TTImp.TTImp.Functor
@@ -438,14 +440,14 @@ getDocsForName fc n config
                         PPi _ _ AutoImplicit _ _ sc => sc
                         _ => ty
              nm <- aliasName n
-             -- when printing e.g. interface methods there is no point in
-             -- repeating the namespace the interface lives in
+             let prig = reAnnotate Syntax $ prettyRig def.multiplicity
              let cat = showCategory Syntax def
              let nm = prettyKindedName typ $ cat
                     $ ifThenElse longNames (pretty (show nm)) (prettyName nm)
              let deprecated = if Context.Deprecate `elem` def.flags
                                  then annotate Deprecation "=DEPRECATED=" <+> line else emptyDoc
-             let docDecl = deprecated <+> annotate (Decl n) (hsep [nm, colon, prettyTerm ty])
+             let docDecl = deprecated
+                     <+> annotate (Decl n) (hsep [prig <+> nm, colon, prettyTerm ty])
 
              -- Finally add the user-provided docstring
              let docText = let docs = reflowDoc str in
@@ -460,6 +462,73 @@ getDocsForName fc n config
                      <$ guard (not (null docs))
              let maybeDocDecl = [docDecl | showType]
              pure . vcat . catMaybes $ maybeDocDecl :: (map Just $ docBody)
+
+export
+getDocsForImplementation :
+  {auto s : Ref Syn SyntaxInfo} ->
+  {auto c : Ref Ctxt Defs} ->
+  PTerm -> Core (Maybe (Doc IdrisSyntax))
+getDocsForImplementation t = do
+  -- the term better be of the shape (I e1 e2 e3) where I is a name
+  let (PRef fc intf, args) = getFnArgs t
+    | _ => pure Nothing
+  -- That name (I) better be the name of an interface
+  syn <- get Syn
+  -- Important: we shadow intf with the fully qualified version returned by lookupName
+  let [(intf, _)] = lookupName intf (ifaces syn)
+    | _ => pure Nothing
+  -- Now lookup the declared implementations for that interface
+  -- For now we only look at the top list
+  ((_, tophs) :: _) <- hintGroups <$> getSearchData fc False intf
+    | _ => pure Nothing
+  defs <- get Ctxt
+  impls <- map catMaybes $ for tophs $ \ hint => do
+    -- get the return type of all the candidate hints
+    Just (ix, def) <- lookupCtxtExactI hint (gamma defs)
+      | Nothing => pure Nothing
+    ty <- resugar [] =<< normaliseHoles defs [] (type def)
+    let (_, retTy) = underPis ty
+    -- try to see whether it approximates what we are looking for
+    -- we throw the head away because it'll be the interface name (I)
+    let (_, cargs) = getFnArgs retTy
+    bs <- for (zip args cargs) $ \ (arg, carg) => do
+      -- For now we only compare the heads of the arguments because we expect
+      -- we are interested in implementations of the form
+      -- Eq (List a), Functor (Vect n), etc.
+      -- In the future we could be more discriminating and make sure we only
+      -- retain implementations whose type is fully compatible.
+
+      -- TODO: check the Args have the same shape before unArgging?
+      let ((PRef fc hd, _), (PRef _ chd, _)) = (getFnArgs (unArg arg), getFnArgs (unArg carg))
+        | ((PPrimVal _ c, _), (PPrimVal _ c', _)) => pure (c == c')
+        | ((PType _, _), (PType _, _)) => pure True
+        | _ => pure False
+      -- if the names match on the nose we can readily say True
+      let False = dropNS hd == dropNS (fullName chd)
+        | True => pure True
+      -- otherwise we check hd is unknown in which case we're happy to
+      -- declare it to be a placeholder name and that it could possibly
+      -- unify e.g. a & b in (List a) vs. (List b)
+      existing <- lookupCtxtName hd (gamma defs)
+      log "doc.implementation" 50 $ unwords
+        [ "Mismatch between \{show hd} and \{show chd},"
+        , "checking whether \{show hd} exists:"
+        , "\{show $ length existing} candidates"
+        ]
+      let [] = existing
+        | _ => pure False
+      -- If the name starts with an uppercase letter it's probably a misspelt constructor name
+      whenJust ((isUN >=> (isBasic . snd) >=> strUncons >=> (guard . isUpper . fst)) hd) $ \ _ =>
+        undefinedName fc hd
+      pure True
+    -- all arguments better be valid approximations
+    let True = all id bs
+      | False => pure Nothing
+    pure (Just (hint, ix, def))
+  case impls of
+    [] => pure $ Just $ "Could not find an implementation for" <++> pretty (show t)
+    _ => do ds <- traverse (displayImpl defs) impls
+            pure $ Just $ vcat ds
 
 export
 getDocsForPTerm : {auto o : Ref ROpts REPLOpts} ->
@@ -496,8 +565,7 @@ getDocsForPTerm (PUnit _) = pure $ vcat
   [ "Unit Literal"
   , indent 2 "Desugars to MkUnit or Unit"
   ]
-getDocsForPTerm pterm = pure $
-  "Docs not implemented for" <++> pretty (show pterm) <++> "yet"
+getDocsForPTerm pterm = pure $ "Docs not implemented for" <++> pretty (show pterm) <++> "yet"
 
 export
 getDocs : {auto o : Ref ROpts REPLOpts} ->
