@@ -651,7 +651,7 @@ interleave (x :: xs) ys = x :: interleave ys xs
 ||| > with List (mergeReplicate '>' ['a', 'b', 'c', 'd', 'e'])
 ||| ['>', 'a', '>', 'b', '>', 'c', '>', 'd', '>', 'e']
 ||| ```
-export
+public export
 mergeReplicate : (sep : a) -> (xs : List a) -> List a
 mergeReplicate sep []      = []
 mergeReplicate sep (y::ys) = sep :: y :: mergeReplicate sep ys
