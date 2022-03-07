@@ -67,26 +67,22 @@ words s = map pack (words' (unpack s) [<] [<])
          else words' cs (sc :< c) css
     words' [] sc css = wordsHelper sc css <>> Nil
 
+||| Joins the strings using the provided separator
+||| ```idris example
+||| joinBy ", " ["A", "BC", "D"] === "A, BC, D"
+||| ```
+public export
+joinBy : String -> List String -> String
+joinBy sep ws = concat (intersperse sep ws)
+
 ||| Joins the strings by spaces into a single string.
 |||
 ||| ```idris example
-||| unwords ["A", "BC", "D", "E"]
+||| unwords ["A", "BC", "D", "E"] === "A BC D E"
 ||| ```
 public export
 unwords : List String -> String
-unwords = pack . unwords' . map unpack
-  where
-    addSpace : List Char -> List Char -> List Char
-    addSpace w s = w ++ (' ' :: s)
-
-    ||| Joins the character lists by spaces into a single character list.
-    |||
-    ||| ```idris example
-    ||| unwords' [['A'], ['B', 'C'], ['D'], ['E']]
-    ||| ```
-    unwords' : List (List Char) -> List Char
-    unwords' [] = []
-    unwords' (ws :: wss) = foldl addSpace ws wss
+unwords = joinBy " "
 
 ||| Splits a character list into a list of newline separated character lists.
 |||
@@ -122,17 +118,6 @@ public export
 lines : String -> List String
 lines s = map pack (lines' (unpack s))
 
-||| Joins the character lists by a single character list by appending a newline
-||| to each line.
-|||
-||| ```idris example
-||| unlines' [['l','i','n','e'], ['l','i','n','e','2'], ['l','n','3'], ['D']]
-||| ```
-public export
-unlines' : List (List Char) -> List Char
-unlines' [] = []
-unlines' (l::ls) = l ++ '\n' :: unlines' ls
-
 ||| Joins the strings into a single string by appending a newline to each string.
 |||
 ||| ```idris example
@@ -140,7 +125,7 @@ unlines' (l::ls) = l ++ '\n' :: unlines' ls
 ||| ```
 public export
 unlines : List String -> String
-unlines = pack . unlines' . map unpack
+unlines ls = concat (interleave ls ("\n" <$ ls))
 
 %transform "fastUnlines" unlines = fastUnlines
 
