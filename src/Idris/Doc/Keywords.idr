@@ -93,7 +93,7 @@ totality = vcat $
     header "Totality" :: ""
     :: map (indent 2) [
     """
-    Definitions can be individually declared `total`, `covering`, or partial`.
+    Definitions can be individually declared `total`, `covering`, or `partial`.
     It is also possible to set the default totality flag for definitions in a
     module by using the `%default` pragma.
     """, "",
