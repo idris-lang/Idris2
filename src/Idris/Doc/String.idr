@@ -576,7 +576,11 @@ getDocs (APTerm ptm) = getDocsForPTerm ptm
 getDocs (Symbol k) = pure $ getDocsForSymbol k
 getDocs (Bracket IdiomBrackets) = pure "Idiom brackets (cf. manual)"
 getDocs (Keyword k) = pure $ getDocsForKeyword k
-
+getDocs (AModule mod) = do
+  syn  <- get Syn
+  let Just modDoc = lookup mod (modDocstrings syn)
+    | _ => throw (ModuleNotFound replFC mod)
+  pure (pretty modDoc)
 
 summarise : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->

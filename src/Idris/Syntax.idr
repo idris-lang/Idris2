@@ -599,6 +599,8 @@ data DocDirective : Type where
   Bracket : BracketType -> DocDirective
   ||| An arbitrary PTerm
   APTerm  : PTerm -> DocDirective
+  ||| A module name
+  AModule : ModuleIdent -> DocDirective
 
 public export
 data REPLCmd : Type where
