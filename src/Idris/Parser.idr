@@ -2061,7 +2061,8 @@ docArgCmd parseCmd command doc = (names, DocArg, doc, parse)
       symbol ":"
       runParseCmd parseCmd
       dir <- mustWork $
-        Keyword <$> anyKeyword
+        AModule <$ keyword "module" <*> moduleIdent -- must be before Keyword to not be captured
+        <|> Keyword <$> anyKeyword
         <|> Symbol <$> (anyReservedSymbol <* eoi
                        <|> parens (Virtual Interactive) anyReservedSymbol <* eoi)
         <|> Bracket <$> (IdiomBrackets <$ symbol "[|" <* symbol "|]")
