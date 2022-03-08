@@ -52,9 +52,9 @@ Once you've successfully bootstrapped with any of the above commands, you can
 install with the command ``make install``.  This will, by default, install into
 ``${HOME}/.idris2``. You can change this by editing the options in
 ``config.mk``. For example, to install into ``/usr/local``, you can edit the
-``PREFIX`` as follows::
+``IDRIS2_PREFIX`` as follows::
 
-    PREFIX ?= /usr/local
+    IDRIS2_PREFIX ?= /usr/local
 
 Installing from a Package Manager
 =================================
