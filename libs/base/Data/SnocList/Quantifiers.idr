@@ -178,3 +178,16 @@ public export
 indexAll : Elem x xs -> All p xs -> p x
 indexAll  Here     (_ :< px) = px
 indexAll (There e) (pxs :< _) = indexAll e pxs
+
+||| If any `a` either satisfies p or q then given a Snoclist of as,
+||| either all values satisfy p
+||| or at least one of them sastifies q
+public export
+decide : ((x : a) -> Either (p x) (q x)) ->
+         (xs : SnocList a) -> Either (All p xs) (Any q xs)
+decide dec [<] = Left [<]
+decide dec (xs :< x) = case dec x of
+  Left px => case decide dec xs of
+    Left pxs => Left (pxs :< px)
+    Right pxs => Right (There pxs)
+  Right px => Right (Here px)
