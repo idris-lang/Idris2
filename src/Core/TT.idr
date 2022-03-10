@@ -59,23 +59,8 @@ covering
     showCon d "MkKindedName" $ showArg nm ++ showArg @{Raw} fn ++ showArg @{Raw} rn
 
 public export
-data Constant
-    = I   Int
-    | I8  Int8
-    | I16 Int16
-    | I32 Int32
-    | I64 Int64
-    | BI  Integer
-    | B8  Bits8
-    | B16 Bits16
-    | B32 Bits32
-    | B64 Bits64
-    | Str String
-    | Ch  Char
-    | Db  Double
-    | WorldVal
-
-    | IntType
+data PrimType
+    = IntType
     | Int8Type
     | Int16Type
     | Int32Type
@@ -90,8 +75,26 @@ data Constant
     | DoubleType
     | WorldType
 
+public export
+data Constant
+    = I   Int
+    | I8  Int8
+    | I16 Int16
+    | I32 Int32
+    | I64 Int64
+    | BI  Integer
+    | B8  Bits8
+    | B16 Bits16
+    | B32 Bits32
+    | B64 Bits64
+    | Str String
+    | Ch  Char
+    | Db  Double
+    | PrT PrimType
+    | WorldVal
+
 export
-isConstantType : Name -> Maybe Constant
+isConstantType : Name -> Maybe PrimType
 isConstantType (UN (Basic n)) = case n of
   "Int"     => Just IntType
   "Int8"    => Just Int8Type
@@ -112,35 +115,22 @@ isConstantType _ = Nothing
 
 export
 isPrimType : Constant -> Bool
-isPrimType (I   x)  = False
-isPrimType (I8  x)  = False
-isPrimType (I16 x)  = False
-isPrimType (I32 x)  = False
-isPrimType (I64 x)  = False
-isPrimType (BI  x)  = False
-isPrimType (B8  x)  = False
-isPrimType (B16 x)  = False
-isPrimType (B32 x)  = False
-isPrimType (B64 x)  = False
-isPrimType (Str x)  = False
-isPrimType (Ch  x)  = False
-isPrimType (Db  x)  = False
-isPrimType WorldVal = False
+isPrimType (PrT _) = True
+isPrimType _       = False
 
-isPrimType Int8Type    = True
-isPrimType Int16Type   = True
-isPrimType Int32Type   = True
-isPrimType Int64Type   = True
-isPrimType IntType     = True
-isPrimType IntegerType = True
-isPrimType Bits8Type   = True
-isPrimType Bits16Type  = True
-isPrimType Bits32Type  = True
-isPrimType Bits64Type  = True
-isPrimType StringType  = True
-isPrimType CharType    = True
-isPrimType DoubleType  = True
-isPrimType WorldType   = True
+export
+primTypeEq : (x, y : PrimType) -> Maybe (x = y)
+primTypeEq IntType IntType = Just Refl
+primTypeEq Int8Type Int8Type = Just Refl
+primTypeEq Int16Type Int16Type = Just Refl
+primTypeEq Int32Type Int32Type = Just Refl
+primTypeEq Int64Type Int64Type = Just Refl
+primTypeEq IntegerType IntegerType = Just Refl
+primTypeEq StringType StringType = Just Refl
+primTypeEq CharType CharType = Just Refl
+primTypeEq DoubleType DoubleType = Just Refl
+primTypeEq WorldType WorldType = Just Refl
+primTypeEq _ _ = Nothing
 
 -- TODO : The `TempXY` instances can be removed after the next release
 --        (see also `Libraries.Data.Primitives`)
@@ -183,35 +173,13 @@ constantEq (Ch x) (Ch y) = case decEq x y of
                                 Yes Refl => Just Refl
                                 No contra => Nothing
 constantEq (Db x) (Db y) = Nothing -- no DecEq for Doubles!
+constantEq (PrT x) (PrT y) = cong PrT <$> primTypeEq x y
 constantEq WorldVal WorldVal = Just Refl
-constantEq IntType IntType = Just Refl
-constantEq Int8Type Int8Type = Just Refl
-constantEq Int16Type Int16Type = Just Refl
-constantEq Int32Type Int32Type = Just Refl
-constantEq Int64Type Int64Type = Just Refl
-constantEq IntegerType IntegerType = Just Refl
-constantEq StringType StringType = Just Refl
-constantEq CharType CharType = Just Refl
-constantEq DoubleType DoubleType = Just Refl
-constantEq WorldType WorldType = Just Refl
+
 constantEq _ _ = Nothing
 
 export
-Show Constant where
-  show (I x) = show x
-  show (I8 x) = show x
-  show (I16 x) = show x
-  show (I32 x) = show x
-  show (I64 x) = show x
-  show (BI x) = show x
-  show (B8 x) = show x
-  show (B16 x) = show x
-  show (B32 x) = show x
-  show (B64 x) = show x
-  show (Str x) = show x
-  show (Ch x) = show x
-  show (Db x) = show x
-  show WorldVal = "%MkWorld"
+Show PrimType where
   show IntType = "Int"
   show Int8Type = "Int8"
   show Int16Type = "Int16"
@@ -228,21 +196,25 @@ Show Constant where
   show WorldType = "%World"
 
 export
-Pretty Constant where
-  pretty (I x) = pretty x
-  pretty (I8 x) = pretty x
-  pretty (I16 x) = pretty x
-  pretty (I32 x) = pretty x
-  pretty (I64 x) = pretty x
-  pretty (BI x) = pretty x
-  pretty (B8 x) = pretty x
-  pretty (B16 x) = pretty x
-  pretty (B32 x) = pretty x
-  pretty (B64 x) = pretty x
-  pretty (Str x) = dquotes (pretty x)
-  pretty (Ch x) = squotes (pretty x)
-  pretty (Db x) = pretty x
-  pretty WorldVal = pretty "%MkWorld"
+Show Constant where
+  show (I x) = show x
+  show (I8 x) = show x
+  show (I16 x) = show x
+  show (I32 x) = show x
+  show (I64 x) = show x
+  show (BI x) = show x
+  show (B8 x) = show x
+  show (B16 x) = show x
+  show (B32 x) = show x
+  show (B64 x) = show x
+  show (Str x) = show x
+  show (Ch x) = show x
+  show (Db x) = show x
+  show (PrT x) = show x
+  show WorldVal = "%MkWorld"
+
+export
+Pretty PrimType where
   pretty IntType = pretty "Int"
   pretty Int8Type = pretty "Int8"
   pretty Int16Type = pretty "Int16"
@@ -259,21 +231,25 @@ Pretty Constant where
   pretty WorldType = pretty "%World"
 
 export
-Eq Constant where
-  (I x) == (I y) = x == y
-  (I8 x) == (I8 y) = x == y
-  (I16 x) == (I16 y) = x == y
-  (I32 x) == (I32 y) = x == y
-  (I64 x) == (I64 y) = x == y
-  (BI x) == (BI y) = x == y
-  (B8 x) == (B8 y) = x == y
-  (B16 x) == (B16 y) = x == y
-  (B32 x) == (B32 y) = x == y
-  (B64 x) == (B64 y) = x == y
-  (Str x) == (Str y) = x == y
-  (Ch x) == (Ch y) = x == y
-  (Db x) == (Db y) = x == y
-  WorldVal == WorldVal = True
+Pretty Constant where
+  pretty (I x) = pretty x
+  pretty (I8 x) = pretty x
+  pretty (I16 x) = pretty x
+  pretty (I32 x) = pretty x
+  pretty (I64 x) = pretty x
+  pretty (BI x) = pretty x
+  pretty (B8 x) = pretty x
+  pretty (B16 x) = pretty x
+  pretty (B32 x) = pretty x
+  pretty (B64 x) = pretty x
+  pretty (Str x) = dquotes (pretty x)
+  pretty (Ch x) = squotes (pretty x)
+  pretty (Db x) = pretty x
+  pretty (PrT x) = pretty x
+  pretty WorldVal = pretty "%MkWorld"
+
+export
+Eq PrimType where
   IntType == IntType = True
   Int8Type == Int8Type = True
   Int16Type == Int16Type = True
@@ -290,25 +266,43 @@ Eq Constant where
   WorldType == WorldType = True
   _ == _ = False
 
+export
+Eq Constant where
+  (I x) == (I y) = x == y
+  (I8 x) == (I8 y) = x == y
+  (I16 x) == (I16 y) = x == y
+  (I32 x) == (I32 y) = x == y
+  (I64 x) == (I64 y) = x == y
+  (BI x) == (BI y) = x == y
+  (B8 x) == (B8 y) = x == y
+  (B16 x) == (B16 y) = x == y
+  (B32 x) == (B32 y) = x == y
+  (B64 x) == (B64 y) = x == y
+  (Str x) == (Str y) = x == y
+  (Ch x) == (Ch y) = x == y
+  (Db x) == (Db y) = x == y
+  (PrT x) == (PrT y) = x == y
+  WorldVal == WorldVal = True
+  _ == _ = False
+
 -- for typecase
 export
-constTag : Constant -> Int
+primTypeTag : PrimType -> Int
 -- 1 = ->, 2 = Type
-constTag IntType = 3
-constTag IntegerType = 4
-constTag Bits8Type = 5
-constTag Bits16Type = 6
-constTag Bits32Type = 7
-constTag Bits64Type = 8
-constTag StringType = 9
-constTag CharType = 10
-constTag DoubleType = 11
-constTag WorldType = 12
-constTag Int8Type = 13
-constTag Int16Type = 14
-constTag Int32Type = 15
-constTag Int64Type = 16
-constTag _ = 0
+primTypeTag IntType = 3
+primTypeTag IntegerType = 4
+primTypeTag Bits8Type = 5
+primTypeTag Bits16Type = 6
+primTypeTag Bits32Type = 7
+primTypeTag Bits64Type = 8
+primTypeTag StringType = 9
+primTypeTag CharType = 10
+primTypeTag DoubleType = 11
+primTypeTag WorldType = 12
+primTypeTag Int8Type = 13
+primTypeTag Int16Type = 14
+primTypeTag Int32Type = 15
+primTypeTag Int64Type = 16
 
 ||| Precision of integral types.
 public export
@@ -333,7 +327,7 @@ public export
 data IntKind = Signed Precision | Unsigned Int
 
 public export
-intKind : Constant -> Maybe IntKind
+intKind : PrimType -> Maybe IntKind
 intKind IntegerType = Just $ Signed Unlimited
 intKind Int8Type    = Just . Signed   $ P 8
 intKind Int16Type   = Just . Signed   $ P 16
@@ -354,24 +348,24 @@ precision (Unsigned p) = P p
 -- All the internal operators, parameterised by their arity
 public export
 data PrimFn : Nat -> Type where
-     Add : (ty : Constant) -> PrimFn 2
-     Sub : (ty : Constant) -> PrimFn 2
-     Mul : (ty : Constant) -> PrimFn 2
-     Div : (ty : Constant) -> PrimFn 2
-     Mod : (ty : Constant) -> PrimFn 2
-     Neg : (ty : Constant) -> PrimFn 1
-     ShiftL : (ty : Constant) -> PrimFn 2
-     ShiftR : (ty : Constant) -> PrimFn 2
+     Add : (ty : PrimType) -> PrimFn 2
+     Sub : (ty : PrimType) -> PrimFn 2
+     Mul : (ty : PrimType) -> PrimFn 2
+     Div : (ty : PrimType) -> PrimFn 2
+     Mod : (ty : PrimType) -> PrimFn 2
+     Neg : (ty : PrimType) -> PrimFn 1
+     ShiftL : (ty : PrimType) -> PrimFn 2
+     ShiftR : (ty : PrimType) -> PrimFn 2
 
-     BAnd : (ty : Constant) -> PrimFn 2
-     BOr : (ty : Constant) -> PrimFn 2
-     BXOr : (ty : Constant) -> PrimFn 2
+     BAnd : (ty : PrimType) -> PrimFn 2
+     BOr : (ty : PrimType) -> PrimFn 2
+     BXOr : (ty : PrimType) -> PrimFn 2
 
-     LT  : (ty : Constant) -> PrimFn 2
-     LTE : (ty : Constant) -> PrimFn 2
-     EQ  : (ty : Constant) -> PrimFn 2
-     GTE : (ty : Constant) -> PrimFn 2
-     GT  : (ty : Constant) -> PrimFn 2
+     LT  : (ty : PrimType) -> PrimFn 2
+     LTE : (ty : PrimType) -> PrimFn 2
+     EQ  : (ty : PrimType) -> PrimFn 2
+     GTE : (ty : PrimType) -> PrimFn 2
+     GT  : (ty : PrimType) -> PrimFn 2
 
      StrLength : PrimFn 1
      StrHead : PrimFn 1
@@ -395,7 +389,7 @@ data PrimFn : Nat -> Type where
      DoubleFloor : PrimFn 1
      DoubleCeiling : PrimFn 1
 
-     Cast : Constant -> Constant -> PrimFn 1
+     Cast : PrimType -> PrimType -> PrimFn 1
      BelieveMe : PrimFn 3
      Crash : PrimFn 2
 

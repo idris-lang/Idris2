@@ -215,7 +215,7 @@ getRelevantArg defs i rel world (NBind fc _ (Pi _ rig _ val) sc)
                        -- %World is never inspected, so might as well be deleted from data types,
                        -- although it needs care when compiling to ensure that the function that
                        -- returns the IO/%World type isn't erased
-                       (NPrimVal _ WorldType) =>
+                       (NPrimVal _ $ PrT WorldType) =>
                            getRelevantArg defs (1 + i) rel False
                                !(sc defs (toClosure defaultOpts [] (Erased fc False)))
                        _ =>

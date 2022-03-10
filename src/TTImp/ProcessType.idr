@@ -210,7 +210,7 @@ getFnString (IPrimVal _ (Str st)) = pure st
 getFnString tm
     = do inidx <- resolveName (UN $ Basic "[foreign]")
          let fc = getFC tm
-         let gstr = gnf [] (PrimVal fc StringType)
+         let gstr = gnf [] (PrimVal fc $ PrT StringType)
          etm <- checkTerm inidx InExpr [] (MkNested []) [] tm gstr
          defs <- get Ctxt
          case !(nf defs [] etm) of

@@ -160,7 +160,7 @@ getMissingAlts : {auto c : Ref Ctxt Defs} ->
                  Core (List (CaseAlt vars))
 -- If it's a primitive other than WorldVal, there's too many to reasonably
 -- check, so require a catch all
-getMissingAlts fc defs (NPrimVal _ WorldType) alts
+getMissingAlts fc defs (NPrimVal _ $ PrT WorldType) alts
     = if isNil alts
          then pure [DefaultCase (Unmatched "Coverage check")]
          else pure []

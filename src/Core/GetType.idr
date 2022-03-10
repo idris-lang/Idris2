@@ -100,21 +100,21 @@ mutual
       = bindty
 
   chkConstant : FC -> Constant -> Term vars
-  chkConstant fc (I x) = PrimVal fc IntType
-  chkConstant fc (I8 x) = PrimVal fc Int8Type
-  chkConstant fc (I16 x) = PrimVal fc Int16Type
-  chkConstant fc (I32 x) = PrimVal fc Int32Type
-  chkConstant fc (I64 x) = PrimVal fc Int64Type
-  chkConstant fc (BI x) = PrimVal fc IntegerType
-  chkConstant fc (B8 x) = PrimVal fc Bits8Type
-  chkConstant fc (B16 x) = PrimVal fc Bits16Type
-  chkConstant fc (B32 x) = PrimVal fc Bits32Type
-  chkConstant fc (B64 x) = PrimVal fc Bits64Type
-  chkConstant fc (Str x) = PrimVal fc StringType
-  chkConstant fc (Ch x) = PrimVal fc CharType
-  chkConstant fc (Db x) = PrimVal fc DoubleType
-  chkConstant fc WorldVal = PrimVal fc WorldType
-  chkConstant fc _ = TType fc (MN "top" 0)
+  chkConstant fc (I x)    = PrimVal fc $ PrT IntType
+  chkConstant fc (I8 x)   = PrimVal fc $ PrT Int8Type
+  chkConstant fc (I16 x)  = PrimVal fc $ PrT Int16Type
+  chkConstant fc (I32 x)  = PrimVal fc $ PrT Int32Type
+  chkConstant fc (I64 x)  = PrimVal fc $ PrT Int64Type
+  chkConstant fc (BI x)   = PrimVal fc $ PrT IntegerType
+  chkConstant fc (B8 x)   = PrimVal fc $ PrT Bits8Type
+  chkConstant fc (B16 x)  = PrimVal fc $ PrT Bits16Type
+  chkConstant fc (B32 x)  = PrimVal fc $ PrT Bits32Type
+  chkConstant fc (B64 x)  = PrimVal fc $ PrT Bits64Type
+  chkConstant fc (Str x)  = PrimVal fc $ PrT StringType
+  chkConstant fc (Ch x)   = PrimVal fc $ PrT CharType
+  chkConstant fc (Db x)   = PrimVal fc $ PrT DoubleType
+  chkConstant fc WorldVal = PrimVal fc $ PrT WorldType
+  chkConstant fc _        = TType fc (MN "top" 0)
 
 export
 getType : {vars : _} ->

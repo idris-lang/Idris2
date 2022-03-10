@@ -58,44 +58,17 @@ fuzzySearch expr = do
  where
 
   data NameOrConst = AName Name
-                   | AInt
-                   | AInteger
-                   | ABits8
-                   | ABits16
-                   | ABits32
-                   | ABits64
-                   | AString
-                   | AChar
-                   | ADouble
-                   | AWorld
+                   | APrimType PrimType
                    | AType
 
   eqConst : (x, y : NameOrConst) -> Bool
-  eqConst AInt     AInt     = True
-  eqConst AInteger AInteger = True
-  eqConst ABits8   ABits8   = True
-  eqConst ABits16  ABits16  = True
-  eqConst ABits32  ABits32  = True
-  eqConst ABits64  ABits64  = True
-  eqConst AString  AString  = True
-  eqConst AChar    AChar    = True
-  eqConst ADouble  ADouble  = True
-  eqConst AWorld   AWorld   = True
-  eqConst AType    AType    = True
-  eqConst _        _        = False
+  eqConst (APrimType x) (APrimType y) = x == y
+  eqConst AType         AType         = True
+  eqConst _             _             = False -- names equality is irrelevant
 
   parseNameOrConst : PTerm -> Maybe NameOrConst
   parseNameOrConst (PRef _ n)               = Just (AName n)
-  parseNameOrConst (PPrimVal _ IntType)     = Just AInt
-  parseNameOrConst (PPrimVal _ IntegerType) = Just AInteger
-  parseNameOrConst (PPrimVal _ Bits8Type)   = Just ABits8
-  parseNameOrConst (PPrimVal _ Bits16Type)  = Just ABits16
-  parseNameOrConst (PPrimVal _ Bits32Type)  = Just ABits32
-  parseNameOrConst (PPrimVal _ Bits64Type)  = Just ABits64
-  parseNameOrConst (PPrimVal _ StringType)  = Just AString
-  parseNameOrConst (PPrimVal _ CharType)    = Just AChar
-  parseNameOrConst (PPrimVal _ DoubleType)  = Just ADouble
-  parseNameOrConst (PPrimVal _ WorldType)   = Just AWorld
+  parseNameOrConst (PPrimVal _ $ PrT t)     = Just (APrimType t)
   parseNameOrConst (PType _)                = Just AType
   parseNameOrConst _                        = Nothing
 

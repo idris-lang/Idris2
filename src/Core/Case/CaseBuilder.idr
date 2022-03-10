@@ -1114,10 +1114,9 @@ mkPat args orig (As fc _ _ ptm)
     = mkPat [] orig ptm
 mkPat args orig (TDelay fc r ty p)
     = pure $ PDelay fc r !(mkPat [] orig ty) !(mkPat [] orig p)
-mkPat args orig (PrimVal fc c)
-    = pure $ if constTag c == 0
-         then PConst fc c
-         else PTyCon fc (UN (Basic $ show c)) 0 []
+mkPat args orig (PrimVal fc $ PrT c) -- Primitive type constant
+    = pure $ PTyCon fc (UN (Basic $ show c)) 0 []
+mkPat args orig (PrimVal fc c) = pure $ PConst fc c -- Non-type constant
 mkPat args orig (TType fc _) = pure $ PTyCon fc (UN $ Basic "Type") 0 []
 mkPat args orig tm
    = do log "compile.casetree" 10 $

@@ -151,12 +151,12 @@ compileConstant fc (B64 x) = Vector (-109) [IntegerVal (cast x)]
 compileConstant fc (Str x) = StringVal x
 compileConstant fc (Ch x) = CharVal x
 compileConstant fc (Db x) = FloatVal x
--- Constant types get compiled as TyCon names, for matching purposes
-compileConstant fc t
-    = Vector (-1) [IntegerVal (cast (constTag t)),
+compileConstant fc (PrT t) -- Constant types get compiled as TyCon names, for matching purposes
+    = Vector (-1) [IntegerVal (cast (primTypeTag t)),
                    StringVal (show t),
                    toScheme (UN (Basic (show t))),
                    toScheme fc]
+compileConstant fc WorldVal = Null
 
 compileStk : Ref Sym Integer =>
              {auto c : Ref Ctxt Defs} ->

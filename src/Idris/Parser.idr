@@ -140,7 +140,7 @@ atom fname
   <|> do x <- bounds $ decorate fname Data $ pragma "MkWorld"
          pure (PPrimVal (boundToFC fname x) WorldVal)
   <|> do x <- bounds $ decorate fname Typ  $ pragma "World"
-         pure (PPrimVal (boundToFC fname x) WorldType)
+         pure (PPrimVal (boundToFC fname x) $ PrT WorldType)
   <|> do x <- bounds $ decoratedPragma fname "search"
          pure (PSearch (boundToFC fname x) 50)
 

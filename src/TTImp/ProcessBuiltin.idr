@@ -93,7 +93,7 @@ getNEIntegerIndex (Bind _ x b tm) = case b of
     _ => Nothing
   where
     isInteger : forall vars. Term vars -> Bool
-    isInteger (PrimVal _ IntegerType) = True
+    isInteger (PrimVal _ $ PrT IntegerType) = True
     isInteger _ = False
 getNEIntegerIndex _ = Just []
 
