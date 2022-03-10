@@ -245,6 +245,9 @@ export
 mkWorld : String -> String
 mkWorld res = res -- MkIORes is a newtype now! schConstructor 0 [res, "#f"] -- MkIORes
 
+schPrimType : PrimType -> String
+schPrimType _ = "#t"
+
 schConstant : (String -> String) -> Constant -> String
 schConstant _ (I x) = show x
 schConstant _ (I8 x) = show x
@@ -262,21 +265,8 @@ schConstant _ (Ch x)
         then "#\\" ++ cast x
         else "(integer->char " ++ show (the Int (cast x)) ++ ")"
 schConstant _ (Db x) = show x
+schConstant _ (PrT t) = schPrimType t
 schConstant _ WorldVal = "#f"
-schConstant _ IntType = "#t"
-schConstant _ Int8Type = "#t"
-schConstant _ Int16Type = "#t"
-schConstant _ Int32Type = "#t"
-schConstant _ Int64Type = "#t"
-schConstant _ IntegerType = "#t"
-schConstant _ Bits8Type = "#t"
-schConstant _ Bits16Type = "#t"
-schConstant _ Bits32Type = "#t"
-schConstant _ Bits64Type = "#t"
-schConstant _ StringType = "#t"
-schConstant _ CharType = "#t"
-schConstant _ DoubleType = "#t"
-schConstant _ WorldType = "#t"
 
 schCaseDef : Maybe String -> String
 schCaseDef Nothing = ""

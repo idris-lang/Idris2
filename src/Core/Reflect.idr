@@ -473,6 +473,41 @@ Reflect NameType where
            appCon fc defs (reflectiontt "TyCon") [t', i']
 
 export
+Reify PrimType where
+  reify defs val@(NDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), args) of
+             (UN (Basic "IntType"), [])
+                  => pure IntType
+             (UN (Basic "Int8Type"), [])
+                  => pure Int8Type
+             (UN (Basic "Int16Type"), [])
+                  => pure Int16Type
+             (UN (Basic "Int32Type"), [])
+                  => pure Int32Type
+             (UN (Basic "Int64Type"), [])
+                  => pure Int64Type
+             (UN (Basic "IntegerType"), [])
+                  => pure IntegerType
+             (UN (Basic "Bits8Type"), [])
+                  => pure Bits8Type
+             (UN (Basic "Bits16Type"), [])
+                  => pure Bits16Type
+             (UN (Basic "Bits32Type"), [])
+                  => pure Bits32Type
+             (UN (Basic "Bits64Type"), [])
+                  => pure Bits64Type
+             (UN (Basic "StringType"), [])
+                  => pure StringType
+             (UN (Basic "CharType"), [])
+                  => pure CharType
+             (UN (Basic "DoubleType"), [])
+                  => pure DoubleType
+             (UN (Basic "WorldType"), [])
+                  => pure WorldType
+             _ => cantReify val "PrimType"
+  reify defs val = cantReify val "PrimType"
+
+export
 Reify Constant where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), args) of
@@ -515,38 +550,44 @@ Reify Constant where
              (UN (Basic "Db"), [(_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (Db x')
+             (UN (Basic "PrT"), [(_, x)])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (PrT x')
              (UN (Basic "WorldVal"), [])
                   => pure WorldVal
-             (UN (Basic "IntType"), [])
-                  => pure IntType
-             (UN (Basic "Int8Type"), [])
-                  => pure Int8Type
-             (UN (Basic "Int16Type"), [])
-                  => pure Int16Type
-             (UN (Basic "Int32Type"), [])
-                  => pure Int32Type
-             (UN (Basic "Int64Type"), [])
-                  => pure Int64Type
-             (UN (Basic "IntegerType"), [])
-                  => pure IntegerType
-             (UN (Basic "Bits8Type"), [])
-                  => pure Bits8Type
-             (UN (Basic "Bits16Type"), [])
-                  => pure Bits16Type
-             (UN (Basic "Bits32Type"), [])
-                  => pure Bits32Type
-             (UN (Basic "Bits64Type"), [])
-                  => pure Bits64Type
-             (UN (Basic "StringType"), [])
-                  => pure StringType
-             (UN (Basic "CharType"), [])
-                  => pure CharType
-             (UN (Basic "DoubleType"), [])
-                  => pure DoubleType
-             (UN (Basic "WorldType"), [])
-                  => pure WorldType
              _ => cantReify val "Constant"
   reify defs val = cantReify val "Constant"
+
+export
+Reflect PrimType where
+  reflect fc defs lhs env IntType
+      = getCon fc defs (reflectiontt "IntType")
+  reflect fc defs lhs env Int8Type
+      = getCon fc defs (reflectiontt "Int8Type")
+  reflect fc defs lhs env Int16Type
+      = getCon fc defs (reflectiontt "Int16Type")
+  reflect fc defs lhs env Int32Type
+      = getCon fc defs (reflectiontt "Int32Type")
+  reflect fc defs lhs env Int64Type
+      = getCon fc defs (reflectiontt "Int64Type")
+  reflect fc defs lhs env IntegerType
+      = getCon fc defs (reflectiontt "IntegerType")
+  reflect fc defs lhs env Bits8Type
+      = getCon fc defs (reflectiontt "Bits8Type")
+  reflect fc defs lhs env Bits16Type
+      = getCon fc defs (reflectiontt "Bits16Type")
+  reflect fc defs lhs env Bits32Type
+      = getCon fc defs (reflectiontt "Bits32Type")
+  reflect fc defs lhs env Bits64Type
+      = getCon fc defs (reflectiontt "Bits64Type")
+  reflect fc defs lhs env StringType
+      = getCon fc defs (reflectiontt "StringType")
+  reflect fc defs lhs env CharType
+      = getCon fc defs (reflectiontt "CharType")
+  reflect fc defs lhs env DoubleType
+      = getCon fc defs (reflectiontt "DoubleType")
+  reflect fc defs lhs env WorldType
+      = getCon fc defs (reflectiontt "WorldType")
 
 export
 Reflect Constant where
@@ -589,36 +630,11 @@ Reflect Constant where
   reflect fc defs lhs env (Db x)
       = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "Db") [x']
+  reflect fc defs lhs env (PrT x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "PrT") [x']
   reflect fc defs lhs env WorldVal
       = getCon fc defs (reflectiontt "WorldVal")
-  reflect fc defs lhs env IntType
-      = getCon fc defs (reflectiontt "IntType")
-  reflect fc defs lhs env Int8Type
-      = getCon fc defs (reflectiontt "Int8Type")
-  reflect fc defs lhs env Int16Type
-      = getCon fc defs (reflectiontt "Int16Type")
-  reflect fc defs lhs env Int32Type
-      = getCon fc defs (reflectiontt "Int32Type")
-  reflect fc defs lhs env Int64Type
-      = getCon fc defs (reflectiontt "Int64Type")
-  reflect fc defs lhs env IntegerType
-      = getCon fc defs (reflectiontt "IntegerType")
-  reflect fc defs lhs env Bits8Type
-      = getCon fc defs (reflectiontt "Bits8Type")
-  reflect fc defs lhs env Bits16Type
-      = getCon fc defs (reflectiontt "Bits16Type")
-  reflect fc defs lhs env Bits32Type
-      = getCon fc defs (reflectiontt "Bits32Type")
-  reflect fc defs lhs env Bits64Type
-      = getCon fc defs (reflectiontt "Bits64Type")
-  reflect fc defs lhs env StringType
-      = getCon fc defs (reflectiontt "StringType")
-  reflect fc defs lhs env CharType
-      = getCon fc defs (reflectiontt "CharType")
-  reflect fc defs lhs env DoubleType
-      = getCon fc defs (reflectiontt "DoubleType")
-  reflect fc defs lhs env WorldType
-      = getCon fc defs (reflectiontt "WorldType")
 
 export
 Reify Visibility where

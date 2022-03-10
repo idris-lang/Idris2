@@ -518,8 +518,8 @@ record ConstantPrimitives where
 ||| the implementations from the provided `ConstantPrimitives`.
 export
 castInt :  ConstantPrimitives
-        -> Constant
-        -> Constant
+        -> PrimType
+        -> PrimType
         -> String
         -> Core String
 castInt p from to x =

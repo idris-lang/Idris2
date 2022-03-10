@@ -162,6 +162,22 @@ getDocsForPrimitive constant = do
                :: hintsDoc
 
   where
+  primTyDoc : PrimType -> Doc IdrisDocAnn
+  primTyDoc IntType = "Primitive type of bounded signed integers (backend dependent size)"
+  primTyDoc Int8Type = "Primitive type of 8 bits signed integers"
+  primTyDoc Int16Type = "Primitive type of 16 bits signed integers"
+  primTyDoc Int32Type = "Primitive type of 32 bits signed integers"
+  primTyDoc Int64Type = "Primitive type of 64 bits signed integers"
+  primTyDoc IntegerType = "Primitive type of unbounded signed integers"
+  primTyDoc Bits8Type = "Primitive type of 8 bits unsigned integers"
+  primTyDoc Bits16Type = "Primitive type of 16 bits unsigned integers"
+  primTyDoc Bits32Type = "Primitive type of 32 bits unsigned integers"
+  primTyDoc Bits64Type = "Primitive type of 64 bits unsigned integers"
+  primTyDoc StringType = "Primitive type of strings"
+  primTyDoc CharType = "Primitive type of characters"
+  primTyDoc DoubleType = "Primitive type of double-precision floating-points"
+  primTyDoc WorldType = "Primitive type of tokens for IO actions"
+
   primDoc : Constant -> Doc IdrisDocAnn
   primDoc (I i) = "Primitive signed int value (backend-dependent precision)"
   primDoc (I8 i) = "Primitive signed 8 bits value"
@@ -176,22 +192,8 @@ getDocsForPrimitive constant = do
   primDoc (Str s) = "Primitive string value"
   primDoc (Ch c) = "Primitive character value"
   primDoc (Db d) = "Primitive double value"
+  primDoc (PrT t) = primTyDoc t
   primDoc WorldVal = "Primitive token for IO actions"
-
-  primDoc IntType = "Primitive type of bounded signed integers (backend dependent size)"
-  primDoc Int8Type = "Primitive type of 8 bits signed integers"
-  primDoc Int16Type = "Primitive type of 16 bits signed integers"
-  primDoc Int32Type = "Primitive type of 32 bits signed integers"
-  primDoc Int64Type = "Primitive type of 64 bits signed integers"
-  primDoc IntegerType = "Primitive type of unbounded signed integers"
-  primDoc Bits8Type = "Primitive type of 8 bits unsigned integers"
-  primDoc Bits16Type = "Primitive type of 16 bits unsigned integers"
-  primDoc Bits32Type = "Primitive type of 32 bits unsigned integers"
-  primDoc Bits64Type = "Primitive type of 64 bits unsigned integers"
-  primDoc StringType = "Primitive type of strings"
-  primDoc CharType = "Primitive type of characters"
-  primDoc DoubleType = "Primitive type of double-precision floating-points"
-  primDoc WorldType = "Primitive type of tokens for IO actions"
 
 public export
 data Config : Type where

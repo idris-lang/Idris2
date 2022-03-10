@@ -56,6 +56,8 @@
 * Adds `%deprecate` pragma that can be used to warn when deprecated functions are used.
 * Package files now support a `langversion` field that can be used to specify what versions of Idris a package supports. As with dependency versions, `>`, `<`, `>=`, and `<=` can all be used.
   + For example, `langversion >= 0.5.1`.
+* Alternatives for primitive types of the `Core.TT.Constant` are moved out to a separate data type `PrimTypes`.
+  Signatures of functions that were working with `Constant` are changed to use `PrimTypes` when appropriate.
 
 ### IDE protocol changes
 

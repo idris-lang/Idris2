@@ -115,7 +115,7 @@ constFold rho (COp {arity} fc fn xs) =
     fromNF (NPrimVal fc c) = Just $ CPrimVal fc c
     fromNF _ = Nothing
 
-    commutative : Constant -> Bool
+    commutative : PrimType -> Bool
     commutative DoubleType = False
     commutative _ = True
 

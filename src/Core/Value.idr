@@ -106,7 +106,7 @@ ntCon : FC -> Name -> Int -> Nat -> List (FC, Closure vars) -> NF vars
 -- universe checking so put a dummy name.
 ntCon fc (UN (Basic "Type")) tag Z [] = NType fc (MN "top" 0)
 ntCon fc n tag Z [] = case isConstantType n of
-  Just c => NPrimVal fc c
+  Just c => NPrimVal fc $ PrT c
   Nothing => NTCon fc n tag Z []
 ntCon fc n tag arity args = NTCon fc n tag arity args
 

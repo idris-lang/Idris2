@@ -344,11 +344,8 @@ mutual
       = pure (CDelay fc lr !(toCExp m n arg))
   toCExpTm m n (TForce fc lr arg)
       = pure (CForce fc lr !(toCExp m n arg))
-  toCExpTm m n (PrimVal fc c)
-      = let t = constTag c in
-            if t == 0
-               then pure $ CPrimVal fc c
-               else pure $ CCon fc (UN $ Basic $ show c) TYCON Nothing []
+  toCExpTm m n (PrimVal fc $ PrT c) = pure $ CCon fc (UN $ Basic $ show c) TYCON Nothing [] -- Primitive type constant
+  toCExpTm m n (PrimVal fc c) = pure $ CPrimVal fc c -- Non-type constant
   toCExpTm m n (Erased fc _) = pure $ CErased fc
   toCExpTm m n (TType fc _) = pure $ CCon fc (UN (Basic "Type")) TYCON Nothing []
 
@@ -601,22 +598,22 @@ getNArgs defs n args = pure $ User n args
 
 nfToCFType : {auto c : Ref Ctxt Defs} ->
              FC -> (inStruct : Bool) -> NF [] -> Core CFType
-nfToCFType _ _ (NPrimVal _ IntType) = pure CFInt
-nfToCFType _ _ (NPrimVal _ IntegerType) = pure CFInteger
-nfToCFType _ _ (NPrimVal _ Bits8Type) = pure CFUnsigned8
-nfToCFType _ _ (NPrimVal _ Bits16Type) = pure CFUnsigned16
-nfToCFType _ _ (NPrimVal _ Bits32Type) = pure CFUnsigned32
-nfToCFType _ _ (NPrimVal _ Bits64Type) = pure CFUnsigned64
-nfToCFType _ _ (NPrimVal _ Int8Type) = pure CFInt8
-nfToCFType _ _ (NPrimVal _ Int16Type) = pure CFInt16
-nfToCFType _ _ (NPrimVal _ Int32Type) = pure CFInt32
-nfToCFType _ _ (NPrimVal _ Int64Type) = pure CFInt64
-nfToCFType _ False (NPrimVal _ StringType) = pure CFString
-nfToCFType fc True (NPrimVal _ StringType)
+nfToCFType _ _ (NPrimVal _ $ PrT IntType) = pure CFInt
+nfToCFType _ _ (NPrimVal _ $ PrT IntegerType) = pure CFInteger
+nfToCFType _ _ (NPrimVal _ $ PrT Bits8Type) = pure CFUnsigned8
+nfToCFType _ _ (NPrimVal _ $ PrT Bits16Type) = pure CFUnsigned16
+nfToCFType _ _ (NPrimVal _ $ PrT Bits32Type) = pure CFUnsigned32
+nfToCFType _ _ (NPrimVal _ $ PrT Bits64Type) = pure CFUnsigned64
+nfToCFType _ _ (NPrimVal _ $ PrT Int8Type) = pure CFInt8
+nfToCFType _ _ (NPrimVal _ $ PrT Int16Type) = pure CFInt16
+nfToCFType _ _ (NPrimVal _ $ PrT Int32Type) = pure CFInt32
+nfToCFType _ _ (NPrimVal _ $ PrT Int64Type) = pure CFInt64
+nfToCFType _ False (NPrimVal _ $ PrT StringType) = pure CFString
+nfToCFType fc True (NPrimVal _ $ PrT StringType)
     = throw (GenericMsg fc "String not allowed in a foreign struct")
-nfToCFType _ _ (NPrimVal _ DoubleType) = pure CFDouble
-nfToCFType _ _ (NPrimVal _ CharType) = pure CFChar
-nfToCFType _ _ (NPrimVal _ WorldType) = pure CFWorld
+nfToCFType _ _ (NPrimVal _ $ PrT DoubleType) = pure CFDouble
+nfToCFType _ _ (NPrimVal _ $ PrT CharType) = pure CFChar
+nfToCFType _ _ (NPrimVal _ $ PrT WorldType) = pure CFWorld
 nfToCFType _ False (NBind fc _ (Pi _ _ _ ty) sc)
     = do defs <- get Ctxt
          sty <- nfToCFType fc False !(evalClosure defs ty)

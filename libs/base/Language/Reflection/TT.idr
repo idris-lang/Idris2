@@ -65,6 +65,23 @@ data NameType : Type where
      TyCon   : (tag : Int) -> (arity : Nat) -> NameType
 
 public export
+data PrimType
+    = IntType
+    | IntegerType
+    | Int8Type
+    | Int16Type
+    | Int32Type
+    | Int64Type
+    | Bits8Type
+    | Bits16Type
+    | Bits32Type
+    | Bits64Type
+    | StringType
+    | CharType
+    | DoubleType
+    | WorldType
+
+public export
 data Constant
     = I Int
     | BI Integer
@@ -79,22 +96,8 @@ data Constant
     | Str String
     | Ch Char
     | Db Double
+    | PrT PrimType
     | WorldVal
-
-    | IntType
-    | IntegerType
-    | Int8Type
-    | Int16Type
-    | Int32Type
-    | Int64Type
-    | Bits8Type
-    | Bits16Type
-    | Bits32Type
-    | Bits64Type
-    | StringType
-    | CharType
-    | DoubleType
-    | WorldType
 
 public export
 data UserName

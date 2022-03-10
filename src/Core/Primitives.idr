@@ -503,26 +503,29 @@ believeMe [_, _, val@(NPrimVal _ _)] = Just val
 believeMe [_, _, NType fc u] = Just (NType fc u)
 believeMe [_, _, val] = Nothing
 
-constTy : Constant -> Constant -> Constant -> ClosedTerm
+primTyVal : PrimType -> ClosedTerm
+primTyVal = PrimVal emptyFC . PrT
+
+constTy : PrimType -> PrimType -> PrimType -> ClosedTerm
 constTy a b c
     = let arr = fnType emptyFC in
-    PrimVal emptyFC a `arr` (PrimVal emptyFC b `arr` PrimVal emptyFC c)
+    primTyVal a `arr` (primTyVal b `arr` primTyVal c)
 
-constTy3 : Constant -> Constant -> Constant -> Constant -> ClosedTerm
+constTy3 : PrimType -> PrimType -> PrimType -> PrimType -> ClosedTerm
 constTy3 a b c d
     = let arr = fnType emptyFC in
-    PrimVal emptyFC a `arr`
-         (PrimVal emptyFC b `arr`
-             (PrimVal emptyFC c `arr` PrimVal emptyFC d))
+    primTyVal a `arr`
+         (primTyVal b `arr`
+             (primTyVal c `arr` primTyVal d))
 
-predTy : Constant -> Constant -> ClosedTerm
+predTy : PrimType -> PrimType -> ClosedTerm
 predTy a b = let arr = fnType emptyFC in
-             PrimVal emptyFC a `arr` PrimVal emptyFC b
+             primTyVal a `arr` primTyVal b
 
-arithTy : Constant -> ClosedTerm
+arithTy : PrimType -> ClosedTerm
 arithTy t = constTy t t t
 
-cmpTy : Constant -> ClosedTerm
+cmpTy : PrimType -> ClosedTerm
 cmpTy t = constTy t t IntType
 
 doubleTy : ClosedTerm
@@ -542,10 +545,10 @@ believeMeTy
 crashTy : ClosedTerm
 crashTy
     = pi "a" erased Explicit (TType emptyFC (MN "top" 0)) $
-      pi "msg" top Explicit (PrimVal emptyFC StringType) $
+      pi "msg" top Explicit (PrimVal emptyFC $ PrT StringType) $
       Local emptyFC Nothing _ (Later First)
 
-castTo : Constant -> Vect 1 (NF vars) -> Maybe (NF vars)
+castTo : PrimType -> Vect 1 (NF vars) -> Maybe (NF vars)
 castTo IntType = castInt
 castTo Int8Type = castInt8
 castTo Int16Type = castInt16
@@ -559,7 +562,7 @@ castTo Bits64Type = castBits64
 castTo StringType = castString
 castTo CharType = castChar
 castTo DoubleType = castDouble
-castTo _ = const Nothing
+castTo WorldType = const Nothing
 
 export
 getOp : {0 arity : Nat} -> PrimFn arity ->
@@ -655,7 +658,7 @@ opName (Cast x y) = prim $ "cast_" ++ show x ++ show y
 opName BelieveMe = prim $ "believe_me"
 opName Crash = prim $ "crash"
 
-integralTypes : List Constant
+integralTypes : List PrimType
 integralTypes = [ IntType
                 , Int8Type
                 , Int16Type
@@ -668,10 +671,10 @@ integralTypes = [ IntType
                 , Bits64Type
                 ]
 
-numTypes : List Constant
+numTypes : List PrimType
 numTypes = integralTypes ++ [DoubleType]
 
-primTypes : List Constant
+primTypes : List PrimType
 primTypes = numTypes ++ [StringType, CharType]
 
 export

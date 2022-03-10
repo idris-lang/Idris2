@@ -148,68 +148,74 @@ TTC t => TTC (PiInfo t) where
              _ => corrupt "PiInfo"
 
 export
+TTC PrimType where
+  toBuf b IntType     = tag 0
+  toBuf b Int8Type    = tag 1
+  toBuf b Int16Type   = tag 2
+  toBuf b Int32Type   = tag 3
+  toBuf b Int64Type   = tag 4
+  toBuf b IntegerType = tag 5
+  toBuf b Bits8Type   = tag 6
+  toBuf b Bits16Type  = tag 7
+  toBuf b Bits32Type  = tag 8
+  toBuf b Bits64Type  = tag 9
+  toBuf b StringType  = tag 10
+  toBuf b CharType    = tag 11
+  toBuf b DoubleType  = tag 12
+  toBuf b WorldType   = tag 13
+
+  fromBuf b = case !getTag of
+    0  => pure IntType
+    1  => pure Int8Type
+    2  => pure Int16Type
+    3  => pure Int32Type
+    4  => pure Int64Type
+    5  => pure IntegerType
+    6  => pure Bits8Type
+    7  => pure Bits16Type
+    8  => pure Bits32Type
+    9  => pure Bits64Type
+    10 => pure StringType
+    11 => pure CharType
+    12 => pure DoubleType
+    13 => pure WorldType
+    _  => corrupt "PrimType"
+
+export
 TTC Constant where
-  toBuf b (I x) = do tag 0; toBuf b x
-  toBuf b (BI x) = do tag 1; toBuf b x
-  toBuf b (B8 x) = do tag 2; toBuf b x
-  toBuf b (B16 x) = do tag 3; toBuf b x
-  toBuf b (B32 x) = do tag 4; toBuf b x
-  toBuf b (B64 x) = do tag 5; toBuf b x
-  toBuf b (Str x) = do tag 6; toBuf b x
-  toBuf b (Ch x) = do tag 7; toBuf b x
-  toBuf b (Db x) = do tag 8; toBuf b x
-
-  toBuf b WorldVal = tag 9
-  toBuf b IntType = tag 10
-  toBuf b IntegerType = tag 11
-  toBuf b Bits8Type = tag 12
-  toBuf b Bits16Type = tag 13
-  toBuf b Bits32Type = tag 14
-  toBuf b Bits64Type = tag 15
-  toBuf b StringType = tag 16
-  toBuf b CharType = tag 17
-  toBuf b DoubleType = tag 18
-  toBuf b WorldType = tag 19
-
-  toBuf b (I32 x) = do tag 20; toBuf b x
-  toBuf b (I64 x) = do tag 21; toBuf b x
-  toBuf b Int32Type = tag 22
-  toBuf b Int64Type = tag 23
-  toBuf b (I8 x) = do tag 24; toBuf b x
-  toBuf b (I16 x) = do tag 25; toBuf b x
-  toBuf b Int8Type = tag 26
-  toBuf b Int16Type = tag 27
+  toBuf b (I x)    = do tag 0;  toBuf b x
+  toBuf b (I8 x)   = do tag 1;  toBuf b x
+  toBuf b (I16 x)  = do tag 2;  toBuf b x
+  toBuf b (I32 x)  = do tag 3;  toBuf b x
+  toBuf b (I64 x)  = do tag 4;  toBuf b x
+  toBuf b (BI x)   = do tag 5;  toBuf b x
+  toBuf b (B8 x)   = do tag 6;  toBuf b x
+  toBuf b (B16 x)  = do tag 7;  toBuf b x
+  toBuf b (B32 x)  = do tag 8;  toBuf b x
+  toBuf b (B64 x)  = do tag 9;  toBuf b x
+  toBuf b (Str x)  = do tag 10; toBuf b x
+  toBuf b (Ch x)   = do tag 11; toBuf b x
+  toBuf b (Db x)   = do tag 12; toBuf b x
+  toBuf b (PrT x)  = do tag 13; toBuf b x
+  toBuf b WorldVal = tag 14
 
   fromBuf b
       = case !getTag of
-             0 => do x <- fromBuf b; pure (I x)
-             1 => do x <- fromBuf b; pure (BI x)
-             2 => do x <- fromBuf b; pure (B8 x)
-             3 => do x <- fromBuf b; pure (B16 x)
-             4 => do x <- fromBuf b; pure (B32 x)
-             5 => do x <- fromBuf b; pure (B64 x)
-             6 => do x <- fromBuf b; pure (Str x)
-             7 => do x <- fromBuf b; pure (Ch x)
-             8 => do x <- fromBuf b; pure (Db x)
-             9 => pure WorldVal
-             10 => pure IntType
-             11 => pure IntegerType
-             12 => pure Bits8Type
-             13 => pure Bits16Type
-             14 => pure Bits32Type
-             15 => pure Bits64Type
-             16 => pure StringType
-             17 => pure CharType
-             18 => pure DoubleType
-             19 => pure WorldType
-             20 => do x <- fromBuf b; pure (I32 x)
-             21 => do x <- fromBuf b; pure (I64 x)
-             22 => pure Int32Type
-             23 => pure Int64Type
-             24 => do x <- fromBuf b; pure (I8 x)
-             25 => do x <- fromBuf b; pure (I16 x)
-             26 => pure Int8Type
-             27 => pure Int16Type
+             0  => do x <- fromBuf b; pure (I x)
+             1  => do x <- fromBuf b; pure (I8 x)
+             2  => do x <- fromBuf b; pure (I16 x)
+             3  => do x <- fromBuf b; pure (I32 x)
+             4  => do x <- fromBuf b; pure (I64 x)
+             5  => do x <- fromBuf b; pure (BI x)
+             6  => do x <- fromBuf b; pure (B8 x)
+             7  => do x <- fromBuf b; pure (B16 x)
+             8  => do x <- fromBuf b; pure (B32 x)
+             9  => do x <- fromBuf b; pure (B64 x)
+             10 => do x <- fromBuf b; pure (Str x)
+             11 => do x <- fromBuf b; pure (Ch x)
+             12 => do x <- fromBuf b; pure (Db x)
+             13 => do x <- fromBuf b; pure (PrT x)
+             14 => pure WorldVal
              _ => corrupt "Constant"
 
 export
