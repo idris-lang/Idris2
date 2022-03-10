@@ -34,8 +34,8 @@ absurd : Uninhabited t => (h : t) -> a
 absurd h = void (uninhabited h)
 
 public export
-Uninhabited (True = False) where
-  uninhabited Refl impossible
+Uninhabited (x = y) => Uninhabited (y = x) where
+  uninhabited = \h => void $ uninhabited $ sym h
 
 public export
 Uninhabited (False = True) where

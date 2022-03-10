@@ -163,10 +163,6 @@ Uninhabited (Nothing = Just x) where
   uninhabited Refl impossible
 
 public export
-Uninhabited (Just x = Nothing) where
-  uninhabited Refl impossible
-
-public export
 maybe : Lazy b -> Lazy (a -> b) -> Maybe a -> b
 maybe n j Nothing  = n
 maybe n j (Just x) = j x
@@ -283,7 +279,6 @@ data Either : (a : Type) -> (b : Type) -> Type where
   Right : forall a, b. (x : b) -> Either a b
 
 export Uninhabited (Left p === Right q) where uninhabited eq impossible
-export Uninhabited (Right p === Left q) where uninhabited eq impossible
 
 export
 Either (Uninhabited a) (Uninhabited b) => Uninhabited (a, b) where

@@ -22,10 +22,6 @@ Uninhabited (Here = There e) where
   uninhabited Refl impossible
 
 export
-Uninhabited (There e = Here) where
-  uninhabited Refl impossible
-
-export
 Injective (There {x} {y} {xs}) where
   injective Refl = Refl
 

@@ -905,11 +905,6 @@ export
 Uninhabited ([] = x :: xs) where
   uninhabited Refl impossible
 
--- Cons is not Nil
-export
-Uninhabited (x :: xs = []) where
-  uninhabited Refl impossible
-
 -- If the heads or the tails of two lists are provably non-equal, then the
 -- combination of the respective heads with their respective tails must be
 -- provably non-equal.

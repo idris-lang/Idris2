@@ -124,10 +124,6 @@ Uninhabited (Valid x = Invalid e) where
   uninhabited Refl impossible
 
 public export
-Uninhabited (Invalid e = Valid x) where
-  uninhabited Refl impossible
-
-public export
 (DecEq e, DecEq a) => DecEq (Validated e a) where
   decEq (Valid x) (Invalid y) = No uninhabited
   decEq (Invalid x) (Valid y) = No uninhabited

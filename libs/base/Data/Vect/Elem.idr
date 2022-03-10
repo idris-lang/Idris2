@@ -20,10 +20,6 @@ Uninhabited (Here = There e) where
   uninhabited Refl impossible
 
 export
-Uninhabited (There e = Here) where
-  uninhabited Refl impossible
-
-export
 Uninhabited (Elem x []) where
   uninhabited Here impossible
 

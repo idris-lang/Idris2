@@ -40,10 +40,6 @@ Uninhabited (FZ = FS k) where
   uninhabited Refl impossible
 
 export
-Uninhabited (FS k = FZ) where
-  uninhabited Refl impossible
-
-export
 Uninhabited (n = m) => Uninhabited (FS n = FS m) where
   uninhabited Refl @{nm} = uninhabited Refl @{nm}
 
