@@ -446,8 +446,8 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
 
     mkTopMethDecl : (Name, Name, List (String, String), RigCount, Maybe TotalReq, RawImp) -> ImpDecl
     mkTopMethDecl (mn, n, upds, c, treq, mty)
-        = let opts_no_hint = filter (not . isHint) opts_in
-              opts = maybe opts_no_hint (\t => Totality t :: opts_no_hint) treq in
+        = let opts_not_hint = filter (not . isHint) opts_in
+              opts = maybe opts_not_hint (\t => Totality t :: opts_not_hint) treq in
               IClaim vfc c vis opts (MkImpTy EmptyFC EmptyFC n mty)
 
     -- Given the method type (result of topMethType) return the mapping from
