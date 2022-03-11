@@ -1413,9 +1413,11 @@ fnDirectOpt : OriginDesc -> Rule PFnOpt
 fnDirectOpt fname
     = do decoratedPragma fname "hint"
          pure $ IFnOpt (Hint True)
+  <|> do decoratedPragma fname "defaulthint"
+         pure $ IFnOpt (Hint False)
   <|> do decoratedPragma fname "globalhint"
          pure $ IFnOpt (GlobalHint False)
-  <|> do decoratedPragma fname "defaulthint"
+  <|> do decoratedPragma fname "defaultglobalhint"
          pure $ IFnOpt (GlobalHint True)
   <|> do decoratedPragma fname "inline"
          commit

@@ -88,6 +88,9 @@ Integral Integer where
 -- This allows us to pick integer as a default at the end of elaboration if
 -- all other possibilities fail. I don't plan to provide a nicer syntax for
 -- this...
+--
+-- TODO(andylokandy): rename %defaulthint to %defaultglobalhint once v0.6.0 is released
+-- See also: https://github.com/idris-lang/Idris2/pull/2247
 %defaulthint
 %inline
 public export

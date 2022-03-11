@@ -251,8 +251,10 @@ mutual
     show NoInline = "%noinline"
     show Deprecate = "%deprecate"
     show TCInline = "%tcinline"
-    show (Hint t) = "%hint " ++ show t
-    show (GlobalHint t) = "%globalhint " ++ show t
+    show (Hint True) = "%hint"
+    show (Hint False) = "%defaulthint"
+    show (GlobalHint True) = "%defaultglobalhint"
+    show (GlobalHint False) = "%globalhint"
     show ExternFn = "%extern"
     show (ForeignFn cs) = "%foreign " ++ showSep " " (map show cs)
     show Invertible = "%invertible"

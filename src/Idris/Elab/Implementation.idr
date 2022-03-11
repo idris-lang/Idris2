@@ -163,10 +163,12 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
          -- Make the constraints auto implicit arguments, which can be explicitly
          -- given when using named implementations
          --    (cs : Constraints) -> Impl params
-         -- Don't make it a hint if it's a named implementation
-         let opts = if named
-                       then [Inline]
-                       else [Inline, Hint True]
+         -- Don't make it a hint if it's a named implementation or it's already
+         --    a hint
+         let opts_hints = filter isHint opts_in
+         let opts = if named then [Inline]
+                    else if isNil opts_hints then [Inline, Hint True]
+                    else Inline :: opts_hints
 
          let initTy = bindImpls vfc is $ bindConstraints vfc AutoImplicit cons
                          (apply (IVar vfc iname) ps)
@@ -278,6 +280,11 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
     where
     vfc : FC
     vfc = virtualiseFC ifc
+
+    isHint : FnOpt -> Bool
+    isHint (Hint _) = True
+    isHint (GlobalHint _) = True
+    isHint _ = False
 
     applyEnv : Name ->
                Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))
@@ -439,7 +446,8 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
 
     mkTopMethDecl : (Name, Name, List (String, String), RigCount, Maybe TotalReq, RawImp) -> ImpDecl
     mkTopMethDecl (mn, n, upds, c, treq, mty)
-        = let opts = maybe opts_in (\t => Totality t :: opts_in) treq in
+        = let opts_no_hint = filter (not . isHint) opts_in
+              opts = maybe opts_no_hint (\t => Totality t :: opts_no_hint) treq in
               IClaim vfc c vis opts (MkImpTy EmptyFC EmptyFC n mty)
 
     -- Given the method type (result of topMethType) return the mapping from

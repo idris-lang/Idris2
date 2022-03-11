@@ -819,6 +819,18 @@ mutual
       = do tms' <- traverse (desugar AnyExpr ps) tms
            pure (ForeignFn tms')
 
+  -- Automatically give pragma %defaultglobalhint for every %defaulthint.
+  -- This is a temporary workaroud in order to rename %defaulthint to
+  -- %defaultglobalhint while giving %defaulthint a new semantic of default
+  -- typed hint.
+  --
+  -- TODO(andylokandy): remove once v0.6 is released
+  -- See also: https://github.com/idris-lang/Idris2/pull/2247
+  amendFnOpts : List FnOpt -> List FnOpt
+  amendFnOpts [] = []
+  amendFnOpts (Hint False::xs) = Hint False :: GlobalHint True :: amendFnOpts xs
+  amendFnOpts (fnopt::xs) = fnopt :: amendFnOpts xs
+
   -- Given a high level declaration, return a list of TTImp declarations
   -- which process it, and update any necessary state on the way.
   export
@@ -829,7 +841,8 @@ mutual
                 List Name -> PDecl -> Core (List ImpDecl)
   desugarDecl ps (PClaim fc rig vis fnopts ty)
       = do opts <- traverse (desugarFnOpt ps) fnopts
-           pure [IClaim fc rig vis opts !(desugarType ps ty)]
+           let opts' = amendFnOpts opts
+           pure [IClaim fc rig vis opts' !(desugarType ps ty)]
         where
           isTotalityOption : FnOpt -> Bool
           isTotalityOption (Totality _) = True
@@ -926,6 +939,7 @@ mutual
 
   desugarDecl ps (PImplementation fc vis fnopts pass is cons tn params impln nusing body)
       = do opts <- traverse (desugarFnOpt ps) fnopts
+           let opts' = amendFnOpts opts
            is' <- traverse (\ (n,c,tm) => do tm' <- desugar AnyExpr ps tm
                                              pure (n, c, tm')) is
            let _ = the (List (Name, RigCount, RawImp)) is'
@@ -955,7 +969,7 @@ mutual
 
            pure [IPragma [impname]
                          (\nest, env =>
-                             elabImplementation fc vis opts pass env nest isb consb
+                             elabImplementation fc vis opts' pass env nest isb consb
                                                 tn paramsb (isNamed impln)
                                                 impname nusing
                                                 body')]

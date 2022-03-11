@@ -104,12 +104,12 @@ fnDirectOpt : Rule FnOpt
 fnDirectOpt
     = do pragma "hint"
          pure (Hint True)
-  <|> do pragma "chaser"
+  <|> do pragma "defaulthint"
          pure (Hint False)
   <|> do pragma "globalhint"
-         pure (GlobalHint True)
-  <|> do pragma "defaulthint"
          pure (GlobalHint False)
+  <|> do pragma "defaultglobalhint"
+         pure (GlobalHint True)
   <|> do pragma "inline"
          pure Inline
   <|> do pragma "noinline"
