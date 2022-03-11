@@ -42,8 +42,8 @@ we haven't been too prescriptive about this. If you're editing a source file,
 try to be consistent with the existing style choices made by previous authors.
 We may need to be more formal about this in future!
 
-Please remember to update CHANGELOG.md, and if it's your first contribution you
-can add yourself to CONTRIBUTORS.
+Please remember to update `CHANGELOG.md`, and if it's your first contribution
+you can add yourself to `CONTRIBUTORS`.
 
 In all cases, a pull request must have a short description (one sentence is
 usually enough) that explains its purpose. However obvious you think it might
@@ -142,8 +142,8 @@ just remember that whatever you contribute, we have to maintain!
 
 Good places to discuss possible contributions are:
 
-* The `mailing list <https://groups.google.com/forum/#!forum/idris-lang>`_.
-* The Idris community on Discord `(Invite link) <https://discord.gg/YXmWC5yKYM>`_
+* The [mailing list](https://groups.google.com/forum/#!forum/idris-lang).
+* The Idris community on Discord [(invite link)](https://discord.gg/YXmWC5yKYM).
 * The issue tracker (in this case, please make your proposal as concrete as
   possible).
 
