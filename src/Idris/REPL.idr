@@ -5,8 +5,10 @@ import Compiler.Inline
 
 import Core.Case.CaseTree
 import Core.CompileExpr
+import Core.CompileExpr.Pretty
 import Core.Context
 import Core.Context.Log
+import Core.Context.Pretty
 import Core.Directory
 import Core.Env
 import Core.FC
@@ -94,6 +96,39 @@ showInfo (n, idx, d)
                                     show (fnArgs s)) !(traverse toFullNames (sizeChange d)) in
                 coreLift_ $ putStrLn $
                         "Size change: " ++ showSep ", " scinfo
+
+prettyInfo : {auto c : Ref Ctxt Defs} ->
+           (Name, Int, GlobalDef) -> Core (Doc IdrisAnn)
+prettyInfo (n, idx, d)
+    = do let nm = fullname d
+         def <- toFullNames (definition d)
+         pure $ vcat
+           ([ pretty nm
+           , pretty def
+           ] ++ (maybe [] (\ expr => ["Compiled:" <++> pretty expr]) (compexpr d))
+           )
+
+
+    {- coreLift_ $ putStrLn (show (fullname d) ++ " ==> " ++
+                              show !(toFullNames (definition d)))
+         coreLift_ $ putStrLn (show (multiplicity d))
+         coreLift_ $ putStrLn ("Erasable args: " ++ show (eraseArgs d))
+         coreLift_ $ putStrLn ("Detaggable arg types: " ++ show (safeErase d))
+         coreLift_ $ putStrLn ("Specialise args: " ++ show (specArgs d))
+         coreLift_ $ putStrLn ("Inferrable args: " ++ show (inferrable d))
+         whenJust (compexpr d) $ \ expr =>
+           coreLift_ $ putStrLn ("Compiled: " ++ show expr)
+         coreLift_ $ putStrLn ("Refers to: " ++
+                               show !(traverse getFullName (keys (refersTo d))))
+         coreLift_ $ putStrLn ("Refers to (runtime): " ++
+                               show !(traverse getFullName (keys (refersToRuntime d))))
+         coreLift_ $ putStrLn ("Flags: " ++ show (flags d))
+         when (not (isNil (sizeChange d))) $
+            let scinfo = map (\s => show (fnCall s) ++ ": " ++
+                                    show (fnArgs s)) !(traverse toFullNames (sizeChange d)) in
+                coreLift_ $ putStrLn $
+                        "Size change: " ++ showSep ", " scinfo
+-}
 
 prettyTerm : IPTerm -> Doc IdrisAnn
 prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
@@ -853,8 +888,8 @@ process (Browse ns)
          pure $ PrintedDoc doc
 process (DebugInfo n)
     = do defs <- get Ctxt
-         traverse_ showInfo !(lookupCtxtName n (gamma defs))
-         pure Done
+         ds <- traverse prettyInfo !(lookupCtxtName n (gamma defs))
+         pure $ Printed $ vcat ds
 process (SetOpt opt)
     = do setOpt opt
          pure Done
