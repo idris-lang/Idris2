@@ -98,14 +98,14 @@ showInfo (n, idx, d)
                         "Size change: " ++ showSep ", " scinfo
 
 prettyInfo : {auto c : Ref Ctxt Defs} ->
-           (Name, Int, GlobalDef) -> Core (Doc IdrisAnn)
+           (Name, Int, GlobalDef) -> Core (Doc IdrisDocAnn)
 prettyInfo (n, idx, d)
     = do let nm = fullname d
          def <- toFullNames (definition d)
          pure $ vcat
            ([ pretty nm
            , pretty def
-           ] ++ (maybe [] (\ expr => ["Compiled:" <++> pretty expr]) (compexpr d))
+           ] ++ (maybe [] (\ expr => [header "Compiled" <++> pretty expr]) (compexpr d))
            )
 
 
@@ -889,7 +889,7 @@ process (Browse ns)
 process (DebugInfo n)
     = do defs <- get Ctxt
          ds <- traverse prettyInfo !(lookupCtxtName n (gamma defs))
-         pure $ Printed $ vcat ds
+         pure $ PrintedDoc $ vcat ds
 process (SetOpt opt)
     = do setOpt opt
          pure Done

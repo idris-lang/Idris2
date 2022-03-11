@@ -100,7 +100,7 @@ mutual
             :: zipWith (\ s, p => indent 2 $ s <++> pretty p)
                        ("{" :: (";" <$ xs))
                        xs
-            ++ maybe [] (\ deflt => [indent 2 ("; _ =>" <++> align (pretty deflt))]) def
+            ++ maybe [] (\ deflt => [indent 2 ("; _ =>" <+> softline <+> align (pretty deflt))]) def
             ++ [indent 2 "}"])
     prettyPrec d (NmConstCase _ sc xs def)
         = parenthesise (d > Open) $ vcat
@@ -108,7 +108,7 @@ mutual
             :: zipWith (\ s, p => indent 2 $ s <++> pretty p)
                        ("{" :: (";" <$ xs))
                        xs
-            ++ maybe [] (\ deflt => [indent 2 ("; _ =>" <++> align (pretty deflt))]) def
+            ++ maybe [] (\ deflt => [indent 2 ("; _ =>" <+> softline <+> align (pretty deflt))]) def
             ++ [indent 2 "}"])
     prettyPrec d (NmPrimVal _ x) = pretty x
     prettyPrec d (NmErased _) = "___"
@@ -120,12 +120,12 @@ mutual
     pretty (MkNConAlt x ci tag args exp)
         = sep (pretty x <+> braces ("tag =" <++> pretty tag) <+> prettyFlag ci
                :: map (prettyPrec App) args
-               ++ ["=>", align (pretty exp) ])
+               ++ ["=>" <+> softline <+> align (pretty exp) ])
 
   export
   Pretty NamedConstAlt where
     pretty (MkNConstAlt x exp)
-        = sep ([ pretty x, "=>", align (pretty exp) ])
+        = pretty x <++> "=>" <+> softline <+> align (pretty exp)
 
 export
 {args : _} -> Pretty (CExp args) where
@@ -134,7 +134,10 @@ export
 
 export
 Pretty CDef where
-  pretty (MkFun args exp) = pretty args <+> "=" <++> pretty exp
+  pretty (MkFun [] exp) = pretty exp
+  pretty (MkFun args exp) =
+    "\\" <++> concatWith (\ x, y => x <+> "," <++> y) (map pretty args)
+         <++> "=>" <++> pretty exp
   pretty (MkCon mtag arity nt)
     = vcat $ (maybe "Data" (const "Type") mtag <++> "Constructor:") :: map (indent 2)
            ( maybe [] (\ tag => ["tag:" <++> pretty tag]) mtag ++
