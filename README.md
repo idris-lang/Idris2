@@ -86,8 +86,9 @@ The javascript codegen uses the new BigInt, hence nodejs 10.4 or higher is requi
 
 Editor Plugins
 --------------
-The [wiki](https://github.com/idris-lang/Idris2/wiki/The-Idris-editor-experience)
-lists the current plugins available for common text editors and their features.
+The [wiki lists the current plugins available for common text editors](
+https://github.com/idris-lang/Idris2/wiki/1-%5BLanguage%5D-Editor-support)
+and their features.
 
 Things still missing
 --------------------
@@ -101,7 +102,7 @@ Contributions wanted
 
 + [Contribution guidelines](CONTRIBUTING.md)
 + [Good first issues](https://github.com/idris-lang/Idris2/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
-+ [Contributors wanted](https://github.com/idris-lang/Idris2/wiki/Contributions-wanted)
++ [Contributors wanted](https://github.com/idris-lang/Idris2/wiki/2-%5BCommunity%5D-Contributions-wanted)
 
 If you want to learn about Idris more, contributing to the compiler could be one
 way to do so. Just select one good first issue and ask about it on the [Discord](https://discord.gg/UX68fDs2jc) channel.

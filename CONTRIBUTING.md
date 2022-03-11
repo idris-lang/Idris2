@@ -76,7 +76,8 @@ Things we might accept
   - However, please consider whether it would be better as a separate library.
     If something is in the Idris2 repository, we need to commit to maintaining
     it to some extent, so we have to be sure that we can do so. You can find
-    (and contribute to) a list of `libraries on the wiki <https://github.com/idris-lang/Idris2/wiki/Libraries>`_.
+    (and contribute to) a list of [libraries on the wiki](
+    https://github.com/idris-lang/Idris2/wiki/1-%5BLanguage%5D-Libraries).
   - For any library additions, please try to include as many documentation
     strings as you can.
 

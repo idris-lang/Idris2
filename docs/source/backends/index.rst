@@ -85,7 +85,7 @@ or via the `IDRIS2_CG` environment variable.
 There are also external code generators that aren't part of the main Idris 2
 repository and can be found on Idris 2 wiki:
 
-`External backends <https://github.com/idris-lang/Idris2/wiki/External-backends>`_
+`External backends <https://github.com/idris-lang/Idris2/wiki/1-%5BLanguage%5D-External-backends>`_
 
 There is work in progress support for generating
 libraries for other languages from idris2 code.
