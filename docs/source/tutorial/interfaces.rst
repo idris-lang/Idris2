@@ -721,6 +721,31 @@ do this with a ``using`` clause in the implementation as follows:
 The ``using PlusNatSemi`` clause indicates that ``PlusNatMonoid`` should
 extend ``PlusNatSemi`` specifically.
 
+Default Implementations
+=====================
+
+While named implementations de-ambiguous multiple implementations of an interface
+by explicitly giving a name, it can be also desirable to have the multiple
+anonymous implementations if we don't really concern about which implementation eventually
+get used. For example to provide multiple implementations of ``Uninhabited p``,
+by which we state that there are multiple strategies to prove that ``p`` is false,
+and the proof searcher is free to use any of them so long as it type-checks.
+
+To achieve this, implementations can be annotated as ``%defaulthint``:
+
+.. code-block:: idris
+
+    %defaulthint
+    Uninhabited (x = y) => Uninhabited (y = x) where
+      uninhabited = \h => void $ uninhabited $ sym h
+
+The pragma ``%defaulthint`` tells the compiler only to use it as the last resort
+when no other implementation is available, and more importantly, not to raise an
+ambiguity error when there is an available normal implementation.
+
+Note that it's undefined which default implementation will be used when multiple
+default implementations are available.
+
 .. _InterfaceConstructors:
 
 Interface Constructors

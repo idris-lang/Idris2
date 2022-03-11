@@ -59,7 +59,7 @@ resolution works. It will try the following, in order:
 - Local variables with function types, searching recursively for the
   arguments.
 - Any function with the appropriate return type which is marked with the
-  ``%hint`` annotation.
+  ``%hint`` or ``%defaulthint`` annotation.
 
 In the case that a proof is not found, it can be provided explicitly as normal:
 

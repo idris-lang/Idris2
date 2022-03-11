@@ -431,6 +431,16 @@ can see if we try evaluating ``myShow True`` at the REPL:
 In fact, this is how interfaces are elaborated. However, ``%hint`` should be
 used with care. Too many hints can lead to a large search space!
 
+In case two ``%hint`` for the same type are available, the compiler will
+raise an ambiguity error. If you believe that it's safe for the compiler
+to use any of them, you can annotate one of them as ``%defaulthint`` instead
+of ``%hint``. The compiler only uses ``%defaulthint`` as the last resort when
+no other hints are available, and more importantly, the compiler will not
+raise an ambiguity error when there is another available hint.
+
+Note that it's undefined which ``%defaulthint`` will be used when multiple
+default hints are available.
+
 Record fields
 -------------
 
