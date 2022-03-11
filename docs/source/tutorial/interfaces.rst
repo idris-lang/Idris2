@@ -722,7 +722,7 @@ The ``using PlusNatSemi`` clause indicates that ``PlusNatMonoid`` should
 extend ``PlusNatSemi`` specifically.
 
 Default Implementations
-=====================
+=======================
 
 While named implementations de-ambiguous multiple implementations of an interface
 by explicitly giving a name, it can be also desirable to have the multiple
