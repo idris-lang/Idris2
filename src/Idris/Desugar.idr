@@ -825,7 +825,7 @@ mutual
   -- typed hint.
   --
   -- TODO(andylokandy): remove once v0.6 is released
-  -- See also: https://github.com/idris-lang/Idris2/pull/2247
+  -- See also: https://github.com/idris-lang/Idris2/pull/2351
   amendFnOpts : List FnOpt -> List FnOpt
   amendFnOpts [] = []
   amendFnOpts (Hint False::xs) = Hint False :: GlobalHint True :: amendFnOpts xs
