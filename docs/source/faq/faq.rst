@@ -24,7 +24,7 @@ Where can I find libraries? Is there a package manager?
 =======================================================
 
 We don't yet have a package manager, but you can still find a source of
-libraries on the wiki: https://github.com/idris-lang/Idris2/wiki/Libraries
+libraries on the wiki: https://github.com/idris-lang/Idris2/wiki/1-%5BLanguage%5D-Libraries
 
 Fortunately, the dependencies are currently not that complicated, but we'd
 still like a package manager to help! There isn't an official one yet, but

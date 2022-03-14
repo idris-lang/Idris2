@@ -31,7 +31,7 @@ general philosophy of the Idris project, which can be summarised as follows:
   properties of programs, but will not *require* them to do so
 
 Many contributions will require acccompanying tests and documentation updates.
-Bug fixes in particular should be accompanied by tests, to avoid future
+Bugfixes in particular should be accompanied by tests, to avoid future
 regressions.
 
 Library functions should be `total` as far as possible, and at least `covering`
@@ -42,8 +42,8 @@ we haven't been too prescriptive about this. If you're editing a source file,
 try to be consistent with the existing style choices made by previous authors.
 We may need to be more formal about this in future!
 
-Please remember to update CHANGELOG.md, and if it's your first contribution you
-can add yourself to CONTRIBUTORS.
+Please remember to update `CHANGELOG.md`, and if it's your first contribution
+you can add yourself to `CONTRIBUTORS`.
 
 In all cases, a pull request must have a short description (one sentence is
 usually enough) that explains its purpose. However obvious you think it might
@@ -76,7 +76,8 @@ Things we might accept
   - However, please consider whether it would be better as a separate library.
     If something is in the Idris2 repository, we need to commit to maintaining
     it to some extent, so we have to be sure that we can do so. You can find
-    (and contribute to) a list of `libraries on the wiki <https://github.com/idris-lang/Idris2/wiki/Libraries>`_.
+    (and contribute to) a list of [libraries on the wiki](
+    https://github.com/idris-lang/Idris2/wiki/1-%5BLanguage%5D-Libraries).
   - For any library additions, please try to include as many documentation
     strings as you can.
 
@@ -115,7 +116,7 @@ Things we probably won't accept
     We encourage following the camp site rule: leave the code tidier than you
     found it!
 * Primitive updates without a strong justification
-  - Primitives increase the burden on back end authors, for example. They may
+  - Primitives increase the burden on backend authors, for example. They may
     be necessary to support a new library, if a foreign function call is not
     appropriate, but we won't accept a primitive on the basis that it could be
     useful in future.
@@ -127,9 +128,9 @@ Things we probably won't accept
   Idris 2 API, to minimise the maintenance burden on the compiler.
 * Similarly, anything which adds an external dependency. We aim to keep
   dependencies minimal for ease of initial installation.
-* New back ends. You can implement new back ends via the Idris 2 API - and indeed
-  several people have. The back ends in this repository are limited to those
-  we are able to commit to maintaining.
+* New backends. You can implement new backends via the Idris 2 API - and indeed
+  several people have. The backends in this repository are limited to those we
+  are able to commit to maintaining.
 
 Other possible contributions
 ----------------------------
@@ -141,8 +142,8 @@ just remember that whatever you contribute, we have to maintain!
 
 Good places to discuss possible contributions are:
 
-* The `mailing list <https://groups.google.com/forum/#!forum/idris-lang>`_.
-* The Idris community on Discord `(Invite link) <https://discord.gg/YXmWC5yKYM>`_
+* The [mailing list](https://groups.google.com/forum/#!forum/idris-lang).
+* The Idris community on Discord [(invite link)](https://discord.gg/YXmWC5yKYM).
 * The issue tracker (in this case, please make your proposal as concrete as
   possible).
 
