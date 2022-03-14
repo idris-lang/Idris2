@@ -18,9 +18,9 @@ is often one of `scheme`, `chezscheme` or `chezscheme9.5` (depending on the
 version). On a modern desktop machine, this process (including tests)
 should take less than 5 minutes.
 
-Idris 2 is mostly backwards compatible with Idris 1, with some minor
-exceptions. The most notable user visible differences, which might cause Idris
-1 programs to fail to type check, are:
+Idris 2 is mostly backward compatible with Idris 1, with some minor exceptions.
+The most notable user visible differences, which might cause Idris 1 programs
+to fail to type check, are:
 
 + Unbound implicit arguments are always erased, so it is a type error to
   attempt to pattern match on one.
@@ -70,8 +70,8 @@ Summary of new features:
   declarations.
 + Better type checker implementation which minimises the need for compile
   time evaluation.
-+ New Chez Scheme based back end which both compiles and runs faster than the
-  default Idris 1 back end. (Also, optionally, Racket and Gambit can be used
++ New Chez Scheme based backend which both compiles and runs faster than the
+  default Idris 1 backend. (Also, optionally, Racket and Gambit can be used
   as targets).
 + Everything works faster :).
 
@@ -80,9 +80,9 @@ language `TTImp`, which is essentially a desugared Idris, and is cleanly
 separated from the high level language which means it is potentially usable
 as a core language for other high level syntaxes.
 
-Javascript
+JavaScript
 ----------
-The javascript codegen uses the new BigInt, hence nodejs 10.4 or higher is required.
+The JavaScript codegen uses the new BigInt, hence Node.js 10.4 or higher is required.
 
 Editor Plugins
 --------------

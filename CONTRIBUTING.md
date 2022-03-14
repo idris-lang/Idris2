@@ -31,7 +31,7 @@ general philosophy of the Idris project, which can be summarised as follows:
   properties of programs, but will not *require* them to do so
 
 Many contributions will require acccompanying tests and documentation updates.
-Bug fixes in particular should be accompanied by tests, to avoid future
+Bugfixes in particular should be accompanied by tests, to avoid future
 regressions.
 
 Library functions should be `total` as far as possible, and at least `covering`
@@ -116,7 +116,7 @@ Things we probably won't accept
     We encourage following the camp site rule: leave the code tidier than you
     found it!
 * Primitive updates without a strong justification
-  - Primitives increase the burden on back end authors, for example. They may
+  - Primitives increase the burden on backend authors, for example. They may
     be necessary to support a new library, if a foreign function call is not
     appropriate, but we won't accept a primitive on the basis that it could be
     useful in future.
@@ -128,9 +128,9 @@ Things we probably won't accept
   Idris 2 API, to minimise the maintenance burden on the compiler.
 * Similarly, anything which adds an external dependency. We aim to keep
   dependencies minimal for ease of initial installation.
-* New back ends. You can implement new back ends via the Idris 2 API - and indeed
-  several people have. The back ends in this repository are limited to those
-  we are able to commit to maintaining.
+* New backends. You can implement new backends via the Idris 2 API - and indeed
+  several people have. The backends in this repository are limited to those we
+  are able to commit to maintaining.
 
 Other possible contributions
 ----------------------------
