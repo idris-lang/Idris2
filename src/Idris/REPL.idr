@@ -74,6 +74,8 @@ import System.File
 
 %default covering
 
+-- Do NOT remove: it can be used instead of prettyInfo in case the prettier output
+-- happens to be buggy
 showInfo : {auto c : Ref Ctxt Defs} ->
            (Name, Int, GlobalDef) -> Core ()
 showInfo (n, idx, d)
@@ -102,33 +104,37 @@ prettyInfo : {auto c : Ref Ctxt Defs} ->
 prettyInfo (n, idx, d)
     = do let nm = fullname d
          def <- toFullNames (definition d)
-         pure $ vcat
-           ([ pretty nm
+         referCT <- traverse getFullName (keys (refersTo d))
+         referRT <- traverse getFullName (keys (refersToRuntime d))
+         schanges <- traverse toFullNames $ sizeChange d
+         pure $ vcat $
+           [ reAnnotate Syntax (prettyRig $ multiplicity d) <+> showCategory Syntax d (pretty nm)
            , pretty def
-           ] ++ (maybe [] (\ expr => [header "Compiled" <++> pretty expr]) (compexpr d))
-           )
+           ] ++
+           catMaybes
+           [ (\ args => header "Erasable args" <++> pretty args) <$> ifNotNull (eraseArgs d)
+           , (\ args => header "Detaggable arg types" <++> pretty args) <$> ifNotNull (safeErase d)
+           , (\ args => header "Specialise args" <++> pretty args) <$> ifNotNull (specArgs d)
+           , (\ args => header "Inferrable args" <++> pretty args) <$> ifNotNull (inferrable d)
+           , (\ expr => header "Compiled" <++> pretty expr) <$> compexpr d
+           , (\ nms  => header "Refers to" <++> enum pretty nms) <$> ifNotNull referCT
+           , (\ nms  => header "Refers to (runtime)" <++> enum pretty nms) <$> ifNotNull referRT
+           , (\ flgs => header "Flags" <++> enum (pretty . show) flgs) <$> ifNotNull (flags d)
+           , (\ sz   => header "Size change" <++> displayChg sz) <$> ifNotNull schanges
+           ]
 
+  where
+    ifNotNull : List a -> Maybe (List a)
+    ifNotNull xs = xs <$ guard (not $ null xs)
 
-    {- coreLift_ $ putStrLn (show (fullname d) ++ " ==> " ++
-                              show !(toFullNames (definition d)))
-         coreLift_ $ putStrLn (show (multiplicity d))
-         coreLift_ $ putStrLn ("Erasable args: " ++ show (eraseArgs d))
-         coreLift_ $ putStrLn ("Detaggable arg types: " ++ show (safeErase d))
-         coreLift_ $ putStrLn ("Specialise args: " ++ show (specArgs d))
-         coreLift_ $ putStrLn ("Inferrable args: " ++ show (inferrable d))
-         whenJust (compexpr d) $ \ expr =>
-           coreLift_ $ putStrLn ("Compiled: " ++ show expr)
-         coreLift_ $ putStrLn ("Refers to: " ++
-                               show !(traverse getFullName (keys (refersTo d))))
-         coreLift_ $ putStrLn ("Refers to (runtime): " ++
-                               show !(traverse getFullName (keys (refersToRuntime d))))
-         coreLift_ $ putStrLn ("Flags: " ++ show (flags d))
-         when (not (isNil (sizeChange d))) $
-            let scinfo = map (\s => show (fnCall s) ++ ": " ++
-                                    show (fnArgs s)) !(traverse toFullNames (sizeChange d)) in
-                coreLift_ $ putStrLn $
-                        "Size change: " ++ showSep ", " scinfo
--}
+    enum : (a -> Doc IdrisDocAnn) -> List a -> Doc IdrisDocAnn
+    enum p xs = hsep $ punctuate "," $ p <$> xs
+
+    displayChg : List SCCall -> Doc IdrisDocAnn
+    displayChg sz =
+      let scinfo = \s => pretty (fnCall s) <+> ":" <++> pretty (show $ fnArgs s) in
+      enum scinfo sz
+
 
 prettyTerm : IPTerm -> Doc IdrisAnn
 prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
