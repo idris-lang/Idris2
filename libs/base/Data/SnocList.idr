@@ -6,11 +6,11 @@ import Data.Fin
 
 %default total
 
-export
+public export
 Cast (SnocList a) (List a) where
   cast sx = sx <>> []
 
-export
+public export
 Cast (List a) (SnocList a) where
   cast xs = Lin <>< xs
 
@@ -138,3 +138,92 @@ findIndex _ Lin = Nothing
 findIndex p (xs :< x) = if p x
   then Just FZ
   else FS <$> findIndex p xs
+
+------------------
+--- Properties ---
+------------------
+
+--- Usual snoc-list append (++) ---
+
+export
+appendAssociative : (l, c, r : SnocList a) -> l ++ (c ++ r) = (l ++ c) ++ r
+appendAssociative l c [<]       = Refl
+appendAssociative l c (sx :< _) = rewrite appendAssociative l c sx in Refl
+
+export
+appendLinLeftNeutral : (sx : SnocList a) -> [<] ++ sx = sx
+appendLinLeftNeutral [<]       = Refl
+appendLinLeftNeutral (sx :< _) = rewrite appendLinLeftNeutral sx in Refl
+
+--- Fish (<><) and chips (<>>) appends ---
+
+export
+fishAsSnocAppend : (xs : SnocList a) -> (ys : List a) -> xs <>< ys = xs ++ cast ys
+fishAsSnocAppend xs []        = Refl
+fishAsSnocAppend xs (y :: ys) = do
+  rewrite fishAsSnocAppend (xs :< y) ys
+  rewrite fishAsSnocAppend [<y] ys
+  rewrite appendAssociative xs [<y] (cast ys)
+  Refl
+
+export
+chipsAsListAppend : (xs : SnocList a) -> (ys : List a) -> xs <>> ys = cast xs ++ ys
+chipsAsListAppend [<]       ys = Refl
+chipsAsListAppend (sx :< x) ys = do
+  rewrite chipsAsListAppend sx (x :: ys)
+  rewrite chipsAsListAppend sx [x]
+  rewrite sym $ appendAssociative (cast sx) [x] ys
+  Refl
+
+--- More on append ---
+
+export
+toListAppend : (sx, sy : SnocList a) -> toList (sx ++ sy) = toList sx ++ toList sy
+toListAppend sx [<] = rewrite appendNilRightNeutral $ toList sx in Refl
+toListAppend sx (sy :< y) = do
+  rewrite chipsAsListAppend sy [y]
+  rewrite appendAssociative (cast sx) (cast sy) [y]
+  rewrite chipsAsListAppend (sx ++ sy) [y]
+  rewrite toListAppend sx sy
+  Refl
+
+export
+castListAppend : (xs, ys : List a) -> cast {to=SnocList a} (xs ++ ys) === cast xs ++ cast ys
+castListAppend []      ys = rewrite appendLinLeftNeutral $ [<] <>< ys in Refl
+castListAppend (x::xs) ys = do
+  rewrite fishAsSnocAppend [<x] (xs ++ ys)
+  rewrite castListAppend xs ys
+  rewrite appendAssociative [<x] (cast xs) (cast ys)
+  rewrite sym $ fishAsSnocAppend [<x] xs
+  Refl
+
+--- Pure casts (including `toList`)
+
+export
+castToList : (sx : SnocList a) -> cast (toList sx) === sx
+castToList [<]       = Refl
+castToList (sx :< x) = do
+  rewrite chipsAsListAppend sx [x]
+  rewrite castListAppend (cast sx) [x]
+  rewrite castToList sx
+  Refl
+
+export
+toListCast : (xs : List a) -> toList (cast {to=SnocList a} xs) === xs
+toListCast []      = Refl
+toListCast (x::xs) = do
+  rewrite fishAsSnocAppend [<x] xs
+  rewrite toListAppend [<x] (cast xs)
+  rewrite toListCast xs
+  Refl
+
+--- Folds ---
+
+export
+snocFoldlAsListFoldl : (f : acc -> a -> acc) -> (init : acc) -> (xs : SnocList a) -> foldl f init xs = foldl f init (toList xs)
+snocFoldlAsListFoldl f init [<]       = Refl
+snocFoldlAsListFoldl f init (sx :< x) = do
+  rewrite chipsAsListAppend sx [x]
+  rewrite snocFoldlAsListFoldl f init sx
+  rewrite foldlAppend f init (cast sx) [x]
+  Refl
