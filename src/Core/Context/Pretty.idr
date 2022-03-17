@@ -6,6 +6,8 @@ import Idris.Pretty
 import Core.Case.CaseTree
 import Core.Context.Context
 
+import Libraries.Data.String.Extra
+
 %default covering
 
 export
