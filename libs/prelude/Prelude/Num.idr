@@ -35,7 +35,7 @@ interface Num ty => Neg ty where
 ||| ```idris example
 ||| (`subtract` 1)
 ||| ```
-||| which with `(-)` would instead be parsed as `-1`.
+||| This contrasts with `(- 1)`, which is parsed as `-1`.
 export
 subtract : Num ty => ty -> ty -> ty
 subtract = (-)
