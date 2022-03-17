@@ -836,11 +836,12 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
 
         boundSafe : Constant -> ElabMode -> Bool
         boundSafe _ (InLHS _) = True -- always need to expand on LHS
-        boundSafe (BI x) _ = abs x < 100 -- only do this for relatively small bounds.
-                           -- Once it gets too big, we might be making the term
-                           -- bigger than it would have been without evaluating!
+        -- only do this for relatively small bounds.
+        -- Once it gets too big, we might be making the term
+        -- bigger than it would have been without evaluating!
+        boundSafe (BI x) _ = abs x < 100
+        boundSafe (Str str) _ = length str < 10
         boundSafe _ _ = True
-
 
     updateElabInfo : List Name -> ElabMode -> Name ->
                      List RawImp -> ElabInfo -> Core ElabInfo
