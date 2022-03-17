@@ -31,11 +31,11 @@ interface Num ty => Neg ty where
   (-) : ty -> ty -> ty
 
 ||| A convenience alias for `(-)`, this function enables partial application of subtraction on the
-||| left-hand operand as
+||| right-hand operand as
 ||| ```idris example
 ||| (`subtract` 1)
 ||| ```
-||| which is not possible with `(-)`.
+||| which with `(-)` would instead be parsed as `-1`.
 export
 subtract : Num ty -> ty -> ty -> ty
 subtract = (-)
