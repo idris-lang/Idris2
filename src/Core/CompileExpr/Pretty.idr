@@ -6,6 +6,7 @@ import Core.TT
 import Data.String
 import Data.Vect
 import Idris.Pretty
+import Libraries.Data.String.Extra
 
 %default covering
 
