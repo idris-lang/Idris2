@@ -895,7 +895,7 @@ process (Browse ns)
 process (DebugInfo n)
     = do defs <- get Ctxt
          ds <- traverse prettyInfo !(lookupCtxtName n (gamma defs))
-         pure $ PrintedDoc $ vcat ds
+         pure $ PrintedDoc $ vcat $ punctuate hardline ds
 process (SetOpt opt)
     = do setOpt opt
          pure Done
