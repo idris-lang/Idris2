@@ -1,4 +1,15 @@
 import Data.List
+import Data.Nat
+
+insertAtCases : List (List Nat)
+insertAtCases = [
+    insertAt 0 9 [6, 7, 8],
+    insertAt 1 9 [6, 7, 8],
+    insertAt 3 9 [6, 7, 8],
+    insertAt 0 9 [6],
+    insertAt 1 9 [6],
+    insertAt 0 9 []
+  ]
 
 deleteAtCases : List (List Nat)
 deleteAtCases = [
@@ -22,5 +33,6 @@ replaceAtCases = [
 
 main : IO ()
 main = do
+  printLn insertAtCases
   printLn deleteAtCases
   printLn replaceAtCases

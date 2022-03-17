@@ -223,6 +223,20 @@ public export
 nub : Eq a => List a -> List a
 nub = nubBy (==)
 
+||| Insert an element at a particular index.
+|||
+||| ```idris example
+||| insertAt 1 [6, 8, 9] 7
+||| ```
+|||
+||| @idx The index of the inserted value in the resulting list.
+||| @x The value to insert.
+||| @xs The list to insert the value into.
+public export
+insertAt : (idx : Nat) -> (x : a) -> (xs : List a) -> {auto 0 ok : idx `LTE` length xs} -> List a
+insertAt Z x xs = x :: xs
+insertAt {ok=LTESucc _} (S n) x (y :: ys) = y :: (insertAt n x ys)
+
 ||| Construct a new list consisting of all but the indicated element.
 |||
 ||| ```idris example
