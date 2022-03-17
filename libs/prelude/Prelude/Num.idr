@@ -37,7 +37,7 @@ interface Num ty => Neg ty where
 ||| ```
 ||| which with `(-)` would instead be parsed as `-1`.
 export
-subtract : Num ty -> ty -> ty -> ty
+subtract : Num ty => ty -> ty -> ty
 subtract = (-)
 
 ||| Numbers for which the absolute value is defined should implement `Abs`.
