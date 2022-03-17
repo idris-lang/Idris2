@@ -514,6 +514,14 @@ perror (NoForeignCC fc specs) = do
 perror (BadMultiline fc str) = pure $ errorDesc (reflow "While processing multi-line string" <+> dot <++> pretty str <+> dot) <+> line <+> !(ploc fc)
 perror (Timeout str) = pure $ errorDesc (reflow "Timeout in" <++> pretty str)
 
+perror (FailingDidNotFail fc)
+  = pure $ errorDesc (reflow "Failing block did not fail" <+> dot)
+    <+> line <+> !(ploc fc)
+perror (FailingWrongError fc err)
+  = pure $ hsep [ errorDesc (reflow "Failing block failed with the wrong error" <+> dot)
+                , !(perror err)
+                ]
+
 perror (InType fc n err)
     = pure $ hsep [ errorDesc (reflow "While processing type of" <++> code (pretty !(prettyName n))) <+> dot
                   , !(perror err)

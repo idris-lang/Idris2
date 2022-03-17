@@ -69,6 +69,8 @@ data Warning : Type where
      Deprecated : String -> Maybe (FC, Name) -> Warning
      GenericWarn : String -> Warning
 
+%name Warning wrn
+
 -- All possible errors, carrying a location
 public export
 data Error : Type where
@@ -163,6 +165,8 @@ data Error : Type where
      NoForeignCC : FC -> List String -> Error
      BadMultiline : FC -> String -> Error
      Timeout : String -> Error
+     FailingDidNotFail : FC -> Error
+     FailingWrongError : FC -> Error -> Error
 
      InType : FC -> Name -> Error -> Error
      InCon : FC -> Name -> Error -> Error
@@ -171,6 +175,8 @@ data Error : Type where
 
      MaybeMisspelling : Error -> List1 String -> Error
      WarningAsError : Warning -> Error
+
+%name Error err
 
 export
 Show TTCErrorMsg where
@@ -345,6 +351,11 @@ Show Error where
   show (BadMultiline fc str) = "Invalid multiline string: " ++ str
   show (Timeout str) = "Timeout in " ++ str
 
+  show (FailingDidNotFail _) = "Failing block did not fail"
+  show (FailingWrongError fc err)
+       = show fc ++ ":Failing block failed with the wrong error:\n" ++
+         show err
+
   show (InType fc n err)
        = show fc ++ ":When elaborating type of " ++ show n ++ ":\n" ++
          show err
@@ -441,6 +452,8 @@ getErrorLoc (BadMultiline loc _) = Just loc
 getErrorLoc (Timeout _) = Nothing
 getErrorLoc (InType _ _ err) = getErrorLoc err
 getErrorLoc (InCon _ _ err) = getErrorLoc err
+getErrorLoc (FailingDidNotFail fc) = pure fc
+getErrorLoc (FailingWrongError fc _) = pure fc
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
 getErrorLoc (InRHS _ _ err) = getErrorLoc err
 getErrorLoc (MaybeMisspelling err _) = getErrorLoc err

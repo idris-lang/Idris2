@@ -459,6 +459,10 @@ mutual
 
        -- TODO: PPostulate
        -- TODO: POpen (for opening named interfaces)
+       ||| PFail is a failing block. The string must appear as a
+       ||| substring of the error message raised when checking the block.
+       PFail : FC -> String -> List (PDecl' nm) -> PDecl' nm
+
        PMutual : FC -> List (PDecl' nm) -> PDecl' nm
        PFixity : FC -> Fixity -> Nat -> OpStr -> PDecl' nm
        PNamespace : FC -> Namespace -> List (PDecl' nm) -> PDecl' nm
@@ -479,6 +483,7 @@ mutual
   getPDeclLoc (PImplementation fc _ _ _ _ _ _ _ _ _ _) = fc
   getPDeclLoc (PRecord fc _ _ _ _ _ _ _) = fc
   getPDeclLoc (PMutual fc _) = fc
+  getPDeclLoc (PFail fc _ _) = fc
   getPDeclLoc (PFixity fc _ _ _) = fc
   getPDeclLoc (PNamespace fc _ _) = fc
   getPDeclLoc (PTransform fc _ _ _) = fc
@@ -1304,6 +1309,7 @@ mapPTermM f = goPTerm where
       PRecord fc doc v tot n <$> go4TupledPTerms nts
                              <*> pure mn
                              <*> goPFields fs
+    goPDecl (PFail fc msg ps) = PFail fc msg <$> goPDecls ps
     goPDecl (PMutual fc ps) = PMutual fc <$> goPDecls ps
     goPDecl p@(PFixity _ _ _ _) = pure p
     goPDecl (PNamespace fc strs ps) = PNamespace fc strs <$> goPDecls ps

@@ -458,6 +458,11 @@ mutual
                           z' <- reify defs !(evalClosure defs z)
                           u' <- reify defs !(evalClosure defs u)
                           pure (IRecord w' x' y' z' u')
+               (UN (Basic "IFail"), [w,x,y])
+                    => do w' <- reify defs !(evalClosure defs w)
+                          x' <- reify defs !(evalClosure defs x)
+                          y' <- reify defs !(evalClosure defs y)
+                          pure (IFail w' x' y')
                (UN (Basic "INamespace"), [w,x,y])
                     => do w' <- reify defs !(evalClosure defs w)
                           x' <- reify defs !(evalClosure defs x)
@@ -806,6 +811,11 @@ mutual
              z' <- reflect fc defs lhs env z
              u' <- reflect fc defs lhs env u
              appCon fc defs (reflectionttimp "IRecord") [w', x', y', z', u']
+    reflect fc defs lhs env (IFail x y z)
+        = do x' <- reflect fc defs lhs env x
+             y' <- reflect fc defs lhs env y
+             z' <- reflect fc defs lhs env z
+             appCon fc defs (reflectionttimp "IFail") [x', y', z']
     reflect fc defs lhs env (INamespace x y z)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y

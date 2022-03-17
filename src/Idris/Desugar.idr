@@ -1015,6 +1015,8 @@ mutual
            pure []
   desugarDecl ps (PFixity fc _ _ _)
       = throw (GenericMsg fc "Fixity declarations must be for unqualified names")
+  desugarDecl ps (PFail fc msg ds)
+      = (pure . IFail fc msg . concat) <$> traverse (desugarDecl ps) ds
   desugarDecl ps (PMutual fc ds)
       = do let (tys, defs) = splitMutual ds
            mds' <- traverse (desugarDecl ps) (tys ++ defs)

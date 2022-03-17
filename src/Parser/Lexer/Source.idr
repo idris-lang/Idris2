@@ -213,7 +213,7 @@ mkDirective str = CGDirective (trim (substr 3 (length str) str))
 public export
 keywords : List String
 keywords = ["data", "module", "where", "let", "in", "do", "record",
-            "auto", "default", "implicit", "mutual", "namespace",
+            "auto", "default", "implicit", "failing", "mutual", "namespace",
             "parameters", "with", "proof", "impossible", "case", "of",
             "if", "then", "else", "forall", "rewrite",
             "using", "interface", "implementation", "open", "import",

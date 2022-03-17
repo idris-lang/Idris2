@@ -28,9 +28,50 @@ import TTImp.TTImp
 
 import Data.List
 import Data.Maybe
+import Data.String
 import Libraries.Data.NameMap
 
 %default covering
+
+||| When we process a failing block we want to know what happend
+data FailedFailure
+  = DidNotFail
+  | IncorrectlyFailed Error
+
+processFailing :
+  {vars : _} ->
+  {auto c : Ref Ctxt Defs} ->
+  {auto m : Ref MD Metadata} ->
+  {auto u : Ref UST UState} ->
+  {auto s : Ref Syn SyntaxInfo} ->
+  List ElabOpt ->
+  NestedNames vars -> Env Term vars ->
+  FC -> String ->  List ImpDecl -> Core ()
+processFailing eopts nest env fc msg decls
+    = do ust <- get UST
+         syn <- get Syn
+         md <- get MD
+         defs <- branch
+         result <- catch
+               (do -- Run the elaborator
+                   traverse_ (processDecl eopts nest env) decls
+                   -- We have (unfortunately) succeeded
+                   pure (Just DidNotFail))
+               (\err => do -- err <- toFullNames err -- TODO: implement HasNames Error
+                           pure $ do -- Unless the error is the expected one
+                                     guard (not (msg `isInfixOf` show err))
+                                     -- We should complain we had the wrong one
+                                     pure (IncorrectlyFailed err))
+         -- Reset the state
+         put UST ust
+         put Syn syn
+         put MD md -- TODO: keep metadata but sanitised
+         put Ctxt defs
+         -- And fail if the block was successfully accepted
+         whenJust result $ \case
+           DidNotFail => throw $ FailingDidNotFail fc
+           IncorrectlyFailed err => throw $ FailingWrongError fc err
+
 
 -- Implements processDecl, declared in TTImp.Elab.Check
 process : {vars : _} ->
@@ -50,6 +91,8 @@ process eopts nest env (IParameters fc ps decls)
     = processParams nest env fc ps decls
 process eopts nest env (IRecord fc ns vis mbtot rec)
     = processRecord eopts nest env ns vis mbtot rec
+process eopts nest env (IFail fc msg decls)
+    = processFailing eopts nest env fc msg decls
 process eopts nest env (INamespace fc ns decls)
     = withExtendedNS ns $
          traverse_ (processDecl eopts nest env) decls

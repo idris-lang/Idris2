@@ -278,17 +278,17 @@ interfacemechanism = vcat $
     """
     ```idris
     interface Failing (0 a : Type) where
-      fail : a
+      failing : a
 
     whenJust : Failing ret => Maybe a -> (a -> ret) -> ret
     whenJust (Just v) k = k v
-    whenJust Nothing  _ = fail
+    whenJust Nothing  _ = failing
 
     implementation Failing Bool where
-      fail = False
+      failing = False
 
     Failing (Maybe a) where
-      fail = Nothing
+      failing = Nothing
     ```
     """, "",
     """
@@ -369,6 +369,29 @@ parametersblock = vcat $
     and their respective types outside of the parameters block are
     `head : a -> List a -> a` and `last : a -> List a -> a`.
     """]
+
+failblock : Doc IdrisDocAnn
+failblock = vcat $
+    header "Fail block" :: ""
+    :: map (indent 2) [
+    """
+    Fail blocks let users check that some code parses but is rejected during elaboration.
+    In the following example, we make sure that Idris rejects a proof that the character
+    'a' is equal to 'b' by throwing an error when unifying them.
+    """, "",
+    """
+    ```idris
+    failing "When unifying"
+      noteq : 'a' === 'b'
+      noteq = Refl
+    ```
+    """, "",
+    """
+    If the string attached to a failing block does not appear in the error raised, or if
+    no error is raised then the failing block is itself failing and thus leads to an error.
+    This lets users document the kind of error the block is meant to document.
+    """
+    ]
 
 mutualblock : Doc IdrisDocAnn
 mutualblock = vcat $
@@ -522,6 +545,7 @@ keywordsDoc =
   :: "auto" ::= implicitarg
   :: "default" ::= implicitarg
   :: "implicit" ::= unusedKeyword
+  :: "failing" ::= failblock
   :: "mutual" ::= mutualblock
   :: "namespace" ::= namespaceblock
   :: "parameters" ::= parametersblock
