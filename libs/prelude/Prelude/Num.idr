@@ -30,6 +30,16 @@ interface Num ty => Neg ty where
   negate : ty -> ty
   (-) : ty -> ty -> ty
 
+||| A convenience alias for `(-)`, this function enables partial application of subtraction on the
+||| left-hand operand as
+||| ```idris example
+||| (`subtract` 1)
+||| ```
+||| which is not possible with `(-)`.
+export
+subtract : Num ty -> ty -> ty -> ty
+subtract = (-)
+
 ||| Numbers for which the absolute value is defined should implement `Abs`.
 public export
 interface Num ty => Abs ty where
