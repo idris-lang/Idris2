@@ -513,11 +513,10 @@ mutual
                               ignore $ updateSolution env metaval argv
                               pure tm
                       else pure tm
-             case elabMode elabinfo of
-                  InLHS _ => -- reset hole and redo it with the unexpanded definition
-                     do updateDef (Resolved idx) (const (Just (Hole 0 (holeInit False))))
-                        ignore $ solveIfUndefined env metaval argv
-                  _ => pure ()
+             when (onLHS $ elabMode elabinfo) $
+                 -- reset hole and redo it with the unexpanded definition
+                 do updateDef (Resolved idx) (const (Just (Hole 0 (holeInit False))))
+                    ignore $ solveIfUndefined env metaval argv
              removeHole idx
              pure (tm, gty)
 
@@ -829,9 +828,7 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
     normalisePrims prims env res
         = do tm <- Normalise.normalisePrims (`boundSafe` elabMode elabinfo)
                                             isIPrimVal
-                                            (case elabMode elabinfo of
-                                                  InLHS _ => True
-                                                  _ => False)
+                                            (onLHS (elabMode elabinfo))
                                             prims n expargs (fst res) env
              pure (fromMaybe (fst res) tm, snd res)
 
