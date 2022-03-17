@@ -3,6 +3,7 @@ module Core.CompileExpr.Pretty
 import Core.Name
 import Core.CompileExpr
 import Core.TT
+import Data.List
 import Data.String
 import Data.Vect
 import Idris.Pretty

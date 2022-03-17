@@ -7,7 +7,6 @@ import Core.Name
 import Core.TT
 
 import Data.List
-import Data.Zippable
 import Data.Vect
 
 %default covering
