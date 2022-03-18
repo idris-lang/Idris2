@@ -12,6 +12,7 @@ import Core.Normalise
 import Core.UnifyState
 import Core.Value
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.BindImplicits
@@ -86,6 +87,7 @@ checkCon : {vars : _} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            List ElabOpt -> NestedNames vars ->
            Env Term vars -> Visibility -> (orig : Name) -> (resolved : Name) ->
            ImpTy -> Core Constructor
@@ -395,6 +397,7 @@ processData : {vars : _} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               List ElabOpt -> NestedNames vars ->
               Env Term vars -> FC ->
               Visibility -> Maybe TotalReq ->

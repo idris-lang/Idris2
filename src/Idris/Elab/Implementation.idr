@@ -8,6 +8,7 @@ import Core.Metadata
 import Core.TT
 import Core.Unify
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.BindImplicits
@@ -110,6 +111,7 @@ elabImplementation : {vars : _} ->
                      {auto u : Ref UST UState} ->
                      {auto s : Ref Syn SyntaxInfo} ->
                      {auto m : Ref MD Metadata} ->
+                     {auto o : Ref ROpts REPLOpts} ->
                      FC -> Visibility -> List FnOpt -> Pass ->
                      Env Term vars -> NestedNames vars ->
                      (implicits : List (Name, RigCount, RawImp)) ->

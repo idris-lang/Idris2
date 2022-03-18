@@ -15,6 +15,7 @@ import Libraries.Data.ANameMap
 import Libraries.Data.SortedMap
 
 import Idris.Doc.String
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import Idris.Elab.Implementation
@@ -185,6 +186,7 @@ mutual
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
+             {auto o : Ref ROpts REPLOpts} ->
              Side -> List Name -> PTerm -> Core RawImp
   desugarB side ps (PRef fc x) = pure $ IVar fc x
   desugarB side ps (PPi fc rig p mn argTy retTy)
@@ -442,6 +444,7 @@ mutual
                   {auto c : Ref Ctxt Defs} ->
                   {auto u : Ref UST UState} ->
                   {auto m : Ref MD Metadata} ->
+                  {auto o : Ref ROpts REPLOpts} ->
                   Side -> List Name -> PFieldUpdate -> Core IFieldUpdate
   desugarUpdate side ps (PSetField p v)
       = pure (ISetField p !(desugarB side ps v))
@@ -453,6 +456,7 @@ mutual
                {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto m : Ref MD Metadata} ->
+               {auto o : Ref ROpts REPLOpts} ->
                Side -> List Name ->
                (nilFC : FC) -> List (FC, PTerm) -> Core RawImp
   expandList side ps nilFC [] = pure (IVar nilFC (UN $ Basic "Nil"))
@@ -466,6 +470,7 @@ mutual
                {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto m : Ref MD Metadata} ->
+               {auto o : Ref ROpts REPLOpts} ->
                Side -> List Name -> (nilFC : FC) ->
                SnocList (FC, PTerm) -> Core RawImp
   expandSnocList side ps nilFC [<] = pure (IVar nilFC (UN $ Basic "Lin"))
@@ -487,6 +492,7 @@ mutual
                  {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  Side -> List Name -> FC -> List PStr -> Core RawImp
   expandString side ps fc xs
     = do xs <- traverse toRawImp (filter notEmpty $ mergeStrLit xs)
@@ -578,6 +584,7 @@ mutual
              {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
              {auto m : Ref MD Metadata} ->
+             {auto o : Ref ROpts REPLOpts} ->
              Side -> List Name -> FC -> Maybe Namespace -> List PDo -> Core RawImp
   expandDo side ps fc ns [] = throw (GenericMsg fc "Do block cannot be empty")
   expandDo side ps _ ns [DoExp fc tm] = desugarDo side ps ns tm
@@ -650,6 +657,7 @@ mutual
                 {auto c : Ref Ctxt Defs} ->
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
+                {auto o : Ref ROpts REPLOpts} ->
                 Side -> List Name -> Tree OpStr PTerm -> Core RawImp
   desugarTree side ps (Infix loc eqFC (UN $ Basic "=") l r) -- special case since '=' is special syntax
       = do l' <- desugarTree side ps l
@@ -701,6 +709,7 @@ mutual
                 {auto c : Ref Ctxt Defs} ->
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
+                {auto o : Ref ROpts REPLOpts} ->
                 List Name -> PTypeDecl -> Core ImpTy
   desugarType ps (MkPTy fc nameFC n d ty)
       = do addDocString n d
@@ -722,6 +731,7 @@ mutual
                {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
+               {auto o : Ref ROpts REPLOpts} ->
                List Name -> (arg : Bool) -> PTerm ->
                Core (IMaybe (not arg) Name, List Name, RawImp)
                   -- ^ we only look for the head name of the expression...
@@ -745,6 +755,7 @@ mutual
                   {auto c : Ref Ctxt Defs} ->
                   {auto u : Ref UST UState} ->
                   {auto m : Ref MD Metadata} ->
+                  {auto o : Ref ROpts REPLOpts} ->
                   List Name -> (arg : Bool) -> PClause ->
                   Core (IMaybe (not arg) Name, ImpClause)
   desugarClause ps arg (MkPatClause fc lhs rhs wheres)
@@ -774,6 +785,7 @@ mutual
                 {auto c : Ref Ctxt Defs} ->
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
+                {auto o : Ref ROpts REPLOpts} ->
                 List Name -> (doc : String) ->
                 PDataDecl -> Core ImpData
   desugarData ps doc (MkPData fc n tycon opts datacons)
@@ -794,6 +806,7 @@ mutual
                  {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
                  {auto m : Ref MD Metadata} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  List Name -> Namespace -> PField ->
                  Core IField
   desugarField ps ns (MkField fc doc rig p n ty)
@@ -813,6 +826,7 @@ mutual
                  {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
                  {auto m : Ref MD Metadata} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  List Name -> PFnOpt -> Core FnOpt
   desugarFnOpt ps (IFnOpt f) = pure f
   desugarFnOpt ps (PForeign tms)
@@ -826,6 +840,7 @@ mutual
                 {auto c : Ref Ctxt Defs} ->
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
+                {auto o : Ref ROpts REPLOpts} ->
                 List Name -> PDecl -> Core (List ImpDecl)
   desugarDecl ps (PClaim fc rig vis fnopts ty)
       = do opts <- traverse (desugarFnOpt ps) fnopts
@@ -1066,6 +1081,7 @@ mutual
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto o : Ref ROpts REPLOpts} ->
               Side -> List Name -> Maybe Namespace -> PTerm -> Core RawImp
   desugarDo s ps doNamespace tm
       = do b <- newRef Bang (initBangs doNamespace)
@@ -1078,5 +1094,6 @@ mutual
             {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
+            {auto o : Ref ROpts REPLOpts} ->
             Side -> List Name -> PTerm -> Core RawImp
   desugar s ps tm = desugarDo s ps Nothing tm

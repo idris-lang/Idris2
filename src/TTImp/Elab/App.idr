@@ -10,6 +10,7 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Check
@@ -164,6 +165,7 @@ mutual
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  RigCount -> RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) ->
@@ -193,6 +195,7 @@ mutual
                      {auto u : Ref UST UState} ->
                      {auto e : Ref EST (EState vars)} ->
                      {auto s : Ref Syn SyntaxInfo} ->
+                     {auto o : Ref ROpts REPLOpts} ->
                      RigCount -> RigCount -> ElabInfo ->
                      NestedNames vars -> Env Term vars ->
                      FC -> (fntm : Term vars) ->
@@ -248,6 +251,7 @@ mutual
                     {auto u : Ref UST UState} ->
                     {auto e : Ref EST (EState vars)} ->
                     {auto s : Ref Syn SyntaxInfo} ->
+                    {auto o : Ref ROpts REPLOpts} ->
                     RigCount -> RigCount -> ElabInfo ->
                     NestedNames vars -> Env Term vars ->
                     FC -> (fntm : Term vars) ->
@@ -415,6 +419,7 @@ mutual
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  RigCount -> RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) -> Name ->
@@ -575,6 +580,7 @@ mutual
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) -> (fnty : NF vars) ->
@@ -743,6 +749,7 @@ mutual
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) -> (fnty : NF vars) ->
@@ -778,6 +785,7 @@ checkApp : {vars : _} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
            {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars ->
            FC -> (fn : RawImp) ->

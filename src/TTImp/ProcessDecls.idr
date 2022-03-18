@@ -10,6 +10,9 @@ import Core.Options
 import Core.Termination
 import Core.UnifyState
 
+import Idris.Error
+import Idris.Pretty
+import Idris.REPL.Opts
 import Idris.Syntax
 import Parser.Source
 
@@ -30,6 +33,7 @@ import Data.List
 import Data.Maybe
 import Data.String
 import Libraries.Data.NameMap
+import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 
 %default covering
 
@@ -44,10 +48,11 @@ processFailing :
   {auto m : Ref MD Metadata} ->
   {auto u : Ref UST UState} ->
   {auto s : Ref Syn SyntaxInfo} ->
+  {auto o : Ref ROpts REPLOpts} ->
   List ElabOpt ->
   NestedNames vars -> Env Term vars ->
   FC -> Maybe String ->  List ImpDecl -> Core ()
-processFailing eopts nest env fc msg decls
+processFailing eopts nest env fc mmsg decls
     = do ust <- get UST
          syn <- get Syn
          md <- get MD
@@ -57,9 +62,11 @@ processFailing eopts nest env fc msg decls
                    traverse_ (processDecl eopts nest env) decls
                    -- We have (unfortunately) succeeded
                    pure (Just DidNotFail))
-               (\err => do -- err <- toFullNames err -- TODO: implement HasNames Error
+               (\err => do let Just msg = mmsg
+                                 | _ => pure Nothing
+                           str <- show <$> perror err
                            pure $ do -- Unless the error is the expected one
-                                     guard (not (fromMaybe "" msg `isInfixOf` show err))
+                                     guard (not (msg `isInfixOf` str))
                                      -- We should complain we had the wrong one
                                      pure (IncorrectlyFailed err))
          md' <- get MD
@@ -85,6 +92,7 @@ process : {vars : _} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
+          {auto o : Ref ROpts REPLOpts} ->
           List ElabOpt ->
           NestedNames vars -> Env Term vars -> ImpDecl -> Core ()
 process eopts nest env (IClaim fc rig vis opts ty)
@@ -176,6 +184,7 @@ processDecls : {vars : _} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
                NestedNames vars -> Env Term vars -> List ImpDecl -> Core Bool
 processDecls nest env decls
     = do traverse_ (processDecl [] nest env) decls
@@ -186,6 +195,7 @@ processTTImpDecls : {vars : _} ->
                     {auto m : Ref MD Metadata} ->
                     {auto u : Ref UST UState} ->
                     {auto s : Ref Syn SyntaxInfo} ->
+                    {auto o : Ref ROpts REPLOpts} ->
                     NestedNames vars -> Env Term vars -> List ImpDecl -> Core Bool
 processTTImpDecls {vars} nest env decls
     = do traverse_ (\d => do d' <- bindNames d
@@ -221,6 +231,7 @@ processTTImpFile : {auto c : Ref Ctxt Defs} ->
                    {auto m : Ref MD Metadata} ->
                    {auto u : Ref UST UState} ->
                    {auto s : Ref Syn SyntaxInfo} ->
+                   {auto o : Ref ROpts REPLOpts} ->
                    String -> Core Bool
 processTTImpFile fname
     = do modIdent <- ctxtPathToNS fname

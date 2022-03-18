@@ -10,6 +10,7 @@ import Data.Vect
 import Libraries.Data.IMaybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Data.Tap
 
 import public Data.IORef
 import System.File
@@ -828,3 +829,21 @@ namespace Monad
   [CORE] Monad Core using Applicative.CORE where
     (>>=) = Core.(>>=)
     join mma = Core.(>>=) mma id
+
+namespace Search
+
+  public export
+  Search : Type -> Type
+  Search = Tap Core
+
+  export %hint
+  functor : Functor Search
+  functor = (the (forall m. Functor m -> Functor (Tap m)) %search) CORE
+
+  export
+  traverse : (a -> Core b) -> Search a -> Core (Search b)
+  traverse = Tap.traverse @{CORE}
+
+  export
+  filter : (a -> Bool) -> Search a -> Core (Search a)
+  filter = Tap.filter @{CORE}

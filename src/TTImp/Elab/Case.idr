@@ -11,6 +11,7 @@ import Core.TT
 import Core.Value
 
 import Idris.Syntax
+import Idris.REPL.Opts
 
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
@@ -159,6 +160,7 @@ caseBlock : {vars : _} ->
             {auto u : Ref UST UState} ->
             {auto e : Ref EST (EState vars)} ->
             {auto s : Ref Syn SyntaxInfo} ->
+            {auto o : Ref ROpts REPLOpts} ->
             RigCount ->
             ElabInfo -> FC ->
             NestedNames vars ->
@@ -379,6 +381,7 @@ checkCase : {vars : _} ->
             {auto u : Ref UST UState} ->
             {auto e : Ref EST (EState vars)} ->
             {auto s : Ref Syn SyntaxInfo} ->
+            {auto o : Ref ROpts REPLOpts} ->
             RigCount -> ElabInfo ->
             NestedNames vars -> Env Term vars ->
             FC -> (scr : RawImp) -> (ty : RawImp) -> List ImpClause ->

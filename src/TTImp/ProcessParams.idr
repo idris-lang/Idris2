@@ -8,6 +8,7 @@ import Core.Unify
 import Core.Metadata
 import Core.Normalise
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.BindImplicits
@@ -32,6 +33,7 @@ processParams : {vars : _} ->
                 {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
                 {auto s : Ref Syn SyntaxInfo} ->
+                {auto o : Ref ROpts REPLOpts} ->
                 NestedNames vars ->
                 Env Term vars ->
                 FC -> List (Name, RigCount, PiInfo RawImp, RawImp) -> List ImpDecl ->
