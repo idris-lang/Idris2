@@ -1041,3 +1041,8 @@ export
 lengthReplicate : (n : Nat) -> length (replicate n x) = n
 lengthReplicate 0 = Refl
 lengthReplicate (S k) = cong S (lengthReplicate k)
+
+export
+foldlAppend : (f : acc -> a -> acc) -> (init : acc) -> (xs : List a) -> (ys : List a) -> foldl f init (xs ++ ys) = foldl f (foldl f init xs) ys
+foldlAppend f init []      ys = Refl
+foldlAppend f init (x::xs) ys = rewrite foldlAppend f (f init x) xs ys in Refl
