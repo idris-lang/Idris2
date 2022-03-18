@@ -198,7 +198,7 @@ findUniqueBindableNames fc arg env used t
             let ctxt = gamma defs
             ns <- map catMaybes $ for assoc $ \ (n, _) => do
                     ns <- lookupCtxtName (UN (Basic n)) ctxt
-                    let ns = flip mapMaybe ns $ \(n, _, d) =>
+                    let ns = flip List.mapMaybe ns $ \(n, _, d) =>
                                case definition d of
                                 -- do not warn about holes: `?a` is not actually
                                 -- getting shadowed as it will not become a

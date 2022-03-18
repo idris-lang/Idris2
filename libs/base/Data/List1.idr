@@ -223,6 +223,16 @@ Zippable List1 where
                                   (bs, cs, ds) = unzipWith3' xs in
                                   (b :: bs, c :: cs, d :: ds)
 
+------------------------------------------------------------------------
+-- Uninhabited
+
 export
 Uninhabited a => Uninhabited (List1 a) where
   uninhabited (hd ::: _) = uninhabited hd
+
+------------------------------------------------------------------------
+-- Filtering
+
+public export %inline
+filter : (a -> Bool) -> List1 a -> Maybe $ List1 a
+filter f = fromList . filter f . forget
