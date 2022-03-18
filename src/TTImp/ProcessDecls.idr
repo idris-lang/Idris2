@@ -62,10 +62,16 @@ processFailing eopts nest env fc msg decls
                                      guard (not (fromMaybe "" msg `isInfixOf` show err))
                                      -- We should complain we had the wrong one
                                      pure (IncorrectlyFailed err))
+         md' <- get MD
          -- Reset the state
          put UST ust
          put Syn syn
-         put MD md -- TODO: keep metadata but sanitised
+         -- For metadata, we preserve the syntax highlithing information (but none
+         -- of the things that may include code that's dropped like types, LHSs, etc.)
+         put MD ({ semanticHighlighting := semanticHighlighting md'
+                 , semanticAliases := semanticAliases md'
+                 , semanticDefaults := semanticDefaults md'
+                 } md)
          put Ctxt defs
          -- And fail if the block was successfully accepted
          whenJust result $ \case
