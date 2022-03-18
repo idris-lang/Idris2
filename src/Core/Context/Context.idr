@@ -8,6 +8,7 @@ import public Core.Options.Log
 import public Core.TT
 
 import Data.IORef
+import Data.String
 
 import Libraries.Data.IntMap
 import Libraries.Data.IOArray
@@ -139,8 +140,10 @@ covering
 Show Def where
   show None = "undefined"
   show (PMDef _ args ct rt pats)
-      = show args ++ ";\nCompile time tree: " ++ show ct ++
-        "\nRun time tree: " ++ show rt
+      = unlines [ show args ++ ";"
+                , "Compile time tree: " ++ show ct
+                , "Run time tree: " ++ show rt
+                ]
   show (DCon t a nt)
       = "DataCon " ++ show t ++ " " ++ show a
            ++ maybe "" (\n => " (newtype by " ++ show n ++ ")") nt
