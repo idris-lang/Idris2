@@ -46,7 +46,7 @@ processFailing :
   {auto s : Ref Syn SyntaxInfo} ->
   List ElabOpt ->
   NestedNames vars -> Env Term vars ->
-  FC -> String ->  List ImpDecl -> Core ()
+  FC -> Maybe String ->  List ImpDecl -> Core ()
 processFailing eopts nest env fc msg decls
     = do ust <- get UST
          syn <- get Syn
@@ -59,7 +59,7 @@ processFailing eopts nest env fc msg decls
                    pure (Just DidNotFail))
                (\err => do -- err <- toFullNames err -- TODO: implement HasNames Error
                            pure $ do -- Unless the error is the expected one
-                                     guard (not (msg `isInfixOf` show err))
+                                     guard (not (fromMaybe "" msg `isInfixOf` show err))
                                      -- We should complain we had the wrong one
                                      pure (IncorrectlyFailed err))
          -- Reset the state

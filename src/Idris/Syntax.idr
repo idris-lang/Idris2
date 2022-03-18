@@ -461,7 +461,7 @@ mutual
        -- TODO: POpen (for opening named interfaces)
        ||| PFail is a failing block. The string must appear as a
        ||| substring of the error message raised when checking the block.
-       PFail : FC -> String -> List (PDecl' nm) -> PDecl' nm
+       PFail : FC -> Maybe String -> List (PDecl' nm) -> PDecl' nm
 
        PMutual : FC -> List (PDecl' nm) -> PDecl' nm
        PFixity : FC -> Fixity -> Nat -> OpStr -> PDecl' nm

@@ -270,25 +270,25 @@ interfacemechanism = vcat $
     programs generic over all types implementing the interface.
     """, "",
     """
-    In the following example we define a `Failing` interface that allows
+    In the following example we define a `Fail` interface that allows
     users to abort in case a computation is doomed to fail. We implement
     the `whenJust` construct using this interface and show a couple of
     implementations:
     """, "",
     """
     ```idris
-    interface Failing (0 a : Type) where
-      failing : a
+    interface Fail (0 a : Type) where
+      fail : a
 
-    whenJust : Failing ret => Maybe a -> (a -> ret) -> ret
+    whenJust : Fail ret => Maybe a -> (a -> ret) -> ret
     whenJust (Just v) k = k v
-    whenJust Nothing  _ = failing
+    whenJust Nothing  _ = fail
 
-    implementation Failing Bool where
-      failing = False
+    implementation Fail Bool where
+      fail = False
 
-    Failing (Maybe a) where
-      failing = Nothing
+    Fail (Maybe a) where
+      fail = Nothing
     ```
     """, "",
     """
@@ -387,8 +387,8 @@ failblock = vcat $
     ```
     """, "",
     """
-    If the string attached to a failing block does not appear in the error raised, or if
-    no error is raised then the failing block is itself failing and thus leads to an error.
+    If the (optional) string attached to a failing block does not appear in the error raised,
+    or if no error is raised then the failing block is itself failing and thus leads to an error.
     This lets users document the kind of error the block is meant to document.
     """
     ]

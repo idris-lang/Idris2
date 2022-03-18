@@ -24,7 +24,7 @@ failing "Undefined name rev"
 
 failing "Failing block did not fail"
 
-  failing ""
+  failing
     -- 1. The content of this `failing' block won't fail.
     -- 2. And so the block will itself fail.
     -- 3. Which means the enclosing one will succeed in

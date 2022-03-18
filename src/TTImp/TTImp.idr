@@ -437,7 +437,7 @@ mutual
                  Maybe String -> -- nested namespace
                  Visibility -> Maybe TotalReq ->
                  ImpRecord' nm -> ImpDecl' nm
-       IFail : FC -> String -> List (ImpDecl' nm) -> ImpDecl' nm
+       IFail : FC -> Maybe String -> List (ImpDecl' nm) -> ImpDecl' nm
        INamespace : FC -> Namespace -> List (ImpDecl' nm) -> ImpDecl' nm
        ITransform : FC -> Name -> RawImp' nm -> RawImp' nm -> ImpDecl' nm
        IRunElabDecl : FC -> RawImp' nm -> ImpDecl' nm
@@ -461,7 +461,7 @@ mutual
           showSep "\n\t" (assert_total $ map show ds)
     show (IRecord _ _ _ _ d) = show d
     show (IFail _ msg decls)
-        = "fail " ++ show msg ++ "\n" ++
+        = "fail" ++ maybe "" ((" " ++) . show) msg ++ "\n" ++
           showSep "\n" (assert_total $ map (("  " ++) . show) decls)
     show (INamespace _ ns decls)
         = "namespace " ++ show ns ++

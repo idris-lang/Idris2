@@ -1383,7 +1383,7 @@ failDecls fname indents
     = do msgds <- bounds $
                  do decoratedKeyword fname "failing"
                     commit
-                    msg <- simpleStr
+                    msg <- optional simpleStr
                     (msg,) <$> assert_total (nonEmptyBlock (topDecl fname))
          pure $
            let (msg, ds) = msgds.val
