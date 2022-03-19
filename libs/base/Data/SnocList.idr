@@ -217,6 +217,10 @@ toListCast (x::xs) = do
   rewrite toListCast xs
   Refl
 
+public export
+cons : a -> SnocList a -> SnocList a
+cons x sx = [< x] ++ sx
+
 --- Folds ---
 
 export
