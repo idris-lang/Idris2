@@ -37,6 +37,7 @@ import Parser.Lexer.Source
 
 import public Idris.Doc.Annotations
 import Idris.Doc.Keywords
+import Idris.Doc.Brackets
 
 %default covering
 
@@ -576,7 +577,7 @@ getDocs : {auto o : Ref ROpts REPLOpts} ->
           DocDirective -> Core (Doc IdrisDocAnn)
 getDocs (APTerm ptm) = getDocsForPTerm ptm
 getDocs (Symbol k) = pure $ getDocsForSymbol k
-getDocs (Bracket IdiomBrackets) = pure "Idiom brackets (cf. manual)"
+getDocs (Bracket bracket) = pure $ getDocsForBracket bracket
 getDocs (Keyword k) = pure $ getDocsForKeyword k
 getDocs (AModule mod) = do
   syn  <- get Syn
