@@ -393,6 +393,7 @@ Ord a => Ord (List a) where
             c => c
 
 namespace List
+
   ||| Concatenate one list with another.
   public export
   (++) : (xs, ys : List a) -> List a
@@ -532,6 +533,47 @@ namespace SnocList
   (<>>) : SnocList a -> List a -> List a
   Lin       <>> xs = xs
   (sx :< x) <>> xs = sx <>> x :: xs
+
+  public export
+  (++) : (sx, sy : SnocList a) -> SnocList a
+  (++) sx Lin = sx
+  (++) sx (sy :< y) = (sx ++ sy) :< y
+
+  public export
+  length : SnocList a -> Nat
+  length Lin = Z
+  length (sx :< x) = S $ length sx
+
+  ||| Filters a snoc-list according to a simple classifying function
+  public export
+  filter : (a -> Bool) -> SnocList a -> SnocList a
+  filter f [<]     = [<]
+  filter f (xs:<x) = let rest = filter f xs in if f x then rest :< x else rest
+
+  ||| Apply a partial function to the elements of a list, keeping the ones at which
+  ||| it is defined.
+  public export
+  mapMaybe : (a -> Maybe b) -> SnocList a -> SnocList b
+  mapMaybe f [<]       = [<]
+  mapMaybe f (sx :< x) = case f x of
+    Nothing => mapMaybe f sx
+    Just j  => mapMaybe f sx :< j
+
+public export
+Eq a => Eq (SnocList a) where
+  (==) Lin Lin = True
+  (==) (sx :< x) (sy :< y) = x == y && sx == sy
+  (==) _ _ = False
+
+public export
+Ord a => Ord (SnocList a) where
+  compare Lin Lin = EQ
+  compare Lin (sx :< x) = LT
+  compare (sx :< x) Lin = GT
+  compare (sx :< x) (sy :< y)
+    = case compare sx sy of
+        EQ => compare x y
+        c  => c
 
 -- This works quickly because when string-concat builds the result, it allocates
 -- enough room in advance so there's only one allocation, rather than lots!

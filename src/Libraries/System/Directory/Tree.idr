@@ -87,7 +87,7 @@ filter filePred dirPred (MkTree files dirs) = MkTree files' dirs' where
   files' = filter filePred files
 
   dirs' : List (SubTree root)
-  dirs' = flip mapMaybe dirs $ \ (dname ** iot) => do
+  dirs' = flip List.mapMaybe dirs $ \ (dname ** iot) => do
             guard (dirPred dname)
             pure (dname ** map (assert_total (filter filePred dirPred)) iot)
 
