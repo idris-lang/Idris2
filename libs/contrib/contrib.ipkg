@@ -138,8 +138,6 @@ modules = Control.ANSI,
           Language.JSON.Tokens,
 
           Syntax.WithProof,
-          Syntax.PreorderReasoning,
-          Syntax.PreorderReasoning.Generic,
 
           System.Console.GetOpt,
           System.Directory.Tree,
