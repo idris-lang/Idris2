@@ -4,7 +4,7 @@ module Syntax.PreorderReasoning
 
 infixl 0  ~~
 prefix 1  |~
-infix  1  ...
+infix  1  ...,..<,..>,.=.,.=<,.=>
 
 |||Slightly nicer syntax for justifying equations:
 |||```
@@ -35,3 +35,13 @@ example x =
    ~~ x+1  ...( plusZeroRightNeutral $ x + 1 )
    ~~ 1+x  ...( plusCommutative x 1          )
 -}
+
+-- Smart constructors
+public export
+(..<) : (y : a) -> {x : a} ->
+    y = x -> Step x y
+(y ..<(prf)) {x} = (y ...(sym prf))
+
+public export
+(..>) : (0 y : a) -> (0 step : x ~=~ y) -> Step x y
+(..>) = (...)
