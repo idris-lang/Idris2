@@ -12,10 +12,12 @@ import public Core.TT
 
 import TTImp.TTImp
 
-import Libraries.Data.ANameMap
 import Data.List
-import Data.SnocList
 import Data.Maybe
+import Data.SnocList
+import Data.String
+
+import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Libraries.Data.SortedMap
 import Libraries.Data.String.Extra
@@ -1418,3 +1420,39 @@ mapPTermM f = goPTerm where
     goPTypeDecls : List (PTypeDecl' nm) -> Core (List (PTypeDecl' nm))
     goPTypeDecls []        = pure []
     goPTypeDecls (t :: ts) = (::) <$> goPTypeDecl t <*> goPTypeDecls ts
+
+
+export
+covering
+Show PTypeDecl where
+  show (MkPTy _ _ nm doc ty) = unwords [show nm, ":", show ty]
+
+export
+covering
+Show PClause where
+  show (MkPatClause _ lhs rhs []) = unwords [ show lhs, "=", show rhs ]
+  show (MkPatClause _ _ _ _) = "MkPatClause"
+  show (MkWithClause _ _ _ _ _ _ _) = "MkWithCLause"
+  show (MkImpossible _ lhs) = unwords [ show lhs, "impossible" ]
+
+-- TODO: finish writing this instance
+export
+covering
+Show PDecl where
+  show (PClaim _ rig vis opts sig) = showCount rig ++ show sig
+  show (PDef _ cls) = unlines (show <$> cls)
+  show (PData{}) = "PData"
+  show (PParameters{}) = "PParameters"
+  show (PUsing{}) = "PUsing"
+  show (PReflect{}) = "PReflect"
+  show (PInterface{}) = "PInterface"
+  show (PImplementation{}) = "PImplementation"
+  show (PRecord{}) = "PRecord"
+  show (PFail _ mstr ds) = unlines (unwords ("failing" :: maybe [] (pure . show) mstr) :: (show <$> ds))
+  show (PMutual{}) = "PMutual"
+  show (PFixity{}) = "PFixity"
+  show (PNamespace{}) = "PNamespace"
+  show (PTransform{}) = "PTransform"
+  show (PRunElabDecl{}) = "PRunElabDecl"
+  show (PDirective{}) = "PDirective"
+  show (PBuiltin{}) = "PBuiltin"

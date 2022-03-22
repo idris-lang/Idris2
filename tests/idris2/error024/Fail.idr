@@ -32,3 +32,15 @@ failing "Failing block did not fail."
 
     success : 'a' === 'a'
     success = Refl
+
+failing "Last statement in do block must be an expression"
+  invalidDoBlock : Nat -> Nat -> Maybe Nat
+  invalidDoBlock = do
+    x <- m <$ guard (m <= n)
+
+failing #"Expected "Invalid" but got:
+Unknown operator '&&&'"#
+
+  failing "Invalid"
+    test : Nat
+    test = 3 &&& 4

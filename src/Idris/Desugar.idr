@@ -15,6 +15,8 @@ import Libraries.Data.ANameMap
 import Libraries.Data.SortedMap
 
 import Idris.Doc.String
+import Idris.Error
+import Idris.Pretty
 import Idris.REPL.Opts
 import Idris.Syntax
 
@@ -32,6 +34,7 @@ import TTImp.Utils
 
 import Libraries.Data.IMaybe
 import Libraries.Utils.Shunting
+import Libraries.Text.PrettyPrint.Prettyprinter
 
 import Data.Maybe
 import Data.List
@@ -1030,8 +1033,44 @@ mutual
            pure []
   desugarDecl ps (PFixity fc _ _ _)
       = throw (GenericMsg fc "Fixity declarations must be for unqualified names")
-  desugarDecl ps (PFail fc msg ds)
-      = (pure . IFail fc msg . concat) <$> traverse (desugarDecl ps) ds
+  desugarDecl ps d@(PFail fc mmsg ds)
+      = do -- save the state: the content of a failing block should be discarded
+           ust <- get UST
+           md <- get MD
+           opts <- get ROpts
+           syn <- get Syn
+           defs <- branch
+           log "desugar.failing" 20 $ "Desugaring the block:\n" ++ show d
+           -- See whether the desugaring phase fails
+           result <- catch
+             (do -- run the desugarer
+                 ds <- traverse (desugarDecl ps) ds
+                 pure (Right (concat ds)))
+             (\err => do -- no message: any error will do
+                         let Just msg = mmsg
+                             | _ => pure (Left Nothing)
+                         -- otherwise have a look at the displayed message
+                         str <- show <$> perror (killErrorLoc err)
+                         log "desugar.failing" 10 $ "Failing block based on \{show msg} failed with \{str}"
+                         pure $ Left $ do
+                              -- Unless the error is the expected one
+                              guard (not (msg `isInfixOf` str))
+                              -- We should complain we had the wrong one
+                              pure (FailingWrongError fc msg err))
+           -- Reset the state
+           put UST ust
+           md' <- get MD
+           put MD ({ semanticHighlighting := semanticHighlighting md'
+                   , semanticAliases := semanticAliases md'
+                   , semanticDefaults := semanticDefaults md'
+                   } md)
+           put Syn syn
+           put Ctxt defs
+           -- either fail or return the block that should fail during the elab phase
+           case the (Either (Maybe Error) (List ImpDecl)) result of
+             Right ds => [IFail fc mmsg ds] <$ log "desugar.failing" 20 "Success"
+             Left Nothing => [] <$ log "desugar.failing" 20 "Correctly failed"
+             Left (Just err) => throw err
   desugarDecl ps (PMutual fc ds)
       = do let (tys, defs) = splitMutual ds
            mds' <- traverse (desugarDecl ps) (tys ++ defs)

@@ -53,7 +53,8 @@ processFailing :
   NestedNames vars -> Env Term vars ->
   FC -> Maybe String ->  List ImpDecl -> Core ()
 processFailing eopts nest env fc mmsg decls
-    = do ust <- get UST
+    = do -- save the state: the content of a failing block should be discarded
+         ust <- get UST
          syn <- get Syn
          md <- get MD
          defs <- branch
@@ -61,14 +62,14 @@ processFailing eopts nest env fc mmsg decls
                (do -- Run the elaborator
                    traverse_ (processDecl eopts nest env) decls
                    -- We have (unfortunately) succeeded
-                   pure (Just DidNotFail))
+                   pure (Just $ FailingDidNotFail fc))
                (\err => do let Just msg = mmsg
                                  | _ => pure Nothing
-                           str <- show <$> perror err
+                           str <- show <$> perror (killErrorLoc err)
                            pure $ do -- Unless the error is the expected one
                                      guard (not (msg `isInfixOf` str))
                                      -- We should complain we had the wrong one
-                                     pure (IncorrectlyFailed err))
+                                     pure (FailingWrongError fc msg err))
          md' <- get MD
          -- Reset the state
          put UST ust
@@ -81,9 +82,7 @@ processFailing eopts nest env fc mmsg decls
                  } md)
          put Ctxt defs
          -- And fail if the block was successfully accepted
-         whenJust result $ \case
-           DidNotFail => throw $ FailingDidNotFail fc
-           IncorrectlyFailed err => throw $ FailingWrongError fc err
+         whenJust result throw
 
 
 -- Implements processDecl, declared in TTImp.Elab.Check
