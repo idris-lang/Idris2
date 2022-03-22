@@ -2,6 +2,7 @@ module Data.SortedSet
 
 import Data.Maybe
 import Data.SortedMap
+import Data.SortedMap.Dependent
 
 %hide Prelude.toList
 
@@ -80,6 +81,12 @@ Show k => Show (SortedSet k) where
 export
 keySet : SortedMap k v -> SortedSet k
 keySet = SetWrapper . map (const ())
+
+namespace Dependent
+
+  export
+  keySet : SortedDMap k v -> SortedSet k
+  keySet = SetWrapper . cast . map (const ())
 
 export
 singleton : Ord k => k -> SortedSet k

@@ -136,3 +136,11 @@ Semigroup v => Semigroup (SortedMap k v) where
 export
 (Ord k, Semigroup v) => Monoid (SortedMap k v) where
   neutral = empty
+
+export %inline
+Cast (SortedDMap k (const v)) (SortedMap k v) where
+  cast = M
+
+export %inline
+Cast (SortedMap k v) (SortedDMap k (const v)) where
+  cast = unM
