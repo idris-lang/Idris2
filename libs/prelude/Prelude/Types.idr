@@ -516,6 +516,23 @@ Traversable List where
   traverse f [] = pure []
   traverse f (x::xs) = [| f x :: traverse f xs |]
 
+namespace SnocList
+
+  infixl 7 <><
+  infixr 6 <>>
+
+  ||| 'fish': Action of lists on snoc-lists
+  public export
+  (<><) : SnocList a -> List a -> SnocList a
+  sx <>< [] = sx
+  sx <>< (x :: xs) = sx :< x <>< xs
+
+  ||| 'chips': Action of snoc-lists on lists
+  public export
+  (<>>) : SnocList a -> List a -> List a
+  Lin       <>> xs = xs
+  (sx :< x) <>> xs = sx <>> x :: xs
+
 -- This works quickly because when string-concat builds the result, it allocates
 -- enough room in advance so there's only one allocation, rather than lots!
 --
