@@ -4,7 +4,7 @@ module Syntax.PreorderReasoning
 
 infixl 0  ~~
 prefix 1  |~
-infix  1  ...
+infix  1  ...,..<,..>,.=.,.=<,.=>
 
 |||Slightly nicer syntax for justifying equations:
 |||```
@@ -35,3 +35,20 @@ example x =
    ~~ x+1  ...( plusZeroRightNeutral $ x + 1 )
    ~~ 1+x  ...( plusCommutative x 1          )
 -}
+
+-- Re-implement `prelude.Builtins.sym` to enable bootstrapping
+-- Remove after next release
+%inline
+public export
+symHet : (0 rule : x ~=~ y) -> y ~=~ x
+symHet Refl = Refl
+
+-- Smart constructors
+public export
+(..<) : (0 y : a) -> {0 x : b} ->
+    y ~=~ x -> Step x y
+(y ..<(prf)) {x} = (y ...(symHet prf)) -- Use `sym` from next release
+
+public export
+(..>) : (0 y : a) -> (0 step : x ~=~ y) -> Step x y
+(..>) = (...)

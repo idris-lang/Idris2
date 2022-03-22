@@ -5,7 +5,7 @@ import Control.Order
 infixl 0  ~~
 infixl 0  <~
 prefix 1  |~
-infix  1  ...
+infix  1  ...,..<,..>,.=.,.=<,.=>
 
 public export
 data Step : (leq : a -> a -> Type) -> a -> a -> Type where
@@ -28,3 +28,27 @@ public export
          -> FastDerivation leq x y -> {z : dom} -> (step : Step Equal y z)
          -> FastDerivation leq x z
 (~~) der (z ... Refl) = der
+
+-- Smart constructors
+public export
+(..<) : Symmetric a leq => (y : a) -> {x : a} -> y `leq` x -> Step leq x y
+(y ..<(prf)) {x} = (y ...(symmetric prf))
+
+public export
+(..>) : (y : a) -> x `leq` y -> Step leq x y
+(..>) = (...)
+
+public export
+(.=.) : Reflexive a leq  => (y : a) -> {x : a} ->
+    x === y -> Step leq x y
+(y .=.(Refl)) {x = _} = (y ...(reflexive))
+
+public export
+(.=>) : Reflexive a leq  => (y : a) -> {x : a} ->
+    x === y -> Step leq x y
+(.=>) = (.=.)
+
+public export
+(.=<) : Reflexive a leq  => (y : a) -> {x : a} ->
+    y === x -> Step leq x y
+(y .=<(Refl)) = (y ...(reflexive))
