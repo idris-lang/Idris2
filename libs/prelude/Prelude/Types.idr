@@ -405,6 +405,25 @@ namespace List
   length []        = Z
   length (x :: xs) = S (length xs)
 
+  ||| Applied to a predicate and a list, returns the list of those elements that
+  ||| satisfy the predicate.
+  public export
+  filter : (p : a -> Bool) -> List a -> List a
+  filter p [] = []
+  filter p (x :: xs)
+     = if p x
+          then x :: filter p xs
+          else filter p xs
+
+  ||| Apply a partial function to the elements of a list, keeping the ones at which it is defined.
+  public export
+  mapMaybe : (a -> Maybe b) -> List a -> List b
+  mapMaybe f []      = []
+  mapMaybe f (x::xs) =
+    case f x of
+      Nothing => mapMaybe f xs
+      Just j  => j :: mapMaybe f xs
+
   ||| Reverse the second list, prepending its elements to the first.
   public export
   reverseOnto : List a -> List a -> List a
