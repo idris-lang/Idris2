@@ -36,11 +36,18 @@ example x =
    ~~ 1+x  ...( plusCommutative x 1          )
 -}
 
+-- Re-implement `prelude.Builtins.sym` to enable bootstrapping
+-- Remove after next release
+%inline
+public export
+symHet : (0 rule : x ~=~ y) -> y ~=~ x
+symHet Refl = Refl
+
 -- Smart constructors
 public export
-(..<) : (y : a) -> {x : a} ->
-    y = x -> Step x y
-(y ..<(prf)) {x} = (y ...(sym prf))
+(..<) : (0 y : a) -> {0 x : b} ->
+    y ~=~ x -> Step x y
+(y ..<(prf)) {x} = (y ...(symHet prf)) -- Use `sym` from next release
 
 public export
 (..>) : (0 y : a) -> (0 step : x ~=~ y) -> Step x y
