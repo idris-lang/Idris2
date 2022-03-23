@@ -35,6 +35,7 @@ rawImpFromDecl decl = case decl of
     IRecord fc1 y z _ (MkImpRecord fc n params conName fields) => do
         (a, b) <- map (snd . snd) params
         getFromPiInfo a ++ [b] ++ getFromIField !fields
+    IFail fc1 msg zs => rawImpFromDecl !zs
     INamespace fc1 ys zs => rawImpFromDecl !zs
     ITransform fc1 y z w => [z, w]
     IRunElabDecl fc1 y => [] -- Not sure about this either
@@ -387,6 +388,8 @@ mutual
       = IDef fc n (map (substNamesClause' bvar bound ps) cs)
   substNamesDecl' bvar bound ps (IData fc vis mbtot d)
       = IData fc vis mbtot (substNamesData' bvar bound ps d)
+  substNamesDecl' bvar bound ps (IFail fc msg ds)
+      = IFail fc msg (map (substNamesDecl' bvar bound ps) ds)
   substNamesDecl' bvar bound ps (INamespace fc ns ds)
       = INamespace fc ns (map (substNamesDecl' bvar bound ps) ds)
   substNamesDecl' bvar bound ps d = d
@@ -485,6 +488,8 @@ mutual
       = IDef fc' n (map (substLocClause fc') cs)
   substLocDecl fc' (IData fc vis mbtot d)
       = IData fc' vis mbtot (substLocData fc' d)
+  substLocDecl fc' (IFail fc msg ds)
+      = IFail fc' msg (map (substLocDecl fc') ds)
   substLocDecl fc' (INamespace fc ns ds)
       = INamespace fc' ns (map (substLocDecl fc') ds)
   substLocDecl fc' d = d

@@ -10,6 +10,9 @@ import Core.Options
 import Core.Termination
 import Core.UnifyState
 
+import Idris.Error
+import Idris.Pretty
+import Idris.REPL.Opts
 import Idris.Syntax
 import Parser.Source
 
@@ -28,9 +31,59 @@ import TTImp.TTImp
 
 import Data.List
 import Data.Maybe
+import Data.String
 import Libraries.Data.NameMap
+import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 
 %default covering
+
+||| When we process a failing block we want to know what happend
+data FailedFailure
+  = DidNotFail
+  | IncorrectlyFailed Error
+
+processFailing :
+  {vars : _} ->
+  {auto c : Ref Ctxt Defs} ->
+  {auto m : Ref MD Metadata} ->
+  {auto u : Ref UST UState} ->
+  {auto s : Ref Syn SyntaxInfo} ->
+  {auto o : Ref ROpts REPLOpts} ->
+  List ElabOpt ->
+  NestedNames vars -> Env Term vars ->
+  FC -> Maybe String ->  List ImpDecl -> Core ()
+processFailing eopts nest env fc mmsg decls
+    = do -- save the state: the content of a failing block should be discarded
+         ust <- get UST
+         syn <- get Syn
+         md <- get MD
+         defs <- branch
+         result <- catch
+               (do -- Run the elaborator
+                   traverse_ (processDecl eopts nest env) decls
+                   -- We have (unfortunately) succeeded
+                   pure (Just $ FailingDidNotFail fc))
+               (\err => do let Just msg = mmsg
+                                 | _ => pure Nothing
+                           str <- show <$> perror (killErrorLoc err)
+                           pure $ do -- Unless the error is the expected one
+                                     guard (not (msg `isInfixOf` str))
+                                     -- We should complain we had the wrong one
+                                     pure (FailingWrongError fc msg err))
+         md' <- get MD
+         -- Reset the state
+         put UST ust
+         put Syn syn
+         -- For metadata, we preserve the syntax highlithing information (but none
+         -- of the things that may include code that's dropped like types, LHSs, etc.)
+         put MD ({ semanticHighlighting := semanticHighlighting md'
+                 , semanticAliases := semanticAliases md'
+                 , semanticDefaults := semanticDefaults md'
+                 } md)
+         put Ctxt defs
+         -- And fail if the block was successfully accepted
+         whenJust result throw
+
 
 -- Implements processDecl, declared in TTImp.Elab.Check
 process : {vars : _} ->
@@ -38,6 +91,7 @@ process : {vars : _} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
+          {auto o : Ref ROpts REPLOpts} ->
           List ElabOpt ->
           NestedNames vars -> Env Term vars -> ImpDecl -> Core ()
 process eopts nest env (IClaim fc rig vis opts ty)
@@ -50,6 +104,8 @@ process eopts nest env (IParameters fc ps decls)
     = processParams nest env fc ps decls
 process eopts nest env (IRecord fc ns vis mbtot rec)
     = processRecord eopts nest env ns vis mbtot rec
+process eopts nest env (IFail fc msg decls)
+    = processFailing eopts nest env fc msg decls
 process eopts nest env (INamespace fc ns decls)
     = withExtendedNS ns $
          traverse_ (processDecl eopts nest env) decls
@@ -127,6 +183,7 @@ processDecls : {vars : _} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
                NestedNames vars -> Env Term vars -> List ImpDecl -> Core Bool
 processDecls nest env decls
     = do traverse_ (processDecl [] nest env) decls
@@ -137,6 +194,7 @@ processTTImpDecls : {vars : _} ->
                     {auto m : Ref MD Metadata} ->
                     {auto u : Ref UST UState} ->
                     {auto s : Ref Syn SyntaxInfo} ->
+                    {auto o : Ref ROpts REPLOpts} ->
                     NestedNames vars -> Env Term vars -> List ImpDecl -> Core Bool
 processTTImpDecls {vars} nest env decls
     = do traverse_ (\d => do d' <- bindNames d
@@ -172,6 +230,7 @@ processTTImpFile : {auto c : Ref Ctxt Defs} ->
                    {auto m : Ref MD Metadata} ->
                    {auto u : Ref UST UState} ->
                    {auto s : Ref Syn SyntaxInfo} ->
+                   {auto o : Ref ROpts REPLOpts} ->
                    String -> Core Bool
 processTTImpFile fname
     = do modIdent <- ctxtPathToNS fname

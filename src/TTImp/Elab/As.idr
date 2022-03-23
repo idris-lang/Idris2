@@ -9,6 +9,7 @@ import Core.Normalise
 import Core.Unify
 import Core.TT
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Check
@@ -26,6 +27,7 @@ checkAs : {vars : _} ->
           {auto u : Ref UST UState} ->
           {auto e : Ref EST (EState vars)} ->
           {auto s : Ref Syn SyntaxInfo} ->
+          {auto o : Ref ROpts REPLOpts} ->
           RigCount -> ElabInfo ->
           NestedNames vars -> Env Term vars ->
           FC -> (nameFC : FC) -> UseSide -> Name -> RawImp -> Maybe (Glued vars) ->

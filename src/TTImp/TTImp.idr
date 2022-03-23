@@ -437,6 +437,7 @@ mutual
                  Maybe String -> -- nested namespace
                  Visibility -> Maybe TotalReq ->
                  ImpRecord' nm -> ImpDecl' nm
+       IFail : FC -> Maybe String -> List (ImpDecl' nm) -> ImpDecl' nm
        INamespace : FC -> Namespace -> List (ImpDecl' nm) -> ImpDecl' nm
        ITransform : FC -> Name -> RawImp' nm -> RawImp' nm -> ImpDecl' nm
        IRunElabDecl : FC -> RawImp' nm -> ImpDecl' nm
@@ -459,6 +460,9 @@ mutual
         = "parameters " ++ show ps ++ "\n\t" ++
           showSep "\n\t" (assert_total $ map show ds)
     show (IRecord _ _ _ _ d) = show d
+    show (IFail _ msg decls)
+        = "fail" ++ maybe "" ((" " ++) . show) msg ++ "\n" ++
+          showSep "\n" (assert_total $ map (("  " ++) . show) decls)
     show (INamespace _ ns decls)
         = "namespace " ++ show ns ++
           showSep "\n" (assert_total $ map show decls)
@@ -737,6 +741,8 @@ implicitsAs n defs ns tm
         impAs loc' (_ :: ns) tm = impAs loc' ns tm
     setAs is es tm = pure tm
 
+||| `definedInBlock` is used to figure out which definitions should
+||| receive the additional arguments introduced by a Parameters directive
 export
 definedInBlock : Namespace -> -- namespace to resolve names
                  List ImpDecl -> List Name
@@ -763,6 +769,7 @@ definedInBlock ns decls =
         = expandNS ns n :: map (expandNS ns) (map getName cons)
     defName ns (IData _ _ _ (MkImpLater _ n _)) = [expandNS ns n]
     defName ns (IParameters _ _ pds) = concatMap (defName ns) pds
+    defName ns (IFail _ _ nds) = concatMap (defName ns) nds
     defName ns (INamespace _ n nds) = concatMap (defName (ns <.> n)) nds
     defName ns (IRecord _ fldns _ _ (MkImpRecord _ n _ con flds))
         = expandNS ns con :: all
@@ -849,6 +856,7 @@ namespace ImpDecl
   getFC (IDef fc _ _) = fc
   getFC (IParameters fc _ _) = fc
   getFC (IRecord fc _ _ _ _) = fc
+  getFC (IFail fc _ _) = fc
   getFC (INamespace fc _ _) = fc
   getFC (ITransform fc _ _ _) = fc
   getFC (IRunElabDecl fc _) = fc
@@ -1332,6 +1340,8 @@ mutual
         = do tag 8; toBuf b n
     toBuf b (IBuiltin fc type name)
         = do tag 9; toBuf b fc; toBuf b type; toBuf b name
+    toBuf b (IFail _ _ _)
+        = pure ()
 
     fromBuf b
         = case !getTag of

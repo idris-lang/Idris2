@@ -1378,6 +1378,18 @@ runElabDecl fname indents
                     expr pnowith fname indents
          pure (PRunElabDecl (boundToFC fname tm) tm.val)
 
+failDecls : OriginDesc -> IndentInfo -> Rule PDecl
+failDecls fname indents
+    = do msgds <- bounds $
+                 do decoratedKeyword fname "failing"
+                    commit
+                    msg <- optional simpleStr
+                    (msg,) <$> assert_total (nonEmptyBlock (topDecl fname))
+         pure $
+           let (msg, ds) = msgds.val
+               fc = boundToFC fname msgds
+           in PFail fc msg (collectDefs (concat ds))
+
 mutualDecls : OriginDesc -> IndentInfo -> Rule PDecl
 mutualDecls fname indents
     = do ds <- bounds $
@@ -1742,6 +1754,8 @@ topDecl fname indents
   <|> do d <- recordDecl fname indents
          pure [d]
   <|> do d <- namespaceDecl fname indents
+         pure [d]
+  <|> do d <- failDecls fname indents
          pure [d]
   <|> do d <- mutualDecls fname indents
          pure [d]

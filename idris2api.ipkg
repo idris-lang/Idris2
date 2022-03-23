@@ -172,6 +172,7 @@ modules =
     Libraries.Data.String.Iterator,
     Libraries.Data.StringMap,
     Libraries.Data.StringTrie,
+    Libraries.Data.Tap,
     Libraries.Data.UserNameMap,
     Libraries.Data.Version,
 

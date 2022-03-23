@@ -10,6 +10,7 @@ import Core.TT
 import Core.UnifyState
 import Core.Value
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab
@@ -314,6 +315,7 @@ getUpdates defs orig updated
 mkCase : {auto c : Ref Ctxt Defs} ->
          {auto u : Ref UST UState} ->
          {auto s : Ref Syn SyntaxInfo} ->
+         {auto o : Ref ROpts REPLOpts} ->
          Int -> RawImp -> RawImp -> Core ClauseUpdate
 mkCase {c} {u} fn orig lhs_raw
     = do m <- newRef MD (initMetadata $ Virtual Interactive)
@@ -375,6 +377,7 @@ getSplitsLHS : {auto m : Ref MD Metadata} ->
                {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
                FC -> Nat -> ClosedTerm -> Name ->
                Core (SplitResult (List ClauseUpdate))
 getSplitsLHS fc envlen lhs_in n
@@ -402,6 +405,7 @@ getSplits : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             {auto s : Ref Syn SyntaxInfo} ->
+            {auto o : Ref ROpts REPLOpts} ->
             (NonEmptyFC -> ClosedTerm -> Bool) -> Name ->
             Core (SplitResult (List ClauseUpdate))
 getSplits p n

@@ -14,6 +14,7 @@ import Core.UnifyState
 import Core.TT
 import Core.Value
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.TTImp
@@ -683,6 +684,7 @@ check : {vars : _} ->
         {auto u : Ref UST UState} ->
         {auto e : Ref EST (EState vars)} ->
         {auto s : Ref Syn SyntaxInfo} ->
+        {auto o : Ref ROpts REPLOpts} ->
         RigCount -> ElabInfo ->
         NestedNames vars -> Env Term vars -> RawImp ->
         Maybe (Glued vars) ->
@@ -696,6 +698,7 @@ checkImp : {vars : _} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
            {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars -> RawImp -> Maybe (Glued vars) ->
            Core (Term vars, Glued vars)
@@ -707,6 +710,7 @@ processDecl : {vars : _} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               List ElabOpt -> NestedNames vars ->
               Env Term vars -> ImpDecl -> Core ()
 
