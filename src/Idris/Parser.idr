@@ -1637,7 +1637,7 @@ typedArg fname indents
 recordParam : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm,  PTerm))
 recordParam fname indents
     = typedArg fname indents
-  <|> do n <- bounds name
+  <|> do n <- bounds (UN . Basic <$> decoratedSimpleBinderName fname)
          pure [(n.val, top, Explicit, PInfer (boundToFC fname n))]
 
 recordDecl : OriginDesc -> IndentInfo -> Rule PDecl
