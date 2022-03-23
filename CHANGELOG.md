@@ -83,6 +83,11 @@
 
 * `elemBy` and `elem` are now defined for any `Foldable` structure. The specialised
   versions defined in `Data.(List/SnocList/Vect)` have been removed.
+* `filter` and `mapMaybe` functions for `List` were moved to `prelude` from `base`.
+* Basic functions of `SnocList` (`(++)`, `length`, `filter`, `mapMaybe`) and
+  implementations of `Eq` and `Ord` were moved to `prelude` from `base`.
+  This may lead to a need to qualifying functions (e.g. `List.filter`) due to possible ambiguity.
+* "Fish" and "chips" operators of `SnocList` were moved to `Prelude.Types` from `Prelude.Basics`.
 
 #### Base
 
@@ -102,6 +107,8 @@
 * Adds the `Data.List.Quantifiers.Interleaving` and
   `Data.List.Quantifiers.Split` datatypes, used for provably splitting a list
   into a list of proofs and a list of counter-proofs for a given property.
+* Properties of the `List1` type were moved from `Data.List1` to `Data.List1.Properties`.
+* `Syntax.PreorderReasoning` was moved to `base` from `contrib`.
 
 #### Test
 
