@@ -56,7 +56,7 @@ newSTRef val
 ||| Read the value of a mutable reference.
 |||
 ||| This occurs within `ST s` to prevent `STRef`s from being usable if they are
-||| "leaked" via `runST`. 
+||| "leaked" via `runST`.
 %inline
 export
 readSTRef : STRef s a -> ST s a
