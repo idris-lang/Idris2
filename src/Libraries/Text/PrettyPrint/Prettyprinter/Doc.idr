@@ -350,17 +350,35 @@ export
 Functor Doc where
   map = reAnnotate
 
-||| Overloaded converison to `Doc`.
+||| Overloaded conversion to `Doc`.
+||| @ ann is the type of annotations
+||| @ a   is the type of things that can be prettified
+||| We declare that only `a` is relevant when looking for an implementation
+|||
+||| Pro tips:
+||| 1. use `prettyBy` if a subprinter uses a different type of annotations
+||| 2. use a variable `ann` rather than `Void` if no annnotation is needed
+|||    (to avoid needless calls to `prettyBy absurd`)
 public export
-interface Pretty a where
+interface Pretty ann a | a where
   pretty : a -> Doc ann
   pretty x = prettyPrec Open x
 
   prettyPrec : Prec -> a -> Doc ann
   prettyPrec _ x = pretty x
 
+||| Sometimes we want to call a subprinter that uses a different annotation
+||| type. That's fine as long as we know how to embed such annotations into
+||| the target ones.
+||| @ ann1 is the type of annotations used by the subprinter
+||| @ ann2 is the type of annotations used in the current document
+||| @ inj  explains how to inject the first into the second
 export
-Pretty String where
+prettyBy : Pretty ann1 a => (inj : ann1 -> ann2) -> a -> Doc ann2
+prettyBy inj a = reAnnotate inj (pretty a)
+
+export
+Pretty ann String where
   pretty str = let str' = if "\n" `isSuffixOf` str then dropLast 1 str else str in
                    vsep $ map unsafeTextWithoutNewLines $ lines str'
 
@@ -383,15 +401,15 @@ tupled = group . encloseSep (flatAlt (pretty "( ") (pretty "("))
                             (pretty ", ")
 
 export
-Pretty a => Pretty (List a) where
+Pretty ann a => Pretty ann (List a) where
   pretty = align . list . map pretty
 
 export
-Pretty a => Pretty (List1 a) where
+Pretty ann a => Pretty ann (List1 a) where
   pretty = pretty . forget
 
 export
-[prettyListMaybe] Pretty a => Pretty (List (Maybe a)) where
+[prettyListMaybe] Pretty ann a => Pretty ann (List (Maybe a)) where
   pretty = pretty . catMaybes
     where catMaybes : List (Maybe a) -> List a
           catMaybes [] = []
@@ -399,38 +417,38 @@ export
           catMaybes ((Just x) :: xs) = x :: catMaybes xs
 
 export
-Pretty () where
+Pretty ann () where
   pretty _ = pretty "()"
 
 export
-Pretty Bool where
+Pretty ann Bool where
   pretty True = pretty "True"
   pretty False = pretty "False"
 
 export
-Pretty Char where
+Pretty ann Char where
   pretty '\n' = line
   pretty c = Chara c
 
-export Pretty Nat where pretty = unsafeTextWithoutNewLines . show
-export Pretty Int where pretty = unsafeTextWithoutNewLines . show
-export Pretty Integer where pretty = unsafeTextWithoutNewLines . show
-export Pretty Double where pretty = unsafeTextWithoutNewLines . show
-export Pretty Bits8 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Bits16 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Bits32 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Bits64 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Int8 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Int16 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Int32 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Int64 where pretty = unsafeTextWithoutNewLines . show
+export Pretty ann Nat where pretty = unsafeTextWithoutNewLines . show
+export Pretty ann Int where pretty = unsafeTextWithoutNewLines . show
+export Pretty ann Integer where pretty = unsafeTextWithoutNewLines . show
+export Pretty ann Double where pretty = unsafeTextWithoutNewLines . show
+export Pretty ann Bits8 where pretty = unsafeTextWithoutNewLines . show
+export Pretty ann Bits16 where pretty = unsafeTextWithoutNewLines . show
+export Pretty ann Bits32 where pretty = unsafeTextWithoutNewLines . show
+export Pretty ann Bits64 where pretty = unsafeTextWithoutNewLines . show
+export Pretty ann Int8 where pretty = unsafeTextWithoutNewLines . show
+export Pretty ann Int16 where pretty = unsafeTextWithoutNewLines . show
+export Pretty ann Int32 where pretty = unsafeTextWithoutNewLines . show
+export Pretty ann Int64 where pretty = unsafeTextWithoutNewLines . show
 
 export
-(Pretty a, Pretty b) => Pretty (a, b) where
+(Pretty ann a, Pretty ann b) => Pretty ann (a, b) where
   pretty (x, y) = tupled [pretty x, pretty y]
 
 export
-Pretty a => Pretty (Maybe a) where
+Pretty ann a => Pretty ann (Maybe a) where
   pretty = maybe neutral pretty
 
 ||| Combines text nodes so they can be rendered more efficiently.

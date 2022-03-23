@@ -50,7 +50,7 @@ Show DotReason where
   show UnderAppliedCon = "Under-applied constructor"
 
 export
-Pretty DotReason where
+Pretty ann DotReason where
   pretty NonLinearVar = reflow "Non linear pattern variable"
   pretty VarApplied = reflow "Variable applied to arguments"
   pretty NotConstructor = reflow "Not a constructor application or primitive"

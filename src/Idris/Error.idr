@@ -33,7 +33,7 @@ keyword = annotate (Syntax Keyword)
 pShowMN : {vars : _} -> Term vars -> Env t vars -> Doc IdrisAnn -> Doc IdrisAnn
 pShowMN t env acc = case t of
   Local fc _ idx p => case dropAllNS (nameAt p) of
-      MN _ _ => acc <++> parens ("implicitly bound at" <++> pretty (getBinderLoc p env))
+      MN _ _ => acc <++> parens ("implicitly bound at" <++> pretty {ann = IdrisAnn} (getBinderLoc p env))
       _ => acc
   _ => acc
 
@@ -45,7 +45,7 @@ pshow env tm
     = do defs <- get Ctxt
          ntm <- normaliseHoles defs env tm
          itm <- resugar env ntm
-         pure (pShowMN ntm env $ reAnnotate Syntax $ prettyTerm itm)
+         pure (pShowMN ntm env $ prettyBy Syntax itm)
 
 pshowNoNorm : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
@@ -54,7 +54,7 @@ pshowNoNorm : {vars : _} ->
 pshowNoNorm env tm
     = do defs <- get Ctxt
          itm <- resugar env tm
-         pure (pShowMN tm env $ reAnnotate Syntax $ prettyTerm itm)
+         pure (pShowMN tm env $ prettyBy Syntax itm)
 
 ploc : {auto o : Ref ROpts REPLOpts} ->
        FC -> Core (Doc IdrisAnn)
@@ -170,7 +170,7 @@ pwarning (ShadowingGlobalDefs fc ns)
 pwarning (Deprecated s fcAndName)
     = do docs <- traverseOpt (\(fc, name) => getDocsForName fc name justUserDoc) fcAndName
          pure . vsep $ catMaybes [ Just $ pretty "Deprecation warning:" <++> pretty s
-                                 , map (const UserDocString) <$> docs
+                                 , reAnnotate (const Pretty.UserDocString) <$> docs
                                  ]
 pwarning (GenericWarn s)
     = pure $ pretty s

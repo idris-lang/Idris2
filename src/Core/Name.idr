@@ -257,7 +257,7 @@ covering
   showPrec d (Resolved i) = showCon d "Resolved" $ showArg i
 
 export
-Pretty UserName where
+Pretty ann UserName where
   pretty (Basic n) = pretty n
   pretty (Field n) = "." <+> pretty n
   pretty Underscore = "_"
@@ -279,7 +279,7 @@ mutual
 
   export
   covering
-  Pretty Name where
+  Pretty ann Name where
     pretty (NS ns n) = pretty ns <+> dot <+> prettyOp n
     pretty (UN x) = pretty x
     pretty (MN x y) = braces (pretty x <+> colon <+> pretty y)

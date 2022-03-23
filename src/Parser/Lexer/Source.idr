@@ -85,7 +85,7 @@ Show Token where
   show (Unrecognised x) = "Unrecognised " ++ x
 
 export
-Pretty Token where
+Pretty ann Token where
   -- Literals
   pretty (CharLit x) = pretty "character" <++> squotes (pretty x)
   pretty (DoubleLit x) = pretty "double" <++> pretty x

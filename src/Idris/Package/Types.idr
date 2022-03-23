@@ -21,7 +21,7 @@ Show PkgVersion where
   show (MkPkgVersion vs) = showSep "." (map show (forget vs))
 
 export
-Pretty PkgVersion where
+Pretty ann PkgVersion where
   pretty = pretty . show
 
 export
@@ -62,7 +62,7 @@ Show PkgVersionBounds where
       upperBounds = p.upperBound <&> \v => (if p.upperInclusive then "<= " else "< ") ++ show v
 
 export
-Pretty PkgVersionBounds where
+Pretty ann PkgVersionBounds where
   pretty (MkPkgVersionBounds lowerBound lowerInclusive upperBound upperInclusive)
       = concatWith (\b1,b2 => b1 <++> pretty "&&" <++> b2) $
           catMaybes [ bounds True lowerInclusive lowerBound
@@ -145,7 +145,7 @@ Show Depends where
   show p = p.pkgname ++ " " ++ show p.pkgbounds
 
 export
-Pretty Depends where
+Pretty ann Depends where
   pretty = pretty . show
 
 ------------------------------------------------------------------------------
@@ -218,7 +218,7 @@ Show PkgDesc where
              maybe "" (\m => "Postclean: " ++ snd m ++ "\n") (postclean pkg)
 
 export
-Pretty PkgDesc where
+Pretty ann PkgDesc where
   pretty desc = vcat
     [ "package" <++> pretty desc.name
     , verField "version"     desc.version
@@ -290,7 +290,7 @@ Pretty PkgDesc where
     strField : String -> Maybe String -> Doc ann
     strField nm = field nm . map (pretty . show)
 
-    seqField : Pretty a => String -> List a -> Doc ann
+    seqField : Pretty ann a => String -> List a -> Doc ann
     seqField nm [] = hsep [ pretty "--", pretty nm, equals ]
     seqField nm xs = pretty nm
                 <++> equals

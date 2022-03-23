@@ -18,6 +18,7 @@ import Core.UnifyState
 
 import Idris.REPL.Opts
 import Idris.Syntax
+import Idris.Pretty.Annotations
 
 import TTImp.BindImplicits
 import TTImp.Elab
@@ -806,7 +807,7 @@ mkRunTime fc n
            logC "compile.casetree" 5 $ pure $ unlines
              [ show cov ++ ":"
              , "Runtime tree for " ++ show (fullname gdef) ++ ":"
-             , show (indent 2 $ pretty {ann = ()} !(toFullNames tree_rt))
+             , show (indent 2 $ pretty !(toFullNames tree_rt))
              ]
            log "compile.casetree" 10 $ show tree_rt
            log "compile.casetree.measure" 15 $ show (measure tree_rt)

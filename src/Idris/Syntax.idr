@@ -541,7 +541,7 @@ Show REPLEval where
   show Scheme = "scheme"
 
 export
-Pretty REPLEval where
+Pretty ann REPLEval where
   pretty EvalTC = pretty "typecheck"
   pretty NormaliseAll = pretty "normalise"
   pretty Execute = pretty "execute"
@@ -570,7 +570,7 @@ Show REPLOpt where
   show (EvalTiming p) = "evaltiming = " ++ show p
 
 export
-Pretty REPLOpt where
+Pretty ann REPLOpt where
   pretty (ShowImplicits impl) = pretty "showimplicits" <++> equals <++> pretty impl
   pretty (ShowNamespace ns) = pretty "shownamespace" <++> equals <++> pretty ns
   pretty (ShowTypes typs) = pretty "showtypes" <++> equals <++> pretty typs

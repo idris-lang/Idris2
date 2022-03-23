@@ -313,12 +313,12 @@ displayIDEResult outf i  (REPL RequestedHelp  )
 displayIDEResult outf i  (REPL $ Evaluated x Nothing)
   = printIDEResultWithHighlight outf i
   $ mapFst AString
-   !(renderWithDecorations syntaxToProperties $ prettyTerm x)
+   !(renderWithDecorations syntaxToProperties $ pretty x)
 displayIDEResult outf i  (REPL $ Evaluated x (Just y))
   = printIDEResultWithHighlight outf i
   $ mapFst AString
    !(renderWithDecorations syntaxToProperties
-     $ prettyTerm x <++> ":" <++> prettyTerm y)
+     $ pretty x <++> ":" <++> pretty y)
 displayIDEResult outf i  (REPL $ Printed xs)
   = printIDEResultWithHighlight outf i
   $ mapFst AString
@@ -331,7 +331,7 @@ displayIDEResult outf i  (REPL $ TermChecked x y)
   = printIDEResultWithHighlight outf i
   $ mapFst AString
    !(renderWithDecorations syntaxToProperties
-     $ prettyTerm x <++> ":" <++> prettyTerm y)
+     $ pretty x <++> ":" <++> pretty y)
 displayIDEResult outf i  (REPL $ FileLoaded x)
   = printIDEResult outf i $ AUnit
 displayIDEResult outf i  (REPL $ ErrorLoadingFile x err)

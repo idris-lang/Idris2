@@ -253,7 +253,7 @@ Show LogLevel where
     _  => fastConcat (intersperse "." ps) ++ ":" ++ show n
 
 export
-Pretty LogLevel where
+Pretty ann LogLevel where
 
   pretty = pretty . show
 

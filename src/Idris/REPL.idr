@@ -136,10 +136,6 @@ prettyInfo (n, idx, d)
       let scinfo = \s => pretty (fnCall s) <+> ":" <++> pretty (show $ fnArgs s) in
       enum scinfo sz
 
-
-prettyTerm : IPTerm -> Doc IdrisAnn
-prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
-
 getEnvTerm : {vars : _} ->
              List Name -> Env Term vars -> Term vars ->
              (vars' ** (Env Term vars', Term vars'))
@@ -450,7 +446,7 @@ processEdit (ExprSearch upd line name hints)
                      let itm'  = ifThenElse brack (addBracket replFC itm) itm
                      if upd
                         then updateFile (proofSearch name (show itm') (integerToNat (cast (line - 1))))
-                        else pure $ DisplayEdit (prettyTerm itm')
+                        else pure $ DisplayEdit (prettyBy Syntax itm')
               [(n, nidx, PMDef pi [] (STerm _ tm) _ _)] =>
                   case holeInfo pi of
                        NotHole => pure $ EditError "Not a searchable hole"
@@ -460,7 +456,7 @@ processEdit (ExprSearch upd line name hints)
                              let itm'= ifThenElse brack (addBracket replFC itm) itm
                              if upd
                                 then updateFile (proofSearch name (show itm') (integerToNat (cast (line - 1))))
-                                else pure $ DisplayEdit (prettyTerm itm')
+                                else pure $ DisplayEdit (prettyBy Syntax itm')
               [] => pure $ EditError $ "Unknown name" <++> pretty name
               _ => pure $ EditError "Not a searchable hole"
 processEdit ExprSearchNext
@@ -474,7 +470,7 @@ processEdit ExprSearchNext
          let tm' = dropLams locs restm
          itm <- pterm $ map defaultKindedName tm'
          let itm' = ifThenElse brack (addBracket replFC itm) itm
-         pure $ DisplayEdit (prettyTerm itm')
+         pure $ DisplayEdit (prettyBy Syntax itm')
 
 processEdit (GenerateDef upd line name rej)
     = do defs <- get Ctxt
@@ -1093,11 +1089,11 @@ mutual
          {auto m : Ref MD Metadata} ->
          {auto o : Ref ROpts REPLOpts} -> REPLResult -> Core ()
   displayResult (REPLError err) = printResult err
-  displayResult (Evaluated x Nothing) = printResult $ prettyTerm x
-  displayResult (Evaluated x (Just y)) = printResult (prettyTerm x <++> colon <++> prettyTerm y)
+  displayResult (Evaluated x Nothing) = printResult $ prettyBy Syntax x
+  displayResult (Evaluated x (Just y)) = printResult (prettyBy Syntax x <++> colon <++> prettyBy Syntax y)
   displayResult (Printed xs) = printResult xs
   displayResult (PrintedDoc xs) = printDocResult xs
-  displayResult (TermChecked x y) = printResult (prettyTerm x <++> colon <++> prettyTerm y)
+  displayResult (TermChecked x y) = printResult (prettyBy Syntax x <++> colon <++> prettyBy Syntax y)
   displayResult (FileLoaded x) = printResult (reflow "Loaded file" <++> pretty x)
   displayResult (ModuleLoaded x) = printResult (reflow "Imported module" <++> pretty x)
   displayResult (ErrorLoadingModule x err) = printResult (reflow "Error loading module" <++> pretty x <+> colon <++> !(perror err))
@@ -1107,7 +1103,7 @@ mutual
   displayResult (CurrentDirectory dir) = printResult (reflow "Current working directory is" <++> dquotes (pretty dir))
   displayResult CompilationFailed = printResult (reflow "Compilation failed")
   displayResult (Compiled f) = printResult (pretty "File" <++> pretty f <++> pretty "written")
-  displayResult (ProofFound x) = printResult (prettyTerm x)
+  displayResult (ProofFound x) = printResult (prettyBy Syntax x)
   displayResult (Missed cases) = printResult $ vsep (handleMissing <$> cases)
   displayResult (CheckedTotal xs) = printResult (vsep (map (\(fn, tot) => pretty fn <++> pretty "is" <++> pretty tot) xs))
   displayResult (LogLevelSet Nothing) = printResult (reflow "Logging turned off")

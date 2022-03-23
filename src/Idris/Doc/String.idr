@@ -78,9 +78,6 @@ addDocStringNS ns n_in doc
          update Syn { defDocstrings  $= addName n' doc,
                       saveDocstrings $= insert n' () }
 
-prettyTerm : IPTerm -> Doc IdrisDocAnn
-prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
-
 prettyName : Name -> Doc IdrisDocAnn
 prettyName n =
   case userNameRoot n of
@@ -112,7 +109,7 @@ getImplDocs keep
               True <- keep ty
                 | False => pure []
               ty <- resugar [] ty
-              pure [annotate (Decl impl) $ prettyTerm ty]
+              pure [annotate (Decl impl) $ prettyBy Syntax ty]
          pure $ case concat docss of
            [] => []
            [doc] => [header "Hint" <++> annotate Declarations doc]
@@ -154,9 +151,9 @@ getDocsForPrimitive : {auto c : Ref Ctxt Defs} ->
                       Constant -> Core (Doc IdrisDocAnn)
 getDocsForPrimitive constant = do
     let (_, type) = checkPrim EmptyFC constant
-    let typeString = prettyTerm (PPrimVal EmptyFC constant)
+    let typeString = pretty constant
                      <++> colon
-                     <++> prettyTerm !(resugar [] type)
+                     <++> prettyBy Syntax !(resugar [] type)
     hintsDoc <- getHintsForPrimitive constant
     pure $ vcat $ typeString
                :: indent 2 (primDoc constant)
@@ -279,7 +276,7 @@ getDocsForName fc n config
                   | Nothing => pure Empty
              syn <- get Syn
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
-             let conWithTypeDoc = annotate (Decl con) (hsep [dCon con (prettyName con), colon, prettyTerm ty])
+             let conWithTypeDoc = annotate (Decl con) (hsep [dCon con (prettyName con), colon, prettyBy Syntax ty])
              case lookupName con (defDocstrings syn) of
                [(n, "")] => pure conWithTypeDoc
                [(n, str)] => pure $ vcat
@@ -297,7 +294,7 @@ getDocsForName fc n config
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure []
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
-             pure [annotate (Decl n) $ prettyTerm ty]
+             pure [annotate (Decl n) $ prettyBy Syntax ty]
 
     getMethDoc : Method -> Core (List (Doc IdrisDocAnn))
     getMethDoc meth
@@ -372,7 +369,7 @@ getDocsForName fc n config
                 | Nothing => pure Empty
            ty <- resugar [] =<< normaliseHoles defs [] (type def)
            let prettyName = prettyName nm
-           let projDecl = annotate (Decl nm) $ hsep [ fun nm prettyName, colon, prettyTerm ty ]
+           let projDecl = annotate (Decl nm) $ hsep [ fun nm prettyName, colon, prettyBy Syntax ty ]
            case lookupName nm (defDocstrings syn) of
                 [(_, "")] => pure projDecl
                 [(_, str)] =>
@@ -450,7 +447,7 @@ getDocsForName fc n config
              let deprecated = if Context.Deprecate `elem` def.flags
                                  then annotate Deprecation "=DEPRECATED=" <+> line else emptyDoc
              let docDecl = deprecated
-                     <+> annotate (Decl n) (hsep [prig <+> nm, colon, prettyTerm ty])
+                     <+> annotate (Decl n) (hsep [prig <+> nm, colon, prettyBy Syntax ty])
 
              -- Finally add the user-provided docstring
              let docText = let docs = reflowDoc str in
@@ -594,7 +591,7 @@ summarise n -- n is fully qualified
              | _ => pure ""
          ty <- normaliseHoles defs [] (type def)
          pure $ showCategory Syntax def (prettyName n)
-              <++> colon <++> hang 0 (prettyTerm !(resugar [] ty))
+              <++> colon <++> hang 0 (prettyBy Syntax !(resugar [] ty))
 
 -- Display all the exported names in the given namespace
 export

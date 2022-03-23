@@ -60,7 +60,7 @@ Show StopReason where
   show (ComposeNotClosing start end) = "ComposeNotClosing " ++ show start ++ " " ++ show end
 
 export
-Pretty StopReason where
+Pretty ann StopReason where
   pretty EndInput = pretty "EndInput"
   pretty NoRuleApply = pretty "NoRuleApply"
   pretty (ComposeNotClosing start end) = "ComposeNotClosing" <++> pretty start <++> pretty end

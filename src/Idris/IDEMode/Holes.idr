@@ -42,7 +42,7 @@ prettyHoles holes = case holes of
   where
 
    prettyHole : Holes.Data -> Doc IdrisSyntax
-   prettyHole x = pretty x.name <++> colon <++> prettyTerm x.type
+   prettyHole x = pretty x.name <++> colon <++> pretty x.type
 
 
 ||| If input is a hole, return number of locals in scope at binding
@@ -185,13 +185,13 @@ prettyHole : {vars : _} ->
 prettyHole defs env fn args ty
   = do hdata <- holeData defs env fn args ty
        case hdata.context of
-            [] => pure $ pretty hdata.name <++> colon <++> prettyTerm hdata.type
+            [] => pure $ pretty hdata.name <++> colon <++> pretty hdata.type
             _  => pure $ (indent 1 $ vsep $
                             map (\premise => prettyRigHole premise.multiplicity
-                                    <+> prettyImpBracket premise.isImplicit (prettyName premise.name <++> colon <++> prettyTerm premise.type))
+                                    <+> prettyImpBracket premise.isImplicit (prettyName premise.name <++> colon <++> pretty premise.type))
                                     hdata.context) <+> hardline
                     <+> (pretty $ replicate 30 '-') <+> hardline
-                    <+> pretty (nameRoot $ hdata.name) <++> colon <++> prettyTerm hdata.type
+                    <+> pretty (nameRoot $ hdata.name) <++> colon <++> pretty hdata.type
 
 
 premiseIDE : Holes.Premise -> HolePremise
