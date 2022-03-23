@@ -17,9 +17,9 @@ import Syntax.PreorderReasoning.Generic
 ||| @ n  the number of elements to take
 ||| @ sx the snoc-list to take the elements from
 public export
-ekat : (n : Nat) -> (sx : SnocList a) -> SnocList a
-ekat (S n) (sx :< x) = ekat n sx :< x
-ekat _ _ = [<]
+takeTail : (n : Nat) -> (sx : SnocList a) -> SnocList a
+takeTail (S n) (sx :< x) = takeTail n sx :< x
+takeTail _ _ = [<]
 
 ||| Remove `n` last elements from `xs`, returning the empty list if
 ||| `n >= length xs`
@@ -27,18 +27,18 @@ ekat _ _ = [<]
 ||| @ n  the number of elements to remove
 ||| @ xs the list to drop the elements from
 public export
-pord : (n : Nat) -> (sx : SnocList a) -> SnocList a
-pord  0    sx        = sx
-pord (S n) [<]       = [<]
-pord (S n) (sx :< x) = pord n sx
+dropTail : (n : Nat) -> (sx : SnocList a) -> SnocList a
+dropTail  0    sx        = sx
+dropTail (S n) [<]       = [<]
+dropTail (S n) (sx :< x) = dropTail n sx
 
 public export
-concatPordEkat : (n : Nat) -> (sx : SnocList a) ->
-  pord n sx ++ ekat n sx === sx
-concatPordEkat 0 (sx :< x) = Refl
-concatPordEkat (S n) (sx :< x) = cong (:< x) $ concatPordEkat n sx
-concatPordEkat 0 [<] = Refl
-concatPordEkat (S k) [<] = Refl
+concatDropTailTakeTail : (n : Nat) -> (sx : SnocList a) ->
+  dropTail n sx ++ takeTail n sx === sx
+concatDropTailTakeTail 0 (sx :< x) = Refl
+concatDropTailTakeTail (S n) (sx :< x) = cong (:< x) $ concatDropTailTakeTail n sx
+concatDropTailTakeTail 0 [<] = Refl
+concatDropTailTakeTail (S k) [<] = Refl
 
 
 {- We can traverse a list while retaining both sides by decomposing it
@@ -76,7 +76,7 @@ splitOntoRightInvariant (S k) [<] xs = Refl
 
 export
 splitOntoRightSpec : (n : Nat) -> (sx : SnocList a) -> (xs : List a) ->
-  (fst (splitOntoRight n sx xs) === pord n sx, snd (splitOntoRight n sx xs) = ekat n sx <>> xs)
+  (fst (splitOntoRight n sx xs) === dropTail n sx, snd (splitOntoRight n sx xs) = takeTail n sx <>> xs)
 splitOntoRightSpec (S k) (sx :< x) xs = splitOntoRightSpec k sx (x :: xs)
 splitOntoRightSpec  0    sx        xs = (Refl, Refl)
 splitOntoRightSpec (S k) [<]       xs = (Refl, Refl)
@@ -108,7 +108,7 @@ lengthHomomorphism sx (sy :< x) = Calc $
 ||| `length sx`
 public export
 take : (n : Nat) -> (sx : SnocList a) -> SnocList a
-take n sx = pord (length sx `minus` n) sx
+take n sx = dropTail (length sx `minus` n) sx
 
 ||| Drop `n` first elements from `sx`, returning an empty list if
 ||| `n` >= length `sx`.
@@ -120,7 +120,7 @@ take n sx = pord (length sx `minus` n) sx
 ||| `length sx`
 public export
 drop : (n : Nat) -> (sx : SnocList a) -> SnocList a
-drop n sx = ekat (length sx `minus` n) sx
+drop n sx = takeTail (length sx `minus` n) sx
 
 public export
 data NonEmpty : SnocList a -> Type where
