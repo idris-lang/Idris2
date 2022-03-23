@@ -29,7 +29,7 @@ runReaderT s action = runReaderT' action s
 --          Reader
 --------------------------------------------------------------------------------
 
-||| A monad that can access an environment. 
+||| A monad that can access an environment.
 |||
 ||| This is `ReaderT` applied to `Identity`.
 public export
