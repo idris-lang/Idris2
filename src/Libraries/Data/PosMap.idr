@@ -594,7 +594,7 @@ inRange low high t = matches (takeUntil (greater high) t)
 ||| Finds the values matching the exact interval input
 export
 exactRange : MeasureRM a => FilePos -> FilePos -> PosMap a -> List a
-exactRange low high t = flip mapMaybe (inRange low high t) $ \ a =>
+exactRange low high t = flip List.mapMaybe (inRange low high t) $ \ a =>
   do let (MkRange rng _) = measureRM a
      guard (rng == (low, high))
      pure a

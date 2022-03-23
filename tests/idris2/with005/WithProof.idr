@@ -2,6 +2,8 @@ module WithProof
 
 %default total
 
+%hide List.filter
+
 filter : (p : a -> Bool) -> (xs : List a) -> List a
 filter p [] = []
 filter p (x :: xs) with (p x)

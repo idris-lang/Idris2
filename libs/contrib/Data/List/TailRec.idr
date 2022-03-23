@@ -1,7 +1,7 @@
 ||| Contains:
 |||
 ||| 1. Tail recursive versions of the list processing functions from
-|||    Data.List.
+|||    List.
 |||
 ||| 2. Extensional equality proofs that these variants are
 |||    (extensionally) equivalent to their non-tail-recursive
@@ -37,7 +37,7 @@ lengthAccSucc [] _ = Refl
 lengthAccSucc (_::xs) n = rewrite lengthAccSucc xs (S n) in cong S Refl
 
 export
-length_ext : (xs : List a) -> List.length xs = Data.List.TailRec.length xs
+length_ext : (xs : List a) -> List.length xs = List.TailRec.length xs
 length_ext [] = Refl
 length_ext (_::xs) = rewrite length_ext xs in sym $ lengthAccSucc xs Z
 
@@ -53,15 +53,15 @@ take n xs = take_aux n xs []
 export
 take_ext :
   (n : Nat) -> (xs : List a) ->
-     Data.List.take n xs = Data.List.TailRec.take n xs
+     List.take n xs = List.TailRec.take n xs
 take_ext n xs = Calc $
-  |~ Data.List.take n xs
-  ~~ reverse [] ++ (Data.List.take n xs)  ...( Refl )
-  ~~ reverseOnto (Data.List.take n xs) [] ...( sym (revOnto (Data.List.take n xs) []) )
+  |~ List.take n xs
+  ~~ reverse [] ++ (List.take n xs)  ...( Refl )
+  ~~ reverseOnto (List.take n xs) [] ...( sym (revOnto (List.take n xs) []) )
   ~~ take_aux n xs []                     ...( sym (lemma n xs []) )
   where
     lemma : (n : Nat) -> (xs, acc : List a) ->
-            take_aux n xs acc =  reverseOnto (Data.List.take n xs) acc
+            take_aux n xs acc =  reverseOnto (List.take n xs) acc
     lemma Z     xs      acc = Refl
     lemma (S n) []      acc = Refl
     lemma (S n) (x::xs) acc = lemma n xs (x :: acc)
@@ -71,7 +71,7 @@ span_aux : (a -> Bool) -> List a -> List a -> (List a, List a)
 span_aux p []      acc = (reverseOnto [] acc, [])
 span_aux p (x::xs) acc =
   if p x then
-    Data.List.TailRec.span_aux p xs (x :: acc)
+    List.TailRec.span_aux p xs (x :: acc)
   else
     (reverseOnto [] acc, x::xs)
 
@@ -83,26 +83,26 @@ coe : (f : (i : a) -> Type) -> i = i' -> f i -> f i'
 coe f Refl x = x
 
 span_aux_ext : (p : a -> Bool) -> (xs, acc : List a) ->
-  (reverseOnto (fst $ Data.List.span p xs) acc, snd $ Data.List.span p xs)
+  (reverseOnto (fst $ List.span p xs) acc, snd $ List.span p xs)
   =
   span_aux p xs acc
 span_aux_ext p []      acc = Refl
 -- This is disgusting. Please teach me a better way.
-span_aux_ext p (x::xs) acc with (@@(p x), @@(Data.List.span p xs))
+span_aux_ext p (x::xs) acc with (@@(p x), @@(List.span p xs))
  span_aux_ext p (x::xs) acc | ((True ** px_tru), ((pre, rest)**dl_pf)) =
    rewrite px_tru in
    rewrite dl_pf in
    let u = span_aux_ext p xs (x::acc) in
    coe (\u => (reverseOnto (x :: fst u) acc, snd u) =
-               Data.List.TailRec.span_aux p xs (x :: acc)) dl_pf u
+               List.TailRec.span_aux p xs (x :: acc)) dl_pf u
  span_aux_ext p (x::xs) acc | ((False**px_fls), ((pre,rest)**dl_pf)) =
    rewrite px_fls in
    Refl
 
 export
 span_ext : (p : a -> Bool) -> (xs : List a) ->
-  Data.List.span p xs = Data.List.TailRec.span p xs
-span_ext p xs with (@@(Data.List.span p xs))
+  List.span p xs = List.TailRec.span p xs
+span_ext p xs with (@@(List.span p xs))
   span_ext p xs |  ((pre, rest) ** pf) =
     rewrite pf in
     let u = span_aux_ext p xs [] in
@@ -110,16 +110,16 @@ span_ext p xs with (@@(Data.List.span p xs))
 
 export
 break : (a -> Bool) -> List a -> (List a, List a)
-break p xs = Data.List.TailRec.span (not . p) xs
+break p xs = List.TailRec.span (not . p) xs
 
 export
 break_ext : (p : a -> Bool) -> (xs : List a) ->
-  Data.List.break p xs = Data.List.TailRec.break p xs
+  List.break p xs = List.TailRec.break p xs
 break_ext p xs = span_ext (not . p) xs
 
 splitOnto : List (List a) -> (a -> Bool) -> List a -> List1 (List a)
 splitOnto acc p xs =
-  case Data.List.break p xs of
+  case List.break p xs of
     (chunk, []       ) => reverseOnto (chunk ::: []) acc
     (chunk, (c::rest)) => splitOnto (chunk::acc) p $ assert_smaller xs rest
 
@@ -128,9 +128,9 @@ split : (a -> Bool) -> List a -> List1 (List a)
 split p xs = splitOnto [] p xs
 
 splitOnto_ext : (acc : List (List a)) -> (p : a -> Bool) -> (xs : List a) ->
-              reverseOnto (Data.List.split p xs) acc
-              = Data.List.TailRec.splitOnto acc p xs
-splitOnto_ext  acc p xs with (@@(Data.List.break p xs))
+              reverseOnto (List.split p xs) acc
+              = List.TailRec.splitOnto acc p xs
+splitOnto_ext  acc p xs with (@@(List.break p xs))
  splitOnto_ext acc p xs | ((chunk,  []    )**pf) =
    rewrite pf in
    Refl
@@ -141,7 +141,7 @@ splitOnto_ext  acc p xs with (@@(Data.List.break p xs))
 
 export
 split_ext : (p : a -> Bool) -> (xs : List a) ->
-  Data.List.split p xs = Data.List.TailRec.split p xs
+  List.split p xs = List.TailRec.split p xs
 split_ext p xs = splitOnto_ext [] p xs
 
 
@@ -155,11 +155,11 @@ splitAt : (n : Nat) -> (xs : List a) -> (List a, List a)
 splitAt n xs = splitAtOnto [] n xs
 
 splitAtOnto_ext : (acc : List a) -> (n : Nat) -> (xs : List a) ->
-  (reverseOnto (fst $ Data.List.splitAt n xs) acc, snd $ Data.List.splitAt n xs)
+  (reverseOnto (fst $ List.splitAt n xs) acc, snd $ List.splitAt n xs)
   = splitAtOnto acc n xs
 splitAtOnto_ext  acc Z     xs      = Refl
 splitAtOnto_ext  acc (S n) []      = Refl
-splitAtOnto_ext  acc (S n) (x::xs) with (@@(Data.List.splitAt n xs))
+splitAtOnto_ext  acc (S n) (x::xs) with (@@(List.splitAt n xs))
  splitAtOnto_ext acc (S n) (x::xs) | ((tk, dr)**pf) =
    rewrite pf in
    let u = splitAtOnto_ext (x::acc) n xs in
@@ -168,9 +168,9 @@ splitAtOnto_ext  acc (S n) (x::xs) with (@@(Data.List.splitAt n xs))
 
 export
 splitAt_ext : (n : Nat) -> (xs : List a) ->
-  Data.List.splitAt n xs =
-  Data.List.TailRec.splitAt n xs
-splitAt_ext  n xs with (@@(Data.List.splitAt n xs))
+  List.splitAt n xs =
+  List.TailRec.splitAt n xs
+splitAt_ext  n xs with (@@(List.splitAt n xs))
  splitAt_ext n xs | ((tk, dr)**pf) =
    rewrite pf in
    rewrite sym $ splitAtOnto_ext [] n xs in
@@ -190,11 +190,11 @@ partition : (a -> Bool) -> List a -> (List a, List a)
 partition p xs = partitionOnto [] [] p xs
 
 partitionOnto_ext : (lfts, rgts : List a) -> (p : a -> Bool) -> (xs : List a) ->
-  (reverseOnto (fst $ Data.List.partition p xs) lfts
-  ,reverseOnto (snd $ Data.List.partition p xs) rgts)
-  = Data.List.TailRec.partitionOnto lfts rgts p xs
+  (reverseOnto (fst $ List.partition p xs) lfts
+  ,reverseOnto (snd $ List.partition p xs) rgts)
+  = List.TailRec.partitionOnto lfts rgts p xs
 partitionOnto_ext  lfts rgts p [] = Refl
-partitionOnto_ext  lfts rgts p (x::xs) with (@@(p x), @@(Data.List.partition p xs))
+partitionOnto_ext  lfts rgts p (x::xs) with (@@(p x), @@(List.partition p xs))
  partitionOnto_ext lfts rgts p (x::xs) | ((True **px_tru), ((dl_l, dl_r)**dl_pf))
    = rewrite px_tru in
      rewrite dl_pf  in
@@ -233,8 +233,8 @@ intersperse sep (y::ys) = y :: mergeReplicate_aux sep ys []
 
 export
 intersperse_ext : (sep : a) -> (xs : List a) ->
-              Data.List.intersperse sep xs =
-              Data.List.TailRec.intersperse sep xs
+              List.intersperse sep xs =
+              List.TailRec.intersperse sep xs
 intersperse_ext sep [] = Refl
 intersperse_ext sep (y::ys) = cong (y::) (sym $ mergeReplicate_ext sep ys [])
 
@@ -250,7 +250,7 @@ mapMaybe : (a -> Maybe b) -> List a -> List b
 mapMaybe f xs = mapMaybeOnto [] f xs
 
 mapMaybeOnto_ext : (acc : List b) -> (f : a -> Maybe b) -> (xs : List a) ->
-  reverseOnto (Data.List.mapMaybe f xs) acc
+  reverseOnto (List.mapMaybe f xs) acc
   =
   mapMaybeOnto acc f xs
 mapMaybeOnto_ext  acc f []                = Refl
@@ -260,7 +260,7 @@ mapMaybeOnto_ext  acc f (x::xs) with (f x)
 
 export
 mapMaybe_ext : (f : a -> Maybe b) -> (xs : List a) ->
-  Data.List.mapMaybe f xs = Data.List.TailRec.mapMaybe f xs
+  List.mapMaybe f xs = List.TailRec.mapMaybe f xs
 mapMaybe_ext f xs = mapMaybeOnto_ext [] f xs
 
 export
@@ -269,12 +269,12 @@ sorted [ ] = True
 sorted [x] = True
 sorted  (x :: xs@(y :: ys)) = case (x <= y) of
                                 False => False
-                                True  => Data.List.TailRec.sorted xs
+                                True  => List.TailRec.sorted xs
 
 export
 covering
 sorted_ext : Ord a => (xs : List a) ->
-  Data.List.sorted xs = Data.List.TailRec.sorted xs
+  List.sorted xs = List.TailRec.sorted xs
 sorted_ext []  = Refl
 sorted_ext [x] = Refl
 sorted_ext  (x :: y :: ys) with (x <= y)
@@ -317,18 +317,18 @@ mergeBy order left right = mergeByOnto [] order left right
 export
 covering
 mergeBy_ext : (order : a -> a -> Ordering) -> (left, right : List a) ->
-  Data.List.mergeBy order left right =
-  Data.List.TailRec.mergeBy order left right
+  List.mergeBy order left right =
+  List.TailRec.mergeBy order left right
 mergeBy_ext order left right = mergeByOnto_ext [] order left right
 
 export
 merge : Ord a => List a -> List a -> List a
-merge = Data.List.TailRec.mergeBy compare
+merge = List.TailRec.mergeBy compare
 
 export
 covering
 merge_ext : Ord a => (left, right : List a) ->
-  Data.List.merge left right = Data.List.TailRec.merge left right
+  List.merge left right = List.TailRec.merge left right
 merge_ext left right = mergeBy_ext compare left right
 
 
@@ -346,30 +346,30 @@ sortBy : (cmp : a -> a -> Ordering) -> (xs : List a) -> List a
 sortBy cmp []  = []
 sortBy cmp [x] = [x]
 sortBy cmp zs = let (xs, ys) = sortBy_split zs in
-    Data.List.TailRec.mergeBy cmp
-          (Data.List.TailRec.sortBy cmp (assert_smaller zs xs))
-          (Data.List.TailRec.sortBy cmp (assert_smaller zs ys))
+    List.TailRec.mergeBy cmp
+          (List.TailRec.sortBy cmp (assert_smaller zs xs))
+          (List.TailRec.sortBy cmp (assert_smaller zs ys))
 
 
  {- Can't really finish this proof because Data.List doesn't export the definition of sortBy. -}
  {-
 export
 sortBy_ext : (cmp : a -> a -> Ordering) -> (xs : List a) ->
-  Data.List.sortBy cmp xs = Data.List.TailRec.sortBy cmp xs
+  List.sortBy cmp xs = List.TailRec.sortBy cmp xs
 sortBy_ext  cmp []  = Refl
 sortBy_ext  cmp [x] = Refl
 sortBy_ext  cmp zs'@(z::zs) =
   Calc $
-  |~ Data.List.sortBy cmp (z::zs)
+  |~ List.sortBy cmp (z::zs)
   ~~ (let (xs, ys) = sortBy_split zs' in
-     Data.List.mergeBy cmp
-     (Data.List.sortBy cmp xs)
-     (Data.List.sortBy cmp ys))
+     List.mergeBy cmp
+     (List.sortBy cmp xs)
+     (List.sortBy cmp ys))
       ...( ?help0 )
   ~~
   let (xs, ys) = sortBy_split (z::zs) in
-  Data.List.TailRec.mergeBy cmp
-    (Data.List.TailRec.sortBy cmp xs)
-    (Data.List.TailRec.sortBy cmp ys)
+  List.TailRec.mergeBy cmp
+    (List.TailRec.sortBy cmp xs)
+    (List.TailRec.sortBy cmp ys)
     ...( ?help1 )
 -}

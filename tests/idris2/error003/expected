@@ -28,6 +28,20 @@ Error:12:18--12:19
  12 | wrong x = length x
                        ^
 
+If Prelude.SnocList.length: When unifying:
+    Nat
+and:
+    SnocList ?a
+Mismatch between: Nat and SnocList ?a.
+
+Error:12:18--12:19
+ 08 | length [] = Z
+ 09 | length (x :: xs) = S (length xs)
+ 10 | 
+ 11 | wrong : Nat -> Nat
+ 12 | wrong x = length x
+                       ^
+
 If Prelude.String.length: When unifying:
     Nat
 and:

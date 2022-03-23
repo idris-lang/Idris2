@@ -142,16 +142,6 @@ dropWhile : (p : a -> Bool) -> (xs : List a) -> List a
 dropWhile p []      = []
 dropWhile p (x::xs) = if p x then dropWhile p xs else x::xs
 
-||| Applied to a predicate and a list, returns the list of those elements that
-||| satisfy the predicate.
-public export
-filter : (p : a -> Bool) -> List a -> List a
-filter p [] = []
-filter p (x :: xs)
-   = if p x
-        then x :: filter p xs
-        else filter p xs
-
 ||| Find the first element of the list that satisfies the predicate.
 public export
 find : (p : a -> Bool) -> (xs : List a) -> Maybe a
@@ -697,16 +687,6 @@ export
 intercalate : (sep : List a) -> (xss : List (List a)) -> List a
 intercalate sep xss = concat $ intersperse sep xss
 
-||| Apply a partial function to the elements of a list, keeping the ones at which
-||| it is defined.
-public export
-mapMaybe : (a -> Maybe b) -> List a -> List b
-mapMaybe f []      = []
-mapMaybe f (x::xs) =
-  case f x of
-    Nothing => mapMaybe f xs
-    Just j  => j :: mapMaybe f xs
-
 ||| Extract all of the values contained in a List of Maybes
 public export
 catMaybes : List (Maybe a) -> List a
@@ -1046,3 +1026,36 @@ export
 foldlAppend : (f : acc -> a -> acc) -> (init : acc) -> (xs : List a) -> (ys : List a) -> foldl f init (xs ++ ys) = foldl f (foldl f init xs) ys
 foldlAppend f init []      ys = Refl
 foldlAppend f init (x::xs) ys = rewrite foldlAppend f (f init x) xs ys in Refl
+
+export
+filterAppend : (f : a -> Bool) -> (xs, ys : List a) -> filter f (xs ++ ys) = filter f xs ++ filter f ys
+filterAppend f []      ys = Refl
+filterAppend f (x::xs) ys with (f x)
+  _ | False = rewrite filterAppend f xs ys in Refl
+  _ | True  = rewrite filterAppend f xs ys in Refl
+
+export
+mapMaybeFusion : (g : b -> Maybe c) -> (f : a -> Maybe b) -> (xs : List a) -> mapMaybe g (mapMaybe f xs) = mapMaybe (f >=> g) xs
+mapMaybeFusion g f []      = Refl
+mapMaybeFusion g f (x::xs) with (f x)
+  _ | Nothing = mapMaybeFusion g f xs
+  _ | (Just y) with (g y)
+    _ | Nothing = mapMaybeFusion g f xs
+    _ | (Just z) = rewrite mapMaybeFusion g f xs in Refl
+
+export
+mapMaybeAppend : (f : a -> Maybe b) -> (xs, ys : List a) -> mapMaybe f (xs ++ ys) = mapMaybe f xs ++ mapMaybe f ys
+mapMaybeAppend f []      ys = Refl
+mapMaybeAppend f (x::xs) ys with (f x)
+  _ | Nothing  = rewrite mapMaybeAppend f xs ys in Refl
+  _ | (Just y) = rewrite mapMaybeAppend f xs ys in Refl
+
+export
+mapFusion : (g : b -> c) -> (f : a -> b) -> (xs : List a) -> map g (map f xs) = map (g . f) xs
+mapFusion g f []      = Refl
+mapFusion g f (x::xs) = rewrite mapFusion g f xs in Refl
+
+export
+mapAppend : (f : a -> b) -> (xs, ys : List a) -> map f (xs ++ ys) = map f xs ++ map f ys
+mapAppend f []      ys = Refl
+mapAppend f (x::xs) ys = rewrite mapAppend f xs ys in Refl

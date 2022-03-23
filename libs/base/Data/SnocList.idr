@@ -21,22 +21,6 @@ public export
 asList : SnocList type -> List type
 asList = (reverse . cast)
 
-public export
-Eq a => Eq (SnocList a) where
-  (==) Lin Lin = True
-  (==) (sx :< x) (sy :< y) = x == y && sx == sy
-  (==) _ _ = False
-
-public export
-Ord a => Ord (SnocList a) where
-  compare Lin Lin = EQ
-  compare Lin (sx :< x) = LT
-  compare (sx :< x) Lin = GT
-  compare (sx :< x) (sy :< y)
-    = case compare sx sy of
-        EQ => compare x y
-        c  => c
-
 ||| True iff input is Lin
 public export
 isLin : SnocList a -> Bool
@@ -48,16 +32,6 @@ public export
 isSnoc : SnocList a -> Bool
 isSnoc Lin     = False
 isSnoc (sx :< x) = True
-
-public export
-(++) : (sx, sy : SnocList a) -> SnocList a
-(++) sx Lin = sx
-(++) sx (sy :< y) = (sx ++ sy) :< y
-
-public export
-length : SnocList a -> Nat
-length Lin = Z
-length (sx :< x) = S $ length sx
 
 export
 Show a => Show (SnocList a) where
@@ -226,6 +200,11 @@ cons x sx = [< x] ++ sx
 --- Folds ---
 
 export
+foldAppend : (f : acc -> a -> acc) -> (init : acc) -> (sx, sy : SnocList a) -> foldl f init (sx ++ sy) = foldl f (foldl f init sx) sy
+foldAppend f init sx [<]       = Refl
+foldAppend f init sx (sy :< x) = rewrite foldAppend f init sx sy in Refl
+
+export
 snocFoldlAsListFoldl : (f : acc -> a -> acc) -> (init : acc) -> (xs : SnocList a) -> foldl f init xs = foldl f init (toList xs)
 snocFoldlAsListFoldl f init [<]       = Refl
 snocFoldlAsListFoldl f init (sx :< x) = do
@@ -233,3 +212,122 @@ snocFoldlAsListFoldl f init (sx :< x) = do
   rewrite snocFoldlAsListFoldl f init sx
   rewrite foldlAppend f init (cast sx) [x]
   Refl
+
+--- Filtering ---
+
+export
+filterAppend : (f : a -> Bool) -> (sx, sy : SnocList a) -> filter f (sx ++ sy) = filter f sx ++ filter f sy
+filterAppend f sx [<]       = Refl
+filterAppend f sx (sy :< x) with (f x)
+  _ | False = filterAppend f sx sy
+  _ | True  = rewrite filterAppend f sx sy in Refl
+
+export
+toListFilter : (f : a -> Bool) -> (sx : SnocList a) -> toList (filter f sx) = filter f (toList sx)
+toListFilter f [<]       = Refl
+toListFilter f (sx :< x) = do
+  rewrite chipsAsListAppend sx [x]
+  rewrite filterAppend f (cast sx) [x]
+  rewrite filterStepLemma
+  rewrite toListFilter f sx
+  Refl
+  where
+    filterStepLemma : toList (filter f (sx :< x)) = toList (filter f sx) ++ filter f [x]
+    filterStepLemma with (f x)
+      _ | False = rewrite appendNilRightNeutral $ toList $ filter f sx in Refl
+      _ | True  = rewrite chipsAsListAppend (filter f sx) [x] in Refl
+
+export
+filterCast : (f : a -> Bool) -> (xs : List a) -> filter f (cast {to=SnocList a} xs) = cast (filter f xs)
+filterCast f []      = Refl
+filterCast f (x::xs) = do
+  rewrite fishAsSnocAppend [<x] xs
+  rewrite filterAppend f [<x] (cast xs)
+  rewrite filterStepLemma
+  rewrite filterCast f xs
+  Refl
+  where
+    filterStepLemma : cast (filter f (x::xs)) = filter f [<x] ++ cast (filter f xs)
+    filterStepLemma with (f x)
+      _ | False = rewrite appendLinLeftNeutral $ [<] <>< filter f xs in Refl
+      _ | True  = rewrite fishAsSnocAppend [<x] (filter f xs) in Refl
+
+--- Functor map ---
+
+export
+mapFusion : (g : b -> c) -> (f : a -> b) -> (sx : SnocList a) -> map g (map f sx) = map (g . f) sx
+mapFusion g f [<]       = Refl
+mapFusion g f (sx :< x) = rewrite mapFusion g f sx in Refl
+
+export
+mapAppend : (f : a -> b) -> (sx, sy : SnocList a) -> map f (sx ++ sy) = map f sx ++ map f sy
+mapAppend f sx [<]       = Refl
+mapAppend f sx (sy :< x) = rewrite mapAppend f sx sy in Refl
+
+export
+toListMap : (f : a -> b) -> (sx : SnocList a) -> toList (map f sx) = map f (toList sx)
+toListMap f [<]       = Refl
+toListMap f (sx :< x) = do
+  rewrite chipsAsListAppend (map f sx) [f x]
+  rewrite chipsAsListAppend sx [x]
+  rewrite mapAppend f (toList sx) [x]
+  rewrite toListMap f sx
+  Refl
+
+export
+mapCast : (f : a -> b) -> (xs : List a) -> map f (cast {to=SnocList a} xs) = cast (map f xs)
+mapCast f []      = Refl
+mapCast f (x::xs) = do
+  rewrite fishAsSnocAppend [<f x] (map f xs)
+  rewrite fishAsSnocAppend [<x] xs
+  rewrite mapAppend f [<x] (cast xs)
+  rewrite mapCast f xs
+  Refl
+
+--- mapMaybe ---
+
+export
+mapMaybeFusion : (g : b -> Maybe c) -> (f : a -> Maybe b) -> (sx : SnocList a) -> mapMaybe g (mapMaybe f sx) = mapMaybe (f >=> g) sx
+mapMaybeFusion g f [<]       = Refl
+mapMaybeFusion g f (sx :< x) with (f x)
+  _ | Nothing = mapMaybeFusion g f sx
+  _ | (Just y) with (g y)
+    _ | Nothing = mapMaybeFusion g f sx
+    _ | (Just z) = rewrite mapMaybeFusion g f sx in Refl
+
+export
+mapMaybeAppend : (f : a -> Maybe b) -> (sx, sy : SnocList a) -> mapMaybe f (sx ++ sy) = mapMaybe f sx ++ mapMaybe f sy
+mapMaybeAppend f sx [<]       = Refl
+mapMaybeAppend f sx (sy :< x) with (f x)
+  _ | Nothing = mapMaybeAppend f sx sy
+  _ | (Just y) = rewrite mapMaybeAppend f sx sy in Refl
+
+export
+toListMapMaybe : (f : a -> Maybe b) -> (sx : SnocList a) -> toList (mapMaybe f sx) = mapMaybe f (toList sx)
+toListMapMaybe f [<]       = Refl
+toListMapMaybe f (sx :< x) = do
+  rewrite chipsAsListAppend sx [x]
+  rewrite mapMaybeAppend f (toList sx) [x]
+  rewrite mapMaybeStepLemma
+  rewrite toListMapMaybe f sx
+  Refl
+  where
+    mapMaybeStepLemma : toList (mapMaybe f (sx :< x)) = toList (mapMaybe f sx) ++ mapMaybe f [x]
+    mapMaybeStepLemma with (f x)
+      _ | Nothing  = rewrite appendNilRightNeutral $ toList $ mapMaybe f sx in Refl
+      _ | (Just y) = rewrite chipsAsListAppend (mapMaybe f sx) [y] in Refl
+
+export
+mapMaybeCast : (f : a -> Maybe b) -> (xs : List a) -> mapMaybe f (cast {to=SnocList a} xs) = cast (mapMaybe f xs)
+mapMaybeCast f []      = Refl
+mapMaybeCast f (x::xs) = do
+  rewrite fishAsSnocAppend [<x] xs
+  rewrite mapMaybeAppend f [<x] (cast xs)
+  rewrite mapMaybeStepLemma
+  rewrite mapMaybeCast f xs
+  Refl
+  where
+    mapMaybeStepLemma : cast (mapMaybe f (x::xs)) = mapMaybe f [<x] ++ cast (mapMaybe f xs)
+    mapMaybeStepLemma with (f x)
+      _ | Nothing  = rewrite appendLinLeftNeutral $ [<] <>< mapMaybe f xs in Refl
+      _ | (Just y) = rewrite fishAsSnocAppend [<y] (mapMaybe f xs) in Refl
