@@ -587,7 +587,11 @@ data EditCmd : Type where
      MakeWith : Bool -> Int -> Name -> EditCmd
 
 public export
-data BracketType = IdiomBrackets
+data BracketType
+  = IdiomBrackets
+  | NameQuote
+  | TermQuote
+  | DeclQuote
 
 public export
 data DocDirective : Type where

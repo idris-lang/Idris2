@@ -88,6 +88,9 @@ modules = Control.App,
           Language.Reflection.TT,
           Language.Reflection.TTImp,
 
+          Syntax.PreorderReasoning,
+          Syntax.PreorderReasoning.Generic,
+
           System,
           System.Clock,
           System.Concurrency,
