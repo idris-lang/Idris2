@@ -217,6 +217,12 @@ toListCast (x::xs) = do
   rewrite toListCast xs
   Refl
 
+||| Append an element to the head of a snoc-list.
+||| Note: Traverses the snoc-list, linear time complexity
+public export
+cons : a -> SnocList a -> SnocList a
+cons x sx = [< x] ++ sx
+
 --- Folds ---
 
 export
