@@ -28,7 +28,7 @@ displayType shortName defs (n, i, gdef)
               let nm = ifThenElse shortName (dropNS nm) nm
               let prig = prettyRig gdef.multiplicity
               let ann = showCategory id gdef
-              pure (prig <+> ann (prettyOp nm) <++> colon <++> pretty tm))
+              pure (prig <+> ann (prettyOp True nm) <++> colon <++> pretty tm))
           (\num => prettyHole defs [] n num (type gdef))
           (isHole gdef)
 export
@@ -48,7 +48,12 @@ displayClause : {auto c : Ref Ctxt Defs} ->
 displayClause defs (vs ** (env, lhs, rhs))
   = do lhstm <- resugar env !(normaliseHoles defs env lhs)
        rhstm <- resugar env !(normaliseHoles defs env rhs)
-       pure (pretty lhstm <++> equals <++> pretty rhstm)
+       pure (prettyLHS lhstm <++> equals <++> pretty rhstm)
+
+  where
+    prettyLHS : IPTerm -> Doc IdrisSyntax
+    prettyLHS (PRef _ op) = prettyOp True op.rawName
+    prettyLHS t = pretty t
 
 export
 displayPats : {auto c : Ref Ctxt Defs} ->

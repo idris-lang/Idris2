@@ -164,14 +164,14 @@ mutual
   leftAppPrec : Prec
   leftAppPrec = Open
 
-  prettyOp : OpStr' KindedName -> Doc IdrisSyntax
+  prettyOp : KindedName -> Doc IdrisSyntax
   prettyOp op@(MkKindedName _ _ nm) = if isOpName nm
       then annotateM (kindAnn op) $ pretty nm
       else Chara '`' <+> annotateM (kindAnn op) (pretty nm) <+> Chara '`'
 
   export
   Pretty IdrisSyntax IPTerm where
-    prettyPrec d (PRef _ nm) = annotateM (kindAnn nm) $ pretty nm.rawName
+    prettyPrec d (PRef _ nm) = annotateM (kindAnn nm) $ prettyOp False nm.rawName
     prettyPrec d (PPi _ rig Explicit Nothing arg ret) =
       parenthesise (d > startPrec) $ group $
         branchVal
