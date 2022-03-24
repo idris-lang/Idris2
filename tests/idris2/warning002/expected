@@ -14,5 +14,6 @@ Foo> Imported module Foo
 Foo> =DEPRECATED=
 Foo.dep1 : String
   
+  Visibility: export
 Foo> 
 Bye for now!
