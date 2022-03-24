@@ -265,11 +265,11 @@ getDocsForName fc n config
     reflowDoc : String -> List (Doc IdrisDocAnn)
     reflowDoc str = map (indent 2 . reflow) (lines str)
 
-    showTotal : Totality -> Doc IdrisDocAnn
+    showTotal : Totality -> Maybe (Doc IdrisDocAnn)
     showTotal tot
         = case isTerminating tot of
-               Unchecked => ""
-               _ => header "Totality" <++> annotate (Syntax Keyword) (pretty tot)
+               Unchecked => Nothing
+               _ => pure (header "Totality" <++> annotate (Syntax Keyword) (pretty tot))
 
     showVisible : Visibility -> Doc IdrisDocAnn
     showVisible vis = header "Visibility" <++> annotate (Syntax Keyword) (pretty vis)
@@ -409,9 +409,11 @@ getDocsForName fc n config
              | [ifacedata] => (Just "interface",) . pure <$> getIFaceDoc ifacedata
              | _ => pure (Nothing, []) -- shouldn't happen, we've resolved ambiguity by now
          case definition d of
-           PMDef _ _ _ _ _ => pure (Nothing, [showTotal (totality d), showVisible (visibility d)])
+           PMDef _ _ _ _ _ => pure (Nothing, catMaybes [ showTotal (totality d)
+                                                       , pure (showVisible (visibility d))])
            TCon _ _ _ _ _ _ cons _ =>
-             do let tot = [showTotal (totality d), showVisible (visibility d)]
+             do let tot = catMaybes [ showTotal (totality d)
+                                    , pure (showVisible (visibility d))]
                 cdocs <- traverse (getDConDoc <=< toFullNames) cons
                 cdoc <- case cdocs of
                   [] => pure (Just "data", [])

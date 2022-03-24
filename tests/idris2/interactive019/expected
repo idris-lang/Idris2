@@ -1,7 +1,6 @@
 1/1: Building TypeSearch (TypeSearch.idr)
 Main> prim__cast_CharString : Char -> String
 Main.sameSig : Char -> String
-  
   Visibility: private
 Data.String.singleton : Char -> String
   Totality: total

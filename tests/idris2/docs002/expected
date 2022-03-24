@@ -11,7 +11,6 @@ world : Nat -> Nat
 .b : SimpleRec -> String
 Doc> Doc.NS.NestedNS.Foo : Type
   A type of Foo
-  
   Visibility: private
 Doc> data Doc.WrappedInt : Type
   Totality: total
