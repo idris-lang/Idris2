@@ -221,7 +221,7 @@ perror (PatternVariableUnifies fc env n tm)
            | Nothing => (fc1, EmptyFC)
       in if sr1 < sr2 then (fc1, fc2) else if sr1 == sr2 && sc1 < sc2 then (fc1, fc2) else (fc2, fc1)
 perror (CyclicMeta fc env n tm)
-    = pure $ errorDesc (reflow "Cycle detected in solution of metavariable" <++> meta (pretty !(prettyName n)) <++> equals
+    = pure $ errorDesc (reflow "Cycle detected in solution of metavariable" <++> meta (pretty !(toFullNames n)) <++> equals
         <++> code !(pshow env tm)) <+> line <+> !(ploc fc)
 perror (WhenUnifying _ gam env x y err)
     = do defs <- get Ctxt
@@ -257,19 +257,19 @@ perror (BadDataConType fc n fam)
 perror (NotCovering fc n IsCovering)
     = pure $ errorDesc (reflow "Internal error" <++> parens (reflow "Coverage of" <++> code (pretty n)))
 perror (NotCovering fc n (MissingCases cs))
-    = pure $ errorDesc (code (pretty !(prettyName n)) <++> reflow "is not covering.")
+    = pure $ errorDesc (code (pretty !(toFullNames n)) <++> reflow "is not covering.")
         <+> line <+> !(ploc fc) <+> line
         <+> reflow "Missing cases" <+> colon <+> line
         <+> indent 4 (vsep !(traverse (pshow []) cs)) <+> line
 perror (NotCovering fc n (NonCoveringCall ns))
-    = pure $ errorDesc (pretty !(prettyName n) <++> reflow "is not covering.")
+    = pure $ errorDesc (pretty !(toFullNames n) <++> reflow "is not covering.")
         <+> line <+> !(ploc fc) <+> line
         <+> reflow "Calls non covering function" <+>
         case ns of
              [fn] => space <+> pretty fn
              _ => pretty 's' <+> colon <++> concatWith (surround (comma <+> space)) (pretty <$> ns)
 perror (NotTotal fc n r)
-    = pure $ errorDesc (code (pretty !(prettyName n)) <++> reflow "is not total," <++> pretty r)
+    = pure $ errorDesc (code (pretty !(toFullNames n)) <++> reflow "is not total," <++> pretty r)
         <+> line <+> !(ploc fc)
 perror (LinearUsed fc count n)
     = pure $ errorDesc (reflow "There are" <++> pretty count <++> reflow "uses of linear name"
@@ -444,20 +444,20 @@ perror (RewriteNoChange fc env rule ty)
 perror (NotRewriteRule fc env rule)
     = pure $ errorDesc (code !(pshow env rule) <++> reflow "is not a rewrite rule type.") <+> line <+> !(ploc fc)
 perror (CaseCompile fc n DifferingArgNumbers)
-    = pure $ errorDesc (reflow "Patterns for" <++> code (pretty !(prettyName n)) <++> reflow "have differing numbers of arguments.")
+    = pure $ errorDesc (reflow "Patterns for" <++> code (pretty !(toFullNames n)) <++> reflow "have differing numbers of arguments.")
         <+> line <+> !(ploc fc)
 perror (CaseCompile fc n DifferingTypes)
-    = pure $ errorDesc (reflow "Patterns for" <++> code (pretty !(prettyName n)) <++> reflow "require matching on different types.")
+    = pure $ errorDesc (reflow "Patterns for" <++> code (pretty !(toFullNames n)) <++> reflow "require matching on different types.")
         <+> line <+> !(ploc fc)
 perror (CaseCompile fc n UnknownType)
-    = pure $ errorDesc (reflow "Can't infer type to match in" <++> code (pretty !(prettyName n)) <+> dot)
+    = pure $ errorDesc (reflow "Can't infer type to match in" <++> code (pretty !(toFullNames n)) <+> dot)
         <+> line <+> !(ploc fc)
 perror (CaseCompile fc n (NotFullyApplied cn))
     = pure $ errorDesc (pretty "Constructor" <++> code (pretty !(toFullNames cn)) <++> reflow "is not fully applied.")
          <+> line <+> !(ploc fc)
 perror (CaseCompile fc n (MatchErased (_ ** (env, tm))))
     = pure $ errorDesc (reflow "Attempt to match on erased argument" <++> code !(pshow env tm) <++> pretty "in"
-        <++> code (pretty !(prettyName n)) <+> dot) <+> line <+> !(ploc fc)
+        <++> code (pretty !(toFullNames n)) <+> dot) <+> line <+> !(ploc fc)
 perror (BadDotPattern fc env reason x y)
     = pure $ errorDesc (reflow "Can't match on" <++> code !(pshow env x)
         <++> parens (pretty reason) <+> dot) <+> line <+> !(ploc fc)
@@ -515,19 +515,19 @@ perror (BadMultiline fc str) = pure $ errorDesc (reflow "While processing multi-
 perror (Timeout str) = pure $ errorDesc (reflow "Timeout in" <++> pretty str)
 
 perror (InType fc n err)
-    = pure $ hsep [ errorDesc (reflow "While processing type of" <++> code (pretty !(prettyName n))) <+> dot
+    = pure $ hsep [ errorDesc (reflow "While processing type of" <++> code (pretty !(toFullNames n))) <+> dot
                   , !(perror err)
                   ]
 perror (InCon fc n err)
-    = pure $ hsep [ errorDesc (reflow "While processing constructor" <++> code (pretty !(prettyName n))) <+> dot
+    = pure $ hsep [ errorDesc (reflow "While processing constructor" <++> code (pretty !(toFullNames n))) <+> dot
                   , !(perror err)
                   ]
 perror (InLHS fc n err)
-    = pure $ hsep [ errorDesc (reflow "While processing left hand side of" <++> code (pretty !(prettyName n))) <+> dot
+    = pure $ hsep [ errorDesc (reflow "While processing left hand side of" <++> code (pretty !(toFullNames n))) <+> dot
                   , !(perror err)
                   ]
 perror (InRHS fc n err)
-    = pure $ hsep [ errorDesc (reflow "While processing right hand side of" <++> code (pretty !(prettyName n))) <+> dot
+    = pure $ hsep [ errorDesc (reflow "While processing right hand side of" <++> code (pretty !(toFullNames n))) <+> dot
                   , !(perror err)
                   ]
 
