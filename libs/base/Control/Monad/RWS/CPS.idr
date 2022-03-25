@@ -9,20 +9,27 @@ import Control.Monad.Trans
 
 %default total
 
-||| A monad transformer adding reading an environment of type `r`,
-||| collecting an output of type `w` and updating a state of type `s`
-||| to an inner monad `m`.
+||| A monad transformer extending an inner monad `m` with the ability to read
+||| an environment of type `r`, collect an output of type `w` and update a
+||| state of type `s`.
+|||
+||| This is equivalent to `ReaderT r (WriterT w (StateT s m)) a`, but fuses the
+||| three layers.
 public export
 record RWST (r : Type) (w : Type) (s : Type) (m : Type -> Type) (a : Type) where
   constructor MkRWST
   unRWST : r -> s -> w -> m (a, s, w)
 
-||| Unwrap an RWST computation as a function. (The inverse of `rwsT`.)
+||| Unwrap an RWST computation as a function.
+|||
+||| This is the inverse of `rwsT`.
 public export %inline
 runRWST : Monoid w => RWST r w s m a -> r -> s -> m (a, s, w)
 runRWST m r s = unRWST m r s neutral
 
-||| Construct an RWST computation from a function. (The inverse of `runRWST`.)
+||| Construct an RWST computation from a function.
+|||
+||| This is the inverse of `runRWST`.
 public export %inline
 rwsT : Semigroup w => Functor m => (r -> s -> m (a, s, w)) -> RWST r w s m a
 rwsT f = MkRWST $ \r,s,w => (\(a,s',w') => (a,s',w <+> w')) <$> f r s
@@ -39,7 +46,7 @@ public export %inline
 execRWST : Monoid w => Functor m => RWST r w s m a -> r -> s -> m (s,w)
 execRWST m r s = (\(_,s',w) => (s',w)) <$> runRWST m r s
 
-||| Map the inner computation using the given function.
+||| Map over the inner computation.
 public export %inline
 mapRWST : (Functor n, Monoid w, Semigroup w')
         => (m (a, s, w) -> n (b, s, w')) -> RWST r w s m a -> RWST r w' s n b
@@ -58,16 +65,22 @@ withRWST f m = MkRWST $ \r,s => uncurry (unRWST m) (f r s)
 
 ||| A monad containing an environment of type `r`, output of type `w`
 ||| and an updatable state of type `s`.
+|||
+||| This is `RWST` applied to `Identity`.
 public export
 RWS : (r : Type) -> (w : Type) -> (s : Type) -> (a : Type) -> Type
 RWS r w s = RWST r w s Identity
 
-||| Unwrap an RWS computation as a function. (The inverse of `rws`.)
+||| Unwrap an RWS computation as a function.
+|||
+||| This is the inverse of `rws`.
 public export %inline
 runRWS : Monoid w => RWS r w s a -> r -> s -> (a, s, w)
 runRWS m r s = runIdentity (runRWST m r s)
 
-||| Construct an RWS computation from a function. (The inverse of `runRWS`.)
+||| Construct an RWS computation from a function.
+|||
+||| This is the inverse of `runRWS`.
 public export %inline
 rws : Semigroup w => (r -> s -> (a, s, w)) -> RWS r w s a
 rws f = MkRWST $ \r,s,w => let (a, s', w') = f r s
