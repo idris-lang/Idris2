@@ -337,10 +337,10 @@ arithOp :  Maybe IntKind
         -> (lhs : Doc)
         -> (rhs : Doc)
         -> Doc
-arithOp (Just $ Signed $ P n) _   op = boundedIntOp n op
-arithOp (Just $ Unsigned n)   _   op = boundedUIntOp n op
-arithOp _                     ""  op = integerOp op
-arithOp _                     sym _  = binOp sym
+arithOp (Just $ Signed $ P n)     _   op = boundedIntOp n op -- IntXY
+arithOp (Just $ Unsigned n)       _   op = boundedUIntOp n op -- BitsXY
+arithOp (Just $ Signed Unlimited) ""  op = integerOp op -- Integer
+arithOp _                         sym _  = binOp sym
 
 -- use 32bit signed integer for `Int`.
 jsIntKind : PrimType -> Maybe IntKind
@@ -416,6 +416,7 @@ jsOp : {0 arity : Nat} ->
 jsOp (Add ty) [x, y] = pure $ arithOp (jsIntKind ty) "+" "add" x y
 jsOp (Sub ty) [x, y] = pure $ arithOp (jsIntKind ty) "-" "sub" x y
 jsOp (Mul ty) [x, y] = pure $ arithOp (jsIntKind ty) "*" "mul" x y
+jsOp (Div DoubleType) [x, y] = pure $ binOp "/" x y
 jsOp (Div ty) [x, y] = pure $ arithOp (jsIntKind ty) ""  "div" x y
 jsOp (Mod ty) [x, y] = pure $ jsMod ty x y
 jsOp (Neg ty) [x] = pure $ "(-(" <+> x <+> "))"
