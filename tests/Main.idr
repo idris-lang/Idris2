@@ -296,6 +296,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "tailrec002"
     , "idiom001"
     , "integers"
+    , "doubles"
     , "fix1839"
     , "tailrec_libs"
     , "nomangle001", "nomangle002"
