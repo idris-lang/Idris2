@@ -167,7 +167,7 @@ replace Refl prf = prf
 ||| Symmetry of propositional equality.
 %inline
 public export
-sym : (0 rule : x = y) -> y = x
+sym : (0 rule : x ~=~ y) -> y ~=~ x
 sym Refl = Refl
 
 ||| Transitivity of propositional equality.

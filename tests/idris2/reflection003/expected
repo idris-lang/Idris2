@@ -2,6 +2,9 @@
 LOG 0: Name: Prelude.Types.List.++
 LOG 0: Type: (%pi Rig0 Implicit (Just a) %type (%pi RigW Explicit (Just xs) (Prelude.Basics.List a) (%pi RigW Explicit (Just ys) (Prelude.Basics.List a) (Prelude.Basics.List a))))
 LOG 0: Pretty Type: (xs : List a) -> (ys : List a) -> List a
+LOG 0: Name: Prelude.Types.SnocList.++
+LOG 0: Type: (%pi Rig0 Implicit (Just a) %type (%pi RigW Explicit (Just sx) (Prelude.Basics.SnocList a) (%pi RigW Explicit (Just sy) (Prelude.Basics.SnocList a) (Prelude.Basics.SnocList a))))
+LOG 0: Pretty Type: (sx : SnocList a) -> (sy : SnocList a) -> SnocList a
 LOG 0: Name: Prelude.Types.String.++
 LOG 0: Type: (%pi RigW Explicit (Just x) String (%pi RigW Explicit (Just y) String String))
 LOG 0: Pretty Type: (x : String) -> (y : String) -> String

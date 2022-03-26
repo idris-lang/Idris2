@@ -12,8 +12,9 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
-import Idris.Syntax
 import Idris.Resugar
+import Idris.REPL.Opts
+import Idris.Syntax
 
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
@@ -51,6 +52,7 @@ elabScript : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              FC -> NestedNames vars ->
              Env Term vars -> NF vars -> Maybe (Glued vars) ->
              Core (NF vars)
@@ -221,6 +223,7 @@ checkRunElab : {vars : _} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
                {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
                RigCount -> ElabInfo ->
                NestedNames vars -> Env Term vars ->
                FC -> RawImp -> Maybe (Glued vars) ->

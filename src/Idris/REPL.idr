@@ -65,6 +65,7 @@ import Data.Stream
 import Data.String
 import Libraries.Data.List.Extra
 import Libraries.Data.String.Extra
+import Libraries.Data.Tap
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Utils.Path
 import Libraries.System.Directory.Tree
@@ -587,6 +588,7 @@ processLocal : {vars : _} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
              {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              List ElabOpt ->
              NestedNames vars -> Env Term vars ->
              List ImpDecl -> (scope : List ImpDecl) ->

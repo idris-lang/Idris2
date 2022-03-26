@@ -11,6 +11,7 @@ import Core.TT
 import Core.UnifyState
 import Core.Value
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Check
@@ -205,7 +206,8 @@ getFnString : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              RawImp -> Core String
+              {auto o : Ref ROpts REPLOpts} ->
+               RawImp -> Core String
 getFnString (IPrimVal _ (Str st)) = pure st
 getFnString tm
     = do inidx <- resolveName (UN $ Basic "[foreign]")
@@ -226,6 +228,7 @@ initDef : {vars : _} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
+          {auto o : Ref ROpts REPLOpts} ->
           Name -> Env Term vars -> Term vars -> List FnOpt -> Core Def
 initDef n env ty []
     = do addUserHole False n
@@ -285,6 +288,7 @@ processType : {vars : _} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               List ElabOpt -> NestedNames vars -> Env Term vars ->
               FC -> RigCount -> Visibility ->
               List FnOpt -> ImpTy -> Core ()
@@ -355,4 +359,3 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
               do addHashWithNames n
                  addHashWithNames ty
                  log "module.hash" 15 "Adding hash for type with name \{show n}"
-

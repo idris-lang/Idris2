@@ -751,6 +751,8 @@ collectDefs (IDef loc fn cs :: ds)
     isClause n _ = Nothing
 collectDefs (INamespace loc ns nds :: ds)
     = INamespace loc ns (collectDefs nds) :: collectDefs ds
+collectDefs (IFail loc msg nds :: ds)
+    = IFail loc msg (collectDefs nds) :: collectDefs ds
 collectDefs (d :: ds)
     = d :: collectDefs ds
 

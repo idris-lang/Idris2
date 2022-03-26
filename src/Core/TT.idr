@@ -978,7 +978,7 @@ export
 Pretty Visibility where
   pretty Private = pretty "private"
   pretty Export = pretty "export"
-  pretty Public = pretty "public" <+> pretty "export"
+  pretty Public = pretty "public" <++> pretty "export"
 
 export
 Eq Visibility where

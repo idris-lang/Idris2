@@ -98,6 +98,8 @@ mutual
       = IParameters fc (map (map  {f = ImpParameter'} f) ps) (map (map f) ds)
     map f (IRecord fc cs vis mbtot rec)
       = IRecord fc cs vis mbtot (map f rec)
+    map f (IFail fc msg ds)
+      = IFail fc msg (map (map f) ds)
     map f (INamespace fc ns ds)
       = INamespace fc ns (map (map f) ds)
     map f (ITransform fc n lhs rhs)

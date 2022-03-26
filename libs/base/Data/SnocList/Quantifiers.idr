@@ -36,7 +36,7 @@ namespace Any
     uninhabited (There y) = uninhabited y
 
   ||| Modify the property given a pointwise function
-  export
+  public export
   mapProperty : (f : {0 x : a} -> p x -> q x) -> Any p l -> Any q l
   mapProperty f (Here p) = Here (f p)
   mapProperty f (There p) = There (mapProperty f p)
@@ -96,7 +96,7 @@ namespace All
     uninhabited @{Right _} (pxs :< px) = uninhabited pxs
 
   ||| Modify the property given a pointwise function
-  export
+  public export
   mapProperty : (f : {0 x : a} -> p x -> q x) -> All p l -> All q l
   mapProperty f [<] = [<]
   mapProperty f (pxs :< px) = mapProperty f pxs :< f px

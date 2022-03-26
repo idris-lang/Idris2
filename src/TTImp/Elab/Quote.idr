@@ -9,6 +9,7 @@ import Core.Reflect
 import Core.Unify
 import Core.TT
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Check
@@ -173,6 +174,7 @@ bindUnqs : {vars : _} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
            {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            List (Name, FC, RawImp) ->
            RigCount -> ElabInfo -> NestedNames vars -> Env Term vars ->
            Term vars ->
@@ -200,6 +202,7 @@ checkQuote : {vars : _} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
              {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
              FC -> RawImp -> Maybe (Glued vars) ->
@@ -238,6 +241,7 @@ checkQuoteDecl : {vars : _} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> List ImpDecl -> Maybe (Glued vars) ->

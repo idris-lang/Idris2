@@ -298,7 +298,7 @@ mutual
   toPTerm p (ILocal fc ds sc)
       = do ds' <- traverse toPDecl ds
            sc' <- toPTerm startPrec sc
-           bracket p startPrec (PLocal fc (mapMaybe id ds') sc')
+           bracket p startPrec (PLocal fc (catMaybes ds') sc')
   toPTerm p (ICaseLocal fc _ _ _ sc) = toPTerm p sc
   toPTerm p (IUpdate fc ds f)
       = do ds' <- traverse toPFieldUpdate ds
@@ -346,7 +346,7 @@ mutual
   toPTerm p (IQuoteName fc n) = pure (PQuoteName fc n)
   toPTerm p (IQuoteDecl fc ds)
       = do ds' <- traverse toPDecl ds
-           pure $ PQuoteDecl fc (mapMaybe id ds')
+           pure $ PQuoteDecl fc (catMaybes ds')
   toPTerm p (IUnquote fc tm) = pure (PUnquote fc !(toPTerm argPrec tm))
   toPTerm p (IRunElab fc tm) = pure (PRunElab fc !(toPTerm argPrec tm))
 
@@ -498,13 +498,16 @@ mutual
                             do info' <- traverse (toPTerm startPrec) info
                                tpe' <- toPTerm startPrec tpe
                                pure (n, rig, info', tpe')) ps)
-                (mapMaybe id ds')))
+                (catMaybes ds')))
   toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, con, fs) <- toPRecord r
            pure (Just (PRecord fc "" vis mbtot n ps con fs))
+  toPDecl (IFail fc msg ds)
+      = do ds' <- traverse toPDecl ds
+           pure (Just (PFail fc msg (catMaybes ds')))
   toPDecl (INamespace fc ns ds)
       = do ds' <- traverse toPDecl ds
-           pure (Just (PNamespace fc ns (mapMaybe id ds')))
+           pure (Just (PNamespace fc ns (catMaybes ds')))
   toPDecl (ITransform fc n lhs rhs)
       = pure (Just (PTransform fc (show n)
                                   !(toPTerm startPrec lhs)

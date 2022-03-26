@@ -69,3 +69,18 @@ public export
 filter : (a -> Bool) -> Maybe a -> Maybe a
 filter _ Nothing = Nothing
 filter f (Just x) = toMaybe (f x) x
+
+namespace Semigroup
+
+  public export
+  [Deep] Semigroup a => Semigroup (Maybe a) where
+    Nothing <+> Nothing = Nothing
+    Just l  <+> Nothing = Just l
+    Nothing <+> Just r  = Just r
+    Just l  <+> Just r  = Just $ l <+> r
+
+namespace Monoid
+
+  public export
+  [Deep] Semigroup a => Monoid (Maybe a) using Semigroup.Deep where
+    neutral = Nothing

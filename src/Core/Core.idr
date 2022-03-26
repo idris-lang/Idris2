@@ -10,6 +10,7 @@ import Data.Vect
 import Libraries.Data.IMaybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Data.Tap
 
 import public Data.IORef
 import System.File
@@ -68,6 +69,8 @@ data Warning : Type where
      ||| have the documentation for the definition printed with the warning.
      Deprecated : String -> Maybe (FC, Name) -> Warning
      GenericWarn : String -> Warning
+
+%name Warning wrn
 
 -- All possible errors, carrying a location
 public export
@@ -163,6 +166,8 @@ data Error : Type where
      NoForeignCC : FC -> List String -> Error
      BadMultiline : FC -> String -> Error
      Timeout : String -> Error
+     FailingDidNotFail : FC -> Error
+     FailingWrongError : FC -> String -> Error -> Error
 
      InType : FC -> Name -> Error -> Error
      InCon : FC -> Name -> Error -> Error
@@ -171,6 +176,8 @@ data Error : Type where
 
      MaybeMisspelling : Error -> List1 String -> Error
      WarningAsError : Warning -> Error
+
+%name Error err
 
 export
 Show TTCErrorMsg where
@@ -345,6 +352,12 @@ Show Error where
   show (BadMultiline fc str) = "Invalid multiline string: " ++ str
   show (Timeout str) = "Timeout in " ++ str
 
+  show (FailingDidNotFail _) = "Failing block did not fail"
+  show (FailingWrongError fc msg err)
+       = show fc ++ ":Failing block failed with the wrong error:\n" ++
+         "Expected: " ++ msg ++ "\n" ++
+         "but got: " ++ show err
+
   show (InType fc n err)
        = show fc ++ ":When elaborating type of " ++ show n ++ ":\n" ++
          show err
@@ -441,10 +454,94 @@ getErrorLoc (BadMultiline loc _) = Just loc
 getErrorLoc (Timeout _) = Nothing
 getErrorLoc (InType _ _ err) = getErrorLoc err
 getErrorLoc (InCon _ _ err) = getErrorLoc err
+getErrorLoc (FailingDidNotFail fc) = pure fc
+getErrorLoc (FailingWrongError fc _ _) = pure fc
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
 getErrorLoc (InRHS _ _ err) = getErrorLoc err
 getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
 getErrorLoc (WarningAsError warn) = getWarningLoc warn
+
+export
+killWarningLoc : Warning -> Warning
+killWarningLoc (ParserWarning fc x) = ParserWarning emptyFC x
+killWarningLoc (UnreachableClause fc x y) = UnreachableClause emptyFC x y
+killWarningLoc (ShadowingGlobalDefs fc xs) = ShadowingGlobalDefs emptyFC xs
+killWarningLoc (Deprecated x y) = Deprecated x y
+killWarningLoc (GenericWarn x) = GenericWarn x
+
+export
+killErrorLoc : Error -> Error
+killErrorLoc (Fatal err) = Fatal (killErrorLoc err)
+killErrorLoc (CantConvert fc x y z w) = CantConvert emptyFC x y z w
+killErrorLoc (CantSolveEq fc x y z w) = CantSolveEq emptyFC x y z w
+killErrorLoc (PatternVariableUnifies fc x y z) = PatternVariableUnifies emptyFC x y z
+killErrorLoc (CyclicMeta fc x y z) = CyclicMeta emptyFC x y z
+killErrorLoc (WhenUnifying fc x y z w err) = WhenUnifying emptyFC x y z w (killErrorLoc err)
+killErrorLoc (ValidCase fc x y) = ValidCase emptyFC x y
+killErrorLoc (UndefinedName fc x) = UndefinedName emptyFC x
+killErrorLoc (InvisibleName fc x y) = InvisibleName emptyFC x y
+killErrorLoc (BadTypeConType fc x) = BadTypeConType emptyFC x
+killErrorLoc (BadDataConType fc x y) = BadDataConType emptyFC x y
+killErrorLoc (NotCovering fc x y) = NotCovering emptyFC x y
+killErrorLoc (NotTotal fc x y) = NotTotal emptyFC x y
+killErrorLoc (LinearUsed fc k x) = LinearUsed emptyFC k x
+killErrorLoc (LinearMisuse fc x y z) = LinearMisuse emptyFC x y z
+killErrorLoc (BorrowPartial fc x y z) = BorrowPartial emptyFC x y z
+killErrorLoc (BorrowPartialType fc x y) = BorrowPartialType emptyFC x y
+killErrorLoc (AmbiguousName fc xs) = AmbiguousName emptyFC xs
+killErrorLoc (AmbiguousElab fc x xs) = AmbiguousElab emptyFC x xs
+killErrorLoc (AmbiguousSearch fc x y xs) = AmbiguousSearch emptyFC x y xs
+killErrorLoc (AmbiguityTooDeep fc x xs) = AmbiguityTooDeep emptyFC x xs
+killErrorLoc (AllFailed xs) = AllFailed xs
+killErrorLoc (RecordTypeNeeded fc x) = RecordTypeNeeded emptyFC x
+killErrorLoc (DuplicatedRecordUpdatePath fc xs) = DuplicatedRecordUpdatePath emptyFC xs
+killErrorLoc (NotRecordField fc x y) = NotRecordField emptyFC x y
+killErrorLoc (NotRecordType fc x) = NotRecordType emptyFC x
+killErrorLoc (IncompatibleFieldUpdate fc xs) = IncompatibleFieldUpdate emptyFC xs
+killErrorLoc (InvalidArgs fc x xs y) = InvalidArgs emptyFC x xs y
+killErrorLoc (TryWithImplicits fc x xs) = TryWithImplicits emptyFC x xs
+killErrorLoc (BadUnboundImplicit fc x y z) = BadUnboundImplicit emptyFC x y z
+killErrorLoc (CantSolveGoal fc x y z w) = CantSolveGoal emptyFC x y z w
+killErrorLoc (DeterminingArg fc x y z w) = DeterminingArg emptyFC x y z w
+killErrorLoc (UnsolvedHoles xs) = UnsolvedHoles xs
+killErrorLoc (CantInferArgType fc x y z w) = CantInferArgType emptyFC x y z w
+killErrorLoc (SolvedNamedHole fc x y z) = SolvedNamedHole emptyFC x y z
+killErrorLoc (VisibilityError fc x y z w) = VisibilityError emptyFC x y z w
+killErrorLoc (NonLinearPattern fc x) = NonLinearPattern emptyFC x
+killErrorLoc (BadPattern fc x) = BadPattern emptyFC x
+killErrorLoc (NoDeclaration fc x) = NoDeclaration emptyFC x
+killErrorLoc (AlreadyDefined fc x) = AlreadyDefined emptyFC x
+killErrorLoc (NotFunctionType fc x y) = NotFunctionType emptyFC x y
+killErrorLoc (RewriteNoChange fc x y z) = RewriteNoChange emptyFC x y z
+killErrorLoc (NotRewriteRule fc x y) = NotRewriteRule emptyFC x y
+killErrorLoc (CaseCompile fc x y) = CaseCompile emptyFC x y
+killErrorLoc (MatchTooSpecific fc x y) = MatchTooSpecific emptyFC x y
+killErrorLoc (BadDotPattern fc x y z w) = BadDotPattern emptyFC x y z w
+killErrorLoc (BadImplicit fc x) = BadImplicit emptyFC x
+killErrorLoc (BadRunElab fc x y description) = BadRunElab emptyFC x y description
+killErrorLoc (GenericMsg fc x) = GenericMsg emptyFC x
+killErrorLoc (TTCError x) = TTCError x
+killErrorLoc (FileErr x y) = FileErr x y
+killErrorLoc (CantFindPackage x) = CantFindPackage x
+killErrorLoc (LitFail fc) = LitFail emptyFC
+killErrorLoc (LexFail fc x) = LexFail emptyFC x
+killErrorLoc (ParseFail xs) = ParseFail xs
+killErrorLoc (ModuleNotFound fc x) = ModuleNotFound emptyFC x
+killErrorLoc (CyclicImports xs) = CyclicImports xs
+killErrorLoc ForceNeeded = ForceNeeded
+killErrorLoc (InternalError x) = InternalError x
+killErrorLoc (UserError x) = UserError x
+killErrorLoc (NoForeignCC fc xs) = NoForeignCC emptyFC xs
+killErrorLoc (BadMultiline fc x) = BadMultiline emptyFC x
+killErrorLoc (Timeout x) = Timeout x
+killErrorLoc (FailingDidNotFail fc) = FailingDidNotFail emptyFC
+killErrorLoc (FailingWrongError fc x err) = FailingWrongError emptyFC x (killErrorLoc err)
+killErrorLoc (InType fc x err) = InType emptyFC x (killErrorLoc err)
+killErrorLoc (InCon fc x err) = InCon emptyFC x (killErrorLoc err)
+killErrorLoc (InLHS fc x err) = InLHS emptyFC x (killErrorLoc err)
+killErrorLoc (InRHS fc x err) = InRHS emptyFC x (killErrorLoc err)
+killErrorLoc (MaybeMisspelling err xs) = MaybeMisspelling (killErrorLoc err) xs
+killErrorLoc (WarningAsError wrn) = WarningAsError (killWarningLoc wrn)
 
 -- Core is a wrapper around IO that is specialised for efficiency.
 export
@@ -815,3 +912,21 @@ namespace Monad
   [CORE] Monad Core using Applicative.CORE where
     (>>=) = Core.(>>=)
     join mma = Core.(>>=) mma id
+
+namespace Search
+
+  public export
+  Search : Type -> Type
+  Search = Tap Core
+
+  export %hint
+  functor : Functor Search
+  functor = (the (forall m. Functor m -> Functor (Tap m)) %search) CORE
+
+  export
+  traverse : (a -> Core b) -> Search a -> Core (Search b)
+  traverse = Tap.traverse @{CORE}
+
+  export
+  filter : (a -> Bool) -> Search a -> Core (Search a)
+  filter = Tap.filter @{CORE}

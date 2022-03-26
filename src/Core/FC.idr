@@ -73,6 +73,8 @@ data FC = MkFC        OriginDesc FilePos FilePos
           MkVirtualFC OriginDesc FilePos FilePos
         | EmptyFC
 
+%name FC fc
+
 ||| A version of a file context that cannot be empty
 public export
 NonEmptyFC : Type

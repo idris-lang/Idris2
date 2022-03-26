@@ -1378,6 +1378,18 @@ runElabDecl fname indents
                     expr pnowith fname indents
          pure (PRunElabDecl (boundToFC fname tm) tm.val)
 
+failDecls : OriginDesc -> IndentInfo -> Rule PDecl
+failDecls fname indents
+    = do msgds <- bounds $
+                 do decoratedKeyword fname "failing"
+                    commit
+                    msg <- optional simpleStr
+                    (msg,) <$> assert_total (nonEmptyBlock (topDecl fname))
+         pure $
+           let (msg, ds) = msgds.val
+               fc = boundToFC fname msgds
+           in PFail fc msg (collectDefs (concat ds))
+
 mutualDecls : OriginDesc -> IndentInfo -> Rule PDecl
 mutualDecls fname indents
     = do ds <- bounds $
@@ -1637,7 +1649,7 @@ typedArg fname indents
 recordParam : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm,  PTerm))
 recordParam fname indents
     = typedArg fname indents
-  <|> do n <- bounds name
+  <|> do n <- bounds (UN . Basic <$> decoratedSimpleBinderName fname)
          pure [(n.val, top, Explicit, PInfer (boundToFC fname n))]
 
 recordDecl : OriginDesc -> IndentInfo -> Rule PDecl
@@ -1742,6 +1754,8 @@ topDecl fname indents
   <|> do d <- recordDecl fname indents
          pure [d]
   <|> do d <- namespaceDecl fname indents
+         pure [d]
+  <|> do d <- failDecls fname indents
          pure [d]
   <|> do d <- mutualDecls fname indents
          pure [d]
@@ -2065,7 +2079,12 @@ docArgCmd parseCmd command doc = (names, DocArg, doc, parse)
         <|> Keyword <$> anyKeyword
         <|> Symbol <$> (anyReservedSymbol <* eoi
                        <|> parens (Virtual Interactive) anyReservedSymbol <* eoi)
-        <|> Bracket <$> (IdiomBrackets <$ symbol "[|" <* symbol "|]")
+        <|> Bracket <$> (
+              IdiomBrackets <$ symbol "[|" <* symbol "|]"
+              <|> NameQuote <$ symbol "`{" <* symbol "}"
+              <|> TermQuote <$ symbol "`(" <* symbol ")"
+              <|> DeclQuote <$ symbol "`[" <* symbol "]"
+              )
         <|> APTerm <$> typeExpr pdef (Virtual Interactive) init
       pure (command dir)
 

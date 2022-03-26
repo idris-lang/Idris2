@@ -163,27 +163,6 @@ Ord a => Ord (List1 a) where
   compare xs ys = compare (forget xs) (forget ys)
 
 ------------------------------------------------------------------------
--- Properties
-
-export
-consInjective : (x ::: xs) === (y ::: ys) -> (x === y, xs === ys)
-consInjective Refl = (Refl, Refl)
-
-export
-{x : a} -> Injective (x :::) where
-  injective Refl = Refl
-
-export
-{ys : List a} -> Injective (::: ys) where
-  injective Refl = Refl
-
-||| Proof that the length of a List1 is the same as the length
-||| of the List it represents.
-export
-listLength : (xs : List1 a) -> length xs = length (forget xs)
-listLength (head ::: tail) = Refl
-
-------------------------------------------------------------------------
 -- Zippable
 
 public export
@@ -223,6 +202,16 @@ Zippable List1 where
                                   (bs, cs, ds) = unzipWith3' xs in
                                   (b :: bs, c :: cs, d :: ds)
 
+------------------------------------------------------------------------
+-- Uninhabited
+
 export
 Uninhabited a => Uninhabited (List1 a) where
   uninhabited (hd ::: _) = uninhabited hd
+
+------------------------------------------------------------------------
+-- Filtering
+
+public export %inline
+filter : (a -> Bool) -> List1 a -> Maybe $ List1 a
+filter f = fromList . filter f . forget

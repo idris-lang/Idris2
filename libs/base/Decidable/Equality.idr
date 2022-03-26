@@ -6,6 +6,7 @@ import Data.Either
 import Data.Nat
 import Data.List
 import Data.List1
+import Data.List1.Properties
 
 import public Decidable.Equality.Core as Decidable.Equality
 

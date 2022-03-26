@@ -23,6 +23,7 @@ import Core.TT
 import Core.Unify
 import Core.Value
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Check
@@ -33,6 +34,8 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Data.List
+
+import Libraries.Data.Tap
 
 %default covering
 
@@ -49,45 +52,12 @@ ExprDefs : Type
 ExprDefs = List ImpDecl
 
 export
-data Search : Type -> Type where
-     NoMore : Search a -- no more results
-     Result : a -> Core (Search a) -> Search a
-       -- ^ a result, and what to do if the result is considered
-       -- unacceptable
-
-export
-Functor Search where
-  map fn NoMore = NoMore
-  map fn (Result res next)
-      = Result (fn res)
-               (do next' <- next
-                   pure (map fn next'))
-
-export
 one : a -> Core (Search a)
-one res = pure $ Result res (pure NoMore)
+one res = pure $ res :: pure []
 
 export
 noResult : Core (Search a)
-noResult = pure NoMore
-
-export
-traverse : (a -> Core b) -> Search a -> Core (Search b)
-traverse f NoMore = pure NoMore
-traverse f (Result r next)
-    = do r' <- f r
-         pure (Result r' (do next' <- next
-                             traverse f next'))
-
-export
-filterS : (a -> Bool) -> Search a -> Core (Search a)
-filterS p NoMore = pure NoMore
-filterS p (Result r next)
-    = do next' <- next
-         let fnext = filterS p next'
-         if p r
-            then pure $ Result r fnext
-            else fnext
+noResult = pure []
 
 export
 searchN : {auto c : Ref Ctxt Defs} ->
@@ -101,13 +71,13 @@ searchN max s
                clearTimer
                pure xs)
            (do clearTimer
-               pure ([], pure NoMore))
+               pure ([], pure []))
   where
     count : Nat -> Search a -> Core (List a, Core (Search a))
-    count k NoMore = pure ([], pure NoMore)
-    count Z _ = pure ([], pure NoMore)
-    count (S Z) (Result a next) = pure ([a], next)
-    count (S k) (Result a next)
+    count k [] = pure ([], pure [])
+    count Z _ = pure ([], pure [])
+    count (S Z) (a :: next) = pure ([a], next)
+    count (S k) (a :: next)
         = do (rest, cont) <- count k !next
              pure $ (a :: rest, cont)
 
@@ -122,13 +92,13 @@ searchSort : {auto c : Ref Ctxt Defs} ->
 searchSort max s ord
     = do (batch, next) <- searchN max s
          if isNil batch
-            then pure NoMore
+            then pure []
             else returnBatch (sortBy ord batch) next
   where
     returnBatch : List a -> Core (Search a) -> Core (Search a)
     returnBatch [] res = searchSort max res ord
     returnBatch (res :: xs) x
-        = pure (Result res (returnBatch xs x))
+        = pure (res :: returnBatch xs x)
 
 export
 nextResult : {auto c : Ref Ctxt Defs} ->
@@ -138,8 +108,8 @@ nextResult s
     = tryUnify
          (do res <- s
              case res of
-                  NoMore => pure Nothing
-                  Result r next => pure (Just (r, next)))
+                  [] => pure Nothing
+                  r :: next => pure (Just (r, next)))
          (pure Nothing)
 
 public export
@@ -238,9 +208,9 @@ firstSuccess [] = noResult
 firstSuccess (elab :: elabs)
     = do ust <- get UST
          defs <- get Ctxt
-         catch (do Result res more <- elab
-                      | NoMore => continue ust defs elabs
-                   pure (Result res (continue ust defs (more :: elabs))))
+         catch (do res :: more <- elab
+                      | [] => continue ust defs elabs
+                   pure (res :: continue ust defs (more :: elabs)))
                (\err =>
                     case err of
                          -- Give up on timeout, or we'll keep trying all the
@@ -268,10 +238,10 @@ export
 combine : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           (a -> b -> t) -> Search a -> Search b -> Core (Search t)
-combine f NoMore y = pure NoMore
-combine f (Result x next) NoMore = pure NoMore
-combine f (Result x nextx) (Result y nexty)
-    = pure $ Result (f x y) $
+combine f [] y = pure []
+combine f (x :: next) [] = pure []
+combine f (x :: nextx) (y :: nexty)
+    = pure $ (::) (f x y) $
                      (do nexty' <- nexty
                          combine f !(one x) nexty')
                          `trySearch`
@@ -291,9 +261,9 @@ mkCandidates : {vars : _} ->
 -- out of arguments, we have a candidate
 mkCandidates fc f ds [] = one (f, ds)
 -- argument has run out of ideas, we're stuck
-mkCandidates fc f ds (NoMore :: argss) = noResult
+mkCandidates fc f ds ([] :: argss) = noResult
 -- make a candidate from 'f arg' applied to the rest of the arguments
-mkCandidates fc f ds (Result (arg, ds') next :: argss)
+mkCandidates fc f ds (((arg, ds') :: next) :: argss)
     = firstSuccess
            [mkCandidates fc (App fc f arg) (ds ++ ds') argss,
             do next' <- next
@@ -358,7 +328,7 @@ getSuccessful : {vars : _} ->
 getSuccessful {vars} fc rig opts mkHole env ty topty all
     = do res <- firstSuccess all
          case res of
-              NoMore => -- If no successful search, make a hole
+              [] => -- If no successful search, make a hole
                 if mkHole && holesOK opts
                    then do defs <- get Ctxt
                            let base = maybe "arg"
@@ -416,7 +386,7 @@ tryRecursive fc rig opts hints env ty topty rdata
                                      env !(nf defs env ty)
                                      topty (recname rdata, def)
                    res' <- traverse (\ (t, ds) => pure (!(toFullNames t), ds)) res
-                   filterS (structDiffTm (lhsapp rdata)) res'
+                   filter (structDiffTm (lhsapp rdata)) res'
   where
     mutual
       -- A fairly simple superficialy syntactic check to make sure that
@@ -571,9 +541,9 @@ makeHelper : {vars : _} ->
              Env Term vars ->
              Term vars -> Term vars -> Search (Term vars, ExprDefs) ->
              Core (Search (Term vars, ExprDefs))
-makeHelper fc rig opts env letty targetty NoMore
-    = pure NoMore
-makeHelper fc rig opts env letty targetty (Result (locapp, ds) next)
+makeHelper fc rig opts env letty targetty []
+    = pure []
+makeHelper fc rig opts env letty targetty ((locapp, ds) :: next)
     = do let S depth' = depth opts
              | Z => noResult
          logTerm "interaction.search" 10 "Local app" locapp
@@ -615,7 +585,7 @@ makeHelper fc rig opts env letty targetty (Result (locapp, ds) next)
 
          let helperdef = IDef fc helpern (snd helper)
          log "interaction.search" 10 $ "Def: " ++ show helperdef
-         pure (Result (def, helperdef :: ds) -- plus helper
+         pure ((::) (def, helperdef :: ds) -- plus helper
                       (do next' <- next
                           makeHelper fc rig opts env letty targetty next'))
   where
@@ -854,10 +824,11 @@ firstLinearOK : {auto c : Ref Ctxt Defs} ->
                 {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
                 {auto s : Ref Syn SyntaxInfo} ->
+                {auto o : Ref ROpts REPLOpts} ->
                 FC -> Search (ClosedTerm, ExprDefs) ->
                 Core (Search RawImp)
-firstLinearOK fc NoMore = noResult
-firstLinearOK fc (Result (t, ds) next)
+firstLinearOK fc [] = noResult
+firstLinearOK fc ((t, ds) :: next)
     = handleUnify
             (do unless (isNil ds) $
                    traverse_ (processDecl [InCase] (MkNested []) []) ds
@@ -865,7 +836,7 @@ firstLinearOK fc (Result (t, ds) next)
                 defs <- get Ctxt
                 nft <- normaliseHoles defs [] t
                 raw <- unelab [] !(toFullNames nft)
-                pure (Result (map rawName raw) (firstLinearOK fc !next)))
+                pure (map rawName raw :: firstLinearOK fc !next))
             (\err =>
                 do next' <- next
                    firstLinearOK fc next')
@@ -875,6 +846,7 @@ exprSearchOpts : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  SearchOpts -> FC -> Name -> List Name ->
                  Core (Search RawImp)
 exprSearchOpts opts fc n_in hints
@@ -913,6 +885,7 @@ exprSearch' : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               FC -> Name -> List Name ->
               Core (Search RawImp)
 exprSearch' = exprSearchOpts (initSearchOpts True 5)
@@ -922,6 +895,7 @@ exprSearch : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              FC -> Name -> List Name ->
              Core (Search RawImp)
 exprSearch fc n hints
@@ -935,6 +909,7 @@ exprSearchN : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               FC -> Nat -> Name -> List Name ->
               Core (List RawImp)
 exprSearchN fc max n hints

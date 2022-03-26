@@ -81,6 +81,7 @@ knownTopics = [
     ("declare.record.projection.prefix", Nothing),
     ("declare.type", Nothing),
     ("desugar.idiom", Nothing),
+    ("desugar.failing", Just "Log result of desugaring a `failing' block"),
     ("doc.data", Nothing),
     ("doc.implementation", Nothing),
     ("doc.record", Nothing),

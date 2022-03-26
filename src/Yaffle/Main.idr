@@ -1,5 +1,6 @@
 module Yaffle.Main
 
+import Compiler.Common
 import Core.Binary
 import Core.Context
 import Core.Directory
@@ -9,6 +10,7 @@ import Core.Metadata
 import Core.UnifyState
 import Libraries.Utils.Path
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.ProcessDecls
@@ -43,6 +45,7 @@ yaffleMain sourceFileName args
          m <- newRef MD (initMetadata (PhysicalIdrSrc modIdent))
          u <- newRef UST initUState
          s <- newRef Syn initSyntax
+         o <- newRef ROpts (defaultOpts (Just sourceFileName) (REPL ErrorLvl) [])
          setLogTimings t
          addPrimitives
          case extension sourceFileName of
@@ -56,7 +59,7 @@ yaffleMain sourceFileName args
                             ttcFileName <- getTTCFileName sourceFileName "ttc"
                             writeToTTC () sourceFileName ttcFileName
                             coreLift_ $ putStrLn "Written TTC"
-         repl {c} {u} {s}
+         repl {c} {u} {s} {o}
 
 ymain : IO ()
 ymain

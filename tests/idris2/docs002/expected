@@ -11,12 +11,14 @@ world : Nat -> Nat
 .b : SimpleRec -> String
 Doc> Doc.NS.NestedNS.Foo : Type
   A type of Foo
-  
+  Visibility: private
 Doc> data Doc.WrappedInt : Type
   Totality: total
+  Visibility: public export
   Constructor: MkWrappedInt : Int -> WrappedInt
 Doc> record Doc.SimpleRec : Type
   Totality: total
+  Visibility: public export
   Constructor: MkSimpleRec : Int -> String -> SimpleRec
   Projections:
     .a : SimpleRec -> Int

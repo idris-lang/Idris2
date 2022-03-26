@@ -49,12 +49,14 @@ processDecls : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
                {auto m : Ref MD Metadata} ->
+               {auto o : Ref ROpts REPLOpts} ->
                List PDecl -> Core (List Error)
 
 processDecl : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
               {auto m : Ref MD Metadata} ->
+              {auto o : Ref ROpts REPLOpts} ->
               PDecl -> Core (List Error)
 
 -- Special cases to avoid treating these big blocks as units

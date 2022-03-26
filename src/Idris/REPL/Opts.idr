@@ -3,12 +3,12 @@ module Idris.REPL.Opts
 import Compiler.Common
 import Idris.Syntax
 import Parser.Unlit
-import TTImp.Interactive.ExprSearch
 import TTImp.TTImp
 
 import Data.List
 import Data.List1
 import Libraries.Data.List.Extra
+import Libraries.Data.Tap
 import Data.String
 import System.File
 

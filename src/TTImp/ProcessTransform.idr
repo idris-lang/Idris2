@@ -8,6 +8,7 @@ import Core.Metadata
 import Core.Normalise
 import Core.UnifyState
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab
@@ -23,6 +24,7 @@ processTransform : {vars : _} ->
                    {auto m : Ref MD Metadata} ->
                    {auto u : Ref UST UState} ->
                    {auto s : Ref Syn SyntaxInfo} ->
+                   {auto o : Ref ROpts REPLOpts} ->
                    List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
                    Name -> RawImp -> RawImp -> Core ()
 processTransform eopts nest env fc tn_in lhs rhs

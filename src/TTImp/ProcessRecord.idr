@@ -7,6 +7,7 @@ import Core.Env
 import Core.Metadata
 import Core.UnifyState
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.BindImplicits
@@ -35,6 +36,7 @@ elabRecord : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              List ElabOpt -> FC -> Env Term vars ->
              NestedNames vars -> Maybe String ->
              Visibility -> Maybe TotalReq -> Name ->
@@ -233,6 +235,7 @@ processRecord : {vars : _} ->
                 {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
                 {auto s : Ref Syn SyntaxInfo} ->
+                {auto o : Ref ROpts REPLOpts} ->
                 List ElabOpt -> NestedNames vars ->
                 Env Term vars -> Maybe String ->
                 Visibility -> Maybe TotalReq ->
