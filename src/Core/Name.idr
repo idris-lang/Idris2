@@ -19,6 +19,8 @@ data UserName : Type where
   Field : String -> UserName -- field accessor                 e.g. .fst
   Underscore : UserName      -- no name                        e.g. _
 
+%name UserName un
+
 ||| A smart constructor taking a string and parsing it as the appropriate
 ||| username
 export
@@ -41,6 +43,8 @@ data Name : Type where
      CaseBlock : String -> Int -> Name -- case block nested in (resolved) name
      WithBlock : String -> Int -> Name -- with block nested in (resolved) name
      Resolved : Int -> Name -- resolved, index into context
+
+%name Name n
 
 export
 mkNamespacedName : Maybe Namespace -> UserName -> Name

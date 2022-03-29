@@ -372,6 +372,10 @@ getFnName (MkTransform _ _ app _)
            Ref _ _ fn => Just fn
            _ => Nothing
 
+-- TODO: refactor via a single function
+-- onNames : (Context -> Name -> Core Name) ->
+--           (Context -> a    -> Core a)
+-- ?
 public export
 interface HasNames a where
   full : Context -> a -> Core a
@@ -667,6 +671,221 @@ HasNames Covering where
       = pure $ MissingCases !(traverse (resolved gam) ts)
   resolved gam (NonCoveringCall ns)
       = pure $ NonCoveringCall !(traverse (resolved gam) ns)
+
+export
+HasNames CaseError where
+  full gam DifferingArgNumbers = pure DifferingArgNumbers
+  full gam DifferingTypes = pure DifferingTypes
+  full gam (MatchErased (vs ** (rho, t))) = do
+    rho <- full gam rho
+    t <- full gam t
+    pure (MatchErased (vs ** (rho, t)))
+  full gam (NotFullyApplied n) = NotFullyApplied <$> full gam n
+  full gam UnknownType = pure UnknownType
+
+  resolved gam DifferingArgNumbers = pure DifferingArgNumbers
+  resolved gam DifferingTypes = pure DifferingTypes
+  resolved gam (MatchErased (vs ** (rho, t))) = do
+    rho <- resolved gam rho
+    t <- resolved gam t
+    pure (MatchErased (vs ** (rho, t)))
+  resolved gam (NotFullyApplied n) = NotFullyApplied <$> resolved gam n
+  resolved gam UnknownType = pure UnknownType
+
+
+export
+HasNames Warning where
+  full gam (ParserWarning fc x) = pure (ParserWarning fc x)
+  full gam (UnreachableClause fc rho s) = UnreachableClause fc <$> full gam rho <*> full gam s
+  full gam (ShadowingGlobalDefs fc xs)
+    = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (full gam))) xs
+  full gam (Deprecated x y) = Deprecated x <$> traverseOpt (traversePair (full gam)) y
+  full gam (GenericWarn x) = pure (GenericWarn x)
+
+  resolved gam (ParserWarning fc x) = pure (ParserWarning fc x)
+  resolved gam (UnreachableClause fc rho s) = UnreachableClause fc <$> resolved gam rho <*> resolved gam s
+  resolved gam (ShadowingGlobalDefs fc xs)
+    = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (resolved gam))) xs
+  resolved gam (Deprecated x y) = Deprecated x <$> traverseOpt (traversePair (resolved gam)) y
+  resolved gam (GenericWarn x) = pure (GenericWarn x)
+
+export
+HasNames Error where
+  full gam (Fatal err) = Fatal <$> full gam err
+  full _ (CantConvert fc gam rho s t)
+    = CantConvert fc gam <$> full gam rho <*> full gam s <*> full gam t
+  full _ (CantSolveEq fc gam rho s t)
+    = CantSolveEq fc gam <$> full gam rho <*> full gam s <*> full gam t
+  full gam (PatternVariableUnifies fc rho n s)
+    = PatternVariableUnifies fc <$> full gam rho <*> full gam n <*> full gam s
+  full gam (CyclicMeta fc rho n s)
+    = CyclicMeta fc <$> full gam rho <*> full gam n <*> full gam s
+  full _ (WhenUnifying fc gam rho s t err)
+    = WhenUnifying fc gam <$> full gam rho <*> full gam s <*> full gam t <*> full gam err
+  full gam (ValidCase fc rho x)
+    = ValidCase fc <$> full gam rho <*> either (map Left . full gam) (map Right . full gam) x
+  full gam (UndefinedName fc n) = UndefinedName fc <$> full gam n
+  full gam (InvisibleName fc n mns) = InvisibleName fc <$> full gam n <*> pure mns
+  full gam (BadTypeConType fc n) = BadTypeConType fc <$> full gam n
+  full gam (BadDataConType fc n n') = BadDataConType fc <$> full gam n <*> full gam n'
+  full gam (NotCovering fc n cov) = NotCovering fc <$> full gam n <*> full gam cov
+  full gam (NotTotal fc n pr) = NotTotal fc <$> full gam n <*> full gam pr
+  full gam (LinearUsed fc k n) = LinearUsed fc k <$> full gam n
+  full gam (LinearMisuse fc n x y) = LinearMisuse fc <$> full gam n <*> pure x <*> pure y
+  full gam (BorrowPartial fc rho s t) = BorrowPartial fc <$> full gam rho <*> full gam s <*> full gam t
+  full gam (BorrowPartialType fc rho s) = BorrowPartialType fc <$> full gam rho <*> full gam s
+  full gam (AmbiguousName fc xs) = AmbiguousName fc <$> traverse (full gam) xs
+  full gam (AmbiguousElab fc rho xs)
+    = AmbiguousElab fc <$> full gam rho <*> traverse (\ (gam, t) => (gam,) <$> full gam t) xs
+  full gam (AmbiguousSearch fc rho s xs)
+    = AmbiguousSearch fc <$> full gam rho <*> full gam s <*> traverse (full gam) xs
+  full gam (AmbiguityTooDeep fc n xs) = AmbiguityTooDeep fc <$> full gam n <*> traverse (full gam) xs
+  full gam (AllFailed xs)
+     = map AllFailed $ for xs $ \ (mn, err) =>
+         (,) <$> traverseOpt (full gam) mn <*> full gam err
+  full gam (RecordTypeNeeded fc rho) = RecordTypeNeeded fc <$> full gam rho
+  full gam (DuplicatedRecordUpdatePath fc xs) = pure (DuplicatedRecordUpdatePath fc xs)
+  full gam (NotRecordField fc x mn) = NotRecordField fc x <$> traverseOpt (full gam) mn
+  full gam (NotRecordType fc n) = NotRecordType fc <$> full gam n
+  full gam (IncompatibleFieldUpdate fc xs) = pure (IncompatibleFieldUpdate fc xs)
+  full gam (InvalidArgs fc rho xs s) = InvalidArgs fc <$> full gam rho <*> traverse (full gam) xs <*> full gam s
+  full gam (TryWithImplicits fc rho xs)
+    = TryWithImplicits fc <$> full gam rho
+       <*> for xs (\ (n, t) => (,) <$> full gam n <*> full gam t)
+  full gam (BadUnboundImplicit fc rho n s) = BadUnboundImplicit fc <$> full gam rho <*> full gam n <*> full gam s
+  full _ (CantSolveGoal fc gam rho s merr)
+    = CantSolveGoal fc gam <$> full gam rho <*> full gam s <*> traverseOpt (full gam) merr
+  full gam (DeterminingArg fc n x rho s)
+    = DeterminingArg fc <$> full gam n <*> pure x <*> full gam rho <*> full gam s
+  full gam (UnsolvedHoles xs) = UnsolvedHoles <$> traverse (traversePair (full gam)) xs
+  full gam (CantInferArgType fc rho n n1 s)
+    = CantInferArgType fc <$> full gam rho <*> full gam n <*> full gam n1 <*> full gam s
+  full gam (SolvedNamedHole fc rho n s) = SolvedNamedHole fc <$> full gam rho <*> full gam n <*> full gam s
+  full gam (VisibilityError fc x n y n1) = VisibilityError fc x <$> full gam n <*> pure y <*> full gam n1
+  full gam (NonLinearPattern fc n) = NonLinearPattern fc <$> full gam  n
+  full gam (BadPattern fc n) = BadPattern fc <$> full gam n
+  full gam (NoDeclaration fc n) = NoDeclaration fc <$> full gam n
+  full gam (AlreadyDefined fc n) = AlreadyDefined fc <$> full gam n
+  full gam (NotFunctionType fc rho s) = NotFunctionType fc <$> full gam rho <*> full gam s
+  full gam (RewriteNoChange fc rho s t) = RewriteNoChange fc <$> full gam rho <*> full gam s <*> full gam t
+  full gam (NotRewriteRule fc rho s) = NotRewriteRule fc <$> full gam rho <*> full gam s
+  full gam (CaseCompile fc n x) = CaseCompile fc <$> full gam n <*> full gam x
+  full gam (MatchTooSpecific fc rho s) = MatchTooSpecific fc <$> full gam rho <*> full gam s
+  full gam (BadDotPattern fc rho x s t)
+    = BadDotPattern fc <$> full gam rho <*> pure x <*> full gam s <*> full gam t
+  full gam (BadImplicit fc x) = pure (BadImplicit fc x)
+  full gam (BadRunElab fc rho s desc) = BadRunElab fc <$> full gam rho <*> full gam s <*> pure desc
+  full gam (GenericMsg fc x) = pure (GenericMsg fc x)
+  full gam (TTCError x) = pure (TTCError x)
+  full gam (FileErr x y) = pure (FileErr x y)
+  full gam (CantFindPackage x) = pure (CantFindPackage x)
+  full gam (LitFail fc) = pure (LitFail fc)
+  full gam (LexFail fc x) = pure (LexFail fc x)
+  full gam (ParseFail xs) = pure (ParseFail xs)
+  full gam (ModuleNotFound fc x) = pure (ModuleNotFound fc x)
+  full gam (CyclicImports xs) = pure (CyclicImports xs)
+  full gam ForceNeeded = pure ForceNeeded
+  full gam (InternalError x) = pure (InternalError x)
+  full gam (UserError x) = pure (UserError x)
+  full gam (NoForeignCC fc xs) = pure (NoForeignCC fc xs)
+  full gam (BadMultiline fc x) = pure (BadMultiline fc x)
+  full gam (Timeout x) = pure (Timeout x)
+  full gam (FailingDidNotFail fc) = pure (FailingDidNotFail fc)
+  full gam (FailingWrongError fc x err) = FailingWrongError fc x <$> full gam err
+  full gam (InType fc n err) = InType fc <$> full gam n <*> full gam err
+  full gam (InCon fc n err) = InCon fc <$> full gam n <*> full gam err
+  full gam (InLHS fc n err) = InLHS fc <$> full gam n <*> full gam err
+  full gam (InRHS fc n err) = InRHS fc <$> full gam n <*> full gam err
+  full gam (MaybeMisspelling err xs) = MaybeMisspelling <$> full gam err <*> pure xs
+  full gam (WarningAsError wrn) = WarningAsError <$> full gam wrn
+
+  resolved gam (Fatal err) = Fatal <$> resolved gam err
+  resolved _ (CantConvert fc gam rho s t)
+    = CantConvert fc gam <$> resolved gam rho <*> resolved gam s <*> resolved gam t
+  resolved _ (CantSolveEq fc gam rho s t)
+    = CantSolveEq fc gam <$> resolved gam rho <*> resolved gam s <*> resolved gam t
+  resolved gam (PatternVariableUnifies fc rho n s)
+    = PatternVariableUnifies fc <$> resolved gam rho <*> resolved gam n <*> resolved gam s
+  resolved gam (CyclicMeta fc rho n s)
+    = CyclicMeta fc <$> resolved gam rho <*> resolved gam n <*> resolved gam s
+  resolved _ (WhenUnifying fc gam rho s t err)
+    = WhenUnifying fc gam <$> resolved gam rho <*> resolved gam s <*> resolved gam t <*> resolved gam err
+  resolved gam (ValidCase fc rho x)
+    = ValidCase fc <$> resolved gam rho <*> either (map Left . resolved gam) (map Right . resolved gam) x
+  resolved gam (UndefinedName fc n) = UndefinedName fc <$> resolved gam n
+  resolved gam (InvisibleName fc n mns) = InvisibleName fc <$> resolved gam n <*> pure mns
+  resolved gam (BadTypeConType fc n) = BadTypeConType fc <$> resolved gam n
+  resolved gam (BadDataConType fc n n') = BadDataConType fc <$> resolved gam n <*> resolved gam n'
+  resolved gam (NotCovering fc n cov) = NotCovering fc <$> resolved gam n <*> resolved gam cov
+  resolved gam (NotTotal fc n pr) = NotTotal fc <$> resolved gam n <*> resolved gam pr
+  resolved gam (LinearUsed fc k n) = LinearUsed fc k <$> resolved gam n
+  resolved gam (LinearMisuse fc n x y) = LinearMisuse fc <$> resolved gam n <*> pure x <*> pure y
+  resolved gam (BorrowPartial fc rho s t) = BorrowPartial fc <$> resolved gam rho <*> resolved gam s <*> resolved gam t
+  resolved gam (BorrowPartialType fc rho s) = BorrowPartialType fc <$> resolved gam rho <*> resolved gam s
+  resolved gam (AmbiguousName fc xs) = AmbiguousName fc <$> traverse (resolved gam) xs
+  resolved gam (AmbiguousElab fc rho xs)
+    = AmbiguousElab fc <$> resolved gam rho <*> traverse (\ (gam, t) => (gam,) <$> resolved gam t) xs
+  resolved gam (AmbiguousSearch fc rho s xs)
+    = AmbiguousSearch fc <$> resolved gam rho <*> resolved gam s <*> traverse (resolved gam) xs
+  resolved gam (AmbiguityTooDeep fc n xs) = AmbiguityTooDeep fc <$> resolved gam n <*> traverse (resolved gam) xs
+  resolved gam (AllFailed xs)
+     = map AllFailed $ for xs $ \ (mn, err) =>
+         (,) <$> traverseOpt (resolved gam) mn <*> resolved gam err
+  resolved gam (RecordTypeNeeded fc rho) = RecordTypeNeeded fc <$> resolved gam rho
+  resolved gam (DuplicatedRecordUpdatePath fc xs) = pure (DuplicatedRecordUpdatePath fc xs)
+  resolved gam (NotRecordField fc x mn) = NotRecordField fc x <$> traverseOpt (resolved gam) mn
+  resolved gam (NotRecordType fc n) = NotRecordType fc <$> resolved gam n
+  resolved gam (IncompatibleFieldUpdate fc xs) = pure (IncompatibleFieldUpdate fc xs)
+  resolved gam (InvalidArgs fc rho xs s) = InvalidArgs fc <$> resolved gam rho <*> traverse (resolved gam) xs <*> resolved gam s
+  resolved gam (TryWithImplicits fc rho xs)
+    = TryWithImplicits fc <$> resolved gam rho
+       <*> for xs (\ (n, t) => (,) <$> resolved gam n <*> resolved gam t)
+  resolved gam (BadUnboundImplicit fc rho n s) = BadUnboundImplicit fc <$> resolved gam rho <*> resolved gam n <*> resolved gam s
+  resolved _ (CantSolveGoal fc gam rho s merr)
+    = CantSolveGoal fc gam <$> resolved gam rho <*> resolved gam s <*> traverseOpt (resolved gam) merr
+  resolved gam (DeterminingArg fc n x rho s)
+    = DeterminingArg fc <$> resolved gam n <*> pure x <*> resolved gam rho <*> resolved gam s
+  resolved gam (UnsolvedHoles xs) = UnsolvedHoles <$> traverse (traversePair (resolved gam)) xs
+  resolved gam (CantInferArgType fc rho n n1 s)
+    = CantInferArgType fc <$> resolved gam rho <*> resolved gam n <*> resolved gam n1 <*> resolved gam s
+  resolved gam (SolvedNamedHole fc rho n s) = SolvedNamedHole fc <$> resolved gam rho <*> resolved gam n <*> resolved gam s
+  resolved gam (VisibilityError fc x n y n1) = VisibilityError fc x <$> resolved gam n <*> pure y <*> resolved gam n1
+  resolved gam (NonLinearPattern fc n) = NonLinearPattern fc <$> resolved gam  n
+  resolved gam (BadPattern fc n) = BadPattern fc <$> resolved gam n
+  resolved gam (NoDeclaration fc n) = NoDeclaration fc <$> resolved gam n
+  resolved gam (AlreadyDefined fc n) = AlreadyDefined fc <$> resolved gam n
+  resolved gam (NotFunctionType fc rho s) = NotFunctionType fc <$> resolved gam rho <*> resolved gam s
+  resolved gam (RewriteNoChange fc rho s t) = RewriteNoChange fc <$> resolved gam rho <*> resolved gam s <*> resolved gam t
+  resolved gam (NotRewriteRule fc rho s) = NotRewriteRule fc <$> resolved gam rho <*> resolved gam s
+  resolved gam (CaseCompile fc n x) = CaseCompile fc <$> resolved gam n <*> resolved gam x
+  resolved gam (MatchTooSpecific fc rho s) = MatchTooSpecific fc <$> resolved gam rho <*> resolved gam s
+  resolved gam (BadDotPattern fc rho x s t)
+    = BadDotPattern fc <$> resolved gam rho <*> pure x <*> resolved gam s <*> resolved gam t
+  resolved gam (BadImplicit fc x) = pure (BadImplicit fc x)
+  resolved gam (BadRunElab fc rho s desc) = BadRunElab fc <$> resolved gam rho <*> resolved gam s <*> pure desc
+  resolved gam (GenericMsg fc x) = pure (GenericMsg fc x)
+  resolved gam (TTCError x) = pure (TTCError x)
+  resolved gam (FileErr x y) = pure (FileErr x y)
+  resolved gam (CantFindPackage x) = pure (CantFindPackage x)
+  resolved gam (LitFail fc) = pure (LitFail fc)
+  resolved gam (LexFail fc x) = pure (LexFail fc x)
+  resolved gam (ParseFail xs) = pure (ParseFail xs)
+  resolved gam (ModuleNotFound fc x) = pure (ModuleNotFound fc x)
+  resolved gam (CyclicImports xs) = pure (CyclicImports xs)
+  resolved gam ForceNeeded = pure ForceNeeded
+  resolved gam (InternalError x) = pure (InternalError x)
+  resolved gam (UserError x) = pure (UserError x)
+  resolved gam (NoForeignCC fc xs) = pure (NoForeignCC fc xs)
+  resolved gam (BadMultiline fc x) = pure (BadMultiline fc x)
+  resolved gam (Timeout x) = pure (Timeout x)
+  resolved gam (FailingDidNotFail fc) = pure (FailingDidNotFail fc)
+  resolved gam (FailingWrongError fc x err) = FailingWrongError fc x <$> resolved gam err
+  resolved gam (InType fc n err) = InType fc <$> resolved gam n <*> resolved gam err
+  resolved gam (InCon fc n err) = InCon fc <$> resolved gam n <*> resolved gam err
+  resolved gam (InLHS fc n err) = InLHS fc <$> resolved gam n <*> resolved gam err
+  resolved gam (InRHS fc n err) = InRHS fc <$> resolved gam n <*> resolved gam err
+  resolved gam (MaybeMisspelling err xs) = MaybeMisspelling <$> resolved gam err <*> pure xs
+  resolved gam (WarningAsError wrn) = WarningAsError <$> resolved gam wrn
 
 export
 HasNames Totality where
