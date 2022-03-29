@@ -109,7 +109,7 @@ concrete value for its *second argument* (in fact, the left hand side of
 the equality has been reduced from ``plus Z m``.) Again, we can prove
 this by induction, this time on ``m``.
 
-First, create a template definition with ``\d``:
+First, create a template definition with ``\a``:
 
 .. code-block:: idris
 
