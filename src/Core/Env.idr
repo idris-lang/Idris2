@@ -11,6 +11,8 @@ data Env : (tm : List Name -> Type) -> List Name -> Type where
      Nil : Env tm []
      (::) : Binder (tm vars) -> Env tm vars -> Env tm (x :: vars)
 
+%name Env rho
+
 export
 extend : (x : Name) -> Binder (tm vars) -> Env tm vars -> Env tm (x :: vars)
 extend x = (::) {x}

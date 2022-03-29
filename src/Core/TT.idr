@@ -809,6 +809,8 @@ data Term : List Name -> Type where
      TType : FC -> Name -> -- universe variable
              Term vars
 
+%name Term s, t, u
+
 -- Remove/restore the given namespace from all Refs. This is to allow
 -- writing terms and case trees to disk without repeating the same namespace
 -- all over the place.
