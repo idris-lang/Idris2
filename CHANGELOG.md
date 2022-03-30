@@ -49,6 +49,12 @@
   `Show` is that `Interpolation` and `Show` have conflicting semantics, typically
   this is the case for `String` which adds double quotes around the string.
 
+* A `failing` block that requires its body to fail with a compile error was added.
+  Optionally this block may contain a string which is checked to be contained in the error message.
+
+* Bodies of `mutual`, `failing`, `using` and `parameters` blocks are required to be indented
+  comparing to the position of the keyword.
+
 ### Compiler changes
 
 * Removes deprecated support for `void` primitive. Now `void` is supported via
