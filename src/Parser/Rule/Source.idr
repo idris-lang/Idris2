@@ -640,7 +640,7 @@ nonEmptyBlockAfter mincol item
          pure (fst res ::: ps)
   <|> do col <- column
          let False = col <= mincol
-            | True => fail "Expected an indented non-empty block"
+            | True => fatalError "Expected an indented non-empty block"
          res <- blockEntry (AtPos col) item
          ps <- blockEntries (snd res) item
          pure (fst res ::: ps)
