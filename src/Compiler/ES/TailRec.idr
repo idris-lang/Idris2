@@ -251,38 +251,40 @@ conAlt (MkTcGroup tcIx funs) (MkTcFunction n ix args exp) =
   let name = tcContinueName tcIx ix
    in MkNConAlt name DATACON (Just ix) args (toTc exp)
 
-   where mutual
-     -- this is returned in case we arrived at a result
-     -- (an expression not corresponding to a recursive
-     -- call in tail position).
-     tcDone : NamedCExp -> NamedCExp
-     tcDone x = NmCon EmptyFC (tcDoneName tcIx) DATACON (Just 0) [x]
+   where
+     mutual
 
-     -- this is returned in case we arrived at a resursive call
-     -- in tail position. The index indicates the next "function"
-     -- to call, the list of expressions are the function's
-     -- arguments.
-     tcContinue : (index : Int) -> List NamedCExp -> NamedCExp
-     tcContinue ix = NmCon EmptyFC (tcContinueName tcIx ix) DATACON (Just ix)
+       -- this is returned in case we arrived at a result
+       -- (an expression not corresponding to a recursive
+       -- call in tail position).
+       tcDone : NamedCExp -> NamedCExp
+       tcDone x = NmCon EmptyFC (tcDoneName tcIx) DATACON (Just 0) [x]
 
-     -- recursively converts an expression. Only the `NmApp` case is
-     -- interesting, the rest is pretty much boiler plate.
-     toTc : NamedCExp -> NamedCExp
-     toTc (NmLet fc x y z) = NmLet fc x y $ toTc z
-     toTc x@(NmApp _ (NmRef _ n) xs) =
-       case lookup n funs of
-         Just v  => tcContinue v.index xs
-         Nothing => tcDone x
-     toTc (NmConCase fc sc a d) = NmConCase fc sc (map con a) (map toTc d)
-     toTc (NmConstCase fc sc a d) = NmConstCase fc sc (map const a) (map toTc d)
-     toTc x@(NmCrash _ _) = x
-     toTc x = tcDone x
+       -- this is returned in case we arrived at a resursive call
+       -- in tail position. The index indicates the next "function"
+       -- to call, the list of expressions are the function's
+       -- arguments.
+       tcContinue : (index : Int) -> List NamedCExp -> NamedCExp
+       tcContinue ix = NmCon EmptyFC (tcContinueName tcIx ix) DATACON (Just ix)
 
-     con : NamedConAlt -> NamedConAlt
-     con (MkNConAlt x y tag xs z) = MkNConAlt x y tag xs (toTc z)
+       -- recursively converts an expression. Only the `NmApp` case is
+       -- interesting, the rest is pretty much boiler plate.
+       toTc : NamedCExp -> NamedCExp
+       toTc (NmLet fc x y z) = NmLet fc x y $ toTc z
+       toTc x@(NmApp _ (NmRef _ n) xs) =
+         case lookup n funs of
+           Just v  => tcContinue v.index xs
+           Nothing => tcDone x
+       toTc (NmConCase fc sc a d) = NmConCase fc sc (map con a) (map toTc d)
+       toTc (NmConstCase fc sc a d) = NmConstCase fc sc (map const a) (map toTc d)
+       toTc x@(NmCrash _ _) = x
+       toTc x = tcDone x
 
-     const : NamedConstAlt -> NamedConstAlt
-     const (MkNConstAlt x y) = MkNConstAlt x (toTc y)
+       con : NamedConAlt -> NamedConAlt
+       con (MkNConAlt x y tag xs z) = MkNConAlt x y tag xs (toTc z)
+
+       const : NamedConstAlt -> NamedConstAlt
+       const (MkNConstAlt x y) = MkNConstAlt x (toTc y)
 
 -- Converts a group of mutually tail recursive functions
 -- to a list of toplevel function declarations. `tailRecLoopName`
