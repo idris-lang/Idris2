@@ -1060,17 +1060,18 @@ mutual
             (rhs, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
             pure (MkPatClause fc (uncurry applyArgs lhs) rhs ws)
-     <|> do b <- bounds (do decoratedKeyword fname "with"
-                            commit
-                            flags <- withFlags fname
-                            rig <- multiplicity fname
-                            start <- bounds (decoratedSymbol fname "(")
-                            wval <- bracketedExpr fname start indents
-                            prf <- optional (decoratedKeyword fname "proof"
-                                             *> UN . Basic <$> decoratedSimpleBinderName fname)
-                            ws <- mustWork $ nonEmptyBlockAfter col
-                                           $ clause (S withArgs) (Just lhs) fname
-                            pure (prf, flags, rig, wval, forget ws))
+     <|> do b <- bounds $ do
+                   decoratedKeyword fname "with"
+                   commit
+                   flags <- withFlags fname
+                   rig <- multiplicity fname
+                   start <- bounds (decoratedSymbol fname "(")
+                   wval <- bracketedExpr fname start indents
+                   prf <- optional (decoratedKeyword fname "proof"
+                                    *> UN . Basic <$> decoratedSimpleBinderName fname)
+                   ws <- mustWork $ nonEmptyBlockAfter col
+                                  $ clause (S withArgs) (Just lhs) fname
+                   pure (prf, flags, rig, wval, forget ws)
             (prf, flags, rig, wval, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
             pure (MkWithClause fc (uncurry applyArgs lhs) rig wval prf flags ws)
@@ -1377,18 +1378,18 @@ transformDecl fname indents
 
 runElabDecl : OriginDesc -> IndentInfo -> Rule PDecl
 runElabDecl fname indents
-    = do tm <- bounds $
-                 do decoratedPragma fname "runElab"
+    = do tm <- bounds $ do
+                    decoratedPragma fname "runElab"
                     expr pnowith fname indents
          pure (PRunElabDecl (boundToFC fname tm) tm.val)
 
 failDecls : OriginDesc -> IndentInfo -> Rule PDecl
 failDecls fname indents
-    = do msgds <- bounds $
-                 do decoratedKeyword fname "failing"
+    = do msgds <- bounds $ do
+                    decoratedKeyword fname "failing"
                     commit
                     msg <- optional simpleStr
-                    (msg,) <$> assert_total (nonEmptyBlock (topDecl fname))
+                    (msg,) <$> nonEmptyBlock (topDecl fname)
          pure $
            let (msg, ds) = msgds.val
                fc = boundToFC fname msgds
@@ -1396,27 +1397,28 @@ failDecls fname indents
 
 mutualDecls : OriginDesc -> IndentInfo -> Rule PDecl
 mutualDecls fname indents
-    = do ds <- bounds $
-                 do decoratedKeyword fname "mutual"
+    = do ds <- bounds $ do
+                    decoratedKeyword fname "mutual"
                     commit
-                    assert_total (nonEmptyBlock (topDecl fname))
+                    nonEmptyBlock (topDecl fname)
          pure (PMutual (boundToFC fname ds) (concat ds.val))
 
 usingDecls : OriginDesc -> IndentInfo -> Rule PDecl
 usingDecls fname indents
-    = do b <- bounds (do decoratedKeyword fname "using"
-                         commit
-                         decoratedSymbol fname "("
-                         us <- sepBy (decoratedSymbol fname ",")
-                                     (do n <- optional
-                                                (do x <- unqualifiedName
-                                                    decoratedSymbol fname ":"
-                                                    pure (UN $ Basic x))
-                                         ty <- typeExpr pdef fname indents
-                                         pure (n, ty))
-                         decoratedSymbol fname ")"
-                         ds <- assert_total (nonEmptyBlock (topDecl fname))
-                         pure (us, ds))
+    = do b <- bounds $ do
+                    decoratedKeyword fname "using"
+                    commit
+                    decoratedSymbol fname "("
+                    us <- sepBy (decoratedSymbol fname ",")
+                                (do n <- optional $ do
+                                               x <- unqualifiedName
+                                               decoratedSymbol fname ":"
+                                               pure (UN $ Basic x)
+                                    ty <- typeExpr pdef fname indents
+                                    pure (n, ty))
+                    decoratedSymbol fname ")"
+                    ds <- nonEmptyBlock (topDecl fname)
+                    pure (us, ds)
          (us, ds) <- pure b.val
          pure (PUsing (boundToFC fname b) us (collectDefs (concat ds)))
 
@@ -1472,12 +1474,9 @@ fnDirectOpt fname
     parseNoMangle ns = case parseNames ns of
         [(Nothing, name)] => pure $ Just $ CommonName name
         ns =>
-            let ns = the (Either String (List (String, String))) $
-                    traverse
-                    (\case
+            let ns = for {f=Either _} ns $ \case
                         (Nothing, _) => Left "expected backend specifier and name, found name"
-                        (Just b, name) => Right (b, name))
-                    ns
+                        (Just b, name) => Right (b, name)
              in case ns of
                 Left msg => fail msg
                 Right ns => pure $ Just $ BackendNames ns
@@ -1571,7 +1570,7 @@ ifaceDecl fname indents
                          det    <- option [] $ decoratedSymbol fname "|" *> sepBy (decoratedSymbol fname ",") (decorate fname Bound name)
                          decoratedKeyword fname "where"
                          dc <- optional (recordConstructor fname)
-                         body <- assert_total (blockAfter col (topDecl fname))
+                         body <- blockAfter col (topDecl fname)
                          pure (\fc : FC => PInterface fc
                                       vis cons n doc params det dc (collectDefs (concat body))))
          pure (b.val (boundToFC fname b))
@@ -1678,8 +1677,8 @@ paramDecls fname indents
          commit
          args <- bounds (newParamDecls fname indents <|> oldParamDecls fname indents)
          commit
-         declarations <- the (Rule (WithBounds (List1 (List PDecl)))) (assert_total (Core.bounds $ nonEmptyBlock (topDecl fname)))
-         mergedBounds <- pure $  b1 `mergeBounds` (args `mergeBounds` declarations)
+         declarations <- bounds $ nonEmptyBlock (topDecl fname)
+         mergedBounds <- pure $ b1 `mergeBounds` (args `mergeBounds` declarations)
          pure (PParameters (boundToFC fname mergedBounds) args.val (collectDefs (concat declarations.val)))
 
   where
