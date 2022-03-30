@@ -1382,10 +1382,11 @@ runElabDecl fname indents
 failDecls : OriginDesc -> IndentInfo -> Rule PDecl
 failDecls fname indents
     = do msgds <- bounds $ do
+                    col <- column
                     decoratedKeyword fname "failing"
                     commit
                     msg <- optional simpleStr
-                    (msg,) <$> nonEmptyBlock (topDecl fname)
+                    (msg,) <$> nonEmptyBlockAfter col (topDecl fname)
          pure $
            let (msg, ds) = msgds.val
                fc = boundToFC fname msgds
@@ -1394,14 +1395,16 @@ failDecls fname indents
 mutualDecls : OriginDesc -> IndentInfo -> Rule PDecl
 mutualDecls fname indents
     = do ds <- bounds $ do
+                    col <- column
                     decoratedKeyword fname "mutual"
                     commit
-                    nonEmptyBlock (topDecl fname)
+                    nonEmptyBlockAfter col (topDecl fname)
          pure (PMutual (boundToFC fname ds) (concat ds.val))
 
 usingDecls : OriginDesc -> IndentInfo -> Rule PDecl
 usingDecls fname indents
     = do b <- bounds $ do
+                    col <- column
                     decoratedKeyword fname "using"
                     commit
                     decoratedSymbol fname "("
@@ -1413,7 +1416,7 @@ usingDecls fname indents
                                     ty <- typeExpr pdef fname indents
                                     pure (n, ty))
                     decoratedSymbol fname ")"
-                    ds <- nonEmptyBlock (topDecl fname)
+                    ds <- nonEmptyBlockAfter col (topDecl fname)
                     pure (us, ds)
          (us, ds) <- pure b.val
          pure (PUsing (boundToFC fname b) us (collectDefs (concat ds)))
@@ -1669,11 +1672,12 @@ recordDecl fname indents
 
 paramDecls : OriginDesc -> IndentInfo -> Rule PDecl
 paramDecls fname indents = do
+         startCol <- column
          b1 <- bounds (decoratedKeyword fname "parameters")
          commit
          args <- bounds (newParamDecls fname indents <|> oldParamDecls fname indents)
          commit
-         declarations <- bounds $ nonEmptyBlock (topDecl fname)
+         declarations <- bounds $ nonEmptyBlockAfter startCol (topDecl fname)
          mergedBounds <- pure $ b1 `mergeBounds` (args `mergeBounds` declarations)
          pure (PParameters (boundToFC fname mergedBounds) args.val (collectDefs (concat declarations.val)))
 
