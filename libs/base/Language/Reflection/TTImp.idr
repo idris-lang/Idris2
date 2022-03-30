@@ -115,7 +115,7 @@ mutual
        Macro : FnOpt
        SpecArgs : List Name -> FnOpt
        ||| Keep the user provided name during codegen
-       NoMangle : NoMangleDirective -> FnOpt
+       NoMangle : Maybe NoMangleDirective -> FnOpt
 
   public export
   data ITy : Type where
