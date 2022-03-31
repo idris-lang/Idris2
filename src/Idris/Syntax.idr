@@ -442,7 +442,7 @@ mutual
                     PDecl' nm
        PImplementation : FC ->
                          Visibility -> List PFnOpt -> Pass ->
-                         (implicits : List (Name, RigCount, PTerm' nm)) ->
+                         (implicits : List (FC, RigCount, Name, PTerm' nm)) ->
                          (constraints : List (Maybe Name, PTerm' nm)) ->
                          Name ->
                          (params : List (PTerm' nm)) ->
@@ -1304,7 +1304,7 @@ mapPTermM f = goPTerm where
                       <*> pure mn
                       <*> goPDecls ps
     goPDecl (PImplementation fc v opts p is cs n ts mn ns mps) =
-      PImplementation fc v opts p <$> go3TupledPTerms is
+      PImplementation fc v opts p <$> goImplicits is
                                   <*> goPairedPTerms cs
                                   <*> pure n
                                   <*> goPTerms ts
@@ -1376,6 +1376,13 @@ mapPTermM f = goPTerm where
     go3TupledPTerms ((a, b, t) :: ts) =
       (::) . (\ c => (a, b, c)) <$> goPTerm t
                                 <*> go3TupledPTerms ts
+
+    goImplicits : List (x, y, z, PTerm' nm) ->
+                      Core (List (x, y, z, PTerm' nm))
+    goImplicits [] = pure []
+    goImplicits ((a, b, c, t) :: ts) =
+      ((::) . (a,b,c,)) <$> goPTerm t
+                        <*> goImplicits ts
 
     go4TupledPTerms : List (x, y, PiInfo (PTerm' nm), PTerm' nm) ->
                       Core (List (x, y, PiInfo (PTerm' nm), PTerm' nm))

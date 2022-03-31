@@ -1534,18 +1534,20 @@ constraints fname indents
          pure ((Just n, tm) :: more)
   <|> pure []
 
-implBinds : OriginDesc -> IndentInfo -> EmptyRule (List (Name, RigCount, PTerm))
-implBinds fname indents
-    = do decoratedSymbol fname "{"
-         rig <- multiplicity fname
-         n <- decorate fname Bound name
-         decoratedSymbol fname ":"
-         tm <- typeExpr pdef fname indents
-         decoratedSymbol fname "}"
-         decoratedSymbol fname "->"
-         more <- implBinds fname indents
-         pure ((n, rig, tm) :: more)
-  <|> pure []
+implBinds : OriginDesc -> IndentInfo -> EmptyRule (List (FC, RigCount, Name, PTerm))
+implBinds fname indents = concatMap (map adjust) <$> go where
+
+  adjust : (RigCount, WithBounds Name, PTerm) -> (FC, RigCount, Name, PTerm)
+  adjust (r, wn, ty) = (virtualiseFC (boundToFC fname wn), r, wn.val, ty)
+
+  go : EmptyRule (List (List (RigCount, WithBounds Name, PTerm)))
+  go = do decoratedSymbol fname "{"
+          ns <- pibindListName fname indents
+          commitSymbol fname "}"
+          commitSymbol fname "->"
+          more <- go
+          pure (ns :: more)
+    <|> pure []
 
 ifaceParam : OriginDesc -> IndentInfo -> Rule (List Name, (RigCount, PTerm))
 ifaceParam fname indents

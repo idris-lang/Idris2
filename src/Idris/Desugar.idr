@@ -944,12 +944,12 @@ mutual
 
   desugarDecl ps (PImplementation fc vis fnopts pass is cons tn params impln nusing body)
       = do opts <- traverse (desugarFnOpt ps) fnopts
-           is' <- traverse (\ (n,c,tm) => do tm' <- desugar AnyExpr ps tm
-                                             pure (n, c, tm')) is
-           let _ = the (List (Name, RigCount, RawImp)) is'
-           cons' <- traverse (\ (n, tm) => do tm' <- desugar AnyExpr ps tm
-                                              pure (n, tm')) cons
-           let _ = the (List (Maybe Name, RawImp)) cons'
+           is' <- for is $ \ (fc, c,n,tm) =>
+                     do tm' <- desugar AnyExpr ps tm
+                        pure (fc, c, n, tm')
+           cons' <- for cons $ \ (n, tm) =>
+                     do tm' <- desugar AnyExpr ps tm
+                        pure (n, tm')
            params' <- traverse (desugar AnyExpr ps) params
            let _ = the (List RawImp) params'
            -- Look for bindable names in all the constraints and parameters
@@ -959,10 +959,8 @@ mutual
              $ findUniqueBindableNames fc True ps []
 
            let paramsb = map (doBind bnames) params'
-           let isb = map (\ (n, r, tm) => (n, r, doBind bnames tm)) is'
-           let _ = the (List (Name, RigCount, RawImp)) isb
+           let isb = map (\ (info, r, n, tm) => (info, r, n, doBind bnames tm)) is'
            let consb = map (\(n, tm) => (n, doBind bnames tm)) cons'
-           let _ = the (List (Maybe Name, RawImp)) consb
 
            body' <- maybe (pure Nothing)
                           (\b => do b' <- traverse (desugarDecl ps) b
