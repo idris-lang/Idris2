@@ -1,0 +1,44 @@
+1/1: Building EmptyFailing (EmptyFailing.idr)
+Error: Expected an indented non-empty block.
+
+EmptyFailing:5:1--5:2
+ 1 | module EmptyFailing
+ 2 | 
+ 3 | failing
+ 4 | 
+ 5 | x : Void
+     ^
+
+1/1: Building EmptyMutual (EmptyMutual.idr)
+Error: Expected an indented non-empty block.
+
+EmptyMutual:5:1--5:2
+ 1 | module EmptyMutual
+ 2 | 
+ 3 | mutual
+ 4 | 
+ 5 | a : Nat
+     ^
+
+1/1: Building EmptyUsing (EmptyUsing.idr)
+Error: Expected an indented non-empty block.
+
+EmptyUsing:5:1--5:2
+ 1 | module EmptyUsing
+ 2 | 
+ 3 | using (Eq a)
+ 4 | 
+ 5 | f : a -> a -> Bool
+     ^
+
+1/1: Building EmptyParameters (EmptyParameters.idr)
+Error: Expected an indented non-empty block.
+
+EmptyParameters:5:1--5:2
+ 1 | module EmptyParameters
+ 2 | 
+ 3 | parameters (m : Nat -> Type)
+ 4 | 
+ 5 | f : (y : Nat) -> m y -> Unit
+     ^
+
