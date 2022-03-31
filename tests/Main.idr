@@ -203,6 +203,11 @@ idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
        "reflection013", "reflection014"
       ]
 
+idrisTestsWith : TestPool
+idrisTestsWith = MkTestPool "With abstraction" [] Nothing
+      [ "with001", "with002", "with004", "with005", "with006", "with007",
+        "with008"
+      ]
 
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
@@ -227,8 +232,6 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "real001", "real002",
        -- Inlining
        "inlining001",
-       -- The 'with' rule
-       "with001", "with002", "with004", "with005", "with006", "with007",
        -- with-disambiguation
        "with003",
        -- pretty printing
@@ -349,6 +352,7 @@ main = runner $
   , testPaths "idris2" idrisTestsTotality
   , testPaths "idris2" idrisTestsSchemeEval
   , testPaths "idris2" idrisTestsReflection
+  , testPaths "idris2" idrisTestsWith
   , testPaths "idris2" idrisTests
   , !typeddTests
   , !ideModeTests
