@@ -157,9 +157,9 @@ commitKeyword fname indents req
          decoratedKeyword fname req
          mustContinue indents Nothing
 
-commitSymbol : String -> Rule ()
-commitSymbol req
-    = symbol req
+commitSymbol : OriginDesc -> String -> Rule ()
+commitSymbol fname req
+    = decoratedSymbol fname req
        <|> fatalError ("Expected '" ++ req ++ "'")
 
 continueWithDecorated : OriginDesc -> IndentInfo -> String -> Rule ()
@@ -719,7 +719,7 @@ mutual
        continueLam : Rule PTerm
        continueLam = do
            binders <- bindList fname indents
-           decoratedSymbol fname "=>"
+           commitSymbol fname "=>"
            mustContinue indents Nothing
            scope <- typeExpr pdef fname indents
            pure (bindAll binders scope)
@@ -777,13 +777,17 @@ mutual
 
   caseRHS : OriginDesc -> WithBounds t -> IndentInfo -> PTerm -> Rule PClause
   caseRHS fname start indents lhs
-      = do rhs <- bounds (decoratedSymbol fname "=>" *> mustContinue indents Nothing *> typeExpr pdef fname indents)
+      = do rhs <- bounds $ do
+                    decoratedSymbol fname "=>"
+                    mustContinue indents Nothing
+                    typeExpr pdef fname indents
            atEnd indents
            let fc = boundToFC fname (mergeBounds start rhs)
            pure (MkPatClause fc lhs rhs.val [])
     <|> do end <- bounds (decoratedKeyword fname "impossible")
            atEnd indents
            pure (MkImpossible (boundToFC fname (mergeBounds start end)) lhs)
+    <|> fatalError ("Expected '=>' or 'impossible'")
 
   if_ : OriginDesc -> IndentInfo -> Rule PTerm
   if_ fname indents

@@ -1,0 +1,18 @@
+1/1: Building LamParseError (LamParseError.idr)
+Error: Expected '=>'.
+
+LamParseError:2:24--2:26
+ 1 | fun : a -> b -> c -> d -> a
+ 2 | fun = \ a, b => \ c, d -> a
+                            ^^
+
+1/1: Building CaseParseError (CaseParseError.idr)
+Error: Expected '=>' or 'impossible'.
+
+CaseParseError:4:7--4:9
+ 1 | plus : Nat -> Nat -> Nat
+ 2 | plus m n = case m of
+ 3 |   Z => n
+ 4 |   S m -> S (plus m n)
+           ^^
+
