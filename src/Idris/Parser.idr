@@ -3,6 +3,7 @@ module Idris.Parser
 import Core.Options
 import Core.Metadata
 import Idris.Syntax
+import Idris.Syntax.Traversals
 import public Parser.Source
 import TTImp.TTImp
 
@@ -1110,7 +1111,9 @@ mutual
       clauseLHS fname indent (Just lhs)
         = do e <- opExpr plhs fname indents
              pure $ case e of
-               PImplicit _ => lhs
+               PImplicit fc =>
+                 let vfc = virtualiseFC fc in
+                 bimap (substFC vfc) (map (map $ substFC vfc)) lhs
                _ => (e, [])
 
       parseWithArg : Rule (FC, PTerm)

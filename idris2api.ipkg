@@ -123,6 +123,7 @@ modules =
     Idris.Resugar,
     Idris.SetOptions,
     Idris.Syntax,
+    Idris.Syntax.Traversals,
     Idris.Syntax.Views,
     Idris.Version,
 

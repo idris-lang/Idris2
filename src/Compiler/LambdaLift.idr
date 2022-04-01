@@ -1,3 +1,13 @@
+||| Utilities pertaining to the _lamda-lifted_ intermediate representation of
+||| Idris 2 programs.
+|||
+||| This representation of program syntax is one of several used when compiling
+||| a program. These representations can be used by compiler back-ends to
+||| compile from versions of Idris programs with reduced complexity---see
+||| [Which Intermediate Representation (IR) should be consumed by the custom
+||| back-end?]
+||| (https://idris2.readthedocs.io/en/latest/backends/backend-cookbook.html?highlight=lifted#which-intermediate-representation-ir-should-be-consumed-by-the-custom-back-end)
+||| for more information.
 module Compiler.LambdaLift
 
 import Core.CompileExpr
@@ -11,67 +21,244 @@ import Data.Vect
 %default covering
 
 mutual
+
+  ||| Type representing the syntax tree of an Idris 2 program after lambda
+  ||| lifting.
+  |||
+  ||| All constructors take as argument a file context, describing the position
+  ||| of the original code pre-transformation.
+  |||
+  ||| @ vars is the list of names accessible within the current scope of the
+  |||   lambda-lifted code.
   public export
-  -- lazy (lazy reason) represents if a function application is lazy (Just _)
-  -- and if so why (eg. Just LInf, Just LLazy)
-  data Lifted : List Name -> Type where
+  data Lifted : (vars : List Name) -> Type where
+
+       ||| A local variable in the lambda-lifted syntax tree.
+       |||
+       ||| @ idx is the index that the variable can be found at in the syntax
+       |||   tree's current scope.
+       ||| @ p is evidence that indexing into vars with idx will provide the
+       |||   correct variable.
        LLocal : {idx : Nat} -> FC -> (0 p : IsVar x idx vars) -> Lifted vars
-       -- A known function applied to exactly the right number of arguments,
-       -- so the runtime can Just Go
-       LAppName : FC -> (lazy : Maybe LazyReason) -> Name -> List (Lifted vars) -> Lifted vars
-       -- A known function applied to too few arguments, so the runtime should
-       -- make a closure and wait for the remaining arguments
-       LUnderApp : FC -> Name -> (missing : Nat) ->
+
+       ||| A known function applied to exactly the right number of arguments.
+       |||
+       ||| Back-end runtimes should be able to utilise total applications
+       ||| effectively, and so they are given a specific constructor here.
+       |||
+       ||| @ lazy is used to signify that this function application is lazy,
+       |||   and, if so, the reason for lazy application.
+       ||| @ n is the name of the function to be invoked.
+       ||| @ args is the list of arguments for the function call.
+       LAppName : FC -> (lazy : Maybe LazyReason) -> (n : Name) ->
+                  (args : List (Lifted vars)) -> Lifted vars
+
+       ||| A known function applied to fewer arguments than its arity.
+       |||
+       ||| Situations described by this constructor will likely be handled by
+       ||| by runtimes by creating a closure which waits for the remaining
+       ||| arguments.
+       |||
+       ||| @ n is the name of the function to be (eventually) invoked.
+       ||| @ missing is the number of arguments missing from this application.
+       ||| @ args is a list of the arguments known at this point in time.
+       LUnderApp : FC -> (n : Name) -> (missing : Nat) ->
                    (args : List (Lifted vars)) -> Lifted vars
-       -- A closure applied to one more argument (so, for example a closure
-       -- which is waiting for another argument before it can run).
-       -- The runtime should add the argument to the closure and run the result
-       -- if it is now fully applied.
-       LApp : FC -> (lazy : Maybe LazyReason) -> (closure : Lifted vars) -> (arg : Lifted vars) -> Lifted vars
-       LLet : FC -> (x : Name) -> Lifted vars ->
-              Lifted (x :: vars) -> Lifted vars
-       LCon : FC -> Name -> ConInfo -> (tag : Maybe Int) ->
-              List (Lifted vars) -> Lifted vars
+
+       ||| A closure applied to one more argument.
+       |||
+       ||| This given argument may be the last one that the closure is waiting
+       ||| on before being able to run; runtimes should check for such a
+       ||| situation, and run the function if it is now fully applied.
+       |||
+       ||| @ lazy is used to signify that this function application is lazy,
+       |||   and, if so, the reason for lazy application.
+       ||| @ closure is the closure being applied.
+       ||| @ arg is the extra argument being given to the closure.
+       LApp : FC -> (lazy : Maybe LazyReason) -> (closure : Lifted vars) ->
+              (arg : Lifted vars) -> Lifted vars
+
+       ||| A let binding: binding a new name to an existing expression.
+       |||
+       ||| Roughly, this constructor represents code of the form:
+       ||| ```idris
+       ||| let
+       |||   x = expr
+       ||| in
+       |||   body
+       ||| ```
+       |||
+       ||| @ x is the new name to bind.
+       ||| @ expr is the expression to bind `x` to.
+       ||| @ body is the expression to evaluate after binding.
+       LLet : FC -> (x : Name) -> (expr : Lifted vars) ->
+              (body : Lifted (x :: vars)) -> Lifted vars
+
+       ||| Use of a constructor to construct a compound data type value.
+       |||
+       ||| @ n is the name of the data type.
+       ||| @ info is information about the constructor.
+       ||| @ tag is the tag value for the construction, if the type is an
+       |||   algebraic data type.
+       ||| @ args is the list of arguments for the constructor.
+       LCon : FC -> (n : Name) -> (info : ConInfo) -> (tag : Maybe Int) ->
+              (args : List (Lifted vars)) -> Lifted vars
+
+       ||| An operator applied to operands.
+       |||
+       ||| @ arity is the arity of the operator.
+       ||| @ lazy is used to signify that this operation is lazy, and, if so,
+       |||   the reason for lazy application.
+       ||| @ op is the operator being used.
+       ||| @ args is a vector containing the operands of the operation.
        LOp : {arity : _} ->
-             FC -> (lazy : Maybe LazyReason) -> PrimFn arity -> Vect arity (Lifted vars) -> Lifted vars
-       LExtPrim : FC -> (lazy : Maybe LazyReason) -> (p : Name) -> List (Lifted vars) -> Lifted vars
-       LConCase : FC -> Lifted vars ->
-                  List (LiftedConAlt vars) ->
-                  Maybe (Lifted vars) -> Lifted vars
-       LConstCase : FC -> Lifted vars ->
-                    List (LiftedConstAlt vars) ->
-                    Maybe (Lifted vars) -> Lifted vars
+             FC -> (lazy : Maybe LazyReason) -> (op : PrimFn arity) ->
+             (args : Vect arity (Lifted vars)) -> Lifted vars
+
+       ||| A second, more involved, form of primitive operation, defined using
+       ||| `%extern` pragmas.
+       |||
+       ||| Backends should cause a compile-time error when encountering an
+       ||| unimplemented LExtPrim operation.
+       |||
+       ||| @ lazy is used to signify that this operation is lazt, and, if so,
+       |||   the reason for lazy application.
+       ||| @ p is the name of the operator being used.
+       ||| @ args is a list of operands for the operation.
+       LExtPrim : FC -> (lazy : Maybe LazyReason) -> (p : Name) ->
+                  (args : List (Lifted vars)) -> Lifted vars
+
+       ||| A case split on constructor tags.
+       |||
+       ||| @ expr is the value to match against.
+       ||| @ alts is a list of the different branches in the case statement.
+       ||| @ def is an (optional) default branch, taken if no branch in alts is
+       |||   taken.
+       LConCase : FC -> (expr : Lifted vars) ->
+                  (alts : List (LiftedConAlt vars)) ->
+                  (def : Maybe (Lifted vars)) -> Lifted vars
+
+       ||| A case split on a constant expression.
+       |||
+       ||| @ expr is the expression to match against.
+       ||| @ alts is a list of the different branches in the case statement.
+       ||| @ def is an (optional) default branch, taken if no branch in alts is
+       |||   taken.
+       LConstCase : FC -> (expr : Lifted vars) ->
+                    (alts : List (LiftedConstAlt vars)) ->
+                    (def : Maybe (Lifted vars)) -> Lifted vars
+
+       ||| A primitive (constant) value.
        LPrimVal : FC -> Constant -> Lifted vars
+
+       ||| An erased value.
        LErased : FC -> Lifted vars
-       LCrash : FC -> String -> Lifted vars
 
+       ||| A forceful crash of the program.
+       |||
+       ||| This kind of crash is generated by the Idris 2 compiler; it is
+       ||| separate from crashes explicitly added to code by programmers (for
+       ||| example via `idris_crash`).
+       |||
+       ||| @ msg is a message emitted when crashing that might be useful for
+       |||   debugging.
+       LCrash : FC -> (msg : String) -> Lifted vars
+
+  ||| A branch of an "LCon" (constructor tag) case statement.
+  |||
+  ||| @ vars is the list of names accessible within the current scope of the
+  |||   lambda-lifted code.
   public export
-  data LiftedConAlt : List Name -> Type where
-       MkLConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : List Name) ->
-                   Lifted (args ++ vars) -> LiftedConAlt vars
+  data LiftedConAlt : (vars : List Name) -> Type where
 
+       ||| Constructs a branch of an "LCon" (constructor tag) case statement.
+       |||
+       ||| If this branch is taken, members of the compound data value being
+       ||| inspected are bound to new names before evaluation continues.
+       |||
+       ||| @ n is the name of the constructor that this branch checks for.
+       ||| @ info is information about the constructor.
+       ||| @ tag is a tag value, present if the type of the value
+       |||   inspected is an algebraic data type (this can be matched against
+       |||   instead of the constructor's name, if preferable).
+       ||| @ args is a list of new names that are bound to the inspected value's
+       |||   members before evaluation of this branch's body (this is similar
+       |||   to using a let binding for each member of the value).
+       ||| @ body is the expression that is evaluated as the consequence of
+       |||   this branch matching.
+       MkLConAlt : (n : Name) -> (info : ConInfo) -> (tag : Maybe Int) ->
+                   (args : List Name) -> (body : Lifted (args ++ vars)) ->
+                   LiftedConAlt vars
+
+  ||| A branch of an "LConst" (constant expression) case statement.
+  |||
+  ||| @ vars is the list of names accessible within the current scope of the
+  |||   lambda-lifted code.
   public export
-  data LiftedConstAlt : List Name -> Type where
-       MkLConstAlt : Constant -> Lifted vars -> LiftedConstAlt vars
+  data LiftedConstAlt : (vars : List Name) -> Type where
 
+       ||| Constructs a branch of an "LConst" (constant expression) case
+       ||| statement.
+       |||
+       ||| @ expr is the constant expression to match against.
+       ||| @ body is the expression that is evaluated as the consequence of this
+       |||   branch matching.
+       MkLConstAlt : (expr : Constant) -> (body : Lifted vars) ->
+                     LiftedConstAlt vars
+
+||| Top-level definitions in the lambda-lifted intermediate representation of an
+||| Idris 2 program.
 public export
 data LiftedDef : Type where
+
+     ||| Constructs a function definition.
+     |||
+     ||| @ args is the arguments accepted by the function.
+     ||| @ scope is the list of names accessible within the current scope of the
+     |||   lambda-lifted code.
+     ||| @ body is the body of the function.
      -- We take the outer scope and the function arguments separately so that
      -- we don't have to reshuffle de Bruijn indices, which is expensive.
      -- This should be compiled as a function which takes 'args' first,
      -- then 'reverse scope'.
      -- (Sorry for the awkward API - it's to do with how the indices are
-     -- arranged for the variables, and it oculd be expensive to reshuffle them!
+     -- arranged for the variables, and it could be expensive to reshuffle them!
      -- See Compiler.ANF for an example of how they get resolved to names)
-     MkLFun : (args : List Name) -> -- function arguments
-              (scope : List Name) -> -- outer scope
-              Lifted (scope ++ args) -> LiftedDef
-     MkLCon : (tag : Maybe Int) -> (arity : Nat) -> (nt : Maybe Nat) -> LiftedDef
+     MkLFun : (args : List Name) -> (scope : List Name) ->
+              (body : Lifted (scope ++ args)) -> LiftedDef
+
+     ||| Constructs a definition of a constructor for a compound data type.
+     |||
+     ||| @ tag is a tag value used by the constructor (if present) to keep track
+     |||   of the value's type when using algebraic data types.
+     ||| @ arity is the arity of the constructor; the number of arguments it
+     |||   takes.
+     ||| @ nt is information related to newtype unboxing; backend
+     |||   implementations needs not make use of this argument, as newtype
+     |||   unboxing is managed by the Idris 2 compiler.
+     MkLCon : (tag : Maybe Int) -> (arity : Nat) -> (nt : Maybe Nat) ->
+              LiftedDef
+
+     ||| Constructs a forward declaration of a foreign function.
+     |||
+     ||| @ ccs is a list of calling conventions; these are annotations to
+     |||   foreign functions, used by backends to relate foreign function calls
+     |||   correctly.
+     ||| @ fargs is a list of the types of the arguments to the function.
+     ||| @ ret is the type of the return value of the function.
      MkLForeign : (ccs : List String) ->
                   (fargs : List CFType) ->
-                  CFType ->
+                  (ret : CFType) ->
                   LiftedDef
-     MkLError : Lifted [] -> LiftedDef
+
+     ||| Constructs an error condition.
+     |||
+     ||| The function produced by this construction should accept any number of
+     ||| arguments, and should crash at runtime. Such crashes should crash via
+     ||| `LCrash` rather than `prim_crash`.
+     |||
+     ||| @ expl : an explanation of the error.
+     MkLError : (expl : Lifted []) -> LiftedDef
 
 showLazy : Maybe LazyReason -> String
 showLazy = maybe "" $ (" " ++) . show

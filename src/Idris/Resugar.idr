@@ -6,6 +6,7 @@ import Core.Env
 import Core.Options
 
 import Idris.Syntax
+import Idris.Syntax.Traversals
 
 import TTImp.TTImp
 import TTImp.TTImp.Functor

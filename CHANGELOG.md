@@ -130,6 +130,10 @@
 * Removes `contrib`'s deprecated `Data.Num.Implementations` module. See
   `Prelude.Interfaces` instead.
 
+### Other changes
+
+* Adds docstrings for the lambda-lifted IR.
+
 ## v0.5.0/0.5.1
 
 ### Language changes
