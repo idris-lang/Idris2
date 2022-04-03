@@ -313,7 +313,6 @@
 0000c8(:output (:ok (:highlight-source ((((:filename "With.idr") (:start 28 41) (:end 28 42)) ((:name "n") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000073(:output (:ok (:highlight-source ((((:filename "With.idr") (:start 28 42) (:end 28 43)) ((:decor :keyword)))))) 1)
 000073(:output (:ok (:highlight-source ((((:filename "With.idr") (:start 29 15) (:end 29 16)) ((:decor :keyword)))))) 1)
-0000c8(:output (:ok (:highlight-source ((((:filename "With.idr") (:start 29 17) (:end 29 18)) ((:name "p") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000071(:output (:ok (:highlight-source ((((:filename "With.idr") (:start 29 17) (:end 29 18)) ((:decor :bound)))))) 1)
 000073(:output (:ok (:highlight-source ((((:filename "With.idr") (:start 29 18) (:end 29 19)) ((:decor :keyword)))))) 1)
 000073(:output (:ok (:highlight-source ((((:filename "With.idr") (:start 29 19) (:end 29 20)) ((:decor :keyword)))))) 1)
