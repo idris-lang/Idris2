@@ -115,6 +115,9 @@
   into a list of proofs and a list of counter-proofs for a given property.
 * Properties of the `List1` type were moved from `Data.List1` to `Data.List1.Properties`.
 * `Syntax.PreorderReasoning` was moved to `base` from `contrib`.
+* Move the types and functions in `Data.Vect.Quantifiers` to their respective
+  namespaces (`All` for all-related things, and `Any` for any-related things) to
+  make the code consistent with the other quantifiers (`List` and `SnocList`).
 
 #### Test
 
