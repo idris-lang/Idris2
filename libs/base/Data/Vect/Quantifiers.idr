@@ -40,7 +40,7 @@ namespace Any
   ||| @ p the property to be satisfied
   ||| @ dec the decision procedure
   ||| @ xs the vector to examine
-  export
+  public export
   any : (dec : (x : a) -> Dec (p x)) -> (xs : Vect n a) -> Dec (Any p xs)
   any _ Nil = No uninhabited
   any p (x::xs) with (p x)
@@ -81,7 +81,7 @@ namespace All
   ||| @ p the property
   ||| @ dec the decision procedure
   ||| @ xs the vector to examine
-  export
+  public export
   all : (dec : (x : a) -> Dec (p x)) -> (xs : Vect n a) -> Dec (All p xs)
   all _ Nil = Yes Nil
   all d (x::xs) with (d x)

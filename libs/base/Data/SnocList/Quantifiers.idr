@@ -47,7 +47,7 @@ namespace Any
   ||| @ p the property to be satisfied
   ||| @ dec the decision procedure
   ||| @ xs the list to examine
-  export
+  public export
   any : (dec : (x : a) -> Dec (p x)) -> (xs : SnocList a) -> Dec (Any p xs)
   any _ Lin = No uninhabited
   any p (xs :< x) with (p x)
@@ -122,7 +122,7 @@ namespace All
   ||| @ p the property
   ||| @ dec the decision procedure
   ||| @ xs the list to examine
-  export
+  public export
   all : (dec : (x : a) -> Dec (p x)) -> (xs : SnocList a) -> Dec (All p xs)
   all _ Lin = Yes Lin
   all d (xs :< x) with (d x)
