@@ -237,7 +237,10 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- pretty printing
        "pretty001", "pretty002",
        -- golden file testing
-       "golden001"]
+       "golden001",
+       -- quantifiers
+       "quantifiers001"
+       ]
 
 typeddTests : IO TestPool
 typeddTests = testsInDir "typedd-book" (const True) "Type Driven Development" [] Nothing
