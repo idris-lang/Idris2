@@ -81,3 +81,13 @@ function support_system_file_chmod (filename, mode) {
     return 1
   }
 }
+
+function support_system_file_removeFile (filename) {
+  try {
+    support_system_file_fs.unlinkSync(filename)
+    return 0
+  } catch (e) {
+    process.__lasterr = e
+    return 1
+  }
+}

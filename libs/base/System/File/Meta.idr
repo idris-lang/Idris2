@@ -7,24 +7,24 @@ import public System.File.Types
 
 %default total
 
-%foreign support "idris2_fileSize"
+%foreign supportC "idris2_fileSize"
          "node:lambda:fp=>require('fs').fstatSync(fp.fd).size"
 prim__fileSize : FilePtr -> PrimIO Int
 
-%foreign support "idris2_fileSize"
+%foreign supportC "idris2_fileSize"
 prim__fPoll : FilePtr -> PrimIO Int
 
-%foreign support "idris2_fileAccessTime"
+%foreign supportC "idris2_fileAccessTime"
 prim__fileAccessTime : FilePtr -> PrimIO Int
 
-%foreign support "idris2_fileModifiedTime"
+%foreign supportC "idris2_fileModifiedTime"
          "node:lambda:fp=>require('fs').fstatSync(fp.fd).mtimeMs / 1000"
 prim__fileModifiedTime : FilePtr -> PrimIO Int
 
-%foreign support "idris2_fileStatusTime"
+%foreign supportC "idris2_fileStatusTime"
 prim__fileStatusTime : FilePtr -> PrimIO Int
 
-%foreign support "idris2_fileIsTTY"
+%foreign supportC "idris2_fileIsTTY"
          "node:lambda:fp=>Number(require('tty').isatty(fp.fd))"
 prim__fileIsTTY : FilePtr -> PrimIO Int
 
