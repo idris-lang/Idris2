@@ -12,11 +12,17 @@ import Data.Buffer
 
 %default total
 
-%foreign support "idris2_readBufferData"
+support : String -> String
+support fn = "C:\{fn}, libidris2_support, idris_file.h"
+-- ^ Only needed until version following 0.5.1 is released at which point
+--   any code in compiler src can be refactored to use renamed @supportC@
+--   function.
+
+%foreign Buffer.support "idris2_readBufferData"
          "node:lambda:(f,b,l,m) => require('fs').readSync(f.fd,b,l,m)"
 prim__readBufferData : FilePtr -> Buffer -> (offset : Int) -> (maxbytes : Int) -> PrimIO Int
 
-%foreign support "idris2_writeBufferData"
+%foreign Buffer.support "idris2_writeBufferData"
          "node:lambda:(f,b,l,m) => require('fs').writeSync(f.fd,b,l,m)"
 prim__writeBufferData : FilePtr -> Buffer -> (offset : Int) -> (size : Int) -> PrimIO Int
 
