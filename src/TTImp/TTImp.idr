@@ -479,14 +479,6 @@ mutual
     show (IBuiltin _ type name) = "%builtin " ++ show type ++ " " ++ show name
 
 
-{-
-       WithClause : FC -> (lhs : RawImp' nm) ->
-                    (rig : RigCount) -> (wval : RawImp' nm) -> -- with'd expression (& quantity)
-                    (prf : Maybe Name) -> -- optional name for the proof
-                    (flags : List WithFlag) ->
-                    List (ImpClause' nm) -> ImpClause' nm
--}
-
 export
 mkWithClause : FC -> RawImp' nm -> List1 (RigCount, RawImp' nm, Maybe Name) ->
                List WithFlag -> List (ImpClause' nm) -> ImpClause' nm
