@@ -1046,6 +1046,16 @@ withFlags fname
           (Syntactic ::) <$> withFlags fname)
   <|> pure []
 
+
+withProblem : OriginDesc -> Int -> IndentInfo -> Rule PWithProblem
+withProblem fname col indents
+  = do rig <- multiplicity fname
+       start <- bounds (decoratedSymbol fname "(")
+       wval <- bracketedExpr fname start indents
+       prf <- optional (decoratedKeyword fname "proof"
+              *> UN . Basic <$> decoratedSimpleBinderName fname)
+       pure (MkPWithProblem rig wval prf)
+
 mutual
   parseRHS : (withArgs : Nat) ->
              OriginDesc -> WithBounds t -> Int ->
@@ -1065,17 +1075,13 @@ mutual
                    decoratedKeyword fname "with"
                    commit
                    flags <- withFlags fname
-                   rig <- multiplicity fname
-                   start <- bounds (decoratedSymbol fname "(")
-                   wval <- bracketedExpr fname start indents
-                   prf <- optional (decoratedKeyword fname "proof"
-                                    *> UN . Basic <$> decoratedSimpleBinderName fname)
+                   wps <- sepBy1 (decoratedSymbol fname "|") (withProblem fname col indents)
                    ws <- mustWork $ nonEmptyBlockAfter col
-                                  $ clause (S withArgs) (Just lhs) fname
-                   pure (prf, flags, rig, wval, forget ws)
-            (prf, flags, rig, wval, ws) <- pure b.val
+                                  $ clause (S (length wps.tail) + withArgs) (Just lhs) fname
+                   pure (flags, wps, forget ws)
+            (flags, wps, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
-            pure (MkWithClause fc (uncurry applyArgs lhs) rig wval prf flags ws)
+            pure (MkWithClause fc (uncurry applyArgs lhs) wps flags ws)
      <|> do end <- bounds (decoratedKeyword fname "impossible")
             atEnd indents
             pure $ let fc = boundToFC fname (mergeBounds start end) in

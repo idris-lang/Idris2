@@ -1,5 +1,7 @@
 module Idris.Syntax.Traversals
 
+import Data.List1
+
 import Idris.Syntax
 import Core.Core
 
@@ -214,14 +216,16 @@ mapPTermM f = goPTerm where
       MkPatClause fc <$> goPTerm lhs
                      <*> goPTerm rhs
                      <*> goPDecls wh
-    goPClause (MkWithClause fc lhs rig wVal prf flags cls) =
+    goPClause (MkWithClause fc lhs wps flags cls) =
       MkWithClause fc <$> goPTerm lhs
-                      <*> pure rig
-                      <*> goPTerm wVal
-                      <*> pure prf
+                      <*> traverseList1 goPWithProblem wps
                       <*> pure flags
                       <*> goPClauses cls
     goPClause (MkImpossible fc lhs) = MkImpossible fc <$> goPTerm lhs
+
+    goPWithProblem : PWithProblem' nm -> Core (PWithProblem' nm)
+    goPWithProblem (MkPWithProblem rig wval mnm)
+      = MkPWithProblem rig <$> goPTerm wval <*> pure mnm
 
     goPDecl : PDecl' nm -> Core (PDecl' nm)
     goPDecl (PClaim fc c v opts tdecl) =
@@ -495,11 +499,14 @@ mapPTerm f = goPTerm where
     goPDo (DoLetLocal fc decls) = DoLetLocal fc $ goPDecl <$> decls
     goPDo (DoRewrite fc t) = DoRewrite fc $ goPTerm t
 
+    goPWithProblem : PWithProblem' nm -> PWithProblem' nm
+    goPWithProblem (MkPWithProblem rig wval mnm)= MkPWithProblem rig (goPTerm wval) mnm
+
     goPClause : PClause' nm -> PClause' nm
     goPClause (MkPatClause fc lhs rhs wh)
       = MkPatClause fc (goPTerm lhs) (goPTerm rhs) (goPDecl <$> wh)
-    goPClause (MkWithClause fc lhs rig wVal prf flags cls)
-      = MkWithClause fc (goPTerm lhs) rig (goPTerm wVal) prf flags (goPClause <$> cls)
+    goPClause (MkWithClause fc lhs wps flags cls)
+      = MkWithClause fc (goPTerm lhs) (goPWithProblem <$> wps) flags (goPClause <$> cls)
     goPClause (MkImpossible fc lhs) = MkImpossible fc $ goPTerm lhs
 
     goPDecl : PDecl' nm -> PDecl' nm

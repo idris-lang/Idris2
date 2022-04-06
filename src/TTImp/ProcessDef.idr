@@ -598,7 +598,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                     $ map (\ nm => (Nothing, IVar vfc nm)) envns
                    ++ concatMap toWarg wargNames
 
-         log "declare.def.clause" 3 $ "Applying to with argument " ++ show rhs_in
+         log "declare.def.clause.with" 3 $ "Applying to with argument " ++ show rhs_in
          rhs <- wrapErrorC opts (InRHS ifc !(getFullName (Resolved n))) $
              checkTermSub n wmode opts nest' env' env sub' rhs_in
                           (gnf env' reqty)

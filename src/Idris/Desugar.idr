@@ -754,6 +754,17 @@ mutual
 
        pure (inm, bound, blhs)
 
+  desugarWithProblem :
+    {auto s : Ref Syn SyntaxInfo} ->
+    {auto c : Ref Ctxt Defs} ->
+    {auto u : Ref UST UState} ->
+    {auto m : Ref MD Metadata} ->
+    {auto o : Ref ROpts REPLOpts} ->
+    List Name -> PWithProblem ->
+    Core (RigCount, RawImp, Maybe Name)
+  desugarWithProblem ps (MkPWithProblem rig wval mnm)
+    = (rig,,mnm) <$> desugar AnyExpr ps wval
+
   desugarClause : {auto s : Ref Syn SyntaxInfo} ->
                   {auto c : Ref Ctxt Defs} ->
                   {auto u : Ref UST UState} ->
@@ -774,11 +785,11 @@ mutual
 
            pure (nm, PatClause fc lhs' rhs')
 
-  desugarClause ps arg (MkWithClause fc lhs rig wval prf flags cs)
+  desugarClause ps arg (MkWithClause fc lhs wps flags cs)
       = do cs' <- traverse (map snd . desugarClause ps arg) cs
            (nm, bound, lhs') <- desugarLHS ps arg lhs
-           wval' <- desugar AnyExpr (bound ++ ps) wval
-           pure (nm, WithClause fc lhs' rig wval' prf flags cs')
+           wps' <- traverseList1 (desugarWithProblem (bound ++ ps)) wps
+           pure (nm, mkWithClause fc lhs' wps' flags cs')
 
   desugarClause ps arg (MkImpossible fc lhs)
       = do (nm, _, lhs') <- desugarLHS ps arg lhs
