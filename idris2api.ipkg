@@ -240,6 +240,7 @@ modules =
     TTImp.ProcessBuiltin,
     TTImp.ProcessData,
     TTImp.ProcessDecls,
+    TTImp.ProcessDecls.Totality,
     TTImp.ProcessDef,
     TTImp.ProcessParams,
     TTImp.ProcessRecord,

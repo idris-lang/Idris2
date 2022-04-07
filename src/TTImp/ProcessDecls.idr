@@ -29,6 +29,8 @@ import TTImp.ProcessTransform
 import TTImp.ProcessType
 import TTImp.TTImp
 
+import TTImp.ProcessDecls.Totality
+
 import Data.List
 import Data.Maybe
 import Data.String
@@ -36,11 +38,6 @@ import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 
 %default covering
-
-||| When we process a failing block we want to know what happend
-data FailedFailure
-  = DidNotFail
-  | IncorrectlyFailed Error
 
 processFailing :
   {vars : _} ->
@@ -59,14 +56,25 @@ processFailing eopts nest env fc mmsg decls
          md <- get MD
          defs <- branch
          -- We're going to run the elaboration, and then return:
-         -- * Nothing                      if the block correctly failed
-         -- * Just DidNotFail              if it incorrectly succeeded
-         -- * Just (IncorrectlyFailed err) if the block failed with the wrong error
+         -- * Nothing     if the block correctly failed
+         -- * Just err    if it either did not fail or failed with an invalid error message
          result <- catch
                (do -- Run the elaborator
+                   before <- getTotalityErrors
                    traverse_ (processDecl eopts nest env) decls
-                   -- We have (unfortunately) succeeded
-                   pure (Just $ FailingDidNotFail fc))
+                   after <- getTotalityErrors
+                   let errs = after \\ before
+                   let (e :: es) = errs
+                     | [] => -- We have (unfortunately) succeeded
+                             pure (Just $ FailingDidNotFail fc)
+                   let Just msg = mmsg
+                     | _ => pure Nothing
+                   log "elab.failing" 10 $ "Failing block based on \{show msg} failed with \{show errs}"
+                   test <- anyM (checkError msg) errs
+                   pure $ do -- Unless the error is the expected one
+                             guard (not test)
+                             -- We should complain we had the wrong one
+                             pure (FailingWrongError fc msg (e ::: es)))
                (\err => do let Just msg = mmsg
                                  | _ => pure Nothing
                            log "elab.failing" 10 $ "Failing block based on \{show msg} failed with \{show err}"
@@ -74,7 +82,7 @@ processFailing eopts nest env fc mmsg decls
                            pure $ do -- Unless the error is the expected one
                                      guard (not test)
                                      -- We should complain we had the wrong one
-                                     pure (FailingWrongError fc msg err))
+                                     pure (FailingWrongError fc msg (err ::: [])))
          md' <- get MD
          -- Reset the state
          put UST ust
@@ -126,61 +134,6 @@ process eopts nest env (IBuiltin fc type name)
     = processBuiltin nest env fc type name
 
 TTImp.Elab.Check.processDecl = process
-
-export
-checkTotalityOK : {auto c : Ref Ctxt Defs} ->
-                  Name -> Core (Maybe Error)
-checkTotalityOK (NS _ (MN _ _)) = pure Nothing -- not interested in generated names
-checkTotalityOK (NS _ (CaseBlock _ _)) = pure Nothing -- case blocks checked elsewhere
-checkTotalityOK n
-    = do defs <- get Ctxt
-         Just gdef <- lookupCtxtExact n (gamma defs)
-              | Nothing => pure Nothing
-         let fc = location gdef
-
-         -- #524: need to check positivity even if we're not in a total context
-         -- because a definition coming later may need to know it is positive
-         case definition gdef of
-           (TCon _ _ _ _ _ _ _ _) => ignore $ checkPositive fc n
-           _ => pure ()
-
-         -- Once that is done, we build up errors if necessary
-         let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
-         let tot = totality gdef
-         log "totality" 3 $ show n ++ " must be: " ++ show treq
-         case treq of
-            PartialOK => pure Nothing
-            CoveringOnly => checkCovering fc (isCovering tot)
-            Total => checkTotality fc
-  where
-    checkCovering : FC -> Covering -> Core (Maybe Error)
-    checkCovering fc IsCovering = pure Nothing
-    checkCovering fc cov
-        = pure (Just (NotCovering fc n cov))
-
-    checkTotality : FC -> Core (Maybe Error)
-    checkTotality fc
-        = do ignore $ logTime ("+++ Checking Termination " ++ show n) (checkTotal fc n)
-             -- ^ checked lazily, so better calculate here
-             t <- getTotality fc n
-             err <- checkCovering fc (isCovering t)
-             maybe (case isTerminating t of
-                         NotTerminating p => pure (Just (NotTotal fc n p))
-                         _ => pure Nothing)
-                   (pure . Just) err
-
--- Check totality of all the names added in the file, and return a list of
--- totality errors.
--- Do this at the end of processing a file (or a batch of definitions) since
--- they might be mutually dependent so we need all the definitions to be able
--- to check accurately.
-export
-getTotalityErrors : {auto c : Ref Ctxt Defs} ->
-                    Core (List Error)
-getTotalityErrors
-    = do defs <- get Ctxt
-         errs <- traverse checkTotalityOK (keys (toSave defs))
-         pure (mapMaybe id errs)
 
 export
 processDecls : {vars : _} ->

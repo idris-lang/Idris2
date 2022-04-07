@@ -167,7 +167,7 @@ data Error : Type where
      BadMultiline : FC -> String -> Error
      Timeout : String -> Error
      FailingDidNotFail : FC -> Error
-     FailingWrongError : FC -> String -> Error -> Error
+     FailingWrongError : FC -> String -> List1 Error -> Error
 
      InType : FC -> Name -> Error -> Error
      InCon : FC -> Name -> Error -> Error
@@ -535,7 +535,7 @@ killErrorLoc (NoForeignCC fc xs) = NoForeignCC emptyFC xs
 killErrorLoc (BadMultiline fc x) = BadMultiline emptyFC x
 killErrorLoc (Timeout x) = Timeout x
 killErrorLoc (FailingDidNotFail fc) = FailingDidNotFail emptyFC
-killErrorLoc (FailingWrongError fc x err) = FailingWrongError emptyFC x (killErrorLoc err)
+killErrorLoc (FailingWrongError fc x errs) = FailingWrongError emptyFC x (map killErrorLoc errs)
 killErrorLoc (InType fc x err) = InType emptyFC x (killErrorLoc err)
 killErrorLoc (InCon fc x err) = InCon emptyFC x (killErrorLoc err)
 killErrorLoc (InLHS fc x err) = InLHS emptyFC x (killErrorLoc err)

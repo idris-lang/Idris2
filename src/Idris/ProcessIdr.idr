@@ -26,6 +26,7 @@ import Parser.Unlit
 
 import TTImp.Elab.Check
 import TTImp.ProcessDecls
+import TTImp.ProcessDecls.Totality
 import TTImp.TTImp
 
 import Idris.Desugar

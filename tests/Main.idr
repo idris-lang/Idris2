@@ -67,7 +67,7 @@ idrisTestsWarning = MkTestPool "Warnings" [] Nothing
 
 idrisTestsFailing : TestPool
 idrisTestsFailing = MkTestPool "Failing blocks" [] Nothing
-      ["failing001", "failing002"
+      ["failing001", "failing002", "failing003"
       ]
 
 idrisTestsError : TestPool
