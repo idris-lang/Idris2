@@ -561,6 +561,25 @@ perror : {auto c : Ref Ctxt Defs} ->
          Error -> Core (Doc IdrisAnn)
 perror err = perrorRaw !(toFullNames err)
 
+||| Check (in a whitespace-insensitive manner) that the msg is
+||| contained in the error.
+export
+checkError :
+  {auto c : Ref Ctxt Defs} ->
+  {auto s : Ref Syn SyntaxInfo} ->
+  {auto o : Ref ROpts REPLOpts} ->
+  (msg : String) -> Error -> Core Bool
+checkError msg err = do
+  -- Kill the locations so that we don't get source code excerpts
+  let err = killErrorLoc err
+  -- Show the error as a string
+  str <- show <$> perror err
+  -- Normalise the two strings. This ensures comparison is whitespace
+  -- insentitive (error messages' layout depend on terminal width)
+  let msg = unwords (words msg)
+  let str = unwords (words str)
+  pure (msg `isInfixOf` str)
+
 prettyMaybeLoc : Maybe FC -> Doc IdrisAnn
 prettyMaybeLoc Nothing = emptyDoc
 prettyMaybeLoc (Just fc) = annotate FileCtxt (pretty fc) <+> colon

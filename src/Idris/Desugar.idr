@@ -1050,7 +1050,11 @@ mutual
            syn <- get Syn
            defs <- branch
            log "desugar.failing" 20 $ "Desugaring the block:\n" ++ show d
-           -- See whether the desugaring phase fails
+           -- See whether the desugaring phase fails and return
+           -- * Right ds                            if the desugaring succeeded
+           --                                       the error will have to come later in the pipeline
+           -- * Left Nothing                        if the block correctly failed
+           -- * Left (Just (FailingWrongError err)) if the block failed with the wrong error
            result <- catch
              (do -- run the desugarer
                  ds <- traverse (desugarDecl ps) ds
@@ -1059,11 +1063,11 @@ mutual
                          let Just msg = mmsg
                              | _ => pure (Left Nothing)
                          -- otherwise have a look at the displayed message
-                         str <- show <$> perror (killErrorLoc err)
-                         log "desugar.failing" 10 $ "Failing block based on \{show msg} failed with \{str}"
+                         log "desugar.failing" 10 $ "Failing block based on \{show msg} failed with \{show err}"
+                         test <- checkError msg err
                          pure $ Left $ do
                               -- Unless the error is the expected one
-                              guard (not (msg `isInfixOf` str))
+                              guard (not test)
                               -- We should complain we had the wrong one
                               pure (FailingWrongError fc msg err))
            -- Reset the state

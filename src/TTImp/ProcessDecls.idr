@@ -58,6 +58,10 @@ processFailing eopts nest env fc mmsg decls
          syn <- get Syn
          md <- get MD
          defs <- branch
+         -- We're going to run the elaboration, and then return:
+         -- * Nothing                      if the block correctly failed
+         -- * Just DidNotFail              if it incorrectly succeeded
+         -- * Just (IncorrectlyFailed err) if the block failed with the wrong error
          result <- catch
                (do -- Run the elaborator
                    traverse_ (processDecl eopts nest env) decls
@@ -65,9 +69,10 @@ processFailing eopts nest env fc mmsg decls
                    pure (Just $ FailingDidNotFail fc))
                (\err => do let Just msg = mmsg
                                  | _ => pure Nothing
-                           str <- show <$> perror (killErrorLoc err)
+                           log "elab.failing" 10 $ "Failing block based on \{show msg} failed with \{show err}"
+                           test <- checkError msg err
                            pure $ do -- Unless the error is the expected one
-                                     guard (not (msg `isInfixOf` str))
+                                     guard (not test)
                                      -- We should complain we had the wrong one
                                      pure (FailingWrongError fc msg err))
          md' <- get MD
