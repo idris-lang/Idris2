@@ -12,11 +12,11 @@ import Data.Buffer
 
 %default total
 
-%foreign support "idris2_readBufferData"
+%foreign supportC "idris2_readBufferData"
          "node:lambda:(f,b,l,m) => require('fs').readSync(f.fd,b,l,m)"
 prim__readBufferData : FilePtr -> Buffer -> (offset : Int) -> (maxbytes : Int) -> PrimIO Int
 
-%foreign support "idris2_writeBufferData"
+%foreign supportC "idris2_writeBufferData"
          "node:lambda:(f,b,l,m) => require('fs').writeSync(f.fd,b,l,m)"
 prim__writeBufferData : FilePtr -> Buffer -> (offset : Int) -> (size : Int) -> PrimIO Int
 

@@ -10,34 +10,44 @@ public export
 DirPtr : Type
 DirPtr = AnyPtr
 
-support : String -> String
-support fn = "C:" ++ fn ++ ", libidris2_support, idris_directory.h"
+||| Shorthand for referring to the C support library
+|||
+||| @ fn the function name to refer to in the C support library
+supportC : (fn : String) -> String
+supportC fn = "C:\{fn}, libidris2_support, idris_directory.h"
+
+||| Shorthand for referring to the Node system support library
+|||
+||| @ fn the function name to refer to in the js/system_support.js file
+supportNode : (fn : String) -> String
+supportNode fn = "node:support:\{fn},support_system_directory"
 
 ok : HasIO io => a -> io (Either FileError a)
 ok x = pure (Right x)
 
-%foreign support "idris2_currentDirectory"
+%foreign supportC "idris2_currentDirectory"
          "node:lambda:()=>process.cwd()"
 prim__currentDir : PrimIO (Ptr String)
 
-%foreign support "idris2_changeDir"
-         "node:support:changeDir,support_system_directory"
+%foreign supportC "idris2_changeDir"
+         supportNode "changeDir"
 prim__changeDir : String -> PrimIO Int
 
-%foreign support "idris2_createDir"
-         "node:support:createDir,support_system_directory"
+%foreign supportC "idris2_createDir"
+         supportNode "createDir"
 prim__createDir : String -> PrimIO Int
 
-%foreign support "idris2_openDir"
+%foreign supportC "idris2_openDir"
 prim__openDir : String -> PrimIO DirPtr
 
-%foreign support "idris2_closeDir"
+%foreign supportC "idris2_closeDir"
 prim__closeDir : DirPtr -> PrimIO ()
 
-%foreign support "idris2_removeDir"
+%foreign supportC "idris2_removeDir"
+         supportNode "removeDir"
 prim__removeDir : String -> PrimIO ()
 
-%foreign support "idris2_nextDirEntry"
+%foreign supportC "idris2_nextDirEntry"
 prim__dirEntry : DirPtr -> PrimIO (Ptr String)
 
 ||| Data structure for managing the pointer to a directory.
@@ -87,6 +97,7 @@ closeDir : HasIO io => Directory -> io ()
 closeDir (MkDir d) = primIO (prim__closeDir d)
 
 ||| Remove the directory at the specified path.
+||| If the directory is not empty, this operation fails.
 export
 removeDir : HasIO io => String -> io ()
 removeDir dirName = primIO (prim__removeDir dirName)

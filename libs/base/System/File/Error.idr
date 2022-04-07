@@ -7,12 +7,12 @@ import public System.File.Types
 
 %default total
 
-%foreign support "idris2_fileError"
+%foreign supportC "idris2_fileError"
          "node:lambda:x=>(x===1?1:0)"
 prim__error : FilePtr -> PrimIO Int
 
-%foreign support "idris2_fileErrno"
-         "node:support:fileErrno,support_system_file"
+%foreign supportC "idris2_fileErrno"
+         supportNode "fileErrno"
 prim__fileErrno : PrimIO Int
 
 ||| The types of errors that can occur during file operations.
