@@ -791,7 +791,7 @@ HasNames Error where
   full gam (BadMultiline fc x) = pure (BadMultiline fc x)
   full gam (Timeout x) = pure (Timeout x)
   full gam (FailingDidNotFail fc) = pure (FailingDidNotFail fc)
-  full gam (FailingWrongError fc x err) = FailingWrongError fc x <$> full gam err
+  full gam (FailingWrongError fc x err) = FailingWrongError fc x <$> traverseList1 (full gam) err
   full gam (InType fc n err) = InType fc <$> full gam n <*> full gam err
   full gam (InCon fc n err) = InCon fc <$> full gam n <*> full gam err
   full gam (InLHS fc n err) = InLHS fc <$> full gam n <*> full gam err
@@ -879,7 +879,7 @@ HasNames Error where
   resolved gam (BadMultiline fc x) = pure (BadMultiline fc x)
   resolved gam (Timeout x) = pure (Timeout x)
   resolved gam (FailingDidNotFail fc) = pure (FailingDidNotFail fc)
-  resolved gam (FailingWrongError fc x err) = FailingWrongError fc x <$> resolved gam err
+  resolved gam (FailingWrongError fc x err) = FailingWrongError fc x <$> traverseList1 (resolved gam) err
   resolved gam (InType fc n err) = InType fc <$> resolved gam n <*> resolved gam err
   resolved gam (InCon fc n err) = InCon fc <$> resolved gam n <*> resolved gam err
   resolved gam (InLHS fc n err) = InLHS fc <$> resolved gam n <*> resolved gam err

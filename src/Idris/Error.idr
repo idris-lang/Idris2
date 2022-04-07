@@ -26,6 +26,112 @@ import System.File
 
 %default covering
 
+-- Not fully correct, see e.g. `UnreachableClause` where we don't check the
+-- Envs & Terms because we don't yet have equality instances for these
+export
+Eq Warning where
+  ParserWarning fc1 x1 == ParserWarning fc2 x2 = fc1 == fc2 && x1 == x2
+  UnreachableClause fc1 rho1 s1 == UnreachableClause fc2 rho2 s2 = fc1 == fc2
+  ShadowingGlobalDefs fc1 xs1 == ShadowingGlobalDefs fc2 xs2 = fc1 == fc2 && xs1 == xs2
+  Deprecated x1 y1 == Deprecated x2 y2 = x1 == x2 && y1 == y2
+  GenericWarn x1 == GenericWarn x2 = x1 == x2
+  _ == _ = False
+
+export
+Eq TTCErrorMsg where
+  Format x1 y1 z1 == Format x2 y2 z2 = x1 == x2 && y1 == y2 && z1 == z2
+  EndOfBuffer x1 == EndOfBuffer x2 = x1 == x2
+  Corrupt x1 == Corrupt x2 = x1 == x2
+  _ == _ = False
+
+export
+Eq FileError where
+  GenericFileError x1 == GenericFileError x2 = x1 == x2
+  FileReadError == FileReadError = True
+  FileWriteError == FileWriteError = True
+  FileNotFound == FileNotFound = True
+  PermissionDenied == PermissionDenied = True
+  FileExists == FileExists = True
+  _ == _ = False
+
+-- Not fully correct, see e.g. `CantConvert` where we don't check the Env
+export
+Eq Error where
+  Fatal err1 == Fatal err2 = err1 == err2
+  CantConvert fc1 gam1 rho1 s1 t1 == CantConvert fc2 gam2 rho2 s2 t2 = fc1 == fc2
+  CantSolveEq fc1 gam1 rho s1 t1 == CantSolveEq fc2 gam2 rho2 s2 t2 = fc1 == fc2
+  PatternVariableUnifies fc1 rho1 n1 s1 == PatternVariableUnifies fc2 rho2 n2 s2 = fc1 == fc2 && n1 == n2
+  CyclicMeta fc1 rho1 n1 s1 == CyclicMeta fc2 rho2 n2 s2 = fc1 == fc2 && n1 == n2
+  WhenUnifying fc1 gam1 rho1 s1 t1 err1 == WhenUnifying fc2 gam2 rho2 s2 t2 err2 = fc1 == fc2 && err1 == err2
+  ValidCase fc1 rho1 x1 == ValidCase fc2 rho2 x2 = fc1 == fc2
+  UndefinedName fc1 n1 == UndefinedName fc2 n2 = fc1 == fc2 && n1 == n2
+  InvisibleName fc1 n1 x1 == InvisibleName fc2 n2 x2 = fc1 == fc2 && n1 == n2 && x1 == x2
+  BadTypeConType fc1 n1 == BadTypeConType fc2 n2 = fc1 == fc2 && n1 == n2
+  BadDataConType fc1 n1 m1 == BadDataConType fc2 n2 m2 = fc1 == fc2 && n1 == n2 && m1 == m2
+  NotCovering fc1 n1 x1 == NotCovering fc2 n2 x2 = fc1 == fc2 && n1 == n2
+  NotTotal fc1 n1 x1 == NotTotal fc2 n2 x2 = fc1 == fc2 && n1 == n2
+  LinearUsed fc1 k1 n1 == LinearUsed fc2 k2 n2 = fc1 == fc2 && k1 == k2 && n1 == n2
+  LinearMisuse fc1 n1 x1 y1 == LinearMisuse fc2 n2 x2 y2 = fc1 == fc2 && n1 == n2 && x1 == x2 && y1 == y2
+  BorrowPartial fc1 rho1 s1 t1 == BorrowPartial fc2 rho2 s2 t2 = fc1 == fc2
+  BorrowPartialType fc1 rho1 s1 == BorrowPartialType fc2 rho2 s2 = fc1 == fc2
+  AmbiguousName fc1 xs1 == AmbiguousName fc2 xs2 = fc1 == fc2 && xs1 == xs2
+  AmbiguousElab fc1 rho1 xs1 == AmbiguousElab fc2 rho2 xs2 = fc1 == fc2
+  AmbiguousSearch fc1 rho1 s1 xs1 == AmbiguousSearch fc2 rho2 s2 xs2 = fc1 == fc2
+  AmbiguityTooDeep fc1 n1 xs1 == AmbiguityTooDeep fc2 n2 xs2 = fc1 == fc2 && n1 == n2 && xs1 == xs2
+  AllFailed xs1 == AllFailed xs2 = assert_total (xs1 == xs2)
+  RecordTypeNeeded fc1 rho1 == RecordTypeNeeded fc2 rho2 = fc1 == fc2
+  DuplicatedRecordUpdatePath fc1 xs1 == DuplicatedRecordUpdatePath fc2 xs2 = fc1 == fc2 && xs1 == xs2
+  NotRecordField fc1 x1 y1 == NotRecordField fc2 x2 y2 = fc1 == fc2 && x1 == x2 && y1 == y2
+  NotRecordType fc1 n1 == NotRecordType fc2 n2 = fc1 == fc2 && n1 == n2
+  IncompatibleFieldUpdate fc1 xs1 == IncompatibleFieldUpdate fc2 xs2 = fc1 == fc2 && xs1 == xs2
+  InvalidArgs fc1 rho1 xs1 s1 == InvalidArgs fc2 rho2 xs2 s2 = fc1 == fc2
+  TryWithImplicits fc1 rho1 xs1 == TryWithImplicits fc2 rho2 xs2 = fc1 == fc2
+  BadUnboundImplicit fc1 rho1 n1 s1 == BadUnboundImplicit fc2 rho2 n2 s2 = fc1 == fc2 && n1 == n2
+  CantSolveGoal fc1 gam1 rho1 s1 x1 == CantSolveGoal fc2 gam2 rho2 s2 x2 = fc1 == fc2
+  DeterminingArg fc1 n1 x1 rho1 s1 == DeterminingArg fc2 n2 x2 rho2 s2 = fc1 == fc2 && n1 == n2 && x1 == x2
+  UnsolvedHoles xs1 == UnsolvedHoles xs2 = xs1 == xs2
+  CantInferArgType fc1 rho1 n1 m1 s1 == CantInferArgType fc2 rho2 n2 m2 s2 = fc1 == fc2 && n1 == n2 && m1 == m2
+  SolvedNamedHole fc1 rho1 n1 s1 == SolvedNamedHole fc2 rho2 n2 s2 = fc1 == fc2 && n1 == n2
+  VisibilityError fc1 x1 n1 y1 m1 == VisibilityError fc2 x2 n2 y2 m2
+    = fc1 == fc2 && x1 == x2 && n1 == n2 && y1 == y2 && m1 == m2
+  NonLinearPattern fc1 n1 == NonLinearPattern fc2 n2 = fc1 == fc2 && n1 == n2
+  BadPattern fc1 n1 == BadPattern fc2 n2 =  fc1 == fc2 && n1 == n2
+  NoDeclaration fc1 n1 == NoDeclaration fc2 n2 = fc1 == fc2 && n1 == n2
+  AlreadyDefined fc1 n1 == AlreadyDefined fc2 n2 = fc1 == fc2 && n1 == n2
+  NotFunctionType fc1 rho1 s1 == NotFunctionType fc2 rho2 s2 = fc1 == fc2
+  RewriteNoChange fc1 rho1 s1 t1 == RewriteNoChange fc2 rho2 s2 t2 = fc1 == fc2
+  NotRewriteRule fc1 rho1 s1 == NotRewriteRule fc2 rho2 s2 = fc1 == fc2
+  CaseCompile fc1 n1 x1 == CaseCompile fc2 n2 x2 = fc1 == fc2 && n1 == n2
+  MatchTooSpecific fc1 rho1 s1 == MatchTooSpecific fc2 rho2 s2 = fc1 == fc2
+  BadDotPattern fc1 rho1 x1 s1 t1 == BadDotPattern fc2 rho2 x2 s2 t2 = fc1 == fc2
+  BadImplicit fc1 x1 == BadImplicit fc2 x2 = fc1 == fc2 && x1 == x2
+  BadRunElab fc1 rho1 s1 d1 == BadRunElab fc2 rho2 s2 d2 = fc1 == fc2 && d1 == d2
+  GenericMsg fc1 x1 == GenericMsg fc2 x2 = fc1 == fc2 && x1 == x2
+  TTCError x1 == TTCError x2 = x1 == x2
+  FileErr x1 y1 == FileErr x2 y2 = x1 == x2 && y1 == y2
+  CantFindPackage x1 == CantFindPackage x2 = x1 == x2
+  LitFail fc1 == LitFail fc2 = fc1 == fc2
+  LexFail fc1 x1 == LexFail fc2 x2 = fc1 == fc2 && x1 == x2
+  ParseFail xs1 == ParseFail xs2 = xs1 == xs2
+  ModuleNotFound fc1 x1 == ModuleNotFound fc2 x2 = fc1 == fc2 && x1 == x2
+  CyclicImports xs1 == CyclicImports xs2 = xs1 == xs2
+  ForceNeeded == ForceNeeded = True
+  InternalError x1 == InternalError x2 = x1 == x2
+  UserError x1 == UserError x2 = x1 == x2
+  NoForeignCC fc1 xs1 == NoForeignCC fc2 xs2 = fc1 == fc2 && xs1 == xs2
+  BadMultiline fc1 x1 == BadMultiline fc2 x2 = fc1 == fc2 && x1 == x2
+  Timeout x1 == Timeout x2 = x1 == x2
+  FailingDidNotFail fc1 == FailingDidNotFail fc2 = fc1 == fc2
+  FailingWrongError fc1 x1 err1 == FailingWrongError fc2 x2 err2
+    = fc1 == fc2 && x1 == x2 && assert_total (err1 == err2)
+  InType fc1 n1 err1 == InType fc2 n2 err2 = fc1 == fc2 && n1 == n2 && err1 == err2
+  InCon fc1 n1 err1 == InCon fc2 n2 err2 = fc1 == fc2 && n1 == n2 && err1 == err2
+  InLHS fc1 n1 err1 == InLHS fc2 n2 err2 = fc1 == fc2 && n1 == n2 && err1 == err2
+  InRHS fc1 n1 err1 == InRHS fc2 n2 err2 = fc1 == fc2 && n1 == n2 && err1 == err2
+  MaybeMisspelling err1 xs1 == MaybeMisspelling err2 xs2 = err1 == err2 && xs1 == xs2
+  WarningAsError wrn1 == WarningAsError wrn2 = wrn1 == wrn2
+  _ == _ = False
+
 keyword : Doc IdrisAnn -> Doc IdrisAnn
 keyword = annotate (Syntax Keyword)
 
@@ -526,7 +632,7 @@ perrorRaw (FailingDidNotFail fc)
 perrorRaw (FailingWrongError fc msg err)
   = pure $ vcat [ errorDesc (reflow "Failing block failed with the wrong error" <+> dot)
                 , "Expected" <++> dquote <+> pretty msg <+> dquote <++> "but got:"
-                , !(perrorRaw err)
+                , vsep !(traverse perrorRaw (forget err))
                 ]
 
 perrorRaw (InType fc n err)

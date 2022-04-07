@@ -1069,7 +1069,7 @@ mutual
                               -- Unless the error is the expected one
                               guard (not test)
                               -- We should complain we had the wrong one
-                              pure (FailingWrongError fc msg err))
+                              pure (FailingWrongError fc msg (err ::: [])))
            -- Reset the state
            put UST ust
            md' <- get MD
