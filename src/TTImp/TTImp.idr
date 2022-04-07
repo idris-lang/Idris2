@@ -12,6 +12,7 @@ import Core.TTC
 import Core.Value
 
 import Data.List
+import Data.List1
 import Data.Maybe
 
 %default covering
@@ -477,6 +478,16 @@ mutual
       _  => concat (intersperse "." topic) ++ " " ++ show lvl
     show (IBuiltin _ type name) = "%builtin " ++ show type ++ " " ++ show name
 
+
+export
+mkWithClause : FC -> RawImp' nm -> List1 (RigCount, RawImp' nm, Maybe Name) ->
+               List WithFlag -> List (ImpClause' nm) -> ImpClause' nm
+mkWithClause fc lhs ((rig, wval, prf) ::: []) flags cls
+  = WithClause fc lhs rig wval prf flags cls
+mkWithClause fc lhs ((rig, wval, prf) ::: wp :: wps) flags cls
+  = let vfc = virtualiseFC fc in
+    WithClause fc lhs rig wval prf flags
+      [mkWithClause fc (IApp vfc lhs (IBindVar vfc "arg")) (wp ::: wps) flags cls]
 
 -- Extract the RawImp term from a FieldUpdate.
 export

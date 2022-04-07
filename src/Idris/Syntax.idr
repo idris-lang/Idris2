@@ -277,6 +277,18 @@ mutual
   getPDataDeclLoc (MkPLater fc _ _) = fc
 
   public export
+  PWithProblem : Type
+  PWithProblem = PWithProblem' Name
+
+
+  public export
+  record PWithProblem' (nm : Type) where
+    constructor MkPWithProblem
+    withRigCount : RigCount
+    withRigValue : PTerm' nm
+    withRigProof : Maybe Name -- This ought to be a `Basic` username
+
+  public export
   PClause : Type
   PClause = PClause' Name
 
@@ -284,16 +296,14 @@ mutual
   data PClause' : Type -> Type where
        MkPatClause : FC -> (lhs : PTerm' nm) -> (rhs : PTerm' nm) ->
                      (whereblock : List (PDecl' nm)) -> PClause' nm
-       MkWithClause : FC -> (lhs : PTerm' nm) ->
-                      (rig : RigCount) -> (wval : PTerm' nm) -> -- with'd term (& quantity)
-                      (prf : Maybe Name) -> -- optional proof
+       MkWithClause : FC -> (lhs : PTerm' nm) -> List1 (PWithProblem' nm) ->
                       List WithFlag -> List (PClause' nm) -> PClause' nm
        MkImpossible : FC -> (lhs : PTerm' nm) -> PClause' nm
 
   export
   getPClauseLoc : PClause -> FC
   getPClauseLoc (MkPatClause fc _ _ _) = fc
-  getPClauseLoc (MkWithClause fc _ _ _ _ _ _) = fc
+  getPClauseLoc (MkWithClause fc _ _ _ _) = fc
   getPClauseLoc (MkImpossible fc _) = fc
 
   public export
@@ -681,7 +691,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
 
   showAlt (MkPatClause _ lhs rhs _) =
     " | " ++ showPTerm lhs ++ " => " ++ showPTerm rhs ++ ";"
-  showAlt (MkWithClause _ lhs rig wval prf flags cs) = " | <<with alts not possible>>;"
+  showAlt (MkWithClause _ lhs wps flags cs) = " | <<with alts not possible>>;"
   showAlt (MkImpossible _ lhs) = " | " ++ showPTerm lhs ++ " impossible;"
 
   showDo (DoExp _ tm) = showPTerm tm
@@ -739,7 +749,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
       where
         showCase : PClause' nm -> String
         showCase (MkPatClause _ lhs rhs _) = showPTerm lhs ++ " => " ++ showPTerm rhs
-        showCase (MkWithClause _ lhs rig wval _ flags _) = " | <<with alts not possible>>"
+        showCase (MkWithClause _ lhs _ flags _) = " | <<with alts not possible>>"
         showCase (MkImpossible _ lhs) = showPTerm lhs ++ " impossible"
   showPTermPrec d (PLocal _ ds sc) -- We'll never see this when displaying a normal form...
         = "let { << definitions >>  } in " ++ showPTermPrec d sc
@@ -1076,7 +1086,7 @@ covering
 Show PClause where
   show (MkPatClause _ lhs rhs []) = unwords [ show lhs, "=", show rhs ]
   show (MkPatClause _ _ _ _) = "MkPatClause"
-  show (MkWithClause _ _ _ _ _ _ _) = "MkWithCLause"
+  show (MkWithClause _ _ _ _ _) = "MkWithClause"
   show (MkImpossible _ lhs) = unwords [ show lhs, "impossible" ]
 
 -- TODO: finish writing this instance
