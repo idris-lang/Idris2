@@ -271,7 +271,7 @@ position = Position
 public export
 data ParsingError tok = Error String (Maybe Bounds)
 
-public export
+export
 Show tok => Show (ParsingError tok) where
   show (Error s Nothing) = "PARSING ERROR: " ++ s
   show (Error s (Just (MkBounds startLine startCol endLine endCol))) =
