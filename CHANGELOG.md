@@ -134,6 +134,7 @@
   to 32 bits but now that is codified. JavaScript backends are now supported.
 * Removes `contrib`'s deprecated `Data.Num.Implementations` module. See
   `Prelude.Interfaces` instead.
+* Implements `Show tok => Show (ParsingError tok)` for `Text.Parser.Core`.
 
 ### Other changes
 
