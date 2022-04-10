@@ -716,8 +716,8 @@ HasNames Error where
     = CantConvert fc gam <$> full gam rho <*> full gam s <*> full gam t
   full _ (CantSolveEq fc gam rho s t)
     = CantSolveEq fc gam <$> full gam rho <*> full gam s <*> full gam t
-  full gam (PatternVariableUnifies fc rho n s)
-    = PatternVariableUnifies fc <$> full gam rho <*> full gam n <*> full gam s
+  full gam (PatternVariableUnifies fc fct rho n s)
+    = PatternVariableUnifies fc fct <$> full gam rho <*> full gam n <*> full gam s
   full gam (CyclicMeta fc rho n s)
     = CyclicMeta fc <$> full gam rho <*> full gam n <*> full gam s
   full _ (WhenUnifying fc gam rho s t err)
@@ -804,8 +804,8 @@ HasNames Error where
     = CantConvert fc gam <$> resolved gam rho <*> resolved gam s <*> resolved gam t
   resolved _ (CantSolveEq fc gam rho s t)
     = CantSolveEq fc gam <$> resolved gam rho <*> resolved gam s <*> resolved gam t
-  resolved gam (PatternVariableUnifies fc rho n s)
-    = PatternVariableUnifies fc <$> resolved gam rho <*> resolved gam n <*> resolved gam s
+  resolved gam (PatternVariableUnifies fc fct rho n s)
+    = PatternVariableUnifies fc fct <$> resolved gam rho <*> resolved gam n <*> resolved gam s
   resolved gam (CyclicMeta fc rho n s)
     = CyclicMeta fc <$> resolved gam rho <*> resolved gam n <*> resolved gam s
   resolved _ (WhenUnifying fc gam rho s t err)

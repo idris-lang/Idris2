@@ -60,7 +60,7 @@ Eq Error where
   Fatal err1 == Fatal err2 = err1 == err2
   CantConvert fc1 gam1 rho1 s1 t1 == CantConvert fc2 gam2 rho2 s2 t2 = fc1 == fc2
   CantSolveEq fc1 gam1 rho s1 t1 == CantSolveEq fc2 gam2 rho2 s2 t2 = fc1 == fc2
-  PatternVariableUnifies fc1 rho1 n1 s1 == PatternVariableUnifies fc2 rho2 n2 s2 = fc1 == fc2 && n1 == n2
+  PatternVariableUnifies fc1 fct1 rho1 n1 s1 == PatternVariableUnifies fc2 fct2 rho2 n2 s2 = fc1 == fc2 && fct1 == fct2 && n1 == n2
   CyclicMeta fc1 rho1 n1 s1 == CyclicMeta fc2 rho2 n2 s2 = fc1 == fc2 && n1 == n2
   WhenUnifying fc1 gam1 rho1 s1 t1 err1 == WhenUnifying fc2 gam2 rho2 s2 t2 err2 = fc1 == fc2 && err1 == err2
   ValidCase fc1 rho1 x1 == ValidCase fc2 rho2 x2 = fc1 == fc2
@@ -313,8 +313,8 @@ perrorRaw (CantSolveEq fc gam env l r)
                       ]) <+> line <+> !(ploc fc)
          put Ctxt defs
          pure res
-perrorRaw (PatternVariableUnifies fc env n tm)
-    = do let (min, max) = order fc (getLoc tm)
+perrorRaw (PatternVariableUnifies fc fct env n tm)
+    = do let (min, max) = order fc fct
          pure $ errorDesc (hsep [ reflow "Pattern variable"
                   , code (prettyVar n)
                   , reflow "unifies with" <+> colon
