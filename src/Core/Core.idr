@@ -81,7 +81,7 @@ data Error : Type where
      CantSolveEq : {vars : _} ->
                    FC -> Context -> Env Term vars -> Term vars -> Term vars -> Error
      PatternVariableUnifies : {vars : _} ->
-                              FC -> Env Term vars -> Name -> Term vars -> Error
+                              FC -> FC -> Env Term vars -> Name -> Term vars -> Error
      CyclicMeta : {vars : _} ->
                   FC -> Env Term vars -> Name -> Term vars -> Error
      WhenUnifying : {vars : _} ->
@@ -207,7 +207,7 @@ Show Error where
       = show fc ++ ":Type mismatch: " ++ show x ++ " and " ++ show y
   show (CantSolveEq fc _ env x y)
       = show fc ++ ":" ++ show x ++ " and " ++ show y ++ " are not equal"
-  show (PatternVariableUnifies fc env n x)
+  show (PatternVariableUnifies fc fct env n x)
       = show fc ++ ":Pattern variable " ++ show n ++ " unifies with " ++ show x
   show (CyclicMeta fc env n tm)
       = show fc ++ ":Cycle detected in metavariable solution " ++ show n
@@ -390,7 +390,7 @@ getErrorLoc : Error -> Maybe FC
 getErrorLoc (Fatal err) = getErrorLoc err
 getErrorLoc (CantConvert loc _ _ _ _) = Just loc
 getErrorLoc (CantSolveEq loc _ _ _ _) = Just loc
-getErrorLoc (PatternVariableUnifies loc _ _ _) = Just loc
+getErrorLoc (PatternVariableUnifies loc _ _ _ _) = Just loc
 getErrorLoc (CyclicMeta loc _ _ _) = Just loc
 getErrorLoc (WhenUnifying loc _ _ _ _ _) = Just loc
 getErrorLoc (ValidCase loc _ _) = Just loc
@@ -466,7 +466,7 @@ killWarningLoc : Warning -> Warning
 killWarningLoc (ParserWarning fc x) = ParserWarning emptyFC x
 killWarningLoc (UnreachableClause fc x y) = UnreachableClause emptyFC x y
 killWarningLoc (ShadowingGlobalDefs fc xs) = ShadowingGlobalDefs emptyFC xs
-killWarningLoc (Deprecated x y) = Deprecated x y
+killWarningLoc (Deprecated x y) = Deprecated x (map ((emptyFC,) . snd) y)
 killWarningLoc (GenericWarn x) = GenericWarn x
 
 export
@@ -474,7 +474,7 @@ killErrorLoc : Error -> Error
 killErrorLoc (Fatal err) = Fatal (killErrorLoc err)
 killErrorLoc (CantConvert fc x y z w) = CantConvert emptyFC x y z w
 killErrorLoc (CantSolveEq fc x y z w) = CantSolveEq emptyFC x y z w
-killErrorLoc (PatternVariableUnifies fc x y z) = PatternVariableUnifies emptyFC x y z
+killErrorLoc (PatternVariableUnifies fc fct x y z) = PatternVariableUnifies emptyFC emptyFC x y z
 killErrorLoc (CyclicMeta fc x y z) = CyclicMeta emptyFC x y z
 killErrorLoc (WhenUnifying fc x y z w err) = WhenUnifying emptyFC x y z w (killErrorLoc err)
 killErrorLoc (ValidCase fc x y) = ValidCase emptyFC x y
@@ -525,7 +525,7 @@ killErrorLoc (FileErr x y) = FileErr x y
 killErrorLoc (CantFindPackage x) = CantFindPackage x
 killErrorLoc (LitFail fc) = LitFail emptyFC
 killErrorLoc (LexFail fc x) = LexFail emptyFC x
-killErrorLoc (ParseFail xs) = ParseFail xs
+killErrorLoc (ParseFail xs) = ParseFail $ map ((emptyFC,) . snd) $ xs
 killErrorLoc (ModuleNotFound fc x) = ModuleNotFound emptyFC x
 killErrorLoc (CyclicImports xs) = CyclicImports xs
 killErrorLoc ForceNeeded = ForceNeeded
