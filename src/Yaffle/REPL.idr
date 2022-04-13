@@ -90,7 +90,7 @@ process (GenerateDef line name)
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
                   catch
-                    (do ((fc, cs) :: _) <- logTime "Generation" $
+                    (do ((fc, cs) :: _) <- logTime 0 "Generation" $
                                 makeDefN (\p, n => onLine line p) 1 n'
                            | _ => coreLift_ (putStrLn "Failed")
                         coreLift_ $ putStrLn (show cs))

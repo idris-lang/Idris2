@@ -132,7 +132,7 @@ data CLOpt
   RunREPL String |
   IgnoreMissingIPKG |
   FindIPKG |
-  Timing |
+  Timing (Maybe Nat) |
   DebugElabCheck |
   AltErrorCount Nat |
    ||| Treat warnings as errors
@@ -303,7 +303,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            optSeparator,
            MkOpt ["--client"] [Required "REPL command"] (\f => [RunREPL f])
               (Just "Run a REPL command then quit immediately"),
-           MkOpt ["--timing"] [] [Timing]
+           MkOpt ["--timing"] [AutoNat "level"] (\ n => [Timing n])
               (Just "Display timing logs"),
 
            optSeparator,

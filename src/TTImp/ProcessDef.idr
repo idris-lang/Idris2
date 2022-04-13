@@ -491,7 +491,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
          log "declare.def.clause" 5 $ "Checking RHS " ++ show rhs
          logEnv "declare.def.clause" 5 "In env" env'
 
-         rhstm <- logTime ("+++ Check RHS " ++ show fc) $
+         rhstm <- logTime 3 ("Check RHS " ++ show fc) $
                     wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
                        checkTermSub n rhsMode opts nest' env' env sub' rhs (gnf env' lhsty')
          clearHoleLHS
@@ -997,7 +997,7 @@ processDef opts nest env fc n_in cs_in
          let pats = map toPats (rights cs)
 
          (cargs ** (tree_ct, unreachable)) <-
-             logTime ("+++ Building compile time case tree for " ++ show n) $
+             logTime 3 ("Building compile time case tree for " ++ show n) $
                 getPMDef fc (CompileTime mult) n ty (rights cs)
 
          traverse_ warnUnreachable unreachable
@@ -1031,7 +1031,7 @@ processDef opts nest env fc n_in cs_in
          update Ctxt { toCompileCase $= (n ::) }
 
          atotal <- toResolvedNames (NS builtinNS (UN $ Basic "assert_total"))
-         logTime ("+++ Building size change graphs " ++ show n) $
+         logTime 3 ("Building size change graphs " ++ show n) $
            when (not (InCase `elem` opts)) $
              do calcRefs False atotal (Resolved nidx)
                 sc <- calculateSizeChange fc n
@@ -1040,7 +1040,7 @@ processDef opts nest env fc n_in cs_in
 
          md <- get MD -- don't need the metadata collected on the coverage check
 
-         cov <- logTime ("+++ Checking Coverage " ++ show n) $ checkCoverage nidx ty mult cs
+         cov <- logTime 3 ("Checking Coverage " ++ show n) $ checkCoverage nidx ty mult cs
          setCovering fc n cov
          put MD md
 
