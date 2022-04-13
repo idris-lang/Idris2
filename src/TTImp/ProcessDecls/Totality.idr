@@ -41,7 +41,7 @@ checkTotalityOK n
 
     checkTotality : FC -> Core (Maybe Error)
     checkTotality fc
-        = do ignore $ logTime ("+++ Checking Termination " ++ show n) (checkTotal fc n)
+        = do ignore $ logTime 3 ("Checking Termination " ++ show n) (checkTotal fc n)
              -- ^ checked lazily, so better calculate here
              t <- getTotality fc n
              err <- checkCovering fc (isCovering t)

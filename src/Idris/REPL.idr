@@ -609,7 +609,7 @@ execExp ctm
               do iputStrLn (reflow "No such code generator available")
                  pure CompilationFailed
          tm_erased <- prepareExp ctm
-         logTimeWhen !getEvalTiming "Execution" $
+         logTimeWhen !getEvalTiming 0 "Execution" $
            execute cg tm_erased
          pure $ Executed ctm
 
@@ -663,7 +663,7 @@ loadMainFile f
          Right res <- coreLift (readFile f)
             | Left err => do setSource ""
                              pure (ErrorLoadingFile f err)
-         errs <- logTime "+ Build deps" $ buildDeps f
+         errs <- logTime 1 "Build deps" $ buildDeps f
          updateErrorLine errs
          setSource res
          resetProofState
@@ -752,13 +752,13 @@ process (Eval itm)
             Execute => do ignore (execExp itm); pure (Executed itm)
             Scheme =>
               do (tm `WithType` ty) <- inferAndElab InExpr itm
-                 qtm <- logTimeWhen !getEvalTiming "Evaluation" $
+                 qtm <- logTimeWhen !getEvalTiming 0 "Evaluation" $
                            (do nf <- snfAll [] tm
                                quote [] nf)
-                 itm <- logTimeWhen False "resugar" $ resugar [] qtm
+                 itm <- logTimeWhen False 0 "Resugar" $ resugar [] qtm
                  pure (Evaluated itm Nothing)
             _ =>
-              do (ntm `WithType` ty) <- logTimeWhen !getEvalTiming "Evaluation" $
+              do (ntm `WithType` ty) <- logTimeWhen !getEvalTiming 0 "Evaluation" $
                                            inferAndNormalize emode itm
                  itm <- resugar [] ntm
                  defs <- get Ctxt

@@ -103,7 +103,7 @@ compile {c} cg tm out
          let outputDir = outputDirWithDefault d
          ensureDirectoryExists tmpDir
          ensureDirectoryExists outputDir
-         logTime "+ Code generation overall" $
+         logTime 1 "Code generation overall" $
              compileExpr cg c tmpDir outputDir tm out
 
 ||| execute
@@ -279,7 +279,7 @@ getCompileData doLazyAnnots phase_in tm_in
          arr <- coreLift $ newArray asize
 
          defs <- get Ctxt
-         logTime "++ Get names" $ getAllDesc (natHackNames' ++ noMangleNames ++ keys ns) arr defs
+         logTime 2 "Get names" $ getAllDesc (natHackNames' ++ noMangleNames ++ keys ns) arr defs
 
          let entries = catMaybes !(coreLift (toList arr))
          let allNs = map (Resolved . fst) entries
@@ -294,20 +294,20 @@ getCompileData doLazyAnnots phase_in tm_in
          log "compile.execute" 40 $
            "Kept: " ++ concat (intersperse ", " $ map show rcns)
 
-         logTime "++ Merge lambda" $ traverse_ mergeLamDef rcns
-         logTime "++ Fix arity" $ traverse_ fixArityDef rcns
+         logTime 2 "Merge lambda" $ traverse_ mergeLamDef rcns
+         logTime 2 "Fix arity" $ traverse_ fixArityDef rcns
          compiledtm <- fixArityExp !(compileExp tm)
 
-         (cseDefs, csetm) <- logTime "++ CSE" $ cse rcns compiledtm
+         (cseDefs, csetm) <- logTime 2 "CSE" $ cse rcns compiledtm
 
-         namedDefs <- logTime "++ Forget names" $
+         namedDefs <- logTime 2 "Forget names" $
            traverse getNamedDef cseDefs
 
          let mainname = MN "__mainExpression" 0
          (liftedtm, ldefs) <- liftBody {doLazyAnnots} mainname csetm
 
          lifted_in <- if phase >= Lifted
-                         then logTime "++ Lambda lift" $
+                         then logTime 2 "Lambda lift" $
                               traverse (lambdaLift doLazyAnnots) cseDefs
                          else pure []
 
@@ -315,10 +315,10 @@ getCompileData doLazyAnnots phase_in tm_in
                       ldefs ++ concat lifted_in
 
          anf <- if phase >= ANF
-                   then logTime "++ Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted
+                   then logTime 2 "Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted
                    else pure []
          vmcode <- if phase >= VMCode
-                      then logTime "++ Get VM Code" $ pure (allDefs anf)
+                      then logTime 2 "Get VM Code" $ pure (allDefs anf)
                       else pure []
 
          defs <- get Ctxt
@@ -373,15 +373,15 @@ getIncCompileData doLazyAnnots phase
          namedDefs <- traverse getNamedDef cseDefs
 
          lifted_in <- if phase >= Lifted
-                         then logTime "++ Lambda lift" $
+                         then logTime 2 "Lambda lift" $
                               traverse (lambdaLift doLazyAnnots) cseDefs
                          else pure []
          let lifted = concat lifted_in
          anf <- if phase >= ANF
-                   then logTime "++ Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted
+                   then logTime 2 "Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted
                    else pure []
          vmcode <- if phase >= VMCode
-                      then logTime "++ Get VM Code" $ pure (allDefs anf)
+                      then logTime 2 "Get VM Code" $ pure (allDefs anf)
                       else pure []
          pure (MkCompileData (CErased emptyFC) namedDefs lifted anf vmcode)
 

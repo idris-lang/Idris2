@@ -2378,8 +2378,8 @@ withLogLevel l comp = do
   pure r
 
 export
-setLogTimings : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
-setLogTimings b = update Ctxt { options->session->logTimings := b }
+setLogTimings : {auto c : Ref Ctxt Defs} -> Nat -> Core ()
+setLogTimings n = update Ctxt { options->session->logTimings := Just n }
 
 export
 setDebugElabCheck : {auto c : Ref Ctxt Defs} -> Bool -> Core ()

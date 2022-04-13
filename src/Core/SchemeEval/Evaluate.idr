@@ -64,7 +64,7 @@ seval : {auto c : Ref Ctxt Defs} ->
 seval mode env tm
     = do -- Check the evaluator is initialised. This will fail if the backend
          -- doesn't support scheme evaluation.
-         True <- logTimeWhen False "Scheme eval" initialiseSchemeEval
+         True <- logTimeWhen False 0 "Scheme eval" initialiseSchemeEval
               | False => throw (InternalError "Loading scheme support failed")
 
          -- make sure all the names in the term are compiled
