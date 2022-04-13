@@ -502,13 +502,36 @@ makeDoc pkg opts =
 
            -- generate docs for all visible names
            defs <- get Ctxt
-           names <- allNames (gamma defs)
-           let allInNamespace = filter (inNS ns) names
-           visibleNames <- filterM (visible defs) allInNamespace
+           let ctxt = gamma defs
+
+           visibleDefs <- map catMaybes $ for [1..nextEntry ctxt - 1] $ \ i =>
+             do -- Select the entries that are from `mod` and visible
+                Just gdef <- lookupCtxtExact (Resolved i) ctxt
+                  | _ => pure Nothing
+                let Just nfc = isNonEmptyFC $ location gdef
+                  | _ => do log "doc.module.definitions" 70 $ unwords
+                              [ show mod ++ ":"
+                              , show (fullname gdef)
+                              , "has an empty FC"
+                              ]
+                            pure Nothing
+                let PhysicalIdrSrc mod' = origin nfc
+                  | _ => pure Nothing
+                let True = mod == mod'
+                  | _ => do log "doc.module.definitions" 60 $ unwords
+                              [ show mod ++ ":"
+                              , show (fullname gdef)
+                              , "was defined in"
+                              , show mod'
+                              ]
+                            pure Nothing
+                let True = visible gdef
+                  | _ => pure Nothing
+                pure (Just gdef)
 
            let outputFilePath = docDir </> (show mod ++ ".html")
-           allDocs <- for (sort visibleNames) $ \ nm =>
-                        getDocsForName emptyFC nm shortNamesConfig
+           allDocs <- for (sortBy (compare `on` startPos . toNonEmptyFC . location) visibleDefs) $ \ def =>
+                        getDocsForName emptyFC (fullname def) shortNamesConfig
            let allDecls = annotate Declarations $ vcat allDocs
 
            -- grab module header doc
@@ -546,19 +569,10 @@ makeDoc pkg opts =
        runScript (postbuild pkg)
        pure []
   where
-    visible : Defs -> Name -> Core Bool
-    visible defs n
-        = do Just def <- lookupCtxtExact n (gamma defs)
-                  | Nothing => pure False
-             -- TODO: if we can find out, whether a def has been declared as
-             -- part of an interface, hide it here
-             pure $ case definition def of
-                         (DCon _ _ _) => False
-                         _ => (visibility def /= Private)
-
-    inNS : Namespace -> Name -> Bool
-    inNS ns (NS xns (UN _)) = ns == xns
-    inNS _ _ = False
+    visible : GlobalDef -> Bool
+    visible def = case definition def of
+      (DCon _ _ _) => False
+      _ => (visibility def /= Private)
 
     fileError : String -> FileError -> Core (List Error)
     fileError filename err = pure [FileErr filename err]
