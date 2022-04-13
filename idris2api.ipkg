@@ -124,6 +124,7 @@ modules =
     Idris.Resugar,
     Idris.SetOptions,
     Idris.Syntax,
+    Idris.Syntax.Traversals,
     Idris.Syntax.Views,
     Idris.Version,
 
@@ -240,6 +241,7 @@ modules =
     TTImp.ProcessBuiltin,
     TTImp.ProcessData,
     TTImp.ProcessDecls,
+    TTImp.ProcessDecls.Totality,
     TTImp.ProcessDef,
     TTImp.ProcessParams,
     TTImp.ProcessRecord,

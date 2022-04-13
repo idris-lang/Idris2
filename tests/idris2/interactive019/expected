@@ -1,21 +1,25 @@
 1/1: Building TypeSearch (TypeSearch.idr)
 Main> prim__cast_CharString : Char -> String
 Main.sameSig : Char -> String
-  
+  Visibility: private
 Data.String.singleton : Char -> String
   Totality: total
+  Visibility: public export
 Prelude.Show.show : Char -> String
 Prelude.Cast.cast : Char -> String
 Main> Prelude.const : a -> b -> a
   Constant function. Ignores its second argument.
   Totality: total
+  Visibility: public export
 Main> Builtin.fromChar : Char -> Char
 Prelude.toUpper : Char -> Char
   Convert a letter to the corresponding upper-case letter, if any.
   Non-letters are ignored.
   Totality: total
+  Visibility: public export
 Prelude.toLower : Char -> Char
   Convert a letter to the corresponding lower-case letter, if any.
   Non-letters are ignored.
   Totality: total
+  Visibility: public export
 Main> Bye for now!

@@ -4,6 +4,8 @@ import Data.Bits
 
 %default total
 
+||| The identity monad. This monad provides no abilities other than pure
+||| computation.
 public export
 record Identity (a : Type) where
   constructor Id

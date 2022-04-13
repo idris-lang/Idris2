@@ -5,7 +5,9 @@ import Control.Monad.Trans
 
 %default total
 
-||| The transformer on which the State monad is based
+||| A monad transformer extending an inner monad `m` with state `stateType`.
+|||
+||| Updates to the state are applied in the order as the sequence of actions.
 public export
 record StateT (stateType : Type) (m : Type -> Type) (a : Type) where
   constructor ST

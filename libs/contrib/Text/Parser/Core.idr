@@ -271,6 +271,14 @@ position = Position
 public export
 data ParsingError tok = Error String (Maybe Bounds)
 
+export
+Show tok => Show (ParsingError tok) where
+  show (Error s Nothing) = "PARSING ERROR: " ++ s
+  show (Error s (Just (MkBounds startLine startCol endLine endCol))) =
+    "PARSING ERROR: "
+    ++ s
+    ++ " @ L\{show startLine}:\{show startCol}-L\{show endLine}:\{show endCol}"
+
 data ParseResult : Type -> Type -> Type -> Type where
      Failure : (committed : Bool) -> (fatal : Bool) ->
                List1 (ParsingError tok) -> ParseResult state tok ty

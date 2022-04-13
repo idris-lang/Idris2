@@ -3,6 +3,7 @@ module Idris.Parser
 import Core.Options
 import Core.Metadata
 import Idris.Syntax
+import Idris.Syntax.Traversals
 import public Parser.Source
 import TTImp.TTImp
 
@@ -157,9 +158,9 @@ commitKeyword fname indents req
          decoratedKeyword fname req
          mustContinue indents Nothing
 
-commitSymbol : String -> Rule ()
-commitSymbol req
-    = symbol req
+commitSymbol : OriginDesc -> String -> Rule ()
+commitSymbol fname req
+    = decoratedSymbol fname req
        <|> fatalError ("Expected '" ++ req ++ "'")
 
 continueWithDecorated : OriginDesc -> IndentInfo -> String -> Rule ()
@@ -719,7 +720,7 @@ mutual
        continueLam : Rule PTerm
        continueLam = do
            binders <- bindList fname indents
-           decoratedSymbol fname "=>"
+           commitSymbol fname "=>"
            mustContinue indents Nothing
            scope <- typeExpr pdef fname indents
            pure (bindAll binders scope)
@@ -777,13 +778,17 @@ mutual
 
   caseRHS : OriginDesc -> WithBounds t -> IndentInfo -> PTerm -> Rule PClause
   caseRHS fname start indents lhs
-      = do rhs <- bounds (decoratedSymbol fname "=>" *> mustContinue indents Nothing *> typeExpr pdef fname indents)
+      = do rhs <- bounds $ do
+                    decoratedSymbol fname "=>"
+                    mustContinue indents Nothing
+                    typeExpr pdef fname indents
            atEnd indents
            let fc = boundToFC fname (mergeBounds start rhs)
            pure (MkPatClause fc lhs rhs.val [])
     <|> do end <- bounds (decoratedKeyword fname "impossible")
            atEnd indents
            pure (MkImpossible (boundToFC fname (mergeBounds start end)) lhs)
+    <|> fatalError ("Expected '=>' or 'impossible'")
 
   if_ : OriginDesc -> IndentInfo -> Rule PTerm
   if_ fname indents
@@ -1041,6 +1046,16 @@ withFlags fname
           (Syntactic ::) <$> withFlags fname)
   <|> pure []
 
+
+withProblem : OriginDesc -> Int -> IndentInfo -> Rule PWithProblem
+withProblem fname col indents
+  = do rig <- multiplicity fname
+       start <- bounds (decoratedSymbol fname "(")
+       wval <- bracketedExpr fname start indents
+       prf <- optional (decoratedKeyword fname "proof"
+              *> UN . Basic <$> decoratedSimpleBinderName fname)
+       pure (MkPWithProblem rig wval prf)
+
 mutual
   parseRHS : (withArgs : Nat) ->
              OriginDesc -> WithBounds t -> Int ->
@@ -1056,20 +1071,17 @@ mutual
             (rhs, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
             pure (MkPatClause fc (uncurry applyArgs lhs) rhs ws)
-     <|> do b <- bounds (do decoratedKeyword fname "with"
-                            commit
-                            flags <- withFlags fname
-                            rig <- multiplicity fname
-                            start <- bounds (decoratedSymbol fname "(")
-                            wval <- bracketedExpr fname start indents
-                            prf <- optional (decoratedKeyword fname "proof"
-                                             *> UN . Basic <$> decoratedSimpleBinderName fname)
-                            ws <- mustWork $ nonEmptyBlockAfter col
-                                           $ clause (S withArgs) (Just lhs) fname
-                            pure (prf, flags, rig, wval, forget ws))
-            (prf, flags, rig, wval, ws) <- pure b.val
+     <|> do b <- bounds $ do
+                   decoratedKeyword fname "with"
+                   commit
+                   flags <- withFlags fname
+                   wps <- sepBy1 (decoratedSymbol fname "|") (withProblem fname col indents)
+                   ws <- mustWork $ nonEmptyBlockAfter col
+                                  $ clause (S (length wps.tail) + withArgs) (Just lhs) fname
+                   pure (flags, wps, forget ws)
+            (flags, wps, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
-            pure (MkWithClause fc (uncurry applyArgs lhs) rig wval prf flags ws)
+            pure (MkWithClause fc (uncurry applyArgs lhs) wps flags ws)
      <|> do end <- bounds (decoratedKeyword fname "impossible")
             atEnd indents
             pure $ let fc = boundToFC fname (mergeBounds start end) in
@@ -1105,7 +1117,9 @@ mutual
       clauseLHS fname indent (Just lhs)
         = do e <- opExpr plhs fname indents
              pure $ case e of
-               PImplicit _ => lhs
+               PImplicit fc =>
+                 let vfc = virtualiseFC fc in
+                 bimap (substFC vfc) (map (map $ substFC vfc)) lhs
                _ => (e, [])
 
       parseWithArg : Rule (FC, PTerm)
@@ -1373,18 +1387,19 @@ transformDecl fname indents
 
 runElabDecl : OriginDesc -> IndentInfo -> Rule PDecl
 runElabDecl fname indents
-    = do tm <- bounds $
-                 do decoratedPragma fname "runElab"
+    = do tm <- bounds $ do
+                    decoratedPragma fname "runElab"
                     expr pnowith fname indents
          pure (PRunElabDecl (boundToFC fname tm) tm.val)
 
 failDecls : OriginDesc -> IndentInfo -> Rule PDecl
 failDecls fname indents
-    = do msgds <- bounds $
-                 do decoratedKeyword fname "failing"
+    = do msgds <- bounds $ do
+                    col <- column
+                    decoratedKeyword fname "failing"
                     commit
                     msg <- optional simpleStr
-                    (msg,) <$> assert_total (nonEmptyBlock (topDecl fname))
+                    (msg,) <$> nonEmptyBlockAfter col (topDecl fname)
          pure $
            let (msg, ds) = msgds.val
                fc = boundToFC fname msgds
@@ -1392,27 +1407,30 @@ failDecls fname indents
 
 mutualDecls : OriginDesc -> IndentInfo -> Rule PDecl
 mutualDecls fname indents
-    = do ds <- bounds $
-                 do decoratedKeyword fname "mutual"
+    = do ds <- bounds $ do
+                    col <- column
+                    decoratedKeyword fname "mutual"
                     commit
-                    assert_total (nonEmptyBlock (topDecl fname))
+                    nonEmptyBlockAfter col (topDecl fname)
          pure (PMutual (boundToFC fname ds) (concat ds.val))
 
 usingDecls : OriginDesc -> IndentInfo -> Rule PDecl
 usingDecls fname indents
-    = do b <- bounds (do decoratedKeyword fname "using"
-                         commit
-                         decoratedSymbol fname "("
-                         us <- sepBy (decoratedSymbol fname ",")
-                                     (do n <- optional
-                                                (do x <- unqualifiedName
-                                                    decoratedSymbol fname ":"
-                                                    pure (UN $ Basic x))
-                                         ty <- typeExpr pdef fname indents
-                                         pure (n, ty))
-                         decoratedSymbol fname ")"
-                         ds <- assert_total (nonEmptyBlock (topDecl fname))
-                         pure (us, ds))
+    = do b <- bounds $ do
+                    col <- column
+                    decoratedKeyword fname "using"
+                    commit
+                    decoratedSymbol fname "("
+                    us <- sepBy (decoratedSymbol fname ",")
+                                (do n <- optional $ do
+                                               x <- unqualifiedName
+                                               decoratedSymbol fname ":"
+                                               pure (UN $ Basic x)
+                                    ty <- typeExpr pdef fname indents
+                                    pure (n, ty))
+                    decoratedSymbol fname ")"
+                    ds <- nonEmptyBlockAfter col (topDecl fname)
+                    pure (us, ds)
          (us, ds) <- pure b.val
          pure (PUsing (boundToFC fname b) us (collectDefs (concat ds)))
 
@@ -1468,12 +1486,9 @@ fnDirectOpt fname
     parseNoMangle ns = case parseNames ns of
         [(Nothing, name)] => pure $ Just $ CommonName name
         ns =>
-            let ns = the (Either String (List (String, String))) $
-                    traverse
-                    (\case
+            let ns = for {f=Either _} ns $ \case
                         (Nothing, _) => Left "expected backend specifier and name, found name"
-                        (Just b, name) => Right (b, name))
-                    ns
+                        (Just b, name) => Right (b, name)
              in case ns of
                 Left msg => fail msg
                 Right ns => pure $ Just $ BackendNames ns
@@ -1528,18 +1543,20 @@ constraints fname indents
          pure ((Just n, tm) :: more)
   <|> pure []
 
-implBinds : OriginDesc -> IndentInfo -> EmptyRule (List (Name, RigCount, PTerm))
-implBinds fname indents
-    = do decoratedSymbol fname "{"
-         rig <- multiplicity fname
-         n <- decorate fname Bound name
-         decoratedSymbol fname ":"
-         tm <- typeExpr pdef fname indents
-         decoratedSymbol fname "}"
-         decoratedSymbol fname "->"
-         more <- implBinds fname indents
-         pure ((n, rig, tm) :: more)
-  <|> pure []
+implBinds : OriginDesc -> IndentInfo -> EmptyRule (List (FC, RigCount, Name, PTerm))
+implBinds fname indents = concatMap (map adjust) <$> go where
+
+  adjust : (RigCount, WithBounds Name, PTerm) -> (FC, RigCount, Name, PTerm)
+  adjust (r, wn, ty) = (virtualiseFC (boundToFC fname wn), r, wn.val, ty)
+
+  go : EmptyRule (List (List (RigCount, WithBounds Name, PTerm)))
+  go = do decoratedSymbol fname "{"
+          ns <- pibindListName fname indents
+          commitSymbol fname "}"
+          commitSymbol fname "->"
+          more <- go
+          pure (ns :: more)
+    <|> pure []
 
 ifaceParam : OriginDesc -> IndentInfo -> Rule (List Name, (RigCount, PTerm))
 ifaceParam fname indents
@@ -1567,7 +1584,7 @@ ifaceDecl fname indents
                          det    <- option [] $ decoratedSymbol fname "|" *> sepBy (decoratedSymbol fname ",") (decorate fname Bound name)
                          decoratedKeyword fname "where"
                          dc <- optional (recordConstructor fname)
-                         body <- assert_total (blockAfter col (topDecl fname))
+                         body <- blockAfter col (topDecl fname)
                          pure (\fc : FC => PInterface fc
                                       vis cons n doc params det dc (collectDefs (concat body))))
          pure (b.val (boundToFC fname b))
@@ -1669,13 +1686,14 @@ recordDecl fname indents
          pure (b.val (boundToFC fname b))
 
 paramDecls : OriginDesc -> IndentInfo -> Rule PDecl
-paramDecls fname indents
-    = do b1 <- bounds (decoratedKeyword fname "parameters")
+paramDecls fname indents = do
+         startCol <- column
+         b1 <- bounds (decoratedKeyword fname "parameters")
          commit
          args <- bounds (newParamDecls fname indents <|> oldParamDecls fname indents)
          commit
-         declarations <- the (Rule (WithBounds (List1 (List PDecl)))) (assert_total (Core.bounds $ nonEmptyBlock (topDecl fname)))
-         mergedBounds <- pure $  b1 `mergeBounds` (args `mergeBounds` declarations)
+         declarations <- bounds $ nonEmptyBlockAfter startCol (topDecl fname)
+         mergedBounds <- pure $ b1 `mergeBounds` (args `mergeBounds` declarations)
          pure (PParameters (boundToFC fname mergedBounds) args.val (collectDefs (concat declarations.val)))
 
   where

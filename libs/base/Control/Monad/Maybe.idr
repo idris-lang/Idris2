@@ -16,54 +16,83 @@ import Data.Maybe
 
 %default total
 
+||| A monad transformer extending an inner monad with the ability to not return
+||| a result.
+|||
+||| Sequenced actions produce a result only if both actions return a result.
+|||
+||| `MaybeT m a` is equivalent to `EitherT () m a`, that is, an computation
+||| that can only throw a single, information-less exception.
 public export
 data MaybeT : (m : Type -> Type) -> (a : Type) -> Type where
   MkMaybeT : m (Maybe a) -> MaybeT m a
 
+||| Unwrap a `MaybeT` computation.
 public export
 %inline
 runMaybeT : MaybeT m a -> m (Maybe a)
 runMaybeT (MkMaybeT x) = x
 
+||| Check if a monadic computation returns a result. This returns `False` if
+||| the computation returns a result, and `True` otherwise.
+|||
+||| This is a version of `isNothing` lifted to work with `MaybeT`.
 public export
 %inline
 isNothingT : Functor m => MaybeT m a -> m Bool
 isNothingT = map isNothing . runMaybeT
 
+||| Check if a monadic computation returns a result. This returns `True` if
+||| the computation returns a result, and `False` otherwise.
+|||
+||| This is a version of `isJust` lifted to work with `MaybeT`.
 public export
 %inline
 isJustT : Functor m => MaybeT m a -> m Bool
 isJustT = map isJust . runMaybeT
 
+||| Run a `MaybeT` computation, handling the case of a result or no result
+||| seperately.
+|||
+||| This is a version of `maybe` lifted to work with `MaybeT`.
 public export
 %inline
 maybeT : Monad m => m b -> (a -> m b) -> MaybeT m a -> m b
 maybeT v g x = runMaybeT x >>= maybe v g
 
+||| Run a `MaybeT` computation providing a default value.
+|||
+||| This is a version of `fromMaybe` lifted to work with `MaybeT`.
 public export
 %inline
 fromMaybeT : Monad m => m a -> MaybeT m a -> m a
 fromMaybeT v x = runMaybeT x >>= maybe v pure
 
+||| Return a value if a condition is met, or else no value.
+|||
+||| This is a version of `toMaybe` lifted to work with `MaybeT`.
 public export
 %inline
 toMaybeT : Functor m => Bool -> m a -> MaybeT m a
 toMaybeT b m = MkMaybeT $ map (\a => toMaybe b a) m
 
-||| map the underlying computation
-||| The basic 'unwrap, apply, rewrap' of this transformer.
+||| Map over the underlying computation.
 public export
 %inline
 mapMaybeT : (m (Maybe a) -> n (Maybe a')) -> MaybeT m a -> MaybeT n a'
 mapMaybeT f = MkMaybeT . f . runMaybeT
 
-||| Analogous to Just, aka pure for MaybeT
+||| A version of `Just` lifted to work with `MaybeT`.
+|||
+||| This is equivalent to `pure`.
 public export
 %inline
 just : Applicative m => a -> MaybeT m a
 just = MkMaybeT . pure . Just
 
-||| Analogous to Nothing, aka empty for MaybeT
+||| A version of `Nothing` lifted to work with `MaybeT`.
+|||
+||| This is equivalent to `throwE ()`.
 public export
 %inline
 nothing : Applicative m => MaybeT m a

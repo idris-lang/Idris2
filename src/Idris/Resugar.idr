@@ -6,12 +6,15 @@ import Core.Env
 import Core.Options
 
 import Idris.Syntax
+import Idris.Syntax.Traversals
 
 import TTImp.TTImp
 import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
+
+import Data.List1
 import Data.List
 import Data.Maybe
 import Data.String
@@ -420,12 +423,11 @@ mutual
                              !(toPTerm startPrec rhs)
                              [])
   toPClause (WithClause fc lhs rig wval prf flags cs)
-      = pure (MkWithClause fc !(toPTerm startPrec lhs)
-                              rig
-                              !(toPTerm startPrec wval)
-                              prf
-                              flags
-                              !(traverse toPClause cs))
+      = pure $ MkWithClause fc
+                 !(toPTerm startPrec lhs)
+                 (MkPWithProblem rig !(toPTerm startPrec wval) prf ::: [])
+                 flags
+                 !(traverse toPClause cs)
   toPClause (ImpossibleClause fc lhs)
       = pure (MkImpossible fc !(toPTerm startPrec lhs))
 

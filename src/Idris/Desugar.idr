@@ -754,6 +754,17 @@ mutual
 
        pure (inm, bound, blhs)
 
+  desugarWithProblem :
+    {auto s : Ref Syn SyntaxInfo} ->
+    {auto c : Ref Ctxt Defs} ->
+    {auto u : Ref UST UState} ->
+    {auto m : Ref MD Metadata} ->
+    {auto o : Ref ROpts REPLOpts} ->
+    List Name -> PWithProblem ->
+    Core (RigCount, RawImp, Maybe Name)
+  desugarWithProblem ps (MkPWithProblem rig wval mnm)
+    = (rig,,mnm) <$> desugar AnyExpr ps wval
+
   desugarClause : {auto s : Ref Syn SyntaxInfo} ->
                   {auto c : Ref Ctxt Defs} ->
                   {auto u : Ref UST UState} ->
@@ -774,11 +785,11 @@ mutual
 
            pure (nm, PatClause fc lhs' rhs')
 
-  desugarClause ps arg (MkWithClause fc lhs rig wval prf flags cs)
+  desugarClause ps arg (MkWithClause fc lhs wps flags cs)
       = do cs' <- traverse (map snd . desugarClause ps arg) cs
            (nm, bound, lhs') <- desugarLHS ps arg lhs
-           wval' <- desugar AnyExpr (bound ++ ps) wval
-           pure (nm, WithClause fc lhs' rig wval' prf flags cs')
+           wps' <- traverseList1 (desugarWithProblem (bound ++ ps)) wps
+           pure (nm, mkWithClause fc lhs' wps' flags cs')
 
   desugarClause ps arg (MkImpossible fc lhs)
       = do (nm, _, lhs') <- desugarLHS ps arg lhs
@@ -944,12 +955,12 @@ mutual
 
   desugarDecl ps (PImplementation fc vis fnopts pass is cons tn params impln nusing body)
       = do opts <- traverse (desugarFnOpt ps) fnopts
-           is' <- traverse (\ (n,c,tm) => do tm' <- desugar AnyExpr ps tm
-                                             pure (n, c, tm')) is
-           let _ = the (List (Name, RigCount, RawImp)) is'
-           cons' <- traverse (\ (n, tm) => do tm' <- desugar AnyExpr ps tm
-                                              pure (n, tm')) cons
-           let _ = the (List (Maybe Name, RawImp)) cons'
+           is' <- for is $ \ (fc, c,n,tm) =>
+                     do tm' <- desugar AnyExpr ps tm
+                        pure (fc, c, n, tm')
+           cons' <- for cons $ \ (n, tm) =>
+                     do tm' <- desugar AnyExpr ps tm
+                        pure (n, tm')
            params' <- traverse (desugar AnyExpr ps) params
            let _ = the (List RawImp) params'
            -- Look for bindable names in all the constraints and parameters
@@ -959,10 +970,8 @@ mutual
              $ findUniqueBindableNames fc True ps []
 
            let paramsb = map (doBind bnames) params'
-           let isb = map (\ (n, r, tm) => (n, r, doBind bnames tm)) is'
-           let _ = the (List (Name, RigCount, RawImp)) isb
+           let isb = map (\ (info, r, n, tm) => (info, r, n, doBind bnames tm)) is'
            let consb = map (\(n, tm) => (n, doBind bnames tm)) cons'
-           let _ = the (List (Maybe Name, RawImp)) consb
 
            body' <- maybe (pure Nothing)
                           (\b => do b' <- traverse (desugarDecl ps) b
@@ -1041,7 +1050,11 @@ mutual
            syn <- get Syn
            defs <- branch
            log "desugar.failing" 20 $ "Desugaring the block:\n" ++ show d
-           -- See whether the desugaring phase fails
+           -- See whether the desugaring phase fails and return
+           -- * Right ds                            if the desugaring succeeded
+           --                                       the error will have to come later in the pipeline
+           -- * Left Nothing                        if the block correctly failed
+           -- * Left (Just (FailingWrongError err)) if the block failed with the wrong error
            result <- catch
              (do -- run the desugarer
                  ds <- traverse (desugarDecl ps) ds
@@ -1050,13 +1063,13 @@ mutual
                          let Just msg = mmsg
                              | _ => pure (Left Nothing)
                          -- otherwise have a look at the displayed message
-                         str <- show <$> perror (killErrorLoc err)
-                         log "desugar.failing" 10 $ "Failing block based on \{show msg} failed with \{str}"
+                         log "desugar.failing" 10 $ "Failing block based on \{show msg} failed with \{show err}"
+                         test <- checkError msg err
                          pure $ Left $ do
                               -- Unless the error is the expected one
-                              guard (not (msg `isInfixOf` str))
+                              guard (not test)
                               -- We should complain we had the wrong one
-                              pure (FailingWrongError fc msg err))
+                              pure (FailingWrongError fc msg (err ::: [])))
            -- Reset the state
            put UST ust
            md' <- get MD

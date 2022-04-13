@@ -49,6 +49,12 @@
   `Show` is that `Interpolation` and `Show` have conflicting semantics, typically
   this is the case for `String` which adds double quotes around the string.
 
+* A `failing` block that requires its body to fail with a compile error was added.
+  Optionally this block may contain a string which is checked to be contained in the error message.
+
+* Bodies of `mutual`, `failing`, `using` and `parameters` blocks are required to be indented
+  comparing to the position of the keyword.
+
 ### Compiler changes
 
 * Removes deprecated support for `void` primitive. Now `void` is supported via
@@ -83,6 +89,11 @@
 
 * `elemBy` and `elem` are now defined for any `Foldable` structure. The specialised
   versions defined in `Data.(List/SnocList/Vect)` have been removed.
+* `filter` and `mapMaybe` functions for `List` were moved to `prelude` from `base`.
+* Basic functions of `SnocList` (`(++)`, `length`, `filter`, `mapMaybe`) and
+  implementations of `Eq` and `Ord` were moved to `prelude` from `base`.
+  This may lead to a need to qualifying functions (e.g. `List.filter`) due to possible ambiguity.
+* "Fish" and "chips" operators of `SnocList` were moved to `Prelude.Types` from `Prelude.Basics`.
 
 #### Base
 
@@ -102,6 +113,13 @@
 * Adds the `Data.List.Quantifiers.Interleaving` and
   `Data.List.Quantifiers.Split` datatypes, used for provably splitting a list
   into a list of proofs and a list of counter-proofs for a given property.
+* Properties of the `List1` type were moved from `Data.List1` to `Data.List1.Properties`.
+* `Syntax.PreorderReasoning` was moved to `base` from `contrib`.
+* Move the types and functions in `Data.Vect.Quantifiers` to their respective
+  namespaces (`All` for all-related things, and `Any` for any-related things) to
+  make the code consistent with the other quantifiers (`List` and `SnocList`).
+* Set the `all` and `any` functions for proof-quantifiers to `public export`
+  instead of `export`, allowing them to be used with auto-implicit `IsYes`.
 
 #### Test
 
@@ -116,6 +134,11 @@
   to 32 bits but now that is codified. JavaScript backends are now supported.
 * Removes `contrib`'s deprecated `Data.Num.Implementations` module. See
   `Prelude.Interfaces` instead.
+* Implements `Show tok => Show (ParsingError tok)` for `Text.Parser.Core`.
+
+### Other changes
+
+* Adds docstrings for the lambda-lifted IR.
 
 ## v0.5.0/0.5.1
 

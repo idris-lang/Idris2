@@ -5,7 +5,10 @@ import Control.Monad.Trans
 
 %default total
 
-||| The transformer on which the Reader monad is based
+||| A monad transformer extending an inner monad with access to an environment.
+|||
+||| The environment is the same for all actions in a sequence, but may be
+||| changed within scopes created by `Control.Monad.Reader.local`.
 public export
 record ReaderT (stateType : Type) (m : Type -> Type) (a : Type) where
   constructor MkReaderT
@@ -26,7 +29,9 @@ runReaderT s action = runReaderT' action s
 --          Reader
 --------------------------------------------------------------------------------
 
-||| The Reader monad. The ReaderT transformer applied to the Identity monad.
+||| A monad that can access an environment.
+|||
+||| This is `ReaderT` applied to `Identity`.
 public export
 Reader : (stateType : Type) -> (a : Type) -> Type
 Reader s a = ReaderT s Identity a

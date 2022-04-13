@@ -463,7 +463,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
 --          let Hole _ _ = definition mdef
 --              | def => ufail {a=()} loc (show mname ++ " already resolved as " ++ show def)
          case fullname mdef of
-              PV pv pi => throw (PatternVariableUnifies loc env (PV pv pi) otm)
+              PV pv pi => throw (PatternVariableUnifies loc (getLoc otm) env (PV pv pi) otm)
               _ => pure ()
          defs <- get Ctxt
          ty <- normalisePis defs [] $ type mdef

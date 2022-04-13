@@ -114,7 +114,7 @@ mutual
   prettyAlt : PClause' KindedName -> Doc IdrisSyntax
   prettyAlt (MkPatClause _ lhs rhs _) =
       space <+> pipe <++> pretty lhs <++> fatArrow <++> pretty rhs <+> semi
-  prettyAlt (MkWithClause _ lhs rig wval prf flags cs) =
+  prettyAlt (MkWithClause _ lhs wps flags cs) =
       space <+> pipe <++> angles (angles (reflow "with alts not possible")) <+> semi
   prettyAlt (MkImpossible _ lhs) =
       space <+> pipe <++> pretty lhs <++> impossible_ <+> semi
@@ -123,7 +123,7 @@ mutual
   Pretty IdrisSyntax (PClause' KindedName) where
     pretty (MkPatClause _ lhs rhs _) =
       pretty lhs <++> fatArrow <++> pretty rhs
-    pretty (MkWithClause _ lhs rig rhs prf flags _) =
+    pretty (MkWithClause _ lhs wps flags _) =
       space <+> pipe <++> angles (angles (reflow "with alts not possible"))
     pretty (MkImpossible _ lhs) =
       pretty lhs <++> impossible_

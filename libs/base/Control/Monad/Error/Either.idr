@@ -1,59 +1,68 @@
+||| Provides a monad transformer `EitherT` that extends an inner monad with the
+||| ability to throw and catch exceptions.
+
 module Control.Monad.Error.Either
-
--------------------------------------------------
--- The monad transformer `EitherT e m a` equips a monad with the ability to
--- return a choice of two values.
-
--- Sequenced actions of `Either e m a` produce a value `a` only if none of the
--- actions in the sequence returned `e`. Because returning `e` exits the
--- computation early, this can be seen as equipping a monad with the ability to
--- throw an exception.
-
--- This is more powerful than MaybeT which instead equips a monad with the
--- ability to not return a result.
--------------------------------------------------
 
 import Control.Monad.Trans
 
 %default total
 
+||| A monad transformer extending an inner monad with the ability to throw and
+||| catch exceptions.
+|||
+||| Sequenced actions produce an exception if either action produces an
+||| exception, with preference for the first exception. If neither produce an
+||| exception, neither does the sequence of actions.
+|||
+||| `MaybeT m a` is equivalent to `EitherT () m a`, that is, an computation
+||| that can only throw a single, information-less exception.
 public export
 data EitherT : (e : Type) -> (m : Type -> Type) -> (a : Type) -> Type where
   MkEitherT : m (Either e a) -> EitherT e m a
 
+||| Unwrap an `EitherT` computation.
 public export
 %inline
 runEitherT : EitherT e m a -> m (Either e a)
 runEitherT (MkEitherT x) = x
 
+||| Run an `EitherT` computation, handling results and exceptions with seperate
+||| functions.
+|||
+||| This is a version of `either` lifted to work with `EitherT`.
 public export
 eitherT : Monad m => (a -> m c) -> (b -> m c) -> EitherT a m b -> m c
 eitherT f g x = runEitherT x >>= either f g
 
-||| map the underlying computation
-||| The basic 'unwrap, apply, rewrap' of this transformer.
+||| Map over the underlying monadic computation.
 public export
 %inline
 mapEitherT : (m (Either e a) -> n (Either e' a')) -> EitherT e m a -> EitherT e' n a'
 mapEitherT f = MkEitherT . f . runEitherT
 
+||| Map over the result or the exception of a monadic computation.
 public export
 bimapEitherT : Functor m => (a -> c) -> (b -> d)
             -> EitherT a m b -> EitherT c m d
 bimapEitherT f g x = mapEitherT (map (either (Left . f) (Right . g))) x
 
-||| Analogous to Left, aka throwE
+||| A version of `Left` lifted to work with `EitherT`.
+|||
+||| This is equivalent to `throwE`.
 public export
 %inline
 left : Applicative m => e -> EitherT e m a
 left = MkEitherT . pure . Left
 
-||| Analogous to Right, aka pure for EitherT
+||| A version of `Right` lifted to work with `EitherT`.
+|||
+||| This is equivalent to `pure`.
 public export
 %inline
 right : Applicative m => a -> EitherT e m a
 right = MkEitherT . pure . Right
 
+||| Swap the result and the exception of a monadic computation.
 public export
 swapEitherT : Functor m => EitherT e m a -> EitherT a m e
 swapEitherT = mapEitherT (map (either Right Left))
@@ -62,12 +71,16 @@ swapEitherT = mapEitherT (map (either Right Left))
 -- Methods of the 'exception' theme
 -------------------------------------------------
 
-||| aka `left`
+||| Throw an exception in a monadic computation.
 public export
 %inline
 throwE : Applicative m => e -> EitherT e m a
 throwE = MkEitherT . pure . Left
 
+||| Handle an exception thrown in a monadic computation.
+|||
+||| Since the handler catches all errors thrown in the computation, it may
+||| raise a different exception type.
 public export
 catchE : Monad m => EitherT e m a -> (e -> EitherT e' m a) -> EitherT e' m a
 catchE et f

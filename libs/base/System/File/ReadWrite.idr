@@ -11,28 +11,29 @@ import public System.File.Types
 
 %default total
 
-%foreign support "idris2_seekLine"
-         "node:support:seekLine,support_system_file"
+%foreign supportC "idris2_seekLine"
+         supportNode "seekLine"
 prim__seekLine : FilePtr -> PrimIO Int
 
-%foreign support "idris2_readLine"
-         "node:support:readLine,support_system_file"
+%foreign supportC "idris2_readLine"
+         supportNode "readLine"
 prim__readLine : FilePtr -> PrimIO (Ptr String)
 
-%foreign support "idris2_readChars"
+%foreign supportC "idris2_readChars"
 prim__readChars : Int -> FilePtr -> PrimIO (Ptr String)
 %foreign "C:fgetc,libc 6"
 prim__readChar : FilePtr -> PrimIO Int
 
-%foreign support "idris2_writeLine"
+%foreign supportC "idris2_writeLine"
          "node:lambda:(filePtr, line) => require('fs').writeSync(filePtr.fd, line, undefined, 'utf-8')"
 prim__writeLine : FilePtr -> String -> PrimIO Int
 
-%foreign support "idris2_eof"
+%foreign supportC "idris2_eof"
          "node:lambda:x=>(x.eof?1:0)"
 prim__eof : FilePtr -> PrimIO Int
 
-%foreign support "idris2_removeFile"
+%foreign supportC "idris2_removeFile"
+         supportNode "removeFile"
 prim__removeFile : String -> PrimIO Int
 
 ||| Seek through the next newline.

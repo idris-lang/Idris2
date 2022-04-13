@@ -1,0 +1,6 @@
+List.testAll
+List.testAny
+Vect.testAll
+Vect.testAny
+SnocList.testAll
+SnocList.testAny

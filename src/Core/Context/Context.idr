@@ -438,3 +438,5 @@ record Context where
     inlineOnly : Bool -- only return things with the 'alwaysReduce' flag
     hidden : NameMap () -- Never return these
     uconstraints : List UConstraint
+
+%name Context gam

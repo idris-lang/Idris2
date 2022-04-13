@@ -97,6 +97,7 @@ knownTopics = [
     ("elab.case", Nothing),
     ("elab.def.local", Nothing),
     ("elab.delay", Nothing),
+    ("elab.failing", Just "Elaborating a 'failing' block."),
     ("elab.hole", Nothing),
     ("elab.implicits", Nothing),
     ("elab.implementation", Nothing),
