@@ -473,3 +473,11 @@ renderWithDecorations f doc =
   do (str, mspans) <- Render.renderWithSpans doc
      let spans = mapMaybe (traverse f) mspans
      pure (str, spans)
+
+export
+prettyImport : Import -> Doc IdrisSyntax
+prettyImport (MkImport loc reexport path nameAs)
+  = keyword "import"
+    <+> ifThenElse reexport (space <+> keyword "public") ""
+    <++> pretty path
+    <+> ifThenElse (miAsNamespace path /= nameAs) (space <+> keyword "as" <++> pretty nameAs) ""

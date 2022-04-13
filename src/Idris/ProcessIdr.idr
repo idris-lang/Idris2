@@ -302,12 +302,12 @@ processMod sourceFileName ttcFileName msg sourcecode origin
         let ns = moduleNS moduleHeader
 
         -- Add an implicit prelude import
-        let imports =
+        let allImports =
           if (session.noprelude || moduleNS moduleHeader == nsAsModuleIdent preludeNS)
              then imports moduleHeader
              else addPrelude $ imports moduleHeader
 
-        importMetas <- traverse readImportMeta imports
+        importMetas <- traverse readImportMeta allImports
         let importInterfaceHashes = snd <$> importMetas
 
         defs <- get Ctxt
@@ -339,13 +339,17 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                                        (do p <- prog (PhysicalIdrSrc origin); eoi; pure p)
                   | Left err => pure (Just [err])
                 traverse_ recordWarning ws
-                -- save the doc string for the current module
+
+                -- save the doc info for the current module
                 log "doc.module" 10 $ unlines
-                  [ "Recording doc"
-                  , documentation mod
-                  , "for module " ++ show (moduleNS mod)
+                  [ "Recording doc", documentation moduleHeader
+                  , "and imports " ++ show (imports moduleHeader)
+                  , "for module " ++ show (moduleNS moduleHeader)
                   ]
-                addModDocString (moduleNS mod) (documentation mod)
+                addModDocInfo
+                  (moduleNS moduleHeader)
+                  (documentation moduleHeader)
+                  (filter reexport $ imports moduleHeader)
 
                 addSemanticDecorations decor
                 update Syn { holeNames := hnames }
@@ -365,7 +369,7 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                 -- (also that we only build child dependencies if rebuilding
                 -- changes the interface - will need to store a hash in .ttc!)
                 logTime 2 "Reading imports" $
-                   traverse_ (readImport False) imports
+                   traverse_ (readImport False) allImports
 
                 -- Before we process the source, make sure the "hide_everywhere"
                 -- names are set to private (TODO, maybe if we want this?)

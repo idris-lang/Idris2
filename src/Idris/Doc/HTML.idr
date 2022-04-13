@@ -214,17 +214,22 @@ preserveLayout d = "<pre>" ++ d ++ "</pre>"
 export
 renderModuleDoc : {auto c : Ref Ctxt Defs} ->
                   ModuleIdent ->
-                  Maybe String ->
-                  Doc IdrisDocAnn ->
+                  Maybe String -> -- module description
+                  Maybe (List (Doc IdrisDocAnn)) -> -- module re-exports
+                  Maybe (Doc IdrisDocAnn) -> -- module definitions
                   Core String
-renderModuleDoc mod modDoc allModuleDocs =
+renderModuleDoc mod modDoc modReexports allModuleDocs =
   let mdoc = maybe "" (preserveLayout . htmlEscape) modDoc
+      mexp = maybe "" vcat modReexports
   in pure $ fastConcat
   [ htmlPreamble (show mod) "../" "namespace"
   , "<div id=\"moduleHeader\">"
   , "<h1>", show mod, "</h1>"
   , mdoc
   , "</div>"
-  , !(docDocToHtml allModuleDocs)
+  , maybe "" (const "<h2>Reexports</h2>") modReexports
+  , "<code>", !(docDocToHtml mexp), "</code>"
+  , maybe "" (const "<h2>Definitions</h2>") allModuleDocs
+  , !(docDocToHtml $ fromMaybe "" allModuleDocs)
   , htmlFooter
   ]

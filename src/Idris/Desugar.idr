@@ -84,6 +84,7 @@ extendSyn newsyn
                     prefixes $= mergeLeft (prefixes newsyn),
                     ifaces $= merge (ifaces newsyn),
                     modDocstrings $= mergeLeft (modDocstrings newsyn),
+                    modDocexports $= mergeLeft (modDocexports newsyn),
                     defDocstrings $= merge (defDocstrings newsyn),
                     bracketholes $= ((bracketholes newsyn) ++) }
                   syn)
