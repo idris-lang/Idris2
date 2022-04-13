@@ -276,7 +276,7 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
   (supportChanged, chezLibs) <- compileToSS c chez appDirRel tm
 
   -- compile the code
-  logTime "++ Make SO" $ when makeitso $ do
+  logTime 2 "Make SO" $ when makeitso $ do
     -- compile the support code
     when supportChanged $ do
       log "compiler.scheme.chez" 3 $ "Compiling support"

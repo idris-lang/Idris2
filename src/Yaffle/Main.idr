@@ -24,9 +24,9 @@ import System
 usage : String
 usage = "Usage: yaffle <input file> [--timing]"
 
-processArgs : List String -> Core Bool
-processArgs [] = pure False
-processArgs ["--timing"] = pure True
+processArgs : List String -> Core (Maybe Nat)
+processArgs [] = pure Nothing
+processArgs ["--timing"] = pure (Just 10)
 processArgs _
     = coreLift $ do ignore $ putStrLn usage
                     exitWith (ExitFailure 1)
@@ -46,7 +46,7 @@ yaffleMain sourceFileName args
          u <- newRef UST initUState
          s <- newRef Syn initSyntax
          o <- newRef ROpts (defaultOpts (Just sourceFileName) (REPL ErrorLvl) [])
-         setLogTimings t
+         whenJust t $ setLogTimings
          addPrimitives
          case extension sourceFileName of
               Just "ttc" => do coreLift_ $ putStrLn "Processing as TTC"

@@ -549,7 +549,7 @@ compileExprWhole makeitso c tmpDir outputDir tm outfile
          chez <- coreLift $ findChez
          let prof = profile !getSession
          compileToSS c (makeitso && prof) appDirGen tm outSsAbs
-         logTime "++ Make SO" $ when makeitso $
+         logTime 2 "Make SO" $ when makeitso $
            compileToSO prof chez appDirGen outSsAbs
          let outShRel = outputDir </> outfile
          if isWindows

@@ -4,6 +4,9 @@ depends = network
 
 sourcedir = "src"
 
+-- Set if you want the build to output timing data
+-- opts = "--timing 1"
+
 -- Set if you want the executable to generate profiling data
 -- (Currently supported by Racket and Chez back ends, others ignore it)
 -- opts = "--profile"

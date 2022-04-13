@@ -347,8 +347,8 @@ preOptions (Directory d :: opts)
 preOptions (ListPackages :: opts)
     = do listPackages
          pure False
-preOptions (Timing :: opts)
-    = do setLogTimings True
+preOptions (Timing tm :: opts)
+    = do setLogTimings (fromMaybe 10 tm)
          preOptions opts
 preOptions (DebugElabCheck :: opts)
     = do setDebugElabCheck True
