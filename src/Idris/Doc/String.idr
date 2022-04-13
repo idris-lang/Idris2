@@ -41,15 +41,6 @@ import Idris.Doc.Brackets
 
 %default covering
 
--- Add a doc string for a module name
-export
-addModDocString : {auto s : Ref Syn SyntaxInfo} ->
-                  ModuleIdent -> String ->
-                  Core ()
-addModDocString mi doc
-    = update Syn { saveMod $= (mi ::)
-                 , modDocstrings $= insert mi doc }
-
 -- Add a doc string for a name in the current namespace
 export
 addDocString : {auto c : Ref Ctxt Defs} ->

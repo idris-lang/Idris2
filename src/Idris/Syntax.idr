@@ -668,6 +668,16 @@ record Import where
   path : ModuleIdent
   nameAs : Namespace
 
+export
+Show Import where
+  show (MkImport loc reexport path nameAs)
+    = unwords $ catMaybes
+      [ Just "import"
+      , "public" <$ guard reexport
+      , Just (show path)
+      , ("as " ++ show nameAs) <$ guard (miAsNamespace path /= nameAs)
+      ]
+
 public export
 record Module where
   constructor MkModule
@@ -939,6 +949,7 @@ record SyntaxInfo where
   -- info about modules
   saveMod : List ModuleIdent -- current module name
   modDocstrings : SortedMap ModuleIdent String
+  modDocexports : SortedMap ModuleIdent (List Import) -- keeping the imports that happen to be reexports
   -- info about interfaces
   saveIFaces : List Name -- interfaces defined in current session, to save
                          -- to ttc
@@ -968,12 +979,29 @@ TTC Fixity where
              _ => corrupt "Fixity"
 
 export
+TTC Import where
+  toBuf b (MkImport loc reexport path nameAs)
+    = do toBuf b loc
+         toBuf b reexport
+         toBuf b path
+         toBuf b nameAs
+
+  fromBuf b
+    = do loc <- fromBuf b
+         reexport <- fromBuf b
+         path <- fromBuf b
+         nameAs <- fromBuf b
+         pure (MkImport loc reexport path nameAs)
+
+export
 TTC SyntaxInfo where
   toBuf b syn
       = do toBuf b (StringMap.toList (infixes syn))
            toBuf b (StringMap.toList (prefixes syn))
            toBuf b (filter (\n => elemBy (==) (fst n) (saveMod syn))
                            (SortedMap.toList $ modDocstrings syn))
+           toBuf b (filter (\n => elemBy (==) (fst n) (saveMod syn))
+                           (SortedMap.toList $ modDocexports syn))
            toBuf b (filter (\n => fst n `elem` saveIFaces syn)
                            (ANameMap.toList (ifaces syn)))
            toBuf b (filter (\n => isJust (lookup (fst n) (saveDocstrings syn)))
@@ -986,13 +1014,14 @@ TTC SyntaxInfo where
       = do inf <- fromBuf b
            pre <- fromBuf b
            moddstr <- fromBuf b
+           modexpts <- fromBuf b
            ifs <- fromBuf b
            defdstrs <- fromBuf b
            bhs <- fromBuf b
            start <- fromBuf b
            hnames <- fromBuf b
            pure $ MkSyntax (fromList inf) (fromList pre)
-                   [] (fromList moddstr)
+                   [] (fromList moddstr) (fromList modexpts)
                    [] (fromList ifs)
                    empty (fromList defdstrs)
                    bhs
@@ -1042,6 +1071,7 @@ initSyntax
                initPrefix
                []
                empty
+               empty
                []
                empty
                initSaveDocStrings
@@ -1075,6 +1105,16 @@ data Syn : Type where
 export
 withSyn : {auto s : Ref Syn SyntaxInfo} -> Core a -> Core a
 withSyn = wrapRef Syn (\_ => pure ())
+
+-- Add a list of reexports for a module name
+export
+addModDocInfo : {auto s : Ref Syn SyntaxInfo} ->
+                ModuleIdent -> String -> List Import ->
+                Core ()
+addModDocInfo mi doc reexpts
+    = update Syn { saveMod $= (mi ::)
+                 , modDocexports $= insert mi reexpts
+                 , modDocstrings $= insert mi doc }
 
 export
 covering

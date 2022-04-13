@@ -32,6 +32,7 @@ import Idris.CommandLine
 import Idris.Doc.HTML
 import Idris.Doc.String
 import Idris.ModTree
+import Idris.Pretty
 import Idris.ProcessIdr
 import Idris.REPL
 import Idris.REPL.Common
@@ -503,7 +504,6 @@ makeDoc pkg opts =
            -- generate docs for all visible names
            defs <- get Ctxt
            let ctxt = gamma defs
-
            visibleDefs <- map catMaybes $ for [1..nextEntry ctxt - 1] $ \ i =>
              do -- Select the entries that are from `mod` and visible
                 Just gdef <- lookupCtxtExact (Resolved i) ctxt
@@ -543,9 +543,20 @@ makeDoc pkg opts =
              , "and got:"
              , show modDoc
              ]
-           log "doc.module" 15 $ "from: " ++ show (modDocstrings syn)
+           log "doc.module" 100 $ "from: " ++ show (modDocstrings syn)
 
-           Right () <- do doc <- renderModuleDoc mod modDoc allDecls
+           -- grab publically re-exported modules
+           let mreexports = do docs <- lookup mod $ modDocexports syn
+                               guard (not $ null docs)
+                               pure docs
+           whenJust mreexports $ \ reexports =>
+             log "doc.module" 15 $ unwords
+               [ "All imported:", show reexports]
+
+           let modExports = map (map (reAnnotate Syntax . prettyImport)) mreexports
+
+           Right () <- do doc <- renderModuleDoc mod modDoc modExports
+                                   (allDecls <$ guard (not $ null allDocs))
                           coreLift $ writeFile outputFilePath doc
              | Left err => fileError (docBase </> "index.html") err
 
