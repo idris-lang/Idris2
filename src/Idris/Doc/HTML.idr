@@ -91,6 +91,12 @@ renderHtml (STAnn (Syntax (TCon mn)) rest) = do
 renderHtml (STAnn (Syntax (Fun n)) rest) = do
   fun <- renderHtml rest
   addLink (Just n) $ "<span class=\"name function\">" <+> fun <+> "</span>"
+renderHtml (STAnn (Syntax Keyword) rest) = do
+  key <- renderHtml rest
+  pure $ "<span class=\"keyword\">" <+> key <+> "</span>"
+renderHtml (STAnn (Syntax Bound) rest) = do
+  bnd <- renderHtml rest
+  pure $ "<span class=\"boundvar\">" <+> bnd <+> "</span>"
 renderHtml (STAnn Header rest) = do
   resthtml <- renderHtml rest
   pure $ "<b>" <+> resthtml <+> "</b>"
@@ -223,7 +229,7 @@ renderModuleDoc mod modDoc modReexports allModuleDocs =
       mexp = maybe "" vcat modReexports
   in pure $ fastConcat
   [ htmlPreamble (show mod) "../" "namespace"
-  , "<div id=\"moduleHeader\">"
+  , "<div id=\"module-header\">"
   , "<h1>", show mod, "</h1>"
   , mdoc
   , "</div>"
