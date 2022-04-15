@@ -72,11 +72,11 @@ displayImpl defs (n, idx, gdef)
   = case definition gdef of
       PMDef _ _ ct _ [(vars ** (env,  _, rhs))] =>
         do rhstm <- resugar env !(normaliseHoles defs env rhs)
-           let (_, args) = getFnArgs rhstm
+           let (_, args) = getFnArgs defaultKindedName rhstm
            defs <- get Ctxt
            pds <- map catMaybes $ for args $ \ arg => do
              let (_, expr) = underLams (unArg arg)
-             let (PRef _ kn, _) = getFnArgs expr
+             let (PRef _ kn, _) = getFnArgs defaultKindedName expr
                | _ => pure Nothing
              log "doc.implementation" 20 $ "Got name \{show @{Raw} kn}"
              let (ns, DN dn nm) = splitNS (kn.fullName)
