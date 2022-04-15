@@ -420,7 +420,7 @@ mutual
     <|> do xs <- option [] $ do
                      hd <- expr pdef fname indents
                      tl <- many $ do b <- bounds (symbol ",")
-                                     x <- expr pdef fname indents
+                                     x <- mustWork $ expr pdef fname indents
                                      pure (x <$ b)
                      pure ((hd <$ s) :: tl)
            (do decoratedSymbol fname ".."
