@@ -8,7 +8,7 @@ We have seen that definitional equalities can be proved using ``Refl`` since the
 always normalise to values that can be compared directly.
 
 However with propositional equalities we are using symbolic variables, which do
-not always normalse.
+not always normalise.
 
 So to take the previous example:
 
