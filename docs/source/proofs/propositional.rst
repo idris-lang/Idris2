@@ -28,9 +28,9 @@ match all possible values of ``n``. In this case
    plusReducesR Z = Refl
    plusReducesR (S k)
        = let rec = plusReducesR k in
-             rewrite sym rec in Refl
+             rewrite rec in Refl
 
-we can't use ``Refl`` to prove ``n = plus n 0`` for all ``n``. Instead, we call
+we can't use ``Refl`` to prove ``plus n 0 = n`` for all ``n``. Instead, we call
 it for each case separately.  So, in the second line for example, the type checker
 substitutes ``Z`` for ``n`` in the type being matched, and reduces the type
 accordingly.
