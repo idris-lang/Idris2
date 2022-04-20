@@ -653,11 +653,11 @@ perrorRaw (InRHS fc n err)
                   ]
 
 perrorRaw (MaybeMisspelling err ns) = pure $ !(perrorRaw err) <+> case ns of
-  (n ::: []) => reflow "Did you mean:" <++> pretty n <+> "?"
+  (n ::: []) => reflow "Did you mean:" <++> code (pretty n) <+> "?"
   _ => let (xs, x) = Lib.unsnoc ns in
        reflow "Did you mean any of:"
-       <++> concatWith (surround (comma <+> space)) (map pretty xs)
-       <+> comma <++> reflow "or" <++> pretty x <+> "?"
+       <++> concatWith (surround (comma <+> space)) (map (code . pretty) xs)
+       <+> comma <++> reflow "or" <++> code (pretty x) <+> "?"
 perrorRaw (WarningAsError warn) = pwarningRaw warn
 
 export

@@ -171,9 +171,8 @@ showHole defs env fn args ty
 
 export
 prettyRigHole : RigCount -> Doc IdrisSyntax
-prettyRigHole = keyword
-              . elimSemi (pretty '0' <+> space)
-                         (pretty '1' <+> space)
+prettyRigHole = elimSemi (keyword (pretty '0') <+> space)
+                         (keyword (pretty '1') <+> space)
                          (const $ space <+> space)
 
 export

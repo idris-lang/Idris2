@@ -561,7 +561,7 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
                          else tryGroups (Just $ fromMaybe err merr) nty gs)
 
 -- Declared in Core.Unify as:
--- search : {vars : _} -
+-- search : {vars : _} ->
 --          {auto c : Ref Ctxt Defs} ->
 --          {auto u : Ref UST UState} ->
 --          FC -> RigCount ->

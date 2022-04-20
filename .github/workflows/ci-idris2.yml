@@ -251,10 +251,9 @@ jobs:
     needs: quick-check
     runs-on: ubuntu-latest
     if: |
-      false
-      && (!contains(needs.initialise.outputs.commit_message, '[ci:')
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
       || contains(needs.initialise.outputs.commit_message, '[ci: ubuntu]')
-      || contains(needs.initialise.outputs.commit_message, '[ci: racket]'))
+      || contains(needs.initialise.outputs.commit_message, '[ci: racket]')
 
     env:
       IDRIS2_CG: racket
@@ -574,3 +573,87 @@ jobs:
       - name: Build idris2-elab-util
         run: |
           make all
+
+  ######################################################################
+  # Ubuntu using katla to build html doc of the libs
+  ######################################################################
+
+  ubuntu-katla:
+    needs: ubuntu-test-collie
+    runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: html]')
+    env:
+      IDRIS2_CG: chez
+    steps:
+
+      - name: Initialise DEPLOY variable
+        run: |
+          if [[ '${{ github.ref }}' == 'refs/heads/main' ]]; then
+             echo "IDRIS2_DEPLOY=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
+      - name: Install build dependencies
+        run: |
+          echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
+          sudo apt-get update
+          sudo apt-get install -y -t hirsute chezscheme
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+      - name: Checkout idris2
+        uses: actions/checkout@v2
+      - name: Build API
+        run: make install-api
+        shell: bash
+      - name: Checkout collie
+        uses: actions/checkout@v2
+        with:
+          repository: 'ohad/collie'
+      - name: Build and install Collie
+        run: |
+          make install
+      - name: Checkout idrall
+        uses: actions/checkout@v2
+        with:
+          repository: 'alexhumphreys/idrall'
+      - name: Build and install idrall
+        run: |
+          make install
+      - name: Checkout katla
+        uses: actions/checkout@v2
+        with:
+          repository: 'idris-community/katla'
+      - name: Build and install katla
+        run: |
+          make
+          mkdir -p "${HOME}"/.local/bin/
+          cp -r build/exec/* "${HOME}"/.local/bin/
+          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+      - name: Checkout idris2
+        uses: actions/checkout@v2
+      - name: Build html doc
+        run: |
+          make -C libs/prelude/ install docs IDRIS2=idris2
+          make -C libs/base/ install docs IDRIS2=idris2
+          make -C libs/contrib/ install docs IDRIS2=idris2
+          make -C libs/network/ install docs IDRIS2=idris2
+          make -C libs/linear/ install docs IDRIS2=idris2
+          make -C libs/test/ install docs IDRIS2=idris2
+          make -C libs/papers/ install docs IDRIS2=idris2
+
+          cd .github/scripts
+          ./katla.sh
+      - name: Deploy HTML
+        uses: JamesIves/github-pages-deploy-action@4.1.3
+        if: ${{ success() && env.IDRIS2_DEPLOY }}
+
+        with:
+          branch: gh-pages
+          folder: .github/scripts/html/
+          git-config-name: Github Actions

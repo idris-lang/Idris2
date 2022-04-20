@@ -41,15 +41,6 @@ import Idris.Doc.Brackets
 
 %default covering
 
--- Add a doc string for a module name
-export
-addModDocString : {auto s : Ref Syn SyntaxInfo} ->
-                  ModuleIdent -> String ->
-                  Core ()
-addModDocString mi doc
-    = update Syn { saveMod $= (mi ::)
-                 , modDocstrings $= insert mi doc }
-
 -- Add a doc string for a name in the current namespace
 export
 addDocString : {auto c : Ref Ctxt Defs} ->
@@ -475,7 +466,7 @@ getDocsForImplementation :
   PTerm -> Core (Maybe (Doc IdrisSyntax))
 getDocsForImplementation t = do
   -- the term better be of the shape (I e1 e2 e3) where I is a name
-  let (PRef fc intf, args) = getFnArgs t
+  let (PRef fc intf, args) = getFnArgs id t
     | _ => pure Nothing
   -- That name (I) better be the name of an interface
   syn <- get Syn
@@ -495,7 +486,7 @@ getDocsForImplementation t = do
     let (_, retTy) = underPis ty
     -- try to see whether it approximates what we are looking for
     -- we throw the head away because it'll be the interface name (I)
-    let (_, cargs) = getFnArgs retTy
+    let (_, cargs) = getFnArgs defaultKindedName retTy
     bs <- for (zip args cargs) $ \ (arg, carg) => do
       -- For now we only compare the heads of the arguments because we expect
       -- we are interested in implementations of the form
@@ -504,7 +495,7 @@ getDocsForImplementation t = do
       -- retain implementations whose type is fully compatible.
 
       -- TODO: check the Args have the same shape before unArgging?
-      let ((PRef fc hd, _), (PRef _ chd, _)) = (getFnArgs (unArg arg), getFnArgs (unArg carg))
+      let ((PRef fc hd, _), (PRef _ chd, _)) = ( getFnArgs id (unArg arg), getFnArgs defaultKindedName (unArg carg))
         | ((PPrimVal _ c, _), (PPrimVal _ c', _)) => pure (c == c')
         | ((PType _, _), (PType _, _)) => pure True
         | _ => pure False
