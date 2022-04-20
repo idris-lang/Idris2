@@ -50,6 +50,7 @@ schHeader prof libs = """
   (require rnrs/io/ports-6)              ; for files
   (require srfi/19)                      ; for file handling and data
   (require ffi/unsafe ffi/unsafe/define) ; for calling C
+  (require racket/unsafe/ops)            ; for unsafe-fx+ and unsafe-fx- functions
   \{ ifThenElse prof "(require profile)" "" }
   (require racket/flonum)                ; for float-typed transcendental functions
   \{ libs }

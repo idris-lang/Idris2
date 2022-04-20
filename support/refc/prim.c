@@ -153,13 +153,13 @@ Value *onCollect(Value *_erased, Value *_anyPtr, Value *_freeingFunction, Value 
     return (Value *)retVal;
 }
 
-Value *onCollectAny(Value *_erased, Value *_anyPtr, Value *_freeingFunction, Value *_world)
+Value *onCollectAny(Value *_anyPtr, Value *_freeingFunction, Value *_world)
 {
     printf("onCollectAny called\n");
     Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
     retVal->header.tag = GC_POINTER_TAG;
-    retVal->p = (Value_Pointer *)_anyPtr;
-    retVal->onCollectFct = (Value_Closure *)_freeingFunction;
+    retVal->p = (Value_Pointer *)newReference(_anyPtr);
+    retVal->onCollectFct = (Value_Closure *)newReference(_freeingFunction);
     return (Value *)retVal;
 }
 
