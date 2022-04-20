@@ -3,4 +3,6 @@ version = 0.5.1
 
 opts = "--ignore-missing-ipkg"
 
+depends = contrib
+
 modules = Test.Golden
