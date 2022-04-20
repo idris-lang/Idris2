@@ -1,0 +1,64 @@
+<!DOCTYPE html><html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Control.Category</title>
+  <link rel="stylesheet" type="text/css" id="preferredStyle" href="../default.css">
+  <script>
+    /* Updates the stylesheet to use the preferred one.
+       Note that we set the link to root ++ sourceLoc because the config
+       is shared across the whole website, so the root may differ from
+       page to page.
+    */
+    function setStyleSource (sourceLoc) {
+      document.getElementById("preferredStyle").href = "../" + sourceLoc + ".css";
+      document.getElementById("selectPreferredStyle").value = sourceLoc;
+    }
+    /* Initialises the preferred style sheet:
+       1. if there is a stored value then use that
+          otherwise select the default
+       2. set both the css link href & the drop down menu selected option
+    */
+    function initStyleSource () {
+      var preferredStyle = localStorage.getItem("stylefile");
+      if (preferredStyle !== null) {
+        setStyleSource(preferredStyle);
+      } else {
+        setStyleSource("default");
+      };
+    }
+    function saveStyleSource (preferredStyle) {
+      localStorage.stylefile = preferredStyle;
+    }
+    </script>
+</head>
+
+<body class="namespace">
+<header>
+  <strong>Idris2Doc</strong> : Control.Category
+  <nav><a href="../index.html">Index</a>
+
+  <select id="selectPreferredStyle">
+    <option value="default">Default</option>
+<option value="alternative">Alternative</option>
+<option value="blackandwhite">Black & White</option>
+
+  </select>
+  </nav>
+
+  <script>
+  /* We start by initialising the style source */
+  initStyleSource();
+
+  /* This listens for changes on the drop down menu and updates the
+     css used for the current page when a selection is made.
+  */
+  document.getElementById("selectPreferredStyle").addEventListener("change", function(){
+    var selected = this.options[this.selectedIndex].value; /* the option chosen */
+    setStyleSource (selected);
+    saveStyleSource (selected);
+  });
+</script>
+
+</header>
+<div class="container"><div id="module-header"><h1>Control.Category<span style="float:right">(<a href="../source/Control.Category.html">source</a>)</span></h1><pre></pre></div><code></code><h2>Definitions</h2><dl class="decls"><dt id="Control.Category.Category"><code><span class="keyword">interface</span>&ensp;<a class="type" href="Control.Category.html#Control.Category.Category"><span class="name type">Category</span></a>&ensp;:&ensp;(<span class="boundvar">obj</span>&ensp;-&gt;&ensp;<span class="boundvar">obj</span>&ensp;-&gt;&ensp;<span class="name type">Type</span>)&ensp;-&gt;&ensp;<span class="name type">Type</span></code></dt><dd>  <b>Parameters</b>:&ensp;cat<br><b>Methods</b>:<br><dl class="decls">  <dt id="Control.Category.id"><code><a class="type" href="Control.Category.html#Control.Category.id"><span class="name function">id</span></a>&ensp;:&ensp;<span class="boundvar">cat</span>&ensp;<span class="boundvar">a</span>&ensp;<span class="boundvar">a</span></code></dt>  <dt id="Control.Category.."><code><a class="type" href="Control.Category.html#Control.Category.."><span class="name function">(.)</span></a>&ensp;:&ensp;<span class="boundvar">cat</span>&ensp;<span class="boundvar">b</span>&ensp;<span class="boundvar">c</span>&ensp;-&gt;&ensp;<span class="boundvar">cat</span>&ensp;<span class="boundvar">a</span>&ensp;<span class="boundvar">b</span>&ensp;-&gt;&ensp;<span class="boundvar">cat</span>&ensp;<span class="boundvar">a</span>&ensp;<span class="boundvar">c</span></code></dt><dd>  <b>Fixity Declaration</b>:&ensp;infixr&ensp;operator,&ensp;level&ensp;9</dd></dl><br><b>Implementations</b>:<br><dl class="decls">  <dt id="$resolved5545"><code><a class="type" href="Control.Category.html#Control.Category.Category"><span class="name type">Category</span></a>&ensp;<span class="type resolved" title="Data.Morphisms.Morphism"><span class="name type">Morphism</span></span></code></dt>  <dt id="$resolved5546"><code><span class="type resolved" title="Prelude.Interfaces.Monad"><span class="name type">Monad</span></span>&ensp;<span class="boundvar">m</span>&ensp;<span class="keyword">=&gt;</span>&ensp;<a class="type" href="Control.Category.html#Control.Category.Category"><span class="name type">Category</span></a>&ensp;(<span class="type resolved" title="Data.Morphisms.Kleislimorphism"><span class="name type">Kleislimorphism</span></span>&ensp;<span class="boundvar">m</span>)</code></dt></dl></dd><dt id="Control.Category.id"><code><a class="type" href="Control.Category.html#Control.Category.id"><span class="name function">id</span></a>&ensp;:&ensp;<a class="type" href="Control.Category.html#Control.Category.Category"><span class="name type">Category</span></a>&ensp;<span class="boundvar">cat</span>&ensp;<span class="keyword">=&gt;</span>&ensp;<span class="boundvar">cat</span>&ensp;<span class="boundvar">a</span>&ensp;<span class="boundvar">a</span></code></dt><dd>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span></dd><dt id="Control.Category.."><code><a class="type" href="Control.Category.html#Control.Category.."><span class="name function">(.)</span></a>&ensp;:&ensp;<a class="type" href="Control.Category.html#Control.Category.Category"><span class="name type">Category</span></a>&ensp;<span class="boundvar">cat</span>&ensp;<span class="keyword">=&gt;</span>&ensp;<span class="boundvar">cat</span>&ensp;<span class="boundvar">b</span>&ensp;<span class="boundvar">c</span>&ensp;-&gt;&ensp;<span class="boundvar">cat</span>&ensp;<span class="boundvar">a</span>&ensp;<span class="boundvar">b</span>&ensp;-&gt;&ensp;<span class="boundvar">cat</span>&ensp;<span class="boundvar">a</span>&ensp;<span class="boundvar">c</span></code></dt><dd>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span><br>  <b>Fixity Declaration</b>:&ensp;infixr&ensp;operator,&ensp;level&ensp;9</dd><dt id="Control.Category.&gt;&gt;&gt;"><code><a class="type" href="Control.Category.html#Control.Category.&gt;&gt;&gt;"><span class="name function">(&gt;&gt;&gt;)</span></a>&ensp;:&ensp;<a class="type" href="Control.Category.html#Control.Category.Category"><span class="name type">Category</span></a>&ensp;<span class="boundvar">cat</span>&ensp;<span class="keyword">=&gt;</span>&ensp;<span class="boundvar">cat</span>&ensp;<span class="boundvar">a</span>&ensp;<span class="boundvar">b</span>&ensp;-&gt;&ensp;<span class="boundvar">cat</span>&ensp;<span class="boundvar">b</span>&ensp;<span class="boundvar">c</span>&ensp;-&gt;&ensp;<span class="boundvar">cat</span>&ensp;<span class="boundvar">a</span>&ensp;<span class="boundvar">c</span></code></dt><dd>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span><br>  <b>Fixity Declaration</b>:&ensp;infixr&ensp;operator,&ensp;level&ensp;1</dd></dl></div><footer>Produced by Idris 2 version 0.5.1-2287fd9ed</footer></body></html>

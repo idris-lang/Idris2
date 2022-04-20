@@ -1,0 +1,214 @@
+<!DOCTYPE html><html lang="en">
+
+<head><title>Data.Vect.Properties.Map</title>
+  <meta charset="utf-8">
+  <style>
+      .IdrisData {
+      
+      color: darkred
+    }
+    .IdrisType {
+      
+      color: blue
+    }
+    .IdrisBound {
+      
+      color: black
+    }
+    .IdrisFunction {
+      
+      color: darkgreen
+    }
+    .IdrisKeyword {
+      text-decoration: underline;
+      color: 
+    }
+    .IdrisImplicit {
+      
+      color: black
+    }
+    .IdrisComment {
+      
+      color: #b22222
+    }
+    .IdrisNamespace {
+      font-style: italic;
+      color: black
+    }
+    .IdrisPostulate {
+      font-weight: bold;
+      color: red
+    }
+    .IdrisModule {
+      font-style: italic;
+      color: black
+    }
+
+  .IdrisLineNumber {
+    text-decoration: none;
+    color: lightgrey;
+    user-select: none;
+  }
+  .IdrisLineNumber:hover {
+    color: darkgray;
+  }
+  .IdrisLineNumber:target {
+    color: gray;
+  }
+  .IdrisHighlight {
+    background-color: yellow;
+  }
+  </style>
+  <script>
+    function initialize() {
+      function handleHash(ev) {
+          if (!location.hash) return
+          let m = location.hash.match(/#(line\d+)(?:-(line\d+))?/)
+          if (m) {
+              let start = document.getElementById(m[1])
+              let end = document.getElementById(m[2])
+              if (start) {
+                  if (end && end.compareDocumentPosition(start) === 4) {
+                      ([start, end] = [end, start])
+                  }
+                  // Only on page load
+                  if (!ev) start.scrollIntoView()
+                  let parent = start.parentElement
+                  let lines = parent.children
+                  let className = ''
+                  for (let n = 0; n < lines.length; n++) {
+                      let el = lines[n]
+                      if (el === start) className = 'IdrisHighlight'
+                      el.className = className
+                      if (el === end || className && !end) className = ''
+                  }
+              }
+          }
+      }
+      let startLine
+      let endLine
+      function handlePointerMove(ev) {
+          if (startLine) {
+              for (let el = document.elementFromPoint(ev.clientX, ev.clientY); el; el = el.parentElement) {
+                  if (el.parentElement === startLine.parentElement) {
+                      if (endLine !== el) {
+                          endLine = el
+                          update()
+                      }
+                      break
+                  }
+              }
+          }
+      }
+      function update(ev) {
+          window.location.hash = startLine === endLine ? startLine.id : startLine.id + '-' + endLine.id
+      }
+      function handlePointerDown(ev) {
+          let target = ev.target
+          if (target.className === 'IdrisLineNumber') {
+              startLine = endLine = target.parentElement
+              window.addEventListener('pointermove', handlePointerMove)
+              update()
+              ev.preventDefault()
+          }
+      }
+      function handlePointerUp(ev) {
+          if (startLine) {
+              update()
+              window.removeEventListener('pointermove', handlePointerMove)
+              startLine = endLine = null
+          }
+      }
+      window.addEventListener('hashchange', handleHash)
+      window.addEventListener('pointerdown', handlePointerDown)
+      window.addEventListener('pointerup', handlePointerUp)
+      handleHash()
+  }
+  </script>
+</head>
+<body onload="initialize()">
+<code>
+<div id="line0"><a href="#line0" class="IdrisLineNumber"> &nbsp;0 | </a><span class="IdrisComment">|||&nbsp;Properties&nbsp;of&nbsp;Data.Vect.map</span></div>
+<div id="line1"><a href="#line1" class="IdrisLineNumber"> &nbsp;1 | </a><span class="IdrisKeyword">module</span>&nbsp;<span class="IdrisModule">Data.Vect.Properties.Map</span></div>
+<div id="line2"><a href="#line2" class="IdrisLineNumber"> &nbsp;2 | </a></div>
+<div id="line3"><a href="#line3" class="IdrisLineNumber"> &nbsp;3 | </a><span class="IdrisKeyword">import</span>&nbsp;<span class="IdrisModule">Data.Vect.Properties.Tabulate</span></div>
+<div id="line4"><a href="#line4" class="IdrisLineNumber"> &nbsp;4 | </a><span class="IdrisKeyword">import</span>&nbsp;<span class="IdrisModule">Data.Vect.Properties.Index</span></div>
+<div id="line5"><a href="#line5" class="IdrisLineNumber"> &nbsp;5 | </a></div>
+<div id="line6"><a href="#line6" class="IdrisLineNumber"> &nbsp;6 | </a><span class="IdrisKeyword">import</span>&nbsp;<span class="IdrisModule">Data.Vect</span></div>
+<div id="line7"><a href="#line7" class="IdrisLineNumber"> &nbsp;7 | </a><span class="IdrisKeyword">import</span>&nbsp;<span class="IdrisModule">Data.Vect.Elem</span></div>
+<div id="line8"><a href="#line8" class="IdrisLineNumber"> &nbsp;8 | </a><span class="IdrisKeyword">import</span>&nbsp;<span class="IdrisModule">Data.Fin</span></div>
+<div id="line9"><a href="#line9" class="IdrisLineNumber"> &nbsp;9 | </a><span class="IdrisKeyword">import</span>&nbsp;<span class="IdrisModule">Data.Vect.Extra</span></div>
+<div id="line10"><a href="#line10" class="IdrisLineNumber"> 10 | </a></div>
+<div id="line11"><a href="#line11" class="IdrisLineNumber"> 11 | </a><span class="IdrisKeyword">import</span>&nbsp;<span class="IdrisModule">Syntax.PreorderReasoning</span></div>
+<div id="line12"><a href="#line12" class="IdrisLineNumber"> 12 | </a></div>
+<div id="line13"><a href="#line13" class="IdrisLineNumber"> 13 | </a><span class="IdrisComment">|||&nbsp;`map`&nbsp;functoriality:&nbsp;identity&nbsp;preservation</span></div>
+<div id="line14"><a href="#line14" class="IdrisLineNumber"> 14 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line15"><a href="#line15" class="IdrisLineNumber"> 15 | </a><span class="IdrisFunction">mapId</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Vect</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisFunction">map</span>&nbsp;<span class="IdrisFunction">Prelude.id</span>&nbsp;<span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">xs</span></div>
+<div id="line16"><a href="#line16" class="IdrisLineNumber"> 16 | </a><span class="IdrisFunction">mapId</span>&nbsp;<span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">vectorExtensionality</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;$&nbsp;<span class="IdrisKeyword">\</span><span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisFunction">indexNaturality</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_</span></div>
+<div id="line17"><a href="#line17" class="IdrisLineNumber"> 17 | </a></div>
+<div id="line18"><a href="#line18" class="IdrisLineNumber"> 18 | </a><span class="IdrisComment">|||&nbsp;`mapWtihPos&nbsp;f`&nbsp;represents&nbsp;post-composition&nbsp;the&nbsp;tabulated&nbsp;function&nbsp;`f`</span></div>
+<div id="line19"><a href="#line19" class="IdrisLineNumber"> 19 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line20"><a href="#line20" class="IdrisLineNumber"> 20 | </a><span class="IdrisFunction">indexMapWithPos</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Fin</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">a</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">b</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Vect</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Fin</span>&nbsp;<span class="IdrisBound">n</span><span class="IdrisKeyword">)</span></div>
+<div id="line21"><a href="#line21" class="IdrisLineNumber"> 21 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisFunction">index</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">mapWithPos</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">index</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span></div>
+<div id="line22"><a href="#line22" class="IdrisLineNumber"> 22 | </a><span class="IdrisFunction">indexMapWithPos</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">x</span>&nbsp;<span class="IdrisData">::</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">)</span>&nbsp;&nbsp;<span class="IdrisData">FZ</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">Refl</span></div>
+<div id="line23"><a href="#line23" class="IdrisLineNumber"> 23 | </a><span class="IdrisFunction">indexMapWithPos</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">(_</span>&nbsp;<span class="IdrisData">::</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">FS</span>&nbsp;<span class="IdrisBound">i</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">indexMapWithPos</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_</span></div>
+<div id="line24"><a href="#line24" class="IdrisLineNumber"> 24 | </a></div>
+<div id="line25"><a href="#line25" class="IdrisLineNumber"> 25 | </a><span class="IdrisComment">|||&nbsp;`tabulate&nbsp;:&nbsp;(Fin&nbsp;n&nbsp;-&gt;)&nbsp;-&gt;&nbsp;Vect&nbsp;n`&nbsp;is&nbsp;a&nbsp;natural&nbsp;transformation</span></div>
+<div id="line26"><a href="#line26" class="IdrisLineNumber"> 26 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line27"><a href="#line27" class="IdrisLineNumber"> 27 | </a><span class="IdrisFunction">mapTabulate</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">a</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">b</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">g</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Fin</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span></div>
+<div id="line28"><a href="#line28" class="IdrisLineNumber"> 28 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisFunction">tabulate</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">f</span>&nbsp;<span class="IdrisFunction">.</span>&nbsp;<span class="IdrisBound">g</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">map</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">tabulate</span>&nbsp;<span class="IdrisBound">g</span><span class="IdrisKeyword">)</span></div>
+<div id="line29"><a href="#line29" class="IdrisLineNumber"> 29 | </a><span class="IdrisFunction">mapTabulate</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">irrelevantEq</span>&nbsp;$</div>
+<div id="line30"><a href="#line30" class="IdrisLineNumber"> 30 | </a>&nbsp;&nbsp;<span class="IdrisFunction">vectorExtensionality</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;$&nbsp;<span class="IdrisKeyword">\</span><span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisFunction">Calc</span>&nbsp;$</div>
+<div id="line31"><a href="#line31" class="IdrisLineNumber"> 31 | </a>&nbsp;&nbsp;<span class="IdrisData">|~</span>&nbsp;<span class="IdrisFunction">index</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">tabulate</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">f</span>&nbsp;<span class="IdrisFunction">.</span>&nbsp;<span class="IdrisBound">g</span><span class="IdrisKeyword">))</span></div>
+<div id="line32"><a href="#line32" class="IdrisLineNumber"> 32 | </a>&nbsp;&nbsp;<span class="IdrisData">~~</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">g</span>&nbsp;<span class="IdrisBound">i</span><span class="IdrisKeyword">)</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">...</span><span class="IdrisKeyword">(</span><span class="IdrisFunction">indexTabulate</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_)</span></div>
+<div id="line33"><a href="#line33" class="IdrisLineNumber"> 33 | </a>&nbsp;&nbsp;<span class="IdrisData">~~</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">index</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;$&nbsp;<span class="IdrisFunction">tabulate</span>&nbsp;<span class="IdrisBound">g</span><span class="IdrisKeyword">)</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">...</span><span class="IdrisKeyword">(</span><span class="IdrisFunction">cong</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">sym</span>&nbsp;$&nbsp;<span class="IdrisFunction">indexTabulate</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_))</span></div>
+<div id="line34"><a href="#line34" class="IdrisLineNumber"> 34 | </a>&nbsp;&nbsp;<span class="IdrisData">~~</span>&nbsp;<span class="IdrisFunction">index</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">map</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;$&nbsp;<span class="IdrisFunction">tabulate</span>&nbsp;<span class="IdrisBound">g</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisData">...</span><span class="IdrisKeyword">(</span><span class="IdrisFunction">sym</span>&nbsp;$&nbsp;<span class="IdrisFunction">indexNaturality</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_)</span></div>
+<div id="line35"><a href="#line35" class="IdrisLineNumber"> 35 | </a></div>
+<div id="line36"><a href="#line36" class="IdrisLineNumber"> 36 | </a><span class="IdrisComment">|||&nbsp;Tabulating&nbsp;with&nbsp;the&nbsp;constant&nbsp;function&nbsp;is&nbsp;replication</span></div>
+<div id="line37"><a href="#line37" class="IdrisLineNumber"> 37 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line38"><a href="#line38" class="IdrisLineNumber"> 38 | </a><span class="IdrisFunction">tabulateConstantly</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisFunction">Fin.tabulate</span>&nbsp;<span class="IdrisKeyword">{</span><span class="IdrisBound">len</span><span class="IdrisKeyword">}</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">const</span>&nbsp;<span class="IdrisBound">x</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisFunction">===</span>&nbsp;<span class="IdrisFunction">replicate</span>&nbsp;<span class="IdrisBound">len</span>&nbsp;&nbsp;<span class="IdrisBound">x</span></div>
+<div id="line39"><a href="#line39" class="IdrisLineNumber"> 39 | </a><span class="IdrisFunction">tabulateConstantly</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">irrelevantEq</span>&nbsp;$</div>
+<div id="line40"><a href="#line40" class="IdrisLineNumber"> 40 | </a>&nbsp;&nbsp;<span class="IdrisFunction">vectorExtensionality</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;$&nbsp;<span class="IdrisKeyword">\</span><span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisFunction">Calc</span>&nbsp;$</div>
+<div id="line41"><a href="#line41" class="IdrisLineNumber"> 41 | </a>&nbsp;&nbsp;<span class="IdrisData">|~</span>&nbsp;<span class="IdrisFunction">index</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">Fin.tabulate</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">const</span>&nbsp;<span class="IdrisBound">x</span><span class="IdrisKeyword">))</span></div>
+<div id="line42"><a href="#line42" class="IdrisLineNumber"> 42 | </a>&nbsp;&nbsp;<span class="IdrisData">~~</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisData">...</span><span class="IdrisKeyword">(</span><span class="IdrisFunction">indexTabulate</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_)</span></div>
+<div id="line43"><a href="#line43" class="IdrisLineNumber"> 43 | </a>&nbsp;&nbsp;<span class="IdrisData">~~</span>&nbsp;<span class="IdrisFunction">index</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">replicate</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisBound">x</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisData">...</span><span class="IdrisKeyword">(</span><span class="IdrisFunction">sym</span>&nbsp;$&nbsp;<span class="IdrisFunction">indexReplicate</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_)</span></div>
+<div id="line44"><a href="#line44" class="IdrisLineNumber"> 44 | </a></div>
+<div id="line45"><a href="#line45" class="IdrisLineNumber"> 45 | </a><span class="IdrisComment">|||&nbsp;It&apos;s&nbsp;enough&nbsp;that&nbsp;two&nbsp;functions&nbsp;agree&nbsp;on&nbsp;the&nbsp;elements&nbsp;of&nbsp;a&nbsp;vector&nbsp;for&nbsp;the&nbsp;maps&nbsp;to&nbsp;agree</span></div>
+<div id="line46"><a href="#line46" class="IdrisLineNumber"> 46 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line47"><a href="#line47" class="IdrisLineNumber"> 47 | </a><span class="IdrisFunction">mapRestrictedExtensional</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">f</span><span class="IdrisKeyword">,</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">a</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">b</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Vect</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span></div>
+<div id="line48"><a href="#line48" class="IdrisLineNumber"> 48 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">prf</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Fin</span>&nbsp;<span class="IdrisBound">n</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">index</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">index</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">))</span></div>
+<div id="line49"><a href="#line49" class="IdrisLineNumber"> 49 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisFunction">map</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">map</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisBound">xs</span></div>
+<div id="line50"><a href="#line50" class="IdrisLineNumber"> 50 | </a><span class="IdrisFunction">mapRestrictedExtensional</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisBound">xs</span>&nbsp;<span class="IdrisBound">prf</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">vectorExtensionality</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;$&nbsp;<span class="IdrisKeyword">\</span><span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisFunction">Calc</span>&nbsp;$</div>
+<div id="line51"><a href="#line51" class="IdrisLineNumber"> 51 | </a>&nbsp;&nbsp;<span class="IdrisData">|~</span>&nbsp;<span class="IdrisFunction">index</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">map</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span></div>
+<div id="line52"><a href="#line52" class="IdrisLineNumber"> 52 | </a>&nbsp;&nbsp;<span class="IdrisData">~~</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">index</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">...</span><span class="IdrisKeyword">(</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisFunction">indexNaturality</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_)</span></div>
+<div id="line53"><a href="#line53" class="IdrisLineNumber"> 53 | </a>&nbsp;&nbsp;<span class="IdrisData">~~</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">index</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">...</span><span class="IdrisKeyword">(</span><span class="IdrisBound">prf</span>&nbsp;<span class="IdrisKeyword">_)</span></div>
+<div id="line54"><a href="#line54" class="IdrisLineNumber"> 54 | </a>&nbsp;&nbsp;<span class="IdrisData">~~</span>&nbsp;<span class="IdrisFunction">index</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">map</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisData">...</span><span class="IdrisKeyword">(</span><span class="IdrisFunction">sym</span>&nbsp;$&nbsp;<span class="IdrisFunction">indexNaturality</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_)</span></div>
+<div id="line55"><a href="#line55" class="IdrisLineNumber"> 55 | </a></div>
+<div id="line56"><a href="#line56" class="IdrisLineNumber"> 56 | </a><span class="IdrisComment">|||&nbsp;function&nbsp;extensionality&nbsp;is&nbsp;a&nbsp;congruence&nbsp;wrt&nbsp;map</span></div>
+<div id="line57"><a href="#line57" class="IdrisLineNumber"> 57 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line58"><a href="#line58" class="IdrisLineNumber"> 58 | </a><span class="IdrisFunction">mapExtensional</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">f</span><span class="IdrisKeyword">,</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">a</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">b</span><span class="IdrisKeyword">)</span></div>
+<div id="line59"><a href="#line59" class="IdrisLineNumber"> 59 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">prf</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisBound">x</span><span class="IdrisKeyword">)</span></div>
+<div id="line60"><a href="#line60" class="IdrisLineNumber"> 60 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Vect</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span></div>
+<div id="line61"><a href="#line61" class="IdrisLineNumber"> 61 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisFunction">map</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">map</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisBound">xs</span></div>
+<div id="line62"><a href="#line62" class="IdrisLineNumber"> 62 | </a><span class="IdrisFunction">mapExtensional</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisBound">prf</span>&nbsp;<span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">mapRestrictedExtensional</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">(\</span><span class="IdrisBound">i</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisBound">prf</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">index</span>&nbsp;<span class="IdrisBound">i</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">))</span></div>
+<div id="line63"><a href="#line63" class="IdrisLineNumber"> 63 | </a></div>
+<div id="line64"><a href="#line64" class="IdrisLineNumber"> 64 | </a><span class="IdrisComment">|||&nbsp;map-fusion&nbsp;property&nbsp;for&nbsp;vectors&nbsp;up&nbsp;to&nbsp;function&nbsp;extensionality</span></div>
+<div id="line65"><a href="#line65" class="IdrisLineNumber"> 65 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line66"><a href="#line66" class="IdrisLineNumber"> 66 | </a><span class="IdrisFunction">mapFusion</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">b</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">c</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">g</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">a</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">b</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Vect</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span></div>
+<div id="line67"><a href="#line67" class="IdrisLineNumber"> 67 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisFunction">map</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">map</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">map</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">f</span>&nbsp;<span class="IdrisFunction">.</span>&nbsp;<span class="IdrisBound">g</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisBound">xs</span></div>
+<div id="line68"><a href="#line68" class="IdrisLineNumber"> 68 | </a><span class="IdrisFunction">mapFusion</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">[]</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">Refl</span></div>
+<div id="line69"><a href="#line69" class="IdrisLineNumber"> 69 | </a><span class="IdrisFunction">mapFusion</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">x</span>&nbsp;<span class="IdrisData">::</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">cong</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">f</span>&nbsp;$&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisData">::</span><span class="IdrisKeyword">)</span>&nbsp;$&nbsp;<span class="IdrisFunction">mapFusion</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisBound">xs</span></div>
+<div id="line70"><a href="#line70" class="IdrisLineNumber"> 70 | </a></div>
+<div id="line71"><a href="#line71" class="IdrisLineNumber"> 71 | </a><span class="IdrisComment">|||&nbsp;function&nbsp;extensionality&nbsp;is&nbsp;a&nbsp;congruence&nbsp;wrt&nbsp;mapWithElem</span></div>
+<div id="line72"><a href="#line72" class="IdrisLineNumber"> 72 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line73"><a href="#line73" class="IdrisLineNumber"> 73 | </a><span class="IdrisFunction">mapWithElemExtensional</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Vect</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">f</span><span class="IdrisKeyword">,</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(0</span>&nbsp;<span class="IdrisBound">_</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisType">`Elem`</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">b</span><span class="IdrisKeyword">)</span></div>
+<div id="line74"><a href="#line74" class="IdrisLineNumber"> 74 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">((</span><span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(0</span>&nbsp;<span class="IdrisBound">pos</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisType">`Elem`</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisBound">pos</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisBound">pos</span><span class="IdrisKeyword">)</span></div>
+<div id="line75"><a href="#line75" class="IdrisLineNumber"> 75 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisFunction">mapWithElem</span>&nbsp;<span class="IdrisBound">xs</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">mapWithElem</span>&nbsp;<span class="IdrisBound">xs</span>&nbsp;<span class="IdrisBound">g</span></div>
+<div id="line76"><a href="#line76" class="IdrisLineNumber"> 76 | </a><span class="IdrisFunction">mapWithElemExtensional</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">[]</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisBound">prf</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">Refl</span></div>
+<div id="line77"><a href="#line77" class="IdrisLineNumber"> 77 | </a><span class="IdrisFunction">mapWithElemExtensional</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">x</span>&nbsp;<span class="IdrisData">::</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">g</span>&nbsp;<span class="IdrisBound">prf</span></div>
+<div id="line78"><a href="#line78" class="IdrisLineNumber"> 78 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">cong2</span>&nbsp;<span class="IdrisData">(::)</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">prf</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisData">Here</span><span class="IdrisKeyword">)</span></div>
+<div id="line79"><a href="#line79" class="IdrisLineNumber"> 79 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">mapWithElemExtensional</span>&nbsp;<span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">(\</span><span class="IdrisBound">x</span><span class="IdrisKeyword">,</span><span class="IdrisBound">pos</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisBound">prf</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">There</span>&nbsp;<span class="IdrisBound">pos</span><span class="IdrisKeyword">)))</span></div>
+<div id="line80"><a href="#line80" class="IdrisLineNumber"> 80 | </a></div>
+</code>
+</body>
+</html>

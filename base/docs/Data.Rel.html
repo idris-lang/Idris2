@@ -1,0 +1,64 @@
+<!DOCTYPE html><html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Data.Rel</title>
+  <link rel="stylesheet" type="text/css" id="preferredStyle" href="../default.css">
+  <script>
+    /* Updates the stylesheet to use the preferred one.
+       Note that we set the link to root ++ sourceLoc because the config
+       is shared across the whole website, so the root may differ from
+       page to page.
+    */
+    function setStyleSource (sourceLoc) {
+      document.getElementById("preferredStyle").href = "../" + sourceLoc + ".css";
+      document.getElementById("selectPreferredStyle").value = sourceLoc;
+    }
+    /* Initialises the preferred style sheet:
+       1. if there is a stored value then use that
+          otherwise select the default
+       2. set both the css link href & the drop down menu selected option
+    */
+    function initStyleSource () {
+      var preferredStyle = localStorage.getItem("stylefile");
+      if (preferredStyle !== null) {
+        setStyleSource(preferredStyle);
+      } else {
+        setStyleSource("default");
+      };
+    }
+    function saveStyleSource (preferredStyle) {
+      localStorage.stylefile = preferredStyle;
+    }
+    </script>
+</head>
+
+<body class="namespace">
+<header>
+  <strong>Idris2Doc</strong> : Data.Rel
+  <nav><a href="../index.html">Index</a>
+
+  <select id="selectPreferredStyle">
+    <option value="default">Default</option>
+<option value="alternative">Alternative</option>
+<option value="blackandwhite">Black & White</option>
+
+  </select>
+  </nav>
+
+  <script>
+  /* We start by initialising the style source */
+  initStyleSource();
+
+  /* This listens for changes on the drop down menu and updates the
+     css used for the current page when a selection is made.
+  */
+  document.getElementById("selectPreferredStyle").addEventListener("change", function(){
+    var selected = this.options[this.selectedIndex].value; /* the option chosen */
+    setStyleSource (selected);
+    saveStyleSource (selected);
+  });
+</script>
+
+</header>
+<div class="container"><div id="module-header"><h1>Data.Rel<span style="float:right">(<a href="../source/Data.Rel.html">source</a>)</span></h1><pre></pre></div><code></code><h2>Definitions</h2><dl class="decls"><dt id="Data.Rel.Rel"><code><a class="type" href="Data.Rel.html#Data.Rel.Rel"><span class="name function">Rel</span></a>&ensp;:&ensp;<a class="type" href="Data.Vect.html#Data.Vect.Vect"><span class="name type">Vect</span></a>&ensp;<span class="boundvar">n</span>&ensp;<span class="name type">Type</span>&ensp;-&gt;&ensp;<span class="name type">Type</span></code></dt><dd><pre>  Build&ensp;an&ensp;n-ary&ensp;relation&ensp;type&ensp;from&ensp;a&ensp;Vect&ensp;of&ensp;Types</pre><br>  <b>Totality</b>:&ensp;<span class="keyword">total</span><br>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span></dd><dt id="Data.Rel.All"><code><a class="type" href="Data.Rel.html#Data.Rel.All"><span class="name function">All</span></a>&ensp;:&ensp;(<span class="boundvar">ts</span>&ensp;:&ensp;<a class="type" href="Data.Vect.html#Data.Vect.Vect"><span class="name type">Vect</span></a>&ensp;<span class="boundvar">n</span>&ensp;<span class="name type">Type</span>)&ensp;-&gt;&ensp;<a class="type" href="Data.Rel.html#Data.Rel.Rel"><span class="name function">Rel</span></a>&ensp;<span class="boundvar">ts</span>&ensp;-&gt;&ensp;<span class="name type">Type</span></code></dt><dd><pre>  Universal&ensp;quantification&ensp;of&ensp;a&ensp;n-ary&ensp;Relation&ensp;over&ensp;its<br>  arguments&ensp;to&ensp;build&ensp;a&ensp;(function)&ensp;type&ensp;from&ensp;a&ensp;`Rel`&ensp;type<br>  <br>  ```<br>  &#955;&gt;&ensp;All&ensp;[Nat,Nat]&ensp;LTE<br>  (x&ensp;:&ensp;Nat)&ensp;-&gt;&ensp;(x&ensp;:&ensp;Nat)&ensp;-&gt;&ensp;LTE&ensp;x&ensp;x<br>  ```</pre><br>  <b>Totality</b>:&ensp;<span class="keyword">total</span><br>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span></dd><dt id="Data.Rel.Ex"><code><a class="type" href="Data.Rel.html#Data.Rel.Ex"><span class="name function">Ex</span></a>&ensp;:&ensp;(<span class="boundvar">ts</span>&ensp;:&ensp;<a class="type" href="Data.Vect.html#Data.Vect.Vect"><span class="name type">Vect</span></a>&ensp;<span class="boundvar">n</span>&ensp;<span class="name type">Type</span>)&ensp;-&gt;&ensp;<a class="type" href="Data.Rel.html#Data.Rel.Rel"><span class="name function">Rel</span></a>&ensp;<span class="boundvar">ts</span>&ensp;-&gt;&ensp;<span class="name type">Type</span></code></dt><dd><pre>  Existential&ensp;quantification&ensp;of&ensp;a&ensp;n-ary&ensp;relation&ensp;over&ensp;its<br>  arguments&ensp;to&ensp;build&ensp;a&ensp;dependent&ensp;pair&ensp;(eg.&ensp;Sigma&ensp;type).<br>  <br>  Given&ensp;a&ensp;(type&ensp;of)&ensp;relation&ensp;`p&ensp;:&ensp;[t_1,&ensp;t_2&ensp;...&ensp;t_n]&ensp;x&ensp;r`&ensp;where&ensp;`t_i`&ensp;and&ensp;`r`&ensp;are<br>  types,&ensp;`Ex`&ensp;builds&ensp;the&ensp;type&ensp;`&#931;&ensp;(x_1&ensp;:&ensp;t_1).&ensp;Σ&ensp;(x_2&ensp;:&ensp;t_2)&ensp;...&ensp;.&ensp;r`<br>  For&ensp;example:<br>  ```<br>  &#955;&gt;&ensp;Ex&ensp;[Nat,Nat]&ensp;LTE<br>  (x&ensp;:&ensp;Nat&ensp;**&ensp;(x&ensp;:&ensp;Nat&ensp;**&ensp;LTE&ensp;x&ensp;x))<br>  ```<br>  Which&ensp;is&ensp;the&ensp;type&ensp;of&ensp;a&ensp;pair&ensp;of&ensp;natural&ensp;numbers&ensp;along&ensp;with&ensp;a&ensp;proof&ensp;that&ensp;the&ensp;first<br>  is&ensp;smaller&ensp;or&ensp;equal&ensp;than&ensp;the&ensp;second.</pre><br>  <b>Totality</b>:&ensp;<span class="keyword">total</span><br>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span></dd><dt id="Data.Rel.liftRel"><code><a class="type" href="Data.Rel.html#Data.Rel.liftRel"><span class="name function">liftRel</span></a>&ensp;:&ensp;(<span class="boundvar">ts</span>&ensp;:&ensp;<a class="type" href="Data.Vect.html#Data.Vect.Vect"><span class="name type">Vect</span></a>&ensp;<span class="boundvar">n</span>&ensp;<span class="name type">Type</span>)&ensp;-&gt;&ensp;<a class="type" href="Data.Rel.html#Data.Rel.Rel"><span class="name function">Rel</span></a>&ensp;<span class="boundvar">ts</span>&ensp;-&gt;&ensp;(<span class="name type">Type</span>&ensp;-&gt;&ensp;<span class="name type">Type</span>)&ensp;-&gt;&ensp;<span class="name type">Type</span></code></dt><dd><pre>  Map&ensp;a&ensp;type-level&ensp;function&ensp;over&ensp;the&ensp;co-domain&ensp;of&ensp;a&ensp;n-ary&ensp;Relation</pre><br>  <b>Totality</b>:&ensp;<span class="keyword">total</span><br>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span></dd></dl></div><footer>Produced by Idris 2 version 0.5.1-2287fd9ed</footer></body></html>

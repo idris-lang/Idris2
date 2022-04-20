@@ -1,0 +1,64 @@
+<!DOCTYPE html><html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Control.Function.FunExt</title>
+  <link rel="stylesheet" type="text/css" id="preferredStyle" href="../default.css">
+  <script>
+    /* Updates the stylesheet to use the preferred one.
+       Note that we set the link to root ++ sourceLoc because the config
+       is shared across the whole website, so the root may differ from
+       page to page.
+    */
+    function setStyleSource (sourceLoc) {
+      document.getElementById("preferredStyle").href = "../" + sourceLoc + ".css";
+      document.getElementById("selectPreferredStyle").value = sourceLoc;
+    }
+    /* Initialises the preferred style sheet:
+       1. if there is a stored value then use that
+          otherwise select the default
+       2. set both the css link href & the drop down menu selected option
+    */
+    function initStyleSource () {
+      var preferredStyle = localStorage.getItem("stylefile");
+      if (preferredStyle !== null) {
+        setStyleSource(preferredStyle);
+      } else {
+        setStyleSource("default");
+      };
+    }
+    function saveStyleSource (preferredStyle) {
+      localStorage.stylefile = preferredStyle;
+    }
+    </script>
+</head>
+
+<body class="namespace">
+<header>
+  <strong>Idris2Doc</strong> : Control.Function.FunExt
+  <nav><a href="../index.html">Index</a>
+
+  <select id="selectPreferredStyle">
+    <option value="default">Default</option>
+<option value="alternative">Alternative</option>
+<option value="blackandwhite">Black & White</option>
+
+  </select>
+  </nav>
+
+  <script>
+  /* We start by initialising the style source */
+  initStyleSource();
+
+  /* This listens for changes on the drop down menu and updates the
+     css used for the current page when a selection is made.
+  */
+  document.getElementById("selectPreferredStyle").addEventListener("change", function(){
+    var selected = this.options[this.selectedIndex].value; /* the option chosen */
+    setStyleSource (selected);
+    saveStyleSource (selected);
+  });
+</script>
+
+</header>
+<div class="container"><div id="module-header"><h1>Control.Function.FunExt<span style="float:right">(<a href="../source/Control.Function.FunExt.html">source</a>)</span></h1><pre></pre></div><code></code><h2>Definitions</h2><dl class="decls"><dt id="Control.Function.FunExt.FunExt"><code><span class="keyword">interface</span>&ensp;<a class="type" href="Control.Function.FunExt.html#Control.Function.FunExt.FunExt"><span class="name type">FunExt</span></a>&ensp;:&ensp;<span class="name type">Type</span></code></dt><dd><pre>  This&ensp;interface&ensp;contains&ensp;a&ensp;proposition&ensp;for&ensp;the&ensp;function&ensp;extensionality.<br>  It&ensp;is&ensp;not&ensp;meant&ensp;to&ensp;be&ensp;ever&ensp;implemented.<br>  It&ensp;can&ensp;be&ensp;used&ensp;to&ensp;mark&ensp;properties&ensp;as&ensp;requiring&ensp;function&ensp;extensionality&ensp;to&ensp;hold,<br>  i.e.&ensp;its&ensp;main&ensp;objective&ensp;is&ensp;to&ensp;provide&ensp;a&ensp;universal&ensp;way&ensp;to&ensp;formulate&ensp;a&ensp;conditional&ensp;property<br>  that&ensp;holds&ensp;only&ensp;in&ensp;the&ensp;presence&ensp;of&ensp;function&ensp;extensionality.</pre><br>  <b>Methods</b>:<br><dl class="decls">  <dt id="Control.Function.FunExt.funExt"><code><span class="keyword">0</span>&ensp;<a class="type" href="Control.Function.FunExt.html#Control.Function.FunExt.funExt"><span class="name function">funExt</span></a>&ensp;:&ensp;((<span class="boundvar">x</span>&ensp;:&ensp;<span class="boundvar">a</span>)&ensp;-&gt;&ensp;<span class="boundvar">f</span>&ensp;<span class="boundvar">x</span>&ensp;<span class="keyword">=</span>&ensp;<span class="boundvar">g</span>&ensp;<span class="boundvar">x</span>)&ensp;-&gt;&ensp;<span class="boundvar">f</span>&ensp;<span class="keyword">=</span>&ensp;<span class="boundvar">g</span></code></dt></dl></dd><dt id="Control.Function.FunExt.funExt"><code><span class="keyword">0</span>&ensp;<a class="type" href="Control.Function.FunExt.html#Control.Function.FunExt.funExt"><span class="name function">funExt</span></a>&ensp;:&ensp;<a class="type" href="Control.Function.FunExt.html#Control.Function.FunExt.FunExt"><span class="name type">FunExt</span></a>&ensp;<span class="keyword">=&gt;</span>&ensp;((<span class="boundvar">x</span>&ensp;:&ensp;<span class="boundvar">a</span>)&ensp;-&gt;&ensp;<span class="boundvar">f</span>&ensp;<span class="boundvar">x</span>&ensp;<span class="keyword">=</span>&ensp;<span class="boundvar">g</span>&ensp;<span class="boundvar">x</span>)&ensp;-&gt;&ensp;<span class="boundvar">f</span>&ensp;<span class="keyword">=</span>&ensp;<span class="boundvar">g</span></code></dt><dd>  <b>Totality</b>:&ensp;<span class="keyword">total</span><br>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span></dd></dl></div><footer>Produced by Idris 2 version 0.5.1-2287fd9ed</footer></body></html>

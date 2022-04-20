@@ -1,0 +1,64 @@
+<!DOCTYPE html><html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>System.File</title>
+  <link rel="stylesheet" type="text/css" id="preferredStyle" href="../default.css">
+  <script>
+    /* Updates the stylesheet to use the preferred one.
+       Note that we set the link to root ++ sourceLoc because the config
+       is shared across the whole website, so the root may differ from
+       page to page.
+    */
+    function setStyleSource (sourceLoc) {
+      document.getElementById("preferredStyle").href = "../" + sourceLoc + ".css";
+      document.getElementById("selectPreferredStyle").value = sourceLoc;
+    }
+    /* Initialises the preferred style sheet:
+       1. if there is a stored value then use that
+          otherwise select the default
+       2. set both the css link href & the drop down menu selected option
+    */
+    function initStyleSource () {
+      var preferredStyle = localStorage.getItem("stylefile");
+      if (preferredStyle !== null) {
+        setStyleSource(preferredStyle);
+      } else {
+        setStyleSource("default");
+      };
+    }
+    function saveStyleSource (preferredStyle) {
+      localStorage.stylefile = preferredStyle;
+    }
+    </script>
+</head>
+
+<body class="namespace">
+<header>
+  <strong>Idris2Doc</strong> : System.File
+  <nav><a href="../index.html">Index</a>
+
+  <select id="selectPreferredStyle">
+    <option value="default">Default</option>
+<option value="alternative">Alternative</option>
+<option value="blackandwhite">Black & White</option>
+
+  </select>
+  </nav>
+
+  <script>
+  /* We start by initialising the style source */
+  initStyleSource();
+
+  /* This listens for changes on the drop down menu and updates the
+     css used for the current page when a selection is made.
+  */
+  document.getElementById("selectPreferredStyle").addEventListener("change", function(){
+    var selected = this.options[this.selectedIndex].value; /* the option chosen */
+    setStyleSource (selected);
+    saveStyleSource (selected);
+  });
+</script>
+
+</header>
+<div class="container"><div id="module-header"><h1>System.File<span style="float:right">(<a href="../source/System.File.html">source</a>)</span></h1><pre></pre></div><h2>Reexports</h2><code><span class="keyword">import</span>&ensp;<span class="keyword">public</span>&ensp;System.File.Buffer<br><span class="keyword">import</span>&ensp;<span class="keyword">public</span>&ensp;System.File.Error<br><span class="keyword">import</span>&ensp;<span class="keyword">public</span>&ensp;System.File.Handle<br><span class="keyword">import</span>&ensp;<span class="keyword">public</span>&ensp;System.File.Meta<br><span class="keyword">import</span>&ensp;<span class="keyword">public</span>&ensp;System.File.Mode<br><span class="keyword">import</span>&ensp;<span class="keyword">public</span>&ensp;System.File.Permissions<br><span class="keyword">import</span>&ensp;<span class="keyword">public</span>&ensp;System.File.Process<br><span class="keyword">import</span>&ensp;<span class="keyword">public</span>&ensp;System.File.ReadWrite<br><span class="keyword">import</span>&ensp;<span class="keyword">public</span>&ensp;System.File.Types<br><span class="keyword">import</span>&ensp;<span class="keyword">public</span>&ensp;System.File.Virtual</code><h2>Definitions</h2><dl class="decls"><dt id="System.File.copyFile"><code><a class="type" href="System.File.html#System.File.copyFile"><span class="name function">copyFile</span></a>&ensp;:&ensp;<span class="type resolved" title="Prelude.IO.HasIO"><span class="name type">HasIO</span></span>&ensp;<span class="boundvar">io</span>&ensp;<span class="keyword">=&gt;</span>&ensp;<span class="name type">String</span>&ensp;-&gt;&ensp;<span class="name type">String</span>&ensp;-&gt;&ensp;<span class="boundvar">io</span>&ensp;(<span class="type resolved" title="Prelude.Types.Either"><span class="name type">Either</span></span>&ensp;(<a class="type" href="System.File.Error.html#System.File.Error.FileError"><span class="name type">FileError</span></a>,&ensp;<span class="name type">Int</span>)&ensp;())</code></dt><dd><pre>  Copy&ensp;the&ensp;file&ensp;at&ensp;the&ensp;specified&ensp;source&ensp;to&ensp;the&ensp;given&ensp;destination.<br>  Returns&ensp;the&ensp;number&ensp;of&ensp;bytes&ensp;that&ensp;have&ensp;been&ensp;written&ensp;upon&ensp;a&ensp;write&ensp;error.<br>  <br>  @&ensp;src&ensp;the&ensp;file&ensp;to&ensp;copy<br>  @&ensp;dest&ensp;the&ensp;place&ensp;to&ensp;copy&ensp;the&ensp;file&ensp;to</pre><br>  <b>Visibility</b>:&ensp;<span class="keyword">export</span></dd></dl></div><footer>Produced by Idris 2 version 0.5.1-2287fd9ed</footer></body></html>

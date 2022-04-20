@@ -1,0 +1,64 @@
+<!DOCTYPE html><html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Data.Singleton</title>
+  <link rel="stylesheet" type="text/css" id="preferredStyle" href="../default.css">
+  <script>
+    /* Updates the stylesheet to use the preferred one.
+       Note that we set the link to root ++ sourceLoc because the config
+       is shared across the whole website, so the root may differ from
+       page to page.
+    */
+    function setStyleSource (sourceLoc) {
+      document.getElementById("preferredStyle").href = "../" + sourceLoc + ".css";
+      document.getElementById("selectPreferredStyle").value = sourceLoc;
+    }
+    /* Initialises the preferred style sheet:
+       1. if there is a stored value then use that
+          otherwise select the default
+       2. set both the css link href & the drop down menu selected option
+    */
+    function initStyleSource () {
+      var preferredStyle = localStorage.getItem("stylefile");
+      if (preferredStyle !== null) {
+        setStyleSource(preferredStyle);
+      } else {
+        setStyleSource("default");
+      };
+    }
+    function saveStyleSource (preferredStyle) {
+      localStorage.stylefile = preferredStyle;
+    }
+    </script>
+</head>
+
+<body class="namespace">
+<header>
+  <strong>Idris2Doc</strong> : Data.Singleton
+  <nav><a href="../index.html">Index</a>
+
+  <select id="selectPreferredStyle">
+    <option value="default">Default</option>
+<option value="alternative">Alternative</option>
+<option value="blackandwhite">Black & White</option>
+
+  </select>
+  </nav>
+
+  <script>
+  /* We start by initialising the style source */
+  initStyleSource();
+
+  /* This listens for changes on the drop down menu and updates the
+     css used for the current page when a selection is made.
+  */
+  document.getElementById("selectPreferredStyle").addEventListener("change", function(){
+    var selected = this.options[this.selectedIndex].value; /* the option chosen */
+    setStyleSource (selected);
+    saveStyleSource (selected);
+  });
+</script>
+
+</header>
+<div class="container"><div id="module-header"><h1>Data.Singleton<span style="float:right">(<a href="../source/Data.Singleton.html">source</a>)</span></h1><pre></pre></div><code></code><h2>Definitions</h2><dl class="decls"><dt id="Data.Singleton.Singleton"><code><span class="keyword">data</span>&ensp;<a class="type" href="Data.Singleton.html#Data.Singleton.Singleton"><span class="name type">Singleton</span></a>&ensp;:&ensp;<span class="boundvar">a</span>&ensp;-&gt;&ensp;<span class="name type">Type</span></code></dt><dd><pre>  The&ensp;type&ensp;containing&ensp;only&ensp;a&ensp;particular&ensp;value.<br>  This&ensp;is&ensp;useful&ensp;for&ensp;calculating&ensp;type-level&ensp;information&ensp;at&ensp;runtime.</pre><br>  <b>Totality</b>:&ensp;<span class="keyword">total</span><br>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span><br>  <b>Constructor</b>:&ensp;<dl class="decls"><dt id="Data.Singleton.Val"><code><a class="type" href="Data.Singleton.html#Data.Singleton.Val"><span class="name constructor">Val</span></a>&ensp;:&ensp;(<span class="boundvar">x</span>&ensp;:&ensp;<span class="boundvar">a</span>)&ensp;-&gt;&ensp;<a class="type" href="Data.Singleton.html#Data.Singleton.Singleton"><span class="name type">Singleton</span></a>&ensp;<span class="boundvar">x</span></code></dt></dl></dd><dt id="Data.Singleton.pure"><code><a class="type" href="Data.Singleton.html#Data.Singleton.pure"><span class="name function">pure</span></a>&ensp;:&ensp;(<span class="boundvar">x</span>&ensp;:&ensp;<span class="boundvar">a</span>)&ensp;-&gt;&ensp;<a class="type" href="Data.Singleton.html#Data.Singleton.Singleton"><span class="name type">Singleton</span></a>&ensp;<span class="boundvar">x</span></code></dt><dd>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span></dd><dt id="Data.Singleton.&lt;*&gt;"><code><a class="type" href="Data.Singleton.html#Data.Singleton.&lt;*&gt;"><span class="name function">(&lt;*&gt;)</span></a>&ensp;:&ensp;<a class="type" href="Data.Singleton.html#Data.Singleton.Singleton"><span class="name type">Singleton</span></a>&ensp;<span class="boundvar">f</span>&ensp;-&gt;&ensp;<a class="type" href="Data.Singleton.html#Data.Singleton.Singleton"><span class="name type">Singleton</span></a>&ensp;<span class="boundvar">x</span>&ensp;-&gt;&ensp;<a class="type" href="Data.Singleton.html#Data.Singleton.Singleton"><span class="name type">Singleton</span></a>&ensp;(<span class="boundvar">f</span>&ensp;<span class="boundvar">x</span>)</code></dt><dd>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span><br>  <b>Fixity Declaration</b>:&ensp;infixl&ensp;operator,&ensp;level&ensp;3</dd></dl></div><footer>Produced by Idris 2 version 0.5.1-2287fd9ed</footer></body></html>

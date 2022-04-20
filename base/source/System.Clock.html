@@ -1,0 +1,398 @@
+<!DOCTYPE html><html lang="en">
+
+<head><title>System.Clock</title>
+  <meta charset="utf-8">
+  <style>
+      .IdrisData {
+      
+      color: darkred
+    }
+    .IdrisType {
+      
+      color: blue
+    }
+    .IdrisBound {
+      
+      color: black
+    }
+    .IdrisFunction {
+      
+      color: darkgreen
+    }
+    .IdrisKeyword {
+      text-decoration: underline;
+      color: 
+    }
+    .IdrisImplicit {
+      
+      color: black
+    }
+    .IdrisComment {
+      
+      color: #b22222
+    }
+    .IdrisNamespace {
+      font-style: italic;
+      color: black
+    }
+    .IdrisPostulate {
+      font-weight: bold;
+      color: red
+    }
+    .IdrisModule {
+      font-style: italic;
+      color: black
+    }
+
+  .IdrisLineNumber {
+    text-decoration: none;
+    color: lightgrey;
+    user-select: none;
+  }
+  .IdrisLineNumber:hover {
+    color: darkgray;
+  }
+  .IdrisLineNumber:target {
+    color: gray;
+  }
+  .IdrisHighlight {
+    background-color: yellow;
+  }
+  </style>
+  <script>
+    function initialize() {
+      function handleHash(ev) {
+          if (!location.hash) return
+          let m = location.hash.match(/#(line\d+)(?:-(line\d+))?/)
+          if (m) {
+              let start = document.getElementById(m[1])
+              let end = document.getElementById(m[2])
+              if (start) {
+                  if (end && end.compareDocumentPosition(start) === 4) {
+                      ([start, end] = [end, start])
+                  }
+                  // Only on page load
+                  if (!ev) start.scrollIntoView()
+                  let parent = start.parentElement
+                  let lines = parent.children
+                  let className = ''
+                  for (let n = 0; n < lines.length; n++) {
+                      let el = lines[n]
+                      if (el === start) className = 'IdrisHighlight'
+                      el.className = className
+                      if (el === end || className && !end) className = ''
+                  }
+              }
+          }
+      }
+      let startLine
+      let endLine
+      function handlePointerMove(ev) {
+          if (startLine) {
+              for (let el = document.elementFromPoint(ev.clientX, ev.clientY); el; el = el.parentElement) {
+                  if (el.parentElement === startLine.parentElement) {
+                      if (endLine !== el) {
+                          endLine = el
+                          update()
+                      }
+                      break
+                  }
+              }
+          }
+      }
+      function update(ev) {
+          window.location.hash = startLine === endLine ? startLine.id : startLine.id + '-' + endLine.id
+      }
+      function handlePointerDown(ev) {
+          let target = ev.target
+          if (target.className === 'IdrisLineNumber') {
+              startLine = endLine = target.parentElement
+              window.addEventListener('pointermove', handlePointerMove)
+              update()
+              ev.preventDefault()
+          }
+      }
+      function handlePointerUp(ev) {
+          if (startLine) {
+              update()
+              window.removeEventListener('pointermove', handlePointerMove)
+              startLine = endLine = null
+          }
+      }
+      window.addEventListener('hashchange', handleHash)
+      window.addEventListener('pointerdown', handlePointerDown)
+      window.addEventListener('pointerup', handlePointerUp)
+      handleHash()
+  }
+  </script>
+</head>
+<body onload="initialize()">
+<code>
+<div id="line0"><a href="#line0" class="IdrisLineNumber"> &nbsp;&nbsp;0 | </a><span class="IdrisComment">|||&nbsp;Types&nbsp;and&nbsp;functions&nbsp;for&nbsp;reasoning&nbsp;about&nbsp;time.</span></div>
+<div id="line1"><a href="#line1" class="IdrisLineNumber"> &nbsp;&nbsp;1 | </a><span class="IdrisKeyword">module</span>&nbsp;<span class="IdrisModule">System.Clock</span></div>
+<div id="line2"><a href="#line2" class="IdrisLineNumber"> &nbsp;&nbsp;2 | </a></div>
+<div id="line3"><a href="#line3" class="IdrisLineNumber"> &nbsp;&nbsp;3 | </a><span class="IdrisKeyword">import</span>&nbsp;<span class="IdrisModule">Data.Nat</span></div>
+<div id="line4"><a href="#line4" class="IdrisLineNumber"> &nbsp;&nbsp;4 | </a><span class="IdrisKeyword">import</span>&nbsp;<span class="IdrisModule">Data.String</span></div>
+<div id="line5"><a href="#line5" class="IdrisLineNumber"> &nbsp;&nbsp;5 | </a><span class="IdrisKeyword">import</span>&nbsp;<span class="IdrisModule">PrimIO</span></div>
+<div id="line6"><a href="#line6" class="IdrisLineNumber"> &nbsp;&nbsp;6 | </a></div>
+<div id="line7"><a href="#line7" class="IdrisLineNumber"> &nbsp;&nbsp;7 | </a><span class="IdrisKeyword">%default</span>&nbsp;<span class="IdrisKeyword">total</span></div>
+<div id="line8"><a href="#line8" class="IdrisLineNumber"> &nbsp;&nbsp;8 | </a></div>
+<div id="line9"><a href="#line9" class="IdrisLineNumber"> &nbsp;&nbsp;9 | </a><span class="IdrisComment">|||&nbsp;The&nbsp;various&nbsp;types&nbsp;of&nbsp;system&nbsp;clock&nbsp;available.</span></div>
+<div id="line10"><a href="#line10" class="IdrisLineNumber"> &nbsp;10 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line11"><a href="#line11" class="IdrisLineNumber"> &nbsp;11 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">ClockType</span></div>
+<div id="line12"><a href="#line12" class="IdrisLineNumber"> &nbsp;12 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisComment">|||&nbsp;The&nbsp;time&nbsp;elapsed&nbsp;since&nbsp;the&nbsp;&quot;epoch:&quot;&nbsp;00:00:00&nbsp;UTC,&nbsp;January&nbsp;1,&nbsp;1970</span></div>
+<div id="line13"><a href="#line13" class="IdrisLineNumber"> &nbsp;13 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">UTC</span></div>
+<div id="line14"><a href="#line14" class="IdrisLineNumber"> &nbsp;14 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">|</span>&nbsp;<span class="IdrisComment">|||&nbsp;The&nbsp;time&nbsp;elapsed&nbsp;since&nbsp;some&nbsp;arbitrary&nbsp;point&nbsp;in&nbsp;the&nbsp;past</span></div>
+<div id="line15"><a href="#line15" class="IdrisLineNumber"> &nbsp;15 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">Monotonic</span></div>
+<div id="line16"><a href="#line16" class="IdrisLineNumber"> &nbsp;16 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">|</span>&nbsp;<span class="IdrisComment">|||&nbsp;Representing&nbsp;a&nbsp;time&nbsp;duration.</span></div>
+<div id="line17"><a href="#line17" class="IdrisLineNumber"> &nbsp;17 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">Duration</span></div>
+<div id="line18"><a href="#line18" class="IdrisLineNumber"> &nbsp;18 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">|</span>&nbsp;<span class="IdrisComment">|||&nbsp;The&nbsp;amount&nbsp;of&nbsp;CPU&nbsp;time&nbsp;used&nbsp;by&nbsp;the&nbsp;current&nbsp;process.</span></div>
+<div id="line19"><a href="#line19" class="IdrisLineNumber"> &nbsp;19 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">Process</span></div>
+<div id="line20"><a href="#line20" class="IdrisLineNumber"> &nbsp;20 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">|</span>&nbsp;<span class="IdrisComment">|||&nbsp;The&nbsp;amount&nbsp;of&nbsp;CPU&nbsp;time&nbsp;used&nbsp;by&nbsp;the&nbsp;current&nbsp;thread.</span></div>
+<div id="line21"><a href="#line21" class="IdrisLineNumber"> &nbsp;21 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">Thread</span></div>
+<div id="line22"><a href="#line22" class="IdrisLineNumber"> &nbsp;22 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">|</span>&nbsp;<span class="IdrisComment">|||&nbsp;The&nbsp;current&nbsp;process&apos;s&nbsp;CPU&nbsp;time&nbsp;consumed&nbsp;by&nbsp;the&nbsp;garbage&nbsp;collector.</span></div>
+<div id="line23"><a href="#line23" class="IdrisLineNumber"> &nbsp;23 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">GCCPU</span></div>
+<div id="line24"><a href="#line24" class="IdrisLineNumber"> &nbsp;24 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">|</span>&nbsp;<span class="IdrisComment">|||&nbsp;The&nbsp;current&nbsp;process&apos;s&nbsp;real&nbsp;time&nbsp;consumed&nbsp;by&nbsp;the&nbsp;garbage&nbsp;collector.</span></div>
+<div id="line25"><a href="#line25" class="IdrisLineNumber"> &nbsp;25 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">GCReal</span></div>
+<div id="line26"><a href="#line26" class="IdrisLineNumber"> &nbsp;26 | </a></div>
+<div id="line27"><a href="#line27" class="IdrisLineNumber"> &nbsp;27 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line28"><a href="#line28" class="IdrisLineNumber"> &nbsp;28 | </a><span class="IdrisType">Show</span>&nbsp;<span class="IdrisType">ClockType</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line29"><a href="#line29" class="IdrisLineNumber"> &nbsp;29 | </a>&nbsp;&nbsp;<span class="IdrisFunction">show</span>&nbsp;<span class="IdrisData">UTC</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">&quot;UTC&quot;</span></div>
+<div id="line30"><a href="#line30" class="IdrisLineNumber"> &nbsp;30 | </a>&nbsp;&nbsp;<span class="IdrisFunction">show</span>&nbsp;<span class="IdrisData">Monotonic</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">&quot;monotonic&quot;</span></div>
+<div id="line31"><a href="#line31" class="IdrisLineNumber"> &nbsp;31 | </a>&nbsp;&nbsp;<span class="IdrisFunction">show</span>&nbsp;<span class="IdrisData">Duration</span>&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">&quot;duration&quot;</span></div>
+<div id="line32"><a href="#line32" class="IdrisLineNumber"> &nbsp;32 | </a>&nbsp;&nbsp;<span class="IdrisFunction">show</span>&nbsp;<span class="IdrisData">Process</span>&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">&quot;process&quot;</span></div>
+<div id="line33"><a href="#line33" class="IdrisLineNumber"> &nbsp;33 | </a>&nbsp;&nbsp;<span class="IdrisFunction">show</span>&nbsp;<span class="IdrisData">Thread</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">&quot;thread&quot;</span></div>
+<div id="line34"><a href="#line34" class="IdrisLineNumber"> &nbsp;34 | </a>&nbsp;&nbsp;<span class="IdrisFunction">show</span>&nbsp;<span class="IdrisData">GCCPU</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">&quot;gcCPU&quot;</span></div>
+<div id="line35"><a href="#line35" class="IdrisLineNumber"> &nbsp;35 | </a>&nbsp;&nbsp;<span class="IdrisFunction">show</span>&nbsp;<span class="IdrisData">GCReal</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">&quot;gcReal&quot;</span></div>
+<div id="line36"><a href="#line36" class="IdrisLineNumber"> &nbsp;36 | </a></div>
+<div id="line37"><a href="#line37" class="IdrisLineNumber"> &nbsp;37 | </a><span class="IdrisComment">|||&nbsp;A&nbsp;clock&nbsp;recording&nbsp;some&nbsp;time&nbsp;in&nbsp;seconds&nbsp;and&nbsp;nanoseconds.&nbsp;The&nbsp;&quot;type&quot;&nbsp;of&nbsp;time</span></div>
+<div id="line38"><a href="#line38" class="IdrisLineNumber"> &nbsp;38 | </a><span class="IdrisComment">|||&nbsp;recorded&nbsp;is&nbsp;indicated&nbsp;by&nbsp;the&nbsp;given&nbsp;`ClockType`.</span></div>
+<div id="line39"><a href="#line39" class="IdrisLineNumber"> &nbsp;39 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line40"><a href="#line40" class="IdrisLineNumber"> &nbsp;40 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">type</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">ClockType</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line41"><a href="#line41" class="IdrisLineNumber"> &nbsp;41 | </a>&nbsp;&nbsp;<span class="IdrisData">MkClock</span></div>
+<div id="line42"><a href="#line42" class="IdrisLineNumber"> &nbsp;42 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">{</span><span class="IdrisBound">type</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">ClockType</span><span class="IdrisKeyword">}</span></div>
+<div id="line43"><a href="#line43" class="IdrisLineNumber"> &nbsp;43 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">seconds</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Integer</span><span class="IdrisKeyword">)</span></div>
+<div id="line44"><a href="#line44" class="IdrisLineNumber"> &nbsp;44 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">nanoseconds</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Integer</span><span class="IdrisKeyword">)</span></div>
+<div id="line45"><a href="#line45" class="IdrisLineNumber"> &nbsp;45 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span></div>
+<div id="line46"><a href="#line46" class="IdrisLineNumber"> &nbsp;46 | </a></div>
+<div id="line47"><a href="#line47" class="IdrisLineNumber"> &nbsp;47 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line48"><a href="#line48" class="IdrisLineNumber"> &nbsp;48 | </a><span class="IdrisType">Eq</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line49"><a href="#line49" class="IdrisLineNumber"> &nbsp;49 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">MkClock</span>&nbsp;<span class="IdrisBound">seconds1</span>&nbsp;<span class="IdrisBound">nanoseconds1</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisFunction">==</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">MkClock</span>&nbsp;<span class="IdrisBound">seconds2</span>&nbsp;<span class="IdrisBound">nanoseconds2</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">=</span></div>
+<div id="line50"><a href="#line50" class="IdrisLineNumber"> &nbsp;50 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisBound">seconds1</span>&nbsp;<span class="IdrisFunction">==</span>&nbsp;<span class="IdrisBound">seconds2</span>&nbsp;<span class="IdrisFunction">&amp;&amp;</span>&nbsp;<span class="IdrisBound">nanoseconds1</span>&nbsp;<span class="IdrisFunction">==</span>&nbsp;<span class="IdrisBound">nanoseconds2</span></div>
+<div id="line51"><a href="#line51" class="IdrisLineNumber"> &nbsp;51 | </a></div>
+<div id="line52"><a href="#line52" class="IdrisLineNumber"> &nbsp;52 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line53"><a href="#line53" class="IdrisLineNumber"> &nbsp;53 | </a><span class="IdrisType">Ord</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line54"><a href="#line54" class="IdrisLineNumber"> &nbsp;54 | </a>&nbsp;&nbsp;<span class="IdrisFunction">compare</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">MkClock</span>&nbsp;<span class="IdrisBound">seconds1</span>&nbsp;<span class="IdrisBound">nanoseconds1</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">MkClock</span>&nbsp;<span class="IdrisBound">seconds2</span>&nbsp;<span class="IdrisBound">nanoseconds2</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">=</span></div>
+<div id="line55"><a href="#line55" class="IdrisLineNumber"> &nbsp;55 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">case</span>&nbsp;<span class="IdrisFunction">compare</span>&nbsp;<span class="IdrisBound">seconds1</span>&nbsp;<span class="IdrisBound">seconds2</span>&nbsp;<span class="IdrisKeyword">of</span></div>
+<div id="line56"><a href="#line56" class="IdrisLineNumber"> &nbsp;56 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">LT</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisData">LT</span></div>
+<div id="line57"><a href="#line57" class="IdrisLineNumber"> &nbsp;57 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">GT</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisData">GT</span></div>
+<div id="line58"><a href="#line58" class="IdrisLineNumber"> &nbsp;58 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">EQ</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisFunction">compare</span>&nbsp;<span class="IdrisBound">nanoseconds1</span>&nbsp;<span class="IdrisBound">nanoseconds2</span></div>
+<div id="line59"><a href="#line59" class="IdrisLineNumber"> &nbsp;59 | </a></div>
+<div id="line60"><a href="#line60" class="IdrisLineNumber"> &nbsp;60 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line61"><a href="#line61" class="IdrisLineNumber"> &nbsp;61 | </a><span class="IdrisType">Show</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line62"><a href="#line62" class="IdrisLineNumber"> &nbsp;62 | </a>&nbsp;&nbsp;<span class="IdrisFunction">show</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">MkClock</span>&nbsp;<span class="IdrisKeyword">{</span><span class="IdrisBound">type</span><span class="IdrisKeyword">}</span>&nbsp;<span class="IdrisBound">seconds</span>&nbsp;<span class="IdrisBound">nanoseconds</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">=</span></div>
+<div id="line63"><a href="#line63" class="IdrisLineNumber"> &nbsp;63 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisFunction">show</span>&nbsp;<span class="IdrisBound">type</span>&nbsp;<span class="IdrisFunction">++</span>&nbsp;<span class="IdrisData">&quot;:&nbsp;&quot;</span>&nbsp;<span class="IdrisFunction">++</span>&nbsp;<span class="IdrisFunction">show</span>&nbsp;<span class="IdrisBound">seconds</span>&nbsp;<span class="IdrisFunction">++</span>&nbsp;<span class="IdrisData">&quot;s&nbsp;&quot;</span>&nbsp;<span class="IdrisFunction">++</span>&nbsp;<span class="IdrisFunction">show</span>&nbsp;<span class="IdrisBound">nanoseconds</span>&nbsp;<span class="IdrisFunction">++</span>&nbsp;<span class="IdrisData">&quot;ns&quot;</span></div>
+<div id="line64"><a href="#line64" class="IdrisLineNumber"> &nbsp;64 | </a></div>
+<div id="line65"><a href="#line65" class="IdrisLineNumber"> &nbsp;65 | </a><span class="IdrisComment">|||&nbsp;Display&nbsp;a&nbsp;`Clock`&apos;s&nbsp;content,&nbsp;padding&nbsp;the&nbsp;seconds&nbsp;and&nbsp;nanoseconds&nbsp;as</span></div>
+<div id="line66"><a href="#line66" class="IdrisLineNumber"> &nbsp;66 | </a><span class="IdrisComment">|||&nbsp;appropriate.</span></div>
+<div id="line67"><a href="#line67" class="IdrisLineNumber"> &nbsp;67 | </a><span class="IdrisComment">|||</span></div>
+<div id="line68"><a href="#line68" class="IdrisLineNumber"> &nbsp;68 | </a><span class="IdrisComment">|||&nbsp;@&nbsp;s&nbsp;&nbsp;&nbsp;the&nbsp;number&nbsp;of&nbsp;digits&nbsp;used&nbsp;to&nbsp;display&nbsp;the&nbsp;seconds</span></div>
+<div id="line69"><a href="#line69" class="IdrisLineNumber"> &nbsp;69 | </a><span class="IdrisComment">|||&nbsp;@&nbsp;ns&nbsp;&nbsp;the&nbsp;number&nbsp;of&nbsp;digits&nbsp;used&nbsp;to&nbsp;display&nbsp;the&nbsp;nanosecondns</span></div>
+<div id="line70"><a href="#line70" class="IdrisLineNumber"> &nbsp;70 | </a><span class="IdrisComment">|||&nbsp;@&nbsp;clk&nbsp;the&nbsp;Clock&nbsp;whose&nbsp;contents&nbsp;to&nbsp;display</span></div>
+<div id="line71"><a href="#line71" class="IdrisLineNumber"> &nbsp;71 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line72"><a href="#line72" class="IdrisLineNumber"> &nbsp;72 | </a><span class="IdrisFunction">showTime</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">s</span><span class="IdrisKeyword">,</span>&nbsp;<span class="IdrisBound">ns</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Nat</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">clk</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">String</span></div>
+<div id="line73"><a href="#line73" class="IdrisLineNumber"> &nbsp;73 | </a><span class="IdrisFunction">showTime</span>&nbsp;<span class="IdrisBound">s</span>&nbsp;<span class="IdrisBound">ns</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">MkClock</span>&nbsp;<span class="IdrisBound">seconds</span>&nbsp;<span class="IdrisBound">nanoseconds</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">=</span></div>
+<div id="line74"><a href="#line74" class="IdrisLineNumber"> &nbsp;74 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">let</span>&nbsp;<span class="IdrisBound">seconds</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">show</span>&nbsp;<span class="IdrisBound">seconds</span></div>
+<div id="line75"><a href="#line75" class="IdrisLineNumber"> &nbsp;75 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisBound">quotient</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Integer</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">cast</span>&nbsp;$&nbsp;<span class="IdrisData">10</span>&nbsp;<span class="IdrisFunction">`power`</span>&nbsp;<span class="IdrisFunction">minus</span>&nbsp;<span class="IdrisData">9</span>&nbsp;<span class="IdrisBound">ns</span></div>
+<div id="line76"><a href="#line76" class="IdrisLineNumber"> &nbsp;76 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisBound">nanoseconds</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">show</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">cast</span>&nbsp;<span class="IdrisBound">nanoseconds</span>&nbsp;<span class="IdrisFunction">`div`</span>&nbsp;<span class="IdrisBound">quotient</span><span class="IdrisKeyword">)</span></div>
+<div id="line77"><a href="#line77" class="IdrisLineNumber"> &nbsp;77 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">in</span>&nbsp;<span class="IdrisFunction">concat</span>&nbsp;<span class="IdrisData">[</span>&nbsp;<span class="IdrisFunction">padLeft</span>&nbsp;<span class="IdrisBound">s</span>&nbsp;<span class="IdrisData">&apos;0&apos;</span>&nbsp;<span class="IdrisBound">seconds</span></div>
+<div id="line78"><a href="#line78" class="IdrisLineNumber"> &nbsp;78 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">,</span>&nbsp;<span class="IdrisData">&quot;.&quot;</span></div>
+<div id="line79"><a href="#line79" class="IdrisLineNumber"> &nbsp;79 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">,</span>&nbsp;<span class="IdrisFunction">padRight</span>&nbsp;<span class="IdrisBound">ns</span>&nbsp;<span class="IdrisData">&apos;0&apos;</span>&nbsp;<span class="IdrisBound">nanoseconds</span></div>
+<div id="line80"><a href="#line80" class="IdrisLineNumber"> &nbsp;80 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">,</span>&nbsp;<span class="IdrisData">&quot;s&quot;</span></div>
+<div id="line81"><a href="#line81" class="IdrisLineNumber"> &nbsp;81 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">]</span></div>
+<div id="line82"><a href="#line82" class="IdrisLineNumber"> &nbsp;82 | </a></div>
+<div id="line83"><a href="#line83" class="IdrisLineNumber"> &nbsp;83 | </a><span class="IdrisComment">|||&nbsp;A&nbsp;helper&nbsp;to&nbsp;deconstruct&nbsp;a&nbsp;Clock.</span></div>
+<div id="line84"><a href="#line84" class="IdrisLineNumber"> &nbsp;84 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line85"><a href="#line85" class="IdrisLineNumber"> &nbsp;85 | </a><span class="IdrisFunction">seconds</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Integer</span></div>
+<div id="line86"><a href="#line86" class="IdrisLineNumber"> &nbsp;86 | </a><span class="IdrisFunction">seconds</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">MkClock</span>&nbsp;<span class="IdrisBound">s</span>&nbsp;<span class="IdrisKeyword">_)</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">s</span></div>
+<div id="line87"><a href="#line87" class="IdrisLineNumber"> &nbsp;87 | </a></div>
+<div id="line88"><a href="#line88" class="IdrisLineNumber"> &nbsp;88 | </a><span class="IdrisComment">|||&nbsp;A&nbsp;helper&nbsp;to&nbsp;deconstruct&nbsp;a&nbsp;Clock.</span></div>
+<div id="line89"><a href="#line89" class="IdrisLineNumber"> &nbsp;89 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line90"><a href="#line90" class="IdrisLineNumber"> &nbsp;90 | </a><span class="IdrisFunction">nanoseconds</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Integer</span></div>
+<div id="line91"><a href="#line91" class="IdrisLineNumber"> &nbsp;91 | </a><span class="IdrisFunction">nanoseconds</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">MkClock</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisBound">ns</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">ns</span></div>
+<div id="line92"><a href="#line92" class="IdrisLineNumber"> &nbsp;92 | </a></div>
+<div id="line93"><a href="#line93" class="IdrisLineNumber"> &nbsp;93 | </a><span class="IdrisComment">|||&nbsp;Make&nbsp;a&nbsp;duration&nbsp;value.</span></div>
+<div id="line94"><a href="#line94" class="IdrisLineNumber"> &nbsp;94 | </a><span class="IdrisComment">|||</span></div>
+<div id="line95"><a href="#line95" class="IdrisLineNumber"> &nbsp;95 | </a><span class="IdrisComment">|||&nbsp;@&nbsp;s&nbsp;&nbsp;the&nbsp;number&nbsp;of&nbsp;seconds&nbsp;in&nbsp;the&nbsp;duration</span></div>
+<div id="line96"><a href="#line96" class="IdrisLineNumber"> &nbsp;96 | </a><span class="IdrisComment">|||&nbsp;@&nbsp;ns&nbsp;the&nbsp;number&nbsp;of&nbsp;nanoseconds&nbsp;in&nbsp;the&nbsp;duration</span></div>
+<div id="line97"><a href="#line97" class="IdrisLineNumber"> &nbsp;97 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line98"><a href="#line98" class="IdrisLineNumber"> &nbsp;98 | </a><span class="IdrisFunction">makeDuration</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">s</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Integer</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">ns</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Integer</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisData">Duration</span></div>
+<div id="line99"><a href="#line99" class="IdrisLineNumber"> &nbsp;99 | </a><span class="IdrisFunction">makeDuration</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">MkClock</span></div>
+<div id="line100"><a href="#line100" class="IdrisLineNumber"> 100 | </a></div>
+<div id="line101"><a href="#line101" class="IdrisLineNumber"> 101 | </a><span class="IdrisComment">|||&nbsp;Opaque&nbsp;clock&nbsp;value&nbsp;manipulated&nbsp;by&nbsp;the&nbsp;back-end.</span></div>
+<div id="line102"><a href="#line102" class="IdrisLineNumber"> 102 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">OSClock</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">where</span>&nbsp;<span class="IdrisKeyword">[</span>external<span class="IdrisKeyword">]</span></div>
+<div id="line103"><a href="#line103" class="IdrisLineNumber"> 103 | </a></div>
+<div id="line104"><a href="#line104" class="IdrisLineNumber"> 104 | </a><span class="IdrisComment">|||&nbsp;Note:&nbsp;Backends&nbsp;are&nbsp;required&nbsp;to&nbsp;implement&nbsp;UTC,&nbsp;monotonic&nbsp;time,&nbsp;CPU&nbsp;time&nbsp;in</span></div>
+<div id="line105"><a href="#line105" class="IdrisLineNumber"> 105 | </a><span class="IdrisComment">|||&nbsp;current&nbsp;process/thread,&nbsp;and&nbsp;time&nbsp;duration;&nbsp;the&nbsp;rest&nbsp;are&nbsp;optional.</span></div>
+<div id="line106"><a href="#line106" class="IdrisLineNumber"> 106 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line107"><a href="#line107" class="IdrisLineNumber"> 107 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">ClockTypeMandatory</span></div>
+<div id="line108"><a href="#line108" class="IdrisLineNumber"> 108 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">Mandatory</span></div>
+<div id="line109"><a href="#line109" class="IdrisLineNumber"> 109 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">|</span>&nbsp;<span class="IdrisData">Optional</span></div>
+<div id="line110"><a href="#line110" class="IdrisLineNumber"> 110 | </a></div>
+<div id="line111"><a href="#line111" class="IdrisLineNumber"> 111 | </a><span class="IdrisComment">|||&nbsp;Determine&nbsp;whether&nbsp;the&nbsp;specified&nbsp;`ClockType`&nbsp;is&nbsp;required&nbsp;to&nbsp;be&nbsp;implemented&nbsp;by</span></div>
+<div id="line112"><a href="#line112" class="IdrisLineNumber"> 112 | </a><span class="IdrisComment">|||&nbsp;all&nbsp;backends.</span></div>
+<div id="line113"><a href="#line113" class="IdrisLineNumber"> 113 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line114"><a href="#line114" class="IdrisLineNumber"> 114 | </a><span class="IdrisFunction">isClockMandatory</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">ClockType</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">ClockTypeMandatory</span></div>
+<div id="line115"><a href="#line115" class="IdrisLineNumber"> 115 | </a><span class="IdrisFunction">isClockMandatory</span>&nbsp;<span class="IdrisData">GCCPU</span>&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">Optional</span></div>
+<div id="line116"><a href="#line116" class="IdrisLineNumber"> 116 | </a><span class="IdrisFunction">isClockMandatory</span>&nbsp;<span class="IdrisData">GCReal</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">Optional</span></div>
+<div id="line117"><a href="#line117" class="IdrisLineNumber"> 117 | </a><span class="IdrisFunction">isClockMandatory</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">Mandatory</span></div>
+<div id="line118"><a href="#line118" class="IdrisLineNumber"> 118 | </a></div>
+<div id="line119"><a href="#line119" class="IdrisLineNumber"> 119 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-clock-time-monotonic&quot;</span></div>
+<div id="line120"><a href="#line120" class="IdrisLineNumber"> 120 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">&quot;RefC:clockTimeMonotonic&quot;</span></div>
+<div id="line121"><a href="#line121" class="IdrisLineNumber"> 121 | </a><span class="IdrisFunction">prim__clockTimeMonotonic</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">PrimIO</span>&nbsp;<span class="IdrisType">OSClock</span></div>
+<div id="line122"><a href="#line122" class="IdrisLineNumber"> 122 | </a></div>
+<div id="line123"><a href="#line123" class="IdrisLineNumber"> 123 | </a><span class="IdrisComment">|||&nbsp;Get&nbsp;the&nbsp;current&nbsp;backend&apos;s&nbsp;monotonic&nbsp;time.</span></div>
+<div id="line124"><a href="#line124" class="IdrisLineNumber"> 124 | </a><span class="IdrisFunction">clockTimeMonotonic</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">IO</span>&nbsp;<span class="IdrisType">OSClock</span></div>
+<div id="line125"><a href="#line125" class="IdrisLineNumber"> 125 | </a><span class="IdrisFunction">clockTimeMonotonic</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">fromPrim</span>&nbsp;<span class="IdrisFunction">prim__clockTimeMonotonic</span></div>
+<div id="line126"><a href="#line126" class="IdrisLineNumber"> 126 | </a></div>
+<div id="line127"><a href="#line127" class="IdrisLineNumber"> 127 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-clock-time-utc&quot;</span></div>
+<div id="line128"><a href="#line128" class="IdrisLineNumber"> 128 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">&quot;RefC:clockTimeUtc&quot;</span></div>
+<div id="line129"><a href="#line129" class="IdrisLineNumber"> 129 | </a><span class="IdrisFunction">prim__clockTimeUtc</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">PrimIO</span>&nbsp;<span class="IdrisType">OSClock</span></div>
+<div id="line130"><a href="#line130" class="IdrisLineNumber"> 130 | </a></div>
+<div id="line131"><a href="#line131" class="IdrisLineNumber"> 131 | </a><span class="IdrisComment">|||&nbsp;Get&nbsp;the&nbsp;current&nbsp;UTC&nbsp;time.</span></div>
+<div id="line132"><a href="#line132" class="IdrisLineNumber"> 132 | </a><span class="IdrisFunction">clockTimeUtc</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">IO</span>&nbsp;<span class="IdrisType">OSClock</span></div>
+<div id="line133"><a href="#line133" class="IdrisLineNumber"> 133 | </a><span class="IdrisFunction">clockTimeUtc</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">fromPrim</span>&nbsp;<span class="IdrisFunction">prim__clockTimeUtc</span></div>
+<div id="line134"><a href="#line134" class="IdrisLineNumber"> 134 | </a></div>
+<div id="line135"><a href="#line135" class="IdrisLineNumber"> 135 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-clock-time-process&quot;</span></div>
+<div id="line136"><a href="#line136" class="IdrisLineNumber"> 136 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">&quot;RefC:clockTimeProcess&quot;</span></div>
+<div id="line137"><a href="#line137" class="IdrisLineNumber"> 137 | </a><span class="IdrisFunction">prim__clockTimeProcess</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">PrimIO</span>&nbsp;<span class="IdrisType">OSClock</span></div>
+<div id="line138"><a href="#line138" class="IdrisLineNumber"> 138 | </a></div>
+<div id="line139"><a href="#line139" class="IdrisLineNumber"> 139 | </a><span class="IdrisComment">|||&nbsp;Get&nbsp;the&nbsp;amount&nbsp;of&nbsp;time&nbsp;used&nbsp;by&nbsp;the&nbsp;current&nbsp;process.</span></div>
+<div id="line140"><a href="#line140" class="IdrisLineNumber"> 140 | </a><span class="IdrisFunction">clockTimeProcess</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">IO</span>&nbsp;<span class="IdrisType">OSClock</span></div>
+<div id="line141"><a href="#line141" class="IdrisLineNumber"> 141 | </a><span class="IdrisFunction">clockTimeProcess</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">fromPrim</span>&nbsp;<span class="IdrisFunction">prim__clockTimeProcess</span></div>
+<div id="line142"><a href="#line142" class="IdrisLineNumber"> 142 | </a></div>
+<div id="line143"><a href="#line143" class="IdrisLineNumber"> 143 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-clock-time-thread&quot;</span></div>
+<div id="line144"><a href="#line144" class="IdrisLineNumber"> 144 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">&quot;RefC:clockTimeThread&quot;</span></div>
+<div id="line145"><a href="#line145" class="IdrisLineNumber"> 145 | </a><span class="IdrisFunction">prim__clockTimeThread</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">PrimIO</span>&nbsp;<span class="IdrisType">OSClock</span></div>
+<div id="line146"><a href="#line146" class="IdrisLineNumber"> 146 | </a></div>
+<div id="line147"><a href="#line147" class="IdrisLineNumber"> 147 | </a><span class="IdrisComment">|||&nbsp;Get&nbsp;the&nbsp;amount&nbsp;of&nbsp;time&nbsp;used&nbsp;by&nbsp;the&nbsp;current&nbsp;thread.</span></div>
+<div id="line148"><a href="#line148" class="IdrisLineNumber"> 148 | </a><span class="IdrisFunction">clockTimeThread</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">IO</span>&nbsp;<span class="IdrisType">OSClock</span></div>
+<div id="line149"><a href="#line149" class="IdrisLineNumber"> 149 | </a><span class="IdrisFunction">clockTimeThread</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">fromPrim</span>&nbsp;<span class="IdrisFunction">prim__clockTimeThread</span></div>
+<div id="line150"><a href="#line150" class="IdrisLineNumber"> 150 | </a></div>
+<div id="line151"><a href="#line151" class="IdrisLineNumber"> 151 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-clock-time-gccpu&quot;</span></div>
+<div id="line152"><a href="#line152" class="IdrisLineNumber"> 152 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">&quot;RefC:clockTimeGcCpu&quot;</span></div>
+<div id="line153"><a href="#line153" class="IdrisLineNumber"> 153 | </a><span class="IdrisFunction">prim__clockTimeGcCpu</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">PrimIO</span>&nbsp;<span class="IdrisType">OSClock</span></div>
+<div id="line154"><a href="#line154" class="IdrisLineNumber"> 154 | </a></div>
+<div id="line155"><a href="#line155" class="IdrisLineNumber"> 155 | </a><span class="IdrisComment">|||&nbsp;Get&nbsp;the&nbsp;amount&nbsp;of&nbsp;the&nbsp;current&nbsp;process&apos;s&nbsp;CPU&nbsp;time&nbsp;consumed&nbsp;by&nbsp;the&nbsp;garbage</span></div>
+<div id="line156"><a href="#line156" class="IdrisLineNumber"> 156 | </a><span class="IdrisComment">|||&nbsp;collector.</span></div>
+<div id="line157"><a href="#line157" class="IdrisLineNumber"> 157 | </a><span class="IdrisFunction">clockTimeGcCpu</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">IO</span>&nbsp;<span class="IdrisType">OSClock</span></div>
+<div id="line158"><a href="#line158" class="IdrisLineNumber"> 158 | </a><span class="IdrisFunction">clockTimeGcCpu</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">fromPrim</span>&nbsp;<span class="IdrisFunction">prim__clockTimeGcCpu</span></div>
+<div id="line159"><a href="#line159" class="IdrisLineNumber"> 159 | </a></div>
+<div id="line160"><a href="#line160" class="IdrisLineNumber"> 160 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-clock-time-gcreal&quot;</span></div>
+<div id="line161"><a href="#line161" class="IdrisLineNumber"> 161 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">&quot;RefC:clockTimeGcReal&quot;</span></div>
+<div id="line162"><a href="#line162" class="IdrisLineNumber"> 162 | </a><span class="IdrisFunction">prim__clockTimeGcReal</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">PrimIO</span>&nbsp;<span class="IdrisType">OSClock</span></div>
+<div id="line163"><a href="#line163" class="IdrisLineNumber"> 163 | </a></div>
+<div id="line164"><a href="#line164" class="IdrisLineNumber"> 164 | </a><span class="IdrisComment">|||&nbsp;Get&nbsp;the&nbsp;amount&nbsp;of&nbsp;the&nbsp;current&nbsp;process&apos;s&nbsp;real-time&nbsp;consumed&nbsp;by&nbsp;the&nbsp;garbage</span></div>
+<div id="line165"><a href="#line165" class="IdrisLineNumber"> 165 | </a><span class="IdrisComment">|||&nbsp;collector.</span></div>
+<div id="line166"><a href="#line166" class="IdrisLineNumber"> 166 | </a><span class="IdrisFunction">clockTimeGcReal</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">IO</span>&nbsp;<span class="IdrisType">OSClock</span></div>
+<div id="line167"><a href="#line167" class="IdrisLineNumber"> 167 | </a><span class="IdrisFunction">clockTimeGcReal</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">fromPrim</span>&nbsp;<span class="IdrisFunction">prim__clockTimeGcReal</span></div>
+<div id="line168"><a href="#line168" class="IdrisLineNumber"> 168 | </a></div>
+<div id="line169"><a href="#line169" class="IdrisLineNumber"> 169 | </a><span class="IdrisFunction">fetchOSClock</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">ClockType</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">IO</span>&nbsp;<span class="IdrisType">OSClock</span></div>
+<div id="line170"><a href="#line170" class="IdrisLineNumber"> 170 | </a><span class="IdrisFunction">fetchOSClock</span>&nbsp;<span class="IdrisData">UTC</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">clockTimeUtc</span></div>
+<div id="line171"><a href="#line171" class="IdrisLineNumber"> 171 | </a><span class="IdrisFunction">fetchOSClock</span>&nbsp;<span class="IdrisData">Monotonic</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">clockTimeMonotonic</span></div>
+<div id="line172"><a href="#line172" class="IdrisLineNumber"> 172 | </a><span class="IdrisFunction">fetchOSClock</span>&nbsp;<span class="IdrisData">Process</span>&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">clockTimeProcess</span></div>
+<div id="line173"><a href="#line173" class="IdrisLineNumber"> 173 | </a><span class="IdrisFunction">fetchOSClock</span>&nbsp;<span class="IdrisData">Thread</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">clockTimeThread</span></div>
+<div id="line174"><a href="#line174" class="IdrisLineNumber"> 174 | </a><span class="IdrisFunction">fetchOSClock</span>&nbsp;<span class="IdrisData">GCCPU</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">clockTimeGcCpu</span></div>
+<div id="line175"><a href="#line175" class="IdrisLineNumber"> 175 | </a><span class="IdrisFunction">fetchOSClock</span>&nbsp;<span class="IdrisData">GCReal</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">clockTimeGcReal</span></div>
+<div id="line176"><a href="#line176" class="IdrisLineNumber"> 176 | </a><span class="IdrisFunction">fetchOSClock</span>&nbsp;<span class="IdrisData">Duration</span>&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">clockTimeMonotonic</span></div>
+<div id="line177"><a href="#line177" class="IdrisLineNumber"> 177 | </a></div>
+<div id="line178"><a href="#line178" class="IdrisLineNumber"> 178 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-is-time?&quot;</span></div>
+<div id="line179"><a href="#line179" class="IdrisLineNumber"> 179 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">&quot;RefC:clockValid&quot;</span></div>
+<div id="line180"><a href="#line180" class="IdrisLineNumber"> 180 | </a><span class="IdrisFunction">prim__osClockValid</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">OSClock</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisFunction">PrimIO</span>&nbsp;<span class="IdrisType">Int</span></div>
+<div id="line181"><a href="#line181" class="IdrisLineNumber"> 181 | </a></div>
+<div id="line182"><a href="#line182" class="IdrisLineNumber"> 182 | </a><span class="IdrisComment">|||&nbsp;A&nbsp;test&nbsp;to&nbsp;determine&nbsp;the&nbsp;status&nbsp;of&nbsp;optional&nbsp;clocks.</span></div>
+<div id="line183"><a href="#line183" class="IdrisLineNumber"> 183 | </a><span class="IdrisFunction">osClockValid</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">OSClock</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">IO</span>&nbsp;<span class="IdrisType">Int</span></div>
+<div id="line184"><a href="#line184" class="IdrisLineNumber"> 184 | </a><span class="IdrisFunction">osClockValid</span>&nbsp;<span class="IdrisBound">clk</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">fromPrim</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">prim__osClockValid</span>&nbsp;<span class="IdrisBound">clk</span><span class="IdrisKeyword">)</span></div>
+<div id="line185"><a href="#line185" class="IdrisLineNumber"> 185 | </a></div>
+<div id="line186"><a href="#line186" class="IdrisLineNumber"> 186 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-clock-second&quot;</span></div>
+<div id="line187"><a href="#line187" class="IdrisLineNumber"> 187 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">&quot;RefC:clockSecond&quot;</span></div>
+<div id="line188"><a href="#line188" class="IdrisLineNumber"> 188 | </a><span class="IdrisFunction">prim__osClockSecond</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">OSClock</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisFunction">PrimIO</span>&nbsp;<span class="IdrisType">Bits64</span></div>
+<div id="line189"><a href="#line189" class="IdrisLineNumber"> 189 | </a></div>
+<div id="line190"><a href="#line190" class="IdrisLineNumber"> 190 | </a><span class="IdrisComment">|||&nbsp;Get&nbsp;the&nbsp;second&nbsp;of&nbsp;time&nbsp;from&nbsp;the&nbsp;given&nbsp;`OSClock`.</span></div>
+<div id="line191"><a href="#line191" class="IdrisLineNumber"> 191 | </a><span class="IdrisFunction">osClockSecond</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">OSClock</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">IO</span>&nbsp;<span class="IdrisType">Bits64</span></div>
+<div id="line192"><a href="#line192" class="IdrisLineNumber"> 192 | </a><span class="IdrisFunction">osClockSecond</span>&nbsp;<span class="IdrisBound">clk</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">fromPrim</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">prim__osClockSecond</span>&nbsp;<span class="IdrisBound">clk</span><span class="IdrisKeyword">)</span></div>
+<div id="line193"><a href="#line193" class="IdrisLineNumber"> 193 | </a></div>
+<div id="line194"><a href="#line194" class="IdrisLineNumber"> 194 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-clock-nanosecond&quot;</span></div>
+<div id="line195"><a href="#line195" class="IdrisLineNumber"> 195 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">&quot;RefC:clockNanosecond&quot;</span></div>
+<div id="line196"><a href="#line196" class="IdrisLineNumber"> 196 | </a><span class="IdrisFunction">prim__osClockNanosecond</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">OSClock</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisFunction">PrimIO</span>&nbsp;<span class="IdrisType">Bits64</span></div>
+<div id="line197"><a href="#line197" class="IdrisLineNumber"> 197 | </a></div>
+<div id="line198"><a href="#line198" class="IdrisLineNumber"> 198 | </a><span class="IdrisComment">|||&nbsp;Get&nbsp;the&nbsp;nanosecond&nbsp;of&nbsp;time&nbsp;from&nbsp;the&nbsp;given&nbsp;`OSClock`.</span></div>
+<div id="line199"><a href="#line199" class="IdrisLineNumber"> 199 | </a><span class="IdrisFunction">osClockNanosecond</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">OSClock</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">IO</span>&nbsp;<span class="IdrisType">Bits64</span></div>
+<div id="line200"><a href="#line200" class="IdrisLineNumber"> 200 | </a><span class="IdrisFunction">osClockNanosecond</span>&nbsp;<span class="IdrisBound">clk</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">fromPrim</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">prim__osClockNanosecond</span>&nbsp;<span class="IdrisBound">clk</span><span class="IdrisKeyword">)</span></div>
+<div id="line201"><a href="#line201" class="IdrisLineNumber"> 201 | </a></div>
+<div id="line202"><a href="#line202" class="IdrisLineNumber"> 202 | </a><span class="IdrisComment">|||&nbsp;Convert&nbsp;an&nbsp;`OSClock`&nbsp;to&nbsp;an&nbsp;Idris&nbsp;`Clock`.</span></div>
+<div id="line203"><a href="#line203" class="IdrisLineNumber"> 203 | </a><span class="IdrisFunction">fromOSClock</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">{</span><span class="IdrisBound">type</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">ClockType</span><span class="IdrisKeyword">}</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">OSClock</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">IO</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span><span class="IdrisKeyword">)</span></div>
+<div id="line204"><a href="#line204" class="IdrisLineNumber"> 204 | </a><span class="IdrisFunction">fromOSClock</span>&nbsp;<span class="IdrisBound">clk</span>&nbsp;<span class="IdrisKeyword">=</span></div>
+<div id="line205"><a href="#line205" class="IdrisLineNumber"> 205 | </a>&nbsp;&nbsp;<span class="IdrisFunction">pure</span>&nbsp;$</div>
+<div id="line206"><a href="#line206" class="IdrisLineNumber"> 206 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">MkClock</span></div>
+<div id="line207"><a href="#line207" class="IdrisLineNumber"> 207 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">{</span><span class="IdrisBound">type</span><span class="IdrisKeyword">}</span></div>
+<div id="line208"><a href="#line208" class="IdrisLineNumber"> 208 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">cast</span>&nbsp;<span class="IdrisKeyword">!(</span><span class="IdrisFunction">osClockSecond</span>&nbsp;<span class="IdrisBound">clk</span><span class="IdrisKeyword">))</span></div>
+<div id="line209"><a href="#line209" class="IdrisLineNumber"> 209 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">cast</span>&nbsp;<span class="IdrisKeyword">!(</span><span class="IdrisFunction">osClockNanosecond</span>&nbsp;<span class="IdrisBound">clk</span><span class="IdrisKeyword">))</span></div>
+<div id="line210"><a href="#line210" class="IdrisLineNumber"> 210 | </a></div>
+<div id="line211"><a href="#line211" class="IdrisLineNumber"> 211 | </a><span class="IdrisComment">|||&nbsp;The&nbsp;return&nbsp;type&nbsp;of&nbsp;a&nbsp;function&nbsp;using&nbsp;a&nbsp;`Clock`&nbsp;depends&nbsp;on&nbsp;the&nbsp;type&nbsp;of</span></div>
+<div id="line212"><a href="#line212" class="IdrisLineNumber"> 212 | </a><span class="IdrisComment">|||&nbsp;`Clock`:</span></div>
+<div id="line213"><a href="#line213" class="IdrisLineNumber"> 213 | </a><span class="IdrisComment">|||&nbsp;*&nbsp;`Optional`&nbsp;clocks&nbsp;may&nbsp;not&nbsp;be&nbsp;implemented,&nbsp;so&nbsp;we&nbsp;might&nbsp;not&nbsp;return&nbsp;anything</span></div>
+<div id="line214"><a href="#line214" class="IdrisLineNumber"> 214 | </a><span class="IdrisComment">|||&nbsp;*&nbsp;`Mandatory`&nbsp;clocks&nbsp;have&nbsp;to&nbsp;be&nbsp;implemented,&nbsp;so&nbsp;we&nbsp;_will_&nbsp;return&nbsp;something</span></div>
+<div id="line215"><a href="#line215" class="IdrisLineNumber"> 215 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line216"><a href="#line216" class="IdrisLineNumber"> 216 | </a><span class="IdrisFunction">clockTimeReturnType</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">typ</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">ClockType</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Type</span></div>
+<div id="line217"><a href="#line217" class="IdrisLineNumber"> 217 | </a><span class="IdrisFunction">clockTimeReturnType</span>&nbsp;<span class="IdrisBound">typ</span>&nbsp;<span class="IdrisKeyword">with</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">isClockMandatory</span>&nbsp;<span class="IdrisBound">typ</span><span class="IdrisKeyword">)</span></div>
+<div id="line218"><a href="#line218" class="IdrisLineNumber"> 218 | </a>&nbsp;&nbsp;clockTimeReturnType&nbsp;<span class="IdrisBound">typ</span>&nbsp;<span class="IdrisKeyword">|</span>&nbsp;<span class="IdrisData">Optional</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisType">Maybe</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">typ</span><span class="IdrisKeyword">)</span></div>
+<div id="line219"><a href="#line219" class="IdrisLineNumber"> 219 | </a>&nbsp;&nbsp;clockTimeReturnType&nbsp;<span class="IdrisBound">typ</span>&nbsp;<span class="IdrisKeyword">|</span>&nbsp;<span class="IdrisData">Mandatory</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">typ</span></div>
+<div id="line220"><a href="#line220" class="IdrisLineNumber"> 220 | </a></div>
+<div id="line221"><a href="#line221" class="IdrisLineNumber"> 221 | </a><span class="IdrisComment">|||&nbsp;Fetch&nbsp;the&nbsp;system&nbsp;clock&nbsp;of&nbsp;a&nbsp;given&nbsp;kind.&nbsp;If&nbsp;the&nbsp;clock&nbsp;is&nbsp;mandatory,</span></div>
+<div id="line222"><a href="#line222" class="IdrisLineNumber"> 222 | </a><span class="IdrisComment">|||&nbsp;we&nbsp;return&nbsp;a&nbsp;`Clock&nbsp;type`&nbsp;else,&nbsp;we&nbsp;return&nbsp;a&nbsp;`Maybe&nbsp;(Clock&nbsp;type)`.</span></div>
+<div id="line223"><a href="#line223" class="IdrisLineNumber"> 223 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line224"><a href="#line224" class="IdrisLineNumber"> 224 | </a><span class="IdrisFunction">clockTime</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">typ</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">ClockType</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">IO</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">clockTimeReturnType</span>&nbsp;<span class="IdrisBound">typ</span><span class="IdrisKeyword">)</span></div>
+<div id="line225"><a href="#line225" class="IdrisLineNumber"> 225 | </a><span class="IdrisFunction">clockTime</span>&nbsp;<span class="IdrisBound">clockType</span>&nbsp;<span class="IdrisKeyword">with</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">isClockMandatory</span>&nbsp;<span class="IdrisBound">clockType</span><span class="IdrisKeyword">)</span></div>
+<div id="line226"><a href="#line226" class="IdrisLineNumber"> 226 | </a>&nbsp;&nbsp;clockTime&nbsp;<span class="IdrisBound">clockType</span>&nbsp;<span class="IdrisKeyword">|</span>&nbsp;<span class="IdrisData">Mandatory</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">fetchOSClock</span>&nbsp;<span class="IdrisBound">clockType</span>&nbsp;<span class="IdrisFunction">&gt;&gt;=</span>&nbsp;<span class="IdrisFunction">fromOSClock</span></div>
+<div id="line227"><a href="#line227" class="IdrisLineNumber"> 227 | </a>&nbsp;&nbsp;clockTime&nbsp;<span class="IdrisBound">clockType</span>&nbsp;<span class="IdrisKeyword">|</span>&nbsp;<span class="IdrisData">Optional</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisKeyword">do</span></div>
+<div id="line228"><a href="#line228" class="IdrisLineNumber"> 228 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisBound">clk</span>&nbsp;<span class="IdrisKeyword">&lt;-</span>&nbsp;<span class="IdrisFunction">fetchOSClock</span>&nbsp;<span class="IdrisBound">clockType</span></div>
+<div id="line229"><a href="#line229" class="IdrisLineNumber"> 229 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisBound">valid</span>&nbsp;<span class="IdrisKeyword">&lt;-</span>&nbsp;<span class="IdrisFunction">map</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">==</span>&nbsp;<span class="IdrisData">1</span><span class="IdrisKeyword">)</span>&nbsp;$&nbsp;<span class="IdrisFunction">osClockValid</span>&nbsp;<span class="IdrisBound">clk</span></div>
+<div id="line230"><a href="#line230" class="IdrisLineNumber"> 230 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">if</span>&nbsp;<span class="IdrisBound">valid</span></div>
+<div id="line231"><a href="#line231" class="IdrisLineNumber"> 231 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">then</span>&nbsp;<span class="IdrisFunction">map</span>&nbsp;<span class="IdrisData">Just</span>&nbsp;$&nbsp;<span class="IdrisFunction">fromOSClock</span>&nbsp;<span class="IdrisBound">clk</span></div>
+<div id="line232"><a href="#line232" class="IdrisLineNumber"> 232 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">else</span>&nbsp;<span class="IdrisFunction">pure</span>&nbsp;<span class="IdrisData">Nothing</span></div>
+<div id="line233"><a href="#line233" class="IdrisLineNumber"> 233 | </a></div>
+<div id="line234"><a href="#line234" class="IdrisLineNumber"> 234 | </a><span class="IdrisComment">|||&nbsp;Convert&nbsp;the&nbsp;time&nbsp;in&nbsp;the&nbsp;given&nbsp;clock&nbsp;to&nbsp;nanoseconds.</span></div>
+<div id="line235"><a href="#line235" class="IdrisLineNumber"> 235 | </a><span class="IdrisFunction">toNano</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Integer</span></div>
+<div id="line236"><a href="#line236" class="IdrisLineNumber"> 236 | </a><span class="IdrisFunction">toNano</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">MkClock</span>&nbsp;<span class="IdrisBound">seconds</span>&nbsp;<span class="IdrisBound">nanoseconds</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">=</span></div>
+<div id="line237"><a href="#line237" class="IdrisLineNumber"> 237 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">let</span>&nbsp;<span class="IdrisBound">scale</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">1000000000</span></div>
+<div id="line238"><a href="#line238" class="IdrisLineNumber"> 238 | </a>&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">in</span>&nbsp;<span class="IdrisBound">scale</span>&nbsp;<span class="IdrisFunction">*</span>&nbsp;<span class="IdrisBound">seconds</span>&nbsp;<span class="IdrisFunction">+</span>&nbsp;<span class="IdrisBound">nanoseconds</span></div>
+<div id="line239"><a href="#line239" class="IdrisLineNumber"> 239 | </a></div>
+<div id="line240"><a href="#line240" class="IdrisLineNumber"> 240 | </a><span class="IdrisComment">|||&nbsp;Convert&nbsp;some&nbsp;time&nbsp;in&nbsp;nanoseconds&nbsp;to&nbsp;a&nbsp;`Clock`&nbsp;containing&nbsp;that&nbsp;time.</span></div>
+<div id="line241"><a href="#line241" class="IdrisLineNumber"> 241 | </a><span class="IdrisComment">|||</span></div>
+<div id="line242"><a href="#line242" class="IdrisLineNumber"> 242 | </a><span class="IdrisComment">|||&nbsp;@&nbsp;n&nbsp;the&nbsp;time&nbsp;in&nbsp;nanoseconds</span></div>
+<div id="line243"><a href="#line243" class="IdrisLineNumber"> 243 | </a><span class="IdrisFunction">fromNano</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">{</span><span class="IdrisBound">type</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">ClockType</span><span class="IdrisKeyword">}</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">n</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Integer</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span></div>
+<div id="line244"><a href="#line244" class="IdrisLineNumber"> 244 | </a><span class="IdrisFunction">fromNano</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisKeyword">=</span></div>
+<div id="line245"><a href="#line245" class="IdrisLineNumber"> 245 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">let</span>&nbsp;<span class="IdrisBound">scale</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">1000000000</span></div>
+<div id="line246"><a href="#line246" class="IdrisLineNumber"> 246 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisBound">seconds</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisFunction">`div`</span>&nbsp;<span class="IdrisBound">scale</span></div>
+<div id="line247"><a href="#line247" class="IdrisLineNumber"> 247 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisBound">nanoseconds</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisFunction">`mod`</span>&nbsp;<span class="IdrisBound">scale</span></div>
+<div id="line248"><a href="#line248" class="IdrisLineNumber"> 248 | </a>&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">in</span>&nbsp;<span class="IdrisData">MkClock</span>&nbsp;<span class="IdrisBound">seconds</span>&nbsp;<span class="IdrisBound">nanoseconds</span></div>
+<div id="line249"><a href="#line249" class="IdrisLineNumber"> 249 | </a></div>
+<div id="line250"><a href="#line250" class="IdrisLineNumber"> 250 | </a><span class="IdrisComment">|||&nbsp;Compute&nbsp;difference&nbsp;between&nbsp;two&nbsp;clocks&nbsp;of&nbsp;the&nbsp;same&nbsp;type.</span></div>
+<div id="line251"><a href="#line251" class="IdrisLineNumber"> 251 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line252"><a href="#line252" class="IdrisLineNumber"> 252 | </a><span class="IdrisFunction">timeDifference</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisData">Duration</span></div>
+<div id="line253"><a href="#line253" class="IdrisLineNumber"> 253 | </a><span class="IdrisFunction">timeDifference</span>&nbsp;<span class="IdrisBound">clock</span>&nbsp;<span class="IdrisBound">duration</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">fromNano</span>&nbsp;$&nbsp;<span class="IdrisFunction">toNano</span>&nbsp;<span class="IdrisBound">clock</span>&nbsp;<span class="IdrisFunction">-</span>&nbsp;<span class="IdrisFunction">toNano</span>&nbsp;<span class="IdrisBound">duration</span></div>
+<div id="line254"><a href="#line254" class="IdrisLineNumber"> 254 | </a></div>
+<div id="line255"><a href="#line255" class="IdrisLineNumber"> 255 | </a><span class="IdrisComment">|||&nbsp;Add&nbsp;a&nbsp;duration&nbsp;to&nbsp;a&nbsp;clock&nbsp;value.</span></div>
+<div id="line256"><a href="#line256" class="IdrisLineNumber"> 256 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line257"><a href="#line257" class="IdrisLineNumber"> 257 | </a><span class="IdrisFunction">addDuration</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">{</span><span class="IdrisBound">type</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">ClockType</span><span class="IdrisKeyword">}</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisData">Duration</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span></div>
+<div id="line258"><a href="#line258" class="IdrisLineNumber"> 258 | </a><span class="IdrisFunction">addDuration</span>&nbsp;<span class="IdrisBound">clock</span>&nbsp;<span class="IdrisBound">duration</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">fromNano</span>&nbsp;$&nbsp;<span class="IdrisFunction">toNano</span>&nbsp;<span class="IdrisBound">clock</span>&nbsp;<span class="IdrisFunction">+</span>&nbsp;<span class="IdrisFunction">toNano</span>&nbsp;<span class="IdrisBound">duration</span></div>
+<div id="line259"><a href="#line259" class="IdrisLineNumber"> 259 | </a></div>
+<div id="line260"><a href="#line260" class="IdrisLineNumber"> 260 | </a><span class="IdrisComment">|||&nbsp;Subtract&nbsp;a&nbsp;duration&nbsp;from&nbsp;a&nbsp;clock&nbsp;value.</span></div>
+<div id="line261"><a href="#line261" class="IdrisLineNumber"> 261 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line262"><a href="#line262" class="IdrisLineNumber"> 262 | </a><span class="IdrisFunction">subtractDuration</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">{</span><span class="IdrisBound">type</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">ClockType</span><span class="IdrisKeyword">}</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisData">Duration</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Clock</span>&nbsp;<span class="IdrisBound">type</span></div>
+<div id="line263"><a href="#line263" class="IdrisLineNumber"> 263 | </a><span class="IdrisFunction">subtractDuration</span>&nbsp;<span class="IdrisBound">clock</span>&nbsp;<span class="IdrisBound">duration</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">fromNano</span>&nbsp;$&nbsp;<span class="IdrisFunction">toNano</span>&nbsp;<span class="IdrisBound">clock</span>&nbsp;<span class="IdrisFunction">-</span>&nbsp;<span class="IdrisFunction">toNano</span>&nbsp;<span class="IdrisBound">duration</span></div>
+<div id="line264"><a href="#line264" class="IdrisLineNumber"> 264 | </a></div>
+</code>
+</body>
+</html>

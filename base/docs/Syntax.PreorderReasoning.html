@@ -1,0 +1,66 @@
+<!DOCTYPE html><html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Syntax.PreorderReasoning</title>
+  <link rel="stylesheet" type="text/css" id="preferredStyle" href="../default.css">
+  <script>
+    /* Updates the stylesheet to use the preferred one.
+       Note that we set the link to root ++ sourceLoc because the config
+       is shared across the whole website, so the root may differ from
+       page to page.
+    */
+    function setStyleSource (sourceLoc) {
+      document.getElementById("preferredStyle").href = "../" + sourceLoc + ".css";
+      document.getElementById("selectPreferredStyle").value = sourceLoc;
+    }
+    /* Initialises the preferred style sheet:
+       1. if there is a stored value then use that
+          otherwise select the default
+       2. set both the css link href & the drop down menu selected option
+    */
+    function initStyleSource () {
+      var preferredStyle = localStorage.getItem("stylefile");
+      if (preferredStyle !== null) {
+        setStyleSource(preferredStyle);
+      } else {
+        setStyleSource("default");
+      };
+    }
+    function saveStyleSource (preferredStyle) {
+      localStorage.stylefile = preferredStyle;
+    }
+    </script>
+</head>
+
+<body class="namespace">
+<header>
+  <strong>Idris2Doc</strong> : Syntax.PreorderReasoning
+  <nav><a href="../index.html">Index</a>
+
+  <select id="selectPreferredStyle">
+    <option value="default">Default</option>
+<option value="alternative">Alternative</option>
+<option value="blackandwhite">Black & White</option>
+
+  </select>
+  </nav>
+
+  <script>
+  /* We start by initialising the style source */
+  initStyleSource();
+
+  /* This listens for changes on the drop down menu and updates the
+     css used for the current page when a selection is made.
+  */
+  document.getElementById("selectPreferredStyle").addEventListener("change", function(){
+    var selected = this.options[this.selectedIndex].value; /* the option chosen */
+    setStyleSource (selected);
+    saveStyleSource (selected);
+  });
+</script>
+
+</header>
+<div class="container"><div id="module-header"><h1>Syntax.PreorderReasoning<span style="float:right">(<a href="../source/Syntax.PreorderReasoning.html">source</a>)</span></h1><pre>Until Idris2 starts supporting the &apos;syntax&apos; keyword, here&apos;s a
+poor-man&apos;s equational reasoning
+</pre></div><code></code><h2>Definitions</h2><dl class="decls"><dt id="Syntax.PreorderReasoning.Step"><code><span class="keyword">data</span>&ensp;<a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning.Step"><span class="name type">Step</span></a>&ensp;:&ensp;<span class="boundvar">a</span>&ensp;-&gt;&ensp;<span class="boundvar">b</span>&ensp;-&gt;&ensp;<span class="name type">Type</span></code></dt><dd><pre>  Slightly&ensp;nicer&ensp;syntax&ensp;for&ensp;justifying&ensp;equations:<br>  ```<br>  |~&ensp;a<br>  ~~&ensp;b&ensp;...(&ensp;justification&ensp;)<br>  ```<br>  and&ensp;we&ensp;can&ensp;think&ensp;of&ensp;the&ensp;`...(&ensp;justification&ensp;)`&ensp;as&ensp;ASCII&ensp;art&ensp;for&ensp;a&ensp;thought&ensp;bubble.</pre><br>  <b>Totality</b>:&ensp;<span class="keyword">total</span><br>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span><br>  <b>Constructor</b>:&ensp;<dl class="decls"><dt id="Syntax.PreorderReasoning...."><code><a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning...."><span class="name constructor">(...)</span></a>&ensp;:&ensp;(<span class="keyword">0</span>&ensp;<span class="boundvar">y</span>&ensp;:&ensp;<span class="boundvar">a</span>)&ensp;-&gt;&ensp;(<span class="keyword">0</span>&ensp;<span class="boundvar">_</span>&ensp;:&ensp;<span class="boundvar">x</span>&ensp;<span class="keyword">=</span>&ensp;<span class="boundvar">y</span>)&ensp;-&gt;&ensp;<a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning.Step"><span class="name type">Step</span></a>&ensp;<span class="boundvar">x</span>&ensp;<span class="boundvar">y</span></code></dt></dl></dd><dt id="Syntax.PreorderReasoning.FastDerivation"><code><span class="keyword">data</span>&ensp;<a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning.FastDerivation"><span class="name type">FastDerivation</span></a>&ensp;:&ensp;<span class="boundvar">a</span>&ensp;-&gt;&ensp;<span class="boundvar">b</span>&ensp;-&gt;&ensp;<span class="name type">Type</span></code></dt><dd>  <b>Totality</b>:&ensp;<span class="keyword">total</span><br>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span><br>  <b>Constructors</b>:<br><dl class="decls">  <dt id="Syntax.PreorderReasoning.|~"><code><a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning.|~"><span class="name constructor">(|~)</span></a>&ensp;:&ensp;(<span class="keyword">0</span>&ensp;<span class="boundvar">x</span>&ensp;:&ensp;<span class="boundvar">a</span>)&ensp;-&gt;&ensp;<a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning.FastDerivation"><span class="name type">FastDerivation</span></a>&ensp;<span class="boundvar">x</span>&ensp;<span class="boundvar">x</span></code></dt>  <dt id="Syntax.PreorderReasoning.~~"><code><a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning.~~"><span class="name constructor">(~~)</span></a>&ensp;:&ensp;<a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning.FastDerivation"><span class="name type">FastDerivation</span></a>&ensp;<span class="boundvar">x</span>&ensp;<span class="boundvar">y</span>&ensp;-&gt;&ensp;<a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning.Step"><span class="name type">Step</span></a>&ensp;<span class="boundvar">y</span>&ensp;<span class="boundvar">z</span>&ensp;-&gt;&ensp;<a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning.FastDerivation"><span class="name type">FastDerivation</span></a>&ensp;<span class="boundvar">x</span>&ensp;<span class="boundvar">z</span></code></dt></dl></dd><dt id="Syntax.PreorderReasoning.Calc"><code><a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning.Calc"><span class="name function">Calc</span></a>&ensp;:&ensp;<a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning.FastDerivation"><span class="name type">FastDerivation</span></a>&ensp;<span class="boundvar">x</span>&ensp;<span class="boundvar">y</span>&ensp;-&gt;&ensp;<span class="boundvar">x</span>&ensp;<span class="keyword">=</span>&ensp;<span class="boundvar">y</span></code></dt><dd>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span></dd><dt id="Syntax.PreorderReasoning.symHet"><code><a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning.symHet"><span class="name function">symHet</span></a>&ensp;:&ensp;(<span class="keyword">0</span>&ensp;<span class="boundvar">_</span>&ensp;:&ensp;<span class="boundvar">x</span>&ensp;<span class="keyword">=</span>&ensp;<span class="boundvar">y</span>)&ensp;-&gt;&ensp;<span class="boundvar">y</span>&ensp;<span class="keyword">=</span>&ensp;<span class="boundvar">x</span></code></dt><dd>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span></dd><dt id="Syntax.PreorderReasoning...&lt;"><code><a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning...&lt;"><span class="name function">(..&lt;)</span></a>&ensp;:&ensp;(<span class="keyword">0</span>&ensp;<span class="boundvar">y</span>&ensp;:&ensp;<span class="boundvar">a</span>)&ensp;-&gt;&ensp;<span class="boundvar">y</span>&ensp;<span class="keyword">=</span>&ensp;<span class="boundvar">x</span>&ensp;-&gt;&ensp;<a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning.Step"><span class="name type">Step</span></a>&ensp;<span class="boundvar">x</span>&ensp;<span class="boundvar">y</span></code></dt><dd>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span><br>  <b>Fixity Declaration</b>:&ensp;infix&ensp;operator,&ensp;level&ensp;1</dd><dt id="Syntax.PreorderReasoning...&gt;"><code><a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning...&gt;"><span class="name function">(..&gt;)</span></a>&ensp;:&ensp;(<span class="keyword">0</span>&ensp;<span class="boundvar">y</span>&ensp;:&ensp;<span class="boundvar">a</span>)&ensp;-&gt;&ensp;(<span class="keyword">0</span>&ensp;<span class="boundvar">_</span>&ensp;:&ensp;<span class="boundvar">x</span>&ensp;<span class="keyword">=</span>&ensp;<span class="boundvar">y</span>)&ensp;-&gt;&ensp;<a class="type" href="Syntax.PreorderReasoning.html#Syntax.PreorderReasoning.Step"><span class="name type">Step</span></a>&ensp;<span class="boundvar">x</span>&ensp;<span class="boundvar">y</span></code></dt><dd>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span><br>  <b>Fixity Declaration</b>:&ensp;infix&ensp;operator,&ensp;level&ensp;1</dd></dl></div><footer>Produced by Idris 2 version 0.5.1-2287fd9ed</footer></body></html>

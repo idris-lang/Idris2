@@ -1,0 +1,68 @@
+<!DOCTYPE html><html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Data.Telescope.SimpleFun</title>
+  <link rel="stylesheet" type="text/css" id="preferredStyle" href="../default.css">
+  <script>
+    /* Updates the stylesheet to use the preferred one.
+       Note that we set the link to root ++ sourceLoc because the config
+       is shared across the whole website, so the root may differ from
+       page to page.
+    */
+    function setStyleSource (sourceLoc) {
+      document.getElementById("preferredStyle").href = "../" + sourceLoc + ".css";
+      document.getElementById("selectPreferredStyle").value = sourceLoc;
+    }
+    /* Initialises the preferred style sheet:
+       1. if there is a stored value then use that
+          otherwise select the default
+       2. set both the css link href & the drop down menu selected option
+    */
+    function initStyleSource () {
+      var preferredStyle = localStorage.getItem("stylefile");
+      if (preferredStyle !== null) {
+        setStyleSource(preferredStyle);
+      } else {
+        setStyleSource("default");
+      };
+    }
+    function saveStyleSource (preferredStyle) {
+      localStorage.stylefile = preferredStyle;
+    }
+    </script>
+</head>
+
+<body class="namespace">
+<header>
+  <strong>Idris2Doc</strong> : Data.Telescope.SimpleFun
+  <nav><a href="../index.html">Index</a>
+
+  <select id="selectPreferredStyle">
+    <option value="default">Default</option>
+<option value="alternative">Alternative</option>
+<option value="blackandwhite">Black & White</option>
+
+  </select>
+  </nav>
+
+  <script>
+  /* We start by initialising the style source */
+  initStyleSource();
+
+  /* This listens for changes on the drop down menu and updates the
+     css used for the current page when a selection is made.
+  */
+  document.getElementById("selectPreferredStyle").addEventListener("change", function(){
+    var selected = this.options[this.selectedIndex].value; /* the option chosen */
+    setStyleSource (selected);
+    saveStyleSource (selected);
+  });
+</script>
+
+</header>
+<div class="container"><div id="module-header"><h1>Data.Telescope.SimpleFun<span style="float:right">(<a href="../source/Data.Telescope.SimpleFun.html">source</a>)</span></h1><pre>N-ary simple (non-dependent) functions using telescopes
+
+Compare with `base/Data.Fun` and `contrib/Data.Fun.Extra` and with:
+Guillaume Allais. 2019. Generic level polymorphic n-ary functions. TyDe 2019.
+</pre></div><code></code><h2>Definitions</h2><dl class="decls"><dt id="Data.Telescope.SimpleFun.SimpleFun"><code><span class="keyword">0</span>&ensp;<a class="type" href="Data.Telescope.SimpleFun.html#Data.Telescope.SimpleFun.SimpleFun"><span class="name function">SimpleFun</span></a>&ensp;:&ensp;<span class="type resolved" title="Data.Telescope.Telescope.Left.Environment"><span class="name function">Environment</span></span>&ensp;<span class="boundvar">gamma</span>&ensp;-&gt;&ensp;(<span class="keyword">0</span>&ensp;<span class="boundvar">_</span>&ensp;:&ensp;<a class="type" href="Data.Telescope.Segment.html#Data.Telescope.Segment.Segment"><span class="name type">Segment</span></a>&ensp;<span class="boundvar">n</span>&ensp;<span class="boundvar">gamma</span>)&ensp;-&gt;&ensp;<span class="name type">Type</span>&ensp;-&gt;&ensp;<span class="name type">Type</span></code></dt><dd><pre>  An&ensp;n-ary&ensp;function&ensp;whose&ensp;codomain&ensp;does&ensp;not&ensp;depend&ensp;on&ensp;its<br>  arguments.&ensp;The&ensp;arguments&ensp;may&ensp;have&ensp;dependencies.</pre><br>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span></dd><dt id="Data.Telescope.SimpleFun.target"><code><a class="type" href="Data.Telescope.SimpleFun.html#Data.Telescope.SimpleFun.target"><span class="name function">target</span></a>&ensp;:&ensp;<a class="type" href="Data.Telescope.SimpleFun.html#Data.Telescope.SimpleFun.SimpleFun"><span class="name function">SimpleFun</span></a>&ensp;<span class="boundvar">env</span>&ensp;<span class="boundvar">delta</span>&ensp;<span class="boundvar">cod</span>&ensp;-&gt;&ensp;<span class="name type">Type</span></code></dt><dd>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span></dd><dt id="Data.Telescope.SimpleFun.uncurry"><code><a class="type" href="Data.Telescope.SimpleFun.html#Data.Telescope.SimpleFun.uncurry"><span class="name function">uncurry</span></a>&ensp;:&ensp;<a class="type" href="Data.Telescope.SimpleFun.html#Data.Telescope.SimpleFun.SimpleFun"><span class="name function">SimpleFun</span></a>&ensp;<span class="boundvar">env</span>&ensp;<span class="boundvar">delta</span>&ensp;<span class="boundvar">cod</span>&ensp;-&gt;&ensp;<a class="type" href="Data.Telescope.Segment.html#Data.Telescope.Segment.Environment"><span class="name type">Environment</span></a>&ensp;<span class="boundvar">env</span>&ensp;<span class="boundvar">delta</span>&ensp;-&gt;&ensp;<span class="boundvar">cod</span></code></dt><dd>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span></dd><dt id="Data.Telescope.SimpleFun.curry"><code><a class="type" href="Data.Telescope.SimpleFun.html#Data.Telescope.SimpleFun.curry"><span class="name function">curry</span></a>&ensp;:&ensp;(<a class="type" href="Data.Telescope.Segment.html#Data.Telescope.Segment.Environment"><span class="name type">Environment</span></a>&ensp;<span class="boundvar">env</span>&ensp;<span class="boundvar">delta</span>&ensp;-&gt;&ensp;<span class="boundvar">cod</span>)&ensp;-&gt;&ensp;<a class="type" href="Data.Telescope.SimpleFun.html#Data.Telescope.SimpleFun.SimpleFun"><span class="name function">SimpleFun</span></a>&ensp;<span class="boundvar">env</span>&ensp;<span class="boundvar">delta</span>&ensp;<span class="boundvar">cod</span></code></dt><dd>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span></dd></dl></div><footer>Produced by Idris 2 version 0.5.1-2287fd9ed</footer></body></html>
