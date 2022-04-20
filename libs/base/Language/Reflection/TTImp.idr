@@ -77,7 +77,7 @@ mutual
        -- bound (either as a pattern variable or a type variable) if unsolved
        -- at the end of elaborator
        Implicit : FC -> (bindIfUnsolved : Bool) -> TTImp
-       IWithUnambigNames : FC -> List Name -> TTImp -> TTImp
+       IWithUnambigNames : FC -> List (FC, Name) -> TTImp -> TTImp
 
   public export
   data IFieldUpdate : Type where
