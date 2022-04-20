@@ -605,8 +605,7 @@ jobs:
       - name: Checkout idrall
         uses: actions/checkout@v2
         with:
-          repository: 'gallais/idrall'
-          ref: 'compat-idris2-main'
+          repository: 'alexhumphreys/idrall'
       - name: Build and install idrall
         run: |
           make install
