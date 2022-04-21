@@ -15,3 +15,7 @@
 #include "casts.h"
 #include "conCaseHelper.h"
 #include "prim.h"
+#include "threads.h"
+
+
+extern IORef_Storage * global_IORef_Storage;

@@ -207,7 +207,6 @@ Value_World *makeWorld()
 {
     Value_World *retVal = IDRIS2_NEW_VALUE(Value_World);
     retVal->header.tag = WORLD_TAG;
-    retVal->listIORefs = NULL;
     return retVal;
 }
 
@@ -336,18 +335,9 @@ void removeReference(Value *elem)
             break;
         }
         case WORLD_TAG:
-        {
-            Value_World *w = (Value_World *)elem;
-            if (w->listIORefs)
-            {
-                for (int i = 0; i < w->listIORefs->filled; i++)
-                {
-                    removeReference(w->listIORefs->refs[i]);
-                }
-                free(w->listIORefs->refs);
-                free(w->listIORefs);
-            }
-        }
+            /* nothing to delete, added for sake of completeness */
+            break;
+
         default:
             break;
         }

@@ -23,7 +23,8 @@ Value *arraySet(Value *, Value *, Value *, Value *, Value *);
 
 // Pointer
 Value *onCollect(Value *, Value *, Value *, Value *);
-Value *onCollectAny(Value *, Value *, Value *, Value *);
+Value *onCollectAny(Value *, Value *, Value *);
+
 
 Value *voidElim(Value *, Value *);
 

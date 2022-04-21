@@ -5,6 +5,7 @@
 
 // This is NOT THREAD SAFE in the current implementation
 
+
 IORef_Storage *newIORef_Storage(int capacity)
 {
     IORef_Storage *retVal = (IORef_Storage *)malloc(sizeof(IORef_Storage));
@@ -28,45 +29,45 @@ void doubleIORef_Storage(IORef_Storage *ior)
     ior->refs = values;
 }
 
+
 Value *newIORef(Value *erased, Value *input_value, Value *_world)
 {
     // if no ioRef Storag exist, start with one
-    Value_World *world = (Value_World *)_world;
-    if (!world->listIORefs)
+    if (!global_IORef_Storage)
     {
-        world->listIORefs = newIORef_Storage(128);
+        global_IORef_Storage = newIORef_Storage(128);
     }
     // expand size of needed
-    if (world->listIORefs->filled >= world->listIORefs->total)
+    if (global_IORef_Storage->filled >= global_IORef_Storage->total)
     {
-        doubleIORef_Storage(world->listIORefs);
+        doubleIORef_Storage(global_IORef_Storage);
     }
 
     // store value
     Value_IORef *ioRef = IDRIS2_NEW_VALUE(Value_IORef);
     ioRef->header.tag = IOREF_TAG;
-    ioRef->index = world->listIORefs->filled;
-    world->listIORefs->refs[world->listIORefs->filled] = newReference(input_value);
-    world->listIORefs->filled++;
+    ioRef->index = global_IORef_Storage->filled;
+    global_IORef_Storage->refs[global_IORef_Storage->filled] = newReference(input_value);
+    global_IORef_Storage->filled++;
 
     return (Value *)ioRef;
 }
 
 Value *readIORef(Value *erased, Value *_index, Value *_world)
 {
-    Value_World *world = (Value_World *)_world;
     Value_IORef *index = (Value_IORef *)_index;
-    return newReference(world->listIORefs->refs[index->index]);
+    return newReference(global_IORef_Storage->refs[index->index]);
 }
 
 Value *writeIORef(Value *erased, Value *_index, Value *new_value, Value *_world)
 {
-    Value_World *world = (Value_World *)_world;
     Value_IORef *index = (Value_IORef *)_index;
-    removeReference(world->listIORefs->refs[index->index]);
-    world->listIORefs->refs[index->index] = newReference(new_value);
+    removeReference(global_IORef_Storage->refs[index->index]);
+    global_IORef_Storage->refs[index->index] = newReference(new_value);
     return newReference(_index);
 }
+
+
 
 // -----------------------------------
 //       System operations
@@ -145,7 +146,6 @@ Value *arraySet(Value *erased, Value *_array, Value *_index, Value *v, Value *_w
 
 Value *onCollect(Value *_erased, Value *_anyPtr, Value *_freeingFunction, Value *_world)
 {
-    printf("onCollect called\n");
     Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
     retVal->header.tag = GC_POINTER_TAG;
     retVal->p = (Value_Pointer *)newReference(_anyPtr);
@@ -153,13 +153,12 @@ Value *onCollect(Value *_erased, Value *_anyPtr, Value *_freeingFunction, Value 
     return (Value *)retVal;
 }
 
-Value *onCollectAny(Value *_erased, Value *_anyPtr, Value *_freeingFunction, Value *_world)
+Value *onCollectAny(Value *_anyPtr, Value *_freeingFunction, Value *_world)
 {
-    printf("onCollectAny called\n");
     Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
     retVal->header.tag = GC_POINTER_TAG;
-    retVal->p = (Value_Pointer *)_anyPtr;
-    retVal->onCollectFct = (Value_Closure *)_freeingFunction;
+    retVal->p = (Value_Pointer *)newReference(_anyPtr);
+    retVal->onCollectFct = (Value_Closure *)newReference(_freeingFunction);
     return (Value *)retVal;
 }
 

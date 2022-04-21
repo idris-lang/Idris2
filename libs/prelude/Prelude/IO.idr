@@ -119,6 +119,7 @@ getChar : HasIO io => io Char
 getChar = primIO prim__getChar
 
 %foreign "scheme:blodwen-thread"
+         "C:refc_fork"
 export
 prim__fork : (1 prog : PrimIO ()) -> PrimIO ThreadID
 
