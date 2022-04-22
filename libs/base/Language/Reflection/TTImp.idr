@@ -348,6 +348,82 @@ mutual
     _ == _ = False
 
   public export
+  Eq NoMangleDirective where
+    CommonName s == CommonName s' = s == s'
+    BackendNames ns == BackendNames ns' = ns == ns'
+    _ == _ = False
+
+  public export
+  Eq FnOpt where
+    Inline == Inline = True
+    NoInline == NoInline = True
+    Deprecate == Deprecate = True
+    TCInline == TCInline = True
+    Hint b == Hint b' = b == b'
+    GlobalHint b == GlobalHint b' = b == b'
+    ExternFn == ExternFn = True
+    ForeignFn es == ForeignFn es' = es == es'
+    Invertible == Invertible = True
+    Totality tr == Totality tr' = tr == tr'
+    Macro == Macro = True
+    SpecArgs ns == SpecArgs ns' = ns == ns'
+    NoMangle nm == NoMangle nm' = nm == nm'
+    _ == _ = False
+
+  public export
+  Eq DataOpt where
+    SearchBy ns == SearchBy ns' = ns == ns'
+    NoHints == NoHints = True
+    UniqueSearch == UniqueSearch = True
+    External == External = True
+    NoNewtype == NoNewtype = True
+    _ == _ = False
+
+  public export
+  Eq Data where
+    MkData _ n tc os dc == MkData _ n' tc' os' dc' =
+      n == n' && tc == tc' && os == os' && dc == dc'
+    MkLater _ n tc == MkLater _ n' tc' =
+      n == n' && tc == tc'
+    _ == _ = False
+
+  public export
+  Eq ITy where
+    MkTy _ _ n ty == MkTy _ _ n' ty' = n == n' && ty == ty'
+
+  public export
+  Eq IField where
+    MkIField _ c pi n e == MkIField _ c' pi' n' e' =
+      c == c' && pi == pi' && n == n' && e == e'
+
+  public export
+  Eq Record where
+    MkRecord _ n ps cn fs == MkRecord _ n' ps' cn' fs' =
+      n == n' && ps == ps' && cn == cn' && fs == fs'
+
+  public export
+  Eq Decl where
+    IClaim _ c v fos t == IClaim _ c' v' fos' t' =
+      c == c' && v == v' && fos == fos' && t == t'
+    IData _ v t d == IData _ v' t' d' =
+      v == v' && t == t' && d == d'
+    IDef _ n cs == IDef _ n' cs' =
+      n == n' && cs == cs'
+    IParameters _ ps ds == IParameters _ ps' ds' =
+      ps == ps' && (assert_total $ ds == ds')
+    IRecord _ ns v tr r == IRecord _ ns' v' tr' r' =
+      ns == ns' && v == v' && tr == tr' && r == r'
+    INamespace _ ns ds == INamespace _ ns' ds' =
+      ns == ns' && (assert_total $ ds == ds')
+    ITransform _ n f t == ITransform _ n' f' t' =
+      n == n' && f == f' && t == t'
+    IRunElabDecl _ e == IRunElabDecl _ e' = e == e'
+    ILog p == ILog p' = p == p'
+    IBuiltin _ t n == IBuiltin _ t' n' =
+      t == t' && n == n'
+    _ == _ = False
+
+  public export
   Eq TTImp where
     IVar _ v == IVar _ v' = v == v'
     IPi _ c i n a r == IPi _ c' i' n' a' r' =
@@ -358,6 +434,8 @@ mutual
       c == c' && n == n' && ty == ty' && val == val' && s == s'
     ICase _ t ty cs == ICase _ t' ty' cs'
       = t == t' && ty == ty' && (assert_total $ cs == cs')
+    ILocal _ ds e == ILocal _ ds' e' =
+      (assert_total $ ds == ds') && e == e'
     IUpdate _ fs t == IUpdate _ fs' t' =
       (assert_total $ fs == fs') && t == t'
 
@@ -387,6 +465,7 @@ mutual
 
     IQuote _ tm == IQuote _ tm' = tm == tm'
     IQuoteName _ n == IQuoteName _ n' = n == n'
+    IQuoteDecl _ ds == IQuoteDecl _ ds' = assert_total $ ds == ds'
     IUnquote _ tm == IUnquote _ tm' = tm == tm'
 
     IPrimVal _ c == IPrimVal _ c' = c == c'

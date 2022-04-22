@@ -182,3 +182,24 @@ data Visibility = Private | Export | Public
 
 public export
 data BuiltinType = BuiltinNatural | NaturalToInteger | IntegerToNatural
+
+public export
+Eq TotalReq where
+  Total        == Total        = True
+  CoveringOnly == CoveringOnly = True
+  PartialOK    == PartialOK    = True
+  _ == _ = False
+
+public export
+Eq Visibility where
+  Private == Private = True
+  Export  == Export  = True
+  Public  == Public  = True
+  _ == _ = False
+
+public export
+Eq BuiltinType where
+  BuiltinNatural   == BuiltinNatural = True
+  NaturalToInteger == NaturalToInteger = True
+  IntegerToNatural == IntegerToNatural = True
+  _ == _ = False
