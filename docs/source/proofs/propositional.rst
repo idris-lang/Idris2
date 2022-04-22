@@ -80,16 +80,16 @@ a little tricky to use because in general the implicit argument ``prop``
 can be hard to infer for the machine, so Idris provides a high level
 syntax which calculates the property and applies ``replace``.
 
-Example: again we supply ``p1`` which is a proof that ``x=2`` and the equality
-``x=y`` then we get a proof that ``y=2``.
+Example: again we supply ``p1 x`` which is a proof that ``x=2`` and the equality
+``y=x`` then we get a proof that ``y=2``.
 
 .. code-block:: idris
 
    p1: Nat -> Type
    p1 x = (x=2)
 
-   testRewrite2: (x=y) -> (p1 y) -> (p1 x)
-   testRewrite2 a b = rewrite a in b
+   testRewrite: (y=x) -> (p1 x) -> (p1 y)
+   testRewrite a b = rewrite a in b
 
 We can think of ``rewrite`` as working in this way:
 
@@ -98,6 +98,11 @@ We can think of ``rewrite`` as working in this way:
  * Replaces all occurrences of ``x`` with ``y`` in ``prop``.
 
 That is, we are doing a substitution.
+
+Notice that here we need to supply reverse equality, i.e. ``y=x`` instead of ``x=y``.
+This is because ``rewrite`` performs the substitution of left part of equality to the right part
+and this substitution is done in the *return type*.
+Thus, here in the return type ``y=2`` we need to apply ``y=x`` in order to match the type of the argument ``x=2``.
 
 Symmetry and Transitivity
 =========================
