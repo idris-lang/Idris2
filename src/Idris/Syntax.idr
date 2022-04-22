@@ -138,7 +138,7 @@ mutual
        PUnifyLog : FC -> LogLevel -> PTerm' nm -> PTerm' nm
 
        -- with-disambiguation
-       PWithUnambigNames : FC -> List Name -> PTerm' nm -> PTerm' nm
+       PWithUnambigNames : FC -> List (FC, Name) -> PTerm' nm -> PTerm' nm
 
   export
   getPTermLoc : PTerm' nm -> FC
