@@ -32,8 +32,9 @@ There are a few rules governing when this optimization occures:
 
 - The data type must have 2 constructors
 
-  - One must have no arguments
-  - One must have exactly 1 argument (called ``Succ``)
+  - After erasure of runtime irrelevant arguments
+    + One must have no arguments
+    + One must have exactly 1 argument (called ``Succ``)
 
 - The type of the argument to ``Succ`` must have the same type constructor as the parent type.
   This means indexed data types, like ``Fin``, can be optimised.
