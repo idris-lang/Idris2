@@ -29,3 +29,35 @@ function support_system_directory_removeDir(d){
     return 1
   }
 }
+
+function support_system_directory_openDir(d) {
+  try{
+    return support_system_directory_fs.opendirSync(d)
+  }catch(e){
+    process.__lasterr = e
+    return null
+  }
+}
+
+function support_system_directory_closeDir(d) {
+  try{
+    d.closeSync()
+  }catch(e){
+    process.__lasterr = e
+    return null
+  }
+}
+
+function support_system_directory_dirEntry(d) {
+  try{
+    const dir = d.readSync()
+    if (dir == null) {
+      return null
+    } else {
+      return dir.name
+    }
+  }catch(e){
+    process.__lasterr = e
+    return null
+  }
+}
