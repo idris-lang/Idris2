@@ -13,6 +13,7 @@ import public Core.TT
 
 import Libraries.Utils.Binary
 import Libraries.Utils.Scheme
+import Libraries.Text.PrettyPrint.Prettyprinter
 
 import Data.Either
 import Data.Fin
@@ -1137,7 +1138,7 @@ showSimilarNames ns nm str kept
     let root = nameRoot nm
     let True = str == root
       | _ => pure (root ++ adj)
-    let full = show nm
+    let full = show (pretty {ann = ()} nm)
     let True = (str == full || show target == full) && not priv
       | _ => pure (full ++ adj)
     Nothing
@@ -2382,8 +2383,8 @@ withLogLevel l comp = do
   pure r
 
 export
-setLogTimings : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
-setLogTimings b = update Ctxt { options->session->logTimings := b }
+setLogTimings : {auto c : Ref Ctxt Defs} -> Nat -> Core ()
+setLogTimings n = update Ctxt { options->session->logTimings := Just n }
 
 export
 setDebugElabCheck : {auto c : Ref Ctxt Defs} -> Bool -> Core ()

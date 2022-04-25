@@ -80,7 +80,7 @@ processDecls decls
     = do xs <- concat <$> traverse processDecl decls
          Nothing <- checkDelayedHoles
              | Just err => pure (if null xs then [err] else xs)
-         errs <- logTime ("+++ Totality check overall") getTotalityErrors
+         errs <- logTime 3 ("Totality check overall") getTotalityErrors
          pure (xs ++ errs)
 
 readModule : {auto c : Ref Ctxt Defs} ->
@@ -302,12 +302,12 @@ processMod sourceFileName ttcFileName msg sourcecode origin
         let ns = moduleNS moduleHeader
 
         -- Add an implicit prelude import
-        let imports =
+        let allImports =
           if (session.noprelude || moduleNS moduleHeader == nsAsModuleIdent preludeNS)
              then imports moduleHeader
              else addPrelude $ imports moduleHeader
 
-        importMetas <- traverse readImportMeta imports
+        importMetas <- traverse readImportMeta allImports
         let importInterfaceHashes = snd <$> importMetas
 
         defs <- get Ctxt
@@ -332,20 +332,24 @@ processMod sourceFileName ttcFileName msg sourcecode origin
            else -- needs rebuilding
              do iputStrLn msg
                 Right (ws, MkState decor hnames, mod) <-
-                    logTime ("++ Parsing " ++ sourceFileName) $
+                    logTime 2 ("Parsing " ++ sourceFileName) $
                       pure $ runParser (PhysicalIdrSrc origin)
                                        (isLitFile sourceFileName)
                                        sourcecode
                                        (do p <- prog (PhysicalIdrSrc origin); eoi; pure p)
                   | Left err => pure (Just [err])
                 traverse_ recordWarning ws
-                -- save the doc string for the current module
+
+                -- save the doc info for the current module
                 log "doc.module" 10 $ unlines
-                  [ "Recording doc"
-                  , documentation mod
-                  , "for module " ++ show (moduleNS mod)
+                  [ "Recording doc", documentation moduleHeader
+                  , "and imports " ++ show (imports moduleHeader)
+                  , "for module " ++ show (moduleNS moduleHeader)
                   ]
-                addModDocString (moduleNS mod) (documentation mod)
+                addModDocInfo
+                  (moduleNS moduleHeader)
+                  (documentation moduleHeader)
+                  (filter reexport $ imports moduleHeader)
 
                 addSemanticDecorations decor
                 update Syn { holeNames := hnames }
@@ -364,20 +368,20 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                 -- a phase before this which builds the dependency graph
                 -- (also that we only build child dependencies if rebuilding
                 -- changes the interface - will need to store a hash in .ttc!)
-                logTime "++ Reading imports" $
-                   traverse_ (readImport False) imports
+                logTime 2 "Reading imports" $
+                   traverse_ (readImport False) allImports
 
                 -- Before we process the source, make sure the "hide_everywhere"
                 -- names are set to private (TODO, maybe if we want this?)
 --                 defs <- get Ctxt
 --                 traverse (\x => setVisibility emptyFC x Private) (hiddenNames defs)
                 setNS (miAsNamespace ns)
-                errs <- logTime "++ Processing decls" $
+                errs <- logTime 2 "Processing decls" $
                             processDecls (decls mod)
 --                 coreLift $ gc
 
                 when (isNil errs) $
-                   logTime "++ Compile defs" $ compileAndInlineAll
+                   logTime 2 "Compile defs" $ compileAndInlineAll
 
                 -- Save the import hashes for the imports we just read.
                 -- If they haven't changed next time, and the source
@@ -403,7 +407,7 @@ process msgPrefix buildMsg sourceFileName ident
     = do Right res <- coreLift (readFile sourceFileName)
                | Left err => pure [FileErr sourceFileName err]
          catch (do ttcFileName <- getTTCFileName sourceFileName "ttc"
-                   Just errs <- logTime ("+ Elaborating " ++ sourceFileName) $
+                   Just errs <- logTime 1 ("Elaborating " ++ sourceFileName) $
                                    processMod sourceFileName ttcFileName
                                               (msgPrefix <++> pretty "Building" <++> buildMsg)
                                               res ident

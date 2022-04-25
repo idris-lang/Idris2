@@ -180,9 +180,8 @@ pragma = annotate Pragma
 
 export
 prettyRig : RigCount -> Doc IdrisSyntax
-prettyRig = keyword
-          . elimSemi (pretty '0' <+> space)
-                     (pretty '1' <+> space)
+prettyRig = elimSemi (keyword (pretty '0') <+> space)
+                     (keyword (pretty '1') <+> space)
                      (const emptyDoc)
 
 mutual
@@ -473,3 +472,11 @@ renderWithDecorations f doc =
   do (str, mspans) <- Render.renderWithSpans doc
      let spans = mapMaybe (traverse f) mspans
      pure (str, spans)
+
+export
+prettyImport : Import -> Doc IdrisSyntax
+prettyImport (MkImport loc reexport path nameAs)
+  = keyword "import"
+    <+> ifThenElse reexport (space <+> keyword "public") ""
+    <++> pretty path
+    <+> ifThenElse (miAsNamespace path /= nameAs) (space <+> keyword "as" <++> pretty nameAs) ""

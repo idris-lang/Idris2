@@ -251,9 +251,9 @@ checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
 
          pure result
   where
-    resolveNames : FC -> List Name -> Core (UserNameMap (Name, Int, GlobalDef))
+    resolveNames : FC -> List (FC, Name) -> Core (UserNameMap (Name, Int, GlobalDef))
     resolveNames fc [] = pure empty
-    resolveNames fc (n :: ns) =
+    resolveNames fc ((nfc, n) :: ns) =
       case userNameRoot n of
         -- should never happen
         Nothing => throw $ InternalError $ "non-UN in \"with\" LHS: " ++ show n
@@ -263,7 +263,14 @@ checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
           ctxt <- get Ctxt
           rns <- lookupCtxtName n (gamma ctxt)
           case rns of
-            [rn] => insert nRoot rn <$> resolveNames fc ns
+            [rn@(_, _, def)] =>
+                do whenJust (isConcreteFC nfc) $ \nfc => do
+                     let nt = fromMaybe Func (defNameType $ definition def)
+                     let decor = nameDecoration def.fullname nt
+                     log "ide-mode.highlight" 7
+                       $ "`with' unambiguous name is adding " ++ show decor ++ ": " ++ show def.fullname
+                     addSemanticDecorations [(nfc, decor, Just def.fullname)]
+                   insert nRoot rn <$> resolveNames fc ns
             rns  => ambiguousName fc n (map fst rns)
 
 -- Declared in TTImp.Elab.Check

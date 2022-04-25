@@ -65,7 +65,7 @@ h1 {
   font-family: "Trebuchet MS", Helvetica, sans-serif;
 }
 
-#moduleHeader {
+#module-header {
   border-bottom: 1px solid #bbb;
   padding-bottom: 2px;
 }
@@ -201,12 +201,11 @@ a.type {
 }
 
 .keyword {
-  color: inherit;
+  color: #999;
 }
 
 .boundvar {
-  color: #bf30bf; /* Too much colour makes it hard to differ the rest of the colours */
-  color: inherit;
+  color: #bf30bf;
 }
 
 .boundvar.implicit {

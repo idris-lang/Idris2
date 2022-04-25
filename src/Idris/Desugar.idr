@@ -19,6 +19,7 @@ import Idris.Error
 import Idris.Pretty
 import Idris.REPL.Opts
 import Idris.Syntax
+import Idris.Syntax.Builtin
 
 import Idris.Elab.Implementation
 import Idris.Elab.Interface
@@ -84,6 +85,7 @@ extendSyn newsyn
                     prefixes $= mergeLeft (prefixes newsyn),
                     ifaces $= merge (ifaces newsyn),
                     modDocstrings $= mergeLeft (modDocstrings newsyn),
+                    modDocexports $= mergeLeft (modDocexports newsyn),
                     defDocstrings $= merge (defDocstrings newsyn),
                     bracketholes $= ((bracketholes newsyn) ++) }
                   syn)
@@ -168,18 +170,6 @@ idiomise fc mns fn
         pur = UN $ Basic "pure"
         nm  = maybe pur (`NS` pur) mns
      in IApp fc (IVar fc nm) fn
-
-pairname : Name
-pairname = NS builtinNS (UN $ Basic "Pair")
-
-mkpairname : Name
-mkpairname = NS builtinNS (UN $ Basic "MkPair")
-
-dpairname : Name
-dpairname = NS dpairNS (UN $ Basic "DPair")
-
-mkdpairname : Name
-mkdpairname = NS dpairNS (UN $ Basic "MkDPair")
 
 data Bang : Type where
 
@@ -531,11 +521,11 @@ mutual
 
       strInterpolate : List RawImp -> RawImp
       strInterpolate []
-        = IVar EmptyFC (NS preludeNS $ UN $ Basic "Nil")
+        = IVar EmptyFC nilName
       strInterpolate (x :: xs)
         = let xFC = virtualiseFC (getFC x) in
-          apply (IVar xFC (NS preludeNS $ UN $ Basic "::"))
-          [ IApp xFC (IVar EmptyFC (UN $ Basic "interpolate"))
+          apply (IVar xFC consName)
+          [ IApp xFC (IVar EmptyFC interpolateName)
                      x
           , strInterpolate xs
           ]
@@ -666,8 +656,8 @@ mutual
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
            pure (IAlternative loc FirstSuccess
-                     [apply (IVar eqFC (UN $ Basic "===")) [l', r'],
-                      apply (IVar eqFC (UN $ Basic "~=~")) [l', r']])
+                     [apply (IVar eqFC eqName) [l', r'],
+                      apply (IVar eqFC heqName) [l', r']])
   desugarTree side ps (Infix loc _ (UN $ Basic "$") l r) -- special case since '$' is special syntax
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
