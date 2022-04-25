@@ -1469,6 +1469,9 @@ fnDirectOpt fname
   <|> do decoratedPragma fname "foreign"
          cs <- block (expr pdef fname)
          pure $ PForeign cs
+  <|> do decoratedPragma fname "export"
+         cs <- block (expr pdef fname)
+         pure $ PForeignExport cs
   <|> do decoratedPragma fname "nomangle"
          commit
          ns <- many (strBegin *> strLit <* strEnd)

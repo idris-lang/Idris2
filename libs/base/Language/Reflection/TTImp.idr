@@ -109,6 +109,8 @@ mutual
        ExternFn : FnOpt
        -- Defined externally, list calling conventions
        ForeignFn : List TTImp -> FnOpt
+       -- Mark for export to a foreign language, list calling conventions
+       ForeignExport : List TTImp -> FnOpt
        -- assume safe to cancel arguments in unification
        Invertible : FnOpt
        Totality : TotalReq -> FnOpt

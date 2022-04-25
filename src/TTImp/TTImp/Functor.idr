@@ -120,6 +120,7 @@ mutual
     map f (GlobalHint b) = GlobalHint b
     map f ExternFn = ExternFn
     map f (ForeignFn ts) = ForeignFn (map (map f) ts)
+    map f (ForeignExport ts) = ForeignExport (map (map f) ts)
     map f Invertible = Invertible
     map f (Totality tot) = Totality tot
     map f Macro = Macro

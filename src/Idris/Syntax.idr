@@ -424,6 +424,7 @@ mutual
   data PFnOpt' : Type -> Type where
        IFnOpt : FnOpt' nm -> PFnOpt' nm
        PForeign : List (PTerm' nm) -> PFnOpt' nm
+       PForeignExport : List (PTerm' nm) -> PFnOpt' nm
 
   public export
   PDecl : Type

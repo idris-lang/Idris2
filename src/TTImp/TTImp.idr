@@ -228,6 +228,8 @@ mutual
        ExternFn : FnOpt' nm
        -- Defined externally, list calling conventions
        ForeignFn : List (RawImp' nm) -> FnOpt' nm
+       -- Mark for export to a foreign language, list calling conventions
+       ForeignExport : List (RawImp' nm) -> FnOpt' nm
        -- assume safe to cancel arguments in unification
        Invertible : FnOpt' nm
        Totality : TotalReq -> FnOpt' nm
@@ -256,6 +258,7 @@ mutual
     show (GlobalHint t) = "%globalhint " ++ show t
     show ExternFn = "%extern"
     show (ForeignFn cs) = "%foreign " ++ showSep " " (map show cs)
+    show (ForeignExport cs) = "%export " ++ showSep " " (map show cs)
     show Invertible = "%invertible"
     show (Totality Total) = "total"
     show (Totality CoveringOnly) = "covering"
@@ -281,6 +284,7 @@ mutual
     (GlobalHint x) == (GlobalHint y) = x == y
     ExternFn == ExternFn = True
     (ForeignFn xs) == (ForeignFn ys) = True -- xs == ys
+    (ForeignExport xs) == (ForeignExport ys) = True -- xs == ys
     Invertible == Invertible = True
     (Totality tot_lhs) == (Totality tot_rhs) = tot_lhs == tot_rhs
     Macro == Macro = True
@@ -1301,6 +1305,7 @@ mutual
     toBuf b (GlobalHint t) = do tag 2; toBuf b t
     toBuf b ExternFn = tag 3
     toBuf b (ForeignFn cs) = do tag 4; toBuf b cs
+    toBuf b (ForeignExport cs) = do tag 15; toBuf b cs
     toBuf b Invertible = tag 5
     toBuf b (Totality Total) = tag 6
     toBuf b (Totality CoveringOnly) = tag 7
@@ -1326,6 +1331,7 @@ mutual
                12 => pure NoInline
                13 => do name <- fromBuf b; pure (NoMangle name)
                14 => pure Deprecate
+               15 => do cs <- fromBuf b; pure (ForeignExport cs)
                _ => corrupt "FnOpt"
 
   export
