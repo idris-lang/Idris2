@@ -365,6 +365,7 @@ mutual
     GlobalHint b == GlobalHint b' = b == b'
     ExternFn == ExternFn = True
     ForeignFn es == ForeignFn es' = es == es'
+    ForeignExport es == ForeignExport es' = es == es'
     Invertible == Invertible = True
     Totality tr == Totality tr' = tr == tr'
     Macro == Macro = True
