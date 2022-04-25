@@ -302,6 +302,9 @@ mutual
                (UN (Basic "ForeignFn"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (ForeignFn x')
+               (UN (Basic "ForeignExport"), [(_, x)])
+                    => do x' <- reify defs !(evalClosure defs x)
+                          pure (ForeignExport x')
                (UN (Basic "Invertible"), _) => pure Invertible
                (UN (Basic "Totality"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
@@ -687,6 +690,9 @@ mutual
     reflect fc defs lhs env (ForeignFn x)
         = do x' <- reflect fc defs lhs env x
              appCon fc defs (reflectionttimp "ForeignFn") [x']
+    reflect fc defs lhs env (ForeignExport x)
+        = do x' <- reflect fc defs lhs env x
+             appCon fc defs (reflectionttimp "ForeignExport") [x']
     reflect fc defs lhs env Invertible = getCon fc defs (reflectionttimp "Invertible")
     reflect fc defs lhs env (Totality r)
         = do r' <- reflect fc defs lhs env r
