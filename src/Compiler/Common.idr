@@ -78,6 +78,10 @@ record CompileData where
   constructor MkCompileData
   mainExpr : CExp [] -- main expression to execute. This also appears in
                      -- the definitions below as MN "__mainExpression" 0
+                     -- For incremental compilation and for compiling exported
+                     -- names only, this can be set to 'erased'.
+  exported : List (Name, String) -- names to be made accessible to the foreign
+                     -- and what they should be called in that language
   namedDefs : List (Name, FC, NamedDef)
   lambdaLifted : List (Name, LiftedDef)
        -- ^ lambda lifted definitions, if required. Only the top level names
@@ -231,13 +235,27 @@ nonErased n
               | Nothing => pure True
          pure (multiplicity gdef /= erased)
 
+-- Get the names of the functions we're exporting to the given back end, and
+-- the corresponding name it will have when exported.
+getExported : String -> NameMap (List (String, String)) -> List (Name, String)
+getExported backend all
+    = mapMaybe isExp (toList all)
+  where
+    -- If the name/convention pair matches the backend, keep the name
+    isExp : (Name, List (String, String)) -> Maybe (Name, String)
+    isExp (n, cs)
+        = do fn <- lookup backend cs
+             pure (n, fn)
+
 -- Find all the names which need compiling, from a given expression, and compile
 -- them to CExp form (and update that in the Defs).
 -- Return the names, the type tags, and a compiled version of the expression
 export
-getCompileData : {auto c : Ref Ctxt Defs} -> (doLazyAnnots : Bool) ->
-                 UsePhase -> ClosedTerm -> Core CompileData
-getCompileData doLazyAnnots phase_in tm_in
+getCompileDataWith : {auto c : Ref Ctxt Defs} ->
+                     Maybe String -> -- which FFI, if compiling foreign exports
+                     (doLazyAnnots : Bool) ->
+                     UsePhase -> ClosedTerm -> Core CompileData
+getCompileDataWith exports doLazyAnnots phase_in tm_in
     = do log "compile.execute" 10 $ "Getting compiled data for: " ++ show tm_in
          sopts <- getSession
          let phase = foldl {t=List} (flip $ maybe id max) phase_in $
@@ -266,10 +284,15 @@ getCompileData doLazyAnnots phase_in tm_in
                                         , namedcompexpr := Just (forgetDef cexp)
                                         } gdef)
 
+         defs <- get Ctxt
          let refs  = getRefs (Resolved (-1)) tm_in
-         let ns = mergeWith const metas refs
+         let exported
+                 = maybe []
+                         (\backend => getExported backend (foreignExports defs))
+                         exports
+         let ns = keys (mergeWith const metas refs) ++ map fst exported
          log "compile.execute" 70 $
-           "Found names: " ++ concat (intersperse ", " $ map show $ keys ns)
+           "Found names: " ++ concat (intersperse ", " $ map show $ ns)
          tm <- toFullNames tm_in
          natHackNames' <- traverse toResolvedNames natHackNames
          noMangleNames <- getAllNoMangle
@@ -279,7 +302,7 @@ getCompileData doLazyAnnots phase_in tm_in
          arr <- coreLift $ newArray asize
 
          defs <- get Ctxt
-         logTime 2 "Get names" $ getAllDesc (natHackNames' ++ noMangleNames ++ keys ns) arr defs
+         logTime 2 "Get names" $ getAllDesc (natHackNames' ++ noMangleNames ++ ns) arr defs
 
          let entries = catMaybes !(coreLift (toList arr))
          let allNs = map (Resolved . fst) entries
@@ -342,7 +365,16 @@ getCompileData doLazyAnnots phase_in tm_in
          -- it was. Back ends shouldn't look at the global context, because
          -- it'll have to decode the definitions again.
          traverse_ replaceEntry entries
-         pure (MkCompileData csetm namedDefs lifted anf vmcode)
+         pure (MkCompileData csetm exported namedDefs lifted anf vmcode)
+
+-- Find all the names which need compiling, from a given expression, and compile
+-- them to CExp form (and update that in the Defs).
+-- Return the names, the type tags, and a compiled version of the expression
+export
+getCompileData : {auto c : Ref Ctxt Defs} ->
+                 (doLazyAnnots : Bool) ->
+                 UsePhase -> ClosedTerm -> Core CompileData
+getCompileData = getCompileDataWith Nothing
 
 export
 compileTerm : {auto c : Ref Ctxt Defs} ->
@@ -359,7 +391,8 @@ compDef n = do
   pure $ Just (n, location def, cexpr)
 
 export
-getIncCompileData : {auto c : Ref Ctxt Defs} -> (doLazyAnnots : Bool) ->
+getIncCompileData : {auto c : Ref Ctxt Defs} ->
+                    (doLazyAnnots : Bool) ->
                     UsePhase -> Core CompileData
 getIncCompileData doLazyAnnots phase
     = do defs <- get Ctxt
@@ -383,9 +416,10 @@ getIncCompileData doLazyAnnots phase
          vmcode <- if phase >= VMCode
                       then logTime 2 "Get VM Code" $ pure (allDefs anf)
                       else pure []
-         pure (MkCompileData (CErased emptyFC) namedDefs lifted anf vmcode)
+         pure (MkCompileData (CErased emptyFC) [] namedDefs lifted anf vmcode)
 
 -- Some things missing from Prelude.File
+
 
 ||| check to see if a given file exists
 export

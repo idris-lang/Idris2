@@ -293,6 +293,7 @@ mapPTermM f = goPTerm where
     goPFnOpt : PFnOpt' nm -> Core (PFnOpt' nm)
     goPFnOpt o@(IFnOpt _) = pure o
     goPFnOpt (PForeign ts) = PForeign <$> goPTerms ts
+    goPFnOpt (PForeignExport ts) = PForeignExport <$> goPTerms ts
 
     -- Traversable stuff. Inlined for termination checking.
 
@@ -555,6 +556,7 @@ mapPTerm f = goPTerm where
     goPFnOpt : PFnOpt' nm -> PFnOpt' nm
     goPFnOpt o@(IFnOpt _) = o
     goPFnOpt (PForeign ts) = PForeign $ goPTerm <$> ts
+    goPFnOpt (PForeignExport ts) = PForeignExport $ goPTerm <$> ts
 
     goPairedPTerms : List (x, PTerm' nm) -> List (x, PTerm' nm)
     goPairedPTerms [] = []

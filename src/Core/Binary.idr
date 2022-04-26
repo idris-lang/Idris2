@@ -29,7 +29,7 @@ import public Libraries.Utils.Binary
 ||| version number if you're changing the version more than once in the same day.
 export
 ttcVersion : Int
-ttcVersion = 20220413 * 100 + 0
+ttcVersion = 20220425 * 100 + 0
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -58,6 +58,7 @@ record TTCFile extra where
   namedirectives : List (Name, List String)
   cgdirectives : List (CG, String)
   transforms : List (Name, Transform)
+  foreignExports : List (Name, (List (String, String)))
   extraData : extra
 
 HasNames a => HasNames (List a) where
@@ -79,7 +80,7 @@ HasNames (Name, Bool) where
   full c (n, b) = pure (!(full c n), b)
   resolved c (n, b) = pure (!(resolved c n), b)
 
-HasNames (Name, List String) where
+HasNames (Name, List a) where
   full c (n, b) = pure (!(full c n), b)
   resolved c (n, b) = pure (!(resolved c n), b)
 
@@ -98,7 +99,7 @@ HasNames e => HasNames (TTCFile e) where
                       imported nextVar currentNS nestedNS
                       pairnames rewritenames primnames
                       namedirectives cgdirectives trans
-                      extra)
+                      fexp extra)
       = pure $ MkTTCFile version totalReq sourceHash ifaceHash iHashes incData
                          context userHoles
                          !(traverse (full gam) autoHints)
@@ -110,6 +111,7 @@ HasNames e => HasNames (TTCFile e) where
                          !(full gam namedirectives)
                          cgdirectives
                          !(full gam trans)
+                         !(full gam fexp)
                          !(full gam extra)
     where
       fullPair : Context -> Maybe PairNames -> Core (Maybe PairNames)
@@ -136,7 +138,7 @@ HasNames e => HasNames (TTCFile e) where
                       imported nextVar currentNS nestedNS
                       pairnames rewritenames primnames
                       namedirectives cgdirectives trans
-                      extra)
+                      fexp extra)
       = pure $ MkTTCFile version totalReq sourceHash ifaceHash iHashes incData
                          context userHoles
                          !(traverse (resolved gam) autoHints)
@@ -148,6 +150,7 @@ HasNames e => HasNames (TTCFile e) where
                          !(resolved gam namedirectives)
                          cgdirectives
                          !(resolved gam trans)
+                         !(resolved gam fexp)
                          !(resolved gam extra)
     where
       resolvedPair : Context -> Maybe PairNames -> Core (Maybe PairNames)
@@ -196,6 +199,7 @@ writeTTCFile b file_in
            toBuf b (namedirectives file)
            toBuf b (cgdirectives file)
            toBuf b (transforms file)
+           toBuf b (foreignExports file)
 
 readTTCFile : TTC extra =>
               {auto c : Ref Ctxt Defs} ->
@@ -221,7 +225,7 @@ readTTCFile readall file as b
                                    0 (mkNamespace "") [] Nothing
                                    Nothing
                                    (MkPrimNs Nothing Nothing Nothing Nothing)
-                                   [] [] [] ex)
+                                   [] [] [] [] ex)
               else do
                  defs <- fromBuf b
                  uholes <- fromBuf b
@@ -236,11 +240,12 @@ readTTCFile readall file as b
                  nds <- fromBuf b
                  cgds <- fromBuf b
                  trans <- fromBuf b
+                 fexp <- fromBuf b
                  pure (MkTTCFile ver totalReq
                                  sourceFileHash ifaceHash importHashes incData
                                  (map (replaceNS cns) defs) uholes
                                  autohs typehs imp nextv cns nns
-                                 pns rws prims nds cgds trans ex)
+                                 pns rws prims nds cgds trans fexp ex)
   where
     -- We don't store full names in 'defs' - we remove the namespace if it's
     -- the same as the current namespace. So, this puts it back.
@@ -306,6 +311,7 @@ writeToTTC extradata sourceFileName ttcFileName
                               (NameMap.toList (namedirectives defs))
                               (cgdirectives defs)
                               (saveTransforms defs)
+                              (NameMap.toList (foreignExports defs))
                               extradata)
 
          Right ok <- coreLift $ writeToFile ttcFileName !(get Bin)
@@ -405,6 +411,14 @@ updateTransforms ((n, t) :: ts)
                   Just ts =>
                      put Ctxt ({ transforms $= insert n (t :: ts) } defs)
 
+export
+updateFExports : {auto c : Ref Ctxt Defs} ->
+                 List (Name, (List (String, String))) -> Core ()
+updateFExports [] = pure ()
+updateFExports ((n, conv) :: ns)
+    = do defs <- get Ctxt
+         put Ctxt ({ foreignExports $= insert n conv } defs)
+         updateFExports ns
 
 getNSas : (String, (ModuleIdent, Bool, Namespace)) ->
           (ModuleIdent, Namespace)
@@ -471,6 +485,7 @@ readFromTTC nestedns loc reexp fname modNS importAs
                     updateNameDirectives (reverse (namedirectives ttc))
                     updateCGDirectives (cgdirectives ttc)
                     updateTransforms (transforms ttc)
+                    updateFExports (foreignExports ttc)
 
                when (not reexp) clearSavedHints
                resetFirstEntry

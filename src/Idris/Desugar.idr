@@ -836,6 +836,9 @@ mutual
   desugarFnOpt ps (PForeign tms)
       = do tms' <- traverse (desugar AnyExpr ps) tms
            pure (ForeignFn tms')
+  desugarFnOpt ps (PForeignExport tms)
+      = do tms' <- traverse (desugar AnyExpr ps) tms
+           pure (ForeignExport tms')
 
   -- Given a high level declaration, return a list of TTImp declarations
   -- which process it, and update any necessary state on the way.

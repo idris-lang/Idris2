@@ -138,7 +138,7 @@ mutual
        PUnifyLog : FC -> LogLevel -> PTerm' nm -> PTerm' nm
 
        -- with-disambiguation
-       PWithUnambigNames : FC -> List Name -> PTerm' nm -> PTerm' nm
+       PWithUnambigNames : FC -> List (FC, Name) -> PTerm' nm -> PTerm' nm
 
   export
   getPTermLoc : PTerm' nm -> FC
@@ -424,6 +424,7 @@ mutual
   data PFnOpt' : Type -> Type where
        IFnOpt : FnOpt' nm -> PFnOpt' nm
        PForeign : List (PTerm' nm) -> PFnOpt' nm
+       PForeignExport : List (PTerm' nm) -> PFnOpt' nm
 
   public export
   PDecl : Type

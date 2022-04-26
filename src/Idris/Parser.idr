@@ -276,18 +276,18 @@ mutual
            (ns, rhs) <- pure b.val
            pure (PWithUnambigNames (boundToFC fname b) ns rhs)
     where
-      singleName : Rule (List Name)
+      singleName : Rule (List (FC, Name))
       singleName = do
-        n <- name
-        pure [n]
+        n <- bounds name
+        pure [(boundToFC fname n, n.val)]
 
-      nameList : Rule (List Name)
+      nameList : Rule (List (FC, Name))
       nameList = do
         decoratedSymbol fname "["
         commit
-        ns <- sepBy1 (decoratedSymbol fname ",") name
+        ns <- sepBy1 (decoratedSymbol fname ",") (bounds name)
         decoratedSymbol fname "]"
-        pure (forget ns)
+        pure (map (\ n => (boundToFC fname n, n.val)) $ forget ns)
 
   opExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   opExpr q fname indents
@@ -1469,6 +1469,9 @@ fnDirectOpt fname
   <|> do decoratedPragma fname "foreign"
          cs <- block (expr pdef fname)
          pure $ PForeign cs
+  <|> do decoratedPragma fname "export"
+         cs <- block (expr pdef fname)
+         pure $ PForeignExport cs
   <|> do decoratedPragma fname "nomangle"
          commit
          ns <- many (strBegin *> strLit <* strEnd)

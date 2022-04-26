@@ -117,6 +117,7 @@ getBits32 buf offset
     = primIO (prim__getBits32 buf offset)
 
 %foreign "scheme:blodwen-buffer-setbits64"
+         "node:lambda:(buf,offset,value)=>buf.writeBigUInt64LE(value, offset)"
 prim__setBits64 : Buffer -> Int -> Bits64 -> PrimIO ()
 
 export %inline
@@ -125,6 +126,7 @@ setBits64 buf offset val
     = primIO (prim__setBits64 buf offset val)
 
 %foreign "scheme:blodwen-buffer-getbits64"
+         "node:lambda:(buf,offset)=>buf.readBigUInt64LE(offset)"
 prim__getBits64 : Buffer -> (offset : Int) -> PrimIO Bits64
 
 export %inline
@@ -194,6 +196,7 @@ getDouble buf offset
 export
 %foreign "scheme:blodwen-stringbytelen"
          "C:strlen, libc 6"
+         "javascript:lambda:(string)=>new TextEncoder().encode(string).length"
 stringByteLength : String -> Int
 
 %foreign "scheme:blodwen-buffer-setstring"

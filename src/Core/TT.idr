@@ -441,6 +441,16 @@ data PiInfo t = Implicit | Explicit | AutoImplicit | DefImplicit t
 namespace PiInfo
 
   export
+  isExplicit : PiInfo t -> Bool
+  isExplicit Explicit = True
+  isExplicit _ = False
+
+  export
+  isAutoImplicit : PiInfo t -> Bool
+  isAutoImplicit AutoImplicit = True
+  isAutoImplicit _ = False
+
+  export
   isImplicit : PiInfo t -> Bool
   isImplicit Explicit = False
   isImplicit _ = True

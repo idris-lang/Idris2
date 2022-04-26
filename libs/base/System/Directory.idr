@@ -38,9 +38,11 @@ prim__changeDir : String -> PrimIO Int
 prim__createDir : String -> PrimIO Int
 
 %foreign supportC "idris2_openDir"
+         supportNode "openDir"
 prim__openDir : String -> PrimIO DirPtr
 
 %foreign supportC "idris2_closeDir"
+         supportNode "closeDir"
 prim__closeDir : DirPtr -> PrimIO ()
 
 %foreign supportC "idris2_removeDir"
@@ -48,6 +50,7 @@ prim__closeDir : DirPtr -> PrimIO ()
 prim__removeDir : String -> PrimIO ()
 
 %foreign supportC "idris2_nextDirEntry"
+         supportNode "dirEntry"
 prim__dirEntry : DirPtr -> PrimIO (Ptr String)
 
 ||| Data structure for managing the pointer to a directory.
