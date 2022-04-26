@@ -37,14 +37,6 @@ import Libraries.Data.String.Extra
 %hide Pretty.Syntax
 %hide List1.forget
 
-export
-Pretty Void CFType where
-  pretty = pretty . show
-
-export
-Pretty Void LazyReason where
-  pretty = pretty . show
-
 prettyFlag : ConInfo -> Doc ann
 prettyFlag DATACON = ""
 prettyFlag f = pretty0 (show f)
@@ -55,8 +47,6 @@ prettyCon x ci tag
          , braces ("tag =" <++> byShow tag)
          , prettyFlag ci
          ]
-
-%logging off
 
 mutual
   Pretty IdrisSyntax NamedCExp where
@@ -80,10 +70,10 @@ mutual
             sep (annotate (Fun p) (pretty0 p) :: map (prettyPrec App) xs)
     prettyPrec d (NmForce _  lr x)
         = parenthesise (d > Open) $
-            sep [keyword "Force", pretty0 lr, prettyPrec App x]
+            sep [keyword "Force", byShow lr, prettyPrec App x]
     prettyPrec d (NmDelay _ lr x)
         = parenthesise (d > Open) $
-            sep [keyword "Delay", pretty0 lr, prettyPrec App x]
+            sep [keyword "Delay", byShow lr, prettyPrec App x]
     prettyPrec d (NmConCase _ sc xs def)
         = parenthesise (d > Open) $ vcat [case_ <++> pretty sc <++> of_, indent 2 (prettyAlts xs def)]
     prettyPrec d (NmConstCase _ sc xs def)
@@ -126,9 +116,7 @@ Pretty IdrisDocAnn CDef where
   pretty (MkForeign ccs args ret)
     = vcat $ header "Foreign function" :: map (indent 2)
            [ "bindings:" <++> cast (prettyList ccs)
-           , "argument types:" <++> cast (prettyList args)
-           , "return type:" <++> cast (pretty ret)
+           , "argument types:" <++> byShow args
+           , "return type:" <++> byShow ret
            ]
   pretty (MkError exp) = "Error:" <++> prettyBy Syntax exp
-
-%logging off

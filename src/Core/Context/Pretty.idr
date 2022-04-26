@@ -69,7 +69,7 @@ Pretty IdrisDocAnn Def where
         , "in:" <++> pretty0 def ]
   pretty (Guess tm _ cs)
     = vcat $ header "Guess" :: map (indent 2)
-        [ "solution:" <++> pretty0 tm
+        [ "solution:" <++> byShow tm
         , "when:" <++> byShow cs ]
   pretty (UniverseLevel i)
     = "Universe level #" <+> byShow i

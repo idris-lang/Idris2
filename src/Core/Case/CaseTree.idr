@@ -147,10 +147,10 @@ mutual
   export
   {vars : _} -> Pretty IdrisSyntax (CaseTree vars) where
     pretty (Case {name} idx prf ty alts)
-      = case_ <++> pretty0 name <++> keyword ":" <++> pretty0 ty <++> of_
+      = case_ <++> pretty0 name <++> keyword ":" <++> byShow ty <++> of_
          <+> nest 2 (hardline
          <+> vsep (assert_total (map pretty alts)))
-    pretty (STerm i tm) = pretty0 tm
+    pretty (STerm i tm) = byShow tm
     pretty (Unmatched msg) = "Error:" <++> pretty0 msg
     pretty Impossible = "Impossible"
 
@@ -216,7 +216,7 @@ Pretty IdrisSyntax Pat where
     parenthesise (d > Open) $ pretty p <++> arrow <++> pretty q
   prettyPrec d (PDelay _ _ _ p) = parens ("Delay" <++> pretty p)
   prettyPrec d (PLoc _ n) = pretty0 n
-  prettyPrec d (PUnmatchable _ tm) = keyword "." <+> parens (pretty0 tm)
+  prettyPrec d (PUnmatchable _ tm) = keyword "." <+> parens (byShow tm)
 
 mutual
   insertCaseNames : SizeOf outer ->

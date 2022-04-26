@@ -256,10 +256,6 @@ Show LogLevel where
     _  => fastConcat (intersperse "." ps) ++ ":" ++ show n
 
 export
-Pretty Void LogLevel where
-  pretty = pretty . show
-
-export
 parseLogLevel : String -> Maybe LogLevel
 parseLogLevel str = do
   (c, n) <- let nns = split (== ':') str

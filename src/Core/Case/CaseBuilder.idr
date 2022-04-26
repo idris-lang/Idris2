@@ -260,7 +260,7 @@ covering
 {vars : _} -> {todo : _} -> Pretty IdrisSyntax (PatClause vars todo) where
 
   pretty (MkPatClause _ ps _ rhs)
-     = pretty ps <++> fatArrow <++> pretty0 rhs
+     = pretty ps <++> fatArrow <++> byShow rhs
 
 HasNames (PatClause vars todo) where
   full gam (MkPatClause ns nps i rhs)
@@ -1240,7 +1240,7 @@ simpleCase fc phase fn ty def clauses
                 do cs <- traverse (\ (c,d) => [| MkPair (toFullNames c) (toFullNames d) |]) clauses
                    pure $ "simpleCase: Clauses:\n" ++ show (
                      indent 2 $ vcat $ flip map cs $ \ lrhs =>
-                       pretty (fst lrhs) <++> pretty "=" <++> pretty (snd lrhs))
+                       byShow (fst lrhs) <++> pretty "=" <++> byShow (snd lrhs))
          ps <- traverse (toPatClause fc fn) clauses
          defs <- get Ctxt
          patCompile fc fn phase ty ps def
