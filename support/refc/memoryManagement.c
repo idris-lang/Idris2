@@ -288,20 +288,23 @@ void removeReference(Value *elem) {
     case GC_POINTER_TAG: {
       /* invoke freeing funtion if set */
       Value_Pointer *vPtr = (Value_Pointer *)elem;
+
       if (vPtr->onCollectFct) {
-        // calling the apply_closure machinery has the downside of introducing
-        // problems, since the closure would need a reference to this pointer
-        // which would then be double-freed when its reference gets removed.
-        // thus, we call the function directly.
-        // Value *closure1 = apply_closure((Value *)vPtr->onCollectFct, elem);
-        // apply_closure(closure1, NULL);
-        // removeReference(closure1);
-        fun_ptr_t f = vPtr->onCollectFct->f;
-        Value_Arglist *al = vPtr->onCollectFct->arglist;
-        al->args[0] = elem;
-        al->args[1] = NULL;
-        Value *retVal = f(al);
-        IDRIS2_REFC_VERIFY(!retVal, "onCollect returned value");
+        /* the next line is an ugly hack. We set the refCounter back to 1, so
+           that calling the freeing function does not run into the loop of
+           creating a new reference to the element, removing the reference, and
+           call the freeing function once again */
+        elem->header.refCounter = 1;
+        Value *closure1 = apply_closure((Value *)vPtr->onCollectFct, elem);
+        apply_closure(closure1, NULL);
+        removeReference(closure1);
+
+        // fun_ptr_t f = vPtr->onCollectFct->f;
+        // Value_Arglist *al = vPtr->onCollectFct->arglist;
+        // al->args[0] = elem;
+        // al->args[1] = NULL;
+        // Value *retVal = f(al);
+        // IDRIS2_REFC_VERIFY(!retVal, "onCollect returned value");
         removeReference((Value *)vPtr->onCollectFct);
       }
       break;

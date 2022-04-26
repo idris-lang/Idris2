@@ -2,6 +2,33 @@
 
 ## [Next version]
 
+### RefC Backend changes
+
+* Changes to the RefC garbage collector. Before, a pointer and a garbage
+collected pointer were two different objects, which makes the following
+code produce a segmentation fault
+
+```
+1  do
+2     ptr <- getExternalPointer
+3     gcptr <- onCollectAny ptr free
+4     putStrLn $ show ptr
+5     pure()
+```
+
+This used to because after the third line the references to gcptr are
+removed, which invokes the freeing function. The variable ptr in line 4
+therefore points to freed memory.
+
+Now, a each pointer has already has a reference to the garbage
+collecting function, and a call to onCollect/onCollectAny simply
+attaches the GC closure to it, but no new object is created.
+
+
+Thus, the freeing function will only be called once all references
+are removed.
+
+
 ### REPL changes
 
 * New experimental Scheme based evaluator (only available if compiled via

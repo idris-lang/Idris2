@@ -134,14 +134,14 @@ Value *arraySet(Value *erased, Value *_array, Value *_index, Value *v,
 
 Value *onCollect(Value *_erased, Value *_anyPtr, Value *_freeingFunction,
                  Value *_world) {
-  printf("onCollect called\n");
+  // printf("onCollect called\n");
   Value_Pointer *retVal = (Value_Pointer *)newReference(_anyPtr);
   retVal->onCollectFct = (Value_Closure *)newReference(_freeingFunction);
   return (Value *)retVal;
 }
 
 Value *onCollectAny(Value *_anyPtr, Value *_freeingFunction, Value *_world) {
-  printf("onCollectAny called\n");
+  // printf("onCollectAny called\n");
   Value_Pointer *retVal = (Value_Pointer *)newReference(_anyPtr);
   retVal->onCollectFct = (Value_Closure *)newReference(_freeingFunction);
   return (Value *)retVal;
