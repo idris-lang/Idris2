@@ -73,13 +73,13 @@ prettyName : Name -> Doc IdrisDocAnn
 prettyName n =
   case userNameRoot n of
     -- shouldn't happen: we only show UN anyways...
-    Nothing => pretty (nameRoot n)
-    Just un => if isOpUserName un then parens (pretty un) else pretty un
+    Nothing => pretty0 (nameRoot n)
+    Just un => if isOpUserName un then parens (pretty0 un) else pretty0 un
 
 prettyKindedName : Maybe String -> Doc IdrisDocAnn -> Doc IdrisDocAnn
 prettyKindedName Nothing   nm = nm
 prettyKindedName (Just kw) nm
-  = annotate (Syntax Keyword) (pretty kw) <++> nm
+  = annotate (Syntax Keyword) (pretty0 kw) <++> nm
 
 ||| Look up implementations
 getImplDocs : {auto c : Ref Ctxt Defs} ->
@@ -142,7 +142,7 @@ getDocsForPrimitive : {auto c : Ref Ctxt Defs} ->
                       Constant -> Core (Doc IdrisDocAnn)
 getDocsForPrimitive constant = do
     let (_, type) = checkPrim EmptyFC constant
-    let typeString = pretty constant
+    let typeString = prettyBy Syntax constant
                      <++> colon
                      <++> prettyBy Syntax !(resugar [] type)
     hintsDoc <- getHintsForPrimitive constant
@@ -257,10 +257,10 @@ getDocsForName fc n config
     showTotal tot
         = case isTerminating tot of
                Unchecked => Nothing
-               _ => pure (header "Totality" <++> annotate (Syntax Keyword) (pretty tot))
+               _ => pure (header "Totality" <++> annotate (Syntax Keyword) (pretty0 tot))
 
     showVisible : Visibility -> Doc IdrisDocAnn
-    showVisible vis = header "Visibility" <++> annotate (Syntax Keyword) (pretty vis)
+    showVisible vis = header "Visibility" <++> annotate (Syntax Keyword) (pretty0 vis)
 
     getDConDoc : Name -> Core (Doc IdrisDocAnn)
     getDConDoc con
@@ -304,10 +304,10 @@ getDocsForName fc n config
              let Just (_, fixity, assoc) = S.lookup n (infixes !(get Syn))
                     | Nothing => pure []
              pure $ pure $ hsep
-                  [ pretty (show fixity)
+                  [ pretty0 (show fixity)
                   , "operator,"
                   , "level"
-                  , pretty (show assoc)
+                  , pretty0 (show assoc)
                   ]
 
     getPrefixDoc : Name -> Core (List (Doc IdrisDocAnn))
@@ -316,7 +316,7 @@ getDocsForName fc n config
                     | _ => pure []
              let Just (_, assoc) = S.lookup n (prefixes !(get Syn))
                     | Nothing => pure []
-             pure $ ["prefix operator, level" <++> pretty (show assoc)]
+             pure $ ["prefix operator, level" <++> pretty0 (show assoc)]
 
     getFixityDoc : Name -> Core (List (Doc IdrisDocAnn))
     getFixityDoc n =
@@ -331,11 +331,11 @@ getDocsForName fc n config
         = do let params =
                 case params iface of
                      [] => []
-                     ps => [hsep (header "Parameters" :: punctuate comma (map (pretty . show) ps))]
+                     ps => [hsep (header "Parameters" :: punctuate comma (map pretty0 ps))]
              let constraints =
                 case !(traverse (pterm . map defaultKindedName) (parents iface)) of
                      [] => []
-                     ps => [hsep (header "Constraints" :: punctuate comma (map (pretty . show) ps))]
+                     ps => [hsep (header "Constraints" :: punctuate comma (map (prettyBy Syntax) ps))]
              let icon = case dropNS (iconstructor iface) of
                           DN _ _ => [] -- machine inserted
                           nm => [hsep [header "Constructor", dCon nm (prettyName nm)]]
@@ -439,7 +439,7 @@ getDocsForName fc n config
              let prig = reAnnotate Syntax $ prettyRig def.multiplicity
              let cat = showCategory Syntax def
              let nm = prettyKindedName typ $ cat
-                    $ ifThenElse longNames (pretty (show nm)) (prettyName nm)
+                    $ ifThenElse longNames (pretty0 (show nm)) (prettyName nm)
              let deprecated = if Context.Deprecate `elem` def.flags
                                  then annotate Deprecation "=DEPRECATED=" <+> line else emptyDoc
              let docDecl = deprecated
@@ -522,7 +522,7 @@ getDocsForImplementation t = do
       | False => pure Nothing
     pure (Just (hint, ix, def))
   case impls of
-    [] => pure $ Just $ "Could not find an implementation for" <++> pretty (show t)
+    [] => pure $ Just $ "Could not find an implementation for" <++> pretty0 (show t) --hack
     _ => do ds <- traverse (displayImpl defs) impls
             pure $ Just $ vcat ds
 
@@ -561,7 +561,7 @@ getDocsForPTerm (PUnit _) = pure $ vcat
   [ "Unit Literal"
   , indent 2 "Desugars to MkUnit or Unit"
   ]
-getDocsForPTerm pterm = pure $ "Docs not implemented for" <++> pretty (show pterm) <++> "yet"
+getDocsForPTerm pterm = pure $ "Docs not implemented for" <++> pretty0 (show pterm) <++> "yet"
 
 export
 getDocs : {auto o : Ref ROpts REPLOpts} ->
@@ -576,7 +576,7 @@ getDocs (AModule mod) = do
   syn  <- get Syn
   let Just modDoc = lookup mod (modDocstrings syn)
     | _ => throw (ModuleNotFound replFC mod)
-  pure (pretty modDoc)
+  pure (pretty0 modDoc)
 
 summarise : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->

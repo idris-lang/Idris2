@@ -181,7 +181,7 @@ helpTopics = show $ vcat $ map helpTopic knownTopics
 
   where
 
-  helpTopic : (String, Maybe String) -> Doc ()
+  helpTopic : (String, Maybe String) -> Doc Void
   helpTopic (str, mblurb)
     = let title = "+" <++> pretty str
           blurb = maybe [] ((::[]) . indent 2 . reflow) mblurb
@@ -256,8 +256,7 @@ Show LogLevel where
     _  => fastConcat (intersperse "." ps) ++ ":" ++ show n
 
 export
-Pretty ann LogLevel where
-
+Pretty Void LogLevel where
   pretty = pretty . show
 
 export

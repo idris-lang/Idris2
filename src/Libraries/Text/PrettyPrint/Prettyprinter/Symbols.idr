@@ -6,79 +6,79 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 
 export
 squote : Doc ann
-squote = pretty '\''
+squote = pretty0 '\''
 
 export
 dquote : Doc ann
-dquote = pretty '"'
+dquote = pretty0 '"'
 
 export
 lparen : Doc ann
-lparen = pretty '('
+lparen = pretty0 '('
 
 export
 rparen : Doc ann
-rparen = pretty ')'
+rparen = pretty0 ')'
 
 export
 langle : Doc ann
-langle = pretty '<'
+langle = pretty0 '<'
 
 export
 rangle : Doc ann
-rangle = pretty '>'
+rangle = pretty0 '>'
 
 export
 lbracket : Doc ann
-lbracket = pretty '['
+lbracket = pretty0 '['
 
 export
 rbracket : Doc ann
-rbracket = pretty ']'
+rbracket = pretty0 ']'
 
 export
 lbrace : Doc ann
-lbrace = pretty '{'
+lbrace = pretty0 '{'
 
 export
 rbrace : Doc ann
-rbrace = pretty '}'
+rbrace = pretty0 '}'
 
 export
 semi : Doc ann
-semi = pretty ';'
+semi = pretty0 ';'
 
 export
 colon : Doc ann
-colon = pretty ':'
+colon = pretty0 ':'
 
 export
 comma : Doc ann
-comma = pretty ','
+comma = pretty0 ','
 
 export
 space : Doc ann
-space = pretty ' '
+space = pretty0 ' '
 
 export
 dot : Doc ann
-dot = pretty '.'
+dot = pretty0 '.'
 
 export
 slash : Doc ann
-slash = pretty '/'
+slash = pretty0 '/'
 
 export
 backslash : Doc ann
-backslash = pretty '\\'
+backslash = pretty0 '\\'
 
 export
 equals : Doc ann
-equals = pretty '='
+equals = pretty0 '='
 
 export
 pipe : Doc ann
-pipe = pretty '|'
+pipe = pretty0 '|'
 
 export
 squotes : Doc ann -> Doc ann

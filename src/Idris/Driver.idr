@@ -176,8 +176,8 @@ stMain cgs opts
                  updateREPLOpts
                  session <- getSession
                  when (not $ nobanner session) $ do
-                   iputStrLn $ pretty banner
-                   when (isCons cgs) $ iputStrLn (reflow "With codegen for:" <++> hsep (pretty . fst <$> cgs))
+                   iputStrLn $ pretty0 banner
+                   when (isCons cgs) $ iputStrLn (reflow "With codegen for:" <++> hsep (pretty0 . fst <$> cgs))
                  fname <- if findipkg session
                              then findIpkg fname
                              else pure fname

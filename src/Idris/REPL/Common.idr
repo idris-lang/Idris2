@@ -257,7 +257,7 @@ docsOrSignature fc n
     typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
                             | Nothing => pure ""
                           ty <- resugar [] !(normaliseHoles defs [] (type def))
-                          pure $ pretty n <++> ":" <++> prettyBy Syntax ty
+                          pure $ pretty0 n <++> ":" <++> prettyBy Syntax ty
 
 export
 equivTypes : {auto c : Ref Ctxt Defs} ->

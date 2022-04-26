@@ -59,7 +59,7 @@ Show OriginDesc where
   show (Virtual ident) = show ident
 
 export
-Pretty ann OriginDesc where
+Pretty Void OriginDesc where
   pretty = pretty . show
 
 ||| A file context is a filename together with starting and ending positions.
@@ -214,11 +214,11 @@ Show FC where
              showPos startPos ++ "--" ++
              showPos endPos
 
-prettyPos : FilePos -> Doc ann
+prettyPos : FilePos -> Doc Void
 prettyPos (l, c) = pretty (l + 1) <+> colon <+> pretty (c + 1)
 
 export
-Pretty ann FC where
+Pretty Void FC where
   pretty EmptyFC = pretty "EmptyFC"
   pretty (MkFC ident startPos endPos) = pretty ident <+> colon
                  <+> prettyPos startPos <+> pretty "--"

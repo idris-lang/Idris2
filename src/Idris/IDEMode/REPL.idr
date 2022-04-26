@@ -222,13 +222,13 @@ process (ElaborateTerm tm)
          pure $ TTTerm tm
 process (PrintDefinition n)
     = do todoCmd "print-definition"
-         pure $ REPL $ Printed (pretty n)
+         pure $ REPL $ Printed (pretty0 n)
 process (ReplCompletions n)
     = do todoCmd "repl-completions"
          pure $ NameList []
 process (EnableSyntax b)
     = do setSynHighlightOn b
-         pure $ REPL $ Printed (reflow "Syntax highlight option changed to" <++> pretty b)
+         pure $ REPL $ Printed (reflow "Syntax highlight option changed to" <++> pretty0 b)
 process Version
     = replWrap $ Idris.REPL.process ShowVersion
 process (Metavariables _)
@@ -335,10 +335,10 @@ displayIDEResult outf i  (REPL $ TermChecked x y)
 displayIDEResult outf i  (REPL $ FileLoaded x)
   = printIDEResult outf i $ AUnit
 displayIDEResult outf i  (REPL $ ErrorLoadingFile x err)
-  = printIDEError outf i $ reflow "Error loading file" <++> pretty x <+> colon <++> pretty (show err)
+  = printIDEError outf i $ reflow "Error loading file" <++> pretty0 x <+> colon <++> pretty0 (show err)
 displayIDEResult outf i  (REPL $ ErrorsBuildingFile x errs)
   = do errs' <- traverse perror errs
-       printIDEError outf i $ reflow "Error(s) building file" <++> pretty x <+> colon <++> vsep errs'
+       printIDEError outf i $ reflow "Error(s) building file" <++> pretty0 x <+> colon <++> vsep errs'
 displayIDEResult outf i  (REPL $ NoFileLoaded)
   = printIDEError outf i $ reflow "No file can be reloaded"
 displayIDEResult outf i  (REPL $ CurrentDirectory dir)
@@ -425,7 +425,7 @@ displayIDEResult outf i (NameLocList dat)
     constructFileContext : (Name, NonEmptyFC) -> Core (String, FileContext)
     constructFileContext (name, origin, (startLine, startCol), (endLine, endCol)) = pure $
         -- TODO: fix the emacs mode to use the more structured SExpr representation
-        (!(render $ pretty name)
+        (!(render $ pretty0 name)
         , MkFileContext
           { file  = !(sexpOriginDesc origin)
           , range = MkBounds {startCol, startLine, endCol, endLine}
@@ -478,7 +478,7 @@ loop
                                handleIDEResult outf i res
                                loop
                           Nothing =>
-                            do printIDEError outf idx (reflow "Unrecognised command:" <++> pretty (show sexp))
+                            do printIDEError outf idx (reflow "Unrecognised command:" <++> pretty0 (show sexp))
                                loop
   where
     updateOutput : Integer -> Core ()

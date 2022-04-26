@@ -14,7 +14,9 @@ import public Idris.REPL.Common
 
 import Data.List
 import Data.Maybe
+import Data.String
 import Libraries.Data.List.Extra
+import Libraries.Data.String.Extra
 
 %default covering
 
@@ -28,17 +30,17 @@ fuzzySearch : {auto c : Ref Ctxt Defs}
            -> Core REPLResult
 fuzzySearch expr = do
   let Just (neg, pos) = parseExpr expr
-    | _ => pure (REPLError (pretty "Bad expression, expected"
-                       <++> code (pretty "B")
-                       <++> pretty "or"
-                       <++> code (pretty "_ -> B")
-                       <++> pretty "or"
-                       <++> code (pretty "A -> B")
-                       <+> pretty ", where"
-                       <++> code (pretty "A")
-                       <++> pretty "and"
-                       <++> code (pretty "B")
-                       <++> pretty "are spines of global names"))
+    | _ => pure (REPLError ("Bad expression, expected"
+                       <++> code "B"
+                       <++> "or"
+                       <++> code "_ -> B"
+                       <++> "or"
+                       <++> code "A -> B"
+                       <+> ", where"
+                       <++> code "A"
+                       <++> "and"
+                       <++> code "B"
+                       <++> "are spines of global names"))
   defs <- branch
   let curr = currentNS defs
   let ctxt = gamma defs

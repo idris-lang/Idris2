@@ -409,9 +409,9 @@ process msgPrefix buildMsg sourceFileName ident
          catch (do ttcFileName <- getTTCFileName sourceFileName "ttc"
                    Just errs <- logTime 1 ("Elaborating " ++ sourceFileName) $
                                    processMod sourceFileName ttcFileName
-                                              (msgPrefix <++> pretty "Building" <++> buildMsg)
+                                              (msgPrefix <++> "Building" <++> buildMsg)
                                               res ident
-                     | Nothing => do log "module" 10 $ show $ msgPrefix <++> pretty "Skipping" <++> buildMsg
+                     | Nothing => do log "module" 10 $ show $ msgPrefix <++> "Skipping" <++> buildMsg
                                      pure [] -- skipped it
                    if isNil errs
                       then

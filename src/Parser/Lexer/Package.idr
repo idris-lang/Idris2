@@ -52,7 +52,7 @@ Show Token where
   show (IntegerLit i) = "IntegerLit: " ++ show i
 
 public export
-Pretty ann Token where
+Pretty Void Token where
   pretty (Comment str) = "Comment:" <++> pretty str
   pretty EndOfInput = "EndOfInput"
   pretty Equals = "Equals"

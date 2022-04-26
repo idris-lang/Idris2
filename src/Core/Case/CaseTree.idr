@@ -147,20 +147,20 @@ mutual
   export
   {vars : _} -> Pretty IdrisSyntax (CaseTree vars) where
     pretty (Case {name} idx prf ty alts)
-      = case_ <++> pretty name <++> keyword ":" <++> pretty ty <++> of_
+      = case_ <++> pretty0 name <++> keyword ":" <++> pretty0 ty <++> of_
          <+> nest 2 (hardline
          <+> vsep (assert_total (map pretty alts)))
-    pretty (STerm i tm) = pretty tm
-    pretty (Unmatched msg) = "Error:" <++> pretty msg
+    pretty (STerm i tm) = pretty0 tm
+    pretty (Unmatched msg) = "Error:" <++> pretty0 msg
     pretty Impossible = "Impossible"
 
   export
   {vars : _} -> Pretty IdrisSyntax (CaseAlt vars) where
     pretty (ConCase n tag args sc)
-      = hsep (map pretty (n :: args)) <++> fatArrow
+      = hsep (map pretty0 (n :: args)) <++> fatArrow
         <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
     pretty (DelayCase _ arg sc) =
-        keyword "Delay" <++> pretty arg <++> fatArrow
+        keyword "Delay" <++> pretty0 arg <++> fatArrow
         <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
     pretty (ConstCase c sc) =
         pretty c <++> fatArrow
@@ -206,17 +206,17 @@ Show Pat where
 
 export
 Pretty IdrisSyntax Pat where
-  prettyPrec d (PAs _ n p) = pretty n <++> keyword "@" <+> parens (pretty p)
+  prettyPrec d (PAs _ n p) = pretty0 n <++> keyword "@" <+> parens (pretty p)
   prettyPrec d (PCon _ n _ _ args) =
-    parenthesise (d > Open) $ hsep (pretty n :: map (prettyPrec App) args)
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
   prettyPrec d (PTyCon _ n _ args) =
-    parenthesise (d > Open) $ hsep (pretty n :: map (prettyPrec App) args)
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
   prettyPrec d (PConst _ c) = pretty c
   prettyPrec d (PArrow _ _ p q) =
     parenthesise (d > Open) $ pretty p <++> arrow <++> pretty q
-  prettyPrec d (PDelay _ _ _ p) = parens (pretty "Delay" <++> pretty p)
-  prettyPrec d (PLoc _ n) = pretty n
-  prettyPrec d (PUnmatchable _ tm) = keyword "." <+> parens (pretty tm)
+  prettyPrec d (PDelay _ _ _ p) = parens ("Delay" <++> pretty p)
+  prettyPrec d (PLoc _ n) = pretty0 n
+  prettyPrec d (PUnmatchable _ tm) = keyword "." <+> parens (pretty0 tm)
 
 mutual
   insertCaseNames : SizeOf outer ->

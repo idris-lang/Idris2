@@ -377,28 +377,46 @@ export
 prettyBy : Pretty ann1 a => (inj : ann1 -> ann2) -> a -> Doc ann2
 prettyBy inj a = reAnnotate inj (pretty a)
 
+
+||| Sometimes we want to use a document that uses no annotation whatsoever.
+||| This should be equivalent to `reAnnotate absurd`, except that in this
+||| case we do not traverse the document because it should be impossible to
+||| manufacture an annotation of type Void.
 export
-Pretty ann String where
+Cast (Doc Void) (Doc ann) where
+  cast = believe_me
+
+
+||| Sometimes we want to call a subprinter that uses no annotation whatsoever.
+||| This should be equivalent to `prettyBy absurd`, except that in this case
+||| we do not traverse the document because it should be impossible to manufacture
+||| an annotation of type Void.
+export
+pretty0 : Pretty Void a => a -> Doc ann
+pretty0 x = cast (pretty x)
+
+export
+Pretty Void String where
   pretty str = let str' = if "\n" `isSuffixOf` str then dropLast 1 str else str in
                    vsep $ map unsafeTextWithoutNewLines $ lines str'
 
 export
 FromString (Doc ann) where
-  fromString = pretty
+  fromString = pretty0
 
 ||| Variant of `encloseSep` with braces and comma as separator.
 export
 list : List (Doc ann) -> Doc ann
-list = group . encloseSep (flatAlt (pretty "[ ") (pretty "["))
-                          (flatAlt (pretty " ]") (pretty "]"))
-                          (pretty ", ")
+list = group . encloseSep (flatAlt (pretty0 "[ ") (pretty0 "["))
+                          (flatAlt (pretty0 " ]") (pretty0 "]"))
+                          (pretty0 ", ")
 
 ||| Variant of `encloseSep` with parentheses and comma as separator.
 export
 tupled : List (Doc ann) -> Doc ann
-tupled = group . encloseSep (flatAlt (pretty "( ") (pretty "("))
-                            (flatAlt (pretty " )") (pretty ")"))
-                            (pretty ", ")
+tupled = group . encloseSep (flatAlt (pretty0 "( ") (pretty0 "("))
+                            (flatAlt (pretty0 " )") (pretty0 ")"))
+                            (pretty0 ", ")
 
 export
 Pretty ann a => Pretty ann (List a) where
@@ -417,31 +435,31 @@ export
           catMaybes ((Just x) :: xs) = x :: catMaybes xs
 
 export
-Pretty ann () where
+Pretty Void () where
   pretty _ = pretty "()"
 
 export
-Pretty ann Bool where
+Pretty Void Bool where
   pretty True = pretty "True"
   pretty False = pretty "False"
 
 export
-Pretty ann Char where
+Pretty Void Char where
   pretty '\n' = line
   pretty c = Chara c
 
-export Pretty ann Nat where pretty = unsafeTextWithoutNewLines . show
-export Pretty ann Int where pretty = unsafeTextWithoutNewLines . show
-export Pretty ann Integer where pretty = unsafeTextWithoutNewLines . show
-export Pretty ann Double where pretty = unsafeTextWithoutNewLines . show
-export Pretty ann Bits8 where pretty = unsafeTextWithoutNewLines . show
-export Pretty ann Bits16 where pretty = unsafeTextWithoutNewLines . show
-export Pretty ann Bits32 where pretty = unsafeTextWithoutNewLines . show
-export Pretty ann Bits64 where pretty = unsafeTextWithoutNewLines . show
-export Pretty ann Int8 where pretty = unsafeTextWithoutNewLines . show
-export Pretty ann Int16 where pretty = unsafeTextWithoutNewLines . show
-export Pretty ann Int32 where pretty = unsafeTextWithoutNewLines . show
-export Pretty ann Int64 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Void Nat where pretty = unsafeTextWithoutNewLines . show
+export Pretty Void Int where pretty = unsafeTextWithoutNewLines . show
+export Pretty Void Integer where pretty = unsafeTextWithoutNewLines . show
+export Pretty Void Double where pretty = unsafeTextWithoutNewLines . show
+export Pretty Void Bits8 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Void Bits16 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Void Bits32 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Void Bits64 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Void Int8 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Void Int16 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Void Int32 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Void Int64 where pretty = unsafeTextWithoutNewLines . show
 
 export
 (Pretty ann a, Pretty ann b) => Pretty ann (a, b) where

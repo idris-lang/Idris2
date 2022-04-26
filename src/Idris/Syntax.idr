@@ -356,7 +356,7 @@ mutual
   export
   pragmaTopics : String
   pragmaTopics =
-    show $ vsep $ map (((<++>) "+") . pretty {ann=()} . showDirective) $ filter isPragma directiveList
+    show $ vsep $ map (((<++>) "+") . pretty . showDirective) $ filter isPragma directiveList
     where
       showDirective : Directive -> String
       showDirective (Hide _)             = "%hide name"
@@ -552,7 +552,7 @@ Show REPLEval where
   show Scheme = "scheme"
 
 export
-Pretty ann REPLEval where
+Pretty Void REPLEval where
   pretty EvalTC = pretty "typecheck"
   pretty NormaliseAll = pretty "normalise"
   pretty Execute = pretty "execute"
@@ -581,7 +581,7 @@ Show REPLOpt where
   show (EvalTiming p) = "evaltiming = " ++ show p
 
 export
-Pretty ann REPLOpt where
+Pretty Void REPLOpt where
   pretty (ShowImplicits impl) = pretty "showimplicits" <++> equals <++> pretty impl
   pretty (ShowNamespace ns) = pretty "shownamespace" <++> equals <++> pretty ns
   pretty (ShowTypes typs) = pretty "showtypes" <++> equals <++> pretty typs

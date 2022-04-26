@@ -3,8 +3,11 @@ module Core.TT
 import public Core.FC
 import public Core.Name
 
+import Idris.Pretty.Annotations
+
 import Data.List
 import Data.Nat
+import Data.String
 import Data.Vect
 import Decidable.Equality
 
@@ -12,6 +15,7 @@ import Libraries.Data.NameMap
 import Libraries.Data.Primitives
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Data.String.Extra
 
 import public Algebra
 
@@ -214,39 +218,43 @@ Show Constant where
   show WorldVal = "%MkWorld"
 
 export
-Pretty ann PrimType where
-  pretty IntType = pretty "Int"
-  pretty Int8Type = pretty "Int8"
-  pretty Int16Type = pretty "Int16"
-  pretty Int32Type = pretty "Int32"
-  pretty Int64Type = pretty "Int64"
-  pretty IntegerType = pretty "Integer"
-  pretty Bits8Type = pretty "Bits8"
-  pretty Bits16Type = pretty "Bits16"
-  pretty Bits32Type = pretty "Bits32"
-  pretty Bits64Type = pretty "Bits64"
-  pretty StringType = pretty "String"
-  pretty CharType = pretty "Char"
-  pretty DoubleType = pretty "Double"
-  pretty WorldType = pretty "%World"
+Pretty IdrisSyntax PrimType where
+  pretty c = annotate (TCon Nothing) $ case c of
+    IntType => "Int"
+    Int8Type => "Int8"
+    Int16Type => "Int16"
+    Int32Type => "Int32"
+    Int64Type => "Int64"
+    IntegerType => "Integer"
+    Bits8Type => "Bits8"
+    Bits16Type => "Bits16"
+    Bits32Type => "Bits32"
+    Bits64Type => "Bits64"
+    StringType => "String"
+    CharType => "Char"
+    DoubleType => "Double"
+    WorldType => "%World"
 
 export
-Pretty ann Constant where
-  pretty (I x) = pretty x
-  pretty (I8 x) = pretty x
-  pretty (I16 x) = pretty x
-  pretty (I32 x) = pretty x
-  pretty (I64 x) = pretty x
-  pretty (BI x) = pretty x
-  pretty (B8 x) = pretty x
-  pretty (B16 x) = pretty x
-  pretty (B32 x) = pretty x
-  pretty (B64 x) = pretty x
-  pretty (Str x) = dquotes (pretty x)
-  pretty (Ch x) = squotes (pretty x)
-  pretty (Db x) = pretty x
+Pretty IdrisSyntax Constant where
   pretty (PrT x) = pretty x
-  pretty WorldVal = pretty "%MkWorld"
+  pretty v = annotate (DCon Nothing) $ case v of
+    I x => pretty0 x
+    I8 x => pretty0 x
+    I16 x => pretty0 x
+    I32 x => pretty0 x
+    I64 x => pretty0 x
+    BI x => pretty0 x
+    B8 x => pretty0 x
+    B16 x => pretty0 x
+    B32 x => pretty0 x
+    B64 x => pretty0 x
+    Str x => dquotes (pretty0 x)
+    Ch x => squotes (pretty0 x)
+    Db x => pretty0 x
+    PrT x => pretty x -- impossible
+    WorldVal => "%MkWorld"
+
 
 export
 Eq PrimType where
@@ -987,7 +995,7 @@ Show Visibility where
   show Public = "public export"
 
 export
-Pretty ann Visibility where
+Pretty Void Visibility where
   pretty Private = pretty "private"
   pretty Export = pretty "export"
   pretty Public = pretty "public" <++> pretty "export"
@@ -1056,7 +1064,7 @@ Show PartialReason where
       = "possibly not terminating due to recursive path " ++ showSep " -> " (map show ns)
 
 export
-Pretty ann PartialReason where
+Pretty Void PartialReason where
   pretty NotStrictlyPositive = reflow "not strictly positive"
   pretty (BadCall [n])
     = reflow "possibly not terminating due to call to" <++> pretty n
@@ -1078,7 +1086,7 @@ Show Terminating where
   show (NotTerminating p) = show p
 
 export
-Pretty ann Terminating where
+Pretty Void Terminating where
   pretty Unchecked = reflow "not yet checked"
   pretty IsTerminating = pretty "terminating"
   pretty (NotTerminating p) = pretty p
@@ -1099,7 +1107,7 @@ Show Covering where
      = "not covering due to calls to functions " ++ showSep ", " (map show cs)
 
 export
-Pretty ann Covering where
+Pretty Void Covering where
   pretty IsCovering = pretty "covering"
   pretty (MissingCases c) = reflow "not covering all cases"
   pretty (NonCoveringCall [f])
@@ -1129,7 +1137,7 @@ Show Totality where
       showTot t c = show c ++ "; " ++ show t
 
 export
-Pretty ann Totality where
+Pretty Void Totality where
   pretty (MkTotality IsTerminating IsCovering) = pretty "total"
   pretty (MkTotality IsTerminating c) = pretty c
   pretty (MkTotality t IsCovering) = pretty t
@@ -1792,6 +1800,6 @@ covering
                      ++ ")"
 
 export
-{vars : _} -> Pretty ann (Term vars) where
+{vars : _} -> Pretty Void (Term vars) where
   pretty = pretty . show
   -- TODO: prettier output

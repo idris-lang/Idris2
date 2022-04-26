@@ -102,6 +102,6 @@ pragma = annotate Pragma
 
 export
 prettyRig : RigCount -> Doc IdrisSyntax
-prettyRig = elimSemi (keyword (pretty '0') <+> space)
-                     (keyword (pretty '1') <+> space)
+prettyRig = elimSemi (keyword (pretty0 '0') <+> space)
+                     (keyword (pretty0 '1') <+> space)
                      (const emptyDoc)

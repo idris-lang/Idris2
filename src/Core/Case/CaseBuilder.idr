@@ -205,7 +205,7 @@ covering
       prettyAll : {vs, ts : _} -> NamedPats vs ts -> List (Doc IdrisSyntax)
       prettyAll [] = []
       prettyAll {ts = t :: _ } (x :: xs)
-          = parens (pretty t <++> equals <++> pretty (pat x))
+          = parens (pretty0 t <++> equals <++> pretty (pat x))
           :: prettyAll xs
 
 Weaken ArgType where
@@ -260,7 +260,7 @@ covering
 {vars : _} -> {todo : _} -> Pretty IdrisSyntax (PatClause vars todo) where
 
   pretty (MkPatClause _ ps _ rhs)
-     = pretty ps <++> fatArrow <++> pretty rhs
+     = pretty ps <++> fatArrow <++> pretty0 rhs
 
 HasNames (PatClause vars todo) where
   full gam (MkPatClause ns nps i rhs)
@@ -1239,8 +1239,8 @@ simpleCase fc phase fn ty def clauses
     = do logC "compile.casetree" 5 $
                 do cs <- traverse (\ (c,d) => [| MkPair (toFullNames c) (toFullNames d) |]) clauses
                    pure $ "simpleCase: Clauses:\n" ++ show (
-                     indent {ann = IdrisSyntax} 2 $ vcat $ flip map cs $ \ (lrhs) =>
-                       pretty (fst lrhs) <++> equals <++> pretty (snd lrhs))
+                     indent 2 $ vcat $ flip map cs $ \ lrhs =>
+                       pretty (fst lrhs) <++> pretty "=" <++> pretty (snd lrhs))
          ps <- traverse (toPatClause fc fn) clauses
          defs <- get Ctxt
          patCompile fc fn phase ty ps def
