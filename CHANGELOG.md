@@ -8,7 +8,7 @@
 collected pointer were two different objects, which makes the following
 code produce a segmentation fault
 
-```
+```idris
 1  do
 2     ptr <- getExternalPointer
 3     gcptr <- onCollectAny ptr free
