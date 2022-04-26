@@ -106,7 +106,7 @@ mutual
     $ zipWith (\ s, p => s <++> pretty p)
               (keyword "{" :: (keyword ";" <$ xs))
               xs
-   ++ maybe [] (\ deflt => [indent 2 (keyword "; _" <++> fatArrow <+> softline <+> align (pretty deflt))]) def
+   ++ maybe [] (\ deflt => [keyword "; _" <++> fatArrow <+> softline <+> align (pretty deflt)]) def
    ++ [keyword "}"]
 
 {args : _} -> Pretty IdrisSyntax (CExp args) where
