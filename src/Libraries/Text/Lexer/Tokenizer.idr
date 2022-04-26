@@ -63,7 +63,7 @@ export
 Pretty Void StopReason where
   pretty EndInput = pretty "EndInput"
   pretty NoRuleApply = pretty "NoRuleApply"
-  pretty (ComposeNotClosing start end) = "ComposeNotClosing" <++> pretty start <++> pretty end
+  pretty (ComposeNotClosing start end) = "ComposeNotClosing" <++> pretty (show start) <++> pretty (show end)
 
 tokenise : Lexer ->
            Tokenizer a ->

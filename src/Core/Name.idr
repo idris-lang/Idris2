@@ -287,14 +287,14 @@ mutual
   Pretty Void Name where
     pretty (NS ns n) = pretty ns <+> dot <+> prettyOp True n
     pretty (UN x) = pretty x
-    pretty (MN x y) = braces (pretty x <+> colon <+> pretty y)
-    pretty (PV n d) = braces (pretty 'P' <+> colon <+> pretty n <+> colon <+> pretty d)
+    pretty (MN x y) = braces (pretty x <+> colon <+> pretty (show y))
+    pretty (PV n d) = braces (pretty 'P' <+> colon <+> pretty n <+> colon <+> pretty (show d))
     pretty (DN str _) = pretty str
     pretty (Nested (outer, idx) inner)
-      = pretty outer <+> colon <+> pretty idx <+> colon <+> pretty inner
+      = pretty (show outer) <+> colon <+> pretty (show idx) <+> colon <+> pretty inner
     pretty (CaseBlock outer _) = reflow "case block in" <++> pretty outer
     pretty (WithBlock outer _) = reflow "with block in" <++> pretty outer
-    pretty (Resolved x) = pretty "$resolved" <+> pretty x
+    pretty (Resolved x) = pretty "$resolved" <+> pretty (show x)
 
 export
 Eq UserName where

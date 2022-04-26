@@ -217,7 +217,6 @@ Show Constant where
   show (PrT x) = show x
   show WorldVal = "%MkWorld"
 
-export
 Pretty IdrisSyntax PrimType where
   pretty c = annotate (TCon Nothing) $ case c of
     IntType => "Int"
@@ -238,22 +237,7 @@ Pretty IdrisSyntax PrimType where
 export
 Pretty IdrisSyntax Constant where
   pretty (PrT x) = pretty x
-  pretty v = annotate (DCon Nothing) $ case v of
-    I x => pretty0 x
-    I8 x => pretty0 x
-    I16 x => pretty0 x
-    I32 x => pretty0 x
-    I64 x => pretty0 x
-    BI x => pretty0 x
-    B8 x => pretty0 x
-    B16 x => pretty0 x
-    B32 x => pretty0 x
-    B64 x => pretty0 x
-    Str x => dquotes (pretty0 x)
-    Ch x => squotes (pretty0 x)
-    Db x => pretty0 x
-    PrT x => pretty x -- impossible
-    WorldVal => "%MkWorld"
+  pretty v = annotate (DCon Nothing) $ pretty0 $ show v
 
 
 export
@@ -442,6 +426,49 @@ Show (PrimFn arity) where
   show (Cast x y) = "cast-" ++ show x ++ "-" ++ show y
   show BelieveMe = "believe_me"
   show Crash = "crash"
+
+export
+prettyOp : PrimFn arity -> Vect arity (Doc IdrisSyntax) -> Doc IdrisSyntax
+prettyOp (Add ty) [v1,v2] = v1 <++> "+" <++> v2
+prettyOp (Sub ty) [v1,v2] = v1 <++> "-" <++> v2
+prettyOp (Mul ty) [v1,v2] = v1 <++> "*" <++> v2
+prettyOp (Div ty) [v1,v2] = v1 <++> "`div`" <++> v2
+prettyOp (Mod ty) [v1,v2] = v1 <++> "`mod`" <++> v2
+prettyOp (Neg ty) [v] = "-" <++> v
+prettyOp (ShiftL ty) [v1,v2] = "shiftl" <++> v1 <++> v2
+prettyOp (ShiftR ty) [v1,v2] = "shiftr" <++> v1 <++> v2
+prettyOp (BAnd ty) [v1,v2] = v1 <++> "&&" <++> v2
+prettyOp (BOr ty) [v1,v2] = v1 <++> "||" <++> v2
+prettyOp (BXOr ty) [v1,v2] = v1 <++> "`xor`" <++> v2
+prettyOp (LT ty) [v1,v2] = v1 <++> "<" <++> v2
+prettyOp (LTE ty) [v1,v2] = v1 <++> "<=" <++> v2
+prettyOp (EQ ty) [v1,v2] = v1 <++> "==" <++> v2
+prettyOp (GTE ty) [v1,v2] = v1 <++> ">=" <++> v2
+prettyOp (GT ty) [v1,v2] = v1 <++> ">" <++> v2
+prettyOp StrLength [v] = "length" <++> v
+prettyOp StrHead [v] = "head" <++> v
+prettyOp StrTail [v] = "tail" <++> v
+prettyOp StrIndex [v1,v2] = v1 <++> "[" <+> v2 <+> "]"
+prettyOp StrCons [v1,v2] = v1 <++> "::" <++> v2
+prettyOp StrAppend [v1,v2] = v1 <++> "++" <++> v2
+prettyOp StrReverse [v] = "reverse" <++> v
+prettyOp StrSubstr [v1,v2,v3] = v1 <++> "[" <+> v2 <+> "," <++> v3 <+> "]"
+prettyOp DoubleExp [v] = "exp" <++> v
+prettyOp DoubleLog [v] = "log" <++> v
+prettyOp DoublePow [v1,v2] = v1 <++> "`pow`" <++> v2
+prettyOp DoubleSin [v] = "sin" <++> v
+prettyOp DoubleCos [v] = "cos" <++> v
+prettyOp DoubleTan [v] = "tan" <++> v
+prettyOp DoubleASin [v] = "asin" <++> v
+prettyOp DoubleACos [v] = "acos" <++> v
+prettyOp DoubleATan [v] = "atan" <++> v
+prettyOp DoubleSqrt [v] = "sqrt" <++> v
+prettyOp DoubleFloor [v] = "floor" <++> v
+prettyOp DoubleCeiling [v] = "ceiling" <++> v
+prettyOp (Cast x y) [v] = "[" <+> pretty x <++> "->" <++> pretty y <+> "]" <++> v
+prettyOp BelieveMe [v1,v2,v3] = "believe_me" <++> v1 <++> v2 <++> v3
+prettyOp Crash [v1,v2] = "crash" <++> v1 <++> v2
+
 
 public export
 data PiInfo t = Implicit | Explicit | AutoImplicit | DefImplicit t

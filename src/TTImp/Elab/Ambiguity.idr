@@ -367,7 +367,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
 
                   logGlueNF "elab.ambiguous" 5 (fastConcat
                     [ "Ambiguous elaboration at ", show fc, ":\n"
-                    , unlines (map show alts)
+                    , unlines (map (("  " ++) . show) alts)
                     , "With default. Target type "
                     ]) env exp'
                   alts' <- pruneByType env !(getNF exp') alts

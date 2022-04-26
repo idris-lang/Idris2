@@ -113,14 +113,14 @@ prettyInfo (n, idx, d)
            , pretty def
            ] ++
            catMaybes
-           [ (\ args => header "Erasable args" <++> pretty0 args) <$> ifNotNull (eraseArgs d)
-           , (\ args => header "Detaggable arg types" <++> pretty0 args) <$> ifNotNull (safeErase d)
-           , (\ args => header "Specialise args" <++> pretty0 args) <$> ifNotNull (specArgs d)
-           , (\ args => header "Inferrable args" <++> pretty0 args) <$> ifNotNull (inferrable d)
+           [ (\ args => header "Erasable args" <++> byShow args) <$> ifNotNull (eraseArgs d)
+           , (\ args => header "Detaggable arg types" <++> byShow args) <$> ifNotNull (safeErase d)
+           , (\ args => header "Specialise args" <++> byShow args) <$> ifNotNull (specArgs d)
+           , (\ args => header "Inferrable args" <++> byShow args) <$> ifNotNull (inferrable d)
            , (\ expr => header "Compiled" <++> pretty expr) <$> compexpr d
            , (\ nms  => header "Refers to" <++> enum pretty0 nms) <$> ifNotNull referCT
            , (\ nms  => header "Refers to (runtime)" <++> enum pretty0 nms) <$> ifNotNull referRT
-           , (\ flgs => header "Flags" <++> enum (pretty0 . show) flgs) <$> ifNotNull (flags d)
+           , (\ flgs => header "Flags" <++> enum byShow flgs) <$> ifNotNull (flags d)
            , (\ sz   => header "Size change" <++> displayChg sz) <$> ifNotNull schanges
            ]
 
@@ -476,7 +476,7 @@ processEdit (GenerateDef upd line name rej)
     = do defs <- get Ctxt
          Just (_, n', _, _) <- findTyDeclAt (\p, n => onLine (line - 1) p)
              | Nothing => pure (EditError ("Can't find declaration for" <++> pretty0 name
-                                          <++> "on line" <++> pretty0 line))
+                                          <++> "on line" <++> byShow line))
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
                  do let searchdef = makeDefSort (\p, n => onLine (line - 1) p)
@@ -1113,8 +1113,8 @@ mutual
   displayResult (CheckedTotal xs)
     = printResult (vsep (map (\(fn, tot) => pretty0 fn <++> "is" <++> pretty0 tot) xs))
   displayResult (LogLevelSet Nothing) = printResult (reflow "Logging turned off")
-  displayResult (LogLevelSet (Just k)) = printResult (reflow "Set log level to" <++> pretty0 k)
-  displayResult (ConsoleWidthSet (Just k)) = printResult (reflow "Set consolewidth to" <++> pretty0 k)
+  displayResult (LogLevelSet (Just k)) = printResult (reflow "Set log level to" <++> byShow k)
+  displayResult (ConsoleWidthSet (Just k)) = printResult (reflow "Set consolewidth to" <++> byShow k)
   displayResult (ConsoleWidthSet Nothing) = printResult (reflow "Set consolewidth to auto")
   displayResult (ColorSet b) = printResult (reflow (if b then "Set color on" else "Set color off"))
   displayResult (VersionIs x) = printResult (pretty0 (showVersion True x))

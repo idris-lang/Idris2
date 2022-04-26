@@ -69,7 +69,7 @@ prettyHoles : List Holes.Data -> Doc IdrisSyntax
 prettyHoles holes = case holes of
   []  => "No holes"
   [x] => "1 hole" <+> colon <++> prettyHole x
-  xs  => vcat $ (pretty0 (length xs) <++> "holes" <+> colon)
+  xs  => vcat $ (pretty0 (show $ length xs) <++> "holes" <+> colon)
               :: map (indent 2 . prettyHole) xs
 
   where

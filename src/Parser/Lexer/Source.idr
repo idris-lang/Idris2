@@ -88,8 +88,8 @@ export
 Pretty Void Token where
   -- Literals
   pretty (CharLit x) = pretty "character" <++> squotes (pretty x)
-  pretty (DoubleLit x) = pretty "double" <++> pretty x
-  pretty (IntegerLit x) = pretty "literal" <++> pretty x
+  pretty (DoubleLit x) = pretty "double" <++> pretty (show x)
+  pretty (IntegerLit x) = pretty "literal" <++> pretty (show x)
   -- String
   pretty (StringBegin Single) = reflow "string begin"
   pretty (StringBegin Multi) = reflow "multiline string begin"

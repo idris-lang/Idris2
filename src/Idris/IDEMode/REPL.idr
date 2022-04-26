@@ -228,7 +228,7 @@ process (ReplCompletions n)
          pure $ NameList []
 process (EnableSyntax b)
     = do setSynHighlightOn b
-         pure $ REPL $ Printed (reflow "Syntax highlight option changed to" <++> pretty0 b)
+         pure $ REPL $ Printed (reflow "Syntax highlight option changed to" <++> byShow b)
 process Version
     = replWrap $ Idris.REPL.process ShowVersion
 process (Metavariables _)

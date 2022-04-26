@@ -255,8 +255,8 @@ buildMod loc num len mod
         errs <- ifThenElse (not rebuild) (pure []) $
            do let pad = minus (length $ show len) (length $ show num)
               let msgPrefix : Doc IdrisAnn
-                  = pretty0 (replicate pad ' ') <+> pretty0 num
-                    <+> slash <+> pretty0 len <+> colon
+                  = pretty0 (replicate pad ' ') <+> byShow num
+                    <+> slash <+> byShow len <+> colon
               let buildMsg : Doc IdrisAnn
                   = pretty0 mod.buildNS
                     <++> parens (pretty0 sourceFile)

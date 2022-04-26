@@ -119,43 +119,39 @@ mutual
   prettyAlt (MkImpossible _ lhs) =
       space <+> pipe <++> pretty lhs <++> impossible_ <+> semi
 
-  export
-  Pretty IdrisSyntax (PClause' KindedName) where
-    pretty (MkPatClause _ lhs rhs _) =
+  prettyPClause : PClause' KindedName -> Doc IdrisSyntax
+  prettyPClause (MkPatClause _ lhs rhs _) =
       pretty lhs <++> fatArrow <++> pretty rhs
-    pretty (MkWithClause _ lhs wps flags _) =
+  prettyPClause (MkWithClause _ lhs wps flags _) =
       space <+> pipe <++> angles (angles (reflow "with alts not possible"))
-    pretty (MkImpossible _ lhs) =
+  prettyPClause (MkImpossible _ lhs) =
       pretty lhs <++> impossible_
 
-  export
-  Pretty IdrisSyntax (PStr' KindedName) where
-    pretty (StrLiteral _ str) = pretty0 str
-    pretty (StrInterp _ tm) = pretty tm
+  prettyPStr : PStr' KindedName -> Doc IdrisSyntax
+  prettyPStr (StrLiteral _ str) = pretty0 str
+  prettyPStr (StrInterp _ tm) = pretty tm
 
-  export
-  Pretty IdrisSyntax (PDo' KindedName) where
-    pretty (DoExp _ tm) = pretty tm
-    pretty (DoBind _ _ n tm) = pretty0 n <++> keyword "<-" <++> pretty tm
-    pretty (DoBindPat _ l tm alts) =
+  prettyPDo : PDo' KindedName -> Doc IdrisSyntax
+  prettyPDo (DoExp _ tm) = pretty tm
+  prettyPDo (DoBind _ _ n tm) = pretty0 n <++> keyword "<-" <++> pretty tm
+  prettyPDo (DoBindPat _ l tm alts) =
       pretty l <++> keyword "<-" <++> pretty tm <+> hang 4 (fillSep $ prettyAlt <$> alts)
-    pretty (DoLet _ _ l rig _ tm) =
+  prettyPDo (DoLet _ _ l rig _ tm) =
       let_ <++> prettyRig rig <+> pretty0 l <++> equals <++> pretty tm
-    pretty (DoLetPat _ l _ tm alts) =
+  prettyPDo (DoLetPat _ l _ tm alts) =
       let_ <++> pretty l <++> equals <++> pretty tm <+> hang 4 (fillSep $ prettyAlt <$> alts)
-    pretty (DoLetLocal _ ds) =
+  prettyPDo (DoLetLocal _ ds) =
       let_ <++> braces (angles (angles "definitions"))
-    pretty (DoRewrite _ rule) = rewrite_ <+> pretty rule
+  prettyPDo (DoRewrite _ rule) = rewrite_ <+> pretty rule
 
   export
   prettyFieldPath : List String -> Doc IdrisSyntax
   prettyFieldPath flds = concatWith (surround $ keyword "->") (pretty0 <$> flds)
 
-  export
-  Pretty IdrisSyntax (PFieldUpdate' KindedName) where
-    pretty (PSetField path v) =
+  prettyPFieldUpdate : PFieldUpdate' KindedName -> Doc IdrisSyntax
+  prettyPFieldUpdate (PSetField path v) =
       prettyFieldPath path <++> equals <++> pretty v
-    pretty (PSetFieldApp path v) =
+  prettyPFieldUpdate (PSetFieldApp path v) =
       prettyFieldPath path <++> keyword "$=" <++> pretty v
 
   prettyBinder : Name -> Doc IdrisSyntax
@@ -289,13 +285,13 @@ mutual
       parenthesise (d > startPrec) $
         case_ <++> pretty tm <++> of_ <+> nest 2 (
         let punctuation = lcurly :: (semi <$ fromMaybe [] (tail' [1..length cs])) in
-        line <+> (vsep $ zipWith (<++>) punctuation (pretty <$> cs) ++ [rcurly]))
+        line <+> (vsep $ zipWith (<++>) punctuation (prettyPClause <$> cs) ++ [rcurly]))
     prettyPrec d (PLocal _ ds sc) =
       parenthesise (d > startPrec) $ group $ align $
         let_ <++> braces (angles (angles "definitions")) <+> line <+> in_ <++> pretty sc
     prettyPrec d (PUpdate _ fs) =
       parenthesise (d > startPrec) $ group $
-        record_ <++> braces (vsep $ punctuate comma (pretty <$> fs))
+        record_ <++> braces (vsep $ punctuate comma (prettyPFieldUpdate <$> fs))
     prettyPrec d (PApp _ f a) =
       let catchall : Lazy (Doc IdrisSyntax)
            := prettyPrec leftAppPrec f <++> prettyPrec appPrec a
@@ -348,14 +344,14 @@ mutual
     prettyPrec d (PSectionR _ _ x op) = parens (pretty x <++> prettyOp op)
     prettyPrec d (PEq fc l r) = parenthesise (d > startPrec) $ prettyPrec Equal l <++> equals <++> prettyPrec Equal r
     prettyPrec d (PBracketed _ tm) = parens (pretty tm)
-    prettyPrec d (PString _ xs) = parenthesise (d > startPrec) $ hsep $ punctuate "++" (pretty <$> xs)
+    prettyPrec d (PString _ xs) = parenthesise (d > startPrec) $ hsep $ punctuate "++" (prettyPStr <$> xs)
     prettyPrec d (PMultiline _ indent xs) =
       "multiline" <++>
         (parenthesise (d > startPrec) $
-           hsep $ punctuate "++" (pretty <$> concat xs))
+           hsep $ punctuate "++" (prettyPStr <$> concat xs))
     prettyPrec d (PDoBlock _ ns ds) =
       parenthesise (d > startPrec) $ group $ align $ hang 2 $
-        do_ <++> (vsep $ punctuate semi (pretty <$> ds))
+        do_ <++> (vsep $ punctuate semi (prettyPDo <$> ds))
     prettyPrec d (PBang _ tm) = "!" <+> prettyPrec d tm
     prettyPrec d (PIdiom _ Nothing tm) = enclose (keyword "[|") (keyword "|]") (pretty tm)
     prettyPrec d (PIdiom _ (Just ns) tm) = enclose (pretty0 ns <+> keyword ".[|") (keyword "|]") (pretty tm)
@@ -375,7 +371,7 @@ mutual
         , keyword "then" <++> pretty t
         , keyword "else" <++> pretty e]
     prettyPrec d (PComprehension _ ret es) =
-      group $ brackets (pretty (dePure ret) <++> pipe <++> vsep (punctuate comma (pretty . deGuard <$> es)))
+      group $ brackets (pretty (dePure ret) <++> pipe <++> vsep (punctuate comma (prettyPDo . deGuard <$> es)))
       where
       dePure : IPTerm -> IPTerm
       dePure tm@(PApp _ (PRef _ n) arg)
@@ -399,12 +395,12 @@ mutual
     prettyPrec d (PUnifyLog _ lvl tm) = prettyPrec d tm
     prettyPrec d (PPostfixApp fc rec fields) =
       parenthesise (d > startPrec) $
-        pretty rec <++> dot <+> concatWith (surround dot) (map pretty0 fields)
+        pretty rec <++> dot <+> concatWith (surround dot) (map (pretty0 . snd) fields)
     prettyPrec d (PPostfixAppPartial fc fields) =
-      parens (dot <+> concatWith (surround dot) (map pretty0 fields))
+      parens (dot <+> concatWith (surround dot) (map (pretty0 . snd) fields))
     prettyPrec d (PWithUnambigNames fc ns rhs) =
       parenthesise (d > startPrec) $ group $
-        with_ <++> pretty0 ns <+> line <+> pretty rhs
+        with_ <++> cast (prettyList $ map snd ns) <+> line <+> pretty rhs
 
 export
 render : {auto o : Ref ROpts REPLOpts} -> Doc IdrisAnn -> Core String

@@ -582,14 +582,14 @@ Show REPLOpt where
 
 export
 Pretty Void REPLOpt where
-  pretty (ShowImplicits impl) = pretty "showimplicits" <++> equals <++> pretty impl
-  pretty (ShowNamespace ns) = pretty "shownamespace" <++> equals <++> pretty ns
-  pretty (ShowTypes typs) = pretty "showtypes" <++> equals <++> pretty typs
+  pretty (ShowImplicits impl) = pretty "showimplicits" <++> equals <++> pretty (show impl)
+  pretty (ShowNamespace ns) = pretty "shownamespace" <++> equals <++> pretty (show ns)
+  pretty (ShowTypes typs) = pretty "showtypes" <++> equals <++> pretty (show typs)
   pretty (EvalMode mod) = pretty "eval" <++> equals <++> pretty mod
   pretty (Editor editor) = pretty "editor" <++> equals <++> pretty editor
   pretty (CG str) = pretty "cg" <++> equals <++> pretty str
-  pretty (Profile p) = pretty "profile" <++> equals <++> pretty p
-  pretty (EvalTiming p) = pretty "evaltiming" <++> equals <++> pretty p
+  pretty (Profile p) = pretty "profile" <++> equals <++> pretty (show p)
+  pretty (EvalTiming p) = pretty "evaltiming" <++> equals <++> pretty (show p)
 
 public export
 data EditCmd : Type where

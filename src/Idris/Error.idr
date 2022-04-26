@@ -210,7 +210,7 @@ ploc2 fc1 fc2 =
                          let line = fileCtxt pipe <++> maybe emptyDoc pretty0 (elemAt source sr1)
                          let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty0 (replicate (ec1 `minus` sc1) '^'))
                                       <+> spaces (cast $ sc2 `minus` ec1) <+> error (pretty0 (replicate (ec2 `minus` sc2) '^'))
-                         pure $ vsep [emptyDoc, head, firstRow, fileCtxt (space <+> pretty0 (sr1 + 1)) <++> align (vsep [line, emph]), emptyDoc]
+                         pure $ vsep [emptyDoc, head, firstRow, fileCtxt (space <+> byShow (sr1 + 1)) <++> align (vsep [line, emph]), emptyDoc]
                        (True, True, False) => do
                          let line1 = fileCtxt pipe <++> maybe emptyDoc pretty0 (elemAt source sr1)
                          let emph1 = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty0 (replicate (ec1 `minus` sc1) '^'))
@@ -219,26 +219,26 @@ ploc2 fc1 fc2 =
                          let numbered = if (sr2 `minus` er1) == 1
                                            then []
                                            else addLineNumbers nsize (sr1 + 1) (pretty0 <$> extractRange (sr1 + 1) er1 source)
-                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> pretty0 (sr1 + 1)) <++> align (vsep [line1, emph1])]
+                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> byShow (sr1 + 1)) <++> align (vsep [line1, emph1])]
                             ++ numbered
-                            ++ [fileCtxt (space <+> pretty0 (sr2 + 1)) <++> align (vsep [line2, emph2]), emptyDoc]
+                            ++ [fileCtxt (space <+> byShow (sr2 + 1)) <++> align (vsep [line2, emph2]), emptyDoc]
                        (True, False, _) => do
                          let line = fileCtxt pipe <++> maybe emptyDoc pretty0 (elemAt source sr1)
                          let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty0 (replicate (ec1 `minus` sc1) '^'))
-                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> pretty0 (sr1 + 1)) <++> align (vsep [line, emph])]
+                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> byShow (sr1 + 1)) <++> align (vsep [line, emph])]
                             ++ addLineNumbers nsize (sr1 + 1) (pretty0 <$> extractRange (sr1 + 1) (Prelude.max er1 er2) source)
                             ++ [emptyDoc]
                        (False, True, True) => do
                          let line = fileCtxt pipe <++> maybe emptyDoc pretty0 (elemAt source sr1)
                          let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty0 (replicate (ec1 `minus` sc1) '^'))
-                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> pretty0 (sr1 + 1)) <++> align (vsep [line, emph])]
+                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> byShow (sr1 + 1)) <++> align (vsep [line, emph])]
                             ++ addLineNumbers nsize (sr1 + 1) (pretty0 <$> extractRange (sr1 + 1) (Prelude.max er1 er2) source)
                             ++ [emptyDoc]
                        (False, True, False) => do
                          let top = addLineNumbers nsize (sr1 + 1) (pretty0 <$> extractRange (sr1 + 1) er1 source)
                          let line = fileCtxt pipe <++> maybe emptyDoc pretty0 (elemAt source sr1)
                          let emph = fileCtxt pipe <++> spaces (cast sc2) <+> error (pretty0 (replicate (ec2 `minus` sc2) '^'))
-                         pure $ vsep $ [emptyDoc, head, firstRow] ++ top ++ [fileCtxt (space <+> pretty0 (sr2 + 1)) <++> align (vsep [line, emph]), emptyDoc]
+                         pure $ vsep $ [emptyDoc, head, firstRow] ++ top ++ [fileCtxt (space <+> byShow (sr2 + 1)) <++> align (vsep [line, emph]), emptyDoc]
                        (_, _, _) => pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr1 (pretty0 <$> extractRange sr1 er2 source)) <+> line
   where
     extractRange : Nat -> Nat -> List String -> List String
@@ -385,7 +385,7 @@ perrorRaw (NotTotal fc n r)
     = pure $ errorDesc (code (pretty0 !(prettyName n)) <++> reflow "is not total," <++> pretty0 r)
         <+> line <+> !(ploc fc)
 perrorRaw (LinearUsed fc count n)
-    = pure $ errorDesc (reflow "There are" <++> pretty0 count <++> reflow "uses of linear name"
+    = pure $ errorDesc (reflow "There are" <++> byShow count <++> reflow "uses of linear name"
         <++> code (pretty0 (sugarName n)) <+> dot)
         <++> line <+> !(ploc fc)
         <+> line <+> reflow "Suggestion: linearly bounded variables must be used exactly once."
@@ -414,7 +414,7 @@ perrorRaw (BorrowPartialType fc env tm)
     = pure $ errorDesc (code !(pshow env tm) <++>
         reflow "borrows, so must return a concrete type.") <+> line <+> !(ploc fc)
 perrorRaw (AmbiguousName fc ns)
-    = pure $ errorDesc (reflow "Ambiguous name" <++> code (pretty0 ns))
+    = pure $ errorDesc (reflow "Ambiguous name" <++> code (cast $ prettyList ns))
         <+> line <+> !(ploc fc)
 perrorRaw (AmbiguousElab fc env ts_in)
     = do pp <- getPPrint
@@ -597,11 +597,11 @@ perrorRaw (BadRunElab fc env script desc)
         <+> line <+> !(ploc fc)
 perrorRaw (GenericMsg fc str) = pure $ pretty0 str <+> line <+> !(ploc fc)
 perrorRaw (TTCError msg)
-    = pure $ errorDesc (reflow "Error in TTC file" <+> colon <++> pretty0 (show msg))
+    = pure $ errorDesc (reflow "Error in TTC file" <+> colon <++> byShow msg)
         <++> parens "the most likely case is that the ./build directory in your current project contains files from a previous build of idris2 or the idris2 executable is from a different build than the installed .ttc files"
 perrorRaw (FileErr fname err)
     = pure $ errorDesc (reflow "File error in" <++> pretty0 fname <++> colon)
-       <++> pretty0 (show err)
+       <++> byShow err
 perrorRaw (CantFindPackage fname)
     = pure $ errorDesc (reflow "Can't find package " <++> pretty0 fname)
 perrorRaw (LitFail fc)

@@ -401,6 +401,10 @@ Pretty Void String where
                    vsep $ map unsafeTextWithoutNewLines $ lines str'
 
 export
+byShow : Show a => a -> Doc ann
+byShow = pretty0 . show
+
+export
 FromString (Doc ann) where
   fromString = pretty0
 
@@ -419,55 +423,25 @@ tupled = group . encloseSep (flatAlt (pretty0 "( ") (pretty0 "("))
                             (pretty0 ", ")
 
 export
-Pretty ann a => Pretty ann (List a) where
-  pretty = align . list . map pretty
+prettyList : Pretty ann a => List a -> Doc ann
+prettyList = align . list . map pretty
 
 export
-Pretty ann a => Pretty ann (List1 a) where
-  pretty = pretty . forget
+prettyList1 : Pretty ann a => List1 a -> Doc ann
+prettyList1 = prettyList . forget
 
 export
 [prettyListMaybe] Pretty ann a => Pretty ann (List (Maybe a)) where
-  pretty = pretty . catMaybes
-    where catMaybes : List (Maybe a) -> List a
-          catMaybes [] = []
-          catMaybes (Nothing :: xs) = catMaybes xs
-          catMaybes ((Just x) :: xs) = x :: catMaybes xs
-
-export
-Pretty Void () where
-  pretty _ = pretty "()"
-
-export
-Pretty Void Bool where
-  pretty True = pretty "True"
-  pretty False = pretty "False"
+  pretty = prettyList . catMaybes
 
 export
 Pretty Void Char where
   pretty '\n' = line
   pretty c = Chara c
 
-export Pretty Void Nat where pretty = unsafeTextWithoutNewLines . show
-export Pretty Void Int where pretty = unsafeTextWithoutNewLines . show
-export Pretty Void Integer where pretty = unsafeTextWithoutNewLines . show
-export Pretty Void Double where pretty = unsafeTextWithoutNewLines . show
-export Pretty Void Bits8 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Void Bits16 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Void Bits32 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Void Bits64 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Void Int8 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Void Int16 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Void Int32 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Void Int64 where pretty = unsafeTextWithoutNewLines . show
-
 export
-(Pretty ann a, Pretty ann b) => Pretty ann (a, b) where
-  pretty (x, y) = tupled [pretty x, pretty y]
-
-export
-Pretty ann a => Pretty ann (Maybe a) where
-  pretty = maybe neutral pretty
+prettyMaybe : Pretty ann a => Maybe a -> Doc ann
+prettyMaybe = maybe neutral pretty
 
 ||| Combines text nodes so they can be rendered more efficiently.
 export

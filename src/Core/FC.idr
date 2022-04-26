@@ -215,7 +215,7 @@ Show FC where
              showPos endPos
 
 prettyPos : FilePos -> Doc Void
-prettyPos (l, c) = pretty (l + 1) <+> colon <+> pretty (c + 1)
+prettyPos = pretty . showPos
 
 export
 Pretty Void FC where
