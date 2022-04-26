@@ -224,13 +224,13 @@ Value *onCollectStringIterator_arglist(Value_Arglist *arglist)
 
 Value *stringIteratorToString(void *a, char *str, Value *it_p, Value_Closure *f)
 {
-    String_Iterator *it = ((Value_GCPointer *)it_p)->p->p;
+    String_Iterator *it = ((Value_Pointer *)it_p)->p;
     return apply_closure((Value *)f, (Value *)makeString(it->str + it->pos));
 }
 
 Value *stringIteratorNext(char *s, Value *it_p)
 {
-    String_Iterator *it = (String_Iterator *)((Value_GCPointer *)it_p)->p->p;
+    String_Iterator *it = (String_Iterator *)((Value_Pointer *)it_p)->p;
     char c = it->str[it->pos];
 
     if (c == '\0') {

@@ -173,14 +173,21 @@ Value_Pointer *makePointer(void *ptr_Raw)
     Value_Pointer *p = IDRIS2_NEW_VALUE(Value_Pointer);
     p->header.tag = POINTER_TAG;
     p->p = ptr_Raw;
+    p->onCollectFct = NULL;
     return p;
 }
 
-Value_GCPointer *makeGCPointer(void *ptr_Raw, Value_Closure *onCollectFct)
+Value_Pointer *makeGCPointer(void *ptr_Raw, Value_Closure *onCollectFct)
 {
-    Value_GCPointer *p = IDRIS2_NEW_VALUE(Value_GCPointer);
+    // Value_Pointer *p = IDRIS2_NEW_VALUE(Value_Pointer);
+    // p->header.tag = GC_POINTER_TAG;
+    // p->p = makePointer(ptr_Raw);
+    // p->onCollectFct = onCollectFct;
+    // return p;
+
+    Value_Pointer *p = IDRIS2_NEW_VALUE(Value_Pointer);
     p->header.tag = GC_POINTER_TAG;
-    p->p = makePointer(ptr_Raw);
+    p->p = ptr_Raw;
     p->onCollectFct = onCollectFct;
     return p;
 }
@@ -321,18 +328,27 @@ void removeReference(Value *elem)
             break;
         }
         case POINTER_TAG:
-            /* nothing to delete, added for sake of completeness */
-            break;
-
         case GC_POINTER_TAG:
         {
-            /* maybe here we need to invoke onCollectAny */
-            Value_GCPointer *vPtr = (Value_GCPointer *)elem;
-            Value *closure1 = apply_closure((Value *)vPtr->onCollectFct, (Value *)vPtr->p);
-            apply_closure(closure1, NULL);
-            removeReference(closure1);
-            removeReference((Value *)vPtr->onCollectFct);
-            removeReference((Value *)vPtr->p);
+            /* invoke freeing funtion if set */
+            Value_Pointer *vPtr = (Value_Pointer *)elem;
+            if(vPtr->onCollectFct)
+            {
+                // calling the apply_closure machinery has the downside of introducing
+                // problems, since the closure would need a reference to this pointer
+                // which would then be double-freed when its reference gets removed.
+                // thus, we call the function directly.
+                //Value *closure1 = apply_closure((Value *)vPtr->onCollectFct, elem);
+                //apply_closure(closure1, NULL);
+                //removeReference(closure1);
+                fun_ptr_t f = vPtr->onCollectFct->f;
+                Value_Arglist * al = vPtr->onCollectFct->arglist;
+                al->args[0] = elem;
+                al->args[1] = NULL;
+                Value * retVal = f(al);
+                IDRIS2_REFC_VERIFY(!retVal, "onCollect returned value");
+                removeReference((Value *)vPtr->onCollectFct);
+            }
             break;
         }
         case WORLD_TAG:

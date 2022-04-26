@@ -161,14 +161,8 @@ typedef struct
 {
     Value_header header;
     void *p;
-} Value_Pointer;
-
-typedef struct
-{
-    Value_header header;
-    Value_Pointer *p;
     Value_Closure *onCollectFct;
-} Value_GCPointer;
+} Value_Pointer;
 
 typedef struct
 {
