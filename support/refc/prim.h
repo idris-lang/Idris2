@@ -2,8 +2,6 @@
 
 #include "cBackend.h"
 
-
-
 // IORef
 
 Value *newIORef(Value *, Value *, Value *);
@@ -13,7 +11,7 @@ Value *writeIORef(Value *, Value *, Value *, Value *);
 // Sys
 
 Value *sysOS(void);
-Value* idris2_crash(Value* msg);
+Value *idris2_crash(Value *msg);
 
 // Array
 
@@ -23,7 +21,7 @@ Value *arraySet(Value *, Value *, Value *, Value *, Value *);
 
 // Pointer
 Value *onCollect(Value *, Value *, Value *, Value *);
-Value *onCollectAny(Value *, Value *, Value *, Value *);
+Value *onCollectAny(Value *, Value *, Value *);
 
 Value *voidElim(Value *, Value *);
 
@@ -38,7 +36,8 @@ Value *System_Concurrency_Raw_prim__makeCondition(Value *);
 
 Value *System_Concurrency_Raw_prim__conditionWait(Value *, Value *, Value *);
 
-Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Value *, Value *, Value *, Value *);
+Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Value *, Value *,
+                                                         Value *, Value *);
 
 Value *System_Concurrency_Raw_prim__conditionSignal(Value *, Value *);
 
