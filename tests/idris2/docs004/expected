@@ -11,7 +11,7 @@ happy = True
 Main> happy : Nat
 happy = 0
 Main> show : String -> String
-show cs = strCons '"' (showLitString (unpack cs) """)
+show cs = strCons '"' (showLitString (unpack cs) "\"")
 
 showPrec : Prec -> String -> String
 showPrec _ x = show x

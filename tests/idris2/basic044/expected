@@ -106,8 +106,8 @@ LOG declare.def:2: Case tree for Vec.::: case {arg:N}[4] : (Data.Fin.Fin (Prelud
  }
 LOG declare.type:1: Processing Vec.test
 LOG elab.ambiguous:5: Ambiguous elaboration at Vec:L:C--L:C:
-($resolvedN 2)
-($resolvedN 2)
+  ($resolvedN 2)
+  ($resolvedN 2)
 With default. Target type : Prelude.Types.Nat
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:L:C--L:C:
 (($resolvedN Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))
@@ -129,16 +129,16 @@ LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not de
 (($resolvedN (fromInteger 0)) Nil)
 Target type : ?Vec.{a:N}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration at Vec:L:C--L:C:
-($resolvedN 0)
-($resolvedN 0)
+  ($resolvedN 0)
+  ($resolvedN 0)
 With default. Target type : ?Vec.{a:N}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:L:C--L:C:
 $resolvedN
 $resolvedN
 Target type : (Vec.Vec ?Vec.{a:N}_[] ?Vec.{n:N}_[])
 LOG elab.ambiguous:5: Ambiguous elaboration at Vec:L:C--L:C:
-($resolvedN 0)
-($resolvedN 0)
+  ($resolvedN 0)
+  ($resolvedN 0)
 With default. Target type : ?Vec.{a:N}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:L:C--L:C:
 $resolvedN
@@ -148,8 +148,8 @@ LOG elab.ambiguous:5: Ambiguous elaboration (kept 1 out of 3 candidates) (delaye
 (($resolvedN (fromInteger 0)) Nil)
 Target type : (Prelude.Basics.List Prelude.Types.Nat)
 LOG elab.ambiguous:5: Ambiguous elaboration at Vec:L:C--L:C:
-($resolvedN 0)
-($resolvedN 0)
+  ($resolvedN 0)
+  ($resolvedN 0)
 With default. Target type : Prelude.Types.Nat
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 1 out of 2 candidates) (delayed) at Vec:L:C--L:C:
 $resolvedN

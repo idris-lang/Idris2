@@ -1,3 +1,3 @@
 000018(:protocol-version 2 1)
-000037(:return (:ok "\"Test\"" ((0 6 ((:decor :data))))) 32)
+00004e(:return (:ok "\"Test\"" ((0 6 ((:decor :data))) (0 6 ((:decor :data))))) 32)
 Alas the file is done, aborting
