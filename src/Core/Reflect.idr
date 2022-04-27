@@ -14,7 +14,6 @@ public export
 interface Reify a where
   reify : {auto c : Ref Ctxt Defs} ->
           {vars : _} ->
-          Env Term vars =>
           Defs -> NF vars -> Core a
 
 public export
@@ -69,9 +68,9 @@ reflectionttimp : String -> Name
 reflectionttimp n = NS reflectionTTImpNS (UN $ Basic n)
 
 export
-cantReify : Ref Ctxt Defs => {vars : _} -> Env Term vars => NF vars -> String -> Core a
+cantReify : Ref Ctxt Defs => {vars : _} -> NF vars -> String -> Core a
 cantReify val ty = do
-  logNF "reflection.reify" 10 "Can't reify as \{ty}" %search val
+  logNF "reflection.reify" 10 "Can't reify as \{ty}" (mkEnv emptyFC vars) val
   throw (GenericMsg (getLoc val) ("Can't reify as " ++ ty))
 
 export
