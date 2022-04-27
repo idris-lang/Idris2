@@ -132,6 +132,7 @@ knownTopics = [
     ("quantity", Nothing),
     ("quantity.hole", Nothing),
     ("quantity.hole.update", Nothing),
+    ("reflection.reify", Just "Log what's happening when converting an `NF` to some real value"),
     ("repl.eval", Nothing),
     ("resugar.var", Nothing),
     ("specialise", Nothing),
