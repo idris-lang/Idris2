@@ -60,10 +60,13 @@ mkArgs fc rigc env ty = pure ([], ty)
 
 export
 impLast : List (ArgInfo vars) -> List (ArgInfo vars)
-impLast xs =
-  let (exp, imp) = partition (isExplicit . plicit) xs in
-  let (aut, imp) = partition (isAutoImplicit . plicit) imp in
-  exp ++ aut ++ imp
+impLast xs = filter (not . impl) xs ++ filter impl xs
+  where
+      impl : ArgInfo vs -> Bool
+      impl inf
+          = case plicit inf of
+                 Explicit => False
+                 _ => True
 
 searchIfHole : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
@@ -533,7 +536,7 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
                                                  then throw e
                                                  else tryGroups Nothing nty (hintGroups sd))
                      else throw (CantSolveGoal fc (gamma defs) [] top Nothing)
-              _ => do logNF "auto" 10 "Next target" env nty
+              _ => do logNF "auto" 10 "Next target: " env nty
                       searchLocalVars fc rigc defaults trying' depth def top env nty
   where
     ambig : Error -> Bool
