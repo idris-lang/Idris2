@@ -22,7 +22,7 @@ import Libraries.Data.String.Extra
 %hide String.indent
 %hide Extra.indent
 %hide List1.(++)
-%hide SnocList.(++)
+-- %hide SnocList.(++)
 %hide String.(++)
 %hide Pretty.Syntax
 %hide List1.forget

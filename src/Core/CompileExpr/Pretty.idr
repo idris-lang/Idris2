@@ -32,7 +32,7 @@ import Libraries.Data.String.Extra
 %hide Extra.indent
 %hide List1.(++)
 %hide Vect.(++)
-%hide SnocList.(++)
+-- %hide SnocList.(++)
 %hide String.(++)
 %hide Pretty.Syntax
 %hide List1.forget
