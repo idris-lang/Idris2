@@ -153,7 +153,7 @@ listPackages
          traverse_ (iputStrLn . pkgDesc) pkgs
   where
     pkgDesc : PkgDir -> Doc IdrisAnn
-    pkgDesc (MkPkgDir _ pkgName version) = pretty pkgName <++> parens (pretty version)
+    pkgDesc (MkPkgDir _ pkgName version) = pretty0 pkgName <++> parens (byShow version)
 
 dirOption : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
@@ -162,7 +162,7 @@ dirOption dirs LibDir
     = coreLift $ putStrLn
          (prefix_dir dirs </> "idris2-" ++ showVersion False version)
 dirOption dirs BlodwenPaths
-    = iputStrLn $ pretty (toString dirs)
+    = iputStrLn $ pretty0 (toString dirs)
 dirOption dirs Prefix
     = coreLift $ putStrLn (prefix_dir dirs)
 

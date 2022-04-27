@@ -224,11 +224,11 @@ Show ModuleIdent where
   show = showNSWithSep "." . miAsNamespace
 
 export
-Pretty Namespace where
+Pretty Void Namespace where
   pretty (MkNS ns) = concatWith (surround dot) (pretty <$> reverse ns)
 
 export
-Pretty ModuleIdent where
+Pretty Void ModuleIdent where
   pretty = pretty . miAsNamespace
 
 

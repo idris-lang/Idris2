@@ -7,148 +7,116 @@ import Data.List
 import Data.String
 import Data.Vect
 import Idris.Pretty
+import Idris.Doc.Annotations
 import Libraries.Data.String.Extra
 
 %default covering
 
-export
-Pretty CFType where
-  pretty = pretty . show
-
-export
-Pretty LazyReason where
-  pretty = pretty . show
-
+%hide Vect.(::)
+%hide Vect.Nil
+%hide CompileExpr.(::)
+%hide CompileExpr.Nil
+%hide String.(::)
+%hide String.Nil
+%hide Doc.Nil
+%hide SubstEnv.(::)
+%hide SubstEnv.Nil
+%hide SubstCEnv.(::)
+%hide SubstCEnv.Nil
+%hide CList.(::)
+%hide CList.Nil
+%hide Stream.(::)
+%hide Symbols.equals
+%hide Fin.fromInteger
+%hide String.indent
+%hide Extra.indent
+%hide List1.(++)
+%hide Vect.(++)
+-- %hide SnocList.(++)
+%hide String.(++)
+%hide Pretty.Syntax
+%hide List1.forget
 
 prettyFlag : ConInfo -> Doc ann
 prettyFlag DATACON = ""
-prettyFlag f = " [" <+> pretty (show f) <+> "]"
+prettyFlag f = pretty0 (show f)
+
+prettyCon : Name -> ConInfo -> Maybe Int -> Doc IdrisSyntax
+prettyCon x ci tag
+  = hsep [ annotate (DCon (Just x)) (pretty0 x)
+         , braces ("tag =" <++> byShow tag)
+         , prettyFlag ci
+         ]
 
 mutual
-  export
-  Pretty NamedCExp where
-    prettyPrec d (NmLocal _ x) = "!" <+> pretty x
-    prettyPrec d (NmRef _ x) = pretty x
+  Pretty IdrisSyntax NamedCExp where
+    prettyPrec d (NmLocal _ x) = "!" <+> pretty0 x
+    prettyPrec d (NmRef _ x) = pretty0 x
     prettyPrec d (NmLam _ x y)
-      = parenthesise (d > Open) $ "\\" <+> pretty x <+> "=>" <++> pretty y
-    prettyPrec d (NmLet _ x y z) = vcat [ "let" <++> pretty x <++> "=" <++> pretty y <++> "in"
-                                  , pretty z
-                                  ]
+      = parenthesise (d > Open) $ keyword "\\" <+> pretty0 x <+> fatArrow <++> pretty y
+    prettyPrec d (NmLet _ x y z)
+        = parenthesise (d > Open) $
+            vcat [ let_ <++> pretty0 x <++> equals <++> pretty y <++> in_, pretty z ]
     prettyPrec d (NmApp _ x xs)
         = parenthesise (d > Open) $
             sep (pretty x :: map (prettyPrec App) xs)
     prettyPrec d (NmCon _ x ci tag xs)
         = parenthesise (d > Open) $
-            sep (pretty x <+> braces ("tag =" <++> pretty tag) <+> prettyFlag ci
-                 :: map (prettyPrec App) xs)
+            sep (prettyCon x ci tag :: map (prettyPrec App) xs)
     prettyPrec d (NmOp _ op xs)
         = parenthesise (d > Open) $ prettyOp op $ map (prettyPrec App) xs
-
-      where
-
-        prettyOp : PrimFn arity -> Vect arity (Doc ann) -> Doc ann
-        prettyOp (Add ty) [v1,v2] = v1 <++> "+" <++> v2
-        prettyOp (Sub ty) [v1,v2] = v1 <++> "-" <++> v2
-        prettyOp (Mul ty) [v1,v2] = v1 <++> "*" <++> v2
-        prettyOp (Div ty) [v1,v2] = v1 <++> "`div`" <++> v2
-        prettyOp (Mod ty) [v1,v2] = v1 <++> "`mod`" <++> v2
-        prettyOp (Neg ty) [v] = "-" <++> v
-        prettyOp (ShiftL ty) [v1,v2] = "shiftl" <++> v1 <++> v2
-        prettyOp (ShiftR ty) [v1,v2] = "shiftr" <++> v1 <++> v2
-        prettyOp (BAnd ty) [v1,v2] = v1 <++> "&&" <++> v2
-        prettyOp (BOr ty) [v1,v2] = v1 <++> "||" <++> v2
-        prettyOp (BXOr ty) [v1,v2] = v1 <++> "`xor`" <++> v2
-        prettyOp (LT ty) [v1,v2] = v1 <++> "<" <++> v2
-        prettyOp (LTE ty) [v1,v2] = v1 <++> "<=" <++> v2
-        prettyOp (EQ ty) [v1,v2] = v1 <++> "==" <++> v2
-        prettyOp (GTE ty) [v1,v2] = v1 <++> ">=" <++> v2
-        prettyOp (GT ty) [v1,v2] = v1 <++> ">" <++> v2
-        prettyOp StrLength [v] = "length" <++> v
-        prettyOp StrHead [v] = "head" <++> v
-        prettyOp StrTail [v] = "tail" <++> v
-        prettyOp StrIndex [v1,v2] = v1 <++> "[" <+> v2 <+> "]"
-        prettyOp StrCons [v1,v2] = v1 <++> "::" <++> v2
-        prettyOp StrAppend [v1,v2] = v1 <++> "++" <++> v2
-        prettyOp StrReverse [v] = "reverse" <++> v
-        prettyOp StrSubstr [v1,v2,v3] = v1 <++> "[" <+> v2 <+> "," <++> v3 <+> "]"
-        prettyOp DoubleExp [v] = "exp" <++> v
-        prettyOp DoubleLog [v] = "log" <++> v
-        prettyOp DoublePow [v1,v2] = v1 <++> "`pow`" <++> v2
-        prettyOp DoubleSin [v] = "sin" <++> v
-        prettyOp DoubleCos [v] = "cos" <++> v
-        prettyOp DoubleTan [v] = "tan" <++> v
-        prettyOp DoubleASin [v] = "asin" <++> v
-        prettyOp DoubleACos [v] = "acos" <++> v
-        prettyOp DoubleATan [v] = "atan" <++> v
-        prettyOp DoubleSqrt [v] = "sqrt" <++> v
-        prettyOp DoubleFloor [v] = "floor" <++> v
-        prettyOp DoubleCeiling [v] = "ceiling" <++> v
-        prettyOp (Cast x y) [v] = "[" <+> pretty x <++> "->" <++> pretty y <+> "]" <++> v
-        prettyOp BelieveMe [v1,v2,v3] = "believe_me" <++> v1 <++> v2 <++> v3
-        prettyOp Crash [v1,v2] = "crash" <++> v1 <++> v2
-
     prettyPrec d (NmExtPrim _ p xs)
         = parenthesise (d > Open) $
-            sep (pretty p :: map (prettyPrec App) xs)
+            sep (annotate (Fun p) (pretty0 p) :: map (prettyPrec App) xs)
     prettyPrec d (NmForce _  lr x)
         = parenthesise (d > Open) $
-            sep ["Force", prettyPrec App lr, prettyPrec App x]
+            sep [keyword "Force", byShow lr, prettyPrec App x]
     prettyPrec d (NmDelay _ lr x)
         = parenthesise (d > Open) $
-            sep ["Delay", prettyPrec App lr, prettyPrec App x]
+            sep [keyword "Delay", byShow lr, prettyPrec App x]
     prettyPrec d (NmConCase _ sc xs def)
-        = parenthesise (d > Open) $ vcat
-            (("case" <++> pretty sc <++> "of")
-            :: zipWith (\ s, p => indent 2 $ s <++> pretty p)
-                       ("{" :: (";" <$ xs))
-                       xs
-            ++ maybe [] (\ deflt => [indent 2 ("; _ =>" <+> softline <+> align (pretty deflt))]) def
-            ++ [indent 2 "}"])
+        = parenthesise (d > Open) $ vcat [case_ <++> pretty sc <++> of_, indent 2 (prettyAlts xs def)]
     prettyPrec d (NmConstCase _ sc xs def)
-        = parenthesise (d > Open) $ vcat
-            (("case" <++> pretty sc <++> "of")
-            :: zipWith (\ s, p => indent 2 $ s <++> pretty p)
-                       ("{" :: (";" <$ xs))
-                       xs
-            ++ maybe [] (\ deflt => [indent 2 ("; _ =>" <+> softline <+> align (pretty deflt))]) def
-            ++ [indent 2 "}"])
+        = parenthesise (d > Open) $ vcat [case_ <++> pretty sc <++> of_, indent 2 (prettyAlts xs def)]
     prettyPrec d (NmPrimVal _ x) = pretty x
     prettyPrec d (NmErased _) = "___"
     prettyPrec d (NmCrash _ x)
         = parenthesise (d > Open) $
-            sep ["crash", prettyPrec App x]
-  export
-  Pretty NamedConAlt where
+            sep ["crash", pretty0 x]
+  Pretty IdrisSyntax NamedConAlt where
     pretty (MkNConAlt x ci tag args exp)
-        = sep (pretty x <+> braces ("tag =" <++> pretty tag) <+> prettyFlag ci
-               :: map (prettyPrec App) args
-               ++ ["=>" <+> softline <+> align (pretty exp) ])
+        = sep (prettyCon x ci tag :: map pretty0 args ++ [fatArrow <+> softline <+> align (pretty exp) ])
 
-  export
-  Pretty NamedConstAlt where
+  Pretty IdrisSyntax NamedConstAlt where
     pretty (MkNConstAlt x exp)
-        = pretty x <++> "=>" <+> softline <+> align (pretty exp)
+        = pretty x <++> fatArrow <+> softline <+> align (pretty exp)
 
-export
-{args : _} -> Pretty (CExp args) where
+  prettyAlts : Pretty IdrisSyntax alt => List alt -> Maybe NamedCExp -> Doc IdrisSyntax
+  prettyAlts xs def = vcat
+    $ zipWith (\ s, p => s <++> pretty p)
+              (keyword "{" :: (keyword ";" <$ xs))
+              xs
+   ++ maybe [] (\ deflt => [keyword "; _" <++> fatArrow <+> softline <+> align (pretty deflt)]) def
+   ++ [keyword "}"]
+
+{args : _} -> Pretty IdrisSyntax (CExp args) where
   pretty = pretty . forget
 
-
 export
-Pretty CDef where
-  pretty (MkFun [] exp) = pretty exp
-  pretty (MkFun args exp) =
-    "\\" <++> concatWith (\ x, y => x <+> "," <++> y) (map pretty args)
-         <++> "=>" <++> pretty exp
+Pretty IdrisDocAnn CDef where
+  pretty (MkFun [] exp) = prettyBy Syntax exp
+  pretty (MkFun args exp) = reAnnotate Syntax $
+    keyword "\\" <++> concatWith (\ x, y => x <+> keyword "," <++> y) (map pretty0 args)
+         <++> fatArrow <++> pretty exp
   pretty (MkCon mtag arity nt)
-    = vcat $ (maybe "Data" (const "Type") mtag <++> "Constructor:") :: map (indent 2)
-           ( maybe [] (\ tag => ["tag:" <++> pretty tag]) mtag ++
-           [ "arity:" <++> pretty arity ] ++
-             maybe [] (\ n => ["newtype by:" <++> pretty n]) nt)
+    = vcat $ header (maybe "Data" (const "Type") mtag <++> "Constructor") :: map (indent 2)
+           ( maybe [] (\ tag => ["tag:" <++> byShow tag]) mtag ++
+           [ "arity:" <++> byShow arity ] ++
+             maybe [] (\ n => ["newtype by:" <++> byShow n]) nt)
   pretty (MkForeign ccs args ret)
-    = vcat $ "Foreign function:" :: map (indent 2)
-           [ "bindings:" <++> pretty ccs
-           , "argument types:" <++> pretty args
-           , "return type:" <++> pretty ret
+    = vcat $ header "Foreign function" :: map (indent 2)
+           [ "bindings:" <++> cast (prettyList ccs)
+           , "argument types:" <++> byShow args
+           , "return type:" <++> byShow ret
            ]
-  pretty (MkError exp) = "Error:" <++> pretty exp
+  pretty (MkError exp) = "Error:" <++> prettyBy Syntax exp

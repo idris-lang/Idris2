@@ -13,7 +13,7 @@ import Idris.Resugar
 import Idris.Syntax
 import Idris.Syntax.Views
 
-import Libraries.Text.PrettyPrint.Prettyprinter.Util
+%hide Symbols.equals
 
 %default covering
 
@@ -28,7 +28,7 @@ displayType shortName defs (n, i, gdef)
               let nm = ifThenElse shortName (dropNS nm) nm
               let prig = prettyRig gdef.multiplicity
               let ann = showCategory id gdef
-              pure (prig <+> ann (prettyOp nm) <++> colon <++> prettyTerm tm))
+              pure (prig <+> ann (cast $ prettyOp True nm) <++> colon <++> pretty tm))
           (\num => prettyHole defs [] n num (type gdef))
           (isHole gdef)
 export
@@ -38,7 +38,7 @@ displayTerm : {auto c : Ref Ctxt Defs} ->
               Core (Doc IdrisSyntax)
 displayTerm defs tm
   = do ptm <- resugar [] !(normaliseHoles defs [] tm)
-       pure (prettyTerm ptm)
+       pure (pretty ptm)
 
 export
 displayClause : {auto c : Ref Ctxt Defs} ->
@@ -48,7 +48,12 @@ displayClause : {auto c : Ref Ctxt Defs} ->
 displayClause defs (vs ** (env, lhs, rhs))
   = do lhstm <- resugar env !(normaliseHoles defs env lhs)
        rhstm <- resugar env !(normaliseHoles defs env rhs)
-       pure (prettyTerm lhstm <++> keyword equals <++> prettyTerm rhstm)
+       pure (prettyLHS lhstm <++> equals <++> pretty rhstm)
+
+  where
+    prettyLHS : IPTerm -> Doc IdrisSyntax
+    prettyLHS (PRef _ op) = cast $ prettyOp True op.rawName
+    prettyLHS t = pretty t
 
 export
 displayPats : {auto c : Ref Ctxt Defs} ->
@@ -61,7 +66,7 @@ displayPats shortName defs (n, idx, gdef)
         do ty <- displayType shortName defs (n, idx, gdef)
            ps <- traverse (displayClause defs) pats
            pure (vsep (ty :: ps))
-      _ => pure (pretty n <++> reflow "is not a pattern matching definition")
+      _ => pure (pretty0 n <++> reflow "is not a pattern matching definition")
 
 export
 displayImpl : {auto c : Ref Ctxt Defs} ->
@@ -89,4 +94,4 @@ displayImpl defs (n, idx, gdef)
              pdef <- displayPats True defs (nm, idx, gdef)
              pure (Just pdef)
            pure (vcat $ intersperse "" pds)
-      _ => pure (pretty n <++> reflow "is not an implementation definition")
+      _ => pure (pretty0 n <++> reflow "is not an implementation definition")

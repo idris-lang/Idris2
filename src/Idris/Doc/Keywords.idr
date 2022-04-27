@@ -579,7 +579,7 @@ keywordsDoc =
 export
 getDocsForKeyword : String -> Doc IdrisDocAnn
 getDocsForKeyword k
-  = maybe (annotate (Syntax Keyword) $ pretty k) doc
+  = maybe (annotate (Syntax Keyword) $ pretty0 k) doc
   $ lookup k keywordsDoc
 
 
@@ -729,5 +729,5 @@ symbolsDoc
 export
 getDocsForSymbol : String -> Doc IdrisDocAnn
 getDocsForSymbol k
-  = maybe (annotate (Syntax Keyword) $ pretty k) doc
+  = maybe (annotate (Syntax Keyword) $ pretty0 k) doc
   $ lookup k symbolsDoc

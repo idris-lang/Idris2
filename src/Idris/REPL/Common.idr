@@ -238,9 +238,6 @@ data REPLResult : Type where
   Exited : REPLResult
   Edited : EditResult -> REPLResult
 
-prettyTerm : IPTerm -> Doc IdrisDocAnn
-prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
-
 export
 docsOrSignature : {auto o : Ref ROpts REPLOpts} ->
                   {auto c : Ref Ctxt Defs} ->
@@ -260,7 +257,7 @@ docsOrSignature fc n
     typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
                             | Nothing => pure ""
                           ty <- resugar [] !(normaliseHoles defs [] (type def))
-                          pure $ pretty n <++> ":" <++> prettyTerm ty
+                          pure $ pretty0 n <++> ":" <++> prettyBy Syntax ty
 
 export
 equivTypes : {auto c : Ref Ctxt Defs} ->

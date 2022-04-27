@@ -139,7 +139,7 @@ keyword = annotate (Syntax Keyword)
 pShowMN : {vars : _} -> Term vars -> Env t vars -> Doc IdrisAnn -> Doc IdrisAnn
 pShowMN t env acc = case t of
   Local fc _ idx p => case dropAllNS (nameAt p) of
-      MN _ _ => acc <++> parens ("implicitly bound at" <++> pretty (getBinderLoc p env))
+      MN _ _ => acc <++> parens ("implicitly bound at" <++> pretty0 (getBinderLoc p env))
       _ => acc
   _ => acc
 
@@ -151,7 +151,7 @@ pshow env tm
     = do defs <- get Ctxt
          ntm <- normaliseHoles defs env tm
          itm <- resugar env ntm
-         pure (pShowMN ntm env $ reAnnotate Syntax $ prettyTerm itm)
+         pure (pShowMN ntm env $ prettyBy Syntax itm)
 
 pshowNoNorm : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
@@ -160,7 +160,7 @@ pshowNoNorm : {vars : _} ->
 pshowNoNorm env tm
     = do defs <- get Ctxt
          itm <- resugar env tm
-         pure (pShowMN tm env $ reAnnotate Syntax $ prettyTerm itm)
+         pure (pShowMN tm env $ prettyBy Syntax itm)
 
 ploc : {auto o : Ref ROpts REPLOpts} ->
        FC -> Core (Doc IdrisAnn)
@@ -170,14 +170,14 @@ ploc fc = do
     let (sr, sc) = mapHom (fromInteger . cast) s
     let (er, ec) = mapHom (fromInteger . cast) e
     let nsize = length $ show (er + 1)
-    let head = annotate FileCtxt (pretty fc)
+    let head = annotate FileCtxt (pretty0 fc)
     source <- lines <$> getCurrentElabSource
     if sr == er
        then do
-         let emph = spaces (cast $ nsize + sc + 4) <+> annotate Error (pretty (replicate (ec `minus` sc) '^'))
+         let emph = spaces (cast $ nsize + sc + 4) <+> annotate Error (pretty0 (replicate (ec `minus` sc) '^'))
          let firstr = er `minus` 4
-         pure $ vsep ([emptyDoc, head] ++ (addLineNumbers nsize firstr (pretty <$> extractRange firstr er source)) ++ [emph]) <+> line
-       else pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr (pretty <$> extractRange sr (Prelude.min er (sr + 5)) source)) <+> line
+         pure $ vsep ([emptyDoc, head] ++ (addLineNumbers nsize firstr (pretty0 <$> extractRange firstr er source)) ++ [emph]) <+> line
+       else pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr (pretty0 <$> extractRange sr (Prelude.min er (sr + 5)) source)) <+> line
   where
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
@@ -185,7 +185,7 @@ ploc fc = do
     pad size s = replicate (size `minus` length s) '0' ++ s
     addLineNumbers : Nat -> Nat -> List (Doc IdrisAnn) -> List (Doc IdrisAnn)
     addLineNumbers size st xs =
-      snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
+      snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty0 (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
 
 -- Assumes the two FCs are sorted
 ploc2 : {auto o : Ref ROpts REPLOpts} ->
@@ -202,44 +202,44 @@ ploc2 fc1 fc2 =
        if (er2 > the Nat (er1 + 5))
           then pure $ !(ploc (MkFC fn1 s1 e1)) <+> line <+> !(ploc (MkFC fn2 s2 e2))
           else do let nsize = length $ show (er2 + 1)
-                  let head = annotate FileCtxt (pretty $ MkFC fn1 s1 e2)
+                  let head = annotate FileCtxt (pretty0 $ MkFC fn1 s1 e2)
                   let firstRow = annotate FileCtxt (spaces (cast $ nsize + 2) <+> pipe)
                   source <- lines <$> getCurrentElabSource
                   case (sr1 == er1, sr2 == er2, sr1 == sr2) of
                        (True, True, True) => do
-                         let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
-                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (replicate (ec1 `minus` sc1) '^'))
-                                      <+> spaces (cast $ sc2 `minus` ec1) <+> error (pretty (replicate (ec2 `minus` sc2) '^'))
-                         pure $ vsep [emptyDoc, head, firstRow, fileCtxt (space <+> pretty (sr1 + 1)) <++> align (vsep [line, emph]), emptyDoc]
+                         let line = fileCtxt pipe <++> maybe emptyDoc pretty0 (elemAt source sr1)
+                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty0 (replicate (ec1 `minus` sc1) '^'))
+                                      <+> spaces (cast $ sc2 `minus` ec1) <+> error (pretty0 (replicate (ec2 `minus` sc2) '^'))
+                         pure $ vsep [emptyDoc, head, firstRow, fileCtxt (space <+> byShow (sr1 + 1)) <++> align (vsep [line, emph]), emptyDoc]
                        (True, True, False) => do
-                         let line1 = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
-                         let emph1 = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (replicate (ec1 `minus` sc1) '^'))
-                         let line2 = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr2)
-                         let emph2 = fileCtxt pipe <++> spaces (cast sc2) <+> error (pretty (replicate (ec2 `minus` sc2) '^'))
+                         let line1 = fileCtxt pipe <++> maybe emptyDoc pretty0 (elemAt source sr1)
+                         let emph1 = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty0 (replicate (ec1 `minus` sc1) '^'))
+                         let line2 = fileCtxt pipe <++> maybe emptyDoc pretty0 (elemAt source sr2)
+                         let emph2 = fileCtxt pipe <++> spaces (cast sc2) <+> error (pretty0 (replicate (ec2 `minus` sc2) '^'))
                          let numbered = if (sr2 `minus` er1) == 1
                                            then []
-                                           else addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) er1 source)
-                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> pretty (sr1 + 1)) <++> align (vsep [line1, emph1])]
+                                           else addLineNumbers nsize (sr1 + 1) (pretty0 <$> extractRange (sr1 + 1) er1 source)
+                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> byShow (sr1 + 1)) <++> align (vsep [line1, emph1])]
                             ++ numbered
-                            ++ [fileCtxt (space <+> pretty (sr2 + 1)) <++> align (vsep [line2, emph2]), emptyDoc]
+                            ++ [fileCtxt (space <+> byShow (sr2 + 1)) <++> align (vsep [line2, emph2]), emptyDoc]
                        (True, False, _) => do
-                         let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
-                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (replicate (ec1 `minus` sc1) '^'))
-                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> pretty (sr1 + 1)) <++> align (vsep [line, emph])]
-                            ++ addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) (Prelude.max er1 er2) source)
+                         let line = fileCtxt pipe <++> maybe emptyDoc pretty0 (elemAt source sr1)
+                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty0 (replicate (ec1 `minus` sc1) '^'))
+                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> byShow (sr1 + 1)) <++> align (vsep [line, emph])]
+                            ++ addLineNumbers nsize (sr1 + 1) (pretty0 <$> extractRange (sr1 + 1) (Prelude.max er1 er2) source)
                             ++ [emptyDoc]
                        (False, True, True) => do
-                         let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
-                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (replicate (ec1 `minus` sc1) '^'))
-                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> pretty (sr1 + 1)) <++> align (vsep [line, emph])]
-                            ++ addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) (Prelude.max er1 er2) source)
+                         let line = fileCtxt pipe <++> maybe emptyDoc pretty0 (elemAt source sr1)
+                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty0 (replicate (ec1 `minus` sc1) '^'))
+                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> byShow (sr1 + 1)) <++> align (vsep [line, emph])]
+                            ++ addLineNumbers nsize (sr1 + 1) (pretty0 <$> extractRange (sr1 + 1) (Prelude.max er1 er2) source)
                             ++ [emptyDoc]
                        (False, True, False) => do
-                         let top = addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) er1 source)
-                         let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
-                         let emph = fileCtxt pipe <++> spaces (cast sc2) <+> error (pretty (replicate (ec2 `minus` sc2) '^'))
-                         pure $ vsep $ [emptyDoc, head, firstRow] ++ top ++ [fileCtxt (space <+> pretty (sr2 + 1)) <++> align (vsep [line, emph]), emptyDoc]
-                       (_, _, _) => pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr1 (pretty <$> extractRange sr1 er2 source)) <+> line
+                         let top = addLineNumbers nsize (sr1 + 1) (pretty0 <$> extractRange (sr1 + 1) er1 source)
+                         let line = fileCtxt pipe <++> maybe emptyDoc pretty0 (elemAt source sr1)
+                         let emph = fileCtxt pipe <++> spaces (cast sc2) <+> error (pretty0 (replicate (ec2 `minus` sc2) '^'))
+                         pure $ vsep $ [emptyDoc, head, firstRow] ++ top ++ [fileCtxt (space <+> byShow (sr2 + 1)) <++> align (vsep [line, emph]), emptyDoc]
+                       (_, _, _) => pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr1 (pretty0 <$> extractRange sr1 er2 source)) <+> line
   where
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
@@ -247,7 +247,7 @@ ploc2 fc1 fc2 =
     pad size s = replicate (size `minus` length s) '0' ++ s
     addLineNumbers : Nat -> Nat -> List (Doc IdrisAnn) -> List (Doc IdrisAnn)
     addLineNumbers size st xs =
-      snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
+      snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty0 (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
 
 export
 pwarningRaw : {auto c : Ref Ctxt Defs} ->
@@ -255,7 +255,7 @@ pwarningRaw : {auto c : Ref Ctxt Defs} ->
               {auto o : Ref ROpts REPLOpts} ->
               Warning -> Core (Doc IdrisAnn)
 pwarningRaw (ParserWarning fc msg)
-    = pure $ pretty msg <+> line <+> !(ploc fc)
+    = pure $ pretty0 msg <+> line <+> !(ploc fc)
 pwarningRaw (UnreachableClause fc env tm)
     = pure $ errorDesc (reflow "Unreachable clause:"
         <++> code !(pshow env tm))
@@ -269,17 +269,17 @@ pwarningRaw (ShadowingGlobalDefs fc ns)
   where
     pshadowing : (String, List1 Name) -> Doc IdrisAnn
     pshadowing (n, ns) = indent 2 $ hsep $
-                           pretty n
+                           pretty0 n
                         :: reflow "is shadowing"
-                        :: punctuate comma (map pretty (forget ns))
+                        :: punctuate comma (map pretty0 (forget ns))
 
 pwarningRaw (Deprecated s fcAndName)
     = do docs <- traverseOpt (\(fc, name) => getDocsForName fc name justUserDoc) fcAndName
-         pure . vsep $ catMaybes [ Just $ pretty "Deprecation warning:" <++> pretty s
-                                 , map (const UserDocString) <$> docs
+         pure . vsep $ catMaybes [ Just $ "Deprecation warning:" <++> pretty0 s
+                                 , reAnnotate (const Pretty.UserDocString) <$> docs
                                  ]
 pwarningRaw (GenericWarn s)
-    = pure $ pretty s
+    = pure $ pretty0 s
 
 export
 pwarning : {auto c : Ref Ctxt Defs} ->
@@ -324,7 +324,7 @@ perrorRaw (PatternVariableUnifies fc fct env n tm)
   where
     prettyVar : Name -> Doc IdrisAnn
     prettyVar (PV n _) = prettyVar n
-    prettyVar n = pretty n
+    prettyVar n = pretty0 n
     order : FC -> FC -> (FC, FC)
     order fc1 fc2 =
       let Just (_, sr1, sc1) = isNonEmptyFC fc1
@@ -333,7 +333,8 @@ perrorRaw (PatternVariableUnifies fc fct env n tm)
            | Nothing => (fc1, EmptyFC)
       in if sr1 < sr2 then (fc1, fc2) else if sr1 == sr2 && sc1 < sc2 then (fc1, fc2) else (fc2, fc1)
 perrorRaw (CyclicMeta fc env n tm)
-    = pure $ errorDesc (reflow "Cycle detected in solution of metavariable" <++> meta (pretty !(prettyName n)) <++> equals
+    = pure $ errorDesc (reflow "Cycle detected in solution of metavariable"
+        <++> meta (pretty0 !(prettyName n)) <++> equals
         <++> code !(pshow env tm)) <+> line <+> !(ploc fc)
 perrorRaw (WhenUnifying _ gam env x y err)
     = do defs <- get Ctxt
@@ -349,51 +350,51 @@ perrorRaw (ValidCase fc env (Left tm))
 perrorRaw (ValidCase _ env (Right err))
     = pure $ errorDesc (reflow "Impossible pattern gives an error" <+> colon) <+> line <+> !(perrorRaw err)
 perrorRaw (UndefinedName fc x)
-    = pure $ errorDesc (reflow "Undefined name" <++> code (pretty x) <+> dot) <++> line <+> !(ploc fc)
+    = pure $ errorDesc (reflow "Undefined name" <++> code (pretty0 x) <+> dot) <++> line <+> !(ploc fc)
 perrorRaw (InvisibleName fc n (Just ns))
-    = pure $ errorDesc ("Name" <++> code (pretty n) <++> reflow "is inaccessible since"
-        <++> code (pretty ns) <++> reflow "is not explicitly imported.")
+    = pure $ errorDesc ("Name" <++> code (pretty0 n) <++> reflow "is inaccessible since"
+        <++> code (pretty0 ns) <++> reflow "is not explicitly imported.")
         <+> line <+> !(ploc fc)
         <+> line <+> reflow "Suggestion: add an explicit" <++> keyword "export" <++> "or" <++> keyword ("public" <++> "export")
         <++> reflow "modifier. By default, all names are" <++> keyword "private" <++> reflow "in namespace blocks."
 perrorRaw (InvisibleName fc x Nothing)
-    = pure $ errorDesc ("Name" <++> code (pretty x) <++> reflow "is private.") <+> line <+> !(ploc fc)
+    = pure $ errorDesc ("Name" <++> code (pretty0 x) <++> reflow "is private.") <+> line <+> !(ploc fc)
         <+> line <+> reflow "Suggestion: add an explicit" <++> keyword "export" <++> "or" <++> keyword ("public" <++> "export")
         <++> reflow "modifier. By default, all names are" <++> keyword "private" <++> reflow "in namespace blocks."
 perrorRaw (BadTypeConType fc n)
-    = pure $ errorDesc (reflow "Return type of" <++> code (pretty n) <++> reflow "must be" <++> code "Type"
+    = pure $ errorDesc (reflow "Return type of" <++> code (pretty0 n) <++> reflow "must be" <++> code "Type"
         <+> dot) <+> line <+> !(ploc fc)
 perrorRaw (BadDataConType fc n fam)
-    = pure $ errorDesc (reflow "Return type of" <++> code (pretty n) <++> reflow "must be in"
-        <++> code (pretty fam)) <++> line <+> !(ploc fc)
+    = pure $ errorDesc (reflow "Return type of" <++> code (pretty0 n) <++> reflow "must be in"
+        <++> code (pretty0 fam)) <++> line <+> !(ploc fc)
 perrorRaw (NotCovering fc n IsCovering)
-    = pure $ errorDesc (reflow "Internal error" <++> parens (reflow "Coverage of" <++> code (pretty n)))
+    = pure $ errorDesc (reflow "Internal error" <++> parens (reflow "Coverage of" <++> code (pretty0 n)))
 perrorRaw (NotCovering fc n (MissingCases cs))
-    = pure $ errorDesc (code (pretty !(prettyName n)) <++> reflow "is not covering.")
+    = pure $ errorDesc (code (pretty0 !(prettyName n)) <++> reflow "is not covering.")
         <+> line <+> !(ploc fc) <+> line
         <+> reflow "Missing cases" <+> colon <+> line
         <+> indent 4 (vsep !(traverse (pshow []) cs)) <+> line
 perrorRaw (NotCovering fc n (NonCoveringCall ns))
-    = pure $ errorDesc (pretty !(prettyName n) <++> reflow "is not covering.")
+    = pure $ errorDesc (pretty0 !(prettyName n) <++> reflow "is not covering.")
         <+> line <+> !(ploc fc) <+> line
         <+> reflow "Calls non covering function" <+>
         case ns of
-             [fn] => space <+> pretty fn
-             _ => pretty 's' <+> colon <++> concatWith (surround (comma <+> space)) (pretty <$> ns)
+             [fn] => space <+> pretty0 fn
+             _ => pretty0 's' <+> colon <++> concatWith (surround (comma <+> space)) (pretty0 <$> ns)
 perrorRaw (NotTotal fc n r)
-    = pure $ errorDesc (code (pretty !(prettyName n)) <++> reflow "is not total," <++> pretty r)
+    = pure $ errorDesc (code (pretty0 !(prettyName n)) <++> reflow "is not total," <++> pretty0 r)
         <+> line <+> !(ploc fc)
 perrorRaw (LinearUsed fc count n)
-    = pure $ errorDesc (reflow "There are" <++> pretty count <++> reflow "uses of linear name"
-        <++> code (pretty (sugarName n)) <+> dot)
+    = pure $ errorDesc (reflow "There are" <++> byShow count <++> reflow "uses of linear name"
+        <++> code (pretty0 (sugarName n)) <+> dot)
         <++> line <+> !(ploc fc)
         <+> line <+> reflow "Suggestion: linearly bounded variables must be used exactly once."
 perrorRaw (LinearMisuse fc n exp ctx)
     = if isErased exp
-         then pure $ errorDesc (code (pretty n) <++> reflow "is not accessible in this context.")
+         then pure $ errorDesc (code (pretty0 n) <++> reflow "is not accessible in this context.")
                 <+> line <+> !(ploc fc)
          else pure $ errorDesc (reflow "Trying to use" <++> prettyRig exp <++> "name"
-                <++> code (pretty (sugarName n)) <++> "in" <++> prettyRel ctx <++> "context.")
+                <++> code (pretty0 (sugarName n)) <++> "in" <++> prettyRel ctx <++> "context.")
                 <+> line <+> !(ploc fc)
   where
     prettyRig : RigCount -> Doc ann
@@ -413,7 +414,7 @@ perrorRaw (BorrowPartialType fc env tm)
     = pure $ errorDesc (code !(pshow env tm) <++>
         reflow "borrows, so must return a concrete type.") <+> line <+> !(ploc fc)
 perrorRaw (AmbiguousName fc ns)
-    = pure $ errorDesc (reflow "Ambiguous name" <++> code (pretty ns))
+    = pure $ errorDesc (reflow "Ambiguous name" <++> code (cast $ prettyList ns))
         <+> line <+> !(ploc fc)
 perrorRaw (AmbiguousElab fc env ts_in)
     = do pp <- getPPrint
@@ -437,8 +438,8 @@ perrorRaw (AmbiguousSearch fc env tgt ts)
                   , indent 4 (vsep !(traverse (pshowNoNorm env) ts))
                   ]
 perrorRaw (AmbiguityTooDeep fc n ns)
-    = pure $ errorDesc (reflow "Maximum ambiguity depth exceeded in" <++> code (pretty !(getFullName n))
-        <+> colon) <+> line <+> concatWith (surround (pretty " --> ")) (pretty <$> !(traverse getFullName ns))
+    = pure $ errorDesc (reflow "Maximum ambiguity depth exceeded in" <++> code (pretty0 !(getFullName n))
+        <+> colon) <+> line <+> concatWith (surround " --> ") (pretty0 <$> !(traverse getFullName ns))
         <++> line <+> !(ploc fc)
         <+> line <+> reflow "Suggestion: the default ambiguity depth limit is 3, the" <++> code "%ambiguity_depth"
         <++> reflow "pragma can be used to extend this limit, but beware compilation times can be severely impacted."
@@ -450,7 +451,7 @@ perrorRaw (AllFailed ts)
   where
     pAlterror : (Maybe Name, Error) -> Core (Doc IdrisAnn)
     pAlterror (Just n, err)
-       = pure $ "If" <++> code (pretty !(aliasName !(getFullName n))) <+> colon <++> !(perrorRaw err)
+       = pure $ "If" <++> code (pretty0 !(aliasName !(getFullName n))) <+> colon <++> !(perrorRaw err)
     pAlterror (Nothing, err)
        = pure $ reflow "Possible error" <+> colon <+> line <+> indent 4 !(perrorRaw err)
 
@@ -464,23 +465,23 @@ perrorRaw (RecordTypeNeeded fc _)
 perrorRaw (DuplicatedRecordUpdatePath fc ps)
     = pure $ vcat $
       errorDesc (reflow "Duplicated record update paths:")
-      :: map (indent 2 . concatWith (surround (pretty "->")) . map pretty) ps
+      :: map (indent 2 . reAnnotate Syntax . prettyFieldPath) ps
       ++ [line <+> !(ploc fc)]
 perrorRaw (NotRecordField fc fld Nothing)
-    = pure $ errorDesc (code (pretty fld) <++> reflow "is not part of a record type.") <+> line <+> !(ploc fc)
+    = pure $ errorDesc (code (pretty0 fld) <++> reflow "is not part of a record type.") <+> line <+> !(ploc fc)
 perrorRaw (NotRecordField fc fld (Just ty))
-    = pure $ errorDesc (reflow "Record type" <++> code (pretty !(getFullName ty)) <++> reflow "has no field"
-        <++> code (pretty fld) <+> dot) <+> line <+> !(ploc fc)
+    = pure $ errorDesc (reflow "Record type" <++> code (pretty0 !(getFullName ty)) <++> reflow "has no field"
+        <++> code (pretty0 fld) <+> dot) <+> line <+> !(ploc fc)
 perrorRaw (NotRecordType fc ty)
-    = pure $ errorDesc (code (pretty !(getFullName ty)) <++> reflow "is not a record type.") <+> line <+> !(ploc fc)
+    = pure $ errorDesc (code (pretty0 !(getFullName ty)) <++> reflow "is not a record type.") <+> line <+> !(ploc fc)
 perrorRaw (IncompatibleFieldUpdate fc flds)
-    = pure $ reflow "Field update" <++> concatWith (surround (pretty "->")) (pretty <$> flds)
+    = pure $ reflow "Field update" <++> reAnnotate Syntax (prettyFieldPath flds)
              <++> reflow "not compatible with other updates at" <+> colon <+> line <+> !(ploc fc)
 perrorRaw (InvalidArgs fc env [n] tm)
-    = pure $ errorDesc (code (pretty n) <++> reflow "is not a valid argument in" <++> !(pshow env tm)
+    = pure $ errorDesc (code (pretty0 n) <++> reflow "is not a valid argument in" <++> !(pshow env tm)
         <+> dot) <+> line <+> !(ploc fc)
 perrorRaw (InvalidArgs fc env ns tm)
-    = pure $ errorDesc (concatWith (surround (comma <+> space)) (code . pretty <$> ns)
+    = pure $ errorDesc (concatWith (surround (comma <+> space)) (code . pretty0 <$> ns)
         <++> reflow "are not valid arguments in" <++> !(pshow env tm) <+> dot)
         <+> line <+> !(ploc fc)
 perrorRaw (TryWithImplicits fc env imps)
@@ -490,9 +491,10 @@ perrorRaw (TryWithImplicits fc env imps)
   where
     tshow : {vars : _} ->
             Env Term vars -> (Name, Term vars) -> Core (Doc IdrisAnn)
-    tshow env (n, ty) = pure $ pretty n <++> colon <++> code !(pshow env ty)
+    tshow env (n, ty) = pure $ pretty0 n <++> colon <++> code !(pshow env ty)
 perrorRaw (BadUnboundImplicit fc env n ty)
-    = pure $ errorDesc (reflow "Can't bind name" <++> code (pretty (nameRoot n)) <++> reflow "with type" <++> code !(pshow env ty)
+    = pure $ errorDesc (reflow "Can't bind name" <++> code (pretty0 (nameRoot n))
+        <++> reflow "with type" <++> code !(pshow env ty)
         <+> colon) <+> line <+> !(ploc fc) <+> line <+> reflow "Suggestion: try an explicit bind."
 perrorRaw (CantSolveGoal fc gam env g reason)
     = do defs <- get Ctxt
@@ -518,7 +520,7 @@ perrorRaw (CantSolveGoal fc gam env g reason)
 
 perrorRaw (DeterminingArg fc n i env g)
     = pure $ errorDesc (reflow "Can't find an implementation for" <++> code !(pshow env g) <+> line
-        <+> reflow "since I can't infer a value for argument" <++> code (pretty n) <+> dot)
+        <+> reflow "since I can't infer a value for argument" <++> code (pretty0 n) <+> dot)
         <+> line <+> !(ploc fc)
 perrorRaw (UnsolvedHoles hs)
     = pure $ errorDesc (reflow "Unsolved holes" <+> colon) <+> line <+> !(prettyHoles hs)
@@ -526,50 +528,60 @@ perrorRaw (UnsolvedHoles hs)
     prettyHoles : List (FC, Name) -> Core (Doc IdrisAnn)
     prettyHoles [] = pure emptyDoc
     prettyHoles ((fc, n) :: hs)
-        = pure $ meta (pretty n) <++> reflow "introduced at:" <++> !(ploc fc) <+> !(prettyHoles hs)
+        = pure $ meta (pretty0 n) <++> reflow "introduced at:" <++> !(ploc fc) <+> !(prettyHoles hs)
 perrorRaw (CantInferArgType fc env n h ty)
-    = pure $ errorDesc (reflow "Can't infer type for argument" <++> code (pretty n)) <+> line
-        <+> "Got" <++> code !(pshow env ty) <++> reflow "with hole" <++> meta (pretty h) <+> dot
+    = pure $ errorDesc (reflow "Can't infer type for argument" <++> code (pretty0 n)) <+> line
+        <+> "Got" <++> code !(pshow env ty) <++> reflow "with hole" <++> meta (pretty0 h) <+> dot
         <+> line <+> !(ploc fc)
 perrorRaw (SolvedNamedHole fc env h tm)
-    = pure $ errorDesc (reflow "Named hole" <++> meta (pretty h) <++> reflow "has been solved by unification.") <+> line
+    = pure $ errorDesc (reflow "Named hole" <++> meta (pretty0 h)
+        <++> reflow "has been solved by unification.") <+> line
         <+> "Result" <+> colon <++> code !(pshow env tm)
         <+> line <+> !(ploc fc)
 perrorRaw (VisibilityError fc vx x vy y)
-    = pure $ errorDesc (keyword (pretty vx) <++> code (pretty (sugarName x))
-        <++> reflow "cannot refer to" <++> keyword (pretty vy) <++> code (pretty (sugarName y)))
+    = pure $ errorDesc (keyword (pretty0 vx) <++> code (pretty0 (sugarName x))
+        <++> reflow "cannot refer to" <++> keyword (pretty0 vy) <++> code (pretty0 (sugarName y)))
         <+> line <+> !(ploc fc)
 perrorRaw (NonLinearPattern fc n)
-    = pure $ errorDesc (reflow "Non linear pattern" <++> code (pretty (sugarName n)) <+> dot) <+> line <+> !(ploc fc)
+    = pure $ errorDesc (reflow "Non linear pattern" <++> code (pretty0 (sugarName n)) <+> dot)
+        <+> line <+> !(ploc fc)
 perrorRaw (BadPattern fc n)
-    = pure $ errorDesc (reflow "Pattern not allowed here" <+> colon <++> code (pretty n) <+> dot) <+> line <+> !(ploc fc)
+    = pure $ errorDesc (reflow "Pattern not allowed here" <+> colon <++> code (pretty0 n) <+> dot)
+        <+> line <+> !(ploc fc)
 perrorRaw (NoDeclaration fc n)
-    = pure $ errorDesc (reflow "No type declaration for" <++> code (pretty n) <+> dot) <+> line <+> !(ploc fc)
+    = pure $ errorDesc (reflow "No type declaration for" <++> code (pretty0 n) <+> dot)
+        <+> line <+> !(ploc fc)
 perrorRaw (AlreadyDefined fc n)
-    = pure $ errorDesc (code (pretty n) <++> reflow "is already defined.") <+> line <+> !(ploc fc)
+    = pure $ errorDesc (code (pretty0 n) <++> reflow "is already defined.")
+        <+> line <+> !(ploc fc)
 perrorRaw (NotFunctionType fc env tm)
-    = pure $ errorDesc (code !(pshow env tm) <++> reflow "is not a function type.") <+> line <+> !(ploc fc)
+    = pure $ errorDesc (code !(pshow env tm) <++> reflow "is not a function type.")
+        <+> line <+> !(ploc fc)
 perrorRaw (RewriteNoChange fc env rule ty)
     = pure $ errorDesc (reflow "Rewriting by" <++> code !(pshow env rule)
         <++> reflow "did not change type" <++> code !(pshow env ty) <+> dot)
         <+> line <+> !(ploc fc)
 perrorRaw (NotRewriteRule fc env rule)
-    = pure $ errorDesc (code !(pshow env rule) <++> reflow "is not a rewrite rule type.") <+> line <+> !(ploc fc)
+    = pure $ errorDesc (code !(pshow env rule) <++> reflow "is not a rewrite rule type.")
+        <+> line <+> !(ploc fc)
 perrorRaw (CaseCompile fc n DifferingArgNumbers)
-    = pure $ errorDesc (reflow "Patterns for" <++> code (pretty !(prettyName n)) <++> reflow "have differing numbers of arguments.")
+    = pure $ errorDesc (reflow "Patterns for" <++> code (pretty0 !(prettyName n))
+       <++> reflow "have differing numbers of arguments.")
         <+> line <+> !(ploc fc)
 perrorRaw (CaseCompile fc n DifferingTypes)
-    = pure $ errorDesc (reflow "Patterns for" <++> code (pretty !(prettyName n)) <++> reflow "require matching on different types.")
+    = pure $ errorDesc (reflow "Patterns for" <++> code (pretty0 !(prettyName n))
+       <++> reflow "require matching on different types.")
         <+> line <+> !(ploc fc)
 perrorRaw (CaseCompile fc n UnknownType)
-    = pure $ errorDesc (reflow "Can't infer type to match in" <++> code (pretty !(prettyName n)) <+> dot)
+    = pure $ errorDesc (reflow "Can't infer type to match in"
+       <++> code (pretty0 !(prettyName n)) <+> dot)
         <+> line <+> !(ploc fc)
 perrorRaw (CaseCompile fc n (NotFullyApplied cn))
-    = pure $ errorDesc (pretty "Constructor" <++> code (pretty cn) <++> reflow "is not fully applied.")
+    = pure $ errorDesc ("Constructor" <++> code (pretty0 cn) <++> reflow "is not fully applied.")
          <+> line <+> !(ploc fc)
 perrorRaw (CaseCompile fc n (MatchErased (_ ** (env, tm))))
-    = pure $ errorDesc (reflow "Attempt to match on erased argument" <++> code !(pshow env tm) <++> pretty "in"
-        <++> code (pretty !(prettyName n)) <+> dot) <+> line <+> !(ploc fc)
+    = pure $ errorDesc (reflow "Attempt to match on erased argument" <++> code !(pshow env tm) <++> "in"
+        <++> code (pretty0 !(prettyName n)) <+> dot) <+> line <+> !(ploc fc)
 perrorRaw (BadDotPattern fc env reason x y)
     = pure $ errorDesc (reflow "Can't match on" <++> code !(pshow env x)
         <++> parens (pretty reason) <+> dot) <+> line <+> !(ploc fc)
@@ -577,45 +589,52 @@ perrorRaw (MatchTooSpecific fc env tm)
     = pure $ errorDesc (reflow "Can't match on" <++> code !(pshow env tm)
         <++> reflow "as it must have a polymorphic type.") <+> line <+> !(ploc fc)
 perrorRaw (BadImplicit fc str)
-    = pure $ errorDesc (reflow "Can't infer type for unbound implicit name" <++> code (pretty str) <+> dot)
+    = pure $ errorDesc (reflow "Can't infer type for unbound implicit name" <++> code (pretty0 str) <+> dot)
         <+> line <+> !(ploc fc) <+> line <+> reflow "Suggestion: try making it a bound implicit."
 perrorRaw (BadRunElab fc env script desc)
-    = pure $ errorDesc (reflow "Bad elaborator script" <++> code !(pshow env script) <++> parens (pretty desc) <+> dot)
+    = pure $ errorDesc (reflow "Bad elaborator script" <++> code !(pshow env script)
+       <++> parens (pretty0 desc) <+> dot)
         <+> line <+> !(ploc fc)
-perrorRaw (GenericMsg fc str) = pure $ pretty str <+> line <+> !(ploc fc)
+perrorRaw (GenericMsg fc str) = pure $ pretty0 str <+> line <+> !(ploc fc)
 perrorRaw (TTCError msg)
-    = pure $ errorDesc (reflow "Error in TTC file" <+> colon <++> pretty (show msg))
-        <++> parens (pretty "the most likely case is that the ./build directory in your current project contains files from a previous build of idris2 or the idris2 executable is from a different build than the installed .ttc files")
+    = pure $ errorDesc (reflow "Error in TTC file" <+> colon <++> byShow msg)
+        <++> parens "the most likely case is that the ./build directory in your current project contains files from a previous build of idris2 or the idris2 executable is from a different build than the installed .ttc files"
 perrorRaw (FileErr fname err)
-    = pure $ errorDesc (reflow "File error in" <++> pretty fname <++> colon) <++> pretty (show err)
+    = pure $ errorDesc (reflow "File error in" <++> pretty0 fname <++> colon)
+       <++> byShow err
 perrorRaw (CantFindPackage fname)
-    = pure $ errorDesc (reflow "Can't find package " <++> pretty fname)
+    = pure $ errorDesc (reflow "Can't find package " <++> pretty0 fname)
 perrorRaw (LitFail fc)
-    = pure $ errorDesc (reflow "Can't parse literate.") <+> line <+> !(ploc fc)
+    = pure $ errorDesc (reflow "Can't parse literate.")
+        <+> line <+> !(ploc fc)
 perrorRaw (LexFail fc msg)
-    = pure $ errorDesc (pretty msg) <+> line <+> !(ploc fc)
+    = pure $ errorDesc (pretty0 msg) <+> line <+> !(ploc fc)
 perrorRaw (ParseFail ((fc, msg) ::: Nil))
-    = pure $ errorDesc (pretty msg) <+> line <+> !(ploc fc)
+    = pure $ errorDesc (pretty0 msg) <+> line <+> !(ploc fc)
 perrorRaw (ParseFail errs)
     = pure $ errorDesc (reflow "Couldn't parse any alternatives" <+> colon) <+> line <+> !listErrors
   where
     prettyErrors : Nat -> Nat -> List (FC, String) -> Core (Doc IdrisAnn)
     prettyErrors showCount _ []   = pure emptyDoc
-    prettyErrors showCount 0 errs = pure $ meta (pretty "... (\{show $ length errs} others)")
+    prettyErrors showCount 0 errs = pure $ meta (pretty0 "... (\{show $ length errs} others)")
     prettyErrors showCount (S k) ((fc, msg) :: hs)
         = do let idx = show $ showCount `minus` k
-             pure $ warning (pretty "\{idx}: \{msg}") <+> line <+> !(ploc fc) <+> !(prettyErrors showCount k hs)
+             pure $ warning (pretty0 "\{idx}: \{msg}")
+               <+> line <+> !(ploc fc)
+               <+> !(prettyErrors showCount k hs)
 
     listErrors : Core (Doc IdrisAnn)
     listErrors = do showCount <- logErrorCount . session . options <$> get Ctxt
                     prettyErrors showCount showCount . nub . reverse $ forget errs
 perrorRaw (ModuleNotFound fc ns)
-    = pure $ errorDesc ("Module" <++> annotate FileCtxt (pretty ns) <++> reflow "not found") <+> line <+> !(ploc fc)
+    = pure $ errorDesc ("Module" <++> annotate FileCtxt (pretty0 ns) <++> reflow "not found")
+        <+> line <+> !(ploc fc)
 perrorRaw (CyclicImports ns)
-    = pure $ errorDesc (reflow "Module imports form a cycle" <+> colon) <++> concatWith (surround (pretty " -> ")) (pretty <$> ns)
+    = pure $ errorDesc (reflow "Module imports form a cycle" <+> colon)
+        <++> concatWith (surround " -> ") (pretty0 <$> ns)
 perrorRaw ForceNeeded = pure $ errorDesc (reflow "Internal error when resolving implicit laziness")
-perrorRaw (InternalError str) = pure $ errorDesc (reflow "INTERNAL ERROR" <+> colon) <++> pretty str
-perrorRaw (UserError str) = pure $ errorDesc (pretty "Error" <+> colon) <++> pretty str
+perrorRaw (InternalError str) = pure $ errorDesc (reflow "INTERNAL ERROR" <+> colon) <++> pretty0 str
+perrorRaw (UserError str) = pure $ errorDesc ("Error" <+> colon) <++> pretty0 str
 perrorRaw (NoForeignCC fc specs) = do
     let cgs = fst <$> availableCGs (options !(get Ctxt))
     let res = vsep [ errorDesc (reflow ("The given specifier '" ++ show specs ++ "' was not accepted by any backend. Available backends") <+> colon)
@@ -623,41 +642,43 @@ perrorRaw (NoForeignCC fc specs) = do
                    , reflow "Some backends have additional specifier rules, refer to their documentation."
                    ] <+> line <+> !(ploc fc)
     pure res
-perrorRaw (BadMultiline fc str) = pure $ errorDesc (reflow "While processing multi-line string" <+> dot <++> pretty str <+> dot) <+> line <+> !(ploc fc)
-perrorRaw (Timeout str) = pure $ errorDesc (reflow "Timeout in" <++> pretty str)
+perrorRaw (BadMultiline fc str)
+  = pure $ errorDesc (reflow "While processing multi-line string" <+> dot <++> pretty0 str <+> dot)
+      <+> line <+> !(ploc fc)
+perrorRaw (Timeout str) = pure $ errorDesc (reflow "Timeout in" <++> pretty0 str)
 
 perrorRaw (FailingDidNotFail fc)
   = pure $ errorDesc (reflow "Failing block did not fail" <+> dot)
     <+> line <+> !(ploc fc)
 perrorRaw (FailingWrongError fc msg err)
   = pure $ vcat [ errorDesc (reflow "Failing block failed with the wrong error" <+> dot)
-                , "Expected" <++> dquote <+> pretty msg <+> dquote <++> "but got:"
+                , "Expected" <++> dquote <+> pretty0 msg <+> dquote <++> "but got:"
                 , vsep !(traverse perrorRaw (forget err))
                 ]
 
 perrorRaw (InType fc n err)
-    = pure $ hsep [ errorDesc (reflow "While processing type of" <++> code (pretty !(prettyName n))) <+> dot
+    = pure $ hsep [ errorDesc (reflow "While processing type of" <++> code (pretty0 !(prettyName n))) <+> dot
                   , !(perrorRaw err)
                   ]
 perrorRaw (InCon fc n err)
-    = pure $ hsep [ errorDesc (reflow "While processing constructor" <++> code (pretty !(prettyName n))) <+> dot
+    = pure $ hsep [ errorDesc (reflow "While processing constructor" <++> code (pretty0 !(prettyName n))) <+> dot
                   , !(perrorRaw err)
                   ]
 perrorRaw (InLHS fc n err)
-    = pure $ hsep [ errorDesc (reflow "While processing left hand side of" <++> code (pretty !(prettyName n))) <+> dot
+    = pure $ hsep [ errorDesc (reflow "While processing left hand side of" <++> code (pretty0 !(prettyName n))) <+> dot
                   , !(perrorRaw err)
                   ]
 perrorRaw (InRHS fc n err)
-    = pure $ hsep [ errorDesc (reflow "While processing right hand side of" <++> code (pretty !(prettyName n))) <+> dot
+    = pure $ hsep [ errorDesc (reflow "While processing right hand side of" <++> code (pretty0 !(prettyName n))) <+> dot
                   , !(perrorRaw err)
                   ]
 
 perrorRaw (MaybeMisspelling err ns) = pure $ !(perrorRaw err) <+> case ns of
-  (n ::: []) => reflow "Did you mean:" <++> code (pretty n) <+> "?"
+  (n ::: []) => reflow "Did you mean:" <++> code (pretty0 n) <+> "?"
   _ => let (xs, x) = Lib.unsnoc ns in
        reflow "Did you mean any of:"
-       <++> concatWith (surround (comma <+> space)) (map (code . pretty) xs)
-       <+> comma <++> reflow "or" <++> code (pretty x) <+> "?"
+       <++> concatWith (surround (comma <+> space)) (map (code . pretty0) xs)
+       <+> comma <++> "or" <++> code (pretty0 x) <+> "?"
 perrorRaw (WarningAsError warn) = pwarningRaw warn
 
 export
@@ -688,7 +709,7 @@ checkError msg err = do
 
 prettyMaybeLoc : Maybe FC -> Doc IdrisAnn
 prettyMaybeLoc Nothing = emptyDoc
-prettyMaybeLoc (Just fc) = annotate FileCtxt (pretty fc) <+> colon
+prettyMaybeLoc (Just fc) = annotate FileCtxt (pretty0 fc) <+> colon
 
 export
 display : {auto c : Ref Ctxt Defs} ->
@@ -696,7 +717,7 @@ display : {auto c : Ref Ctxt Defs} ->
           {auto o : Ref ROpts REPLOpts} ->
           Error -> Core (Doc IdrisAnn)
 display err = do
-  pure $ annotate Error (pretty "Error:") <++> !(perror err)
+  pure $ annotate Error "Error:" <++> !(perror err)
 
 export
 displayWarning : {auto c : Ref Ctxt Defs} ->
@@ -704,4 +725,4 @@ displayWarning : {auto c : Ref Ctxt Defs} ->
                  {auto o : Ref ROpts REPLOpts} ->
                  Warning -> Core (Doc IdrisAnn)
 displayWarning w
-    = pure $ annotate Warning (pretty "Warning:") <++> !(pwarning w)
+    = pure $ annotate Warning "Warning:" <++> !(pwarning w)

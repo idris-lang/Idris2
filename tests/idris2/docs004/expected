@@ -11,7 +11,7 @@ happy = True
 Main> happy : Nat
 happy = 0
 Main> show : String -> String
-show cs = strCons '"' (showLitString (unpack cs) """)
+show cs = strCons '"' (showLitString (unpack cs) "\"")
 
 showPrec : Prec -> String -> String
 showPrec _ x = show x
@@ -47,7 +47,7 @@ foldr f acc (Left _) = acc
 foldr f acc (Right x) = f x acc
 
 foldl : (acc -> elem -> acc) -> acc -> Either e elem -> acc
-foldl f z t = foldr (flip . . flip f) id t z
+foldl f z t = foldr (flip (.) . flip f) id t z
 
 null : Either e elem -> Bool
 null (Left _) = True
@@ -57,10 +57,10 @@ foldlM : Monad m => (acc -> elem -> m acc) -> acc -> Either e elem -> m acc
 foldlM fm a0 = foldl (\ma, b => ma >>= flip fm b) (pure a0)
 
 toList : Either e elem -> List elem
-toList = foldr :: []
+toList = foldr (::) []
 
 foldMap : Monoid m => (a -> m) -> Either e a -> m
-foldMap f = foldr (<+> . f) neutral
+foldMap f = foldr ((<+>) . f) neutral
 Main> Imported module Data.Bits
 Main> 0 Index : Type
 Index = Nat

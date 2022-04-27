@@ -3,8 +3,11 @@ module Core.TT
 import public Core.FC
 import public Core.Name
 
+import Idris.Pretty.Annotations
+
 import Data.List
 import Data.Nat
+import Data.String
 import Data.Vect
 import Decidable.Equality
 
@@ -12,6 +15,7 @@ import Libraries.Data.NameMap
 import Libraries.Data.Primitives
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Data.String.Extra
 
 import public Algebra
 
@@ -213,40 +217,28 @@ Show Constant where
   show (PrT x) = show x
   show WorldVal = "%MkWorld"
 
-export
-Pretty PrimType where
-  pretty IntType = pretty "Int"
-  pretty Int8Type = pretty "Int8"
-  pretty Int16Type = pretty "Int16"
-  pretty Int32Type = pretty "Int32"
-  pretty Int64Type = pretty "Int64"
-  pretty IntegerType = pretty "Integer"
-  pretty Bits8Type = pretty "Bits8"
-  pretty Bits16Type = pretty "Bits16"
-  pretty Bits32Type = pretty "Bits32"
-  pretty Bits64Type = pretty "Bits64"
-  pretty StringType = pretty "String"
-  pretty CharType = pretty "Char"
-  pretty DoubleType = pretty "Double"
-  pretty WorldType = pretty "%World"
+Pretty IdrisSyntax PrimType where
+  pretty c = annotate (TCon Nothing) $ case c of
+    IntType => "Int"
+    Int8Type => "Int8"
+    Int16Type => "Int16"
+    Int32Type => "Int32"
+    Int64Type => "Int64"
+    IntegerType => "Integer"
+    Bits8Type => "Bits8"
+    Bits16Type => "Bits16"
+    Bits32Type => "Bits32"
+    Bits64Type => "Bits64"
+    StringType => "String"
+    CharType => "Char"
+    DoubleType => "Double"
+    WorldType => "%World"
 
 export
-Pretty Constant where
-  pretty (I x) = pretty x
-  pretty (I8 x) = pretty x
-  pretty (I16 x) = pretty x
-  pretty (I32 x) = pretty x
-  pretty (I64 x) = pretty x
-  pretty (BI x) = pretty x
-  pretty (B8 x) = pretty x
-  pretty (B16 x) = pretty x
-  pretty (B32 x) = pretty x
-  pretty (B64 x) = pretty x
-  pretty (Str x) = dquotes (pretty x)
-  pretty (Ch x) = squotes (pretty x)
-  pretty (Db x) = pretty x
+Pretty IdrisSyntax Constant where
   pretty (PrT x) = pretty x
-  pretty WorldVal = pretty "%MkWorld"
+  pretty v = annotate (DCon Nothing) $ pretty0 $ show v
+
 
 export
 Eq PrimType where
@@ -434,6 +426,49 @@ Show (PrimFn arity) where
   show (Cast x y) = "cast-" ++ show x ++ "-" ++ show y
   show BelieveMe = "believe_me"
   show Crash = "crash"
+
+export
+prettyOp : PrimFn arity -> Vect arity (Doc IdrisSyntax) -> Doc IdrisSyntax
+prettyOp (Add ty) [v1,v2] = v1 <++> "+" <++> v2
+prettyOp (Sub ty) [v1,v2] = v1 <++> "-" <++> v2
+prettyOp (Mul ty) [v1,v2] = v1 <++> "*" <++> v2
+prettyOp (Div ty) [v1,v2] = v1 <++> "`div`" <++> v2
+prettyOp (Mod ty) [v1,v2] = v1 <++> "`mod`" <++> v2
+prettyOp (Neg ty) [v] = "-" <++> v
+prettyOp (ShiftL ty) [v1,v2] = "shiftl" <++> v1 <++> v2
+prettyOp (ShiftR ty) [v1,v2] = "shiftr" <++> v1 <++> v2
+prettyOp (BAnd ty) [v1,v2] = v1 <++> "&&" <++> v2
+prettyOp (BOr ty) [v1,v2] = v1 <++> "||" <++> v2
+prettyOp (BXOr ty) [v1,v2] = v1 <++> "`xor`" <++> v2
+prettyOp (LT ty) [v1,v2] = v1 <++> "<" <++> v2
+prettyOp (LTE ty) [v1,v2] = v1 <++> "<=" <++> v2
+prettyOp (EQ ty) [v1,v2] = v1 <++> "==" <++> v2
+prettyOp (GTE ty) [v1,v2] = v1 <++> ">=" <++> v2
+prettyOp (GT ty) [v1,v2] = v1 <++> ">" <++> v2
+prettyOp StrLength [v] = "length" <++> v
+prettyOp StrHead [v] = "head" <++> v
+prettyOp StrTail [v] = "tail" <++> v
+prettyOp StrIndex [v1,v2] = v1 <++> "[" <+> v2 <+> "]"
+prettyOp StrCons [v1,v2] = v1 <++> "::" <++> v2
+prettyOp StrAppend [v1,v2] = v1 <++> "++" <++> v2
+prettyOp StrReverse [v] = "reverse" <++> v
+prettyOp StrSubstr [v1,v2,v3] = v1 <++> "[" <+> v2 <+> "," <++> v3 <+> "]"
+prettyOp DoubleExp [v] = "exp" <++> v
+prettyOp DoubleLog [v] = "log" <++> v
+prettyOp DoublePow [v1,v2] = v1 <++> "`pow`" <++> v2
+prettyOp DoubleSin [v] = "sin" <++> v
+prettyOp DoubleCos [v] = "cos" <++> v
+prettyOp DoubleTan [v] = "tan" <++> v
+prettyOp DoubleASin [v] = "asin" <++> v
+prettyOp DoubleACos [v] = "acos" <++> v
+prettyOp DoubleATan [v] = "atan" <++> v
+prettyOp DoubleSqrt [v] = "sqrt" <++> v
+prettyOp DoubleFloor [v] = "floor" <++> v
+prettyOp DoubleCeiling [v] = "ceiling" <++> v
+prettyOp (Cast x y) [v] = "[" <+> pretty x <++> "->" <++> pretty y <+> "]" <++> v
+prettyOp BelieveMe [v1,v2,v3] = "believe_me" <++> v1 <++> v2 <++> v3
+prettyOp Crash [v1,v2] = "crash" <++> v1 <++> v2
+
 
 public export
 data PiInfo t = Implicit | Explicit | AutoImplicit | DefImplicit t
@@ -977,7 +1012,7 @@ Show Visibility where
   show Public = "public export"
 
 export
-Pretty Visibility where
+Pretty Void Visibility where
   pretty Private = pretty "private"
   pretty Export = pretty "export"
   pretty Public = pretty "public" <++> pretty "export"
@@ -1046,7 +1081,7 @@ Show PartialReason where
       = "possibly not terminating due to recursive path " ++ showSep " -> " (map show ns)
 
 export
-Pretty PartialReason where
+Pretty Void PartialReason where
   pretty NotStrictlyPositive = reflow "not strictly positive"
   pretty (BadCall [n])
     = reflow "possibly not terminating due to call to" <++> pretty n
@@ -1068,7 +1103,7 @@ Show Terminating where
   show (NotTerminating p) = show p
 
 export
-Pretty Terminating where
+Pretty Void Terminating where
   pretty Unchecked = reflow "not yet checked"
   pretty IsTerminating = pretty "terminating"
   pretty (NotTerminating p) = pretty p
@@ -1089,7 +1124,7 @@ Show Covering where
      = "not covering due to calls to functions " ++ showSep ", " (map show cs)
 
 export
-Pretty Covering where
+Pretty Void Covering where
   pretty IsCovering = pretty "covering"
   pretty (MissingCases c) = reflow "not covering all cases"
   pretty (NonCoveringCall [f])
@@ -1119,7 +1154,7 @@ Show Totality where
       showTot t c = show c ++ "; " ++ show t
 
 export
-Pretty Totality where
+Pretty Void Totality where
   pretty (MkTotality IsTerminating IsCovering) = pretty "total"
   pretty (MkTotality IsTerminating c) = pretty c
   pretty (MkTotality t IsCovering) = pretty t
@@ -1780,8 +1815,3 @@ covering
       showApp f args = "(" ++ assert_total (show f) ++ " " ++
                         assert_total (showSep " " (map show args))
                      ++ ")"
-
-export
-{vars : _} -> Pretty (Term vars) where
-  pretty = pretty . show
-  -- TODO: prettier output

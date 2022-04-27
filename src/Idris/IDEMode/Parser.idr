@@ -12,8 +12,8 @@ import Protocol.SExp.Parser
 import Parser.Source
 
 Cast SExpError Error where
-  cast (LexError    err) = fromLexError      (Virtual Interactive) err
-  cast (ParseErrors err) = fromParsingErrors (Virtual Interactive) err
+  cast (LexError    err) = fromLexError                   (Virtual Interactive) err
+  cast (ParseErrors err) = fromParsingErrors {ann = Void} (Virtual Interactive) err
 
 export
 covering

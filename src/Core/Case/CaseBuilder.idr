@@ -11,6 +11,8 @@ import Core.Options
 import Core.TT
 import Core.Value
 
+import Idris.Pretty.Annotations
+
 import Data.List
 import Data.String
 import Data.Vect
@@ -22,6 +24,8 @@ import Decidable.Equality
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering
+
+%hide Symbols.equals
 
 public export
 data Phase = CompileTime RigCount | RunTime
@@ -195,13 +199,13 @@ covering
           = show t ++ " " ++ show (pat x) ++ " [" ++ show (argType x) ++ "]"
                      ++ ", " ++ showAll xs
 
-{vars : _} -> {todo : _} -> Pretty (NamedPats vars todo) where
+{vars : _} -> {todo : _} -> Pretty IdrisSyntax (NamedPats vars todo) where
   pretty xs = hsep $ prettyAll xs
     where
-      prettyAll : {vs, ts : _} -> NamedPats vs ts -> List (Doc ann)
+      prettyAll : {vs, ts : _} -> NamedPats vs ts -> List (Doc IdrisSyntax)
       prettyAll [] = []
       prettyAll {ts = t :: _ } (x :: xs)
-          = parens (pretty t <++> pretty "=" <++> pretty (pat x))
+          = parens (pretty0 t <++> equals <++> pretty (pat x))
           :: prettyAll xs
 
 Weaken ArgType where
@@ -253,10 +257,10 @@ covering
   show (MkPatClause _ ps pid rhs)
      = show ps ++ " => " ++ show rhs
 
-{vars : _} -> {todo : _} -> Pretty (PatClause vars todo) where
+{vars : _} -> {todo : _} -> Pretty IdrisSyntax (PatClause vars todo) where
 
   pretty (MkPatClause _ ps _ rhs)
-     = pretty ps <++> "=>" <++> pretty rhs
+     = pretty ps <++> fatArrow <++> byShow rhs
 
 HasNames (PatClause vars todo) where
   full gam (MkPatClause ns nps i rhs)
@@ -1185,7 +1189,7 @@ patCompile fc fn phase ty (p :: ps) def
          logC "compile.casetree" 5 $ do
            pats <- traverse toFullNames pats
            pure $ "Pattern clauses:\n"
-                ++ show (indent 2 $ vcat $ pretty {ann = ()} <$> pats)
+                ++ show (indent 2 $ vcat $ pretty <$> pats)
          -- higher verbosity: dump the raw data structure
          log "compile.casetree" 10 $ show pats
          i <- newRef PName (the Int 0)
@@ -1235,8 +1239,8 @@ simpleCase fc phase fn ty def clauses
     = do logC "compile.casetree" 5 $
                 do cs <- traverse (\ (c,d) => [| MkPair (toFullNames c) (toFullNames d) |]) clauses
                    pure $ "simpleCase: Clauses:\n" ++ show (
-                     indent {ann = ()} 2 $ vcat $ flip map cs $ \ (lrhs) =>
-                       pretty {ann = ()} (fst lrhs) <++> pretty "=" <++> pretty (snd lrhs))
+                     indent 2 $ vcat $ flip map cs $ \ lrhs =>
+                       byShow (fst lrhs) <++> pretty "=" <++> byShow (snd lrhs))
          ps <- traverse (toPatClause fc fn) clauses
          defs <- get Ctxt
          patCompile fc fn phase ty ps def

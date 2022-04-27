@@ -23,6 +23,39 @@ record Premise where
   multiplicity : RigCount
   isImplicit   : Bool
 
+impBracket : Bool -> String -> String
+impBracket False str = str
+impBracket True str = "{" ++ str ++ "}"
+
+tidy : Name -> String
+tidy (MN n _) = n
+tidy n = show n
+
+export covering
+Show Holes.Premise where
+  show premise =
+    " " ++ showCount premise.multiplicity ++ " "
+    ++ impBracket premise.isImplicit (tidy premise.name ++ " : " ++ show premise.type)
+
+prettyImpBracket : Bool -> Doc ann -> Doc ann
+prettyImpBracket False = id
+prettyImpBracket True = braces
+
+prettyName : Name -> Doc IdrisSyntax
+prettyName (MN n _) = pretty0 n
+prettyName n = pretty0 n
+
+export
+prettyRigHole : RigCount -> Doc IdrisSyntax
+prettyRigHole = elimSemi (keyword (pretty0 '0') <+> space)
+                         (keyword (pretty0 '1') <+> space)
+                         (const $ space <+> space)
+
+export
+Pretty IdrisSyntax Holes.Premise where
+  pretty premise =
+     prettyRigHole premise.multiplicity
+     <+> prettyImpBracket premise.isImplicit (prettyName premise.name <++> colon <++> pretty premise.type)
 
 public export
 record Data where
@@ -36,13 +69,13 @@ prettyHoles : List Holes.Data -> Doc IdrisSyntax
 prettyHoles holes = case holes of
   []  => "No holes"
   [x] => "1 hole" <+> colon <++> prettyHole x
-  xs  => vcat $ (pretty (length xs) <++> pretty "holes" <+> colon)
+  xs  => vcat $ (pretty0 (show $ length xs) <++> "holes" <+> colon)
               :: map (indent 2 . prettyHole) xs
 
   where
 
    prettyHole : Holes.Data -> Doc IdrisSyntax
-   prettyHole x = pretty x.name <++> colon <++> prettyTerm x.type
+   prettyHole x = pretty0 x.name <++> colon <++> pretty x.type
 
 
 ||| If input is a hole, return number of locals in scope at binding
@@ -60,28 +93,11 @@ isHole def
            _ => Nothing
 
 
-
 -- Bring these back into REPL.idr
 showName : Name -> Bool
 showName (UN Underscore) = False
 showName (MN _ _) = False
 showName _ = True
-
-impBracket : Bool -> String -> String
-impBracket False str = str
-impBracket True str = "{" ++ str ++ "}"
-
-prettyImpBracket : Bool -> Doc ann -> Doc ann
-prettyImpBracket False = id
-prettyImpBracket True = braces
-
-tidy : Name -> String
-tidy (MN n _) = n
-tidy n = show n
-
-prettyName : Name -> Doc ann
-prettyName (MN n _) = pretty n
-prettyName n = pretty n
 
 export
 extractHoleData : {vars : _} ->
@@ -161,20 +177,10 @@ showHole defs env fn args ty
     = do hdata <- holeData defs env fn args ty
          case hdata.context of
            [] => pure $ show (hdata.name) ++ " : " ++ show hdata.type
-           _  => pure $ concat
-              (map (\ premise : Holes.Premise => " " ++ showCount premise.multiplicity ++ " "
-                             ++ (impBracket premise.isImplicit $
-                                 tidy premise.name ++ " : " ++ (show premise.type) ++ "\n" )
-                   ) hdata.context)
+           _  => pure $
+              unlines (map show hdata.context)
               ++ "-------------------------------------\n"
               ++ nameRoot (hdata.name) ++ " : " ++ show hdata.type
-
-export
-prettyRigHole : RigCount -> Doc IdrisSyntax
-prettyRigHole = keyword
-              . elimSemi (pretty '0' <+> space)
-                         (pretty '1' <+> space)
-                         (const $ space <+> space)
 
 export
 prettyHole : {vars : _} ->
@@ -185,13 +191,10 @@ prettyHole : {vars : _} ->
 prettyHole defs env fn args ty
   = do hdata <- holeData defs env fn args ty
        case hdata.context of
-            [] => pure $ pretty hdata.name <++> colon <++> prettyTerm hdata.type
-            _  => pure $ (indent 1 $ vsep $
-                            map (\premise => prettyRigHole premise.multiplicity
-                                    <+> prettyImpBracket premise.isImplicit (prettyName premise.name <++> colon <++> prettyTerm premise.type))
-                                    hdata.context) <+> hardline
-                    <+> (pretty $ replicate 30 '-') <+> hardline
-                    <+> pretty (nameRoot $ hdata.name) <++> colon <++> prettyTerm hdata.type
+         [] => pure $ pretty0 hdata.name <++> colon <++> pretty hdata.type
+         _  => pure $ indent 1 (vsep $ map pretty hdata.context) <+> hardline
+                  <+> (pretty0 $ replicate 30 '-') <+> hardline
+                  <+> pretty0 (nameRoot $ hdata.name) <++> colon <++> pretty hdata.type
 
 
 premiseIDE : Holes.Premise -> HolePremise

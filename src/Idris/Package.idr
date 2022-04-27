@@ -723,7 +723,7 @@ processPackage opts (cmd, mfile)
              let fp = fromMaybe (pkg.name ++ ".ipkg") mfile
              False <- coreLift (exists fp)
                | _ => throw (GenericMsg emptyFC ("File " ++ fp ++ " already exists"))
-             Right () <- coreLift $ writeFile fp (show $ the (Doc ()) $ pretty pkg)
+             Right () <- coreLift $ writeFile fp (show $ pretty pkg)
                | Left err => throw (FileErr fp err)
              pure ()
         _ =>

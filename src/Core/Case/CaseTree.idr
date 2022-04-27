@@ -3,9 +3,12 @@ module Core.Case.CaseTree
 import Core.TT
 
 import Data.List
+import Data.String
+import Idris.Pretty.Annotations
 
 import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Data.String.Extra -- needed for boostrapping
 
 %default covering
 
@@ -142,28 +145,28 @@ covering
 
 mutual
   export
-  {vars : _} -> Pretty (CaseTree vars) where
+  {vars : _} -> Pretty IdrisSyntax (CaseTree vars) where
     pretty (Case {name} idx prf ty alts)
-      = "case" <++> pretty name <++> ":" <++> pretty ty <++> "of"
+      = case_ <++> pretty0 name <++> keyword ":" <++> byShow ty <++> of_
          <+> nest 2 (hardline
          <+> vsep (assert_total (map pretty alts)))
-    pretty (STerm i tm) = pretty tm
-    pretty (Unmatched msg) = pretty "Error:" <++> pretty msg
-    pretty Impossible = pretty "Impossible"
+    pretty (STerm i tm) = byShow tm
+    pretty (Unmatched msg) = "Error:" <++> pretty0 msg
+    pretty Impossible = "Impossible"
 
   export
-  {vars : _} -> Pretty (CaseAlt vars) where
+  {vars : _} -> Pretty IdrisSyntax (CaseAlt vars) where
     pretty (ConCase n tag args sc)
-      = hsep (map pretty (n :: args)) <++> pretty "=>"
+      = hsep (map pretty0 (n :: args)) <++> fatArrow
         <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
     pretty (DelayCase _ arg sc) =
-        pretty "Delay" <++> pretty arg <++> pretty "=>"
+        keyword "Delay" <++> pretty0 arg <++> fatArrow
         <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
     pretty (ConstCase c sc) =
-        pretty c <++> pretty "=>"
+        pretty c <++> fatArrow
         <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
     pretty (DefaultCase sc) =
-        pretty "_ =>"
+        keyword "_" <++> fatArrow
         <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
 
 mutual
@@ -202,18 +205,18 @@ Show Pat where
   show (PUnmatchable _ tm) = ".(" ++ show tm ++ ")"
 
 export
-Pretty Pat where
-  prettyPrec d (PAs _ n p) = pretty n <++> pretty "@" <+> parens (pretty p)
+Pretty IdrisSyntax Pat where
+  prettyPrec d (PAs _ n p) = pretty0 n <++> keyword "@" <+> parens (pretty p)
   prettyPrec d (PCon _ n _ _ args) =
-    parenthesise (d > Open) $ hsep (pretty n :: map (prettyPrec App) args)
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
   prettyPrec d (PTyCon _ n _ args) =
-    parenthesise (d > Open) $ hsep (pretty n :: map (prettyPrec App) args)
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
   prettyPrec d (PConst _ c) = pretty c
   prettyPrec d (PArrow _ _ p q) =
-    parenthesise (d > Open) $ pretty p <++> pretty "->" <++> pretty q
-  prettyPrec d (PDelay _ _ _ p) = parens (pretty "Delay" <++> pretty p)
-  prettyPrec d (PLoc _ n) = pretty n
-  prettyPrec d (PUnmatchable _ tm) = pretty "." <+> parens (pretty tm)
+    parenthesise (d > Open) $ pretty p <++> arrow <++> pretty q
+  prettyPrec d (PDelay _ _ _ p) = parens ("Delay" <++> pretty p)
+  prettyPrec d (PLoc _ n) = pretty0 n
+  prettyPrec d (PUnmatchable _ tm) = keyword "." <+> parens (byShow tm)
 
 mutual
   insertCaseNames : SizeOf outer ->

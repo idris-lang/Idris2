@@ -261,39 +261,40 @@ covering
   showPrec d (Resolved i) = showCon d "Resolved" $ showArg i
 
 export
-Pretty UserName where
+Pretty Void UserName where
   pretty (Basic n) = pretty n
   pretty (Field n) = "." <+> pretty n
   pretty Underscore = "_"
 
 export
 ||| Will it be an operation once prettily displayed?
-isPrettyOp : Name -> Bool
-isPrettyOp (UN nm@(Field _)) = True
-isPrettyOp (UN nm@(Basic _)) = isOpUserName nm
-isPrettyOp (DN str _) = isOpUserName (Basic str)
-isPrettyOp nm = False
+||| The first boolean states whether the operator is prefixed.
+isPrettyOp : Bool -> Name -> Bool
+isPrettyOp b (UN nm@(Field _)) = b -- prefixed fields need to be parenthesised
+isPrettyOp b (UN nm@(Basic _)) = isOpUserName nm
+isPrettyOp b (DN str _) = isOpUserName (Basic str)
+isPrettyOp b nm = False
 
 mutual
 
   export
   covering
-  prettyOp : Name -> Doc ann
-  prettyOp nm = parenthesise (isPrettyOp nm) (pretty nm)
+  prettyOp : Bool -> Name -> Doc Void
+  prettyOp b nm = parenthesise (isPrettyOp b nm) (pretty nm)
 
   export
   covering
-  Pretty Name where
-    pretty (NS ns n) = pretty ns <+> dot <+> prettyOp n
+  Pretty Void Name where
+    pretty (NS ns n) = pretty ns <+> dot <+> prettyOp True n
     pretty (UN x) = pretty x
-    pretty (MN x y) = braces (pretty x <+> colon <+> pretty y)
-    pretty (PV n d) = braces (pretty 'P' <+> colon <+> pretty n <+> colon <+> pretty d)
+    pretty (MN x y) = braces (pretty x <+> colon <+> pretty (show y))
+    pretty (PV n d) = braces (pretty 'P' <+> colon <+> pretty n <+> colon <+> pretty (show d))
     pretty (DN str _) = pretty str
     pretty (Nested (outer, idx) inner)
-      = pretty outer <+> colon <+> pretty idx <+> colon <+> pretty inner
+      = pretty (show outer) <+> colon <+> pretty (show idx) <+> colon <+> pretty inner
     pretty (CaseBlock outer _) = reflow "case block in" <++> pretty outer
     pretty (WithBlock outer _) = reflow "with block in" <++> pretty outer
-    pretty (Resolved x) = pretty "$resolved" <+> pretty x
+    pretty (Resolved x) = pretty "$resolved" <+> pretty (show x)
 
 export
 Eq UserName where

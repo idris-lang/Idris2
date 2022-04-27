@@ -4,7 +4,9 @@ import Core.FC
 import Core.Name.Namespace
 import Data.List
 import Data.Maybe
+import Data.String
 import Idris.Version
+import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
@@ -21,7 +23,7 @@ Show PkgVersion where
   show (MkPkgVersion vs) = showSep "." (map show (forget vs))
 
 export
-Pretty PkgVersion where
+Pretty Void PkgVersion where
   pretty = pretty . show
 
 export
@@ -62,18 +64,18 @@ Show PkgVersionBounds where
       upperBounds = p.upperBound <&> \v => (if p.upperInclusive then "<= " else "< ") ++ show v
 
 export
-Pretty PkgVersionBounds where
+Pretty Void PkgVersionBounds where
   pretty (MkPkgVersionBounds lowerBound lowerInclusive upperBound upperInclusive)
-      = concatWith (\b1,b2 => b1 <++> pretty "&&" <++> b2) $
+      = concatWith (surround " && ") $
           catMaybes [ bounds True lowerInclusive lowerBound
                     , bounds False upperInclusive upperBound
                     ]
     where
-      operator : (greater : Bool) -> (inclusive : Bool) -> Doc ann
+      operator : (greater : Bool) -> (inclusive : Bool) -> Doc Void
       operator greater inclusive = pretty $ the String
-                                     (if greater then ">" else "<") ++ (if inclusive then "=" else "")
+        (if greater then ">" else "<") ++ (if inclusive then "=" else "")
 
-      bounds : (greater : Bool) -> (inclusive : Bool) -> Maybe PkgVersion -> Maybe (Doc ann)
+      bounds : (greater : Bool) -> (inclusive : Bool) -> Maybe PkgVersion -> Maybe (Doc Void)
       bounds greater inclusive Nothing = Nothing
       bounds greater inclusive (Just v) = Just $ operator greater inclusive <++> pretty v
 
@@ -145,7 +147,7 @@ Show Depends where
   show p = p.pkgname ++ " " ++ show p.pkgbounds
 
 export
-Pretty Depends where
+Pretty Void Depends where
   pretty = pretty . show
 
 ------------------------------------------------------------------------------
@@ -218,7 +220,7 @@ Show PkgDesc where
              maybe "" (\m => "Postclean: " ++ snd m ++ "\n") (postclean pkg)
 
 export
-Pretty PkgDesc where
+Pretty Void PkgDesc where
   pretty desc = vcat
     [ "package" <++> pretty desc.name
     , verField "version"     desc.version
@@ -271,26 +273,32 @@ Pretty PkgDesc where
 
   where
 
-    comment : String -> Doc ann
+    comment : String -> Doc Void
     comment str =
       let ws = "--" :: words str in
-      let commSoftLine = Union (Chara ' ') (hcat [Line, pretty "-- "]) in
+      let commSoftLine = Union (Chara ' ') (hcat [Line, "-- "]) in
       Line <+> concatWith (\x, y => x <+> commSoftLine <+> y) ws
 
-    field : {default True printEquals : Bool} -> String -> Maybe (Doc ann) -> Doc ann
-    field {printEquals} nm Nothing = hsep $ catMaybes [ Just $ pretty "--", Just $ pretty nm, (guard printEquals *> Just equals) ]
-    field {printEquals} nm (Just d) = hsep $ catMaybes [ Just $ pretty nm, (guard printEquals *> Just equals), Just d ]
+    field : {default True printEquals : Bool} -> String -> Maybe (Doc Void) -> Doc Void
+    field {printEquals} nm Nothing = hsep $ catMaybes
+      [ Just $ "--"
+      , Just $ pretty nm
+      , (guard printEquals *> Just equals) ]
+    field {printEquals} nm (Just d) = hsep $ catMaybes
+      [ Just $ pretty nm
+      , (guard printEquals *> Just equals)
+      , Just d ]
 
-    verField : String -> Maybe PkgVersion -> Doc ann
+    verField : String -> Maybe PkgVersion -> Doc Void
     verField nm = field nm . map pretty
 
-    verSeqField : String -> Maybe PkgVersionBounds -> Doc ann
+    verSeqField : String -> Maybe PkgVersionBounds -> Doc Void
     verSeqField nm = field {printEquals=False} nm . map pretty
 
-    strField : String -> Maybe String -> Doc ann
+    strField : String -> Maybe String -> Doc Void
     strField nm = field nm . map (pretty . show)
 
-    seqField : Pretty a => String -> List a -> Doc ann
+    seqField : Pretty Void a => String -> List a -> Doc Void
     seqField nm [] = hsep [ pretty "--", pretty nm, equals ]
     seqField nm xs = pretty nm
                 <++> equals

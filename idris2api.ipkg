@@ -117,6 +117,7 @@ modules =
     Idris.Parser,
     Idris.Parser.Let,
     Idris.Pretty,
+    Idris.Pretty.Annotations,
     Idris.Pretty.Render,
     Idris.ProcessIdr,
     Idris.REPL,

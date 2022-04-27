@@ -356,7 +356,7 @@ mutual
   export
   pragmaTopics : String
   pragmaTopics =
-    show $ vsep $ map (((<++>) "+") . pretty {ann=()} . showDirective) $ filter isPragma directiveList
+    show $ vsep $ map (((<++>) "+") . pretty . showDirective) $ filter isPragma directiveList
     where
       showDirective : Directive -> String
       showDirective (Hide _)             = "%hide name"
@@ -552,7 +552,7 @@ Show REPLEval where
   show Scheme = "scheme"
 
 export
-Pretty REPLEval where
+Pretty Void REPLEval where
   pretty EvalTC = pretty "typecheck"
   pretty NormaliseAll = pretty "normalise"
   pretty Execute = pretty "execute"
@@ -581,15 +581,15 @@ Show REPLOpt where
   show (EvalTiming p) = "evaltiming = " ++ show p
 
 export
-Pretty REPLOpt where
-  pretty (ShowImplicits impl) = pretty "showimplicits" <++> equals <++> pretty impl
-  pretty (ShowNamespace ns) = pretty "shownamespace" <++> equals <++> pretty ns
-  pretty (ShowTypes typs) = pretty "showtypes" <++> equals <++> pretty typs
+Pretty Void REPLOpt where
+  pretty (ShowImplicits impl) = pretty "showimplicits" <++> equals <++> pretty (show impl)
+  pretty (ShowNamespace ns) = pretty "shownamespace" <++> equals <++> pretty (show ns)
+  pretty (ShowTypes typs) = pretty "showtypes" <++> equals <++> pretty (show typs)
   pretty (EvalMode mod) = pretty "eval" <++> equals <++> pretty mod
   pretty (Editor editor) = pretty "editor" <++> equals <++> pretty editor
   pretty (CG str) = pretty "cg" <++> equals <++> pretty str
-  pretty (Profile p) = pretty "profile" <++> equals <++> pretty p
-  pretty (EvalTiming p) = pretty "evaltiming" <++> equals <++> pretty p
+  pretty (Profile p) = pretty "profile" <++> equals <++> pretty (show p)
+  pretty (EvalTiming p) = pretty "evaltiming" <++> equals <++> pretty (show p)
 
 public export
 data EditCmd : Type where

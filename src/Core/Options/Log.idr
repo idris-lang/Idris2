@@ -38,7 +38,8 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Util
 public export
 knownTopics : List (String, Maybe String)
 knownTopics = [
-    ("auto", Nothing),
+    ("auto", Just "Auto proof search"),
+    ("auto.determining", Just "Checking that interface's determining argument are concrete"),
     ("builtin.Natural", Just "Log each encountered %builtin Natural declaration."),
     ("builtin.NaturalToInteger", Just "Log each encountered %builtin NaturalToInteger declaration."),
     ("builtin.IntegerToNatural", Just "Log each encountered %builtin IntegerToNatural declaration."),
@@ -180,7 +181,7 @@ helpTopics = show $ vcat $ map helpTopic knownTopics
 
   where
 
-  helpTopic : (String, Maybe String) -> Doc ()
+  helpTopic : (String, Maybe String) -> Doc Void
   helpTopic (str, mblurb)
     = let title = "+" <++> pretty str
           blurb = maybe [] ((::[]) . indent 2 . reflow) mblurb
@@ -253,11 +254,6 @@ Show LogLevel where
   show (MkLogLevel ps n) = case ps of
     [] => show n
     _  => fastConcat (intersperse "." ps) ++ ":" ++ show n
-
-export
-Pretty LogLevel where
-
-  pretty = pretty . show
 
 export
 parseLogLevel : String -> Maybe LogLevel

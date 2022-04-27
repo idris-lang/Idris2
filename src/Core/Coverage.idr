@@ -460,7 +460,7 @@ checkMatched cs ulhs
          logC "coverage" 5 $ do
             cs <- traverse toFullNames cs
             pure $ "Against clauses:\n" ++
-                   (show $ indent {ann = ()} 2 $ vcat $ map (pretty . show) cs)
+                   (show $ indent 2 $ vcat $ map (pretty . show) cs)
          tryClauses cs ulhs
   where
     tryClauses : List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)

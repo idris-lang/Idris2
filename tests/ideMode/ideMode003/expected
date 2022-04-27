@@ -64,5 +64,5 @@
 0000ca(:output (:ok (:highlight-source ((((:filename "LocType.idr") (:start 6 34) (:end 6 36)) ((:name "xs") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 0000ca(:output (:ok (:highlight-source ((((:filename "LocType.idr") (:start 6 37) (:end 6 39)) ((:name "ys") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000015(:return (:ok ()) 1)
-000095(:return (:ok "Main.Vect : Nat -> Type -> Type" ((0 9 ((:decor :type))) (12 3 ((:decor :type))) (19 4 ((:decor :type))) (27 4 ((:decor :type))))) 2)
+0000cb(:return (:ok "Main.Vect : Nat -> Type -> Type" ((0 9 ((:decor :type))) (12 3 ((:decor :type))) (16 2 ((:decor :keyword))) (19 4 ((:decor :type))) (24 2 ((:decor :keyword))) (27 4 ((:decor :type))))) 2)
 Alas the file is done, aborting
