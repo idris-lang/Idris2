@@ -147,7 +147,10 @@ mutual
   export
   {vars : _} -> Pretty IdrisSyntax (CaseTree vars) where
     pretty (Case {name} idx prf ty alts)
-      = case_ <++> pretty0 name <++> keyword ":" <++> byShow ty <++> of_
+      = let ann = case ty of
+                    Erased _ _ => ""
+                    _ => space <+> keyword ":" <++> byShow ty
+        in case_ <++> pretty0 name <+> ann <++> of_
          <+> nest 2 (hardline
          <+> vsep (assert_total (map pretty alts)))
     pretty (STerm i tm) = byShow tm
@@ -157,16 +160,20 @@ mutual
   export
   {vars : _} -> Pretty IdrisSyntax (CaseAlt vars) where
     pretty (ConCase n tag args sc)
-      = hsep (map pretty0 (n :: args)) <++> fatArrow
+      = hsep (annotate (DCon (Just n)) (pretty0 n) ::  map pretty0 args)
+        <++> fatArrow
         <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
     pretty (DelayCase _ arg sc) =
-        keyword "Delay" <++> pretty0 arg <++> fatArrow
+        keyword "Delay" <++> pretty0 arg
+        <++> fatArrow
         <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
     pretty (ConstCase c sc) =
-        pretty c <++> fatArrow
+        pretty c
+        <++> fatArrow
         <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
     pretty (DefaultCase sc) =
-        keyword "_" <++> fatArrow
+        keyword "_"
+        <++> fatArrow
         <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
 
 mutual
