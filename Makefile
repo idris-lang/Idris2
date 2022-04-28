@@ -155,8 +155,8 @@ support:
 	@${MAKE} -C support/chez
 
 support-clean:
-	@${MAKE} -C support/c clean
-	@${MAKE} -C support/refc clean
+	@${MAKE} -C support/c cleandeps
+	@${MAKE} -C support/refc cleandeps
 	@${MAKE} -C support/chez clean
 
 clean-libs:
