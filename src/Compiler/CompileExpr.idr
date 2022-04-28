@@ -287,12 +287,14 @@ dconFlag n
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (InternalError ("Can't find " ++ show n))
-         pure (ciFlags (flags def))
+         pure (ciFlags (definition def) (flags def))
   where
-    ciFlags : List DefFlag -> ConInfo
-    ciFlags [] = DATACON
-    ciFlags (ConType ci :: xs) = ci
-    ciFlags (x :: xs) = ciFlags xs
+    ciFlags : Def -> List DefFlag -> ConInfo
+    ciFlags def [] = case def of
+      TCon{} => TYCON
+      _ => DATACON
+    ciFlags def (ConType ci :: xs) = ci
+    ciFlags def (x :: xs) = ciFlags def xs
 
 mutual
   toCExpTm : {vars : _} ->

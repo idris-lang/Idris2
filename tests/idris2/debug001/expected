@@ -1,0 +1,25 @@
+1/1: Building TypePat (TypePat.idr)
+Main> Main.isNat
+Arguments [{arg:0}]
+Compile time tree: case {arg:0} of
+  Prelude.Types.Nat => Prelude.Basics.True
+  _ => Prelude.Basics.False
+Compiled: \ {arg:0} => case {arg:0} of
+  { Prelude.Types.Nat [tycon] => 1
+  ; _ => 0
+  }
+Refers to: Prelude.Basics.True, Prelude.Basics.False
+Flags: allguarded, covering
+Main> Main.isNat
+Arguments [{arg:0}]
+Compile time tree: case {arg:0} of
+  Nat => True
+  _ => False
+Compiled: \ {arg:0} => case {arg:0} of
+  { Prelude.Types.Nat [tycon] => 1
+  ; _ => 0
+  }
+Refers to: Prelude.Basics.True, Prelude.Basics.False
+Flags: allguarded, covering
+Main> 
+Bye for now!
