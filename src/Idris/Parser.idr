@@ -1050,7 +1050,7 @@ withFlags fname
 withProblem : OriginDesc -> Int -> IndentInfo -> Rule PWithProblem
 withProblem fname col indents
   = do rig <- multiplicity fname
-       start <- bounds (decoratedSymbol fname "(")
+       start <- mustWork $ bounds (decoratedSymbol fname "(")
        wval <- bracketedExpr fname start indents
        prf <- optional (decoratedKeyword fname "proof"
               *> UN . Basic <$> decoratedSimpleBinderName fname)

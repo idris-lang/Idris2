@@ -1,0 +1,8 @@
+1/1: Building ParseWith (ParseWith.idr)
+Error: Expected '('.
+
+ParseWith:2:12--2:13
+ 1 | foo : Nat -> Nat
+ 2 | foo a with a
+                ^
+
