@@ -145,39 +145,6 @@ covering
 
 mutual
   export
-  {vars : _} -> Pretty IdrisSyntax (CaseTree vars) where
-    pretty (Case {name} idx prf ty alts)
-      = let ann = case ty of
-                    Erased _ _ => ""
-                    _ => space <+> keyword ":" <++> byShow ty
-        in case_ <++> pretty0 name <+> ann <++> of_
-         <+> nest 2 (hardline
-         <+> vsep (assert_total (map pretty alts)))
-    pretty (STerm i tm) = byShow tm
-    pretty (Unmatched msg) = "Error:" <++> pretty0 msg
-    pretty Impossible = "Impossible"
-
-  export
-  {vars : _} -> Pretty IdrisSyntax (CaseAlt vars) where
-    pretty (ConCase n tag args sc)
-      = hsep (annotate (DCon (Just n)) (pretty0 n) ::  map pretty0 args)
-        <++> fatArrow
-        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
-    pretty (DelayCase _ arg sc) =
-        keyword "Delay" <++> pretty0 arg
-        <++> fatArrow
-        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
-    pretty (ConstCase c sc) =
-        pretty c
-        <++> fatArrow
-        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
-    pretty (DefaultCase sc) =
-        keyword "_"
-        <++> fatArrow
-        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
-
-mutual
-  export
   eqTree : CaseTree vs -> CaseTree vs' -> Bool
   eqTree (Case i _ _ alts) (Case i' _ _ alts')
       = i == i'

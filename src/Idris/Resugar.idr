@@ -219,7 +219,7 @@ sugarName x = show x
 
 toPRef : FC -> KindedName -> Core IPTerm
 toPRef fc kn@(MkKindedName nt fn nm) = case nm of
-  MN n _     => pure (sugarApp (PRef fc (MkKindedName nt fn $ UN $ Basic n)))
+  MN n i     => pure (sugarApp (PRef fc (MkKindedName nt fn $ MN n i)))
   PV n _     => pure (sugarApp (PRef fc (MkKindedName nt fn $ n)))
   DN n _     => pure (sugarApp (PRef fc (MkKindedName nt fn $ UN $ Basic n)))
   Nested _ n => toPRef fc (MkKindedName nt fn n)

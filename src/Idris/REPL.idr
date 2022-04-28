@@ -101,16 +101,18 @@ showInfo (n, idx, d)
                         "Size change: " ++ showSep ", " scinfo
 
 prettyInfo : {auto c : Ref Ctxt Defs} ->
-           (Name, Int, GlobalDef) -> Core (Doc IdrisDocAnn)
-prettyInfo (n, idx, d)
+             {auto s : Ref Syn SyntaxInfo} ->
+             Bool -> (Name, Int, GlobalDef) -> Core (Doc IdrisDocAnn)
+prettyInfo experimental (n, idx, d)
     = do let nm = fullname d
          def <- toFullNames (definition d)
          referCT <- traverse getFullName (keys (refersTo d))
          referRT <- traverse getFullName (keys (refersToRuntime d))
          schanges <- traverse toFullNames $ sizeChange d
+         def <- ifThenElse experimental Resugared.prettyDef (pure . Raw.prettyDef) def
          pure $ vcat $
            [ reAnnotate Syntax (prettyRig $ multiplicity d) <+> showCategory Syntax d (pretty0 nm)
-           , pretty def
+           , def
            ] ++
            catMaybes
            [ (\ args => header "Erasable args" <++> byShow args) <$> ifNotNull (eraseArgs d)
@@ -891,9 +893,9 @@ process (Doc dir)
 process (Browse ns)
     = do doc <- getContents ns
          pure $ PrintedDoc doc
-process (DebugInfo n)
+process (DebugInfo b n)
     = do defs <- get Ctxt
-         ds <- traverse prettyInfo !(lookupCtxtName n (gamma defs))
+         ds <- traverse (prettyInfo b) !(lookupCtxtName n (gamma defs))
          pure $ PrintedDoc $ vcat $ punctuate hardline ds
 process (SetOpt opt)
     = do setOpt opt

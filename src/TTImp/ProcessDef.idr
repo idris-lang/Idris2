@@ -2,6 +2,7 @@ module TTImp.ProcessDef
 
 import Core.Case.CaseBuilder
 import Core.Case.CaseTree
+import Core.Case.CaseTree.Pretty
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -804,11 +805,13 @@ mkRunTime fc n
                               _ => clauses_init
 
            (rargs ** (tree_rt, _)) <- getPMDef (location gdef) RunTime n ty clauses
-           logC "compile.casetree" 5 $ pure $ unlines
-             [ show cov ++ ":"
-             , "Runtime tree for " ++ show (fullname gdef) ++ ":"
-             , show (indent 2 $ pretty !(toFullNames tree_rt))
-             ]
+           logC "compile.casetree" 5 $ do
+             tree_rt <- toFullNames tree_rt
+             pure $ unlines
+               [ show cov ++ ":"
+               , "Runtime tree for " ++ show (fullname gdef) ++ ":"
+               , show (indent 2 $ prettyTree tree_rt)
+               ]
            log "compile.casetree" 10 $ show tree_rt
            log "compile.casetree.measure" 15 $ show (measure tree_rt)
 
