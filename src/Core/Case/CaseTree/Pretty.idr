@@ -22,7 +22,7 @@ namespace Raw
       = let ann = case ty of
                     Erased _ _ => ""
                     _ => space <+> keyword ":" <++> byShow ty
-        in case_ <++> pretty0 name <+> ann <++> of_
+        in case_ <++> annotate Bound (pretty0 name) <+> ann <++> of_
          <+> nest 2 (hardline
          <+> vsep (assert_total (map prettyAlt alts)))
   prettyTree (STerm i tm) = byShow tm

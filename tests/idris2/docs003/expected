@@ -17,6 +17,6 @@ RecordDoc> record RecordDoc.Singleton : a -> Type
   Visibility: private
   Constructor: __mkSingleton : _
   Projections:
-    .equal : (rec : Singleton v) -> value rec = v
+    .equal : ({rec:0} : Singleton v) -> value {rec:0} = v
     .value : Singleton v -> a
 RecordDoc> Bye for now!

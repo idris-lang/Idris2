@@ -531,7 +531,9 @@ cleanPTerm ptm
 
     cleanName : Name -> Core Name
     cleanName nm = case nm of
-      MN n _     => pure (UN $ mkUserName n) -- this may be "_"
+      -- only clean MN that are underscores
+      -- otherwise we may be shadowing names
+      MN "_" _   => pure (UN Underscore)
       PV n _     => pure n
       DN n _     => pure (UN $ mkUserName n) -- this may be "_"
       NS _ n     => cleanName n

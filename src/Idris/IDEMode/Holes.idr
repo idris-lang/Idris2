@@ -27,23 +27,15 @@ impBracket : Bool -> String -> String
 impBracket False str = str
 impBracket True str = "{" ++ str ++ "}"
 
-tidy : Name -> String
-tidy (MN n _) = n
-tidy n = show n
-
 export covering
 Show Holes.Premise where
   show premise =
     " " ++ showCount premise.multiplicity ++ " "
-    ++ impBracket premise.isImplicit (tidy premise.name ++ " : " ++ show premise.type)
+    ++ impBracket premise.isImplicit (show premise.name ++ " : " ++ show premise.type)
 
 prettyImpBracket : Bool -> Doc ann -> Doc ann
 prettyImpBracket False = id
 prettyImpBracket True = braces
-
-prettyName : Name -> Doc IdrisSyntax
-prettyName (MN n _) = pretty0 n
-prettyName n = pretty0 n
 
 export
 prettyRigHole : RigCount -> Doc IdrisSyntax
@@ -55,7 +47,7 @@ export
 Pretty IdrisSyntax Holes.Premise where
   pretty premise =
      prettyRigHole premise.multiplicity
-     <+> prettyImpBracket premise.isImplicit (prettyName premise.name <++> colon <++> pretty premise.type)
+     <+> prettyImpBracket premise.isImplicit (pretty0 premise.name <++> colon <++> pretty premise.type)
 
 public export
 record Data where
@@ -201,7 +193,7 @@ premiseIDE : Holes.Premise -> HolePremise
 premiseIDE premise = IDE.MkHolePremise
   { name = " " ++ showCount premise.multiplicity ++ " "
                ++ (impBracket premise.isImplicit $
-                  tidy premise.name)
+                  show premise.name)
   , type = show premise.type
   }
 

@@ -640,7 +640,7 @@ data REPLCmd : Type where
      Help : REPLCmd
      TypeSearch : PTerm -> REPLCmd
      FuzzyTypeSearch : PTerm -> REPLCmd
-     DebugInfo : Bool -> Name -> REPLCmd
+     DebugInfo : Name -> REPLCmd
      SetOpt : REPLOpt -> REPLCmd
      GetOpts : REPLCmd
      CGDirective : String -> REPLCmd

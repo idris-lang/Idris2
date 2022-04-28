@@ -3,29 +3,29 @@ Main>  0 m : Nat
  0 a : Type
    x : a
  0 y : a
- 0 ws : Vect k a
- 1 zs : Vect (S k) a
+ 0 ws : Vect {k:854} a
+ 1 zs : Vect (S {k:854}) a
    ys : Vect m a
  0 n : Nat
 ------------------------------
-foo : Vect (S (S (plus k m))) a
+foo : Vect (S (S (plus {k:854} m))) a
 Main>  0 m : Nat
  0 a : Type
    ys : Vect m a
    x : a
- 1 zs : Vect k a
- 0 xs : Vect (S k) a
+ 1 zs : Vect {k:919} a
+ 0 xs : Vect (S {k:919}) a
  0 n : Nat
 ------------------------------
-bar : Vect (S (plus k m)) a
+bar : Vect (S (plus {k:919} m)) a
 Main>  0 m : Nat
  0 a : Type
    ys : Vect m a
    x : a
- 0 zs : Vect k a
- 0 xs : Vect (S k) a
+ 0 zs : Vect {k:961} a
+ 0 xs : Vect (S {k:961}) a
  0 n : Nat
- 1 ts : Vect k a
+ 1 ts : Vect {k:961} a
 ------------------------------
-baz : Vect (S (plus k m)) a
+baz : Vect (S (plus {k:961} m)) a
 Main> Bye for now!

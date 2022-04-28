@@ -1,3 +1,6 @@
 :di isNat
-:di2 isNat
+:di isInt32
+:di plus
+:di minus
+:di SnocList.filter
 :q

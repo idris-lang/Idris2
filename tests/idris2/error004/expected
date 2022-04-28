@@ -11,7 +11,7 @@ Error1:8:9--8:40
 
 1/1: Building Error2 (Error2.idr)
 Error: While processing right hand side of show. Multiple solutions found in search of:
-    Show (Vect k Integer)
+    Show (Vect {k:1658} Integer)
 
 Error2:13:38--13:45
  09 |   show (x :: xs) = show x ++ ", " ++ show xs
