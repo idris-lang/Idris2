@@ -1,4 +1,4 @@
 1/1: Building LocType (LocType.idr)
 Main> Main.Vect : Nat -> Type -> Type
-Main> xs : Vect {k:858} a
+Main> xs : Vect k a
 Main> Bye for now!

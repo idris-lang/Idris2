@@ -1905,6 +1905,8 @@ setOption set
          pure (ShowImplicits set)
   <|> do exactIdent "shownamespace"
          pure (ShowNamespace set)
+  <|> do exactIdent "showmachinenames"
+         pure (ShowMachineNames set)
   <|> do exactIdent "showtypes"
          pure (ShowTypes set)
   <|> do exactIdent "profile"

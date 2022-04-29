@@ -562,6 +562,7 @@ public export
 data REPLOpt : Type where
      ShowImplicits : Bool -> REPLOpt
      ShowNamespace : Bool -> REPLOpt
+     ShowMachineNames : Bool -> REPLOpt
      ShowTypes : Bool -> REPLOpt
      EvalMode : REPLEval -> REPLOpt
      Editor : String -> REPLOpt
@@ -573,6 +574,7 @@ export
 Show REPLOpt where
   show (ShowImplicits impl) = "showimplicits = " ++ show impl
   show (ShowNamespace ns) = "shownamespace = " ++ show ns
+  show (ShowMachineNames mn) = "showmachinenames = " ++ show mn
   show (ShowTypes typs) = "showtypes = " ++ show typs
   show (EvalMode mod) = "eval = " ++ show mod
   show (Editor editor) = "editor = " ++ show editor
@@ -582,14 +584,15 @@ Show REPLOpt where
 
 export
 Pretty Void REPLOpt where
-  pretty (ShowImplicits impl) = pretty "showimplicits" <++> equals <++> pretty (show impl)
-  pretty (ShowNamespace ns) = pretty "shownamespace" <++> equals <++> pretty (show ns)
-  pretty (ShowTypes typs) = pretty "showtypes" <++> equals <++> pretty (show typs)
-  pretty (EvalMode mod) = pretty "eval" <++> equals <++> pretty mod
-  pretty (Editor editor) = pretty "editor" <++> equals <++> pretty editor
-  pretty (CG str) = pretty "cg" <++> equals <++> pretty str
-  pretty (Profile p) = pretty "profile" <++> equals <++> pretty (show p)
-  pretty (EvalTiming p) = pretty "evaltiming" <++> equals <++> pretty (show p)
+  pretty (ShowImplicits impl) = "showimplicits" <++> equals <++> pretty (show impl)
+  pretty (ShowNamespace ns) = "shownamespace" <++> equals <++> pretty (show ns)
+  pretty (ShowMachineNames mn) = "showmachinenames" <++> equals <++> pretty (show mn)
+  pretty (ShowTypes typs) = "showtypes" <++> equals <++> pretty (show typs)
+  pretty (EvalMode mod) = "eval" <++> equals <++> pretty mod
+  pretty (Editor editor) = "editor" <++> equals <++> pretty editor
+  pretty (CG str) = "cg" <++> equals <++> pretty str
+  pretty (Profile p) = "profile" <++> equals <++> pretty (show p)
+  pretty (EvalTiming p) = "evaltiming" <++> equals <++> pretty (show p)
 
 public export
 data EditCmd : Type where
