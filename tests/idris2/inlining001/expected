@@ -1,39 +1,39 @@
 1/1: Building Inlining (Inlining.idr)
 Main> Main.leaveAlone
 Arguments [{arg:0}]
-Compile time tree: (Prelude.Types.String.++ {arg:0}[0] "!")
-Compiled: \ {arg:0} => !{arg:0} ++ "!"
+Compile time tree: {arg:0} ++ "!"
+Compiled: \ {arg:0} => {arg:0} ++ "!"
 Refers to: Prelude.Types.String.(++)
 Flags: covering
 Size change: Prelude.Types.String.(++): [Just (0, Same), Nothing]
 Main> Main.forceInline
 Arguments [{arg:0}]
-Compile time tree: (Prelude.Num.+ Prelude.Types.Nat Prelude.Types.Num implementation at Prelude.Types:66:1--71:33 {arg:0}[0] (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))))))))))
-Compiled: \ {arg:0} => !{arg:0} + 10
+Compile time tree: {arg:0} + 10
+Compiled: \ {arg:0} => {arg:0} + 10
 Refers to: Prelude.Types.Num implementation at Prelude.Types:66:1--71:33, Prelude.Types.Z, Prelude.Types.S, Prelude.Types.Nat, Prelude.Num.(+)
 Flags: covering, inline
 Size change: Prelude.Num.(+): [Nothing, Nothing, Just (0, Same), Nothing], Prelude.Types.Num implementation at Prelude.Types:66:1--71:33: []
 Main> Main.forceNoInline
 Arguments []
-Compile time tree: (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z))))))))))
+Compile time tree: 10
 Compiled: 10
 Refers to: Prelude.Types.Z, Prelude.Types.S
 Flags: allguarded, covering, noinline
 Main> Main.heuristicPublicInline
 Arguments []
-Compile time tree: (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z))
+Compile time tree: 2
 Compiled: 2
 Refers to: Prelude.Types.Z, Prelude.Types.S
 Flags: inline, allguarded, covering
 Main> Main.exportedForced
 Arguments []
-Compile time tree: (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))))))))))))))))))))))))))))))))
+Compile time tree: 33
 Compiled: 33
 Refers to: Prelude.Types.Z, Prelude.Types.S
 Flags: allguarded, covering, inline
 Main> Main.exportedUnforced
 Arguments []
-Compile time tree: (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+Compile time tree: 66
 Compiled: 66
 Refers to: Prelude.Types.Z, Prelude.Types.S
 Flags: allguarded, covering

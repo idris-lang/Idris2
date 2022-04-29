@@ -429,45 +429,45 @@ Show (PrimFn arity) where
 
 export
 prettyOp : PrimFn arity -> Vect arity (Doc IdrisSyntax) -> Doc IdrisSyntax
-prettyOp (Add ty) [v1,v2] = v1 <++> "+" <++> v2
-prettyOp (Sub ty) [v1,v2] = v1 <++> "-" <++> v2
-prettyOp (Mul ty) [v1,v2] = v1 <++> "*" <++> v2
-prettyOp (Div ty) [v1,v2] = v1 <++> "`div`" <++> v2
-prettyOp (Mod ty) [v1,v2] = v1 <++> "`mod`" <++> v2
-prettyOp (Neg ty) [v] = "-" <++> v
-prettyOp (ShiftL ty) [v1,v2] = "shiftl" <++> v1 <++> v2
-prettyOp (ShiftR ty) [v1,v2] = "shiftr" <++> v1 <++> v2
-prettyOp (BAnd ty) [v1,v2] = v1 <++> "&&" <++> v2
-prettyOp (BOr ty) [v1,v2] = v1 <++> "||" <++> v2
-prettyOp (BXOr ty) [v1,v2] = v1 <++> "`xor`" <++> v2
-prettyOp (LT ty) [v1,v2] = v1 <++> "<" <++> v2
-prettyOp (LTE ty) [v1,v2] = v1 <++> "<=" <++> v2
-prettyOp (EQ ty) [v1,v2] = v1 <++> "==" <++> v2
-prettyOp (GTE ty) [v1,v2] = v1 <++> ">=" <++> v2
-prettyOp (GT ty) [v1,v2] = v1 <++> ">" <++> v2
-prettyOp StrLength [v] = "length" <++> v
-prettyOp StrHead [v] = "head" <++> v
-prettyOp StrTail [v] = "tail" <++> v
-prettyOp StrIndex [v1,v2] = v1 <++> "[" <+> v2 <+> "]"
-prettyOp StrCons [v1,v2] = v1 <++> "::" <++> v2
-prettyOp StrAppend [v1,v2] = v1 <++> "++" <++> v2
-prettyOp StrReverse [v] = "reverse" <++> v
-prettyOp StrSubstr [v1,v2,v3] = v1 <++> "[" <+> v2 <+> "," <++> v3 <+> "]"
-prettyOp DoubleExp [v] = "exp" <++> v
-prettyOp DoubleLog [v] = "log" <++> v
-prettyOp DoublePow [v1,v2] = v1 <++> "`pow`" <++> v2
-prettyOp DoubleSin [v] = "sin" <++> v
-prettyOp DoubleCos [v] = "cos" <++> v
-prettyOp DoubleTan [v] = "tan" <++> v
-prettyOp DoubleASin [v] = "asin" <++> v
-prettyOp DoubleACos [v] = "acos" <++> v
-prettyOp DoubleATan [v] = "atan" <++> v
-prettyOp DoubleSqrt [v] = "sqrt" <++> v
-prettyOp DoubleFloor [v] = "floor" <++> v
-prettyOp DoubleCeiling [v] = "ceiling" <++> v
-prettyOp (Cast x y) [v] = "[" <+> pretty x <++> "->" <++> pretty y <+> "]" <++> v
-prettyOp BelieveMe [v1,v2,v3] = "believe_me" <++> v1 <++> v2 <++> v3
-prettyOp Crash [v1,v2] = "crash" <++> v1 <++> v2
+prettyOp op@(Add ty) [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "+" <++> v2
+prettyOp op@(Sub ty) [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "-" <++> v2
+prettyOp op@(Mul ty) [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "*" <++> v2
+prettyOp op@(Div ty) [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "`div`" <++> v2
+prettyOp op@(Mod ty) [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "`mod`" <++> v2
+prettyOp op@(Neg ty) [v] = annotate (Fun $ UN $ Basic $ show op) "-" <++> v
+prettyOp op@(ShiftL ty) [v1,v2] = annotate (Fun $ UN $ Basic $ show op) "shiftl" <++> v1 <++> v2
+prettyOp op@(ShiftR ty) [v1,v2] = annotate (Fun $ UN $ Basic $ show op) "shiftr" <++> v1 <++> v2
+prettyOp op@(BAnd ty) [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "&&" <++> v2
+prettyOp op@(BOr ty) [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "||" <++> v2
+prettyOp op@(BXOr ty) [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "`xor`" <++> v2
+prettyOp op@(LT ty) [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "<" <++> v2
+prettyOp op@(LTE ty) [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "<=" <++> v2
+prettyOp op@(EQ ty) [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "==" <++> v2
+prettyOp op@(GTE ty) [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) ">=" <++> v2
+prettyOp op@(GT ty) [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) ">" <++> v2
+prettyOp op@StrLength [v] = annotate (Fun $ UN $ Basic $ show op) "length" <++> v
+prettyOp op@StrHead [v] = annotate (Fun $ UN $ Basic $ show op) "head" <++> v
+prettyOp op@StrTail [v] = annotate (Fun $ UN $ Basic $ show op) "tail" <++> v
+prettyOp op@StrIndex [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "[" <+> v2 <+> annotate (Fun $ UN $ Basic $ show op) "]"
+prettyOp op@StrCons [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "::" <++> v2
+prettyOp op@StrAppend [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "++" <++> v2
+prettyOp op@StrReverse [v] = annotate (Fun $ UN $ Basic $ show op) "reverse" <++> v
+prettyOp op@StrSubstr [v1,v2,v3] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "[" <+> v2 <+> annotate (Fun $ UN $ Basic $ show op) "," <++> v3 <+> annotate (Fun $ UN $ Basic $ show op) "]"
+prettyOp op@DoubleExp [v] = annotate (Fun $ UN $ Basic $ show op) "exp" <++> v
+prettyOp op@DoubleLog [v] = annotate (Fun $ UN $ Basic $ show op) "log" <++> v
+prettyOp op@DoublePow [v1,v2] = v1 <++> annotate (Fun $ UN $ Basic $ show op) "`pow`" <++> v2
+prettyOp op@DoubleSin [v] = annotate (Fun $ UN $ Basic $ show op) "sin" <++> v
+prettyOp op@DoubleCos [v] = annotate (Fun $ UN $ Basic $ show op) "cos" <++> v
+prettyOp op@DoubleTan [v] = annotate (Fun $ UN $ Basic $ show op) "tan" <++> v
+prettyOp op@DoubleASin [v] = annotate (Fun $ UN $ Basic $ show op) "asin" <++> v
+prettyOp op@DoubleACos [v] = annotate (Fun $ UN $ Basic $ show op) "acos" <++> v
+prettyOp op@DoubleATan [v] = annotate (Fun $ UN $ Basic $ show op) "atan" <++> v
+prettyOp op@DoubleSqrt [v] = annotate (Fun $ UN $ Basic $ show op) "sqrt" <++> v
+prettyOp op@DoubleFloor [v] = annotate (Fun $ UN $ Basic $ show op) "floor" <++> v
+prettyOp op@DoubleCeiling [v] = annotate (Fun $ UN $ Basic $ show op) "ceiling" <++> v
+prettyOp op@(Cast x y) [v] = annotate (Fun $ UN $ Basic $ show op) "[" <+> pretty x <++> annotate (Fun $ UN $ Basic $ show op) "->" <++> pretty y <+> annotate (Fun $ UN $ Basic $ show op) "]" <++> v
+prettyOp op@BelieveMe [v1,v2,v3] = annotate (Fun $ UN $ Basic $ show op) "believe_me" <++> v1 <++> v2 <++> v3
+prettyOp op@Crash [v1,v2] = annotate (Fun $ UN $ Basic $ show op) "crash" <++> v1 <++> v2
 
 
 public export

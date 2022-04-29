@@ -37,21 +37,22 @@ import Libraries.Data.String.Extra
 %hide Pretty.Syntax
 %hide List1.forget
 
-prettyFlag : ConInfo -> Doc ann
-prettyFlag DATACON = ""
-prettyFlag f = pretty0 (show f)
+prettyFlag : ConInfo -> Maybe (Doc ann)
+prettyFlag DATACON = Nothing
+prettyFlag f = Just (byShow f)
 
 prettyCon : Name -> ConInfo -> Maybe Int -> Doc IdrisSyntax
-prettyCon x ci tag
-  = hsep [ annotate (DCon (Just x)) (pretty0 x)
-         , braces ("tag =" <++> byShow tag)
-         , prettyFlag ci
-         ]
+prettyCon x ci mtag
+  = hsep $ catMaybes
+      [ Just (annotate ((if ci == TYCON then TCon else DCon) (Just x)) (pretty0 x))
+      , (braces . ("tag =" <++>) . byShow) <$> mtag
+      , prettyFlag ci
+      ]
 
 mutual
   Pretty IdrisSyntax NamedCExp where
-    prettyPrec d (NmLocal _ x) = "!" <+> pretty0 x
-    prettyPrec d (NmRef _ x) = pretty0 x
+    prettyPrec d (NmLocal _ x) = annotate Bound $ pretty0 x
+    prettyPrec d (NmRef _ x) = annotate (Fun x) $ pretty0 x
     prettyPrec d (NmLam _ x y)
       = parenthesise (d > Open) $ keyword "\\" <+> pretty0 x <+> fatArrow <++> pretty y
     prettyPrec d (NmLet _ x y z)
@@ -82,7 +83,8 @@ mutual
     prettyPrec d (NmErased _) = "___"
     prettyPrec d (NmCrash _ x)
         = parenthesise (d > Open) $
-            sep ["crash", pretty0 x]
+            sep [annotate Keyword "crash", byShow x]
+
   Pretty IdrisSyntax NamedConAlt where
     pretty (MkNConAlt x ci tag args exp)
         = sep (prettyCon x ci tag :: map pretty0 args ++ [fatArrow <+> softline <+> align (pretty exp) ])

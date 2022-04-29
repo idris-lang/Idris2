@@ -47,6 +47,10 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "interpolation001", "interpolation002", "interpolation003",
        "interpolation004"]
 
+idrisTestsDebug : TestPool
+idrisTestsDebug = MkTestPool "Debug features" [] Nothing
+      ["debug001"]
+
 idrisTestsCoverage : TestPool
 idrisTestsCoverage = MkTestPool "Coverage checking" [] Nothing
        -- Coverage checking
@@ -96,7 +100,7 @@ idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
        "interactive029", "interactive030", "interactive031", "interactive032",
        "interactive033", "interactive034", "interactive035", "interactive036",
        "interactive037", "interactive038", "interactive039", "interactive040",
-       "interactive041"]
+       "interactive041", "interactive042"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool "Interface" [] Nothing
@@ -362,6 +366,7 @@ main = runner $
   , testPaths "idris2" idrisTestsSchemeEval
   , testPaths "idris2" idrisTestsReflection
   , testPaths "idris2" idrisTestsWith
+  , testPaths "idris2" idrisTestsDebug
   , testPaths "idris2" idrisTests
   , !typeddTests
   , !ideModeTests

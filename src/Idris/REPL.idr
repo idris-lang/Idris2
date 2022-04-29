@@ -101,16 +101,21 @@ showInfo (n, idx, d)
                         "Size change: " ++ showSep ", " scinfo
 
 prettyInfo : {auto c : Ref Ctxt Defs} ->
-           (Name, Int, GlobalDef) -> Core (Doc IdrisDocAnn)
+             {auto s : Ref Syn SyntaxInfo} ->
+             (Name, Int, GlobalDef) -> Core (Doc IdrisDocAnn)
 prettyInfo (n, idx, d)
     = do let nm = fullname d
          def <- toFullNames (definition d)
          referCT <- traverse getFullName (keys (refersTo d))
          referRT <- traverse getFullName (keys (refersToRuntime d))
          schanges <- traverse toFullNames $ sizeChange d
+         pp <- getPPrint
+         setPPrint ({ showMachineNames := True } pp)
+         def <- Resugared.prettyDef def
+         setPPrint ({ showMachineNames := showMachineNames pp } pp)
          pure $ vcat $
            [ reAnnotate Syntax (prettyRig $ multiplicity d) <+> showCategory Syntax d (pretty0 nm)
-           , pretty def
+           , def
            ] ++
            catMaybes
            [ (\ args => header "Erasable args" <++> byShow args) <$> ifNotNull (eraseArgs d)
@@ -162,6 +167,9 @@ setOpt (ShowImplicits t)
 setOpt (ShowNamespace t)
     = do pp <- getPPrint
          setPPrint ({ fullNamespace := t } pp)
+setOpt (ShowMachineNames t)
+    = do pp <- getPPrint
+         setPPrint ({ showMachineNames := t } pp)
 setOpt (ShowTypes t)
     = update ROpts { showTypes := t }
 setOpt (EvalMode m)

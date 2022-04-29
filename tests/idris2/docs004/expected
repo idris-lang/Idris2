@@ -81,7 +81,7 @@ shiftR : Integer -> Index -> Integer
 shiftR x = prim__shr_Integer x . natToInteger
 
 bit : Index -> Integer
-bit = \{arg:0} => 1 `shiftL` arg
+bit = \arg => 1 `shiftL` arg
 
 zeroBits : Integer
 zeroBits = 0

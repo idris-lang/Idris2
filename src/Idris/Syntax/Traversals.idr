@@ -23,9 +23,9 @@ mapPTermM f = goPTerm where
                <*> goPTerm argTy
                <*> goPTerm retTy
       >>= f
-    goPTerm (PLam fc x info z argTy scope) =
+    goPTerm (PLam fc x info pat argTy scope) =
       PLam fc x <$> goPiInfo info
-                <*> pure z
+                <*> goPTerm pat
                 <*> goPTerm argTy
                 <*> goPTerm scope
       >>= f

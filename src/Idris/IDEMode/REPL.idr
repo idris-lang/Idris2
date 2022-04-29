@@ -290,14 +290,15 @@ Cast REPLEval String where
   cast Scheme = "scheme"
 
 Cast REPLOpt REPLOption where
-  cast (ShowImplicits impl) = MkOption "show-implicits" BOOL impl
-  cast (ShowNamespace ns)   = MkOption "show-namespace" BOOL ns
-  cast (ShowTypes typs)     = MkOption "show-types"     BOOL typs
-  cast (EvalMode mod)       = MkOption "eval"           ATOM $ cast mod
-  cast (Editor editor)      = MkOption "editor"         STRING editor
-  cast (CG str)             = MkOption "cg"             STRING str
-  cast (Profile p)          = MkOption "profile"        BOOL p
-  cast (EvalTiming p)       = MkOption "evaltiming"     BOOL p
+  cast (ShowImplicits impl)  = MkOption "show-implicits" BOOL impl
+  cast (ShowNamespace ns)    = MkOption "show-namespace" BOOL ns
+  cast (ShowMachineNames ns) = MkOption "show-machinenames" BOOL ns
+  cast (ShowTypes typs)      = MkOption "show-types"     BOOL typs
+  cast (EvalMode mod)        = MkOption "eval"           ATOM $ cast mod
+  cast (Editor editor)       = MkOption "editor"         STRING editor
+  cast (CG str)              = MkOption "cg"             STRING str
+  cast (Profile p)           = MkOption "profile"        BOOL p
+  cast (EvalTiming p)        = MkOption "evaltiming"     BOOL p
 
 
 displayIDEResult : {auto c : Ref Ctxt Defs} ->

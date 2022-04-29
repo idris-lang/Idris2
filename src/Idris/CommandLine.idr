@@ -94,6 +94,10 @@ data CLOpt
   NoBanner |
    ||| Run Idris 2 in quiet mode
   Quiet |
+   ||| Show machine names when pretty printing
+  ShowMachineNames |
+   ||| Show namespaces when pretty printing
+  ShowNamespaces |
    ||| Run Idris 2 in verbose mode (cancels quiet if it's the default)
   Verbose |
    ||| Set the console width for REPL output
@@ -267,7 +271,6 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--init"] [Optional "package file"]
               (\ f => [Package Init f])
               (Just "Interactively initialise a new project"),
-
            MkOpt ["--build"] [Optional "package file"]
                (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),
@@ -313,6 +316,10 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Quiet mode; display fewer messages"),
            MkOpt ["--console-width"] [AutoNat "console width"] (\l => [ConsoleWidth l])
               (Just "Width for console output (0 for unbounded) (auto by default)"),
+           MkOpt ["--show-machine-names"] [] [ShowMachineNames]
+              (Just "Show machine names when pretty printing"),
+           MkOpt ["--show-namespaces"] [] [ShowNamespaces]
+              (Just "Show namespaces when pretty printing"),
            MkOpt ["--color", "--colour"] [] ([Color True])
               (Just "Forces colored console output (enabled by default)"),
            MkOpt ["--no-color", "--no-colour"] [] ([Color False])

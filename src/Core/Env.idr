@@ -17,6 +17,7 @@ export
 extend : (x : Name) -> Binder (tm vars) -> Env tm vars -> Env tm (x :: vars)
 extend x = (::) {x}
 
+
 export
 length : Env tm xs -> Nat
 length [] = 0
@@ -249,6 +250,13 @@ shrinkEnv (b :: env) (KeepCons p)
     = do env' <- shrinkEnv env p
          b' <- assert_total (shrinkBinder b p)
          pure (b' :: env')
+
+export
+mkEnvOnto : FC -> (xs : List Name) -> Env Term ys -> Env Term (xs ++ ys)
+mkEnvOnto fc [] vs = vs
+mkEnvOnto fc (n :: ns) vs
+   = PVar fc top Explicit (Erased fc False)
+   :: mkEnvOnto fc ns vs
 
 -- Make a dummy environment, if we genuinely don't care about the values
 -- and types of the contents.
