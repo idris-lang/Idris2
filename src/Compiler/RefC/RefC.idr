@@ -814,7 +814,7 @@ emitFDef funcName ((varType, varName, varCFType) :: xs) = do
 data CLang = CLangC | CLangRefC
 
 extractValue : (cLang : CLang) -> (cfType:CFType) -> (varName:String) -> String
-extractValue _ CFUnit           varName = "void"
+extractValue _ CFUnit           varName = "NULL"
 extractValue _ CFInt            varName = "((Value_Int64*)" ++ varName ++ ")->i64"
 extractValue _ CFInt8           varName = "((Value_Int8*)" ++ varName ++ ")->i8"
 extractValue _ CFInt16          varName = "((Value_Int16*)" ++ varName ++ ")->i16"
