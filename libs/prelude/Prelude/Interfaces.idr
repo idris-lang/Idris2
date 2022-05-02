@@ -370,7 +370,7 @@ public export
 any : Foldable t => (a -> Bool) -> t a -> Bool
 any = foldMap @{%search} @{Any}
 
-||| The disjunction of the collective results of applying a predicate to all
+||| The conjunction of the collective results of applying a predicate to all
 ||| elements of a structure.  `all` short-circuits from left to right.
 public export
 all : Foldable t => (a -> Bool) -> t a -> Bool
