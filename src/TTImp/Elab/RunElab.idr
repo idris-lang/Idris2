@@ -88,7 +88,12 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                       elabScript fc nest env
                               !(sc defs (toClosure withAll env
                                               !(quote defs env act'))) exp
-                  x => failWith defs $ "non-function RHS of a Bind: " ++ show x
+                  head => do -- we've got an eta-contracted form here. Eta-expand!
+                    headq <- quote defs env head
+                    argq <- quote defs env act'
+                    let app = App fc headq argq
+                    appnf <- nfOpts withAll defs env app
+                    elabScript fc nest env appnf exp
     elabCon defs "Fail" [_, mbfc, msg]
         = do msg' <- evalClosure defs msg
              let customFC = case !(evalClosure defs mbfc >>= reify defs) of
