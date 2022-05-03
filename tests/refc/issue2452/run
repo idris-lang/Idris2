@@ -1,0 +1,4 @@
+rm -rf build
+
+$1 --no-banner --no-color --console-width 0 --cg refc -o bits_case BitsCase.idr > /dev/null
+./build/exec/bits_case

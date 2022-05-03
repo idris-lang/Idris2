@@ -69,6 +69,14 @@ Value *tailcall_apply_closure(Value *_clos, Value *arg) {
 
 int extractInt(Value *v) {
   switch (v->header.tag) {
+  case BITS8_TAG:
+    return (int)((Value_Bits8 *)v)->ui8;
+  case BITS16_TAG:
+    return (int)((Value_Bits16 *)v)->ui16;
+  case BITS32_TAG:
+    return (int)((Value_Bits32 *)v)->ui32;
+  case BITS64_TAG:
+    return (int)((Value_Bits64 *)v)->ui64;
   case INT8_TAG:
     return (int)((Value_Int8 *)v)->i8;
   case INT16_TAG:
