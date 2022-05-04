@@ -3,6 +3,6 @@ Main> Main.cube : Nat -> Nat
 cube = \x => mult x (mult x (mult x (const 1 x)))
 Main> 27
 Main> Main.cube' : Nat -> Nat
-cube' = \x => mult (mult (plus x 0) x) x
+cube' = \x => mult (mult (mult (const 1 x) x) x) x
 Main> 27
 Main> Bye for now!
