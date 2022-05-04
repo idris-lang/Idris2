@@ -81,19 +81,17 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
         = do empty <- clearDefs defs
              evalClosure empty val
     elabCon defs "Bind" [_,_,act,k]
-        = do act' <- elabScript fc nest env
+        -- act : Elab A
+        -- k : A -> Elab B
+        -- 1) Run elabScript on act stripping off Elab
+        -- 2) apply k to the result of (1)
+        -- 3) Run elabScript on the result stripping off Elab
+        = do act <- elabScript fc nest env
                                 !(evalClosure defs act) exp
-             case !(evalClosure defs k) of
-                  NBind _ x (Lam _ _ _ _) sc =>
-                      elabScript fc nest env
-                              !(sc defs (toClosure withAll env
-                                              !(quote defs env act'))) exp
-                  head => do -- we've got an eta-contracted form here. Eta-expand!
-                    headq <- quote defs env head
-                    argq <- quote defs env act'
-                    let app = App fc headq argq
-                    appnf <- nfOpts withAll defs env app
-                    elabScript fc nest env appnf exp
+             k <- evalClosure defs k
+             r <- applyToStack defs withAll env k
+                       [(EmptyFC, MkNFClosure withAll env act)]
+             elabScript fc nest env r exp
     elabCon defs "Fail" [_, mbfc, msg]
         = do msg' <- evalClosure defs msg
              let customFC = case !(evalClosure defs mbfc >>= reify defs) of
