@@ -174,6 +174,13 @@ idrisTestsEvaluator = MkTestPool "Evaluation" [] Nothing
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
        "interpreter005", "interpreter006", "interpreter007", "interpreter008"]
 
+idrisTestsAllSchemes : Requirement -> TestPool
+idrisTestsAllSchemes cg = MkTestPool
+      ("Test across all scheme backends: " ++ show cg ++ " instance")
+      [] (Just cg)
+      [ "scheme001"
+      ]
+
 idrisTestsAllBackends : Requirement -> TestPool
 idrisTestsAllBackends cg = MkTestPool
       ("Test across all backends: " ++ show cg ++ " instance")
@@ -183,6 +190,7 @@ idrisTestsAllBackends cg = MkTestPool
        -- Unfortunately the behaviour of Double is platform dependent so the
        -- following test is turned off.
        -- "evaluator005",
+       "issue2362",
        "basic048",
        "perf006"]
 
@@ -381,6 +389,7 @@ main = runner $
   , !templateTests
   , !codegenTests
   ]
+  ++ map (testPaths "allschemes" . idrisTestsAllSchemes) [Chez, Racket]
   ++ map (testPaths "allbackends" . idrisTestsAllBackends) [Chez, Node, Racket]
 
 
