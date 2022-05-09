@@ -381,7 +381,7 @@ main = runner $
   , !templateTests
   , !codegenTests
   ]
-  ++ map (testPaths "allbackends" . idrisTestsAllBackends) [Chez, Node, Racket]
+  ++ map (testPaths "allbackends" . idrisTestsAllBackends) [Chez, Node, Racket, C]
 
 
     where
