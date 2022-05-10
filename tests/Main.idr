@@ -185,12 +185,14 @@ idrisTestsAllBackends : Requirement -> TestPool
 idrisTestsAllBackends cg = MkTestPool
       ("Test across all backends: " ++ show cg ++ " instance")
       [] (Just cg)
-      [ -- Evaluator
+       -- RefC implements IEEE standard and distinguishes between 0.0 and -0.0
+       -- unlike other backends. So turn this test for now.
+      $ ([ "issue2362" ] <* guard (cg /= C))
+      ++ [ -- Evaluator
        "evaluator004",
        -- Unfortunately the behaviour of Double is platform dependent so the
        -- following test is turned off.
        -- "evaluator005",
-       "issue2362",
        "basic048",
        "perf006"]
 
@@ -390,7 +392,7 @@ main = runner $
   , !codegenTests
   ]
   ++ map (testPaths "allschemes" . idrisTestsAllSchemes) [Chez, Racket]
-  ++ map (testPaths "allbackends" . idrisTestsAllBackends) [Chez, Node, Racket]
+  ++ map (testPaths "allbackends" . idrisTestsAllBackends) [Chez, Node, Racket, C]
 
 
     where

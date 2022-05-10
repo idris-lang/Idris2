@@ -307,6 +307,15 @@ public export
 data Requirement = C | Chez | Node | Racket | Gambit
 
 export
+Eq Requirement where
+  C == C = True
+  Chez == Chez = True
+  Node == Node = True
+  Racket == Racket = True
+  Gambit == Gambit = True
+  _ == _ = False
+
+export
 Show Requirement where
   show C = "C"
   show Chez = "Chez"

@@ -45,7 +45,7 @@ compileExpr c tmpDir outputDir tm outfile =
 ||| Node implementation of the `executeExpr` interface.
 executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c tmpDir tm =
-  do let outn = tmpDir </> "_tmp_node" ++ ".js"
+  do let outn = tmpDir </> "_tmp_node.js"
      js <- compileToNode c tm
      Core.writeFile outn js
      node <- coreLift findNode
