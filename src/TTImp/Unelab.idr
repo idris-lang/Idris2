@@ -42,6 +42,27 @@ Eq UnelabMode where
    _ == _ = False
 
 mutual
+
+  ||| Unelaborate a call to a case expression as an inline case.
+  ||| This should allow us to eventurally resugar case blocks and if-then-else calls.
+  |||
+  ||| This is really hard however because all we have access to is the elaborated
+  ||| clauses of the lifted case expression. So e.g.
+  |||      f x = case g x of p -> e
+  ||| became
+  |||      f x = f-case x (g x)
+  |||      f-case x p = e
+  ||| and so to display the
+  |||      f-case (h y) (g (p o))
+  ||| correctly we need to:
+  ||| 1. extract p from f-case x p
+  ||| 2. replace x with (h y) in e
+  |||
+  ||| However it can be the case that x has been split because it was forced by a
+  ||| pattern in p and so looking at (f-case x p) we may not be able to recover the
+  ||| name x.
+  |||
+  ||| We will try to do our best...
   unelabCase : {auto c : Ref Ctxt Defs} ->
                List (Name, Nat) ->
                Name -> List IArg -> IRawImp ->
@@ -65,7 +86,7 @@ mutual
       findArgPos _ = Nothing
 
       idxOrDefault : Nat -> a -> List a -> a
-      idxOrDefault Z def (x :: xs) = x
+      idxOrDefault Z def (x :: _) = x
       idxOrDefault (S k) def (_ :: xs) = idxOrDefault k def xs
       idxOrDefault _ def [] = def
 
@@ -78,23 +99,40 @@ mutual
       nthArg fc drop (App afc f a) = getNth drop (App afc f a)
       nthArg fc drop tm = Erased fc False
 
+      ||| This is where we should introduce some renaming in the RHS to match
+      ||| the specialised call.
       mkClause : FC -> Nat ->
                  (vs ** (Env Term vs, Term vs, Term vs)) ->
                  Core IImpClause
       mkClause fc dropped (vs ** (env, lhs, rhs))
-          = do let pat = nthArg fc dropped lhs
-               logTerm "unelab.case" 20 "Unelaborating LHS" pat
+          = do logTerm "unelab.case.clause" 20 "Unelaborating clause" lhs
+               let pat = nthArg fc dropped lhs
+               logTerm "unelab.case.clause" 20 "Unelaborating LHS pattern" pat
                lhs' <- unelabTy Full nest env pat
-               logTerm "unelab.case" 20 "Unelaborating RHS" rhs
-               logEnv "unelab.case" 20 "In Env" env
+               logTerm "unelab.case.clause" 20 "Unelaborating RHS" rhs
+               logEnv "unelab.case.clause" 20 "In Env" env
                rhs' <- unelabTy Full nest env rhs
                pure (PatClause fc (fst lhs') (fst rhs'))
 
+      ||| mkCase looks up the value passed as the scrutinee of the case-block.
+      ||| @ idx     is the running index of the case-block's scrutinee
+      |||           It starts as the actual index and is decreased as we pass
+      |||           arguments on the way to finding the scrutinee.
+      ||| @ dropped is the number of arguments already dropped
+      |||           It starts as 0 and increases as we pass arguments
+      ||| Invariant: idx + dropped = argpos
+      ||| @ args    is the list of arguments at the call site of the case-block
+      |||
+      ||| Once we have the scrutinee `e`, we can form `case e of` and so focus
+      ||| on manufacturing the clauses.
       mkCase : List (vs ** (Env Term vs, Term vs, Term vs)) ->
-               Nat -> Nat -> List IArg -> Core IRawImp
+               (idx : Nat) -> (droppped : Nat) -> (args : List IArg) ->
+               Core IRawImp
       mkCase pats (S k) dropped (_ :: args) = mkCase pats k (S dropped) args
-      mkCase pats Z dropped (Explicit fc tm :: _)
-          = do pats' <- traverse (mkClause fc dropped) pats
+      mkCase pats Z dropped (Explicit fc tm :: args)
+          = do unless (null args) $ log "unelab.case.clause" 20 $
+                 unwords $ "Ignoring" :: map show args
+               pats' <- traverse (mkClause fc dropped) pats
                pure $ ICase fc tm (Implicit fc False) pats'
       mkCase _ _ _ _ = pure orig
 
