@@ -203,11 +203,8 @@ snoc (x :: xs) v = x :: snoc xs v
 ||| @ xs The vector to pop the element from.
 public export
 unsnoc : (xs : Vect (S n) a) -> (Vect n a, a)
-unsnoc (x :: xs) = go x xs
-  where
-  go : a -> Vect n a -> (Vect n a, a)
-  go x [] = ([], x)
-  go x (y :: ys) = let (ini, lst) = go y ys in (x :: ini, lst)
+unsnoc [x] = ([], x)
+unsnoc (x :: xs@(_ :: _)) = let (ini, lst) = unsnoc xs in (x :: ini, lst)
 
 ||| Repeate some value some number of times.
 |||
