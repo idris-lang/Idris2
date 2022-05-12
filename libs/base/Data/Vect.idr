@@ -197,6 +197,18 @@ snoc : (xs : Vect n a) -> (v : a) -> Vect (S n) a
 snoc [] v = [v]
 snoc (x :: xs) v = x :: snoc xs v
 
+||| Pop the last element from a vector. This is the opposite of `snoc`, in that
+||| `(uncurry snoc) unsnoc xs` is `xs`. It is equivalent to `\xs => (init xs, last xs)`.
+|||
+||| @ xs The vector to pop the element from.
+public export
+unsnoc : (xs : Vect (S n) a) -> (Vect n a, a)
+unsnoc (x :: xs) = go x xs
+  where
+  go : a -> Vect n a -> (Vect n a, a)
+  go x [] = ([], x)
+  go x (y :: ys) = let (ini, lst) = go y ys in (x :: ini, lst)
+
 ||| Repeate some value some number of times.
 |||
 ||| @ len the number of times to repeat it
@@ -449,7 +461,7 @@ scanr f q (x :: xs) = let qs'@(q' :: _) = scanr f q xs in f x q' :: qs'
 public export
 scanr1 : (elem -> elem -> elem) -> Vect len elem -> Vect len elem
 scanr1 _ [] = []
-scanr1 f xs@(_ :: _) = scanr f (last xs) (init xs)
+scanr1 f xs@(_ :: _) = let (ini, lst) = unsnoc xs in scanr f lst ini
 
 ||| The scanl function is similar to foldl, but returns all the intermediate
 ||| accumulator states in the form of a vector.
