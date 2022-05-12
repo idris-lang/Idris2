@@ -197,6 +197,16 @@ snoc : (xs : Vect n a) -> (v : a) -> Vect (S n) a
 snoc [] v = [v]
 snoc (x :: xs) v = x :: snoc xs v
 
+||| Pop the last element from a vector. This is the opposite of `snoc`, in that
+||| `(uncurry snoc) unsnoc xs` is `xs`. It is equivalent to `(init xs, last xs)`,
+||| but traverses the vector once.
+|||
+||| @ xs The vector to pop the element from.
+public export
+unsnoc : (xs : Vect (S n) a) -> (Vect n a, a)
+unsnoc [x] = ([], x)
+unsnoc (x :: xs@(_ :: _)) = let (ini, lst) = unsnoc xs in (x :: ini, lst)
+
 ||| Repeate some value some number of times.
 |||
 ||| @ len the number of times to repeat it
@@ -424,6 +434,32 @@ foldl1 f (x::xs) = foldl f x xs
 --------------------------------------------------------------------------------
 -- Scans
 --------------------------------------------------------------------------------
+
+||| The scanr function is similar to foldr, but returns all the intermediate
+||| accumulator states in the form of a vector. Note the intermediate accumulator
+||| states appear in the result in reverse order - the first state appears last
+||| in the result.
+|||
+||| ```idris example
+||| scanr (-) 0 (fromList [1,2,3])
+||| ```
+public export
+scanr : (elem -> res -> res) -> res -> Vect len elem -> Vect (S len) res
+scanr _ q [] = [q]
+scanr f q (x :: xs) = let qs'@(q' :: _) = scanr f q xs in f x q' :: qs'
+
+||| The scanr1 function is a variant of scanr that doesn't require an explicit
+||| starting value.
+||| It assumes the last element of the vector to be the starting value and then
+||| starts the fold with the element preceding it.
+|||
+||| ```idris example
+||| scanr1 (-) (fromList [1,2,3])
+||| ```
+public export
+scanr1 : (elem -> elem -> elem) -> Vect len elem -> Vect len elem
+scanr1 _ [] = []
+scanr1 f xs@(_ :: _) = let (ini, lst) = unsnoc xs in scanr f lst ini
 
 ||| The scanl function is similar to foldl, but returns all the intermediate
 ||| accumulator states in the form of a vector.
