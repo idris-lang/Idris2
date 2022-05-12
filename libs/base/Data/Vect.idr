@@ -427,7 +427,8 @@ foldl1 f (x::xs) = foldl f x xs
 
 ||| The scanr function is similar to foldr, but returns all the intermediate
 ||| accumulator states in the form of a vector. Note the intermediate accumulator
-||| states appear in the result in reverse order.
+||| states appear in the result in reverse order - the first state appears last
+||| in the result.
 |||
 ||| ```idris example
 ||| scanr (-) 0 (fromList [1,2,3])
