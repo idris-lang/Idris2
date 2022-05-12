@@ -425,6 +425,31 @@ foldl1 f (x::xs) = foldl f x xs
 -- Scans
 --------------------------------------------------------------------------------
 
+||| The scanr function is similar to foldr, but returns all the intermediate
+||| accumulator states in the form of a vector. Note the intermediate accumulator
+||| states appear in the result in reverse order.
+|||
+||| ```idris example
+||| scanr (-) 0 (fromList [1,2,3])
+||| ```
+public export
+scanr : (elem -> res -> res) -> res -> Vect len elem -> Vect (S len) res
+scanr _ q [] = [q]
+scanr f q (x :: xs) = let qs'@(q' :: _) = scanr f q xs in f x q' :: qs'
+
+||| The scanr1 function is a variant of scanr that doesn't require an explicit
+||| starting value.
+||| It assumes the last element of the vector to be the starting value and then
+||| starts the fold with the element preceding it.
+|||
+||| ```idris example
+||| scanr1 (-) (fromList [1,2,3])
+||| ```
+public export
+scanr1 : (elem -> elem -> elem) -> Vect len elem -> Vect len elem
+scanr1 _ [] = []
+scanr1 f xs@(_ :: _) = scanr f (last xs) (init xs)
+
 ||| The scanl function is similar to foldl, but returns all the intermediate
 ||| accumulator states in the form of a vector.
 |||
