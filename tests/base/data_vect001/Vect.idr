@@ -22,8 +22,8 @@ scanrCons = scanr (::) Nil [2, 3, 4]
 
 scanr1Mul : List (n ** Vect n Nat)
 scanr1Mul = [
-      (_ ** scanr (*) [3])
-    , (_ ** scanr (*) [5, 4, 3])
+      (_ ** scanr1 (*) [3])
+    , (_ ** scanr1 (*) [5, 4, 3])
   ]
 
 main : IO ()
