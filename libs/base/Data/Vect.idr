@@ -198,7 +198,8 @@ snoc [] v = [v]
 snoc (x :: xs) v = x :: snoc xs v
 
 ||| Pop the last element from a vector. This is the opposite of `snoc`, in that
-||| `(uncurry snoc) unsnoc xs` is `xs`. It is equivalent to `\xs => (init xs, last xs)`.
+||| `(uncurry snoc) unsnoc xs` is `xs`. It is equivalent to `(init xs, last xs)`,
+||| but traverses the vector once.
 |||
 ||| @ xs The vector to pop the element from.
 public export
