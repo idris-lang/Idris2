@@ -192,7 +192,7 @@ idrisTestsAllBackends cg = MkTestPool
        "evaluator004",
        -- Unfortunately the behaviour of Double is platform dependent so the
        -- following test is turned off.
-       -- "evaluator005",
+       "evaluator005",
        "basic048",
        "perf006"]
 
