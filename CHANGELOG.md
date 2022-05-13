@@ -120,6 +120,8 @@
   make the code consistent with the other quantifiers (`List` and `SnocList`).
 * Set the `all` and `any` functions for proof-quantifiers to `public export`
   instead of `export`, allowing them to be used with auto-implicit `IsYes`.
+* Legacy duplicating type `Given` (with constructor `Always`) is removed from the `Decidable.Decidable`.
+  Use the type `IsYes` (with constructor `ItIsYes`) from the same module instead.
 
 #### Test
 
