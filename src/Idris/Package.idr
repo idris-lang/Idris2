@@ -293,7 +293,6 @@ addDeps :
     PkgDesc ->
     Core ()
 addDeps pkg = do
-    -- srcDir <- get 
     allPkgs <- getTransitiveDeps pkg.depends empty
     log "package.depends" 10 $ "all depends: \{show allPkgs}"
     traverse_ addExtraDir allPkgs
@@ -321,7 +320,7 @@ addDeps pkg = do
                 True <- coreLift $ exists pkgFile
                     | False => getTransitiveDeps deps (insert dep.pkgname Nothing done)
                 pkg <- parsePkgFile True pkgFile
-                getTransitiveDeps 
+                getTransitiveDeps
                     (pkg.depends ++ deps)
                     (insert pkg.name pkg.version done)
 
