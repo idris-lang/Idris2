@@ -53,8 +53,3 @@ interface Decidable k ts p where
 ||| this relation.
 decision : (ts : Vect k Type) -> (p : Rel ts) -> Decidable k ts p => liftRel ts p Dec
 decision ts p = decide {ts} {p}
-
-using (a : Type, x : a)
-  public export
-  data Given : Dec a -> Type where
-    Always : Given (Yes x)
