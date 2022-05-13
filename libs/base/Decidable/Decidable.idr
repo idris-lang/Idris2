@@ -15,6 +15,14 @@ isYes : Dec a -> Bool
 isYes (Yes _) = True
 isYes (No _) = False
 
+export
+Injective Yes where
+  injective Refl = Refl
+
+export
+Injective No where
+  injective Refl = Refl
+
 ||| Proof that some `Dec` is actually `Yes`
 public export
 data IsYes : Dec a -> Type where
