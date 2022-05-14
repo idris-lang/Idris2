@@ -1,0 +1,7 @@
+if [ "$OS" = "windows" ]; then
+    MY_PWD="$(cygpath -m "$(pwd)")\\\\"
+else
+    MY_PWD="$(pwd)/"
+fi
+
+$1 --build test.ipkg --log package.depends:10 | sed "s|$MY_PWD|__MY_PWD__|g"

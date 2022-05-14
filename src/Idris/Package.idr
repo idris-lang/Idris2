@@ -246,13 +246,13 @@ addField (PPostclean fc e)   pkg = pure $ { postclean := Just (fc, e) } pkg
 addFields : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             {auto o : Ref ROpts REPLOpts} ->
-            (asDepends : Bool) ->
+            (setSrc : Bool) ->
             List DescField -> PkgDesc -> Core PkgDesc
-addFields asDepends xs desc = do
+addFields setSrc xs desc = do
   p <- newRef ParsedMods []
   m <- newRef MainMod Nothing
   added <- go {p} {m} xs desc
-  unless asDepends $ setSourceDir (sourcedir added)
+  when setSrc $ setSourceDir (sourcedir added)
   ms <- get ParsedMods
   mmod <- get MainMod
   pure $
@@ -279,12 +279,12 @@ export
 parsePkgFile : {auto c : Ref Ctxt Defs} ->
                {auto s : Ref Syn SyntaxInfo} ->
                {auto o : Ref ROpts REPLOpts} ->
-               (asDepends : Bool) -> -- parse package file as a dependency
+               (setSrc : Bool) -> -- parse package file as a dependency
                String -> Core PkgDesc
-parsePkgFile asDepends file = do
+parsePkgFile setSrc file = do
     Right (pname, fs) <- coreLift $ parseFile file $ parsePkgDesc file <* eoi
         | Left err => throw err
-    addFields asDepends fs (initPkgDesc pname)
+    addFields setSrc fs (initPkgDesc pname)
 
 addDeps :
     {auto c : Ref Ctxt Defs} ->
@@ -314,12 +314,13 @@ addDeps pkg = do
                 then getTransitiveDeps deps done
                 else throw $ GenericMsg EmptyFC "2 versions of the same package are required, this is unsupported"
             Nothing => do
+                log "package.depends" 50 "adding new dependency: \{dep.pkgname} (\{show dep.pkgbounds})"
                 Just pkgDir <- findPkgDir dep.pkgname dep.pkgbounds
                     | Nothing => getTransitiveDeps deps done
                 let pkgFile = pkgDir </> dep.pkgname <.> "ipkg"
                 True <- coreLift $ exists pkgFile
                     | False => getTransitiveDeps deps (insert dep.pkgname Nothing done)
-                pkg <- parsePkgFile True pkgFile
+                pkg <- parsePkgFile False pkgFile
                 getTransitiveDeps
                     (pkg.depends ++ deps)
                     (insert pkg.name pkg.version done)
@@ -785,7 +786,7 @@ processPackage opts (cmd, mfile)
                  | _ => do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
                            coreLift (exitWith (ExitFailure 1))
              setWorkingDir dir
-             pkg <- parsePkgFile False filename
+             pkg <- parsePkgFile True filename
              whenJust (builddir pkg) setBuildDir
              setOutputDir (outputdir pkg)
              case cmd of
@@ -902,7 +903,7 @@ findIpkg fname
              | Nothing => pure fname
         coreLift_ $ changeDir dir
         setWorkingDir dir
-        pkg <- parsePkgFile False ipkgn
+        pkg <- parsePkgFile True ipkgn
         maybe (pure ()) setBuildDir (builddir pkg)
         setOutputDir (outputdir pkg)
         processOptions (options pkg)
