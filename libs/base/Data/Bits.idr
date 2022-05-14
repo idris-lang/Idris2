@@ -257,7 +257,7 @@ FiniteBits Bits64 where
              ((x0 `shiftR` 1) .&. 0x5555555555555555)
         x2 = (x1 .&. 0x3333333333333333)
              + ((x1 `shiftR` 2) .&. 0x3333333333333333)
-        x3 = ((x2 + (x2 `shiftR` 4)) .&. 0x0F0F0F0F)
+        x3 = ((x2 + (x2 `shiftR` 4)) .&. 0x0F0F0F0F0F0F0F0F)
         x4 = (x3 * 0x0101010101010101) `shiftR` 56
      in cast x4
 
