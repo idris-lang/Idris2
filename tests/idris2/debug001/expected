@@ -66,7 +66,7 @@ Main> Prelude.Types.SnocList.filter
 Arguments [{arg:0}, {arg:1}, {arg:2}]
 Compile time tree: case {arg:2} of
   Lin {e:0} => [<]
-  (:<) {e:1} {e:2} {e:3} => let rest = filter {arg:1} {e:2} in if {arg:1} {e:3} then rest :< x else rest
+  (:<) {e:1} {e:2} {e:3} => let rest = filter {arg:1} {e:2} in if {arg:1} {e:3} then rest :< {e:3} else rest
 Erasable args: [0]
 Inferrable args: [0]
 Compiled: \ {arg:1}, {arg:2} => case {arg:2} of

@@ -1,0 +1,5 @@
+1/1: Building Issue1282 (Issue1282.idr)
+Main> Main.test1 : (b : Bool) -> (if b then () else ())
+Main> \x => if x then x else x
+Main> \a, b, c => case c of { 0 => S (case b of { 0 => S (case a of { 0 => 1 ; i => 0 }) ; i => case a of { 0 => 1 ; i => 0 } }) ; i => case b of { 0 => S (case a of { 0 => 1 ; i => 0 }) ; i => case a of { 0 => 1 ; i => 0 } } }
+Main> Bye for now!
