@@ -18,6 +18,11 @@ extend : (x : Name) -> Binder (tm vars) -> Env tm vars -> Env tm (x :: vars)
 extend x = (::) {x}
 
 export
+(++) : {ns : _} -> Env Term ns -> Env Term vars -> Env Term (ns ++ vars)
+(++) (b :: bs) e = extend _ (map embed b) (bs ++ e)
+(++) [] e = e
+
+export
 length : Env tm xs -> Nat
 length [] = 0
 length (_ :: xs) = S (length xs)

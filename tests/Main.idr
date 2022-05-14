@@ -169,7 +169,7 @@ idrisTestsBuiltin = MkTestPool "Builtin types and functions" [] Nothing
 idrisTestsEvaluator : TestPool
 idrisTestsEvaluator = MkTestPool "Evaluation" [] Nothing
       [ -- Evaluator
-       "evaluator001", "evaluator002", "evaluator003",
+       "evaluator001", "evaluator002", "evaluator003", "evaluator004",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
        "interpreter005", "interpreter006", "interpreter007", "interpreter008"]
