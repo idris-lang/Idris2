@@ -4,4 +4,6 @@ else
     MY_PWD="$(pwd)/"
 fi
 
-$1 --build test.ipkg --log package.depends:10 | sed "s|$MY_PWD|__MY_PWD__|g"
+MY_PWD="${MY_PWD}" ./gen_expected.sh
+
+$1 --build test.ipkg --log package.depends:10
