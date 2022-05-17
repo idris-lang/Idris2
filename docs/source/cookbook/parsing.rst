@@ -21,7 +21,24 @@ smart enough to parse the following expression:
 Lexer
 -----
 
-The lexer is under ``Text.Lexer``.
+The main lexer module is under ``Text.Lexer``. This module contains ``toTokenMap`` which is a function
+that converts a ``List (Lexer, k) -> TokenMap (Token k)`` where ``k`` is a token kind. This function
+could be used for simple lexer to token mappings. The module also includes high level lexers for
+specifying quantity and common programming primitives like ``alphas``, ``intLit``,
+``lineComment`` and ``blockComment``.
+
+The ``Text.Lexer`` module also reexports ``Text.Lexer.Core``, ``Text.Quantity`` and ``Text.Token``.
+
+``Text.Lexer.Core`` provides the building blocks of building the lexer, including a type called
+``Recognise`` which is the underlying data type for the lexer. The other important function that this
+module provides is a ``lex`` function which takes in a lexer and returns the tokens.
+
+``Text.Quantity`` provides a data type ``Quantity`` which can be used with certain lexers to specify
+how many times something is expected to appear.
+
+``Text.Token`` provides a data type ``Token`` that represents a parsed token, it's kind and the text.
+This module also provides an important interface called ``TokenKind`` which tells the lexer how to map
+token kinds to Idris 2 types and how to convert each kind from a string to a value.
 
 Parser
 ------
@@ -328,3 +345,11 @@ Building a Calculutor
       case lexCalculator x of
         Just toks => parseCalculator toks
         Nothing => Left "Failed to lex."
+
+Testing out our calculator gives us back the following output:
+
+.. code-block:: text
+
+    $ idris2 -p contrib Calculator.idr
+    Main> :exec printLn $ parse1 "1 + 2 - 3 * 4 / 5"
+    Right 0.6000000000000001
