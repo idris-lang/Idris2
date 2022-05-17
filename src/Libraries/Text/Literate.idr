@@ -98,6 +98,10 @@ record LiterateError where
   column : Int
   input  : String
 
+export
+Show LiterateError where
+  show (MkLitErr line col input) = "\{input}:\{show line}:\{show col}"
+
 ||| Description of literate styles.
 |||
 ||| A 'literate' style comprises of
