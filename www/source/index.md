@@ -1,3 +1,6 @@
+Welcome to Idris2!
+==================
+
 <style>
 body {
   width: 80%;
@@ -11,9 +14,6 @@ pre code {
   display: block;
 }
 </style>
-
-Welcome to Idris2!
-==================
 
 [Idris](https://www.idris-lang.org/) is a programming language designed to encourage
 _Type-Driven Development_.
@@ -49,12 +49,12 @@ keywords (`module`, `:`, `=`, etc.) and hopefully get helpful information.
 
 Here are links to the automatically generated documentation for the libraries shipped with the
 **bleeding edge** version of the compiler. The documentation for the latest **released** version
-is available on the [idris-lang.org](https://www.idris-lang.org/pages/documentation.html) website.
+is available on the [idris-lang.org](https://www.idris-lang.org/pages/documentation.html) site.
 
 #### [Prelude](https://idris-lang.github.io/Idris2/prelude)
 
-The `prelude` is always implicitly loaded unless you use the `--no-prelude` command line option.
-This is where the builtin types are bound, where the core data types (`List`, `Nat`, `Equal`, etc.)
+The `prelude` is always implicitly loaded unless you use the `--no-prelude` command-line option.
+This is where the built-in types are bound, where the core data types (`List`, `Nat`, `Equal`, etc.)
 and interfaces (`Eq`, `Show`, `Functor`, etc.) are defined.
 
 #### [Base](https://idris-lang.github.io/Idris2/base)
