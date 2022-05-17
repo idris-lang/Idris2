@@ -603,7 +603,7 @@ jobs:
         run: |
           echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
-          sudo apt-get install -y -t hirsute chezscheme
+          sudo apt-get install -y -t hirsute chezscheme markdown
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout idris2
