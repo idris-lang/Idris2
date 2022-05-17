@@ -29,9 +29,9 @@ specifying quantity and common programming primitives like ``alphas``, ``intLit`
 
 The ``Text.Lexer`` module also reexports ``Text.Lexer.Core``, ``Text.Quantity`` and ``Text.Token``.
 
-``Text.Lexer.Core`` provides the building blocks of building the lexer, including a type called
+``Text.Lexer.Core`` provides the building blocks of the lexer, including a type called
 ``Recognise`` which is the underlying data type for the lexer. The other important function that this
-module provides is a ``lex`` function which takes in a lexer and returns the tokens.
+module provides is a ``lex`` which takes in a lexer and returns the tokens.
 
 ``Text.Quantity`` provides a data type ``Quantity`` which can be used with certain lexers to specify
 how many times something is expected to appear.
@@ -43,7 +43,18 @@ token kinds to Idris 2 types and how to convert each kind from a string to a val
 Parser
 ------
 
-The parser is under ``Text.Parser``.
+The main parser module is under ``Text.Parser``. This module contains different grammar parsers, the main
+one being ``match`` which takes a ``TokenKind`` and returns the value as defined in the ``TokenKind``
+interface. There are other grammar parsers as well, but for our example, we will only be using ``match``.
+
+The ``Text.Parser`` module reexports ``Text.Parser.Core``, ``Text.Quantity`` and ``Text.Token``.
+
+``Text.Parser.Core`` provides the building blocks of the parser, including a type called ``Grammar``
+which is the underlying data type for the parser. The other important function that this module provides
+is ``parse`` which takes in a ``Grammar`` and returns the parsed expression.
+
+We covered ``Text.Quantity`` and ``Text.Token`` in the Lexer section so we're not going to
+repeat what they do here.
 
 Lambda Calculus Lexer & Parser
 ------------------------------
@@ -229,7 +240,35 @@ Expression Parser
 -----------------
 
 Idris 2 also comes with a very convenient expression parser that is
-aware of precedence and associatiivity: ``Text.Parser.Expression``.
+aware of precedence and associativity in ``Text.Parser.Expression``.
+
+The main function called ``buildExpressionParser`` takes in an ``OperatorTable`` and a
+``Grammar`` that represents the terms, and returns a parsed expression. The magic comes from
+the ``OperatorTable`` since this table defines all the operators, the grammars for those operators,
+the precedence, and the associativity.
+
+An ``OperatorTable`` is a list of lists containing the ``Op`` type. The ``Op`` type allows you to specify
+``Prefix``, ``Postfix``, and ``Infix`` operators along with their grammars. ``Infix`` also contains the
+associativity called ``Assoc`` which can specify left associativity or ``AssocLeft``, right
+associativity assoc or ``AssocRight`` and as being non-associative or ``AssocNone``.
+
+An example of an operator table we'll be using for the calculator is:
+
+.. code-block:: idris
+
+    [
+      [ Infix (match CTMultiply >> pure (*)) AssocLeft
+      , Infix (match CTDivide >> pure (/)) AssocLeft
+      ],
+      [ Infix (match CTPlus >> pure (+)) AssocLeft
+      , Infix (match CTMinus >> pure (-)) AssocLeft
+      ]
+    ]
+
+This table defines 4 operators for mulitiplication, division, addition and subtraction.
+Mulitiplication and division show up in the first table because they have higher precedence than
+addition and subtraction, which show up in the second table. We're also defining them as infix operators,
+with a specific grammar and all being left associative via ``AssocLeft``.
 
 Building a Calculutor
 ---------------------
