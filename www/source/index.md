@@ -43,7 +43,7 @@ using the `:doc` command: `:doc main` will return:
       Visibility: private
 
 You should be able to use `:doc` on identifiers (e.g. `main`, `IO`, `()`, `putStrLn`, etc.) and
-keywords (`module`, `:`, `=`, etc.) and hopefully get helpful information.
+keywords (`module`, `:`, `=`, `private`, etc.) and hopefully get helpful information.
 
 ### Libraries shipped with the compiler
 
