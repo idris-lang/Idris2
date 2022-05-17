@@ -637,7 +637,7 @@ jobs:
           echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
       - name: Checkout idris2
         uses: actions/checkout@v2
-      - name: Build html doc
+      - name: Build html doc & landing page
         run: |
           make -C libs/prelude/ install docs IDRIS2=idris2
           make -C libs/base/ install docs IDRIS2=idris2
@@ -649,9 +649,14 @@ jobs:
 
           cd .github/scripts
           ./katla.sh
+          cd -
+          cd www/
+          ./katla.sh
+          cd -
+          cp -r www/html/* .github/scripts/html/
       - name: Deploy HTML
         uses: JamesIves/github-pages-deploy-action@4.1.3
-        if: ${{ success() && env.IDRIS2_DEPLOY }}
+        if: true || ${{ success() && env.IDRIS2_DEPLOY }}
 
         with:
           branch: gh-pages
