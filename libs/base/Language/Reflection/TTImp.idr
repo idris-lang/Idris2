@@ -317,6 +317,21 @@ Eq Constant where
   _ == _ = False
 
 public export
+Eq DataOpt where
+  SearchBy ns == SearchBy ns' = ns == ns'
+  NoHints == NoHints = True
+  UniqueSearch == UniqueSearch = True
+  External == External = True
+  NoNewtype == NoNewtype = True
+  _ == _ = False
+
+public export
+Eq NoMangleDirective where
+  CommonName s == CommonName s' = s == s'
+  BackendNames ns == BackendNames ns' = ns == ns'
+  _ == _ = False
+
+public export
 Eq a => Eq (PiInfo a) where
   ImplicitArg   == ImplicitArg = True
   ExplicitArg   == ExplicitArg = True
@@ -324,7 +339,7 @@ Eq a => Eq (PiInfo a) where
   DefImplicit t == DefImplicit t' = t == t'
   _ == _ = False
 
-mutual
+parameters {auto eqTTImp : Eq TTImp}
   public export
   Eq Clause where
     PatClause _ lhs rhs == PatClause _ lhs' rhs' =
@@ -350,12 +365,6 @@ mutual
     _ == _ = False
 
   public export
-  Eq NoMangleDirective where
-    CommonName s == CommonName s' = s == s'
-    BackendNames ns == BackendNames ns' = ns == ns'
-    _ == _ = False
-
-  public export
   Eq FnOpt where
     Inline == Inline = True
     NoInline == NoInline = True
@@ -374,13 +383,8 @@ mutual
     _ == _ = False
 
   public export
-  Eq DataOpt where
-    SearchBy ns == SearchBy ns' = ns == ns'
-    NoHints == NoHints = True
-    UniqueSearch == UniqueSearch = True
-    External == External = True
-    NoNewtype == NoNewtype = True
-    _ == _ = False
+  Eq ITy where
+    MkTy _ _ n ty == MkTy _ _ n' ty' = n == n' && ty == ty'
 
   public export
   Eq Data where
@@ -389,10 +393,6 @@ mutual
     MkLater _ n tc == MkLater _ n' tc' =
       n == n' && tc == tc'
     _ == _ = False
-
-  public export
-  Eq ITy where
-    MkTy _ _ n ty == MkTy _ _ n' ty' = n == n' && ty == ty'
 
   public export
   Eq IField where
@@ -426,57 +426,57 @@ mutual
       t == t' && n == n'
     _ == _ = False
 
-  public export
-  Eq TTImp where
-    IVar _ v == IVar _ v' = v == v'
-    IPi _ c i n a r == IPi _ c' i' n' a' r' =
-      c == c' && (assert_total $ i == i') && n == n' && a == a' && r == r'
-    ILam _ c i n a r == ILam _ c' i' n' a' r' =
-      c == c' && (assert_total $ i == i') && n == n' && a == a' && r == r'
-    ILet _ _ c n ty val s == ILet _ _ c' n' ty' val' s' =
-      c == c' && n == n' && ty == ty' && val == val' && s == s'
-    ICase _ t ty cs == ICase _ t' ty' cs'
-      = t == t' && ty == ty' && (assert_total $ cs == cs')
-    ILocal _ ds e == ILocal _ ds' e' =
-      (assert_total $ ds == ds') && e == e'
-    IUpdate _ fs t == IUpdate _ fs' t' =
-      (assert_total $ fs == fs') && t == t'
+public export
+Eq TTImp where
+  IVar _ v == IVar _ v' = v == v'
+  IPi _ c i n a r == IPi _ c' i' n' a' r' =
+    c == c' && (assert_total $ i == i') && n == n' && a == a' && r == r'
+  ILam _ c i n a r == ILam _ c' i' n' a' r' =
+    c == c' && (assert_total $ i == i') && n == n' && a == a' && r == r'
+  ILet _ _ c n ty val s == ILet _ _ c' n' ty' val' s' =
+    c == c' && n == n' && ty == ty' && val == val' && s == s'
+  ICase _ t ty cs == ICase _ t' ty' cs'
+    = t == t' && ty == ty' && (assert_total $ cs == cs')
+  ILocal _ ds e == ILocal _ ds' e' =
+    (assert_total $ ds == ds') && e == e'
+  IUpdate _ fs t == IUpdate _ fs' t' =
+    (assert_total $ fs == fs') && t == t'
 
-    IApp _ f x == IApp _ f' x' = f == f' && x == x'
-    INamedApp _ f n x == INamedApp _ f' n' x' =
-      f == f' && n == n' && x == x'
-    IAutoApp _ f x == IAutoApp _ f' x' = f == f' && x == x'
-    IWithApp _ f x == IWithApp _ f' x' = f == f' && x == x'
+  IApp _ f x == IApp _ f' x' = f == f' && x == x'
+  INamedApp _ f n x == INamedApp _ f' n' x' =
+    f == f' && n == n' && x == x'
+  IAutoApp _ f x == IAutoApp _ f' x' = f == f' && x == x'
+  IWithApp _ f x == IWithApp _ f' x' = f == f' && x == x'
 
-    ISearch _ n == ISearch _ n' = n == n'
-    IAlternative _ t as == IAlternative _ t' as' =
-      (assert_total $ t == t') && (assert_total $ as == as')
-    IRewrite _ p q == IRewrite _ p' q' =
-      p == p' && q == q'
+  ISearch _ n == ISearch _ n' = n == n'
+  IAlternative _ t as == IAlternative _ t' as' =
+    (assert_total $ t == t') && (assert_total $ as == as')
+  IRewrite _ p q == IRewrite _ p' q' =
+    p == p' && q == q'
 
-    IBindHere _ m t == IBindHere _ m' t' =
-      m == m' && t == t'
-    IBindVar _ s == IBindVar _ s' = s == s'
-    IAs _ _ u n t == IAs _ _ u' n' t' =
-      u == u' && n == n' && t == t'
-    IMustUnify _ r t == IMustUnify _ r' t' =
-      r == r' && t == t'
+  IBindHere _ m t == IBindHere _ m' t' =
+    m == m' && t == t'
+  IBindVar _ s == IBindVar _ s' = s == s'
+  IAs _ _ u n t == IAs _ _ u' n' t' =
+    u == u' && n == n' && t == t'
+  IMustUnify _ r t == IMustUnify _ r' t' =
+    r == r' && t == t'
 
-    IDelayed _ r t == IDelayed _ r' t' = r == r' && t == t'
-    IDelay _ t == IDelay _ t' = t == t'
-    IForce _ t == IForce _ t' = t == t'
+  IDelayed _ r t == IDelayed _ r' t' = r == r' && t == t'
+  IDelay _ t == IDelay _ t' = t == t'
+  IForce _ t == IForce _ t' = t == t'
 
-    IQuote _ tm == IQuote _ tm' = tm == tm'
-    IQuoteName _ n == IQuoteName _ n' = n == n'
-    IQuoteDecl _ ds == IQuoteDecl _ ds' = assert_total $ ds == ds'
-    IUnquote _ tm == IUnquote _ tm' = tm == tm'
+  IQuote _ tm == IQuote _ tm' = tm == tm'
+  IQuoteName _ n == IQuoteName _ n' = n == n'
+  IQuoteDecl _ ds == IQuoteDecl _ ds' = assert_total $ ds == ds'
+  IUnquote _ tm == IUnquote _ tm' = tm == tm'
 
-    IPrimVal _ c == IPrimVal _ c' = c == c'
-    IType _ == IType _ = True
-    IHole _ s == IHole _ s' = s == s'
+  IPrimVal _ c == IPrimVal _ c' = c == c'
+  IType _ == IType _ = True
+  IHole _ s == IHole _ s' = s == s'
 
-    Implicit _ b == Implicit _ b' = b == b'
-    IWithUnambigNames _ ns t == IWithUnambigNames _ ns' t' =
-      map snd ns == map snd ns' && t == t'
+  Implicit _ b == Implicit _ b' = b == b'
+  IWithUnambigNames _ ns t == IWithUnambigNames _ ns' t' =
+    map snd ns == map snd ns' && t == t'
 
-    _ == _ = False
+  _ == _ = False
