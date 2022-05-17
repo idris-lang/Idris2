@@ -11,7 +11,7 @@ while IFS= read -r rawfile; do
     mkdir -p "${htmldir}"
     idris2 -c "${rawfile}"
     katla markdown "$rawfile" "build/ttc/source/${filename}.ttm" >"$mdfile"
-    markdown "$mdfile" > "$htmlfile"
+    markdown "$mdfile" >"$htmlfile"
     # rm "$mdfile"
 done <tmp
 rm tmp
