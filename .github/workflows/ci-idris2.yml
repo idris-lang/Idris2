@@ -603,7 +603,7 @@ jobs:
         run: |
           echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
-          sudo apt-get install -y -t hirsute chezscheme
+          sudo apt-get install -y -t hirsute chezscheme markdown
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout idris2
@@ -637,7 +637,7 @@ jobs:
           echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
       - name: Checkout idris2
         uses: actions/checkout@v2
-      - name: Build html doc
+      - name: Build html doc & landing page
         run: |
           make -C libs/prelude/ install docs IDRIS2=idris2
           make -C libs/base/ install docs IDRIS2=idris2
@@ -649,6 +649,11 @@ jobs:
 
           cd .github/scripts
           ./katla.sh
+          cd -
+          cd www/
+          ./katla.sh
+          cd -
+          cp -r www/html/* .github/scripts/html/
       - name: Deploy HTML
         uses: JamesIves/github-pages-deploy-action@4.1.3
         if: ${{ success() && env.IDRIS2_DEPLOY }}

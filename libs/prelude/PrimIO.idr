@@ -13,6 +13,7 @@ public export
 PrimIO : Type -> Type
 PrimIO a = (1 x : %World) -> IORes a
 
+||| The internal representation of I/O computations.
 export
 data IO : Type -> Type where
      MkIO : (1 fn : PrimIO a) -> IO a

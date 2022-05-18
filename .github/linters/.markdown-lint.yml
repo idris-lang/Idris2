@@ -18,6 +18,8 @@
 ###############
 # Rules by id #
 ###############
+MD001: false
+MD003: false
 MD004: false                  # Unordered list style
 MD007:
   indent: 2                   # Unordered list indentation
@@ -26,10 +28,11 @@ MD013:
 MD024:
   siblings_only: true         # allow duplicate headings in CHANGELOG
 MD026:
-  punctuation: ".,;:!。，；:"  # List of not allowed
+  punctuation: ".,;:。，；:"   # List of not allowed
 MD029: false                  # Ordered list item prefix
 MD033: false                  # Allow inline HTML
 MD036: false                  # Emphasis used instead of a heading
+MD046: false                  # Idented code block instead of fenced off
 
 #################
 # Rules by tags #
