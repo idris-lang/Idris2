@@ -73,10 +73,10 @@ Lambda Calculus Lexer & Parser
     data Expr = App Expr Expr | Abs String Expr | Var String | Let String Expr Expr
 
     Show Expr where
-      show (App e1 e2) = "(" ++ show e1 ++ " " ++ show e2 ++ ")"
-      show (Abs v e) = "(\\" ++ v ++ "." ++ show e ++ ")"
-      show (Var v) = v
-      show (Let v e1 e2) = "let " ++ v ++ " = " ++ show e1 ++ " in " ++ show e2
+      showPrec d (App e1 e2) = showParens (d == App) (showPrec (User 0) e1 ++ " " ++ showPrec App e2)
+      showPrec d (Abs v e) = showParens (d > Open) ("\\" ++ v ++ "." ++ show e)
+      showPrec d (Var v) = v
+      showPrec d (Let v e1 e2) = showParens (d > Open) ("let " ++ v ++ " = " ++ show e1 ++ " in " ++ show e2)
 
     data LambdaTokenKind
       = LTLambda
