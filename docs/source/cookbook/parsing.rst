@@ -364,11 +364,11 @@ Building a Calculutor
 
       expr : Grammar state CalculatorToken True Double
       expr = buildExpressionParser [
-        [ Infix (match CTMultiply >> pure (*)) AssocLeft
-        , Infix (match CTDivide >> pure (/)) AssocLeft
+        [ Infix ((*) <$ match CTMultiply) AssocLeft
+        , Infix ((/) <$ match CTDivide) AssocLeft
         ],
-        [ Infix (match CTPlus >> pure (+)) AssocLeft
-        , Infix (match CTMinus >> pure (-)) AssocLeft
+        [ Infix ((+) <$ match CTPlus) AssocLeft
+        , Infix ((-) <$ match CTMinus) AssocLeft
         ]
       ] term
 
