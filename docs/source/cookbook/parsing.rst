@@ -36,7 +36,7 @@ module provides is a ``lex`` which takes in a lexer and returns the tokens.
 ``Text.Quantity`` provides a data type ``Quantity`` which can be used with certain lexers to specify
 how many times something is expected to appear.
 
-``Text.Token`` provides a data type ``Token`` that represents a parsed token, it's kind and the text.
+``Text.Token`` provides a data type ``Token`` that represents a parsed token, its kind and the text.
 This module also provides an important interface called ``TokenKind`` which tells the lexer how to map
 token kinds to Idris 2 types and how to convert each kind from a string to a value.
 
