@@ -1,0 +1,121 @@
+<p><style>
+.IdrisData {
+  color: darkred
+}
+.IdrisType {
+  color: blue
+}
+.IdrisBound {
+  color: black
+}
+.IdrisFunction {
+  color: darkgreen
+}
+.IdrisKeyword {
+  text-decoration: underline;
+}
+.IdrisComment {
+  color: #b22222
+}
+.IdrisNamespace {
+  font-style: italic;
+  color: black
+}
+.IdrisPostulate {
+  font-weight: bold;
+  color: red
+}
+.IdrisModule {
+  font-style: italic;
+  color: black
+}
+.IdrisCode {
+  display: block;
+  background-color: whitesmoke;
+}
+</style></p>
+
+<h1>Welcome to Idris2!</h1>
+
+<p><style>
+body {
+  width: 80%;
+  max-width: 700px;
+  margin: auto;
+}
+code {
+  background-color: whitesmoke;
+}
+pre code {
+  display: block;
+}
+</style></p>
+
+<p><a href="https://www.idris-lang.org/">Idris</a> is a programming language designed to encourage
+<em>Type-Driven Development</em>.</p>
+
+<h3>Getting started</h3>
+
+<p>Once you have <a href="https://idris2.readthedocs.io/en/latest/tutorial/starting.html#getting-started">installed Idris2</a>
+you can write a simple hello-world by opening a <code>Main.idr</code> file and writing:</p>
+
+<p><code class="IdrisCode">
+<span class="IdrisKeyword">module</span>&nbsp;<span class="IdrisModule">Main</span><br />
+<br />
+<span class="IdrisComment">|||&nbsp;My&nbsp;first&nbsp;Idris2&nbsp;function</span><br />
+<span class="IdrisFunction">main</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">IO</span>&nbsp;<span class="IdrisType">()</span><br />
+<span class="IdrisFunction">main</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">putStrLn</span>&nbsp;<span class="IdrisData">&quot;Hello,&nbsp;and&nbsp;welcome&nbsp;to&nbsp;Idris2!&quot;</span><br />
+</code></p>
+
+<p>You can run this example by using the <code>--exec ENTRYPOINT</code> option.
+The command <code>idris2 --exec main Main.idr</code> will compile the module and immediately run <code>main</code>.</p>
+
+<p>The line starting with a triple pipe (<code>|||</code>) attaches documentation to the identifier. You
+can consult it by loading the file in the REPL (<code>idris2 Main.idr</code>) and querying the compiler
+using the <code>:doc</code> command: <code>:doc main</code> will return:</p>
+
+<pre><code>Main.main : IO ()
+  My first Idris2 function
+  Visibility: private
+</code></pre>
+
+<p>You should be able to use <code>:doc</code> on identifiers (e.g. <code>main</code>, <code>IO</code>, <code>()</code>, <code>putStrLn</code>, etc.) and
+keywords (<code>module</code>, <code>:</code>, <code>=</code>, <code>private</code>, etc.) and hopefully get helpful information.</p>
+
+<h3>Libraries shipped with the compiler</h3>
+
+<p>Here are links to the automatically generated documentation for the libraries shipped with the
+<strong>bleeding edge</strong> version of the compiler. The documentation for the latest <strong>released</strong> version
+is available on the <a href="https://www.idris-lang.org/pages/documentation.html">idris-lang.org</a> site.</p>
+
+<h4><a href="https://idris-lang.github.io/Idris2/prelude">Prelude</a></h4>
+
+<p>The <code>prelude</code> is always implicitly loaded unless you use the <code>--no-prelude</code> command-line option.
+This is where the built-in types are bound, where the core data types (<code>List</code>, <code>Nat</code>, <code>Equal</code>, etc.)
+and interfaces (<code>Eq</code>, <code>Show</code>, <code>Functor</code>, etc.) are defined.</p>
+
+<h4><a href="https://idris-lang.github.io/Idris2/base">Base</a></h4>
+
+<p><code>base</code> contains all the basics needed to write small programs. Its modules can be used by adding
+an <code>import</code> statement to the top of your file.
+In <a href="https://idris-lang.github.io/Idris2/base/docs/Data.List.html"><code>Data.List</code></a> for instance you
+will find functions to <code>take</code> or <code>drop</code> values from a list, or <code>partition</code> it using a given predicate.
+You can explore the content of a namespace like <code>Data.List</code> by using <code>:browse Data.List</code> in the REPL.
+For more information about specific entries, you can then use <code>:doc</code>.</p>
+
+<h4><a href="https://idris-lang.github.io/Idris2/contrib">Contrib</a></h4>
+
+<p>The <code>contrib</code> library contains a bit of everything. It will eventually be disbanded in favour of
+third-party packages once we have a convenient package manager. To use modules defined in it, you
+can pass the <code>-p contrib</code> option to <code>idris2</code>.</p>
+
+<h4><a href="https://idris-lang.github.io/Idris2/linear">Linear</a></h4>
+
+<p><code>linear</code> is the add-on to <code>base</code> you'll need for programs using linearity. Similarly to <code>contrib</code>,
+you will need to pass <code>-p linear</code> to <code>idris2</code> to use modules defined in it.</p>
+
+<h4><a href="https://idris-lang.github.io/Idris2/papers">Papers</a></h4>
+
+<p><code>papers</code> is not installed by default.
+It contains complex examples that are lifted from academic papers using dependent typeds
+and demonstrates advanced language features.</p>
