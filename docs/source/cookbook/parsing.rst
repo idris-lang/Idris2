@@ -234,7 +234,7 @@ Testing out our parser gives us back the following output:
 
     $ idris2 -p contrib LambdaCalculus.idr
     Main> :exec printLn $ parse "let name = world in (\\x.hello x) name"
-    Right let name = world in ((\x.(hello x)) name)
+    Right (let name = world in (\x.hello x) name)
 
 Expression Parser
 -----------------
