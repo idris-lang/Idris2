@@ -595,7 +595,7 @@ lambdaAbstraction = """
   For instance we can implement `transport` like so:
   ```
   transport : a === b -> a -> b
-  transport = \ Refl, v => v
+  transport = \\ Refl, v => v
   ```
   """
 
