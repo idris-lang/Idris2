@@ -270,7 +270,7 @@ Mulitiplication and division show up in the first table because they have higher
 addition and subtraction, which show up in the second table. We're also defining them as infix operators,
 with a specific grammar and all being left associative via ``AssocLeft``.
 
-Building a Calculutor
+Building a Calculator
 ---------------------
 
 .. code-block:: idris
