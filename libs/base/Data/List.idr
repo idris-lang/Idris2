@@ -1,5 +1,7 @@
 module Data.List
 
+import public Control.Function
+
 import Data.Nat
 import Data.List1
 import Data.Fin
@@ -913,6 +915,11 @@ export
   uninhabited @{Right z} Refl = uninhabited @{z} Refl
 
 ||| (::) is injective
+export
+Biinjective Prelude.(::) where
+  biinjective Refl = (Refl, Refl)
+
+||| Heterogeneous injectivity for (::)
 export
 consInjective : forall x, xs, y, ys .
                 the (List a) (x :: xs) = the (List b) (y :: ys) -> (x = y, xs = ys)

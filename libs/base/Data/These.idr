@@ -51,6 +51,10 @@ export
 {y : _} -> Injective (`Both` y) where
   injective Refl = Refl
 
+export
+Biinjective Both where
+  biinjective Refl = (Refl, Refl)
+
 public export
 (Show a, Show b) => Show (These a b) where
   showPrec d (This x)   = showCon d "This" $ showArg x

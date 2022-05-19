@@ -33,10 +33,6 @@ lengthCorrect : (xs : Vect len elem) -> length xs = len
 lengthCorrect []        = Refl
 lengthCorrect (_ :: xs) = rewrite lengthCorrect xs in Refl
 
-||| If two vectors are equal, their heads and tails are equal
-vectInjective : {0 xs : Vect n a} -> {0 ys : Vect m b} -> x::xs = y::ys -> (x = y, xs = ys)
-vectInjective Refl = (Refl, Refl)
-
 export
 {x : a} -> Injective (Vect.(::) x) where
   injective Refl = Refl
@@ -44,6 +40,10 @@ export
 export
 {xs : Vect n a} -> Injective (\x => Vect.(::) x xs) where
   injective Refl = Refl
+
+export
+Biinjective Vect.(::) where
+  biinjective Refl = (Refl, Refl)
 
 --------------------------------------------------------------------------------
 -- Indexing into vectors
@@ -333,8 +333,8 @@ DecEq a => DecEq (Vect n a) where
   decEq []      []      = Yes Refl
   decEq (x::xs) (y::ys) with (decEq x y, decEq xs ys)
     decEq (x::xs) (x::xs) | (Yes Refl, Yes Refl) = Yes Refl
-    decEq (x::xs) (y::ys) | (No nhd, _) = No $ nhd . fst . vectInjective
-    decEq (x::xs) (y::ys) | (_, No ntl) = No $ ntl . snd . vectInjective
+    decEq (x::xs) (y::ys) | (No nhd, _) = No $ nhd . fst . biinjective
+    decEq (x::xs) (y::ys) | (_, No ntl) = No $ ntl . snd . biinjective
 
 --------------------------------------------------------------------------------
 -- Order
