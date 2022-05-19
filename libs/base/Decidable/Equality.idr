@@ -39,11 +39,9 @@ DecEq Bool where
 public export
 DecEq Nat where
   decEq Z     Z     = Yes Refl
+  decEq (S n) (S m) = decEqCong $ decEq n m
   decEq Z     (S _) = No absurd
   decEq (S _) Z     = No absurd
-  decEq (S n) (S m) with (decEq n m)
-   decEq (S n) (S m) | Yes p = Yes $ cong S p
-   decEq (S n) (S m) | No p = No $ \h : (S n = S m) => p $ injective h
 
 --------------------------------------------------------------------------------
 -- Maybe
@@ -52,12 +50,9 @@ DecEq Nat where
 public export
 DecEq t => DecEq (Maybe t) where
   decEq Nothing Nothing = Yes Refl
+  decEq (Just x) (Just y) = decEqCong $ decEq x y
   decEq Nothing (Just _) = No absurd
   decEq (Just _) Nothing = No absurd
-  decEq (Just x') (Just y') with (decEq x' y')
-    decEq (Just x') (Just y') | Yes p = Yes $ cong Just p
-    decEq (Just x') (Just y') | No p
-       = No $ \h : Just x' = Just y' => p $ injective h
 
 --------------------------------------------------------------------------------
 -- Either
@@ -65,14 +60,10 @@ DecEq t => DecEq (Maybe t) where
 
 public export
 (DecEq t, DecEq s) => DecEq (Either t s) where
-  decEq (Left x) (Left y) with (decEq x y)
-   decEq (Left x) (Left x) | Yes Refl = Yes Refl
-   decEq (Left x) (Left y) | No contra = No (contra . injective)
+  decEq (Left x)  (Left y)  = decEqCong $ decEq x y
+  decEq (Right x) (Right y) = decEqCong $ decEq x y
   decEq (Left x) (Right y) = No absurd
   decEq (Right x) (Left y) = No absurd
-  decEq (Right x) (Right y) with (decEq x y)
-   decEq (Right x) (Right x) | Yes Refl = Yes Refl
-   decEq (Right x) (Right y) | No contra = No (contra . injective)
 
 --------------------------------------------------------------------------------
 -- These (inclusive or)

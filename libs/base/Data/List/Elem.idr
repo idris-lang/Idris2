@@ -32,11 +32,9 @@ Injective (There {x} {y} {xs}) where
 export
 DecEq (Elem x xs) where
   decEq Here Here = Yes Refl
+  decEq (There this) (There that) = decEqCong $ decEq this that
   decEq Here (There later) = No absurd
   decEq (There later) Here = No absurd
-  decEq (There this) (There that) with (decEq this that)
-    decEq (There this) (There this) | Yes Refl  = Yes Refl
-    decEq (There this) (There that) | No contra = No (contra . injective)
 
 export
 Uninhabited (Elem {a} x []) where

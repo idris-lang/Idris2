@@ -283,12 +283,9 @@ public export
 public export
 DecEq (Fin n) where
   decEq FZ FZ = Yes Refl
+  decEq (FS f) (FS f') = decEqCong $ decEq f f'
   decEq FZ (FS f) = No absurd
   decEq (FS f) FZ = No absurd
-  decEq (FS f) (FS f')
-      = case decEq f f' of
-             Yes p => Yes $ cong FS p
-             No p => No $ p . injective
 
 namespace Equality
 
