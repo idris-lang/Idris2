@@ -59,6 +59,7 @@ import TTImp.Utils
 import TTImp.BindImplicits
 import TTImp.ProcessDecls
 
+import Data.SnocList -- until 0.6.0 release
 import Data.List
 import Data.List1
 import Data.Maybe
@@ -489,17 +490,19 @@ processEdit (AddClause upd line name)
 processEdit (Refine upd line hole e)
     = do defs <- get Ctxt
          -- First we grab the hole's definition (and check it is not a solved hole)
-         -- We will use its type later on
+         -- We grab the LHS it lives in as well as its type in that context.
          [(h, hidx, hgdef)] <- lookupCtxtName hole (gamma defs)
            | _ => pure $ EditError ("Could not find hole named" <++> pretty0 hole)
          let Hole args _ = definition hgdef
            | _ => pure $ EditError (pretty0 hole <++> "is not a refinable hole")
+         let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) [] (type hgdef)
+
+         -- TODO: branch here to cancel whatever effect this has!
          -- Then we elaborate the expression we were given and infer its type.
          -- We do it in an extended context corresponding to the hole's so that users
          -- may mention variables bound on the LHS.
-         let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) [] (type hgdef)
          (etm `WithType` ety) <- inferAndElab InExpr e env
-         etm <- unelab env etm
+
          -- Now that we have a hole & a function to use inside it,
          -- we need to figure out how many arguments to pass to the function so that the types align
 
@@ -520,24 +523,31 @@ processEdit (Refine upd line hole e)
          let True = size_tele_fun >= size_tele_hole
            | _ => pure $ EditError $ hsep
                        [ "Cannot seem to refine", pretty0 hole
-                       , "by", prettyBy Syntax !(pterm etm) ]
+                       , "by", prettyBy Syntax !(pterm =<< unelab env etm) ]
 
-         -- We're forming the TTImp term (fun ?hole_1 ... ?hole_|missing_args|)
-         icall <- do let n = minus size_tele_fun size_tele_hole
-                     ns <- uniqueHoleNames defs n (nameRoot hole)
-                     let new_holes = IHole replFC <$> ns
-                     pure $ TTImp.apply (fullName <$> etm) new_holes
+         -- We now have all the necessary information to manufacture the function call
+         -- that starts with the expression the user passed
+         call <- do -- We're forming the PTerm (e ?hole_1 ... ?hole_|missing_args|)
+                    -- We don't reuse etm because it may have been elaborated to something dodgy
+                    -- because of defaulting instances.
+                    let n = minus size_tele_fun size_tele_hole
+                    ns <- uniqueHoleNames defs n (nameRoot hole)
+                    let new_holes = PHole replFC True <$> ns
+                    let pcall = papply replFC e new_holes
 
-         -- We're checking this term full of holes again the type of the hole
-         -- TODO: branch before checking the expression fits
-         --       so that we can cleanly recover in case of error
-         ccall <- do let gty = gnf env htyInLhsCtxt
-                     checkTerm hidx {-is this correct?-} InExpr [] (MkNested []) env icall gty
+                    -- We're desugaring it to the corresponding TTImp
+                    icall <- desugar AnyExpr (lhsCtxt <>> []) pcall
 
-         -- And then we normalise, unelab, resugar the resulting term so
-         -- that solved holes are replaced with their solutions
-         -- (we need to re-read the context because elaboration may have added solutions to it)
-         call <- do defs <- get Ctxt
+                    -- We're checking this term full of holes against the type of the hole
+                    -- TODO: branch before checking the expression fits
+                    --       so that we can cleanly recover in case of error
+                    let gty = gnf env htyInLhsCtxt
+                    ccall <- checkTerm hidx {-is this correct?-} InExpr [] (MkNested []) env icall gty
+
+                    -- And then we normalise, unelab, resugar the resulting term so
+                    -- that solved holes are replaced with their solutions
+                    -- (we need to re-read the context because elaboration may have added solutions to it)
+                    defs <- get Ctxt
                     ncall <- normaliseHoles defs env ccall
                     pcall <- resugar env ncall
                     syn <- get Syn
