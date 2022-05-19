@@ -331,10 +331,7 @@ Eq a => Eq (Vect n a) where
 public export
 DecEq a => DecEq (Vect n a) where
   decEq []      []      = Yes Refl
-  decEq (x::xs) (y::ys) with (decEq x y, decEq xs ys)
-    decEq (x::xs) (x::xs) | (Yes Refl, Yes Refl) = Yes Refl
-    decEq (x::xs) (y::ys) | (No nhd, _) = No $ nhd . fst . biinjective
-    decEq (x::xs) (y::ys) | (_, No ntl) = No $ ntl . snd . biinjective
+  decEq (x::xs) (y::ys) = decEqCong2 (decEq x y) (decEq xs ys)
 
 --------------------------------------------------------------------------------
 -- Order

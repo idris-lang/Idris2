@@ -73,9 +73,7 @@ public export
 DecEq t => DecEq s => DecEq (These t s) where
   decEq (This x) (This y) = decEqCong $ decEq x y
   decEq (That x) (That y) = decEqCong $ decEq x y
-  decEq (Both x z) (Both y w) with (decEq x y)
-    decEq (Both x z) (Both x w) | Yes Refl = decEqCong $ decEq z w
-    _                           | No ctr   = No $ \case Refl => ctr Refl
+  decEq (Both x z) (Both y w) = decEqCong2 (decEq x y) (decEq z w)
   decEq (This x)   (That y)    = No $ \case Refl impossible
   decEq (This x)   (Both y z)  = No $ \case Refl impossible
   decEq (That x)   (This y)    = No $ \case Refl impossible
@@ -92,13 +90,7 @@ pairInjective Refl = (Refl, Refl)
 
 public export
 (DecEq a, DecEq b) => DecEq (a, b) where
-  decEq (a, b) (a', b') with (decEq a a')
-    decEq (a, b) (a', b') | (No contra) =
-      No $ contra . fst . pairInjective
-    decEq (a, b) (a, b') | (Yes Refl) with (decEq b b')
-      decEq (a, b) (a, b) | (Yes Refl) | (Yes Refl) = Yes Refl
-      decEq (a, b) (a, b') | (Yes Refl) | (No contra) =
-        No $ contra . snd . pairInjective
+  decEq (a, b) (a', b') = decEqCong2 (decEq a a') (decEq b b')
 
 --------------------------------------------------------------------------------
 -- List
@@ -109,14 +101,7 @@ DecEq a => DecEq (List a) where
   decEq [] [] = Yes Refl
   decEq (x :: xs) [] = No absurd
   decEq [] (x :: xs) = No absurd
-  decEq (x :: xs) (y :: ys) with (decEq x y)
-    decEq (x :: xs) (y :: ys) | No contra =
-      No $ contra . fst . consInjective
-    decEq (x :: xs) (x :: ys) | Yes Refl with (decEq xs ys)
-      decEq (x :: xs) (x :: xs) | (Yes Refl) | (Yes Refl) = Yes Refl
-      decEq (x :: xs) (x :: ys) | (Yes Refl) | (No contra) =
-        No $ contra . snd . consInjective
-
+  decEq (x :: xs) (y :: ys) = decEqCong2 (decEq x y) (decEq xs ys)
 
 --------------------------------------------------------------------------------
 -- List1
@@ -124,12 +109,7 @@ DecEq a => DecEq (List a) where
 
 public export
 DecEq a => DecEq (List1 a) where
-
-  decEq (x ::: xs) (y ::: ys) with (decEq x y)
-    decEq (x ::: xs) (y ::: ys) | No contra = No (contra . fst . consInjective)
-    decEq (x ::: xs) (y ::: ys) | Yes eqxy with (decEq xs ys)
-      decEq (x ::: xs) (y ::: ys) | Yes eqxy | No contra = No (contra . (rewrite sym eqxy in injective))
-      decEq (x ::: xs) (y ::: ys) | Yes eqxy | Yes eqxsys = Yes (cong2 (:::) eqxy eqxsys)
+  decEq (x ::: xs) (y ::: ys) = decEqCong2 (decEq x y) (decEq xs ys)
 
 -- TODO: Other prelude data types
 
