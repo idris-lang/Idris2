@@ -379,10 +379,10 @@ findInTree p hint m
     match : (NonEmptyFC, Name) -> Bool
     match (_, n) = matches hint n && checkCandidate n
 
-record TermWithType where
+record TermWithType (vars : List Name) where
   constructor WithType
-  termOf : ClosedTerm
-  typeOf : ClosedTerm
+  termOf : Term vars
+  typeOf : Term vars
 
 getItDecls :
     {auto o : Ref ROpts REPLOpts} ->
@@ -397,16 +397,19 @@ getItDecls
                   , IDef replFC it [PatClause replFC (IVar replFC it) (IVar replFC n)]]
 
 ||| Produce the elaboration of a PTerm, along with its inferred type
-inferAndElab : {auto c : Ref Ctxt Defs} ->
+inferAndElab :
+  {vars : _} ->
+  {auto c : Ref Ctxt Defs} ->
   {auto u : Ref UST UState} ->
   {auto s : Ref Syn SyntaxInfo} ->
   {auto m : Ref MD Metadata} ->
   {auto o : Ref ROpts REPLOpts} ->
   ElabMode ->
   PTerm ->
-  Core TermWithType
-inferAndElab emode itm
-  = do ttimp <- desugar AnyExpr [] itm
+  Env Term vars ->
+  Core (TermWithType vars)
+inferAndElab emode itm env
+  = do ttimp <- desugar AnyExpr vars itm
        let ttimpWithIt = ILocal replFC !getItDecls ttimp
        inidx <- resolveName (UN $ Basic "[input]")
        -- a TMP HACK to prioritise list syntax for List: hide
@@ -416,8 +419,7 @@ inferAndElab emode itm
        catch (do hide replFC (NS primIONS (UN $ Basic "::"))
                  hide replFC (NS primIONS (UN $ Basic "Nil")))
              (\err => pure ())
-       (tm , gty) <- elabTerm inidx emode [] (MkNested [])
-                   [] ttimpWithIt Nothing
+       (tm , gty) <- elabTerm inidx emode [] (MkNested []) env ttimpWithIt Nothing
        ty <- getTerm gty
        pure (tm `WithType` ty)
 
@@ -490,11 +492,14 @@ processEdit (Refine upd line hole e)
          -- We will use its type later on
          [(h, hidx, hgdef)] <- lookupCtxtName hole (gamma defs)
            | _ => pure $ EditError ("Could not find hole named" <++> pretty0 hole)
-         let Hole _ _ = definition hgdef
+         let Hole args _ = definition hgdef
            | _ => pure $ EditError (pretty0 hole <++> "is not a refinable hole")
-         -- Then we elaborate the expression we were given and infer its type
-         (etm `WithType` ety) <- inferAndElab InExpr e
-         etm <- unelab [] etm
+         -- Then we elaborate the expression we were given and infer its type.
+         -- We do it in an extended context corresponding to the hole's so that users
+         -- may mention variables bound on the LHS.
+         let (_ ** (env, _)) = underPis (cast args) [] (type hgdef)
+         (etm `WithType` ety) <- inferAndElab InExpr e env
+         etm <- unelab env etm
          -- Now that we have a hole & a function to use inside it,
          -- we need to figure out how many arguments to pass to the function so that the types align
 
@@ -510,8 +515,8 @@ processEdit (Refine upd line hole e)
          -- without eta-expansion to (\ a => fun a)
          -- It is hopefully a good enough approximation for now. A very ambitious approach
          -- would be to type-align the telescopes. Bonus points for allowing permutations.
-         let size_tele_fun  = lengthExplicitPi $ fst $ snd $ underPis [] ety
-         let size_tele_hole = lengthExplicitPi $ fst $ snd $ underPis [] (type hgdef)
+         let size_tele_fun  = lengthExplicitPi $ fst $ snd $ underPis (-1) env ety
+         let size_tele_hole = lengthExplicitPi $ fst $ snd $ underPis (-1) [] (type hgdef)
          let True = size_tele_fun >= size_tele_hole
            | _ => pure $ EditError $ hsep
                        [ "Cannot seem to refine", pretty0 hole
@@ -773,9 +778,9 @@ inferAndNormalize : {auto c : Ref Ctxt Defs} ->
   {auto o : Ref ROpts REPLOpts} ->
   REPLEval ->
   PTerm ->
-  Core TermWithType
+  Core (TermWithType [])
 inferAndNormalize emode itm
-  = do (tm `WithType` ty) <- inferAndElab (elabMode emode) itm
+  = do (tm `WithType` ty) <- inferAndElab (elabMode emode) itm []
        logTerm "repl.eval" 10 "Elaborated input" tm
        defs <- get Ctxt
        let norm = replEval emode
@@ -806,7 +811,7 @@ process (Eval itm)
          case emode of
             Execute => do ignore (execExp itm); pure (Executed itm)
             Scheme =>
-              do (tm `WithType` ty) <- inferAndElab InExpr itm
+              do (tm `WithType` ty) <- inferAndElab InExpr itm []
                  qtm <- logTimeWhen !getEvalTiming 0 "Evaluation" $
                            (do nf <- snfAll [] tm
                                quote [] nf)
@@ -841,7 +846,7 @@ process (Check (PRef fc fn))
               ts => do tys <- traverse (displayType False defs) ts
                        pure (Printed $ vsep $ map (reAnnotate Syntax) tys)
 process (Check itm)
-    = do (tm `WithType` ty) <- inferAndElab InExpr itm
+    = do (tm `WithType` ty) <- inferAndElab InExpr itm []
          defs <- get Ctxt
          itm <- resugar [] !(normaliseHoles defs [] tm)
          -- ty <- getTerm gty
