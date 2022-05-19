@@ -7,6 +7,7 @@ import Data.Nat
 import Data.List
 import Data.List1
 import Data.List1.Properties
+import Data.These
 
 import public Decidable.Equality.Core as Decidable.Equality
 
@@ -72,6 +73,24 @@ public export
   decEq (Right x) (Right y) with (decEq x y)
    decEq (Right x) (Right x) | Yes Refl = Yes Refl
    decEq (Right x) (Right y) | No contra = No (contra . injective)
+
+--------------------------------------------------------------------------------
+-- These (inclusive or)
+--------------------------------------------------------------------------------
+
+public export
+DecEq t => DecEq s => DecEq (These t s) where
+  decEq (This x) (This y) = decEqCong $ decEq x y
+  decEq (That x) (That y) = decEqCong $ decEq x y
+  decEq (Both x z) (Both y w) with (decEq x y)
+    decEq (Both x z) (Both x w) | Yes Refl = decEqCong $ decEq z w
+    _                           | No ctr   = No $ \case Refl => ctr Refl
+  decEq (This x)   (That y)    = No $ \case Refl impossible
+  decEq (This x)   (Both y z)  = No $ \case Refl impossible
+  decEq (That x)   (This y)    = No $ \case Refl impossible
+  decEq (That x)   (Both y z)  = No $ \case Refl impossible
+  decEq (Both x z) (This y)    = No $ \case Refl impossible
+  decEq (Both x z) (That y)    = No $ \case Refl impossible
 
 --------------------------------------------------------------------------------
 -- Tuple

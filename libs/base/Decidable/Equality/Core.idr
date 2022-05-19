@@ -1,5 +1,7 @@
 module Decidable.Equality.Core
 
+import Control.Function
+
 %default total
 
 --------------------------------------------------------------------------------
@@ -34,3 +36,13 @@ decEqContraIsNo : DecEq a => {x, y : a} -> Not (x = y) -> (p ** decEq x y = No p
 decEqContraIsNo uxy with (decEq x y)
   decEqContraIsNo uxy | Yes xy = absurd $ uxy xy
   decEqContraIsNo _   | No uxy = (uxy ** Refl)
+
+export
+decEqCong : (0 _ : Injective f) => Dec (x = y) -> Dec (f x = f y)
+decEqCong $ Yes prf   = Yes $ cong f prf
+decEqCong $ No contra = No $ \c => contra $ inj f c
+
+export
+decEqInj : (0 _ : Injective f) => Dec (f x = f y) -> Dec (x = y)
+decEqInj $ Yes prf   = Yes $ inj f prf
+decEqInj $ No contra = No $ contra . cong f
