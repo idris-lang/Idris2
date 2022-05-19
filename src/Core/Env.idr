@@ -30,6 +30,12 @@ lengthNoLet (Let _ _ _ _ :: xs) = lengthNoLet xs
 lengthNoLet (_ :: xs) = S (lengthNoLet xs)
 
 export
+lengthExplicitPi : Env tm xs -> Nat
+lengthExplicitPi [] = 0
+lengthExplicitPi (Pi _ _ Explicit _ :: rho) = S (lengthExplicitPi rho)
+lengthExplicitPi (_ :: rho) = lengthExplicitPi rho
+
+export
 namesNoLet : {xs : _} -> Env tm xs -> List Name
 namesNoLet [] = []
 namesNoLet (Let _ _ _ _ :: xs) = namesNoLet xs

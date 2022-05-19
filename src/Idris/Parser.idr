@@ -2246,6 +2246,31 @@ editLineColNameArgCmd parseCmd command doc =
     n <- mustWork name
     pure (Editing $ command upd line col n)
 
+editLineNamePTermArgCmd : ParseCmd -> (Bool -> Int -> Name -> PTerm -> EditCmd) -> String -> CommandDefinition
+editLineNamePTermArgCmd parseCmd command doc =
+  ( names
+  , Args [ NamedCmdArg "l" NumberArg
+         , NamedCmdArg "c" NumberArg
+         , NamedCmdArg "h" StringArg
+         , NamedCmdArg "e" ExprArg
+         ]
+  , doc
+  , parse
+  ) where
+
+  names : List String
+  names = extractNames parseCmd
+
+  parse : Rule REPLCmd
+  parse = do
+    symbol ":"
+    runParseCmd parseCmd
+    upd <- option False (symbol "!" $> True)
+    line <- fromInteger <$> mustWork intLit
+    h <- mustWork name
+    n <- mustWork $ typeExpr pdef (Virtual Interactive) init
+    pure (Editing $ command upd line h n)
+
 editLineNameCSVArgCmd : ParseCmd
                        -> (Bool -> Int -> Name -> List Name -> EditCmd)
                        -> String
@@ -2330,12 +2355,13 @@ parserCommandsForHelp =
   , autoNumberArgCmd (ParseREPLCmd ["consolewidth"]) SetConsoleWidth "Set the width of the console output (0 for unbounded) (auto by default)"
   , onOffArgCmd (ParseREPLCmd ["color", "colour"]) SetColor "Whether to use color for the console output (enabled by default)"
   , noArgCmd (ParseREPLCmd ["m", "metavars"]) Metavars "Show remaining proof obligations (metavariables or holes)"
-  , editLineColNameArgCmd (ParseREPLCmd ["typeat"]) (\_,l,c,n => TypeAt l c n) "Show type of term <n> defined on line <l> and column <c>"
+  , editLineColNameArgCmd (ParseREPLCmd ["typeat"]) (const TypeAt) "Show type of term <n> defined on line <l> and column <c>"
   , editLineColNameArgCmd (ParseREPLCmd ["cs", "casesplit"]) CaseSplit "Case split term <n> defined on line <l> and column <c>"
   , editLineNameArgCmd (ParseREPLCmd ["ac", "addclause"]) AddClause "Add clause to term <n> defined on line <l>"
   , editLineNameArgCmd (ParseREPLCmd ["ml", "makelemma"]) MakeLemma "Make lemma for term <n> defined on line <l>"
   , editLineNameArgCmd (ParseREPLCmd ["mc", "makecase"]) MakeCase "Make case on term <n> defined on line <l>"
   , editLineNameArgCmd (ParseREPLCmd ["mw", "makewith"]) MakeWith "Add with expression on term <n> defined on line <l>"
+  , editLineNamePTermArgCmd (ParseREPLCmd ["refine"]) Refine "Refine hole <h> with identifier <n> on line <l> and column <c>"
   , editLineNameCSVArgCmd (ParseREPLCmd ["ps", "proofsearch"]) ExprSearch "Search for a proof"
   , noArgCmd (ParseREPLCmd ["psnext"]) (Editing ExprSearchNext) "Show next proof"
   , editLineNameOptionArgCmd (ParseREPLCmd ["gd"]) GenerateDef "Search for a proof"
@@ -2360,6 +2386,10 @@ eval : Rule REPLCmd
 eval = do
   tm <- typeExpr pdef (Virtual Interactive) init
   pure (Eval tm)
+
+export
+aPTerm : Rule PTerm
+aPTerm = typeExpr pdef (Virtual Interactive) init
 
 export
 command : EmptyRule REPLCmd

@@ -599,6 +599,7 @@ data EditCmd : Type where
      TypeAt : Int -> Int -> Name -> EditCmd
      CaseSplit : Bool -> Int -> Int -> Name -> EditCmd
      AddClause : Bool -> Int -> Name -> EditCmd
+     Refine : Bool -> Int -> (hole : Name) -> (expr : PTerm) -> EditCmd
      ExprSearch : Bool -> Int -> Name -> List Name -> EditCmd
      ExprSearchNext : EditCmd
      GenerateDef : Bool -> Int -> Name -> Nat -> EditCmd

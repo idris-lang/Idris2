@@ -177,6 +177,12 @@ process (AddClause l n)
 process (AddMissing l n)
     = do todoCmd "add-missing"
          pure $ REPL $ Edited $ DisplayEdit emptyDoc
+process (Refine l h expr) =
+   do let Right (_, _, e) = runParser (Virtual Interactive) Nothing expr aPTerm
+        | Left err => pure $ REPL $ REPLError (pretty0 $ show err)
+      replWrap $ Idris.REPL.process
+               $ Editing
+               $ Refine False (fromInteger l) (UN $ Basic h) {- hole name -} e
 process (ExprSearch l n hs all)
     = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l)
                      (UN $ Basic n) (map (UN . Basic) hs.list)))
