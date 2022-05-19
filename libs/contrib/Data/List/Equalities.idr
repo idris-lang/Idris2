@@ -1,5 +1,7 @@
 module Data.List.Equalities
 
+import Control.Function
+
 import Data.List
 
 %default total
@@ -34,7 +36,7 @@ snocInjective {xs = z :: xs} {ys = []} prf =
   let snocIsNil = snd $ consInjective {x = z} {xs = xs ++ [x]} {ys = []} prf
    in void $ snocNonEmpty snocIsNil
 snocInjective {xs = w :: xs} {ys = z :: ys} prf =
-  let (wEqualsZ, xsSnocXEqualsYsSnocY) = consInjective prf
+  let (wEqualsZ, xsSnocXEqualsYsSnocY) = biinjective prf
       (xsEqualsYS, xEqualsY) = snocInjective xsSnocXEqualsYsSnocY
    in (consCong2 wEqualsZ xsEqualsYS, xEqualsY)
 
@@ -80,7 +82,7 @@ lengthSnoc x (_ :: xs) = cong S (lengthSnoc x xs)
 export
 appendSameLeftInjective : (xs, ys, zs : List a) -> zs ++ xs = zs ++ ys -> xs = ys
 appendSameLeftInjective xs ys []      = id
-appendSameLeftInjective xs ys (_::zs) = appendSameLeftInjective xs ys zs . snd . consInjective
+appendSameLeftInjective xs ys (_::zs) = appendSameLeftInjective xs ys zs . snd . biinjective
 
 ||| Appending the same list at right is injective.
 export
@@ -92,16 +94,24 @@ appendSameRightInjective xs ys (z::zs) = rewrite appendAssociative xs [z] zs in
                                          rewrite appendAssociative ys [z] zs in
                                          fst . snocInjective . appendSameRightInjective (xs ++ [z]) (ys ++ [z]) zs
 
+export
+{zs : List a} -> Injective (zs ++) where
+  injective = appendSameLeftInjective _ _ zs
+
+export
+{zs : List a} -> Injective (++ zs) where
+  injective = appendSameRightInjective _ _ zs
+
 ||| List cannot be equal to itself prepended with some non-empty list.
 export
 appendNonEmptyLeftNotEq : (zs, xs : List a) -> NonEmpty xs => Not (zs = xs ++ zs)
 appendNonEmptyLeftNotEq []      (_::_)  Refl impossible
 appendNonEmptyLeftNotEq (z::zs) (_::xs) prf
   = appendNonEmptyLeftNotEq zs (xs ++ [z]) @{SnocNonEmpty xs z}
-  $ rewrite sym $ appendAssociative xs [z] zs in snd $ consInjective prf
+  $ rewrite sym $ appendAssociative xs [z] zs in snd $ biinjective prf
 
 ||| List cannot be equal to itself appended with some non-empty list.
 export
 appendNonEmptyRightNotEq : (zs, xs : List a) -> NonEmpty xs => Not (zs = zs ++ xs)
 appendNonEmptyRightNotEq []      (_::_)  Refl impossible
-appendNonEmptyRightNotEq (_::zs) (x::xs) prf = appendNonEmptyRightNotEq zs (x::xs) $ snd $ consInjective prf
+appendNonEmptyRightNotEq (_::zs) (x::xs) prf = appendNonEmptyRightNotEq zs (x::xs) $ snd $ biinjective prf
