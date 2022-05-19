@@ -497,7 +497,7 @@ processEdit (Refine upd line hole e)
          -- Then we elaborate the expression we were given and infer its type.
          -- We do it in an extended context corresponding to the hole's so that users
          -- may mention variables bound on the LHS.
-         let (_ ** (env, _)) = underPis (cast args) [] (type hgdef)
+         let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) [] (type hgdef)
          (etm `WithType` ety) <- inferAndElab InExpr e env
          etm <- unelab env etm
          -- Now that we have a hole & a function to use inside it,
@@ -522,16 +522,28 @@ processEdit (Refine upd line hole e)
                        [ "Cannot seem to refine", pretty0 hole
                        , "by", prettyBy Syntax !(pterm etm) ]
 
-         -- For now, rather than bothering to create new holes (and check the solution works),
-         -- we're opting for a purely syntactic solution.
-         -- TODO: branch & check the expression can fit in the hole
-         call <- do let n = minus size_tele_fun size_tele_hole
-                    ns <- uniqueHoleNames defs n (nameRoot hole)
-                    let new_holes = IVar replFC . UN . Basic . ("?" ++) <$> ns
-                    pcall <- pterm $ TTImp.apply etm (map (defaultKindedName <$>) new_holes)
+         -- We're forming the TTImp term (fun ?hole_1 ... ?hole_|missing_args|)
+         icall <- do let n = minus size_tele_fun size_tele_hole
+                     ns <- uniqueHoleNames defs n (nameRoot hole)
+                     let new_holes = IHole replFC <$> ns
+                     pure $ TTImp.apply (fullName <$> etm) new_holes
+
+         -- We're checking this term full of holes again the type of the hole
+         -- TODO: branch before checking the expression fits
+         --       so that we can cleanly recover in case of error
+         ccall <- do let gty = gnf env htyInLhsCtxt
+                     checkTerm hidx {-is this correct?-} InExpr [] (MkNested []) env icall gty
+
+         -- And then we normalise, unelab, resugar the resulting term so
+         -- that solved holes are replaced with their solutions
+         -- (we need to re-read the context because elaboration may have added solutions to it)
+         call <- do defs <- get Ctxt
+                    ncall <- normaliseHoles defs env ccall
+                    pcall <- resugar env ncall
                     syn <- get Syn
                     let brack = elemBy (\x, y => dropNS x == dropNS y) hole (bracketholes syn)
                     pure $ show $ ifThenElse brack (addBracket replFC) id pcall
+
          if upd
             then updateFile (proofSearch hole call (integerToNat (cast (line - 1))))
             else pure $ DisplayEdit (pretty0 call)

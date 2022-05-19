@@ -3,6 +3,8 @@ module Core.TT.Views
 import Core.Env
 import Core.TT
 
+import Data.SnocList
+
 ||| Go under n Pis (if n < 0 then go under as many as possible)
 export
 underPis : (n : Int) -> Env Term vars -> Term vars ->
