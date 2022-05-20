@@ -9,6 +9,8 @@ MY_PWD="${MY_PWD}" ./gen_expected.sh
 export IDRIS2_PACKAGE_PATH=$IDRIS2_PREFIX/$NAME_VERSION
 export IDRIS2_PREFIX=${MY_PWD}currently/nonexistent/dir/
 
+export IDRIS2_INC_CGS=
+
 $1 --install ./testpkg.ipkg
 
 # ../ is there for some extra safety for using rm -rf

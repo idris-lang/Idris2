@@ -1,3 +1,4 @@
 1/1: Building Main (Main.idr)
 Installing __PWD__build/ttc/Main.ttc to __PWD__currently/nonexistent/dir/idris2-0.5.1/testpkg-0
 Installing __PWD__build/ttc/Main.ttc to __PWD__currently/nonexistent/dir/idris2-0.5.1/testpkg-0
+Installing package file for testpkg to __PWD__currently/nonexistent/dir/idris2-0.5.1/testpkg-0
