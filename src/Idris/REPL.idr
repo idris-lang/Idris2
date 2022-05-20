@@ -497,11 +497,39 @@ processEdit (Refine upd line hole e)
            | _ => pure $ EditError (pretty0 hole <++> "is not a refinable hole")
          let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) [] (type hgdef)
 
-         -- TODO: branch here to cancel whatever effect this has!
          -- Then we elaborate the expression we were given and infer its type.
+         -- We have some magic built-in if the expression happens to be a single identifier
+         -- corresponding to a top-level definition
+         Right msize_tele_fun <- case e of
+             PRef fc v => do
+               (n :: ns) <- lookupCtxtName v (gamma defs)
+                 -- could not find the variable: it may be a local one!
+                 | [] => pure (Right Nothing)
+               let sizes = (n ::: ns) <&> \ (_,_,gdef) =>
+                              let ctxt = underPis (-1) [] (type gdef) in
+                              lengthExplicitPi $ fst $ snd $ ctxt
+               let True = all (head sizes ==) sizes
+                 | _ => pure (Left ("Ambiguous name" <++> pretty0 v <++> "(couldn't infer arity)"))
+               let arity = args + head sizes -- pretending the term has been elaborated in the LHS context
+               pure (Right $ Just arity)
+             _ => pure (Right Nothing)
+           | Left err => pure (EditError err)
          -- We do it in an extended context corresponding to the hole's so that users
          -- may mention variables bound on the LHS.
-         (etm `WithType` ety) <- inferAndElab InExpr e env
+         size_tele_fun <- case msize_tele_fun of
+             Just n => pure n
+             Nothing => do
+               ust <- get UST
+               syn <- get Syn
+               md <- get MD
+               defs <- branch
+               infered <- inferAndElab InExpr e env
+               put UST ust
+               put Syn syn
+               put MD md
+               put Ctxt defs
+               let tele = underPis (-1) env $ typeOf infered
+               pure (lengthExplicitPi $ fst $ snd tele)
 
          -- Now that we have a hole & a function to use inside it,
          -- we need to figure out how many arguments to pass to the function so that the types align
@@ -518,12 +546,11 @@ processEdit (Refine upd line hole e)
          -- without eta-expansion to (\ a => fun a)
          -- It is hopefully a good enough approximation for now. A very ambitious approach
          -- would be to type-align the telescopes. Bonus points for allowing permutations.
-         let size_tele_fun  = lengthExplicitPi $ fst $ snd $ underPis (-1) env ety
          let size_tele_hole = lengthExplicitPi $ fst $ snd $ underPis (-1) [] (type hgdef)
          let True = size_tele_fun >= size_tele_hole
            | _ => pure $ EditError $ hsep
                        [ "Cannot seem to refine", pretty0 hole
-                       , "by", prettyBy Syntax !(pterm =<< unelab env etm) ]
+                       , "by", pretty0 (show e) ]
 
          -- We now have all the necessary information to manufacture the function call
          -- that starts with the expression the user passed
