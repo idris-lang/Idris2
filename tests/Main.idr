@@ -245,7 +245,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "params001", "params002", "params003",
        -- Packages and ipkg files
        "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
-       "pkg008", "pkg009", "pkg010", "pkg011", "pkg012", "pkg013",
+       "pkg008", "pkg009", "pkg010", "pkg011", "pkg012",
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",
