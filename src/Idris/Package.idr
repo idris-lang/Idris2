@@ -524,8 +524,9 @@ install pkg opts installSrc -- not used but might be in the future
     savePkgMetadata : PkgDesc -> PkgDesc
     savePkgMetadata pkg =
       the (PkgDesc -> PkgDesc)
-      { depends := pkg.depends }
-      $ initPkgDesc pkg.name
+      { depends := pkg.depends
+      , version := pkg.version
+      } $ initPkgDesc pkg.name
 
 -- Check package without compiling anything.
 check : {auto c : Ref Ctxt Defs} ->
