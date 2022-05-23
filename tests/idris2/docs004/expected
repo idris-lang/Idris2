@@ -75,10 +75,10 @@ xor : Integer -> Integer -> Integer
 xor = prim__xor_Integer
 
 shiftL : Integer -> Index -> Integer
-shiftL x = prim__shl_Integer x . natToInteger
+(x `shiftL`) = prim__shl_Integer x . natToInteger
 
 shiftR : Integer -> Index -> Integer
-shiftR x = prim__shr_Integer x . natToInteger
+(x `shiftR`) = prim__shr_Integer x . natToInteger
 
 bit : Index -> Integer
 bit = \arg => 1 `shiftL` arg
@@ -87,7 +87,7 @@ zeroBits : Integer
 zeroBits = 0
 
 complement : Integer -> Integer
-complement = xor oneBits
+complement = (oneBits `xor`)
 
 oneBits : Integer
 oneBits = -1
