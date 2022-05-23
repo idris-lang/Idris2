@@ -490,7 +490,8 @@ Foldable List where
 
   foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
 
-public export listBindOnto : (a -> List b) -> List b -> List a -> List b
+public export
+listBindOnto : (a -> List b) -> List b -> List a -> List b
 listBindOnto f xs []        = reverse xs
 listBindOnto f xs (y :: ys) = listBindOnto f (reverseOnto xs (f y)) ys
 
