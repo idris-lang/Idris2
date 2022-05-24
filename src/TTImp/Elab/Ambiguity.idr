@@ -124,24 +124,21 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
             else IMustUnify fc NotConstructor tm
     wrapDot _ _ _ _ _ _ tm = tm
 
+    notLHS : ElabMode -> Bool
+    notLHS (InLHS _) = False
+    notLHS _ = True
 
     mkTerm : Bool -> EState vars -> Name -> GlobalDef -> RawImp
     mkTerm prim est n def
         = let tm = wrapDot prim est mode n (map (snd . snd) args)
                        (definition def) (buildAlt (IVar fc n) args) in
-              if Context.Macro `elem` flags def
-                 then case mode of
-                           InLHS _ => tm
-                           _ => IRunElab fc (ICoerced fc tm)
+              if (Context.Macro `elem` flags def) && notLHS mode
+                 then IRunElab fc (ICoerced fc tm)
                  else tm
 
     mkAlt : Bool -> EState vars -> (Name, Int, GlobalDef) -> RawImp
     mkAlt prim est (fullname, i, gdef)
         = mkTerm prim est (Resolved i) gdef
-
-    notLHS : ElabMode -> Bool
-    notLHS (InLHS _) = False
-    notLHS _ = True
 
 expandAmbigName mode nest env orig args (IApp fc f a) exp
     = expandAmbigName mode nest env orig
