@@ -531,3 +531,14 @@ uniqueHoleName : {auto s : Ref Syn SyntaxInfo} ->
 uniqueHoleName defs used n
     = do syn <- get Syn
          uniqueBasicName defs (used ++ holeNames syn) n
+
+export
+uniqueHoleNames : {auto s : Ref Syn SyntaxInfo} ->
+                  Defs -> Nat -> String -> Core (List String)
+uniqueHoleNames defs = go [] where
+
+  go : List String -> Nat -> String -> Core (List String)
+  go acc Z _ = pure (reverse acc)
+  go acc (S n) hole = do
+    hole' <- uniqueHoleName defs acc hole
+    go (hole' :: acc) n hole'

@@ -108,9 +108,12 @@ They are compatible with Version 1 and 2.0 of the protocol unless otherwise stat
     Create a top level function with a type which solves the hole named ``NAME`` on line ``LINE``.
 
   ``(:proof-search LINE NAME HINTS)``
-    Attempt to fill out the holes on ``LINE`` named ``NAME`` by proof search.
+    Attempt to fill out the hole on ``LINE`` named ``NAME`` by proof search.
     ``HINTS`` is a possibly-empty list of additional things to try while searching.
     This operation is also called ``ExprSearch`` in the Idris 2 API.
+
+  ``(:refine LINE NAME TM)``
+    Refine the hole on ``LINE`` named ``NAME`` by using the term ``TM``.
 
   ``(:docs-for NAME [MODE])``
     Look up the documentation for ``NAME``, and return it as a highlighted string.
