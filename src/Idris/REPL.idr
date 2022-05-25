@@ -487,6 +487,25 @@ processEdit (AddClause upd line name)
          if upd
             then updateFile (addClause c (integerToNat (cast line)))
             else pure $ DisplayEdit (pretty0 c)
+processEdit (Intro upd line hole)
+    = do defs <- get Ctxt
+         -- Grab the hole's definition (and check it is not a solved hole)
+         [(h, hidx, hgdef)] <- lookupCtxtName hole (gamma defs)
+           | _ => pure $ EditError ("Could not find hole named" <++> pretty0 hole)
+         let Hole args _ = definition hgdef
+           | _ => pure $ EditError (pretty0 hole <++> "is not a refinable hole")
+         let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) [] (type hgdef)
+
+         let ([<x] ** (Pi _ rig info ty :: _, _)) = underPis 1 env htyInLhsCtxt
+           | _ => pure (EditError "Don't know what to do")
+         info <- traverse (unelab env) info
+         ty <- unelab env ty
+         new_hole <- uniqueHoleName defs [] (nameRoot hole)
+         let iintrod = ILam replFC rig info (Just x) ty (IHole replFC new_hole)
+         introd <- show . pretty <$> pterm iintrod
+         if upd
+            then updateFile (proofSearch hole introd (integerToNat (cast (line - 1))))
+            else pure $ DisplayEdit (pretty0 introd)
 processEdit (Refine upd line hole e)
     = do defs <- get Ctxt
          -- First we grab the hole's definition (and check it is not a solved hole)
