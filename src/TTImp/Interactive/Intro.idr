@@ -40,15 +40,15 @@ parameters
     let iintrod = ILam replFC rig Explicit (Just x) ty (IHole replFC new_hole)
     pure iintrod
 
-  introCon : Name -> Term lhsCtxt -> Core (Maybe IRawImp)
+  introCon : Name -> Term lhsCtxt -> Core (List IRawImp)
   introCon n ty = do
     defs <- get Ctxt
     ust <- get UST
     Just gdef <- lookupCtxtExact n (gamma defs)
-      | _ => pure Nothing
+      | _ => pure []
     -- for now we only handle types with a unique constructor
     let TCon _ _ _ _ _ _ cs _ = definition gdef
-      | _ => pure Nothing
+      | _ => pure []
     let gty = gnf env ty
     ics <- for cs $ \ cons => do
       Just gdef <- lookupCtxtExact cons (gamma defs)
@@ -69,17 +69,15 @@ parameters
       put Ctxt defs -- reset the context, we don't want any updates
       put UST ust
       pure res
-    case catMaybes ics of
-      [icons] => pure $ Just icons
-      _ => pure Nothing
+    pure (catMaybes ics)
 
   export
-  intro : Term lhsCtxt -> Core (Maybe IRawImp)
+  intro : Term lhsCtxt -> Core (List IRawImp)
   -- structural cases
-  intro (Bind _ x (Let _ _ ty val) sc) = intro (subst val sc)
+  intro (Bind _ x (Let _ _ ty val) sc) = toList <$> intro (subst val sc)
   intro (TDelayed _ _ t) = intro t
   -- interesting ones
-  intro (Bind _ x (Pi _ rig Explicit ty) _) = Just <$> introLam x rig ty
+  intro (Bind _ x (Pi _ rig Explicit ty) _) = singleton <$> introLam x rig ty
   intro t = case getFnArgs t of
     (Ref _ (TyCon _ ar) n, _) => introCon n t
-    _ => pure Nothing
+    _ => pure []

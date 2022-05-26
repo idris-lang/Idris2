@@ -381,6 +381,8 @@ displayIDEResult outf i (REPL $ Edited (DisplayEdit xs))
   = printIDEResult outf i $ AString $ show xs
 displayIDEResult outf i (REPL $ Edited (EditError x))
   = printIDEError outf i x
+displayIDEResult outf i (REPL $ Edited (MadeIntro is))
+  = printIDEResult outf i $ AnIntroList is
 displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr))
   = printIDEResult outf i $ AMetaVarLemma $ MkMetaVarLemma
       { application = pappstr

@@ -497,16 +497,18 @@ processEdit (Intro upd line hole)
            | _ => pure $ EditError (pretty0 hole <++> "is not a refinable hole")
          let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) [] (type hgdef)
 
-         Just iintrod <- intro hidx hole env htyInLhsCtxt
-           | Nothing => pure $ EditError "Don't know what to do."
-         pintrod <- pterm iintrod
+         (iintrod :: iintrods) <- intro hidx hole env htyInLhsCtxt
+           | [] => pure $ EditError "Don't know what to do."
+         pintrods <- traverseList1 pterm (iintrod ::: iintrods)
          syn <- get Syn
          let brack = elemBy (\x, y => dropNS x == dropNS y) hole (bracketholes syn)
-         let introd = show $ pretty $ ifThenElse brack (addBracket replFC) id pintrod
+         let introds = map (show . pretty . ifThenElse brack (addBracket replFC) id) pintrods
 
          if upd
-            then updateFile (proofSearch hole introd (integerToNat (cast (line - 1))))
-            else pure $ DisplayEdit (pretty0 introd)
+            then case introds of
+                   introd ::: [] => updateFile (proofSearch hole introd (integerToNat (cast (line - 1))))
+                   _ => pure $ EditError "Don't know what to do"
+            else pure $ MadeIntro introds
 processEdit (Refine upd line hole e)
     = do defs <- get Ctxt
          -- First we grab the hole's definition (and check it is not a solved hole)
@@ -1258,6 +1260,7 @@ mutual
     = printResult $ pretty0 (relit lit (show name ++ " : " ++ show pty ++ "\n") ++ pappstr)
   displayResult (Edited (MadeWith lit wapp)) = printResult $ pretty0 $ showSep "\n" (map (relit lit) wapp)
   displayResult (Edited (MadeCase lit cstr)) = printResult $ pretty0 $ showSep "\n" (map (relit lit) cstr)
+  displayResult (Edited (MadeIntro is)) = printResult $ pretty0 $ showSep "\n" (toList is)
   displayResult (OptionsSet opts) = printResult (vsep (pretty0 <$> opts))
 
   -- do not use a catchall so that we are warned when a new constructor is added
