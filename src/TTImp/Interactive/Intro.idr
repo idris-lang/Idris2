@@ -43,25 +43,35 @@ parameters
   introCon : Name -> Term lhsCtxt -> Core (Maybe IRawImp)
   introCon n ty = do
     defs <- get Ctxt
+    ust <- get UST
     Just gdef <- lookupCtxtExact n (gamma defs)
       | _ => pure Nothing
     -- for now we only handle types with a unique constructor
-    let TCon _ _ _ _ _ _ [cons] _ = definition gdef
+    let TCon _ _ _ _ _ _ cs _ = definition gdef
       | _ => pure Nothing
-    Just gdef <- lookupCtxtExact cons (gamma defs)
-      | _ => pure Nothing
-    let n = lengthExplicitPi $ fst $ snd $ underPis (-1) [] (type gdef)
-    ns <- uniqueHoleNames defs n (nameRoot hole)
-    let new_holes = PHole replFC True <$> ns
-    let pcons = papply replFC (PRef replFC cons) new_holes
-    -- We're desugaring it to the corresponding TTImp
-    icons <- desugar AnyExpr lhsCtxt pcons
     let gty = gnf env ty
-    ccons <- checkTerm hidx {-is this correct?-} InExpr [] (MkNested []) env icons gty
-    defs <- get Ctxt
-    ncons <- normaliseHoles defs env ccons
-    icons <- unelab env ncons
-    pure $ Just icons
+    ics <- for cs $ \ cons => do
+      Just gdef <- lookupCtxtExact cons (gamma defs)
+        | _ => pure Nothing
+      let nargs = lengthExplicitPi $ fst $ snd $ underPis (-1) [] (type gdef)
+      new_hole_names <- uniqueHoleNames defs nargs (nameRoot hole)
+      let new_holes = PHole replFC True <$> new_hole_names
+      let pcons = papply replFC (PRef replFC cons) new_holes
+      res <- catch
+        (do -- We're desugaring it to the corresponding TTImp
+            icons <- desugar AnyExpr lhsCtxt pcons
+            ccons <- checkTerm hidx {-is this correct?-} InExpr [] (MkNested []) env icons gty
+            newdefs <- get Ctxt
+            ncons <- normaliseHoles newdefs env ccons
+            icons <- unelab env ncons
+            pure (Just icons))
+        (\ _ => pure Nothing)
+      put Ctxt defs -- reset the context, we don't want any updates
+      put UST ust
+      pure res
+    case catMaybes ics of
+      [icons] => pure $ Just icons
+      _ => pure Nothing
 
   export
   intro : Term lhsCtxt -> Core (Maybe IRawImp)
