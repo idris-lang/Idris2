@@ -77,7 +77,7 @@ parameters
   intro (Bind _ x (Let _ _ ty val) sc) = toList <$> intro (subst val sc)
   intro (TDelayed _ _ t) = intro t
   -- interesting ones
-  intro (Bind _ x (Pi _ rig Explicit ty) _) = singleton <$> introLam x rig ty
+  intro (Bind _ x (Pi _ rig Explicit ty) _) = pure <$> introLam x rig ty
   intro t = case getFnArgs t of
     (Ref _ (TyCon _ ar) n, _) => introCon n t
     _ => pure []
