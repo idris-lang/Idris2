@@ -52,6 +52,7 @@ import TTImp.Elab.Local
 import TTImp.Interactive.CaseSplit
 import TTImp.Interactive.ExprSearch
 import TTImp.Interactive.GenerateDef
+import TTImp.Interactive.Intro
 import TTImp.Interactive.MakeLemma
 import TTImp.TTImp
 import TTImp.Unelab
@@ -496,13 +497,13 @@ processEdit (Intro upd line hole)
            | _ => pure $ EditError (pretty0 hole <++> "is not a refinable hole")
          let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) [] (type hgdef)
 
-         let ([<x] ** (Pi _ rig info ty :: _, _)) = underPis 1 env htyInLhsCtxt
-           | _ => pure (EditError "Don't know what to do")
-         info <- traverse (unelab env) info
-         ty <- unelab env ty
-         new_hole <- uniqueHoleName defs [] (nameRoot hole)
-         let iintrod = ILam replFC rig info (Just x) ty (IHole replFC new_hole)
-         introd <- show . pretty <$> pterm iintrod
+         Just iintrod <- intro hidx hole env htyInLhsCtxt
+           | Nothing => pure $ EditError "Don't know what to do."
+         pintrod <- pterm iintrod
+         syn <- get Syn
+         let brack = elemBy (\x, y => dropNS x == dropNS y) hole (bracketholes syn)
+         let introd = show $ pretty $ ifThenElse brack (addBracket replFC) id pintrod
+
          if upd
             then updateFile (proofSearch hole introd (integerToNat (cast (line - 1))))
             else pure $ DisplayEdit (pretty0 introd)

@@ -281,6 +281,7 @@ modules =
     TTImp.Interactive.CaseSplit,
     TTImp.Interactive.ExprSearch,
     TTImp.Interactive.GenerateDef,
+    TTImp.Interactive.Intro,
     TTImp.Interactive.MakeLemma,
 
     Yaffle.Main,
