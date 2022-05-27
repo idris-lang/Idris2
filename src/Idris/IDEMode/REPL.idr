@@ -102,16 +102,16 @@ getNChars i (S k)
 
 -- Read 6 characters. If they're a hex number, read that many characters.
 -- Otherwise, just read to newline
-getInput : File -> IO String
+getInput : File -> IO (Maybe String, String)
 getInput f
     = do x <- getNChars f 6
          case fromHexChars (reverse x) of
               Nothing =>
                 do rest <- getFLine f
-                   pure (pack x ++ rest)
+                   pure (Nothing, pack x ++ rest)
               Just num =>
                 do inp <- getNChars f (integerToNat num)
-                   pure (pack inp)
+                   pure (Just (pack x), pack inp)
 
 ||| Do nothing and tell the user to wait for us to implmement this (or join the effort!)
 todoCmd : {auto c : Ref Ctxt Defs} ->
@@ -477,8 +477,8 @@ loop
          case res of
               REPL _ => printError $ reflow "Running idemode but output isn't"
               IDEMode idx inf outf => do
-                inp <- coreLift $ getInput inf
-                log "ide-mode.recv" 50 $ "Received: \{inp}"
+                (pref, inp) <- coreLift $ getInput inf
+                log "ide-mode.recv" 50 $ "Received: \{fromMaybe "" pref}\{inp}"
                 end <- coreLift $ fEOF inf
                 unless end $ do
                   case parseSExp inp of
