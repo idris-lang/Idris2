@@ -27,7 +27,6 @@ import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Check
-import TTImp.Interactive.CaseSplit
 import TTImp.TTImp
 import TTImp.TTImp.Functor
 import TTImp.Unelab

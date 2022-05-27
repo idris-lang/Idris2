@@ -52,6 +52,7 @@ import TTImp.Elab.Local
 import TTImp.Interactive.CaseSplit
 import TTImp.Interactive.ExprSearch
 import TTImp.Interactive.GenerateDef
+import TTImp.Interactive.Intro
 import TTImp.Interactive.MakeLemma
 import TTImp.TTImp
 import TTImp.Unelab
@@ -487,6 +488,27 @@ processEdit (AddClause upd line name)
          if upd
             then updateFile (addClause c (integerToNat (cast line)))
             else pure $ DisplayEdit (pretty0 c)
+processEdit (Intro upd line hole)
+    = do defs <- get Ctxt
+         -- Grab the hole's definition (and check it is not a solved hole)
+         [(h, hidx, hgdef)] <- lookupCtxtName hole (gamma defs)
+           | _ => pure $ EditError ("Could not find hole named" <++> pretty0 hole)
+         let Hole args _ = definition hgdef
+           | _ => pure $ EditError (pretty0 hole <++> "is not a refinable hole")
+         let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) [] (type hgdef)
+
+         (iintrod :: iintrods) <- intro hidx hole env htyInLhsCtxt
+           | [] => pure $ EditError "Don't know what to do."
+         pintrods <- traverseList1 pterm (iintrod ::: iintrods)
+         syn <- get Syn
+         let brack = elemBy (\x, y => dropNS x == dropNS y) hole (bracketholes syn)
+         let introds = map (show . pretty . ifThenElse brack (addBracket replFC) id) pintrods
+
+         if upd
+            then case introds of
+                   introd ::: [] => updateFile (proofSearch hole introd (integerToNat (cast (line - 1))))
+                   _ => pure $ EditError "Don't know what to do"
+            else pure $ MadeIntro introds
 processEdit (Refine upd line hole e)
     = do defs <- get Ctxt
          -- First we grab the hole's definition (and check it is not a solved hole)
@@ -1238,6 +1260,7 @@ mutual
     = printResult $ pretty0 (relit lit (show name ++ " : " ++ show pty ++ "\n") ++ pappstr)
   displayResult (Edited (MadeWith lit wapp)) = printResult $ pretty0 $ showSep "\n" (map (relit lit) wapp)
   displayResult (Edited (MadeCase lit cstr)) = printResult $ pretty0 $ showSep "\n" (map (relit lit) cstr)
+  displayResult (Edited (MadeIntro is)) = printResult $ pretty0 $ showSep "\n" (toList is)
   displayResult (OptionsSet opts) = printResult (vsep (pretty0 <$> opts))
 
   -- do not use a catchall so that we are warned when a new constructor is added

@@ -177,6 +177,10 @@ process (AddClause l n)
 process (AddMissing l n)
     = do todoCmd "add-missing"
          pure $ REPL $ Edited $ DisplayEdit emptyDoc
+process (Intro l h) =
+   do replWrap $ Idris.REPL.process
+               $ Editing
+               $ Intro False (fromInteger l) (UN $ Basic h) {- hole name -}
 process (Refine l h expr) =
    do let Right (_, _, e) = runParser (Virtual Interactive) Nothing expr aPTerm
         | Left err => pure $ REPL $ REPLError (pretty0 $ show err)
@@ -377,6 +381,8 @@ displayIDEResult outf i (REPL $ Edited (DisplayEdit xs))
   = printIDEResult outf i $ AString $ show xs
 displayIDEResult outf i (REPL $ Edited (EditError x))
   = printIDEError outf i x
+displayIDEResult outf i (REPL $ Edited (MadeIntro is))
+  = printIDEResult outf i $ AnIntroList is
 displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr))
   = printIDEResult outf i $ AMetaVarLemma $ MkMetaVarLemma
       { application = pappstr

@@ -2361,6 +2361,7 @@ parserCommandsForHelp =
   , editLineNameArgCmd (ParseREPLCmd ["ml", "makelemma"]) MakeLemma "Make lemma for term <n> defined on line <l>"
   , editLineNameArgCmd (ParseREPLCmd ["mc", "makecase"]) MakeCase "Make case on term <n> defined on line <l>"
   , editLineNameArgCmd (ParseREPLCmd ["mw", "makewith"]) MakeWith "Add with expression on term <n> defined on line <l>"
+  , editLineNameArgCmd (ParseREPLCmd ["intro"]) Intro "Introduce unambiguous constructor in hole <n> defined on line <l>"
   , editLineNamePTermArgCmd (ParseREPLCmd ["refine"]) Refine "Refine hole <h> with identifier <n> on line <l> and column <c>"
   , editLineNameCSVArgCmd (ParseREPLCmd ["ps", "proofsearch"]) ExprSearch "Search for a proof"
   , noArgCmd (ParseREPLCmd ["psnext"]) (Editing ExprSearchNext) "Show next proof"

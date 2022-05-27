@@ -180,29 +180,33 @@ mutual
       "rangeFromThenTo" => pure $ PRange fc (unbracket l) (Just $ unbracket m) (unbracket r)
       _ => Nothing
   sugarAppM (PApp fc (PApp _ (PRef opFC (MkKindedName nt (NS ns nm) rn)) l) r) =
-    if builtinNS == ns
-       then case nameRoot nm of
-         "Pair"   => pure $ PPair fc (unbracket l) (unbracket r)
-         "MkPair" => pure $ PPair fc (unbracket l) (unbracket r)
-         "DPair"  => case unbracket r of
-            PLam _ _ _ n _ r' => pure $ PDPair fc opFC n (unbracket l) (unbracket r')
-            _                 => Nothing
-         "Equal"  => pure $ PEq fc (unbracket l) (unbracket r)
-         "==="    => pure $ PEq fc (unbracket l) (unbracket r)
-         "~=~"    => pure $ PEq fc (unbracket l) (unbracket r)
-         _        => Nothing
-       else case nameRoot nm of
-              "::" => case sugarApp (unbracket r) of
-                PList fc nilFC xs => pure $ PList fc nilFC ((opFC, unbracketApp l) :: xs)
-                _           => Nothing
-              ":<" => case sugarApp (unbracket l) of
-                        PSnocList fc nilFC xs => pure $ PSnocList fc nilFC
-                                                  (xs :< (opFC, unbracketApp r))
-                        _                     => Nothing
-              "rangeFromTo" => pure $ PRange fc (unbracket l) Nothing (unbracket r)
-              "rangeFromThen" => pure $ PRangeStream fc (unbracket l) (Just $ unbracket r)
-
-              _    => Nothing
+    if builtinNS == ns then
+      case nameRoot nm of
+        "Pair"   => pure $ PPair fc (unbracket l) (unbracket r)
+        "MkPair" => pure $ PPair fc (unbracket l) (unbracket r)
+        "DPair"  => case unbracket r of
+          PLam _ _ _ n _ r' => pure $ PDPair fc opFC n (unbracket l) (unbracket r')
+          _                 => Nothing
+        "Equal"  => pure $ PEq fc (unbracket l) (unbracket r)
+        "==="    => pure $ PEq fc (unbracket l) (unbracket r)
+        "~=~"    => pure $ PEq fc (unbracket l) (unbracket r)
+        _        => Nothing
+    else if dpairNS == ns then
+      case nameRoot nm of
+        "MkDPair" => pure $ PDPair fc opFC (unbracket l) (PImplicit opFC) (unbracket r)
+        _                 => Nothing
+    else
+      case nameRoot nm of
+        "::" => case sugarApp (unbracket r) of
+          PList fc nilFC xs => pure $ PList fc nilFC ((opFC, unbracketApp l) :: xs)
+          _ => Nothing
+        ":<" => case sugarApp (unbracket l) of
+          PSnocList fc nilFC xs => pure $ PSnocList fc nilFC
+                                            (xs :< (opFC, unbracketApp r))
+          _ => Nothing
+        "rangeFromTo" => pure $ PRange fc (unbracket l) Nothing (unbracket r)
+        "rangeFromThen" => pure $ PRangeStream fc (unbracket l) (Just $ unbracket r)
+        _    => Nothing
   sugarAppM tm =
   -- refolding natural numbers if the expression is a constant
     let Nothing = extractNat 0 tm

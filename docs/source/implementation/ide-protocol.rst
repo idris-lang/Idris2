@@ -173,6 +173,10 @@ New in Version 2 of the protocol are:
   ``(:proof-search-next)``
     Replace the previous proof search result with the next proof search result.
 
+  ``(:intro LINE NAME)``
+    Returns the non-empty list of valid saturated constructors that can be used in the hole
+    at line ``LINE`` named ``NAME``.
+
 Possible Replies
 ----------------
 
