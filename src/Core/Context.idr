@@ -1112,7 +1112,7 @@ getSimilarNames nm = case show <$> userNameRoot nm of
                Just def <- lookupCtxtExact nm (gamma defs)
                    | Nothing => pure Nothing -- should be impossible
                pure (Just (visibility def, dist))
-       kept <- mapMaybeM @{CORE} test (resolvedAs (gamma defs))
+       kept <- NameMap.mapMaybeM @{CORE} test (resolvedAs (gamma defs))
        pure $ Just (str, toList kept)
 
 export
