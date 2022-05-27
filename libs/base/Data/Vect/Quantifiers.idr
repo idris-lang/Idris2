@@ -50,6 +50,11 @@ namespace Any
         Yes prf' => Yes (There prf')
         No prf' => No (anyElim prf' prf)
 
+  export
+  mapProperty : (f : forall x. p x -> q x) -> Any p l -> Any q l
+  mapProperty f (Here p)  = Here (f p)
+  mapProperty f (There p) = There (mapProperty f p)
+
 namespace All
   ||| A proof that all elements of a vector satisfy a property. It is a list of
   ||| proofs, corresponding element-wise to the `Vect`.
@@ -95,3 +100,17 @@ namespace All
   Either (Uninhabited $ p x) (Uninhabited $ All p xs) => Uninhabited (All p $ x::xs) where
     uninhabited @{Left  _} (px::pxs) = uninhabited px
     uninhabited @{Right _} (px::pxs) = uninhabited pxs
+
+  export
+  mapProperty : (f : forall x. p x -> q x) -> All p l -> All q l
+  mapProperty f [] = []
+  mapProperty f (p::pl) = f p :: mapProperty f pl
+
+  public export
+  imapProperty : (0 i : Type -> Type) ->
+                 (f : forall a. i a => p a -> q a) ->
+                 {0 types : Vect n Type} ->
+                 All i types =>
+                 All p types -> All q types
+  imapProperty _ _              []      = []
+  imapProperty i f @{ix :: ixs} (x::xs) = f @{ix} x :: imapProperty i f @{ixs} xs
