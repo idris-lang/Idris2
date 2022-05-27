@@ -996,3 +996,10 @@ public export
       = if y > x
            then countFrom x (+ (y - x))
            else countFrom x (\n => n - (x - y))
+
+public export
+Range Char where
+  rangeFromTo x y = map chr $ rangeFromTo (ord x) (ord y)
+  rangeFromThenTo x y z = map chr $ rangeFromThenTo (ord x) (ord y) (ord z)
+  rangeFrom x = map chr $ rangeFrom (ord x)
+  rangeFromThen x y = map chr $ rangeFromThen (ord x) (ord y)
