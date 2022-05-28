@@ -1,0 +1,3 @@
+((:load-file "Holes.idr") 1)
+((:type-of "prf" 7 12) 2)
+((:type-of "prf2" 10 15) 3)

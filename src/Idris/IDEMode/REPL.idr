@@ -102,16 +102,16 @@ getNChars i (S k)
 
 -- Read 6 characters. If they're a hex number, read that many characters.
 -- Otherwise, just read to newline
-getInput : File -> IO String
+getInput : File -> IO (Maybe String, String)
 getInput f
     = do x <- getNChars f 6
          case fromHexChars (reverse x) of
               Nothing =>
                 do rest <- getFLine f
-                   pure (pack x ++ rest)
+                   pure (Nothing, pack x ++ rest)
               Just num =>
                 do inp <- getNChars f (integerToNat num)
-                   pure (pack inp)
+                   pure (Just (pack x), pack inp)
 
 ||| Do nothing and tell the user to wait for us to implmement this (or join the effort!)
 todoCmd : {auto c : Ref Ctxt Defs} ->
@@ -378,7 +378,9 @@ displayIDEResult outf i  (REPL $ VersionIs x)
     in printIDEResult outf i $ AVersion $ MkIdrisVersion
       {major, minor, patch, tag = versionTag x}
 displayIDEResult outf i (REPL $ Edited (DisplayEdit xs))
-  = printIDEResult outf i $ AString $ show xs
+  = printIDEResultWithHighlight outf i
+  $ mapFst AString
+   !(renderWithDecorations annToProperties $ xs)
 displayIDEResult outf i (REPL $ Edited (EditError x))
   = printIDEError outf i x
 displayIDEResult outf i (REPL $ Edited (MadeIntro is))
@@ -475,24 +477,24 @@ loop
          case res of
               REPL _ => printError $ reflow "Running idemode but output isn't"
               IDEMode idx inf outf => do
-                inp <- coreLift $ getInput inf
+                (pref, inp) <- coreLift $ getInput inf
+                log "ide-mode.recv" 50 $ "Received: \{fromMaybe "" pref}\{inp}"
                 end <- coreLift $ fEOF inf
-                if end
-                   then pure ()
-                   else case parseSExp inp of
-                      Left err =>
-                        do printIDEError outf idx (reflow "Parse error:" <++> !(perror err))
-                           loop
-                      Right sexp =>
-                        case getMsg sexp of
-                          Just (cmd, i) =>
-                            do updateOutput i
-                               res <- processCatch cmd
-                               handleIDEResult outf i res
-                               loop
-                          Nothing =>
-                            do printIDEError outf idx (reflow "Unrecognised command:" <++> pretty0 (show sexp))
-                               loop
+                unless end $ do
+                  case parseSExp inp of
+                    Left err =>
+                      do printIDEError outf idx (reflow "Parse error:" <++> !(perror err))
+                         loop
+                    Right sexp =>
+                      case getMsg sexp of
+                        Just (cmd, i) =>
+                          do updateOutput i
+                             res <- processCatch cmd
+                             handleIDEResult outf i res
+                             loop
+                        Nothing =>
+                          do printIDEError outf idx (reflow "Unrecognised command:" <++> pretty0 (show sexp))
+                             loop
   where
     updateOutput : Integer -> Core ()
     updateOutput idx

@@ -121,6 +121,7 @@ knownTopics = [
     ("ide-mode.highlight", Nothing),
     ("ide-mode.highlight.alias", Nothing),
     ("ide-mode.send", Nothing),
+    ("ide-mode.recv", Just "Messages received by the IDE mode"),
     ("import", Nothing),
     ("import.file", Nothing),
     ("interaction.casesplit", Nothing),

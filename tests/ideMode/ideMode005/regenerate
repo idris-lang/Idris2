@@ -18,6 +18,7 @@ $1 --no-color --console-width 0 --ide-mode < inputF > expectedF
 $1 --no-color --console-width 0 --ide-mode < inputG > expectedG
 $1 --no-color --console-width 0 --ide-mode < inputH > expectedH
 $1 --no-color --console-width 0 --ide-mode < inputI > expectedI
+$1 --no-color --console-width 0 --ide-mode < inputJ > expectedJ
 
 rm -f expected output*
 touch expected
