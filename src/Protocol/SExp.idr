@@ -1,6 +1,7 @@
 module Protocol.SExp
 
 import Data.List
+import Data.List1
 
 %default total
 
@@ -110,6 +111,16 @@ SExpable a => SExpable (List a) where
 export
 FromSExpable a => FromSExpable (List a) where
   fromSExp (SExpList sexps) = traverse fromSExp sexps
+  fromSExp _ = Nothing
+
+export
+SExpable a => SExpable (List1 a) where
+  toSExp xs
+      = SExpList (map toSExp (toList xs))
+
+export
+FromSExpable a => FromSExpable (List1 a) where
+  fromSExp (SExpList (sexp :: sexps)) = traverse fromSExp (sexp ::: sexps)
   fromSExp _ = Nothing
 
 export

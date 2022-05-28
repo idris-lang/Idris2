@@ -55,3 +55,6 @@ diff expectedH outputH >> output
 
 $1 --no-color --console-width 0 --ide-mode < inputI > outputI
 diff expectedI outputI >> output
+
+$1 --no-color --console-width 0 --ide-mode < inputJ > outputJ
+diff expectedJ outputJ >> output

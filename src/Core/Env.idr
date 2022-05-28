@@ -17,7 +17,6 @@ export
 extend : (x : Name) -> Binder (tm vars) -> Env tm vars -> Env tm (x :: vars)
 extend x = (::) {x}
 
-
 export
 length : Env tm xs -> Nat
 length [] = 0
