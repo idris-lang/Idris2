@@ -21,7 +21,7 @@ section, we explain how these features can be exploited by a text
 editor, and specifically how to do so in `Vim
 <https://github.com/edwinb/idris2-vim>`_. An interactive mode
 for `Emacs <https://github.com/idris-hackers/idris-mode>`_ is also
-available, updated for Idris 2 compatability as of 23 February 2021.
+available, updated for Idris 2 compatibility as of 23 February 2021.
 
 Editing at the REPL
 ===================
