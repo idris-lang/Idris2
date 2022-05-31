@@ -1,5 +1,6 @@
 module Idris.Syntax.Pragmas
 
+import Data.List -- until 0.6.0 release
 import Data.String
 
 %default total
