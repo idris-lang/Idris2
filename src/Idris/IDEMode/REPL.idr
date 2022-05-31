@@ -34,6 +34,8 @@ import Network.Socket.Data
 
 import TTImp.Interactive.Completion
 
+import Libraries.Data.String.Extra -- until 0.6.0 release
+
 %default covering
 
 ||| TODO: use the version in `Network.FFI` in network after the next release.
