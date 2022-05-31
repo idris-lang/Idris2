@@ -4,7 +4,8 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 
-import Idris.Syntax.Pragmas
+import Idris.Syntax
+import Idris.Parser
 
 import Data.String
 
@@ -59,6 +60,7 @@ nameCompletion pref = do
     pure (Just n)
   pure (map show $ nub nms)
 
+||| Completion among a list of constants
 oneOfCompletion : String -> List String -> Maybe (List String)
 oneOfCompletion pref candidates = do
     let cs@(_ :: _) = filter (pref `isPrefixOf`) candidates
@@ -113,4 +115,6 @@ completion line = do
   case task of
     NameCompletion pref => (Just . (ctxt,)) <$> nameCompletion pref
     PragmaCompletion mprag pref => map (mapFst (ctxt ++)) <$> pragmaCompletion mprag pref
-    _ => pure Nothing
+    CommandCompletion pref =>
+      let commands = concatMap fst parserCommandsForHelp in
+      pure $ map ((ctxt,) . map (":" ++)) $ oneOfCompletion pref commands
