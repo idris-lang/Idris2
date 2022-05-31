@@ -62,7 +62,10 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
          case fnm of
               NS ns (UN (Basic n))
                  => if ns == reflectionNS
-                      then elabCon defs n (map snd args)
+                      then elabCon defs n (map snd args) `catch` \case
+                             e@(BadRunElab _ _ _ _) => throw e
+                             e@(RunElabFail _)      => throw e
+                             e                      => throw $ RunElabFail e
                       else failWith defs $ "bad reflection namespace " ++ show ns
               _ => failWith defs $ "bad fullnames " ++ show fnm
   where
@@ -94,8 +97,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
              let customFC = case !(evalClosure defs mbfc >>= reify defs) of
                                EmptyFC => fc
                                x       => x
-             throw (GenericMsg customFC ("Error during reflection: " ++
-                                      !(reify defs msg')))
+             throw $ RunElabFail $ GenericMsg customFC !(reify defs msg')
     elabCon defs "Try" [_, elab1, elab2]
         = tryUnify (elabScript fc nest env !(evalClosure defs elab1) exp)
                    (elabScript fc nest env !(evalClosure defs elab2) exp)
@@ -239,8 +241,7 @@ checkRunElab rig elabinfo nest env fc script exp
          (stm, sty) <- runDelays (const True) $
                            check rig elabinfo nest env script (Just (gnf env elabtt))
          defs <- get Ctxt -- checking might have resolved some holes
-         ntm <- elabScript fc nest env
-                           !(nfOpts withAll defs env stm) (Just (gnf env expected))
+         ntm <- elabScript fc nest env !(nfOpts withAll defs env stm) (Just (gnf env expected))
          defs <- get Ctxt -- might have updated as part of the script
          empty <- clearDefs defs
          pure (!(quote empty env ntm), gnf env expected)
