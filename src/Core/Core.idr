@@ -151,6 +151,7 @@ data Error : Type where
      BadImplicit : FC -> String -> Error
      BadRunElab : {vars : _} ->
                   FC -> Env Term vars -> Term vars -> (description : String) -> Error
+     RunElabFail : Error -> Error
      GenericMsg : FC -> String -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
@@ -334,6 +335,7 @@ Show Error where
            " - it elaborates to " ++ show y
   show (BadImplicit fc str) = show fc ++ ":" ++ str ++ " can't be bound here"
   show (BadRunElab fc env script desc) = show fc ++ ":Bad elaborator script " ++ show script ++ " (" ++ desc ++ ")"
+  show (RunElabFail e) = "Error during reflection: " ++ show e
   show (GenericMsg fc str) = show fc ++ ":" ++ str
   show (TTCError msg) = "Error in TTC file: " ++ show msg
   show (FileErr fname err) = "File error (" ++ fname ++ "): " ++ show err
@@ -438,6 +440,7 @@ getErrorLoc (MatchTooSpecific loc _ _) = Just loc
 getErrorLoc (BadDotPattern loc _ _ _ _) = Just loc
 getErrorLoc (BadImplicit loc _) = Just loc
 getErrorLoc (BadRunElab loc _ _ _) = Just loc
+getErrorLoc (RunElabFail e) = getErrorLoc e
 getErrorLoc (GenericMsg loc _) = Just loc
 getErrorLoc (TTCError _) = Nothing
 getErrorLoc (FileErr _ _) = Nothing
@@ -520,6 +523,7 @@ killErrorLoc (MatchTooSpecific fc x y) = MatchTooSpecific emptyFC x y
 killErrorLoc (BadDotPattern fc x y z w) = BadDotPattern emptyFC x y z w
 killErrorLoc (BadImplicit fc x) = BadImplicit emptyFC x
 killErrorLoc (BadRunElab fc x y description) = BadRunElab emptyFC x y description
+killErrorLoc (RunElabFail e) = RunElabFail $ killErrorLoc e
 killErrorLoc (GenericMsg fc x) = GenericMsg emptyFC x
 killErrorLoc (TTCError x) = TTCError x
 killErrorLoc (FileErr x y) = FileErr x y
