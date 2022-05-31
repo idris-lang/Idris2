@@ -63,6 +63,10 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
               NS ns (UN (Basic n))
                  => if ns == reflectionNS
                       then elabCon defs n (map snd args)
+                             `catch` \case -- wrap into `RunElabFail` any non-elab error
+                               e@(BadRunElab _ _ _ _) => throw e
+                               e@(RunElabFail _)      => throw e
+                               e                      => throw $ RunElabFail e
                       else failWith defs $ "bad reflection namespace " ++ show ns
               _ => failWith defs $ "bad fullnames " ++ show fnm
   where
@@ -94,8 +98,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
              let customFC = case !(evalClosure defs mbfc >>= reify defs) of
                                EmptyFC => fc
                                x       => x
-             throw (GenericMsg customFC ("Error during reflection: " ++
-                                      !(reify defs msg')))
+             throw $ RunElabFail $ GenericMsg customFC !(reify defs msg')
     elabCon defs "Try" [_, elab1, elab2]
         = tryUnify (elabScript fc nest env !(evalClosure defs elab1) exp)
                    (elabScript fc nest env !(evalClosure defs elab2) exp)
