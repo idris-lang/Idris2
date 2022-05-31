@@ -142,7 +142,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
     elabCon defs "Lambda" [x, _, scope]
         = do empty <- clearDefs defs
              NBind bfc x (Lam fc' c p ty) sc <- evalClosure defs scope
-                   | _ => throw (GenericMsg fc "Not a lambda")
+                   | _ => failWith defs "Not a lambda"
              n <- genVarName "x"
              sc' <- sc defs (toClosure withAll env (Ref bfc Bound n))
              qsc <- quote empty env sc'
@@ -159,7 +159,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
          quotePi Explicit = pure Explicit
          quotePi Implicit = pure Implicit
          quotePi AutoImplicit = pure AutoImplicit
-         quotePi (DefImplicit t) = throw (GenericMsg fc "Can't add default lambda")
+         quotePi (DefImplicit t) = failWith defs "Can't add default lambda"
     elabCon defs "Goal" []
         = do let Just gty = exp
                  | Nothing => nfOpts withAll defs env
@@ -196,13 +196,13 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                        do let binder = getBinder lv env
                           let bty = binderType binder
                           scriptRet $ map rawName !(unelabUniqueBinders env bty)
-                  _ => throw (GenericMsg fc (show n ++ " is not a local variable"))
+                  _ => failWith defs $ show n ++ " is not a local variable"
     elabCon defs "GetCons" [n]
         = do n' <- evalClosure defs n
              cn <- reify defs n'
              Just (TCon _ _ _ _ _ _ cons _) <-
                      lookupDefExact cn (gamma defs)
-                 | _ => throw (GenericMsg fc (show cn ++ " is not a type"))
+                 | _ => failWith defs $ show cn ++ " is not a type"
              scriptRet cons
     elabCon defs "Declare" [d]
         = do d' <- evalClosure defs d
