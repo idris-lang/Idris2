@@ -15,6 +15,8 @@ import Libraries.Utils.Binary
 import Libraries.Utils.Scheme
 import Libraries.Text.PrettyPrint.Prettyprinter
 
+import Idris.Syntax.Pragmas
+
 import Data.Either
 import Data.Fin
 import Libraries.Data.IOArray

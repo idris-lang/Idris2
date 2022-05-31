@@ -32,6 +32,8 @@ import System.File
 import Network.Socket
 import Network.Socket.Data
 
+import TTImp.Interactive.Completion
+
 %default covering
 
 ||| TODO: use the version in `Network.FFI` in network after the next release.
@@ -123,7 +125,7 @@ todoCmd cmdName = iputStrLn $ reflow $ cmdName ++ ": command not yet implemented
 
 data IDEResult
   = REPL REPLResult
-  | CompletionList (List Name) String
+  | CompletionList (List String) String
   | NameList (List Name)
   | FoundHoles (List Holes.Data)
   | Term String   -- should be a PTerm + metadata, or SExp.
@@ -236,26 +238,9 @@ process (PrintDefinition n)
     = do todoCmd "print-definition"
          pure $ REPL $ Printed (pretty0 n)
 process (ReplCompletions line)
-    = do let (pref, rest) = bimap Prelude.reverse Prelude.reverse
-                          $ break (\ x => not (isAlphaNum x || x > chr 160))
-                          $ ltrim
-                          $ Prelude.reverse line
-         log "ide-mode.completion" 30 $ "Looking at completions for \{show pref}"
-         defs <- get Ctxt
-         let cns = currentNS defs
-         nms <- flip mapMaybeM !(allNames (gamma defs)) $ \ nsn => do
-           -- the name better be a completion
-           log "ide-mode.completion" 50 $ "Looking at \{show nsn}"
-           let (ns, n) = splitNS nsn
-           let True = pref `isPrefixOf` nameRoot n
-              | False => pure Nothing
-           -- and it better be visible
-           Just def <- lookupCtxtExact nsn (gamma defs)
-              | Nothing => pure Nothing
-           let True = visibleIn cns nsn (visibility def)
-              | False => pure Nothing
-           pure (Just n)
-         pure $ CompletionList (nub nms) rest
+    = do Just (ctxt, compl) <- completion line
+           | Nothing => pure (REPL $ REPLError $ vcat [ "I can't make sense of the completion task:", pretty0 line])
+         pure (CompletionList compl ctxt)
 process (EnableSyntax b)
     = do setSynHighlightOn b
          pure $ REPL $ Printed (reflow "Syntax highlight option changed to" <++> byShow b)
@@ -419,7 +404,7 @@ displayIDEResult outf i (REPL $ (Edited (MadeCase lit cstr)))
 displayIDEResult outf i (FoundHoles holes)
   = printIDEResult outf i $ AHoleList $ map holeIDE holes
 displayIDEResult outf i (CompletionList ns r)
-  = printIDEResult outf i $ ACompletionList (map show ns) r
+  = printIDEResult outf i $ ACompletionList ns r
 displayIDEResult outf i (NameList ns)
   = printIDEResult outf i $ ANameList (map show ns)
 displayIDEResult outf i (Term t)
