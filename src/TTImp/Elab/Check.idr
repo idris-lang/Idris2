@@ -23,6 +23,7 @@ import Data.Either
 import Libraries.Data.IntMap
 import Data.List
 import Libraries.Data.NameMap
+import Data.SnocList
 import Libraries.Data.UserNameMap
 
 %default covering
@@ -671,9 +672,14 @@ anyOne : {vars : _} ->
          {auto e : Ref EST (EState vars)} ->
          FC -> List (Maybe Name, Core (Term vars, Glued vars)) ->
          Core (Term vars, Glued vars)
-anyOne fc [] = throw (GenericMsg fc "No elaborators provided")
-anyOne fc [(tm, elab)] = elab
-anyOne fc ((tm, elab) :: es) = try elab (anyOne fc es)
+anyOne fc es = anyOneErrs es [<] where
+  anyOneErrs : List (Maybe Name, Core a) -> SnocList (Maybe Name, Error) -> Core a
+  anyOneErrs [] [<]        = throw $ GenericMsg fc "No elaborators provided"
+  anyOneErrs [] [<(tm, e)] = throw e
+  anyOneErrs [] errs       = throw $ AllFailed $ errs <>> []
+  anyOneErrs ((tm, elab) :: es) errs = case !(tryError elab) of
+    Right res => pure res
+    Left err  => anyOneErrs es $ errs :< (tm, err)
 
 -- Implemented in TTImp.Elab.Term; delaring just the type allows us to split
 -- the elaborator over multiple files more easily
