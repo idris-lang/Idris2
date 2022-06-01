@@ -1,8 +1,10 @@
 module Data.List.Equalities
 
 import Control.Function
+import Syntax.PreorderReasoning
 
 import Data.List
+import Data.List.Reverse
 
 %default total
 
@@ -115,3 +117,47 @@ export
 appendNonEmptyRightNotEq : (zs, xs : List a) -> NonEmpty xs => Not (zs = zs ++ xs)
 appendNonEmptyRightNotEq []      (_::_)  Refl impossible
 appendNonEmptyRightNotEq (_::zs) (x::xs) prf = appendNonEmptyRightNotEq zs (x::xs) $ snd $ biinjective prf
+
+listBindOntoPrf : (xs: List a)
+                -> (f: a -> List b)
+                -> (zs, ys: List b)
+                -> listBindOnto f (reverse zs ++ reverse ys) xs = ys ++ listBindOnto f (reverse zs) xs
+listBindOntoPrf [] f zs ys =
+  Calc $
+    |~  reverse (reverse zs ++ reverse ys)
+    ~~  reverse (reverse (ys ++ zs)) ... cong reverse (revAppend ys zs)
+    ~~  ys ++ zs ... reverseInvolutive _
+    ~~  ys ++ reverse (reverse zs) ... cong (ys ++) (sym $ reverseInvolutive _)
+listBindOntoPrf (x::xs) f zs ys =
+  Calc $
+    |~ listBindOnto f (reverseOnto (reverse zs ++ reverse ys) (f x)) xs
+    ~~ listBindOnto f (reverse (f x) ++ reverse zs ++ reverse ys) xs
+                          ... cong  (\n => listBindOnto f n xs)
+                                    (reverseOntoSpec _ _)
+    ~~ listBindOnto f ((reverse (f x) ++ reverse zs) ++ reverse ys) xs
+                          ... cong  (\n => listBindOnto f n xs)
+                                    (appendAssociative _ _ _)
+    ~~ listBindOnto f (reverse (zs ++ f x) ++ reverse ys) xs
+                          ... cong  (\n => listBindOnto f (n ++ reverse ys) xs)
+                                    (revAppend _ _)
+    ~~ ys ++ listBindOnto f (reverse (zs ++ f x)) xs ... listBindOntoPrf _ _ _ _
+    ~~ ys ++ listBindOnto f (reverse (f x) ++ reverse zs) xs
+                          ... cong  (\n => ys ++ listBindOnto f n xs)
+                                    (sym $ revAppend _ _)
+    ~~ ys ++ listBindOnto f (reverseOnto (reverse zs) (f x)) xs
+                          ... cong  (\n => ys ++ listBindOnto f n xs)
+                                    (sym $ reverseOntoSpec _ _)
+
+||| Proof of correspondence between list bind and concatenation.
+export
+bindConcatPrf : (xs: List a)
+              -> (x: a)
+              -> (f: a -> List b)
+              -> ((x::xs >>= f) = (f x) ++ (xs >>= f))
+bindConcatPrf xs x f =
+  Calc $
+    |~ listBindOnto f ([] ++ reverse (f x)) xs
+    ~~ listBindOnto f (reverse [] ++ reverse (f x)) xs
+                          ... cong  (\n => listBindOnto f (n ++ reverse (f x)) xs)
+                                    (sym reverseNil)
+    ~~ f x ++ listBindOnto f [] xs ... listBindOntoPrf xs f [] (f x)
