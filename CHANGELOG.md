@@ -6,6 +6,11 @@
 
 * Adds documentation for unquotes `~( )`.
 
+### Compiler changes
+
+* If `IAlternative` expression with `FirstSuccess` rule fails to typecheck,
+  compiler prints all tried alternatives, not only the last one.
+
 ### Library changes
 
 #### System
