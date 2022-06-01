@@ -236,12 +236,11 @@ checkRunElab rig elabinfo nest env fc script exp
          unless (isExtension ElabReflection defs) $
              throw (GenericMsg fc "%language ElabReflection not enabled")
          let n = NS reflectionNS (UN $ Basic "Elab")
-         let ttn = reflectiontt "TT"
          elabtt <- appCon fc defs n [expected]
          (stm, sty) <- runDelays (const True) $
                            check rig elabinfo nest env script (Just (gnf env elabtt))
          defs <- get Ctxt -- checking might have resolved some holes
-         ntm <- elabScript fc nest env !(nfOpts withAll defs env stm) (Just (gnf env expected))
+         ntm <- elabScript fc nest env !(nfOpts withAll defs env stm) exp
          defs <- get Ctxt -- might have updated as part of the script
          empty <- clearDefs defs
          pure (!(quote empty env ntm), gnf env expected)
