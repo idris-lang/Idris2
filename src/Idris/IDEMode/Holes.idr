@@ -102,16 +102,16 @@ extractHoleData defs env fn (S args) (Bind fc x (Let _ c val ty) sc)
 extractHoleData defs env fn (S args) (Bind fc x b sc)
   = do rest <- extractHoleData defs (b :: env) fn args sc
        let True = showName x
-         | False => do log "idemode.hole" 10 $ "Not showing name: " ++ show x
+         | False => do log "ide-mode.hole" 10 $ "Not showing name: " ++ show x
                        pure rest
-       log "idemode.hole" 10 $ "Showing name: " ++ show x
+       log "ide-mode.hole" 10 $ "Showing name: " ++ show x
        ity <- resugar env !(normalise defs env (binderType b))
        let premise = MkHolePremise x ity (multiplicity b) (isImplicit b)
        pure $ { context $= (premise ::)  } rest
 extractHoleData defs env fn args ty
   = do nty <- normalise defs env ty
        ity <- resugar env nty
-       log "idemode.hole" 20 $
+       log "ide-mode.hole" 20 $
           "Return type: " ++ show !(toFullNames ty)
           ++ "\n  Evaluated to: " ++ show !(toFullNames nty)
           ++ "\n  Resugared to: " ++ show ity

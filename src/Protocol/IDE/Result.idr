@@ -109,6 +109,7 @@ data Result =
   | AMetaVarLemma MetaVarLemma
   | ANameLocList (List (String, FileContext))
   | AHoleList (List HoleData)
+  | ACompletionList (List String) String
   | ANameList (List String)
   | AnOptionList (List REPLOption)
   | AnIntroList (List1 String)
@@ -121,7 +122,8 @@ SExpable Result where
   toSExp (AMetaVarLemma mvl) = toSExp mvl
   toSExp (ANameLocList fcs) = toSExp fcs
   toSExp (AHoleList holes) = toSExp holes
-  toSExp (ANameList names) = SExpList (map SymbolAtom names)
+  toSExp (ANameList names) = SExpList (map StringAtom names)
+  toSExp (ACompletionList names str) = SExpList [SExpList (map StringAtom names), StringAtom str]
   toSExp (AnOptionList opts) = toSExp opts
   toSExp (AnIntroList iss) = toSExp iss
 
@@ -143,6 +145,8 @@ FromSExpable Result where
     | Just hl => pure $ AHoleList hl
   let Nothing = fromSExp sexp
     | Just nl => pure $ ANameList nl
+  let Nothing = fromSExp sexp
+    | Just nlr => pure $ uncurry ACompletionList nlr
   let Nothing = fromSExp sexp
     | Just optl => pure $ AnOptionList optl
   let Nothing = fromSExp sexp

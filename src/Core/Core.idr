@@ -5,6 +5,7 @@ import Core.Env
 import Core.TT
 
 import Data.List1
+import Data.SnocList -- until 0.6.0
 import Data.Vect
 
 import Libraries.Data.IMaybe
@@ -713,6 +714,15 @@ traverse' f (x :: xs) acc
 export
 traverse : (a -> Core b) -> List a -> Core (List b)
 traverse f xs = traverse' f xs []
+
+export
+mapMaybeM : (a -> Core (Maybe b)) -> List a -> Core (List b)
+mapMaybeM f = go [<] where
+  go : SnocList b -> List a -> Core (List b)
+  go acc [] = pure (acc <>> [])
+  go acc (a::as) = do
+    mb <- f a
+    go (maybe id (flip (:<)) mb acc) as
 
 %inline
 export

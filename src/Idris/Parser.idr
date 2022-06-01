@@ -2006,9 +2006,11 @@ data ParseCmd : Type where
      ParseKeywordCmd : String -> ParseCmd
      ParseIdentCmd : String -> ParseCmd
 
+public export
 CommandDefinition : Type
 CommandDefinition = (List String, CmdArg, String, Rule REPLCmd)
 
+public export
 CommandTable : Type
 CommandTable = List CommandDefinition
 
@@ -2325,6 +2327,7 @@ editLineNameOptionArgCmd parseCmd command doc =
     nreject <- fromInteger <$> option 0 intLit
     pure (Editing $ command upd line n nreject)
 
+export
 parserCommandsForHelp : CommandTable
 parserCommandsForHelp =
   [ exprArgCmd (ParseREPLCmd ["t", "type"]) Check "Check the type of an expression"

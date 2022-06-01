@@ -25,11 +25,16 @@ import Protocol.Hex
 import Libraries.Utils.Path
 
 import Data.List
+import Data.String
 import System
 import System.File
 
 import Network.Socket
 import Network.Socket.Data
+
+import TTImp.Interactive.Completion
+
+import Libraries.Data.String.Extra -- until 0.6.0 release
 
 %default covering
 
@@ -122,6 +127,7 @@ todoCmd cmdName = iputStrLn $ reflow $ cmdName ++ ": command not yet implemented
 
 data IDEResult
   = REPL REPLResult
+  | CompletionList (List String) String
   | NameList (List Name)
   | FoundHoles (List Holes.Data)
   | Term String   -- should be a PTerm + metadata, or SExp.
@@ -233,9 +239,10 @@ process (ElaborateTerm tm)
 process (PrintDefinition n)
     = do todoCmd "print-definition"
          pure $ REPL $ Printed (pretty0 n)
-process (ReplCompletions n)
-    = do todoCmd "repl-completions"
-         pure $ NameList []
+process (ReplCompletions line)
+    = do Just (ctxt, compl) <- completion line
+           | Nothing => pure (REPL $ REPLError $ vcat [ "I can't make sense of the completion task:", pretty0 line])
+         pure (CompletionList compl ctxt)
 process (EnableSyntax b)
     = do setSynHighlightOn b
          pure $ REPL $ Printed (reflow "Syntax highlight option changed to" <++> byShow b)
@@ -398,8 +405,10 @@ displayIDEResult outf i (REPL $ (Edited (MadeCase lit cstr)))
   $ AString $ showSep "\n" (map (relit lit) cstr)
 displayIDEResult outf i (FoundHoles holes)
   = printIDEResult outf i $ AHoleList $ map holeIDE holes
+displayIDEResult outf i (CompletionList ns r)
+  = printIDEResult outf i $ ACompletionList ns r
 displayIDEResult outf i (NameList ns)
-  = printIDEResult outf i $ ANameList $ map show ns
+  = printIDEResult outf i $ ANameList (map show ns)
 displayIDEResult outf i (Term t)
   = printIDEResult outf i $ AString t
 displayIDEResult outf i (TTTerm t)
