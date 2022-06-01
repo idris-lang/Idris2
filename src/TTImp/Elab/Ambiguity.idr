@@ -145,7 +145,7 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
 
         alternativeFirstSuccess : forall n. Vect (S n) RawImp -> RawImp
         alternativeFirstSuccess [x] = x
-        alternativeFirstSuccess xs  = IAlternative fc FirstSuccess $ toList xs
+        alternativeFirstSuccess xs  = IAlternative fc FirstReflection $ toList xs
 
     mkAlt : Bool -> EState vars -> (Name, Int, GlobalDef) -> RawImp
     mkAlt prim est (fullname, i, gdef)
@@ -436,8 +436,18 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                               , unlines (map show alts')
                               , "Target type "
                               ]) env exp'
+                          let manageReflectionErr : List (Maybe Name, Error) -> List (Maybe Name, Error)
+                              manageReflectionErr errs = case find (isReflectionErr . snd) errs of
+                                                           Just e  => [e]
+                                                           Nothing => errs
+                                                          where
+                                                            isReflectionErr : Error -> Bool
+                                                            isReflectionErr $ BadRunElab _ _ _ _ = True
+                                                            isReflectionErr $ RunElabFail _ = True
+                                                            isReflectionErr _ = False
                           let tryall = case uniq of
                                             FirstSuccess => anyOne fc
+                                            FirstReflection => anyOne fc {mapErrors=manageReflectionErr}
                                             _ => exactlyOne' (not delayed) fc env
                           tryall (map (\t =>
                               (getName t,

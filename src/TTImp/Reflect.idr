@@ -268,6 +268,8 @@ mutual
                (UN (Basic "UniqueDefault"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (UniqueDefault x')
+               (UN (Basic "FirstReflection"), _)
+                    => pure FirstReflection
                _ => cantReify val "AltType"
     reify defs val = cantReify val "AltType"
 
@@ -664,6 +666,7 @@ mutual
     reflect fc defs lhs env (UniqueDefault x)
         = do x' <- reflect fc defs lhs env x
              appCon fc defs (reflectionttimp "UniqueDefault") [x']
+    reflect fc defs lhs env FirstReflection = getCon fc defs (reflectionttimp "FirstReflection")
 
   export
   Reflect NoMangleDirective where

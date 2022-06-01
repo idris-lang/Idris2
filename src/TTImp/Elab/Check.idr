@@ -670,13 +670,15 @@ anyOne : {vars : _} ->
          {auto m : Ref MD Metadata} ->
          {auto u : Ref UST UState} ->
          {auto e : Ref EST (EState vars)} ->
+         {default Prelude.id mapErrors : List (Maybe Name, Error) -> List (Maybe Name, Error)} ->
          FC -> List (Maybe Name, Core (Term vars, Glued vars)) ->
          Core (Term vars, Glued vars)
 anyOne fc es = anyOneErrs es [<] where
   anyOneErrs : List (Maybe Name, Core a) -> SnocList (Maybe Name, Error) -> Core a
-  anyOneErrs [] [<]        = throw $ GenericMsg fc "No elaborators provided"
-  anyOneErrs [] [<(tm, e)] = throw e
-  anyOneErrs [] errs       = throw $ AllFailed $ errs <>> []
+  anyOneErrs [] errs = case mapErrors $ errs <>> [] of
+                         []       => throw $ GenericMsg fc "No elaborators provided"
+                         [(_, e)] => throw e
+                         errs     => throw $ AllFailed errs
   anyOneErrs ((tm, elab) :: es) errs = case !(tryError elab) of
     Right res => pure res
     Left err  => anyOneErrs es $ errs :< (tm, err)

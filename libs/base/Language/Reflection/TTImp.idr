@@ -89,6 +89,7 @@ mutual
        FirstSuccess : AltType
        Unique : AltType
        UniqueDefault : TTImp -> AltType
+       FirstReflection : AltType
 
   public export
   data NoMangleDirective : Type where
@@ -362,6 +363,7 @@ parameters {auto eqTTImp : Eq TTImp}
     FirstSuccess    == FirstSuccess     = True
     Unique          == Unique           = True
     UniqueDefault t == UniqueDefault t' = t == t'
+    FirstReflection == FirstReflection  = True
     _ == _ = False
 
   public export

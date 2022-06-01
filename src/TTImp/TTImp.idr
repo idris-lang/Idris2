@@ -143,6 +143,7 @@ mutual
        FirstSuccess : AltType' nm
        Unique : AltType' nm
        UniqueDefault : RawImp' nm -> AltType' nm
+       FirstReflection : AltType' nm
 
   export
   covering
@@ -1178,6 +1179,7 @@ mutual
     toBuf b FirstSuccess = tag 0
     toBuf b Unique = tag 1
     toBuf b (UniqueDefault x) = do tag 2; toBuf b x
+    toBuf b FirstReflection = tag 3
 
     fromBuf b
         = case !getTag of
@@ -1185,6 +1187,7 @@ mutual
                1 => pure Unique
                2 => do x <- fromBuf b
                        pure (UniqueDefault x)
+               3 => pure FirstReflection
                _ => corrupt "AltType"
 
   export

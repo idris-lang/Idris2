@@ -164,3 +164,4 @@ mutual
     map f FirstSuccess = FirstSuccess
     map f Unique = Unique
     map f (UniqueDefault t) = UniqueDefault (map f t)
+    map f FirstReflection = FirstReflection

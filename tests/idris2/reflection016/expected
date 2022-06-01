@@ -1,0 +1,105 @@
+1/1: Building Goaly (Goaly.idr)
+LOG bug.lostgoal:0: the goal: Nat
+LOG bug.lostgoal.uns:0: the goal: Nat
+LOG bug.lostgoal.uns:0: the goal: (arg : Nat) -> Nat
+Error: While processing right hand side of x. Error during reflection: good goal; intensional (expected) failure
+
+Goaly:18:5--18:15
+ 14 | 
+ 15 | %language ElabReflection
+ 16 | 
+ 17 | x : Nat
+ 18 | x = failyGoaly 5
+          ^^^^^^^^^^
+
+Error: While processing right hand side of chF'. Error during reflection: no goal at all
+
+Goaly:38:10--38:18
+ 34 | chF : Nat -> Nat
+ 35 | chF = choosing
+ 36 | 
+ 37 | chF' : Nat -> Nat
+ 38 | chF' x = choosing x
+               ^^^^^^^^
+
+Error: While processing right hand side of knownIncorrectGoal. Error during reflection: unsupported resulting type of a function
+
+Goaly:63:22--63:27
+ 59 | knownCorrectGoal' : Nat -> Nat
+ 60 | knownCorrectGoal' = S . the (Nat -> Nat) (goaly @{Z})
+ 61 | 
+ 62 | knownIncorrectGoal : Nat -> String
+ 63 | knownIncorrectGoal = goaly @{Z}
+                           ^^^^^
+
+Error: While processing right hand side of holeInGoal. Error during reflection: unknown resulting type of a function
+
+Goaly:66:14--66:19
+ 62 | knownIncorrectGoal : Nat -> String
+ 63 | knownIncorrectGoal = goaly @{Z}
+ 64 | 
+ 65 | holeInGoal : Nat -> ?
+ 66 | holeInGoal = goaly @{Z}
+                   ^^^^^
+
+Error: While processing right hand side of uknownOrNoHole. Error during reflection: goal is hole "_"
+
+Goaly:69:18--69:23
+ 65 | holeInGoal : Nat -> ?
+ 66 | holeInGoal = goaly @{Z}
+ 67 | 
+ 68 | uknownOrNoHole : ?
+ 69 | uknownOrNoHole = goaly @{Z}
+                       ^^^^^
+
+Error: While processing right hand side of nowYetKnownResultInGoal. Error during reflection: unknown resulting type of a function
+
+Goaly:75:27--75:32
+ 71 | knownResultInGoal : Nat -> Nat
+ 72 | knownResultInGoal = S . goaly @{Z}
+ 73 | 
+ 74 | nowYetKnownResultInGoal : Nat -> Nat
+ 75 | nowYetKnownResultInGoal = goaly @{Z} . S
+                                ^^^^^
+
+Error: While processing right hand side of goalInMap. Error during reflection: unknown resulting type of a function
+
+Goaly:78:19--78:24
+ 74 | nowYetKnownResultInGoal : Nat -> Nat
+ 75 | nowYetKnownResultInGoal = goaly @{Z} . S
+ 76 | 
+ 77 | goalInMap : List Nat -> List Nat
+ 78 | goalInMap = map $ goaly @{Z}
+                        ^^^^^
+
+Error: While processing right hand side of noStart. Sorry, I can't find any elaboration which works. All errors:
+Possible error:
+    When unifying:
+        Elab (Nat -> ?a)
+    and:
+        Elab (String -> String)
+    Mismatch between: Nat and String.
+
+    Goaly:95:11--95:19
+     91 |     _                 => do logSugaredTerm "nogoal" 0 "goal" g
+     92 |                             fail "can't manage the given result type"
+     93 | 
+     94 | noStart : String -> String
+     95 | noStart = goaly' 4
+                    ^^^^^^^^
+
+Possible error:
+    When unifying:
+        Nat -> Elab (Nat -> ?a)
+    and:
+        Elab ?scriptTy
+    Mismatch between: Nat -> Elab (Nat -> ?a) and Elab ?scriptTy.
+
+    Goaly:95:11--95:17
+     91 |     _                 => do logSugaredTerm "nogoal" 0 "goal" g
+     92 |                             fail "can't manage the given result type"
+     93 | 
+     94 | noStart : String -> String
+     95 | noStart = goaly' 4
+                    ^^^^^^
+
