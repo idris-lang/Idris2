@@ -126,6 +126,10 @@ interface Monad m => Elaboration m where
            ((val : x) -> Elab (ty val)) -> m ((val : x) -> (ty val))
 
   ||| Get the goal type of the current elaboration
+  |||
+  ||| `Nothing` means the script is run in the top-level `%runElab` clause.
+  ||| If elaboration script is run in expression mode, this function will always return `Just`.
+  ||| In the case of unknown result type in the expression mode, returned `TTImp` would be an `IHole`.
   goal : m (Maybe TTImp)
 
   ||| Get the names of the local variables in scope
