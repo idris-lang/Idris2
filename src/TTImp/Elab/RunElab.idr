@@ -234,7 +234,6 @@ checkRunElab rig elabinfo nest env fc script exp
          unless (isExtension ElabReflection defs) $
              throw (GenericMsg fc "%language ElabReflection not enabled")
          let n = NS reflectionNS (UN $ Basic "Elab")
-         let ttn = reflectiontt "TT"
          elabtt <- appCon fc defs n [expected]
          (stm, sty) <- runDelays (const True) $
                            check rig elabinfo nest env script (Just (gnf env elabtt))
