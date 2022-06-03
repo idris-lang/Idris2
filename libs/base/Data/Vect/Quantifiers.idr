@@ -63,6 +63,12 @@ namespace All
     Nil  : All p Nil
     (::) : {0 xs : Vect n a} -> p x -> All p xs -> All p (x :: xs)
 
+  ||| Modify the property given a pointwise function
+  export
+  mapProperty : (f : {0 x : a} -> p x -> q x) -> All p xs -> All q xs
+  mapProperty f [] = []
+  mapProperty f (p::ps) = f p :: mapProperty f ps
+
   ||| If there does not exist an element that satifies the property, then it is
   ||| the case that all elements do not satisfy.
   export
