@@ -238,13 +238,13 @@ stMain cgs opts
 quitOpts : List CLOpt -> IO Bool
 quitOpts [] = pure True
 quitOpts (Version :: _)
-    = do putStrLn versionMsg
+    = do putStr versionMsg
          pure False
 quitOpts (Help Nothing :: _)
     = do putStr usage
          pure False
 quitOpts (Help (Just helptopic) :: _)
-    = do putStr (HelpTopic.content helptopic)
+    = do putStrLn (HelpTopic.content helptopic)
          pure False
 quitOpts (_ :: opts) = quitOpts opts
 
