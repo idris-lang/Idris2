@@ -241,13 +241,10 @@ quitOpts (Version :: _)
     = do putStrLn versionMsg
          pure False
 quitOpts (Help Nothing :: _)
-    = do putStrLn usage
+    = do putStr usage
          pure False
-quitOpts (Help (Just HelpLogging) :: _)
-    = do putStrLn helpTopics
-         pure False
-quitOpts (Help (Just HelpPragma) :: _)
-    = do putStrLn pragmaTopics
+quitOpts (Help (Just helptopic) :: _)
+    = do putStr helptopic.content
          pure False
 quitOpts (_ :: opts) = quitOpts opts
 

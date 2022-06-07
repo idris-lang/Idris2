@@ -151,8 +151,8 @@ allPragmas =
   ]
 
 export
-pragmaTopics : String
-pragmaTopics
+pragmaHelpMessage : String
+pragmaHelpMessage
   = concat $ intersperse "\n" $ map ("+ " ++)
   $ map (\ kw => unwords (show kw :: map show (pragmaArgs kw)))
   $ allPragmas

@@ -12,6 +12,8 @@ import Data.Either
 
 import System
 
+import Idris.Syntax.Pragmas -- pragmaHelpMessage
+
 %default total
 
 public export
@@ -49,18 +51,36 @@ Show DirCommand where
   show Prefix = "--prefix"
   show BlodwenPaths = "--paths"
 
+
 ||| Help topics
 public export
-data HelpTopic
-  = ||| Interactive debugging topics
-    HelpLogging
-  | ||| The various pragmas
-    HelpPragma
+record HelpTopic where
+  constructor MkHelpTopic
+  ||| Used to match topic in `--help [topic name]`
+  name    : String
+  ||| Content to print
+  content : Lazy String
 
-recogniseHelpTopic : String -> Maybe HelpTopic
-recogniseHelpTopic "logging"   = pure HelpLogging
-recogniseHelpTopic "pragma" = pure HelpPragma
-recogniseHelpTopic _ = Nothing
+mutual
+   allHelpTopics : List HelpTopic
+   allHelpTopics = [
+      (MkHelpTopic "logging" loggingHelpMessage),
+      (MkHelpTopic "pragma"  pragmaHelpMessage),
+      (MkHelpTopic "topics"  listOfTopicsHelpMessage)
+   ]
+
+   listOfTopicsHelpMessage : String
+
+invalidTopic : String -> HelpTopic
+invalidTopic name = MkHelpTopic name ("Invalid topic: \(topic).\n" ++ "Use '--help topics' to see all topics you can specify.")
+
+
+recogniseHelpTopic : String -> HelpTopic
+recogniseHelpTopic topic_name = do
+   let Nothing = find (\topic => topic.name == topic_name) allHelpTopics
+   | Just topic => topic
+   invalidTopic topic_name
+
 
 ||| CLOpt - possible command line options
 public export
@@ -332,7 +352,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            optSeparator,
            MkOpt ["--version", "-v"] [] [Version]
               (Just "Display version string"),
-           MkOpt ["--help", "-h", "-?"] [Optional "topic"] (\ tp => [Help (tp >>= recogniseHelpTopic)])
+           MkOpt ["--help", "-h", "-?"] [Optional "topic"] (\ tp => [Help (tp >>= (Just . recogniseHelpTopic))])
               (Just "Display help text"),
 
            -- Internal debugging options

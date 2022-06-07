@@ -181,8 +181,10 @@ knownTopics = [
 ]
 
 export
-helpTopics : String
-helpTopics = show $ vcat $ map helpTopic knownTopics
+loggingHelpMessage : String
+loggingHelpMessage = do
+  let list = show $ vcat $ map helpTopic knownTopics
+  "All logging topics/levels:\n" ++ list
 
   where
 
