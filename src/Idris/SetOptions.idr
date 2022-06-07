@@ -91,9 +91,12 @@ localPackageDir
          pure $ srcdir </> depends
 
 export
-addPkgDir : {auto c : Ref Ctxt Defs} ->
-            String -> PkgVersionBounds -> Core ()
-addPkgDir p bounds
+findPkgDir :
+    Ref Ctxt Defs =>
+    String ->
+    PkgVersionBounds ->
+    Core (Maybe String)
+findPkgDir p bounds
     = do defs <- get Ctxt
          globaldir <- globalPackageDir
          localdir <- localPackageDir
@@ -118,9 +121,17 @@ addPkgDir p bounds
          -- (TODO: Can't do this quite yet due to idris2 build system...)
          case sorted of
               [] => if defs.options.session.ignoreMissingPkg
-                       then pure ()
+                       then pure Nothing
                        else throw (CantFindPackage (p ++ " (" ++ show bounds ++ ")"))
-              ((p, _) :: ps) => addExtraDir p
+              ((p, _) :: ps) => pure $ Just p
+
+export
+addPkgDir : {auto c : Ref Ctxt Defs} ->
+            String -> PkgVersionBounds -> Core ()
+addPkgDir p bounds = do
+    Just p <- findPkgDir p bounds
+        | Nothing => pure ()
+    addExtraDir p
 
 visiblePackages : String -> IO (List PkgDir)
 visiblePackages dir = filter viable <$> getPackageDirs dir

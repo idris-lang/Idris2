@@ -131,6 +131,7 @@ knownTopics = [
     ("metadata.names", Nothing),
     ("module", Nothing),
     ("module.hash", Nothing),
+    ("package.depends", Just "Log which packages are being added"),
     ("quantity", Nothing),
     ("quantity.hole", Nothing),
     ("quantity.hole.update", Nothing),

@@ -1,0 +1,4 @@
+package bar
+version = 0.7.2
+
+depends = foo >= 0.1.0
