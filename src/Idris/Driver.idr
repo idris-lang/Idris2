@@ -244,7 +244,7 @@ quitOpts (Help Nothing :: _)
     = do putStr usage
          pure False
 quitOpts (Help (Just helptopic) :: _)
-    = do putStr helptopic.content
+    = do putStr (HelpTopic.content helptopic)
          pure False
 quitOpts (_ :: opts) = quitOpts opts
 
