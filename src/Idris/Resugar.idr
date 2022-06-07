@@ -184,15 +184,15 @@ mutual
       case nameRoot nm of
         "Pair"   => pure $ PPair fc (unbracket l) (unbracket r)
         "MkPair" => pure $ PPair fc (unbracket l) (unbracket r)
-        "DPair"  => case unbracket r of
-          PLam _ _ _ n _ r' => pure $ PDPair fc opFC n (unbracket l) (unbracket r')
-          _                 => Nothing
         "Equal"  => pure $ PEq fc (unbracket l) (unbracket r)
         "==="    => pure $ PEq fc (unbracket l) (unbracket r)
         "~=~"    => pure $ PEq fc (unbracket l) (unbracket r)
         _        => Nothing
     else if dpairNS == ns then
       case nameRoot nm of
+        "DPair"  => case unbracket r of
+          PLam _ _ _ n _ r' => pure $ PDPair fc opFC n (unbracket l) (unbracket r')
+          _                 => Nothing
         "MkDPair" => pure $ PDPair fc opFC (unbracket l) (PImplicit opFC) (unbracket r)
         _                 => Nothing
     else
