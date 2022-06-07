@@ -1242,11 +1242,13 @@ onoff : Rule Bool
 onoff
    = (exactIdent "on" $> True)
  <|> (exactIdent "off" $> False)
+ <|> fail "expected 'on' or 'off'"
 
 extension : Rule LangExt
 extension
     = (exactIdent "ElabReflection" $> ElabReflection)
   <|> (exactIdent "Borrowing" $> Borrowing)
+  <|> fail "expected either 'ElabReflection' or 'Borrowing'"
 
 logLevel : OriginDesc -> Rule (Maybe LogLevel)
 logLevel fname
@@ -1344,7 +1346,7 @@ directive fname indents
          atEnd indents
          pure (Overloadable n)
   <|> do decoratedPragma fname "language"
-         e <- extension
+         e <- mustWork extension
          atEnd indents
          pure (Extension e)
   <|> do decoratedPragma fname "default"
