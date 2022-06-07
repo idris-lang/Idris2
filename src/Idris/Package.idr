@@ -790,6 +790,7 @@ partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
     optType (DumpVMCode f)         = POpt
     optType DebugElabCheck         = POpt
     optType (SetCG f)              = POpt
+    optType (IncrementalCG _)      = POpt
     optType (Directive d)          = POpt
     optType (BuildDir f)           = POpt
     optType (OutputDir f)          = POpt
@@ -821,6 +822,7 @@ errorMsg = unlines
   , "    --dumpvmcode <file>"
   , "    --debug-elab-check"
   , "    --codegen <cg>"
+  , "    --inc <cg>"
   , "    --directive <directive>"
   , "    --build-dir <dir>"
   , "    --output-dir <dir>"
