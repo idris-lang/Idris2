@@ -123,6 +123,7 @@
 * Legacy duplicating type `Given` (with constructor `Always`) is removed from the `Decidable.Decidable`.
   Use the type `IsYes` (with constructor `ItIsYes`) from the same module instead.
 * Adds `Data.List1.Elem`, ported from `Data.List.Elem`.
+* Adds `Data.List1.Quantifiers`, ported from `Data.List.Quantifiers`.
 
 #### Test
 
