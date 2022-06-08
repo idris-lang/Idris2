@@ -53,7 +53,7 @@ fuzzySearch expr = do
                          guard (isJust $ userNameRoot (fullname d))
                          pure d
        allDefs <- traverse (resolved ctxt) defs
-       filterM (\def => fuzzyMatch neg pos def.type) allDefs
+       filterM (predicate neg pos) allDefs
   put Ctxt defs
   doc <- traverse (docsOrSignature EmptyFC) $ fullname <$> filteredDefs
   pure $ PrintedDoc $ vsep doc
@@ -153,3 +153,11 @@ fuzzySearch expr = do
     let refsB = doFind [] tm
     refsB <- traverse toFullNames' refsB
     pure (isNil $ diffBy isApproximationOf' pos refsB)
+
+  predicate :  (neg : List NameOrConst)
+            -> (pos : List NameOrConst)
+            -> GlobalDef
+            -> Core Bool
+  predicate neg pos def = case definition def of
+    Hole{} => pure False
+    _ => fuzzyMatch neg pos def.type
