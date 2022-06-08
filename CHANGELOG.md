@@ -122,6 +122,7 @@
   instead of `export`, allowing them to be used with auto-implicit `IsYes`.
 * Legacy duplicating type `Given` (with constructor `Always`) is removed from the `Decidable.Decidable`.
   Use the type `IsYes` (with constructor `ItIsYes`) from the same module instead.
+* Adds `Data.List1.Elem`, ported from `Data.List.Elem`.
 
 #### Test
 
