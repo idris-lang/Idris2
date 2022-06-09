@@ -78,6 +78,7 @@ mutual
        NRef   : NameType -> Name -> NHead vars
        NMeta  : Name -> Int -> List (Closure vars) -> NHead vars
 
+
   -- Values themselves. 'Closure' is an unevaluated thunk, which means
   -- we can wait until necessary to reduce constructor arguments
   public export
@@ -99,6 +100,11 @@ mutual
        NPrimVal : FC -> Constant -> NF vars
        NErased  : FC -> (imp : Bool) -> NF vars
        NType    : FC -> Name -> NF vars
+
+%name LocalEnv lenv
+%name Closure cl
+%name NHead hd
+%name NF nf
 
 export
 ntCon : FC -> Name -> Int -> Nat -> List (FC, Closure vars) -> NF vars
@@ -132,6 +138,40 @@ export
 
 Show (Closure free) where
   show _ = "[closure]"
+
+export
+HasNames (NHead free) where
+  full defs (NRef nt n) = NRef nt <$> full defs n
+  full defs hd = pure hd
+
+  resolved defs (NRef nt n) = NRef nt <$> resolved defs n
+  resolved defs hd = pure hd
+
+export
+HasNames (NF free) where
+  full defs (NBind fc x bd f) = pure $ NBind fc x bd f
+  full defs (NApp fc hd xs) = pure $ NApp fc !(full defs hd) xs
+  full defs (NDCon fc n tag arity xs) = pure $ NDCon fc !(full defs n) tag arity xs
+  full defs (NTCon fc n tag arity xs) = pure $ NTCon fc !(full defs n) tag arity xs
+  full defs (NAs fc side nf nf1) = pure $ NAs fc side !(full defs nf) !(full defs nf1)
+  full defs (NDelayed fc lz nf) = pure $ NDelayed fc lz !(full defs nf)
+  full defs (NDelay fc lz cl cl1) = pure $ NDelay fc lz cl cl1
+  full defs (NForce fc lz nf xs) = pure $ NForce fc lz !(full defs nf) xs
+  full defs (NPrimVal fc cst) = pure $ NPrimVal fc cst
+  full defs (NErased fc imp) = pure $ NErased fc imp
+  full defs (NType fc n) = pure $ NType fc !(full defs n)
+
+  resolved defs (NBind fc x bd f) = pure $ NBind fc x bd f
+  resolved defs (NApp fc hd xs) = pure $ NApp fc !(resolved defs hd) xs
+  resolved defs (NDCon fc n tag arity xs) = pure $ NDCon fc !(resolved defs n) tag arity xs
+  resolved defs (NTCon fc n tag arity xs) = pure $ NTCon fc !(resolved defs n) tag arity xs
+  resolved defs (NAs fc side nf nf1) = pure $ NAs fc side !(resolved defs nf) !(resolved defs nf1)
+  resolved defs (NDelayed fc lz nf) = pure $ NDelayed fc lz !(resolved defs nf)
+  resolved defs (NDelay fc lz cl cl1) = pure $ NDelay fc lz cl cl1
+  resolved defs (NForce fc lz nf xs) = pure $ NForce fc lz !(resolved defs nf) xs
+  resolved defs (NPrimVal fc cst) = pure $ NPrimVal fc cst
+  resolved defs (NErased fc imp) = pure $ NErased fc imp
+  resolved defs (NType fc n) = pure $ NType fc !(resolved defs n)
 
 export
 covering
