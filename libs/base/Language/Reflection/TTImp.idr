@@ -8,11 +8,13 @@ import public Language.Reflection.TT
 mutual
   public export
   data BindMode = PI Count | PATTERN | COVERAGE | NONE
+  %name BindMode bm
 
   -- For as patterns matching linear arguments, select which side is
   -- consumed
   public export
   data UseSide = UseLeft | UseRight
+  %name UseSide side
 
   public export
   data DotReason = NonLinearVar
@@ -22,6 +24,7 @@ mutual
                  | UserDotted
                  | UnknownDot
                  | UnderAppliedCon
+  %name DotReason dr
 
   public export
   data TTImp : Type where
@@ -78,6 +81,7 @@ mutual
        -- at the end of elaborator
        Implicit : FC -> (bindIfUnsolved : Bool) -> TTImp
        IWithUnambigNames : FC -> List (FC, Name) -> TTImp -> TTImp
+  %name TTImp s, t, u
 
   public export
   data IFieldUpdate : Type where
