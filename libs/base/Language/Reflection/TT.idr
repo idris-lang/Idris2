@@ -53,6 +53,8 @@ data FC = MkFC        OriginDesc FilePos FilePos
           MkVirtualFC OriginDesc FilePos FilePos
         | EmptyFC
 
+%name FC fc
+
 public export
 emptyFC : FC
 emptyFC = EmptyFC
@@ -63,6 +65,8 @@ data NameType : Type where
      Func    : NameType
      DataCon : (tag : Int) -> (arity : Nat) -> NameType
      TyCon   : (tag : Int) -> (arity : Nat) -> NameType
+
+%name NameType nty
 
 public export
 data PrimType
@@ -80,6 +84,8 @@ data PrimType
     | CharType
     | DoubleType
     | WorldType
+
+%name PrimType pty
 
 public export
 data Constant
@@ -99,11 +105,50 @@ data Constant
     | PrT PrimType
     | WorldVal
 
+%name Constant c
+
+export
+Show PrimType where
+  show IntType = "Int"
+  show IntegerType = "Integer"
+  show Int8Type = "Int8"
+  show Int16Type = "Int16"
+  show Int32Type = "Int32"
+  show Int64Type = "Int64"
+  show Bits8Type = "Bits8"
+  show Bits16Type = "Bits16"
+  show Bits32Type = "Bits32"
+  show Bits64Type = "Bits64"
+  show StringType = "String"
+  show CharType = "Char"
+  show DoubleType = "Double"
+  show WorldType = "%World"
+
+export
+Show Constant where
+  show (I x) = show x
+  show (BI x) = show x
+  show (I8 x) = show x
+  show (I16 x) = show x
+  show (I32 x) = show x
+  show (I64 x) = show x
+  show (B8 x) = show x
+  show (B16 x) = show x
+  show (B32 x) = show x
+  show (B64 x) = show x
+  show (Str x) = show x
+  show (Ch x) = show x
+  show (Db x) = show x
+  show (PrT x) = show x
+  show WorldVal = "%World"
+
 public export
 data UserName
   = Basic String -- default name constructor       e.g. map
   | Field String -- field accessor                 e.g. .fst
   | Underscore   -- no name                        e.g. _
+
+%name UserName un
 
 public export
 data Name = NS Namespace Name -- name in a namespace
@@ -113,6 +158,8 @@ data Name = NS Namespace Name -- name in a namespace
           | Nested (Int, Int) Name -- nested function name
           | CaseBlock String Int -- case block nested in (resolved) name
           | WithBlock String Int -- with block nested in (resolved) name
+
+%name Name nm
 
 export
 Show UserName where
@@ -138,17 +185,21 @@ record NameInfo where
 
 public export
 data Count = M0 | M1 | MW
+%name Count rig
 
 public export
 data PiInfo t = ImplicitArg | ExplicitArg | AutoImplicit | DefImplicit t
+%name PiInfo pinfo
 
 public export
 data IsVar : Name -> Nat -> List Name -> Type where
      First : IsVar n Z (n :: ns)
      Later : IsVar n i ns -> IsVar n (S i) (m :: ns)
+%name IsVar idx
 
 public export
 data LazyReason = LInf | LLazy | LUnknown
+%name LazyReason lr
 
 export
 data TT : Type where [external]
@@ -176,12 +227,15 @@ data TT : List Name -> Type where
 
 public export
 data TotalReq = Total | CoveringOnly | PartialOK
+%name TotalReq treq
 
 public export
 data Visibility = Private | Export | Public
+%name Visibility vis
 
 public export
 data BuiltinType = BuiltinNatural | NaturalToInteger | IntegerToNatural
+%name BuiltinType bty
 
 public export
 Eq TotalReq where
