@@ -744,6 +744,18 @@ maximumIdempotent Z = Refl
 maximumIdempotent (S k) = cong S $ maximumIdempotent k
 
 export
+maximumLeftUpperBound : (m, n : Nat) -> m `LTE` maximum m n
+maximumLeftUpperBound 0 n = LTEZero
+maximumLeftUpperBound (S m) 0 = reflexive
+maximumLeftUpperBound (S m) (S n) = LTESucc (maximumLeftUpperBound m n)
+
+export
+maximumRightUpperBound : (m, n : Nat) -> n `LTE` maximum m n
+maximumRightUpperBound 0 n = reflexive
+maximumRightUpperBound (S m) 0 = LTEZero
+maximumRightUpperBound (S m) (S n) = LTESucc (maximumRightUpperBound m n)
+
+export
 minimumAssociative : (l, c, r : Nat) ->
   minimum l (minimum c r) = minimum (minimum l c) r
 minimumAssociative Z _ _ = Refl
