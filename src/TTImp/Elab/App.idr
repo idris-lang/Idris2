@@ -306,7 +306,7 @@ mutual
   needsDelayExpr True (IAutoApp _ f _) = needsDelayExpr True f
   needsDelayExpr True (INamedApp _ f _ _) = needsDelayExpr True f
   needsDelayExpr True (ILam _ _ _ _ _ _) = pure True
-  needsDelayExpr True (ICase _ _ _ _) = pure True
+  needsDelayExpr True (ICase _ _ _ _ _) = pure True
   needsDelayExpr True (ILocal _ _ _) = pure True
   needsDelayExpr True (IUpdate _ _ _) = pure True
   needsDelayExpr True (IAlternative _ _ _) = pure True

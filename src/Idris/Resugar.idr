@@ -306,13 +306,13 @@ mutual
            sc' <- toPTerm startPrec sc
            let var = PRef lhsFC (MkKindedName (Just Bound) n n)
            bracket p startPrec (PLet fc rig var ty' val' sc' [])
-  toPTerm p (ICase fc sc scty [PatClause _ lhs rhs])
+  toPTerm p (ICase fc rig sc scty [PatClause _ lhs rhs])
       = do sc' <- toPTerm startPrec sc
            lhs' <- toPTerm startPrec lhs
            rhs' <- toPTerm startPrec rhs
            bracket p startPrec
-                   (PLet fc top lhs' (PImplicit fc) sc' rhs' [])
-  toPTerm p (ICase fc sc scty alts)
+                   (PLet fc rig lhs' (PImplicit fc) sc' rhs' [])
+  toPTerm p (ICase fc rig sc scty alts)
       = do sc' <- toPTerm startPrec sc
            alts' <- traverse toPClause alts
            bracket p startPrec (mkIf (PCase fc sc' alts'))

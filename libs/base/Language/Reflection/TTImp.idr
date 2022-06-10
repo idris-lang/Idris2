@@ -33,7 +33,7 @@ mutual
        ILet : FC -> (lhsFC : FC) -> Count -> Name ->
               (nTy : TTImp) -> (nVal : TTImp) ->
               (scope : TTImp) -> TTImp
-       ICase : FC -> TTImp -> (ty : TTImp) ->
+       ICase : FC -> Count -> TTImp -> (ty : TTImp) ->
                List Clause -> TTImp
        ILocal : FC -> List Decl -> TTImp -> TTImp
        IUpdate : FC -> List IFieldUpdate -> TTImp -> TTImp
@@ -187,7 +187,7 @@ getFC (IVar fc y)                = fc
 getFC (IPi fc _ _ _ _ _)         = fc
 getFC (ILam fc _ _ _ _ _)        = fc
 getFC (ILet fc _ _ _ _ _ _)      = fc
-getFC (ICase fc _ _ _)           = fc
+getFC (ICase fc _ _ _ _)           = fc
 getFC (ILocal fc _ _)            = fc
 getFC (IUpdate fc _ _)           = fc
 getFC (IApp fc _ _)              = fc
@@ -435,7 +435,7 @@ Eq TTImp where
     c == c' && (assert_total $ i == i') && n == n' && a == a' && r == r'
   ILet _ _ c n ty val s == ILet _ _ c' n' ty' val' s' =
     c == c' && n == n' && ty == ty' && val == val' && s == s'
-  ICase _ t ty cs == ICase _ t' ty' cs'
+  ICase _ _ t ty cs == ICase _ _ t' ty' cs'
     = t == t' && ty == ty' && (assert_total $ cs == cs')
   ILocal _ ds e == ILocal _ ds' e' =
     (assert_total $ ds == ds') && e == e'

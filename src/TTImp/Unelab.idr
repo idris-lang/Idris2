@@ -165,7 +165,7 @@ mutual
                (tm, _) <- unelabTy Full nest env scrutinee
                Just pats' <- map sequence $ traverse (mkClause fc argpos args) pats
                  | _ => pure Nothing
-               pure $ Just $ ICase fc tm (Implicit fc False) pats'
+               pure $ Just $ ICase fc top tm (Implicit fc False) pats'
 
   dropParams : {auto c : Ref Ctxt Defs} ->
                List (Name, Nat) -> (IRawImp, Glued vars) ->

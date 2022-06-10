@@ -66,7 +66,7 @@ mutual
        ILet : FC -> (lhsFC : FC) -> RigCount -> Name ->
               (nTy : RawImp' nm) -> (nVal : RawImp' nm) ->
               (scope : RawImp' nm) -> RawImp' nm
-       ICase : FC -> RawImp' nm -> (ty : RawImp' nm) ->
+       ICase : FC -> RigCount -> RawImp' nm -> (ty : RawImp' nm) ->
                List (ImpClause' nm) -> RawImp' nm
        ILocal : FC -> List (ImpDecl' nm) -> RawImp' nm -> RawImp' nm
        -- Local definitions made elsewhere, but that we're pushing
@@ -157,8 +157,8 @@ mutual
       show (ILet fc lhsFC c n ty val sc)
          = "(%let " ++ show c ++ " " ++ " " ++ show n ++ " " ++ show ty ++
            " " ++ show val ++ " " ++ show sc ++ ")"
-      show (ICase _ scr scrty alts)
-         = "(%case (" ++ show scr ++ " : " ++ show scrty ++ ") " ++ show alts ++ ")"
+      show (ICase _ c scr scrty alts)
+         = "(%case (" ++ show c ++ show scr ++ " : " ++ show scrty ++ ") " ++ show alts ++ ")"
       show (ILocal _ def scope)
          = "(%local (" ++ show def ++ ") " ++ show scope ++ ")"
       show (ICaseLocal _ uname iname args sc)
@@ -831,7 +831,7 @@ getFC (IVar x _) = x
 getFC (IPi x _ _ _ _ _) = x
 getFC (ILam x _ _ _ _ _) = x
 getFC (ILet x _ _ _ _ _ _) = x
-getFC (ICase x _ _ _) = x
+getFC (ICase x _ _ _ _) = x
 getFC (ILocal x _ _) = x
 getFC (ICaseLocal x _ _ _ _) = x
 getFC (IUpdate x _ _) = x
@@ -980,8 +980,8 @@ mutual
     toBuf b (ILet fc lhsFC r n nTy nVal scope)
         = do tag 3; toBuf b fc; toBuf b lhsFC; toBuf b r; toBuf b n;
              toBuf b nTy; toBuf b nVal; toBuf b scope
-    toBuf b (ICase fc y ty xs)
-        = do tag 4; toBuf b fc; toBuf b y; toBuf b ty; toBuf b xs
+    toBuf b (ICase fc c y ty xs)
+        = do tag 4; toBuf b fc; toBuf b c; toBuf b y; toBuf b ty; toBuf b xs
     toBuf b (ILocal fc xs sc)
         = do tag 5; toBuf b fc; toBuf b xs; toBuf b sc
     toBuf b (ICaseLocal fc _ _ _ sc)
@@ -1066,9 +1066,10 @@ mutual
                        nTy <- fromBuf b; nVal <- fromBuf b
                        scope <- fromBuf b
                        pure (ILet fc lhsFC r n nTy nVal scope)
-               4 => do fc <- fromBuf b; y <- fromBuf b;
+               4 => do fc <- fromBuf b;
+                       r <- fromBuf b; y <- fromBuf b;
                        ty <- fromBuf b; xs <- fromBuf b
-                       pure (ICase fc y ty xs)
+                       pure (ICase fc r y ty xs)
                5 => do fc <- fromBuf b;
                        xs <- fromBuf b; sc <- fromBuf b
                        pure (ILocal fc xs sc)

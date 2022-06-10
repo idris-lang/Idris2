@@ -382,7 +382,7 @@ mutual
            alts <- block (caseAlt fname)
            end <- location
            pure (let fc = MkFC fname start end in
-                     ICase fc scr (Implicit fc False) alts)
+                     ICase fc top scr (Implicit fc False) alts)
 
   caseAlt : OriginDesc -> IndentInfo -> Rule ImpClause
   caseAlt fname indents

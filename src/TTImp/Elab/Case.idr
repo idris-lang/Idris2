@@ -210,8 +210,10 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          u <- uniVar fc
          (caseretty, _) <- bindImplicits fc (implicitMode elabinfo) defs env
                                          fullImps caseretty_in (TType fc u)
+         -- don't make the scrutinee Rig1 if it is empty.
+         let env' = if isErased caseRig then env else (allow splitOn (explicitPi env))
          let casefnty
-               = abstractFullEnvType fc (allow splitOn (explicitPi env))
+               = abstractFullEnvType fc env'
                             (maybe (Bind fc scrn (Pi fc caseRig Explicit scrty)
                                        (weaken caseretty))
                                    (const caseretty) splitOn)
@@ -384,10 +386,10 @@ checkCase : {vars : _} ->
             {auto o : Ref ROpts REPLOpts} ->
             RigCount -> ElabInfo ->
             NestedNames vars -> Env Term vars ->
-            FC -> (scr : RawImp) -> (ty : RawImp) -> List ImpClause ->
+            FC -> RigCount -> (scr : RawImp) -> (ty : RawImp) -> List ImpClause ->
             Maybe (Glued vars) ->
             Core (Term vars, Glued vars)
-checkCase rig elabinfo nest env fc scr scrty_in alts exp
+checkCase rig elabinfo nest env fc r scr scrty_in alts exp
     = delayElab fc rig env exp CaseBlock $
         do scrty_exp <- case scrty_in of
                              Implicit _ _ => guessScrType alts
@@ -403,8 +405,8 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
            log "elab.case" 5 $ "Checking " ++ show scr ++ " at " ++ show chrig
 
            (scrtm_in, gscrty, caseRig) <- handle
-              (do c <- runDelays (const True) $ check chrig elabinfo nest env scr (Just (gnf env scrtyv))
-                  pure (fst c, snd c, chrig))
+              (do c <- runDelays (const True) $ check (chrig |*| r) elabinfo nest env scr (Just (gnf env scrtyv))
+                  pure (fst c, snd c, chrig |*| r))
             $ \case
                 e@(LinearMisuse _ _ r _)
                   => branchOne

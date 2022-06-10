@@ -131,7 +131,7 @@ findBindableNamesQuot env used (ILam fc x y z argTy lamTy)
     = findBindableNamesQuot env used ![argTy, lamTy]
 findBindableNamesQuot env used (ILet fc lhsfc x y nTy nVal scope)
     = findBindableNamesQuot env used ![nTy, nVal, scope]
-findBindableNamesQuot env used (ICase fc x ty xs)
+findBindableNamesQuot env used (ICase fc rig x ty xs)
     = findBindableNamesQuot env used !([x, ty] ++ getRawImp !xs)
   where getRawImp : ImpClause -> List RawImp
         getRawImp (PatClause fc1 lhs rhs) = [lhs, rhs]
@@ -319,9 +319,9 @@ mutual
             ILet fc lhsFC r n (substNames' bvar bound ps nTy)
                               (substNames' bvar bound ps nVal)
                               (substNames' bvar bound' ps scope)
-  substNames' bvar bound ps (ICase fc y ty xs)
-      = ICase fc (substNames' bvar bound ps y) (substNames' bvar bound ps ty)
-                 (map (substNamesClause' bvar bound ps) xs)
+  substNames' bvar bound ps (ICase fc rig y ty xs)
+      = ICase fc rig (substNames' bvar bound ps y) (substNames' bvar bound ps ty)
+                     (map (substNamesClause' bvar bound ps) xs)
   substNames' bvar bound ps (ILocal fc xs y)
       = let bound' = definedInBlock emptyNS xs ++ bound in
             ILocal fc (map (substNamesDecl' bvar bound ps) xs)
@@ -426,9 +426,9 @@ mutual
       = ILet fc' fc' r n (substLoc fc' nTy)
                      (substLoc fc' nVal)
                      (substLoc fc' scope)
-  substLoc fc' (ICase fc y ty xs)
-      = ICase fc' (substLoc fc' y) (substLoc fc' ty)
-                  (map (substLocClause fc') xs)
+  substLoc fc' (ICase fc rig y ty xs)
+      = ICase fc' rig (substLoc fc' y) (substLoc fc' ty)
+                      (map (substLocClause fc') xs)
   substLoc fc' (ILocal fc xs y)
       = ILocal fc' (map (substLocDecl fc') xs)
                    (substLoc fc' y)
