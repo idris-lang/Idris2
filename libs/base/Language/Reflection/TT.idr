@@ -169,6 +169,19 @@ data Name = NS Namespace Name -- name in a namespace
 %name Name nm
 
 export
+dropNS : Name -> Name
+dropNS (NS _ n) = dropNS n
+dropNS n = n
+
+export
+isOp : Name -> Bool
+isOp nm = case dropNS nm of
+  UN (Basic n) => case strM n of
+    StrCons c _ => not (isAlpha c)
+    _ => False
+  _ => False
+
+export
 Show UserName where
   show (Basic n) = n
   show (Field n) = "." ++ n
