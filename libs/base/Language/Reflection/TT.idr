@@ -1,14 +1,19 @@
 module Language.Reflection.TT
 
 import public Data.List
+import Data.String
 
 %default total
 
 public export
 data Namespace = MkNS (List String) -- namespace, stored in reverse order
 
+%name Namespace ns
+
 public export
 data ModuleIdent = MkMI (List String) -- module identifier, stored in reverse order
+
+%name ModuleIdent mi
 
 export
 showSep : String -> List String -> String
@@ -41,6 +46,8 @@ data OriginDesc : Type where
   |||   where `fname` is path to the package file.
   PhysicalPkgSrc : (fname : String) -> OriginDesc
   Virtual : (ident : VirtualIdent) -> OriginDesc
+
+%name OriginDesc origin
 
 ||| A file context is a filename together with starting and ending positions.
 ||| It's often carried by AST nodes that might have been created from a source
@@ -187,9 +194,22 @@ public export
 data Count = M0 | M1 | MW
 %name Count rig
 
+export
+showCount : Count -> String -> String
+showCount M0 s = "0 \{s}"
+showCount M1 s = "1 \{s}"
+showCount MW s = s
+
 public export
 data PiInfo t = ImplicitArg | ExplicitArg | AutoImplicit | DefImplicit t
 %name PiInfo pinfo
+
+export
+showPiInfo : Show a => PiInfo a -> String -> String
+showPiInfo ImplicitArg s = "{\{s}}"
+showPiInfo ExplicitArg s = "(\{s})"
+showPiInfo AutoImplicit s = "{auto \{s}}"
+showPiInfo (DefImplicit t) s = "{default \{assert_total (show t)} \{s}}"
 
 public export
 data IsVar : Name -> Nat -> List Name -> Type where
@@ -203,6 +223,7 @@ data LazyReason = LInf | LLazy | LUnknown
 
 export
 data TT : Type where [external]
+%name TT s, t, u
 
 {-
 -- Type checked terms in the core TT
@@ -229,13 +250,36 @@ public export
 data TotalReq = Total | CoveringOnly | PartialOK
 %name TotalReq treq
 
+export
+Show TotalReq where
+  show Total = "total"
+  show CoveringOnly = "covering"
+  show PartialOK = "partial"
+
+export
+showTotalReq : Maybe TotalReq -> String -> String
+showTotalReq Nothing s = s
+showTotalReq (Just treq) s = unwords [show treq, s]
+
 public export
 data Visibility = Private | Export | Public
 %name Visibility vis
 
+export
+Show Visibility where
+  show Private = "private"
+  show Export = "export"
+  show Public = "public export"
+
 public export
 data BuiltinType = BuiltinNatural | NaturalToInteger | IntegerToNatural
 %name BuiltinType bty
+
+export
+Show BuiltinType where
+  show BuiltinNatural = "Natural"
+  show NaturalToInteger = "NaturalToInteger"
+  show IntegerToNatural = "IntegerToNatural"
 
 public export
 Eq TotalReq where
