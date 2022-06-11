@@ -211,7 +211,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          (caseretty, _) <- bindImplicits fc (implicitMode elabinfo) defs env
                                          fullImps caseretty_in (TType fc u)
          -- don't make the scrutinee Rig1 if it is empty.
-         let env' = if isErased caseRig then env else (allow splitOn (explicitPi env))
+         let env' = if isErased caseRig then explicitPi env else (allow splitOn (explicitPi env))
          let casefnty
                = abstractFullEnvType fc env'
                             (maybe (Bind fc scrn (Pi fc caseRig Explicit scrty)
