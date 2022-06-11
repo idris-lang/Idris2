@@ -158,7 +158,7 @@ mutual
          = "(%let " ++ show c ++ " " ++ " " ++ show n ++ " " ++ show ty ++
            " " ++ show val ++ " " ++ show sc ++ ")"
       show (ICase _ c scr scrty alts)
-         = "(%case (" ++ show c ++ show scr ++ " : " ++ show scrty ++ ") " ++ show alts ++ ")"
+         = "(%case (" ++ show c ++ " " ++ show scr ++ " : " ++ show scrty ++ ") " ++ show alts ++ ")"
       show (ILocal _ def scope)
          = "(%local (" ++ show def ++ ") " ++ show scope ++ ")"
       show (ICaseLocal _ uname iname args sc)
