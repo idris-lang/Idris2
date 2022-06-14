@@ -124,6 +124,8 @@
   Use the type `IsYes` (with constructor `ItIsYes`) from the same module instead.
 * Adds `Data.List1.Elem`, ported from `Data.List.Elem`.
 * Adds `Data.List1.Quantifiers`, ported from `Data.List.Quantifiers`.
+* Changes the order of arguments in `RWST` transformer's runners functions (`runRWST`. `evalRWST`, `execRWST`),
+  now transformer argument is the last, as in the other standard transformers, like `ReaderT` and `StateT`.
 
 #### Test
 
