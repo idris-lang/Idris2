@@ -403,7 +403,7 @@ mutual
                  Implicit _ _ => tm
                  IAs _ _ _ _ (IBindVar _ _) => tm
                  IAs _ _ _ _ (Implicit _ _) => tm
-                 IAs fc nameFC p t arg => IAs fc nameFC p t (IMustUnify fc ErasedArg tm)
+                 IAs fc nameFC p t arg => IAs fc nameFC p t (IMustUnify fc ErasedArg arg)
                  _ => IMustUnify (getFC tm) ErasedArg tm
   dotErased _ _ _ _ _ tm = pure tm
 
