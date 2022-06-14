@@ -321,85 +321,84 @@
 <div id="line200"><a href="#line200" class="IdrisLineNumber"> 200 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisFunction">id</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(1</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">a</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">b</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">a</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">b</span></div>
 <div id="line201"><a href="#line201" class="IdrisLineNumber"> 201 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisFunction">id</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">f</span></div>
 <div id="line202"><a href="#line202" class="IdrisLineNumber"> 202 | </a></div>
-<div id="line203"><a href="#line203" class="IdrisLineNumber"> 203 | </a></div>
-<div id="line204"><a href="#line204" class="IdrisLineNumber"> 204 | </a><span class="IdrisKeyword">export</span>&nbsp;<span class="IdrisKeyword">partial</span></div>
-<div id="line205"><a href="#line205" class="IdrisLineNumber"> 205 | </a><span class="IdrisPostulate">idris_crash</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">String</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">a</span></div>
-<div id="line206"><a href="#line206" class="IdrisLineNumber"> 206 | </a><span class="IdrisPostulate">idris_crash</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisPostulate">prim__crash</span>&nbsp;<span class="IdrisKeyword">_</span></div>
-<div id="line207"><a href="#line207" class="IdrisLineNumber"> 207 | </a></div>
-<div id="line208"><a href="#line208" class="IdrisLineNumber"> 208 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span>&nbsp;<span class="IdrisKeyword">%inline</span></div>
-<div id="line209"><a href="#line209" class="IdrisLineNumber"> 209 | </a><span class="IdrisFunction">delay</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">a</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Lazy</span>&nbsp;<span class="IdrisBound">a</span></div>
-<div id="line210"><a href="#line210" class="IdrisLineNumber"> 210 | </a><span class="IdrisFunction">delay</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">Delay</span>&nbsp;<span class="IdrisBound">x</span></div>
-<div id="line211"><a href="#line211" class="IdrisLineNumber"> 211 | </a></div>
-<div id="line212"><a href="#line212" class="IdrisLineNumber"> 212 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span>&nbsp;<span class="IdrisKeyword">%inline</span></div>
-<div id="line213"><a href="#line213" class="IdrisLineNumber"> 213 | </a><span class="IdrisFunction">force</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Lazy</span>&nbsp;<span class="IdrisBound">a</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">a</span></div>
-<div id="line214"><a href="#line214" class="IdrisLineNumber"> 214 | </a><span class="IdrisFunction">force</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">Force</span>&nbsp;<span class="IdrisBound">x</span></div>
-<div id="line215"><a href="#line215" class="IdrisLineNumber"> 215 | </a></div>
-<div id="line216"><a href="#line216" class="IdrisLineNumber"> 216 | </a><span class="IdrisKeyword">%stringLit</span>&nbsp;fromString</div>
-<div id="line217"><a href="#line217" class="IdrisLineNumber"> 217 | </a></div>
-<div id="line218"><a href="#line218" class="IdrisLineNumber"> 218 | </a><span class="IdrisComment">|||&nbsp;Interface&nbsp;for&nbsp;types&nbsp;that&nbsp;can&nbsp;be&nbsp;constructed&nbsp;from&nbsp;string&nbsp;literals.</span></div>
-<div id="line219"><a href="#line219" class="IdrisLineNumber"> 219 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
-<div id="line220"><a href="#line220" class="IdrisLineNumber"> 220 | </a><span class="IdrisKeyword">interface</span>&nbsp;<span class="IdrisType">FromString</span>&nbsp;<span class="IdrisBound">ty</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line221"><a href="#line221" class="IdrisLineNumber"> 221 | </a>&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkFromString</span></div>
-<div id="line222"><a href="#line222" class="IdrisLineNumber"> 222 | </a>&nbsp;&nbsp;<span class="IdrisComment">|||&nbsp;Conversion&nbsp;from&nbsp;String.</span></div>
-<div id="line223"><a href="#line223" class="IdrisLineNumber"> 223 | </a>&nbsp;&nbsp;<span class="IdrisFunction">fromString</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">String</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">ty</span></div>
-<div id="line224"><a href="#line224" class="IdrisLineNumber"> 224 | </a></div>
-<div id="line225"><a href="#line225" class="IdrisLineNumber"> 225 | </a><span class="IdrisKeyword">%allow_overloads</span>&nbsp;fromString</div>
-<div id="line226"><a href="#line226" class="IdrisLineNumber"> 226 | </a></div>
-<div id="line227"><a href="#line227" class="IdrisLineNumber"> 227 | </a><span class="IdrisKeyword">%inline</span></div>
-<div id="line228"><a href="#line228" class="IdrisLineNumber"> 228 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
-<div id="line229"><a href="#line229" class="IdrisLineNumber"> 229 | </a><span class="IdrisType">FromString</span>&nbsp;<span class="IdrisType">String</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line230"><a href="#line230" class="IdrisLineNumber"> 230 | </a>&nbsp;&nbsp;<span class="IdrisFunction">fromString</span>&nbsp;<span class="IdrisBound">s</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">s</span></div>
-<div id="line231"><a href="#line231" class="IdrisLineNumber"> 231 | </a></div>
-<div id="line232"><a href="#line232" class="IdrisLineNumber"> 232 | </a><span class="IdrisKeyword">%defaulthint</span></div>
-<div id="line233"><a href="#line233" class="IdrisLineNumber"> 233 | </a><span class="IdrisKeyword">%inline</span></div>
-<div id="line234"><a href="#line234" class="IdrisLineNumber"> 234 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
-<div id="line235"><a href="#line235" class="IdrisLineNumber"> 235 | </a><span class="IdrisFunction">defaultString</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">FromString</span>&nbsp;<span class="IdrisType">String</span></div>
-<div id="line236"><a href="#line236" class="IdrisLineNumber"> 236 | </a><span class="IdrisFunction">defaultString</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisKeyword">%search</span></div>
-<div id="line237"><a href="#line237" class="IdrisLineNumber"> 237 | </a></div>
-<div id="line238"><a href="#line238" class="IdrisLineNumber"> 238 | </a><span class="IdrisKeyword">%charLit</span>&nbsp;fromChar</div>
-<div id="line239"><a href="#line239" class="IdrisLineNumber"> 239 | </a></div>
-<div id="line240"><a href="#line240" class="IdrisLineNumber"> 240 | </a><span class="IdrisComment">|||&nbsp;Interface&nbsp;for&nbsp;types&nbsp;that&nbsp;can&nbsp;be&nbsp;constructed&nbsp;from&nbsp;char&nbsp;literals.</span></div>
-<div id="line241"><a href="#line241" class="IdrisLineNumber"> 241 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
-<div id="line242"><a href="#line242" class="IdrisLineNumber"> 242 | </a><span class="IdrisKeyword">interface</span>&nbsp;<span class="IdrisType">FromChar</span>&nbsp;<span class="IdrisBound">ty</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line243"><a href="#line243" class="IdrisLineNumber"> 243 | </a>&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkFromChar</span></div>
-<div id="line244"><a href="#line244" class="IdrisLineNumber"> 244 | </a>&nbsp;&nbsp;<span class="IdrisComment">|||&nbsp;Conversion&nbsp;from&nbsp;Char.</span></div>
-<div id="line245"><a href="#line245" class="IdrisLineNumber"> 245 | </a>&nbsp;&nbsp;<span class="IdrisFunction">fromChar</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Char</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">ty</span></div>
-<div id="line246"><a href="#line246" class="IdrisLineNumber"> 246 | </a></div>
-<div id="line247"><a href="#line247" class="IdrisLineNumber"> 247 | </a><span class="IdrisKeyword">%allow_overloads</span>&nbsp;fromChar</div>
-<div id="line248"><a href="#line248" class="IdrisLineNumber"> 248 | </a></div>
-<div id="line249"><a href="#line249" class="IdrisLineNumber"> 249 | </a><span class="IdrisKeyword">%inline</span></div>
-<div id="line250"><a href="#line250" class="IdrisLineNumber"> 250 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
-<div id="line251"><a href="#line251" class="IdrisLineNumber"> 251 | </a><span class="IdrisType">FromChar</span>&nbsp;<span class="IdrisType">Char</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line252"><a href="#line252" class="IdrisLineNumber"> 252 | </a>&nbsp;&nbsp;<span class="IdrisFunction">fromChar</span>&nbsp;<span class="IdrisBound">s</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">s</span></div>
-<div id="line253"><a href="#line253" class="IdrisLineNumber"> 253 | </a></div>
-<div id="line254"><a href="#line254" class="IdrisLineNumber"> 254 | </a><span class="IdrisKeyword">%defaulthint</span></div>
-<div id="line255"><a href="#line255" class="IdrisLineNumber"> 255 | </a><span class="IdrisKeyword">%inline</span></div>
-<div id="line256"><a href="#line256" class="IdrisLineNumber"> 256 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
-<div id="line257"><a href="#line257" class="IdrisLineNumber"> 257 | </a><span class="IdrisFunction">defaultChar</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">FromChar</span>&nbsp;<span class="IdrisType">Char</span></div>
-<div id="line258"><a href="#line258" class="IdrisLineNumber"> 258 | </a><span class="IdrisFunction">defaultChar</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisKeyword">%search</span></div>
-<div id="line259"><a href="#line259" class="IdrisLineNumber"> 259 | </a></div>
-<div id="line260"><a href="#line260" class="IdrisLineNumber"> 260 | </a><span class="IdrisKeyword">%doubleLit</span>&nbsp;fromDouble</div>
-<div id="line261"><a href="#line261" class="IdrisLineNumber"> 261 | </a></div>
-<div id="line262"><a href="#line262" class="IdrisLineNumber"> 262 | </a><span class="IdrisComment">|||&nbsp;Interface&nbsp;for&nbsp;types&nbsp;that&nbsp;can&nbsp;be&nbsp;constructed&nbsp;from&nbsp;double&nbsp;literals.</span></div>
-<div id="line263"><a href="#line263" class="IdrisLineNumber"> 263 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
-<div id="line264"><a href="#line264" class="IdrisLineNumber"> 264 | </a><span class="IdrisKeyword">interface</span>&nbsp;<span class="IdrisType">FromDouble</span>&nbsp;<span class="IdrisBound">ty</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line265"><a href="#line265" class="IdrisLineNumber"> 265 | </a>&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkFromDouble</span></div>
-<div id="line266"><a href="#line266" class="IdrisLineNumber"> 266 | </a>&nbsp;&nbsp;<span class="IdrisComment">|||&nbsp;Conversion&nbsp;from&nbsp;Double.</span></div>
-<div id="line267"><a href="#line267" class="IdrisLineNumber"> 267 | </a>&nbsp;&nbsp;<span class="IdrisFunction">fromDouble</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Double</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">ty</span></div>
-<div id="line268"><a href="#line268" class="IdrisLineNumber"> 268 | </a></div>
-<div id="line269"><a href="#line269" class="IdrisLineNumber"> 269 | </a><span class="IdrisKeyword">%allow_overloads</span>&nbsp;fromDouble</div>
-<div id="line270"><a href="#line270" class="IdrisLineNumber"> 270 | </a></div>
-<div id="line271"><a href="#line271" class="IdrisLineNumber"> 271 | </a><span class="IdrisKeyword">%inline</span></div>
-<div id="line272"><a href="#line272" class="IdrisLineNumber"> 272 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
-<div id="line273"><a href="#line273" class="IdrisLineNumber"> 273 | </a><span class="IdrisType">FromDouble</span>&nbsp;<span class="IdrisType">Double</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line274"><a href="#line274" class="IdrisLineNumber"> 274 | </a>&nbsp;&nbsp;<span class="IdrisFunction">fromDouble</span>&nbsp;<span class="IdrisBound">s</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">s</span></div>
-<div id="line275"><a href="#line275" class="IdrisLineNumber"> 275 | </a></div>
-<div id="line276"><a href="#line276" class="IdrisLineNumber"> 276 | </a><span class="IdrisKeyword">%defaulthint</span></div>
-<div id="line277"><a href="#line277" class="IdrisLineNumber"> 277 | </a><span class="IdrisKeyword">%inline</span></div>
-<div id="line278"><a href="#line278" class="IdrisLineNumber"> 278 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
-<div id="line279"><a href="#line279" class="IdrisLineNumber"> 279 | </a><span class="IdrisFunction">defaultDouble</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">FromDouble</span>&nbsp;<span class="IdrisType">Double</span></div>
-<div id="line280"><a href="#line280" class="IdrisLineNumber"> 280 | </a><span class="IdrisFunction">defaultDouble</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisKeyword">%search</span></div>
-<div id="line281"><a href="#line281" class="IdrisLineNumber"> 281 | </a></div>
+<div id="line203"><a href="#line203" class="IdrisLineNumber"> 203 | </a><span class="IdrisKeyword">export</span>&nbsp;<span class="IdrisKeyword">partial</span></div>
+<div id="line204"><a href="#line204" class="IdrisLineNumber"> 204 | </a><span class="IdrisPostulate">idris_crash</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">String</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">a</span></div>
+<div id="line205"><a href="#line205" class="IdrisLineNumber"> 205 | </a><span class="IdrisPostulate">idris_crash</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisPostulate">prim__crash</span>&nbsp;<span class="IdrisKeyword">_</span></div>
+<div id="line206"><a href="#line206" class="IdrisLineNumber"> 206 | </a></div>
+<div id="line207"><a href="#line207" class="IdrisLineNumber"> 207 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span>&nbsp;<span class="IdrisKeyword">%inline</span></div>
+<div id="line208"><a href="#line208" class="IdrisLineNumber"> 208 | </a><span class="IdrisFunction">delay</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">a</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Lazy</span>&nbsp;<span class="IdrisBound">a</span></div>
+<div id="line209"><a href="#line209" class="IdrisLineNumber"> 209 | </a><span class="IdrisFunction">delay</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">Delay</span>&nbsp;<span class="IdrisBound">x</span></div>
+<div id="line210"><a href="#line210" class="IdrisLineNumber"> 210 | </a></div>
+<div id="line211"><a href="#line211" class="IdrisLineNumber"> 211 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span>&nbsp;<span class="IdrisKeyword">%inline</span></div>
+<div id="line212"><a href="#line212" class="IdrisLineNumber"> 212 | </a><span class="IdrisFunction">force</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Lazy</span>&nbsp;<span class="IdrisBound">a</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">a</span></div>
+<div id="line213"><a href="#line213" class="IdrisLineNumber"> 213 | </a><span class="IdrisFunction">force</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">Force</span>&nbsp;<span class="IdrisBound">x</span></div>
+<div id="line214"><a href="#line214" class="IdrisLineNumber"> 214 | </a></div>
+<div id="line215"><a href="#line215" class="IdrisLineNumber"> 215 | </a><span class="IdrisKeyword">%stringLit</span>&nbsp;fromString</div>
+<div id="line216"><a href="#line216" class="IdrisLineNumber"> 216 | </a></div>
+<div id="line217"><a href="#line217" class="IdrisLineNumber"> 217 | </a><span class="IdrisComment">|||&nbsp;Interface&nbsp;for&nbsp;types&nbsp;that&nbsp;can&nbsp;be&nbsp;constructed&nbsp;from&nbsp;string&nbsp;literals.</span></div>
+<div id="line218"><a href="#line218" class="IdrisLineNumber"> 218 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line219"><a href="#line219" class="IdrisLineNumber"> 219 | </a><span class="IdrisKeyword">interface</span>&nbsp;<span class="IdrisType">FromString</span>&nbsp;<span class="IdrisBound">ty</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line220"><a href="#line220" class="IdrisLineNumber"> 220 | </a>&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkFromString</span></div>
+<div id="line221"><a href="#line221" class="IdrisLineNumber"> 221 | </a>&nbsp;&nbsp;<span class="IdrisComment">|||&nbsp;Conversion&nbsp;from&nbsp;String.</span></div>
+<div id="line222"><a href="#line222" class="IdrisLineNumber"> 222 | </a>&nbsp;&nbsp;<span class="IdrisFunction">fromString</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">String</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">ty</span></div>
+<div id="line223"><a href="#line223" class="IdrisLineNumber"> 223 | </a></div>
+<div id="line224"><a href="#line224" class="IdrisLineNumber"> 224 | </a><span class="IdrisKeyword">%allow_overloads</span>&nbsp;fromString</div>
+<div id="line225"><a href="#line225" class="IdrisLineNumber"> 225 | </a></div>
+<div id="line226"><a href="#line226" class="IdrisLineNumber"> 226 | </a><span class="IdrisKeyword">%inline</span></div>
+<div id="line227"><a href="#line227" class="IdrisLineNumber"> 227 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line228"><a href="#line228" class="IdrisLineNumber"> 228 | </a><span class="IdrisType">FromString</span>&nbsp;<span class="IdrisType">String</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line229"><a href="#line229" class="IdrisLineNumber"> 229 | </a>&nbsp;&nbsp;<span class="IdrisFunction">fromString</span>&nbsp;<span class="IdrisBound">s</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">s</span></div>
+<div id="line230"><a href="#line230" class="IdrisLineNumber"> 230 | </a></div>
+<div id="line231"><a href="#line231" class="IdrisLineNumber"> 231 | </a><span class="IdrisKeyword">%defaulthint</span></div>
+<div id="line232"><a href="#line232" class="IdrisLineNumber"> 232 | </a><span class="IdrisKeyword">%inline</span></div>
+<div id="line233"><a href="#line233" class="IdrisLineNumber"> 233 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line234"><a href="#line234" class="IdrisLineNumber"> 234 | </a><span class="IdrisFunction">defaultString</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">FromString</span>&nbsp;<span class="IdrisType">String</span></div>
+<div id="line235"><a href="#line235" class="IdrisLineNumber"> 235 | </a><span class="IdrisFunction">defaultString</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisKeyword">%search</span></div>
+<div id="line236"><a href="#line236" class="IdrisLineNumber"> 236 | </a></div>
+<div id="line237"><a href="#line237" class="IdrisLineNumber"> 237 | </a><span class="IdrisKeyword">%charLit</span>&nbsp;fromChar</div>
+<div id="line238"><a href="#line238" class="IdrisLineNumber"> 238 | </a></div>
+<div id="line239"><a href="#line239" class="IdrisLineNumber"> 239 | </a><span class="IdrisComment">|||&nbsp;Interface&nbsp;for&nbsp;types&nbsp;that&nbsp;can&nbsp;be&nbsp;constructed&nbsp;from&nbsp;char&nbsp;literals.</span></div>
+<div id="line240"><a href="#line240" class="IdrisLineNumber"> 240 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line241"><a href="#line241" class="IdrisLineNumber"> 241 | </a><span class="IdrisKeyword">interface</span>&nbsp;<span class="IdrisType">FromChar</span>&nbsp;<span class="IdrisBound">ty</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line242"><a href="#line242" class="IdrisLineNumber"> 242 | </a>&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkFromChar</span></div>
+<div id="line243"><a href="#line243" class="IdrisLineNumber"> 243 | </a>&nbsp;&nbsp;<span class="IdrisComment">|||&nbsp;Conversion&nbsp;from&nbsp;Char.</span></div>
+<div id="line244"><a href="#line244" class="IdrisLineNumber"> 244 | </a>&nbsp;&nbsp;<span class="IdrisFunction">fromChar</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Char</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">ty</span></div>
+<div id="line245"><a href="#line245" class="IdrisLineNumber"> 245 | </a></div>
+<div id="line246"><a href="#line246" class="IdrisLineNumber"> 246 | </a><span class="IdrisKeyword">%allow_overloads</span>&nbsp;fromChar</div>
+<div id="line247"><a href="#line247" class="IdrisLineNumber"> 247 | </a></div>
+<div id="line248"><a href="#line248" class="IdrisLineNumber"> 248 | </a><span class="IdrisKeyword">%inline</span></div>
+<div id="line249"><a href="#line249" class="IdrisLineNumber"> 249 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line250"><a href="#line250" class="IdrisLineNumber"> 250 | </a><span class="IdrisType">FromChar</span>&nbsp;<span class="IdrisType">Char</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line251"><a href="#line251" class="IdrisLineNumber"> 251 | </a>&nbsp;&nbsp;<span class="IdrisFunction">fromChar</span>&nbsp;<span class="IdrisBound">s</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">s</span></div>
+<div id="line252"><a href="#line252" class="IdrisLineNumber"> 252 | </a></div>
+<div id="line253"><a href="#line253" class="IdrisLineNumber"> 253 | </a><span class="IdrisKeyword">%defaulthint</span></div>
+<div id="line254"><a href="#line254" class="IdrisLineNumber"> 254 | </a><span class="IdrisKeyword">%inline</span></div>
+<div id="line255"><a href="#line255" class="IdrisLineNumber"> 255 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line256"><a href="#line256" class="IdrisLineNumber"> 256 | </a><span class="IdrisFunction">defaultChar</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">FromChar</span>&nbsp;<span class="IdrisType">Char</span></div>
+<div id="line257"><a href="#line257" class="IdrisLineNumber"> 257 | </a><span class="IdrisFunction">defaultChar</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisKeyword">%search</span></div>
+<div id="line258"><a href="#line258" class="IdrisLineNumber"> 258 | </a></div>
+<div id="line259"><a href="#line259" class="IdrisLineNumber"> 259 | </a><span class="IdrisKeyword">%doubleLit</span>&nbsp;fromDouble</div>
+<div id="line260"><a href="#line260" class="IdrisLineNumber"> 260 | </a></div>
+<div id="line261"><a href="#line261" class="IdrisLineNumber"> 261 | </a><span class="IdrisComment">|||&nbsp;Interface&nbsp;for&nbsp;types&nbsp;that&nbsp;can&nbsp;be&nbsp;constructed&nbsp;from&nbsp;double&nbsp;literals.</span></div>
+<div id="line262"><a href="#line262" class="IdrisLineNumber"> 262 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line263"><a href="#line263" class="IdrisLineNumber"> 263 | </a><span class="IdrisKeyword">interface</span>&nbsp;<span class="IdrisType">FromDouble</span>&nbsp;<span class="IdrisBound">ty</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line264"><a href="#line264" class="IdrisLineNumber"> 264 | </a>&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkFromDouble</span></div>
+<div id="line265"><a href="#line265" class="IdrisLineNumber"> 265 | </a>&nbsp;&nbsp;<span class="IdrisComment">|||&nbsp;Conversion&nbsp;from&nbsp;Double.</span></div>
+<div id="line266"><a href="#line266" class="IdrisLineNumber"> 266 | </a>&nbsp;&nbsp;<span class="IdrisFunction">fromDouble</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Double</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">ty</span></div>
+<div id="line267"><a href="#line267" class="IdrisLineNumber"> 267 | </a></div>
+<div id="line268"><a href="#line268" class="IdrisLineNumber"> 268 | </a><span class="IdrisKeyword">%allow_overloads</span>&nbsp;fromDouble</div>
+<div id="line269"><a href="#line269" class="IdrisLineNumber"> 269 | </a></div>
+<div id="line270"><a href="#line270" class="IdrisLineNumber"> 270 | </a><span class="IdrisKeyword">%inline</span></div>
+<div id="line271"><a href="#line271" class="IdrisLineNumber"> 271 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line272"><a href="#line272" class="IdrisLineNumber"> 272 | </a><span class="IdrisType">FromDouble</span>&nbsp;<span class="IdrisType">Double</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line273"><a href="#line273" class="IdrisLineNumber"> 273 | </a>&nbsp;&nbsp;<span class="IdrisFunction">fromDouble</span>&nbsp;<span class="IdrisBound">s</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">s</span></div>
+<div id="line274"><a href="#line274" class="IdrisLineNumber"> 274 | </a></div>
+<div id="line275"><a href="#line275" class="IdrisLineNumber"> 275 | </a><span class="IdrisKeyword">%defaulthint</span></div>
+<div id="line276"><a href="#line276" class="IdrisLineNumber"> 276 | </a><span class="IdrisKeyword">%inline</span></div>
+<div id="line277"><a href="#line277" class="IdrisLineNumber"> 277 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line278"><a href="#line278" class="IdrisLineNumber"> 278 | </a><span class="IdrisFunction">defaultDouble</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">FromDouble</span>&nbsp;<span class="IdrisType">Double</span></div>
+<div id="line279"><a href="#line279" class="IdrisLineNumber"> 279 | </a><span class="IdrisFunction">defaultDouble</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisKeyword">%search</span></div>
+<div id="line280"><a href="#line280" class="IdrisLineNumber"> 280 | </a></div>
 </code>
 </body>
 </html>
