@@ -75,10 +75,10 @@ public export %inline
   tell w' = writer ((), w')
 
   listen m = MkRWST $ \r,s,w =>
-               (\(a,s',w') => ((a,w'),s',w <+> w')) <$> runRWST m r s
+               (\(a,s',w') => ((a,w'),s',w <+> w')) <$> runRWST r s m
 
   pass m = MkRWST $ \r,s,w =>
-             (\((a,f),s',w') => (a,s',w <+> f w')) <$> runRWST m r s
+             (\((a,f),s',w') => (a,s',w <+> f w')) <$> runRWST r s m
 
 public export %inline
 MonadWriter w m => MonadWriter w (EitherT e m) where
