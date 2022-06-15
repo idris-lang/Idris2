@@ -601,9 +601,9 @@ mutual
     showPrec d (ILet fc lhsFC rig nm nTy nVal scope)
       = showParens (d > Open) $
           "let \{showCount rig (show nm)} : \{show nTy} = \{show nVal} in \{show scope}"
-    showPrec d (ICase fc s ty xs)
+    showPrec d (ICase fc rig s ty xs)
       = showParens (d > Open) $
-          unwords [ "case", show s, ":", show ty, "of", "{"
+          unwords [ "case", showCount rig (show s), ":", show ty, "of", "{"
                   , joinBy "; " (assert_total $ map show xs)
                   , "}"
                   ]
