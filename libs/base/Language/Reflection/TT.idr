@@ -218,11 +218,11 @@ data PiInfo t = ImplicitArg | ExplicitArg | AutoImplicit | DefImplicit t
 %name PiInfo pinfo
 
 export
-showPiInfo : Show a => PiInfo a -> String -> String
+showPiInfo : Show a => {default True wrapExplicit : Bool} -> PiInfo a -> String -> String
 showPiInfo ImplicitArg s = "{\{s}}"
-showPiInfo ExplicitArg s = "(\{s})"
+showPiInfo ExplicitArg s = if wrapExplicit then "(\{s})" else s
 showPiInfo AutoImplicit s = "{auto \{s}}"
-showPiInfo (DefImplicit t) s = "{default \{assert_total (show t)} \{s}}"
+showPiInfo (DefImplicit t) s = "{default \{assert_total $ showPrec App t} \{s}}"
 
 public export
 data IsVar : Name -> Nat -> List Name -> Type where
