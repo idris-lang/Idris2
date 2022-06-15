@@ -435,8 +435,8 @@ Eq TTImp where
     c == c' && (assert_total $ i == i') && n == n' && a == a' && r == r'
   ILet _ _ c n ty val s == ILet _ _ c' n' ty' val' s' =
     c == c' && n == n' && ty == ty' && val == val' && s == s'
-  ICase _ _ t ty cs == ICase _ _ t' ty' cs'
-    = t == t' && ty == ty' && (assert_total $ cs == cs')
+  ICase _ c t ty cs == ICase _ c' t' ty' cs'
+    = c == c' && t == t' && ty == ty' && (assert_total $ cs == cs')
   ILocal _ ds e == ILocal _ ds' e' =
     (assert_total $ ds == ds') && e == e'
   IUpdate _ fs t == IUpdate _ fs' t' =

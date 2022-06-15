@@ -196,7 +196,7 @@ mutual
                                     !(desugar AnyExpr (n :: ps) scope)
            else pure $ ILam EmptyFC rig !(traverse (desugar AnyExpr ps) p)
                    (Just (MN "lamc" 0)) !(desugarB AnyExpr ps argTy) $
-                 ICase fc top (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
+                 ICase fc rig (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [snd !(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLam fc rig p (PRef _ n@(MN _ _)) argTy scope)
       = pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
@@ -209,7 +209,7 @@ mutual
   desugarB side ps (PLam fc rig p pat argTy scope)
       = pure $ ILam EmptyFC rig !(traverse (desugar AnyExpr ps) p)
                    (Just (MN "lamc" 0)) !(desugarB AnyExpr ps argTy) $
-                 ICase fc top (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
+                 ICase fc rig (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [snd !(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLet fc rig (PRef prefFC n) nTy nVal scope [])
       = do whenJust (isConcreteFC prefFC) $ \nfc =>
