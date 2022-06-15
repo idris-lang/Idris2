@@ -144,7 +144,15 @@ namespace RuleName
   export
   toName : RuleName -> Name
   toName (Free nm) = nm
-  toName (Bound n) = MN "bound_variable_auto_search" (cast n)
+  toName (Bound n) = DN (pack $ display n)
+                   $ MN "bound_variable_auto_search" (cast n)
+
+    where
+    display : Nat -> List Char
+    display n =
+      let (p, q) = divmodNatNZ n 26 SIsNonZero in
+      cast (q + cast 'a') :: if p == 0 then [] else display (assert_smaller n (pred p))
+
 
 export
 Show RuleName where
@@ -684,9 +692,8 @@ namespace Example
   mkPair : a -> b -> Pair a b
   mkPair a b = (a, b)
 
-  export
-  listFromDupTest : ((a -> (a, a)) -> List a) -> a -> List a
-  listFromDupTest = %runElab (bySearch 5 [%runElab (mkRule `{mkPair})])
+  listFromDupTest : (a -> (a -> (a, a)) -> List a) -> a -> List a
+  listFromDupTest = %runElab (bySearch 6 [%runElab (mkRule `{mkPair})])
 
   even0Test : Even Z
   even0Test = %runElab (bySearch 1 evenHints)
