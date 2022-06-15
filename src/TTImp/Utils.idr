@@ -589,9 +589,29 @@ getArgName defs x bound allvars ty
     findNames (NBind _ x (Pi _ _ _ _) _)
         = pure (filter notBound ["f", "g"])
     findNames (NTCon _ n _ _ _)
-        = case !(lookupName n (NameMap.toList (namedirectives defs))) of
-               Nothing => pure (filter notBound defaultNames)
-               Just ns => pure (filter notBound ns)
+        = pure $ filter notBound
+        $ case !(lookupName n (NameMap.toList (namedirectives defs))) of
+               Nothing => defaultNames
+               Just ns => ns
+    findNames (NPrimVal fc c) = do
+          let defaultPos = ["m", "n", "p", "q"]
+          let defaultInts = ["i", "j", "k", "l"]
+          pure $ filter notBound $ case c of
+            PrT IntType => defaultInts
+            PrT Int8Type => defaultInts
+            PrT Int16Type => defaultInts
+            PrT Int32Type => defaultInts
+            PrT Int64Type => defaultInts
+            PrT IntegerType => defaultInts
+            PrT Bits8Type => defaultPos
+            PrT Bits16Type => defaultPos
+            PrT Bits32Type => defaultPos
+            PrT Bits64Type => defaultPos
+            PrT StringType => ["str"]
+            PrT CharType => ["c","d"]
+            PrT DoubleType => ["dbl"]
+            PrT WorldType => ["wrld", "w"]
+            _ => defaultNames -- impossible
     findNames ty = pure (filter notBound defaultNames)
 
     getName : Name -> List String -> List Name -> String

@@ -201,7 +201,6 @@ assert_linear = believe_me id
     id : (1 f : a -> b) -> a -> b
     id f = f
 
-
 export partial
 idris_crash : String -> a
 idris_crash = prim__crash _
