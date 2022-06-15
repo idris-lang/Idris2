@@ -211,16 +211,22 @@ mutual
                    (Just (MN "lamc" 0)) !(desugarB AnyExpr ps argTy) $
                  ICase fc rig (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [snd !(desugarClause ps True (MkPatClause fc pat scope []))]
+  desugarB side ps (PLet fc rig pat@(PRef prefFC n@(UN nm)) nTy nVal scope [])
+      = if isPatternVariable nm || isOpName n
+          then do whenJust (isConcreteFC prefFC) $ \nfc =>
+                    addSemanticDecorations [(nfc, Bound, Just n)]
+                  pure $ ILet fc prefFC rig n !(desugarB side ps nTy) !(desugarB side ps nVal)
+                                              !(desugar side (n :: ps) scope)
+          else pure $ ICase fc rig !(desugarB side ps nVal) !(desugarB side ps nTy)
+                                   !(traverse (map snd . desugarClause ps True)
+                                              (MkPatClause fc pat scope [] :: []))
   desugarB side ps (PLet fc rig (PRef prefFC n) nTy nVal scope [])
-      = do whenJust (isConcreteFC prefFC) $ \nfc =>
-             addSemanticDecorations [(nfc, Bound, Just n)]
-           pure $ ILet fc prefFC rig n !(desugarB side ps nTy) !(desugarB side ps nVal)
-                                       !(desugar side (n :: ps) scope)
-  -- Tag ICase with rig to handle "let 0 (u,w) = x"
-  desugarB side ps foo@(PLet fc rig pat nTy nVal scope alts) -- <--
+      = pure $ ILet fc prefFC rig n !(desugarB side ps nTy) !(desugarB side ps nVal)
+                                    !(desugar side (n :: ps) scope)
+  desugarB side ps (PLet fc rig pat nTy nVal scope alts)
       = pure $ ICase fc rig !(desugarB side ps nVal) !(desugarB side ps nTy)
                             !(traverse (map snd . desugarClause ps True)
-                            (MkPatClause fc pat scope [] :: alts))
+                                       (MkPatClause fc pat scope [] :: alts))
   desugarB side ps (PCase fc x xs)
       = pure $ ICase fc top !(desugarB side ps x)
                             (Implicit (virtualiseFC fc) False)

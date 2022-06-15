@@ -14,3 +14,6 @@ test = \ 0 (u,v) => 1
 test2 : (0 _ : a = b) -> Nat
 test2 = \ 0 Refl => 1
 
+failing
+  test3 : (0 _ : (a,b)) -> Nat
+  test3 f = let 0 Refl = f in 0
