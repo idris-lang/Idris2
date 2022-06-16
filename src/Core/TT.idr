@@ -870,7 +870,7 @@ data Term : List Name -> Type where
      TType : FC -> Name -> -- universe variable
              Term vars
 
-%name Term s, t, u
+%name Term t, u
 
 -- Remove/restore the given namespace from all Refs. This is to allow
 -- writing terms and case trees to disk without repeating the same namespace
@@ -1030,6 +1030,7 @@ interface Weaken tm where
 
 public export
 data Visibility = Private | Export | Public
+%name Visibility vis
 
 export
 Show Visibility where
@@ -1066,6 +1067,7 @@ Ord Visibility where
 
 public export
 data TotalReq = Total | CoveringOnly | PartialOK
+%name TotalReq treq
 
 export
 Eq TotalReq where

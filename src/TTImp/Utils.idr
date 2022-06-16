@@ -585,18 +585,35 @@ getArgName defs x bound allvars ty
     defaultNames : List String
     defaultNames = ["x", "y", "z", "w", "v", "s", "t", "u"]
 
-    findNames : NF vars -> Core (List String)
-    findNames (NBind _ x (Pi _ _ _ _) _)
-        = pure (filter notBound ["f", "g"])
-    findNames (NTCon _ n _ _ _)
-        = pure $ filter notBound
-        $ case !(lookupName n (NameMap.toList (namedirectives defs))) of
-               Nothing => defaultNames
-               Just ns => ns
-    findNames (NPrimVal fc c) = do
-          let defaultPos = ["m", "n", "p", "q"]
-          let defaultInts = ["i", "j", "k", "l"]
-          pure $ filter notBound $ case c of
+    namesFor : Name -> Core (Maybe (List String))
+    namesFor n = lookupName n (NameMap.toList (namedirectives defs))
+
+    findNamesM : NF vars -> Core (Maybe (List String))
+    findNamesM (NBind _ x (Pi _ _ _ _) _)
+        = pure (Just ["f", "g"])
+    findNamesM (NTCon _ n _ d [(_, v)]) = do
+          case dropNS !(full (gamma defs) n) of
+            UN (Basic "List") =>
+              do nf <- evalClosure defs v
+                 case !(findNamesM nf) of
+                   Nothing => namesFor n
+                   Just ns => pure (Just (map (++ "s") ns))
+            UN (Basic "Maybe") =>
+              do nf <- evalClosure defs v
+                 case !(findNamesM nf) of
+                   Nothing => namesFor n
+                   Just ns => pure (Just (map ("m" ++) ns))
+            UN (Basic "SnocList") =>
+              do nf <- evalClosure defs v
+                 case !(findNamesM nf) of
+                   Nothing => namesFor n
+                   Just ns => pure (Just (map ("s" ++) ns))
+            _ => namesFor n
+    findNamesM (NTCon _ n _ _ _) = namesFor n
+    findNamesM (NPrimVal fc c) = do
+          let defaultPos = Just ["m", "n", "p", "q"]
+          let defaultInts = Just ["i", "j", "k", "l"]
+          pure $ map (filter notBound) $ case c of
             PrT IntType => defaultInts
             PrT Int8Type => defaultInts
             PrT Int16Type => defaultInts
@@ -607,12 +624,15 @@ getArgName defs x bound allvars ty
             PrT Bits16Type => defaultPos
             PrT Bits32Type => defaultPos
             PrT Bits64Type => defaultPos
-            PrT StringType => ["str"]
-            PrT CharType => ["c","d"]
-            PrT DoubleType => ["dbl"]
-            PrT WorldType => ["wrld", "w"]
-            _ => defaultNames -- impossible
-    findNames ty = pure (filter notBound defaultNames)
+            PrT StringType => Just ["str"]
+            PrT CharType => Just ["c","d"]
+            PrT DoubleType => Just ["dbl"]
+            PrT WorldType => Just ["wrld", "w"]
+            _ => Nothing -- impossible
+    findNamesM ty = pure Nothing
+
+    findNames : NF vars -> Core (List String)
+    findNames nf = pure $ filter notBound $ fromMaybe defaultNames !(findNamesM nf)
 
     getName : Name -> List String -> List Name -> String
     getName (UN (Basic n)) defs used = unique (n :: defs) (n :: defs) 0 used
