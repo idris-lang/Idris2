@@ -508,7 +508,7 @@ mutual
 
   export
   Show IField where
-    show (MkIField fc rig pinfo nm s) = showPiInfo pinfo (showCount rig "\{show nm} : \{show s}")
+    show (MkIField fc rig pinfo nm s) = showPiInfo {wrapExplicit=False} pinfo (showCount rig "\{show nm} : \{show s}")
 
   export
   Show Record where
@@ -519,8 +519,10 @@ mutual
                        showPiInfo pinfo (showCount rig "\{show nm} : \{show ty}"))
                 params)
       , "where"
-      , "constructor", show conName
+      , "{"
+      , "constructor", show conName, "; "
       , joinBy "; " (map show fields)
+      , "}"
       ]
 
   export
@@ -583,7 +585,7 @@ mutual
       [ show lhs, "with"
       , showCount rig $ maybe id (\ nm => (++ " proof \{show nm}")) prf
                       $ showParens True (show wval)
-      , "{", joinBy "; " (assert_total $ map show cls)
+      , "{", joinBy "; " (assert_total $ map show cls), "}"
       ]
     show (ImpossibleClause fc lhs) = "\{show lhs} impossible"
 
@@ -593,7 +595,7 @@ mutual
     showPrec d (IPi fc rig pinfo x argTy retTy)
       = showParens (d > Open) $
           let nm = fromMaybe (UN Underscore) x in
-          assert_total (showPiInfo pinfo ("\{showCount rig $ show nm} : \{show argTy}"))
+          assert_total (showPiInfo pinfo "\{showCount rig $ show nm} : \{show argTy}")
           ++ " -> \{show retTy}"
     showPrec d (ILam fc rig pinfo x argTy lamTy)
       = showParens (d > Open) $
