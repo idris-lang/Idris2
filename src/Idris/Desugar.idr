@@ -188,7 +188,7 @@ mutual
                               mn !(desugarB side ps argTy)
                                  !(desugarB side ps' retTy)
   desugarB side ps (PLam fc rig p pat@(PRef prefFC n@(UN nm)) argTy scope)
-      =  if isPatternVariable nm
+      =  if isPatternVariable nm || isOpName n
            then do whenJust (isConcreteFC prefFC) $ \nfc
                      => addSemanticDecorations [(nfc, Bound, Just n)]
                    pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
