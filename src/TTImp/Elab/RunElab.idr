@@ -80,15 +80,14 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
     elabCon defs "Pure" [_,val]
         = do empty <- clearDefs defs
              evalClosure empty val
-    elabCon defs "Bind" [a, _, act, k]
+    elabCon defs "Bind" [_,_,act,k]
         -- act : Elab A
         -- k : A -> Elab B
         -- 1) Run elabScript on act stripping off Elab
         -- 2) apply k to the result of (1)
         -- 3) Run elabScript on the result stripping off Elab
-        = do let a = glueClosure defs env a
-             act <- elabScript fc nest env
-                                !(evalClosure defs act) (Just a)
+        = do act <- elabScript fc nest env
+                                !(evalClosure defs act) Nothing
              k <- evalClosure defs k
              r <- applyToStack defs withAll env k
                        [(EmptyFC, MkNFClosure withAll env act)]
