@@ -87,7 +87,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
         -- 2) apply k to the result of (1)
         -- 3) Run elabScript on the result stripping off Elab
         = do act <- elabScript fc nest env
-                                !(evalClosure defs act) exp
+                                !(evalClosure defs act) Nothing
              k <- evalClosure defs k
              r <- applyToStack defs withAll env k
                        [(EmptyFC, MkNFClosure withAll env act)]
