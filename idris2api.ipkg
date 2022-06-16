@@ -257,6 +257,7 @@ modules =
     TTImp.Reflect,
     TTImp.TTImp,
     TTImp.TTImp.Functor,
+    TTImp.TTImp.Traversals,
     TTImp.TTImp.TTC,
     TTImp.Unelab,
     TTImp.Utils,
