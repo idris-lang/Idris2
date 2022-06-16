@@ -35,6 +35,7 @@ import Idris.Parser
 import Idris.REPL.Common
 import Idris.REPL.Opts
 import Idris.Syntax
+import Idris.Syntax.TTC
 import Idris.Pretty
 import Idris.Doc.String
 
