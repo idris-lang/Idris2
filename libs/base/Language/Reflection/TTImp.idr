@@ -508,7 +508,7 @@ mutual
 
   export
   Show IField where
-    show (MkIField fc rig pinfo nm s) = showPiInfo {wrapExplicit=False} pinfo (showCount rig "\{show nm} : \{show s}") where
+    show (MkIField fc rig pinfo nm s) = showPiInfo {wrapExplicit=False} pinfo (showCount rig "\{show nm} : \{show s}")
 
   export
   Show Record where
