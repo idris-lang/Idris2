@@ -54,9 +54,9 @@ invFin (FS k) = weaken (invFin k)
 export
 invFinSpec : {n : _} -> (i : Fin n) -> 1 + finToNat i + finToNat (invFin i) = n
 invFinSpec {n = S k} FZ = cong S finToNatLastIsBound
-invFinSpec (FS k) = let H = invFinSpec k in
+invFinSpec (FS k) = let g = invFinSpec k in
   let h = finToNatWeakenNeutral {n = invFin k} in
-  cong S (rewrite h in H)
+  cong S (rewrite h in g)
 
 ||| The inverse of a weakened element is the successor of its inverse
 export
