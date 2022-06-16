@@ -44,6 +44,8 @@ Weaken NestedNames where
 public export
 data BindMode = PI RigCount | PATTERN | COVERAGE | NONE
 
+%name BindMode bm
+
 mutual
 
   public export
@@ -123,6 +125,8 @@ mutual
        -- with-disambiguation
        IWithUnambigNames : FC -> List (FC, Name) -> RawImp' nm -> RawImp' nm
 
+  %name RawImp' t, u
+
   public export
   IFieldUpdate : Type
   IFieldUpdate = IFieldUpdate' Name
@@ -131,6 +135,7 @@ mutual
   data IFieldUpdate' : Type -> Type where
        ISetField : (path : List String) -> RawImp' nm -> IFieldUpdate' nm
        ISetFieldApp : (path : List String) -> RawImp' nm -> IFieldUpdate' nm
+  %name IFieldUpdate' upd
 
   public export
   AltType : Type
@@ -141,6 +146,7 @@ mutual
        FirstSuccess : AltType' nm
        Unique : AltType' nm
        UniqueDefault : RawImp' nm -> AltType' nm
+  %name AltType' alt
 
   export
   covering
@@ -234,6 +240,7 @@ mutual
        Macro : FnOpt' nm
        SpecArgs : List Name -> FnOpt' nm
        NoMangle : Maybe NoMangleDirective -> FnOpt' nm
+  %name FnOpt' fopt
 
   public export
   isTotalityReq : FnOpt' nm -> Bool
@@ -298,6 +305,8 @@ mutual
   data ImpTy' : Type -> Type where
        MkImpTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : RawImp' nm) -> ImpTy' nm
 
+  %name ImpTy' ty
+
   export
   covering
   Show nm => Show (ImpTy' nm) where
@@ -310,6 +319,7 @@ mutual
        UniqueSearch : DataOpt -- auto implicit search must check result is unique
        External : DataOpt -- implemented externally
        NoNewtype : DataOpt -- don't apply newtype optimisation
+  %name DataOpt dopt
 
   export
   Eq DataOpt where
@@ -331,6 +341,8 @@ mutual
                    (datacons : List (ImpTy' nm)) -> ImpData' nm
        MkImpLater : FC -> (n : Name) -> (tycon : RawImp' nm) -> ImpData' nm
 
+  %name ImpData' dat
+
   export
   covering
   Show nm => Show (ImpData' nm) where
@@ -348,6 +360,8 @@ mutual
   data IField' : Type -> Type where
        MkIField : FC -> RigCount -> PiInfo (RawImp' nm) -> Name -> RawImp' nm ->
                   IField' nm
+
+  %name IField' fld
 
   public export
   ImpParameter : Type
@@ -369,6 +383,8 @@ mutual
                      (conName : Name) ->
                      (fields : List (IField' nm)) ->
                      ImpRecord' nm
+
+  %name ImpRecord' rec
 
   export
   covering
@@ -409,6 +425,8 @@ mutual
                     (flags : List WithFlag) ->
                     List (ImpClause' nm) -> ImpClause' nm
        ImpossibleClause : FC -> (lhs : RawImp' nm) -> ImpClause' nm
+
+  %name ImpClause' cl
 
   export
   covering
@@ -452,6 +470,8 @@ mutual
                  ImpDecl' nm
        ILog : Maybe (List String, Nat) -> ImpDecl' nm
        IBuiltin : FC -> BuiltinType -> Name -> ImpDecl' nm
+
+  %name ImpDecl' decl
 
   export
   covering
@@ -882,6 +902,7 @@ data Arg' nm
    = Explicit FC (RawImp' nm)
    | Auto     FC (RawImp' nm)
    | Named    FC Name (RawImp' nm)
+%name Arg' arg
 
 public export
 Arg : Type
