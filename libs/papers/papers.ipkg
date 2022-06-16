@@ -25,6 +25,8 @@ modules = Data.Container,
 
           Language.Tagless,
 
+          Search.Auto,
+
           Search.Generator,
           Search.HDecidable,
           Search.Negation,
