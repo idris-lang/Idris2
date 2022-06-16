@@ -1,5 +1,7 @@
 module Data.Validated
 
+import Control.Function
+
 import Data.List1
 
 import Decidable.Equality
@@ -22,6 +24,14 @@ export
 (Show e, Show a) => Show (Validated e a) where
   showPrec d $ Valid   x = showCon d "Valid" $ showArg x
   showPrec d $ Invalid e = showCon d "Invalid" $ showArg e
+
+export
+Injective Valid where
+  injective Refl = Refl
+
+export
+Injective Invalid where
+  injective Refl = Refl
 
 public export
 Functor (Validated e) where
@@ -129,14 +139,10 @@ Uninhabited (Invalid e = Valid x) where
 
 public export
 (DecEq e, DecEq a) => DecEq (Validated e a) where
+  decEq (Valid x) (Valid y) = decEqCong $ decEq x y
+  decEq (Invalid x) (Invalid y) = decEqCong $ decEq x y
   decEq (Valid x) (Invalid y) = No uninhabited
   decEq (Invalid x) (Valid y) = No uninhabited
-  decEq (Valid x) (Valid y) with (decEq x y)
-    decEq (Valid _) (Valid _) | Yes p = rewrite p in Yes Refl
-    decEq (Valid _) (Valid _) | No up = No $ \case Refl => up Refl
-  decEq (Invalid x) (Invalid y) with (decEq x y)
-    decEq (Invalid _) (Invalid _) | Yes p = rewrite p in Yes Refl
-    decEq (Invalid _) (Invalid _) | No up = No $ \case Refl => up Refl
 
 --- Convenience representations ---
 

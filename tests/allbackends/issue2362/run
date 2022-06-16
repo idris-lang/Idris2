@@ -1,0 +1,4 @@
+rm -rf build
+
+$1 --exec main Issue2362.idr
+

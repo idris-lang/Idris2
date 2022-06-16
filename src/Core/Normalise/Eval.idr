@@ -12,6 +12,7 @@ import Core.Value
 import Data.List
 import Data.Maybe
 import Data.Nat
+import Data.String
 import Data.Vect
 
 %default covering
@@ -273,8 +274,8 @@ parameters (defs : Defs, topopts : EvalOpts)
              --                              pure $ "Found bound variable: " ++ show fn'
              pure def
     evalRef env meta fc nt@Func n stk def
-        = do -- logC "eval.ref.func" 50 $ do n' <- toFullNames n
-             --                             pure $ "Found function: " ++ show n'
+        = do -- logC "eval.ref" 50 $ do n' <- toFullNames n
+             --                        pure $ "Found function: " ++ show n'
              Just res <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure def
              let redok1 = evalAll topopts
@@ -288,14 +289,18 @@ parameters (defs : Defs, topopts : EvalOpts)
                         -- when evaluating something recursive, so this is a
                         -- good place to check
              unless redok2 $ logC "eval.stuck" 5 $ do n' <- toFullNames n
-                                                      pure $ "Stuck function: " ++ show n'
+                                                      pure $ "Stuck function: \{show n'}"
              if redok
                 then do
                    Just opts' <- updateLimit nt n topopts
-                        | Nothing => do log "eval.stuck" 10 $ "Function " ++ show n ++ " past reduction limit"
+                        | Nothing => do log "eval.stuck" 10 $ "Function \{show n} past reduction limit"
                                         pure def -- name is past reduction limit
-                   evalDef env opts' meta fc
+                   nf <- evalDef env opts' meta fc
                            (multiplicity res) (definition res) (flags res) stk def
+                   -- logC "eval.ref" 50 $ do n' <- toFullNames n
+                   --                         nf <- toFullNames nf
+                   --                         pure "Reduced \{show n'} to \{show nf}"
+                   pure nf
                 else pure def
 
     getCaseBound : List (Closure free) ->
@@ -389,8 +394,10 @@ parameters (defs : Defs, topopts : EvalOpts)
          = do Result val <- tryAlt env loc opts fc stk val x
                    | NoMatch => findAlt env loc opts fc stk val xs
                    | GotStuck => do
-                       logC "eval.casetree.stuck" 5 $
-                         pure $ "Got stuck matching " ++ show val ++ " against " ++ show !(toFullNames x)
+                       logC "eval.casetree.stuck" 5 $ do
+                         val <- toFullNames val
+                         x <- toFullNames x
+                         pure $ "Got stuck matching \{show val} against \{show x}"
                        pure GotStuck
               pure (Result val)
 
@@ -403,7 +410,9 @@ parameters (defs : Defs, topopts : EvalOpts)
       = do xval <- evalLocal env fc Nothing idx (varExtend x) [] loc
            -- we have not defined quote yet (it depends on eval itself) so we show the NF
            -- i.e. only the top-level constructor.
-           log "eval.casetree" 5 $ "Evaluated " ++ show name ++ " to " ++ show xval
+           logC "eval.casetree" 5 $ do
+             xval <- toFullNames xval
+             pure "Evaluated \{show name} to \{show xval}"
            let loc' = updateLocal opts env idx (varExtend x) loc xval
            findAlt env loc' opts fc stk xval alts
     evalTree env loc opts fc stk (STerm _ tm)
@@ -485,17 +494,36 @@ parameters (defs : Defs, topopts : EvalOpts)
              || (meta && holesOnly opts)
              || (tcInline opts && elem TCInline flags)
              then case argsFromStack args stk of
-                       Nothing => pure def
+                       Nothing => do logC "eval.def.underapplied" 50 $ do
+                                       def <- toFullNames def
+                                       pure "Cannot reduce under-applied \{show def}"
+                                     pure def
                        Just (locs', stk') =>
                             do Result res <- evalTree env locs' opts fc stk' tree
-                                    | _ => pure def
+                                    | _ => do logC "eval.def.stuck" 50 $ do
+                                                def <- toFullNames def
+                                                pure "evalTree failed on \{show def}"
+                                              pure def
                                pure res
-             else pure def
+             else do -- logC "eval.def.stuck" 50 $ do
+                     --   def <- toFullNames def
+                     --   pure $ unlines [ "Refusing to reduce \{show def}:"
+                     --                  , "  holesOnly   : \{show $ holesOnly opts}"
+                     --                  , "  argHolesOnly: \{show $ argHolesOnly opts}"
+                     --                  , "  tcInline    : \{show $ tcInline opts}"
+                     --                  , "  meta        : \{show meta}"
+                     --                  , "  rigd        : \{show rigd}"
+                     --                  ]
+                     pure def
     evalDef env opts meta fc rigd (Builtin op) flags stk def
         = evalOp (getOp op) stk def
     -- All other cases, use the default value, which is already applied to
     -- the stack
-    evalDef env opts _ _ _ _ _ stk def = pure def
+    evalDef env opts meta fc rigd def flags stk orig = do
+      logC "eval.def.stuck" 50 $ do
+        orig <- toFullNames orig
+        pure "Cannot reduce def \{show orig}: it is a \{show def}"
+      pure orig
 
 -- Make sure implicit argument order is right... 'vars' is used so we'll
 -- write it explicitly, but it does appear after the parameters in 'eval'!

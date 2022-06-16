@@ -28,6 +28,8 @@ data NameType : Type where
      DataCon : (tag : Int) -> (arity : Nat) -> NameType
      TyCon   : (tag : Int) -> (arity : Nat) -> NameType
 
+%name NameType nt
+
 export
 covering
 Show NameType where
@@ -49,9 +51,15 @@ record KindedName where
   fullName : Name -- fully qualified name
   rawName  : Name
 
+%name KindedName kn
+
 export
 defaultKindedName : Name -> KindedName
 defaultKindedName nm = MkKindedName Nothing nm nm
+
+export
+funKindedName : Name -> KindedName
+funKindedName nm = MkKindedName (Just Func) nm nm
 
 export
 Show KindedName where show = show . rawName
@@ -79,6 +87,8 @@ data PrimType
     | DoubleType
     | WorldType
 
+%name PrimType pty
+
 public export
 data Constant
     = I   Int
@@ -96,6 +106,8 @@ data Constant
     | Db  Double
     | PrT PrimType
     | WorldVal
+
+%name Constant cst
 
 export
 isConstantType : Name -> Maybe PrimType
@@ -300,6 +312,8 @@ primTypeTag Int64Type = 16
 public export
 data Precision = P Int | Unlimited
 
+%name Precision prec
+
 export
 Eq Precision where
   (P m) == (P n)         = m == n
@@ -384,6 +398,8 @@ data PrimFn : Nat -> Type where
      Cast : PrimType -> PrimType -> PrimFn 1
      BelieveMe : PrimFn 3
      Crash : PrimFn 2
+
+%name PrimFn f
 
 export
 Show (PrimFn arity) where
@@ -473,6 +489,8 @@ prettyOp op@Crash [v1,v2] = annotate (Fun $ UN $ Basic $ show op) "crash" <++> v
 public export
 data PiInfo t = Implicit | Explicit | AutoImplicit | DefImplicit t
 
+%name PiInfo pinfo
+
 namespace PiInfo
 
   export
@@ -530,6 +548,8 @@ data Binder : Type -> Type where
      PLet : FC -> RigCount -> (val : type) -> (ty : type) -> Binder type
      -- the type of pattern bound variables
      PVTy : FC -> RigCount -> (ty : type) -> Binder type
+
+%name Binder bd
 
 export
 isLet : Binder t -> Bool
@@ -654,6 +674,8 @@ public export
 data IsVar : Name -> Nat -> List Name -> Type where
      First : IsVar n Z (n :: ns)
      Later : IsVar n i ns -> IsVar n (S i) (m :: ns)
+
+%name IsVar idx
 
 export
 dropLater : IsVar nm (S idx) (v :: vs) -> IsVar nm idx vs
@@ -810,10 +832,14 @@ namespace CList
 public export
 data LazyReason = LInf | LLazy | LUnknown
 
+%name LazyReason lz
+
 -- For as patterns matching linear arguments, select which side is
 -- consumed
 public export
 data UseSide = UseLeft | UseRight
+
+%name UseSide side
 
 public export
 data Term : List Name -> Type where

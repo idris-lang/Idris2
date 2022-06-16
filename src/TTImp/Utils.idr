@@ -3,6 +3,8 @@ module TTImp.Utils
 import Core.Context
 import Core.Options
 import Core.TT
+import Core.Env
+import Core.Value
 import TTImp.TTImp
 
 import Data.List
@@ -11,6 +13,7 @@ import Data.String
 
 import Idris.Syntax
 
+import Libraries.Data.NameMap
 import Libraries.Utils.String
 
 %default covering
@@ -531,3 +534,99 @@ uniqueHoleName : {auto s : Ref Syn SyntaxInfo} ->
 uniqueHoleName defs used n
     = do syn <- get Syn
          uniqueBasicName defs (used ++ holeNames syn) n
+
+export
+uniqueHoleNames : {auto s : Ref Syn SyntaxInfo} ->
+                  Defs -> Nat -> String -> Core (List String)
+uniqueHoleNames defs = go [] where
+
+  go : List String -> Nat -> String -> Core (List String)
+  go acc Z _ = pure (reverse acc)
+  go acc (S n) hole = do
+    hole' <- uniqueHoleName defs acc hole
+    go (hole' :: acc) n hole'
+
+unique : List String -> List String -> Int -> List Name -> String
+unique [] supply suff usedns = unique supply supply (suff + 1) usedns
+unique (str :: next) supply suff usedns
+    = let var = mkVarN str suff in
+          if UN (Basic var) `elem` usedns
+             then unique next supply suff usedns
+             else var
+  where
+    mkVarN : String -> Int -> String
+    mkVarN x 0 = x
+    mkVarN x i = x ++ show i
+
+
+export
+getArgName : {vars : _} ->
+             {auto c : Ref Ctxt Defs} ->
+             Defs -> Name ->
+             List Name -> -- explicitly bound names (possibly coming later),
+                          -- so we don't invent a default
+                          -- name that duplicates it
+             List Name -> -- names bound so far
+             NF vars -> Core String
+getArgName defs x bound allvars ty
+    = do defnames <- findNames ty
+         pure $ getName x defnames allvars
+  where
+    lookupName : Name -> List (Name, a) -> Core (Maybe a)
+    lookupName n [] = pure Nothing
+    lookupName n ((n', t) :: ts)
+        = if !(getFullName n) == !(getFullName n')
+             then pure (Just t)
+             else lookupName n ts
+
+    notBound : String -> Bool
+    notBound x = not $ UN (Basic x) `elem` bound
+
+    defaultNames : List String
+    defaultNames = ["x", "y", "z", "w", "v", "s", "t", "u"]
+
+    findNames : NF vars -> Core (List String)
+    findNames (NBind _ x (Pi _ _ _ _) _)
+        = pure (filter notBound ["f", "g"])
+    findNames (NTCon _ n _ _ _)
+        = pure $ filter notBound
+        $ case !(lookupName n (NameMap.toList (namedirectives defs))) of
+               Nothing => defaultNames
+               Just ns => ns
+    findNames (NPrimVal fc c) = do
+          let defaultPos = ["m", "n", "p", "q"]
+          let defaultInts = ["i", "j", "k", "l"]
+          pure $ filter notBound $ case c of
+            PrT IntType => defaultInts
+            PrT Int8Type => defaultInts
+            PrT Int16Type => defaultInts
+            PrT Int32Type => defaultInts
+            PrT Int64Type => defaultInts
+            PrT IntegerType => defaultInts
+            PrT Bits8Type => defaultPos
+            PrT Bits16Type => defaultPos
+            PrT Bits32Type => defaultPos
+            PrT Bits64Type => defaultPos
+            PrT StringType => ["str"]
+            PrT CharType => ["c","d"]
+            PrT DoubleType => ["dbl"]
+            PrT WorldType => ["wrld", "w"]
+            _ => defaultNames -- impossible
+    findNames ty = pure (filter notBound defaultNames)
+
+    getName : Name -> List String -> List Name -> String
+    getName (UN (Basic n)) defs used = unique (n :: defs) (n :: defs) 0 used
+    getName _ defs used = unique defs defs 0 used
+
+export
+getArgNames : {vars : _} ->
+              {auto c : Ref Ctxt Defs} ->
+              Defs -> List Name -> List Name -> Env Term vars -> NF vars ->
+              Core (List String)
+getArgNames defs bound allvars env (NBind fc x (Pi _ _ p ty) sc)
+    = do ns <- case p of
+                    Explicit => pure [!(getArgName defs x bound allvars !(evalClosure defs ty))]
+                    _ => pure []
+         sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
+         pure $ ns ++ !(getArgNames defs bound (map (UN . Basic) ns ++ allvars) env sc')
+getArgNames defs bound allvars env val = pure []

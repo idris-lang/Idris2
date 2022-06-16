@@ -200,6 +200,7 @@ data EditResult : Type where
   MadeLemma : Maybe String -> Name -> IPTerm -> String -> EditResult
   MadeWith : Maybe String -> List String -> EditResult
   MadeCase : Maybe String -> List String -> EditResult
+  MadeIntro : List1 String -> EditResult
 
 public export
 data MissedResult : Type where

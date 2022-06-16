@@ -9,26 +9,26 @@ Main>             0 => ?h_rhs_0
             (S k) => ?h_rhs_1     )
 Main>   j_Where k = (case toTest k of One => ?j_Where_rhs_0
                                 (Two j) => ?j_Where_rhs_1
-                                (Three x j) => ?j_Where_rhs_2
+                                (Three str j) => ?j_Where_rhs_2
                                 Four => ?j_Where_rhs_3    )
 Main>             One => ?k_rhs_0
             (Two k) => ?k_rhs_1
-            (Three x k) => ?k_rhs_2
+            (Three str k) => ?k_rhs_2
             Four => ?k_rhs_3)
 Main> l n m = case n of foo => case toTest m of One => ?l_rhs_0
                                           (Two k) => ?l_rhs_1
-                                          (Three x k) => ?l_rhs_2
+                                          (Three str k) => ?l_rhs_2
                                           Four => ?l_rhs_3
 Main> m n k = (case n of foo => case toTest k of One => ?m_rhs_0
                                            (Two j) => ?m_rhs_1
-                                           (Three x j) => ?m_rhs_2
+                                           (Three str j) => ?m_rhs_2
                                            Four => ?m_rhs_3  )
 Main>                               One => ?n_rhs_0
                               (Two j) => ?n_rhs_1
-                              (Three x j) => ?n_rhs_2
+                              (Three str j) => ?n_rhs_2
                               Four => ?n_rhs_3
 Main>                                One => ?o_rhs_0
                                (Two k) => ?o_rhs_1
-                               (Three x k) => ?o_rhs_2
+                               (Three str k) => ?o_rhs_2
                                Four => ?o_rhs_3   )
 Main> Bye for now!

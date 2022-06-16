@@ -490,13 +490,15 @@ Foldable List where
 
   foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
 
+public export
+listBindOnto : (a -> List b) -> List b -> List a -> List b
+listBindOnto f xs []        = reverse xs
+listBindOnto f xs (y :: ys) = listBindOnto f (reverseOnto xs (f y)) ys
+
 -- tail recursive O(n) implementation of `(>>=)` for `List`
 public export
 listBind : List a -> (a -> List b) -> List b
-listBind as f = go Nil as
-  where go : List b -> List a -> List b
-        go xs []        = reverse xs
-        go xs (y :: ys) = go (reverseOnto xs (f y)) ys
+listBind as f = listBindOnto f Nil as
 
 public export
 Applicative List where
@@ -996,3 +998,10 @@ public export
       = if y > x
            then countFrom x (+ (y - x))
            else countFrom x (\n => n - (x - y))
+
+public export
+Range Char where
+  rangeFromTo x y = map chr $ rangeFromTo (ord x) (ord y)
+  rangeFromThenTo x y z = map chr $ rangeFromThenTo (ord x) (ord y) (ord z)
+  rangeFrom x = map chr $ rangeFrom (ord x)
+  rangeFromThen x y = map chr $ rangeFromThen (ord x) (ord y)

@@ -126,7 +126,8 @@
     (if (number? x) x 0))
   (define (destroy-prefix x)
     (if (or (string=? x "") (char=? (string-ref x 0) #\#)) "" x))
-  (cast-num (string->number (destroy-prefix x))))
+  (exact->inexact (cast-num (string->number (destroy-prefix x)))))
+
 
 (define-macro (cast-string-int x)
   `(exact-truncate (cast-string-double ,x)))

@@ -169,16 +169,26 @@ idrisTestsBuiltin = MkTestPool "Builtin types and functions" [] Nothing
 idrisTestsEvaluator : TestPool
 idrisTestsEvaluator = MkTestPool "Evaluation" [] Nothing
       [ -- Evaluator
-       "evaluator001", "evaluator002", "evaluator003",
+       "evaluator001", "evaluator002", "evaluator003", "evaluator004",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
        "interpreter005", "interpreter006", "interpreter007", "interpreter008"]
+
+idrisTestsAllSchemes : Requirement -> TestPool
+idrisTestsAllSchemes cg = MkTestPool
+      ("Test across all scheme backends: " ++ show cg ++ " instance")
+      [] (Just cg)
+      [ "scheme001"
+      ]
 
 idrisTestsAllBackends : Requirement -> TestPool
 idrisTestsAllBackends cg = MkTestPool
       ("Test across all backends: " ++ show cg ++ " instance")
       [] (Just cg)
-      [ -- Evaluator
+       -- RefC implements IEEE standard and distinguishes between 0.0 and -0.0
+       -- unlike other backends. So turn this test for now.
+      $ ([ "issue2362" ] <* guard (cg /= C))
+      ++ [ -- Evaluator
        "evaluator004",
        -- Unfortunately the behaviour of Double is platform dependent so the
        -- following test is turned off.
@@ -209,7 +219,7 @@ idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
       ["reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",
        "reflection009", "reflection010", "reflection011", "reflection012",
-       "reflection013", "reflection014", "reflection016"
+       "reflection013", "reflection014", "reflection015", "reflection016"
       ]
 
 idrisTestsWith : TestPool
@@ -381,7 +391,8 @@ main = runner $
   , !templateTests
   , !codegenTests
   ]
-  ++ map (testPaths "allbackends" . idrisTestsAllBackends) [Chez, Node, Racket]
+  ++ map (testPaths "allschemes" . idrisTestsAllSchemes) [Chez, Racket]
+  ++ map (testPaths "allbackends" . idrisTestsAllBackends) [Chez, Node, Racket, C]
 
 
     where

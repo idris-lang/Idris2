@@ -39,7 +39,7 @@ reversePalindromeEqualsLemma x x' xs prf = equateInnerAndOuter flipHeadX
     flipLastX' : reverse (xs ++ [x']) = x :: xs -> (x' :: reverse xs) = (x :: xs)
     flipLastX' prf = rewrite (revAppend xs [x']) in prf
     cancelOuter : (reverse (xs ++ [x'])) = x :: xs -> reverse xs = xs
-    cancelOuter prf = snd (consInjective (flipLastX' prf))
+    cancelOuter prf = snd (biinjective (flipLastX' prf))
     equateInnerAndOuter
       : reverse (xs ++ [x']) ++ [x] = (x :: xs) ++ [x']
       -> (reverse xs = xs, x = x')

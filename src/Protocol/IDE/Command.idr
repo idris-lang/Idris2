@@ -30,6 +30,8 @@ data IDECommand
      | AddClause Integer String
      -- deprecated: | AddProofClause
      | AddMissing Integer String
+     | Intro Integer String -- line, hole name
+     | Refine Integer String String -- line, hole name, expression
      | ExprSearch Integer String Hints Bool
      | ExprSearchNext
      | GenerateDef Integer String
@@ -83,6 +85,10 @@ getIDECommand (SExpList [SymbolAtom "add-missing", IntegerAtom line, StringAtom 
     = Just $ AddMissing line n
 getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n])
     = Just $ ExprSearch l n (MkHints []) False
+getIDECommand (SExpList [SymbolAtom "intro", IntegerAtom l, StringAtom h])
+    = Just $ Intro l h
+getIDECommand (SExpList [SymbolAtom "refine", IntegerAtom l, StringAtom h, StringAtom n])
+    = Just $ Refine l h n
 getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n, hs])
     = (\hs' => ExprSearch l n hs' False) <$> fromSExp hs
 getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n, hs, SymbolAtom mode])
@@ -153,6 +159,8 @@ putIDECommand (NameAt cmd (Just (line, col))) = (SExpList [SymbolAtom "name-at",
 putIDECommand (CaseSplit line col n)          = (SExpList [SymbolAtom "case-split", IntegerAtom line, IntegerAtom col, StringAtom n])
 putIDECommand (AddClause line n)              = (SExpList [SymbolAtom "add-clause", IntegerAtom line, StringAtom n])
 putIDECommand (AddMissing line n)             = (SExpList [SymbolAtom "add-missing", IntegerAtom line, StringAtom n])
+putIDECommand (Intro line hole)               = (SExpList [SymbolAtom "intro", IntegerAtom line, StringAtom hole])
+putIDECommand (Refine line hole name)         = (SExpList [SymbolAtom "refine", IntegerAtom line, StringAtom hole, StringAtom name])
 putIDECommand (ExprSearch line n hints mode)  = (SExpList [SymbolAtom "proof-search", IntegerAtom line, StringAtom n, toSExp hints, getMode mode])
   where
   getMode : Bool -> SExp

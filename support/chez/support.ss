@@ -128,7 +128,8 @@
 
 (define cast-string-double
   (lambda (x)
-    (cast-num (string->number (destroy-prefix x)))))
+    (exact->inexact (cast-num (string->number (destroy-prefix x))))))
+
 
 (define (string-concat xs) (apply string-append xs))
 (define (string-unpack s) (string->list s))

@@ -54,7 +54,7 @@ Main> Prelude.>> : Monad m => m () -> Lazy (m b) -> m b
   Totality: total
   Visibility: public export
   Fixity Declaration: infixl operator, level 1
-Main> Main> Main> Main> Main.@@ : (t : a) -> DPair a (\u => t = u)
+Main> Main> Main> Main> Main.@@ : (t : a) -> (u : a ** t = u)
   Visibility: private
   Fixity Declaration: prefix operator, level 10
 Main> Prelude.<$ : Functor f => b -> f a -> f b

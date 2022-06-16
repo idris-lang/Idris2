@@ -362,8 +362,10 @@ getDocsForName fc n config
                 -- should never happen, since we know that the DCon exists:
                 | Nothing => pure Empty
            ty <- resugar [] =<< normaliseHoles defs [] (type def)
-           let prettyName = prettyName nm
-           let projDecl = annotate (Decl nm) $ hsep [ fun nm prettyName, colon, prettyBy Syntax ty ]
+           let projDecl = annotate (Decl nm) $
+                            reAnnotate Syntax (prettyRig def.multiplicity) <+> hsep
+                            [ fun nm (prettyName nm)
+                            , colon, prettyBy Syntax ty ]
            case lookupName nm (defDocstrings syn) of
                 [(_, "")] => pure projDecl
                 [(_, str)] =>
@@ -586,8 +588,10 @@ summarise n -- n is fully qualified
          Just def <- lookupCtxtExact n (gamma defs)
              | _ => pure ""
          ty <- normaliseHoles defs [] (type def)
-         pure $ showCategory Syntax def (prettyName n)
-              <++> colon <++> hang 0 (prettyBy Syntax !(resugar [] ty))
+         pure $ reAnnotate Syntax (prettyRig def.multiplicity)
+            <+> hsep [ showCategory Syntax def (prettyName n)
+                     , colon, hang 0 (prettyBy Syntax !(resugar [] ty))
+                     ]
 
 -- Display all the exported names in the given namespace
 export

@@ -17,6 +17,8 @@ import Data.Maybe
 import Data.SnocList
 import Data.String
 
+import public Idris.Syntax.Pragmas
+
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Libraries.Data.SortedMap
@@ -331,62 +333,6 @@ mutual
        NFMetavarThreshold : Nat -> Directive
        SearchTimeout : Integer -> Directive
 
-  directiveList : List Directive
-  directiveList =
-      [ (Hide ph), (Unhide ph), (Logging Nothing), (LazyOn False)
-      , (UnboundImplicits False), (AmbigDepth 0)
-      , (PairNames ph ph ph), (RewriteName ph ph)
-      , (PrimInteger ph), (PrimString ph), (PrimChar ph)
-      , (PrimDouble ph), (CGAction "" ""), (Names ph [])
-      , (StartExpr (PRef EmptyFC ph)), (Overloadable ph)
-      , (Extension ElabReflection), (DefaultTotality PartialOK)
-      , (PrefixRecordProjections True), (AutoImplicitDepth 0)
-      , (NFMetavarThreshold 0), (SearchTimeout 0)
-      ]
-
-      where
-        -- placeholder
-        ph : Name
-        ph = UN $ Basic ""
-
-  isPragma : Directive -> Bool
-  isPragma (CGAction _ _) = False
-  isPragma _              = True
-
-  export
-  pragmaTopics : String
-  pragmaTopics =
-    show $ vsep $ map (((<++>) "+") . pretty . showDirective) $ filter isPragma directiveList
-    where
-      showDirective : Directive -> String
-      showDirective (Hide _)             = "%hide name"
-      showDirective (Unhide _)           = "%unhide name"
-      showDirective (Logging _)          = "%logging [topic] lvl"
-      showDirective (LazyOn _)           = "%auto_lazy on|off"
-      showDirective (UnboundImplicits _) = "%unbound_implicits"
-      showDirective (AmbigDepth _)       = "%ambiguity_depth n"
-      showDirective (PairNames _ _ _)    = "%pair ty f s"
-      showDirective (RewriteName _ _)    = "%rewrite eq rw"
-      showDirective (PrimInteger _)      = "%integerLit n"
-      showDirective (PrimString _)       = "%stringLit n"
-      showDirective (PrimChar _)         = "%charLit n"
-      showDirective (PrimDouble _)       = "%doubleLit n"
-      showDirective (CGAction _ _)       = "--directive d"
-      showDirective (Names _ _)          = "%name ty ns"
-      showDirective (StartExpr _)        = "%start expr"
-      showDirective (Overloadable _)     = "%allow_overloads"
-      showDirective (Extension _)        = "%language"
-      showDirective (DefaultTotality _)  =
-        "%default partial|total|covering"
-      showDirective (PrefixRecordProjections _) =
-        "%prefix_record_projections on|off"
-      showDirective (AutoImplicitDepth _) =
-        "%auto_implicit_depth n"
-      showDirective (NFMetavarThreshold _) =
-        "%nf_metavar_threshold n"
-      showDirective (SearchTimeout _) =
-        "%search_timeout ms"
-
   public export
   PField : Type
   PField = PField' Name
@@ -599,6 +545,8 @@ data EditCmd : Type where
      TypeAt : Int -> Int -> Name -> EditCmd
      CaseSplit : Bool -> Int -> Int -> Name -> EditCmd
      AddClause : Bool -> Int -> Name -> EditCmd
+     Refine : Bool -> Int -> (hole : Name) -> (expr : PTerm) -> EditCmd
+     Intro : Bool -> Int -> (hole : Name) -> EditCmd
      ExprSearch : Bool -> Int -> Name -> List Name -> EditCmd
      ExprSearchNext : EditCmd
      GenerateDef : Bool -> Int -> Name -> Nat -> EditCmd

@@ -1,6 +1,9 @@
 module Language.Reflection.TTImp
 
+import Data.Maybe
+import Data.String
 import public Language.Reflection.TT
+
 
 %default total
 
@@ -8,11 +11,13 @@ import public Language.Reflection.TT
 mutual
   public export
   data BindMode = PI Count | PATTERN | COVERAGE | NONE
+  %name BindMode bm
 
   -- For as patterns matching linear arguments, select which side is
   -- consumed
   public export
   data UseSide = UseLeft | UseRight
+  %name UseSide side
 
   public export
   data DotReason = NonLinearVar
@@ -22,6 +27,7 @@ mutual
                  | UserDotted
                  | UnknownDot
                  | UnderAppliedCon
+  %name DotReason dr
 
   public export
   data TTImp : Type where
@@ -78,11 +84,14 @@ mutual
        -- at the end of elaborator
        Implicit : FC -> (bindIfUnsolved : Bool) -> TTImp
        IWithUnambigNames : FC -> List (FC, Name) -> TTImp -> TTImp
+  %name TTImp s, t, u
 
   public export
   data IFieldUpdate : Type where
        ISetField : (path : List String) -> TTImp -> IFieldUpdate
        ISetFieldApp : (path : List String) -> TTImp -> IFieldUpdate
+
+  %name IFieldUpdate upd
 
   public export
   data AltType : Type where
@@ -123,6 +132,8 @@ mutual
   data ITy : Type where
        MkTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : TTImp) -> ITy
 
+  %name ITy sig
+
   public export
   data DataOpt : Type where
        SearchBy : List Name -> DataOpt -- determining arguments
@@ -131,6 +142,8 @@ mutual
        External : DataOpt -- implemented externally
        NoNewtype : DataOpt -- don't apply newtype optimisation
 
+  %name DataOpt dopt
+
   public export
   data Data : Type where
        MkData : FC -> (n : Name) -> (tycon : TTImp) ->
@@ -138,10 +151,14 @@ mutual
                 (datacons : List ITy) -> Data
        MkLater : FC -> (n : Name) -> (tycon : TTImp) -> Data
 
+  %name Data dt
+
   public export
   data IField : Type where
        MkIField : FC -> Count -> PiInfo TTImp -> Name -> TTImp ->
                   IField
+
+  %name IField fld
 
   public export
   data Record : Type where
@@ -150,6 +167,7 @@ mutual
                   (conName : Name) ->
                   (fields : List IField) ->
                   Record
+  %name Record rec
 
   public export
   data WithFlag = Syntactic
@@ -164,22 +182,26 @@ mutual
                     List Clause -> Clause
        ImpossibleClause : FC -> (lhs : TTImp) -> Clause
 
+  %name Clause cl
+
   public export
   data Decl : Type where
        IClaim : FC -> Count -> Visibility -> List FnOpt ->
                 ITy -> Decl
        IData : FC -> Visibility -> Maybe TotalReq -> Data -> Decl
-       IDef : FC -> Name -> List Clause -> Decl
-       IParameters : FC -> List (Name, Count, PiInfo TTImp, TTImp) ->
-                     List Decl -> Decl
+       IDef : FC -> Name -> (cls : List Clause) -> Decl
+       IParameters : FC -> (params : List (Name, Count, PiInfo TTImp, TTImp)) ->
+                     (decls : List Decl) -> Decl
        IRecord : FC ->
                  Maybe String -> -- nested namespace
                  Visibility -> Maybe TotalReq -> Record -> Decl
-       INamespace : FC -> Namespace -> List Decl -> Decl
+       INamespace : FC -> Namespace -> (decls : List Decl) -> Decl
        ITransform : FC -> Name -> TTImp -> TTImp -> Decl
        IRunElabDecl : FC -> TTImp -> Decl
        ILog : Maybe (List String, Nat) -> Decl
        IBuiltin : FC -> BuiltinType -> Name -> Decl
+
+  %name Decl decl
 
 public export
 getFC : TTImp -> FC
@@ -317,6 +339,21 @@ Eq Constant where
   _ == _ = False
 
 public export
+Eq DataOpt where
+  SearchBy ns == SearchBy ns' = ns == ns'
+  NoHints == NoHints = True
+  UniqueSearch == UniqueSearch = True
+  External == External = True
+  NoNewtype == NoNewtype = True
+  _ == _ = False
+
+public export
+Eq NoMangleDirective where
+  CommonName s == CommonName s' = s == s'
+  BackendNames ns == BackendNames ns' = ns == ns'
+  _ == _ = False
+
+public export
 Eq a => Eq (PiInfo a) where
   ImplicitArg   == ImplicitArg = True
   ExplicitArg   == ExplicitArg = True
@@ -324,7 +361,7 @@ Eq a => Eq (PiInfo a) where
   DefImplicit t == DefImplicit t' = t == t'
   _ == _ = False
 
-mutual
+parameters {auto eqTTImp : Eq TTImp}
   public export
   Eq Clause where
     PatClause _ lhs rhs == PatClause _ lhs' rhs' =
@@ -350,12 +387,6 @@ mutual
     _ == _ = False
 
   public export
-  Eq NoMangleDirective where
-    CommonName s == CommonName s' = s == s'
-    BackendNames ns == BackendNames ns' = ns == ns'
-    _ == _ = False
-
-  public export
   Eq FnOpt where
     Inline == Inline = True
     NoInline == NoInline = True
@@ -374,13 +405,8 @@ mutual
     _ == _ = False
 
   public export
-  Eq DataOpt where
-    SearchBy ns == SearchBy ns' = ns == ns'
-    NoHints == NoHints = True
-    UniqueSearch == UniqueSearch = True
-    External == External = True
-    NoNewtype == NoNewtype = True
-    _ == _ = False
+  Eq ITy where
+    MkTy _ _ n ty == MkTy _ _ n' ty' = n == n' && ty == ty'
 
   public export
   Eq Data where
@@ -389,10 +415,6 @@ mutual
     MkLater _ n tc == MkLater _ n' tc' =
       n == n' && tc == tc'
     _ == _ = False
-
-  public export
-  Eq ITy where
-    MkTy _ _ n ty == MkTy _ _ n' ty' = n == n' && ty == ty'
 
   public export
   Eq IField where
@@ -426,57 +448,203 @@ mutual
       t == t' && n == n'
     _ == _ = False
 
-  public export
-  Eq TTImp where
-    IVar _ v == IVar _ v' = v == v'
-    IPi _ c i n a r == IPi _ c' i' n' a' r' =
-      c == c' && (assert_total $ i == i') && n == n' && a == a' && r == r'
-    ILam _ c i n a r == ILam _ c' i' n' a' r' =
-      c == c' && (assert_total $ i == i') && n == n' && a == a' && r == r'
-    ILet _ _ c n ty val s == ILet _ _ c' n' ty' val' s' =
-      c == c' && n == n' && ty == ty' && val == val' && s == s'
-    ICase _ t ty cs == ICase _ t' ty' cs'
-      = t == t' && ty == ty' && (assert_total $ cs == cs')
-    ILocal _ ds e == ILocal _ ds' e' =
-      (assert_total $ ds == ds') && e == e'
-    IUpdate _ fs t == IUpdate _ fs' t' =
-      (assert_total $ fs == fs') && t == t'
+public export
+Eq TTImp where
+  IVar _ v == IVar _ v' = v == v'
+  IPi _ c i n a r == IPi _ c' i' n' a' r' =
+    c == c' && (assert_total $ i == i') && n == n' && a == a' && r == r'
+  ILam _ c i n a r == ILam _ c' i' n' a' r' =
+    c == c' && (assert_total $ i == i') && n == n' && a == a' && r == r'
+  ILet _ _ c n ty val s == ILet _ _ c' n' ty' val' s' =
+    c == c' && n == n' && ty == ty' && val == val' && s == s'
+  ICase _ t ty cs == ICase _ t' ty' cs'
+    = t == t' && ty == ty' && (assert_total $ cs == cs')
+  ILocal _ ds e == ILocal _ ds' e' =
+    (assert_total $ ds == ds') && e == e'
+  IUpdate _ fs t == IUpdate _ fs' t' =
+    (assert_total $ fs == fs') && t == t'
 
-    IApp _ f x == IApp _ f' x' = f == f' && x == x'
-    INamedApp _ f n x == INamedApp _ f' n' x' =
-      f == f' && n == n' && x == x'
-    IAutoApp _ f x == IAutoApp _ f' x' = f == f' && x == x'
-    IWithApp _ f x == IWithApp _ f' x' = f == f' && x == x'
+  IApp _ f x == IApp _ f' x' = f == f' && x == x'
+  INamedApp _ f n x == INamedApp _ f' n' x' =
+    f == f' && n == n' && x == x'
+  IAutoApp _ f x == IAutoApp _ f' x' = f == f' && x == x'
+  IWithApp _ f x == IWithApp _ f' x' = f == f' && x == x'
 
-    ISearch _ n == ISearch _ n' = n == n'
-    IAlternative _ t as == IAlternative _ t' as' =
-      (assert_total $ t == t') && (assert_total $ as == as')
-    IRewrite _ p q == IRewrite _ p' q' =
-      p == p' && q == q'
+  ISearch _ n == ISearch _ n' = n == n'
+  IAlternative _ t as == IAlternative _ t' as' =
+    (assert_total $ t == t') && (assert_total $ as == as')
+  IRewrite _ p q == IRewrite _ p' q' =
+    p == p' && q == q'
 
-    IBindHere _ m t == IBindHere _ m' t' =
-      m == m' && t == t'
-    IBindVar _ s == IBindVar _ s' = s == s'
-    IAs _ _ u n t == IAs _ _ u' n' t' =
-      u == u' && n == n' && t == t'
-    IMustUnify _ r t == IMustUnify _ r' t' =
-      r == r' && t == t'
+  IBindHere _ m t == IBindHere _ m' t' =
+    m == m' && t == t'
+  IBindVar _ s == IBindVar _ s' = s == s'
+  IAs _ _ u n t == IAs _ _ u' n' t' =
+    u == u' && n == n' && t == t'
+  IMustUnify _ r t == IMustUnify _ r' t' =
+    r == r' && t == t'
 
-    IDelayed _ r t == IDelayed _ r' t' = r == r' && t == t'
-    IDelay _ t == IDelay _ t' = t == t'
-    IForce _ t == IForce _ t' = t == t'
+  IDelayed _ r t == IDelayed _ r' t' = r == r' && t == t'
+  IDelay _ t == IDelay _ t' = t == t'
+  IForce _ t == IForce _ t' = t == t'
 
-    IQuote _ tm == IQuote _ tm' = tm == tm'
-    IQuoteName _ n == IQuoteName _ n' = n == n'
-    IQuoteDecl _ ds == IQuoteDecl _ ds' = assert_total $ ds == ds'
-    IUnquote _ tm == IUnquote _ tm' = tm == tm'
+  IQuote _ tm == IQuote _ tm' = tm == tm'
+  IQuoteName _ n == IQuoteName _ n' = n == n'
+  IQuoteDecl _ ds == IQuoteDecl _ ds' = assert_total $ ds == ds'
+  IUnquote _ tm == IUnquote _ tm' = tm == tm'
 
-    IPrimVal _ c == IPrimVal _ c' = c == c'
-    IType _ == IType _ = True
-    IHole _ s == IHole _ s' = s == s'
+  IPrimVal _ c == IPrimVal _ c' = c == c'
+  IType _ == IType _ = True
+  IHole _ s == IHole _ s' = s == s'
 
-    Implicit _ b == Implicit _ b' = b == b'
-    IWithUnambigNames _ ns t == IWithUnambigNames _ ns' t' =
-      map snd ns == map snd ns' && t == t'
+  Implicit _ b == Implicit _ b' = b == b'
+  IWithUnambigNames _ ns t == IWithUnambigNames _ ns' t' =
+    map snd ns == map snd ns' && t == t'
 
-    _ == _ = False
+  _ == _ = False
+
+
+mutual
+
+  export
+  Show IField where
+    show (MkIField fc rig pinfo nm s) = showPiInfo pinfo (showCount rig "\{show nm} : \{show s}")
+
+  export
+  Show Record where
+    show (MkRecord fc n params conName fields)
+      = unwords
+      [ "record", show n
+      , unwords (map (\ (nm, rig, pinfo, ty) =>
+                       showPiInfo pinfo (showCount rig "\{show nm} : \{show ty}"))
+                params)
+      , "where"
+      , "constructor", show conName
+      , joinBy "; " (map show fields)
+      ]
+
+  export
+  Show Data where
+    show (MkData fc n tycon opts datacons) -- TODO: print opts
+      = unwords
+      [ "data", show n, ":", show tycon, "where"
+      , "{", joinBy "; " (map show datacons), "}"
+      ]
+    show (MkLater fc n tycon) = unwords [ "data", show n, ":", show tycon ]
+
+  export
+  Show ITy where
+    show (MkTy fc nameFC n ty) = "\{show n} : \{show ty}"
+
+  export
+  Show Decl where
+    show (IClaim fc rig vis xs sig)
+      = unwords [ show vis
+                , showCount rig (show sig) ]
+    show (IData fc vis treq dt)
+      = unwords [ show vis
+                , showTotalReq treq (show dt)
+                ]
+    show (IDef fc nm xs) = joinBy "; " (map show xs)
+    show (IParameters fc params decls)
+      = unwords
+      [ "parameters"
+      , unwords (map (\ (nm, rig, pinfo, ty) =>
+                       showPiInfo pinfo (showCount rig "\{show nm} : \{show ty}"))
+                params)
+      , "{"
+      , joinBy "; " (assert_total $ map show decls)
+      , "}"
+      ]
+    show (IRecord fc x vis treq rec)
+      = unwords [ show vis, showTotalReq treq (show rec) ]
+    show (INamespace fc ns decls)
+      = unwords
+      [ "namespace", show ns
+      , "{", joinBy "; " (assert_total $ map show decls), "}" ]
+    show (ITransform fc nm s t) = #"%transform "\{show nm}" \{show s} = \{show t}"#
+    show (IRunElabDecl fc s) = "%runElab \{show s}"
+    show (ILog loglvl) = case loglvl of
+      Nothing => "%logging off"
+      Just ([], lvl) => "%logging \{show lvl}"
+      Just (topic, lvl) => "%logging \{joinBy "." topic} \{show lvl}"
+    show (IBuiltin fc bty nm) = "%builtin \{show bty} \{show nm}"
+
+  export
+  Show IFieldUpdate where
+    show (ISetField path s) = "\{joinBy "->" path} := \{show s}"
+    show (ISetFieldApp path s) = "\{joinBy "->" path} $= \{show s}"
+
+  export
+  Show Clause where
+    show (PatClause fc lhs rhs) = "\{show lhs} = \{show rhs}"
+    show (WithClause fc lhs rig wval prf flags cls) -- TODO print flags
+      = unwords
+      [ show lhs, "with"
+      , showCount rig $ maybe id (\ nm => (++ " proof \{show nm}")) prf
+                      $ showParens True (show wval)
+      , "{", joinBy "; " (assert_total $ map show cls)
+      ]
+    show (ImpossibleClause fc lhs) = "\{show lhs} impossible"
+
+  export
+  Show TTImp where
+    showPrec d (IVar fc nm) = show nm
+    showPrec d (IPi fc rig pinfo x argTy retTy)
+      = showParens (d > Open) $
+          let nm = fromMaybe (UN Underscore) x in
+          assert_total (showPiInfo pinfo ("\{showCount rig $ show nm} : \{show argTy}"))
+          ++ " -> \{show retTy}"
+    showPrec d (ILam fc rig pinfo x argTy lamTy)
+      = showParens (d > Open) $
+          "\\ \{showCount rig $ show (fromMaybe (UN Underscore) x)} => \{show lamTy}"
+    showPrec d (ILet fc lhsFC rig nm nTy nVal scope)
+      = showParens (d > Open) $
+          "let \{showCount rig (show nm)} : \{show nTy} = \{show nVal} in \{show scope}"
+    showPrec d (ICase fc s ty xs)
+      = showParens (d > Open) $
+          unwords [ "case", show s, ":", show ty, "of", "{"
+                  , joinBy "; " (assert_total $ map show xs)
+                  , "}"
+                  ]
+    showPrec d (ILocal fc decls s)
+      = showParens (d > Open) $
+          unwords [ "let", joinBy "; " (assert_total $ map show decls)
+                  , "in", show s
+                  ]
+    showPrec d (IUpdate fc upds s)
+      = showParens (d > Open) $
+          unwords [ "{", joinBy ", " $ assert_total (map show upds), "}"
+                  , showPrec App s ]
+    showPrec d (IApp fc f t)
+      = showParens (d >= App) $ "\{show f} \{showPrec App t}"
+    showPrec d (INamedApp fc f nm t)
+      = showParens (d >= App) $ "\{show f} {\{show nm} = \{show t}}"
+    showPrec d (IAutoApp fc f t)
+      = showParens (d >= App) $ "\{show f} @{\{show t}}"
+    showPrec d (IWithApp fc f t)
+      = showParens (d >= App) $ "\{show f} | \{showPrec App t}"
+    showPrec d (ISearch fc depth) = "%search"
+    showPrec d (IAlternative fc x xs) = "<\{show (length xs)} alts>"
+    showPrec d (IRewrite fc s t)
+      = showParens (d > Open) "rewrite \{show s} in \{show t}"
+    showPrec d (IBindHere fc bm s) = showPrec d s
+    showPrec d (IBindVar fc x) = x
+    showPrec d (IAs fc nameFC side nm s)
+      = "\{show nm}@\{showPrec App s}"
+    showPrec d (IMustUnify fc dr s) = ".(\{show s})"
+    showPrec d (IDelayed fc lr s) = showPrec d s
+    showPrec d (IDelay fc s) = showCon d "Delay" $ assert_total (showArg s)
+    showPrec d (IForce fc s) = showPrec d s
+    showPrec d (IQuote fc s) = "`(\{show s})"
+    showPrec d (IQuoteName fc nm) = "`{\{show nm}}"
+    showPrec d (IQuoteDecl fc xs) = "`[\{joinBy "; " (assert_total $ map show xs)}]"
+    showPrec d (IUnquote fc s) = "~(\{show s})"
+    showPrec d (IPrimVal fc c) = show c
+    showPrec d (IType fc) = "Type"
+    showPrec d (IHole fc str) = "?" ++ str
+    showPrec d (Implicit fc b) = ifThenElse b "_" "?"
+    showPrec d (IWithUnambigNames fc ns s) = case ns of
+      [] => show s
+      [(_,x)] => "with \{show x} \{show s}"
+      _   => "with [\{joinBy ", " $ map (show . snd) ns}] \{show s}"

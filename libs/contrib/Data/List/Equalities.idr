@@ -1,6 +1,10 @@
 module Data.List.Equalities
 
+import Control.Function
+import Syntax.PreorderReasoning
+
 import Data.List
+import Data.List.Reverse
 
 %default total
 
@@ -34,7 +38,7 @@ snocInjective {xs = z :: xs} {ys = []} prf =
   let snocIsNil = snd $ consInjective {x = z} {xs = xs ++ [x]} {ys = []} prf
    in void $ snocNonEmpty snocIsNil
 snocInjective {xs = w :: xs} {ys = z :: ys} prf =
-  let (wEqualsZ, xsSnocXEqualsYsSnocY) = consInjective prf
+  let (wEqualsZ, xsSnocXEqualsYsSnocY) = biinjective prf
       (xsEqualsYS, xEqualsY) = snocInjective xsSnocXEqualsYsSnocY
    in (consCong2 wEqualsZ xsEqualsYS, xEqualsY)
 
@@ -80,7 +84,7 @@ lengthSnoc x (_ :: xs) = cong S (lengthSnoc x xs)
 export
 appendSameLeftInjective : (xs, ys, zs : List a) -> zs ++ xs = zs ++ ys -> xs = ys
 appendSameLeftInjective xs ys []      = id
-appendSameLeftInjective xs ys (_::zs) = appendSameLeftInjective xs ys zs . snd . consInjective
+appendSameLeftInjective xs ys (_::zs) = appendSameLeftInjective xs ys zs . snd . biinjective
 
 ||| Appending the same list at right is injective.
 export
@@ -92,16 +96,68 @@ appendSameRightInjective xs ys (z::zs) = rewrite appendAssociative xs [z] zs in
                                          rewrite appendAssociative ys [z] zs in
                                          fst . snocInjective . appendSameRightInjective (xs ++ [z]) (ys ++ [z]) zs
 
+export
+{zs : List a} -> Injective (zs ++) where
+  injective = appendSameLeftInjective _ _ zs
+
+export
+{zs : List a} -> Injective (++ zs) where
+  injective = appendSameRightInjective _ _ zs
+
 ||| List cannot be equal to itself prepended with some non-empty list.
 export
 appendNonEmptyLeftNotEq : (zs, xs : List a) -> NonEmpty xs => Not (zs = xs ++ zs)
 appendNonEmptyLeftNotEq []      (_::_)  Refl impossible
 appendNonEmptyLeftNotEq (z::zs) (_::xs) prf
   = appendNonEmptyLeftNotEq zs (xs ++ [z]) @{SnocNonEmpty xs z}
-  $ rewrite sym $ appendAssociative xs [z] zs in snd $ consInjective prf
+  $ rewrite sym $ appendAssociative xs [z] zs in snd $ biinjective prf
 
 ||| List cannot be equal to itself appended with some non-empty list.
 export
 appendNonEmptyRightNotEq : (zs, xs : List a) -> NonEmpty xs => Not (zs = zs ++ xs)
 appendNonEmptyRightNotEq []      (_::_)  Refl impossible
-appendNonEmptyRightNotEq (_::zs) (x::xs) prf = appendNonEmptyRightNotEq zs (x::xs) $ snd $ consInjective prf
+appendNonEmptyRightNotEq (_::zs) (x::xs) prf = appendNonEmptyRightNotEq zs (x::xs) $ snd $ biinjective prf
+
+listBindOntoPrf : (xs: List a)
+                -> (f: a -> List b)
+                -> (zs, ys: List b)
+                -> listBindOnto f (reverse zs ++ reverse ys) xs = ys ++ listBindOnto f (reverse zs) xs
+listBindOntoPrf [] f zs ys =
+  Calc $
+    |~  reverse (reverse zs ++ reverse ys)
+    ~~  reverse (reverse (ys ++ zs)) ... cong reverse (revAppend ys zs)
+    ~~  ys ++ zs ... reverseInvolutive _
+    ~~  ys ++ reverse (reverse zs) ... cong (ys ++) (sym $ reverseInvolutive _)
+listBindOntoPrf (x::xs) f zs ys =
+  Calc $
+    |~ listBindOnto f (reverseOnto (reverse zs ++ reverse ys) (f x)) xs
+    ~~ listBindOnto f (reverse (f x) ++ reverse zs ++ reverse ys) xs
+                          ... cong  (\n => listBindOnto f n xs)
+                                    (reverseOntoSpec _ _)
+    ~~ listBindOnto f ((reverse (f x) ++ reverse zs) ++ reverse ys) xs
+                          ... cong  (\n => listBindOnto f n xs)
+                                    (appendAssociative _ _ _)
+    ~~ listBindOnto f (reverse (zs ++ f x) ++ reverse ys) xs
+                          ... cong  (\n => listBindOnto f (n ++ reverse ys) xs)
+                                    (revAppend _ _)
+    ~~ ys ++ listBindOnto f (reverse (zs ++ f x)) xs ... listBindOntoPrf _ _ _ _
+    ~~ ys ++ listBindOnto f (reverse (f x) ++ reverse zs) xs
+                          ... cong  (\n => ys ++ listBindOnto f n xs)
+                                    (sym $ revAppend _ _)
+    ~~ ys ++ listBindOnto f (reverseOnto (reverse zs) (f x)) xs
+                          ... cong  (\n => ys ++ listBindOnto f n xs)
+                                    (sym $ reverseOntoSpec _ _)
+
+||| Proof of correspondence between list bind and concatenation.
+export
+bindConcatPrf : (xs: List a)
+              -> (x: a)
+              -> (f: a -> List b)
+              -> ((x::xs >>= f) = (f x) ++ (xs >>= f))
+bindConcatPrf xs x f =
+  Calc $
+    |~ listBindOnto f ([] ++ reverse (f x)) xs
+    ~~ listBindOnto f (reverse [] ++ reverse (f x)) xs
+                          ... cong  (\n => listBindOnto f (n ++ reverse (f x)) xs)
+                                    (sym reverseNil)
+    ~~ f x ++ listBindOnto f [] xs ... listBindOntoPrf xs f [] (f x)

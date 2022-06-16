@@ -9,4 +9,4 @@ module Control.Function.FunExt
 ||| that holds only in the presence of function extensionality.
 public export
 interface FunExt where
-  0 funExt : {0 f, g : a -> b} -> ((x : a) -> f x = g x) -> f = g
+  funExt : {0 b : a -> Type} -> {0 f, g : (x : a) -> b x} -> ((x : a) -> f x = g x) -> f = g

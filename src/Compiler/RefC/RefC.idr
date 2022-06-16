@@ -1038,12 +1038,6 @@ footer = do
       """
 
 export
-executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
-executeExpr c _ tm
-    = do coreLift_ $ putStrLn "Execute expression not yet implemented for refc"
-         coreLift_ $ system "false"
-
-export
 generateCSourceFile : {auto c : Ref Ctxt Defs}
                    -> {default [] additionalFFILangs : List String}
                    -> List (Name, ANFDef)
@@ -1088,6 +1082,16 @@ compileExpr ANF c _ outputDir tm outfile =
      compileCFile outobj outexec
 
 compileExpr _ _ _ _ _ _ = pure Nothing
+
+
+
+export
+executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
+executeExpr c tmpDir tm = do
+  do let outfile = "_tmp_refc"
+     Just _ <- compileExpr ANF c tmpDir tmpDir tm outfile
+       | Nothing => do coreLift_ $ putStrLn "Error: failed to compile"
+     coreLift_ $ system (tmpDir </> outfile)
 
 export
 codegenRefC : Codegen

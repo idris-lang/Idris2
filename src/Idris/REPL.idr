@@ -17,6 +17,7 @@ import Core.Metadata
 import Core.Normalise
 import Core.Options
 import Core.TT
+import Core.TT.Views
 import Core.Termination
 import Core.Unify
 import Core.Value
@@ -51,11 +52,15 @@ import TTImp.Elab.Local
 import TTImp.Interactive.CaseSplit
 import TTImp.Interactive.ExprSearch
 import TTImp.Interactive.GenerateDef
+import TTImp.Interactive.Intro
 import TTImp.Interactive.MakeLemma
 import TTImp.TTImp
+import TTImp.Unelab
+import TTImp.Utils
 import TTImp.BindImplicits
 import TTImp.ProcessDecls
 
+import Data.SnocList -- until 0.6.0 release
 import Data.List
 import Data.List1
 import Data.Maybe
@@ -193,7 +198,8 @@ getOptions : {auto c : Ref Ctxt Defs} ->
 getOptions = do
   pp <- getPPrint
   opts <- get ROpts
-  pure $ [ ShowImplicits (showImplicits pp), ShowNamespace (fullNamespace pp)
+  pure $ [ ShowImplicits (showImplicits pp), ShowMachineNames (showMachineNames pp)
+         , ShowNamespace (fullNamespace pp)
          , ShowTypes (showTypes opts), EvalMode (evalMode opts)
          , Editor (editor opts)
          ]
@@ -376,6 +382,50 @@ findInTree p hint m
     match : (NonEmptyFC, Name) -> Bool
     match (_, n) = matches hint n && checkCandidate n
 
+record TermWithType (vars : List Name) where
+  constructor WithType
+  termOf : Term vars
+  typeOf : Term vars
+
+getItDecls :
+    {auto o : Ref ROpts REPLOpts} ->
+    Core (List ImpDecl)
+getItDecls
+    = do opts <- get ROpts
+         case evalResultName opts of
+            Nothing => pure []
+            Just n =>
+              let it = UN $ Basic "it" in
+              pure [ IClaim replFC top Private [] (MkImpTy replFC EmptyFC it (Implicit replFC False))
+                  , IDef replFC it [PatClause replFC (IVar replFC it) (IVar replFC n)]]
+
+||| Produce the elaboration of a PTerm, along with its inferred type
+inferAndElab :
+  {vars : _} ->
+  {auto c : Ref Ctxt Defs} ->
+  {auto u : Ref UST UState} ->
+  {auto s : Ref Syn SyntaxInfo} ->
+  {auto m : Ref MD Metadata} ->
+  {auto o : Ref ROpts REPLOpts} ->
+  ElabMode ->
+  PTerm ->
+  Env Term vars ->
+  Core (TermWithType vars)
+inferAndElab emode itm env
+  = do ttimp <- desugar AnyExpr vars itm
+       let ttimpWithIt = ILocal replFC !getItDecls ttimp
+       inidx <- resolveName (UN $ Basic "[input]")
+       -- a TMP HACK to prioritise list syntax for List: hide
+       -- foreign argument lists. TODO: once the new FFI is fully
+       -- up and running we won't need this. Also, if we add
+       -- 'with' disambiguation we can use that instead.
+       catch (do hide replFC (NS primIONS (UN $ Basic "::"))
+                 hide replFC (NS primIONS (UN $ Basic "Nil")))
+             (\err => pure ())
+       (tm , gty) <- elabTerm inidx emode [] (MkNested []) env ttimpWithIt Nothing
+       ty <- getTerm gty
+       pure (tm `WithType` ty)
+
 processEdit : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -439,6 +489,125 @@ processEdit (AddClause upd line name)
          if upd
             then updateFile (addClause c (integerToNat (cast line)))
             else pure $ DisplayEdit (pretty0 c)
+processEdit (Intro upd line hole)
+    = do defs <- get Ctxt
+         -- Grab the hole's definition (and check it is not a solved hole)
+         [(h, hidx, hgdef)] <- lookupCtxtName hole (gamma defs)
+           | _ => pure $ EditError ("Could not find hole named" <++> pretty0 hole)
+         let Hole args _ = definition hgdef
+           | _ => pure $ EditError (pretty0 hole <++> "is not a refinable hole")
+         let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) [] (type hgdef)
+
+         (iintrod :: iintrods) <- intro hidx hole env htyInLhsCtxt
+           | [] => pure $ EditError "Don't know what to do."
+         pintrods <- traverseList1 pterm (iintrod ::: iintrods)
+         syn <- get Syn
+         let brack = elemBy (\x, y => dropNS x == dropNS y) hole (bracketholes syn)
+         let introds = map (show . pretty . ifThenElse brack (addBracket replFC) id) pintrods
+
+         if upd
+            then case introds of
+                   introd ::: [] => updateFile (proofSearch hole introd (integerToNat (cast (line - 1))))
+                   _ => pure $ EditError "Don't know what to do"
+            else pure $ MadeIntro introds
+processEdit (Refine upd line hole e)
+    = do defs <- get Ctxt
+         -- First we grab the hole's definition (and check it is not a solved hole)
+         -- We grab the LHS it lives in as well as its type in that context.
+         [(h, hidx, hgdef)] <- lookupCtxtName hole (gamma defs)
+           | _ => pure $ EditError ("Could not find hole named" <++> pretty0 hole)
+         let Hole args _ = definition hgdef
+           | _ => pure $ EditError (pretty0 hole <++> "is not a refinable hole")
+         let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) [] (type hgdef)
+
+         -- Then we elaborate the expression we were given and infer its type.
+         -- We have some magic built-in if the expression happens to be a single identifier
+         -- corresponding to a top-level definition
+         Right msize_tele_fun <- case e of
+             PRef fc v => do
+               (n :: ns) <- lookupCtxtName v (gamma defs)
+                 -- could not find the variable: it may be a local one!
+                 | [] => pure (Right Nothing)
+               let sizes = (n ::: ns) <&> \ (_,_,gdef) =>
+                              let ctxt = underPis (-1) [] (type gdef) in
+                              lengthExplicitPi $ fst $ snd $ ctxt
+               let True = all (head sizes ==) sizes
+                 | _ => pure (Left ("Ambiguous name" <++> pretty0 v <++> "(couldn't infer arity)"))
+               let arity = args + head sizes -- pretending the term has been elaborated in the LHS context
+               pure (Right $ Just arity)
+             _ => pure (Right Nothing)
+           | Left err => pure (EditError err)
+         -- We do it in an extended context corresponding to the hole's so that users
+         -- may mention variables bound on the LHS.
+         size_tele_fun <- case msize_tele_fun of
+             Just n => pure n
+             Nothing => do
+               ust <- get UST
+               syn <- get Syn
+               md <- get MD
+               defs <- branch
+               infered <- inferAndElab InExpr e env
+               put UST ust
+               put Syn syn
+               put MD md
+               put Ctxt defs
+               let tele = underPis (-1) env $ typeOf infered
+               pure (lengthExplicitPi $ fst $ snd tele)
+
+         -- Now that we have a hole & a function to use inside it,
+         -- we need to figure out how many arguments to pass to the function so that the types align
+
+         -- E.g. refining `?hole : Nat` with the function `plus : Nat -> Nat -> Nat`
+         -- means we need to replace the hole with `plus ?hole_1 ?hole_2`
+         -- while refining it with the constructor `Z : Nat` means we can just return `Z`.
+
+         -- Crude heuristics: measure the length of both *explicit* telescopes and pass
+         -- |tele_fun| - |tele_hole| arguments.
+         -- This may not always work because
+         -- e.g.         fun   : (a : Type) -> {n : Nat} -> Vect n a
+         -- won't fit in ?hole : (a : Type) -> Vect 3 a
+         -- without eta-expansion to (\ a => fun a)
+         -- It is hopefully a good enough approximation for now. A very ambitious approach
+         -- would be to type-align the telescopes. Bonus points for allowing permutations.
+         let size_tele_hole = lengthExplicitPi $ fst $ snd $ underPis (-1) [] (type hgdef)
+         let True = size_tele_fun >= size_tele_hole
+           | _ => pure $ EditError $ hsep
+                       [ "Cannot seem to refine", pretty0 hole
+                       , "by", pretty0 (show e) ]
+
+         -- We now have all the necessary information to manufacture the function call
+         -- that starts with the expression the user passed
+         call <- do -- We're forming the PTerm (e ?hole_1 ... ?hole_|missing_args|)
+                    -- We don't reuse etm because it may have been elaborated to something dodgy
+                    -- because of defaulting instances.
+                    let n = minus size_tele_fun size_tele_hole
+                    ns <- uniqueHoleNames defs n (nameRoot hole)
+                    let new_holes = PHole replFC True <$> ns
+                    let pcall = papply replFC e new_holes
+
+                    -- We're desugaring it to the corresponding TTImp
+                    icall <- desugar AnyExpr (lhsCtxt <>> []) pcall
+
+                    -- We're checking this term full of holes against the type of the hole
+                    -- TODO: branch before checking the expression fits
+                    --       so that we can cleanly recover in case of error
+                    let gty = gnf env htyInLhsCtxt
+                    ccall <- checkTerm hidx {-is this correct?-} InExpr [] (MkNested []) env icall gty
+
+                    -- And then we normalise, unelab, resugar the resulting term so
+                    -- that solved holes are replaced with their solutions
+                    -- (we need to re-read the context because elaboration may have added solutions to it)
+                    defs <- get Ctxt
+                    ncall <- normaliseHoles defs env ccall
+                    pcall <- resugar env ncall
+                    syn <- get Syn
+                    let brack = elemBy (\x, y => dropNS x == dropNS y) hole (bracketholes syn)
+                    pure $ show $ ifThenElse brack (addBracket replFC) id pcall
+
+         if upd
+            then updateFile (proofSearch hole call (integerToNat (cast (line - 1))))
+            else pure $ DisplayEdit (pretty0 call)
+
 processEdit (ExprSearch upd line name hints)
     = do defs <- get Ctxt
          syn <- get Syn
@@ -558,18 +727,6 @@ processEdit (MakeWith upd line name)
             then updateFile (addMadeCase markM w (max 0 (integerToNat (cast (line - 1)))))
             else pure $ MadeWith markM w
 
-getItDecls :
-    {auto o : Ref ROpts REPLOpts} ->
-    Core (List ImpDecl)
-getItDecls
-    = do opts <- get ROpts
-         case evalResultName opts of
-            Nothing => pure []
-            Just n =>
-              let it = UN $ Basic "it" in
-              pure [ IClaim replFC top Private [] (MkImpTy replFC EmptyFC it (Implicit replFC False))
-                  , IDef replFC it [PatClause replFC (IVar replFC it) (IVar replFC n)]]
-
 prepareExp :
     {auto c : Ref Ctxt Defs} ->
     {auto u : Ref UST UState} ->
@@ -685,36 +842,6 @@ replEval : {auto c : Ref Ctxt Defs} ->
 replEval NormaliseAll = normaliseOpts ({ strategy := CBV } withAll)
 replEval _ = normalise
 
-record TermWithType where
-  constructor WithType
-  termOf : Term []
-  typeOf : Term []
-
-||| Produce the elaboration of a PTerm, along with its inferred type
-inferAndElab : {auto c : Ref Ctxt Defs} ->
-  {auto u : Ref UST UState} ->
-  {auto s : Ref Syn SyntaxInfo} ->
-  {auto m : Ref MD Metadata} ->
-  {auto o : Ref ROpts REPLOpts} ->
-  ElabMode ->
-  PTerm ->
-  Core TermWithType
-inferAndElab emode itm
-  = do ttimp <- desugar AnyExpr [] itm
-       let ttimpWithIt = ILocal replFC !getItDecls ttimp
-       inidx <- resolveName (UN $ Basic "[input]")
-       -- a TMP HACK to prioritise list syntax for List: hide
-       -- foreign argument lists. TODO: once the new FFI is fully
-       -- up and running we won't need this. Also, if we add
-       -- 'with' disambiguation we can use that instead.
-       catch (do hide replFC (NS primIONS (UN $ Basic "::"))
-                 hide replFC (NS primIONS (UN $ Basic "Nil")))
-             (\err => pure ())
-       (tm , gty) <- elabTerm inidx emode [] (MkNested [])
-                   [] ttimpWithIt Nothing
-       ty <- getTerm gty
-       pure (tm `WithType` ty)
-
 ||| Produce the normal form of a PTerm, along with its inferred type
 inferAndNormalize : {auto c : Ref Ctxt Defs} ->
   {auto u : Ref UST UState} ->
@@ -723,9 +850,9 @@ inferAndNormalize : {auto c : Ref Ctxt Defs} ->
   {auto o : Ref ROpts REPLOpts} ->
   REPLEval ->
   PTerm ->
-  Core TermWithType
+  Core (TermWithType [])
 inferAndNormalize emode itm
-  = do (tm `WithType` ty) <- inferAndElab (elabMode emode) itm
+  = do (tm `WithType` ty) <- inferAndElab (elabMode emode) itm []
        logTerm "repl.eval" 10 "Elaborated input" tm
        defs <- get Ctxt
        let norm = replEval emode
@@ -756,7 +883,7 @@ process (Eval itm)
          case emode of
             Execute => do ignore (execExp itm); pure (Executed itm)
             Scheme =>
-              do (tm `WithType` ty) <- inferAndElab InExpr itm
+              do (tm `WithType` ty) <- inferAndElab InExpr itm []
                  qtm <- logTimeWhen !getEvalTiming 0 "Evaluation" $
                            (do nf <- snfAll [] tm
                                quote [] nf)
@@ -791,7 +918,7 @@ process (Check (PRef fc fn))
               ts => do tys <- traverse (displayType False defs) ts
                        pure (Printed $ vsep $ map (reAnnotate Syntax) tys)
 process (Check itm)
-    = do (tm `WithType` ty) <- inferAndElab InExpr itm
+    = do (tm `WithType` ty) <- inferAndElab InExpr itm []
          defs <- get Ctxt
          itm <- resugar [] !(normaliseHoles defs [] tm)
          -- ty <- getTerm gty
@@ -1134,6 +1261,7 @@ mutual
     = printResult $ pretty0 (relit lit (show name ++ " : " ++ show pty ++ "\n") ++ pappstr)
   displayResult (Edited (MadeWith lit wapp)) = printResult $ pretty0 $ showSep "\n" (map (relit lit) wapp)
   displayResult (Edited (MadeCase lit cstr)) = printResult $ pretty0 $ showSep "\n" (map (relit lit) cstr)
+  displayResult (Edited (MadeIntro is)) = printResult $ pretty0 $ showSep "\n" (toList is)
   displayResult (OptionsSet opts) = printResult (vsep (pretty0 <$> opts))
 
   -- do not use a catchall so that we are warned when a new constructor is added

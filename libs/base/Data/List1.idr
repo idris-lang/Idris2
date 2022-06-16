@@ -1,7 +1,7 @@
 module Data.List1
 
 import public Data.Zippable
-import Control.Function
+import public Control.Function
 
 %default total
 

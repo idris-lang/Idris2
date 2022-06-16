@@ -5,6 +5,7 @@ import Protocol.SExp
 import Protocol.IDE.Holes
 import Protocol.IDE.FileContext
 
+import Data.List1
 import Data.Maybe
 
 %default total
@@ -60,7 +61,7 @@ record MetaVarLemma where
 
 export
 SExpable MetaVarLemma where
-  toSExp mvl =  SExpList [ SymbolAtom "metavariable-lemma"
+  toSExp mvl = SExpList [ SymbolAtom "metavariable-lemma"
              , SExpList [ SymbolAtom "replace-metavariable", StringAtom mvl.application ]
              , SExpList [ SymbolAtom "definition-type", StringAtom mvl.lemma ]
              ]
@@ -68,9 +69,9 @@ SExpable MetaVarLemma where
 export
 FromSExpable MetaVarLemma where
   fromSExp (SExpList [ SymbolAtom "metavariable-lemma"
-             , SExpList [ SymbolAtom "replace-metavariable", StringAtom application ]
-             , SExpList [ SymbolAtom "definition-type", StringAtom lemma ]
-             ]) = Just $ MkMetaVarLemma {application, lemma}
+            , SExpList [ SymbolAtom "replace-metavariable", StringAtom application ]
+            , SExpList [ SymbolAtom "definition-type", StringAtom lemma ]
+            ]) = Just $ MkMetaVarLemma {application, lemma}
   fromSExp _ = Nothing
 
 public export
@@ -108,8 +109,10 @@ data Result =
   | AMetaVarLemma MetaVarLemma
   | ANameLocList (List (String, FileContext))
   | AHoleList (List HoleData)
+  | ACompletionList (List String) String
   | ANameList (List String)
   | AnOptionList (List REPLOption)
+  | AnIntroList (List1 String)
 
 export
 SExpable Result where
@@ -119,9 +122,10 @@ SExpable Result where
   toSExp (AMetaVarLemma mvl) = toSExp mvl
   toSExp (ANameLocList fcs) = toSExp fcs
   toSExp (AHoleList holes) = toSExp holes
-  toSExp (ANameList names) = SExpList (map SymbolAtom names)
+  toSExp (ANameList names) = SExpList (map StringAtom names)
+  toSExp (ACompletionList names str) = SExpList [SExpList (map StringAtom names), StringAtom str]
   toSExp (AnOptionList opts) = toSExp opts
-
+  toSExp (AnIntroList iss) = toSExp iss
 
 -- This code is not efficient. Usually the client knows what kind of
 -- result to expect based on the request it issued.
@@ -142,5 +146,9 @@ FromSExpable Result where
   let Nothing = fromSExp sexp
     | Just nl => pure $ ANameList nl
   let Nothing = fromSExp sexp
+    | Just nlr => pure $ uncurry ACompletionList nlr
+  let Nothing = fromSExp sexp
     | Just optl => pure $ AnOptionList optl
+  let Nothing = fromSExp sexp
+    | Just optl => pure $ AnIntroList optl
   Nothing

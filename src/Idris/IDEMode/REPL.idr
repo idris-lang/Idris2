@@ -25,11 +25,16 @@ import Protocol.Hex
 import Libraries.Utils.Path
 
 import Data.List
+import Data.String
 import System
 import System.File
 
 import Network.Socket
 import Network.Socket.Data
+
+import TTImp.Interactive.Completion
+
+import Libraries.Data.String.Extra -- until 0.6.0 release
 
 %default covering
 
@@ -102,16 +107,16 @@ getNChars i (S k)
 
 -- Read 6 characters. If they're a hex number, read that many characters.
 -- Otherwise, just read to newline
-getInput : File -> IO String
+getInput : File -> IO (Maybe String, String)
 getInput f
     = do x <- getNChars f 6
          case fromHexChars (reverse x) of
               Nothing =>
                 do rest <- getFLine f
-                   pure (pack x ++ rest)
+                   pure (Nothing, pack x ++ rest)
               Just num =>
                 do inp <- getNChars f (integerToNat num)
-                   pure (pack inp)
+                   pure (Just (pack x), pack inp)
 
 ||| Do nothing and tell the user to wait for us to implmement this (or join the effort!)
 todoCmd : {auto c : Ref Ctxt Defs} ->
@@ -122,6 +127,7 @@ todoCmd cmdName = iputStrLn $ reflow $ cmdName ++ ": command not yet implemented
 
 data IDEResult
   = REPL REPLResult
+  | CompletionList (List String) String
   | NameList (List Name)
   | FoundHoles (List Holes.Data)
   | Term String   -- should be a PTerm + metadata, or SExp.
@@ -177,6 +183,16 @@ process (AddClause l n)
 process (AddMissing l n)
     = do todoCmd "add-missing"
          pure $ REPL $ Edited $ DisplayEdit emptyDoc
+process (Intro l h) =
+   do replWrap $ Idris.REPL.process
+               $ Editing
+               $ Intro False (fromInteger l) (UN $ Basic h) {- hole name -}
+process (Refine l h expr) =
+   do let Right (_, _, e) = runParser (Virtual Interactive) Nothing expr aPTerm
+        | Left err => pure $ REPL $ REPLError (pretty0 $ show err)
+      replWrap $ Idris.REPL.process
+               $ Editing
+               $ Refine False (fromInteger l) (UN $ Basic h) {- hole name -} e
 process (ExprSearch l n hs all)
     = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l)
                      (UN $ Basic n) (map (UN . Basic) hs.list)))
@@ -223,9 +239,10 @@ process (ElaborateTerm tm)
 process (PrintDefinition n)
     = do todoCmd "print-definition"
          pure $ REPL $ Printed (pretty0 n)
-process (ReplCompletions n)
-    = do todoCmd "repl-completions"
-         pure $ NameList []
+process (ReplCompletions line)
+    = do Just (ctxt, compl) <- completion line
+           | Nothing => pure (REPL $ REPLError $ vcat [ "I can't make sense of the completion task:", pretty0 line])
+         pure (CompletionList compl ctxt)
 process (EnableSyntax b)
     = do setSynHighlightOn b
          pure $ REPL $ Printed (reflow "Syntax highlight option changed to" <++> byShow b)
@@ -368,9 +385,13 @@ displayIDEResult outf i  (REPL $ VersionIs x)
     in printIDEResult outf i $ AVersion $ MkIdrisVersion
       {major, minor, patch, tag = versionTag x}
 displayIDEResult outf i (REPL $ Edited (DisplayEdit xs))
-  = printIDEResult outf i $ AString $ show xs
+  = printIDEResultWithHighlight outf i
+  $ mapFst AString
+   !(renderWithDecorations annToProperties $ xs)
 displayIDEResult outf i (REPL $ Edited (EditError x))
   = printIDEError outf i x
+displayIDEResult outf i (REPL $ Edited (MadeIntro is))
+  = printIDEResult outf i $ AnIntroList is
 displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr))
   = printIDEResult outf i $ AMetaVarLemma $ MkMetaVarLemma
       { application = pappstr
@@ -384,8 +405,10 @@ displayIDEResult outf i (REPL $ (Edited (MadeCase lit cstr)))
   $ AString $ showSep "\n" (map (relit lit) cstr)
 displayIDEResult outf i (FoundHoles holes)
   = printIDEResult outf i $ AHoleList $ map holeIDE holes
+displayIDEResult outf i (CompletionList ns r)
+  = printIDEResult outf i $ ACompletionList ns r
 displayIDEResult outf i (NameList ns)
-  = printIDEResult outf i $ ANameList $ map show ns
+  = printIDEResult outf i $ ANameList (map show ns)
 displayIDEResult outf i (Term t)
   = printIDEResult outf i $ AString t
 displayIDEResult outf i (TTTerm t)
@@ -434,13 +457,13 @@ displayIDEResult outf i (NameLocList dat)
 
 -- do not use a catchall so that we are warned about missing cases when adding a
 -- new construtor to the enumeration.
-displayIDEResult _ _ (REPL Done) = pure ()
-displayIDEResult _ _ (REPL (Executed _)) = pure ()
-displayIDEResult _ _ (REPL (ModuleLoaded _)) = pure ()
-displayIDEResult _ _ (REPL (ErrorLoadingModule _ _)) = pure ()
-displayIDEResult _ _ (REPL (ColorSet _)) = pure ()
-displayIDEResult _ _ (REPL DefDeclared) = pure ()
-displayIDEResult _ _ (REPL Exited) = pure ()
+displayIDEResult outf i (REPL Done) = printIDEResult outf i (AString "")
+displayIDEResult outf i (REPL (Executed _)) = printIDEResult outf i (AString "")
+displayIDEResult outf i (REPL (ModuleLoaded _)) = printIDEResult outf i (AString "")
+displayIDEResult outf i (REPL (ErrorLoadingModule _ _)) = printIDEResult outf i (AString "")
+displayIDEResult outf i (REPL (ColorSet _)) = printIDEResult outf i (AString "")
+displayIDEResult outf i (REPL DefDeclared) = printIDEResult outf i (AString "")
+displayIDEResult outf i (REPL Exited) = printIDEResult outf i (AString "")
 
 
 handleIDEResult : {auto c : Ref Ctxt Defs} ->
@@ -463,24 +486,24 @@ loop
          case res of
               REPL _ => printError $ reflow "Running idemode but output isn't"
               IDEMode idx inf outf => do
-                inp <- coreLift $ getInput inf
+                (pref, inp) <- coreLift $ getInput inf
+                log "ide-mode.recv" 50 $ "Received: \{fromMaybe "" pref}\{inp}"
                 end <- coreLift $ fEOF inf
-                if end
-                   then pure ()
-                   else case parseSExp inp of
-                      Left err =>
-                        do printIDEError outf idx (reflow "Parse error:" <++> !(perror err))
-                           loop
-                      Right sexp =>
-                        case getMsg sexp of
-                          Just (cmd, i) =>
-                            do updateOutput i
-                               res <- processCatch cmd
-                               handleIDEResult outf i res
-                               loop
-                          Nothing =>
-                            do printIDEError outf idx (reflow "Unrecognised command:" <++> pretty0 (show sexp))
-                               loop
+                unless end $ do
+                  case parseSExp inp of
+                    Left err =>
+                      do printIDEError outf idx (reflow "Parse error:" <++> !(perror err))
+                         loop
+                    Right sexp =>
+                      case getMsg sexp of
+                        Just (cmd, i) =>
+                          do updateOutput i
+                             res <- processCatch cmd
+                             handleIDEResult outf i res
+                             loop
+                        Nothing =>
+                          do printIDEError outf idx (reflow "Unrecognised command:" <++> pretty0 (show sexp))
+                             loop
   where
     updateOutput : Integer -> Core ()
     updateOutput idx

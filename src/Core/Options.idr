@@ -6,6 +6,7 @@ import public Core.Options.Log
 import Core.TT
 
 import Libraries.Utils.Path
+import Idris.Syntax.Pragmas
 
 import Data.List
 import Data.Maybe
@@ -110,17 +111,6 @@ record PrimNames where
 export
 primNamesToList : PrimNames -> List Name
 primNamesToList (MkPrimNs i s c d) = catMaybes [i,s,c,d]
-
-public export
-data LangExt
-     = ElabReflection
-     | Borrowing -- not yet implemented
-
-export
-Eq LangExt where
-  ElabReflection == ElabReflection = True
-  Borrowing == Borrowing = True
-  _ == _ = False
 
 -- Other options relevant to the current session (so not to be saved in a TTC)
 public export

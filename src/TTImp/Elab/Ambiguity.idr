@@ -20,6 +20,7 @@ import TTImp.TTImp
 
 import Data.List
 import Data.String
+import Data.Vect
 
 import Libraries.Data.UserNameMap
 
@@ -124,24 +125,31 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
             else IMustUnify fc NotConstructor tm
     wrapDot _ _ _ _ _ _ tm = tm
 
+    notLHS : ElabMode -> Bool
+    notLHS (InLHS _) = False
+    notLHS _ = True
 
     mkTerm : Bool -> EState vars -> Name -> GlobalDef -> RawImp
     mkTerm prim est n def
-        = let tm = wrapDot prim est mode n (map (snd . snd) args)
-                       (definition def) (buildAlt (IVar fc n) args) in
-              if Context.Macro `elem` flags def
-                 then case mode of
-                           InLHS _ => tm
-                           _ => IRunElab fc (ICoerced fc tm)
-                 else tm
+        = if (Context.Macro `elem` flags def) && notLHS mode
+             then alternativeFirstSuccess $ reverse $
+                    allSplits args <&> \(macroArgs, extArgs) =>
+                      (IRunElab fc $ ICoerced fc $ IVar fc n `buildAlt` macroArgs) `buildAlt` extArgs
+             else wrapDot prim est mode n (map (snd . snd) args)
+                    (definition def) (buildAlt (IVar fc n) args)
+      where
+        -- All splits of the original list starting from the (empty, full) finishing with (full, empty)
+        allSplits : (l : List a) -> Vect (S $ length l) (List a, List a)
+        allSplits []           = [([], [])]
+        allSplits full@(x::xs) = ([], full) :: (mapFst (x::) <$> allSplits xs)
+
+        alternativeFirstSuccess : forall n. Vect (S n) RawImp -> RawImp
+        alternativeFirstSuccess [x] = x
+        alternativeFirstSuccess xs  = IAlternative fc FirstSuccess $ toList xs
 
     mkAlt : Bool -> EState vars -> (Name, Int, GlobalDef) -> RawImp
     mkAlt prim est (fullname, i, gdef)
         = mkTerm prim est (Resolved i) gdef
-
-    notLHS : ElabMode -> Bool
-    notLHS (InLHS _) = False
-    notLHS _ = True
 
 expandAmbigName mode nest env orig args (IApp fc f a) exp
     = expandAmbigName mode nest env orig

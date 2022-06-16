@@ -12,8 +12,13 @@ import Data.List1
 %default total
 
 export
+-- %deprecate -- deprecated in favor of Biinjective interface
 consInjective : (x ::: xs) === (y ::: ys) -> (x === y, xs === ys)
 consInjective Refl = (Refl, Refl)
+
+export
+Biinjective (:::) where
+  biinjective Refl = (Refl, Refl)
 
 export
 {x : a} -> Injective (x :::) where
@@ -64,6 +69,5 @@ fromListAppend [] ys with (fromList ys)
   _ | (Just _) = Refl
 fromListAppend (x::xs) ys with (fromList ys) proof prf
   fromListAppend (x::xs) []      | Nothing         = rewrite appendNilRightNeutral xs in Refl
-  fromListAppend (x::xs) (y::ys) | (Just $ l:::ls) = do
-    let (prfL, prfLs) = consInjective $ injective prf
-    rewrite prfL; rewrite prfLs; Refl
+  fromListAppend (x::xs) (y::ys) | (Just $ l:::ls) =
+    let (Refl, Refl) = biinjective $ injective prf in Refl
