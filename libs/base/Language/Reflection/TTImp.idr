@@ -205,7 +205,7 @@ mutual
 
 public export
 getFC : TTImp -> FC
-getFC (IVar fc y)                = fc
+getFC (IVar fc _)                = fc
 getFC (IPi fc _ _ _ _ _)         = fc
 getFC (ILam fc _ _ _ _ _)        = fc
 getFC (ILet fc _ _ _ _ _ _)      = fc
@@ -236,6 +236,38 @@ getFC (IHole fc _)               = fc
 getFC (Implicit fc _)            = fc
 getFC (IWithUnambigNames fc _ _) = fc
 
+public export
+mapTopmostFC : (FC -> FC) -> TTImp -> TTImp
+mapTopmostFC fcf $ IVar fc a                = IVar (fcf fc) a
+mapTopmostFC fcf $ IPi fc a b c d e         = IPi (fcf fc) a b c d e
+mapTopmostFC fcf $ ILam fc a b c d e        = ILam (fcf fc) a b c d e
+mapTopmostFC fcf $ ILet fc a b c d e f      = ILet (fcf fc) a b c d e f
+mapTopmostFC fcf $ ICase fc a b c           = ICase (fcf fc) a b c
+mapTopmostFC fcf $ ILocal fc a b            = ILocal (fcf fc) a b
+mapTopmostFC fcf $ IUpdate fc a b           = IUpdate (fcf fc) a b
+mapTopmostFC fcf $ IApp fc a b              = IApp (fcf fc) a b
+mapTopmostFC fcf $ INamedApp fc a b c       = INamedApp (fcf fc) a b c
+mapTopmostFC fcf $ IAutoApp fc a b          = IAutoApp (fcf fc) a b
+mapTopmostFC fcf $ IWithApp fc a b          = IWithApp (fcf fc) a b
+mapTopmostFC fcf $ ISearch fc a             = ISearch (fcf fc) a
+mapTopmostFC fcf $ IAlternative fc a b      = IAlternative (fcf fc) a b
+mapTopmostFC fcf $ IRewrite fc a b          = IRewrite (fcf fc) a b
+mapTopmostFC fcf $ IBindHere fc a b         = IBindHere (fcf fc) a b
+mapTopmostFC fcf $ IBindVar fc a            = IBindVar (fcf fc) a
+mapTopmostFC fcf $ IAs fc a b c d           = IAs (fcf fc) a b c d
+mapTopmostFC fcf $ IMustUnify fc a b        = IMustUnify (fcf fc) a b
+mapTopmostFC fcf $ IDelayed fc a b          = IDelayed (fcf fc) a b
+mapTopmostFC fcf $ IDelay fc a              = IDelay (fcf fc) a
+mapTopmostFC fcf $ IForce fc a              = IForce (fcf fc) a
+mapTopmostFC fcf $ IQuote fc a              = IQuote (fcf fc) a
+mapTopmostFC fcf $ IQuoteName fc a          = IQuoteName (fcf fc) a
+mapTopmostFC fcf $ IQuoteDecl fc a          = IQuoteDecl (fcf fc) a
+mapTopmostFC fcf $ IUnquote fc a            = IUnquote (fcf fc) a
+mapTopmostFC fcf $ IPrimVal fc a            = IPrimVal (fcf fc) a
+mapTopmostFC fcf $ IType fc                 = IType (fcf fc)
+mapTopmostFC fcf $ IHole fc a               = IHole (fcf fc) a
+mapTopmostFC fcf $ Implicit fc a            = Implicit (fcf fc) a
+mapTopmostFC fcf $ IWithUnambigNames fc a b = IWithUnambigNames (fcf fc) a b
 
 public export
 Eq LazyReason where
