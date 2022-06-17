@@ -35,6 +35,7 @@ record PMDefInfo where
                  -- typically for inlinable metavariable solutions
   externalDecl : Bool -- declared in another module, which may affect how it
                       -- is compiled
+%name PMDefInfo pminfo
 
 export
 defaultPI : PMDefInfo
@@ -170,6 +171,7 @@ record Constructor where
   name : Name
   arity : Nat
   type : ClosedTerm
+%name Constructor cons
 
 public export
 data DataDef : Type where
@@ -181,6 +183,7 @@ data Clause : Type where
      MkClause : {vars : _} ->
                 (env : Env Term vars) ->
                 (lhs : Term vars) -> (rhs : Term vars) -> Clause
+%name Clause cl
 
 export
 covering
@@ -192,6 +195,8 @@ public export
 data NoMangleDirective : Type where
     CommonName : String -> NoMangleDirective
     BackendNames : List (String, String) -> NoMangleDirective
+%name NoMangleDirective dir
+
 
 public export
 data DefFlag
@@ -228,6 +233,7 @@ data DefFlag
          -- The nat represents which argument the function evaluates to
     | NoMangle NoMangleDirective
          -- use the user provided name directly (backend, name)
+%name DefFlag dflag
 
 export
 Eq DefFlag where
