@@ -81,7 +81,7 @@ mkDoLets origin lets = letFactory
     buildDoLets [] = []
     buildDoLets (b :: rest) = let fc = boundToFC origin b in case b.val of
       (MkLetBinder rig (PRef fc' (UN un)) ty val []) =>
-         (if isPatternVariable un
+         (if isPatternVariable un || isOpUserName un || isFieldName un
             then DoLet fc fc' (UN un) rig ty val
             else DoLetPat fc (PRef fc' (UN un)) ty val []
          ) :: buildDoLets rest

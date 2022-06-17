@@ -1,2 +1,2 @@
 rm -rf build
-$1 --no-banner --no-color --console-width 0 issue2513.idr --check
+$1 --no-banner --no-color --console-width 0 issue2513.idr < input

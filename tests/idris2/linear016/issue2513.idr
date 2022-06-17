@@ -15,10 +15,15 @@ test = \ 0 (u,v) => 1
 test2 : (0 _ : a = b) -> Nat
 test2 = \ 0 Refl => 1
 
--- Lambda can bind operators
-test3 : (a -> b) -> Integer
-test3 foo = (\ (>>=) => 0) foo
+-- Lambdas, lets, and dos can bind operators and projection-looking things
+test3 : (a -> b) -> (c -> d) -> Maybe Integer
+test3 = \ (>>=), (.toD) =>
+  let (>>) = 0 in
+  let (.inv) = 1 in
+  do let (*) = 2
+     let (.proj) = 3
+     pure 4
 
-failing
-  test3 : (0 _ : (a,b)) -> Nat
-  test3 f = let 0 Refl = f in 0
+failing "Mismatch between: (a, b) and ?_ = ?_."
+  test4 : (0 _ : (a,b)) -> Nat
+  test4 f = let 0 Refl = f in 0

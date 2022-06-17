@@ -113,6 +113,11 @@ isPatternVariable (Field _) = False
 isPatternVariable Underscore = True
 
 export
+isFieldName : UserName -> Bool
+isFieldName (Field _) = True
+isFieldName _ = False
+
+export
 isUserName : Name -> Bool
 isUserName (PV _ _) = False
 isUserName (MN _ _) = False

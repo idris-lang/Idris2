@@ -188,7 +188,7 @@ mutual
                               mn !(desugarB side ps argTy)
                                  !(desugarB side ps' retTy)
   desugarB side ps (PLam fc rig p pat@(PRef prefFC n@(UN nm)) argTy scope)
-      =  if isPatternVariable nm || isOpName n
+      =  if isPatternVariable nm || isOpUserName nm || isFieldName nm
            then do whenJust (isConcreteFC prefFC) $ \nfc
                      => addSemanticDecorations [(nfc, Bound, Just n)]
                    pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
@@ -212,7 +212,7 @@ mutual
                  ICase fc rig (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [snd !(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLet fc rig pat@(PRef prefFC n@(UN nm)) nTy nVal scope [])
-      = if isPatternVariable nm || isOpName n
+      = if isPatternVariable nm || isOpUserName nm || isFieldName nm
           then do whenJust (isConcreteFC prefFC) $ \nfc =>
                     addSemanticDecorations [(nfc, Bound, Just n)]
                   pure $ ILet fc prefFC rig n !(desugarB side ps nTy) !(desugarB side ps nVal)

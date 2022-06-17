@@ -1,1 +1,5 @@
 1/1: Building issue2513 (issue2513.idr)
+Main> Main.test3 : (a -> b) -> (c -> d) -> Maybe Integer
+test3 = \(>>=), .toD => let (>>) = 0 in let .inv = 1 in let (*) = 2 in let .proj = 3 in pure 4
+Main> 
+Bye for now!
