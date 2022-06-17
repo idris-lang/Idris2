@@ -28,6 +28,11 @@ choose True  = Left Oh
 choose False = Right Oh
 
 export
+decSo : (b : Bool) -> Dec (So b)
+decSo True  = Yes Oh
+decSo False = No uninhabited
+
+export
 eqToSo : b = True -> So b
 eqToSo Refl = Oh
 
