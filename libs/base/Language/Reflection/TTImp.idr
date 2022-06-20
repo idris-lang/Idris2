@@ -270,24 +270,6 @@ mapTopmostFC fcf $ Implicit fc a            = Implicit (fcf fc) a
 mapTopmostFC fcf $ IWithUnambigNames fc a b = IWithUnambigNames (fcf fc) a b
 
 public export
-Eq LazyReason where
-  LInf     == LInf     = True
-  LLazy    == LLazy    = True
-  LUnknown == LUnknown = True
-  _ == _ = False
-
-public export
-Eq Namespace where
-  MkNS ns == MkNS ns' = ns == ns'
-
-public export
-Eq Count where
-  M0 == M0 = True
-  M1 == M1 = True
-  MW == MW = True
-  _  == _  = False
-
-public export
 Eq BindMode where
   PI c    == PI c'   = c == c'
   PATTERN == PATTERN = True
@@ -314,61 +296,6 @@ Eq DotReason where
 public export
 Eq WithFlag where
   Syntactic == Syntactic = True
-
-public export
-Eq UserName where
-  Basic n    == Basic n'   = n == n'
-  Field n    == Field n'   = n == n'
-  Underscore == Underscore = True
-  _ == _ = False
-
-public export
-Eq Name where
-  NS ns n        == NS ns' n'       = ns == ns' && n == n'
-  UN n           == UN n'           = n == n'
-  MN n i         == MN n' i'        = n == n' && i == i'
-  DN _ n         == DN _ n'         = n == n'
-  Nested i n     == Nested i' n'    = i == i' && n == n'
-  CaseBlock n i  == CaseBlock n' i' = n == n' && i == i'
-  WithBlock n i  == WithBlock n' i' = n == n' && i == i'
-  _ == _ = False
-
-public export
-Eq PrimType where
-  IntType     == IntType     = True
-  IntegerType == IntegerType = True
-  Int8Type    == Int8Type    = True
-  Int16Type   == Int16Type   = True
-  Int32Type   == Int32Type   = True
-  Int64Type   == Int64Type   = True
-  Bits8Type   == Bits8Type   = True
-  Bits16Type  == Bits16Type  = True
-  Bits32Type  == Bits32Type  = True
-  Bits64Type  == Bits64Type  = True
-  StringType  == StringType  = True
-  CharType    == CharType    = True
-  DoubleType  == DoubleType  = True
-  WorldType   == WorldType   = True
-  _ == _ = False
-
-public export
-Eq Constant where
-  I c         == I c'        = c == c'
-  BI c        == BI c'       = c == c'
-  I8 c        == I8 c'       = c == c'
-  I16 c       == I16 c'      = c == c'
-  I32 c       == I32 c'      = c == c'
-  I64 c       == I64 c'      = c == c'
-  B8 c        == B8 c'       = c == c'
-  B16 c       == B16 c'      = c == c'
-  B32 c       == B32 c'      = c == c'
-  B64 c       == B64 c'      = c == c'
-  Str c       == Str c'      = c == c'
-  Ch c        == Ch c'       = c == c'
-  Db c        == Db c'       = c == c'
-  PrT t       == PrT t'      = t == t'
-  WorldVal    == WorldVal    = True
-  _ == _ = False
 
 public export
 Eq DataOpt where
