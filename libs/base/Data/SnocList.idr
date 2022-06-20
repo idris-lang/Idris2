@@ -87,7 +87,7 @@ Alternative SnocList where
   empty = Lin
   xs <|> ys = xs ++ ys
 
-||| Find the first element of the snoc-list that satisfies the predicate.
+||| Find the rightmost element of the snoc-list that satisfies the predicate.
 public export
 find : (a -> Bool) -> SnocList a -> Maybe a
 find p Lin = Nothing
@@ -104,7 +104,7 @@ data InBounds : (k : Nat) -> (xs : SnocList a) -> Type where
     ||| Valid indices can be extended
     InLater : InBounds k xs -> InBounds (S k) (xs :< x)
 
-||| Find the index and proof of InBounds of the first element (if exists) of a
+||| Find the index (counting from right) of the rightmost element (if exists) of a
 ||| snoc-list that satisfies the given test, else `Nothing`.
 public export
 findIndex : (a -> Bool) -> (xs : SnocList a) -> Maybe $ Fin (length xs)
