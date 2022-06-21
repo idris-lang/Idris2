@@ -285,7 +285,7 @@ runTest opts testPath = do
           -- 1. ": success" and ": FAILURE" have the same length
           -- 2. ANSI escape codes make the msg look longer than it is
           spent = String.length time + String.length path + 9
-          pad   = pack $ replicate (minus 72 spent) ' '
+          pad   = pack $ replicate (minus 72 spent `max` 1) ' '
       in putStrLn $ concat [path, ": ", msg, pad, time]
 
 ||| Find the first occurrence of an executable on `PATH`.
