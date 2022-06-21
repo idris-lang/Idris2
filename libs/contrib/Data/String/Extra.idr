@@ -102,3 +102,33 @@ justifyLeft n c s = s ++ replicate (n `minus` length s) c
 export
 justifyRight : Nat -> Char -> String -> String
 justifyRight n c s = replicate (n `minus` length s) c ++ s
+
+||| Fits a string to the given length.
+||| If the given string is longer, replace first characters with given prefix.
+|||
+||| Say, `fitMunchLeft 5 ".." "abcdefgh"` should give `"..fgh"` and
+||| `fitMunchLeft 5 "" "abcdefgh"` should give `"defgh"`.
+|||
+||| Notice, that the resulting string can be longer than max length if the prefix is longer.
+export
+fitMunchLeft : (maxLen : Nat) -> (pref : String) -> String -> String
+fitMunchLeft maxLen pref str = do
+ let len = length str
+ case len `isLTE` maxLen of
+   Yes _ => str
+   No _  => pref ++ substr ((len + length pref) `minus` maxLen) len str
+
+||| Fits a string to the given length.
+||| If the given string is longer, replace last characters with given suffix.
+|||
+||| Say, `fitMunchRight 5 ".." "abcdefgh"` should give `"abc.."` and
+||| `fitMunchRight 5 "" "abcdefgh"` should give `"abcde"`.
+|||
+||| Notice, that the resulting string can be longer than max length if the suffix is longer.
+export
+fitMunchRight : (maxLen : Nat) -> (suff : String) -> String -> String
+fitMunchRight maxLen suff str = do
+  let len = length str
+  case len `isLTE` maxLen of
+    Yes _ => str
+    No _  => take (maxLen `minus` length suff) str ++ suff
