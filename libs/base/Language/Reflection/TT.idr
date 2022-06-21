@@ -1,7 +1,7 @@
 module Language.Reflection.TT
 
 import public Data.List
-import Data.String
+import public Data.String
 
 import Decidable.Equality
 
@@ -190,15 +190,19 @@ Show UserName where
   show Underscore = "_"
 
 export
+showPrefix : Bool -> Name -> String
+showPrefix b nm@(UN un) = showParens (b && isOp nm) (show un)
+showPrefix b (NS ns n) = show ns ++ "." ++ showPrefix True n
+showPrefix b (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
+showPrefix b (DN str y) = str
+showPrefix b (Nested (outer, idx) inner)
+      = show outer ++ ":" ++ show idx ++ ":" ++ showPrefix False inner
+showPrefix b (CaseBlock outer i) = "case block in " ++ show outer
+showPrefix b (WithBlock outer i) = "with block in " ++ show outer
+
+export
 Show Name where
-  show (NS ns n) = show ns ++ "." ++ show n
-  show (UN x) = show x
-  show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
-  show (DN str y) = str
-  show (Nested (outer, idx) inner)
-      = show outer ++ ":" ++ show idx ++ ":" ++ show inner
-  show (CaseBlock outer i) = "case block in " ++ show outer
-  show (WithBlock outer i) = "with block in " ++ show outer
+  show = showPrefix False
 
 public export
 record NameInfo where
