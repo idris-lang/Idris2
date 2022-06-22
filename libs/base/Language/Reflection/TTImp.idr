@@ -270,24 +270,6 @@ mapTopmostFC fcf $ Implicit fc a            = Implicit (fcf fc) a
 mapTopmostFC fcf $ IWithUnambigNames fc a b = IWithUnambigNames (fcf fc) a b
 
 public export
-Eq LazyReason where
-  LInf     == LInf     = True
-  LLazy    == LLazy    = True
-  LUnknown == LUnknown = True
-  _ == _ = False
-
-public export
-Eq Namespace where
-  MkNS ns == MkNS ns' = ns == ns'
-
-public export
-Eq Count where
-  M0 == M0 = True
-  M1 == M1 = True
-  MW == MW = True
-  _  == _  = False
-
-public export
 Eq BindMode where
   PI c    == PI c'   = c == c'
   PATTERN == PATTERN = True
@@ -314,61 +296,6 @@ Eq DotReason where
 public export
 Eq WithFlag where
   Syntactic == Syntactic = True
-
-public export
-Eq UserName where
-  Basic n    == Basic n'   = n == n'
-  Field n    == Field n'   = n == n'
-  Underscore == Underscore = True
-  _ == _ = False
-
-public export
-Eq Name where
-  NS ns n        == NS ns' n'       = ns == ns' && n == n'
-  UN n           == UN n'           = n == n'
-  MN n i         == MN n' i'        = n == n' && i == i'
-  DN _ n         == DN _ n'         = n == n'
-  Nested i n     == Nested i' n'    = i == i' && n == n'
-  CaseBlock n i  == CaseBlock n' i' = n == n' && i == i'
-  WithBlock n i  == WithBlock n' i' = n == n' && i == i'
-  _ == _ = False
-
-public export
-Eq PrimType where
-  IntType     == IntType     = True
-  IntegerType == IntegerType = True
-  Int8Type    == Int8Type    = True
-  Int16Type   == Int16Type   = True
-  Int32Type   == Int32Type   = True
-  Int64Type   == Int64Type   = True
-  Bits8Type   == Bits8Type   = True
-  Bits16Type  == Bits16Type  = True
-  Bits32Type  == Bits32Type  = True
-  Bits64Type  == Bits64Type  = True
-  StringType  == StringType  = True
-  CharType    == CharType    = True
-  DoubleType  == DoubleType  = True
-  WorldType   == WorldType   = True
-  _ == _ = False
-
-public export
-Eq Constant where
-  I c         == I c'        = c == c'
-  BI c        == BI c'       = c == c'
-  I8 c        == I8 c'       = c == c'
-  I16 c       == I16 c'      = c == c'
-  I32 c       == I32 c'      = c == c'
-  I64 c       == I64 c'      = c == c'
-  B8 c        == B8 c'       = c == c'
-  B16 c       == B16 c'      = c == c'
-  B32 c       == B32 c'      = c == c'
-  B64 c       == B64 c'      = c == c'
-  Str c       == Str c'      = c == c'
-  Ch c        == Ch c'       = c == c'
-  Db c        == Db c'       = c == c'
-  PrT t       == PrT t'      = t == t'
-  WorldVal    == WorldVal    = True
-  _ == _ = False
 
 public export
 Eq DataOpt where
@@ -540,7 +467,8 @@ mutual
 
   export
   Show IField where
-    show (MkIField fc rig pinfo nm s) = showPiInfo {wrapExplicit=False} pinfo (showCount rig "\{show nm} : \{show s}")
+    show (MkIField fc rig pinfo nm s) =
+      showPiInfo {wrapExplicit=False} pinfo (showCount rig "\{show nm} : \{show s}")
 
   export
   Show Record where
@@ -621,14 +549,30 @@ mutual
       ]
     show (ImpossibleClause fc lhs) = "\{show lhs} impossible"
 
+  collectPis : Count -> PiInfo TTImp -> SnocList Name -> TTImp -> TTImp -> (List Name, TTImp)
+  collectPis rig pinfo xs argTy t@(IPi fc rig' pinfo' x argTy' retTy)
+    = ifThenElse (rig == rig' && pinfo == pinfo' && argTy == argTy')
+         (collectPis rig pinfo (xs :< fromMaybe (UN Underscore) x) argTy retTy)
+         (xs <>> [], t)
+  collectPis rig pinfo xs argTy t = (xs <>> [], t)
+
+  showIApps : TTImp -> List String -> String
+  showIApps (IApp _ f t) ts = showIApps f (assert_total (showPrec App t) :: ts)
+  showIApps (IVar _ nm) [a,b] =
+    if isOp nm then unwords [a, showPrefix False nm, b]
+    else unwords [showPrefix True nm, a, b]
+  showIApps f ts = unwords (show f :: ts)
+
   export
   Show TTImp where
-    showPrec d (IVar fc nm) = show nm
+    showPrec d (IVar fc nm) = showPrefix True nm
+    showPrec d (IPi fc MW ExplicitArg Nothing argTy retTy)
+      = showParens (d > Open) $ "\{showPrec Dollar argTy} -> \{show retTy}"
     showPrec d (IPi fc rig pinfo x argTy retTy)
       = showParens (d > Open) $
-          let nm = fromMaybe (UN Underscore) x in
-          assert_total (showPiInfo pinfo "\{showCount rig $ show nm} : \{show argTy}")
-          ++ " -> \{show retTy}"
+          let (xs, retTy) = collectPis rig pinfo [<fromMaybe (UN Underscore) x] argTy retTy in
+          assert_total (showPiInfo pinfo "\{showCount rig $ joinBy ", " (show <$> xs)} : \{show argTy}")
+          ++ " -> \{assert_total $ show retTy}"
     showPrec d (ILam fc rig pinfo x argTy lamTy)
       = showParens (d > Open) $
           "\\ \{showCount rig $ show (fromMaybe (UN Underscore) x)} => \{show lamTy}"
@@ -651,7 +595,7 @@ mutual
           unwords [ "{", joinBy ", " $ assert_total (map show upds), "}"
                   , showPrec App s ]
     showPrec d (IApp fc f t)
-      = showParens (d >= App) $ "\{show f} \{showPrec App t}"
+      = showParens (d >= App) $ assert_total $ showIApps f [showPrec App t]
     showPrec d (INamedApp fc f nm t)
       = showParens (d >= App) $ "\{show f} {\{show nm} = \{show t}}"
     showPrec d (IAutoApp fc f t)
@@ -682,3 +626,119 @@ mutual
       [] => show s
       [(_,x)] => "with \{show x} \{show s}"
       _   => "with [\{joinBy ", " $ map (show . snd) ns}] \{show s}"
+
+parameters (f : TTImp -> TTImp)
+
+  export
+  mapTTImp : TTImp -> TTImp
+
+  export
+  mapPiInfo : PiInfo TTImp -> PiInfo TTImp
+  mapPiInfo ImplicitArg = ImplicitArg
+  mapPiInfo ExplicitArg = ExplicitArg
+  mapPiInfo AutoImplicit = AutoImplicit
+  mapPiInfo (DefImplicit t) = DefImplicit (mapTTImp t)
+
+  export
+  mapClause : Clause -> Clause
+  mapClause (PatClause fc lhs rhs) = PatClause fc (mapTTImp lhs) (mapTTImp rhs)
+  mapClause (WithClause fc lhs rig wval prf flags cls)
+    = WithClause fc (mapTTImp lhs) rig (mapTTImp wval) prf flags (assert_total $ map mapClause cls)
+  mapClause (ImpossibleClause fc lhs) = ImpossibleClause fc (mapTTImp lhs)
+
+  export
+  mapITy : ITy -> ITy
+  mapITy (MkTy fc nameFC n ty) = MkTy fc nameFC n (mapTTImp ty)
+
+  export
+  mapFnOpt : FnOpt -> FnOpt
+  mapFnOpt Inline = Inline
+  mapFnOpt NoInline = NoInline
+  mapFnOpt Deprecate = Deprecate
+  mapFnOpt TCInline = TCInline
+  mapFnOpt (Hint b) = Hint b
+  mapFnOpt (GlobalHint b) = GlobalHint b
+  mapFnOpt ExternFn = ExternFn
+  mapFnOpt (ForeignFn ts) = ForeignFn (map mapTTImp ts)
+  mapFnOpt (ForeignExport ts) = ForeignExport (map mapTTImp ts)
+  mapFnOpt Invertible = Invertible
+  mapFnOpt (Totality treq) = Totality treq
+  mapFnOpt Macro = Macro
+  mapFnOpt (SpecArgs ns) = SpecArgs ns
+  mapFnOpt (NoMangle mdir) = NoMangle mdir
+
+  export
+  mapData : Data -> Data
+  mapData (MkData fc n tycon opts datacons)
+    = MkData fc n (mapTTImp tycon) opts (map mapITy datacons)
+  mapData (MkLater fc n tycon) = MkLater fc n (mapTTImp tycon)
+
+  export
+  mapIField : IField -> IField
+  mapIField (MkIField fc rig pinfo n t) = MkIField fc rig (mapPiInfo pinfo) n (mapTTImp t)
+
+  export
+  mapRecord : Record -> Record
+  mapRecord (MkRecord fc n params conName fields)
+    = MkRecord fc n (map (map $ map $ bimap mapPiInfo mapTTImp) params) conName (map mapIField fields)
+
+  export
+  mapDecl : Decl -> Decl
+  mapDecl (IClaim fc rig vis opts ty)
+    = IClaim fc rig vis (map mapFnOpt opts) (mapITy ty)
+  mapDecl (IData fc vis mtreq dat) = IData fc vis mtreq (mapData dat)
+  mapDecl (IDef fc n cls) = IDef fc n (map mapClause cls)
+  mapDecl (IParameters fc params xs) = IParameters fc params (assert_total $ map mapDecl xs)
+  mapDecl (IRecord fc mstr x y rec) = IRecord fc mstr x y (mapRecord rec)
+  mapDecl (INamespace fc mi xs) = INamespace fc mi (assert_total $ map mapDecl xs)
+  mapDecl (ITransform fc n t u) = ITransform fc n (mapTTImp t) (mapTTImp u)
+  mapDecl (IRunElabDecl fc t) = IRunElabDecl fc (mapTTImp t)
+  mapDecl (ILog x) = ILog x
+  mapDecl (IBuiltin fc x n) = IBuiltin fc x n
+
+  export
+  mapIFieldUpdate : IFieldUpdate -> IFieldUpdate
+  mapIFieldUpdate (ISetField path t) = ISetField path (mapTTImp t)
+  mapIFieldUpdate (ISetFieldApp path t) = ISetFieldApp path (mapTTImp t)
+
+  export
+  mapAltType : AltType -> AltType
+  mapAltType FirstSuccess = FirstSuccess
+  mapAltType Unique = Unique
+  mapAltType (UniqueDefault t) = UniqueDefault (mapTTImp t)
+
+  mapTTImp t@(IVar _ _) = f t
+  mapTTImp (IPi fc rig pinfo x argTy retTy)
+    = f $ IPi fc rig (mapPiInfo pinfo) x (mapTTImp argTy) (mapTTImp retTy)
+  mapTTImp (ILam fc rig pinfo x argTy lamTy)
+    = f $ ILam fc rig (mapPiInfo pinfo) x (mapTTImp argTy) (mapTTImp lamTy)
+  mapTTImp (ILet fc lhsFC rig n nTy nVal scope)
+    = f $ ILet fc lhsFC rig n (mapTTImp nTy) (mapTTImp nVal) (mapTTImp scope)
+  mapTTImp (ICase fc t ty cls)
+    = f $ ICase fc (mapTTImp t) (mapTTImp ty) (assert_total $ map mapClause cls)
+  mapTTImp (ILocal fc xs t)
+    = f $ ILocal fc (assert_total $ map mapDecl xs) (mapTTImp t)
+  mapTTImp (IUpdate fc upds t) = f $ IUpdate fc (assert_total map mapIFieldUpdate upds) (mapTTImp t)
+  mapTTImp (IApp fc t u) = f $ IApp fc (mapTTImp t) (mapTTImp u)
+  mapTTImp (IAutoApp fc t u) = f $ IAutoApp fc (mapTTImp t) (mapTTImp u)
+  mapTTImp (INamedApp fc t n u) = f $ INamedApp fc (mapTTImp t) n (mapTTImp u)
+  mapTTImp (IWithApp fc t u) = f $ IWithApp fc (mapTTImp t) (mapTTImp u)
+  mapTTImp (ISearch fc depth) = f $ ISearch fc depth
+  mapTTImp (IAlternative fc alt ts) = f $ IAlternative fc (mapAltType alt) (assert_total map mapTTImp ts)
+  mapTTImp (IRewrite fc t u) = f $ IRewrite fc (mapTTImp t) (mapTTImp u)
+  mapTTImp (IBindHere fc bm t) = f $ IBindHere fc bm (mapTTImp t)
+  mapTTImp (IBindVar fc str) = f $ IBindVar fc str
+  mapTTImp (IAs fc nameFC side n t) = f $ IAs fc nameFC side n (mapTTImp t)
+  mapTTImp (IMustUnify fc x t) = f $ IMustUnify fc x (mapTTImp t)
+  mapTTImp (IDelayed fc lz t) = f $ IDelayed fc lz (mapTTImp t)
+  mapTTImp (IDelay fc t) = f $ IDelay fc (mapTTImp t)
+  mapTTImp (IForce fc t) = f $ IForce fc (mapTTImp t)
+  mapTTImp (IQuote fc t) = f $ IQuote fc (mapTTImp t)
+  mapTTImp (IQuoteName fc n) = f $ IQuoteName fc n
+  mapTTImp (IQuoteDecl fc xs) = f $ IQuoteDecl fc (assert_total $ map mapDecl xs)
+  mapTTImp (IUnquote fc t) = f $ IUnquote fc (mapTTImp t)
+  mapTTImp (IPrimVal fc c) = f $ IPrimVal fc c
+  mapTTImp (IType fc) = f $ IType fc
+  mapTTImp (IHole fc str) = f $ IHole fc str
+  mapTTImp (Implicit fc bindIfUnsolved) = f $ Implicit fc bindIfUnsolved
+  mapTTImp (IWithUnambigNames fc xs t) = f $ IWithUnambigNames fc xs (mapTTImp t)

@@ -1,7 +1,9 @@
 module Language.Reflection.TT
 
 import public Data.List
-import Data.String
+import public Data.String
+
+import Decidable.Equality
 
 %default total
 
@@ -188,15 +190,19 @@ Show UserName where
   show Underscore = "_"
 
 export
+showPrefix : Bool -> Name -> String
+showPrefix b nm@(UN un) = showParens (b && isOp nm) (show un)
+showPrefix b (NS ns n) = show ns ++ "." ++ showPrefix True n
+showPrefix b (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
+showPrefix b (DN str y) = str
+showPrefix b (Nested (outer, idx) inner)
+      = show outer ++ ":" ++ show idx ++ ":" ++ showPrefix False inner
+showPrefix b (CaseBlock outer i) = "case block in " ++ show outer
+showPrefix b (WithBlock outer i) = "with block in " ++ show outer
+
+export
 Show Name where
-  show (NS ns n) = show ns ++ "." ++ show n
-  show (UN x) = show x
-  show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
-  show (DN str y) = str
-  show (Nested (outer, idx) inner)
-      = show outer ++ ":" ++ show idx ++ ":" ++ show inner
-  show (CaseBlock outer i) = "case block in " ++ show outer
-  show (WithBlock outer i) = "with block in " ++ show outer
+  show = showPrefix False
 
 public export
 record NameInfo where
@@ -314,3 +320,158 @@ Eq BuiltinType where
   NaturalToInteger == NaturalToInteger = True
   IntegerToNatural == IntegerToNatural = True
   _ == _ = False
+
+
+public export
+Eq LazyReason where
+  LInf     == LInf     = True
+  LLazy    == LLazy    = True
+  LUnknown == LUnknown = True
+  _ == _ = False
+
+public export
+Eq Namespace where
+  MkNS ns == MkNS ns' = ns == ns'
+
+public export
+Eq Count where
+  M0 == M0 = True
+  M1 == M1 = True
+  MW == MW = True
+  _  == _  = False
+
+public export
+Eq UserName where
+  Basic n    == Basic n'   = n == n'
+  Field n    == Field n'   = n == n'
+  Underscore == Underscore = True
+  _ == _ = False
+
+public export
+Eq Name where
+  NS ns n        == NS ns' n'       = ns == ns' && n == n'
+  UN n           == UN n'           = n == n'
+  MN n i         == MN n' i'        = n == n' && i == i'
+  DN _ n         == DN _ n'         = n == n'
+  Nested i n     == Nested i' n'    = i == i' && n == n'
+  CaseBlock n i  == CaseBlock n' i' = n == n' && i == i'
+  WithBlock n i  == WithBlock n' i' = n == n' && i == i'
+  _ == _ = False
+
+public export
+Eq PrimType where
+  IntType     == IntType     = True
+  IntegerType == IntegerType = True
+  Int8Type    == Int8Type    = True
+  Int16Type   == Int16Type   = True
+  Int32Type   == Int32Type   = True
+  Int64Type   == Int64Type   = True
+  Bits8Type   == Bits8Type   = True
+  Bits16Type  == Bits16Type  = True
+  Bits32Type  == Bits32Type  = True
+  Bits64Type  == Bits64Type  = True
+  StringType  == StringType  = True
+  CharType    == CharType    = True
+  DoubleType  == DoubleType  = True
+  WorldType   == WorldType   = True
+  _ == _ = False
+
+public export
+Eq Constant where
+  I c         == I c'        = c == c'
+  BI c        == BI c'       = c == c'
+  I8 c        == I8 c'       = c == c'
+  I16 c       == I16 c'      = c == c'
+  I32 c       == I32 c'      = c == c'
+  I64 c       == I64 c'      = c == c'
+  B8 c        == B8 c'       = c == c'
+  B16 c       == B16 c'      = c == c'
+  B32 c       == B32 c'      = c == c'
+  B64 c       == B64 c'      = c == c'
+  Str c       == Str c'      = c == c'
+  Ch c        == Ch c'       = c == c'
+  Db c        == Db c'       = c == c'
+  PrT t       == PrT t'      = t == t'
+  WorldVal    == WorldVal    = True
+  _ == _ = False
+
+export Injective MkNS where injective Refl = Refl
+
+public export
+DecEq Namespace where
+  decEq (MkNS ns) (MkNS ns') = decEqCong (decEq ns ns')
+
+export Injective Basic where injective Refl = Refl
+export Injective Field where injective Refl = Refl
+
+public export
+DecEq UserName where
+  decEq (Basic str) (Basic str1) = decEqCong (decEq str str1)
+  decEq (Basic str) (Field str1) = No (\case Refl impossible)
+  decEq (Basic str) Underscore = No (\case Refl impossible)
+  decEq (Field str) (Basic str1) = No (\case Refl impossible)
+  decEq (Field str) (Field str1) = decEqCong (decEq str str1)
+  decEq (Field str) Underscore = No (\case Refl impossible)
+  decEq Underscore (Basic str) = No (\case Refl impossible)
+  decEq Underscore (Field str) = No (\case Refl impossible)
+  decEq Underscore Underscore = Yes Refl
+
+export Biinjective NS where biinjective Refl = (Refl, Refl)
+export Injective UN where injective Refl = Refl
+export Biinjective MN where biinjective Refl = (Refl, Refl)
+export Biinjective DN where biinjective Refl = (Refl, Refl)
+export Biinjective Nested where biinjective Refl = (Refl, Refl)
+export Biinjective CaseBlock where biinjective Refl = (Refl, Refl)
+export Biinjective WithBlock where biinjective Refl = (Refl, Refl)
+
+public export
+DecEq Name where
+  decEq (NS ns nm) (NS ns1 nm1) = decEqCong2 (decEq ns ns1) (decEq nm nm1)
+  decEq (NS ns nm) (UN un) =  No (\case Refl impossible)
+  decEq (NS ns nm) (MN str i) = No (\case Refl impossible)
+  decEq (NS ns nm) (DN str nm1) = No (\case Refl impossible)
+  decEq (NS ns nm) (Nested x nm1) = No (\case Refl impossible)
+  decEq (NS ns nm) (CaseBlock str i) = No (\case Refl impossible)
+  decEq (NS ns nm) (WithBlock str i) = No (\case Refl impossible)
+  decEq (UN un) (NS ns nm) = No (\case Refl impossible)
+  decEq (UN un) (UN un1) = decEqCong (decEq un un1)
+  decEq (UN un) (MN str i) = No (\case Refl impossible)
+  decEq (UN un) (DN str nm) = No (\case Refl impossible)
+  decEq (UN un) (Nested x nm) = No (\case Refl impossible)
+  decEq (UN un) (CaseBlock str i) = No (\case Refl impossible)
+  decEq (UN un) (WithBlock str i) = No (\case Refl impossible)
+  decEq (MN str i) (NS ns nm) = No (\case Refl impossible)
+  decEq (MN str i) (UN un) = No (\case Refl impossible)
+  decEq (MN str i) (MN str1 j) = decEqCong2 (decEq str str1) (decEq i j)
+  decEq (MN str i) (DN str1 nm) = No (\case Refl impossible)
+  decEq (MN str i) (Nested x nm) = No (\case Refl impossible)
+  decEq (MN str i) (CaseBlock str1 j) = No (\case Refl impossible)
+  decEq (MN str i) (WithBlock str1 j) = No (\case Refl impossible)
+  decEq (DN str nm) (NS ns nm1) = No (\case Refl impossible)
+  decEq (DN str nm) (UN un) = No (\case Refl impossible)
+  decEq (DN str nm) (MN str1 i) = No (\case Refl impossible)
+  decEq (DN str nm) (DN str1 nm1) = decEqCong2 (decEq str str1) (decEq nm nm1)
+  decEq (DN str nm) (Nested x nm1) = No (\case Refl impossible)
+  decEq (DN str nm) (CaseBlock str1 i) = No (\case Refl impossible)
+  decEq (DN str nm) (WithBlock str1 i) = No (\case Refl impossible)
+  decEq (Nested x nm) (NS ns nm1) = No (\case Refl impossible)
+  decEq (Nested x nm) (UN un) = No (\case Refl impossible)
+  decEq (Nested x nm) (MN str i) = No (\case Refl impossible)
+  decEq (Nested x nm) (DN str nm1) = No (\case Refl impossible)
+  decEq (Nested x nm) (Nested y nm1) = decEqCong2 (decEq x y) (decEq nm nm1)
+  decEq (Nested x nm) (CaseBlock str i) = No (\case Refl impossible)
+  decEq (Nested x nm) (WithBlock str i) = No (\case Refl impossible)
+  decEq (CaseBlock str i) (NS ns nm) = No (\case Refl impossible)
+  decEq (CaseBlock str i) (UN un) = No (\case Refl impossible)
+  decEq (CaseBlock str i) (MN str1 j) = No (\case Refl impossible)
+  decEq (CaseBlock str i) (DN str1 nm) = No (\case Refl impossible)
+  decEq (CaseBlock str i) (Nested x nm) = No (\case Refl impossible)
+  decEq (CaseBlock str i) (CaseBlock str1 j) = decEqCong2 (decEq str str1) (decEq i j)
+  decEq (CaseBlock str i) (WithBlock str1 j) = No (\case Refl impossible)
+  decEq (WithBlock str i) (NS ns nm) = No (\case Refl impossible)
+  decEq (WithBlock str i) (UN un) = No (\case Refl impossible)
+  decEq (WithBlock str i) (MN str1 j) = No (\case Refl impossible)
+  decEq (WithBlock str i) (DN str1 nm) = No (\case Refl impossible)
+  decEq (WithBlock str i) (Nested x nm) = No (\case Refl impossible)
+  decEq (WithBlock str i) (CaseBlock str1 j) = No (\case Refl impossible)
+  decEq (WithBlock str i) (WithBlock str1 j) = decEqCong2 (decEq str str1) (decEq i j)
