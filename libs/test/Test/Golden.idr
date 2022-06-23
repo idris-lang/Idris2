@@ -287,7 +287,7 @@ runTest opts testPath = do
           -- 1. ": success" and ": FAILURE" have the same length
           -- 2. ANSI escape codes make the msg look longer than it is
           msgl  = 9
-          path  = fitMunchLeft (width `minus` (1 + msgl + length time)) "(...)" path
+          path  = truncateMunchLeft (width `minus` (1 + msgl + length time)) "(...)" path
           spent = length time + length path + msgl
           pad   = pack $ replicate (width `minus` spent) ' '
       in putStrLn $ concat [path, ": ", msg, pad, time]
