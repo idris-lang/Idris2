@@ -20,33 +20,43 @@ signalFFI fn = "C:" ++ fn ++ ", libidris2_support, idris_signal.h"
 -- Signals
 --
 %foreign signalFFI "sighup"
+         "node:support:sighup,support_system_signal"
 prim__sighup : Int
 
 %foreign signalFFI "sigint"
+         "node:support:sigint,support_system_signal"
 prim__sigint : Int
 
 %foreign signalFFI "sigabrt"
+         "node:support:sigabrt,support_system_signal"
 prim__sigabrt : Int
 
 %foreign signalFFI "sigquit"
+         "node:support:sigquit,support_system_signal"
 prim__sigquit : Int
 
 %foreign signalFFI "sigill"
+         "node:support:sigill,support_system_signal"
 prim__sigill : Int
 
 %foreign signalFFI "sigsegv"
+         "node:support:sigsegv,support_system_signal"
 prim__sigsegv : Int
 
 %foreign signalFFI "sigtrap"
+         "node:support:sigtrap,support_system_signal"
 prim__sigtrap : Int
 
 %foreign signalFFI "sigfpe"
+         "node:support:sigfpe,support_system_signal"
 prim__sigfpe : Int
 
 %foreign signalFFI "sigusr1"
+         "node:support:sigusr1,support_system_signal"
 prim__sigusr1 : Int
 
 %foreign signalFFI "sigusr2"
+         "node:support:sigusr2,support_system_signal"
 prim__sigusr2 : Int
 
 public export
@@ -126,21 +136,27 @@ toSignal x    = lookup x codes
 -- Signal Handling
 --
 %foreign signalFFI "ignore_signal"
+         "node:support:ignoreSignal,support_system_signal"
 prim__ignoreSignal : Int -> PrimIO Int
 
 %foreign signalFFI "default_signal"
+         "node:support:defaultSignal,support_system_signal"
 prim__defaultSignal : Int -> PrimIO Int
 
 %foreign signalFFI "collect_signal"
+         "node:support:collectSignal,support_system_signal"
 prim__collectSignal : Int -> PrimIO Int
 
 %foreign signalFFI "handle_next_collected_signal"
+         "node:support:handleNextCollectedSignal,support_system_signal"
 prim__handleNextCollectedSignal : PrimIO Int
 
 %foreign signalFFI "send_signal"
+         "node:support:sendSignal,support_system_signal"
 prim__sendSignal : Int -> Int -> PrimIO Int
 
 %foreign signalFFI "raise_signal"
+         "node:support:raiseSignal,support_system_signal"
 prim__raiseSignal : Int -> PrimIO Int
 
 ||| An Error represented by a code. See
