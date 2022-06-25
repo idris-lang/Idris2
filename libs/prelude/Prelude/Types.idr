@@ -27,7 +27,7 @@ data Nat =
 prim__integerToNat : Integer -> Nat
 prim__integerToNat i
   = if intToBool (prim__lte_Integer 0 i)
-      then believe_me i
+      then believe_me i -- Integer and Nat must have same internal representation
       else Z
 
 public export

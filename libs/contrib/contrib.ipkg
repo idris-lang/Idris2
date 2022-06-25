@@ -80,6 +80,8 @@ modules = Control.ANSI,
 
           Data.Path,
 
+          Data.Rational,
+
           Data.Rel.Complement,
 
           Data.Seq.Internal,
