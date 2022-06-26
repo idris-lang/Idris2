@@ -518,9 +518,12 @@ jobs:
   ubuntu-test-frex:
     needs: ubuntu-self-host-previous-version
     runs-on: ubuntu-latest
+    # Temporarily disabled until frex / elab-util are updated for new ICase arg
+    # if: |
+    #   !contains(needs.initialise.outputs.commit_message, '[ci:')
+    #   || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
     if: |
-      !contains(needs.initialise.outputs.commit_message, '[ci:')
-      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
+      false
     env:
       IDRIS2_CG: chez
     steps:
@@ -548,9 +551,12 @@ jobs:
   ubuntu-test-elab:
     needs: ubuntu-self-host-previous-version
     runs-on: ubuntu-latest
+    # Temporarily disabled until frex / elab-util are updated for new ICase arg
+    # if: |
+    #   !contains(needs.initialise.outputs.commit_message, '[ci:')
+    #   || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
     if: |
-      !contains(needs.initialise.outputs.commit_message, '[ci:')
-      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
+      false
     env:
       IDRIS2_CG: chez
     steps:
