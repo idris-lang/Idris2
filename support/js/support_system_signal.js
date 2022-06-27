@@ -81,10 +81,26 @@ function support_system_signal_defaultSignal(signal) {
     }
 }
 
+// this implementation deduplicates signals and leaves handle ordering up to details of the Map impl
+var pending_signals = new Map();
+
 function support_system_signal_collectSignal(signal) {
-    // TODO
+    let signal_string = system_signal_int_to_string(signal)
+    try {
+        support_system_signal_process.on(signal_string, x => { pending_signals.set(signal) })
+        return 0
+    } catch (e) {
+        return -1
+    }
 }
 
 function support_system_signal_handleNextCollectedSignal() {
-    // TODO
+    let next = pending_signals.keys().next()
+    if (next.done) {
+        return -1
+    } else {
+        let val = next.value
+        pending_signals.delete(val)
+        return val
+    }
 }
