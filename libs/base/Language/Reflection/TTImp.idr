@@ -611,9 +611,11 @@ mutual
     showPrec d (IAs fc nameFC side nm s)
       = "\{show nm}@\{showPrec App s}"
     showPrec d (IMustUnify fc dr s) = ".(\{show s})"
-    showPrec d (IDelayed fc lr s) = showPrec d s
-    showPrec d (IDelay fc s) = showCon d "Delay" $ assert_total (showArg s)
-    showPrec d (IForce fc s) = showPrec d s
+    showPrec d (IDelayed fc LInf s) = showCon d "Inf" $ assert_total $ showArg s
+    showPrec d (IDelayed fc LLazy s) = showCon d "Lazy" $ assert_total $ showArg s
+    showPrec d (IDelayed fc LUnknown s) = "({- unknown lazy -} \{showPrec Open s})"
+    showPrec d (IDelay fc s) = showCon d "Delay" $ assert_total $ showArg s
+    showPrec d (IForce fc s) = showCon d "Force" $ assert_total $ showArg s
     showPrec d (IQuote fc s) = "`(\{show s})"
     showPrec d (IQuoteName fc nm) = "`{\{show nm}}"
     showPrec d (IQuoteDecl fc xs) = "`[\{joinBy "; " (assert_total $ map show xs)}]"
