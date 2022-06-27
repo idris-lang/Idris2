@@ -57,7 +57,8 @@ function support_system_signal_raiseSignal(signal) {
 }
 
 function support_system_signal_defaultSignal(signal) {
-    // TODO
+    support_system_signal_process.removeAllListeners(signal_int_to_string(signal))
+    return 0
 }
 
 function support_system_signal_collectSignal(signal) {
