@@ -42,23 +42,43 @@ function signal_int_to_string(signal) {
 }
 
 function support_system_signal_ignoreSignal(signal) {
-    support_system_signal_process.on(signal_int_to_string(signal), sig => {})
-    return 0
+    let signal_string = signal_int_to_string(signal)
+    try {
+        support_system_signal_process.on(signal_string, sig => {})
+        return 0
+    } catch (e) {
+        return -1
+    }
 }
 
 function support_system_signal_sendSignal(pid, signal) {
-    support_system_signal_process.kill(pid, signal_int_to_string(signal))
-    return 0
+    let signal_string = signal_int_to_string(signal)
+    try {
+        support_system_signal_process.kill(pid)
+        return 0
+    } catch (e) {
+        return -1
+    }
 }
 
 function support_system_signal_raiseSignal(signal) {
-    support_system_signal_process.kill(support_system_signal_process.pid, signal_int_to_string(signal))
-    return 0
+    let signal_string = signal_int_to_string(signal)
+    try {
+        support_system_signal_process.kill(support_system_signal_process.pid)
+        return 0
+    } catch (e) {
+        return -1
+    }
 }
 
 function support_system_signal_defaultSignal(signal) {
-    support_system_signal_process.removeAllListeners(signal_int_to_string(signal))
-    return 0
+    let signal_string = signal_int_to_string(signal)
+    try {
+        support_system_signal_process.removeAllListeners()
+        return 0
+    } catch (e) {
+        return -1
+    }
 }
 
 function support_system_signal_collectSignal(signal) {
