@@ -539,7 +539,7 @@ mutual
 
   export
   Show Clause where
-    show (PatClause fc lhs rhs) = "\{show lhs} = \{show rhs}"
+    show (PatClause fc lhs rhs) = "\{show lhs} => \{show rhs}"
     show (WithClause fc lhs rig wval prf flags cls) -- TODO print flags
       = unwords
       [ show lhs, "with"
@@ -581,10 +581,14 @@ mutual
           "let \{showCount rig (show nm)} : \{show nTy} = \{show nVal} in \{show scope}"
     showPrec d (ICase fc s ty xs)
       = showParens (d > Open) $
-          unwords [ "case", show s, ":", show ty, "of", "{"
-                  , joinBy "; " (assert_total $ map show xs)
-                  , "}"
-                  ]
+          unwords $ [ "case", show s ] ++ typeFor ty ++ [ "of", "{"
+                    , joinBy "; " (assert_total $ map show xs)
+                    , "}"
+                    ]
+          where
+            typeFor : TTImp -> List String
+            typeFor $ Implicit _ False = []
+            typeFor ty = [ "{-", ":", show ty, "-}" ]
     showPrec d (ILocal fc decls s)
       = showParens (d > Open) $
           unwords [ "let", joinBy "; " (assert_total $ map show decls)
