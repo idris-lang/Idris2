@@ -252,14 +252,14 @@ Show Error where
      where
        showRig : RigCount -> String
        showRig = elimSemi
-         "linear"
          "irrelevant"
+         "linear"
          (const "unrestricted")
 
        showRel : RigCount -> String
        showRel = elimSemi
-         "relevant"
          "irrelevant"
+         "relevant"
          (const "non-linear")
   show (BorrowPartial fc env t arg)
       = show fc ++ ":" ++ show t ++ " borrows argument " ++ show arg ++
