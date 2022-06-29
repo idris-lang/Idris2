@@ -54,7 +54,7 @@ function support_system_signal_ignoreSignal(signal) {
 function support_system_signal_sendSignal(pid, signal) {
     let signal_string = signal_int_to_string(signal)
     try {
-        support_system_signal_process.kill(pid)
+        support_system_signal_process.kill(pid, signal_string)
         return 0
     } catch (e) {
         return -1
@@ -64,7 +64,7 @@ function support_system_signal_sendSignal(pid, signal) {
 function support_system_signal_raiseSignal(signal) {
     let signal_string = signal_int_to_string(signal)
     try {
-        support_system_signal_process.kill(support_system_signal_process.pid)
+        support_system_signal_process.kill(support_system_signal_process.pid, signal_string)
         return 0
     } catch (e) {
         return -1
@@ -74,7 +74,7 @@ function support_system_signal_raiseSignal(signal) {
 function support_system_signal_defaultSignal(signal) {
     let signal_string = signal_int_to_string(signal)
     try {
-        support_system_signal_process.removeAllListeners()
+        support_system_signal_process.removeAllListeners(signal_string)
         return 0
     } catch (e) {
         return -1
