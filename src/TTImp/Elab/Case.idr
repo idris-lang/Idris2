@@ -221,7 +221,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- big do it. It's the depth of stuck applications - 10 is already
          -- pretty much unreadable!
          casefnty <- normaliseSizeLimit defs 10 [] casefnty
-         (erasedargs, _) <- findErased casefnty
+         (erasedargs, dterased) <- findErased casefnty
 
          logEnv "elab.case" 10 "Case env" env
          logTermNF "elab.case" 2 ("Case function type: " ++ show casen) [] casefnty
@@ -233,7 +233,8 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- actually bound! This is rather hacky, but a lot less fiddly than
          -- the alternative of fixing up the environment
          when (not (isNil fullImps)) $ findImpsIn fc [] [] casefnty
-         cidx <- addDef casen ({ eraseArgs := erasedargs }
+         cidx <- addDef casen ({ eraseArgs := erasedargs,
+                                 safeErase := dterased }
                                 (newDef fc casen (if isErased rigc then erased else top)
                                       [] casefnty vis None))
 

@@ -3,10 +3,10 @@ f x =
   let 0 (u,v) = x in
   0
 
-data Foo = Bar Int
+data Foo = MkFoo Int
 
 g : (0 x : Foo ) -> Nat
-g x@(Bar y) = 0
+g x@(MkFoo y) = 0
 
 test : (0 _ : (a,b)) -> Nat
 test = \ 0 (u,v) => 1
@@ -27,3 +27,11 @@ test3 = \ (>>=), (.toD) =>
 failing "Mismatch between: (a, b) and ?_ = ?_."
   test4 : (0 _ : (a,b)) -> Nat
   test4 f = let 0 Refl = f in 0
+
+data Bar : Bool -> Type where
+    BarA : Bar True
+    BarB : Bar False
+
+test5 : (0 _ : Bar True) -> Unit
+test5 x = let 0 BarA = x
+          in ()
