@@ -88,8 +88,9 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
         -- act : Elab A
         -- k : A -> Elab B
         -- 1) Run elabScript on act stripping off Elab
-        -- 2) apply k to the result of (1)
-        -- 3) Run elabScript on the result stripping off Elab
+        -- 2) Evaluate the resulting act
+        -- 3) apply k to the result of (2)
+        -- 4) Run elabScript on the result stripping off Elab
         = do act <- elabScript fc nest env
                                 !(evalClosure defs act) exp
              act <- quote defs env act
