@@ -92,9 +92,9 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
         -- 3) Run elabScript on the result stripping off Elab
         = do act <- elabScript fc nest env
                                 !(evalClosure defs act) exp
+             act <- quote defs env act
              k <- evalClosure defs k
-             r <- applyToStack defs withAll env k
-                       [(EmptyFC, MkNFClosure withAll env act)]
+             r <- applyToStack defs withAll env k [(getLoc act, toClosure withAll env act)]
              elabScript fc nest env r exp
     elabCon defs "Fail" [_, mbfc, msg]
         = do msg' <- evalClosure defs msg
