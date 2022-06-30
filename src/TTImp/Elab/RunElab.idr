@@ -85,14 +85,18 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
         = do empty <- clearDefs defs
              evalClosure empty val
     elabCon defs "Bind" [_,_,act,k]
-        = do act' <- elabScript fc nest env
+        -- act : Elab A
+        -- k : A -> Elab B
+        -- 1) Run elabScript on act stripping off Elab
+        -- 2) Evaluate the resulting act
+        -- 3) apply k to the result of (2)
+        -- 4) Run elabScript on the result stripping off Elab
+        = do act <- elabScript fc nest env
                                 !(evalClosure defs act) exp
-             case !(evalClosure defs k) of
-                  NBind _ x (Lam _ _ _ _) sc =>
-                      elabScript fc nest env
-                              !(sc defs (toClosure withAll env
-                                              !(quote defs env act'))) exp
-                  x => failWith defs $ "non-function RHS of a Bind: " ++ show x
+             act <- quote defs env act
+             k <- evalClosure defs k
+             r <- applyToStack defs withAll env k [(getLoc act, toClosure withAll env act)]
+             elabScript fc nest env r exp
     elabCon defs "Fail" [_, mbfc, msg]
         = do msg' <- evalClosure defs msg
              let customFC = case !(evalClosure defs mbfc >>= reify defs) of

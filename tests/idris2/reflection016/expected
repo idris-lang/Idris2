@@ -1,0 +1,11 @@
+1/1: Building Eta (Eta.idr)
+LOG debug:0: a
+LOG debug:0: b
+LOG debug:0: a
+LOG debug:0: b
+LOG debug:0: a
+LOG debug:0: b
+LOG This is false:0: debug
+LOG this is true:0: debug
+Main> Bye for now!
+1/1: Building BindElabScBug (BindElabScBug.idr)
