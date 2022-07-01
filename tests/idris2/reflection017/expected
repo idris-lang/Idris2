@@ -1,0 +1,115 @@
+1/1: Building DeriveFunctor (DeriveFunctor.idr)
+LOG derive.functor:1: Deriving Functor for List
+LOG derive.functor.constructors:1: 
+  Nil : {0 a : Type} -> List a
+  (::) : {0 a : Type} -> ({arg:492} : a) -> ({arg:495} : List a) -> List a
+LOG derive.functor.clauses:10: Nil ()
+LOG derive.functor.clauses:10: (::) (a, List a)
+LOG derive.functor.clauses:1: 
+  mapList : {0 a, b : Type} -> (a -> b) -> List a -> List b
+  mapList f Nil => Nil
+  mapList f (x0 :: x1) => (f x0) :: (mapList f x1)
+LOG derive.functor:1: Deriving Functor for Maybe
+LOG derive.functor.constructors:1: 
+  Nothing : {0 ty : Type} -> Maybe ty
+  Just : {0 ty : Type} -> (x : ty) -> Maybe ty
+LOG derive.functor.clauses:10: Nothing ()
+LOG derive.functor.clauses:10: Just (ty)
+LOG derive.functor.clauses:1: 
+  mapMaybe : {0 a, b : Type} -> (a -> b) -> Maybe a -> Maybe b
+  mapMaybe f Nothing => Nothing
+  mapMaybe f (Just x0) => Just (f x0)
+LOG derive.functor:1: Deriving Functor for (Either err)
+LOG derive.functor.constructors:1: 
+  Left : {0 a, b : Type} -> (x : a) -> Either a b
+  Right : {0 a, b : Type} -> (x : b) -> Either a b
+LOG derive.functor.clauses:10: Left (a)
+LOG derive.functor.clauses:10: Right (b)
+LOG derive.functor.clauses:1: 
+  mapEither : {0 err : _} -> {0 a, b : Type} -> (a -> b) -> Either err a -> Either err b
+  mapEither f (Left x0) => Left x0
+  mapEither f (Right x0) => Right (f x0)
+LOG derive.functor:1: Deriving Functor for (Vect n)
+LOG derive.functor.constructors:1: 
+  Nil : {0 a : Type} -> Vect Z a
+  (::) : {0 n : Nat} -> {0 a : Type} -> ({arg:3827} : a) -> ({arg:3830} : Vect n a) -> Vect (S n) a
+LOG derive.functor.clauses:10: Nil ()
+LOG derive.functor.clauses:10: (::) (a, Vect n a)
+LOG derive.functor.clauses:1: 
+  mapVect : {0 n : _} -> {0 a, b : Type} -> (a -> b) -> Vect n a -> Vect n b
+  mapVect f Nil => Nil
+  mapVect f (x0 :: x1) => (f x0) :: (mapVect f x1)
+LOG derive.functor:1: Deriving Functor for BigTree
+LOG derive.functor.constructors:1: 
+  End : {0 a : Type} -> ({arg:3914} : a) -> BigTree a
+  Branch : {0 a : Type} -> ({arg:3919} : String) -> ({arg:3922} : List a) -> ({arg:3925} : ({arg:3927} : Bool) -> BigTree a) -> BigTree a
+  Rose : {0 a : Type} -> ({arg:3936} : List (BigTree a)) -> BigTree a
+LOG derive.functor.clauses:10: End (a)
+LOG derive.functor.clauses:10: Branch (String, List a, (({arg:3927} : Bool) -> BigTree a))
+LOG derive.functor.clauses:10: Rose (List (BigTree a))
+LOG derive.functor.clauses:1: 
+  mapBigTree : {0 a, b : Type} -> (a -> b) -> BigTree a -> BigTree b
+  mapBigTree f (End x0) => End (f x0)
+  mapBigTree f (Branch x0 x1 x2) => Branch x0 (map f x1) (\ {arg:3927} => mapBigTree f (x2 {arg:3927}))
+  mapBigTree f (Rose x0) => Rose (map (assert_total (mapBigTree f)) x0)
+LOG derive.functor:1: Deriving Functor for (Matrix m n)
+LOG derive.functor.constructors:1: 
+  MkMatrix : {0 m, n : Nat} -> {0 a : Type} -> (runMatrix : Vect m (Vect n a)) -> Matrix m n a
+LOG derive.functor.clauses:10: MkMatrix (Vect m (Vect n a))
+LOG derive.functor.clauses:1: 
+  mapMatrix : {0 n, m : _} -> {0 a, b : Type} -> (a -> b) -> Matrix m n a -> Matrix m n b
+  mapMatrix f (MkMatrix x0) => MkMatrix (map (map f) x0)
+LOG derive.functor:1: Deriving Functor for Tm
+LOG derive.functor.constructors:1: 
+  Var : {0 a : Type} -> ({arg:4232} : a) -> Tm a
+  Call : {0 a : Type} -> {0 n : Nat} -> ({arg:4237} : Op n) -> ({arg:4240} : Vect n (Tm a)) -> Tm a
+  Lam : {0 a : Type} -> ({arg:4246} : Tm (Maybe a)) -> Tm a
+LOG derive.functor.clauses:10: Var (a)
+LOG derive.functor.clauses:10: Call (Op n, Vect n (Tm a))
+LOG derive.functor.clauses:10: Lam (Tm (Maybe a))
+LOG derive.functor.clauses:1: 
+  mapTm : {0 a, b : Type} -> (a -> b) -> Tm a -> Tm b
+  mapTm f (Var x0) => Var (f x0)
+  mapTm f (Call x0 x1) => Call x0 (map (assert_total (mapTm f)) x1)
+  mapTm f (Lam x0) => Lam (mapTm (map f) x0)
+LOG derive.functor:1: Deriving Functor for Tree
+LOG derive.functor.constructors:1: 
+  Leaf : {0 a : Type} -> ({arg:4367} : a) -> Tree a
+  Node : {0 a : Type} -> ({arg:4372} : Forest a) -> Tree a
+LOG derive.functor.clauses:10: Leaf (a)
+LOG derive.functor.clauses:10: Node (Forest a)
+LOG derive.functor.clauses:1: 
+  mapTree : {0 a, b : Type} -> (a -> b) -> Tree a -> Tree b
+  mapTree f (Leaf x0) => Leaf (f x0)
+  mapTree f (Node x0) => Node (assert_total (map f x0))
+LOG derive.functor:1: Deriving Functor for Forest
+LOG derive.functor.constructors:1: 
+  Empty : {0 a : Type} -> Forest a
+  Plant : {0 a : Type} -> ({arg:4385} : Tree a) -> ({arg:4388} : Forest a) -> Forest a
+LOG derive.functor.clauses:10: Empty ()
+LOG derive.functor.clauses:10: Plant (Tree a, Forest a)
+LOG derive.functor.clauses:1: 
+  mapForest : {0 a, b : Type} -> (a -> b) -> Forest a -> Forest b
+  mapForest f Empty => Empty
+  mapForest f (Plant x0 x1) => Plant (assert_total (map f x0)) (mapForest f x1)
+LOG derive.functor:1: Deriving Functor for List1
+LOG derive.functor.constructors:1: 
+  MkList1 : {0 a : Type} -> ({arg:4536} : Pair a (Maybe (List1 a))) -> List1 a
+LOG derive.functor.clauses:10: MkList1 (Pair a (Maybe (List1 a)))
+LOG derive.functor.clauses:1: 
+  mapList1 : {0 a, b : Type} -> (a -> b) -> List1 a -> List1 b
+  mapList1 f (MkList1 x0) => MkList1 (bimap f (map (assert_total (mapList1 f))) x0)
+LOG derive.functor:1: Deriving Functor for Full
+LOG derive.functor.constructors:1: 
+  Leaf : {0 a : Type} -> ({arg:4613} : a) -> Full a
+  Node : {0 a : Type} -> ({arg:4618} : Full (Pair a a)) -> Full a
+LOG derive.functor.clauses:10: Leaf (a)
+LOG derive.functor.clauses:10: Node (Full (Pair a a))
+LOG derive.functor.clauses:1: 
+  mapFull : {0 a, b : Type} -> (a -> b) -> Full a -> Full b
+  mapFull f (Leaf x0) => Leaf (f x0)
+  mapFull f (Node x0) => Node (mapFull (bimap f f) x0)
+LOG derive.functor:1: Deriving Functor for NOT
+LOG derive.functor.constructors:1: 
+  MkNOT : {0 a : Type} -> ({arg:4698} : ({arg:4700} : a) -> Void) -> NOT a
+LOG derive.functor.clauses:10: MkNOT ((({arg:4700} : a) -> Void))

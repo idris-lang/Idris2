@@ -633,6 +633,39 @@ mutual
       [(_,x)] => "with \{show x} \{show s}"
       _   => "with [\{joinBy ", " $ map (show . snd) ns}] \{show s}"
 
+data Argument a
+  = Arg FC a
+  | NamedArg FC Name a
+  | AutoArg FC a
+
+public export
+data IsAppView : (FC, Name) -> SnocList (Argument TTImp) -> TTImp -> Type where
+  AVVar : IsAppView (fc, t) [<] (IVar fc t)
+  AVApp : IsAppView x ts f -> IsAppView x (ts :< Arg fc t) (IApp fc f t)
+  AVNamedApp : IsAppView x ts f -> IsAppView x (ts :< NamedArg fc n t) (INamedApp fc f n t)
+  AVAutoApp : IsAppView x ts f -> IsAppView x (ts :< AutoArg fc t) (IAutoApp fc f a)
+
+public export
+record AppView (t : TTImp) where
+  constructor MkAppView
+  head : (FC, Name)
+  args : SnocList (Argument TTImp)
+  0 isAppView : IsAppView head args t
+
+export
+appView : (t : TTImp) -> Maybe (AppView t)
+appView (IVar fc f) = Just (MkAppView (fc, f) [<] AVVar)
+appView (IApp fc f t) = do
+  (MkAppView x ts prf) <- appView f
+  pure (MkAppView x (ts :< Arg fc t) (AVApp prf))
+appView (INamedApp fc f n t) = do
+  (MkAppView x ts prf) <- appView f
+  pure (MkAppView x (ts :< NamedArg fc n t) (AVNamedApp prf))
+appView (IAutoApp fc f t) = do
+  (MkAppView x ts prf) <- appView f
+  pure (MkAppView x (ts :< AutoArg fc t) (AVAutoApp prf))
+appView _ = Nothing
+
 parameters (f : TTImp -> TTImp)
 
   export
