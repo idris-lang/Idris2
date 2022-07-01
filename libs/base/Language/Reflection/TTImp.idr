@@ -462,6 +462,8 @@ Eq TTImp where
 
   _ == _ = False
 
+public export
+data Mode = InDecl | InCase
 
 mutual
 
@@ -507,7 +509,7 @@ mutual
       = unwords [ show vis
                 , showTotalReq treq (show dt)
                 ]
-    show (IDef fc nm xs) = joinBy "; " (map show xs)
+    show (IDef fc nm xs) = joinBy "; " (map (showClause InDecl) xs)
     show (IParameters fc params decls)
       = unwords
       [ "parameters"
@@ -538,16 +540,19 @@ mutual
     show (ISetFieldApp path s) = "\{joinBy "->" path} $= \{show s}"
 
   export
-  Show Clause where
-    show (PatClause fc lhs rhs) = "\{show lhs} => \{show rhs}"
-    show (WithClause fc lhs rig wval prf flags cls) -- TODO print flags
+  showClause : Mode -> Clause -> String
+  showClause mode (PatClause fc lhs rhs) = "\{show lhs} \{showSep mode} \{show rhs}" where
+    showSep : Mode -> String
+    showSep InDecl = "="
+    showSep InCase = "=>"
+  showClause mode (WithClause fc lhs rig wval prf flags cls) -- TODO print flags
       = unwords
       [ show lhs, "with"
       , showCount rig $ maybe id (\ nm => (++ " proof \{show nm}")) prf
                       $ showParens True (show wval)
-      , "{", joinBy "; " (assert_total $ map show cls), "}"
+      , "{", joinBy "; " (assert_total $ map (showClause mode) cls), "}"
       ]
-    show (ImpossibleClause fc lhs) = "\{show lhs} impossible"
+  showClause mode (ImpossibleClause fc lhs) = "\{show lhs} impossible"
 
   collectPis : Count -> PiInfo TTImp -> SnocList Name -> TTImp -> TTImp -> (List Name, TTImp)
   collectPis rig pinfo xs argTy t@(IPi fc rig' pinfo' x argTy' retTy)
@@ -582,7 +587,7 @@ mutual
     showPrec d (ICase fc s ty xs)
       = showParens (d > Open) $
           unwords $ [ "case", show s ] ++ typeFor ty ++ [ "of", "{"
-                    , joinBy "; " (assert_total $ map show xs)
+                    , joinBy "; " (assert_total $ map (showClause InCase) xs)
                     , "}"
                     ]
           where

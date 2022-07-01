@@ -351,7 +351,7 @@ namespace Functor
              `({0 a, b : Type} -> (a -> b) -> ~(t) a -> ~(t) b)
     logMsg "derive.functor.clauses" 1 $
       joinBy "\n" ("" :: ("  " ++ show (mapITy cleanup ty))
-                      :: map (("  " ++) . show . mapClause cleanup) cls)
+                      :: map (("  " ++) . showClause InDecl . mapClause cleanup) cls)
 
     -- Define the instance
     check $ ILocal fc
