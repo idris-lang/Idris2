@@ -130,26 +130,29 @@ data FreeOf : (x : Name) -> (ty : TTImp) -> Type
 
 data IsFunctorialIn : (t, x : Name) -> TTImp -> Type where
   ||| The type variable x occurs alone
-  SPVar  : IsFunctorialIn t x (IVar fc x)
+  FIVar : IsFunctorialIn t x (IVar fc x)
   ||| There is a recursive subtree of type (t a1 ... an u) and u is functorial in x.
   ||| We do not insist that arg is exactly x so that we can deal with nested types
   ||| like the following:
   |||   data Full a = Leaf a | Node (Full (a, a))
   |||   data Term a = Var a | App (Term a) (Term a) | Lam (Term (Maybe a))
-  SPRec  : (0 _ : IsAppView (_, t) _ f) -> IsFunctorialIn t x arg -> IsFunctorialIn t x (IApp fc f arg)
+  FIRec : (0 _ : IsAppView (_, t) _ f) -> IsFunctorialIn t x arg -> IsFunctorialIn t x (IApp fc f arg)
+  ||| The subterm is delayed (either Inf or Lazy)
+  FIDelayed : IsFunctorialIn t x ty -> IsFunctorialIn t x (IDelayed fc lr ty)
   ||| There are nested subtrees somewhere inside a 3rd party type constructor
   ||| which satisfies the Bifunctor interface
-  SPBifun : HasImplementation Bifunctor sp ->
+  FIBifun : HasImplementation Bifunctor sp ->
             IsFunctorialIn t x arg1 -> Either (IsFunctorialIn t x arg2) (FreeOf x arg2) ->
             IsFunctorialIn t x (IApp fc1 (IApp fc2 sp arg1) arg2)
   ||| There are nested subtrees somewhere inside a 3rd party type constructor
   ||| which satisfies the Functor interface
-  SPFun   : HasImplementation Functor sp ->
-            IsFunctorialIn t x arg -> IsFunctorialIn t x (IApp fc sp arg)
+  FIFun : HasImplementation Functor sp ->
+          IsFunctorialIn t x arg -> IsFunctorialIn t x (IApp fc sp arg)
   ||| A pi type, with no negative occurence of x in its domain
-  SPPi    : FreeOf x a -> IsFunctorialIn t x b -> IsFunctorialIn t x (IPi fc rig pinfo nm a b)
+  FIPi : FreeOf x a -> IsFunctorialIn t x b -> IsFunctorialIn t x (IPi fc rig pinfo nm a b)
+
   ||| A type free of x is trivially Functorial in it
-  SFree   : FreeOf x a -> IsFunctorialIn t x a
+  FIFree : FreeOf x a -> IsFunctorialIn t x a
 
 data FreeOf : Name -> TTImp -> Type where
   ||| For now we do not bother keeping precise track of the proof that a type
@@ -187,25 +190,25 @@ parameters
         let Just (MkAppView (_, hd) ts prf) = appView f
            | _ => throwError (NotAnApplication f)
         case decEq t hd of
-           Yes Refl => pure $ Left (SPRec prf sp)
+           Yes Refl => pure $ Left (FIRec prf sp)
            No diff => do
              Just prf <- hasImplementation Functor f
                | _ => throwError (NotAFunctor f)
-             pure (Left (SPFun prf sp))
+             pure (Left (FIFun prf sp))
       Right fo => do
         Right _ <- typeView f
           | _ => throwError (NotAFunctorInItsLastArg (IApp fc f arg))
         pure (Right TrustMeFO)
 
   typeView (IVar fc y) = pure $ case decEq x y of
-    Yes Refl => Left SPVar
+    Yes Refl => Left FIVar
     No _ => Right TrustMeFO
   typeView ty@(IPi fc rig pinfo nm a b) = do
     Right p <- typeView a
       | _ => throwError (NegativeOccurence x ty)
     Left q <- typeView b
       | _ => pure (Right TrustMeFO)
-    pure (Left (SPPi p q))
+    pure (Left (FIPi p q))
   typeView fa@(IApp _ (IApp _ f arg1) arg2) = do
     chka1 <- typeView arg1
     case chka1 of
@@ -213,8 +216,11 @@ parameters
       Left sp => do
         Just prf <- hasImplementation Bifunctor f
           | _ => throwError (NotABifunctor f)
-        pure (Left (SPBifun prf sp !(typeView arg2)))
+        pure (Left (FIBifun prf sp !(typeView arg2)))
   typeView fa@(IApp _ f arg) = typeAppView f arg
+  typeView (IDelayed _ lz f) = pure $ case !(typeView f) of
+    Left sp => Left (FIDelayed sp)
+    Right _ => Right TrustMeFO
   typeView (IPrimVal _ _) = pure (Right TrustMeFO)
   typeView (IType _) = pure (Right TrustMeFO)
   typeView ty = throwError (UnsupportedType ty)
@@ -245,37 +251,38 @@ parameters (fc : FC) (mutualWith : List Name)
   ||| the eta contracted `map (mapTree f)` instead of `map (\ ts => mapTree f ts)`.
   functorFun : (assert : Maybe Bool) -> {ty : TTImp} -> IsFunctorialIn t x ty ->
                (rec, f : Name) -> (arg : Maybe TTImp) -> TTImp
-  functorFun assert SPVar rec f t = apply fc (IVar fc f) (toList t)
-  functorFun assert (SPRec y sp) rec f t
+  functorFun assert FIVar rec f t = apply fc (IVar fc f) (toList t)
+  functorFun assert (FIRec y sp) rec f t
     -- only add assert_total if it is declared to be needed
     = ifThenElse (fromMaybe False assert) (IApp fc (IVar fc (UN $ Basic "assert_total"))) id
     $ apply fc (IVar fc rec) (functorFun (Just False) sp rec f Nothing :: toList t)
-  functorFun assert {ty = IApp _ ty _} (SPFun _ sp) rec f t
+  functorFun assert (FIDelayed sp) rec f t = functorFun assert sp rec f t
+  functorFun assert {ty = IApp _ ty _} (FIFun _ sp) rec f t
     -- only add assert_total we are calling a mutually defined Functor implementation.
     = let isMutual = fromMaybe False (appView ty >>= \ v => pure (snd v.head `elem` mutualWith)) in
       ifThenElse isMutual (IApp fc (IVar fc (UN $ Basic "assert_total"))) id
     $ apply fc (IVar fc (UN $ Basic "map"))
       (functorFun ((False <$ guard isMutual) <|> assert <|> Just True) sp rec f Nothing
        :: toList t)
-  functorFun assert (SPBifun _ sp1 (Left sp2)) rec f t
+  functorFun assert (FIBifun _ sp1 (Left sp2)) rec f t
     = apply fc (IVar fc (UN $ Basic "bimap"))
       (functorFun (assert <|> Just True) sp1 rec f Nothing
       :: functorFun (assert <|> Just True) sp2 rec f Nothing
       :: toList t)
-  functorFun assert (SPBifun _ sp (Right _)) rec f t
+  functorFun assert (FIBifun _ sp (Right _)) rec f t
     = apply fc (IVar fc (UN $ Basic "mapFst"))
       (functorFun (assert <|> Just True) sp rec f Nothing
       :: toList t)
-  functorFun assert (SPPi {rig, pinfo, nm, a} _ z) rec f (Just t)
+  functorFun assert (FIPi {rig, pinfo, nm, a} _ z) rec f (Just t)
     = let nm = fromMaybe (UN $ Basic "x") nm in
       ILam fc rig pinfo (Just nm) a (functorFun assert z rec f (Just $ IApp fc t (IVar fc nm)))
-  functorFun assert (SPPi {rig, pinfo, nm, a} _ z) rec f Nothing
+  functorFun assert (FIPi {rig, pinfo, nm, a} _ z) rec f Nothing
     = let tnm = UN $ Basic "t" in
       let nm = fromMaybe (UN $ Basic "x") nm in
       ILam fc MW ExplicitArg (Just tnm) (Implicit fc False) $
       ILam fc rig pinfo (Just nm) a $
       functorFun assert z rec f (Just $ IApp fc (IVar fc tnm) (IVar fc nm))
-  functorFun assert (SFree y) rec f t = fromMaybe `(id) t
+  functorFun assert (FIFree y) rec f t = fromMaybe `(id) t
 
 ------------------------------------------------------------------------------
 -- User-facing: Functor deriving

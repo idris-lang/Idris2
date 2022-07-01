@@ -5,7 +5,7 @@ import Deriving.Functor
 %language ElabReflection
 %default total
 
-%logging "derive.functor" 10
+%logging "derive.functor.clauses" 1
 
 list : Functor List
 list = %runElab derive
@@ -101,3 +101,20 @@ failing "Negative occurence of a"
 
   negative : Functor NOT
   negative = %runElab derive
+
+namespace Colist
+
+  data Colist a = Nil | (::) a (Inf (Colist a))
+
+  colist : Functor Colist
+  colist = %runElab derive
+
+
+namespace LAZY
+
+  record LAZY (a : Type) where
+    constructor MkLAZY
+    wrapped : Lazy a
+
+  lazy : Functor LAZY
+  lazy = %runElab derive
