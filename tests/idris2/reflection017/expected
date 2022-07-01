@@ -50,3 +50,6 @@ LOG derive.functor.clauses:1:
 LOG derive.functor.clauses:1: 
   mapLAZY : {0 a, b : Type} -> (a -> b) -> LAZY a -> LAZY b
   mapLAZY f (MkLAZY x0) = MkLAZY (f x0)
+LOG derive.functor.clauses:1: 
+  mapRose : {0 a, b : Type} -> (a -> b) -> Rose a -> Rose b
+  mapRose f (Node x0) = Node (map (\ eta => Delay (assert_total (mapRose f eta))) x0)

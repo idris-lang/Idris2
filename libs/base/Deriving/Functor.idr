@@ -256,7 +256,13 @@ parameters (fc : FC) (mutualWith : List Name)
     -- only add assert_total if it is declared to be needed
     = ifThenElse (fromMaybe False assert) (IApp fc (IVar fc (UN $ Basic "assert_total"))) id
     $ apply fc (IVar fc rec) (functorFun (Just False) sp rec f Nothing :: toList t)
-  functorFun assert (FIDelayed sp) rec f t = functorFun assert sp rec f t
+  functorFun assert (FIDelayed sp) rec f Nothing
+    -- here we need to eta-expand to avoid "Lazy t does not unify with t" errors
+    = let nm = UN $ Basic "eta" in
+      ILam fc MW ExplicitArg (Just nm) (Implicit fc False)
+    $ IDelay fc
+    $ functorFun assert sp rec f (Just (IVar fc nm))
+  functorFun assert (FIDelayed sp) rec f (Just t) = functorFun assert sp rec f (Just t)
   functorFun assert {ty = IApp _ ty _} (FIFun _ sp) rec f t
     -- only add assert_total we are calling a mutually defined Functor implementation.
     = let isMutual = fromMaybe False (appView ty >>= \ v => pure (snd v.head `elem` mutualWith)) in
@@ -273,15 +279,15 @@ parameters (fc : FC) (mutualWith : List Name)
     = apply fc (IVar fc (UN $ Basic "mapFst"))
       (functorFun (assert <|> Just True) sp rec f Nothing
       :: toList t)
-  functorFun assert (FIPi {rig, pinfo, nm, a} _ z) rec f (Just t)
+  functorFun assert (FIPi {rig, pinfo, nm, a} _ sp) rec f (Just t)
     = let nm = fromMaybe (UN $ Basic "x") nm in
-      ILam fc rig pinfo (Just nm) a (functorFun assert z rec f (Just $ IApp fc t (IVar fc nm)))
-  functorFun assert (FIPi {rig, pinfo, nm, a} _ z) rec f Nothing
+      ILam fc rig pinfo (Just nm) a (functorFun assert sp rec f (Just $ IApp fc t (IVar fc nm)))
+  functorFun assert (FIPi {rig, pinfo, nm, a} _ sp) rec f Nothing
     = let tnm = UN $ Basic "t" in
       let nm = fromMaybe (UN $ Basic "x") nm in
       ILam fc MW ExplicitArg (Just tnm) (Implicit fc False) $
       ILam fc rig pinfo (Just nm) a $
-      functorFun assert z rec f (Just $ IApp fc (IVar fc tnm) (IVar fc nm))
+      functorFun assert sp rec f (Just $ IApp fc (IVar fc tnm) (IVar fc nm))
   functorFun assert (FIFree y) rec f t = fromMaybe `(id) t
 
 ------------------------------------------------------------------------------

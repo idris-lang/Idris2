@@ -118,3 +118,10 @@ namespace LAZY
 
   lazy : Functor LAZY
   lazy = %runElab derive
+
+namespace Rose
+
+  data Rose a = Node (List (Lazy (Rose a)))
+
+  rose : Functor Rose
+  rose = %runElab derive
