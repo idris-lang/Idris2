@@ -73,15 +73,15 @@ explicitPi (Pi fc c _ ty :: env) = Pi fc c Explicit ty :: explicitPi env
 explicitPi (b :: env) = b :: explicitPi env
 explicitPi [] = []
 
-allow : Maybe (Var vs) -> Env Term vs -> Env Term vs
-allow Nothing env = env
-allow (Just (MkVar p)) env = toRig1 p env
-
 -- If the name is used elsewhere, update its multiplicity so it's
 -- not required to be used in the case block
 updateMults : List (Var vs) -> Env Term vs -> Env Term vs
 updateMults [] env = env
 updateMults (MkVar p :: us) env = updateMults us (toRig0 p env)
+
+disuse : Var v -> List (Var v) -> List (Var v)
+disuse x [] = []
+disuse x (y :: xs) = if sameVar x y then xs else y :: disuse x xs
 
 findImpsIn : {vars : _} ->
              FC -> Env Term vars -> List (Name, Term vars) -> Term vars ->
@@ -176,6 +176,24 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- to be delayed, but now I think it's better to have simpler
          -- resolution rules, and not delay
 
+         -- if the scrutinee is ones of the arguments in 'env' we should
+         -- split on that, rather than adding it as a new argument
+         let splitOn = findScrutinee env scr
+
+         -- If we used a linear scrutinee, we free it up again to be used by
+         -- the either the case body (if matching at Rig0) or that call to the
+         -- case body (otherwise).
+         whenJust splitOn $ \var => update EST { linearUsed $= (disuse var) }
+
+         -- if we're matching at a smaller quantity than scrutinee, we drop splitOn, so
+         -- scrutinee is available at full quantity in the case body
+         let splitOn = do
+            MkVar p <- splitOn
+            let splitMult = multiplicity $ getBinder p env
+            if caseRig < splitMult
+                then Nothing
+                else Just (MkVar p)
+
          est <- get EST
          fullImps <- getToBind fc (elabMode elabinfo)
                                (implicitMode elabinfo) env []
@@ -196,19 +214,6 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
                                 else Private
                         Nothing => Public
 
-         -- if the scrutinee is ones of the arguments in 'env' we should
-         -- split on that, rather than adding it as a new argument
-
-         -- If we're explicitly matching at a smaller Rig than scrutinee, we want to
-         -- match at that rig but also expose the original value at its full quantity
-         -- so we set splitOn to Nothing
-         let splitOn = do
-            MkVar p <- findScrutinee env scr
-            let splitMult = multiplicity $ getBinder p env
-            if caseRig < splitMult
-                then Nothing
-                else Just (MkVar p)
-
          caseretty_in <- case expected of
                            Just ty => getTerm ty
                            _ =>
@@ -219,10 +224,8 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          u <- uniVar fc
          (caseretty, _) <- bindImplicits fc (implicitMode elabinfo) defs env
                                          fullImps caseretty_in (TType fc u)
-         -- don't make the scrutinee Rig1 if it is empty.
-         let env' = if isErased caseRig then explicitPi env else (allow splitOn (explicitPi env))
          let casefnty
-               = abstractFullEnvType fc env'
+               = abstractFullEnvType fc (explicitPi env)
                             (maybe (Bind fc scrn (Pi fc caseRig Explicit scrty)
                                        (weaken caseretty))
                                    (const caseretty) splitOn)

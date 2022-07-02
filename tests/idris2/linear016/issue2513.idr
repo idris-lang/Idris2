@@ -56,12 +56,8 @@ rw1 r = let 1 (MkR e l o) = r in ?foo_w1
 rwO : R -> Nat
 rwO r = let (MkR e l o) = r in ?foo_ww
 
--- This case would be interesting to handle, but it is tricky
--- because we don't know if we should pass in r at Rig0 (someone
--- else gets it) or Rig1 (?foo_10 gets it).
-
--- r10 : (1 _ : R) -> R
--- r10 r = let 0 (MkR e l o) = r in ?foo_10
+r10 : (1 _ : R) -> R
+r10 r = let 0 (MkR e l o) = r in ?foo_10
 
 r11: (1 _ : R) -> Nat
 r11 r = let 1 (MkR e l o) = r in ?foo_11

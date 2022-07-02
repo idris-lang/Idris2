@@ -19,6 +19,12 @@ Main>    o : Nat
    r : R
 ------------------------------
 foo_ww : Nat
+Main>  1 r : R
+ 0 o : Nat
+ 0 l : Nat
+ 0 e : Nat
+------------------------------
+foo_10 : R
 Main>    o : Nat
  1 l : Nat
  0 e : Nat
