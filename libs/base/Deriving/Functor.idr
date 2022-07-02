@@ -2,7 +2,7 @@
 ||| You can for instance define:
 ||| ```
 ||| data Tree a = Leaf a | Node (Tree a) (Tree a)
-||| treeFunctor : Functor Node
+||| treeFunctor : Functor Tree
 ||| treeFunctor = %runElab derive
 ||| ```
 
@@ -117,8 +117,8 @@ hasImplementation c t = catch $ do
 ||| @ t  the name of the data type whose constructors are being analysed
 ||| @ x  the name of the type variable that the functioral action will change
 ||| @ ty the type being analysed
-||| The inductive delivers a proof that x occurs positively in ty, assuming that
-||| t also is positive.
+||| The inductive type delivers a proof that x occurs positively in ty,
+||| assuming that t also is positive.
 public export
 data IsFunctorialIn : (t, x : Name) -> (ty : TTImp) -> Type
 
@@ -132,7 +132,7 @@ data IsFunctorialIn : (t, x : Name) -> TTImp -> Type where
   ||| The type variable x occurs alone
   FIVar : IsFunctorialIn t x (IVar fc x)
   ||| There is a recursive subtree of type (t a1 ... an u) and u is functorial in x.
-  ||| We do not insist that arg is exactly x so that we can deal with nested types
+  ||| We do not insist that u is exactly x so that we can deal with nested types
   ||| like the following:
   |||   data Full a = Leaf a | Node (Full (a, a))
   |||   data Term a = Var a | App (Term a) (Term a) | Lam (Term (Maybe a))
@@ -150,7 +150,6 @@ data IsFunctorialIn : (t, x : Name) -> TTImp -> Type where
           IsFunctorialIn t x arg -> IsFunctorialIn t x (IApp fc sp arg)
   ||| A pi type, with no negative occurence of x in its domain
   FIPi : FreeOf x a -> IsFunctorialIn t x b -> IsFunctorialIn t x (IPi fc rig pinfo nm a b)
-
   ||| A type free of x is trivially Functorial in it
   FIFree : FreeOf x a -> IsFunctorialIn t x a
 
@@ -186,6 +185,9 @@ parameters
   typeAppView {fc} f arg = do
     chka <- typeView arg
     case chka of
+      -- if x is present in the argument then the function better be:
+      -- 1. either an occurrence of t i.e. a subterm
+      -- 2. or a type constructor already known to be functorial
       Left sp => do
         let Just (MkAppView (_, hd) ts prf) = appView f
            | _ => throwError (NotAnApplication f)
@@ -195,6 +197,8 @@ parameters
              Just prf <- hasImplementation Functor f
                | _ => throwError (NotAFunctor f)
              pure (Left (FIFun prf sp))
+      -- Otherwise it better be the case that f is also free of x so that
+      -- we can mark the whole type as being x-free.
       Right fo => do
         Right _ <- typeView f
           | _ => throwError (NotAFunctorInItsLastArg (IApp fc f arg))
@@ -235,7 +239,7 @@ apply fc = foldl (IApp fc)
 parameters (fc : FC) (mutualWith : List Name)
 
   ||| functorFun takes
-  ||| @ mutualWith a list of mutually defined type constructors. Calls ot their
+  ||| @ mutualWith a list of mutually defined type constructors. Calls to their
   ||| respective mapping functions typically need an assert_total because the
   ||| termination checker is not doing enough inlining to see that things are
   ||| terminating
@@ -246,7 +250,7 @@ parameters (fc : FC) (mutualWith : List Name)
   ||| @ ty the type being transformed by the mapping function
   ||| @ rec the name of the mapping function being defined (used for recursive calls)
   ||| @ f the name of the function we're mapping
-  ||| @ arg the (optional) name of the argument being mapped over. This lets use
+  ||| @ arg the (optional) name of the argument being mapped over. This lets us use
   ||| Nothing when generating arguments to higher order functions so that we generate
   ||| the eta contracted `map (mapTree f)` instead of `map (\ ts => mapTree f ts)`.
   functorFun : (assert : Maybe Bool) -> {ty : TTImp} -> IsFunctorialIn t x ty ->
@@ -264,7 +268,7 @@ parameters (fc : FC) (mutualWith : List Name)
     $ functorFun assert sp rec f (Just (IVar fc nm))
   functorFun assert (FIDelayed sp) rec f (Just t) = functorFun assert sp rec f (Just t)
   functorFun assert {ty = IApp _ ty _} (FIFun _ sp) rec f t
-    -- only add assert_total we are calling a mutually defined Functor implementation.
+    -- only add assert_total if we are calling a mutually defined Functor implementation.
     = let isMutual = fromMaybe False (appView ty >>= \ v => pure (snd v.head `elem` mutualWith)) in
       ifThenElse isMutual (IApp fc (IVar fc (UN $ Basic "assert_total"))) id
     $ apply fc (IVar fc (UN $ Basic "map"))
@@ -329,9 +333,9 @@ namespace Functor
     MkIsType f params cs <- isType t
     logMsg "derive.functor.constructors" 1 $
       joinBy "\n" $ "" :: map (\ (n, ty) => "  \{showPrefix True $ dropNS n} : \{show $ mapTTImp cleanup ty}") cs
-    let fc = emptyFC
 
     -- Generate a clause for each data constructor
+    let fc = emptyFC
     let mapName = UN (Basic $ "map" ++ show (dropNS f))
     let funName = UN $ Basic "f"
     let fun  = IVar fc funName
@@ -369,7 +373,7 @@ namespace Functor
   ||| This can be used like so:
   ||| ```
   ||| data Tree a = Leaf a | Node (Tree a) (Tree a)
-  ||| treeFunctor : Functor Node
+  ||| treeFunctor : Functor Tree
   ||| treeFunctor = %runElab derive
   ||| ```
   export
