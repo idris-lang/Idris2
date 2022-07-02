@@ -35,3 +35,32 @@ data Bar : Bool -> Type where
 test5 : (0 _ : Bar True) -> Unit
 test5 x = let 0 BarA = x
           in ()
+
+failing "x is not accessible in this context"
+  test6 : (Nat, Nat) -> Nat
+  test6 pair = let 0 (x, y) = pair
+               in x
+
+record R where
+  constructor MkR
+  0 erased : Nat
+  1 linear : Nat
+  omega : Nat
+
+rw0 : R -> Nat
+rw0 r = let 0 (MkR e l o) = r in ?foo_w0
+
+rw1 : R -> Nat
+rw1 r = let 1 (MkR e l o) = r in ?foo_w1
+
+rwO : R -> Nat
+rwO r = let (MkR e l o) = r in ?foo_ww
+
+-- r10 : (1 _ : R) -> R
+-- r10 r = let 0 (MkR e l o) = r in ?foo_10
+
+r11: (1 _ : R) -> Nat
+r11 r = let 1 (MkR e l o) = r in ?foo_11
+
+r1w : (1 _ : R) -> Nat
+r1w r = let (MkR e l o) = r in ?foo_1w

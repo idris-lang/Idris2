@@ -1,1 +1,6 @@
 :printdef test3
+:t foo_w0
+:t foo_w1
+:t foo_ww
+:t foo_11
+:t foo_1w

@@ -67,7 +67,7 @@ toRig0 : {idx : Nat} -> (0 p : IsVar nm idx vs) -> Env Term vs -> Env Term vs
 toRig0 First (b :: bs) = setMultiplicity b erased :: bs
 toRig0 (Later p) (b :: bs) = b :: toRig0 p bs
 
--- When we abstract over the evironment, pi needs to be explicit
+-- When we abstract over the environment, pi needs to be explicit
 explicitPi : Env Term vs -> Env Term vs
 explicitPi (Pi fc c _ ty :: env) = Pi fc c Explicit ty :: explicitPi env
 explicitPi (b :: env) = b :: explicitPi env
@@ -198,7 +198,16 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
 
          -- if the scrutinee is ones of the arguments in 'env' we should
          -- split on that, rather than adding it as a new argument
-         let splitOn = findScrutinee env scr
+
+         -- If we're explicitly matching at a smaller Rig than scrutinee, we want to
+         -- match at that rig but also expose the original value at its full quantity
+         -- so we set splitOn to Nothing
+         let splitOn = do
+            MkVar p <- findScrutinee env scr
+            let splitMult = multiplicity $ getBinder p env
+            if caseRig < splitMult
+                then Nothing
+                else Just (MkVar p)
 
          caseretty_in <- case expected of
                            Just ty => getTerm ty
@@ -390,7 +399,7 @@ checkCase : {vars : _} ->
             FC -> RigCount -> (scr : RawImp) -> (ty : RawImp) -> List ImpClause ->
             Maybe (Glued vars) ->
             Core (Term vars, Glued vars)
-checkCase rig elabinfo nest env fc r scr scrty_in alts exp
+checkCase rig elabinfo nest env fc scrig scr scrty_in alts exp
     = delayElab fc rig env exp CaseBlock $
         do scrty_exp <- case scrty_in of
                              Implicit _ _ => guessScrType alts
@@ -402,12 +411,14 @@ checkCase rig elabinfo nest env fc r scr scrty_in alts exp
            -- Try checking at the given multiplicity; if that doesn't work,
            -- try checking at Rig1 (meaning that we're using a linear variable
            -- so the scrutinee should be linear)
-           let chrig = if isErased rig then erased else top
-           log "elab.case" 5 $ "Checking " ++ show scr ++ " at " ++ show chrig
+           -- But if rig is explictly set by the user, we check at the smaller of that and the scrutinee's rig
+           let chrig = if isRigOther scrig
+                          then (if isErased rig then erased else top)
+                          else (if scrig < rig then scrig else rig)
 
            (scrtm_in, gscrty, caseRig) <- handle
-              (do c <- runDelays (const True) $ check (chrig |*| r) elabinfo nest env scr (Just (gnf env scrtyv))
-                  pure (fst c, snd c, chrig |*| r))
+              (do c <- runDelays (const True) $ check (chrig) elabinfo nest env scr (Just (gnf env scrtyv))
+                  pure (fst c, snd c, chrig))
             $ \case
                 e@(LinearMisuse _ _ r _)
                   => branchOne

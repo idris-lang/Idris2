@@ -1,5 +1,35 @@
 1/1: Building issue2513 (issue2513.idr)
 Main> Main.test3 : (a -> b) -> (c -> d) -> Maybe Integer
 test3 = \(>>=), .toD => let (>>) = 0 in let .inv = 1 in let (*) = 2 in let .proj = 3 in pure 4
+Main>    r : R
+ 0 o : Nat
+ 0 l : Nat
+ 0 e : Nat
+------------------------------
+foo_w0 : Nat
+Main>    r : R
+   o : Nat
+ 1 l : Nat
+ 0 e : Nat
+------------------------------
+foo_w1 : Nat
+Main>    o : Nat
+   l : Nat
+ 0 e : Nat
+   r : R
+------------------------------
+foo_ww : Nat
+Main>    o : Nat
+ 1 l : Nat
+ 0 e : Nat
+ 0 r : R
+------------------------------
+foo_11 : Nat
+Main>    o : Nat
+ 1 l : Nat
+ 0 e : Nat
+ 0 r : R
+------------------------------
+foo_1w : Nat
 Main> 
 Bye for now!
