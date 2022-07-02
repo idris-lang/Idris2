@@ -56,6 +56,10 @@ rw1 r = let 1 (MkR e l o) = r in ?foo_w1
 rwO : R -> Nat
 rwO r = let (MkR e l o) = r in ?foo_ww
 
+-- This case would be interesting to handle, but it is tricky
+-- because we don't know if we should pass in r at Rig0 (someone
+-- else gets it) or Rig1 (?foo_10 gets it).
+
 -- r10 : (1 _ : R) -> R
 -- r10 r = let 0 (MkR e l o) = r in ?foo_10
 
@@ -64,3 +68,15 @@ r11 r = let 1 (MkR e l o) = r in ?foo_11
 
 r1w : (1 _ : R) -> Nat
 r1w r = let (MkR e l o) = r in ?foo_1w
+
+r00 : (0 _ : R) -> Nat
+r00 r = let 0 (MkR e l o) = r in ?foo_00
+
+failing "r is not accessible in this context"
+  r01 : (0 _ : R) -> Nat
+  r01 r = let 1 (MkR e l o) = r in ?foo_01
+
+-- do we want to automatically this as a Rig0 match?
+failing "r is not accessible in this context"
+  r0w : (0 _ : R) -> Nat
+  r0w r = let (MkR e l o) = r in ?foo_0w

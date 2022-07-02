@@ -31,5 +31,11 @@ Main>    o : Nat
  0 r : R
 ------------------------------
 foo_1w : Nat
+Main>  0 o : Nat
+ 0 l : Nat
+ 0 e : Nat
+ 0 r : R
+------------------------------
+foo_00 : Nat
 Main> 
 Bye for now!
