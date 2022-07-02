@@ -125,3 +125,38 @@ namespace Rose
 
   rose : Functor Rose
   rose = %runElab derive
+
+failing "Couldn't find a `Functor' instance for the type constructor DeriveFunctor.Wrap"
+
+  record Wrap (a : Type) where
+    constructor MkWrap
+    unWrap : a
+
+  data Indirect : Type -> Type where
+    MkIndirect : Wrap a -> Indirect a
+
+  indirect : Functor Indirect
+  indirect = %runElab derive
+
+failing "Couldn't find a `Bifunctor' instance for the type constructor DeriveFunctor.Tree"
+
+  data Tree : (l, n : Type) -> Type where
+    Leaf : l -> Tree l n
+    Node : Tree l n -> n -> Tree l n -> Tree l n
+
+  -- this one will succeed
+  tree : Functor (Tree l)
+  tree = %runElab derive
+
+  record Tree' (a : Type) where
+    constructor MkTree'
+    getTree : Tree a a
+
+  -- and this one will fail
+  tree' : Functor Tree'
+  tree' = %runElab derive
+
+failing "Expected a type constructor, got: Prelude.Basics.id {a = Type}"
+
+  functor : Functor Prelude.id
+  functor = %runElab derive

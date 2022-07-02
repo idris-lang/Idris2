@@ -53,3 +53,8 @@ LOG derive.functor.clauses:1:
 LOG derive.functor.clauses:1: 
   mapRose : {0 a, b : Type} -> (a -> b) -> Rose a -> Rose b
   mapRose f (Node x0) = Node (map (\ eta => Delay (assert_total (mapRose f eta))) x0)
+LOG derive.functor.clauses:1: 
+  mapTree : {0 l : _} -> {0 a, b : Type} -> (a -> b) -> Tree l a -> Tree l b
+  mapTree f (Leaf x0) = Leaf x0
+  mapTree f (Node x0 x1 x2) = Node (mapTree f x0) (f x1) (mapTree f x2)
+1/1: Building Search (Search.idr)

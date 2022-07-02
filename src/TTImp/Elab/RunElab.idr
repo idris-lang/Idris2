@@ -104,7 +104,13 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                                x       => x
              throw $ RunElabFail $ GenericMsg customFC !(reify defs msg')
     elabCon defs "Try" [_, elab1, elab2]
-        = tryUnify (elabScript fc nest env !(evalClosure defs elab1) exp)
+        = tryUnify (do constart <- getNextEntry
+                       res <- elabScript fc nest env !(evalClosure defs elab1) exp
+                       -- We ensure that all of the constraints introduced during the elab script
+                       -- have been solved. This guarantees that we do not mistakenly succeed even
+                       -- though e.g. a proof search got delayed.
+                       solveConstraintsAfter constart inTerm LastChance
+                       pure res)
                    (elabScript fc nest env !(evalClosure defs elab2) exp)
     elabCon defs "LogMsg" [topic, verb, str]
         = do topic' <- evalClosure defs topic
@@ -244,6 +250,7 @@ checkRunElab rig elabinfo nest env fc script exp
          elabtt <- appCon fc defs n [expected]
          (stm, sty) <- runDelays (const True) $
                            check rig elabinfo nest env script (Just (gnf env elabtt))
+         solveConstraints inTerm Normal
          defs <- get Ctxt -- checking might have resolved some holes
          ntm <- elabScript fc nest env
                            !(nfOpts withAll defs env stm) (Just (gnf env expected))
