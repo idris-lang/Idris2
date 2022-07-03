@@ -109,7 +109,6 @@ namespace Colist
   colist : Functor Colist
   colist = %runElab derive
 
-
 namespace LAZY
 
   record LAZY (a : Type) where
@@ -125,6 +124,15 @@ namespace Rose
 
   rose : Functor Rose
   rose = %runElab derive
+
+namespace Free
+
+  data Free : (Type -> Type) -> Type -> Type where
+    Pure : a -> Free f a
+    Bind : f a -> (a -> Free f b) -> Free f b
+
+  free : Functor (Free f)
+  free = %runElab derive
 
 failing "Couldn't find a `Functor' instance for the type constructor DeriveFunctor.Wrap"
 

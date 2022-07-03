@@ -283,14 +283,21 @@ parameters (fc : FC) (mutualWith : List Name)
     = apply fc (IVar fc (UN $ Basic "mapFst"))
       (functorFun (assert <|> Just True) sp rec f Nothing
       :: toList t)
-  functorFun assert (FIPi {rig, pinfo, nm, a} _ sp) rec f (Just t)
+  functorFun assert (FIPi {rig, pinfo, nm} _ sp) rec f (Just t)
     = let nm = fromMaybe (UN $ Basic "x") nm in
-      ILam fc rig pinfo (Just nm) a (functorFun assert sp rec f (Just $ IApp fc t (IVar fc nm)))
-  functorFun assert (FIPi {rig, pinfo, nm, a} _ sp) rec f Nothing
+      -- /!\ We cannot use the type stored in FIPi here because it could just
+      -- be a name that will happen to be different when bound on the LHS!
+      -- Cf. the Free test case in reflection017
+      ILam fc rig pinfo (Just nm) (Implicit fc False)
+    $ functorFun assert sp rec f (Just $ IApp fc t (IVar fc nm))
+  functorFun assert (FIPi {rig, pinfo, nm} _ sp) rec f Nothing
     = let tnm = UN $ Basic "t" in
       let nm = fromMaybe (UN $ Basic "x") nm in
       ILam fc MW ExplicitArg (Just tnm) (Implicit fc False) $
-      ILam fc rig pinfo (Just nm) a $
+      -- /!\ We cannot use the type stored in FIPi here because it could just
+      -- be a name that will happen to be different when bound on the LHS!
+      -- Cf. the Free test case in reflection017
+      ILam fc rig pinfo (Just nm) (Implicit fc False) $
       functorFun assert sp rec f (Just $ IApp fc (IVar fc tnm) (IVar fc nm))
   functorFun assert (FIFree y) rec f t = fromMaybe `(id) t
 
@@ -336,8 +343,9 @@ namespace Functor
 
     -- Generate a clause for each data constructor
     let fc = emptyFC
-    let mapName = UN (Basic $ "map" ++ show (dropNS f))
-    let funName = UN $ Basic "f"
+    let un = UN . Basic
+    let mapName = un ("map" ++ show (dropNS f))
+    let funName = un "f"
     let fun  = IVar fc funName
     cls <- for cs $ \ (cName, ty) => withError (WhenCheckingConstructor cName) $ do
              -- Grab the types of the constructor's explicit arguments
@@ -345,7 +353,7 @@ namespace Functor
                  | _ => throwError ConfusingReturnType
              logMsg "derive.functor.clauses" 10 $
                 "\{showPrefix True (dropNS cName)} (\{joinBy ", " (map (showPrec Dollar . mapTTImp cleanup) args)})"
-             let vars = map (IVar fc . UN . Basic . ("x" ++) . show . (`minus` 1))
+             let vars = map (IVar fc . un . ("x" ++) . show . (`minus` 1))
                       $ zipWith const [1..length args] args -- fix because [1..0] is [1,0]
              recs <- for (zip vars args) $ \ (v, arg) => do
                        res <- withError (WhenCheckingArg arg) $ typeView f para arg
