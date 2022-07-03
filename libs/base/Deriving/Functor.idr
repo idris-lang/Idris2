@@ -17,6 +17,21 @@ import public Language.Reflection
 %language ElabReflection
 %default total
 
+freshName : List Name -> String -> String
+freshName ns a = assert_total $ go (basicNames ns) Nothing where
+
+  basicNames : List Name -> List String
+  basicNames = mapMaybe $ \ nm => case dropNS nm of
+    UN (Basic str) => Just str
+    _ => Nothing
+
+  covering
+  go : List String -> Maybe Nat -> String
+  go ns mi =
+    let nm = a ++ maybe "" show mi in
+    ifThenElse (nm `elem` ns) (go ns (Just $ maybe 0 S mi)) nm
+
+
 ------------------------------------------------------------------------------
 -- Errors
 
@@ -438,8 +453,15 @@ namespace Functor
           (apply fc (IVar fc cName) recs)
 
     -- Generate the type of the mapping function
-    let ty = MkTy fc fc mapName $ withParams fc ns params $
-             `({0 a, b : Type} -> (a -> b) -> ~(t) a -> ~(t) b)
+    let paramNames = fst <$> params
+    let a = un $ freshName paramNames "a"
+    let b = un $ freshName paramNames "b"
+    let va = IVar fc a
+    let vb = IVar fc b
+    let ty = MkTy fc fc mapName $ withParams fc ns params
+           $ IPi fc M0 ImplicitArg (Just a) (IType fc)
+           $ IPi fc M0 ImplicitArg (Just b) (IType fc)
+           $ `((~(va) -> ~(vb)) -> ~(t) ~(va) -> ~(t) ~(vb))
     logMsg "derive.functor.clauses" 1 $
       joinBy "\n" ("" :: ("  " ++ show (mapITy cleanup ty))
                       :: map (("  " ++) . showClause InDecl . mapClause cleanup) cls)

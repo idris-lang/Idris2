@@ -12,13 +12,16 @@ LOG derive.functor.clauses:1:
   mapEither f (Left x0) = Left x0
   mapEither f (Right x0) = Right (f x0)
 LOG derive.functor.clauses:1: 
+  mapConstant : {0 a : _} -> {0 a0, b : Type} -> (a0 -> b) -> Constant a a0 -> Constant a b
+  mapConstant f (MkConstant x0) = MkConstant x0
+LOG derive.functor.clauses:1: 
   mapVect : {0 n : _} -> {0 a, b : Type} -> (a -> b) -> Vect n a -> Vect n b
   mapVect f Nil = Nil
   mapVect f (x0 :: x1) = (f x0) :: (mapVect f x1)
 LOG derive.functor.clauses:1: 
   mapBigTree : {0 a, b : Type} -> (a -> b) -> BigTree a -> BigTree b
   mapBigTree f (End x0) = End (f x0)
-  mapBigTree f (Branch x0 x1 x2) = Branch x0 (map f x1) (\ {arg:3927} => mapBigTree f (x2 {arg:3927}))
+  mapBigTree f (Branch x0 x1 x2) = Branch x0 (map f x1) (\ {arg:4047} => mapBigTree f (x2 {arg:4047}))
   mapBigTree f (Rose x0) = Rose (map (assert_total (mapBigTree f)) x0)
 LOG derive.functor.clauses:1: 
   mapMatrix : {0 n, m : _} -> {0 a, b : Type} -> (a -> b) -> Matrix m n a -> Matrix m n b
@@ -56,7 +59,7 @@ LOG derive.functor.clauses:1:
 LOG derive.functor.clauses:1: 
   mapFree : {0 f : _} -> {0 a, b : Type} -> (a -> b) -> Free f a -> Free f b
   mapFree f (Pure x0) = Pure (f x0)
-  mapFree f (Bind x0 x1) = Bind x0 (\ {arg:4956} => mapFree f (x1 {arg:4956}))
+  mapFree f (Bind x0 x1) = Bind x0 (\ {arg:5076} => mapFree f (x1 {arg:5076}))
 LOG derive.functor.assumption:10: I am assuming that the parameter m is a Functor
 LOG derive.functor.clauses:1: 
   mapMaybeT : {0 m : _} -> Functor m => {0 a, b : Type} -> (a -> b) -> MaybeT m a -> MaybeT m b

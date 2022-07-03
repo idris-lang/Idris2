@@ -17,6 +17,15 @@ maybe = %runElab derive
 either : Functor (Either err)
 either = %runElab derive
 
+namespace Constant
+
+  record Constant (a, b : Type) where
+    constructor MkConstant
+    runConstant : a
+
+  constant : Functor (Constant a)
+  constant = %runElab derive
+
 namespace Vect
 
   public export
