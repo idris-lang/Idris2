@@ -310,10 +310,10 @@ parseInteger s = parseIntTrimmed (trim s)
 ||| parseDouble "+123.123e-2"
 ||| ```
 ||| ```idris example
-||| parseDouble {a=Int} " -123.123E+2"
+||| parseDouble " -123.123E+2"
 ||| ```
 ||| ```idris example
-||| parseDouble {a=Int} " +123.123"
+||| parseDouble " +123.123"
 ||| ```
 export -- it's a bit too slow at compile time
 covering
