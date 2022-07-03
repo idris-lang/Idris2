@@ -167,7 +167,7 @@ namespace TreeT
 
   record Tree (a : Type) where
     constructor MkTree
-    runTree : TreeT Prelude.Types.Either a
+    runTree : TreeT Either a
 
   tree : Functor Tree
   tree = %runElab derive {treq = CoveringOnly}
