@@ -61,7 +61,7 @@ Show Error where
 record IsType where
   constructor MkIsType
   typeConstructor  : Name
-  parameterNames   : List Name
+  parameterNames   : List (Name, Nat)
   dataConstructors : List (Name, TTImp)
 
 wording : NameType -> String
@@ -83,19 +83,40 @@ isTypeCon ty = do
       pure (n, ty)
 
 isType : Elaboration m => TTImp -> m IsType
-isType (IVar _ n) = MkIsType n [] <$> isTypeCon n
-isType (IApp _ t (IVar _ n)) = { parameterNames $= (n ::) } <$> isType t
-isType t = fail "Expected a type constructor, got: \{show t}"
+isType = go Z where
 
-withParams : FC -> List Nat -> List Name -> TTImp -> TTImp
-withParams fc funcs nms t = go 0 nms where
-  go : (pos : Nat) -> List Name -> TTImp
-  go pos [] = t
-  go pos (nm :: nms)
+  go : Nat -> TTImp -> m IsType
+  go idx (IVar _ n) = MkIsType n [] <$> isTypeCon n
+  go idx (IApp _ t (IVar _ nm)) = case nm of
+    -- Unqualified: that's a local variable
+    UN (Basic _) => { parameterNames $= ((nm, idx) ::) } <$> go (S idx) t
+    _ => go (S idx) t
+  go idx t = fail "Expected a type constructor, got: \{show t}"
+
+record Parameters where
+  constructor MkParameters
+  asFunctors : List Nat
+  asBifunctors : List Nat
+
+initParameters : Parameters
+initParameters = MkParameters [] []
+
+withParams : FC -> Parameters -> List (Name, Nat) -> TTImp -> TTImp
+withParams fc params nms t = go nms where
+
+  addConstraint : Bool -> Name -> Name -> TTImp -> TTImp
+  addConstraint False _ _ = id
+  addConstraint True cst nm =
+     let ty = IApp fc (IVar fc cst) (IVar fc nm) in
+     IPi fc MW AutoImplicit Nothing ty
+
+  go : List (Name, Nat) -> TTImp
+  go [] = t
+  go ((nm, pos) :: nms)
     = IPi fc M0 ImplicitArg (Just nm) (Implicit fc True)
-    $ ifThenElse (not (pos `elem` funcs)) id
-        (IPi fc MW AutoImplicit Nothing (IApp fc (IVar fc `{Prelude.Interfaces.Functor}) (IVar fc nm)))
-    $ go (S pos) nms
+    $ addConstraint (pos `elem` params.asFunctors)   `{Prelude.Interfaces.Functor}   nm
+    $ addConstraint (pos `elem` params.asBifunctors) `{Prelude.Interfaces.Bifunctor} nm
+    $ go nms
 
 ||| Type of proofs that a type satisfies a constraint.
 ||| Internally it's vacuous. We don't export the constructor so
@@ -114,7 +135,7 @@ hasImplementation : Elaboration m => (intf : a -> Type) -> (t : TTImp) ->
 hasImplementation c t = catch $ do
   prf <- isType t
   intf <- quote c
-  ty <- check {expected = Type} $ withParams emptyFC [] prf.parameterNames `(~(intf) ~(t))
+  ty <- check {expected = Type} $ withParams emptyFC initParameters prf.parameterNames `(~(intf) ~(t))
   ignore $ check {expected = ty} `(%search)
   pure TrustMeHI
 
@@ -177,7 +198,7 @@ parameters
   {0 m : Type -> Type}
   {auto elab : Elaboration m}
   {auto error : MonadError Error m}
-  {auto cs : MonadState (List Nat) m}
+  {auto cs : MonadState Parameters m}
   (t : Name)
   (ps : List Name)
   (x : Name)
@@ -211,20 +232,19 @@ parameters
            | _ => throwError (NotAnApplication f)
         case decEq t hd of
           Yes Refl => pure $ Left (FIRec prf sp)
-          No diff => do
-            case !(hasImplementation Functor f) of
-              Just prf => pure (Left (FIFun prf sp))
-              Nothing => case hd `elemPos` ps of
-                Just n => do
-                  -- record that the nth parameter should be functorial
-                  ns <- get
-                  let ns = ifThenElse (n `elem` ns) ns (n :: ns)
-                  put ns
-                  -- and happily succeed
-                  logMsg "derive.functor.assumption" 10 $
-                    "I am assuming that the parameter \{show hd} is a Functor"
-                  pure (Left (FIFun TrustMeHI sp))
-                Nothing => throwError (NotAFunctor f)
+          No diff => case !(hasImplementation Functor f) of
+            Just prf => pure (Left (FIFun prf sp))
+            Nothing => case hd `elemPos` ps of
+              Just n => do
+                -- record that the nth parameter should be functorial
+                ns <- gets asFunctors
+                let ns = ifThenElse (n `elem` ns) ns (n :: ns)
+                modify { asFunctors := ns }
+                -- and happily succeed
+                logMsg "derive.functor.assumption" 10 $
+                  "I am assuming that the parameter \{show hd} is a Functor"
+                pure (Left (FIFun TrustMeHI sp))
+              Nothing => throwError (NotAFunctor f)
       -- Otherwise it better be the case that f is also free of x so that
       -- we can mark the whole type as being x-free.
       Right fo => do
@@ -245,10 +265,22 @@ parameters
     chka1 <- typeView arg1
     case chka1 of
       Right _ => typeAppView (assert_smaller fa (IApp _ f arg1)) arg2
-      Left sp => do
-        Just prf <- hasImplementation Bifunctor f
-          | _ => throwError (NotABifunctor f)
-        pure (Left (FIBifun prf sp !(typeView arg2)))
+      Left sp => case !(hasImplementation Bifunctor f) of
+        Just prf => pure (Left (FIBifun prf sp !(typeView arg2)))
+        Nothing => do
+          let Just (MkAppView (_, hd) ts prf) = appView f
+             | _ => throwError (NotAnApplication f)
+          case hd `elemPos` ps of
+            Just n => do
+              -- record that the nth parameter should be bifunctorial
+              ns <- gets asBifunctors
+              let ns = ifThenElse (n `elem` ns) ns (n :: ns)
+              modify { asBifunctors := ns }
+              -- and happily succeed
+              logMsg "derive.functor.assumption" 10 $
+                  "I am assuming that the parameter \{show hd} is a Bifunctor"
+              pure (Left (FIBifun TrustMeHI sp !(typeView arg2)))
+            Nothing => throwError (NotABifunctor f)
   typeView fa@(IApp _ f arg) = typeAppView f arg
   typeView (IDelayed _ lz f) = pure $ case !(typeView f) of
     Left sp => Left (FIDelayed sp)
@@ -386,7 +418,7 @@ namespace Functor
     let mapName = un ("map" ++ show (dropNS f))
     let funName = un "f"
     let fun  = IVar fc funName
-    (ns, cls) <- runStateT {m = m} (the (List Nat) []) $ for cs $ \ (cName, ty) =>
+    (ns, cls) <- runStateT {m = m} initParameters $ for cs $ \ (cName, ty) =>
       withError (WhenCheckingConstructor cName) $ do
         -- Grab the types of the constructor's explicit arguments
         let Just (MkConstructorView paras para args) = explicits ty

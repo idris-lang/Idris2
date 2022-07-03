@@ -3,7 +3,7 @@ module DeriveFunctor
 import Deriving.Functor
 
 %language ElabReflection
-%default total
+%default covering
 
 %logging "derive.functor.clauses" 1
 %logging "derive.functor.assumption" 10
@@ -25,6 +25,7 @@ namespace Vect
     (::) : a -> Vect n a -> Vect (S n) a
 
   export %hint
+  total
   vect : Functor (Vect n)
   vect = %runElab derive
 
@@ -35,6 +36,7 @@ namespace BigTree
     | Branch String (List a) (Bool -> BigTree a)
     | Rose (List (BigTree a))
 
+  total
   bigTree : Functor BigTree
   bigTree = %runElab derive
 
@@ -44,6 +46,7 @@ namespace Matrix
     constructor MkMatrix
     runMatrix : Vect m (Vect n a)
 
+  total
   matrix : Functor (Matrix m n)
   matrix = %runElab derive
 
@@ -58,6 +61,7 @@ namespace Tm
     Call : Op n -> Vect n (Tm a) -> Tm a
     Lam : Tm (Maybe a) -> Tm a
 
+  total
   tm : Functor Tm
   tm = %runElab derive
 
@@ -74,8 +78,8 @@ namespace Forest
     Empty : Forest a
     Plant : Tree a -> Forest a -> Forest a
 
-  %hint tree : Functor Tree
-  %hint forest : Functor Forest
+  %hint total tree : Functor Tree
+  %hint total forest : Functor Forest
 
   tree = %runElab derive {mutualWith = [`{Forest}]}
   forest = %runElab derive {mutualWith = [`{Tree}]}
@@ -85,6 +89,7 @@ namespace List1
   data List1 : Type -> Type where
     MkList1 : (a, Maybe (List1 a)) -> List1 a
 
+  total
   list1 : Functor List1
   list1 = %runElab derive
 
@@ -92,6 +97,7 @@ namespace Full
 
   data Full a = Leaf a | Node (Full (a, a))
 
+  total
   full : Functor Full
   full = %runElab derive
 
@@ -100,6 +106,7 @@ failing "Negative occurence of a"
   data NOT : Type -> Type where
     MkNOT : (a -> Void) -> NOT a
 
+  total
   negative : Functor NOT
   negative = %runElab derive
 
@@ -107,6 +114,7 @@ namespace Colist
 
   data Colist a = Nil | (::) a (Inf (Colist a))
 
+  total
   colist : Functor Colist
   colist = %runElab derive
 
@@ -116,6 +124,7 @@ namespace LAZY
     constructor MkLAZY
     wrapped : Lazy a
 
+  total
   lazy : Functor LAZY
   lazy = %runElab derive
 
@@ -123,6 +132,7 @@ namespace Rose
 
   data Rose a = Node (List (Lazy (Rose a)))
 
+  total
   rose : Functor Rose
   rose = %runElab derive
 
@@ -132,6 +142,7 @@ namespace Free
     Pure : a -> Free f a
     Bind : f a -> (a -> Free f b) -> Free f b
 
+  total
   free : Functor (Free f)
   free = %runElab derive
 
@@ -141,8 +152,25 @@ namespace MaybeT
     constructor MkMaybeT
     runMaybeT : m (Maybe a)
 
+  total
   maybeT : Functor m => Functor (MaybeT m)
   maybeT = %runElab derive
+
+namespace TreeT
+
+  data TreeT : (Type -> Type -> Type) -> Type -> Type where
+    MkTreeT : layer a (TreeT layer a) -> TreeT layer a
+
+  %hint
+  treeT : Bifunctor layer => Functor (TreeT layer)
+  treeT = %runElab derive {treq = CoveringOnly}
+
+  record Tree (a : Type) where
+    constructor MkTree
+    runTree : TreeT Prelude.Types.Either a
+
+  tree : Functor Tree
+  tree = %runElab derive {treq = CoveringOnly}
 
 failing "Couldn't find a `Functor' instance for the type constructor DeriveFunctor.Wrap"
 
@@ -153,28 +181,33 @@ failing "Couldn't find a `Functor' instance for the type constructor DeriveFunct
   data Indirect : Type -> Type where
     MkIndirect : Wrap a -> Indirect a
 
+  total
   indirect : Functor Indirect
   indirect = %runElab derive
 
-failing "Couldn't find a `Bifunctor' instance for the type constructor DeriveFunctor.Tree"
+namespace BifunctorFail
 
   data Tree : (l, n : Type) -> Type where
     Leaf : l -> Tree l n
     Node : Tree l n -> n -> Tree l n -> Tree l n
 
   -- this one will succeed
+  total
   tree : Functor (Tree l)
   tree = %runElab derive
 
-  record Tree' (a : Type) where
-    constructor MkTree'
-    getTree : Tree a a
+  failing "Couldn't find a `Bifunctor' instance for the type constructor DeriveFunctor.BifunctorFail.Tree"
 
-  -- and this one will fail
-  tree' : Functor Tree'
-  tree' = %runElab derive
+    record Tree' (a : Type) where
+      constructor MkTree'
+      getTree : Tree a a
+
+    -- and this one will fail
+    tree' : Functor Tree'
+    tree' = %runElab derive
 
 failing "Expected a type constructor, got: Prelude.Basics.id {a = Type}"
 
+  total
   functor : Functor Prelude.id
   functor = %runElab derive
