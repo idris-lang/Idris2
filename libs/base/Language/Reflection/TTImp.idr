@@ -573,6 +573,8 @@ mutual
     showPrec d (IVar fc nm) = showPrefix True nm
     showPrec d (IPi fc MW ExplicitArg Nothing argTy retTy)
       = showParens (d > Open) $ "\{showPrec Dollar argTy} -> \{show retTy}"
+    showPrec d (IPi fc MW AutoImplicit Nothing argTy retTy)
+      = showParens (d > Open) $ "\{showPrec Dollar argTy} => \{show retTy}"
     showPrec d (IPi fc rig pinfo x argTy retTy)
       = showParens (d > Open) $
           let (xs, retTy) = collectPis rig pinfo [<fromMaybe (UN Underscore) x] argTy retTy in
@@ -638,6 +640,7 @@ mutual
       [(_,x)] => "with \{show x} \{show s}"
       _   => "with [\{joinBy ", " $ map (show . snd) ns}] \{show s}"
 
+public export
 data Argument a
   = Arg FC a
   | NamedArg FC Name a

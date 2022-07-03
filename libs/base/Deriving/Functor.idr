@@ -9,6 +9,7 @@
 module Deriving.Functor
 
 import public Control.Monad.Either
+import public Control.Monad.State
 import public Data.Maybe
 import public Decidable.Equality
 import public Language.Reflection
@@ -86,8 +87,15 @@ isType (IVar _ n) = MkIsType n [] <$> isTypeCon n
 isType (IApp _ t (IVar _ n)) = { parameterNames $= (n ::) } <$> isType t
 isType t = fail "Expected a type constructor, got: \{show t}"
 
-withParams : FC -> List Name -> TTImp -> TTImp
-withParams fc params t = foldr (\ x => IPi fc M0 ImplicitArg (Just x) (Implicit fc True)) t params
+withParams : FC -> List Nat -> List Name -> TTImp -> TTImp
+withParams fc funcs nms t = go 0 nms where
+  go : (pos : Nat) -> List Name -> TTImp
+  go pos [] = t
+  go pos (nm :: nms)
+    = IPi fc M0 ImplicitArg (Just nm) (Implicit fc True)
+    $ ifThenElse (not (pos `elem` funcs)) id
+        (IPi fc MW AutoImplicit Nothing (IApp fc (IVar fc `{Prelude.Interfaces.Functor}) (IVar fc nm)))
+    $ go (S pos) nms
 
 ||| Type of proofs that a type satisfies a constraint.
 ||| Internally it's vacuous. We don't export the constructor so
@@ -106,7 +114,7 @@ hasImplementation : Elaboration m => (intf : a -> Type) -> (t : TTImp) ->
 hasImplementation c t = catch $ do
   prf <- isType t
   intf <- quote c
-  ty <- check {expected = Type} $ withParams emptyFC prf.parameterNames `(~(intf) ~(t))
+  ty <- check {expected = Type} $ withParams emptyFC [] prf.parameterNames `(~(intf) ~(t))
   ignore $ check {expected = ty} `(%search)
   pure TrustMeHI
 
@@ -158,11 +166,21 @@ data FreeOf : Name -> TTImp -> Type where
   ||| is free of x
   TrustMeFO : FreeOf a x
 
+elemPos : Eq a => a -> List a -> Maybe Nat
+elemPos x = go 0 where
+
+  go : Nat -> List a -> Maybe Nat
+  go idx [] = Nothing
+  go idx (y :: ys) = idx <$ guard (x == y) <|> go (S idx) ys
+
 parameters
   {0 m : Type -> Type}
   {auto elab : Elaboration m}
   {auto error : MonadError Error m}
-  (t, x : Name)
+  {auto cs : MonadState (List Nat) m}
+  (t : Name)
+  (ps : List Name)
+  (x : Name)
 
   ||| When analysing the type of a constructor for the type family t,
   ||| we hope to observe
@@ -192,11 +210,21 @@ parameters
         let Just (MkAppView (_, hd) ts prf) = appView f
            | _ => throwError (NotAnApplication f)
         case decEq t hd of
-           Yes Refl => pure $ Left (FIRec prf sp)
-           No diff => do
-             Just prf <- hasImplementation Functor f
-               | _ => throwError (NotAFunctor f)
-             pure (Left (FIFun prf sp))
+          Yes Refl => pure $ Left (FIRec prf sp)
+          No diff => do
+            case !(hasImplementation Functor f) of
+              Just prf => pure (Left (FIFun prf sp))
+              Nothing => case hd `elemPos` ps of
+                Just n => do
+                  -- record that the nth parameter should be functorial
+                  ns <- get
+                  let ns = ifThenElse (n `elem` ns) ns (n :: ns)
+                  put ns
+                  -- and happily succeed
+                  logMsg "derive.functor.assumption" 10 $
+                    "I am assuming that the parameter \{show hd} is a Functor"
+                  pure (Left (FIFun TrustMeHI sp))
+                Nothing => throwError (NotAFunctor f)
       -- Otherwise it better be the case that f is also free of x so that
       -- we can mark the whole type as being x-free.
       Right fo => do
@@ -304,10 +332,21 @@ parameters (fc : FC) (mutualWith : List Name)
 ------------------------------------------------------------------------------
 -- User-facing: Functor deriving
 
-explicits : TTImp -> Maybe (Name, List TTImp)
-explicits (IPi fc rig ExplicitArg x a b) = mapSnd (a ::) <$> explicits b
+record ConstructorView where
+  constructor MkConstructorView
+  params      : List Name
+  functorPara : Name
+  conArgTypes : List TTImp
+
+explicits : TTImp -> Maybe ConstructorView
+explicits (IPi fc rig ExplicitArg x a b) = { conArgTypes $= (a ::) } <$> explicits b
 explicits (IPi fc rig pinfo x a b) = explicits b
-explicits (IApp _ _ (IVar _ a)) = Just (a, [])
+explicits (IApp _ f (IVar _ a)) = do
+  MkAppView _ ts _ <- appView f
+  let ps = flip mapMaybe ts $ \ t => the (Maybe Name) $ case t of
+             Arg _ (IVar _ nm) => Just nm
+             _ => Nothing
+  pure (MkConstructorView (ps <>> []) a [])
 explicits _ = Nothing
 
 cleanup : TTImp -> TTImp
@@ -347,25 +386,27 @@ namespace Functor
     let mapName = un ("map" ++ show (dropNS f))
     let funName = un "f"
     let fun  = IVar fc funName
-    cls <- for cs $ \ (cName, ty) => withError (WhenCheckingConstructor cName) $ do
-             -- Grab the types of the constructor's explicit arguments
-             let Just (para, args) = explicits ty
-                 | _ => throwError ConfusingReturnType
-             logMsg "derive.functor.clauses" 10 $
-                "\{showPrefix True (dropNS cName)} (\{joinBy ", " (map (showPrec Dollar . mapTTImp cleanup) args)})"
-             let vars = map (IVar fc . un . ("x" ++) . show . (`minus` 1))
-                      $ zipWith const [1..length args] args -- fix because [1..0] is [1,0]
-             recs <- for (zip vars args) $ \ (v, arg) => do
-                       res <- withError (WhenCheckingArg arg) $ typeView f para arg
-                       pure $ case res of
-                         Left sp => functorFun fc mutualWith Nothing sp mapName funName (Just v)
-                         Right free => v
-             pure $ PatClause fc
-               (apply fc (IVar fc mapName) [ fun, apply fc (IVar fc cName) vars])
-               (apply fc (IVar fc cName) recs)
+    (ns, cls) <- runStateT {m = m} (the (List Nat) []) $ for cs $ \ (cName, ty) =>
+      withError (WhenCheckingConstructor cName) $ do
+        -- Grab the types of the constructor's explicit arguments
+        let Just (MkConstructorView paras para args) = explicits ty
+              | _ => throwError ConfusingReturnType
+        logMsg "derive.functor.clauses" 10 $
+          "\{showPrefix True (dropNS cName)} (\{joinBy ", " (map (showPrec Dollar . mapTTImp cleanup) args)})"
+        let vars = map (IVar fc . un . ("x" ++) . show . (`minus` 1))
+                 $ zipWith const [1..length args] args -- fix because [1..0] is [1,0]
+        recs <- for (zip vars args) $ \ (v, arg) => do
+                  res <- withError (WhenCheckingArg (mapTTImp cleanup arg)) $
+                           typeView f paras para arg
+                  pure $ case res of
+                    Left sp => functorFun fc mutualWith Nothing sp mapName funName (Just v)
+                    Right free => v
+        pure $ PatClause fc
+          (apply fc (IVar fc mapName) [ fun, apply fc (IVar fc cName) vars])
+          (apply fc (IVar fc cName) recs)
 
     -- Generate the type of the mapping function
-    let ty = MkTy fc fc mapName $ withParams fc params $
+    let ty = MkTy fc fc mapName $ withParams fc ns params $
              `({0 a, b : Type} -> (a -> b) -> ~(t) a -> ~(t) b)
     logMsg "derive.functor.clauses" 1 $
       joinBy "\n" ("" :: ("  " ++ show (mapITy cleanup ty))

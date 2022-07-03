@@ -57,6 +57,10 @@ LOG derive.functor.clauses:1:
   mapFree : {0 f : _} -> {0 a, b : Type} -> (a -> b) -> Free f a -> Free f b
   mapFree f (Pure x0) = Pure (f x0)
   mapFree f (Bind x0 x1) = Bind x0 (\ {arg:4956} => mapFree f (x1 {arg:4956}))
+LOG derive.functor.assumption:10: I am assuming that the parameter m is a Functor
+LOG derive.functor.clauses:1: 
+  mapMaybeT : {0 m : _} -> Functor m => {0 a, b : Type} -> (a -> b) -> MaybeT m a -> MaybeT m b
+  mapMaybeT f (MkMaybeT x0) = MkMaybeT (map (map f) x0)
 LOG derive.functor.clauses:1: 
   mapTree : {0 l : _} -> {0 a, b : Type} -> (a -> b) -> Tree l a -> Tree l b
   mapTree f (Leaf x0) = Leaf x0

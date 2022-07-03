@@ -6,6 +6,7 @@ import Deriving.Functor
 %default total
 
 %logging "derive.functor.clauses" 1
+%logging "derive.functor.assumption" 10
 
 list : Functor List
 list = %runElab derive
@@ -133,6 +134,15 @@ namespace Free
 
   free : Functor (Free f)
   free = %runElab derive
+
+namespace MaybeT
+
+  record MaybeT (m : Type -> Type) (a : Type) where
+    constructor MkMaybeT
+    runMaybeT : m (Maybe a)
+
+  maybeT : Functor m => Functor (MaybeT m)
+  maybeT = %runElab derive
 
 failing "Couldn't find a `Functor' instance for the type constructor DeriveFunctor.Wrap"
 
