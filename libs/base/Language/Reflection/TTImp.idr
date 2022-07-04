@@ -462,6 +462,8 @@ Eq TTImp where
 
   _ == _ = False
 
+public export
+data Mode = InDecl | InCase
 
 mutual
 
@@ -507,7 +509,7 @@ mutual
       = unwords [ show vis
                 , showTotalReq treq (show dt)
                 ]
-    show (IDef fc nm xs) = joinBy "; " (map show xs)
+    show (IDef fc nm xs) = joinBy "; " (map (showClause InDecl) xs)
     show (IParameters fc params decls)
       = unwords
       [ "parameters"
@@ -538,16 +540,19 @@ mutual
     show (ISetFieldApp path s) = "\{joinBy "->" path} $= \{show s}"
 
   export
-  Show Clause where
-    show (PatClause fc lhs rhs) = "\{show lhs} => \{show rhs}"
-    show (WithClause fc lhs rig wval prf flags cls) -- TODO print flags
+  showClause : Mode -> Clause -> String
+  showClause mode (PatClause fc lhs rhs) = "\{show lhs} \{showSep mode} \{show rhs}" where
+    showSep : Mode -> String
+    showSep InDecl = "="
+    showSep InCase = "=>"
+  showClause mode (WithClause fc lhs rig wval prf flags cls) -- TODO print flags
       = unwords
       [ show lhs, "with"
       , showCount rig $ maybe id (\ nm => (++ " proof \{show nm}")) prf
                       $ showParens True (show wval)
-      , "{", joinBy "; " (assert_total $ map show cls), "}"
+      , "{", joinBy "; " (assert_total $ map (showClause mode) cls), "}"
       ]
-    show (ImpossibleClause fc lhs) = "\{show lhs} impossible"
+  showClause mode (ImpossibleClause fc lhs) = "\{show lhs} impossible"
 
   collectPis : Count -> PiInfo TTImp -> SnocList Name -> TTImp -> TTImp -> (List Name, TTImp)
   collectPis rig pinfo xs argTy t@(IPi fc rig' pinfo' x argTy' retTy)
@@ -568,6 +573,8 @@ mutual
     showPrec d (IVar fc nm) = showPrefix True nm
     showPrec d (IPi fc MW ExplicitArg Nothing argTy retTy)
       = showParens (d > Open) $ "\{showPrec Dollar argTy} -> \{show retTy}"
+    showPrec d (IPi fc MW AutoImplicit Nothing argTy retTy)
+      = showParens (d > Open) $ "\{showPrec Dollar argTy} => \{show retTy}"
     showPrec d (IPi fc rig pinfo x argTy retTy)
       = showParens (d > Open) $
           let (xs, retTy) = collectPis rig pinfo [<fromMaybe (UN Underscore) x] argTy retTy in
@@ -582,7 +589,7 @@ mutual
     showPrec d (ICase fc s ty xs)
       = showParens (d > Open) $
           unwords $ [ "case", show s ] ++ typeFor ty ++ [ "of", "{"
-                    , joinBy "; " (assert_total $ map show xs)
+                    , joinBy "; " (assert_total $ map (showClause InCase) xs)
                     , "}"
                     ]
           where
@@ -632,6 +639,40 @@ mutual
       [] => show s
       [(_,x)] => "with \{show x} \{show s}"
       _   => "with [\{joinBy ", " $ map (show . snd) ns}] \{show s}"
+
+public export
+data Argument a
+  = Arg FC a
+  | NamedArg FC Name a
+  | AutoArg FC a
+
+public export
+data IsAppView : (FC, Name) -> SnocList (Argument TTImp) -> TTImp -> Type where
+  AVVar : IsAppView (fc, t) [<] (IVar fc t)
+  AVApp : IsAppView x ts f -> IsAppView x (ts :< Arg fc t) (IApp fc f t)
+  AVNamedApp : IsAppView x ts f -> IsAppView x (ts :< NamedArg fc n t) (INamedApp fc f n t)
+  AVAutoApp : IsAppView x ts f -> IsAppView x (ts :< AutoArg fc t) (IAutoApp fc f a)
+
+public export
+record AppView (t : TTImp) where
+  constructor MkAppView
+  head : (FC, Name)
+  args : SnocList (Argument TTImp)
+  0 isAppView : IsAppView head args t
+
+export
+appView : (t : TTImp) -> Maybe (AppView t)
+appView (IVar fc f) = Just (MkAppView (fc, f) [<] AVVar)
+appView (IApp fc f t) = do
+  (MkAppView x ts prf) <- appView f
+  pure (MkAppView x (ts :< Arg fc t) (AVApp prf))
+appView (INamedApp fc f n t) = do
+  (MkAppView x ts prf) <- appView f
+  pure (MkAppView x (ts :< NamedArg fc n t) (AVNamedApp prf))
+appView (IAutoApp fc f t) = do
+  (MkAppView x ts prf) <- appView f
+  pure (MkAppView x (ts :< AutoArg fc t) (AVAutoApp prf))
+appView _ = Nothing
 
 parameters (f : TTImp -> TTImp)
 

@@ -1,0 +1,78 @@
+1/1: Building DeriveFunctor (DeriveFunctor.idr)
+LOG derive.functor.clauses:1: 
+  mapList : {0 a, b : Type} -> (a -> b) -> List a -> List b
+  mapList f Nil = Nil
+  mapList f (x0 :: x1) = (f x0) :: (mapList f x1)
+LOG derive.functor.clauses:1: 
+  mapMaybe : {0 a, b : Type} -> (a -> b) -> Maybe a -> Maybe b
+  mapMaybe f Nothing = Nothing
+  mapMaybe f (Just x0) = Just (f x0)
+LOG derive.functor.clauses:1: 
+  mapEither : {0 err : _} -> {0 a, b : Type} -> (a -> b) -> Either err a -> Either err b
+  mapEither f (Left x0) = Left x0
+  mapEither f (Right x0) = Right (f x0)
+LOG derive.functor.clauses:1: 
+  mapConstant : {0 a : _} -> {0 a0, b : Type} -> (a0 -> b) -> Constant a a0 -> Constant a b
+  mapConstant f (MkConstant x0) = MkConstant x0
+LOG derive.functor.clauses:1: 
+  mapVect : {0 n : _} -> {0 a, b : Type} -> (a -> b) -> Vect n a -> Vect n b
+  mapVect f Nil = Nil
+  mapVect f (x0 :: x1) = (f x0) :: (mapVect f x1)
+LOG derive.functor.clauses:1: 
+  mapBigTree : {0 a, b : Type} -> (a -> b) -> BigTree a -> BigTree b
+  mapBigTree f (End x0) = End (f x0)
+  mapBigTree f (Branch x0 x1 x2) = Branch x0 (map f x1) (\ {arg:4047} => mapBigTree f (x2 {arg:4047}))
+  mapBigTree f (Rose x0) = Rose (map (assert_total (mapBigTree f)) x0)
+LOG derive.functor.clauses:1: 
+  mapMatrix : {0 n, m : _} -> {0 a, b : Type} -> (a -> b) -> Matrix m n a -> Matrix m n b
+  mapMatrix f (MkMatrix x0) = MkMatrix (map (map f) x0)
+LOG derive.functor.clauses:1: 
+  mapTm : {0 a, b : Type} -> (a -> b) -> Tm a -> Tm b
+  mapTm f (Var x0) = Var (f x0)
+  mapTm f (Call x0 x1) = Call x0 (map (assert_total (mapTm f)) x1)
+  mapTm f (Lam x0) = Lam (mapTm (map f) x0)
+LOG derive.functor.clauses:1: 
+  mapTree : {0 a, b : Type} -> (a -> b) -> Tree a -> Tree b
+  mapTree f (Leaf x0) = Leaf (f x0)
+  mapTree f (Node x0) = Node (assert_total (map f x0))
+LOG derive.functor.clauses:1: 
+  mapForest : {0 a, b : Type} -> (a -> b) -> Forest a -> Forest b
+  mapForest f Empty = Empty
+  mapForest f (Plant x0 x1) = Plant (assert_total (map f x0)) (mapForest f x1)
+LOG derive.functor.clauses:1: 
+  mapList1 : {0 a, b : Type} -> (a -> b) -> List1 a -> List1 b
+  mapList1 f (MkList1 x0) = MkList1 (bimap f (map (assert_total (mapList1 f))) x0)
+LOG derive.functor.clauses:1: 
+  mapFull : {0 a, b : Type} -> (a -> b) -> Full a -> Full b
+  mapFull f (Leaf x0) = Leaf (f x0)
+  mapFull f (Node x0) = Node (mapFull (bimap f f) x0)
+LOG derive.functor.clauses:1: 
+  mapColist : {0 a, b : Type} -> (a -> b) -> Colist a -> Colist b
+  mapColist f Nil = Nil
+  mapColist f (x0 :: x1) = (f x0) :: (mapColist f x1)
+LOG derive.functor.clauses:1: 
+  mapLAZY : {0 a, b : Type} -> (a -> b) -> LAZY a -> LAZY b
+  mapLAZY f (MkLAZY x0) = MkLAZY (f x0)
+LOG derive.functor.clauses:1: 
+  mapRose : {0 a, b : Type} -> (a -> b) -> Rose a -> Rose b
+  mapRose f (Node x0) = Node (map (\ eta => Delay (assert_total (mapRose f eta))) x0)
+LOG derive.functor.clauses:1: 
+  mapFree : {0 f : _} -> {0 a, b : Type} -> (a -> b) -> Free f a -> Free f b
+  mapFree f (Pure x0) = Pure (f x0)
+  mapFree f (Bind x0 x1) = Bind x0 (\ {arg:5076} => mapFree f (x1 {arg:5076}))
+LOG derive.functor.assumption:10: I am assuming that the parameter m is a Functor
+LOG derive.functor.clauses:1: 
+  mapMaybeT : {0 m : _} -> Functor m => {0 a, b : Type} -> (a -> b) -> MaybeT m a -> MaybeT m b
+  mapMaybeT f (MkMaybeT x0) = MkMaybeT (map (map f) x0)
+LOG derive.functor.assumption:10: I am assuming that the parameter layer is a Bifunctor
+LOG derive.functor.clauses:1: 
+  mapTreeT : {0 layer : _} -> Bifunctor layer => {0 a, b : Type} -> (a -> b) -> TreeT layer a -> TreeT layer b
+  mapTreeT f (MkTreeT x0) = MkTreeT (bimap f (assert_total (mapTreeT f)) x0)
+LOG derive.functor.clauses:1: 
+  mapTree : {0 a, b : Type} -> (a -> b) -> Tree a -> Tree b
+  mapTree f (MkTree x0) = MkTree (map f x0)
+LOG derive.functor.clauses:1: 
+  mapTree : {0 l : _} -> {0 a, b : Type} -> (a -> b) -> Tree l a -> Tree l b
+  mapTree f (Leaf x0) = Leaf x0
+  mapTree f (Node x0 x1 x2) = Node (mapTree f x0) (f x1) (mapTree f x2)
+1/1: Building Search (Search.idr)
