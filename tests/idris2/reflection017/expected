@@ -67,7 +67,7 @@ LOG derive.functor.clauses:1:
 LOG derive.functor.assumption:10: I am assuming that the parameter layer is a Bifunctor
 LOG derive.functor.clauses:1: 
   mapTreeT : {0 layer : _} -> Bifunctor layer => {0 a, b : Type} -> (a -> b) -> TreeT layer a -> TreeT layer b
-  mapTreeT f (MkTreeT x0) = MkTreeT (bimap f (assert_total (mapTreeT f)) x0)
+  mapTreeT f (MkTreeT x0) = MkTreeT (bimap f (mapTreeT f) x0)
 LOG derive.functor.clauses:1: 
   mapTree : {0 a, b : Type} -> (a -> b) -> Tree a -> Tree b
   mapTree f (MkTree x0) = MkTree (map f x0)

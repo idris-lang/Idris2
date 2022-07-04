@@ -446,7 +446,10 @@ namespace Functor
                   res <- withError (WhenCheckingArg (mapTTImp cleanup arg)) $
                            typeView f paras para arg
                   pure $ case res of
-                    Left sp => functorFun fc mutualWith Nothing sp mapName funName (Just v)
+                    Left sp => -- do not bother with assert_total if you're generating
+                               -- a covering/partial definition
+                               let useTot = False <$ guard (treq /= Total) in
+                               functorFun fc mutualWith useTot sp mapName funName (Just v)
                     Right free => v
         pure $ PatClause fc
           (apply fc (IVar fc mapName) [ fun, apply fc (IVar fc cName) vars])
