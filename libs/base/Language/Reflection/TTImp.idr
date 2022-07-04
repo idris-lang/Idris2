@@ -646,6 +646,12 @@ data Argument a
   | NamedArg FC Name a
   | AutoArg FC a
 
+export
+unArg : Argument a -> a
+unArg (Arg _ x) = x
+unArg (NamedArg _ _ x) = x
+unArg (AutoArg _ x) = x
+
 public export
 data IsAppView : (FC, Name) -> SnocList (Argument TTImp) -> TTImp -> Type where
   AVVar : IsAppView (fc, t) [<] (IVar fc t)

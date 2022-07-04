@@ -72,6 +72,9 @@ LOG derive.functor.clauses:1:
   mapTree : {0 a, b : Type} -> (a -> b) -> Tree a -> Tree b
   mapTree f (MkTree x0) = MkTree (map f x0)
 LOG derive.functor.clauses:1: 
+  mapIVect : {0 m : _} -> {0 a, b : Type} -> (a -> b) -> IVect {n = m} a -> IVect {n = m} b
+  mapIVect f (MkIVect x0) = MkIVect (map f x0)
+LOG derive.functor.clauses:1: 
   mapTree : {0 l : _} -> {0 a, b : Type} -> (a -> b) -> Tree l a -> Tree l b
   mapTree f (Leaf x0) = Leaf x0
   mapTree f (Node x0 x1 x2) = Node (mapTree f x0) (f x1) (mapTree f x2)

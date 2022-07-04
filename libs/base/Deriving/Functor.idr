@@ -76,7 +76,7 @@ Show Error where
 record IsType where
   constructor MkIsType
   typeConstructor  : Name
-  parameterNames   : List (Name, Nat)
+  parameterNames   : List (Argument Name, Nat)
   dataConstructors : List (Name, TTImp)
 
 wording : NameType -> String
@@ -104,7 +104,15 @@ isType = go Z where
   go idx (IVar _ n) = MkIsType n [] <$> isTypeCon n
   go idx (IApp _ t (IVar _ nm)) = case nm of
     -- Unqualified: that's a local variable
-    UN (Basic _) => { parameterNames $= ((nm, idx) ::) } <$> go (S idx) t
+    UN (Basic _) =>
+      let arg = Arg emptyFC nm in
+      { parameterNames $= ((arg, idx) ::) } <$> go (S idx) t
+    _ => go (S idx) t
+  go idx (INamedApp _ t nm (IVar _ nm')) = case nm' of
+    -- Unqualified: that's a local variable
+    UN (Basic _) =>
+      let arg = NamedArg emptyFC nm nm' in
+      { parameterNames $= ((arg, idx) ::) } <$> go (S idx) t
     _ => go (S idx) t
   go idx t = fail "Expected a type constructor, got: \{show t}"
 
@@ -116,7 +124,7 @@ record Parameters where
 initParameters : Parameters
 initParameters = MkParameters [] []
 
-withParams : FC -> Parameters -> List (Name, Nat) -> TTImp -> TTImp
+withParams : FC -> Parameters -> List (Argument Name, Nat) -> TTImp -> TTImp
 withParams fc params nms t = go nms where
 
   addConstraint : Bool -> Name -> Name -> TTImp -> TTImp
@@ -125,10 +133,11 @@ withParams fc params nms t = go nms where
      let ty = IApp fc (IVar fc cst) (IVar fc nm) in
      IPi fc MW AutoImplicit Nothing ty
 
-  go : List (Name, Nat) -> TTImp
+  go : List (Argument Name, Nat) -> TTImp
   go [] = t
-  go ((nm, pos) :: nms)
-    = IPi fc M0 ImplicitArg (Just nm) (Implicit fc True)
+  go ((arg, pos) :: nms)
+    = let nm = unArg arg in
+      IPi fc M0 ImplicitArg (Just nm) (Implicit fc True)
     $ addConstraint (pos `elem` params.asFunctors)   `{Prelude.Interfaces.Functor}   nm
     $ addConstraint (pos `elem` params.asBifunctors) `{Prelude.Interfaces.Bifunctor} nm
     $ go nms
@@ -456,7 +465,7 @@ namespace Functor
           (apply fc (IVar fc cName) recs)
 
     -- Generate the type of the mapping function
-    let paramNames = fst <$> params
+    let paramNames = unArg . fst <$> params
     let a = un $ freshName paramNames "a"
     let b = un $ freshName paramNames "b"
     let va = IVar fc a

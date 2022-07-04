@@ -181,6 +181,14 @@ namespace TreeT
   tree : Functor Tree
   tree = %runElab derive {treq = CoveringOnly}
 
+namespace Implicit
+
+  data IVect : {n : Nat} -> (a : Type) -> Type where
+    MkIVect : (v : Vect n a) -> IVect {n} a
+
+  XF : {m : Nat} -> Functor (IVect {n = m})
+  XF = %runElab derive
+
 failing "Couldn't find a `Functor' instance for the type constructor DeriveFunctor.Wrap"
 
   record Wrap (a : Type) where
