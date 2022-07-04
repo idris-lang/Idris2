@@ -85,6 +85,8 @@ modules = Control.App,
 
           Debug.Trace,
 
+          Deriving.Functor,
+
           Decidable.Decidable,
           Decidable.Equality,
           Decidable.Equality.Core,
