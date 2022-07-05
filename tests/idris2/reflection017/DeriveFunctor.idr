@@ -186,8 +186,33 @@ namespace Implicit
   data IVect : {n : Nat} -> (a : Type) -> Type where
     MkIVect : (v : Vect n a) -> IVect {n} a
 
-  XF : {m : Nat} -> Functor (IVect {n = m})
-  XF = %runElab derive
+  ivect : {m : Nat} -> Functor (IVect {n = m})
+  ivect = %runElab derive
+
+
+namespace EqMap
+
+  data EqMap : (key : Type) -> Eq key => (val : Type) -> Type where
+    MkEqMap : (eq : Eq key) => List (key, val) -> EqMap key @{eq} val
+
+  empty : Eq key => EqMap key val
+  empty = MkEqMap []
+
+  insert : (eq : Eq key) => key -> val -> EqMap key @{eq} val -> EqMap key @{eq} val
+  insert k v (MkEqMap kvs) = MkEqMap ((k, v) :: filter ((k /=) . fst) kvs)
+
+  fromList : Eq key => List (key, val) -> EqMap key val
+  fromList = foldr (uncurry insert) empty
+
+  toList : EqMap key @{eq} val -> List (key, val)
+  toList (MkEqMap kvs) = kvs
+
+  test : EqMap.toList (fromList [(1,2), (1,3), (2, 4), (5, 3), (1, 0)])
+         === [(1,2), (2, 4), (5, 3)]
+  test = Refl
+
+  eqMap : (eq : Eq key) => Functor (EqMap key @{eq})
+  eqMap = %runElab derive
 
 failing "Couldn't find a `Functor' instance for the type constructor DeriveFunctor.Wrap"
 

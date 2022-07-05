@@ -98,23 +98,23 @@ isTypeCon ty = do
       pure (n, ty)
 
 isType : Elaboration m => TTImp -> m IsType
-isType = go Z where
+isType = go Z [] where
 
-  go : Nat -> TTImp -> m IsType
-  go idx (IVar _ n) = MkIsType n [] <$> isTypeCon n
-  go idx (IApp _ t (IVar _ nm)) = case nm of
+  go : Nat -> List (Argument Name, Nat) -> TTImp -> m IsType
+  go idx acc (IVar _ n) = MkIsType n acc <$> isTypeCon n
+  go idx acc (IApp _ t (IVar _ nm)) = case nm of
     -- Unqualified: that's a local variable
-    UN (Basic _) =>
-      let arg = Arg emptyFC nm in
-      { parameterNames $= ((arg, idx) ::) } <$> go (S idx) t
-    _ => go (S idx) t
-  go idx (INamedApp _ t nm (IVar _ nm')) = case nm' of
+    UN (Basic _) => go (S idx) ((Arg emptyFC nm, idx) :: acc) t
+    _ => go (S idx) acc t
+  go idx acc (INamedApp _ t nm (IVar _ nm')) = case nm' of
     -- Unqualified: that's a local variable
-    UN (Basic _) =>
-      let arg = NamedArg emptyFC nm nm' in
-      { parameterNames $= ((arg, idx) ::) } <$> go (S idx) t
-    _ => go (S idx) t
-  go idx t = fail "Expected a type constructor, got: \{show t}"
+    UN (Basic _) => go (S idx) ((NamedArg emptyFC nm nm', idx) :: acc) t
+    _ => go (S idx) acc t
+  go idx acc (IAutoApp _ t (IVar _ nm)) = case nm of
+    -- Unqualified: that's a local variable
+    UN (Basic _) => go (S idx) ((AutoArg emptyFC nm, idx) :: acc) t
+    _ => go (S idx) acc t
+  go idx acc t = fail "Expected a type constructor, got: \{show t}"
 
 record Parameters where
   constructor MkParameters
