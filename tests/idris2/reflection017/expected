@@ -24,7 +24,7 @@ LOG derive.functor.clauses:1:
   mapBigTree f (Branch x0 x1 x2) = Branch x0 (map f x1) (\ {arg:4047} => mapBigTree f (x2 {arg:4047}))
   mapBigTree f (Rose x0) = Rose (map (assert_total (mapBigTree f)) x0)
 LOG derive.functor.clauses:1: 
-  mapMatrix : {0 n, m : _} -> {0 a, b : Type} -> (a -> b) -> Matrix m n a -> Matrix m n b
+  mapMatrix : {0 m, n : _} -> {0 a, b : Type} -> (a -> b) -> Matrix m n a -> Matrix m n b
   mapMatrix f (MkMatrix x0) = MkMatrix (map (map f) x0)
 LOG derive.functor.clauses:1: 
   mapTm : {0 a, b : Type} -> (a -> b) -> Tm a -> Tm b
@@ -71,6 +71,12 @@ LOG derive.functor.clauses:1:
 LOG derive.functor.clauses:1: 
   mapTree : {0 a, b : Type} -> (a -> b) -> Tree a -> Tree b
   mapTree f (MkTree x0) = MkTree (map f x0)
+LOG derive.functor.clauses:1: 
+  mapIVect : {0 m : _} -> {0 a, b : Type} -> (a -> b) -> IVect {n = m} a -> IVect {n = m} b
+  mapIVect f (MkIVect x0) = MkIVect (map f x0)
+LOG derive.functor.clauses:1: 
+  mapEqMap : {0 key, eq : _} -> {0 a, b : Type} -> (a -> b) -> EqMap key {{conArg:5665} = eq} a -> EqMap key {{conArg:5665} = eq} b
+  mapEqMap f (MkEqMap x0) = MkEqMap (map (map f) x0)
 LOG derive.functor.clauses:1: 
   mapTree : {0 l : _} -> {0 a, b : Type} -> (a -> b) -> Tree l a -> Tree l b
   mapTree f (Leaf x0) = Leaf x0
