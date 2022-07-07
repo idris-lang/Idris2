@@ -44,6 +44,7 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic061", "basic062", "basic063", "basic064", "basic065",
        "basic066", "basic067", "basic068",
        "idiom001",
+       "rewrite001",
        "interpolation001", "interpolation002", "interpolation003",
        "interpolation004"]
 
@@ -230,6 +231,11 @@ idrisTestsWith = MkTestPool "With abstraction" [] Nothing
         "with008", "with009", "with010"
       ]
 
+idrisTestsIPKG : TestPool
+idrisTestsIPKG = MkTestPool "Package and .ipkg files" [] Nothing
+      ["pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
+       "pkg008", "pkg009", "pkg010", "pkg011", "pkg012"]
+
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
        -- Documentation strings
@@ -245,9 +251,6 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "namespace001", "namespace002",
        -- Parameters blocks
        "params001", "params002", "params003",
-       -- Packages and ipkg files
-       "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
-       "pkg008", "pkg009", "pkg010", "pkg011", "pkg012",
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",
@@ -381,6 +384,7 @@ main = runner $
   , testPaths "idris2" idrisTestsReflection
   , testPaths "idris2" idrisTestsWith
   , testPaths "idris2" idrisTestsDebug
+  , testPaths "idris2" idrisTestsIPKG
   , testPaths "idris2" idrisTests
   , !typeddTests
   , !ideModeTests
