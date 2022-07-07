@@ -818,7 +818,11 @@ mutual
            pure (PUpdate (boundToFC fname b) b.val)
     where
       oldSyntaxWarning : String
-      oldSyntaxWarning = "DEPRECATED: old record update syntax. Use \"{ f := v } p\" instead of \"record { f = v } p\""
+      oldSyntaxWarning = unlines
+        [ "DEPRECATED: old record update syntax."
+        , #"  Use "{ f := v } p" instead of "record { f = v } p""#
+        , #"  and "{ f $= v } p" instead of "record { f $= v } p""#
+        ]
 
       body : Bool -> Rule (List PFieldUpdate)
       body kw = do
