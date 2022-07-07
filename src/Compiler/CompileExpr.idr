@@ -446,22 +446,23 @@ mutual
 -- I'm (edwinb) keeping it visible here because I plan to put it back in
 -- more or less this form once case inlining works better and the whole thing
 -- works in a nice principled way.
---                      if noworld -- just substitute the scrutinee into
---                                 -- the RHS
---                         then
+                     if noworld -- just substitute the scrutinee into
+                                -- the RHS
+                        then
                              let env : SubstCEnv args vars
                                      = mkSubst 0 scr pos args in
                                  pure $ Just (substs env !(toCExpTree n sc))
---                         else -- let bind the scrutinee, and substitute the
---                              -- name into the RHS
---                              let env : SubstCEnv args (MN "eff" 0 :: vars)
---                                      = mkSubst 0 (CLocal fc First) pos args in
---                              do sc' <- toCExpTree n sc
---                                 let scope = insertNames {outer=args}
---                                                         {inner=vars}
---                                                         [MN "eff" 0] sc'
---                                 pure $ Just (CLet fc (MN "eff" 0) False scr
---                                                   (substs env scope))
+                        else -- let bind the scrutinee, and substitute the
+                             -- name into the RHS
+                             let env : SubstCEnv args (MN "eff" 0 :: vars)
+                                     = mkSubst 0 (CLocal fc First) pos args in
+                             do sc' <- toCExpTree n sc
+                                let scope = insertNames {outer=args}
+                                                        {inner=vars}
+                                                        {ns = [MN "eff" 0]}
+                                                        (mkSizeOf _) (mkSizeOf _) sc'
+                                pure $ Just (CLet fc (MN "eff" 0) False scr
+                                                  (substs env scope))
                 _ => pure Nothing -- there's a normal match to do
     where
       mkSubst : Nat -> CExp vs ->

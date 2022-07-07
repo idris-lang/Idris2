@@ -257,6 +257,8 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "with003",
        -- pretty printing
        "pretty001", "pretty002",
+       -- PrimIO
+       "primloop",
        -- golden file testing
        "golden001",
        -- quantifiers
