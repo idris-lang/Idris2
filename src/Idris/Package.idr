@@ -27,6 +27,7 @@ import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
 import Libraries.Text.Parser
 import Libraries.Utils.Path
+import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 
 import Idris.CommandLine
 import Idris.Doc.HTML
@@ -271,8 +272,53 @@ runScript (Just (fc, s))
          when (res /= 0) $
             throw (GenericMsg fc "Script failed")
 
-addDeps : {auto c : Ref Ctxt Defs} -> PkgDesc -> Core ()
-addDeps pkg = traverse_ (\p => addPkgDir p.pkgname p.pkgbounds) (depends pkg)
+export
+parsePkgFile : {auto c : Ref Ctxt Defs} ->
+               {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
+               String -> Core PkgDesc
+parsePkgFile file = do
+    Right (pname, fs) <- coreLift $ parseFile file $ parsePkgDesc file <* eoi
+        | Left err => throw err
+    addFields fs (initPkgDesc pname)
+
+addDeps :
+    {auto c : Ref Ctxt Defs} ->
+    {auto s : Ref Syn SyntaxInfo} ->
+    {auto o : Ref ROpts REPLOpts} ->
+    PkgDesc ->
+    Core ()
+addDeps pkg = do
+    allPkgs <- getTransitiveDeps pkg.depends empty
+    log "package.depends" 10 $ "all depends: \{show allPkgs}"
+    traverse_ addExtraDir allPkgs
+  where
+    -- Note: findPkgDir throws an error if a package is not found
+    -- *unless* --ignore-missing-ipkg is enabled
+    -- therefore, findPkgDir returns Nothing, skip the package
+    getTransitiveDeps :
+        List Depends ->
+        (done : StringMap (Maybe PkgVersion)) ->
+        Core (List String) -- package directories to add
+    getTransitiveDeps [] done =
+        map catMaybes $ traverse
+            (\(pkg, mv) => findPkgDir pkg (exactBounds mv))
+            $ StringMap.toList done
+    getTransitiveDeps (dep :: deps) done =
+        case lookup dep.pkgname done of
+            Just mv => if inBounds mv dep.pkgbounds
+                then getTransitiveDeps deps done
+                else throw $ GenericMsg EmptyFC "2 versions of the same package are required, this is unsupported"
+            Nothing => do
+                Just pkgDir <- findPkgDir dep.pkgname dep.pkgbounds
+                    | Nothing => getTransitiveDeps deps done
+                let pkgFile = pkgDir </> dep.pkgname <.> "ipkg"
+                True <- coreLift $ exists pkgFile
+                    | False => getTransitiveDeps deps (insert dep.pkgname Nothing done)
+                pkg <- parsePkgFile pkgFile
+                getTransitiveDeps 
+                    (pkg.depends ++ deps)
+                    (insert pkg.name pkg.version done)
 
 processOptions : {auto c : Ref Ctxt Defs} ->
                  {auto o : Ref ROpts REPLOpts} ->
@@ -458,9 +504,23 @@ install pkg opts installSrc -- not used but might be in the future
          traverse_ (installFrom (wdir </> build) targetDir . fst) toInstall
          when installSrc $ do
            traverse_ (installSrcFrom wdir targetDir) toInstall
+
+         -- install package file
+         let pkgFile = targetDir </> pkg.name <.> "ipkg"
+         coreLift $ putStrLn $ "Installing package file for \{pkg.name} to \{targetDir}"
+         let pkgStr = String.renderString $ layoutUnbounded $ pretty $ savePkgMetadata pkg
+         log "package.depends" 25 $ "  package file:\n\{pkgStr}"
+         coreLift_ $ writeFile pkgFile pkgStr
+
          coreLift_ $ changeDir wdir
 
          runScript (postinstall pkg)
+  where
+    savePkgMetadata : PkgDesc -> PkgDesc
+    savePkgMetadata pkg =
+      the (PkgDesc -> PkgDesc)
+      { depends := pkg.depends }
+      $ initPkgDesc pkg.name
 
 -- Check package without compiling anything.
 check : {auto c : Ref Ctxt Defs} ->
@@ -684,19 +744,6 @@ runRepl fname = do
         displayErrors errs
   repl {u} {s}
 
-export
-parsePkgFile : {auto c : Ref Ctxt Defs} ->
-               {auto s : Ref Syn SyntaxInfo} ->
-               {auto o : Ref ROpts REPLOpts} ->
-               String -> Core PkgDesc
-parsePkgFile file = do
-  Right (pname, fs) <- coreLift $ parseFile file
-                                          (do desc <- parsePkgDesc file
-                                              eoi
-                                              pure desc)
-      | Left err => throw err
-  addFields fs (initPkgDesc pname)
-
 ||| If the user did not provide a package file we can look in the working
 ||| directory. If there is exactly one `.ipkg` file then use that!
 localPackageFile : Maybe String -> Core String
@@ -734,9 +781,7 @@ processPackage opts (cmd, mfile)
                  | _ => do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
                            coreLift (exitWith (ExitFailure 1))
              setWorkingDir dir
-             Right (pname, fs) <- coreLift $ parseFile filename (parsePkgDesc filename <* eoi)
-                | Left err => throw err
-             pkg <- addFields fs (initPkgDesc pname)
+             pkg <- parsePkgFile filename
              whenJust (builddir pkg) setBuildDir
              setOutputDir (outputdir pkg)
              case cmd of
@@ -855,16 +900,11 @@ findIpkg fname
              | Nothing => pure fname
         coreLift_ $ changeDir dir
         setWorkingDir dir
-        Right (pname, fs) <- coreLift $ parseFile ipkgn
-                                 (do desc <- parsePkgDesc ipkgn
-                                     eoi
-                                     pure desc)
-            | Left err => throw err
-        pkg <- addFields fs (initPkgDesc pname)
+        pkg <- parsePkgFile ipkgn
         maybe (pure ()) setBuildDir (builddir pkg)
         setOutputDir (outputdir pkg)
         processOptions (options pkg)
-        loadDependencies (depends pkg)
+        addDeps pkg
         case fname of
              Nothing => pure Nothing
              Just srcpath  =>
@@ -877,6 +917,3 @@ findIpkg fname
     dropHead str [] = []
     dropHead str (x :: xs)
         = if x == str then xs else x :: xs
-
-    loadDependencies : List Depends -> Core ()
-    loadDependencies = traverse_ (\p => addPkgDir p.pkgname p.pkgbounds)

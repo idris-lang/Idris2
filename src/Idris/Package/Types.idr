@@ -84,6 +84,10 @@ anyBounds : PkgVersionBounds
 anyBounds = MkPkgVersionBounds Nothing True Nothing True
 
 export
+exactBounds : Maybe PkgVersion -> PkgVersionBounds
+exactBounds mv = MkPkgVersionBounds mv True mv True
+
+export
 current : PkgVersionBounds
 current = let (maj,min,patch) = semVer version
               version = Just (MkPkgVersion (maj ::: [min, patch])) in
@@ -148,7 +152,7 @@ Show Depends where
 
 export
 Pretty Void Depends where
-  pretty = pretty . show
+  pretty dep = pretty dep.pkgname <+> pretty dep.pkgbounds
 
 ------------------------------------------------------------------------------
 -- Package description
