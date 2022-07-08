@@ -265,7 +265,9 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- golden file testing
        "golden001",
        -- quantifiers
-       "quantifiers001"
+       "quantifiers001",
+       -- unification
+       "unification001"
        ]
 
 typeddTests : IO TestPool
