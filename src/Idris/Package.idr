@@ -246,16 +246,19 @@ addField (PPostclean fc e)   pkg = pure $ { postclean := Just (fc, e) } pkg
 addFields : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             {auto o : Ref ROpts REPLOpts} ->
+            (asDepends : Bool) ->
             List DescField -> PkgDesc -> Core PkgDesc
-addFields xs desc = do p <- newRef ParsedMods []
-                       m <- newRef MainMod Nothing
-                       added <- go {p} {m} xs desc
-                       setSourceDir (sourcedir added)
-                       ms <- get ParsedMods
-                       mmod <- get MainMod
-                       pure $ { modules := !(traverse toSource ms)
-                              , mainmod := !(traverseOpt toSource mmod)
-                              } added
+addFields asDepends xs desc = do
+  p <- newRef ParsedMods []
+  m <- newRef MainMod Nothing
+  added <- go {p} {m} xs desc
+  unless asDepends $ setSourceDir (sourcedir added)
+  ms <- get ParsedMods
+  mmod <- get MainMod
+  pure $
+    { modules := !(traverse toSource ms)
+    , mainmod := !(traverseOpt toSource mmod)
+    } added
   where
     toSource : (FC, ModuleIdent) -> Core (ModuleIdent, String)
     toSource (loc, ns) = pure (ns, !(nsToSource loc ns))
@@ -276,11 +279,12 @@ export
 parsePkgFile : {auto c : Ref Ctxt Defs} ->
                {auto s : Ref Syn SyntaxInfo} ->
                {auto o : Ref ROpts REPLOpts} ->
+               (asDepends : Bool) -> -- parse package file as a dependency
                String -> Core PkgDesc
-parsePkgFile file = do
+parsePkgFile asDepends file = do
     Right (pname, fs) <- coreLift $ parseFile file $ parsePkgDesc file <* eoi
         | Left err => throw err
-    addFields fs (initPkgDesc pname)
+    addFields asDepends fs (initPkgDesc pname)
 
 addDeps :
     {auto c : Ref Ctxt Defs} ->
@@ -289,6 +293,7 @@ addDeps :
     PkgDesc ->
     Core ()
 addDeps pkg = do
+    -- srcDir <- get 
     allPkgs <- getTransitiveDeps pkg.depends empty
     log "package.depends" 10 $ "all depends: \{show allPkgs}"
     traverse_ addExtraDir allPkgs
@@ -315,7 +320,7 @@ addDeps pkg = do
                 let pkgFile = pkgDir </> dep.pkgname <.> "ipkg"
                 True <- coreLift $ exists pkgFile
                     | False => getTransitiveDeps deps (insert dep.pkgname Nothing done)
-                pkg <- parsePkgFile pkgFile
+                pkg <- parsePkgFile True pkgFile
                 getTransitiveDeps 
                     (pkg.depends ++ deps)
                     (insert pkg.name pkg.version done)
@@ -781,7 +786,7 @@ processPackage opts (cmd, mfile)
                  | _ => do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
                            coreLift (exitWith (ExitFailure 1))
              setWorkingDir dir
-             pkg <- parsePkgFile filename
+             pkg <- parsePkgFile False filename
              whenJust (builddir pkg) setBuildDir
              setOutputDir (outputdir pkg)
              case cmd of
@@ -900,7 +905,7 @@ findIpkg fname
              | Nothing => pure fname
         coreLift_ $ changeDir dir
         setWorkingDir dir
-        pkg <- parsePkgFile ipkgn
+        pkg <- parsePkgFile False ipkgn
         maybe (pure ()) setBuildDir (builddir pkg)
         setOutputDir (outputdir pkg)
         processOptions (options pkg)
