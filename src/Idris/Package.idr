@@ -286,6 +286,53 @@ parsePkgFile setSrc file = do
         | Left err => throw err
     addFields setSrc fs (initPkgDesc pname)
 
+record ResolutionError where
+  constructor MkRE
+  decisions : List (String, Maybe PkgVersion)
+  depends   : Depends
+  version   : Maybe PkgVersion
+
+prepend : (String, Maybe PkgVersion) -> ResolutionError -> ResolutionError
+prepend p = { decisions $= (p ::)}
+
+reason : Maybe PkgVersion -> String
+reason Nothing  = "no matching version installed"
+reason (Just x) = "\{show x} is out of bounds"
+
+
+printResolutionError : ResolutionError -> String
+printResolutionError (MkRE ds d v) = go [<] ds
+  where go : SnocList String -> List (String, Maybe PkgVersion) -> String
+        go ss []        =
+          let pre    := "\{d.pkgname} \{show d.pkgbounds}"
+           in fastConcat . intersperse "; " $ ss <>> ["\{pre}: \{reason v}"]
+        go ss ((n,mv) :: xs) =
+          let v := fromMaybe defaultVersion mv
+           in go (ss :< "\{n}-\{show v}") xs
+
+data ResolutionRes : Type where
+  Resolved : List String -> ResolutionRes
+  Failed   : List ResolutionError -> ResolutionRes
+
+printErrs : PkgDesc -> List ResolutionError -> String
+printErrs x es =
+  unlines $  "Failed to resolve the dependencies for \{x.name}:"
+          :: map (indent 2 . printResolutionError) es
+
+-- try all possible resolution paths, keeping the first
+-- that works
+tryAll :  List (String, Maybe PkgVersion)
+       -> ((String, Maybe PkgVersion) -> Core ResolutionRes)
+       -> Core ResolutionRes
+tryAll ps f = go [<] ps
+  where go :  SnocList ResolutionError
+           -> List (String,Maybe PkgVersion)
+           -> Core ResolutionRes
+        go se []        = pure (Failed $ se <>> [])
+        go se (x :: xs) = do
+          Failed errs <- f x | Resolved res => pure (Resolved res)
+          go (se <>< map (prepend x) errs) xs
+
 addDeps :
     {auto c : Ref Ctxt Defs} ->
     {auto s : Ref Syn SyntaxInfo} ->
@@ -293,37 +340,60 @@ addDeps :
     PkgDesc ->
     Core ()
 addDeps pkg = do
-    allPkgs <- getTransitiveDeps pkg.depends empty
-    log "package.depends" 10 $ "all depends: \{show allPkgs}"
-    traverse_ addExtraDir allPkgs
+  Resolved allPkgs <- getTransitiveDeps pkg.depends empty
+    | Failed errs => throw $ GenericMsg EmptyFC (printErrs pkg errs)
+  log "package.depends" 10 $ "all depends: \{show allPkgs}"
+  traverse_ addExtraDir allPkgs
   where
     -- Note: findPkgDir throws an error if a package is not found
     -- *unless* --ignore-missing-ipkg is enabled
     -- therefore, findPkgDir returns Nothing, skip the package
+    --
+    -- We use a backtracking algorithm here: If several versions of
+    -- a package are installed, we must try all, which are are
+    -- potentially in bounds, because their set of dependencies
+    -- might be different across versions and not all of them
+    -- might lead to a resolvable situation.
     getTransitiveDeps :
         List Depends ->
         (done : StringMap (Maybe PkgVersion)) ->
-        Core (List String) -- package directories to add
-    getTransitiveDeps [] done =
-        map catMaybes $ traverse
-            (\(pkg, mv) => findPkgDir pkg (exactBounds mv))
-            $ StringMap.toList done
+        Core ResolutionRes
+    getTransitiveDeps [] done = do
+      ms <- for (StringMap.toList done) $
+        \(pkg, mv) => findPkgDir pkg (exactBounds mv)
+      pure . Resolved $ catMaybes ms
+
     getTransitiveDeps (dep :: deps) done =
-        case lookup dep.pkgname done of
-            Just mv => if inBounds mv dep.pkgbounds
+      case lookup dep.pkgname done of
+        Just mv =>
+          if inBounds mv dep.pkgbounds
+            -- already resolved dependency is in bounds
+            -- so we keep it and resolve remaining deps
+            then getTransitiveDeps deps done
+            -- the resolved dependency does not satisfy the
+            -- current bounds. we return an error and backtrack
+            else pure (Failed [MkRE [] dep $ mv <|> Just defaultVersion])
+        Nothing => do
+          log "package.depends" 50 "adding new dependency: \{dep.pkgname} (\{show dep.pkgbounds})"
+          pkgDirs <- findPkgDirs dep.pkgname dep.pkgbounds
+
+          case pkgDirs of
+            [] => do
+              defs <- get Ctxt
+              if defs.options.session.ignoreMissingPkg
+                -- this corresponds to what `findPkgDir` does in
+                -- case of `ignoreMissingPkg` being set to `True`
                 then getTransitiveDeps deps done
-                else throw $ GenericMsg EmptyFC "2 versions of the same package are required, this is unsupported"
-            Nothing => do
-                log "package.depends" 50 "adding new dependency: \{dep.pkgname} (\{show dep.pkgbounds})"
-                Just pkgDir <- findPkgDir dep.pkgname dep.pkgbounds
-                    | Nothing => getTransitiveDeps deps done
-                let pkgFile = pkgDir </> dep.pkgname <.> "ipkg"
-                True <- coreLift $ exists pkgFile
-                    | False => getTransitiveDeps deps (insert dep.pkgname Nothing done)
-                pkg <- parsePkgFile False pkgFile
-                getTransitiveDeps
-                    (pkg.depends ++ deps)
-                    (insert pkg.name pkg.version done)
+                else pure (Failed [MkRE [] dep Nothing])
+
+            _  => tryAll pkgDirs $ \(pkgDir,mv) => do
+              let pkgFile = pkgDir </> dep.pkgname <.> "ipkg"
+              True <- coreLift $ exists pkgFile
+                | False => getTransitiveDeps deps (insert dep.pkgname mv done)
+              pkg <- parsePkgFile False pkgFile
+              getTransitiveDeps
+                (pkg.depends ++ deps)
+                (insert pkg.name pkg.version done)
 
 processOptions : {auto c : Ref Ctxt Defs} ->
                  {auto o : Ref ROpts REPLOpts} ->
