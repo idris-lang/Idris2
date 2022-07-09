@@ -1,0 +1,21 @@
+-- dependencies:
+--
+-- test
+-- |_______
+-- |       |
+-- foo     bar
+-- |       |_____
+-- |       |     |
+-- baz     baz   (quux for bar >= 0.3)
+--
+-- We can't use the latest foo, because we have a <= 0.2.0 restriction.
+-- We also can't use foo-0.1.0, because it transitively depends on baz < 0.1.0,
+-- which is not installed. So foo-0.2.0 it is.
+--
+-- foo-0.2.0 requires baz >= 0.2.0, but baz-0.3.0 requires quux, which is
+-- not installed. So baz-0.2.0 it is. So, we can't use bar-0.1.1,
+-- which requires baz < 0.2.0. Hence, bar-0.1.0 it is, but this
+-- requires prz, which is not installed. And so this fails.
+package test
+depends = foo <= 0.2.0
+        , bar >= 0.1.0

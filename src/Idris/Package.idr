@@ -286,29 +286,42 @@ parsePkgFile setSrc file = do
         | Left err => throw err
     addFields setSrc fs (initPkgDesc pname)
 
+--------------------------------------------------------------------------------
+--          Dependency Resolution
+--------------------------------------------------------------------------------
+
+record Candidate where
+  constructor MkCandidate
+  name      : String
+  version   : Maybe PkgVersion
+  directory : String
+
+toCandidate : (name : String) -> (String,Maybe PkgVersion) -> Candidate
+toCandidate name (dir,v) = MkCandidate name v dir
+
 record ResolutionError where
   constructor MkRE
-  decisions : List (String, Maybe PkgVersion)
+  decisions : List Candidate
   depends   : Depends
   version   : Maybe PkgVersion
 
-prepend : (String, Maybe PkgVersion) -> ResolutionError -> ResolutionError
+prepend : Candidate -> ResolutionError -> ResolutionError
 prepend p = { decisions $= (p ::)}
 
 reason : Maybe PkgVersion -> String
-reason Nothing  = "no matching version installed"
-reason (Just x) = "\{show x} is out of bounds"
+reason Nothing  = "no matching version is installed"
+reason (Just x) = "assigned version \{show x} which is out of bounds"
 
 
 printResolutionError : ResolutionError -> String
 printResolutionError (MkRE ds d v) = go [<] ds
-  where go : SnocList String -> List (String, Maybe PkgVersion) -> String
+  where go : SnocList String -> List Candidate -> String
         go ss []        =
-          let pre    := "\{d.pkgname} \{show d.pkgbounds}"
-           in fastConcat . intersperse "; " $ ss <>> ["\{pre}: \{reason v}"]
-        go ss ((n,mv) :: xs) =
-          let v := fromMaybe defaultVersion mv
-           in go (ss :< "\{n}-\{show v}") xs
+          let pre    := "required \{d.pkgname} \{show d.pkgbounds} but"
+           in fastConcat . intersperse "; " $ ss <>> ["\{pre} \{reason v}"]
+        go ss (c :: cs) =
+          let v := fromMaybe defaultVersion c.version
+           in go (ss :< "\{c.name}-\{show v}") cs
 
 data ResolutionRes : Type where
   Resolved : List String -> ResolutionRes
@@ -321,12 +334,12 @@ printErrs x es =
 
 -- try all possible resolution paths, keeping the first
 -- that works
-tryAll :  List (String, Maybe PkgVersion)
-       -> ((String, Maybe PkgVersion) -> Core ResolutionRes)
+tryAll :  List Candidate
+       -> (Candidate -> Core ResolutionRes)
        -> Core ResolutionRes
 tryAll ps f = go [<] ps
   where go :  SnocList ResolutionError
-           -> List (String,Maybe PkgVersion)
+           -> List Candidate
            -> Core ResolutionRes
         go se []        = pure (Failed $ se <>> [])
         go se (x :: xs) = do
@@ -376,8 +389,9 @@ addDeps pkg = do
         Nothing => do
           log "package.depends" 50 "adding new dependency: \{dep.pkgname} (\{show dep.pkgbounds})"
           pkgDirs <- findPkgDirs dep.pkgname dep.pkgbounds
+          let candidates := toCandidate dep.pkgname <$> pkgDirs
 
-          case pkgDirs of
+          case candidates of
             [] => do
               defs <- get Ctxt
               if defs.options.session.ignoreMissingPkg
@@ -386,14 +400,18 @@ addDeps pkg = do
                 then getTransitiveDeps deps done
                 else pure (Failed [MkRE [] dep Nothing])
 
-            _  => tryAll pkgDirs $ \(pkgDir,mv) => do
-              let pkgFile = pkgDir </> dep.pkgname <.> "ipkg"
+            _  => tryAll candidates $ \(MkCandidate name mv pkgDir) => do
+              let pkgFile = pkgDir </> name <.> "ipkg"
               True <- coreLift $ exists pkgFile
-                | False => getTransitiveDeps deps (insert dep.pkgname mv done)
+                | False => getTransitiveDeps deps (insert name mv done)
               pkg <- parsePkgFile False pkgFile
               getTransitiveDeps
                 (pkg.depends ++ deps)
                 (insert pkg.name pkg.version done)
+
+--------------------------------------------------------------------------------
+--          Processing Options
+--------------------------------------------------------------------------------
 
 processOptions : {auto c : Ref Ctxt Defs} ->
                  {auto o : Ref ROpts REPLOpts} ->
