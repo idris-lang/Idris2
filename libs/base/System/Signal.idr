@@ -16,37 +16,50 @@ import System.Errno
 signalFFI : String -> String
 signalFFI fn = "C:" ++ fn ++ ", libidris2_support, idris_signal.h"
 
+signalFFINode : String -> String
+signalFFINode fn = "node:support:" ++ fn ++ ",support_system_signal"
+
 --
 -- Signals
 --
 %foreign signalFFI "sighup"
+         signalFFINode "sighup"
 prim__sighup : Int
 
 %foreign signalFFI "sigint"
+         signalFFINode "sigint"
 prim__sigint : Int
 
 %foreign signalFFI "sigabrt"
+         signalFFINode "sigabrt"
 prim__sigabrt : Int
 
 %foreign signalFFI "sigquit"
+         signalFFINode "sigquit"
 prim__sigquit : Int
 
 %foreign signalFFI "sigill"
+         signalFFINode "sigill"
 prim__sigill : Int
 
 %foreign signalFFI "sigsegv"
+         signalFFINode "sigsegv"
 prim__sigsegv : Int
 
 %foreign signalFFI "sigtrap"
+         signalFFINode "sigtrap"
 prim__sigtrap : Int
 
 %foreign signalFFI "sigfpe"
+         signalFFINode "sigfpe"
 prim__sigfpe : Int
 
 %foreign signalFFI "sigusr1"
+         signalFFINode "sigusr1"
 prim__sigusr1 : Int
 
 %foreign signalFFI "sigusr2"
+         signalFFINode "sigusr2"
 prim__sigusr2 : Int
 
 public export
@@ -126,21 +139,27 @@ toSignal x    = lookup x codes
 -- Signal Handling
 --
 %foreign signalFFI "ignore_signal"
+         signalFFINode "ignoreSignal"
 prim__ignoreSignal : Int -> PrimIO Int
 
 %foreign signalFFI "default_signal"
+         signalFFINode "defaultSignal"
 prim__defaultSignal : Int -> PrimIO Int
 
 %foreign signalFFI "collect_signal"
+         signalFFINode "collectSignal"
 prim__collectSignal : Int -> PrimIO Int
 
 %foreign signalFFI "handle_next_collected_signal"
+         signalFFINode "handleNextCollectedSignal"
 prim__handleNextCollectedSignal : PrimIO Int
 
 %foreign signalFFI "send_signal"
+         signalFFINode "sendSignal"
 prim__sendSignal : Int -> Int -> PrimIO Int
 
 %foreign signalFFI "raise_signal"
+         signalFFINode "raiseSignal"
 prim__raiseSignal : Int -> PrimIO Int
 
 ||| An Error represented by a code. See
