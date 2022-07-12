@@ -164,10 +164,10 @@ data CLOpt
 ||| Extract the host and port to bind the IDE socket to
 export
 ideSocketModeAddress : List CLOpt -> (String, Int)
-ideSocketModeAddress []  = ("localhost", 38398)
+ideSocketModeAddress []  = ("localhost", 0)
 ideSocketModeAddress (IdeModeSocket hp :: _) =
   let (h, p) = String.break (== ':') hp
-      port = fromMaybe 38398 (portPart p >>= parsePositive)
+      port = fromMaybe 0 (portPart p >>= parsePositive)
       host = if h == "" then "localhost" else h
   in (host, port)
   where
@@ -300,8 +300,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Run the REPL with machine-readable syntax"),
            MkOpt ["--ide-mode-socket"] [Optional "host:port"]
                  (\hp => [IdeModeSocket $ fromMaybe (formatSocketAddress (ideSocketModeAddress [])) hp])
-              (Just $ "Run the ide socket mode on given host and port " ++
-                      showDefault (formatSocketAddress (ideSocketModeAddress []))),
+              (Just $ "Run the ide socket mode on given host and port (random open socket by default)"),
 
            optSeparator,
            MkOpt ["--client"] [Required "REPL command"] (\f => [RunREPL f])
