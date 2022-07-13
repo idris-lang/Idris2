@@ -2,6 +2,6 @@ rm -rf build
 
 $1 --no-banner --no-color --console-width 0 --cg refc -o refc_buffer TestBuffer.idr > /dev/null
 ./build/exec/refc_buffer
-base64 testWrite.buf
+base64 -i testWrite.buf
 
 rm testWrite.buf

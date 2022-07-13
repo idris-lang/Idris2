@@ -2,7 +2,7 @@ rm -rf build
 
 $1 --no-banner --no-color --console-width 0 -p contrib CopyDir.idr < input
 ls -R resultDir | sed '/^resultDir:$/d'
-base64 resultDir/source.bin
+base64 -i resultDir/source.bin
 cat resultDir/nestedDir/anotherFile.txt
 
 rm -rf resultDir
