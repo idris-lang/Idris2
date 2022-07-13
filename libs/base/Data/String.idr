@@ -250,6 +250,7 @@ public export
 isInfixOf : String -> String -> Bool
 isInfixOf a b = isInfixOf (unpack a) (unpack b)
 
+public export
 parseNumWithoutSign : List Char -> Integer -> Maybe Integer
 parseNumWithoutSign []        acc = Just acc
 parseNumWithoutSign (c :: cs) acc =

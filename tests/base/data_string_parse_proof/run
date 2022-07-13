@@ -1,0 +1,3 @@
+$1 --no-banner --no-color --console-width 0 -c StringParse.idr
+
+rm -rf build
