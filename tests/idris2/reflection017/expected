@@ -78,6 +78,12 @@ LOG derive.functor.clauses:1:
   mapEqMap : {0 key, eq : _} -> {0 a, b : Type} -> (a -> b) -> EqMap key {{conArg:5665} = eq} a -> EqMap key {{conArg:5665} = eq} b
   mapEqMap f (MkEqMap x0) = MkEqMap (map (map f) x0)
 LOG derive.functor.clauses:1: 
+  mapCont : {0 r : _} -> {0 a, b : Type} -> (a -> b) -> Cont r a -> Cont r b
+  mapCont f (MkCont x0) = MkCont (\ {arg:6021} => x0 (\ {arg:6023} => {arg:6021} (f {arg:6023})))
+LOG derive.functor.clauses:1: 
+  mapCont2 : {0 r, e : _} -> {0 a, b : Type} -> (a -> b) -> Cont2 r e a -> Cont2 r e b
+  mapCont2 f (MkCont2 x0) = MkCont2 (\ {arg:6113} => \ {arg:6120} => x0 {arg:6113} (\ {arg:6122} => {arg:6120} (f {arg:6122})))
+LOG derive.functor.clauses:1: 
   mapTree : {0 l : _} -> {0 a, b : Type} -> (a -> b) -> Tree l a -> Tree l b
   mapTree f (Leaf x0) = Leaf x0
   mapTree f (Node x0 x1 x2) = Node (mapTree f x0) (f x1) (mapTree f x2)

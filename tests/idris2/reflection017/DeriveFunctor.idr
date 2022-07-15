@@ -214,6 +214,19 @@ namespace EqMap
   eqMap : (eq : Eq key) => Functor (EqMap key @{eq})
   eqMap = %runElab derive
 
+namespace Cont
+
+  data Cont r a = MkCont ((a -> r) -> r)
+
+  cont : Functor (Cont r)
+  cont = %runElab derive
+
+  ||| Continuation with short-circuiting error cont
+  data Cont2 r e a = MkCont2 ((e -> r) -> (a -> r) -> r)
+
+  cont2 : Functor (Cont2 r e)
+  cont2 = %runElab derive
+
 failing "Couldn't find a `Functor' instance for the type constructor DeriveFunctor.Wrap"
 
   record Wrap (a : Type) where

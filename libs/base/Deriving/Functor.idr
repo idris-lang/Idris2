@@ -31,7 +31,6 @@ freshName ns a = assert_total $ go (basicNames ns) Nothing where
     let nm = a ++ maybe "" show mi in
     ifThenElse (nm `elem` ns) (go ns (Just $ maybe 0 S mi)) nm
 
-
 ------------------------------------------------------------------------------
 -- Errors
 
@@ -166,6 +165,15 @@ hasImplementation c t = catch $ do
 ------------------------------------------------------------------------------
 -- Core machinery: being functorial
 
+||| IsFreeOf is parametrised by
+||| @ x  the name of the type variable that the functioral action will change
+||| @ ty the type that does not contain any mention of x
+export
+data IsFreeOf : (x : Name) -> (ty : TTImp) -> Type where
+  ||| For now we do not bother keeping precise track of the proof that a type
+  ||| is free of x
+  TrustMeFO : IsFreeOf a x
+
 ||| IsFunctorialIn is parametrised by
 ||| @ t  the name of the data type whose constructors are being analysed
 ||| @ x  the name of the type variable that the functioral action will change
@@ -175,13 +183,18 @@ hasImplementation c t = catch $ do
 public export
 data IsFunctorialIn : (t, x : Name) -> (ty : TTImp) -> Type
 
-||| FreeOf is parametrised by
-||| @ x  the name of the type variable that the functioral action will change
-||| @ ty the type that does not contain any mention of x
-export
-data FreeOf : (x : Name) -> (ty : TTImp) -> Type
+||| For a domain type, it better be the case that `x` only possibly occurs
+||| in a doubly negative position aka a positive (but not strictly positive)
+||| occurence. We share the same parameters as `IsFunctorialIn`.
+public export
+data IsDoublyNegativeIn : (t, x : Name) -> (ty : TTImp) -> Type
 
-data IsFunctorialIn : (t, x : Name) -> TTImp -> Type where
+data IsDoublyNegativeIn : (t, x : Name) -> TTImp -> Type where
+  DNPi   : IsFunctorialIn t x a -> IsDoublyNegativeIn t x b ->
+           IsDoublyNegativeIn t x (IPi fc rig pinfo nm a b)
+  DNFree : IsFreeOf x a -> IsDoublyNegativeIn t x a
+
+data IsFunctorialIn  : (t, x : Name) -> TTImp -> Type where
   ||| The type variable x occurs alone
   FIVar : IsFunctorialIn t x (IVar fc x)
   ||| There is a recursive subtree of type (t a1 ... an u) and u is functorial in x.
@@ -195,21 +208,17 @@ data IsFunctorialIn : (t, x : Name) -> TTImp -> Type where
   ||| There are nested subtrees somewhere inside a 3rd party type constructor
   ||| which satisfies the Bifunctor interface
   FIBifun : HasImplementation Bifunctor sp ->
-            IsFunctorialIn t x arg1 -> Either (IsFunctorialIn t x arg2) (FreeOf x arg2) ->
+            IsFunctorialIn t x arg1 -> Either (IsFunctorialIn t x arg2) (IsFreeOf x arg2) ->
             IsFunctorialIn t x (IApp fc1 (IApp fc2 sp arg1) arg2)
   ||| There are nested subtrees somewhere inside a 3rd party type constructor
   ||| which satisfies the Functor interface
   FIFun : HasImplementation Functor sp ->
           IsFunctorialIn t x arg -> IsFunctorialIn t x (IApp fc sp arg)
   ||| A pi type, with no negative occurence of x in its domain
-  FIPi : FreeOf x a -> IsFunctorialIn t x b -> IsFunctorialIn t x (IPi fc rig pinfo nm a b)
+  FIPi : IsDoublyNegativeIn t x a -> IsFunctorialIn t x b ->
+         IsFunctorialIn t x (IPi fc rig pinfo nm a b)
   ||| A type free of x is trivially Functorial in it
-  FIFree : FreeOf x a -> IsFunctorialIn t x a
-
-data FreeOf : Name -> TTImp -> Type where
-  ||| For now we do not bother keeping precise track of the proof that a type
-  ||| is free of x
-  TrustMeFO : FreeOf a x
+  FIFree : IsFreeOf x a -> IsFunctorialIn t x a
 
 elemPos : Eq a => a -> List a -> Maybe Nat
 elemPos x = go 0 where
@@ -217,6 +226,17 @@ elemPos x = go 0 where
   go : Nat -> List a -> Maybe Nat
   go idx [] = Nothing
   go idx (y :: ys) = idx <$ guard (x == y) <|> go (S idx) ys
+
+export
+isFreeOf : (x : Name) -> (ty : TTImp) -> Maybe (IsFreeOf x ty)
+isFreeOf x ty = do
+  _ <- mapMTTImp notX ty
+  pure TrustMeFO
+
+  where
+    notX : TTImp -> Maybe TTImp
+    notX t@(IVar _ y) = t <$ guard (x /= y)
+    notX t = pure t
 
 parameters
   {0 m : Type -> Type}
@@ -235,7 +255,10 @@ parameters
   ||| to fail with an informative message.
   public export
   TypeView : TTImp -> Type
-  TypeView ty = Either (IsFunctorialIn t x ty) (FreeOf x ty)
+  TypeView ty = Either (IsFunctorialIn t x ty) (IsFreeOf x ty)
+
+  ||| Hoping to observe that ty is doubly negative
+  doublyNegative : (ty : TTImp) -> m (IsDoublyNegativeIn t x ty)
 
   ||| Hoping to observe that ty is functorial
   export
@@ -280,11 +303,12 @@ parameters
     Yes Refl => Left FIVar
     No _ => Right TrustMeFO
   typeView ty@(IPi fc rig pinfo nm a b) = do
-    Right p <- typeView a
-      | _ => throwError (NegativeOccurence x ty)
-    Left q <- typeView b
-      | _ => pure (Right TrustMeFO)
-    pure (Left (FIPi p q))
+    va <- doublyNegative a
+    vb <- typeView b
+    pure $ case (va, vb) of
+      (_, Left sp) => Left (FIPi va sp)
+      (DNFree _, Right _) => Right TrustMeFO
+      (va, Right fo) => Left (FIPi va (FIFree fo))
   typeView fa@(IApp _ (IApp _ f arg1) arg2) = do
     chka1 <- typeView arg1
     case chka1 of
@@ -313,6 +337,17 @@ parameters
   typeView (IType _) = pure (Right TrustMeFO)
   typeView ty = throwError (UnsupportedType ty)
 
+  doublyNegative (IPi fc rig pinfo nm a b) = do
+    va <- typeView a
+    vb <- doublyNegative b
+    case (va, vb) of
+      (Left sp, _) => pure (DNPi sp vb)
+      (Right fo, DNFree _) => pure (DNFree TrustMeFO)
+      (Right fo, _) => pure (DNPi (FIFree fo) vb)
+  doublyNegative ty = case isFreeOf x ty of
+    Nothing => throwError (NegativeOccurence x ty)
+    Just fo => pure (DNFree fo)
+
 ------------------------------------------------------------------------------
 -- Core machinery: building the mapping function from an IsFunctorialIn proof
 
@@ -339,6 +374,9 @@ parameters (fc : FC) (mutualWith : List Name)
   ||| the eta contracted `map (mapTree f)` instead of `map (\ ts => mapTree f ts)`.
   functorFun : (assert : Maybe Bool) -> {ty : TTImp} -> IsFunctorialIn t x ty ->
                (rec, f : Name) -> (arg : Maybe TTImp) -> TTImp
+  doubleNegFun : (assert : Maybe Bool) -> {ty : TTImp} -> IsDoublyNegativeIn t x ty ->
+                 (rec, f : Name) -> (arg : TTImp) -> TTImp
+
   functorFun assert FIVar rec f t = apply fc (IVar fc f) (toList t)
   functorFun assert (FIRec y sp) rec f t
     -- only add assert_total if it is declared to be needed
@@ -367,14 +405,16 @@ parameters (fc : FC) (mutualWith : List Name)
     = apply fc (IVar fc (UN $ Basic "mapFst"))
       (functorFun (assert <|> Just True) sp rec f Nothing
       :: toList t)
-  functorFun assert (FIPi {rig, pinfo, nm} _ sp) rec f (Just t)
+  functorFun assert (FIPi {rig, pinfo, nm} dn sp) rec f (Just t)
     = let nm = fromMaybe (UN $ Basic "x") nm in
       -- /!\ We cannot use the type stored in FIPi here because it could just
       -- be a name that will happen to be different when bound on the LHS!
       -- Cf. the Free test case in reflection017
-      ILam fc rig pinfo (Just nm) (Implicit fc False)
-    $ functorFun assert sp rec f (Just $ IApp fc t (IVar fc nm))
-  functorFun assert (FIPi {rig, pinfo, nm} _ sp) rec f Nothing
+      ILam fc rig pinfo (Just nm) (Implicit fc False) $
+      functorFun assert sp rec f
+        $ Just $ IApp fc t
+        $ doubleNegFun assert dn rec f (IVar fc nm)
+  functorFun assert (FIPi {rig, pinfo, nm} dn sp) rec f Nothing
     = let tnm = UN $ Basic "t" in
       let nm = fromMaybe (UN $ Basic "x") nm in
       ILam fc MW ExplicitArg (Just tnm) (Implicit fc False) $
@@ -382,8 +422,20 @@ parameters (fc : FC) (mutualWith : List Name)
       -- be a name that will happen to be different when bound on the LHS!
       -- Cf. the Free test case in reflection017
       ILam fc rig pinfo (Just nm) (Implicit fc False) $
-      functorFun assert sp rec f (Just $ IApp fc (IVar fc tnm) (IVar fc nm))
+      functorFun assert sp rec f
+        $ Just $ IApp fc (IVar fc tnm)
+        $ doubleNegFun assert dn rec f (IVar fc nm)
   functorFun assert (FIFree y) rec f t = fromMaybe `(id) t
+
+  doubleNegFun assert (DNPi {rig, pinfo, nm} sp dn) rec f t
+    = let nm = fromMaybe (UN $ Basic "xn") nm in
+      -- /!\ We cannot use the type stored in DNPi here because it could just
+      -- be a name that will happen to be different when bound on the LHS!
+      ILam fc rig pinfo (Just nm) (Implicit fc False) $
+      doubleNegFun assert dn rec f
+        $ IApp fc t
+        $ functorFun assert sp rec f (Just (IVar fc nm))
+  doubleNegFun assert (DNFree _) rec f t = t
 
 ------------------------------------------------------------------------------
 -- User-facing: Functor deriving
