@@ -84,6 +84,9 @@ LOG derive.functor.clauses:1:
   mapCont2 : {0 r, e : _} -> {0 a, b : Type} -> (a -> b) -> Cont2 r e a -> Cont2 r e b
   mapCont2 f (MkCont2 x0) = MkCont2 (\ {arg:6113} => \ {arg:6120} => x0 {arg:6113} (\ {arg:6122} => {arg:6120} (f {arg:6122})))
 LOG derive.functor.clauses:1: 
+  mapCont2' : {0 r, e : _} -> {0 a, b : Type} -> (a -> b) -> Cont2' r e a -> Cont2' r e b
+  mapCont2' f (MkCont2' x0) = MkCont2' (\ {arg:6227} => x0 (mapFst (\ t => \ {arg:6229} => t (f {arg:6229})) {arg:6227}))
+LOG derive.functor.clauses:1: 
   mapTree : {0 l : _} -> {0 a, b : Type} -> (a -> b) -> Tree l a -> Tree l b
   mapTree f (Leaf x0) = Leaf x0
   mapTree f (Node x0 x1 x2) = Node (mapTree f x0) (f x1) (mapTree f x2)

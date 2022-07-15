@@ -192,6 +192,15 @@ data IsDoublyNegativeIn : (t, x : Name) -> (ty : TTImp) -> Type
 data IsDoublyNegativeIn : (t, x : Name) -> TTImp -> Type where
   DNPi   : IsFunctorialIn t x a -> IsDoublyNegativeIn t x b ->
            IsDoublyNegativeIn t x (IPi fc rig pinfo nm a b)
+  ||| There are nested subtrees somewhere inside a 3rd party type constructor
+  ||| which satisfies the Bifunctor interface
+  DNBifun : HasImplementation Bifunctor c ->
+            IsDoublyNegativeIn t x arg1 -> IsDoublyNegativeIn t x arg2 ->
+            IsDoublyNegativeIn t x (IApp fc1 (IApp fc2 c arg1) arg2)
+  ||| There are nested subtrees somewhere inside a 3rd party type constructor
+  ||| which satisfies the Functor interface
+  DNFun : HasImplementation Functor c ->
+          IsDoublyNegativeIn t x arg -> IsDoublyNegativeIn t x (IApp fc c arg)
   DNFree : IsFreeOf x a -> IsDoublyNegativeIn t x a
 
 data IsFunctorialIn  : (t, x : Name) -> TTImp -> Type where
@@ -238,6 +247,13 @@ isFreeOf x ty = do
     notX t@(IVar _ y) = t <$ guard (x /= y)
     notX t = pure t
 
+optionallyEta : FC -> Maybe TTImp -> (TTImp -> TTImp) -> TTImp
+optionallyEta fc (Just t) f = f t
+optionallyEta fc Nothing f =
+  let tnm = UN $ Basic "t" in
+  ILam fc MW ExplicitArg (Just tnm) (Implicit fc False) $
+  f (IVar fc tnm)
+
 parameters
   {0 m : Type -> Type}
   {auto elab : Elaboration m}
@@ -267,6 +283,10 @@ parameters
   ||| To avoid code duplication in typeView, we have an auxiliary function
   ||| specifically to handle the application case
   typeAppView : {fc : FC} -> (f, arg : TTImp) -> m (TypeView (IApp fc f arg))
+
+  doublyNegativeApp :
+    {fc : FC} -> (f, arg : TTImp) ->
+    m (IsDoublyNegativeIn t x (IApp fc f arg))
 
   typeAppView {fc} f arg = do
     chka <- typeView arg
@@ -337,6 +357,34 @@ parameters
   typeView (IType _) = pure (Right TrustMeFO)
   typeView ty = throwError (UnsupportedType ty)
 
+  doublyNegativeApp {fc} f arg = do
+    chka <- doublyNegative arg
+    case chka of
+      -- It better be the case that f is also free of x so that
+      -- we can mark the whole type as being x-free.
+      DNFree _ => do
+        let Just _ = isFreeOf x f
+          | _ => throwError (NotAFunctorInItsLastArg (IApp fc f arg))
+        pure (DNFree TrustMeFO)
+      dn => do
+        let Just (MkAppView (_, hd) ts prf) = appView f
+           | _ => throwError (NotAnApplication f)
+        case decEq t hd of
+          Yes _ => throwError (NegativeOccurence t f)
+          No diff => case !(hasImplementation Functor f) of
+            Just prf => pure (DNFun prf dn)
+            Nothing => case hd `elemPos` ps of
+              Just n => do
+                -- record that the nth parameter should be functorial
+                ns <- gets asFunctors
+                let ns = ifThenElse (n `elem` ns) ns (n :: ns)
+                modify { asFunctors := ns }
+                -- and happily succeed
+                logMsg "derive.functor.assumption" 10 $
+                  "I am assuming that the parameter \{show hd} is a Functor"
+                pure (DNFun TrustMeHI dn)
+              Nothing => throwError (NotAFunctor f)
+
   doublyNegative (IPi fc rig pinfo nm a b) = do
     va <- typeView a
     vb <- doublyNegative b
@@ -344,6 +392,27 @@ parameters
       (Left sp, _) => pure (DNPi sp vb)
       (Right fo, DNFree _) => pure (DNFree TrustMeFO)
       (Right fo, _) => pure (DNPi (FIFree fo) vb)
+  doublyNegative fa@(IApp _ (IApp _ f arg1) arg2) = do
+    chka1 <- doublyNegative arg1
+    case chka1 of
+      DNFree _ => doublyNegativeApp (assert_smaller fa (IApp _ f arg1)) arg2
+      dn1 => case !(hasImplementation Bifunctor f) of
+        Just prf => pure (DNBifun prf dn1 !(doublyNegative arg2))
+        Nothing => do
+          let Just (MkAppView (_, hd) ts prf) = appView f
+             | _ => throwError (NotAnApplication f)
+          case hd `elemPos` ps of
+            Just n => do
+              -- record that the nth parameter should be bifunctorial
+              ns <- gets asBifunctors
+              let ns = ifThenElse (n `elem` ns) ns (n :: ns)
+              modify { asBifunctors := ns }
+              -- and happily succeed
+              logMsg "derive.functor.assumption" 10 $
+                  "I am assuming that the parameter \{show hd} is a Bifunctor"
+              pure (DNBifun TrustMeHI dn1 !(doublyNegative arg2))
+            Nothing => throwError (NotABifunctor f)
+  doublyNegative fa@(IApp _ f arg) = doublyNegativeApp f arg
   doublyNegative ty = case isFreeOf x ty of
     Nothing => throwError (NegativeOccurence x ty)
     Just fo => pure (DNFree fo)
@@ -375,7 +444,7 @@ parameters (fc : FC) (mutualWith : List Name)
   functorFun : (assert : Maybe Bool) -> {ty : TTImp} -> IsFunctorialIn t x ty ->
                (rec, f : Name) -> (arg : Maybe TTImp) -> TTImp
   doubleNegFun : (assert : Maybe Bool) -> {ty : TTImp} -> IsDoublyNegativeIn t x ty ->
-                 (rec, f : Name) -> (arg : TTImp) -> TTImp
+                 (rec, f : Name) -> (arg : Maybe TTImp) -> TTImp
 
   functorFun assert FIVar rec f t = apply fc (IVar fc f) (toList t)
   functorFun assert (FIRec y sp) rec f t
@@ -405,37 +474,44 @@ parameters (fc : FC) (mutualWith : List Name)
     = apply fc (IVar fc (UN $ Basic "mapFst"))
       (functorFun (assert <|> Just True) sp rec f Nothing
       :: toList t)
-  functorFun assert (FIPi {rig, pinfo, nm} dn sp) rec f (Just t)
-    = let nm = fromMaybe (UN $ Basic "x") nm in
-      -- /!\ We cannot use the type stored in FIPi here because it could just
-      -- be a name that will happen to be different when bound on the LHS!
-      -- Cf. the Free test case in reflection017
-      ILam fc rig pinfo (Just nm) (Implicit fc False) $
-      functorFun assert sp rec f
-        $ Just $ IApp fc t
-        $ doubleNegFun assert dn rec f (IVar fc nm)
-  functorFun assert (FIPi {rig, pinfo, nm} dn sp) rec f Nothing
-    = let tnm = UN $ Basic "t" in
+  functorFun assert (FIPi {rig, pinfo, nm} dn sp) rec f t
+    = optionallyEta fc t $ \ arg =>
       let nm = fromMaybe (UN $ Basic "x") nm in
-      ILam fc MW ExplicitArg (Just tnm) (Implicit fc False) $
       -- /!\ We cannot use the type stored in FIPi here because it could just
       -- be a name that will happen to be different when bound on the LHS!
       -- Cf. the Free test case in reflection017
       ILam fc rig pinfo (Just nm) (Implicit fc False) $
       functorFun assert sp rec f
-        $ Just $ IApp fc (IVar fc tnm)
-        $ doubleNegFun assert dn rec f (IVar fc nm)
+        $ Just $ IApp fc arg
+        $ doubleNegFun assert dn rec f (Just (IVar fc nm))
   functorFun assert (FIFree y) rec f t = fromMaybe `(id) t
 
   doubleNegFun assert (DNPi {rig, pinfo, nm} sp dn) rec f t
-    = let nm = fromMaybe (UN $ Basic "xn") nm in
+    = optionallyEta fc t $ \ arg =>
+      let nm = fromMaybe (UN $ Basic "xn") nm in
       -- /!\ We cannot use the type stored in DNPi here because it could just
       -- be a name that will happen to be different when bound on the LHS!
       ILam fc rig pinfo (Just nm) (Implicit fc False) $
       doubleNegFun assert dn rec f
-        $ IApp fc t
+        $ Just $ IApp fc arg
         $ functorFun assert sp rec f (Just (IVar fc nm))
-  doubleNegFun assert (DNFree _) rec f t = t
+  doubleNegFun assert (DNBifun _ dn1 (DNFree _)) rec f t
+    = apply fc (IVar fc (UN $ Basic "mapFst"))
+      (doubleNegFun (assert <|> Just True) dn1 rec f Nothing
+      :: toList t)
+  doubleNegFun assert (DNBifun _ dn1 dn2) rec f t
+    = apply fc (IVar fc (UN $ Basic "bimap"))
+      (doubleNegFun (assert <|> Just True) dn1 rec f Nothing
+      :: doubleNegFun (assert <|> Just True) dn2 rec f Nothing
+      :: toList t)
+  doubleNegFun assert (DNFun _ dn) rec f t
+      -- only add assert_total if we are calling a mutually defined Functor implementation.
+    = let isMutual = fromMaybe False (appView ty >>= \ v => pure (snd v.head `elem` mutualWith)) in
+      ifThenElse isMutual (IApp fc (IVar fc (UN $ Basic "assert_total"))) id
+    $ apply fc (IVar fc (UN $ Basic "map"))
+      (doubleNegFun ((False <$ guard isMutual) <|> assert <|> Just True) dn rec f Nothing
+       :: toList t)
+  doubleNegFun assert (DNFree _) rec f t = fromMaybe `(id) t
 
 ------------------------------------------------------------------------------
 -- User-facing: Functor deriving
