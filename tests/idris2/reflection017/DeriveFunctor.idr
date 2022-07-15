@@ -227,11 +227,17 @@ namespace Cont
   cont2 : Functor (Cont2 r e)
   cont2 = %runElab derive
 
-  ||| Continuation with short-circuiting error cont
+  ||| Uncurried version of ontinuation with short-circuiting error cont
   data Cont2' r e a = MkCont2' (((a -> r), (e -> r)) -> r)
 
   cont2' : Functor (Cont2' r e)
   cont2' = %runElab derive
+
+  ||| Throw in lazyness
+  data Cont2'' r e a = MkCont2'' (Lazy ((Lazy a -> r), (e -> r)) -> r)
+
+  cont2'' : Functor (Cont2'' r e)
+  cont2'' = %runElab derive
 
 failing "Couldn't find a `Functor' instance for the type constructor DeriveFunctor.Wrap"
 
