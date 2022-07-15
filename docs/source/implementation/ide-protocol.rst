@@ -9,6 +9,23 @@ The first version of Idris (written in Haskell and is at v1.3.3) implements vers
 
 The protocol and its serialisation/deserialisation routines are part of the `Protocol` submodule hierarchy and are packaged in the `idris2protocols.ipkg` package.
 
+Starting IDE Mode
+-----------------
+
+To initiate the IDE-Protocol on stdin/stdout, use the ``--ide-mode`` command line option.
+To run the protocol over a TCP socket, use the ``--ide-mode-socket`` option: ::
+
+  idris2 --ide-mode-socket
+  53864
+
+By default this will chose an open port, print the number of the port to stdout followed by a newline, and listen to that socket on localhost.
+You may optionally specify the hostname and port to listen to: ::
+
+  idris2 --ide-mode-socket localhost:12345
+  12345
+
+The IDE-Protocol will run on that socket, and Idris will exit when the client disconnects from the socket.
+
 
 Protocol Overview
 -----------------
@@ -23,7 +40,7 @@ A reply can consist of multiple messages: any number of messages to inform the u
 The wire format is the length of the message in characters, encoded in 6 characters hexadecimal, followed by the message encoded as S-expression (sexp).
 Additionally, each request includes a unique integer (counting upwards), which is repeated in all messages corresponding to that request.
 
-An example interaction from loading the file ``/home/hannes/empty.idr`` looks as follows on the wire:::
+An example interaction from loading the file ``/home/hannes/empty.idr`` looks as follows on the wire: ::
 
   00002a((:load-file "/home/hannes/empty.idr") 1)
   000039(:write-string "Type checking /home/hannes/empty.idr" 1)
@@ -180,17 +197,17 @@ New in Version 2 of the protocol are:
 Possible Replies
 ----------------
 
-Possible replies include a normal final reply:::
+Possible replies include a normal final reply: ::
 
  (:return (:ok SEXP [HIGHLIGHTING]) ID)
  (:return (:error String [HIGHLIGHTING]) ID)
 
-A normal intermediate reply:::
+A normal intermediate reply: ::
 
  (:output (:ok SEXP [HIGHLIGHTING]) ID)
  (:output (:error String [HIGHLIGHTING]) ID)
 
-Informational and/or abnormal replies:::
+Informational and/or abnormal replies: ::
 
   (:write-string String ID)
   (:set-prompt String ID)
@@ -266,7 +283,7 @@ Idris supports instructing editors how to colour their code.
 When elaborating source code or REPL input, Idris will locate regions of the source code corresponding to names, and emit information about these names using the same metadata as output highlighting.
 
 These messages will arrive as replies to the command that caused elaboration to occur, such as ``:load-file`` or ``:interpret``.
-They have the format:::
+They have the format: ::
 
   (:output (:ok (:highlight-source POSNS)) ID)
 
