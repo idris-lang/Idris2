@@ -2354,7 +2354,7 @@ parserCommandsForHelp =
   , exprArgCmd (ParseIdentCmd "exec") Exec "Compile to an executable and run"
   , stringArgCmd (ParseIdentCmd "directive") CGDirective "Set a codegen-specific directive"
   , stringArgCmd (ParseREPLCmd ["l", "load"]) Load "Load a file"
-  , noArgCmd (ParseREPLCmd ["r", "reload"]) Reload "Reload current file"
+  , noArgCmd (ParseREPLCmd ["r", "reload"]) Reload "Reload current file or package"
   , noArgCmd (ParseREPLCmd ["e", "edit"]) Edit "Edit current file using $EDITOR or $VISUAL"
   , nameArgCmd (ParseREPLCmd ["miss", "missing"]) Missing "Show missing clauses"
   , nameArgCmd (ParseKeywordCmd "total") Total "Check the totality of a name"

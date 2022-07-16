@@ -761,6 +761,7 @@ processPackage opts (cmd, mfile)
                   REPL => do
                     [] <- build pkg opts
                        | errs => coreLift (exitWith (ExitFailure 1))
+                    setMainFile (snd <$> mainmod pkg)
                     runRepl (map snd $ mainmod pkg)
                   Init => pure () -- already handled earlier
 
