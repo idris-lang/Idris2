@@ -110,7 +110,7 @@ namespace Full
   full : Functor Full
   full = %runElab derive
 
-failing "Negative occurence of a"
+failing "Negative occurrence of a"
 
   data NOT : Type -> Type where
     MkNOT : (a -> Void) -> NOT a
@@ -227,7 +227,7 @@ namespace Cont
   cont2 : Functor (Cont2 r e)
   cont2 = %runElab derive
 
-  ||| Uncurried version of ontinuation with short-circuiting error cont
+  ||| Uncurried version of continuation with short-circuiting error cont
   data Cont2' r e a = MkCont2' (((a -> r), (e -> r)) -> r)
 
   cont2' : Functor (Cont2' r e)

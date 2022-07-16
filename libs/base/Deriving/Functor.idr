@@ -37,7 +37,7 @@ freshName ns a = assert_total $ go (basicNames ns) Nothing where
 ||| Possible errors for the functor-deriving machinery.
 public export
 data Error : Type where
-  NegativeOccurence : Name -> TTImp -> Error
+  NegativeOccurrence : Name -> TTImp -> Error
   NotAnApplication : TTImp -> Error
   NotAFunctor : TTImp -> Error
   NotABifunctor : TTImp -> Error
@@ -54,7 +54,7 @@ Show Error where
   show = joinBy "\n" . go [<] where
 
     go : SnocList String -> Error -> List String
-    go acc (NegativeOccurence a ty) = acc <>> ["Negative occurence of \{show a} in \{show ty}"]
+    go acc (NegativeOccurrence a ty) = acc <>> ["Negative occurrence of \{show a} in \{show ty}"]
     go acc (NotAnApplication s) = acc <>> ["The type \{show s} is not an application"]
     go acc (NotAFunctor s) = acc <>> ["Couldn't find a `Functor' instance for the type constructor \{show s}"]
     go acc (NotABifunctor s) = acc <>> ["Couldn't find a `Bifunctor' instance for the type constructor \{show s}"]
@@ -213,7 +213,7 @@ data IsFunctorialIn : (pol : Polarity) -> (t, x : Name) -> (ty : TTImp) -> Type 
   ||| which satisfies the Functor interface
   FIFun : HasImplementation Functor sp ->
           IsFunctorialIn pol t x arg -> IsFunctorialIn pol t x (IApp fc sp arg)
-  ||| A pi type, with no negative occurence of x in its domain
+  ||| A pi type, with no negative occurrence of x in its domain
   FIPi : IsFunctorialIn (not pol) t x a -> IsFunctorialIn pol t x b ->
          IsFunctorialIn pol t x (IPi fc rig pinfo nm a b)
   ||| A type free of x is trivially Functorial in it
@@ -279,7 +279,7 @@ parameters
         case decEq t hd of
           Yes Refl => case pol of
             Positive => pure $ Left (FIRec prf sp)
-            Negative => throwError (NegativeOccurence t (IApp fc f arg))
+            Negative => throwError (NegativeOccurrence t (IApp fc f arg))
           No diff => case !(hasImplementation Functor f) of
             Just prf => pure (Left (FIFun prf sp))
             Nothing => case hd `elemPos` ps of
@@ -299,13 +299,13 @@ parameters
         Right _ <- typeView {pol} f
           | _ => throwError $ case pol of
                    Positive => NotAFunctorInItsLastArg (IApp fc f arg)
-                   Negative => NegativeOccurence x (IApp fc f arg)
+                   Negative => NegativeOccurrence x (IApp fc f arg)
         pure (Right TrustMeFO)
 
   typeView {pol} tm@(IVar fc y) = case decEq x y of
     Yes Refl => case pol of
       Positive => pure (Left FIVar)
-      Negative => throwError (NegativeOccurence x tm)
+      Negative => throwError (NegativeOccurrence x tm)
     No _ => pure (Right TrustMeFO)
   typeView ty@(IPi fc rig pinfo nm a b) = do
     va <- typeView a
