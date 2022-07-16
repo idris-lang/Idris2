@@ -131,9 +131,9 @@ parameters (noMangle : NoMangleMap)
   minimal (MVar v)          = var v
   minimal (MProjection n v) = minimal v <+> ".a" <+> shown n
 
-tag2es : Either Int Name -> Doc
-tag2es (Left x)  = shown x
-tag2es (Right x) = jsStringDoc $ show x
+tag2es : Tag -> (Doc, Maybe Doc)
+tag2es (DataCon i n)  = (shown i, Just (shown (dropNS n)))
+tag2es (TypeCon x) = (jsStringDoc $ show x, Nothing)
 
 constant : Doc -> Doc -> Doc
 constant n d = "const" <++> n <+> softEq <+> d <+> ";"
@@ -147,6 +147,9 @@ conTags as = zipWith (\i,a => hcat ["a",shown i,softColon,a]) [1..length as] as
 applyObj : (args : List Doc) -> Doc
 applyObj = applyList "{" "}" softComma
 
+comment : Doc -> Doc
+comment d = "/*" <++> d <++> "*/"
+
 -- fully applied constructors are converted to JS objects with fields
 -- labeled `a1`, `a2`, and so on for the given list of arguments.
 -- a header field (label: `h`) is added holding either the index of
@@ -156,14 +159,19 @@ applyObj = applyList "{" "}" softComma
 -- Exceptions based on the given `ConInfo`:
 -- `NIL` and `NOTHING`-like data constructors are represented as `{h: 0}`,
 -- while `CONS`, `JUST`, and `RECORD` come without the header field.
-applyCon : ConInfo -> (tag : Either Int Name) -> (args : List Doc) -> Doc
+applyCon : ConInfo -> (tag : Tag) -> (args : List Doc) -> Doc
 applyCon NIL     _ [] = "{h" <+> softColon <+> "0}"
 applyCon NOTHING _ [] = "{h" <+> softColon <+> "0}"
 applyCon CONS    _ as = applyObj (conTags as)
 applyCon JUST    _ as = applyObj (conTags as)
 applyCon RECORD  _ as = applyObj (conTags as)
 applyCon UNIT    _ [] = "undefined"
-applyCon _       t as = applyObj (("h" <+> softColon <+> tag2es t)::conTags as)
+applyCon _       t as = applyObj (mkCon (tag2es t) :: conTags as)
+
+  where
+    mkCon : (Doc, Maybe Doc) -> Doc
+    mkCon (t, Nothing) = "h" <+> softColon <+> t
+    mkCon (t, Just cmt) = "h" <+> softColon <+> t <++> comment cmt
 
 -- applys the given list of arguments to the given function.
 app : (fun : Doc) -> (args : List Doc) -> Doc
@@ -591,30 +599,32 @@ isFun _          = True
 -- case blocks (the first entry in a pair is the value belonging
 -- to a `case` statement, the second is the body
 --
--- Example: switch "foo.a1" [("0","return 2;")] (Just "return 0;")
+-- Example: switch "foo.a1" [(("0", Just "True"),"return 2;")] (Just "return 0;")
 -- generates the following code:
 -- ```javascript
 --   switch(foo.a1) {
---     case 0: return 2;
+--     case 0: /* True */ return 2;
 --     default: return 0;
 --   }
 -- ```
 switch :  (scrutinee : Doc)
-       -> (alts : List (Doc,Doc))
+       -> (alts : List ((Doc,Maybe Doc),Doc)) -- match, comment, code
        -> (def : Maybe Doc)
        -> Doc
 switch sc alts def =
   let stmt    = "switch" <+> paren sc <+> SoftSpace
-      defcase = concatMap (pure . anyCase "default") def
+      defcase = concatMap (pure . anyCase "default" Nothing) def
    in stmt <+> block (vcat $ map alt alts ++ defcase)
 
-  where anyCase : Doc -> Doc -> Doc
-        anyCase s d =
-          let b = if isMultiline d then block d else d
-           in s <+> softColon <+> b
+  where anyCase : Doc -> Maybe Doc -> Doc -> Doc
+        anyCase s cmt d =
+          let b = if isMultiline d then block d else d in
+          case cmt of
+            Nothing => s <+> softColon <+> b
+            Just cmt => s <+> softColon <+> comment cmt <++> b
 
-        alt : (Doc,Doc) -> Doc
-        alt (e,d) = anyCase ("case" <++> e) d
+        alt : ((Doc,Maybe Doc),Doc) -> Doc
+        alt ((e, c), d) = anyCase ("case" <++> e) c d
 
 -- creates an argument list for a (possibly multi-argument)
 -- anonymous function. An empty argument list is treated
@@ -623,7 +633,7 @@ lambdaArgs : (noMangle : NoMangleMap) -> List Var -> Doc
 lambdaArgs noMangle [] = "()" <+> lambdaArrow
 lambdaArgs noMangle xs = hcat $ (<+> lambdaArrow) . var noMangle <$> xs
 
-insertBreak : (r : Effect) -> (Doc, Doc) -> (Doc, Doc)
+insertBreak : (r : Effect) -> (a, Doc) -> (a, Doc)
 insertBreak Returns x = x
 insertBreak (ErrorWithout _) (pat, exp) = (pat, vcat [exp, "break;"])
 
@@ -678,13 +688,13 @@ mutual
     nm <- get NoMangleMap
     pure $ switch (minimal nm sc <+> ".h") as d
     where
-        alt : {r : _} -> EConAlt r -> Core (Doc,Doc)
-        alt (MkEConAlt _ RECORD b)  = ("undefined",) <$> stmt b
-        alt (MkEConAlt _ NIL b)     = ("0",) <$> stmt b
-        alt (MkEConAlt _ CONS b)    = ("undefined",) <$> stmt b
-        alt (MkEConAlt _ NOTHING b) = ("0",) <$> stmt b
-        alt (MkEConAlt _ JUST b)    = ("undefined",) <$> stmt b
-        alt (MkEConAlt _ UNIT b)    = ("undefined",) <$> stmt b
+        alt : {r : _} -> EConAlt r -> Core ((Doc,Maybe Doc),Doc)
+        alt (MkEConAlt _ RECORD b)  = (("undefined",Just "record"),) <$> stmt b
+        alt (MkEConAlt _ NIL b)     = (("0",Just "nil"),) <$> stmt b
+        alt (MkEConAlt _ CONS b)    = (("undefined",Just "cons"),) <$> stmt b
+        alt (MkEConAlt _ NOTHING b) = (("0",Just "nothing"),) <$> stmt b
+        alt (MkEConAlt _ JUST b)    = (("undefined",Just "just"),) <$> stmt b
+        alt (MkEConAlt _ UNIT b)    = (("undefined",Just "unit"),) <$> stmt b
         alt (MkEConAlt t _ b)       = (tag2es t,) <$> stmt b
 
   stmt (ConstSwitch r sc alts def) = do
@@ -693,10 +703,10 @@ mutual
     ex <- exp sc
     pure $ switch ex as d
     where
-        alt : EConstAlt r -> Core (Doc,Doc)
+        alt : EConstAlt r -> Core ((Doc,Maybe Doc),Doc)
         alt (MkEConstAlt c b) = do
             d <- stmt b
-            pure (Text $ jsConstant c, d)
+            pure ((Text $ jsConstant c, Nothing), d)
 
   stmt (Error x)   = pure $ jsCrashExp (jsStringDoc x) <+> ";"
   stmt (Block ss s) = do

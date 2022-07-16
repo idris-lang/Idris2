@@ -13,8 +13,9 @@ import Compiler.ES.State
 --------------------------------------------------------------------------------
 
 -- used to convert data and type constructor tags
-tag : Name -> Maybe Int -> Either Int Name
-tag n = maybe (Right n) Left
+tag : Name -> Maybe Int -> Tag
+tag n Nothing = TypeCon n
+tag n (Just i) = DataCon i n
 
 -- creates a single assignment statement.
 assign : (e : Effect) -> Exp -> Stmt (Just e)
