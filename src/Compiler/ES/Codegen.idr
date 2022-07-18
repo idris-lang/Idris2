@@ -746,16 +746,18 @@ def (MkFunction n as body) = do
   args <- traverse registerLocal as
   mde  <- mode <$> get ESs
   b    <- stmt Returns body >>= stmt
+  let cmt = comment $ hsep (shown n :: toList ((":" <++>) <$> mty))
   case args of
     -- zero argument toplevel functions are converted to
     -- lazily evaluated constants.
-    [] => pure $ printDoc mde $
-      constant (var !(get NoMangleMap) ref) (
-        "__lazy(" <+> function neutral [] b <+> ")"
-      )
+    [] => pure $ printDoc mde $ vcat
+          [ cmt
+          , constant (var !(get NoMangleMap) ref)
+               ("__lazy(" <+> function neutral [] b <+> ")") ]
     _  => pure $ printDoc mde $ vcat
-           [ comment $ hsep (shown n :: toList ((":" <++>) <$> mty))
-           , function (var !(get NoMangleMap) ref) (map (var !(get NoMangleMap)) args) b ]
+          [ cmt
+          , function (var !(get NoMangleMap) ref)
+               (map (var !(get NoMangleMap)) args) b ]
 
 -- generate code for the given foreign function definition
 foreign :  {auto c : Ref ESs ESSt}
