@@ -89,6 +89,12 @@ namespace All
   imapProperty i f @{[]} [] = []
   imapProperty i f @{ix :: ixs} (x :: xs) = f @{ix} x :: imapProperty i f @{ixs} xs
 
+  ||| Map a constrained function over a list given a list of constraints.
+  public export
+  map : ((x : a) -> {0 ok : p x} -> b) -> (xs : List a) -> {auto 0 allOk : All p xs} -> List b
+  map f [] {allOk = []} = []
+  map f (x :: xs) {allOk = ok :: _} = f {ok} x :: map f xs
+
   ||| Forget property source for a homogeneous collection of properties
   public export
   forget : All (const type) types -> List type
