@@ -7,6 +7,16 @@ import Data.Vect
 
 %default total
 
+public export
+data Tag : Type where
+  ||| A data constructor. Use the tag to dispatch / construct.
+  ||| Here the Name is only for documentation purposes and should not
+  ||| be used.
+  DataCon : (tag : Int) -> (name : Name) -> Tag
+  ||| A type constructor. We do not have a unique tag associated to types
+  ||| and so we match on names instead.
+  TypeCon : (name : Name) -> Tag
+
 ||| A variable in a toplevel function definition
 |||
 ||| When generating the syntax tree of imperative
@@ -84,7 +94,7 @@ mutual
     ||| The tag either represents the name of a type constructor
     ||| (when we are pattern matching on types) or the index
     ||| of a data constructor.
-    ECon      : (tag : Either Int Name) -> ConInfo -> List Exp -> Exp
+    ECon      : (tag : Tag) -> ConInfo -> List Exp -> Exp
 
     ||| Primitive operation
     EOp       : {0 arity : Nat} -> PrimFn arity -> Vect arity Exp -> Exp
@@ -165,7 +175,7 @@ mutual
   public export
   record EConAlt (e : Effect) where
     constructor MkEConAlt
-    tag     : Either Int Name
+    tag     : Tag
     conInfo : ConInfo
     body    : Stmt (Just e)
 

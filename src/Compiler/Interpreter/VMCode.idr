@@ -1,13 +1,16 @@
 module Compiler.Interpreter.VMCode
 
-
 import Core.Core
 import Core.Context
 import Core.Context.Log
 import Core.Primitives
 import Core.Value
+
 import Compiler.Common
 import Compiler.VMCode
+
+import Idris.Syntax
+
 import Libraries.Data.IOArray
 import Libraries.Data.NameMap
 import Data.Nat
@@ -281,11 +284,17 @@ parameters {auto c : Ref Ctxt Defs}
         when logCallStack $ coreLift $ putStrLn $ ind ++ "Result: " ++ show res
         pure res
 
-compileExpr : Ref Ctxt Defs -> String -> String -> ClosedTerm -> String -> Core (Maybe String)
-compileExpr _ _ _ _ _ = Nothing <$ throw {a=()} (InternalError "compile not implemeted for vmcode-interp")
+compileExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  String -> String -> ClosedTerm -> String -> Core (Maybe String)
+compileExpr _ _ _ _ _ _ = throw (InternalError "compile not implemeted for vmcode-interp")
 
-executeExpr : Ref Ctxt Defs -> String -> ClosedTerm -> Core ()
-executeExpr c _ tm = do
+executeExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  String -> ClosedTerm -> Core ()
+executeExpr c s _ tm = do
     cdata <- getCompileData False VMCode tm
     st <- newRef State !(initInterpState cdata.vmcode)
     ignore $ callFunc [] (MN "__mainExpression" 0) []

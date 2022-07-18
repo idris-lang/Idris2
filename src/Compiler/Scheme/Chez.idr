@@ -21,6 +21,7 @@ import Data.String
 import Data.Vect
 
 import Idris.Env
+import Idris.Syntax
 
 import System
 import System.Directory
@@ -534,9 +535,13 @@ makeShWindows chez outShRel appdir outAbs progType
             | Left err => throw (FileErr outShRel err)
          pure ()
 
-compileExprWhole : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-                   ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExprWhole makeitso c tmpDir outputDir tm outfile
+compileExprWhole :
+  Bool ->
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> (outputDir : String) ->
+  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExprWhole makeitso c s tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
          coreLift_ $ mkdirAll appDirGen
@@ -558,14 +563,18 @@ compileExprWhole makeitso c tmpDir outputDir tm outfile
          coreLift_ $ chmodRaw outShRel 0o755
          pure (Just outShRel)
 
-compileExprInc : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-                 ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExprInc makeitso c tmpDir outputDir tm outfile
+compileExprInc :
+  Bool ->
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> (outputDir : String) ->
+  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExprInc makeitso c s tmpDir outputDir tm outfile
     = do defs <- get Ctxt
          let Just (mods, libs) = lookup Chez (allIncData defs)
              | Nothing =>
                  do coreLift $ putStrLn $ "Missing incremental compile data, reverting to whole program compilation"
-                    compileExprWhole makeitso c tmpDir outputDir tm outfile
+                    compileExprWhole makeitso c s tmpDir outputDir tm outfile
          let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
          coreLift_ $ mkdirAll appDirGen
@@ -585,25 +594,34 @@ compileExprInc makeitso c tmpDir outputDir tm outfile
          pure (Just outShRel)
 
 ||| Chez Scheme implementation of the `compileExpr` interface.
-compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-              ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr makeitso c tmpDir outputDir tm outfile
-    = do s <- getSession
-         if not (wholeProgram s) && (Chez `elem` incrementalCGs !getSession)
-            then compileExprInc makeitso c tmpDir outputDir tm outfile
-            else compileExprWhole makeitso c tmpDir outputDir tm outfile
+compileExpr :
+  Bool ->
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> (outputDir : String) ->
+  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExpr makeitso c s tmpDir outputDir tm outfile
+    = do sesh <- getSession
+         if not (wholeProgram sesh) && (Chez `elem` incrementalCGs sesh)
+            then compileExprInc makeitso c s tmpDir outputDir tm outfile
+            else compileExprWhole makeitso c s tmpDir outputDir tm outfile
 
 ||| Chez Scheme implementation of the `executeExpr` interface.
 ||| This implementation simply runs the usual compiler, saving it to a temp file, then interpreting it.
-executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c tmpDir tm
-    = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpchez"
+executeExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> ClosedTerm -> Core ()
+executeExpr c s tmpDir tm
+    = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpchez"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
          coreLift_ $ system sh
 
-incCompile : Ref Ctxt Defs ->
-             (sourceFile : String) -> Core (Maybe (String, List String))
-incCompile c sourceFile
+incCompile :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (sourceFile : String) -> Core (Maybe (String, List String))
+incCompile c s sourceFile
     = do
          ssFile <- getTTCFileName sourceFile "ss"
          soFile <- getTTCFileName sourceFile "so"
