@@ -1,0 +1,5 @@
+package testpkg
+
+modules = Main
+
+opts = "--no-color --console-width 0"

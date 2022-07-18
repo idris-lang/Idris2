@@ -1,0 +1,12 @@
+1/2: Building Lib (Lib.idr)
+2/2: Building Main (Main.idr)
+Main> Hello
+Main> Main> 1/2: Building Lib (Lib.idr)
+Loaded file Main.idr
+Main> World
+Main> 
+Bye for now!
+1/2: Building Lib (Lib.idr)
+Main> No file can be reloaded
+Main> 
+Bye for now!

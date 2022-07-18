@@ -1,0 +1,8 @@
+package testpkg
+
+modules = Lib, Main
+
+main = Main
+executable = say
+
+opts = "--no-color --console-width 0"

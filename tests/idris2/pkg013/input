@@ -1,0 +1,4 @@
+:exec main
+:sh "sed -i \"s/Hello/World/\" Lib.idr"
+:reload
+:exec main

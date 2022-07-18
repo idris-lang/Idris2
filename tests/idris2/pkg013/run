@@ -1,0 +1,7 @@
+rm -rf  ./build/
+
+$1 --repl testpkg.ipkg < input
+sed -i "s/World/Hello/" Lib.idr
+
+$1 --repl testpkg2.ipkg < input2
+sed -i "s/World/Hello/" Lib.idr
