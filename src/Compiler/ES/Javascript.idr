@@ -65,8 +65,10 @@ compileExpr c s tmpDir outputDir tm outfile =
      pure (Just out)
 
 ||| Node implementation of the `executeExpr` interface.
-executeExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
-              (tmpDir : String) -> ClosedTerm -> Core ()
+executeExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c s tmpDir tm =
   throw $ InternalError "Javascript backend is only able to compile, use Node instead"
 
