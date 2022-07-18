@@ -9,6 +9,7 @@ data Doc
   = Nil
   | LineBreak
   | SoftSpace -- this will be ignored in compact printing
+  | Comment Doc -- this will be ignored in compact printing
   | Text String
   | Nest Nat Doc
   | Seq Doc Doc
@@ -27,6 +28,10 @@ public export %inline
 shown : Show a => a -> Doc
 shown a = Text (show a)
 
+export %inline
+comment : Doc -> Doc
+comment = Comment
+
 export
 FromString Doc where
   fromString = Text
@@ -37,6 +42,7 @@ isMultiline []         = False
 isMultiline LineBreak  = True
 isMultiline SoftSpace  = False
 isMultiline (Text x)   = False
+isMultiline (Comment x) = isMultiline x
 isMultiline (Nest k x) = isMultiline x
 isMultiline (Seq x y)  = isMultiline x || isMultiline y
 
@@ -87,6 +93,7 @@ compact = fastConcat . go
         go Nil        = []
         go LineBreak  = []
         go SoftSpace  = []
+        go (Comment _) = []
         go (Text x)   = [x]
         go (Nest _ y) = go y
         go (Seq x y)  = go x ++ go y
@@ -101,6 +108,7 @@ pretty = fastConcat . go ""
         go _ Nil        = []
         go s LineBreak  = ["\n",s]
         go _ SoftSpace  = [" "]
+        go s (Comment x) = "/* " :: go s x ++ [" */"]
         go _ (Text x)   = [x]
         go s (Nest x y) = go (s ++ nSpaces x) y
         go s (Seq x y)  = go s x ++ go s y

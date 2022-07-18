@@ -3,8 +3,11 @@ module Compiler.ES.Codegen
 import Compiler.Common
 import Core.CompileExpr
 import Core.Context
+import Core.Context.Log
 import Core.Directory
 import Core.Options
+import Core.Env
+import Core.Normalise
 import Data.List1
 import Data.String
 import Compiler.ES.Ast
@@ -16,6 +19,10 @@ import Compiler.NoMangle
 import Libraries.Data.SortedMap
 import Protocol.Hex
 import Libraries.Data.String.Extra
+
+import Idris.Pretty.Annotations
+import Idris.Syntax
+import Idris.Doc.String
 
 import Data.Vect
 
@@ -146,9 +153,6 @@ conTags as = zipWith (\i,a => hcat ["a",shown i,softColon,a]) [1..length as] as
 
 applyObj : (args : List Doc) -> Doc
 applyObj = applyList "{" "}" softComma
-
-comment : Doc -> Doc
-comment d = "/*" <++> d <++> "*/"
 
 -- fully applied constructors are converted to JS objects with fields
 -- labeled `a1`, `a2`, and so on for the given list of arguments.
@@ -722,12 +726,22 @@ printDoc Compact y = compact y
 printDoc Minimal y = compact y
 
 -- generate code for the given toplevel function.
-def :  {auto c : Ref ESs ESSt}
+def :  {auto c : Ref Ctxt Defs}
+    -> {auto s : Ref Syn SyntaxInfo}
+    -> {auto e : Ref ESs ESSt}
     -> {auto nm : Ref NoMangleMap NoMangleMap}
     -> Function
     -> Core String
 def (MkFunction n as body) = do
   reset
+  defs <- get Ctxt
+  mty <- do log "compiler.javascript.doc" 50 $ "Looking up \{show n}"
+            Just gdef <- lookupCtxtExact n (gamma defs)
+              | Nothing => pure Nothing
+            let UN _ = dropNS n
+              | _ => pure Nothing
+            ty <- prettyType (const ()) gdef.type
+            pure (Just (shown ty))
   ref  <- getOrRegisterRef n
   args <- traverse registerLocal as
   mde  <- mode <$> get ESs
@@ -739,7 +753,9 @@ def (MkFunction n as body) = do
       constant (var !(get NoMangleMap) ref) (
         "__lazy(" <+> function neutral [] b <+> ")"
       )
-    _  => pure $ printDoc mde $ function (var !(get NoMangleMap) ref) (map (var !(get NoMangleMap)) args) b
+    _  => pure $ printDoc mde $ vcat
+           [ comment $ hsep (shown n :: toList ((":" <++>) <$> mty))
+           , function (var !(get NoMangleMap) ref) (map (var !(get NoMangleMap)) args) b ]
 
 -- generate code for the given foreign function definition
 foreign :  {auto c : Ref ESs ESSt}
@@ -769,8 +785,9 @@ validJSName name =
 ||| Compiles the given `ClosedTerm` for the list of supported
 ||| backends to JS code.
 export
-compileToES : Ref Ctxt Defs -> (cg : CG) -> ClosedTerm -> List String -> Core String
-compileToES c cg tm ccTypes = do
+compileToES : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
+              (cg : CG) -> ClosedTerm -> List String -> Core String
+compileToES c s cg tm ccTypes = do
   _ <- initNoMangle "javascript" validJSName
 
   cdata      <- getCompileData False Cases tm

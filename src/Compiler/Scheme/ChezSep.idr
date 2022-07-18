@@ -21,6 +21,7 @@ import Data.List1
 import Data.String
 
 import Idris.Env
+import Idris.Syntax
 
 import System
 import System.Directory
@@ -260,9 +261,13 @@ makeShWindows chez outShRel appDirSh targetSh = do
   Core.writeFile outShRel (startChezWinSh chez appDirSh targetSh)
 
 ||| Chez Scheme implementation of the `compileExpr` interface.
-compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-              ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr makeitso c tmpDir outputDir tm outfile = do
+compileExpr :
+  Bool ->
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> (outputDir : String) ->
+  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExpr makeitso c s tmpDir outputDir tm outfile = do
   -- set up paths
   Just cwd <- coreLift currentDir
        | Nothing => throw (InternalError "Can't get current directory")
@@ -306,9 +311,12 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
 
 ||| Chez Scheme implementation of the `executeExpr` interface.
 ||| This implementation simply runs the usual compiler, saving it to a temp file, then interpreting it.
-executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c tmpDir tm
-    = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpchez"
+executeExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> ClosedTerm -> Core ()
+executeExpr c s tmpDir tm
+    = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpchez"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
          coreLift_ $ system sh
 
