@@ -31,14 +31,13 @@ freshName ns a = assert_total $ go (basicNames ns) Nothing where
     let nm = a ++ maybe "" show mi in
     ifThenElse (nm `elem` ns) (go ns (Just $ maybe 0 S mi)) nm
 
-
 ------------------------------------------------------------------------------
 -- Errors
 
 ||| Possible errors for the functor-deriving machinery.
 public export
 data Error : Type where
-  NegativeOccurence : Name -> TTImp -> Error
+  NegativeOccurrence : Name -> TTImp -> Error
   NotAnApplication : TTImp -> Error
   NotAFunctor : TTImp -> Error
   NotABifunctor : TTImp -> Error
@@ -55,7 +54,7 @@ Show Error where
   show = joinBy "\n" . go [<] where
 
     go : SnocList String -> Error -> List String
-    go acc (NegativeOccurence a ty) = acc <>> ["Negative occurence of \{show a} in \{show ty}"]
+    go acc (NegativeOccurrence a ty) = acc <>> ["Negative occurrence of \{show a} in \{show ty}"]
     go acc (NotAnApplication s) = acc <>> ["The type \{show s} is not an application"]
     go acc (NotAFunctor s) = acc <>> ["Couldn't find a `Functor' instance for the type constructor \{show s}"]
     go acc (NotABifunctor s) = acc <>> ["Couldn't find a `Bifunctor' instance for the type constructor \{show s}"]
@@ -166,50 +165,59 @@ hasImplementation c t = catch $ do
 ------------------------------------------------------------------------------
 -- Core machinery: being functorial
 
+||| IsFreeOf is parametrised by
+||| @ x  the name of the type variable that the functioral action will change
+||| @ ty the type that does not contain any mention of x
+export
+data IsFreeOf : (x : Name) -> (ty : TTImp) -> Type where
+  ||| For now we do not bother keeping precise track of the proof that a type
+  ||| is free of x
+  TrustMeFO : IsFreeOf a x
+
+public export
+data Polarity = Positive | Negative
+
+public export
+not : Polarity -> Polarity
+not Positive = Negative
+not Negative = Positive
+
 ||| IsFunctorialIn is parametrised by
+||| @ pol the polarity of the type being analysed. We start in positive polarity
+|||       where occurrences of x are allowed and negate the polarity every time
+|||       we step into the domain of a Pi type.
 ||| @ t  the name of the data type whose constructors are being analysed
 ||| @ x  the name of the type variable that the functioral action will change
 ||| @ ty the type being analysed
 ||| The inductive type delivers a proof that x occurs positively in ty,
 ||| assuming that t also is positive.
 public export
-data IsFunctorialIn : (t, x : Name) -> (ty : TTImp) -> Type
-
-||| FreeOf is parametrised by
-||| @ x  the name of the type variable that the functioral action will change
-||| @ ty the type that does not contain any mention of x
-export
-data FreeOf : (x : Name) -> (ty : TTImp) -> Type
-
-data IsFunctorialIn : (t, x : Name) -> TTImp -> Type where
+data IsFunctorialIn : (pol : Polarity) -> (t, x : Name) -> (ty : TTImp) -> Type where
   ||| The type variable x occurs alone
-  FIVar : IsFunctorialIn t x (IVar fc x)
+  FIVar : IsFunctorialIn Positive t x (IVar fc x)
   ||| There is a recursive subtree of type (t a1 ... an u) and u is functorial in x.
   ||| We do not insist that u is exactly x so that we can deal with nested types
   ||| like the following:
   |||   data Full a = Leaf a | Node (Full (a, a))
   |||   data Term a = Var a | App (Term a) (Term a) | Lam (Term (Maybe a))
-  FIRec : (0 _ : IsAppView (_, t) _ f) -> IsFunctorialIn t x arg -> IsFunctorialIn t x (IApp fc f arg)
+  FIRec : (0 _ : IsAppView (_, t) _ f) -> IsFunctorialIn pol t x arg ->
+          IsFunctorialIn Positive t x (IApp fc f arg)
   ||| The subterm is delayed (either Inf or Lazy)
-  FIDelayed : IsFunctorialIn t x ty -> IsFunctorialIn t x (IDelayed fc lr ty)
+  FIDelayed : IsFunctorialIn pol t x ty -> IsFunctorialIn pol t x (IDelayed fc lr ty)
   ||| There are nested subtrees somewhere inside a 3rd party type constructor
   ||| which satisfies the Bifunctor interface
   FIBifun : HasImplementation Bifunctor sp ->
-            IsFunctorialIn t x arg1 -> Either (IsFunctorialIn t x arg2) (FreeOf x arg2) ->
-            IsFunctorialIn t x (IApp fc1 (IApp fc2 sp arg1) arg2)
+            IsFunctorialIn pol t x arg1 -> Either (IsFunctorialIn pol t x arg2) (IsFreeOf x arg2) ->
+            IsFunctorialIn pol t x (IApp fc1 (IApp fc2 sp arg1) arg2)
   ||| There are nested subtrees somewhere inside a 3rd party type constructor
   ||| which satisfies the Functor interface
   FIFun : HasImplementation Functor sp ->
-          IsFunctorialIn t x arg -> IsFunctorialIn t x (IApp fc sp arg)
-  ||| A pi type, with no negative occurence of x in its domain
-  FIPi : FreeOf x a -> IsFunctorialIn t x b -> IsFunctorialIn t x (IPi fc rig pinfo nm a b)
+          IsFunctorialIn pol t x arg -> IsFunctorialIn pol t x (IApp fc sp arg)
+  ||| A pi type, with no negative occurrence of x in its domain
+  FIPi : IsFunctorialIn (not pol) t x a -> IsFunctorialIn pol t x b ->
+         IsFunctorialIn pol t x (IPi fc rig pinfo nm a b)
   ||| A type free of x is trivially Functorial in it
-  FIFree : FreeOf x a -> IsFunctorialIn t x a
-
-data FreeOf : Name -> TTImp -> Type where
-  ||| For now we do not bother keeping precise track of the proof that a type
-  ||| is free of x
-  TrustMeFO : FreeOf a x
+  FIFree : IsFreeOf x a -> IsFunctorialIn pol t x a
 
 elemPos : Eq a => a -> List a -> Maybe Nat
 elemPos x = go 0 where
@@ -217,6 +225,13 @@ elemPos x = go 0 where
   go : Nat -> List a -> Maybe Nat
   go idx [] = Nothing
   go idx (y :: ys) = idx <$ guard (x == y) <|> go (S idx) ys
+
+optionallyEta : FC -> Maybe TTImp -> (TTImp -> TTImp) -> TTImp
+optionallyEta fc (Just t) f = f t
+optionallyEta fc Nothing f =
+  let tnm = UN $ Basic "t" in
+  ILam fc MW ExplicitArg (Just tnm) (Implicit fc False) $
+  f (IVar fc tnm)
 
 parameters
   {0 m : Type -> Type}
@@ -234,18 +249,25 @@ parameters
   ||| If if it is not the case, we will use the `MonadError Error` constraint
   ||| to fail with an informative message.
   public export
-  TypeView : TTImp -> Type
-  TypeView ty = Either (IsFunctorialIn t x ty) (FreeOf x ty)
+  TypeView : Polarity -> TTImp -> Type
+  TypeView pol ty = Either (IsFunctorialIn pol t x ty) (IsFreeOf x ty)
+
+  export
+  fromTypeView : TypeView pol ty -> IsFunctorialIn pol t x ty
+  fromTypeView (Left prf) = prf
+  fromTypeView (Right fo) = FIFree fo
 
   ||| Hoping to observe that ty is functorial
   export
-  typeView : (ty : TTImp) -> m (TypeView ty)
+  typeView : {pol : Polarity} -> (ty : TTImp) -> m (TypeView pol ty)
 
   ||| To avoid code duplication in typeView, we have an auxiliary function
   ||| specifically to handle the application case
-  typeAppView : {fc : FC} -> (f, arg : TTImp) -> m (TypeView (IApp fc f arg))
+  typeAppView :
+    {fc : FC} -> {pol : Polarity} ->
+    (f, arg : TTImp) -> m (TypeView pol (IApp fc f arg))
 
-  typeAppView {fc} f arg = do
+  typeAppView {fc, pol} f arg = do
     chka <- typeView arg
     case chka of
       -- if x is present in the argument then the function better be:
@@ -255,7 +277,9 @@ parameters
         let Just (MkAppView (_, hd) ts prf) = appView f
            | _ => throwError (NotAnApplication f)
         case decEq t hd of
-          Yes Refl => pure $ Left (FIRec prf sp)
+          Yes Refl => case pol of
+            Positive => pure $ Left (FIRec prf sp)
+            Negative => throwError (NegativeOccurrence t (IApp fc f arg))
           No diff => case !(hasImplementation Functor f) of
             Just prf => pure (Left (FIFun prf sp))
             Nothing => case hd `elemPos` ps of
@@ -272,19 +296,24 @@ parameters
       -- Otherwise it better be the case that f is also free of x so that
       -- we can mark the whole type as being x-free.
       Right fo => do
-        Right _ <- typeView f
-          | _ => throwError (NotAFunctorInItsLastArg (IApp fc f arg))
+        Right _ <- typeView {pol} f
+          | _ => throwError $ case pol of
+                   Positive => NotAFunctorInItsLastArg (IApp fc f arg)
+                   Negative => NegativeOccurrence x (IApp fc f arg)
         pure (Right TrustMeFO)
 
-  typeView (IVar fc y) = pure $ case decEq x y of
-    Yes Refl => Left FIVar
-    No _ => Right TrustMeFO
+  typeView {pol} tm@(IVar fc y) = case decEq x y of
+    Yes Refl => case pol of
+      Positive => pure (Left FIVar)
+      Negative => throwError (NegativeOccurrence x tm)
+    No _ => pure (Right TrustMeFO)
   typeView ty@(IPi fc rig pinfo nm a b) = do
-    Right p <- typeView a
-      | _ => throwError (NegativeOccurence x ty)
-    Left q <- typeView b
-      | _ => pure (Right TrustMeFO)
-    pure (Left (FIPi p q))
+    va <- typeView a
+    vb <- typeView b
+    pure $ case (va, vb) of
+      (_, Left sp) => Left (FIPi (fromTypeView va) sp)
+      (Left sp,  _) => Left (FIPi sp (fromTypeView vb))
+      (Right _, Right _) => Right TrustMeFO
   typeView fa@(IApp _ (IApp _ f arg1) arg2) = do
     chka1 <- typeView arg1
     case chka1 of
@@ -337,7 +366,7 @@ parameters (fc : FC) (mutualWith : List Name)
   ||| @ arg the (optional) name of the argument being mapped over. This lets us use
   ||| Nothing when generating arguments to higher order functions so that we generate
   ||| the eta contracted `map (mapTree f)` instead of `map (\ ts => mapTree f ts)`.
-  functorFun : (assert : Maybe Bool) -> {ty : TTImp} -> IsFunctorialIn t x ty ->
+  functorFun : (assert : Maybe Bool) -> {ty : TTImp} -> IsFunctorialIn pol t x ty ->
                (rec, f : Name) -> (arg : Maybe TTImp) -> TTImp
   functorFun assert FIVar rec f t = apply fc (IVar fc f) (toList t)
   functorFun assert (FIRec y sp) rec f t
@@ -350,7 +379,9 @@ parameters (fc : FC) (mutualWith : List Name)
       ILam fc MW ExplicitArg (Just nm) (Implicit fc False)
     $ IDelay fc
     $ functorFun assert sp rec f (Just (IVar fc nm))
-  functorFun assert (FIDelayed sp) rec f (Just t) = functorFun assert sp rec f (Just t)
+  functorFun assert (FIDelayed sp) rec f (Just t)
+    = IDelay fc
+    $ functorFun assert sp rec f (Just t)
   functorFun assert {ty = IApp _ ty _} (FIFun _ sp) rec f t
     -- only add assert_total if we are calling a mutually defined Functor implementation.
     = let isMutual = fromMaybe False (appView ty >>= \ v => pure (snd v.head `elem` mutualWith)) in
@@ -367,22 +398,16 @@ parameters (fc : FC) (mutualWith : List Name)
     = apply fc (IVar fc (UN $ Basic "mapFst"))
       (functorFun (assert <|> Just True) sp rec f Nothing
       :: toList t)
-  functorFun assert (FIPi {rig, pinfo, nm} _ sp) rec f (Just t)
-    = let nm = fromMaybe (UN $ Basic "x") nm in
-      -- /!\ We cannot use the type stored in FIPi here because it could just
-      -- be a name that will happen to be different when bound on the LHS!
-      -- Cf. the Free test case in reflection017
-      ILam fc rig pinfo (Just nm) (Implicit fc False)
-    $ functorFun assert sp rec f (Just $ IApp fc t (IVar fc nm))
-  functorFun assert (FIPi {rig, pinfo, nm} _ sp) rec f Nothing
-    = let tnm = UN $ Basic "t" in
+  functorFun assert (FIPi {rig, pinfo, nm} dn sp) rec f t
+    = optionallyEta fc t $ \ arg =>
       let nm = fromMaybe (UN $ Basic "x") nm in
-      ILam fc MW ExplicitArg (Just tnm) (Implicit fc False) $
       -- /!\ We cannot use the type stored in FIPi here because it could just
       -- be a name that will happen to be different when bound on the LHS!
       -- Cf. the Free test case in reflection017
       ILam fc rig pinfo (Just nm) (Implicit fc False) $
-      functorFun assert sp rec f (Just $ IApp fc (IVar fc tnm) (IVar fc nm))
+      functorFun assert sp rec f
+        $ Just $ IApp fc arg
+        $ functorFun assert dn rec f (Just (IVar fc nm))
   functorFun assert (FIFree y) rec f t = fromMaybe `(id) t
 
 ------------------------------------------------------------------------------
@@ -453,7 +478,7 @@ namespace Functor
                  $ zipWith const [1..length args] args -- fix because [1..0] is [1,0]
         recs <- for (zip vars args) $ \ (v, arg) => do
                   res <- withError (WhenCheckingArg (mapTTImp cleanup arg)) $
-                           typeView f paras para arg
+                           typeView {pol = Positive} f paras para arg
                   pure $ case res of
                     Left sp => -- do not bother with assert_total if you're generating
                                -- a covering/partial definition

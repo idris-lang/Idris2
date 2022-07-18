@@ -110,7 +110,7 @@ namespace Full
   full : Functor Full
   full = %runElab derive
 
-failing "Negative occurence of a"
+failing "Negative occurrence of a"
 
   data NOT : Type -> Type where
     MkNOT : (a -> Void) -> NOT a
@@ -213,6 +213,31 @@ namespace EqMap
 
   eqMap : (eq : Eq key) => Functor (EqMap key @{eq})
   eqMap = %runElab derive
+
+namespace Cont
+
+  data Cont r a = MkCont ((a -> r) -> r)
+
+  cont : Functor (Cont r)
+  cont = %runElab derive
+
+  ||| Continuation with short-circuiting error cont
+  data Cont2 r e a = MkCont2 ((e -> r) -> (a -> r) -> r)
+
+  cont2 : Functor (Cont2 r e)
+  cont2 = %runElab derive
+
+  ||| Uncurried version of continuation with short-circuiting error cont
+  data Cont2' r e a = MkCont2' (((a -> r), (e -> r)) -> r)
+
+  cont2' : Functor (Cont2' r e)
+  cont2' = %runElab derive
+
+  ||| Throw in lazyness
+  data Cont2'' r e a = MkCont2'' (Lazy ((Lazy a -> r), (e -> r)) -> r)
+
+  cont2'' : Functor (Cont2'' r e)
+  cont2'' = %runElab derive
 
 failing "Couldn't find a `Functor' instance for the type constructor DeriveFunctor.Wrap"
 
