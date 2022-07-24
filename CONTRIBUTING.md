@@ -30,7 +30,7 @@ general philosophy of the Idris project, which can be summarised as follows:
 * Idris *allows* software developers to express invariants of their data and prove
   properties of programs, but will not *require* them to do so
 
-Many contributions will require acccompanying tests and documentation updates.
+Many contributions will require accompanying tests and documentation updates.
 Bugfixes in particular should be accompanied by tests, to avoid future
 regressions.
 
