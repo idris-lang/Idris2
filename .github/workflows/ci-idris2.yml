@@ -79,9 +79,8 @@ jobs:
         uses: actions/checkout@v2
       - name: Install build dependencies
         run: |
-          echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
-          sudo apt-get install -y -t hirsute chezscheme
+          sudo apt-get install -y chezscheme
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
 
       # Get our hands on the released version either by using the cache
@@ -91,7 +90,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: Idris2-${{ env.IDRIS2_VERSION }}
-          key: ${{ runner.os }}-idris2-bootstrapped-hirsute-chez-${{ env.IDRIS2_VERSION }}
+          key: ${{ runner.os }}-idris2-bootstrapped-chez-${{ env.IDRIS2_VERSION }}
       - name : Build previous version
         if: steps.previous-version-cache.outputs.cache-hit != 'true'
         run: |
@@ -137,9 +136,8 @@ jobs:
         uses: actions/checkout@v2
       - name: Install build dependencies
         run: |
-          echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
-          sudo apt-get install -y -t hirsute chezscheme
+          sudo apt-get install -y chezscheme
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Make bootstrap folder readonly
         run: chmod -R a-w bootstrap
@@ -296,9 +294,8 @@ jobs:
           path: ~/.idris2/
       - name: Install build dependencies
         run: |
-          echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
-          sudo apt-get install -y -t hirsute chezscheme
+          sudo apt-get install -y chezscheme
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build self-hosted
@@ -377,9 +374,8 @@ jobs:
           path: ~/.idris2/
       - name: Install build dependencies
         run: |
-          echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
-          sudo apt-get install -y -t hirsute chezscheme
+          sudo apt-get install -y chezscheme
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build self-hosted from previous version
@@ -467,9 +463,8 @@ jobs:
           path: ~/.idris2/
       - name: Install build dependencies
         run: |
-          echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
-          sudo apt-get install -y -t hirsute chezscheme
+          sudo apt-get install -y chezscheme
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build API
@@ -502,9 +497,8 @@ jobs:
           path: ~/.idris2/
       - name: Install build dependencies
         run: |
-          echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
-          sudo apt-get install -y -t hirsute chezscheme
+          sudo apt-get install -y chezscheme
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
@@ -531,9 +525,8 @@ jobs:
           path: ~/.idris2/
       - name: Install build dependencies
         run: |
-          echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
-          sudo apt-get install -y -t hirsute chezscheme
+          sudo apt-get install -y chezscheme
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
@@ -561,9 +554,8 @@ jobs:
           path: ~/.idris2/
       - name: Install build dependencies
         run: |
-          echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
-          sudo apt-get install -y -t hirsute chezscheme
+          sudo apt-get install -y chezscheme
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
@@ -601,9 +593,8 @@ jobs:
           path: ~/.idris2/
       - name: Install build dependencies
         run: |
-          echo "deb http://security.ubuntu.com/ubuntu hirsute universe" | sudo tee -a /etc/apt/sources.list
           sudo apt-get update
-          sudo apt-get install -y -t hirsute chezscheme markdown
+          sudo apt-get install -y chezscheme markdown
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout idris2
