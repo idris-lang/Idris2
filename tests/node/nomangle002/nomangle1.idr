@@ -1,5 +1,5 @@
 
-%nomangle
+%nomangle "node:continue"
 continue : Int -> Int
 continue x = x + 1
 

@@ -100,11 +100,6 @@ mutual
        UniqueDefault : TTImp -> AltType
 
   public export
-  data NoMangleDirective : Type where
-     CommonName : String -> NoMangleDirective
-     BackendNames : List (String, String) -> NoMangleDirective
-
-  public export
   data FnOpt : Type where
        Inline : FnOpt
        NoInline : FnOpt
@@ -125,8 +120,6 @@ mutual
        Totality : TotalReq -> FnOpt
        Macro : FnOpt
        SpecArgs : List Name -> FnOpt
-       ||| Keep the user provided name during codegen
-       NoMangle : Maybe NoMangleDirective -> FnOpt
 
   public export
   data ITy : Type where
@@ -307,12 +300,6 @@ Eq DataOpt where
   _ == _ = False
 
 public export
-Eq NoMangleDirective where
-  CommonName s == CommonName s' = s == s'
-  BackendNames ns == BackendNames ns' = ns == ns'
-  _ == _ = False
-
-public export
 Eq a => Eq (PiInfo a) where
   ImplicitArg   == ImplicitArg = True
   ExplicitArg   == ExplicitArg = True
@@ -360,7 +347,6 @@ parameters {auto eqTTImp : Eq TTImp}
     Totality tr == Totality tr' = tr == tr'
     Macro == Macro = True
     SpecArgs ns == SpecArgs ns' = ns == ns'
-    NoMangle nm == NoMangle nm' = nm == nm'
     _ == _ = False
 
   public export
@@ -718,7 +704,6 @@ parameters (f : TTImp -> TTImp)
   mapFnOpt (Totality treq) = Totality treq
   mapFnOpt Macro = Macro
   mapFnOpt (SpecArgs ns) = SpecArgs ns
-  mapFnOpt (NoMangle mdir) = NoMangle mdir
 
   export
   mapData : Data -> Data
@@ -840,7 +825,6 @@ parameters {0 m : Type -> Type} {auto mon : Monad m} (f : TTImp -> m TTImp)
   mapMFnOpt (Totality treq) = pure (Totality treq)
   mapMFnOpt Macro = pure Macro
   mapMFnOpt (SpecArgs ns) = pure (SpecArgs ns)
-  mapMFnOpt (NoMangle mdir) = pure (NoMangle mdir)
 
   export
   mapMData : Data -> m Data
