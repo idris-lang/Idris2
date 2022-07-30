@@ -58,7 +58,7 @@ prim__free : AnyPtr -> PrimIO ()
 |||
 ||| @ size the number of bytes to allocate
 export
-malloc : HasIO io => (size : Int) -> io AnyPtr
+malloc : HasIO io => (size : Int) -> {auto 0 ok : So (size >= 0)} -> io AnyPtr
 malloc size = primIO $ prim__malloc size
 
 ||| Release memory with libc `free`.
