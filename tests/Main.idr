@@ -246,7 +246,7 @@ idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
 idrisTestsWith : TestPool
 idrisTestsWith = MkTestPool "With abstraction" [] Nothing
       [ "with001", "with002", "with004", "with005", "with006", "with007",
-        "with008", "with009", "with010"
+        "with008", "with009", "with010", "with011"
       ]
 
 idrisTestsIPKG : TestPool
