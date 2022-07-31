@@ -84,9 +84,9 @@ mutual
       = matchAll True [(f, f'), (a, a)]
   -- On RHS: Rely on unification to fill in the implicit
   getMatch False (INamedApp fc f n a) f'
-      = getMatch False f f
+      = getMatch False f f'
   getMatch False (IAutoApp fc f a) f'
-      = getMatch False f f
+      = getMatch False f f'
   -- Can't have an implicit in the clause if there wasn't a matching
   -- implicit in the parent
   getMatch lhs f (INamedApp fc f' n a)
