@@ -62,7 +62,7 @@ LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG declare.def.lhs:3: LHS term: Term.Typ
-LOG unify.equal:10: Skipped unification (equal already): (vars : $resolvedN) -> Type) and (vars : $resolvedN) -> Type)
+LOG unify.equal:10: Skipped unification (equal already): (vars : $resolvedN) -> Type and (vars : $resolvedN) -> Type
 LOG declare.def.clause:3: RHS term: Term.Chk
 LOG declare.def:2: Case tree for Term.Typ: [0] Term.Chk
 LOG declare.def:3: Working from [0] Term.Chk
@@ -96,7 +96,7 @@ LOG declare.def:3: Initially missing in Term.NF:
 Term> Bye for now!
 1/1: Building Vec (Vec.idr)
 LOG declare.type:1: Processing Vec.Vec
-LOG declare.def:2: Case tree for Vec.Vec: [0] ({arg:N} : (Data.Fin.Fin {arg:N}[1])) -> {arg:N}[1])
+LOG declare.def:2: Case tree for Vec.Vec: [0] ({arg:N} : (Data.Fin.Fin {arg:N}[1])) -> {arg:N}[1]
 LOG declare.type:1: Processing Vec.Nil
 LOG declare.def:2: Case tree for Vec.Nil: [0] (Prelude.Uninhabited.absurd {arg:N}[0] (Data.Fin.Fin Prelude.Types.Z) Data.Fin.Uninhabited implementation at Data.Fin:L:C--L:C)
 LOG declare.type:1: Processing Vec.::
@@ -113,7 +113,7 @@ LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not de
 (($resolvedN Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))
 (($resolvedN Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))
 (($resolvedN Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))
-Target type : ({arg:N} : (Data.Fin.Fin (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))) -> (Prelude.Basics.List Prelude.Types.Nat))
+Target type : ({arg:N} : (Data.Fin.Fin (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))) -> (Prelude.Basics.List Prelude.Types.Nat)
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:L:C--L:C:
 $resolvedN
 $resolvedN
