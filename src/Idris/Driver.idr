@@ -158,14 +158,14 @@ stMain cgs opts
          when (not finish) $ do
            -- start by going over the pre-options, and stop if we do not need to
            -- continue
-           True <- preOptions opts
-              | False => pure ()
+           Continue _ <- preOptions opts
+           | Break _ => pure ()
 
            -- If there's a --build or --install, just do that then quit
            done <- processPackageOpts opts
 
-           when (not done) $ flip catch renderError $
-              do when (checkVerbose opts) $ -- override Quiet if implicitly set
+           when (not done) $ flip catch renderError $ do
+             when (checkVerbose opts) $ -- override Quiet if implicitly set
                      setOutput (REPL InfoLvl)
                  u <- newRef UST initUState
                  origin <- maybe
@@ -196,8 +196,9 @@ stMain cgs opts
                                   pure res
 
                  doRepl <- catch (postOptions result opts)
-                                 (\err => emitError err *> pure False)
-                 if doRepl then
+                                 (\err => emitError err *> (pure $ Break ()))
+                 case doRepl of
+                 Continue _ =>
                    if ide || ideSocket then
                      if not ideSocket
                       then do
@@ -213,12 +214,12 @@ stMain cgs opts
                          Right file => do
                            setOutput (IDEMode 0 file file)
                            replIDE {c} {u} {m}
-                   else do
+                    else do
                        repl {c} {u} {m}
                        showTimeRecord
-                  else
-                      -- exit with an error code if there was an error, otherwise
-                      -- just exit
+                 Break _ =>
+                    -- exit with an error code if there was an error, otherwise
+                    -- just exit
                     do ropts <- get ROpts
                        showTimeRecord
                        whenJust (errorLine ropts) $ \ _ =>
