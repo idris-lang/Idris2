@@ -269,6 +269,10 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "List installed packages"),
 
            optSeparator,
+           MkOpt ["--use-ipkg"] [Required "package file"] (\f => [UseIPKG f])
+              (Just "Use an .ipkg file (idris project file) in REPL."),
+           MkOpt ["--find-ipkg"] [] [FindIPKG]
+              (Just "Try to automatically find and use an .ipkg file in a parent directory."),
            MkOpt ["--init"] [Optional "package file"]
               (\ f => [Package Init f])
               (Just "Interactively initialise a new project"),
@@ -291,10 +295,6 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Clean intermediate files/executables for the given package"),
            MkOpt ["--repl"] [Optional "package file"] (\f => [Package REPL f])
               (Just "Build the given package and launch a REPL instance."),
-           MkOpt ["--find-ipkg"] [] [FindIPKG]
-              (Just "Find and use an .ipkg file in a parent directory."),
-           MkOpt ["--use-ipkg"] [Required "file"] (\f => [UseIPKG f])
-              (Just "Use an .ipkg file"),
            MkOpt ["--ignore-missing-ipkg"] [] [IgnoreMissingIPKG]
               (Just "Fail silently if a dependency is missing."),
 
