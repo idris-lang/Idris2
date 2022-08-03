@@ -18,6 +18,12 @@ void setBufferWordLE(void* buffer, int loc, uint64_t val,  size_t len);
 #define setBufferWord16LE(b, l, v)       do { setBufferWordLE(b, l, (uint64_t)v, 2); } while (0)
 #define setBufferWord32LE(b, l, v)       do { setBufferWordLE(b, l, (uint64_t)v, 4); } while (0)
 #define setBufferWord64LE(b, l, v)       do { setBufferWordLE(b, l, (uint64_t)v, 8); } while (0)
+
+#define setBufferByte(b, l, v)           do { setBufferWordLE(b, l, (uint64_t)v, 1); } while (0)
+#define setBufferInt16LE(b, l, v)        do { setBufferWordLE(b, l, (uint64_t)v, 2); } while (0)
+#define setBufferInt32LE(b, l, v)        do { setBufferWordLE(b, l, (uint64_t)v, 4); } while (0)
+#define setBufferInt64LE(b, l, v)        do { setBufferWordLE(b, l, (uint64_t)v, 8); } while (0)
+
 void setBufferDouble(void* buffer, int loc, double val);
 void setBufferString(void* buffer, int loc, char* str);
 
