@@ -363,6 +363,9 @@ preOptions (RunREPL _ :: opts)
 preOptions (FindIPKG :: opts)
     = do setSession ({ findipkg := True } !getSession)
          preOptions opts
+preOptions (UseIPKG ipkgn :: opts)
+    = do setSession ({ useipkg := Just ipkgn } !getSession)
+         preOptions opts
 preOptions (IgnoreMissingIPKG :: opts)
     = do setSession ({ ignoreMissingPkg := True } !getSession)
          preOptions opts

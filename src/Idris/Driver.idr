@@ -178,9 +178,11 @@ stMain cgs opts
                  when (not $ nobanner session) $ do
                    iputStrLn $ pretty0 banner
                    when (isCons cgs) $ iputStrLn (reflow "With codegen for:" <++> hsep (pretty0 . fst <$> cgs))
-                 fname <- if findipkg session
-                             then findIpkg fname
-                             else pure fname
+                 fname <- case (findipkg session, useipkg session) of
+                            (False, Nothing) => pure fname
+                            (True,  Nothing) => findIpkg fname
+                            (False, Just pkgname) => useIpkg fname pkgname
+                            (True,  Just _ ) => throw (InternalError "Cannot handle both --use-ipkg and --find-ipkg")
                  setMainFile fname
                  result <- case fname of
                       Nothing => logTime 1 "Loading prelude" $ do

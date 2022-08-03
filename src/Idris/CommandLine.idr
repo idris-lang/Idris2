@@ -136,6 +136,7 @@ data CLOpt
   RunREPL String |
   IgnoreMissingIPKG |
   FindIPKG |
+  UseIPKG String |
   Timing (Maybe Nat) |
   DebugElabCheck |
   AltErrorCount Nat |
@@ -292,6 +293,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Build the given package and launch a REPL instance."),
            MkOpt ["--find-ipkg"] [] [FindIPKG]
               (Just "Find and use an .ipkg file in a parent directory."),
+           MkOpt ["--use-ipkg"] [Required "file"] (\f => [UseIPKG f])
+              (Just "Use an .ipkg file"),
            MkOpt ["--ignore-missing-ipkg"] [] [IgnoreMissingIPKG]
               (Just "Fail silently if a dependency is missing."),
 

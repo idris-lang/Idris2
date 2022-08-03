@@ -843,18 +843,13 @@ processPackageOpts opts
          pure True
 
 
--- find an ipkg file in one of the parent directories
--- If it exists, read it, set the current directory to the root of the source
--- tree, and set the relevant command line options before proceeding
-export
-findIpkg : {auto c : Ref Ctxt Defs} ->
+useIpkg_helper : {auto c : Ref Ctxt Defs} ->
            {auto r : Ref ROpts REPLOpts} ->
            {auto s : Ref Syn SyntaxInfo} ->
-           Maybe String -> Core (Maybe String)
-findIpkg fname
-   = do Just (dir, ipkgn, up) <- coreLift findIpkgFile
-             | Nothing => pure fname
-        coreLift_ $ changeDir dir
+           (main_file : Maybe String) ->
+           (ipkg_file_and_dir: (String, String, String)) -> Core (Maybe String)
+useIpkg_helper fname (dir, ipkgn, up)
+   = do coreLift_ $ changeDir dir
         setWorkingDir dir
         Right (pname, fs) <- coreLift $ parseFile ipkgn
                                  (do desc <- parsePkgDesc ipkgn
@@ -881,3 +876,30 @@ findIpkg fname
 
     loadDependencies : List Depends -> Core ()
     loadDependencies = traverse_ (\p => addPkgDir p.pkgname p.pkgbounds)
+
+-- find an ipkg file in one of the parent directories
+-- If it exists, read it, set the current directory to the root of the source
+-- tree, and set the relevant command line options before proceeding
+export
+findIpkg : {auto c : Ref Ctxt Defs} ->
+           {auto r : Ref ROpts REPLOpts} ->
+           {auto s : Ref Syn SyntaxInfo} ->
+           (main_file: Maybe String) -> Core (Maybe String)
+findIpkg fname
+   = do Just (dir, ipkgn, up) <- coreLift findIpkgFile
+             | Nothing => pure fname
+        useIpkg_helper fname (dir, ipkgn, up)
+
+-- use the specified ipkg file
+-- If it exists, read it, set the current directory to the root of the source
+-- tree, and set the relevant command line options before proceeding
+export
+useIpkg : {auto c : Ref Ctxt Defs} ->
+           {auto r : Ref ROpts REPLOpts} ->
+           {auto s : Ref Syn SyntaxInfo} ->
+           (main_file: Maybe String) ->
+           (ipkg_file: String) -> Core (Maybe String)
+useIpkg fname pkgname =
+  case splitParent pkgname of
+    Nothing => pure fname
+    Just (parent, end) => useIpkg_helper fname (parent, end, "")

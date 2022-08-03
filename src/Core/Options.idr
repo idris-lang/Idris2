@@ -135,6 +135,7 @@ record Session where
   totalReq : TotalReq
   nobanner : Bool
   findipkg : Bool
+  useipkg : Maybe String
   codegen : CG
   directives : List String
   searchTimeout : Integer -- maximum number of milliseconds to run
@@ -217,10 +218,32 @@ defaultPPrint = MkPPOpts False False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False CoveringOnly False False Chez [] 1000 False False
-                               defaultLogLevel Nothing False Nothing Nothing
-                               Nothing Nothing False 1 False True
-                               False [] False False
+defaultSession = MkSessionOpts
+  { noprelude                   = False           }
+  { totalReq                    = CoveringOnly    }
+  { nobanner                    = False           }
+  { findipkg                    = False           }
+  { useipkg                     = Nothing         }
+  { codegen                     = Chez            }
+  { directives                  = []              }
+  { searchTimeout               = 1000            }
+  { ignoreMissingPkg            = False           }
+  { logEnabled                  = False           }
+  { logLevel                    = defaultLogLevel }
+  { logTimings                  = Nothing         }
+  { debugElabCheck              = False           }
+  { dumpcases                   = Nothing         }
+  { dumplifted                  = Nothing         }
+  { dumpanf                     = Nothing         }
+  { dumpvmcode                  = Nothing         }
+  { profile                     = False           }
+  { logErrorCount               = 1               }
+  { warningsAsErrors            = False           }
+  { showShadowingWarning        = True            }
+  { checkHashesInsteadOfModTime = False           }
+  { incrementalCGs              = []              }
+  { wholeProgram                = False           }
+  { caseTreeHeuristics          = False           }
 
 export
 defaultElab : ElabDirectives
