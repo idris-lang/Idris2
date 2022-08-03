@@ -250,6 +250,7 @@ public export
 isInfixOf : String -> String -> Bool
 isInfixOf a b = isInfixOf (unpack a) (unpack b)
 
+public export
 parseNumWithoutSign : List Char -> Integer -> Maybe Integer
 parseNumWithoutSign []        acc = Just acc
 parseNumWithoutSign (c :: cs) acc =
@@ -310,10 +311,10 @@ parseInteger s = parseIntTrimmed (trim s)
 ||| parseDouble "+123.123e-2"
 ||| ```
 ||| ```idris example
-||| parseDouble {a=Int} " -123.123E+2"
+||| parseDouble " -123.123E+2"
 ||| ```
 ||| ```idris example
-||| parseDouble {a=Int} " +123.123"
+||| parseDouble " +123.123"
 ||| ```
 export -- it's a bit too slow at compile time
 covering

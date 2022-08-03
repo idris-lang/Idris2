@@ -81,6 +81,17 @@ prettyKindedName Nothing   nm = nm
 prettyKindedName (Just kw) nm
   = annotate (Syntax Keyword) (pretty0 kw) <++> nm
 
+export
+prettyType : {auto c : Ref Ctxt Defs} ->
+             {auto s : Ref Syn SyntaxInfo} ->
+             (IdrisSyntax -> ann) -> ClosedTerm -> Core (Doc ann)
+prettyType syn ty = do
+  defs <- get Ctxt
+  ty <- normaliseHoles defs [] ty
+  ty <- toFullNames ty
+  ty <- resugar [] ty
+  pure (prettyBy syn ty)
+
 ||| Look up implementations
 getImplDocs : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -269,8 +280,8 @@ getDocsForName fc n config
                   -- should never happen, since we know that the DCon exists:
                   | Nothing => pure Empty
              syn <- get Syn
-             ty <- resugar [] =<< normaliseHoles defs [] (type def)
-             let conWithTypeDoc = annotate (Decl con) (hsep [dCon con (prettyName con), colon, prettyBy Syntax ty])
+             ty <- prettyType Syntax (type def)
+             let conWithTypeDoc = annotate (Decl con) (hsep [dCon con (prettyName con), colon, ty])
              case lookupName con (defDocstrings syn) of
                [(n, "")] => pure conWithTypeDoc
                [(n, str)] => pure $ vcat
@@ -287,8 +298,8 @@ getDocsForName fc n config
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure []
-             ty <- resugar [] =<< normaliseHoles defs [] (type def)
-             pure [annotate (Decl n) $ prettyBy Syntax ty]
+             ty <- prettyType Syntax (type def)
+             pure [annotate (Decl n) ty]
 
     getMethDoc : Method -> Core (List (Doc IdrisDocAnn))
     getMethDoc meth
@@ -361,11 +372,10 @@ getDocsForName fc n config
            Just def <- lookupCtxtExact nm (gamma defs)
                 -- should never happen, since we know that the DCon exists:
                 | Nothing => pure Empty
-           ty <- resugar [] =<< normaliseHoles defs [] (type def)
+           ty <- prettyType Syntax (type def)
            let projDecl = annotate (Decl nm) $
                             reAnnotate Syntax (prettyRig def.multiplicity) <+> hsep
-                            [ fun nm (prettyName nm)
-                            , colon, prettyBy Syntax ty ]
+                            [ fun nm (prettyName nm), colon, ty ]
            case lookupName nm (defDocstrings syn) of
                 [(_, "")] => pure projDecl
                 [(_, str)] =>
@@ -587,10 +597,10 @@ summarise n -- n is fully qualified
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
              | _ => pure ""
-         ty <- normaliseHoles defs [] (type def)
+         ty <- prettyType Syntax (type def)
          pure $ reAnnotate Syntax (prettyRig def.multiplicity)
             <+> hsep [ showCategory Syntax def (prettyName n)
-                     , colon, hang 0 (prettyBy Syntax !(resugar [] ty))
+                     , colon, hang 0 ty
                      ]
 
 -- Display all the exported names in the given namespace

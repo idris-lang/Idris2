@@ -11,6 +11,8 @@ import Core.Context
 import Core.Context.Log
 import Core.Directory
 
+import Idris.Syntax
+
 import Data.List
 import Libraries.Data.DList
 import Data.Nat
@@ -1062,12 +1064,13 @@ generateCSourceFile defs outn =
 export
 compileExpr : UsePhase
            -> Ref Ctxt Defs
+           -> Ref Syn SyntaxInfo
            -> (tmpDir : String)
            -> (outputDir : String)
            -> ClosedTerm
            -> (outfile : String)
            -> Core (Maybe String)
-compileExpr ANF c _ outputDir tm outfile =
+compileExpr ANF c s _ outputDir tm outfile =
   do let outn = outputDir </> outfile ++ ".c"
      let outobj = outputDir </> outfile ++ ".o"
      let outexec = outputDir </> outfile
@@ -1081,15 +1084,16 @@ compileExpr ANF c _ outputDir tm outfile =
        | Nothing => pure Nothing
      compileCFile outobj outexec
 
-compileExpr _ _ _ _ _ _ = pure Nothing
+compileExpr _ _ _ _ _ _ _ = pure Nothing
 
 
 
 export
-executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
-executeExpr c tmpDir tm = do
+executeExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
+              (execDir : String) -> ClosedTerm -> Core ()
+executeExpr c s tmpDir tm = do
   do let outfile = "_tmp_refc"
-     Just _ <- compileExpr ANF c tmpDir tmpDir tm outfile
+     Just _ <- compileExpr ANF c s tmpDir tmpDir tm outfile
        | Nothing => do coreLift_ $ putStrLn "Error: failed to compile"
      coreLift_ $ system (tmpDir </> outfile)
 

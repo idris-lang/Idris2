@@ -24,6 +24,7 @@ import Data.List1
 import Libraries.Data.NameMap
 import Data.String as String
 
+import Idris.Syntax
 import Idris.Env
 
 import System.Directory
@@ -36,17 +37,19 @@ public export
 record Codegen where
   constructor MkCG
   ||| Compile an Idris 2 expression, saving it to a file.
-  compileExpr : Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
+  compileExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
+                (tmpDir : String) -> (outputDir : String) ->
                 ClosedTerm -> (outfile : String) -> Core (Maybe String)
   ||| Execute an Idris 2 expression directly.
-  executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
+  executeExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
+                (tmpDir : String) -> ClosedTerm -> Core ()
   ||| Incrementally compile definitions in the current module (toIR defs)
   ||| if supported
   ||| Takes a source file name, returns the name of the generated object
   ||| file, if successful, plus any other backend specific data in a list
   ||| of strings. The generated object file should be placed in the same
   ||| directory as the associated TTC.
-  incCompileFile : Maybe (Ref Ctxt Defs ->
+  incCompileFile : Maybe (Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
                           (sourcefile : String) ->
                           Core (Maybe (String, List String)))
   ||| If incremental compilation is supported, get the output file extension
@@ -99,36 +102,39 @@ record CompileData where
 ||| that executes the `compileExpr` method of the Codegen
 export
 compile : {auto c : Ref Ctxt Defs} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           Codegen ->
           ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compile {c} cg tm out
+compile {c} {s} cg tm out
     = do d <- getDirs
          let tmpDir = execBuildDir d
          let outputDir = outputDirWithDefault d
          ensureDirectoryExists tmpDir
          ensureDirectoryExists outputDir
          logTime 1 "Code generation overall" $
-             compileExpr cg c tmpDir outputDir tm out
+             compileExpr cg c s tmpDir outputDir tm out
 
 ||| execute
 ||| As with `compile`, produce a functon that executes
 ||| the `executeExpr` method of the given Codegen
 export
 execute : {auto c : Ref Ctxt Defs} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           Codegen -> ClosedTerm -> Core ()
-execute {c} cg tm
+execute {c} {s} cg tm
     = do d <- getDirs
          let tmpDir = execBuildDir d
          ensureDirectoryExists tmpDir
-         executeExpr cg c tmpDir tm
+         executeExpr cg c s tmpDir tm
 
 export
 incCompile : {auto c : Ref Ctxt Defs} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              Codegen -> String -> Core (Maybe (String, List String))
-incCompile {c} cg src
+incCompile {c} {s} cg src
     = do let Just inc = incCompileFile cg
              | Nothing => pure Nothing
-         inc c src
+         inc c s src
 
 -- If an entry isn't already decoded, get the minimal entry we need for
 -- compilation, and record the Binary so that we can put it back when we're

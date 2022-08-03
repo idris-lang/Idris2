@@ -3,8 +3,11 @@ module Compiler.ES.Codegen
 import Compiler.Common
 import Core.CompileExpr
 import Core.Context
+import Core.Context.Log
 import Core.Directory
 import Core.Options
+import Core.Env
+import Core.Normalise
 import Data.List1
 import Data.String
 import Compiler.ES.Ast
@@ -16,6 +19,10 @@ import Compiler.NoMangle
 import Libraries.Data.SortedMap
 import Protocol.Hex
 import Libraries.Data.String.Extra
+
+import Idris.Pretty.Annotations
+import Idris.Syntax
+import Idris.Doc.String
 
 import Data.Vect
 
@@ -131,9 +138,9 @@ parameters (noMangle : NoMangleMap)
   minimal (MVar v)          = var v
   minimal (MProjection n v) = minimal v <+> ".a" <+> shown n
 
-tag2es : Either Int Name -> Doc
-tag2es (Left x)  = shown x
-tag2es (Right x) = jsStringDoc $ show x
+tag2es : Tag -> (Doc, Maybe Doc)
+tag2es (DataCon i n)  = (shown i, Just (shown (dropNS n)))
+tag2es (TypeCon x) = (jsStringDoc $ show x, Nothing)
 
 constant : Doc -> Doc -> Doc
 constant n d = "const" <++> n <+> softEq <+> d <+> ";"
@@ -156,14 +163,19 @@ applyObj = applyList "{" "}" softComma
 -- Exceptions based on the given `ConInfo`:
 -- `NIL` and `NOTHING`-like data constructors are represented as `{h: 0}`,
 -- while `CONS`, `JUST`, and `RECORD` come without the header field.
-applyCon : ConInfo -> (tag : Either Int Name) -> (args : List Doc) -> Doc
+applyCon : ConInfo -> (tag : Tag) -> (args : List Doc) -> Doc
 applyCon NIL     _ [] = "{h" <+> softColon <+> "0}"
 applyCon NOTHING _ [] = "{h" <+> softColon <+> "0}"
 applyCon CONS    _ as = applyObj (conTags as)
 applyCon JUST    _ as = applyObj (conTags as)
 applyCon RECORD  _ as = applyObj (conTags as)
 applyCon UNIT    _ [] = "undefined"
-applyCon _       t as = applyObj (("h" <+> softColon <+> tag2es t)::conTags as)
+applyCon _       t as = applyObj (mkCon (tag2es t) :: conTags as)
+
+  where
+    mkCon : (Doc, Maybe Doc) -> Doc
+    mkCon (t, Nothing) = "h" <+> softColon <+> t
+    mkCon (t, Just cmt) = "h" <+> softColon <+> t <++> comment cmt
 
 -- applys the given list of arguments to the given function.
 app : (fun : Doc) -> (args : List Doc) -> Doc
@@ -591,30 +603,32 @@ isFun _          = True
 -- case blocks (the first entry in a pair is the value belonging
 -- to a `case` statement, the second is the body
 --
--- Example: switch "foo.a1" [("0","return 2;")] (Just "return 0;")
+-- Example: switch "foo.a1" [(("0", Just "True"),"return 2;")] (Just "return 0;")
 -- generates the following code:
 -- ```javascript
 --   switch(foo.a1) {
---     case 0: return 2;
+--     case 0: /* True */ return 2;
 --     default: return 0;
 --   }
 -- ```
 switch :  (scrutinee : Doc)
-       -> (alts : List (Doc,Doc))
+       -> (alts : List ((Doc,Maybe Doc),Doc)) -- match, comment, code
        -> (def : Maybe Doc)
        -> Doc
 switch sc alts def =
   let stmt    = "switch" <+> paren sc <+> SoftSpace
-      defcase = concatMap (pure . anyCase "default") def
+      defcase = concatMap (pure . anyCase "default" Nothing) def
    in stmt <+> block (vcat $ map alt alts ++ defcase)
 
-  where anyCase : Doc -> Doc -> Doc
-        anyCase s d =
-          let b = if isMultiline d then block d else d
-           in s <+> softColon <+> b
+  where anyCase : Doc -> Maybe Doc -> Doc -> Doc
+        anyCase s cmt d =
+          let b = if isMultiline d then block d else d in
+          case cmt of
+            Nothing => s <+> softColon <+> b
+            Just cmt => s <+> softColon <+> comment cmt <++> b
 
-        alt : (Doc,Doc) -> Doc
-        alt (e,d) = anyCase ("case" <++> e) d
+        alt : ((Doc,Maybe Doc),Doc) -> Doc
+        alt ((e, c), d) = anyCase ("case" <++> e) c d
 
 -- creates an argument list for a (possibly multi-argument)
 -- anonymous function. An empty argument list is treated
@@ -623,7 +637,7 @@ lambdaArgs : (noMangle : NoMangleMap) -> List Var -> Doc
 lambdaArgs noMangle [] = "()" <+> lambdaArrow
 lambdaArgs noMangle xs = hcat $ (<+> lambdaArrow) . var noMangle <$> xs
 
-insertBreak : (r : Effect) -> (Doc, Doc) -> (Doc, Doc)
+insertBreak : (r : Effect) -> (a, Doc) -> (a, Doc)
 insertBreak Returns x = x
 insertBreak (ErrorWithout _) (pat, exp) = (pat, vcat [exp, "break;"])
 
@@ -678,13 +692,13 @@ mutual
     nm <- get NoMangleMap
     pure $ switch (minimal nm sc <+> ".h") as d
     where
-        alt : {r : _} -> EConAlt r -> Core (Doc,Doc)
-        alt (MkEConAlt _ RECORD b)  = ("undefined",) <$> stmt b
-        alt (MkEConAlt _ NIL b)     = ("0",) <$> stmt b
-        alt (MkEConAlt _ CONS b)    = ("undefined",) <$> stmt b
-        alt (MkEConAlt _ NOTHING b) = ("0",) <$> stmt b
-        alt (MkEConAlt _ JUST b)    = ("undefined",) <$> stmt b
-        alt (MkEConAlt _ UNIT b)    = ("undefined",) <$> stmt b
+        alt : {r : _} -> EConAlt r -> Core ((Doc,Maybe Doc),Doc)
+        alt (MkEConAlt _ RECORD b)  = (("undefined",Just "record"),) <$> stmt b
+        alt (MkEConAlt _ NIL b)     = (("0",Just "nil"),) <$> stmt b
+        alt (MkEConAlt _ CONS b)    = (("undefined",Just "cons"),) <$> stmt b
+        alt (MkEConAlt _ NOTHING b) = (("0",Just "nothing"),) <$> stmt b
+        alt (MkEConAlt _ JUST b)    = (("undefined",Just "just"),) <$> stmt b
+        alt (MkEConAlt _ UNIT b)    = (("undefined",Just "unit"),) <$> stmt b
         alt (MkEConAlt t _ b)       = (tag2es t,) <$> stmt b
 
   stmt (ConstSwitch r sc alts def) = do
@@ -693,10 +707,10 @@ mutual
     ex <- exp sc
     pure $ switch ex as d
     where
-        alt : EConstAlt r -> Core (Doc,Doc)
+        alt : EConstAlt r -> Core ((Doc,Maybe Doc),Doc)
         alt (MkEConstAlt c b) = do
             d <- stmt b
-            pure (Text $ jsConstant c, d)
+            pure ((Text $ jsConstant c, Nothing), d)
 
   stmt (Error x)   = pure $ jsCrashExp (jsStringDoc x) <+> ";"
   stmt (Block ss s) = do
@@ -712,24 +726,38 @@ printDoc Compact y = compact y
 printDoc Minimal y = compact y
 
 -- generate code for the given toplevel function.
-def :  {auto c : Ref ESs ESSt}
+def :  {auto c : Ref Ctxt Defs}
+    -> {auto s : Ref Syn SyntaxInfo}
+    -> {auto e : Ref ESs ESSt}
     -> {auto nm : Ref NoMangleMap NoMangleMap}
     -> Function
     -> Core String
 def (MkFunction n as body) = do
   reset
+  defs <- get Ctxt
+  mty <- do log "compiler.javascript.doc" 50 $ "Looking up \{show n}"
+            Just gdef <- lookupCtxtExact n (gamma defs)
+              | Nothing => pure Nothing
+            let UN _ = dropNS n
+              | _ => pure Nothing
+            ty <- prettyType (const ()) gdef.type
+            pure (Just (shown ty))
   ref  <- getOrRegisterRef n
   args <- traverse registerLocal as
   mde  <- mode <$> get ESs
   b    <- stmt Returns body >>= stmt
+  let cmt = comment $ hsep (shown n :: toList ((":" <++>) <$> mty))
   case args of
     -- zero argument toplevel functions are converted to
     -- lazily evaluated constants.
-    [] => pure $ printDoc mde $
-      constant (var !(get NoMangleMap) ref) (
-        "__lazy(" <+> function neutral [] b <+> ")"
-      )
-    _  => pure $ printDoc mde $ function (var !(get NoMangleMap) ref) (map (var !(get NoMangleMap)) args) b
+    [] => pure $ printDoc mde $ vcat
+          [ cmt
+          , constant (var !(get NoMangleMap) ref)
+               ("__lazy(" <+> function neutral [] b <+> ")") ]
+    _  => pure $ printDoc mde $ vcat
+          [ cmt
+          , function (var !(get NoMangleMap) ref)
+               (map (var !(get NoMangleMap)) args) b ]
 
 -- generate code for the given foreign function definition
 foreign :  {auto c : Ref ESs ESSt}
@@ -759,8 +787,9 @@ validJSName name =
 ||| Compiles the given `ClosedTerm` for the list of supported
 ||| backends to JS code.
 export
-compileToES : Ref Ctxt Defs -> (cg : CG) -> ClosedTerm -> List String -> Core String
-compileToES c cg tm ccTypes = do
+compileToES : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
+              (cg : CG) -> ClosedTerm -> List String -> Core String
+compileToES c s cg tm ccTypes = do
   _ <- initNoMangle "javascript" validJSName
 
   cdata      <- getCompileData False Cases tm

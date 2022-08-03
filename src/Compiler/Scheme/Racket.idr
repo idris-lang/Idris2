@@ -20,6 +20,7 @@ import Data.String
 import Data.Vect
 
 import Idris.Env
+import Idris.Syntax
 
 import System
 import System.Directory
@@ -422,9 +423,13 @@ makeShWindows racket outShRel appdir outAbs
             | Left err => throw (FileErr outShRel err)
          pure ()
 
-compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-              ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr mkexec c tmpDir outputDir tm outfile
+compileExpr :
+  Bool ->
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> (outputDir : String) ->
+  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExpr mkexec c s tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
          coreLift_ $ mkdirAll appDirGen
@@ -460,9 +465,12 @@ compileExpr mkexec c tmpDir outputDir tm outfile
                     pure (Just outShRel)
             else pure Nothing
 
-executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c tmpDir tm
-    = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpracket"
+executeExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> ClosedTerm -> Core ()
+executeExpr c s tmpDir tm
+    = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpracket"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
          coreLift_ $ system sh
 

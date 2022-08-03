@@ -34,7 +34,7 @@ package file would be:
             , Maths.BinOps
             , Maths.HexOps
 
-Running ``idris2 --init`` will interactively create a new package file in the current directory. The generated pacakge file lists all configurable fields with a brief description.
+Running ``idris2 --init`` will interactively create a new package file in the current directory. The generated package file lists all configurable fields with a brief description.
 
 Other examples of package files can be found in the ``libs`` directory
 of the main Idris repository, and in `third-party libraries

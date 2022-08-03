@@ -81,30 +81,13 @@ outputSyntaxHighlighting fname loadResult = do
     --decls <- filter (inFile fname) . tydecls <$> get MD
     --_ <- traverse outputNameSyntax allNames -- ++ decls)
 
-    let semHigh = meta.semanticHighlighting
-    log "ide-mode.highlight" 19 $
-      "Semantic metadata is: " ++ show semHigh
-
-    let aliases
-          : List ASemanticDecoration
-          = flip foldMap meta.semanticAliases $ \ (from, to) =>
-              let decors = uncurry exactRange (snd to) semHigh in
-              map (\ ((fnm, loc), rest) => ((fnm, snd from), rest)) decors
-    log "ide-mode.highlight.alias" 19 $
-      "Semantic metadata from aliases is: " ++ show aliases
-
-    let defaults
-         : List ASemanticDecoration
-         = flip foldMap meta.semanticDefaults $ \ decor@((_, range), _) =>
-             case uncurry exactRange range semHigh of
-               [] => [decor]
-               _ => []
+    decors <- allSemanticHighlighting meta
 
     traverse_ {b = Unit}
          (\(nfc, decor, mn) =>
            case mn of
              Nothing => lwOutputHighlight (fname, nfc, decor)
              Just n  => outputNameSyntax  (fname, nfc, decor, n))
-         (defaults ++ aliases ++ toList semHigh)
+         (toList decors)
 
   pure loadResult
