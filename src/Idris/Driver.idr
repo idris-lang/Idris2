@@ -27,6 +27,7 @@ import Data.List
 import Data.String
 import System
 import System.Directory
+import Libraries.Data.ControlFlow
 import Libraries.Utils.Path
 import Libraries.Utils.Term
 
@@ -130,100 +131,102 @@ checkVerbose (Verbose :: _) = True
 checkVerbose (_ :: xs) = checkVerbose xs
 
 stMain : List (String, Codegen) -> List CLOpt -> Core ()
-stMain cgs opts
-    = do False <- tryYaffle opts
-            | True => pure ()
-         False <- tryTTM opts
-            | True => pure ()
-         defs <- initDefs
-         let updated = foldl (\o, (s, _) => addCG (s, Other s) o) (options defs) cgs
-         c <- newRef Ctxt ({ options := updated } defs)
-         s <- newRef Syn initSyntax
-         setCG {c} $ maybe Chez (Other . fst) (head' cgs)
-         addPrimitives
+stMain cgs opts = do
+    False <- tryYaffle opts
+      | True => pure ()
+    False <- tryTTM opts
+      | True => pure ()
+    defs <- initDefs
+    let updated = foldl (\o, (s, _) => addCG (s, Other s) o) (options defs) cgs
+    c <- newRef Ctxt ({ options := updated } defs)
+    s <- newRef Syn initSyntax
+    setCG {c} $ maybe Chez (Other . fst) (head' cgs)
+    addPrimitives
 
-         setWorkingDir "."
-         when (ignoreMissingIpkg opts) $
-            setSession ({ ignoreMissingPkg := True } !getSession)
+    setWorkingDir "."
+    when (ignoreMissingIpkg opts) $
+      setSession ({ ignoreMissingPkg := True } !getSession)
 
-         let ide = ideMode opts
-         let ideSocket = ideModeSocket opts
-         let outmode = if ide then IDEMode 0 stdin stdout else REPL InfoLvl
-         let fname = findInput opts
-         o <- newRef ROpts (REPL.Opts.defaultOpts fname outmode cgs)
-         updateEnv
+    let ide = ideMode opts
+    let ideSocket = ideModeSocket opts
+    let outmode = if ide then IDEMode 0 stdin stdout else REPL InfoLvl
+    let fname = findInput opts
+    o <- newRef ROpts (REPL.Opts.defaultOpts fname outmode cgs)
+    updateEnv
 
-         finish <- showInfo opts
-         when (not finish) $ do
-           -- start by going over the pre-options, and stop if we do not need to
-           -- continue
-           True <- preOptions opts
-              | False => pure ()
+    finish <- showInfo opts
+    when (not finish) $ do
+      -- start by going over the pre-options, and stop if we do not need to
+      -- continue
+      Continue _ <- preOptions opts
+      | Break _ => pure ()
 
-           -- If there's a --build or --install, just do that then quit
-           done <- processPackageOpts opts
+      -- If there's a --build or --install, just do that then quit
+      done <- processPackageOpts opts
 
-           when (not done) $ flip catch renderError $
-              do when (checkVerbose opts) $ -- override Quiet if implicitly set
-                     setOutput (REPL InfoLvl)
-                 u <- newRef UST initUState
-                 origin <- maybe
-                   (pure $ Virtual Interactive) (\fname => do
-                     modIdent <- ctxtPathToNS fname
-                     pure (PhysicalIdrSrc modIdent)
-                     ) fname
-                 m <- newRef MD (initMetadata origin)
-                 updateREPLOpts
-                 session <- getSession
-                 when (not $ nobanner session) $ do
-                   iputStrLn $ pretty0 banner
-                   when (isCons cgs) $ iputStrLn (reflow "With codegen for:" <++> hsep (pretty0 . fst <$> cgs))
-                 fname <- case (findipkg session, useipkg session) of
-                            (False, Nothing) => pure fname
-                            (True,  Nothing) => findIpkg fname
-                            (False, Just pkgname) => useIpkg fname pkgname
-                            (True,  Just _ ) => throw (InternalError "Cannot handle both --use-ipkg and --find-ipkg")
-                 setMainFile fname
-                 result <- case fname of
-                      Nothing => logTime 1 "Loading prelude" $ do
-                                   when (not $ noprelude session) $
-                                     readPrelude True
-                                   pure Done
-                      Just f => logTime 1 "Loading main file" $ do
-                                  res <- loadMainFile f
-                                  displayErrors res
-                                  pure res
+      when (not done) $ flip catch renderError $ do
+        when (checkVerbose opts) $ -- override Quiet if implicitly set
+            setOutput (REPL InfoLvl)
+        u <- newRef UST initUState
+        origin <- maybe
+          (pure $ Virtual Interactive) (\fname => do
+            modIdent <- ctxtPathToNS fname
+            pure (PhysicalIdrSrc modIdent)
+            ) fname
+        m <- newRef MD (initMetadata origin)
+        updateREPLOpts
+        session <- getSession
+        when (not $ nobanner session) $ do
+          iputStrLn $ pretty0 banner
+          when (isCons cgs) $ iputStrLn (reflow "With codegen for:" <++> hsep (pretty0 . fst <$> cgs))
+        fname <- case (findipkg session, useipkg session) of
+                  (False, Nothing) => pure fname
+                  (True,  Nothing) => findIpkg fname
+                  (False, Just pkgname) => useIpkg fname pkgname
+                  (True,  Just _ ) => throw (InternalError "Cannot handle both --use-ipkg and --find-ipkg")
+        setMainFile fname
+        result <- case fname of
+            Nothing => logTime 1 "Loading prelude" $ do
+                          when (not $ noprelude session) $
+                            readPrelude True
+                          pure Done
+            Just f => logTime 1 "Loading main file" $ do
+                        res <- loadMainFile f
+                        displayErrors res
+                        pure res
 
-                 doRepl <- catch (postOptions result opts)
-                                 (\err => emitError err *> pure False)
-                 if doRepl then
-                   if ide || ideSocket then
-                     if not ideSocket
-                      then do
-                       setOutput (IDEMode 0 stdin stdout)
-                       replIDE {c} {u} {m}
-                     else do
-                       let (host, port) = ideSocketModeAddress opts
-                       f <- coreLift $ initIDESocketFile host port
-                       case f of
-                         Left err => do
-                           coreLift $ putStrLn err
-                           coreLift $ exitWith (ExitFailure 1)
-                         Right file => do
-                           setOutput (IDEMode 0 file file)
-                           replIDE {c} {u} {m}
-                   else do
-                       repl {c} {u} {m}
-                       showTimeRecord
-                  else
-                      -- exit with an error code if there was an error, otherwise
-                      -- just exit
-                    do ropts <- get ROpts
-                       showTimeRecord
-                       whenJust (errorLine ropts) $ \ _ =>
-                         coreLift $ exitWith (ExitFailure 1)
+        doRepl <- catch (postOptions result opts)
+                        (\err => emitError err *> (pure $ Break ()))
+        case doRepl of
+          Continue _ =>
+            if ide || ideSocket
+            then
+              if not ideSocket
+              then do
+                setOutput (IDEMode 0 stdin stdout)
+                replIDE {c} {u} {m}
+              else do
+                let (host, port) = ideSocketModeAddress opts
+                f <- coreLift $ initIDESocketFile host port
+                case f of
+                  Left err => do
+                    coreLift $ putStrLn err
+                    coreLift $ exitWith (ExitFailure 1)
+                  Right file => do
+                    setOutput (IDEMode 0 file file)
+                    replIDE {c} {u} {m}
+            else do
+              repl {c} {u} {m}
+              showTimeRecord
+          Break _ => do
+            -- exit with an error code if there was an error, otherwise
+            -- just exit
+            ropts <- get ROpts
+            showTimeRecord
+            whenJust (errorLine ropts) $ \ _ =>
+              coreLift $ exitWith (ExitFailure 1)
 
-  where
+where
 
   renderError : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->

@@ -8,6 +8,7 @@ import Core.Options
 import Core.Unify
 import Libraries.Utils.Path
 import Libraries.Data.List.Extra
+import Libraries.Data.ControlFlow
 
 import Idris.CommandLine
 import Idris.Package.Types
@@ -281,155 +282,101 @@ setIncrementalCG failOnError cgn
                          coreLift $ exitWith (ExitFailure 1)
                  else pure ()
 
+
+tuneSession : {auto c : Ref Ctxt Defs} ->
+             (Session -> Session) -> Core ControlFlowUnit
+tuneSession mapsession = do
+    setSession (mapsession !getSession)
+    pure $ Continue ()
+
+simply : Core Unit -> Core ControlFlowUnit
+simply cont = do
+    cont
+    pure $ Continue ()
+
+breakafter : Core Unit -> Core ControlFlowUnit
+breakafter cont = do
+    cont
+    pure $ Break ()
+
+preOption : {auto c : Ref Ctxt Defs} ->
+            {auto o : Ref ROpts REPLOpts} ->
+            CLOpt -> Core ControlFlowUnit
+-- These things are processed later, but imply nobanner too
+preOption NoBanner                = tuneSession { nobanner := True }
+preOption (OutputFile _      )    = tuneSession { nobanner := True }
+preOption (ExecFn _          )    = tuneSession { nobanner := True }
+preOption IdeMode                 = tuneSession { nobanner := True }
+preOption (IdeModeSocket _   )    = tuneSession { nobanner := True }
+preOption CheckOnly               = tuneSession { nobanner := True }
+preOption Profile                 = tuneSession { profile := True }
+preOption NoPrelude               = tuneSession { noprelude := True }
+preOption (Directive d       )    = tuneSession { directives $= (d::) }
+preOption (AltErrorCount c   )    = tuneSession { logErrorCount := c }
+preOption FindIPKG                = tuneSession { findipkg := True }
+preOption (UseIPKG ipkgn     )    = tuneSession { useipkg := Just ipkgn }
+preOption IgnoreMissingIPKG       = tuneSession { ignoreMissingPkg := True }
+preOption (DumpCases f       )    = tuneSession { dumpcases := Just f }
+preOption (DumpLifted f      )    = tuneSession { dumplifted := Just f }
+preOption (DumpANF f         )    = tuneSession { dumpanf := Just f }
+preOption (DumpVMCode f      )    = tuneSession { dumpvmcode := Just f }
+preOption (Logging n         )    = tuneSession { logEnabled := True, logLevel $= insertLogLevel n }
+preOption WarningsAsErrors        = tuneSession { warningsAsErrors := True }
+preOption IgnoreShadowingWarnings = tuneSession { showShadowingWarning := False }
+preOption CaseTreeHeuristics      = tuneSession { caseTreeHeuristics := True }
+preOption WholeProgram            = tuneSession { wholeProgram := True }
+preOption Total                   = tuneSession { totalReq := Total }
+preOption HashesInsteadOfModTime  = do throw (InternalError "-Xcheck-hashes disabled (see issue #1935)")
+                                       tuneSession { checkHashesInsteadOfModTime := True }
+preOption (RunREPL _)             = do setOutput (REPL VerbosityLvl.ErrorLvl)
+                                       tuneSession { nobanner := True }
+
+preOption Quiet                   = simply $ setOutput (REPL VerbosityLvl.ErrorLvl)
+preOption (PkgPath p)             = simply $ addPkgDir p anyBounds
+preOption (SourceDir d)           = simply $ setSourceDir (Just d)
+preOption (BuildDir d)            = simply $ setBuildDir d
+preOption (OutputDir d)           = simply $ setOutputDir (Just d)
+preOption (Timing tm)             = simply $ setLogTimings (fromMaybe 10 tm)
+preOption DebugElabCheck          = simply $ setDebugElabCheck True
+preOption (ConsoleWidth n)        = simply $ setConsoleWidth n
+preOption ShowMachineNames        = simply $ setPPrint ({ showMachineNames := True } !getPPrint)
+preOption ShowNamespaces          = simply $ setPPrint ({ fullNamespace := True } !getPPrint)
+preOption (Color b)               = simply $ setColor b
+preOption (IncrementalCG e)       = simply $ setIncrementalCG True e
+
+preOption (Directory d)           = breakafter $ do
+                                        defs <- get Ctxt
+                                        dirOption (dirs (options defs)) d
+preOption (ListPackages)          = breakafter listPackages
+preOption (BashCompletion a b)    = breakafter $ do
+                                        os <- opts a b
+                                        coreLift $ putStr (unlines os)
+preOption (BashCompletionScript fun) = breakafter $ do
+                                        coreLift $ putStrLn (completionScript fun)
+
+preOption (SetCG e) = do
+    defs <- get Ctxt
+    let Nothing = getCG (options defs) e
+    | Just cg => simply $ setCG cg
+    coreLift $ do
+        putStrLn "No such code generator"
+        putStrLn $ "Code generators available: " ++ showSep ", " (map fst (availableCGs (options defs)))
+        exitWith (ExitFailure 1)
+
+preOption unrecognized = simply $ pure ()
+
 ||| Options to be processed before type checking. Return whether to continue.
 export
 preOptions : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
-             List CLOpt -> Core Bool
-preOptions [] = pure True
-preOptions (NoBanner :: opts)
-    = do setSession ({ nobanner := True } !getSession)
-         preOptions opts
--- These things are processed later, but imply nobanner too
-preOptions (OutputFile _ :: opts)
-    = do setSession ({ nobanner := True } !getSession)
-         preOptions opts
-preOptions (ExecFn _ :: opts)
-    = do setSession ({ nobanner := True } !getSession)
-         preOptions opts
-preOptions (IdeMode :: opts)
-    = do setSession ({ nobanner := True } !getSession)
-         preOptions opts
-preOptions (IdeModeSocket _ :: opts)
-    = do setSession ({ nobanner := True } !getSession)
-         preOptions opts
-preOptions (CheckOnly :: opts)
-    = do setSession ({ nobanner := True } !getSession)
-         preOptions opts
-preOptions (Profile :: opts)
-    = do setSession ({ profile := True } !getSession)
-         preOptions opts
-preOptions (Quiet :: opts)
-    = do setOutput (REPL VerbosityLvl.ErrorLvl)
-         preOptions opts
-preOptions (NoPrelude :: opts)
-    = do setSession ({ noprelude := True } !getSession)
-         preOptions opts
-preOptions (SetCG e :: opts)
-    = do defs <- get Ctxt
-         case getCG (options defs) e of
-            Just cg => do setCG cg
-                          preOptions opts
-            Nothing =>
-              do coreLift $ putStrLn "No such code generator"
-                 coreLift $ putStrLn $ "Code generators available: " ++
-                                 showSep ", " (map fst (availableCGs (options defs)))
-                 coreLift $ exitWith (ExitFailure 1)
-preOptions (Directive d :: opts)
-    = do setSession ({ directives $= (d::) } !getSession)
-         preOptions opts
-preOptions (PkgPath p :: opts)
-    = do addPkgDir p anyBounds
-         preOptions opts
-preOptions (SourceDir d :: opts)
-    = do setSourceDir (Just d)
-         preOptions opts
-preOptions (BuildDir d :: opts)
-    = do setBuildDir d
-         preOptions opts
-preOptions (OutputDir d :: opts)
-    = do setOutputDir (Just d)
-         preOptions opts
-preOptions (Directory d :: opts)
-    = do defs <- get Ctxt
-         dirOption (dirs (options defs)) d
-         pure False
-preOptions (ListPackages :: opts)
-    = do listPackages
-         pure False
-preOptions (Timing tm :: opts)
-    = do setLogTimings (fromMaybe 10 tm)
-         preOptions opts
-preOptions (DebugElabCheck :: opts)
-    = do setDebugElabCheck True
-         preOptions opts
-preOptions (AltErrorCount c :: opts)
-    = do setSession ({ logErrorCount := c } !getSession)
-         preOptions opts
-preOptions (RunREPL _ :: opts)
-    = do setOutput (REPL VerbosityLvl.ErrorLvl)
-         setSession ({ nobanner := True } !getSession)
-         preOptions opts
-preOptions (FindIPKG :: opts)
-    = do setSession ({ findipkg := True } !getSession)
-         preOptions opts
-preOptions (UseIPKG ipkgn :: opts)
-    = do setSession ({ useipkg := Just ipkgn } !getSession)
-         preOptions opts
-preOptions (IgnoreMissingIPKG :: opts)
-    = do setSession ({ ignoreMissingPkg := True } !getSession)
-         preOptions opts
-preOptions (DumpCases f :: opts)
-    = do setSession ({ dumpcases := Just f } !getSession)
-         preOptions opts
-preOptions (DumpLifted f :: opts)
-    = do setSession ({ dumplifted := Just f } !getSession)
-         preOptions opts
-preOptions (DumpANF f :: opts)
-    = do setSession ({ dumpanf := Just f } !getSession)
-         preOptions opts
-preOptions (DumpVMCode f :: opts)
-    = do setSession ({ dumpvmcode := Just f } !getSession)
-         preOptions opts
-preOptions (Logging n :: opts)
-    = do setSession ({ logEnabled := True,
-                       logLevel $= insertLogLevel n } !getSession)
-         preOptions opts
-preOptions (ConsoleWidth n :: opts)
-    = do setConsoleWidth n
-         preOptions opts
-preOptions (ShowMachineNames :: opts)
-    = do pp <- getPPrint
-         setPPrint ({ showMachineNames := True } pp)
-         preOptions opts
-preOptions (ShowNamespaces :: opts)
-    = do pp <- getPPrint
-         setPPrint ({ fullNamespace := True } pp)
-         preOptions opts
-preOptions (Color b :: opts)
-    = do setColor b
-         preOptions opts
-preOptions (WarningsAsErrors :: opts)
-    = do updateSession ({ warningsAsErrors := True })
-         preOptions opts
-preOptions (IgnoreShadowingWarnings :: opts)
-    = do updateSession ({ showShadowingWarning := False })
-         preOptions opts
-preOptions (HashesInsteadOfModTime :: opts)
-    = do throw (InternalError "-Xcheck-hashes disabled (see issue #1935)")
-         updateSession ({ checkHashesInsteadOfModTime := True })
-         preOptions opts
-preOptions (CaseTreeHeuristics :: opts)
-    = do updateSession ({ caseTreeHeuristics := True })
-         preOptions opts
-preOptions (IncrementalCG e :: opts)
-    = do defs <- get Ctxt
-         setIncrementalCG True e
-         preOptions opts
-preOptions (WholeProgram :: opts)
-    = do updateSession ({ wholeProgram := True })
-         preOptions opts
-preOptions (BashCompletion a b :: _)
-    = do os <- opts a b
-         coreLift $ putStr $ unlines os
-         pure False
-preOptions (BashCompletionScript fun :: _)
-    = do coreLift $ putStrLn $ completionScript fun
-         pure False
-preOptions (Total :: opts)
-    = do updateSession ({ totalReq := Total })
-         preOptions opts
-preOptions (_ :: opts) = preOptions opts
+             List CLOpt -> Core ControlFlowUnit
+preOptions [] = pure $ Continue ()
+preOptions (x :: xs) = do
+    r <- preOption x
+    case r of
+        Continue _ => do
+            preOptions xs
+        Break arg => pure $ Break arg
 
 -- Options to be processed after type checking. Returns whether execution
 -- should continue (i.e., whether to start a REPL)
@@ -439,35 +386,30 @@ postOptions : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               {auto m : Ref MD Metadata} ->
               {auto o : Ref ROpts REPLOpts} ->
-              REPLResult -> List CLOpt -> Core Bool
-postOptions _ [] = pure True
+              REPLResult -> List CLOpt -> Core ControlFlowUnit
+postOptions _ [] = pure $ Continue ()
 postOptions res@(ErrorLoadingFile _ _) (OutputFile _ :: rest)
-    = do ignore $ postOptions res rest
-         pure False
-postOptions res (OutputFile outfile :: rest)
-    = do ignore $ compileExp (PRef EmptyFC (UN $ Basic "main")) outfile
-         ignore $ postOptions res rest
-         pure False
-postOptions res (ExecFn str :: rest)
-    = do ignore $ execExp (PRef EmptyFC (UN $ Basic str))
-         ignore $ postOptions res rest
-         pure False
+    = breakafter $ ignore $ postOptions res rest
 postOptions res (CheckOnly :: rest)
-    = do ignore $ postOptions res rest
-         pure False
+    = breakafter $ ignore $ postOptions res rest
 postOptions res (RunREPL str :: rest)
-    = do replCmd str
-         pure False
-postOptions res (_ :: rest) = postOptions res rest
+    = breakafter $ replCmd str
+postOptions res (OutputFile outfile :: rest)
+    = breakafter $ do ignore $ compileExp (PRef EmptyFC (UN $ Basic "main")) outfile
+                      ignore $ postOptions res rest
+postOptions res (ExecFn str :: rest)
+    = breakafter $ do ignore $ execExp (PRef EmptyFC (UN $ Basic str))
+                      ignore $ postOptions res rest
+postOptions res (unrecognized :: rest) = postOptions res rest
 
 export
 ideMode : List CLOpt -> Bool
 ideMode [] = False
 ideMode (IdeMode :: _) = True
-ideMode (_ :: xs) = ideMode xs
+ideMode (unrecognized :: xs) = ideMode xs
 
 export
 ideModeSocket : List CLOpt -> Bool
 ideModeSocket [] = False
 ideModeSocket (IdeModeSocket _ :: _) = True
-ideModeSocket (_ :: xs) = ideModeSocket xs
+ideModeSocket (unrecognized :: xs) = ideModeSocket xs
