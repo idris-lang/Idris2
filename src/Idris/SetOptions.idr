@@ -233,6 +233,7 @@ opts x "--mkdoc"     = prefixOnlyIfNonEmpty x <$> findIpkg
 opts x "--typecheck" = prefixOnlyIfNonEmpty x <$> findIpkg
 opts x "--clean"     = prefixOnlyIfNonEmpty x <$> findIpkg
 opts x "--repl"      = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--use-ipkg"  = prefixOnlyIfNonEmpty x <$> findIpkg
 
 -- options
 opts x _ = pure $ if (x `elem` optionFlags)
