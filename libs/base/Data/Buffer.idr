@@ -163,7 +163,7 @@ setInt32 buf offset val
     = primIO (prim__setInt32 buf offset val)
 
 %foreign "scheme:blodwen-buffer-getint32"
-         "RefC:getBufferBufferInt32LE"
+         "RefC:getBufferInt32LE"
          "node:lambda:(buf,offset)=>buf.readInt32LE(offset)"
 prim__getInt32 : Buffer -> (offset : Int) -> PrimIO Int
 
