@@ -13,6 +13,7 @@ import Core.Unify
 
 import Data.List
 import Data.Maybe
+import Data.SnocList
 import Data.String
 import Data.These
 
