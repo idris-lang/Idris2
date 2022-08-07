@@ -1,0 +1,10 @@
+export IDRIS2_INC_CGS=
+$1 --no-banner --no-color --console-width 0 --check Mod1.idr < input
+
+export IDRIS2_INC_CGS=chez
+$1 --no-banner --no-color --console-width 0 -o test Mod2.idr < input
+./build/exec/test
+
+ls build/ttc/Mod1.so
+
+rm -rf build
