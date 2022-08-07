@@ -2474,6 +2474,9 @@ addImportedInc modNS inc
                   do recordWarning (GenericWarn ("No incremental compile data for " ++ show modNS))
                      defs <- get Ctxt
                      put Ctxt ({ allIncData $= drop cg } defs)
+                     -- Tell session that the codegen is no longer incremental
+                     when (show modNS /= "") $
+                        updateSession { incrementalCGs $= (delete cg) }
                 Just (mods, extra) =>
                      put Ctxt ({ allIncData $= addMod cg (mods, extra) }
                                       defs)
