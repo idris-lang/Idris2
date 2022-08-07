@@ -47,6 +47,21 @@ import System.File
 
 %default covering
 
+-- If we're on an incremental codegen, check to see if the ttc was
+-- built with incremental.
+export
+missingIncremental : {auto c : Ref Ctxt Defs} ->
+                   String -> Core Bool
+missingIncremental ttcFile
+  = catch (do s <- getSession
+              if s.codegen `elem` s.incrementalCGs
+                then do
+                  incData <- readIncData ttcFile
+                  pure $ isNothing $ lookup s.codegen incData
+                else
+                  pure False)
+          (\error => pure False)
+
 processDecls : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
@@ -324,8 +339,10 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                              else (\ttc,src => not <$> (isTTCOutdated ttc [src]))
         sourceUnchanged <- isUnchanged ttcFileName sourceFileName
 
+        incrementalOK <- not <$> missingIncremental ttcFileName
+
         -- If neither the source nor the interface hashes of imports have changed then no rebuilding is needed
-        if (sourceUnchanged && sort importInterfaceHashes == sort storedImportInterfaceHashes)
+        if (sourceUnchanged && sort importInterfaceHashes == sort storedImportInterfaceHashes && incrementalOK)
            then -- Hashes the same, source up to date, just set the ns
                 -- for the REPL
                 do setNS (miAsNamespace ns)

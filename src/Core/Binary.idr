@@ -537,6 +537,14 @@ getImportHashes file b
     = do ignore $ getHashes file b
          fromBuf b -- `importHashes`
 
+-- Implements a portion of @readTTCFile@. The fields must be read in order.
+-- This reads everything up to and including `incData`.
+getIncData : String -> Ref Bin Binary ->
+             Core (List (CG, String, List String))
+getIncData file b
+    = do ignore $ getImportHashes file b
+         fromBuf b -- `incData`
+
 export
 readTotalReq : (fileName : String) -> -- file containing the module
                Core (Maybe TotalReq)
@@ -565,5 +573,16 @@ readImportHashes fname
             | Left err => pure []
          b <- newRef Bin buffer
          catch (do res <- getImportHashes fname b
+                   pure res)
+               (\err => pure [])
+
+export
+readIncData : (fname : String) -> -- file containing the module
+              Core (List (CG, String, List String))
+readIncData fname
+    = do Right buffer <- coreLift $ readFromFile fname
+            | Left err => pure []
+         b <- newRef Bin buffer
+         catch (do res <- getIncData fname b
                    pure res)
                (\err => pure [])

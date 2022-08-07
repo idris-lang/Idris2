@@ -201,6 +201,9 @@ needsBuilding sourceFile ttcFile depFiles
 
        log "import" 20 $ "\{ifThenElse checkHashesInsteadOfTime "Hashes" "Mod Times"} still valid for " ++ sourceFile
 
+       False <- missingIncremental ttcFile
+         | True => pure True
+
        -- in case we're loading the main file, make sure the TTC is
        -- using the appropriate default totality requirement
        Just f <- mainfile <$> get ROpts
