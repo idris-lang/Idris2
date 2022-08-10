@@ -138,9 +138,9 @@ threadWait threadID = fromPrim (prim__threadWait threadID)
 ||| Output something showable to stdout, without a trailing newline.
 export
 print : (HasIO io, Show a) => a -> io ()
-print x = putStr $ show x
+print = putStr . show
 
 ||| Output something showable to stdout, with a trailing newline.
 export
 printLn : (HasIO io, Show a) => a -> io ()
-printLn x = putStrLn $ show x
+printLn = putStrLn . show
