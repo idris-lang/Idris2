@@ -1,7 +1,7 @@
 1/1: Building Module' (Module'.idr)
 Module'> 2
 Module'> Bye for now!
-"5"
+5
 Module'> Loaded file Module'.idr
 Module'> 
 Bye for now!
