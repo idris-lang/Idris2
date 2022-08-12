@@ -893,8 +893,8 @@ parameters {0 m : Type -> Type} {auto mon : Monad m} (f : TTImp -> m TTImp)
     = f =<< ILam fc rig <$> mapMPiInfo pinfo <*> pure x <*> mapMTTImp argTy <*> mapMTTImp lamTy
   mapMTTImp (ILet fc lhsFC rig n nTy nVal scope)
     = f =<< ILet fc lhsFC rig n <$> mapMTTImp nTy <*> mapMTTImp nVal <*> mapMTTImp scope
-  mapMTTImp (ICase fc t ty cls)
-    = f =<< ICase fc <$> mapMTTImp t <*> mapMTTImp ty <*> assert_total (traverse mapMClause cls)
+  mapMTTImp (ICase fc rig t ty cls)
+    = f =<< ICase fc rig <$> mapMTTImp t <*> mapMTTImp ty <*> assert_total (traverse mapMClause cls)
   mapMTTImp (ILocal fc xs t)
     = f =<< ILocal fc <$> assert_total (traverse mapMDecl xs) <*> mapMTTImp t
   mapMTTImp (IUpdate fc upds t)
