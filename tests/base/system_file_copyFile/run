@@ -1,6 +1,6 @@
 rm -rf build
 
 $1 --no-color --console-width 0 --no-banner CopyFile.idr < input
-base64 dest.bin
+base64 -i dest.bin
 
 rm dest.bin

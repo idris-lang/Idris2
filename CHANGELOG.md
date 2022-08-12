@@ -67,6 +67,9 @@
   + For example, `langversion >= 0.5.1`.
 * Alternatives for primitive types of the `Core.TT.Constant` are moved out to a separate data type `PrimTypes`.
   Signatures of functions that were working with `Constant` are changed to use `PrimTypes` when appropriate.
+* Codegens now take an additional `Ref Syn SyntaxInfo` argument. This empowers
+  compiler writers to pretty print core terms e.g. to add comments with the
+  original type annotations in the generated code.
 
 ### IDE protocol changes
 
@@ -127,6 +130,8 @@
   Use the type `IsYes` (with constructor `ItIsYes`) from the same module instead.
 * Adds `Data.List1.Elem`, ported from `Data.List.Elem`.
 * Adds `Data.List1.Quantifiers`, ported from `Data.List.Quantifiers`.
+* Changes the order of arguments in `RWST` transformer's runners functions (`runRWST`. `evalRWST`, `execRWST`),
+  now transformer argument is the last, as in the other standard transformers, like `ReaderT` and `StateT`.
 
 #### Test
 

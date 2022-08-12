@@ -240,31 +240,6 @@ public export
 data LazyReason = LInf | LLazy | LUnknown
 %name LazyReason lr
 
-export
-data TT : Type where [external]
-%name TT s, t, u
-
-{-
--- Type checked terms in the core TT
-public export
-data TT : List Name -> Type where
-     Local : FC -> (idx : Nat) -> (0 prf : IsVar name idx vars) -> TT vars
-     Ref : FC -> NameType -> Name -> TT vars
-     Pi : FC -> Count -> PiInfo (TT vars) ->
-          (x : Name) -> (argTy : TT vars) -> (retTy : TT (x :: vars)) ->
-          TT vars
-     Lam : FC -> Count -> PiInfo (TT vars) ->
-           (x : Name) -> (argTy : TT vars) -> (scope : TT (x :: vars)) ->
-           TT vars
-     App : FC -> TT vars -> TT vars -> TT vars
-     TDelayed : FC -> LazyReason -> TT vars -> TT vars
-     TDelay : FC -> LazyReason -> (ty : TT vars) -> (arg : TT vars) -> TT vars
-     TForce : FC -> LazyReason -> TT vars -> TT vars
-     PrimVal : FC -> Constant -> TT vars
-     Erased : FC -> TT vars
-     TType : FC -> TT vars
-     -}
-
 public export
 data TotalReq = Total | CoveringOnly | PartialOK
 %name TotalReq treq

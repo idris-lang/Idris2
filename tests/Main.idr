@@ -44,6 +44,7 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic061", "basic062", "basic063", "basic064", "basic065",
        "basic066", "basic067", "basic068",
        "idiom001",
+       "rewrite001",
        "interpolation001", "interpolation002", "interpolation003",
        "interpolation004"]
 
@@ -230,6 +231,11 @@ idrisTestsWith = MkTestPool "With abstraction" [] Nothing
         "with008", "with009", "with010"
       ]
 
+idrisTestsIPKG : TestPool
+idrisTestsIPKG = MkTestPool "Package and .ipkg files" [] Nothing
+      ["pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
+       "pkg008", "pkg009", "pkg010", "pkg011", "pkg012"]
+
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
        -- Documentation strings
@@ -245,9 +251,6 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "namespace001", "namespace002",
        -- Parameters blocks
        "params001", "params002", "params003",
-       -- Packages and ipkg files
-       "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
-       "pkg008", "pkg009", "pkg010", "pkg011", "pkg012",
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",
@@ -257,10 +260,14 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "with003",
        -- pretty printing
        "pretty001", "pretty002",
+       -- PrimIO
+       "primloop",
        -- golden file testing
        "golden001",
        -- quantifiers
-       "quantifiers001"
+       "quantifiers001",
+       -- unification
+       "unification001"
        ]
 
 typeddTests : IO TestPool
@@ -273,7 +280,7 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "chez013", "chez014", "chez015", "chez016", "chez017", "chez018"
     , "chez019", "chez020", "chez021", "chez022", "chez023", "chez024"
     , "chez025", "chez026", "chez027", "chez028", "chez029", "chez030"
-    , "chez031", "chez032", "chez033", "chez034"
+    , "chez031", "chez032", "chez033", "chez034", "chez035"
     , "futures001"
     , "bitops"
     , "casts"
@@ -379,6 +386,7 @@ main = runner $
   , testPaths "idris2" idrisTestsReflection
   , testPaths "idris2" idrisTestsWith
   , testPaths "idris2" idrisTestsDebug
+  , testPaths "idris2" idrisTestsIPKG
   , testPaths "idris2" idrisTests
   , !typeddTests
   , !ideModeTests

@@ -56,16 +56,22 @@ rewriteErr (InRHS _ _ err) = rewriteErr err
 rewriteErr (WhenUnifying _ _ _ _ _ err) = rewriteErr err
 rewriteErr _ = False
 
--- Returns the rewriting lemma to use, and the predicate for passing to the
--- rewriting lemma
-export
+record Lemma (vars : _) where
+  constructor MkLemma
+  ||| The name of the rewriting lemma
+  name : Name
+  ||| The predicate (\ v => lhs === rhs) to pass to it
+  pred : Term vars
+  ||| The type ((v : ?) -> Type) of the predicate
+  predTy : Term vars
+
 elabRewrite : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
               FC -> Env Term vars ->
               (expected : Term vars) ->
               (rulety : Term vars) ->
-              Core (Name, Term vars, Term vars)
+              Core (Lemma vars)
 elabRewrite loc env expected rulety
     = do defs <- get Ctxt
          parg <- genVarName "rwarg"
@@ -94,7 +100,7 @@ elabRewrite loc env expected rulety
          -- then the rewrite did nothing, which is an error
          when !(convert defs env rwexp_sc exptm) $
              throw (RewriteNoChange loc env rulety exptm)
-         pure (lemn, pred, predty)
+         pure (MkLemma lemn pred predty)
 
 export
 checkRewrite : {vars : _} ->
@@ -113,16 +119,20 @@ checkRewrite rigc elabinfo nest env fc rule tm Nothing
 checkRewrite {vars} rigc elabinfo nest env ifc rule tm (Just expected)
     = delayOnFailure ifc rigc env (Just expected) rewriteErr Rewrite $ \delayed =>
         do let vfc = virtualiseFC ifc
+
+           constart <- getNextEntry
            (rulev, grulet) <- check erased elabinfo nest env rule Nothing
+           solveConstraintsAfter constart inTerm Normal
+
            rulet <- getTerm grulet
            expTy <- getTerm expected
            when delayed $ log "elab.rewrite" 5 "Retrying rewrite"
-           (lemma, pred, predty) <- elabRewrite vfc env expTy rulet
+           lemma <- elabRewrite vfc env expTy rulet
 
            rname <- genVarName "_"
            pname <- genVarName "_"
 
-           let pbind = Let vfc erased pred predty
+           let pbind = Let vfc erased lemma.pred lemma.predTy
            let rbind = Let vfc erased (weaken rulev) (weaken rulet)
 
            let env' = rbind :: pbind :: env
@@ -137,10 +147,11 @@ checkRewrite {vars} rigc elabinfo nest env ifc rule tm (Just expected)
                 inScope {e=e'} vfc env' $ \e'' =>
                   let offset = mkSizeOf [rname, pname] in
                   check {e = e''} rigc elabinfo (weakenNs offset nest) env'
-                                (apply (IVar vfc lemma) [IVar vfc pname,
-                                                         IVar vfc rname,
-                                                         tm])
-                                (Just (gnf env' (weakenNs offset expTy)))
+                    (apply (IVar vfc lemma.name)
+                      [ IVar vfc pname
+                      , IVar vfc rname
+                      , tm ])
+                    (Just (gnf env' (weakenNs offset expTy)))
            rwty <- getTerm grwty
            let binding = Bind vfc pname pbind . Bind vfc rname rbind
            pure (binding rwtm, gnf env (binding rwty))

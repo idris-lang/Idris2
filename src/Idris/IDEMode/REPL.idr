@@ -31,6 +31,7 @@ import System.File
 
 import Network.Socket
 import Network.Socket.Data
+import Network.Socket.Raw
 
 import TTImp.Interactive.Completion
 
@@ -69,7 +70,8 @@ initIDESocketFile h p = do
                 then
                   pure (Left ("Failed to listen on socket with error: " ++ show res))
                else
-                 do putStrLn (show p)
+                 do p <- getSockPort sock
+                    putStrLn (show p)
                     fflush stdout
                     res <- accept sock
                     case res of

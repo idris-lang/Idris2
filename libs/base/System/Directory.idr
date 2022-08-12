@@ -3,6 +3,7 @@ module System.Directory
 
 import System.Errno
 import public System.File
+import System.FFI
 
 %default total
 
@@ -83,7 +84,9 @@ currentDir
     = do res <- primIO prim__currentDir
          if prim__nullPtr res /= 0
             then pure Nothing
-            else pure (Just (prim__getString res))
+            else do let s = prim__getString res
+                    free $ prim__forgetPtr res
+                    pure (Just s)
 
 ||| Try to open the directory at the specified path.
 export

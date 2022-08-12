@@ -57,6 +57,7 @@ knownTopics = [
     ("compiler.inline.eval", Just "Log function definitions before and after inlining."),
     ("compiler.inline.heuristic", Just "Log names the inlining heuristic(s) have decided to inline."),
     ("compiler.interpreter", Just "Log the call-stack of the VMCode interpreter."),
+    ("compiler.javascript.doc", Just "Generating doc comments for the JS backend."),
     ("compiler.refc", Nothing),
     ("compiler.refc.cc", Nothing),
     ("compiler.scheme.chez", Nothing),

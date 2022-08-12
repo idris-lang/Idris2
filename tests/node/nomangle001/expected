@@ -1,4 +1,6 @@
+/* Main.foo : Int -> Int */
 function foo($0) {
+/* Main.baz : Int -> Int */
 function $_baz($0) {
 function another_name($0) {
 function foo($0){return $0;}

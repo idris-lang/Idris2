@@ -8,6 +8,7 @@ import System.File.Handle
 import public System.File.Error
 import System.File.Support
 import public System.File.Types
+import System.FFI
 
 %default total
 
@@ -50,6 +51,17 @@ fSeekLine (FHandle f)
             then returnError
             else ok ()
 
+
+||| Get a garbage collected String from a Ptr String and and free the original
+export
+getStringAndFree : HasIO io => Ptr String -> io (Either FileError String)
+getStringAndFree res
+    = if prim__nullPtr res /= 0
+         then returnError
+         else do let s = prim__getString res
+                 free $ prim__forgetPtr res
+                 ok s
+
 ||| Get the next line from the given file handle, returning the empty string if
 ||| nothing was read.
 |||
@@ -59,9 +71,7 @@ covering
 fGetLine : HasIO io => (h : File) -> io (Either FileError String)
 fGetLine (FHandle f)
     = do res <- primIO (prim__readLine f)
-         if prim__nullPtr res /= 0
-            then returnError
-            else ok (prim__getString res)
+         getStringAndFree res
 
 ||| Get a number of characters from the given file handle.
 |||
@@ -71,9 +81,7 @@ export
 fGetChars : HasIO io => (h : File) -> (max : Int) -> io (Either FileError String)
 fGetChars (FHandle f) max
     = do res <- primIO (prim__readChars max f)
-         if prim__nullPtr res /= 0
-            then returnError
-            else ok (prim__getString res)
+         getStringAndFree res
 
 ||| Get the next character from the given file handle.
 |||
