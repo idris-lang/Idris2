@@ -733,6 +733,7 @@ mutual
     do rawlhs <- desugar LHS ps lhs
        inm <- iunless arg $ getClauseFn rawlhs
        (bound, blhs) <- bindNames arg rawlhs
+       log "desugar.lhs" 10 "Desugared \{show lhs} to \{show blhs}"
        iwhenJust inm $ \ nm =>
          when (nm `elem` bound) $ do
            let fc = getPTermLoc lhs
