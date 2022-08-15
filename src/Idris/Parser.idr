@@ -1475,32 +1475,17 @@ fnDirectOpt fname
   <|> do decoratedPragma fname "foreign"
          cs <- block (expr pdef fname)
          pure $ PForeign cs
-  <|> do decoratedPragma fname "export"
+  <|> do (decoratedPragma fname "export"
+          <|> withWarning noMangleWarning
+              (decoratedPragma fname "nomangle"))
          cs <- block (expr pdef fname)
          pure $ PForeignExport cs
-  <|> do decoratedPragma fname "nomangle"
-         commit
-         ns <- many (strBegin *> strLit <* strEnd)
-         ns' <- parseNoMangle ns
-         pure $ IFnOpt (NoMangle ns')
   where
-    parseNames : List String -> List (Maybe String, String)
-    parseNames = map
-        (\x => case split (== ':') x of
-            name ::: [] => (Nothing, name)
-            bck ::: ns => (Just bck, concat ns))
-
-    parseNoMangle : List String -> EmptyRule (Maybe NoMangleDirective)
-    parseNoMangle [] = pure Nothing
-    parseNoMangle ns = case parseNames ns of
-        [(Nothing, name)] => pure $ Just $ CommonName name
-        ns =>
-            let ns = for {f=Either _} ns $ \case
-                        (Nothing, _) => Left "expected backend specifier and name, found name"
-                        (Just b, name) => Right (b, name)
-             in case ns of
-                Left msg => fail msg
-                Right ns => pure $ Just $ BackendNames ns
+    noMangleWarning : String
+    noMangleWarning = """
+    DEPRECATED: "%nomangle".
+      Use "%export" instead
+    """
 
 builtinDecl : OriginDesc -> IndentInfo -> Rule PDecl
 builtinDecl fname indents

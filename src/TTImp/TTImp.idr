@@ -239,18 +239,12 @@ mutual
        Totality : TotalReq -> FnOpt' nm
        Macro : FnOpt' nm
        SpecArgs : List Name -> FnOpt' nm
-       NoMangle : Maybe NoMangleDirective -> FnOpt' nm
   %name FnOpt' fopt
 
   public export
   isTotalityReq : FnOpt' nm -> Bool
   isTotalityReq (Totality _) = True
   isTotalityReq _ = False
-
-  export
-  Show NoMangleDirective where
-    show (CommonName name) = "\"\{name}\""
-    show (BackendNames ns) = showSep " " (map (\(b, n) => "\"\{b}:\{n}\"") ns)
 
   export
   covering
@@ -270,14 +264,6 @@ mutual
     show (Totality PartialOK) = "partial"
     show Macro = "%macro"
     show (SpecArgs ns) = "%spec " ++ showSep " " (map show ns)
-    show (NoMangle Nothing) = "%nomangle"
-    show (NoMangle (Just ns)) = "%nomangle \{show ns}"
-
-  export
-  Eq NoMangleDirective where
-    CommonName x == CommonName y = x == y
-    BackendNames xs == BackendNames ys = xs == ys
-    _ == _ = False
 
   export
   Eq FnOpt where
@@ -294,7 +280,6 @@ mutual
     (Totality tot_lhs) == (Totality tot_rhs) = tot_lhs == tot_rhs
     Macro == Macro = True
     (SpecArgs ns) == (SpecArgs ns') = ns == ns'
-    (NoMangle x) == (NoMangle y) = x == y
     _ == _ = False
 
   public export

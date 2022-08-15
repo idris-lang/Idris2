@@ -272,19 +272,6 @@ mutual
     reify defs val = cantReify val "AltType"
 
   export
-  Reify NoMangleDirective where
-    reify defs val@(NDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), args) of
-               (UN (Basic "CommonName"), [(_, name)])
-                    => do n <- reify defs !(evalClosure defs name)
-                          pure $ CommonName n
-               (UN (Basic "BackendNames"), [(_, names)])
-                    => do ns <- reify defs !(evalClosure defs names)
-                          pure $ BackendNames ns
-               _ => cantReify val "NoMangleDirective"
-    reify defs val = cantReify val "NoMangleDirective"
-
-  export
   Reify FnOpt where
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), args) of
@@ -313,9 +300,6 @@ mutual
                (UN (Basic "SpecArgs"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (SpecArgs x')
-               (UN (Basic "NoMangle"), [(_, n)])
-                    => do ds <- reify defs !(evalClosure defs n)
-                          pure (NoMangle ds)
                _ => cantReify val "FnOpt"
     reify defs val = cantReify val "FnOpt"
 
@@ -666,15 +650,6 @@ mutual
              appCon fc defs (reflectionttimp "UniqueDefault") [x']
 
   export
-  Reflect NoMangleDirective where
-    reflect fc defs lhs env (CommonName n)
-        = do n' <- reflect fc defs lhs env n
-             appCon fc defs (reflectionttimp "CommonName") [n']
-    reflect fc defs lhs env (BackendNames ns)
-        = do ns' <- reflect fc defs lhs env ns
-             appCon fc defs (reflectionttimp "BackendNames") [ns']
-
-  export
   Reflect FnOpt where
     reflect fc defs lhs env Inline = getCon fc defs (reflectionttimp "Inline")
     reflect fc defs lhs env NoInline = getCon fc defs (reflectionttimp "NoInline")
@@ -701,9 +676,6 @@ mutual
     reflect fc defs lhs env (SpecArgs r)
         = do r' <- reflect fc defs lhs env r
              appCon fc defs (reflectionttimp "SpecArgs") [r']
-    reflect fc defs lhs env (NoMangle n)
-        = do n' <- reflect fc defs lhs env n
-             appCon fc defs (reflectionttimp "NoMangle") [n']
 
   export
   Reflect ImpTy where

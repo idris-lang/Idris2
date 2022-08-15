@@ -792,9 +792,9 @@ export
 compileToES : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
               (cg : CG) -> ClosedTerm -> List String -> Core String
 compileToES c s cg tm ccTypes = do
-  _ <- initNoMangle "javascript" validJSName
+  _ <- initNoMangle ccTypes validJSName
 
-  cdata      <- getCompileData False Cases tm
+  cdata <- getCompileDataWith ccTypes False Cases tm
 
   -- read a derive the codegen mode to use from
   -- user defined directives for the

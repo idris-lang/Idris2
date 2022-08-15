@@ -1,2 +1,6 @@
-Error: INTERNAL ERROR: "continue" is not a valid name on the javascript backend
-Error: INTERNAL ERROR: missing %nomangle name for Main.break on javascript backend
+Error: "continue" is not a valid name on node backend
+
+Error: No valid %export specifier for Main.break
+  Supported backends: node, javascript
+  Given backends: refc
+

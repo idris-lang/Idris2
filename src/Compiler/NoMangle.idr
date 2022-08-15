@@ -3,20 +3,16 @@ module Compiler.NoMangle
 
 import Core.Core
 import Core.Context
+import Data.List
 import Libraries.Data.NameMap
 import Libraries.Data.NameMap.Traversable
 
 export
 record NoMangleMap where
     constructor MkNMMap
-    map : NameMap (Maybe String)
+    map : NameMap String
 
-findNoMangle : List DefFlag -> Maybe NoMangleDirective
-findNoMangle [] = Nothing
-findNoMangle (NoMangle x :: _) = Just x
-findNoMangle (_ :: xs) = findNoMangle xs
-
-||| Get a map of all %nomangle names
+||| Get a map of all %export names
 ||| Errors for all invalid names, so the backend can skip checking
 ||| or adding escape characters.
 ||| @ backend what backend is this being used in?
@@ -25,38 +21,35 @@ findNoMangle (_ :: xs) = findNoMangle xs
 export
 initNoMangle :
     {auto d : Ref Ctxt Defs} ->
-    (backend : String) ->
+    (backends : List String) ->
     (valid : String -> Bool) ->
     Core (Ref NoMangleMap NoMangleMap)
-initNoMangle backend valid = do
+initNoMangle backends valid = do
     defs <- get Ctxt
-    let ctxt = defs.gamma
     map <- traverseNameMap
-        (\nm, res => do
-            Just gdef <- lookupCtxtExact (Resolved res) ctxt
-                | Nothing => pure Nothing
-            let Just ns = findNoMangle gdef.flags
-                | Nothing => pure Nothing
-            name <- case ns of
-                CommonName name => pure name
-                BackendNames ns =>
-                    maybe
-                        (throw (InternalError "missing %nomangle name for \{show nm} on \{backend} backend"))
-                        pure
-                        (lookupBackend ns)
-            let True = valid name
-                | False => throw (InternalError "\{show name} is not a valid name on the \{backend} backend")
-            pure $ Just name
-        ) ctxt.resolvedAs
+        (\name, exps => do
+            let Just (backend, expName) = lookupBackend backends exps
+                | Nothing => throw (GenericMsg EmptyFC """
+                    No valid %export specifier for \{show name}
+                      Supported backends: \{showSep ", " backends}
+                      Given backends: \{showSep ", " (fst <$> exps)}
+                    """)
+            let True = valid expName
+                | False => throw (GenericMsg EmptyFC "\"\{expName}\" is not a valid name on \{backend} backend")
+            pure expName)
+        defs.foreignExports
     newRef NoMangleMap $ MkNMMap map
   where
-    lookupBackend : List (String, String) -> Maybe String
-    lookupBackend [] = Nothing
-    lookupBackend ((b, n) :: ns) = if b == backend then Just n else lookupBackend ns
+    lookupBackend : List String -> List (String, String) -> Maybe (String, String)
+    lookupBackend [] exps = Nothing
+    lookupBackend (b :: bs) exps =
+        case lookup b exps of
+            Just exp => Just (b, exp)
+            Nothing => lookupBackend bs exps
 
 export
 isNoMangle : NoMangleMap -> Name -> Maybe String
-isNoMangle nm n = join $ lookup n nm.map
+isNoMangle nm n = lookup n nm.map
 
 export
 lookupNoMangle :
@@ -64,18 +57,3 @@ lookupNoMangle :
     Name ->
     Core (Maybe String)
 lookupNoMangle n = pure $ isNoMangle !(get NoMangleMap) n
-
-export
-getAllNoMangle : {auto c : Ref Ctxt Defs} -> Core (List Name)
-getAllNoMangle = do
-    defs <- get Ctxt
-    foldlNames (addNames defs) (pure []) defs.gamma.resolvedAs
-  where
-    addNames : Defs -> Core (List Name) -> Name -> Int -> Core (List Name)
-    addNames defs acc _ res = do
-        Just gdef <- lookupCtxtExact (Resolved res) defs.gamma
-            | Nothing => acc
-        let Just name = findNoMangle gdef.flags
-            | Nothing => acc
-        ns <- acc
-        pure $ (Resolved res) :: ns
