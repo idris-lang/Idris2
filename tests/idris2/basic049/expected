@@ -93,6 +93,50 @@ Fld:141:1--141:10
  141 | mapSetMap : (a -> a') -> b' -> (c -> c') -> Three a b c -> Three a' b' c'
        ^^^^^^^^^
 
+Warning: You may be unintentionall shadowing the following local bindings:
+  a
+
+Fld:152:1--152:70
+ 148 | 
+ 149 | --------- Applications in presence of duplicate names ----------
+ 150 | 
+ 151 | -- Duplicate names are ok and treated sequentially
+ 152 | testDuplicateNames : {auto a : String} -> {auto a : String} -> String
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning: You may be unintentionall shadowing the following local bindings:
+  a
+
+Fld:160:1--160:52
+ 156 | -- a function on RHS
+ 157 | -- unnamed arguments always take priority over named,
+ 158 | -- i.e they are bound/applied first,
+ 159 | -- regardless of their relative positions to named ones
+ 160 | testOrder1 : (a : String) -> (a : String) -> String
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning: You may be unintentionall shadowing the following local bindings:
+  a
+
+Fld:174:1--174:57
+ 170 | -- Two arguments with the same name can be successfully bound
+ 171 | -- if one of them is renamed in patterns.
+ 172 | -- As both arguments are requested by name
+ 173 | -- They are bound in the same order they are given
+ 174 | sameNamesOk : (a : String) -> (a : Nat) -> (String, Nat)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning: You may be unintentionall shadowing the following local bindings:
+  aa
+
+Fld:179:1--179:74
+ 175 | sameNamesOk {a {- = a-}, a = b} = (a, b)
+ 176 | 
+ 177 | -- All arguments are named and are of different `plicities`. Binds occur sequentially.
+ 178 | -- Arguments are renamed on LHS
+ 179 | eachArgType : (a : String) -> {a : String} -> {auto a : String} -> String
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
