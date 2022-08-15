@@ -380,7 +380,7 @@ getCompileDataWith exports doLazyAnnots phase_in tm_in
     lookupBackend (b :: bs) (n, exps) = case find (\(b', _) => b == b') exps of
         Just (_, exp) => Just (n, exp)
         Nothing => lookupBackend bs (n, exps)
-    
+
     getExports : Defs -> Core (List (Name, String))
     getExports defs = traverse (\(n, exp) => pure (!(resolved defs.gamma n), exp)) $
         mapMaybe (lookupBackend exports) (toList defs.foreignExports)
