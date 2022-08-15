@@ -69,7 +69,7 @@ data Warning : Type where
      ||| First FC is type
      ||| @ shadowed list of names which are shadowed,
      |||   where they originally appear
-     |||   and where they are shadowed 
+     |||   and where they are shadowed
      ShadowingLocalBindings : FC -> (shadowed : List1 (String, FC, FC)) -> Warning
      ||| A warning about a deprecated definition. Supply an FC and Name to
      ||| have the documentation for the definition printed with the warning.
