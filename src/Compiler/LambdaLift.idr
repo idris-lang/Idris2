@@ -541,7 +541,7 @@ mutual
   dropIdx (_::xs) unused (Later p) = Var.later $ dropIdx xs unused p
 
   dropUnused : {vars : _} ->
-               {auto l : Ref Lifts LDefs} ->
+               {auto _ : Ref Lifts LDefs} ->
                {outer : List Name} ->
                (unused : Vect (length vars) Bool) ->
                (l : Lifted (outer ++ vars)) ->
