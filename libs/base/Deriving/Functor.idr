@@ -37,6 +37,7 @@ freshName ns a = assert_total $ go (basicNames ns) Nothing where
 ||| Possible errors for the functor-deriving machinery.
 public export
 data Error : Type where
+  NotFreeOf : Name -> TTImp -> Error
   NegativeOccurrence : Name -> TTImp -> Error
   NotAnApplication : TTImp -> Error
   NotAFunctor : TTImp -> Error
@@ -54,6 +55,7 @@ Show Error where
   show = joinBy "\n" . go [<] where
 
     go : SnocList String -> Error -> List String
+    go acc (NotFreeOf x ty) = acc <>> ["The term \{show ty} is not free of \{show x}"]
     go acc (NegativeOccurrence a ty) = acc <>> ["Negative occurrence of \{show a} in \{show ty}"]
     go acc (NotAnApplication s) = acc <>> ["The type \{show s} is not an application"]
     go acc (NotAFunctor s) = acc <>> ["Couldn't find a `Functor' instance for the type constructor \{show s}"]
@@ -174,6 +176,26 @@ data IsFreeOf : (x : Name) -> (ty : TTImp) -> Type where
   ||| is free of x
   TrustMeFO : IsFreeOf a x
 
+||| Testing function deciding whether the given term is free of a particular
+||| variable.
+export
+isFreeOf : (x : Name) -> (ty : TTImp) -> Maybe (IsFreeOf x ty)
+isFreeOf x ty
+  = do isOk <- flip mapMTTImp ty $ \case
+         t@(IVar _ v) => t <$ guard (v /= x)
+         t => pure t
+       pure TrustMeFO
+
+-- Not meant to be re-exported as it's using the internal notion of error
+isFreeOf' :
+  {0 m : Type -> Type} ->
+  {auto elab : Elaboration m} ->
+  {auto error : MonadError Error m} ->
+  (x : Name) -> (ty : TTImp) -> m (IsFreeOf x ty)
+isFreeOf' x ty = case isFreeOf x ty of
+  Nothing => throwError (NotFreeOf x ty)
+  Just prf => pure prf
+
 public export
 data Polarity = Positive | Negative
 
@@ -206,12 +228,12 @@ data IsFunctorialIn : (pol : Polarity) -> (t, x : Name) -> (ty : TTImp) -> Type 
   FIDelayed : IsFunctorialIn pol t x ty -> IsFunctorialIn pol t x (IDelayed fc lr ty)
   ||| There are nested subtrees somewhere inside a 3rd party type constructor
   ||| which satisfies the Bifunctor interface
-  FIBifun : HasImplementation Bifunctor sp ->
+  FIBifun : IsFreeOf x sp -> HasImplementation Bifunctor sp ->
             IsFunctorialIn pol t x arg1 -> Either (IsFunctorialIn pol t x arg2) (IsFreeOf x arg2) ->
             IsFunctorialIn pol t x (IApp fc1 (IApp fc2 sp arg1) arg2)
   ||| There are nested subtrees somewhere inside a 3rd party type constructor
   ||| which satisfies the Functor interface
-  FIFun : HasImplementation Functor sp ->
+  FIFun : IsFreeOf x sp -> HasImplementation Functor sp ->
           IsFunctorialIn pol t x arg -> IsFunctorialIn pol t x (IApp fc sp arg)
   ||| A pi type, with no negative occurrence of x in its domain
   FIPi : IsFunctorialIn (not pol) t x a -> IsFunctorialIn pol t x b ->
@@ -265,14 +287,17 @@ parameters
   ||| specifically to handle the application case
   typeAppView :
     {fc : FC} -> {pol : Polarity} ->
-    (f, arg : TTImp) -> m (TypeView pol (IApp fc f arg))
+    {f : TTImp} -> IsFreeOf x f ->
+    (arg : TTImp) ->
+    m (TypeView pol (IApp fc f arg))
 
-  typeAppView {fc, pol} f arg = do
+  typeAppView {fc, pol, f} isFO arg = do
     chka <- typeView arg
     case chka of
       -- if x is present in the argument then the function better be:
-      -- 1. either an occurrence of t i.e. a subterm
-      -- 2. or a type constructor already known to be functorial
+      -- 1. free of x
+      -- 2. either an occurrence of t i.e. a subterm
+      --    or a type constructor already known to be functorial
       Left sp => do
         let Just (MkAppView (_, hd) ts prf) = appView f
            | _ => throwError (NotAnApplication f)
@@ -281,7 +306,7 @@ parameters
             Positive => pure $ Left (FIRec prf sp)
             Negative => throwError (NegativeOccurrence t (IApp fc f arg))
           No diff => case !(hasImplementation Functor f) of
-            Just prf => pure (Left (FIFun prf sp))
+            Just prf => pure (Left (FIFun isFO prf sp))
             Nothing => case hd `elemPos` ps of
               Just n => do
                 -- record that the nth parameter should be functorial
@@ -291,7 +316,7 @@ parameters
                 -- and happily succeed
                 logMsg "derive.functor.assumption" 10 $
                   "I am assuming that the parameter \{show hd} is a Functor"
-                pure (Left (FIFun TrustMeHI sp))
+                pure (Left (FIFun isFO TrustMeHI sp))
               Nothing => throwError (NotAFunctor f)
       -- Otherwise it better be the case that f is also free of x so that
       -- we can mark the whole type as being x-free.
@@ -314,27 +339,32 @@ parameters
       (_, Left sp) => Left (FIPi (fromTypeView va) sp)
       (Left sp,  _) => Left (FIPi sp (fromTypeView vb))
       (Right _, Right _) => Right TrustMeFO
-  typeView fa@(IApp _ (IApp _ f arg1) arg2) = do
+  typeView fab@(IApp _ (IApp fc1 f arg1) arg2) = do
     chka1 <- typeView arg1
     case chka1 of
-      Right _ => typeAppView (assert_smaller fa (IApp _ f arg1)) arg2
-      Left sp => case !(hasImplementation Bifunctor f) of
-        Just prf => pure (Left (FIBifun prf sp !(typeView arg2)))
-        Nothing => do
-          let Just (MkAppView (_, hd) ts prf) = appView f
-             | _ => throwError (NotAnApplication f)
-          case hd `elemPos` ps of
-            Just n => do
-              -- record that the nth parameter should be bifunctorial
-              ns <- gets asBifunctors
-              let ns = ifThenElse (n `elem` ns) ns (n :: ns)
-              modify { asBifunctors := ns }
-              -- and happily succeed
-              logMsg "derive.functor.assumption" 10 $
-                  "I am assuming that the parameter \{show hd} is a Bifunctor"
-              pure (Left (FIBifun TrustMeHI sp !(typeView arg2)))
-            Nothing => throwError (NotABifunctor f)
-  typeView fa@(IApp _ f arg) = typeAppView f arg
+      Right _ => do isFO <- isFreeOf' x (IApp _ f arg1)
+                    typeAppView {f = assert_smaller fab (IApp _ f arg1)} isFO arg2
+      Left sp => do
+        isFO <- isFreeOf' x f
+        case !(hasImplementation Bifunctor f) of
+          Just prf => pure (Left (FIBifun isFO prf sp !(typeView arg2)))
+          Nothing => do
+            let Just (MkAppView (_, hd) ts prf) = appView f
+               | _ => throwError (NotAnApplication f)
+            case hd `elemPos` ps of
+              Just n => do
+                -- record that the nth parameter should be bifunctorial
+                ns <- gets asBifunctors
+                let ns = ifThenElse (n `elem` ns) ns (n :: ns)
+                modify { asBifunctors := ns }
+                -- and happily succeed
+                logMsg "derive.functor.assumption" 10 $
+                    "I am assuming that the parameter \{show hd} is a Bifunctor"
+                pure (Left (FIBifun isFO TrustMeHI sp !(typeView arg2)))
+              Nothing => throwError (NotABifunctor f)
+  typeView (IApp _ f arg) = do
+    isFO <- isFreeOf' x f
+    typeAppView isFO arg
   typeView (IDelayed _ lz f) = pure $ case !(typeView f) of
     Left sp => Left (FIDelayed sp)
     Right _ => Right TrustMeFO
@@ -382,19 +412,19 @@ parameters (fc : FC) (mutualWith : List Name)
   functorFun assert (FIDelayed sp) rec f (Just t)
     = IDelay fc
     $ functorFun assert sp rec f (Just t)
-  functorFun assert {ty = IApp _ ty _} (FIFun _ sp) rec f t
+  functorFun assert {ty = IApp _ ty _} (FIFun _ _ sp) rec f t
     -- only add assert_total if we are calling a mutually defined Functor implementation.
     = let isMutual = fromMaybe False (appView ty >>= \ v => pure (snd v.head `elem` mutualWith)) in
       ifThenElse isMutual (IApp fc (IVar fc (UN $ Basic "assert_total"))) id
     $ apply fc (IVar fc (UN $ Basic "map"))
       (functorFun ((False <$ guard isMutual) <|> assert <|> Just True) sp rec f Nothing
        :: toList t)
-  functorFun assert (FIBifun _ sp1 (Left sp2)) rec f t
+  functorFun assert (FIBifun _ _ sp1 (Left sp2)) rec f t
     = apply fc (IVar fc (UN $ Basic "bimap"))
       (functorFun (assert <|> Just True) sp1 rec f Nothing
       :: functorFun (assert <|> Just True) sp2 rec f Nothing
       :: toList t)
-  functorFun assert (FIBifun _ sp (Right _)) rec f t
+  functorFun assert (FIBifun _ _ sp (Right _)) rec f t
     = apply fc (IVar fc (UN $ Basic "mapFst"))
       (functorFun (assert <|> Just True) sp rec f Nothing
       :: toList t)

@@ -278,3 +278,29 @@ failing "Expected a type constructor, got: Prelude.Basics.id {a = Type}"
   total
   functor : Functor Prelude.id
   functor = %runElab derive
+
+namespace Triple
+
+  data Triple a b c = MkTriple a b c
+
+  %hint
+  triple : Functor (Triple a b)
+  triple = %runElab derive
+
+  data Tree3 a = Node (Triple a () (Tree3 a))
+
+  failing "The term DeriveFunctor.Triple.Triple a Builtin.Unit is not free of a"
+
+    tree : Functor Tree3
+    tree = %runElab derive
+
+namespace WriterList
+
+  data WList : (w, u, a : Type) -> Type where
+    (::) : (w, a) -> WList {- oops -} a u a -> WList w u a
+    Nil : WList w u a
+
+  failing "The term DeriveFunctor.WriterList.WList a u is not free of a"
+
+    wlist : Functor (WList w ())
+    wlist = %runElab derive

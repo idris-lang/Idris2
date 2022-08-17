@@ -342,7 +342,6 @@ mutual
     toBuf b (Totality PartialOK) = tag 8
     toBuf b Macro = tag 9
     toBuf b (SpecArgs ns) = do tag 10; toBuf b ns
-    toBuf b (NoMangle name) = do tag 13; toBuf b name
 
     fromBuf b
         = case !getTag of
@@ -359,7 +358,6 @@ mutual
                10 => do ns <- fromBuf b; pure (SpecArgs ns)
                11 => pure TCInline
                12 => pure NoInline
-               13 => do name <- fromBuf b; pure (NoMangle name)
                14 => pure Deprecate
                15 => do cs <- fromBuf b; pure (ForeignExport cs)
                _ => corrupt "FnOpt"
