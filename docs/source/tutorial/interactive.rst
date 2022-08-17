@@ -98,10 +98,10 @@ should be chosen in the order ``xs``, ``ys``, ``zs``, ``ws``.
 :casesplit
 ----------
 
-The ``:casesplit n x`` command, abbreviated ``:cs n x``, splits the
-pattern variable ``x`` on line ``n`` into the various pattern forms it
-may take, removing any cases which are impossible due to unification
-errors. For example, if the code beginning on line 94 is:
+The ``:casesplit n c x`` command, abbreviated ``:cs n c x``, splits the
+pattern variable ``x`` on line ``n`` at column ``c`` into the various
+pattern forms it may take, removing any cases which are impossible due
+to unification errors. For example, if the code beginning on line 94 is:
 
 .. code-block:: idris
 
@@ -109,7 +109,7 @@ errors. For example, if the code beginning on line 94 is:
                Vect n a -> Vect n b -> Vect n c
     vzipWith f xs ys = ?vzipWith_rhs
 
-then ``:cs 96 xs`` will give:
+then ``:cs 96 12 xs`` will give:
 
 .. code-block:: idris
 

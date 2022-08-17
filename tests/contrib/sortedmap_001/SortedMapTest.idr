@@ -51,7 +51,7 @@ testLeftRight =
 main : IO ()
 main =
   do
-    ignore $ traverse (printLn . show) testLookupBetween
-    ignore $ traverse (printLn . show) testLeftRight
+    ignore $ traverse printLn testLookupBetween
+    ignore $ traverse printLn testLeftRight
 
 

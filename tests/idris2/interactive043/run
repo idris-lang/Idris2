@@ -1,0 +1,10 @@
+rm -rf build
+rm -f ImplicitSplitsGen.idr
+
+cp ImplicitSplits.idr ImplicitSplitsGen.idr
+
+$1 --no-color --console-width 0 --no-banner ImplicitSplitsGen.idr < input
+# now that we've inline edited it, make sure it still type checks:
+$1 --no-color --console-width 0 --no-banner --check ImplicitSplitsGen.idr
+
+rm ImplicitSplitsGen.idr
