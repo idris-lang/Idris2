@@ -1,19 +1,19 @@
 1/1: Building SortedMapTest (SortedMapTest.idr)
-Main> "Nothing"
-"Nothing"
-"Nothing"
-"Nothing"
-"Nothing"
-"Nothing"
-"Nothing"
-"Nothing"
-"Nothing"
-"Nothing"
-"Nothing"
-"Nothing"
-"Nothing"
-"Nothing"
-"Nothing"
-"Nothing"
-"Nothing"
+Main> Nothing
+Nothing
+Nothing
+Nothing
+Nothing
+Nothing
+Nothing
+Nothing
+Nothing
+Nothing
+Nothing
+Nothing
+Nothing
+Nothing
+Nothing
+Nothing
+Nothing
 Main> Bye for now!

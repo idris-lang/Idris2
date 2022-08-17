@@ -55,6 +55,8 @@
 * Bodies of `mutual`, `failing`, `using` and `parameters` blocks are required to be indented
   comparing to the position of the keyword.
 
+* `%nomangle` has been deprecated in favour of `%export`.
+
 ### Compiler changes
 
 * Removes deprecated support for `void` primitive. Now `void` is supported via

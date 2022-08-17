@@ -258,7 +258,7 @@ getExported backend all
 -- Return the names, the type tags, and a compiled version of the expression
 export
 getCompileDataWith : {auto c : Ref Ctxt Defs} ->
-                     Maybe String -> -- which FFI, if compiling foreign exports
+                     List String -> -- which FFI(s), if compiling foreign exports
                      (doLazyAnnots : Bool) ->
                      UsePhase -> ClosedTerm -> Core CompileData
 getCompileDataWith exports doLazyAnnots phase_in tm_in
@@ -292,23 +292,22 @@ getCompileDataWith exports doLazyAnnots phase_in tm_in
 
          defs <- get Ctxt
          let refs  = getRefs (Resolved (-1)) tm_in
-         let exported
-                 = maybe []
-                         (\backend => getExported backend (foreignExports defs))
-                         exports
+         exported <- if isNil exports
+                 then pure []
+                 else getExports defs
+         log "compile.export" 25 "exporting: \{show $ map fst exported}"
          let ns = keys (mergeWith const metas refs) ++ map fst exported
          log "compile.execute" 70 $
            "Found names: " ++ concat (intersperse ", " $ map show $ ns)
          tm <- toFullNames tm_in
          natHackNames' <- traverse toResolvedNames natHackNames
-         noMangleNames <- getAllNoMangle
          -- make an array of Bools to hold which names we've found (quicker
          -- to check than a NameMap!)
          asize <- getNextEntry
          arr <- coreLift $ newArray asize
 
          defs <- get Ctxt
-         logTime 2 "Get names" $ getAllDesc (natHackNames' ++ noMangleNames ++ ns) arr defs
+         logTime 2 "Get names" $ getAllDesc (natHackNames' ++ ns) arr defs
 
          let entries = catMaybes !(coreLift (toList arr))
          let allNs = map (Resolved . fst) entries
@@ -372,6 +371,19 @@ getCompileDataWith exports doLazyAnnots phase_in tm_in
          -- it'll have to decode the definitions again.
          traverse_ replaceEntry entries
          pure (MkCompileData csetm exported namedDefs lifted anf vmcode)
+  where
+    lookupBackend :
+        List String ->
+        (Name, List (String, String)) ->
+        Maybe (Name, String)
+    lookupBackend [] _ = Nothing
+    lookupBackend (b :: bs) (n, exps) = case find (\(b', _) => b == b') exps of
+        Just (_, exp) => Just (n, exp)
+        Nothing => lookupBackend bs (n, exps)
+
+    getExports : Defs -> Core (List (Name, String))
+    getExports defs = traverse (\(n, exp) => pure (!(resolved defs.gamma n), exp)) $
+        mapMaybe (lookupBackend exports) (toList defs.foreignExports)
 
 -- Find all the names which need compiling, from a given expression, and compile
 -- them to CExp form (and update that in the Defs).
@@ -380,7 +392,7 @@ export
 getCompileData : {auto c : Ref Ctxt Defs} ->
                  (doLazyAnnots : Bool) ->
                  UsePhase -> ClosedTerm -> Core CompileData
-getCompileData = getCompileDataWith Nothing
+getCompileData = getCompileDataWith []
 
 export
 compileTerm : {auto c : Ref Ctxt Defs} ->

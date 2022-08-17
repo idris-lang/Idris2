@@ -1821,7 +1821,7 @@ covering
             " = " ++ show val ++ " in " ++ show sc
       showApp (Bind _ x (Pi _ c info ty) sc) []
           = withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
-            " -> " ++ show sc ++ ")"
+            " -> " ++ show sc
       showApp (Bind _ x (PVar _ c info ty) sc) []
           = withPiInfo info ("pat " ++ showCount c ++ show x ++ " : " ++ show ty) ++
             " => " ++ show sc

@@ -18,5 +18,5 @@ main =
    do
       printLn $ factorial 100
       printLn $ factorial 10000
-      printLn $ show $ the (Vect 3 String) ["red", "green", "blue"]
+      printLn $ the (Vect 3 String) ["red", "green", "blue"]
       printLn foo
