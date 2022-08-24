@@ -87,6 +87,10 @@ Alternative SnocList where
   empty = Lin
   xs <|> ys = xs ++ ys
 
+export
+Biinjective (:<) where
+  biinjective Refl = (Refl, Refl)
+
 ||| Find the rightmost element of the snoc-list that satisfies the predicate.
 public export
 find : (a -> Bool) -> SnocList a -> Maybe a
