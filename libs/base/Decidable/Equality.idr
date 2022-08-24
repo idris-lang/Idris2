@@ -7,6 +7,7 @@ import Data.Nat
 import Data.List
 import Data.List1
 import Data.List1.Properties
+import Data.SnocList
 import Data.These
 
 import public Decidable.Equality.Core as Decidable.Equality
