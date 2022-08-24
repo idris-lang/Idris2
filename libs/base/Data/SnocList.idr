@@ -21,6 +21,14 @@ public export
 asList : SnocList type -> List type
 asList = (reverse . cast)
 
+export
+Uninhabited (Lin = x :< xs) where
+  uninhabited Refl impossible
+
+export
+Uninhabited (x :< xs = Lin) where
+  uninhabited Refl impossible
+
 ||| True iff input is Lin
 public export
 isLin : SnocList a -> Bool
