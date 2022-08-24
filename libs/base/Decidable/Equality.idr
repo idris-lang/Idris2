@@ -111,6 +111,17 @@ public export
 DecEq a => DecEq (List1 a) where
   decEq (x ::: xs) (y ::: ys) = decEqCong2 (decEq x y) (decEq xs ys)
 
+--------------------------------------------------------------------------------
+-- SnocList
+--------------------------------------------------------------------------------
+
+public export
+DecEq a => DecEq (SnocList a) where
+  decEq Lin Lin = Yes Refl
+  decEq (xs :< x) Lin = No absurd
+  decEq [] (xs :< x) = No absurd
+  decEq (xs :< x) (ys :< y) = decEqCong2 (decEq x y) (decEq xs ys)
+
 -- TODO: Other prelude data types
 
 -- For the primitives, we have to cheat because we don't have access to their
