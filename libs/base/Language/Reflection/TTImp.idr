@@ -633,10 +633,40 @@ data Argument a
   | AutoArg FC a
 
 export
+isExplicit : Argument a -> Maybe (FC, a)
+isExplicit (Arg fc a) = pure (fc, a)
+isExplicit _ = Nothing
+
+export
+fromPiInfo : FC -> PiInfo t -> Maybe Name -> a -> Maybe (Argument a)
+fromPiInfo fc ImplicitArg (Just nm) a = pure (NamedArg fc nm a)
+fromPiInfo fc ExplicitArg _ a = pure (Arg fc a)
+fromPiInfo fc AutoImplicit _ a = pure (AutoArg fc a)
+fromPiInfo fc (DefImplicit _) (Just nm) a = pure (NamedArg fc nm a)
+fromPiInfo _ _ _ _ = Nothing
+
+export
+Functor Argument where
+  map f (Arg fc a) = Arg fc (f a)
+  map f (NamedArg fc nm a) = NamedArg fc nm (f a)
+  map f (AutoArg fc a) = AutoArg fc (f a)
+
+export
+iApp : TTImp -> Argument TTImp -> TTImp
+iApp f (Arg fc t) = IApp fc f t
+iApp f (NamedArg fc nm t) = INamedApp fc f nm t
+iApp f (AutoArg fc t) = IAutoApp fc f t
+
+export
 unArg : Argument a -> a
 unArg (Arg _ x) = x
 unArg (NamedArg _ _ x) = x
 unArg (AutoArg _ x) = x
+
+||| We often apply multiple arguments, this makes things simpler
+export
+apply : TTImp -> List (Argument TTImp) -> TTImp
+apply = foldl iApp
 
 public export
 data IsAppView : (FC, Name) -> SnocList (Argument TTImp) -> TTImp -> Type where
