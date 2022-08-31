@@ -1,6 +1,7 @@
 ||| The content of this module is based on the paper
 ||| Applications of Applicative Proof Search
 ||| by Liam O'Connor
+||| https://doi.org/10.1145/2976022.2976030
 
 module Search.Properties
 
