@@ -130,7 +130,7 @@ parameters (Lbls, Sts : Type)
     ||| The formula `Guarded g` is true when the current state satisfies the guard
     ||| `g`.
     public export
-    data Guarded :  (g : (st : Sts) -> (l : Lbls) -> Type) -> Formula where
+    data Guarded : (g : (st : Sts) -> (l : Lbls) -> Type) -> Formula where
       Here :  {st : _} -> {l : _}
            -> {ms : Lazy (List CT)} -> {depth : Nat}
            -> {g : _}
@@ -145,22 +145,9 @@ parameters (Lbls, Sts : Type)
         prf : {n : _} -> {m : _} -> Guarded p n m -> Guarded p (S n) m
         prf (Here x) = Here x   -- can be interactively generated!
 
-  ---  public export
-  ---  data Guarded :  (g : (st : Sts) -> (l : Lbls) -> Type) -> Formula where
-  ---    Here :  {st : _} -> {l : _}
-  ---         -> {ms : Lazy (List CT)} -> {depth : Nat}
-  ---         -> g st l
-  ---         -> Guarded g depth (At (l, st) ms)
-  ---
-  ---  public export
-  ---  diGuarded : {p : _} -> DepthInv (Guarded (p st l))
-  ---  diGuarded {p} = DI prf
-  ---    where
-  ---      prf : {n : _} -> {m : _} -> Guarded (p st l) n m -> Guarded (p st l) (S n) m
-  ---      prf (Here x) = Here {depth=(S n)} x
-
   ------------------------------------------------------------------------
   -- Conjunction / And
+
   ||| Conjunction of two `Formula`s
   public export
   record AND' (f, g : Formula) (depth : Nat) (tree : CT) where
@@ -175,30 +162,19 @@ parameters (Lbls, Sts : Type)
          -> {auto q : DepthInv g}
          -> DepthInv (AND' f g)
   diAND' @{(DI diP)} @{(DI diQ)} = DI (\ a' => MkAND' (diP a'.fst) (diQ a'.snd))
---  diAND' @{(DI diP)} @{(DI diQ)} = DI (\ (MkAND' a b) => MkAND' (diP a) (diQ b))
 
   ------------------------------------------------------------------------
   -- Always Until
 
   namespace AU
-    ---- -- FIXME: HOW??
-    ---- data RTAll : {a : Type} -> (_ : (a -> Type)) -> List a -> Type where
-    ----   Nil :  {p : (a -> Type)}
-    ----       -> RTAll p []
-    ----   (::) :  {x : a} -> {xs : List a} -> {p : (a -> Type)}
-    ----        -> p x -> RTAll p xs -> RTAll p (x :: xs)
-
-    ---- mapProperty : {a : _} -> {p : _} -> {q : _}
-    ----             -> (p a -> q a) -> RTAll p l -> RTAll q l
-    ---- mapProperty f [] = []
-    ---- mapProperty f (p :: ps) = f p :: mapProperty f ps
+    -- TODO: custom `map` function over All
 
     ||| A proof that for all paths in the tree, f holds until g does.
     public export
     data AlwaysUntil : (f, g : Formula) -> Formula where
       ||| We've found a place where g holds, so we're done.
       Here : {t : _} -> {n : _} -> g n t -> AlwaysUntil f g (S n) t
-    
+
       ||| If f still holds and we can recursively show that g holds for all
       ||| possible subpaths in the CT, then all branches have f hold until g does.
       There :  {st : _} -> {lazyCTs : _} -> {n : _}
@@ -262,9 +238,9 @@ parameters (Lbls, Sts : Type)
   ||| A completed formula is a formula for which no more successor states exist.
   public export
   data Completed : Formula where
-    IsComplete :  {st : _} -> {n : _} -> {ms : _}
-               -> ms === []
-               -> Completed n (At st ms)
+    IsCompleted :  {st : _} -> {n : _} -> {ms : _}
+                -> ms === []
+                -> Completed n (At st ms)
 
   ||| A completed formula is depth-invariant (there is nothing more to do).
   public export
@@ -272,7 +248,7 @@ parameters (Lbls, Sts : Type)
   diCompleted = DI prf
     where
       prf : {d : _} -> {t : _} -> Completed d t -> Completed (S d) t
-      prf (IsComplete p) = IsComplete p
+      prf (IsCompleted p) = IsCompleted p
 
   ||| We can only handle always global checks on finite paths.
   public export
@@ -288,14 +264,37 @@ parameters (Lbls, Sts : Type)
   -- Proof search (finally!)
 
   ||| Model-checking is a half-decider for the formula `f`
+  public export
   MC : (f : Formula) -> Type
   MC f = (t : CT) -> (d : Nat) -> HDec (f d t)
 
   ||| Proof-search combinator for guards.
+  public export
   now :  {g : (st : Sts) -> (l : Lbls) -> Type}
       -> {hdec : _}
       -> {auto p : AnHDec hdec}
       -> ((st : Sts) -> (l : Lbls) -> hdec (g st l))
       -> MC (Guarded g)
   now f (At (l, st) ms) d = [| Guards.Here (toHDec (f st l)) |]
+
+  ||| Check if the current state has any successors.
+  public export
+  isCompleted : MC Completed
+  isCompleted (At st ms) _ = ?isCompleted_rhs   -- TODO: guard on `$`???
+    where
+      ||| Half-decider for whether a list is empty
+      isEmpty : {X : _} -> (n : List X) -> HDec (n === [])
+      isEmpty [] = yes Refl
+      isEmpty (_ :: _) = no
+
+  ||| Conjunction of model-checking procedures.
+  public export
+  mcAND' : {f, g : Formula} -> MC f -> MC g -> MC (f `AND'` g)
+  mcAND' a b m n = [| MkAND' (a m n) (b m n) |]
+
+  ||| Proof-search for `AlwaysUntil`
+  auSearch : {f, g : Formula} -> MC f -> MC g -> MC (AlwaysUntil f g)
+  auSearch _ _ _ Z = no
+  auSearch p1 p2 t@(At st ms) (S n) =  [| AU.Here  (p2 t n) |]
+                                   <|> ?todo_au -- WTF is `rest`? [| AU.There (p1 t n) rest |]
 
