@@ -239,6 +239,17 @@ namespace Cont
   cont2'' : Functor (Cont2'' r e)
   cont2'' = %runElab derive
 
+namespace Implicit
+
+  data WithImplicits : Type -> Type where
+    MkImplicit : {x : a} -> (0 y : a) -> WithImplicits a
+    OtherImplicit : {0 x : a} -> a => WithImplicits a
+    LastOne : {auto 0 _ : a} -> a -> WithImplicits a
+
+  total
+  withImplicits : Functor WithImplicits
+  withImplicits = %runElab derive
+
 failing "Couldn't find a `Functor' instance for the type constructor DeriveFunctor.Wrap"
 
   record Wrap (a : Type) where

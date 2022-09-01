@@ -14,6 +14,8 @@ import public Data.Maybe
 import public Decidable.Equality
 import public Language.Reflection
 
+import public Deriving.Common
+
 %language ElabReflection
 %default total
 
@@ -68,123 +70,7 @@ Show Error where
     go acc (WhenCheckingArg s err) = go (acc :< "When checking argument of type \{show s}") err
 
 ------------------------------------------------------------------------------
--- Preliminaries: satisfying an interface
---
--- In order to derive Functor for `data Tree a = Node (List (Tree a))`, we need
--- to make sure that `Functor List` already exists. This is done using the following
--- convenience functions.
-
-record IsType where
-  constructor MkIsType
-  typeConstructor  : Name
-  parameterNames   : List (Argument Name, Nat)
-  dataConstructors : List (Name, TTImp)
-
-wording : NameType -> String
-wording Bound = "a bound variable"
-wording Func = "a function name"
-wording (DataCon tag arity) = "a data constructor"
-wording (TyCon tag arity) = "a type constructor"
-
-isTypeCon : Elaboration m => Name -> m (List (Name, TTImp))
-isTypeCon ty = do
-    [(_, MkNameInfo (TyCon _ _))] <- getInfo ty
-      | [] => fail "\{show ty} out of scope"
-      | [(_, MkNameInfo nt)] => fail "\{show ty} is \{wording nt} rather than a type constructor"
-      | _ => fail "\{show ty} is ambiguous"
-    cs <- getCons ty
-    for cs $ \ n => do
-      [(_, ty)] <- getType n
-         | _ => fail "\{show n} is ambiguous"
-      pure (n, ty)
-
-isType : Elaboration m => TTImp -> m IsType
-isType = go Z [] where
-
-  go : Nat -> List (Argument Name, Nat) -> TTImp -> m IsType
-  go idx acc (IVar _ n) = MkIsType n acc <$> isTypeCon n
-  go idx acc (IApp _ t (IVar _ nm)) = case nm of
-    -- Unqualified: that's a local variable
-    UN (Basic _) => go (S idx) ((Arg emptyFC nm, idx) :: acc) t
-    _ => go (S idx) acc t
-  go idx acc (INamedApp _ t nm (IVar _ nm')) = case nm' of
-    -- Unqualified: that's a local variable
-    UN (Basic _) => go (S idx) ((NamedArg emptyFC nm nm', idx) :: acc) t
-    _ => go (S idx) acc t
-  go idx acc (IAutoApp _ t (IVar _ nm)) = case nm of
-    -- Unqualified: that's a local variable
-    UN (Basic _) => go (S idx) ((AutoArg emptyFC nm, idx) :: acc) t
-    _ => go (S idx) acc t
-  go idx acc t = fail "Expected a type constructor, got: \{show t}"
-
-record Parameters where
-  constructor MkParameters
-  asFunctors : List Nat
-  asBifunctors : List Nat
-
-initParameters : Parameters
-initParameters = MkParameters [] []
-
-withParams : FC -> Parameters -> List (Argument Name, Nat) -> TTImp -> TTImp
-withParams fc params nms t = go nms where
-
-  addConstraint : Bool -> Name -> Name -> TTImp -> TTImp
-  addConstraint False _ _ = id
-  addConstraint True cst nm =
-     let ty = IApp fc (IVar fc cst) (IVar fc nm) in
-     IPi fc MW AutoImplicit Nothing ty
-
-  go : List (Argument Name, Nat) -> TTImp
-  go [] = t
-  go ((arg, pos) :: nms)
-    = let nm = unArg arg in
-      IPi fc M0 ImplicitArg (Just nm) (Implicit fc True)
-    $ addConstraint (pos `elem` params.asFunctors)   `{Prelude.Interfaces.Functor}   nm
-    $ addConstraint (pos `elem` params.asBifunctors) `{Prelude.Interfaces.Bifunctor} nm
-    $ go nms
-
-||| Type of proofs that a type satisfies a constraint.
-||| Internally it's vacuous. We don't export the constructor so
-||| that users cannot manufacture buggy proofs.
-export
-data HasImplementation : (intf : a -> Type) -> TTImp -> Type where
-  TrustMeHI : HasImplementation intf t
-
-||| Given
-||| @ intf an interface (e.g. `Functor`, or `Bifunctor`)
-||| @ t    a term corresponding to a (possibly partially applied) type constructor
-||| check whether Idris2 can find a proof that t satisfies the interface.
-export
-hasImplementation : Elaboration m => (intf : a -> Type) -> (t : TTImp) ->
-                    m (Maybe (HasImplementation intf t))
-hasImplementation c t = catch $ do
-  prf <- isType t
-  intf <- quote c
-  ty <- check {expected = Type} $ withParams emptyFC initParameters prf.parameterNames `(~(intf) ~(t))
-  ignore $ check {expected = ty} `(%search)
-  pure TrustMeHI
-
-------------------------------------------------------------------------------
 -- Core machinery: being functorial
-
-||| IsFreeOf is parametrised by
-||| @ x  the name of the type variable that the functioral action will change
-||| @ ty the type that does not contain any mention of x
-export
-data IsFreeOf : (x : Name) -> (ty : TTImp) -> Type where
-  ||| For now we do not bother keeping precise track of the proof that a type
-  ||| is free of x
-  TrustMeFO : IsFreeOf a x
-
-||| Testing function deciding whether the given term is free of a particular
-||| variable.
-export
-isFreeOf : (x : Name) -> (ty : TTImp) -> Maybe (IsFreeOf x ty)
-isFreeOf x ty
-  = do isOk <- flip mapMTTImp ty $ \case
-         t@(IVar _ v) => t <$ guard (v /= x)
-         t => pure t
-       pure TrustMeFO
 
 -- Not meant to be re-exported as it's using the internal notion of error
 isFreeOf' :
@@ -241,19 +127,18 @@ data IsFunctorialIn : (pol : Polarity) -> (t, x : Name) -> (ty : TTImp) -> Type 
   ||| A type free of x is trivially Functorial in it
   FIFree : IsFreeOf x a -> IsFunctorialIn pol t x a
 
-elemPos : Eq a => a -> List a -> Maybe Nat
-elemPos x = go 0 where
+record Parameters where
+  constructor MkParameters
+  asFunctors : List Nat
+  asBifunctors : List Nat
 
-  go : Nat -> List a -> Maybe Nat
-  go idx [] = Nothing
-  go idx (y :: ys) = idx <$ guard (x == y) <|> go (S idx) ys
+initParameters : Parameters
+initParameters = MkParameters [] []
 
-optionallyEta : FC -> Maybe TTImp -> (TTImp -> TTImp) -> TTImp
-optionallyEta fc (Just t) f = f t
-optionallyEta fc Nothing f =
-  let tnm = UN $ Basic "t" in
-  ILam fc MW ExplicitArg (Just tnm) (Implicit fc False) $
-  f (IVar fc tnm)
+paramConstraints : Parameters -> Nat -> Maybe TTImp
+paramConstraints params pos
+    = IVar emptyFC `{Prelude.Interfaces.Functor}   <$ guard (pos `elem` params.asFunctors)
+  <|> IVar emptyFC `{Prelude.Interfaces.Bifunctor} <$ guard (pos `elem` params.asBifunctors)
 
 parameters
   {0 m : Type -> Type}
@@ -316,7 +201,7 @@ parameters
                 -- and happily succeed
                 logMsg "derive.functor.assumption" 10 $
                   "I am assuming that the parameter \{show hd} is a Functor"
-                pure (Left (FIFun isFO TrustMeHI sp))
+                pure (Left (FIFun isFO assert_hasImplementation sp))
               Nothing => throwError (NotAFunctor f)
       -- Otherwise it better be the case that f is also free of x so that
       -- we can mark the whole type as being x-free.
@@ -325,20 +210,20 @@ parameters
           | _ => throwError $ case pol of
                    Positive => NotAFunctorInItsLastArg (IApp fc f arg)
                    Negative => NegativeOccurrence x (IApp fc f arg)
-        pure (Right TrustMeFO)
+        pure (Right assert_IsFreeOf)
 
   typeView {pol} tm@(IVar fc y) = case decEq x y of
     Yes Refl => case pol of
       Positive => pure (Left FIVar)
       Negative => throwError (NegativeOccurrence x tm)
-    No _ => pure (Right TrustMeFO)
+    No _ => pure (Right assert_IsFreeOf)
   typeView ty@(IPi fc rig pinfo nm a b) = do
     va <- typeView a
     vb <- typeView b
     pure $ case (va, vb) of
       (_, Left sp) => Left (FIPi (fromTypeView va) sp)
       (Left sp,  _) => Left (FIPi sp (fromTypeView vb))
-      (Right _, Right _) => Right TrustMeFO
+      (Right _, Right _) => Right assert_IsFreeOf
   typeView fab@(IApp _ (IApp fc1 f arg1) arg2) = do
     chka1 <- typeView arg1
     case chka1 of
@@ -360,24 +245,20 @@ parameters
                 -- and happily succeed
                 logMsg "derive.functor.assumption" 10 $
                     "I am assuming that the parameter \{show hd} is a Bifunctor"
-                pure (Left (FIBifun isFO TrustMeHI sp !(typeView arg2)))
+                pure (Left (FIBifun isFO assert_hasImplementation sp !(typeView arg2)))
               Nothing => throwError (NotABifunctor f)
   typeView (IApp _ f arg) = do
     isFO <- isFreeOf' x f
     typeAppView isFO arg
   typeView (IDelayed _ lz f) = pure $ case !(typeView f) of
     Left sp => Left (FIDelayed sp)
-    Right _ => Right TrustMeFO
-  typeView (IPrimVal _ _) = pure (Right TrustMeFO)
-  typeView (IType _) = pure (Right TrustMeFO)
+    Right _ => Right assert_IsFreeOf
+  typeView (IPrimVal _ _) = pure (Right assert_IsFreeOf)
+  typeView (IType _) = pure (Right assert_IsFreeOf)
   typeView ty = throwError (UnsupportedType ty)
 
 ------------------------------------------------------------------------------
 -- Core machinery: building the mapping function from an IsFunctorialIn proof
-
-||| We often apply multiple arguments, this makes things simpler
-apply : FC -> TTImp -> List TTImp -> TTImp
-apply fc = foldl (IApp fc)
 
 parameters (fc : FC) (mutualWith : List Name)
 
@@ -447,18 +328,22 @@ record ConstructorView where
   constructor MkConstructorView
   params      : List Name
   functorPara : Name
-  conArgTypes : List TTImp
+  conArgTypes : List (Argument TTImp)
 
-explicits : TTImp -> Maybe ConstructorView
-explicits (IPi fc rig ExplicitArg x a b) = { conArgTypes $= (a ::) } <$> explicits b
-explicits (IPi fc rig pinfo x a b) = explicits b
-explicits (IApp _ f (IVar _ a)) = do
+constructorView : TTImp -> Maybe ConstructorView
+constructorView (IPi fc rig pinfo x a b) = do
+  let Just arg = fromPiInfo fc pinfo x a
+    | Nothing => constructorView b -- this better be a boring argument...
+  let True = rig /= M1
+    | False => constructorView b -- this better be another boring argument...
+  { conArgTypes $= (arg ::) } <$> constructorView b
+constructorView (IApp _ f (IVar _ a)) = do
   MkAppView _ ts _ <- appView f
   let ps = flip mapMaybe ts $ \ t => the (Maybe Name) $ case t of
              Arg _ (IVar _ nm) => Just nm
              _ => Nothing
   pure (MkConstructorView (ps <>> []) a [])
-explicits _ = Nothing
+constructorView _ = Nothing
 
 cleanup : TTImp -> TTImp
 cleanup = \case
@@ -500,24 +385,30 @@ namespace Functor
     (ns, cls) <- runStateT {m = m} initParameters $ for cs $ \ (cName, ty) =>
       withError (WhenCheckingConstructor cName) $ do
         -- Grab the types of the constructor's explicit arguments
-        let Just (MkConstructorView paras para args) = explicits ty
+        let Just (MkConstructorView paras para args) = constructorView ty
               | _ => throwError ConfusingReturnType
         logMsg "derive.functor.clauses" 10 $
-          "\{showPrefix True (dropNS cName)} (\{joinBy ", " (map (showPrec Dollar . mapTTImp cleanup) args)})"
-        let vars = map (IVar fc . un . ("x" ++) . show . (`minus` 1))
-                 $ zipWith const [1..length args] args -- fix because [1..0] is [1,0]
+          "\{showPrefix True (dropNS cName)} (\{joinBy ", " (map (showPrec Dollar . mapTTImp cleanup . unArg) args)})"
+        let vars = map (map (IVar fc . un . ("x" ++) . show . (`minus` 1)))
+                 $ zipWith (<$) [1..length args] args
+
+        -- only keep the arguments that are either:
+        --  1. modified by map
+        --  2. explicit
         recs <- for (zip vars args) $ \ (v, arg) => do
-                  res <- withError (WhenCheckingArg (mapTTImp cleanup arg)) $
-                           typeView {pol = Positive} f paras para arg
+                  res <- withError (WhenCheckingArg (mapTTImp cleanup $ unArg arg)) $
+                           typeView {pol = Positive} f paras para (unArg arg)
                   pure $ case res of
                     Left sp => -- do not bother with assert_total if you're generating
                                -- a covering/partial definition
                                let useTot = False <$ guard (treq /= Total) in
-                               functorFun fc mutualWith useTot sp mapName funName (Just v)
-                    Right free => v
+                               pure (v, functorFun fc mutualWith useTot sp mapName funName . Just <$> v)
+                    Right free => do ignore $ isExplicit v
+                                     pure (v, v)
+        let (vars, recs) = unzip (catMaybes recs)
         pure $ PatClause fc
-          (apply fc (IVar fc mapName) [ fun, apply fc (IVar fc cName) vars])
-          (apply fc (IVar fc cName) recs)
+          (apply fc (IVar fc mapName) [ fun, apply (IVar fc cName) vars])
+          (apply (IVar fc cName) recs)
 
     -- Generate the type of the mapping function
     let paramNames = unArg . fst <$> params
@@ -525,7 +416,7 @@ namespace Functor
     let b = un $ freshName paramNames "b"
     let va = IVar fc a
     let vb = IVar fc b
-    let ty = MkTy fc fc mapName $ withParams fc ns params
+    let ty = MkTy fc fc mapName $ withParams fc (paramConstraints ns) params
            $ IPi fc M0 ImplicitArg (Just a) (IType fc)
            $ IPi fc M0 ImplicitArg (Just b) (IType fc)
            $ `((~(va) -> ~(vb)) -> ~(t) ~(va) -> ~(t) ~(vb))
