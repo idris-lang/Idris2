@@ -61,6 +61,11 @@ idrisTestsCoverage = MkTestPool "Coverage checking" [] Nothing
        "coverage013", "coverage014", "coverage015", "coverage016",
        "coverage017", "coverage018", "coverage019"]
 
+idrisTestsTermination : TestPool
+idrisTestsTermination = MkTestPool "Termination checking" [] Nothing
+       -- Termination checking
+      ["termination001"]
+
 idrisTestsCasetree : TestPool
 idrisTestsCasetree = MkTestPool "Case tree building" [] Nothing
        -- Case tree building
@@ -368,6 +373,7 @@ main = runner $
   [ testPaths "ttimp" ttimpTests
   , testPaths "idris2" idrisTestsBasic
   , testPaths "idris2" idrisTestsCoverage
+  , testPaths "idris2" idrisTestsTermination
   , testPaths "idris2" idrisTestsCasetree
   , testPaths "idris2" idrisTestsError
   , testPaths "idris2" idrisTestsFailing
