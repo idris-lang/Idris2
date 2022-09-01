@@ -2,98 +2,103 @@
 LOG derive.functor.clauses:1: 
   mapList : {0 a, b : Type} -> (a -> b) -> List a -> List b
   mapList f Nil = Nil
-  mapList f (x0 :: x1) = (f x0) :: (mapList f x1)
+  mapList f (x1 :: x2) = (f x1) :: (mapList f x2)
 LOG derive.functor.clauses:1: 
   mapMaybe : {0 a, b : Type} -> (a -> b) -> Maybe a -> Maybe b
   mapMaybe f Nothing = Nothing
-  mapMaybe f (Just x0) = Just (f x0)
+  mapMaybe f (Just x1) = Just (f x1)
 LOG derive.functor.clauses:1: 
   mapEither : {0 err : _} -> {0 a, b : Type} -> (a -> b) -> Either err a -> Either err b
-  mapEither f (Left x0) = Left x0
-  mapEither f (Right x0) = Right (f x0)
+  mapEither f (Left x2) = Left x2
+  mapEither f (Right x2) = Right (f x2)
 LOG derive.functor.clauses:1: 
   mapConstant : {0 a : _} -> {0 a0, b : Type} -> (a0 -> b) -> Constant a a0 -> Constant a b
-  mapConstant f (MkConstant x0) = MkConstant x0
+  mapConstant f (MkConstant x2) = MkConstant x2
 LOG derive.functor.clauses:1: 
   mapVect : {0 n : _} -> {0 a, b : Type} -> (a -> b) -> Vect n a -> Vect n b
   mapVect f Nil = Nil
-  mapVect f (x0 :: x1) = (f x0) :: (mapVect f x1)
+  mapVect f (x2 :: x3) = (f x2) :: (mapVect f x3)
 LOG derive.functor.clauses:1: 
   mapBigTree : {0 a, b : Type} -> (a -> b) -> BigTree a -> BigTree b
-  mapBigTree f (End x0) = End (f x0)
-  mapBigTree f (Branch x0 x1 x2) = Branch x0 (map f x1) (\ {arg:4047} => mapBigTree f (x2 {arg:4047}))
-  mapBigTree f (Rose x0) = Rose (map (assert_total (mapBigTree f)) x0)
+  mapBigTree f (End x1) = End (f x1)
+  mapBigTree f (Branch x1 x2 x3) = Branch x1 (map f x2) (\ {arg:4047} => mapBigTree f (x3 {arg:4047}))
+  mapBigTree f (Rose x1) = Rose (map (assert_total (mapBigTree f)) x1)
 LOG derive.functor.clauses:1: 
   mapMatrix : {0 m, n : _} -> {0 a, b : Type} -> (a -> b) -> Matrix m n a -> Matrix m n b
-  mapMatrix f (MkMatrix x0) = MkMatrix (map (map f) x0)
+  mapMatrix f (MkMatrix x3) = MkMatrix (map (map f) x3)
 LOG derive.functor.clauses:1: 
   mapTm : {0 a, b : Type} -> (a -> b) -> Tm a -> Tm b
-  mapTm f (Var x0) = Var (f x0)
-  mapTm f (Call x0 x1) = Call x0 (map (assert_total (mapTm f)) x1)
-  mapTm f (Lam x0) = Lam (mapTm (map f) x0)
+  mapTm f (Var x1) = Var (f x1)
+  mapTm f (Call x2 x3) = Call x2 (map (assert_total (mapTm f)) x3)
+  mapTm f (Lam x1) = Lam (mapTm (map f) x1)
 LOG derive.functor.clauses:1: 
   mapTree : {0 a, b : Type} -> (a -> b) -> Tree a -> Tree b
-  mapTree f (Leaf x0) = Leaf (f x0)
-  mapTree f (Node x0) = Node (assert_total (map f x0))
+  mapTree f (Leaf x1) = Leaf (f x1)
+  mapTree f (Node x1) = Node (assert_total (map f x1))
 LOG derive.functor.clauses:1: 
   mapForest : {0 a, b : Type} -> (a -> b) -> Forest a -> Forest b
   mapForest f Empty = Empty
-  mapForest f (Plant x0 x1) = Plant (assert_total (map f x0)) (mapForest f x1)
+  mapForest f (Plant x1 x2) = Plant (assert_total (map f x1)) (mapForest f x2)
 LOG derive.functor.clauses:1: 
   mapList1 : {0 a, b : Type} -> (a -> b) -> List1 a -> List1 b
-  mapList1 f (MkList1 x0) = MkList1 (bimap f (map (assert_total (mapList1 f))) x0)
+  mapList1 f (MkList1 x1) = MkList1 (bimap f (map (assert_total (mapList1 f))) x1)
 LOG derive.functor.clauses:1: 
   mapFull : {0 a, b : Type} -> (a -> b) -> Full a -> Full b
-  mapFull f (Leaf x0) = Leaf (f x0)
-  mapFull f (Node x0) = Node (mapFull (bimap f f) x0)
+  mapFull f (Leaf x1) = Leaf (f x1)
+  mapFull f (Node x1) = Node (mapFull (bimap f f) x1)
 LOG derive.functor.clauses:1: 
   mapColist : {0 a, b : Type} -> (a -> b) -> Colist a -> Colist b
   mapColist f Nil = Nil
-  mapColist f (x0 :: x1) = (f x0) :: (Delay (mapColist f x1))
+  mapColist f (x1 :: x2) = (f x1) :: (Delay (mapColist f x2))
 LOG derive.functor.clauses:1: 
   mapLAZY : {0 a, b : Type} -> (a -> b) -> LAZY a -> LAZY b
-  mapLAZY f (MkLAZY x0) = MkLAZY (Delay (f x0))
+  mapLAZY f (MkLAZY x1) = MkLAZY (Delay (f x1))
 LOG derive.functor.clauses:1: 
   mapRose : {0 a, b : Type} -> (a -> b) -> Rose a -> Rose b
-  mapRose f (Node x0) = Node (map (\ eta => Delay (assert_total (mapRose f eta))) x0)
+  mapRose f (Node x1) = Node (map (\ eta => Delay (assert_total (mapRose f eta))) x1)
 LOG derive.functor.clauses:1: 
   mapFree : {0 f : _} -> {0 a, b : Type} -> (a -> b) -> Free f a -> Free f b
-  mapFree f (Pure x0) = Pure (f x0)
-  mapFree f (Bind x0 x1) = Bind x0 (\ {arg:5076} => mapFree f (x1 {arg:5076}))
+  mapFree f (Pure x2) = Pure (f x2)
+  mapFree f (Bind x3 x4) = Bind x3 (\ {arg:5076} => mapFree f (x4 {arg:5076}))
 LOG derive.functor.assumption:10: I am assuming that the parameter m is a Functor
 LOG derive.functor.clauses:1: 
   mapMaybeT : {0 m : _} -> Functor m => {0 a, b : Type} -> (a -> b) -> MaybeT m a -> MaybeT m b
-  mapMaybeT f (MkMaybeT x0) = MkMaybeT (map (map f) x0)
+  mapMaybeT f (MkMaybeT x2) = MkMaybeT (map (map f) x2)
 LOG derive.functor.assumption:10: I am assuming that the parameter layer is a Bifunctor
 LOG derive.functor.clauses:1: 
   mapTreeT : {0 layer : _} -> Bifunctor layer => {0 a, b : Type} -> (a -> b) -> TreeT layer a -> TreeT layer b
-  mapTreeT f (MkTreeT x0) = MkTreeT (bimap f (mapTreeT f) x0)
+  mapTreeT f (MkTreeT x2) = MkTreeT (bimap f (mapTreeT f) x2)
 LOG derive.functor.clauses:1: 
   mapTree : {0 a, b : Type} -> (a -> b) -> Tree a -> Tree b
-  mapTree f (MkTree x0) = MkTree (map f x0)
+  mapTree f (MkTree x1) = MkTree (map f x1)
 LOG derive.functor.clauses:1: 
   mapIVect : {0 m : _} -> {0 a, b : Type} -> (a -> b) -> IVect {n = m} a -> IVect {n = m} b
-  mapIVect f (MkIVect x0) = MkIVect (map f x0)
+  mapIVect f (MkIVect x2) = MkIVect (map f x2)
 LOG derive.functor.clauses:1: 
   mapEqMap : {0 key, eq : _} -> {0 a, b : Type} -> (a -> b) -> EqMap key {{conArg:5665} = eq} a -> EqMap key {{conArg:5665} = eq} b
-  mapEqMap f (MkEqMap x0) = MkEqMap (map (map f) x0)
+  mapEqMap f (MkEqMap x3) = MkEqMap (map (map f) x3)
 LOG derive.functor.clauses:1: 
   mapCont : {0 r : _} -> {0 a, b : Type} -> (a -> b) -> Cont r a -> Cont r b
-  mapCont f (MkCont x0) = MkCont (\ {arg:6021} => x0 (\ {arg:6023} => {arg:6021} (f {arg:6023})))
+  mapCont f (MkCont x2) = MkCont (\ {arg:6021} => x2 (\ {arg:6023} => {arg:6021} (f {arg:6023})))
 LOG derive.functor.clauses:1: 
   mapCont2 : {0 r, e : _} -> {0 a, b : Type} -> (a -> b) -> Cont2 r e a -> Cont2 r e b
-  mapCont2 f (MkCont2 x0) = MkCont2 (\ {arg:6113} => \ {arg:6120} => x0 {arg:6113} (\ {arg:6122} => {arg:6120} (f {arg:6122})))
+  mapCont2 f (MkCont2 x3) = MkCont2 (\ {arg:6113} => \ {arg:6120} => x3 {arg:6113} (\ {arg:6122} => {arg:6120} (f {arg:6122})))
 LOG derive.functor.clauses:1: 
   mapCont2' : {0 r, e : _} -> {0 a, b : Type} -> (a -> b) -> Cont2' r e a -> Cont2' r e b
-  mapCont2' f (MkCont2' x0) = MkCont2' (\ {arg:6227} => x0 (mapFst (\ t => \ {arg:6229} => t (f {arg:6229})) {arg:6227}))
+  mapCont2' f (MkCont2' x3) = MkCont2' (\ {arg:6227} => x3 (mapFst (\ t => \ {arg:6229} => t (f {arg:6229})) {arg:6227}))
 LOG derive.functor.clauses:1: 
   mapCont2'' : {0 r, e : _} -> {0 a, b : Type} -> (a -> b) -> Cont2'' r e a -> Cont2'' r e b
-  mapCont2'' f (MkCont2'' x0) = MkCont2'' (\ {arg:6351} => x0 (Delay (mapFst (\ t => \ {arg:6354} => t (Delay (f {arg:6354}))) {arg:6351})))
+  mapCont2'' f (MkCont2'' x3) = MkCont2'' (\ {arg:6351} => x3 (Delay (mapFst (\ t => \ {arg:6354} => t (Delay (f {arg:6354}))) {arg:6351})))
+LOG derive.functor.clauses:1: 
+  mapWithImplicits : {0 a, b : Type} -> (a -> b) -> WithImplicits a -> WithImplicits b
+  mapWithImplicits f (MkImplicit {x = x1} x2) = MkImplicit {x = f x1} (f x2)
+  mapWithImplicits f (OtherImplicit {x = x1} @{x2}) = OtherImplicit {x = f x1} @{f x2}
+  mapWithImplicits f (LastOne @{x1} x2) = LastOne @{f x1} (f x2)
 LOG derive.functor.clauses:1: 
   mapTree : {0 l : _} -> {0 a, b : Type} -> (a -> b) -> Tree l a -> Tree l b
-  mapTree f (Leaf x0) = Leaf x0
-  mapTree f (Node x0 x1 x2) = Node (mapTree f x0) (f x1) (mapTree f x2)
+  mapTree f (Leaf x2) = Leaf x2
+  mapTree f (Node x2 x3 x4) = Node (mapTree f x2) (f x3) (mapTree f x4)
 LOG derive.functor.clauses:1: 
   mapTriple : {0 a, b : _} -> {0 a0, b0 : Type} -> (a0 -> b0) -> Triple a b a0 -> Triple a b b0
-  mapTriple f (MkTriple x0 x1 x2) = MkTriple x0 x1 (f x2)
+  mapTriple f (MkTriple x3 x4 x5) = MkTriple x3 x4 (f x5)
 1/1: Building Search (Search.idr)
