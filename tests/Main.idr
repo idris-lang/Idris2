@@ -91,7 +91,8 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006", "perror007", "perror008", "perror009", "perror010",
-       "perror011", "perror012", "perror013", "perror014", "perror015"]
+       "perror011", "perror012", "perror013", "perror014", "perror015",
+       "perror016"]
 
 idrisTestsInteractive : TestPool
 idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
