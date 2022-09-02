@@ -35,10 +35,10 @@ Mismatch between: Vect 0 ?elem and List ?a.
 
 Main> the (Maybe Integer) (pure 4) : Maybe Integer
 Main> Couldn't parse any alternatives:
-1: Expected 'case', 'if', 'do', application or operator expression.
+1: Expected namespaced name.
 
-(Interactive):1:4--1:8
+(Interactive):1:10--1:11
  1 | :t with [] 4
-        ^^^^
-... (45 others)
+              ^
+... (16 others)
 Main> Bye for now!
