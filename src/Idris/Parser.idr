@@ -793,6 +793,7 @@ mutual
   if_ : OriginDesc -> IndentInfo -> Rule PTerm
   if_ fname indents
       = do b <- bounds (do decoratedKeyword fname "if"
+                           commit
                            x <- expr pdef fname indents
                            commitKeyword fname indents "then"
                            t <- typeExpr pdef fname indents
