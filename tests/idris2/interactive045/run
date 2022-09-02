@@ -1,0 +1,8 @@
+rm -rf build
+rm -f Issue1742Gen.idr
+
+cp Issue1742.idr Issue1742Gen.idr
+
+$1 --no-color --console-width 0 --no-banner Issue1742Gen.idr < input
+
+rm Issue1742Gen.idr
