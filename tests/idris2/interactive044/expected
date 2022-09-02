@@ -1,0 +1,4 @@
+1/1: Building SplitShadowGen (SplitShadowGen.idr)
+Main> colour (Emerald k) = ?colour_rhs_6
+Main> Loaded file SplitShadowGen.idr
+Main> Bye for now!
