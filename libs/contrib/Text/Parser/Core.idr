@@ -329,7 +329,7 @@ doParse s com (Alt {c1} {c2} x y) xs
                                                                      -- Only add the errors together if the second branch
                                                                      -- is also non-committed and non-fatal.
                                                              then Failure com'' fatal' errs'
-                                                             else Failure False False (errs ++ errs')
+                                                             else Failure com False (errs ++ errs')
                              (Res s _ val xs) => Res s com val xs
            -- Successfully parsed the first option, so use the outer commit flag
            Res s _ val xs => Res s com val xs
