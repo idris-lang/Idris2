@@ -119,7 +119,8 @@ findAllVars (Bind _ x (Let _ _ _ _) sc)
     = x :: findAllVars sc
 findAllVars (Bind _ x (PLet _ _ _ _) sc)
     = x :: findAllVars sc
-findAllVars _ = []
+-- #2640 also grab the name of the function being defined
+findAllVars t = toList (dropNS <$> getDefining t)
 
 export
 explicitlyBound : Defs -> NF [] -> Core (List Name)
