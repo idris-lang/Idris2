@@ -637,9 +637,8 @@ getArgName defs x bound allvars ty
     getName : Name -> List String -> List Name -> String
     getName (UN (Basic n)) defs used =
       -- # 1742 Uppercase names are not valid for pattern variables
-      ifThenElse (lowerFirst n)
-        (unique (n :: defs) (n :: defs) 0 used)
-        (unique defs defs 0 used)
+      let candidate = ifThenElse (lowerFirst n) n (toLower n) in
+      unique (candidate :: defs) (candidate :: defs) 0 used
     getName _ defs used = unique defs defs 0 used
 
 export
