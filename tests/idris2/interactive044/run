@@ -2,6 +2,7 @@ rm -rf build
 rm -f SplitShadowGen.idr
 
 cp SplitShadow.idr SplitShadowGen.idr
+sleep 1
 
 $1 --no-color --console-width 0 --no-banner SplitShadowGen.idr < input
 
