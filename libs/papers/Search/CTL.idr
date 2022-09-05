@@ -247,7 +247,7 @@ parameters (Lbls, Sts : Type)
   ||| A completed formula is a formula for which no more successor states exist.
   public export
   data Completed : Formula where
-    IsCompleted :  {st : _} -> {n : _} -> {ms : _}
+    IsCompleted :  {st : _} -> {n : _} -> {ms : Lazy _}
                 -> ms === []
                 -> Completed n (At st ms)
 
@@ -289,10 +289,10 @@ parameters (Lbls, Sts : Type)
   ||| Check if the current state has any successors.
   public export
   isCompleted : MC Completed
-  isCompleted (At st ms) _ = ?isCompleted_rhs   -- TODO: guard on `$`???
+  isCompleted (At st ms) _ = IsCompleted <$> isEmpty ms
     where
       ||| Half-decider for whether a list is empty
-      isEmpty : {X : _} -> (n : List X) -> HDec (n === [])
+      isEmpty : {x : _} -> (n : List x) -> HDec (n === [])
       isEmpty [] = yes Refl
       isEmpty (_ :: _) = no
 
