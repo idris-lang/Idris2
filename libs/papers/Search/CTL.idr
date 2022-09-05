@@ -239,7 +239,23 @@ parameters (Lbls, Sts : Type)
 
 
   ------------------------------------------------------------------------
-  -- Completed, and the stronger forms of Global
+  -- Finally, Completed, and the stronger forms of Global
+
+  ||| "Always finally" means that for all paths, the formula f will eventually
+  ||| hold.
+  |||
+  ||| This is equivalent to saying `A [TT U f]` (where TT is trivially true).
+  public export
+  AF : Formula -> Formula
+  AF f = AlwaysUntil TrueF f
+
+  ||| "Exists finally" means that for some pathe, the formula f will eventually
+  ||| hold.
+  |||
+  ||| This is equivalent to saying `E [TT U f]` (where TT is trivially true).
+  public export
+  EF : Formula -> Formula
+  EF f = ExistsUntil TrueF f
 
   ||| A completed formula is a formula for which no more successor states exist.
   public export
