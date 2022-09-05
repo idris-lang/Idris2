@@ -246,16 +246,16 @@ parameters (Lbls, Sts : Type)
   |||
   ||| This is equivalent to saying `A [TT U f]` (where TT is trivially true).
   public export
-  AF : Formula -> Formula
-  AF f = AlwaysUntil TrueF f
+  AlwaysFinally : Formula -> Formula
+  AlwaysFinally f = AlwaysUntil TrueF f
 
   ||| "Exists finally" means that for some pathe, the formula f will eventually
   ||| hold.
   |||
   ||| This is equivalent to saying `E [TT U f]` (where TT is trivially true).
   public export
-  EF : Formula -> Formula
-  EF f = ExistsUntil TrueF f
+  ExistsFinally : Formula -> Formula
+  ExistsFinally f = ExistsUntil TrueF f
 
   ||| A completed formula is a formula for which no more successor states exist.
   public export
@@ -274,13 +274,13 @@ parameters (Lbls, Sts : Type)
 
   ||| We can only handle always global checks on finite paths.
   public export
-  alwaysGlobal : (f : Formula) -> Formula
-  alwaysGlobal f = (AlwaysUntil f f) `AND'` Completed
+  AlwaysGlobal : (f : Formula) -> Formula
+  AlwaysGlobal f = (AlwaysUntil f f) `AND'` Completed
 
   ||| We can only handle exists global checks on finite paths.
   public export
-  existsGlobal : (f : Formula) -> Formula
-  existsGlobal f = (ExistsUntil f f) `AND'` Completed
+  ExistsGlobal : (f : Formula) -> Formula
+  ExistsGlobal f = (ExistsUntil f f) `AND'` Completed
 
   ------------------------------------------------------------------------
   -- Proof search (finally!)
