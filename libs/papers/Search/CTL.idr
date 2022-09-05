@@ -165,8 +165,6 @@ parameters (Lbls, Sts : Type)
   -- Always Until
 
   namespace AU
-    -- TODO: custom `map` function over All
-
     ||| A proof that for all paths in the tree, f holds until g does.
     public export
     data AlwaysUntil : (f, g : Formula) -> Formula where
@@ -175,9 +173,8 @@ parameters (Lbls, Sts : Type)
 
       ||| If f still holds and we can recursively show that g holds for all
       ||| possible subpaths in the CT, then all branches have f hold until g does.
-      There :  {st : _} -> {lazyCTs : _} -> {n : _}
+      There :  {st : _} -> {lazyCTs : Lazy _} -> {n : _}
             -> f n (At st lazyCTs)
-            ---- -> RTAll ((AlwaysUntil f g) n) lazyCTs
             -> All ((AlwaysUntil f g) n) lazyCTs
             -> AlwaysUntil f g (S n) (At st lazyCTs)
 
@@ -215,7 +212,7 @@ parameters (Lbls, Sts : Type)
 
       ||| If f holds here and any of the further branches have a g, then there is
       ||| a branch where f holds until g does.
-      There :  {st : _} -> {ms : _} -> {n : _}
+      There :  {st : _} -> {ms : Lazy _} -> {n : _}
             -> f n (At st ms)
             -> Any (ExistsUntil f g n) ms
             -> ExistsUntil f g (S n) (At st ms)
@@ -301,9 +298,23 @@ parameters (Lbls, Sts : Type)
   mcAND' : {f, g : Formula} -> MC f -> MC g -> MC (f `AND'` g)
   mcAND' a b m n = [| MkAND' (a m n) (b m n) |]
 
-  ||| Proof-search for `AlwaysUntil`
+  ||| Proof-search for `AlwaysUntil`.
+  public export
   auSearch : {f, g : Formula} -> MC f -> MC g -> MC (AlwaysUntil f g)
   auSearch _ _ _ Z = no
   auSearch p1 p2 t@(At st ms) (S n) =  [| AU.Here  (p2 t n) |]
-                                   <|> ?todo_au -- WTF is `rest`? [| AU.There (p1 t n) rest |]
+                                   <|> [| AU.There (p1 t n) rest |]
+    where
+      rest : HDec (All (AlwaysUntil f g n) ms)
+      rest = HDecidable.List.all ms (\ m => auSearch p1 p2 m n)
+
+  ||| Proof-search for `ExistsUntil`.
+  public export
+  euSearch : {f, g : Formula} -> MC f -> MC g -> MC (ExistsUntil f g)
+  euSearch _ _ _ Z = no
+  euSearch p1 p2 t@(At st ms) (S n) =  [| EU.Here  (p2 t n) |]
+                                   <|> [| EU.There (p1 t n) rest |]
+    where
+      rest : HDec (Any (ExistsUntil f g n) ms)
+      rest = HDecidable.List.any ms (\ m => euSearch p1 p2 m n)
 
