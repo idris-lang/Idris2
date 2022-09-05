@@ -189,18 +189,20 @@ parameters (Lbls, Sts : Type)
          -> DepthInv (AlwaysUntil f g)
     diAU @{(DI diP)} @{(DI diQ)} = DI prf
       where
-        -- lemma : {d : _} -> RTAll (AlwaysUntil f g d) lt -> RTAll (AlwaysUntil f g (S d)) lt
-        lemma :  {d : _} -> {lt : _}
-              ---- -> RTAll (AlwaysUntil f g d) lt -> RTAll (AlwaysUntil f g (S d)) lt
-              -> All (AlwaysUntil f g d) lt -> All (AlwaysUntil f g (S d)) lt
-
-        prf : {d : _} -> {t : _} -> AlwaysUntil f g d t -> AlwaysUntil f g (S d) t
-
-        lemma [] = []
-        lemma (au :: aus) = (prf au) :: ?lemma_rhs_1 -- TODO: mapProperty prf xs
-
+        prf :  {d : _} -> {t : _}
+            -> AlwaysUntil f g d t
+            -> AlwaysUntil f g (S d) t
         prf (Here au) = Here (diQ au)
-        prf (There au aus) = There (diP au) (lemma aus)
+        prf (There au aus) = There (diP au) (mapAllAU prf aus)
+          where
+            -- `All.mapProperty` erases the list and so won't work here
+            mapAllAU :  {d : _} -> {lt : _}
+                     -> (prf : AlwaysUntil f g d t -> AlwaysUntil f g (S d) t)
+                     -> All (AlwaysUntil f g d) lt
+                     -> All (AlwaysUntil f g (S d)) lt
+            mapAllAU prf [] = []
+            mapAllAU prf (au :: aus) = (prf au) :: mapAllAU prf aus
+
 
   ------------------------------------------------------------------------
   -- Exists Until
@@ -230,7 +232,16 @@ parameters (Lbls, Sts : Type)
             -> ExistsUntil f g d t
             -> ExistsUntil f g (S d) t
         prf (Here eu) = Here (diQ eu)
-        prf (There eu eus) = There (diP eu) ?prf_rhs_1  -- TODO: same err as AU
+        prf (There eu eus) = There (diP eu) (mapAnyEU prf eus)
+          where
+            -- `Any.mapProperty` erases the list and so won't work here
+            mapAnyEU :  {d : _} -> {lt : _}
+                     -> (prf : ExistsUntil f g d t -> ExistsUntil f g (S d) t)
+                     -> List.Quantifiers.Any.Any (ExistsUntil f g d) lt
+                     -> List.Quantifiers.Any.Any (ExistsUntil f g (S d)) lt
+            mapAnyEU prf (Here x) = Here (prf x)
+            mapAnyEU prf (There x) = There (mapAnyEU prf x)
+
 
   ------------------------------------------------------------------------
   -- Completed, and the stronger forms of Global
