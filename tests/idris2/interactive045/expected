@@ -1,0 +1,4 @@
+1/1: Building Issue1742Gen (Issue1742Gen.idr)
+Main> Gnu (MkFoo bar) = ?Gnu_rhs_1
+Main> Loaded file Issue1742Gen.idr
+Main> Bye for now!
