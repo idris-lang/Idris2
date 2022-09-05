@@ -275,12 +275,12 @@ parameters (Lbls, Sts : Type)
   ||| We can only handle always global checks on finite paths.
   public export
   AlwaysGlobal : (f : Formula) -> Formula
-  AlwaysGlobal f = (AlwaysUntil f f) `AND'` Completed
+  AlwaysGlobal f = AlwaysUntil f (f `AND'` Completed)
 
   ||| We can only handle exists global checks on finite paths.
   public export
   ExistsGlobal : (f : Formula) -> Formula
-  ExistsGlobal f = (ExistsUntil f f) `AND'` Completed
+  ExistsGlobal f = ExistsUntil f (f `AND'` Completed)
 
   ------------------------------------------------------------------------
   -- Proof search (finally!)
@@ -340,4 +340,24 @@ parameters (Lbls, Sts : Type)
     where
       rest : HDec (Lazy.Quantifiers.Any.Any (ExistsUntil f g n) ms)
       rest = HDecidable.LazyList.any ms (\ m => euSearch p1 p2 m n)
+
+  ||| Proof-search for Exists Finally
+  public export
+  efSearch : {f : _} -> MC f -> MC (ExistsFinally f)
+  efSearch g = euSearch (\ _, _ => yes TT) g
+
+  ||| Proof-search for Always Finally
+  public export
+  afSearch : {f : _} -> MC f -> MC (AlwaysFinally f)
+  afSearch g = auSearch (\ _, _ => yes TT) g
+
+  ||| Proof-search for Exists Global
+  public export
+  egSearch : {f : _} -> MC f -> MC (ExistsGlobal f)
+  egSearch g = euSearch g (g `mcAND'` isCompleted)
+
+  ||| Proof-search for Always Global
+  public export
+  agSearch : {f : _} -> MC f -> MC (AlwaysGlobal f)
+  agSearch g = auSearch g (g `mcAND'` isCompleted)
 
