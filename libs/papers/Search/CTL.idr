@@ -62,7 +62,7 @@ lteAltToLTE {m=(S m)} (LTEStep s) = lteSuccRight (lteAltToLTE s)
 parameters (Lbls, Sts : Type)
   ||| A computation tree (corecursive rose tree?)
   data CT : Type where
-    At : (Lbls, Sts) -> Lazy (List CT) -> CT
+    At : (Lbls, Sts) -> LazyList CT -> CT
 
   ||| Given a transition diagram and a starting value for the shared state,
   ||| construct the computation tree of the given transition diagram.
@@ -74,7 +74,7 @@ parameters (Lbls, Sts : Type)
 
       followAll : List (Lbls, Sts) -> List CT
       
-      follow st = At st (followAll (transFn st))
+      follow st = At st (fromList $ followAll (transFn st))
 
       followAll [] = []
       followAll (st :: sts) = follow st :: followAll sts
@@ -130,7 +130,7 @@ parameters (Lbls, Sts : Type)
     public export
     data Guarded : (g : (st : Sts) -> (l : Lbls) -> Type) -> Formula where
       Here :  {st : _} -> {l : _}
-           -> {ms : Lazy (List CT)} -> {depth : Nat}
+           -> {ms : LazyList CT} -> {depth : Nat}
            -> {g : _}
            -> (guardOK : g st l)
            -> Guarded g depth (At (l, st) ms)
@@ -173,9 +173,9 @@ parameters (Lbls, Sts : Type)
 
       ||| If f still holds and we can recursively show that g holds for all
       ||| possible subpaths in the CT, then all branches have f hold until g does.
-      There :  {st : _} -> {lazyCTs : Lazy _} -> {n : _}
+      There :  {st : _} -> {lazyCTs : _} -> {n : _}
             -> f n (At st lazyCTs)
-            -> All ((AlwaysUntil f g) n) lazyCTs
+            -> All ((AlwaysUntil f g) n) (toList lazyCTs)
             -> AlwaysUntil f g (S n) (At st lazyCTs)
 
     ||| Provided `f` and `g` are depth-invariant, AlwaysUntil is depth-invariant
@@ -212,9 +212,9 @@ parameters (Lbls, Sts : Type)
 
       ||| If f holds here and any of the further branches have a g, then there is
       ||| a branch where f holds until g does.
-      There :  {st : _} -> {ms : Lazy _} -> {n : _}
+      There :  {st : _} -> {ms : _} -> {n : _}
             -> f n (At st ms)
-            -> Any (ExistsUntil f g n) ms
+            -> Lazy.Quantifiers.Any.Any (ExistsUntil f g n) ms
             -> ExistsUntil f g (S n) (At st ms)
 
     ||| Provided `f` and `g` are depth-invariant, ExistsUntil is depth-invariant.
@@ -232,8 +232,8 @@ parameters (Lbls, Sts : Type)
             -- `Any.mapProperty` erases the list and so won't work here
             mapAnyEU :  {d : _} -> {lt : _}
                      -> (prf : ExistsUntil f g d t -> ExistsUntil f g (S d) t)
-                     -> List.Quantifiers.Any.Any (ExistsUntil f g d) lt
-                     -> List.Quantifiers.Any.Any (ExistsUntil f g (S d)) lt
+                     -> Lazy.Quantifiers.Any.Any (ExistsUntil f g d) lt
+                     -> Lazy.Quantifiers.Any.Any (ExistsUntil f g (S d)) lt
             mapAnyEU prf (Here x) = Here (prf x)
             mapAnyEU prf (There x) = There (mapAnyEU prf x)
 
@@ -244,7 +244,7 @@ parameters (Lbls, Sts : Type)
   ||| A completed formula is a formula for which no more successor states exist.
   public export
   data Completed : Formula where
-    IsCompleted :  {st : _} -> {n : _} -> {ms : Lazy _}
+    IsCompleted :  {st : _} -> {n : _} -> {ms : _}
                 -> ms === []
                 -> Completed n (At st ms)
 
@@ -289,7 +289,7 @@ parameters (Lbls, Sts : Type)
   isCompleted (At st ms) _ = IsCompleted <$> isEmpty ms
     where
       ||| Half-decider for whether a list is empty
-      isEmpty : {x : _} -> (n : List x) -> HDec (n === [])
+      isEmpty : {x : _} -> (n : LazyList x) -> HDec (n === [])
       isEmpty [] = yes Refl
       isEmpty (_ :: _) = no
 
@@ -299,22 +299,29 @@ parameters (Lbls, Sts : Type)
   mcAND' a b m n = [| MkAND' (a m n) (b m n) |]
 
   ||| Proof-search for `AlwaysUntil`.
+  |||
+  ||| Evaluates the entire `LazyList` of the state-space, since we need `f U g`
+  ||| to hold across every path.
   public export
   auSearch : {f, g : Formula} -> MC f -> MC g -> MC (AlwaysUntil f g)
   auSearch _ _ _ Z = no
   auSearch p1 p2 t@(At st ms) (S n) =  [| AU.Here  (p2 t n) |]
                                    <|> [| AU.There (p1 t n) rest |]
     where
-      rest : HDec (All (AlwaysUntil f g n) ms)
-      rest = HDecidable.List.all ms (\ m => auSearch p1 p2 m n)
+      -- in AlwaysUntil searches, we have to check the entire LazyList
+      rest : HDec (All (AlwaysUntil f g n) (toList ms))
+      rest = HDecidable.List.all (toList ms) (\ m => auSearch p1 p2 m n)
 
   ||| Proof-search for `ExistsUntil`.
+  |||
+  ||| Lazy over the state-space, since `E [f U g]` holds as soon as `f U g` is
+  ||| found.
   public export
   euSearch : {f, g : Formula} -> MC f -> MC g -> MC (ExistsUntil f g)
   euSearch _ _ _ Z = no
   euSearch p1 p2 t@(At st ms) (S n) =  [| EU.Here  (p2 t n) |]
                                    <|> [| EU.There (p1 t n) rest |]
     where
-      rest : HDec (Any (ExistsUntil f g n) ms)
-      rest = HDecidable.List.any ms (\ m => euSearch p1 p2 m n)
+      rest : HDec (Lazy.Quantifiers.Any.Any (ExistsUntil f g n) ms)
+      rest = HDecidable.LazyList.any ms (\ m => euSearch p1 p2 m n)
 
