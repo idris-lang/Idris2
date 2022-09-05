@@ -44,6 +44,21 @@ pComp (TD transFn1 iState1) (TD transFn2 iState2) =
                     map (\ (l1', st') => ((l1', l2), st')) (transFn1 (l1, st)) ++
                     map (\ (l2', st') => ((l1, l2'), st')) (transFn2 (l2, st)))
 
+-- different formulation of LTE, see also:
+-- https://agda.github.io/agda-stdlib/Data.Nat.Base.html#4636
+-- thanks @gallais!
+public export
+data LTE' : (n : Nat) -> (m : Nat) -> Type where
+  LTERefl : LTE' m m
+  LTEStep : LTE' n m -> LTE' n (S m)
+
+||| Convert LTE' to LTE
+lteAltToLTE : {m : _} -> LTE' n m -> LTE n m
+lteAltToLTE {m=0} LTERefl = LTEZero
+lteAltToLTE {m=(S k)} LTERefl = LTESucc (lteAltToLTE LTERefl)
+lteAltToLTE {m=(S m)} (LTEStep s) = lteSuccRight (lteAltToLTE s)
+
+
 parameters (Lbls, Sts : Type)
   ||| A computation tree (corecursive rose tree?)
   data CT : Type where
@@ -64,23 +79,6 @@ parameters (Lbls, Sts : Type)
       followAll [] = []
       followAll (st :: sts) = follow st :: followAll sts
       
-
-  -- different formulation of LTE, see also:
-  -- https://agda.github.io/agda-stdlib/Data.Nat.Base.html#4636
-  -- thanks @gallais!
-  public export
-  data LTE' : (n : Nat) -> (m : Nat) -> Type where
-    LTERefl : LTE' m m
-    LTEStep : LTE' n m -> LTE' n (S m)
-
-  ||| Convert LTE' to LTE
-  lteAltToLTE : {m : _} -> LTE' n m -> LTE n m
-  lteAltToLTE {m=0} LTERefl = LTEZero
-  lteAltToLTE {m=(S k)} LTERefl = LTESucc (lteAltToLTE LTERefl)
-  lteAltToLTE {m=(S m)} (LTEStep s) = lteSuccRight (lteAltToLTE s)
-
-  lteAltIsLTE : LTE' n m === LTE n m
-
   ||| A formula has a bound (for Bounded Model Checking; BMC) and a computation
   ||| tree to check against.
   public export
