@@ -9,6 +9,7 @@ import Data.Nat
 import Data.List.Lazy
 import Data.List.Quantifiers
 import Data.List.Lazy.Quantifiers
+import Decidable.Equality
 
 import public Search.Negation
 import public Search.HDecidable
@@ -32,7 +33,7 @@ record Diagram (labels : Type) (state : Type) where
 
 ||| Parallel composition of transition diagrams
 public export
-pComp :  {Lbls1, Lbls2, Sts : _}
+pComp :  {Lbls1, Lbls2 : _} -> {Sts : _}
       -> (td1 : Diagram Lbls1 Sts)
       -> (td2 : Diagram Lbls2 Sts)
       -> Diagram (Lbls1, Lbls2) Sts
@@ -43,6 +44,22 @@ pComp (TD transFn1 iState1) (TD transFn2 iState2) =
     compTransFn = (\ ((l1, l2), st) => 
                     map (\ (l1', st') => ((l1', l2), st')) (transFn1 (l1, st)) ++
                     map (\ (l2', st') => ((l1, l2'), st')) (transFn2 (l2, st)))
+
+||| A process which always increases the shared number.
+public export
+HiHorse : Diagram () Nat
+HiHorse = TD transFn ()
+  where
+    transFn : ((), Nat) -> List ((), Nat)
+    transFn (l, st) = [(l, (S st))]
+
+||| A process which always decreases the shared number.
+public export
+LoRoad : Diagram () Nat
+LoRoad = TD transFn ()
+  where
+    transFn : ((), Nat) -> List ((), Nat)
+    transFn (l, st) = [(l, pred st)]
 
 -- different formulation of LTE, see also:
 -- https://agda.github.io/agda-stdlib/Data.Nat.Base.html#4636
@@ -360,4 +377,26 @@ parameters (Lbls, Sts : Type)
   public export
   agSearch : {f : _} -> MC f -> MC (AlwaysGlobal f)
   agSearch g = auSearch g (g `mcAND'` isCompleted)
+
+------------------------------------------------------------------------
+-- Proof search example
+
+||| This CT is a model of composing the `HiHorse` and `LoRoad` programs.
+export
+covering
+tree : CT ((), ()) Nat
+tree = model ((), ()) Nat (HiHorse `pComp` LoRoad) 0
+
+export
+covering
+reaches10 : ?   -- HDec (ExistsFinally [...])
+reaches10 =
+  efSearch ((), ()) Nat (now ((), ()) Nat (\ st, _ => fromDec $ decEq st 10)) tree 20
+
+--- FIXME
+--- export
+--- covering
+--- r10Proof : ?
+--- r10Proof = diModels ((), ()) Nat (evidence reaches10)
+
 
