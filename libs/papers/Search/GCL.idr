@@ -18,6 +18,10 @@ import public Search.CTL
 %default total
 
 parameters (Sts : Type)
+
+  ------------------------------------------------------------------------
+  -- Type and operational semantics
+
   mutual
     ||| Guarded Command Language
     public export
@@ -38,10 +42,13 @@ parameters (Sts : Type)
     Pred : Type
     Pred = (st : Sts) -> Bool
 
+    ||| Guards are checks on the current state
     public export
     record GUARD where
       constructor MkGUARD
+      ||| The check to confirm
       g : Pred
+      ||| The current state
       x : GCL
 
   public export
@@ -92,4 +99,24 @@ parameters (Sts : Type)
   covering
   gclToDiag : GCL -> Diagram GCL Sts
   gclToDiag p = TD ops p
+
+
+  ------------------------------------------------------------------------
+  -- Control Structures
+
+  ||| While loops are GCL do loops with a single guard.
+  public export
+  while : Pred -> GCL -> GCL
+  while g x = DO [MkGUARD g x]
+
+  ||| Await halts progress unless the predicate is satisfied.
+  public export
+  await : Pred -> GCL
+  await g = IF [MkGUARD g SKIP]
+
+  ||| If statements translate into GCL if statements by having an unmodified and
+  ||| a negated version of the predicate in the list of `IF` GCL statements.
+  public export
+  ifThenElse : (g : Pred) -> (x : GCL) -> (y : GCL) -> GCL
+  ifThenElse g x y = IF [MkGUARD g x, MkGUARD (not . g) y]
 
