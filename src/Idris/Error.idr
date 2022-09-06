@@ -276,7 +276,7 @@ pwarningRaw (ShadowingGlobalDefs fc ns)
 
 pwarningRaw (ShadowingLocalBindings fc ns)
     = pure $ vcat
-    [ reflow "You may be unintentionaly shadowing the following local bindings:"
+    [ reflow "You may be unintentionally shadowing the following local bindings:"
     , indent 2 $ hcat $ pretty0 . fst <$> (forget ns)
     , !(ploc fc)
     ]
