@@ -23,6 +23,7 @@ import Data.List
 import Data.List1
 import Data.String
 import Libraries.Data.NameMap
+import Libraries.Data.StringMap
 
 %default covering
 
@@ -288,6 +289,15 @@ findInferrable defs ty = fi 0 0 [] [] ty
              pure rest
     fi pos i args acc ret = findInf acc args ret
 
+checkForShadowing : (env : StringMap FC) -> RawImp -> List (String, FC, FC)
+checkForShadowing env (IPi fc _ _ (Just (UN (Basic name))) argTy retTy) =
+    let argShadowing = checkForShadowing empty argTy
+     in (case lookup name env of
+        Just origFc => (name, origFc, fc) :: checkForShadowing env retTy
+        Nothing => checkForShadowing (insert name fc env) retTy)
+        ++ argShadowing
+checkForShadowing env t = []
+
 export
 processType : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
@@ -365,3 +375,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
               do addHashWithNames n
                  addHashWithNames ty
                  log "module.hash" 15 "Adding hash for type with name \{show n}"
+
+         when (showShadowingWarning !getSession) $
+            whenJust (fromList (checkForShadowing StringMap.empty ty_raw))
+                $ recordWarning . ShadowingLocalBindings fc

@@ -702,6 +702,7 @@ HasNames Warning where
   full gam (UnreachableClause fc rho s) = UnreachableClause fc <$> full gam rho <*> full gam s
   full gam (ShadowingGlobalDefs fc xs)
     = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (full gam))) xs
+  full gam w@(ShadowingLocalBindings _ _) = pure w
   full gam (Deprecated x y) = Deprecated x <$> traverseOpt (traversePair (full gam)) y
   full gam (GenericWarn x) = pure (GenericWarn x)
 
@@ -709,6 +710,7 @@ HasNames Warning where
   resolved gam (UnreachableClause fc rho s) = UnreachableClause fc <$> resolved gam rho <*> resolved gam s
   resolved gam (ShadowingGlobalDefs fc xs)
     = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (resolved gam))) xs
+  resolved gam w@(ShadowingLocalBindings _ _) = pure w
   resolved gam (Deprecated x y) = Deprecated x <$> traverseOpt (traversePair (resolved gam)) y
   resolved gam (GenericWarn x) = pure (GenericWarn x)
 

@@ -3,68 +3,68 @@ Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R1.R1.a
 
-Fld:66:11--66:20
- 62 | 
- 63 |   public export
- 64 |   record R2 where
- 65 |     constructor MkR
- 66 |     {auto field : a}
+Fld:68:11--68:20
+ 64 | 
+ 65 |   public export
+ 66 |   record R2 where
+ 67 |     constructor MkR
+ 68 |     {auto field : a}
                 ^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
-Fld:74:1--79:38
- 74 | interface Show a => (num : Num a) => MyIface a where -- Some interface with
- 75 |   constructor MkIface
- 76 |                                              -- constraints
- 77 |   data MyData : a -> Type                    -- and a data declaration.
- 78 |   someFunc : a -> a                          -- Constraints are now elaborated as auto implicits (as one would expect)
- 79 |   giveBack : {x : a} -> MyData x -> a        -- (previously as explicit arguments of the interface
+Fld:76:1--81:38
+ 76 | interface Show a => (num : Num a) => MyIface a where -- Some interface with
+ 77 |   constructor MkIface
+ 78 |                                              -- constraints
+ 79 |   data MyData : a -> Type                    -- and a data declaration.
+ 80 |   someFunc : a -> a                          -- Constraints are now elaborated as auto implicits (as one would expect)
+ 81 |   giveBack : {x : a} -> MyData x -> a        -- (previously as explicit arguments of the interface
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
-Fld:74:1--79:38
- 74 | interface Show a => (num : Num a) => MyIface a where -- Some interface with
- 75 |   constructor MkIface
- 76 |                                              -- constraints
- 77 |   data MyData : a -> Type                    -- and a data declaration.
- 78 |   someFunc : a -> a                          -- Constraints are now elaborated as auto implicits (as one would expect)
- 79 |   giveBack : {x : a} -> MyData x -> a        -- (previously as explicit arguments of the interface
+Fld:76:1--81:38
+ 76 | interface Show a => (num : Num a) => MyIface a where -- Some interface with
+ 77 |   constructor MkIface
+ 78 |                                              -- constraints
+ 79 |   data MyData : a -> Type                    -- and a data declaration.
+ 80 |   someFunc : a -> a                          -- Constraints are now elaborated as auto implicits (as one would expect)
+ 81 |   giveBack : {x : a} -> MyData x -> a        -- (previously as explicit arguments of the interface
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
-Fld:83:1--84:37
- 83 | data MyDataImpl : a -> Type where            -- implementation of MyData
- 84 |   MkMyData : (x : a) -> MyDataImpl x
+Fld:85:1--86:37
+ 85 | data MyDataImpl : a -> Type where            -- implementation of MyData
+ 86 |   MkMyData : (x : a) -> MyDataImpl x
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
-Fld:84:3--84:11
- 80 |                                              -- constructor)
- 81 | 
- 82 | 
- 83 | data MyDataImpl : a -> Type where            -- implementation of MyData
- 84 |   MkMyData : (x : a) -> MyDataImpl x
+Fld:86:3--86:11
+ 82 |                                              -- constructor)
+ 83 | 
+ 84 | 
+ 85 | data MyDataImpl : a -> Type where            -- implementation of MyData
+ 86 |   MkMyData : (x : a) -> MyDataImpl x
         ^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
-Fld:110:1--110:11
- 106 | Show' String where
- 107 |    show' = id
- 108 | 
- 109 | %hint
- 110 | showMaybe' : Show' a => Show' (Maybe a)
+Fld:112:1--112:11
+ 108 | Show' String where
+ 109 |    show' = id
+ 110 | 
+ 111 | %hint
+ 112 | showMaybe' : Show' a => Show' (Maybe a)
        ^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
@@ -72,12 +72,12 @@ You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
   b is shadowing Main.Other.b
 
-Fld:139:3--139:10
- 135 | setName : String -> OrdinaryDog -> OrdinaryDog
- 136 | setName name' = {name := name'}
- 137 | 
- 138 | data Three : Type -> Type -> Type -> Type where
- 139 |   MkThree : (x : a) -> (y : b) -> (z : c) -> Three a b c
+Fld:141:3--141:10
+ 137 | setName : String -> OrdinaryDog -> OrdinaryDog
+ 138 | setName name' = {name := name'}
+ 139 | 
+ 140 | data Three : Type -> Type -> Type -> Type where
+ 141 |   MkThree : (x : a) -> (y : b) -> (z : c) -> Three a b c
          ^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
@@ -85,80 +85,124 @@ You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
   b is shadowing Main.Other.b
 
-Fld:141:1--141:10
- 137 | 
- 138 | data Three : Type -> Type -> Type -> Type where
- 139 |   MkThree : (x : a) -> (y : b) -> (z : c) -> Three a b c
- 140 | 
- 141 | mapSetMap : (a -> a') -> b' -> (c -> c') -> Three a b c -> Three a' b' c'
+Fld:143:1--143:10
+ 139 | 
+ 140 | data Three : Type -> Type -> Type -> Type where
+ 141 |   MkThree : (x : a) -> (y : b) -> (z : c) -> Three a b c
+ 142 | 
+ 143 | mapSetMap : (a -> a') -> b' -> (c -> c') -> Three a b c -> Three a' b' c'
        ^^^^^^^^^
+
+Warning: You may be unintentionally shadowing the following local bindings:
+  a
+
+Fld:154:1--154:70
+ 150 | 
+ 151 | --------- Applications in presence of duplicate names ----------
+ 152 | 
+ 153 | -- Duplicate names are ok and treated sequentially
+ 154 | testDuplicateNames : {auto a : String} -> {auto a : String} -> String
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning: You may be unintentionally shadowing the following local bindings:
+  a
+
+Fld:162:1--162:52
+ 158 | -- a function on RHS
+ 159 | -- unnamed arguments always take priority over named,
+ 160 | -- i.e they are bound/applied first,
+ 161 | -- regardless of their relative positions to named ones
+ 162 | testOrder1 : (a : String) -> (a : String) -> String
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning: You may be unintentionally shadowing the following local bindings:
+  a
+
+Fld:176:1--176:57
+ 172 | -- Two arguments with the same name can be successfully bound
+ 173 | -- if one of them is renamed in patterns.
+ 174 | -- As both arguments are requested by name
+ 175 | -- They are bound in the same order they are given
+ 176 | sameNamesOk : (a : String) -> (a : Nat) -> (String, Nat)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning: You may be unintentionally shadowing the following local bindings:
+  aa
+
+Fld:181:1--181:74
+ 177 | sameNamesOk {a {- = a-}, a = b} = (a, b)
+ 178 | 
+ 179 | -- All arguments are named and are of different `plicities`. Binds occur sequentially.
+ 180 | -- Arguments are renamed on LHS
+ 181 | eachArgType : (a : String) -> {a : String} -> {auto a : String} -> String
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
-Fld:217:15--217:21
- 213 | dontCare2 : (x : Nat) -> Nat -> Nat -> Nat -> (y : Nat) -> x + y = y + x
- 214 | dontCare2 {} = plusCommutative {}
- 215 | -- dontCare2 _ _ _ _ _ = plusCommutative _ _
- 216 | 
- 217 | data Tree a = Leaf a | Node (Tree a) a (Tree a)
+Fld:219:15--219:21
+ 215 | dontCare2 : (x : Nat) -> Nat -> Nat -> Nat -> (y : Nat) -> x + y = y + x
+ 216 | dontCare2 {} = plusCommutative {}
+ 217 | -- dontCare2 _ _ _ _ _ = plusCommutative _ _
+ 218 | 
+ 219 | data Tree a = Leaf a | Node (Tree a) a (Tree a)
                      ^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
-Fld:217:24--217:48
- 213 | dontCare2 : (x : Nat) -> Nat -> Nat -> Nat -> (y : Nat) -> x + y = y + x
- 214 | dontCare2 {} = plusCommutative {}
- 215 | -- dontCare2 _ _ _ _ _ = plusCommutative _ _
- 216 | 
- 217 | data Tree a = Leaf a | Node (Tree a) a (Tree a)
+Fld:219:24--219:48
+ 215 | dontCare2 : (x : Nat) -> Nat -> Nat -> Nat -> (y : Nat) -> x + y = y + x
+ 216 | dontCare2 {} = plusCommutative {}
+ 217 | -- dontCare2 _ _ _ _ _ = plusCommutative _ _
+ 218 | 
+ 219 | data Tree a = Leaf a | Node (Tree a) a (Tree a)
                               ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
-Fld:219:1--219:7
- 215 | -- dontCare2 _ _ _ _ _ = plusCommutative _ _
- 216 | 
- 217 | data Tree a = Leaf a | Node (Tree a) a (Tree a)
+Fld:221:1--221:7
+ 217 | -- dontCare2 _ _ _ _ _ = plusCommutative _ _
  218 | 
- 219 | isNode : Tree a -> Bool
+ 219 | data Tree a = Leaf a | Node (Tree a) a (Tree a)
+ 220 | 
+ 221 | isNode : Tree a -> Bool
        ^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
-Fld:223:1--224:24
- 223 | data IsNode : Tree a -> Type where
- 224 |   Is : IsNode (Node {})
+Fld:225:1--226:24
+ 225 | data IsNode : Tree a -> Type where
+ 226 |   Is : IsNode (Node {})
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
-Fld:226:1--226:10
- 222 | 
- 223 | data IsNode : Tree a -> Type where
- 224 |   Is : IsNode (Node {})
- 225 | 
- 226 | decIsNode : (x : Tree a) -> Dec (IsNode x)
+Fld:228:1--228:10
+ 224 | 
+ 225 | data IsNode : Tree a -> Type where
+ 226 |   Is : IsNode (Node {})
+ 227 | 
+ 228 | decIsNode : (x : Tree a) -> Dec (IsNode x)
        ^^^^^^^^^
 
 Error: While processing right hand side of r2_shouldNotTypecheck1. Ambiguous elaboration. Possible results:
     Main.R2.MkR
     Main.R1.MkR (Prelude.the Prelude.Nat 22)
 
-Fld:72:26--72:29
- 68 | r1 : R1 -- explicit fields access
- 69 | r1 = MkR {field = "string"}
- 70 | 
- 71 | r2_shouldNotTypecheck1 : ?
- 72 | r2_shouldNotTypecheck1 = MkR {field = the Nat 22} -- fail, impossible to disambiguate
+Fld:74:26--74:29
+ 70 | r1 : R1 -- explicit fields access
+ 71 | r1 = MkR {field = "string"}
+ 72 | 
+ 73 | r2_shouldNotTypecheck1 : ?
+ 74 | r2_shouldNotTypecheck1 = MkR {field = the Nat 22} -- fail, impossible to disambiguate
                                ^^^
 
 Main> Main.myDog : OrdinaryDog
