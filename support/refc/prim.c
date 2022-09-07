@@ -88,7 +88,7 @@ Value *sysOS(void) {
 }
 
 Value *sysCodegen(void) {
-  return (Value*)makeString("refc");
+  return (Value *)makeString("refc");
 }
 
 Value *idris2_crash(Value *msg) {
