@@ -21,10 +21,10 @@ endif
 endif
 
 
+.PHONY: all
 all: build
 
 .PHONY: build
-
 build: $(LIBTARGET) $(DYLIBTARGET)
 
 $(LIBTARGET): $(OBJS)
@@ -32,26 +32,24 @@ $(LIBTARGET): $(OBJS)
 	$(RANLIB) $@
 
 $(DYLIBTARGET): $(OBJS)
-	$(CC) -shared -o $@ $^ $(LDFLAGS)
-
+	$(CC) $(CFLAGS) $(CPPFLAGS) -shared -o $@ $^ $(LDFLAGS)
 
 -include $(DEPS)
 
 %.d: %.c
-	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
+	@$(CPP) $(CPPFLAGS) $< -MM -MT $(@:.d=.o) >$@
 
 
 .PHONY: clean
-
 clean:
 	$(RM) $(OBJS) $(DYLIBTARGET) $(LIBTARGET)
 
+.PHONY: cleandep
 cleandep: clean
 	$(RM) $(DEPS)
 
 
 .PHONY: install
-
 install: build
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/lib
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/c

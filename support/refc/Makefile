@@ -15,10 +15,10 @@ ifeq ($(OLD_WIN), 1)
 endif
 
 
+.PHONY: all
 all: build
 
 .PHONY: build
-
 build: $(LIBTARGET)
 
 $(LIBTARGET): $(OBJS)
@@ -28,20 +28,19 @@ $(LIBTARGET): $(OBJS)
 -include $(DEPS)
 
 %.d: %.c
-	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
+	@$(CPP) $(CPPFLAGS) $< -MM -MT $(@:.d=.o) >$@ $(LDFLAGS)
 
 
 .PHONY: clean
-
 clean:
 	$(RM) $(OBJS) $(LIBTARGET)
 
+.PHONY: cleandep
 cleandep: clean
 	$(RM) $(DEPS)
 
 
 .PHONY: install
-
 install: build
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/refc
 	install -m 644 $(LIBTARGET) *.h ${PREFIX}/idris2-${IDRIS2_VERSION}/support/refc
