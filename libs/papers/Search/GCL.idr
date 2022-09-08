@@ -9,6 +9,7 @@ import Data.Nat
 import Data.List.Lazy
 import Data.List.Quantifiers
 import Data.List.Lazy.Quantifiers
+import Decidable.Equality
 
 import public Search.Negation
 import public Search.HDecidable
@@ -16,6 +17,12 @@ import public Search.Properties
 import public Search.CTL
 
 %default total
+
+||| Weaken a Dec to a Bool.
+public export
+weaken : Dec _ -> Bool
+weaken (Yes _) = True
+weaken (No  _) = False
 
 parameters (Sts : Type)
 
@@ -119,4 +126,74 @@ parameters (Sts : Type)
   public export
   ifThenElse : (g : Pred) -> (x : GCL) -> (y : GCL) -> GCL
   ifThenElse g x y = IF [MkGUARD g x, MkGUARD (not . g) y]
+
+------------------------------------------------------------------------
+-- Example: Peterson's Algorithm
+
+public export
+record State where
+  constructor MkState
+  -- shared state: intent1, intent2, and turn
+  intent1, intent2 : Bool
+  turn : Nat
+  -- is the current state in its critical section?
+  inCS1, inCS2 : Bool
+
+||| First critical section
+public export
+CS1 : GCL State
+CS1 =
+  DOT State
+    (UPDATE State (\st => { inCS1 := True } st))
+    (DOT State
+      (SKIP State)
+      (UPDATE State (\st => { inCS1 := False } st))
+      )
+
+||| Second critical section
+public export
+CS2 : GCL State
+CS2 =
+  DOT State
+    (UPDATE State (\st => { inCS2 := True } st))
+    (DOT State
+      (SKIP State)
+      (UPDATE State (\st => { inCS2 := False } st))
+      )
+
+||| First Peterson's algorithm process
+public export
+petersons1 : GCL State
+petersons1 =
+  DOT State
+    (UPDATE State (\st => { intent1 := True } st))
+    (DOT State
+      (UPDATE State (\st => { turn := 1 } st))
+      (DOT State
+        (await State (\st => not st.intent2 || weaken (decEq st.turn 0)))
+        (DOT State
+          CS1
+          (UPDATE State (\st => { intent1 := False } st))
+          )))
+
+||| Second Peterson's algorithm process
+public export
+petersons2 : GCL State
+petersons2 =
+  DOT State
+    (UPDATE State (\st => { intent2 := True } st))
+    (DOT State
+      (UPDATE State (\st => { turn := 0 } st))
+      (DOT State
+        (await State (\st => not st.intent1 || weaken (decEq st.turn 1)))
+        (DOT State
+          CS2
+          (UPDATE State (\st => { intent2 := False } st))
+          )))
+
+||| The parallel composition of the two Peterson's processes, to be analysed.
+public export
+covering
+petersons : ?
+petersons = (gclToDiag State petersons1) `pComp` (gclToDiag State petersons2)
 
