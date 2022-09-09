@@ -1,0 +1,4 @@
+package bar
+version = 0.1.0
+depends = baz >= 0.1.0
+        , prz > 0.1.0

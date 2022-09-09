@@ -1,3 +1,7 @@
-Uncaught error: Can't find package foo (>= 0.4 && < 0.5)
-Uncaught error: Can't find package baz (any)
+Uncaught error: EmptyFC:Failed to resolve the dependencies for test3:
+  required foo >= 0.4 && < 0.5 but no matching version is installed
+
+Uncaught error: EmptyFC:Failed to resolve the dependencies for test4:
+  required baz any but no matching version is installed
+
 [38;5;3;1mWarning:[0m Deprecation warning: version numbers must now be of the form x.y.z

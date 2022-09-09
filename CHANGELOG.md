@@ -158,6 +158,7 @@
 ### Other changes
 
 * Adds docstrings for the lambda-lifted IR.
+* Package files are now installed along-side build artifacts for installed packages. This means all transitive dependencies of packages you specify with the `depends` field are added automatically.
 
 ## v0.5.0/0.5.1
 
