@@ -28,7 +28,7 @@ $(LIBTARGET): $(OBJS)
 -include $(DEPS)
 
 %.d: %.c
-	@$(CPP) $(CPPFLAGS) $< -MM -MT $(@:.d=.o) >$@ $(LDFLAGS)
+	@$(CPP) $(CPPFLAGS) $< -MM -MT $(@:.d=.o) >$@
 
 
 .PHONY: clean
