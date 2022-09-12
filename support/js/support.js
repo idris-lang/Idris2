@@ -89,25 +89,25 @@ const _truncBigInt8 = x => {
 
 // Euclidian Division
 const _div = (a,b) => {
-  let q = Math.trunc(a / b)
-  let r = a % b
+  const q = Math.trunc(a / b)
+  const r = a % b
   return r < 0 ? (b > 0 ? q - 1 : q + 1) : q
 }
 
 const _divBigInt = (a,b) => {
-  let q = a / b
-  let r = a % b
+  const q = a / b
+  const r = a % b
   return r < 0n ? (b > 0n ? q - 1n : q + 1n) : q
 }
 
 // Euclidian Modulo
 const _mod = (a,b) => {
-  r = a % b
+  const r = a % b
   return r < 0 ? (b > 0 ? r + b : r - b) : r
 }
 
 const _modBigInt = (a,b) => {
-  r = a % b
+  const r = a % b
   return r < 0n ? (b > 0n ? r + b : r - b) : r
 }
 
