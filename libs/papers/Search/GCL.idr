@@ -5,6 +5,7 @@
 
 module Search.GCL
 
+import Data.So
 import Data.Nat
 import Data.List.Lazy
 import Data.List.Quantifiers
@@ -196,4 +197,46 @@ public export
 covering
 petersons : ?
 petersons = (gclToDiag State petersons1) `pComp` (gclToDiag State petersons2)
+
+
+------------------------------------------------------------------------
+-- Properties to verify
+
+||| Type-level decider for booleans.
+public export
+IsTT : (b : Bool) -> Dec (So b)
+IsTT = decSo
+
+||| Mutual exclusion, i.e. both critical sections not simultaneously active.
+public export
+Mutex : (p : State) -> ?
+Mutex p =
+  AlwaysGlobal State () (Guarded State () (\ _, _ => So (not (p.inCS1 && p.inCS2))))
+
+||| Model-check (search) whether the mutex condition is satisfied.
+public export
+mcMutex : {p : _} -> MC State () (Mutex p)
+mcMutex =
+  agSearch State () (now State () (\_, _ => fromDec $ IsTT _))
+                  -- (not (p .inCS1 && (Delay (p .inCS2))) ^
+
+||| Starvation freedom
+public export
+SF : (p : State) -> ?
+SF p =
+  let guardCS1 = Guarded State () (\ _, _ => So (p.inCS1))
+      guardCS2 = Guarded State () (\ _, _ => So (p.inCS2))
+  in AND' State ()
+      (AlwaysFinally State () guardCS1)
+      (AlwaysFinally State () guardCS2)
+
+||| Model-check (search) whether starvation freedom holds.
+public export
+mcSF : {p : _} -> MC State () (SF p)
+mcSF =
+  let mcAndFst = afSearch State () (now State () (\_,_ => fromDec $ IsTT _))
+                                                              -- p.inCS1 ^
+      mcAndSnd = afSearch State () (now State () (\_,_ => fromDec $ IsTT _))
+                                                              -- p.inCS2 ^
+  in mcAND' State () mcAndFst mcAndSnd
 
