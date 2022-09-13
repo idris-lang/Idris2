@@ -195,7 +195,7 @@ petersons2 =
 ||| The parallel composition of the two Peterson's processes, to be analysed.
 public export
 covering
-petersons : ?
+petersons : Diagram (GCL State, GCL State) State
 petersons = (gclToDiag State petersons1) `pComp` (gclToDiag State petersons2)
 
 
@@ -207,36 +207,101 @@ public export
 IsTT : (b : Bool) -> Dec (So b)
 IsTT = decSo
 
+
 ||| Mutual exclusion, i.e. both critical sections not simultaneously active.
 public export
-Mutex : (p : State) -> ?
+Mutex : (p : State) -> Formula ? ?
 Mutex p =
-  AlwaysGlobal State () (Guarded State () (\ _, _ => So (not (p.inCS1 && p.inCS2))))
+  AlwaysGlobal (GCL State, GCL State) State
+      (Guarded (GCL State, GCL State) State
+          (\_,_ => So (not (p.inCS1 && p.inCS2))))
 
 ||| Model-check (search) whether the mutex condition is satisfied.
 public export
-mcMutex : {p : _} -> MC State () (Mutex p)
-mcMutex =
-  agSearch State () (now State () (\_, _ => fromDec $ IsTT _))
-                  -- (not (p .inCS1 && (Delay (p .inCS2))) ^
+checkMutex : {p : _} -> MC (GCL State, GCL State) State (Mutex p)
+checkMutex =
+  agSearch (GCL State, GCL State) State
+      (now (GCL State, GCL State) State (\_,_ => fromDec $ IsTT _))
+                       -- (not (p .inCS1 && (Delay (p .inCS2))) ^
+
 
 ||| Starvation freedom
 public export
-SF : (p : State) -> ?
+SF : (p : State) -> Formula ? ?
 SF p =
-  let guardCS1 = Guarded State () (\ _, _ => So (p.inCS1))
-      guardCS2 = Guarded State () (\ _, _ => So (p.inCS2))
-  in AND' State ()
-      (AlwaysFinally State () guardCS1)
-      (AlwaysFinally State () guardCS2)
+  let guardCS1 = Guarded (GCL State, GCL State) State (\ _, _ => So (p.inCS1))
+      guardCS2 = Guarded (GCL State, GCL State) State (\ _, _ => So (p.inCS2))
+  in AND' (GCL State, GCL State) State
+      (AlwaysFinally (GCL State, GCL State) State guardCS1)
+      (AlwaysFinally (GCL State, GCL State) State guardCS2)
 
 ||| Model-check (search) whether starvation freedom holds.
 public export
-mcSF : {p : _} -> MC State () (SF p)
-mcSF =
-  let mcAndFst = afSearch State () (now State () (\_,_ => fromDec $ IsTT _))
-                                                              -- p.inCS1 ^
-      mcAndSnd = afSearch State () (now State () (\_,_ => fromDec $ IsTT _))
-                                                              -- p.inCS2 ^
-  in mcAND' State () mcAndFst mcAndSnd
+checkSF : {p : _} -> MC (GCL State, GCL State) State (SF p)
+checkSF =
+  let mcAndFst = afSearch (GCL State, GCL State) State
+                     (now (GCL State, GCL State) State
+                        (\_,_ => fromDec $ IsTT _))
+                                     -- p.inCS1 ^
+      mcAndSnd = afSearch (GCL State, GCL State) State
+                     (now (GCL State, GCL State) State
+                        (\_,_ => fromDec $ IsTT _))
+                                     -- p.inCS2 ^
+  in mcAND' (GCL State, GCL State) State mcAndFst mcAndSnd
+
+
+||| Deadlock freedom, aka. termination for all possible paths/traces
+public export
+Termination : {p : _} -> Formula ? ?
+Termination =
+  AlwaysFinally (GCL State, GCL State) State
+       (Guarded (GCL State, GCL State) State
+          (\_, _ => allSkip))
+  where
+    allSkip : {auto l : (GCL State, GCL State)} -> Type
+    allSkip @{(a, b)} = (a === SKIP State, b === SKIP State)
+
+||| Model-check (search) whether termination holds.
+public export
+checkTermination : {p : _} -> ?searchMe
+checkTermination =
+  ?mcTermination_rhs -- afSearch State () (now State () ?tododododo)
+  where
+    -- l should be auto-implicit, but we can't search for that here
+    isTerm : (l : (GCL State, GCL State)) -> Bool
+    isTerm (a, b) =
+      (weaken $ isSkip State a) && (weaken $ isSkip State b)
+
+    sound :  (l : (GCL State, GCL State))
+          -> So (isTerm l)
+          -> (fst l === SKIP State, snd l === SKIP State)
+    sound (a, b) _ with (isSkip State a) | (isSkip State b)
+      sound (a, b) _  | (Yes p) | (Yes q) = (p, q)
+      sound (a, b) Oh | (Yes p) | (No _)  impossible
+      sound (a, b) Oh | (No _)  | _       impossible
+
+--    theHDec : ?
+--    theHDec = MkHDec isTerm sound
+
+||| Initial state for model-checking Peterson's algorithm.
+public export
+init : State
+init = MkState False False 0 False False
+        -- intent1 intent2 turn inCS1 inCS2
+
+||| The computational tree for the two Peterson's processes.
+public export
+covering
+tree : CT (GCL State, GCL State) State
+tree = model (GCL State, GCL State) State petersons init
+
+checkPetersons : Prop ? ?
+checkPetersons = exists $
+                  (mcAND' (GCL State, GCL State) State
+                    checkMutex
+                    (mcAND' (GCL State, GCL State) State
+                      checkSF
+                      checkTermination
+                      ))
+                   tree
 
