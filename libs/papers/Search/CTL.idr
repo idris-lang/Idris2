@@ -5,10 +5,9 @@
 
 module Search.CTL
 
+import Data.So
 import Data.Nat
-import Data.List.Lazy
 import Data.List.Quantifiers
-import Data.List.Lazy.Quantifiers
 import Decidable.Equality
 
 import public Search.Negation
@@ -80,12 +79,11 @@ parameters (Lbls, Sts : Type)
   ||| A computation tree (corecursive rose tree?)
   public export
   data CT : Type where
-    At : (Lbls, Sts) -> LazyList CT -> CT
+    At : (Lbls, Sts) -> Inf (List CT) -> CT
 
   ||| Given a transition diagram and a starting value for the shared state,
   ||| construct the computation tree of the given transition diagram.
   public export
-  covering
   model : Diagram Lbls Sts -> (st : Sts) -> CT
   model (TD transFn iState) st = follow (iState, st)
     where
@@ -93,7 +91,7 @@ parameters (Lbls, Sts : Type)
 
       followAll : List (Lbls, Sts) -> List CT
       
-      follow st = At st (fromList $ followAll (transFn st))
+      follow st = At st (Delay (followAll (transFn st)))
 
       followAll [] = []
       followAll (st :: sts) = follow st :: followAll sts
@@ -121,8 +119,8 @@ parameters (Lbls, Sts : Type)
     constructor DI
     prf : {n : Nat} -> {m : CT} -> f n m -> f (S n) m
 
-  ||| A DI-formula holding for a specific depth means the CT models the formula in
-  ||| general (we could increase the search depth and still be fine).
+  ||| A DI-formula holding for a specific depth means the CT models the formula
+  ||| in general (we could increase the search depth and still be fine).
   public export
   diModels :  {n : Nat} -> {m : CT} -> {f : Formula} -> {auto d : DepthInv f}
            -> (p : f n m) -> Models m f
@@ -139,6 +137,7 @@ parameters (Lbls, Sts : Type)
 
   ||| A tt formula is depth-invariant.
   public export
+  %hint
   TrueDI : DepthInv TrueF
   TrueDI = DI (const TT)
 
@@ -146,18 +145,20 @@ parameters (Lbls, Sts : Type)
   -- Guards
 
   namespace Guards
-    ||| The formula `Guarded g` is true when the current state satisfies the guard
-    ||| `g`.
+    ||| The formula `Guarded g` is true when the current state satisfies the
+    ||| guard `g`.
     public export
     data Guarded : (g : (st : Sts) -> (l : Lbls) -> Type) -> Formula where
       Here :  {st : _} -> {l : _}
-           -> {ms : LazyList CT} -> {depth : Nat}
+           -> {ms : Inf (List CT)} -> {depth : Nat}
            -> {g : _}
            -> (guardOK : g st l)
            -> Guarded g depth (At (l, st) ms)
 
-    ||| Guarded expressions are depth-inv as the guard does not care about depth.
+    ||| Guarded expressions are depth-invariant as the guard does not care about
+    ||| depth.
     public export
+    %hint
     diGuarded : {p : _} -> DepthInv (Guarded p)
     diGuarded {p} = DI prf
       where
@@ -176,6 +177,7 @@ parameters (Lbls, Sts : Type)
 
   ||| Conjunction is depth-invariant
   public export
+  %hint
   diAND' :  {f, g : Formula}
          -> {auto p : DepthInv f}
          -> {auto q : DepthInv g}
@@ -193,14 +195,17 @@ parameters (Lbls, Sts : Type)
       Here : {t : _} -> {n : _} -> g n t -> AlwaysUntil f g (S n) t
 
       ||| If f still holds and we can recursively show that g holds for all
-      ||| possible subpaths in the CT, then all branches have f hold until g does.
-      There :  {st : _} -> {lazyCTs : _} -> {n : _}
-            -> f n (At st lazyCTs)
-            -> All ((AlwaysUntil f g) n) (toList lazyCTs)
-            -> AlwaysUntil f g (S n) (At st lazyCTs)
+      ||| possible subpaths in the CT, then all branches have f hold until g
+      ||| does.
+      There :  {st : _} -> {infCTs : Inf _} -> {n : _}
+            -> f n (At st infCTs)
+            -> All ((AlwaysUntil f g) n) (Force infCTs)
+            -> AlwaysUntil f g (S n) (At st infCTs)
 
-    ||| Provided `f` and `g` are depth-invariant, AlwaysUntil is depth-invariant
+    ||| Provided `f` and `g` are depth-invariant, AlwaysUntil is
+    ||| depth-invariant.
     public export
+    %hint
     diAU :  {f,g : _} -> {auto p : DepthInv f} -> {auto q : DepthInv g}
          -> DepthInv (AlwaysUntil f g)
     diAU @{(DI diP)} @{(DI diQ)} = DI prf
@@ -231,15 +236,17 @@ parameters (Lbls, Sts : Type)
       ||| If g holds here, we've found a branch where we can stop.
       Here : {t : _} -> {n : _} -> g n t -> ExistsUntil f g (S n) t
 
-      ||| If f holds here and any of the further branches have a g, then there is
-      ||| a branch where f holds until g does.
-      There :  {st : _} -> {ms : _} -> {n : _}
-            -> f n (At st ms)
-            -> Lazy.Quantifiers.Any.Any (ExistsUntil f g n) ms
-            -> ExistsUntil f g (S n) (At st ms)
+      ||| If f holds here and any of the further branches have a g, then there
+      ||| is a branch where f holds until g does.
+      There :  {st : _} -> {infCTs : Inf _} -> {n : _}
+            -> f n (At st infCTs)
+            -> Any (ExistsUntil f g n) (Force infCTs)
+            -> ExistsUntil f g (S n) (At st infCTs)
 
-    ||| Provided `f` and `g` are depth-invariant, ExistsUntil is depth-invariant.
+    ||| Provided `f` and `g` are depth-invariant, ExistsUntil is
+    ||| depth-invariant.
     public export
+    %hint
     diEU :  {f, g : _} -> {auto p : DepthInv f} -> {auto q : DepthInv g}
          -> DepthInv (ExistsUntil f g)
     diEU @{(DI diP)} @{(DI diQ)} = DI prf
@@ -253,14 +260,14 @@ parameters (Lbls, Sts : Type)
             -- `Any.mapProperty` erases the list and so won't work here
             mapAnyEU :  {d : _} -> {lt : _}
                      -> (prf : ExistsUntil f g d t -> ExistsUntil f g (S d) t)
-                     -> Lazy.Quantifiers.Any.Any (ExistsUntil f g d) lt
-                     -> Lazy.Quantifiers.Any.Any (ExistsUntil f g (S d)) lt
+                     -> Any (ExistsUntil f g d) lt
+                     -> Any (ExistsUntil f g (S d)) lt
             mapAnyEU prf (Here x) = Here (prf x)
             mapAnyEU prf (There x) = There (mapAnyEU prf x)
 
 
   ------------------------------------------------------------------------
-  -- Finally, Completed, and the stronger forms of Global
+  -- Finally, Completed, and the finite forms of Global
 
   ||| "Always finally" means that for all paths, the formula f will eventually
   ||| hold.
@@ -281,12 +288,13 @@ parameters (Lbls, Sts : Type)
   ||| A completed formula is a formula for which no more successor states exist.
   public export
   data Completed : Formula where
-    IsCompleted :  {st : _} -> {n : _} -> {ms : _}
-                -> ms === []
-                -> Completed n (At st ms)
+    IsCompleted :  {st : _} -> {n : _} -> {infCTs : Inf _}
+                -> (Force infCTs) === []
+                -> Completed n (At st infCTs)
 
   ||| A completed formula is depth-invariant (there is nothing more to do).
   public export
+  %hint
   diCompleted : DepthInv Completed
   diCompleted = DI prf
     where
@@ -302,6 +310,7 @@ parameters (Lbls, Sts : Type)
   public export
   ExistsGlobal : (f : Formula) -> Formula
   ExistsGlobal f = ExistsUntil f (f `AND'` Completed)
+
 
   ------------------------------------------------------------------------
   -- Proof search (finally!)
@@ -323,10 +332,10 @@ parameters (Lbls, Sts : Type)
   ||| Check if the current state has any successors.
   public export
   isCompleted : MC Completed
-  isCompleted (At st ms) _ = IsCompleted <$> isEmpty ms
+  isCompleted (At st ms) _ = IsCompleted <$> isEmpty (Force ms)
     where
       ||| Half-decider for whether a list is empty
-      isEmpty : {x : _} -> (n : LazyList x) -> HDec (n === [])
+      isEmpty : {x : _} -> (n : List x) -> HDec (n === [])
       isEmpty [] = yes Refl
       isEmpty (_ :: _) = no
 
@@ -337,21 +346,21 @@ parameters (Lbls, Sts : Type)
 
   ||| Proof-search for `AlwaysUntil`.
   |||
-  ||| Evaluates the entire `LazyList` of the state-space, since we need `f U g`
-  ||| to hold across every path.
+  ||| Evaluates the entire `Inf (List CT)` of the state-space, since we need
+  ||| `f U g` to hold across every path.
   public export
   auSearch : {f, g : Formula} -> MC f -> MC g -> MC (AlwaysUntil f g)
   auSearch _ _ _ Z = no
   auSearch p1 p2 t@(At st ms) (S n) =  [| AU.Here  (p2 t n) |]
                                    <|> [| AU.There (p1 t n) rest |]
     where
-      -- in AlwaysUntil searches, we have to check the entire LazyList
-      rest : HDec (All (AlwaysUntil f g n) (toList ms))
+      -- in AlwaysUntil searches, we have to check the entire `Inf (List CT)`
+      rest : HDec (All (AlwaysUntil f g n) (Force ms))
       rest = HDecidable.List.all (toList ms) (\ m => auSearch p1 p2 m n)
 
   ||| Proof-search for `ExistsUntil`.
   |||
-  ||| Lazy over the state-space, since `E [f U g]` holds as soon as `f U g` is
+  ||| `Inf` over the state-space, since `E [f U g]` holds as soon as `f U g` is
   ||| found.
   public export
   euSearch : {f, g : Formula} -> MC f -> MC g -> MC (ExistsUntil f g)
@@ -359,8 +368,8 @@ parameters (Lbls, Sts : Type)
   euSearch p1 p2 t@(At st ms) (S n) =  [| EU.Here  (p2 t n) |]
                                    <|> [| EU.There (p1 t n) rest |]
     where
-      rest : HDec (Lazy.Quantifiers.Any.Any (ExistsUntil f g n) ms)
-      rest = HDecidable.LazyList.any ms (\ m => euSearch p1 p2 m n)
+      rest : HDec (Any (ExistsUntil f g n) ms)
+      rest = HDecidable.List.any (Force ms) (\ m => euSearch p1 p2 m n)
 
   ||| Proof-search for Exists Finally
   public export
@@ -387,20 +396,22 @@ parameters (Lbls, Sts : Type)
 
 ||| This CT is a model of composing the `HiHorse` and `LoRoad` programs.
 public export
-covering
-tree : CT ((), ()) Nat
-tree = model ((), ()) Nat (HiHorse `pComp` LoRoad) 0
+Tree : CT ((), ()) Nat
+Tree = model ((), ()) Nat (HiHorse `pComp` LoRoad) 0
 
+||| Prove that there exists a path where `HiHorse || LoRoad`'s state reaches 10.
 public export
-covering
 reaches10 : ?   -- HDec (ExistsFinally [...])
 reaches10 =
-  efSearch ((), ()) Nat (now ((), ()) Nat (\ st, _ => fromDec $ decEq st 10)) tree 20
+  efSearch ((), ()) Nat
+      (now ((), ()) Nat
+          (\ st, _ => fromDec $ decEq st 10)) Tree 20
 
---- FIXME
---- export
---- covering
---- r10Proof : ?
---- r10Proof = diModels ((), ()) Nat (evidence reaches10)
+export
+r10Proof : Models ((), ()) Nat
+              Tree
+              (ExistsFinally ((), ()) Nat
+                  (Guarded ((), ()) Nat (\ st, _ => st === 10)))
+r10Proof = diModels ((), ()) Nat (reaches10.evidence Oh)
 
 
