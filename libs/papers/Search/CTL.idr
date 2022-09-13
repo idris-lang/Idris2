@@ -78,11 +78,13 @@ lteAltToLTE {m=(S m)} (LTEStep s) = lteSuccRight (lteAltToLTE s)
 
 parameters (Lbls, Sts : Type)
   ||| A computation tree (corecursive rose tree?)
+  public export
   data CT : Type where
     At : (Lbls, Sts) -> LazyList CT -> CT
 
   ||| Given a transition diagram and a starting value for the shared state,
   ||| construct the computation tree of the given transition diagram.
+  public export
   covering
   model : Diagram Lbls Sts -> (st : Sts) -> CT
   model (TD transFn iState) st = follow (iState, st)
@@ -131,10 +133,12 @@ parameters (Lbls, Sts : Type)
       diLTE p (LTEStep x) = diPrf (diLTE p x)
 
   ||| A trivially true (TT) formula.
+  public export
   data TrueF : Formula where
     TT : {n : _} -> {m : _} -> TrueF n m
 
   ||| A tt formula is depth-invariant.
+  public export
   TrueDI : DepthInv TrueF
   TrueDI = DI (const TT)
 
@@ -329,7 +333,7 @@ parameters (Lbls, Sts : Type)
   ||| Conjunction of model-checking procedures.
   public export
   mcAND' : {f, g : Formula} -> MC f -> MC g -> MC (f `AND'` g)
-  mcAND' a b m n = [| MkAND' (a m n) (b m n) |]
+  mcAND' mcF mcG t d = [| MkAND' (mcF t d) (mcG t d) |]
 
   ||| Proof-search for `AlwaysUntil`.
   |||
@@ -382,12 +386,12 @@ parameters (Lbls, Sts : Type)
 -- Proof search example
 
 ||| This CT is a model of composing the `HiHorse` and `LoRoad` programs.
-export
+public export
 covering
 tree : CT ((), ()) Nat
 tree = model ((), ()) Nat (HiHorse `pComp` LoRoad) 0
 
-export
+public export
 covering
 reaches10 : ?   -- HDec (ExistsFinally [...])
 reaches10 =
