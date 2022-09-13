@@ -7,6 +7,7 @@ module Search.GCL
 
 import Data.So
 import Data.Nat
+import Data.Fuel
 import Data.List.Lazy
 import Data.List.Quantifiers
 import Data.List.Lazy.Quantifiers
@@ -84,27 +85,30 @@ parameters (Sts : Type)
   isSkip (UPDATE uf) = No absurd
   isSkip SKIP        = Yes Refl
 
-  ||| Operational sematics of GCL
+  ||| Operational semantics of GCL.
+  ||| (curried version to pass the termination checker)
   public export
-  covering
-  ops : (GCL, Sts) -> List (GCL, Sts)
-  ops (SKIP, st) = []
-  ops ((UPDATE u), st) = [(SKIP, u st)]
-  ops ((DOT SKIP y), st) = [(y, st)]
-  ops ((DOT x y), st) = map (\ (x, st') => ((DOT x y), st')) $
-                        ops (x, st)
-  ops ((IF gs), st) = map (\ aGuard => (aGuard.x, st)) $
-                      filter (\ aGuard => aGuard.g st) gs
+  ops' : GCL -> Sts -> List (GCL, Sts)
+  ops' SKIP st = []
+  ops' (UPDATE u) st = [(SKIP, u st)]
+  ops' (DOT SKIP y) st = [(y, st)]
+  ops' (DOT x y) st = mapFst (`DOT` y) <$> ops' x st
+  ops' (IF gs) st = map (\ aGuard => (aGuard.x, st)) $
+                    filter (\ aGuard => aGuard.g st) gs
 
-  ops ((DO gs), st) with (map (\ aG => ((DOT aG.x (DO gs)), st)) $
-                          filter (\ aG => aG.g st) gs)
+  ops' (DO gs) st with (map (\ aG => ((DOT aG.x (DO gs)), st)) $
+                        filter (\ aG => aG.g st) gs)
     _ | [] = [(SKIP, st)]
     _ | ys = ys
+
+  ||| Operational semantics of GCL.
+  public export
+  ops : (GCL, Sts) -> List (GCL, Sts)
+  ops (l, st) = ops' l st
 
   ||| We can convert a GCL program to a transition digram by using the program
   ||| as the state and the operational semantics as the transition function.
   public export
-  covering
   gclToDiag : GCL -> Diagram GCL Sts
   gclToDiag p = TD ops p
 
@@ -194,7 +198,6 @@ petersons2 =
 
 ||| The parallel composition of the two Peterson's processes, to be analysed.
 public export
-covering
 petersons : Diagram (GCL State, GCL State) State
 petersons = (gclToDiag State petersons1) `pComp` (gclToDiag State petersons2)
 
@@ -205,67 +208,70 @@ petersons = (gclToDiag State petersons1) `pComp` (gclToDiag State petersons2)
 ||| Type-level decider for booleans.
 public export
 IsTT : (b : Bool) -> Dec (So b)
-IsTT = decSo
+IsTT True = Yes Oh
+IsTT False = No absurd
 
 
 ||| Mutual exclusion, i.e. both critical sections not simultaneously active.
 public export
-Mutex : (p : State) -> Formula ? ?
-Mutex p =
+Mutex : Formula ? ?
+Mutex =
   AlwaysGlobal (GCL State, GCL State) State
       (Guarded (GCL State, GCL State) State
-          (\_,_ => So (not (p.inCS1 && p.inCS2))))
+          (\p,_ => So (not (p.inCS1 && p.inCS2))))
 
 ||| Model-check (search) whether the mutex condition is satisfied.
 public export
-checkMutex : {p : _} -> MC (GCL State, GCL State) State (Mutex p)
+checkMutex : MC (GCL State, GCL State) State Mutex
 checkMutex =
   agSearch (GCL State, GCL State) State
-      (now (GCL State, GCL State) State (\_,_ => fromDec $ IsTT _))
-                       -- (not (p .inCS1 && (Delay (p .inCS2))) ^
-
+      (now (GCL State, GCL State) State
+          (\p,_ => fromDec $ IsTT _))
+                              --  ^ (not (p .inCS1 && (Delay (p .inCS2)))
 
 ||| Starvation freedom
 public export
-SF : (p : State) -> Formula ? ?
-SF p =
-  let guardCS1 = Guarded (GCL State, GCL State) State (\ _, _ => So (p.inCS1))
-      guardCS2 = Guarded (GCL State, GCL State) State (\ _, _ => So (p.inCS2))
+SF : Formula ? ?
+SF =
+  let guardCS1 = Guarded (GCL State, GCL State) State (\p,_ => So (p.inCS1))
+      guardCS2 = Guarded (GCL State, GCL State) State (\p,_ => So (p.inCS2))
   in AND' (GCL State, GCL State) State
       (AlwaysFinally (GCL State, GCL State) State guardCS1)
       (AlwaysFinally (GCL State, GCL State) State guardCS2)
 
 ||| Model-check (search) whether starvation freedom holds.
 public export
-checkSF : {p : _} -> MC (GCL State, GCL State) State (SF p)
+checkSF : MC (GCL State, GCL State) State SF
 checkSF =
   let mcAndFst = afSearch (GCL State, GCL State) State
                      (now (GCL State, GCL State) State
-                        (\_,_ => fromDec $ IsTT _))
+                        (\p,_ => fromDec $ IsTT _))
                                      -- p.inCS1 ^
       mcAndSnd = afSearch (GCL State, GCL State) State
                      (now (GCL State, GCL State) State
-                        (\_,_ => fromDec $ IsTT _))
+                        (\p,_ => fromDec $ IsTT _))
                                      -- p.inCS2 ^
   in mcAND' (GCL State, GCL State) State mcAndFst mcAndSnd
 
 
 ||| Deadlock freedom, aka. termination for all possible paths/traces
 public export
-Termination : {p : _} -> Formula ? ?
+Termination : Formula ? ?
 Termination =
   AlwaysFinally (GCL State, GCL State) State
        (Guarded (GCL State, GCL State) State
-          (\_, _ => allSkip))
+          (\_,l => allSkip l))
   where
-    allSkip : {auto l : (GCL State, GCL State)} -> Type
-    allSkip @{(a, b)} = (a === SKIP State, b === SKIP State)
+    allSkip : (l : (GCL State, GCL State)) -> Type
+    allSkip l = (fst l === SKIP State, snd l === SKIP State)
 
 ||| Model-check (search) whether termination holds.
 public export
-checkTermination : {p : _} -> ?searchMe
+checkTermination : MC (GCL State, GCL State) State Termination
 checkTermination =
-  ?mcTermination_rhs -- afSearch State () (now State () ?tododododo)
+  afSearch (GCL State, GCL State) State
+      (now (GCL State, GCL State) State
+          (\_,l => MkHDec (isTerm l) (sound l)))
   where
     -- l should be auto-implicit, but we can't search for that here
     isTerm : (l : (GCL State, GCL State)) -> Bool
@@ -280,8 +286,6 @@ checkTermination =
       sound (a, b) Oh | (Yes p) | (No _)  impossible
       sound (a, b) Oh | (No _)  | _       impossible
 
---    theHDec : ?
---    theHDec = MkHDec isTerm sound
 
 ||| Initial state for model-checking Peterson's algorithm.
 public export
@@ -291,10 +295,10 @@ init = MkState False False 0 False False
 
 ||| The computational tree for the two Peterson's processes.
 public export
-covering
 tree : CT (GCL State, GCL State) State
 tree = model (GCL State, GCL State) State petersons init
 
+public export
 checkPetersons : Prop ? ?
 checkPetersons = exists $
                   (mcAND' (GCL State, GCL State) State
@@ -304,4 +308,19 @@ checkPetersons = exists $
                       checkTermination
                       ))
                    tree
+
+%logging "eval.casetree.stuck" 5
+|||
+public export
+petersonsCorrect : Models ? ?
+                    GCL.tree
+                    (AND' ? ?
+                      Mutex
+                      (AND' ? ?
+                        SF
+                        Termination
+                        ))
+petersonsCorrect =
+  diModels ? ? (snd (check @{%search} (limit 1000) checkPetersons @{Oh}))
+%logging off
 
