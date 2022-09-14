@@ -410,6 +410,7 @@ mutual
                  Visibility -> Maybe TotalReq ->
                  Name ->
                  (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
+                 (opts : List DataOpt) ->
                  (conName : Maybe Name) ->
                  List (PField' nm) ->
                  PDecl' nm
@@ -438,7 +439,7 @@ mutual
   getPDeclLoc (PReflect fc _) = fc
   getPDeclLoc (PInterface fc _ _ _ _ _ _ _ _) = fc
   getPDeclLoc (PImplementation fc _ _ _ _ _ _ _ _ _ _) = fc
-  getPDeclLoc (PRecord fc _ _ _ _ _ _ _) = fc
+  getPDeclLoc (PRecord fc _ _ _ _ _ _ _ _) = fc
   getPDeclLoc (PMutual fc _) = fc
   getPDeclLoc (PFail fc _ _) = fc
   getPDeclLoc (PFixity fc _ _ _) = fc

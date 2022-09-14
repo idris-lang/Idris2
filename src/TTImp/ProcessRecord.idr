@@ -49,10 +49,11 @@ elabRecord : {vars : _} ->
              NestedNames vars -> Maybe String ->
              Visibility -> Maybe TotalReq -> Name ->
              (params : List (Name, RigCount, PiInfo RawImp, RawImp)) ->
+             (opts : List DataOpt) ->
              (conName : Name) ->
              List IField ->
              Core ()
-elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params conName_in fields
+elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params opts conName_in fields
     = do tn <- inCurrentNS tn_in
          conName <- inCurrentNS conName_in
          elabAsData tn conName
@@ -130,7 +131,7 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params conName_in fiel
              let boundNames = paramNames ++ map fname fields ++ vars
              let con = MkImpTy EmptyFC EmptyFC cname
                        !(bindTypeNames fc [] boundNames conty)
-             let dt = MkImpData fc tn !(bindTypeNames fc [] boundNames (mkDataTy fc params)) [] [con]
+             let dt = MkImpData fc tn !(bindTypeNames fc [] boundNames (mkDataTy fc params)) opts [con]
              log "declare.record" 5 $ "Record data type " ++ show dt
              processDecl [] nest env (IData fc vis mbtot dt)
 
@@ -257,5 +258,5 @@ processRecord : {vars : _} ->
                 Env Term vars -> Maybe String ->
                 Visibility -> Maybe TotalReq ->
                 ImpRecord -> Core ()
-processRecord eopts nest env newns vis mbtot (MkImpRecord fc n ps cons fs)
-    = elabRecord eopts fc env nest newns vis mbtot n ps cons fs
+processRecord eopts nest env newns vis mbtot (MkImpRecord fc n ps opts cons fs)
+    = elabRecord eopts fc env nest newns vis mbtot n ps opts cons fs

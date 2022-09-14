@@ -365,6 +365,7 @@ mutual
   data ImpRecord' : Type -> Type where
        MkImpRecord : FC -> (n : Name) ->
                      (params : List (ImpParameter' nm)) ->
+                     (opts : List DataOpt) ->
                      (conName : Name) ->
                      (fields : List (IField' nm)) ->
                      ImpRecord' nm
@@ -380,7 +381,7 @@ mutual
   export
   covering
   Show nm => Show (ImpRecord' nm) where
-    show (MkImpRecord _ n params con fields)
+    show (MkImpRecord _ n params opts con fields)
         = "record " ++ show n ++ " " ++ show params ++
           " " ++ show con ++ "\n\t" ++
           showSep "\n\t" (map show fields) ++ "\n"
@@ -789,7 +790,7 @@ definedInBlock ns decls =
     defName ns (IParameters _ _ pds) = concatMap (defName ns) pds
     defName ns (IFail _ _ nds) = concatMap (defName ns) nds
     defName ns (INamespace _ n nds) = concatMap (defName (ns <.> n)) nds
-    defName ns (IRecord _ fldns _ _ (MkImpRecord _ n _ con flds))
+    defName ns (IRecord _ fldns _ _ (MkImpRecord _ n _ opts con flds))
         = expandNS ns con :: all
       where
         fldns' : Namespace
