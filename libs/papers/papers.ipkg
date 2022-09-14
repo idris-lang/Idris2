@@ -7,6 +7,13 @@ options = "--ignore-missing-ipkg"
 
 modules = Data.Container,
 
+          Data.Description.Regular,
+          Data.Description.Indexed,
+
+          Data.Enumerate,
+          Data.Enumerate.Common,
+          Data.Enumerate.Indexed,
+
           Data.InductionRecursion.DybjerSetzer,
 
           Data.INTEGER,
