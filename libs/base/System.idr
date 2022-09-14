@@ -182,6 +182,36 @@ namespace Escaped
   run : HasIO io => (cmd : List String) -> io (String, Int)
   run = run . escapeCmd
 
+||| Run a shell command, allowing processing its stdout line by line.
+|||
+||| Notice that is the line of the command ends with a newline character,
+||| it will be present in the string passed to the processing function.
+|||
+||| This function returns an exit code which value should be consistent with the `run` function.
+export
+covering
+runProcessingOutput : HasIO io => (String -> io ()) -> (cmd : String) -> io Int
+runProcessingOutput pr cmd = do
+  Right f <- popen cmd Read
+    | Left err => pure 1
+  True <- process f
+    | False => pure 1 -- we do not close `f` in case of reading error, like `run` does
+  pclose f
+
+  where
+    process : File -> io Bool
+    process h = if !(fEOF h) then pure True else do
+      Right line <- fGetLine h
+        | Left err => pure False
+      pr line
+      process h
+
+namespace Escaped
+  export
+  covering
+  runProcessingOutput : HasIO io => (String -> io ()) -> (cmd : List String) -> io Int
+  runProcessingOutput pr = runProcessingOutput pr . escapeCmd
+
 %foreign supportC "idris2_time"
          "javascript:lambda:() => Math.floor(new Date().getTime() / 1000)"
 prim__time : PrimIO Int
