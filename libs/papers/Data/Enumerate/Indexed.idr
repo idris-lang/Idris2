@@ -6,6 +6,7 @@
 module Data.Enumerate.Indexed
 
 import Data.List
+import Data.Description.Regular
 import Data.Description.Indexed
 
 import Data.Enumerate.Common
@@ -96,3 +97,15 @@ indexed d v = MkFix <$> go (d v) where
   go (d1 * d2) = pair (go d1) (go d2)
   go (d1 + d2) = Left <$> go d1 <|> Right <$> go d2
   go (Sig s vs f) = sig (const vs) (\ x => go (f x))
+
+export covering
+0 Memorator : (d : Desc p) -> (Fix d -> Type) -> Type -> Type
+Memorator d a b = (d ~> (List . a)) -> List b
+
+export covering
+memorate : {d : Desc p} ->
+           {0 b : Fix d -> Type} ->
+           ((x : Fix d) -> Memorator d b (b x)) ->
+           Nat -> (x : Fix d) -> List (b x)
+memorate f 0 x = []
+memorate f (S n) x = f x (trie $ memorate f n)

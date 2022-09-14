@@ -108,3 +108,24 @@ trie f = MkMemo (go d (\ t => f (MkFix t))) where
   go (Const s prop) f = f
   go (d1 * d2) f = go d1 $ \ v1 => go d2 $ \ v2 => f (v1, v2)
   go (d1 + d2) f = (go d1 (\ v => f (Left v)), go d2 (\ v => f (Right v)))
+
+export
+untrie : {d : Desc p} -> {0 b : Fix d -> Type} -> d ~> b -> ((x : Fix d) -> b x)
+untrie (MkMemo f) (MkFix t) = go d f t where
+
+  go : (e : Desc p) ->
+       {0 b' : Elem e (Fix d) -> Type} ->
+       Memo e (\ x => Inf (d ~> x)) b' ->
+       (x : Elem e (Fix d)) -> b' x
+  go Zero mem x = absurd x
+  go One mem () = mem
+  go Id mem x = untrie mem x
+  go (Const s prop) mem x = mem x
+  go (d1 * d2) mem (x, y) = go d2 (go d1 mem x) y
+  go (d1 + d2) mem (Left x) = go d1 (fst mem) x
+  go (d1 + d2) mem (Right x) = go d2 (snd mem) x
+
+export
+memo : {d : Desc p} -> (0 b : Fix d -> Type) ->
+       ((x : Fix d) -> b x) -> ((x : Fix d) -> b x)
+memo b f = untrie (trie f)
