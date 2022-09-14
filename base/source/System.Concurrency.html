@@ -152,7 +152,7 @@
 <div id="line31"><a href="#line31" class="IdrisLineNumber"> &nbsp;31 | </a><span class="IdrisComment">--&nbsp;Mutexes</span></div>
 <div id="line32"><a href="#line32" class="IdrisLineNumber"> &nbsp;32 | </a></div>
 <div id="line33"><a href="#line33" class="IdrisLineNumber"> &nbsp;33 | </a><span class="IdrisKeyword">export</span></div>
-<div id="line34"><a href="#line34" class="IdrisLineNumber"> &nbsp;34 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">Mutex</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">where</span>&nbsp;<span class="IdrisKeyword">[</span>external<span class="IdrisKeyword">]</span></div>
+<div id="line34"><a href="#line34" class="IdrisLineNumber"> &nbsp;34 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">Mutex</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">where</span>&nbsp;<span class="IdrisKeyword">[external]</span></div>
 <div id="line35"><a href="#line35" class="IdrisLineNumber"> &nbsp;35 | </a></div>
 <div id="line36"><a href="#line36" class="IdrisLineNumber"> &nbsp;36 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-make-mutex&quot;</span></div>
 <div id="line37"><a href="#line37" class="IdrisLineNumber"> &nbsp;37 | </a><span class="IdrisFunction">prim__makeMutex</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">PrimIO</span>&nbsp;<span class="IdrisType">Mutex</span></div>
@@ -187,7 +187,7 @@
 <div id="line66"><a href="#line66" class="IdrisLineNumber"> &nbsp;66 | </a><span class="IdrisComment">--&nbsp;Condition&nbsp;variables</span></div>
 <div id="line67"><a href="#line67" class="IdrisLineNumber"> &nbsp;67 | </a></div>
 <div id="line68"><a href="#line68" class="IdrisLineNumber"> &nbsp;68 | </a><span class="IdrisKeyword">export</span></div>
-<div id="line69"><a href="#line69" class="IdrisLineNumber"> &nbsp;69 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">Condition</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">where</span>&nbsp;<span class="IdrisKeyword">[</span>external<span class="IdrisKeyword">]</span></div>
+<div id="line69"><a href="#line69" class="IdrisLineNumber"> &nbsp;69 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">Condition</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">where</span>&nbsp;<span class="IdrisKeyword">[external]</span></div>
 <div id="line70"><a href="#line70" class="IdrisLineNumber"> &nbsp;70 | </a></div>
 <div id="line71"><a href="#line71" class="IdrisLineNumber"> &nbsp;71 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme,racket:blodwen-make-cv&quot;</span></div>
 <div id="line72"><a href="#line72" class="IdrisLineNumber"> &nbsp;72 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">&quot;scheme,chez:blodwen-make-condition&quot;</span></div>
@@ -246,7 +246,7 @@
 <div id="line125"><a href="#line125" class="IdrisLineNumber"> 125 | </a><span class="IdrisComment">--&nbsp;Semaphores</span></div>
 <div id="line126"><a href="#line126" class="IdrisLineNumber"> 126 | </a></div>
 <div id="line127"><a href="#line127" class="IdrisLineNumber"> 127 | </a><span class="IdrisKeyword">export</span></div>
-<div id="line128"><a href="#line128" class="IdrisLineNumber"> 128 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">Semaphore</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">where</span>&nbsp;<span class="IdrisKeyword">[</span>external<span class="IdrisKeyword">]</span></div>
+<div id="line128"><a href="#line128" class="IdrisLineNumber"> 128 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">Semaphore</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">where</span>&nbsp;<span class="IdrisKeyword">[external]</span></div>
 <div id="line129"><a href="#line129" class="IdrisLineNumber"> 129 | </a></div>
 <div id="line130"><a href="#line130" class="IdrisLineNumber"> 130 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-make-semaphore&quot;</span></div>
 <div id="line131"><a href="#line131" class="IdrisLineNumber"> 131 | </a><span class="IdrisFunction">prim__makeSemaphore</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Int</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisFunction">PrimIO</span>&nbsp;<span class="IdrisType">Semaphore</span></div>
@@ -278,7 +278,7 @@
 <div id="line157"><a href="#line157" class="IdrisLineNumber"> 157 | </a><span class="IdrisComment">|||&nbsp;A&nbsp;barrier&nbsp;enables&nbsp;multiple&nbsp;threads&nbsp;to&nbsp;synchronize&nbsp;the&nbsp;beginning&nbsp;of&nbsp;some</span></div>
 <div id="line158"><a href="#line158" class="IdrisLineNumber"> 158 | </a><span class="IdrisComment">|||&nbsp;computation.</span></div>
 <div id="line159"><a href="#line159" class="IdrisLineNumber"> 159 | </a><span class="IdrisKeyword">export</span></div>
-<div id="line160"><a href="#line160" class="IdrisLineNumber"> 160 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">Barrier</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">where</span>&nbsp;<span class="IdrisKeyword">[</span>external<span class="IdrisKeyword">]</span></div>
+<div id="line160"><a href="#line160" class="IdrisLineNumber"> 160 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">Barrier</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">where</span>&nbsp;<span class="IdrisKeyword">[external]</span></div>
 <div id="line161"><a href="#line161" class="IdrisLineNumber"> 161 | </a></div>
 <div id="line162"><a href="#line162" class="IdrisLineNumber"> 162 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-make-barrier&quot;</span></div>
 <div id="line163"><a href="#line163" class="IdrisLineNumber"> 163 | </a><span class="IdrisFunction">prim__makeBarrier</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Int</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisFunction">PrimIO</span>&nbsp;<span class="IdrisType">Barrier</span></div>
@@ -301,7 +301,7 @@
 <div id="line180"><a href="#line180" class="IdrisLineNumber"> 180 | </a><span class="IdrisComment">--&nbsp;Channels</span></div>
 <div id="line181"><a href="#line181" class="IdrisLineNumber"> 181 | </a></div>
 <div id="line182"><a href="#line182" class="IdrisLineNumber"> 182 | </a><span class="IdrisKeyword">export</span></div>
-<div id="line183"><a href="#line183" class="IdrisLineNumber"> 183 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">Channel</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">where</span>&nbsp;<span class="IdrisKeyword">[</span>external<span class="IdrisKeyword">]</span></div>
+<div id="line183"><a href="#line183" class="IdrisLineNumber"> 183 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">Channel</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">where</span>&nbsp;<span class="IdrisKeyword">[external]</span></div>
 <div id="line184"><a href="#line184" class="IdrisLineNumber"> 184 | </a></div>
 <div id="line185"><a href="#line185" class="IdrisLineNumber"> 185 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-make-channel&quot;</span></div>
 <div id="line186"><a href="#line186" class="IdrisLineNumber"> 186 | </a><span class="IdrisFunction">prim__makeChannel</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">PrimIO</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisType">Channel</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span></div>
