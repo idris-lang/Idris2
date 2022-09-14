@@ -56,6 +56,8 @@ namespace R1
   public export
   record R1 where
     constructor MkR
+    -- `a` is out of scope here so
+    -- this silently declares an implicit field `0 a : Type`
     field : a
 
 namespace R2

@@ -157,6 +157,7 @@ mutual
   data Record : Type where
        MkRecord : FC -> (n : Name) ->
                   (params : List (Name, Count, PiInfo TTImp, TTImp)) ->
+                  (opts : List DataOpt) ->
                   (conName : Name) ->
                   (fields : List IField) ->
                   Record
@@ -368,8 +369,8 @@ parameters {auto eqTTImp : Eq TTImp}
 
   public export
   Eq Record where
-    MkRecord _ n ps cn fs == MkRecord _ n' ps' cn' fs' =
-      n == n' && ps == ps' && cn == cn' && fs == fs'
+    MkRecord _ n ps opts cn fs == MkRecord _ n' ps' opts' cn' fs' =
+      n == n' && ps == ps' && opts == opts' && cn == cn' && fs == fs'
 
   public export
   Eq Decl where
@@ -460,7 +461,7 @@ mutual
 
   export
   Show Record where
-    show (MkRecord fc n params conName fields)
+    show (MkRecord fc n params opts conName fields) -- TODO: print opts
       = unwords
       [ "record", show n
       , unwords (map (\ (nm, rig, pinfo, ty) =>
@@ -633,10 +634,40 @@ data Argument a
   | AutoArg FC a
 
 export
+isExplicit : Argument a -> Maybe (FC, a)
+isExplicit (Arg fc a) = pure (fc, a)
+isExplicit _ = Nothing
+
+export
+fromPiInfo : FC -> PiInfo t -> Maybe Name -> a -> Maybe (Argument a)
+fromPiInfo fc ImplicitArg (Just nm) a = pure (NamedArg fc nm a)
+fromPiInfo fc ExplicitArg _ a = pure (Arg fc a)
+fromPiInfo fc AutoImplicit _ a = pure (AutoArg fc a)
+fromPiInfo fc (DefImplicit _) (Just nm) a = pure (NamedArg fc nm a)
+fromPiInfo _ _ _ _ = Nothing
+
+export
+Functor Argument where
+  map f (Arg fc a) = Arg fc (f a)
+  map f (NamedArg fc nm a) = NamedArg fc nm (f a)
+  map f (AutoArg fc a) = AutoArg fc (f a)
+
+export
+iApp : TTImp -> Argument TTImp -> TTImp
+iApp f (Arg fc t) = IApp fc f t
+iApp f (NamedArg fc nm t) = INamedApp fc f nm t
+iApp f (AutoArg fc t) = IAutoApp fc f t
+
+export
 unArg : Argument a -> a
 unArg (Arg _ x) = x
 unArg (NamedArg _ _ x) = x
 unArg (AutoArg _ x) = x
+
+||| We often apply multiple arguments, this makes things simpler
+export
+apply : TTImp -> List (Argument TTImp) -> TTImp
+apply = foldl iApp
 
 public export
 data IsAppView : (FC, Name) -> SnocList (Argument TTImp) -> TTImp -> Type where
@@ -717,8 +748,8 @@ parameters (f : TTImp -> TTImp)
 
   export
   mapRecord : Record -> Record
-  mapRecord (MkRecord fc n params conName fields)
-    = MkRecord fc n (map (map $ map $ bimap mapPiInfo mapTTImp) params) conName (map mapIField fields)
+  mapRecord (MkRecord fc n params opts conName fields)
+    = MkRecord fc n (map (map $ map $ bimap mapPiInfo mapTTImp) params) opts conName (map mapIField fields)
 
   export
   mapDecl : Decl -> Decl
@@ -839,9 +870,10 @@ parameters {0 m : Type -> Type} {auto mon : Monad m} (f : TTImp -> m TTImp)
 
   export
   mapMRecord : Record -> m Record
-  mapMRecord (MkRecord fc n params conName fields)
+  mapMRecord (MkRecord fc n params opts conName fields)
     = MkRecord fc n
     <$> traverse (bitraverse pure $ bitraverse pure $ bitraverse mapMPiInfo mapMTTImp) params
+    <*> pure opts
     <*> pure conName
     <*> traverse mapMIField fields
 

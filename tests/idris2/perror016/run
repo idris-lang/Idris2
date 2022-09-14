@@ -1,0 +1,4 @@
+rm -rf build
+
+$1 --no-color --console-width 0 --check ParseIf.idr || true
+$1 --no-color --console-width 0 --check ParseIf2.idr || true

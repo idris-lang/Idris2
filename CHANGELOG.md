@@ -131,6 +131,8 @@
 * Adds `Data.List1.Quantifiers`, ported from `Data.List.Quantifiers`.
 * Changes the order of arguments in `RWST` transformer's runners functions (`runRWST`. `evalRWST`, `execRWST`),
   now transformer argument is the last, as in the other standard transformers, like `ReaderT` and `StateT`.
+* Adds `Data.Fin.finToNatEqualityAsPointwise`,
+  which takes a witness of `finToNat k = finToNat l` and proves `k ~~~ l`.
 
 #### Test
 
@@ -147,9 +149,16 @@
   `Prelude.Interfaces` instead.
 * Implements `Show tok => Show (ParsingError tok)` for `Text.Parser.Core`.
 
+#### Network
+
+* `Control.Linear.Network` now supports `connect` in the linear environment, and
+  can also access the `sendBytes`, `recvBytes` and `recvAllBytes` functions of
+  the underlying `Socket` module.
+
 ### Other changes
 
 * Adds docstrings for the lambda-lifted IR.
+* Package files are now installed along-side build artifacts for installed packages. This means all transitive dependencies of packages you specify with the `depends` field are added automatically.
 
 ## v0.5.0/0.5.1
 

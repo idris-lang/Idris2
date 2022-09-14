@@ -1,0 +1,4 @@
+package baz
+version = 0.3.0
+
+depends = quux

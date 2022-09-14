@@ -84,15 +84,23 @@ anyBounds : PkgVersionBounds
 anyBounds = MkPkgVersionBounds Nothing True Nothing True
 
 export
+exactBounds : Maybe PkgVersion -> PkgVersionBounds
+exactBounds mv = MkPkgVersionBounds mv True mv True
+
+export
 current : PkgVersionBounds
 current = let (maj,min,patch) = semVer version
               version = Just (MkPkgVersion (maj ::: [min, patch])) in
               MkPkgVersionBounds version True version True
 
+export %inline
+defaultVersion : PkgVersion
+defaultVersion = MkPkgVersion $ 0 ::: []
+
 export
 inBounds : Maybe PkgVersion -> PkgVersionBounds -> Bool
 inBounds mv bounds
-   = let v = fromMaybe (MkPkgVersion (0 ::: [])) mv in
+   = let v = fromMaybe defaultVersion mv in
      maybe True (\v' => if bounds.lowerInclusive
                            then v >= v'
                            else v > v') bounds.lowerBound &&
@@ -148,7 +156,7 @@ Show Depends where
 
 export
 Pretty Void Depends where
-  pretty = pretty . show
+  pretty dep = pretty dep.pkgname <+> pretty dep.pkgbounds
 
 ------------------------------------------------------------------------------
 -- Package description

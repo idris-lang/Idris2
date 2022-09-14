@@ -35,7 +35,7 @@ rawImpFromDecl decl = case decl of
     IData fc1 y _ (MkImpLater fc2 n tycon) => [tycon]
     IDef fc1 y ys => getFromClause !ys
     IParameters fc1 ys zs => rawImpFromDecl !zs ++ map getParamTy ys
-    IRecord fc1 y z _ (MkImpRecord fc n params conName fields) => do
+    IRecord fc1 y z _ (MkImpRecord fc n params opts conName fields) => do
         (a, b) <- map (snd . snd) params
         getFromPiInfo a ++ [b] ++ getFromIField !fields
     IFail fc1 msg zs => rawImpFromDecl !zs
@@ -635,7 +635,10 @@ getArgName defs x bound allvars ty
     findNames nf = pure $ filter notBound $ fromMaybe defaultNames !(findNamesM nf)
 
     getName : Name -> List String -> List Name -> String
-    getName (UN (Basic n)) defs used = unique (n :: defs) (n :: defs) 0 used
+    getName (UN (Basic n)) defs used =
+      -- # 1742 Uppercase names are not valid for pattern variables
+      let candidate = ifThenElse (lowerFirst n) n (toLower n) in
+      unique (candidate :: defs) (candidate :: defs) 0 used
     getName _ defs used = unique defs defs 0 used
 
 export

@@ -1,0 +1,21 @@
+1/1: Building ParseIf (ParseIf.idr)
+Error: Couldn't parse any alternatives:
+1: Expected 'then'.
+
+ParseIf:3:26--3:30
+ 1 | 
+ 2 | test : Int -> Int
+ 3 | test a = if a < 10 the 0 else a
+                              ^^^^
+... (14 others)
+1/1: Building ParseIf2 (ParseIf2.idr)
+Error: Couldn't parse any alternatives:
+1: Expected 'then'.
+
+ParseIf2:4:33--4:37
+ 1 | 
+ 2 | test : Int -> Int
+ 3 | test a = if a < 10
+ 4 |             then if a < 0 the 0 else 5
+                                     ^^^^
+... (28 others)
