@@ -7,7 +7,7 @@ module Data.Description.Indexed
 
 %default covering
 
-total public export
+public export
 data IDesc : (p : Type -> Type) -> (i : Type) -> Type where
   Zero : IDesc p i
   One : IDesc p i

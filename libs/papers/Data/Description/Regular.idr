@@ -5,10 +5,12 @@
 
 module Data.Description.Regular
 
+%default covering
+
 ||| Description of regular functors
 ||| @ p stores additional data for constant types
 |||     e.g. the fact they are enumerable
-total public export
+public export
 data Desc : (p : Type -> Type) -> Type where
   ||| The code for the empty type
   Zero : Desc p
