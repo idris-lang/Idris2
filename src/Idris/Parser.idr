@@ -156,6 +156,7 @@ commitKeyword : OriginDesc -> IndentInfo -> String -> Rule ()
 commitKeyword fname indents req
     = do mustContinue indents (Just req)
          decoratedKeyword fname req
+          <|> the (Rule ()) (fatalError ("Expected '" ++ req ++ "'"))
          mustContinue indents Nothing
 
 commitSymbol : OriginDesc -> String -> Rule ()
