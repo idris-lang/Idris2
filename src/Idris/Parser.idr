@@ -1607,7 +1607,7 @@ implDecl fname indents
                          impls  <- implBinds fname indents
                          cons   <- constraints fname indents
                          n      <- decorate fname Typ name
-                         params <- many (simpleExpr fname indents)
+                         params <- many (continue indents *> simpleExpr fname indents)
                          nusing <- option [] $ decoratedKeyword fname "using"
                                             *> forget <$> some (decorate fname Function name)
                          body <- optional $ decoratedKeyword fname "where" *> blockAfter col (topDecl fname)
