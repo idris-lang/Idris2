@@ -1,12 +1,41 @@
-# Installing
+# Installation
 
-- [Installing from source](#installing-from-source)
-- [Installing from a package manager](#installing-from-a-package-manager)
+- [Install with a package manager](#install-with-a-package-manager)
+  - [Install with Pack](#install-with-pack)
+  - [Install with Homebrew](#install-with-homebrew)
+  - [Install with Nix](#install-with-nix)
+  - [Install with Nix Flakes](#install-with-nix-flakes)
+- [Install from source](#install-from-source)
+- [Install Chez Scheme on Apple Silicon](#install-chez-scheme-on-apple-silicon)
 
-## Installing from source
+## Install with a package manager
 
-The easiest way to install is via the existing generated Scheme code.
-The requirements are:
+You can install Idris 2 with any one of a number of package managers.
+
+### Install with [Pack](https://github.com/stefan-hoeck/idris2-pack/blob/main/INSTALL.md)
+Pack comes with an installation of Idris 2 so you just need to install Pack.
+Assuming you have already installed Chez Scheme, run
+  ```sh
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/stefan-hoeck/idris2-pack/main/install.bash)"
+  ```
+  then add `$HOME/.pack/bin` to your `$PATH` variable.
+### Install with [Homebrew](https://brew.sh/)
+```sh
+brew install idris2
+```
+### Install with [Nix](https://nixos.org/features.html)
+```sh
+nix-env -i idris2
+```
+### Install with [Nix Flakes](https://nixos.wiki/wiki/Flakes)
+```sh
+nix profile install github:idris-lang/Idris2
+```
+
+## Install from source
+
+The easiest way to install from source is via the existing generated Scheme
+code. The requirements are:
 
 - A Scheme compiler; either Chez Scheme (default), or Racket.
 - `bash`, `GNU make`, `gcc` or `clang`, `sha256sum` and `GMP`.  On Linux, you probably already
@@ -151,35 +180,6 @@ bootstrapping via Chez Scheme, or while running the tests when bootstrapping via
 Racket, then your copy of Chez Scheme was built without thread support. Pass
 `--threads` to `./configure` while building Chez Scheme to correct the issue.
 
-## Installing from a package manager
-
-### Installing using Homebrew
-
-If you are Homebrew user you can install Idris 2 together with all the requirements
-by running the following command:
-
-```sh
-brew install idris2
-```
-
-### Installing from nix
-
-If you are a [nix](https://nixos.org/features.html) user you can install Idris
-2 together with all the requirements by running the following command:
-
-```sh
-nix-env -i idris2
-```
-
-### Install from nix flakes
-
-If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can install
-Idris 2 together with all the requirements by running the following command:
-
-```sh
-nix profile install github:idris-lang/Idris2
-```
-
 ## Running in text editor
 
 ### Run on emacs using nix flakes
@@ -191,7 +191,7 @@ Idris 2 in emacs by running the following command:
 nix run github:idris-lang/Idris2#emacs-with-idris idrisCode.idr
 ```
 
-### Installing Chez Scheme on Apple Silicon
+## Install Chez Scheme on Apple Silicon
 
 The official version of chez scheme does not yet support Apple Silicon. So, on
 macOS with Apple Silicon (e.g. M1 and M2 macs), you will need to build and install
@@ -209,4 +209,3 @@ make ${arch}.bootquick
 make
 sudo make install
 ```
-
