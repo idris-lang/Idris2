@@ -1,0 +1,16 @@
+1 :: 2 :: 3 :: Nil
+1/1: Building ForwardImpl2 (ForwardImpl2.idr)
+Error: Mismatch between: Show Nat => IsOdd Nat and IsOdd Nat.
+
+ForwardImpl2:13:1--15:33
+ 13 | implementation Show Nat => IsOdd Nat where
+ 14 |     isOdd 0 = True
+ 15 |     isOdd (S k) = not $ isEven k
+
+1/1: Building ForwardImpl3 (ForwardImpl3.idr)
+Error: Main.IsOdd implementation at ForwardImpl3:7:1--8:14 is already defined.
+
+ForwardImpl3:7:1--8:14
+ 7 | implementation IsOdd Bool where
+ 8 |   isOdd b = b
+
