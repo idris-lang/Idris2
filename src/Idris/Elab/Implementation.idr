@@ -198,10 +198,9 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                                       (Just (gType vfc u))
                    let fullty = abstractFullEnvType vfc env ty
                    ok <- convert defs [] fullty (type gdef)
-                   if ok then pure ()
-                         else do logTermNF "elab.implementation" 1 "Previous" [] (type gdef)
-                                 logTermNF "elab.implementation" 1 "Now" [] fullty
-                                 throw (CantConvert (getFC impTy) (gamma defs) [] fullty (type gdef))
+                   unless ok $ do logTermNF "elab.implementation" 1 "Previous" [] (type gdef)
+                                  logTermNF "elab.implementation" 1 "Now" [] fullty
+                                  throw (CantConvert (getFC impTy) (gamma defs) [] fullty (type gdef))
 
          -- If the body is empty, we're done for now (just declaring that
          -- the implementation exists and define it later)
