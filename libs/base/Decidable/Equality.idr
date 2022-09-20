@@ -121,7 +121,7 @@ DecEq a => DecEq (SnocList a) where
   decEq Lin Lin = Yes Refl
   decEq (xs :< x) Lin = No absurd
   decEq Lin (xs :< x) = No absurd
-  decEq (xs :< x) (ys :< y) = decEqCong2 (decEq x y) (decEq xs ys)
+  decEq (xs :< x) (ys :< y) = decEqCong2 (decEq xs ys) (decEq x y)
 
 -- TODO: Other prelude data types
 

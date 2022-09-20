@@ -95,9 +95,10 @@ Alternative SnocList where
   empty = Lin
   xs <|> ys = xs ++ ys
 
-export
-Biinjective (:<) where
-  biinjective Refl = (Refl, Refl)
+-- Why can't we just use an implementation here?!
+export %hint
+SnocBiinjective : Biinjective (:<)
+SnocBiinjective = MkBiinjective $ \case Refl => (Refl, Refl)
 
 ||| Find the rightmost element of the snoc-list that satisfies the predicate.
 public export
