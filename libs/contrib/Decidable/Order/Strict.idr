@@ -25,7 +25,7 @@ interface Asymmetric ty rel where
 
 public export
 [SPA] StrictPreorder ty rel => Asymmetric ty rel where
-  asymmetric xy yx = irreflexive {rel} $ transitive {rel} xy yx
+  asymmetric xy yx = irreflexive {rel} $ transitive xy yx
 
 -- We make this completion a record type so that we do not need to name the
 -- interface implementations for fear of them interfering with other
@@ -42,7 +42,7 @@ Transitive ty rel => Transitive ty (EqOr rel) where
   transitive (MkEqOr (Left  Refl)) bLTEc                 = bLTEc
   transitive aLTEb                 (MkEqOr (Left  Refl)) = aLTEb
   transitive (MkEqOr (Right aLTb)) (MkEqOr (Right bLTc))
-    = MkEqOr $ Right $ transitive {rel} aLTb bLTc
+    = MkEqOr $ Right $ transitive aLTb bLTc
 
 public export
 Reflexive ty (EqOr rel) where

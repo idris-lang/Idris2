@@ -9,7 +9,6 @@ import Data.String
 import Data.These
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 
 %default total
 
@@ -39,13 +38,13 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 public export
 knownTopics : List (String, Maybe String)
 knownTopics = [
-    ("auto", Nothing),
-    ("builtin.Natural", Nothing),
-    ("builtin.Natural.addTransform", Nothing),
-    ("builtin.NaturalToInteger", Nothing),
-    ("builtin.NaturalToInteger.addTransforms", Nothing),
-    ("builtin.IntegerToNatural", Nothing),
-    ("builtin.IntegerToNatural.addTransforms", Nothing),
+    ("auto", Just "Auto proof search"),
+    ("auto.determining", Just "Checking that interface's determining argument are concrete"),
+    ("builtin.Natural", Just "Log each encountered %builtin Natural declaration."),
+    ("builtin.NaturalToInteger", Just "Log each encountered %builtin NaturalToInteger declaration."),
+    ("builtin.IntegerToNatural", Just "Log each encountered %builtin IntegerToNatural declaration."),
+    ("compile.execute", Nothing),
+    ("compile.export", Just "Log each name exported using %export"),
     ("compile.casetree", Nothing),
     ("compile.casetree.clauses", Nothing),
     ("compile.casetree.getpmdef", Nothing),
@@ -53,8 +52,13 @@ knownTopics = [
     ("compile.casetree.measure", Just "Log the node counts of each runtime case tree."),
     ("compile.casetree.pick", Nothing),
     ("compile.casetree.partition", Nothing),
-    ("compiler.inline.eval", Nothing),
-    ("compiler.interpreter", Nothing),
+    ("compiler.const-fold", Just "Log definitions before and after constant folding."),
+    ("compiler.cse", Just "Log information about common sub-expression elimination."),
+    ("compiler.identity", Just "Log definitions that are equivalent to identity at runtime."),
+    ("compiler.inline.eval", Just "Log function definitions before and after inlining."),
+    ("compiler.inline.heuristic", Just "Log names the inlining heuristic(s) have decided to inline."),
+    ("compiler.interpreter", Just "Log the call-stack of the VMCode interpreter."),
+    ("compiler.javascript.doc", Just "Generating doc comments for the JS backend."),
     ("compiler.refc", Nothing),
     ("compiler.refc.cc", Nothing),
     ("compiler.scheme.chez", Nothing),
@@ -66,6 +70,7 @@ knownTopics = [
     ("declare.data.constructor", Nothing),
     ("declare.data.parameters", Nothing),
     ("declare.def", Nothing),
+    ("declare.def.alias", Nothing),
     ("declare.def.clause", Nothing),
     ("declare.def.clause.impossible", Nothing),
     ("declare.def.clause.with", Nothing),
@@ -79,10 +84,17 @@ knownTopics = [
     ("declare.record.projection.prefix", Nothing),
     ("declare.type", Nothing),
     ("desugar.idiom", Nothing),
+    ("desugar.failing", Just "Log result of desugaring a `failing' block"),
+    ("desugar.lhs", Just "Log result of desugaring a left hand side"),
+    ("doc.data", Nothing),
+    ("doc.implementation", Nothing),
     ("doc.record", Nothing),
+    ("doc.module", Nothing),
+    ("doc.module.definitions", Nothing),
     ("elab", Nothing),
     ("elab.ambiguous", Nothing),
     ("elab.app.var", Nothing),
+    ("elab.app.dot", Just "Dealing with forced expressions when elaborating applications"),
     ("elab.app.lhs", Nothing),
     ("elab.as", Nothing),
     ("elab.bindnames", Nothing),
@@ -90,6 +102,7 @@ knownTopics = [
     ("elab.case", Nothing),
     ("elab.def.local", Nothing),
     ("elab.delay", Nothing),
+    ("elab.failing", Just "Elaborating a 'failing' block."),
     ("elab.hole", Nothing),
     ("elab.implicits", Nothing),
     ("elab.implementation", Nothing),
@@ -105,27 +118,37 @@ knownTopics = [
     ("elab.with", Nothing),
     ("eval.casetree", Nothing),
     ("eval.casetree.stuck", Nothing),
+    ("eval.def.underapplied", Just "Evaluating definitions (unavailable by default, edit Core.Normalise.Eval & recompile)"),
+    ("eval.def.stuck", Just "Evaluating definitions (unavailable by default, edit Core.Normalise.Eval & recompile)"),
     ("eval.eta", Nothing),
+    ("eval.ref", Just "Evaluating refs (unavailable by default, edit Core.Normalise.Eval & recompile)"),
     ("eval.stuck", Nothing),
-    ("idemode.hole", Nothing),
+    ("ide-mode.completion", Just "Autocompletion requests"),
+    ("ide-mode.hole", Just "Displaying hole contexts"),
     ("ide-mode.highlight", Nothing),
     ("ide-mode.highlight.alias", Nothing),
-    ("ide-mode.send", Nothing),
+    ("ide-mode.send", Just "The IDE mode's SExp traffic"),
+    ("ide-mode.recv", Just "Messages received by the IDE mode"),
     ("import", Nothing),
     ("import.file", Nothing),
     ("interaction.casesplit", Nothing),
     ("interaction.generate", Nothing),
     ("interaction.search", Nothing),
     ("metadata.names", Nothing),
+    ("module", Nothing),
     ("module.hash", Nothing),
+    ("package.depends", Just "Log which packages are being added"),
     ("quantity", Nothing),
     ("quantity.hole", Nothing),
     ("quantity.hole.update", Nothing),
+    ("reflection.reify", Just "Log what's happening when converting an `NF` to some real value"),
     ("repl.eval", Nothing),
-    ("resugar.var", Nothing),
+    ("resugar.var", Just "Resugaring variables"),
+    ("resugar.sectionL", Just "Resugaring left sections"),
     ("specialise", Nothing),
     ("totality", Nothing),
     ("totality.positivity", Nothing),
+    ("totality.requirement", Nothing),
     ("totality.termination", Nothing),
     ("totality.termination.calc", Nothing),
     ("totality.termination.guarded", Nothing),
@@ -142,7 +165,8 @@ knownTopics = [
     ("ttc.read", Nothing),
     ("ttc.write", Nothing),
     ("typesearch.equiv", Nothing),
-    ("unelab.case", Nothing),
+    ("unelab.case", Just "Unelaborating a case block"),
+    ("unelab.case.clause", Just "Unelaborating a case block's clauses"),
     ("unelab.var", Nothing),
     ("unify", Nothing),
     ("unify.application", Nothing),
@@ -169,7 +193,7 @@ helpTopics = show $ vcat $ map helpTopic knownTopics
 
   where
 
-  helpTopic : (String, Maybe String) -> Doc ()
+  helpTopic : (String, Maybe String) -> Doc Void
   helpTopic (str, mblurb)
     = let title = "+" <++> pretty str
           blurb = maybe [] ((::[]) . indent 2 . reflow) mblurb
@@ -241,12 +265,7 @@ Show LogLevel where
 
   show (MkLogLevel ps n) = case ps of
     [] => show n
-    _  => fastAppend (intersperse "." ps) ++ ":" ++ show n
-
-export
-Pretty LogLevel where
-
-  pretty = pretty . show
+    _  => fastConcat (intersperse "." ps) ++ ":" ++ show n
 
 export
 parseLogLevel : String -> Maybe LogLevel

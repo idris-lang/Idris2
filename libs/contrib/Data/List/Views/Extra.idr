@@ -65,7 +65,7 @@ splitBalancedHelper revLs rs [] prf = MkSplitBal balancedLeftsAndRights
           mkBalancedEq Refl
 splitBalancedHelper revLs [] (x :: xs) prf =
   absurd $
-    the (0 = S (plus (length revLs) (length xs)))
+    the (0 = S (plus (length revLs) (length xs))) $
       rewrite plusSuccRightSucc (length revLs) (length xs) in
         prf
 splitBalancedHelper revLs (x :: rs) [lastItem] prf =
@@ -146,7 +146,7 @@ data LazyFilterRec : List a -> Type where
 
 ||| Covering function for the LazyFilterRec view.
 ||| Constructs the view lazily in linear time.
-total export
+export
 lazyFilterRec : (pred : (a -> Bool)) -> (xs : List a) -> LazyFilterRec xs
 lazyFilterRec pred [] = Exhausted []
 lazyFilterRec pred (x :: xs) with (pred x)

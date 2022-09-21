@@ -56,6 +56,8 @@ namespace R1
   public export
   record R1 where
     constructor MkR
+    -- `a` is out of scope here so
+    -- this silently declares an implicit field `0 a : Type`
     field : a
 
 namespace R2
@@ -142,7 +144,7 @@ mapSetMap : (a -> a') -> b' -> (c -> c') -> Three a b c -> Three a' b' c'
 mapSetMap f y' g = {x $= f, y := y', z $= g}
 
 setNameOld : String -> OrdinaryDog -> OrdinaryDog
-setNameOld name' = record {name = name'}
+setNameOld name' = {name := name'}
 
 -------------------------------------
 

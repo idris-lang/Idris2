@@ -5,7 +5,10 @@ import Control.Monad.Trans
 
 %default total
 
-||| The transformer on which the Reader monad is based
+||| A monad transformer extending an inner monad with access to an environment.
+|||
+||| The environment is the same for all actions in a sequence, but may be
+||| changed within scopes created by `Control.Monad.Reader.local`.
 public export
 record ReaderT (stateType : Type) (m : Type -> Type) (a : Type) where
   constructor MkReaderT
@@ -14,7 +17,7 @@ record ReaderT (stateType : Type) (m : Type -> Type) (a : Type) where
 ||| Transform the computation inside a @ReaderT@.
 public export %inline
 mapReaderT : (m a -> n b) -> ReaderT r m a -> ReaderT r n b
-mapReaderT f m = MkReaderT \st => f (runReaderT' m st)
+mapReaderT f m = MkReaderT $ \st => f (runReaderT' m st)
 
 ||| Unwrap and apply a ReaderT monad computation
 public export
@@ -26,7 +29,9 @@ runReaderT s action = runReaderT' action s
 --          Reader
 --------------------------------------------------------------------------------
 
-||| The Reader monad. The ReaderT transformer applied to the Identity monad.
+||| A monad that can access an environment.
+|||
+||| This is `ReaderT` applied to `Identity`.
 public export
 Reader : (stateType : Type) -> (a : Type) -> Type
 Reader s a = ReaderT s Identity a
@@ -42,35 +47,33 @@ runReader s = runIdentity . runReaderT s
 
 public export
 implementation Functor f => Functor (ReaderT stateType f) where
-  map f (MkReaderT g) = MkReaderT (\st => map f (g st))
+  map f (MkReaderT g) = MkReaderT $ \st => f <$> g st
 
 public export
 implementation Applicative f => Applicative (ReaderT stateType f) where
-  pure x = MkReaderT (\st => pure x)
+  pure x = MkReaderT $ \_ => pure x
 
-  (MkReaderT f) <*> (MkReaderT a) =
-    MkReaderT (\st =>
+  MkReaderT f <*> MkReaderT a =
+    MkReaderT $ \st =>
       let f' = f st in
       let a' = a st in
-      f' <*> a')
+      f' <*> a'
 
 public export
 implementation Monad m => Monad (ReaderT stateType m) where
-  (MkReaderT f) >>= k =
-    MkReaderT (\st => do v <- f st
-                         let MkReaderT kv = k v
-                         kv st)
+  MkReaderT f >>= k =
+    MkReaderT $ \st => f st >>= runReaderT st . k
 
 public export
 implementation MonadTrans (ReaderT stateType) where
-  lift x = MkReaderT (\_ => x)
+  lift x = MkReaderT $ \_ => x
 
 public export
 implementation HasIO m => HasIO (ReaderT stateType m) where
-  liftIO f = MkReaderT (\_ => liftIO f)
+  liftIO f = MkReaderT $ \_ => liftIO f
 
 public export
-implementation (Monad f, Alternative f) => Alternative (ReaderT stateType f) where
-  empty = lift empty
+implementation Alternative f => Alternative (ReaderT stateType f) where
+  empty = MkReaderT $ const empty
 
-  (MkReaderT f) <|> (MkReaderT g) = MkReaderT (\st => f st <|> g st)
+  MkReaderT f <|> mg = MkReaderT $ \st => f st <|> runReaderT' mg st

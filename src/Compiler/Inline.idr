@@ -2,11 +2,15 @@ module Compiler.Inline
 
 import Compiler.CaseOpts
 import Compiler.CompileExpr
+import Compiler.Opts.ConstantFold
+import Compiler.Opts.Identity
+import Compiler.Opts.InlineHeuristics
 
 import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
 import Core.FC
+import Core.Hash
 import Core.Options
 import Core.TT
 
@@ -150,7 +154,7 @@ mutual
   -- whether they're safe to inline, but until then this gives such a huge
   -- boost by removing unnecessary lambdas that we'll keep the special case.
   eval rec env stk (CRef fc n)
-      = case (n == NS primIONS (UN "io_bind"), stk) of
+      = case (n == NS primIONS (UN $ Basic "io_bind"), stk) of
           (True, act :: cont :: world :: stk) =>
                  do xn <- genName "act"
                     sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
@@ -164,7 +168,10 @@ mutual
                 let Just def = compexpr gdef
                   | Nothing => pure (unload stk (CRef fc n))
                 let arity = getArity def
-                if (Inline `elem` flags gdef) && (not (n `elem` rec))
+                let gdefFlags = flags gdef
+                if (Inline `elem` gdefFlags)
+                    && (not (n `elem` rec))
+                    && (not (NoInline `elem` gdefFlags))
                    then do ap <- tryApply (n :: rec) stk env def
                            pure $ fromMaybe (unloadApp arity stk (CRef fc n)) ap
                    else pure $ unloadApp arity stk (CRef fc n)
@@ -189,6 +196,15 @@ mutual
                       sc' <- eval rec (CRef fc xn :: env) stk sc
                       val' <- eval rec env [] val
                       pure (CLet fc x True val' (refToLocal xn x sc'))
+  eval rec env stk (CApp fc f@(CRef nfc n) args)
+      = do -- If we don't know 'n' leave the arity alone, because it's
+           -- a name from another module where the job is already done
+           defs <- get Ctxt
+           Just gdef <- lookupCtxtExact n (gamma defs)
+                | Nothing => do args' <- traverse (eval rec env []) args
+                                pure (unload stk
+                                          (CApp fc (CRef nfc n) args'))
+           eval rec env (!(traverse (eval rec env []) args) ++ stk) f
   eval rec env stk (CApp fc f args)
       = eval rec env (!(traverse (eval rec env []) args) ++ stk) f
   eval rec env stk (CCon fc n ci t args)
@@ -325,6 +341,13 @@ fixArityTm (CLam fc x sc) args
 fixArityTm (CLet fc x inl val sc) args
     = pure $ expandToArity Z
                  (CLet fc x inl !(fixArityTm val []) !(fixArityTm sc [])) args
+fixArityTm outf@(CApp fc f@(CRef _ n) fargs) args
+    = do defs <- get Ctxt
+         -- If we don't know 'n' leave the arity alone, because it's
+         -- a name from another module where the job is already done
+         Just gdef <- lookupCtxtExact n (gamma defs)
+              | Nothing => pure (unload args outf)
+         fixArityTm f (!(traverse (\tm => fixArityTm tm []) fargs) ++ args)
 fixArityTm (CApp fc f fargs) args
     = fixArityTm f (!(traverse (\tm => fixArityTm tm []) fargs) ++ args)
 fixArityTm (CCon fc n ci t args) []
@@ -407,9 +430,12 @@ mergeLambdas args (CLam fc x sc)
           (_ ** expLocs)
 mergeLambdas args exp = (args ** exp)
 
+||| Inline all inlinable functions into the given expression.
+||| @ n the function name
+||| @ exp the body of the function
 doEval : {args : _} ->
          {auto c : Ref Ctxt Defs} ->
-         Name -> CExp args -> Core (CExp args)
+         (n : Name) -> (exp : CExp args) -> Core (CExp args)
 doEval n exp
     = do l <- newRef LVar (the Int 0)
          log "compiler.inline.eval" 10 (show n ++ ": " ++ show exp)
@@ -486,7 +512,7 @@ updateCallGraph n
          Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
          let Just cexpr =  compexpr def             | Nothing => pure ()
          let refs = getRefs cexpr
-         ignore $ addDef n (record { refersToRuntimeM = Just refs } def)
+         ignore $ addDef n ({ refersToRuntimeM := Just refs } def)
 
 export
 fixArityDef : {auto c : Ref Ctxt Defs} ->
@@ -514,6 +540,18 @@ mergeLamDef n
                     setCompiled n !(mergeLam cexpr)
 
 export
+addArityHash : {auto c : Ref Ctxt Defs} ->
+               Name -> Core ()
+addArityHash n
+    = do defs <- get Ctxt
+         Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
+         let Just cexpr =  compexpr def             | Nothing => pure ()
+         let MkFun args _ = cexpr                   | _ => pure ()
+         case visibility def of
+              Private => pure ()
+              _ => addHash (n, length args)
+
+export
 compileAndInlineAll : {auto c : Ref Ctxt Defs} ->
                       Core ()
 compileAndInlineAll
@@ -522,10 +560,16 @@ compileAndInlineAll
          cns <- filterM nonErased ns
 
          traverse_ compileDef cns
+         traverse_ rewriteIdentityFlag cns
          transform 3 cns -- number of rounds to run transformations.
                          -- This seems to be the point where not much useful
                          -- happens any more.
          traverse_ updateCallGraph cns
+         -- in incremental mode, add the arity of the definitions to the hash,
+         -- because if these change we need to recompile dependencies
+         -- accordingly
+         when (not (isNil (incrementalCGs !getSession))) $
+           traverse_ addArityHash cns
   where
     transform : Nat -> List Name -> Core ()
     transform Z cns = pure ()
@@ -534,6 +578,9 @@ compileAndInlineAll
              traverse_ mergeLamDef cns
              traverse_ caseLamDef cns
              traverse_ fixArityDef cns
+             traverse_ inlineHeuristics cns
+             traverse_ constantFold cns
+             traverse_ setIdentity cns
              transform k cns
 
     nonErased : Name -> Core Bool

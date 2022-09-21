@@ -4,19 +4,41 @@
     [(i3ob ti3ob a6ob ta6ob) "unix"]  ; OpenBSD
     [(i3fb ti3fb a6fb ta6fb) "unix"]  ; FreeBSD
     [(i3nb ti3nb a6nb ta6nb) "unix"]  ; NetBSD
-    [(i3osx ti3osx a6osx ta6osx) "darwin"]
+    [(i3osx ti3osx a6osx ta6osx tarm64osx) "darwin"]
     [(i3nt ti3nt a6nt ta6nt) "windows"]
     [else "unknown"]))
 
-(define blodwen-toSignedInt
-  (lambda (x bits)
-    (if (logbit? bits x)
-        (logor x (ash (- 1) bits))
-        (logand x (- (ash 1 bits) 1)))))
+(define blodwen-lazy
+  (lambda (f)
+    (let ([evaluated #f] [res void])
+      (lambda ()
+        (if (not evaluated)
+            (begin (set! evaluated #t)
+                   (set! res (f))
+                   (set! f void))
+            (void))
+        res))))
 
-(define blodwen-toUnsignedInt
-  (lambda (x bits)
-    (modulo x (ash 1 bits))))
+(define (blodwen-toSignedInt x bits)
+  (if (logbit? bits x)
+      (logor x (ash -1 bits))
+      (logand x (sub1 (ash 1 bits)))))
+
+(define (blodwen-toUnsignedInt x bits)
+  (logand x (sub1 (ash 1 bits))))
+
+(define (blodwen-euclidDiv a b)
+  (let ((q (quotient a b))
+        (r (remainder a b)))
+    (if (< r 0)
+      (if (> b 0) (- q 1) (+ q 1))
+      q)))
+
+(define (blodwen-euclidMod a b)
+  (let ((r (remainder a b)))
+    (if (< r 0)
+      (if (> b 0) (+ r b) (- r b))
+      r)))
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
@@ -26,28 +48,23 @@
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
 (define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
-(define bs/ (lambda (x y bits) (blodwen-toSignedInt (quotient x y) bits)))
+(define bs/ (lambda (x y bits) (blodwen-toSignedInt (blodwen-euclidDiv x y) bits)))
 
-(define b+ (lambda (x y bits) (remainder (+ x y) (ash 1 bits))))
-(define b- (lambda (x y bits) (remainder (- x y) (ash 1 bits))))
-(define b* (lambda (x y bits) (remainder (* x y) (ash 1 bits))))
-(define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (ash 1 bits))))
+(define (integer->bits8 x) (logand x (sub1 (ash 1 8))))
+(define (integer->bits16 x) (logand x (sub1 (ash 1 16))))
+(define (integer->bits32 x) (logand x (sub1 (ash 1 32))))
+(define (integer->bits64 x) (logand x (sub1 (ash 1 64))))
 
-(define integer->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
-(define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
+(define (bits16->bits8 x) (logand x (sub1 (ash 1 8))))
+(define (bits32->bits8 x) (logand x (sub1 (ash 1 8))))
+(define (bits64->bits8 x) (logand x (sub1 (ash 1 8))))
+(define (bits32->bits16 x) (logand x (sub1 (ash 1 16))))
+(define (bits64->bits16 x) (logand x (sub1 (ash 1 16))))
+(define (bits64->bits32 x) (logand x (sub1 (ash 1 32))))
 
-(define bits16->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits32->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits32->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define bits64->bits8 (lambda (x) (modulo x (expt 2 8))))
-(define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
-(define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
+(define (blodwen-bits-shl-signed x y bits) (blodwen-toSignedInt (ash x y) bits))
 
-(define blodwen-bits-shl-signed (lambda (x y bits) (blodwen-toSignedInt (ash x y) bits)))
-
-(define blodwen-bits-shl (lambda (x y bits) (remainder (ash x y) (ash 1 bits))))
+(define (blodwen-bits-shl x y bits) (logand (ash x y) (sub1 (ash 1 bits))))
 
 (define blodwen-shl (lambda (x y) (ash x y)))
 (define blodwen-shr (lambda (x y) (ash x (- y))))
@@ -111,7 +128,8 @@
 
 (define cast-string-double
   (lambda (x)
-    (cast-num (string->number (destroy-prefix x)))))
+    (exact->inexact (cast-num (string->number (destroy-prefix x))))))
+
 
 (define (string-concat xs) (apply string-append xs))
 (define (string-unpack s) (string->list s))
@@ -481,3 +499,85 @@
         (when x
           (((cdr x) (car x)) 'erased)
           (run))))))
+
+;; For creating and reading back scheme objects
+
+; read a scheme string and evaluate it, returning 'Just result' on success
+; TODO: catch exception!
+(define (blodwen-eval-scheme str)
+  (guard
+     (x [#t '()]) ; Nothing on failure
+     (box (eval (read (open-input-string str)))))
+  ); box == Just
+
+(define (blodwen-eval-okay obj)
+  (if (null? obj)
+      0
+      1))
+
+(define (blodwen-get-eval-result obj)
+  (unbox obj))
+
+(define (blodwen-debug-scheme obj)
+  (display obj) (newline))
+
+(define (blodwen-is-number obj)
+  (if (number? obj) 1 0))
+
+(define (blodwen-is-integer obj)
+  (if (and (number? obj) (exact? obj)) 1 0))
+
+(define (blodwen-is-float obj)
+  (if (flonum? obj) 1 0))
+
+(define (blodwen-is-char obj)
+  (if (char? obj) 1 0))
+
+(define (blodwen-is-string obj)
+  (if (string? obj) 1 0))
+
+(define (blodwen-is-procedure obj)
+  (if (procedure? obj) 1 0))
+
+(define (blodwen-is-symbol obj)
+  (if (symbol? obj) 1 0))
+
+(define (blodwen-is-vector obj)
+  (if (vector? obj) 1 0))
+
+(define (blodwen-is-nil obj)
+  (if (null? obj) 1 0))
+
+(define (blodwen-is-pair obj)
+  (if (pair? obj) 1 0))
+
+(define (blodwen-is-box obj)
+  (if (box? obj) 1 0))
+
+(define (blodwen-make-symbol str)
+  (string->symbol str))
+
+; The below rely on checking that the objects are the right type first.
+
+(define (blodwen-vector-ref obj i)
+  (vector-ref obj i))
+
+(define (blodwen-vector-length obj)
+  (vector-length obj))
+
+(define (blodwen-vector-list obj)
+  (vector->list obj))
+
+(define (blodwen-unbox obj)
+  (unbox obj))
+
+(define (blodwen-apply obj arg)
+  (obj arg))
+
+(define (blodwen-force obj)
+  (obj))
+
+(define (blodwen-read-symbol sym)
+  (symbol->string sym))
+
+(define (blodwen-id x) x)

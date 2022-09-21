@@ -2,7 +2,6 @@ module Prelude.EqOrd
 
 import Builtin
 import Prelude.Basics
-import Prelude.Ops
 
 %default total
 
@@ -11,10 +10,13 @@ import Prelude.Ops
 ------------------------
 
 ||| The Eq interface defines inequality and equality.
+||| A minimal definition includes either `(==)` or `(/=)`.
 public export
 interface Eq ty where
   constructor MkEq
+  total
   (==) : ty -> ty -> Bool
+  total
   (/=) : ty -> ty -> Bool
 
   x == y = not (x /= y)
@@ -94,6 +96,12 @@ public export
 data Ordering = LT | EQ | GT
 
 public export
+contra : Ordering -> Ordering
+contra LT = GT
+contra EQ = EQ
+contra GT = LT
+
+public export
 Eq Ordering where
   LT == LT = True
   EQ == EQ = True
@@ -101,33 +109,45 @@ Eq Ordering where
   _  == _  = False
 
 ||| The Ord interface defines comparison operations on ordered data types.
+||| A minimal definition includes either `compare` or `(<)`.
 public export
 interface Eq ty => Ord ty where
   constructor MkOrd
+  total
   compare : ty -> ty -> Ordering
   compare x y = if x < y then LT else if x == y then EQ else GT
 
+  total
   (<) : ty -> ty -> Bool
   (<) x y = compare x y == LT
 
+  total
   (>) : ty -> ty -> Bool
   (>) x y = compare x y == GT
 
+  total
   (<=) : ty -> ty -> Bool
   (<=) x y = compare x y /= GT
 
+  total
   (>=) : ty -> ty -> Bool
   (>=) x y = compare x y /= LT
 
+  total
   max : ty -> ty -> ty
   max x y = if x > y then x else y
 
+  total
   min : ty -> ty -> ty
   min x y = if (x < y) then x else y
 
 export
 comparing : Ord a => (b -> a) -> b -> b -> Ordering
 comparing p x y = compare (p x) (p y)
+
+public export
+[Reverse] (fwd : Ord a) => Ord a where
+  compare x y = contra $ compare @{fwd} x y
 
 public export
 Ord Void where

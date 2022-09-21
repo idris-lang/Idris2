@@ -3,7 +3,6 @@ module Compiler.Scheme.Gambit
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Generated
-import Compiler.Inline
 import Compiler.Scheme.Common
 
 import Core.Context
@@ -11,21 +10,18 @@ import Core.Directory
 import Core.Name
 import Core.Options
 import Core.TT
-import Libraries.Utils.Hex
+import Protocol.Hex
 import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Libraries.Data.NameMap
-import Data.String
 import Data.Vect
 
 import Idris.Env
+import Idris.Syntax
 
 import System
 import System.Directory
-import System.File
-import System.Info
 
 %default covering
 
@@ -49,14 +45,16 @@ findGSCBackend =
               Just e => " -cc " ++ e
 
 schHeader : String
-schHeader =
-    "; " ++ (generatedString "Gambit") ++ "\n" ++
-    "(declare (block)\n" ++
-    "(inlining-limit 450)\n" ++
-    "(standard-bindings)\n" ++
-    "(extended-bindings)\n" ++
-    "(not safe)\n" ++
-    "(optimize-dead-definitions))\n"
+schHeader = """
+  ;; \{ generatedString "Gambit" }
+  (declare (block)
+    (inlining-limit 450)
+    (standard-bindings)
+    (extended-bindings)
+    (not safe)
+    (optimize-dead-definitions))
+
+  """
 
 showGambitChar : Char -> String -> String
 showGambitChar '\\' = ("\\\\" ++)
@@ -75,7 +73,7 @@ gambitString cs = strCons '"' (showGambitString (unpack cs) "\"")
 
 mutual
   handleRet : String -> String -> String
-  handleRet "void" op = op ++ " " ++ mkWorld (schConstructor gambitString (UN "") (Just 0) [])
+  handleRet "void" op = op ++ " " ++ mkWorld (schConstructor gambitString (UN $ Basic "") (Just 0) [])
   handleRet _ op = mkWorld op
 
   getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))
@@ -366,7 +364,7 @@ compileToSCM c tm outfile
          s <- newRef {t = List String} Structs []
          fgndefs <- traverse getFgnCall ndefs
          compdefs <- traverse (getScheme gambitPrim gambitString) ndefs
-         let code = fastAppend (map snd fgndefs ++ compdefs)
+         let code = fastConcat (map snd fgndefs ++ compdefs)
          main <- schExp gambitPrim gambitString 0 ctm
          support <- readDataFile "gambit/support.scm"
          ds <- getDirectives Gambit
@@ -377,9 +375,12 @@ compileToSCM c tm outfile
             | Left err => throw (FileErr outfile err)
          pure $ mapMaybe fst fgndefs
 
-compileExpr : Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-              ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr c tmpDir outputDir tm outfile
+compileExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> (outputDir : String) ->
+  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExpr c s tmpDir outputDir tm outfile
     = do let srcPath = tmpDir </> outfile <.> "scm"
          let execPath = outputDir </> outfile
          libsname <- compileToSCM c tm srcPath
@@ -399,9 +400,12 @@ compileExpr c tmpDir outputDir tm outfile
             then pure (Just execPath)
             else pure Nothing
 
-executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c tmpDir tm
-    = do Just sh <- compileExpr c tmpDir tmpDir tm "_tmpgambit"
+executeExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> ClosedTerm -> Core ()
+executeExpr c s tmpDir tm
+    = do Just sh <- compileExpr c s tmpDir tmpDir tm "_tmpgambit"
            | Nothing => throw (InternalError "compileExpr returned Nothing")
          coreLift_ $ system sh -- TODO: on windows, should add exe extension
          pure ()

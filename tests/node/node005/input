@@ -1,2 +1,2 @@
-:exec printLn (filter even [S Z,2,3,4,5,6])
+:exec printLn (Main.filter even [S Z,2,3,4,5,6])
 :q

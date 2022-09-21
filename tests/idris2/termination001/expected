@@ -1,0 +1,51 @@
+1/1: Building AgdaIssue6059 (AgdaIssue6059.idr)
+Error: f is not total, possibly not terminating due to call to Main.f
+
+AgdaIssue6059:23:3--23:21
+ 19 | lem 0 = Refl
+ 20 | lem (S n) = Refl
+ 21 | 
+ 22 | mutual
+ 23 |   f : (x : D) -> P x
+        ^^^^^^^^^^^^^^^^^^
+
+Error: g is not total, possibly not terminating due to call to Main.f
+
+AgdaIssue6059:31:3--31:32
+ 27 |   -- Base cases:
+ 28 |   f (MkD 0 0) = ()
+ 29 |   f (MkD 0 1) = ()
+ 30 | 
+ 31 |   g : (h : Nat -> D) -> P (h 2)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: f is not total, possibly not terminating due to call to Main.f
+
+AgdaIssue6059:23:3--23:21
+ 19 | lem 0 = Refl
+ 20 | lem (S n) = Refl
+ 21 | 
+ 22 | mutual
+ 23 |   f : (x : D) -> P x
+        ^^^^^^^^^^^^^^^^^^
+
+Error: g is not total, possibly not terminating due to call to Main.f
+
+AgdaIssue6059:31:3--31:32
+ 27 |   -- Base cases:
+ 28 |   f (MkD 0 0) = ()
+ 29 |   f (MkD 0 1) = ()
+ 30 | 
+ 31 |   g : (h : Nat -> D) -> P (h 2)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: loop is not total, possibly not terminating due to call to Main.f
+
+AgdaIssue6059:34:1--34:12
+ 30 | 
+ 31 |   g : (h : Nat -> D) -> P (h 2)
+ 32 |   g h = f (h 2)
+ 33 | 
+ 34 | loop : Void
+      ^^^^^^^^^^^
+

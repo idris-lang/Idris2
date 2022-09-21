@@ -1,7 +1,6 @@
 module Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 
 import Data.String
-import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 
 %default total

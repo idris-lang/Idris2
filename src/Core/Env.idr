@@ -11,9 +11,16 @@ data Env : (tm : List Name -> Type) -> List Name -> Type where
      Nil : Env tm []
      (::) : Binder (tm vars) -> Env tm vars -> Env tm (x :: vars)
 
+%name Env rho
+
 export
 extend : (x : Name) -> Binder (tm vars) -> Env tm vars -> Env tm (x :: vars)
 extend x = (::) {x}
+
+export
+(++) : {ns : _} -> Env Term ns -> Env Term vars -> Env Term (ns ++ vars)
+(++) (b :: bs) e = extend _ (map embed b) (bs ++ e)
+(++) [] e = e
 
 export
 length : Env tm xs -> Nat
@@ -25,6 +32,12 @@ lengthNoLet : Env tm xs -> Nat
 lengthNoLet [] = 0
 lengthNoLet (Let _ _ _ _ :: xs) = lengthNoLet xs
 lengthNoLet (_ :: xs) = S (lengthNoLet xs)
+
+export
+lengthExplicitPi : Env tm xs -> Nat
+lengthExplicitPi [] = 0
+lengthExplicitPi (Pi _ _ Explicit _ :: rho) = S (lengthExplicitPi rho)
+lengthExplicitPi (_ :: rho) = lengthExplicitPi rho
 
 export
 namesNoLet : {xs : _} -> Env tm xs -> List Name
@@ -248,6 +261,13 @@ shrinkEnv (b :: env) (KeepCons p)
          b' <- assert_total (shrinkBinder b p)
          pure (b' :: env')
 
+export
+mkEnvOnto : FC -> (xs : List Name) -> Env Term ys -> Env Term (xs ++ ys)
+mkEnvOnto fc [] vs = vs
+mkEnvOnto fc (n :: ns) vs
+   = PVar fc top Explicit (Erased fc False)
+   :: mkEnvOnto fc ns vs
+
 -- Make a dummy environment, if we genuinely don't care about the values
 -- and types of the contents.
 -- We use this when building and comparing case trees.
@@ -266,7 +286,7 @@ uniqifyEnv env = uenv [] env
   where
     next : Name -> Name
     next (MN n i) = MN n (i + 1)
-    next (UN n) = MN n 0
+    next (UN n) = MN (displayUserName n) 0
     next (NS ns n) = NS ns (next n)
     next n = MN (show n) 0
 

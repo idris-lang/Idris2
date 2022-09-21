@@ -1,0 +1,13 @@
+1/1: Building Main (Main.idr)
+Warning: DEPRECATED: old record update syntax.
+  Use "{ f := v } p" instead of "record { f = v } p"
+  and "{ f $= v } p" instead of "record { f $= v } p"
+
+Main:11:14--11:37
+ 07 | testRec : TestRecord
+ 08 | testRec = MkTestRecord 0
+ 09 | 
+ 10 | updatedRec : TestRecord
+ 11 | updatedRec = record { recField = 1 } testRec
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+

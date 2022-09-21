@@ -27,7 +27,7 @@
 ||| as they are:
 |||
 ||| ```sh
-|||  git diff --no-index --exit-code --word-diff=color expected output
+|||  git diff --no-index --exit-code --word-diff-regex=. --color expected output
 ||| ```
 |||
 ||| If `git` fails then the runner will simply present the expected and 'given'
@@ -83,9 +83,9 @@ import System
 import System.Clock
 import System.Directory
 import System.File
-import System.Future
 import System.Info
 import System.Path
+import System.Concurrency
 
 -- [ Options ]
 
@@ -155,17 +155,17 @@ options args = case args of
     go : List String -> Maybe String -> Options -> Maybe (Maybe String, Options)
     go rest only opts = case rest of
       []                            => pure (only, opts)
-      ("--timing" :: xs)            => go xs only (record { timing = True} opts)
-      ("--interactive" :: xs)       => go xs only (record { interactive = True } opts)
-      ("--color"  :: xs)            => go xs only (record { color = True } opts)
-      ("--colour" :: xs)            => go xs only (record { color = True } opts)
-      ("--no-color"  :: xs)         => go xs only (record { color = False } opts)
-      ("--no-colour" :: xs)         => go xs only (record { color = False } opts)
-      ("--cg" :: cg :: xs)          => go xs only (record { codegen = Just cg } opts)
+      ("--timing" :: xs)            => go xs only ({ timing := True} opts)
+      ("--interactive" :: xs)       => go xs only ({ interactive := True } opts)
+      ("--color"  :: xs)            => go xs only ({ color := True } opts)
+      ("--colour" :: xs)            => go xs only ({ color := True } opts)
+      ("--no-color"  :: xs)         => go xs only ({ color := False } opts)
+      ("--no-colour" :: xs)         => go xs only ({ color := False } opts)
+      ("--cg" :: cg :: xs)          => go xs only ({ codegen := Just cg } opts)
       ("--threads" :: n :: xs)      => do let pos : Nat = !(parsePositive n)
-                                          go xs only (record { threads = pos } opts)
-      ("--failure-file" :: p :: xs) => go  xs only (record { failureFile = Just p } opts)
-      ("--only" :: xs)              => pure (only, record { onlyNames = xs } opts)
+                                          go xs only ({ threads := pos } opts)
+      ("--failure-file" :: p :: xs) => go  xs only ({ failureFile := Just p } opts)
+      ("--only" :: xs)              => pure (only, { onlyNames := xs } opts)
       ("--only-file" :: p :: xs)    => go xs (Just p) opts
       _ => Nothing
 
@@ -178,7 +178,7 @@ options args = case args of
                  | Nothing => pure (Just opts)
            Right only <- readFile fp
              | Left err => fail (show err)
-           pure $ Just $ record { onlyNames $= ((lines only) ++) } opts
+           pure $ Just $ { onlyNames $= ((lines only) ++) } opts
 
 ||| Normalise strings between different OS.
 |||
@@ -197,17 +197,15 @@ Result : Type
 Result = Either String String
 
 ||| Run the specified Golden test with the supplied options.
-|||
 ||| See the module documentation for more information.
-|||
 ||| @testPath the directory that contains the test.
 export
-runTest : Options -> (testPath : String) -> IO (Future Result)
-runTest opts testPath = forkIO $ do
+runTest : Options -> (testPath : String) -> IO Result
+runTest opts testPath = do
   start <- clockTime UTC
   let cg = maybe "" (" --cg " ++) (codegen opts)
   let exe = "\"" ++ exeUnderTest opts ++ cg ++ "\""
-  ignore $ system $ "cd " ++ testPath ++ " && " ++
+  ignore $ system $ "cd " ++ escapeArg testPath ++ " && " ++
     "sh ./run " ++ exe ++ " | tr -d '\\r' > output"
   end <- clockTime UTC
 
@@ -228,11 +226,9 @@ runTest opts testPath = forkIO $ do
   let time = timeDifference end start
 
   if result
-    then printTiming (timing opts) time testPath $
-      (if opts.color then show . colored BrightGreen else id) "success"
+    then printTiming opts.timing time testPath $ maybeColored BrightGreen "success"
     else do
-      printTiming (timing opts) time testPath $
-        (if opts.color then show . colored BrightRed else id) "FAILURE"
+      printTiming opts.timing time testPath $ maybeColored BrightRed "FAILURE"
       if interactive opts
         then mayOverwrite (Just exp) out
         else putStr . unlines $ expVsOut exp out
@@ -251,24 +247,30 @@ runTest opts testPath = forkIO $ do
         _   => do putStrLn "Invalid answer."
                   getAnswer
 
+    maybeColored : Color -> String -> String
+    maybeColored c = if opts.color then show . colored c else id
+
     expVsOut : String -> String -> List String
-    expVsOut exp out = ["Expected:", exp, "Given:", out]
+    expVsOut exp out = ["Expected:", maybeColored Green exp, "Given:", maybeColored Red out]
+
+    badSystemExitCode : Int -> Bool
+    badSystemExitCode code = code < 0 || code == 127 {- 127 means shell couldn't start -}
 
     mayOverwrite : Maybe String -> String -> IO ()
     mayOverwrite mexp out = do
       case mexp of
         Nothing => putStr $ unlines
           [ "Golden value missing. I computed the following result:"
-          , out
+          , maybeColored BrightBlue out
           , "Accept new golden value? [y/N]"
           ]
         Just exp => do
-          code <- system $ "git diff --no-index --exit-code " ++
-            (if opts.color then  "--word-diff=color " else "") ++
-            testPath ++ "/expected " ++ testPath ++ "/output"
+          code <- system $ "git diff --no-index --exit-code --word-diff-regex=. " ++
+            (if opts.color then  "--color " else "") ++
+            escapeArg testPath ++ "/expected " ++ escapeArg testPath ++ "/output"
           putStr . unlines $
             ["Golden value differs from actual value."] ++
-            (if (code < 0) then expVsOut exp out else []) ++
+            (if badSystemExitCode code then expVsOut exp out else []) ++
             ["Accept actual value as new golden value? [y/N]"]
       b <- getAnswer
       when b $ do Right _ <- writeFile (testPath ++ "/expected") out
@@ -305,6 +307,15 @@ public export
 data Requirement = C | Chez | Node | Racket | Gambit
 
 export
+Eq Requirement where
+  C == C = True
+  Chez == Chez = True
+  Node == Node = True
+  Racket == Racket = True
+  Gambit == Gambit = True
+  _ == _ = False
+
+export
 Show Requirement where
   show C = "C"
   show Chez = "Chez"
@@ -331,7 +342,7 @@ checkRequirement req
   where
     requirement : Requirement -> (String, List String)
     requirement C = ("CC", ["cc"])
-    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "chezscheme", "scheme"])
+    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "chezscheme", "chez-scheme", "scheme"])
     requirement Node = ("NODE", ["node"])
     requirement Racket = ("RACKET", ["racket"])
     requirement Gambit = ("GAMBIT", ["gsc"])
@@ -422,14 +433,24 @@ record Summary where
   success : List String
   failure : List String
 
+||| A new, blank summary
 export
 initSummary : Summary
 initSummary = MkSummary [] []
 
+||| Update the summary to contain the given result
 export
-updateSummary : List Result -> Summary -> Summary
-updateSummary res =
-  let (ls, ws) = partitionEithers res in
+updateSummary : (newRes : Result) -> Summary -> Summary
+updateSummary newRes =
+  case newRes of
+       Left l  => { failure $= (l ::) }
+       Right w => { success $= (w ::) }
+
+||| Update the summary to contain the given results
+export
+bulkUpdateSummary : (newRess : List Result) -> Summary -> Summary
+bulkUpdateSummary newRess =
+  let (ls, ws) = partitionEithers newRess in
   { success $= (ws ++)
   , failure $= (ls ++)
   }
@@ -443,7 +464,79 @@ export
 Monoid Summary where
   neutral = initSummary
 
-||| A runner for a test pool
+||| An instruction to a thread which runs tests
+public export
+data ThreadInstruction : Type where
+  ||| A test to run
+  Run : (test : String) -> ThreadInstruction
+  ||| An indication for the thread to stop
+  Stop : ThreadInstruction
+
+||| Sends the given tests on the given @Channel@, then sends `nThreads` many
+||| 'Stop' @ThreadInstruction@s to stop the threads running the tests.
+|||
+||| @testChan The channel to send the tests over.
+||| @nThreads The number of threads being used to run the tests.
+||| @tests The list of tests to send to the runners/threads.
+export
+testSender : (testChan : Channel ThreadInstruction) -> (nThreads : Nat)
+           -> (tests : List String) -> IO ()
+testSender testChan 0 [] = pure ()
+testSender testChan (S k) [] =
+  -- out of tests, so the next thing for all the threads is to stop
+  do channelPut testChan Stop
+     testSender testChan k []
+testSender testChan nThreads (test :: tests) =
+  do channelPut testChan (Run test)
+     testSender testChan nThreads tests
+
+||| A result from a test-runner/thread
+public export
+data ThreadResult : Type where
+  ||| The result of running a test
+  Res : (res : Result) -> ThreadResult
+  ||| An indication that the thread was told to stop
+  Done : ThreadResult
+
+||| Receives results on the given @Channel@, accumulating them as a @Summary@.
+||| When all results have been received (i.e. @nThreads@ many 'Done'
+||| @ThreadInstruction@s have been encountered), send the resulting Summary over
+||| the @accChan@ Channel (necessary to be able to @fork@ this function and
+||| still obtain the Summary at the end).
+|||
+||| @resChan The channel to receives the results on.
+||| @acc The Summary acting as an accumulator.
+||| @accChan The Channel to send the final Summary over.
+||| @nThreads The number of threads being used to run the tests.
+export
+testReceiver : (resChan : Channel ThreadResult) -> (acc : Summary)
+             -> (accChan : Channel Summary) -> (nThreads : Nat) -> IO ()
+testReceiver resChan acc accChan 0 = channelPut accChan acc
+testReceiver resChan acc accChan nThreads@(S k) =
+  do (Res res) <- channelGet resChan
+        | Done => testReceiver resChan acc accChan k
+     testReceiver resChan (updateSummary res acc) accChan nThreads
+
+||| Function responsible for receiving and running tests.
+|||
+||| @opts The options to run the threads under.
+||| @testChan The Channel to receive tests on.
+||| @resChan The Channel to send results over.
+testThread : (opts : Options) -> (testChan : Channel ThreadInstruction)
+              -> (resChan : Channel ThreadResult) -> IO ()
+testThread opts testChan resChan =
+  do (Run test) <- channelGet testChan
+        | Stop => channelPut resChan Done
+     res <- runTest opts test
+     channelPut resChan (Res res)
+     testThread opts testChan resChan
+
+||| A runner for a test pool. If there are tests in the @TestPool@ that we want
+||| to run, spawns `opts.threads` many runners and sends them the tests,
+||| collecting all the results in the @Summary@ returned at the end.
+|||
+||| @opts The options for the TestPool.
+||| @pool The TestPool to run.
 export
 poolRunner : Options -> TestPool -> IO Summary
 poolRunner opts pool
@@ -470,8 +563,23 @@ poolRunner opts pool
                     Nothing => { codegen := Nothing } opts
                     Just cg => { codegen := Just (show @{CG} cg) } opts
                     Default => opts
-       -- if so run them all!
-       loop opts initSummary tests
+
+       -- set up the channels
+       accChan <- makeChannel
+       resChan <- makeChannel
+       testChan <- makeChannel
+
+       -- and then run all the tests
+
+       for_ (replicate opts.threads 0) $ \_ =>
+         fork (testThread opts testChan resChan)
+       -- start sending tests
+       senderTID <- fork $ testSender testChan opts.threads tests
+       -- start receiving results
+       receiverTID <- fork $ testReceiver resChan initSummary accChan opts.threads
+       -- wait until things are done, i.e. until we receive the final acc
+       acc <- channelGet accChan
+       pure acc
 
   where
 
@@ -484,14 +592,6 @@ poolRunner opts pool
        ++ msgs
        ++ [ separator ]
 
-    loop : Options -> Summary -> List String -> IO Summary
-    loop opts acc [] = pure acc
-    loop opts acc tests
-      = do let (now, later) = splitAt opts.threads tests
-           bs <- map await <$> traverse (runTest opts) now
-           loop opts (updateSummary bs acc) later
-
-
 ||| A runner for a whole test suite
 export
 runner : List TestPool -> IO ()
@@ -502,7 +602,7 @@ runner tests
                       putStrLn usage
          -- if no CG has been set, find a sensible default based on what is available
          opts <- case codegen opts of
-                   Nothing => pure $ record { codegen = !findCG } opts
+                   Nothing => pure $ { codegen := !findCG } opts
                    Just _ => pure opts
          -- run the tests
          res <- concat <$> traverse (poolRunner opts) tests

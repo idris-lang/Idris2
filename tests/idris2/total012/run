@@ -1,0 +1,12 @@
+rm -rf build
+
+$1 --no-color --console-width 0 Issue1828.idr --check
+$1 --no-color --console-width 0 Issue1828.idr --check --total --log totality.requirement:20
+
+$1 --no-color --console-width 0 Issue1828.idr --check
+$1 --no-color --console-width 0 Issue1828.idr --check --log totality.requirement:20
+
+
+$1 --no-color --console-width 0 TotallyTotal.idr --check
+$1 --no-color --console-width 0 TotallyTotal.idr --check --log totality.requirement:20
+$1 --no-color --console-width 0 TotallyTotal.idr --check --total --log totality.requirement:20

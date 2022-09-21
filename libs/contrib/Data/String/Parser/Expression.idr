@@ -3,7 +3,6 @@
 
 module Data.String.Parser.Expression
 
-import Control.Monad.Identity
 import Data.String.Parser
 
 public export

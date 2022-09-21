@@ -1,13 +1,8 @@
 ||| Additional properties/lemmata of Nats involving order
 module Data.Nat.Order.Properties
 
-import Syntax.PreorderReasoning
 import Syntax.PreorderReasoning.Generic
 import Data.Nat
-import Data.Nat.Order
-import Data.Nat.Order.Strict
-import Decidable.Equality
-import Decidable.Order.Strict
 import Data.Bool.Decidable
 
 
@@ -21,7 +16,7 @@ LTESuccInjectiveMonotone m n (RFalse not_m_lte_n) = RFalse $ \case
 export
 lteReflection : (a, b : Nat) -> Reflects (a `LTE` b) (a `lte` b)
 lteReflection 0 b = RTrue LTEZero
-lteReflection (S k) 0 = RFalse \sk_lte_z => absurd sk_lte_z
+lteReflection (S k) 0 = RFalse $ \sk_lte_z => absurd sk_lte_z
 lteReflection (S a) (S b) = LTESuccInjectiveMonotone a b (lteReflection a b)
 
 export
@@ -48,7 +43,7 @@ notltIsNotLT a = notlteIsNotLTE (S a)
 
 export
 notlteIsLT : (a, b : Nat) -> a `lte` b = False -> b `LT` a
-notlteIsLT a b prf = notLTImpliesGTE
+notlteIsLT a b prf = notLTImpliesGTE $
                        \prf' =>
                          (invert $ replace {p = Reflects (S a `LTE` S b)} prf
                                  $ lteReflection (S a) (S b)) prf'
@@ -73,17 +68,17 @@ export
 GTIsnotlte : (a, b : Nat) -> b `LT` a -> a `lte` b = False
 GTIsnotlte a b prf =
   notLteIsnotlte a b $ \contra =>
-    succNotLTEpred $ transitive {rel = LTE} prf contra
+    succNotLTEpred $ transitive prf contra
 
 ||| Subtracting a number gives a smaller number
 export
 minusLTE : (a,b : Nat) -> (b `minus` a) `LTE` b
 minusLTE a      0    = LTEZero
-minusLTE 0     (S b) = reflexive {rel = LTE}
+minusLTE 0     (S _) = reflexive
 minusLTE (S a) (S b) =
-  transitive {rel = LTE}
+  transitive
     (minusLTE a b)
-    (lteSuccRight (reflexive {rel = LTE}))
+    (lteSuccRight reflexive)
 
 ||| Subtracting a positive number gives a strictly smaller number
 export

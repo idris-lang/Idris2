@@ -3,8 +3,11 @@ module Compiler.ES.Codegen
 import Compiler.Common
 import Core.CompileExpr
 import Core.Context
+import Core.Context.Log
 import Core.Directory
 import Core.Options
+import Core.Env
+import Core.Normalise
 import Data.List1
 import Data.String
 import Compiler.ES.Ast
@@ -12,9 +15,14 @@ import Compiler.ES.Doc
 import Compiler.ES.ToAst
 import Compiler.ES.TailRec
 import Compiler.ES.State
+import Compiler.NoMangle
 import Libraries.Data.SortedMap
-import Libraries.Utils.Hex
+import Protocol.Hex
 import Libraries.Data.String.Extra
+
+import Idris.Pretty.Annotations
+import Idris.Syntax
+import Idris.Doc.String
 
 import Data.Vect
 
@@ -49,7 +57,7 @@ jsString s = "'" ++ (concatMap okchar (unpack s)) ++ "'"
                             '"' => "\\\""
                             '\r' => "\\r"
                             '\n' => "\\n"
-                            other => "\\u{" ++ asHex (cast {to=Int} c) ++ "}"
+                            other => "\\u{" ++ asHex (cast c) ++ "}"
 
 ||| Alias for Text . jsString
 jsStringDoc : String -> Doc
@@ -69,34 +77,51 @@ jsIdent s = concatMap okchar (unpack s)
     okchar '_' = "_"
     okchar c = if isAlphaNum c
                   then cast c
-                  else "x" ++ the (String) (asHex (cast {to=Int} c))
+                  else "x" ++ asHex (cast c)
+
+jsReservedNames : List String
+jsReservedNames =
+  [ "await", "break", "case", "catch", "class", "const", "continue", "debugger"
+  , "default", "delete", "do", "else", "enum", "export", "extends", "false"
+  , "finally", "for", "function", "if", "implements", "import", "in"
+  , "instanceof", "interface", "let", "new", "null", "package", "private"
+  , "protected", "public", "return", "static", "super", "switch", "this"
+  , "throw", "true", "try", "typeof", "var", "void", "while", "with", "yield"
+  ]
 
 keywordSafe : String -> String
-keywordSafe "var"    = "var$"
-keywordSafe "switch" = "switch$"
-keywordSafe "return" = "return$"
-keywordSafe "const"  = "const$"
-keywordSafe "function" = "function$"
-keywordSafe s = s
+keywordSafe s = if s `elem` jsReservedNames
+  then s ++ "$"
+  else s
 
 --------------------------------------------------------------------------------
 --          JS Name
 --------------------------------------------------------------------------------
 
-jsName : Name -> String
-jsName (NS ns n) = jsIdent (showNSWithSep "_" ns) ++ "_" ++ jsName n
-jsName (UN n) = keywordSafe $ jsIdent n
-jsName (MN n i) = jsIdent n ++ "_" ++ show i
-jsName (PV n d) = "pat__" ++ jsName n
-jsName (DN _ n) = jsName n
-jsName (RF n) = "rf__" ++ jsIdent n
-jsName (Nested (i, x) n) = "n__" ++ show i ++ "_" ++ show x ++ "_" ++ jsName n
-jsName (CaseBlock x y) = "case__" ++ jsIdent x ++ "_" ++ show y
-jsName (WithBlock x y) = "with__" ++ jsIdent x ++ "_" ++ show y
-jsName (Resolved i) = "fn__" ++ show i
+jsUserName : UserName -> String
+jsUserName (Basic n) = keywordSafe $ jsIdent n
+jsUserName (Field n) = "rf__" ++ jsIdent n
+jsUserName Underscore = keywordSafe $ jsIdent "_"
 
-jsNameDoc : Name -> Doc
-jsNameDoc = Text . jsName
+jsMangleName : Name -> String
+jsMangleName (NS ns n) = jsIdent (showNSWithSep "_" ns) ++ "_" ++ jsMangleName n
+jsMangleName (UN n) = jsUserName n
+jsMangleName (MN n i) = jsIdent n ++ "_" ++ show i
+jsMangleName (PV n d) = "pat__" ++ jsMangleName n
+jsMangleName (DN _ n) = jsMangleName n
+jsMangleName (Nested (i, x) n) = "n__" ++ show i ++ "_" ++ show x ++ "_" ++ jsMangleName n
+jsMangleName (CaseBlock x y) = "case__" ++ jsIdent x ++ "_" ++ show y
+jsMangleName (WithBlock x y) = "with__" ++ jsIdent x ++ "_" ++ show y
+jsMangleName (Resolved i) = "fn__" ++ show i
+
+parameters (noMangle : NoMangleMap)
+  jsName : Name -> String
+  jsName n = case isNoMangle noMangle n of
+    Just name => name
+    Nothing => jsMangleName n
+
+  jsNameDoc : Name -> Doc
+  jsNameDoc = Text . jsName
 
 mainExpr : Name
 mainExpr = MN "__mainExpression" 0
@@ -105,18 +130,19 @@ mainExpr = MN "__mainExpression" 0
 --          Pretty Printing
 --------------------------------------------------------------------------------
 
-var : Var -> Doc
-var (VName x) = jsNameDoc x
-var (VLoc x)  = Text $ "$" ++ asHex x
-var (VRef x)  = Text $ "$R" ++ asHex x
+parameters (noMangle : NoMangleMap)
+  var : Var -> Doc
+  var (VName x) = jsNameDoc noMangle x
+  var (VLoc x)  = Text $ "$" ++ asHex (cast x)
+  var (VRef x)  = Text $ "$R" ++ asHex (cast x)
 
-minimal : Minimal -> Doc
-minimal (MVar v)          = var v
-minimal (MProjection n v) = minimal v <+> ".a" <+> shown n
+  minimal : Minimal -> Doc
+  minimal (MVar v)          = var v
+  minimal (MProjection n v) = minimal v <+> ".a" <+> shown n
 
-tag2es : Either Int Name -> Doc
-tag2es (Left x)  = shown x
-tag2es (Right x) = jsStringDoc $ show x
+tag2es : Tag -> (Doc, Maybe Doc)
+tag2es (DataCon i n)  = (shown i, Just (shown (dropNS n)))
+tag2es (TypeCon x) = (jsStringDoc $ show x, Nothing)
 
 constant : Doc -> Doc -> Doc
 constant n d = "const" <++> n <+> softEq <+> d <+> ";"
@@ -139,13 +165,19 @@ applyObj = applyList "{" "}" softComma
 -- Exceptions based on the given `ConInfo`:
 -- `NIL` and `NOTHING`-like data constructors are represented as `{h: 0}`,
 -- while `CONS`, `JUST`, and `RECORD` come without the header field.
-applyCon : ConInfo -> (tag : Either Int Name) -> (args : List Doc) -> Doc
+applyCon : ConInfo -> (tag : Tag) -> (args : List Doc) -> Doc
 applyCon NIL     _ [] = "{h" <+> softColon <+> "0}"
 applyCon NOTHING _ [] = "{h" <+> softColon <+> "0}"
 applyCon CONS    _ as = applyObj (conTags as)
 applyCon JUST    _ as = applyObj (conTags as)
 applyCon RECORD  _ as = applyObj (conTags as)
-applyCon _       t as = applyObj (("h" <+> softColon <+> tag2es t)::conTags as)
+applyCon UNIT    _ [] = "undefined"
+applyCon _       t as = applyObj (mkCon (tag2es t) :: conTags as)
+
+  where
+    mkCon : (Doc, Maybe Doc) -> Doc
+    mkCon (t, Nothing) = "h" <+> softColon <+> t
+    mkCon (t, Just cmt) = "h" <+> softColon <+> t <++> comment cmt
 
 -- applys the given list of arguments to the given function.
 app : (fun : Doc) -> (args : List Doc) -> Doc
@@ -202,12 +234,15 @@ jsBigIntOfString = callFun1 (esName "bigIntOfString")
 -- call _parseFloat from the preamble, which
 -- converts a string to a `Number`
 jsNumberOfString : Doc -> Doc
-jsNumberOfString = callFun1 "parseFloat"
+jsNumberOfString = callFun1 (esName "numberOfString")
 
 -- convert an string to an integral type based
 -- on its `IntKind`.
 jsIntOfString : IntKind -> Doc -> Doc
-jsIntOfString k = if useBigInt k then jsBigIntOfString else jsNumberOfString
+jsIntOfString k =
+  if useBigInt k
+     then jsBigIntOfString
+     else callFun1 (esName "intOfString")
 
 -- introduce a binary infix operation
 binOp : (symbol : String) -> (lhs : Doc) -> (rhs : Doc) -> Doc
@@ -260,6 +295,9 @@ truncateUnsigned isBigInt bits =
    let add = if isBigInt then "BigInt" else "Int"
     in callFun1 (esName "truncU" ++ add ++ show bits)
 
+integerOp : (op : String) -> (lhs : Doc) -> (rhs : Doc) -> Doc
+integerOp op x y = callFun (fastConcat ["_", op, "BigInt"]) [x,y]
+
 -- invokes an arithmetic operation for a bounded integral value.
 -- this is used to implement `boundedIntOp` and `boundedUIntOp`
 -- where the suffix is set to "s" or "u", respectively.
@@ -283,6 +321,9 @@ boundedUIntOp = boundedOp "u"
 boolOp : (op : String) -> (lhs : Doc) -> (rhs : Doc) -> Doc
 boolOp o lhs rhs = "(" <+> binOp o lhs rhs <+> "?1:0)"
 
+jsPrimType : PrimType -> String
+jsPrimType _ = "#t"
+
 -- convert an Idris constant to its JS representation
 jsConstant : Constant -> String
 jsConstant (I i)    = show i
@@ -291,28 +332,15 @@ jsConstant (I16 i)  = show i
 jsConstant (I32 i)  = show i
 jsConstant (I64 i)  = show i ++ "n"
 jsConstant (BI i)   = show i ++ "n"
-jsConstant (Str s)  = jsString s
-jsConstant (Ch c)   = jsString $ singleton c
-jsConstant (Db f)   = show f
-jsConstant WorldVal = esName "idrisworld"
 jsConstant (B8 i)   = show i
 jsConstant (B16 i)  = show i
 jsConstant (B32 i)  = show i
 jsConstant (B64 i)  = show i ++ "n"
-jsConstant IntType = "#t"
-jsConstant Int8Type = "#t"
-jsConstant Int16Type = "#t"
-jsConstant Int32Type = "#t"
-jsConstant Int64Type = "#t"
-jsConstant IntegerType = "#t"
-jsConstant Bits8Type = "#t"
-jsConstant Bits16Type = "#t"
-jsConstant Bits32Type = "#t"
-jsConstant Bits64Type = "#t"
-jsConstant StringType = "#t"
-jsConstant CharType = "#t"
-jsConstant DoubleType = "#t"
-jsConstant WorldType = "#t"
+jsConstant (Str s)  = jsString s
+jsConstant (Ch c)   = jsString $ singleton c
+jsConstant (Db f)   = show f
+jsConstant (PrT t)  = jsPrimType t
+jsConstant WorldVal = esName "idrisworld"
 
 -- Creates the definition of a binary arithmetic operation.
 -- Rounding / truncation behavior is determined from the
@@ -323,18 +351,28 @@ arithOp :  Maybe IntKind
         -> (lhs : Doc)
         -> (rhs : Doc)
         -> Doc
-arithOp (Just $ Signed $ P n) _   op = boundedIntOp n op
-arithOp (Just $ Unsigned n)   _   op = boundedUIntOp n op
-arithOp _                     sym _  = binOp sym
+arithOp (Just $ Signed $ P n)     _   op = boundedIntOp n op -- IntXY
+arithOp (Just $ Unsigned n)       _   op = boundedUIntOp n op -- BitsXY
+arithOp (Just $ Signed Unlimited) ""  op = integerOp op -- Integer
+arithOp _                         sym _  = binOp sym
 
 -- use 32bit signed integer for `Int`.
-jsIntKind : Constant -> Maybe IntKind
-jsIntKind IntType = Just . Signed   $ P 32
+jsIntKind : PrimType -> Maybe IntKind
+jsIntKind IntType = Just . Signed $ P 32
 jsIntKind x       = intKind x
+
+jsMod : PrimType -> Doc -> Doc -> Doc
+jsMod ty x y = case jsIntKind ty of
+  (Just $ Signed $ P n) => case useBigInt' n of
+    True  => integerOp "mod" x y
+    False => callFun "_mod" [x,y]
+  (Just $ Unsigned n)   => binOp "%" x y
+  _                     => integerOp "mod" x y
+
 
 -- implementation of all kinds of cast from and / or to integral
 -- values.
-castInt : Constant -> Constant -> Doc -> Core Doc
+castInt : PrimType -> PrimType -> Doc -> Core Doc
 castInt from to x =
   case ((from, jsIntKind from), (to, jsIntKind to)) of
     ((CharType,_),  (_,Just k)) => truncInt (useBigInt k) k $ jsIntOfChar k x
@@ -392,8 +430,9 @@ jsOp : {0 arity : Nat} ->
 jsOp (Add ty) [x, y] = pure $ arithOp (jsIntKind ty) "+" "add" x y
 jsOp (Sub ty) [x, y] = pure $ arithOp (jsIntKind ty) "-" "sub" x y
 jsOp (Mul ty) [x, y] = pure $ arithOp (jsIntKind ty) "*" "mul" x y
-jsOp (Div ty) [x, y] = pure $ arithOp (jsIntKind ty) "/" "div" x y
-jsOp (Mod ty) [x, y] = pure $ binOp "%" x y
+jsOp (Div DoubleType) [x, y] = pure $ binOp "/" x y
+jsOp (Div ty) [x, y] = pure $ arithOp (jsIntKind ty) ""  "div" x y
+jsOp (Mod ty) [x, y] = pure $ jsMod ty x y
 jsOp (Neg ty) [x] = pure $ "(-(" <+> x <+> "))"
 jsOp (ShiftL Int32Type) [x, y] = pure $ binOp "<<" x y
 jsOp (ShiftL IntType) [x, y] = pure $ binOp "<<" x y
@@ -462,11 +501,12 @@ searchForeign knownBackends decls =
 -- generate a toplevel function definition.
 makeForeign :  {auto d : Ref Ctxt Defs}
             -> {auto c : Ref ESs ESSt}
+            -> {auto nm : Ref NoMangleMap NoMangleMap}
             -> (name : Name)
             -> (ffDecl : String)
             -> Core Doc
 makeForeign n x = do
-  nd <- var <$> getOrRegisterRef n
+  nd <- var !(get NoMangleMap) <$> getOrRegisterRef n
   let (ty, def) = readCCPart x
   case ty of
     "lambda" => pure . constant nd . paren $ Text def
@@ -496,6 +536,7 @@ makeForeign n x = do
 -- to extract a declaration for one of the supported backends.
 foreignDecl :  {auto d : Ref Ctxt Defs}
             -> {auto c : Ref ESs ESSt}
+            -> {auto nm : Ref NoMangleMap NoMangleMap}
             -> Name
             -> List String
             -> Core Doc
@@ -512,20 +553,33 @@ foreignDecl n ccs = do
 
 -- implementations for external primitive functions.
 jsPrim : {auto c : Ref ESs ESSt} -> Name -> List Doc -> Core Doc
-jsPrim (NS _ (UN "prim__newIORef")) [_,v,_] = pure $ hcat ["({value:", v, "})"]
-jsPrim (NS _ (UN "prim__readIORef")) [_,r,_] = pure $ hcat ["(", r, ".value)"]
-jsPrim (NS _ (UN "prim__writeIORef")) [_,r,v,_] = pure $ hcat ["(", r, ".value=", v, ")"]
-jsPrim (NS _ (UN "prim__newArray")) [_,s,v,_] = pure $ hcat ["(Array(", s, ").fill(", v, "))"]
-jsPrim (NS _ (UN "prim__arrayGet")) [_,x,p,_] = pure $ hcat ["(", x, "[", p, "])"]
-jsPrim (NS _ (UN "prim__arraySet")) [_,x,p,v,_] = pure $ hcat ["(", x, "[", p, "]=", v, ")"]
-jsPrim (NS _ (UN "prim__os")) [] = pure $ Text $ esName "sysos"
-jsPrim (NS _ (UN "void")) [_, _] = pure . jsCrashExp $ jsStringDoc "Error: Executed 'void'"
-jsPrim (NS _ (UN "prim__void")) [_, _] = pure . jsCrashExp $ jsStringDoc "Error: Executed 'void'"
-jsPrim (NS _ (UN "prim__codegen")) [] = do
+jsPrim nm docs = case (dropAllNS nm, docs) of
+  (UN (Basic "prim__newIORef"), [_,v,_]) => pure $ hcat ["({value:", v, "})"]
+  (UN (Basic "prim__readIORef"), [_,r,_]) => pure $ hcat ["(", r, ".value)"]
+  (UN (Basic "prim__writeIORef"), [_,r,v,_]) => pure $ hcat ["(", r, ".value=", v, ")"]
+  (UN (Basic "prim__newArray"), [_,s,v,_]) => pure $ hcat ["(Array(", s, ").fill(", v, "))"]
+  (UN (Basic "prim__arrayGet"), [_,x,p,_]) => pure $ hcat ["(", x, "[", p, "])"]
+  (UN (Basic "prim__arraySet"), [_,x,p,v,_]) => pure $ hcat ["(", x, "[", p, "]=", v, ")"]
+  (UN (Basic "void"), [_, _]) => pure . jsCrashExp $ jsStringDoc "Error: Executed 'void'"
+  (UN (Basic "prim__void"), [_, _]) => pure . jsCrashExp $ jsStringDoc "Error: Executed 'void'"
+  (UN (Basic "prim__codegen"), []) => do
     (cg :: _) <- ccTypes <$> get ESs
         | _ => pure "\"javascript\""
     pure . Text $ jsString cg
-jsPrim x args = throw $ InternalError $ "prim not implemented: " ++ (show x)
+
+-- fix #1839: Only support `prim__os` in Node backend but not in browsers
+  (UN (Basic "prim__os"), []) => do
+    tys <- ccTypes <$> get ESs
+    case searchForeign tys ["node"] of
+      Right _ => do
+        addToPreamble "prim__os" $
+          "const _sysos = ((o => o === 'linux'?'unix':o==='win32'?'windows':o)" ++
+          "(require('os').platform()));"
+        pure $ Text $ esName "sysos"
+      Left  _ =>
+        throw $ InternalError $ "prim not implemented: prim__os"
+
+  _ => throw $ InternalError $ "prim not implemented: " ++ show nm
 
 --------------------------------------------------------------------------------
 --          Codegen
@@ -551,46 +605,60 @@ isFun _          = True
 -- case blocks (the first entry in a pair is the value belonging
 -- to a `case` statement, the second is the body
 --
--- Example: switch "foo.a1" [("0","return 2;")] (Just "return 0;")
+-- Example: switch "foo.a1" [(("0", Just "True"),"return 2;")] (Just "return 0;")
 -- generates the following code:
 -- ```javascript
 --   switch(foo.a1) {
---     case 0: return 2;
+--     case 0: /* True */ return 2;
 --     default: return 0;
 --   }
 -- ```
 switch :  (scrutinee : Doc)
-       -> (alts : List (Doc,Doc))
+       -> (alts : List ((Doc,Maybe Doc),Doc)) -- match, comment, code
        -> (def : Maybe Doc)
        -> Doc
 switch sc alts def =
   let stmt    = "switch" <+> paren sc <+> SoftSpace
-      defcase = concatMap (pure . anyCase "default") def
+      defcase = concatMap (pure . anyCase "default" Nothing) def
    in stmt <+> block (vcat $ map alt alts ++ defcase)
 
-  where anyCase : Doc -> Doc -> Doc
-        anyCase s d =
-          let b = if isMultiline d then block d else d
-           in s <+> softColon <+> b
+  where anyCase : Doc -> Maybe Doc -> Doc -> Doc
+        anyCase s cmt d =
+          let b = if isMultiline d then block d else d in
+          case cmt of
+            Nothing => s <+> softColon <+> b
+            Just cmt => s <+> softColon <+> comment cmt <++> b
 
-        alt : (Doc,Doc) -> Doc
-        alt (e,d) = anyCase ("case" <++> e) d
+        alt : ((Doc,Maybe Doc),Doc) -> Doc
+        alt ((e, c), d) = anyCase ("case" <++> e) c d
 
 -- creates an argument list for a (possibly multi-argument)
 -- anonymous function. An empty argument list is treated
 -- as a delayed computation (prefixed by `() =>`).
-lambdaArgs : List Var -> Doc
-lambdaArgs [] = "()" <+> lambdaArrow
-lambdaArgs xs = hcat $ (<+> lambdaArrow) . var <$> xs
+lambdaArgs : (noMangle : NoMangleMap) -> List Var -> Doc
+lambdaArgs noMangle [] = "()" <+> lambdaArrow
+lambdaArgs noMangle xs = hcat $ (<+> lambdaArrow) . var noMangle <$> xs
+
+insertBreak : (r : Effect) -> (a, Doc) -> (a, Doc)
+insertBreak Returns x = x
+insertBreak (ErrorWithout _) (pat, exp) = (pat, vcat [exp, "break;"])
 
 mutual
   -- converts an `Exp` to JS code
-  exp : {auto c : Ref ESs ESSt} -> Exp -> Core Doc
-  exp (EMinimal x) = pure $ minimal x
-  exp (ELam xs (Return $ y@(ECon _ _ _))) =
-     map (\e => lambdaArgs xs <+> paren e) (exp y)
-  exp (ELam xs (Return $ y)) = (lambdaArgs xs <+> ) <$> exp y
-  exp (ELam xs y) = (lambdaArgs xs <+>) . block <$> stmt y
+  exp :  {auto c : Ref ESs ESSt}
+      -> {auto nm : Ref NoMangleMap NoMangleMap}
+      -> Exp
+      -> Core Doc
+  exp (EMinimal x) = pure $ minimal !(get NoMangleMap) x
+  exp (ELam xs (Return $ y@(ECon _ _ _))) = do
+     nm <- get NoMangleMap
+     map (\e => lambdaArgs nm xs <+> paren e) (exp y)
+  exp (ELam xs (Return $ y)) = do
+     nm <- get NoMangleMap
+     (lambdaArgs nm xs <+> ) <$> exp y
+  exp (ELam xs y) = do
+     nm <- get NoMangleMap
+     (lambdaArgs nm xs <+>) . block <$> stmt y
   exp (EApp x xs) = do
     o    <- exp x
     args <- traverse exp xs
@@ -604,34 +672,47 @@ mutual
   exp EErased = pure "undefined"
 
   -- converts a `Stmt e` to JS code.
-  stmt : {e : _} -> {auto c : Ref ESs ESSt} -> Stmt e -> Core Doc
+  stmt :  {e : _}
+       -> {auto c : Ref ESs ESSt}
+       -> {auto nm : Ref NoMangleMap NoMangleMap}
+       -> Stmt e
+       -> Core Doc
   stmt (Return y) = (\e => "return" <++> e <+> ";") <$> exp y
-  stmt (Const v x) = constant (var v) <$> exp x
-  stmt (Declare v s) =
-    (\d => vcat ["let" <++> var v <+> ";",d]) <$> stmt s
-  stmt (Assign v x) =
-    (\d => vcat [hcat [var v,softEq,d,";"], "break;"]) <$> exp x
+  stmt (Const v x) = do
+    nm <- get NoMangleMap
+    constant (var nm v) <$> exp x
+  stmt (Declare v s) = do
+    nm <- get NoMangleMap
+    (\d => vcat ["let" <++> var nm v <+> ";",d]) <$> stmt s
+  stmt (Assign v x) = do
+    nm <- get NoMangleMap
+    (\d => hcat [var nm v,softEq,d,";"]) <$> exp x
 
   stmt (ConSwitch r sc alts def) = do
-    as <- traverse alt alts
+    as <- traverse (map (insertBreak r) . alt) alts
     d  <- traverseOpt stmt def
-    pure $  switch (minimal sc <+> ".h") as d
-    where alt : EConAlt r -> Core (Doc,Doc)
-          alt (MkEConAlt _ RECORD b)  = ("undefined",) <$> stmt b
-          alt (MkEConAlt _ NIL b)     = ("0",) <$> stmt b
-          alt (MkEConAlt _ CONS b)    = ("undefined",) <$> stmt b
-          alt (MkEConAlt _ NOTHING b) = ("0",) <$> stmt b
-          alt (MkEConAlt _ JUST b)    = ("undefined",) <$> stmt b
-          alt (MkEConAlt t _ b)       = (tag2es t,) <$> stmt b
+    nm <- get NoMangleMap
+    pure $ switch (minimal nm sc <+> ".h") as d
+    where
+        alt : {r : _} -> EConAlt r -> Core ((Doc,Maybe Doc),Doc)
+        alt (MkEConAlt _ RECORD b)  = (("undefined",Just "record"),) <$> stmt b
+        alt (MkEConAlt _ NIL b)     = (("0",Just "nil"),) <$> stmt b
+        alt (MkEConAlt _ CONS b)    = (("undefined",Just "cons"),) <$> stmt b
+        alt (MkEConAlt _ NOTHING b) = (("0",Just "nothing"),) <$> stmt b
+        alt (MkEConAlt _ JUST b)    = (("undefined",Just "just"),) <$> stmt b
+        alt (MkEConAlt _ UNIT b)    = (("undefined",Just "unit"),) <$> stmt b
+        alt (MkEConAlt t _ b)       = (tag2es t,) <$> stmt b
 
   stmt (ConstSwitch r sc alts def) = do
-    as <- traverse alt alts
+    as <- traverse (map (insertBreak r) . alt) alts
     d  <- traverseOpt stmt def
     ex <- exp sc
     pure $ switch ex as d
-    where alt : EConstAlt r -> Core (Doc,Doc)
-          alt (MkEConstAlt c b) = do d    <- stmt b
-                                     pure (Text $ jsConstant c, d)
+    where
+        alt : EConstAlt r -> Core ((Doc,Maybe Doc),Doc)
+        alt (MkEConstAlt c b) = do
+            d <- stmt b
+            pure ((Text $ jsConstant c, Nothing), d)
 
   stmt (Error x)   = pure $ jsCrashExp (jsStringDoc x) <+> ";"
   stmt (Block ss s) = do
@@ -647,18 +728,43 @@ printDoc Compact y = compact y
 printDoc Minimal y = compact y
 
 -- generate code for the given toplevel function.
-def : {auto c : Ref ESs ESSt} -> Function -> Core String
+def :  {auto c : Ref Ctxt Defs}
+    -> {auto s : Ref Syn SyntaxInfo}
+    -> {auto e : Ref ESs ESSt}
+    -> {auto nm : Ref NoMangleMap NoMangleMap}
+    -> Function
+    -> Core String
 def (MkFunction n as body) = do
   reset
+  defs <- get Ctxt
+  mty <- do log "compiler.javascript.doc" 50 $ "Looking up \{show n}"
+            Just gdef <- lookupCtxtExact n (gamma defs)
+              | Nothing => pure Nothing
+            let UN _ = dropNS n
+              | _ => pure Nothing
+            ty <- prettyType (const ()) gdef.type
+            pure (Just (shown ty))
   ref  <- getOrRegisterRef n
   args <- traverse registerLocal as
   mde  <- mode <$> get ESs
   b    <- stmt Returns body >>= stmt
-  pure $ printDoc mde $ function (var ref) (map var args) b
+  let cmt = comment $ hsep (shown n :: toList ((":" <++>) <$> mty))
+  case args of
+    -- zero argument toplevel functions are converted to
+    -- lazily evaluated constants.
+    [] => pure $ printDoc mde $ vcat
+          [ cmt
+          , constant (var !(get NoMangleMap) ref)
+               ("__lazy(" <+> function neutral [] b <+> ")") ]
+    _  => pure $ printDoc mde $ vcat
+          [ cmt
+          , function (var !(get NoMangleMap) ref)
+               (map (var !(get NoMangleMap)) args) b ]
 
 -- generate code for the given foreign function definition
 foreign :  {auto c : Ref ESs ESSt}
         -> {auto d : Ref Ctxt Defs}
+        -> {auto nm : Ref NoMangleMap NoMangleMap}
         -> (Name,FC,NamedDef)
         -> Core (List String)
 foreign (n, _, MkNmForeign path _ _) = pure . pretty <$> foreignDecl n path
@@ -667,14 +773,28 @@ foreign _                            = pure []
 -- name of the toplevel tail call loop from the
 -- preamble.
 tailRec : Name
-tailRec = UN "__tailRec"
+tailRec = UN $ Basic "__tailRec"
+
+validJSName : String -> Bool
+validJSName name =
+    not (name `elem` jsReservedNames)
+    && all validNameChar (unpack name)
+    && (case strM name of
+      StrNil => True
+      StrCons head _ => not $ isDigit head)
+  where
+    validNameChar : Char -> Bool
+    validNameChar c = isAlphaNum c || c == '_' || c == '$'
 
 ||| Compiles the given `ClosedTerm` for the list of supported
 ||| backends to JS code.
 export
-compileToES : Ref Ctxt Defs -> (cg : CG) -> ClosedTerm -> List String -> Core String
-compileToES c cg tm ccTypes = do
-  cdata      <- getCompileData False Cases tm
+compileToES : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
+              (cg : CG) -> ClosedTerm -> List String -> Core String
+compileToES c s cg tm ccTypes = do
+  _ <- initNoMangle ccTypes validJSName
+
+  cdata <- getCompileDataWith ccTypes False Cases tm
 
   -- read a derive the codegen mode to use from
   -- user defined directives for the
@@ -684,7 +804,7 @@ compileToES c cg tm ccTypes = do
              else Pretty
 
   -- initialize the state used in the code generator
-  s <- newRef ESs $ init mode (isArg mode) isFun ccTypes
+  s <- newRef ESs $ init mode (isArg mode) isFun ccTypes !(get NoMangleMap)
 
   -- register the toplevel `__tailRec` function to make sure
   -- it is not mangled in `Minimal` mode
@@ -705,7 +825,7 @@ compileToES c cg tm ccTypes = do
   foreigns <- concat <$> traverse foreign allDefs
 
   -- lookup the (possibly mangled) name of the main function
-  mainName <- compact . var <$> getOrRegisterRef mainExpr
+  mainName <- compact . var !(get NoMangleMap) <$> getOrRegisterRef mainExpr
 
   -- main function and list of all declarations
   let main =  "try{"

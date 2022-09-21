@@ -1,6 +1,5 @@
 module TTImp.Elab.Local
 
-import Core.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -9,10 +8,11 @@ import Core.Metadata
 import Core.Normalise
 import Core.Unify
 import Core.TT
-import Core.Value
+
+import Idris.REPL.Opts
+import Idris.Syntax
 
 import TTImp.Elab.Check
-import TTImp.Elab.Utils
 import TTImp.TTImp
 
 import Libraries.Data.NameMap
@@ -26,6 +26,8 @@ localHelper : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
+             {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              NestedNames vars -> Env Term vars ->
              List ImpDecl -> (NestedNames vars -> Core a) ->
              Core a
@@ -55,14 +57,14 @@ localHelper {vars} nest env nestdecls_in func
          names' <- traverse (applyEnv f)
                             (nub defNames) -- binding names must be unique
                                            -- fixes bug #115
-         let nest' = record { names $= (names' ++) } nest
+         let nest' = { names $= (names' ++) } nest
          let env' = dropLinear env
          -- We don't want to keep rechecking delayed elaborators in the
          -- locals  block, because they're not going to make progress until
          -- we come out again, so save them
          ust <- get UST
          let olddelayed = delayedElab ust
-         put UST (record { delayedElab = [] } ust)
+         put UST ({ delayedElab := [] } ust)
          defs <- get Ctxt
          -- store the local hints, so we can reset them after we've elaborated
          -- everything
@@ -72,12 +74,9 @@ localHelper {vars} nest env nestdecls_in func
          log "elab.def.local" 20 $ show nestdecls
 
          traverse_ (processDecl [] nest' env') nestdecls
-         ust <- get UST
-         put UST (record { delayedElab = olddelayed } ust)
-         defs <- get Ctxt
+         update UST { delayedElab := olddelayed }
          res <- func nest'
-         defs <- get Ctxt
-         put Ctxt (record { localHints = oldhints } defs)
+         update Ctxt { localHints := oldhints }
          pure res
   where
     -- For the local definitions, don't allow access to linear things
@@ -95,7 +94,7 @@ localHelper {vars} nest env nestdecls_in func
                Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))
     applyEnv outer inner
           = do ust <- get UST
-               put UST (record { nextName $= (+1) } ust)
+               put UST ({ nextName $= (+1) } ust)
                let nestedName_in = Nested (outer, nextName ust) inner
                nestedName <- inCurrentNS nestedName_in
                n' <- addName nestedName
@@ -123,19 +122,37 @@ localHelper {vars} nest env nestdecls_in func
     updateDataName nest (MkImpLater loc' n tycons)
         = MkImpLater loc' (newName nest n) tycons
 
+    updateFieldName : NestedNames vars -> IField -> IField
+    updateFieldName nest (MkIField fc rigc piinfo n rawimp)
+        = MkIField fc rigc piinfo (newName nest n) rawimp
+
+    updateRecordName : NestedNames vars -> ImpRecord -> ImpRecord
+    updateRecordName nest (MkImpRecord fc n params opts conName fields)
+        = MkImpRecord fc (newName nest n)
+                         params
+                         opts
+                         (newName nest conName)
+                         (map (updateFieldName nest) fields)
+
+    updateRecordNS : NestedNames vars -> Maybe String -> Maybe String
+    updateRecordNS _    Nothing   = Nothing
+    updateRecordNS nest (Just ns) = Just $ show $ newName nest (UN $ mkUserName ns)
+
     updateName : NestedNames vars -> ImpDecl -> ImpDecl
     updateName nest (IClaim loc' r vis fnopts ty)
          = IClaim loc' r vis fnopts (updateTyName nest ty)
     updateName nest (IDef loc' n cs)
          = IDef loc' (newName nest n) cs
-    updateName nest (IData loc' vis d)
-         = IData loc' vis (updateDataName nest d)
+    updateName nest (IData loc' vis mbt d)
+         = IData loc' vis mbt (updateDataName nest d)
+    updateName nest (IRecord loc' ns vis mbt imprecord)
+         = IRecord loc' (updateRecordNS nest ns) vis mbt (updateRecordName nest imprecord)
     updateName nest i = i
 
     setPublic : ImpDecl -> ImpDecl
     setPublic (IClaim fc c _ opts ty) = IClaim fc c Public opts ty
-    setPublic (IData fc _ d) = IData fc Public d
-    setPublic (IRecord fc c _ r) = IRecord fc c Public r
+    setPublic (IData fc _ mbt d) = IData fc Public mbt d
+    setPublic (IRecord fc c _ mbt r) = IRecord fc c Public mbt r
     setPublic (IParameters fc ps decls)
         = IParameters fc ps (map setPublic decls)
     setPublic (INamespace fc ps decls)
@@ -156,6 +173,8 @@ checkLocal : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
+             {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
              FC -> List ImpDecl -> (scope : RawImp) ->
@@ -183,6 +202,8 @@ checkCaseLocal : {vars : _} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> Name -> Name -> List Name -> RawImp ->
@@ -192,15 +213,12 @@ checkCaseLocal {vars} rig elabinfo nest env fc uname iname args sc expty
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact iname (gamma defs)
               | Nothing => check rig elabinfo nest env sc expty
-         let name = case definition def of
-                         PMDef _ _ _ _ _ => Ref fc Func iname
-                         DCon t a _ => Ref fc (DataCon t a) iname
-                         TCon t a _ _ _ _ _ _ => Ref fc (TyCon t a) iname
-                         _ => Ref fc Func iname
+         let nt = fromMaybe Func (defNameType $ definition def)
+         let name = Ref fc nt iname
          (app, args) <- getLocalTerm fc env name args
          log "elab.local" 5 $ "Updating case local " ++ show uname ++ " " ++ show args
          logTermNF "elab.local" 5 "To" env app
-         let nest' = record { names $= ((uname, (Just iname, args,
-                                                (\fc, nt => app))) :: ) }
-                            nest
+         let nest' = { names $= ((uname, (Just iname, args,
+                                         (\fc, nt => app))) :: ) }
+                     nest
          check rig elabinfo nest' env sc expty

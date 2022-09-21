@@ -8,7 +8,6 @@ import public Parser.Support
 
 import Core.Core
 import Core.FC
-import Core.Name.Namespace
 import System.File
 
 %default total
@@ -18,8 +17,8 @@ runParser : (fname : String) -> (str : String) -> Rule ty -> Either Error ty
 runParser fname str p
     = do toks   <- mapFst (\err => fromLexError
                      (PhysicalPkgSrc fname) (NoRuleApply, err)) $ lex str
-         parsed <- mapFst (fromParsingErrors (PhysicalPkgSrc fname)) $ parse p toks
-         Right (fst parsed)
+         (_, val, _) <- mapFst (fromParsingErrors (PhysicalPkgSrc fname)) $ parse p toks
+         Right val
 
 export
 covering

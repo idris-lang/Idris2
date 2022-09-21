@@ -7,6 +7,7 @@ import public Data.Fin
 import public Data.Zippable
 
 import Decidable.Equality
+import Control.Function
 
 %default total
 
@@ -32,10 +33,17 @@ lengthCorrect : (xs : Vect len elem) -> length xs = len
 lengthCorrect []        = Refl
 lengthCorrect (_ :: xs) = rewrite lengthCorrect xs in Refl
 
-||| If two vectors are equal, their heads and tails are equal
 export
-vectInjective : {0 xs : Vect n a} -> {0 ys : Vect m b} -> x::xs = y::ys -> (x = y, xs = ys)
-vectInjective Refl = (Refl, Refl)
+{x : a} -> Injective (Vect.(::) x) where
+  injective Refl = Refl
+
+export
+{xs : Vect n a} -> Injective (\x => Vect.(::) x xs) where
+  injective Refl = Refl
+
+export
+Biinjective Vect.(::) where
+  biinjective Refl = (Refl, Refl)
 
 --------------------------------------------------------------------------------
 -- Indexing into vectors
@@ -86,6 +94,15 @@ take : (n  : Nat)
     -> Vect n type
 take 0 xs = Nil
 take (S k) (x :: xs) = x :: take k xs
+
+namespace Stream
+  ||| Take precisely n elements from the stream.
+  ||| @ n how many elements to take
+  ||| @ xs the stream
+  public export
+  take : (n : Nat) -> (xs : Stream a) -> Vect n a
+  take Z xs = []
+  take (S k) (x :: xs) = x :: take k xs
 
 ||| Drop the first `n` elements of a Vect.
 public export
@@ -179,6 +196,16 @@ public export
 snoc : (xs : Vect n a) -> (v : a) -> Vect (S n) a
 snoc [] v = [v]
 snoc (x :: xs) v = x :: snoc xs v
+
+||| Pop the last element from a vector. This is the opposite of `snoc`, in that
+||| `(uncurry snoc) unsnoc xs` is `xs`. It is equivalent to `(init xs, last xs)`,
+||| but traverses the vector once.
+|||
+||| @ xs The vector to pop the element from.
+public export
+unsnoc : (xs : Vect (S n) a) -> (Vect n a, a)
+unsnoc [x] = ([], x)
+unsnoc (x :: xs@(_ :: _)) = let (ini, lst) = unsnoc xs in (x :: ini, lst)
 
 ||| Repeate some value some number of times.
 |||
@@ -304,10 +331,7 @@ Eq a => Eq (Vect n a) where
 public export
 DecEq a => DecEq (Vect n a) where
   decEq []      []      = Yes Refl
-  decEq (x::xs) (y::ys) with (decEq x y, decEq xs ys)
-    decEq (x::xs) (x::xs) | (Yes Refl, Yes Refl) = Yes Refl
-    decEq (x::xs) (y::ys) | (No nhd, _) = No $ nhd . fst . vectInjective
-    decEq (x::xs) (y::ys) | (_, No ntl) = No $ ntl . snd . vectInjective
+  decEq (x::xs) (y::ys) = decEqCong2 (decEq x y) (decEq xs ys)
 
 --------------------------------------------------------------------------------
 -- Order
@@ -408,6 +432,32 @@ foldl1 f (x::xs) = foldl f x xs
 -- Scans
 --------------------------------------------------------------------------------
 
+||| The scanr function is similar to foldr, but returns all the intermediate
+||| accumulator states in the form of a vector. Note the intermediate accumulator
+||| states appear in the result in reverse order - the first state appears last
+||| in the result.
+|||
+||| ```idris example
+||| scanr (-) 0 (fromList [1,2,3])
+||| ```
+public export
+scanr : (elem -> res -> res) -> res -> Vect len elem -> Vect (S len) res
+scanr _ q [] = [q]
+scanr f q (x :: xs) = let qs'@(q' :: _) = scanr f q xs in f x q' :: qs'
+
+||| The scanr1 function is a variant of scanr that doesn't require an explicit
+||| starting value.
+||| It assumes the last element of the vector to be the starting value and then
+||| starts the fold with the element preceding it.
+|||
+||| ```idris example
+||| scanr1 (-) (fromList [1,2,3])
+||| ```
+public export
+scanr1 : (elem -> elem -> elem) -> Vect len elem -> Vect len elem
+scanr1 _ [] = []
+scanr1 f xs@(_ :: _) = let (ini, lst) = unsnoc xs in scanr f lst ini
+
 ||| The scanl function is similar to foldl, but returns all the intermediate
 ||| accumulator states in the form of a vector.
 |||
@@ -435,30 +485,6 @@ scanl1 f (x::xs) = scanl f x xs
 --------------------------------------------------------------------------------
 -- Membership tests
 --------------------------------------------------------------------------------
-
-||| Search for an item using a user-provided test
-||| @ p the equality test
-||| @ e the item to search for
-||| @ xs the vector to search in
-|||
-||| ```idris example
-||| elemBy (==) 2 [1,2,3,4]
-||| ```
-public export
-elemBy : (p : elem -> elem -> Bool) -> (e : elem) -> (xs : Vect len elem) -> Bool
-elemBy p e []      = False
-elemBy p e (x::xs) = p e x || elemBy p e xs
-
-||| Use the default Boolean equality on elements to search for an item
-||| @ x what to search for
-||| @ xs where to search
-|||
-||| ```idris example
-||| elem 3 [1,2,3,4]
-||| ```
-public export
-elem : Eq elem => (x : elem) -> (xs : Vect len elem) -> Bool
-elem = elemBy (==)
 
 ||| Find the association of some key with a user-provided comparison
 ||| @ p the comparison operator for keys (True if they match)
@@ -858,6 +884,7 @@ implementation {k : Nat} -> Applicative (Vect k) where
 
 -- ||| This monad is different from the List monad, (>>=)
 -- ||| uses the diagonal.
+public export
 implementation {k : Nat} -> Monad (Vect k) where
     m >>= f = diag (map f m)
 
@@ -865,6 +892,18 @@ public export
 implementation Traversable (Vect k) where
     traverse f []        = pure []
     traverse f (x :: xs) = [| f x :: traverse f xs |]
+
+--------------------------------------------------------------------------------
+-- Semigroup/Monoid
+--------------------------------------------------------------------------------
+
+public export
+Semigroup a => Semigroup (Vect k a) where
+  (<+>) = zipWith (<+>)
+
+public export
+{k : Nat} -> Monoid a => Monoid (Vect k a) where
+  neutral = replicate k neutral
 
 --------------------------------------------------------------------------------
 -- Show

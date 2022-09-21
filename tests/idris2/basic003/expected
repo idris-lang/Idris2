@@ -2,8 +2,8 @@
 Main> Bye for now!
 1/1: Building Ambig2 (Ambig2.idr)
 Error: While processing right hand side of keepUnique. Ambiguous elaboration. Possible results:
-    Main.Set.toList ?arg
-    Main.Vect.toList ?arg
+    Main.Set.toList (Main.Set.fromList xs)
+    Main.Vect.toList (Main.Vect.fromList xs)
 
 Ambig2:26:21--26:27
  22 |   export

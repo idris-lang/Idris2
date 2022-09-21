@@ -1,9 +1,7 @@
 module Prelude.Num
 
-import Builtin
 import Prelude.Basics
 import Prelude.EqOrd
-import Prelude.Ops
 
 %default total
 
@@ -31,6 +29,16 @@ interface Num ty => Neg ty where
   ||| The underlying of unary minus. `-5` desugars to `negate (fromInteger 5)`.
   negate : ty -> ty
   (-) : ty -> ty -> ty
+
+||| A convenience alias for `(-)`, this function enables partial application of subtraction on the
+||| right-hand operand as
+||| ```idris example
+||| (`subtract` 1)
+||| ```
+||| This contrasts with `(- 1)`, which is parsed as `-1`.
+export
+subtract : Neg ty => ty -> ty -> ty
+subtract = (-)
 
 ||| Numbers for which the absolute value is defined should implement `Abs`.
 public export
@@ -68,6 +76,7 @@ Num Integer where
   (*) = prim__mul_Integer
   fromInteger = id
 
+%inline
 public export
 Neg Integer where
   negate x = prim__sub_Integer 0 x
@@ -104,6 +113,7 @@ Num Int where
   (*) = prim__mul_Int
   fromInteger = prim__cast_IntegerInt
 
+%inline
 public export
 Neg Int where
   negate x = prim__sub_Int 0 x
@@ -131,6 +141,7 @@ Num Int8 where
   (*) = prim__mul_Int8
   fromInteger = prim__cast_IntegerInt8
 
+%inline
 public export
 Neg Int8 where
   negate x = prim__sub_Int8 0 x
@@ -158,6 +169,7 @@ Num Int16 where
   (*) = prim__mul_Int16
   fromInteger = prim__cast_IntegerInt16
 
+%inline
 public export
 Neg Int16 where
   negate x = prim__sub_Int16 0 x
@@ -185,6 +197,7 @@ Num Int32 where
   (*) = prim__mul_Int32
   fromInteger = prim__cast_IntegerInt32
 
+%inline
 public export
 Neg Int32 where
   negate x = prim__sub_Int32 0 x
@@ -212,6 +225,7 @@ Num Int64 where
   (*) = prim__mul_Int64
   fromInteger = prim__cast_IntegerInt64
 
+%inline
 public export
 Neg Int64 where
   negate x = prim__sub_Int64 0 x
@@ -239,6 +253,7 @@ Num Bits8 where
   (*) = prim__mul_Bits8
   fromInteger = prim__cast_IntegerBits8
 
+%inline
 public export
 Neg Bits8 where
   negate x = prim__sub_Bits8 0 x
@@ -266,6 +281,7 @@ Num Bits16 where
   (*) = prim__mul_Bits16
   fromInteger = prim__cast_IntegerBits16
 
+%inline
 public export
 Neg Bits16 where
   negate x = prim__sub_Bits16 0 x
@@ -293,6 +309,7 @@ Num Bits32 where
   (*) = prim__mul_Bits32
   fromInteger = prim__cast_IntegerBits32
 
+%inline
 public export
 Neg Bits32 where
   negate x = prim__sub_Bits32 0 x
@@ -320,6 +337,7 @@ Num Bits64 where
   (*) = prim__mul_Bits64
   fromInteger = prim__cast_IntegerBits64
 
+%inline
 public export
 Neg Bits64 where
   negate x = prim__sub_Bits64 0 x
@@ -346,6 +364,7 @@ Num Double where
   (*) = prim__mul_Double
   fromInteger = prim__cast_IntegerDouble
 
+%inline
 public export
 Neg Double where
   negate x = prim__negate_Double x

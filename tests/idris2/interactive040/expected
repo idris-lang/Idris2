@@ -1,0 +1,5 @@
+Main> -1 : Integer
+Main> the Nat 8 : Nat
+Main> -1.0 : Double
+Main> 
+Bye for now!

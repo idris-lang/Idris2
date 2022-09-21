@@ -15,6 +15,14 @@ isYes : Dec a -> Bool
 isYes (Yes _) = True
 isYes (No _) = False
 
+export
+Injective Yes where
+  injective Refl = Refl
+
+export
+Injective No where
+  injective Refl = Refl
+
 ||| Proof that some `Dec` is actually `Yes`
 public export
 data IsYes : Dec a -> Type where
@@ -43,10 +51,5 @@ interface Decidable k ts p where
 
 ||| Given a `Decidable` n-ary relation, provides a decision procedure for
 ||| this relation.
-decision : (ts : Vect k Type) -> (p : Rel ts) -> (Decidable k ts p) => liftRel ts p Dec
+decision : (ts : Vect k Type) -> (p : Rel ts) -> Decidable k ts p => liftRel ts p Dec
 decision ts p = decide {ts} {p}
-
-using (a : Type, x : a)
-  public export
-  data Given : Dec a -> Type where
-    Always : Given (Yes x)

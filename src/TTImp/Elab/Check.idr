@@ -14,13 +14,16 @@ import Core.UnifyState
 import Core.TT
 import Core.Value
 
+import Idris.REPL.Opts
+import Idris.Syntax
+
 import TTImp.TTImp
 
 import Data.Either
 import Libraries.Data.IntMap
 import Data.List
 import Libraries.Data.NameMap
-import Libraries.Data.StringMap
+import Libraries.Data.UserNameMap
 
 %default covering
 
@@ -32,6 +35,7 @@ isLHS : ElabMode -> Maybe RigCount
 isLHS (InLHS w) = Just w
 isLHS _ = Nothing
 
+export
 Show ElabMode where
   show InType = "InType"
   show (InLHS c) = "InLHS " ++ show c
@@ -66,6 +70,7 @@ data ImplBinding : List Name -> Type where
                  ImplBinding vars
 
 export
+covering
 Show (ImplBinding vars) where
   show (NameBinding c p tm ty) = show (tm, ty)
   show (AsBinding c p tm ty pat) = show (tm, ty) ++ "@" ++ show tm
@@ -143,7 +148,7 @@ record EState (vars : List Name) where
   linearUsed : List (Var vars)
   saveHoles : NameMap () -- things we'll need to save to TTC, even if solved
 
-  unambiguousNames : StringMap (Name, Int, GlobalDef)
+  unambiguousNames : UserNameMap (Name, Int, GlobalDef)
                   -- Mapping from userNameRoot to fully resolved names.
                   -- For names in this mapping, we don't run disambiguation.
                   -- Used in with-expressions.
@@ -178,9 +183,7 @@ initEState n env = initEStateSub n env SubRefl
 export
 saveHole : {auto e : Ref EST (EState vars)} ->
            Name -> Core ()
-saveHole n
-    = do est <- get EST
-         put EST (record { saveHoles $= insert n () } est)
+saveHole n = update EST { saveHoles $= insert n () }
 
 weakenedEState : {n, vars : _} ->
                  {auto e : Ref EST (EState vars)} ->
@@ -188,12 +191,12 @@ weakenedEState : {n, vars : _} ->
 weakenedEState {e}
     = do est <- get EST
          eref <- newRef EST $
-                   record { subEnv $= DropCons
-                          , boundNames $= map wknTms
-                          , toBind $= map wknTms
-                          , linearUsed $= map weaken
-                          , polyMetavars = [] -- no binders on LHS
-                          } est
+                   { subEnv $= DropCons
+                   , boundNames $= map wknTms
+                   , toBind $= map wknTms
+                   , linearUsed $= map weaken
+                   , polyMetavars := [] -- no binders on LHS
+                   } est
          pure eref
   where
     wknTms : (Name, ImplBinding vs) ->
@@ -214,12 +217,12 @@ strengthenedEState {n} {vars} c e fc env
          svs <- dropSub (subEnv est)
          bns <- traverse (strTms defs) (boundNames est)
          todo <- traverse (strTms defs) (toBind est)
-         pure $ record { subEnv = svs
-                       , boundNames = bns
-                       , toBind = todo
-                       , linearUsed $= mapMaybe dropTop
-                       , polyMetavars = [] -- no binders on LHS
-                       } est
+         pure $ { subEnv := svs
+                , boundNames := bns
+                , toBind := todo
+                , linearUsed $= mapMaybe dropTop
+                , polyMetavars := [] -- no binders on LHS
+                } est
 
   where
     dropSub : SubVars xs (y :: ys) -> Core (SubVars xs ys)
@@ -298,9 +301,7 @@ export
 mustBePoly : {auto e : Ref EST (EState vars)} ->
              FC -> Env Term vars ->
              Term vars -> Term vars -> Core ()
-mustBePoly fc env tm ty
-    = do est <- get EST
-         put EST (record { polyMetavars $= ((fc, env, tm, ty) :: ) } est)
+mustBePoly fc env tm ty = update EST { polyMetavars $= ((fc, env, tm, ty) :: ) }
 
 -- Return whether we already know the return type of the given function
 -- type. If we know this, we can possibly infer some argument types before
@@ -313,7 +314,7 @@ concrete defs env (NBind fc _ (Pi _ _ _ _) sc)
 concrete defs env (NDCon _ _ _ _ _) = pure True
 concrete defs env (NTCon _ _ _ _ _) = pure True
 concrete defs env (NPrimVal _ _) = pure True
-concrete defs env (NType _) = pure True
+concrete defs env (NType _ _) = pure True
 concrete defs env _ = pure False
 
 export
@@ -324,10 +325,10 @@ updateEnv : {new : _} ->
                               Term vars', Term vars', SubVars new vars'))) ->
             EState vars -> EState vars
 updateEnv env sub bif st
-    = record { outerEnv = env
-             , subEnv = sub
-             , bindIfUnsolved = bif
-             } st
+    = { outerEnv := env
+      , subEnv := sub
+      , bindIfUnsolved := bif
+      } st
 
 export
 addBindIfUnsolved : {vars : _} ->
@@ -335,35 +336,29 @@ addBindIfUnsolved : {vars : _} ->
                     Env Term vars -> Term vars -> Term vars ->
                     EState vars -> EState vars
 addBindIfUnsolved hn r p env tm ty st
-    = record { bindIfUnsolved $=
-                ((hn, r, (_ ** (env, p, tm, ty, subEnv st))) ::)} st
+    = { bindIfUnsolved $=
+         ((hn, r, (_ ** (env, p, tm, ty, subEnv st))) ::)} st
 
 clearBindIfUnsolved : EState vars -> EState vars
-clearBindIfUnsolved = record { bindIfUnsolved = [] }
+clearBindIfUnsolved = { bindIfUnsolved := [] }
 
 -- Clear the 'toBind' list, except for the names given
 export
 clearToBind : {auto e : Ref EST (EState vars)} ->
               (excepts : List Name) -> Core ()
-clearToBind excepts
-    = do est <- get EST
-         put EST (record { toBind $= filter (\x => fst x `elem` excepts) }
-                         (clearBindIfUnsolved est))
+clearToBind excepts =
+  update EST $ { toBind $= filter (\x => fst x `elem` excepts) } . clearBindIfUnsolved
 
 export
 noteLHSPatVar : {auto e : Ref EST (EState vars)} ->
                 ElabMode -> Name -> Core ()
-noteLHSPatVar (InLHS _) n
-    = do est <- get EST
-         put EST (record { lhsPatVars $= (n ::) } est)
-noteLHSPatVar _ _ = pure ()
+noteLHSPatVar (InLHS _) n = update EST { lhsPatVars $= (n ::) }
+noteLHSPatVar _         _ = pure ()
 
 export
 notePatVar : {auto e : Ref EST (EState vars)} ->
              Name -> Core ()
-notePatVar n
-    = do est <- get EST
-         put EST (record { allPatVars $= (n ::) } est)
+notePatVar n = update EST { allPatVars $= (n ::) }
 
 export
 metaVar : {vars : _} ->
@@ -396,7 +391,7 @@ metaVarI fc rig env n ty
          tynf <- nf defs env ty
          let hinf = case tynf of
                          NApp _ (NMeta _ _ _) _ =>
-                              record { precisetype = True } (holeInit False)
+                              { precisetype := True } (holeInit False)
                          _ => holeInit False
          newMeta fc rig env n ty (Hole (length env) hinf) True
 
@@ -408,6 +403,15 @@ argVar : {vars : _} ->
          Env Term vars -> Name -> Term vars -> Core (Int, Term vars)
 argVar fc rig env n ty
     = newMetaLets fc rig env n ty (Hole (length env) (holeInit False)) False True
+
+export
+uniVar : {auto c : Ref Ctxt Defs} ->
+         {auto u : Ref UST UState} ->
+         FC -> Core Name
+uniVar fc
+    = do n <- genName "u"
+         idx <- addDef n (newDef fc n erased [] (Erased fc False) Public None)
+         pure (Resolved idx)
 
 export
 searchVar : {vars : _} ->
@@ -455,11 +459,7 @@ searchVar fc rig depth def env nest n ty
              defs <- get Ctxt
              Just ndef <- lookupCtxtExact n' (gamma defs)
                  | Nothing => pure (vs ** (f, env'))
-             let nt = case definition ndef of
-                           PMDef _ _ _ _ _ => Func
-                           DCon t a _ => DataCon t a
-                           TCon t a _ _ _ _ _ _ => TyCon t a
-                           _ => Func
+             let nt = fromMaybe Func (defNameType $ definition ndef)
              let app = tmf fc nt
              let tyenv = useVars (getArgs app) (embed (type ndef))
              let binder = Let fc top (weakenNs (mkSizeOf vs) app)
@@ -504,7 +504,7 @@ tryError elab
                            put EST est
                            put MD md
                            defs' <- get Ctxt
-                           put Ctxt (record { timings = timings defs' } defs)
+                           put Ctxt ({ timings := timings defs' } defs)
                            pure (Left err))
 
 export
@@ -551,7 +551,7 @@ successful allowCons ((tm, elab) :: elabs)
          defs <- branch
          catch (do -- Run the elaborator
                    logC "elab" 5 $
-                            do tm' <- maybe (pure (UN "__"))
+                            do tm' <- maybe (pure (UN $ Basic "__"))
                                              toFullNames tm
                                pure ("Running " ++ show tm')
                    res <- elab
@@ -571,7 +571,7 @@ successful allowCons ((tm, elab) :: elabs)
                    put MD md
                    put Ctxt defs
                    logC "elab" 5 $
-                            do tm' <- maybe (pure (UN "__"))
+                            do tm' <- maybe (pure (UN $ Basic "__"))
                                             toFullNames tm
                                pure ("Success " ++ show tm' ++
                                      " (" ++ show ncons' ++ " - "
@@ -584,8 +584,20 @@ successful allowCons ((tm, elab) :: elabs)
                            put EST est
                            put MD md
                            put Ctxt defs
+                           when (abandon err) $ throw err
                            elabs' <- successful allowCons elabs
-                           pure (Left (tm, !(normaliseErr err)) :: elabs'))
+                           pure (Left (tm, err) :: elabs'))
+  where
+    -- Some errors, it's not worth trying all the possibilities because
+    -- something serious has gone wrong, so just give up immediately.
+    abandon : Error -> Bool
+    abandon (UndefinedName _ _) = True
+    abandon (InType _ _ err) = abandon err
+    abandon (InCon _ _ err) = abandon err
+    abandon (InLHS _ _ err) = abandon err
+    abandon (InRHS _ _ err) = abandon err
+    abandon (AllFailed errs) = any (abandon . snd) errs
+    abandon _ = False
 
 export
 exactlyOne' : {vars : _} ->
@@ -617,8 +629,8 @@ exactlyOne' {vars} allowCons fc env all
                           [(_, res)] => Right res
                           _ => Left (map snd rs)
 
-    getRes : ((Term vars, Glued vars), st) -> Term vars
-    getRes ((tm, _), thisst) = tm
+    getRes : ((Term vars, Glued vars), Defs, st) -> (Context, Term vars)
+    getRes ((tm, _), defs, thisst) = (gamma defs, tm)
 
     getDepthError : Error -> Maybe Error
     getDepthError e@(AmbiguityTooDeep _ _ _) = Just e
@@ -632,7 +644,7 @@ exactlyOne' {vars} allowCons fc env all
     -- If they've all failed, collect all the errors
     -- If more than one succeeded, report the ambiguity
     altError : List (Maybe Name, Error) ->
-               List ((Term vars, Glued vars), st) ->
+               List ((Term vars, Glued vars), Defs, st) ->
                Error
     altError ls []
         = case depthError ls of
@@ -671,6 +683,8 @@ check : {vars : _} ->
         {auto m : Ref MD Metadata} ->
         {auto u : Ref UST UState} ->
         {auto e : Ref EST (EState vars)} ->
+        {auto s : Ref Syn SyntaxInfo} ->
+        {auto o : Ref ROpts REPLOpts} ->
         RigCount -> ElabInfo ->
         NestedNames vars -> Env Term vars -> RawImp ->
         Maybe (Glued vars) ->
@@ -683,6 +697,8 @@ checkImp : {vars : _} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
+           {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars -> RawImp -> Maybe (Glued vars) ->
            Core (Term vars, Glued vars)
@@ -693,6 +709,8 @@ processDecl : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               List ElabOpt -> NestedNames vars ->
               Env Term vars -> ImpDecl -> Core ()
 
@@ -733,8 +751,7 @@ convertWithLazy withLazy fc elabinfo env x y
                     solveConstraints umode Normal
                 pure vs)
             (\err =>
-               do defs <- get Ctxt
-                  xtm <- getTerm x
+               do xtm <- getTerm x
                   ytm <- getTerm y
                   -- See if we can improve the error message by
                   -- resolving any more constraints
@@ -744,7 +761,7 @@ convertWithLazy withLazy fc elabinfo env x y
                   -- throwing because they may no longer be known
                   -- by the time we look at the error
                   defs <- get Ctxt
-                  throw !(normaliseErr (WhenUnifying fc env xtm ytm err)))
+                  throw (WhenUnifying fc (gamma defs) env xtm ytm err))
 
 export
 convert : {vars : _} ->

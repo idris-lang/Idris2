@@ -3,33 +3,42 @@ module TTImp.Utils
 import Core.Context
 import Core.Options
 import Core.TT
+import Core.Env
+import Core.Value
 import TTImp.TTImp
 
 import Data.List
 import Data.List1
 import Data.String
 
+import Idris.Syntax
+
+import Libraries.Data.NameMap
 import Libraries.Utils.String
 
 %default covering
 
+
+-- Appends the ' character to "x" until it is unique with respect to "xs".
 export
-getUnique : List String -> String -> String
-getUnique xs x = if x `elem` xs then getUnique xs (x ++ "'") else x
+genUniqueStr : (xs : List String) -> (x : String) -> String
+genUniqueStr xs x = if x `elem` xs then genUniqueStr xs (x ++ "'") else x
+
 
 -- Extract the RawImp pieces from a ImpDecl so they can be searched for unquotes
 -- Used in findBindableNames{,Quot}
 rawImpFromDecl : ImpDecl -> List RawImp
 rawImpFromDecl decl = case decl of
     IClaim fc1 y z ys ty => [getFromTy ty]
-    IData fc1 y (MkImpData fc2 n tycon opts datacons)
+    IData fc1 y _ (MkImpData fc2 n tycon opts datacons)
         => tycon :: map getFromTy datacons
-    IData fc1 y (MkImpLater fc2 n tycon) => [tycon]
+    IData fc1 y _ (MkImpLater fc2 n tycon) => [tycon]
     IDef fc1 y ys => getFromClause !ys
     IParameters fc1 ys zs => rawImpFromDecl !zs ++ map getParamTy ys
-    IRecord fc1 y z (MkImpRecord fc n params conName fields) => do
+    IRecord fc1 y z _ (MkImpRecord fc n params opts conName fields) => do
         (a, b) <- map (snd . snd) params
         getFromPiInfo a ++ [b] ++ getFromIField !fields
+    IFail fc1 msg zs => rawImpFromDecl !zs
     INamespace fc1 ys zs => rawImpFromDecl !zs
     ITransform fc1 y z w => [z, w]
     IRunElabDecl fc1 y => [] -- Not sure about this either
@@ -42,7 +51,7 @@ rawImpFromDecl decl = case decl of
         getFromTy (MkImpTy _ _ _ ty) = ty
         getFromClause : ImpClause -> List RawImp
         getFromClause (PatClause fc1 lhs rhs) = [lhs, rhs]
-        getFromClause (WithClause fc1 lhs wval prf flags ys) = [wval, lhs] ++ getFromClause !ys
+        getFromClause (WithClause fc1 lhs rig wval prf flags ys) = [wval, lhs] ++ getFromClause !ys
         getFromClause (ImpossibleClause fc1 lhs) = [lhs]
         getFromPiInfo : PiInfo RawImp -> List RawImp
         getFromPiInfo (DefImplicit x) = [x]
@@ -50,19 +59,26 @@ rawImpFromDecl decl = case decl of
         getFromIField : IField -> List RawImp
         getFromIField (MkIField fc x y z w) = getFromPiInfo y ++ [w]
 
--- Bind lower case names in argument position
--- Don't go under case, let, or local bindings, or IAlternative
+
+-- Identify lower case names in argument position, which we can bind later.
+-- Don't go under case, let, or local bindings, or IAlternative.
+--
+-- arg: Is the current expression in argument position? (We don't want to implicitly
+--      bind funtions.)
+--
+-- env: Local names in scope. We only want to bind free variables, so we need this.
 export
-findBindableNames : (arg : Bool) -> List Name -> (used : List String) ->
+findBindableNames : (arg : Bool) -> (env : List Name) -> (used : List String) ->
                     RawImp -> List (String, String)
 
 -- Helper to traverse the inside of a quoted expression, looking for unquotes
 findBindableNamesQuot : List Name -> (used : List String) -> RawImp ->
                         List (String, String)
 
-findBindableNames True env used (IVar fc (UN n))
-    = if not (UN n `elem` env) && lowerFirst n
-         then [(n, getUnique used n)]
+findBindableNames True env used (IVar fc nm@(UN (Basic n)))
+      -- If the identifier is not bound locally and begins with a lowercase letter..
+    = if not (nm `elem` env) && lowerFirst n
+         then [(n, genUniqueStr used n)]
          else []
 findBindableNames arg env used (IPi fc rig p mn aty retty)
     = let env' = case mn of
@@ -84,8 +100,8 @@ findBindableNames arg env used (IAutoApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
 findBindableNames arg env used (IWithApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
-findBindableNames arg env used (IAs fc _ _ (UN n) pat)
-    = (n, getUnique used n) :: findBindableNames arg env used pat
+findBindableNames arg env used (IAs fc _ _ (UN (Basic n)) pat)
+    = (n, genUniqueStr used n) :: findBindableNames arg env used pat
 findBindableNames arg env used (IAs fc _ _ n pat)
     = findBindableNames arg env used pat
 findBindableNames arg env used (IMustUnify fc r pat)
@@ -102,6 +118,9 @@ findBindableNames arg env used (IQuoteDecl fc d)
     = findBindableNamesQuot env used !(rawImpFromDecl !d)
 findBindableNames arg env used (IAlternative fc u alts)
     = concatMap (findBindableNames arg env used) alts
+findBindableNames arg env used (IUpdate fc updates tm)
+    = findBindableNames True env used tm ++
+      concatMap (findBindableNames True env used . getFieldUpdateTerm) updates
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findBindableNames arg env used tm = []
@@ -116,7 +135,7 @@ findBindableNamesQuot env used (ICase fc x ty xs)
     = findBindableNamesQuot env used !([x, ty] ++ getRawImp !xs)
   where getRawImp : ImpClause -> List RawImp
         getRawImp (PatClause fc1 lhs rhs) = [lhs, rhs]
-        getRawImp (WithClause fc1 lhs wval prf flags ys) = [wval, lhs] ++ getRawImp !ys
+        getRawImp (WithClause fc1 lhs rig wval prf flags ys) = [wval, lhs] ++ getRawImp !ys
         getRawImp (ImpossibleClause fc1 lhs) = [lhs]
 findBindableNamesQuot env used (ILocal fc xs x)
     = findBindableNamesQuot env used !(x :: rawImpFromDecl !xs)
@@ -137,10 +156,7 @@ findBindableNamesQuot env used (ICoerced fc x)
 findBindableNamesQuot env used (IBindHere fc x y)
     = findBindableNamesQuot env used y
 findBindableNamesQuot env used (IUpdate fc xs x)
-    = findBindableNamesQuot env used !(x :: map getRawImp xs)
-  where getRawImp : IFieldUpdate -> RawImp
-        getRawImp (ISetField path y) = y
-        getRawImp (ISetFieldApp path y) = y
+    = findBindableNamesQuot env used !(x :: map getFieldUpdateTerm xs)
 findBindableNamesQuot env used (IAs fc nfc x y z)
     = findBindableNamesQuot env used z
 findBindableNamesQuot env used (IDelayed fc x y)
@@ -184,8 +200,8 @@ findUniqueBindableNames fc arg env used t
          do defs <- get Ctxt
             let ctxt = gamma defs
             ns <- map catMaybes $ for assoc $ \ (n, _) => do
-                    ns <- lookupCtxtName (UN n) ctxt
-                    let ns = flip mapMaybe ns $ \(n, _, d) =>
+                    ns <- lookupCtxtName (UN (Basic n)) ctxt
+                    let ns = flip List.mapMaybe ns $ \(n, _, d) =>
                                case definition d of
                                 -- do not warn about holes: `?a` is not actually
                                 -- getting shadowed as it will not become a
@@ -234,6 +250,10 @@ findAllNames env (IUnquote fc t)
     = findAllNames env t
 findAllNames env (IAlternative fc u alts)
     = concatMap (findAllNames env) alts
+findAllNames env (IUpdate fc updates tm)
+    = findAllNames env tm
+    ++ concatMap (findAllNames env . getFieldUpdateTerm) updates
+    ++ concatMap (map (UN . Basic) . getFieldUpdatePath) updates
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findAllNames env tm = []
@@ -255,7 +275,7 @@ findIBindVars (IAutoApp fc fn av)
 findIBindVars (IWithApp fc fn av)
     = findIBindVars fn ++ findIBindVars av
 findIBindVars (IBindVar fc v)
-    = [UN v]
+    = [UN (Basic v)]
 findIBindVars (IDelayed fc r t)
     = findIBindVars t
 findIBindVars (IDelay fc t)
@@ -264,6 +284,8 @@ findIBindVars (IForce fc t)
     = findIBindVars t
 findIBindVars (IAlternative fc u alts)
     = concatMap findIBindVars alts
+findIBindVars (IUpdate fc updates tm)
+    = findIBindVars tm ++ concatMap (findIBindVars . getFieldUpdateTerm) updates
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findIBindVars tm = []
@@ -279,8 +301,8 @@ mutual
                      _ => IVar fc n
            else IVar fc n
   substNames' True bound ps (IBindVar fc n)
-      = if not (UN n `elem` bound)
-           then case lookup (UN n) ps of
+      = if not (UN (Basic n) `elem` bound)
+           then case lookup (UN $ Basic n) ps of
                      Just t => t
                      _ => IBindVar fc n
            else IBindVar fc n
@@ -326,21 +348,24 @@ mutual
       = IDelay fc (substNames' bvar bound ps t)
   substNames' bvar bound ps (IForce fc t)
       = IForce fc (substNames' bvar bound ps t)
+  substNames' bvar bound ps (IUpdate fc updates tm)
+      = IUpdate fc (map (mapFieldUpdateTerm $ substNames' bvar bound ps) updates)
+                   (substNames' bvar bound ps tm)
   substNames' bvar bound ps tm = tm
 
   substNamesClause' : Bool -> List Name -> List (Name, RawImp) ->
                       ImpClause -> ImpClause
   substNamesClause' bvar bound ps (PatClause fc lhs rhs)
-      = let bound' = map UN (map snd (findBindableNames True bound [] lhs))
+      = let bound' = map (UN . Basic) (map snd (findBindableNames True bound [] lhs))
                      ++ findIBindVars lhs
                      ++ bound in
             PatClause fc (substNames' bvar [] [] lhs)
                          (substNames' bvar bound' ps rhs)
-  substNamesClause' bvar bound ps (WithClause fc lhs wval prf flags cs)
-      = let bound' = map UN (map snd (findBindableNames True bound [] lhs))
+  substNamesClause' bvar bound ps (WithClause fc lhs rig wval prf flags cs)
+      = let bound' = map (UN . Basic) (map snd (findBindableNames True bound [] lhs))
                      ++ findIBindVars lhs
                      ++ bound in
-            WithClause fc (substNames' bvar [] [] lhs)
+            WithClause fc (substNames' bvar [] [] lhs) rig
                           (substNames' bvar bound' ps wval) prf flags cs
   substNamesClause' bvar bound ps (ImpossibleClause fc lhs)
       = ImpossibleClause fc (substNames' bvar bound [] lhs)
@@ -364,8 +389,10 @@ mutual
       = IClaim fc r vis opts (substNamesTy' bvar bound ps td)
   substNamesDecl' bvar bound ps (IDef fc n cs)
       = IDef fc n (map (substNamesClause' bvar bound ps) cs)
-  substNamesDecl' bvar bound ps (IData fc vis d)
-      = IData fc vis (substNamesData' bvar bound ps d)
+  substNamesDecl' bvar bound ps (IData fc vis mbtot d)
+      = IData fc vis mbtot (substNamesData' bvar bound ps d)
+  substNamesDecl' bvar bound ps (IFail fc msg ds)
+      = IFail fc msg (map (substNamesDecl' bvar bound ps) ds)
   substNamesDecl' bvar bound ps (INamespace fc ns ds)
       = INamespace fc ns (map (substNamesDecl' bvar bound ps) ds)
   substNamesDecl' bvar bound ps d = d
@@ -427,6 +454,9 @@ mutual
       = IDelay fc' (substLoc fc' t)
   substLoc fc' (IForce fc t)
       = IForce fc' (substLoc fc' t)
+  substLoc fc' (IUpdate fc updates tm)
+      = IUpdate fc' (map (mapFieldUpdateTerm $ substLoc fc') updates)
+                    (substLoc fc' tm)
   substLoc fc' tm = tm
 
   export
@@ -434,8 +464,8 @@ mutual
   substLocClause fc' (PatClause fc lhs rhs)
       = PatClause fc' (substLoc fc' lhs)
                       (substLoc fc' rhs)
-  substLocClause fc' (WithClause fc lhs wval prf flags cs)
-      = WithClause fc' (substLoc fc' lhs)
+  substLocClause fc' (WithClause fc lhs rig wval prf flags cs)
+      = WithClause fc' (substLoc fc' lhs) rig
                        (substLoc fc' wval)
                        prf
                        flags
@@ -459,35 +489,167 @@ mutual
       = IClaim fc' r vis opts (substLocTy fc' td)
   substLocDecl fc' (IDef fc n cs)
       = IDef fc' n (map (substLocClause fc') cs)
-  substLocDecl fc' (IData fc vis d)
-      = IData fc' vis (substLocData fc' d)
+  substLocDecl fc' (IData fc vis mbtot d)
+      = IData fc' vis mbtot (substLocData fc' d)
+  substLocDecl fc' (IFail fc msg ds)
+      = IFail fc' msg (map (substLocDecl fc') ds)
   substLocDecl fc' (INamespace fc ns ds)
       = INamespace fc' ns (map (substLocDecl fc') ds)
   substLocDecl fc' d = d
 
-nameNum : String -> (String, Int)
-nameNum str
-    = case span isDigit (reverse str) of
-           ("", _) => (str, 0)
-           (nums, pre)
-              => case unpack pre of
-                      ('_' :: rest) => (reverse (pack rest), cast (reverse nums))
-                      _ => (str, 0)
+nameNum : String -> (String, Maybe Int)
+nameNum str = case span isDigit (reverse str) of
+  ("", _) => (str, Nothing)
+  (nums, pre) => case unpack pre of
+    ('_' :: rest) => (reverse (pack rest), Just $ cast (reverse nums))
+    _ => (str, Nothing)
+
+nextNameNum : (String, Maybe Int) -> (String, Maybe Int)
+nextNameNum (str, mn) = (str, Just $ maybe 0 (1+) mn)
+
+unNameNum : (String, Maybe Int) -> String
+unNameNum (str, Nothing) = str
+unNameNum (str, Just n) = fastConcat [str, "_", show n]
+
 
 export
-uniqueName : Defs -> List String -> String -> Core String
-uniqueName defs used n
+uniqueBasicName : Defs -> List String -> String -> Core String
+uniqueBasicName defs used n
     = if !usedName
-         then uniqueName defs used (next n)
+         then uniqueBasicName defs used (next n)
          else pure n
   where
     usedName : Core Bool
     usedName
-        = pure $ case !(lookupTyName (UN n) (gamma defs)) of
+        = pure $ case !(lookupTyName (UN $ Basic n) (gamma defs)) of
                       [] => n `elem` used
                       _ => True
 
     next : String -> String
-    next str
-        = let (n, i) = nameNum str in
-              n ++ "_" ++ show (i + 1)
+    next = unNameNum . nextNameNum . nameNum
+
+export
+uniqueHoleName : {auto s : Ref Syn SyntaxInfo} ->
+                 Defs -> List String -> String -> Core String
+uniqueHoleName defs used n
+    = do syn <- get Syn
+         uniqueBasicName defs (used ++ holeNames syn) n
+
+export
+uniqueHoleNames : {auto s : Ref Syn SyntaxInfo} ->
+                  Defs -> Nat -> String -> Core (List String)
+uniqueHoleNames defs = go [] where
+
+  go : List String -> Nat -> String -> Core (List String)
+  go acc Z _ = pure (reverse acc)
+  go acc (S n) hole = do
+    hole' <- uniqueHoleName defs acc hole
+    go (hole' :: acc) n hole'
+
+unique : List String -> List String -> Int -> List Name -> String
+unique [] supply suff usedns = unique supply supply (suff + 1) usedns
+unique (str :: next) supply suff usedns
+    = let var = mkVarN str suff in
+          if UN (Basic var) `elem` usedns
+             then unique next supply suff usedns
+             else var
+  where
+    mkVarN : String -> Int -> String
+    mkVarN x 0 = x
+    mkVarN x i = x ++ show i
+
+
+export
+getArgName : {vars : _} ->
+             {auto c : Ref Ctxt Defs} ->
+             Defs -> Name ->
+             List Name -> -- explicitly bound names (possibly coming later),
+                          -- so we don't invent a default
+                          -- name that duplicates it
+             List Name -> -- names bound so far
+             NF vars -> Core String
+getArgName defs x bound allvars ty
+    = do defnames <- findNames ty
+         pure $ getName x defnames allvars
+  where
+    lookupName : Name -> List (Name, a) -> Core (Maybe a)
+    lookupName n [] = pure Nothing
+    lookupName n ((n', t) :: ts)
+        = if !(getFullName n) == !(getFullName n')
+             then pure (Just t)
+             else lookupName n ts
+
+    notBound : String -> Bool
+    notBound x = not $ UN (Basic x) `elem` bound
+
+    defaultNames : List String
+    defaultNames = ["x", "y", "z", "w", "v", "s", "t", "u"]
+
+    namesFor : Name -> Core (Maybe (List String))
+    namesFor n = lookupName n (NameMap.toList (namedirectives defs))
+
+    findNamesM : NF vars -> Core (Maybe (List String))
+    findNamesM (NBind _ x (Pi _ _ _ _) _)
+        = pure (Just ["f", "g"])
+    findNamesM (NTCon _ n _ d [(_, v)]) = do
+          case dropNS !(full (gamma defs) n) of
+            UN (Basic "List") =>
+              do nf <- evalClosure defs v
+                 case !(findNamesM nf) of
+                   Nothing => namesFor n
+                   Just ns => pure (Just (map (++ "s") ns))
+            UN (Basic "Maybe") =>
+              do nf <- evalClosure defs v
+                 case !(findNamesM nf) of
+                   Nothing => namesFor n
+                   Just ns => pure (Just (map ("m" ++) ns))
+            UN (Basic "SnocList") =>
+              do nf <- evalClosure defs v
+                 case !(findNamesM nf) of
+                   Nothing => namesFor n
+                   Just ns => pure (Just (map ("s" ++) ns))
+            _ => namesFor n
+    findNamesM (NTCon _ n _ _ _) = namesFor n
+    findNamesM (NPrimVal fc c) = do
+          let defaultPos = Just ["m", "n", "p", "q"]
+          let defaultInts = Just ["i", "j", "k", "l"]
+          pure $ map (filter notBound) $ case c of
+            PrT IntType => defaultInts
+            PrT Int8Type => defaultInts
+            PrT Int16Type => defaultInts
+            PrT Int32Type => defaultInts
+            PrT Int64Type => defaultInts
+            PrT IntegerType => defaultInts
+            PrT Bits8Type => defaultPos
+            PrT Bits16Type => defaultPos
+            PrT Bits32Type => defaultPos
+            PrT Bits64Type => defaultPos
+            PrT StringType => Just ["str"]
+            PrT CharType => Just ["c","d"]
+            PrT DoubleType => Just ["dbl"]
+            PrT WorldType => Just ["wrld", "w"]
+            _ => Nothing -- impossible
+    findNamesM ty = pure Nothing
+
+    findNames : NF vars -> Core (List String)
+    findNames nf = pure $ filter notBound $ fromMaybe defaultNames !(findNamesM nf)
+
+    getName : Name -> List String -> List Name -> String
+    getName (UN (Basic n)) defs used =
+      -- # 1742 Uppercase names are not valid for pattern variables
+      let candidate = ifThenElse (lowerFirst n) n (toLower n) in
+      unique (candidate :: defs) (candidate :: defs) 0 used
+    getName _ defs used = unique defs defs 0 used
+
+export
+getArgNames : {vars : _} ->
+              {auto c : Ref Ctxt Defs} ->
+              Defs -> List Name -> List Name -> Env Term vars -> NF vars ->
+              Core (List String)
+getArgNames defs bound allvars env (NBind fc x (Pi _ _ p ty) sc)
+    = do ns <- case p of
+                    Explicit => pure [!(getArgName defs x bound allvars !(evalClosure defs ty))]
+                    _ => pure []
+         sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
+         pure $ ns ++ !(getArgNames defs bound (map (UN . Basic) ns ++ allvars) env sc')
+getArgNames defs bound allvars env val = pure []

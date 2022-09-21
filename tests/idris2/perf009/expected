@@ -1,0 +1,15 @@
+1/3: Building A (A.idr)
+2/3: Building B (B.idr)
+3/3: Building C (C.idr)
+Error: While processing right hand side of foo. Can't find an implementation for Monad (StateT AFoo Identity).
+
+C:14:5--14:12
+ 10 | 
+ 11 | foo : X ()
+ 12 | foo =
+ 13 |   do
+ 14 |     pure ()
+          ^^^^^^^
+
+Possible cause: Undefined name A.AFoo. 
+

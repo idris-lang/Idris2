@@ -11,14 +11,18 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.REPL.Opts
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
 
 import Data.List
 import Data.String
+import Data.Vect
 
-import Libraries.Data.StringMap
+import Libraries.Data.UserNameMap
 
 %default covering
 
@@ -31,7 +35,7 @@ expandAmbigName : {vars : _} ->
                   RawImp -> Maybe (Glued vars) -> Core RawImp
 expandAmbigName (InLHS _) nest env orig args (IBindVar fc n) exp
     = do est <- get EST
-         if UN n `elem` lhsPatVars est
+         if UN (Basic n) `elem` lhsPatVars est
             then pure $ IMustUnify fc NonLinearVar orig
             else pure $ orig
 expandAmbigName mode nest env orig args (IVar fc x) exp
@@ -68,7 +72,7 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
                                                       (uniqType primNs x args)
                                                       (map (mkAlt primApp est) nalts)
   where
-    lookupUN : Maybe String -> StringMap a -> Maybe a
+    lookupUN : Maybe UserName -> UserNameMap a -> Maybe a
     lookupUN Nothing _ = Nothing
     lookupUN (Just n) sm = lookup n sm
 
@@ -104,11 +108,6 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
     buildAlt f ((fc', Just (Just i), a) :: as)
         = buildAlt (INamedApp fc' f i a) as
 
-    isPrimName : List Name -> Name -> Bool
-    isPrimName [] fn = False
-    isPrimName (p :: ps) fn
-        = dropNS fn == p || isPrimName ps fn
-
     -- If it's not a constructor application, dot it
     wrapDot : Bool -> EState vars ->
               ElabMode -> Name -> List RawImp -> Def -> RawImp -> RawImp
@@ -126,24 +125,31 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
             else IMustUnify fc NotConstructor tm
     wrapDot _ _ _ _ _ _ tm = tm
 
+    notLHS : ElabMode -> Bool
+    notLHS (InLHS _) = False
+    notLHS _ = True
 
     mkTerm : Bool -> EState vars -> Name -> GlobalDef -> RawImp
     mkTerm prim est n def
-        = let tm = wrapDot prim est mode n (map (snd . snd) args)
-                       (definition def) (buildAlt (IVar fc n) args) in
-              if Macro `elem` flags def
-                 then case mode of
-                           InLHS _ => tm
-                           _ => IRunElab fc (ICoerced fc tm)
-                 else tm
+        = if (Context.Macro `elem` flags def) && notLHS mode
+             then alternativeFirstSuccess $ reverse $
+                    allSplits args <&> \(macroArgs, extArgs) =>
+                      (IRunElab fc $ ICoerced fc $ IVar fc n `buildAlt` macroArgs) `buildAlt` extArgs
+             else wrapDot prim est mode n (map (snd . snd) args)
+                    (definition def) (buildAlt (IVar fc n) args)
+      where
+        -- All splits of the original list starting from the (empty, full) finishing with (full, empty)
+        allSplits : (l : List a) -> Vect (S $ length l) (List a, List a)
+        allSplits []           = [([], [])]
+        allSplits full@(x::xs) = ([], full) :: (mapFst (x::) <$> allSplits xs)
+
+        alternativeFirstSuccess : forall n. Vect (S n) RawImp -> RawImp
+        alternativeFirstSuccess [x] = x
+        alternativeFirstSuccess xs  = IAlternative fc FirstSuccess $ toList xs
 
     mkAlt : Bool -> EState vars -> (Name, Int, GlobalDef) -> RawImp
     mkAlt prim est (fullname, i, gdef)
         = mkTerm prim est (Resolved i) gdef
-
-    notLHS : ElabMode -> Bool
-    notLHS (InLHS _) = False
-    notLHS _ = True
 
 expandAmbigName mode nest env orig args (IApp fc f a) exp
     = expandAmbigName mode nest env orig
@@ -217,7 +223,7 @@ mutual
            else pure NoMatch
   mightMatch defs (NPrimVal _ x) (NPrimVal _ y)
       = if x == y then pure Concrete else pure NoMatch
-  mightMatch defs (NType _) (NType _) = pure Concrete
+  mightMatch defs (NType _ _) (NType _ _) = pure Concrete
   mightMatch defs (NApp _ _ _) _ = pure Poly
   mightMatch defs (NErased _ _) _ = pure Poly
   mightMatch defs _ (NApp _ _ _) = pure Poly
@@ -257,7 +263,7 @@ couldBe {vars} defs ty@(NPrimVal _ _) app
           Concrete => pure $ Just (True, app)
           Poly => pure $ Just (False, app)
           NoMatch => pure Nothing
-couldBe {vars} defs ty@(NType _) app
+couldBe {vars} defs ty@(NType _ _) app
    = case !(couldBeFn {vars} defs ty (getFn app)) of
           Concrete => pure $ Just (True, app)
           Poly => pure $ Just (False, app)
@@ -332,7 +338,7 @@ addAmbig : List alts -> Maybe Name -> ElabInfo -> ElabInfo
 addAmbig _ Nothing = id
 addAmbig [] _ = id
 addAmbig [_] _ = id
-addAmbig _ (Just n) = record { ambigTries $= (n ::) }
+addAmbig _ (Just n) = { ambigTries $= (n ::) }
 
 export
 checkAlternative : {vars : _} ->
@@ -340,6 +346,8 @@ checkAlternative : {vars : _} ->
                    {auto m : Ref MD Metadata} ->
                    {auto u : Ref UST UState} ->
                    {auto e : Ref EST (EState vars)} ->
+                   {auto s : Ref Syn SyntaxInfo} ->
+                   {auto o : Ref ROpts REPLOpts} ->
                    RigCount -> ElabInfo ->
                    NestedNames vars -> Env Term vars ->
                    FC -> AltType -> List RawImp -> Maybe (Glued vars) ->
@@ -347,7 +355,8 @@ checkAlternative : {vars : _} ->
 checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
     = do checkAmbigDepth fc elabinfo
          expected <- maybe (do nm <- genName "altTy"
-                               ty <- metaVar fc erased env nm (TType fc)
+                               u <- uniVar fc
+                               ty <- metaVar fc erased env nm (TType fc u)
                                pure (gnf env ty))
                            pure mexpected
          let solvemode = case elabMode elabinfo of
@@ -356,7 +365,6 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
          delayOnFailure fc rig env (Just expected) ambiguous Ambiguity $
              \delayed =>
                do solveConstraints solvemode Normal
-                  defs <- get Ctxt
                   exp <- getTerm expected
 
                   -- We can't just use the old NF on the second attempt,
@@ -367,7 +375,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
 
                   logGlueNF "elab.ambiguous" 5 (fastConcat
                     [ "Ambiguous elaboration at ", show fc, ":\n"
-                    , unlines (map show alts)
+                    , unlines (map (("  " ++) . show) alts)
                     , "With default. Target type "
                     ]) env exp'
                   alts' <- pruneByType env !(getNF exp') alts
@@ -400,7 +408,8 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
            [alt] => checkImp rig elabinfo nest env alt mexpected
            _ =>
              do expected <- maybe (do nm <- genName "altTy"
-                                      ty <- metaVar fc erased env nm (TType fc)
+                                      u <- uniVar fc
+                                      ty <- metaVar fc erased env nm (TType fc u)
                                       pure (gnf env ty))
                                   pure mexpected
                 let solvemode = case elabMode elabinfo of
@@ -408,8 +417,7 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                                       _ => inTerm
                 delayOnFailure fc rig env (Just expected) ambiguous Ambiguity $
                      \delayed =>
-                       do defs <- get Ctxt
-                          exp <- getTerm expected
+                       do exp <- getTerm expected
 
                           -- We can't just use the old NF on the second attempt,
                           -- because we might know more now, so recalculate it
@@ -442,4 +450,5 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                                   solveConstraints solvemode Normal
                                   solveConstraints solvemode Normal
                                   log "elab.ambiguous" 10 $ show (getName t) ++ " success"
+                                  logTermNF "elab.ambiguous" 10 "Result" env (fst res)
                                   pure res)) alts')

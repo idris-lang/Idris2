@@ -1,7 +1,6 @@
 module System.Path
 
 import Data.List
-import Data.List1
 import Data.Maybe
 import Data.Nat
 import Data.String
@@ -14,7 +13,7 @@ import Text.Quantity
 
 import System.Info
 
-infixr 5 </>, />
+infixl 5 </>, />
 infixr 7 <.>
 
 
@@ -153,15 +152,15 @@ pathTokenMap = toTokenMap $
   , (some $ non $ oneOf "/\\:?", PTText)
   ]
 
-lexPath : String -> List PathToken
+lexPath : String -> List (WithBounds PathToken)
 lexPath str =
   let
     (tokens, _, _, _) = lex pathTokenMap str
   in
-    map TokenData.tok tokens
+    tokens -- TokenData.tok tokens
 
 -- match both '/' and '\\' regardless of the platform.
-bodySeparator : Grammar PathToken True ()
+bodySeparator : Grammar state PathToken True ()
 bodySeparator = (match $ PTPunct '\\') <|> (match $ PTPunct '/')
 
 -- Windows will automatically translate '/' to '\\'. And the verbatim prefix,
@@ -169,7 +168,7 @@ bodySeparator = (match $ PTPunct '\\') <|> (match $ PTPunct '/')
 -- However, we just parse it and ignore it.
 --
 -- Example: \\?\
-verbatim : Grammar PathToken True ()
+verbatim : Grammar state PathToken True ()
 verbatim =
   do
     ignore $ count (exactly 2) $ match $ PTPunct '\\'
@@ -178,7 +177,7 @@ verbatim =
     pure ()
 
 -- Example: \\server\share
-unc : Grammar PathToken True Volume
+unc : Grammar state PathToken True Volume
 unc =
   do
     ignore $ count (exactly 2) $ match $ PTPunct '\\'
@@ -188,7 +187,7 @@ unc =
     pure $ UNC server share
 
 -- Example: \\?\server\share
-verbatimUnc : Grammar PathToken True Volume
+verbatimUnc : Grammar state PathToken True Volume
 verbatimUnc =
   do
     verbatim
@@ -198,7 +197,7 @@ verbatimUnc =
     pure $ UNC server share
 
 -- Example: C:
-disk : Grammar PathToken True Volume
+disk : Grammar state PathToken True Volume
 disk =
   do
     text <- match PTText
@@ -209,21 +208,21 @@ disk =
     pure $ Disk (toUpper disk)
 
 -- Example: \\?\C:
-verbatimDisk : Grammar PathToken True Volume
+verbatimDisk : Grammar state PathToken True Volume
 verbatimDisk =
   do
     verbatim
     disk <- disk
     pure disk
 
-parseVolume : Grammar PathToken True Volume
+parseVolume : Grammar state PathToken True Volume
 parseVolume =
       verbatimUnc
   <|> verbatimDisk
   <|> unc
   <|> disk
 
-parseBody : Grammar PathToken True Body
+parseBody : Grammar state PathToken True Body
 parseBody =
   do
     text <- match PTText
@@ -232,7 +231,7 @@ parseBody =
       "." => CurDir
       normal => Normal normal
 
-parsePath : Grammar PathToken False Path
+parsePath : Grammar state PathToken False Path
 parsePath =
   do
     vol <- optional parseVolume
@@ -244,6 +243,13 @@ parsePath =
                 [] => []
                 (x::xs) => x :: delete CurDir xs
     pure $ MkPath vol (isJust root) body (isJust trailSep)
+
+export
+tryParse : String -> Maybe Path
+tryParse str =
+  case parse parsePath (lexPath str) of
+    Right (path, []) => Just path
+    _ => Nothing
 
 ||| Parses a String into Path.
 |||
@@ -293,9 +299,9 @@ append' left right =
   if isAbsolute' right || isJust right.volume then
     right
   else if hasRoot right then
-    record { volume = left.volume } right
+    { volume := left.volume } right
   else
-    record { body = left.body ++ right.body, hasTrailSep = right.hasTrailSep } left
+    { body := left.body ++ right.body, hasTrailSep := right.hasTrailSep } left
 
 splitPath' : Path -> List Path
 splitPath' path =
@@ -320,7 +326,7 @@ splitParent' path =
     [] => Nothing
     (x::xs) =>
       let
-        parent = record { body = init (x::xs), hasTrailSep = False } path
+        parent = { body := init (x::xs), hasTrailSep := False } path
         child = MkPath Nothing False [last (x::xs)] path.hasTrailSep
       in
         Just (parent, child)
@@ -352,6 +358,19 @@ splitFileName name =
     (_, ['.']) => (name, "")
     (revExt, (dot :: revStem)) =>
       ((pack $ reverse revStem), (pack $ reverse revExt))
+
+||| Split a file name into a basename and a list of extensions.
+||| A leading dot is considered to be part of the basename.
+||| ```
+||| splitExtensions "Path.idr"           = ("Path", ["idr"])
+||| splitExtensions "file.latex.lidr"    = ("file", ["latex", "lidr"])
+||| splitExtensions ".hidden.latex.lidr" = (".hidden", ["latex", "lidr"])
+||| ```
+export
+splitExtensions : String -> (String, List String)
+splitExtensions name = case map pack $ split (== '.') (unpack name) of
+  ("" ::: base :: exts) => ("." ++ base, exts)
+  (base ::: exts) => (base, exts)
 
 --------------------------------------------------------------------------------
 -- Methods
@@ -525,6 +544,17 @@ export
 extension : String -> Maybe String
 extension path = fileName path >>=
   filter (/= "") . Just . snd . splitFileName
+
+||| Extracts the list of extensions of the file name in the path.
+||| The returned value is:
+|||
+||| - Nothing, if there is no file name;
+||| - Just [], if there is no embedded ".";
+||| - Just [], if the filename begins with a "." and has no other ".";
+||| - Just es, the portions between the "."s (excluding a potential leading one).
+export
+extensions : String -> Maybe (List String)
+extensions path = snd . splitExtensions <$> fileName path
 
 ||| Updates the file name in the path.
 |||

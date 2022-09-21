@@ -282,7 +282,7 @@ punctuate _ [d] = [d]
 punctuate p (d :: ds) = (d <+> p) :: punctuate p ds
 
 export
-plural : (Num amount, Eq amount) => doc -> doc -> amount -> doc
+plural : Num amount => Eq amount => doc -> doc -> amount -> doc
 plural one multiple n = if n == 1 then one else multiple
 
 ||| Encloses the document between two other documents using `(<+>)`.
@@ -413,15 +413,15 @@ Pretty Char where
 export Pretty Nat where pretty = unsafeTextWithoutNewLines . show
 export Pretty Int where pretty = unsafeTextWithoutNewLines . show
 export Pretty Integer where pretty = unsafeTextWithoutNewLines . show
-export Pretty Int8 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Int16 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Int32 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Int64 where pretty = unsafeTextWithoutNewLines . show
 export Pretty Double where pretty = unsafeTextWithoutNewLines . show
 export Pretty Bits8 where pretty = unsafeTextWithoutNewLines . show
 export Pretty Bits16 where pretty = unsafeTextWithoutNewLines . show
 export Pretty Bits32 where pretty = unsafeTextWithoutNewLines . show
 export Pretty Bits64 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int8 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int16 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int32 where pretty = unsafeTextWithoutNewLines . show
+export Pretty Int64 where pretty = unsafeTextWithoutNewLines . show
 
 export
 (Pretty a, Pretty b) => Pretty (a, b) where

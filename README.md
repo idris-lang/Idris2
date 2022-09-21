@@ -18,9 +18,9 @@ is often one of `scheme`, `chezscheme` or `chezscheme9.5` (depending on the
 version). On a modern desktop machine, this process (including tests)
 should take less than 5 minutes.
 
-Idris 2 is mostly backwards compatible with Idris 1, with some minor
-exceptions. The most notable user visible differences, which might cause Idris
-1 programs to fail to type check, are:
+Idris 2 is mostly backward compatible with Idris 1, with some minor exceptions.
+The most notable user visible differences, which might cause Idris 1 programs
+to fail to type check, are:
 
 + Unbound implicit arguments are always erased, so it is a type error to
   attempt to pattern match on one.
@@ -70,8 +70,8 @@ Summary of new features:
   declarations.
 + Better type checker implementation which minimises the need for compile
   time evaluation.
-+ New Chez Scheme based back end which both compiles and runs faster than the
-  default Idris 1 back end. (Also, optionally, Racket and Gambit can be used
++ New Chez Scheme based backend which both compiles and runs faster than the
+  default Idris 1 backend. (Also, optionally, Racket and Gambit can be used
   as targets).
 + Everything works faster :).
 
@@ -80,14 +80,15 @@ language `TTImp`, which is essentially a desugared Idris, and is cleanly
 separated from the high level language which means it is potentially usable
 as a core language for other high level syntaxes.
 
-Javascript
+JavaScript
 ----------
-The javascript codegen uses the new BigInt, hence nodejs 10.4 or higher is required.
+The JavaScript codegen uses the new BigInt, hence Node.js 10.4 or higher is required.
 
 Editor Plugins
 --------------
-The [wiki](https://github.com/idris-lang/Idris2/wiki/The-Idris-editor-experience)
-lists the current plugins available for common text editors and their features.
+The [wiki lists the current plugins available for common text editors](
+https://github.com/idris-lang/Idris2/wiki/1-%5BLanguage%5D-Editor-support)
+and their features.
 
 Things still missing
 --------------------
@@ -101,7 +102,7 @@ Contributions wanted
 
 + [Contribution guidelines](CONTRIBUTING.md)
 + [Good first issues](https://github.com/idris-lang/Idris2/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
-+ [Contributors wanted](https://github.com/idris-lang/Idris2/wiki/Contributions-wanted)
++ [Contributors wanted](https://github.com/idris-lang/Idris2/wiki/2-%5BCommunity%5D-Contributions-wanted)
 
 If you want to learn about Idris more, contributing to the compiler could be one
 way to do so. Just select one good first issue and ask about it on the [Discord](https://discord.gg/UX68fDs2jc) channel.

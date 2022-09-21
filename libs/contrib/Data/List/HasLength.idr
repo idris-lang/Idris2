@@ -6,12 +6,12 @@
 ||| depends on the length of said lists.
 |||
 ||| Instead of writing:
-||| ```
+||| ```idris example
 ||| f0 : (xs : List a) -> P xs
 ||| ```
 |||
 ||| We would write either of:
-||| ```
+||| ```idris example
 ||| f1 : (n : Nat) -> (0 _ : HasLength xs n) -> P xs
 ||| f2 : (n : Subset n (HasLength xs)) -> P xs
 ||| ```
@@ -130,7 +130,7 @@ covering
 notListTerminating : (p : Subset Nat (HasLength xs)) -> P xs
 notListTerminating p = case view p of
   Z => PNil
-  S p => PCon (notListTerminating {xs = map id (tail xs)} (record { snd $= map id } p))
+  S p => PCon (notListTerminating {xs = map id (tail xs)} ({ snd $= map id } p))
 
 natTerminating : (n : Nat) -> (0 p : HasLength xs n) -> P xs
 natTerminating n p = case view n p of

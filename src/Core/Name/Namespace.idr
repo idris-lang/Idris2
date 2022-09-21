@@ -4,8 +4,8 @@ import Data.List
 import Data.List1
 import Data.String
 import Decidable.Equality
+import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Utils.Path
 
 %default total
@@ -23,10 +23,14 @@ export
 data Namespace : Type where
   MkNS : List String -> Namespace
 
+%name Namespace ns
+
 ||| A Module Identifier is, similarly to a namespace, stored inside out.
 export
 data ModuleIdent : Type where
   MkMI : List String -> ModuleIdent
+
+%name Namespace mi
 
 ||| Sometimes we need to convert a module identifier to the corresponding
 ||| namespace. It is still useful to have them as distinct types as it
@@ -166,6 +170,12 @@ isApproximationOf (MkNS ms) (MkNS ns)
   -- the other's.
   = isPrefixOf ms ns
 
+||| We can check whether a given string (assumed to be a valid Namespace ident)
+||| is in the path of a given namespace.
+export
+isInPathOf : (i : String) -> (candidate : Namespace) -> Bool
+isInPathOf i (MkNS ns) = i `elem` ns
+
 -------------------------------------------------------------------------------------
 -- INSTANCES
 -------------------------------------------------------------------------------------
@@ -182,6 +192,10 @@ export
 Ord Namespace where
     compare (MkNS ms) (MkNS ns) = compare ms ns
 
+export
+Ord ModuleIdent where
+    compare (MkMI ms) (MkMI ns) = compare ms ns
+
 mkNSInjective : MkNS ms === MkNS ns -> ms === ns
 mkNSInjective Refl = Refl
 
@@ -195,9 +209,7 @@ DecEq Namespace where
 -- TODO: move somewhere more appropriate
 export
 showSep : String -> List String -> String
-showSep sep [] = ""
-showSep sep [x] = x
-showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
+showSep sep = Libraries.Data.String.Extra.join sep
 
 export
 showNSWithSep : String -> Namespace -> String
@@ -212,11 +224,11 @@ Show ModuleIdent where
   show = showNSWithSep "." . miAsNamespace
 
 export
-Pretty Namespace where
+Pretty Void Namespace where
   pretty (MkNS ns) = concatWith (surround dot) (pretty <$> reverse ns)
 
 export
-Pretty ModuleIdent where
+Pretty Void ModuleIdent where
   pretty = pretty . miAsNamespace
 
 

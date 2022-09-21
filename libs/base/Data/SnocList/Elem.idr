@@ -2,6 +2,7 @@ module Data.SnocList.Elem
 
 import Data.SnocList
 import Decidable.Equality
+import Control.Function
 
 ||| A proof that some element is found in a list.
 public export
@@ -9,7 +10,7 @@ data Elem : a -> SnocList a -> Type where
   ||| A proof that the element is at the head of the list
   Here : Elem x (sx :< x)
   ||| A proof that the element is in the tail of the list
-  There : Elem x sx -> Elem x (sx :< y)
+  There : {0 x, y : a} -> Elem x sx -> Elem x (sx :< y)
 
 export
 Uninhabited (Here = There e) where
@@ -25,17 +26,15 @@ Uninhabited (Elem {a} x [<]) where
   uninhabited (There p) impossible
 
 export
-thereInjective : {0 e1, e2 : Elem x sx} -> There e1 = There e2 -> e1 = e2
-thereInjective Refl = Refl
+Injective (There {x} {y} {sx}) where
+  injective Refl = Refl
 
 export
 DecEq (x `Elem` sx) where
   decEq Here Here = Yes Refl
+  decEq (There y) (There z) = decEqCong $ decEq y z
   decEq Here (There _) = No absurd
   decEq (There _) Here = No absurd
-  decEq (There y) (There z) with (decEq y z)
-    decEq (There y) (There y) | Yes Refl = Yes Refl
-    decEq (There y) (There z) | No neq = No $ neq . thereInjective
 
 ||| Remove the element at the given position.
 public export

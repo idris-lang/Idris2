@@ -3,19 +3,16 @@ module Libraries.Text.PrettyPrint.Prettyprinter.Doc
 import Data.List
 import public Data.List1
 import Data.Maybe
+import Data.SnocList
 import Data.String
-import public Libraries.Data.String.Extra
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
+import public Libraries.Data.Span
+import Libraries.Data.String.Extra
 
 %default total
 
 export
 textSpaces : Int -> String
-textSpaces n = Extra.replicate (integerToNat $ cast n) ' '
+textSpaces n = String.replicate (integerToNat $ cast n) ' '
 
 ||| Maximum number of characters that fit in one line.
 public export
@@ -353,84 +350,98 @@ export
 Functor Doc where
   map = reAnnotate
 
-||| Overloaded converison to `Doc`.
+||| Overloaded conversion to `Doc`.
+||| @ ann is the type of annotations
+||| @ a   is the type of things that can be prettified
+||| We declare that only `a` is relevant when looking for an implementation
+|||
+||| Pro tips:
+||| 1. use `prettyBy` if a subprinter uses a different type of annotations
+||| 2. use a variable `ann` rather than `Void` if no annnotation is needed
+|||    (to avoid needless calls to `prettyBy absurd`)
 public export
-interface Pretty a where
+interface Pretty ann a | a where
   pretty : a -> Doc ann
   pretty x = prettyPrec Open x
 
   prettyPrec : Prec -> a -> Doc ann
   prettyPrec _ x = pretty x
 
+||| Sometimes we want to call a subprinter that uses a different annotation
+||| type. That's fine as long as we know how to embed such annotations into
+||| the target ones.
+||| @ ann1 is the type of annotations used by the subprinter
+||| @ ann2 is the type of annotations used in the current document
+||| @ inj  explains how to inject the first into the second
 export
-Pretty String where
-  pretty str = let str' = if "\n" `isSuffixOf` str then dropLast 1 str else str in
-                   vsep $ map unsafeTextWithoutNewLines $ forget $ lines str'
+prettyBy : Pretty ann1 a => (inj : ann1 -> ann2) -> a -> Doc ann2
+prettyBy inj a = reAnnotate inj (pretty a)
 
-public export
+
+||| Sometimes we want to use a document that uses no annotation whatsoever.
+||| This should be equivalent to `reAnnotate absurd`, except that in this
+||| case we do not traverse the document because it should be impossible to
+||| manufacture an annotation of type Void.
+export
+Cast (Doc Void) (Doc ann) where
+  cast = believe_me
+
+
+||| Sometimes we want to call a subprinter that uses no annotation whatsoever.
+||| This should be equivalent to `prettyBy absurd`, except that in this case
+||| we do not traverse the document because it should be impossible to manufacture
+||| an annotation of type Void.
+export
+pretty0 : Pretty Void a => a -> Doc ann
+pretty0 x = cast (pretty x)
+
+export
+Pretty Void String where
+  pretty str = let str' = if "\n" `isSuffixOf` str then dropLast 1 str else str in
+                   vsep $ map unsafeTextWithoutNewLines $ lines str'
+
+export
+byShow : Show a => a -> Doc ann
+byShow = pretty0 . show
+
+export
 FromString (Doc ann) where
-  fromString = pretty
+  fromString = pretty0
 
 ||| Variant of `encloseSep` with braces and comma as separator.
 export
 list : List (Doc ann) -> Doc ann
-list = group . encloseSep (flatAlt (pretty "[ ") (pretty "["))
-                          (flatAlt (pretty " ]") (pretty "]"))
-                          (pretty ", ")
+list = group . encloseSep (flatAlt (pretty0 "[ ") (pretty0 "["))
+                          (flatAlt (pretty0 " ]") (pretty0 "]"))
+                          (pretty0 ", ")
 
 ||| Variant of `encloseSep` with parentheses and comma as separator.
 export
 tupled : List (Doc ann) -> Doc ann
-tupled = group . encloseSep (flatAlt (pretty "( ") (pretty "("))
-                            (flatAlt (pretty " )") (pretty ")"))
-                            (pretty ", ")
+tupled = group . encloseSep (flatAlt (pretty0 "( ") (pretty0 "("))
+                            (flatAlt (pretty0 " )") (pretty0 ")"))
+                            (pretty0 ", ")
 
 export
-Pretty a => Pretty (List a) where
-  pretty = align . list . map pretty
+prettyList : Pretty ann a => List a -> Doc ann
+prettyList = align . list . map pretty
 
 export
-Pretty a => Pretty (List1 a) where
-  pretty = pretty . forget
+prettyList1 : Pretty ann a => List1 a -> Doc ann
+prettyList1 = prettyList . forget
 
 export
-[prettyListMaybe] Pretty a => Pretty (List (Maybe a)) where
-  pretty = pretty . catMaybes
-    where catMaybes : List (Maybe a) -> List a
-          catMaybes [] = []
-          catMaybes (Nothing :: xs) = catMaybes xs
-          catMaybes ((Just x) :: xs) = x :: catMaybes xs
+[prettyListMaybe] Pretty ann a => Pretty ann (List (Maybe a)) where
+  pretty = prettyList . catMaybes
 
 export
-Pretty () where
-  pretty _ = pretty "()"
-
-export
-Pretty Bool where
-  pretty True = pretty "True"
-  pretty False = pretty "False"
-
-export
-Pretty Char where
+Pretty Void Char where
   pretty '\n' = line
   pretty c = Chara c
 
-export Pretty Nat where pretty = unsafeTextWithoutNewLines . show
-export Pretty Int where pretty = unsafeTextWithoutNewLines . show
-export Pretty Integer where pretty = unsafeTextWithoutNewLines . show
-export Pretty Double where pretty = unsafeTextWithoutNewLines . show
-export Pretty Bits8 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Bits16 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Bits32 where pretty = unsafeTextWithoutNewLines . show
-export Pretty Bits64 where pretty = unsafeTextWithoutNewLines . show
-
 export
-(Pretty a, Pretty b) => Pretty (a, b) where
-  pretty (x, y) = tupled [pretty x, pretty y]
-
-export
-Pretty a => Pretty (Maybe a) where
-  pretty = maybe neutral pretty
+prettyMaybe : Pretty ann a => Maybe a -> Doc ann
+prettyMaybe = maybe neutral pretty
 
 ||| Combines text nodes so they can be rendered more efficiently.
 export
@@ -747,6 +758,11 @@ layoutCompact doc = scan 0 [doc]
     scan col s@((Nesting f) :: ds) = scan col $ assert_smaller s (f 0 :: ds)
     scan col s@((Annotated _ x) :: ds) = scan col $ assert_smaller s (x :: ds)
 
+
+------------------------------------------------------------------------
+-- Turn the document into a string
+------------------------------------------------------------------------
+
 export
 renderShow : SimpleDocStream ann -> (String -> String)
 renderShow SEmpty = id
@@ -759,3 +775,37 @@ renderShow (SAnnPop x) = renderShow x
 export
 Show (Doc ann) where
   show doc = renderShow (layoutPretty defaultLayoutOptions doc) ""
+
+------------------------------------------------------------------------
+-- Turn the document into a string, and a list of annotation spans
+------------------------------------------------------------------------
+
+export
+displaySpans : SimpleDocStream a -> (String, List (Span a))
+displaySpans p =
+  let (bits, anns) = go Z [<] [<] [] p in
+  (concat bits, anns)
+
+  where
+
+    go : (index : Nat) ->
+         (doc   : SnocList String) ->
+         (spans : SnocList (Span a)) ->
+         (ann : List (Nat, a)) -> -- starting index, < current
+         SimpleDocStream a ->
+         (List String, List (Span a))
+    go index doc spans ann SEmpty = (doc <>> [], spans <>> [])
+    go index doc spans ann (SChar c rest)
+      = go (S index) (doc :< cast c) spans ann rest
+    go index doc spans ann (SText len text rest)
+      = go (integerToNat (cast len) + index) (doc :< text) spans ann rest
+    go index doc spans ann (SLine i rest)
+      = let text = strCons '\n' (textSpaces i) in
+        go (S (integerToNat $ cast i) + index) (doc :< text) spans ann rest
+    go index doc spans ann (SAnnPush a rest)
+      = go index doc spans ((index, a) :: ann) rest
+    go index doc spans ((start, a) :: ann) (SAnnPop rest)
+      = let span = MkSpan start (minus index start) a in
+        go index doc (spans :< span) ann rest
+    go index doc spans [] (SAnnPop rest)
+      = go index doc spans [] rest

@@ -134,7 +134,7 @@ check :  (Num a, Cast a Integer) => Op a -> List String
 check (MkOp name op opInt allowZero $ MkIntType type signed bits mi ma) =
   let ps = if allowZero then pairs
            else filter ((0 /=) . checkBounds . snd) pairs
-   in mapMaybe failing ps
+   in mapMaybe fail ps
 
   where
     trueMod : Integer -> Integer -> Integer
@@ -147,8 +147,8 @@ check (MkOp name op opInt allowZero $ MkIntType type signed bits mi ma) =
                            then r1 - (ma + 1 - mi)
                            else r1
 
-    failing : (Integer,Integer) -> Maybe String
-    failing (x,y) =
+    fail : (Integer,Integer) -> Maybe String
+    fail (x,y) =
       let resInteger = opInt x y
           resMod     = checkBounds $ opInt (checkBounds x) (checkBounds y)
           resA       = cast {to = Integer} (op (fromInteger x) (fromInteger y))

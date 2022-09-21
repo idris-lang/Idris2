@@ -1,7 +1,5 @@
 module Libraries.Utils.Term
 
-import System.FFI
-
 %default total
 
 libterm : String -> String

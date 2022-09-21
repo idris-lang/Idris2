@@ -4,6 +4,8 @@ import Data.Bits
 
 %default total
 
+||| The identity monad. This monad provides no abilities other than pure
+||| computation.
 public export
 record Identity (a : Type) where
   constructor Id
@@ -41,11 +43,11 @@ Ord a => Ord (Identity a) where
 --   pred (Id n) = Id $ pred n
 
 public export
-(Semigroup a) => Semigroup (Identity a) where
+Semigroup a => Semigroup (Identity a) where
   (<+>) x y = Id (runIdentity x <+> runIdentity y)
 
 public export
-(Monoid a) => Monoid (Identity a) where
+Monoid a => Monoid (Identity a) where
   neutral = Id (neutral)
 
 public export

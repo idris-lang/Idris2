@@ -1,0 +1,22 @@
+1/1: Building WithClause (WithClause.idr)
+Error: While processing left hand side of with block in pred. When unifying:
+    IsS (S ?dotTm)
+and:
+    IsS ?n
+Pattern variable n unifies with: S ?dotTm.
+
+WithClause:2:25--2:28
+ 1 | data IsS : Nat -> Type where
+ 2 |   S : (n : Nat) -> IsS (S n)
+                             ^^^
+
+
+WithClause:11:3--11:4
+ 07 | 
+ 08 | pred : Nat -> Nat
+ 09 | pred n with (isS n)
+ 10 |   _ | Nothing = Z
+ 11 |   _ | Just (S n) = n
+        ^
+
+Suggestion: Use the same name for both pattern variables, since they unify.

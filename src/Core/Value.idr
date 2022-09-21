@@ -5,9 +5,6 @@ import Core.Core
 import Core.Env
 import Core.TT
 
-import Libraries.Data.IntMap
-import Libraries.Data.NameMap
-
 %default covering
 
 public export
@@ -44,11 +41,11 @@ withArgHoles = MkEvalOpts False True False False False Nothing [] CBN
 
 export
 tcOnly : EvalOpts
-tcOnly = record { tcInline = True } withArgHoles
+tcOnly = { tcInline := True } withArgHoles
 
 export
 onLHS : EvalOpts
-onLHS = record { removeAs = False } defaultOpts
+onLHS = { removeAs := False } defaultOpts
 
 export
 cbn : EvalOpts
@@ -56,7 +53,7 @@ cbn = defaultOpts
 
 export
 cbv : EvalOpts
-cbv = record { strategy = CBV } defaultOpts
+cbv = { strategy := CBV } defaultOpts
 
 mutual
   public export
@@ -81,11 +78,12 @@ mutual
        NRef   : NameType -> Name -> NHead vars
        NMeta  : Name -> Int -> List (Closure vars) -> NHead vars
 
+
   -- Values themselves. 'Closure' is an unevaluated thunk, which means
   -- we can wait until necessary to reduce constructor arguments
   public export
   data NF : List Name -> Type where
-       NBind    : FC -> (x : Name) -> Binder (NF vars) ->
+       NBind    : FC -> (x : Name) -> Binder (Closure vars) ->
                   (Defs -> Closure vars -> Core (NF vars)) -> NF vars
        -- Each closure is associated with the file context of the App node that
        -- had it as an argument. It's necessary so as to not lose file context
@@ -101,13 +99,20 @@ mutual
        NForce   : FC -> LazyReason -> NF vars -> List (FC, Closure vars) -> NF vars
        NPrimVal : FC -> Constant -> NF vars
        NErased  : FC -> (imp : Bool) -> NF vars
-       NType    : FC -> NF vars
+       NType    : FC -> Name -> NF vars
+
+%name LocalEnv lenv
+%name Closure cl
+%name NHead hd
+%name NF nf
 
 export
 ntCon : FC -> Name -> Int -> Nat -> List (FC, Closure vars) -> NF vars
-ntCon fc (UN "Type") tag Z [] = NType fc
+-- Part of the machinery for matching on types - I believe this won't affect
+-- universe checking so put a dummy name.
+ntCon fc (UN (Basic "Type")) tag Z [] = NType fc (MN "top" 0)
 ntCon fc n tag Z [] = case isConstantType n of
-  Just c => NPrimVal fc c
+  Just c => NPrimVal fc $ PrT c
   Nothing => NTCon fc n tag Z []
 ntCon fc n tag arity args = NTCon fc n tag arity args
 
@@ -123,7 +128,7 @@ getLoc (NDelay fc _ _ _) = fc
 getLoc (NForce fc _ _ _) = fc
 getLoc (NPrimVal fc _) = fc
 getLoc (NErased fc i) = fc
-getLoc (NType fc) = fc
+getLoc (NType fc _) = fc
 
 export
 {free : _} -> Show (NHead free) where
@@ -131,7 +136,45 @@ export
   show (NRef _ n) = show n
   show (NMeta n _ args) = "?" ++ show n ++ "_[" ++ show (length args) ++ " closures]"
 
+Show (Closure free) where
+  show _ = "[closure]"
+
 export
+HasNames (NHead free) where
+  full defs (NRef nt n) = NRef nt <$> full defs n
+  full defs hd = pure hd
+
+  resolved defs (NRef nt n) = NRef nt <$> resolved defs n
+  resolved defs hd = pure hd
+
+export
+HasNames (NF free) where
+  full defs (NBind fc x bd f) = pure $ NBind fc x bd f
+  full defs (NApp fc hd xs) = pure $ NApp fc !(full defs hd) xs
+  full defs (NDCon fc n tag arity xs) = pure $ NDCon fc !(full defs n) tag arity xs
+  full defs (NTCon fc n tag arity xs) = pure $ NTCon fc !(full defs n) tag arity xs
+  full defs (NAs fc side nf nf1) = pure $ NAs fc side !(full defs nf) !(full defs nf1)
+  full defs (NDelayed fc lz nf) = pure $ NDelayed fc lz !(full defs nf)
+  full defs (NDelay fc lz cl cl1) = pure $ NDelay fc lz cl cl1
+  full defs (NForce fc lz nf xs) = pure $ NForce fc lz !(full defs nf) xs
+  full defs (NPrimVal fc cst) = pure $ NPrimVal fc cst
+  full defs (NErased fc imp) = pure $ NErased fc imp
+  full defs (NType fc n) = pure $ NType fc !(full defs n)
+
+  resolved defs (NBind fc x bd f) = pure $ NBind fc x bd f
+  resolved defs (NApp fc hd xs) = pure $ NApp fc !(resolved defs hd) xs
+  resolved defs (NDCon fc n tag arity xs) = pure $ NDCon fc !(resolved defs n) tag arity xs
+  resolved defs (NTCon fc n tag arity xs) = pure $ NTCon fc !(resolved defs n) tag arity xs
+  resolved defs (NAs fc side nf nf1) = pure $ NAs fc side !(resolved defs nf) !(resolved defs nf1)
+  resolved defs (NDelayed fc lz nf) = pure $ NDelayed fc lz !(resolved defs nf)
+  resolved defs (NDelay fc lz cl cl1) = pure $ NDelay fc lz cl cl1
+  resolved defs (NForce fc lz nf xs) = pure $ NForce fc lz !(resolved defs nf) xs
+  resolved defs (NPrimVal fc cst) = pure $ NPrimVal fc cst
+  resolved defs (NErased fc imp) = pure $ NErased fc imp
+  resolved defs (NType fc n) = pure $ NType fc !(resolved defs n)
+
+export
+covering
 {free : _} -> Show (NF free) where
   show (NBind _ x (Lam _ c info ty) _)
     = "\\" ++ withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
@@ -160,4 +203,4 @@ export
   show (NForce _ _ tm args) = "%Force " ++ show tm ++ " [" ++ show (length args) ++ " closures]"
   show (NPrimVal _ c) = show c
   show (NErased _ _) = "[__]"
-  show (NType _) = "Type"
+  show (NType _ _) = "Type"

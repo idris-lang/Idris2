@@ -7,7 +7,6 @@ import Data.Fin
 import Data.Fun
 import Data.Rel
 import Data.Nat
-import Data.Nat.Order
 import Decidable.Decidable
 
 %default total
@@ -21,11 +20,11 @@ using (k : Nat)
   public export
   Transitive (Fin k) FinLTE where
     transitive (FromNatPrf xy) (FromNatPrf yz) =
-      FromNatPrf $ transitive {rel = LTE} xy yz
+      FromNatPrf $ transitive xy yz
 
   public export
   Reflexive (Fin k) FinLTE where
-    reflexive = FromNatPrf $ reflexive {rel = LTE}
+    reflexive = FromNatPrf $ reflexive
 
   public export
   Preorder (Fin k) FinLTE where
@@ -34,7 +33,7 @@ using (k : Nat)
   Antisymmetric (Fin k) FinLTE where
     antisymmetric {x} {y} (FromNatPrf xy) (FromNatPrf yx) =
       finToNatInjective x y $
-        antisymmetric {rel = LTE} xy yx
+        antisymmetric xy yx
 
   public export
   PartialOrder (Fin k) FinLTE where
@@ -45,11 +44,11 @@ using (k : Nat)
     connex {y = FZ} _ = Right $ FromNatPrf LTEZero
     connex {x = FS k} {y = FS j} prf =
       case connex {rel = FinLTE} $ prf . (cong FS) of
-        Left  $ FromNatPrf p => Left  $ FromNatPrf $ LTESucc p
-        Right $ FromNatPrf p => Right $ FromNatPrf $ LTESucc p
+        Left  (FromNatPrf p) => Left  $ FromNatPrf $ LTESucc p
+        Right (FromNatPrf p) => Right $ FromNatPrf $ LTESucc p
 
   public export
   Decidable 2 [Fin k, Fin k] FinLTE where
-    decide m n with (decideLTE (finToNat m) (finToNat n))
+    decide m n with (isLTE (finToNat m) (finToNat n))
       decide m n | Yes prf    = Yes (FromNatPrf prf)
       decide m n | No  disprf = No (\ (FromNatPrf prf) => disprf prf)

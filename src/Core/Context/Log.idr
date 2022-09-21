@@ -2,8 +2,8 @@ module Core.Context.Log
 
 import Core.Context
 import Core.Options
-import Data.String
 
+import Data.String
 import Libraries.Data.StringMap
 
 import System.Clock
@@ -23,7 +23,7 @@ logString str n msg = coreLift $ putStrLn
 export
 logString' : LogLevel -> String -> Core ()
 logString' lvl =
-  logString (fastAppend (intersperse "." (topics lvl)) ++ ":")
+  logString (fastConcat (intersperse "." (topics lvl)) ++ ":")
             (verbosity lvl)
 
 export
@@ -127,8 +127,8 @@ logTimeOver nsecs str act
 
 export
 logTimeWhen : {auto c : Ref Ctxt Defs} ->
-              Bool -> Lazy String -> Core a -> Core a
-logTimeWhen p str act
+              Bool -> Nat -> Lazy String -> Core a -> Core a
+logTimeWhen p lvl str act
     = if p
          then do clock <- coreLift (clockTime Process)
                  let t = seconds clock * nano + nanoseconds clock
@@ -137,7 +137,9 @@ logTimeWhen p str act
                  let t' = seconds clock * nano + nanoseconds clock
                  let time = t' - t
                  assert_total $ -- We're not dividing by 0
-                    coreLift $ putStrLn $ "TIMING " ++ str ++ ": " ++
+                    coreLift $ do
+                      let header = "TIMING " ++ replicate lvl '+' ++ ifThenElse (0 < lvl) " " ""
+                      putStrLn $ header ++ str ++ ": " ++
                              show (time `div` nano) ++ "." ++
                              addZeros (unpack (show ((time `mod` nano) `div` micro))) ++
                              "s"
@@ -163,7 +165,7 @@ logTimeRecord' key act
          let tot = case lookup key (timings defs) of
                         Nothing => 0
                         Just (_, t) => t
-         put Ctxt (record { timings $= insert key (False, tot + time) } defs)
+         put Ctxt ({ timings $= insert key (False, tot + time) } defs)
          pure res
 
 -- for ad-hoc profiling, record the time the action takes and add it
@@ -177,7 +179,7 @@ logTimeRecord key act
          case lookup key (timings defs) of
               Just (True, t) => act
               Just (False, t)
-                => do put Ctxt (record { timings $= insert key (True, t) } defs)
+                => do put Ctxt ({ timings $= insert key (True, t) } defs)
                       logTimeRecord' key act
               Nothing
                 => logTimeRecord' key act
@@ -205,7 +207,7 @@ showTimeRecord
 
 export
 logTime : {auto c : Ref Ctxt Defs} ->
-          Lazy String -> Core a -> Core a
-logTime str act
+          Nat -> Lazy String -> Core a -> Core a
+logTime lvl str act
     = do opts <- getSession
-         logTimeWhen (logTimings opts) str act
+         logTimeWhen (maybe False (lvl <=) (logTimings opts)) lvl str act

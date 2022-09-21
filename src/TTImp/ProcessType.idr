@@ -11,16 +11,19 @@ import Core.TT
 import Core.UnifyState
 import Core.Value
 
-import TTImp.BindImplicits
+import Idris.REPL.Opts
+import Idris.Syntax
+
 import TTImp.Elab.Check
 import TTImp.Elab.Utils
 import TTImp.Elab
 import TTImp.TTImp
-import TTImp.Utils
 
 import Data.List
+import Data.List1
 import Data.String
 import Libraries.Data.NameMap
+import Libraries.Data.StringMap
 
 %default covering
 
@@ -32,11 +35,21 @@ getRetTy defs ty
     = throw (GenericMsg (getLoc ty)
              "Can only add hints for concrete return types")
 
+throwIfHasFlag : {auto c : Ref Ctxt Defs} -> FC -> Name -> DefFlag -> String -> Core ()
+throwIfHasFlag fc ndef fl msg
+    = when !(hasFlag fc ndef fl) $ throw (GenericMsg fc msg)
+
 processFnOpt : {auto c : Ref Ctxt Defs} ->
                FC -> Bool -> -- ^ top level name?
                Name -> FnOpt -> Core ()
 processFnOpt fc _ ndef Inline
-    = setFlag fc ndef Inline
+    = do throwIfHasFlag fc ndef NoInline "%noinline and %inline are mutually exclusive"
+         setFlag fc ndef Inline
+processFnOpt fc _ ndef NoInline
+    = do throwIfHasFlag fc ndef Inline "%inline and %noinline are mutually exclusive"
+         setFlag fc ndef NoInline
+processFnOpt fc _ ndef Deprecate
+    =  setFlag fc ndef Deprecate
 processFnOpt fc _ ndef TCInline
     = setFlag fc ndef TCInline
 processFnOpt fc True ndef (Hint d)
@@ -56,6 +69,8 @@ processFnOpt fc _ ndef ExternFn
     = setFlag fc ndef Inline -- if externally defined, inline when compiling
 processFnOpt fc _ ndef (ForeignFn _)
     = setFlag fc ndef Inline -- if externally defined, inline when compiling
+processFnOpt fc _ ndef (ForeignExport _)
+    = pure ()
 processFnOpt fc _ ndef Invertible
     = setFlag fc ndef Invertible
 processFnOpt fc _ ndef (Totality tot)
@@ -70,7 +85,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
          ps <- getNamePos 0 nty
          ddeps <- collectDDeps nty
          specs <- collectSpec [] ddeps ps nty
-         ignore $ addDef ndef (record { specArgs = specs } gdef)
+         ignore $ addDef ndef ({ specArgs := specs } gdef)
   where
     insertDeps : List Nat -> List (Name, Nat) -> List Name -> List Nat
     insertDeps acc ps [] = acc
@@ -91,7 +106,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
                 then collectDDeps sc'
                 else do aty <- quote empty [] nty
                         -- Get names depended on by nty
-                        let deps = keys (getRefs (UN "_") aty)
+                        let deps = keys (getRefs (UN Underscore) aty)
                         rest <- collectDDeps sc'
                         pure (rest ++ deps)
     collectDDeps _ = pure []
@@ -108,13 +123,13 @@ processFnOpt fc _ ndef (SpecArgs ns)
       getDeps : Bool -> NF [] -> NameMap Bool ->
                 Core (NameMap Bool)
       getDeps inparam (NBind _ x (Pi _ _ _ pty) sc) ns
-          = do ns' <- getDeps inparam pty ns
-               defs <- get Ctxt
+          = do defs <- get Ctxt
+               ns' <- getDeps inparam !(evalClosure defs pty) ns
                sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
                getDeps inparam sc' ns'
       getDeps inparam (NBind _ x b sc) ns
-          = do ns' <- getDeps False (binderType b) ns
-               defs <- get Ctxt
+          = do defs <- get Ctxt
+               ns' <- getDeps False !(evalClosure defs (binderType b)) ns
                sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
                getDeps False sc' ns
       getDeps inparam (NApp _ (NRef Bound n) args) ns
@@ -158,7 +173,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
              empty <- clearDefs defs
              sc' <- sc defs (toClosure defaultOpts [] (Ref tfc Bound x))
              if x `elem` ns
-                then do deps <- getDeps True nty NameMap.empty
+                then do deps <- getDeps True !(evalClosure defs nty) NameMap.empty
                         -- Get names depended on by nty
                         -- Keep the ones which are either:
                         --  * parameters
@@ -181,12 +196,14 @@ processFnOpt fc _ ndef (SpecArgs ns)
 getFnString : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
-              RawImp -> Core String
+              {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
+               RawImp -> Core String
 getFnString (IPrimVal _ (Str st)) = pure st
 getFnString tm
-    = do inidx <- resolveName (UN "[foreign]")
+    = do inidx <- resolveName (UN $ Basic "[foreign]")
          let fc = getFC tm
-         let gstr = gnf [] (PrimVal fc StringType)
+         let gstr = gnf [] (PrimVal fc $ PrT StringType)
          etm <- checkTerm inidx InExpr [] (MkNested []) [] tm gstr
          defs <- get Ctxt
          case !(nf defs [] etm) of
@@ -201,20 +218,38 @@ initDef : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
-          Name -> Env Term vars -> Term vars -> List FnOpt -> Core Def
-initDef n env ty []
+          {auto s : Ref Syn SyntaxInfo} ->
+          {auto o : Ref ROpts REPLOpts} ->
+          FC -> Name -> Env Term vars -> Term vars -> List FnOpt -> Core Def
+initDef fc n env ty []
     = do addUserHole False n
          pure None
-initDef n env ty (ExternFn :: opts)
+initDef fc n env ty (ExternFn :: opts)
     = do defs <- get Ctxt
          a <- getArity defs env ty
          pure (ExternDef a)
-initDef n env ty (ForeignFn cs :: opts)
+initDef fc n env ty (ForeignFn cs :: opts)
     = do defs <- get Ctxt
          a <- getArity defs env ty
          cs' <- traverse getFnString cs
          pure (ForeignDef a cs')
-initDef n env ty (_ :: opts) = initDef n env ty opts
+-- In this case, nothing to initialise to, but we do need to process the
+-- calling conventions then process the rest of the options.
+-- This means, for example, we can technically re-export something foreign!
+-- I suppose that may be useful one day...
+initDef fc n env ty (ForeignExport cs :: opts)
+    = do cs' <- traverse getFnString cs
+         conv <- traverse getConvention cs'
+         defs <- get Ctxt
+         put Ctxt ({ foreignExports $= insert n conv } defs)
+         initDef fc n env ty opts
+  where
+    getConvention : String -> Core (String, String)
+    getConvention c
+        = do let (lang ::: fname :: []) = split (== ':') c
+                 | _ => throw (GenericMsg fc "Invalid calling convention")
+             pure (trim lang, trim fname)
+initDef fc n env ty (_ :: opts) = initDef fc n env ty opts
 
 -- Find the inferrable argument positions in a type. This is useful for
 -- generalising partially evaluated definitions and (potentially) in interactive
@@ -249,16 +284,27 @@ findInferrable defs ty = fi 0 0 [] [] ty
     fi pos i args acc (NBind fc x (Pi _ _ _ aty) sc)
         = do let argn = MN "inf" i
              sc' <- sc defs (toClosure defaultOpts [] (Ref fc Bound argn))
-             acc' <- findInf acc args aty
+             acc' <- findInf acc args !(evalClosure defs aty)
              rest <- fi (1 + pos) (1 + i) ((argn, pos) :: args) acc' sc'
              pure rest
     fi pos i args acc ret = findInf acc args ret
+
+checkForShadowing : (env : StringMap FC) -> RawImp -> List (String, FC, FC)
+checkForShadowing env (IPi fc _ _ (Just (UN (Basic name))) argTy retTy) =
+    let argShadowing = checkForShadowing empty argTy
+     in (case lookup name env of
+        Just origFc => (name, origFc, fc) :: checkForShadowing env retTy
+        Nothing => checkForShadowing (insert name fc env) retTy)
+        ++ argShadowing
+checkForShadowing env t = []
 
 export
 processType : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               List ElabOpt -> NestedNames vars -> Env Term vars ->
               FC -> RigCount -> Visibility ->
               List FnOpt -> ImpTy -> Core ()
@@ -276,14 +322,15 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
          Nothing <- lookupCtxtExact (Resolved idx) (gamma defs)
               | Just gdef => throw (AlreadyDefined fc n)
 
+         u <- uniVar fc
          ty <-
              wrapErrorC eopts (InType fc n) $
                    checkTerm idx InType (HolesOkay :: eopts) nest env
                              (IBindHere fc (PI erased) ty_raw)
-                             (gType fc)
+                             (gType fc u)
          logTermNF "declare.type" 3 ("Type of " ++ show n) [] (abstractFullEnvType tfc env ty)
 
-         def <- initDef n env ty opts
+         def <- initDef fc n env ty opts
          let fullty = abstractFullEnvType tfc env ty
 
          (erased, dterased) <- findErased fullty
@@ -292,10 +339,10 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
          infargs <- findInferrable empty !(nf defs [] fullty)
 
          ignore $ addDef (Resolved idx)
-                (record { eraseArgs = erased,
-                          safeErase = dterased,
-                          inferrable = infargs }
-                        (newDef fc n rig vars fullty vis def))
+                ({ eraseArgs := erased,
+                   safeErase := dterased,
+                   inferrable := infargs }
+                 (newDef fc n rig vars fullty vis def))
          -- Flag it as checked, because we're going to check the clauses
          -- from the top level.
          -- But, if it's a case block, it'll be checked as part of the top
@@ -327,3 +374,8 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
          when (vis /= Private) $
               do addHashWithNames n
                  addHashWithNames ty
+                 log "module.hash" 15 "Adding hash for type with name \{show n}"
+
+         when (showShadowingWarning !getSession) $
+            whenJust (fromList (checkForShadowing StringMap.empty ty_raw))
+                $ recordWarning . ShadowingLocalBindings fc

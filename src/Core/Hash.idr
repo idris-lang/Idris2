@@ -1,13 +1,10 @@
 module Core.Hash
 
-import Core.CaseTree
-import Core.TT
+import Core.Case.CaseTree
 import Core.CompileExpr
+import Core.TT
 
-import Data.List
 import Data.List1
-import Libraries.Data.List.Lazy
-import Data.String
 import Libraries.Data.String.Iterator
 import Data.Vect
 
@@ -31,6 +28,38 @@ infixl 5 `hashWithSalt`
 export
 Hashable Int where
   hash = id
+
+export
+Hashable Int8 where
+  hash = cast
+
+export
+Hashable Int16 where
+  hash = cast
+
+export
+Hashable Int32 where
+  hash = cast
+
+export
+Hashable Int64 where
+  hash = cast
+
+export
+Hashable Bits8 where
+  hash = cast
+
+export
+Hashable Bits16 where
+  hash = cast
+
+export
+Hashable Bits32 where
+  hash = cast
+
+export
+Hashable Bits64 where
+  hash = cast
 
 export
 Hashable Integer where
@@ -144,8 +173,8 @@ mutual
         = h `hashWithSalt` 9 `hashWithSalt` (show c)
     hashWithSalt h (Erased fc _)
         = hashWithSalt h 10
-    hashWithSalt h (TType fc)
-        = hashWithSalt h 11
+    hashWithSalt h (TType fc u)
+        = hashWithSalt h 11 `hashWithSalt` u
 
   export
   Hashable Pat where
@@ -235,62 +264,48 @@ Hashable CFType where
       h `hashWithSalt` 19
     CFInt64 =>
       h `hashWithSalt` 20
+    CFForeignObj =>
+      h `hashWithSalt` 21
+    CFInteger =>
+      h `hashWithSalt` 22
+
+export
+Hashable PrimType where
+  hashWithSalt h = \case
+    IntType     => h `hashWithSalt` 1
+    Int8Type    => h `hashWithSalt` 2
+    Int16Type   => h `hashWithSalt` 3
+    Int32Type   => h `hashWithSalt` 4
+    Int64Type   => h `hashWithSalt` 5
+    IntegerType => h `hashWithSalt` 6
+    Bits8Type   => h `hashWithSalt` 7
+    Bits16Type  => h `hashWithSalt` 8
+    Bits32Type  => h `hashWithSalt` 9
+    Bits64Type  => h `hashWithSalt` 10
+    StringType  => h `hashWithSalt` 11
+    CharType    => h `hashWithSalt` 12
+    DoubleType  => h `hashWithSalt` 13
+    WorldType   => h `hashWithSalt` 14
 
 export
 Hashable Constant where
   hashWithSalt h = \case
-    I i =>
-      h `hashWithSalt` 0 `hashWithSalt` i
-    BI x =>
-      h `hashWithSalt` 1 `hashWithSalt` x
-    B8 x =>
-      h `hashWithSalt` 2 `hashWithSalt` x
-    B16 x =>
-      h `hashWithSalt` 3 `hashWithSalt` x
-    B32 x =>
-      h `hashWithSalt` 4 `hashWithSalt` x
-    B64 x =>
-      h `hashWithSalt` 5 `hashWithSalt` x
-    Str x =>
-      h `hashWithSalt` 6 `hashWithSalt` x
-    Ch x =>
-      h `hashWithSalt` 7 `hashWithSalt` x
-    Db x =>
-      h `hashWithSalt` 8 `hashWithSalt` x
+    I i   => h `hashWithSalt` 0  `hashWithSalt` i
+    I8 x  => h `hashWithSalt` 1  `hashWithSalt` x
+    I16 x => h `hashWithSalt` 2  `hashWithSalt` x
+    I32 x => h `hashWithSalt` 3  `hashWithSalt` x
+    I64 x => h `hashWithSalt` 4  `hashWithSalt` x
+    BI x  => h `hashWithSalt` 5  `hashWithSalt` x
+    B8 x  => h `hashWithSalt` 6  `hashWithSalt` x
+    B16 x => h `hashWithSalt` 7  `hashWithSalt` x
+    B32 x => h `hashWithSalt` 8  `hashWithSalt` x
+    B64 x => h `hashWithSalt` 9  `hashWithSalt` x
+    Str x => h `hashWithSalt` 10 `hashWithSalt` x
+    Ch x  => h `hashWithSalt` 11 `hashWithSalt` x
+    Db x  => h `hashWithSalt` 12 `hashWithSalt` x
+    PrT x => h `hashWithSalt` 13 `hashWithSalt` x
 
-    WorldVal =>
-      h `hashWithSalt` 9
-
-    IntType =>
-      h `hashWithSalt` 10
-    IntegerType =>
-      h `hashWithSalt` 11
-    Bits8Type =>
-      h `hashWithSalt` 12
-    Bits16Type =>
-      h `hashWithSalt` 13
-    Bits32Type =>
-      h `hashWithSalt` 14
-    Bits64Type =>
-      h `hashWithSalt` 15
-    StringType =>
-      h `hashWithSalt` 16
-    CharType =>
-      h `hashWithSalt` 17
-    DoubleType =>
-      h `hashWithSalt` 18
-    WorldType =>
-      h `hashWithSalt` 19
-
-    I8 x => h `hashWithSalt` 20 `hashWithSalt` x
-    I16 x => h `hashWithSalt` 21 `hashWithSalt` x
-    I32 x => h `hashWithSalt` 22 `hashWithSalt` x
-    I64 x => h `hashWithSalt` 23 `hashWithSalt` x
-
-    Int8Type => h `hashWithSalt` 24
-    Int16Type => h `hashWithSalt` 25
-    Int32Type => h `hashWithSalt` 26
-    Int64Type => h `hashWithSalt` 27
+    WorldVal => h `hashWithSalt` 14
 
 export
 Hashable LazyReason where
@@ -398,7 +413,9 @@ Hashable ConInfo where
     NOTHING => h `hashWithSalt` 5
     JUST => h `hashWithSalt` 6
     RECORD => h `hashWithSalt` 7
-
+    ZERO => h `hashWithSalt` 8
+    SUCC => h `hashWithSalt` 9
+    UNIT => h `hashWithSalt` 10
 
 mutual
   export

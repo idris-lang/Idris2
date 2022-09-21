@@ -1,19 +1,22 @@
 1/1: Building RecordDoc (RecordDoc.idr)
 RecordDoc> 
-RecordDoc> RecordDoc.A : Type -> Type
+RecordDoc> record RecordDoc.A : Type -> Type
   Totality: total
+  Visibility: private
   Constructor: __mkA : _
-  Projection: anA : A a -> a
-RecordDoc> RecordDoc.Tuple : Type -> Type -> Type
+  Projection: .anA : A a -> a
+RecordDoc> record RecordDoc.Tuple : Type -> Type -> Type
   Totality: total
+  Visibility: private
   Constructor: __mkTuple : _
   Projections:
-    proj1 : Tuple a b -> a
-    proj2 : Tuple a b -> b
-RecordDoc> RecordDoc.Singleton : a -> Type
+    .proj1 : Tuple a b -> a
+    .proj2 : Tuple a b -> b
+RecordDoc> record RecordDoc.Singleton : a -> Type
   Totality: total
+  Visibility: private
   Constructor: __mkSingleton : _
   Projections:
-    equal : ({rec:0} : Singleton v) -> value rec = v
-    value : Singleton v -> a
+    0 .equal : (rec : Singleton v) -> value rec = v
+    .value : Singleton v -> a
 RecordDoc> Bye for now!

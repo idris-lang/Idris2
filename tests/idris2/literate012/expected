@@ -1,8 +1,8 @@
 1/1: Building IEdit (IEdit.org)
-Main> append {n = 0} [] ys = ?foo_1
-append {n = (S k)} (x :: xs) ys = ?foo_2
-Main> vadd [] [] = ?bar_1
-Main> vadd (x :: xs) (y :: ys) = ?baz_1
-Main> suc x x Refl = ?quux_1
-Main> suc' {x = x} {y = x} Refl = ?quuz_1
+Main> append {n = 0} [] ys = ?foo_0
+append {n = (S k)} (x :: xs) ys = ?foo_1
+Main> vadd [] [] = ?bar_0
+Main> vadd (x :: xs) (y :: ys) = ?baz_0
+Main> suc x x Refl = ?quux_0
+Main> suc' {x = x} {y = x} Refl = ?quuz_0
 Main> Bye for now!

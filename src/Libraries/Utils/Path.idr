@@ -19,7 +19,7 @@ import System.File
 
 %default total
 
-infixr 5 </>, />
+infixl 5 </>, />
 infixr 7 <.>
 
 
@@ -276,7 +276,7 @@ export
 parse : String -> Path
 parse str =
   case parse parsePath (lexPath str) of
-    Right (path, _) => path
+    Right (_, path, _) => path
     _ => emptyPath
 
 --------------------------------------------------------------------------------
@@ -298,9 +298,9 @@ append' left right =
   if isAbsolute' right || isJust right.volume then
     right
   else if hasRoot right then
-    record { volume = left.volume } right
+    { volume := left.volume } right
   else
-    record { body = left.body ++ right.body, hasTrailSep = right.hasTrailSep } left
+    { body := left.body ++ right.body, hasTrailSep := right.hasTrailSep } left
 
 splitPath' : Path -> List Path
 splitPath' path =
@@ -325,7 +325,7 @@ splitParent' path =
     [] => Nothing
     (x::xs) =>
       let
-        parent = record { body = init (x::xs), hasTrailSep = False } path
+        parent = { body := init (x::xs), hasTrailSep := False } path
         child = MkPath Nothing False [last (x::xs)] path.hasTrailSep
       in
         Just (parent, child)
@@ -357,6 +357,19 @@ splitFileName name =
     (_, ['.']) => (name, "")
     (revExt, (dot :: revStem)) =>
       ((pack $ reverse revStem), (pack $ reverse revExt))
+
+||| Split a file name into a basename and a list of extensions.
+||| A leading dot is considered to be part of the basename.
+||| ```
+||| splitExtensions "Path.idr"           = ("Path", ["idr"])
+||| splitExtensions "file.latex.lidr"    = ("file", ["latex", "lidr"])
+||| splitExtensions ".hidden.latex.lidr" = (".hidden", ["latex", "lidr"])
+||| ```
+export
+splitExtensions : String -> (String, List String)
+splitExtensions name = case map pack $ split (== '.') (unpack name) of
+  ("" ::: base :: exts) => ("." ++ base, exts)
+  (base ::: exts) => (base, exts)
 
 --------------------------------------------------------------------------------
 -- Methods
@@ -538,6 +551,17 @@ extension path = fileName path >>=
   filter : forall a. (a -> Bool) -> Maybe a -> Maybe a
   filter f Nothing = Nothing
   filter f (Just x) = toMaybe (f x) x
+
+||| Extracts the list of extensions of the file name in the path.
+||| The returned value is:
+|||
+||| - Nothing, if there is no file name;
+||| - Just [], if there is no embedded ".";
+||| - Just [], if the filename begins with a "." and has no other ".";
+||| - Just es, the portions between the "."s (excluding a potential leading one).
+export
+extensions : String -> Maybe (List String)
+extensions path = snd . splitExtensions <$> fileName path
 
 ||| Updates the file name in the path.
 |||

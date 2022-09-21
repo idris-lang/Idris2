@@ -1,19 +1,13 @@
 module TTImp.Parser
 
 import Core.Context
-import Core.Core
-import Core.Metadata
-import Core.Env
 import Core.TT
 import Parser.Source
 import TTImp.TTImp
 
 import public Libraries.Text.Parser
 import Data.List
-import Data.List.Views
 import Data.List1
-import Data.Maybe
-import Data.String
 
 topDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 -- All the clauses get parsed as one-clause definitions. Collect any
@@ -96,6 +90,12 @@ totalityOpt
   <|> do keyword "covering"
          pure CoveringOnly
 
+dataVisOpt : EmptyRule (Visibility, Maybe TotalReq)
+dataVisOpt
+    = do { vis <- visOption   ; mbtot <- optional totalityOpt ; pure (vis, mbtot) }
+  <|> do { tot <- totalityOpt ; vis <- visibility ; pure (vis, Just tot) }
+  <|> pure (Private, Nothing)
+
 fnOpt : Rule FnOpt
 fnOpt = do x <- totalityOpt
            pure $ Totality x
@@ -112,6 +112,10 @@ fnDirectOpt
          pure (GlobalHint False)
   <|> do pragma "inline"
          pure Inline
+  <|> do pragma "noinline"
+         pure NoInline
+  <|> do pragma "deprecate"
+         pure Deprecate
   <|> do pragma "extern"
          pure ExternFn
 
@@ -180,15 +184,15 @@ mutual
   implicitArg fname indents
       = do start <- location
            symbol "{"
-           x <- unqualifiedName
+           x <- UN . Basic <$> unqualifiedName
            (do symbol "="
                commit
                tm <- expr fname indents
                symbol "}"
-               pure (Just (UN x), tm))
+               pure (Just x, tm))
              <|> (do symbol "}"
                      end <- location
-                     pure (Just (UN x), IVar (MkFC fname start end) (UN x)))
+                     pure (Just x, IVar (MkFC fname start end) x))
     <|> do symbol "@{"
            commit
            tm <- expr fname indents
@@ -198,12 +202,12 @@ mutual
   as : OriginDesc -> IndentInfo -> Rule RawImp
   as fname indents
       = do start <- location
-           x <- unqualifiedName
+           x <- UN . Basic <$> unqualifiedName
            nameEnd <- location
            symbol "@"
            pat <- simpleExpr fname indents
            end <- location
-           pure (IAs (MkFC fname start end) (MkFC fname start nameEnd) UseRight (UN x) pat)
+           pure (IAs (MkFC fname start end) (MkFC fname start nameEnd) UseRight x pat)
 
   simpleExpr : OriginDesc -> IndentInfo -> Rule RawImp
   simpleExpr fname indents
@@ -247,7 +251,7 @@ mutual
                                        (do symbol ":"
                                            appExpr fname indents)
                               rig <- getMult rigc
-                              pure (rig, UN n, ty))
+                              pure (rig, UN (Basic n), ty))
 
 
   pibindListName : OriginDesc -> FilePos -> IndentInfo ->
@@ -259,7 +263,7 @@ mutual
             ty <- expr fname indents
             atEnd indents
             rig <- getMult rigc
-            pure (map (\n => (rig, UN n, ty)) (forget ns))
+            pure (map (\n => (rig, UN (Basic n), ty)) (forget ns))
      <|> forget <$> sepBy1 (symbol ",")
                            (do rigc <- multiplicity
                                n <- name
@@ -297,7 +301,10 @@ mutual
            ns <- sepBy1 (symbol ",") unqualifiedName
            nend <- location
            let nfc = MkFC fname nstart nend
-           let binders = map (\n => (erased {a=RigCount}, Just (UN n), Implicit nfc False)) (forget ns)
+           let binders = map (\n => ( erased {a=RigCount}
+                                    , Just (UN $ Basic n)
+                                    , Implicit nfc False))
+                             (forget ns)
            symbol "."
            scope <- typeExpr fname indents
            end <- location
@@ -507,6 +514,8 @@ mutual
            let fc = MkFC fname start end
            pure (!(getFn lhs), PatClause fc lhs rhs)
     <|> do keyword "with"
+           m <- multiplicity
+           rig <- getMult m
            wstart <- location
            symbol "("
            wval <- expr fname indents
@@ -515,7 +524,7 @@ mutual
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
-           pure (!(getFn lhs), WithClause fc lhs wval prf [] (forget $ map snd ws))
+           pure (!(getFn lhs), WithClause fc lhs rig wval prf [] (forget $ map snd ws))
 
     <|> do keyword "impossible"
            atEnd indents
@@ -568,6 +577,13 @@ dataOpt
          ns <- forget <$> some name
          pure (SearchBy ns)
 
+dataOpts : EmptyRule (List DataOpt)
+dataOpts = option [] $ do
+  symbol "["
+  dopts <- sepBy1 (symbol ",") dataOpt
+  symbol "]"
+  pure $ forget dopts
+
 dataDecl : OriginDesc -> IndentInfo -> Rule ImpData
 dataDecl fname indents
     = do start <- location
@@ -576,10 +592,7 @@ dataDecl fname indents
          symbol ":"
          ty <- expr fname indents
          keyword "where"
-         opts <- option [] (do symbol "["
-                               dopts <- sepBy1 (symbol ",") dataOpt
-                               symbol "]"
-                               pure $ forget dopts)
+         opts <- dataOpts
          cs <- block (tyDecl fname)
          end <- location
          pure (MkImpData (MkFC fname start end) n ty opts cs)
@@ -628,12 +641,12 @@ fieldDecl fname indents
              ty <- expr fname indents
              end <- location
              pure (map (\n => MkIField (MkFC fname start end)
-                                       linear p (UN n) ty) (forget ns))
+                                       linear p (UN $ Basic n) ty) (forget ns))
 
 recordDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 recordDecl fname indents
     = do start <- location
-         vis <- visibility
+         (vis,mbtot) <- dataVisOpt
          col <- column
          keyword "record"
          commit
@@ -641,13 +654,14 @@ recordDecl fname indents
          paramss <- many (recordParam fname indents)
          let params = concat paramss
          keyword "where"
+         opts <- dataOpts
          exactIdent "constructor"
          dc <- name
          flds <- assert_total (blockAfter col (fieldDecl fname))
          end <- location
          pure (let fc = MkFC fname start end in
-                   IRecord fc Nothing vis
-                           (MkImpRecord fc n params dc (concat flds)))
+                   IRecord fc Nothing vis mbtot
+                           (MkImpRecord fc n params opts dc (concat flds)))
 
 namespaceDecl : Rule Namespace
 namespaceDecl
@@ -700,10 +714,10 @@ directive fname indents
 -- topDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 topDecl fname indents
     = do start <- location
-         vis <- visibility
+         (vis,mbtot) <- dataVisOpt
          dat <- dataDecl fname indents
          end <- location
-         pure (IData (MkFC fname start end) vis dat)
+         pure (IData (MkFC fname start end) vis mbtot dat)
   <|> do start <- location
          ns <- namespaceDecl
          ds <- assert_total (nonEmptyBlock (topDecl fname))
@@ -742,6 +756,8 @@ collectDefs (IDef loc fn cs :: ds)
     isClause n _ = Nothing
 collectDefs (INamespace loc ns nds :: ds)
     = INamespace loc ns (collectDefs nds) :: collectDefs ds
+collectDefs (IFail loc msg nds :: ds)
+    = IFail loc msg (collectDefs nds) :: collectDefs ds
 collectDefs (d :: ds)
     = d :: collectDefs ds
 

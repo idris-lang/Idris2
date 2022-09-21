@@ -11,6 +11,8 @@ import Core.TT
 import Core.Unify
 import Core.Value
 
+import Idris.REPL.Opts
+import Idris.Syntax
 import Parser.Lexer.Source
 
 import TTImp.Elab
@@ -20,15 +22,16 @@ import TTImp.Interactive.ExprSearch
 import TTImp.ProcessDecls
 import TTImp.ProcessDef
 import TTImp.TTImp
-import TTImp.Unelab
 import TTImp.Utils
 
 import Data.List
 
+import Libraries.Data.Tap
+
 %default covering
 
 fnName : Bool -> Name -> String
-fnName lhs (UN n)
+fnName lhs (UN (Basic n))
     = if isIdentNormal n then n
       else if lhs then "(" ++ n ++ ")"
       else "op"
@@ -38,6 +41,7 @@ fnName lhs n = nameRoot n
 
 -- Make the hole on the RHS have a unique name
 uniqueRHS : {auto c : Ref Ctxt Defs} ->
+            {auto s : Ref Syn SyntaxInfo} ->
             ImpClause -> Core ImpClause
 uniqueRHS (PatClause fc lhs rhs)
     = pure $ PatClause fc lhs !(mkUniqueName rhs)
@@ -45,7 +49,7 @@ uniqueRHS (PatClause fc lhs rhs)
     mkUniqueName : RawImp -> Core RawImp
     mkUniqueName (IHole fc' rhsn)
         = do defs <- get Ctxt
-             rhsn' <- uniqueName defs [] rhsn
+             rhsn' <- uniqueHoleName defs [] rhsn
              pure (IHole fc' rhsn')
     mkUniqueName tm = pure tm -- it'll be a hole, but this is needed for covering
 uniqueRHS c = pure c
@@ -53,6 +57,8 @@ uniqueRHS c = pure c
 expandClause : {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
+               {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
                FC -> SearchOpts -> Int -> ImpClause ->
                Core (Search (List ImpClause))
 expandClause loc opts n c
@@ -78,8 +84,8 @@ expandClause loc opts n c
     updateRHS : ImpClause -> RawImp -> ImpClause
     updateRHS (PatClause fc lhs _) rhs = PatClause fc lhs rhs
     -- 'with' won't happen, include for completeness
-    updateRHS (WithClause fc lhs wval prf flags cs) rhs
-      = WithClause fc lhs wval prf flags cs
+    updateRHS (WithClause fc lhs rig wval prf flags cs) rhs
+      = WithClause fc lhs rig wval prf flags cs
     updateRHS (ImpossibleClause fc lhs) _ = ImpossibleClause fc lhs
 
     dropLams : Nat -> RawImp -> RawImp
@@ -89,7 +95,7 @@ expandClause loc opts n c
 
 splittableNames : RawImp -> List Name
 splittableNames (IApp _ f (IBindVar _ n))
-    = splittableNames f ++ [UN n]
+    = splittableNames f ++ [UN $ Basic n]
 splittableNames (IApp _ f _)
     = splittableNames f
 splittableNames (IAutoApp _ f _)
@@ -101,6 +107,8 @@ splittableNames _ = []
 trySplit : {auto m : Ref MD Metadata} ->
            {auto c : Ref Ctxt Defs} ->
            {auto u : Ref UST UState} ->
+           {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            FC -> RawImp -> ClosedTerm -> RawImp -> Name ->
            Core (Name, List ImpClause)
 trySplit loc lhsraw lhs rhs n
@@ -114,7 +122,7 @@ trySplit loc lhsraw lhs rhs n
     valid _ = Nothing
 
     fixNames : RawImp -> RawImp
-    fixNames (IVar loc' (UN n)) = IBindVar loc' n
+    fixNames (IVar loc' (UN (Basic n))) = IBindVar loc' n
     fixNames (IVar loc' (MN _ _)) = Implicit loc' True
     fixNames (IApp loc' f a) = IApp loc' (fixNames f) (fixNames a)
     fixNames (IAutoApp loc' f a) = IAutoApp loc' (fixNames f) (fixNames a)
@@ -127,7 +135,7 @@ trySplit loc lhsraw lhs rhs n
                Nothing => IVar loc' n
                Just tm => fixNames tm
     updateLHS ups (IBindVar loc' n)
-        = case lookup (UN n) ups of
+        = case lookup (UN (Basic n)) ups of
                Nothing => IBindVar loc' n
                Just tm => fixNames tm
     updateLHS ups (IApp loc' f a) = IApp loc' (updateLHS ups f) (updateLHS ups a)
@@ -139,10 +147,12 @@ trySplit loc lhsraw lhs rhs n
 generateSplits : {auto m : Ref MD Metadata} ->
                  {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  FC -> SearchOpts -> Int -> ImpClause ->
                  Core (List (Name, List ImpClause))
 generateSplits loc opts fn (ImpossibleClause fc lhs) = pure []
-generateSplits loc opts fn (WithClause fc lhs wval prf flags cs) = pure []
+generateSplits loc opts fn (WithClause fc lhs rig wval prf flags cs) = pure []
 generateSplits loc opts fn (PatClause fc lhs rhs)
     = do (lhstm, _) <-
                 elabTerm fn (InLHS linear) [] (MkNested []) []
@@ -165,6 +175,8 @@ mutual
   tryAllSplits : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  FC -> SearchOpts -> Int ->
                  List (Name, List ImpClause) ->
                  Core (Search (List ImpClause))
@@ -180,6 +192,8 @@ mutual
   mkSplits : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
+             {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              FC -> SearchOpts -> Int -> ImpClause ->
              Core (Search (List ImpClause))
   -- If the clause works, use it. Otherwise, split on one of the splittable
@@ -191,13 +205,15 @@ mutual
               else expandClause loc opts n c)
           (do cs <- generateSplits loc opts n c
               log "interaction.generate" 5 $ "Splits: " ++ show cs
-              tryAllSplits loc (record { mustSplit = False,
-                                         doneSplit = True } opts) n cs)
+              tryAllSplits loc ({ mustSplit := False,
+                                  doneSplit := True } opts) n cs)
 
 export
 makeDefFromType : {auto c : Ref Ctxt Defs} ->
                   {auto m : Ref MD Metadata} ->
                   {auto u : Ref UST UState} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
+                  {auto o : Ref ROpts REPLOpts} ->
                   FC ->
                   SearchOpts ->
                   Name -> -- function name to generate
@@ -214,7 +230,7 @@ makeDefFromType loc opts n envlen ty
              -- We won't try splitting on these
              let pre_env = replicate envlen (Implicit loc True)
 
-             rhshole <- uniqueName defs [] (fnName False n ++ "_rhs")
+             rhshole <- uniqueHoleName defs [] (fnName False n ++ "_rhs")
              let initcs = PatClause loc
                                 (apply (IVar loc n) (pre_env ++ (map (IBindVar loc) argns)))
                                 (IHole loc rhshole)
@@ -232,6 +248,8 @@ export
 makeDef : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
+          {auto s : Ref Syn SyntaxInfo} ->
+          {auto o : Ref ROpts REPLOpts} ->
           (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
           Name -> Core (Search (FC, List ImpClause))
 makeDef p n
@@ -239,7 +257,7 @@ makeDef p n
             | Nothing => noResult
          n <- getFullName nidx
          logTerm "interaction.generate" 5 ("Searching for " ++ show n) ty
-         let opts = record { genExpr = Just (makeDefFromType (justFC loc)) }
+         let opts = { genExpr := Just (makeDefFromType (justFC loc)) }
                            (initSearchOpts True 5)
          makeDefFromType (justFC loc) opts n envlen ty
 
@@ -279,6 +297,8 @@ export
 makeDefSort : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
               Nat -> (List ImpClause -> List ImpClause -> Ordering) ->
               Name -> Core (Search (FC, List ImpClause))
@@ -289,6 +309,8 @@ export
 makeDefN : {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
+           {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
            Nat -> Name -> Core (List (FC, List ImpClause))
 makeDefN p max n

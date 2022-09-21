@@ -30,3 +30,4 @@ Documentation for the Idris 2 Language
    proofs/index
    implementation/index
    reference/index
+   cookbook/index

@@ -1,5 +1,7 @@
 module Data.List
 
+import public Control.Function
+
 import Data.Nat
 import Data.List1
 import Data.Fin
@@ -7,25 +9,39 @@ import public Data.Zippable
 
 %default total
 
+||| Boolean check for whether the list is the empty list.
 public export
 isNil : List a -> Bool
 isNil [] = True
 isNil _  = False
 
+||| Boolean check for whether the list contains a cons (::) / is non-empty.
 public export
 isCons : List a -> Bool
 isCons [] = False
 isCons _  = True
 
+||| Add an element to the end of a list.
+||| O(n). See the `Data.SnocList` module if you need to perform `snoc` often.
 public export
 snoc : List a -> a -> List a
 snoc xs x = xs ++ [x]
 
+||| Take `n` first elements from `xs`, returning the whole list if
+||| `n` >= length `xs`.
+|||
+||| @ n  the number of elements to take
+||| @ xs the list to take the elements from
 public export
-take : Nat -> List a -> List a
+take : (n : Nat) -> (xs : List a) -> List a
 take (S k) (x :: xs) = x :: take k xs
 take _ _ = []
 
+||| Remove `n` first elements from `xs`, returning the empty list if
+||| `n >= length xs`
+|||
+||| @ n  the number of elements to remove
+||| @ xs the list to drop the elements from
 public export
 drop : (n : Nat) -> (xs : List a) -> List a
 drop Z     xs      = xs
@@ -85,37 +101,48 @@ iterate f x  = x :: case f x of
   Nothing => []
   Just y => iterate f y
 
+||| Given a function `f` which extracts an element of `b` and `b`'s
+||| continuation, return the list consisting of the extracted elements.
+||| CAUTION: Only terminates if `f` eventually returns `Nothing`.
+|||
+||| @ f  a function which provides an element of `b` and the rest of `b`
+||| @ b  a structure contanining any number of elements
 covering
 public export
-unfoldr : (b -> Maybe (a, b)) -> b -> List a
+unfoldr : (f : b -> Maybe (a, b)) -> b -> List a
 unfoldr f c = case f c of
   Nothing     => []
   Just (a, n) => a :: unfoldr f n
 
+||| Returns the list of elements obtained by applying `f` to `x` `0` to `n-1` times,
+||| starting with `x`.
+|||
+||| @ n  the number of times to iterate `f` over `x`
+||| @ f  a function producing a series
+||| @ x  the initial element of the series
 public export
-iterateN : Nat -> (a -> a) -> a -> List a
+iterateN : (n : Nat) -> (f : a -> a) -> (x : a) -> List a
 iterateN Z     _ _ = []
-iterateN (S n) f x = x :: iterateN n f (f x)
+iterateN (S k) f x = x :: iterateN k f (f x)
 
+||| Get the longest prefix of the list that satisfies the predicate.
+|||
+||| @ p  a custom predicate for the elements of the list
+||| @ xs the list of elements
 public export
-takeWhile : (p : a -> Bool) -> List a -> List a
+takeWhile : (p : a -> Bool) -> (xs : List a) -> List a
 takeWhile p []      = []
 takeWhile p (x::xs) = if p x then x :: takeWhile p xs else []
 
+||| Remove elements from the list until an element no longer satisfies the
+||| predicate.
+|||
+||| @ p  a custom predicate for the elements of the list
+||| @ xs the list of elements to remove from
 public export
-dropWhile : (p : a -> Bool) -> List a -> List a
+dropWhile : (p : a -> Bool) -> (xs : List a) -> List a
 dropWhile p []      = []
 dropWhile p (x::xs) = if p x then dropWhile p xs else x::xs
-
-||| Applied to a predicate and a list, returns the list of those elements that
-||| satisfy the predicate.
-public export
-filter : (p : a -> Bool) -> List a -> List a
-filter p [] = []
-filter p (x :: xs)
-   = if p x
-        then x :: filter p xs
-        else filter p xs
 
 ||| Find the first element of the list that satisfies the predicate.
 public export
@@ -144,7 +171,7 @@ findIndices p = h 0 where
 
 ||| Find associated information in a list using a custom comparison.
 public export
-lookupBy : (a -> a -> Bool) -> a -> List (a, b) -> Maybe b
+lookupBy : (a -> b -> Bool) -> a -> List (b, v) -> Maybe v
 lookupBy p e []      = Nothing
 lookupBy p e ((l, r) :: xs) =
   if p e l then
@@ -157,14 +184,14 @@ public export
 lookup : Eq a => a -> List (a, b) -> Maybe b
 lookup = lookupBy (==)
 
-||| Check if something is a member of a list using a custom comparison.
+||| Remove duplicate elements from a list using a custom comparison. The general
+||| case of `nub`.
+||| O(n^2).
+|||
+||| @ p  a custom comparison for detecting duplicate elements
+||| @ xs the list to remove the duplicates from
 public export
-elemBy : (a -> a -> Bool) -> a -> List a -> Bool
-elemBy p e []      = False
-elemBy p e (x::xs) = p e x || elemBy p e xs
-
-public export
-nubBy : (a -> a -> Bool) -> List a -> List a
+nubBy : (p : a -> a -> Bool) -> (xs : List a) -> List a
 nubBy = nubBy' []
   where
     nubBy' : List a -> (a -> a -> Bool) -> List a -> List a
@@ -175,10 +202,11 @@ nubBy = nubBy' []
       else
         x :: nubBy' (x::acc) p xs
 
-||| O(n^2). The nub function removes duplicate elements from a list. In
-||| particular, it keeps only the first occurrence of each element. It is a
-||| special case of nubBy, which allows the programmer to supply their own
-||| equality test.
+||| The nub function removes duplicate elements from a list using
+||| boolean equality. In particular, it keeps only the first occurrence of each
+||| element. It is a special case of `nubBy`, which allows the programmer to
+||| supply their own equality test.
+||| O(n^2).
 |||
 ||| ```idris example
 ||| nub (the (List _) [1,2,1,3])
@@ -187,9 +215,36 @@ public export
 nub : Eq a => List a -> List a
 nub = nubBy (==)
 
+||| Insert an element at a particular index.
+|||
+||| ```idris example
+||| insertAt 1 [6, 8, 9] 7
+||| ```
+|||
+||| @idx The index of the inserted value in the resulting list.
+||| @x The value to insert.
+||| @xs The list to insert the value into.
+public export
+insertAt : (idx : Nat) -> (x : a) -> (xs : List a) -> {auto 0 ok : idx `LTE` length xs} -> List a
+insertAt Z x xs = x :: xs
+insertAt {ok=LTESucc _} (S n) x (y :: ys) = y :: (insertAt n x ys)
+
+||| Construct a new list consisting of all but the indicated element.
+|||
+||| ```idris example
+||| deleteAt 3 [5, 6, 7, 8, 9]
+||| ```
+|||
+||| @ idx The index of the value to delete.
+||| @ xs The list to delete the value from.
+public export
+deleteAt : (idx : Nat) -> (xs : List a) -> {auto 0 prf : InBounds idx xs} -> List a
+deleteAt {prf=InFirst} Z (_ :: xs) = xs
+deleteAt {prf=InLater _} (S k) (x :: xs) = x :: deleteAt k xs
+
 ||| The deleteBy function behaves like delete, but takes a user-supplied equality predicate.
 public export
-deleteBy : (a -> a -> Bool) -> a -> List a -> List a
+deleteBy : (a -> b -> Bool) -> a -> List b -> List b
 deleteBy _  _ []      = []
 deleteBy eq x (y::ys) = if x `eq` y then ys else y :: deleteBy eq x ys
 
@@ -205,6 +260,31 @@ deleteBy eq x (y::ys) = if x `eq` y then ys else y :: deleteBy eq x ys
 public export
 delete : Eq a => a -> List a -> List a
 delete = deleteBy (==)
+
+||| Delete the first occurrence of each element from the second list in the first
+||| list where equality is determined by the predicate passed as the first argument.
+||| @ p            A function that returns true when its two arguments should be considered equal.
+||| @ source       The list to delete elements from.
+||| @ undesirables The list of elements to delete.
+public export
+deleteFirstsBy : (p : a -> b -> Bool) -> (source : List b) -> (undesirables : List a) -> List b
+deleteFirstsBy p = foldl (flip (deleteBy p))
+
+infix 7 \\
+
+||| The non-associative list-difference.
+||| A specialized form of @deleteFirstsBy@ where the predicate is equality under the @Eq@
+||| interface.
+||| Deletes the first occurrence of each element of the second list from the first list.
+|||
+||| In the following example, the result is `[2, 4]`.
+||| ```idris example
+||| [1, 2, 3, 4] // [1, 3]
+||| ```
+|||
+public export
+(\\) : Eq a => List a -> List a -> List a
+(\\) = foldl (flip delete)
 
 ||| The unionBy function returns the union of two lists by user-supplied equality predicate.
 public export
@@ -244,9 +324,16 @@ span p (x::xs) =
   else
     ([], x::xs)
 
+||| Similar to `span` but negates the predicate, i.e.: returns a tuple
+||| consisting of the longest prefix of the list whose elements don't satisfy
+||| the predicate, and the rest of the list.
 public export
 break : (a -> Bool) -> List a -> (List a, List a)
 break p xs = span (not . p) xs
+
+public export
+singleton : a -> List a
+singleton x = [x]
 
 public export
 split : (a -> Bool) -> List a -> List1 (List a)
@@ -255,6 +342,11 @@ split p xs =
     (chunk, [])          => singleton chunk
     (chunk, (c :: rest)) => chunk ::: forget (split p (assert_smaller xs rest))
 
+||| Split the list `xs` at the index `n`. If `n > length xs`, returns a tuple
+||| consisting of `xs` and `[]`.
+|||
+||| @ n  the index to split the list at
+||| @ xs the list to split
 public export
 splitAt : (n : Nat) -> (xs : List a) -> (List a, List a)
 splitAt Z xs = ([], xs)
@@ -263,8 +355,14 @@ splitAt (S k) (x :: xs)
       = let (tk, dr) = splitAt k xs in
             (x :: tk, dr)
 
+||| Divide the list into a tuple containing two smaller lists: one with the
+||| elements that satisfies the given predicate and another with the elements
+||| that don't.
+|||
+||| @ p  the predicate to partition according to
+||| @ xs the list to partition
 public export
-partition : (a -> Bool) -> List a -> (List a, List a)
+partition : (p : a -> Bool) -> (xs : List a) -> (List a, List a)
 partition p []      = ([], [])
 partition p (x::xs) =
   let (lefts, rights) = partition p xs in
@@ -307,30 +405,48 @@ public export
 splitOn : Eq a => a -> List a -> List1 (List a)
 splitOn a = split (== a)
 
-public export
-replaceWhen : (a -> Bool) -> a -> List a -> List a
-replaceWhen p b l = map (\c => if p c then b else c) l
-
-||| Replaces all occurences of the first argument with the second argument in a list.
+||| Replace an element at a particlar index with another.
 |||
 ||| ```idris example
-||| replaceOn '-' ',' ['1', '-', '2', '-', '3']
+||| replaceAt 2 6 [1, 2, 3, 4]
 ||| ```
 |||
+||| @idx The index of the value to replace.
+||| @x The value to insert.
+||| @xs The list in which to replace an element.
 public export
-replaceOn : Eq a => a -> a -> List a -> List a
-replaceOn a = replaceWhen (== a)
+replaceAt : (idx : Nat) -> a -> (xs : List a) -> {auto 0 ok : InBounds idx xs} -> List a
+replaceAt Z y (_ :: xs) {ok=InFirst} = y :: xs
+replaceAt (S k) y (x :: xs) {ok=InLater _} = x :: replaceAt k y xs
 
+||| Replace the elements in the list that satisfy the predicate with the given
+||| value. The general case of `replaceOn`.
+|||
+||| @ p  the predicate to replace elements in the list according to
+||| @ b  the element to replace with
+||| @ l  the list to perform the replacements on
 public export
-reverseOnto : List a -> List a -> List a
-reverseOnto acc [] = acc
-reverseOnto acc (x::xs) = reverseOnto (x::acc) xs
+replaceWhen : (p : a -> Bool) -> (b : a) -> (l : List a) -> List a
+replaceWhen p b l = map (\c => if p c then b else c) l
 
+||| Replace the elements in the list that are equal to `e`, using boolean
+||| equality, with `b`. A special case of `replaceWhen`, using `== e` as the
+||| predicate.
+|||
+||| ```idris example
+||| > replaceOn '-' ',' ['1', '-', '2', '-', '3']
+||| ['1', ',', '2', ',', '3']
+||| ```
+|||
+||| @ e  the element to find and replace
+||| @ b  the element to replace with
+||| @ l  the list to perform the replacements on
 public export
-reverse : List a -> List a
-reverse = reverseOnto []
+replaceOn : Eq a => (e : a) -> (b : a) -> (l : List a) -> List a
+replaceOn e = replaceWhen (== e)
 
 ||| Construct a list with `n` copies of `x`.
+|||
 ||| @ n how many copies
 ||| @ x the element to replicate
 public export
@@ -343,18 +459,29 @@ export
 intersectBy : (a -> a -> Bool) -> List a -> List a -> List a
 intersectBy eq xs ys = [x | x <- xs, any (eq x) ys]
 
-||| Compute the intersect of two lists according to the `Eq` implementation for the elements.
+||| Compute the intersection of two lists according to the `Eq` implementation for
+||| the elements.
 export
 intersect : Eq a => List a -> List a -> List a
 intersect = intersectBy (==)
 
+||| Compute the intersect of all the lists in the given list of lists, according
+||| to the user-supplied equality predicate.
+|||
+||| @ eq the predicate for computing the intersection
+||| @ ls the list of lists to compute the intersect of
 export
-intersectAllBy : (a -> a -> Bool) -> List (List a) -> List a
+intersectAllBy : (eq : a -> a -> Bool) -> (ls : List (List a)) -> List a
 intersectAllBy eq [] = []
 intersectAllBy eq (xs :: xss) = filter (\x => all (elemBy eq x) xss) xs
 
+||| Compute the intersect of all the lists in the given list of lists, according
+||| to boolean equality. A special case of `intersectAllBy`, using `==` as the
+||| equality predicate.
+|||
+||| @ ls the list of lists to compute the intersect of
 export
-intersectAll : Eq a => List (List a) -> List a
+intersectAll : Eq a => (ls : List (List a)) -> List a
 intersectAll = intersectAllBy (==)
 
 ---------------------------
@@ -386,10 +513,12 @@ Zippable List where
 -- Non-empty List
 ---------------------------
 
+||| Proof that a given list is non-empty.
 public export
 data NonEmpty : (xs : List a) -> Type where
     IsNonEmpty : NonEmpty (x :: xs)
 
+-- The empty list (Nil) cannot be `NonEmpty`.
 export
 Uninhabited (NonEmpty []) where
   uninhabited IsNonEmpty impossible
@@ -452,6 +581,14 @@ init' : List a -> Maybe (List a)
 init' [] = Nothing
 init' xs@(_::_) = Just (init xs)
 
+||| Foldr a non-empty list, using `map` to transform the first accumulated
+||| element to something of the desired type and `func` to accumulate the
+||| elements.
+|||
+||| @ func the function used to accumulate the elements
+||| @ map  an initial transformation from the element to the accumulated type
+||| @ l    the non-empty list to foldr
+||| @ ok   proof that the list is non-empty
 public export
 foldr1By : (func : a -> b -> b) -> (map : a -> b) ->
            (l : List a) -> {auto 0 ok : NonEmpty l} -> b
@@ -459,6 +596,14 @@ foldr1By f map [] impossible
 foldr1By f map [x] = map x
 foldr1By f map (x :: xs@(_::_)) = f x (foldr1By f map xs)
 
+||| Foldl a non-empty list, using `map` to transform the first accumulated
+||| element to something of the desired type and `func` to accumulate the
+||| elements.
+|||
+||| @ func the function used to accumulate the elements
+||| @ map  an initial transformation from the element to the accumulated type
+||| @ l    the non-empty list to foldl
+||| @ ok   proof that the list is non-empty
 public export
 foldl1By : (func : b -> a -> b) -> (map : a -> b) ->
            (l : List a) -> {auto 0 ok : NonEmpty l} -> b
@@ -466,18 +611,21 @@ foldl1By f map [] impossible
 foldl1By f map (x::xs) = foldl f (map x) xs
 
 ||| Foldr a non-empty list without seeding the accumulator.
+|||
 ||| @ ok proof that the list is non-empty
 public export
 foldr1 : (a -> a -> a) -> (l : List a) -> {auto 0 ok : NonEmpty l} -> a
 foldr1 f xs = foldr1By f id xs
 
 ||| Foldl a non-empty list without seeding the accumulator.
+|||
 ||| @ ok proof that the list is non-empty
 public export
 foldl1 : (a -> a -> a) -> (l : List a) -> {auto 0 ok : NonEmpty l} -> a
 foldl1 f xs = foldl1By f id xs
 
 ||| Convert to a non-empty list.
+|||
 ||| @ ok proof the list is non-empty
 export
 toList1 : (l : List a) -> {auto 0 ok : NonEmpty l} -> List1 a
@@ -485,30 +633,46 @@ toList1 [] impossible
 toList1 (x :: xs) = x ::: xs
 
 ||| Convert to a non-empty list, returning Nothing if the list is empty.
-export
+public export
 toList1' : (l : List a) -> Maybe (List1 a)
 toList1' [] = Nothing
 toList1' (x :: xs) = Just (x ::: xs)
 
-||| Prefix every element in the list with the given element
+||| Interleave two lists.
+||| ```idris example
+||| > interleave ["a", "c", "e"]  ["b", "d", "f"]
+||| ["a", "b", "c", "d", "e", "f"]
+||| ```
+public export
+interleave : (xs, ys : List a) -> List a
+interleave [] ys = ys
+interleave (x :: xs) ys = x :: interleave ys xs
+
+||| Prefix every element in the list with the given element.
+|||
+||| @ sep the value to prefix
+||| @ xs  the list of elements to prefix with the given element
 |||
 ||| ```idris example
-||| with List (mergeReplicate '>' ['a', 'b', 'c', 'd', 'e'])
+||| > with List (mergeReplicate '>' ['a', 'b', 'c', 'd', 'e'])
+||| ['>', 'a', '>', 'b', '>', 'c', '>', 'd', '>', 'e']
 ||| ```
-|||
-export
-mergeReplicate : a -> List a -> List a
+public export
+mergeReplicate : (sep : a) -> (xs : List a) -> List a
 mergeReplicate sep []      = []
 mergeReplicate sep (y::ys) = sep :: y :: mergeReplicate sep ys
 
 ||| Insert some separator between the elements of a list.
 |||
-||| ````idris example
-||| with List (intersperse ',' ['a', 'b', 'c', 'd', 'e'])
-||| ````
+||| @ sep the value to intersperse
+||| @ xs  the list of elements to intersperse with the separator
 |||
-export
-intersperse : a -> List a -> List a
+||| ```idris example
+||| > with List (intersperse ',' ['a', 'b', 'c', 'd', 'e'])
+||| ['a', ',', 'b', ',', 'c', ',', 'd', ',', 'e']
+||| ```
+public export
+intersperse : (sep : a) -> (xs : List a) -> List a
 intersperse sep []      = []
 intersperse sep (x::xs) = x :: mergeReplicate sep xs
 
@@ -524,16 +688,6 @@ intersperse sep (x::xs) = x :: mergeReplicate sep xs
 export
 intercalate : (sep : List a) -> (xss : List (List a)) -> List a
 intercalate sep xss = concat $ intersperse sep xss
-
-||| Apply a partial function to the elements of a list, keeping the ones at which
-||| it is defined.
-public export
-mapMaybe : (a -> Maybe b) -> List a -> List b
-mapMaybe f []      = []
-mapMaybe f (x::xs) =
-  case f x of
-    Nothing => mapMaybe f xs
-    Just j  => j :: mapMaybe f xs
 
 ||| Extract all of the values contained in a List of Maybes
 public export
@@ -598,23 +752,69 @@ export
 sort : Ord a => List a -> List a
 sort = sortBy compare
 
-export
-isPrefixOfBy : (eq : a -> a -> Bool) -> (left, right : List a) -> Bool
+||| Check whether the `left` list is a prefix of the `right` one, according to
+||| `match`. Returns the matched prefix together with the leftover suffix.
+|||
+||| @ match a custom matching function for checking the elements are convertible
+||| @ left  the list which might be a prefix of `right`
+||| @ right the list of elements to compare against
+public export
+prefixOfBy : (match : a -> b -> Maybe m) ->
+             (left : List a) -> (right : List b) ->
+             Maybe (List m, List b)
+prefixOfBy p = go [<] where
+  go : SnocList m -> List a -> List b -> Maybe (List m, List b)
+  go sm [] bs = pure (sm <>> [], bs)
+  go sm as [] = Nothing
+  go sm (a :: as) (b :: bs) = go (sm :< !(p a b)) as bs
+
+||| Check whether the `left` list is a prefix of the `right` one, using the
+||| provided equality function to compare elements.
+|||
+||| @ eq    a custom equality function for comparing the elements
+||| @ left  the list which might be a prefix of `right`
+||| @ right the list of elements to compare againts
+public export
+isPrefixOfBy : (eq : a -> b -> Bool) ->
+               (left : List a) -> (right : List b) -> Bool
 isPrefixOfBy p [] _            = True
 isPrefixOfBy p _ []            = False
 isPrefixOfBy p (x::xs) (y::ys) = p x y && isPrefixOfBy p xs ys
 
-||| The isPrefixOf function takes two lists and returns True iff the first list is a prefix of the second.
-export
+||| The isPrefixOf function takes two lists and returns True iff the first list
+||| is a prefix of the second when comparing elements using `==`.
+public export
 isPrefixOf : Eq a => List a -> List a -> Bool
 isPrefixOf = isPrefixOfBy (==)
 
-export
-isSuffixOfBy : (a -> a -> Bool) -> List a -> List a -> Bool
+||| Check whether the `left` is a suffix of the `right` one, according to
+||| `match`. Returns the matched suffix together with the leftover prefix.
+|||
+||| @ match a custom matching function for checking the elements are convertible
+||| @ left  the list which might be a prefix of `right`
+||| @ right the list of elements to compare against
+public export
+suffixOfBy : (match : a -> b -> Maybe m) ->
+             (left : List a) -> (right : List b) ->
+             Maybe (List b, List m)
+suffixOfBy match left right
+  = do (ms, bs) <- prefixOfBy match (reverse left) (reverse right)
+       pure (reverse bs, reverse ms)
+
+||| Check whether the `left` is a suffix of the `right` one, using the provided
+||| equality function to compare elements.
+|||
+||| @ eq    a custom equality function for comparing the elements
+||| @ left  the list which might be a suffix of `right`
+||| @ right the list of elements to compare againts
+public export
+isSuffixOfBy : (eq : a -> b -> Bool) ->
+               (left : List a) -> (right : List b) -> Bool
 isSuffixOfBy p left right = isPrefixOfBy p (reverse left) (reverse right)
 
-||| The isSuffixOf function takes two lists and returns True iff the first list is a suffix of the second.
-export
+||| The isSuffixOf function takes two lists and returns True iff the first list
+||| is a suffix of the second when comparing elements using `==`.
+public export
 isSuffixOf : Eq a => List a -> List a -> Bool
 isSuffixOf = isSuffixOfBy (==)
 
@@ -628,7 +828,7 @@ isSuffixOf = isSuffixOfBy (==)
 ||| isInfixOf ['b','d'] ['a', 'b', 'c', 'd']
 ||| ```
 |||
-export
+public export
 isInfixOf : Eq a => List a -> List a -> Bool
 isInfixOf n h = any (isPrefixOf n) (tails h)
 
@@ -654,6 +854,7 @@ transpose (heads :: tails) = spreadHeads heads (transpose tails) where
 
 ------------------------------------------------------------------------
 -- Grouping
+------------------------------------------------------------------------
 
 ||| `groupBy` operates like `group`, but uses the provided equality
 ||| predicate instead of `==`.
@@ -695,14 +896,19 @@ groupAllWith f = groupWith f . sortBy (comparing f)
 -- Properties
 --------------------------------------------------------------------------------
 
+-- Nil is not Cons
 export
 Uninhabited ([] = x :: xs) where
   uninhabited Refl impossible
 
+-- Cons is not Nil
 export
 Uninhabited (x :: xs = []) where
   uninhabited Refl impossible
 
+-- If the heads or the tails of two lists are provably non-equal, then the
+-- combination of the respective heads with their respective tails must be
+-- provably non-equal.
 export
 {0 xs : List a} -> Either (Uninhabited $ x === y) (Uninhabited $ xs === ys) => Uninhabited (x::xs = y::ys) where
   uninhabited @{Left  z} Refl = uninhabited @{z} Refl
@@ -710,9 +916,64 @@ export
 
 ||| (::) is injective
 export
+Biinjective Prelude.(::) where
+  biinjective Refl = (Refl, Refl)
+
+||| Heterogeneous injectivity for (::)
+export
 consInjective : forall x, xs, y, ys .
                 the (List a) (x :: xs) = the (List b) (y :: ys) -> (x = y, xs = ys)
 consInjective Refl = (Refl, Refl)
+
+lengthPlusIsLengthPlus : (n : Nat) -> (xs : List a) ->
+                         lengthPlus n xs = n + length xs
+lengthPlusIsLengthPlus n [] = sym $ plusZeroRightNeutral n
+lengthPlusIsLengthPlus n (x::xs) =
+  trans
+  (lengthPlusIsLengthPlus (S n) xs)
+  (plusSuccRightSucc n (length xs))
+
+lengthTRIsLength : (xs : List a) -> lengthTR xs = length xs
+lengthTRIsLength = lengthPlusIsLengthPlus Z
+
+||| List `reverse` applied to `reverseOnto` is equivalent to swapping the
+||| arguments of `reverseOnto`.
+reverseReverseOnto : (l, r : List a) ->
+                     reverse (reverseOnto l r) = reverseOnto r l
+reverseReverseOnto _ [] = Refl
+reverseReverseOnto l (x :: xs) = reverseReverseOnto (x :: l) xs
+
+||| List `reverse` applied twice yields the identity function.
+export
+reverseInvolutive : (xs : List a) -> reverse (reverse xs) = xs
+reverseInvolutive = reverseReverseOnto []
+
+||| Appending `x` to `l` and then reversing the result onto `r` is the same as
+||| using (::) with `x` and the result of reversing `l` onto `r`.
+consReverse : (x : a) -> (l, r : List a) ->
+              x :: reverseOnto r l = reverseOnto r (reverseOnto [x] (reverse l))
+consReverse _ [] _ = Refl
+consReverse x (y::ys) r
+  = rewrite consReverse x ys (y :: r) in
+      rewrite cong (reverseOnto r . reverse) $ consReverse x ys [y] in
+        rewrite reverseInvolutive (y :: reverseOnto [x] (reverse ys)) in
+          Refl
+
+||| Proof that it is safe to lift a (::) out of the first `tailRecAppend`
+||| argument.
+consTailRecAppend : (x : a) -> (l, r : List a) ->
+                    tailRecAppend (x :: l) r = x :: (tailRecAppend l r)
+consTailRecAppend x l r
+  = rewrite consReverse x (reverse l) r in
+      rewrite reverseInvolutive l in
+        Refl
+
+||| Proof that `(++)` and `tailRecAppend` do the same thing, so the %transform
+||| directive is safe.
+tailRecAppendIsAppend : (xs, ys : List a) -> tailRecAppend xs ys = xs ++ ys
+tailRecAppendIsAppend [] ys = Refl
+tailRecAppendIsAppend (x::xs) ys =
+  trans (consTailRecAppend x xs ys) (cong (x ::) $ tailRecAppendIsAppend xs ys)
 
 ||| The empty list is a right identity for append.
 export
@@ -726,6 +987,7 @@ appendAssociative : (l, c, r : List a) -> l ++ (c ++ r) = (l ++ c) ++ r
 appendAssociative []      c r = Refl
 appendAssociative (_::xs) c r = rewrite appendAssociative xs c r in Refl
 
+||| `reverseOnto` reverses the list and prepends it to the "onto" argument
 revOnto : (xs, vs : List a) -> reverseOnto xs vs = reverse vs ++ xs
 revOnto _ [] = Refl
 revOnto xs (v :: vs)
@@ -733,6 +995,7 @@ revOnto xs (v :: vs)
         rewrite appendAssociative (reverse vs) [v] xs in
                                   rewrite revOnto [v] vs in Refl
 
+||| `reverse` is distributive
 export
 revAppend : (vs, ns : List a) -> reverse ns ++ reverse vs = reverse (vs ++ ns)
 revAppend [] ns = rewrite appendNilRightNeutral (reverse ns) in Refl
@@ -743,14 +1006,8 @@ revAppend (v :: vs) ns
             rewrite appendAssociative (reverse ns) (reverse vs) [v] in
               Refl
 
-||| List reverse applied twice yields the identity function.
-export
-reverseInvolutive : (xs : List a) -> reverse (reverse xs) = xs
-reverseInvolutive [] = Refl
-reverseInvolutive (x :: xs) = rewrite revOnto [x] xs in
-                                rewrite sym (revAppend (reverse xs) [x]) in
-                                  cong (x ::) $ reverseInvolutive xs
-
+||| Dropping `m` elements from `l` and then dropping `n` elements from the
+||| result, is the same as simply dropping `n+m` elements from `l`
 export
 dropFusion : (n, m : Nat) -> (l : List t) -> drop n (drop m l) = drop (n+m) l
 dropFusion  Z     m    l      = Refl
@@ -760,7 +1017,52 @@ dropFusion (S n) (S m) (x::l) = rewrite plusAssociative n 1 m in
                                 rewrite plusCommutative n 1 in
                                 dropFusion (S n) m l
 
+||| Mapping a function over a list does not change the length of the list.
 export
 lengthMap : (xs : List a) -> length (map f xs) = length xs
 lengthMap [] = Refl
 lengthMap (x :: xs) = cong S (lengthMap xs)
+
+||| Proof that replicate produces a list of the requested length.
+export
+lengthReplicate : (n : Nat) -> length (replicate n x) = n
+lengthReplicate 0 = Refl
+lengthReplicate (S k) = cong S (lengthReplicate k)
+
+export
+foldlAppend : (f : acc -> a -> acc) -> (init : acc) -> (xs : List a) -> (ys : List a) -> foldl f init (xs ++ ys) = foldl f (foldl f init xs) ys
+foldlAppend f init []      ys = Refl
+foldlAppend f init (x::xs) ys = rewrite foldlAppend f (f init x) xs ys in Refl
+
+export
+filterAppend : (f : a -> Bool) -> (xs, ys : List a) -> filter f (xs ++ ys) = filter f xs ++ filter f ys
+filterAppend f []      ys = Refl
+filterAppend f (x::xs) ys with (f x)
+  _ | False = rewrite filterAppend f xs ys in Refl
+  _ | True  = rewrite filterAppend f xs ys in Refl
+
+export
+mapMaybeFusion : (g : b -> Maybe c) -> (f : a -> Maybe b) -> (xs : List a) -> mapMaybe g (mapMaybe f xs) = mapMaybe (f >=> g) xs
+mapMaybeFusion g f []      = Refl
+mapMaybeFusion g f (x::xs) with (f x)
+  _ | Nothing = mapMaybeFusion g f xs
+  _ | (Just y) with (g y)
+    _ | Nothing = mapMaybeFusion g f xs
+    _ | (Just z) = rewrite mapMaybeFusion g f xs in Refl
+
+export
+mapMaybeAppend : (f : a -> Maybe b) -> (xs, ys : List a) -> mapMaybe f (xs ++ ys) = mapMaybe f xs ++ mapMaybe f ys
+mapMaybeAppend f []      ys = Refl
+mapMaybeAppend f (x::xs) ys with (f x)
+  _ | Nothing  = rewrite mapMaybeAppend f xs ys in Refl
+  _ | (Just y) = rewrite mapMaybeAppend f xs ys in Refl
+
+export
+mapFusion : (g : b -> c) -> (f : a -> b) -> (xs : List a) -> map g (map f xs) = map (g . f) xs
+mapFusion g f []      = Refl
+mapFusion g f (x::xs) = rewrite mapFusion g f xs in Refl
+
+export
+mapAppend : (f : a -> b) -> (xs, ys : List a) -> map f (xs ++ ys) = map f xs ++ map f ys
+mapAppend f []      ys = Refl
+mapAppend f (x::xs) ys = rewrite mapAppend f xs ys in Refl

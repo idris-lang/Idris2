@@ -4,157 +4,145 @@
 #include "idris_net.h"
 #include <errno.h>
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "idris_util.h"
 
 #ifndef _WIN32
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #else
 static int socket_inited = 0;
 static WSADATA wsa_data;
 
-static void clean_sockets(void) {
-    WSACleanup();
-}
+static void clean_sockets(void) { WSACleanup(); }
 
 static int check_init(void) {
-    if (!socket_inited) {
-        int result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
-        if (result == NO_ERROR) {
-            socket_inited = 1;
-            atexit(clean_sockets);
-        }
+  if (!socket_inited) {
+    int result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+    if (result == NO_ERROR) {
+      socket_inited = 1;
+      atexit(clean_sockets);
     }
-    return socket_inited;
+  }
+  return socket_inited;
 }
 #endif
 
-
-void buf_htonl(void* buf, int len) {
-    int* buf_i = (int*) buf;
-    int i;
-    for (i = 0; i < (len / sizeof(int)) + 1; i++) {
-        buf_i[i] = htonl(buf_i[i]);
-    }
+void buf_htonl(void *buf, int len) {
+  int *buf_i = (int *)buf;
+  int i;
+  for (i = 0; i < (len / sizeof(int)) + 1; i++) {
+    buf_i[i] = htonl(buf_i[i]);
+  }
 }
 
-void buf_ntohl(void* buf, int len) {
-    int* buf_i = (int*) buf;
-    int i;
-    for (i = 0; i < (len / sizeof(int)) + 1; i++) {
-        buf_i[i] = ntohl(buf_i[i]);
-    }
+void buf_ntohl(void *buf, int len) {
+  int *buf_i = (int *)buf;
+  int i;
+  for (i = 0; i < (len / sizeof(int)) + 1; i++) {
+    buf_i[i] = ntohl(buf_i[i]);
+  }
 }
 
-struct sockaddr_un get_sockaddr_unix(char* host) {
-    struct sockaddr_un addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    strcpy(addr.sun_path, host);
-    return addr;
+struct sockaddr_un get_sockaddr_unix(char *host) {
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strcpy(addr.sun_path, host);
+  return addr;
 }
 
 unsigned int idrnet_peek(void *ptr, unsigned int offset) {
-  unsigned char *buf_c = (unsigned char*) ptr;
-  return (unsigned int) buf_c[offset];
+  unsigned char *buf_c = (unsigned char *)ptr;
+  return (unsigned int)buf_c[offset];
 }
 
 void idrnet_poke(void *ptr, unsigned int offset, char val) {
-  char *buf_c = (char*)ptr;
+  char *buf_c = (char *)ptr;
   buf_c[offset] = val;
 }
 
-
 int idrnet_socket(int domain, int type, int protocol) {
 #ifdef _WIN32
-    if (!check_init()) {
-        return -1;
-    }
+  if (!check_init()) {
+    return -1;
+  }
 #endif
-    return socket(domain, type, protocol);
+  return socket(domain, type, protocol);
 }
 
 int idrnet_close(int fd) {
 #ifdef _WIN32
-    return _close(fd);
+  return _close(fd);
 #else
-    return close(fd);
+  return close(fd);
 #endif
 }
 
 // Get the address family constants out of C and into Idris
-int idrnet_af_unspec() {
-    return AF_UNSPEC;
-}
+int idrnet_af_unspec() { return AF_UNSPEC; }
 
-int idrnet_af_unix() {
-    return AF_UNIX;
-}
+int idrnet_af_unix() { return AF_UNIX; }
 
-int idrnet_af_inet() {
-    return AF_INET;
-}
+int idrnet_af_inet() { return AF_INET; }
 
-int idrnet_af_inet6() {
-    return AF_INET6;
-}
+int idrnet_af_inet6() { return AF_INET6; }
 
-// We call this from quite a few functions. Given a textual host and an int port,
-// populates a struct addrinfo.
-int idrnet_getaddrinfo(struct addrinfo** address_res, char* host, int port,
+// We call this from quite a few functions. Given a textual host and an int
+// port, populates a struct addrinfo.
+int idrnet_getaddrinfo(struct addrinfo **address_res, char *host, int port,
                        int family, int socket_type) {
 
-    struct addrinfo hints;
-    // Convert port into string
-    char str_port[8];
-    sprintf(str_port, "%d", port);
+  struct addrinfo hints;
+  // Convert port into string
+  char str_port[8];
+  sprintf(str_port, "%d", port);
 
-    // Set up hints structure
-    memset(&hints, 0, sizeof(hints)); // zero out hints
-    hints.ai_family = family;
-    hints.ai_socktype = socket_type;
+  // Set up hints structure
+  memset(&hints, 0, sizeof(hints)); // zero out hints
+  hints.ai_family = family;
+  hints.ai_socktype = socket_type;
 
-    // If the length of the hostname is 0 (i.e, it was set to Nothing in Idris)
-    // then we want to instruct the C library to fill in the IP automatically
-    if (strlen(host) == 0) {
-        hints.ai_flags = AI_PASSIVE; // fill in IP automatically
-        return getaddrinfo(NULL, str_port, &hints, address_res);
-    }
-    return getaddrinfo(host, str_port, &hints, address_res);
-
+  // If the length of the hostname is 0 (i.e, it was set to Nothing in Idris)
+  // then we want to instruct the C library to fill in the IP automatically
+  if (strlen(host) == 0) {
+    hints.ai_flags = AI_PASSIVE; // fill in IP automatically
+    return getaddrinfo(NULL, str_port, &hints, address_res);
+  }
+  return getaddrinfo(host, str_port, &hints, address_res);
 }
 
-int idrnet_bind(int sockfd, int family, int socket_type, char* host, int port) {
-    int bind_res;
-    if (family == AF_UNIX) {
-        struct sockaddr_un addr = get_sockaddr_unix(host);
-        bind_res = bind(sockfd, (struct sockaddr *)&addr, sizeof(addr));
-    } else {
-        struct addrinfo *address_res;
-        int addr_res = idrnet_getaddrinfo(&address_res, host, port, family, socket_type);
-        if (addr_res != 0) {
-            //printf("Lib err: bind getaddrinfo\n");
-            return -1;
-        }
+int idrnet_bind(int sockfd, int family, int socket_type, char *host, int port) {
+  int bind_res;
+  if (family == AF_UNIX) {
+    struct sockaddr_un addr = get_sockaddr_unix(host);
+    bind_res = bind(sockfd, (struct sockaddr *)&addr, sizeof(addr));
+  } else {
+    struct addrinfo *address_res;
+    int addr_res =
+        idrnet_getaddrinfo(&address_res, host, port, family, socket_type);
+    if (addr_res != 0) {
+      // printf("Lib err: bind getaddrinfo\n");
+      return -1;
+    }
 
-        bind_res = bind(sockfd, address_res->ai_addr, address_res->ai_addrlen);
-    }
-    if (bind_res == -1) {
-        //freeaddrinfo(address_res);
-        //printf("Lib err: bind\n");
-        return -1;
-    }
-    return 0;
+    bind_res = bind(sockfd, address_res->ai_addr, address_res->ai_addrlen);
+  }
+  if (bind_res == -1) {
+    // freeaddrinfo(address_res);
+    // printf("Lib err: bind\n");
+    return -1;
+  }
+  return 0;
 }
 
 // to retrieve information about a socket bound to port 0
 int idrnet_getsockname(int sockfd, void *address, void *len) {
   int res = getsockname(sockfd, address, len);
-  if(res != 0) {
+  if (res != 0) {
     return -1;
   }
 
@@ -164,284 +152,286 @@ int idrnet_getsockname(int sockfd, void *address, void *len) {
 int idrnet_sockaddr_port(int sockfd) {
   struct sockaddr_storage address;
   socklen_t addrlen = sizeof(struct sockaddr_storage);
-  int res = getsockname(sockfd, (struct sockaddr*)&address, &addrlen);
-  if(res < 0) {
+  int res = getsockname(sockfd, (struct sockaddr *)&address, &addrlen);
+  if (res < 0) {
     return -1;
   }
 
-  switch(address.ss_family) {
+  switch (address.ss_family) {
   case AF_INET:
-    return ntohs(((struct sockaddr_in*)&address)->sin_port);
+    return ntohs(((struct sockaddr_in *)&address)->sin_port);
   case AF_INET6:
-    return ntohs(((struct sockaddr_in6*)&address)->sin6_port);
+    return ntohs(((struct sockaddr_in6 *)&address)->sin6_port);
   default:
     return -1;
   }
 }
 
+int idrnet_connect(int sockfd, int family, int socket_type, char *host,
+                   int port) {
+  if (family == AF_UNIX) {
+    struct sockaddr_un addr = get_sockaddr_unix(host);
+    return connect(sockfd, (struct sockaddr *)&addr, sizeof(addr));
+  }
+  struct addrinfo *remote_host;
+  int addr_res =
+      idrnet_getaddrinfo(&remote_host, host, port, family, socket_type);
+  if (addr_res != 0) {
+    return -1;
+  }
 
-int idrnet_connect(int sockfd, int family, int socket_type, char* host, int port) {
-    if (family == AF_UNIX) {
-        struct sockaddr_un addr = get_sockaddr_unix(host);
-        return connect(sockfd, (struct sockaddr *)&addr, sizeof(addr));
-    }
-    struct addrinfo* remote_host;
-    int addr_res = idrnet_getaddrinfo(&remote_host, host, port, family, socket_type);
-    if (addr_res != 0) {
-        return -1;
-    }
-
-    int connect_res = connect(sockfd, remote_host->ai_addr, remote_host->ai_addrlen);
-    if (connect_res == -1) {
-        freeaddrinfo(remote_host);
-        return -1;
-    }
+  int connect_res =
+      connect(sockfd, remote_host->ai_addr, remote_host->ai_addrlen);
+  if (connect_res == -1) {
     freeaddrinfo(remote_host);
-    return 0;
+    return -1;
+  }
+  freeaddrinfo(remote_host);
+  return 0;
 }
 
-int idrnet_listen(int socket, int backlog) {
-    return listen(socket, backlog);
-}
+int idrnet_listen(int socket, int backlog) { return listen(socket, backlog); }
 
-FILE* idrnet_fdopen(int fd, const char* mode) {
+FILE *idrnet_fdopen(int fd, const char *mode) {
 #ifdef _WIN32
-    return _fdopen(fd, mode);
+  return _fdopen(fd, mode);
 #else
-    return fdopen(fd, mode);
+  return fdopen(fd, mode);
 #endif
 }
 
-
-int idrnet_sockaddr_family(void* sockaddr) {
-    struct sockaddr* addr = (struct sockaddr*) sockaddr;
-    return (int) addr->sa_family;
+int idrnet_sockaddr_family(void *sockaddr) {
+  struct sockaddr *addr = (struct sockaddr *)sockaddr;
+  return (int)addr->sa_family;
 }
 
-char* idrnet_sockaddr_ipv4(void* sockaddr) {
-    struct sockaddr_in* addr = (struct sockaddr_in*) sockaddr;
-    char* ip_addr = (char*) malloc(sizeof(char) * INET_ADDRSTRLEN);
-    inet_ntop(AF_INET, &(addr->sin_addr), ip_addr, INET_ADDRSTRLEN);
-    //printf("Lib: ip_addr: %s\n", ip_addr);
-    return ip_addr;
+char *idrnet_sockaddr_ipv4(void *sockaddr) {
+  struct sockaddr_in *addr = (struct sockaddr_in *)sockaddr;
+  char *ip_addr = (char *)malloc(sizeof(char) * INET_ADDRSTRLEN);
+  inet_ntop(AF_INET, &(addr->sin_addr), ip_addr, INET_ADDRSTRLEN);
+  // printf("Lib: ip_addr: %s\n", ip_addr);
+  return ip_addr;
 }
 
-int idrnet_sockaddr_ipv4_port(void* sockaddr) {
-    struct sockaddr_in* addr = (struct sockaddr_in*) sockaddr;
-    return ((int) ntohs(addr->sin_port));
+int idrnet_sockaddr_ipv4_port(void *sockaddr) {
+  struct sockaddr_in *addr = (struct sockaddr_in *)sockaddr;
+  return ((int)ntohs(addr->sin_port));
 }
 
-char* idrnet_sockaddr_unix(void* sockaddr) {
-    struct sockaddr_un* addr = (struct sockaddr_un*) sockaddr;
-    return addr->sun_path;
+char *idrnet_sockaddr_unix(void *sockaddr) {
+  struct sockaddr_un *addr = (struct sockaddr_un *)sockaddr;
+  return addr->sun_path;
 }
 
-void* idrnet_create_sockaddr() {
-    return malloc(sizeof(struct sockaddr_storage));
+void *idrnet_create_sockaddr() {
+  return malloc(sizeof(struct sockaddr_storage));
 }
 
-
-int idrnet_accept(int sockfd, void* sockaddr) {
-    struct sockaddr* addr = (struct sockaddr*) sockaddr;
-    socklen_t addr_size = sizeof(struct sockaddr_storage);
-    return accept(sockfd, addr, &addr_size);
+int idrnet_accept(int sockfd, void *sockaddr) {
+  struct sockaddr *addr = (struct sockaddr *)sockaddr;
+  socklen_t addr_size = sizeof(struct sockaddr_storage);
+  return accept(sockfd, addr, &addr_size);
 }
 
-int idrnet_send(int sockfd, char* data) {
-    int len = strlen(data); // For now.
-    return send(sockfd, (void*) data, len, 0);
+int idrnet_send(int sockfd, char *data) {
+  int len = strlen(data); // For now.
+  return send(sockfd, (void *)data, len, 0);
 }
 
-int idrnet_send_buf(int sockfd, void* data, int len) {
-    void* buf_cpy = malloc(len);
-    memset(buf_cpy, 0, len);
-    memcpy(buf_cpy, data, len);
-    buf_htonl(buf_cpy, len);
-    int res = send(sockfd, buf_cpy, len, 0);
-    free(buf_cpy);
-    return res;
+int idrnet_send_bytes(int sockfd, void *data, int len) {
+  return send(sockfd, (void *)data, len, 0);
 }
 
-void* idrnet_recv(int sockfd, int len) {
-    idrnet_recv_result* res_struct =
-        (idrnet_recv_result*) malloc(sizeof(idrnet_recv_result));
-    char* buf = malloc(len + 1);
-    memset(buf, 0, len + 1);
-    int recv_res = recv(sockfd, buf, len, 0);
-    res_struct->result = recv_res;
-
-    if (recv_res > 0) { // Data was received
-        buf[recv_res + 1] = 0x00; // Null-term, so Idris can interpret it
-    }
-    res_struct->payload = buf;
-    return (void*) res_struct;
+int idrnet_send_buf(int sockfd, void *data, int len) {
+  void *buf_cpy = malloc(len);
+  memset(buf_cpy, 0, len);
+  memcpy(buf_cpy, data, len);
+  buf_htonl(buf_cpy, len);
+  int res = send(sockfd, buf_cpy, len, 0);
+  free(buf_cpy);
+  return res;
 }
 
-int idrnet_recv_buf(int sockfd, void* buf, int len) {
-    int recv_res = recv(sockfd, buf, len, 0);
-    if (recv_res != -1) {
-        buf_ntohl(buf, len);
-    }
-    return recv_res;
+void *idrnet_recv(int sockfd, int len) {
+  idrnet_recv_result *res_struct =
+      (idrnet_recv_result *)malloc(sizeof(idrnet_recv_result));
+  char *buf = malloc(len + 1);
+  memset(buf, 0, len + 1);
+  int recv_res = recv(sockfd, buf, len, 0);
+  res_struct->result = recv_res;
+
+  if (recv_res > 0) {         // Data was received
+    buf[recv_res + 1] = 0x00; // Null-term, so Idris can interpret it
+  }
+  res_struct->payload = buf;
+  return (void *)res_struct;
 }
 
-int idrnet_get_recv_res(void* res_struct) {
-    return (((idrnet_recv_result*) res_struct)->result);
+int idrnet_recv_bytes(int sockfd, void *buf, int len) {
+  return recv(sockfd, buf, len, 0);
 }
 
-char* idrnet_get_recv_payload(void* res_struct) {
-    return (((idrnet_recv_result*) res_struct)->payload);
+int idrnet_recv_buf(int sockfd, void *buf, int len) {
+  int recv_res = recv(sockfd, buf, len, 0);
+  if (recv_res != -1) {
+    buf_ntohl(buf, len);
+  }
+  return recv_res;
 }
 
-void idrnet_free_recv_struct(void* res_struct) {
-    idrnet_recv_result* i_res_struct =
-        (idrnet_recv_result*) res_struct;
-    if (i_res_struct->payload != NULL) {
-        free(i_res_struct->payload);
-    }
-    free(res_struct);
+int idrnet_get_recv_res(void *res_struct) {
+  return (((idrnet_recv_result *)res_struct)->result);
 }
 
-int idrnet_errno() {
-    return errno;
+char *idrnet_get_recv_payload(void *res_struct) {
+  return (((idrnet_recv_result *)res_struct)->payload);
 }
 
-
-int idrnet_sendto(int sockfd, char* data, char* host, int port, int family) {
-
-    struct addrinfo* remote_host;
-    int addr_res = idrnet_getaddrinfo(&remote_host, host, port, family, SOCK_DGRAM);
-    if (addr_res != 0) {
-        return -1;
-    }
-
-    int send_res = sendto(sockfd, data, strlen(data), 0,
-                        remote_host->ai_addr, remote_host->ai_addrlen);
-    freeaddrinfo(remote_host);
-    return send_res;
+void idrnet_free_recv_struct(void *res_struct) {
+  idrnet_recv_result *i_res_struct = (idrnet_recv_result *)res_struct;
+  if (i_res_struct->payload != NULL) {
+    free(i_res_struct->payload);
+  }
+  free(res_struct);
 }
 
-int idrnet_sendto_buf(int sockfd, void* buf, int buf_len, char* host, int port, int family) {
+int idrnet_errno() { return errno; }
 
-    struct addrinfo* remote_host;
-    int addr_res = idrnet_getaddrinfo(&remote_host, host, port, family, SOCK_DGRAM);
-    if (addr_res != 0) {
-        //printf("lib err: sendto getaddrinfo \n");
-        return -1;
-    }
+int idrnet_sendto(int sockfd, char *data, char *host, int port, int family) {
 
-    buf_htonl(buf, buf_len);
-
-    int send_res = sendto(sockfd, buf, buf_len, 0,
-                        remote_host->ai_addr, remote_host->ai_addrlen);
-    if (send_res == -1) {
-        perror("lib err: sendto \n");
-    }
-    //freeaddrinfo(remote_host);
-    return send_res;
-}
-
-
-
-void* idrnet_recvfrom(int sockfd, int len) {
-/*
- * int recvfrom(int sockfd, void *buf, int len, unsigned int flags,
-             struct sockaddr *from, int *fromlen);
-*/
-    // Allocate the required structures, and nuke them
-    struct sockaddr_storage* remote_addr =
-        (struct sockaddr_storage*) malloc(sizeof(struct sockaddr_storage));
-    char* buf = (char*) malloc(len + 1);
-    idrnet_recvfrom_result* ret =
-        (idrnet_recvfrom_result*) malloc(sizeof(idrnet_recvfrom_result));
-    memset(remote_addr, 0, sizeof(struct sockaddr_storage));
-    memset(buf, 0, len + 1);
-    memset(ret, 0, sizeof(idrnet_recvfrom_result));
-    socklen_t fromlen = sizeof(struct sockaddr_storage);
-
-    int recv_res = recvfrom(sockfd, buf, len, 0, (struct sockaddr*) remote_addr, &fromlen);
-    ret->result = recv_res;
-    // Check for failure...
-    if (recv_res == -1) {
-        free(buf);
-        free(remote_addr);
-    } else {
-        // If data was received, process and populate
-        ret->result = recv_res;
-        ret->remote_addr = remote_addr;
-        // Ensure the last byte is NULL, since in this mode we're sending strings
-        buf[len] = 0x00;
-        ret->payload = (void*) buf;
-    }
-
-    return ret;
-}
-
-void* idrnet_recvfrom_buf(int sockfd, void* buf, int len) {
-    // Allocate the required structures, and nuke them
-    struct sockaddr_storage* remote_addr =
-        (struct sockaddr_storage*) malloc(sizeof(struct sockaddr_storage));
-    idrnet_recvfrom_result* ret =
-        (idrnet_recvfrom_result*) malloc(sizeof(idrnet_recvfrom_result));
-    memset(remote_addr, 0, sizeof(struct sockaddr_storage));
-    memset(ret, 0, sizeof(idrnet_recvfrom_result));
-    socklen_t fromlen = 0;
-
-    int recv_res = recvfrom(sockfd, buf, len, 0, (struct sockaddr*) remote_addr, &fromlen);
-    // Check for failure... But don't free the buffer! Not our job.
-    ret->result = recv_res;
-    if (recv_res == -1) {
-        free(remote_addr);
-    }
-    // Payload will be NULL -- since it's been put into the user-specified buffer. We
-    // still need the return struct to get our hands on the remote address, though.
-    if (recv_res > 0) {
-        buf_ntohl(buf, len);
-        ret->payload = NULL;
-        ret->remote_addr = remote_addr;
-    }
-    return ret;
-}
-
-int idrnet_get_recvfrom_res(void* res_struct) {
-    return (((idrnet_recvfrom_result*) res_struct)->result);
-}
-
-char* idrnet_get_recvfrom_payload(void* res_struct) {
-    return (((idrnet_recvfrom_result*) res_struct)->payload);
-}
-
-void* idrnet_get_recvfrom_sockaddr(void* res_struct) {
-    idrnet_recvfrom_result* recv_struct = (idrnet_recvfrom_result*) res_struct;
-    return recv_struct->remote_addr;
-}
-
-int idrnet_get_recvfrom_port(void* res_struct) {
-    idrnet_recvfrom_result* recv_struct = (idrnet_recvfrom_result*) res_struct;
-    if (recv_struct->remote_addr != NULL) {
-        struct sockaddr_in* remote_addr_in =
-            (struct sockaddr_in*) recv_struct->remote_addr;
-        return ((int) ntohs(remote_addr_in->sin_port));
-    }
+  struct addrinfo *remote_host;
+  int addr_res =
+      idrnet_getaddrinfo(&remote_host, host, port, family, SOCK_DGRAM);
+  if (addr_res != 0) {
     return -1;
+  }
+
+  int send_res = sendto(sockfd, data, strlen(data), 0, remote_host->ai_addr,
+                        remote_host->ai_addrlen);
+  freeaddrinfo(remote_host);
+  return send_res;
 }
 
-void idrnet_free_recvfrom_struct(void* res_struct) {
-    idrnet_recvfrom_result* recv_struct = (idrnet_recvfrom_result*) res_struct;
-    if (recv_struct != NULL) {
-        if (recv_struct->payload != NULL) {
-            free(recv_struct->payload);
-        }
-        if (recv_struct->remote_addr != NULL) {
-            free(recv_struct->remote_addr);
-        }
+int idrnet_sendto_buf(int sockfd, void *buf, int buf_len, char *host, int port,
+                      int family) {
+
+  struct addrinfo *remote_host;
+  int addr_res =
+      idrnet_getaddrinfo(&remote_host, host, port, family, SOCK_DGRAM);
+  if (addr_res != 0) {
+    // printf("lib err: sendto getaddrinfo \n");
+    return -1;
+  }
+
+  buf_htonl(buf, buf_len);
+
+  int send_res = sendto(sockfd, buf, buf_len, 0, remote_host->ai_addr,
+                        remote_host->ai_addrlen);
+  if (send_res == -1) {
+    perror("lib err: sendto \n");
+  }
+  // freeaddrinfo(remote_host);
+  return send_res;
+}
+
+void *idrnet_recvfrom(int sockfd, int len) {
+  /*
+   * int recvfrom(int sockfd, void *buf, int len, unsigned int flags,
+               struct sockaddr *from, int *fromlen);
+  */
+  // Allocate the required structures, and nuke them
+  struct sockaddr_storage *remote_addr =
+      (struct sockaddr_storage *)malloc(sizeof(struct sockaddr_storage));
+  char *buf = (char *)malloc(len + 1);
+  idrnet_recvfrom_result *ret =
+      (idrnet_recvfrom_result *)malloc(sizeof(idrnet_recvfrom_result));
+  memset(remote_addr, 0, sizeof(struct sockaddr_storage));
+  memset(buf, 0, len + 1);
+  memset(ret, 0, sizeof(idrnet_recvfrom_result));
+  socklen_t fromlen = sizeof(struct sockaddr_storage);
+
+  int recv_res =
+      recvfrom(sockfd, buf, len, 0, (struct sockaddr *)remote_addr, &fromlen);
+  ret->result = recv_res;
+  // Check for failure...
+  if (recv_res == -1) {
+    free(buf);
+    free(remote_addr);
+  } else {
+    // If data was received, process and populate
+    ret->result = recv_res;
+    ret->remote_addr = remote_addr;
+    // Ensure the last byte is NULL, since in this mode we're sending strings
+    buf[len] = 0x00;
+    ret->payload = (void *)buf;
+  }
+
+  return ret;
+}
+
+void *idrnet_recvfrom_buf(int sockfd, void *buf, int len) {
+  // Allocate the required structures, and nuke them
+  struct sockaddr_storage *remote_addr =
+      (struct sockaddr_storage *)malloc(sizeof(struct sockaddr_storage));
+  idrnet_recvfrom_result *ret =
+      (idrnet_recvfrom_result *)malloc(sizeof(idrnet_recvfrom_result));
+  memset(remote_addr, 0, sizeof(struct sockaddr_storage));
+  memset(ret, 0, sizeof(idrnet_recvfrom_result));
+  socklen_t fromlen = 0;
+
+  int recv_res =
+      recvfrom(sockfd, buf, len, 0, (struct sockaddr *)remote_addr, &fromlen);
+  // Check for failure... But don't free the buffer! Not our job.
+  ret->result = recv_res;
+  if (recv_res == -1) {
+    free(remote_addr);
+  }
+  // Payload will be NULL -- since it's been put into the user-specified buffer.
+  // We still need the return struct to get our hands on the remote address,
+  // though.
+  if (recv_res > 0) {
+    buf_ntohl(buf, len);
+    ret->payload = NULL;
+    ret->remote_addr = remote_addr;
+  }
+  return ret;
+}
+
+int idrnet_get_recvfrom_res(void *res_struct) {
+  return (((idrnet_recvfrom_result *)res_struct)->result);
+}
+
+char *idrnet_get_recvfrom_payload(void *res_struct) {
+  return (((idrnet_recvfrom_result *)res_struct)->payload);
+}
+
+void *idrnet_get_recvfrom_sockaddr(void *res_struct) {
+  idrnet_recvfrom_result *recv_struct = (idrnet_recvfrom_result *)res_struct;
+  return recv_struct->remote_addr;
+}
+
+int idrnet_get_recvfrom_port(void *res_struct) {
+  idrnet_recvfrom_result *recv_struct = (idrnet_recvfrom_result *)res_struct;
+  if (recv_struct->remote_addr != NULL) {
+    struct sockaddr_in *remote_addr_in =
+        (struct sockaddr_in *)recv_struct->remote_addr;
+    return ((int)ntohs(remote_addr_in->sin_port));
+  }
+  return -1;
+}
+
+void idrnet_free_recvfrom_struct(void *res_struct) {
+  idrnet_recvfrom_result *recv_struct = (idrnet_recvfrom_result *)res_struct;
+  if (recv_struct != NULL) {
+    if (recv_struct->payload != NULL) {
+      free(recv_struct->payload);
     }
+    if (recv_struct->remote_addr != NULL) {
+      free(recv_struct->remote_addr);
+    }
+  }
 }
 
-int idrnet_geteagain() {
-    return EAGAIN;
-}
+int idrnet_geteagain() { return EAGAIN; }
 
-int isNull(void* ptr) {
-    return ptr==NULL;
-}
+int isNull(void *ptr) { return ptr == NULL; }

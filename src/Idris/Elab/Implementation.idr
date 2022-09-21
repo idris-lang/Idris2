@@ -1,6 +1,5 @@
 module Idris.Elab.Implementation
 
-import Core.Binary
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -9,20 +8,21 @@ import Core.Metadata
 import Core.TT
 import Core.Unify
 
-import Idris.Resugar
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.BindImplicits
-import TTImp.Elab
 import TTImp.Elab.Check
+import TTImp.Elab
 import TTImp.ProcessDecls
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
 import Control.Monad.State
-import Libraries.Data.ANameMap
 import Data.List
+import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 
 %default covering
@@ -38,7 +38,7 @@ export
 mkImplName : FC -> Name -> List RawImp -> Name
 mkImplName fc n ps
     = DN (show n ++ " implementation at " ++ replaceSep (show fc))
-         (UN ("__Impl_" ++ show n ++ "_" ++
+         (UN $ Basic ("__Impl_" ++ show n ++ "_" ++
           showSep "_" (map show ps)))
 
 bindConstraints : FC -> PiInfo RawImp ->
@@ -47,10 +47,10 @@ bindConstraints fc p [] ty = ty
 bindConstraints fc p ((n, ty) :: rest) sc
     = IPi fc top p n ty (bindConstraints fc p rest sc)
 
-bindImpls : FC -> List (Name, RigCount, RawImp) -> RawImp -> RawImp
-bindImpls fc [] ty = ty
-bindImpls fc ((n, r, ty) :: rest) sc
-    = IPi fc r Implicit (Just n) ty (bindImpls fc rest sc)
+bindImpls : List (FC, RigCount, Name, RawImp) -> RawImp -> RawImp
+bindImpls [] ty = ty
+bindImpls ((fc, r, n, ty) :: rest) sc
+    = IPi fc r Implicit (Just n) ty (bindImpls rest sc)
 
 addDefaults : FC -> Name ->
               (params : List (Name, RawImp)) -> -- parameters have been specialised, use them!
@@ -63,7 +63,7 @@ addDefaults fc impName params allms defs body
           extendBody [] missing body
   where
     specialiseMeth : Name -> (Name, RawImp)
-    specialiseMeth n = (n, INamedApp fc (IVar fc n) (UN "__con") (IVar fc impName))
+    specialiseMeth n = (n, INamedApp fc (IVar fc n) (UN $ Basic "__con") (IVar fc impName))
     -- Given the list of missing names, if any are among the default definitions,
     -- add them to the body
     extendBody : List Name -> List Name -> List ImpDecl ->
@@ -101,7 +101,7 @@ getMethImps : {vars : _} ->
               Env Term vars -> Term vars ->
               Core (List (Name, RigCount, RawImp))
 getMethImps env (Bind fc x (Pi fc' c Implicit ty) sc)
-    = do rty <- unelabNoSugar env ty
+    = do rty <- map (map rawName) $ unelabNoSugar env ty
          ts <- getMethImps (Pi fc' c Implicit ty :: env) sc
          pure ((x, c, rty) :: ts)
 getMethImps env tm = pure []
@@ -112,9 +112,10 @@ elabImplementation : {vars : _} ->
                      {auto u : Ref UST UState} ->
                      {auto s : Ref Syn SyntaxInfo} ->
                      {auto m : Ref MD Metadata} ->
+                     {auto o : Ref ROpts REPLOpts} ->
                      FC -> Visibility -> List FnOpt -> Pass ->
                      Env Term vars -> NestedNames vars ->
-                     (implicits : List (Name, RigCount, RawImp)) ->
+                     (implicits : List (FC, RigCount, Name, RawImp)) ->
                      (constraints : List (Maybe Name, RawImp)) ->
                      Name ->
                      (ps : List RawImp) ->
@@ -138,8 +139,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
          inames <- lookupCtxtName iname (gamma defs)
          let [cndata] = concatMap (\n => lookupName n (ifaces syn))
                                   (map fst inames)
-             | [] => undefinedName vfc iname
-             | ns => throw (AmbiguousName vfc (map fst ns))
+             | ns => ambiguousName vfc iname (map fst ns)
          let cn : Name = fst cndata
          let cdata : IFaceInfo = snd cndata
 
@@ -171,7 +171,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                        then [Inline]
                        else [Inline, Hint True]
 
-         let initTy = bindImpls vfc is $ bindConstraints vfc AutoImplicit cons
+         let initTy = bindImpls is $ bindConstraints vfc AutoImplicit cons
                          (apply (IVar vfc iname) ps)
          let paramBinds = if !isUnboundImplicits
                           then findBindableNames True vars [] initTy
@@ -182,7 +182,25 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
 
          log "elab.implementation" 5 $ "Implementation type: " ++ show impTy
 
-         when (typePass pass) $ processDecl [] nest env impTyDecl
+         -- Handle the case where it was already declared with a Nothing mbody
+         when (typePass pass) $ do
+           gdefm <- lookupCtxtExactI impName (gamma defs)
+           case gdefm of
+              Nothing => processDecl [] nest env impTyDecl
+              -- If impName exists, check that it is a forward declaration of the same type
+              Just (tidx,gdef) =>
+                do u <- uniVar vfc
+                   -- If the definition is filled in, it wasn't a forward declaration
+                   let None = definition gdef
+                     | _ => throw (AlreadyDefined vfc impName)
+                   (ty,_) <- elabTerm tidx InType [] nest env
+                                      (IBindHere vfc (PI erased) impTy)
+                                      (Just (gType vfc u))
+                   let fullty = abstractFullEnvType vfc env ty
+                   ok <- convert defs [] fullty (type gdef)
+                   unless ok $ do logTermNF "elab.implementation" 1 "Previous" [] (type gdef)
+                                  logTermNF "elab.implementation" 1 "Now" [] fullty
+                                  throw (CantConvert (getFC impTy) (gamma defs) [] fullty (type gdef))
 
          -- If the body is empty, we're done for now (just declaring that
          -- the implementation exists and define it later)
@@ -249,7 +267,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                -- Update nested names so we elaborate the body in the right
                -- environment
                names' <- traverse applyEnv (impName :: mtops)
-               let nest' = record { names $= (names' ++) } nest
+               let nest' = { names $= (names' ++) } nest
 
                traverse_ (processDecl [] nest' env) [impFn]
                unsetFlag vfc impName BlockedHint
@@ -341,19 +359,19 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
               mkLam argns
                     (impsApply
                          (applyTo (IVar EmptyFC n) argns)
-                         (map (\n => (n, IVar vfc (UN (show n)))) imps))
+                         (map (\n => (n, IVar vfc (UN (Basic $ show n)))) imps))
       where
         applyUpdate : (Name, RigCount, PiInfo RawImp) ->
                       (Name, RigCount, PiInfo RawImp)
-        applyUpdate (UN n, c, p)
-            = maybe (UN n, c, p) (\n' => (UN n', c, p)) (lookup n upds)
+        applyUpdate (UN (Basic n), c, p)
+            = maybe (UN (Basic n), c, p) (\n' => (UN (Basic n'), c, p)) (lookup n upds)
         applyUpdate t = t
 
     methName : Name -> Name
     methName (NS _ n) = methName n
     methName n
         = DN (show n)
-             (UN (show n ++ "_" ++ show iname ++ "_" ++
+             (UN $ Basic (show n ++ "_" ++ show iname ++ "_" ++
                      (if named then show impName_in else "") ++
                      showSep "_" (map show ps)))
 
@@ -449,9 +467,8 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
     -- top level method name to current implementation's method name
     methNameUpdate : (Name, Name, t) -> (Name, Name)
     methNameUpdate (UN mn, fn, _) = (UN mn, fn)
-    methNameUpdate (RF mn, fn, _) = (RF mn, fn)
     methNameUpdate (NS _ mn, fn, p) = methNameUpdate (mn, fn, p)
-    methNameUpdate (mn, fn, p) = (UN (nameRoot mn), fn) -- probably impossible
+    methNameUpdate (mn, fn, p) = (UN (Basic $ nameRoot mn), fn) -- probably impossible
 
 
     findMethName : List (Name, Name) -> FC -> Name -> Core Name
@@ -483,10 +500,10 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
     updateClause ns (PatClause fc lhs rhs)
         = do lhs' <- updateApp ns lhs
              pure (PatClause fc lhs' rhs)
-    updateClause ns (WithClause fc lhs wval prf flags cs)
+    updateClause ns (WithClause fc lhs rig wval prf flags cs)
         = do lhs' <- updateApp ns lhs
              cs' <- traverse (updateClause ns) cs
-             pure (WithClause fc lhs' wval prf flags cs')
+             pure (WithClause fc lhs' rig wval prf flags cs')
     updateClause ns (ImpossibleClause fc lhs)
         = do lhs' <- updateApp ns lhs
              pure (ImpossibleClause fc lhs')
@@ -509,7 +526,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                      "Adding transform for " ++ show meth.name ++ " : " ++ show meth.type ++
                      "\n\tfor " ++ show iname ++ " in " ++ show ns
              let lhs = INamedApp vfc (IVar vfc meth.name)
-                                     (UN "__con")
+                                     (UN $ Basic "__con")
                                      (IVar vfc iname)
              let Just mname = lookup (dropNS meth.name) ns
                  | Nothing => pure ()
@@ -517,7 +534,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
              log "elab.implementation" 5 $ show lhs ++ " ==> " ++ show rhs
              handleUnify
                  (processDecl [] nest env
-                     (ITransform vfc (UN (show meth.name ++ " " ++ show iname)) lhs rhs))
+                     (ITransform vfc (UN $ Basic (show meth.name ++ " " ++ show iname)) lhs rhs))
                  (\err =>
                      log "elab.implementation" 5 $ "Can't add transform " ++
                                 show lhs ++ " ==> " ++ show rhs ++

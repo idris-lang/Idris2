@@ -1,3 +1,4 @@
+||| Managing error codes.
 module System.Errno
 
 %default total

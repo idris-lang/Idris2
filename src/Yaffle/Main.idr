@@ -1,29 +1,22 @@
 module Yaffle.Main
 
-import Parser.Source
-
+import Compiler.Common
 import Core.Binary
 import Core.Context
 import Core.Directory
-import Core.Env
 import Core.FC
 import Core.InitPrimitives
 import Core.Metadata
-import Core.Normalise
-import Core.Options
-import Core.TT
 import Core.UnifyState
 import Libraries.Utils.Path
 
-import TTImp.Parser
+import Idris.REPL.Opts
+import Idris.Syntax
+
 import TTImp.ProcessDecls
-import TTImp.TTImp
 
 import Yaffle.REPL
 
-import Data.List
-import Data.So
-import Data.String
 import System
 
 %default covering
@@ -31,9 +24,9 @@ import System
 usage : String
 usage = "Usage: yaffle <input file> [--timing]"
 
-processArgs : List String -> Core Bool
-processArgs [] = pure False
-processArgs ["--timing"] = pure True
+processArgs : List String -> Core (Maybe Nat)
+processArgs [] = pure Nothing
+processArgs ["--timing"] = pure (Just 10)
 processArgs _
     = coreLift $ do ignore $ putStrLn usage
                     exitWith (ExitFailure 1)
@@ -51,7 +44,9 @@ yaffleMain sourceFileName args
          modIdent <- ctxtPathToNS sourceFileName
          m <- newRef MD (initMetadata (PhysicalIdrSrc modIdent))
          u <- newRef UST initUState
-         setLogTimings t
+         s <- newRef Syn initSyntax
+         o <- newRef ROpts (defaultOpts (Just sourceFileName) (REPL ErrorLvl) [])
+         whenJust t $ setLogTimings
          addPrimitives
          case extension sourceFileName of
               Just "ttc" => do coreLift_ $ putStrLn "Processing as TTC"
@@ -64,9 +59,7 @@ yaffleMain sourceFileName args
                             ttcFileName <- getTTCFileName sourceFileName "ttc"
                             writeToTTC () sourceFileName ttcFileName
                             coreLift_ $ putStrLn "Written TTC"
-         ust <- get UST
-
-         repl {c} {u}
+         repl {c} {u} {s} {o}
 
 ymain : IO ()
 ymain

@@ -3,7 +3,6 @@ module Compiler.Scheme.Chez
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Generated
-import Compiler.Inline
 import Compiler.Scheme.Common
 
 import Core.Context
@@ -12,7 +11,7 @@ import Core.Directory
 import Core.Name
 import Core.Options
 import Core.TT
-import Libraries.Utils.Hex
+import Protocol.Hex
 import Libraries.Utils.Path
 
 import Data.List
@@ -22,13 +21,12 @@ import Data.String
 import Data.Vect
 
 import Idris.Env
+import Idris.Syntax
 
 import System
 import System.Directory
-import System.File
 import System.Info
 
-import Libraries.Data.NameMap
 import Libraries.Data.Version
 import Libraries.Utils.String
 
@@ -39,7 +37,7 @@ findChez : IO String
 findChez
     = do Nothing <- idrisGetEnv "CHEZ"
             | Just chez => pure chez
-         path <- pathLookup ["chez", "chezscheme", "chezscheme9.5", "scheme"]
+         path <- pathLookup ["chez", "chezscheme", "chez-scheme", "chezscheme9.5", "scheme"]
          pure $ fromMaybe "/usr/bin/env scheme" path
 
 ||| Returns the chez scheme version for given executable
@@ -54,7 +52,7 @@ chezVersion chez = do
         | Left err => pure Nothing
     Right output <- fGetLine fh
         | Left err => pure Nothing
-    pclose fh
+    ignore $ pclose fh
     pure $ parseVersion output
   where
   cmd : String
@@ -87,28 +85,33 @@ schHeader : String -> List String -> Bool -> String
 schHeader chez libs whole
   = (if os /= "windows"
         then "#!" ++ chez ++ (if whole then " --program\n\n" else " --script\n\n")
-        else "") ++
-    "; " ++ (generatedString "Chez") ++ "\n" ++
-    "(import (chezscheme))\n" ++
-    "(case (machine-type)\n" ++
-    "  [(i3fb ti3fb a6fb ta6fb) #f]\n" ++
-    "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
-    "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
-    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")]\n" ++
-    "  [else (load-shared-object \"libc.so\")])\n\n" ++
-    showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeStringChez x ++ "\")") libs) ++ "\n\n" ++
-    if whole
-       then "(let ()\n"
-       else "(source-directories (cons (getenv \"IDRIS2_INC_SRC\") (source-directories)))\n"
+        else "") ++ """
+    ;; \{ generatedString "Chez" }
+    (import (chezscheme))
+    (case (machine-type)
+      [(i3fb ti3fb a6fb ta6fb) #f]
+      [(i3le ti3le a6le ta6le tarm64le) (load-shared-object "libc.so.6")]
+      [(i3osx ti3osx a6osx ta6osx tarm64osx) (load-shared-object "libc.dylib")]
+      [(i3nt ti3nt a6nt ta6nt) (load-shared-object "msvcrt.dll")]
+      [else (load-shared-object "libc.so")])
+
+    \{ showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeStringChez x ++ "\")") libs) }
+
+    \{ ifThenElse whole
+                  "(let ()"
+                  "(source-directories (cons (getenv \"IDRIS2_INC_SRC\") (source-directories)))"
+     }
+
+    """
 
 schFooter : Bool -> Bool -> String
-schFooter prof whole
-    = "(collect 4)\n(blodwen-run-finalisers)\n" ++
-      (if prof
-          then "(profile-dump-html)"
-          else "") ++
-      (if whole
-          then ")\n" else "\n")
+schFooter prof whole = """
+
+    (collect 4)
+    (blodwen-run-finalisers)
+    \{ ifThenElse prof "(profile-dump-html)" "" }
+    \{ ifThenElse whole ")" "" }
+  """
 
 showChezChar : Char -> String -> String
 showChezChar '\\' = ("\\\\" ++)
@@ -128,7 +131,7 @@ chezString cs = strCons '"' (showChezString (unpack cs) "\"")
 
 mutual
   handleRet : String -> String -> String
-  handleRet "void" op = op ++ " " ++ mkWorld (schConstructor chezString (UN "") (Just 0) [])
+  handleRet "void" op = op ++ " " ++ mkWorld (schConstructor chezString (UN $ Basic "") (Just 0) [])
   handleRet _ op = mkWorld op
 
   getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))
@@ -385,48 +388,56 @@ getFgnCall version (n, fc, d) = schFgnDef fc n d version
 
 export
 startChezPreamble : String
-startChezPreamble = unlines
-    [ "#!/bin/sh"
-    , "# " ++ (generatedString "Chez")
-    , ""
-    , "set -e # exit on any error"
-    , ""
-    , "if [ \"$(uname)\" = Darwin ]; then"
-    , "  DIR=$(zsh -c 'printf %s \"$0:A:h\"' \"$0\")"
-    , "else"
-    , "  DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
-    , "fi"
-    , ""  -- so that the preamble ends with a newline
-    ]
+startChezPreamble = """
+  #!/bin/sh
+  # \{ generatedString "Chez" }
+
+  set -e # exit on any error
+
+  if [ "$(uname)" = Darwin ]; then
+    DIR=$(zsh -c 'printf %s "$0:A:h"' "$0")
+  else
+    DIR=$(dirname "$(readlink -f -- "$0")")
+  fi
+
+  """
 
 startChez : String -> String -> String
-startChez appdir target = startChezPreamble ++ unlines
-    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ ":$LD_LIBRARY_PATH\""
-    , "export IDRIS2_INC_SRC=\"$DIR/" ++ appdir ++ "\""
-    , "\"$DIR/" ++ target ++ "\" \"$@\""
-    ]
+startChez appdir target = startChezPreamble ++ """
+  export LD_LIBRARY_PATH="$DIR/\{ appdir }:$LD_LIBRARY_PATH"
+  export DYLD_LIBRARY_PATH="$DIR/\{ appdir }:$DYLD_LIBRARY_PATH"
+  export IDRIS2_INC_SRC="$DIR/\{ appdir }"
+
+  "$DIR/\{ target }" "$@"
+  """
 
 startChezCmd : String -> String -> String -> String -> String
-startChezCmd chez appdir target progType = unlines
-    [ "@echo off"
-    , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%" ++ appdir ++ ";%PATH%"
-    , "set IDRIS2_INC_SRC=%APPDIR%" ++ appdir
-    , "\"" ++ chez ++ "\" " ++ progType ++ " \"%APPDIR%" ++ target ++ "\" %*"
-    ]
+startChezCmd chez appdir target progType = """
+  @echo off
+
+  rem \{ generatedString "Chez" }
+
+  set APPDIR=%~dp0
+  set PATH=%APPDIR%\{ appdir };%PATH%
+  set IDRIS2_INC_SRC=%APPDIR%\{ appdir }
+
+  "\{ chez }" \{ progType } "%APPDIR%\{ target }" %*
+  """
 
 startChezWinSh : String -> String -> String -> String -> String
-startChezWinSh chez appdir target progType = unlines
-    [ "#!/bin/sh"
-    , "# " ++ (generatedString "Chez")
-    , ""
-    , "set -e # exit on any error"
-    , ""
-    , "DIR=$(dirname \"$(readlink -f -- \"$0\" || cygpath -a -- \"$0\")\")"
-    , "PATH=\"$DIR/" ++ appdir ++ ":$PATH\""
-    , "export IDRIS2_INC_SRC=\"$DIR/" ++ appdir ++ "\""
-    , "\"" ++ chez ++ "\" " ++ progType ++ " \"$DIR/" ++ target ++ "\" \"$@\""
-    ]
+startChezWinSh chez appdir target progType = """
+  #!/bin/sh
+  # \{ generatedString "Chez" }
+
+  set -e # exit on any error
+
+  DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
+  PATH="$DIR/\{ appdir }:$PATH"
+
+  export IDRIS2_INC_SRC="$DIR/\{ appdir }"
+
+  "\{ chez }" \{ progType } "$DIR/\{ target }" "$@"
+  """
 
 ||| Compile a TT expression to Chez Scheme
 compileToSS : Ref Ctxt Defs ->
@@ -449,7 +460,7 @@ compileToSS c prof appdir tm outfile
          loadlibs <- traverse (loadLib appdir) (mapMaybe fst fgndefs)
 
          compdefs <- traverse (getScheme chezExtPrim chezString) ndefs
-         let code = fastAppend (map snd fgndefs ++ compdefs)
+         let code = fastConcat (map snd fgndefs ++ compdefs)
          main <- schExp chezExtPrim chezString 0 ctm
          support <- readDataFile "chez/support.ss"
          extraRuntime <- getExtraRuntime ds
@@ -461,7 +472,6 @@ compileToSS c prof appdir tm outfile
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)
          coreLift_ $ chmodRaw outfile 0o755
-         pure ()
 
 ||| Compile a Chez Scheme source file to an executable, daringly with runtime checks off.
 compileToSO : {auto c : Ref Ctxt Defs} ->
@@ -525,9 +535,13 @@ makeShWindows chez outShRel appdir outAbs progType
             | Left err => throw (FileErr outShRel err)
          pure ()
 
-compileExprWhole : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-                   ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExprWhole makeitso c tmpDir outputDir tm outfile
+compileExprWhole :
+  Bool ->
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> (outputDir : String) ->
+  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExprWhole makeitso c s tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
          coreLift_ $ mkdirAll appDirGen
@@ -540,7 +554,7 @@ compileExprWhole makeitso c tmpDir outputDir tm outfile
          chez <- coreLift $ findChez
          let prof = profile !getSession
          compileToSS c (makeitso && prof) appDirGen tm outSsAbs
-         logTime "++ Make SO" $ when makeitso $
+         logTime 2 "Make SO" $ when makeitso $
            compileToSO prof chez appDirGen outSsAbs
          let outShRel = outputDir </> outfile
          if isWindows
@@ -549,14 +563,18 @@ compileExprWhole makeitso c tmpDir outputDir tm outfile
          coreLift_ $ chmodRaw outShRel 0o755
          pure (Just outShRel)
 
-compileExprInc : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-                 ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExprInc makeitso c tmpDir outputDir tm outfile
+compileExprInc :
+  Bool ->
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> (outputDir : String) ->
+  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExprInc makeitso c s tmpDir outputDir tm outfile
     = do defs <- get Ctxt
          let Just (mods, libs) = lookup Chez (allIncData defs)
              | Nothing =>
                  do coreLift $ putStrLn $ "Missing incremental compile data, reverting to whole program compilation"
-                    compileExprWhole makeitso c tmpDir outputDir tm outfile
+                    compileExprWhole makeitso c s tmpDir outputDir tm outfile
          let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
          coreLift_ $ mkdirAll appDirGen
@@ -576,26 +594,34 @@ compileExprInc makeitso c tmpDir outputDir tm outfile
          pure (Just outShRel)
 
 ||| Chez Scheme implementation of the `compileExpr` interface.
-compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-              ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr makeitso c tmpDir outputDir tm outfile
-    = do s <- getSession
-         if not (wholeProgram s) && (Chez `elem` incrementalCGs !getSession)
-            then compileExprInc makeitso c tmpDir outputDir tm outfile
-            else compileExprWhole makeitso c tmpDir outputDir tm outfile
+compileExpr :
+  Bool ->
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> (outputDir : String) ->
+  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExpr makeitso c s tmpDir outputDir tm outfile
+    = do sesh <- getSession
+         if not (wholeProgram sesh) && (Chez `elem` incrementalCGs sesh)
+            then compileExprInc makeitso c s tmpDir outputDir tm outfile
+            else compileExprWhole makeitso c s tmpDir outputDir tm outfile
 
 ||| Chez Scheme implementation of the `executeExpr` interface.
 ||| This implementation simply runs the usual compiler, saving it to a temp file, then interpreting it.
-executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c tmpDir tm
-    = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpchez"
+executeExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> ClosedTerm -> Core ()
+executeExpr c s tmpDir tm
+    = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpchez"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
          coreLift_ $ system sh
-         pure ()
 
-incCompile : Ref Ctxt Defs ->
-             (sourceFile : String) -> Core (Maybe (String, List String))
-incCompile c sourceFile
+incCompile :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (sourceFile : String) -> Core (Maybe (String, List String))
+incCompile c s sourceFile
     = do
          ssFile <- getTTCFileName sourceFile "ss"
          soFile <- getTTCFileName sourceFile "so"
@@ -617,7 +643,7 @@ incCompile c sourceFile
                version <- coreLift $ chezVersion chez
                fgndefs <- traverse (getFgnCall version) ndefs
                compdefs <- traverse (getScheme chezExtPrim chezString) ndefs
-               let code = fastAppend (map snd fgndefs ++ compdefs)
+               let code = fastConcat (map snd fgndefs ++ compdefs)
                Right () <- coreLift $ writeFile ssFile code
                   | Left err => throw (FileErr ssFile err)
 

@@ -1,5 +1,16 @@
-1/1: Building Test (Test.idr)
-Main> ZERO
+ZERO
 SEVENTEEN
-Main> 
-Bye for now!
+Hello "world" $PATH %PATH% \" `echo 'Uh, oh'`
+Hello "world" $PATH %PATH% \" `echo 'Uh, oh'`
+Hello
+world
+Hello
+world
+ZERO
+SEVENTEEN
+Hello "world" $PATH %PATH% \" `echo 'Uh, oh'`
+Hello "world" $PATH %PATH% \" `echo 'Uh, oh'`
+Hello
+world
+Hello
+world

@@ -5,8 +5,11 @@ import Compiler.ANF
 import Compiler.CompileExpr
 import Compiler.Inline
 import Compiler.LambdaLift
+import Compiler.NoMangle
+import Compiler.Opts.CSE
 import Compiler.VMCode
 
+import Core.Binary.Prims
 import Core.Context
 import Core.Context.Log
 import Core.Directory
@@ -14,19 +17,18 @@ import Core.Options
 import Core.TT
 import Core.TTC
 import Libraries.Data.IOArray
-import Libraries.Utils.Binary
-import Libraries.Utils.Path
+import Libraries.Utils.Scheme
 
 import Data.List
 import Data.List1
 import Libraries.Data.NameMap
 import Data.String as String
 
+import Idris.Syntax
 import Idris.Env
 
 import System.Directory
 import System.Info
-import System.File
 
 %default covering
 
@@ -35,17 +37,19 @@ public export
 record Codegen where
   constructor MkCG
   ||| Compile an Idris 2 expression, saving it to a file.
-  compileExpr : Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
+  compileExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
+                (tmpDir : String) -> (outputDir : String) ->
                 ClosedTerm -> (outfile : String) -> Core (Maybe String)
   ||| Execute an Idris 2 expression directly.
-  executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
+  executeExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
+                (tmpDir : String) -> ClosedTerm -> Core ()
   ||| Incrementally compile definitions in the current module (toIR defs)
   ||| if supported
   ||| Takes a source file name, returns the name of the generated object
   ||| file, if successful, plus any other backend specific data in a list
   ||| of strings. The generated object file should be placed in the same
   ||| directory as the associated TTC.
-  incCompileFile : Maybe (Ref Ctxt Defs ->
+  incCompileFile : Maybe (Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
                           (sourcefile : String) ->
                           Core (Maybe (String, List String)))
   ||| If incremental compilation is supported, get the output file extension
@@ -77,6 +81,10 @@ record CompileData where
   constructor MkCompileData
   mainExpr : CExp [] -- main expression to execute. This also appears in
                      -- the definitions below as MN "__mainExpression" 0
+                     -- For incremental compilation and for compiling exported
+                     -- names only, this can be set to 'erased'.
+  exported : List (Name, String) -- names to be made accessible to the foreign
+                     -- and what they should be called in that language
   namedDefs : List (Name, FC, NamedDef)
   lambdaLifted : List (Name, LiftedDef)
        -- ^ lambda lifted definitions, if required. Only the top level names
@@ -94,37 +102,39 @@ record CompileData where
 ||| that executes the `compileExpr` method of the Codegen
 export
 compile : {auto c : Ref Ctxt Defs} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           Codegen ->
           ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compile {c} cg tm out
+compile {c} {s} cg tm out
     = do d <- getDirs
          let tmpDir = execBuildDir d
          let outputDir = outputDirWithDefault d
          ensureDirectoryExists tmpDir
          ensureDirectoryExists outputDir
-         logTime "+ Code generation overall" $
-             compileExpr cg c tmpDir outputDir tm out
+         logTime 1 "Code generation overall" $
+             compileExpr cg c s tmpDir outputDir tm out
 
 ||| execute
 ||| As with `compile`, produce a functon that executes
 ||| the `executeExpr` method of the given Codegen
 export
 execute : {auto c : Ref Ctxt Defs} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           Codegen -> ClosedTerm -> Core ()
-execute {c} cg tm
+execute {c} {s} cg tm
     = do d <- getDirs
          let tmpDir = execBuildDir d
          ensureDirectoryExists tmpDir
-         executeExpr cg c tmpDir tm
-         pure ()
+         executeExpr cg c s tmpDir tm
 
 export
 incCompile : {auto c : Ref Ctxt Defs} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              Codegen -> String -> Core (Maybe (String, List String))
-incCompile {c} cg src
+incCompile {c} {s} cg src
     = do let Just inc = incCompileFile cg
              | Nothing => pure Nothing
-         inc c src
+         inc c s src
 
 -- If an entry isn't already decoded, get the minimal entry we need for
 -- compilation, and record the Binary so that we can put it back when we're
@@ -143,10 +153,11 @@ getMinimalDef (Coded ns bin)
              = MkGlobalDef fc name (Erased fc False) [] [] [] [] mul
                            [] Public (MkTotality Unchecked IsCovering)
                            [] Nothing refsR False False True
-                           None cdef Nothing []
+                           None cdef Nothing [] Nothing
          pure (def, Just (ns, bin))
 
 -- ||| Recursively get all calls in a function definition
+-- ||| Note: this only checks resolved names
 getAllDesc : {auto c : Ref Ctxt Defs} ->
              List Name -> -- calls to check
              IOArray (Int, Maybe (Namespace, Binary)) ->
@@ -162,7 +173,8 @@ getAllDesc (n@(Resolved i) :: rest) arr defs
   = do Nothing <- coreLift $ readArray arr i
            | Just _ => getAllDesc rest arr defs
        case !(lookupContextEntry n (gamma defs)) of
-            Nothing => getAllDesc rest arr defs
+            Nothing => do log "compile.execute" 20 $ "Couldn't find " ++ show n
+                          getAllDesc rest arr defs
             Just (_, entry) =>
               do (def, bin) <- getMinimalDef entry
                  ignore $ addDef n def
@@ -172,25 +184,25 @@ getAllDesc (n@(Resolved i) :: rest) arr defs
                             let refs = refersToRuntime def
                             refs' <- traverse toResolvedNames (keys refs)
                             getAllDesc (refs' ++ rest) arr defs
-                    else getAllDesc rest arr defs
+                    else do log "compile.execute" 20
+                               $ "Dropping " ++ show n ++ " because it's erased"
+                            getAllDesc rest arr defs
 getAllDesc (n :: rest) arr defs
-  = getAllDesc rest arr defs
+  = do log "compile.execute" 20 $
+         "Ignoring " ++ show n ++ " because it's not a Resolved name"
+       getAllDesc rest arr defs
 
 warnIfHole : Name -> NamedDef -> Core ()
 warnIfHole n (MkNmError _)
     = coreLift $ putStrLn $ "Warning: compiling hole " ++ show n
 warnIfHole n _ = pure ()
 
-getNamedDef : {auto c : Ref Ctxt Defs} ->
-              Name -> Core (Maybe (Name, FC, NamedDef))
-getNamedDef n
-    = do defs <- get Ctxt
-         case !(lookupCtxtExact n (gamma defs)) of
-              Nothing => pure Nothing
-              Just def => case namedcompexpr def of
-                               Nothing => pure Nothing
-                               Just d => do warnIfHole n d
-                                            pure (Just (n, location def, d))
+getNamedDef :  {auto c : Ref Ctxt Defs}
+            -> (Name,FC,CDef)
+            -> Core (Name, FC, NamedDef)
+getNamedDef (n,fc,cdef) =
+  let ndef = forgetDef cdef
+   in warnIfHole n ndef >> pure (n,fc,ndef)
 
 replaceEntry : {auto c : Ref Ctxt Defs} ->
                (Int, Maybe (Namespace, Binary)) -> Core ()
@@ -200,37 +212,15 @@ replaceEntry (i, Just (ns, b))
 
 natHackNames : List Name
 natHackNames
-    = [UN "prim__add_Integer",
-       UN "prim__sub_Integer",
-       UN "prim__mul_Integer",
-       NS typesNS (UN "prim__integerToNat")]
+    = [UN (Basic "prim__add_Integer"),
+       UN (Basic "prim__sub_Integer"),
+       UN (Basic "prim__mul_Integer"),
+       NS typesNS (UN $ Basic "prim__integerToNat")]
 
--- Hmm, these dump functions are all very similar aren't they...
-dumpCases : Defs -> String -> List Name ->
-            Core ()
-dumpCases defs fn cns
-    = do cstrs <- traverse dumpCase cns
-         Right () <- coreLift $ writeFile fn (fastAppend cstrs)
-               | Left err => throw (FileErr fn err)
-         pure ()
-  where
-    fullShow : Name -> String
-    fullShow (DN _ n) = show n
-    fullShow n = show n
-
-    dumpCase : Name -> Core String
-    dumpCase n
-        = case !(lookupCtxtExact n (gamma defs)) of
-               Nothing => pure ""
-               Just d =>
-                    case namedcompexpr d of
-                         Nothing => pure ""
-                         Just def => pure (fullShow n ++ " = " ++ show def ++ "\n")
-
-dumpLifted : String -> List (Name, LiftedDef) -> Core ()
-dumpLifted fn lns
+dumpIR : Show def => String -> List (Name, def) -> Core ()
+dumpIR fn lns
     = do let cstrs = map dumpDef lns
-         Right () <- coreLift $ writeFile fn (fastAppend cstrs)
+         Right () <- coreLift $ writeFile fn (fastConcat cstrs)
                | Left err => throw (FileErr fn err)
          pure ()
   where
@@ -238,36 +228,9 @@ dumpLifted fn lns
     fullShow (DN _ n) = show n
     fullShow n = show n
 
-    dumpDef : (Name, LiftedDef) -> String
+    dumpDef : (Name, def) -> String
     dumpDef (n, d) = fullShow n ++ " = " ++ show d ++ "\n"
 
-dumpANF : String -> List (Name, ANFDef) -> Core ()
-dumpANF fn lns
-    = do let cstrs = map dumpDef lns
-         Right () <- coreLift $ writeFile fn (fastAppend cstrs)
-               | Left err => throw (FileErr fn err)
-         pure ()
-  where
-    fullShow : Name -> String
-    fullShow (DN _ n) = show n
-    fullShow n = show n
-
-    dumpDef : (Name, ANFDef) -> String
-    dumpDef (n, d) = fullShow n ++ " = " ++ show d ++ "\n"
-
-dumpVMCode : String -> List (Name, VMDef) -> Core ()
-dumpVMCode fn lns
-    = do let cstrs = map dumpDef lns
-         Right () <- coreLift $ writeFile fn (fastAppend cstrs)
-               | Left err => throw (FileErr fn err)
-         pure ()
-  where
-    fullShow : Name -> String
-    fullShow (DN _ n) = show n
-    fullShow n = show n
-
-    dumpDef : (Name, VMDef) -> String
-    dumpDef (n, d) = fullShow n ++ " = " ++ show d ++ "\n"
 
 export
 nonErased : {auto c : Ref Ctxt Defs} ->
@@ -278,82 +241,158 @@ nonErased n
               | Nothing => pure True
          pure (multiplicity gdef /= erased)
 
+-- Get the names of the functions we're exporting to the given back end, and
+-- the corresponding name it will have when exported.
+getExported : String -> NameMap (List (String, String)) -> List (Name, String)
+getExported backend all
+    = mapMaybe isExp (toList all)
+  where
+    -- If the name/convention pair matches the backend, keep the name
+    isExp : (Name, List (String, String)) -> Maybe (Name, String)
+    isExp (n, cs)
+        = do fn <- lookup backend cs
+             pure (n, fn)
+
 -- Find all the names which need compiling, from a given expression, and compile
 -- them to CExp form (and update that in the Defs).
 -- Return the names, the type tags, and a compiled version of the expression
 export
-getCompileData : {auto c : Ref Ctxt Defs} -> (doLazyAnnots : Bool) ->
-                 UsePhase -> ClosedTerm -> Core CompileData
-getCompileData doLazyAnnots phase_in tm_in
-    = do defs <- get Ctxt
+getCompileDataWith : {auto c : Ref Ctxt Defs} ->
+                     List String -> -- which FFI(s), if compiling foreign exports
+                     (doLazyAnnots : Bool) ->
+                     UsePhase -> ClosedTerm -> Core CompileData
+getCompileDataWith exports doLazyAnnots phase_in tm_in
+    = do log "compile.execute" 10 $ "Getting compiled data for: " ++ show tm_in
          sopts <- getSession
          let phase = foldl {t=List} (flip $ maybe id max) phase_in $
-                         [Cases <$ dumpcases sopts, Lifted <$ dumplifted sopts, ANF <$ dumpanf sopts, VMCode <$ dumpvmcode sopts]
-         let ns = getRefs (Resolved (-1)) tm_in
+                       [ Cases <$ dumpcases sopts
+                       , Lifted <$ dumplifted sopts
+                       , ANF <$ dumpanf sopts
+                       , VMCode <$ dumpvmcode sopts
+                       ]
+
+         -- When we compile a REPL expression, there may be leftovers holes in it.
+         -- Turn these into runtime errors.
+         let metas = addMetas True empty tm_in
+         for_ (keys metas) $ \ metanm =>
+             do defs <- get Ctxt
+                Just gdef <- lookupCtxtExact metanm (gamma defs)
+                  | Nothing => log "compile.execute" 50 $ unwords
+                                    [ "Couldn't find"
+                                    , show metanm
+                                    , "(probably impossible)"]
+                let Hole _ _ = definition gdef
+                  | _ => pure ()
+                let fulln = fullname gdef
+                let cexp = MkError $ CCrash emptyFC
+                         $ "Encountered unimplemented hole " ++ show fulln
+                ignore $ addDef metanm ({ compexpr := Just cexp
+                                        , namedcompexpr := Just (forgetDef cexp)
+                                        } gdef)
+
+         defs <- get Ctxt
+         let refs  = getRefs (Resolved (-1)) tm_in
+         exported <- if isNil exports
+                 then pure []
+                 else getExports defs
+         log "compile.export" 25 "exporting: \{show $ map fst exported}"
+         let ns = keys (mergeWith const metas refs) ++ map fst exported
+         log "compile.execute" 70 $
+           "Found names: " ++ concat (intersperse ", " $ map show $ ns)
          tm <- toFullNames tm_in
          natHackNames' <- traverse toResolvedNames natHackNames
          -- make an array of Bools to hold which names we've found (quicker
          -- to check than a NameMap!)
          asize <- getNextEntry
          arr <- coreLift $ newArray asize
-         logTime "++ Get names" $ getAllDesc (natHackNames' ++ keys ns) arr defs
 
-         let entries = mapMaybe id !(coreLift (toList arr))
+         defs <- get Ctxt
+         logTime 2 "Get names" $ getAllDesc (natHackNames' ++ ns) arr defs
+
+         let entries = catMaybes !(coreLift (toList arr))
          let allNs = map (Resolved . fst) entries
          cns <- traverse toFullNames allNs
+         log "compile.execute" 30 $
+           "All names: " ++ concat (intersperse ", " $ map show $ zip allNs cns)
 
          -- Do a round of merging/arity fixing for any names which were
          -- unknown due to cyclic modules (i.e. declared in one, defined in
          -- another)
          rcns <- filterM nonErased cns
-         logTime "++ Merge lambda" $ traverse_ mergeLamDef rcns
-         logTime "++ Fix arity" $ traverse_ fixArityDef rcns
-         logTime "++ Forget names" $ traverse_ mkForgetDef rcns
+         log "compile.execute" 40 $
+           "Kept: " ++ concat (intersperse ", " $ map show rcns)
 
+         logTime 2 "Merge lambda" $ traverse_ mergeLamDef rcns
+         logTime 2 "Fix arity" $ traverse_ fixArityDef rcns
          compiledtm <- fixArityExp !(compileExp tm)
-         let mainname = MN "__mainExpression" 0
-         (liftedtm, ldefs) <- liftBody {doLazyAnnots} mainname compiledtm
 
-         namedefs <- traverse getNamedDef rcns
+         (cseDefs, csetm) <- logTime 2 "CSE" $ cse rcns compiledtm
+
+         namedDefs <- logTime 2 "Forget names" $
+           traverse getNamedDef cseDefs
+
+         let mainname = MN "__mainExpression" 0
+         (liftedtm, ldefs) <- liftBody {doLazyAnnots} mainname csetm
+
          lifted_in <- if phase >= Lifted
-                         then logTime "++ Lambda lift" $ traverse (lambdaLift doLazyAnnots) rcns
+                         then logTime 2 "Lambda lift" $
+                              traverse (lambdaLift doLazyAnnots) cseDefs
                          else pure []
 
          let lifted = (mainname, MkLFun [] [] liftedtm) ::
                       ldefs ++ concat lifted_in
 
          anf <- if phase >= ANF
-                   then logTime "++ Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted
+                   then logTime 2 "Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted
                    else pure []
          vmcode <- if phase >= VMCode
-                      then logTime "++ Get VM Code" $ pure (allDefs anf)
+                      then logTime 2 "Get VM Code" $ pure (allDefs anf)
                       else pure []
 
          defs <- get Ctxt
-         maybe (pure ())
-               (\f => do coreLift $ putStrLn $ "Dumping case trees to " ++ f
-                         dumpCases defs f rcns)
-               (dumpcases sopts)
-         maybe (pure ())
-               (\f => do coreLift $ putStrLn $ "Dumping lambda lifted defs to " ++ f
-                         dumpLifted f lifted)
-               (dumplifted sopts)
-         maybe (pure ())
-               (\f => do coreLift $ putStrLn $ "Dumping ANF defs to " ++ f
-                         dumpANF f anf)
-               (dumpanf sopts)
-         maybe (pure ())
-               (\f => do coreLift $ putStrLn $ "Dumping VM defs to " ++ f
-                         dumpVMCode f vmcode)
-               (dumpvmcode sopts)
+         whenJust (dumpcases sopts) $ \ f =>
+            do coreLift $ putStrLn $ "Dumping case trees to " ++ f
+               dumpIR f (map (\(n, _, def) => (n, def)) namedDefs)
+
+         whenJust (dumplifted sopts) $ \ f =>
+            do coreLift $ putStrLn $ "Dumping lambda lifted defs to " ++ f
+               dumpIR f lifted
+
+         whenJust (dumpanf sopts) $ \ f =>
+            do coreLift $ putStrLn $ "Dumping ANF defs to " ++ f
+               dumpIR f anf
+
+         whenJust (dumpvmcode sopts) $ \ f =>
+            do coreLift $ putStrLn $ "Dumping VM defs to " ++ f
+               dumpIR f vmcode
 
          -- We're done with our minimal context now, so put it back the way
          -- it was. Back ends shouldn't look at the global context, because
          -- it'll have to decode the definitions again.
          traverse_ replaceEntry entries
-         pure (MkCompileData compiledtm
-                             (mapMaybe id namedefs)
-                             lifted anf vmcode)
+         pure (MkCompileData csetm exported namedDefs lifted anf vmcode)
+  where
+    lookupBackend :
+        List String ->
+        (Name, List (String, String)) ->
+        Maybe (Name, String)
+    lookupBackend [] _ = Nothing
+    lookupBackend (b :: bs) (n, exps) = case find (\(b', _) => b == b') exps of
+        Just (_, exp) => Just (n, exp)
+        Nothing => lookupBackend bs (n, exps)
+
+    getExports : Defs -> Core (List (Name, String))
+    getExports defs = traverse (\(n, exp) => pure (!(resolved defs.gamma n), exp)) $
+        mapMaybe (lookupBackend exports) (toList defs.foreignExports)
+
+-- Find all the names which need compiling, from a given expression, and compile
+-- them to CExp form (and update that in the Defs).
+-- Return the names, the type tags, and a compiled version of the expression
+export
+getCompileData : {auto c : Ref Ctxt Defs} ->
+                 (doLazyAnnots : Bool) ->
+                 UsePhase -> ClosedTerm -> Core CompileData
+getCompileData = getCompileDataWith []
 
 export
 compileTerm : {auto c : Ref Ctxt Defs} ->
@@ -362,8 +401,16 @@ compileTerm tm_in
     = do tm <- toFullNames tm_in
          fixArityExp !(compileExp tm)
 
+compDef : {auto c : Ref Ctxt Defs} -> Name -> Core (Maybe (Name, FC, CDef))
+compDef n = do
+  defs <- get Ctxt
+  Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure Nothing
+  let Just cexpr =  compexpr def             | Nothing => pure Nothing
+  pure $ Just (n, location def, cexpr)
+
 export
-getIncCompileData : {auto c : Ref Ctxt Defs} -> (doLazyAnnots : Bool) ->
+getIncCompileData : {auto c : Ref Ctxt Defs} ->
+                    (doLazyAnnots : Bool) ->
                     UsePhase -> Core CompileData
 getIncCompileData doLazyAnnots phase
     = do defs <- get Ctxt
@@ -372,24 +419,25 @@ getIncCompileData doLazyAnnots phase
          let ns = keys (toIR defs)
          cns <- traverse toFullNames ns
          rcns <- filterM nonErased cns
-         traverse_ mkForgetDef rcns
+         cseDefs <- catMaybes <$> traverse compDef rcns
 
-         namedefs <- traverse getNamedDef rcns
+         namedDefs <- traverse getNamedDef cseDefs
+
          lifted_in <- if phase >= Lifted
-                         then logTime "++ Lambda lift" $ traverse (lambdaLift doLazyAnnots) rcns
+                         then logTime 2 "Lambda lift" $
+                              traverse (lambdaLift doLazyAnnots) cseDefs
                          else pure []
          let lifted = concat lifted_in
          anf <- if phase >= ANF
-                   then logTime "++ Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted
+                   then logTime 2 "Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted
                    else pure []
          vmcode <- if phase >= VMCode
-                      then logTime "++ Get VM Code" $ pure (allDefs anf)
+                      then logTime 2 "Get VM Code" $ pure (allDefs anf)
                       else pure []
-         pure (MkCompileData (CErased emptyFC)
-                             (mapMaybe id namedefs)
-                             lifted anf vmcode)
+         pure (MkCompileData (CErased emptyFC) [] namedDefs lifted anf vmcode)
 
 -- Some things missing from Prelude.File
+
 
 ||| check to see if a given file exists
 export
@@ -435,7 +483,7 @@ parseCC (target::ts) strs = findTarget target strs <|> parseCC ts strs
 export
 dylib_suffix : String
 dylib_suffix
-    = cond [(os `elem` ["windows", "mingw32", "cygwin32"], "dll"),
+    = cond [(elem os $ the (List String) ["windows", "mingw32", "cygwin32"], "dll"),
             (os == "darwin", "dylib")]
            "so"
 
@@ -522,8 +570,8 @@ record ConstantPrimitives where
 ||| the implementations from the provided `ConstantPrimitives`.
 export
 castInt :  ConstantPrimitives
-        -> Constant
-        -> Constant
+        -> PrimType
+        -> PrimType
         -> String
         -> Core String
 castInt p from to x =

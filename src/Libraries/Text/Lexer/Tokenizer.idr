@@ -1,15 +1,10 @@
 module Libraries.Text.Lexer.Tokenizer
 
 import Data.List
-import Data.Either
-import Data.Nat
-import Data.String
 
-import Libraries.Data.String.Extra
 import Libraries.Text.Lexer.Core
 import Libraries.Text.Lexer
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import public Libraries.Control.Delayed
 import public Libraries.Text.Bounded
@@ -65,10 +60,10 @@ Show StopReason where
   show (ComposeNotClosing start end) = "ComposeNotClosing " ++ show start ++ " " ++ show end
 
 export
-Pretty StopReason where
+Pretty Void StopReason where
   pretty EndInput = pretty "EndInput"
   pretty NoRuleApply = pretty "NoRuleApply"
-  pretty (ComposeNotClosing start end) = "ComposeNotClosing" <++> pretty start <++> pretty end
+  pretty (ComposeNotClosing start end) = "ComposeNotClosing" <++> pretty (show start) <++> pretty (show end)
 
 tokenise : Lexer ->
            Tokenizer a ->
@@ -121,7 +116,7 @@ tokenise reject tokenizer line col acc str
               end = endFn tag
               beginTok'' = MkBounded (mapBegin beginTok') False (MkBounds line col line' col')
               (midToks, (reason, line'', col'', rest'')) =
-                    tokenise end middle line' col' [] rest
+                    assert_total $ tokenise end middle line' col' [] rest
            in case reason of
                    (ComposeNotClosing _ _) => Left reason
                    _ => let Just (endTok', lineEnd, colEnd, restEnd) =

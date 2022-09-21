@@ -27,17 +27,23 @@ Now create a file containing
     import Core.Context
     import Compiler.Common
     import Idris.Driver
+    import Idris.Syntax
 
-    compile : Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-            ClosedTerm -> (outfile : String) -> Core (Maybe String)
-    compile defs tmpDir outputDir term file = do coreLift $ putStrLn "I'd rather not."
-                                                 pure $ Nothing
+    compile :
+      Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
+      (tmpDir : String) -> (execDir : String) ->
+      ClosedTerm -> (outfile : String) -> Core (Maybe String)
+    compile syn defs tmp dir term file
+      = do coreLift $ putStrLn "I'd rather not."
+           pure Nothing
 
-    execute : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
-    execute defs tmpDir term = do coreLift $ putStrLn "Maybe in an hour."
+    execute :
+      Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
+      (execDir : String) -> ClosedTerm -> Core ()
+    execute defs syn dir term = do coreLift $ putStrLn "Maybe in an hour."
 
     lazyCodegen : Codegen
-    lazyCodegen = MkCG compile execute
+    lazyCodegen = MkCG compile execute Nothing Nothing
 
     main : IO ()
     main = mainWithCodegens [("lazy", lazyCodegen)]

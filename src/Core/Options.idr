@@ -5,14 +5,12 @@ import Core.Name
 import public Core.Options.Log
 import Core.TT
 
-import Libraries.Utils.Binary
 import Libraries.Utils.Path
+import Idris.Syntax.Pragmas
 
 import Data.List
 import Data.Maybe
 import Data.String
-
-import System.Info
 
 %default total
 
@@ -40,17 +38,18 @@ outputDirWithDefault d = fromMaybe (build_dir d </> "exec") (output_dir d)
 
 public export
 toString : Dirs -> String
-toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs pdirs ldirs ddirs) =
-  unlines [ "+ Working Directory      :: " ++ show wdir
-          , "+ Source Directory       :: " ++ show sdir
-          , "+ Build Directory        :: " ++ show bdir
-          , "+ Local Depend Directory :: " ++ show ldir
-          , "+ Output Directory       :: " ++ show (outputDirWithDefault d)
-          , "+ Installation Prefix    :: " ++ show dfix
-          , "+ Extra Directories      :: " ++ show edirs
-          , "+ Package Directories    :: " ++ show pdirs
-          , "+ CG Library Directories :: " ++ show ldirs
-          , "+ Data Directories       :: " ++ show ddirs]
+toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs pdirs ldirs ddirs) = """
+  + Working Directory      :: \{ show wdir }
+  + Source Directory       :: \{ show sdir }
+  + Build Directory        :: \{ show bdir }
+  + Local Depend Directory :: \{ show ldir }
+  + Output Directory       :: \{ show $ outputDirWithDefault d }
+  + Installation Prefix    :: \{ show dfix }
+  + Extra Directories      :: \{ show edirs }
+  + Package Directories    :: \{ show pdirs }
+  + CG Library Directories :: \{ show ldirs }
+  + Data Directories       :: \{ show ddirs }
+  """
 
 public export
 data CG = Chez
@@ -113,17 +112,6 @@ export
 primNamesToList : PrimNames -> List Name
 primNamesToList (MkPrimNs i s c d) = catMaybes [i,s,c,d]
 
-public export
-data LangExt
-     = ElabReflection
-     | Borrowing -- not yet implemented
-
-export
-Eq LangExt where
-  ElabReflection == ElabReflection = True
-  Borrowing == Borrowing = True
-  _ == _ = False
-
 -- Other options relevant to the current session (so not to be saved in a TTC)
 public export
 record ElabDirectives where
@@ -144,6 +132,7 @@ public export
 record Session where
   constructor MkSessionOpts
   noprelude : Bool
+  totalReq : TotalReq
   nobanner : Bool
   findipkg : Bool
   codegen : CG
@@ -158,7 +147,7 @@ record Session where
   logEnabled : Bool -- do we check logging flags at all? This is 'False' until
                     -- any logging is enabled.
   logLevel : LogLevels
-  logTimings : Bool
+  logTimings : Maybe Nat -- log level, higher means more details
   debugElabCheck : Bool -- do conversion check to verify results of elaborator
   dumpcases : Maybe String -- file to output compiled case trees
   dumplifted : Maybe String -- file to output lambda lifted definitions
@@ -185,6 +174,7 @@ public export
 record PPrinter where
   constructor MkPPOpts
   showImplicits : Bool
+  showMachineNames : Bool
   showFullEnv : Bool
   fullNamespace : Bool
 
@@ -200,8 +190,7 @@ record Options where
   primnames : PrimNames
   extensions : List LangExt
   additionalCGs : List (String, CG)
-  hashFn : String
-
+  hashFn : Maybe String
 
 export
 availableCGs : Options -> List (String, CG)
@@ -224,75 +213,82 @@ defaultDirs = MkDirs "." Nothing "build" "depends" Nothing
                      "/usr/local" ["."] [] [] []
 
 defaultPPrint : PPrinter
-defaultPPrint = MkPPOpts False True False
+defaultPPrint = MkPPOpts False False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez [] 1000 False False
-                               defaultLogLevel False False Nothing Nothing
+defaultSession = MkSessionOpts False CoveringOnly False False Chez [] 1000 False False
+                               defaultLogLevel Nothing False Nothing Nothing
                                Nothing Nothing False 1 False True
                                False [] False False
 
 export
 defaultElab : ElabDirectives
-defaultElab = MkElabDirectives True True CoveringOnly 3 50 50 True
+defaultElab = MkElabDirectives True True CoveringOnly 3 50 25 True
 
+-- FIXME: This turns out not to be reliably portable, since different systems
+-- may have tools with the same name but different required arugments. We
+-- probably need another way (perhaps our own internal hash function, although
+-- that's not going to be as good as sha256).
 export
-defaultHashFn : Core String
+defaultHashFn : Core (Maybe String)
 defaultHashFn
     = do Nothing <- coreLift $ pathLookup ["sha256sum", "gsha256sum"]
-           | Just p => pure $ p ++ " --tag"
+           | Just p => pure $ Just $ p ++ " --tag"
          Nothing <- coreLift $ pathLookup ["sha256"]
-           | Just p => pure $ p
+           | Just p => pure $ Just p
          Nothing <- coreLift $ pathLookup ["openssl"]
-           | Just p => pure $ p ++ " sha256"
-         coreFail $ InternalError ("Can't get util to get sha256sum (tried `sha256sum`, `gsha256sum`, `sha256`, `openssl`)")
+           | Just p => pure $ Just $ p ++ " sha256"
+         pure Nothing
 
 export
 defaults : Core Options
 defaults
-    = do hashFn <- defaultHashFn
+    = do -- hashFn <- defaultHashFn
+         -- Temporarily disabling the hash function until we have a more
+         -- portable way of working out what to call, and allowing a way for
+         -- it to fail gracefully.
          pure $ MkOptions
            defaultDirs defaultPPrint defaultSession defaultElab Nothing Nothing
-           (MkPrimNs Nothing Nothing Nothing Nothing) [] [] hashFn
+           (MkPrimNs Nothing Nothing Nothing Nothing) [] [] Nothing
 
 -- Reset the options which are set by source files
 export
 clearNames : Options -> Options
-clearNames = record { pairnames = Nothing,
-                      rewritenames = Nothing,
-                      primnames = MkPrimNs Nothing Nothing Nothing Nothing,
-                      extensions = []
-                    }
+clearNames = { pairnames := Nothing,
+               rewritenames := Nothing,
+               primnames := MkPrimNs Nothing Nothing Nothing Nothing,
+               extensions := []
+             }
 
 export
 setPair : (pairType : Name) -> (fstn : Name) -> (sndn : Name) ->
           Options -> Options
-setPair ty f s = record { pairnames = Just (MkPairNs ty f s) }
+setPair ty f s = { pairnames := Just (MkPairNs ty f s) }
 
 export
 setRewrite : (eq : Name) -> (rwlemma : Name) -> Options -> Options
-setRewrite eq rw = record { rewritenames = Just (MkRewriteNs eq rw) }
+setRewrite eq rw = { rewritenames := Just (MkRewriteNs eq rw) }
 
 export
 setFromInteger : Name -> Options -> Options
-setFromInteger n = record { primnames->fromIntegerName = Just n }
+setFromInteger n = { primnames->fromIntegerName := Just n }
 
 export
 setFromString : Name -> Options -> Options
-setFromString n = record { primnames->fromStringName = Just n }
+setFromString n = { primnames->fromStringName := Just n }
 
 export
 setFromChar : Name -> Options -> Options
-setFromChar n = record { primnames->fromCharName = Just n }
+setFromChar n = { primnames->fromCharName := Just n }
 
 export
 setFromDouble : Name -> Options -> Options
-setFromDouble n = record { primnames->fromDoubleName = Just n }
+setFromDouble n = { primnames->fromDoubleName := Just n }
 
 export
 setExtension : LangExt -> Options -> Options
-setExtension e = record { extensions $= (e ::) }
+setExtension e = { extensions $= (e ::) }
 
 export
 isExtension : LangExt -> Options -> Bool
@@ -300,4 +296,4 @@ isExtension e opts = e `elem` extensions opts
 
 export
 addCG : (String, CG) -> Options -> Options
-addCG cg = record { additionalCGs $= (cg::) }
+addCG cg = { additionalCGs $= (cg::) }

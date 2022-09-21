@@ -1,7 +1,6 @@
 module Libraries.Text.Parser
 
 import Data.Bool
-import Data.List
 import Data.Nat
 import public Data.List1
 
@@ -226,3 +225,8 @@ public export
 when : Bool -> Lazy (Grammar state token False ()) -> Grammar state token False ()
 when True y = y
 when False y = pure ()
+
+public export
+%inline
+unless : Bool -> Lazy (Grammar state token False ()) -> Grammar state token False ()
+unless = when . not

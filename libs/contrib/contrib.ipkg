@@ -1,5 +1,5 @@
 package contrib
-version = 0.4.0
+version = 0.5.1
 
 opts = "--ignore-missing-ipkg -Wno-shadowing"
 
@@ -28,16 +28,12 @@ modules = Control.ANSI,
           Data.Bool.Algebra,
           Data.Bool.Decidable,
 
-          Data.Container,
-
           Data.Fin.Extra,
 
           Data.Fun.Extra,
           Data.Fun.Graph,
 
           Data.IMaybe,
-
-          Data.InductionRecursion.DybjerSetzer,
 
           Data.Int.Order,
 
@@ -54,6 +50,7 @@ modules = Control.ANSI,
           Data.List.Palindrome,
           Data.List.HasLength,
           Data.List.AtIndex,
+          Data.List.Alternating,
 
           Data.List.Elem.Extra,
 
@@ -79,19 +76,18 @@ modules = Control.ANSI,
           Data.Nat.Order.Relation,
           Data.Nat.Properties,
 
-          Data.Num.Implementations,
-
-          Data.OpenUnion,
-
           Data.Order,
 
           Data.Path,
 
-          Data.Recursion.Free,
-
           Data.Rel.Complement,
 
+          Data.Seq.Internal,
+          Data.Seq.Sized,
+          Data.Seq.Unsized,
+
           Data.SortedMap,
+          Data.SortedMap.Dependent,
           Data.SortedSet,
 
           Data.Stream.Extra,
@@ -110,11 +106,8 @@ modules = Control.ANSI,
           Data.Telescope.SimpleFun,
           Data.Telescope.Congruence,
 
-          Data.Tree.Perfect,
-
           Data.Validated,
 
-          Data.Vect.Binary,
           Data.Vect.Properties,
           Data.Vect.Properties.Tabulate,
           Data.Vect.Properties.Index,
@@ -144,14 +137,7 @@ modules = Control.ANSI,
           Language.JSON.String.Tokens,
           Language.JSON.Tokens,
 
-          Search.Generator,
-          Search.HDecidable,
-          Search.Negation,
-          Search.Properties,
-
           Syntax.WithProof,
-          Syntax.PreorderReasoning,
-          Syntax.PreorderReasoning.Generic,
 
           System.Console.GetOpt,
           System.Directory.Tree,
@@ -159,17 +145,21 @@ modules = Control.ANSI,
           System.Random,
           System.Path,
 
-          Text.Token,
-          Text.Quantity,
-          Text.Parser,
+          Text.Bounded,
           Text.Lexer,
-          Text.Parser.Core,
           Text.Lexer.Core,
+          Text.Lexer.Tokenizer,
+          Text.Literate,
+          Text.Parser,
+          Text.Parser.Core,
+          Text.Parser.Expression,
           Text.PrettyPrint.Prettyprinter,
           Text.PrettyPrint.Prettyprinter.Doc,
-          Text.PrettyPrint.Prettyprinter.Symbols,
-          Text.PrettyPrint.Prettyprinter.Util,
-          Text.PrettyPrint.Prettyprinter.SimpleDocTree,
           Text.PrettyPrint.Prettyprinter.Render.HTML,
           Text.PrettyPrint.Prettyprinter.Render.String,
-          Text.PrettyPrint.Prettyprinter.Render.Terminal
+          Text.PrettyPrint.Prettyprinter.Render.Terminal,
+          Text.PrettyPrint.Prettyprinter.SimpleDocTree,
+          Text.PrettyPrint.Prettyprinter.Symbols,
+          Text.PrettyPrint.Prettyprinter.Util,
+          Text.Quantity,
+          Text.Token

@@ -3,7 +3,6 @@ module Compiler.Scheme.Racket
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Generated
-import Compiler.Inline
 import Compiler.Scheme.Common
 
 import Core.Options
@@ -12,21 +11,19 @@ import Core.Context.Log
 import Core.Directory
 import Core.Name
 import Core.TT
-import Libraries.Utils.Hex
+import Protocol.Hex
 import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Libraries.Data.NameMap
-import Data.Nat
 import Data.String
 import Data.Vect
 
 import Idris.Env
+import Idris.Syntax
 
 import System
 import System.Directory
-import System.File
 import System.Info
 
 %default covering
@@ -42,24 +39,30 @@ findRacoExe =
      pure $ (fromMaybe "/usr/bin/env raco" env) ++ " exe"
 
 schHeader : Bool -> String -> String
-schHeader prof libs
-  = "#lang racket/base\n" ++
-    "; " ++ (generatedString "Racket") ++ "\n" ++
-    "(require racket/async-channel)\n" ++ -- for asynchronous channels
-    "(require racket/future)\n" ++ -- for parallelism/concurrency
-    "(require racket/math)\n" ++ -- for math ops
-    "(require racket/system)\n" ++ -- for system
-    "(require rnrs/bytevectors-6)\n" ++ -- for buffers
-    "(require rnrs/io/ports-6)\n" ++ -- for files
-    "(require srfi/19)\n" ++ -- for file handling and data
-    "(require ffi/unsafe ffi/unsafe/define)\n" ++ -- for calling C
-    (if prof then "(require profile)\n" else "") ++
-    "(require racket/flonum)\n" ++ -- for float-typed transcendental functions
-    libs ++
-    "(let ()\n"
+schHeader prof libs = """
+  #lang racket/base
+  ;; \{ generatedString "Racket" }
+  (require racket/async-channel)         ; for asynchronous channels
+  (require racket/future)                ; for parallelism/concurrency
+  (require racket/math)                  ; for math ops
+  (require racket/system)                ; for system
+  (require racket/unsafe/ops)            ; for fast fixnum ops
+  (require rnrs/bytevectors-6)           ; for buffers
+  (require rnrs/io/ports-6)              ; for files
+  (require srfi/19)                      ; for file handling and data
+  (require ffi/unsafe ffi/unsafe/define) ; for calling C
+  \{ ifThenElse prof "(require profile)" "" }
+  (require racket/flonum)                ; for float-typed transcendental functions
+  \{ libs }
+  (let ()
+
+  """
 
 schFooter : String
-schFooter = ") (collect-garbage)"
+schFooter = """
+  )
+  (collect-garbage)
+  """
 
 showRacketChar : Char -> String -> String
 showRacketChar '\\' = ("\\\\" ++)
@@ -173,7 +176,7 @@ rktToC CFChar op = "(char->integer " ++ op ++ ")"
 rktToC _ op = op
 
 handleRet : CFType -> String -> String
-handleRet CFUnit op = op ++ " " ++ mkWorld (schConstructor racketString (UN "") (Just 0) [])
+handleRet CFUnit op = op ++ " " ++ mkWorld (schConstructor racketString (UN $ Basic "") (Just 0) [])
 handleRet ret op = mkWorld (cToRkt ret op)
 
 cCall : {auto f : Ref Done (List String) } ->
@@ -330,41 +333,48 @@ getFgnCall : {auto f : Ref Done (List String) } ->
 getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
 
 startRacket : String -> String -> String -> String
-startRacket racket appdir target = unlines
-    [ "#!/bin/sh"
-    , "# " ++ (generatedString "Racket")
-    , ""
-    , "set -e # exit on any error"
-    , ""
-    , "if [ \"$(uname)\" = Darwin ]; then"
-    , "  DIR=$(zsh -c 'printf %s \"$0:A:h\"' \"$0\")"
-    , "else"
-    , "  DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
-    , "fi"
-    , ""
-    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ ":$LD_LIBRARY_PATH\""
-    , racket ++ "\"$DIR/" ++ target ++ "\" \"$@\""
-    ]
+startRacket racket appdir target = """
+  #!/bin/sh
+  # \{ generatedString "Racket" }
+
+  set -e # exit on any error
+
+  if [ "$(uname)" = Darwin ]; then
+    DIR=$(zsh -c 'printf %s "$0:A:h"' "$0")
+  else
+    DIR=$(dirname "$(readlink -f -- "$0")")
+  fi
+
+  export LD_LIBRARY_PATH="$DIR/\{ appdir }:$LD_LIBRARY_PATH"
+  export DYLD_LIBRARY_PATH="$DIR/\{ appdir }:$DYLD_LIBRARY_PATH"
+
+  \{ racket } "$DIR/\{ target }" "$@"
+  """
 
 startRacketCmd : String -> String -> String -> String
-startRacketCmd racket appdir target = unlines
-    [ "@echo off"
-    , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%" ++ appdir ++ ";%PATH%"
-    , racket ++ "\"%APPDIR%" ++ target ++ "\" %*"
-    ]
+startRacketCmd racket appdir target = """
+  @echo off
+
+  rem \{ generatedString "Racket" }
+
+  set APPDIR=%~dp0
+  set PATH=%APPDIR%\{ appdir };%PATH%
+
+  \{ racket } "%APPDIR%\{ target }" %*
+  """
 
 startRacketWinSh : String -> String -> String -> String
-startRacketWinSh racket appdir target = unlines
-    [ "#!/bin/sh"
-    , "# " ++ (generatedString "Racket")
-    , ""
-    , "set -e # exit on any error"
-    , ""
-    , "DIR=$(dirname \"$(readlink -f -- \"$0\" || cygpath -a -- \"$0\")\")"
-    , "PATH=\"$DIR/" ++ appdir ++ ":$PATH\""
-    , racket ++ "\"$DIR/" ++ target ++ "\" \"$@\""
-    ]
+startRacketWinSh racket appdir target = """
+  #!/bin/sh
+  # \{ generatedString "Racket" }
+
+  set -e # exit on any error
+
+  DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
+  PATH="$DIR/\{ appdir }:$PATH"
+
+  \{ racket } "$DIR/\{ target }" "$@"
+  """
 
 compileToRKT : Ref Ctxt Defs ->
                String -> ClosedTerm -> (outfile : String) -> Core ()
@@ -379,7 +389,7 @@ compileToRKT c appdir tm outfile
          s <- newRef {t = List String} Structs []
          fgndefs <- traverse (getFgnCall appdir) ndefs
          compdefs <- traverse (getScheme racketPrim racketString) ndefs
-         let code = fastAppend (map snd fgndefs ++ compdefs)
+         let code = fastConcat (map snd fgndefs ++ compdefs)
          main <- schExp racketPrim racketString 0 ctm
          support <- readDataFile "racket/support.rkt"
          ds <- getDirectives Racket
@@ -413,9 +423,13 @@ makeShWindows racket outShRel appdir outAbs
             | Left err => throw (FileErr outShRel err)
          pure ()
 
-compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-              ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr mkexec c tmpDir outputDir tm outfile
+compileExpr :
+  Bool ->
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> (outputDir : String) ->
+  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExpr mkexec c s tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
          coreLift_ $ mkdirAll appDirGen
@@ -433,7 +447,7 @@ compileExpr mkexec c tmpDir outputDir tm outfile
          racket <- coreLift findRacket
 
          ok <- the (Core Int) $ if mkexec
-                  then logTime "+ Build racket" $
+                  then logTime 1 "Build racket" $
                          coreLift $
                            system (raco ++ " -o " ++ outBinAbs ++ " " ++ outRktAbs)
                   else pure 0
@@ -451,9 +465,12 @@ compileExpr mkexec c tmpDir outputDir tm outfile
                     pure (Just outShRel)
             else pure Nothing
 
-executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c tmpDir tm
-    = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpracket"
+executeExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> ClosedTerm -> Core ()
+executeExpr c s tmpDir tm
+    = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpracket"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
          coreLift_ $ system sh
 

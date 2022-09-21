@@ -11,7 +11,9 @@ import Core.Normalise
 import Core.Termination
 import Core.TT
 import Core.Unify
-import Core.Value
+
+import Idris.REPL.Opts
+import Idris.Syntax
 
 import TTImp.Elab
 import TTImp.Elab.Check
@@ -36,6 +38,8 @@ showInfo (n, _, d)
 process : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
+          {auto s : Ref Syn SyntaxInfo} ->
+          {auto o : Ref ROpts REPLOpts} ->
           ImpREPL -> Core Bool
 process (Eval ttimp)
     = do (tm, _) <- elabTerm 0 InExpr [] (MkNested []) [] ttimp Nothing
@@ -65,8 +69,7 @@ process (Check ttimp)
 process (ProofSearch n_in)
     = do defs <- get Ctxt
          [(n, i, ty)] <- lookupTyName n_in (gamma defs)
-              | [] => undefinedName (justFC defaultFC) n_in
-              | ns => throw (AmbiguousName (justFC defaultFC) (map fst ns))
+              | ns => ambiguousName (justFC defaultFC) n_in (map fst ns)
          def <- search (justFC defaultFC) top False 1000 n ty []
          defs <- get Ctxt
          defnf <- normaliseHoles defs [] def
@@ -75,8 +78,7 @@ process (ProofSearch n_in)
 process (ExprSearch n_in)
     = do defs <- get Ctxt
          [(n, i, ty)] <- lookupTyName n_in (gamma defs)
-              | [] => undefinedName (justFC defaultFC) n_in
-              | ns => throw (AmbiguousName (justFC defaultFC) (map fst ns))
+              | ns => ambiguousName (justFC defaultFC) n_in (map fst ns)
          results <- exprSearchN (justFC defaultFC) 1 n []
          traverse_ (coreLift . printLn) results
          pure True
@@ -88,7 +90,7 @@ process (GenerateDef line name)
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
                   catch
-                    (do ((fc, cs) :: _) <- logTime "Generation" $
+                    (do ((fc, cs) :: _) <- logTime 0 "Generation" $
                                 makeDefN (\p, n => onLine line p) 1 n'
                            | _ => coreLift_ (putStrLn "Failed")
                         coreLift_ $ putStrLn (show cs))
@@ -136,6 +138,8 @@ process Quit
 processCatch : {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
+               {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
                ImpREPL -> Core Bool
 processCatch cmd
     = catch (process cmd)
@@ -146,6 +150,8 @@ export
 repl : {auto c : Ref Ctxt Defs} ->
        {auto m : Ref MD Metadata} ->
        {auto u : Ref UST UState} ->
+       {auto s : Ref Syn SyntaxInfo} ->
+       {auto o : Ref ROpts REPLOpts} ->
        Core ()
 repl
     = do coreLift_ (putStr "Yaffle> ")
@@ -153,4 +159,4 @@ repl
          case runParser (Virtual Interactive) Nothing inp command of
               Left err => do coreLift_ (printLn err)
                              repl
-              Right (decor, cmd) => when !(processCatch cmd) repl
+              Right (_, _, cmd) => when !(processCatch cmd) repl

@@ -8,14 +8,15 @@ import Core.Metadata
 import Core.Normalise
 import Core.Unify
 import Core.TT
-import Core.Value
+
+import Idris.REPL.Opts
+import Idris.Syntax
 
 import TTImp.Elab.Check
 import TTImp.Elab.ImplicitBind
 import TTImp.TTImp
 
 import Data.List
-import Libraries.Data.NameMap
 
 %default covering
 
@@ -25,6 +26,8 @@ checkAs : {vars : _} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
           {auto e : Ref EST (EState vars)} ->
+          {auto s : Ref Syn SyntaxInfo} ->
+          {auto o : Ref ROpts REPLOpts} ->
           RigCount -> ElabInfo ->
           NestedNames vars -> Env Term vars ->
           FC -> (nameFC : FC) -> UseSide -> Name -> RawImp -> Maybe (Glued vars) ->
@@ -46,11 +49,8 @@ checkAs rig elabinfo nest env fc nameFC side n_in pat topexp
                                             topexp
                     log "elab.as" 5 $ "Added as pattern name " ++ show (n, (rigAs, tm, exp, bty))
                     defs <- get Ctxt
-                    est <- get EST
-                    put EST
-                        (record { boundNames $= ((n, AsBinding rigAs Explicit tm exp pattm) :: ),
-                                  toBind $= ((n, AsBinding rigAs Explicit tm bty pattm) ::) }
-                                est)
+                    update EST { boundNames $= ((n, AsBinding rigAs Explicit tm exp pattm) :: ),
+                                 toBind $= ((n, AsBinding rigAs Explicit tm bty pattm) ::) }
                     (ntm, nty) <- checkExp rig elabinfo env nameFC tm (gnf env exp)
                                            (Just patty)
 

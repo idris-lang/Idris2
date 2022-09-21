@@ -1,0 +1,18 @@
+1/2: Building Foo (Foo.idr)
+2/2: Building Main (Main.idr)
+Warning: Deprecation warning: Foo.dep1 is deprecated and will be removed in a future version.
+
+Warning: Deprecation warning: Foo.dep2 is deprecated and will be removed in a future version.
+  Just use the string "world" directly from now on.
+Warning: Deprecation warning: Foo.dep3 is deprecated and will be removed in a future version.
+
+Warning: Deprecation warning: Foo.foo is deprecated and will be removed in a future version.
+
+Warning: Deprecation warning: Foo.foo is deprecated and will be removed in a future version.
+
+Foo> Imported module Foo
+Foo> =DEPRECATED=
+Foo.dep1 : String
+  Visibility: export
+Foo> 
+Bye for now!

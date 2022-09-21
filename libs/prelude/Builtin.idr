@@ -66,10 +66,15 @@ public export
 snd : {0 a, b : Type} -> (a, b) -> b
 snd (x, y) = y
 
+||| Swap the elements in a pair
+public export
+swap : (a, b) -> (b, a)
+swap (x, y) = (y, x)
+
 -- This directive tells auto implicit search what to use to look inside pairs
 %pair Pair fst snd
 
-infix 5 #
+infixr 5 #
 
 ||| A pair type where each component is linear
 public export
@@ -148,7 +153,7 @@ public export
 %inline
 public export
 rewrite__impl : {0 x, y : a} -> (0 p : _) ->
-                (0 rule : x = y) -> (val : p y) -> p x
+                (0 rule : x = y) -> (1 val : p y) -> p x
 rewrite__impl p Refl prf = prf
 
 %rewrite Equal rewrite__impl
@@ -156,13 +161,13 @@ rewrite__impl p Refl prf = prf
 ||| Perform substitution in a term according to some equality.
 %inline
 public export
-replace : forall x, y, p . (0 rule : x = y) -> p x -> p y
+replace : forall x, y, p . (0 rule : x = y) -> (1 _ : p x) -> p y
 replace Refl prf = prf
 
 ||| Symmetry of propositional equality.
 %inline
 public export
-sym : (0 rule : x = y) -> y = x
+sym : (0 rule : x ~=~ y) -> y ~=~ x
 sym Refl = Refl
 
 ||| Transitivity of propositional equality.
@@ -184,9 +189,9 @@ mkDPairInjectiveSnd Refl = Refl
 ||| Subvert the type checker.  This function is abstract, so it will not reduce
 ||| in the type checker.  Use it with care - it can result in segfaults or
 ||| worse!
-public export
-believe_me : a -> b
-believe_me = prim__believe_me _ _
+public export %inline
+believe_me : a -> b -- TODO: make linear
+believe_me v = prim__believe_me _ _ v
 
 ||| Assert to the usage checker that the given function uses its argument linearly.
 public export
@@ -195,7 +200,6 @@ assert_linear = believe_me id
   where
     id : (1 f : a -> b) -> a -> b
     id f = f
-
 
 export partial
 idris_crash : String -> a

@@ -1,7 +1,6 @@
 module Data.List.Palindrome
 
 import Data.List
-import Data.List.Views
 import Data.List.Views.Extra
 import Data.List.Reverse
 import Data.List.Equalities
@@ -40,7 +39,7 @@ reversePalindromeEqualsLemma x x' xs prf = equateInnerAndOuter flipHeadX
     flipLastX' : reverse (xs ++ [x']) = x :: xs -> (x' :: reverse xs) = (x :: xs)
     flipLastX' prf = rewrite (revAppend xs [x']) in prf
     cancelOuter : (reverse (xs ++ [x'])) = x :: xs -> reverse xs = xs
-    cancelOuter prf = snd (consInjective (flipLastX' prf))
+    cancelOuter prf = snd (biinjective (flipLastX' prf))
     equateInnerAndOuter
       : reverse (xs ++ [x']) ++ [x] = (x :: xs) ++ [x']
       -> (reverse xs = xs, x = x')

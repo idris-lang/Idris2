@@ -8,7 +8,9 @@ import Core.Normalise
 import Core.Reflect
 import Core.Unify
 import Core.TT
-import Core.Value
+
+import Idris.REPL.Opts
+import Idris.Syntax
 
 import TTImp.Elab.Check
 import TTImp.Reflect
@@ -70,8 +72,7 @@ mutual
       = pure $ IQuote fc !(getUnquote t)
   getUnquote (IUnquote fc tm)
       = do qv <- genVarName "q"
-           unqs <- get Unq
-           put Unq ((qv, fc, tm) :: unqs)
+           update Unq ((qv, fc, tm) ::)
            pure (IUnquote fc (IVar fc qv)) -- turned into just qv when reflecting
   getUnquote tm = pure tm
 
@@ -82,10 +83,11 @@ mutual
                      Core ImpClause
   getUnquoteClause (PatClause fc l r)
       = pure $ PatClause fc !(getUnquote l) !(getUnquote r)
-  getUnquoteClause (WithClause fc l w prf flags cs)
+  getUnquoteClause (WithClause fc l rig w prf flags cs)
       = pure $ WithClause
                  fc
                  !(getUnquote l)
+                 rig
                  !(getUnquote w)
                  prf
                  flags
@@ -121,8 +123,8 @@ mutual
                      {auto u : Ref UST UState} ->
                      ImpRecord ->
                      Core ImpRecord
-  getUnquoteRecord (MkImpRecord fc n ps cn fs)
-      = pure $ MkImpRecord fc n !(traverse unqPair ps) cn
+  getUnquoteRecord (MkImpRecord fc n ps opts cn fs)
+      = pure $ MkImpRecord fc n !(traverse unqPair ps) opts cn
                            !(traverse getUnquoteField fs)
     where
       unqPair : (Name, RigCount, PiInfo RawImp, RawImp) ->
@@ -147,8 +149,8 @@ mutual
                    Core ImpDecl
   getUnquoteDecl (IClaim fc c v opts ty)
       = pure $ IClaim fc c v opts !(getUnquoteTy ty)
-  getUnquoteDecl (IData fc v d)
-      = pure $ IData fc v !(getUnquoteData d)
+  getUnquoteDecl (IData fc v mbt d)
+      = pure $ IData fc v mbt !(getUnquoteData d)
   getUnquoteDecl (IDef fc v d)
       = pure $ IDef fc v !(traverse getUnquoteClause d)
   getUnquoteDecl (IParameters fc ps ds)
@@ -158,8 +160,8 @@ mutual
     where
       unqTuple : (Name, RigCount, PiInfo RawImp, RawImp) -> Core (Name, RigCount, PiInfo RawImp, RawImp)
       unqTuple (n, rig, i, t) = pure (n, rig, i, !(getUnquote t))
-  getUnquoteDecl (IRecord fc ns v d)
-      = pure $ IRecord fc ns v !(getUnquoteRecord d)
+  getUnquoteDecl (IRecord fc ns v mbt d)
+      = pure $ IRecord fc ns v mbt !(getUnquoteRecord d)
   getUnquoteDecl (INamespace fc ns ds)
       = pure $ INamespace fc ns !(traverse getUnquoteDecl ds)
   getUnquoteDecl (ITransform fc n l r)
@@ -171,6 +173,8 @@ bindUnqs : {vars : _} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
+           {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            List (Name, FC, RawImp) ->
            RigCount -> ElabInfo -> NestedNames vars -> Env Term vars ->
            Term vars ->
@@ -197,6 +201,8 @@ checkQuote : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
+             {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
              FC -> RawImp -> Maybe (Glued vars) ->
@@ -234,6 +240,8 @@ checkQuoteDecl : {vars : _} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> List ImpDecl -> Maybe (Glued vars) ->

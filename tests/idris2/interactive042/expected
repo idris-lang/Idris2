@@ -1,0 +1,63 @@
+1/1: Building Issue35 (Issue35.idr)
+Main>    a : Nat
+   eq : a = a
+------------------------------
+a : Nat
+Main>  0 m : Nat
+ 0 a : Type
+   x : a
+   xs : Vect n a
+   ys : Vect m a
+ 0 n : Nat
+------------------------------
+help : Vect (S (plus n m)) a
+Main> Main>    a : Nat
+   eq : {a:827} = a
+------------------------------
+a : Nat
+Main>  0 m : Nat
+ 0 a : Type
+   x : a
+   xs : Vect {n:876} a
+   ys : Vect m a
+ 0 n : Nat
+------------------------------
+help : Vect (S (plus {n:876} m)) a
+Main> 
+Bye for now!
+1/1: Building Issue35-2 (Issue35-2.idr)
+Error: While processing right hand side of f. When unifying:
+    Either b b
+and:
+    Either b b
+Mismatch between: b (implicitly bound at Issue35-2:2:1--2:14) and b.
+
+Issue35-2:2:13--2:14
+ 1 | f : { a, b : Type } -> Either a b -> Either b a
+ 2 | f {a=b} x = x
+                 ^
+
+1/1: Building Issue35-2 (Issue35-2.idr)
+Error: While processing right hand side of f. When unifying:
+    Either b {b:826}
+and:
+    Either {b:826} b
+Mismatch between: {b:826} (implicitly bound at Issue35-2:2:1--2:14) and b.
+
+Issue35-2:2:13--2:14
+ 1 | f : { a, b : Type } -> Either a b -> Either b a
+ 2 | f {a=b} x = x
+                 ^
+
+1/1: Building Issue35-2 (Issue35-2.idr)
+Error: While processing right hand side of f. When unifying:
+    Prelude.Either b {b:826}
+and:
+    Prelude.Either {b:826} b
+Mismatch between: {b:826} (implicitly bound at Issue35-2:2:1--2:14) and b.
+
+Issue35-2:2:13--2:14
+ 1 | f : { a, b : Type } -> Either a b -> Either b a
+ 2 | f {a=b} x = x
+                 ^
+

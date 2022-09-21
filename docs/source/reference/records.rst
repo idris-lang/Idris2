@@ -176,14 +176,14 @@ Finally, the examples:
 
       -- record update syntax uses dots now
       -- prints 3.0
-      printLn $ (record { topLeft.x = 3 } rect).topLeft.x
+      printLn $ ({ topLeft.x := 3 } rect).topLeft.x
 
       -- but for compatibility, we support the old syntax, too
-      printLn $ (record { topLeft->x = 3 } rect).topLeft.x
+      printLn $ ({ topLeft->x := 3 } rect).topLeft.x
 
       -- prints 2.1
-      printLn $ (record { topLeft.x $= (+1) } rect).topLeft.x
-      printLn $ (record { topLeft->x $= (+1) } rect).topLeft.x
+      printLn $ ({ topLeft.x $= (+1) } rect).topLeft.x
+      printLn $ ({ topLeft->x $= (+1) } rect).topLeft.x
 
 Parses but does not typecheck:
 

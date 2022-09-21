@@ -7,13 +7,12 @@ import Core.Metadata
 import Core.Normalise
 import Core.Unify
 import Core.TT
-import Core.Value
+
+import Idris.REPL.Opts
+import Idris.Syntax
 
 import TTImp.Elab.Check
-import TTImp.Elab.ImplicitBind
 import TTImp.TTImp
-
-import Libraries.Data.NameMap
 
 %default covering
 
@@ -40,6 +39,8 @@ checkDot : {vars : _} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
+           {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars ->
            FC -> DotReason -> RawImp -> Maybe (Glued vars) ->
@@ -51,7 +52,7 @@ checkDot rig elabinfo nest env fc reason tm (Just gexpty)
     = case elabMode elabinfo of
         InLHS _ =>
           do (wantedTm, wantedTy) <- check rig
-                                              (record { elabMode = InExpr }
+                                              ({ elabMode := InExpr }
                                                   elabinfo)
                                               nest env
                                               tm (Just gexpty)

@@ -9,11 +9,13 @@ The easiest way to install is via the existing generated Scheme code.
 The requirements are:
 
 - A Scheme compiler; either Chez Scheme (default), or Racket.
-- `bash`, with `realpath`. On Linux, you probably already have this.
-  On a macOS, you can install this with `brew install coreutils`.
-  On FreeBSD, OpenBSD and NetBSD, you can install `realpath` and `GNU make`
-  using a package manager.  For instance, on OpenBSD you can install all of them
-  with `pkg_add coreutils gmake` command.
+- `bash`, `GNU make`, `sha256sum` and `GMP`.  On Linux, you probably already
+  have these.  On macOS and major BSD flavours, you can install them using a
+  package manager: for instance, on macOS, you can install with the
+  `brew install coreutils gmp` and on OpenBSD, with the `pkg_add coreutils
+  bash gmake gmp` command. You specifically need the dev GMP library, which
+  means on some systems the package you need to install will be named
+  something more like `libgmp3-dev`.
 
 On Windows, it has been reported that installing via `MSYS2` works
 [MSYS2](https://www.msys2.org/). On Windows older than Windows 8, you may need to
@@ -29,8 +31,9 @@ make sure you run `./configure --threads` to build multithreading support in.
 **NOTE**: On FreeBSD, OpenBSD and NetBSD you need to use `gmake` command instead
 of `make` in the following steps.
 
-**NOTE**: If you're running macOS on Apple Silicon (arm64) you may need to run
-"`arch -x86_64 make ...`" instead of `make` in the following steps.
+**NOTE**: If you're running macOS on Apple Silicon (arm64) you will need to
+install the Racket fork of chez scheme as described below.  If you install gmp
+via homebrew, you will also need to `export CPATH=/opt/homebrew/include`.
 
 ### 1: Set installation target directory
 
@@ -69,12 +72,18 @@ If all is well, to install, type:
 
 ### 3: Installing with an existing Idris 2
 
-If you have an earlier version of Idris 2 (minimum version 0.2.2) installed:
+If you have the latest *released* version of Idris 2
+(0.4.0 at the time of writing) installed:
 
 - `make all`
 - `make install`
 
-### 4: (Optional) Self-hosting step
+### 4: (Optional) Installing Idris 2 library documentation
+
+After `make install`, type `make install-libdocs` to install Idris 2 library documentation.  After
+that, the index file can be found here: ``idris2 --libdir`/docs/index.html`.``
+
+### 5: (Optional) Self-hosting step
 
 As a final step, you can rebuild from the newly installed Idris 2 to verify
 that everything has worked correctly. Assuming that `idris2` is in your
@@ -85,30 +94,30 @@ that everything has worked correctly. Assuming that `idris2` is in your
 `make all IDRIS2_BOOT='idris2 --codegen racket' && make install`
 if using Racket.
 
-### 5: Running tests
+### 6: Running tests
 
 After `make all`, type `make test` to check everything works. This uses the
 executable in `./build/exec`.
 
-### 6: (Optional) Enabling incremental compilation
+### 7: (Optional) Enabling incremental compilation
 
 If you are working on Idris, incremental compilation means that rebuilds are
 much faster, at the cost of runtime performance being slower. To enable
 incremental compilation for the Chez back end, set the environment variable
 `IDRIS2_INC_CGS=chez`, or set the `--inc chez` flag in `idris2.ipkg`.
 
-### 7: (Optional) Installing the Idris 2 API
+### 8: (Optional) Installing the Idris 2 API
 
 You'll only need this if you're developing support tools, such as an external
 code generator. To do so, once everything is successfully installed, type:
 
 - `make install-api`
 
-The API will only work if you've completed the self-hosting step, step 4, since
+The API will only work if you've completed the self-hosting step (step 5), since
 the intermediate code versions need to be consistent throughout. Otherwise, you
 will get an `Error in TTC: TTC data is in an older format` error.
 
-### 8: (Optional) Shell Auto-completion
+### 9: (Optional) Shell Auto-completion
 
 Idris2 supports tab auto-completion for Bash-like shells.
 
@@ -180,3 +189,23 @@ Idris 2 in emacs by running the following command:
 ```sh
 nix run github:idris-lang/Idris2#emacs-with-idris idrisCode.idr
 ```
+
+### Installing Chez Scheme on Apple Silicon
+
+The official version of chez scheme does not yet support Apple Silicon. So, on
+macOS with Apple Silicon (e.g. M1 and M2 macs), you will need to build and install
+the Racket fork of chez scheme.
+
+```sh
+git clone git@github.com:racket/ChezScheme.git
+cd ChezScheme
+git submodule init
+git submodule update
+arch=tarm64osx
+./configure --pb
+make ${arch}.bootquick
+./configure --threads
+make
+sudo make install
+```
+

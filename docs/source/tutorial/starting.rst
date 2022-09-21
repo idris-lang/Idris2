@@ -7,6 +7,11 @@ Getting Started
 Installing from Source
 ======================
 
+.. toctree::
+   :hidden:
+
+   windows
+
 Prerequisites
 -------------
 
@@ -19,7 +24,7 @@ these from:
 - `Racket <https://download.racket-lang.org/>`_
 
 Both are also available from MacPorts/Homebrew and all major Linux
-distributions.
+distributions. Windows requires some further prerequisites, see :ref:`windows-install`.
 
 **Note**: If you install Chez Scheme from source files, building it locally, make sure
 you run ``./configure --threads`` to build multithreading support in.
@@ -47,9 +52,9 @@ Once you've successfully bootstrapped with any of the above commands, you can
 install with the command ``make install``.  This will, by default, install into
 ``${HOME}/.idris2``. You can change this by editing the options in
 ``config.mk``. For example, to install into ``/usr/local``, you can edit the
-``PREFIX`` as follows::
+``IDRIS2_PREFIX`` as follows::
 
-    PREFIX ?= /usr/local
+    IDRIS2_PREFIX ?= /usr/local
 
 Installing from a Package Manager
 =================================
@@ -81,7 +86,7 @@ program is doing and how it works, but if not, we will explain the
 details later. You can compile the program to an executable by
 entering ``idris2 hello.idr -o hello`` at the shell prompt. This will,
 by default, create an executable called ``hello``, which invokes a generated
-and compiled Chez Schem program, in the destination directory ``build/exec``
+and compiled Chez Scheme program, in the destination directory ``build/exec``
 which you can run:
 
 ::
@@ -89,8 +94,6 @@ which you can run:
     $ idris2 hello.idr -o hello
     $ ./build/exec/hello
     Hello world
-
-(On macOS you may first need to install realpath: ```brew install coreutils```)
 
 Please note that the dollar sign ``$`` indicates the shell prompt!
 Some useful options to the Idris command are:

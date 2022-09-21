@@ -7,24 +7,68 @@ import Core.Context
 import Core.TT
 import Core.Metadata
 import Data.List1
+import Data.SnocList
 import Data.String
 import Libraries.Data.List.Extra
-import Libraries.Data.String.Extra
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
 
 %default total
 
+||| This version of the Parser's state is parameterized over
+||| the container for SemanticDecorations. The parser should
+||| only work the ParsingState type below and after parsing
+||| is complete, use the regular State type.
+public export
+record ParserState (container : Type -> Type) where
+  constructor MkState
+  decorations : container ASemanticDecoration
+  holeNames : List String
+
+||| This state needs to provide efficient concatenation.
+public export
+ParsingState : Type
+ParsingState = ParserState SnocList
+
+||| This is the final state after parsing. We no longer
+||| need to support efficient concatenation.
+public export
+State : Type
+State = ParserState List
+
+export
+toState : ParsingState -> State
+toState (MkState decs hs) = MkState (cast decs) hs
+
+-- To help prevent concatenation slow downs, we only
+-- provide Semigroup and Monoid for the efficient
+-- version of the ParserState.
+export
+Semigroup ParsingState where
+  MkState decs1 hs1 <+> MkState decs2 hs2
+    = MkState (decs1 <+> decs2) (hs1 ++ hs2)
+
+export
+Monoid ParsingState where
+  neutral = MkState [<] []
+
+public export
+BRule : Bool -> Type -> Type
+BRule = Grammar ParsingState Token
+
 public export
 Rule : Type -> Type
-Rule ty = Grammar SemanticDecorations Token True ty
+Rule = BRule True
 
 public export
 EmptyRule : Type -> Type
-EmptyRule ty = Grammar SemanticDecorations Token False ty
+EmptyRule = BRule False
+
+export
+actD : ASemanticDecoration -> EmptyRule ()
+actD s = act (MkState [<s] [])
+
+export
+actH : String -> EmptyRule ()
+actH s = act (MkState [<] [s])
 
 export
 eoi : EmptyRule ()
@@ -37,30 +81,40 @@ eoi = ignore $ nextIs "Expected end of input" isEOI
 export
 constant : Rule Constant
 constant
-    = terminal "Expected constant"
-               \case
-                 CharLit c    =>  Ch <$> getCharLit c
-                 DoubleLit d  => Just (Db d)
-                 IntegerLit i => Just (BI i)
-                 Ident s      => isConstantType (UN s) >>=
-                                 \case WorldType => Nothing
-                                       c         => Just c
-                 _            => Nothing
+    = terminal "Expected constant" $ \case
+        CharLit c    => Ch <$> getCharLit c
+        DoubleLit d  => Just (Db d)
+        IntegerLit i => Just (BI i)
+        Ident s      => isConstantType (UN $ Basic s) >>=
+                             \case WorldType => Nothing
+                                   c         => Just $ PrT c
+        _            => Nothing
 
 documentation' : Rule String
-documentation' = terminal "Expected documentation comment"
+documentation' = terminal "Expected documentation comment" $
                           \case
                             DocComment d => Just d
                             _ => Nothing
 
 export
-documentation : Rule String
-documentation = (unlines . forget) <$> some documentation'
+decorationFromBounded : OriginDesc -> Decoration -> WithBounds a -> ASemanticDecoration
+decorationFromBounded fname decor bnds
+   = ((fname, start bnds, end bnds), decor, Nothing)
+
+documentation : OriginDesc -> Rule String
+documentation fname
+  = do b <- bounds (some documentation')
+       actD (decorationFromBounded fname Comment b)
+       pure (unlines $ forget b.val)
+
+export
+optDocumentation : OriginDesc -> EmptyRule String
+optDocumentation fname = option "" (documentation fname)
 
 export
 intLit : Rule Integer
 intLit
-    = terminal "Expected integer literal"
+    = terminal "Expected integer literal" $
                \case
                  IntegerLit i => Just i
                  _ => Nothing
@@ -68,7 +122,7 @@ intLit
 export
 onOffLit : Rule Bool
 onOffLit
-    = terminal "Expected on or off"
+    = terminal "Expected on or off" $
                \case
                  Ident "on" => Just True
                  Ident "off" => Just False
@@ -77,7 +131,7 @@ onOffLit
 export
 strLit : Rule String
 strLit
-    = terminal "Expected string literal"
+    = terminal "Expected string literal" $
                \case
                  StringLit n s => escape n s
                  _ => Nothing
@@ -86,7 +140,7 @@ strLit
 export
 strLitLines : Rule (List1 String)
 strLitLines
-    = terminal "Expected string literal"
+    = terminal "Expected string literal" $
                \case
                  StringLit n s =>
                    traverse (escape n . fastPack)
@@ -95,35 +149,35 @@ strLitLines
 
 export
 strBegin : Rule ()
-strBegin = terminal "Expected string begin"
+strBegin = terminal "Expected string begin" $
                     \case
-                      StringBegin False => Just ()
+                      StringBegin Single => Just ()
                       _ => Nothing
 
 export
 multilineBegin : Rule ()
-multilineBegin = terminal "Expected multiline string begin"
+multilineBegin = terminal "Expected multiline string begin" $
                           \case
-                            StringBegin True => Just ()
+                            StringBegin Multi => Just ()
                             _ => Nothing
 
 export
 strEnd : Rule ()
-strEnd = terminal "Expected string end"
+strEnd = terminal "Expected string end" $
                   \case
                     StringEnd => Just ()
                     _ => Nothing
 
 export
 interpBegin : Rule ()
-interpBegin = terminal "Expected string interp begin"
+interpBegin = terminal "Expected string interp begin" $
                        \case
                          InterpBegin => Just ()
                          _ => Nothing
 
 export
 interpEnd : Rule ()
-interpEnd = terminal "Expected string interp end"
+interpEnd = terminal "Expected string interp end" $
                      \case
                        InterpEnd => Just ()
                        _ => Nothing
@@ -134,48 +188,61 @@ simpleStr = strBegin *> commit *> (option "" strLit) <* strEnd
 
 export
 aDotIdent : Rule String
-aDotIdent = terminal "Expected dot+identifier"
+aDotIdent = terminal "Expected dot+identifier" $
                      \case
                        DotIdent s => Just s
                        _ => Nothing
 
 export
 postfixProj : Rule Name
-postfixProj = RF <$> aDotIdent
+postfixProj = UN . Field <$> aDotIdent
 
 export
 symbol : String -> Rule ()
 symbol req
-    = terminal ("Expected '" ++ req ++ "'")
+    = terminal ("Expected '" ++ req ++ "'") $
                \case
-                 Symbol s => if s == req then Just () else Nothing
+                 Symbol s => guard (s == req)
                  _ => Nothing
+
+export
+anyReservedSymbol : Rule String
+anyReservedSymbol
+  = terminal ("Expected a reserved symbol") $
+               \case
+                 Symbol s => s <$ guard (s `elem` reservedSymbols)
+                 _ => Nothing
+
+export
+anyKeyword : Rule String
+anyKeyword
+  = terminal ("Expected a keyword") $
+             \case
+               Keyword s => Just s
+               _ => Nothing
 
 export
 keyword : String -> Rule ()
 keyword req
-    = terminal ("Expected '" ++ req ++ "'")
+    = terminal ("Expected '" ++ req ++ "'") $
                \case
-                 Keyword s => if s == req then Just () else Nothing
+                 Keyword s => guard (s == req)
                  _ => Nothing
 
 export
 exactIdent : String -> Rule ()
 exactIdent req
-    = terminal ("Expected " ++ req)
+    = terminal ("Expected " ++ req) $
                \case
-                 Ident s => if s == req then Just () else Nothing
+                 Ident s => guard (s == req)
                  _ => Nothing
 
 export
 pragma : String -> Rule ()
 pragma n =
-  terminal ("Expected pragma " ++ n)
+  terminal ("Expected pragma " ++ n) $
     \case
-      Pragma s =>
-        if s == n
-          then Just ()
-          else Nothing
+      Pragma s => guard (s == n)
       _ => Nothing
 
 export
@@ -187,25 +254,27 @@ builtinType =
 
 operatorCandidate : Rule Name
 operatorCandidate
-    = terminal "Expected operator"
+    = terminal "Expected operator" $
                \case
-                 Symbol s => Just (UN s)
+                 Symbol s => Just (UN $ Basic s) -- TODO: have an operator construct?
+                 _ => Nothing
+
+export
+unqualifiedOperatorName : Rule String
+unqualifiedOperatorName
+    = terminal "Expected operator" $
+               \case
+                 Symbol s => s <$ guard (not $ s `elem` reservedSymbols)
                  _ => Nothing
 
 export
 operator : Rule Name
-operator
-    = terminal "Expected operator"
-               \case
-                 Symbol s =>
-                   if s `elem` reservedSymbols
-                   then Nothing
-                   else Just (UN s)
-                 _ => Nothing
+operator = UN . Basic <$> unqualifiedOperatorName
+               -- ^ TODO: add an operator constructor?
 
 identPart : Rule String
 identPart
-    = terminal "Expected name"
+    = terminal "Expected name" $
                \case
                  Ident str => Just str
                  _ => Nothing
@@ -213,7 +282,7 @@ identPart
 export
 namespacedIdent : Rule (Maybe Namespace, String)
 namespacedIdent
-    = terminal "Expected namespaced name"
+    = terminal "Expected namespaced name" $
                \case
                  DotSepIdent ns n => Just (Just ns, n)
                  Ident i => Just (Nothing, i)
@@ -238,6 +307,14 @@ namespaceId = do
   pure (uncurry mkNestedNamespace nsid.val)
 
 export
+namespacedSymbol : String -> Rule (Maybe Namespace)
+namespacedSymbol req = do
+  (symbol req $> Nothing) <|> do
+    ns <- namespaceId
+    symbol ("." ++ req)
+    pure (Just ns)
+
+export
 moduleIdent : Rule ModuleIdent
 moduleIdent = nsAsModuleIdent <$> namespaceId
 
@@ -248,7 +325,7 @@ unqualifiedName = identPart
 export
 holeName : Rule String
 holeName
-    = terminal "Expected hole name"
+    = terminal "Expected hole name" $
                \case
                  HoleIdent str => Just str
                  _ => Nothing
@@ -262,15 +339,13 @@ reservedNames
 
 isNotReservedName : WithBounds String -> EmptyRule ()
 isNotReservedName x
-    = if x.val `elem` reservedNames
-      then failLoc x.bounds $ "Can't use reserved name \{x.val}"
-      else pure ()
+    = when (x.val `elem` reservedNames) $
+        failLoc x.bounds $ "Can't use reserved name \{x.val}"
 
 isNotReservedSymbol : WithBounds String -> EmptyRule ()
 isNotReservedSymbol x
-    = if x.val `elem` reservedSymbols
-      then failLoc x.bounds $ "Can't use reserved symbol \{x.val}"
-      else pure ()
+    = when (x.val `elem` reservedSymbols) $
+        failLoc x.bounds $ "Can't use reserved symbol \{x.val}"
 
 export
 opNonNS : Rule Name
@@ -284,7 +359,7 @@ opNonNS = do
 
 identWithCapital : (capitalised : Bool) -> WithBounds String ->
                    EmptyRule ()
-identWithCapital b x = if b then isCapitalisedIdent x else pure ()
+identWithCapital b x = when b (isCapitalisedIdent x)
 
 nameWithCapital : (capitalised : Bool) -> Rule Name
 nameWithCapital b = opNonNS <|> do
@@ -297,7 +372,7 @@ nameWithCapital b = opNonNS <|> do
     let id = snd <$> nsx
     identWithCapital b id
     isNotReservedName id
-    pure $ uncurry mkNamespacedName nsx.val
+    pure $ uncurry mkNamespacedName (map Basic nsx.val)
 
   opNS : WithBounds (Maybe Namespace, String) -> Rule Name
   opNS nsx = do
@@ -326,7 +401,7 @@ capitalisedIdent = do
 
 export
 dataConstructorName : Rule Name
-dataConstructorName = opNonNS <|> UN <$> capitalisedIdent
+dataConstructorName = opNonNS <|> (UN . Basic) <$> capitalisedIdent
 
 export %inline
 dataTypeName : Rule Name
@@ -379,12 +454,8 @@ Show ValidIndent where
 
 checkValid : ValidIndent -> Int -> EmptyRule ()
 checkValid AnyIndent c = pure ()
-checkValid (AtPos x) c = if c == x
-                            then pure ()
-                            else fail "Invalid indentation"
-checkValid (AfterPos x) c = if c >= x
-                               then pure ()
-                               else fail "Invalid indentation"
+checkValid (AtPos x) c = unless (c == x) $ fail "Invalid indentation"
+checkValid (AfterPos x) c = unless (c >= x) $ fail "Invalid indentation"
 checkValid EndOfBlock c = fail "End of block"
 
 ||| Any token which indicates the end of a statement/block/expression
@@ -400,6 +471,7 @@ isTerminator (Keyword "in") = True
 isTerminator (Keyword "then") = True
 isTerminator (Keyword "else") = True
 isTerminator (Keyword "where") = True
+isTerminator InterpEnd = True
 isTerminator EndInput = True
 isTerminator _ = False
 
@@ -568,7 +640,7 @@ nonEmptyBlockAfter mincol item
          pure (fst res ::: ps)
   <|> do col <- column
          let False = col <= mincol
-            | True => fail "Expected an indented non-empty block"
+            | True => fatalError "Expected an indented non-empty block"
          res <- blockEntry (AtPos col) item
          ps <- blockEntries (snd res) item
          pure (fst res ::: ps)

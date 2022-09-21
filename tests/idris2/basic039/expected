@@ -1,22 +1,20 @@
 1/1: Building Main (Main.idr)
-Main> Main.MkFoo ==> DataCon 0 1 (newtype by (False, 0))
-RigW
-Erasable args: []
-Detaggable arg types: []
-Specialise args: []
-Inferrable args: []
-Compiled: Constructor tag Just 0 arity 1 (newtype by 0)
-Refers to: []
-Refers to (runtime): []
-Flags: [contype [record]]
-Main> Main.MkBar ==> DataCon 0 1
-RigW
-Erasable args: []
-Detaggable arg types: []
-Specialise args: []
-Inferrable args: []
-Compiled: Constructor tag Just 0 arity 1
-Refers to: []
-Refers to (runtime): []
-Flags: [contype [record]]
+Main> Main.MkFoo
+Data constructor:
+  tag: 0
+  arity: 1
+  newtype by: (False, 0)
+Compiled: Type Constructor:
+  tag: 0
+  arity: 1
+  newtype by: 0
+Flags: contype [record]
+Main> Main.MkBar
+Data constructor:
+  tag: 0
+  arity: 1
+Compiled: Type Constructor:
+  tag: 0
+  arity: 1
+Flags: contype [record]
 Main> Bye for now!

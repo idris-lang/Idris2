@@ -10,7 +10,7 @@ import Control.Monad.Writer.CPS
 
 %default total
 
-||| A computation which runs in a context and produces an output
+||| A monadic computation that has access to state.
 public export
 interface Monad m => MonadState stateType m | m where
     ||| Get the context
@@ -63,9 +63,9 @@ MonadState s m => MonadState s (MaybeT m) where
 
 public export %inline
 Monad m => MonadState s (RWST r w s m) where
-  get     = MkRWST \_,s,w => pure (s,s,w)
-  put s   = MkRWST \_,_,w => pure ((),s,w)
-  state f = MkRWST \_,s,w => let (s',a) = f s in pure (a,s',w)
+  get     = MkRWST $ \_,s,w => pure (s,s,w)
+  put s   = MkRWST $ \_,_,w => pure ((),s,w)
+  state f = MkRWST $ \_,s,w => let (s',a) = f s in pure (a,s',w)
 
 public export %inline
 MonadState s m => MonadState s (ReaderT r m) where

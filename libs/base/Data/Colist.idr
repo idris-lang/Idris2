@@ -1,6 +1,5 @@
 module Data.Colist
 
-import Data.Maybe
 import Data.List
 import Data.List1
 import public Data.Zippable
@@ -215,7 +214,7 @@ inBounds k [] = No uninhabited
 inBounds Z (x::xs) = Yes InFirst
 inBounds (S k) (x::xs) = case inBounds k xs of
   Yes p => Yes $ InLater p
-  No up => No \(InLater p) => up p
+  No up => No $ \(InLater p) => up p
 
 ||| Find a particular element of a Colist using InBounds
 |||

@@ -1,0 +1,17 @@
+1/1: Building ImplicitSplitsGen (ImplicitSplitsGen.idr)
+Main> willCasesplitNonImplicit @{a} False = ?willCasesplitNonImplicit_rhs_0
+willCasesplitNonImplicit @{a} True = ?willCasesplitNonImplicit_rhs_1
+Main> Main> 1/1: Building ImplicitSplitsGen (ImplicitSplitsGen.idr)
+Loaded file ImplicitSplitsGen.idr
+Main> willCasesplitAutoImplicit @{False} b = ?willCasesplitAutoImplicit_rhs_0
+willCasesplitAutoImplicit @{True} b = ?willCasesplitAutoImplicit_rhs_1
+Main> Main> 1/1: Building ImplicitSplitsGen (ImplicitSplitsGen.idr)
+Loaded file ImplicitSplitsGen.idr
+Main> willCasesplitAutoThenNonImplicit @{False} b = ?willCasesplitAutoThenNonImplicit_rhs_0
+willCasesplitAutoThenNonImplicit @{True} b = ?willCasesplitAutoThenNonImplicit_rhs_1
+Main> Main> 1/1: Building ImplicitSplitsGen (ImplicitSplitsGen.idr)
+Loaded file ImplicitSplitsGen.idr
+Main> willCasesplitAutoThenNonImplicit @{False} False = ?willCasesplitAutoThenNonImplicit_rhs_2
+willCasesplitAutoThenNonImplicit @{False} True = ?willCasesplitAutoThenNonImplicit_rhs_3
+Main> Main> Bye for now!
+1/1: Building ImplicitSplitsGen (ImplicitSplitsGen.idr)

@@ -15,31 +15,31 @@ interface Num a => Bits a => SomeBits a where
     one : Index {a}
 
 SomeBits Bits8 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Bits16 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Bits32 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Bits64 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int8 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int16 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int32 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int64 where
-    one = fromNat 1
+    one = 1
 
 SomeBits Int where
-    one = fromNat 1
+    one = 1
 
 SomeBits Integer where
     one = 1
@@ -116,17 +116,17 @@ main = do
     putStrLn "Multiply:"
     put $ imapProperty Num (* 2) ints
 
---    putStrLn "Divide:"
---    put $ imapProperty Integral (`div` 3) ints
---    put $ imapProperty Integral (`div` -3) ints
---
---    putStrLn "Mod:"
---    put $ imapProperty Integral (`mod` 17) ints
---    put $ imapProperty Integral (`mod` -17) ints
---
---    putStrLn "Division Euclidean:"
---    put $ imapProperty Integral (\x => (x `div` 19) * 19 + (x `mod` 19)) ints
---    put $ imapProperty Integral (\x => (x `div` -19) * -19 + (x `mod` -19)) ints
+    putStrLn "Divide:"
+    put $ imapProperty Integral (`div` 3) ints
+    put $ imapProperty Integral (`div` -3) ints
+
+    putStrLn "Mod:"
+    put $ imapProperty Integral (`mod` 17) ints
+    put $ imapProperty Integral (`mod` -17) ints
+
+    putStrLn "Division Euclidean:"
+    put $ imapProperty Integral (\x => (x `div` 19) * 19 + (x `mod` 19)) ints
+    put $ imapProperty Integral (\x => (x `div` -19) * -19 + (x `mod` -19)) ints
 
     putStrLn "Shift:"
     put $ imapProperty SomeBits (`shiftL` one) ints

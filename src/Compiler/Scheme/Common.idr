@@ -2,16 +2,12 @@ module Compiler.Scheme.Common
 
 import Compiler.Common
 import Compiler.CompileExpr
-import Compiler.Inline
 
 import Core.Context
 import Core.Name
 import Core.TT
 
-import Data.List
 import Data.Vect
-
-import System.Info
 
 %default covering
 
@@ -29,14 +25,19 @@ schString s = concatMap okchar (unpack s)
                   else "C-" ++ show (cast {to=Int} c)
 
 export
+schUserName : UserName -> String
+schUserName (Basic n) = "u--" ++ schString n
+schUserName (Field n) = "rf--" ++ schString n
+schUserName Underscore = "u--_"
+
+export
 schName : Name -> String
-schName (NS ns (UN n)) = schString (showNSWithSep "-" ns) ++ "-" ++ schString n
+schName (NS ns (UN (Basic n))) = schString (showNSWithSep "-" ns) ++ "-" ++ schString n
+schName (UN n) = schUserName n
 schName (NS ns n) = schString (showNSWithSep "-" ns) ++ "-" ++ schName n
-schName (UN n) = "u--" ++ schString n
 schName (MN n i) = schString n ++ "-" ++ show i
 schName (PV n d) = "pat--" ++ schName n
 schName (DN _ n) = schName n
-schName (RF n) = "rf--" ++ schString n
 schName (Nested (i, x) n) = "n--" ++ show i ++ "-" ++ show x ++ "-" ++ schName n
 schName (CaseBlock x y) = "case--" ++ schString x ++ "-" ++ show y
 schName (WithBlock x y) = "with--" ++ schString x ++ "-" ++ show y
@@ -77,7 +78,7 @@ mul (Just $ Unsigned n)     x y = op "bu*" [x, y, show n]
 mul _                       x y = op "*" [x, y]
 
 div : Maybe IntKind -> String -> String -> String
-div (Just $ Signed Unlimited) x y = op "quotient" [x, y]
+div (Just $ Signed Unlimited) x y = op "blodwen-euclidDiv" [x, y]
 div (Just $ Signed $ P n)     x y = op "bs/" [x, y, show (n-1)]
 div (Just $ Unsigned n)       x y = op "bu/" [x, y, show n]
 div _                         x y = op "/" [x, y]
@@ -135,7 +136,7 @@ schOp (Add ty) [x, y] = pure $ add (intKind ty) x y
 schOp (Sub ty) [x, y] = pure $ sub (intKind ty) x y
 schOp (Mul ty) [x, y] = pure $ mul (intKind ty) x y
 schOp (Div ty) [x, y] = pure $ div (intKind ty) x y
-schOp (Mod ty) [x, y] = pure $ op "remainder" [x, y]
+schOp (Mod ty) [x, y] = pure $ op "blodwen-euclidMod" [x, y]
 schOp (Neg ty) [x] = pure $ op "-" [x]
 schOp (ShiftL ty) [x, y] = pure $ shl (intKind ty) x y
 schOp (ShiftR ty) [x, y] = pure $ op "blodwen-shr" [x, y]
@@ -169,7 +170,7 @@ schOp StrSubstr [x, y, z] = pure $ op "string-substr" [x, y, z]
 -- `e` is Euler's number, which approximates to: 2.718281828459045
 schOp DoubleExp [x] = pure $ op "flexp" [x] -- Base is `e`. Same as: `pow(e, x)`
 schOp DoubleLog [x] = pure $ op "fllog" [x] -- Base is `e`.
-schOp DoublePow [x, y] = pure $ op "expt" [x, y]
+schOp DoublePow [x, y] = pure $ op "flexpt" [x, y]
 schOp DoubleSin [x] = pure $ op "flsin" [x]
 schOp DoubleCos [x] = pure $ op "flcos" [x]
 schOp DoubleTan [x] = pure $ op "fltan" [x]
@@ -222,21 +223,20 @@ Show ExtPrim where
 ||| Match on a user given name to get the scheme primitive
 toPrim : Name -> ExtPrim
 toPrim pn@(NS _ n)
-    = cond [(n == UN "prim__newIORef", NewIORef),
-            (n == UN "prim__readIORef", ReadIORef),
-            (n == UN "prim__writeIORef", WriteIORef),
-            (n == UN "prim__newArray", NewArray),
-            (n == UN "prim__arrayGet", ArrayGet),
-            (n == UN "prim__arraySet", ArraySet),
-            (n == UN "prim__getField", GetField),
-            (n == UN "prim__setField", SetField),
-            (n == UN "void", VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
-            (n == UN "prim__void", VoidElim),
-            (n == UN "prim__os", SysOS),
-            (n == UN "prim__codegen", SysCodegen),
-            (n == UN "prim__onCollect", OnCollect),
-            (n == UN "prim__onCollectAny", OnCollectAny),
-            (n == UN "prim__makeFuture", MakeFuture)
+    = cond [(n == UN (Basic "prim__newIORef"), NewIORef),
+            (n == UN (Basic "prim__readIORef"), ReadIORef),
+            (n == UN (Basic "prim__writeIORef"), WriteIORef),
+            (n == UN (Basic "prim__newArray"), NewArray),
+            (n == UN (Basic "prim__arrayGet"), ArrayGet),
+            (n == UN (Basic "prim__arraySet"), ArraySet),
+            (n == UN (Basic "prim__getField"), GetField),
+            (n == UN (Basic "prim__setField"), SetField),
+            (n == UN (Basic "prim__void"), VoidElim),
+            (n == UN (Basic "prim__os"), SysOS),
+            (n == UN (Basic "prim__codegen"), SysCodegen),
+            (n == UN (Basic "prim__onCollect"), OnCollect),
+            (n == UN (Basic "prim__onCollectAny"), OnCollectAny),
+            (n == UN (Basic "prim__makeFuture"), MakeFuture)
             ]
            (Unknown pn)
 toPrim pn = Unknown pn
@@ -244,6 +244,9 @@ toPrim pn = Unknown pn
 export
 mkWorld : String -> String
 mkWorld res = res -- MkIORes is a newtype now! schConstructor 0 [res, "#f"] -- MkIORes
+
+schPrimType : PrimType -> String
+schPrimType _ = "#t"
 
 schConstant : (String -> String) -> Constant -> String
 schConstant _ (I x) = show x
@@ -262,21 +265,8 @@ schConstant _ (Ch x)
         then "#\\" ++ cast x
         else "(integer->char " ++ show (the Int (cast x)) ++ ")"
 schConstant _ (Db x) = show x
+schConstant _ (PrT t) = schPrimType t
 schConstant _ WorldVal = "#f"
-schConstant _ IntType = "#t"
-schConstant _ Int8Type = "#t"
-schConstant _ Int16Type = "#t"
-schConstant _ Int32Type = "#t"
-schConstant _ Int64Type = "#t"
-schConstant _ IntegerType = "#t"
-schConstant _ Bits8Type = "#t"
-schConstant _ Bits16Type = "#t"
-schConstant _ Bits32Type = "#t"
-schConstant _ Bits64Type = "#t"
-schConstant _ StringType = "#t"
-schConstant _ CharType = "#t"
-schConstant _ DoubleType = "#t"
-schConstant _ WorldType = "#t"
 
 schCaseDef : Maybe String -> String
 schCaseDef Nothing = ""
@@ -659,6 +649,9 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
 
   schDef : {auto c : Ref Ctxt Defs} ->
            Name -> NamedDef -> Core String
+  schDef n (MkNmFun [] exp)
+     = pure $ "(define " ++ schName !(getFullName n) ++ "(blodwen-lazy (lambda () "
+                      ++ !(schExp 0 exp) ++ ")))\n"
   schDef n (MkNmFun args exp)
      = pure $ "(define " ++ schName !(getFullName n) ++ " (lambda (" ++ schArglist args ++ ") "
                       ++ !(schExp 0 exp) ++ "))\n"

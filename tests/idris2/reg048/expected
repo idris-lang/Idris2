@@ -1,7 +1,7 @@
 1/1: Building inferror (inferror.idr)
 Error: While processing right hand side of g. Ambiguous elaboration. Possible results:
     Data.SortedMap.toList m
-    Prelude.toList ?arg
+    Prelude.toList m
 
 inferror:9:17--9:23
  5 | f m = case sortBy (\(x, _), (y, _) => compare x y) (SortedMap.toList m) of

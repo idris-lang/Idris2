@@ -3,7 +3,6 @@ module Compiler.Scheme.ChezSep
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Generated
-import Compiler.Inline
 import Compiler.Scheme.Common
 import Compiler.Scheme.Chez
 import Compiler.Separate
@@ -13,84 +12,88 @@ import Core.Hash
 import Core.Context
 import Core.Context.Log
 import Core.Directory
-import Core.Name
 import Core.Options
 import Core.TT
-import Libraries.Utils.Hex
 import Libraries.Utils.Path
 
 import Data.List
 import Data.List1
-import Data.Maybe
 import Data.String
-import Data.Vect
 
 import Idris.Env
+import Idris.Syntax
 
 import System
 import System.Directory
-import System.File
 import System.Info
 
-import Libraries.Data.NameMap
 import Libraries.Data.Version
 import Libraries.Utils.String
 
 %default covering
 
 schHeader : List String -> List String -> String
-schHeader libs compilationUnits = unlines
-  [ "(import (chezscheme) (support) "
-      ++ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits]
-      ++ ")"
-  , "(case (machine-type)"
-  , "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]"
-  , "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]"
-  , "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")"
-  , "                           (load-shared-object \"ws2_32.dll\")]"
-  , "  [else (load-shared-object \"libc.so\")]"
-  , unlines ["  (load-shared-object \"" ++ escapeStringChez lib ++ "\")" | lib <- libs]
-  , ")"
-  ]
+schHeader libs compilationUnits = """
+  (import (chezscheme) (support)
+      \{ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits] })
+  (case (machine-type)
+    [(i3le ti3le a6le ta6le tarm64le) (load-shared-object "libc.so.6")]
+    [(i3osx ti3osx a6osx ta6osx tarm64osx) (load-shared-object "libc.dylib")]
+    [(i3nt ti3nt a6nt ta6nt) (load-shared-object "msvcrt.dll")]
+    [else (load-shared-object "libc.so")]
+  \{ unlines ["  (load-shared-object \"" ++ escapeStringChez lib ++ "\")" | lib <- libs] })
+
+  """
 
 schFooter : String
-schFooter = "(collect 4)\n(blodwen-run-finalisers)\n"
+schFooter = """
+
+  (collect 4)
+  (blodwen-run-finalisers)
+  """
 
 startChez : String -> String -> String -> String
-startChez chez appDirSh targetSh = Chez.startChezPreamble ++ unlines
-    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appDirSh ++ ":$LD_LIBRARY_PATH\""
-    , "\"" ++ chez ++ "\" -q "
-        ++ "--libdirs \"$DIR/" ++ appDirSh ++ "\" "
-        ++ "--program \"$DIR/" ++ targetSh ++ "\" "
-        ++ "\"$@\""
-    ]
+startChez chez appDirSh targetSh = Chez.startChezPreamble ++ """
+  export LD_LIBRARY_PATH="$DIR/\{ appDirSh }:$LD_LIBRARY_PATH"
+  export DYLD_LIBRARY_PATH="$DIR/\{ appDirSh }:$DYLD_LIBRARY_PATH"
+
+  "\{ chez }" -q \
+    --libdirs "$DIR/\{ appDirSh }" \
+    --program "$DIR/\{ targetSh }" \
+    "$@"
+  """
 
 startChezCmd : String -> String -> String -> String
-startChezCmd chez appDirSh targetSh = unlines
-    [ "@echo off"
-    , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%" ++ appDirSh ++ ";%PATH%"
-    , "\"" ++ chez ++ "\" -q "
-        ++ "--libdirs \"%APPDIR%" ++ appDirSh ++ "\" "
-        ++ "--program \"%APPDIR%" ++ targetSh ++ "\" "
-        ++ "%*"
-    ]
+startChezCmd chez appDirSh targetSh = """
+  @echo off
+
+  rem \{ generatedString "ChezSep" }
+
+  set APPDIR=%~dp0
+  set PATH=%APPDIR%\{ appDirSh };%PATH%
+
+  "\{ chez }" -q \
+    --libdirs "%APPDIR%\{ appDirSh }" \
+    --program "%APPDIR%\{ targetSh }" \
+    %*
+  """
 
 startChezWinSh : String -> String -> String -> String
-startChezWinSh chez appDirSh targetSh = unlines
-    [ "#!/bin/sh"
-    , "# " ++ (generatedString "Chez")
-    , ""
-    , "set -e # exit on any error"
-    , ""
-    , "DIR=$(dirname \"$(readlink -f -- \"$0\" || cygpath -a -- \"$0\")\")"
-    , "PATH=\"$DIR/" ++ appDirSh ++ ":$PATH\""
-    , "\"" ++ chez ++ "\" --program \"$DIR/" ++ targetSh ++ "\" \"$@\""
-    , "\"" ++ chez ++ "\" -q "
-        ++ "--libdirs \"$DIR/" ++ appDirSh ++ "\" "
-        ++ "--program \"$DIR/" ++ targetSh ++ "\" "
-        ++ "\"$@\""
-    ]
+startChezWinSh chez appDirSh targetSh = """
+  #!/bin/sh
+  # \{ generatedString "ChezSep" }
+
+  set -e # exit on any error
+
+  DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
+  PATH="$DIR/\{ appDirSh }:$PATH"
+
+  "\{ chez }" --program "$DIR/\{ targetSh }" "$@"
+  "\{ chez }" -q \
+    --libdirs "$DIR/\{ appDirSh }" \
+    --program "$DIR/\{ targetSh }" \
+    "$@"
+  """
 
 -- TODO: parallelise this
 compileChezLibraries : (chez : String) -> (libDir : String) -> (ssFiles : List String) -> Core ()
@@ -166,7 +169,7 @@ compileToSS c chez appdir tm = do
   support <- readDataFile "chez/support-sep.ss"
   let supportHash = show $ hash support
   supportChanged <-
-    coreLift (File.readFile (appdir </> "support.hash")) >>= \case
+    coreLift (readFile (appdir </> "support.hash")) >>= \case
       Left err => pure True
       Right fileHash => pure (fileHash /= supportHash)
   when supportChanged $ do
@@ -185,7 +188,7 @@ compileToSS c chez appdir tm = do
     -- TODO: also check that the .so file exists
     let cuHash = show (hash cu)
     hashChanged <-
-      coreLift (File.readFile (appdir </> chezLib <.> "hash")) >>= \case
+      coreLift (readFile (appdir </> chezLib <.> "hash")) >>= \case
         Left err       => pure True
         Right fileHash => pure (fileHash /= cuHash)
 
@@ -224,7 +227,7 @@ compileToSS c chez appdir tm = do
 
       -- write the files
       log "compiler.scheme.chez" 3 $ "Generating code for " ++ chezLib
-      Core.writeFile (appdir </> chezLib <.> "ss") $ fastAppend $
+      Core.writeFile (appdir </> chezLib <.> "ss") $ fastConcat $
         [header]
         ++ map snd fgndefs  -- definitions using foreign libs
         ++ compdefs
@@ -258,9 +261,13 @@ makeShWindows chez outShRel appDirSh targetSh = do
   Core.writeFile outShRel (startChezWinSh chez appDirSh targetSh)
 
 ||| Chez Scheme implementation of the `compileExpr` interface.
-compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-              ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr makeitso c tmpDir outputDir tm outfile = do
+compileExpr :
+  Bool ->
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> (outputDir : String) ->
+  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExpr makeitso c s tmpDir outputDir tm outfile = do
   -- set up paths
   Just cwd <- coreLift currentDir
        | Nothing => throw (InternalError "Can't get current directory")
@@ -274,7 +281,7 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
   (supportChanged, chezLibs) <- compileToSS c chez appDirRel tm
 
   -- compile the code
-  logTime "++ Make SO" $ when makeitso $ do
+  logTime 2 "Make SO" $ when makeitso $ do
     -- compile the support code
     when supportChanged $ do
       log "compiler.scheme.chez" 3 $ "Compiling support"
@@ -304,9 +311,12 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
 
 ||| Chez Scheme implementation of the `executeExpr` interface.
 ||| This implementation simply runs the usual compiler, saving it to a temp file, then interpreting it.
-executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c tmpDir tm
-    = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpchez"
+executeExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> ClosedTerm -> Core ()
+executeExpr c s tmpDir tm
+    = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpchez"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
          coreLift_ $ system sh
 

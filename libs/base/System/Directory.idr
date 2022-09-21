@@ -1,7 +1,9 @@
+||| Directory access and handling.
 module System.Directory
 
 import System.Errno
 import public System.File
+import System.FFI
 
 %default total
 
@@ -9,56 +11,55 @@ public export
 DirPtr : Type
 DirPtr = AnyPtr
 
-support : String -> String
-support fn = "C:" ++ fn ++ ", libidris2_support, idris_directory.h"
+||| Shorthand for referring to the C support library
+|||
+||| @ fn the function name to refer to in the C support library
+supportC : (fn : String) -> String
+supportC fn = "C:\{fn}, libidris2_support, idris_directory.h"
 
-%foreign "C:idris2_fileErrno, libidris2_support, idris_file.h"
-         "node:support:fileErrno,support_system_file"
-prim__fileErrno : PrimIO Int
-
-returnError : HasIO io => io (Either FileError a)
-returnError
-    = do err <- primIO prim__fileErrno
-         pure $ Left $
-           case err of
-              0 => FileReadError
-              1 => FileWriteError
-              2 => FileNotFound
-              3 => PermissionDenied
-              4 => FileExists
-              _ => GenericFileError (err-5)
+||| Shorthand for referring to the Node system support library
+|||
+||| @ fn the function name to refer to in the js/system_support.js file
+supportNode : (fn : String) -> String
+supportNode fn = "node:support:\{fn},support_system_directory"
 
 ok : HasIO io => a -> io (Either FileError a)
 ok x = pure (Right x)
 
-%foreign support "idris2_currentDirectory"
+%foreign supportC "idris2_currentDirectory"
          "node:lambda:()=>process.cwd()"
 prim__currentDir : PrimIO (Ptr String)
 
-%foreign support "idris2_changeDir"
-         "node:support:changeDir,support_system_directory"
+%foreign supportC "idris2_changeDir"
+         supportNode "changeDir"
 prim__changeDir : String -> PrimIO Int
 
-%foreign support "idris2_createDir"
-         "node:support:createDir,support_system_directory"
+%foreign supportC "idris2_createDir"
+         supportNode "createDir"
 prim__createDir : String -> PrimIO Int
 
-%foreign support "idris2_openDir"
+%foreign supportC "idris2_openDir"
+         supportNode "openDir"
 prim__openDir : String -> PrimIO DirPtr
 
-%foreign support "idris2_closeDir"
+%foreign supportC "idris2_closeDir"
+         supportNode "closeDir"
 prim__closeDir : DirPtr -> PrimIO ()
 
-%foreign support "idris2_removeDir"
+%foreign supportC "idris2_removeDir"
+         supportNode "removeDir"
 prim__removeDir : String -> PrimIO ()
 
-%foreign support "idris2_nextDirEntry"
+%foreign supportC "idris2_nextDirEntry"
+         supportNode "dirEntry"
 prim__dirEntry : DirPtr -> PrimIO (Ptr String)
 
+||| Data structure for managing the pointer to a directory.
 export
 data Directory : Type where
      MkDir : DirPtr -> Directory
 
+||| Try to create a directory at the specified path.
 export
 createDir : HasIO io => String -> io (Either FileError ())
 createDir dir
@@ -67,20 +68,27 @@ createDir dir
             then ok ()
             else returnError
 
+||| Change the current working directory to the specified path. Returns whether
+||| the operation succeeded.
 export
 changeDir : HasIO io => String -> io Bool
 changeDir dir
     = do ok <- primIO (prim__changeDir dir)
          pure (ok == 0)
 
+||| Get the absolute path of the current working directory. Returns `Nothing` if
+||| an error occurred.
 export
 currentDir : HasIO io => io (Maybe String)
 currentDir
     = do res <- primIO prim__currentDir
          if prim__nullPtr res /= 0
             then pure Nothing
-            else pure (Just (prim__getString res))
+            else do let s = prim__getString res
+                    free $ prim__forgetPtr res
+                    pure (Just s)
 
+||| Try to open the directory at the specified path.
 export
 openDir : HasIO io => String -> io (Either FileError Directory)
 openDir d
@@ -89,14 +97,18 @@ openDir d
             then returnError
             else ok (MkDir res)
 
+||| Close the given `Directory`.
 export
 closeDir : HasIO io => Directory -> io ()
 closeDir (MkDir d) = primIO (prim__closeDir d)
 
+||| Remove the directory at the specified path.
+||| If the directory is not empty, this operation fails.
 export
 removeDir : HasIO io => String -> io ()
 removeDir dirName = primIO (prim__removeDir dirName)
 
+||| Get the next entry in the `Directory`, omitting the '.' and '..' entries.
 export
 nextDirEntry : HasIO io => Directory -> io (Either FileError (Maybe String))
 nextDirEntry (MkDir d)
@@ -110,15 +122,8 @@ nextDirEntry (MkDir d)
                        then assert_total $ nextDirEntry (MkDir d)
                        else pure $ Right (Just n)
 
--- This function is deprecated; to be removed after the next version bump
-export
-dirEntry : HasIO io => Directory -> io (Either FileError String)
-dirEntry d = do r <- nextDirEntry d
-                pure $ case r of
-                         Left e         => Left e
-                         Right (Just n) => Right n
-                         Right Nothing  => Left FileNotFound
-
+||| Get a list of all the entries in the `Directory`, excluding the '.' and '..'
+||| entries.
 collectDir : HasIO io => Directory -> io (Either FileError (List String))
 collectDir d
     = liftIO $ do let (>>=) : (IO . Either e) a -> (a -> (IO . Either e) b) -> (IO . Either e) b
@@ -128,8 +133,12 @@ collectDir d
                   ns <- assert_total $ collectDir d
                   pure $ Right (n :: ns)
 
+||| Get a list of all the entries in the directory at the specified path,
+||| excluding the '.' and '..' entries.
+|||
+||| @ name the directory to list
 export
-listDir : HasIO io => String -> io (Either FileError (List String))
+listDir : HasIO io => (name : String) -> io (Either FileError (List String))
 listDir name = do Right d <- openDir name
                     | Left e => pure $ Left e
                   ns <- collectDir d

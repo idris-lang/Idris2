@@ -96,10 +96,10 @@ mutual
   -- one of them is okay
   getMatch lhs (IAlternative fc _ as) (IAlternative _ _ as')
       = matchAny fc lhs (zip as as')
-  getMatch lhs (IAs _ _ _ (UN n) p) (IAs _ fc _ (UN n') p')
+  getMatch lhs (IAs _ _ _ (UN (Basic n)) p) (IAs _ fc _ nm'@(UN (Basic n')) p')
       = do ms <- getMatch lhs p p'
-           mergeMatches lhs ((n, IBindVar fc n') :: ms)
-  getMatch lhs (IAs _ _ _ (UN n) p) p'
+           mergeMatches lhs ((n, IAs fc emptyFC UseLeft nm' (Implicit fc True)) :: ms)
+  getMatch lhs (IAs _ _ _ (UN (Basic n)) p) p'
       = do ms <- getMatch lhs p p'
            mergeMatches lhs ((n, p') :: ms)
   getMatch lhs (IAs _ _ _ _ p) p' = getMatch lhs p p'
@@ -151,7 +151,7 @@ getArgMatch : FC -> (side : ElabMode) -> (search : Bool) ->
               (arg : Maybe (PiInfo RawImp, Name)) -> RawImp
 getArgMatch ploc mode search warg ms Nothing = warg
 getArgMatch ploc mode True warg ms (Just (AutoImplicit, nm))
-    = case (isUN nm >>= \ n => lookup n ms) of
+    = case (isUN nm >>= \ (_, un) => isBasic un >>= \ n => lookup n ms) of
         Just tm => tm
         Nothing =>
           let arg = ISearch ploc 500 in
@@ -159,7 +159,7 @@ getArgMatch ploc mode True warg ms (Just (AutoImplicit, nm))
             then IAs ploc ploc UseLeft nm arg
              else arg
 getArgMatch ploc mode search warg ms (Just (_, nm))
-    = case (isUN nm >>= \ n => lookup n ms) of
+    = case (isUN nm >>= \ (_, un) => isBasic un >>= \ n => lookup n ms) of
         Just tm => tm
         Nothing =>
           let arg = Implicit ploc True in
@@ -176,6 +176,9 @@ getNewLHS : {auto c : Ref Ctxt Defs} ->
 getNewLHS iploc drop nest wname wargnames lhs_raw patlhs
     = do let vploc = virtualiseFC iploc
          (mlhs_raw, wrest) <- dropWithArgs drop patlhs
+
+         log "declare.def.clause.with" 20 $ "Parent LHS: " ++ show lhs_raw
+         log "declare.def.clause.with" 20 $ "Modified LHS: " ++ show mlhs_raw
 
          autoimp <- isUnboundImplicits
          setUnboundImplicits True

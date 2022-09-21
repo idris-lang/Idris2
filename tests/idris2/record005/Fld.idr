@@ -6,4 +6,4 @@ AFoo : Foo
 AFoo = MkFoo {Gnu = 'c'}
 
 Bar : Foo
-Bar = record { Gnu = '?' } AFoo
+Bar = { Gnu := '?' } AFoo

@@ -4,6 +4,7 @@ module Compiler.ES.State
 
 import Core.Context
 import Compiler.ES.Ast
+import Compiler.NoMangle
 import Libraries.Data.SortedMap
 
 %default total
@@ -105,6 +106,9 @@ record ESSt where
   ||| `["browser","javascript"]`.
   ccTypes  : List String
 
+  ||| %nomangle names
+  noMangleMap : NoMangleMap
+
 --------------------------------------------------------------------------------
 --          Local Variables
 --------------------------------------------------------------------------------
@@ -112,14 +116,14 @@ record ESSt where
 ||| Map a local name to the given minimal expression
 export
 addLocal : { auto c : Ref ESs ESSt } -> Name -> Minimal -> Core ()
-addLocal n v = update ESs $ record { locals $= insert n v }
+addLocal n v = update ESs $ { locals $= insert n v }
 
 ||| Get and bump the local var index
 export
 nextLocal : { auto c : Ref ESs ESSt } -> Core Var
 nextLocal = do
   st <- get ESs
-  put ESs $ record { loc $= (+1) } st
+  put ESs $ { loc $= (+1) } st
   pure $ VLoc st.loc
 
 ||| Register a `Name` as a local variable. The name is kept
@@ -164,20 +168,22 @@ projections sc xs =
 ||| Map a toplevel function name to the given `Var`
 export
 addRef : { auto c : Ref ESs ESSt } -> Name -> Var -> Core ()
-addRef n v = update ESs $ record { refs $= insert n v }
+addRef n v = update ESs $ { refs $= insert n v }
 
 ||| Get and bump the local ref index
 export
 nextRef : { auto c : Ref ESs ESSt } -> Core Var
 nextRef = do
   st <- get ESs
-  put ESs $ record { ref $= (+1) } st
+  put ESs $ { ref $= (+1) } st
   pure $ VRef st.ref
 
-registerRef : {auto c : Ref ESs ESSt} -> (name : Name) -> Core Var
+registerRef :  {auto c : Ref ESs ESSt}
+            -> (name : Name)
+            -> Core Var
 registerRef n = do
   st <- get ESs
-  if keepRefName n st.mode
+  if keepRefName n st.mode || isJust (isNoMangle st.noMangleMap n)
      then let v = VName n in addRef n v >> pure v
      else do v <- nextRef
              addRef n v
@@ -188,7 +194,9 @@ registerRef n = do
 ||| The name will be replace with an index if the current
 ||| `GCMode` is set to `Minimal`.
 export
-getOrRegisterRef : {auto c : Ref ESs ESSt} -> Name -> Core Var
+getOrRegisterRef :  {auto c : Ref ESs ESSt}
+                 -> Name
+                 -> Core Var
 getOrRegisterRef n = do
   Nothing <- lookup n . refs <$> get ESs
     | Just v => pure v
@@ -208,7 +216,7 @@ addToPreamble :  {auto c : Ref ESs ESSt}
 addToPreamble name def = do
   s <- get ESs
   case lookup name (preamble s) of
-    Nothing => put ESs $ record { preamble $= insert name def } s
+    Nothing => put ESs $ { preamble $= insert name def } s
     Just x =>
       unless (x == def) $ do
         errorConcat
@@ -226,12 +234,13 @@ init :  (mode  : CGMode)
      -> (isArg : Exp -> Bool)
      -> (isFun : Exp -> Bool)
      -> (types : List String)
+     -> (noMangle : NoMangleMap)
      -> ESSt
-init mode isArg isFun ccs =
-  MkESSt mode isArg isFun 0 0 empty empty empty ccs
+init mode isArg isFun ccs noMangle =
+  MkESSt mode isArg isFun 0 0 empty empty empty ccs noMangle
 
 ||| Reset the local state before defining a new toplevel
 ||| function.
 export
 reset : {auto c : Ref ESs ESSt} -> Core ()
-reset = update ESs $ record { loc = 0, locals = empty }
+reset = update ESs $ { loc := 0, locals := empty }
