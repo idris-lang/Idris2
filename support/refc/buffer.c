@@ -19,7 +19,7 @@ void *newBuffer(int bytes) {
 
 static void assert_valid_range(Buffer *buf, int64_t offset, int64_t len) {
   IDRIS2_REFC_VERIFY(offset >= 0, "offset (%lld) < 0", (long long)offset);
-  IDRIS2_REFC_VERIFY(len >= 0, "len (%lld) < 0", (long long)offset);
+  IDRIS2_REFC_VERIFY(len >= 0, "len (%lld) < 0", (long long)len);
   IDRIS2_REFC_VERIFY(offset + len <= buf->size,
                      "offset (%lld) + len (%lld) > buf.size (%lld)",
                      (long long)offset, (long long)len, (long long)buf->size);
