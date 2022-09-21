@@ -1,0 +1,1 @@
+LOG package.depends:10: all depends: ["__PWD__depends/bar-0.1.0", "__PWD__depends/baz-0.2.0", "__PWD__depends/foo-0.2.0"]

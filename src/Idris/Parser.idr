@@ -156,6 +156,7 @@ commitKeyword : OriginDesc -> IndentInfo -> String -> Rule ()
 commitKeyword fname indents req
     = do mustContinue indents (Just req)
          decoratedKeyword fname req
+          <|> the (Rule ()) (fatalError ("Expected '" ++ req ++ "'"))
          mustContinue indents Nothing
 
 commitSymbol : OriginDesc -> String -> Rule ()
@@ -793,6 +794,7 @@ mutual
   if_ : OriginDesc -> IndentInfo -> Rule PTerm
   if_ fname indents
       = do b <- bounds (do decoratedKeyword fname "if"
+                           commit
                            x <- expr pdef fname indents
                            commitKeyword fname indents "then"
                            t <- typeExpr pdef fname indents
@@ -1176,13 +1178,21 @@ simpleData fname start tyName indents
          pure (MkPData (boundToFC fname (mergeBounds start b)) tyName.val
                        (mkTyConType fname tyfc params) [] cons)
 
-dataOpt : Rule DataOpt
-dataOpt
-    = (exactIdent "noHints" $> NoHints)
-  <|> (exactIdent "uniqueSearch" $> UniqueSearch)
-  <|> (exactIdent "search" *> SearchBy <$> forget <$> some name)
-  <|> (exactIdent "external" $> External)
-  <|> (exactIdent "noNewtype" $> NoNewtype)
+dataOpt : OriginDesc -> Rule DataOpt
+dataOpt fname
+    = (decorate fname Keyword (exactIdent "noHints") $> NoHints)
+  <|> (decorate fname Keyword (exactIdent "uniqueSearch") $> UniqueSearch)
+  <|> (do decorate fname Keyword (exactIdent "search")
+          SearchBy <$> forget <$> some (decorate fname Bound name))
+  <|> (decorate fname Keyword (exactIdent "external") $> External)
+  <|> (decorate fname Keyword (exactIdent "noNewtype") $> NoNewtype)
+
+dataOpts : OriginDesc -> EmptyRule (List DataOpt)
+dataOpts fname = option [] $ do
+  decoratedSymbol fname "["
+  opts <- sepBy1 (decoratedSymbol fname ",") (dataOpt fname)
+  decoratedSymbol fname "]"
+  pure (forget opts)
 
 dataBody : OriginDesc -> Int -> WithBounds t -> Name -> IndentInfo -> PTerm ->
           EmptyRule PDataDecl
@@ -1190,7 +1200,7 @@ dataBody fname mincol start n indents ty
     = do atEndIndent indents
          pure (MkPLater (boundToFC fname start) n ty)
   <|> do b <- bounds (do decoratedKeyword fname "where"
-                         opts <- option [] $ decoratedSymbol fname "[" *> forget <$> sepBy1 (decoratedSymbol fname ",") dataOpt <* decoratedSymbol fname "]"
+                         opts <- dataOpts fname
                          cs <- blockAfter mincol (tyDecls (mustWork $ decoratedDataConstructorName fname) "" fname)
                          pure (opts, concatMap forget cs))
          (opts, cs) <- pure b.val
@@ -1597,7 +1607,7 @@ implDecl fname indents
                          impls  <- implBinds fname indents
                          cons   <- constraints fname indents
                          n      <- decorate fname Typ name
-                         params <- many (simpleExpr fname indents)
+                         params <- many (continue indents *> simpleExpr fname indents)
                          nusing <- option [] $ decoratedKeyword fname "using"
                                             *> forget <$> some (decorate fname Function name)
                          body <- optional $ decoratedKeyword fname "where" *> blockAfter col (topDecl fname)
@@ -1673,10 +1683,11 @@ recordDecl fname indents
                          paramss <- many (recordParam fname indents)
                          let params = concat paramss
                          decoratedKeyword fname "where"
+                         opts <- dataOpts fname
                          dcflds <- blockWithOptHeaderAfter col
                                       (\ idt => recordConstructor fname <* atEnd idt)
                                       (fieldDecl fname)
-                         pure (\fc : FC => PRecord fc doc vis mbtot n params (fst dcflds) (concat (snd dcflds))))
+                         pure (\fc : FC => PRecord fc doc vis mbtot n params opts (fst dcflds) (concat (snd dcflds))))
          pure (b.val (boundToFC fname b))
 
 paramDecls : OriginDesc -> IndentInfo -> Rule PDecl

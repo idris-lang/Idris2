@@ -17,15 +17,10 @@ findConstAlt c (MkConstAlt c' exp :: alts) def = if c == c'
 
 foldableOp : PrimFn ar -> Bool
 foldableOp BelieveMe = False
-foldableOp (Cast from to)
-  = fromMaybe False [| intKind from `smaller` intKind to |]
-  where
-    smaller : IntKind -> IntKind -> Bool
-    smaller (Signed x) (Signed y) = x <= y
-    smaller (Unsigned x) (Unsigned y) = x <= y
-    smaller (Signed x) (Unsigned y) = x < P y
-    smaller (Unsigned x) (Signed y) = P x < y
-foldableOp _ = True
+foldableOp (Cast IntType _) = False
+foldableOp (Cast _ IntType) = False
+foldableOp (Cast from to)   = isJust (intKind from) && isJust (intKind to)
+foldableOp _                = True
 
 
 data Subst : List Name -> List Name -> Type where

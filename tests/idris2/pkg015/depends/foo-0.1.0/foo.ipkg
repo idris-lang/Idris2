@@ -1,0 +1,3 @@
+package foo
+version = 0.1.0
+depends = baz < 0.1.0

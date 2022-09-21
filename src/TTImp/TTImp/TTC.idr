@@ -317,13 +317,13 @@ mutual
 
   export
   TTC ImpRecord where
-    toBuf b (MkImpRecord fc n ps con fs)
-        = do toBuf b fc; toBuf b n; toBuf b ps; toBuf b con; toBuf b fs
+    toBuf b (MkImpRecord fc n ps opts con fs)
+        = do toBuf b fc; toBuf b n; toBuf b ps; toBuf b opts; toBuf b con; toBuf b fs
 
     fromBuf b
         = do fc <- fromBuf b; n <- fromBuf b; ps <- fromBuf b
-             con <- fromBuf b; fs <- fromBuf b
-             pure (MkImpRecord fc n ps con fs)
+             opts <- fromBuf b; con <- fromBuf b; fs <- fromBuf b
+             pure (MkImpRecord fc n ps opts con fs)
 
   export
   TTC FnOpt where

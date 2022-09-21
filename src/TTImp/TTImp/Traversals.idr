@@ -56,8 +56,8 @@ parameters (f : RawImp' nm -> RawImp' nm)
 
   export
   mapImpRecord : ImpRecord' nm -> ImpRecord' nm
-  mapImpRecord (MkImpRecord fc n params conName fields)
-    = MkImpRecord fc n (map (map $ map $ bimap mapPiInfo mapTTImp) params) conName (map mapIField fields)
+  mapImpRecord (MkImpRecord fc n params opts conName fields)
+    = MkImpRecord fc n (map (map $ map $ bimap mapPiInfo mapTTImp) params) opts conName (map mapIField fields)
 
   export
   mapImpDecl : ImpDecl' nm -> ImpDecl' nm

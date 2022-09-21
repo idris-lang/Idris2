@@ -274,6 +274,13 @@ pwarningRaw (ShadowingGlobalDefs fc ns)
                         :: reflow "is shadowing"
                         :: punctuate comma (map pretty0 (forget ns))
 
+pwarningRaw (ShadowingLocalBindings fc ns)
+    = pure $ vcat
+    [ reflow "You may be unintentionally shadowing the following local bindings:"
+    , indent 2 $ hcat $ pretty0 . fst <$> (forget ns)
+    , !(ploc fc)
+    ]
+
 pwarningRaw (Deprecated s fcAndName)
     = do docs <- traverseOpt (\(fc, name) => getDocsForName fc name justUserDoc) fcAndName
          pure . vsep $ catMaybes [ Just $ "Deprecation warning:" <++> pretty0 s

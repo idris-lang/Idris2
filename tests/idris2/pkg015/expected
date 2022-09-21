@@ -1,0 +1,6 @@
+Uncaught error: EmptyFC:Failed to resolve the dependencies for test:
+  foo-0.2.0; baz-0.3.0; required quux any but no matching version is installed
+  foo-0.2.0; baz-0.2.0; bar-0.1.1; required baz < 0.2.0 but assigned version 0.2.0 which is out of bounds
+  foo-0.2.0; baz-0.2.0; bar-0.1.0; required prz > 0.1.0 but no matching version is installed
+  foo-0.1.0; required baz < 0.1.0 but no matching version is installed
+

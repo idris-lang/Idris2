@@ -22,7 +22,7 @@ mkPoint n
     = let type = "Point" ++ show n ++ "D" in
       let mkMainUN = NS (MkNS ["Main"]) . UN . Basic in
       IRecord emptyFC Nothing Public Nothing
-      (MkRecord emptyFC (mkMainUN type) [] (mkMainUN ("Mk" ++ type))
+      (MkRecord emptyFC (mkMainUN type) [] [] (mkMainUN ("Mk" ++ type))
         (toList $ map (\axis => MkIField emptyFC MW ExplicitArg (UN (Field axis)) `(Double)) (axes n)))
 
 logDecls : TTImp -> Elab (Int -> Int)

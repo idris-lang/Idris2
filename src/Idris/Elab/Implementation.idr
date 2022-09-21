@@ -13,6 +13,7 @@ import Idris.Syntax
 
 import TTImp.BindImplicits
 import TTImp.Elab.Check
+import TTImp.Elab
 import TTImp.ProcessDecls
 import TTImp.TTImp
 import TTImp.TTImp.Functor
@@ -181,7 +182,25 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
 
          log "elab.implementation" 5 $ "Implementation type: " ++ show impTy
 
-         when (typePass pass) $ processDecl [] nest env impTyDecl
+         -- Handle the case where it was already declared with a Nothing mbody
+         when (typePass pass) $ do
+           gdefm <- lookupCtxtExactI impName (gamma defs)
+           case gdefm of
+              Nothing => processDecl [] nest env impTyDecl
+              -- If impName exists, check that it is a forward declaration of the same type
+              Just (tidx,gdef) =>
+                do u <- uniVar vfc
+                   -- If the definition is filled in, it wasn't a forward declaration
+                   let None = definition gdef
+                     | _ => throw (AlreadyDefined vfc impName)
+                   (ty,_) <- elabTerm tidx InType [] nest env
+                                      (IBindHere vfc (PI erased) impTy)
+                                      (Just (gType vfc u))
+                   let fullty = abstractFullEnvType vfc env ty
+                   ok <- convert defs [] fullty (type gdef)
+                   unless ok $ do logTermNF "elab.implementation" 1 "Previous" [] (type gdef)
+                                  logTermNF "elab.implementation" 1 "Now" [] fullty
+                                  throw (CantConvert (getFC impTy) (gamma defs) [] fullty (type gdef))
 
          -- If the body is empty, we're done for now (just declaring that
          -- the implementation exists and define it later)

@@ -61,6 +61,11 @@ idrisTestsCoverage = MkTestPool "Coverage checking" [] Nothing
        "coverage013", "coverage014", "coverage015", "coverage016",
        "coverage017", "coverage018", "coverage019"]
 
+idrisTestsTermination : TestPool
+idrisTestsTermination = MkTestPool "Termination checking" [] Nothing
+       -- Termination checking
+      ["termination001"]
+
 idrisTestsCasetree : TestPool
 idrisTestsCasetree = MkTestPool "Case tree building" [] Nothing
        -- Case tree building
@@ -86,7 +91,8 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006", "perror007", "perror008", "perror009", "perror010",
-       "perror011", "perror012", "perror013", "perror014", "perror015"]
+       "perror011", "perror012", "perror013", "perror014", "perror015",
+       "perror016", "perror017"]
 
 idrisTestsInteractive : TestPool
 idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
@@ -101,7 +107,8 @@ idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
        "interactive029", "interactive030", "interactive031", "interactive032",
        "interactive033", "interactive034", "interactive035", "interactive036",
        "interactive037", "interactive038", "interactive039", "interactive040",
-       "interactive041", "interactive042", "interactive043"]
+       "interactive041", "interactive042", "interactive043", "interactive044",
+       "interactive045"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool "Interface" [] Nothing
@@ -112,7 +119,8 @@ idrisTestsInterface = MkTestPool "Interface" [] Nothing
        "interface013", "interface014", "interface015", "interface016",
        "interface017", "interface018", "interface019", "interface020",
        "interface021", "interface022", "interface023", "interface024",
-       "interface025", "interface026", "interface027", "interface028"]
+       "interface025", "interface026", "interface027", "interface028",
+       "interface029"]
 
 idrisTestsLinear : TestPool
 idrisTestsLinear = MkTestPool "Quantities" [] Nothing
@@ -159,7 +167,7 @@ idrisTestsData = MkTestPool "Data and record types" [] Nothing
        "record001", "record002", "record003", "record004", "record005",
        "record006", "record007", "record008", "record009", "record010",
        "record011", "record012", "record013", "record014", "record015",
-       "record016" ]
+       "record016", "record017" ]
 
 idrisTestsBuiltin : TestPool
 idrisTestsBuiltin = MkTestPool "Builtin types and functions" [] Nothing
@@ -234,7 +242,8 @@ idrisTestsWith = MkTestPool "With abstraction" [] Nothing
 idrisTestsIPKG : TestPool
 idrisTestsIPKG = MkTestPool "Package and .ipkg files" [] Nothing
       ["pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
-       "pkg008", "pkg009", "pkg010", "pkg011", "pkg012"]
+       "pkg008", "pkg009", "pkg010", "pkg011", "pkg012", "pkg013", "pkg014",
+       "pkg015"]
 
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
@@ -284,6 +293,7 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "futures001"
     , "bitops"
     , "casts"
+    , "constfold"
     , "memo"
     , "newints"
     , "integers"
@@ -368,6 +378,7 @@ main = runner $
   [ testPaths "ttimp" ttimpTests
   , testPaths "idris2" idrisTestsBasic
   , testPaths "idris2" idrisTestsCoverage
+  , testPaths "idris2" idrisTestsTermination
   , testPaths "idris2" idrisTestsCasetree
   , testPaths "idris2" idrisTestsError
   , testPaths "idris2" idrisTestsFailing

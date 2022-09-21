@@ -374,6 +374,17 @@ namespace Equality
   finToNatQuotient FZ = Refl
   finToNatQuotient (FS prf) = cong S (finToNatQuotient prf)
 
+  ||| Propositional equality on `finToNat`s implies pointwise equality on the `Fin`s themselves
+  export
+  finToNatEqualityAsPointwise : (k : Fin m) ->
+                                (l : Fin n) ->
+                                finToNat k = finToNat l ->
+                                k ~~~ l
+  finToNatEqualityAsPointwise FZ FZ _ = FZ
+  finToNatEqualityAsPointwise FZ (FS _) prf = absurd prf
+  finToNatEqualityAsPointwise (FS _) FZ prf = absurd prf
+  finToNatEqualityAsPointwise (FS k) (FS l) prf = FS $ finToNatEqualityAsPointwise k l (injective prf)
+
   export
   weakenNeutral : (k : Fin n) -> weaken k ~~~ k
   weakenNeutral FZ = FZ

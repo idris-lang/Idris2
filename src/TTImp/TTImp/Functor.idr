@@ -145,9 +145,9 @@ mutual
 
   export
   Functor ImpRecord' where
-    map f (MkImpRecord fc n params conName fields)
+    map f (MkImpRecord fc n params opts conName fields)
       = MkImpRecord fc n (map (map {f = ImpParameter'} f) params)
-                    conName (map (map f) fields)
+                    opts conName (map (map f) fields)
 
   export
   Functor ImpParameter' where

@@ -21,6 +21,14 @@ public export
 asList : SnocList type -> List type
 asList = (reverse . cast)
 
+export
+Uninhabited (Lin = x :< xs) where
+  uninhabited Refl impossible
+
+export
+Uninhabited (x :< xs = Lin) where
+  uninhabited Refl impossible
+
 ||| True iff input is Lin
 public export
 isLin : SnocList a -> Bool
@@ -86,6 +94,11 @@ public export
 Alternative SnocList where
   empty = Lin
   xs <|> ys = xs ++ ys
+
+-- Why can't we just use an implementation here?!
+export %hint
+SnocBiinjective : Biinjective (:<)
+SnocBiinjective = MkBiinjective $ \case Refl => (Refl, Refl)
 
 ||| Find the rightmost element of the snoc-list that satisfies the predicate.
 public export
