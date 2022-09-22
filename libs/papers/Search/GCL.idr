@@ -194,7 +194,8 @@ petersons2 =
           (UPDATE State (\st => { intent2 := False } st))
           )))
 
-||| The parallel composition of the two Peterson's processes, to be analysed.
+||| The parallel composition of the two Peterson's processes, to be
+||| model-checked.
 public export
 petersons : Diagram (GCL State, GCL State) State
 petersons = (gclToDiag State petersons1) `pComp` (gclToDiag State petersons2)
@@ -332,15 +333,18 @@ checkPetersons = exists $
                       ))
                    tree
 
+
 {- N.B.: commenting this in causes the type-checking of this file to take ~2
  -       minutes and ~4 GB of RAM
  -
-||| /!\ CAUTION: THIS IS **VERY** SLOW + RESOURCE INTENSIVE /!\
-|||
+
 ||| Prove that Peterson's Algorithm is a solution to the Critical Section
 ||| Problem. This evaluates the `checkPetersons` property to obtain a proof (at
 ||| a search depth of 1000!), at which point we can show that it is
 ||| depth-invariant.
+|||
+||| /!\       CAUTION: THIS IS **EXTREMELY** SLOW + RESOURCE INTENSIVE       /!\
+||| /!\ Attempt at evaluation did not complete after 3hrs and 57.6 GB of RAM /!\
 public export
 petersonsCorrect : Models ? ?
                     GCL.tree
@@ -353,5 +357,80 @@ petersonsCorrect : Models ? ?
 petersonsCorrect =
   diModels (GCL State, GCL State) State
            (snd (check @{%search} (limit 1000) checkPetersons @{Oh}))
+
  -}
+
+
+
+------------------------------------------------------------------------
+-- Example: Dekker's Algorithm
+
+||| First Dekker's algorithm process
+public export
+dekkers1 : GCL State
+dekkers1 =
+  DOT _
+    (UPDATE _ (\st => { intent1 := True } st))
+    (DOT _
+      (while _ (\st => st.intent2)
+        (IF _ [ (MkGUARD _ (\st => weaken $ decEq st.turn 0) (SKIP _))
+              , (MkGUARD _ (\st => weaken $ decEq st.turn 1)
+                           (DOT _
+                            (UPDATE _ (\st => { intent1 := False } st))
+                            (DOT _
+                              (await _ (\st => weaken $ decEq st.turn 0))
+                              (UPDATE _ (\st => { intent1 := True } st))
+                              )))
+              ]
+        ))
+        (DOT _
+          CS1
+          (DOT _
+            (UPDATE _ (\st => { turn := 1 } st))
+            (UPDATE _ (\st => { intent1 := False } st))
+    )))
+
+||| First Dekker's algorithm process
+public export
+dekkers2 : GCL State
+dekkers2 =
+  DOT _
+    (UPDATE _ (\st => { intent2 := True } st))
+    (DOT _
+      (while _ (\st => st.intent1)
+        (IF _ [ (MkGUARD _ (\st => weaken $ decEq st.turn 1) (SKIP _))
+              , (MkGUARD _ (\st => weaken $ decEq st.turn 0)
+                           (DOT _
+                            (UPDATE _ (\st => { intent2 := False } st))
+                            (DOT _
+                              (await _ (\st => weaken $ decEq st.turn 1))
+                              (UPDATE _ (\st => { intent2 := True } st))
+                              )))
+              ]
+        ))
+        (DOT _
+          CS2
+          (DOT _
+            (UPDATE _ (\st => { turn := 0 } st))
+            (UPDATE _ (\st => { intent2 := False } st))
+    )))
+
+||| The parallel composition of the two Dekker's processes, to be model-checked.
+public export
+dekkers : Diagram (GCL State, GCL State) State
+dekkers = (gclToDiag _ dekkers1) `pComp` (gclToDiag _ dekkers2)
+
+||| An attempt at finding a violation of Mutual Exclusion.
+||| THIS WILL NOT WORK due to the lack of fairness in the unfolding of the
+||| traces. Dekker's algorithm requires fair scheduling in order to be correct,
+||| but since we don't have that, we cannot find a proof that no violations of
+||| mutex exist.
+|||
+||| /!\ Trying to evaluate this did not finish after 10 minutes /!\
+public export
+checkDekkers : HDec ?
+checkDekkers =
+  efSearch _ _
+    (now _ _ (\p, _ => (fromDec $ IsTT (p.inCS1 && p.inCS2))))
+    (model _ _ dekkers init) 100
 
