@@ -421,10 +421,10 @@ dekkers : Diagram (GCL State, GCL State) State
 dekkers = (gclToDiag _ dekkers1) `pComp` (gclToDiag _ dekkers2)
 
 ||| An attempt at finding a violation of Mutual Exclusion.
-||| THIS WILL NOT WORK due to the lack of fairness in the unfolding of the
-||| traces. Dekker's algorithm requires fair scheduling in order to be correct,
-||| but since we don't have that, we cannot find a proof that no violations of
-||| mutex exist.
+||| THIS WILL NOT FIND A PROOF due to the lack of fairness in the unfolding of
+||| the traces. Dekker's algorithm requires fair scheduling in order to be
+||| correct, but since we don't have that, we cannot find a proof that no
+||| violations of mutex exist.
 |||
 ||| /!\ Trying to evaluate this did not finish after 10 minutes /!\
 public export

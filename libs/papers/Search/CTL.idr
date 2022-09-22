@@ -391,27 +391,30 @@ parameters (Lbls, Sts : Type)
   agSearch : {f : _} -> MC f -> MC (AlwaysGlobal f)
   agSearch g = auSearch g (g `mcAND'` isCompleted)
 
+
 ------------------------------------------------------------------------
 -- Proof search example
 
 ||| This CT is a model of composing the `HiHorse` and `LoRoad` programs.
 public export
-Tree : CT ((), ()) Nat
-Tree = model ((), ()) Nat (HiHorse `pComp` LoRoad) 0
+tree : CT ((), ()) Nat
+tree = model ((), ()) Nat (HiHorse `pComp` LoRoad) 0
 
-||| Prove that there exists a path where `HiHorse || LoRoad`'s state reaches 10.
+||| A half-decider for proving that there exists a path where the shared
+||| `HiHorse || LoRoad` state reaches 10.
 public export
 reaches10 : ?   -- HDec (ExistsFinally [...])
 reaches10 =
   efSearch ((), ()) Nat
       (now ((), ()) Nat
-          (\ st, _ => fromDec $ decEq st 10)) Tree 20
+          (\st, _ => fromDec $ decEq st 10)) tree 20
 
+||| Prove that the shared state of `HiHorse || LoRoad` reaches 10, using the
+||| previously defined half-decider.
 export
 r10Proof : Models ((), ()) Nat
-              Tree
+              CTL.tree
               (ExistsFinally ((), ()) Nat
                   (Guarded ((), ()) Nat (\ st, _ => st === 10)))
 r10Proof = diModels ((), ()) Nat (reaches10.evidence Oh)
-
 
