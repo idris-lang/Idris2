@@ -332,6 +332,9 @@ checkPetersons = exists $
                       ))
                    tree
 
+{- N.B.: commenting this in causes the type-checking of this file to take ~2
+ -       minutes and ~4 GB of RAM
+ -
 ||| /!\ CAUTION: THIS IS **VERY** SLOW + RESOURCE INTENSIVE /!\
 |||
 ||| Prove that Peterson's Algorithm is a solution to the Critical Section
@@ -350,4 +353,5 @@ petersonsCorrect : Models ? ?
 petersonsCorrect =
   diModels (GCL State, GCL State) State
            (snd (check @{%search} (limit 1000) checkPetersons @{Oh}))
+ -}
 
