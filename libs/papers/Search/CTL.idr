@@ -40,7 +40,7 @@ pComp (TD transFn1 iState1) (TD transFn2 iState2) =
   TD compTransFn (iState1, iState2)
   where
     compTransFn : ((Lbls1, Lbls2), Sts) -> List ((Lbls1, Lbls2), Sts)
-    compTransFn = (\ ((l1, l2), st) => 
+    compTransFn = (\ ((l1, l2), st) =>
                     map (\ (l1', st') => ((l1', l2), st')) (transFn1 (l1, st)) ++
                     map (\ (l2', st') => ((l1, l2'), st')) (transFn2 (l2, st)))
 
@@ -90,12 +90,12 @@ parameters (Lbls, Sts : Type)
       follow : (Lbls, Sts) -> CT
 
       followAll : List (Lbls, Sts) -> List CT
-      
+
       follow st = At st (Delay (followAll (transFn st)))
 
       followAll [] = []
       followAll (st :: sts) = follow st :: followAll sts
-      
+
   ||| A formula has a bound (for Bounded Model Checking; BMC) and a computation
   ||| tree to check against.
   public export
