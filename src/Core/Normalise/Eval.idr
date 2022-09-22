@@ -277,7 +277,9 @@ parameters (defs : Defs, topopts : EvalOpts)
         = do -- logC "eval.ref" 50 $ do n' <- toFullNames n
              --                        pure $ "Found function: " ++ show n'
              Just res <- lookupCtxtExact n (gamma defs)
-                  | Nothing => pure def
+                  | Nothing => do logC "eval.stuck.outofscope" 5 $ do n' <- toFullNames n
+                                                                      pure $ "Stuck function: " ++ show n'
+                                  pure def
              let redok1 = evalAll topopts
              let redok2 = reducibleInAny (currentNS defs :: nestedNS defs)
                                          (fullname res)

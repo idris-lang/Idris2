@@ -123,6 +123,7 @@ knownTopics = [
     ("eval.eta", Nothing),
     ("eval.ref", Just "Evaluating refs (unavailable by default, edit Core.Normalise.Eval & recompile)"),
     ("eval.stuck", Nothing),
+    ("eval.stuck.outofscope", Nothing),
     ("ide-mode.completion", Just "Autocompletion requests"),
     ("ide-mode.hole", Just "Displaying hole contexts"),
     ("ide-mode.highlight", Nothing),
