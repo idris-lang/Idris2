@@ -296,13 +296,33 @@ public export
 tree : CT (GCL State, GCL State) State
 tree = model (GCL State, GCL State) State petersons init
 
+||| The Critical Section Problem:
+||| 1) a process's critical section (CS) is only ever accessed by that process
+|||    and no other
+||| 2) any process which wishes to gain access to its CS eventually
+|||    does so
+||| 3) the composition of the processes is deadlock free
+|||    (we use a stronger requirement: that all process composition must
+|||    terminate successfully)
+public export
+CSP : Type
+CSP = (arg : Nat **
+        AND' (GCL State, GCL State) State
+          (\depth, tree => Mutex depth tree)              -- mutually exclusive
+          (\depth, tree =>
+            AND' (GCL State, GCL State) State
+              (\depth, tree => SF depth tree)             -- starvation free
+              (\depth, tree => Termination depth tree)    -- completed
+              depth tree)
+        arg GCL.tree)
+
 ||| A `Prop` (property) containing all the conditions necessary for proving that
 ||| Peterson's Algorithm is a correct solution to the Critical Section Problem.
 ||| When evaluated (e.g. through the `auto` search in a `Properties.check`
 ||| call; specifically `runProp`), it will produce the required proof (which is
 ||| **very** big).
 public export
-checkPetersons : Prop ? ?
+checkPetersons : Prop ? CSP
 checkPetersons = exists $
                   (mcAND' (GCL State, GCL State) State
                     checkMutex
@@ -315,17 +335,9 @@ checkPetersons = exists $
 ||| /!\ CAUTION: THIS IS **VERY** SLOW + RESOURCE INTENSIVE /!\
 |||
 ||| Prove that Peterson's Algorithm is a solution to the Critical Section
-||| Problem; i.e.:
-||| 1) a process's critical section (CS) is only ever accessed by that process
-|||    and no other
-||| 2) any process which wishes to gain access to its CS eventually
-|||    does so
-||| 3) the composition of the processes is deadlock free
-|||    (we use a stronger requirement: that all process composition must
-|||    terminate successfully)
-|||
-||| This evaluates the `checkPetersons` property to obtain a proof (at a search
-||| depth of 1000!), at which point we can show that it is depth-invariant.
+||| Problem. This evaluates the `checkPetersons` property to obtain a proof (at
+||| a search depth of 1000!), at which point we can show that it is
+||| depth-invariant.
 public export
 petersonsCorrect : Models ? ?
                     GCL.tree
