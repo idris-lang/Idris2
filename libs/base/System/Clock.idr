@@ -72,12 +72,11 @@ Show (Clock type) where
 export
 showTime : (s, ns : Nat) -> (clk : Clock type) -> String
 showTime s ns (MkClock seconds nanoseconds) =
-  let seconds = show seconds
-      quotient : Integer = cast $ 10 `power` minus 9 ns
-      nanoseconds = show (cast nanoseconds `div` quotient)
-  in concat [ padLeft s '0' seconds
-            , "."
-            , padRight ns '0' nanoseconds
+  let seconds' = show seconds
+      nanoseconds' = show nanoseconds
+  in concat [ padLeft s '0' seconds'
+            , if ns == 0 then "" else "."
+            , padRight ns '0' $ substr 0 ns $ (padLeft 9 '0' nanoseconds')
             , "s"
             ]
 
