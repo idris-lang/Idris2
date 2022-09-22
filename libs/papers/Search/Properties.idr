@@ -10,9 +10,10 @@ import Data.List.Lazy
 import Data.List.Lazy.Quantifiers
 import Data.Nat
 import Data.So
-import Data.Stream
-import Data.Colist
-import Data.Colist1
+
+import public Data.Stream
+import public Data.Colist
+import public Data.Colist1
 
 import public Search.Negation
 import public Search.HDecidable

@@ -13,9 +13,6 @@ import Data.List.Quantifiers
 import Data.List.Lazy.Quantifiers
 import Decidable.Equality
 
-import public Search.Negation
-import public Search.HDecidable
-import public Search.Properties
 import public Search.CTL
 
 %default total
@@ -29,7 +26,7 @@ weaken (No  _) = False
 parameters (Sts : Type)
 
   ------------------------------------------------------------------------
-  -- Type and operational semantics
+  -- Types and operational semantics
 
   mutual
     ||| Guarded Command Language
@@ -132,6 +129,7 @@ parameters (Sts : Type)
   ifThenElse : (g : Pred) -> (x : GCL) -> (y : GCL) -> GCL
   ifThenElse g x y = IF [MkGUARD g x, MkGUARD (not . g) y]
 
+
 ------------------------------------------------------------------------
 -- Example: Peterson's Algorithm
 
@@ -175,7 +173,7 @@ petersons1 =
     (DOT State
       (UPDATE State (\st => { turn := 1 } st))
       (DOT State
-        (await State (\st => not st.intent2 || weaken (decEq st.turn 0)))
+        (await State (\st => (not st.intent2) || (weaken (decEq st.turn 0))))
         (DOT State
           CS1
           (UPDATE State (\st => { intent1 := False } st))
@@ -190,7 +188,7 @@ petersons2 =
     (DOT State
       (UPDATE State (\st => { turn := 0 } st))
       (DOT State
-        (await State (\st => not st.intent1 || weaken (decEq st.turn 1)))
+        (await State (\st => (not st.intent1) || (weaken (decEq st.turn 1))))
         (DOT State
           CS2
           (UPDATE State (\st => { intent2 := False } st))
@@ -298,6 +296,11 @@ public export
 tree : CT (GCL State, GCL State) State
 tree = model (GCL State, GCL State) State petersons init
 
+||| A `Prop` (property) containing all the conditions necessary for proving that
+||| Peterson's Algorithm is a correct solution to the Critical Section Problem.
+||| When evaluated (e.g. through the `auto` search in a `Properties.check`
+||| call; specifically `runProp`), it will produce the required proof (which is
+||| **very** big).
 public export
 checkPetersons : Prop ? ?
 checkPetersons = exists $
@@ -309,8 +312,20 @@ checkPetersons = exists $
                       ))
                    tree
 
-%logging "eval.casetree.stuck" 5
+||| /!\ CAUTION: THIS IS **VERY** SLOW + RESOURCE INTENSIVE /!\
 |||
+||| Prove that Peterson's Algorithm is a solution to the Critical Section
+||| Problem; i.e.:
+||| 1) a process's critical section (CS) is only ever accessed by that process
+|||    and no other
+||| 2) any process which wishes to gain access to its CS eventually
+|||    does so
+||| 3) the composition of the processes is deadlock free
+|||    (we use a stronger requirement: that all process composition must
+|||    terminate successfully)
+|||
+||| This evaluates the `checkPetersons` property to obtain a proof (at a search
+||| depth of 1000!), at which point we can show that it is depth-invariant.
 public export
 petersonsCorrect : Models ? ?
                     GCL.tree
@@ -321,6 +336,6 @@ petersonsCorrect : Models ? ?
                         Termination
                         ))
 petersonsCorrect =
-  diModels ? ? (snd (check @{%search} (limit 1000) checkPetersons @{Oh}))
-%logging off
+  diModels (GCL State, GCL State) State
+           (snd (check @{%search} (limit 1000) checkPetersons @{Oh}))
 
