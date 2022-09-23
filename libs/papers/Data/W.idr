@@ -393,15 +393,14 @@ namespace PartitionedSets
                  (Pi (pos s) (lam $ \ p => pred (ts $$ p))) ->
                  pred (MkW s ts)) ->
          (w : W sh pos) -> pred w
-  elim pred step (MkW s (MkArr ts)) with (step s)
-    _ | steps with (pos s)
-      _ | MkPSet d (MkArr e) = steps (MkArr ts) (MkPi $ ih d e ts) where
+  elim pred step (MkW s (MkArr ts)) with (step s) | (pos s)
+    _ | steps | MkPSet d (MkArr e) = steps (MkArr ts) (MkPi $ ih d e ts) where
 
-        ih : (d : Fin) -> (e : Arr d Type) -> (ts : Arr d e (W sh pos)) ->
-             PiArr d e (lamArr d e $ \ p => pred (appArr d e ts p))
-        ih AVoid e ts = ()
-        ih (AUnit nm) (MkOne e) (MkOne ts) = MkOne (\ x => elim pred step (ts x))
-        ih (d || e) (f, g) (ts, us) = (ih d f ts, ih e g us)
+      ih : (d : Fin) -> (e : Arr d Type) -> (ts : Arr d e (W sh pos)) ->
+           PiArr d e (lamArr d e $ \ p => pred (appArr d e ts p))
+      ih AVoid e ts = ()
+      ih (AUnit nm) (MkOne e) (MkOne ts) = MkOne (\ x => elim pred step (ts x))
+      ih (d || e) (f, g) (ts, us) = (ih d f ts, ih e g us)
 
   namespace Examples
 
