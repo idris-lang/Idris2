@@ -19,20 +19,6 @@ import public Deriving.Common
 %language ElabReflection
 %default total
 
-freshName : List Name -> String -> String
-freshName ns a = assert_total $ go (basicNames ns) Nothing where
-
-  basicNames : List Name -> List String
-  basicNames = mapMaybe $ \ nm => case dropNS nm of
-    UN (Basic str) => Just str
-    _ => Nothing
-
-  covering
-  go : List String -> Maybe Nat -> String
-  go ns mi =
-    let nm = a ++ maybe "" show mi in
-    ifThenElse (nm `elem` ns) (go ns (Just $ maybe 0 S mi)) nm
-
 ------------------------------------------------------------------------------
 -- Errors
 
