@@ -80,6 +80,33 @@ isType = go Z [] where
   go idx acc t = fail "Expected a type constructor, got: \{show t}"
 
 ------------------------------------------------------------------------------
+-- Being a (data) constructor with a parameter
+-- TODO: generalise?
+
+public export
+record ConstructorView where
+  constructor MkConstructorView
+  params      : List Name
+  functorPara : Name
+  conArgTypes : List (Count, Argument TTImp)
+
+export
+constructorView : TTImp -> Maybe ConstructorView
+constructorView (IPi fc rig pinfo x a b) = do
+  let Just arg = fromPiInfo fc pinfo x a
+    | Nothing => constructorView b -- this better be a boring argument...
+  let True = rig /= M1
+    | False => constructorView b -- this better be another boring argument...
+  { conArgTypes $= ((rig, arg) ::) } <$> constructorView b
+constructorView (IApp _ f (IVar _ a)) = do
+  MkAppView _ ts _ <- appView f
+  let ps = flip mapMaybe ts $ \ t => the (Maybe Name) $ case t of
+             Arg _ (IVar _ nm) => Just nm
+             _ => Nothing
+  pure (MkConstructorView (ps <>> []) a [])
+constructorView _ = Nothing
+
+------------------------------------------------------------------------------
 -- Satisfying an interface
 --
 -- In order to derive Functor for `data Tree a = Node (List (Tree a))`, we need
@@ -146,6 +173,13 @@ optionallyEta fc Nothing f =
 export
 apply : FC -> TTImp -> List TTImp -> TTImp
 apply fc t ts = apply t (map (Arg fc) ts)
+
+||| Use unqualified names (useful for more compact printing)
+export
+cleanup : TTImp -> TTImp
+cleanup = \case
+  IVar fc n => IVar fc (dropNS n)
+  t => t
 
 ------------------------------------------------------------------------------
 -- TODO: move to Data.List?
