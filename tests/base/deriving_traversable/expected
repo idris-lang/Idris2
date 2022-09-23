@@ -68,7 +68,7 @@ LOG derive.traversable.clauses:1:
   traverseIVect : {0 m : _} -> {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> IVect {n = m} a -> f (IVect {n = m} b)
   traverseIVect f (MkIVect x2) = MkIVect <$> (traverse f x2)
 LOG derive.traversable.clauses:1: 
-  traverseEqMap : {0 key, eq : _} -> {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> EqMap key {{conArg:13365} = eq} a -> f (EqMap key {{conArg:13365} = eq} b)
+  traverseEqMap : {0 key, eq : _} -> {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> EqMap key {{conArg:13793} = eq} a -> f (EqMap key {{conArg:13793} = eq} b)
   traverseEqMap f (MkEqMap x3) = MkEqMap <$> (traverse (traverse f) x3)
 LOG derive.traversable.clauses:1: 
   traverseTree : {0 l : _} -> {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> Tree l a -> f (Tree l b)
@@ -77,3 +77,6 @@ LOG derive.traversable.clauses:1:
 LOG derive.traversable.clauses:1: 
   traverseTriple : {0 a, b : _} -> {0 a0, b0 : Type} -> {0 f : Type -> Type} -> Applicative f => (a0 -> f b0) -> Triple a b a0 -> f (Triple a b b0)
   traverseTriple f (MkTriple x3 x4 x5) = (MkTriple x3 x4) <$> (f x5)
+LOG derive.traversable.clauses:1: 
+  traverseF : {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> F a -> f (F b)
+  traverseF f (MkF {x = x1} x2 x3 x4 {y = x5} x6 x7) = (((((\ y0 => \ y1 => \ y2 => MkF {x = y0} x2 y1 x4 {y = y2}) <$> (f x1)) <*> (f x3)) <*> (f x5)) <*> (f x6)) <*> (traverse f x7)

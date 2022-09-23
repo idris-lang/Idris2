@@ -421,3 +421,19 @@ namespace WriterList
 
     wlist : Traversable (WList w ())
     wlist = %runElab derive
+
+namespace WithImplicits
+
+  data F : Type -> Type where
+    MkF : {x : a} -> Nat -> a -> String -> {y : a} -> a -> List a -> F a
+
+  %hint
+  fF : Functor F
+  fF = %runElab derive
+
+  %hint
+  fM : Foldable F
+  fM = %runElab derive
+
+  fT : Traversable F
+  fT = %runElab derive

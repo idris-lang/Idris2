@@ -288,12 +288,41 @@ parameters (fc : FC) (mutualWith : List Name)
 applyA : FC -> TTImp -> List (Either (Argument TTImp) TTImp) -> TTImp
 applyA fc c [] = `(pure ~(c))
 applyA fc c (Right a :: as) = applyA fc (IApp fc c a) as
-applyA fc c (Left a :: as) = go (apply fc `((<$>)) [c, unArg a]) as where
+applyA fc c as =
+  let (pref, suff) = spanBy canBeApplied ([<] <>< as) in
+  let (lams, args, vals) = preEta 0 (pref <>> []) in
+  let eta = foldr (\ x => ILam fc MW ExplicitArg (Just x) (Implicit fc False)) (apply c args) lams in
+  fire eta (map Left vals ++ (suff <>> []))
 
-  go : TTImp -> List (Either (Argument TTImp) TTImp) -> TTImp
-  go f [] = f
-  go f (Left a :: as) = go (apply fc `((<*>)) [f, unArg a]) as
-  go f (Right a :: as) = go (apply fc `((<*>)) [f, IApp fc `(pure) a]) as
+  where
+
+    canBeApplied : Either (Argument TTImp) TTImp -> Maybe (Either TTImp TTImp)
+    canBeApplied (Left (Arg _ t)) = pure (Left t)
+    canBeApplied (Right t) = pure (Right t)
+    canBeApplied _ = Nothing
+
+    preEta : Nat -> List (Either (Argument TTImp) TTImp) ->
+             (List Name, List (Argument TTImp), List TTImp)
+    preEta n [] = ([], [], [])
+    preEta n (a :: as) =
+      let (n, ns, args, vals) = the (Nat, List Name, List (Argument TTImp), List _) $
+            let x = UN (Basic ("y" ++ show n)); vx = IVar fc x in case a of
+              Left (Arg fc t) => (S n, [x], [Arg fc vx], [t])
+              Left (NamedArg fc nm t) => (S n, [x], [NamedArg fc nm vx], [t])
+              Left (AutoArg fc t) => (S n, [x], [AutoArg fc vx], [t])
+              Right t => (n, [], [Arg fc t], [])
+      in
+      let (nss, argss, valss) = preEta n as in
+      (ns ++ nss, args ++ argss, vals ++ valss)
+
+    go : TTImp -> List (Either TTImp TTImp) -> TTImp
+    go f [] = f
+    go f (Left a :: as) = go (apply fc `((<*>)) [f, a]) as
+    go f (Right a :: as) = go (apply fc `((<*>)) [f, IApp fc `(pure) a]) as
+
+    fire : TTImp -> List (Either TTImp TTImp) -> TTImp
+    fire f [] = f
+    fire f (a :: as) = go (apply fc `((<$>)) [f, either id id a]) as
 
 namespace Traversable
 
