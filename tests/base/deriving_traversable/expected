@@ -1,76 +1,79 @@
-1/1: Building DeriveFoldable (DeriveFoldable.idr)
-LOG derive.foldable.clauses:1: 
-  foldMapList : {0 a, b : Type} -> Monoid b => (a -> b) -> List a -> b
-  foldMapList f Nil = neutral
-  foldMapList f (x1 :: x2) = (f x1) <+> (foldMapList f x2)
-LOG derive.foldable.clauses:1: 
-  foldMapMaybe : {0 a, b : Type} -> Monoid b => (a -> b) -> Maybe a -> b
-  foldMapMaybe f Nothing = neutral
-  foldMapMaybe f (Just x1) = f x1
-LOG derive.foldable.clauses:1: 
-  foldMapEither : {0 err : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> Either err a -> b
-  foldMapEither f (Left x2) = neutral
-  foldMapEither f (Right x2) = f x2
-LOG derive.foldable.clauses:1: 
-  foldMapPair : {0 a : _} -> {0 a0, b : Type} -> Monoid b => (a0 -> b) -> Pair a a0 -> b
-  foldMapPair f (MkPair x2 x3) = f x3
-LOG derive.foldable.clauses:1: 
-  foldMapConstant : {0 a : _} -> {0 a0, b : Type} -> Monoid b => (a0 -> b) -> Constant a a0 -> b
-  foldMapConstant f (MkConstant x2) = neutral
-LOG derive.foldable.clauses:1: 
-  foldMapVect : {0 n : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> Vect n a -> b
-  foldMapVect f Nil = neutral
-  foldMapVect f (x2 :: x3) = (f x2) <+> (foldMapVect f x3)
-LOG derive.foldable.clauses:1: 
-  foldMapMatrix : {0 m, n : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> Matrix m n a -> b
-  foldMapMatrix f (MkMatrix x3) = foldMap (foldMap f) x3
-LOG derive.foldable.clauses:1: 
-  foldMapTm : {0 a, b : Type} -> Monoid b => (a -> b) -> Tm a -> b
-  foldMapTm f (Var x1) = f x1
-  foldMapTm f (Call x2 x3) = foldMap (assert_total (foldMapTm f)) x3
-  foldMapTm f (Lam x1) = foldMapTm (foldMap f) x1
-LOG derive.foldable.clauses:1: 
-  foldMapTree : {0 a, b : Type} -> Monoid b => (a -> b) -> Tree a -> b
-  foldMapTree f (Leaf x1) = f x1
-  foldMapTree f (Node x1) = assert_total (foldMap f x1)
-LOG derive.foldable.clauses:1: 
-  foldMapForest : {0 a, b : Type} -> Monoid b => (a -> b) -> Forest a -> b
-  foldMapForest f Empty = neutral
-  foldMapForest f (Plant x1 x2) = (assert_total (foldMap f x1)) <+> (foldMapForest f x2)
-LOG derive.foldable.clauses:1: 
-  foldMapList1 : {0 a, b : Type} -> Monoid b => (a -> b) -> List1 a -> b
-  foldMapList1 f (MkList1 x1) = bifoldMap f (foldMap (assert_total (foldMapList1 f))) x1
-LOG derive.foldable.clauses:1: 
-  foldMapFull : {0 a, b : Type} -> Monoid b => (a -> b) -> Full a -> b
-  foldMapFull f (Leaf x1) = f x1
-  foldMapFull f (Node x1) = foldMapFull (bifoldMap f f) x1
-LOG derive.foldable.clauses:1: 
-  foldMapLAZY : {0 a, b : Type} -> Monoid b => (a -> b) -> LAZY a -> b
-  foldMapLAZY f (MkLAZY x1) = f x1
-LOG derive.foldable.clauses:1: 
-  foldMapRose : {0 a, b : Type} -> Monoid b => (a -> b) -> Rose a -> b
-  foldMapRose f (Node x1) = foldMap (\ eta => assert_total (foldMapRose f eta)) x1
-LOG derive.foldable.assumption:10: I am assuming that the parameter m is a Foldable
-LOG derive.foldable.clauses:1: 
-  foldMapMaybeT : {0 m : _} -> Foldable m => {0 a, b : Type} -> Monoid b => (a -> b) -> MaybeT m a -> b
-  foldMapMaybeT f (MkMaybeT x2) = foldMap (foldMap f) x2
-LOG derive.foldable.assumption:10: I am assuming that the parameter layer is a Bifoldable
-LOG derive.foldable.clauses:1: 
-  foldMapTreeT : {0 layer : _} -> Bifoldable layer => {0 a, b : Type} -> Monoid b => (a -> b) -> TreeT layer a -> b
-  foldMapTreeT f (MkTreeT x2) = bifoldMap f (foldMapTreeT f) x2
-LOG derive.foldable.clauses:1: 
-  foldMapTree : {0 a, b : Type} -> Monoid b => (a -> b) -> Tree a -> b
-  foldMapTree f (MkTree x1) = foldMap f x1
-LOG derive.foldable.clauses:1: 
-  foldMapIVect : {0 m : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> IVect {n = m} a -> b
-  foldMapIVect f (MkIVect x2) = foldMap f x2
-LOG derive.foldable.clauses:1: 
-  foldMapEqMap : {0 key, eq : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> EqMap key {{conArg:5682} = eq} a -> b
-  foldMapEqMap f (MkEqMap x3) = foldMap (foldMap f) x3
-LOG derive.foldable.clauses:1: 
-  foldMapTree : {0 l : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> Tree l a -> b
-  foldMapTree f (Leaf x2) = neutral
-  foldMapTree f (Node x2 x3 x4) = (foldMapTree f x2) <+> ((f x3) <+> (foldMapTree f x4))
-LOG derive.foldable.clauses:1: 
-  foldMapTriple : {0 a, b : _} -> {0 a0, b0 : Type} -> Monoid b0 => (a0 -> b0) -> Triple a b a0 -> b0
-  foldMapTriple f (MkTriple x3 x4 x5) = f x5
+1/1: Building DeriveTraversable (DeriveTraversable.idr)
+LOG derive.traversable.clauses:1: 
+  traverseList : {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> List a -> f (List b)
+  traverseList f Nil = pure Nil
+  traverseList f (x1 :: x2) = ((::) <$> (f x1)) <*> (traverseList f x2)
+LOG derive.traversable.clauses:1: 
+  traverseMaybe : {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> Maybe a -> f (Maybe b)
+  traverseMaybe f Nothing = pure Nothing
+  traverseMaybe f (Just x1) = Just <$> (f x1)
+LOG derive.traversable.clauses:1: 
+  traverseEither : {0 err : _} -> {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> Either err a -> f (Either err b)
+  traverseEither f (Left x2) = pure (Left x2)
+  traverseEither f (Right x2) = Right <$> (f x2)
+LOG derive.traversable.clauses:1: 
+  traversePair : {0 a : _} -> {0 a0, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a0 -> f b) -> Pair a a0 -> f (Pair a b)
+  traversePair f (MkPair x2 x3) = (MkPair x2) <$> (f x3)
+LOG derive.traversable.clauses:1: 
+  traversePair : {0 a : _} -> {0 a0, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a0 -> f b) -> Pair a a0 -> f (Pair a b)
+  traversePair f (MkPair x2 x3) = (MkPair x2) <$> (f x3)
+LOG derive.traversable.clauses:1: 
+  traverseConstant : {0 a : _} -> {0 a0, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a0 -> f b) -> Constant a a0 -> f (Constant a b)
+  traverseConstant f (MkConstant x2) = pure (MkConstant x2)
+LOG derive.traversable.clauses:1: 
+  traverseVect : {0 n : _} -> {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> Vect n a -> f (Vect n b)
+  traverseVect f Nil = pure Nil
+  traverseVect f (x2 :: x3) = ((::) <$> (f x2)) <*> (traverseVect f x3)
+LOG derive.traversable.clauses:1: 
+  traverseMatrix : {0 m, n : _} -> {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> Matrix m n a -> f (Matrix m n b)
+  traverseMatrix f (MkMatrix x3) = MkMatrix <$> (traverse (traverse f) x3)
+LOG derive.traversable.clauses:1: 
+  traverseTm : {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> Tm a -> f (Tm b)
+  traverseTm f (Var x1) = Var <$> (f x1)
+  traverseTm f (Call x2 x3) = (Call x2) <$> (traverse (assert_total (traverseTm f)) x3)
+  traverseTm f (Lam x1) = Lam <$> (traverseTm (traverse f) x1)
+LOG derive.traversable.clauses:1: 
+  traverseTree : {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> Tree a -> f (Tree b)
+  traverseTree f (Leaf x1) = Leaf <$> (f x1)
+  traverseTree f (Node x1) = Node <$> (assert_total (traverse f x1))
+LOG derive.traversable.clauses:1: 
+  traverseForest : {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> Forest a -> f (Forest b)
+  traverseForest f Empty = pure Empty
+  traverseForest f (Plant x1 x2) = (Plant <$> (assert_total (traverse f x1))) <*> (traverseForest f x2)
+LOG derive.traversable.clauses:1: 
+  traverseList1 : {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> List1 a -> f (List1 b)
+  traverseList1 f (MkList1 x1) = MkList1 <$> (bitraverse f (traverse (assert_total (traverseList1 f))) x1)
+LOG derive.traversable.clauses:1: 
+  traverseFull : {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> Full a -> f (Full b)
+  traverseFull f (Leaf x1) = Leaf <$> (f x1)
+  traverseFull f (Node x1) = Node <$> (traverseFull (bitraverse f f) x1)
+LOG derive.traversable.clauses:1: 
+  traverseLAZY : {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> LAZY a -> f (LAZY b)
+  traverseLAZY f (MkLAZY x1) = MkLAZY <$> (delay <$> (f x1))
+LOG derive.traversable.clauses:1: 
+  traverseRose : {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> Rose a -> f (Rose b)
+  traverseRose f (Node x1) = Node <$> (traverse (\ eta => delay <$> (assert_total (traverseRose f eta))) x1)
+LOG derive.traversable.assumption:10: I am assuming that the parameter m is a Traversable
+LOG derive.traversable.clauses:1: 
+  traverseMaybeT : {0 m : _} -> Traversable m => {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> MaybeT m a -> f (MaybeT m b)
+  traverseMaybeT f (MkMaybeT x2) = MkMaybeT <$> (traverse (traverse f) x2)
+LOG derive.traversable.assumption:10: I am assuming that the parameter layer is a Bitraversable
+LOG derive.traversable.clauses:1: 
+  traverseTreeT : {0 layer : _} -> Bitraversable layer => {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> TreeT layer a -> f (TreeT layer b)
+  traverseTreeT f (MkTreeT x2) = MkTreeT <$> (bitraverse f (traverseTreeT f) x2)
+LOG derive.traversable.clauses:1: 
+  traverseTree : {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> Tree a -> f (Tree b)
+  traverseTree f (MkTree x1) = MkTree <$> (traverse f x1)
+LOG derive.traversable.clauses:1: 
+  traverseIVect : {0 m : _} -> {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> IVect {n = m} a -> f (IVect {n = m} b)
+  traverseIVect f (MkIVect x2) = MkIVect <$> (traverse f x2)
+LOG derive.traversable.clauses:1: 
+  traverseEqMap : {0 key, eq : _} -> {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> EqMap key {{conArg:13365} = eq} a -> f (EqMap key {{conArg:13365} = eq} b)
+  traverseEqMap f (MkEqMap x3) = MkEqMap <$> (traverse (traverse f) x3)
+LOG derive.traversable.clauses:1: 
+  traverseTree : {0 l : _} -> {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> Tree l a -> f (Tree l b)
+  traverseTree f (Leaf x2) = pure (Leaf x2)
+  traverseTree f (Node x2 x3 x4) = ((Node <$> (traverseTree f x2)) <*> (f x3)) <*> (traverseTree f x4)
+LOG derive.traversable.clauses:1: 
+  traverseTriple : {0 a, b : _} -> {0 a0, b0 : Type} -> {0 f : Type -> Type} -> Applicative f => (a0 -> f b0) -> Triple a b a0 -> f (Triple a b b0)
+  traverseTriple f (MkTriple x3 x4 x5) = (MkTriple x3 x4) <$> (f x5)
