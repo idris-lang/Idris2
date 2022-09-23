@@ -10,4 +10,4 @@ modules = Control.Linear.Network,
           Network.Socket.Raw,
           Network.FFI
 
-depends = contrib
+depends = linear

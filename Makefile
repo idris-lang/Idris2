@@ -78,7 +78,7 @@ prelude:
 base: prelude
 	${MAKE} -C libs/base IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
-network: prelude contrib
+network: prelude linear
 	${MAKE} -C libs/network IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 contrib: base
@@ -93,7 +93,7 @@ linear:
 papers: contrib linear
 	${MAKE} -C libs/papers IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
-bootstrap-libs : prelude base contrib network
+bootstrap-libs : prelude base linear network
 libs : prelude base contrib network test-lib linear papers
 
 libdocs:
