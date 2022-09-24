@@ -59,7 +59,7 @@
 ; To match Chez
 (define (add1 x) (+ x 1))
 (define (sub1 x) (- x 1))
-(define (fxsub1 x) (fx- x 1))
+(define (fxadd1 x) (fx+ x 1))
 (define (fxsub1 x) (fx- x 1))
 
 (define (integer->bits8 x) (bitwise-and x #xff))
