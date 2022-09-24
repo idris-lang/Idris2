@@ -929,11 +929,11 @@ mutual
            let consb = map (\ (nm, tm) => (nm, doBind bnames tm)) cons'
 
            body' <- traverse (desugarDecl (ps ++ mnames ++ paramNames)) body
-           pure [IPragma (maybe [tn] (\n => [tn, n]) conname)
-                         (\nest, env =>
-                             elabInterface fc vis env nest consb
-                                           tn paramsb det conname
-                                           (concat body'))]
+           pure [IPragma fc (maybe [tn] (\n => [tn, n]) conname)
+                            (\nest, env =>
+                              elabInterface fc vis env nest consb
+                                            tn paramsb det conname
+                                            (concat body'))]
     where
       -- Turns pairs in the constraints to individual constraints. This
       -- is a bit of a hack, but it's necessary to build parent constraint
@@ -974,12 +974,12 @@ mutual
            -- given.
            let impname = maybe (mkImplName fc tn paramsb) id impln
 
-           pure [IPragma [impname]
-                         (\nest, env =>
-                             elabImplementation fc vis opts pass env nest isb consb
-                                                tn paramsb (isNamed impln)
-                                                impname nusing
-                                                body')]
+           pure [IPragma fc [impname]
+                            (\nest, env =>
+                               elabImplementation fc vis opts pass env nest isb consb
+                                                  tn paramsb (isNamed impln)
+                                                  impname nusing
+                                                  body')]
     where
       isNamed : Maybe a -> Bool
       isNamed Nothing = False
@@ -1095,31 +1095,31 @@ mutual
            pure [IRunElabDecl fc tm']
   desugarDecl ps (PDirective fc d)
       = case d of
-             Hide n => pure [IPragma [] (\nest, env => hide fc n)]
-             Unhide n => pure [IPragma [] (\nest, env => unhide fc n)]
+             Hide n => pure [IPragma fc [] (\nest, env => hide fc n)]
+             Unhide n => pure [IPragma fc [] (\nest, env => unhide fc n)]
              Logging i => pure [ILog ((\ i => (topics i, verbosity i)) <$> i)]
-             LazyOn a => pure [IPragma [] (\nest, env => lazyActive a)]
+             LazyOn a => pure [IPragma fc [] (\nest, env => lazyActive a)]
              UnboundImplicits a => do
                setUnboundImplicits a
-               pure [IPragma [] (\nest, env => setUnboundImplicits a)]
+               pure [IPragma fc [] (\nest, env => setUnboundImplicits a)]
              PrefixRecordProjections b => do
-               pure [IPragma [] (\nest, env => setPrefixRecordProjections b)]
-             AmbigDepth n => pure [IPragma [] (\nest, env => setAmbigLimit n)]
-             AutoImplicitDepth n => pure [IPragma [] (\nest, env => setAutoImplicitLimit n)]
-             NFMetavarThreshold n => pure [IPragma [] (\nest, env => setNFThreshold n)]
-             SearchTimeout n => pure [IPragma [] (\nest, env => setSearchTimeout n)]
-             PairNames ty f s => pure [IPragma [] (\nest, env => setPair fc ty f s)]
-             RewriteName eq rw => pure [IPragma [] (\nest, env => setRewrite fc eq rw)]
-             PrimInteger n => pure [IPragma [] (\nest, env => setFromInteger n)]
-             PrimString n => pure [IPragma [] (\nest, env => setFromString n)]
-             PrimChar n => pure [IPragma [] (\nest, env => setFromChar n)]
-             PrimDouble n => pure [IPragma [] (\nest, env => setFromDouble n)]
-             CGAction cg dir => pure [IPragma [] (\nest, env => addDirective cg dir)]
-             Names n ns => pure [IPragma [] (\nest, env => addNameDirective fc n ns)]
-             StartExpr tm => pure [IPragma [] (\nest, env => throw (InternalError "%start not implemented"))] -- TODO!
-             Overloadable n => pure [IPragma [] (\nest, env => setNameFlag fc n Overloadable)]
-             Extension e => pure [IPragma [] (\nest, env => setExtension e)]
-             DefaultTotality tot => pure [IPragma [] (\_, _ => setDefaultTotalityOption tot)]
+               pure [IPragma fc [] (\nest, env => setPrefixRecordProjections b)]
+             AmbigDepth n => pure [IPragma fc [] (\nest, env => setAmbigLimit n)]
+             AutoImplicitDepth n => pure [IPragma fc [] (\nest, env => setAutoImplicitLimit n)]
+             NFMetavarThreshold n => pure [IPragma fc [] (\nest, env => setNFThreshold n)]
+             SearchTimeout n => pure [IPragma fc [] (\nest, env => setSearchTimeout n)]
+             PairNames ty f s => pure [IPragma fc [] (\nest, env => setPair fc ty f s)]
+             RewriteName eq rw => pure [IPragma fc [] (\nest, env => setRewrite fc eq rw)]
+             PrimInteger n => pure [IPragma fc [] (\nest, env => setFromInteger n)]
+             PrimString n => pure [IPragma fc [] (\nest, env => setFromString n)]
+             PrimChar n => pure [IPragma fc [] (\nest, env => setFromChar n)]
+             PrimDouble n => pure [IPragma fc [] (\nest, env => setFromDouble n)]
+             CGAction cg dir => pure [IPragma fc [] (\nest, env => addDirective cg dir)]
+             Names n ns => pure [IPragma fc [] (\nest, env => addNameDirective fc n ns)]
+             StartExpr tm => pure [IPragma fc [] (\nest, env => throw (InternalError "%start not implemented"))] -- TODO!
+             Overloadable n => pure [IPragma fc [] (\nest, env => setNameFlag fc n Overloadable)]
+             Extension e => pure [IPragma fc [] (\nest, env => setExtension e)]
+             DefaultTotality tot => pure [IPragma fc [] (\_, _ => setDefaultTotalityOption tot)]
   desugarDecl ps (PBuiltin fc type name) = pure [IBuiltin fc type name]
 
   export
