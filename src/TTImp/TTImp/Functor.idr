@@ -106,7 +106,7 @@ mutual
       = ITransform fc n (map f lhs) (map f rhs)
     map f (IRunElabDecl fc t)
       = IRunElabDecl fc (map f t)
-    map f (IPragma xs k) = IPragma xs k
+    map f (IPragma fc xs k) = IPragma fc xs k
     map f (ILog x) = ILog x
     map f (IBuiltin fc ty n) = IBuiltin fc ty n
 

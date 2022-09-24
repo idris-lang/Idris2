@@ -448,9 +448,9 @@ mutual
        INamespace : FC -> Namespace -> List (ImpDecl' nm) -> ImpDecl' nm
        ITransform : FC -> Name -> RawImp' nm -> RawImp' nm -> ImpDecl' nm
        IRunElabDecl : FC -> RawImp' nm -> ImpDecl' nm
-       IPragma : List Name -> -- pragmas might define names that wouldn't
-                       -- otherwise be spotted in 'definedInBlock' so they
-                       -- can be flagged here.
+       IPragma : FC -> List Name -> -- pragmas might define names that wouldn't
+                                    -- otherwise be spotted in 'definedInBlock' so they
+                                    -- can be flagged here.
                  ({vars : _} ->
                   NestedNames vars -> Env Term vars -> Core ()) ->
                  ImpDecl' nm
@@ -479,7 +479,7 @@ mutual
         = "%transform " ++ show n ++ " " ++ show lhs ++ " ==> " ++ show rhs
     show (IRunElabDecl _ tm)
         = "%runElab " ++ show tm
-    show (IPragma _ _) = "[externally defined pragma]"
+    show (IPragma _ _ _) = "[externally defined pragma]"
     show (ILog Nothing) = "%logging off"
     show (ILog (Just (topic, lvl))) = "%logging " ++ case topic of
       [] => show lvl
@@ -816,7 +816,7 @@ definedInBlock ns decls =
         all : List Name
         all = expandNS ns n :: map (expandNS fldns') (fnsRF ++ fnsUN)
 
-    defName ns (IPragma pns _) = map (expandNS ns) pns
+    defName ns (IPragma _ pns _) = map (expandNS ns) pns
     defName _ _ = []
 
 export
@@ -879,7 +879,7 @@ namespace ImpDecl
   getFC (INamespace fc _ _) = fc
   getFC (ITransform fc _ _ _) = fc
   getFC (IRunElabDecl fc _) = fc
-  getFC (IPragma _ _) = EmptyFC
+  getFC (IPragma fc _ _) = fc
   getFC (ILog _) = EmptyFC
   getFC (IBuiltin fc _ _) = fc
 
