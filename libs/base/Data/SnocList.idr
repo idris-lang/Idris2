@@ -41,6 +41,18 @@ isSnoc : SnocList a -> Bool
 isSnoc Lin     = False
 isSnoc (sx :< x) = True
 
+||| Given a predicate and a snoclist, returns a tuple consisting of the longest
+||| prefix of the snoclist whose elements satisfy the predicate, and the rest of the
+||| snoclist.
+public export
+spanBy : (a -> Maybe b) -> SnocList a -> (SnocList a, SnocList b)
+spanBy p [<] = ([<], [<])
+spanBy p (xs :< x) = case p x of
+  Just b =>
+    let (as, bs) = spanBy p xs in
+    (as, bs :< b)
+  Nothing => (xs :< x, [<])
+
 export
 Show a => Show (SnocList a) where
   show xs = concat ("[< " :: intersperse ", " (show' [] xs) ++ ["]"])
