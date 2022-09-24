@@ -152,8 +152,29 @@ Show Constant where
   show WorldVal = "%World"
 
 public export
+data Fixity = InfixL | InfixR | Infix | Prefix
+
+export
+Show Fixity where
+  show InfixL = "InfixL"
+  show InfixR = "InfixR"
+  show Infix = "Infix"
+  show Prefix = "Prefix"
+
+
+public export
+record Operator where
+  constructor MkOperator
+  opFixity : Fixity
+  opLevel : Nat
+  opSyntax : String
+
+%name Operator op
+
+public export
 data UserName
   = Basic String -- default name constructor       e.g. map
+  | Op Operator  -- (pre/in)fix operator           e.g. <><
   | Field String -- field accessor                 e.g. .fst
   | Underscore   -- no name                        e.g. _
 
@@ -178,14 +199,13 @@ dropNS n = n
 export
 isOp : Name -> Bool
 isOp nm = case dropNS nm of
-  UN (Basic n) => case strM n of
-    StrCons c _ => not (isAlpha c)
-    _ => False
+  UN (Op _) => True
   _ => False
 
 export
 Show UserName where
   show (Basic n) = n
+  show (Op op) = op .opSyntax
   show (Field n) = "." ++ n
   show Underscore = "_"
 
@@ -330,6 +350,7 @@ Eq Count where
 public export
 Eq UserName where
   Basic n    == Basic n'   = n == n'
+  Op op      == Op op'     = op.opSyntax == op'.opSyntax
   Field n    == Field n'   = n == n'
   Underscore == Underscore = True
   _ == _ = False
@@ -389,17 +410,52 @@ DecEq Namespace where
   decEq (MkNS ns) (MkNS ns') = decEqCong (decEq ns ns')
 
 export Injective Basic where injective Refl = Refl
+export Injective Op where injective Refl = Refl
 export Injective Field where injective Refl = Refl
+
+export Biinjective (MkOperator _) where biinjective Refl = (Refl, Refl)
+
+public export
+DecEq Fixity where
+  decEq InfixL InfixL = Yes Refl
+  decEq InfixL InfixR = No (\case prf impossible)
+  decEq InfixL Infix = No (\case prf impossible)
+  decEq InfixL Prefix = No (\case prf impossible)
+  decEq InfixR InfixL = No (\case prf impossible)
+  decEq InfixR InfixR = Yes Refl
+  decEq InfixR Infix = No (\case prf impossible)
+  decEq InfixR Prefix = No (\case prf impossible)
+  decEq Infix InfixL = No (\case prf impossible)
+  decEq Infix InfixR = No (\case prf impossible)
+  decEq Infix Infix = Yes Refl
+  decEq Infix Prefix = No (\case prf impossible)
+  decEq Prefix InfixL = No (\case prf impossible)
+  decEq Prefix InfixR = No (\case prf impossible)
+  decEq Prefix Infix = No (\case prf impossible)
+  decEq Prefix Prefix = Yes Refl
+
+public export
+DecEq Operator where
+  decEq (MkOperator a@_ b c) (MkOperator x y z) with (decEq a x)
+    _ | Yes Refl = decEqCong2 (decEq b y) (decEq c z)
+    _ | No nprf = No (nprf . cong opFixity)
 
 public export
 DecEq UserName where
   decEq (Basic str) (Basic str1) = decEqCong (decEq str str1)
+  decEq (Basic str) (Op op) = No (\case Refl impossible)
   decEq (Basic str) (Field str1) = No (\case Refl impossible)
   decEq (Basic str) Underscore = No (\case Refl impossible)
+  decEq (Op op) (Basic str) = No (\case Refl impossible)
+  decEq (Op op) (Op op1) = decEqCong (decEq op op1)
+  decEq (Op op) (Field str) = No (\case Refl impossible)
+  decEq (Op op) Underscore = No (\case Refl impossible)
   decEq (Field str) (Basic str1) = No (\case Refl impossible)
+  decEq (Field str) (Op op) = No (\case Refl impossible)
   decEq (Field str) (Field str1) = decEqCong (decEq str str1)
   decEq (Field str) Underscore = No (\case Refl impossible)
   decEq Underscore (Basic str) = No (\case Refl impossible)
+  decEq Underscore (Op op) = No (\case Refl impossible)
   decEq Underscore (Field str) = No (\case Refl impossible)
   decEq Underscore Underscore = Yes Refl
 

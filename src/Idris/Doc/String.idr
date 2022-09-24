@@ -308,34 +308,31 @@ getDocsForName fc n config
                   | _ => pure []
              pure <$> showDoc methodsConfig nstr
 
-    getInfixDoc : Name -> Core (List (Doc IdrisDocAnn))
-    getInfixDoc n
-        = do let Just (Basic n) = userNameRoot n
-                    | _ => pure []
-             let Just (_, fixity, assoc) = S.lookup n (infixes !(get Syn))
-                    | Nothing => pure []
-             pure $ pure $ hsep
-                  [ pretty0 (show fixity)
-                  , "operator,"
-                  , "level"
-                  , pretty0 (show assoc)
-                  ]
-
-    getPrefixDoc : Name -> Core (List (Doc IdrisDocAnn))
-    getPrefixDoc n
-        = do let Just (Basic n) = userNameRoot n
-                    | _ => pure []
-             let Just (_, assoc) = S.lookup n (prefixes !(get Syn))
-                    | Nothing => pure []
-             pure $ ["prefix operator, level" <++> pretty0 (show assoc)]
-
     getFixityDoc : Name -> Core (List (Doc IdrisDocAnn))
-    getFixityDoc n =
-      pure $ case toList !(getInfixDoc n) ++ toList !(getPrefixDoc n) of
-        []  => []
-        [f] => [header "Fixity Declaration" <++> f]
-        fs  => [header "Fixity Declarations" <+> Line <+>
-                 indent 2 (vcat fs)]
+    getFixityDoc n
+        = do let Just n = do un <- userNameRoot n
+                             case un of
+                               Op op => pure op.opSyntax
+                               Basic str => pure str
+                               _ => Nothing
+                    | _ => pure []
+             syn <- get Syn
+             let pref : List (Doc ?) = case S.lookup n (prefixes syn) of
+                          Nothing => []
+                          Just (_, assoc) => ["prefix operator, level" <++> pretty0 (show assoc)]
+             let inff = case S.lookup n (infixes syn) of
+                          Nothing => []
+                          Just (_, fixity, assoc) =>
+                            pure $ hsep
+                                 [ pretty0 (show fixity)
+                                 , "operator,"
+                                 , "level"
+                                 , pretty0 (show assoc)
+                                 ]
+             pure $ case inff ++ pref of
+               []  => []
+               [f] => [header "Fixity Declaration" <++> f]
+               fs  => [header "Fixity Declarations" <+> Line <+> indent 2 (vcat fs)]
 
     getIFaceDoc : (Name, IFaceInfo) -> Core (Doc IdrisDocAnn)
     getIFaceDoc (n, iface)
@@ -543,7 +540,9 @@ getDocsForPTerm : {auto o : Ref ROpts REPLOpts} ->
                   {auto c : Ref Ctxt Defs} ->
                   {auto s : Ref Syn SyntaxInfo} ->
                   PTerm -> Core (Doc IdrisDocAnn)
-getDocsForPTerm (PRef fc name) = getDocsForName fc name MkConfig
+getDocsForPTerm (PRef fc name) =
+  do name <- desugarName name
+     getDocsForName fc name MkConfig
 getDocsForPTerm (PPrimVal _ c) = getDocsForPrimitive c
 getDocsForPTerm (PType _) = pure $ vcat
   [ "Type : Type"

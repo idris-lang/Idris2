@@ -617,7 +617,7 @@ mkRule nm = do
   let (premises, goal) = split tm
   logMsg (show nm) 1 "Successfully split the type."
   let r = MkRule m (Free nm) (fromList premises) goal
-  logMsg "auto.quoting.\{show nm}" 1 ("\n" ++ show r)
+  logMsg "search.auto.quoting.\{show nm}" 1 ("\n" ++ show r)
   pure r
 
 namespace Example
@@ -669,11 +669,14 @@ export
 bySearch : (depth : Nat) -> HintDB -> Elab a
 bySearch depth rules = do
   (rules', g) <- getGoal
-  logMsg "auto.search.goal" 1 (showTerm [<] g)
+  logMsg "search.auto.goal" 1 (showTerm [<] g)
+  unless (null rules) $
+    logMsg "search.auto.rules" 1 (unlines ("HintDB rules:" :: map show rules))
+  unless (null rules') $
+    logMsg "search.auto.rules" 1 (unlines ("Local rules:" :: map show rules'))
   let rules = rules ++ rules'
-  logMsg "auto.search.rules" 1 (unlines $ map show rules')
   let (prf :: _) = dfs depth (solve (length rules') rules g)
-    | _ => fail "Couldn't find proof for goal"
+    | _ => fail "Couldn't find proof for goal: \{showTerm [<] g}"
   check (intros rules' (unquote prf))
 
 namespace Example

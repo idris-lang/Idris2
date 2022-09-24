@@ -48,6 +48,10 @@ basics : String -> Name
 basics n = NS basicsNS (UN $ Basic n)
 
 export
+basicsOp : Operator -> Name
+basicsOp op = NS basicsNS (UN $ Op op)
+
+export
 builtin : String -> Name
 builtin n = NS builtinNS (UN $ Basic n)
 
@@ -240,7 +244,7 @@ Reify a => Reify (List a) where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), args) of
              (UN (Basic "Nil"), _) => pure []
-             (UN (Basic "::"), [_, (_, x), (_, xs)])
+             (UN (Op (MkOperator _ _ "::")), [_, (_, x), (_, xs)])
                   => do x' <- reify defs !(evalClosure defs x)
                         xs' <- reify defs !(evalClosure defs xs)
                         pure (x' :: xs')
@@ -253,13 +257,13 @@ Reflect a => Reflect (List a) where
   reflect fc defs lhs env (x :: xs)
       = do x' <- reflect fc defs lhs env x
            xs' <- reflect fc defs lhs env xs
-           appCon fc defs (basics "::") [Erased fc False, x', xs']
+           appCon fc defs (basicsOp (MkOperator InfixR 7 "::")) [Erased fc False, x', xs']
 
 export
 Reify a => Reify (List1 a) where
   reify defs val@(NDCon _ n _ _ [_, (_, x), (_, xs)])
       = case dropAllNS !(full (gamma defs) n) of
-             UN (Basic ":::")
+             UN (Op (MkOperator _ _ ":::"))
                   => do x' <- reify defs !(evalClosure defs x)
                         xs' <- reify defs !(evalClosure defs xs)
                         pure (x' ::: xs')
@@ -272,7 +276,7 @@ Reflect a => Reflect (List1 a) where
       = do x' <- reflect fc defs lhs env (head xxs)
            xs' <- reflect fc defs lhs env (tail xxs)
            appCon fc defs (NS (mkNamespace "Data.List1")
-                  (UN $ Basic ":::")) [Erased fc False, x', xs']
+                  (UN $ Op (MkOperator InfixR 7 ":::"))) [Erased fc False, x', xs']
 
 export
 Reify a => Reify (Maybe a) where
@@ -343,12 +347,53 @@ Reflect ModuleIdent where
          appCon fc defs (reflectiontt "MkMI") [ns']
 
 export
+Reify Fixity where
+  reify defs val@(NDCon _ n _ _ [])
+    = case dropAllNS !(full (gamma defs) n) of
+        (UN (Basic "InfixL")) => pure InfixL
+        (UN (Basic "InfixR")) => pure InfixR
+        (UN (Basic "Infix")) => pure Infix
+        (UN (Basic "Prefix")) => pure Prefix
+        _ => cantReify val "Fixity"
+  reify defs val = cantReify val "Fixity"
+
+export
+Reflect Fixity where
+  reflect fc defs lhs env InfixL = appCon fc defs (reflectiontt "InfixL") []
+  reflect fc defs lhs env InfixR = appCon fc defs (reflectiontt "InfixR") []
+  reflect fc defs lhs env Infix = appCon fc defs (reflectiontt "Infix") []
+  reflect fc defs lhs env Prefix = appCon fc defs (reflectiontt "Prefix") []
+
+export
+Reify Operator where
+  reify defs val@(NDCon _ n _ _ args)
+    = case (dropAllNS !(full (gamma defs) n), args) of
+             (UN (Basic "MkOperator"), [(_, f), (_, l), (_, str)])
+                 => do f' <- reify defs !(evalClosure defs f)
+                       l' <- reify defs !(evalClosure defs l)
+                       str' <- reify defs !(evalClosure defs str)
+                       pure (MkOperator f' l' str')
+             _ => cantReify val "Operator"
+  reify defs val = cantReify val "Operator"
+
+export
+Reflect Operator where
+  reflect fc defs lhs env (MkOperator x y z)
+    = do x' <- reflect fc defs lhs env x
+         y' <- reflect fc defs lhs env y
+         z' <- reflect fc defs lhs env z
+         appCon fc defs (reflectiontt "MkOperator") [x',y',z']
+
+export
 Reify UserName where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), args) of
              (UN (Basic "Basic"), [(_, str)])
                  => do str' <- reify defs !(evalClosure defs str)
                        pure (Basic str')
+             (UN (Basic "Op"), [(_, op)])
+                 => do op' <- reify defs !(evalClosure defs op)
+                       pure (Op op')
              (UN (Basic "Field"), [(_, str)])
                  => do str' <- reify defs !(evalClosure defs str)
                        pure (Field str')
@@ -364,6 +409,9 @@ Reflect UserName where
   reflect fc defs lhs env (Basic x)
       = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "Basic") [x']
+  reflect fc defs lhs env (Op x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "Op") [x']
   reflect fc defs lhs env (Field x)
       = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "Field") [x']

@@ -78,10 +78,10 @@ decoratedDataConstructorName fname = decorate fname Data dataConstructorName
 decoratedSimpleBinderName : OriginDesc -> Rule String
 decoratedSimpleBinderName fname = decorate fname Bound unqualifiedName
 
-decoratedSimpleNamedArg : OriginDesc -> Rule String
+decoratedSimpleNamedArg : OriginDesc -> Rule Name
 decoratedSimpleNamedArg fname
-  = decorate fname Bound unqualifiedName
-  <|> parens fname (decorate fname Bound unqualifiedOperatorName)
+  = UN . Basic <$> decorate fname Bound unqualifiedName
+  <|> parens fname (decorate fname Bound operator)
 
 -- Forward declare since they're used in the parser
 topDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
@@ -243,7 +243,7 @@ mutual
       braceArgs fname indents
           = do start <- bounds (decoratedSymbol fname "{")
                list <- sepBy (decoratedSymbol fname ",")
-                        $ do x <- bounds (UN . Basic <$> decoratedSimpleNamedArg fname)
+                        $ do x <- bounds (decoratedSimpleNamedArg fname)
                              let fc = boundToFC fname x
                              option (NamedArg x.val $ PRef fc x.val)
                               $ do tm <- decoratedSymbol fname "=" *> typeExpr pdef fname indents
@@ -298,14 +298,14 @@ mutual
                        pure $
                          let fc = boundToFC fname (mergeBounds l r)
                              opFC = virtualiseFC fc -- already been highlighted: we don't care
-                         in POp fc opFC (UN $ Basic "=") l.val r.val
+                         in POp fc opFC (UN $ Op (MkOperator Infix 20 "=")) l.val r.val
                else fail "= not allowed")
              <|>
              (do b <- bounds $ do
                         continue indents
                         op <- bounds iOperator
                         e <- case op.val of
-                               UN (Basic "$") => typeExpr q fname indents
+                               UN (Op (MkOperator _ _ "$")) => typeExpr q fname indents
                                _ => expr q fname indents
                         pure (op, e)
                  (op, r) <- pure b.val

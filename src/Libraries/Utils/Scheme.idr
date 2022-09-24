@@ -299,6 +299,13 @@ Scheme Integer where
   fromScheme _ = Nothing
 
 export
+Scheme Nat where
+  toScheme x = IntegerVal (cast x)
+
+  fromScheme (IntegerVal x) = Just (cast x)
+  fromScheme _ = Nothing
+
+export
 Scheme Int where
   toScheme x = IntegerVal (cast x)
 

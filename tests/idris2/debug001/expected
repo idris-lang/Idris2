@@ -74,7 +74,7 @@ Compiled: \ {arg:1}, {arg:2} => case {arg:2} of
   ; Prelude.Basics.(:<) {tag = 1} [cons] {e:2} {e:3} => let rest = Prelude.Types.SnocList.filter {arg:1} {e:2} incase {arg:1} {e:3} of  { 1 => Prelude.Basics.(:<) {tag = 1} [cons] rest {e:3}; 0 => rest}
   }
 Refers to: Prelude.Basics.SnocList, Prelude.Basics.Lin, Prelude.Types.SnocList.case block in filter, Prelude.Types.SnocList.filter
-Refers to (runtime): Prelude.Basics.Lin, Prelude.Basics.(:<), Prelude.Types.SnocList.filter
+Refers to (runtime): Prelude.Basics.(:<), Prelude.Basics.Lin, Prelude.Types.SnocList.filter
 Flags: total
 Size change: Prelude.Types.SnocList.filter: [Just (0, Same), Just (1, Same), Just (2, Smaller)]
 Main> 

@@ -27,6 +27,7 @@ schString s = concatMap okchar (unpack s)
 export
 schUserName : UserName -> String
 schUserName (Basic n) = "u--" ++ schString n
+schUserName (Op op) = "o--" ++ schString op.opSyntax
 schUserName (Field n) = "rf--" ++ schString n
 schUserName Underscore = "u--_"
 

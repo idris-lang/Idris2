@@ -108,6 +108,8 @@ knownTopics = [
     ("elab.implementation", Nothing),
     ("elab.interface", Nothing),
     ("elab.interface.default", Nothing),
+    ("elab.interface.data", Nothing),
+    ("elab.interface.method", Nothing),
     ("elab.local", Nothing),
     ("elab.prune", Nothing),
     ("elab.record", Nothing),

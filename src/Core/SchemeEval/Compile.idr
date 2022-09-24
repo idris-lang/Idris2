@@ -34,6 +34,7 @@ schString s = concatMap okchar (unpack s)
 
 schVarUN : UserName -> String
 schVarUN (Basic n) = schString n
+schVarUN (Op op) = "op--" ++ schString op.opSyntax
 schVarUN (Field n) = "rf--" ++ schString n
 schVarUN Underscore = "_US_"
 

@@ -76,6 +76,7 @@ cCleanString cs = showcCleanString (unpack cs) ""
 export
 cUserName : UserName -> String
 cUserName (Basic n) = cCleanString n
+cUserName (Op op) = "op__" ++ cCleanString op.opSyntax
 cUserName (Field n) = "rec__" ++ cCleanString n
 cUserName Underscore = cCleanString "_"
 

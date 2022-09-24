@@ -12,14 +12,51 @@ import public Core.Name.Namespace
 
 %default total
 
+public export
+data Fixity = InfixL | InfixR | Infix | Prefix
+
+export
+Show Fixity where
+  show InfixL = "infixl"
+  show InfixR = "infixr"
+  show Infix  = "infix"
+  show Prefix = "prefix"
+
+public export
+record Operator where
+  constructor MkOperator
+  opFixity : Fixity
+  opLevel  : Nat
+  opSyntax : String
+
+%name Operator op
+
 ||| A username has some structure
 public export
 data UserName : Type where
-  Basic : String -> UserName -- default name constructor       e.g. map
-  Field : String -> UserName -- field accessor                 e.g. .fst
-  Underscore : UserName      -- no name                        e.g. _
+  Basic      : String -> UserName   -- default name constructor       e.g. map
+  Op         : Operator -> UserName -- operator                       e.g. <><
+  Field      : String -> UserName   -- field accessor                 e.g. .fst
+  Underscore : UserName             -- no name                        e.g. _
 
 %name UserName un
+
+export
+isOpChar : Char -> Bool
+isOpChar c = c `elem` (unpack ":!#$%&*+./<=>?@\\^|-~")
+
+export
+||| Test whether a user name begins with an operator symbol.
+isOpString : String -> Bool
+isOpString n = fromMaybe False $ do
+   c <- fst <$> strUncons n
+   guard (isOpChar c)
+   pure True
+
+export
+isOpUserName : UserName -> Bool
+isOpUserName (Op _) = True
+isOpUserName _ = False
 
 ||| A smart constructor taking a string and parsing it as the appropriate
 ||| username
@@ -28,7 +65,10 @@ mkUserName : String -> UserName
 mkUserName "_" = Underscore
 mkUserName str with (strM str)
   mkUserName _   | StrCons '.' n = Field n
-  mkUserName str | _             = Basic str
+  mkUserName str | _
+    = ifThenElse (isOpString str)
+        (Op (MkOperator Infix 20 str)) -- arbitrary
+        (Basic str)
 
 ||| Name helps us track a name's structure as well as its origin:
 ||| was it user-provided or machine-manufactured? For what reason?
@@ -82,20 +122,6 @@ userNameRoot (DN _ n) = userNameRoot n
 userNameRoot _ = Nothing
 
 export
-isOpChar : Char -> Bool
-isOpChar c = c `elem` (unpack ":!#$%&*+./<=>?@\\^|-~")
-
-export
-||| Test whether a user name begins with an operator symbol.
-isOpUserName : UserName -> Bool
-isOpUserName (Basic n) = fromMaybe False $ do
-   c <- fst <$> strUncons n
-   guard (isOpChar c)
-   pure True
-isOpUserName (Field _) = False
-isOpUserName Underscore = False
-
-export
 ||| Test whether a name begins with an operator symbol.
 isOpName : Name -> Bool
 isOpName = maybe False isOpUserName . userNameRoot
@@ -109,6 +135,7 @@ isUnderscoreName _ = False
 export
 isPatternVariable : UserName -> Bool
 isPatternVariable (Basic nm) = lowerFirst nm
+isPatternVariable (Op _) = False
 isPatternVariable (Field _) = False
 isPatternVariable Underscore = True
 
@@ -152,6 +179,11 @@ isBasic (Basic str) = Just str
 isBasic _ = Nothing
 
 export
+isOp : UserName -> Maybe Operator
+isOp (Op op) = Just op
+isOp _ = Nothing
+
+export
 isField : UserName -> Maybe String
 isField (Field str) = Just str
 isField _ = Nothing
@@ -159,6 +191,7 @@ isField _ = Nothing
 export
 displayUserName : UserName -> String
 displayUserName (Basic n) = n
+displayUserName (Op op) = op.opSyntax
 displayUserName (Field n) = n
 displayUserName Underscore = "_"
 
@@ -224,6 +257,7 @@ isUnsafeBuiltin nm = case splitNS nm of
 export
 Show UserName where
   show (Basic n) = n
+  show (Op op) = op .opSyntax
   show (Field n) = "." ++ n
   show Underscore = "_"
 
@@ -242,9 +276,16 @@ Show Name where
   show (Resolved x) = "$resolved" ++ show x
 
 export
+[RawOP] Show Operator where
+  showPrec d (MkOperator f l op)
+    = showCon d "MkOperator"
+    $ showArg f ++ showArg l ++ showArg op
+
+export
 [RawUN] Show UserName where
-  showPrec d (Basic n) = showCon d "Basic " n
-  showPrec d (Field n) = showCon d "Field " n
+  showPrec d (Basic n) = showCon d "Basic" $ showArg n
+  showPrec d (Op op) = showCon d "Op" $ showArg @{RawOP} op
+  showPrec d (Field n) = showCon d "Field" $ showArg n
   showPrec d Underscore = "Underscore"
 
 export
@@ -263,6 +304,7 @@ covering
 export
 Pretty Void UserName where
   pretty (Basic n) = pretty n
+  pretty (Op op) = pretty op.opSyntax
   pretty (Field n) = "." <+> pretty n
   pretty Underscore = "_"
 
@@ -271,8 +313,8 @@ export
 ||| The first boolean states whether the operator is prefixed.
 isPrettyOp : Bool -> Name -> Bool
 isPrettyOp b (UN nm@(Field _)) = b -- prefixed fields need to be parenthesised
-isPrettyOp b (UN nm@(Basic _)) = isOpUserName nm
-isPrettyOp b (DN str _) = isOpUserName (Basic str)
+isPrettyOp b (UN (Op _)) = True
+isPrettyOp b (DN str _) = isOpUserName (mkUserName str)
 isPrettyOp b nm = False
 
 mutual
@@ -297,8 +339,22 @@ mutual
     pretty (Resolved x) = pretty "$resolved" <+> pretty (show x)
 
 export
+Eq Fixity where
+  InfixL == InfixL = True
+  InfixR == InfixR = True
+  Infix == Infix = True
+  Prefix == Prefix = True
+  _ == _ = False
+
+export
+Eq Operator where
+  MkOperator f l s == MkOperator f' l' s'
+    = s == s' && f == f' && l == l'
+
+export
 Eq UserName where
   (==) (Basic x) (Basic y) = x == y
+  (==) (Op x) (Op y) = x == y
   (==) (Field x) (Field y) = x == y
   (==) Underscore Underscore = True
   (==) _ _ = False
@@ -318,12 +374,42 @@ Eq Name where
 
 usernameTag : UserName -> Int
 usernameTag (Basic _) = 0
+usernameTag (Op _) = 1
 usernameTag (Field _) = 2
 usernameTag Underscore = 3
 
 export
+fixityTag : Fixity -> Int
+fixityTag InfixL = 0
+fixityTag InfixR = 1
+fixityTag Infix = 2
+fixityTag Prefix = 3
+
+export
+tagFixity : Int -> Maybe Fixity
+tagFixity 0 = pure InfixL
+tagFixity 1 = pure InfixR
+tagFixity 2 = pure Infix
+tagFixity 3 = pure Prefix
+tagFixity _ = Nothing
+
+export
+Ord Fixity where
+  compare x y = compare (fixityTag x) (fixityTag y)
+
+export
+Ord Operator where
+  compare (MkOperator f l s) (MkOperator f' l' s') =
+    case compare s s' of
+      EQ => case compare f f' of
+        EQ => compare l l'
+        res => res
+      res => res
+
+export
 Ord UserName where
   compare (Basic x) (Basic y) = compare x y
+  compare (Op x) (Op y) = compare x y
   compare (Field x) (Field y) = compare x y
   compare Underscore Underscore = EQ
   compare x y = compare (usernameTag x) (usernameTag y)
@@ -379,12 +465,43 @@ Ord Name where
 
     compare x y = compare (nameTag x) (nameTag y)
 
+export
+DecEq Fixity where
+  decEq InfixL InfixL = Yes Refl
+  decEq InfixL InfixR = No (\case prf impossible)
+  decEq InfixL Infix = No (\case prf impossible)
+  decEq InfixL Prefix = No (\case prf impossible)
+  decEq InfixR InfixL = No (\case prf impossible)
+  decEq InfixR InfixR = Yes Refl
+  decEq InfixR Infix = No (\case prf impossible)
+  decEq InfixR Prefix = No (\case prf impossible)
+  decEq Infix InfixL = No (\case prf impossible)
+  decEq Infix InfixR = No (\case prf impossible)
+  decEq Infix Infix = Yes Refl
+  decEq Infix Prefix = No (\case prf impossible)
+  decEq Prefix InfixL = No (\case prf impossible)
+  decEq Prefix InfixR = No (\case prf impossible)
+  decEq Prefix Infix = No (\case prf impossible)
+  decEq Prefix Prefix = Yes Refl
+
+export
+DecEq Operator where
+  decEq (MkOperator f l s) (MkOperator f' l' s') with (decEq f f')
+    _ | No nprf = No (nprf . cong opFixity)
+    _ | Yes prf with (decEq l l')
+      _ | No nprl = No (nprl . cong opLevel)
+      _ | Yes prl with (decEq s s')
+        _ | No nprs = No (nprs . cong opSyntax)
+        _ | Yes prs = Yes (rewrite prf in rewrite prl in rewrite prs in Refl)
 
 export
 userNameEq : (x, y : UserName) -> Maybe (x = y)
 userNameEq (Basic x) (Basic y) with (decEq x y)
   userNameEq (Basic x) (Basic y) | Yes prf = Just (cong Basic prf)
   userNameEq (Basic x) (Basic y) | No nprf = Nothing
+userNameEq (Op x) (Op y) with (decEq x y)
+  userNameEq (Op x) (Op y) | Yes prf = Just (cong Op prf)
+  userNameEq (Op x) (Op y) | No nprf = Nothing
 userNameEq (Field x) (Field y) with (decEq x y)
   userNameEq (Field x) (Field y) | Yes prf = Just (cong Field prf)
   userNameEq (Field x) (Field y) | No nprf = Nothing

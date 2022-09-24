@@ -100,6 +100,7 @@ keywordSafe s = if s `elem` jsReservedNames
 
 jsUserName : UserName -> String
 jsUserName (Basic n) = keywordSafe $ jsIdent n
+jsUserName (Op op) = "op__" ++ jsIdent op.opSyntax
 jsUserName (Field n) = "rf__" ++ jsIdent n
 jsUserName Underscore = keywordSafe $ jsIdent "_"
 

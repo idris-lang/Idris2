@@ -256,7 +256,7 @@ operatorCandidate : Rule Name
 operatorCandidate
     = terminal "Expected operator" $
                \case
-                 Symbol s => Just (UN $ Basic s) -- TODO: have an operator construct?
+                 Symbol s => Just (UN $ Op (MkOperator Infix 20 s)) -- TODO: refactor to avoid placeholder value?
                  _ => Nothing
 
 export
@@ -269,8 +269,8 @@ unqualifiedOperatorName
 
 export
 operator : Rule Name
-operator = UN . Basic <$> unqualifiedOperatorName
-               -- ^ TODO: add an operator constructor?
+operator = UN . Op . MkOperator Infix 20 <$> unqualifiedOperatorName
+               -- ^ TODO: refactor to avoid placeholder value?
 
 identPart : Rule String
 identPart

@@ -72,6 +72,20 @@ TTC FC where
              _ => corrupt "FC"
 
 export
+TTC Fixity where
+  toBuf b InfixL = tag 0
+  toBuf b InfixR = tag 1
+  toBuf b Infix = tag 2
+  toBuf b Prefix = tag 3
+
+  fromBuf b = case !getTag of
+    0 => pure InfixL
+    1 => pure InfixR
+    2 => pure Infix
+    3 => pure Prefix
+    _ => corrupt "Fixity"
+
+export
 TTC Name where
   -- for efficiency reasons we do not encode UserName separately
   -- hence the nested pattern matches on UN (Basic/Hole/Field)
@@ -87,6 +101,8 @@ TTC Name where
   toBuf b (Resolved x)
       = throw (InternalError ("Can't write resolved name " ++ show x))
   toBuf b (UN Underscore) = tag 9
+  toBuf b (UN (Op (MkOperator f l s)))
+    = do tag 10; toBuf b f; toBuf b l; toBuf b s
 
   fromBuf b
       = case !getTag of
@@ -116,6 +132,10 @@ TTC Name where
                      y <- fromBuf b
                      pure (WithBlock x y)
              9 => pure (UN Underscore)
+             10 => do x <- fromBuf b
+                      y <- fromBuf b
+                      z <- fromBuf b
+                      pure (UN (Op (MkOperator x y z)))
              _ => corrupt "Name"
 
 export

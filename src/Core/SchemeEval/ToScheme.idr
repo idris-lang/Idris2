@@ -9,13 +9,20 @@ Scheme Namespace where
   fromScheme x = Just $ unsafeFoldNamespace !(fromScheme x)
 
 export
+Scheme Fixity where
+  toScheme f = toScheme (fixityTag f)
+  fromScheme f = tagFixity =<< fromScheme f
+
+export
 Scheme UserName where
   toScheme (Basic str) = toScheme str
+  toScheme (Op (MkOperator f l str)) = Vector 3 [toScheme f, toScheme l, toScheme str]
   toScheme (Field str) = Vector 5 [toScheme str]
   toScheme Underscore = Vector 9 []
 
   fromScheme (Vector 5 [x]) = pure $ Field !(fromScheme x)
   fromScheme (Vector 9 []) = pure Underscore
+  fromScheme (Vector 3 [x,y,z]) = pure $ Op (MkOperator !(fromScheme x) !(fromScheme y) !(fromScheme z))
   fromScheme (StringVal x) = pure (Basic x)
   fromScheme _ = Nothing
 
@@ -106,5 +113,3 @@ toSchemePi Implicit = IntegerVal 0
 toSchemePi Explicit = IntegerVal 1
 toSchemePi AutoImplicit = IntegerVal 2
 toSchemePi (DefImplicit s) = Box s
-
-

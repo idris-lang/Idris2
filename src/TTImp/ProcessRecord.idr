@@ -164,8 +164,11 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params opts conName_in
                               upds (b :: tyenv) sc
              else
                 do let fldNameStr = nameRoot n
+                   let varNameStr = case dropNS n of
+                                      n@(UN (Basic str)) => str
+                                      _ => "op" ++ fldNameStr
                    rfNameNS <- inCurrentNS (UN $ Field fldNameStr)
-                   unNameNS <- inCurrentNS (UN $ Basic fldNameStr)
+                   unNameNS <- inCurrentNS (dropNS n)
 
                    let nestDrop
                           = map (\ (n, (_, ns, _)) => (n, length ns))
@@ -197,15 +200,14 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params opts conName_in
                           = apply (IVar bfc con)
                                     (replicate done (Implicit bfc True) ++
                                        (if imp == Explicit
-                                           then [IBindVar EmptyFC fldNameStr]
+                                           then [IBindVar EmptyFC varNameStr]
                                            else []) ++
                                     (replicate (countExp sc) (Implicit bfc True)))
                    let lhs = IApp bfc (IVar bfc rfNameNS)
                                 (if imp == Explicit
                                     then lhs_exp
-                                    else INamedApp bfc lhs_exp (UN $ Basic fldNameStr)
-                                             (IBindVar bfc fldNameStr))
-                   let rhs = IVar EmptyFC (UN $ Basic fldNameStr)
+                                    else INamedApp bfc lhs_exp (dropNS n) (IBindVar bfc varNameStr))
+                   let rhs = IVar EmptyFC (UN $ Basic varNameStr)
                    log "declare.record.projection" 5 $ "Projection " ++ show lhs ++ " = " ++ show rhs
                    processDecl [] nest env
                        (IDef bfc rfNameNS [PatClause bfc lhs rhs])

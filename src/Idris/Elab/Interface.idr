@@ -21,6 +21,7 @@ import TTImp.Utils
 import Libraries.Data.ANameMap
 import Libraries.Data.List.Extra
 import Data.List
+import Data.String
 
 %default covering
 
@@ -180,7 +181,8 @@ getMethToplevel : {vars : _} ->
                   Signature ->
                   Core (List ImpDecl)
 getMethToplevel {vars} env vis iname cname constraints allmeths params sig
-    = do let paramNames = map fst params
+    = do log "elab.interface.method" 50 $ "Elaboration method \{show sig.name}"
+         let paramNames = map fst params
          let ity = apply (IVar vfc iname) (map (IVar EmptyFC) paramNames)
          -- Make the constraint application explicit for any method names
          -- which appear in other method types
@@ -202,6 +204,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
                                     (apply (IVar EmptyFC (methName sig.name))
                                            (map (IVar EmptyFC) argns)))
          let fndef = IDef vfc cn [fnclause]
+         log "elab.interface.method" 20 $ unlines [show tydecl, show fndef]
          pure [tydecl, fndef]
   where
     vfc : FC
@@ -387,15 +390,15 @@ elabInterface {vars} ifc vis env nest constraints iname params dets mcon body
              meths <- traverse (\ meth => getMethDecl env nest params meth_names
                                           (meth.count, meth.name, meth.type))
                                 meth_sigs
-             log "elab.interface" 5 $ "Method declarations: " ++ show meths
+             log "elab.interface.data" 5 $ "Method declarations: " ++ show meths
 
              consts <- traverse (getMethDecl env nest params meth_names . (top,)) constraints
-             log "elab.interface" 5 $ "Constraints: " ++ show consts
+             log "elab.interface.data" 5 $ "Constraints: " ++ show consts
 
              dt <- mkIfaceData vfc vis env consts iname conName params
                                   dets meths
-             log "elab.interface" 10 $ "Methods: " ++ show meths
-             log "elab.interface" 5 $ "Making interface data type " ++ show dt
+             log "elab.interface.data" 10 $ "Methods: " ++ show meths
+             log "elab.interface.data" 5 $ "Making interface data type " ++ show dt
              ignore $ processDecls nest env [dt]
 
     elabMethods : (conName : Name) -> List Name ->
@@ -475,6 +478,8 @@ elabInterface {vars} ifc vis env nest constraints iname params dets mcon body
         applyParams tm [] = tm
         applyParams tm (UN (Basic n) :: ns)
             = applyParams (INamedApp vdfc tm (UN (Basic n)) (IBindVar vdfc n)) ns
+        applyParams tm (UN (Op op) :: ns)
+            = applyParams (INamedApp vdfc tm (UN (Op op)) (IBindVar vdfc op.opSyntax)) ns
         applyParams tm (_ :: ns) = applyParams tm ns
 
         changeNameTerm : Name -> RawImp -> Core RawImp

@@ -540,6 +540,11 @@ mapAltType f (UniqueDefault x) = UniqueDefault (f x)
 mapAltType _ u = u
 
 export
+traverseAltType : (RawImp' nm -> Core (RawImp' nm)) -> AltType' nm -> Core (AltType' nm)
+traverseAltType f (UniqueDefault x) = UniqueDefault <$> f x
+traverseAltType _ u = pure u
+
+export
 lhsInCurrentNS : {auto c : Ref Ctxt Defs} ->
                  NestedNames vars -> RawImp -> Core RawImp
 lhsInCurrentNS nest (IApp loc f a)

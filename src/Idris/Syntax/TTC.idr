@@ -52,21 +52,6 @@ TTC IFaceInfo where
            pure (MkIFaceInfo ic impps ps cs ms ds)
 
 export
-TTC Fixity where
-  toBuf b InfixL = tag 0
-  toBuf b InfixR = tag 1
-  toBuf b Infix = tag 2
-  toBuf b Prefix = tag 3
-
-  fromBuf b
-      = case !getTag of
-             0 => pure InfixL
-             1 => pure InfixR
-             2 => pure Infix
-             3 => pure Prefix
-             _ => corrupt "Fixity"
-
-export
 TTC Import where
   toBuf b (MkImport loc reexport path nameAs)
     = do toBuf b loc

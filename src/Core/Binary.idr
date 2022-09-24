@@ -29,7 +29,7 @@ import public Libraries.Utils.Binary
 ||| version number if you're changing the version more than once in the same day.
 export
 ttcVersion : Int
-ttcVersion = 20220914 * 100 + 0
+ttcVersion = 20220924 * 100 + 0
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -327,10 +327,9 @@ addGlobalDef modns filens asm (n, def)
          codedentry <- lookupContextEntry n (gamma defs)
          -- Don't update the coded entry because some names might not be
          -- resolved yet
-         entry <- maybe (pure Nothing)
-                        (\ p => do x <- decode (gamma defs) (fst p) False (snd p)
-                                   pure (Just x))
-                        codedentry
+         entry <- traverseOpt
+                    (\ p => decode (gamma defs) (fst p) False (snd p))
+                    codedentry
          unless (completeDef entry) $
            ignore $ addContextEntry filens n def
 

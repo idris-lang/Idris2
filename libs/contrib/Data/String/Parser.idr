@@ -97,6 +97,8 @@ export
 parse : Parser a -> String -> Either String (a, Int)
 parse p str = runIdentity $ parseT p str
 
+infixl 0 <?>
+
 ||| Combinator that replaces the error message on failure.
 ||| This allows combinators to output relevant errors
 export
@@ -105,8 +107,6 @@ export
                                 OK r s' => OK r s'
                                 Fail i _ => Fail i msg)
                             (p.runParser s)
-
-infixl 0 <?>
 
 ||| Discards the result of a parser
 export

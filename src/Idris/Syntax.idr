@@ -29,16 +29,6 @@ import Parser.Lexer.Source
 %default covering
 
 public export
-data Fixity = InfixL | InfixR | Infix | Prefix
-
-export
-Show Fixity where
-  show InfixL = "infixl"
-  show InfixR = "infixr"
-  show Infix  = "infix"
-  show Prefix = "prefix"
-
-public export
 OpStr' : Type -> Type
 OpStr' nm = nm
 
@@ -952,6 +942,21 @@ initSyntax
 -- A label for Syntax info in the global state
 export
 data Syn : Type where
+
+export
+desugarName : {auto s : Ref Syn SyntaxInfo} ->
+              Name -> Core Name
+desugarName nm = do
+  syn <- get Syn
+  case isUN nm of
+    Just (ns, Op (MkOperator _ _ op)) => case lookup op (infixes syn) of
+      Nothing => case lookup op (prefixes syn) of
+        Nothing => pure nm
+        Just l => pure $ mkNamespacedName (ns <$ guard (ns /= emptyNS))
+                       $ Op (MkOperator Prefix (snd l) op)
+      Just (_, f, l) => pure $ mkNamespacedName (ns <$ guard (ns /= emptyNS))
+                             $ Op (MkOperator f l op)
+    _ => pure nm
 
 export
 withSyn : {auto s : Ref Syn SyntaxInfo} -> Core a -> Core a
