@@ -958,6 +958,7 @@ desugarName nm = do
                              $ Op (MkOperator f l op)
     _ => pure nm
 
+
 export
 withSyn : {auto s : Ref Syn SyntaxInfo} -> Core a -> Core a
 withSyn = wrapRef Syn (\_ => pure ())

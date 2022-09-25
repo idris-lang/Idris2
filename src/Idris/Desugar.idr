@@ -154,21 +154,23 @@ addNS (Just ns) n@(NS _ _) = n
 addNS (Just ns) n = NS ns n
 addNS _ n = n
 
+defaultOperator : {auto s : Ref Syn SyntaxInfo} -> String -> Core Name
+-- TODO: refactor to avoid placeholder values?
+defaultOperator str = desugarName (UN $ Op $ MkOperator Infix 20 str)
+
 bindFun : {auto s : Ref Syn SyntaxInfo} ->
           FC -> Maybe Namespace -> RawImp -> RawImp -> Core RawImp
-bindFun fc ns ma f =
-     -- TODO: refactor to avoid placeholder values?
-  do bindOp <- desugarName (UN $ Op (MkOperator Infix 20 ">>="))
+bindFun fc mns ma f =
+  do bindOp <- addNS mns <$> defaultOperator ">>="
      let fc = virtualiseFC fc
-     pure $ IApp fc (IApp fc (IVar fc (addNS ns $ bindOp)) ma) f
+     pure $ IApp fc (IApp fc (IVar fc bindOp) ma) f
 
 seqFun : {auto s : Ref Syn SyntaxInfo} ->
          FC -> Maybe Namespace -> RawImp -> RawImp -> Core RawImp
-seqFun fc ns ma mb =
-  -- TODO: refactor to avoid placeholder values?
-  do seqOp <- desugarName (UN $ Op (MkOperator Infix 20 ">>"))
+seqFun fc mns ma mb =
+  do seqOp <- addNS mns <$> defaultOperator ">>"
      let fc = virtualiseFC fc
-     pure $ IApp fc (IApp fc (IVar fc (addNS ns seqOp)) ma) mb
+     pure $ IApp fc (IApp fc (IVar fc seqOp) ma) mb
 
 bindBangs : {auto s : Ref Syn SyntaxInfo} ->
             List (Name, FC, RawImp) -> Maybe Namespace -> RawImp -> Core RawImp
@@ -184,7 +186,7 @@ idiomise fc mns (IAlternative afc u alts)
   = IAlternative afc <$> traverseAltType (idiomise afc mns) u
                      <*> traverse (idiomise afc mns) alts
 idiomise fc mns (IApp afc f a)
-  = do appOp <- desugarName (mkNamespacedName mns $ Op (MkOperator Infix 20 "<*>"))
+  = do appOp <- addNS mns <$> defaultOperator "<*>"
        let fc  = virtualiseFC fc
        pure $ IApp fc (IApp fc (IVar fc appOp) !(idiomise afc mns f)) a
 idiomise fc mns fn = pure $
@@ -301,8 +303,8 @@ mutual
       = do l' <- desugarB side ps l
            r' <- desugarB side ps r
            pure $ IAlternative fc FirstSuccess
-                     [apply (IVar fc (UN $ Op (MkOperator Infix 6 "==="))) [l', r'],
-                      apply (IVar fc (UN $ Op (MkOperator Infix 6 "~=~"))) [l', r']]
+                     [apply (IVar fc !(defaultOperator "===")) [l', r'],
+                      apply (IVar fc !(defaultOperator "~=~")) [l', r']]
   desugarB side ps (PBracketed fc e) = desugarB side ps e
   desugarB side ps (POp fc opFC op l r)
       = do ts <- toTokList (POp fc opFC op l r)
@@ -357,7 +359,8 @@ mutual
   desugarB side ps (PQuote fc tm)
       = pure $ IQuote fc !(desugarB side ps tm)
   desugarB side ps (PQuoteName fc n)
-      = pure $ IQuoteName fc n
+      = do n <- desugarName n
+           pure $ IQuoteName fc n
   desugarB side ps (PQuoteDecl fc x)
       = do xs <- traverse (desugarDecl ps) x
            pure $ IQuoteDecl fc (concat xs)
@@ -509,7 +512,8 @@ mutual
                (nilFC : FC) -> List (FC, PTerm) -> Core RawImp
   expandList side ps nilFC [] = pure (IVar nilFC (UN $ Basic "Nil"))
   expandList side ps nilFC ((consFC, x) :: xs)
-      = pure $ apply (IVar consFC (UN $ Op (MkOperator InfixR 7 "::")))
+      = do consName <- defaultOperator "::"
+           pure $ apply (IVar consFC consName)
                 [!(desugarB side ps x), !(expandList side ps nilFC xs)]
 
   expandSnocList
@@ -523,7 +527,7 @@ mutual
                SnocList (FC, PTerm) -> Core RawImp
   expandSnocList side ps nilFC [<] = pure (IVar nilFC (UN $ Basic "Lin"))
   expandSnocList side ps nilFC (xs :< (consFC, x))
-      = pure $ apply (IVar consFC (UN $ Op (MkOperator InfixL 7 ":<")))
+      = pure $ apply (IVar consFC !(defaultOperator ":<"))
                 [!(expandSnocList side ps nilFC xs) , !(desugarB side ps x)]
 
   addFromString : {auto c : Ref Ctxt Defs} ->
