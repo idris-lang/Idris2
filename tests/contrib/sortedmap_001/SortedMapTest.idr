@@ -1,9 +1,9 @@
 import Data.SortedMap
 
+infixl 2 &~
+
 (&~) : a -> (a -> b) -> b
 (&~) x f = f x
-
-infixl 2 &~
 
 testLookupBetween : List (Maybe (Maybe (Int,Int),Maybe (Int,Int)))
 testLookupBetween =
@@ -53,5 +53,3 @@ main =
   do
     ignore $ traverse printLn testLookupBetween
     ignore $ traverse printLn testLeftRight
-
-

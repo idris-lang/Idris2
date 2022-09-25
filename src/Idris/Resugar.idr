@@ -254,7 +254,7 @@ toPRef : FC -> KindedName -> Core IPTerm
 toPRef fc (MkKindedName nt fn nm) = case dropNS nm of
   MN n i     => pure (sugarApp (PRef fc (MkKindedName nt fn $ MN n i)))
   PV n _     => pure (sugarApp (PRef fc (MkKindedName nt fn $ n)))
-  DN n _     => pure (sugarApp (PRef fc (MkKindedName nt fn $ UN $ Basic n)))
+  DN n _     => pure (sugarApp (PRef fc (MkKindedName nt fn $ UN $ mkUserName n)))
   Nested _ n => toPRef fc (MkKindedName nt fn n)
   n          => pure (sugarApp (PRef fc (MkKindedName nt fn n)))
 

@@ -308,13 +308,17 @@ Pretty Void UserName where
   pretty (Field n) = "." <+> pretty n
   pretty Underscore = "_"
 
+isPrettyOpUN : Bool -> UserName -> Bool
+isPrettyOpUN b (Field _) = b -- prefixed fields need to be parenthesised
+isPrettyOpUN b (Op _) = True
+isPrettyOpUN b _ = False
+
 export
 ||| Will it be an operation once prettily displayed?
 ||| The first boolean states whether the operator is prefixed.
 isPrettyOp : Bool -> Name -> Bool
-isPrettyOp b (UN nm@(Field _)) = b -- prefixed fields need to be parenthesised
-isPrettyOp b (UN (Op _)) = True
-isPrettyOp b (DN str _) = isOpUserName (mkUserName str)
+isPrettyOp b (UN un) = isPrettyOpUN b un
+isPrettyOp b (DN str _) = isPrettyOpUN b (mkUserName str)
 isPrettyOp b nm = False
 
 mutual
