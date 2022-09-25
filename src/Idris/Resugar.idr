@@ -39,20 +39,26 @@ mkOp tm@(PApp fc (PApp fc_in (PRef opFC kn) x) y)
       Just (Op (MkOperator fix l str)) => pure $ case fix of
         Prefix => PApp fc (PPrefixOp fc_in opFC kn (unbracketApp x)) y
         _ => asOp
-      Just (Basic str) =>
-        do syn <- get Syn
+      Just un =>
+        do let str = displayUserName un
+           syn <- get Syn
            pure $ case lookup str (infixes syn) of
              Just _ => asOp
              _ => tm
       _ => pure tm
 mkOp tm@(PApp fc (PRef opFC kn) x)
-  = pure $ case userNameRoot (rawName kn) of
-      Just (Op (MkOperator fix l str)) => case fix of
-        InfixL => PSectionR fc opFC (unbracketApp x) kn
-        InfixR => PSectionR fc opFC (unbracketApp x) kn
-        Infix => PSectionR fc opFC (unbracketApp x) kn
+  = let asOp = PSectionR fc opFC (unbracketApp x) kn in
+    case userNameRoot (rawName kn) of
+      Just (Op (MkOperator fix l str)) => pure $ case fix of
         Prefix => PPrefixOp fc opFC kn x
-      _ => tm
+        _ => asOp
+      Just un =>
+        do let str = displayUserName un
+           syn <- get Syn
+           pure $ case lookup str (infixes syn) of
+             Just _ => asOp
+             _ => tm
+      _ => pure tm
 mkOp tm = pure tm
 
 mkSectionL : {auto c : Ref Ctxt Defs} ->

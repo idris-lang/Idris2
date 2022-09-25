@@ -49,12 +49,7 @@ displayClause : {auto c : Ref Ctxt Defs} ->
 displayClause defs (vs ** (env, lhs, rhs))
   = do lhstm <- resugar env !(normaliseHoles defs env lhs)
        rhstm <- resugar env !(normaliseHoles defs env rhs)
-       pure (prettyLHS lhstm <++> equals <++> pretty rhstm)
-
-  where
-    prettyLHS : IPTerm -> Doc IdrisSyntax
-    prettyLHS (PRef _ op) = cast $ prettyOp True op.rawName
-    prettyLHS t = pretty t
+       pure (pretty lhstm <++> equals <++> pretty rhstm)
 
 export
 displayPats : {auto c : Ref Ctxt Defs} ->

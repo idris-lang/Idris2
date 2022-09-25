@@ -1,8 +1,9 @@
 module List
 
+infixr 5 ::
+
 data List a = Nil | (::) a (List a)
 
-infixr 5 ::
 infixr 5 ++
 
 interface Monoid ty where

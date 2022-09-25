@@ -167,7 +167,7 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params opts conName_in
                      Just (Basic str) => pure (UN (Field str), UN (Basic str), str)
                      Just (Field str) => pure (UN (Field str), UN (Basic str), str)
                      Just (Op op)     => pure $ let str = "op" ++ op.opSyntax in
-                                           (UN (Field str), UN (Basic str), str)
+                                           (UN (Field op.opSyntax), UN (Op op), str)
                      _ => throw (InternalError ("Impossible: record fields need to have a user name"))
 
                    rfNameNS <- inCurrentNS rfNameNS
