@@ -436,8 +436,9 @@ DecEq Fixity where
 
 public export
 DecEq Operator where
-  decEq (MkOperator a@_ b c) (MkOperator x y z) with (decEq a x)
-    _ | Yes Refl = decEqCong2 (decEq b y) (decEq c z)
+  decEq (MkOperator a b c) (MkOperator x y z) with (decEq a x)
+    decEq (MkOperator a b c) (MkOperator .(a) y z)
+      | Yes Refl = decEqCong2 (decEq b y) (decEq c z)
     _ | No nprf = No (nprf . cong opFixity)
 
 public export

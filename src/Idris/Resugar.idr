@@ -31,27 +31,28 @@ unbracketApp : PTerm' nm -> PTerm' nm
 unbracketApp (PBracketed _ tm@(PApp _ _ _)) = tm
 unbracketApp tm = tm
 
--- TODO: Deal with precedences
 mkOp : {auto s : Ref Syn SyntaxInfo} ->
        IPTerm -> Core IPTerm
-mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
-  = do syn <- get Syn
-       let n = rawName kn
-       let asOp = POp fc opFC kn (unbracketApp x) (unbracketApp y)
-       case StringMap.lookup (snd $ displayName n) (infixes syn) of
-         Just _ => pure asOp
-         Nothing => case dropNS n of
-           DN str _ => pure $ ifThenElse (isOpUserName (Basic str)) asOp tm
-           _ => pure tm
+mkOp tm@(PApp fc (PApp fc_in (PRef opFC kn) x) y)
+  = let asOp = POp fc opFC kn (unbracketApp x) (unbracketApp y) in
+    case userNameRoot (rawName kn) of
+      Just (Op (MkOperator fix l str)) => pure $ case fix of
+        Prefix => PApp fc (PPrefixOp fc_in opFC kn (unbracketApp x)) y
+        _ => asOp
+      Just (Basic str) =>
+        do syn <- get Syn
+           pure $ case lookup str (infixes syn) of
+             Just _ => asOp
+             _ => tm
+      _ => pure tm
 mkOp tm@(PApp fc (PRef opFC kn) x)
-  = do syn <- get Syn
-       let n = rawName kn
-       let asOp = PSectionR fc opFC (unbracketApp x) kn
-       case StringMap.lookup (snd $ displayName n) (infixes syn) of
-         Just _ => pure asOp
-         Nothing => case dropNS n of
-           DN str _ => pure $ ifThenElse (isOpUserName (Basic str)) asOp tm
-           _ => pure tm
+  = pure $ case userNameRoot (rawName kn) of
+      Just (Op (MkOperator fix l str)) => case fix of
+        InfixL => PSectionR fc opFC (unbracketApp x) kn
+        InfixR => PSectionR fc opFC (unbracketApp x) kn
+        Infix => PSectionR fc opFC (unbracketApp x) kn
+        Prefix => PPrefixOp fc opFC kn x
+      _ => tm
 mkOp tm = pure tm
 
 mkSectionL : {auto c : Ref Ctxt Defs} ->
@@ -62,14 +63,13 @@ mkSectionL tm@(PLam fc rig info (PRef _ bd) ty
   = do log "resugar.sectionL" 30 $ "SectionL candidate: \{show tm}"
        let True = bd.fullName == nm
          | _ => pure tm
-       syn <- get Syn
-       let n = rawName kn
        let asOp = PSectionL fc opFC kn (unbracketApp x)
-       case StringMap.lookup (snd $ displayName n) (infixes syn) of
-         Just _ => pure asOp
-         Nothing => case dropNS n of
-           DN str _ => pure $ ifThenElse (isOpUserName (Basic str)) asOp tm
+       case userNameRoot kn.rawName of
+         Just (Op (MkOperator _ _ _)) => pure asOp
+         Nothing => case dropNS kn.rawName of
+           DN str _ => pure $ ifThenElse (isOpUserName (mkUserName str)) asOp tm
            _ => pure tm
+         _ => pure tm
 mkSectionL tm = pure tm
 
 export

@@ -115,7 +115,7 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params opts conName_in
         ||| Apply argument to list of explicit or implicit named arguments
         apply : RawImp -> List (Name, RawImp, PiInfo RawImp) -> RawImp
         apply f [] = f
-        apply f ((n, arg, Explicit) :: xs) = apply (IApp         (getFC f) f          arg) xs
+        apply f ((n, arg, Explicit) :: xs) = apply (IApp      (getFC f) f   arg) xs
         apply f ((n, arg, _       ) :: xs) = apply (INamedApp (getFC f) f n arg) xs
 
     paramNames : List Name
@@ -163,12 +163,15 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params opts conName_in
                                   then S done else done)
                               upds (b :: tyenv) sc
              else
-                do let fldNameStr = nameRoot n
-                   let varNameStr = case dropNS n of
-                                      n@(UN (Basic str)) => str
-                                      _ => "op" ++ fldNameStr
-                   rfNameNS <- inCurrentNS (UN $ Field fldNameStr)
-                   unNameNS <- inCurrentNS (dropNS n)
+                do (rfNameNS, unNameNS, varNameStr) <- case userNameRoot n of
+                     Just (Basic str) => pure (UN (Field str), UN (Basic str), str)
+                     Just (Field str) => pure (UN (Field str), UN (Basic str), str)
+                     Just (Op op)     => pure $ let str = "op" ++ op.opSyntax in
+                                           (UN (Field str), UN (Basic str), str)
+                     _ => throw (InternalError ("Impossible: record fields need to have a user name"))
+
+                   rfNameNS <- inCurrentNS rfNameNS
+                   unNameNS <- inCurrentNS unNameNS
 
                    let nestDrop
                           = map (\ (n, (_, ns, _)) => (n, length ns))
