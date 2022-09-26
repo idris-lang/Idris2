@@ -3,6 +3,7 @@ module Idris.SetOptions
 import Compiler.Common
 
 import Core.Context
+import Core.Directory
 import Core.Metadata
 import Core.Options
 import Core.Unify
@@ -76,12 +77,6 @@ candidateDirs dname pkg bounds =
           do guard (pkgName == pkg && inBounds ver bounds)
              pure ((dname </> dirName), ver)
 
-globalPackageDir : {auto c : Ref Ctxt Defs} -> Core String
-globalPackageDir
-    = do defs <- get Ctxt
-         pure $ prefix_dir (dirs (options defs)) </>
-                  "idris2-" ++ showVersion False version
-
 localPackageDir : {auto c : Ref Ctxt Defs} -> Core String
 localPackageDir
     = do defs <- get Ctxt
@@ -101,7 +96,7 @@ findPkgDirs :
     Core (List (String, Maybe PkgVersion))
 findPkgDirs p bounds = do
   defs <- get Ctxt
-  globaldir <- globalPackageDir
+  globaldir <- ttcInstallDirectory
   localdir <- localPackageDir
 
   -- Get candidate directories from the global install location,
@@ -159,7 +154,7 @@ findPackages : {auto c : Ref Ctxt Defs} -> Core (List PkgDir)
 findPackages
     = do -- global packages
          defs <- get Ctxt
-         globalPkgs <- coreLift $ visiblePackages !globalPackageDir
+         globalPkgs <- coreLift $ visiblePackages !ttcInstallDirectory
          -- additional packages in directories specified
          let pkgDirs = (options defs).dirs.package_dirs
          additionalPkgs <- coreLift $ traverse (\d => visiblePackages d) pkgDirs

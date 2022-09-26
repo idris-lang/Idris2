@@ -488,14 +488,14 @@ installFrom : {auto o : Ref ROpts REPLOpts} ->
               String -> String -> ModuleIdent -> Core ()
 installFrom builddir destdir ns
     = do let ttcfile = ModuleIdent.toPath ns
-         let ttcPath = builddir </> "ttc" </> ttcfile <.> "ttc"
+         let ttcPath = builddir </> ttcfile <.> "ttc"
          objPaths_in <- traverse
                      (\cg =>
                         do Just cgdata <- getCG cg
                                 | Nothing => pure Nothing
                            let Just ext = incExt cgdata
                                 | Nothing => pure Nothing
-                           let srcFile = builddir </> "ttc" </> ttcfile <.> ext
+                           let srcFile = builddir </> ttcfile <.> ext
                            let destFile = destdir </> ttcfile <.> ext
                            let Just (dir, _) = splitParent destFile
                                 | Nothing => pure Nothing
@@ -575,7 +575,8 @@ install : {auto c : Ref Ctxt Defs} ->
           Core ()
 install pkg opts installSrc -- not used but might be in the future
     = do defs <- get Ctxt
-         let build = build_dir (dirs (options defs))
+         build <- ttcBuildDirectory
+         install <- ttcInstallDirectory
          let src = source_dir (dirs (options defs))
          runScript (preinstall pkg)
          let toInstall = maybe (modules pkg)
@@ -583,9 +584,7 @@ install pkg opts installSrc -- not used but might be in the future
                                (mainmod pkg)
          wdir <- getWorkingDir
          -- Make the package installation directory
-         let targetDir = prefix_dir (dirs (options defs)) </>
-                             "idris2-" ++ showVersion False version </>
-                             installDir pkg
+         let targetDir = install </> installDir pkg
          Right _ <- coreLift $ mkdirAll targetDir
              | Left err => throw $ InternalError $ unlines
                              [ "Can't make directory " ++ targetDir
@@ -786,7 +785,8 @@ clean pkg opts -- `opts` is not used but might be in the future
                           pkgmods
          srcdir <- getWorkingDir
          let d = dirs (options defs)
-         let builddir = srcdir </> build_dir d </> "ttc"
+         bdir <- ttcBuildDirectory
+         let builddir = srcdir </> bdir </> "ttc"
          let outputdir = srcdir </> outputDirWithDefault d
          -- the usual pair syntax breaks with `No such variable a` here for some reason
          let pkgTrie : StringTrie (List String)
