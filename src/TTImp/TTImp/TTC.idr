@@ -380,7 +380,7 @@ mutual
         = do tag 6; toBuf b fc; toBuf b n; toBuf b lhs; toBuf b rhs
     toBuf b (IRunElabDecl fc tm)
         = do tag 7; toBuf b fc; toBuf b tm
-    toBuf b (IPragma _ f) = throw (InternalError "Can't write Pragma")
+    toBuf b (IPragma _ _ f) = throw (InternalError "Can't write Pragma")
     toBuf b (ILog n)
         = do tag 8; toBuf b n
     toBuf b (IBuiltin fc type name)

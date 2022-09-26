@@ -88,6 +88,7 @@ modules = Control.App,
           Deriving.Common,
           Deriving.Foldable,
           Deriving.Functor,
+          Deriving.Traversable,
 
           Decidable.Decidable,
           Decidable.Equality,

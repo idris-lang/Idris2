@@ -42,7 +42,7 @@ rawImpFromDecl decl = case decl of
     INamespace fc1 ys zs => rawImpFromDecl !zs
     ITransform fc1 y z w => [z, w]
     IRunElabDecl fc1 y => [] -- Not sure about this either
-    IPragma _ f => []
+    IPragma _ _ f => []
     ILog k => []
     IBuiltin _ _ _ => []
   where getParamTy : (a, b, c, RawImp) -> RawImp

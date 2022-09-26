@@ -181,6 +181,22 @@ cleanup = \case
   IVar fc n => IVar fc (dropNS n)
   t => t
 
+||| Create fresh names
+export
+freshName : List Name -> String -> String
+freshName ns a = assert_total $ go (basicNames ns) Nothing where
+
+  basicNames : List Name -> List String
+  basicNames = mapMaybe $ \ nm => case dropNS nm of
+    UN (Basic str) => Just str
+    _ => Nothing
+
+  covering
+  go : List String -> Maybe Nat -> String
+  go ns mi =
+    let nm = a ++ maybe "" show mi in
+    ifThenElse (nm `elem` ns) (go ns (Just $ maybe 0 S mi)) nm
+
 ------------------------------------------------------------------------------
 -- TODO: move to Data.List?
 
