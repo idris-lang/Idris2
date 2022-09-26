@@ -357,7 +357,7 @@ addDeps pkg = do
   Resolved allPkgs <- getTransitiveDeps pkg.depends empty
     | Failed errs => throw $ GenericMsg EmptyFC (printErrs pkg errs)
   log "package.depends" 10 $ "all depends: \{show allPkgs}"
-  traverse_ addExtraDir allPkgs
+  traverse_ addPackageDir allPkgs
   where
     -- Note: findPkgDir throws an error if a package is not found
     -- *unless* --ignore-missing-ipkg is enabled

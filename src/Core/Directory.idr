@@ -37,7 +37,7 @@ export
 extraSearchDirectories : {auto c : Ref Ctxt Defs} -> Core (List String)
 extraSearchDirectories =
   do d <- getDirs
-     pure (extra_dirs d)
+     pure (map (</> show ttcVersion) (extra_dirs d) ++ package_dirs d)
 
 public export
 data IdrSrcExt = E_idr | E_lidr | E_yaff | E_org | E_md

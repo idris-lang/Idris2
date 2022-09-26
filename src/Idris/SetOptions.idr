@@ -137,7 +137,7 @@ addPkgDir : {auto c : Ref Ctxt Defs} ->
 addPkgDir p bounds = do
     Just p <- findPkgDir p bounds
         | Nothing => pure ()
-    addExtraDir p
+    addPackageDir p
 
 visiblePackages : String -> IO (List PkgDir)
 visiblePackages dir = filter viable <$> getPackageDirs dir
