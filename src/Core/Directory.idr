@@ -21,6 +21,26 @@ import System.Directory
 
 %default total
 
+------------------------------------------------------------------------
+-- Package directories
+
+export
+pkgGlobalDirectory : {auto c : Ref Ctxt Defs} -> Core String
+pkgGlobalDirectory =
+  do d <- getDirs
+     pure (prefix_dir d </> "idris2-" ++ showVersion False version)
+
+export
+pkgLocalDirectory : {auto c : Ref Ctxt Defs} -> Core String
+pkgLocalDirectory =
+  do d <- getDirs
+     Just srcdir <- coreLift currentDir
+       | Nothing => throw (InternalError "Can't get current directory")
+     pure $ srcdir </> depends_dir d
+
+------------------------------------------------------------------------
+-- TTC directories
+
 export
 ttcBuildDirectory : {auto c : Ref Ctxt Defs} -> Core String
 ttcBuildDirectory =
@@ -28,16 +48,18 @@ ttcBuildDirectory =
      pure (build_dir d </> "ttc" </> show ttcVersion)
 
 export
-ttcInstallDirectory : {auto c : Ref Ctxt Defs} -> Core String
-ttcInstallDirectory =
-  do d <- getDirs
-     pure (prefix_dir d </> "idris2-" ++ showVersion False version </> show ttcVersion)
+ttcInstallDirectory : {auto c : Ref Ctxt Defs} -> String -> Core String
+ttcInstallDirectory lib =
+  do gbdir <- pkgGlobalDirectory
+     pure (gbdir </> lib </> show ttcVersion)
 
 export
 extraSearchDirectories : {auto c : Ref Ctxt Defs} -> Core (List String)
 extraSearchDirectories =
   do d <- getDirs
-     pure (map (</> show ttcVersion) (extra_dirs d) ++ package_dirs d)
+     pure (map (</> show ttcVersion) (extra_dirs d ++ package_dirs d))
+
+------------------------------------------------------------------------
 
 public export
 data IdrSrcExt = E_idr | E_lidr | E_yaff | E_org | E_md

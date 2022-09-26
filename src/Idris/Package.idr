@@ -576,7 +576,7 @@ install : {auto c : Ref Ctxt Defs} ->
 install pkg opts installSrc -- not used but might be in the future
     = do defs <- get Ctxt
          build <- ttcBuildDirectory
-         install <- ttcInstallDirectory
+         targetDir <- ttcInstallDirectory (installDir pkg)
          let src = source_dir (dirs (options defs))
          runScript (preinstall pkg)
          let toInstall = maybe (modules pkg)
@@ -584,7 +584,6 @@ install pkg opts installSrc -- not used but might be in the future
                                (mainmod pkg)
          wdir <- getWorkingDir
          -- Make the package installation directory
-         let targetDir = install </> installDir pkg
          Right _ <- coreLift $ mkdirAll targetDir
              | Left err => throw $ InternalError $ unlines
                              [ "Can't make directory " ++ targetDir
