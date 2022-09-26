@@ -605,10 +605,11 @@ mutual
   pibindListName fname indents
        = forget <$> sepBy1 (decoratedSymbol fname ",")
                            (do rig <- multiplicity fname
-                               n <- bounds (decorate fname Bound binderName)
+                               n <- bounds $ UN <$> binderName
+                               decorateBoundedName fname Bound n
                                decoratedSymbol fname ":"
                                ty <- typeExpr pdef fname indents
-                               pure (rig, map UN n, ty))
+                               pure (rig, n, ty))
      <|> do rig <- multiplicity fname
             ns <- sepBy1 (decoratedSymbol fname ",")
                          (bounds $ UN <$> binderName)
