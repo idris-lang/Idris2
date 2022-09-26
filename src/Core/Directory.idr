@@ -37,7 +37,7 @@ export
 ttcAllDirectories : {auto c : Ref Ctxt Defs} -> Core (List String)
 ttcAllDirectories =
   do d <- getDirs
-     pure (map (</> show ttcVersion) (extra_dirs d))
+     pure (extra_dirs d)
 
 public export
 data IdrSrcExt = E_idr | E_lidr | E_yaff | E_org | E_md
