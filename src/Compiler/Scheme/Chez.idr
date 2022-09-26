@@ -219,7 +219,7 @@ loadSO appdir "" = pure ""
 loadSO appdir mod
     = do d <- getDirs
          bdir <- ttcBuildDirectory
-         allDirs <- ttcAllDirectories
+         allDirs <- extraSearchDirectories
          let fs = map (\p => p </> mod) (bdir :: allDirs)
          Just fname <- firstAvailable fs
             | Nothing => throw (InternalError ("Missing .so:" ++ mod))

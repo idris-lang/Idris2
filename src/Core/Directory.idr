@@ -34,8 +34,8 @@ ttcInstallDirectory =
      pure (prefix_dir d </> "idris2-" ++ showVersion False version </> show ttcVersion)
 
 export
-ttcAllDirectories : {auto c : Ref Ctxt Defs} -> Core (List String)
-ttcAllDirectories =
+extraSearchDirectories : {auto c : Ref Ctxt Defs} -> Core (List String)
+extraSearchDirectories =
   do d <- getDirs
      pure (extra_dirs d)
 
@@ -149,7 +149,7 @@ nsToPath : {auto c : Ref Ctxt Defs} ->
            FC -> ModuleIdent -> Core (Either Error String)
 nsToPath loc ns
     = do bdir <- ttcBuildDirectory
-         ttcs <- ttcAllDirectories
+         ttcs <- extraSearchDirectories
          let fnameBase = ModuleIdent.toPath ns
          let fs = map (\p => cleanPath $ p </> fnameBase <.> "ttc") (bdir :: ttcs)
          Just f <- firstAvailable fs

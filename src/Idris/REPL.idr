@@ -1072,7 +1072,7 @@ process ShowVersion
     = pure $ VersionIs  version
 process (ImportPackage package) = do
   defs <- get Ctxt
-  searchDirs <- ttcAllDirectories
+  searchDirs <- extraSearchDirectories
   let Just packageDir = find
         (\d => isInfixOf package (fromMaybe d (fileName d)))
         searchDirs
