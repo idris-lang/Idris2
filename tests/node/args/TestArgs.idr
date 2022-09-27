@@ -4,4 +4,4 @@ import Data.List
 import System
 
 main : IO ()
-main = getArgs >>= (putStrLn . show . drop 2)
+main = getArgs >>= (putStrLn . show . drop 1)
