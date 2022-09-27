@@ -133,6 +133,8 @@
   now transformer argument is the last, as in the other standard transformers, like `ReaderT` and `StateT`.
 * Adds `Data.Fin.finToNatEqualityAsPointwise`,
   which takes a witness of `finToNat k = finToNat l` and proves `k ~~~ l`.
+* Drop first argument (path to the `node` executable) from `System.getArgs` on
+  the node backend to make it consistent with other backends.
 
 #### Test
 
