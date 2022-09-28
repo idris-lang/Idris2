@@ -184,17 +184,10 @@ natToFinLT Z {prf = LTESucc _} = FZ
 natToFinLT (S k) {prf = LTESucc _} = FS $ natToFinLT k
 
 public export
-0 natToFinLemma : (m,n : Nat) -> So (m < n) => LT m n
-natToFinLemma 0 (S k)     = LTESucc LTEZero
-natToFinLemma (S k) (S j) = LTESucc (natToFinLemma k j)
-natToFinLemma (S k) 0 prf impossible
-natToFinLemma 0 0     prf impossible
-
-public export
 natToFinLt : (x : Nat) -> {0 n : Nat} ->
-             {auto 0 prf : So (x < n)} ->
+             {auto 0 prf : (x < n) === True} ->
              Fin n
-natToFinLt x = let 0 p := natToFinLemma x n in natToFinLT x
+natToFinLt x = let 0 p := ltOpReflectsLT x n prf in natToFinLT x
 
 public export
 natToFin : Nat -> (n : Nat) -> Maybe (Fin n)
@@ -221,7 +214,7 @@ maybeLT x y = maybeLTE (S x) y
 
 public export
 finFromInteger : (x : Integer) -> {n : Nat} ->
-                 {auto 0 prf : So (fromInteger x < n)} ->
+                 {auto 0 prf : (fromInteger x < n) === True} ->
                  Fin n
 finFromInteger x = natToFinLt (fromInteger x)
 
@@ -241,13 +234,16 @@ integerLessThanNat x n with (x < the Integer 0)
 ||| @ prf an automatically-constructed proof that `x` is in bounds
 public export
 fromInteger : (x : Integer) -> {n : Nat} ->
-              {auto 0 prf : So (integerLessThanNat x n)} ->
+              {auto 0 prf : (integerLessThanNat x n) === True} ->
               Fin n
 fromInteger x = finFromInteger x {prf = lemma prf} where
   -- to be minimally invasive, we just call the previous implementation.
   -- however, having a different proof obligation resolves #2032
-  0 lemma : {x : Integer} -> {n : Nat} -> So (integerLessThanNat x n) -> So (fromInteger {ty=Nat} x < n)
-  lemma oh = believe_me oh
+  0 lemma :  {x : Integer}
+          -> {n : Nat}
+          -> integerLessThanNat x n === True
+          -> (fromInteger {ty=Nat} x < n) === True
+  lemma refl = believe_me refl
 
 -- %builtin IntegerToNatural Data.Fin.fromInteger
 
