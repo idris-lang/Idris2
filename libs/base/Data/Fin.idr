@@ -183,12 +183,17 @@ natToFinLT : (x : Nat) -> {0 n : Nat} ->
 natToFinLT Z {prf = LTESucc _} = FZ
 natToFinLT (S k) {prf = LTESucc _} = FS $ natToFinLT k
 
+0 natToFinLemma : (m,n : Nat) -> So (m < n) => LT m n
+natToFinLemma 0 (S k)     = LTESucc LTEZero
+natToFinLemma (S k) (S j) = LTESucc (natToFinLemma k j)
+natToFinLemma (S k) 0 prf impossible
+natToFinLemma 0 0     prf impossible
+
 public export
-natToFinLt : (x : Nat) -> {n : Nat} ->
+natToFinLt : (x : Nat) -> {0 n : Nat} ->
              {auto 0 prf : So (x < n)} ->
              Fin n
-natToFinLt Z     {n = S _} = FZ
-natToFinLt (S k) {n = S _} = FS $ natToFinLt k
+natToFinLt x = let 0 p := natToFinLemma x n in natToFinLT x
 
 public export
 natToFin : Nat -> (n : Nat) -> Maybe (Fin n)
