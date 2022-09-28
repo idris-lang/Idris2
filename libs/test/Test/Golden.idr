@@ -138,12 +138,6 @@ usage = unwords
   , "[[--only|--except] [NAMES]]"
   ]
 
-export
-fail : String -> IO a
-fail err
-    = do putStrLn err
-         exitWith (ExitFailure 1)
-
 optionsTestsFilter : List String -> List String -> Maybe (String -> Bool)
 optionsTestsFilter [] [] = Nothing
 optionsTestsFilter only except = Just $ \ name =>
@@ -207,7 +201,7 @@ options args = case args of
            extraOnlyNames <- the (IO (List String)) $ case acc.onlyFile of
                                Nothing => pure []
                                Just fp => do Right only <- readFile fp
-                                               | Left err => fail (show err)
+                                               | Left err => die (show err)
                                              pure (lines only)
            pure $ Just $ { onlyNames := optionsTestsFilter (extraOnlyNames ++ acc.onlyNames) acc.exceptNames } opts
 
@@ -430,14 +424,11 @@ export
 testsInDir : (dirName : String) -> (testNameFilter : String -> Bool) -> (poolName : String) -> List Requirement -> Codegen -> IO TestPool
 testsInDir dirName testNameFilter poolName reqs cg = do
   Right names <- listDir dirName
-    | Left e => do putStrLn ("failed to list " ++ dirName ++ ": " ++ show e)
-                   exitFailure
+    | Left e => die $ "failed to list " ++ dirName ++ ": " ++ show e
   let names = [n | n <- names, testNameFilter n]
   let testNames = [dirName ++ "/" ++ n | n <- names]
   testNames <- filter testNames
-  when (length testNames == 0) $ do
-    putStrLn ("no tests found in " ++ dirName)
-    exitFailure
+  when (length testNames == 0) $ die $ "no tests found in " ++ dirName
   pure $ MkTestPool poolName reqs cg testNames
     where
       -- Directory without `run` file is not a test
@@ -652,13 +643,13 @@ runnerWith opts tests = do
          -- always overwrite the failure file, if it is given
          whenJust opts.failureFile $ \ path =>
            do Right _ <- writeFile path list
-                | Left err => fail (show err)
+                | Left err => die (show err)
               pure ()
 
          -- exit
          if nfail == 0
-           then exitWith ExitSuccess
-           else exitWith (ExitFailure 1)
+           then exitSuccess
+           else exitFailure
 
 ||| A runner for a whole test suite
 export
