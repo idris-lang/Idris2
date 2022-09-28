@@ -183,6 +183,7 @@ natToFinLT : (x : Nat) -> {0 n : Nat} ->
 natToFinLT Z {prf = LTESucc _} = FZ
 natToFinLT (S k) {prf = LTESucc _} = FS $ natToFinLT k
 
+public export
 0 natToFinLemma : (m,n : Nat) -> So (m < n) => LT m n
 natToFinLemma 0 (S k)     = LTESucc LTEZero
 natToFinLemma (S k) (S j) = LTESucc (natToFinLemma k j)
