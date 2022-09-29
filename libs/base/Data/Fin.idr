@@ -184,11 +184,10 @@ natToFinLT Z {prf = LTESucc _} = FZ
 natToFinLT (S k) {prf = LTESucc _} = FS $ natToFinLT k
 
 public export
-natToFinLt : (x : Nat) -> {n : Nat} ->
+natToFinLt : (x : Nat) -> {0 n : Nat} ->
              {auto 0 prf : So (x < n)} ->
              Fin n
-natToFinLt Z     {n = S _} = FZ
-natToFinLt (S k) {n = S _} = FS $ natToFinLt k
+natToFinLt x = let 0 p := ltOpReflectsLT x n prf in natToFinLT x
 
 public export
 natToFin : Nat -> (n : Nat) -> Maybe (Fin n)

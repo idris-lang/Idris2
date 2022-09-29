@@ -295,6 +295,7 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "memo"
     , "newints"
     , "integers"
+    , "nat2fin"
     , "semaphores001"
     , "semaphores002"
     , "perf001"
