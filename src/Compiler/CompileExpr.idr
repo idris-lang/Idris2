@@ -265,7 +265,7 @@ enumTree (CConCase fc sc alts def)
   where
     toEnum : CConAlt vars -> Maybe (CConstAlt vars)
     toEnum (MkConAlt nm ENUM (Just tag) [] sc)
-        = pure $ MkConstAlt (I tag) sc
+        = pure $ MkConstAlt (B32 $ cast tag) sc
     toEnum _ = Nothing
 enumTree t = t
 
