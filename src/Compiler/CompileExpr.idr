@@ -310,7 +310,7 @@ mutual
            cn <- getFullName fn
            fl <- dconFlag cn
            case fl of
-                ENUM => pure $ CPrimVal fc (I tag)
+                ENUM => pure $ CPrimVal fc (B32 $ cast tag)
                 ZERO => pure $ CPrimVal fc (BI 0)
                 SUCC => do x <- newMN "succ"
                            pure $ CLam fc x $ COp fc (Add IntegerType) [CPrimVal fc (BI 1), CLocal fc First]
