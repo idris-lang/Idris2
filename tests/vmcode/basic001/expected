@@ -1,11 +1,10 @@
-Error: INTERNAL ERROR: Interpreter Error in [Prelude.EqOrd.compare, Prelude.Show.compare, Prelude.Show.>=, Prelude.Show.primNumShow, Prelude.Show.showPrec, Prelude.Show.show, {{csegen:16}:0}, Prelude.IO.printLn, Main.main, {__mainExpression:0}]:
-CONSTCASE: Missing matching alternative or default
-
-locals:
-  0: Just 0
-  1: Just 5
-  2: Nothing
-  3: Just 1
-
-return:
-  Nothing
+1022
+720
+361
+Left Left
+Right
+Left Right
+55
+13
+-1
+-2
