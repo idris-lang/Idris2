@@ -5,6 +5,7 @@ import Core.Context
 import Core.Context.Log
 import Core.Primitives
 import Core.Value
+import Core.Name
 import Data.List
 import Data.Vect
 
@@ -87,6 +88,13 @@ constFold rho (CLet fc x inlineOK y z) =
             then constFold (val :: rho) z
             else CLet fc x inlineOK val (constFold (wk (mkSizeOf [x]) rho) z)
         _ => CLet fc x inlineOK val (constFold (wk (mkSizeOf [x]) rho) z)
+constFold rho (CApp fc (CRef fc2 n) [x]) =
+  if n == NS typesNS (UN $ Basic "prim__integerToNat")
+     then case constFold rho x of
+            CPrimVal fc3 (BI v) =>
+              if v >= 0 then CPrimVal fc3 (BI v) else CPrimVal fc3 (BI 0)
+            v                   => CApp fc (CRef fc2 n) [v]
+     else CApp fc (CRef fc2 n) [constFold rho x]
 constFold rho (CApp fc x xs) = CApp fc (constFold rho x) (constFold rho <$> xs)
 constFold rho (CCon fc x y tag xs) = CCon fc x y tag $ constFold rho <$> xs
 constFold rho (COp {arity} fc fn xs) =

@@ -669,7 +669,7 @@ TTC ConInfo where
   toBuf b TYCON = tag 1
   toBuf b NIL = tag 2
   toBuf b CONS = tag 3
-  toBuf b ENUM = tag 4
+  toBuf b (ENUM n) = do tag 4; toBuf b n
   toBuf b NOTHING = tag 5
   toBuf b JUST = tag 6
   toBuf b RECORD = tag 7
@@ -683,7 +683,7 @@ TTC ConInfo where
              1 => pure TYCON
              2 => pure NIL
              3 => pure CONS
-             4 => pure ENUM
+             4 => do n <- fromBuf b; pure (ENUM n)
              5 => pure NOTHING
              6 => pure JUST
              7 => pure RECORD
