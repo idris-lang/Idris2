@@ -312,7 +312,7 @@ racketTests = MkTestPool "Racket backend" [] (Just Racket)
     , "semaphores001", "semaphores002"
     , "futures001"
     , "mutex001", "mutex002", "mutex003", "mutex004", "mutex005"
-    , "channels006"
+    , "channels001", "channels002", "channels003", "channels004", "channels005", "channels006"
     , "conditions001" , "conditions002" , "conditions003" , "conditions004"
     , "conditions005"
 --    , "conditions006"
