@@ -324,7 +324,7 @@ calcEnum : {auto c : Ref Ctxt Defs} ->
            FC -> List Constructor -> Core Bool
 calcEnum fc cs
     = if !(allM isNullary cs)
-         then do traverse_ (\c => setFlag fc c (ConType ENUM)) (map name cs)
+         then do traverse_ (\c => setFlag fc c (ConType (ENUM $ length cs))) (map name cs)
                  pure True
          else pure False
   where
