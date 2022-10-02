@@ -136,6 +136,8 @@
 * Drop first argument (path to the `node` executable) from `System.getArgs` on
   the Node.js backend to make it consistent with other backends.
 * Adds `Uninhabited` instances for `FZ ~~~ FS k` and `FS k ~~~ FZ`.
+* Change behavior of `channelPut` on the Racket backend to match the behavior
+  on the Chez backend.
 
 #### Test
 
