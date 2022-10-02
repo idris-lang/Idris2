@@ -257,6 +257,17 @@ replaceAtDiffIndexPreserves (_::_) (FS z) (FS w) co y = replaceAtDiffIndexPreser
 -- Transformations
 --------------------------------------------------------------------------------
 
+||| Reverse the second vector, prepending the result to the first.
+|||
+||| ```idris example
+||| reverseOnto [0, 1] [10, 11, 12]
+||| ```
+public export
+reverseOnto : Vect n elem -> Vect m elem -> Vect (n+m) elem
+reverseOnto {n}         acc []        = rewrite plusZeroRightNeutral n in acc
+reverseOnto {n} {m=S m} acc (x :: xs) = rewrite sym $ plusSuccRightSucc n m
+                                        in reverseOnto (x::acc) xs
+
 ||| Reverse the order of the elements of a vector
 |||
 ||| ```idris example
@@ -264,11 +275,7 @@ replaceAtDiffIndexPreserves (_::_) (FS z) (FS w) co y = replaceAtDiffIndexPreser
 ||| ```
 public export
 reverse : (xs : Vect len elem) -> Vect len elem
-reverse xs = go [] xs
-  where go : Vect n elem -> Vect m elem -> Vect (n+m) elem
-        go {n}         acc []        = rewrite plusZeroRightNeutral n in acc
-        go {n} {m=S m} acc (x :: xs) = rewrite sym $ plusSuccRightSucc n m
-                                       in go (x::acc) xs
+reverse = reverseOnto []
 
 ||| Alternate an element between the other elements of a vector
 ||| @ sep the element to intersperse
