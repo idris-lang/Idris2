@@ -135,6 +135,7 @@
   which takes a witness of `finToNat k = finToNat l` and proves `k ~~~ l`.
 * Drop first argument (path to the `node` executable) from `System.getArgs` on
   the Node.js backend to make it consistent with other backends.
+* Adds `Uninhabited` instances for `FZ ~~~ FS k` and `FS k ~~~ FZ`.
 
 #### Test
 
