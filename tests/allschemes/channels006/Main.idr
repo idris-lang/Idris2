@@ -9,11 +9,11 @@ producer ch =
      send 2
      send 3
      send 4
-     where
-       send : Nat -> IO ()
-       send i =
-         do putStrLn $ "> " ++ show i
-            channelPut ch i
+  where
+    send : Nat -> IO ()
+    send i =
+      do putStrLn $ "> " ++ show i
+         channelPut ch i
 
 consumer : Channel Nat -> IO ()
 consumer ch =
@@ -21,12 +21,12 @@ consumer ch =
      recv
      recv
      recv
-     where
-       recv : IO ()
-       recv =
-         do usleep 100000
-            v <- channelGet ch
-            putStrLn $ "< " ++ show v
+  where
+    recv : IO ()
+    recv =
+      do usleep 100000
+         v <- channelGet ch
+         putStrLn $ "< " ++ show v
 
 main : IO ()
 main =
