@@ -190,8 +190,7 @@ idrisTestsAllSchemes cg = MkTestPool
       [] (Just cg)
       [ "scheme001"
       , "channels001", "channels002", "channels003", "channels004", "channels005"
-      -- FIXME: sometimes works, depending on a race condition
-      -- , "channels006"
+      , "channels006"
       ]
 
 idrisTestsAllBackends : Requirement -> TestPool

@@ -14,6 +14,7 @@ producer ch =
     send i =
       do putStrLn $ "> " ++ show i
          channelPut ch i
+         usleep 75000
 
 consumer : Channel Nat -> IO ()
 consumer ch =
