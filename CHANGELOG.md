@@ -153,6 +153,8 @@
 * Removes `contrib`'s deprecated `Data.Num.Implementations` module. See
   `Prelude.Interfaces` instead.
 * Implements `Show tok => Show (ParsingError tok)` for `Text.Parser.Core`.
+* `Control.Linear.LIO` has been moved from `contribs` to `linear` to guarantee
+  that idris2 does not need to rely on contribs anymore.
 
 #### Network
 

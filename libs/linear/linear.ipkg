@@ -3,7 +3,9 @@ version = 0.5.1
 
 options = "--ignore-missing-ipkg"
 
-modules = Data.Linear,
+modules = Control.Linear.LIO,
+
+          Data.Linear,
           Data.Linear.Bifunctor,
           Data.Linear.Copies,
           Data.Linear.Interface,
