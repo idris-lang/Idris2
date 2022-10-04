@@ -76,7 +76,8 @@ Monoid (SnocList a) where
 
 public export
 Foldable SnocList where
-  foldr f z = foldr f z . (<>> [])
+  foldr f z [<]       = z
+  foldr f z (sx :< x) = foldr f (f x z) sx
 
   foldl f z Lin = z
   foldl f z (xs :< x) = f (foldl f z xs) x
@@ -86,7 +87,7 @@ Foldable SnocList where
 
   toList = (<>> [])
 
-  foldMap f = foldl (\xs, x => xs <+> f x) neutral
+  foldMap f = foldr (\v,acc => f v <+> acc) neutral
 
 public export
 Applicative SnocList where
