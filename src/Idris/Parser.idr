@@ -11,8 +11,10 @@ import public Libraries.Text.Parser
 import Data.Either
 import Libraries.Data.IMaybe
 import Data.List
+import Data.List.Quantifiers
 import Data.List1
 import Data.Maybe
+import Data.So
 import Data.Nat
 import Data.SnocList
 import Data.String
@@ -2003,6 +2005,61 @@ mutual
     show OnOffArg = "(on|off)"
     show (Args args) = showSep " " (map show args)
     show arg = "<" ++ showCmdArg arg ++ ">"
+
+public export
+knownCommands : List (String, Maybe String)
+knownCommands =
+  [ ["t", "type"]
+  , "ti"
+  , "printdef"
+  , ["s", "search"]
+  , "di"
+  , "module"
+  , "package"
+  , ["q", "quit", "exit"]
+  , "cwd"
+  , "cd"
+  , "sh"
+  , "set"
+  , "unset"
+  , "opts"
+  , ["c", "compile"]
+  , "exec"
+  , "directive"
+  , ["l", "load"]
+  , ["r", "reload"]
+  , ["e", "edit"]
+  , ["miss", "missing"]
+  , "total"
+  , "doc"
+  , "browse"
+  , ["log", "logging"]
+  , "consolewidth"
+  , ["color", "colour"]
+  , ["m", "metavars"]
+  , "typeat"
+  , ["cs", "casesplit"]
+  , ["ac", "addclause"]
+  , ["ml", "makelemma"]
+  , ["mc", "makecase"]
+  , ["mw", "makewith"]
+  , "intro"
+  , "refine"
+  , ["ps", "proofsearch"]
+  , "psnext"
+  , "gd"
+  , "gdnext"
+  , "version"
+  , ["?", "h", "help"]
+  , "let"
+  , ["fs", "fsearch"]
+  ]
+  where
+    explain : List String -> String -> List (String, Maybe String)
+    explain cmds expl = map (\s => (s, Just expl)) cmds
+
+    noExplain : List String -> List (String, Maybe String)
+    noExplain cmds = map (\s => (s, Nothing)) cmds
 
 export
 data ParseCmd : Type where
