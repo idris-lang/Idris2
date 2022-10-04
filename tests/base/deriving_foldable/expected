@@ -1,0 +1,76 @@
+1/1: Building DeriveFoldable (DeriveFoldable.idr)
+LOG derive.foldable.clauses:1: 
+  foldMapList : {0 a, b : Type} -> Monoid b => (a -> b) -> List a -> b
+  foldMapList f Nil = neutral
+  foldMapList f (x1 :: x2) = (f x1) <+> (foldMapList f x2)
+LOG derive.foldable.clauses:1: 
+  foldMapMaybe : {0 a, b : Type} -> Monoid b => (a -> b) -> Maybe a -> b
+  foldMapMaybe f Nothing = neutral
+  foldMapMaybe f (Just x1) = f x1
+LOG derive.foldable.clauses:1: 
+  foldMapEither : {0 err : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> Either err a -> b
+  foldMapEither f (Left x2) = neutral
+  foldMapEither f (Right x2) = f x2
+LOG derive.foldable.clauses:1: 
+  foldMapPair : {0 a : _} -> {0 a0, b : Type} -> Monoid b => (a0 -> b) -> Pair a a0 -> b
+  foldMapPair f (MkPair x2 x3) = f x3
+LOG derive.foldable.clauses:1: 
+  foldMapConstant : {0 a : _} -> {0 a0, b : Type} -> Monoid b => (a0 -> b) -> Constant a a0 -> b
+  foldMapConstant f (MkConstant x2) = neutral
+LOG derive.foldable.clauses:1: 
+  foldMapVect : {0 n : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> Vect n a -> b
+  foldMapVect f Nil = neutral
+  foldMapVect f (x2 :: x3) = (f x2) <+> (foldMapVect f x3)
+LOG derive.foldable.clauses:1: 
+  foldMapMatrix : {0 m, n : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> Matrix m n a -> b
+  foldMapMatrix f (MkMatrix x3) = foldMap (foldMap f) x3
+LOG derive.foldable.clauses:1: 
+  foldMapTm : {0 a, b : Type} -> Monoid b => (a -> b) -> Tm a -> b
+  foldMapTm f (Var x1) = f x1
+  foldMapTm f (Call x2 x3) = foldMap (assert_total (foldMapTm f)) x3
+  foldMapTm f (Lam x1) = foldMapTm (foldMap f) x1
+LOG derive.foldable.clauses:1: 
+  foldMapTree : {0 a, b : Type} -> Monoid b => (a -> b) -> Tree a -> b
+  foldMapTree f (Leaf x1) = f x1
+  foldMapTree f (Node x1) = assert_total (foldMap f x1)
+LOG derive.foldable.clauses:1: 
+  foldMapForest : {0 a, b : Type} -> Monoid b => (a -> b) -> Forest a -> b
+  foldMapForest f Empty = neutral
+  foldMapForest f (Plant x1 x2) = (assert_total (foldMap f x1)) <+> (foldMapForest f x2)
+LOG derive.foldable.clauses:1: 
+  foldMapList1 : {0 a, b : Type} -> Monoid b => (a -> b) -> List1 a -> b
+  foldMapList1 f (MkList1 x1) = bifoldMap f (foldMap (assert_total (foldMapList1 f))) x1
+LOG derive.foldable.clauses:1: 
+  foldMapFull : {0 a, b : Type} -> Monoid b => (a -> b) -> Full a -> b
+  foldMapFull f (Leaf x1) = f x1
+  foldMapFull f (Node x1) = foldMapFull (bifoldMap f f) x1
+LOG derive.foldable.clauses:1: 
+  foldMapLAZY : {0 a, b : Type} -> Monoid b => (a -> b) -> LAZY a -> b
+  foldMapLAZY f (MkLAZY x1) = f x1
+LOG derive.foldable.clauses:1: 
+  foldMapRose : {0 a, b : Type} -> Monoid b => (a -> b) -> Rose a -> b
+  foldMapRose f (Node x1) = foldMap (\ eta => assert_total (foldMapRose f eta)) x1
+LOG derive.foldable.assumption:10: I am assuming that the parameter m is a Foldable
+LOG derive.foldable.clauses:1: 
+  foldMapMaybeT : {0 m : _} -> Foldable m => {0 a, b : Type} -> Monoid b => (a -> b) -> MaybeT m a -> b
+  foldMapMaybeT f (MkMaybeT x2) = foldMap (foldMap f) x2
+LOG derive.foldable.assumption:10: I am assuming that the parameter layer is a Bifoldable
+LOG derive.foldable.clauses:1: 
+  foldMapTreeT : {0 layer : _} -> Bifoldable layer => {0 a, b : Type} -> Monoid b => (a -> b) -> TreeT layer a -> b
+  foldMapTreeT f (MkTreeT x2) = bifoldMap f (foldMapTreeT f) x2
+LOG derive.foldable.clauses:1: 
+  foldMapTree : {0 a, b : Type} -> Monoid b => (a -> b) -> Tree a -> b
+  foldMapTree f (MkTree x1) = foldMap f x1
+LOG derive.foldable.clauses:1: 
+  foldMapIVect : {0 m : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> IVect {n = m} a -> b
+  foldMapIVect f (MkIVect x2) = foldMap f x2
+LOG derive.foldable.clauses:1: 
+  foldMapEqMap : {0 key, eq : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> EqMap key {{conArg:5682} = eq} a -> b
+  foldMapEqMap f (MkEqMap x3) = foldMap (foldMap f) x3
+LOG derive.foldable.clauses:1: 
+  foldMapTree : {0 l : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> Tree l a -> b
+  foldMapTree f (Leaf x2) = neutral
+  foldMapTree f (Node x2 x3 x4) = (foldMapTree f x2) <+> ((f x3) <+> (foldMapTree f x4))
+LOG derive.foldable.clauses:1: 
+  foldMapTriple : {0 a, b : _} -> {0 a0, b0 : Type} -> Monoid b0 => (a0 -> b0) -> Triple a b a0 -> b0
+  foldMapTriple f (MkTriple x3 x4 x5) = f x5

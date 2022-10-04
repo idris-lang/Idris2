@@ -92,7 +92,7 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006", "perror007", "perror008", "perror009", "perror010",
        "perror011", "perror012", "perror013", "perror014", "perror015",
-       "perror016"]
+       "perror016", "perror017", "perror018", "perror019"]
 
 idrisTestsInteractive : TestPool
 idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
@@ -119,7 +119,8 @@ idrisTestsInterface = MkTestPool "Interface" [] Nothing
        "interface013", "interface014", "interface015", "interface016",
        "interface017", "interface018", "interface019", "interface020",
        "interface021", "interface022", "interface023", "interface024",
-       "interface025", "interface026", "interface027", "interface028"]
+       "interface025", "interface026", "interface027", "interface028",
+       "interface029"]
 
 idrisTestsLinear : TestPool
 idrisTestsLinear = MkTestPool "Quantities" [] Nothing
@@ -188,6 +189,7 @@ idrisTestsAllSchemes cg = MkTestPool
       ("Test across all scheme backends: " ++ show cg ++ " instance")
       [] (Just cg)
       [ "scheme001"
+      , "channels001", "channels002", "channels003", "channels004", "channels005", "channels006"
       ]
 
 idrisTestsAllBackends : Requirement -> TestPool
@@ -228,9 +230,7 @@ idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
       ["reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",
        "reflection009", "reflection010", "reflection011", "reflection012",
-       "reflection013", "reflection014", "reflection015", "reflection016",
-       "reflection017"
-      ]
+       "reflection013", "reflection014", "reflection015", "reflection016"]
 
 idrisTestsWith : TestPool
 idrisTestsWith = MkTestPool "With abstraction" [] Nothing
@@ -292,14 +292,15 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "futures001"
     , "bitops"
     , "casts"
+    , "constfold"
     , "memo"
     , "newints"
     , "integers"
+    , "nat2fin"
     , "semaphores001"
     , "semaphores002"
     , "perf001"
     , "reg001"
-    , "channels001", "channels002", "channels003", "channels004", "channels005"
     ]
 
 refcTests : IO TestPool

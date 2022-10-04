@@ -21,6 +21,14 @@ public export
 asList : SnocList type -> List type
 asList = (reverse . cast)
 
+export
+Uninhabited (Lin = x :< xs) where
+  uninhabited Refl impossible
+
+export
+Uninhabited (x :< xs = Lin) where
+  uninhabited Refl impossible
+
 ||| True iff input is Lin
 public export
 isLin : SnocList a -> Bool
@@ -32,6 +40,18 @@ public export
 isSnoc : SnocList a -> Bool
 isSnoc Lin     = False
 isSnoc (sx :< x) = True
+
+||| Given a predicate and a snoclist, returns a tuple consisting of the longest
+||| prefix of the snoclist whose elements satisfy the predicate, and the rest of the
+||| snoclist.
+public export
+spanBy : (a -> Maybe b) -> SnocList a -> (SnocList a, SnocList b)
+spanBy p [<] = ([<], [<])
+spanBy p (xs :< x) = case p x of
+  Just b =>
+    let (as, bs) = spanBy p xs in
+    (as, bs :< b)
+  Nothing => (xs :< x, [<])
 
 export
 Show a => Show (SnocList a) where
@@ -56,7 +76,8 @@ Monoid (SnocList a) where
 
 public export
 Foldable SnocList where
-  foldr f z = foldr f z . (<>> [])
+  foldr f z [<]       = z
+  foldr f z (sx :< x) = foldr f (f x z) sx
 
   foldl f z Lin = z
   foldl f z (xs :< x) = f (foldl f z xs) x
@@ -66,7 +87,7 @@ Foldable SnocList where
 
   toList = (<>> [])
 
-  foldMap f = foldl (\xs, x => xs <+> f x) neutral
+  foldMap f = foldr (\v,acc => f v <+> acc) neutral
 
 public export
 Applicative SnocList where
@@ -86,6 +107,11 @@ public export
 Alternative SnocList where
   empty = Lin
   xs <|> ys = xs ++ ys
+
+-- Why can't we just use an implementation here?!
+export %hint
+SnocBiinjective : Biinjective (:<)
+SnocBiinjective = MkBiinjective $ \case Refl => (Refl, Refl)
 
 ||| Find the rightmost element of the snoc-list that satisfies the predicate.
 public export

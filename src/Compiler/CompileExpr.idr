@@ -256,6 +256,12 @@ builtinNatTree (CConCase fc sc alts def)
                 !(builtinNatTree $ CConCase fc (CLocal fc First) (map weaken alts) (map weaken def))
 builtinNatTree t = pure t
 
+enumTag : Nat -> Int -> Constant
+enumTag k i =
+  if      k <= 0xff   then B8 (cast i)
+  else if k <= 0xffff then B16 (cast i)
+  else                     B32 (cast i)
+
 enumTree : CExp vars -> CExp vars
 enumTree (CConCase fc sc alts def)
    = let x = traverse toEnum alts
@@ -264,8 +270,8 @@ enumTree (CConCase fc sc alts def)
          CConstCase fc sc alts' def
   where
     toEnum : CConAlt vars -> Maybe (CConstAlt vars)
-    toEnum (MkConAlt nm ENUM (Just tag) [] sc)
-        = pure $ MkConstAlt (I tag) sc
+    toEnum (MkConAlt nm (ENUM n) (Just tag) [] sc)
+        = pure $ MkConstAlt (enumTag n tag) sc
     toEnum _ = Nothing
 enumTree t = t
 
@@ -310,7 +316,7 @@ mutual
            cn <- getFullName fn
            fl <- dconFlag cn
            case fl of
-                ENUM => pure $ CPrimVal fc (I tag)
+                (ENUM n) => pure $ CPrimVal fc (enumTag n tag)
                 ZERO => pure $ CPrimVal fc (BI 0)
                 SUCC => do x <- newMN "succ"
                            pure $ CLam fc x $ COp fc (Add IntegerType) [CPrimVal fc (BI 1), CLocal fc First]

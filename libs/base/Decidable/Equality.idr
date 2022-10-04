@@ -7,6 +7,7 @@ import Data.Nat
 import Data.List
 import Data.List1
 import Data.List1.Properties
+import Data.SnocList
 import Data.These
 
 import public Decidable.Equality.Core as Decidable.Equality
@@ -110,6 +111,17 @@ DecEq a => DecEq (List a) where
 public export
 DecEq a => DecEq (List1 a) where
   decEq (x ::: xs) (y ::: ys) = decEqCong2 (decEq x y) (decEq xs ys)
+
+--------------------------------------------------------------------------------
+-- SnocList
+--------------------------------------------------------------------------------
+
+public export
+DecEq a => DecEq (SnocList a) where
+  decEq Lin Lin = Yes Refl
+  decEq (xs :< x) Lin = No absurd
+  decEq Lin (xs :< x) = No absurd
+  decEq (xs :< x) (ys :< y) = decEqCong2 (decEq xs ys) (decEq x y)
 
 -- TODO: Other prelude data types
 

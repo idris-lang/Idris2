@@ -307,13 +307,13 @@
 ;; Channels
 
 (define (blodwen-make-channel ty)
-  (make-channel))
+  (make-async-channel 1))
 
 (define (blodwen-channel-get ty chan)
-  (channel-get chan))
+  (async-channel-get chan))
 
 (define (blodwen-channel-put ty chan val)
-  (channel-put chan val))
+  (async-channel-put chan val))
 
 ;; Mutex
 

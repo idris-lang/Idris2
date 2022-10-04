@@ -156,6 +156,7 @@ commitKeyword : OriginDesc -> IndentInfo -> String -> Rule ()
 commitKeyword fname indents req
     = do mustContinue indents (Just req)
          decoratedKeyword fname req
+          <|> the (Rule ()) (fatalError ("Expected '" ++ req ++ "'"))
          mustContinue indents Nothing
 
 commitSymbol : OriginDesc -> String -> Rule ()
@@ -1606,7 +1607,7 @@ implDecl fname indents
                          impls  <- implBinds fname indents
                          cons   <- constraints fname indents
                          n      <- decorate fname Typ name
-                         params <- many (simpleExpr fname indents)
+                         params <- many (continue indents *> simpleExpr fname indents)
                          nusing <- option [] $ decoratedKeyword fname "using"
                                             *> forget <$> some (decorate fname Function name)
                          body <- optional $ decoratedKeyword fname "where" *> blockAfter col (topDecl fname)
@@ -1642,15 +1643,17 @@ fieldDecl fname indents
       pure (DefImplicit t)
 
     fieldBody : String -> PiInfo PTerm -> Rule (List PField)
-    fieldBody doc p
-        = do b <- bounds (do rig <- multiplicity fname
-                             ns <- sepBy1 (decoratedSymbol fname ",") (do
-                                     n <- decorate fname Function name
-                                     pure n)
-                             decoratedSymbol fname ":"
-                             ty <- typeExpr pdef fname indents
-                             pure (\fc : FC => map (\n => MkField fc doc rig p n ty) (forget ns)))
-             pure (b.val (boundToFC fname b))
+    fieldBody doc p = do
+      b <- bounds (do
+             rig <- multiplicity fname
+             ns <- sepBy1 (decoratedSymbol fname ",")
+                     (decorate fname Function name
+                        <|> (do b <- bounds (symbol "_")
+                                fatalLoc {c = True} b.bounds "Fields have to be named"))
+             decoratedSymbol fname ":"
+             ty <- typeExpr pdef fname indents
+             pure (\fc : FC => map (\n => MkField fc doc rig p n ty) (forget ns)))
+      pure (b.val (boundToFC fname b))
 
 typedArg : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm, PTerm))
 typedArg fname indents
@@ -1681,7 +1684,7 @@ recordDecl fname indents
                          n       <- mustWork (decoratedDataTypeName fname)
                          paramss <- many (recordParam fname indents)
                          let params = concat paramss
-                         decoratedKeyword fname "where"
+                         mustWork $ decoratedKeyword fname "where"
                          opts <- dataOpts fname
                          dcflds <- blockWithOptHeaderAfter col
                                       (\ idt => recordConstructor fname <* atEnd idt)

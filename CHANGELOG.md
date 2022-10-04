@@ -133,6 +133,11 @@
   now transformer argument is the last, as in the other standard transformers, like `ReaderT` and `StateT`.
 * Adds `Data.Fin.finToNatEqualityAsPointwise`,
   which takes a witness of `finToNat k = finToNat l` and proves `k ~~~ l`.
+* Drop first argument (path to the `node` executable) from `System.getArgs` on
+  the Node.js backend to make it consistent with other backends.
+* Adds `Uninhabited` instances for `FZ ~~~ FS k` and `FS k ~~~ FZ`.
+* Change behavior of `channelPut` on the Racket backend to match the behavior
+  on the Chez backend.
 
 #### Test
 
@@ -148,6 +153,8 @@
 * Removes `contrib`'s deprecated `Data.Num.Implementations` module. See
   `Prelude.Interfaces` instead.
 * Implements `Show tok => Show (ParsingError tok)` for `Text.Parser.Core`.
+* `Control.Linear.LIO` has been moved from `contribs` to `linear` to guarantee
+  that idris2 does not need to rely on contribs anymore.
 
 #### Network
 

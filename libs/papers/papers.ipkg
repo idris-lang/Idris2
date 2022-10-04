@@ -23,6 +23,8 @@ modules = Data.Container,
 
           Data.Vect.Binary,
 
+          Data.W,
+
           Language.Tagless,
 
           Search.Auto,

@@ -210,12 +210,6 @@ channelGet chan = primIO (prim__channelGet chan)
 
 ||| Puts a value on the given channel.
 |||
-||| CAUTION: Different behaviour under chez and racket:
-||| - Chez: Puts a value on the channel. If there already is a value, blocks
-|||         until that value has been received.
-||| - Racket: Blocks until a receiver is ready to accept the value `val` through
-|||           `chan`.
-|||
 ||| @ chan the `Channel` to send the value over
 ||| @ val  the value to send
 export
