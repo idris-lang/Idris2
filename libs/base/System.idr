@@ -58,15 +58,22 @@ usleep : HasIO io => (usec : Int) -> So (usec >= 0) => io ()
 usleep usec = primIO (prim__usleep usec)
 
 -- Get the number of arguments
+-- Note: node prefixes the list of command line arguments
+--       with the path to the `node` executable. This is
+--       inconsistent with other backends, which only list
+--       the path to the running program. For reasons of
+--       consistency across backends, this first argument ist
+--       dropped on the node backend.
 %foreign "scheme:blodwen-arg-count"
          supportC "idris2_getArgCount"
-         "node:lambda:() => process.argv.length"
+         "node:lambda:() => process.argv.length - 1"
 prim__getArgCount : PrimIO Int
 
--- Get argument number `n`
+-- Get argument number `n`. See also `prim__getArgCount`
+-- about the special treatment of the node backend.
 %foreign "scheme:blodwen-arg"
          supportC "idris2_getArg"
-         "node:lambda:n => process.argv[n]"
+         "node:lambda:n => process.argv[n + 1]"
 prim__getArg : Int -> PrimIO String
 
 ||| Retrieve the arguments to the program call, if there were any.

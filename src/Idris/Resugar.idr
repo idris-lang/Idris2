@@ -544,7 +544,7 @@ mutual
                                   !(toPTerm startPrec rhs)))
   toPDecl (IRunElabDecl fc tm)
       = pure (Just (PRunElabDecl fc !(toPTerm startPrec tm)))
-  toPDecl (IPragma _ _) = pure Nothing
+  toPDecl (IPragma _ _ _) = pure Nothing
   toPDecl (ILog _) = pure Nothing
   toPDecl (IBuiltin fc type name) = pure $ Just $ PBuiltin fc type name
 

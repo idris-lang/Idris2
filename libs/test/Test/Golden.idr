@@ -592,18 +592,15 @@ poolRunner opts pool
        ++ msgs
        ++ [ separator ]
 
-||| A runner for a whole test suite
 export
-runner : List TestPool -> IO ()
-runner tests
-    = do args <- getArgs
-         Just opts <- options args
-            | _ => do printLn args
-                      putStrLn usage
+runnerWith : Options -> List TestPool -> IO ()
+runnerWith opts tests = do
+
          -- if no CG has been set, find a sensible default based on what is available
          opts <- case codegen opts of
                    Nothing => pure $ { codegen := !findCG } opts
                    Just _ => pure opts
+
          -- run the tests
          res <- concat <$> traverse (poolRunner opts) tests
 
@@ -628,3 +625,13 @@ runner tests
          if nfail == 0
            then exitWith ExitSuccess
            else exitWith (ExitFailure 1)
+
+||| A runner for a whole test suite
+export
+runner : List TestPool -> IO ()
+runner tests
+    = do args <- getArgs
+         Just opts <- options args
+            | _ => do printLn args
+                      putStrLn usage
+         runnerWith opts tests

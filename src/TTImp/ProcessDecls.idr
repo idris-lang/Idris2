@@ -126,7 +126,7 @@ process eopts nest env (ITransform fc n lhs rhs)
     = processTransform eopts nest env fc n lhs rhs
 process eopts nest env (IRunElabDecl fc tm)
     = processRunElab eopts nest env fc tm
-process eopts nest env (IPragma _ act)
+process eopts nest env (IPragma _ _ act)
     = act nest env
 process eopts nest env (ILog lvl)
     = addLogLevel (uncurry unsafeMkLogLevel <$> lvl)
