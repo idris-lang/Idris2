@@ -189,7 +189,8 @@ idrisTestsAllSchemes cg = MkTestPool
       ("Test across all scheme backends: " ++ show cg ++ " instance")
       [] (Just cg)
       [ "scheme001"
-      , "channels001", "channels002", "channels003", "channels004", "channels005", "channels006"
+      , "channels001", "channels002", "channels003", "channels004", "channels005"
+      , "channels006"
       ]
 
 idrisTestsAllBackends : Requirement -> TestPool
