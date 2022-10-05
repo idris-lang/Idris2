@@ -6,9 +6,6 @@ BOOTSTRAP_PREFIX=$PWD/bootstrap-build
 
 IDRIS2_CG="${IDRIS2_CG-"chez"}"
 
-BOOT_PATH_BASE=$IDRIS_PREFIX/idris2-$IDRIS2_VERSION
-IDRIS2_BOOT_PATH="$BOOT_PATH_BASE/prelude$SEP$BOOT_PATH_BASE/base$SEP$BOOT_PATH_BASE/linear$SEP$BOOT_PATH_BASE/network$SEP$BOOT_PATH_BASE/contrib"
-
 # BOOTSTRAP_PREFIX must be the "clean" build root, without cygpath -m
 # Otherwise, we get 'git: Bad address'
 echo "$BOOTSTRAP_PREFIX"
