@@ -2,6 +2,7 @@ module Main
 
 import System
 import System.Concurrency
+import System.Info
 
 -- Taken from tests/chez/futures001
 
