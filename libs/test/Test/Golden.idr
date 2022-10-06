@@ -78,6 +78,7 @@ import Data.Maybe
 import Data.List
 import Data.List1
 import Data.String
+import Data.String.Extra
 
 import System
 import System.Clock
@@ -281,11 +282,14 @@ runTest opts testPath = do
     printTiming False _     path msg = putStrLn $ concat [path, ": ", msg]
     printTiming True  clock path msg =
       let time  = showTime 2 3 clock
+          width = 72
           -- We use 9 instead of `String.length msg` because:
           -- 1. ": success" and ": FAILURE" have the same length
           -- 2. ANSI escape codes make the msg look longer than it is
-          spent = String.length time + String.length path + 9
-          pad   = pack $ replicate (minus 72 spent) ' '
+          msgl  = 9
+          path  = leftEllipsis (width `minus` (1 + msgl + length time)) "(...)" path
+          spent = length time + length path + msgl
+          pad   = pack $ replicate (width `minus` spent) ' '
       in putStrLn $ concat [path, ": ", msg, pad, time]
 
 ||| Find the first occurrence of an executable on `PATH`.
