@@ -106,13 +106,13 @@ justifyRight n c s = replicate (n `minus` length s) c ++ s
 ||| Truncates a string to the given length.
 ||| If the given string is longer, replace first characters with given prefix.
 |||
-||| Say, `truncateMunchLeft 5 ".." "abcdefgh"` should give `"..fgh"` and
-||| `truncateMunchLeft 5 "" "abcdefgh"` should give `"defgh"`.
+||| Say, `leftEllipsis 5 ".." "abcdefgh"` should give `"..fgh"` and
+||| `leftEllipsis 5 "" "abcdefgh"` should give `"defgh"`.
 |||
 ||| Notice, that the resulting string can be longer than max length if the prefix is longer.
 export
-truncateMunchLeft : (maxLen : Nat) -> (pref : String) -> String -> String
-truncateMunchLeft maxLen pref str = do
+leftEllipsis : (maxLen : Nat) -> (pref : String) -> String -> String
+leftEllipsis maxLen pref str = do
  let len = length str
  case len `isLTE` maxLen of
    Yes _ => str
@@ -121,13 +121,13 @@ truncateMunchLeft maxLen pref str = do
 ||| Truncates a string to the given length.
 ||| If the given string is longer, replace last characters with given suffix.
 |||
-||| Say, `truncateMunchRight 5 ".." "abcdefgh"` should give `"abc.."` and
-||| `truncateMunchRight 5 "" "abcdefgh"` should give `"abcde"`.
+||| Say, `rightEllipsis 5 ".." "abcdefgh"` should give `"abc.."` and
+||| `rightEllipsis 5 "" "abcdefgh"` should give `"abcde"`.
 |||
 ||| Notice, that the resulting string can be longer than max length if the suffix is longer.
 export
-truncateMunchRight : (maxLen : Nat) -> (suff : String) -> String -> String
-truncateMunchRight maxLen suff str = do
+rightEllipsis : (maxLen : Nat) -> (suff : String) -> String -> String
+rightEllipsis maxLen suff str = do
   let len = length str
   case len `isLTE` maxLen of
     Yes _ => str
