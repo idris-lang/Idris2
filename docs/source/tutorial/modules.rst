@@ -249,7 +249,8 @@ Explicit namespaces inside functions
 
 Explicit namespaces can be defined inside ``where``-blocks of functions.
 Unlike other definitions (e.g. ``data`` or ``record``),
-such namespace definitions are understood as belonging to the scope of the function definition itself.
+such namespace definitions are understood as belonging to the scope of the
+function definition itself.
 
 For example, the following code should typecheck.
 
@@ -269,8 +270,9 @@ Notice that if a function that contains namespace definition has parameters,
 then definitions inside this namespace will have these parameters too.
 This is done because such definitions have access to values of the parameters.
 
-These parameters must be passed explicitly when accessing namespaced definitions from outside the function where they are declared,
-and must not be passed when accessed from the inside.
+These parameters must be passed explicitly when accessing namespaced definitions
+from outside the function where they are declared, and must not be passed when
+accessed from the inside.
 This behaviour is similar to parameterised blocks described below.
 Look at the following example.
 
