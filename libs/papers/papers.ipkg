@@ -33,5 +33,7 @@ modules = Data.Container,
           Search.HDecidable,
           Search.Negation,
           Search.Properties,
+          Search.CTL,
+          Search.GCL,
 
           Search.Tychonoff.PartI

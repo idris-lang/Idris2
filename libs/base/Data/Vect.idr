@@ -207,7 +207,7 @@ unsnoc : (xs : Vect (S n) a) -> (Vect n a, a)
 unsnoc [x] = ([], x)
 unsnoc (x :: xs@(_ :: _)) = let (ini, lst) = unsnoc xs in (x :: ini, lst)
 
-||| Repeate some value some number of times.
+||| Repeat some value some number of times.
 |||
 ||| @ len the number of times to repeat it
 ||| @ x the value to repeat

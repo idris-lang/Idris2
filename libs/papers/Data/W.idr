@@ -393,76 +393,75 @@ namespace PartitionedSets
                  (Pi (pos s) (lam $ \ p => pred (ts $$ p))) ->
                  pred (MkW s ts)) ->
          (w : W sh pos) -> pred w
-  elim pred step (MkW s (MkArr ts)) with (step s)
-    _ | steps with (pos s)
-      _ | MkPSet d (MkArr e) = steps (MkArr ts) (MkPi $ ih d e ts) where
+  elim pred step (MkW s (MkArr ts)) with (step s) | (pos s)
+    _ | steps | MkPSet d (MkArr e) = steps (MkArr ts) (MkPi $ ih d e ts) where
 
-        ih : (d : Fin) -> (e : Arr d Type) -> (ts : Arr d e (W sh pos)) ->
-             PiArr d e (lamArr d e $ \ p => pred (appArr d e ts p))
-        ih AVoid e ts = ()
-        ih (AUnit nm) (MkOne e) (MkOne ts) = MkOne (\ x => elim pred step (ts x))
-        ih (d || e) (f, g) (ts, us) = (ih d f ts, ih e g us)
+      ih : (d : Fin) -> (e : Arr d Type) -> (ts : Arr d e (W sh pos)) ->
+           PiArr d e (lamArr d e $ \ p => pred (appArr d e ts p))
+      ih AVoid e ts = ()
+      ih (AUnit nm) (MkOne e) (MkOne ts) = MkOne (\ x => elim pred step (ts x))
+      ih (d || e) (f, g) (ts, us) = (ih d f ts, ih e g us)
 
   namespace Examples
 
-    ORD : Type
-    ORD = PartitionedSets.W (Shape ("zero" || "succ" || "lim")) $ cases
-        ( "zero" .= mkPSet AVoid ()
-        , "succ" .= mkPSet "x" ("x" .= ())
-        , "lim"  .= mkPSet "f" ("f" .= NAT)
-        )
+    -- proceed with the following assumption
+    parameters { auto etaUnit : forall a. (o : () -> a) -> o === (\ _ => o ()) }
 
-    zero : ORD
-    zero = mkW "zero" ()
+      ORD : Type
+      ORD = PartitionedSets.W (Shape ("zero" || "succ" || "lim")) $ cases
+          ( "zero" .= mkPSet AVoid ()
+          , "succ" .= mkPSet "x" ("x" .= ())
+          , "lim"  .= mkPSet "f" ("f" .= NAT)
+          )
 
-    succ : ORD -> ORD
-    succ o = mkW "succ" ("x" .= \ _ => o)
+      zero : ORD
+      zero = mkW "zero" ()
 
-    lim : (NAT -> ORD) -> ORD
-    lim f = mkW "lim" ("f" .= f)
+      succ : ORD -> ORD
+      succ o = mkW "succ" ("x" .= \ _ => o)
 
-    ORDind : (0 pred : ORD -> Type) ->
-             pred Examples.zero ->
-             ((n : ORD) -> pred n -> pred (succ n)) ->
-             ((f : NAT -> ORD) -> ((n : NAT) -> pred (f n)) -> pred (lim f)) ->
-             (n : ORD) -> pred n
-    ORDind pred pZ pS pL
-      = elim pred
-      $ cases ("zero" .= pZero, "succ" .= pSucc, "lim" .= pLim)
+      lim : (NAT -> ORD) -> ORD
+      lim f = mkW "lim" ("f" .= f)
 
-      where
+      ORDind : (0 pred : ORD -> Type) ->
+               pred Examples.zero ->
+               ((n : ORD) -> pred n -> pred (succ n)) ->
+               ((f : NAT -> ORD) -> ((n : NAT) -> pred (f n)) -> pred (lim f)) ->
+               (n : ORD) -> pred n
+      ORDind pred pZ pS pL
+        = elim pred
+        $ cases ("zero" .= pZero, "succ" .= pSucc, "lim" .= pLim)
 
-        -- we're forced to do quite a bit of additional pattern matching
-        -- because of a lack of eta
+        where
 
-        pZero : (o : mkPSet AVoid () ~> ORD) -> ? -> pred (MkW "zero" o)
-        pZero (MkArr ()) ih = pZ
+          -- we're forced to do quite a bit of additional pattern matching
+          -- because of a lack of eta
 
-        -- oops we need to postulate this!
-        etaUnit : (o : () -> a) -> o === (\ _ => o ())
+          pZero : (o : mkPSet AVoid () ~> ORD) -> ? -> pred (MkW "zero" o)
+          pZero (MkArr ()) ih = pZ
 
-        pSucc : (o : mkPSet (AUnit "x") ("x" .= ()) ~> ORD) ->
-                Pi (mkPSet (AUnit "x") ("x" .= ())) (lam (\p => pred (o $$ p))) ->
-                pred (MkW "succ" o)
-        pSucc (MkArr (MkOne o)) (MkPi (MkOne po)) =
-          rewrite etaUnit o in pS (o ()) (po ())
+          pSucc : (o : mkPSet (AUnit "x") ("x" .= ()) ~> ORD) ->
+                  Pi (mkPSet (AUnit "x") ("x" .= ())) (lam (\p => pred (o $$ p))) ->
+                  pred (MkW "succ" o)
+          pSucc (MkArr (MkOne o)) (MkPi (MkOne po)) =
+            rewrite etaUnit o in pS (o ()) (po ())
 
-        pLim : (o : mkPSet (AUnit "f") ("f" .= ?A) ~> ORD) ->
-               Pi (mkPSet (AUnit "f") ("f" .= ?B)) (lam (\p => pred (o $$ p))) ->
-               pred (MkW "lim" o)
-        pLim (MkArr (MkOne o)) (MkPi (MkOne po)) = pL o po
+          pLim : (o : mkPSet (AUnit "f") ("f" .= ?A) ~> ORD) ->
+                 Pi (mkPSet (AUnit "f") ("f" .= ?B)) (lam (\p => pred (o $$ p))) ->
+                 pred (MkW "lim" o)
+          pLim (MkArr (MkOne o)) (MkPi (MkOne po)) = pL o po
 
 
-    ORDindZ : {0 pred : ORD -> Type} -> {0 pZ, pS, pL : ?} ->
-              ORDind pred pZ pS pL Examples.zero === pZ
-    ORDindZ = Refl
+      ORDindZ : {0 pred : ORD -> Type} -> {0 pZ, pS, pL : ?} ->
+                ORDind pred pZ pS pL Examples.zero === pZ
+      ORDindZ = Refl
 
-    ORDindS : {0 pred : ORD -> Type} -> {0 pZ, pL : ?} ->
-              {pS : (n : ORD) -> pred n -> pred (succ n)} ->
-              {0 n : ORD} -> ORDind pred pZ pS pL (succ n) === pS n (ORDind pred pZ pS pL n)
-    ORDindS = Refl
+      ORDindS : {0 pred : ORD -> Type} -> {0 pZ, pL : ?} ->
+                {pS : (n : ORD) -> pred n -> pred (succ n)} ->
+                {0 n : ORD} -> ORDind pred pZ pS pL (succ n) === pS n (ORDind pred pZ pS pL n)
+      ORDindS = Refl
 
-    ORDindL : {0 pred : ORD -> Type} -> {0 pZ, pS : ?} ->
-              {pL : (f : NAT -> ORD) -> ((n : NAT) -> pred (f n)) -> pred (lim f)} ->
-              {0 f : NAT -> ORD} -> ORDind pred pZ pS pL (lim f) === pL f (\ n => ORDind pred pZ pS pL (f n))
-    ORDindL = Refl
+      ORDindL : {0 pred : ORD -> Type} -> {0 pZ, pS : ?} ->
+                {pL : (f : NAT -> ORD) -> ((n : NAT) -> pred (f n)) -> pred (lim f)} ->
+                {0 f : NAT -> ORD} -> ORDind pred pZ pS pL (lim f) === pL f (\ n => ORDind pred pZ pS pL (f n))
+      ORDindL = Refl

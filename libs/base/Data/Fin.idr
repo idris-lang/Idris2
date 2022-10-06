@@ -304,6 +304,16 @@ namespace Equality
   (~~~) : Fin m -> Fin n -> Type
   (~~~) = Pointwise
 
+  export
+  Uninhabited (FS k ~~~ FZ) where
+    uninhabited FZ impossible
+    uninhabited (FS _) impossible
+
+  export
+  Uninhabited (FZ ~~~ FS k) where
+    uninhabited FZ impossible
+    uninhabited (FS _) impossible
+
   ||| Pointwise equality is reflexive
   export
   reflexive : {k : Fin m} -> k ~~~ k
