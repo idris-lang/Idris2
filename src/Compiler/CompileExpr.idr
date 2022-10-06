@@ -182,15 +182,15 @@ magic__integerToNat fc fc' [k]
   = CApp fc (CRef fc' (NS typesNS (UN $ Basic "prim__integerToNat"))) [k]
 
 magic__natMinus : FC -> FC -> forall vars. Vect 2 (CExp vars) -> CExp vars
-magic__natMinus fc fc' [m,n]
+magic__natMinus fc fc' [m, n]
   = magic__integerToNat fc fc'
-    [CApp fc (CRef fc' (UN $ Basic "prim__sub_Integer")) [m, n]]
+    [COp fc (Sub IntegerType) [m, n]]
 
 -- We don't reuse natMinus here because we assume that unsuc will only be called
 -- on S-headed numbers so we do not need the truncating integerToNat call!
 magic__natUnsuc : FC -> FC -> forall vars. Vect 1 (CExp vars) -> CExp vars
 magic__natUnsuc fc fc' [m]
-  = CApp fc (CRef fc' (UN $ Basic "prim__sub_Integer")) [m, CPrimVal fc (BI 1)]
+  = COp fc (Sub IntegerType) [m, CPrimVal fc (BI 1)]
 
 -- TODO: next release remove this and use %builtin pragma
 natHack : List Magic
@@ -198,19 +198,19 @@ natHack =
     [ MagicCRef (NS typesNS (UN $ Basic "natToInteger")) 1 (\ _, _, [k] => k)
     , MagicCRef (NS typesNS (UN $ Basic "integerToNat")) 1 magic__integerToNat
     , MagicCRef (NS typesNS (UN $ Basic "plus")) 2
-         (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN $ Basic "prim__add_Integer")) [m, n])
+         (\ fc, fc', [m,n] => COp fc (Add IntegerType) [m, n])
     , MagicCRef (NS typesNS (UN $ Basic "mult")) 2
-         (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN $ Basic "prim__mul_Integer")) [m, n])
+         (\ fc, fc', [m,n] => COp fc (Mul IntegerType) [m, n])
     , MagicCRef (NS typesNS (UN $ Basic "minus")) 2 magic__natMinus
     , MagicCRef (NS typesNS (UN $ Basic "equalNat")) 2
-         (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN $ Basic "prim__eq_Integer")) [m, n])
+         (\ fc, fc', [m,n] => COp fc (EQ IntegerType) [m, n])
     , MagicCRef (NS typesNS (UN $ Basic "compareNat")) 2
          (\ fc, fc', [m,n] => CApp fc (CRef fc' (NS eqOrdNS (UN $ Basic "compareInteger"))) [m, n])
     ]
 
--- get all transformation from %builtin pragmas
-builtinMagic : Ref Ctxt Defs => Core (forall vars. CExp vars -> CExp vars)
-builtinMagic = pure $ magic natHack
+-- get all builtin transformations
+builtinMagic : forall vars. CExp vars -> CExp vars
+builtinMagic = magic natHack
 
 data NextMN : Type where
 newMN : {auto s : Ref NextMN Int} -> String -> Core Name
@@ -235,11 +235,11 @@ tryZBranch _ = Nothing
 
 getSBranch : CExp vars -> List (CConAlt vars) -> Maybe (CExp vars)
 getSBranch n [] = Nothing
-getSBranch n (x :: xs) = trySBranch n x <+> getSBranch n xs
+getSBranch n (x :: xs) = trySBranch n x <|> getSBranch n xs
 
 getZBranch : List (CConAlt vars) -> Maybe (CExp vars)
 getZBranch [] = Nothing
-getZBranch (x :: xs) = tryZBranch x <+> getZBranch xs
+getZBranch (x :: xs) = tryZBranch x <|> getZBranch xs
 
 -- Rewrite case trees on Nat to be case trees on Integer
 builtinNatTree : {auto s : Ref NextMN Int} -> CExp vars -> Core (CExp vars)
@@ -302,82 +302,80 @@ dconFlag n
     ciFlags def (ConType ci :: xs) = ci
     ciFlags def (x :: xs) = ciFlags def xs
 
-mutual
-  toCExpTm : {vars : _} ->
-             {auto c : Ref Ctxt Defs} ->
-             {auto s : Ref NextMN Int} ->
-             (magic : forall vars. CExp vars -> CExp vars) ->
-             Name -> Term vars ->
-             Core (CExp vars)
-  toCExpTm m n (Local fc _ _ prf)
-      = pure $ CLocal fc prf
-  toCExpTm m n (Ref fc (DataCon tag arity) fn)
-      = do -- get full name for readability, and %builtin Natural
-           cn <- getFullName fn
-           fl <- dconFlag cn
-           case fl of
-                (ENUM n) => pure $ CPrimVal fc (enumTag n tag)
-                ZERO => pure $ CPrimVal fc (BI 0)
-                SUCC => do x <- newMN "succ"
-                           pure $ CLam fc x $ COp fc (Add IntegerType) [CPrimVal fc (BI 1), CLocal fc First]
-                _ => pure $ CCon fc cn fl (Just tag) []
-  toCExpTm m n (Ref fc (TyCon tag arity) fn)
-      = pure $ CCon fc fn TYCON Nothing []
-  toCExpTm m n (Ref fc _ fn)
-      = do full <- getFullName fn
-               -- ^ For readability of output code, and the Nat hack,
-           pure $ CApp fc (CRef fc full) []
-  toCExpTm m n (Meta fc mn i args)
-      = pure $ CApp fc (CRef fc mn) !(traverse (toCExp m n) args)
-  toCExpTm m n (Bind fc x (Lam _ _ _ _) sc)
-      = pure $ CLam fc x !(toCExp m n sc)
-  toCExpTm m n (Bind fc x (Let _ rig val _) sc)
-      = do sc' <- toCExp m n sc
-           pure $ branchZero (shrinkCExp (DropCons SubRefl) sc')
-                          (CLet fc x True !(toCExp m n val) sc')
-                          rig
-  toCExpTm m n (Bind fc x (Pi _ c e ty) sc)
-      = pure $ CCon fc (UN (Basic "->")) TYCON Nothing
-                       [ !(toCExp m n ty)
-                       , CLam fc x !(toCExp m n sc)]
-  toCExpTm m n (Bind fc x b tm) = pure $ CErased fc
-  -- We'd expect this to have been dealt with in toCExp, but for completeness...
-  toCExpTm m n (App fc tm arg)
-      = pure $ CApp fc !(toCExp m n tm) [!(toCExp m n arg)]
-  -- This shouldn't be in terms any more, but here for completeness
-  toCExpTm m n (As _ _ _ p) = toCExpTm m n p
-  -- TODO: Either make sure 'Delayed' is always Rig0, or add to typecase
-  toCExpTm m n (TDelayed fc _ _) = pure $ CErased fc
-  toCExpTm m n (TDelay fc lr _ arg)
-      = pure (CDelay fc lr !(toCExp m n arg))
-  toCExpTm m n (TForce fc lr arg)
-      = pure (CForce fc lr !(toCExp m n arg))
-  toCExpTm m n (PrimVal fc $ PrT c) = pure $ CCon fc (UN $ Basic $ show c) TYCON Nothing [] -- Primitive type constant
-  toCExpTm m n (PrimVal fc c) = pure $ CPrimVal fc c -- Non-type constant
-  toCExpTm m n (Erased fc _) = pure $ CErased fc
-  toCExpTm m n (TType fc _) = pure $ CCon fc (UN (Basic "Type")) TYCON Nothing []
-
-  toCExp : {vars : _} ->
+toCExpTm : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            {auto s : Ref NextMN Int} ->
-           (magic : forall vars. CExp vars -> CExp vars) ->
            Name -> Term vars ->
            Core (CExp vars)
-  toCExp m n tm
-      = case getFnArgs tm of
-             (f, args) =>
-                do args' <- traverse (toCExp m n) args
-                   defs <- get Ctxt
-                   f' <- toCExpTm m n f
-                   Arity a <- numArgs defs f
-                      | NewTypeBy arity pos =>
-                            do let res = applyNewType arity pos f' args'
-                               pure $ m res
-                      | EraseArgs arity epos =>
-                            do let res = eraseConArgs arity epos f' args'
-                               pure $ m res
-                   let res = expandToArity a f' args'
-                   pure $ m res
+toCExp : {vars : _} ->
+         {auto c : Ref Ctxt Defs} ->
+         {auto s : Ref NextMN Int} ->
+         Name -> Term vars ->
+         Core (CExp vars)
+
+toCExpTm n (Local fc _ _ prf)
+    = pure $ CLocal fc prf
+toCExpTm n (Ref fc (DataCon tag arity) fn)
+    = do -- get full name for readability, and %builtin Natural
+         cn <- getFullName fn
+         fl <- dconFlag cn
+         case fl of
+              (ENUM n) => pure $ CPrimVal fc (enumTag n tag)
+              ZERO => pure $ CPrimVal fc (BI 0)
+              SUCC => do x <- newMN "succ"
+                         pure $ CLam fc x $ COp fc (Add IntegerType) [CPrimVal fc (BI 1), CLocal fc First]
+              _ => pure $ CCon fc cn fl (Just tag) []
+toCExpTm n (Ref fc (TyCon tag arity) fn)
+    = pure $ CCon fc fn TYCON Nothing []
+toCExpTm n (Ref fc _ fn)
+    = do full <- getFullName fn
+             -- ^ For readability of output code, and the Nat hack,
+         pure $ CApp fc (CRef fc full) []
+toCExpTm n (Meta fc mn i args)
+    = pure $ CApp fc (CRef fc mn) !(traverse (toCExp n) args)
+toCExpTm n (Bind fc x (Lam _ _ _ _) sc)
+    = pure $ CLam fc x !(toCExp n sc)
+toCExpTm n (Bind fc x (Let _ rig val _) sc)
+    = do sc' <- toCExp n sc
+         pure $ branchZero (shrinkCExp (DropCons SubRefl) sc')
+                        (CLet fc x True !(toCExp n val) sc')
+                        rig
+toCExpTm n (Bind fc x (Pi _ c e ty) sc)
+    = pure $ CCon fc (UN (Basic "->")) TYCON Nothing
+                     [ !(toCExp n ty)
+                     , CLam fc x !(toCExp n sc)]
+toCExpTm n (Bind fc x b tm) = pure $ CErased fc
+-- We'd expect this to have been dealt with in toCExp, but for completeness...
+toCExpTm n (App fc tm arg)
+    = pure $ CApp fc !(toCExp n tm) [!(toCExp n arg)]
+-- This shouldn't be in terms any more, but here for completeness
+toCExpTm n (As _ _ _ p) = toCExpTm n p
+-- TODO: Either make sure 'Delayed' is always Rig0, or add to typecase
+toCExpTm n (TDelayed fc _ _) = pure $ CErased fc
+toCExpTm n (TDelay fc lr _ arg)
+    = pure (CDelay fc lr !(toCExp n arg))
+toCExpTm n (TForce fc lr arg)
+    = pure (CForce fc lr !(toCExp n arg))
+toCExpTm n (PrimVal fc $ PrT c) = pure $ CCon fc (UN $ Basic $ show c) TYCON Nothing [] -- Primitive type constant
+toCExpTm n (PrimVal fc c) = pure $ CPrimVal fc c -- Non-type constant
+toCExpTm n (Erased fc _) = pure $ CErased fc
+toCExpTm n (TType fc _) = pure $ CCon fc (UN (Basic "Type")) TYCON Nothing []
+
+toCExp n tm
+    = case getFnArgs tm of
+           (f, args) =>
+              do args' <- traverse (toCExp n) args
+                 defs <- get Ctxt
+                 f' <- toCExpTm n f
+                 Arity a <- numArgs defs f
+                    | NewTypeBy arity pos =>
+                          do let res = applyNewType arity pos f' args'
+                             pure $ builtinMagic res
+                    | EraseArgs arity epos =>
+                          do let res = eraseConArgs arity epos f' args'
+                             pure $ builtinMagic res
+                 let res = expandToArity a f' args'
+                 pure $ builtinMagic res
 
 mutual
   conCases : {vars : _} ->
@@ -535,7 +533,7 @@ mutual
       = toCExpTree n sc
   toCExpTree' n (Case _ x scTy [])
       = pure $ CCrash (getLoc scTy) $ "Missing case tree in " ++ show n
-  toCExpTree' n (STerm _ tm) = toCExp !builtinMagic n tm
+  toCExpTree' n (STerm _ tm) = toCExp n tm
   toCExpTree' n (Unmatched msg)
       = pure $ CCrash emptyFC msg
   toCExpTree' n Impossible
@@ -779,9 +777,8 @@ export
 compileExp : {auto c : Ref Ctxt Defs} ->
              ClosedTerm -> Core (CExp [])
 compileExp tm
-    = do m <- builtinMagic
-         s <- newRef NextMN 0
-         exp <- toCExp m (UN $ Basic "main") tm
+    = do s <- newRef NextMN 0
+         exp <- toCExp (UN $ Basic "main") tm
          pure exp
 
 ||| Given a name, look up an expression, and compile it to a CExp in the environment

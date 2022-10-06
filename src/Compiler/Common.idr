@@ -211,11 +211,11 @@ replaceEntry (i, Just (ns, b))
     = ignore $ addContextEntry ns (Resolved i) b
 
 natHackNames : List Name
-natHackNames
-    = [UN (Basic "prim__add_Integer"),
-       UN (Basic "prim__sub_Integer"),
-       UN (Basic "prim__mul_Integer"),
-       NS typesNS (UN $ Basic "prim__integerToNat")]
+natHackNames =
+    [ UN (Basic "prim__sub_Integer")
+    , NS typesNS (UN $ Basic "prim__integerToNat")
+    , NS eqOrdNS (UN $ Basic "compareInteger")
+    ]
 
 dumpIR : Show def => String -> List (Name, def) -> Core ()
 dumpIR fn lns
