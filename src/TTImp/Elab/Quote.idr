@@ -9,6 +9,7 @@ import Core.Reflect
 import Core.Unify
 import Core.TT
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Check
@@ -71,8 +72,7 @@ mutual
       = pure $ IQuote fc !(getUnquote t)
   getUnquote (IUnquote fc tm)
       = do qv <- genVarName "q"
-           unqs <- get Unq
-           put Unq ((qv, fc, tm) :: unqs)
+           update Unq ((qv, fc, tm) ::)
            pure (IUnquote fc (IVar fc qv)) -- turned into just qv when reflecting
   getUnquote tm = pure tm
 
@@ -83,10 +83,11 @@ mutual
                      Core ImpClause
   getUnquoteClause (PatClause fc l r)
       = pure $ PatClause fc !(getUnquote l) !(getUnquote r)
-  getUnquoteClause (WithClause fc l w prf flags cs)
+  getUnquoteClause (WithClause fc l rig w prf flags cs)
       = pure $ WithClause
                  fc
                  !(getUnquote l)
+                 rig
                  !(getUnquote w)
                  prf
                  flags
@@ -122,8 +123,8 @@ mutual
                      {auto u : Ref UST UState} ->
                      ImpRecord ->
                      Core ImpRecord
-  getUnquoteRecord (MkImpRecord fc n ps cn fs)
-      = pure $ MkImpRecord fc n !(traverse unqPair ps) cn
+  getUnquoteRecord (MkImpRecord fc n ps opts cn fs)
+      = pure $ MkImpRecord fc n !(traverse unqPair ps) opts cn
                            !(traverse getUnquoteField fs)
     where
       unqPair : (Name, RigCount, PiInfo RawImp, RawImp) ->
@@ -173,6 +174,7 @@ bindUnqs : {vars : _} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
            {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            List (Name, FC, RawImp) ->
            RigCount -> ElabInfo -> NestedNames vars -> Env Term vars ->
            Term vars ->
@@ -200,6 +202,7 @@ checkQuote : {vars : _} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
              {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
              FC -> RawImp -> Maybe (Glued vars) ->
@@ -238,6 +241,7 @@ checkQuoteDecl : {vars : _} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> List ImpDecl -> Maybe (Glued vars) ->

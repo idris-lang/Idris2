@@ -1,0 +1,7 @@
+1/1: Building HoleRecord (HoleRecord.idr)
+Main> Main.hole : Type
+Main> Main.hole2 : Type
+Main> Main.hole3 : Type
+Main> 1 hole: Main.hole2 : Type
+Main> 
+Bye for now!

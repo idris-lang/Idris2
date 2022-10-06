@@ -81,8 +81,8 @@ mutual
   Functor ImpClause' where
     map f (PatClause fc lhs rhs)
       = PatClause fc (map f lhs) (map f rhs)
-    map f (WithClause fc lhs wval prf flags xs)
-      = WithClause fc (map f lhs) (map f wval) prf flags (map (map f) xs)
+    map f (WithClause fc lhs rig wval prf flags xs)
+      = WithClause fc (map f lhs) rig (map f wval) prf flags (map (map f) xs)
     map f (ImpossibleClause fc lhs)
       = ImpossibleClause fc (map f lhs)
 
@@ -98,13 +98,15 @@ mutual
       = IParameters fc (map (map  {f = ImpParameter'} f) ps) (map (map f) ds)
     map f (IRecord fc cs vis mbtot rec)
       = IRecord fc cs vis mbtot (map f rec)
+    map f (IFail fc msg ds)
+      = IFail fc msg (map (map f) ds)
     map f (INamespace fc ns ds)
       = INamespace fc ns (map (map f) ds)
     map f (ITransform fc n lhs rhs)
       = ITransform fc n (map f lhs) (map f rhs)
     map f (IRunElabDecl fc t)
       = IRunElabDecl fc (map f t)
-    map f (IPragma xs k) = IPragma xs k
+    map f (IPragma fc xs k) = IPragma fc xs k
     map f (ILog x) = ILog x
     map f (IBuiltin fc ty n) = IBuiltin fc ty n
 
@@ -118,11 +120,11 @@ mutual
     map f (GlobalHint b) = GlobalHint b
     map f ExternFn = ExternFn
     map f (ForeignFn ts) = ForeignFn (map (map f) ts)
+    map f (ForeignExport ts) = ForeignExport (map (map f) ts)
     map f Invertible = Invertible
     map f (Totality tot) = Totality tot
     map f Macro = Macro
     map f (SpecArgs ns) = SpecArgs ns
-    map f (NoMangle name) = (NoMangle name)
 
   export
   Functor ImpTy' where
@@ -143,9 +145,9 @@ mutual
 
   export
   Functor ImpRecord' where
-    map f (MkImpRecord fc n params conName fields)
+    map f (MkImpRecord fc n params opts conName fields)
       = MkImpRecord fc n (map (map {f = ImpParameter'} f) params)
-                    conName (map (map f) fields)
+                    opts conName (map (map f) fields)
 
   export
   Functor ImpParameter' where

@@ -236,6 +236,16 @@ Traversable Maybe where
   traverse f Nothing = pure Nothing
   traverse f (Just x) = Just <$> f x
 
+-----------------
+-- EQUIVALENCE --
+-----------------
+
+public export
+record (<=>) (a, b : Type) where
+  constructor MkEquivalence
+  leftToRight : a -> b
+  rightToLeft : b -> a
+
 ---------
 -- DEC --
 ---------
@@ -253,6 +263,11 @@ data Dec : Type -> Type where
 
 export Uninhabited (Yes p === No q) where uninhabited eq impossible
 export Uninhabited (No p === Yes q) where uninhabited eq impossible
+
+public export
+viaEquivalence : a <=> b -> Dec a -> Dec b
+viaEquivalence f (Yes a) = Yes (f .leftToRight a)
+viaEquivalence f (No na) = No (na . f .rightToLeft)
 
 ------------
 -- EITHER --
@@ -378,6 +393,7 @@ Ord a => Ord (List a) where
             c => c
 
 namespace List
+
   ||| Concatenate one list with another.
   public export
   (++) : (xs, ys : List a) -> List a
@@ -389,6 +405,25 @@ namespace List
   length : List a -> Nat
   length []        = Z
   length (x :: xs) = S (length xs)
+
+  ||| Applied to a predicate and a list, returns the list of those elements that
+  ||| satisfy the predicate.
+  public export
+  filter : (p : a -> Bool) -> List a -> List a
+  filter p [] = []
+  filter p (x :: xs)
+     = if p x
+          then x :: filter p xs
+          else filter p xs
+
+  ||| Apply a partial function to the elements of a list, keeping the ones at which it is defined.
+  public export
+  mapMaybe : (a -> Maybe b) -> List a -> List b
+  mapMaybe f []      = []
+  mapMaybe f (x::xs) =
+    case f x of
+      Nothing => mapMaybe f xs
+      Just j  => j :: mapMaybe f xs
 
   ||| Reverse the second list, prepending its elements to the first.
   public export
@@ -411,6 +446,21 @@ namespace List
   -- Always use tailRecAppend at runtime. Data.List.tailRecAppendIsAppend
   -- proves these are equivalent.
   %transform "tailRecAppend" (++) = tailRecAppend
+
+  ||| Returns the first argument plus the length of the second.
+  public export
+  lengthPlus : Nat -> List a -> Nat
+  lengthPlus n [] = n
+  lengthPlus n (x::xs) = lengthPlus (S n) xs
+
+  ||| `length` implementation that uses tail recursion. Exported so
+  ||| lengthTRIsLength can see it.
+  public export
+  lengthTR : List a -> Nat
+  lengthTR = lengthPlus Z
+
+  -- Data.List.lengthTRIsLength proves these are equivalent.
+  %transform "tailRecLength" length = lengthTR
 
 public export
 Functor List where
@@ -441,9 +491,19 @@ Foldable List where
   foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
 
 public export
+listBindOnto : (a -> List b) -> List b -> List a -> List b
+listBindOnto f xs []        = reverse xs
+listBindOnto f xs (y :: ys) = listBindOnto f (reverseOnto xs (f y)) ys
+
+-- tail recursive O(n) implementation of `(>>=)` for `List`
+public export
+listBind : List a -> (a -> List b) -> List b
+listBind as f = listBindOnto f Nil as
+
+public export
 Applicative List where
   pure x = [x]
-  fs <*> vs = concatMap (\f => map f vs) fs
+  fs <*> vs = listBind fs (\f => map f vs)
 
 public export
 Alternative List where
@@ -452,12 +512,70 @@ Alternative List where
 
 public export
 Monad List where
-  m >>= f = concatMap f m
+  (>>=) = listBind
 
 public export
 Traversable List where
   traverse f [] = pure []
   traverse f (x::xs) = [| f x :: traverse f xs |]
+
+namespace SnocList
+
+  infixl 7 <><
+  infixr 6 <>>
+
+  ||| 'fish': Action of lists on snoc-lists
+  public export
+  (<><) : SnocList a -> List a -> SnocList a
+  sx <>< [] = sx
+  sx <>< (x :: xs) = sx :< x <>< xs
+
+  ||| 'chips': Action of snoc-lists on lists
+  public export
+  (<>>) : SnocList a -> List a -> List a
+  Lin       <>> xs = xs
+  (sx :< x) <>> xs = sx <>> x :: xs
+
+  public export
+  (++) : (sx, sy : SnocList a) -> SnocList a
+  (++) sx Lin = sx
+  (++) sx (sy :< y) = (sx ++ sy) :< y
+
+  public export
+  length : SnocList a -> Nat
+  length Lin = Z
+  length (sx :< x) = S $ length sx
+
+  ||| Filters a snoc-list according to a simple classifying function
+  public export
+  filter : (a -> Bool) -> SnocList a -> SnocList a
+  filter f [<]     = [<]
+  filter f (xs:<x) = let rest = filter f xs in if f x then rest :< x else rest
+
+  ||| Apply a partial function to the elements of a list, keeping the ones at which
+  ||| it is defined.
+  public export
+  mapMaybe : (a -> Maybe b) -> SnocList a -> SnocList b
+  mapMaybe f [<]       = [<]
+  mapMaybe f (sx :< x) = case f x of
+    Nothing => mapMaybe f sx
+    Just j  => mapMaybe f sx :< j
+
+public export
+Eq a => Eq (SnocList a) where
+  (==) Lin Lin = True
+  (==) (sx :< x) (sy :< y) = x == y && sx == sy
+  (==) _ _ = False
+
+public export
+Ord a => Ord (SnocList a) where
+  compare Lin Lin = EQ
+  compare Lin (sx :< x) = LT
+  compare (sx :< x) Lin = GT
+  compare (sx :< x) (sy :< y)
+    = case compare sx sy of
+        EQ => compare x y
+        c  => c
 
 -- This works quickly because when string-concat builds the result, it allocates
 -- enough room in advance so there's only one allocation, rather than lots!
@@ -473,11 +591,15 @@ fastConcat : List String -> String
 
 %transform "fastConcat" concat {t = List} {a = String} = fastConcat
 
+||| Check if something is a member of a list using a custom comparison.
+public export
+elemBy : Foldable t => (a -> a -> Bool) -> a -> t a -> Bool
+elemBy p e = any (p e)
+
 ||| Check if something is a member of a list using the default Boolean equality.
 public export
-elem : Eq a => a -> List a -> Bool
-x `elem` [] = False
-x `elem` (y :: ys) = x == y ||  elem x ys
+elem : Foldable t => Eq a => a -> t a -> Bool
+elem = elemBy (==)
 
 ||| Lookup a value at a given position
 export
@@ -752,7 +874,7 @@ log x = prim__doubleLog x
 
 public export
 pow : Double -> Double -> Double
-pow x y = exp (y * log x) -- prim__doublePow x y
+pow x y = prim__doublePow x y
 
 public export
 sin : Double -> Double
@@ -876,3 +998,10 @@ public export
       = if y > x
            then countFrom x (+ (y - x))
            else countFrom x (\n => n - (x - y))
+
+public export
+Range Char where
+  rangeFromTo x y = map chr $ rangeFromTo (ord x) (ord y)
+  rangeFromThenTo x y z = map chr $ rangeFromThenTo (ord x) (ord y) (ord z)
+  rangeFrom x = map chr $ rangeFrom (ord x)
+  rangeFromThen x y = map chr $ rangeFromThen (ord x) (ord y)

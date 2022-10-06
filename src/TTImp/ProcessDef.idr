@@ -2,6 +2,7 @@ module TTImp.ProcessDef
 
 import Core.Case.CaseBuilder
 import Core.Case.CaseTree
+import Core.Case.CaseTree.Pretty
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -16,7 +17,9 @@ import Core.Transform
 import Core.Value
 import Core.UnifyState
 
+import Idris.REPL.Opts
 import Idris.Syntax
+import Idris.Pretty.Annotations
 
 import TTImp.BindImplicits
 import TTImp.Elab
@@ -36,12 +39,6 @@ import Libraries.Data.NameMap
 import Data.String
 import Data.Maybe
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Data.String.Extra
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
 
 %default covering
 
@@ -361,15 +358,16 @@ checkLHS : {vars : _} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            Bool -> -- in transform
-           (mult : RigCount) -> (hashit : Bool) ->
+           (mult : RigCount) ->
            Int -> List ElabOpt -> NestedNames vars -> Env Term vars ->
            FC -> RawImp ->
            Core (RawImp, -- checked LHS with implicits added
                  (vars' ** (SubVars vars vars',
                            Env Term vars', NestedNames vars',
                            Term vars', Term vars')))
-checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
+checkLHS {vars} trans mult n opts nest env fc lhs_in
     = do defs <- get Ctxt
          logRaw "declare.def.lhs" 30 "Raw LHS: " lhs_in
          lhs_raw <- if trans
@@ -458,6 +456,7 @@ checkClause : {vars : _} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               (mult : RigCount) -> (vis : Visibility) ->
               (totreq : TotalReq) -> (hashit : Bool) ->
               Int -> List ElabOpt -> NestedNames vars -> Env Term vars ->
@@ -489,12 +488,12 @@ checkClause mult vis totreq hashit n opts nest env (ImpossibleClause fc lhs)
                               else throw (ValidCase fc env (Right err)))
 checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in rhs)
     = do (_, (vars'  ** (sub', env', nest', lhstm', lhsty'))) <-
-             checkLHS False mult hashit n opts nest env fc lhs_in
+             checkLHS False mult n opts nest env fc lhs_in
          let rhsMode = if isErased mult then InType else InExpr
          log "declare.def.clause" 5 $ "Checking RHS " ++ show rhs
          logEnv "declare.def.clause" 5 "In env" env'
 
-         rhstm <- logTime ("+++ Check RHS " ++ show fc) $
+         rhstm <- logTime 3 ("Check RHS " ++ show fc) $
                     wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
                        checkTermSub n rhsMode opts nest' env' env sub' rhs (gnf env' lhsty')
          clearHoleLHS
@@ -503,6 +502,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
          when hashit $
            do addHashWithNames lhstm'
               addHashWithNames rhstm
+              log "module.hash" 15 "Adding hash for def."
 
          -- If the rhs is a hole, record the lhs in the metadata because we
          -- might want to split it interactively
@@ -514,17 +514,17 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
          pure (Right (MkClause env' lhstm' rhstm))
 -- TODO: (to decide) With is complicated. Move this into its own module?
 checkClause {vars} mult vis totreq hashit n opts nest env
-    (WithClause ifc lhs_in wval_raw mprf flags cs)
+    (WithClause ifc lhs_in rig wval_raw mprf flags cs)
     = do (lhs, (vars'  ** (sub', env', nest', lhspat, reqty))) <-
-             checkLHS False mult hashit n opts nest env ifc lhs_in
+             checkLHS False mult n opts nest env ifc lhs_in
          let wmode
-               = if isErased mult then InType else InExpr
+               = if isErased mult || isErased rig then InType else InExpr
 
          (wval, gwvalTy) <- wrapErrorC opts (InRHS ifc !(getFullName (Resolved n))) $
                 elabTermSub n wmode opts nest' env' env sub' wval_raw Nothing
          clearHoleLHS
 
-         logTerm "declare.def.clause.with" 5 "With value" wval
+         logTerm "declare.def.clause.with" 5 "With value (at quantity \{show rig})" wval
          logTerm "declare.def.clause.with" 3 "Required type" reqty
          wvalTy <- getTerm gwvalTy
          defs <- get Ctxt
@@ -546,7 +546,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
 
          -- Abstracting over 'wval' in the scope of bNotReq in order
          -- to get the 'magic with' behaviour
-         (wargs ** (scenv, var, binder)) <- bindWithArgs wvalTy ((,wval) <$> mprf) wvalEnv
+         (wargs ** (scenv, var, binder)) <- bindWithArgs rig wvalTy ((,wval) <$> mprf) wvalEnv
 
          let bnr = bindNotReq vfc 0 env' withSub [] reqty
          let notreqns = fst bnr
@@ -600,7 +600,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                     $ map (\ nm => (Nothing, IVar vfc nm)) envns
                    ++ concatMap toWarg wargNames
 
-         log "declare.def.clause" 3 $ "Applying to with argument " ++ show rhs_in
+         log "declare.def.clause.with" 3 $ "Applying to with argument " ++ show rhs_in
          rhs <- wrapErrorC opts (InRHS ifc !(getFullName (Resolved n))) $
              checkTermSub n wmode opts nest' env' env sub' rhs_in
                           (gnf env' reqty)
@@ -627,14 +627,14 @@ checkClause {vars} mult vis totreq hashit n opts nest env
     mkExplicit (b :: env) = b :: mkExplicit env
 
     bindWithArgs :
-       (wvalTy : Term xs) -> Maybe (Name, Term xs) ->
+       (rig : RigCount) -> (wvalTy : Term xs) -> Maybe (Name, Term xs) ->
        (wvalEnv : Env Term xs) ->
        Core (ext : List Name
          ** ( Env Term (ext ++ xs)
             , Term (ext ++ xs)
             , (Term (ext ++ xs) -> Term xs)
             ))
-    bindWithArgs {xs} wvalTy Nothing wvalEnv =
+    bindWithArgs {xs} rig wvalTy Nothing wvalEnv =
       let wargn : Name
           wargn = MN "warg" 0
           wargs : List Name
@@ -647,11 +647,11 @@ checkClause {vars} mult vis totreq hashit n opts nest env
               := Local vfc (Just False) Z First
 
           binder : Term (wargs ++ xs) -> Term xs
-                 := Bind vfc wargn (Pi vfc top Explicit wvalTy)
+                 := Bind vfc wargn (Pi vfc rig Explicit wvalTy)
 
       in pure (wargs ** (scenv, var, binder))
 
-    bindWithArgs {xs} wvalTy (Just (name, wval)) wvalEnv = do
+    bindWithArgs {xs} rig wvalTy (Just (name, wval)) wvalEnv = do
       defs <- get Ctxt
 
       let eqName = NS builtinNS (UN $ Basic "Equal")
@@ -682,8 +682,8 @@ checkClause {vars} mult vis totreq hashit n opts nest env
               := Local vfc (Just False) (S Z) (Later First)
 
           binder : Term (wargs ++ xs) -> Term xs
-                 := \ t => Bind vfc wargn (Pi vfc top Explicit wvalTy)
-                         $ Bind vfc name  (Pi vfc top Implicit eqTy) t
+                 := \ t => Bind vfc wargn (Pi vfc rig Explicit wvalTy)
+                         $ Bind vfc name  (Pi vfc rig Implicit eqTy) t
 
       pure (wargs ** (scenv, var, binder))
 
@@ -720,12 +720,12 @@ checkClause {vars} mult vis totreq hashit n opts nest env
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              newrhs <- withRHS ploc drop wname wargnames rhs lhs
              pure (PatClause ploc newlhs newrhs)
-    mkClauseWith drop wname wargnames lhs (WithClause ploc patlhs rhs prf flags ws)
+    mkClauseWith drop wname wargnames lhs (WithClause ploc patlhs rig wval prf flags ws)
         = do log "declare.def.clause.with" 20 "WithClause"
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
-             newrhs <- withRHS ploc drop wname wargnames rhs lhs
+             newwval <- withRHS ploc drop wname wargnames wval lhs
              ws' <- traverse (mkClauseWith (S drop) wname wargnames lhs) ws
-             pure (WithClause ploc newlhs newrhs prf flags ws')
+             pure (WithClause ploc newlhs rig newwval prf flags ws')
     mkClauseWith drop wname wargnames lhs (ImpossibleClause ploc patlhs)
         = do log "declare.def.clause.with" 20 "ImpossibleClause"
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
@@ -781,6 +781,7 @@ mkRunTime : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             {auto s : Ref Syn SyntaxInfo} ->
+            {auto o : Ref ROpts REPLOpts} ->
             FC -> Name -> Core ()
 mkRunTime fc n
     = do log "compile.casetree" 5 $ "Making run time definition for " ++ show !(toFullNames n)
@@ -804,11 +805,13 @@ mkRunTime fc n
                               _ => clauses_init
 
            (rargs ** (tree_rt, _)) <- getPMDef (location gdef) RunTime n ty clauses
-           logC "compile.casetree" 5 $ pure $ unlines
-             [ show cov ++ ":"
-             , "Runtime tree for " ++ show (fullname gdef) ++ ":"
-             , show (indent 2 $ pretty {ann = ()} !(toFullNames tree_rt))
-             ]
+           logC "compile.casetree" 5 $ do
+             tree_rt <- toFullNames tree_rt
+             pure $ unlines
+               [ show cov ++ ":"
+               , "Runtime tree for " ++ show (fullname gdef) ++ ":"
+               , show (indent 2 $ prettyTree tree_rt)
+               ]
            log "compile.casetree" 10 $ show tree_rt
            log "compile.casetree.measure" 15 $ show (measure tree_rt)
 
@@ -817,14 +820,18 @@ mkRunTime fc n
            ignore $ addDef n $
                        { definition := PMDef r rargs tree_ct tree_rt pats
                        } gdef
-           -- If it's a case block, and not already set as inlinable,
-           -- check if it's safe to inline
+           -- If it's a case block, and not already set as inlinable or forced
+           -- to not be inlinable, check if it's safe to inline
            when (caseName !(toFullNames n) && noInline (flags gdef)) $
              do inl <- canInlineCaseBlock n
-                when inl $ setFlag fc n Inline
+                when inl $ do
+                  log "compiler.inline.eval" 5 "Marking \{show !(toFullNames n)} for inlining in runtime case tree."
+                  setFlag fc n Inline
   where
+    -- check if the flags contain explicit inline or noinline directives:
     noInline : List DefFlag -> Bool
-    noInline (Inline :: _) = False
+    noInline (Inline :: _)   = False
+    noInline (NoInline :: _) = False
     noInline (x :: xs) = noInline xs
     noInline _ = True
 
@@ -877,14 +884,14 @@ compileRunTime : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  FC -> Name -> Core ()
 compileRunTime fc atotal
     = do defs <- get Ctxt
          traverse_ (mkRunTime fc) (toCompileCase defs)
          traverse_ (calcRefs True atotal) (toCompileCase defs)
 
-         defs <- get Ctxt
-         put Ctxt ({ toCompileCase := [] } defs)
+         update Ctxt { toCompileCase := [] }
 
 toPats : Clause -> (vs ** (Env Term vs, Term vs, Term vs))
 toPats (MkClause {vars} env lhs rhs)
@@ -908,6 +915,7 @@ lookupOrAddAlias : {vars : _} ->
                    {auto c : Ref Ctxt Defs} ->
                    {auto u : Ref UST UState} ->
                    {auto s : Ref Syn SyntaxInfo} ->
+                   {auto o : Ref ROpts REPLOpts} ->
                    List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
                    Name -> List ImpClause -> Core (Maybe GlobalDef)
 lookupOrAddAlias eopts nest env fc n [cl@(PatClause _ lhs _)]
@@ -961,6 +969,7 @@ processDef : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
              Name -> List ImpClause -> Core ()
 processDef opts nest env fc n_in cs_in
@@ -971,7 +980,11 @@ processDef opts nest env fc n_in cs_in
          let None = definition gdef
               | _ => throw (AlreadyDefined fc n)
          let ty = type gdef
-         let hashit = visibility gdef == Public
+         -- a module's interface hash (what determines when the module has changed)
+         -- should include the definition (RHS) of anything that is public (available
+         -- at compile time for elaboration) _or_ inlined (dropped into destination definitions
+         -- during compilation).
+         let hashit = visibility gdef == Public || (Inline `elem` gdef.flags)
          let mult = if isErased (multiplicity gdef)
                        then erased
                        else linear
@@ -988,7 +1001,7 @@ processDef opts nest env fc n_in cs_in
          let pats = map toPats (rights cs)
 
          (cargs ** (tree_ct, unreachable)) <-
-             logTime ("+++ Building compile time case tree for " ++ show n) $
+             logTime 3 ("Building compile time case tree for " ++ show n) $
                 getPMDef fc (CompileTime mult) n ty (rights cs)
 
          traverse_ warnUnreachable unreachable
@@ -1019,11 +1032,10 @@ processDef opts nest env fc n_in cs_in
          addToSave n
 
          -- Flag this name as one which needs compiling
-         defs <- get Ctxt
-         put Ctxt ({ toCompileCase $= (n ::) } defs)
+         update Ctxt { toCompileCase $= (n ::) }
 
          atotal <- toResolvedNames (NS builtinNS (UN $ Basic "assert_total"))
-         logTime ("+++ Building size change graphs " ++ show n) $
+         logTime 3 ("Building size change graphs " ++ show n) $
            when (not (InCase `elem` opts)) $
              do calcRefs False atotal (Resolved nidx)
                 sc <- calculateSizeChange fc n
@@ -1032,7 +1044,7 @@ processDef opts nest env fc n_in cs_in
 
          md <- get MD -- don't need the metadata collected on the coverage check
 
-         cov <- logTime ("+++ Checking Coverage " ++ show n) $ checkCoverage nidx ty mult cs
+         cov <- logTime 3 ("Checking Coverage " ++ show n) $ checkCoverage nidx ty mult cs
          setCovering fc n cov
          put MD md
 

@@ -118,7 +118,7 @@ ignore = map (const ())
 namespace Functor
   ||| Composition of functors is a functor.
   public export
-  [Compose] (Functor f, Functor g) => Functor (f . g) where
+  [Compose] (l : Functor f) => (r : Functor g) => Functor (f . g) where
     map = map . map
 
 ||| Bifunctors
@@ -182,7 +182,7 @@ a *> b = map (const id) a <*> b
 namespace Applicative
   ||| Composition of applicative functors is an applicative functor.
   public export
-  [Compose] (Applicative f, Applicative g) => Applicative (f . g)
+  [Compose] (l : Applicative f) => (r : Applicative g) => Applicative (f . g)
     using Functor.Compose where
       pure = pure . pure
       fun <*> x = [| fun <*> x |]
@@ -370,7 +370,7 @@ public export
 any : Foldable t => (a -> Bool) -> t a -> Bool
 any = foldMap @{%search} @{Any}
 
-||| The disjunction of the collective results of applying a predicate to all
+||| The conjunction of the collective results of applying a predicate to all
 ||| elements of a structure.  `all` short-circuits from left to right.
 public export
 all : Foldable t => (a -> Bool) -> t a -> Bool
@@ -433,6 +433,14 @@ public export
 for_ : Applicative f => Foldable t => t a -> (a -> f b) -> f ()
 for_ = flip traverse_
 
+public export
+[SemigroupApplicative] Applicative f => Semigroup a => Semigroup (f a) where
+  x <+> y = [| x <+> y |]
+
+public export
+[MonoidApplicative] Applicative f => Monoid a => Monoid (f a) using SemigroupApplicative where
+  neutral = pure neutral
+
 namespace Lazy
   public export
   [SemigroupAlternative] Alternative f => Semigroup (Lazy (f a)) where
@@ -482,7 +490,7 @@ choiceMap = foldMap @{%search} @{MonoidAlternative}
 namespace Foldable
   ||| Composition of foldables is foldable.
   public export
-  [Compose] (Foldable t, Foldable f) => Foldable (t . f) where
+  [Compose] (l : Foldable t) => (r : Foldable f) => Foldable (t . f) where
     foldr = foldr . flip . foldr
     foldl = foldl . foldl
     null tf = null tf || all null tf
@@ -502,6 +510,16 @@ interface Bifoldable p where
 
   binull : p a b -> Bool
   binull t = bifoldr {acc = Lazy Bool} (\ _,_ => False) (\ _,_ => False) True t
+
+||| Analogous to `foldMap` but for `Bifoldable` structures
+public export
+bifoldMap : Monoid acc => Bifoldable p => (a -> acc) -> (b -> acc) -> p a b -> acc
+bifoldMap f g = bifoldr ((<+>) . f) ((<+>) . g) neutral
+
+||| Like Bifunctor's `mapFst` but for `Bifoldable` structures
+public export
+bifoldMapFst : Monoid acc => Bifoldable p => (a -> acc) -> p a b -> acc
+bifoldMapFst f = bifoldMap f (const neutral)
 
 public export
 interface (Functor t, Foldable t) => Traversable t where
@@ -544,13 +562,13 @@ bifor t f g = bitraverse f g t
 namespace Traversable
   ||| Composition of traversables is traversable.
   public export
-  [Compose] (Traversable t, Traversable f) => Traversable (t . f)
+  [Compose] (l : Traversable t) => (r : Traversable f) => Traversable (t . f)
     using Foldable.Compose Functor.Compose where
       traverse = traverse . traverse
 
 namespace Monad
   ||| Composition of a traversable monad and a monad is a monad.
   public export
-  [Compose] (Monad m, Monad t, Traversable t) => Monad (m . t)
+  [Compose] (l : Monad m) => (r : Monad t) => (tr : Traversable t) => Monad (m . t)
     using Applicative.Compose where
       a >>= f = a >>= map join . traverse f

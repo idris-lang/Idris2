@@ -10,6 +10,7 @@ import Core.Normalise
 import Core.Value
 import Core.UnifyState
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Check
@@ -219,6 +220,7 @@ mkSpecDef : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             {auto s : Ref Syn SyntaxInfo} ->
+            {auto o : Ref ROpts REPLOpts} ->
             FC -> GlobalDef ->
             Name -> List (Nat, ArgMode) -> Name -> List (FC, Term vars) ->
             Core (Term vars)
@@ -289,8 +291,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
         (\err =>
            do log "specialise" 1 $ "Partial evaluation of " ++ show !(toFullNames fn) ++ " failed" ++
                       "\n" ++ show err
-              defs <- get Ctxt
-              put Ctxt ({ peFailures $= insert pename () } defs)
+              update Ctxt { peFailures $= insert pename () }
               pure (applyWithFC (Ref fc Func fn) stk))
   where
     getAllRefs : NameMap Bool -> List ArgMode -> NameMap Bool
@@ -353,6 +354,7 @@ specialise : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              FC -> Env Term vars -> GlobalDef ->
              Name -> List (FC, Term vars) ->
              Core (Maybe (Term vars))
@@ -402,6 +404,7 @@ findSpecs : {vars : _} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             {auto s : Ref Syn SyntaxInfo} ->
+            {auto o : Ref ROpts REPLOpts} ->
             Env Term vars -> List (FC, Term vars) -> Term vars ->
             Core (Term vars)
 findSpecs env stk (Ref fc Func fn)
@@ -451,6 +454,7 @@ mutual
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               Ref QVar Int -> Defs -> Bounds bound ->
               Env Term free -> List (Closure free) ->
               Core (List (Term (bound ++ free)))
@@ -463,6 +467,7 @@ mutual
                     {auto m : Ref MD Metadata} ->
                     {auto u : Ref UST UState} ->
                     {auto s : Ref Syn SyntaxInfo} ->
+                    {auto o : Ref ROpts REPLOpts} ->
                     {bound, free : _} ->
                     Ref QVar Int -> Defs -> Bounds bound ->
                     Env Term free -> List (FC, Closure free) ->
@@ -475,6 +480,7 @@ mutual
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               Ref QVar Int -> Defs ->
               FC -> Bounds bound -> Env Term free -> NHead free ->
               Core (Term (bound ++ free))
@@ -514,6 +520,7 @@ mutual
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             {auto s : Ref Syn SyntaxInfo} ->
+            {auto o : Ref ROpts REPLOpts} ->
             Ref QVar Int -> Defs -> Bounds bound ->
             Env Term free -> PiInfo (Closure free) ->
             Core (PiInfo (Term (bound ++ free)))
@@ -529,6 +536,7 @@ mutual
                 {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
                 {auto s : Ref Syn SyntaxInfo} ->
+                {auto o : Ref ROpts REPLOpts} ->
                 Ref QVar Int -> Defs -> Bounds bound ->
                 Env Term free -> Binder (Closure free) ->
                 Core (Binder (Term (bound ++ free)))
@@ -561,6 +569,7 @@ mutual
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
                Ref QVar Int ->
                Defs -> Bounds bound ->
                Env Term vars -> NF vars -> Core (Term (bound ++ vars))
@@ -642,6 +651,7 @@ evalRHS : {vars : _} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
+          {auto o : Ref ROpts REPLOpts} ->
           Env Term vars -> NF vars -> Core (Term vars)
 evalRHS env nf
     = do q <- newRef QVar 0
@@ -654,6 +664,7 @@ applySpecialise : {vars : _} ->
                   {auto m : Ref MD Metadata} ->
                   {auto u : Ref UST UState} ->
                   {auto s : Ref Syn SyntaxInfo} ->
+                  {auto o : Ref ROpts REPLOpts} ->
                   Env Term vars ->
                   Maybe (List (Name, Nat)) ->
                         -- ^ If we're specialising, names to reduce in the RHS

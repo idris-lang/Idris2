@@ -271,6 +271,14 @@ position = Position
 public export
 data ParsingError tok = Error String (Maybe Bounds)
 
+export
+Show tok => Show (ParsingError tok) where
+  show (Error s Nothing) = "PARSING ERROR: " ++ s
+  show (Error s (Just (MkBounds startLine startCol endLine endCol))) =
+    "PARSING ERROR: "
+    ++ s
+    ++ " @ L\{show startLine}:\{show startCol}-L\{show endLine}:\{show endCol}"
+
 data ParseResult : Type -> Type -> Type -> Type where
      Failure : (committed : Bool) -> (fatal : Bool) ->
                List1 (ParsingError tok) -> ParseResult state tok ty
@@ -321,7 +329,7 @@ doParse s com (Alt {c1} {c2} x y) xs
                                                                      -- Only add the errors together if the second branch
                                                                      -- is also non-committed and non-fatal.
                                                              then Failure com'' fatal' errs'
-                                                             else Failure False False (errs ++ errs')
+                                                             else Failure com False (errs ++ errs')
                              (Res s _ val xs) => Res s com val xs
            -- Successfully parsed the first option, so use the outer commit flag
            Res s _ val xs => Res s com val xs

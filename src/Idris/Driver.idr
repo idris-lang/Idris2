@@ -85,9 +85,8 @@ updateEnv
 updateREPLOpts : {auto o : Ref ROpts REPLOpts} ->
                  Core ()
 updateREPLOpts
-    = do opts <- get ROpts
-         ed <- coreLift $ idrisGetEnv "EDITOR"
-         whenJust ed $ \ e => put ROpts ({ editor := e } opts)
+    = do ed <- coreLift $ idrisGetEnv "EDITOR"
+         whenJust ed $ \ e => update ROpts { editor := e }
 
 showInfo : {auto c : Ref Ctxt Defs}
         -> {auto o : Ref ROpts REPLOpts}
@@ -177,18 +176,18 @@ stMain cgs opts
                  updateREPLOpts
                  session <- getSession
                  when (not $ nobanner session) $ do
-                   iputStrLn $ pretty banner
-                   when (isCons cgs) $ iputStrLn (reflow "With codegen for:" <++> hsep (pretty . fst <$> cgs))
+                   iputStrLn $ pretty0 banner
+                   when (isCons cgs) $ iputStrLn (reflow "With codegen for:" <++> hsep (pretty0 . fst <$> cgs))
                  fname <- if findipkg session
                              then findIpkg fname
                              else pure fname
                  setMainFile fname
                  result <- case fname of
-                      Nothing => logTime "+ Loading prelude" $ do
+                      Nothing => logTime 1 "Loading prelude" $ do
                                    when (not $ noprelude session) $
                                      readPrelude True
                                    pure Done
-                      Just f => logTime "+ Loading main file" $ do
+                      Just f => logTime 1 "Loading main file" $ do
                                   res <- loadMainFile f
                                   displayErrors res
                                   pure res

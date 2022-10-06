@@ -52,6 +52,7 @@ setField s n val = primIO (prim__setField s n fieldok val)
 prim__malloc : (size : Int) -> PrimIO AnyPtr
 
 %foreign "C:idris2_free, libidris2_support, idris_memory.h"
+         "javascript:lambda:()=>undefined"
 prim__free : AnyPtr -> PrimIO ()
 
 ||| Allocate memory with libc `malloc`.

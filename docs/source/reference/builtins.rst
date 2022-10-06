@@ -7,104 +7,119 @@ Builtins
 .. role:: idris(code)
     :language: idris
 
-Idris2 supports an optimised runtime representation of some types,
-using the ``%builtin`` pragma.
-For now only ``Nat``-like types has been implemented.
+Natural numbers
+===============
 
-``%builtin Natural``
-====================
+Idris2 supports an optimized runtime representation of natural numbers (non-negative integers).
+This optimization is automatic,
+however it only works when natural numbers are represented in a specific way
 
-I suggest having a look at the source for ``Nat`` (in ``Prelude.Types``) before reading this section.
-
-The ``%builtin Natural`` pragma converts recursive/unary representations of natural numbers
-into primitive ``Integer`` representations.
-This massively reduces the memory usage and offers a small speed improvement,
-for example with the unary representation ``the Nat 1000`` would take up about 2000 * 8 bytes
-(1000 for the tag, 1000 for the pointers) whereas the ``Integer`` representation takes about 8 to 16 bytes.
-
-Here's an example:
+Here is an example of a natural number that would be optimized:
 
 .. code-block:: idris
 
-    data Nat
-        = Z
-        | S Nat
+    data Natural
+        = Zero
+        | Succ Natural
 
-    %builtin Natural Nat
+Natural numbers are generally represented as either zero or the successor (1 more than)
+of another natural number. These are called Peano numbers.
 
-Note that the order of the constructors doesn't matter.
-Furthermore this pragma supports GADTs
-so long as any extra arguments are erased.
+At runtime, Idris2 will automatically represent this the same as the ``Integer`` type.
+This will massively reduce the memory usage.
 
-For example:
+There are a few rules governing when this optimization occures:
 
-.. code-block:: idris
+- The data type must have 2 constructors
 
-    data Fin : Nat -> Type where
-        FZ : Fin (S k)
-        FS : Fin k -> Fin (S k)
+  - After erasure of runtime irrelevant arguments
+    + One must have no arguments
+    + One must have exactly 1 argument (called ``Succ``)
 
-    %builtin Natural Fin
+- The type of the argument to ``Succ`` must have the same type constructor as the parent type.
+  This means indexed data types, like ``Fin``, can be optimised.
+- The argument to ``Succ`` must be strict, ie not ``Lazy Natural``
 
-works because the ``k`` is always erased.
-
-This doesn't work if the argument to the ``S``-like constructor
-is ``Inf`` (sometime known as ``CoNat``) as these can be infinite
-or is ``Lazy`` as it wouldn't preserve laziness semantics.
-
-During codegen any occurance of ``Nat`` will be converted to the faster ``Integer`` implementation.
-Here are the specifics for the conversion:
-
-``Z`` => ``0``
-
-``S k`` => ``1 + k``
+To ensure that a type is optimized to an ``Integer``, use ``%builtin Natural`` ie
 
 .. code-block:: idris
 
-    case k of
-        Z => zexp
-        S k' => sexp
+    data MyNat
+        = Succ MyNat
+        | Zero
+    
+    %builtin Natural MyNat
 
-=>
+Casting between natural numbers and integer
+===========================================
 
-.. code-block:: idris
+Idris optimizes functions which convert between natural numbers and integers,
+so that it takes constant time rather than linear time.
 
-    case k of
-        0 => zexp
-        _ => let k' = k - 1 in sexp
+Such functions must be written in a specific way,
+so that idris can detect that it can be optimised.
 
-``%builtin NaturalToInteger``
-=============================
-
-The ``%builtin NaturalToInteger`` pragma allows O(1) conversion of naturals to ``Integer`` s.
-For example
-
-.. code-block:: idris
-
-    natToInteger : Nat -> Integer
-    natToInteger Z = 0
-    natToInteger (S k) = 1 + natToInteger k
-
-    %builtin NaturalToInteger natToInteger
-
-For now, any ``NaturalToInteger`` function must have exactly 1 non-erased argument, which must be a natural.
-
-``%builtin IntegerToNatural``
-=============================
-
-The ``%builtin IntegerToNatural`` pragma allows O(1) conversion of ``Integer`` s to naturals.
-For example
+Here is an example of a natural to ``Integer`` function.
 
 .. code-block:: idris
 
-    integerToNat : Integer -> Nat
-    integerToNat x = if x <= 0
-        then Z
-        else S $ integerToNat (x - 1)
+    cast : Natural -> Integer
+    cast Z = 0
+    cast (S k) = cast k + 1
 
-Any ``IntegerToNatural`` function must have exactly 1 unrestricted ``Integer`` argument and the return type must be a natural.
+This optimization is applied late in the compilation process,
+so it may be sensitive to seemingly insignificant changes.
 
-Please note, ``NaturalToInteger`` and ``IntegerToNatural`` only check the type, not that the function is correct.
+However here are roughly the rules governing this optimisation:
+
+- Exactly one argument must be pattern matched on
+  (any other forced or dotted patterns are allowed)
+- The right hand side of the 'Zero' case must be ``0``
+- The right hand side of the 'Succ' case must be ``1 + cast k``
+  where ``k`` is the predecessor of the pattern matched argument
+
+Casting from an ``Integer`` to a natural is a little more complex.
+
+.. code-block:: idris
+
+    castNonNegative : Integer -> Natural
+    castNonNegative x = case x of
+        0 => Zero
+        _ => Succ $ castNonNegative (x - 1)
+
+    cast : Integer -> Natural
+    cast x = if x < 0 then Zero else castNonNegative x
+
+For now you must manually check the given integer is non-negative.
+
+If you are using an indexed data type it may be very hard to write
+your ``Integer`` to natural cast in such a way,
+so you can use ``%builtin IntegerToNatural`` to assert to the compiler
+that a function is correct. It is your responsibility to make sure this is correct.
+
+.. code-block:: idris
+
+    module ComplexNat
+
+    import Data.Maybe
+
+    data ComplexNat
+        = Zero
+        | Succ ComplexNat
+    
+    integerToMaybeNat : Integer -> Maybe ComplexNat
+    integerToMaybeNat _ = ...
+
+    integerToNat :
+        (x : Integer) ->
+        {auto 0 prf : IsJust (ComplexNat.integerToMaybeNat x)} ->
+        ComplexNat
+    integerToNat x {prf} = fromJust (integerToMaybeNat x) @{prf}
+
+    %builtin IntegerToNatural ComplexNat.integerToNat
+
+Other operations
+================
 
 This can be used with ``%transform`` to allow many other operations to be O(1) too.
 
@@ -122,3 +137,28 @@ This can be used with ``%transform`` to allow many other operations to be O(1) t
     plus (S x) y = S $ plus x y
 
     %transform "plus" plus j k = integerToNat (natToInteger j + natToInteger j)
+
+Compilation
+===========
+
+Here are the details of how natural numbers are compiled to ``Integer`` s.
+Note: a numeric literal here is an ``Integer``.
+
+``Zero`` => ``0``
+
+``Succ k`` => ``1 + k``
+
+.. code-block:: idris
+
+    case k of
+        Z => zexp
+        S k' => sexp
+
+=>
+
+.. code-block:: idris
+
+    case k of
+        0 => zexp
+        _ => let k' = k - 1 in sexp
+

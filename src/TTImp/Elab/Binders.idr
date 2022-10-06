@@ -10,6 +10,7 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Check
@@ -37,6 +38,7 @@ checkPiInfo : {vars : _} ->
               {auto u : Ref UST UState} ->
               {auto e : Ref EST (EState vars)} ->
               {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               RigCount -> ElabInfo -> NestedNames vars -> Env Term vars ->
               PiInfo RawImp -> (expTy : Maybe (Glued vars)) ->
               Core (PiInfo (Term vars))
@@ -54,6 +56,7 @@ checkPi : {vars : _} ->
           {auto u : Ref UST UState} ->
           {auto e : Ref EST (EState vars)} ->
           {auto s : Ref Syn SyntaxInfo} ->
+          {auto o : Ref ROpts REPLOpts} ->
           RigCount -> ElabInfo ->
           NestedNames vars -> Env Term vars ->
           FC ->
@@ -98,6 +101,7 @@ inferLambda : {vars : _} ->
               {auto u : Ref UST UState} ->
               {auto e : Ref EST (EState vars)} ->
               {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               RigCount -> ElabInfo ->
               NestedNames vars -> Env Term vars ->
               FC ->
@@ -141,6 +145,7 @@ checkLambda : {vars : _} ->
               {auto u : Ref UST UState} ->
               {auto e : Ref EST (EState vars)} ->
               {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               RigCount -> ElabInfo ->
               NestedNames vars -> Env Term vars ->
               FC ->
@@ -208,6 +213,7 @@ checkLet : {vars : _} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
            {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars ->
            FC -> (lhsFC : FC) -> RigCount -> (n : Name) ->

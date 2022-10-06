@@ -11,6 +11,7 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Ambiguity
@@ -118,6 +119,7 @@ checkTerm : {vars : _} ->
             {auto u : Ref UST UState} ->
             {auto e : Ref EST (EState vars)} ->
             {auto s : Ref Syn SyntaxInfo} ->
+            {auto o : Ref ROpts REPLOpts} ->
             RigCount -> ElabInfo ->
             NestedNames vars -> Env Term vars -> RawImp -> Maybe (Glued vars) ->
             Core (Term vars, Glued vars)
@@ -217,14 +219,12 @@ checkTerm rig elabinfo nest env (IUnifyLog fc lvl tm) exp
 checkTerm rig elabinfo nest env (Implicit fc b) (Just gexpty)
     = do nm <- genName "_"
          expty <- getTerm gexpty
-         defs <- get Ctxt
          metaval <- metaVar fc rig env nm expty
          -- Add to 'bindIfUnsolved' if 'b' set
          when (b && bindingVars elabinfo) $
-            do est <- get EST
-               expty <- getTerm gexpty
+            do expty <- getTerm gexpty
                -- Explicit because it's an explicitly given thing!
-               put EST (addBindIfUnsolved nm rig Explicit env metaval expty est)
+               update EST $ addBindIfUnsolved nm rig Explicit env metaval expty
          pure (metaval, gexpty)
 checkTerm rig elabinfo nest env (Implicit fc b) Nothing
     = do nmty <- genName "implicit_type"
@@ -234,8 +234,7 @@ checkTerm rig elabinfo nest env (Implicit fc b) Nothing
          metaval <- metaVar fc rig env nm ty
          -- Add to 'bindIfUnsolved' if 'b' set
          when (b && bindingVars elabinfo) $
-            do est <- get EST
-               put EST (addBindIfUnsolved nm rig Explicit env metaval ty est)
+            update EST $ addBindIfUnsolved nm rig Explicit env metaval ty
          pure (metaval, gnf env ty)
 checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
     = do -- enter the scope -> add unambiguous names
@@ -252,9 +251,9 @@ checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
 
          pure result
   where
-    resolveNames : FC -> List Name -> Core (UserNameMap (Name, Int, GlobalDef))
+    resolveNames : FC -> List (FC, Name) -> Core (UserNameMap (Name, Int, GlobalDef))
     resolveNames fc [] = pure empty
-    resolveNames fc (n :: ns) =
+    resolveNames fc ((nfc, n) :: ns) =
       case userNameRoot n of
         -- should never happen
         Nothing => throw $ InternalError $ "non-UN in \"with\" LHS: " ++ show n
@@ -264,7 +263,14 @@ checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
           ctxt <- get Ctxt
           rns <- lookupCtxtName n (gamma ctxt)
           case rns of
-            [rn] => insert nRoot rn <$> resolveNames fc ns
+            [rn@(_, _, def)] =>
+                do whenJust (isConcreteFC nfc) $ \nfc => do
+                     let nt = fromMaybe Func (defNameType $ definition def)
+                     let decor = nameDecoration def.fullname nt
+                     log "ide-mode.highlight" 7
+                       $ "`with' unambiguous name is adding " ++ show decor ++ ": " ++ show def.fullname
+                     addSemanticDecorations [(nfc, decor, Just def.fullname)]
+                   insert nRoot rn <$> resolveNames fc ns
             rns  => ambiguousName fc n (map fst rns)
 
 -- Declared in TTImp.Elab.Check
@@ -288,9 +294,7 @@ TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILocal _ _ _) exp
 TTImp.Elab.Check.check rigc elabinfo nest env tm@(IUpdate _ _ _) exp
     = checkImp rigc elabinfo nest env tm exp
 TTImp.Elab.Check.check rigc elabinfo nest env tm_in exp
-    = do defs <- get Ctxt
-         est <- get EST
-         tm <- expandAmbigName (elabMode elabinfo) nest env tm_in [] tm_in exp
+    = do tm <- expandAmbigName (elabMode elabinfo) nest env tm_in [] tm_in exp
          case elabMode elabinfo of
               InLHS _ => -- Don't expand implicit lambda on lhs
                  checkImp rigc elabinfo nest env tm exp

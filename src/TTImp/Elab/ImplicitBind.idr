@@ -14,6 +14,7 @@ import Core.UnifyState
 import Core.TT
 import Core.Value
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Check
@@ -144,11 +145,10 @@ bindUnsolved {vars} fc elabmode _
                Just exp' =>
                     do impn <- genVarName (nameRoot n)
                        tm <- metaVar fc rig env impn exp'
-                       est <- get EST
                        let p' : PiInfo (Term vars) = forgetDef p
-                       put EST ({ toBind $= ((impn, NameBinding rig p'
-                                                      (embedSub subvars tm)
-                                                      (embedSub subvars exp')) ::) } est)
+                       update EST { toBind $= ((impn, NameBinding rig p'
+                                                        (embedSub subvars tm)
+                                                        (embedSub subvars exp')) ::) }
                        pure (embedSub sub tm)
 
     mkImplicit : {outer : _} ->
@@ -418,6 +418,7 @@ checkBindVar : {vars : _} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
                {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
                RigCount -> ElabInfo ->
                NestedNames vars -> Env Term vars ->
                FC -> UserName -> -- username is base of the pattern name
@@ -452,9 +453,8 @@ checkBindVar rig elabinfo nest env fc str topexp
                         PI _ => setInvertible fc n
                         _ => pure ()
                    log "elab.implicits" 5 $ "Added Bound implicit " ++ show (n, (rig, tm, exp, bty))
-                   est <- get EST
-                   put EST ({ boundNames $= ((n, NameBinding rig Explicit tm exp) ::),
-                              toBind $= ((n, NameBinding rig Explicit tm bty) :: ) } est)
+                   update EST { boundNames $= ((n, NameBinding rig Explicit tm exp) ::),
+                                toBind $= ((n, NameBinding rig Explicit tm bty) :: ) }
 
                    log "metadata.names" 7 $ "checkBindVar is adding ↓"
                    addNameType fc (UN str) env exp
@@ -533,6 +533,7 @@ checkBindHere : {vars : _} ->
                 {auto u : Ref UST UState} ->
                 {auto e : Ref EST (EState vars)} ->
                 {auto s : Ref Syn SyntaxInfo} ->
+                {auto o : Ref ROpts REPLOpts} ->
                 RigCount -> ElabInfo ->
                 NestedNames vars -> Env Term vars ->
                 FC -> BindMode -> RawImp ->
@@ -560,8 +561,7 @@ checkBindHere rig elabinfo nest env fc bindmode tm exp
          ust <- get UST
          catch (retryDelayed solvemode (delayedElab ust))
                (\err =>
-                  do ust <- get UST
-                     put UST ({ delayedElab := [] } ust)
+                  do update UST { delayedElab := [] }
                      throw err)
 
          -- Check all the patterns standing for polymorphic variables are
@@ -584,9 +584,7 @@ checkBindHere rig elabinfo nest env fc bindmode tm exp
          argImps <- getToBind fc (elabMode elabinfo)
                               bindmode env dontbind
          clearToBind dontbind
-         est <- get EST
-         put EST (updateEnv oldenv oldsub oldbif
-                     ({ boundNames := [] } est))
+         update EST $ updateEnv oldenv oldsub oldbif . { boundNames := [] }
          ty <- getTerm tmt
          defs <- get Ctxt
          (bv, bt) <- bindImplicits fc bindmode

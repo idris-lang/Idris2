@@ -22,6 +22,7 @@ import Idris.Syntax
 import Idris.Version
 
 import Libraries.Data.ANameMap
+import Libraries.Data.String.Extra
 
 import Data.String
 import System.File
@@ -173,14 +174,9 @@ getFCLine : FC -> Maybe Int
 getFCLine = map startLine . isNonEmptyFC
 
 export
-updateErrorLine : {auto o : Ref ROpts REPLOpts} ->
-                  List Error -> Core ()
-updateErrorLine []
-    = do opts <- get ROpts
-         put ROpts ({ errorLine := Nothing } opts)
-updateErrorLine (e :: _)
-    = do opts <- get ROpts
-         put ROpts ({ errorLine := (getErrorLoc e) >>= getFCLine } opts)
+updateErrorLine : {auto o : Ref ROpts REPLOpts} -> List Error -> Core ()
+updateErrorLine []       = update ROpts { errorLine := Nothing }
+updateErrorLine (e :: _) = update ROpts { errorLine := getErrorLoc e >>= getFCLine }
 
 export
 resetContext : {auto c : Ref Ctxt Defs} ->
@@ -204,6 +200,7 @@ data EditResult : Type where
   MadeLemma : Maybe String -> Name -> IPTerm -> String -> EditResult
   MadeWith : Maybe String -> List String -> EditResult
   MadeCase : Maybe String -> List String -> EditResult
+  MadeIntro : List1 String -> EditResult
 
 public export
 data MissedResult : Type where
@@ -242,9 +239,6 @@ data REPLResult : Type where
   Exited : REPLResult
   Edited : EditResult -> REPLResult
 
-prettyTerm : IPTerm -> Doc IdrisDocAnn
-prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
-
 export
 docsOrSignature : {auto o : Ref ROpts REPLOpts} ->
                   {auto c : Ref Ctxt Defs} ->
@@ -264,7 +258,7 @@ docsOrSignature fc n
     typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
                             | Nothing => pure ""
                           ty <- resugar [] !(normaliseHoles defs [] (type def))
-                          pure $ pretty n <++> ":" <++> prettyTerm ty
+                          pure $ pretty0 n <++> ":" <++> prettyBy Syntax ty
 
 export
 equivTypes : {auto c : Ref Ctxt Defs} ->

@@ -1,7 +1,6 @@
 module TTImp.Parser
 
 import Core.Context
-import Core.Metadata
 import Core.TT
 import Parser.Source
 import TTImp.TTImp
@@ -515,6 +514,8 @@ mutual
            let fc = MkFC fname start end
            pure (!(getFn lhs), PatClause fc lhs rhs)
     <|> do keyword "with"
+           m <- multiplicity
+           rig <- getMult m
            wstart <- location
            symbol "("
            wval <- expr fname indents
@@ -523,7 +524,7 @@ mutual
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
-           pure (!(getFn lhs), WithClause fc lhs wval prf [] (forget $ map snd ws))
+           pure (!(getFn lhs), WithClause fc lhs rig wval prf [] (forget $ map snd ws))
 
     <|> do keyword "impossible"
            atEnd indents
@@ -576,6 +577,13 @@ dataOpt
          ns <- forget <$> some name
          pure (SearchBy ns)
 
+dataOpts : EmptyRule (List DataOpt)
+dataOpts = option [] $ do
+  symbol "["
+  dopts <- sepBy1 (symbol ",") dataOpt
+  symbol "]"
+  pure $ forget dopts
+
 dataDecl : OriginDesc -> IndentInfo -> Rule ImpData
 dataDecl fname indents
     = do start <- location
@@ -584,10 +592,7 @@ dataDecl fname indents
          symbol ":"
          ty <- expr fname indents
          keyword "where"
-         opts <- option [] (do symbol "["
-                               dopts <- sepBy1 (symbol ",") dataOpt
-                               symbol "]"
-                               pure $ forget dopts)
+         opts <- dataOpts
          cs <- block (tyDecl fname)
          end <- location
          pure (MkImpData (MkFC fname start end) n ty opts cs)
@@ -649,13 +654,14 @@ recordDecl fname indents
          paramss <- many (recordParam fname indents)
          let params = concat paramss
          keyword "where"
+         opts <- dataOpts
          exactIdent "constructor"
          dc <- name
          flds <- assert_total (blockAfter col (fieldDecl fname))
          end <- location
          pure (let fc = MkFC fname start end in
                    IRecord fc Nothing vis mbtot
-                           (MkImpRecord fc n params dc (concat flds)))
+                           (MkImpRecord fc n params opts dc (concat flds)))
 
 namespaceDecl : Rule Namespace
 namespaceDecl
@@ -750,6 +756,8 @@ collectDefs (IDef loc fn cs :: ds)
     isClause n _ = Nothing
 collectDefs (INamespace loc ns nds :: ds)
     = INamespace loc ns (collectDefs nds) :: collectDefs ds
+collectDefs (IFail loc msg nds :: ds)
+    = IFail loc msg (collectDefs nds) :: collectDefs ds
 collectDefs (d :: ds)
     = d :: collectDefs ds
 

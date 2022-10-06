@@ -78,7 +78,7 @@ mul (Just $ Unsigned n)     x y = op "bu*" [x, y, show n]
 mul _                       x y = op "*" [x, y]
 
 div : Maybe IntKind -> String -> String -> String
-div (Just $ Signed Unlimited) x y = op "quotient" [x, y]
+div (Just $ Signed Unlimited) x y = op "blodwen-euclidDiv" [x, y]
 div (Just $ Signed $ P n)     x y = op "bs/" [x, y, show (n-1)]
 div (Just $ Unsigned n)       x y = op "bu/" [x, y, show n]
 div _                         x y = op "/" [x, y]
@@ -136,7 +136,7 @@ schOp (Add ty) [x, y] = pure $ add (intKind ty) x y
 schOp (Sub ty) [x, y] = pure $ sub (intKind ty) x y
 schOp (Mul ty) [x, y] = pure $ mul (intKind ty) x y
 schOp (Div ty) [x, y] = pure $ div (intKind ty) x y
-schOp (Mod ty) [x, y] = pure $ op "remainder" [x, y]
+schOp (Mod ty) [x, y] = pure $ op "blodwen-euclidMod" [x, y]
 schOp (Neg ty) [x] = pure $ op "-" [x]
 schOp (ShiftL ty) [x, y] = pure $ shl (intKind ty) x y
 schOp (ShiftR ty) [x, y] = pure $ op "blodwen-shr" [x, y]
@@ -170,7 +170,7 @@ schOp StrSubstr [x, y, z] = pure $ op "string-substr" [x, y, z]
 -- `e` is Euler's number, which approximates to: 2.718281828459045
 schOp DoubleExp [x] = pure $ op "flexp" [x] -- Base is `e`. Same as: `pow(e, x)`
 schOp DoubleLog [x] = pure $ op "fllog" [x] -- Base is `e`.
-schOp DoublePow [x, y] = pure $ op "expt" [x, y]
+schOp DoublePow [x, y] = pure $ op "flexpt" [x, y]
 schOp DoubleSin [x] = pure $ op "flsin" [x]
 schOp DoubleCos [x] = pure $ op "flcos" [x]
 schOp DoubleTan [x] = pure $ op "fltan" [x]
@@ -245,6 +245,9 @@ export
 mkWorld : String -> String
 mkWorld res = res -- MkIORes is a newtype now! schConstructor 0 [res, "#f"] -- MkIORes
 
+schPrimType : PrimType -> String
+schPrimType _ = "#t"
+
 schConstant : (String -> String) -> Constant -> String
 schConstant _ (I x) = show x
 schConstant _ (I8 x) = show x
@@ -262,21 +265,8 @@ schConstant _ (Ch x)
         then "#\\" ++ cast x
         else "(integer->char " ++ show (the Int (cast x)) ++ ")"
 schConstant _ (Db x) = show x
+schConstant _ (PrT t) = schPrimType t
 schConstant _ WorldVal = "#f"
-schConstant _ IntType = "#t"
-schConstant _ Int8Type = "#t"
-schConstant _ Int16Type = "#t"
-schConstant _ Int32Type = "#t"
-schConstant _ Int64Type = "#t"
-schConstant _ IntegerType = "#t"
-schConstant _ Bits8Type = "#t"
-schConstant _ Bits16Type = "#t"
-schConstant _ Bits32Type = "#t"
-schConstant _ Bits64Type = "#t"
-schConstant _ StringType = "#t"
-schConstant _ CharType = "#t"
-schConstant _ DoubleType = "#t"
-schConstant _ WorldType = "#t"
 
 schCaseDef : Maybe String -> String
 schCaseDef Nothing = ""

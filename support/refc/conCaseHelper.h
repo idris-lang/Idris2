@@ -2,10 +2,9 @@
 
 #include "cBackend.h"
 
-typedef struct
-{
-    char *name;
-    int tag;
+typedef struct {
+  char *name;
+  int tag;
 } AConAlt;
 
 AConAlt *newConstructorField(int);

@@ -1,7 +1,9 @@
 module Core.Name
 
+import Data.Maybe
 import Data.String
 import Decidable.Equality
+import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Utils.String
@@ -16,6 +18,8 @@ data UserName : Type where
   Basic : String -> UserName -- default name constructor       e.g. map
   Field : String -> UserName -- field accessor                 e.g. .fst
   Underscore : UserName      -- no name                        e.g. _
+
+%name UserName un
 
 ||| A smart constructor taking a string and parsing it as the appropriate
 ||| username
@@ -39,6 +43,8 @@ data Name : Type where
      CaseBlock : String -> Int -> Name -- case block nested in (resolved) name
      WithBlock : String -> Int -> Name -- with block nested in (resolved) name
      Resolved : Int -> Name -- resolved, index into context
+
+%name Name n
 
 export
 mkNamespacedName : Maybe Namespace -> UserName -> Name
@@ -74,6 +80,25 @@ userNameRoot (NS _ n) = userNameRoot n
 userNameRoot (UN n) = Just n
 userNameRoot (DN _ n) = userNameRoot n
 userNameRoot _ = Nothing
+
+export
+isOpChar : Char -> Bool
+isOpChar c = c `elem` (unpack ":!#$%&*+./<=>?@\\^|-~")
+
+export
+||| Test whether a user name begins with an operator symbol.
+isOpUserName : UserName -> Bool
+isOpUserName (Basic n) = fromMaybe False $ do
+   c <- fst <$> strUncons n
+   guard (isOpChar c)
+   pure True
+isOpUserName (Field _) = False
+isOpUserName Underscore = False
+
+export
+||| Test whether a name begins with an operator symbol.
+isOpName : Name -> Bool
+isOpName = maybe False isOpUserName . userNameRoot
 
 export
 isUnderscoreName : Name -> Bool
@@ -125,6 +150,11 @@ export
 isBasic : UserName -> Maybe String
 isBasic (Basic str) = Just str
 isBasic _ = Nothing
+
+export
+isField : UserName -> Maybe String
+isField (Field str) = Just str
+isField _ = Nothing
 
 export
 displayUserName : UserName -> String
@@ -213,41 +243,58 @@ Show Name where
 
 export
 [RawUN] Show UserName where
-  show (Basic n) = "Basic " ++ n
-  show (Field n) = "Field " ++ n
-  show Underscore = "Underscore"
+  showPrec d (Basic n) = showCon d "Basic " n
+  showPrec d (Field n) = showCon d "Field " n
+  showPrec d Underscore = "Underscore"
 
 export
+covering
 [Raw] Show Name where
-  show (NS ns n) = "NS " ++ show ns ++ " (" ++ show n ++ ")"
-  show (UN x) = "UN (" ++ show @{RawUN} x ++ ")"
-  show (MN x y) = "MN (" ++ show x ++ ") " ++ show y
-  show (PV n d) = "PV (" ++ show n ++ ") " ++ show d
-  show (DN str n) = "DN " ++ str ++ " (" ++ show n ++ ")"
-  show (Nested ij n) = "Nested " ++ show ij ++ " (" ++ show n ++ ")"
-  show (CaseBlock str i) = "CaseBlock " ++ str ++ " " ++ show i
-  show (WithBlock str i) = "CaseBlock " ++ str ++ " " ++ show i
-  show (Resolved i) = "Resolved " ++ show i
+  showPrec d (NS ns n) = showCon d "NS" $ showArg ns ++ showArg n
+  showPrec d (UN x) = showCon d "UN" $ showArg @{RawUN} x
+  showPrec d (MN x y) = showCon d "MN" $ showArg x ++ showArg y
+  showPrec d (PV n i) = showCon d "PV" $ showArg n ++ showArg i
+  showPrec d (DN str n) = showCon d "DN" $ showArg str ++ showArg n
+  showPrec d (Nested ij n) = showCon d "Nested" $ showArg ij ++ showArg n
+  showPrec d (CaseBlock str i) = showCon d "CaseBlock" $ showArg str ++ showArg i
+  showPrec d (WithBlock str i) = showCon d "WithBlock" $ showArg str ++ showArg i
+  showPrec d (Resolved i) = showCon d "Resolved" $ showArg i
 
 export
-Pretty UserName where
+Pretty Void UserName where
   pretty (Basic n) = pretty n
   pretty (Field n) = "." <+> pretty n
   pretty Underscore = "_"
 
 export
-Pretty Name where
-  pretty (NS ns n@(UN (Field _))) = pretty ns <+> dot <+> parens (pretty n)
-  pretty (NS ns n) = pretty ns <+> dot <+> pretty n
-  pretty (UN x) = pretty x
-  pretty (MN x y) = braces (pretty x <+> colon <+> pretty y)
-  pretty (PV n d) = braces (pretty 'P' <+> colon <+> pretty n <+> colon <+> pretty d)
-  pretty (DN str _) = pretty str
-  pretty (Nested (outer, idx) inner)
-    = pretty outer <+> colon <+> pretty idx <+> colon <+> pretty inner
-  pretty (CaseBlock outer _) = reflow "case block in" <++> pretty outer
-  pretty (WithBlock outer _) = reflow "with block in" <++> pretty outer
-  pretty (Resolved x) = pretty "$resolved" <+> pretty x
+||| Will it be an operation once prettily displayed?
+||| The first boolean states whether the operator is prefixed.
+isPrettyOp : Bool -> Name -> Bool
+isPrettyOp b (UN nm@(Field _)) = b -- prefixed fields need to be parenthesised
+isPrettyOp b (UN nm@(Basic _)) = isOpUserName nm
+isPrettyOp b (DN str _) = isOpUserName (Basic str)
+isPrettyOp b nm = False
+
+mutual
+
+  export
+  covering
+  prettyOp : Bool -> Name -> Doc Void
+  prettyOp b nm = parenthesise (isPrettyOp b nm) (pretty nm)
+
+  export
+  covering
+  Pretty Void Name where
+    pretty (NS ns n) = pretty ns <+> dot <+> prettyOp True n
+    pretty (UN x) = pretty x
+    pretty (MN x y) = braces (pretty x <+> colon <+> byShow y)
+    pretty (PV n d) = braces (pretty 'P' <+> colon <+> pretty n <+> colon <+> byShow d)
+    pretty (DN str _) = pretty str
+    pretty (Nested (outer, idx) inner)
+      = byShow outer <+> colon <+> byShow idx <+> colon <+> pretty inner
+    pretty (CaseBlock outer _) = reflow "case block in" <++> pretty outer
+    pretty (WithBlock outer _) = reflow "with block in" <++> pretty outer
+    pretty (Resolved x) = pretty "$resolved" <+> pretty (show x)
 
 export
 Eq UserName where
@@ -255,7 +302,6 @@ Eq UserName where
   (==) (Field x) (Field y) = x == y
   (==) Underscore Underscore = True
   (==) _ _ = False
-
 
 export
 Eq Name where

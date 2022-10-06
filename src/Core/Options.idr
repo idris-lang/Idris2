@@ -6,6 +6,7 @@ import public Core.Options.Log
 import Core.TT
 
 import Libraries.Utils.Path
+import Idris.Syntax.Pragmas
 
 import Data.List
 import Data.Maybe
@@ -111,17 +112,6 @@ export
 primNamesToList : PrimNames -> List Name
 primNamesToList (MkPrimNs i s c d) = catMaybes [i,s,c,d]
 
-public export
-data LangExt
-     = ElabReflection
-     | Borrowing -- not yet implemented
-
-export
-Eq LangExt where
-  ElabReflection == ElabReflection = True
-  Borrowing == Borrowing = True
-  _ == _ = False
-
 -- Other options relevant to the current session (so not to be saved in a TTC)
 public export
 record ElabDirectives where
@@ -157,7 +147,7 @@ record Session where
   logEnabled : Bool -- do we check logging flags at all? This is 'False' until
                     -- any logging is enabled.
   logLevel : LogLevels
-  logTimings : Bool
+  logTimings : Maybe Nat -- log level, higher means more details
   debugElabCheck : Bool -- do conversion check to verify results of elaborator
   dumpcases : Maybe String -- file to output compiled case trees
   dumplifted : Maybe String -- file to output lambda lifted definitions
@@ -184,6 +174,7 @@ public export
 record PPrinter where
   constructor MkPPOpts
   showImplicits : Bool
+  showMachineNames : Bool
   showFullEnv : Bool
   fullNamespace : Bool
 
@@ -222,12 +213,12 @@ defaultDirs = MkDirs "." Nothing "build" "depends" Nothing
                      "/usr/local" ["."] [] [] []
 
 defaultPPrint : PPrinter
-defaultPPrint = MkPPOpts False True False
+defaultPPrint = MkPPOpts False False True False
 
 export
 defaultSession : Session
 defaultSession = MkSessionOpts False CoveringOnly False False Chez [] 1000 False False
-                               defaultLogLevel False False Nothing Nothing
+                               defaultLogLevel Nothing False Nothing Nothing
                                Nothing Nothing False 1 False True
                                False [] False False
 

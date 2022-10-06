@@ -1,0 +1,6 @@
+:di isNat
+:di isInt32
+:di plus
+:di minus
+:di SnocList.filter
+:q

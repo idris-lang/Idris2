@@ -65,7 +65,7 @@ h1 {
   font-family: "Trebuchet MS", Helvetica, sans-serif;
 }
 
-#moduleHeader {
+#module-header {
   border-bottom: 1px solid #bbb;
   padding-bottom: 2px;
 }
@@ -181,27 +181,27 @@ dd.fixity {
 */
 
 a.function {
-  color: rgb(53, 155, 115);
+  color: #359b73;
 }
 
 .function {
-  color: rgb(53, 155, 115);
+  color: #359b73;
 }
 
 a.constructor {
-  color: rgb(213, 94, 0);
+  color: #d55e;
 }
 
 .constructor {
-  color: rgb(213, 94, 0);
+  color: #d55e;
 }
 
 a.type {
-  color: rgb(61, 183, 233);
+  color: #3db7e9;
 }
 
 .type {
-  color: rgb(61, 183, 233);
+  color: #3db7e9;
 }
 
 .keyword {
@@ -209,8 +209,7 @@ a.type {
 }
 
 .boundvar {
-  color: rgb(247, 72, 165); /* Too much colour makes it hard to differ the rest of the colours */
-  color: inherit;
+  color: #f748a5;
 }
 
 .boundvar.implicit {

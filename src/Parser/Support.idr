@@ -25,7 +25,7 @@ fromLexError origin (_, l, c, _)
     = LexFail (MkFC origin (l, c) (l, c + 1)) "Can't recognise token."
 
 export
-fromParsingErrors : (Show token, Pretty token) =>
+fromParsingErrors : (Show token, Pretty ann token) =>
                     OriginDesc -> List1 (ParsingError token) -> Error
 fromParsingErrors origin = ParseFail . (map fromError)
   where

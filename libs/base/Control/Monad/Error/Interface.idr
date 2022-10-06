@@ -75,6 +75,11 @@ MonadError () Maybe where
   catchError x       _ = x
 
 public export
+Monad m => MonadError () (MaybeT m) where
+  throwError () = MkMaybeT $ pure Nothing
+  catchError (MkMaybeT m) f = MkMaybeT $ m >>= maybe (runMaybeT $ f ()) (pure @{Compose})
+
+public export
 MonadError e (Either e) where
   throwError             = Left
   Left  l `catchError` h = h l

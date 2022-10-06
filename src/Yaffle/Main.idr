@@ -1,5 +1,6 @@
 module Yaffle.Main
 
+import Compiler.Common
 import Core.Binary
 import Core.Context
 import Core.Directory
@@ -9,6 +10,7 @@ import Core.Metadata
 import Core.UnifyState
 import Libraries.Utils.Path
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.ProcessDecls
@@ -22,9 +24,9 @@ import System
 usage : String
 usage = "Usage: yaffle <input file> [--timing]"
 
-processArgs : List String -> Core Bool
-processArgs [] = pure False
-processArgs ["--timing"] = pure True
+processArgs : List String -> Core (Maybe Nat)
+processArgs [] = pure Nothing
+processArgs ["--timing"] = pure (Just 10)
 processArgs _
     = coreLift $ do ignore $ putStrLn usage
                     exitWith (ExitFailure 1)
@@ -43,7 +45,8 @@ yaffleMain sourceFileName args
          m <- newRef MD (initMetadata (PhysicalIdrSrc modIdent))
          u <- newRef UST initUState
          s <- newRef Syn initSyntax
-         setLogTimings t
+         o <- newRef ROpts (defaultOpts (Just sourceFileName) (REPL ErrorLvl) [])
+         whenJust t $ setLogTimings
          addPrimitives
          case extension sourceFileName of
               Just "ttc" => do coreLift_ $ putStrLn "Processing as TTC"
@@ -56,9 +59,7 @@ yaffleMain sourceFileName args
                             ttcFileName <- getTTCFileName sourceFileName "ttc"
                             writeToTTC () sourceFileName ttcFileName
                             coreLift_ $ putStrLn "Written TTC"
-         ust <- get UST
-
-         repl {c} {u} {s}
+         repl {c} {u} {s} {o}
 
 ymain : IO ()
 ymain

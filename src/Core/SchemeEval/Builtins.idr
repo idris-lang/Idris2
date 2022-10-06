@@ -156,7 +156,7 @@ applyIntCast (Unsigned m) (Unsigned n) x
          else Apply (Var "ct-cast-unsigned") [x, toScheme n]
 
 applyCast : SchemeObj Write ->
-            Constant -> Constant ->
+            PrimType -> PrimType ->
             SchemeObj Write -> SchemeObj Write
 applyCast blk CharType to x
     = canonical blk [x] $

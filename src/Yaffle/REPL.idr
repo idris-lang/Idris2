@@ -12,6 +12,7 @@ import Core.Termination
 import Core.TT
 import Core.Unify
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab
@@ -38,6 +39,7 @@ process : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
+          {auto o : Ref ROpts REPLOpts} ->
           ImpREPL -> Core Bool
 process (Eval ttimp)
     = do (tm, _) <- elabTerm 0 InExpr [] (MkNested []) [] ttimp Nothing
@@ -88,7 +90,7 @@ process (GenerateDef line name)
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
                   catch
-                    (do ((fc, cs) :: _) <- logTime "Generation" $
+                    (do ((fc, cs) :: _) <- logTime 0 "Generation" $
                                 makeDefN (\p, n => onLine line p) 1 n'
                            | _ => coreLift_ (putStrLn "Failed")
                         coreLift_ $ putStrLn (show cs))
@@ -137,6 +139,7 @@ processCatch : {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
                ImpREPL -> Core Bool
 processCatch cmd
     = catch (process cmd)
@@ -148,6 +151,7 @@ repl : {auto c : Ref Ctxt Defs} ->
        {auto m : Ref MD Metadata} ->
        {auto u : Ref UST UState} ->
        {auto s : Ref Syn SyntaxInfo} ->
+       {auto o : Ref ROpts REPLOpts} ->
        Core ()
 repl
     = do coreLift_ (putStr "Yaffle> ")

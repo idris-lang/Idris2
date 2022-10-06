@@ -114,8 +114,7 @@ trans env stk (Ref fc Func fn)
               Nothing => pure (unload stk (Ref fc Func fn))
               Just ts => do let fullapp = unload stk (Ref fc Func fn)
                             let (u, tm') = apply ts fullapp
-                            upd <- get Upd
-                            put Upd (upd || u)
+                            update Upd (|| u)
                             pure tm'
 trans env stk (Meta fc n i args)
     = do args' <- traverse (trans env []) args

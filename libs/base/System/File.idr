@@ -14,12 +14,13 @@ import public System.File.Types
 import public System.File.Virtual
 
 ||| Copy the file at the specified source to the given destination.
+||| Returns the number of bytes that have been written upon a write error.
 |||
 ||| @ src  the file to copy
 ||| @ dest the place to copy the file to
 export
-copyFile : HasIO io => (src : String) -> (dest : String) -> io (Either FileError ())
+copyFile : HasIO io => (src : String) -> (dest : String) -> io (Either (FileError, Int) ())
 copyFile src dest
     = do Right buf <- createBufferFromFile src
-             | Left err => pure (Left err)
+             | Left err => pure (Left (err, 0))
          writeBufferToFile dest buf !(rawSize buf)

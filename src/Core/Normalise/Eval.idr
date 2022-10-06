@@ -12,6 +12,7 @@ import Core.Value
 import Data.List
 import Data.Maybe
 import Data.Nat
+import Data.String
 import Data.Vect
 
 %default covering
@@ -37,6 +38,7 @@ export
 getNF : {auto c : Ref Ctxt Defs} -> Glued vars -> Core (NF vars)
 getNF {c} (MkGlue _ _ nf) = nf c
 
+public export
 Stack : List Name -> Type
 Stack vars = List (FC, Closure vars)
 
@@ -143,52 +145,53 @@ parameters (defs : Defs, topopts : EvalOpts)
 
     -- Apply an evaluated argument (perhaps cached from an earlier evaluation)
     -- to a stack
+    export
     applyToStack : {auto c : Ref Ctxt Defs} ->
                    {free : _} ->
-                   Env Term free -> Bool ->
+                   Env Term free ->
                    NF free -> Stack free -> Core (NF free)
-    applyToStack env cont (NBind fc _ (Lam _ _ _ _) sc) (arg :: stk)
+    applyToStack env (NBind fc _ (Lam _ _ _ _) sc) (arg :: stk)
         = do arg' <- sc defs $ snd arg
-             applyToStack env cont arg' stk
-    applyToStack env cont (NBind fc x b@(Let _ r val ty) sc) stk
+             applyToStack env arg' stk
+    applyToStack env (NBind fc x b@(Let _ r val ty) sc) stk
         = if (holesOnly topopts || argHolesOnly topopts) && not (tcInline topopts)
              then pure (NBind fc x b
-                              (\defs', arg => applyToStack env cont !(sc defs' arg) stk))
-             else applyToStack env cont !(sc defs val) stk
-    applyToStack env cont (NBind fc x b sc) stk
+                              (\defs', arg => applyToStack env !(sc defs' arg) stk))
+             else applyToStack env !(sc defs val) stk
+    applyToStack env (NBind fc x b sc) stk
         = pure (NBind fc x b
-                      (\defs', arg => applyToStack env cont !(sc defs' arg) stk))
-    applyToStack env cont (NApp fc (NRef nt fn) args) stk
+                      (\defs', arg => applyToStack env !(sc defs' arg) stk))
+    applyToStack env (NApp fc (NRef nt fn) args) stk
         = evalRef env False fc nt fn (args ++ stk)
                   (NApp fc (NRef nt fn) (args ++ stk))
-    applyToStack env cont (NApp fc (NLocal mrig idx p) args) stk
+    applyToStack env (NApp fc (NLocal mrig idx p) args) stk
         = evalLocal env fc mrig _ p (args ++ stk) []
-    applyToStack env cont (NApp fc (NMeta n i args) args') stk
+    applyToStack env (NApp fc (NMeta n i args) args') stk
         = evalMeta env fc n i args (args' ++ stk)
-    applyToStack env cont (NDCon fc n t a args) stk
+    applyToStack env (NDCon fc n t a args) stk
         = pure $ NDCon fc n t a (args ++ stk)
-    applyToStack env cont (NTCon fc n t a args) stk
+    applyToStack env (NTCon fc n t a args) stk
         = pure $ NTCon fc n t a (args ++ stk)
-    applyToStack env cont (NAs fc s p t) stk
+    applyToStack env (NAs fc s p t) stk
        = if removeAs topopts
-            then applyToStack env cont t stk
-            else do p' <- applyToStack env cont p []
-                    t' <- applyToStack env cont t stk
+            then applyToStack env t stk
+            else do p' <- applyToStack env p []
+                    t' <- applyToStack env t stk
                     pure (NAs fc s p' t')
-    applyToStack env cont (NDelayed fc r tm) stk
-       = do tm' <- applyToStack env cont tm stk
+    applyToStack env (NDelayed fc r tm) stk
+       = do tm' <- applyToStack env tm stk
             pure (NDelayed fc r tm')
-    applyToStack env cont nf@(NDelay fc r ty tm) stk
+    applyToStack env nf@(NDelay fc r ty tm) stk
        = pure nf -- stack should always be empty here!
-    applyToStack env cont (NForce fc r tm args) stk
-       = do tm' <- applyToStack env cont tm []
+    applyToStack env (NForce fc r tm args) stk
+       = do tm' <- applyToStack env tm []
             case tm' of
                  NDelay fc r _ arg =>
                     eval env [arg] (Local {name = UN (Basic "fvar")} fc Nothing _ First) stk
                  _ => pure (NForce fc r tm' (args ++ stk))
-    applyToStack env cont nf@(NPrimVal fc _) _ = pure nf
-    applyToStack env cont nf@(NErased fc _) _ = pure nf
-    applyToStack env cont nf@(NType fc _) _ = pure nf
+    applyToStack env nf@(NPrimVal fc _) _ = pure nf
+    applyToStack env nf@(NErased fc _) _ = pure nf
+    applyToStack env nf@(NType fc _) _ = pure nf
 
     evalLocClosure : {auto c : Ref Ctxt Defs} ->
                      {free : _} ->
@@ -200,7 +203,7 @@ parameters (defs : Defs, topopts : EvalOpts)
     evalLocClosure env fc mrig stk (MkClosure opts locs' env' tm')
         = evalWithOpts defs opts env' locs' tm' stk
     evalLocClosure {free} env fc mrig stk (MkNFClosure opts env' nf)
-        = applyToStack env' False nf stk
+        = applyToStack env' nf stk
 
     evalLocal : {auto c : Ref Ctxt Defs} ->
                 {free : _} ->
@@ -271,10 +274,12 @@ parameters (defs : Defs, topopts : EvalOpts)
              --                              pure $ "Found bound variable: " ++ show fn'
              pure def
     evalRef env meta fc nt@Func n stk def
-        = do -- logC "eval.ref.func" 50 $ do n' <- toFullNames n
-             --                             pure $ "Found function: " ++ show n'
+        = do -- logC "eval.ref" 50 $ do n' <- toFullNames n
+             --                        pure $ "Found function: " ++ show n'
              Just res <- lookupCtxtExact n (gamma defs)
-                  | Nothing => pure def
+                  | Nothing => do logC "eval.stuck.outofscope" 5 $ do n' <- toFullNames n
+                                                                      pure $ "Stuck function: " ++ show n'
+                                  pure def
              let redok1 = evalAll topopts
              let redok2 = reducibleInAny (currentNS defs :: nestedNS defs)
                                          (fullname res)
@@ -286,14 +291,18 @@ parameters (defs : Defs, topopts : EvalOpts)
                         -- when evaluating something recursive, so this is a
                         -- good place to check
              unless redok2 $ logC "eval.stuck" 5 $ do n' <- toFullNames n
-                                                      pure $ "Stuck function: " ++ show n'
+                                                      pure $ "Stuck function: \{show n'}"
              if redok
                 then do
                    Just opts' <- updateLimit nt n topopts
-                        | Nothing => do log "eval.stuck" 10 $ "Function " ++ show n ++ " past reduction limit"
+                        | Nothing => do log "eval.stuck" 10 $ "Function \{show n} past reduction limit"
                                         pure def -- name is past reduction limit
-                   evalDef env opts' meta fc
+                   nf <- evalDef env opts' meta fc
                            (multiplicity res) (definition res) (flags res) stk def
+                   -- logC "eval.ref" 50 $ do n' <- toFullNames n
+                   --                         nf <- toFullNames nf
+                   --                         pure "Reduced \{show n'} to \{show nf}"
+                   pure nf
                 else pure def
 
     getCaseBound : List (Closure free) ->
@@ -371,6 +380,7 @@ parameters (defs : Defs, topopts : EvalOpts)
         concrete (NPrimVal _ _) = True
         concrete (NBind _ _ _ _) = True
         concrete (NType _ _) = True
+        concrete (NDelay _ _ _ _) = True
         concrete _ = False
     tryAlt _ _ _ _ _ _ _ = pure GotStuck
 
@@ -387,8 +397,10 @@ parameters (defs : Defs, topopts : EvalOpts)
          = do Result val <- tryAlt env loc opts fc stk val x
                    | NoMatch => findAlt env loc opts fc stk val xs
                    | GotStuck => do
-                       logC "eval.casetree.stuck" 5 $
-                         pure $ "Got stuck matching " ++ show val ++ " against " ++ show !(toFullNames x)
+                       logC "eval.casetree.stuck" 5 $ do
+                         val <- toFullNames val
+                         x <- toFullNames x
+                         pure $ "Got stuck matching \{show val} against \{show x}"
                        pure GotStuck
               pure (Result val)
 
@@ -401,7 +413,9 @@ parameters (defs : Defs, topopts : EvalOpts)
       = do xval <- evalLocal env fc Nothing idx (varExtend x) [] loc
            -- we have not defined quote yet (it depends on eval itself) so we show the NF
            -- i.e. only the top-level constructor.
-           log "eval.casetree" 5 $ "Evaluated " ++ show name ++ " to " ++ show xval
+           logC "eval.casetree" 5 $ do
+             xval <- toFullNames xval
+             pure "Evaluated \{show name} to \{show xval}"
            let loc' = updateLocal opts env idx (varExtend x) loc xval
            findAlt env loc' opts fc stk xval alts
     evalTree env loc opts fc stk (STerm _ tm)
@@ -483,17 +497,36 @@ parameters (defs : Defs, topopts : EvalOpts)
              || (meta && holesOnly opts)
              || (tcInline opts && elem TCInline flags)
              then case argsFromStack args stk of
-                       Nothing => pure def
+                       Nothing => do logC "eval.def.underapplied" 50 $ do
+                                       def <- toFullNames def
+                                       pure "Cannot reduce under-applied \{show def}"
+                                     pure def
                        Just (locs', stk') =>
                             do Result res <- evalTree env locs' opts fc stk' tree
-                                    | _ => pure def
+                                    | _ => do logC "eval.def.stuck" 50 $ do
+                                                def <- toFullNames def
+                                                pure "evalTree failed on \{show def}"
+                                              pure def
                                pure res
-             else pure def
+             else do -- logC "eval.def.stuck" 50 $ do
+                     --   def <- toFullNames def
+                     --   pure $ unlines [ "Refusing to reduce \{show def}:"
+                     --                  , "  holesOnly   : \{show $ holesOnly opts}"
+                     --                  , "  argHolesOnly: \{show $ argHolesOnly opts}"
+                     --                  , "  tcInline    : \{show $ tcInline opts}"
+                     --                  , "  meta        : \{show meta}"
+                     --                  , "  rigd        : \{show rigd}"
+                     --                  ]
+                     pure def
     evalDef env opts meta fc rigd (Builtin op) flags stk def
         = evalOp (getOp op) stk def
     -- All other cases, use the default value, which is already applied to
     -- the stack
-    evalDef env opts _ _ _ _ _ stk def = pure def
+    evalDef env opts meta fc rigd def flags stk orig = do
+      logC "eval.def.stuck" 50 $ do
+        orig <- toFullNames orig
+        pure "Cannot reduce def \{show orig}: it is a \{show def}"
+      pure orig
 
 -- Make sure implicit argument order is right... 'vars' is used so we'll
 -- write it explicitly, but it does appear after the parameters in 'eval'!
@@ -502,7 +535,7 @@ evalWithOpts {vars} defs opts = eval {vars} defs opts
 evalClosure defs (MkClosure opts locs env tm)
     = eval defs opts env locs tm []
 evalClosure defs (MkNFClosure opts env nf)
-    = applyToStack defs opts env True nf []
+    = applyToStack defs opts env nf []
 
 export
 evalClosureWithOpts : {auto c : Ref Ctxt Defs} ->
@@ -511,7 +544,7 @@ evalClosureWithOpts : {auto c : Ref Ctxt Defs} ->
 evalClosureWithOpts defs opts (MkClosure _ locs env tm)
     = eval defs opts env locs tm []
 evalClosureWithOpts defs opts (MkNFClosure _ env nf)
-    = applyToStack defs opts env True nf []
+    = applyToStack defs opts env nf []
 
 export
 nf : {auto c : Ref Ctxt Defs} ->
@@ -557,4 +590,4 @@ continueNF : {auto c : Ref Ctxt Defs} ->
              {vars : _} ->
              Defs -> Env Term vars -> NF vars -> Core (NF vars)
 continueNF defs env stuck
-   = applyToStack defs defaultOpts env True stuck []
+   = applyToStack defs defaultOpts env stuck []

@@ -7,11 +7,11 @@ import public System.File.Types
 
 %default total
 
-%foreign support "idris2_openFile"
-         "node:support:openFile,support_system_file"
+%foreign supportC "idris2_openFile"
+         supportNode "openFile"
 prim__open : String -> String -> PrimIO FilePtr
 
-%foreign support "idris2_closeFile"
+%foreign supportC "idris2_closeFile"
          "node:lambda:(fp) => require('fs').closeSync(fp.fd)"
 prim__close : FilePtr -> PrimIO ()
 

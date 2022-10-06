@@ -9,6 +9,7 @@ import Idris.Doc.Annotations
 import Idris.Pretty
 
 import Libraries.Data.List.Quantifiers.Extra
+import Libraries.Data.String.Extra
 
 
 infix 10 ::=
@@ -92,7 +93,7 @@ totality = vcat $
     header "Totality" :: ""
     :: map (indent 2) [
     """
-    Definitions can be individually declared `total`, `covering`, or partial`.
+    Definitions can be individually declared `total`, `covering`, or `partial`.
     It is also possible to set the default totality flag for definitions in a
     module by using the `%default` pragma.
     """, "",
@@ -269,24 +270,24 @@ interfacemechanism = vcat $
     programs generic over all types implementing the interface.
     """, "",
     """
-    In the following example we define a `Failing` interface that allows
+    In the following example we define a `Fail` interface that allows
     users to abort in case a computation is doomed to fail. We implement
     the `whenJust` construct using this interface and show a couple of
     implementations:
     """, "",
     """
     ```idris
-    interface Failing (0 a : Type) where
+    interface Fail (0 a : Type) where
       fail : a
 
-    whenJust : Failing ret => Maybe a -> (a -> ret) -> ret
+    whenJust : Fail ret => Maybe a -> (a -> ret) -> ret
     whenJust (Just v) k = k v
     whenJust Nothing  _ = fail
 
-    implementation Failing Bool where
+    implementation Fail Bool where
       fail = False
 
-    Failing (Maybe a) where
+    Fail (Maybe a) where
       fail = Nothing
     ```
     """, "",
@@ -368,6 +369,29 @@ parametersblock = vcat $
     and their respective types outside of the parameters block are
     `head : a -> List a -> a` and `last : a -> List a -> a`.
     """]
+
+failblock : Doc IdrisDocAnn
+failblock = vcat $
+    header "Fail block" :: ""
+    :: map (indent 2) [
+    """
+    Fail blocks let users check that some code parses but is rejected during elaboration.
+    In the following example, we make sure that Idris rejects a proof that the character
+    'a' is equal to 'b' by throwing an error when unifying them.
+    """, "",
+    """
+    ```idris
+    failing "When unifying"
+      noteq : 'a' === 'b'
+      noteq = Refl
+    ```
+    """, "",
+    """
+    If the (optional) string attached to a failing block does not appear in the error raised,
+    or if no error is raised then the failing block is itself failing and thus leads to an error.
+    This lets users document the kind of error the block is meant to document.
+    """
+    ]
 
 mutualblock : Doc IdrisDocAnn
 mutualblock = vcat $
@@ -521,6 +545,7 @@ keywordsDoc =
   :: "auto" ::= implicitarg
   :: "default" ::= implicitarg
   :: "implicit" ::= unusedKeyword
+  :: "failing" ::= failblock
   :: "mutual" ::= mutualblock
   :: "namespace" ::= namespaceblock
   :: "parameters" ::= parametersblock
@@ -554,7 +579,7 @@ keywordsDoc =
 export
 getDocsForKeyword : String -> Doc IdrisDocAnn
 getDocsForKeyword k
-  = maybe (annotate (Syntax Keyword) $ pretty k) doc
+  = maybe (annotate (Syntax Keyword) $ pretty0 k) doc
   $ lookup k keywordsDoc
 
 
@@ -570,7 +595,7 @@ lambdaAbstraction = """
   For instance we can implement `transport` like so:
   ```
   transport : a === b -> a -> b
-  transport = \ Refl, v => v
+  transport = \\ Refl, v => v
   ```
   """
 
@@ -704,5 +729,5 @@ symbolsDoc
 export
 getDocsForSymbol : String -> Doc IdrisDocAnn
 getDocsForSymbol k
-  = maybe (annotate (Syntax Keyword) $ pretty k) doc
+  = maybe (annotate (Syntax Keyword) $ pretty0 k) doc
   $ lookup k symbolsDoc

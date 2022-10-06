@@ -9,6 +9,7 @@ import Core.Normalise
 import Core.Unify
 import Core.TT
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Check
@@ -26,6 +27,7 @@ localHelper : {vars : _} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
              {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              NestedNames vars -> Env Term vars ->
              List ImpDecl -> (NestedNames vars -> Core a) ->
              Core a
@@ -72,12 +74,9 @@ localHelper {vars} nest env nestdecls_in func
          log "elab.def.local" 20 $ show nestdecls
 
          traverse_ (processDecl [] nest' env') nestdecls
-         ust <- get UST
-         put UST ({ delayedElab := olddelayed } ust)
-         defs <- get Ctxt
+         update UST { delayedElab := olddelayed }
          res <- func nest'
-         defs <- get Ctxt
-         put Ctxt ({ localHints := oldhints } defs)
+         update Ctxt { localHints := oldhints }
          pure res
   where
     -- For the local definitions, don't allow access to linear things
@@ -123,6 +122,22 @@ localHelper {vars} nest env nestdecls_in func
     updateDataName nest (MkImpLater loc' n tycons)
         = MkImpLater loc' (newName nest n) tycons
 
+    updateFieldName : NestedNames vars -> IField -> IField
+    updateFieldName nest (MkIField fc rigc piinfo n rawimp)
+        = MkIField fc rigc piinfo (newName nest n) rawimp
+
+    updateRecordName : NestedNames vars -> ImpRecord -> ImpRecord
+    updateRecordName nest (MkImpRecord fc n params opts conName fields)
+        = MkImpRecord fc (newName nest n)
+                         params
+                         opts
+                         (newName nest conName)
+                         (map (updateFieldName nest) fields)
+
+    updateRecordNS : NestedNames vars -> Maybe String -> Maybe String
+    updateRecordNS _    Nothing   = Nothing
+    updateRecordNS nest (Just ns) = Just $ show $ newName nest (UN $ mkUserName ns)
+
     updateName : NestedNames vars -> ImpDecl -> ImpDecl
     updateName nest (IClaim loc' r vis fnopts ty)
          = IClaim loc' r vis fnopts (updateTyName nest ty)
@@ -130,6 +145,8 @@ localHelper {vars} nest env nestdecls_in func
          = IDef loc' (newName nest n) cs
     updateName nest (IData loc' vis mbt d)
          = IData loc' vis mbt (updateDataName nest d)
+    updateName nest (IRecord loc' ns vis mbt imprecord)
+         = IRecord loc' (updateRecordNS nest ns) vis mbt (updateRecordName nest imprecord)
     updateName nest i = i
 
     setPublic : ImpDecl -> ImpDecl
@@ -157,6 +174,7 @@ checkLocal : {vars : _} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
              {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
              FC -> List ImpDecl -> (scope : RawImp) ->
@@ -185,6 +203,7 @@ checkCaseLocal : {vars : _} ->
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> Name -> Name -> List Name -> RawImp ->

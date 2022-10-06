@@ -12,8 +12,9 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
-import Idris.Syntax
 import Idris.Resugar
+import Idris.REPL.Opts
+import Idris.Syntax
 
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
@@ -51,6 +52,7 @@ elabScript : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              FC -> NestedNames vars ->
              Env Term vars -> NF vars -> Maybe (Glued vars) ->
              Core (NF vars)
@@ -61,6 +63,10 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
               NS ns (UN (Basic n))
                  => if ns == reflectionNS
                       then elabCon defs n (map snd args)
+                             `catch` \case -- wrap into `RunElabFail` any non-elab error
+                               e@(BadRunElab _ _ _ _) => throw e
+                               e@(RunElabFail _)      => throw e
+                               e                      => throw $ RunElabFail e
                       else failWith defs $ "bad reflection namespace " ++ show ns
               _ => failWith defs $ "bad fullnames " ++ show fnm
   where
@@ -79,23 +85,32 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
         = do empty <- clearDefs defs
              evalClosure empty val
     elabCon defs "Bind" [_,_,act,k]
-        = do act' <- elabScript fc nest env
+        -- act : Elab A
+        -- k : A -> Elab B
+        -- 1) Run elabScript on act stripping off Elab
+        -- 2) Evaluate the resulting act
+        -- 3) apply k to the result of (2)
+        -- 4) Run elabScript on the result stripping off Elab
+        = do act <- elabScript fc nest env
                                 !(evalClosure defs act) exp
-             case !(evalClosure defs k) of
-                  NBind _ x (Lam _ _ _ _) sc =>
-                      elabScript fc nest env
-                              !(sc defs (toClosure withAll env
-                                              !(quote defs env act'))) exp
-                  x => failWith defs $ "non-function RHS of a Bind: " ++ show x
+             act <- quote defs env act
+             k <- evalClosure defs k
+             r <- applyToStack defs withAll env k [(getLoc act, toClosure withAll env act)]
+             elabScript fc nest env r exp
     elabCon defs "Fail" [_, mbfc, msg]
         = do msg' <- evalClosure defs msg
              let customFC = case !(evalClosure defs mbfc >>= reify defs) of
                                EmptyFC => fc
                                x       => x
-             throw (GenericMsg customFC ("Error during reflection: " ++
-                                      !(reify defs msg')))
+             throw $ RunElabFail $ GenericMsg customFC !(reify defs msg')
     elabCon defs "Try" [_, elab1, elab2]
-        = tryUnify (elabScript fc nest env !(evalClosure defs elab1) exp)
+        = tryUnify (do constart <- getNextEntry
+                       res <- elabScript fc nest env !(evalClosure defs elab1) exp
+                       -- We ensure that all of the constraints introduced during the elab script
+                       -- have been solved. This guarantees that we do not mistakenly succeed even
+                       -- though e.g. a proof search got delayed.
+                       solveConstraintsAfter constart inTerm LastChance
+                       pure res)
                    (elabScript fc nest env !(evalClosure defs elab2) exp)
     elabCon defs "LogMsg" [topic, verb, str]
         = do topic' <- evalClosure defs topic
@@ -140,7 +155,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
     elabCon defs "Lambda" [x, _, scope]
         = do empty <- clearDefs defs
              NBind bfc x (Lam fc' c p ty) sc <- evalClosure defs scope
-                   | _ => throw (GenericMsg fc "Not a lambda")
+                   | _ => failWith defs "Not a lambda"
              n <- genVarName "x"
              sc' <- sc defs (toClosure withAll env (Ref bfc Bound n))
              qsc <- quote empty env sc'
@@ -157,7 +172,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
          quotePi Explicit = pure Explicit
          quotePi Implicit = pure Implicit
          quotePi AutoImplicit = pure AutoImplicit
-         quotePi (DefImplicit t) = throw (GenericMsg fc "Can't add default lambda")
+         quotePi (DefImplicit t) = failWith defs "Can't add default lambda"
     elabCon defs "Goal" []
         = do let Just gty = exp
                  | Nothing => nfOpts withAll defs env
@@ -194,13 +209,13 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
                        do let binder = getBinder lv env
                           let bty = binderType binder
                           scriptRet $ map rawName !(unelabUniqueBinders env bty)
-                  _ => throw (GenericMsg fc (show n ++ " is not a local variable"))
+                  _ => failWith defs $ show n ++ " is not a local variable"
     elabCon defs "GetCons" [n]
         = do n' <- evalClosure defs n
              cn <- reify defs n'
              Just (TCon _ _ _ _ _ _ cons _) <-
                      lookupDefExact cn (gamma defs)
-                 | _ => throw (GenericMsg fc (show cn ++ " is not a type"))
+                 | _ => failWith defs $ show cn ++ " is not a type"
              scriptRet cons
     elabCon defs "Declare" [d]
         = do d' <- evalClosure defs d
@@ -221,6 +236,7 @@ checkRunElab : {vars : _} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
                {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
                RigCount -> ElabInfo ->
                NestedNames vars -> Env Term vars ->
                FC -> RawImp -> Maybe (Glued vars) ->
@@ -231,10 +247,10 @@ checkRunElab rig elabinfo nest env fc script exp
          unless (isExtension ElabReflection defs) $
              throw (GenericMsg fc "%language ElabReflection not enabled")
          let n = NS reflectionNS (UN $ Basic "Elab")
-         let ttn = reflectiontt "TT"
          elabtt <- appCon fc defs n [expected]
          (stm, sty) <- runDelays (const True) $
                            check rig elabinfo nest env script (Just (gnf env elabtt))
+         solveConstraints inTerm Normal
          defs <- get Ctxt -- checking might have resolved some holes
          ntm <- elabScript fc nest env
                            !(nfOpts withAll defs env stm) (Just (gnf env expected))

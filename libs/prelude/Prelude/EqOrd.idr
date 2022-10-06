@@ -96,6 +96,12 @@ public export
 data Ordering = LT | EQ | GT
 
 public export
+contra : Ordering -> Ordering
+contra LT = GT
+contra EQ = EQ
+contra GT = LT
+
+public export
 Eq Ordering where
   LT == LT = True
   EQ == EQ = True
@@ -138,6 +144,10 @@ interface Eq ty => Ord ty where
 export
 comparing : Ord a => (b -> a) -> b -> b -> Ordering
 comparing p x y = compare (p x) (p y)
+
+public export
+[Reverse] (fwd : Ord a) => Ord a where
+  compare x y = contra $ compare @{fwd} x y
 
 public export
 Ord Void where

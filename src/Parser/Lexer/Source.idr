@@ -65,7 +65,7 @@ Show Token where
   show StringEnd = "string end"
   show InterpBegin = "string interp begin"
   show InterpEnd = "string interp end"
-  show (StringLit n x) = "string" ++ Extra.replicate n '#' ++ " " ++ show x
+  show (StringLit n x) = "string" ++ replicate n '#' ++ " " ++ show x
   -- Identifiers
   show (HoleIdent x) = "hole identifier " ++ x
   show (Ident x) = "identifier " ++ x
@@ -85,18 +85,18 @@ Show Token where
   show (Unrecognised x) = "Unrecognised " ++ x
 
 export
-Pretty Token where
+Pretty Void Token where
   -- Literals
   pretty (CharLit x) = pretty "character" <++> squotes (pretty x)
-  pretty (DoubleLit x) = pretty "double" <++> pretty x
-  pretty (IntegerLit x) = pretty "literal" <++> pretty x
+  pretty (DoubleLit x) = pretty "double" <++> pretty (show x)
+  pretty (IntegerLit x) = pretty "literal" <++> pretty (show x)
   -- String
   pretty (StringBegin Single) = reflow "string begin"
   pretty (StringBegin Multi) = reflow "multiline string begin"
   pretty StringEnd = reflow "string end"
   pretty InterpBegin = reflow "string interp begin"
   pretty InterpEnd = reflow "string interp end"
-  pretty (StringLit n x) = pretty ("string" ++ Extra.replicate n '#') <++> dquotes (pretty x)
+  pretty (StringLit n x) = pretty ("string" ++ replicate n '#') <++> dquotes (pretty x)
   -- Identifiers
   pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
   pretty (Ident x) = pretty "identifier" <++> pretty x
@@ -184,14 +184,14 @@ stringBegin : Lexer
 stringBegin = many (is '#') <+> (is '"')
 
 stringEnd : Nat -> String
-stringEnd hashtag = "\"" ++ Extra.replicate hashtag '#'
+stringEnd hashtag = "\"" ++ replicate hashtag '#'
 
 multilineBegin : Lexer
 multilineBegin = many (is '#') <+> (exact "\"\"\"") <+>
                     manyUntil newline space <+> newline
 
 multilineEnd : Nat -> String
-multilineEnd hashtag = "\"\"\"" ++ Extra.replicate hashtag '#'
+multilineEnd hashtag = "\"\"\"" ++ replicate hashtag '#'
 
 -- Do this as an entire token, because the contents will be processed by
 -- a specific back end
@@ -213,7 +213,7 @@ mkDirective str = CGDirective (trim (substr 3 (length str) str))
 public export
 keywords : List String
 keywords = ["data", "module", "where", "let", "in", "do", "record",
-            "auto", "default", "implicit", "mutual", "namespace",
+            "auto", "default", "implicit", "failing", "mutual", "namespace",
             "parameters", "with", "proof", "impossible", "case", "of",
             "if", "then", "else", "forall", "rewrite",
             "using", "interface", "implementation", "open", "import",
@@ -232,6 +232,7 @@ symbols = [",", ";", "_", "`"]
 export
 groupSymbols : List String
 groupSymbols = [".(", -- for things such as Foo.Bar.(+)
+    ".[|", -- for namespaced brackets such as Foo.Bar.[| x + y |]
     "@{", "[|", "(", "{", "[<", "[>", "[", "`(", "`{", "`["]
 
 export
@@ -239,6 +240,7 @@ groupClose : String -> String
 groupClose ".(" = ")"
 groupClose "@{" = "}"
 groupClose "[|" = "|]"
+groupClose ".[|" = "|]"
 groupClose "(" = ")"
 groupClose "[" = "]"
 groupClose "[<" = "]"
@@ -248,25 +250,6 @@ groupClose "`(" = ")"
 groupClose "`{" = "}"
 groupClose "`[" = "]"
 groupClose _ = ""
-
-export
-isOpChar : Char -> Bool
-isOpChar c = c `elem` (unpack ":!#$%&*+./<=>?@\\^|-~")
-
-export
-||| Test whether a user name begins with an operator symbol.
-isOpUserName : UserName -> Bool
-isOpUserName (Basic n) = fromMaybe False $ do
-   c <- fst <$> strUncons n
-   guard (isOpChar c)
-   pure True
-isOpUserName (Field _) = False
-isOpUserName Underscore = False
-
-export
-||| Test whether a name begins with an operator symbol.
-isOpName : Name -> Bool
-isOpName = maybe False isOpUserName . userNameRoot
 
 validSymbol : Lexer
 validSymbol = some (pred isOpChar)
@@ -319,7 +302,7 @@ fromOctLit str
 mutual
   stringTokens : Bool -> Nat -> Tokenizer Token
   stringTokens multi hashtag
-      = let escapeChars = "\\" ++ Extra.replicate hashtag '#'
+      = let escapeChars = "\\" ++ replicate hashtag '#'
             interpStart = escapeChars ++ "{"
             escapeLexer = escape (exact escapeChars) any
             charLexer = non $ exact (if multi then multilineEnd hashtag else stringEnd hashtag)

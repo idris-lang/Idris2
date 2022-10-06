@@ -66,10 +66,15 @@ public export
 snd : {0 a, b : Type} -> (a, b) -> b
 snd (x, y) = y
 
+||| Swap the elements in a pair
+public export
+swap : (a, b) -> (b, a)
+swap (x, y) = (y, x)
+
 -- This directive tells auto implicit search what to use to look inside pairs
 %pair Pair fst snd
 
-infix 5 #
+infixr 5 #
 
 ||| A pair type where each component is linear
 public export
@@ -162,7 +167,7 @@ replace Refl prf = prf
 ||| Symmetry of propositional equality.
 %inline
 public export
-sym : (0 rule : x = y) -> y = x
+sym : (0 rule : x ~=~ y) -> y ~=~ x
 sym Refl = Refl
 
 ||| Transitivity of propositional equality.
@@ -184,7 +189,7 @@ mkDPairInjectiveSnd Refl = Refl
 ||| Subvert the type checker.  This function is abstract, so it will not reduce
 ||| in the type checker.  Use it with care - it can result in segfaults or
 ||| worse!
-public export
+public export %inline
 believe_me : a -> b -- TODO: make linear
 believe_me v = prim__believe_me _ _ v
 
@@ -195,7 +200,6 @@ assert_linear = believe_me id
   where
     id : (1 f : a -> b) -> a -> b
     id f = f
-
 
 export partial
 idris_crash : String -> a

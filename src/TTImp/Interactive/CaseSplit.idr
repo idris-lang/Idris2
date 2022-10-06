@@ -10,6 +10,7 @@ import Core.TT
 import Core.UnifyState
 import Core.Value
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab
@@ -118,71 +119,8 @@ findAllVars (Bind _ x (Let _ _ _ _) sc)
     = x :: findAllVars sc
 findAllVars (Bind _ x (PLet _ _ _ _) sc)
     = x :: findAllVars sc
-findAllVars _ = []
-
-unique : List String -> List String -> Int -> List Name -> String
-unique [] supply suff usedns = unique supply supply (suff + 1) usedns
-unique (str :: next) supply suff usedns
-    = let var = mkVarN str suff in
-          if UN (Basic var) `elem` usedns
-             then unique next supply suff usedns
-             else var
-  where
-    mkVarN : String -> Int -> String
-    mkVarN x 0 = x
-    mkVarN x i = x ++ show i
-
-defaultNames : List String
-defaultNames = ["x", "y", "z", "w", "v", "s", "t", "u"]
-
-export
-getArgName : {vars : _} ->
-             {auto c : Ref Ctxt Defs} ->
-             Defs -> Name ->
-             List Name -> -- explicitly bound names (possibly coming later),
-                          -- so we don't invent a default
-                          -- name that duplicates it
-             List Name -> -- names bound so far
-             NF vars -> Core String
-getArgName defs x bound allvars ty
-    = do defnames <- findNames ty
-         pure $ getName x defnames allvars
-  where
-    lookupName : Name -> List (Name, a) -> Core (Maybe a)
-    lookupName n [] = pure Nothing
-    lookupName n ((n', t) :: ts)
-        = if !(getFullName n) == !(getFullName n')
-             then pure (Just t)
-             else lookupName n ts
-
-    notBound : String -> Bool
-    notBound x = not $ UN (Basic x) `elem` bound
-
-    findNames : NF vars -> Core (List String)
-    findNames (NBind _ x (Pi _ _ _ _) _)
-        = pure (filter notBound ["f", "g"])
-    findNames (NTCon _ n _ _ _)
-        = case !(lookupName n (NameMap.toList (namedirectives defs))) of
-               Nothing => pure (filter notBound defaultNames)
-               Just ns => pure (filter notBound ns)
-    findNames ty = pure (filter notBound defaultNames)
-
-    getName : Name -> List String -> List Name -> String
-    getName (UN (Basic n)) defs used = unique (n :: defs) (n :: defs) 0 used
-    getName _ defs used = unique defs defs 0 used
-
-export
-getArgNames : {vars : _} ->
-              {auto c : Ref Ctxt Defs} ->
-              Defs -> List Name -> List Name -> Env Term vars -> NF vars ->
-              Core (List String)
-getArgNames defs bound allvars env (NBind fc x (Pi _ _ p ty) sc)
-    = do ns <- case p of
-                    Explicit => pure [!(getArgName defs x bound allvars !(evalClosure defs ty))]
-                    _ => pure []
-         sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
-         pure $ ns ++ !(getArgNames defs bound (map (UN . Basic) ns ++ allvars) env sc')
-getArgNames defs bound allvars env val = pure []
+-- #2640 also grab the name of the function being defined
+findAllVars t = toList (dropNS <$> getDefining t)
 
 export
 explicitlyBound : Defs -> NF [] -> Core (List Name)
@@ -272,7 +210,7 @@ recordUpdate : {auto u : Ref UPD Updates} ->
                FC -> Name -> RawImp -> Core ()
 recordUpdate fc n tm
     = do u <- get UPD
-         let nupdates = map (\x => (fst x, IVar fc (snd x))) (namemap u)
+         let nupdates = mapSnd (IVar fc) <$> namemap u
          put UPD ({ updates $= ((n, substNames [] nupdates tm) ::) } u)
 
 findUpdates : {auto u : Ref UPD Updates} ->
@@ -314,6 +252,7 @@ getUpdates defs orig updated
 mkCase : {auto c : Ref Ctxt Defs} ->
          {auto u : Ref UST UState} ->
          {auto s : Ref Syn SyntaxInfo} ->
+         {auto o : Ref ROpts REPLOpts} ->
          Int -> RawImp -> RawImp -> Core ClauseUpdate
 mkCase {c} {u} fn orig lhs_raw
     = do m <- newRef MD (initMetadata $ Virtual Interactive)
@@ -375,6 +314,7 @@ getSplitsLHS : {auto m : Ref MD Metadata} ->
                {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
                FC -> Nat -> ClosedTerm -> Name ->
                Core (SplitResult (List ClauseUpdate))
 getSplitsLHS fc envlen lhs_in n
@@ -402,6 +342,7 @@ getSplits : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             {auto s : Ref Syn SyntaxInfo} ->
+            {auto o : Ref ROpts REPLOpts} ->
             (NonEmptyFC -> ClosedTerm -> Bool) -> Name ->
             Core (SplitResult (List ClauseUpdate))
 getSplits p n

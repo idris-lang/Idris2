@@ -1,7 +1,7 @@
 module Data.List1
 
 import public Data.Zippable
-import Control.Function
+import public Control.Function
 
 %default total
 
@@ -54,7 +54,7 @@ foldr1By f map (x ::: xs) = loop x xs where
   loop x [] = map x
   loop x (y :: xs) = f x (loop y xs)
 
-export
+public export
 foldl1By : (func : b -> a -> b) -> (map : a -> b) -> (l : List1 a) -> b
 foldl1By f map (x ::: xs) = foldl f (map x) xs
 
@@ -62,7 +62,7 @@ export
 foldr1 : (func : a -> a -> a) -> (l : List1 a) -> a
 foldr1 f = foldr1By f id
 
-export
+public export
 foldl1 : (func : a -> a -> a) -> (l : List1 a) -> a
 foldl1 f = foldl1By f id
 
@@ -73,15 +73,15 @@ length (_ ::: xs) = S (length xs)
 ------------------------------------------------------------------------
 -- Append
 
-export
+public export
 appendl : (xs : List1 a) -> (ys : List a) -> List1 a
 appendl (x ::: xs) ys = x ::: xs ++ ys
 
-export
+public export
 (++) : (xs, ys : List1 a) -> List1 a
 (++) xs ys = appendl xs (forget ys)
 
-export
+public export
 lappend : (xs : List a) -> (ys : List1 a) -> List1 a
 lappend [] ys = ys
 lappend (x :: xs) ys = (x ::: xs) ++ ys
@@ -93,7 +93,7 @@ public export
 cons : (x : a) -> (xs : List1 a) -> List1 a
 cons x xs = x ::: forget xs
 
-export
+public export
 snoc : (xs : List1 a) -> (x : a) -> List1 a
 snoc xs x = xs ++ (singleton x)
 
@@ -121,7 +121,7 @@ reverse (x ::: xs) = reverseOnto (singleton x) xs
 ------------------------------------------------------------------------
 -- Instances
 
-export
+public export
 Semigroup (List1 a) where
   (<+>) = (++)
 
@@ -134,11 +134,11 @@ Applicative List1 where
   pure x = singleton x
   f ::: fs <*> xs = appendl (map f xs) (fs <*> forget xs)
 
-export
+public export
 Monad List1 where
   (x ::: xs) >>= f = appendl (f x) (xs >>= forget . f)
 
-export
+public export
 Foldable List1 where
   foldr c n (x ::: xs) = c x (foldr c n xs)
   foldl f z (x ::: xs) = foldl f (f z x) xs
@@ -146,7 +146,7 @@ Foldable List1 where
   toList = forget
   foldMap f (x ::: xs) = f x <+> foldMap f xs
 
-export
+public export
 Traversable List1 where
   traverse f (x ::: xs) = [| f x ::: traverse f xs |]
 
@@ -154,28 +154,13 @@ export
 Show a => Show (List1 a) where
   show = show . forget
 
-export
+public export
 Eq a => Eq (List1 a) where
   (x ::: xs) == (y ::: ys) = x == y && xs == ys
 
-export
+public export
 Ord a => Ord (List1 a) where
   compare xs ys = compare (forget xs) (forget ys)
-
-------------------------------------------------------------------------
--- Properties
-
-export
-consInjective : (x ::: xs) === (y ::: ys) -> (x === y, xs === ys)
-consInjective Refl = (Refl, Refl)
-
-export
-{x : a} -> Injective (x :::) where
-  injective Refl = Refl
-
-export
-{ys : List a} -> Injective (::: ys) where
-  injective Refl = Refl
 
 ------------------------------------------------------------------------
 -- Zippable
@@ -217,6 +202,16 @@ Zippable List1 where
                                   (bs, cs, ds) = unzipWith3' xs in
                                   (b :: bs, c :: cs, d :: ds)
 
+------------------------------------------------------------------------
+-- Uninhabited
+
 export
 Uninhabited a => Uninhabited (List1 a) where
   uninhabited (hd ::: _) = uninhabited hd
+
+------------------------------------------------------------------------
+-- Filtering
+
+public export %inline
+filter : (a -> Bool) -> List1 a -> Maybe $ List1 a
+filter f = fromList . filter f . forget

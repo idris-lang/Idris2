@@ -11,6 +11,7 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Check
@@ -19,6 +20,7 @@ import TTImp.TTImp
 
 import Data.List
 import Data.String
+import Data.Vect
 
 import Libraries.Data.UserNameMap
 
@@ -123,24 +125,31 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
             else IMustUnify fc NotConstructor tm
     wrapDot _ _ _ _ _ _ tm = tm
 
+    notLHS : ElabMode -> Bool
+    notLHS (InLHS _) = False
+    notLHS _ = True
 
     mkTerm : Bool -> EState vars -> Name -> GlobalDef -> RawImp
     mkTerm prim est n def
-        = let tm = wrapDot prim est mode n (map (snd . snd) args)
-                       (definition def) (buildAlt (IVar fc n) args) in
-              if Macro `elem` flags def
-                 then case mode of
-                           InLHS _ => tm
-                           _ => IRunElab fc (ICoerced fc tm)
-                 else tm
+        = if (Context.Macro `elem` flags def) && notLHS mode
+             then alternativeFirstSuccess $ reverse $
+                    allSplits args <&> \(macroArgs, extArgs) =>
+                      (IRunElab fc $ ICoerced fc $ IVar fc n `buildAlt` macroArgs) `buildAlt` extArgs
+             else wrapDot prim est mode n (map (snd . snd) args)
+                    (definition def) (buildAlt (IVar fc n) args)
+      where
+        -- All splits of the original list starting from the (empty, full) finishing with (full, empty)
+        allSplits : (l : List a) -> Vect (S $ length l) (List a, List a)
+        allSplits []           = [([], [])]
+        allSplits full@(x::xs) = ([], full) :: (mapFst (x::) <$> allSplits xs)
+
+        alternativeFirstSuccess : forall n. Vect (S n) RawImp -> RawImp
+        alternativeFirstSuccess [x] = x
+        alternativeFirstSuccess xs  = IAlternative fc FirstSuccess $ toList xs
 
     mkAlt : Bool -> EState vars -> (Name, Int, GlobalDef) -> RawImp
     mkAlt prim est (fullname, i, gdef)
         = mkTerm prim est (Resolved i) gdef
-
-    notLHS : ElabMode -> Bool
-    notLHS (InLHS _) = False
-    notLHS _ = True
 
 expandAmbigName mode nest env orig args (IApp fc f a) exp
     = expandAmbigName mode nest env orig
@@ -338,6 +347,7 @@ checkAlternative : {vars : _} ->
                    {auto u : Ref UST UState} ->
                    {auto e : Ref EST (EState vars)} ->
                    {auto s : Ref Syn SyntaxInfo} ->
+                   {auto o : Ref ROpts REPLOpts} ->
                    RigCount -> ElabInfo ->
                    NestedNames vars -> Env Term vars ->
                    FC -> AltType -> List RawImp -> Maybe (Glued vars) ->
@@ -355,7 +365,6 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
          delayOnFailure fc rig env (Just expected) ambiguous Ambiguity $
              \delayed =>
                do solveConstraints solvemode Normal
-                  defs <- get Ctxt
                   exp <- getTerm expected
 
                   -- We can't just use the old NF on the second attempt,
@@ -366,7 +375,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
 
                   logGlueNF "elab.ambiguous" 5 (fastConcat
                     [ "Ambiguous elaboration at ", show fc, ":\n"
-                    , unlines (map show alts)
+                    , unlines (map (("  " ++) . show) alts)
                     , "With default. Target type "
                     ]) env exp'
                   alts' <- pruneByType env !(getNF exp') alts
@@ -408,8 +417,7 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                                       _ => inTerm
                 delayOnFailure fc rig env (Just expected) ambiguous Ambiguity $
                      \delayed =>
-                       do defs <- get Ctxt
-                          exp <- getTerm expected
+                       do exp <- getTerm expected
 
                           -- We can't just use the old NF on the second attempt,
                           -- because we might know more now, so recalculate it

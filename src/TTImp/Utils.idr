@@ -3,6 +3,8 @@ module TTImp.Utils
 import Core.Context
 import Core.Options
 import Core.TT
+import Core.Env
+import Core.Value
 import TTImp.TTImp
 
 import Data.List
@@ -11,6 +13,7 @@ import Data.String
 
 import Idris.Syntax
 
+import Libraries.Data.NameMap
 import Libraries.Utils.String
 
 %default covering
@@ -32,13 +35,14 @@ rawImpFromDecl decl = case decl of
     IData fc1 y _ (MkImpLater fc2 n tycon) => [tycon]
     IDef fc1 y ys => getFromClause !ys
     IParameters fc1 ys zs => rawImpFromDecl !zs ++ map getParamTy ys
-    IRecord fc1 y z _ (MkImpRecord fc n params conName fields) => do
+    IRecord fc1 y z _ (MkImpRecord fc n params opts conName fields) => do
         (a, b) <- map (snd . snd) params
         getFromPiInfo a ++ [b] ++ getFromIField !fields
+    IFail fc1 msg zs => rawImpFromDecl !zs
     INamespace fc1 ys zs => rawImpFromDecl !zs
     ITransform fc1 y z w => [z, w]
     IRunElabDecl fc1 y => [] -- Not sure about this either
-    IPragma _ f => []
+    IPragma _ _ f => []
     ILog k => []
     IBuiltin _ _ _ => []
   where getParamTy : (a, b, c, RawImp) -> RawImp
@@ -47,7 +51,7 @@ rawImpFromDecl decl = case decl of
         getFromTy (MkImpTy _ _ _ ty) = ty
         getFromClause : ImpClause -> List RawImp
         getFromClause (PatClause fc1 lhs rhs) = [lhs, rhs]
-        getFromClause (WithClause fc1 lhs wval prf flags ys) = [wval, lhs] ++ getFromClause !ys
+        getFromClause (WithClause fc1 lhs rig wval prf flags ys) = [wval, lhs] ++ getFromClause !ys
         getFromClause (ImpossibleClause fc1 lhs) = [lhs]
         getFromPiInfo : PiInfo RawImp -> List RawImp
         getFromPiInfo (DefImplicit x) = [x]
@@ -131,7 +135,7 @@ findBindableNamesQuot env used (ICase fc x ty xs)
     = findBindableNamesQuot env used !([x, ty] ++ getRawImp !xs)
   where getRawImp : ImpClause -> List RawImp
         getRawImp (PatClause fc1 lhs rhs) = [lhs, rhs]
-        getRawImp (WithClause fc1 lhs wval prf flags ys) = [wval, lhs] ++ getRawImp !ys
+        getRawImp (WithClause fc1 lhs rig wval prf flags ys) = [wval, lhs] ++ getRawImp !ys
         getRawImp (ImpossibleClause fc1 lhs) = [lhs]
 findBindableNamesQuot env used (ILocal fc xs x)
     = findBindableNamesQuot env used !(x :: rawImpFromDecl !xs)
@@ -197,7 +201,7 @@ findUniqueBindableNames fc arg env used t
             let ctxt = gamma defs
             ns <- map catMaybes $ for assoc $ \ (n, _) => do
                     ns <- lookupCtxtName (UN (Basic n)) ctxt
-                    let ns = flip mapMaybe ns $ \(n, _, d) =>
+                    let ns = flip List.mapMaybe ns $ \(n, _, d) =>
                                case definition d of
                                 -- do not warn about holes: `?a` is not actually
                                 -- getting shadowed as it will not become a
@@ -357,11 +361,11 @@ mutual
                      ++ bound in
             PatClause fc (substNames' bvar [] [] lhs)
                          (substNames' bvar bound' ps rhs)
-  substNamesClause' bvar bound ps (WithClause fc lhs wval prf flags cs)
+  substNamesClause' bvar bound ps (WithClause fc lhs rig wval prf flags cs)
       = let bound' = map (UN . Basic) (map snd (findBindableNames True bound [] lhs))
                      ++ findIBindVars lhs
                      ++ bound in
-            WithClause fc (substNames' bvar [] [] lhs)
+            WithClause fc (substNames' bvar [] [] lhs) rig
                           (substNames' bvar bound' ps wval) prf flags cs
   substNamesClause' bvar bound ps (ImpossibleClause fc lhs)
       = ImpossibleClause fc (substNames' bvar bound [] lhs)
@@ -387,6 +391,8 @@ mutual
       = IDef fc n (map (substNamesClause' bvar bound ps) cs)
   substNamesDecl' bvar bound ps (IData fc vis mbtot d)
       = IData fc vis mbtot (substNamesData' bvar bound ps d)
+  substNamesDecl' bvar bound ps (IFail fc msg ds)
+      = IFail fc msg (map (substNamesDecl' bvar bound ps) ds)
   substNamesDecl' bvar bound ps (INamespace fc ns ds)
       = INamespace fc ns (map (substNamesDecl' bvar bound ps) ds)
   substNamesDecl' bvar bound ps d = d
@@ -458,8 +464,8 @@ mutual
   substLocClause fc' (PatClause fc lhs rhs)
       = PatClause fc' (substLoc fc' lhs)
                       (substLoc fc' rhs)
-  substLocClause fc' (WithClause fc lhs wval prf flags cs)
-      = WithClause fc' (substLoc fc' lhs)
+  substLocClause fc' (WithClause fc lhs rig wval prf flags cs)
+      = WithClause fc' (substLoc fc' lhs) rig
                        (substLoc fc' wval)
                        prf
                        flags
@@ -485,6 +491,8 @@ mutual
       = IDef fc' n (map (substLocClause fc') cs)
   substLocDecl fc' (IData fc vis mbtot d)
       = IData fc' vis mbtot (substLocData fc' d)
+  substLocDecl fc' (IFail fc msg ds)
+      = IFail fc' msg (map (substLocDecl fc') ds)
   substLocDecl fc' (INamespace fc ns ds)
       = INamespace fc' ns (map (substLocDecl fc') ds)
   substLocDecl fc' d = d
@@ -526,3 +534,122 @@ uniqueHoleName : {auto s : Ref Syn SyntaxInfo} ->
 uniqueHoleName defs used n
     = do syn <- get Syn
          uniqueBasicName defs (used ++ holeNames syn) n
+
+export
+uniqueHoleNames : {auto s : Ref Syn SyntaxInfo} ->
+                  Defs -> Nat -> String -> Core (List String)
+uniqueHoleNames defs = go [] where
+
+  go : List String -> Nat -> String -> Core (List String)
+  go acc Z _ = pure (reverse acc)
+  go acc (S n) hole = do
+    hole' <- uniqueHoleName defs acc hole
+    go (hole' :: acc) n hole'
+
+unique : List String -> List String -> Int -> List Name -> String
+unique [] supply suff usedns = unique supply supply (suff + 1) usedns
+unique (str :: next) supply suff usedns
+    = let var = mkVarN str suff in
+          if UN (Basic var) `elem` usedns
+             then unique next supply suff usedns
+             else var
+  where
+    mkVarN : String -> Int -> String
+    mkVarN x 0 = x
+    mkVarN x i = x ++ show i
+
+
+export
+getArgName : {vars : _} ->
+             {auto c : Ref Ctxt Defs} ->
+             Defs -> Name ->
+             List Name -> -- explicitly bound names (possibly coming later),
+                          -- so we don't invent a default
+                          -- name that duplicates it
+             List Name -> -- names bound so far
+             NF vars -> Core String
+getArgName defs x bound allvars ty
+    = do defnames <- findNames ty
+         pure $ getName x defnames allvars
+  where
+    lookupName : Name -> List (Name, a) -> Core (Maybe a)
+    lookupName n [] = pure Nothing
+    lookupName n ((n', t) :: ts)
+        = if !(getFullName n) == !(getFullName n')
+             then pure (Just t)
+             else lookupName n ts
+
+    notBound : String -> Bool
+    notBound x = not $ UN (Basic x) `elem` bound
+
+    defaultNames : List String
+    defaultNames = ["x", "y", "z", "w", "v", "s", "t", "u"]
+
+    namesFor : Name -> Core (Maybe (List String))
+    namesFor n = lookupName n (NameMap.toList (namedirectives defs))
+
+    findNamesM : NF vars -> Core (Maybe (List String))
+    findNamesM (NBind _ x (Pi _ _ _ _) _)
+        = pure (Just ["f", "g"])
+    findNamesM (NTCon _ n _ d [(_, v)]) = do
+          case dropNS !(full (gamma defs) n) of
+            UN (Basic "List") =>
+              do nf <- evalClosure defs v
+                 case !(findNamesM nf) of
+                   Nothing => namesFor n
+                   Just ns => pure (Just (map (++ "s") ns))
+            UN (Basic "Maybe") =>
+              do nf <- evalClosure defs v
+                 case !(findNamesM nf) of
+                   Nothing => namesFor n
+                   Just ns => pure (Just (map ("m" ++) ns))
+            UN (Basic "SnocList") =>
+              do nf <- evalClosure defs v
+                 case !(findNamesM nf) of
+                   Nothing => namesFor n
+                   Just ns => pure (Just (map ("s" ++) ns))
+            _ => namesFor n
+    findNamesM (NTCon _ n _ _ _) = namesFor n
+    findNamesM (NPrimVal fc c) = do
+          let defaultPos = Just ["m", "n", "p", "q"]
+          let defaultInts = Just ["i", "j", "k", "l"]
+          pure $ map (filter notBound) $ case c of
+            PrT IntType => defaultInts
+            PrT Int8Type => defaultInts
+            PrT Int16Type => defaultInts
+            PrT Int32Type => defaultInts
+            PrT Int64Type => defaultInts
+            PrT IntegerType => defaultInts
+            PrT Bits8Type => defaultPos
+            PrT Bits16Type => defaultPos
+            PrT Bits32Type => defaultPos
+            PrT Bits64Type => defaultPos
+            PrT StringType => Just ["str"]
+            PrT CharType => Just ["c","d"]
+            PrT DoubleType => Just ["dbl"]
+            PrT WorldType => Just ["wrld", "w"]
+            _ => Nothing -- impossible
+    findNamesM ty = pure Nothing
+
+    findNames : NF vars -> Core (List String)
+    findNames nf = pure $ filter notBound $ fromMaybe defaultNames !(findNamesM nf)
+
+    getName : Name -> List String -> List Name -> String
+    getName (UN (Basic n)) defs used =
+      -- # 1742 Uppercase names are not valid for pattern variables
+      let candidate = ifThenElse (lowerFirst n) n (toLower n) in
+      unique (candidate :: defs) (candidate :: defs) 0 used
+    getName _ defs used = unique defs defs 0 used
+
+export
+getArgNames : {vars : _} ->
+              {auto c : Ref Ctxt Defs} ->
+              Defs -> List Name -> List Name -> Env Term vars -> NF vars ->
+              Core (List String)
+getArgNames defs bound allvars env (NBind fc x (Pi _ _ p ty) sc)
+    = do ns <- case p of
+                    Explicit => pure [!(getArgName defs x bound allvars !(evalClosure defs ty))]
+                    _ => pure []
+         sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
+         pure $ ns ++ !(getArgNames defs bound (map (UN . Basic) ns ++ allvars) env sc')
+getArgNames defs bound allvars env val = pure []

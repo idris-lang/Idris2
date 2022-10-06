@@ -5,8 +5,9 @@ import Data.DPair
 import Data.List
 import Data.Nat
 import System.Directory
-import System.File
 import Libraries.Utils.Path
+
+import Libraries.System.File as LibFile
 
 %default total
 
@@ -86,7 +87,7 @@ filter filePred dirPred (MkTree files dirs) = MkTree files' dirs' where
   files' = filter filePred files
 
   dirs' : List (SubTree root)
-  dirs' = flip mapMaybe dirs $ \ (dname ** iot) => do
+  dirs' = flip List.mapMaybe dirs $ \ (dname ** iot) => do
             guard (dirPred dname)
             pure (dname ** map (assert_total (filter filePred dirPred)) iot)
 
@@ -201,8 +202,10 @@ copyDir src target = runEitherT $ do
     copyDirContents !(liftIO $ explore src) target
   where
     copyFile' : (srcDir : Path) -> (targetDir : Path) -> (fileName : String) -> EitherT FileError io ()
-    copyFile' srcDir targetDir fileName = do
-      MkEitherT $ copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
+    copyFile' srcDir targetDir fileName = MkEitherT $ do
+      Right ok <- LibFile.copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
+      | Left (err, size) => pure (Left err)
+      pure (Right ok)
 
     covering
     copyDirContents : {srcDir : Path} -> Tree srcDir -> (targetDir : Path) -> EitherT FileError io ()

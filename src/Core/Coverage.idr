@@ -17,11 +17,6 @@ import Libraries.Data.NameMap
 import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
-
 %default covering
 
 -- Return whether any of the name matches conflict
@@ -165,7 +160,7 @@ getMissingAlts : {auto c : Ref Ctxt Defs} ->
                  Core (List (CaseAlt vars))
 -- If it's a primitive other than WorldVal, there's too many to reasonably
 -- check, so require a catch all
-getMissingAlts fc defs (NPrimVal _ WorldType) alts
+getMissingAlts fc defs (NPrimVal _ $ PrT WorldType) alts
     = if isNil alts
          then pure [DefaultCase (Unmatched "Coverage check")]
          else pure []
@@ -347,7 +342,7 @@ getMissing fc n ctree
         patss <- buildArgs fc defs [] [] psIn ctree
         let pats = concat patss
         unless (null pats) $
-          logC "coverage.missing" 20 $ map unlines $
+          logC "coverage.missing" 20 $ map (join "\n") $
             flip traverse pats $ \ pat =>
               show <$> toFullNames pat
         pure (map (apply fc (Ref fc Func n)) patss)
@@ -465,7 +460,7 @@ checkMatched cs ulhs
          logC "coverage" 5 $ do
             cs <- traverse toFullNames cs
             pure $ "Against clauses:\n" ++
-                   (show $ indent {ann = ()} 2 $ vcat $ map (pretty . show) cs)
+                   (show $ indent 2 $ vcat $ map (pretty . show) cs)
          tryClauses cs ulhs
   where
     tryClauses : List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)

@@ -90,13 +90,46 @@ record Metadata where
        nameLocMap : PosMap (NonEmptyFC, Name)
        sourceIdent : OriginDesc
 
-       -- Semantic Highlighting
-       -- Posmap of known semantic decorations
+       ||| Semantic Highlighting
+       ||| Posmap of known semantic decorations
        semanticHighlighting : PosMap ASemanticDecoration
-       -- Posmap of aliases (in `with` clauses the LHS disapear during
-       -- elaboration after making sure that they match their parents'
+
+       ||| Posmap of aliases (in `with` clauses the LHS disapear during
+       ||| elaboration after making sure that they match their parents'
        semanticAliases : PosMap (NonEmptyFC, NonEmptyFC)
+
+       ||| Posmap of decorations to default to if the elaboration does not
+       ||| produce any highlighting for this range
        semanticDefaults : PosMap ASemanticDecoration
+
+
+||| Combine semanticHighlighting, semanticAliases, and semanticDefaults into
+||| a single posmap with all the information
+export
+allSemanticHighlighting :
+  {auto c : Ref Ctxt Defs} ->
+  Metadata -> Core (PosMap ASemanticDecoration)
+allSemanticHighlighting meta = do
+    let semHigh = meta.semanticHighlighting
+    log "ide-mode.highlight" 19 $
+      "Semantic metadata is: " ++ show semHigh
+
+    let aliases
+          : List ASemanticDecoration
+          = flip foldMap meta.semanticAliases $ \ (from, to) =>
+              let decors = uncurry exactRange (snd to) semHigh in
+              map (\ ((fnm, loc), rest) => ((fnm, snd from), rest)) decors
+    log "ide-mode.highlight.alias" 19 $
+      "Semantic metadata from aliases is: " ++ show aliases
+
+    let defaults
+         : List ASemanticDecoration
+         = flip foldMap meta.semanticDefaults $ \ decor@((_, range), _) =>
+             case uncurry exactRange range semHigh of
+               [] => [decor]
+               _ => []
+
+    pure (fromList aliases `union` (fromList defaults `union` semHigh))
 
 covering
 Show Metadata where
@@ -228,18 +261,12 @@ addNameLoc loc n
            put MD $ { nameLocMap $= insert (neloc, n') } meta
 
 export
-setHoleLHS : {auto m : Ref MD Metadata} ->
-             ClosedTerm -> Core ()
-setHoleLHS tm
-    = do meta <- get MD
-         put MD ({ currentLHS := Just tm } meta)
+setHoleLHS : {auto m : Ref MD Metadata} -> ClosedTerm -> Core ()
+setHoleLHS tm = update MD { currentLHS := Just tm }
 
 export
-clearHoleLHS : {auto m : Ref MD Metadata} ->
-               Core ()
-clearHoleLHS
-    = do meta <- get MD
-         put MD ({ currentLHS := Nothing } meta)
+clearHoleLHS : {auto m : Ref MD Metadata} -> Core ()
+clearHoleLHS = update MD { currentLHS := Nothing }
 
 export
 withCurrentLHS : {auto c : Ref Ctxt Defs} ->
@@ -289,16 +316,12 @@ findHoleLHS hn
 export
 addSemanticDefault : {auto m : Ref MD Metadata} ->
                      ASemanticDecoration -> Core ()
-addSemanticDefault asem
-  = do meta <- get MD
-       put MD $ { semanticDefaults $= insert asem } meta
+addSemanticDefault asem = update MD { semanticDefaults $= insert asem }
 
 export
 addSemanticAlias : {auto m : Ref MD Metadata} ->
                    NonEmptyFC -> NonEmptyFC -> Core ()
-addSemanticAlias from to
-  = do meta <- get MD
-       put MD $ { semanticAliases $= insert (from, to) } meta
+addSemanticAlias from to = update MD { semanticAliases $= insert (from, to) }
 
 export
 addSemanticDecorations : {auto m : Ref MD Metadata} ->
@@ -306,7 +329,6 @@ addSemanticDecorations : {auto m : Ref MD Metadata} ->
    SemanticDecorations -> Core ()
 addSemanticDecorations decors
     = do meta <- get MD
-         defs <- get Ctxt
          let posmap = meta.semanticHighlighting
          let (newDecors,droppedDecors) =
                span

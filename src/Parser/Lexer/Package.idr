@@ -52,11 +52,11 @@ Show Token where
   show (IntegerLit i) = "IntegerLit: " ++ show i
 
 public export
-Pretty Token where
+Pretty Void Token where
   pretty (Comment str) = "Comment:" <++> pretty str
   pretty EndOfInput = "EndOfInput"
   pretty Equals = "Equals"
-  pretty (DotSepIdent ns n) = "DotSepIdentifier:" <++> pretty ns <+> dot <+> pretty n
+  pretty (DotSepIdent ns n) = "DotSepIdentifier:" <++> prettyMaybe ns <+> dot <+> pretty n
   pretty Separator = "Separator"
   pretty Dot = "Dot"
   pretty LTE = "LTE"
@@ -67,7 +67,7 @@ Pretty Token where
   pretty AndOp = "AndOp"
   pretty Space = "Space"
   pretty (StringLit s) = "StringLit:" <++> pretty s
-  pretty (IntegerLit i) = "IntegerLit:" <++> pretty i
+  pretty (IntegerLit i) = "IntegerLit:" <++> byShow i
 
 equals : Lexer
 equals = is '='

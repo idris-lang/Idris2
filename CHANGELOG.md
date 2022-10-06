@@ -13,6 +13,21 @@
 
 ### Language changes
 
+* There were two versions of record syntax used when updating records:
+
+  ```idris
+  record { field = value } r
+  ```
+
+  and
+
+  ```idris
+  { field := value } r
+  ```
+
+  The former is now deprecated in favour of the latter syntax.
+  The compiler will issue a warning when using the `record` keyword.
+
 * Interpolated strings now make use of `concat` which is compiled into `fastConcat`
   The interpolated slices now make use of the `Interpolation` interface available
   in the prelude. It has only one method `interpolate` which is called for every
@@ -34,13 +49,56 @@
   `Show` is that `Interpolation` and `Show` have conflicting semantics, typically
   this is the case for `String` which adds double quotes around the string.
 
+* A `failing` block that requires its body to fail with a compile error was added.
+  Optionally this block may contain a string which is checked to be contained in the error message.
+
+* Bodies of `mutual`, `failing`, `using` and `parameters` blocks are required to be indented
+  comparing to the position of the keyword.
+
+* `%nomangle` has been deprecated in favour of `%export`.
+
 ### Compiler changes
 
 * Removes deprecated support for `void` primitive. Now `void` is supported via
   `prim__void`.
 * Adds `%deprecate` pragma that can be used to warn when deprecated functions are used.
+* Package files now support a `langversion` field that can be used to specify what versions of Idris a package supports. As with dependency versions, `>`, `<`, `>=`, and `<=` can all be used.
+  + For example, `langversion >= 0.5.1`.
+* Alternatives for primitive types of the `Core.TT.Constant` are moved out to a separate data type `PrimTypes`.
+  Signatures of functions that were working with `Constant` are changed to use `PrimTypes` when appropriate.
+* Codegens now take an additional `Ref Syn SyntaxInfo` argument. This empowers
+  compiler writers to pretty print core terms e.g. to add comments with the
+  original type annotations in the generated code.
+
+### IDE protocol changes
+
+* The IDE protocol and its serialisation to S-Expressions are factored
+  into a separate module hierarchy Protocol.{Hex, SExp, IDE}.
+
+* File context ranges sent in the IDE protocol follow the same
+  convention as Bounds values in the parser:
+  + all offsets (line and column) are 0-based.
+  + Lines: start and end are within the bounds
+  + Column:
+    + start column is within the bounds;
+    + end   column is after the bounds.
+
+  This changes behaviour from previous versions of the protocol.
+  Matching PRs in the emacs modes:
+  + idris2-mode [PR#11](https://github.com/idris-community/idris2-mode/pull/11)
+  + idris-mode [PR#547](https://github.com/idris-hackers/idris-mode/pull/547)
 
 ### Library changes
+
+#### Prelude
+
+* `elemBy` and `elem` are now defined for any `Foldable` structure. The specialised
+  versions defined in `Data.(List/SnocList/Vect)` have been removed.
+* `filter` and `mapMaybe` functions for `List` were moved to `prelude` from `base`.
+* Basic functions of `SnocList` (`(++)`, `length`, `filter`, `mapMaybe`) and
+  implementations of `Eq` and `Ord` were moved to `prelude` from `base`.
+  This may lead to a need to qualifying functions (e.g. `List.filter`) due to possible ambiguity.
+* "Fish" and "chips" operators of `SnocList` were moved to `Prelude.Types` from `Prelude.Basics`.
 
 #### Base
 
@@ -48,17 +106,66 @@
   return code of that run.
 * Adds escaped versions of `System.system`, `Systen.File.popen`, and
   `System.run`, which take a list of arguments, and escapes them.
+* Adds the `Injective` interface in module `Control.Function`.
 * Changes `System.pclose` to return the return code of the closed process.
 * Deprecates `base`'s `Data.Nat.Order.decideLTE` in favor of `Data.Nat.isLTE`.
 * Removes `base`'s deprecated `System.Directory.dirEntry`. Use `nextDirEntry` instead.
 * Removes `base`'s deprecated `Data.String.fastAppend`. Use `fastConcat` instead.
+* `System.File.Buffer.writeBufferData` now returns the number of bytes that have
+   been written when there is a write error.
+* `System.File.Buffer.readBufferData` now returns the number of bytes that have
+   been read into the buffer.
+* Adds the `Data.List.Quantifiers.Interleaving` and
+  `Data.List.Quantifiers.Split` datatypes, used for provably splitting a list
+  into a list of proofs and a list of counter-proofs for a given property.
+* Properties of the `List1` type were moved from `Data.List1` to `Data.List1.Properties`.
+* `Syntax.PreorderReasoning` was moved to `base` from `contrib`.
+* Move the types and functions in `Data.Vect.Quantifiers` to their respective
+  namespaces (`All` for all-related things, and `Any` for any-related things) to
+  make the code consistent with the other quantifiers (`List` and `SnocList`).
+* Set the `all` and `any` functions for proof-quantifiers to `public export`
+  instead of `export`, allowing them to be used with auto-implicit `IsYes`.
+* Legacy duplicating type `Given` (with constructor `Always`) is removed from the `Decidable.Decidable`.
+  Use the type `IsYes` (with constructor `ItIsYes`) from the same module instead.
+* Adds `Data.List1.Elem`, ported from `Data.List.Elem`.
+* Adds `Data.List1.Quantifiers`, ported from `Data.List.Quantifiers`.
+* Changes the order of arguments in `RWST` transformer's runners functions (`runRWST`. `evalRWST`, `execRWST`),
+  now transformer argument is the last, as in the other standard transformers, like `ReaderT` and `StateT`.
+* Adds `Data.Fin.finToNatEqualityAsPointwise`,
+  which takes a witness of `finToNat k = finToNat l` and proves `k ~~~ l`.
+* Drop first argument (path to the `node` executable) from `System.getArgs` on
+  the Node.js backend to make it consistent with other backends.
+* Adds `Uninhabited` instances for `FZ ~~~ FS k` and `FS k ~~~ FZ`.
+* Change behavior of `channelPut` on the Racket backend to match the behavior
+  on the Chez backend.
+
+#### Test
+
+* Refactors `Test.Golden.runTest` to use `System.Concurrency` from the base
+  libraries instead of `System.Future` from `contrib`. In addition to reducing
+  the dependency on `contrib` in the core of Idris2, this also seems to provide
+  a small performance improvement for `make test`.
 
 #### Contrib
 
 * `System.Random` support for `Int` changed to `Int32`; it already limited itself
-  to 32 bits but now that is codified. Javascript backends are now supported.
+  to 32 bits but now that is codified. JavaScript backends are now supported.
 * Removes `contrib`'s deprecated `Data.Num.Implementations` module. See
   `Prelude.Interfaces` instead.
+* Implements `Show tok => Show (ParsingError tok)` for `Text.Parser.Core`.
+* `Control.Linear.LIO` has been moved from `contribs` to `linear` to guarantee
+  that idris2 does not need to rely on contribs anymore.
+
+#### Network
+
+* `Control.Linear.Network` now supports `connect` in the linear environment, and
+  can also access the `sendBytes`, `recvBytes` and `recvAllBytes` functions of
+  the underlying `Socket` module.
+
+### Other changes
+
+* Adds docstrings for the lambda-lifted IR.
+* Package files are now installed along-side build artifacts for installed packages. This means all transitive dependencies of packages you specify with the `depends` field are added automatically.
 
 ## v0.5.0/0.5.1
 
@@ -192,7 +299,7 @@ Changed
   list-shaped types, and enumerations, so generated code will often be slightly
   faster.
 * Added `--profile` flag, which generates profile data if supported by a back
-  end. Currently supported by the Chez and Racket back ends.
+  end. Currently supported by the Chez and Racket backends.
 * New `%builtin` pragma for compiling user defined natural numbers to primitive
   `Integer`s (see the
   [docs](https://idris2.readthedocs.io/en/latest/reference/builtins.html))
@@ -295,7 +402,7 @@ Added
   `broadcast` at the cost of losing `wait-timeout` due to increased complexity
   of their internals and interactions between their associated functions.
 
-#### Javascript
+#### JavaScript
 
 * Now use `Number` to represent up to 32 bit precision signed and unsigned
   integers. `Int32` still goes via `BigInt` for multiplication to avoid
@@ -315,7 +422,7 @@ Added
   it also leads to shorter compilation times in large codebases where only some
   files have changed -- for example when developing Idris2 code generators. The
   codegen has a large parallelisation potential but at the moment, it is
-  significantly slower for a full rebuild of a large code base (the code
+  significantly slower for a full rebuild of a large codebase (the code
   generation stage takes about 3x longer).
 
 ### API changes
@@ -388,7 +495,7 @@ Library changes:
     [Implementing Condition Variables with Semaphores](https://www.microsoft.com/en-us/research/wp-content/uploads/2004/12/ImplementingCVs.pdf) by Andrew Birrell
 
   - Removed `threadID` and `blodwen-thisthread`. Formerly, in the Chez Scheme
-    backend, this function returned "the thread id of the current thread" as a
+    backend, this function returned "the thread ID of the current thread" as a
     value of type `ThreadID`. However, `fork` returned a "thread object" as a
     value of type `ThreadID`. These are *different kinds of values* in Chez
     Scheme. As there was nothing one could do with a value of type `ThreadID`, I
@@ -448,7 +555,7 @@ REPL/IDE mode changes:
 
 * Added `:color (on|off)` option for colored terminal output.
 * Added `:consolewidth (auto|n)` option for printing margins.  Mirrors the
-  command line option.
+  command-line option.
 
 ## v0.2.1
 
@@ -539,7 +646,7 @@ Language changes:
   be at least `covering`
   + That is, `%default covering` is the default status.
 * Fields of records can be accessed (and updated) using the dot syntax,
-  such as `r.field1.field2` or `{ field1.field2 := 42 }`.
+  such as `r.field1.field2` or `record { field1.field2 = 42 }`.
   For details, see [the "records" entry in the user manual](https://idris2.readthedocs.io/en/latest/reference/records.html)
 * New function flag `%tcinline` which means that the function should be
   inlined for the purposes of totality checking (but otherwise not inlined).

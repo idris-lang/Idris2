@@ -96,9 +96,9 @@ mutual
   -- one of them is okay
   getMatch lhs (IAlternative fc _ as) (IAlternative _ _ as')
       = matchAny fc lhs (zip as as')
-  getMatch lhs (IAs _ _ _ (UN (Basic n)) p) (IAs _ fc _ (UN (Basic n')) p')
+  getMatch lhs (IAs _ _ _ (UN (Basic n)) p) (IAs _ fc _ nm'@(UN (Basic n')) p')
       = do ms <- getMatch lhs p p'
-           mergeMatches lhs ((n, IBindVar fc n') :: ms)
+           mergeMatches lhs ((n, IAs fc emptyFC UseLeft nm' (Implicit fc True)) :: ms)
   getMatch lhs (IAs _ _ _ (UN (Basic n)) p) p'
       = do ms <- getMatch lhs p p'
            mergeMatches lhs ((n, p') :: ms)
@@ -176,6 +176,9 @@ getNewLHS : {auto c : Ref Ctxt Defs} ->
 getNewLHS iploc drop nest wname wargnames lhs_raw patlhs
     = do let vploc = virtualiseFC iploc
          (mlhs_raw, wrest) <- dropWithArgs drop patlhs
+
+         log "declare.def.clause.with" 20 $ "Parent LHS: " ++ show lhs_raw
+         log "declare.def.clause.with" 20 $ "Modified LHS: " ++ show mlhs_raw
 
          autoimp <- isUnboundImplicits
          setUnboundImplicits True

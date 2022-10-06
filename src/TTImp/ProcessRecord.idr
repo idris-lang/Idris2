@@ -7,12 +7,14 @@ import Core.Env
 import Core.Metadata
 import Core.UnifyState
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.BindImplicits
 import TTImp.Elab.Check
 import TTImp.TTImp
 import TTImp.TTImp.Functor
+import TTImp.TTImp.Traversals
 import TTImp.Unelab
 import TTImp.Utils
 
@@ -20,10 +22,17 @@ import Data.List
 
 %default covering
 
+-- Used to remove the holes so that we don't end up with "hole is already defined"
+-- errors because they've been duplicarted when forming the various types of the
+-- record constructor, getters, etc.
+killHole : RawImp -> RawImp
+killHole (IHole fc str) = Implicit fc True
+killHole t = t
+
 mkDataTy : FC -> List (Name, RigCount, PiInfo RawImp, RawImp) -> RawImp
 mkDataTy fc [] = IType fc
 mkDataTy fc ((n, c, p, ty) :: ps)
-    = IPi fc c p (Just n) ty (mkDataTy fc ps)
+    = IPi fc c (mapPiInfo killHole p) (Just n) (mapTTImp killHole ty) (mkDataTy fc ps)
 
 -- Projections are only visible if the record is public export
 projVis : Visibility -> Visibility
@@ -35,14 +44,16 @@ elabRecord : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              List ElabOpt -> FC -> Env Term vars ->
              NestedNames vars -> Maybe String ->
              Visibility -> Maybe TotalReq -> Name ->
              (params : List (Name, RigCount, PiInfo RawImp, RawImp)) ->
+             (opts : List DataOpt) ->
              (conName : Name) ->
              List IField ->
              Core ()
-elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params conName_in fields
+elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params opts conName_in fields
     = do tn <- inCurrentNS tn_in
          conName <- inCurrentNS conName_in
          elabAsData tn conName
@@ -64,13 +75,13 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params conName_in fiel
                       extendNS (mkNamespace ns)
                       newns <- getNS
                       elabGetters tn conName 0 [] [] conty
-                      defs <- get Ctxt
                       -- Record that the current namespace is allowed to look
                       -- at private names in the nested namespace
-                      put Ctxt ({ currentNS := cns,
-                                  nestedNS := newns :: nns } defs)
+                      update Ctxt { currentNS := cns,
+                                    nestedNS := newns :: nns }
 
   where
+
     paramTelescope : List (FC, Maybe Name, RigCount, PiInfo RawImp, RawImp)
     paramTelescope = map jname params
       where
@@ -79,6 +90,10 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params conName_in fiel
         -- Record type parameters are implicit in the constructor
         -- and projections
         jname (n, _, _, t) = (EmptyFC, Just n, erased, Implicit, t)
+
+    removeIHoles : List (FC, Maybe Name, RigCount, PiInfo RawImp, RawImp) ->
+                   List (FC, Maybe Name, RigCount, PiInfo RawImp, RawImp)
+    removeIHoles = map (map $ map $ map $ bimap (mapPiInfo killHole) (mapTTImp killHole))
 
     fname : IField -> Name
     fname (MkIField fc c p n ty) = n
@@ -103,6 +118,9 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params conName_in fiel
         apply f ((n, arg, Explicit) :: xs) = apply (IApp         (getFC f) f          arg) xs
         apply f ((n, arg, _       ) :: xs) = apply (INamedApp (getFC f) f n arg) xs
 
+    paramNames : List Name
+    paramNames = map fst params
+
     elabAsData : (tn : Name) -> -- fully qualified name of the record type
                  (conName : Name) -> -- fully qualified name of the record type constructor
                  Core ()
@@ -110,11 +128,10 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params conName_in fiel
         = do let fc = virtualiseFC fc
              let conty = mkTy paramTelescope $
                          mkTy (map farg fields) (recTy tn)
-             let con = MkImpTy EmptyFC EmptyFC cname !(bindTypeNames fc [] (map fst params ++
-                                           map fname fields ++ vars) conty)
-             let dt = MkImpData fc tn !(bindTypeNames fc [] (map fst params ++
-                                           map fname fields ++ vars)
-                                         (mkDataTy fc params)) [] [con]
+             let boundNames = paramNames ++ map fname fields ++ vars
+             let con = MkImpTy EmptyFC EmptyFC cname
+                       !(bindTypeNames fc [] boundNames conty)
+             let dt = MkImpData fc tn !(bindTypeNames fc [] boundNames (mkDataTy fc params)) opts [con]
              log "declare.record" 5 $ "Record data type " ++ show dt
              processDecl [] nest env (IData fc vis mbtot dt)
 
@@ -162,7 +179,9 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params conName_in fiel
                    -- Claim the projection type
                    projTy <- bindTypeNames fc []
                                  (map fst params ++ map fname fields ++ vars) $
-                                    mkTy paramTelescope $
+                                    -- Remove the holes here so that we don't end up with
+                                    -- "hole is already defined" errors
+                                      mkTy (removeIHoles paramTelescope) $
                                       IPi bfc top Explicit (Just rname) (recTy tn) ty'
 
                    let mkProjClaim = \ nm =>
@@ -234,9 +253,10 @@ processRecord : {vars : _} ->
                 {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
                 {auto s : Ref Syn SyntaxInfo} ->
+                {auto o : Ref ROpts REPLOpts} ->
                 List ElabOpt -> NestedNames vars ->
                 Env Term vars -> Maybe String ->
                 Visibility -> Maybe TotalReq ->
                 ImpRecord -> Core ()
-processRecord eopts nest env newns vis mbtot (MkImpRecord fc n ps cons fs)
-    = elabRecord eopts fc env nest newns vis mbtot n ps cons fs
+processRecord eopts nest env newns vis mbtot (MkImpRecord fc n ps opts cons fs)
+    = elabRecord eopts fc env nest newns vis mbtot n ps opts cons fs

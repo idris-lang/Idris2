@@ -8,31 +8,33 @@ import System.File.Handle
 import public System.File.Error
 import System.File.Support
 import public System.File.Types
+import System.FFI
 
 %default total
 
-%foreign support "idris2_seekLine"
-         "node:support:seekLine,support_system_file"
+%foreign supportC "idris2_seekLine"
+         supportNode "seekLine"
 prim__seekLine : FilePtr -> PrimIO Int
 
-%foreign support "idris2_readLine"
-         "node:support:readLine,support_system_file"
+%foreign supportC "idris2_readLine"
+         supportNode "readLine"
 prim__readLine : FilePtr -> PrimIO (Ptr String)
 
-%foreign support "idris2_readChars"
+%foreign supportC "idris2_readChars"
 prim__readChars : Int -> FilePtr -> PrimIO (Ptr String)
 %foreign "C:fgetc,libc 6"
 prim__readChar : FilePtr -> PrimIO Int
 
-%foreign support "idris2_writeLine"
+%foreign supportC "idris2_writeLine"
          "node:lambda:(filePtr, line) => require('fs').writeSync(filePtr.fd, line, undefined, 'utf-8')"
 prim__writeLine : FilePtr -> String -> PrimIO Int
 
-%foreign support "idris2_eof"
+%foreign supportC "idris2_eof"
          "node:lambda:x=>(x.eof?1:0)"
 prim__eof : FilePtr -> PrimIO Int
 
-%foreign support "idris2_removeFile"
+%foreign supportC "idris2_removeFile"
+         supportNode "removeFile"
 prim__removeFile : String -> PrimIO Int
 
 ||| Seek through the next newline.
@@ -41,6 +43,7 @@ prim__removeFile : String -> PrimIO Int
 |||
 ||| @ h the file handle to seek through
 export
+covering
 fSeekLine : HasIO io => (h : File) -> io (Either FileError ())
 fSeekLine (FHandle f)
     = do res <- primIO (prim__seekLine f)
@@ -48,17 +51,27 @@ fSeekLine (FHandle f)
             then returnError
             else ok ()
 
+
+||| Get a garbage collected String from a Ptr String and and free the original
+export
+getStringAndFree : HasIO io => Ptr String -> io (Either FileError String)
+getStringAndFree res
+    = if prim__nullPtr res /= 0
+         then returnError
+         else do let s = prim__getString res
+                 free $ prim__forgetPtr res
+                 ok s
+
 ||| Get the next line from the given file handle, returning the empty string if
 ||| nothing was read.
 |||
 ||| @ h the file handle to get the line from
 export
+covering
 fGetLine : HasIO io => (h : File) -> io (Either FileError String)
 fGetLine (FHandle f)
     = do res <- primIO (prim__readLine f)
-         if prim__nullPtr res /= 0
-            then returnError
-            else ok (prim__getString res)
+         getStringAndFree res
 
 ||| Get a number of characters from the given file handle.
 |||
@@ -68,9 +81,7 @@ export
 fGetChars : HasIO io => (h : File) -> (max : Int) -> io (Either FileError String)
 fGetChars (FHandle f) max
     = do res <- primIO (prim__readChars max f)
-         if prim__nullPtr res /= 0
-            then returnError
-            else ok (prim__getString res)
+         getStringAndFree res
 
 ||| Get the next character from the given file handle.
 |||
@@ -201,7 +212,7 @@ readFilePage offset fuel fname
 |||
 ||| @ fname the name of the file to read
 export
-partial
+covering
 readFile : HasIO io => (fname : String) -> io (Either FileError String)
 readFile = (map $ map (fastConcat . snd)) . readFilePage 0 forever
 

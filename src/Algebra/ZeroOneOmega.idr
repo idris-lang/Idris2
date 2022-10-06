@@ -8,6 +8,8 @@ import Algebra.Preorder
 export
 data ZeroOneOmega = Rig0 | Rig1 | RigW
 
+%name ZeroOneOmega rig
+
 export
 Preorder ZeroOneOmega where
   Rig0 <=    _ = True

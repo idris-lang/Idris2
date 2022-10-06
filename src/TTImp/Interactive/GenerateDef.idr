@@ -11,6 +11,7 @@ import Core.TT
 import Core.Unify
 import Core.Value
 
+import Idris.REPL.Opts
 import Idris.Syntax
 import Parser.Lexer.Source
 
@@ -24,6 +25,8 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Data.List
+
+import Libraries.Data.Tap
 
 %default covering
 
@@ -55,6 +58,7 @@ expandClause : {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
                FC -> SearchOpts -> Int -> ImpClause ->
                Core (Search (List ImpClause))
 expandClause loc opts n c
@@ -80,8 +84,8 @@ expandClause loc opts n c
     updateRHS : ImpClause -> RawImp -> ImpClause
     updateRHS (PatClause fc lhs _) rhs = PatClause fc lhs rhs
     -- 'with' won't happen, include for completeness
-    updateRHS (WithClause fc lhs wval prf flags cs) rhs
-      = WithClause fc lhs wval prf flags cs
+    updateRHS (WithClause fc lhs rig wval prf flags cs) rhs
+      = WithClause fc lhs rig wval prf flags cs
     updateRHS (ImpossibleClause fc lhs) _ = ImpossibleClause fc lhs
 
     dropLams : Nat -> RawImp -> RawImp
@@ -104,6 +108,7 @@ trySplit : {auto m : Ref MD Metadata} ->
            {auto c : Ref Ctxt Defs} ->
            {auto u : Ref UST UState} ->
            {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            FC -> RawImp -> ClosedTerm -> RawImp -> Name ->
            Core (Name, List ImpClause)
 trySplit loc lhsraw lhs rhs n
@@ -143,10 +148,11 @@ generateSplits : {auto m : Ref MD Metadata} ->
                  {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  FC -> SearchOpts -> Int -> ImpClause ->
                  Core (List (Name, List ImpClause))
 generateSplits loc opts fn (ImpossibleClause fc lhs) = pure []
-generateSplits loc opts fn (WithClause fc lhs wval prf flags cs) = pure []
+generateSplits loc opts fn (WithClause fc lhs rig wval prf flags cs) = pure []
 generateSplits loc opts fn (PatClause fc lhs rhs)
     = do (lhstm, _) <-
                 elabTerm fn (InLHS linear) [] (MkNested []) []
@@ -170,6 +176,7 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  FC -> SearchOpts -> Int ->
                  List (Name, List ImpClause) ->
                  Core (Search (List ImpClause))
@@ -186,6 +193,7 @@ mutual
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto s : Ref Syn SyntaxInfo} ->
+             {auto o : Ref ROpts REPLOpts} ->
              FC -> SearchOpts -> Int -> ImpClause ->
              Core (Search (List ImpClause))
   -- If the clause works, use it. Otherwise, split on one of the splittable
@@ -205,6 +213,7 @@ makeDefFromType : {auto c : Ref Ctxt Defs} ->
                   {auto m : Ref MD Metadata} ->
                   {auto u : Ref UST UState} ->
                   {auto s : Ref Syn SyntaxInfo} ->
+                  {auto o : Ref ROpts REPLOpts} ->
                   FC ->
                   SearchOpts ->
                   Name -> -- function name to generate
@@ -240,6 +249,7 @@ makeDef : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
+          {auto o : Ref ROpts REPLOpts} ->
           (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
           Name -> Core (Search (FC, List ImpClause))
 makeDef p n
@@ -288,6 +298,7 @@ makeDefSort : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
               Nat -> (List ImpClause -> List ImpClause -> Ordering) ->
               Name -> Core (Search (FC, List ImpClause))
@@ -299,6 +310,7 @@ makeDefN : {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
            Nat -> Name -> Core (List (FC, List ImpClause))
 makeDefN p max n

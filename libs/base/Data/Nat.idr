@@ -1,6 +1,8 @@
 module Data.Nat
 
+import Data.So
 import public Control.Relation
+import public Control.Ord
 import public Control.Order
 import public Control.Function
 
@@ -60,6 +62,19 @@ pred Z     = Z
 pred (S n) = n
 
 -- Comparisons
+
+export
+compareNatDiag : (k : Nat) -> compareNat k k === EQ
+compareNatDiag Z = Refl
+compareNatDiag (S k) = compareNatDiag k
+
+export
+compareNatFlip : (m, n : Nat) ->
+  flip Prelude.compareNat m n === contra (compareNat m n)
+compareNatFlip 0      0    = Refl
+compareNatFlip 0     (S n) = Refl
+compareNatFlip (S m) 0     = Refl
+compareNatFlip (S m) (S n) = compareNatFlip m n
 
 public export
 data NotBothZero : (n, m : Nat) -> Type where
@@ -253,6 +268,13 @@ export
 ltReflectsLT : (k : Nat) -> (n : Nat) -> lt k n === True -> k `LT` n
 ltReflectsLT k n prf = lteReflectsLTE (S k) n prf
 
+public export
+ltOpReflectsLT : (m,n : Nat) -> So (m < n) -> LT m n
+ltOpReflectsLT 0     (S k) prf = LTESucc LTEZero
+ltOpReflectsLT (S k) (S j) prf = LTESucc (ltOpReflectsLT k j prf)
+ltOpReflectsLT (S k) 0     prf impossible
+ltOpReflectsLT 0 0         prf impossible
+
 export
 gtReflectsGT : (k : Nat) -> (n : Nat) -> gt k n === True -> k `GT` n
 gtReflectsGT k n prf = ltReflectsLT n k prf
@@ -334,7 +356,8 @@ export partial
 divNat : Nat -> Nat -> Nat
 divNat left (S right) = divNatNZ left (S right) SIsNonZero
 
-export partial
+export
+covering
 divCeilNZ : Nat -> (y: Nat) -> (0 _ : NonZero y) -> Nat
 divCeilNZ x y p = case (modNatNZ x y p) of
   Z   => divNatNZ x y p
@@ -365,7 +388,8 @@ Integral Nat where
   div = divNat
   mod = modNat
 
-export partial
+export
+covering
 gcd : (a: Nat) -> (b: Nat) -> {auto ok: NotBothZero a b} -> Nat
 gcd a Z     = a
 gcd Z b     = b
@@ -728,6 +752,18 @@ maximumIdempotent Z = Refl
 maximumIdempotent (S k) = cong S $ maximumIdempotent k
 
 export
+maximumLeftUpperBound : (m, n : Nat) -> m `LTE` maximum m n
+maximumLeftUpperBound 0 n = LTEZero
+maximumLeftUpperBound (S m) 0 = reflexive
+maximumLeftUpperBound (S m) (S n) = LTESucc (maximumLeftUpperBound m n)
+
+export
+maximumRightUpperBound : (m, n : Nat) -> n `LTE` maximum m n
+maximumRightUpperBound 0 n = reflexive
+maximumRightUpperBound (S m) 0 = LTEZero
+maximumRightUpperBound (S m) (S n) = LTESucc (maximumRightUpperBound m n)
+
+export
 minimumAssociative : (l, c, r : Nat) ->
   minimum l (minimum c r) = minimum (minimum l c) r
 minimumAssociative Z _ _ = Refl
@@ -786,16 +822,6 @@ sucMinR Z = Refl
 sucMinR (S l) = cong S $ sucMinR l
 
 -- Algebra -----------------------------
-
-namespace Semigroup
-
-  public export
-  [Maximum] Semigroup Nat where
-    (<+>) = max
-
-  public export
-  [Minimum] Semigroup Nat where
-    (<+>) = min
 
 namespace Monoid
 

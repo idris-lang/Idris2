@@ -430,12 +430,14 @@ concreteDets : {vars : _} ->
                Core ()
 concreteDets fc defaults env top pos dets [] = pure ()
 concreteDets {vars} fc defaults env top pos dets (arg :: args)
-    = if not (pos `elem` dets)
-         then concreteDets fc defaults env top (1 + pos) dets args
-         else do defs <- get Ctxt
-                 argnf <- evalClosure defs arg
-                 concrete defs argnf True
-                 concreteDets fc defaults env top (1 + pos) dets args
+    = do when (pos `elem` dets) $ do
+           defs <- get Ctxt
+           argnf <- evalClosure defs arg
+           logNF "auto.determining" 10
+             "Checking that the following argument is concrete"
+             env argnf
+           concrete defs argnf True
+         concreteDets fc defaults env top (1 + pos) dets args
   where
     drop : Nat -> List Nat -> List t -> List t
     drop i ns [] = []
@@ -488,8 +490,9 @@ checkConcreteDets fc defaults env top (NTCon tfc tyn t a args)
                               concreteDets fc defaults env top 0 (detArgs sd) (map snd args)
             else
               do sd <- getSearchData fc defaults tyn
-                 log "auto" 10 $ "Determining arguments for " ++ show !(toFullNames tyn)
-                              ++ " " ++ show (detArgs sd)
+                 log "auto.determining" 10 $
+                   "Determining arguments for " ++ show !(toFullNames tyn)
+                   ++ " " ++ show (detArgs sd)
                  concreteDets fc defaults env top 0 (detArgs sd) (map snd args)
 checkConcreteDets fc defaults env top _
     = pure ()
@@ -561,7 +564,7 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
                          else tryGroups (Just $ fromMaybe err merr) nty gs)
 
 -- Declared in Core.Unify as:
--- search : {vars : _} -
+-- search : {vars : _} ->
 --          {auto c : Ref Ctxt Defs} ->
 --          {auto u : Ref UST UState} ->
 --          FC -> RigCount ->
@@ -569,12 +572,10 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
 --          (defining : Name) -> (topTy : Term vars) -> Env Term vars ->
 --          Core (Term vars)
 Core.Unify.search fc rigc defaults depth def top env
-    = do defs <- get Ctxt
-         logTermNF "auto" 3 "Initial target: " env top
+    = do logTermNF "auto" 3 "Initial target: " env top
          log "auto" 3 $ "Running search with defaults " ++ show defaults
          tm <- searchType fc rigc defaults [] depth def
                           True (abstractEnvType fc env top) env
                           top
          logTermNF "auto" 3 "Result" env tm
-         defs <- get Ctxt
          pure tm

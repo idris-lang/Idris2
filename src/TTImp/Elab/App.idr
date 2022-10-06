@@ -10,6 +10,7 @@ import Core.Unify
 import Core.TT
 import Core.Value
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Check
@@ -56,10 +57,7 @@ getNameType elabMode rigc env fc x
                  log "metadata.names" 7 $ "getNameType is adding ↓"
                  addNameType fc x env bty
 
-                 when (isLinear rigb) $
-                      do est <- get EST
-                         put EST
-                            ({ linearUsed $= ((MkVar lv) :: ) } est)
+                 when (isLinear rigb) $ update EST { linearUsed $= ((MkVar lv) :: ) }
                  log "ide-mode.highlight" 8
                      $ "getNameType is trying to add Bound: "
                       ++ show x ++ " (" ++ show fc ++ ")"
@@ -167,6 +165,7 @@ mutual
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  RigCount -> RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) ->
@@ -186,9 +185,7 @@ mutual
            metaval <- metaVar fc argRig env nm metaty
            let fntm = App fc tm metaval
            fnty <- sc defs (toClosure defaultOpts env metaval)
-           when (bindingVars elabinfo) $
-                do est <- get EST
-                   put EST (addBindIfUnsolved nm argRig Implicit env metaval metaty est)
+           when (bindingVars elabinfo) $ update EST $ addBindIfUnsolved nm argRig Implicit env metaval metaty
            checkAppWith rig elabinfo nest env fc
                         fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
 
@@ -198,6 +195,7 @@ mutual
                      {auto u : Ref UST UState} ->
                      {auto e : Ref EST (EState vars)} ->
                      {auto s : Ref Syn SyntaxInfo} ->
+                     {auto o : Ref ROpts REPLOpts} ->
                      RigCount -> RigCount -> ElabInfo ->
                      NestedNames vars -> Env Term vars ->
                      FC -> (fntm : Term vars) ->
@@ -220,8 +218,7 @@ mutual
                    metaval <- metaVar fc argRig env nm metaty
                    let fntm = App fc tm metaval
                    fnty <- sc defs (toClosure defaultOpts env metaval)
-                   est <- get EST
-                   put EST (addBindIfUnsolved nm argRig AutoImplicit env metaval metaty est)
+                   update EST $ addBindIfUnsolved nm argRig AutoImplicit env metaval metaty
                    checkAppWith rig elabinfo nest env fc
                                 fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
            else do defs <- get Ctxt
@@ -254,6 +251,7 @@ mutual
                     {auto u : Ref UST UState} ->
                     {auto e : Ref EST (EState vars)} ->
                     {auto s : Ref Syn SyntaxInfo} ->
+                    {auto o : Ref ROpts REPLOpts} ->
                     RigCount -> RigCount -> ElabInfo ->
                     NestedNames vars -> Env Term vars ->
                     FC -> (fntm : Term vars) ->
@@ -277,8 +275,7 @@ mutual
                    metaval <- metaVar fc argRig env nm metaty
                    let fntm = App fc tm metaval
                    fnty <- sc defs (toClosure defaultOpts env metaval)
-                   est <- get EST
-                   put EST (addBindIfUnsolved nm argRig AutoImplicit env metaval metaty est)
+                   update EST $ addBindIfUnsolved nm argRig AutoImplicit env metaval metaty
                    checkAppWith rig elabinfo nest env fc
                                 fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
            else do defs <- get Ctxt
@@ -365,7 +362,12 @@ mutual
             -- if the argument type aty has a single constructor, there's no need
             -- to dot it
             defs <- get Ctxt
-            mconsCount <- countConstructors !(evalClosure defs argty)
+            nfargty <- evalClosure defs argty
+            mconsCount <- countConstructors nfargty
+            logNF "elab.app.dot" 50
+              "Found \{show mconsCount} constructors for type"
+              (mkEnv emptyFC vars)
+              nfargty
             if mconsCount == Just 1 || mconsCount == Just 0
               then pure tm
               else
@@ -378,6 +380,8 @@ mutual
                       else pure $ dotTerm tm
           else pure tm
     where
+      -- TODO: this seems too conservative. If we get back an expression stuck on a
+      -- meta, shouldn't we delay the check instead of declaring the tm dotted?
       ||| Count the constructors of a fully applied concrete datatype
       countConstructors : NF vars -> Core (Maybe Nat)
       countConstructors (NTCon _ tycName _ n args) =
@@ -415,6 +419,7 @@ mutual
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  RigCount -> RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) -> Name ->
@@ -513,11 +518,10 @@ mutual
                               ignore $ updateSolution env metaval argv
                               pure tm
                       else pure tm
-             case elabMode elabinfo of
-                  InLHS _ => -- reset hole and redo it with the unexpanded definition
-                     do updateDef (Resolved idx) (const (Just (Hole 0 (holeInit False))))
-                        ignore $ solveIfUndefined env metaval argv
-                  _ => pure ()
+             when (onLHS $ elabMode elabinfo) $
+                 -- reset hole and redo it with the unexpanded definition
+                 do updateDef (Resolved idx) (const (Just (Hole 0 (holeInit False))))
+                    ignore $ solveIfUndefined env metaval argv
              removeHole idx
              pure (tm, gty)
 
@@ -575,6 +579,7 @@ mutual
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) -> (fnty : NF vars) ->
@@ -743,6 +748,7 @@ mutual
                  {auto u : Ref UST UState} ->
                  {auto e : Ref EST (EState vars)} ->
                  {auto s : Ref Syn SyntaxInfo} ->
+                 {auto o : Ref ROpts REPLOpts} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) -> (fnty : NF vars) ->
@@ -778,6 +784,7 @@ checkApp : {vars : _} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
            {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars ->
            FC -> (fn : RawImp) ->
@@ -829,9 +836,7 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
     normalisePrims prims env res
         = do tm <- Normalise.normalisePrims (`boundSafe` elabMode elabinfo)
                                             isIPrimVal
-                                            (case elabMode elabinfo of
-                                                  InLHS _ => True
-                                                  _ => False)
+                                            (onLHS (elabMode elabinfo))
                                             prims n expargs (fst res) env
              pure (fromMaybe (fst res) tm, snd res)
 
@@ -839,11 +844,12 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
 
         boundSafe : Constant -> ElabMode -> Bool
         boundSafe _ (InLHS _) = True -- always need to expand on LHS
-        boundSafe (BI x) _ = abs x < 100 -- only do this for relatively small bounds.
-                           -- Once it gets too big, we might be making the term
-                           -- bigger than it would have been without evaluating!
+        -- only do this for relatively small bounds.
+        -- Once it gets too big, we might be making the term
+        -- bigger than it would have been without evaluating!
+        boundSafe (BI x) _ = abs x < 100
+        boundSafe (Str str) _ = length str < 10
         boundSafe _ _ = True
-
 
     updateElabInfo : List Name -> ElabMode -> Name ->
                      List RawImp -> ElabInfo -> Core ElabInfo

@@ -110,3 +110,27 @@ groupWith f = Libraries.Data.List.Extra.groupBy (\x,y => f x == f y)
 export
 groupAllWith : Ord b => (a -> b) -> List a -> List (List1 a)
 groupAllWith f = Libraries.Data.List.Extra.groupWith f . sortBy (comparing f)
+
+
+||| TODO: use the version in `Data.List` in base after the next release.
+public export
+prefixOfBy : (match : a -> b -> Maybe m) ->
+             (left : List a) -> (right : List b) ->
+             Maybe (List m, List b)
+prefixOfBy p = go [<] where
+  chips : forall a. SnocList a -> List a -> List a
+  chips [<] xs = xs
+  chips (xz :< x) xs = chips xz (x :: xs)
+  go : SnocList m -> List a -> List b -> Maybe (List m, List b)
+  go sm [] bs = pure (chips sm [], bs)
+  go sm as [] = Nothing
+  go sm (a :: as) (b :: bs) = go (sm :< !(p a b)) as bs
+
+||| TODO: use the version in `Data.List` in base after the next release.
+public export
+suffixOfBy : (match : a -> b -> Maybe m) ->
+             (left : List a) -> (right : List b) ->
+             Maybe (List b, List m)
+suffixOfBy match left right
+  = do (ms, bs) <- Extra.prefixOfBy match (reverse left) (reverse right)
+       pure (reverse bs, reverse ms)

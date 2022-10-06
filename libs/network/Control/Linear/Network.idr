@@ -20,6 +20,7 @@ data Action : SocketState -> Type where
   Bind    : Action Ready
   Listen  : Action Bound
   Accept  : Action Listening
+  Connect : Action Ready
   Send    : Action Open
   Receive : Action Open
   Close   : Action st
@@ -38,6 +39,7 @@ Next : (action : Action st)
 Next Bind    True  = Socket Bound
 Next Listen  True  = Socket Listening
 Next Accept  True  = LPair (Socket Listening) (Socket Open)
+Next Connect True  = Socket Open
 Next Send    True  = Socket Open
 Next Receive True  = Socket Open
 Next Close   True  = Socket Closed
@@ -83,13 +85,12 @@ bind (MkSocket sock) addr port
 
 export
 connect : LinearIO io =>
-          (sock : Socket) ->
+          (1 sock : Socket Ready) ->
           (addr : SocketAddress) ->
           (port : Port) ->
           L1 io (Res (Maybe SocketError)
-            (\case Nothing => Socket Ready
-                   Just _  => Socket Closed))
-connect sock addr port
+            (\res => Next Connect (isNothing res)))
+connect (MkSocket sock) addr port
     = do code <- Socket.connect sock addr port
          case code of
            0 =>
@@ -150,5 +151,37 @@ recvAll : LinearIO io =>
             (\res => Next Receive (isRight res)))
 recvAll (MkSocket sock)
     = do Right msg <- Socket.recvAll sock
+             | Left err => pure1 (Left err # MkSocket sock)
+         pure1 (Right msg # MkSocket sock)
+
+export
+sendBytes : LinearIO io =>
+            (1 sock : Socket Open) ->
+            (msg : List Bits8) ->
+            L1 io (Res (Maybe SocketError)
+              (\res => Next Send (isNothing res)))
+sendBytes (MkSocket sock) msg
+    = do Right c <- Socket.sendBytes sock msg
+             | Left err => pure1 (Just err # MkSocket sock)
+         pure1 (Nothing # MkSocket sock)
+
+export
+recvBytes : LinearIO io =>
+            (1 sock : Socket Open) ->
+            (len : ByteLength) ->
+            L1 io (Res (Either SocketError (List Bits8))
+              (\res => Next Receive (isRight res)))
+recvBytes (MkSocket sock) len
+    = do Right msg <- Socket.recvBytes sock len
+             | Left err => pure1 (Left err # MkSocket sock)
+         pure1 (Right msg # MkSocket sock)
+
+export
+recvAllBytes : LinearIO io =>
+              (1 sock : Socket Open) ->
+              L1 io (Res (Either SocketError (List Bits8))
+                (\res => Next Receive (isRight res)))
+recvAllBytes (MkSocket sock)
+    = do Right msg <- Socket.recvAllBytes sock
              | Left err => pure1 (Left err # MkSocket sock)
          pure1 (Right msg # MkSocket sock)

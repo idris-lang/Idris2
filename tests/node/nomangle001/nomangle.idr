@@ -1,9 +1,8 @@
-
-%nomangle
+%nomangle "javascript:foo"
 foo : Int -> Int
 foo x = x
 
-%nomangle "$_baz"
+%nomangle "node:$_baz"
 baz : Int -> Int
 baz x = x
 

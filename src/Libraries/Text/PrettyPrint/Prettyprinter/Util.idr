@@ -9,7 +9,7 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 ||| Split an input into word-sized `Doc`.
 export
 words : String -> List (Doc ann)
-words s = map pretty $ map pack (helper (unpack s))
+words s = map pretty0 $ map pack (helper (unpack s))
   where
     helper : List Char -> List (List Char)
     helper s =

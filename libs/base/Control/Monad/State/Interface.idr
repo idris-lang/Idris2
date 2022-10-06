@@ -10,7 +10,7 @@ import Control.Monad.Writer.CPS
 
 %default total
 
-||| A computation which runs in a context and produces an output
+||| A monadic computation that has access to state.
 public export
 interface Monad m => MonadState stateType m | m where
     ||| Get the context

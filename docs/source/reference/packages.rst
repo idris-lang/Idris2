@@ -25,7 +25,7 @@ of modules to be installed. For example, a library ``test`` which has two module
 ``Foo.idr`` and ``Bar.idr`` as source files would be written as follows::
 
     package test
-    version = 0.1
+    version = 0.0.1
 
     modules = Foo, Bar
 
@@ -44,8 +44,11 @@ The added fields are:
 + ``brief = "<text>"``, a string literal containing a brief description
   of the package.
 
-+ ``version = <version number>``, a version number, which must be in the form
-  of integers separated by dots (e.g. ``1.0``, ``0.3.0``, ``3.1.4.1.5`` etc)
++ ``version = <version number>``, a semantic version number, which must be in the form
+  of integers separated by dots (e.g. ``1.0.0``, ``0.3.0``, ``3.1.4`` etc)
+
++ ``langversion <version constraints>``, see ``depends`` below for a list of allowable
+  constraints. For example, ``langversion >= 0.5.1 && < 1.0.0``
 
 + ``readme = "<file>"``, location of the README file.
 
@@ -123,7 +126,7 @@ Given an Idris package file ``test.ipkg`` it can be used with the Idris compiler
 + ``idris2 --build test.ipkg`` will build all modules in the package
 
 + ``idris2 --install test.ipkg`` will install the package to the global
-  Idris library directory (that is ``$PREFIX/idris-<version>/``),
+  Idris library directory (that is ``$IDRIS2_PREFIX/idris-<version>/``),
   making the modules in its ``modules`` field accessible by other Idris
   libraries and programs. Note that this doesn't install any executables, just
   library modules.
@@ -145,7 +148,7 @@ Where does Idris look for packages?
 Compiled packages are directories with compiled TTC files (see :ref:`build-artefacts` section).
 Directory structure of the source `*.idr` files is preserved for TTC files.
 
-Compiled packages can be installed globally (under ``$PREFIX/idris-<version>/`` as
+Compiled packages can be installed globally (under ``$IDRIS2_PREFIX/idris-<version>/`` as
 described above) or locally (under a ``depends`` subdirectory in the top level
 working directory of a project).
 Packages specified using ``-p pkgname`` or with the ``depends`` field of a
@@ -154,7 +157,7 @@ package will then be located as follows:
 * First, Idris looks in ``depends/pkgname-<version>``, for a package which
   satisfies the version constraint.
 * If no package is found locally, Idris looks in
-  ``$PREFIX/idris-<version>/pkgname-<version>``.
+  ``$IDRIS2_PREFIX/idris-<version>/pkgname-<version>``.
 
 In each case, if more than one version satisfies the constraint, it will choose
 the one with the highest version number.

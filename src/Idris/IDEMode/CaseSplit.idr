@@ -25,15 +25,9 @@ import Data.List1
 import Data.List.Views
 import Data.SnocList
 import Libraries.Data.List.Extra
-import Libraries.Data.String.Extra
 import Data.String
 import System.File
 import Data.Fin
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
 
 %default covering
 
@@ -79,6 +73,14 @@ doUpdates : {auto s : Ref Syn SyntaxInfo} ->
             Defs -> Updates -> List SourcePart ->
             Core (List SourcePart)
 doUpdates defs ups [] = pure []   -- no more tokens to update, so we are done
+-- if we have a name that acts as an as-pattern then do not update it
+doUpdates defs ups (Name n :: AsPattern :: xs)
+    = pure $ Name n :: AsPattern :: !(doUpdates defs ups xs)
+-- if we have an `@{` that was not handled as a named pattern, it should not
+-- result in named expansion (i.e. `@{n = ...}`) because that is not syntactically
+-- valid. This clause allows us to treat `@{n}` just like `n` (no braces).
+doUpdates defs ups (AsPattern :: LBrace :: xs)
+    = pure $ AsPattern :: LBrace :: !(doUpdates defs ups xs)
 -- if we have an LBrace (i.e. `{`), handle its contents
 doUpdates defs ups (LBrace :: xs)
     -- the cases we care about are easy to detect w/o whitespace, so separate it
@@ -110,9 +112,6 @@ doUpdates defs ups (LBrace :: xs)
                              )
           -- not a special case: proceed as normal
           _ => pure (LBrace :: [] ++ !(doUpdates defs ups xs))
--- if we have a name that acts as an as-pattern then do not update it
-doUpdates defs ups (Name n :: AsPattern :: xs)
-    = pure $ Name n :: AsPattern :: !(doUpdates defs ups xs)
 -- if we have a name, look up if it's a name we're updating. If it isn't, keep
 -- the old name, otherwise update the name, i.e. replace with the new name
 doUpdates defs ups (Name n :: xs)
@@ -238,7 +237,7 @@ parenTrim = Idris.IDEMode.CaseSplit.rtrim . fastPack . dropLast . fastUnpack
 ||| just after the `of`.
 onelineIndent : Nat -> String -> String
 onelineIndent indentation
-  = (Data.String.indent indentation) . fastPack . (drop indentation) . fastUnpack
+  = (indent indentation) . fastPack . (drop indentation) . fastUnpack
 
 ||| An unbracketed, oneline `case` block just needs to have the last updates
 ||| indented to lign up with the statement after the `of`.
@@ -296,7 +295,7 @@ updateCase splits line col
               Just f =>
                 do Right file <- coreLift $ readFile f
                        | Left err => throw (FileErr f err)
-                   let thisline = elemAt (forget $ lines file) (integerToNat (cast line))
+                   let thisline = elemAt (lines file) (integerToNat (cast line))
                    case thisline of
                         Nothing => throw (InternalError "File too short!")
                         Just l =>

@@ -1,0 +1,1 @@
+$1 --build test.ipkg --log package.depends:10

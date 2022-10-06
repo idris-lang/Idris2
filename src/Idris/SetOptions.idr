@@ -28,8 +28,6 @@ import System.Directory
 
 %default covering
 
-%hide Libraries.Data.String.Extra.unlines
-
 ||| Dissected information about a package directory
 record PkgDir where
   constructor MkPkgDir
@@ -92,37 +90,59 @@ localPackageDir
          let depends = depends_dir (dirs (options defs))
          pure $ srcdir </> depends
 
+||| Find all package directories (plus version) matching
+||| the given package name and version bounds. Results
+||| will be sorted with the latest package version first.
+export
+findPkgDirs :
+    Ref Ctxt Defs =>
+    String ->
+    PkgVersionBounds ->
+    Core (List (String, Maybe PkgVersion))
+findPkgDirs p bounds = do
+  defs <- get Ctxt
+  globaldir <- globalPackageDir
+  localdir <- localPackageDir
+
+  -- Get candidate directories from the global install location,
+  -- and the local package directory
+  locFiles <- coreLift $ candidateDirs localdir p bounds
+  globFiles <- coreLift $ candidateDirs globaldir p bounds
+  -- Look in all the package paths too
+  let pkgdirs = (options defs).dirs.package_dirs
+  pkgFiles <- coreLift $ traverse (\d => candidateDirs d p bounds) pkgdirs
+
+  -- If there's anything locally, use that and ignore the global ones
+  let allFiles = if isNil locFiles
+                    then globFiles ++ concat pkgFiles
+                    else locFiles
+  -- Sort in reverse order of version number
+  pure $ sortBy (\x, y => compare (snd y) (snd x)) allFiles
+
+export
+findPkgDir :
+    Ref Ctxt Defs =>
+    String ->
+    PkgVersionBounds ->
+    Core (Maybe String)
+findPkgDir p bounds = do
+  defs <- get Ctxt
+  [] <- findPkgDirs p bounds | ((p,_) :: _) => pure (Just p)
+
+  -- From what remains, pick the one with the highest version number.
+  -- If there's none, report it
+  -- (TODO: Can't do this quite yet due to idris2 build system...)
+  if defs.options.session.ignoreMissingPkg
+     then pure Nothing
+     else throw (CantFindPackage (p ++ " (" ++ show bounds ++ ")"))
+
 export
 addPkgDir : {auto c : Ref Ctxt Defs} ->
             String -> PkgVersionBounds -> Core ()
-addPkgDir p bounds
-    = do defs <- get Ctxt
-         globaldir <- globalPackageDir
-         localdir <- localPackageDir
-
-         -- Get candidate directories from the global install location,
-         -- and the local package directory
-         locFiles <- coreLift $ candidateDirs localdir p bounds
-         globFiles <- coreLift $ candidateDirs globaldir p bounds
-         -- Look in all the package paths too
-         let pkgdirs = (options defs).dirs.package_dirs
-         pkgFiles <- coreLift $ traverse (\d => candidateDirs d p bounds) pkgdirs
-
-         -- If there's anything locally, use that and ignore the global ones
-         let allFiles = if isNil locFiles
-                           then globFiles ++ concat pkgFiles
-                           else locFiles
-         -- Sort in reverse order of version number
-         let sorted = sortBy (\x, y => compare (snd y) (snd x)) allFiles
-
-         -- From what remains, pick the one with the highest version number.
-         -- If there's none, report it
-         -- (TODO: Can't do this quite yet due to idris2 build system...)
-         case sorted of
-              [] => if defs.options.session.ignoreMissingPkg
-                       then pure ()
-                       else throw (CantFindPackage (p ++ " (" ++ show bounds ++ ")"))
-              ((p, _) :: ps) => addExtraDir p
+addPkgDir p bounds = do
+    Just p <- findPkgDir p bounds
+        | Nothing => pure ()
+    addExtraDir p
 
 visiblePackages : String -> IO (List PkgDir)
 visiblePackages dir = filter viable <$> getPackageDirs dir
@@ -130,7 +150,7 @@ visiblePackages dir = filter viable <$> getPackageDirs dir
         notHidden = not . isPrefixOf "." . pkgName
 
         notDenylisted : PkgDir -> Bool
-        notDenylisted = not . flip elem ["include", "lib", "support", "refc"] . pkgName
+        notDenylisted = not . flip elem (the (List String) ["include", "lib", "support", "refc"]) . pkgName
 
         viable : PkgDir -> Bool
         viable p = notHidden p && notDenylisted p
@@ -155,7 +175,7 @@ listPackages
          traverse_ (iputStrLn . pkgDesc) pkgs
   where
     pkgDesc : PkgDir -> Doc IdrisAnn
-    pkgDesc (MkPkgDir _ pkgName version) = pretty pkgName <++> parens (pretty version)
+    pkgDesc (MkPkgDir _ pkgName version) = pretty0 pkgName <++> parens (byShow version)
 
 dirOption : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
@@ -164,7 +184,7 @@ dirOption dirs LibDir
     = coreLift $ putStrLn
          (prefix_dir dirs </> "idris2-" ++ showVersion False version)
 dirOption dirs BlodwenPaths
-    = iputStrLn $ pretty (toString dirs)
+    = iputStrLn $ pretty0 (toString dirs)
 dirOption dirs Prefix
     = coreLift $ putStrLn (prefix_dir dirs)
 
@@ -349,8 +369,8 @@ preOptions (Directory d :: opts)
 preOptions (ListPackages :: opts)
     = do listPackages
          pure False
-preOptions (Timing :: opts)
-    = do setLogTimings True
+preOptions (Timing tm :: opts)
+    = do setLogTimings (fromMaybe 10 tm)
          preOptions opts
 preOptions (DebugElabCheck :: opts)
     = do setDebugElabCheck True
@@ -386,6 +406,14 @@ preOptions (Logging n :: opts)
          preOptions opts
 preOptions (ConsoleWidth n :: opts)
     = do setConsoleWidth n
+         preOptions opts
+preOptions (ShowMachineNames :: opts)
+    = do pp <- getPPrint
+         setPPrint ({ showMachineNames := True } pp)
+         preOptions opts
+preOptions (ShowNamespaces :: opts)
+    = do pp <- getPPrint
+         setPPrint ({ fullNamespace := True } pp)
          preOptions opts
 preOptions (Color b :: opts)
     = do setColor b

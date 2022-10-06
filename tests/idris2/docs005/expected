@@ -1,0 +1,16 @@
+Main> Imported module Data.Vect.AtIndex
+Main> Indexing Vectors.
+
+`Elem` proofs give existential quantification that a given element
+*is* in the list, but not where in the list it is!  Here we give a
+predicate that presents proof that a given index of a vector,
+given by a `Fin` instance, will return a certain element.
+
+Two decidable decision procedures are presented:
+
+1. Check that a given index points to the provided element in the
+   presented vector.
+
+2. Find the element at the given index in the presented vector.
+Main> 
+Bye for now!

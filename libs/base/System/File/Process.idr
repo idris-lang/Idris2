@@ -8,9 +8,9 @@ import public System.File.Types
 
 %foreign "C:fflush,libc 6"
 prim__flush : FilePtr -> PrimIO Int
-%foreign support "idris2_popen"
+%foreign supportC "idris2_popen"
 prim__popen : String -> String -> PrimIO FilePtr
-%foreign support "idris2_pclose"
+%foreign supportC "idris2_pclose"
 prim__pclose : FilePtr -> PrimIO Int
 
 ||| Force a write of all user-space buffered data for the given `File`.

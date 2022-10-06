@@ -1,5 +1,7 @@
 module Data.These
 
+import Control.Function
+
 %default total
 
 public export
@@ -33,11 +35,38 @@ swap (This a)   = That a
 swap (That b)   = This b
 swap (Both a b) = Both b a
 
+export
+Injective This where
+  injective Refl = Refl
+
+export
+Injective That where
+  injective Refl = Refl
+
+export
+{x : _} -> Injective (Both x) where
+  injective Refl = Refl
+
+export
+{y : _} -> Injective (`Both` y) where
+  injective Refl = Refl
+
+export
+Biinjective Both where
+  biinjective Refl = (Refl, Refl)
+
 public export
 (Show a, Show b) => Show (These a b) where
   showPrec d (This x)   = showCon d "This" $ showArg x
   showPrec d (That x)   = showCon d "That" $ showArg x
   showPrec d (Both x y) = showCon d "Both" $ showArg x ++ showArg y
+
+public export
+Eq a => Eq b => Eq (These a b) where
+  This x   == This x'    = x == x'
+  That x   == That x'    = x == x'
+  Both x y == Both x' y' = x == x' && y == y'
+  _ == _ = False
 
 %inline
 public export

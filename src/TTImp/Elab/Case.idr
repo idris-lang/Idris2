@@ -11,6 +11,7 @@ import Core.TT
 import Core.Value
 
 import Idris.Syntax
+import Idris.REPL.Opts
 
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
@@ -159,6 +160,7 @@ caseBlock : {vars : _} ->
             {auto u : Ref UST UState} ->
             {auto e : Ref EST (EState vars)} ->
             {auto s : Ref Syn SyntaxInfo} ->
+            {auto o : Ref ROpts REPLOpts} ->
             RigCount ->
             ElabInfo -> FC ->
             NestedNames vars ->
@@ -360,11 +362,11 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
                         (bindCaseLocals loc' (map getNestData (names nest))
                                         ns rhs)
     -- With isn't allowed in a case block but include for completeness
-    updateClause casen splitOn nest env (WithClause loc' lhs wval prf flags cs)
+    updateClause casen splitOn nest env (WithClause loc' lhs rig wval prf flags cs)
         = let (_, args) = addEnv 0 env (usedIn lhs)
               args' = mkSplit splitOn lhs args
               lhs' = apply (IVar loc' casen) args' in
-              WithClause loc' (applyNested nest lhs') wval prf flags cs
+              WithClause loc' (applyNested nest lhs') rig wval prf flags cs
     updateClause casen splitOn nest env (ImpossibleClause loc' lhs)
         = let (_, args) = addEnv 0 env (usedIn lhs)
               args' = mkSplit splitOn lhs args
@@ -379,6 +381,7 @@ checkCase : {vars : _} ->
             {auto u : Ref UST UState} ->
             {auto e : Ref EST (EState vars)} ->
             {auto s : Ref Syn SyntaxInfo} ->
+            {auto o : Ref ROpts REPLOpts} ->
             RigCount -> ElabInfo ->
             NestedNames vars -> Env Term vars ->
             FC -> (scr : RawImp) -> (ty : RawImp) -> List ImpClause ->

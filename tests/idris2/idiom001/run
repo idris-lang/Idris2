@@ -1,0 +1,4 @@
+rm -rf build
+
+$1 --no-color --console-width 0 --no-banner Main.idr < input
+

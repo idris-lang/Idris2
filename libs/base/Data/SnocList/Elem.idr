@@ -32,11 +32,9 @@ Injective (There {x} {y} {sx}) where
 export
 DecEq (x `Elem` sx) where
   decEq Here Here = Yes Refl
+  decEq (There y) (There z) = decEqCong $ decEq y z
   decEq Here (There _) = No absurd
   decEq (There _) Here = No absurd
-  decEq (There y) (There z) with (decEq y z)
-    decEq (There y) (There y) | Yes Refl = Yes Refl
-    decEq (There y) (There z) | No neq = No $ neq . injective
 
 ||| Remove the element at the given position.
 public export

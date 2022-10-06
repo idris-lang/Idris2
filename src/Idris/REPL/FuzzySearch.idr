@@ -14,7 +14,9 @@ import public Idris.REPL.Common
 
 import Data.List
 import Data.Maybe
+import Data.String
 import Libraries.Data.List.Extra
+import Libraries.Data.String.Extra
 
 %default covering
 
@@ -28,17 +30,17 @@ fuzzySearch : {auto c : Ref Ctxt Defs}
            -> Core REPLResult
 fuzzySearch expr = do
   let Just (neg, pos) = parseExpr expr
-    | _ => pure (REPLError (pretty "Bad expression, expected"
-                       <++> code (pretty "B")
-                       <++> pretty "or"
-                       <++> code (pretty "_ -> B")
-                       <++> pretty "or"
-                       <++> code (pretty "A -> B")
-                       <+> pretty ", where"
-                       <++> code (pretty "A")
-                       <++> pretty "and"
-                       <++> code (pretty "B")
-                       <++> pretty "are spines of global names"))
+    | _ => pure (REPLError ("Bad expression, expected"
+                       <++> code "B"
+                       <++> "or"
+                       <++> code "_ -> B"
+                       <++> "or"
+                       <++> code "A -> B"
+                       <+> ", where"
+                       <++> code "A"
+                       <++> "and"
+                       <++> code "B"
+                       <++> "are spines of global names"))
   defs <- branch
   let curr = currentNS defs
   let ctxt = gamma defs
@@ -51,51 +53,24 @@ fuzzySearch expr = do
                          guard (isJust $ userNameRoot (fullname d))
                          pure d
        allDefs <- traverse (resolved ctxt) defs
-       filterM (\def => fuzzyMatch neg pos def.type) allDefs
+       filterM (predicate neg pos) allDefs
   put Ctxt defs
   doc <- traverse (docsOrSignature EmptyFC) $ fullname <$> filteredDefs
   pure $ PrintedDoc $ vsep doc
  where
 
   data NameOrConst = AName Name
-                   | AInt
-                   | AInteger
-                   | ABits8
-                   | ABits16
-                   | ABits32
-                   | ABits64
-                   | AString
-                   | AChar
-                   | ADouble
-                   | AWorld
+                   | APrimType PrimType
                    | AType
 
   eqConst : (x, y : NameOrConst) -> Bool
-  eqConst AInt     AInt     = True
-  eqConst AInteger AInteger = True
-  eqConst ABits8   ABits8   = True
-  eqConst ABits16  ABits16  = True
-  eqConst ABits32  ABits32  = True
-  eqConst ABits64  ABits64  = True
-  eqConst AString  AString  = True
-  eqConst AChar    AChar    = True
-  eqConst ADouble  ADouble  = True
-  eqConst AWorld   AWorld   = True
-  eqConst AType    AType    = True
-  eqConst _        _        = False
+  eqConst (APrimType x) (APrimType y) = x == y
+  eqConst AType         AType         = True
+  eqConst _             _             = False -- names equality is irrelevant
 
   parseNameOrConst : PTerm -> Maybe NameOrConst
   parseNameOrConst (PRef _ n)               = Just (AName n)
-  parseNameOrConst (PPrimVal _ IntType)     = Just AInt
-  parseNameOrConst (PPrimVal _ IntegerType) = Just AInteger
-  parseNameOrConst (PPrimVal _ Bits8Type)   = Just ABits8
-  parseNameOrConst (PPrimVal _ Bits16Type)  = Just ABits16
-  parseNameOrConst (PPrimVal _ Bits32Type)  = Just ABits32
-  parseNameOrConst (PPrimVal _ Bits64Type)  = Just ABits64
-  parseNameOrConst (PPrimVal _ StringType)  = Just AString
-  parseNameOrConst (PPrimVal _ CharType)    = Just AChar
-  parseNameOrConst (PPrimVal _ DoubleType)  = Just ADouble
-  parseNameOrConst (PPrimVal _ WorldType)   = Just AWorld
+  parseNameOrConst (PPrimVal _ $ PrT t)     = Just (APrimType t)
   parseNameOrConst (PType _)                = Just AType
   parseNameOrConst _                        = Nothing
 
@@ -178,3 +153,11 @@ fuzzySearch expr = do
     let refsB = doFind [] tm
     refsB <- traverse toFullNames' refsB
     pure (isNil $ diffBy isApproximationOf' pos refsB)
+
+  predicate :  (neg : List NameOrConst)
+            -> (pos : List NameOrConst)
+            -> GlobalDef
+            -> Core Bool
+  predicate neg pos def = case definition def of
+    Hole{} => pure False
+    _ => fuzzyMatch neg pos def.type

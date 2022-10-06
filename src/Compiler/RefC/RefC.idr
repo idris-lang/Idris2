@@ -11,6 +11,8 @@ import Core.Context
 import Core.Context.Log
 import Core.Directory
 
+import Idris.Syntax
+
 import Data.List
 import Libraries.Data.DList
 import Data.Nat
@@ -26,29 +28,38 @@ import Libraries.Utils.Path
 %default covering
 
 showcCleanStringChar : Char -> String -> String
-showcCleanStringChar '+' = ("_plus" ++)
-showcCleanStringChar '-' = ("__" ++)
-showcCleanStringChar '*' = ("_star" ++)
-showcCleanStringChar '/' = ("_slash" ++)
-showcCleanStringChar '\\' = ("_backslash" ++)
-showcCleanStringChar '<' = ("_lt" ++)
-showcCleanStringChar '>' = ("_gt" ++)
-showcCleanStringChar '=' = ("_eq" ++)
-showcCleanStringChar '&' = ("_and" ++)
-showcCleanStringChar '|' = ("_or" ++)
-showcCleanStringChar '\'' = ("_tick" ++)
+showcCleanStringChar ' ' = ("_" ++)
+showcCleanStringChar '!' = ("_bang" ++)
 showcCleanStringChar '"' = ("_quotation" ++)
+showcCleanStringChar '#' = ("_number" ++)
+showcCleanStringChar '$' = ("_dollar" ++)
+showcCleanStringChar '%' = ("_percent" ++)
+showcCleanStringChar '&' = ("_and" ++)
+showcCleanStringChar '\'' = ("_tick" ++)
 showcCleanStringChar '(' = ("_parenOpen" ++)
 showcCleanStringChar ')' = ("_parenClose" ++)
-showcCleanStringChar '{' = ("_braceOpen" ++)
-showcCleanStringChar '}' = ("_braceClose" ++)
-showcCleanStringChar ' ' = ("_" ++)
-showcCleanStringChar ':' = ("_colon" ++)
-showcCleanStringChar '.' = ("_dot" ++)
-showcCleanStringChar '$' = ("_dollar" ++)
+showcCleanStringChar '*' = ("_star" ++)
+showcCleanStringChar '+' = ("_plus" ++)
 showcCleanStringChar ',' = ("_comma" ++)
-showcCleanStringChar '#' = ("_number" ++)
-showcCleanStringChar '%' = ("_percent" ++)
+showcCleanStringChar '-' = ("__" ++)
+showcCleanStringChar '.' = ("_dot" ++)
+showcCleanStringChar '/' = ("_slash" ++)
+showcCleanStringChar ':' = ("_colon" ++)
+showcCleanStringChar ';' = ("_semicolon" ++)
+showcCleanStringChar '<' = ("_lt" ++)
+showcCleanStringChar '=' = ("_eq" ++)
+showcCleanStringChar '>' = ("_gt" ++)
+showcCleanStringChar '?' = ("_question" ++)
+showcCleanStringChar '@' = ("_at" ++)
+showcCleanStringChar '[' = ("_bracketOpen" ++)
+showcCleanStringChar '\\' = ("_backslash" ++)
+showcCleanStringChar ']' = ("_bracketClose" ++)
+showcCleanStringChar '^' = ("_hat" ++)
+showcCleanStringChar '_' = ("_" ++)
+showcCleanStringChar '`' = ("_backquote" ++)
+showcCleanStringChar '{' = ("_braceOpen" ++)
+showcCleanStringChar '|' = ("_or" ++)
+showcCleanStringChar '}' = ("_braceClose" ++)
 showcCleanStringChar '~' = ("_tilde" ++)
 showcCleanStringChar c
    = if c < chr 32 || c > chr 126
@@ -113,6 +124,22 @@ showInt64Min x = if x == -9223372036854775808
     then "INT64_MIN"
     else "INT64_C("++ show x ++")"
 
+cPrimType : PrimType -> String
+cPrimType IntType = "Int64"
+cPrimType Int8Type = "Int8"
+cPrimType Int16Type = "Int16"
+cPrimType Int32Type = "Int32"
+cPrimType Int64Type = "Int64"
+cPrimType IntegerType = "Integer"
+cPrimType Bits8Type = "Bits8"
+cPrimType Bits16Type = "Bits16"
+cPrimType Bits32Type = "Bits32"
+cPrimType Bits64Type = "Bits64"
+cPrimType StringType = "string"
+cPrimType CharType = "char"
+cPrimType DoubleType = "double"
+cPrimType WorldType = "f32"
+
 cConstant : Constant -> String
 cConstant (I x) = "(Value*)makeInt64("++ showIntMin x ++")"
 cConstant (I8 x) = "(Value*)makeInt8(INT8_C("++ show x ++"))"
@@ -120,28 +147,15 @@ cConstant (I16 x) = "(Value*)makeInt16(INT16_C("++ show x ++"))"
 cConstant (I32 x) = "(Value*)makeInt32(INT32_C("++ show x ++"))"
 cConstant (I64 x) = "(Value*)makeInt64("++ showInt64Min x ++")"
 cConstant (BI x) = "(Value*)makeIntegerLiteral(\""++ show x ++"\")"
-cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
-cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
-cConstant (Str x) = "(Value*)makeString("++ cStringQuoted x ++")"
-cConstant WorldVal = "(Value*)makeWorld()"
-cConstant IntType = "Int64"
-cConstant Int8Type = "Int8"
-cConstant Int16Type = "Int16"
-cConstant Int32Type = "Int32"
-cConstant Int64Type = "Int64"
-cConstant IntegerType = "Integer"
-cConstant StringType = "string"
-cConstant CharType = "char"
-cConstant DoubleType = "double"
-cConstant WorldType = "f32"
 cConstant (B8 x)   = "(Value*)makeBits8(UINT8_C("++ show x ++"))"
 cConstant (B16 x)  = "(Value*)makeBits16(UINT16_C("++ show x ++"))"
 cConstant (B32 x)  = "(Value*)makeBits32(UINT32_C("++ show x ++"))"
 cConstant (B64 x)  = "(Value*)makeBits64(UINT64_C("++ show x ++"))"
-cConstant Bits8Type = "Bits8"
-cConstant Bits16Type = "Bits16"
-cConstant Bits32Type = "Bits32"
-cConstant Bits64Type = "Bits64"
+cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
+cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
+cConstant (Str x) = "(Value*)makeString("++ cStringQuoted x ++")"
+cConstant (PrT t) = cPrimType t
+cConstant WorldVal = "(Value*)makeWorld()"
 
 extractConstant : Constant -> String
 extractConstant (I x) = show x
@@ -167,12 +181,12 @@ plainOp op args = op ++ "(" ++ (showSep ", " args) ++ ")"
 
 ||| Generate scheme for a primitive function.
 cOp : {0 arity : Nat} -> PrimFn arity -> Vect arity String -> String
-cOp (Neg ty)      [x]       = "negate_"  ++  cConstant ty ++ "(" ++ x ++ ")"
+cOp (Neg ty)      [x]       = "negate_"  ++  cPrimType ty ++ "(" ++ x ++ ")"
 cOp StrLength     [x]       = "stringLength(" ++ x ++ ")"
 cOp StrHead       [x]       = "head(" ++ x ++ ")"
 cOp StrTail       [x]       = "tail(" ++ x ++ ")"
 cOp StrReverse    [x]       = "reverse(" ++ x ++ ")"
-cOp (Cast i o)    [x]       = "cast_" ++ (cConstant i) ++ "_to_" ++ (cConstant o) ++ "(" ++ x ++ ")"
+cOp (Cast i o)    [x]       = "cast_" ++ (cPrimType i) ++ "_to_" ++ (cPrimType o) ++ "(" ++ x ++ ")"
 cOp DoubleExp     [x]       = "(Value*)makeDouble(exp(unpackDouble(" ++ x ++ ")))"
 cOp DoubleLog     [x]       = "(Value*)makeDouble(log(unpackDouble(" ++ x ++ ")))"
 cOp DoublePow     [x, y]    = "(Value*)makeDouble(pow(unpackDouble(" ++ x ++ "), unpackDouble(" ++ y ++ ")))"
@@ -185,21 +199,21 @@ cOp DoubleATan    [x]       = "(Value*)makeDouble(atan(unpackDouble(" ++ x ++ ")
 cOp DoubleSqrt    [x]       = "(Value*)makeDouble(sqrt(unpackDouble(" ++ x ++ ")))"
 cOp DoubleFloor   [x]       = "(Value*)makeDouble(floor(unpackDouble(" ++ x ++ ")))"
 cOp DoubleCeiling [x]       = "(Value*)makeDouble(ceil(unpackDouble(" ++ x ++ ")))"
-cOp (Add ty)      [x, y]    = "add_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (Sub ty)      [x, y]    = "sub_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (Mul ty)      [x, y]    = "mul_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (Div ty)      [x, y]    = "div_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (Mod ty)      [x, y]    = "mod_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (ShiftL ty)   [x, y]    = "shiftl_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (ShiftR ty)   [x, y]    = "shiftr_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (BAnd ty)     [x, y]    = "and_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (BOr ty)      [x, y]    = "or_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (BXOr ty)     [x, y]    = "xor_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (LT ty)       [x, y]    = "lt_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (GT ty)       [x, y]    = "gt_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (EQ ty)       [x, y]    = "eq_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (LTE ty)      [x, y]    = "lte_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (GTE ty)      [x, y]    = "gte_" ++  cConstant ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (Add ty)      [x, y]    = "add_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (Sub ty)      [x, y]    = "sub_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (Mul ty)      [x, y]    = "mul_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (Div ty)      [x, y]    = "div_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (Mod ty)      [x, y]    = "mod_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (ShiftL ty)   [x, y]    = "shiftl_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (ShiftR ty)   [x, y]    = "shiftr_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (BAnd ty)     [x, y]    = "and_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (BOr ty)      [x, y]    = "or_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (BXOr ty)     [x, y]    = "xor_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (LT ty)       [x, y]    = "lt_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (GT ty)       [x, y]    = "gt_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (EQ ty)       [x, y]    = "eq_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (LTE ty)      [x, y]    = "lte_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (GTE ty)      [x, y]    = "gte_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
 cOp StrIndex      [x, i]    = "strIndex(" ++ x ++ ", " ++ i ++ ")"
 cOp StrCons       [x, y]    = "strCons(" ++ x ++ ", " ++ y ++ ")"
 cOp StrAppend     [x, y]    = "strAppend(" ++ x ++ ", " ++ y ++ ")"
@@ -366,9 +380,7 @@ freeTmpVars = do
 addHeader : {auto h : Ref HeaderFiles (SortedSet String)}
          -> String
          -> Core ()
-addHeader header = do
-    headerFiles <- get HeaderFiles
-    put HeaderFiles $ insert header headerFiles
+addHeader = update HeaderFiles . insert
 
 
 
@@ -430,6 +442,10 @@ integer_switch (MkAConstAlt c _  :: _) =
         (I16 x) => True
         (I32 x) => True
         (I64 x) => True
+        (B8 x) => True
+        (B16 x) => True
+        (B32 x) => True
+        (B64 x) => True
         (BI x) => True
         (Ch x) => True
         _ => False
@@ -464,6 +480,11 @@ record ReturnStatement where
     nonTailCall : String
     tailCall : String
 
+data TailPositionStatus = InTailPosition | NotInTailPosition
+
+callByPosition : TailPositionStatus -> ReturnStatement -> String
+callByPosition InTailPosition = tailCall
+callByPosition NotInTailPosition = nonTailCall
 
 mutual
     copyConstructors : {auto a : Ref ArgCounter Nat}
@@ -496,21 +517,22 @@ mutual
              -> List AConAlt
              -> (returnValueVariable:String)
              -> (nrConBlock:Nat)
+             -> TailPositionStatus
              -> Core ()
-    conBlocks _ [] _ _ = pure ()
-    conBlocks sc ((MkAConAlt n _ mTag args body) :: xs) retValVar k = do
+    conBlocks _ [] _ _ _ = pure ()
+    conBlocks sc ((MkAConAlt n _ mTag args body) :: xs) retValVar k tailStatus = do
         emit EmptyFC $ "  case " ++ show k ++ ":"
         emit EmptyFC $ "  {"
         increaseIndentation
         newTemporaryVariableLevel
         varBindLines sc args Z
-        assignment <- cStatementsFromANF body
-        emit EmptyFC $ retValVar ++ " = " ++ nonTailCall assignment ++ ";"
+        assignment <- cStatementsFromANF body tailStatus
+        emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         freeTmpVars
         emit EmptyFC $ "break;"
         decreaseIndentation
         emit EmptyFC $ "  }"
-        conBlocks sc xs retValVar (S k)
+        conBlocks sc xs retValVar (S k) tailStatus
     where
         varBindLines : String -> (args : List Int) -> Nat -> Core ()
         varBindLines _ [] _ = pure ()
@@ -527,21 +549,22 @@ mutual
                        -> (alts:List AConstAlt)
                        -> (retValVar:String)
                        -> (alternativeIntMatcher:Integer)
+                       -> TailPositionStatus
                        -> Core ()
-    constBlockSwitch [] _ _ = pure ()
-    constBlockSwitch ((MkAConstAlt c' caseBody) :: alts) retValVar i = do
+    constBlockSwitch [] _ _ _ = pure ()
+    constBlockSwitch ((MkAConstAlt c' caseBody) :: alts) retValVar i tailStatus = do
         let c = const2Integer c' i
         emit EmptyFC $ "  case " ++ show c ++ " :"
         emit EmptyFC "  {"
         increaseIndentation
         newTemporaryVariableLevel
-        assignment <- cStatementsFromANF caseBody
-        emit EmptyFC $ retValVar ++ " = " ++ nonTailCall assignment ++ ";"
+        assignment <- cStatementsFromANF caseBody tailStatus
+        emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         freeTmpVars
         emit EmptyFC "break;"
         decreaseIndentation
         emit EmptyFC "  }"
-        constBlockSwitch alts retValVar (i+1)
+        constBlockSwitch alts retValVar (i+1) tailStatus
 
 
 
@@ -551,15 +574,16 @@ mutual
                      -> {auto il : Ref IndentLevel Nat}
                      -> (def:Maybe ANF)
                      -> (retValVar:String)
+                     -> TailPositionStatus
                      -> Core ()
-    constDefaultBlock Nothing _ = pure ()
-    constDefaultBlock (Just defaultBody) retValVar = do
+    constDefaultBlock Nothing _ _ = pure ()
+    constDefaultBlock (Just defaultBody) retValVar tailStatus = do
         emit EmptyFC "  default :"
         emit EmptyFC "  {"
         increaseIndentation
         newTemporaryVariableLevel
-        assignment <- cStatementsFromANF defaultBody
-        emit EmptyFC $ retValVar ++ " = " ++ nonTailCall assignment ++ ";"
+        assignment <- cStatementsFromANF defaultBody tailStatus
+        emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         freeTmpVars
         decreaseIndentation
         emit EmptyFC "  }"
@@ -606,11 +630,12 @@ mutual
                       -> {auto oft : Ref OutfileText Output}
                       -> {auto il : Ref IndentLevel Nat}
                       -> ANF
+                      -> TailPositionStatus
                       -> Core ReturnStatement
-    cStatementsFromANF (AV fc x) = do
+    cStatementsFromANF (AV fc x) _ = do
         let returnLine = "newReference(" ++ varName x  ++ ")"
         pure $ MkRS returnLine returnLine
-    cStatementsFromANF (AAppName fc _ n args) = do
+    cStatementsFromANF (AAppName fc _ n args) _ = do
         emit fc $ ("// start " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
         arglist <- makeArglist 0 args
         c <- getNextCounter
@@ -626,7 +651,7 @@ mutual
                ++ ");"
         emit fc $ ("// end   " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
         pure $ MkRS ("trampoline(" ++ closure_name ++ ")") closure_name
-    cStatementsFromANF (AUnderApp fc n missing args) = do
+    cStatementsFromANF (AUnderApp fc n missing args) _ = do
         arglist <- makeArglist missing args
         c <- getNextCounter
         let f_ptr_name = "closure_" ++ show c
@@ -634,18 +659,18 @@ mutual
         emit fc f_ptr
         let returnLine = "(Value*)makeClosureFromArglist(" ++ f_ptr_name  ++ ", " ++ arglist ++ ")"
         pure $ MkRS returnLine returnLine
-    cStatementsFromANF (AApp fc _ closure arg) =
+    cStatementsFromANF (AApp fc _ closure arg) _ =
         pure $ MkRS ("apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
                     ("tailcall_apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
-    cStatementsFromANF (ALet fc var value body) = do
-        valueAssignment <- cStatementsFromANF value
+    cStatementsFromANF (ALet fc var value body) tailPosition = do
+        valueAssignment <- cStatementsFromANF value NotInTailPosition
         emit fc $ "Value * var_" ++ (show var) ++ " = " ++ nonTailCall valueAssignment ++ ";"
         registerVariableForAutomaticFreeing $ "var_" ++ (show var)
-        bodyAssignment <- cStatementsFromANF body
+        bodyAssignment <- cStatementsFromANF body tailPosition
         pure $ bodyAssignment
-    cStatementsFromANF (ACon fc n UNIT tag []) = do
+    cStatementsFromANF (ACon fc n UNIT tag []) _ = do
         pure $ MkRS "(Value*)NULL" "(Value*)NULL"
-    cStatementsFromANF (ACon fc n _ tag args) = do
+    cStatementsFromANF (ACon fc n _ tag args) _ = do
         c <- getNextCounter
         let constr = "constructor_" ++ (show c)
         emit fc $ "Value_Constructor* "
@@ -658,15 +683,15 @@ mutual
 
         fillConstructorArgs constr args 0
         pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
-    cStatementsFromANF (AOp fc _ op args) = do
+    cStatementsFromANF (AOp fc _ op args) _ = do
         argsVec <- cArgsVectANF args
         let opStatement = cOp op argsVec
         pure $ MkRS opStatement opStatement
-    cStatementsFromANF (AExtPrim fc _ p args) = do
+    cStatementsFromANF (AExtPrim fc _ p args) _ = do
         emit fc $ "// call to external primitive " ++ cName p
         let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")")
         pure $ MkRS returnLine returnLine
-    cStatementsFromANF (AConCase fc sc alts mDef) = do
+    cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
         c <- getNextCounter
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
         let newValueLine = "Value * " ++ switchReturnVar ++ " = NULL;"
@@ -684,7 +709,7 @@ mutual
         emit fc constructorFieldLine
         copyConstructors (varName sc) alts constructorField switchReturnVar 0
         emit fc switchLine
-        conBlocks (varName sc) alts switchReturnVar 0
+        conBlocks (varName sc) alts switchReturnVar 0 tailPosition
         case mDef of
             Nothing => do
                 emit EmptyFC $ "}"
@@ -694,36 +719,36 @@ mutual
                 emit EmptyFC $ "  default : {"
                 increaseIndentation
                 newTemporaryVariableLevel
-                defaultAssignment <- cStatementsFromANF d
-                emit EmptyFC $ switchReturnVar ++ " = " ++ nonTailCall defaultAssignment ++ ";"
+                defaultAssignment <- cStatementsFromANF d tailPosition
+                emit EmptyFC $ switchReturnVar ++ " = " ++ callByPosition tailPosition defaultAssignment ++ ";"
                 freeTmpVars
                 decreaseIndentation
                 emit EmptyFC $ "  }"
                 emit EmptyFC $ "}"
                 emit EmptyFC $ "free(" ++ constructorField ++ ");"
                 pure $ MkRS switchReturnVar switchReturnVar
-    cStatementsFromANF (AConstCase fc sc alts def) = do
+    cStatementsFromANF (AConstCase fc sc alts def) tailPosition = do
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
         let newValueLine = "Value * " ++ switchReturnVar ++ " = NULL;"
         emit fc newValueLine
         case integer_switch alts of
             True => do
                 emit fc $ "switch(extractInt(" ++ varName sc ++")){"
-                constBlockSwitch alts switchReturnVar 0
-                constDefaultBlock def switchReturnVar
+                constBlockSwitch alts switchReturnVar 0 tailPosition
+                constDefaultBlock def switchReturnVar tailPosition
                 emit EmptyFC "}"
                 pure $ MkRS switchReturnVar switchReturnVar
             False => do
                 (compareField, compareFunction) <- makeNonIntSwitchStatementConst alts 0 "" ""
                 emit fc $ "switch("++ compareFunction ++ "(" ++ varName sc ++ ", " ++ show (length alts) ++ ", " ++ compareField ++ ")){"
-                constBlockSwitch alts switchReturnVar 0
-                constDefaultBlock def switchReturnVar
+                constBlockSwitch alts switchReturnVar 0 tailPosition
+                constDefaultBlock def switchReturnVar tailPosition
                 emit EmptyFC "}"
                 emit EmptyFC $ "free(" ++ compareField ++ ");"
                 pure $ MkRS switchReturnVar switchReturnVar
-    cStatementsFromANF (APrimVal fc c) = pure $ MkRS (cConstant c) (cConstant c)
-    cStatementsFromANF (AErased fc) = pure $ MkRS "NULL" "NULL"
-    cStatementsFromANF (ACrash fc x) = do
+    cStatementsFromANF (APrimVal fc c) _ = pure $ MkRS (cConstant c) (cConstant c)
+    cStatementsFromANF (AErased fc) _ = pure $ MkRS "NULL" "NULL"
+    cStatementsFromANF (ACrash fc x) _ = do
         emit fc $ "// CRASH"
         pure $ MkRS "NULL" "NULL"
 
@@ -802,7 +827,7 @@ emitFDef funcName ((varType, varName, varCFType) :: xs) = do
 data CLang = CLangC | CLangRefC
 
 extractValue : (cLang : CLang) -> (cfType:CFType) -> (varName:String) -> String
-extractValue _ CFUnit           varName = "void"
+extractValue _ CFUnit           varName = "NULL"
 extractValue _ CFInt            varName = "((Value_Int64*)" ++ varName ++ ")->i64"
 extractValue _ CFInt8           varName = "((Value_Int8*)" ++ varName ++ ")->i8"
 extractValue _ CFInt16          varName = "((Value_Int16*)" ++ varName ++ ")->i16"
@@ -876,14 +901,13 @@ createCFunctions : {auto c : Ref Ctxt Defs}
 createCFunctions n (MkAFun args anf) = do
     fn <- functionDefSignature n args
     fn' <- functionDefSignatureArglist n
-    otherDefs <- get FunctionDefinitions
-    put FunctionDefinitions ((fn ++ ";\n") :: (fn' ++ ";\n") :: otherDefs)
+    update FunctionDefinitions $ \otherDefs => (fn ++ ";\n") :: (fn' ++ ";\n") :: otherDefs
     newTemporaryVariableLevel
     let argsNrs = getArgsNrList args Z
     emit EmptyFC fn
     emit EmptyFC "{"
     increaseIndentation
-    assignment <- cStatementsFromANF anf
+    assignment <- cStatementsFromANF anf InTailPosition
     emit EmptyFC $ "Value *returnValue = " ++ tailCall assignment ++ ";"
     freeTmpVars
     emit EmptyFC $ "return returnValue;"
@@ -918,19 +942,18 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
           let cLang = if lang == "RefC"
                          then CLangRefC
                          else CLangC
-          let isStandardFFI = Prelude.elem lang ["RefC", "C"]
+          let isStandardFFI = elem lang $ the (List String) ["RefC", "C"]
           let fctName = if isStandardFFI
                            then UN $ Basic $ fctForeignName
-                           else UN $ Basic $ lang ++ "_" ++ fctForeignName
+                           else NS (mkNamespace lang) n
           if isStandardFFI
              then case extLibOpts of
                       [lib, header] => addHeader header
                       _ => pure ()
              else emit EmptyFC $ additionalFFIStub fctName fargs ret
-          otherDefs <- get FunctionDefinitions
           let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Value *") ++ ");"
           fn_arglist <- functionDefSignatureArglist n
-          put FunctionDefinitions ((fnDef ++ "\n") :: (fn_arglist ++ ";\n") :: otherDefs)
+          update FunctionDefinitions $ \otherDefs => (fnDef ++ "\n") :: (fn_arglist ++ ";\n") :: otherDefs
           typeVarNameArgList <- createFFIArgList fargs
 
           emit EmptyFC fn_arglist
@@ -992,6 +1015,10 @@ header = do
       #include <runtime.h>
       /* \{ generatedString "RefC" } */
 
+      /* a global storage for IO References */
+      IORef_Storage * global_IORef_Storage;
+
+
       """
     let headerFiles = Libraries.Data.SortedSet.toList !(get HeaderFiles)
     let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
@@ -1012,17 +1039,12 @@ footer = do
                         "idris2_setArgs(argc, argv);"
                         ""
           }
+          global_IORef_Storage = NULL;
           Value *mainExprVal = __mainExpression_0();
           trampoline(mainExprVal);
           return 0; // bye bye
       }
       """
-
-export
-executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
-executeExpr c _ tm
-    = do coreLift_ $ putStrLn "Execute expression not yet implemented for refc"
-         coreLift_ $ system "false"
 
 export
 generateCSourceFile : {auto c : Ref Ctxt Defs}
@@ -1049,12 +1071,13 @@ generateCSourceFile defs outn =
 export
 compileExpr : UsePhase
            -> Ref Ctxt Defs
+           -> Ref Syn SyntaxInfo
            -> (tmpDir : String)
            -> (outputDir : String)
            -> ClosedTerm
            -> (outfile : String)
            -> Core (Maybe String)
-compileExpr ANF c _ outputDir tm outfile =
+compileExpr ANF c s _ outputDir tm outfile =
   do let outn = outputDir </> outfile ++ ".c"
      let outobj = outputDir </> outfile ++ ".o"
      let outexec = outputDir </> outfile
@@ -1068,7 +1091,18 @@ compileExpr ANF c _ outputDir tm outfile =
        | Nothing => pure Nothing
      compileCFile outobj outexec
 
-compileExpr _ _ _ _ _ _ = pure Nothing
+compileExpr _ _ _ _ _ _ _ = pure Nothing
+
+
+
+export
+executeExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
+              (execDir : String) -> ClosedTerm -> Core ()
+executeExpr c s tmpDir tm = do
+  do let outfile = "_tmp_refc"
+     Just _ <- compileExpr ANF c s tmpDir tmpDir tm outfile
+       | Nothing => do coreLift_ $ putStrLn "Error: failed to compile"
+     coreLift_ $ system (tmpDir </> outfile)
 
 export
 codegenRefC : Codegen

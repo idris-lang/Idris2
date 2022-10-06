@@ -126,6 +126,10 @@ interface Monad m => Elaboration m where
            ((val : x) -> Elab (ty val)) -> m ((val : x) -> (ty val))
 
   ||| Get the goal type of the current elaboration
+  |||
+  ||| `Nothing` means the script is run in the top-level `%runElab` clause.
+  ||| If elaboration script is run in expression mode, this function will always return `Just`.
+  ||| In the case of unknown result type in the expression mode, returned `TTImp` would be an `IHole`.
   goal : m (Maybe TTImp)
 
   ||| Get the names of the local variables in scope
@@ -201,3 +205,14 @@ Elaboration m => MonadTrans t => Monad (t m) => Elaboration (t m) where
   getLocalType        = lift . getLocalType
   getCons             = lift . getCons
   declare             = lift . declare
+
+||| Catch failures and use the `Maybe` monad instead
+export
+catch : Elaboration m => Elab a -> m (Maybe a)
+catch elab = try (Just <$> elab) (pure Nothing)
+
+||| Run proof search to attempt to find a value of the input type.
+||| Useful to check whether a give interface constraint is satisfied.
+export
+search : Elaboration m => (ty : Type) -> m (Maybe ty)
+search ty = catch $ check {expected = ty} `(%search)

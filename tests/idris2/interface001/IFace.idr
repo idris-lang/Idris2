@@ -47,10 +47,10 @@ test : ((Eq b, Eq b, Eq a), Eq b) => a -> a -> Bool
 test x y = x == y
 
 interface DecEq a where
-  decEq : (x : a) -> (y : a) -> Dec (x = y)
+  decEq : (x : a) -> (y : a) -> Dec (x === y)
 
 -- partial!
-eqNat : (x : Nat) -> (y : Nat) -> Dec (x = y)
+eqNat : (x : Nat) -> (y : Nat) -> Dec (x === y)
 eqNat (S x) (S y)
     = case eqNat x y of
            Yes Refl => Yes Refl

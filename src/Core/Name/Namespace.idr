@@ -4,6 +4,7 @@ import Data.List
 import Data.List1
 import Data.String
 import Decidable.Equality
+import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Utils.Path
 
@@ -22,10 +23,14 @@ export
 data Namespace : Type where
   MkNS : List String -> Namespace
 
+%name Namespace ns
+
 ||| A Module Identifier is, similarly to a namespace, stored inside out.
 export
 data ModuleIdent : Type where
   MkMI : List String -> ModuleIdent
+
+%name Namespace mi
 
 ||| Sometimes we need to convert a module identifier to the corresponding
 ||| namespace. It is still useful to have them as distinct types as it
@@ -219,11 +224,11 @@ Show ModuleIdent where
   show = showNSWithSep "." . miAsNamespace
 
 export
-Pretty Namespace where
+Pretty Void Namespace where
   pretty (MkNS ns) = concatWith (surround dot) (pretty <$> reverse ns)
 
 export
-Pretty ModuleIdent where
+Pretty Void ModuleIdent where
   pretty = pretty . miAsNamespace
 
 

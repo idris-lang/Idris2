@@ -272,19 +272,6 @@ mutual
     reify defs val = cantReify val "AltType"
 
   export
-  Reify NoMangleDirective where
-    reify defs val@(NDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), args) of
-               (UN (Basic "CommonName"), [(_, name)])
-                    => do n <- reify defs !(evalClosure defs name)
-                          pure $ CommonName n
-               (UN (Basic "BackendNames"), [(_, names)])
-                    => do ns <- reify defs !(evalClosure defs names)
-                          pure $ BackendNames ns
-               _ => cantReify val "NoMangleDirective"
-    reify defs val = cantReify val "NoMangleDirective"
-
-  export
   Reify FnOpt where
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), args) of
@@ -302,6 +289,9 @@ mutual
                (UN (Basic "ForeignFn"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (ForeignFn x')
+               (UN (Basic "ForeignExport"), [(_, x)])
+                    => do x' <- reify defs !(evalClosure defs x)
+                          pure (ForeignExport x')
                (UN (Basic "Invertible"), _) => pure Invertible
                (UN (Basic "Totality"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
@@ -310,9 +300,6 @@ mutual
                (UN (Basic "SpecArgs"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (SpecArgs x')
-               (UN (Basic "NoMangle"), [(_, n)])
-                    => do ds <- reify defs !(evalClosure defs n)
-                          pure (NoMangle ds)
                _ => cantReify val "FnOpt"
     reify defs val = cantReify val "FnOpt"
 
@@ -380,13 +367,14 @@ mutual
   Reify ImpRecord where
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), map snd args) of
-               (UN (Basic "MkRecord"), [v,w,x,y,z])
+               (UN (Basic "MkRecord"), [v,w,x,y,z,a])
                     => do v' <- reify defs !(evalClosure defs v)
                           w' <- reify defs !(evalClosure defs w)
                           x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (MkImpRecord v' w' x' y' z')
+                          a' <- reify defs !(evalClosure defs a)
+                          pure (MkImpRecord v' w' x' y' z' a')
                _ => cantReify val "Record"
     reify defs val = cantReify val "Record"
 
@@ -408,14 +396,15 @@ mutual
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
                           pure (PatClause x' y' z')
-               (UN (Basic "WithClause"), [u,v,w,x,y,z])
+               (UN (Basic "WithClause"), [u,v,w,x,y,z,a])
                     => do u' <- reify defs !(evalClosure defs u)
                           v' <- reify defs !(evalClosure defs v)
                           w' <- reify defs !(evalClosure defs w)
                           x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (WithClause u' v' w' x' y' z')
+                          a' <- reify defs !(evalClosure defs a)
+                          pure (WithClause u' v' w' x' y' z' a')
                (UN (Basic "ImpossibleClause"), [x,y])
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
@@ -457,6 +446,11 @@ mutual
                           z' <- reify defs !(evalClosure defs z)
                           u' <- reify defs !(evalClosure defs u)
                           pure (IRecord w' x' y' z' u')
+               (UN (Basic "IFail"), [w,x,y])
+                    => do w' <- reify defs !(evalClosure defs w)
+                          x' <- reify defs !(evalClosure defs x)
+                          y' <- reify defs !(evalClosure defs y)
+                          pure (IFail w' x' y')
                (UN (Basic "INamespace"), [w,x,y])
                     => do w' <- reify defs !(evalClosure defs w)
                           x' <- reify defs !(evalClosure defs x)
@@ -657,15 +651,6 @@ mutual
              appCon fc defs (reflectionttimp "UniqueDefault") [x']
 
   export
-  Reflect NoMangleDirective where
-    reflect fc defs lhs env (CommonName n)
-        = do n' <- reflect fc defs lhs env n
-             appCon fc defs (reflectionttimp "CommonName") [n']
-    reflect fc defs lhs env (BackendNames ns)
-        = do ns' <- reflect fc defs lhs env ns
-             appCon fc defs (reflectionttimp "BackendNames") [ns']
-
-  export
   Reflect FnOpt where
     reflect fc defs lhs env Inline = getCon fc defs (reflectionttimp "Inline")
     reflect fc defs lhs env NoInline = getCon fc defs (reflectionttimp "NoInline")
@@ -681,6 +666,9 @@ mutual
     reflect fc defs lhs env (ForeignFn x)
         = do x' <- reflect fc defs lhs env x
              appCon fc defs (reflectionttimp "ForeignFn") [x']
+    reflect fc defs lhs env (ForeignExport x)
+        = do x' <- reflect fc defs lhs env x
+             appCon fc defs (reflectionttimp "ForeignExport") [x']
     reflect fc defs lhs env Invertible = getCon fc defs (reflectionttimp "Invertible")
     reflect fc defs lhs env (Totality r)
         = do r' <- reflect fc defs lhs env r
@@ -689,9 +677,6 @@ mutual
     reflect fc defs lhs env (SpecArgs r)
         = do r' <- reflect fc defs lhs env r
              appCon fc defs (reflectionttimp "SpecArgs") [r']
-    reflect fc defs lhs env (NoMangle n)
-        = do n' <- reflect fc defs lhs env n
-             appCon fc defs (reflectionttimp "NoMangle") [n']
 
   export
   Reflect ImpTy where
@@ -739,13 +724,14 @@ mutual
 
   export
   Reflect ImpRecord where
-    reflect fc defs lhs env (MkImpRecord v w x y z)
+    reflect fc defs lhs env (MkImpRecord v w x y z a)
         = do v' <- reflect fc defs lhs env v
              w' <- reflect fc defs lhs env w
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "MkRecord") [v', w', x', y', z']
+             a' <- reflect fc defs lhs env a
+             appCon fc defs (reflectionttimp "MkRecord") [v', w', x', y', z', a']
 
   export
   Reflect WithFlag where
@@ -759,14 +745,15 @@ mutual
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
              appCon fc defs (reflectionttimp "PatClause") [x', y', z']
-    reflect fc defs lhs env (WithClause u v w x y z)
+    reflect fc defs lhs env (WithClause u v w x y z a)
         = do u' <- reflect fc defs lhs env u
              v' <- reflect fc defs lhs env v
              w' <- reflect fc defs lhs env w
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "WithClause") [u', v', w', x', y', z']
+             a' <- reflect fc defs lhs env a
+             appCon fc defs (reflectionttimp "WithClause") [u', v', w', x', y', z', a']
     reflect fc defs lhs env (ImpossibleClause x y)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
@@ -804,6 +791,11 @@ mutual
              z' <- reflect fc defs lhs env z
              u' <- reflect fc defs lhs env u
              appCon fc defs (reflectionttimp "IRecord") [w', x', y', z', u']
+    reflect fc defs lhs env (IFail x y z)
+        = do x' <- reflect fc defs lhs env x
+             y' <- reflect fc defs lhs env y
+             z' <- reflect fc defs lhs env z
+             appCon fc defs (reflectionttimp "IFail") [x', y', z']
     reflect fc defs lhs env (INamespace x y z)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
@@ -817,7 +809,7 @@ mutual
              appCon fc defs (reflectionttimp "ITransform") [w', x', y', z']
     reflect fc defs lhs env (IRunElabDecl w x)
         = throw (GenericMsg fc "Can't reflect a %runElab")
-    reflect fc defs lhs env (IPragma _ x)
+    reflect fc defs lhs env (IPragma _ _ x)
         = throw (GenericMsg fc "Can't reflect a pragma")
     reflect fc defs lhs env (ILog x)
         = do x' <- reflect fc defs lhs env x

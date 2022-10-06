@@ -8,10 +8,12 @@ import Core.Metadata
 import Core.TT
 import Core.Unify
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.BindImplicits
 import TTImp.Elab.Check
+import TTImp.Elab
 import TTImp.ProcessDecls
 import TTImp.TTImp
 import TTImp.TTImp.Functor
@@ -45,10 +47,10 @@ bindConstraints fc p [] ty = ty
 bindConstraints fc p ((n, ty) :: rest) sc
     = IPi fc top p n ty (bindConstraints fc p rest sc)
 
-bindImpls : FC -> List (Name, RigCount, RawImp) -> RawImp -> RawImp
-bindImpls fc [] ty = ty
-bindImpls fc ((n, r, ty) :: rest) sc
-    = IPi fc r Implicit (Just n) ty (bindImpls fc rest sc)
+bindImpls : List (FC, RigCount, Name, RawImp) -> RawImp -> RawImp
+bindImpls [] ty = ty
+bindImpls ((fc, r, n, ty) :: rest) sc
+    = IPi fc r Implicit (Just n) ty (bindImpls rest sc)
 
 addDefaults : FC -> Name ->
               (params : List (Name, RawImp)) -> -- parameters have been specialised, use them!
@@ -110,9 +112,10 @@ elabImplementation : {vars : _} ->
                      {auto u : Ref UST UState} ->
                      {auto s : Ref Syn SyntaxInfo} ->
                      {auto m : Ref MD Metadata} ->
+                     {auto o : Ref ROpts REPLOpts} ->
                      FC -> Visibility -> List FnOpt -> Pass ->
                      Env Term vars -> NestedNames vars ->
-                     (implicits : List (Name, RigCount, RawImp)) ->
+                     (implicits : List (FC, RigCount, Name, RawImp)) ->
                      (constraints : List (Maybe Name, RawImp)) ->
                      Name ->
                      (ps : List RawImp) ->
@@ -168,7 +171,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                        then [Inline]
                        else [Inline, Hint True]
 
-         let initTy = bindImpls vfc is $ bindConstraints vfc AutoImplicit cons
+         let initTy = bindImpls is $ bindConstraints vfc AutoImplicit cons
                          (apply (IVar vfc iname) ps)
          let paramBinds = if !isUnboundImplicits
                           then findBindableNames True vars [] initTy
@@ -179,7 +182,25 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
 
          log "elab.implementation" 5 $ "Implementation type: " ++ show impTy
 
-         when (typePass pass) $ processDecl [] nest env impTyDecl
+         -- Handle the case where it was already declared with a Nothing mbody
+         when (typePass pass) $ do
+           gdefm <- lookupCtxtExactI impName (gamma defs)
+           case gdefm of
+              Nothing => processDecl [] nest env impTyDecl
+              -- If impName exists, check that it is a forward declaration of the same type
+              Just (tidx,gdef) =>
+                do u <- uniVar vfc
+                   -- If the definition is filled in, it wasn't a forward declaration
+                   let None = definition gdef
+                     | _ => throw (AlreadyDefined vfc impName)
+                   (ty,_) <- elabTerm tidx InType [] nest env
+                                      (IBindHere vfc (PI erased) impTy)
+                                      (Just (gType vfc u))
+                   let fullty = abstractFullEnvType vfc env ty
+                   ok <- convert defs [] fullty (type gdef)
+                   unless ok $ do logTermNF "elab.implementation" 1 "Previous" [] (type gdef)
+                                  logTermNF "elab.implementation" 1 "Now" [] fullty
+                                  throw (CantConvert (getFC impTy) (gamma defs) [] fullty (type gdef))
 
          -- If the body is empty, we're done for now (just declaring that
          -- the implementation exists and define it later)
@@ -479,10 +500,10 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
     updateClause ns (PatClause fc lhs rhs)
         = do lhs' <- updateApp ns lhs
              pure (PatClause fc lhs' rhs)
-    updateClause ns (WithClause fc lhs wval prf flags cs)
+    updateClause ns (WithClause fc lhs rig wval prf flags cs)
         = do lhs' <- updateApp ns lhs
              cs' <- traverse (updateClause ns) cs
-             pure (WithClause fc lhs' wval prf flags cs')
+             pure (WithClause fc lhs' rig wval prf flags cs')
     updateClause ns (ImpossibleClause fc lhs)
         = do lhs' <- updateApp ns lhs
              pure (ImpossibleClause fc lhs')

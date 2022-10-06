@@ -132,9 +132,22 @@ public export %inline
 for : Applicative f => LazyList a -> (a -> f b) -> f (List b)
 for = flip traverse
 
-public export
+public export %inline
 sequence : Applicative f => LazyList (f a) -> f (List a)
 sequence = traverse id
+
+-- Traverse a lazy list with lazy effect lazily
+public export
+traverse_ : Monad m => (a -> m b) -> LazyList a -> m Unit
+traverse_ f = foldrLazy ((>>) . ignore . f) (pure ())
+
+public export %inline
+for_ : Monad m => LazyList a -> (a -> m b) -> m Unit
+for_ = flip Lazy.traverse_
+
+public export %inline
+sequence_ : Monad m => LazyList (m a) -> m Unit
+sequence_ = Lazy.traverse_ id
 
 public export
 Zippable LazyList where

@@ -86,9 +86,9 @@ public export
 uncurry : (a -> b -> c) -> (a, b) -> c
 uncurry f (a, b) = f a b
 
--- $ is compiled specially to shortcut any tricky unification issues, but if
--- it did have a type this is what it would be, and it might be useful to
--- use directly sometimes (e.g. in higher order functions)
+||| ($) is compiled specially to shortcut any tricky unification issues, but if
+||| it did have a type this is what it would be, and it might be useful to
+||| use directly sometimes (e.g. in higher order functions)
 public export
 ($) : forall a, b . ((x : a) -> b x) -> (x : a) -> b x
 ($) f a = f a

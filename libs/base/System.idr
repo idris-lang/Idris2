@@ -11,8 +11,14 @@ import System.File
 ||| Shorthand for referring to the C support library
 |||
 ||| @ fn the function name to refer to in the C support library
-support : (fn : String) -> String
-support fn = "C:" ++ fn ++ ", libidris2_support, idris_support.h"
+supportC : (fn : String) -> String
+supportC fn = "C:\{fn}, libidris2_support, idris_support.h"
+
+||| Shorthand for referring to the Node system support library
+|||
+||| @ fn the function name to refer to in the js/system_support.js file
+supportNode : (fn : String) -> String
+supportNode fn = "node:support:\{fn},support_system"
 
 ||| Shorthand for referring to libc 6
 |||
@@ -24,11 +30,11 @@ libc fn = "C:" ++ fn ++ ", libc 6"
 -- reasons (see support/racket/support.rkt)
 
 %foreign "scheme,racket:blodwen-sleep"
-         support "idris2_sleep"
+         supportC "idris2_sleep"
 prim__sleep : Int -> PrimIO ()
 
 %foreign "scheme,racket:blodwen-usleep"
-         support "idris2_usleep"
+         supportC "idris2_usleep"
 prim__usleep : Int -> PrimIO ()
 
 ||| Sleep for the specified number of seconds or, if signals are supported,
@@ -52,15 +58,22 @@ usleep : HasIO io => (usec : Int) -> So (usec >= 0) => io ()
 usleep usec = primIO (prim__usleep usec)
 
 -- Get the number of arguments
+-- Note: node prefixes the list of command line arguments
+--       with the path to the `node` executable. This is
+--       inconsistent with other backends, which only list
+--       the path to the running program. For reasons of
+--       consistency across backends, this first argument ist
+--       dropped on the node backend.
 %foreign "scheme:blodwen-arg-count"
-         support "idris2_getArgCount"
-         "node:lambda:() => process.argv.length"
+         supportC "idris2_getArgCount"
+         "node:lambda:() => process.argv.length - 1"
 prim__getArgCount : PrimIO Int
 
--- Get argument number `n`
+-- Get argument number `n`. See also `prim__getArgCount`
+-- about the special treatment of the node backend.
 %foreign "scheme:blodwen-arg"
-         support "idris2_getArg"
-         "node:lambda:n => process.argv[n]"
+         supportC "idris2_getArg"
+         "node:lambda:n => process.argv[n + 1]"
 prim__getArg : Int -> PrimIO String
 
 ||| Retrieve the arguments to the program call, if there were any.
@@ -76,11 +89,13 @@ getArgs = do
          "node:lambda: n => process.env[n]"
 prim__getEnv : String -> PrimIO (Ptr String)
 
-%foreign support "idris2_getEnvPair"
+%foreign supportC "idris2_getEnvPair"
 prim__getEnvPair : Int -> PrimIO (Ptr String)
-%foreign support "idris2_setenv"
+%foreign supportC "idris2_setenv"
+         supportNode "setEnv"
 prim__setEnv : String -> String -> Int -> PrimIO Int
-%foreign support "idris2_unsetenv"
+%foreign supportC "idris2_unsetenv"
+         supportNode "unsetEnv"
 prim__unsetEnv : String -> PrimIO Int
 
 ||| Retrieve the specified environment variable's value string, or `Nothing` if
@@ -117,6 +132,9 @@ getEnvironment = getAllPairs 0 []
 
 ||| Add the specified variable with the given value string to the environment,
 ||| optionally overwriting any existing environment variable with the same name.
+||| Returns True whether the value is set, overwritten, or not overwritten because
+||| overwrite was False. Returns False if a system error occurred. You can `getErrno`
+||| to check the error.
 |||
 ||| @ var       the name of the environment variable to set
 ||| @ val       the value string to set the environment variable to
@@ -131,7 +149,7 @@ setEnv var val overwrite
 
 ||| Delete the specified environment variable. Returns `True` either if the
 ||| value was deleted or if the value was not defined/didn't exist. Returns
-||| `False` if a system error occurred.
+||| `False` if a system error occurred. You can `getErrno` to check the error.
 export
 unsetEnv : HasIO io => (var : String) -> io Bool
 unsetEnv var
@@ -139,6 +157,7 @@ unsetEnv var
         pure $ ok == 0
 
 %foreign "C:idris2_system, libidris2_support, idris_system.h"
+         supportNode "spawnSync"
 prim__system : String -> PrimIO Int
 
 ||| Execute a shell command, returning its termination status or -1 if an error
@@ -170,7 +189,37 @@ namespace Escaped
   run : HasIO io => (cmd : List String) -> io (String, Int)
   run = run . escapeCmd
 
-%foreign support "idris2_time"
+||| Run a shell command, allowing processing its stdout line by line.
+|||
+||| Notice that is the line of the command ends with a newline character,
+||| it will be present in the string passed to the processing function.
+|||
+||| This function returns an exit code which value should be consistent with the `run` function.
+export
+covering
+runProcessingOutput : HasIO io => (String -> io ()) -> (cmd : String) -> io Int
+runProcessingOutput pr cmd = do
+  Right f <- popen cmd Read
+    | Left err => pure 1
+  True <- process f
+    | False => pure 1 -- we do not close `f` in case of reading error, like `run` does
+  pclose f
+
+  where
+    process : File -> io Bool
+    process h = if !(fEOF h) then pure True else do
+      Right line <- fGetLine h
+        | Left err => pure False
+      pr line
+      process h
+
+namespace Escaped
+  export
+  covering
+  runProcessingOutput : HasIO io => (String -> io ()) -> (cmd : List String) -> io Int
+  runProcessingOutput pr = runProcessingOutput pr . escapeCmd
+
+%foreign supportC "idris2_time"
          "javascript:lambda:() => Math.floor(new Date().getTime() / 1000)"
 prim__time : PrimIO Int
 
@@ -179,7 +228,7 @@ export
 time : HasIO io => io Integer
 time = pure $ cast !(primIO prim__time)
 
-%foreign support "idris2_getPID"
+%foreign supportC "idris2_getPID"
          "node:lambda:() => process.pid"
 prim__getPID : PrimIO Int
 
@@ -220,3 +269,8 @@ exitFailure = exitWith (ExitFailure 1)
 export
 exitSuccess : HasIO io => io a
 exitSuccess = exitWith ExitSuccess
+
+||| Print the error message and call exitFailure
+export
+die : HasIO io => String -> io a
+die str = do putStrLn str; exitFailure

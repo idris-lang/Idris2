@@ -232,3 +232,9 @@ export
 (Show a, Show b) => Show (Either a b) where
   showPrec d (Left x)  = showCon d "Left" $ showArg x
   showPrec d (Right x) = showCon d "Right" $ showArg x
+
+export
+Show Ordering where
+  show LT = "LT"
+  show EQ = "EQ"
+  show GT = "GT"

@@ -28,12 +28,6 @@ import Libraries.Text.Lexer
 import Data.List1
 import Data.List.Views
 import Data.String
-import Libraries.Data.String.Extra
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
 
 %default total
 
@@ -50,25 +44,27 @@ notCodeLine : Lexer
 notCodeLine = newline
            <|> any <+> untilEOL
 
-data Token = CodeBlock String String String
-           | Any String
-           | CodeLine String String
+public export
+data LitToken
+  = CodeBlock String String String
+  | Any String
+  | CodeLine String String
 
-Show Token where
+Show LitToken where
   showPrec d (CodeBlock l r x) = showCon d "CodeBlock" $ showArg l ++ showArg r ++ showArg x
   showPrec d (Any x)           = showCon d "Any" $ showArg x
   showPrec d (CodeLine m x)    = showCon d "CodeLine" $ showArg m ++ showArg x
 
 rawTokens : (delims  : List (String, String))
          -> (markers : List String)
-         -> TokenMap (Token)
+         -> TokenMap LitToken
 rawTokens delims ls =
           map (\(l,r) => (block l r, CodeBlock (trim l) (trim r))) delims
        ++ map (\m => (line m, CodeLine (trim m))) ls
        ++ [(notCodeLine, Any)]
 
 ||| Merge the tokens into a single source file.
-reduce : List (WithBounds Token) -> List String -> String
+reduce : List (WithBounds LitToken) -> List String -> String
 reduce [] acc = fastConcat (reverse acc)
 reduce (MkBounded (Any x) _ _ :: rest) acc =
   -- newline will always be tokenized as a single token
@@ -85,11 +81,12 @@ reduce (MkBounded (CodeLine m src) _ _ :: rest) acc =
                       )::acc)
 
 reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc with (lines src) -- Strip the deliminators surrounding the block.
-  reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: ys) with (snocList ys)
-    reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: []) | Empty = reduce rest acc -- 2
-    reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: (srcs ++ [f])) | (Snoc f srcs rec) =
+  reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | [] = reduce rest acc -- 1
+  reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s :: ys) with (snocList ys)
+    reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s :: []) | Empty = reduce rest acc -- 2
+    reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s :: (srcs ++ [f])) | (Snoc f srcs rec) =
         -- the "\n" counts for the open deliminator; the closing deliminator should always be followed by a (Any "\n"), so we don't add a newline
-        reduce rest (((unlines srcs) ++ "\n") :: "\n" :: acc)
+        reduce rest ((unlines srcs) :: "\n" :: acc)
 
 -- [ NOTE ] 1 & 2 shouldn't happen as code blocks are well formed i.e. have two deliminators.
 
@@ -100,6 +97,10 @@ record LiterateError where
   line   : Int
   column : Int
   input  : String
+
+export
+Show LiterateError where
+  show (MkLitErr line col input) = "\{input}:\{show line}:\{show col}"
 
 ||| Description of literate styles.
 |||
@@ -155,6 +156,22 @@ record LiterateStyle where
   ||| files.
   file_extensions : List String
 
+||| Given a 'literate specification' lex the file to extract code blocks
+|||
+||| @specification The literate specification to use.
+||| @litStr  The literate source file.
+|||
+||| Returns a `LiterateError` if the literate file contains malformed
+||| code blocks or code lines.
+export
+lexLiterate : (specification : LiterateStyle)
+           -> (litStr        : String)
+           -> Either LiterateError (List (WithBounds LitToken))
+lexLiterate (MkLitStyle delims markers exts) str =
+      case lex (rawTokens delims markers) str of
+        (toks, (_,_,"")) => Right toks
+        (_, (l,c,i))     => Left (MkLitErr l c i)
+
 ||| Given a 'literate specification' extract the code from the
 ||| literate source file (`litStr`) that follows the presented style.
 |||
@@ -168,10 +185,7 @@ export
 extractCode : (specification : LiterateStyle)
            -> (litStr        : String)
            -> Either LiterateError String
-extractCode (MkLitStyle delims markers exts) str =
-      case lex (rawTokens delims markers) str of
-        (toks, (_,_,"")) => Right (reduce toks Nil)
-        (_, (l,c,i))     => Left (MkLitErr l c i)
+extractCode spec str = flip reduce Nil <$> lexLiterate spec str
 
 ||| Synonym for `extractCode`.
 export

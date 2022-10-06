@@ -1,6 +1,7 @@
 module Data.Fin
 
 import Control.Function
+import public Control.Ord
 import Data.List1
 import public Data.Maybe
 import public Data.Nat
@@ -132,11 +133,25 @@ shift : (m : Nat) -> Fin n -> Fin (m + n)
 shift Z f = f
 shift (S m) f = FS $ shift m f
 
+||| Increment a Fin, wrapping on overflow
+public export
+finS : {n : Nat} -> Fin n -> Fin n
+finS {n = S _} x = case strengthen x of
+    Nothing => FZ
+    Just y => FS y
+
 ||| The largest element of some Fin type
 public export
 last : {n : _} -> Fin (S n)
 last {n=Z} = FZ
 last {n=S _} = FS last
+
+||| The finite complement of some Fin.
+||| The number as far along as the input, but starting from the other end.
+public export
+complement : {n : Nat} -> Fin n -> Fin n
+complement {n = S _} FZ = last
+complement {n = S _} (FS x) = weaken $ complement x
 
 ||| All of the Fin elements
 public export
@@ -151,6 +166,16 @@ Ord (Fin n) where
   compare (FS _)  FZ    = GT
   compare (FS x) (FS y) = compare x y
 
+namespace Monoid
+
+  public export
+  [Minimum] {n : Nat} -> Monoid (Fin $ S n) using Semigroup.Minimum where
+    neutral = last
+
+  public export
+  [Maximum] Monoid (Fin $ S n) using Semigroup.Maximum where
+    neutral = FZ
+
 public export
 natToFinLT : (x : Nat) -> {0 n : Nat} ->
              {auto 0 prf : x `LT` n} ->
@@ -159,11 +184,10 @@ natToFinLT Z {prf = LTESucc _} = FZ
 natToFinLT (S k) {prf = LTESucc _} = FS $ natToFinLT k
 
 public export
-natToFinLt : (x : Nat) -> {n : Nat} ->
+natToFinLt : (x : Nat) -> {0 n : Nat} ->
              {auto 0 prf : So (x < n)} ->
              Fin n
-natToFinLt Z     {n = S _} = FZ
-natToFinLt (S k) {n = S _} = FS $ natToFinLt k
+natToFinLt x = let 0 p := ltOpReflectsLT x n prf in natToFinLT x
 
 public export
 natToFin : Nat -> (n : Nat) -> Maybe (Fin n)
@@ -232,18 +256,35 @@ restrict n val = let val' = assert_total (abs (mod val (cast (S n)))) in
                          {prf = believe_me {a=IsJust (Just val')} ItIsJust}
 
 --------------------------------------------------------------------------------
+-- Num
+--------------------------------------------------------------------------------
+
+public export
+{n : Nat} -> Num (Fin (S n)) where
+  FZ + y = y
+  (+) {n = S _} (FS x) y = finS $ assert_smaller x (weaken x) + y
+
+  FZ * y = FZ
+  (FS x) * y = y + (assert_smaller x $ weaken x) * y
+
+  fromInteger = restrict n
+
+public export
+{n : Nat} -> Neg (Fin (S n)) where
+  negate = finS . complement
+
+  x - y = x + (negate y)
+
+--------------------------------------------------------------------------------
 -- DecEq
 --------------------------------------------------------------------------------
 
 public export
 DecEq (Fin n) where
   decEq FZ FZ = Yes Refl
+  decEq (FS f) (FS f') = decEqCong $ decEq f f'
   decEq FZ (FS f) = No absurd
   decEq (FS f) FZ = No absurd
-  decEq (FS f) (FS f')
-      = case decEq f f' of
-             Yes p => Yes $ cong FS p
-             No p => No $ p . injective
 
 namespace Equality
 
@@ -262,6 +303,16 @@ namespace Equality
   public export
   (~~~) : Fin m -> Fin n -> Type
   (~~~) = Pointwise
+
+  export
+  Uninhabited (FS k ~~~ FZ) where
+    uninhabited FZ impossible
+    uninhabited (FS _) impossible
+
+  export
+  Uninhabited (FZ ~~~ FS k) where
+    uninhabited FZ impossible
+    uninhabited (FS _) impossible
 
   ||| Pointwise equality is reflexive
   export
@@ -331,6 +382,17 @@ namespace Equality
   finToNatQuotient : k ~~~ l -> finToNat k === finToNat l
   finToNatQuotient FZ = Refl
   finToNatQuotient (FS prf) = cong S (finToNatQuotient prf)
+
+  ||| Propositional equality on `finToNat`s implies pointwise equality on the `Fin`s themselves
+  export
+  finToNatEqualityAsPointwise : (k : Fin m) ->
+                                (l : Fin n) ->
+                                finToNat k = finToNat l ->
+                                k ~~~ l
+  finToNatEqualityAsPointwise FZ FZ _ = FZ
+  finToNatEqualityAsPointwise FZ (FS _) prf = absurd prf
+  finToNatEqualityAsPointwise (FS _) FZ prf = absurd prf
+  finToNatEqualityAsPointwise (FS k) (FS l) prf = FS $ finToNatEqualityAsPointwise k l (injective prf)
 
   export
   weakenNeutral : (k : Fin n) -> weaken k ~~~ k

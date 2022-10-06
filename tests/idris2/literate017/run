@@ -1,0 +1,4 @@
+rm -rf build project-output.ipkg
+
+$1 --init project-output.ipkg < input
+diff project-output.ipkg project-expected.ipkg

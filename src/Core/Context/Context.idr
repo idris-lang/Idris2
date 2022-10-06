@@ -8,6 +8,7 @@ import public Core.Options.Log
 import public Core.TT
 
 import Data.IORef
+import Data.String
 
 import Libraries.Data.IntMap
 import Libraries.Data.IOArray
@@ -34,6 +35,7 @@ record PMDefInfo where
                  -- typically for inlinable metavariable solutions
   externalDecl : Bool -- declared in another module, which may affect how it
                       -- is compiled
+%name PMDefInfo pminfo
 
 export
 defaultPI : PMDefInfo
@@ -139,8 +141,10 @@ covering
 Show Def where
   show None = "undefined"
   show (PMDef _ args ct rt pats)
-      = show args ++ ";\nCompile time tree: " ++ show ct ++
-        "\nRun time tree: " ++ show rt
+      = unlines [ show args ++ ";"
+                , "Compile time tree: " ++ show ct
+                , "Run time tree: " ++ show rt
+                ]
   show (DCon t a nt)
       = "DataCon " ++ show t ++ " " ++ show a
            ++ maybe "" (\n => " (newtype by " ++ show n ++ ")") nt
@@ -167,6 +171,7 @@ record Constructor where
   name : Name
   arity : Nat
   type : ClosedTerm
+%name Constructor cons
 
 public export
 data DataDef : Type where
@@ -178,17 +183,13 @@ data Clause : Type where
      MkClause : {vars : _} ->
                 (env : Env Term vars) ->
                 (lhs : Term vars) -> (rhs : Term vars) -> Clause
+%name Clause cl
 
 export
 covering
 Show Clause where
   show (MkClause {vars} env lhs rhs)
       = show vars ++ ": " ++ show lhs ++ " = " ++ show rhs
-
-public export
-data NoMangleDirective : Type where
-    CommonName : String -> NoMangleDirective
-    BackendNames : List (String, String) -> NoMangleDirective
 
 public export
 data DefFlag
@@ -223,8 +224,7 @@ data DefFlag
     | Identity Nat
          -- Is it the identity function at runtime?
          -- The nat represents which argument the function evaluates to
-    | NoMangle NoMangleDirective
-         -- use the user provided name directly (backend, name)
+%name DefFlag dflag
 
 export
 Eq DefFlag where
@@ -241,7 +241,6 @@ Eq DefFlag where
     (==) AllGuarded AllGuarded = True
     (==) (ConType x) (ConType y) = x == y
     (==) (Identity x) (Identity y) = x == y
-    (==) (NoMangle _) (NoMangle _) = True
     (==) _ _ = False
 
 export
@@ -259,7 +258,6 @@ Show DefFlag where
   show AllGuarded = "allguarded"
   show (ConType ci) = "contype " ++ show ci
   show (Identity x) = "identity " ++ show x
-  show (NoMangle _) = "nomangle"
 
 public export
 data SizeChange = Smaller | Same | Unknown
@@ -435,3 +433,5 @@ record Context where
     inlineOnly : Bool -- only return things with the 'alwaysReduce' flag
     hidden : NameMap () -- Never return these
     uconstraints : List UConstraint
+
+%name Context gam

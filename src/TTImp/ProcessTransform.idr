@@ -8,6 +8,7 @@ import Core.Metadata
 import Core.Normalise
 import Core.UnifyState
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab
@@ -23,13 +24,14 @@ processTransform : {vars : _} ->
                    {auto m : Ref MD Metadata} ->
                    {auto u : Ref UST UState} ->
                    {auto s : Ref Syn SyntaxInfo} ->
+                   {auto o : Ref ROpts REPLOpts} ->
                    List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
                    Name -> RawImp -> RawImp -> Core ()
 processTransform eopts nest env fc tn_in lhs rhs
     = do tn <- inCurrentNS tn_in
          tidx <- resolveName tn
          (_, (vars'  ** (sub', env', nest', lhstm, lhsty))) <-
-             checkLHS True top True tidx eopts nest env fc lhs
+             checkLHS True top tidx eopts nest env fc lhs
          logTerm "transform.lhs" 3 "Transform LHS" lhstm
          rhstm <- wrapError (InRHS fc tn_in) $
                        checkTermSub tidx InExpr (InTrans :: eopts) nest' env' env sub' rhs (gnf env' lhsty)

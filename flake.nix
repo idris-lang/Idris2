@@ -6,10 +6,9 @@
     url = "github:redfish64/idris2-mode";
     flake = false;
   };
-  # FIXME: Remove this when https://github.com/NixOS/nixpkgs/pull/131833 gets merged
-  inputs.nixpkgs-chez-racket.url = "github:L-as/nixpkgs?ref=chez-racket";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs";
 
-  outputs = { self, nixpkgs, nixpkgs-chez-racket, flake-utils, idris-emacs-src }:
+  outputs = { self, nixpkgs, flake-utils, idris-emacs-src }:
     let
       idris2-version = "0.5.1";
       lib = import ./nix/lib.nix;
@@ -30,7 +29,7 @@
           pkgs = import nixpkgs { inherit config system overlays; };
           chez = if system == "x86_64-linux"
             then pkgs.chez
-            else pkgs.callPackage "${nixpkgs-chez-racket}/pkgs/development/compilers/chez-racket" { inherit (pkgs.darwin) cctools; };
+            else pkgs.chez-racket; # TODO: Should this always be the default?
           idris2Pkg = pkgs.callPackage ./nix/package.nix {
             inherit idris2-version chez;
             srcRev = self.shortRev or "dirty";

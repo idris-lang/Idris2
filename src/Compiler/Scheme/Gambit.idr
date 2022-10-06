@@ -18,6 +18,7 @@ import Data.Maybe
 import Data.Vect
 
 import Idris.Env
+import Idris.Syntax
 
 import System
 import System.Directory
@@ -374,9 +375,12 @@ compileToSCM c tm outfile
             | Left err => throw (FileErr outfile err)
          pure $ mapMaybe fst fgndefs
 
-compileExpr : Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-              ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr c tmpDir outputDir tm outfile
+compileExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> (outputDir : String) ->
+  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExpr c s tmpDir outputDir tm outfile
     = do let srcPath = tmpDir </> outfile <.> "scm"
          let execPath = outputDir </> outfile
          libsname <- compileToSCM c tm srcPath
@@ -396,9 +400,12 @@ compileExpr c tmpDir outputDir tm outfile
             then pure (Just execPath)
             else pure Nothing
 
-executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c tmpDir tm
-    = do Just sh <- compileExpr c tmpDir tmpDir tm "_tmpgambit"
+executeExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  (tmpDir : String) -> ClosedTerm -> Core ()
+executeExpr c s tmpDir tm
+    = do Just sh <- compileExpr c s tmpDir tmpDir tm "_tmpgambit"
            | Nothing => throw (InternalError "compileExpr returned Nothing")
          coreLift_ $ system sh -- TODO: on windows, should add exe extension
          pure ()

@@ -27,4 +27,4 @@ m : Nat
 m = believe_me %MkWorld
 
 Rainbow : Nat -> Type
-Rainbow n =  [ n , m , n ]
+Rainbow n = with L0.Nil [ n , m , n ]

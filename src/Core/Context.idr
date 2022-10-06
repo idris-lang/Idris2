@@ -13,6 +13,9 @@ import public Core.TT
 
 import Libraries.Utils.Binary
 import Libraries.Utils.Scheme
+import Libraries.Text.PrettyPrint.Prettyprinter
+
+import Idris.Syntax.Pragmas
 
 import Data.Either
 import Data.Fin
@@ -372,6 +375,10 @@ getFnName (MkTransform _ _ app _)
            Ref _ _ fn => Just fn
            _ => Nothing
 
+-- TODO: refactor via a single function
+-- onNames : (Context -> Name -> Core Name) ->
+--           (Context -> a    -> Core a)
+-- ?
 public export
 interface HasNames a where
   full : Context -> a -> Core a
@@ -669,6 +676,225 @@ HasNames Covering where
       = pure $ NonCoveringCall !(traverse (resolved gam) ns)
 
 export
+HasNames CaseError where
+  full gam DifferingArgNumbers = pure DifferingArgNumbers
+  full gam DifferingTypes = pure DifferingTypes
+  full gam (MatchErased (vs ** (rho, t))) = do
+    rho <- full gam rho
+    t <- full gam t
+    pure (MatchErased (vs ** (rho, t)))
+  full gam (NotFullyApplied n) = NotFullyApplied <$> full gam n
+  full gam UnknownType = pure UnknownType
+
+  resolved gam DifferingArgNumbers = pure DifferingArgNumbers
+  resolved gam DifferingTypes = pure DifferingTypes
+  resolved gam (MatchErased (vs ** (rho, t))) = do
+    rho <- resolved gam rho
+    t <- resolved gam t
+    pure (MatchErased (vs ** (rho, t)))
+  resolved gam (NotFullyApplied n) = NotFullyApplied <$> resolved gam n
+  resolved gam UnknownType = pure UnknownType
+
+
+export
+HasNames Warning where
+  full gam (ParserWarning fc x) = pure (ParserWarning fc x)
+  full gam (UnreachableClause fc rho s) = UnreachableClause fc <$> full gam rho <*> full gam s
+  full gam (ShadowingGlobalDefs fc xs)
+    = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (full gam))) xs
+  full gam w@(ShadowingLocalBindings _ _) = pure w
+  full gam (Deprecated x y) = Deprecated x <$> traverseOpt (traversePair (full gam)) y
+  full gam (GenericWarn x) = pure (GenericWarn x)
+
+  resolved gam (ParserWarning fc x) = pure (ParserWarning fc x)
+  resolved gam (UnreachableClause fc rho s) = UnreachableClause fc <$> resolved gam rho <*> resolved gam s
+  resolved gam (ShadowingGlobalDefs fc xs)
+    = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (resolved gam))) xs
+  resolved gam w@(ShadowingLocalBindings _ _) = pure w
+  resolved gam (Deprecated x y) = Deprecated x <$> traverseOpt (traversePair (resolved gam)) y
+  resolved gam (GenericWarn x) = pure (GenericWarn x)
+
+export
+HasNames Error where
+  full gam (Fatal err) = Fatal <$> full gam err
+  full _ (CantConvert fc gam rho s t)
+    = CantConvert fc gam <$> full gam rho <*> full gam s <*> full gam t
+  full _ (CantSolveEq fc gam rho s t)
+    = CantSolveEq fc gam <$> full gam rho <*> full gam s <*> full gam t
+  full gam (PatternVariableUnifies fc fct rho n s)
+    = PatternVariableUnifies fc fct <$> full gam rho <*> full gam n <*> full gam s
+  full gam (CyclicMeta fc rho n s)
+    = CyclicMeta fc <$> full gam rho <*> full gam n <*> full gam s
+  full _ (WhenUnifying fc gam rho s t err)
+    = WhenUnifying fc gam <$> full gam rho <*> full gam s <*> full gam t <*> full gam err
+  full gam (ValidCase fc rho x)
+    = ValidCase fc <$> full gam rho <*> either (map Left . full gam) (map Right . full gam) x
+  full gam (UndefinedName fc n) = UndefinedName fc <$> full gam n
+  full gam (InvisibleName fc n mns) = InvisibleName fc <$> full gam n <*> pure mns
+  full gam (BadTypeConType fc n) = BadTypeConType fc <$> full gam n
+  full gam (BadDataConType fc n n') = BadDataConType fc <$> full gam n <*> full gam n'
+  full gam (NotCovering fc n cov) = NotCovering fc <$> full gam n <*> full gam cov
+  full gam (NotTotal fc n pr) = NotTotal fc <$> full gam n <*> full gam pr
+  full gam (LinearUsed fc k n) = LinearUsed fc k <$> full gam n
+  full gam (LinearMisuse fc n x y) = LinearMisuse fc <$> full gam n <*> pure x <*> pure y
+  full gam (BorrowPartial fc rho s t) = BorrowPartial fc <$> full gam rho <*> full gam s <*> full gam t
+  full gam (BorrowPartialType fc rho s) = BorrowPartialType fc <$> full gam rho <*> full gam s
+  full gam (AmbiguousName fc xs) = AmbiguousName fc <$> traverse (full gam) xs
+  full gam (AmbiguousElab fc rho xs)
+    = AmbiguousElab fc <$> full gam rho <*> traverse (\ (gam, t) => (gam,) <$> full gam t) xs
+  full gam (AmbiguousSearch fc rho s xs)
+    = AmbiguousSearch fc <$> full gam rho <*> full gam s <*> traverse (full gam) xs
+  full gam (AmbiguityTooDeep fc n xs) = AmbiguityTooDeep fc <$> full gam n <*> traverse (full gam) xs
+  full gam (AllFailed xs)
+     = map AllFailed $ for xs $ \ (mn, err) =>
+         (,) <$> traverseOpt (full gam) mn <*> full gam err
+  full gam (RecordTypeNeeded fc rho) = RecordTypeNeeded fc <$> full gam rho
+  full gam (DuplicatedRecordUpdatePath fc xs) = pure (DuplicatedRecordUpdatePath fc xs)
+  full gam (NotRecordField fc x mn) = NotRecordField fc x <$> traverseOpt (full gam) mn
+  full gam (NotRecordType fc n) = NotRecordType fc <$> full gam n
+  full gam (IncompatibleFieldUpdate fc xs) = pure (IncompatibleFieldUpdate fc xs)
+  full gam (InvalidArgs fc rho xs s) = InvalidArgs fc <$> full gam rho <*> traverse (full gam) xs <*> full gam s
+  full gam (TryWithImplicits fc rho xs)
+    = TryWithImplicits fc <$> full gam rho
+       <*> for xs (\ (n, t) => (,) <$> full gam n <*> full gam t)
+  full gam (BadUnboundImplicit fc rho n s) = BadUnboundImplicit fc <$> full gam rho <*> full gam n <*> full gam s
+  full _ (CantSolveGoal fc gam rho s merr)
+    = CantSolveGoal fc gam <$> full gam rho <*> full gam s <*> traverseOpt (full gam) merr
+  full gam (DeterminingArg fc n x rho s)
+    = DeterminingArg fc <$> full gam n <*> pure x <*> full gam rho <*> full gam s
+  full gam (UnsolvedHoles xs) = UnsolvedHoles <$> traverse (traversePair (full gam)) xs
+  full gam (CantInferArgType fc rho n n1 s)
+    = CantInferArgType fc <$> full gam rho <*> full gam n <*> full gam n1 <*> full gam s
+  full gam (SolvedNamedHole fc rho n s) = SolvedNamedHole fc <$> full gam rho <*> full gam n <*> full gam s
+  full gam (VisibilityError fc x n y n1) = VisibilityError fc x <$> full gam n <*> pure y <*> full gam n1
+  full gam (NonLinearPattern fc n) = NonLinearPattern fc <$> full gam  n
+  full gam (BadPattern fc n) = BadPattern fc <$> full gam n
+  full gam (NoDeclaration fc n) = NoDeclaration fc <$> full gam n
+  full gam (AlreadyDefined fc n) = AlreadyDefined fc <$> full gam n
+  full gam (NotFunctionType fc rho s) = NotFunctionType fc <$> full gam rho <*> full gam s
+  full gam (RewriteNoChange fc rho s t) = RewriteNoChange fc <$> full gam rho <*> full gam s <*> full gam t
+  full gam (NotRewriteRule fc rho s) = NotRewriteRule fc <$> full gam rho <*> full gam s
+  full gam (CaseCompile fc n x) = CaseCompile fc <$> full gam n <*> full gam x
+  full gam (MatchTooSpecific fc rho s) = MatchTooSpecific fc <$> full gam rho <*> full gam s
+  full gam (BadDotPattern fc rho x s t)
+    = BadDotPattern fc <$> full gam rho <*> pure x <*> full gam s <*> full gam t
+  full gam (BadImplicit fc x) = pure (BadImplicit fc x)
+  full gam (BadRunElab fc rho s desc) = BadRunElab fc <$> full gam rho <*> full gam s <*> pure desc
+  full gam (RunElabFail e) = RunElabFail <$> full gam e
+  full gam (GenericMsg fc x) = pure (GenericMsg fc x)
+  full gam (TTCError x) = pure (TTCError x)
+  full gam (FileErr x y) = pure (FileErr x y)
+  full gam (CantFindPackage x) = pure (CantFindPackage x)
+  full gam (LitFail fc) = pure (LitFail fc)
+  full gam (LexFail fc x) = pure (LexFail fc x)
+  full gam (ParseFail xs) = pure (ParseFail xs)
+  full gam (ModuleNotFound fc x) = pure (ModuleNotFound fc x)
+  full gam (CyclicImports xs) = pure (CyclicImports xs)
+  full gam ForceNeeded = pure ForceNeeded
+  full gam (InternalError x) = pure (InternalError x)
+  full gam (UserError x) = pure (UserError x)
+  full gam (NoForeignCC fc xs) = pure (NoForeignCC fc xs)
+  full gam (BadMultiline fc x) = pure (BadMultiline fc x)
+  full gam (Timeout x) = pure (Timeout x)
+  full gam (FailingDidNotFail fc) = pure (FailingDidNotFail fc)
+  full gam (FailingWrongError fc x err) = FailingWrongError fc x <$> traverseList1 (full gam) err
+  full gam (InType fc n err) = InType fc <$> full gam n <*> full gam err
+  full gam (InCon fc n err) = InCon fc <$> full gam n <*> full gam err
+  full gam (InLHS fc n err) = InLHS fc <$> full gam n <*> full gam err
+  full gam (InRHS fc n err) = InRHS fc <$> full gam n <*> full gam err
+  full gam (MaybeMisspelling err xs) = MaybeMisspelling <$> full gam err <*> pure xs
+  full gam (WarningAsError wrn) = WarningAsError <$> full gam wrn
+
+  resolved gam (Fatal err) = Fatal <$> resolved gam err
+  resolved _ (CantConvert fc gam rho s t)
+    = CantConvert fc gam <$> resolved gam rho <*> resolved gam s <*> resolved gam t
+  resolved _ (CantSolveEq fc gam rho s t)
+    = CantSolveEq fc gam <$> resolved gam rho <*> resolved gam s <*> resolved gam t
+  resolved gam (PatternVariableUnifies fc fct rho n s)
+    = PatternVariableUnifies fc fct <$> resolved gam rho <*> resolved gam n <*> resolved gam s
+  resolved gam (CyclicMeta fc rho n s)
+    = CyclicMeta fc <$> resolved gam rho <*> resolved gam n <*> resolved gam s
+  resolved _ (WhenUnifying fc gam rho s t err)
+    = WhenUnifying fc gam <$> resolved gam rho <*> resolved gam s <*> resolved gam t <*> resolved gam err
+  resolved gam (ValidCase fc rho x)
+    = ValidCase fc <$> resolved gam rho <*> either (map Left . resolved gam) (map Right . resolved gam) x
+  resolved gam (UndefinedName fc n) = UndefinedName fc <$> resolved gam n
+  resolved gam (InvisibleName fc n mns) = InvisibleName fc <$> resolved gam n <*> pure mns
+  resolved gam (BadTypeConType fc n) = BadTypeConType fc <$> resolved gam n
+  resolved gam (BadDataConType fc n n') = BadDataConType fc <$> resolved gam n <*> resolved gam n'
+  resolved gam (NotCovering fc n cov) = NotCovering fc <$> resolved gam n <*> resolved gam cov
+  resolved gam (NotTotal fc n pr) = NotTotal fc <$> resolved gam n <*> resolved gam pr
+  resolved gam (LinearUsed fc k n) = LinearUsed fc k <$> resolved gam n
+  resolved gam (LinearMisuse fc n x y) = LinearMisuse fc <$> resolved gam n <*> pure x <*> pure y
+  resolved gam (BorrowPartial fc rho s t) = BorrowPartial fc <$> resolved gam rho <*> resolved gam s <*> resolved gam t
+  resolved gam (BorrowPartialType fc rho s) = BorrowPartialType fc <$> resolved gam rho <*> resolved gam s
+  resolved gam (AmbiguousName fc xs) = AmbiguousName fc <$> traverse (resolved gam) xs
+  resolved gam (AmbiguousElab fc rho xs)
+    = AmbiguousElab fc <$> resolved gam rho <*> traverse (\ (gam, t) => (gam,) <$> resolved gam t) xs
+  resolved gam (AmbiguousSearch fc rho s xs)
+    = AmbiguousSearch fc <$> resolved gam rho <*> resolved gam s <*> traverse (resolved gam) xs
+  resolved gam (AmbiguityTooDeep fc n xs) = AmbiguityTooDeep fc <$> resolved gam n <*> traverse (resolved gam) xs
+  resolved gam (AllFailed xs)
+     = map AllFailed $ for xs $ \ (mn, err) =>
+         (,) <$> traverseOpt (resolved gam) mn <*> resolved gam err
+  resolved gam (RecordTypeNeeded fc rho) = RecordTypeNeeded fc <$> resolved gam rho
+  resolved gam (DuplicatedRecordUpdatePath fc xs) = pure (DuplicatedRecordUpdatePath fc xs)
+  resolved gam (NotRecordField fc x mn) = NotRecordField fc x <$> traverseOpt (resolved gam) mn
+  resolved gam (NotRecordType fc n) = NotRecordType fc <$> resolved gam n
+  resolved gam (IncompatibleFieldUpdate fc xs) = pure (IncompatibleFieldUpdate fc xs)
+  resolved gam (InvalidArgs fc rho xs s) = InvalidArgs fc <$> resolved gam rho <*> traverse (resolved gam) xs <*> resolved gam s
+  resolved gam (TryWithImplicits fc rho xs)
+    = TryWithImplicits fc <$> resolved gam rho
+       <*> for xs (\ (n, t) => (,) <$> resolved gam n <*> resolved gam t)
+  resolved gam (BadUnboundImplicit fc rho n s) = BadUnboundImplicit fc <$> resolved gam rho <*> resolved gam n <*> resolved gam s
+  resolved _ (CantSolveGoal fc gam rho s merr)
+    = CantSolveGoal fc gam <$> resolved gam rho <*> resolved gam s <*> traverseOpt (resolved gam) merr
+  resolved gam (DeterminingArg fc n x rho s)
+    = DeterminingArg fc <$> resolved gam n <*> pure x <*> resolved gam rho <*> resolved gam s
+  resolved gam (UnsolvedHoles xs) = UnsolvedHoles <$> traverse (traversePair (resolved gam)) xs
+  resolved gam (CantInferArgType fc rho n n1 s)
+    = CantInferArgType fc <$> resolved gam rho <*> resolved gam n <*> resolved gam n1 <*> resolved gam s
+  resolved gam (SolvedNamedHole fc rho n s) = SolvedNamedHole fc <$> resolved gam rho <*> resolved gam n <*> resolved gam s
+  resolved gam (VisibilityError fc x n y n1) = VisibilityError fc x <$> resolved gam n <*> pure y <*> resolved gam n1
+  resolved gam (NonLinearPattern fc n) = NonLinearPattern fc <$> resolved gam  n
+  resolved gam (BadPattern fc n) = BadPattern fc <$> resolved gam n
+  resolved gam (NoDeclaration fc n) = NoDeclaration fc <$> resolved gam n
+  resolved gam (AlreadyDefined fc n) = AlreadyDefined fc <$> resolved gam n
+  resolved gam (NotFunctionType fc rho s) = NotFunctionType fc <$> resolved gam rho <*> resolved gam s
+  resolved gam (RewriteNoChange fc rho s t) = RewriteNoChange fc <$> resolved gam rho <*> resolved gam s <*> resolved gam t
+  resolved gam (NotRewriteRule fc rho s) = NotRewriteRule fc <$> resolved gam rho <*> resolved gam s
+  resolved gam (CaseCompile fc n x) = CaseCompile fc <$> resolved gam n <*> resolved gam x
+  resolved gam (MatchTooSpecific fc rho s) = MatchTooSpecific fc <$> resolved gam rho <*> resolved gam s
+  resolved gam (BadDotPattern fc rho x s t)
+    = BadDotPattern fc <$> resolved gam rho <*> pure x <*> resolved gam s <*> resolved gam t
+  resolved gam (BadImplicit fc x) = pure (BadImplicit fc x)
+  resolved gam (BadRunElab fc rho s desc) = BadRunElab fc <$> resolved gam rho <*> resolved gam s <*> pure desc
+  resolved gam (RunElabFail e) = RunElabFail <$> resolved gam e
+  resolved gam (GenericMsg fc x) = pure (GenericMsg fc x)
+  resolved gam (TTCError x) = pure (TTCError x)
+  resolved gam (FileErr x y) = pure (FileErr x y)
+  resolved gam (CantFindPackage x) = pure (CantFindPackage x)
+  resolved gam (LitFail fc) = pure (LitFail fc)
+  resolved gam (LexFail fc x) = pure (LexFail fc x)
+  resolved gam (ParseFail xs) = pure (ParseFail xs)
+  resolved gam (ModuleNotFound fc x) = pure (ModuleNotFound fc x)
+  resolved gam (CyclicImports xs) = pure (CyclicImports xs)
+  resolved gam ForceNeeded = pure ForceNeeded
+  resolved gam (InternalError x) = pure (InternalError x)
+  resolved gam (UserError x) = pure (UserError x)
+  resolved gam (NoForeignCC fc xs) = pure (NoForeignCC fc xs)
+  resolved gam (BadMultiline fc x) = pure (BadMultiline fc x)
+  resolved gam (Timeout x) = pure (Timeout x)
+  resolved gam (FailingDidNotFail fc) = pure (FailingDidNotFail fc)
+  resolved gam (FailingWrongError fc x err) = FailingWrongError fc x <$> traverseList1 (resolved gam) err
+  resolved gam (InType fc n err) = InType fc <$> resolved gam n <*> resolved gam err
+  resolved gam (InCon fc n err) = InCon fc <$> resolved gam n <*> resolved gam err
+  resolved gam (InLHS fc n err) = InLHS fc <$> resolved gam n <*> resolved gam err
+  resolved gam (InRHS fc n err) = InRHS fc <$> resolved gam n <*> resolved gam err
+  resolved gam (MaybeMisspelling err xs) = MaybeMisspelling <$> resolved gam err <*> pure xs
+  resolved gam (WarningAsError wrn) = WarningAsError <$> resolved gam wrn
+
+export
 HasNames Totality where
   full gam (MkTotality t c) = pure $ MkTotality !(full gam t) !(full gam c)
   resolved gam (MkTotality t c) = pure $ MkTotality !(resolved gam t) !(resolved gam c)
@@ -797,6 +1023,9 @@ record Defs where
   warnings : List Warning
      -- ^ as yet unreported warnings
   schemeEvalLoaded : Bool
+  foreignExports : NameMap (List (String, String))
+       -- ^ For functions which are callable from a foreign language. This
+       -- maps names to a pair of the back end and the exported function name
 
 -- Label for context references
 export
@@ -845,6 +1074,7 @@ initDefs
            , timer = Nothing
            , warnings = []
            , schemeEvalLoaded = False
+           , foreignExports = empty
            }
 
 -- Reset the context, except for the options
@@ -888,7 +1118,7 @@ getSimilarNames nm = case show <$> userNameRoot nm of
                Just def <- lookupCtxtExact nm (gamma defs)
                    | Nothing => pure Nothing -- should be impossible
                pure (Just (visibility def, dist))
-       kept <- mapMaybeM @{CORE} test (resolvedAs (gamma defs))
+       kept <- NameMap.mapMaybeM @{CORE} test (resolvedAs (gamma defs))
        pure $ Just (str, toList kept)
 
 export
@@ -914,7 +1144,7 @@ showSimilarNames ns nm str kept
     let root = nameRoot nm
     let True = str == root
       | _ => pure (root ++ adj)
-    let full = show nm
+    let full = show (pretty nm)
     let True = (str == full || show target == full) && not priv
       | _ => pure (full ++ adj)
     Nothing
@@ -996,34 +1226,23 @@ aliasName fulln
 -- it'll be better to use addHashWithNames to make the hash independent
 -- of the internal numbering of names.
 export
-addHash : {auto c : Ref Ctxt Defs} ->
-          Hashable a => a -> Core ()
-addHash x
-    = do defs <- get Ctxt
-         put Ctxt ({ ifaceHash := hashWithSalt (ifaceHash defs) x } defs)
+addHash : {auto c : Ref Ctxt Defs} -> Hashable a => a -> Core ()
+addHash x = update Ctxt { ifaceHash $= flip hashWithSalt x }
 
 export
-initHash : {auto c : Ref Ctxt Defs} ->
-           Core ()
-initHash
-    = do defs <- get Ctxt
-         put Ctxt ({ ifaceHash := 5381 } defs)
+initHash : {auto c : Ref Ctxt Defs} -> Core ()
+initHash = update Ctxt { ifaceHash := 5381 }
 
 export
 addUserHole : {auto c : Ref Ctxt Defs} ->
               Bool -> -- defined in another module?
               Name -> -- hole name
               Core ()
-addUserHole ext n
-    = do defs <- get Ctxt
-         put Ctxt ({ userHoles $= insert n ext } defs)
+addUserHole ext n = update Ctxt { userHoles $= insert n ext }
 
 export
-clearUserHole : {auto c : Ref Ctxt Defs} ->
-                Name -> Core ()
-clearUserHole n
-    = do defs <- get Ctxt
-         put Ctxt ({ userHoles $= delete n } defs)
+clearUserHole : {auto c : Ref Ctxt Defs} -> Name -> Core ()
+clearUserHole n = update Ctxt { userHoles $= delete n }
 
 export
 getUserHoles : {auto c : Ref Ctxt Defs} ->
@@ -1153,9 +1372,7 @@ setLinearCheck i chk
 
 export
 setCtxt : {auto c : Ref Ctxt Defs} -> Context -> Core ()
-setCtxt gam
-  = do defs <- get Ctxt
-       put Ctxt ({ gamma := gam } defs)
+setCtxt gam = update Ctxt { gamma := gam }
 
 export
 resolveName : {auto c : Ref Ctxt Defs} ->
@@ -1427,23 +1644,24 @@ setVisibility fc n vis
 public export
 record SearchData where
   constructor MkSearchData
-  detArgs : List Nat -- determining argument positions
+  ||| determining argument positions
+  detArgs : List Nat
+  ||| Name of functions to use as hints, and whether ambiguity is allowed
+  |||
+  ||| In proof search, for every group of names
+  |||  * If exactly one succeeds, use it
+  |||  * If more than one succeeds, report an ambiguity error
+  |||  * If none succeed, move on to the next group
+  |||
+  ||| This allows us to prioritise some names (e.g. to declare 'open' hints,
+  ||| which we might us to open an implementation working as a module, or to
+  ||| declare a named implementation to be used globally), and to have names
+  ||| which are only used if all else fails (e.g. as a defaulting mechanism),
+  ||| while the proof search mechanism doesn't need to know about any of the
+  ||| details.
   hintGroups : List (Bool, List Name)
-       -- names of functions to use as hints, and whether ambiguity is allowed
-    {- In proof search, for every group of names
-        * If exactly one succeeds, use it
-        * If more than one succeeds, report an ambiguity error
-        * If none succeed, move on to the next group
 
-       This allows us to prioritise some names (e.g. to declare 'open' hints,
-       which we might us to open an implementation working as a module, or to
-       declare a named implementation to be used globally), and to have names
-       which are only used if all else fails (e.g. as a defaulting mechanism),
-       while the proof search mechanism doesn't need to know about any of the
-       details.
-    -}
-
--- Get the auto search data for a name.
+||| Get the auto search data for a name.
 export
 getSearchData : {auto c : Ref Ctxt Defs} ->
                 FC -> (defaults : Bool) -> Name ->
@@ -1500,16 +1718,12 @@ setMutWith fc tn tns
 export
 addMutData : {auto c : Ref Ctxt Defs} ->
              Name -> Core ()
-addMutData n
-    = do defs <- get Ctxt
-         put Ctxt ({ mutData $= (n ::) } defs)
+addMutData n = update Ctxt { mutData $= (n ::) }
 
 export
 dropMutData : {auto c : Ref Ctxt Defs} ->
               Name -> Core ()
-dropMutData n
-    = do defs <- get Ctxt
-         put Ctxt ({ mutData $= filter (/= n) } defs)
+dropMutData n = update Ctxt { mutData $= filter (/= n) }
 
 export
 setDetermining : {auto c : Ref Ctxt Defs} ->
@@ -1597,39 +1811,32 @@ export
 addGlobalHint : {auto c : Ref Ctxt Defs} ->
                 Name -> Bool -> Core ()
 addGlobalHint hintn_in isdef
-    = do defs <- get Ctxt
-         hintn <- toResolvedNames hintn_in
-
-         put Ctxt ({ autoHints $= insert hintn isdef,
-                     saveAutoHints $= ((hintn, isdef) ::) } defs)
+    = do hintn <- toResolvedNames hintn_in
+         update Ctxt { autoHints $= insert hintn isdef,
+                       saveAutoHints $= ((hintn, isdef) ::) }
 
 export
 addLocalHint : {auto c : Ref Ctxt Defs} ->
                Name -> Core ()
 addLocalHint hintn_in
-    = do defs <- get Ctxt
-         hintn <- toResolvedNames hintn_in
-         put Ctxt ({ localHints $= insert hintn () } defs)
+    = do hintn <- toResolvedNames hintn_in
+         update Ctxt { localHints $= insert hintn () }
 
 export
 addOpenHint : {auto c : Ref Ctxt Defs} -> Name -> Core ()
 addOpenHint hintn_in
-    = do defs <- get Ctxt
-         hintn <- toResolvedNames hintn_in
-         put Ctxt ({ openHints $= insert hintn () } defs)
+    = do hintn <- toResolvedNames hintn_in
+         update Ctxt { openHints $= insert hintn () }
 
 export
 dropOpenHint : {auto c : Ref Ctxt Defs} -> Name -> Core ()
 dropOpenHint hintn_in
-    = do defs <- get Ctxt
-         hintn <- toResolvedNames hintn_in
-         put Ctxt ({ openHints $= delete hintn } defs)
+    = do hintn <- toResolvedNames hintn_in
+         update Ctxt { openHints $= delete hintn }
 
 export
 setOpenHints : {auto c : Ref Ctxt Defs} -> NameMap () -> Core ()
-setOpenHints hs
-    = do d <- get Ctxt
-         put Ctxt ({ openHints := hs } d)
+setOpenHints hs = update Ctxt { openHints := hs }
 
 export
 addTransform : {auto c : Ref Ctxt Defs} ->
@@ -1653,26 +1860,18 @@ addTransform fc t_in
 
 export
 clearSavedHints : {auto c : Ref Ctxt Defs} -> Core ()
-clearSavedHints
-    = do defs <- get Ctxt
-         put Ctxt ({ saveTypeHints := [],
-                     saveAutoHints := [] } defs)
+clearSavedHints = update Ctxt { saveTypeHints := [], saveAutoHints := [] }
 
 -- Set the default namespace for new definitions
 export
-setNS : {auto c : Ref Ctxt Defs} ->
-        Namespace -> Core ()
-setNS ns
-    = do defs <- get Ctxt
-         put Ctxt ({ currentNS := ns } defs)
+setNS : {auto c : Ref Ctxt Defs} -> Namespace -> Core ()
+setNS ns = update Ctxt { currentNS := ns }
 
 -- Set the nested namespaces we're allowed to look inside
 export
 setNestedNS : {auto c : Ref Ctxt Defs} ->
               List Namespace -> Core ()
-setNestedNS ns
-    = do defs <- get Ctxt
-         put Ctxt ({ nestedNS := ns } defs)
+setNestedNS ns = update Ctxt { nestedNS := ns }
 
 -- Get the default namespace for new definitions
 export
@@ -1697,9 +1896,7 @@ getNestedNS
 export
 addImported : {auto c : Ref Ctxt Defs} ->
               (ModuleIdent, Bool, Namespace) -> Core ()
-addImported mod
-    = do defs <- get Ctxt
-         put Ctxt ({ imported $= (mod ::) } defs)
+addImported mod = update Ctxt { imported $= (mod ::) }
 
 export
 getImported : {auto c : Ref Ctxt Defs} ->
@@ -1743,11 +1940,8 @@ getNextTypeTag
 -- current namespace of "Prelude.List.Data"
 -- Inner namespaces go first, for ease of name lookup
 export
-extendNS : {auto c : Ref Ctxt Defs} ->
-           Namespace -> Core ()
-extendNS ns
-    = do defs <- get Ctxt
-         put Ctxt ({ currentNS $= (<.> ns) } defs)
+extendNS : {auto c : Ref Ctxt Defs} -> Namespace -> Core ()
+extendNS ns = update Ctxt { currentNS $= (<.> ns) }
 
 export
 withExtendedNS : {auto c : Ref Ctxt Defs} ->
@@ -1792,9 +1986,7 @@ inCurrentNS n = pure n
 export
 setVisible : {auto c : Ref Ctxt Defs} ->
              Namespace -> Core ()
-setVisible nspace
-    = do defs <- get Ctxt
-         put Ctxt ({ gamma->visibleNS $= (nspace ::) } defs)
+setVisible nspace = update Ctxt { gamma->visibleNS $= (nspace ::) }
 
 export
 getVisible : {auto c : Ref Ctxt Defs} ->
@@ -1809,9 +2001,7 @@ getVisible
 export
 setAllPublic : {auto c : Ref Ctxt Defs} ->
                (pub : Bool) -> Core ()
-setAllPublic pub
-    = do defs <- get Ctxt
-         put Ctxt ({ gamma->allPublic := pub } defs)
+setAllPublic pub = update Ctxt { gamma->allPublic := pub }
 
 export
 isAllPublic : {auto c : Ref Ctxt Defs} ->
@@ -1849,9 +2039,7 @@ getNextEntry
 export
 setNextEntry : {auto c : Ref Ctxt Defs} ->
                Int -> Core ()
-setNextEntry i
-    = do defs <- get Ctxt
-         put Ctxt ({ gamma->nextEntry := i } defs)
+setNextEntry i = update Ctxt { gamma->nextEntry := i }
 
 -- Set the 'first entry' index (i.e. the first entry in the current file)
 -- to the place we currently are in the context
@@ -1882,18 +2070,12 @@ getPPrint
          pure (printing (options defs))
 
 export
-setPPrint : {auto c : Ref Ctxt Defs} ->
-            PPrinter -> Core ()
-setPPrint ppopts
-    = do defs <- get Ctxt
-         put Ctxt ({ options->printing := ppopts } defs)
+setPPrint : {auto c : Ref Ctxt Defs} -> PPrinter -> Core ()
+setPPrint ppopts = update Ctxt { options->printing := ppopts }
 
 export
-setCG : {auto c : Ref Ctxt Defs} ->
-        CG -> Core ()
-setCG cg
-    = do defs <- get Ctxt
-         put Ctxt ({ options->session->codegen := cg } defs)
+setCG : {auto c : Ref Ctxt Defs} -> CG -> Core ()
+setCG cg = update Ctxt { options->session->codegen := cg }
 
 export
 getDirs : {auto c : Ref Ctxt Defs} -> Core Dirs
@@ -1903,60 +2085,43 @@ getDirs
 
 export
 addExtraDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-addExtraDir dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->extra_dirs $= (++ [dir]) } defs)
+addExtraDir dir = update Ctxt { options->dirs->extra_dirs $= (++ [dir]) }
 
 export
 addPackageDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-addPackageDir dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->package_dirs $= (++ [dir]) } defs)
+addPackageDir dir = update Ctxt { options->dirs->package_dirs $= (++ [dir]) }
 
 export
 addDataDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-addDataDir dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->data_dirs $= (++ [dir]) } defs)
+addDataDir dir = update Ctxt { options->dirs->data_dirs $= (++ [dir]) }
 
 export
 addLibDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-addLibDir dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->lib_dirs $= (++ [dir]) } defs)
+addLibDir dir = update Ctxt { options->dirs->lib_dirs $= (++ [dir]) }
 
 export
 setBuildDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-setBuildDir dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->build_dir := dir } defs)
+setBuildDir dir = update Ctxt { options->dirs->build_dir := dir }
 
 export
 setDependsDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-setDependsDir dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->depends_dir := dir } defs)
+setDependsDir dir = update Ctxt { options->dirs->depends_dir := dir }
 
 export
 setOutputDir : {auto c : Ref Ctxt Defs} -> Maybe String -> Core ()
-setOutputDir dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->output_dir := dir } defs)
+setOutputDir dir = update Ctxt { options->dirs->output_dir := dir }
 
 export
 setSourceDir : {auto c : Ref Ctxt Defs} -> Maybe String -> Core ()
-setSourceDir mdir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->source_dir := mdir } defs)
+setSourceDir mdir = update Ctxt { options->dirs->source_dir := mdir }
 
 export
 setWorkingDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
 setWorkingDir dir
-    = do defs <- get Ctxt
-         coreLift_ $ changeDir dir
+    = do coreLift_ $ changeDir dir
          Just cdir <- coreLift $ currentDir
               | Nothing => throw (InternalError "Can't get current directory")
-         put Ctxt ({ options->dirs->working_dir := cdir } defs)
+         update Ctxt { options->dirs->working_dir := cdir }
 
 export
 getWorkingDir : Core String
@@ -1975,15 +2140,11 @@ withCtxt = wrapRef Ctxt resetCtxt
 
 export
 setPrefix : {auto c : Ref Ctxt Defs} -> String -> Core ()
-setPrefix dir
-    = do defs <- get Ctxt
-         put Ctxt ({ options->dirs->prefix_dir := dir } defs)
+setPrefix dir = update Ctxt { options->dirs->prefix_dir := dir }
 
 export
 setExtension : {auto c : Ref Ctxt Defs} -> LangExt -> Core ()
-setExtension e
-    = do defs <- get Ctxt
-         put Ctxt ({ options $= setExtension e } defs)
+setExtension e = update Ctxt { options $= setExtension e }
 
 export
 isExtension : LangExt -> Defs -> Bool
@@ -1999,59 +2160,41 @@ checkUnambig fc n
               ns => ambiguousName fc n (map fst ns)
 
 export
-lazyActive : {auto c : Ref Ctxt Defs} ->
-             Bool -> Core ()
-lazyActive a
-    = do defs <- get Ctxt
-         put Ctxt ({ options->elabDirectives->lazyActive := a } defs)
+lazyActive : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
+lazyActive a = update Ctxt { options->elabDirectives->lazyActive := a }
 
 export
-setUnboundImplicits : {auto c : Ref Ctxt Defs} ->
-                Bool -> Core ()
-setUnboundImplicits a
-    = do defs <- get Ctxt
-         put Ctxt ({ options->elabDirectives->unboundImplicits := a } defs)
+setUnboundImplicits : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
+setUnboundImplicits a = update Ctxt { options->elabDirectives->unboundImplicits := a }
 
 export
 setPrefixRecordProjections : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
-setPrefixRecordProjections b = do
-  defs <- get Ctxt
-  put Ctxt ({ options->elabDirectives->prefixRecordProjections := b } defs)
+setPrefixRecordProjections b = update Ctxt { options->elabDirectives->prefixRecordProjections := b }
 
 export
 setDefaultTotalityOption : {auto c : Ref Ctxt Defs} ->
                            TotalReq -> Core ()
-setDefaultTotalityOption tot
-    = do defs <- get Ctxt
-         put Ctxt ({ options->elabDirectives->totality := tot } defs)
+setDefaultTotalityOption tot = update Ctxt { options->elabDirectives->totality := tot }
 
 export
 setAmbigLimit : {auto c : Ref Ctxt Defs} ->
                 Nat -> Core ()
-setAmbigLimit max
-    = do defs <- get Ctxt
-         put Ctxt ({ options->elabDirectives->ambigLimit := max } defs)
+setAmbigLimit max = update Ctxt { options->elabDirectives->ambigLimit := max }
 
 export
 setAutoImplicitLimit : {auto c : Ref Ctxt Defs} ->
                        Nat -> Core ()
-setAutoImplicitLimit max
-    = do defs <- get Ctxt
-         put Ctxt ({ options->elabDirectives->autoImplicitLimit := max } defs)
+setAutoImplicitLimit max = update Ctxt { options->elabDirectives->autoImplicitLimit := max }
 
 export
 setNFThreshold : {auto c : Ref Ctxt Defs} ->
                  Nat -> Core ()
-setNFThreshold max
-    = do defs <- get Ctxt
-         put Ctxt ({ options->elabDirectives->nfThreshold := max } defs)
+setNFThreshold max = update Ctxt { options->elabDirectives->nfThreshold := max }
 
 export
 setSearchTimeout : {auto c : Ref Ctxt Defs} ->
                    Integer -> Core ()
-setSearchTimeout t
-    = do defs <- get Ctxt
-         put Ctxt ({ options->session->searchTimeout := t } defs)
+setSearchTimeout t = update Ctxt { options->session->searchTimeout := t }
 
 export
 isLazyActive : {auto c : Ref Ctxt Defs} ->
@@ -2098,57 +2241,46 @@ setPair : {auto c : Ref Ctxt Defs} ->
           FC -> (pairType : Name) -> (fstn : Name) -> (sndn : Name) ->
           Core ()
 setPair fc ty f s
-    = do defs <- get Ctxt
-         ty' <- checkUnambig fc ty
+    = do ty' <- checkUnambig fc ty
          f' <- checkUnambig fc f
          s' <- checkUnambig fc s
-         put Ctxt ({ options $= setPair ty' f' s' } defs)
+         update Ctxt { options $= setPair ty' f' s' }
 
 export
 setRewrite : {auto c : Ref Ctxt Defs} ->
              FC -> (eq : Name) -> (rwlemma : Name) -> Core ()
 setRewrite fc eq rw
-    = do defs <- get Ctxt
-         rw' <- checkUnambig fc rw
+    = do rw' <- checkUnambig fc rw
          eq' <- checkUnambig fc eq
-         put Ctxt ({ options $= setRewrite eq' rw' } defs)
+         update Ctxt { options $= setRewrite eq' rw' }
 
 -- Don't check for ambiguity here; they're all meant to be overloadable
 export
 setFromInteger : {auto c : Ref Ctxt Defs} ->
                  Name -> Core ()
-setFromInteger n
-    = do defs <- get Ctxt
-         put Ctxt ({ options $= setFromInteger n } defs)
+setFromInteger n = update Ctxt { options $= setFromInteger n }
 
 export
 setFromString : {auto c : Ref Ctxt Defs} ->
                 Name -> Core ()
-setFromString n
-    = do defs <- get Ctxt
-         put Ctxt ({ options $= setFromString n } defs)
+setFromString n = update Ctxt { options $= setFromString n }
 
 export
 setFromChar : {auto c : Ref Ctxt Defs} ->
               Name -> Core ()
-setFromChar n
-    = do defs <- get Ctxt
-         put Ctxt ({ options $= setFromChar n } defs)
+setFromChar n = update Ctxt { options $= setFromChar n }
 
 export
 setFromDouble : {auto c : Ref Ctxt Defs} ->
               Name -> Core ()
-setFromDouble n
-    = do defs <- get Ctxt
-         put Ctxt ({ options $= setFromDouble n } defs)
+setFromDouble n = update Ctxt { options $= setFromDouble n }
 
 export
 addNameDirective : {auto c : Ref Ctxt Defs} ->
                    FC -> Name -> List String -> Core ()
 addNameDirective fc n ns
-    = do defs <- get Ctxt
-         n' <- checkUnambig fc n
-         put Ctxt ({ namedirectives $= insert n' ns  } defs)
+    = do n' <- checkUnambig fc n
+         update Ctxt { namedirectives $= insert n' ns  }
 
 -- Checking special names from Options
 
@@ -2241,13 +2373,8 @@ isPrimName prims given = let (ns, nm) = splitNS given in go ns nm prims where
 export
 addLogLevel : {auto c : Ref Ctxt Defs} ->
               Maybe LogLevel -> Core ()
-addLogLevel lvl
-    = do defs <- get Ctxt
-         case lvl of
-           Nothing => put Ctxt ({ options->session->logEnabled := True,
-                                  options->session->logLevel := defaultLogLevel } defs)
-           Just l  => put Ctxt ({ options->session->logEnabled := True,
-                                  options->session->logLevel $= insertLogLevel l } defs)
+addLogLevel Nothing  = update Ctxt { options->session->logEnabled := False, options->session->logLevel := defaultLogLevel }
+addLogLevel (Just l) = update Ctxt { options->session->logEnabled := True, options->session->logLevel $= insertLogLevel l }
 
 export
 withLogLevel : {auto c : Ref Ctxt Defs} ->
@@ -2262,18 +2389,12 @@ withLogLevel l comp = do
   pure r
 
 export
-setLogTimings : {auto c : Ref Ctxt Defs} ->
-                Bool -> Core ()
-setLogTimings b
-    = do defs <- get Ctxt
-         put Ctxt ({ options->session->logTimings := b } defs)
+setLogTimings : {auto c : Ref Ctxt Defs} -> Nat -> Core ()
+setLogTimings n = update Ctxt { options->session->logTimings := Just n }
 
 export
-setDebugElabCheck : {auto c : Ref Ctxt Defs} ->
-                    Bool -> Core ()
-setDebugElabCheck b
-    = do defs <- get Ctxt
-         put Ctxt ({ options->session->debugElabCheck := b } defs)
+setDebugElabCheck : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
+setDebugElabCheck b = update Ctxt { options->session->debugElabCheck := b }
 
 export
 getSession : {auto c : Ref Ctxt Defs} ->
@@ -2283,11 +2404,8 @@ getSession
          pure (session (options defs))
 
 export
-setSession : {auto c : Ref Ctxt Defs} ->
-             Session -> Core ()
-setSession sopts
-    = do defs <- get Ctxt
-         put Ctxt ({ options->session := sopts } defs)
+setSession : {auto c : Ref Ctxt Defs} -> Session -> Core ()
+setSession sopts = update Ctxt { options->session := sopts }
 
 %inline
 export
@@ -2297,10 +2415,7 @@ updateSession f = setSession (f !getSession)
 
 export
 recordWarning : {auto c : Ref Ctxt Defs} -> Warning -> Core ()
-recordWarning w
-    = do defs <- get Ctxt
-         session <- getSession
-         put Ctxt $ { warnings $= (w ::) } defs
+recordWarning w = update Ctxt { warnings $= (w ::) }
 
 export
 getTime : Core Integer
@@ -2324,15 +2439,12 @@ startTimer : {auto c : Ref Ctxt Defs} ->
              Integer -> String -> Core ()
 startTimer tmax action
     = do t <- getTime
-         defs <- get Ctxt
-         put Ctxt $ { timer := Just (t + tmax * 1000000, action) } defs
+         update Ctxt { timer := Just (t + tmax * 1000000, action) }
 
 ||| Clear the timer
 export
 clearTimer : {auto c : Ref Ctxt Defs} -> Core ()
-clearTimer
-    = do defs <- get Ctxt
-         put Ctxt $ { timer := Nothing } defs
+clearTimer = update Ctxt { timer := Nothing }
 
 ||| If the timer was started more than t milliseconds ago, throw an exception
 export
@@ -2364,6 +2476,9 @@ addImportedInc modNS inc
                   do recordWarning (GenericWarn ("No incremental compile data for " ++ show modNS))
                      defs <- get Ctxt
                      put Ctxt ({ allIncData $= drop cg } defs)
+                     -- Tell session that the codegen is no longer incremental
+                     when (show modNS /= "") $
+                        updateSession { incrementalCGs $= (delete cg) }
                 Just (mods, extra) =>
                      put Ctxt ({ allIncData $= addMod cg (mods, extra) }
                                       defs)
@@ -2387,9 +2502,7 @@ addImportedInc modNS inc
 export
 setIncData : {auto c : Ref Ctxt Defs} ->
              CG -> (String, List String) -> Core ()
-setIncData cg res
-    = do defs <- get Ctxt
-         put Ctxt ({ incData $= ((cg, res) :: )} defs)
+setIncData cg res = update Ctxt { incData $= ((cg, res) :: )}
 
 -- Set a name as Private that was previously visible (and, if 'everywhere' is
 -- set, hide in any modules imported by this one)

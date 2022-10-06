@@ -7,35 +7,52 @@ import Core.Context
 import Core.TT
 import Core.Metadata
 import Data.List1
+import Data.SnocList
 import Data.String
 import Libraries.Data.List.Extra
-import Libraries.Data.String.Extra
-
-%hide Data.String.lines
-%hide Data.String.lines'
-%hide Data.String.unlines
-%hide Data.String.unlines'
 
 %default total
 
+||| This version of the Parser's state is parameterized over
+||| the container for SemanticDecorations. The parser should
+||| only work the ParsingState type below and after parsing
+||| is complete, use the regular State type.
 public export
-record State where
+record ParserState (container : Type -> Type) where
   constructor MkState
-  decorations : SemanticDecorations
+  decorations : container ASemanticDecoration
   holeNames : List String
 
-export
-Semigroup State where
-  MkState decs1 hs1 <+> MkState decs2 hs2
-    = MkState (decs1 ++ decs2) (hs1 ++ hs2)
+||| This state needs to provide efficient concatenation.
+public export
+ParsingState : Type
+ParsingState = ParserState SnocList
+
+||| This is the final state after parsing. We no longer
+||| need to support efficient concatenation.
+public export
+State : Type
+State = ParserState List
 
 export
-Monoid State where
-  neutral = MkState [] []
+toState : ParsingState -> State
+toState (MkState decs hs) = MkState (cast decs) hs
+
+-- To help prevent concatenation slow downs, we only
+-- provide Semigroup and Monoid for the efficient
+-- version of the ParserState.
+export
+Semigroup ParsingState where
+  MkState decs1 hs1 <+> MkState decs2 hs2
+    = MkState (decs1 <+> decs2) (hs1 ++ hs2)
+
+export
+Monoid ParsingState where
+  neutral = MkState [<] []
 
 public export
 BRule : Bool -> Type -> Type
-BRule = Grammar State Token
+BRule = Grammar ParsingState Token
 
 public export
 Rule : Type -> Type
@@ -47,11 +64,11 @@ EmptyRule = BRule False
 
 export
 actD : ASemanticDecoration -> EmptyRule ()
-actD s = act (MkState [s] [])
+actD s = act (MkState [<s] [])
 
 export
 actH : String -> EmptyRule ()
-actH s = act (MkState [] [s])
+actH s = act (MkState [<] [s])
 
 export
 eoi : EmptyRule ()
@@ -65,12 +82,12 @@ export
 constant : Rule Constant
 constant
     = terminal "Expected constant" $ \case
-        CharLit c    =>  Ch <$> getCharLit c
+        CharLit c    => Ch <$> getCharLit c
         DoubleLit d  => Just (Db d)
         IntegerLit i => Just (BI i)
         Ident s      => isConstantType (UN $ Basic s) >>=
                              \case WorldType => Nothing
-                                   c         => Just c
+                                   c         => Just $ PrT c
         _            => Nothing
 
 documentation' : Rule String
@@ -288,6 +305,14 @@ namespaceId = do
   nsid <- bounds namespacedIdent
   isCapitalisedIdent (snd <$> nsid)
   pure (uncurry mkNestedNamespace nsid.val)
+
+export
+namespacedSymbol : String -> Rule (Maybe Namespace)
+namespacedSymbol req = do
+  (symbol req $> Nothing) <|> do
+    ns <- namespaceId
+    symbol ("." ++ req)
+    pure (Just ns)
 
 export
 moduleIdent : Rule ModuleIdent
@@ -615,7 +640,7 @@ nonEmptyBlockAfter mincol item
          pure (fst res ::: ps)
   <|> do col <- column
          let False = col <= mincol
-            | True => fail "Expected an indented non-empty block"
+            | True => fatalError "Expected an indented non-empty block"
          res <- blockEntry (AtPos col) item
          ps <- blockEntries (snd res) item
          pure (fst res ::: ps)

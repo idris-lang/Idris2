@@ -3,7 +3,7 @@ Main> Main.Dict : (a -> a -> Bool) -> Type -> Type
 Main> Main.MkDict : (eq : (a -> a -> Bool)) -> List (a, b) -> Dict eq b
 Main> Main.lookup : (a -> a -> Bool) -> a -> List (a, b) -> Maybe b
 Main> Main.lookupK : (eq : (a -> a -> Bool)) -> a -> Dict eq b -> Maybe b
-Main> MkDict (\{arg:0}, {arg:1} => intToBool (prim__eq_Int arg arg)) [(0, "foo"), (1, "bar")]
+Main> MkDict (\arg, arg => intToBool (prim__eq_Int arg arg)) [(0, "foo"), (1, "bar")]
 Main> Just "bar"
 Main> Nothing
 Main> Bye for now!

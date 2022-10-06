@@ -10,6 +10,7 @@ import Core.Normalise
 import Core.UnifyState
 import Core.Unify
 
+import Idris.REPL.Opts
 import Idris.Syntax
 
 import TTImp.Elab.Check
@@ -96,6 +97,7 @@ elabTermSub : {inner, vars : _} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
+              {auto o : Ref ROpts REPLOpts} ->
               Int -> ElabMode -> List ElabOpt ->
               NestedNames vars -> Env Term vars ->
               Env Term inner -> SubVars inner vars ->
@@ -135,11 +137,9 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
                              (sortBy (\x, y => compare (fst x) (fst y))
                                        (delayedElab ust)))
                  (\err =>
-                    do ust <- get UST
-                       put UST ({ delayedElab := olddelayed } ust)
+                    do update UST { delayedElab := olddelayed }
                        throw err)
-         ust <- get UST
-         put UST ({ delayedElab := olddelayed } ust)
+         update UST { delayedElab := olddelayed }
          solveConstraintsAfter constart solvemode MatchArgs
 
          -- As long as we're not in the RHS of a case block,
@@ -216,6 +216,7 @@ elabTerm : {vars : _} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
            Int -> ElabMode -> List ElabOpt ->
            NestedNames vars -> Env Term vars ->
            RawImp -> Maybe (Glued vars) ->
@@ -229,6 +230,7 @@ checkTermSub : {inner, vars : _} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
                Int -> ElabMode -> List ElabOpt ->
                NestedNames vars -> Env Term vars ->
                Env Term inner -> SubVars inner vars ->
@@ -282,6 +284,7 @@ checkTerm : {vars : _} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
             {auto s : Ref Syn SyntaxInfo} ->
+            {auto o : Ref ROpts REPLOpts} ->
             Int -> ElabMode -> List ElabOpt ->
             NestedNames vars -> Env Term vars ->
             RawImp -> Glued vars ->

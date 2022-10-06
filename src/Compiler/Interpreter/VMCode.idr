@@ -1,13 +1,16 @@
 module Compiler.Interpreter.VMCode
 
-
 import Core.Core
 import Core.Context
 import Core.Context.Log
 import Core.Primitives
 import Core.Value
+
 import Compiler.Common
 import Compiler.VMCode
+
+import Idris.Syntax
+
 import Libraries.Data.IOArray
 import Libraries.Data.NameMap
 import Data.Nat
@@ -123,13 +126,13 @@ NS_UN : Namespace -> String -> Name
 NS_UN ns un = NS ns (UN $ Basic un)
 
 argError : Ref State InterpState => Stack -> Vect h Object -> Core a
-argError stk obj = interpError stk $ "Unexpected arguments: " ++ foldMap ((" " ++) . showType) obj
+argError stk obj = interpError stk $ "Unexpected arguments: " ++ foldMap ((" " ++) . showDepth 1) obj
 
 unit : Object
 unit = Const (I 0)
 
 ioRes : Object -> Object
-ioRes obj = Constructor (Left 0) [Const WorldVal, obj]
+ioRes obj = obj -- ioRes is a newtype -- Constructor (Left 0) [Const WorldVal, obj]
 
 -- TODO: add more?
 knownForeign : NameMap (ar ** (Ref State InterpState => Stack -> Vect ar Object -> Core Object))
@@ -140,17 +143,27 @@ knownForeign = fromList
     , (NS_UN ioNS "prim__putStr", (2 ** prim_putStr))
     ]
   where
+    -- %MkWorld should not be matched on
+    -- however a value of type %World should only be %MkWorld or and erased value
+    world : Ref State InterpState => Stack -> Object -> Core ()
+    world stk Null = pure ()
+    world stk (Const WorldVal) = pure ()
+    world stk o = interpError stk $ "expected %MkWorld or Null, got \{show o}"
+
     prim_putChar : Ref State InterpState => Stack -> Vect 2 Object -> Core Object
-    prim_putChar _ [Const (Ch c), Const WorldVal] = ioRes unit <$ coreLift_ (putChar c)
+    prim_putChar stk [Const (Ch c), w] = world stk w *> (ioRes unit <$ coreLift_ (putChar c))
     prim_putChar stk as = argError stk as
+
     prim_getChar : Ref State InterpState => Stack -> Vect 1 Object -> Core Object
-    prim_getChar _ [Const WorldVal] = ioRes . Const . Ch <$> coreLift getChar
+    prim_getChar stk [w] = world stk w *> (ioRes . Const . Ch <$> coreLift getChar)
     prim_getChar stk as = argError stk as
+
     prim_getStr : Ref State InterpState => Stack -> Vect 1 Object -> Core Object
-    prim_getStr _ [Const WorldVal] = Const . Str <$> coreLift getLine
+    prim_getStr stk [w] = world stk w *> (ioRes . Const . Str <$> coreLift getLine)
     prim_getStr stk as = argError stk as
+
     prim_putStr : Ref State InterpState => Stack -> Vect 2 Object -> Core Object
-    prim_putStr _ [Const (Str s), Const WorldVal] = ioRes unit <$ coreLift_ (putStr s)
+    prim_putStr stk [Const (Str s), w] = world stk w *> (ioRes unit <$ coreLift_ (putStr s))
     prim_putStr stk as = argError stk as
 
 knownExtern : NameMap (ar ** (Ref State InterpState => Stack -> Vect ar Object -> Core Object))
@@ -271,11 +284,17 @@ parameters {auto c : Ref Ctxt Defs}
         when logCallStack $ coreLift $ putStrLn $ ind ++ "Result: " ++ show res
         pure res
 
-compileExpr : Ref Ctxt Defs -> String -> String -> ClosedTerm -> String -> Core (Maybe String)
-compileExpr _ _ _ _ _ = Nothing <$ throw {a=()} (InternalError "compile not implemeted for vmcode-interp")
+compileExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  String -> String -> ClosedTerm -> String -> Core (Maybe String)
+compileExpr _ _ _ _ _ _ = throw (InternalError "compile not implemeted for vmcode-interp")
 
-executeExpr : Ref Ctxt Defs -> String -> ClosedTerm -> Core ()
-executeExpr c _ tm = do
+executeExpr :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  String -> ClosedTerm -> Core ()
+executeExpr c s _ tm = do
     cdata <- getCompileData False VMCode tm
     st <- newRef State !(initInterpState cdata.vmcode)
     ignore $ callFunc [] (MN "__mainExpression" 0) []

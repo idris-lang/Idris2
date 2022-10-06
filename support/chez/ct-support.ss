@@ -241,7 +241,7 @@
 
 (define ct-cast-string-double
   (lambda (x)
-    (cast-num (string->number (destroy-prefix x)))))
+    (exact->inexact (cast-num (string->number (destroy-prefix x))))))
 
 (define ct-cast-char-boundedInt
   (lambda (x y)

@@ -5,6 +5,9 @@ import Core.Context.Log
 import Core.Core
 import Core.FC
 import Core.Options
+
+import Parser.Unlit
+
 import Libraries.Utils.Path
 
 import Data.List
@@ -34,9 +37,38 @@ Show IdrSrcExt where
   show E_org  = "org"
   show E_md   = "md"
 
+||| This does not include the complete set of literate extensions as supported by Idris.
 public export
 listOfExtensions : List IdrSrcExt
 listOfExtensions = [E_idr, E_lidr, E_yaff, E_org, E_md]
+
+||| List of valid extensions in Idris as strings.
+|||
+||| Extensions have a leading "." separator *and* may include multiple extensions to support literate mode extensions for the form ".org.idr".
+|||
+public export
+listOfExtensionsStr : List String
+listOfExtensionsStr = listOfExtensionsLiterate ++ [".yaff", ".idr"]
+
+||| Given a path, removes trailing separators and current directory identifiers, '.'.
+cleanPath : String -> String
+cleanPath = show . the (Path -> Path) { hasTrailSep := False, body $= filter (/= CurDir) } . parse
+
+||| Return the basename and extension used *if* given filename is a valid idris filename.
+|||
+||| Extensions are returned with a leading "." separator.
+export
+splitIdrisFileName : String -> Maybe (String, String)
+splitIdrisFileName fname
+    = hasLitFileExt fname <|> isPureCode
+
+  where
+    isPureCode : Maybe (String, String)
+    isPureCode
+      = let (bname, ext) = splitFileName fname in
+        do guard (ext == "idr")
+           pure (bname, ".idr")
+
 
 -- Return the name of the first file available in the list
 -- Used in LSP.
@@ -57,7 +89,7 @@ findDataFile : {auto c : Ref Ctxt Defs} ->
                String -> Core String
 findDataFile fname
     = do d <- getDirs
-         let fs = map (\p => p </> fname) (data_dirs d)
+         let fs = map (\p => cleanPath $ p </> fname) (data_dirs d)
          Just f <- firstAvailable fs
             | Nothing => throw (InternalError ("Can't find data file " ++ fname ++
                                                " in any of " ++ show fs))
@@ -74,14 +106,14 @@ readDataFile fname
          pure d
 
 -- Look for a library file required by a code generator. Look in the
--- library directories, and in the lib/ subdirectoriy of all the 'extra import'
+-- library directories, and in the lib/ subdirectory of all the 'extra import'
 -- directories
 export
 findLibraryFile : {auto c : Ref Ctxt Defs} ->
                   String -> Core String
 findLibraryFile fname
     = do d <- getDirs
-         let fs = map (\p => p </> fname)
+         let fs = map (\p => cleanPath $ p </> fname)
                       (lib_dirs d ++ map (\x => x </> "lib")
                                          (extra_dirs d))
          Just f <- firstAvailable fs
@@ -96,7 +128,7 @@ nsToPath : {auto c : Ref Ctxt Defs} ->
 nsToPath loc ns
     = do d <- getDirs
          let fnameBase = ModuleIdent.toPath ns
-         let fs = map (\p => p </> fnameBase <.> "ttc")
+         let fs = map (\p => cleanPath $ p </> fnameBase <.> "ttc")
                       ((build_dir d </> "ttc") :: extra_dirs d)
          Just f <- firstAvailable fs
             | Nothing => pure (Left (ModuleNotFound loc ns))
@@ -110,11 +142,12 @@ nsToSource : {auto c : Ref Ctxt Defs} ->
 nsToSource loc ns
     = do d <- getDirs
          let fnameOrig = ModuleIdent.toPath ns
-         let fnameBase = maybe fnameOrig (\srcdir => srcdir </> fnameOrig) (source_dir d)
-         let fs = map ((fnameBase <.>) . show) listOfExtensions
+         let fnameBase = cleanPath $ maybe fnameOrig (\srcdir => srcdir </> fnameOrig) (source_dir d)
+         let fs = map ((fnameBase ++)) listOfExtensionsStr
          Just f <- firstAvailable fs
             | Nothing => throw (ModuleNotFound loc ns)
          pure f
+
 
 -- Given a filename in the working directory + source directory, return the correct
 -- namespace for it
@@ -122,10 +155,6 @@ export
 mbPathToNS : String -> Maybe String -> String -> Maybe ModuleIdent
 mbPathToNS wdir sdir fname =
   let
-    cleanPath : String -> String
-      := show
-       . the (Path -> Path) { hasTrailSep := False, body $= filter (/= CurDir) }
-       . parse
     sdir = fromMaybe "" sdir
     base = if isAbsolute fname then wdir </> sdir else sdir
   in
