@@ -140,7 +140,9 @@ parameters (defs : Defs, topopts : EvalOpts)
                       eval env (arg :: locs) (Local {name = UN (Basic "fvar")} fc Nothing _ First) stk
                   _ => pure (NForce fc r tm' stk)
     eval env locs (PrimVal fc c) stk = pure $ NPrimVal fc c
-    eval env locs (Erased fc i) stk = pure $ NErased fc i
+    eval env locs (Erased fc Impossible) stk = pure $ NErased fc Impossible
+    eval env locs (Erased fc Placeholder) stk = pure $ NErased fc Placeholder
+    eval env locs (Erased fc (Dotted t)) stk = pure $ NErased fc $ Dotted !(eval env locs t stk)
     eval env locs (TType fc u) stk = pure $ NType fc u
 
     -- Apply an evaluated argument (perhaps cached from an earlier evaluation)
@@ -334,6 +336,9 @@ parameters (defs : Defs, topopts : EvalOpts)
              LocalEnv free more -> EvalOpts -> FC ->
              Stack free -> NF free -> CaseAlt more ->
              Core (CaseResult (NF free))
+    -- Dotted values should still reduce at compile time
+    tryAlt {more} env loc opts fc stk (NErased _ (Dotted tm)) alt
+         = tryAlt {more} env loc opts fc stk tm alt
     -- Ordinary constructor matching
     tryAlt {more} env loc opts fc stk (NDCon _ nm tag' arity args') (ConCase x tag args sc)
          = if tag == tag'
@@ -582,7 +587,7 @@ gType fc u = MkGlue True (pure (TType fc u)) (const (pure (NType fc u)))
 
 export
 gErased : FC -> Glued vars
-gErased fc = MkGlue True (pure (Erased fc False)) (const (pure (NErased fc False)))
+gErased fc = MkGlue True (pure (Erased fc Placeholder)) (const (pure (NErased fc Placeholder)))
 
 -- Resume a previously blocked normalisation with a new environment
 export

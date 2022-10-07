@@ -620,7 +620,7 @@ mutual
     reflect fc defs lhs env (IUnifyLog tfc _ t)
         = reflect fc defs lhs env t
     reflect fc defs True env (Implicit tfc t)
-        = pure (Erased fc False)
+        = pure (Erased fc Placeholder)
     reflect fc defs lhs env (Implicit tfc t)
         = do fc' <- reflect fc defs lhs env tfc
              t' <- reflect fc defs lhs env t

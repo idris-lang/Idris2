@@ -29,7 +29,7 @@ import Libraries.Data.StringMap
 
 getRetTy : Defs -> NF [] -> Core Name
 getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
-    = getRetTy defs !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+    = getRetTy defs !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
 getRetTy defs (NTCon _ n _ _ _) = pure n
 getRetTy defs ty
     = throw (GenericMsg (getLoc ty)
@@ -125,12 +125,12 @@ processFnOpt fc _ ndef (SpecArgs ns)
       getDeps inparam (NBind _ x (Pi _ _ _ pty) sc) ns
           = do defs <- get Ctxt
                ns' <- getDeps inparam !(evalClosure defs pty) ns
-               sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+               sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
                getDeps inparam sc' ns'
       getDeps inparam (NBind _ x b sc) ns
           = do defs <- get Ctxt
                ns' <- getDeps False !(evalClosure defs (binderType b)) ns
-               sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+               sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
                getDeps False sc' ns
       getDeps inparam (NApp _ (NRef Bound n) args) ns
           = do defs <- get Ctxt
@@ -189,7 +189,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
     getNamePos : Nat -> NF [] -> Core (List (Name, Nat))
     getNamePos i (NBind tfc x (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
-             ns' <- getNamePos (1 + i) !(sc defs (toClosure defaultOpts [] (Erased tfc False)))
+             ns' <- getNamePos (1 + i) !(sc defs (toClosure defaultOpts [] (Erased tfc Placeholder)))
              pure ((x, i) :: ns')
     getNamePos _ _ = pure []
 

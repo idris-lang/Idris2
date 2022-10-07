@@ -529,11 +529,11 @@ groupCons fc fn pvars cs
     addConG {vars'} {todo'} n tag pargs pats pid rhs []
         = do cty <- if n == UN (Basic "->")
                       then pure $ NBind fc (MN "_" 0) (Pi fc top Explicit (MkNFClosure defaultOpts (mkEnv fc vars') (NType fc (MN "top" 0)))) $
-                              (\d, a => pure $ NBind fc (MN "_" 1) (Pi fc top Explicit (MkNFClosure defaultOpts (mkEnv fc vars') (NErased fc False)))
+                              (\d, a => pure $ NBind fc (MN "_" 1) (Pi fc top Explicit (MkNFClosure defaultOpts (mkEnv fc vars') (NErased fc Placeholder)))
                                 (\d, a => pure $ NType fc (MN "top" 0)))
                       else do defs <- get Ctxt
                               Just t <- lookupTyExact n (gamma defs)
-                                   | Nothing => pure (NErased fc False)
+                                   | Nothing => pure (NErased fc Placeholder)
                               nf defs (mkEnv fc vars') (embed t)
              (patnames ** (l, newargs)) <- nextNames {vars=vars'} fc "e" pargs (Just cty)
              -- Update non-linear names in remaining patterns (to keep
@@ -988,7 +988,7 @@ mutual
   match {todo = []} fc fn phase [] err
        = maybe (pure (Unmatched "No patterns"))
                pure err
-  match {todo = []} fc fn phase ((MkPatClause pvars [] pid (Erased _ True)) :: _) err
+  match {todo = []} fc fn phase ((MkPatClause pvars [] pid (Erased _ Impossible)) :: _) err
        = pure Impossible
   match {todo = []} fc fn phase ((MkPatClause pvars [] pid rhs) :: _) err
        = pure $ STerm pid rhs
@@ -1107,7 +1107,7 @@ mkPat args orig (Ref fc Func n)
                 "Unmatchable function: " ++ show n
               pure $ PUnmatchable (getLoc orig) orig
 mkPat args orig (Bind fc x (Pi _ _ _ s) t)
-    = let t' = subst (Erased fc False) t in
+    = let t' = subst (Erased fc Placeholder) t in
       pure $ PArrow fc x !(mkPat [] s s) !(mkPat [] t' t')
 mkPat args orig (App fc fn arg)
     = do parg <- mkPat [] arg arg
@@ -1346,7 +1346,7 @@ getPMDef fc phase fn ty []
     getArgs : Int -> NF [] -> Core (List Name)
     getArgs i (NBind fc x (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
              pure (MN "arg" i :: !(getArgs i sc'))
     getArgs i _ = pure []
 getPMDef fc phase fn ty clauses

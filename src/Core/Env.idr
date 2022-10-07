@@ -265,7 +265,7 @@ export
 mkEnvOnto : FC -> (xs : List Name) -> Env Term ys -> Env Term (xs ++ ys)
 mkEnvOnto fc [] vs = vs
 mkEnvOnto fc (n :: ns) vs
-   = PVar fc top Explicit (Erased fc False)
+   = PVar fc top Explicit (Erased fc Placeholder)
    :: mkEnvOnto fc ns vs
 
 -- Make a dummy environment, if we genuinely don't care about the values
@@ -274,7 +274,7 @@ mkEnvOnto fc (n :: ns) vs
 export
 mkEnv : FC -> (vs : List Name) -> Env Term vs
 mkEnv fc [] = []
-mkEnv fc (n :: ns) = PVar fc top Explicit (Erased fc False) :: mkEnv fc ns
+mkEnv fc (n :: ns) = PVar fc top Explicit (Erased fc Placeholder) :: mkEnv fc ns
 
 -- Update an environment so that all names are guaranteed unique. In the
 -- case of a clash, the most recently bound is left unchanged.

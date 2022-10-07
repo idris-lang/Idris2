@@ -1,0 +1,19 @@
+1/1: Building ForcedPats (ForcedPats.idr)
+Main> Main.idL
+Arguments [{arg:0}, {arg:1}, {arg:2}]
+Compile time tree: case {arg:2} of
+  Nil {e:0} => []
+  (::) {e:1} {e:2} {e:3} => {e:2} :: idL {e:3} (view {e:3})
+Erasable args: [0]
+Detaggable arg types: [2]
+Inferrable args: [1, 0]
+Compiled: \ {arg:1}, {arg:2} => case {arg:2} of
+  { Main.Nil {tag = 0} [nil] => Prelude.Basics.Nil {tag = 0} [nil]
+  ; Main.(::) {tag = 1} [cons] {e:2} {e:3} => Prelude.Basics.(::) {tag = 1} [cons] {e:2} (Main.idL {e:3} (Main.view {e:3}))
+  }
+Refers to: Main.view, Main.idL, Prelude.Basics.Nil, Prelude.Basics.(::)
+Refers to (runtime): Main.view, Main.idL, Prelude.Basics.Nil, Prelude.Basics.(::)
+Flags: covering
+Size change: Main.idL: [Just (0, Same), Just (2, Smaller), Nothing]
+Main> 
+Bye for now!

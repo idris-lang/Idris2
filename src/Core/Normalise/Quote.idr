@@ -229,7 +229,10 @@ mutual
                 _ => do arg' <- quoteGenNF q opts defs bound env arg
                         pure $ applyWithFC (TForce fc r arg') args'
   quoteGenNF q opts defs bound env (NPrimVal fc c) = pure $ PrimVal fc c
-  quoteGenNF q opts defs bound env (NErased fc i) = pure $ Erased fc i
+  quoteGenNF q opts defs bound env (NErased fc Impossible) = pure $ Erased fc Impossible
+  quoteGenNF q opts defs bound env (NErased fc Placeholder) = pure $ Erased fc Placeholder
+  quoteGenNF q opts defs bound env (NErased fc (Dotted nf))
+    = pure $ Erased fc $ Dotted !(quoteGenNF q opts defs bound env nf)
   quoteGenNF q opts defs bound env (NType fc u) = pure $ TType fc u
 
 export
