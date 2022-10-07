@@ -72,7 +72,7 @@ bindEnv loc (b :: env) tm
                                         Explicit
                                         (binderType b)) tm)
 
-revOnto : (xs, vs : _) -> reverseOnto xs vs = reverse vs ++ xs
+revOnto : (xs, vs : List a) -> reverseOnto xs vs = reverse vs ++ xs
 revOnto xs [] = Refl
 revOnto xs (v :: vs)
     = rewrite revOnto (v :: xs) vs in
