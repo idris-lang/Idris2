@@ -841,13 +841,13 @@ data UseSide = UseLeft | UseRight
 
 %name UseSide side
 
-data Term : List Name -> Type
-
 public export
 data WhyErased a
   = Placeholder
   | Impossible
   | Dotted a
+
+%name WhyErased why
 
 public export
 data Term : List Name -> Type where
