@@ -229,38 +229,38 @@
     Michael Abbott, Thorsten Altenkirch, and Neil Ghani, and "Derivatives of
     Containers" by Michael Abbott, Thorsten Altenkirch, Neil Ghani, and Conor
     McBride, to `papers`.
-    https://doi.org/10.1007/3-540-36576-1_2
-    https://doi.org/10.1007/3-540-44904-3_2
+    [https://doi.org/10.1007/3-540-36576-1_2](https://doi.org/10.1007/3-540-36576-1_2)
+    [https://doi.org/10.1007/3-540-44904-3_2](https://doi.org/10.1007/3-540-44904-3_2)
 * Moves the implementation of "Indexed induction-recursion" by Dybjer and Setzer
     to `papers`
-    https://doi.org/10.1016/j.jlap.2005.07.001
+    [https://doi.org/10.1016/j.jlap.2005.07.001](https://doi.org/10.1016/j.jlap.2005.07.001)
 * Ports "How to Take the Inverse of a Type" by Daniel Marshall and Dominic
     Orchard as `Data.Linear.{Communications,Diff,Inverse}`
-    https://doi.org/10.4230/LIPIcs.ECOOP.2022.5
+    [https://doi.org/10.4230/LIPIcs.ECOOP.2022.5](https://doi.org/10.4230/LIPIcs.ECOOP.2022.5)
 * Moves `Data.OpenUnion`, inspired by the paper "Freer monads, more extensible
     effects" by Oleg Kiselyov and Hiromi Ishii, to `papers`
-    https://doi.org/10.1145/2887747.2804319
+    [https://doi.org/10.1145/2887747.2804319](https://doi.org/10.1145/2887747.2804319)
 * Moves `Data.Recursion.Free`, partially based on "Turing-Completeness Totally
     Free" by Conor McBride, to `papers`
-    https://doi.org/10.1007/978-3-319-19797-5_13
+    [https://doi.org/10.1007/978-3-319-19797-5_13](https://doi.org/10.1007/978-3-319-19797-5_13)
 * Moves `Data.Tree.Perfect` to `papers`.
 * Moves `Data.Vect.Binary`, taken from the paper "Heterogeneous Binary
     Random-access Lists" by Wouter Swierstra, to `papers`
-    https://doi.org/10.1017/S0956796820000064
+    [https://doi.org/10.1017/S0956796820000064](https://doi.org/10.1017/S0956796820000064)
 * Ports "Applications of Applicative Proof Search" by Liam O'Connor as
     `Search.{Generator,HDecidable,Negation,Properties,CTL,GCL}`
-    https://doi.org/10.1145/2976022.2976030
+    [https://doi.org/10.1145/2976022.2976030](https://doi.org/10.1145/2976022.2976030)
 * Implements "Dependent Tagless Final" by Nicolas Biri as `Language.Tagless`
-    https://doi.org/10.1145/3498886.3502201
+    [https://doi.org/10.1145/3498886.3502201](https://doi.org/10.1145/3498886.3502201)
 * Ports Todd Waugh Ambridge's Agda blog post series "Search over uniformly
     continuous decidable predicates on infinite collections of types" as
     `Search.Tychonoff`
-    https://www.cs.bham.ac.uk/~txw467/tychonoff/InfiniteSearch1.html
+    [https://www.cs.bham.ac.uk/~txw467/tychonoff/InfiniteSearch1.html](https://www.cs.bham.ac.uk/~txw467/tychonoff/InfiniteSearch1.html)
 * Ports "Auto in Agda - Programming proof search using reflection" by Wen Kokke
     and Wouter Swierstra as `Search.Auto`
-    https://doi.org/10.1007/978-3-319-19797-5_14
+    [https://doi.org/10.1007/978-3-319-19797-5_14](https://doi.org/10.1007/978-3-319-19797-5_14)
 * Ports "Computing with Generic Trees in Agda" by Stephen Dolan as `Data.W`
-    https://doi.org/10.1145/3546196.3550165
+    [https://doi.org/10.1145/3546196.3550165](https://doi.org/10.1145/3546196.3550165)
 
 ### Other changes
 
