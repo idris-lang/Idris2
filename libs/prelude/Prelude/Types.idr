@@ -450,7 +450,7 @@ namespace SnocList
   ||| lives in a different module.
   public export
   tailRecAppend : (sx, sy : SnocList a) -> SnocList a
-  tailRecAppend sx sy = reverseOnto sy (reverse sx)
+  tailRecAppend sx sy = reverseOnto sx (reverse sy)
 
   -- Always use tailRecAppend at runtime. Data.SnocList.tailRecAppendIsAppend
   -- proves these are equivalent.

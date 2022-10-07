@@ -407,3 +407,42 @@ filterTRIsFilter f = lemma []
         lemma as (sx :< x) with (f x)
           lemma as (sx :< x) | False = lemma as sx
           lemma as (sx :< x) | True  = lemma (x :: as) sx
+
+-- SnocList `reverse` applied to `reverseOnto` is equivalent to swapping the
+-- arguments of `reverseOnto`.
+reverseReverseOnto : (l, r : SnocList a) ->
+                     reverse (reverseOnto l r) = reverseOnto r l
+reverseReverseOnto _ Lin = Refl
+reverseReverseOnto l (sx :< x) = reverseReverseOnto (l :< x) sx
+
+||| SnocList `reverse` applied twice yields the identity function.
+export
+reverseInvolutive : (sx : SnocList a) -> reverse (reverse sx) = sx
+reverseInvolutive = reverseReverseOnto Lin
+
+-- Appending `x` to `l` and then reversing the result onto `r` is the same as
+-- using (::) with `x` and the result of reversing `l` onto `r`.
+snocReverse : (x : a) -> (l, r : SnocList a) ->
+              reverseOnto r l :< x = reverseOnto r (reverseOnto [<x] (reverse l))
+snocReverse _ Lin _ = Refl
+snocReverse x (sy :< y) r
+  = rewrite snocReverse x sy (r :< y) in
+      rewrite cong (reverseOnto r . reverse) $ snocReverse x sy [<y] in
+        rewrite reverseInvolutive (reverseOnto [<x] (reverse sy) :< y) in
+          Refl
+
+-- Proof that it is safe to lift a (::) out of the first `tailRecAppend`
+-- argument.
+snocTailRecAppend : (x : a) -> (l, r : SnocList a) ->
+                    tailRecAppend l (r :< x) = (tailRecAppend l r) :< x
+snocTailRecAppend x l r =
+  rewrite snocReverse x (reverse r) l in
+    rewrite reverseInvolutive r in
+       Refl
+
+-- Proof that `(++)` and `tailRecAppend` do the same thing, so the %transform
+-- directive is safe.
+tailRecAppendIsAppend : (sx, sy : SnocList a) -> tailRecAppend sx sy = sx ++ sy
+tailRecAppendIsAppend sx Lin = Refl
+tailRecAppendIsAppend sx (sy :< y) =
+  trans (snocTailRecAppend y sx sy) (cong (:< y) $ tailRecAppendIsAppend sx sy)
