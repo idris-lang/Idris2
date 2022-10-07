@@ -99,7 +99,7 @@ record Options where
   ||| Which codegen should we use?
   codegen      : Maybe String
   ||| Should we only run some specific cases?
-  onlyNames    : List String
+  onlyNames    : Maybe (String -> Bool)
   ||| Should we run the test suite interactively?
   interactive  : Bool
   ||| Should we use colors?
@@ -116,7 +116,7 @@ initOptions : String -> Bool -> Options
 initOptions exe color
   = MkOptions exe
               Nothing
-              []
+              Nothing
               False
               color
               False
@@ -144,6 +144,9 @@ fail err
     = do putStrLn err
          exitWith (ExitFailure 1)
 
+optionsTestsFilter : List String -> (String -> Bool)
+optionsTestsFilter xs name = any (`isInfixOf` name) xs
+
 ||| Process the command line options.
 export
 options : List String -> IO (Maybe Options)
@@ -166,7 +169,7 @@ options args = case args of
       ("--threads" :: n :: xs)      => do let pos : Nat = !(parsePositive n)
                                           go xs only ({ threads := pos } opts)
       ("--failure-file" :: p :: xs) => go  xs only ({ failureFile := Just p } opts)
-      ("--only" :: xs)              => pure (only, { onlyNames := xs } opts)
+      ("--only" :: xs)              => pure (only, { onlyNames := Just (optionsTestsFilter xs) } opts)
       ("--only-file" :: p :: xs)    => go xs (Just p) opts
       _ => Nothing
 
@@ -179,7 +182,7 @@ options args = case args of
                  | Nothing => pure (Just opts)
            Right only <- readFile fp
              | Left err => fail (show err)
-           pure $ Just $ { onlyNames $= ((lines only) ++) } opts
+           pure $ Just $ { onlyNames $= \o => Just $ \x => optionsTestsFilter (lines only) x || fromMaybe (const False) o x } opts
 
 ||| Normalise strings between different OS.
 |||
@@ -427,8 +430,8 @@ testsInDir dirName testNameFilter poolName reqs cg = do
 export
 filterTests : Options -> List String -> List String
 filterTests opts = case onlyNames opts of
-  [] => id
-  xs => filter (\ name => any (`isInfixOf` name) xs)
+  Nothing => id
+  Just f  => filter f
 
 ||| The summary of a test pool run
 public export
