@@ -57,6 +57,27 @@
 
 * `%nomangle` has been deprecated in favour of `%export`.
 
+* Records now support DataOpts, i.e. we can write things like
+  ```idris
+  record Wrap (phantom : Type) (a : Type) where
+    [search a]    -- this was previously not supported
+    constructor MkWrap
+    unWrap : a
+  ```
+
+* Adds ability to forward-declare interface implementations, e.g.:
+  ```idris
+  implementation IsOdd Nat    -- forward declare for use in `IsEven`
+
+  implementation IsEven Nat where
+   isEven 0 = True
+   isEven (S k) = not $ isOdd k
+
+  implementation IsOdd Nat where
+    isOdd 0 = False
+    isOdd (S k) = not $ isEven k
+  ```
+
 ### Compiler changes
 
 * Removes deprecated support for `void` primitive. Now `void` is supported via
@@ -69,6 +90,18 @@
 * Codegens now take an additional `Ref Syn SyntaxInfo` argument. This empowers
   compiler writers to pretty print core terms e.g. to add comments with the
   original type annotations in the generated code.
+* `Refc.showcCleanStringChar` forgot some symbols which have now been added,
+    ensuring the string is properly cleaned.
+* Constant-folds all casts and integral expressions (with the exception of type
+    `Int`), leading to improved performance.
+* Increases accuracy of error reporting for keywords.
+* Adds the `eval.stuck.outofscope` log topic in order to be able to spot when we
+    get stuck due to a function being out of scope.
+* Improves the error reporting for syntactically incorrect records.
+* `IPragma` now carries an `FC` with it for better error reporting.
+* Adds the number of enum constructors to enum types during codegen, to allow
+    for trivial conversion to, e.g., `Bits32`.
+* Adds constant-folding for `Nat` literals.
 
 ### IDE protocol changes
 
@@ -88,6 +121,18 @@
   + idris2-mode [PR#11](https://github.com/idris-community/idris2-mode/pull/11)
   + idris-mode [PR#547](https://github.com/idris-hackers/idris-mode/pull/547)
 
+* The IDE protocol now supports specifying a socket and hostname via the
+    `--ide-mode-socket` flag, allowing multiple IDE server instances to run on
+    the same machine.
+
+### Interactive Editing changes
+
+* Case-split no longer generates syntactically invalid Idris when splitting on
+    auto-implicits.
+* Case-split no longer shadows the function name when an internal named argument
+    has the same name as the function.
+* Case-split now avoids using upper-case names for pattern variables.
+
 ### Library changes
 
 #### Prelude
@@ -99,6 +144,7 @@
   implementations of `Eq` and `Ord` were moved to `prelude` from `base`.
   This may lead to a need to qualifying functions (e.g. `List.filter`) due to possible ambiguity.
 * "Fish" and "chips" operators of `SnocList` were moved to `Prelude.Types` from `Prelude.Basics`.
+* Adds `contra` for returning the opposite of a given `Ordering`.
 
 #### Base
 
@@ -138,6 +184,13 @@
 * Adds `Uninhabited` instances for `FZ ~~~ FS k` and `FS k ~~~ FZ`.
 * Change behavior of `channelPut` on the Racket backend to match the behavior
   on the Chez backend.
+* `fGetLine` has been marked as `covering` instead of `total`.
+* Adds the ability to derive `Functor` and `Traversable` using `%runElab derive`
+    in the implementation definition.
+* Fixes memory leaks in `currentDir`, `fGetLine`, and `fGetChars`.
+* Fixes `natToFinLT` being O(n) by proving that `So (x < n)` implies `LT x n`,
+    allowing the compiler to optimise `natToFinLT` away.
+* Fixes `SnocList.foldr` and `SnocList.foldMap` to be performant and stack-safe.
 
 #### Test
 
@@ -145,6 +198,9 @@
   libraries instead of `System.Future` from `contrib`. In addition to reducing
   the dependency on `contrib` in the core of Idris2, this also seems to provide
   a small performance improvement for `make test`.
+* Splits `runner` into `runnerWith` for processing the options and configuring
+    the test pools, and a new `runner` function for reading options from the
+    command-line.
 
 #### Contrib
 
@@ -162,10 +218,56 @@
   can also access the `sendBytes`, `recvBytes` and `recvAllBytes` functions of
   the underlying `Socket` module.
 
+#### Papers, Linear
+
+* Creates the `papers` and `linear` libraries to remove bits of type theory and
+    pl propaganda from `contrib` and instead clearly have them as
+    implementations of their respective papers.
+* Creates `Data.Linear.{Notation,LEither,LMaybe,LVect,Pow}`.
+
+* Moves `Data.Container`, based on the papers "Categories of Containers" by
+    Michael Abbott, Thorsten Altenkirch, and Neil Ghani, and "Derivatives of
+    Containers" by Michael Abbott, Thorsten Altenkirch, Neil Ghani, and Conor
+    McBride, to `papers`.
+    https://doi.org/10.1007/3-540-36576-1_2
+    https://doi.org/10.1007/3-540-44904-3_2
+* Moves the implementation of "Indexed induction-recursion" by Dybjer and Setzer
+    to `papers`
+    https://doi.org/10.1016/j.jlap.2005.07.001
+* Ports "How to Take the Inverse of a Type" by Daniel Marshall and Dominic
+    Orchard as `Data.Linear.{Communications,Diff,Inverse}`
+    https://doi.org/10.4230/LIPIcs.ECOOP.2022.5
+* Moves `Data.OpenUnion`, inspired by the paper "Freer monads, more extensible
+    effects" by Oleg Kiselyov and Hiromi Ishii, to `papers`
+    https://doi.org/10.1145/2887747.2804319
+* Moves `Data.Recursion.Free`, partially based on "Turing-Completeness Totally
+    Free" by Conor McBride, to `papers`
+    https://doi.org/10.1007/978-3-319-19797-5_13
+* Moves `Data.Tree.Perfect` to `papers`.
+* Moves `Data.Vect.Binary`, taken from the paper "Heterogeneous Binary
+    Random-access Lists" by Wouter Swierstra, to `papers`
+    https://doi.org/10.1017/S0956796820000064
+* Ports "Applications of Applicative Proof Search" by Liam O'Connor as
+    `Search.{Generator,HDecidable,Negation,Properties,CTL,GCL}`
+    https://doi.org/10.1145/2976022.2976030
+* Implements "Dependent Tagless Final" by Nicolas Biri as `Language.Tagless`
+    https://doi.org/10.1145/3498886.3502201
+* Ports Todd Waugh Ambridge's Agda blog post series "Search over uniformly
+    continuous decidable predicates on infinite collections of types" as
+    `Search.Tychonoff`
+    https://www.cs.bham.ac.uk/~txw467/tychonoff/InfiniteSearch1.html
+* Ports "Auto in Agda - Programming proof search using reflection" by Wen Kokke
+    and Wouter Swierstra as `Search.Auto`
+    https://doi.org/10.1007/978-3-319-19797-5_14
+* Ports "Computing with Generic Trees in Agda" by Stephen Dolan as `Data.W`
+    https://doi.org/10.1145/3546196.3550165
+
 ### Other changes
 
 * Adds docstrings for the lambda-lifted IR.
 * Package files are now installed along-side build artifacts for installed packages. This means all transitive dependencies of packages you specify with the `depends` field are added automatically.
+* No longer builds `contrib` and `papers` during bootstrap, as these may rely on
+    new features not yet present in the bootstrap version of Idris2.
 
 ## v0.5.0/0.5.1
 
