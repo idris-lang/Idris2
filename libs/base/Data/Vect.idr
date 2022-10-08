@@ -377,19 +377,41 @@ mapMaybe f (x::xs) =
        Nothing => (  len **      ys)
 
 --------------------------------------------------------------------------------
+-- Dependent folds
+--------------------------------------------------------------------------------
+
+||| Dependent right fold.
+|||
+||| Use this instead of `Foldable`'s `foldr`
+||| if your accumulator type depends on the length of the `Vect`.
+foldrD : (0 accTy : Nat -> Type) ->
+         (f : forall k. a -> accTy k -> accTy (S k)) ->
+         (acc : accTy Z) ->
+         (xs : Vect n a) ->
+         accTy n
+foldrD _     _ acc []        = acc
+foldrD accTy f acc (x :: xs) = f x (foldrD accTy f acc xs)
+
+||| Dependent left fold.
+|||
+||| Use this instead of `Foldable`'s `foldl`
+||| if your accumulator type depends on the length of the `Vect`.
+foldlD : (0 accTy : Nat -> Type) ->
+         (f : forall k. accTy k -> a -> accTy (S k)) ->
+         (acc : accTy Z) ->
+         (xs : Vect n a) ->
+         accTy n
+foldlD _     _ acc []        = acc
+foldlD accTy f acc (x :: xs) = foldlD (accTy . S) f (acc `f` x) xs
+
+--------------------------------------------------------------------------------
 -- Folds
 --------------------------------------------------------------------------------
 
 public export
-foldrImpl : (t -> acc -> acc) -> acc -> (acc -> acc) -> Vect n t -> acc
-foldrImpl f e go [] = go e
-foldrImpl f e go (x::xs) = foldrImpl f e (go . (f x)) xs
-
-public export
 implementation Foldable (Vect n) where
-  foldr f e xs = foldrImpl f e id xs
-  foldl f z [] = z
-  foldl f z (x :: xs) = foldl f (f z x) xs
+  foldr f acc xs = foldrD (const _) f acc xs
+  foldl f acc xs = foldlD (const _) f acc xs
 
   null [] = True
   null _ = False
@@ -399,6 +421,40 @@ implementation Foldable (Vect n) where
 --------------------------------------------------------------------------------
 -- Special folds
 --------------------------------------------------------------------------------
+
+||| Tail-recursive right fold
+|||
+||| Depending on the accumulator, codegen backend and what not,
+||| it might be more efficient than plain `foldr`.
+
+public export
+foldrImpl : (a -> acc -> acc) -> acc -> (acc -> acc) -> Vect n a -> acc
+foldrImpl f e go [] = go e
+foldrImpl f e go (x::xs) = foldrImpl f e (go . (f x)) xs
+
+public export
+foldrTR : (a -> acc -> acc) -> acc -> Vect n a -> acc
+foldrTR f e xs = foldrImpl f e id xs
+
+export
+foldrImplStep : (f : a -> accTy -> accTy) ->
+                (g : accTy -> accTy) ->
+                (acc : accTy) ->
+                (x : a) ->
+                (xs : Vect n a) ->
+                f x (foldrImpl f acc g xs) = foldrImpl f acc (f x . g) xs
+foldrImplStep f g acc x [] = Refl
+foldrImplStep f g acc x (x' :: xs) = foldrImplStep f (g . f x') acc x xs
+
+export
+foldrTRisFoldr : (f : a -> accTy -> accTy) ->
+                 (acc : accTy) ->
+                 (xs : Vect n a) ->
+                 foldr f acc xs = foldrTR f acc xs
+foldrTRisFoldr f acc [] = Refl
+foldrTRisFoldr f acc (x :: xs) = rewrite foldrTRisFoldr f acc xs in
+                                         foldrImplStep f id acc x xs
+
 
 ||| Flatten a vector of equal-length vectors
 |||
