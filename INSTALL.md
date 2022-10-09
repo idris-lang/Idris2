@@ -47,6 +47,14 @@ Make sure that:
 - `$PREFIX/bin` is in your `PATH`
 - `$PREFIX/lib` is in your `LD_LIBRARY_PATH` or `DYLD_LIBRARY_PATH` if on
   `macOS` (so that the system knows where to look for library support code)
+  
+Further, on Apple silicon Macs (M1/M2), you need to set the following environment
+variables:
+
+``` sh
+export IDRIS2_LIBS=/opt/homebrew/lib
+export CPATH=/opt/homebrew/include:/opt/homebrew/lib
+```
 
 ### 2: Installing without an existing Idris 2
 
@@ -199,12 +207,7 @@ the Racket fork of chez scheme.
 ```sh
 git clone git@github.com:racket/ChezScheme.git
 cd ChezScheme
-git submodule init
-git submodule update
-arch=tarm64osx
-./configure --pb
-make ${arch}.bootquick
-./configure --threads
+./configure
 make
 sudo make install
 ```
