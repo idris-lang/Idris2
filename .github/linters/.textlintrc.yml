@@ -5,12 +5,8 @@
 ###################################
 
 rules:
-  # https://github.com/textlint-rule/textlint-rule-en-capitalization
-  en-capitalization:
-    allowWords: ["HTML", "html", "HTM", "htm", "MD", "md"]
   # https://github.com/sapegin/textlint-rule-terminology
   terminology:
     # AST: https://github.com/textlint/textlint/blob/master/docs/txtnode.md
     skip: ["BlockQuote", "Link", "Code", "CodeBlock"]
-    exclude: ["HTML", "html", "HTM", "htm", "MD", "md"]
 
