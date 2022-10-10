@@ -5,6 +5,6 @@
 ###################################
 
 rules:
-  en-capitalisation:
-    allowWords: ["html","htm","js","css","md"]
+  terminology:
+    skip: ["Link", "LinkExit", "Code", "CodeExit"]
 
