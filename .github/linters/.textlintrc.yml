@@ -6,5 +6,6 @@
 
 rules:
   terminology:
-    skip: ["Link", "LinkExit", "Code", "CodeExit"]
+    skip: ["BlockQuote", "Link", "LinkExit", "Code", "CodeExit"]
+    exclude: ["HTML", "html", "HTM", "htm"]
 
