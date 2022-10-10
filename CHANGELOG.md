@@ -145,6 +145,8 @@
   This may lead to a need to qualifying functions (e.g. `List.filter`) due to possible ambiguity.
 * "Fish" and "chips" operators of `SnocList` were moved to `Prelude.Types` from `Prelude.Basics`.
 * Adds `contra` for returning the opposite of a given `Ordering`.
+* Fix `pow`, using backend implementations.
+* Add `subtract` alias for `(-)`
 
 #### Base
 
@@ -191,6 +193,9 @@
 * Fixes `natToFinLT` being O(n) by proving that `So (x < n)` implies `LT x n`,
     allowing the compiler to optimise `natToFinLT` away.
 * Fixes `SnocList.foldr` and `SnocList.foldMap` to be performant and stack-safe.
+* Add `insertAt`, `deleteAt` and `replaceAt` for `List`
+* Add `scanr`, `scanr1` and `unsnoc` for `Vect`
+* Implement `DecEq` for `SnocList`
 
 #### Test
 
