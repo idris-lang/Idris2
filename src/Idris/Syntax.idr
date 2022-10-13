@@ -271,6 +271,18 @@ mutual
                  (datacons : List (PTypeDecl' nm)) -> PDataDecl' nm
        MkPLater : FC -> (tyname : Name) -> (tycon : PTerm' nm) -> PDataDecl' nm
 
+  public export
+  data PRecordDecl' : Type -> Type where
+       MkPRecord : (tyname : Name) ->
+                   (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
+                   (opts : List DataOpt) ->
+                   (conName : Maybe Name) ->
+                   List (PField' nm) ->
+                   PRecordDecl' nm
+       MkPRecordLater : (tyname : Name) ->
+                        (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
+                        PRecordDecl' nm
+
   export
   getPDataDeclLoc : PDataDecl' nm -> FC
   getPDataDeclLoc (MkPData fc _ _ _ _) = fc
@@ -408,11 +420,7 @@ mutual
        PRecord : FC ->
                  (doc : String) ->
                  Visibility -> Maybe TotalReq ->
-                 Name ->
-                 (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
-                 (opts : List DataOpt) ->
-                 (conName : Maybe Name) ->
-                 List (PField' nm) ->
+                 PRecordDecl' nm ->
                  PDecl' nm
 
        -- TODO: PPostulate
@@ -439,7 +447,7 @@ mutual
   getPDeclLoc (PReflect fc _) = fc
   getPDeclLoc (PInterface fc _ _ _ _ _ _ _ _) = fc
   getPDeclLoc (PImplementation fc _ _ _ _ _ _ _ _ _ _) = fc
-  getPDeclLoc (PRecord fc _ _ _ _ _ _ _ _) = fc
+  getPDeclLoc (PRecord fc _ _ _ _) = fc
   getPDeclLoc (PMutual fc _) = fc
   getPDeclLoc (PFail fc _ _) = fc
   getPDeclLoc (PFixity fc _ _ _) = fc

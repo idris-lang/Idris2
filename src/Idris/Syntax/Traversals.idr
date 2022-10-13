@@ -256,11 +256,13 @@ mapPTermM f = goPTerm where
                                   <*> pure mn
                                   <*> pure ns
                                   <*> goMPDecls mps
-    goPDecl (PRecord fc doc v tot n nts opts mn fs) =
-      PRecord fc doc v tot n <$> go4TupledPTerms nts
-                             <*> pure opts
-                             <*> pure mn
-                             <*> goPFields fs
+    goPDecl (PRecord fc doc v tot (MkPRecord n nts opts mn fs)) =
+      pure $ PRecord fc doc v tot !(MkPRecord n <$> go4TupledPTerms nts
+                                                <*> pure opts
+                                                <*> pure mn
+                                                <*> goPFields fs)
+    goPDecl (PRecord fc doc v tot (MkPRecordLater n nts)) =
+      pure $ PRecord fc doc v tot (MkPRecordLater n !(go4TupledPTerms nts))
     goPDecl (PFail fc msg ps) = PFail fc msg <$> goPDecls ps
     goPDecl (PMutual fc ps) = PMutual fc <$> goPDecls ps
     goPDecl p@(PFixity _ _ _ _) = pure p
@@ -526,8 +528,10 @@ mapPTerm f = goPTerm where
     goPDecl (PImplementation fc v opts p is cs n ts mn ns mps)
       = PImplementation fc v opts p (goImplicits is) (goPairedPTerms cs)
            n (goPTerm <$> ts) mn ns (map (goPDecl <$>) mps)
-    goPDecl (PRecord fc doc v tot n nts opts mn fs)
-      = PRecord fc doc v tot n (go4TupledPTerms nts) opts mn (goPField <$> fs)
+    goPDecl (PRecord fc doc v tot (MkPRecord n nts opts mn fs))
+      = PRecord fc doc v tot (MkPRecord n (go4TupledPTerms nts) opts mn (goPField <$> fs))
+    goPDecl (PRecord fc doc v tot (MkPRecordLater n nts))
+      = PRecord fc doc v tot (MkPRecordLater n (go4TupledPTerms nts))
     goPDecl (PFail fc msg ps) = PFail fc msg $ goPDecl <$> ps
     goPDecl (PMutual fc ps) = PMutual fc $ goPDecl <$> ps
     goPDecl p@(PFixity _ _ _ _) = p
