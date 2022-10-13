@@ -1,0 +1,47 @@
+Main>  <expr>                                                Evaluate an expression
+ :t :type          <expr>                              Check the type of an expression
+ :ti               <expr>                              Check the type of an expression, showing implicit arguments
+ :printdef         <expr>                              Show the definition of a function
+ :s :search        <expr>                              Search for values by type
+ :di               <name>                              Show debugging information for a name
+ :module :import   <module>                            Import an extra module
+ :package          <string>                            Import every module of the package
+ :q :quit :exit                                        Exit the Idris system
+ :cwd                                                  Displays the current working directory
+ :cd               <string>                            Change the current working directory
+ :sh               <string>                            Run a shell command
+ :set              <option>                            Set an option
+ :unset            <option>                            Unset an option
+ :opts                                                 Show current options settings
+ :c :compile       <file> <expr>                       Compile to an executable
+ :exec             <expr>                              Compile to an executable and run
+ :directive        <string>                            Set a codegen-specific directive
+ :l :load          <string>                            Load a file
+ :r :reload                                            Reload current file
+ :e :edit                                              Edit current file using $EDITOR or $VISUAL
+ :miss :missing    <name>                              Show missing clauses
+ :total            <name>                              Check the totality of a name
+ :doc              <keyword|expr>                      Show documentation for a keyword, a name, or a primitive
+ :browse           <module>                            Browse contents of a namespace
+ :log :logging     <string> <number>                   Set logging level
+ :consolewidth     <number|auto>                       Set the width of the console output (0 for unbounded) (auto by default)
+ :color :colour    (on|off)                            Whether to use color for the console output (enabled by default)
+ :m :metavars                                          Show remaining proof obligations (metavariables or holes)
+ :typeat           <l:number> <c:number> <n:string>    Show type of term <n> defined on line <l> and column <c>
+ :cs :casesplit    <l:number> <c:number> <n:string>    Case split term <n> defined on line <l> and column <c>
+ :ac :addclause    <l:number> <n:string>               Add clause to term <n> defined on line <l>
+ :ml :makelemma    <l:number> <n:string>               Make lemma for term <n> defined on line <l>
+ :mc :makecase     <l:number> <n:string>               Make case on term <n> defined on line <l>
+ :mw :makewith     <l:number> <n:string>               Add with expression on term <n> defined on line <l>
+ :intro            <l:number> <n:string>               Introduce unambiguous constructor in hole <n> defined on line <l>
+ :refine           <l:number> <c:number> <h:string> <e:expr>Refine hole <h> with identifier <n> on line <l> and column <c>
+ :ps :proofsearch  <l:number> <n:string> <h:[name]>    Search for a proof
+ :psnext                                               Show next proof
+ :gd               <l:number> <n:string> <r:number|0>  Search for a proof
+ :gdnext                                               Show next definition
+ :version                                              Display the Idris version
+ :? :h :help                                           Display this help text
+ :let              <decls>                             Define a new value
+ :fs :fsearch      <expr>                              Search for global definitions by sketching the names distribution of the wanted type(s).
+Main> 
+Bye for now!
