@@ -184,6 +184,11 @@ idrisTestsEvaluator = MkTestPool "Evaluation" [] Nothing
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
        "interpreter005", "interpreter006", "interpreter007", "interpreter008"]
 
+idrisTestsREPL : TestPool
+idrisTestsREPL = MkTestPool "REPL commands and help" [] Nothing
+      [ "repl001", "repl002"
+      ]
+
 idrisTestsAllSchemes : Requirement -> TestPool
 idrisTestsAllSchemes cg = MkTestPool
       ("Test across all scheme backends: " ++ show cg ++ " instance")
@@ -393,6 +398,7 @@ main = runner $
   , testPaths "idris2" idrisTestsData
   , testPaths "idris2" idrisTestsBuiltin
   , testPaths "idris2" idrisTestsEvaluator
+  , testPaths "idris2" idrisTestsREPL
   , testPaths "idris2" idrisTestsTotality
   , testPaths "idris2" idrisTestsSchemeEval
   , testPaths "idris2" idrisTestsReflection
