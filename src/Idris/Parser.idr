@@ -1675,6 +1675,23 @@ recordParam fname indents
   <|> do n <- bounds (UN . Basic <$> decoratedSimpleBinderName fname)
          pure [(n.val, top, Explicit, PInfer (boundToFC fname n))]
 
+-- A record without a where is a forward declaration
+recordBody : OriginDesc -> IndentInfo ->
+             String -> Visibility -> Maybe TotalReq ->
+             Int ->
+             Name ->
+             List (Name, RigCount, PiInfo PTerm, PTerm) ->
+             EmptyRule (FC -> PDecl)
+recordBody fname indents doc vis mbtot col n params
+    = do atEndIndent indents
+         pure (\fc : FC => PRecord fc doc vis mbtot (MkPRecordLater n params))
+  <|> do mustWork $ decoratedKeyword fname "where"
+         opts <- dataOpts fname
+         dcflds <- blockWithOptHeaderAfter col
+                     (\ idt => recordConstructor fname <* atEnd idt)
+                     (fieldDecl fname)
+         pure (\fc : FC => PRecord fc doc vis mbtot (MkPRecord n params opts (fst dcflds) (concat (snd dcflds))))
+
 recordDecl : OriginDesc -> IndentInfo -> Rule PDecl
 recordDecl fname indents
     = do b <- bounds (do doc         <- optDocumentation fname
@@ -1684,12 +1701,7 @@ recordDecl fname indents
                          n       <- mustWork (decoratedDataTypeName fname)
                          paramss <- many (recordParam fname indents)
                          let params = concat paramss
-                         mustWork $ decoratedKeyword fname "where"
-                         opts <- dataOpts fname
-                         dcflds <- blockWithOptHeaderAfter col
-                                      (\ idt => recordConstructor fname <* atEnd idt)
-                                      (fieldDecl fname)
-                         pure (\fc : FC => PRecord fc doc vis mbtot n params opts (fst dcflds) (concat (snd dcflds))))
+                         recordBody fname indents doc vis mbtot col n params)
          pure (b.val (boundToFC fname b))
 
 paramDecls : OriginDesc -> IndentInfo -> Rule PDecl
