@@ -2007,7 +2007,7 @@ mutual
 export
 data ParseCmd : Type where
      ParseREPLCmd : List String -> ParseCmd
-     ParseKeywordCmd : String -> ParseCmd
+     ParseKeywordCmd : List String -> ParseCmd
      ParseIdentCmd : String -> ParseCmd
 
 public export
@@ -2020,12 +2020,12 @@ CommandTable = List CommandDefinition
 
 extractNames : ParseCmd -> List String
 extractNames (ParseREPLCmd names) = names
-extractNames (ParseKeywordCmd keyword) = [keyword]
+extractNames (ParseKeywordCmd keywords) = keywords
 extractNames (ParseIdentCmd ident) = [ident]
 
 runParseCmd : ParseCmd -> Rule ()
 runParseCmd (ParseREPLCmd names) = replCmd names
-runParseCmd (ParseKeywordCmd keyword') = keyword keyword'
+runParseCmd (ParseKeywordCmd keywords) = choice $ map keyword keywords
 runParseCmd (ParseIdentCmd ident) = exactIdent ident
 
 
@@ -2339,7 +2339,7 @@ parserCommandsForHelp =
   , exprArgCmd (ParseREPLCmd ["printdef"]) PrintDef "Show the definition of a function"
   , exprArgCmd (ParseREPLCmd ["s", "search"]) TypeSearch "Search for values by type"
   , nameArgCmd (ParseIdentCmd "di") DebugInfo "Show debugging information for a name"
-  , moduleArgCmd (ParseKeywordCmd "module") ImportMod "Import an extra module"
+  , moduleArgCmd (ParseKeywordCmd ["module", "import"]) ImportMod "Import an extra module"
   , stringArgCmd (ParseREPLCmd ["package"]) ImportPackage "Import every module of the package"
   , noArgCmd (ParseREPLCmd ["q", "quit", "exit"]) Quit "Exit the Idris system"
   , noArgCmd (ParseREPLCmd ["cwd"]) CWD "Displays the current working directory"
@@ -2355,7 +2355,7 @@ parserCommandsForHelp =
   , noArgCmd (ParseREPLCmd ["r", "reload"]) Reload "Reload current file"
   , noArgCmd (ParseREPLCmd ["e", "edit"]) Edit "Edit current file using $EDITOR or $VISUAL"
   , nameArgCmd (ParseREPLCmd ["miss", "missing"]) Missing "Show missing clauses"
-  , nameArgCmd (ParseKeywordCmd "total") Total "Check the totality of a name"
+  , nameArgCmd (ParseKeywordCmd ["total"]) Total "Check the totality of a name"
   , docArgCmd (ParseIdentCmd "doc") Doc "Show documentation for a keyword, a name, or a primitive"
   , moduleArgCmd (ParseIdentCmd "browse") (Browse . miAsNamespace) "Browse contents of a namespace"
   , loggingArgCmd (ParseREPLCmd ["log", "logging"]) SetLog "Set logging level"
@@ -2376,7 +2376,7 @@ parserCommandsForHelp =
   , noArgCmd (ParseREPLCmd ["gdnext"]) (Editing GenerateDefNext) "Show next definition"
   , noArgCmd (ParseREPLCmd ["version"]) ShowVersion "Display the Idris version"
   , noArgCmd (ParseREPLCmd ["?", "h", "help"]) Help "Display this help text"
-  , declsArgCmd (ParseKeywordCmd "let") NewDefn "Define a new value"
+  , declsArgCmd (ParseKeywordCmd ["let"]) NewDefn "Define a new value"
   , exprArgCmd (ParseREPLCmd ["fs", "fsearch"]) FuzzyTypeSearch "Search for global definitions by sketching the names distribution of the wanted type(s)."
   ]
 

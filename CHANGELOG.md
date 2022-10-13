@@ -10,6 +10,7 @@
 * New option `evaltiming` to time how long an evaluation takes at the REPL,
   set with `:set evaltiming`.
 * Renames `:lp/loadpackage` to `:package`.
+* Adds `:import`, with the same functionality as `:module`.
 
 ### Language changes
 
