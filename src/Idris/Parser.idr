@@ -2009,57 +2009,91 @@ mutual
 public export
 knownCommands : List (String, Maybe String)
 knownCommands =
-  [ ["t", "type"]
-  , "ti"
-  , "printdef"
-  , ["s", "search"]
-  , "di"
-  , "module"
-  , "package"
-  , ["q", "quit", "exit"]
-  , "cwd"
-  , "cd"
-  , "sh"
-  , "set"
-  , "unset"
-  , "opts"
-  , ["c", "compile"]
-  , "exec"
-  , "directive"
-  , ["l", "load"]
-  , ["r", "reload"]
-  , ["e", "edit"]
-  , ["miss", "missing"]
-  , "total"
-  , "doc"
-  , "browse"
-  , ["log", "logging"]
-  , "consolewidth"
-  , ["color", "colour"]
-  , ["m", "metavars"]
-  , "typeat"
-  , ["cs", "casesplit"]
-  , ["ac", "addclause"]
-  , ["ml", "makelemma"]
-  , ["mc", "makecase"]
-  , ["mw", "makewith"]
-  , "intro"
-  , "refine"
-  , ["ps", "proofsearch"]
-  , "psnext"
-  , "gd"
-  , "gdnext"
-  , "version"
-  , ["?", "h", "help"]
-  , "let"
-  , ["fs", "fsearch"]
-  ]
-  where
-    explain : List String -> String -> List (String, Maybe String)
-    explain cmds expl = map (\s => (s, Just expl)) cmds
+  noDetails ["t", "type"] ++
+  [ ("ti", Nothing)
+  , ("printdef", Nothing)
+  ] ++
+  noDetails ["s", "search"] ++
+  [ ("di", Nothing)
+  , ("module", Nothing)
+  , ("package", Nothing)
+  ] ++
+  noDetails ["q", "quit", "exit"] ++
+  [ ("cwd", Nothing)
+  , ("cd", Nothing)
+  , ("sh", Nothing)
+  , ("set"
+    , Just """
+           Set an option:
+                eval    specify what evaluation mode to use:
+                          typecheck|tc
+                          normalise|normalize|normal
+                          execute|exec
+                          scheme
 
-    noExplain : List String -> List (String, Maybe String)
-    noExplain cmds = map (\s => (s, Nothing)) cmds
+                editor  specify the name of the editor command
+
+                cg      specify the codegen/backend to use
+                        bultin codegens are:
+                          chez
+                          racket
+                          refc
+                          node
+
+                showimplicits
+                shownamespace
+                showmachinenames
+                showtypes
+                profile
+                evaltiming
+           """
+    )
+  , ("unset", Nothing)
+  , ("opts", Nothing)
+  ]  ++
+  noDetails ["c", "compile"] ++
+  [ ("exec", Nothing)
+  , ("directive", Nothing)
+  ] ++
+  noDetails ["l", "load"] ++
+  noDetails ["r", "reload"] ++
+  noDetails ["e", "edit"] ++
+  noDetails ["miss", "missing"] ++
+  [ ("total", Nothing)
+  , ("doc", Nothing)
+  , ("browse", Nothing)
+  ] ++
+  noDetails ["log", "logging"] ++
+  [ ("consolewidth", Nothing)
+  ] ++
+  noDetails ["color", "colour"] ++
+  noDetails ["m", "metavars"] ++
+  [ ("typeat", Nothing)
+  ] ++
+  noDetails ["cs", "casesplit"] ++
+  noDetails ["ac", "addclause"] ++
+  noDetails ["ml", "makelemma"] ++
+  noDetails ["mc", "makecase"] ++
+  noDetails ["mw", "makewith"] ++
+  [ ("intro", Nothing)
+  , ("refine", Nothing)
+  ] ++
+  noDetails ["ps", "proofsearch"] ++
+  [ ("psnext", Nothing)
+  , ("gd", Nothing)
+  , ("gdnext", Nothing)
+  , ("version", Nothing)
+  ] ++
+  noDetails ["?", "h", "help"] ++
+  [ ("let", Nothing)    -- TODO
+  ] ++
+  noDetails ["fs", "fsearch"]
+  where
+    details : List String -> String -> List (String, Maybe String)
+    details cmds expl = map (\s => (s, Just expl)) cmds
+
+    noDetails : List String -> List (String, Maybe String)
+    noDetails cmds = map (\s => (s, Nothing)) cmds
 
 export
 data ParseCmd : Type where
@@ -2393,7 +2427,7 @@ parserCommandsForHelp : CommandTable
 parserCommandsForHelp =
   [ exprArgCmd (ParseREPLCmd ["t", "type"]) Check "Check the type of an expression"
   , exprArgCmd (ParseREPLCmd ["ti"]) CheckWithImplicits "Check the type of an expression, showing implicit arguments"
-  , exprArgCmd (ParseREPLCmd ["printdef"]) PrintDef "Show the definition of a function"
+  , exprArgCmd (ParseREPLCmd ["printdef"]) PrintDef "Show the definition of a pattern-matching function"
   , exprArgCmd (ParseREPLCmd ["s", "search"]) TypeSearch "Search for values by type"
   , nameArgCmd (ParseIdentCmd "di") DebugInfo "Show debugging information for a name"
   , moduleArgCmd (ParseKeywordCmd "module") ImportMod "Import an extra module"
