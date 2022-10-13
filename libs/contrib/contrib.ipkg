@@ -9,8 +9,6 @@ modules = Control.ANSI,
 
           Control.Delayed,
 
-          Control.Linear.LIO,
-
           Control.Monad.Algebra,
 
           Control.Algebra,

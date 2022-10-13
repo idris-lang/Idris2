@@ -189,6 +189,8 @@ idrisTestsAllSchemes cg = MkTestPool
       ("Test across all scheme backends: " ++ show cg ++ " instance")
       [] (Just cg)
       [ "scheme001"
+      , "channels001", "channels002", "channels003", "channels004", "channels005"
+      , "channels006"
       ]
 
 idrisTestsAllBackends : Requirement -> TestPool
@@ -229,7 +231,8 @@ idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
       ["reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",
        "reflection009", "reflection010", "reflection011", "reflection012",
-       "reflection013", "reflection014", "reflection015", "reflection016"]
+       "reflection013", "reflection014", "reflection015", "reflection016",
+       "reflection017"]
 
 idrisTestsWith : TestPool
 idrisTestsWith = MkTestPool "With abstraction" [] Nothing
@@ -300,7 +303,6 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "semaphores002"
     , "perf001"
     , "reg001"
-    , "channels001", "channels002", "channels003", "channels004", "channels005"
     ]
 
 refcTests : IO TestPool

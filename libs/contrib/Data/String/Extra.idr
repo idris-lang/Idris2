@@ -102,3 +102,33 @@ justifyLeft n c s = s ++ replicate (n `minus` length s) c
 export
 justifyRight : Nat -> Char -> String -> String
 justifyRight n c s = replicate (n `minus` length s) c ++ s
+
+||| Truncates a string to the given length.
+||| If the given string is longer, replace first characters with given prefix.
+|||
+||| Say, `leftEllipsis 5 ".." "abcdefgh"` should give `"..fgh"` and
+||| `leftEllipsis 5 "" "abcdefgh"` should give `"defgh"`.
+|||
+||| Notice, that the resulting string can be longer than max length if the prefix is longer.
+export
+leftEllipsis : (maxLen : Nat) -> (pref : String) -> String -> String
+leftEllipsis maxLen pref str = do
+ let len = length str
+ case len `isLTE` maxLen of
+   Yes _ => str
+   No _  => pref ++ substr ((len + length pref) `minus` maxLen) len str
+
+||| Truncates a string to the given length.
+||| If the given string is longer, replace last characters with given suffix.
+|||
+||| Say, `rightEllipsis 5 ".." "abcdefgh"` should give `"abc.."` and
+||| `rightEllipsis 5 "" "abcdefgh"` should give `"abcde"`.
+|||
+||| Notice, that the resulting string can be longer than max length if the suffix is longer.
+export
+rightEllipsis : (maxLen : Nat) -> (suff : String) -> String -> String
+rightEllipsis maxLen suff str = do
+  let len = length str
+  case len `isLTE` maxLen of
+    Yes _ => str
+    No _  => take (maxLen `minus` length suff) str ++ suff

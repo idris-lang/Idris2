@@ -568,7 +568,7 @@ compileAndInlineAll
          -- in incremental mode, add the arity of the definitions to the hash,
          -- because if these change we need to recompile dependencies
          -- accordingly
-         when (not (isNil (incrementalCGs !getSession))) $
+         unless (isNil (incrementalCGs !getSession)) $
            traverse_ addArityHash cns
   where
     transform : Nat -> List Name -> Core ()

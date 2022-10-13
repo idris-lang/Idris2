@@ -380,6 +380,7 @@ parameters (defs : Defs, topopts : EvalOpts)
         concrete (NPrimVal _ _) = True
         concrete (NBind _ _ _ _) = True
         concrete (NType _ _) = True
+        concrete (NDelay _ _ _ _) = True
         concrete _ = False
     tryAlt _ _ _ _ _ _ _ = pure GotStuck
 
