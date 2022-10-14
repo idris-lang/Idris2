@@ -2007,99 +2007,118 @@ mutual
     show arg = "<" ++ showCmdArg arg ++ ">"
 
 public export
-knownCommands : List (String, Maybe String)
+knownCommands : List (String, String)
 knownCommands =
   noDetails ["t", "type"] ++
-  [ ("ti", Nothing)
-  , ("printdef", Nothing)
+  [ ("ti", noDetailedHelp)
+  , ("printdef", noDetailedHelp)
   ] ++
   noDetails ["s", "search"] ++
-  [ ("di", Nothing)
-  , ("module", Nothing)
-  , ("package", Nothing)
+  [ ("di", noDetailedHelp)
+  ] ++
+  noDetails ["module", "import"] ++
+  [ ("package", noDetailedHelp)
   ] ++
   noDetails ["q", "quit", "exit"] ++
-  [ ("cwd", Nothing)
-  , ("cd", Nothing)
-  , ("sh", Nothing)
+  [ ("cwd", noDetailedHelp)
+  , ("cd", noDetailedHelp)
+  , ("sh", noDetailedHelp)
   , ("set"
-    , Just """
-           Set an option:
-                eval    specify what evaluation mode to use:
-                          typecheck|tc
-                          normalise|normalize|normal
-                          execute|exec
-                          scheme
+    , """
+      Set an option:
+           eval    specify what evaluation mode to use:
+                     typecheck|tc
+                     normalise|normalize|normal
+                     execute|exec
+                     scheme
 
-                editor  specify the name of the editor command
+           editor  specify the name of the editor command
 
-                cg      specify the codegen/backend to use
-                        bultin codegens are:
-                          chez
-                          racket
-                          refc
-                          node
+           cg      specify the codegen/backend to use
+                   bultin codegens are:
+                     chez
+                     racket
+                     refc
+                     node
 
-                showimplicits
-                shownamespace
-                showmachinenames
-                showtypes
-                profile
-                evaltiming
-           """
+           showimplicits
+           shownamespace
+           showmachinenames
+           showtypes
+           profile
+           evaltiming
+      """
     )
-  , ("unset", Nothing)
-  , ("opts", Nothing)
+  , ("unset", noDetailedHelp)
+  , ("opts", noDetailedHelp)
   ]  ++
   noDetails ["c", "compile"] ++
-  [ ("exec", Nothing)
-  , ("directive", Nothing)
+  [ ("exec", noDetailedHelp)
+  , ("directive", noDetailedHelp)
   ] ++
   noDetails ["l", "load"] ++
   noDetails ["r", "reload"] ++
   noDetails ["e", "edit"] ++
   noDetails ["miss", "missing"] ++
-  [ ("total", Nothing)
-  , ("doc", Nothing)
-  , ("browse", Nothing)
+  [ ("total", noDetailedHelp)
+  , ("doc", noDetailedHelp)
+  , ("browse", noDetailedHelp)
   ] ++
   noDetails ["log", "logging"] ++
-  [ ("consolewidth", Nothing)
+  [ ("consolewidth", noDetailedHelp)
   ] ++
   noDetails ["color", "colour"] ++
   noDetails ["m", "metavars"] ++
-  [ ("typeat", Nothing)
+  [ ("typeat", noDetailedHelp)
   ] ++
   noDetails ["cs", "casesplit"] ++
   noDetails ["ac", "addclause"] ++
   noDetails ["ml", "makelemma"] ++
   noDetails ["mc", "makecase"] ++
   noDetails ["mw", "makewith"] ++
-  [ ("intro", Nothing)
-  , ("refine", Nothing)
+  [ ("intro", noDetailedHelp)
+  , ("refine", noDetailedHelp)
   ] ++
   noDetails ["ps", "proofsearch"] ++
-  [ ("psnext", Nothing)
-  , ("gd", Nothing)
-  , ("gdnext", Nothing)
-  , ("version", Nothing)
+  [ ("psnext", noDetailedHelp)
+  , ("gd", noDetailedHelp)
+  , ("gdnext", noDetailedHelp)
+  , ("version", noDetailedHelp)
   ] ++
-  noDetails ["?", "h", "help"] ++
-  [ ("let", Nothing)    -- TODO
+  noDetails ["?", "h", "help"] ++   -- TODO
+  [ ("let", noDetailedHelp)         -- TODO
   ] ++
   noDetails ["fs", "fsearch"]
   where
-    details : List String -> String -> List (String, Maybe String)
-    details cmds expl = map (\s => (s, Just expl)) cmds
+    noDetailedHelp : String
+    noDetailedHelp =
+      """
+      No detailed help for this command, sorry.
+      """
 
-    noDetails : List String -> List (String, Maybe String)
-    noDetails cmds = map (\s => (s, Nothing)) cmds
+    details : List String -> String -> List (String, String)
+    details cmds expl = map (\s => (s, expl)) cmds
+
+    noDetails : List String -> List (String, String)
+    noDetails cmds = map (\s => (s, noDetailedHelp)) cmds
+
+public export
+KnownCommand : String -> Type
+KnownCommand cmd = IsJust (lookup cmd knownCommands)
 
 export
 data ParseCmd : Type where
-     ParseREPLCmd : List String -> ParseCmd
-     ParseKeywordCmd : List String -> ParseCmd
-     ParseIdentCmd : String -> ParseCmd
+     ParseREPLCmd :  (cmds : List String)
+                  -> {auto 0 _ : All KnownCommand cmds}
+                  -> ParseCmd
+
+     ParseKeywordCmd :  (cmds : List String)
+                     -> {auto 0 _ : All KnownCommand cmds}
+                     -> ParseCmd
+
+     ParseIdentCmd :  (cmd : String)
+                   -> {auto 0 _ : KnownCommand cmd}
+                   -> ParseCmd
 
 public export
 CommandDefinition : Type
@@ -2157,6 +2176,25 @@ stringArgCmd parseCmd command doc = (names, StringArg, doc, parse)
       runParseCmd parseCmd
       s <- mustWork simpleStr
       pure (command s)
+
+helpHelpCommand :  ParseCmd
+                -> (Maybe String -> REPLCmd)    -- switch to Either?
+                -> String
+                -> CommandDefinition
+helpHelpCommand parseCmd command doc = ?helpHelpCommand_rhs
+  where
+    names : List String
+    names = extractNames parseCmd
+
+    parse : Rule REPLCmd
+    parse = do
+      symbol ":"
+      runParseCmd parseCmd
+      cmd <- mustWork simpleStr
+      -- FIXME: lookup may: 1) return the detailed string as a `Just $ Just details`
+      --                    2) return no detailed string as `Just Nothing`
+      --                    3) NOT FIND THE COMMAND, returning a plain `Nothing`
+      pure $ command (lookup cmd knownCommands)
 
 moduleArgCmd : ParseCmd -> (ModuleIdent -> REPLCmd) -> String -> CommandDefinition
 moduleArgCmd parseCmd command doc = (names, ModuleArg, doc, parse)
