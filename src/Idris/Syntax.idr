@@ -588,6 +588,7 @@ data REPLCmd : Type where
      Compile : PTerm -> String -> REPLCmd
      Exec : PTerm -> REPLCmd
      Help : REPLCmd
+     HelpHelp : Maybe String -> REPLCmd   -- TODO: merge with the above?
      TypeSearch : PTerm -> REPLCmd
      FuzzyTypeSearch : PTerm -> REPLCmd
      DebugInfo : Name -> REPLCmd

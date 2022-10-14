@@ -2026,27 +2026,36 @@ knownCommands =
   , ("set"
     , """
       Set an option:
-           eval    specify what evaluation mode to use:
-                     typecheck|tc
-                     normalise|normalize|normal
-                     execute|exec
-                     scheme
+        eval                specify what evaluation mode to use:
+                              typecheck|tc
+                              normalise|normalize|normal
+                              execute|exec
+                              scheme
 
-           editor  specify the name of the editor command
+        editor              specify the name of the editor command
 
-           cg      specify the codegen/backend to use
-                   bultin codegens are:
-                     chez
-                     racket
-                     refc
-                     node
+        cg                  specify the codegen/backend to use
+                            builtin codegens are:
+                              chez
+                              racket
+                              refc
+                              node
 
-           showimplicits
-           shownamespace
-           showmachinenames
-           showtypes
-           profile
-           evaltiming
+        showimplicits       enable displaying implicit arguments as part of the
+                            output
+
+        shownamespace       enable displaying namespaces as part of the output
+
+        showmachinenames    enable displaying machine names as part of the
+                            output
+
+        showtypes           enable displaying the type of the term as part of
+                            the output
+
+        profile
+
+        evaltiming          enable timing how long evaluation takes and
+                            displaying this before the printing of the output
       """
     )
   , ("unset", noDetailedHelp)
@@ -2088,7 +2097,9 @@ knownCommands =
   noDetails ["?", "h", "help"] ++   -- TODO
   [ ("let", noDetailedHelp)         -- TODO
   ] ++
-  noDetails ["fs", "fsearch"]
+  noDetails ["fs", "fsearch"] ++
+  [ ("helpHelp", noDetailedHelp)
+  ]
   where
     noDetailedHelp : String
     noDetailedHelp =
@@ -2177,11 +2188,11 @@ stringArgCmd parseCmd command doc = (names, StringArg, doc, parse)
       s <- mustWork simpleStr
       pure (command s)
 
-helpHelpCommand :  ParseCmd
+helpHelpCmd :  ParseCmd
                 -> (Maybe String -> REPLCmd)    -- switch to Either?
                 -> String
                 -> CommandDefinition
-helpHelpCommand parseCmd command doc = ?helpHelpCommand_rhs
+helpHelpCmd parseCmd command doc = (names, StringArg, doc, parse)
   where
     names : List String
     names = extractNames parseCmd
@@ -2505,6 +2516,7 @@ parserCommandsForHelp =
   , noArgCmd (ParseREPLCmd ["gdnext"]) (Editing GenerateDefNext) "Show next definition"
   , noArgCmd (ParseREPLCmd ["version"]) ShowVersion "Display the Idris version"
   , noArgCmd (ParseREPLCmd ["?", "h", "help"]) Help "Display this help text"
+  , helpHelpCmd (ParseREPLCmd ["helpHelp"]) HelpHelp "Display detailed help"
   , declsArgCmd (ParseKeywordCmd ["let"]) NewDefn "Define a new value"
   , exprArgCmd (ParseREPLCmd ["fs", "fsearch"]) FuzzyTypeSearch "Search for global definitions by sketching the names distribution of the wanted type(s)."
   ]
