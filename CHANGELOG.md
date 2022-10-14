@@ -78,6 +78,15 @@
     isOdd (S k) = not $ isEven k
   ```
 
+* Adds ability to forward-declare records, e.g.:
+  ```idris
+  record B
+  record A where
+    b : B
+  record B where
+    a : A
+  ```
+
 ### Compiler changes
 
 * Removes deprecated support for `void` primitive. Now `void` is supported via
