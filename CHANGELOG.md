@@ -70,6 +70,7 @@
 * Codegens now take an additional `Ref Syn SyntaxInfo` argument. This empowers
   compiler writers to pretty print core terms e.g. to add comments with the
   original type annotations in the generated code.
+* Fixes `CyclicMeta` in `TTImp.ProcessDef` being considered a recoverable error.
 
 ### IDE protocol changes
 
