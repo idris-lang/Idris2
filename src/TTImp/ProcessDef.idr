@@ -843,10 +843,10 @@ mkRunTime fc n
     mkCrash : {vars : _} -> String -> Term vars
     mkCrash msg
        = apply fc (Ref fc Func (NS builtinNS (UN $ Basic "idris_crash")))
-               [Erased fc False, PrimVal fc (Str msg)]
+               [Erased fc Placeholder, PrimVal fc (Str msg)]
 
     matchAny : Term vars -> Term vars
-    matchAny (App fc f a) = App fc (matchAny f) (Erased fc False)
+    matchAny (App fc f a) = App fc (matchAny f) (Erased fc Placeholder)
     matchAny tm = tm
 
     makeErrorClause : {vars : _} -> Env Term vars -> Term vars -> Clause
@@ -1120,7 +1120,7 @@ processDef opts nest env fc n_in cs_in
     getClause (Left rawlhs)
         = catch (do lhsp <- getImpossibleTerm env nest rawlhs
                     log "declare.def.impossible" 3 $ "Generated impossible LHS: " ++ show lhsp
-                    pure $ Just $ MkClause [] lhsp (Erased (getFC rawlhs) True))
+                    pure $ Just $ MkClause [] lhsp (Erased (getFC rawlhs) Impossible))
                 (\e => do log "declare.def" 5 $ "Error in getClause " ++ show e
                           pure Nothing)
     getClause (Right c) = pure (Just c)

@@ -321,7 +321,7 @@ mutual
                  Just t => t
         where
           urhs : Term vs -> Term vs'
-          urhs (Local fc _ _ _) = Erased fc False
+          urhs (Local fc _ _ _) = Erased fc Placeholder
           urhs (Ref fc nt n) = Ref fc nt n
           urhs (Meta fc m i margs) = Meta fc m i (map (updateRHS ms) margs)
           urhs (App fc f a) = App fc (updateRHS ms f) (updateRHS ms a)
@@ -334,7 +334,9 @@ mutual
               = Bind fc x (map (updateRHS ms) b)
                   (updateRHS (map (\vt => (weaken (fst vt), weaken (snd vt))) ms) sc)
           urhs (PrimVal fc c) = PrimVal fc c
-          urhs (Erased fc i) = Erased fc i
+          urhs (Erased fc Impossible) = Erased fc Impossible
+          urhs (Erased fc Placeholder) = Erased fc Placeholder
+          urhs (Erased fc (Dotted t)) = Erased fc (Dotted (updateRHS ms t))
           urhs (TType fc u) = TType fc u
 
           lookupTm : Term vs -> List (Term vs, Term vs') -> Maybe (Term vs')

@@ -38,7 +38,7 @@ match nty (n, i, rty)
     sameRet (NType _ _) (NType _ _) = pure True
     sameRet nf (NBind fc _ (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
              sameRet nf sc'
     sameRet _ _ = pure False
 

@@ -583,7 +583,9 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
     updateIVars ivs (TForce fc r arg)
         = Just (TForce fc r !(updateIVars ivs arg))
     updateIVars ivs (PrimVal fc c) = Just (PrimVal fc c)
-    updateIVars ivs (Erased fc i) = Just (Erased fc i)
+    updateIVars ivs (Erased fc Impossible) = Just (Erased fc Impossible)
+    updateIVars ivs (Erased fc Placeholder) = Just (Erased fc Placeholder)
+    updateIVars ivs (Erased fc (Dotted t)) = Erased fc . Dotted <$> updateIVars ivs t
     updateIVars ivs (TType fc u) = Just (TType fc u)
 
     mkDef : {vs, newvars : _} ->
@@ -592,7 +594,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
             Core (Maybe (Term vs))
     mkDef (v :: vs) vars soln (Bind bfc x (Pi fc c _ ty) sc)
        = do sc' <- mkDef vs (ICons (Just v) vars) soln sc
-            pure $ (Bind bfc x (Lam fc c Explicit (Erased bfc False)) <$> sc')
+            pure $ (Bind bfc x (Lam fc c Explicit (Erased bfc Placeholder)) <$> sc')
     mkDef vs vars soln (Bind bfc x b@(Let _ c val ty) sc)
        = do mbsc' <- mkDef vs (ICons Nothing vars) soln sc
             flip traverseOpt mbsc' $ \sc' =>
@@ -936,6 +938,8 @@ mutual
       = unifyHole swap mode loc env fc n i margs (map snd args) tm
   unifyApp swap mode loc env fc hd args (NApp mfc (NMeta n i margs) margs')
       = unifyHole swap mode loc env mfc n i margs (map snd margs') (NApp fc hd args)
+  unifyApp swap mode loc env fc hd args (NErased _ (Dotted t))
+      = unifyApp swap mode loc env fc hd args t
   -- Postpone if a name application against an application, unless they are
   -- convertible
   unifyApp swap mode loc env fc (NRef nt n) args tm
@@ -1216,6 +1220,8 @@ mutual
                else unifyBothApps (lower mode) loc env xfc fx axs yfc fy ays
   unifyNoEta mode loc env (NApp xfc fx axs) (NApp yfc fy ays)
       = unifyBothApps (lower mode) loc env xfc fx axs yfc fy ays
+  unifyNoEta mode loc env x (NErased _ (Dotted y)) = unifyNoEta mode loc env x y
+  unifyNoEta mode loc env (NErased _ (Dotted x)) y = unifyNoEta mode loc env x y
   unifyNoEta mode loc env (NApp xfc hd args) y
       = unifyApp False (lower mode) loc env xfc hd args y
   unifyNoEta mode loc env y (NApp yfc hd args)

@@ -107,4 +107,8 @@ toSchemePi Explicit = IntegerVal 1
 toSchemePi AutoImplicit = IntegerVal 2
 toSchemePi (DefImplicit s) = Box s
 
-
+export
+toSchemeWhy : WhyErased (SchemeObj Write) -> SchemeObj Write
+toSchemeWhy Impossible = IntegerVal 0
+toSchemeWhy Placeholder = IntegerVal 1
+toSchemeWhy (Dotted s) = Box s
