@@ -1928,6 +1928,15 @@ replCmd (c :: cs)
   <|> symbol c
   <|> replCmd cs
 
+cmdName : String -> Rule String
+cmdName str = do
+  _ <- optional (symbol ":")
+  terminal ("Unrecognised REPL command '" ++ str ++ "'") $
+           \case
+              (Ident s) => if s == str then Just s else Nothing
+              (Symbol "?") => Just "?"
+              _ => Nothing
+
 export
 data CmdArg : Type where
      ||| The command takes no arguments.
@@ -2201,7 +2210,7 @@ helpHelpCmd parseCmd command doc = (names, StringArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      cmd <- mustWork simpleStr
+      cmd <- mustWork $ choice $ (cmdName . fst) <$> knownCommands
       -- FIXME: lookup may: 1) return the detailed string as a `Just $ Just details`
       --                    2) return no detailed string as `Just Nothing`
       --                    3) NOT FIND THE COMMAND, returning a plain `Nothing`
