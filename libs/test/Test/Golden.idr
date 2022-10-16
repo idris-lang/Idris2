@@ -144,8 +144,9 @@ fail err
     = do putStrLn err
          exitWith (ExitFailure 1)
 
-optionsTestsFilter : List String -> (String -> Bool)
-optionsTestsFilter xs name = any (`isInfixOf` name) xs
+optionsTestsFilter : List String -> Maybe (String -> Bool)
+optionsTestsFilter [] = Nothing
+optionsTestsFilter xs = Just $ \name => any (`isInfixOf` name) xs
 
 ||| Process the command line options.
 export
@@ -169,7 +170,7 @@ options args = case args of
       ("--threads" :: n :: xs)      => do let pos : Nat = !(parsePositive n)
                                           go xs only ({ threads := pos } opts)
       ("--failure-file" :: p :: xs) => go  xs only ({ failureFile := Just p } opts)
-      ("--only" :: xs)              => pure (only, { onlyNames := Just (optionsTestsFilter xs) } opts)
+      ("--only" :: xs)              => pure (only, { onlyNames := optionsTestsFilter xs } opts)
       ("--only-file" :: p :: xs)    => go xs (Just p) opts
       _ => Nothing
 
@@ -182,7 +183,13 @@ options args = case args of
                  | Nothing => pure (Just opts)
            Right only <- readFile fp
              | Left err => fail (show err)
-           pure $ Just $ { onlyNames $= \o => Just $ \x => optionsTestsFilter (lines only) x || fromMaybe (const False) o x } opts
+           pure $ Just $ { onlyNames $= mergeOnlys $ optionsTestsFilter (lines only) } opts
+      where
+        mergeOnlys : Maybe (String -> Bool) -> Maybe (String -> Bool) -> Maybe (String -> Bool)
+        mergeOnlys Nothing   Nothing   = Nothing
+        mergeOnlys (Just f1) Nothing   = Just f1
+        mergeOnlys Nothing   (Just f2) = Just f2
+        mergeOnlys (Just f1) (Just f2) = Just $ \x => f1 x || f2 x
 
 ||| Normalise strings between different OS.
 |||
