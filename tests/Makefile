@@ -3,11 +3,15 @@ threads ?= $(shell (nproc || sysctl -n hw.ncpu) 2>/dev/null || echo 1)
 
 .PHONY: testbin test
 
+ifneq ($(only),)
+ONLYOPT := --only $(only)
+endif
+
 test:
-	./build/exec/runtests $(IDRIS2) $(INTERACTIVE) --timing --failure-file failures --threads $(threads) --only $(only)
+	./build/exec/runtests $(IDRIS2) $(INTERACTIVE) --timing --failure-file failures --threads $(threads) $(ONLYOPT)
 
 retest:
-	./build/exec/runtests $(IDRIS2) $(INTERACTIVE) --timing --failure-file failures --threads $(threads) --only-file failures --only $(only)
+	./build/exec/runtests $(IDRIS2) $(INTERACTIVE) --timing --failure-file failures --threads $(threads) --only-file failures $(ONLYOPT)
 
 testbin:
 	${IDRIS2} --build tests.ipkg
