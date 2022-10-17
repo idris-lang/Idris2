@@ -972,12 +972,10 @@ process (Compile ctm outfile)
     = compileExp ctm outfile
 process (Exec ctm)
     = execExp ctm
-process Help
+process (Help GenericHelp)
     = pure RequestedHelp
-process (HelpHelp (Just details))
+process (Help (DetailedHelp details))
     = pure (RequestedDetails details)   -- TODO: merge with the above?
-process (HelpHelp Nothing)
-    = pure (RequestedDetails "Nope")    -- TODO: merge with the above?
 process (TypeSearch searchTerm)
     = do defs <- branch
          let curr = currentNS defs

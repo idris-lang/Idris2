@@ -1933,8 +1933,10 @@ cmdName str = do
   _ <- optional (symbol ":")
   terminal ("Unrecognised REPL command '" ++ str ++ "'") $
            \case
-              (Ident s) => if s == str then Just s else Nothing
-              (Symbol "?") => Just "?"
+              (Ident s)       => if s == str then Just s else Nothing
+              (Keyword kw)    => if kw == str then Just kw else Nothing
+              (Symbol "?")    => Just "?"
+              (Symbol ":?")   => Just "?"   -- `:help :?` is a special case
               _ => Nothing
 
 export
@@ -2198,7 +2200,7 @@ stringArgCmd parseCmd command doc = (names, StringArg, doc, parse)
       pure (command s)
 
 helpHelpCmd :  ParseCmd
-                -> (Maybe String -> REPLCmd)    -- switch to Either?
+                -> (HelpType -> REPLCmd)
                 -> String
                 -> CommandDefinition
 helpHelpCmd parseCmd command doc = (names, StringArg, doc, parse)
@@ -2210,11 +2212,13 @@ helpHelpCmd parseCmd command doc = (names, StringArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      cmd <- mustWork $ choice $ (cmdName . fst) <$> knownCommands
-      -- FIXME: lookup may: 1) return the detailed string as a `Just $ Just details`
-      --                    2) return no detailed string as `Just Nothing`
-      --                    3) NOT FIND THE COMMAND, returning a plain `Nothing`
-      pure $ command (lookup cmd knownCommands)
+      optCmd <- optional $ choice $ (cmdName . fst) <$> knownCommands
+      let helpType = case optCmd of
+                          Nothing => GenericHelp
+                          Just cmd =>
+                            DetailedHelp $ fromMaybe "Unrecognised command '\{cmd}'"
+                                         $ lookup cmd knownCommands
+      pure (command helpType)
 
 moduleArgCmd : ParseCmd -> (ModuleIdent -> REPLCmd) -> String -> CommandDefinition
 moduleArgCmd parseCmd command doc = (names, ModuleArg, doc, parse)
@@ -2524,8 +2528,7 @@ parserCommandsForHelp =
   , editLineNameOptionArgCmd (ParseREPLCmd ["gd"]) GenerateDef "Search for a proof"
   , noArgCmd (ParseREPLCmd ["gdnext"]) (Editing GenerateDefNext) "Show next definition"
   , noArgCmd (ParseREPLCmd ["version"]) ShowVersion "Display the Idris version"
-  , noArgCmd (ParseREPLCmd ["?", "h", "help"]) Help "Display this help text"
-  , helpHelpCmd (ParseREPLCmd ["helpHelp"]) HelpHelp "Display detailed help"
+  , helpHelpCmd (ParseREPLCmd ["?", "h", "help"]) Help "Display help"
   , declsArgCmd (ParseKeywordCmd ["let"]) NewDefn "Define a new value"
   , exprArgCmd (ParseREPLCmd ["fs", "fsearch"]) FuzzyTypeSearch "Search for global definitions by sketching the names distribution of the wanted type(s)."
   ]
@@ -2554,5 +2557,5 @@ command : EmptyRule REPLCmd
 command
     = eoi $> NOP
   <|> nonEmptyCommand
-  <|> symbol ":?" $> Help -- special case, :? doesn't fit into above scheme
+  <|> symbol ":?" $> Help GenericHelp -- special case, :? doesn't fit into above scheme
   <|> eval
