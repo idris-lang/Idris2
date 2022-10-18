@@ -214,7 +214,7 @@ data REPLResult : Type where
   REPLError : Doc IdrisAnn -> REPLResult
   Executed : PTerm -> REPLResult
   RequestedHelp : REPLResult
-  RequestedDetails : String -> REPLResult   -- TODO: merge with the above?
+  RequestedDetails : String -> REPLResult
   Evaluated : IPTerm -> Maybe IPTerm -> REPLResult
   Printed : Doc IdrisAnn -> REPLResult
   PrintedDoc : Doc IdrisDocAnn -> REPLResult
