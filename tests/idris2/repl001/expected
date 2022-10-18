@@ -25,7 +25,7 @@ Main>  <expr>                                                Evaluate an express
  :browse           <module>                            Browse contents of a namespace
  :log :logging     <string> <number>                   Set logging level
  :consolewidth     <number|auto>                       Set the width of the console output (0 for unbounded) (auto by default)
- :color :colour    (on|off)                            Whether to use color for the console output (enabled by default)
+ :colour :color    (on|off)                            Whether to use colour for the console output (enabled by default)
  :m :metavars                                          Show remaining proof obligations (metavariables or holes)
  :typeat           <l:number> <c:number> <n:string>    Show type of term <n> defined on line <l> and column <c>
  :cs :casesplit    <l:number> <c:number> <n:string>    Case split term <n> defined on line <l> and column <c>
@@ -37,7 +37,7 @@ Main>  <expr>                                                Evaluate an express
  :refine           <l:number> <c:number> <h:string> <e:expr>Refine hole <h> with identifier <n> on line <l> and column <c>
  :ps :proofsearch  <l:number> <n:string> <h:[name]>    Search for a proof
  :psnext                                               Show next proof
- :gd               <l:number> <n:string> <r:number|0>  Search for a proof
+ :gd               <l:number> <n:string> <r:number|0>  Try to generate a definition using proof-search
  :gdnext                                               Show next definition
  :version                                              Display the Idris version
  :? :h :help       <string>                            Display help
@@ -70,7 +70,7 @@ Main>  <expr>                                                Evaluate an express
  :browse           <module>                            Browse contents of a namespace
  :log :logging     <string> <number>                   Set logging level
  :consolewidth     <number|auto>                       Set the width of the console output (0 for unbounded) (auto by default)
- :color :colour    (on|off)                            Whether to use color for the console output (enabled by default)
+ :colour :color    (on|off)                            Whether to use colour for the console output (enabled by default)
  :m :metavars                                          Show remaining proof obligations (metavariables or holes)
  :typeat           <l:number> <c:number> <n:string>    Show type of term <n> defined on line <l> and column <c>
  :cs :casesplit    <l:number> <c:number> <n:string>    Case split term <n> defined on line <l> and column <c>
@@ -82,7 +82,7 @@ Main>  <expr>                                                Evaluate an express
  :refine           <l:number> <c:number> <h:string> <e:expr>Refine hole <h> with identifier <n> on line <l> and column <c>
  :ps :proofsearch  <l:number> <n:string> <h:[name]>    Search for a proof
  :psnext                                               Show next proof
- :gd               <l:number> <n:string> <r:number|0>  Search for a proof
+ :gd               <l:number> <n:string> <r:number|0>  Try to generate a definition using proof-search
  :gdnext                                               Show next definition
  :version                                              Display the Idris version
  :? :h :help       <string>                            Display help
@@ -115,7 +115,7 @@ Main>  <expr>                                                Evaluate an express
  :browse           <module>                            Browse contents of a namespace
  :log :logging     <string> <number>                   Set logging level
  :consolewidth     <number|auto>                       Set the width of the console output (0 for unbounded) (auto by default)
- :color :colour    (on|off)                            Whether to use color for the console output (enabled by default)
+ :colour :color    (on|off)                            Whether to use colour for the console output (enabled by default)
  :m :metavars                                          Show remaining proof obligations (metavariables or holes)
  :typeat           <l:number> <c:number> <n:string>    Show type of term <n> defined on line <l> and column <c>
  :cs :casesplit    <l:number> <c:number> <n:string>    Case split term <n> defined on line <l> and column <c>
@@ -127,7 +127,7 @@ Main>  <expr>                                                Evaluate an express
  :refine           <l:number> <c:number> <h:string> <e:expr>Refine hole <h> with identifier <n> on line <l> and column <c>
  :ps :proofsearch  <l:number> <n:string> <h:[name]>    Search for a proof
  :psnext                                               Show next proof
- :gd               <l:number> <n:string> <r:number|0>  Search for a proof
+ :gd               <l:number> <n:string> <r:number|0>  Try to generate a definition using proof-search
  :gdnext                                               Show next definition
  :version                                              Display the Idris version
  :? :h :help       <string>                            Display help

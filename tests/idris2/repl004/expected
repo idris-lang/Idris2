@@ -1,4 +1,4 @@
-Main> Set an option:
+Main> Set an option
   eval                specify what evaluation mode to use:
                         typecheck|tc
                         normalise|normalize|normal
@@ -29,7 +29,7 @@ Main> Set an option:
 
   evaltiming          enable timing how long evaluation takes and
                       displaying this before the printing of the output
-Main> Set an option:
+Main> Set an option
   eval                specify what evaluation mode to use:
                         typecheck|tc
                         normalise|normalize|normal
@@ -60,7 +60,7 @@ Main> Set an option:
 
   evaltiming          enable timing how long evaluation takes and
                       displaying this before the printing of the output
-Main> Set an option:
+Main> Set an option
   eval                specify what evaluation mode to use:
                         typecheck|tc
                         normalise|normalize|normal
@@ -91,7 +91,7 @@ Main> Set an option:
 
   evaltiming          enable timing how long evaluation takes and
                       displaying this before the printing of the output
-Main> Set an option:
+Main> Set an option
   eval                specify what evaluation mode to use:
                         typecheck|tc
                         normalise|normalize|normal
