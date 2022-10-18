@@ -2052,39 +2052,39 @@ knownCommands =
   , ("cd", "Change the current working directory")
   , ("sh", "Run a shell command")
   , ("set"
-    , """
-      Set an option
-        eval                specify what evaluation mode to use:
-                              typecheck|tc
-                              normalise|normalize|normal
-                              execute|exec
-                              scheme
-
-        editor              specify the name of the editor command
-
-        cg                  specify the codegen/backend to use
-                            builtin codegens are:
-                              chez
-                              racket
-                              refc
-                              node
-
-        showimplicits       enable displaying implicit arguments as part of the
-                            output
-
-        shownamespace       enable displaying namespaces as part of the output
-
-        showmachinenames    enable displaying machine names as part of the
-                            output
-
-        showtypes           enable displaying the type of the term as part of
-                            the output
-
-        profile
-
-        evaltiming          enable timing how long evaluation takes and
-                            displaying this before the printing of the output
-      """
+    , unlines   -- FIXME: this should be a multiline string (see #2087)
+      [ "Set an option"
+      , "  eval                specify what evaluation mode to use:"
+      , "                        typecheck|tc"
+      , "                        normalise|normalize|normal"
+      , "                        execute|exec"
+      , "                        scheme"
+      , ""
+      , "  editor              specify the name of the editor command"
+      , ""
+      , "  cg                  specify the codegen/backend to use"
+      , "                      builtin codegens are:"
+      , "                        chez"
+      , "                        racket"
+      , "                        refc"
+      , "                        node"
+      , ""
+      , "  showimplicits       enable displaying implicit arguments as part of the"
+      , "                      output"
+      , ""
+      , "  shownamespace       enable displaying namespaces as part of the output"
+      , ""
+      , "  showmachinenames    enable displaying machine names as part of the"
+      , "                      output"
+      , ""
+      , "  showtypes           enable displaying the type of the term as part of"
+      , "                      the output"
+      , ""
+      , "  profile"
+      , ""
+      , "  evaltiming          enable timing how long evaluation takes and"
+      , "                      displaying this before the printing of the output"
+      ]
     )
   , ("unset", "Unset an option")
   , ("opts", "Show current options settings")
@@ -2122,19 +2122,18 @@ knownCommands =
   , ("gdnext", "Show next definition")
   , ("version", "Display the Idris version")
   ] ++
-  explain ["?", "h", "help"]
-          """
-          Display help text, optionally of a specific command.
-
-          If run without arguments, lists all the REPL commands along with their
-          initial line of help text.
-
-          More detailed help can then be obtained by running the :help command
-          with another command as an argument, e.g.
-            > :help :help
-            > :help :set
-          (the leading ':' in the command argument is optional)
-          """ ++
+  explain ["?", "h", "help"] (unlines     -- FIXME: this should be a multiline string (see #2087)
+        [ "Display help text, optionally of a specific command."
+        , ""
+        , "If run without arguments, lists all the REPL commands along with their"
+        , "initial line of help text."
+        , ""
+        , "More detailed help can then be obtained by running the :help command"
+        , "with another command as an argument, e.g."
+        , "  > :help :help"
+        , "  > :help :set"
+        , "(the leading ':' in the command argument is optional)"
+        ] ) ++
   [ ( "let"
     , """
       Define a new value.
