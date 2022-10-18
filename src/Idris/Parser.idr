@@ -2123,11 +2123,9 @@ knownCommands =
   , ("version", "Display the Idris version")
   ] ++
   explain ["?", "h", "help"] (unlines     -- FIXME: this should be a multiline string (see #2087)
-        [ "Display help text, optionally of a specific command."
-        , ""
+        [ "Display help text, optionally of a specific command.\n"
         , "If run without arguments, lists all the REPL commands along with their"
-        , "initial line of help text."
-        , ""
+        , "initial line of help text.\n"
         , "More detailed help can then be obtained by running the :help command"
         , "with another command as an argument, e.g."
         , "  > :help :help"
