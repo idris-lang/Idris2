@@ -262,7 +262,7 @@ getDocsForName fc n config
     showDoc : Config -> (Name, String) -> Core (Doc IdrisDocAnn)
 
     reflowDoc : String -> List (Doc IdrisDocAnn)
-    reflowDoc str = map (indent 2 . reflow) (lines str)
+    reflowDoc str = map (indent 2 . pretty0) (lines str)
 
     showTotal : Totality -> Maybe (Doc IdrisDocAnn)
     showTotal tot
