@@ -2105,9 +2105,34 @@ knownCommands =
   , ("gdnext", "Show next definition")
   , ("version", "Display the Idris version")
   ] ++
-  explain ["?", "h", "help"] "Display help" ++   -- TODO
-  [ ("let"
-    , "Define a new value")                      -- TODO
+  explain ["?", "h", "help"]
+          """
+          Display help text, optionally of a specific command.
+
+          If run without arguments, lists all the REPL commands along with their
+          initial line of help text.
+
+          More detailed help can then be obtained by running the :help command
+          with another command as an argument, e.g.
+            > :help :help
+            > :help :set
+          (the leading ':' in the command argument is optional)
+          """ ++
+  [ ( "let"
+    , """
+      Define a new value.
+
+      First, declare the type of your new value, e.g.
+        :let myValue : List Nat
+
+      Then, define the value:
+        :let myValue = [1, 2, 3]
+
+      Now the value is in scope at the REPL:
+        > map (+ 2) myValue
+        [3, 4, 5]
+      """
+    )
   ] ++
   explain ["fs", "fsearch"] "Search for global definitions by sketching the names distribution of the wanted type(s)."
   where
@@ -2198,11 +2223,11 @@ getHelpType = do
          Just cmd => DetailedHelp $ fromMaybe "Unrecognised command '\{cmd}'"
                                   $ lookup cmd knownCommands
 
-helpHelpCmd :  ParseCmd
-                -> (HelpType -> REPLCmd)
-                -> String
-                -> CommandDefinition
-helpHelpCmd parseCmd command doc = (names, StringArg, doc, parse)
+helpCmd :  ParseCmd
+        -> (HelpType -> REPLCmd)
+        -> String
+        -> CommandDefinition
+helpCmd parseCmd command doc = (names, StringArg, doc, parse)
   where
     names : List String
     names = extractNames parseCmd
@@ -2528,7 +2553,7 @@ parserCommandsForHelp =
   , editLineNameOptionArgCmd (ParseREPLCmd ["gd"]) GenerateDef (firstHelpLine "gd")
   , noArgCmd (ParseREPLCmd ["gdnext"]) (Editing GenerateDefNext) (firstHelpLine "gdnext")
   , noArgCmd (ParseREPLCmd ["version"]) ShowVersion (firstHelpLine "version")
-  , helpHelpCmd (ParseREPLCmd ["?", "h", "help"]) Help (firstHelpLine "h")
+  , helpCmd (ParseREPLCmd ["?", "h", "help"]) Help (firstHelpLine "?")
   , declsArgCmd (ParseKeywordCmd ["let"]) NewDefn (firstHelpLine "let")
   , exprArgCmd (ParseREPLCmd ["fs", "fsearch"]) FuzzyTypeSearch (firstHelpLine "fs")
   ]
