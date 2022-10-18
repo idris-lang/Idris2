@@ -144,20 +144,20 @@ getSpecPats fc pename fn stk fnty args sargs pats
                 Core RawImp
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
              mkRHSargs sc' (IApp fc app (IVar fc (UN $ Basic a))) as ds
     mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
              mkRHSargs sc' (INamedApp fc app x (IVar fc (UN $ Basic a))) as ds
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
              tm' <- unelabNoSugar [] tm
              mkRHSargs sc' (IApp fc app (map rawName tm')) as ds
     mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
              tm' <- unelabNoSugar [] tm
              mkRHSargs sc' (INamedApp fc app x (map rawName tm')) as ds
     -- Type will depend on the value here (we assume a variadic function) but
@@ -343,7 +343,7 @@ eraseInferred tm
     dropErased fc pos ps [] = []
     dropErased fc pos ps (n :: ns)
         = if pos `elem` ps
-             then Erased fc False :: dropErased fc (1 + pos) ps ns
+             then Erased fc Placeholder :: dropErased fc (1 + pos) ps ns
              else n :: dropErased fc (1 + pos) ps ns
 
 -- Specialise a function name according to arguments. Return the specialised
@@ -604,7 +604,7 @@ mutual
        extendEnv (Add x n bs) env
            -- We're just using this to evaluate holes in the right scope, so
            -- a placeholder binder is fine
-           = Lam fc top Explicit (Erased fc False) :: extendEnv bs env
+           = Lam fc top Explicit (Erased fc Placeholder) :: extendEnv bs env
   quoteGenNF q defs bound env (NApp fc f args)
       = do f' <- quoteHead q defs fc bound env f
            args' <- quoteArgsWithFC q defs bound env args
@@ -643,7 +643,10 @@ mutual
                 _ => do arg' <- quoteGenNF q defs bound env arg
                         pure $ applyWithFC (TForce fc r arg') args'
   quoteGenNF q defs bound env (NPrimVal fc c) = pure $ PrimVal fc c
-  quoteGenNF q defs bound env (NErased fc i) = pure $ Erased fc i
+  quoteGenNF q defs bound env (NErased fc Impossible) = pure $ Erased fc Impossible
+  quoteGenNF q defs bound env (NErased fc Placeholder) = pure $ Erased fc Placeholder
+  quoteGenNF q defs bound env (NErased fc (Dotted t))
+    = pure $ Erased fc $ Dotted !(quoteGenNF q defs bound env t)
   quoteGenNF q defs bound env (NType fc u) = pure $ TType fc u
 
 evalRHS : {vars : _} ->

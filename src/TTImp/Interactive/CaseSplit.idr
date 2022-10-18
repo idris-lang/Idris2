@@ -126,7 +126,7 @@ export
 explicitlyBound : Defs -> NF [] -> Core (List Name)
 explicitlyBound defs (NBind fc x (Pi _ _ _ _) sc)
     = pure $ x :: !(explicitlyBound defs
-                    !(sc defs (toClosure defaultOpts [] (Erased fc False))))
+                    !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder))))
 explicitlyBound defs _ = pure []
 
 export
@@ -134,7 +134,7 @@ getEnvArgNames : {auto c : Ref Ctxt Defs} ->
                  Defs -> Nat -> NF [] -> Core (List String)
 getEnvArgNames defs Z sc = getArgNames defs !(explicitlyBound defs sc) [] [] sc
 getEnvArgNames defs (S k) (NBind fc n _ sc)
-    = getEnvArgNames defs k !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+    = getEnvArgNames defs k !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
 getEnvArgNames defs n ty = pure []
 
 expandCon : {auto c : Ref Ctxt Defs} ->

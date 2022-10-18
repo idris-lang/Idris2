@@ -950,19 +950,24 @@ mutual
   typeExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   typeExpr q fname indents
       = binder fname indents
-    <|> do arg <- bounds (expr q fname indents)
-           mscope <- optional $ do
-                        continue indents
-                        bd <- bindSymbol fname
-                        scope <- mustWork $ typeExpr q fname indents
-                        pure (bd, scope)
-           pure (mkPi arg mscope)
+    <|> ((bounds $ do
+            arg <- expr q fname indents
+            mscope <- optional $ do
+                continue indents
+                bd <- bindSymbol fname
+                scope <- mustWork $ typeExpr q fname indents
+                pure (bd, scope)
+            pure (arg, mscope))
+        <&> \arg_mscope =>
+            let fc = boundToFC fname arg_mscope
+                (arg, mscope) = arg_mscope.val
+             in mkPi fc arg mscope)
 
     where
-      mkPi : WithBounds PTerm -> Maybe (PiInfo PTerm, PTerm) -> PTerm
-      mkPi arg Nothing = arg.val
-      mkPi arg (Just (exp, a))
-        = PPi (boundToFC fname arg) top exp Nothing arg.val a
+      mkPi : FC -> PTerm -> Maybe (PiInfo PTerm, PTerm) -> PTerm
+      mkPi _ arg Nothing = arg
+      mkPi fc arg (Just (exp, a))
+        = PPi fc top exp Nothing arg a
 
   export
   expr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
@@ -1677,6 +1682,23 @@ recordParam fname indents
   <|> do n <- bounds (UN . Basic <$> decoratedSimpleBinderName fname)
          pure [(n.val, top, Explicit, PInfer (boundToFC fname n))]
 
+-- A record without a where is a forward declaration
+recordBody : OriginDesc -> IndentInfo ->
+             String -> Visibility -> Maybe TotalReq ->
+             Int ->
+             Name ->
+             List (Name, RigCount, PiInfo PTerm, PTerm) ->
+             EmptyRule (FC -> PDecl)
+recordBody fname indents doc vis mbtot col n params
+    = do atEndIndent indents
+         pure (\fc : FC => PRecord fc doc vis mbtot (MkPRecordLater n params))
+  <|> do mustWork $ decoratedKeyword fname "where"
+         opts <- dataOpts fname
+         dcflds <- blockWithOptHeaderAfter col
+                     (\ idt => recordConstructor fname <* atEnd idt)
+                     (fieldDecl fname)
+         pure (\fc : FC => PRecord fc doc vis mbtot (MkPRecord n params opts (fst dcflds) (concat (snd dcflds))))
+
 recordDecl : OriginDesc -> IndentInfo -> Rule PDecl
 recordDecl fname indents
     = do b <- bounds (do doc         <- optDocumentation fname
@@ -1686,12 +1708,7 @@ recordDecl fname indents
                          n       <- mustWork (decoratedDataTypeName fname)
                          paramss <- many (recordParam fname indents)
                          let params = concat paramss
-                         mustWork $ decoratedKeyword fname "where"
-                         opts <- dataOpts fname
-                         dcflds <- blockWithOptHeaderAfter col
-                                      (\ idt => recordConstructor fname <* atEnd idt)
-                                      (fieldDecl fname)
-                         pure (\fc : FC => PRecord fc doc vis mbtot n params opts (fst dcflds) (concat (snd dcflds))))
+                         recordBody fname indents doc vis mbtot col n params)
          pure (b.val (boundToFC fname b))
 
 paramDecls : OriginDesc -> IndentInfo -> Rule PDecl

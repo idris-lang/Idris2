@@ -75,7 +75,7 @@ findFields defs con
   where
     getExpNames : NF [] -> Core (List (String, Maybe Name, Maybe Name))
     getExpNames (NBind fc x (Pi _ _ p ty) sc)
-        = do rest <- getExpNames !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+        = do rest <- getExpNames !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
              let imp = case p of
                             Explicit => Nothing
                             _ => Just x

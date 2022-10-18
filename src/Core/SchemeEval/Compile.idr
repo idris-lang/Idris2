@@ -174,6 +174,16 @@ compilePiInfo svs (DefImplicit t)
     = do t' <- compileStk svs [] t
          pure (DefImplicit t')
 
+compileWhyErased : Ref Sym Integer =>
+                {auto c : Ref Ctxt Defs} ->
+                SchVars vars -> List (SchemeObj Write) -> WhyErased (Term vars) ->
+                Core (WhyErased (SchemeObj Write))
+compileWhyErased svs stk Impossible = pure Impossible
+compileWhyErased svs stk Placeholder = pure Placeholder
+compileWhyErased svs stk (Dotted t)
+    = do t' <- compileStk svs stk t
+         pure (Dotted t')
+
 compileStk svs stk (Local fc isLet idx p)
     = pure $ unload (Var (getSchVar p svs)) stk
 -- We are assuming that the bound name is a valid scheme symbol. We should
@@ -270,7 +280,9 @@ compileStk svs stk (TForce fc x tm)
                       [tm',
                       Vector (-5) [toScheme x, toScheme fc, Lambda [] tm']]
 compileStk svs stk (PrimVal fc c) = pure $ compileConstant fc c
-compileStk svs stk (Erased fc imp) = pure $ Vector (-6) [toScheme fc, toScheme imp]
+compileStk svs stk (Erased fc why)
+  = do why' <- compileWhyErased svs stk why
+       pure $ Vector (-6) [toScheme fc, toSchemeWhy why']
 compileStk svs stk (TType fc u) = pure $ Vector (-7) [toScheme fc, toScheme u]
 
 export

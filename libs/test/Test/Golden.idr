@@ -99,7 +99,7 @@ record Options where
   ||| Which codegen should we use?
   codegen      : Maybe String
   ||| Should we only run some specific cases?
-  onlyNames    : List String
+  onlyNames    : Maybe (String -> Bool)
   ||| Should we run the test suite interactively?
   interactive  : Bool
   ||| Should we use colors?
@@ -116,7 +116,7 @@ initOptions : String -> Bool -> Options
 initOptions exe color
   = MkOptions exe
               Nothing
-              []
+              Nothing
               False
               color
               False
@@ -144,6 +144,10 @@ fail err
     = do putStrLn err
          exitWith (ExitFailure 1)
 
+optionsTestsFilter : List String -> Maybe (String -> Bool)
+optionsTestsFilter [] = Nothing
+optionsTestsFilter xs = Just $ \name => any (`isInfixOf` name) xs
+
 ||| Process the command line options.
 export
 options : List String -> IO (Maybe Options)
@@ -166,7 +170,7 @@ options args = case args of
       ("--threads" :: n :: xs)      => do let pos : Nat = !(parsePositive n)
                                           go xs only ({ threads := pos } opts)
       ("--failure-file" :: p :: xs) => go  xs only ({ failureFile := Just p } opts)
-      ("--only" :: xs)              => pure (only, { onlyNames := xs } opts)
+      ("--only" :: xs)              => pure (only, { onlyNames := optionsTestsFilter xs } opts)
       ("--only-file" :: p :: xs)    => go xs (Just p) opts
       _ => Nothing
 
@@ -179,7 +183,13 @@ options args = case args of
                  | Nothing => pure (Just opts)
            Right only <- readFile fp
              | Left err => fail (show err)
-           pure $ Just $ { onlyNames $= ((lines only) ++) } opts
+           pure $ Just $ { onlyNames $= mergeOnlys $ optionsTestsFilter (lines only) } opts
+      where
+        mergeOnlys : Maybe (String -> Bool) -> Maybe (String -> Bool) -> Maybe (String -> Bool)
+        mergeOnlys Nothing   Nothing   = Nothing
+        mergeOnlys (Just f1) Nothing   = Just f1
+        mergeOnlys Nothing   (Just f2) = Just f2
+        mergeOnlys (Just f1) (Just f2) = Just $ \x => f1 x || f2 x
 
 ||| Normalise strings between different OS.
 |||
@@ -427,8 +437,8 @@ testsInDir dirName testNameFilter poolName reqs cg = do
 export
 filterTests : Options -> List String -> List String
 filterTests opts = case onlyNames opts of
-  [] => id
-  xs => filter (\ name => any (`isInfixOf` name) xs)
+  Nothing => id
+  Just f  => filter f
 
 ||| The summary of a test pool run
 public export

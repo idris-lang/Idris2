@@ -551,7 +551,7 @@ is certainly not the identity function
 
 .. code-block:: idris
 
-    notId {a = Int} x = x + 1
+    notId {a = Integer} x = x + 1
     notId x = x
 
 ::

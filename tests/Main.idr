@@ -69,7 +69,7 @@ idrisTestsTermination = MkTestPool "Termination checking" [] Nothing
 idrisTestsCasetree : TestPool
 idrisTestsCasetree = MkTestPool "Case tree building" [] Nothing
        -- Case tree building
-      ["casetree001", "casetree002"]
+      ["casetree001", "casetree002", "casetree003"]
 
 idrisTestsWarning : TestPool
 idrisTestsWarning = MkTestPool "Warnings" [] Nothing
@@ -108,7 +108,8 @@ idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
        "interactive033", "interactive034", "interactive035", "interactive036",
        "interactive037", "interactive038", "interactive039", "interactive040",
        "interactive041", "interactive042", "interactive043", "interactive044",
-       "interactive045"]
+       "interactive045", "interactive046"
+       ]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool "Interface" [] Nothing
@@ -167,7 +168,7 @@ idrisTestsData = MkTestPool "Data and record types" [] Nothing
        "record001", "record002", "record003", "record004", "record005",
        "record006", "record007", "record008", "record009", "record010",
        "record011", "record012", "record013", "record014", "record015",
-       "record016", "record017" ]
+       "record016", "record017", "record018" ]
 
 idrisTestsBuiltin : TestPool
 idrisTestsBuiltin = MkTestPool "Builtin types and functions" [] Nothing
