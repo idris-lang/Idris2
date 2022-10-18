@@ -2199,6 +2199,15 @@ stringArgCmd parseCmd command doc = (names, StringArg, doc, parse)
       s <- mustWork simpleStr
       pure (command s)
 
+getHelpType : EmptyRule HelpType
+getHelpType = do
+  optCmd <- optional $ choice $ (cmdName . fst) <$> knownCommands
+  pure $
+    case optCmd of
+         Nothing => GenericHelp
+         Just cmd => DetailedHelp $ fromMaybe "Unrecognised command '\{cmd}'"
+                                  $ lookup cmd knownCommands
+
 helpHelpCmd :  ParseCmd
                 -> (HelpType -> REPLCmd)
                 -> String
@@ -2212,12 +2221,7 @@ helpHelpCmd parseCmd command doc = (names, StringArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      optCmd <- optional $ choice $ (cmdName . fst) <$> knownCommands
-      let helpType = case optCmd of
-                          Nothing => GenericHelp
-                          Just cmd =>
-                            DetailedHelp $ fromMaybe "Unrecognised command '\{cmd}'"
-                                         $ lookup cmd knownCommands
+      helpType <- getHelpType
       pure (command helpType)
 
 moduleArgCmd : ParseCmd -> (ModuleIdent -> REPLCmd) -> String -> CommandDefinition
@@ -2557,5 +2561,8 @@ command : EmptyRule REPLCmd
 command
     = eoi $> NOP
   <|> nonEmptyCommand
-  <|> symbol ":?" $> Help GenericHelp -- special case, :? doesn't fit into above scheme
+  <|> (do symbol ":?" -- special case, :? doesn't fit into above scheme
+          helpType <- getHelpType
+          pure $ Help helpType)
   <|> eval
+
