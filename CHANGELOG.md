@@ -78,6 +78,15 @@
     isOdd (S k) = not $ isEven k
   ```
 
+* Adds ability to forward-declare records, e.g.:
+  ```idris
+  record B
+  record A where
+    b : B
+  record B where
+    a : A
+  ```
+
 ### Compiler changes
 
 * Removes deprecated support for `void` primitive. Now `void` is supported via
@@ -145,6 +154,8 @@
   This may lead to a need to qualifying functions (e.g. `List.filter`) due to possible ambiguity.
 * "Fish" and "chips" operators of `SnocList` were moved to `Prelude.Types` from `Prelude.Basics`.
 * Adds `contra` for returning the opposite of a given `Ordering`.
+* Fix `pow`, using backend implementations.
+* Add `subtract` alias for `(-)`
 
 #### Base
 
@@ -191,6 +202,9 @@
 * Fixes `natToFinLT` being O(n) by proving that `So (x < n)` implies `LT x n`,
     allowing the compiler to optimise `natToFinLT` away.
 * Fixes `SnocList.foldr` and `SnocList.foldMap` to be performant and stack-safe.
+* Add `insertAt`, `deleteAt` and `replaceAt` for `List`
+* Add `scanr`, `scanr1` and `unsnoc` for `Vect`
+* Implement `DecEq` for `SnocList`
 
 #### Test
 
