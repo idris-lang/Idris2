@@ -1,0 +1,4 @@
+c795133923312e212a9b8bd2ea8c576e7adc0c88079ac9f2babd6381514cdceb  src/Idris/Parser.idr
+22018dd5e667531da261d563c1bd36f44f1cc3ccc0d3868d5f5e414d657f606e  tests/idris2/repl005/expected
+6ccfad0e5baad5570f429e7920b7bf7267079d80d3a4063a07de598de808a1a4  tests/idris2/repl005/input
+26e50a4535aabc2ef039336c9da873d803ad31ae24e62f27dc8a112ecba38312  tests/idris2/repl005/run
