@@ -282,6 +282,7 @@ unifyArgs mode loc env _ _ = ufail loc ""
 getVars : {vars : _} ->
           List Nat -> List (NF vars) -> Maybe (List (Var vars))
 getVars got [] = Just []
+getVars got (NErased fc (Dotted t) :: xs) = getVars got (t :: xs)
 getVars got (NApp fc (NLocal r idx v) [] :: xs)
     = if inArgs idx got then Nothing
          else do xs' <- getVars (idx :: got) xs
@@ -639,6 +640,8 @@ solveIfUndefined env metavar@(Meta fc mname idx args) soln
          Just (Hole _ _) <- lookupDefExact (Resolved idx) (gamma defs)
               | _ => pure False
          updateSolution env metavar soln
+solveIfUndefined env (Erased _ (Dotted metavar)) soln
+  = solveIfUndefined env metavar soln
 solveIfUndefined env metavar soln
     = pure False
 
