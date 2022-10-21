@@ -218,7 +218,7 @@ jobs:
       - name: Bootstrap
         run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap"
       - name: Bootstrap test
-        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap-test"
+        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make ci-windows-bootstrap-test"
       - name: Install
         run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make install"
       - name: Artifact Idris2 from chez
