@@ -229,10 +229,8 @@ mutual
                 _ => do arg' <- quoteGenNF q opts defs bound env arg
                         pure $ applyWithFC (TForce fc r arg') args'
   quoteGenNF q opts defs bound env (NPrimVal fc c) = pure $ PrimVal fc c
-  quoteGenNF q opts defs bound env (NErased fc Impossible) = pure $ Erased fc Impossible
-  quoteGenNF q opts defs bound env (NErased fc Placeholder) = pure $ Erased fc Placeholder
-  quoteGenNF q opts defs bound env (NErased fc (Dotted nf))
-    = pure $ Erased fc $ Dotted !(quoteGenNF q opts defs bound env nf)
+  quoteGenNF q opts defs bound env (NErased fc t)
+    = Erased fc <$> traverse @{%search} @{CORE} (\ nf => quoteGenNF q opts defs bound env nf) t
   quoteGenNF q opts defs bound env (NType fc u) = pure $ TType fc u
 
 export
@@ -259,6 +257,8 @@ quoteWithPiGen q opts defs bound env (NBind fc n (Pi bfc c p ty) sc)
          ty' <- quoteGenNF q opts empty bound env !(evalClosure empty ty)
          p' <- quotePi q opts empty bound env p
          pure (Bind fc n (Pi bfc c p' ty') sc')
+quoteWithPiGen q opts defs bound env (NErased fc t)
+  = Erased fc <$> traverse @{%search} @{CORE} (quoteWithPiGen q opts defs bound env) t
 quoteWithPiGen q opts defs bound env tm
     = do empty <- clearDefs defs
          quoteGenNF q opts empty bound env tm

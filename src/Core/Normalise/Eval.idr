@@ -140,9 +140,8 @@ parameters (defs : Defs, topopts : EvalOpts)
                       eval env (arg :: locs) (Local {name = UN (Basic "fvar")} fc Nothing _ First) stk
                   _ => pure (NForce fc r tm' stk)
     eval env locs (PrimVal fc c) stk = pure $ NPrimVal fc c
-    eval env locs (Erased fc Impossible) stk = pure $ NErased fc Impossible
-    eval env locs (Erased fc Placeholder) stk = pure $ NErased fc Placeholder
-    eval env locs (Erased fc (Dotted t)) stk = pure $ NErased fc $ Dotted !(eval env locs t stk)
+    eval env locs (Erased fc a) stk
+      = NErased fc <$> traverse @{%search} @{CORE} (\ t => eval env locs t stk) a
     eval env locs (TType fc u) stk = pure $ NType fc u
 
     -- Apply an evaluated argument (perhaps cached from an earlier evaluation)
@@ -192,7 +191,8 @@ parameters (defs : Defs, topopts : EvalOpts)
                     eval env [arg] (Local {name = UN (Basic "fvar")} fc Nothing _ First) stk
                  _ => pure (NForce fc r tm' (args ++ stk))
     applyToStack env nf@(NPrimVal fc _) _ = pure nf
-    applyToStack env nf@(NErased fc _) _ = pure nf
+    applyToStack env (NErased fc a) stk
+      = NErased fc <$> traverse @{%search} @{CORE} (\ t => applyToStack env t stk) a
     applyToStack env nf@(NType fc _) _ = pure nf
 
     evalLocClosure : {auto c : Ref Ctxt Defs} ->

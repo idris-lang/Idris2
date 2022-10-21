@@ -79,9 +79,7 @@ tryUpdate ms (TDelayed fc r tm) = pure $ TDelayed fc r !(tryUpdate ms tm)
 tryUpdate ms (TDelay fc r ty tm) = pure $ TDelay fc r !(tryUpdate ms ty) !(tryUpdate ms tm)
 tryUpdate ms (TForce fc r tm) = pure $ TForce fc r !(tryUpdate ms tm)
 tryUpdate ms (PrimVal fc c) = pure $ PrimVal fc c
-tryUpdate ms (Erased fc Impossible) = pure $ Erased fc Impossible
-tryUpdate ms (Erased fc Placeholder) = pure $ Erased fc Placeholder
-tryUpdate ms (Erased fc (Dotted t)) = pure $ Erased fc (Dotted !(tryUpdate ms t))
+tryUpdate ms (Erased fc a) = Erased fc <$> traverse (tryUpdate ms) a
 tryUpdate ms (TType fc u) = pure $ TType fc u
 
 mutual
