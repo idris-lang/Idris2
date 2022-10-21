@@ -218,7 +218,7 @@ jobs:
       - name: Bootstrap
         run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap"
       - name: Bootstrap test
-        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap-test"
+        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make ci-windows-bootstrap-test"
       - name: Install
         run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make install"
       - name: Artifact Idris2 from chez
@@ -231,9 +231,10 @@ jobs:
     needs: quick-check
     runs-on: ubuntu-latest
     if: |
-      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      false
+      && (!contains(needs.initialise.outputs.commit_message, '[ci:')
       || contains(needs.initialise.outputs.commit_message, '[ci: nix]')
-      || contains(needs.initialise.outputs.commit_message, '[ci: chez]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: chez]'))
     steps:
     - uses: actions/checkout@v2
       with:

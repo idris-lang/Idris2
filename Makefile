@@ -276,6 +276,9 @@ bootstrap-racket: support
 bootstrap-test:
 	$(MAKE) test INTERACTIVE='' IDRIS2_PREFIX=${IDRIS2_BOOT_PREFIX}
 
+ci-windows-bootstrap-test:
+	$(MAKE) test except="idris2/repl005" INTERACTIVE='' IDRIS2_PREFIX=${IDRIS2_BOOT_PREFIX}
+
 bootstrap-clean:
 	$(RM) -r bootstrap-build
 
