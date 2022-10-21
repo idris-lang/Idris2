@@ -64,7 +64,7 @@
 |||   [--failure-file PATH]
 |||   [--threads N]
 |||   [--cg CODEGEN]
-|||   [--only [NAMES]]
+|||   [[--only|--except] [NAMES]]
 |||```
 |||
 ||| assuming that the test runner is compiled to an executable named `runtests`.
@@ -135,7 +135,7 @@ usage = unwords
   , "[--threads N]"
   , "[--failure-file PATH]"
   , "[--only-file PATH]"
-  , "[--only [NAMES]]"
+  , "[[--only|--except] [NAMES]]"
   ]
 
 export
@@ -144,9 +144,20 @@ fail err
     = do putStrLn err
          exitWith (ExitFailure 1)
 
-optionsTestsFilter : List String -> Maybe (String -> Bool)
-optionsTestsFilter [] = Nothing
-optionsTestsFilter xs = Just $ \name => any (`isInfixOf` name) xs
+optionsTestsFilter : List String -> List String -> Maybe (String -> Bool)
+optionsTestsFilter [] [] = Nothing
+optionsTestsFilter only except = Just $ \ name =>
+  let onlyCheck = null only || any (`isInfixOf` name) only in
+  let exceptCheck = all (not . (`isInfixOf` name)) except in
+  onlyCheck && exceptCheck
+
+record Acc where
+  constructor MkAcc
+  onlyFile : Maybe String
+  onlyNames : List String
+  exceptNames : List String
+initAcc : Acc
+initAcc = MkAcc Nothing [] []
 
 ||| Process the command line options.
 export
@@ -157,39 +168,35 @@ options args = case args of
 
   where
 
-    go : List String -> Maybe String -> Options -> Maybe (Maybe String, Options)
-    go rest only opts = case rest of
-      []                            => pure (only, opts)
-      ("--timing" :: xs)            => go xs only ({ timing := True} opts)
-      ("--interactive" :: xs)       => go xs only ({ interactive := True } opts)
-      ("--color"  :: xs)            => go xs only ({ color := True } opts)
-      ("--colour" :: xs)            => go xs only ({ color := True } opts)
-      ("--no-color"  :: xs)         => go xs only ({ color := False } opts)
-      ("--no-colour" :: xs)         => go xs only ({ color := False } opts)
-      ("--cg" :: cg :: xs)          => go xs only ({ codegen := Just cg } opts)
+    go : List String -> Acc -> Options -> Maybe (Acc, Options)
+    go rest acc opts = case rest of
+      []                            => pure (acc, opts)
+      ("--timing" :: xs)            => go xs acc ({ timing := True} opts)
+      ("--interactive" :: xs)       => go xs acc ({ interactive := True } opts)
+      ("--color"  :: xs)            => go xs acc ({ color := True } opts)
+      ("--colour" :: xs)            => go xs acc ({ color := True } opts)
+      ("--no-color"  :: xs)         => go xs acc ({ color := False } opts)
+      ("--no-colour" :: xs)         => go xs acc ({ color := False } opts)
+      ("--cg" :: cg :: xs)          => go xs acc ({ codegen := Just cg } opts)
       ("--threads" :: n :: xs)      => do let pos : Nat = !(parsePositive n)
-                                          go xs only ({ threads := pos } opts)
-      ("--failure-file" :: p :: xs) => go  xs only ({ failureFile := Just p } opts)
-      ("--only" :: xs)              => pure (only, { onlyNames := optionsTestsFilter xs } opts)
-      ("--only-file" :: p :: xs)    => go xs (Just p) opts
+                                          go xs acc ({ threads := pos } opts)
+      ("--failure-file" :: p :: xs) => go  xs acc ({ failureFile := Just p } opts)
+      ("--only" :: p :: xs)         => go xs ({ onlyNames $= (words p ++) } acc) opts
+      ("--except" :: p :: xs)       => go xs ({ exceptNames $= (words p ++) } acc) opts
+      ("--only-file" :: p :: xs)    => go xs ({ onlyFile := Just p } acc) opts
       _ => Nothing
 
     mkOptions : String -> List String -> IO (Maybe Options)
     mkOptions exe rest
       = do color <- (Just "DUMB" /=) <$> getEnv "TERM"
-           let Just (mfp, opts) = go rest Nothing (initOptions exe color)
+           let Just (acc, opts) = go rest initAcc (initOptions exe color)
                  | Nothing => pure Nothing
-           let Just fp = mfp
-                 | Nothing => pure (Just opts)
-           Right only <- readFile fp
-             | Left err => fail (show err)
-           pure $ Just $ { onlyNames $= mergeOnlys $ optionsTestsFilter (lines only) } opts
-      where
-        mergeOnlys : Maybe (String -> Bool) -> Maybe (String -> Bool) -> Maybe (String -> Bool)
-        mergeOnlys Nothing   Nothing   = Nothing
-        mergeOnlys (Just f1) Nothing   = Just f1
-        mergeOnlys Nothing   (Just f2) = Just f2
-        mergeOnlys (Just f1) (Just f2) = Just $ \x => f1 x || f2 x
+           extraOnlyNames <- the (IO (List String)) $ case acc.onlyFile of
+                               Nothing => pure []
+                               Just fp => do Right only <- readFile fp
+                                               | Left err => fail (show err)
+                                             pure (lines only)
+           pure $ Just $ { onlyNames := optionsTestsFilter (extraOnlyNames ++ acc.onlyNames) acc.exceptNames } opts
 
 ||| Normalise strings between different OS.
 |||
