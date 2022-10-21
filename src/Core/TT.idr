@@ -849,6 +849,23 @@ data WhyErased a
 
 %name WhyErased why
 
+export
+Functor WhyErased where
+  map f Placeholder = Placeholder
+  map f Impossible = Impossible
+  map f (Dotted x) = Dotted (f x)
+
+export
+Foldable WhyErased where
+  foldr c n (Dotted x) = c x n
+  foldr c n _ = n
+
+export
+Traversable WhyErased where
+  traverse f Placeholder = pure Placeholder
+  traverse f Impossible = pure Impossible
+  traverse f (Dotted x) = Dotted <$> f x
+
 public export
 data Term : List Name -> Type where
      Local : FC -> (isLet : Maybe Bool) ->
