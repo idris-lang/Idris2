@@ -472,13 +472,12 @@ build pkg opts
          [] <- prepareCompilation pkg opts
             | errs => pure errs
 
-         case executable pkg of
-              Nothing => pure ()
-              Just exec =>
-                   do let Just (mainNS, mainFile) = mainmod pkg
-                               | Nothing => throw (GenericMsg emptyFC "No main module given")
-                      let mainName = NS (miAsNamespace mainNS) (UN $ Basic "main")
-                      compileMain mainName mainFile exec
+         whenJust (executable pkg) $ \ exec =>
+           do let Just (mainNS, mainFile) = mainmod pkg
+                 | Nothing => throw (GenericMsg emptyFC "No main module given")
+              let mainName = NS (miAsNamespace mainNS) (UN $ Basic "main")
+              coreLift $ putStrLn "Now compiling the executable: \{exec}"
+              compileMain mainName mainFile exec
 
          runScript (postbuild pkg)
          pure []

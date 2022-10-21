@@ -46,6 +46,7 @@ mutual
       = [(n, tm)] <$ addAlias from to
   getMatch lhs (IBindVar _ n) tm = pure [(n, tm)]
   getMatch lhs (Implicit _ _) tm = pure []
+  getMatch lhs _ (IMustUnify _ UserDotted _) = pure []
 
   getMatch lhs (IVar to (NS ns n)) (IVar from (NS ns' n'))
       = if n == n' && isParentOf ns' ns

@@ -53,10 +53,10 @@ elabScript : {vars : _} ->
              {auto u : Ref UST UState} ->
              {auto s : Ref Syn SyntaxInfo} ->
              {auto o : Ref ROpts REPLOpts} ->
-             FC -> NestedNames vars ->
+             RigCount -> FC -> NestedNames vars ->
              Env Term vars -> NF vars -> Maybe (Glued vars) ->
              Core (NF vars)
-elabScript fc nest env script@(NDCon nfc nm t ar args) exp
+elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
     = do defs <- get Ctxt
          fnm <- toFullNames nm
          case fnm of
@@ -91,12 +91,12 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
         -- 2) Evaluate the resulting act
         -- 3) apply k to the result of (2)
         -- 4) Run elabScript on the result stripping off Elab
-        = do act <- elabScript fc nest env
+        = do act <- elabScript rig fc nest env
                                 !(evalClosure defs act) exp
              act <- quote defs env act
              k <- evalClosure defs k
              r <- applyToStack defs withAll env k [(getLoc act, toClosure withAll env act)]
-             elabScript fc nest env r exp
+             elabScript rig fc nest env r exp
     elabCon defs "Fail" [_, mbfc, msg]
         = do msg' <- evalClosure defs msg
              let customFC = case !(evalClosure defs mbfc >>= reify defs) of
@@ -105,13 +105,13 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
              throw $ RunElabFail $ GenericMsg customFC !(reify defs msg')
     elabCon defs "Try" [_, elab1, elab2]
         = tryUnify (do constart <- getNextEntry
-                       res <- elabScript fc nest env !(evalClosure defs elab1) exp
+                       res <- elabScript rig fc nest env !(evalClosure defs elab1) exp
                        -- We ensure that all of the constraints introduced during the elab script
                        -- have been solved. This guarantees that we do not mistakenly succeed even
                        -- though e.g. a proof search got delayed.
                        solveConstraintsAfter constart inTerm LastChance
                        pure res)
-                   (elabScript fc nest env !(evalClosure defs elab2) exp)
+                   (elabScript rig fc nest env !(evalClosure defs elab2) exp)
     elabCon defs "LogMsg" [topic, verb, str]
         = do topic' <- evalClosure defs topic
              verb' <- evalClosure defs verb
@@ -143,7 +143,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
              tidx <- resolveName (UN $ Basic "[elaborator script]")
              e <- newRef EST (initEState tidx env)
              (checktm, _) <- runDelays (const True) $
-                     check top (initElabInfo InExpr) nest env !(reify defs ttimp')
+                     check rig (initElabInfo InExpr) nest env !(reify defs ttimp')
                            (Just (glueBack defs env exp'))
              empty <- clearDefs defs
              nf empty env checktm
@@ -164,7 +164,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
              qty <- quote empty env ty
              let env' = Lam fc' c qp qty :: env
 
-             runsc <- elabScript fc (weaken nest) env'
+             runsc <- elabScript rig fc (weaken nest) env'
                                  !(nf defs env' lamsc) Nothing -- (map weaken exp)
              nf empty env (Bind bfc x (Lam fc' c qp qty) !(quote empty env' runsc))
        where
@@ -224,7 +224,7 @@ elabScript fc nest env script@(NDCon nfc nm t ar args) exp
              scriptRet ()
     elabCon defs n args = failWith defs $ "unexpected Elab constructor " ++ n ++
                                           ", or incorrect count of arguments: " ++ show (length args)
-elabScript fc nest env script exp
+elabScript rig fc nest env script exp
     = do defs <- get Ctxt
          empty <- clearDefs defs
          throw (BadRunElab fc env !(quote empty env script) "script is not a data value")
@@ -252,7 +252,7 @@ checkRunElab rig elabinfo nest env fc script exp
                            check rig elabinfo nest env script (Just (gnf env elabtt))
          solveConstraints inTerm Normal
          defs <- get Ctxt -- checking might have resolved some holes
-         ntm <- elabScript fc nest env
+         ntm <- elabScript rig fc nest env
                            !(nfOpts withAll defs env stm) (Just (gnf env expected))
          defs <- get Ctxt -- might have updated as part of the script
          empty <- clearDefs defs

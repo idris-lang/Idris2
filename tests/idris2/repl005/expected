@@ -1,0 +1,46 @@
+Main> Define a new value.
+
+First, declare the type of your new value, e.g.
+  :let myValue : List Nat
+
+Then, define the value:
+  :let myValue = [1, 2, 3]
+
+Now the value is in scope at the REPL:
+  > map (+ 2) myValue
+  [3, 4, 5]
+Main> Define a new value.
+
+First, declare the type of your new value, e.g.
+  :let myValue : List Nat
+
+Then, define the value:
+  :let myValue = [1, 2, 3]
+
+Now the value is in scope at the REPL:
+  > map (+ 2) myValue
+  [3, 4, 5]
+Main> Define a new value.
+
+First, declare the type of your new value, e.g.
+  :let myValue : List Nat
+
+Then, define the value:
+  :let myValue = [1, 2, 3]
+
+Now the value is in scope at the REPL:
+  > map (+ 2) myValue
+  [3, 4, 5]
+Main> Define a new value.
+
+First, declare the type of your new value, e.g.
+  :let myValue : List Nat
+
+Then, define the value:
+  :let myValue = [1, 2, 3]
+
+Now the value is in scope at the REPL:
+  > map (+ 2) myValue
+  [3, 4, 5]
+Main> 
+Bye for now!

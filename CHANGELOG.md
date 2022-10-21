@@ -10,6 +10,9 @@
 * New option `evaltiming` to time how long an evaluation takes at the REPL,
   set with `:set evaltiming`.
 * Renames `:lp/loadpackage` to `:package`.
+* Adds `:import`, with the same functionality as `:module`.
+* Adds the ability to request detailed help via `:help <replCmd>`, e.g.
+  `:help :help` or `:help :let`. This also works with the `:?` and `:h` aliases.
 
 ### Language changes
 
@@ -111,6 +114,8 @@
 * Adds the number of enum constructors to enum types during codegen, to allow
     for trivial conversion to, e.g., `Bits32`.
 * Adds constant-folding for `Nat` literals.
+* Fixes `CyclicMeta` in `TTImp.ProcessDef` being considered a recoverable error.
+
 
 ### IDE protocol changes
 

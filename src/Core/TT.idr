@@ -842,6 +842,14 @@ data UseSide = UseLeft | UseRight
 %name UseSide side
 
 public export
+data WhyErased a
+  = Placeholder
+  | Impossible
+  | Dotted a
+
+%name WhyErased why
+
+public export
 data Term : List Name -> Type where
      Local : FC -> (isLet : Maybe Bool) ->
              (idx : Nat) -> (0 p : IsVar name idx vars) -> Term vars
@@ -865,7 +873,7 @@ data Term : List Name -> Type where
      TDelay : FC -> LazyReason -> (ty : Term vars) -> (arg : Term vars) -> Term vars
      TForce : FC -> LazyReason -> Term vars -> Term vars
      PrimVal : FC -> (c : Constant) -> Term vars
-     Erased : FC -> (imp : Bool) -> -- True == impossible term, for coverage checker
+     Erased : FC -> WhyErased (Term vars) -> -- True == impossible term, for coverage checker
               Term vars
      TType : FC -> Name -> -- universe variable
              Term vars
@@ -980,6 +988,15 @@ Eq a => Eq (Binder a) where
 
 export
 total
+Eq a => Eq (WhyErased a) where
+  Placeholder == Placeholder = True
+  Impossible == Impossible = True
+  Dotted t == Dotted u = t == u
+  _ == _ = False
+
+
+export
+total
 Eq (Term vars) where
   (==) (Local _ _ idx _) (Local _ _ idx' _) = idx == idx'
   (==) (Ref _ _ n) (Ref _ _ n') = n == n'
@@ -993,11 +1010,13 @@ Eq (Term vars) where
   (==) (TDelay _ _ t x) (TDelay _ _ t' x') = t == t' && x == x'
   (==) (TForce _ _ t) (TForce _ _ t') = t == t'
   (==) (PrimVal _ c) (PrimVal _ c') = c == c'
-  (==) (Erased _ i) (Erased _ i') = i == i'
+  (==) (Erased _ i) (Erased _ i') = assert_total (i == i')
   (==) (TType _ _) (TType _ _) = True
   (==) _ _ = False
 
 -- Check equality, ignoring variable naming and universes
+eqWhyErased : WhyErased (Term vs) -> WhyErased (Term vs') -> Bool
+
 export
 total
 eqTerm : Term vs -> Term vs' -> Bool
@@ -1013,9 +1032,14 @@ eqTerm (TDelayed _ _ t) (TDelayed _ _ t') = eqTerm t t'
 eqTerm (TDelay _ _ t x) (TDelay _ _ t' x') = eqTerm t t' && eqTerm x x'
 eqTerm (TForce _ _ t) (TForce _ _ t') = eqTerm t t'
 eqTerm (PrimVal _ c) (PrimVal _ c') = c == c'
-eqTerm (Erased _ i) (Erased _ i') = i == i'
+eqTerm (Erased _ i) (Erased _ i') = eqWhyErased i i'
 eqTerm (TType _ _) (TType _ _) = True
 eqTerm _ _ = False
+
+eqWhyErased Impossible Impossible = True
+eqWhyErased Placeholder Placeholder = True
+eqWhyErased (Dotted t) (Dotted u)  = eqTerm t u
+eqWhyErased _ _ = False
 
 public export
 interface Weaken tm where
@@ -1287,7 +1311,9 @@ insertNames out ns (TDelay fc r ty tm)
     = TDelay fc r (insertNames out ns ty) (insertNames out ns tm)
 insertNames out ns (TForce fc r tm) = TForce fc r (insertNames out ns tm)
 insertNames out ns (PrimVal fc c) = PrimVal fc c
-insertNames out ns (Erased fc i) = Erased fc i
+insertNames out ns (Erased fc Impossible) = Erased fc Impossible
+insertNames out ns (Erased fc Placeholder) = Erased fc Placeholder
+insertNames out ns (Erased fc (Dotted t)) = Erased fc (Dotted (insertNames out ns t))
 insertNames out ns (TType fc u) = TType fc u
 
 export
@@ -1494,7 +1520,9 @@ mutual
   shrinkTerm (TForce fc r x) prf
      = Just (TForce fc r !(shrinkTerm x prf))
   shrinkTerm (PrimVal fc c) prf = Just (PrimVal fc c)
-  shrinkTerm (Erased fc i) prf = Just (Erased fc i)
+  shrinkTerm (Erased fc Placeholder) prf = Just (Erased fc Placeholder)
+  shrinkTerm (Erased fc Impossible) prf = Just (Erased fc Impossible)
+  shrinkTerm (Erased fc (Dotted t)) prf = Erased fc . Dotted <$> shrinkTerm t prf
   shrinkTerm (TType fc u) prf = Just (TType fc u)
 
 varEmbedSub : SubVars small vars ->
@@ -1527,7 +1555,9 @@ embedSub sub (TDelay fc x t y)
     = TDelay fc x (embedSub sub t) (embedSub sub y)
 embedSub sub (TForce fc r x) = TForce fc r (embedSub sub x)
 embedSub sub (PrimVal fc c) = PrimVal fc c
-embedSub sub (Erased fc i) = Erased fc i
+embedSub sub (Erased fc Impossible) = Erased fc Impossible
+embedSub sub (Erased fc Placeholder) = Erased fc Placeholder
+embedSub sub (Erased fc (Dotted t)) = Erased fc (Dotted (embedSub sub t))
 embedSub sub (TType fc u) = TType fc u
 
 namespace Bounds
@@ -1583,7 +1613,9 @@ mkLocals outer bs (TDelay fc x t y)
 mkLocals outer bs (TForce fc r x)
     = TForce fc r (mkLocals outer bs x)
 mkLocals outer bs (PrimVal fc c) = PrimVal fc c
-mkLocals outer bs (Erased fc i) = Erased fc i
+mkLocals outer bs (Erased fc Impossible) = Erased fc Impossible
+mkLocals outer bs (Erased fc Placeholder) = Erased fc Placeholder
+mkLocals outer bs (Erased fc (Dotted t)) = Erased fc (Dotted (mkLocals outer bs t))
 mkLocals outer bs (TType fc u) = TType fc u
 
 export
@@ -1684,7 +1716,9 @@ namespace SubstEnv
       = TDelay fc x (substEnv outer env t) (substEnv outer env y)
   substEnv outer env (TForce fc r x) = TForce fc r (substEnv outer env x)
   substEnv outer env (PrimVal fc c) = PrimVal fc c
-  substEnv outer env (Erased fc i) = Erased fc i
+  substEnv outer env (Erased fc Impossible) = Erased fc Impossible
+  substEnv outer env (Erased fc Placeholder) = Erased fc Placeholder
+  substEnv outer env (Erased fc (Dotted t)) = Erased fc (Dotted (substEnv outer env t))
   substEnv outer env (TType fc u) = TType fc u
 
   export

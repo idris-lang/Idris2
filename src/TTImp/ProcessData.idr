@@ -45,7 +45,7 @@ checkRetType : {auto c : Ref Ctxt Defs} ->
                (NF vars -> Core ()) -> Core ()
 checkRetType env (NBind fc x (Pi _ _ _ ty) sc) chk
     = do defs <- get Ctxt
-         checkRetType env !(sc defs (toClosure defaultOpts env (Erased fc False))) chk
+         checkRetType env !(sc defs (toClosure defaultOpts env (Erased fc Placeholder))) chk
 checkRetType env nf chk = chk nf
 
 checkIsType : {auto c : Ref Ctxt Defs} ->
@@ -135,7 +135,7 @@ getIndexPats tm
   where
     getRetType : Defs -> NF [] -> Core (NF [])
     getRetType defs (NBind fc _ (Pi _ _ _ _) sc)
-        = do sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+        = do sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
              getRetType defs sc'
     getRetType defs t = pure t
 
@@ -212,19 +212,19 @@ getRelevantArg : {auto c : Ref Ctxt Defs} ->
                  Core (Maybe (Bool, Nat))
 getRelevantArg defs i rel world (NBind fc _ (Pi _ rig _ val) sc)
     = branchZero (getRelevantArg defs (1 + i) rel world
-                              !(sc defs (toClosure defaultOpts [] (Erased fc False))))
+                              !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder))))
                  (case !(evalClosure defs val) of
                        -- %World is never inspected, so might as well be deleted from data types,
                        -- although it needs care when compiling to ensure that the function that
                        -- returns the IO/%World type isn't erased
                        (NPrimVal _ $ PrT WorldType) =>
                            getRelevantArg defs (1 + i) rel False
-                               !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+                               !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
                        _ =>
                        -- if we haven't found a relevant argument yet, make
                        -- a note of this one and keep going. Otherwise, we
                        -- have more than one, so give up.
-                           maybe (do sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+                           maybe (do sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
                                      getRelevantArg defs (1 + i) (Just i) False sc')
                                  (const (pure Nothing))
                                  rel)

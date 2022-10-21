@@ -230,7 +230,7 @@ usableLocal loc defaults env (NApp _ (NLocal _ _ _) args)
 usableLocal loc defaults env (NBind fc x (Pi _ _ _ _) sc)
     = do defs <- get Ctxt
          usableLocal loc defaults env
-                !(sc defs (toClosure defaultOpts env (Erased fc False)))
+                !(sc defs (toClosure defaultOpts env (Erased fc Placeholder)))
 usableLocal loc defaults env (NErased _ _) = pure False
 usableLocal loc _ _ _ = pure True
 
@@ -255,7 +255,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
     clearEnvType : {idx : Nat} -> (0 p : IsVar nm idx vs) ->
                    FC -> Env Term vs -> Env Term vs
     clearEnvType First fc (b :: env)
-        = Lam (binderLoc b) (multiplicity b) Explicit (Erased fc False) :: env
+        = Lam (binderLoc b) (multiplicity b) Explicit (Erased fc Placeholder) :: env
     clearEnvType (Later p) fc (b :: env) = b :: clearEnvType p fc env
 
     clearEnv : Term vars -> Env Term vars -> Env Term vars
@@ -349,7 +349,7 @@ isPairNF : {auto c : Ref Ctxt Defs} ->
 isPairNF env (NTCon _ n _ _ _) defs
     = isPairType n
 isPairNF env (NBind fc b (Pi _ _ _ _) sc) defs
-    = isPairNF env !(sc defs (toClosure defaultOpts env (Erased fc False))) defs
+    = isPairNF env !(sc defs (toClosure defaultOpts env (Erased fc Placeholder))) defs
 isPairNF _ _ _ = pure False
 
 searchName : {vars : _} ->
@@ -448,7 +448,7 @@ concreteDets {vars} fc defaults env top pos dets (arg :: args)
 
     concrete : Defs -> NF vars -> (atTop : Bool) -> Core ()
     concrete defs (NBind nfc x b sc) atTop
-        = do scnf <- sc defs (toClosure defaultOpts env (Erased nfc False))
+        = do scnf <- sc defs (toClosure defaultOpts env (Erased nfc Placeholder))
              concrete defs scnf False
     concrete defs (NTCon nfc n t a args) atTop
         = do sd <- getSearchData nfc False n

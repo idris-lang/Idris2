@@ -274,11 +274,11 @@ mutual
     fromBuf b
         = case !getTag of
                0 => do c <- fromBuf b; x <- fromBuf b; ty <- fromBuf b; pure (Lam emptyFC c x ty)
-               1 => do c <- fromBuf b; x <- fromBuf b; pure (Let emptyFC c x (Erased emptyFC False))
+               1 => do c <- fromBuf b; x <- fromBuf b; pure (Let emptyFC c x (Erased emptyFC Placeholder))
                2 => do c <- fromBuf b; x <- fromBuf b; y <- fromBuf b; pure (Pi emptyFC c x y)
                3 => do c <- fromBuf b; p <- fromBuf b; ty <- fromBuf b; pure (PVar emptyFC c p ty)
-               4 => do c <- fromBuf b; x <- fromBuf b; pure (PLet emptyFC c x (Erased emptyFC False))
-               5 => do c <- fromBuf b; pure (PVTy emptyFC c (Erased emptyFC False))
+               4 => do c <- fromBuf b; x <- fromBuf b; pure (PLet emptyFC c x (Erased emptyFC Placeholder))
+               5 => do c <- fromBuf b; pure (PVTy emptyFC c (Erased emptyFC Placeholder))
                _ => corrupt "Binder"
 
   export
@@ -370,7 +370,7 @@ mutual
                        pure (TForce emptyFC lr tm)
                9 => do c <- fromBuf b
                        pure (PrimVal emptyFC c)
-               10 => pure (Erased emptyFC False)
+               10 => pure (Erased emptyFC Placeholder)
                11 => do u <- fromBuf b; pure (TType emptyFC u)
                12 => do fn <- fromBuf b
                         args <- fromBuf b
@@ -442,7 +442,7 @@ mutual
         = case !getTag of
                0 => do name <- fromBuf b; idx <- fromBuf b
                        xs <- fromBuf b
-                       pure (Case {name} idx (mkPrf idx) (Erased emptyFC False) xs)
+                       pure (Case {name} idx (mkPrf idx) (Erased emptyFC Placeholder) xs)
                1 => do x <- fromBuf b
                        pure (STerm 0 x)
                2 => do msg <- fromBuf b
@@ -1131,7 +1131,7 @@ TTC GlobalDef where
                       pure (MkGlobalDef loc name ty eargs seargs specargs iargs
                                         mul vars vis
                                         tot fl refs refsR inv c True def cdef Nothing sc Nothing)
-              else pure (MkGlobalDef loc name (Erased loc False) [] [] [] []
+              else pure (MkGlobalDef loc name (Erased loc Placeholder) [] [] [] []
                                      mul [] Public unchecked [] refs refsR
                                      False False True def cdef Nothing [] Nothing)
 
