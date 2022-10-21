@@ -308,6 +308,9 @@ replace' {vars} tmpi defs env lhs parg tm
         = do args' <- traverse (traversePair repArg) args
              tm' <- repSub tm
              pure $ applyWithFC (TForce fc r tm') args'
+    repSub (NErased fc (Dotted t))
+        = do t' <- repSub t
+             pure (Erased fc (Dotted t'))
     repSub tm = do empty <- clearDefs defs
                    quote empty env tm
 

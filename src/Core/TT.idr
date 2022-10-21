@@ -1871,6 +1871,7 @@ covering
       showApp (TDelay _ _ _ tm) [] = "%Delay " ++ show tm
       showApp (TForce _ _ tm) [] = "%Force " ++ show tm
       showApp (PrimVal _ c) [] = show c
+      showApp (Erased _ (Dotted t)) [] = ".(" ++ show t ++ ")"
       showApp (Erased _ _) [] = "[__]"
       showApp (TType _ u) [] = "Type"
       showApp _ [] = "???"
