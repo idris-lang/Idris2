@@ -1793,7 +1793,7 @@ addMetas res ns (TDelay fc x t y)
     = addMetas res (addMetas res ns t) y
 addMetas res ns (TForce fc r x) = addMetas res ns x
 addMetas res ns (PrimVal fc c) = ns
-addMetas res ns (Erased fc i) = ns
+addMetas res ns (Erased fc i) = foldr (flip $ addMetas res) ns i
 addMetas res ns (TType fc u) = ns
 
 -- Get the metavariable names in a term
@@ -1828,7 +1828,7 @@ addRefs ua at ns (TDelay fc x t y)
     = addRefs ua at (addRefs ua at ns t) y
 addRefs ua at ns (TForce fc r x) = addRefs ua at ns x
 addRefs ua at ns (PrimVal fc c) = ns
-addRefs ua at ns (Erased fc i) = ns
+addRefs ua at ns (Erased fc i) = foldr (flip $ addRefs ua at) ns i
 addRefs ua at ns (TType fc u) = ns
 
 -- As above, but for references. Also flag whether a name is under an
