@@ -195,6 +195,8 @@ options args = case args of
       ("--only-file" :: p :: xs)    => go xs ({ onlyFile := Just p } acc) opts
       [p] => do guard (p `elem` ["--only", "--except"])
                 pure (acc, opts)
+                -- ^ we accept trailing only or except flags as unused (do not filter out any tests)
+                -- for the convenience of populating these options from shell scripts. 
       _ => Nothing
 
     mkOptions : String -> List String -> IO (Maybe Options)
