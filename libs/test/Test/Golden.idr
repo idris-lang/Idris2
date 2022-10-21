@@ -196,7 +196,7 @@ options args = case args of
       [p] => do guard (p `elem` ["--only", "--except"])
                 pure (acc, opts)
                 -- ^ we accept trailing only or except flags as unused (do not filter out any tests)
-                -- for the convenience of populating these options from shell scripts. 
+                -- for the convenience of populating these options from shell scripts.
       _ => Nothing
 
     mkOptions : String -> List String -> IO (Maybe Options)
