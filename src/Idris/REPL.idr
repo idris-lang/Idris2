@@ -972,8 +972,10 @@ process (Compile ctm outfile)
     = compileExp ctm outfile
 process (Exec ctm)
     = execExp ctm
-process Help
+process (Help GenericHelp)
     = pure RequestedHelp
+process (Help (DetailedHelp details))
+    = pure (RequestedDetails details)
 process (TypeSearch searchTerm)
     = do defs <- branch
          let curr = currentNS defs
@@ -1254,6 +1256,7 @@ mutual
   displayResult (ColorSet b) = printResult (reflow (if b then "Set color on" else "Set color off"))
   displayResult (VersionIs x) = printResult (pretty0 (showVersion True x))
   displayResult (RequestedHelp) = printResult (pretty0 displayHelp)
+  displayResult (RequestedDetails details) = printResult (pretty0 details)
   displayResult (Edited (DisplayEdit Empty)) = pure ()
   displayResult (Edited (DisplayEdit xs)) = printResult xs
   displayResult (Edited (EditError x)) = printResult x

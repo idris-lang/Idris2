@@ -583,6 +583,11 @@ data DocDirective : Type where
   AModule : ModuleIdent -> DocDirective
 
 public export
+data HelpType : Type where
+  GenericHelp : HelpType
+  DetailedHelp : (details : String) -> HelpType
+
+public export
 data REPLCmd : Type where
      NewDefn : List PDecl -> REPLCmd
      Eval : PTerm -> REPLCmd
@@ -595,7 +600,7 @@ data REPLCmd : Type where
      Edit : REPLCmd
      Compile : PTerm -> String -> REPLCmd
      Exec : PTerm -> REPLCmd
-     Help : REPLCmd
+     Help : HelpType -> REPLCmd
      TypeSearch : PTerm -> REPLCmd
      FuzzyTypeSearch : PTerm -> REPLCmd
      DebugInfo : Name -> REPLCmd

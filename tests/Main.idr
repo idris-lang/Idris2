@@ -187,7 +187,7 @@ idrisTestsEvaluator = MkTestPool "Evaluation" [] Nothing
 
 idrisTestsREPL : TestPool
 idrisTestsREPL = MkTestPool "REPL commands and help" [] Nothing
-      [ "repl001", "repl002"
+      [ "repl001", "repl002", "repl003", "repl004", "repl005"
       ]
 
 idrisTestsAllSchemes : Requirement -> TestPool

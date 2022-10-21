@@ -1,0 +1,126 @@
+Main> Set an option
+  eval                specify what evaluation mode to use:
+                        typecheck|tc
+                        normalise|normalize|normal
+                        execute|exec
+                        scheme
+
+  editor              specify the name of the editor command
+
+  cg                  specify the codegen/backend to use
+                      builtin codegens are:
+                        chez
+                        racket
+                        refc
+                        node
+
+  showimplicits       enable displaying implicit arguments as part of the
+                      output
+
+  shownamespace       enable displaying namespaces as part of the output
+
+  showmachinenames    enable displaying machine names as part of the
+                      output
+
+  showtypes           enable displaying the type of the term as part of
+                      the output
+
+  profile
+
+  evaltiming          enable timing how long evaluation takes and
+                      displaying this before the printing of the output
+Main> Set an option
+  eval                specify what evaluation mode to use:
+                        typecheck|tc
+                        normalise|normalize|normal
+                        execute|exec
+                        scheme
+
+  editor              specify the name of the editor command
+
+  cg                  specify the codegen/backend to use
+                      builtin codegens are:
+                        chez
+                        racket
+                        refc
+                        node
+
+  showimplicits       enable displaying implicit arguments as part of the
+                      output
+
+  shownamespace       enable displaying namespaces as part of the output
+
+  showmachinenames    enable displaying machine names as part of the
+                      output
+
+  showtypes           enable displaying the type of the term as part of
+                      the output
+
+  profile
+
+  evaltiming          enable timing how long evaluation takes and
+                      displaying this before the printing of the output
+Main> Set an option
+  eval                specify what evaluation mode to use:
+                        typecheck|tc
+                        normalise|normalize|normal
+                        execute|exec
+                        scheme
+
+  editor              specify the name of the editor command
+
+  cg                  specify the codegen/backend to use
+                      builtin codegens are:
+                        chez
+                        racket
+                        refc
+                        node
+
+  showimplicits       enable displaying implicit arguments as part of the
+                      output
+
+  shownamespace       enable displaying namespaces as part of the output
+
+  showmachinenames    enable displaying machine names as part of the
+                      output
+
+  showtypes           enable displaying the type of the term as part of
+                      the output
+
+  profile
+
+  evaltiming          enable timing how long evaluation takes and
+                      displaying this before the printing of the output
+Main> Set an option
+  eval                specify what evaluation mode to use:
+                        typecheck|tc
+                        normalise|normalize|normal
+                        execute|exec
+                        scheme
+
+  editor              specify the name of the editor command
+
+  cg                  specify the codegen/backend to use
+                      builtin codegens are:
+                        chez
+                        racket
+                        refc
+                        node
+
+  showimplicits       enable displaying implicit arguments as part of the
+                      output
+
+  shownamespace       enable displaying namespaces as part of the output
+
+  showmachinenames    enable displaying machine names as part of the
+                      output
+
+  showtypes           enable displaying the type of the term as part of
+                      the output
+
+  profile
+
+  evaltiming          enable timing how long evaluation takes and
+                      displaying this before the printing of the output
+Main> 
+Bye for now!

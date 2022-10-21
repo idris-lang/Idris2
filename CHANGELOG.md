@@ -11,6 +11,8 @@
   set with `:set evaltiming`.
 * Renames `:lp/loadpackage` to `:package`.
 * Adds `:import`, with the same functionality as `:module`.
+* Adds the ability to request detailed help via `:help <replCmd>`, e.g.
+  `:help :help` or `:help :let`. This also works with the `:?` and `:h` aliases.
 
 ### Language changes
 

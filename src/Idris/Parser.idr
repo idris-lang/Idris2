@@ -11,8 +11,10 @@ import public Libraries.Text.Parser
 import Data.Either
 import Libraries.Data.IMaybe
 import Data.List
+import Data.List.Quantifiers
 import Data.List1
 import Data.Maybe
+import Data.So
 import Data.Nat
 import Data.SnocList
 import Data.String
@@ -1943,6 +1945,17 @@ replCmd (c :: cs)
   <|> symbol c
   <|> replCmd cs
 
+cmdName : String -> Rule String
+cmdName str = do
+  _ <- optional (symbol ":")
+  terminal ("Unrecognised REPL command '" ++ str ++ "'") $
+           \case
+              (Ident s)       => if s == str then Just s else Nothing
+              (Keyword kw)    => if kw == str then Just kw else Nothing
+              (Symbol "?")    => Just "?"
+              (Symbol ":?")   => Just "?"   -- `:help :?` is a special case
+              _ => Nothing
+
 export
 data CmdArg : Type where
      ||| The command takes no arguments.
@@ -2021,11 +2034,142 @@ mutual
     show (Args args) = showSep " " (map show args)
     show arg = "<" ++ showCmdArg arg ++ ">"
 
+public export
+knownCommands : List (String, String)
+knownCommands =
+  explain ["t", "type"] "Check the type of an expression" ++
+  [ ("ti", "Check the type of an expression, showing implicit arguments")
+  , ("printdef", "Show the definition of a pattern-matching function")
+  ] ++
+  explain ["s", "search"] "Search for values by type" ++
+  [ ("di", "Show debugging information for a name")
+  ] ++
+  explain ["module", "import"] "Import an extra module" ++
+  [ ("package", "Import every module of the package")
+  ] ++
+  explain ["q", "quit", "exit"] "Exit the Idris system" ++
+  [ ("cwd", "Displays the current working directory")
+  , ("cd", "Change the current working directory")
+  , ("sh", "Run a shell command")
+  , ("set"
+    , unlines   -- FIXME: this should be a multiline string (see #2087)
+      [ "Set an option"
+      , "  eval                specify what evaluation mode to use:"
+      , "                        typecheck|tc"
+      , "                        normalise|normalize|normal"
+      , "                        execute|exec"
+      , "                        scheme"
+      , ""
+      , "  editor              specify the name of the editor command"
+      , ""
+      , "  cg                  specify the codegen/backend to use"
+      , "                      builtin codegens are:"
+      , "                        chez"
+      , "                        racket"
+      , "                        refc"
+      , "                        node"
+      , ""
+      , "  showimplicits       enable displaying implicit arguments as part of the"
+      , "                      output"
+      , ""
+      , "  shownamespace       enable displaying namespaces as part of the output"
+      , ""
+      , "  showmachinenames    enable displaying machine names as part of the"
+      , "                      output"
+      , ""
+      , "  showtypes           enable displaying the type of the term as part of"
+      , "                      the output"
+      , ""
+      , "  profile"
+      , ""
+      , "  evaltiming          enable timing how long evaluation takes and"
+      , "                      displaying this before the printing of the output"
+      ]
+    )
+  , ("unset", "Unset an option")
+  , ("opts", "Show current options settings")
+  ] ++
+  explain ["c", "compile"] "Compile to an executable" ++
+  [ ("exec", "Compile to an executable and run")
+  , ("directive", "Set a codegen-specific directive")
+  ] ++
+  explain ["l", "load"] "Load a file" ++
+  explain ["r", "reload"] "Reload current file" ++
+  explain ["e", "edit"] "Edit current file using $EDITOR or $VISUAL" ++
+  explain ["miss", "missing"] "Show missing clauses" ++
+  [ ("total", "Check the totality of a name")
+  , ("doc", "Show documentation for a keyword, a name, or a primitive")
+  , ("browse", "Browse contents of a namespace")
+  ] ++
+  explain ["log", "logging"] "Set logging level" ++
+  [ ("consolewidth", "Set the width of the console output (0 for unbounded) (auto by default)")
+  ] ++
+  explain ["colour", "color"] "Whether to use colour for the console output (enabled by default)" ++
+  explain ["m", "metavars"] "Show remaining proof obligations (metavariables or holes)" ++
+  [ ("typeat", "Show type of term <n> defined on line <l> and column <c>")
+  ] ++
+  explain ["cs", "casesplit"] "Case split term <n> defined on line <l> and column <c>" ++
+  explain ["ac", "addclause"] "Add clause to term <n> defined on line <l>" ++
+  explain ["ml", "makelemma"] "Make lemma for term <n> defined on line <l>" ++
+  explain ["mc", "makecase"] "Make case on term <n> defined on line <l>" ++
+  explain ["mw", "makewith"] "Add with expression on term <n> defined on line <l>" ++
+  [ ("intro", "Introduce unambiguous constructor in hole <n> defined on line <l>")
+  , ("refine", "Refine hole <h> with identifier <n> on line <l> and column <c>")
+  ] ++
+  explain ["ps", "proofsearch"] "Search for a proof" ++
+  [ ("psnext", "Show next proof")
+  , ("gd", "Try to generate a definition using proof-search")
+  , ("gdnext", "Show next definition")
+  , ("version", "Display the Idris version")
+  ] ++
+  explain ["?", "h", "help"] (unlines     -- FIXME: this should be a multiline string (see #2087)
+        [ "Display help text, optionally of a specific command.\n"
+        , "If run without arguments, lists all the REPL commands along with their"
+        , "initial line of help text.\n"
+        , "More detailed help can then be obtained by running the :help command"
+        , "with another command as an argument, e.g."
+        , "  > :help :help"
+        , "  > :help :set"
+        , "(the leading ':' in the command argument is optional)"
+        ] ) ++
+  [ ( "let"
+    , """
+      Define a new value.
+
+      First, declare the type of your new value, e.g.
+        :let myValue : List Nat
+
+      Then, define the value:
+        :let myValue = [1, 2, 3]
+
+      Now the value is in scope at the REPL:
+        > map (+ 2) myValue
+        [3, 4, 5]
+      """
+    )
+  ] ++
+  explain ["fs", "fsearch"] "Search for global definitions by sketching the names distribution of the wanted type(s)."
+  where
+    explain : List String -> String -> List (String, String)
+    explain cmds expl = map (\s => (s, expl)) cmds
+
+public export
+KnownCommand : String -> Type
+KnownCommand cmd = IsJust (lookup cmd knownCommands)
+
 export
 data ParseCmd : Type where
-     ParseREPLCmd : List String -> ParseCmd
-     ParseKeywordCmd : List String -> ParseCmd
-     ParseIdentCmd : String -> ParseCmd
+     ParseREPLCmd :  (cmds : List String)
+                  -> {auto 0 _ : All KnownCommand cmds}
+                  -> ParseCmd
+
+     ParseKeywordCmd :  (cmds : List String)
+                     -> {auto 0 _ : All KnownCommand cmds}
+                     -> ParseCmd
+
+     ParseIdentCmd :  (cmd : String)
+                   -> {auto 0 _ : KnownCommand cmd}
+                   -> ParseCmd
 
 public export
 CommandDefinition : Type
@@ -2083,6 +2227,31 @@ stringArgCmd parseCmd command doc = (names, StringArg, doc, parse)
       runParseCmd parseCmd
       s <- mustWork simpleStr
       pure (command s)
+
+getHelpType : EmptyRule HelpType
+getHelpType = do
+  optCmd <- optional $ choice $ (cmdName . fst) <$> knownCommands
+  pure $
+    case optCmd of
+         Nothing => GenericHelp
+         Just cmd => DetailedHelp $ fromMaybe "Unrecognised command '\{cmd}'"
+                                  $ lookup cmd knownCommands
+
+helpCmd :  ParseCmd
+        -> (HelpType -> REPLCmd)
+        -> String
+        -> CommandDefinition
+helpCmd parseCmd command doc = (names, StringArg, doc, parse)
+  where
+    names : List String
+    names = extractNames parseCmd
+
+    parse : Rule REPLCmd
+    parse = do
+      symbol ":"
+      runParseCmd parseCmd
+      helpType <- getHelpType
+      pure (command helpType)
 
 moduleArgCmd : ParseCmd -> (ModuleIdent -> REPLCmd) -> String -> CommandDefinition
 moduleArgCmd parseCmd command doc = (names, ModuleArg, doc, parse)
@@ -2348,53 +2517,59 @@ editLineNameOptionArgCmd parseCmd command doc =
     nreject <- fromInteger <$> option 0 intLit
     pure (Editing $ command upd line n nreject)
 
+firstHelpLine : (cmd : String) -> {auto 0 _ : KnownCommand cmd} -> String
+firstHelpLine cmd =
+  head . (split ((==) '\n')) $
+  fromMaybe "Failed to look up '\{cmd}' (SHOULDN'T HAPPEN!)" $
+  lookup cmd knownCommands
+
 export
 parserCommandsForHelp : CommandTable
 parserCommandsForHelp =
-  [ exprArgCmd (ParseREPLCmd ["t", "type"]) Check "Check the type of an expression"
-  , exprArgCmd (ParseREPLCmd ["ti"]) CheckWithImplicits "Check the type of an expression, showing implicit arguments"
-  , exprArgCmd (ParseREPLCmd ["printdef"]) PrintDef "Show the definition of a function"
-  , exprArgCmd (ParseREPLCmd ["s", "search"]) TypeSearch "Search for values by type"
-  , nameArgCmd (ParseIdentCmd "di") DebugInfo "Show debugging information for a name"
-  , moduleArgCmd (ParseKeywordCmd ["module", "import"]) ImportMod "Import an extra module"
-  , stringArgCmd (ParseREPLCmd ["package"]) ImportPackage "Import every module of the package"
-  , noArgCmd (ParseREPLCmd ["q", "quit", "exit"]) Quit "Exit the Idris system"
-  , noArgCmd (ParseREPLCmd ["cwd"]) CWD "Displays the current working directory"
-  , stringArgCmd (ParseREPLCmd ["cd"]) CD "Change the current working directory"
-  , stringArgCmd (ParseREPLCmd ["sh"]) RunShellCommand "Run a shell command"
-  , optArgCmd (ParseIdentCmd "set") SetOpt True "Set an option"
-  , optArgCmd (ParseIdentCmd "unset") SetOpt False "Unset an option"
-  , noArgCmd (ParseREPLCmd ["opts"]) GetOpts "Show current options settings"
-  , compileArgsCmd (ParseREPLCmd ["c", "compile"]) Compile "Compile to an executable"
-  , exprArgCmd (ParseIdentCmd "exec") Exec "Compile to an executable and run"
-  , stringArgCmd (ParseIdentCmd "directive") CGDirective "Set a codegen-specific directive"
-  , stringArgCmd (ParseREPLCmd ["l", "load"]) Load "Load a file"
-  , noArgCmd (ParseREPLCmd ["r", "reload"]) Reload "Reload current file"
-  , noArgCmd (ParseREPLCmd ["e", "edit"]) Edit "Edit current file using $EDITOR or $VISUAL"
-  , nameArgCmd (ParseREPLCmd ["miss", "missing"]) Missing "Show missing clauses"
-  , nameArgCmd (ParseKeywordCmd ["total"]) Total "Check the totality of a name"
-  , docArgCmd (ParseIdentCmd "doc") Doc "Show documentation for a keyword, a name, or a primitive"
-  , moduleArgCmd (ParseIdentCmd "browse") (Browse . miAsNamespace) "Browse contents of a namespace"
-  , loggingArgCmd (ParseREPLCmd ["log", "logging"]) SetLog "Set logging level"
-  , autoNumberArgCmd (ParseREPLCmd ["consolewidth"]) SetConsoleWidth "Set the width of the console output (0 for unbounded) (auto by default)"
-  , onOffArgCmd (ParseREPLCmd ["color", "colour"]) SetColor "Whether to use color for the console output (enabled by default)"
-  , noArgCmd (ParseREPLCmd ["m", "metavars"]) Metavars "Show remaining proof obligations (metavariables or holes)"
-  , editLineColNameArgCmd (ParseREPLCmd ["typeat"]) (const TypeAt) "Show type of term <n> defined on line <l> and column <c>"
-  , editLineColNameArgCmd (ParseREPLCmd ["cs", "casesplit"]) CaseSplit "Case split term <n> defined on line <l> and column <c>"
-  , editLineNameArgCmd (ParseREPLCmd ["ac", "addclause"]) AddClause "Add clause to term <n> defined on line <l>"
-  , editLineNameArgCmd (ParseREPLCmd ["ml", "makelemma"]) MakeLemma "Make lemma for term <n> defined on line <l>"
-  , editLineNameArgCmd (ParseREPLCmd ["mc", "makecase"]) MakeCase "Make case on term <n> defined on line <l>"
-  , editLineNameArgCmd (ParseREPLCmd ["mw", "makewith"]) MakeWith "Add with expression on term <n> defined on line <l>"
-  , editLineNameArgCmd (ParseREPLCmd ["intro"]) Intro "Introduce unambiguous constructor in hole <n> defined on line <l>"
-  , editLineNamePTermArgCmd (ParseREPLCmd ["refine"]) Refine "Refine hole <h> with identifier <n> on line <l> and column <c>"
-  , editLineNameCSVArgCmd (ParseREPLCmd ["ps", "proofsearch"]) ExprSearch "Search for a proof"
-  , noArgCmd (ParseREPLCmd ["psnext"]) (Editing ExprSearchNext) "Show next proof"
-  , editLineNameOptionArgCmd (ParseREPLCmd ["gd"]) GenerateDef "Search for a proof"
-  , noArgCmd (ParseREPLCmd ["gdnext"]) (Editing GenerateDefNext) "Show next definition"
-  , noArgCmd (ParseREPLCmd ["version"]) ShowVersion "Display the Idris version"
-  , noArgCmd (ParseREPLCmd ["?", "h", "help"]) Help "Display this help text"
-  , declsArgCmd (ParseKeywordCmd ["let"]) NewDefn "Define a new value"
-  , exprArgCmd (ParseREPLCmd ["fs", "fsearch"]) FuzzyTypeSearch "Search for global definitions by sketching the names distribution of the wanted type(s)."
+  [ exprArgCmd (ParseREPLCmd ["t", "type"]) Check (firstHelpLine "t")
+  , exprArgCmd (ParseREPLCmd ["ti"]) CheckWithImplicits (firstHelpLine "ti")
+  , exprArgCmd (ParseREPLCmd ["printdef"]) PrintDef (firstHelpLine "printdef")
+  , exprArgCmd (ParseREPLCmd ["s", "search"]) TypeSearch (firstHelpLine "s")
+  , nameArgCmd (ParseIdentCmd "di") DebugInfo (firstHelpLine "di")
+  , moduleArgCmd (ParseKeywordCmd ["module", "import"]) ImportMod (firstHelpLine "module")
+  , stringArgCmd (ParseREPLCmd ["package"]) ImportPackage (firstHelpLine "package")
+  , noArgCmd (ParseREPLCmd ["q", "quit", "exit"]) Quit (firstHelpLine "q")
+  , noArgCmd (ParseREPLCmd ["cwd"]) CWD (firstHelpLine "cwd")
+  , stringArgCmd (ParseREPLCmd ["cd"]) CD (firstHelpLine "cd")
+  , stringArgCmd (ParseREPLCmd ["sh"]) RunShellCommand (firstHelpLine "sh")
+  , optArgCmd (ParseIdentCmd "set") SetOpt True (firstHelpLine "set")
+  , optArgCmd (ParseIdentCmd "unset") SetOpt False (firstHelpLine "unset")
+  , noArgCmd (ParseREPLCmd ["opts"]) GetOpts (firstHelpLine "opts")
+  , compileArgsCmd (ParseREPLCmd ["c", "compile"]) Compile (firstHelpLine "c")
+  , exprArgCmd (ParseIdentCmd "exec") Exec (firstHelpLine "exec")
+  , stringArgCmd (ParseIdentCmd "directive") CGDirective (firstHelpLine "directive")
+  , stringArgCmd (ParseREPLCmd ["l", "load"]) Load (firstHelpLine "l")
+  , noArgCmd (ParseREPLCmd ["r", "reload"]) Reload (firstHelpLine "r")
+  , noArgCmd (ParseREPLCmd ["e", "edit"]) Edit (firstHelpLine "e")
+  , nameArgCmd (ParseREPLCmd ["miss", "missing"]) Missing (firstHelpLine "miss")
+  , nameArgCmd (ParseKeywordCmd ["total"]) Total (firstHelpLine "total")
+  , docArgCmd (ParseIdentCmd "doc") Doc (firstHelpLine "doc")
+  , moduleArgCmd (ParseIdentCmd "browse") (Browse . miAsNamespace) (firstHelpLine "browse")
+  , loggingArgCmd (ParseREPLCmd ["log", "logging"]) SetLog (firstHelpLine "log")
+  , autoNumberArgCmd (ParseREPLCmd ["consolewidth"]) SetConsoleWidth (firstHelpLine "consolewidth")
+  , onOffArgCmd (ParseREPLCmd ["colour", "color"]) SetColor (firstHelpLine "colour")
+  , noArgCmd (ParseREPLCmd ["m", "metavars"]) Metavars (firstHelpLine "m")
+  , editLineColNameArgCmd (ParseREPLCmd ["typeat"]) (const TypeAt) (firstHelpLine "typeat")
+  , editLineColNameArgCmd (ParseREPLCmd ["cs", "casesplit"]) CaseSplit (firstHelpLine "cs")
+  , editLineNameArgCmd (ParseREPLCmd ["ac", "addclause"]) AddClause (firstHelpLine "ac")
+  , editLineNameArgCmd (ParseREPLCmd ["ml", "makelemma"]) MakeLemma (firstHelpLine "ml")
+  , editLineNameArgCmd (ParseREPLCmd ["mc", "makecase"]) MakeCase (firstHelpLine "mc")
+  , editLineNameArgCmd (ParseREPLCmd ["mw", "makewith"]) MakeWith (firstHelpLine "mw")
+  , editLineNameArgCmd (ParseREPLCmd ["intro"]) Intro (firstHelpLine "intro")
+  , editLineNamePTermArgCmd (ParseREPLCmd ["refine"]) Refine (firstHelpLine "refine")
+  , editLineNameCSVArgCmd (ParseREPLCmd ["ps", "proofsearch"]) ExprSearch (firstHelpLine "ps")
+  , noArgCmd (ParseREPLCmd ["psnext"]) (Editing ExprSearchNext) (firstHelpLine "psnext")
+  , editLineNameOptionArgCmd (ParseREPLCmd ["gd"]) GenerateDef (firstHelpLine "gd")
+  , noArgCmd (ParseREPLCmd ["gdnext"]) (Editing GenerateDefNext) (firstHelpLine "gdnext")
+  , noArgCmd (ParseREPLCmd ["version"]) ShowVersion (firstHelpLine "version")
+  , helpCmd (ParseREPLCmd ["?", "h", "help"]) Help (firstHelpLine "?")
+  , declsArgCmd (ParseKeywordCmd ["let"]) NewDefn (firstHelpLine "let")
+  , exprArgCmd (ParseREPLCmd ["fs", "fsearch"]) FuzzyTypeSearch (firstHelpLine "fs")
   ]
 
 export
@@ -2421,5 +2596,8 @@ command : EmptyRule REPLCmd
 command
     = eoi $> NOP
   <|> nonEmptyCommand
-  <|> symbol ":?" $> Help -- special case, :? doesn't fit into above scheme
+  <|> (do symbol ":?" -- special case, :? doesn't fit into above scheme
+          helpType <- getHelpType
+          pure $ Help helpType)
   <|> eval
+
