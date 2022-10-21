@@ -32,6 +32,9 @@ MD026:
 MD029: false                  # Ordered list item prefix
 MD033: false                  # Allow inline HTML
 MD036: false                  # Emphasis used instead of a heading
+MD044:                        # Proper names should have the correct capitalization
+  code_blocks: false
+  html_elements: false
 MD046: false                  # Idented code block instead of fenced off
 
 #################

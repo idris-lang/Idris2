@@ -168,6 +168,9 @@ options args = case args of
 
   where
 
+    isFlag : String -> Bool
+    isFlag str = "--" `isPrefixOf` str
+
     go : List String -> Acc -> Options -> Maybe (Acc, Options)
     go rest acc opts = case rest of
       []                            => pure (acc, opts)
@@ -181,9 +184,19 @@ options args = case args of
       ("--threads" :: n :: xs)      => do let pos : Nat = !(parsePositive n)
                                           go xs acc ({ threads := pos } opts)
       ("--failure-file" :: p :: xs) => go  xs acc ({ failureFile := Just p } opts)
-      ("--only" :: p :: xs)         => go xs ({ onlyNames $= (words p ++) } acc) opts
-      ("--except" :: p :: xs)       => go xs ({ exceptNames $= (words p ++) } acc) opts
+      ("--only" :: p :: xs)         =>
+        ifThenElse (isFlag p)
+          (go (p :: xs) acc opts)
+          (go xs ({ onlyNames $= (words p ++) } acc) opts)
+      ("--except" :: p :: xs)       =>
+        ifThenElse (isFlag p)
+          (go (p :: xs) acc opts)
+          (go xs ({ exceptNames $= (words p ++) } acc) opts)
       ("--only-file" :: p :: xs)    => go xs ({ onlyFile := Just p } acc) opts
+      [p] => do guard (p `elem` ["--only", "--except"])
+                pure (acc, opts)
+                -- ^ we accept trailing only or except flags as unused (do not filter out any tests)
+                -- for the convenience of populating these options from shell scripts.
       _ => Nothing
 
     mkOptions : String -> List String -> IO (Maybe Options)
