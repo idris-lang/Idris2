@@ -36,7 +36,7 @@ stdenv.mkDerivation rec {
   buildFlags = [ "bootstrap" "SCHEME=scheme" ];
 
   checkInputs = [ gambit nodejs ]; # racket ];
-  checkFlags = [ "INTERACTIVE=" ];
+  checkFlags = [ "except=\"idris2/repl005\"" "INTERACTIVE=" ];
 
   # TODO: Move this into its own derivation, such that this can be changed
   #       without having to recompile idris2 every time.
