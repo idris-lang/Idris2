@@ -34,7 +34,7 @@ runReaderT s action = runReaderT' action s
 ||| This is `ReaderT` applied to `Identity`.
 public export
 Reader : (stateType : Type) -> (a : Type) -> Type
-Reader s a = ReaderT s Identity a
+Reader s = ReaderT s Identity
 
 ||| Unwrap and apply a Reader monad computation
 public export %inline
