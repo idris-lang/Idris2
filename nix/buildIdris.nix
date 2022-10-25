@@ -1,23 +1,14 @@
-{ stdenv
-, lib
-, idris2-version
-, idris2
-}:
-{
-src
-, projectName
-, idrisLibraries
-, ...
-}@attrs:
+{ stdenv, lib, idris2-version, idris2 }:
+{ src, projectName, idrisLibraries, ... }@attrs:
 
 let
   ipkgName = projectName + ".ipkg";
   idrName = "idris2-${idris2-version}";
   libSuffix = "lib/${idrName}";
-  lib-dirs = lib.strings.concatMapStringsSep ":" (p: "${p}/${libSuffix}") idrisLibraries;
+  lib-dirs =
+    lib.strings.concatMapStringsSep ":" (p: "${p}/${libSuffix}") idrisLibraries;
   drvAttrs = builtins.removeAttrs attrs [ "idrisLibraries" ];
-in
-rec {
+in rec {
   build = stdenv.mkDerivation (drvAttrs // {
     name = projectName;
     src = src;
