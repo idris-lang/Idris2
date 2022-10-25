@@ -24,33 +24,41 @@
         defaultTemplate = templates.pkg;
         version = idris2-version;
       };
-      per-system = { config ? { }, overlays ? [ ] }: system:
+      per-system = { config ? { }, overlays ? [ ] }:
+        system:
         let
           pkgs = import nixpkgs { inherit config system overlays; };
-          chez = if system == "x86_64-linux"
-            then pkgs.chez
-            else pkgs.chez-racket; # TODO: Should this always be the default?
-          idris2Bootstrap = pkgs.callPackage ./nix/bootstrap.nix {
+          chez = if system == "x86_64-linux" then
+            pkgs.chez
+          else
+            pkgs.chez-racket; # TODO: Should this always be the default?
+          idris2Bootstrap = pkgs.callPackage ./nix/package.nix {
             inherit idris2-version chez;
+            idris2Bootstrap = null;
             srcRev = self.shortRev or "dirty";
           };
           idris2Pkg = pkgs.callPackage ./nix/package.nix {
             inherit idris2-version chez idris2Bootstrap;
             srcRev = self.shortRev or "dirty";
           };
-          buildIdris = pkgs.callPackage ./nix/buildIdris.nix { inherit idris2-version; idris2 = idris2Pkg; };
+          buildIdris = pkgs.callPackage ./nix/buildIdris.nix {
+            inherit idris2-version;
+            idris2 = idris2Pkg;
+          };
         in rec {
           checks = import ./nix/test.nix {
             inherit (pkgs) system stdenv runCommand lib;
             inherit nixpkgs flake-utils;
             idris = self;
           };
-          packages =
-            { idris2 = idris2Pkg; }
-            // (import ./nix/text-editor.nix { inherit pkgs idris-emacs-src idris2Pkg; });
+          packages = {
+            idris2 = idris2Pkg;
+          } // (import ./nix/text-editor.nix {
+            inherit pkgs idris-emacs-src idris2Pkg;
+          });
           inherit buildIdris;
           defaultPackage = packages.idris2;
         };
-    in
-    lib.mkOvrOptsFlake (opts: flake-utils.lib.eachDefaultSystem (per-system opts) // sys-agnostic);
+    in lib.mkOvrOptsFlake
+    (opts: flake-utils.lib.eachDefaultSystem (per-system opts) // sys-agnostic);
 }
