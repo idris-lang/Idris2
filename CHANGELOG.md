@@ -1,6 +1,6 @@
 # Changelog
 
-## [Next version]
+## v0.6.0
 
 ### REPL changes
 
