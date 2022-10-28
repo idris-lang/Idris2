@@ -1,6 +1,6 @@
 [ ] Change version number (MAJOR, MINOR, PATCH) in Makefile
 [ ] Change version numbers in doc listings
-[ ] Change version numbers in prelude, base, contrib, network, and test ipkgs
+[ ] Change version numbers in prelude, base, contrib, linear, network, papers, and test ipkgs
 [ ] Change version number in idris2api.ipkg
 [ ] Change version number in flake.nix
 [ ] Change version number in test pkg010 (TODO: make this step unnecessary!)
