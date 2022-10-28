@@ -9,14 +9,22 @@ So far, only Prelude.List.++ is tested.
 
 module Main
 
--- Until replicate is tail recursive, we roll our own for this test.
+import Data.List
+import Data.SnocList
 
-replicateOnto : List a -> Nat -> a -> List a
-replicateOnto acc Z x = acc
-replicateOnto acc (S n) x = replicateOnto (x :: acc) n x
+values : List Nat
+values = replicate 50000 1
 
-tailRecReplicate : Nat -> a -> List a
-tailRecReplicate = replicateOnto []
+seulav : SnocList Nat
+seulav = Lin <>< values
 
 main : IO ()
-main = putStrLn $ show $ length $ tailRecReplicate 50000 () ++ [()]
+main = do
+  printLn $ length $ values ++ [1]
+  printLn $ length $ map Just values
+  printLn $ length $ mapMaybe Just values
+  printLn $ length $ filter (const True) values
+  printLn $ length $ seulav ++ [<1]
+  printLn $ length $ map Just seulav
+  printLn $ length $ mapMaybe Just seulav
+  printLn $ length $ filter (const True) seulav

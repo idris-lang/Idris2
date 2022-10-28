@@ -62,9 +62,26 @@ Show a => Show (SnocList a) where
       show' acc (xs :< x) = show' (show x :: acc) xs
 
 public export
+mapImpl : (a -> b) -> SnocList a -> SnocList b
+mapImpl f Lin = Lin
+mapImpl f (sx :< x) = (mapImpl f sx) :< (f x)
+
+-- Utility for implementing `mapTR`
+mapTR' : List b -> (a -> b) -> SnocList a -> SnocList b
+mapTR' xs f (sx :< x) = mapTR' (f x :: xs) f sx
+mapTR' xs f Lin       = Lin <>< xs
+
+-- Tail recursive version of `map`. This is automatically used
+-- at runtime due to a `transform` rule.
+mapTR : (a -> b) -> SnocList a -> SnocList b
+mapTR = mapTR' []
+
+-- mapTRIsMap proves these are equivalent.
+%transform "tailRecMapSnocList" SnocList.mapImpl = SnocList.mapTR
+
+public export %inline
 Functor SnocList where
-  map f Lin = Lin
-  map f (sx :< x) = (map f sx) :< (f x)
+  map = mapImpl
 
 public export
 Semigroup (SnocList a) where
@@ -357,3 +374,75 @@ mapMaybeCast f (x::xs) = do
     mapMaybeStepLemma with (f x)
       _ | Nothing  = rewrite appendLinLeftNeutral $ [<] <>< mapMaybe f xs in Refl
       _ | (Just y) = rewrite fishAsSnocAppend [<y] (mapMaybe f xs) in Refl
+
+0 mapTRIsMap :  (f : a -> b) -> (sa : SnocList a) -> mapTR f sa === map f sa
+mapTRIsMap f = lemma []
+  where lemma :  (bs : List b)
+              -> (sa : SnocList a)
+              -> mapTR' bs f sa === (map f sa <>< bs)
+        lemma bs Lin       = Refl
+        lemma bs (sx :< x) = lemma (f x :: bs) sx
+
+
+0 mapMaybeTRIsMapMaybe :  (f : a -> Maybe b)
+                       -> (sa : SnocList a)
+                       -> mapMaybeTR f sa === mapMaybe f sa
+mapMaybeTRIsMapMaybe f = lemma []
+  where lemma :  (bs : List b)
+              -> (sa : SnocList a)
+              -> mapMaybeAppend bs f sa === (mapMaybe f sa <>< bs)
+        lemma bs Lin = Refl
+        lemma bs (sx :< x) with (f x)
+          lemma bs (sx :< x) | Nothing = lemma bs sx
+          lemma bs (sx :< x) | Just v  = lemma (v :: bs) sx
+
+0 filterTRIsFilter :  (f : a -> Bool)
+                   -> (sa : SnocList a)
+                   -> filterTR f sa === filter f sa
+filterTRIsFilter f = lemma []
+  where lemma :  (as : List a)
+              -> (sa : SnocList a)
+              -> filterAppend as f sa === (filter f sa <>< as)
+        lemma as Lin = Refl
+        lemma as (sx :< x) with (f x)
+          lemma as (sx :< x) | False = lemma as sx
+          lemma as (sx :< x) | True  = lemma (x :: as) sx
+
+-- SnocList `reverse` applied to `reverseOnto` is equivalent to swapping the
+-- arguments of `reverseOnto`.
+reverseReverseOnto : (l, r : SnocList a) ->
+                     reverse (reverseOnto l r) = reverseOnto r l
+reverseReverseOnto _ Lin = Refl
+reverseReverseOnto l (sx :< x) = reverseReverseOnto (l :< x) sx
+
+||| SnocList `reverse` applied twice yields the identity function.
+export
+reverseInvolutive : (sx : SnocList a) -> reverse (reverse sx) = sx
+reverseInvolutive = reverseReverseOnto Lin
+
+-- Appending `x` to `l` and then reversing the result onto `r` is the same as
+-- using (::) with `x` and the result of reversing `l` onto `r`.
+snocReverse : (x : a) -> (l, r : SnocList a) ->
+              reverseOnto r l :< x = reverseOnto r (reverseOnto [<x] (reverse l))
+snocReverse _ Lin _ = Refl
+snocReverse x (sy :< y) r
+  = rewrite snocReverse x sy (r :< y) in
+      rewrite cong (reverseOnto r . reverse) $ snocReverse x sy [<y] in
+        rewrite reverseInvolutive (reverseOnto [<x] (reverse sy) :< y) in
+          Refl
+
+-- Proof that it is safe to lift a (::) out of the first `tailRecAppend`
+-- argument.
+snocTailRecAppend : (x : a) -> (l, r : SnocList a) ->
+                    tailRecAppend l (r :< x) = (tailRecAppend l r) :< x
+snocTailRecAppend x l r =
+  rewrite snocReverse x (reverse r) l in
+    rewrite reverseInvolutive r in
+       Refl
+
+-- Proof that `(++)` and `tailRecAppend` do the same thing, so the %transform
+-- directive is safe.
+tailRecAppendIsAppend : (sx, sy : SnocList a) -> tailRecAppend sx sy = sx ++ sy
+tailRecAppendIsAppend sx Lin = Refl
+tailRecAppendIsAppend sx (sy :< y) =
+  trans (snocTailRecAppend y sx sy) (cong (:< y) $ tailRecAppendIsAppend sx sy)

@@ -445,6 +445,10 @@ public export
 replaceOn : Eq a => (e : a) -> (b : a) -> (l : List a) -> List a
 replaceOn e = replaceWhen (== e)
 
+replicateTR : List a -> Nat -> a -> List a
+replicateTR as Z     _ = as
+replicateTR as (S n) x = replicateTR (x :: as) n x
+
 ||| Construct a list with `n` copies of `x`.
 |||
 ||| @ n how many copies
@@ -453,6 +457,10 @@ public export
 replicate : (n : Nat) -> (x : a) -> List a
 replicate Z     _ = []
 replicate (S n) x = x :: replicate n x
+
+-- Data.List.replicateTRIsReplicate proves these are equivalent.
+%transform "tailRecReplicate" List.replicate = List.replicateTR Nil
+
 
 ||| Compute the intersect of two lists by user-supplied equality predicate.
 export
@@ -1066,3 +1074,49 @@ export
 mapAppend : (f : a -> b) -> (xs, ys : List a) -> map f (xs ++ ys) = map f xs ++ map f ys
 mapAppend f []      ys = Refl
 mapAppend f (x::xs) ys = rewrite mapAppend f xs ys in Refl
+
+0 mapTRIsMap :  (f : a -> b) -> (as : List a) -> mapTR f as === map f as
+mapTRIsMap f = lemma Lin
+  where lemma :  (sb : SnocList b)
+              -> (as : List a)
+              -> mapAppend sb f as === (sb <>> map f as)
+        lemma sb []        = Refl
+        lemma sb (x :: xs) = lemma (sb :< f x) xs
+
+
+0 mapMaybeTRIsMapMaybe :  (f : a -> Maybe b)
+                       -> (as : List a)
+                       -> mapMaybeTR f as === mapMaybe f as
+mapMaybeTRIsMapMaybe f = lemma Lin
+  where lemma :  (sb : SnocList b)
+              -> (as : List a)
+              -> mapMaybeAppend sb f as === (sb <>> mapMaybe f as)
+        lemma sb []        = Refl
+        lemma sb (x :: xs) with (f x)
+          lemma sb (x :: xs) | Nothing = lemma sb xs
+          lemma sb (x :: xs) | Just v  = lemma (sb :< v) xs
+
+0 filterTRIsFilter :  (f : a -> Bool)
+                   -> (as : List a)
+                   -> filterTR f as === filter f as
+filterTRIsFilter f = lemma Lin
+
+  where lemma :  (sa : SnocList a)
+              -> (as : List a)
+              -> filterAppend sa f as === (sa <>> filter f as)
+        lemma sa []        = Refl
+        lemma sa (x :: xs) with (f x)
+          lemma sa (x :: xs) | False = lemma sa xs
+          lemma sa (x :: xs) | True  = lemma (sa :< x) xs
+
+0 replicateTRIsReplicate : (n : Nat) -> (x : a) -> replicateTR [] n x === replicate n x
+replicateTRIsReplicate n x = trans (lemma [] n) (appendNilRightNeutral _)
+  where lemma1 : (as : List a) -> (m : Nat) -> (x :: replicate m x) ++ as === replicate m x ++ (x :: as)
+        lemma1 as 0     = Refl
+        lemma1 as (S k) = cong (x ::) (lemma1 as k)
+
+        lemma : (as : List a) -> (m : Nat) -> replicateTR as m x === replicate m x ++ as
+        lemma as 0     = Refl
+        lemma as (S k) =
+          let prf := lemma (x :: as) k
+           in trans prf (sym $ lemma1 as k)
