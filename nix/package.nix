@@ -1,17 +1,5 @@
-{ stdenv
-, lib
-, chez
-, clang
-, gmp
-, fetchFromGitHub
-, makeWrapper
-, idris2-version
-, srcRev
-, gambit
-, nodejs
-, zsh
-, idris2Bootstrap
-}:
+{ stdenv, lib, chez, clang, gmp, fetchFromGitHub, makeWrapper, idris2-version
+, srcRev, gambit, nodejs, zsh, idris2Bootstrap ? null }:
 
 # Uses scheme to bootstrap the build of idris2
 stdenv.mkDerivation rec {
@@ -21,20 +9,21 @@ stdenv.mkDerivation rec {
   src = ../.;
 
   strictDeps = true;
-  nativeBuildInputs = [ makeWrapper clang chez idris2Bootstrap ]
-    ++ lib.optional stdenv.isDarwin [ zsh ];
+  nativeBuildInputs = [ makeWrapper clang chez ]
+    ++ lib.optional stdenv.isDarwin [ zsh ]
+    ++ lib.optional (!(idris2Bootstrap == null)) [ idris2Bootstrap ];
   buildInputs = [ chez gmp ];
 
   prePatch = ''
     patchShebangs --build tests
-    sed 's/''$(GIT_SHA1)/${srcRev}/' -i Makefile
+    sed 's/$(GIT_SHA1)/${srcRev}/' -i Makefile
   '';
 
-  makeFlags = [ "PREFIX=$(out)" ]
-    ++ lib.optional stdenv.isDarwin "OS=";
+  makeFlags = [ "PREFIX=$(out)" ] ++ lib.optional stdenv.isDarwin "OS=";
 
   # The name of the main executable of pkgs.chez is `scheme`
-  buildFlags = [ ];
+  buildFlags =
+    if idris2Bootstrap == null then [ "bootstrap" "SCHEME=scheme" ] else [ ];
 
   checkInputs = [ gambit nodejs ]; # racket ];
   checkFlags = [ "INTERACTIVE=" ];
