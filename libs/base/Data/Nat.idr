@@ -390,7 +390,7 @@ Integral Nat where
 
 export
 covering
-gcd : (a: Nat) -> (b: Nat) -> {auto ok: NotBothZero a b} -> Nat
+gcd : (a: Nat) -> (b: Nat) -> {auto 0 ok: NotBothZero a b} -> Nat
 gcd a Z     = a
 gcd Z b     = b
 gcd a (S b) = gcd (S b) (modNatNZ a (S b) SIsNonZero)
