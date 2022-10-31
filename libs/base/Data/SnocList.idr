@@ -156,6 +156,31 @@ findIndex p (xs :< x) = if p x
   then Just FZ
   else FS <$> findIndex p xs
 
+---------------------------
+-- Zippable --
+---------------------------
+
+public export
+Zippable SnocList where
+  zipWith _ [<] _ = [<]
+  zipWith _ _ [<] = [<]
+  zipWith f (xs :< x) (ys :< y) = zipWith f xs ys :< f x y
+
+  zipWith3 _ [<] _ _ = [<]
+  zipWith3 _ _ [<] _ = [<]
+  zipWith3 _ _ _ [<] = [<]
+  zipWith3 f (xs :< x) (ys :< y) (zs :< z) = zipWith3 f xs ys zs :< f x y z
+
+  unzipWith f [<] = ([<], [<])
+  unzipWith f (xs :< x) = let (bs, cs) = unzipWith f xs
+                              (b, c) = f x
+                          in (bs :< b, cs :< c)
+
+  unzipWith3 f [<] = ([<], [<], [<])
+  unzipWith3 f (xs :< x) = let (bs, cs, ds) = unzipWith3 f xs
+                               (b, c, d) = f x
+                           in  (bs :< b, cs :< c, ds :< d)
+
 ------------------
 --- Properties ---
 ------------------

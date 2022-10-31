@@ -1,0 +1,16 @@
+1/1: Building DeriveShow (DeriveShow.idr)
+LOG derive.show.clauses:1: 
+  showPrecEnum : Prec -> Enum -> String
+  showPrecEnum d A = "A"
+  showPrecEnum d B = "B"
+  showPrecEnum d C = "C"
+LOG derive.show.clauses:1: 
+  showPrecSum : Prec -> Sum -> String
+  showPrecSum d (AString x0) = showCon d (concat ((showArg x0) :: Nil))
+  showPrecSum d (ANat x0) = showCon d (concat ((showArg x0) :: Nil))
+Error: While processing right hand side of sumShow. Error during reflection: While processing right hand side of $resolved5707,showPrecSum. When unifying:
+    String -> String
+and:
+    String
+Mismatch between: String -> String and String.
+

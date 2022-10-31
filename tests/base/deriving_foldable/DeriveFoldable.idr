@@ -171,16 +171,16 @@ namespace MaybeT
 
 namespace TreeT
 
-  data TreeT : (Type -> Type -> Type) -> Type -> Type where
-    MkTreeT : layer a (TreeT layer a) -> TreeT layer a
+  data TreeT : (lbl : Type) -> (Type -> Type -> Type) -> Type -> Type where
+    MkTreeT : lbl -> layer a (TreeT lbl layer a) -> TreeT lbl layer a
 
   %hint
-  treeT : Bifoldable layer => Foldable (TreeT layer)
+  treeT : Bifoldable layer => Foldable (TreeT lbl layer)
   treeT = %runElab derive {treq = CoveringOnly}
 
   record Tree (a : Type) where
     constructor MkTree
-    runTree : TreeT Either a
+    runTree : TreeT () Either a
 
   tree : Foldable Tree
   tree = %runElab derive {treq = CoveringOnly}
