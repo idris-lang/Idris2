@@ -1,0 +1,5 @@
+rm -rf build
+
+$1 --no-banner --no-color --quiet -o test Test.idr
+$1 --no-banner --no-color --console-width 0 Check.idr < input
+

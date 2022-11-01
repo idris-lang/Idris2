@@ -985,7 +985,13 @@ mutual
       isNamed Nothing = False
       isNamed (Just _) = True
 
-  desugarDecl ps (PRecord fc doc vis mbtot tn params opts conname_in fields)
+  desugarDecl ps (PRecord fc doc vis mbtot (MkPRecordLater tn params))
+      = desugarDecl ps (PData fc doc vis mbtot (MkPLater fc tn (mkRecType params)))
+    where
+      mkRecType : List (Name, RigCount, PiInfo PTerm, PTerm) -> PTerm
+      mkRecType [] = PType fc
+      mkRecType ((n, c, p, t) :: ts) = PPi fc c p (Just n) t (mkRecType ts)
+  desugarDecl ps (PRecord fc doc vis mbtot (MkPRecord tn params opts conname_in fields))
       = do addDocString tn doc
            params' <- traverse (\ (n,c,p,tm) =>
                           do tm' <- desugar AnyExpr ps tm

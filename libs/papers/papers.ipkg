@@ -1,5 +1,5 @@
 package papers
-version = 0.5.1
+version = 0.6.0
 
 depends = contrib, linear
 
@@ -33,5 +33,7 @@ modules = Data.Container,
           Search.HDecidable,
           Search.Negation,
           Search.Properties,
+          Search.CTL,
+          Search.GCL,
 
           Search.Tychonoff.PartI

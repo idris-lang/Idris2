@@ -1008,7 +1008,7 @@ intermediate values:
 
 .. code-block:: idris
 
-    filter : (a -> Bool) -> Vect n a -> (p ** Vect p a)
+    filter : (a -> Bool) -> Vect n a -> (n' ** Vect n' a)
     filter p Nil = (_ ** [])
     filter p (x :: xs)
         = case filter p xs of

@@ -150,7 +150,7 @@ getMinimalDef (Coded ns bin)
          mul <- fromBuf b
          name <- fromBuf b
          let def
-             = MkGlobalDef fc name (Erased fc False) [] [] [] [] mul
+             = MkGlobalDef fc name (Erased fc Placeholder) [] [] [] [] mul
                            [] Public (MkTotality Unchecked IsCovering)
                            [] Nothing refsR False False True
                            None cdef Nothing [] Nothing
@@ -211,11 +211,11 @@ replaceEntry (i, Just (ns, b))
     = ignore $ addContextEntry ns (Resolved i) b
 
 natHackNames : List Name
-natHackNames
-    = [UN (Basic "prim__add_Integer"),
-       UN (Basic "prim__sub_Integer"),
-       UN (Basic "prim__mul_Integer"),
-       NS typesNS (UN $ Basic "prim__integerToNat")]
+natHackNames =
+    [ UN (Basic "prim__sub_Integer")
+    , NS typesNS (UN $ Basic "prim__integerToNat")
+    , NS eqOrdNS (UN $ Basic "compareInteger")
+    ]
 
 dumpIR : Show def => String -> List (Name, def) -> Core ()
 dumpIR fn lns

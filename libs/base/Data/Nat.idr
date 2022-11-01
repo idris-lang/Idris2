@@ -1,5 +1,6 @@
 module Data.Nat
 
+import Data.So
 import public Control.Relation
 import public Control.Ord
 import public Control.Order
@@ -266,6 +267,13 @@ gteReflectsGTE k n prf = lteReflectsLTE n k prf
 export
 ltReflectsLT : (k : Nat) -> (n : Nat) -> lt k n === True -> k `LT` n
 ltReflectsLT k n prf = lteReflectsLTE (S k) n prf
+
+public export
+ltOpReflectsLT : (m,n : Nat) -> So (m < n) -> LT m n
+ltOpReflectsLT 0     (S k) prf = LTESucc LTEZero
+ltOpReflectsLT (S k) (S j) prf = LTESucc (ltOpReflectsLT k j prf)
+ltOpReflectsLT (S k) 0     prf impossible
+ltOpReflectsLT 0 0         prf impossible
 
 export
 gtReflectsGT : (k : Nat) -> (n : Nat) -> gt k n === True -> k `GT` n

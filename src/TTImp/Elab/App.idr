@@ -438,7 +438,7 @@ mutual
           arg <- dotErased aty n argpos (elabMode elabinfo) argRig arg_in
           kr <- if knownret
                    then pure True
-                   else do sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
+                   else do sc' <- sc defs (toClosure defaultOpts env (Erased fc Placeholder))
                            concrete defs env sc'
           -- In theory we can check the arguments in any order. But it turns
           -- out that it's sometimes better to do the rightmost arguments
