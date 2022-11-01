@@ -1,5 +1,4 @@
 rm -rf build
 
 $1 --yaffle Interp.yaff < input
-$1 --yaffle build/ttc/Interp.ttc < input
-
+$1 --yaffle build/ttc/$(ls build/ttc/)/Interp.ttc < input

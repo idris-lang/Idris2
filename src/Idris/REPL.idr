@@ -1074,7 +1074,7 @@ process ShowVersion
     = pure $ VersionIs  version
 process (ImportPackage package) = do
   defs <- get Ctxt
-  let searchDirs = defs.options.dirs.extra_dirs
+  searchDirs <- extraSearchDirectories
   let Just packageDir = find
         (\d => isInfixOf package (fromMaybe d (fileName d)))
         searchDirs

@@ -1,13 +1,17 @@
 module Core.Directory
 
+import Core.Binary
 import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.FC
 import Core.Options
 
+import Idris.Version
+
 import Parser.Unlit
 
+import Libraries.Data.Version
 import Libraries.Utils.Path
 
 import Data.List
@@ -16,6 +20,46 @@ import Data.Maybe
 import System.Directory
 
 %default total
+
+------------------------------------------------------------------------
+-- Package directories
+
+export
+pkgGlobalDirectory : {auto c : Ref Ctxt Defs} -> Core String
+pkgGlobalDirectory =
+  do d <- getDirs
+     pure (prefix_dir d </> "idris2-" ++ showVersion False version)
+
+export
+pkgLocalDirectory : {auto c : Ref Ctxt Defs} -> Core String
+pkgLocalDirectory =
+  do d <- getDirs
+     Just srcdir <- coreLift currentDir
+       | Nothing => throw (InternalError "Can't get current directory")
+     pure $ srcdir </> depends_dir d
+
+------------------------------------------------------------------------
+-- TTC directories
+
+export
+ttcBuildDirectory : {auto c : Ref Ctxt Defs} -> Core String
+ttcBuildDirectory =
+  do d <- getDirs
+     pure (build_dir d </> "ttc" </> show ttcVersion)
+
+export
+ttcInstallDirectory : {auto c : Ref Ctxt Defs} -> String -> Core String
+ttcInstallDirectory lib =
+  do gbdir <- pkgGlobalDirectory
+     pure (gbdir </> lib </> show ttcVersion)
+
+export
+extraSearchDirectories : {auto c : Ref Ctxt Defs} -> Core (List String)
+extraSearchDirectories =
+  do d <- getDirs
+     pure (map (</> show ttcVersion) (extra_dirs d ++ package_dirs d))
+
+------------------------------------------------------------------------
 
 public export
 data IdrSrcExt = E_idr | E_lidr | E_yaff | E_org | E_md
@@ -126,10 +170,10 @@ export
 nsToPath : {auto c : Ref Ctxt Defs} ->
            FC -> ModuleIdent -> Core (Either Error String)
 nsToPath loc ns
-    = do d <- getDirs
+    = do bdir <- ttcBuildDirectory
+         ttcs <- extraSearchDirectories
          let fnameBase = ModuleIdent.toPath ns
-         let fs = map (\p => cleanPath $ p </> fnameBase <.> "ttc")
-                      ((build_dir d </> "ttc") :: extra_dirs d)
+         let fs = map (\p => cleanPath $ p </> fnameBase <.> "ttc") (bdir :: ttcs)
          Just f <- firstAvailable fs
             | Nothing => pure (Left (ModuleNotFound loc ns))
          pure (Right f)
@@ -207,12 +251,11 @@ covering
 makeBuildDirectory : {auto c : Ref Ctxt Defs} ->
                      ModuleIdent -> Core ()
 makeBuildDirectory ns
-    = do d <- getDirs
-         let bdir = build_dir d </> "ttc"
+    = do bdir <- ttcBuildDirectory
          let ns = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns -- first item is file name
          let ndir = joinPath ns
          Right _ <- coreLift $ mkdirAll (bdir </> ndir)
-            | Left err => throw (FileErr (build_dir d </> ndir) err)
+            | Left err => throw (FileErr (bdir </> ndir) err)
          pure ()
 
 export
@@ -232,9 +275,8 @@ getTTCFileName inp ext
          -- and generate the ttc file from that
          ns <- ctxtPathToNS inp
          let fname = ModuleIdent.toPath ns <.> ext
-         d <- getDirs
-         let bdir = build_dir d
-         pure $ bdir </> "ttc" </> fname
+         bdir <- ttcBuildDirectory
+         pure $ bdir </> fname
 
 -- Given a source file, return the name of the corresponding object file.
 -- As above, but without the build directory
