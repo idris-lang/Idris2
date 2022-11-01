@@ -3,7 +3,7 @@ rm -rf Lib/build
 
 cd Lib
 $1 --build
-cd -
+cd ..
 cd Exe
 $1 --no-color --console-width 0 --no-banner --check --find-ipkg Mod.idr
 $1 --no-color --console-width 0 --no-banner --exec main --find-ipkg Mod.idr
