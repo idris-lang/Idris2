@@ -603,14 +603,7 @@ mutual
   pibindListName : OriginDesc -> IndentInfo ->
                    Rule (List (RigCount, WithBounds Name, PTerm))
   pibindListName fname indents
-       = forget <$> sepBy1 (decoratedSymbol fname ",")
-                           (do rig <- multiplicity fname
-                               n <- bounds $ UN <$> binderName
-                               decorateBoundedName fname Bound n
-                               decoratedSymbol fname ":"
-                               ty <- typeExpr pdef fname indents
-                               pure (rig, n, ty))
-     <|> do rig <- multiplicity fname
+       = do rig <- multiplicity fname
             ns <- sepBy1 (decoratedSymbol fname ",")
                          (bounds $ UN <$> binderName)
             let ns = forget ns
