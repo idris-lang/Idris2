@@ -32,6 +32,9 @@ modules = Data.Container,
 
           Data.W,
 
+          Language.IntrinsicTyping.SECD,
+          Language.IntrinsicTyping.STLCR,
+
           Language.Tagless,
 
           Search.Auto,
