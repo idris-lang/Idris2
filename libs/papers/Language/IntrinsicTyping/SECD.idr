@@ -2,11 +2,11 @@
 ||| Coinductive Formalization of SECD Machine in Agda
 ||| by Adam Krupička
 
-module Control.SECD
+module Language.IntrinsicTyping.SECD
 
-import Data.Late
+import public Data.Late
 import Data.List.Elem
-import Data.List.Quantifiers
+import public Data.List.Quantifiers
 
 %default total
 
@@ -334,6 +334,9 @@ eqb (TyFun a b) l r = False
 eqbs a [] [] = True
 eqbs a (l :: ls) (r :: rs) = eqb a l r && eqbs a ls rs
 eqbs a _ _ = False
+
+-- TODO: these are not actually tail recursive.
+-- APP is the biggest culprit
 
 public export
 steps : Meaning st -> Steps st st' -> Late (Meaning st')

@@ -5,9 +5,7 @@ depends = contrib, linear
 
 options = "--ignore-missing-ipkg"
 
-modules = Control.SECD,
-
-          Data.Container,
+modules = Data.Container,
 
           Data.InductionRecursion.DybjerSetzer,
 
@@ -26,6 +24,9 @@ modules = Control.SECD,
           Data.Vect.Binary,
 
           Data.W,
+
+          Language.IntrinsicTyping.SECD,
+          Language.IntrinsicTyping.STLCR,
 
           Language.Tagless,
 
