@@ -143,7 +143,7 @@ parameters
   {auto error : MonadError Error m}
   {auto cs : MonadState Parameters m}
   (t : Name)
-  (ps : List Name)
+  (ps : List (Name, Nat))
   (x : Name)
 
   ||| When analysing the type of a constructor for the type family t,
@@ -161,7 +161,7 @@ parameters
   fromTypeView (Left prf) = prf
   fromTypeView (Right fo) = FIFree fo
 
-  ||| Hoping to observe that ty is functorial
+  ||| Hoping to observe that ty is foldable
   export
   typeView : (ty : TTImp) -> m (TypeView ty)
 
@@ -187,7 +187,7 @@ parameters
           Yes Refl => pure $ Left (FIRec prf sp)
           No diff => case !(hasImplementation Foldable f) of
             Just prf => pure (Left (FIFold isFO prf sp))
-            Nothing => case hd `elemPos` ps of
+            Nothing => case lookup hd ps of
               Just n => do
                 -- record that the nth parameter should be functorial
                 ns <- gets asFoldables
@@ -220,7 +220,7 @@ parameters
           Nothing => do
             let Just (MkAppView (_, hd) ts prf) = appView f
                | _ => throwError (NotAnApplication f)
-            case hd `elemPos` ps of
+            case lookup hd ps of
               Just n => do
                 -- record that the nth parameter should be bifoldable
                 ns <- gets asBifoldables
@@ -335,8 +335,9 @@ namespace Foldable
     (ns, cls) <- runStateT {m = m} initParameters $ for cs $ \ (cName, ty) =>
       withError (WhenCheckingConstructor cName) $ do
         -- Grab the types of the constructor's explicit arguments
-        let Just (MkConstructorView paras para args) = constructorView ty
+        let Just (MkConstructorView (paraz :< (para, _)) args) = constructorView ty
               | _ => throwError ConfusingReturnType
+        let paras = paraz <>> []
         logMsg "derive.foldable.clauses" 10 $
           "\{showPrefix True (dropNS cName)} (\{joinBy ", " (map (showPrec Dollar . mapTTImp cleanup . unArg . snd) args)})"
         let vars = map (map (IVar fc . un . ("x" ++) . show . (`minus` 1)))

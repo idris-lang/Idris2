@@ -1,0 +1,2 @@
+show (Lam (Call Add [Var Nothing, Var (Just ())]))
+:q
