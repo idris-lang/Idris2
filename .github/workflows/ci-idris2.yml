@@ -33,7 +33,7 @@ on:
       - '.github/workflows/ci-super-linter.yml'
 
 env:
-  IDRIS2_VERSION: 0.5.1 # For previous-version build
+  IDRIS2_VERSION: 0.6.0 # For previous-version build
 
 jobs:
 
