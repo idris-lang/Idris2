@@ -2,6 +2,7 @@ module Idris.Package
 
 import Compiler.Common
 
+import Core.Binary
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -402,7 +403,7 @@ addDeps pkg = do
                 else pure (Failed [MkRE [] dep Nothing])
 
             _  => tryAll candidates $ \(MkCandidate name mv pkgDir) => do
-              let pkgFile = pkgDir </> name <.> "ipkg"
+              let pkgFile = pkgDir </> show ttcVersion </> name <.> "ipkg"
               True <- coreLift $ exists pkgFile
                 | False => getTransitiveDeps deps (insert name mv done)
               pkg <- parsePkgFile False pkgFile
