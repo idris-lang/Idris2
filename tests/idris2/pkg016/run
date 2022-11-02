@@ -1,5 +1,3 @@
-IDRIS2_VERSION="idris2-0.6.0"
-
 $1 --install foo.ipkg > /dev/null
 $1 --install bar.ipkg > /dev/null
 $1 --install baz.ipkg > /dev/null
@@ -7,7 +5,7 @@ $1 --build test.ipkg
 
 build/exec/test
 
-rm -r "${IDRIS2_PREFIX}/${IDRIS2_VERSION}/foo-0"
-rm -r "${IDRIS2_PREFIX}/${IDRIS2_VERSION}/bar-0"
-rm -r "${IDRIS2_PREFIX}/${IDRIS2_VERSION}/baz-0"
+rm -r "${IDRIS2_PREFIX}"/idris2-*/foo-0
+rm -r "${IDRIS2_PREFIX}"/idris2-*/bar-0
+rm -r "${IDRIS2_PREFIX}"/idris2-*/baz-0
 rm -r build
