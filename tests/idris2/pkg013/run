@@ -6,4 +6,13 @@ fi
 
 MY_PWD="${MY_PWD}" ./gen_expected.sh
 
+TTC="$($1 --ttc-version)"
+
+mkdir -p "depends/bar-0.7.2/${TTC}"
+mkdir -p "depends/foo-0.1.0/${TTC}"
+cp bar.ipkg "depends/bar-0.7.2/${TTC}/bar.ipkg"
+cp foo.ipkg "depends/foo-0.1.0/${TTC}/foo.ipkg"
+
 $1 --build test.ipkg --log package.depends:10
+
+rm -r depends
