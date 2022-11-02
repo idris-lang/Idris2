@@ -1,3 +1,7 @@
+||| The content of this module is based on the MSc Thesis
+||| Coinductive Formalization of SECD Machine in Agda
+||| by Adam Krupička
+
 module Language.IntrinsicTyping.STLCR
 
 import Data.List.Elem
