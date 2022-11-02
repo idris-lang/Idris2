@@ -149,20 +149,24 @@ readDataFile fname
             | Left err => throw (FileErr f err)
          pure d
 
--- Look for a library file required by a code generator. Look in the
--- library directories, and in the lib/ subdirectory of all the 'extra import'
--- directories
+||| Look for a library file required by a code generator. Look in the
+||| library directories, and in the lib/ subdirectory of all the 'extra import'
+||| directories and the package directory roots.
 export
 findLibraryFile : {auto c : Ref Ctxt Defs} ->
                   String -> Core String
 findLibraryFile fname
     = do d <- getDirs
+         let packageLibs = libDirs (package_dirs d)
+         let extraLibs = libDirs (extra_dirs d)
          let fs = map (\p => cleanPath $ p </> fname)
-                      (lib_dirs d ++ map (\x => x </> "lib")
-                                         (extra_dirs d))
+                      (lib_dirs d ++ packageLibs ++ extraLibs)
          Just f <- firstAvailable fs
             | Nothing => throw (InternalError ("Can't find library " ++ fname))
          pure f
+    where
+      libDirs : List String -> List String
+      libDirs = map (\x => x </> "lib")
 
 -- Given a namespace, return the full path to the checked module,
 -- looking first in the build directory then in the extra_dirs
