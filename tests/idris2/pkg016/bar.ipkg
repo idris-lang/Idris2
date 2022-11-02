@@ -1,0 +1,4 @@
+package bar
+sourcedir = "bar"
+modules = Bar
+depends = foo

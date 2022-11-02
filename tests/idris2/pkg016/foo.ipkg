@@ -1,0 +1,3 @@
+package foo
+sourcedir = "foo"
+modules = Foo
