@@ -347,7 +347,7 @@ mutual
            put Bang ({ nextName $= (+1),
                        bangNames $= ((bn, fc, itm) ::)
                      } bs)
-           pure (IVar EmptyFC bn)
+           pure (IVar (virtualiseFC fc) bn)
   desugarB side ps (PIdiom fc ns term)
       = do itm <- desugarB side ps term
            logRaw "desugar.idiom" 10 "Desugaring idiom for" itm
