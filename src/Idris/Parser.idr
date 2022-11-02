@@ -614,12 +614,6 @@ mutual
             ty <- typeExpr pdef fname indents
             atEnd indents
             pure (map (\n => (rig, n, ty)) ns)
-     <|> forget <$> sepBy1 (decoratedSymbol fname ",")
-                           (do rig <- multiplicity fname
-                               n <- bounds (decorate fname Bound binderName)
-                               decoratedSymbol fname ":"
-                               ty <- typeExpr pdef fname indents
-                               pure (rig, map UN n, ty))
     where
       -- _ gets treated specially here, it means "I don't care about the name"
       binderName : Rule UserName
