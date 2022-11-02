@@ -575,6 +575,7 @@ install : {auto c : Ref Ctxt Defs} ->
 install pkg opts installSrc -- not used but might be in the future
     = do defs <- get Ctxt
          build <- ttcBuildDirectory
+         libdir <- (</> installDir pkg) <$> pkgGlobalDirectory
          targetDir <- ttcInstallDirectory (installDir pkg)
          let src = source_dir (dirs (options defs))
          runScript (preinstall pkg)
@@ -597,7 +598,7 @@ install pkg opts installSrc -- not used but might be in the future
            traverse_ (installSrcFrom wdir targetDir) toInstall
 
          -- install package file
-         let pkgFile = targetDir </> pkg.name <.> "ipkg"
+         let pkgFile = libdir </> pkg.name <.> "ipkg"
          coreLift $ putStrLn $ "Installing package file for \{pkg.name} to \{targetDir}"
          let pkgStr = String.renderString $ layoutUnbounded $ pretty $ savePkgMetadata pkg
          log "package.depends" 25 $ "  package file:\n\{pkgStr}"
