@@ -11,7 +11,7 @@ while IFS= read -r rawfile; do
     htmldir="html/${libname}/source/"
     htmlfile="${htmldir}/${modulename}.html"
     mkdir -p "$htmldir"
-    katla html "$rawfile" "${prefix}/${libname}/build/ttc/${filename}.ttm" >"$htmlfile"
+    katla html "$rawfile" "${prefix}/${libname}/build/ttc/*/${filename}.ttm" >"$htmlfile"
     sed -i "s|<head>|<head><title>${modulename}</title>|" "$htmlfile"
 done <tmp
 rm tmp
