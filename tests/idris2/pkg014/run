@@ -5,5 +5,27 @@ else
 fi
 
 MY_PWD="${MY_PWD}" ./gen_expected.sh
+TTC="$($1 --ttc-version)"
+
+mkdir -p "depends/bar-0.1.0/${TTC}"
+mkdir -p "depends/bar-0.1.1/${TTC}"
+cp bar-0.1.0/bar.ipkg "depends/bar-0.1.0/${TTC}/bar.ipkg"
+cp bar-0.1.1/bar.ipkg "depends/bar-0.1.1/${TTC}/bar.ipkg"
+
+mkdir -p "depends/baz-0.1.0/${TTC}"
+mkdir -p "depends/baz-0.2.0/${TTC}"
+mkdir -p "depends/baz-0.3.0/${TTC}"
+cp baz-0.1.0/baz.ipkg "depends/baz-0.1.0/${TTC}/baz.ipkg"
+cp baz-0.2.0/baz.ipkg "depends/baz-0.2.0/${TTC}/baz.ipkg"
+cp baz-0.3.0/baz.ipkg "depends/baz-0.3.0/${TTC}/baz.ipkg"
+
+mkdir -p "depends/foo-0.1.0/${TTC}"
+mkdir -p "depends/foo-0.2.0/${TTC}"
+mkdir -p "depends/foo-0.3.0/${TTC}"
+cp foo-0.1.0/foo.ipkg "depends/foo-0.1.0/${TTC}/foo.ipkg"
+cp foo-0.2.0/foo.ipkg "depends/foo-0.2.0/${TTC}/foo.ipkg"
+cp foo-0.3.0/foo.ipkg "depends/foo-0.3.0/${TTC}/foo.ipkg"
 
 $1 --build test.ipkg --log package.depends:10
+
+rm -r depends
