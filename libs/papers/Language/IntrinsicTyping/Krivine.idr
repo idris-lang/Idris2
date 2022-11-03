@@ -553,34 +553,75 @@ namespace Machine
     _ | VBeta tr' = refocus tr'
     _ | VDone sc = Val (Closure (Lam sc) (fst env)) Lam
 
--- This is way TOO nasty because we don't have eta for records :((
-public export
-correctness :
-  {a : Ty} ->
-  (ctx : ValidEvalContext a b) ->
-  (t : Term g a) ->
-  (env : ValidEnv g) ->
-  (trold : Refocus.Trace (refocus (fst ctx) (Closure t (fst env)))) ->
-  (trnew : Machine.Trace t env ctx) ->
-  refocus trnew === Refocus.iterate trold
-correctness ctx (Var v) env (Step (fst ctx) (RVar v (fst env)) trold) (Var trnew)
-  with (lookup env v) proof eq
-  _ | Element (Closure t' env') penv'
-  = correctness ctx t' (Element env' penv')
-      (rewrite sym (cong fst eq) in rewrite fstLookup env v in trold)
-      trnew
-correctness ctx (App f t) env (Step (fst ctx) (RApp f t (fst env)) trold) (App trnew)
-  = correctness (Closure t env :: ctx) f env
-      (rewrite fstCons (Closure t env) ctx in rewrite fstClosure t env in trold)
-      trnew
-correctness .(Element arg parg :: Element ctx pctx) (Lam sc) (Element env penv)
-  (Step ctx (Beta sc env arg) trold)
-  (Beta {arg = Element arg parg, ctx = Element ctx pctx} trnew)
-  = correctness (Element ctx pctx) sc (Element arg parg :: Element env penv)
-      trold
-      trnew
-correctness (Element [] _) (Lam sc) env (Done _ _) tr
-  -- DISGUSTING
-  = case tr of
-      Beta {arg = Element _ _, ctx = Element _ _} _ impossible
-      Done => Refl
+  -- This is way TOO nasty because we don't have eta for records :((
+  public export
+  correctness :
+    {a : Ty} ->
+    (ctx : ValidEvalContext a b) ->
+    (t : Term g a) ->
+    (env : ValidEnv g) ->
+    (trold : Refocus.Trace (refocus (fst ctx) (Closure t (fst env)))) ->
+    (trnew : Machine.Trace t env ctx) ->
+    refocus trnew === Refocus.iterate trold
+  correctness ctx (Var v) env (Step (fst ctx) (RVar v (fst env)) trold) (Var trnew)
+    with (lookup env v) proof eq
+    _ | Element (Closure t' env') penv'
+    = correctness ctx t' (Element env' penv')
+        (rewrite sym (cong fst eq) in rewrite fstLookup env v in trold)
+        trnew
+  correctness ctx (App f t) env (Step (fst ctx) (RApp f t (fst env)) trold) (App trnew)
+    = correctness (Closure t env :: ctx) f env
+        (rewrite fstCons (Closure t env) ctx in rewrite fstClosure t env in trold)
+        trnew
+  correctness .(Element arg parg :: Element ctx pctx) (Lam sc) (Element env penv)
+    (Step ctx (Beta sc env arg) trold)
+    (Beta {arg = Element arg parg, ctx = Element ctx pctx} trnew)
+    = correctness (Element ctx pctx) sc (Element arg parg :: Element env penv)
+        trold
+        trnew
+  correctness (Element [] _) (Lam sc) env (Done _ _) tr
+    -- DISGUSTING
+    = case tr of
+        Beta {arg = Element _ _, ctx = Element _ _} _ impossible
+        Done => Refl
+
+  -- Another disgusgint proof because of a mix of:
+  --   * lack of eta and the coverage
+  --   * invalid "Dot pattern not valid here (Not LHS)" on the LHS
+  --   * coverage checker being confused
+  public export
+  trace : {a : Ty} -> (ctx : ValidEvalContext a b) ->
+          (t : Term g a) -> (env : ValidEnv g) ->
+          Refocus.Trace (refocus (fst ctx) (Closure t (fst env))) ->
+          Trace t env ctx
+  trace ctx (Var v) env (Step (fst ctx) (RVar v (fst env)) tr)
+    with (fstLookup env v) | (lookup env v) proof eq
+    _ | lemma | Element (Closure t' env') p
+      with (lookup (fst env) v)
+      trace ctx (Var v) env (Step (fst ctx) (RVar v (fst env)) tr)
+        | Refl | Element (Closure t' env') penv' | .(Closure t' env')
+        = Var (rewrite eq in trace ctx t' (Element env' penv') tr)
+  trace (Element ctx pctx) (App f t) (Element env penv) (Step .(ctx) (RApp f t env) tr)
+    = App (trace (Closure t (Element env penv) :: Element ctx pctx) f (Element env penv) tr)
+  trace (Element (arg :: ctx) pctx) (Lam sc) (Element env penv) tr
+    = case tr of
+        Done _ _ impossible
+        (Step ctx (Beta sc env arg) tr) =>
+          rewrite etaPair pctx in
+          Beta {arg = Element arg (fst pctx), ctx = Element ctx (snd pctx)}
+          (trace (Element ctx (snd pctx)) sc (Element (arg :: env) (fst pctx, penv)) tr)
+  trace (Element [] pctx) (Lam sc) env tr
+    = case tr of
+        Beta {arg = Element _ _, ctx = Element _ _} _ impossible
+        Done sc .(fst env) => rewrite irrelevantUnit pctx in Done
+
+  public export
+  termination : {a : Ty} -> (t : Term [] a) -> Trace t [] []
+  termination t
+    = trace [] t []
+    $ rewrite refocusCorrect [] (Closure t []) in
+      Refocus.termination (Closure t [])
+
+  public export
+  evaluate : {a : Ty} -> Term [] a -> Value a
+  evaluate t = Machine.refocus (termination t)
