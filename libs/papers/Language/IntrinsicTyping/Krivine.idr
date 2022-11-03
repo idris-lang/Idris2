@@ -222,8 +222,8 @@ namespace Naïve
 
 public export
 data Trace : Decomposition c -> Type where
-  Done : (0 sc, env : _) -> Trace (Val sc env)
-  Step : (0 ctx : EvalContext a b) -> (0 r : Redex a) ->
+  Done : (sc, env : _) -> Trace (Val sc env)
+  Step : (ctx : EvalContext a b) -> (r : Redex a) ->
          Trace (decompose (plug ctx (contract r))) -> Trace (Red r ctx)
 
 public export
@@ -376,24 +376,39 @@ namespace ValidClosed
   Closure : Term g a -> ValidEnv g -> ValidClosed a
   Closure t (Element env pr) = Element (Closure t env) pr
 
-public export
-0 getContext : ValidClosed a -> Context
-getContext (Element (Closure {g} t env) _) = g
+  public export
+  fstClosure : (t : Term g a) -> (env : ValidEnv g) ->
+               fst (Closure t env) === Closure t (fst env)
+  fstClosure t (Element env p) = Refl
 
-public export
-getEnv : (c : ValidClosed a) -> ValidEnv (getContext c)
-getEnv (Element (Closure {g} _ env) pr) = Element env pr
+  public export
+  0 getContext : ValidClosed a -> Context
+  getContext (Element (Closure {g} t env) _) = g
 
-public export
-getTerm : (c : ValidClosed a) -> Term (getContext c) a
-getTerm (Element (Closure t _) _) = t
+  public export
+  getEnv : (c : ValidClosed a) -> ValidEnv (getContext c)
+  getEnv (Element (Closure {g} _ env) pr) = Element env pr
+
+  public export
+  getTerm : (c : ValidClosed a) -> Term (getContext c) a
+  getTerm (Element (Closure t _) _) = t
+
+  public export
+  etaValidClosed : (c : ValidClosed a) -> c === Closure (getTerm c) (getEnv c)
+  etaValidClosed (Element (Closure t env) _) = Refl
 
 namespace ValidEnv
 
   public export
   lookup : (env : ValidEnv g) -> Elem a g -> ValidClosed a
-  lookup (Element (t :: env) pr) Here = Element t (fst pr)
-  lookup (Element (t :: env) pr) (There v) = lookup (Element env (snd pr)) v
+  lookup (Element (t :: env) p) Here = Element t (fst p)
+  lookup (Element (t :: env) p) (There v) = lookup (Element env (snd p)) v
+
+  public export
+  fstLookup : (env : ValidEnv g) -> (v : Elem a g) ->
+              fst (lookup env v) === lookup (fst env) v
+  fstLookup (Element (t :: env) p) Here = Refl
+  fstLookup (Element (t :: env) p) (There v) = fstLookup (Element env (snd p)) v
 
   public export
   Nil : ValidEnv []
@@ -421,6 +436,11 @@ namespace ValidEvalContext
   public export
   (::) : ValidClosed a -> ValidEvalContext b c -> ValidEvalContext (Arr a b) c
   Element t p :: Element ctx q = Element (t :: ctx) (p, q)
+
+  public export
+  fstCons : (t : ValidClosed a) -> (ctx : ValidEvalContext b c) ->
+            fst (t :: ctx) === fst t :: fst ctx
+  fstCons (Element t p) (Element ctx q) = Refl
 
   public export
   [CONS] Biinjective ValidEvalContext.(::) where
@@ -465,7 +485,9 @@ namespace Machine
           Trace f env (Closure t env :: ctx) ->
           Trace (App f t) env ctx
 
-    Beta : {sc : Term (a :: g) b} -> {arg : ValidClosed a} ->
+    Beta : {sc : Term (a :: g) b} ->
+           {arg : ValidClosed a} ->
+           {ctx : ValidEvalContext b c} ->
            Trace sc (arg :: env) ctx ->
            Trace (Lam sc) env (arg :: ctx)
 
@@ -530,3 +552,35 @@ namespace Machine
     _ | VApp tr' = refocus tr'
     _ | VBeta tr' = refocus tr'
     _ | VDone sc = Val (Closure (Lam sc) (fst env)) Lam
+
+-- This is way TOO nasty because we don't have eta for records :((
+public export
+correctness :
+  {a : Ty} ->
+  (ctx : ValidEvalContext a b) ->
+  (t : Term g a) ->
+  (env : ValidEnv g) ->
+  (trold : Refocus.Trace (refocus (fst ctx) (Closure t (fst env)))) ->
+  (trnew : Machine.Trace t env ctx) ->
+  refocus trnew === Refocus.iterate trold
+correctness ctx (Var v) env (Step (fst ctx) (RVar v (fst env)) trold) (Var trnew)
+  with (lookup env v) proof eq
+  _ | Element (Closure t' env') penv'
+  = correctness ctx t' (Element env' penv')
+      (rewrite sym (cong fst eq) in rewrite fstLookup env v in trold)
+      trnew
+correctness ctx (App f t) env (Step (fst ctx) (RApp f t (fst env)) trold) (App trnew)
+  = correctness (Closure t env :: ctx) f env
+      (rewrite fstCons (Closure t env) ctx in rewrite fstClosure t env in trold)
+      trnew
+correctness .(Element arg parg :: Element ctx pctx) (Lam sc) (Element env penv)
+  (Step ctx (Beta sc env arg) trold)
+  (Beta {arg = Element arg parg, ctx = Element ctx pctx} trnew)
+  = correctness (Element ctx pctx) sc (Element arg parg :: Element env penv)
+      trold
+      trnew
+correctness (Element [] _) (Lam sc) env (Done _ _) tr
+  -- DISGUSTING
+  = case tr of
+      Beta {arg = Element _ _, ctx = Element _ _} _ impossible
+      Done => Refl
