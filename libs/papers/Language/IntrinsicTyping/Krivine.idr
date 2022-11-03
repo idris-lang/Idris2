@@ -5,6 +5,8 @@
 
 module Language.IntrinsicTyping.Krivine
 
+import Control.Function
+import Data.DPair
 import Data.List.Elem
 
 %default total
@@ -91,16 +93,16 @@ namespace EvalContext
   public export
   data SnocView : EvalContext inner outer -> Type where
     Lin : SnocView []
-    (:<) : (ctxt : EvalContext inner (Arr dom outer)) ->
+    (:<) : (ctx : EvalContext inner (Arr dom outer)) ->
            (t : Closed dom) ->
-           SnocView (snoc ctxt t)
+           SnocView (snoc ctx t)
 
   public export
-  snocView : (ctxt : EvalContext inner outer) -> SnocView ctxt
+  snocView : (ctx : EvalContext inner outer) -> SnocView ctx
   snocView [] = [<]
-  snocView (hd :: ctxt@_) with (snocView ctxt)
+  snocView (hd :: ctx@_) with (snocView ctx)
     _ | [<] = [] :< hd
-    _ | ctxt' :< t = (hd :: ctxt') :< t
+    _ | ctx' :< t = (hd :: ctx') :< t
 
 public export
 plug : {a : Ty} -> EvalContext a b -> Closed a -> Closed b
@@ -347,3 +349,184 @@ namespace Refocus
 
 ------------------------------------------------------------------------
 -- Section 6: The Krivine machine
+
+public export
+IsValidEnv : Env g -> Type
+
+public export
+IsValidClosed : Closed a -> Type
+
+IsValidClosed (Closure t env) = IsValidEnv env
+IsValidClosed _ = Void
+
+IsValidEnv [] = ()
+IsValidEnv (t :: env) = (IsValidClosed t, IsValidEnv env)
+
+public export
+ValidEnv : Context -> Type
+ValidEnv g = Subset (Env g) IsValidEnv
+
+public export
+ValidClosed : Ty -> Type
+ValidClosed a = Subset (Closed a) IsValidClosed
+
+namespace ValidClosed
+
+  public export
+  Closure : Term g a -> ValidEnv g -> ValidClosed a
+  Closure t (Element env pr) = Element (Closure t env) pr
+
+public export
+0 getContext : ValidClosed a -> Context
+getContext (Element (Closure {g} t env) _) = g
+
+public export
+getEnv : (c : ValidClosed a) -> ValidEnv (getContext c)
+getEnv (Element (Closure {g} _ env) pr) = Element env pr
+
+public export
+getTerm : (c : ValidClosed a) -> Term (getContext c) a
+getTerm (Element (Closure t _) _) = t
+
+namespace ValidEnv
+
+  public export
+  lookup : (env : ValidEnv g) -> Elem a g -> ValidClosed a
+  lookup (Element (t :: env) pr) Here = Element t (fst pr)
+  lookup (Element (t :: env) pr) (There v) = lookup (Element env (snd pr)) v
+
+  public export
+  Nil : ValidEnv []
+  Nil = Element [] ()
+
+  public export
+  (::) : {a : Ty} -> ValidClosed a -> ValidEnv g -> ValidEnv (a :: g)
+  Element t p :: Element env q = Element (t :: env) (p, q)
+
+public export
+IsValidEvalContext : EvalContext a b -> Type
+IsValidEvalContext [] = ()
+IsValidEvalContext (t :: ctx) =  (IsValidClosed t, IsValidEvalContext ctx)
+
+public export
+ValidEvalContext : (a, b : Ty) -> Type
+ValidEvalContext a b = Subset (EvalContext a b) IsValidEvalContext
+
+namespace ValidEvalContext
+
+  public export
+  Nil : ValidEvalContext a a
+  Nil = Element [] ()
+
+  public export
+  (::) : ValidClosed a -> ValidEvalContext b c -> ValidEvalContext (Arr a b) c
+  Element t p :: Element ctx q = Element (t :: ctx) (p, q)
+
+  public export
+  [CONS] Biinjective ValidEvalContext.(::) where
+    biinjective
+      {x = Element t p} {y = Element t p}
+      {v = Element ts ps} {w = Element ts ps}
+      Refl = (Refl, Refl)
+
+namespace ValidEvalContextView
+
+  public export
+  data View : ValidEvalContext a b -> Type where
+    Nil : View []
+    (::) : (t : ValidClosed a) -> (ctx : ValidEvalContext b c) ->
+           View (t :: ctx)
+
+  public export
+  irrelevantUnit : (t : ()) -> t === ()
+  irrelevantUnit () = Refl
+
+  public export
+  etaPair : (p : (a, b)) -> p === (fst p, snd p)
+  etaPair (x, y) = Refl
+
+  public export
+  view : (ctx : ValidEvalContext a b) -> View ctx
+  view (Element [] p) = rewrite irrelevantUnit p in []
+  view (Element (t :: ctx) p)
+    = rewrite etaPair p in
+      Element t (fst p) :: Element ctx (snd p)
+
+namespace Machine
+
+  public export
+  data Trace : Term g a -> ValidEnv g -> ValidEvalContext a b -> Type where
+
+    Var : {env : ValidEnv g} -> {v : Elem a g} ->
+          Trace (getTerm (lookup env v)) (getEnv (lookup env v)) ctx ->
+          Trace (Var v) env ctx
+
+    App : {f : Term g (Arr a b)} -> {t : Term g a} ->
+          Trace f env (Closure t env :: ctx) ->
+          Trace (App f t) env ctx
+
+    Beta : {sc : Term (a :: g) b} -> {arg : ValidClosed a} ->
+           Trace sc (arg :: env) ctx ->
+           Trace (Lam sc) env (arg :: ctx)
+
+    Done : Trace (Lam sc) env []
+
+  data View : Trace t env ctx -> Type where
+    VVar : {0 env : ValidEnv g} -> {0 v : Elem a g} ->
+           (0 tr : Trace (getTerm (lookup env v)) (getEnv (lookup env v)) ctx) ->
+           View {t = Var v, env, ctx} (Var tr)
+    VApp : {0 f : Term g (Arr a b)} -> {0 t : Term g a} ->
+           {0 ctx : ValidEvalContext b c} ->
+           (0 tr : Trace f env (Closure t env :: ctx)) ->
+           View (App {f, t, env, ctx} tr)
+    VBeta : {0 sc : Term (a :: g) b} ->
+            {arg : ValidClosed a} ->
+            {ctx : ValidEvalContext b c} ->
+            (0 tr : Trace sc (arg :: env) ctx) ->
+            View (Beta {sc, arg, env, ctx} tr)
+    VDone : (sc : Term (a :: g) b) ->
+            View (Done {sc})
+
+  public export
+  vvar : (tr : Trace (Var v) env ctx) ->
+         (tr' : Trace ? ? ctx ** tr = Var tr')
+  vvar (Var tr) = (tr ** Refl)
+
+  public export
+  vapp : (tr : Trace (App f t) env ctx) ->
+         (tr' : Trace f env (Closure t env :: ctx) ** tr = App tr')
+  vapp (App tr) = (tr ** Refl)
+
+  public export
+  vlam0 : (eq : ctx = []) -> (tr : Trace (Lam sc) env ctx) -> tr ~=~ Machine.Done {sc, env}
+  vlam0 eq Done = Refl
+
+  public export
+  vlamS : {0 env : ValidEnv g} -> {0 arg : ValidClosed a} ->
+          {0 sc : Term (a :: g) b} -> {0 ctx' : ValidEvalContext b c} ->
+          (eq : ctx = ValidEvalContext.(::) arg ctx') ->
+          (tr : Trace (Lam sc) env ctx) ->
+          (tr' : Trace sc (arg :: env) ctx' ** tr ~=~ Machine.Beta {sc, arg, env} tr')
+  vlamS eq (Beta tr) with 0 (fst (biinjective @{CONS} eq))
+    _ | Refl with 0 (snd (biinjective @{CONS} eq))
+      _ | Refl = (tr ** Refl)
+
+  public export
+  view : (t : Term g a) -> (env : ValidEnv g) -> (ctx : ValidEvalContext a b) ->
+         (0 tr : Trace t env ctx) -> View tr
+  view (Var v) env ctx tr = rewrite snd (vvar tr) in VVar _
+  view (App f t) env ctx tr = rewrite snd (vapp tr) in VApp _
+  view (Lam sc) env ctx@_ tr with (view ctx)
+    _ | [] = rewrite vlam0 Refl tr in VDone sc
+    _ | (arg :: ctx') = rewrite snd (vlamS {env, arg, sc, ctx'} Refl tr) in VBeta _
+
+  public export
+  refocus : {a : Ty} ->
+    {t : Term g a} -> {env : ValidEnv g} ->
+    {ctx : ValidEvalContext a b} ->
+    (0 _ : Trace t env ctx) -> Value b
+  refocus tr@_ with (view _ _ _ tr)
+    _ | VVar tr' = refocus tr'
+    _ | VApp tr' = refocus tr'
+    _ | VBeta tr' = refocus tr'
+    _ | VDone sc = Val (Closure (Lam sc) (fst env)) Lam
