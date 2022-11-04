@@ -2,6 +2,7 @@ module Idris.Driver
 
 import Compiler.Common
 
+import Core.Binary
 import Core.Context.Log
 import Core.Core
 import Core.Directory
@@ -239,6 +240,9 @@ quitOpts : List CLOpt -> IO Bool
 quitOpts [] = pure True
 quitOpts (Version :: _)
     = do putStrLn versionMsg
+         pure False
+quitOpts (TTCVersion :: _)
+    = do printLn ttcVersion
          pure False
 quitOpts (Help Nothing :: _)
     = do putStrLn usage
