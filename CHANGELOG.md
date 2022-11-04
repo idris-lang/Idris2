@@ -1,5 +1,11 @@
 # Changelog
 
+## [Next version]
+
+### REPL changes
+
+* Adds documentation for unquotes `~( )`.
+
 ## v0.6.0
 
 ### REPL changes
