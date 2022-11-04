@@ -333,7 +333,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            optSeparator,
            MkOpt ["--version", "-v"] [] [Version]
               (Just "Display version string"),
-           MkOpt ["--ttc-version", "-v"] [] [TTCVersion]
+           MkOpt ["--ttc-version"] [] [TTCVersion]
               (Just "Display TTC version string"),
            MkOpt ["--help", "-h", "-?"] [Optional "topic"] (\ tp => [Help (tp >>= recogniseHelpTopic)])
               (Just "Display help text"),
