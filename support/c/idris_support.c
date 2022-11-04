@@ -119,6 +119,6 @@ long idris2_getNProcessors() {
 #ifdef _WIN32
   return win32_getNProcessors();
 #else
-  return sysconf(_SC_NPROCESSORS_CONF);
+  return sysconf(_SC_NPROCESSORS_ONLN);
 #endif
 }
