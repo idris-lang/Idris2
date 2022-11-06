@@ -9,30 +9,28 @@ introduce new global state.
 Exceptions
 ----------
 
-The ``List Error`` is a list of error types, usable via the
-``Exception`` interface defined in ``Control.App``:
+The ``List Error`` is a list of error types, which can be thrown and caught
+using the functions below:
 
 .. code-block:: idris
 
-    interface Exception err e where
-      throw : err -> App e a
-      catch : App e a -> (err -> App e a) -> App e a
+    throw : HasErr err es => err -> App es a
+    catch : HasErr err es => App es a -> (err -> App es a) -> App es a
 
-We can use ``throw`` and ``catch`` for some exception type
-``err`` as long as the exception type exists in the list of errors. This is
-checked with the ``HasErr`` predicate, also defined in ``Control.App``:
+We can use ``throw`` and ``catch`` for some exception type ``err`` as 
+long as the exception type exists in the list of errors, ``es``, as 
+checked by the ``HasErr`` predicate, also defined in ``Control.App`` 
+(Also, note that ``Exception`` is a synonym for ``HasErr``):
 
 .. code-block:: idris
 
     data HasErr : Error -> List Error -> Type where
          Here : HasErr e (e :: es)
          There : HasErr e es -> HasErr e (e' :: es)
+    
+    Exception : Error -> List Error -> Type
+    Exception = HasErr
 
-    HasErr err es => Exception err es where ...
-
-Note the ``HasErr`` constraint on ``Exception``: this is one place
-where it is notationally convenient that the ``auto`` implicit mechanism
-and the interface resolution mechanism are identical in Idris 2.
 Finally, we can introduce new exception types via ``handle``, which runs a
 block of code which might throw, handling any exceptions:
 
