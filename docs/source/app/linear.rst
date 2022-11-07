@@ -98,13 +98,14 @@ introductory example.
 
 The following listing shows a complete program accessing the store, which
 reads a password, accesses the store if the password is correct and prints the
-secret data. It uses ``let (>>=) = bindL`` to redefine
+secret data. It uses ``let (>>=) = bindL`` and ``(>>) = seqL`` to redefine
 ``do``-notation locally.
 
 .. code-block:: idris
 
     storeProg : Has [Console, StoreI] e => App e ()
-    storeProg = let (>>=) = bindL in
+    storeProg = let (>>=) = bindL
+                    (>>) = seqL in
           do putStr "Password: "
              password <- getStr
              connect $ \s =>
@@ -119,7 +120,8 @@ secret data. It uses ``let (>>=) = bindL`` to redefine
 If we omit the ``let (>>=) = bindL``, it will use the default
 ``(>>=)`` operator, which allows the continuation to be run multiple
 times, which would mean that ``s`` is not guaranteed to be accessed
-linearly, and ``storeProg`` would not type check.
+linearly, and ``storeProg`` would not type check (and similarly
+with ``(>>) = bindIg``).
 We can safely use ``getStr`` and ``putStr`` because they
 are guaranteed not to throw by the ``Path`` parameter in their types.
 
