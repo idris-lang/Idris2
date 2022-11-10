@@ -98,7 +98,7 @@ mutual
        NDelay   : FC -> LazyReason -> Closure vars -> Closure vars -> NF vars
        NForce   : FC -> LazyReason -> NF vars -> List (FC, Closure vars) -> NF vars
        NPrimVal : FC -> Constant -> NF vars
-       NErased  : FC -> (imp : Bool) -> NF vars
+       NErased  : FC -> WhyErased (NF vars) -> NF vars
        NType    : FC -> Name -> NF vars
 
 %name LocalEnv lenv

@@ -1,11 +1,18 @@
 package papers
-version = 0.5.1
+version = 0.6.0
 
 depends = contrib, linear
 
 options = "--ignore-missing-ipkg"
 
 modules = Data.Container,
+
+          Data.Description.Regular,
+          Data.Description.Indexed,
+
+          Data.Enumerate,
+          Data.Enumerate.Common,
+          Data.Enumerate.Indexed,
 
           Data.InductionRecursion.DybjerSetzer,
 
@@ -25,6 +32,13 @@ modules = Data.Container,
 
           Data.W,
 
+          Language.IntrinsicTyping.ABT,
+
+          Language.IntrinsicTyping.Krivine,
+
+          Language.IntrinsicTyping.SECD,
+          Language.IntrinsicTyping.STLCR,
+
           Language.Tagless,
 
           Search.Auto,
@@ -33,5 +47,7 @@ modules = Data.Container,
           Search.HDecidable,
           Search.Negation,
           Search.Properties,
+          Search.CTL,
+          Search.GCL,
 
           Search.Tychonoff.PartI

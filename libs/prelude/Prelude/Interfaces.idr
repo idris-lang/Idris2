@@ -511,6 +511,16 @@ interface Bifoldable p where
   binull : p a b -> Bool
   binull t = bifoldr {acc = Lazy Bool} (\ _,_ => False) (\ _,_ => False) True t
 
+||| Analogous to `foldMap` but for `Bifoldable` structures
+public export
+bifoldMap : Monoid acc => Bifoldable p => (a -> acc) -> (b -> acc) -> p a b -> acc
+bifoldMap f g = bifoldr ((<+>) . f) ((<+>) . g) neutral
+
+||| Like Bifunctor's `mapFst` but for `Bifoldable` structures
+public export
+bifoldMapFst : Monoid acc => Bifoldable p => (a -> acc) -> p a b -> acc
+bifoldMapFst f = bifoldMap f (const neutral)
+
 public export
 interface (Functor t, Foldable t) => Traversable t where
   constructor MkTraversable

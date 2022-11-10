@@ -19,7 +19,7 @@ data ConInfo = DATACON -- normal data constructor
              | TYCON -- normal type constructor
              | NIL -- nil of a list or option shaped thing
              | CONS -- cons of a list shaped thing
-             | ENUM -- part of an enumeration
+             | ENUM Nat -- part of an enumeration with the given number of constructors
              | NOTHING -- nothing of an option shaped thing
              | JUST -- just of an option shaped thing
              | RECORD -- record constructor (no tag)
@@ -33,7 +33,7 @@ Show ConInfo where
   show TYCON   = "[tycon]"
   show NIL     = "[nil]"
   show CONS    = "[cons]"
-  show ENUM    = "[enum]"
+  show (ENUM n) = "[enum " ++ show n ++ "]"
   show NOTHING = "[nothing]"
   show JUST    = "[just]"
   show RECORD  = "[record]"
@@ -47,7 +47,7 @@ Eq ConInfo where
   TYCON == TYCON = True
   NIL == NIL = True
   CONS == CONS = True
-  ENUM == ENUM = True
+  ENUM x == ENUM y = x == y
   NOTHING == NOTHING = True
   JUST == JUST = True
   RECORD == RECORD = True

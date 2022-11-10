@@ -81,8 +81,8 @@ Main> interface Prelude.Show : Type -> Type
       
       A value should produce parentheses around itself if and only if the given
       precedence context is greater than or equal to the precedence of the
-      outermost operation represented in the produced `String`. *This is
-      different from Haskell*, which requires it to be strictly greater. `Open`
+      outermost operation represented in the produced `String`.  *This is
+      different from Haskell*, which requires it to be strictly greater.  `Open`
       should thus always produce *no* outermost parens, `App` should always
       produce outermost parens except on atomic values and those that provide
       their own bracketing, like `Pair` and `List`.

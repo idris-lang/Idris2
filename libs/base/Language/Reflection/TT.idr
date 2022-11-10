@@ -214,6 +214,12 @@ data Count = M0 | M1 | MW
 %name Count rig
 
 export
+enunciate : Count -> String
+enunciate M0 = "runtime irrelevant"
+enunciate M1 = "linear"
+enunciate MW = "unconstrained"
+
+export
 showCount : Count -> String -> String
 showCount M0 s = "0 \{s}"
 showCount M1 s = "1 \{s}"
@@ -239,6 +245,12 @@ data IsVar : Name -> Nat -> List Name -> Type where
 public export
 data LazyReason = LInf | LLazy | LUnknown
 %name LazyReason lr
+
+export
+Show LazyReason where
+  show LInf = "Inf"
+  show LLazy = "Lazy"
+  show LUnknown = "Unknown"
 
 public export
 data TotalReq = Total | CoveringOnly | PartialOK

@@ -218,8 +218,9 @@ loadSO : {auto c : Ref Ctxt Defs} ->
 loadSO appdir "" = pure ""
 loadSO appdir mod
     = do d <- getDirs
-         let fs = map (\p => p </> mod)
-                      ((build_dir d </> "ttc") :: extra_dirs d)
+         bdir <- ttcBuildDirectory
+         allDirs <- extraSearchDirectories
+         let fs = map (\p => p </> mod) (bdir :: allDirs)
          Just fname <- firstAvailable fs
             | Nothing => throw (InternalError ("Missing .so:" ++ mod))
          -- Easier to put them all in the same directory, so we don't need
@@ -629,7 +630,7 @@ incCompile c s sourceFile
          cdata <- getIncCompileData False Cases
 
          d <- getDirs
-         let outputDir = build_dir d </> "ttc"
+         outputDir <- ttcBuildDirectory
 
          let ndefs = namedDefs cdata
          if isNil ndefs

@@ -1,6 +1,6 @@
+rm -rf build
+rm Main.cases
+
 $1 --no-color --console-width 0 --no-banner --dumpcases Main.cases -o Main Main.idr
 
 cat Main.cases | sed -E "s/[0-9]+}/N}/g" | sed -E "s/[0-9]+:[0-9]+/L:C/g" | sed '/Constructor/!d'
-
-rm -rf build
-rm Main.cases

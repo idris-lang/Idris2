@@ -155,7 +155,7 @@ tokenise pred line col acc tmap str
 
     getCols : List Char -> Int -> Int
     getCols x c
-         = case span (/= '\n') (reverse x) of
+         = case span (/= '\n') x of
                 (incol, []) => c + cast (length incol)
                 (incol, _) => cast (length incol)
 

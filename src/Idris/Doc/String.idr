@@ -262,7 +262,7 @@ getDocsForName fc n config
     showDoc : Config -> (Name, String) -> Core (Doc IdrisDocAnn)
 
     reflowDoc : String -> List (Doc IdrisDocAnn)
-    reflowDoc str = map (indent 2 . reflow) (lines str)
+    reflowDoc str = map (indent 2 . pretty0) (lines str)
 
     showTotal : Totality -> Maybe (Doc IdrisDocAnn)
     showTotal tot
@@ -573,6 +573,23 @@ getDocsForPTerm (PUnit _) = pure $ vcat
   [ "Unit Literal"
   , indent 2 "Desugars to MkUnit or Unit"
   ]
+getDocsForPTerm (PUnquote _ _) = pure $ vcat $
+  header "Unquotes" :: ""
+  :: map (indent 2) [
+  """
+  Unquotes allows us to use TTImp expressions inside a quoted expression.
+  This is useful when we want to add some computed TTImp while building up
+  complex expressions.
+
+  ```idris
+  module Quote
+
+  import Language.Reflection
+
+  foo : TTImp -> TTImp
+  foo expr = `(either ~(expr) x y)
+  ```
+  """]
 getDocsForPTerm pterm = pure $ "Docs not implemented for" <++> pretty0 (show pterm) <++> "yet"
 
 export

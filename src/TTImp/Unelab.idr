@@ -304,6 +304,8 @@ mutual
            defs <- get Ctxt
            pure (IForce fc tm', gErased fc)
   unelabTy' umode nest env (PrimVal fc c) = pure (IPrimVal fc c, gErased fc)
+  unelabTy' umode nest env (Erased fc (Dotted t))
+    = unelabTy' umode nest env t
   unelabTy' umode nest env (Erased fc _) = pure (Implicit fc True, gErased fc)
   unelabTy' umode nest env (TType fc _) = pure (IType fc, gType fc (MN "top" 0))
 

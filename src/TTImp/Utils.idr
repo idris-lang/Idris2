@@ -42,7 +42,7 @@ rawImpFromDecl decl = case decl of
     INamespace fc1 ys zs => rawImpFromDecl !zs
     ITransform fc1 y z w => [z, w]
     IRunElabDecl fc1 y => [] -- Not sure about this either
-    IPragma _ f => []
+    IPragma _ _ f => []
     ILog k => []
     IBuiltin _ _ _ => []
   where getParamTy : (a, b, c, RawImp) -> RawImp
@@ -650,6 +650,6 @@ getArgNames defs bound allvars env (NBind fc x (Pi _ _ p ty) sc)
     = do ns <- case p of
                     Explicit => pure [!(getArgName defs x bound allvars !(evalClosure defs ty))]
                     _ => pure []
-         sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
+         sc' <- sc defs (toClosure defaultOpts env (Erased fc Placeholder))
          pure $ ns ++ !(getArgNames defs bound (map (UN . Basic) ns ++ allvars) env sc')
 getArgNames defs bound allvars env val = pure []

@@ -57,3 +57,4 @@ jobs:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IGNORE_GENERATED_FILES: true
+          NATURAL_LANGUAGE_CONFIG_FILE: '.textlintrc.yml'

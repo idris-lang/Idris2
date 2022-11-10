@@ -531,7 +531,7 @@ mutual
                 (catMaybes ds')))
   toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, opts, con, fs) <- toPRecord r
-           pure (Just (PRecord fc "" vis mbtot n ps opts con fs))
+           pure (Just (PRecord fc "" vis mbtot (MkPRecord n ps opts con fs)))
   toPDecl (IFail fc msg ds)
       = do ds' <- traverse toPDecl ds
            pure (Just (PFail fc msg (catMaybes ds')))
@@ -544,7 +544,7 @@ mutual
                                   !(toPTerm startPrec rhs)))
   toPDecl (IRunElabDecl fc tm)
       = pure (Just (PRunElabDecl fc !(toPTerm startPrec tm)))
-  toPDecl (IPragma _ _) = pure Nothing
+  toPDecl (IPragma _ _ _) = pure Nothing
   toPDecl (ILog _) = pure Nothing
   toPDecl (IBuiltin fc type name) = pure $ Just $ PBuiltin fc type name
 
