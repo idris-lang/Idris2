@@ -2088,7 +2088,7 @@ addExtraDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
 addExtraDir dir = update Ctxt { options->dirs->extra_dirs $= (++ [dir]) }
 
 export
-addPackageDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
+addPackageDir: {auto c : Ref Ctxt Defs} -> String -> Core ()
 addPackageDir dir = update Ctxt { options->dirs->package_dirs $= (++ [dir]) }
 
 export

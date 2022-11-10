@@ -14,6 +14,7 @@ data Late : Type -> Type where
 -- Creating late values
 
 ||| Never return
+public export
 never : Late a
 never = Later never
 

@@ -58,15 +58,22 @@ usleep : HasIO io => (usec : Int) -> So (usec >= 0) => io ()
 usleep usec = primIO (prim__usleep usec)
 
 -- Get the number of arguments
+-- Note: node prefixes the list of command line arguments
+--       with the path to the `node` executable. This is
+--       inconsistent with other backends, which only list
+--       the path to the running program. For reasons of
+--       consistency across backends, this first argument ist
+--       dropped on the node backend.
 %foreign "scheme:blodwen-arg-count"
          supportC "idris2_getArgCount"
-         "node:lambda:() => process.argv.length"
+         "node:lambda:() => process.argv.length - 1"
 prim__getArgCount : PrimIO Int
 
--- Get argument number `n`
+-- Get argument number `n`. See also `prim__getArgCount`
+-- about the special treatment of the node backend.
 %foreign "scheme:blodwen-arg"
          supportC "idris2_getArg"
-         "node:lambda:n => process.argv[n]"
+         "node:lambda:n => process.argv[n + 1]"
 prim__getArg : Int -> PrimIO String
 
 ||| Retrieve the arguments to the program call, if there were any.
@@ -181,6 +188,36 @@ namespace Escaped
   covering
   run : HasIO io => (cmd : List String) -> io (String, Int)
   run = run . escapeCmd
+
+||| Run a shell command, allowing processing its stdout line by line.
+|||
+||| Notice that is the line of the command ends with a newline character,
+||| it will be present in the string passed to the processing function.
+|||
+||| This function returns an exit code which value should be consistent with the `run` function.
+export
+covering
+runProcessingOutput : HasIO io => (String -> io ()) -> (cmd : String) -> io Int
+runProcessingOutput pr cmd = do
+  Right f <- popen cmd Read
+    | Left err => pure 1
+  True <- process f
+    | False => pure 1 -- we do not close `f` in case of reading error, like `run` does
+  pclose f
+
+  where
+    process : File -> io Bool
+    process h = if !(fEOF h) then pure True else do
+      Right line <- fGetLine h
+        | Left err => pure False
+      pr line
+      process h
+
+namespace Escaped
+  export
+  covering
+  runProcessingOutput : HasIO io => (String -> io ()) -> (cmd : List String) -> io Int
+  runProcessingOutput pr = runProcessingOutput pr . escapeCmd
 
 %foreign supportC "idris2_time"
          "javascript:lambda:() => Math.floor(new Date().getTime() / 1000)"

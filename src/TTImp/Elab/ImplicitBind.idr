@@ -202,7 +202,9 @@ swapVars (TDelayed fc x tm) = TDelayed fc x (swapVars tm)
 swapVars (TDelay fc x ty tm) = TDelay fc x (swapVars ty) (swapVars tm)
 swapVars (TForce fc r tm) = TForce fc r (swapVars tm)
 swapVars (PrimVal fc c) = PrimVal fc c
-swapVars (Erased fc i) = Erased fc i
+swapVars (Erased fc Impossible) = Erased fc Impossible
+swapVars (Erased fc Placeholder) = Erased fc Placeholder
+swapVars (Erased fc (Dotted t)) = Erased fc $ Dotted (swapVars t)
 swapVars (TType fc u) = TType fc u
 
 -- Push an explicit pi binder as far into a term as it'll go. That is,

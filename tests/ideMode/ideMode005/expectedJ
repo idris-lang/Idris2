@@ -48,7 +48,7 @@
 0000cf(:return (:ok "   n : Nat
 ------------------------------
 prf : [2, 1, 0] = ?a" ((7 3 ((:decor :type))) (49 1 ((:decor :data))) (52 1 ((:decor :data))) (55 1 ((:decor :data))) (58 1 ((:decor :keyword))))) 2)
-0000f6(:return (:ok "   xs : List Nat
+0000fa(:return (:ok "   xs : List Nat
 ------------------------------
-prf2 : map S xs = ?lgjgk" ((8 4 ((:decor :type))) (13 3 ((:decor :type))) (55 3 ((:decor :function))) (59 1 ((:decor :data))) (61 2 ((:decor :bound))) (64 1 ((:decor :keyword))))) 3)
+prf2 : mapImpl S xs = ?lgjgk" ((8 4 ((:decor :type))) (13 3 ((:decor :type))) (55 7 ((:decor :function))) (63 1 ((:decor :data))) (65 2 ((:decor :bound))) (68 1 ((:decor :keyword))))) 3)
 Alas the file is done, aborting

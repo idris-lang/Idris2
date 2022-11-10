@@ -392,6 +392,119 @@ Ord a => Ord (List a) where
             EQ => compare xs ys
             c => c
 
+namespace SnocList
+
+  infixl 7 <><
+  infixr 6 <>>
+
+  ||| 'fish': Action of lists on snoc-lists
+  public export
+  (<><) : SnocList a -> List a -> SnocList a
+  sx <>< [] = sx
+  sx <>< (x :: xs) = sx :< x <>< xs
+
+  ||| 'chips': Action of snoc-lists on lists
+  public export
+  (<>>) : SnocList a -> List a -> List a
+  Lin       <>> xs = xs
+  (sx :< x) <>> xs = sx <>> x :: xs
+
+  public export
+  (++) : (sx, sy : SnocList a) -> SnocList a
+  (++) sx Lin = sx
+  (++) sx (sy :< y) = (sx ++ sy) :< y
+
+  public export
+  length : SnocList a -> Nat
+  length Lin = Z
+  length (sx :< x) = S $ length sx
+
+  ||| Filters a snoc-list according to a simple classifying function
+  public export
+  filter : (a -> Bool) -> SnocList a -> SnocList a
+  filter f [<]     = [<]
+  filter f (xs:<x) = let rest = filter f xs in if f x then rest :< x else rest
+
+  ||| Apply a partial function to the elements of a list, keeping the ones at which
+  ||| it is defined.
+  public export
+  mapMaybe : (a -> Maybe b) -> SnocList a -> SnocList b
+  mapMaybe f [<]       = [<]
+  mapMaybe f (sx :< x) = case f x of
+    Nothing => mapMaybe f sx
+    Just j  => mapMaybe f sx :< j
+
+  ||| Reverse the second snoclist, prepending its elements to the first.
+  public export
+  reverseOnto : SnocList a -> SnocList a -> SnocList a
+  reverseOnto acc Lin       = acc
+  reverseOnto acc (sx :< x) = reverseOnto (acc :< x) sx
+
+  ||| Reverses the given list.
+  public export
+  reverse : SnocList a -> SnocList a
+  reverse = reverseOnto Lin
+
+  ||| Tail-recursive append. Uses of (++) are automatically transformed to
+  ||| this. The only reason this is exported is that the proof of equivalence
+  ||| lives in a different module.
+  public export
+  tailRecAppend : (sx, sy : SnocList a) -> SnocList a
+  tailRecAppend sx sy = reverseOnto sx (reverse sy)
+
+  -- Always use tailRecAppend at runtime. Data.SnocList.tailRecAppendIsAppend
+  -- proves these are equivalent.
+  %transform "tailRecAppendSnocList" SnocList.(++) = SnocList.tailRecAppend
+
+  ||| Returns the first argument plus the length of the second.
+  public export
+  lengthPlus : Nat -> SnocList a -> Nat
+  lengthPlus n Lin       = n
+  lengthPlus n (sx :< _) = lengthPlus (S n) sx
+
+  ||| `length` implementation that uses tail recursion. Exported so
+  ||| lengthTRIsLength can see it.
+  public export
+  lengthTR : SnocList a -> Nat
+  lengthTR = lengthPlus Z
+
+  -- Data.List.lengthTRIsLength proves these are equivalent.
+  %transform "tailRecLengthSnocList" SnocList.length = SnocList.lengthTR
+
+  ||| Utility for implementing `mapMaybeTR`
+  public export
+  mapMaybeAppend : List b -> (a -> Maybe b) -> SnocList a -> SnocList b
+  mapMaybeAppend xs f (sx :< x) = case f x of
+    Just v  => mapMaybeAppend (v :: xs) f sx
+    Nothing => mapMaybeAppend xs f sx
+  mapMaybeAppend xs f Lin       = Lin <>< xs
+
+  ||| Tail recursive version of `mapMaybe`. This is automatically used
+  ||| at runtime due to a `transform` rule.
+  public export %inline
+  mapMaybeTR : (a -> Maybe b) -> SnocList a -> SnocList b
+  mapMaybeTR = mapMaybeAppend []
+
+  -- Data.List.mapMaybeTRIsMapMaybe proves these are equivalent.
+  %transform "tailRecMapMaybeSnocList" SnocList.mapMaybe = SnocList.mapMaybeTR
+
+  ||| Utility for implementing `filterTR`
+  public export
+  filterAppend : List a -> (a -> Bool) -> SnocList a -> SnocList a
+  filterAppend xs f (sx :< x) = case f x of
+    True  => filterAppend (x :: xs) f sx
+    False => filterAppend xs f sx
+  filterAppend xs f Lin       = Lin <>< xs
+
+  ||| Tail recursive version of `filter`. This is automatically used
+  ||| at runtime due to a `transform` rule.
+  public export %inline
+  filterTR : (a -> Bool) -> SnocList a -> SnocList a
+  filterTR = filterAppend []
+
+  -- Data.List.listTRIsList proves these are equivalent.
+  %transform "tailRecFilterSnocList" SnocList.filter = SnocList.filterTR
+
 namespace List
 
   ||| Concatenate one list with another.
@@ -445,7 +558,7 @@ namespace List
 
   -- Always use tailRecAppend at runtime. Data.List.tailRecAppendIsAppend
   -- proves these are equivalent.
-  %transform "tailRecAppend" (++) = tailRecAppend
+  %transform "tailRecAppend" List.(++) = List.tailRecAppend
 
   ||| Returns the first argument plus the length of the second.
   public export
@@ -460,12 +573,65 @@ namespace List
   lengthTR = lengthPlus Z
 
   -- Data.List.lengthTRIsLength proves these are equivalent.
-  %transform "tailRecLength" length = lengthTR
+  %transform "tailRecLength" List.length = List.lengthTR
 
-public export
+  public export
+  mapImpl : (a -> b) -> List a -> List b
+  mapImpl f [] = []
+  mapImpl f (x :: xs) = f x :: mapImpl f xs
+
+  ||| Utility for implementing `mapTR`
+  public export
+  mapAppend : SnocList b -> (a -> b) -> List a -> List b
+  mapAppend sx f (x :: xs) = mapAppend (sx :< f x) f xs
+  mapAppend sx f []        = sx <>> []
+
+  ||| Tail recursive version of `map`. This is automatically used
+  ||| at runtime due to a `transform` rule.
+  public export %inline
+  mapTR : (a -> b) -> List a -> List b
+  mapTR = mapAppend Lin
+
+  -- Data.List.mapTRIsMap proves these are equivalent.
+  %transform "tailRecMap" mapImpl = List.mapTR
+
+  ||| Utility for implementing `mapMaybeTR`
+  public export
+  mapMaybeAppend : SnocList b -> (a -> Maybe b) -> List a -> List b
+  mapMaybeAppend sx f (x :: xs) = case f x of
+    Just v  => mapMaybeAppend (sx :< v) f xs
+    Nothing => mapMaybeAppend sx f xs
+  mapMaybeAppend sx f []        = sx <>> []
+
+  ||| Tail recursive version of `mapMaybe`. This is automatically used
+  ||| at runtime due to a `transform` rule.
+  public export %inline
+  mapMaybeTR : (a -> Maybe b) -> List a -> List b
+  mapMaybeTR = mapMaybeAppend Lin
+
+  -- Data.List.mapMaybeTRIsMapMaybe proves these are equivalent.
+  %transform "tailRecMapMaybe" List.mapMaybe = List.mapMaybeTR
+
+  ||| Utility for implementing `filterTR`
+  public export
+  filterAppend : SnocList a -> (a -> Bool) -> List a -> List a
+  filterAppend sx f (x :: xs) = case f x of
+    True  => filterAppend (sx :< x) f xs
+    False => filterAppend sx f xs
+  filterAppend sx f []        = sx <>> []
+
+  ||| Tail recursive version of `filter`. This is automatically used
+  ||| at runtime due to a `transform` rule.
+  public export %inline
+  filterTR : (a -> Bool) -> List a -> List a
+  filterTR = filterAppend Lin
+
+  -- Data.List.listTRIsList proves these are equivalent.
+  %transform "tailRecFilter" List.filter = List.filterTR
+
+public export %inline
 Functor List where
-  map f [] = []
-  map f (x :: xs) = f x :: map f xs
+  map = mapImpl
 
 public export
 Semigroup (List a) where
@@ -518,48 +684,6 @@ public export
 Traversable List where
   traverse f [] = pure []
   traverse f (x::xs) = [| f x :: traverse f xs |]
-
-namespace SnocList
-
-  infixl 7 <><
-  infixr 6 <>>
-
-  ||| 'fish': Action of lists on snoc-lists
-  public export
-  (<><) : SnocList a -> List a -> SnocList a
-  sx <>< [] = sx
-  sx <>< (x :: xs) = sx :< x <>< xs
-
-  ||| 'chips': Action of snoc-lists on lists
-  public export
-  (<>>) : SnocList a -> List a -> List a
-  Lin       <>> xs = xs
-  (sx :< x) <>> xs = sx <>> x :: xs
-
-  public export
-  (++) : (sx, sy : SnocList a) -> SnocList a
-  (++) sx Lin = sx
-  (++) sx (sy :< y) = (sx ++ sy) :< y
-
-  public export
-  length : SnocList a -> Nat
-  length Lin = Z
-  length (sx :< x) = S $ length sx
-
-  ||| Filters a snoc-list according to a simple classifying function
-  public export
-  filter : (a -> Bool) -> SnocList a -> SnocList a
-  filter f [<]     = [<]
-  filter f (xs:<x) = let rest = filter f xs in if f x then rest :< x else rest
-
-  ||| Apply a partial function to the elements of a list, keeping the ones at which
-  ||| it is defined.
-  public export
-  mapMaybe : (a -> Maybe b) -> SnocList a -> SnocList b
-  mapMaybe f [<]       = [<]
-  mapMaybe f (sx :< x) = case f x of
-    Nothing => mapMaybe f sx
-    Just j  => mapMaybe f sx :< j
 
 public export
 Eq a => Eq (SnocList a) where

@@ -1,11 +1,11 @@
 [ ] Change version number (MAJOR, MINOR, PATCH) in Makefile
 [ ] Change version numbers in doc listings
-[ ] Change version numbers in prelude, base, contrib, network, and test ipkgs
+[ ] Change version numbers in prelude, base, contrib, linear, network, papers, and test ipkgs
 [ ] Change version number in idris2api.ipkg
 [ ] Change version number in flake.nix
 [ ] Change version number in test pkg010 (TODO: make this step unnecessary!)
 [ ] Make sure INSTALL.md gives the correct minimum Idris version
-[ ] Update bootstrap chez and racket
+[ ] Update bootstrap chez and racket (built with new version)
 [ ] Remove __collect_safe from generated chez (to avoid need for chez >9.5)
 [ ] Tag on github with version number (in the form vX.Y.Z)
 [ ] make libdocs and upload to idris-lang.org

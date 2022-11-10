@@ -31,7 +31,10 @@ registerDot rig env fc reason wantedTm gexpty
          expty <- getTerm gexpty
          metaval <- metaVar fc rig env nm expty
          addDot fc env nm wantedTm reason metaval
-         pure (metaval, gexpty)
+         let tm = case reason of
+                    UserDotted => Erased fc (Dotted metaval)
+                    _ => metaval
+         pure (tm, gexpty)
 
 export
 checkDot : {vars : _} ->

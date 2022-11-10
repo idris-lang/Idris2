@@ -1,5 +1,5 @@
 package base
-version = 0.5.1
+version = 0.6.0
 
 opts = "--ignore-missing-ipkg -Wno-shadowing"
 
@@ -85,7 +85,11 @@ modules = Control.App,
 
           Debug.Trace,
 
+          Deriving.Common,
+          Deriving.Foldable,
           Deriving.Functor,
+          Deriving.Show,
+          Deriving.Traversable,
 
           Decidable.Decidable,
           Decidable.Equality,

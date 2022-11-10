@@ -106,7 +106,7 @@ mutual
       = ITransform fc n (map f lhs) (map f rhs)
     map f (IRunElabDecl fc t)
       = IRunElabDecl fc (map f t)
-    map f (IPragma xs k) = IPragma xs k
+    map f (IPragma fc xs k) = IPragma fc xs k
     map f (ILog x) = ILog x
     map f (IBuiltin fc ty n) = IBuiltin fc ty n
 
@@ -145,9 +145,9 @@ mutual
 
   export
   Functor ImpRecord' where
-    map f (MkImpRecord fc n params conName fields)
+    map f (MkImpRecord fc n params opts conName fields)
       = MkImpRecord fc n (map (map {f = ImpParameter'} f) params)
-                    conName (map (map f) fields)
+                    opts conName (map (map f) fields)
 
   export
   Functor ImpParameter' where

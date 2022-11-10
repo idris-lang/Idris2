@@ -330,6 +330,8 @@ displayIDEResult outf i  (REPL $ REPLError err)
   = printIDEError outf i err
 displayIDEResult outf i  (REPL RequestedHelp  )
   = printIDEResult outf i $ AString displayHelp
+displayIDEResult outf i  (REPL $ RequestedDetails details)
+  = printIDEResult outf i $ AString details
 displayIDEResult outf i  (REPL $ Evaluated x Nothing)
   = printIDEResultWithHighlight outf i
   $ mapFst AString

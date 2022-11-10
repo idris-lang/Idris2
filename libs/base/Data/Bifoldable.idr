@@ -14,12 +14,6 @@ bifoldlM f g a0 = bifoldl (\ma,b => ma >>= flip f b)
                           (\ma,c => ma >>= flip g c)
                           (pure a0)
 
-||| Combines the elements of a structure,
-||| given ways of mapping them to a common monoid.
-public export
-bifoldMap : Monoid m => Bifoldable p => (a -> m) -> (b -> m) -> p a b -> m
-bifoldMap f g = bifoldr ((<+>) . f) ((<+>) . g) neutral
-
 ||| Combines the elements of a structure using a monoid.
 public export
 biconcat : Monoid m => Bifoldable p => p m m -> m

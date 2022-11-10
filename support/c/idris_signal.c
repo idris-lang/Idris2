@@ -13,19 +13,21 @@
 #include "idris_util.h"
 
 static_assert(ATOMIC_LONG_LOCK_FREE == 2,
-  "when not lock free, atomic functions are not async-signal-safe");
+              "when not lock free, atomic functions are not async-signal-safe");
 
 #define N_SIGNALS 32
 static atomic_uint_fast32_t signals;
 
 void _collect_signal(int signum) {
-  IDRIS2_VERIFY(signum >= 0 && signum < N_SIGNALS, "signal number out of range: %d", signum);
+  IDRIS2_VERIFY(signum >= 0 && signum < N_SIGNALS,
+                "signal number out of range: %d", signum);
 
-  atomic_fetch_or(&signals, (uint32_t) 1 << signum);
+  atomic_fetch_or(&signals, (uint32_t)1 << signum);
 
 #ifdef _WIN32
-  //re-instate signal handler
-  IDRIS2_VERIFY(signal(signum, _collect_signal) != SIG_ERR, "signal failed: %s", strerror(errno));
+  // re-instate signal handler
+  IDRIS2_VERIFY(signal(signum, _collect_signal) != SIG_ERR, "signal failed: %s",
+                strerror(errno));
 #endif
 }
 
@@ -34,7 +36,7 @@ static inline struct sigaction _simple_handler(void (*handler)(int)) {
   struct sigaction new_action;
 
   new_action.sa_handler = handler;
-  sigemptyset (&new_action.sa_mask);
+  sigemptyset(&new_action.sa_mask);
   new_action.sa_flags = 0;
 
   return new_action;
@@ -74,7 +76,7 @@ int handle_next_collected_signal() {
     return -1;
   }
   for (uint32_t signum = 0; signum != N_SIGNALS; ++signum) {
-    uint32_t mask = (uint32_t) 1 << signum;
+    uint32_t mask = (uint32_t)1 << signum;
     if ((signals_snapshot & mask) != 0) {
       atomic_fetch_and(&signals, ~mask);
       return signum;
@@ -83,9 +85,7 @@ int handle_next_collected_signal() {
   abort();
 }
 
-int raise_signal(int signum) {
-  return raise(signum);
-}
+int raise_signal(int signum) { return raise(signum); }
 
 int send_signal(int pid, int signum) {
 #ifdef _WIN32
@@ -104,13 +104,9 @@ int sighup() {
 #endif
 }
 
-int sigint() {
-  return SIGINT;
-}
+int sigint() { return SIGINT; }
 
-int sigabrt() {
-  return SIGABRT;
-}
+int sigabrt() { return SIGABRT; }
 
 int sigquit() {
 #ifdef _WIN32
@@ -120,13 +116,9 @@ int sigquit() {
 #endif
 }
 
-int sigill() {
-  return SIGILL;
-}
+int sigill() { return SIGILL; }
 
-int sigsegv() {
-  return SIGSEGV;
-}
+int sigsegv() { return SIGSEGV; }
 
 int sigtrap() {
 #ifdef _WIN32
@@ -136,9 +128,7 @@ int sigtrap() {
 #endif
 }
 
-int sigfpe() {
-  return SIGFPE;
-}
+int sigfpe() { return SIGFPE; }
 
 int sigusr1() {
 #ifdef _WIN32
@@ -155,4 +145,3 @@ int sigusr2() {
   return SIGUSR2;
 #endif
 }
-

@@ -1,0 +1,12 @@
+###################################
+###################################
+## Natural language Linter rules ##
+###################################
+###################################
+
+rules:
+  # https://github.com/sapegin/textlint-rule-terminology
+  terminology:
+    # AST: https://github.com/textlint/textlint/blob/master/docs/txtnode.md
+    skip: ["BlockQuote", "Link", "Code", "CodeBlock"]
+

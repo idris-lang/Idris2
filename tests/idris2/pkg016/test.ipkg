@@ -1,0 +1,6 @@
+package test
+sourcedir = "src"
+modules = Test
+depends = baz
+main = Test
+executable = test

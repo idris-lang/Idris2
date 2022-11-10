@@ -41,7 +41,7 @@ mutual
                   SNF vars
        SForce   : FC -> LazyReason -> SNF vars -> SNF vars
        SPrimVal : FC -> Constant -> SNF vars
-       SErased  : FC -> (imp : Bool) -> SNF vars
+       SErased  : FC -> WhyErased (SNF vars) -> SNF vars
        SType    : FC -> Name -> SNF vars
 
 getAllNames : {auto c : Ref Ctxt Defs} ->
@@ -100,10 +100,10 @@ seval mode env tm
              pure (bind, Free ("free-" ++ show i) :: vs)
 
 invalid : Core (Term vs)
-invalid = pure (Erased emptyFC False)
+invalid = pure (Erased emptyFC Placeholder)
 
 invalidS : Core (SNF vs)
-invalidS = pure (SErased emptyFC False)
+invalidS = pure (SErased emptyFC Placeholder)
 
 getArgList : ForeignObj -> List ForeignObj
 getArgList obj
@@ -206,9 +206,7 @@ mutual
            pure (TForce fc r tm)
   quoteVector svs (-6) [_, fc_in, imp_in] -- Erased
       = do let fc = quoteFC fc_in
-           let imp = case fromScheme (decodeObj imp_in) of
-                          Just imp => imp
-                          _ => False
+           imp <- quoteWhyErased (quote' svs) imp_in
            pure (Erased fc imp)
   quoteVector svs (-7) [_, fc_in, u_in] -- Type
       = do let fc = quoteFC fc_in
@@ -292,6 +290,19 @@ mutual
                            pure (DefImplicit t')
            else pure Explicit
 
+  quoteWhyErased : (ForeignObj -> Core a) ->
+                   ForeignObj ->
+                   Core (WhyErased a)
+  quoteWhyErased qt obj
+      = if isInteger obj
+           then case unsafeGetInteger obj of
+                     0 => pure Impossible
+                     _ => pure Placeholder
+           else if isBox obj
+                   then do t' <- qt (unsafeUnbox obj)
+                           pure (Dotted t')
+           else pure Placeholder
+
   quoteBinder : Ref Sym Integer =>
                 Ref Ctxt Defs =>
                 SchVars (outer ++ vars) ->
@@ -343,7 +354,7 @@ mutual
                                 (unsafeVectorToList obj)
         else if isProcedure obj then quoteBinder svs Lam obj top
                                               Explicit
-                                              (Erased emptyFC False)
+                                              (Erased emptyFC Placeholder)
                                               (UN (Basic "x"))
         else if isSymbol obj then pure $ findName svs (unsafeReadSymbol obj)
         else if isFloat obj then pure $ PrimVal emptyFC (Db (unsafeGetFloat obj))
@@ -435,9 +446,7 @@ mutual
            pure (SForce fc r tm)
   snfVector svs (-6) [_, fc_in, imp_in] -- Erased
       = do let fc = quoteFC fc_in
-           let imp = case fromScheme (decodeObj imp_in) of
-                          Just imp => imp
-                          _ => False
+           imp <- quoteWhyErased (snf' svs) imp_in
            pure (SErased fc imp)
   snfVector svs (-7) [_, fc_in, u_in] -- Type
       = do let fc = quoteFC fc_in
@@ -564,7 +573,7 @@ mutual
                               (unsafeVectorToList obj)
            else if isProcedure obj then snfBinder svs Lam obj top
                                                  Explicit
-                                                 (SErased emptyFC False)
+                                                 (SErased emptyFC Placeholder)
                                                  (UN (Basic "x"))
            else if isSymbol obj then pure $ findName svs (unsafeReadSymbol obj)
            else if isFloat obj then pure $ SPrimVal emptyFC (Db (unsafeGetFloat obj))

@@ -5,6 +5,7 @@ import Core.Context
 import Core.Context.Log
 import Core.Primitives
 import Core.Value
+import Core.Name
 import Data.List
 import Data.Vect
 
@@ -17,15 +18,10 @@ findConstAlt c (MkConstAlt c' exp :: alts) def = if c == c'
 
 foldableOp : PrimFn ar -> Bool
 foldableOp BelieveMe = False
-foldableOp (Cast from to)
-  = fromMaybe False [| intKind from `smaller` intKind to |]
-  where
-    smaller : IntKind -> IntKind -> Bool
-    smaller (Signed x) (Signed y) = x <= y
-    smaller (Unsigned x) (Unsigned y) = x <= y
-    smaller (Signed x) (Unsigned y) = x < P y
-    smaller (Unsigned x) (Signed y) = P x < y
-foldableOp _ = True
+foldableOp (Cast IntType _) = False
+foldableOp (Cast _ IntType) = False
+foldableOp (Cast from to)   = isJust (intKind from) && isJust (intKind to)
+foldableOp _                = True
 
 
 data Subst : List Name -> List Name -> Type where
@@ -92,6 +88,13 @@ constFold rho (CLet fc x inlineOK y z) =
             then constFold (val :: rho) z
             else CLet fc x inlineOK val (constFold (wk (mkSizeOf [x]) rho) z)
         _ => CLet fc x inlineOK val (constFold (wk (mkSizeOf [x]) rho) z)
+constFold rho (CApp fc (CRef fc2 n) [x]) =
+  if n == NS typesNS (UN $ Basic "prim__integerToNat")
+     then case constFold rho x of
+            CPrimVal fc3 (BI v) =>
+              if v >= 0 then CPrimVal fc3 (BI v) else CPrimVal fc3 (BI 0)
+            v                   => CApp fc (CRef fc2 n) [v]
+     else CApp fc (CRef fc2 n) [constFold rho x]
 constFold rho (CApp fc x xs) = CApp fc (constFold rho x) (constFold rho <$> xs)
 constFold rho (CCon fc x y tag xs) = CCon fc x y tag $ constFold rho <$> xs
 constFold rho (COp {arity} fc fn xs) =

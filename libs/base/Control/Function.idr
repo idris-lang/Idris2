@@ -36,7 +36,7 @@ public export
 ||| This is more strict than injectivity on each of arguments.
 ||| For instance, list appending is injective on both arguments but is not biinjective.
 public export
-interface Biinjective (f : a -> b -> c) | f where
+interface Biinjective (0 f : a -> b -> c) | f where
   constructor MkBiinjective
   biinjective : {x, y : a} -> {v, w : b} -> f x v = f y w -> (x = y, v = w)
 

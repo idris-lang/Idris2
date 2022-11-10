@@ -56,8 +56,8 @@ parameters (f : RawImp' nm -> RawImp' nm)
 
   export
   mapImpRecord : ImpRecord' nm -> ImpRecord' nm
-  mapImpRecord (MkImpRecord fc n params conName fields)
-    = MkImpRecord fc n (map (map $ map $ bimap mapPiInfo mapTTImp) params) conName (map mapIField fields)
+  mapImpRecord (MkImpRecord fc n params opts conName fields)
+    = MkImpRecord fc n (map (map $ map $ bimap mapPiInfo mapTTImp) params) opts conName (map mapIField fields)
 
   export
   mapImpDecl : ImpDecl' nm -> ImpDecl' nm
@@ -71,7 +71,7 @@ parameters (f : RawImp' nm -> RawImp' nm)
   mapImpDecl (INamespace fc mi xs) = INamespace fc mi (assert_total $ map mapImpDecl xs)
   mapImpDecl (ITransform fc n t u) = ITransform fc n (mapTTImp t) (mapTTImp u)
   mapImpDecl (IRunElabDecl fc t) = IRunElabDecl fc (mapTTImp t)
-  mapImpDecl (IPragma ns g) = IPragma ns g
+  mapImpDecl (IPragma fc ns g) = IPragma fc ns g
   mapImpDecl (ILog x) = ILog x
   mapImpDecl (IBuiltin fc x n) = IBuiltin fc x n
 

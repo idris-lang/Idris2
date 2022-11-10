@@ -44,6 +44,7 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic061", "basic062", "basic063", "basic064", "basic065",
        "basic066", "basic067", "basic068",
        "idiom001",
+       "dotted001",
        "rewrite001",
        "interpolation001", "interpolation002", "interpolation003",
        "interpolation004"]
@@ -69,7 +70,7 @@ idrisTestsTermination = MkTestPool "Termination checking" [] Nothing
 idrisTestsCasetree : TestPool
 idrisTestsCasetree = MkTestPool "Case tree building" [] Nothing
        -- Case tree building
-      ["casetree001", "casetree002"]
+      ["casetree001", "casetree002", "casetree003"]
 
 idrisTestsWarning : TestPool
 idrisTestsWarning = MkTestPool "Warnings" [] Nothing
@@ -87,12 +88,12 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
        "error006", "error007", "error008", "error009", "error010",
        "error011", "error012", "error013", "error014", "error015",
        "error016", "error017", "error018", "error019", "error020",
-       "error021", "error022", "error023",
+       "error021", "error022", "error023", "error024",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006", "perror007", "perror008", "perror009", "perror010",
        "perror011", "perror012", "perror013", "perror014", "perror015",
-       "perror016"]
+       "perror016", "perror017", "perror018", "perror019"]
 
 idrisTestsInteractive : TestPool
 idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
@@ -108,7 +109,8 @@ idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
        "interactive033", "interactive034", "interactive035", "interactive036",
        "interactive037", "interactive038", "interactive039", "interactive040",
        "interactive041", "interactive042", "interactive043", "interactive044",
-       "interactive045"]
+       "interactive045", "interactive046"
+       ]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool "Interface" [] Nothing
@@ -119,7 +121,8 @@ idrisTestsInterface = MkTestPool "Interface" [] Nothing
        "interface013", "interface014", "interface015", "interface016",
        "interface017", "interface018", "interface019", "interface020",
        "interface021", "interface022", "interface023", "interface024",
-       "interface025", "interface026", "interface027", "interface028"]
+       "interface025", "interface026", "interface027", "interface028",
+       "interface029"]
 
 idrisTestsLinear : TestPool
 idrisTestsLinear = MkTestPool "Quantities" [] Nothing
@@ -166,7 +169,7 @@ idrisTestsData = MkTestPool "Data and record types" [] Nothing
        "record001", "record002", "record003", "record004", "record005",
        "record006", "record007", "record008", "record009", "record010",
        "record011", "record012", "record013", "record014", "record015",
-       "record016" ]
+       "record016", "record017", "record018" ]
 
 idrisTestsBuiltin : TestPool
 idrisTestsBuiltin = MkTestPool "Builtin types and functions" [] Nothing
@@ -183,11 +186,18 @@ idrisTestsEvaluator = MkTestPool "Evaluation" [] Nothing
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
        "interpreter005", "interpreter006", "interpreter007", "interpreter008"]
 
+idrisTestsREPL : TestPool
+idrisTestsREPL = MkTestPool "REPL commands and help" [] Nothing
+      [ "repl001", "repl002", "repl003", "repl004", "repl005"
+      ]
+
 idrisTestsAllSchemes : Requirement -> TestPool
 idrisTestsAllSchemes cg = MkTestPool
       ("Test across all scheme backends: " ++ show cg ++ " instance")
       [] (Just cg)
       [ "scheme001"
+      , "channels001", "channels002", "channels003", "channels004", "channels005"
+      , "channels006"
       ]
 
 idrisTestsAllBackends : Requirement -> TestPool
@@ -229,8 +239,7 @@ idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
        "reflection005", "reflection006", "reflection007", "reflection008",
        "reflection009", "reflection010", "reflection011", "reflection012",
        "reflection013", "reflection014", "reflection015", "reflection016",
-       "reflection017"
-      ]
+       "reflection017"]
 
 idrisTestsWith : TestPool
 idrisTestsWith = MkTestPool "With abstraction" [] Nothing
@@ -242,7 +251,7 @@ idrisTestsIPKG : TestPool
 idrisTestsIPKG = MkTestPool "Package and .ipkg files" [] Nothing
       ["pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
        "pkg008", "pkg009", "pkg010", "pkg011", "pkg012", "pkg013", "pkg014",
-       "pkg015"]
+       "pkg015", "pkg016" ]
 
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
@@ -252,7 +261,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "eta001",
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005", "import006",
-       "import007",
+       "import007", "import008",
        -- Implicit laziness, lazy evaluation
        "lazy001", "lazy002",
        -- Namespace blocks
@@ -292,14 +301,15 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "futures001"
     , "bitops"
     , "casts"
+    , "constfold"
     , "memo"
     , "newints"
     , "integers"
+    , "nat2fin"
     , "semaphores001"
     , "semaphores002"
     , "perf001"
     , "reg001"
-    , "channels001", "channels002", "channels003", "channels004", "channels005"
     ]
 
 refcTests : IO TestPool
@@ -390,6 +400,7 @@ main = runner $
   , testPaths "idris2" idrisTestsData
   , testPaths "idris2" idrisTestsBuiltin
   , testPaths "idris2" idrisTestsEvaluator
+  , testPaths "idris2" idrisTestsREPL
   , testPaths "idris2" idrisTestsTotality
   , testPaths "idris2" idrisTestsSchemeEval
   , testPaths "idris2" idrisTestsReflection

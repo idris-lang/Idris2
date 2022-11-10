@@ -19,20 +19,6 @@ import public Deriving.Common
 %language ElabReflection
 %default total
 
-freshName : List Name -> String -> String
-freshName ns a = assert_total $ go (basicNames ns) Nothing where
-
-  basicNames : List Name -> List String
-  basicNames = mapMaybe $ \ nm => case dropNS nm of
-    UN (Basic str) => Just str
-    _ => Nothing
-
-  covering
-  go : List String -> Maybe Nat -> String
-  go ns mi =
-    let nm = a ++ maybe "" show mi in
-    ifThenElse (nm `elem` ns) (go ns (Just $ maybe 0 S mi)) nm
-
 ------------------------------------------------------------------------------
 -- Errors
 
@@ -146,7 +132,7 @@ parameters
   {auto error : MonadError Error m}
   {auto cs : MonadState Parameters m}
   (t : Name)
-  (ps : List Name)
+  (ps : List (Name, Nat))
   (x : Name)
 
   ||| When analysing the type of a constructor for the type family t,
@@ -192,7 +178,7 @@ parameters
             Negative => throwError (NegativeOccurrence t (IApp fc f arg))
           No diff => case !(hasImplementation Functor f) of
             Just prf => pure (Left (FIFun isFO prf sp))
-            Nothing => case hd `elemPos` ps of
+            Nothing => case lookup hd ps of
               Just n => do
                 -- record that the nth parameter should be functorial
                 ns <- gets asFunctors
@@ -236,7 +222,7 @@ parameters
           Nothing => do
             let Just (MkAppView (_, hd) ts prf) = appView f
                | _ => throwError (NotAnApplication f)
-            case hd `elemPos` ps of
+            case lookup hd ps of
               Just n => do
                 -- record that the nth parameter should be bifunctorial
                 ns <- gets asBifunctors
@@ -324,32 +310,6 @@ parameters (fc : FC) (mutualWith : List Name)
 ------------------------------------------------------------------------------
 -- User-facing: Functor deriving
 
-record ConstructorView where
-  constructor MkConstructorView
-  params      : List Name
-  functorPara : Name
-  conArgTypes : List (Argument TTImp)
-
-constructorView : TTImp -> Maybe ConstructorView
-constructorView (IPi fc rig pinfo x a b) = do
-  let Just arg = fromPiInfo fc pinfo x a
-    | Nothing => constructorView b -- this better be a boring argument...
-  let True = rig /= M1
-    | False => constructorView b -- this better be another boring argument...
-  { conArgTypes $= (arg ::) } <$> constructorView b
-constructorView (IApp _ f (IVar _ a)) = do
-  MkAppView _ ts _ <- appView f
-  let ps = flip mapMaybe ts $ \ t => the (Maybe Name) $ case t of
-             Arg _ (IVar _ nm) => Just nm
-             _ => Nothing
-  pure (MkConstructorView (ps <>> []) a [])
-constructorView _ = Nothing
-
-cleanup : TTImp -> TTImp
-cleanup = \case
-  IVar fc n => IVar fc (dropNS n)
-  t => t
-
 namespace Functor
 
   derive' : (Elaboration m, MonadError Error m) =>
@@ -385,17 +345,18 @@ namespace Functor
     (ns, cls) <- runStateT {m = m} initParameters $ for cs $ \ (cName, ty) =>
       withError (WhenCheckingConstructor cName) $ do
         -- Grab the types of the constructor's explicit arguments
-        let Just (MkConstructorView paras para args) = constructorView ty
+        let Just (MkConstructorView (paraz :< (para, _)) args) = constructorView ty
               | _ => throwError ConfusingReturnType
+        let paras = paraz <>> []
         logMsg "derive.functor.clauses" 10 $
-          "\{showPrefix True (dropNS cName)} (\{joinBy ", " (map (showPrec Dollar . mapTTImp cleanup . unArg) args)})"
+          "\{showPrefix True (dropNS cName)} (\{joinBy ", " (map (showPrec Dollar . mapTTImp cleanup . unArg . snd) args)})"
         let vars = map (map (IVar fc . un . ("x" ++) . show . (`minus` 1)))
-                 $ zipWith (<$) [1..length args] args
+                 $ zipWith (<$) [1..length args] (map snd args)
 
         -- only keep the arguments that are either:
         --  1. modified by map
         --  2. explicit
-        recs <- for (zip vars args) $ \ (v, arg) => do
+        recs <- for (zip vars args) $ \ (v, (rig, arg)) => do
                   res <- withError (WhenCheckingArg (mapTTImp cleanup $ unArg arg)) $
                            typeView {pol = Positive} f paras para (unArg arg)
                   pure $ case res of
@@ -416,6 +377,11 @@ namespace Functor
     let b = un $ freshName paramNames "b"
     let va = IVar fc a
     let vb = IVar fc b
+    logMsg "derive.functor.parameters" 20 $ unlines
+      [ "Functors: \{show ns.asFunctors}"
+      , "Bifunctors: \{show ns.asBifunctors}"
+      , "Parameters: \{show (map (mapFst unArg) params)}"
+      ]
     let ty = MkTy fc fc mapName $ withParams fc (paramConstraints ns) params
            $ IPi fc M0 ImplicitArg (Just a) (IType fc)
            $ IPi fc M0 ImplicitArg (Just b) (IType fc)

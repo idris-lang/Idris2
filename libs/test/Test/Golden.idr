@@ -64,7 +64,7 @@
 |||   [--failure-file PATH]
 |||   [--threads N]
 |||   [--cg CODEGEN]
-|||   [--only [NAMES]]
+|||   [[--only|--except] [NAMES]]
 |||```
 |||
 ||| assuming that the test runner is compiled to an executable named `runtests`.
@@ -78,6 +78,7 @@ import Data.Maybe
 import Data.List
 import Data.List1
 import Data.String
+import Data.String.Extra
 
 import System
 import System.Clock
@@ -98,7 +99,7 @@ record Options where
   ||| Which codegen should we use?
   codegen      : Maybe String
   ||| Should we only run some specific cases?
-  onlyNames    : List String
+  onlyNames    : Maybe (String -> Bool)
   ||| Should we run the test suite interactively?
   interactive  : Bool
   ||| Should we use colors?
@@ -115,7 +116,7 @@ initOptions : String -> Bool -> Options
 initOptions exe color
   = MkOptions exe
               Nothing
-              []
+              Nothing
               False
               color
               False
@@ -134,7 +135,7 @@ usage = unwords
   , "[--threads N]"
   , "[--failure-file PATH]"
   , "[--only-file PATH]"
-  , "[--only [NAMES]]"
+  , "[[--only|--except] [NAMES]]"
   ]
 
 export
@@ -142,6 +143,21 @@ fail : String -> IO a
 fail err
     = do putStrLn err
          exitWith (ExitFailure 1)
+
+optionsTestsFilter : List String -> List String -> Maybe (String -> Bool)
+optionsTestsFilter [] [] = Nothing
+optionsTestsFilter only except = Just $ \ name =>
+  let onlyCheck = null only || any (`isInfixOf` name) only in
+  let exceptCheck = all (not . (`isInfixOf` name)) except in
+  onlyCheck && exceptCheck
+
+record Acc where
+  constructor MkAcc
+  onlyFile : Maybe String
+  onlyNames : List String
+  exceptNames : List String
+initAcc : Acc
+initAcc = MkAcc Nothing [] []
 
 ||| Process the command line options.
 export
@@ -152,33 +168,48 @@ options args = case args of
 
   where
 
-    go : List String -> Maybe String -> Options -> Maybe (Maybe String, Options)
-    go rest only opts = case rest of
-      []                            => pure (only, opts)
-      ("--timing" :: xs)            => go xs only ({ timing := True} opts)
-      ("--interactive" :: xs)       => go xs only ({ interactive := True } opts)
-      ("--color"  :: xs)            => go xs only ({ color := True } opts)
-      ("--colour" :: xs)            => go xs only ({ color := True } opts)
-      ("--no-color"  :: xs)         => go xs only ({ color := False } opts)
-      ("--no-colour" :: xs)         => go xs only ({ color := False } opts)
-      ("--cg" :: cg :: xs)          => go xs only ({ codegen := Just cg } opts)
+    isFlag : String -> Bool
+    isFlag str = "--" `isPrefixOf` str
+
+    go : List String -> Acc -> Options -> Maybe (Acc, Options)
+    go rest acc opts = case rest of
+      []                            => pure (acc, opts)
+      ("--timing" :: xs)            => go xs acc ({ timing := True} opts)
+      ("--interactive" :: xs)       => go xs acc ({ interactive := True } opts)
+      ("--color"  :: xs)            => go xs acc ({ color := True } opts)
+      ("--colour" :: xs)            => go xs acc ({ color := True } opts)
+      ("--no-color"  :: xs)         => go xs acc ({ color := False } opts)
+      ("--no-colour" :: xs)         => go xs acc ({ color := False } opts)
+      ("--cg" :: cg :: xs)          => go xs acc ({ codegen := Just cg } opts)
       ("--threads" :: n :: xs)      => do let pos : Nat = !(parsePositive n)
-                                          go xs only ({ threads := pos } opts)
-      ("--failure-file" :: p :: xs) => go  xs only ({ failureFile := Just p } opts)
-      ("--only" :: xs)              => pure (only, { onlyNames := xs } opts)
-      ("--only-file" :: p :: xs)    => go xs (Just p) opts
+                                          go xs acc ({ threads := pos } opts)
+      ("--failure-file" :: p :: xs) => go  xs acc ({ failureFile := Just p } opts)
+      ("--only" :: p :: xs)         =>
+        ifThenElse (isFlag p)
+          (go (p :: xs) acc opts)
+          (go xs ({ onlyNames $= (words p ++) } acc) opts)
+      ("--except" :: p :: xs)       =>
+        ifThenElse (isFlag p)
+          (go (p :: xs) acc opts)
+          (go xs ({ exceptNames $= (words p ++) } acc) opts)
+      ("--only-file" :: p :: xs)    => go xs ({ onlyFile := Just p } acc) opts
+      [p] => do guard (p `elem` ["--only", "--except"])
+                pure (acc, opts)
+                -- ^ we accept trailing only or except flags as unused (do not filter out any tests)
+                -- for the convenience of populating these options from shell scripts.
       _ => Nothing
 
     mkOptions : String -> List String -> IO (Maybe Options)
     mkOptions exe rest
       = do color <- (Just "DUMB" /=) <$> getEnv "TERM"
-           let Just (mfp, opts) = go rest Nothing (initOptions exe color)
+           let Just (acc, opts) = go rest initAcc (initOptions exe color)
                  | Nothing => pure Nothing
-           let Just fp = mfp
-                 | Nothing => pure (Just opts)
-           Right only <- readFile fp
-             | Left err => fail (show err)
-           pure $ Just $ { onlyNames $= ((lines only) ++) } opts
+           extraOnlyNames <- the (IO (List String)) $ case acc.onlyFile of
+                               Nothing => pure []
+                               Just fp => do Right only <- readFile fp
+                                               | Left err => fail (show err)
+                                             pure (lines only)
+           pure $ Just $ { onlyNames := optionsTestsFilter (extraOnlyNames ++ acc.onlyNames) acc.exceptNames } opts
 
 ||| Normalise strings between different OS.
 |||
@@ -281,11 +312,14 @@ runTest opts testPath = do
     printTiming False _     path msg = putStrLn $ concat [path, ": ", msg]
     printTiming True  clock path msg =
       let time  = showTime 2 3 clock
+          width = 72
           -- We use 9 instead of `String.length msg` because:
           -- 1. ": success" and ": FAILURE" have the same length
           -- 2. ANSI escape codes make the msg look longer than it is
-          spent = String.length time + String.length path + 9
-          pad   = pack $ replicate (minus 72 spent) ' '
+          msgl  = 9
+          path  = leftEllipsis (width `minus` (1 + msgl + length time)) "(...)" path
+          spent = length time + length path + msgl
+          pad   = pack $ replicate (width `minus` spent) ' '
       in putStrLn $ concat [path, ": ", msg, pad, time]
 
 ||| Find the first occurrence of an executable on `PATH`.
@@ -423,8 +457,8 @@ testsInDir dirName testNameFilter poolName reqs cg = do
 export
 filterTests : Options -> List String -> List String
 filterTests opts = case onlyNames opts of
-  [] => id
-  xs => filter (\ name => any (`isInfixOf` name) xs)
+  Nothing => id
+  Just f  => filter f
 
 ||| The summary of a test pool run
 public export
@@ -592,18 +626,15 @@ poolRunner opts pool
        ++ msgs
        ++ [ separator ]
 
-||| A runner for a whole test suite
 export
-runner : List TestPool -> IO ()
-runner tests
-    = do args <- getArgs
-         Just opts <- options args
-            | _ => do printLn args
-                      putStrLn usage
+runnerWith : Options -> List TestPool -> IO ()
+runnerWith opts tests = do
+
          -- if no CG has been set, find a sensible default based on what is available
          opts <- case codegen opts of
                    Nothing => pure $ { codegen := !findCG } opts
                    Just _ => pure opts
+
          -- run the tests
          res <- concat <$> traverse (poolRunner opts) tests
 
@@ -628,3 +659,13 @@ runner tests
          if nfail == 0
            then exitWith ExitSuccess
            else exitWith (ExitFailure 1)
+
+||| A runner for a whole test suite
+export
+runner : List TestPool -> IO ()
+runner tests
+    = do args <- getArgs
+         Just opts <- options args
+            | _ => do printLn args
+                      putStrLn usage
+         runnerWith opts tests

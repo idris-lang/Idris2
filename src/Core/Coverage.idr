@@ -397,6 +397,8 @@ match (TDelayed _ _ t) (TDelayed _ _ t') = match t t'
 match (TDelay _ _ _ t) (TDelay _ _ _ t') = match t t'
 match (TForce _ _ t) (TForce _ _ t') = match t t'
 match (PrimVal _ c) (PrimVal _ c') = c == c'
+match (Erased _ (Dotted t)) u = match t u
+match t (Erased _ (Dotted u)) = match t u
 match (Erased _ _) _ = True
 match _ (Erased _ _) = True
 match (TType _ _) (TType _ _) = True
@@ -424,7 +426,7 @@ eraseApps {vs} tm
     dropPos fc i ns [] = []
     dropPos fc i ns (x :: xs)
         = if i `elem` ns
-             then Erased fc False :: dropPos fc (S i) ns xs
+             then Erased fc Placeholder :: dropPos fc (S i) ns xs
              else x :: dropPos fc (S i) ns xs
 
 -- if tm would be matched by trylhs, then it's not an impossible case

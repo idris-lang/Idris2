@@ -8,7 +8,7 @@ Data.String.singleton : Char -> String
 Prelude.Show.show : Char -> String
 Prelude.Cast.cast : Char -> String
 Main> Prelude.const : a -> b -> a
-  Constant function. Ignores its second argument.
+  Constant function.  Ignores its second argument.
   Totality: total
   Visibility: public export
 Main> Builtin.fromChar : Char -> Char
