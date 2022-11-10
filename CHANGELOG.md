@@ -6,6 +6,14 @@
 
 * Adds documentation for unquotes `~( )`.
 
+### Library changes
+
+#### Base
+
+* Deprecates `setByte` from `Data.Buffer` for removal in a future release.
+  Use `setBits8` instead, as its value is safely passed, as opposed to the
+  assumption in `setByte` that the value is between 0 and 255.
+
 ## v0.6.0
 
 ### REPL changes

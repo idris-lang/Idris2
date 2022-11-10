@@ -50,6 +50,8 @@ prim__setByte : Buffer -> (offset : Int) -> (val : Int) -> PrimIO ()
 prim__setBits8 : Buffer -> (offset : Int) -> (val: Bits8) -> PrimIO ()
 
 -- Assumes val is in the range 0-255
+||| Use `setBits8` instead, as its value is correctly limited.
+%deprecate
 export %inline
 setByte : HasIO io => Buffer -> (offset : Int) -> (val : Int) -> io ()
 setByte buf offset val
