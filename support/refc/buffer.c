@@ -37,7 +37,7 @@ void copyBuffer(void *from, int from_offset, int len, void *to, int to_offset) {
 
 int getBufferSize(void *buffer) { return ((Buffer *)buffer)->size; }
 
-void setBufferWordLE(void *b, int loc, uint64_t val, size_t len) {
+void setBufferUIntLE(void *b, int loc, uint64_t val, size_t len) {
   assert_valid_range((Buffer *)b, loc, len);
   while (len--) {
     ((Buffer *)b)->data[loc++] = (uint8_t)val;
@@ -45,7 +45,7 @@ void setBufferWordLE(void *b, int loc, uint64_t val, size_t len) {
   }
 }
 
-uint64_t getBufferWordLE(void *b, int loc, size_t len) {
+uint64_t getBufferUIntLE(void *b, int loc, size_t len) {
   assert_valid_range((Buffer *)b, loc, len);
   uint64_t r = 0;
   loc += len;
@@ -62,7 +62,7 @@ void setBufferDouble(void *buffer, int loc, double val) {
     uint64_t i;
   } tmp;
   tmp.d = val;
-  setBufferWordLE(buffer, loc, tmp.i, 8);
+  setBufferUIntLE(buffer, loc, tmp.i, 8);
 }
 
 void setBufferString(void *buffer, int loc, char *str) {
@@ -77,7 +77,7 @@ double getBufferDouble(void *buffer, int loc) {
     double d;
     uint64_t i;
   } tmp;
-  tmp.i = getBufferWordLE(buffer, loc, 8);
+  tmp.i = getBufferUIntLE(buffer, loc, 8);
   return tmp.d;
 }
 

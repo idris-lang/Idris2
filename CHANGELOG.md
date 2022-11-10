@@ -6,6 +6,12 @@
 
 * Adds documentation for unquotes `~( )`.
 
+### Library changes
+
+#### Base
+
+* Adds RefC support for 16- and 32-bit access in `Data.Buffer`.
+
 ## v0.6.0
 
 ### REPL changes
