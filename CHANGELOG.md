@@ -15,6 +15,11 @@
   convert a `Bits8` to an `Int`), as their values are limited, as opposed to the
   assumption in `setByte` that the value is between 0 and 255.
 
+#### System
+
+* Changes `getNProcessors` to return the number of online processors rather than
+  the number of configured processors.
+
 ## v0.6.0
 
 ### REPL changes
