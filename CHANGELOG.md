@@ -6,6 +6,13 @@
 
 * Adds documentation for unquotes `~( )`.
 
+### Library changes
+
+#### System
+
+* Changes `getNProcessors` to return the number of online processors rather than
+  the number of configured processors.
+
 ## v0.6.0
 
 ### REPL changes
