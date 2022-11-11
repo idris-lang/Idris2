@@ -2,6 +2,10 @@
 
 ## [Next version]
 
+### REPL changes
+
+* Adds documentation for unquotes `~( )`.
+
 ### Library changes
 
 #### System

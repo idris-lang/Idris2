@@ -12,6 +12,7 @@ RANLIB ?= ranlib
 AR ?= ar
 
 CFLAGS := -Wall $(CFLAGS)
+CPPFLAGS := $(CPPFLAGS)
 LDFLAGS := $(LDFLAGS)
 
 MACHINE := $(shell $(CC) -dumpmachine)

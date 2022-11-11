@@ -32,6 +32,10 @@ modules = Data.Container,
 
           Data.W,
 
+          Language.IntrinsicTyping.ABT,
+
+          Language.IntrinsicTyping.Krivine,
+
           Language.IntrinsicTyping.SECD,
           Language.IntrinsicTyping.STLCR,
 
