@@ -363,8 +363,7 @@ displayIDEResult outf i  (REPL $ FileLoaded x)
 displayIDEResult outf i  (REPL $ ErrorLoadingFile x err)
   = printIDEError outf i $ reflow "Error loading file" <++> pretty0 x <+> colon <++> pretty0 (show err)
 displayIDEResult outf i  (REPL $ ErrorsBuildingFile x errs)
-  = do errs' <- traverse perror errs
-       printIDEError outf i $ reflow "Error(s) building file" <++> pretty0 x <+> colon <++> vsep errs'
+  = printIDEError outf i $ reflow "Error(s) building file" <++> pretty0 x -- messages already displayed while building
 displayIDEResult outf i  (REPL $ NoFileLoaded)
   = printIDEError outf i $ reflow "No file can be reloaded"
 displayIDEResult outf i  (REPL $ CurrentDirectory dir)
