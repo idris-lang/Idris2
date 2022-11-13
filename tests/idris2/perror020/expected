@@ -6,3 +6,10 @@ Issue2769:3:1--5:14
  4 |   constructor SomeRecord
  5 |   field : Int
 
+1/1: Building Issue2769b (Issue2769b.idr)
+Error: Main.Bar is already defined.
+
+Issue2769b:5:1--6:18
+ 5 | interface Blah where
+ 6 |   constructor Bar
+
