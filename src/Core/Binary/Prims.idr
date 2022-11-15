@@ -71,10 +71,10 @@ tag {b} val
     = do chunk <- get Bin
          if avail chunk >= 1
             then
-              do coreLift $ setByte (buf chunk) (loc chunk) val
+              do coreLift $ setBits8 (buf chunk) (loc chunk) $ cast val
                  put Bin (appended 1 chunk)
             else do chunk' <- extendBinary 1 chunk
-                    coreLift $ setByte (buf chunk') (loc chunk') val
+                    coreLift $ setBits8 (buf chunk') (loc chunk') $ cast val
                     put Bin (appended 1 chunk')
 
 export
@@ -83,10 +83,10 @@ getTag {b}
     = do chunk <- get Bin
          if toRead chunk >= 1
             then
-              do val <- coreLift $ getByte (buf chunk) (loc chunk)
+              do val <- coreLift $ getBits8 (buf chunk) (loc chunk)
                  put Bin (incLoc 1 chunk)
-                 pure val
-              else throw (TTCError (EndOfBuffer "Byte"))
+                 pure $ cast val
+              else throw (TTCError (EndOfBuffer "Bits8"))
 
 -- Primitives; these are the only things that have to deal with growing
 -- the buffer list
