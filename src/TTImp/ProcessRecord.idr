@@ -129,7 +129,7 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params opts conName_in
              let conty = mkTy paramTelescope $
                          mkTy (map farg fields) (recTy tn)
              let boundNames = paramNames ++ map fname fields ++ vars
-             let con = MkImpTy EmptyFC EmptyFC cname
+             let con = MkImpTy (virtualiseFC fc) EmptyFC cname
                        !(bindTypeNames fc [] boundNames conty)
              let dt = MkImpData fc tn !(bindTypeNames fc [] boundNames (mkDataTy fc params)) opts [con]
              log "declare.record" 5 $ "Record data type " ++ show dt

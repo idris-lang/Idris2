@@ -42,6 +42,7 @@ newBuffer size
 
 -- There is no endianness indication (LE/BE) for UInt8 since it is a single byte
 
+-- TODO: remove me when we remove the deprecated `setByte` in a future release
 %foreign "scheme:blodwen-buffer-setbyte"
          "RefC:setBufferUInt8"
          "node:lambda:(buf,offset,value)=>buf.writeUInt8(value, offset)"
@@ -53,6 +54,8 @@ prim__setByte : Buffer -> (offset : Int) -> (val : Int) -> PrimIO ()
 prim__setBits8 : Buffer -> (offset : Int) -> (val: Bits8) -> PrimIO ()
 
 -- Assumes val is in the range 0-255
+||| Use `setBits8` instead, as its value is correctly limited.
+%deprecate
 export %inline
 setByte : HasIO io => Buffer -> (offset : Int) -> (val : Int) -> io ()
 setByte buf offset val
@@ -63,6 +66,7 @@ setBits8 : HasIO io => Buffer -> (offset : Int) -> (val : Bits8) -> io ()
 setBits8 buf offset val
     = primIO (prim__setBits8 buf offset val)
 
+-- TODO: remove me when we remove the deprecated `getByte` in a future release
 %foreign "scheme:blodwen-buffer-getbyte"
          "RefC:getBufferByte"
          "node:lambda:(buf,offset)=>buf.readUInt8(offset)"
@@ -73,6 +77,8 @@ prim__getByte : Buffer -> (offset : Int) -> PrimIO Int
          "node:lambda:(buf,offset)=>buf.readUInt8(offset)"
 prim__getBits8 : Buffer -> (offset : Int) -> PrimIO Bits8
 
+||| Use `getBits8` instead, as its value is correctly limited.
+%deprecate
 export %inline
 getByte : HasIO io => Buffer -> (offset : Int) -> io Int
 getByte buf offset
