@@ -6,10 +6,19 @@
 
 * Adds documentation for unquotes `~( )`.
 
+### Backend changes
+
+#### RefC
+
+* Adds support for `CFLAGS`, `CPPFLAGS`, and `LDFLAGS` to facilitate building on
+  systems with non-standard installation locations of libraries (e.g. GMP).
+  Versions of the flags with the `IDRIS2_` prefix can also be used and take
+  precedence.
+
 ### Compiler changes
 
 * If `IAlternative` expression with `FirstSuccess` rule fails to typecheck,
-  compiler prints all tried alternatives, not only the last one.
+  compiler now prints all tried alternatives, not only the last one.
 
 ### Library changes
 
