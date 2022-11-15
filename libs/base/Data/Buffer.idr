@@ -39,14 +39,17 @@ newBuffer size
 --             then pure Nothing
 --             else pure $ Just $ MkBuffer buf size 0
 
+
+-- There is no endianness indication (LE/BE) for UInt8 since it is a single byte
+
 -- TODO: remove me when we remove the deprecated `setByte` in a future release
 %foreign "scheme:blodwen-buffer-setbyte"
-         "RefC:setBufferByte"
+         "RefC:setBufferUInt8"
          "node:lambda:(buf,offset,value)=>buf.writeUInt8(value, offset)"
 prim__setByte : Buffer -> (offset : Int) -> (val : Int) -> PrimIO ()
 
 %foreign "scheme:blodwen-buffer-setbyte"
-         "RefC:setBufferByte"
+         "RefC:setBufferUInt8"
          "node:lambda:(buf,offset,value)=>buf.writeUInt8(value, offset)"
 prim__setBits8 : Buffer -> (offset : Int) -> (val: Bits8) -> PrimIO ()
 
@@ -70,7 +73,7 @@ setBits8 buf offset val
 prim__getByte : Buffer -> (offset : Int) -> PrimIO Int
 
 %foreign "scheme:blodwen-buffer-getbyte"
-         "RefC:getBufferByte"
+         "RefC:getBufferUInt8"
          "node:lambda:(buf,offset)=>buf.readUInt8(offset)"
 prim__getBits8 : Buffer -> (offset : Int) -> PrimIO Bits8
 
@@ -87,6 +90,7 @@ getBits8 buf offset
     = primIO (prim__getBits8 buf offset)
 
 %foreign "scheme:blodwen-buffer-setbits16"
+         "RefC:setBufferUInt16LE"
          "node:lambda:(buf,offset,value)=>buf.writeUInt16LE(value, offset)"
 prim__setBits16 : Buffer -> (offset : Int) -> (value : Bits16) -> PrimIO ()
 
@@ -96,6 +100,7 @@ setBits16 buf offset val
     = primIO (prim__setBits16 buf offset val)
 
 %foreign "scheme:blodwen-buffer-getbits16"
+         "RefC:getBufferUInt16LE"
          "node:lambda:(buf,offset)=>buf.readUInt16LE(offset)"
 prim__getBits16 : Buffer -> (offset : Int) -> PrimIO Bits16
 
@@ -105,6 +110,7 @@ getBits16 buf offset
     = primIO (prim__getBits16 buf offset)
 
 %foreign "scheme:blodwen-buffer-setbits32"
+         "RefC:setBufferUInt32LE"
          "node:lambda:(buf,offset,value)=>buf.writeUInt32LE(value, offset)"
 prim__setBits32 : Buffer -> (offset : Int) -> (value : Bits32) -> PrimIO ()
 
@@ -114,6 +120,7 @@ setBits32 buf offset val
     = primIO (prim__setBits32 buf offset val)
 
 %foreign "scheme:blodwen-buffer-getbits32"
+         "RefC:getBufferUInt32LE"
          "node:lambda:(buf,offset)=>buf.readUInt32LE(offset)"
 prim__getBits32 : Buffer -> Int -> PrimIO Bits32
 
@@ -123,6 +130,7 @@ getBits32 buf offset
     = primIO (prim__getBits32 buf offset)
 
 %foreign "scheme:blodwen-buffer-setbits64"
+         "RefC:setBufferUInt64LE"
          "node:lambda:(buf,offset,value)=>buf.writeBigUInt64LE(value, offset)"
 prim__setBits64 : Buffer -> Int -> Bits64 -> PrimIO ()
 
@@ -132,6 +140,7 @@ setBits64 buf offset val
     = primIO (prim__setBits64 buf offset val)
 
 %foreign "scheme:blodwen-buffer-getbits64"
+         "RefC:getBufferUInt64LE"
          "node:lambda:(buf,offset)=>buf.readBigUInt64LE(offset)"
 prim__getBits64 : Buffer -> (offset : Int) -> PrimIO Bits64
 
@@ -140,7 +149,20 @@ getBits64 : HasIO io => Buffer -> (offset : Int) -> io Bits64
 getBits64 buf offset
     = primIO (prim__getBits64 buf offset)
 
+%foreign "scheme:blodwen-buffer-setint16"
+         "RefC:setBufferInt16LE"
+         "node:lambda:(buf,offset,value)=>buf.writeInt16LE(value, offset)"
+prim__setInt16 : Buffer -> (offset : Int) -> (val : Int) -> PrimIO ()
+
+export %inline
+setInt16 : HasIO io => Buffer -> (offset : Int) -> (val : Int) -> io ()
+setInt16 buf offset val
+    = primIO (prim__setInt16 buf offset val)
+
+
+
 %foreign "scheme:blodwen-buffer-setint32"
+         "RefC:setBufferInt32LE"
          "node:lambda:(buf,offset,value)=>buf.writeInt32LE(value, offset)"
 prim__setInt32 : Buffer -> (offset : Int) -> (val : Int) -> PrimIO ()
 
@@ -150,6 +172,7 @@ setInt32 buf offset val
     = primIO (prim__setInt32 buf offset val)
 
 %foreign "scheme:blodwen-buffer-getint32"
+         "RefC:getBufferInt32LE"
          "node:lambda:(buf,offset)=>buf.readInt32LE(offset)"
 prim__getInt32 : Buffer -> (offset : Int) -> PrimIO Int
 
@@ -159,7 +182,7 @@ getInt32 buf offset
     = primIO (prim__getInt32 buf offset)
 
 %foreign "scheme:blodwen-buffer-setint"
-         "RefC:setBufferInt"
+         "RefC:setBufferInt64LE"
          "node:lambda:(buf,offset,value)=>buf.writeInt32LE(value, offset)"
 prim__setInt : Buffer -> (offset : Int) -> (val : Int) -> PrimIO ()
 
@@ -169,7 +192,7 @@ setInt buf offset val
     = primIO (prim__setInt buf offset val)
 
 %foreign "scheme:blodwen-buffer-getint"
-         "RefC:getBufferInt"
+         "RefC:getBufferInt64LE"
          "node:lambda:(buf,offset)=>buf.readInt32LE(offset)"
 prim__getInt : Buffer -> (offset : Int) -> PrimIO Int
 
