@@ -11,6 +11,7 @@ main = do
     Just buf <- newBuffer 31
         | Nothing => pure ()
 
+    -- TODO: setByte is deprecated, remove once no longer in libs
     setByte buf 0 1
     setBits8 buf 1 2
     setInt buf 2 0x1122334455667788
@@ -26,6 +27,7 @@ main = do
 
     put $ rawSize buf
 
+    -- TODO: getByte is deprecated, remove once no longer in libs
     put $ getByte buf 0
     put $ getBits8 buf 1
     put $ getInt buf 2

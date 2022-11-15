@@ -1,0 +1,30 @@
+1/1: Building IAlternativePrints (IAlternativePrints.idr)
+Error: While processing right hand side of z. Error during reflection: Sorry, I can't find any elaboration which works. All errors:
+If the: When unifying:
+    Nat
+and:
+    Bool
+Mismatch between: Nat and Bool.
+
+IAlternativePrints:8:7--8:16
+ 4 | %default total
+ 5 | 
+ 6 | magicScript : Elab a
+ 7 | magicScript = check $ IAlternative EmptyFC FirstSuccess
+ 8 |   [ `(the Nat 5)
+           ^^^^^^^^^
+
+If the: When unifying:
+    String
+and:
+    Bool
+Mismatch between: String and Bool.
+
+IAlternativePrints:9:7--9:23
+ 5 | 
+ 6 | magicScript : Elab a
+ 7 | magicScript = check $ IAlternative EmptyFC FirstSuccess
+ 8 |   [ `(the Nat 5)
+ 9 |   , `(the String "foo")
+           ^^^^^^^^^^^^^^^^
+
