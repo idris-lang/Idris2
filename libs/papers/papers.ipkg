@@ -41,6 +41,8 @@ modules = Data.Container,
 
           Language.Tagless,
 
+          Language.TypeTheory,
+
           Search.Auto,
 
           Search.Generator,
