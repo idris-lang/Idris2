@@ -243,7 +243,8 @@ mutual
 
       braceArgs : OriginDesc -> IndentInfo -> Rule (List ArgType)
       braceArgs fname indents
-          = do start <- bounds (decoratedSymbol fname "{")
+        = do start <- bounds (decoratedSymbol fname "{")
+             mustWork $ do
                list <- sepBy (decoratedSymbol fname ",")
                         $ do x <- bounds (UN . Basic <$> decoratedSimpleNamedArg fname)
                              let fc = boundToFC fname x
@@ -1782,12 +1783,12 @@ topDecl fname indents
          pure [d]
   <|> do ds <- claims fname indents
          pure (forget ds)
+  <|> do d <- implDecl fname indents
+         pure [d]
   <|> do d <- definition fname indents
          pure [d]
   <|> fixDecl fname indents
   <|> do d <- ifaceDecl fname indents
-         pure [d]
-  <|> do d <- implDecl fname indents
          pure [d]
   <|> do d <- recordDecl fname indents
          pure [d]
