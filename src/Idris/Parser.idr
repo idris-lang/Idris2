@@ -1701,7 +1701,7 @@ recordDecl fname indents
                          col         <- column
                          decoratedKeyword fname "record"
                          n       <- mustWork (decoratedDataTypeName fname)
-                         paramss <- many (recordParam fname indents)
+                         paramss <- many (continue indents >> recordParam fname indents)
                          let params = concat paramss
                          recordBody fname indents doc vis mbtot col n params)
          pure (b.val (boundToFC fname b))
