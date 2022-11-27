@@ -56,4 +56,4 @@ public export
 -- For documenting an equality that the compiler knows about but is not trivial to the reader.
 public export
 (~=) : FastDerivation x y -> (0 z : dom) -> {auto xEqy : y = z} -> FastDerivation x z
-(~=) deriv y {xEqy = Refl} = deriv
+(~=) der y {xEqy = Refl} = der ~~ y ... Refl
