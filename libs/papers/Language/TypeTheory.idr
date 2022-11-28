@@ -4,13 +4,29 @@
 |||
 ||| NB: The work is originally written in Haskell and uses unsafe features
 |||     This is not how we would write idiomatic Idris code.
-|||     Cf. Core.TT's Term datatype for a more idiomatic implementation
+|||     Cf. Language.IntrinsicScoping.TypeTheory for a more idiomatic representation.
 module Language.TypeTheory
 
 import Control.Monad.Error.Interface
 import Data.List
 
+%hide Prelude.Abs
+%hide Prelude.MkAbs
+
 %default covering
+
+||| We use this wrapper to mark places where binding occurs.
+||| This is a major footgun and we hope the type constructor
+||| forces users to think carefully about what they are doing
+||| when they encounter Abs, thus potentially avoiding scoping bugs
+||| given that scope is not an invariant here.
+||| This is unfortunately not present in the original paper.
+data Abs : Type -> Type where
+   ||| The body of an abstraction lives in an extended context
+   MkAbs : t -> Abs t
+
+Eq t => Eq (Abs t) where
+  MkAbs b == MkAbs b' = b == b'
 
 ||| Section 2: Simply Typed Lambda Calculus
 namespace Section2
@@ -84,18 +100,24 @@ namespace Section2
     ||| Inferable terms are trivially checkable
     Emb : Infer -> Check
     ||| A function binding its argument
-    Lam : Check -> Check
+    Lam : Abs Check -> Check
 
   substCheck : Nat -> Infer -> Check -> Check
+  substAbs   : Nat -> Infer -> Abs Check -> Abs Check
   substInfer : Nat -> Infer -> Infer -> Infer
 
   substCheck lvl u (Emb t) = Emb (substInfer lvl u t)
-  substCheck lvl u (Lam b) = Lam (substCheck (S lvl) u b)
+  substCheck lvl u (Lam b) = Lam (substAbs lvl u b)
+
+  substAbs lvl u (MkAbs t) = MkAbs (substCheck (S lvl) u t)
 
   substInfer lvl u (Ann s a) = Ann (substCheck lvl u s) a
   substInfer lvl u (Bnd k) = ifThenElse (lvl == k) u (Bnd k)
   substInfer lvl u (Var nm) = Var nm
   substInfer lvl u (App e s) = App (substInfer lvl u e) (substCheck lvl u s)
+
+  applyAbs : Abs Check -> Infer -> Check
+  applyAbs (MkAbs t) u = substCheck 0 u t
 
   %name Check s, t
 
@@ -140,6 +162,11 @@ namespace Section2
   partial
   evalCheck : Check -> Env -> Value
 
+  ||| Big step evaluation of an abstraction's body
+  partial
+  evalAbs : Abs Check -> Env -> Value -> Value
+  evalAbs (MkAbs t) env v = evalCheck t (v :: env)
+
   evalInfer (Ann t _) env = evalCheck t env
   evalInfer (Bnd x) env = case inBounds x env of
     Yes prf => index x env
@@ -148,7 +175,7 @@ namespace Section2
   evalInfer (App f t) env = vapp (evalInfer f env) (evalCheck t env)
 
   evalCheck (Emb i) env = evalInfer i env
-  evalCheck (Lam b) env = VLam (\ v => evalCheck b (v :: env))
+  evalCheck (Lam b) env = VLam (evalAbs b env)
 
 
   data Kind =
@@ -210,7 +237,7 @@ namespace Section2
         | _ => throwError "expected a function type"
       let x = Local lvl
       let k = HasType i
-      let b = substCheck 0 (Var x) b
+      let b = applyAbs b (Var x)
       checkI (S lvl) ((x, k) :: ctx) o b
 
     infer : Context -> Infer -> m Ty
@@ -221,7 +248,7 @@ namespace Section2
 
   exampleC : check [(Global "o", HasKind Star)]
                    (let ty = Base (Global "o") in (ty ~> ty) ~> ty ~> ty)
-                   (Lam (Lam (Emb (Bnd 0))))
+                   (Lam (MkAbs (Lam (MkAbs (Emb (Bnd 0))))))
            = Right {a = String} ()
   exampleC = Refl
 
@@ -231,12 +258,15 @@ namespace Section2
 
   quoteStuckI : Nat -> Stuck -> Infer
   quoteValueI : Nat -> Value -> Check
+  quoteAbsI   : Nat -> (Value -> Value) -> Abs Check
 
   quoteStuckI lvl (NVar nm) = boundFree lvl nm
   quoteStuckI lvl (NApp e t) = App (quoteStuckI lvl e) (quoteValueI lvl t)
 
-  quoteValueI lvl (VLam f) = Lam (quoteValueI (S lvl) (f (vfree (Quote lvl))))
+  quoteValueI lvl (VLam f) = Lam (quoteAbsI lvl f)
   quoteValueI lvl (VEmb e) = Emb (quoteStuckI lvl e)
+
+  quoteAbsI lvl f = MkAbs (quoteValueI (S lvl) (f (vfree (Quote lvl))))
 
   quoteValue : Value -> Check
   quoteValue = quoteValueI 0
@@ -250,7 +280,7 @@ namespace Section2
   normInfer t env = quoteValue (evalInfer t env)
 
   exampleQ : quoteValue (VLam $ \x => VLam $ \y => x)
-           = Lam (Lam (Emb (Bnd 1)))
+           = Lam (MkAbs (Lam (MkAbs (Emb (Bnd 1)))))
   exampleQ = Refl
 
 
@@ -269,8 +299,8 @@ namespace Section2
     fromInteger n = Emb (Bnd (cast n))
 
   ID, CONST : Check
-  ID = Lam 0
-  CONST = Lam (Lam 1)
+  ID = Lam (MkAbs 0)
+  CONST = Lam (MkAbs (Lam (MkAbs 1)))
 
   namespace Ty
     public export
@@ -321,7 +351,7 @@ namespace Section3
     ||| The star kind is inferrable
     Star : Infer
     ||| Pi is inferrable
-    Pi : (a, b : Check) -> Infer
+    Pi : (a : Check) -> (b : Abs Check) -> Infer
     ||| A bound variable
     Bnd : (k : Nat) -> Infer
     ||| A free variable
@@ -338,7 +368,7 @@ namespace Section3
     ||| Inferable terms are trivially checkable
     Emb : Infer -> Check
     ||| A function binding its argument
-    Lam : Check -> Check
+    Lam : Abs Check -> Check
 
   Eq Infer
   Eq Check
@@ -346,7 +376,7 @@ namespace Section3
   Eq Infer where
     Ann t ty == Ann t' ty' = t == t' && ty == ty'
     Star == Star = True
-    Pi a b == Pi s t = a == s && b == t
+    Pi a b == Pi s t = a == s && assert_total (b == t)
     Bnd k == Bnd l = k == l
     Var m == Var n = m == n
     App e s == App f t = e == f && s == t
@@ -354,21 +384,28 @@ namespace Section3
 
   Eq Check where
     Emb e == Emb f = assert_total (e == f)
-    Lam b == Lam t = b == t
+    Lam b == Lam t = assert_total (b == t)
     _ == _ = False
 
   substCheck : Nat -> Infer -> Check -> Check
+  substAbs   : Nat -> Infer -> Abs Check -> Abs Check
   substInfer : Nat -> Infer -> Infer -> Infer
 
+  substAbs lvl u (MkAbs b) = MkAbs (substCheck (S lvl) u b)
+
+
   substCheck lvl u (Emb t) = Emb (substInfer lvl u t)
-  substCheck lvl u (Lam b) = Lam (substCheck (S lvl) u b)
+  substCheck lvl u (Lam b) = Lam (substAbs lvl u b)
 
   substInfer lvl u (Ann s a) = Ann (substCheck lvl u s) (substCheck lvl u a)
   substInfer lvl u Star = Star
-  substInfer lvl u (Pi a b) = Pi (substCheck lvl u a) (substCheck lvl u b)
+  substInfer lvl u (Pi a b) = Pi (substCheck lvl u a) (substAbs lvl u b)
   substInfer lvl u (Bnd k) = ifThenElse (lvl == k) u (Bnd k)
   substInfer lvl u (Var nm) = Var nm
   substInfer lvl u (App e s) = App (substInfer lvl u e) (substCheck lvl u s)
+
+  applyAbs : Abs Check -> Infer -> Check
+  applyAbs (MkAbs t) u = substCheck 0 u t
 
   %name Check s, t
 
@@ -426,9 +463,14 @@ namespace Section3
   partial
   evalCheck : Check -> Env -> Value
 
+  partial
+  evalAbs : Abs Check -> Env -> Value -> Value
+  evalAbs (MkAbs t) env v = evalCheck t (v :: env)
+
+
   evalInfer (Ann t _) env = evalCheck t env
   evalInfer Star env = VStar
-  evalInfer (Pi a b) env = VPi (evalCheck a env) (\ v => evalCheck b (v :: env))
+  evalInfer (Pi a b) env = VPi (evalCheck a env) (evalAbs b env)
   evalInfer (Bnd x) env = case inBounds x env of
     Yes prf => index x env
     No nprf => idris_crash "OOPS"
@@ -436,7 +478,7 @@ namespace Section3
   evalInfer (App f t) env = vapp (evalInfer f env) (evalCheck t env)
 
   evalCheck (Emb i) env = evalInfer i env
-  evalCheck (Lam b) env = VLam (\ v => evalCheck b (v :: env))
+  evalCheck (Lam b) env = VLam (evalAbs b env)
 
 
   boundFree : Nat -> Name -> Infer
@@ -445,6 +487,7 @@ namespace Section3
 
   quoteStuckI : Nat -> Stuck -> Infer
   quoteValueI : Nat -> Value -> Check
+  quoteAbsI   : Nat -> (Value -> Value) -> Abs Check
 
   quoteStuckI lvl (NVar nm) = boundFree lvl nm
   quoteStuckI lvl (NApp e t) = App (quoteStuckI lvl e) (quoteValueI lvl t)
@@ -452,11 +495,15 @@ namespace Section3
   quoteValueI lvl VStar = Emb Star
   quoteValueI lvl (VPi a b)
     = let a = quoteValueI lvl a in
-      let x = vfree (Quote lvl) in
-      let b = quoteValueI (S lvl) (b x) in
+      let b = quoteAbsI lvl b in
       Emb (Pi a b)
-  quoteValueI lvl (VLam f) = Lam (quoteValueI (S lvl) (f (vfree (Quote lvl))))
+  quoteValueI lvl (VLam f) = Lam (quoteAbsI lvl f)
   quoteValueI lvl (VEmb e) = Emb (quoteStuckI lvl e)
+
+  quoteAbsI lvl f =
+    let x = vfree (Quote lvl) in
+    MkAbs (quoteValueI (S lvl) (f x))
+
 
   quoteValue : Value -> Check
   quoteValue = quoteValueI 0
@@ -471,8 +518,9 @@ namespace Section3
 
   parameters {0 m : Type -> Type} {auto _ : MonadError String m}
 
-    inferI : Nat -> Context -> Infer -> m Ty
-    checkI : Nat -> Context -> Ty -> Check -> m ()
+    inferI    : Nat -> Context -> Infer -> m Ty
+    checkI    : Nat -> Context -> Ty -> Check -> m ()
+    checkAbsI : Nat -> Context -> Ty -> (Ty -> Ty) -> Abs Check -> m ()
 
     inferI lvl ctx (Ann t ty) = do
       checkI lvl ctx VStar ty
@@ -483,9 +531,7 @@ namespace Section3
       checkI lvl ctx VStar a
       let a = assert_total (evalCheck a [])
       let x = Local lvl
-      let b = substCheck 0 (Var x) b
-      checkI (S lvl) ((x, a) :: ctx) VStar b
-      pure VStar
+      VStar <$ checkAbsI lvl ctx a (\ _ => VStar) b
     inferI lvl ctx (Bnd k) =
       -- unhandled in the original Haskell
       throwError "Oops"
@@ -507,8 +553,13 @@ namespace Section3
     checkI lvl ctx ty (Lam t) = do
       let VPi a b = ty
         | _ => throwError "expected a function type"
+      checkAbsI lvl ctx a b t
+
+  checkAbsI lvl ctx a b t = do
       let x = Local lvl
-      checkI (S lvl) ((x, a) :: ctx) (b (vfree x)) t
+      let b = b (vfree x)
+      let t = applyAbs t (Var x)
+      checkI (S lvl) ((x, a) :: ctx) b t
 
 %hide Infer
 %hide Check
@@ -530,13 +581,18 @@ namespace Section4
     ||| The nat type is inferrable
     Nat : Infer
     ||| The nat induction principle is inferrable
+    -- Here there's a bit of leeway in the design: we could just as well demand:
+    --   pred : Abs Check
+    --   pz : Check
+    --   ps : Abs (Abs Check)
+    --   n : Check
     Rec : (pred, pz, ps : Check) -> (n : Check) -> Infer
     ||| The zero constructor is inferable
     Zro : Infer
     ||| The successor constructor is inferable
     Suc : Check -> Infer
     ||| Pi is inferrable
-    Pi : (a, b : Check) -> Infer
+    Pi : (a : Check) -> (b : Abs Check) -> Infer
     ||| A bound variable
     Bnd : (k : Nat) -> Infer
     ||| A free variable
@@ -553,7 +609,7 @@ namespace Section4
     ||| Inferable terms are trivially checkable
     Emb : Infer -> Check
     ||| A function binding its argument
-    Lam : Check -> Check
+    Lam : Abs Check -> Check
 
   Eq Infer
   Eq Check
@@ -569,14 +625,15 @@ namespace Section4
 
   Eq Check where
     Emb e == Emb f = assert_total (e == f)
-    Lam b == Lam t = b == t
+    Lam b == Lam t = assert_total (b == t)
     _ == _ = False
 
   substCheck : Nat -> Infer -> Check -> Check
+  substAbs   : Nat -> Infer -> Abs Check -> Abs Check
   substInfer : Nat -> Infer -> Infer -> Infer
 
   substCheck lvl u (Emb t) = Emb (substInfer lvl u t)
-  substCheck lvl u (Lam b) = Lam (substCheck (S lvl) u b)
+  substCheck lvl u (Lam b) = Lam (substAbs lvl u b)
 
   substInfer lvl u (Ann s a) = Ann (substCheck lvl u s) (substCheck lvl u a)
   substInfer lvl u Star = Star
@@ -585,10 +642,15 @@ namespace Section4
   substInfer lvl u (Suc n) = Suc (substCheck lvl u n)
   substInfer lvl u (Rec p pz ps n)
     = Rec (substCheck lvl u p) (substCheck lvl u pz) (substCheck lvl u ps) (substCheck lvl u n)
-  substInfer lvl u (Pi a b) = Pi (substCheck lvl u a) (substCheck lvl u b)
+  substInfer lvl u (Pi a b) = Pi (substCheck lvl u a) (substAbs lvl u b)
   substInfer lvl u (Bnd k) = ifThenElse (lvl == k) u (Bnd k)
   substInfer lvl u (Var nm) = Var nm
   substInfer lvl u (App e s) = App (substInfer lvl u e) (substCheck lvl u s)
+
+  substAbs lvl u (MkAbs t) = MkAbs (substCheck (S lvl) u t)
+
+  applyAbs : Abs Check -> Infer -> Check
+  applyAbs (MkAbs t) u = substCheck 0 u t
 
   %name Check s, t
 
@@ -656,6 +718,11 @@ namespace Section4
   partial
   evalCheck : Check -> Env -> Value
 
+  ||| Big step evaluation of an abstraction in a given environment
+  partial
+  evalAbs : Abs Check -> Env -> Value -> Value
+  evalAbs (MkAbs t) env v = evalCheck t (v :: env)
+
   evalInfer (Ann t _) env = evalCheck t env
   evalInfer Star env = VStar
   evalInfer Nat env = VNat
@@ -669,7 +736,7 @@ namespace Section4
     go pz ps (VEmb n) = VEmb (NRec (evalCheck p env) pz ps n)
     go _ _ _ = idris_crash "Oops"
 
-  evalInfer (Pi a b) env = VPi (evalCheck a env) (\ v => evalCheck b (v :: env))
+  evalInfer (Pi a b) env = VPi (evalCheck a env) (evalAbs b env)
   evalInfer (Bnd x) env = case inBounds x env of
     Yes prf => index x env
     No nprf => idris_crash "OOPS"
@@ -677,7 +744,7 @@ namespace Section4
   evalInfer (App f t) env = vapp (evalInfer f env) (evalCheck t env)
 
   evalCheck (Emb i) env = evalInfer i env
-  evalCheck (Lam b) env = VLam (\ v => evalCheck b (v :: env))
+  evalCheck (Lam b) env = VLam (evalAbs b env)
 
 
   boundFree : Nat -> Name -> Infer
@@ -685,6 +752,7 @@ namespace Section4
   boundFree lvl x = Var x
 
   quoteStuckI : Nat -> Stuck -> Infer
+  quoteAbsI   : Nat -> (Value -> Value) -> Abs Check
   quoteValueI : Nat -> Value -> Check
 
   quoteStuckI lvl (NVar nm) = boundFree lvl nm
@@ -698,11 +766,12 @@ namespace Section4
   quoteValueI lvl (VSuc n) = Emb (Suc (quoteValueI lvl n))
   quoteValueI lvl (VPi a b)
     = let a = quoteValueI lvl a in
-      let x = vfree (Quote lvl) in
-      let b = quoteValueI (S lvl) (b x) in
+      let b = quoteAbsI lvl b in
       Emb (Pi a b)
-  quoteValueI lvl (VLam f) = Lam (quoteValueI (S lvl) (f (vfree (Quote lvl))))
+  quoteValueI lvl (VLam f) = Lam (quoteAbsI lvl f)
   quoteValueI lvl (VEmb e) = Emb (quoteStuckI lvl e)
+
+  quoteAbsI lvl f = let x = vfree (Quote lvl) in MkAbs (quoteValueI (S lvl) (f x))
 
   quoteValue : Value -> Check
   quoteValue = quoteValueI 0
@@ -718,6 +787,7 @@ namespace Section4
   parameters {0 m : Type -> Type} {auto _ : MonadError String m}
 
     inferI : Nat -> Context -> Infer -> m Ty
+    checkAbsI : Nat -> Context -> Ty -> (Ty -> Ty) -> Abs Check -> m ()
     checkI : Nat -> Context -> Ty -> Check -> m ()
 
     inferI lvl ctx (Ann t ty) = do
@@ -745,10 +815,7 @@ namespace Section4
     inferI lvl ctx (Pi a b) = do
       checkI lvl ctx VStar a
       let a = assert_total (evalCheck a [])
-      let x = Local lvl
-      let b = substCheck 0 (Var x) b
-      checkI (S lvl) ((x, a) :: ctx) VStar b
-      pure VStar
+      VStar <$ checkAbsI lvl ctx a (\ _ => VStar) b
     inferI lvl ctx (Bnd k) =
       -- unhandled in the original Haskell
       throwError "Oops"
@@ -770,5 +837,11 @@ namespace Section4
     checkI lvl ctx ty (Lam t) = do
       let VPi a b = ty
         | _ => throwError "expected a function type"
+      checkAbsI lvl ctx a b t
+
+
+  checkAbsI lvl ctx a b t = do
       let x = Local lvl
-      checkI (S lvl) ((x, a) :: ctx) (b (vfree x)) t
+      let b = b (vfree x)
+      let t = applyAbs t (Var x)
+      checkI (S lvl) ((x, a) :: ctx) b t
