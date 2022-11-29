@@ -20,14 +20,18 @@
         res))))
 
 (define (blodwen-delay-lazy inf f)
-  (weak-cons #!bwp f))
+  (if inf
+    f
+    (weak-cons #!bwp f)))
 
 (define (blodwen-force-lazy e)
-  (let ((exval (car e)))
-    (if (bwp-object? exval)
-      (let ((val ((cdr e))))
-        (begin (set-car! e val) val))
-      exval)))
+  (if (weak-pair? e)
+    (let ((exval (car e)))
+      (if (bwp-object? exval)
+        (let ((val ((cdr e))))
+          (begin (set-car! e val) val))
+        exval))
+    (e)))
 
 (define (blodwen-toSignedInt x bits)
   (if (logbit? bits x)
