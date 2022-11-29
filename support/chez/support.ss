@@ -19,10 +19,15 @@
             (void))
         res))))
 
+(define bwp
+  (let ((x (cons 'a 'b)))
+    (let ((p (weak-cons x '())))
+      (begin (set! x '*) (collect) (car p)))))
+
 (define (blodwen-delay-lazy inf f)
   (if inf
     f
-    (weak-cons #!bwp f)))
+    (weak-cons bwp f)))
 
 (define (blodwen-force-lazy e)
   (if (weak-pair? e)
