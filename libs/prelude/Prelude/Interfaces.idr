@@ -217,12 +217,12 @@ interface Applicative m => Monad m where
 %allow_overloads (>>=)
 
 ||| Right-to-left monadic bind, flipped version of `>>=`.
-public export
+%inline public export
 (=<<) : Monad m => (a -> m b) -> m a -> m b
 (=<<) = flip (>>=)
 
 ||| Sequencing of effectful composition
-public export
+%inline public export
 (>>) : Monad m => m () -> Lazy (m b) -> m b
 a >> b = a >>= \_ => b
 
