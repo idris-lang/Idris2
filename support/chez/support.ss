@@ -19,6 +19,12 @@
             (void))
         res))))
 
+(define (blodwen-delay-lazy f)
+  f)
+
+(define (blodwen-force-lazy e)
+  (e))
+
 (define (blodwen-toSignedInt x bits)
   (if (logbit? bits x)
       (logor x (ash -1 bits))
