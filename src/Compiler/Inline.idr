@@ -164,6 +164,16 @@ mutual
                     pure $ unload stk $
                              CLet fc xn False (CApp fc act [world])
                                               (refToLocal xn xn sc)
+          (True, [act, cont]) =>
+                 do wn <- genName "world"
+                    xn <- genName "act"
+                    let world : forall vars. CExp vars := CRef fc wn
+                    sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
+                    pure $ CLam fc wn
+                         $ refToLocal wn wn
+                         $ CLet fc xn False (CApp fc act [world])
+                         $ refToLocal xn xn
+                         $ sc
           (_,_) =>
              do defs <- get Ctxt
                 Just gdef <- lookupCtxtExact n (gamma defs)
