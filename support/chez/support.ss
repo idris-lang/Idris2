@@ -19,7 +19,7 @@
             (void))
         res))))
 
-(define (blodwen-delay-lazy f)
+(define (blodwen-delay-lazy inf f)
   f)
 
 (define (blodwen-force-lazy e)
