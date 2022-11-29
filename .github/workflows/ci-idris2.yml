@@ -50,9 +50,9 @@ jobs:
         id: get_commit_message
         run: |
           if   [[ '${{ github.event_name }}' == 'push' ]]; then
-            echo "::set-output name=commit_message::$(git log --format=%B -n 1 HEAD)"
+            echo "commit_message=$(git log --format=%B -n 1 HEAD)" >> "$GITHUB_OUTPUT"
           elif [[ '${{ github.event_name }}' == 'pull_request' ]]; then
-            echo "::set-output name=commit_message::$(git log --format=%B -n 1 HEAD^2)"
+            echo "commit_message=$(git log --format=%B -n 1 HEAD^2)" >> "$GITHUB_OUTPUT"
           fi
 
     outputs:
