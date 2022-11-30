@@ -1,0 +1,5 @@
+package test
+
+main = Memo
+
+depends = contrib

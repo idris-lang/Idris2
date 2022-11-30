@@ -1,0 +1,59 @@
+
+-----------------------
+first take of stream (should be `s 0..9`)
+> s 0
+> s 1
+> s 2
+> s 3
+> s 4
+> s 5
+> s 6
+> s 7
+> s 8
+> s 9
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+-----------------------
+second take of stream (should be `s 0..9`)
+> s 0
+> s 1
+> s 2
+> s 3
+> s 4
+> s 5
+> s 6
+> s 7
+> s 8
+> s 9
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+-----------------------
+first take of short lazy list (should be `ll 0..9`)
+> ll 0
+> ll 1
+> ll 2
+> ll 3
+> ll 4
+> ll 5
+> ll 6
+> ll 7
+> ll 8
+> ll 9
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+-----------------------
+second take of short lazy list (should be no `ll *`)
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+-----------------------
+first take of longer lazy list (should be `ll 10..14`)
+> ll 10
+> ll 11
+> ll 12
+> ll 13
+> ll 14
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+
+-----------------------
+second take of longer lazy list (should be no `ll *`)
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
