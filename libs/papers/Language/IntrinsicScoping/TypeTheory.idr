@@ -4,7 +4,6 @@
 |||
 ||| NB: Unlike `Language.TypeTheory`, this is not a direct translation
 |||     of the code in the paper but rather a more idiomatic solution.
-|||     It is very similar in spirit to the Idris implementation
 module Language.IntrinsicScoping.TypeTheory
 
 import Control.Monad.Error.Interface
@@ -17,14 +16,41 @@ import Language.IntrinsicScoping.Variables
 
 -- We go straight to Section 4: LambdaPi + natural numbers
 
-data Abs : (LContext -> IContext -> Type) -> (LContext -> IContext -> Type) where
+------------------------------------------------------------------------
+-- Syntax
+-- This tutorial uses a locally-nameless presentation.
+-- In the intrinsically scoped world, this means that everything is doubly
+-- indexed here. Each term has:
+--
+-- * an LContext of variables using De Bruijn *L*evels.
+--   It is used for free variables, the level do not change when we push
+--   the term under a new binder
+--
+-- * an IContext of variables using De Bruijn *I*ndices.
+--   It is used for bound variables, the indices pointing to free variables
+--   would change when we push the term under a new binder.
+--
+-- Every time we go under a binder, the corresponding index is turned
+-- into level. This ensures we only ever manipulate terms whose free
+-- variables are levels and so can be weakened "for free".
+------------------------------------------------------------------------
+
+public export
+Scoped : Type
+Scoped = LContext -> IContext -> Type
+
+||| Abs binds the most local variable
+data Abs : Scoped -> Scoped where
   MkAbs : (x : Name) -> t f (g :< x) -> Abs t f g
 
-data Infer : LContext -> IContext -> Type
-data Check : LContext -> IContext -> Type
+||| Infer-able terms are those whose type can be reconstructed
+data Infer : Scoped
+
+||| Check-able terms are those whose type can be checked
+data Check : Scoped
 
 total
-data Infer : LContext -> IContext -> Type where
+data Infer : Scoped where
   ||| A checkable term annotated with its expected type
   Ann : (t, ty : Check f g) -> Infer f g
   ||| The star kind is inferrable
@@ -55,13 +81,16 @@ infixl 3 `App`
 %name Infer e
 
 total
-data Check : LContext -> IContext -> Type where
+data Check : Scoped where
   ||| Inferable terms are trivially checkable
   Emb : Infer f g -> Check f g
   ||| A function binding its argument
   Lam : Abs Check f g -> Check f g
 
 %name Check s, t
+
+------------------------------------------------------------------------
+-- Free operations (thanks to indices & level properties)
 
 namespace Check
   -- here it's okay to use believe_me precisely because embedding
@@ -83,6 +112,8 @@ namespace Infer
   closed : (0 g : _) -> Infer f [<] -> Infer f g
   closed g = believe_me
 
+------------------------------------------------------------------------
+-- Equality testing
 
 (forall g. Eq (t f g)) => Eq (Abs t f g) where
   MkAbs x@_ b == MkAbs x' b' with (decEq x x')
@@ -110,6 +141,12 @@ Eq (Check f g) where
   Lam b == Lam t = assert_total (b == t)
   _ == _ = False
 
+------------------------------------------------------------------------
+-- Substituting a closed term for the outermost de Bruijn index
+--
+-- This will allow us to open a closed `Abs` by converting the most local
+-- de Bruijn index into a fresh de Bruijn level.
+
 parameters {0 x : Name}
 
   substAbs   : {g : _} -> Infer f [<] -> Abs Check f ([<x] <+> g) -> Abs Check f g
@@ -134,6 +171,14 @@ parameters {0 x : Name}
   substInfer u (App e s) = App (substInfer u e) (substCheck u s)
 
   substAbs u (MkAbs y t) = MkAbs y (substCheck u t)
+
+------------------------------------------------------------------------
+-- Semantics
+--
+-- Values only use de Bruijn levels. The syntax's binders are interpreted
+-- as functions in the host language, and so the de Bruijn indices have
+-- become variables in the host language.
+------------------------------------------------------------------------
 
 ||| Function are interpreted using a Kripke function space:
 ||| we know how to run the function in any extended context.
@@ -176,13 +221,8 @@ namespace Value
   thin : (0 ext : _) -> Value f -> Value (ext ++ f)
   thin ext = believe_me
 
-||| Types are just values in TT
-Ty : LContext -> Type
-Ty = Value
-
-||| A context maps names to types, that is to say values
-Context : LContext -> Type
-Context f = All (const (Ty f)) f
+------------------------------------------------------------------------
+-- Evaluation
 
 ||| We can easily turn a level into a value
 ||| by building a stuck computation first
@@ -201,9 +241,10 @@ vapp (VEmb n) t = VEmb (NApp n t)
 vapp _ _ = idris_crash "Oops"
 
 ||| An environment is a list of values for all the bound variables in scope
-Env : LContext -> IContext -> Type
+Env : Scoped
 Env f g = All (const (Value f)) g
 
+||| Indices are mapped to environment values
 evalIndex : Index nm g -> Env f g -> Value f
 evalIndex i@_ env with (view i)
   evalIndex i@_ (_ :< v) | Z = v
@@ -245,6 +286,10 @@ evalAbs {f} (MkAbs x b) env
   -- terms in a wider LContext does not change any of their syntax
   = \ ext, v => evalCheck {f = ext ++ f, g = g :< x} (believe_me b) (believe_me env :< v)
 
+
+------------------------------------------------------------------------
+-- Reification
+
 quoteStuckI : {f : _} -> Stuck f -> Infer [] (rev f)
 quoteAbsI   : {f : _} -> Kripke f -> Abs Check [] (rev f)
 quoteValueI : {f : _} -> Value f -> Check [] (rev f)
@@ -272,6 +317,9 @@ quoteAbsI {f} b
 quoteValue : {f : _} -> Value f -> Check [] (rev f)
 quoteValue = quoteValueI
 
+------------------------------------------------------------------------
+-- Normalisation is evaluation followed by reification
+
 partial
 normCheck : Check [] g -> Env [] g  -> Check [] [<]
 normCheck t env = quoteValue (evalCheck t env)
@@ -279,6 +327,21 @@ normCheck t env = quoteValue (evalCheck t env)
 partial
 normInfer : Infer [] g -> Env [] g -> Check [] [<]
 normInfer t env = quoteValue (evalInfer t env)
+
+------------------------------------------------------------------------
+-- Typechecking
+--
+-- Note that here we keep the terms closed by turning de Bruijn indices
+-- into de Bruijn levels (cf. checkAbsI).
+------------------------------------------------------------------------
+
+||| Types are just values in TT
+Ty : LContext -> Type
+Ty = Value
+
+||| A context maps names to types, that is to say values
+Context : LContext -> Type
+Context f = All (const (Ty f)) f
 
 parameters {0 m : Type -> Type} {auto _ : MonadError String m}
 
@@ -336,5 +399,6 @@ parameters {0 m : Type -> Type} {auto _ : MonadError String m}
 
   checkAbsI {f} ctx a b (MkAbs x t) = do
     let b = b [x] (vfree fresh)
+    -- Here we turn the most local de Bruijn index into a level
     let t = substCheck (Var fresh) (thin [x] t)
     checkI (thin [x] a :: believe_me ctx) b t
