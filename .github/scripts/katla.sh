@@ -12,7 +12,8 @@ while IFS= read -r rawfile; do
     htmlfile="${htmldir}/${modulename}.html"
     mkdir -p "$htmldir"
     echo $(ls "${prefix}/${libname}/build/ttc/")
-    katla html "$rawfile" "${prefix}/${libname}/build/ttc/*/${filename}.ttm" >"$htmlfile"
+    ttc_version=$(ls "${prefix}/${libname}/build/ttc/")
+    katla html "$rawfile" "${prefix}/${libname}/build/ttc/${ttc_version}/${filename}.ttm" >"$htmlfile"
     sed -i "s|<head>|<head><title>${modulename}</title>|" "$htmlfile"
 done <tmp
 rm tmp
