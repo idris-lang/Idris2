@@ -163,6 +163,10 @@ bindL (MkApp prog) next
                    Left err => absurdWith2 next world' err
 
 export
+seqL : App {l=NoThrow} e () -> (1 k : App {l} e b) -> App {l} e b
+seqL ma mb = bindL ma (\ () => mb)
+
+export
 app : (1 p : App {l=NoThrow} e a) -> App1 {u=Any} e a
 app (MkApp prog)
     = MkApp1 $ \world =>

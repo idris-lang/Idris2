@@ -87,7 +87,7 @@ interface Functor f where
 ||| in a parameterised type.
 ||| @ f the parameterised type
 ||| @ func the function to apply
-public export
+%inline public export
 (<$>) : Functor f => (func : a -> b) -> f a -> f b
 (<$>) func x = map func x
 
@@ -95,23 +95,22 @@ public export
 ||| everything of type 'a' in a parameterised type.
 ||| @ f the parameterised type
 ||| @ func the function to apply
-public export
+%inline public export
 (<&>) : Functor f => f a -> (func : a -> b) -> f b
 (<&>) x func = map func x
 
 ||| Run something for effects, replacing the return value with a given parameter.
-public export
+%inline public export
 (<$) : Functor f => b -> f a -> f b
 (<$) b = map (const b)
 
 ||| Flipped version of `<$`.
-public export
+%inline public export
 ($>) : Functor f => f a -> b -> f b
 ($>) fa b = map (const b) fa
 
 ||| Run something for effects, throwing away the return value.
-%inline
-public export
+%inline public export
 ignore : Functor f => f a -> f ()
 ignore = map (const ())
 
@@ -217,12 +216,12 @@ interface Applicative m => Monad m where
 %allow_overloads (>>=)
 
 ||| Right-to-left monadic bind, flipped version of `>>=`.
-public export
+%inline public export
 (=<<) : Monad m => (a -> m b) -> m a -> m b
 (=<<) = flip (>>=)
 
 ||| Sequencing of effectful composition
-public export
+%inline public export
 (>>) : Monad m => m () -> Lazy (m b) -> m b
 a >> b = a >>= \_ => b
 
@@ -302,13 +301,13 @@ interface Foldable t where
   foldMap f = foldr ((<+>) . f) neutral
 
 ||| Combine each element of a structure into a monoid.
-public export
+%inline public export
 concat : Monoid a => Foldable t => t a -> a
 concat = foldMap id
 
 ||| Combine into a monoid the collective results of applying a function to each
 ||| element of a structure.
-public export
+%inline public export
 concatMap : Monoid m => Foldable t => (a -> m) -> t a -> m
 concatMap = foldMap
 
@@ -366,13 +365,13 @@ namespace Bool
 
 ||| The disjunction of the collective results of applying a predicate to all
 ||| elements of a structure.  `any` short-circuits from left to right.
-public export
+%inline public export
 any : Foldable t => (a -> Bool) -> t a -> Bool
 any = foldMap @{%search} @{Any}
 
 ||| The conjunction of the collective results of applying a predicate to all
 ||| elements of a structure.  `all` short-circuits from left to right.
-public export
+%inline public export
 all : Foldable t => (a -> Bool) -> t a -> Bool
 all = foldMap @{%search} @{All}
 
@@ -478,12 +477,12 @@ public export
 ||| ```
 |||
 ||| Note: In Haskell, `choice` is called `asum`.
-public export
+%inline public export
 choice : Alternative f => Foldable t => t (Lazy (f a)) -> f a
 choice = force . concat @{Lazy.MonoidAlternative}
 
 ||| A fused version of `choice` and `map`.
-public export
+%inline public export
 choiceMap : Alternative f => Foldable t => (a -> f b) -> t a -> f b
 choiceMap = foldMap @{%search} @{MonoidAlternative}
 
@@ -534,7 +533,7 @@ sequence : Applicative f => Traversable t => t (f a) -> f (t a)
 sequence = traverse id
 
 ||| Like `traverse` but with the arguments flipped.
-public export
+%inline public export
 for : Applicative f => Traversable t => t a -> (a -> f b) -> f (t b)
 for = flip traverse
 

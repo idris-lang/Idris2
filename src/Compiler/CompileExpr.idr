@@ -3,6 +3,7 @@ module Compiler.CompileExpr
 import Core.Case.CaseTree
 import public Core.CompileExpr
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Name
 import Core.Normalise
@@ -455,6 +456,7 @@ mutual
                         then
                              let env : SubstCEnv args vars
                                      = mkSubst 0 scr pos args in
+                              do log "compiler.newtype.world" 50 "Inlining case on \{show n} (no world)"
                                  pure $ Just (substs env !(toCExpTree n sc))
                         else -- let bind the scrutinee, and substitute the
                              -- name into the RHS
@@ -465,8 +467,9 @@ mutual
                                                         {inner=vars}
                                                         {ns = [MN "eff" 0]}
                                                         (mkSizeOf _) (mkSizeOf _) sc'
-                                pure $ Just (CLet fc (MN "eff" 0) False scr
-                                                  (substs env scope))
+                                let tm = CLet fc (MN "eff" 0) False scr (substs env scope)
+                                log "compiler.newtype.world" 50 "Kept the scrutinee \{show tm}"
+                                pure (Just tm)
                 _ => pure Nothing -- there's a normal match to do
     where
       mkSubst : Nat -> CExp vs ->

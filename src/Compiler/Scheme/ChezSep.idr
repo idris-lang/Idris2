@@ -141,9 +141,8 @@ chezLibraryName cu = chezNS (min1 cu.namespaces)
     min1 : List1 Namespace -> Namespace
     min1 (ns ::: nss) = foldl min ns nss
 
--- TODO: use a proper exec function without shell injection
 touch : String -> Core ()
-touch s = coreLift_ $ system ("touch \"" ++ s ++ "\"")
+touch s = coreLift_ $ system ["touch", s]
 
 record ChezLib where
   constructor MkChezLib
@@ -318,7 +317,7 @@ executeExpr :
 executeExpr c s tmpDir tm
     = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpchez"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system sh
+         coreLift_ $ system [sh]
 
 ||| Codegen wrapper for Chez scheme implementation.
 export

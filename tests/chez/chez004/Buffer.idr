@@ -46,7 +46,7 @@ main
          ds <- bufferData buf2
          printLn ds
 
-         setByte buf2 0 1
+         setBits8 buf2 0 1
          Just ccBuf <- concatBuffers [buf, buf2]
             | Nothing => putStrLn "Buffer concat failed"
          printLn !(bufferData ccBuf)

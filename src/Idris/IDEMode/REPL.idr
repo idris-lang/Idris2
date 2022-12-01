@@ -150,15 +150,19 @@ process (Interpret cmd)
 process (LoadFile fname_in _)
     = do
          defs <- get Ctxt
-         let extraDirs = defs.options.dirs.extra_dirs
+         --both extra dirs and packageDirs keeps getting added to by findIpkg when we load
+         --the file. If left unchecked, loading time will go slower and slower everytime
+         --LoadFile is invoked. To prevent this, the entirety of dirs is replaced after
+         --the operation is complete
+         let dirs = defs.options.dirs
+
          let fname = case !(findIpkg (Just fname_in)) of
                           Nothing => fname_in
                           Just f' => f'
          res <- replWrap $ Idris.REPL.process (Load fname) >>= outputSyntaxHighlighting fname
-         --findIpkg keeps adding extra dirs everytime its run, so we need to reset
-         --it back to what it was
+         --putting the dirs back
          defs <- get Ctxt
-         put Ctxt ({ options->dirs->extra_dirs := extraDirs } defs)
+         put Ctxt ({ options->dirs := dirs } defs)
          pure res
 
 process (NameAt name Nothing)
@@ -359,8 +363,7 @@ displayIDEResult outf i  (REPL $ FileLoaded x)
 displayIDEResult outf i  (REPL $ ErrorLoadingFile x err)
   = printIDEError outf i $ reflow "Error loading file" <++> pretty0 x <+> colon <++> pretty0 (show err)
 displayIDEResult outf i  (REPL $ ErrorsBuildingFile x errs)
-  = do errs' <- traverse perror errs
-       printIDEError outf i $ reflow "Error(s) building file" <++> pretty0 x <+> colon <++> vsep errs'
+  = printIDEError outf i $ reflow "Error(s) building file" <++> pretty0 x -- messages already displayed while building
 displayIDEResult outf i  (REPL $ NoFileLoaded)
   = printIDEError outf i $ reflow "No file can be reloaded"
 displayIDEResult outf i  (REPL $ CurrentDirectory dir)

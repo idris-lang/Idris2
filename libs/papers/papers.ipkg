@@ -32,10 +32,19 @@ modules = Data.Container,
 
           Data.W,
 
+          Language.IntrinsicScoping.Variables,
+          Language.IntrinsicScoping.TypeTheory,
+
+          Language.IntrinsicTyping.ABT,
+
+          Language.IntrinsicTyping.Krivine,
+
           Language.IntrinsicTyping.SECD,
           Language.IntrinsicTyping.STLCR,
 
           Language.Tagless,
+
+          Language.TypeTheory,
 
           Search.Auto,
 

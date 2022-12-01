@@ -1,5 +1,40 @@
 # Changelog
 
+## [Next version]
+
+### REPL changes
+
+* Adds documentation for unquotes `~( )`.
+
+### Backend changes
+
+#### RefC
+
+* Adds support for `CFLAGS`, `CPPFLAGS`, and `LDFLAGS` to facilitate building on
+  systems with non-standard installation locations of libraries (e.g. GMP).
+  Versions of the flags with the `IDRIS2_` prefix can also be used and take
+  precedence.
+
+### Compiler changes
+
+* If `IAlternative` expression with `FirstSuccess` rule fails to typecheck,
+  compiler now prints all tried alternatives, not only the last one.
+
+### Library changes
+
+#### Base
+
+* Deprecates `setByte` and `getByte` from `Data.Buffer` for removal in a future
+  release. Use `setBits8` and `getBits8` instead (with `cast` if you need to
+  convert a `Bits8` to an `Int`), as their values are limited, as opposed to the
+  assumption in `setByte` that the value is between 0 and 255.
+* Adds RefC support for 16- and 32-bit access in `Data.Buffer`.
+
+#### System
+
+* Changes `getNProcessors` to return the number of online processors rather than
+  the number of configured processors.
+
 ## v0.6.0
 
 ### REPL changes

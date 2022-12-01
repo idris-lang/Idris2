@@ -33,10 +33,10 @@ findRacket =
   do env <- idrisGetEnv "RACKET"
      pure $ fromMaybe "/usr/bin/env racket" env
 
-findRacoExe : IO String
+findRacoExe : IO (List String)
 findRacoExe =
   do env <- idrisGetEnv "RACKET_RACO"
-     pure $ (fromMaybe "/usr/bin/env raco" env) ++ " exe"
+     pure $ (maybe ["/usr/bin/env", "raco"] singleton env) ++ ["exe"]
 
 schHeader : Bool -> String -> String
 schHeader prof libs = """
@@ -448,8 +448,7 @@ compileExpr mkexec c s tmpDir outputDir tm outfile
 
          ok <- the (Core Int) $ if mkexec
                   then logTime 1 "Build racket" $
-                         coreLift $
-                           system (raco ++ " -o " ++ outBinAbs ++ " " ++ outRktAbs)
+                         coreLift $ system $ raco ++ ["-o", outBinAbs, outRktAbs]
                   else pure 0
          if ok == 0
             then do -- TODO: add launcher script
@@ -472,7 +471,7 @@ executeExpr :
 executeExpr c s tmpDir tm
     = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpracket"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system sh
+         coreLift_ $ system [sh]
 
 export
 codegenRacket : Codegen
