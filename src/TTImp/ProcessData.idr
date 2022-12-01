@@ -230,7 +230,7 @@ getRelevantArg defs i rel world (NBind fc _ (Pi _ rig _ val) sc)
                                  rel)
                  rig
 getRelevantArg defs i rel world tm
-    = pure (maybe Nothing (\r => Just (world, r)) rel)
+    = pure ((world,) <$> rel)
 
 -- If there's one constructor with only one non-erased argument, flag it as
 -- a newtype for optimisation

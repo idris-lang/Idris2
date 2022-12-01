@@ -153,14 +153,27 @@ mutual
   -- in case they duplicate work. We should fix that, to decide more accurately
   -- whether they're safe to inline, but until then this gives such a huge
   -- boost by removing unnecessary lambdas that we'll keep the special case.
-  eval rec env stk (CRef fc n)
-      = case (n == NS primIONS (UN $ Basic "io_bind"), stk) of
+  eval rec env stk (CRef fc n) = do
+        when (n == NS primIONS (UN $ Basic "io_bind")) $
+          log "compiler.inline.io_bind" 50 $
+            "Attempting to inline io_bind, its stack is: \{show stk}"
+        case (n == NS primIONS (UN $ Basic "io_bind"), stk) of
           (True, act :: cont :: world :: stk) =>
                  do xn <- genName "act"
                     sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
                     pure $ unload stk $
                              CLet fc xn False (CApp fc act [world])
                                               (refToLocal xn xn sc)
+          (True, [act, cont]) =>
+                 do wn <- genName "world"
+                    xn <- genName "act"
+                    let world : forall vars. CExp vars := CRef fc wn
+                    sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
+                    pure $ CLam fc wn
+                         $ refToLocal wn wn
+                         $ CLet fc xn False (CApp fc act [world])
+                         $ refToLocal xn xn
+                         $ sc
           (_,_) =>
              do defs <- get Ctxt
                 Just gdef <- lookupCtxtExact n (gamma defs)
