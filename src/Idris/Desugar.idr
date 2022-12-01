@@ -157,18 +157,18 @@ bindBangs ((n, fc, btm) :: bs) ns tm
     $ bindFun fc ns btm
     $ ILam EmptyFC top Explicit (Just n) (Implicit fc False) tm
 
-idiomise : FC -> Maybe Namespace -> RawImp -> RawImp
-idiomise fc mns (IAlternative afc u alts)
-  = IAlternative afc (mapAltType (idiomise afc mns) u) (idiomise afc mns <$> alts)
-idiomise fc mns (IApp afc f a)
+idiomise : FC -> Maybe Namespace -> Maybe Namespace -> RawImp -> RawImp
+idiomise fc dons mns (IAlternative afc u alts)
+  = IAlternative afc (mapAltType (idiomise afc dons mns) u) (idiomise afc dons mns <$> alts)
+idiomise fc dons mns (IApp afc f a)
   = let fc  = virtualiseFC fc
         app = UN $ Basic "<*>"
-        nm  = maybe app (`NS` app) mns
-     in IApp fc (IApp fc (IVar fc nm) (idiomise afc mns f)) a
-idiomise fc mns fn
+        nm  = maybe app (`NS` app) (mns <|> dons)
+     in IApp fc (IApp fc (IVar fc nm) (idiomise afc dons mns f)) a
+idiomise fc dons mns fn
   = let fc  = virtualiseFC fc
         pur = UN $ Basic "pure"
-        nm  = maybe pur (`NS` pur) mns
+        nm  = maybe pur (`NS` pur) (mns <|> dons)
      in IApp fc (IVar fc nm) fn
 
 data Bang : Type where
@@ -181,7 +181,12 @@ mutual
              {auto u : Ref UST UState} ->
              {auto o : Ref ROpts REPLOpts} ->
              Side -> List Name -> PTerm -> Core RawImp
-  desugarB side ps (PRef fc x) = pure $ IVar fc x
+  desugarB side ps (PRef fc x) = do
+    let ns = mbNamespace !(get Bang)
+    let pur = UN $ Basic "pure"
+    case x == pur of -- implicitly add namespace to unqualified occurrences of `pure` in a qualified do-block
+      False => pure $ IVar fc x
+      True => pure $ IVar fc (maybe pur (`NS` pur) ns)
   desugarB side ps (PPi fc rig p mn argTy retTy)
       = let ps' = maybe ps (:: ps) mn in
             pure $ IPi fc rig !(traverse (desugar side ps') p)
@@ -351,7 +356,7 @@ mutual
   desugarB side ps (PIdiom fc ns term)
       = do itm <- desugarB side ps term
            logRaw "desugar.idiom" 10 "Desugaring idiom for" itm
-           let val = idiomise fc ns itm
+           let val = idiomise fc (mbNamespace !(get Bang)) ns itm
            logRaw "desugar.idiom" 10 "Desugared to" val
            pure val
   desugarB side ps (PList fc nilFC args)
