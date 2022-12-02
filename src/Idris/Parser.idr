@@ -1531,7 +1531,8 @@ getVisibility v (_ :: xs) = getVisibility v xs
 
 recordConstructor : OriginDesc -> Rule Name
 recordConstructor fname
-  = do exactIdent "constructor"
+  = do doc <- optDocumentation fname
+       exactIdent "constructor"
        n <- mustWork $ decoratedDataConstructorName fname
        pure n
 
