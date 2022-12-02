@@ -935,7 +935,7 @@ mutual
            let consb = map (\ (nm, tm) => (nm, doBind bnames tm)) cons'
 
            body' <- traverse (desugarDecl (ps ++ mnames ++ paramNames)) body
-           pure [IPragma fc (maybe [tn] (\n => [tn, n]) conname)
+           pure [IPragma fc (maybe [tn] (\n => [tn, snd n]) conname)
                             (\nest, env =>
                               elabInterface fc vis env nest consb
                                             tn paramsb det conname
