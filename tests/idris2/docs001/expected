@@ -70,7 +70,7 @@ Main> interface Prelude.Show : Type -> Type
   Things that have a canonical `String` representation.
   A minimal implementation includes either `show` or `showPrec`.
   Parameters: ty
-  Constructor: MkShow
+  Constructor: MkShow : (ty -> String) -> (Prec -> ty -> String) -> Show ty
   Methods:
     show : ty -> String
       Convert a value to its `String` representation.
@@ -123,7 +123,7 @@ Main> interface Prelude.Monad : (Type -> Type) -> Type
   A minimal definition includes either `(>>=)` or `join`.
   Parameters: m
   Constraints: Applicative m
-  Constructor: MkMonad
+  Constructor: MkMonad : Applicative m => (m a -> (a -> m b) -> m b) -> (m (m a) -> m a) -> Monad m
   Methods:
     (>>=) : m a -> (a -> m b) -> m b
       Also called `bind`.
