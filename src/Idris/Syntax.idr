@@ -280,7 +280,7 @@ mutual
                    (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
                    (opts : List DataOpt) ->
                    (conName : Maybe (String, Name)) ->
-                   List (PField' nm) ->
+                   (fields : List (PField' nm)) ->
                    PRecordDecl' nm
        MkPRecordLater : (tyname : Name) ->
                         (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
