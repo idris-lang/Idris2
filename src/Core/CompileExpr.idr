@@ -56,6 +56,16 @@ Eq ConInfo where
   UNIT == UNIT = True
   _ == _ = False
 
+||| Tagging let binders with whether it is safe to inline them
+public export
+data InlineOk = YesInline | NotInline
+
+export
+Eq InlineOk where
+  YesInline == YesInline = True
+  NotInline == NotInline = True
+  _ == _ = False
+
 mutual
   ||| CExp - an expression ready for compiling.
   public export
@@ -65,7 +75,8 @@ mutual
        -- Lambda expression
        CLam : FC -> (x : Name) -> CExp (x :: vars) -> CExp vars
        -- Let bindings
-       CLet : FC -> (x : Name) -> (inlineOK : Bool) -> -- Don't inline if set
+       CLet : FC -> (x : Name) ->
+              InlineOk -> -- Don't inline if set
               CExp vars -> CExp (x :: vars) -> CExp vars
        -- Application of a defined function. The length of the argument list is
        -- exactly the same length as expected by its definition (so saturate with

@@ -227,7 +227,7 @@ natBranch _ = False
 
 trySBranch : CExp vars -> CConAlt vars -> Maybe (CExp vars)
 trySBranch n (MkConAlt nm SUCC _ [arg] sc)
-    = Just (CLet (getFC n) arg True (magic__natUnsuc (getFC n) (getFC n) [n]) sc)
+    = Just (CLet (getFC n) arg YesInline (magic__natUnsuc (getFC n) (getFC n) [n]) sc)
 trySBranch _ _ = Nothing
 
 tryZBranch : CConAlt vars -> Maybe (CExp vars)
@@ -253,7 +253,7 @@ builtinNatTree (CConCase fc sc@(CLocal _ _) alts def)
                else CConCase fc sc alts def
 builtinNatTree (CConCase fc sc alts def)
     = do x <- newMN "succ"
-         pure $ CLet fc x True sc
+         pure $ CLet fc x YesInline sc
                 !(builtinNatTree $ CConCase fc (CLocal fc First) (map weaken alts) (map weaken def))
 builtinNatTree t = pure t
 
@@ -283,7 +283,7 @@ unitTree exp@(CConCase fc sc alts def) = fromMaybe (pure exp)
              | _ => Nothing
          Just $ case sc of -- TODO: Check scrutinee has no effect, and skip let binding
                      CLocal _ _ => pure e
-                     _ => pure $ CLet fc !(newMN "_unit") False sc (weaken e)
+                     _ => pure $ CLet fc !(newMN "_unit") NotInline sc (weaken e)
 unitTree t = pure t
 
 -- See if the constructor is a special constructor type, e.g a nil or cons
@@ -339,7 +339,7 @@ toCExpTm n (Bind fc x (Lam _ _ _ _) sc)
 toCExpTm n (Bind fc x (Let _ rig val _) sc)
     = do sc' <- toCExp n sc
          pure $ branchZero (shrinkCExp (DropCons SubRefl) sc')
-                        (CLet fc x True !(toCExp n val) sc')
+                        (CLet fc x YesInline !(toCExp n val) sc')
                         rig
 toCExpTm n (Bind fc x (Pi _ c e ty) sc)
     = pure $ CCon fc (UN (Basic "->")) TYCON Nothing
@@ -467,7 +467,7 @@ mutual
                                                         {inner=vars}
                                                         {ns = [MN "eff" 0]}
                                                         (mkSizeOf _) (mkSizeOf _) sc'
-                                let tm = CLet fc (MN "eff" 0) False scr (substs env scope)
+                                let tm = CLet fc (MN "eff" 0) NotInline scr (substs env scope)
                                 log "compiler.newtype.world" 50 "Kept the scrutinee \{show tm}"
                                 pure (Just tm)
                 _ => pure Nothing -- there's a normal match to do
@@ -501,8 +501,8 @@ mutual
   toCExpTree n alts@(Case _ x scTy (DelayCase ty arg sc :: rest))
       = let fc = getLoc scTy in
             pure $
-              CLet fc arg True (CForce fc LInf (CLocal (getLoc scTy) x)) $
-              CLet fc ty True (CErased fc)
+              CLet fc arg YesInline (CForce fc LInf (CLocal (getLoc scTy) x)) $
+              CLet fc ty YesInline (CErased fc)
                    !(toCExpTree n sc)
   toCExpTree n alts
       = toCExpTree' n alts

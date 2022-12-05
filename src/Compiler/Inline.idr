@@ -80,13 +80,13 @@ mutual
          {idx : Nat} -> (0 p : IsVar n idx free) -> CExp free -> Int
   used {idx} n (CLocal _ {idx=pidx} prf) = if idx == pidx then 1 else 0
   used n (CLam _ _ sc) = used (Later n) sc
-  used n (CLet _ _ False val sc)
+  used n (CLet _ _ NotInline val sc)
       = let usedl = used n val + used (Later n) sc in
             if usedl > 0
                then 1000 -- Don't do any inlining of the name, because if it's
                          -- used under a non-inlinable let things might go wrong
                else usedl
-  used n (CLet _ _ True val sc) = used n val + used (Later n) sc
+  used n (CLet _ _ YesInline val sc) = used n val + used (Later n) sc
   used n (CApp _ x args) = foldr (+) (used n x) (map (used n) args)
   used n (CCon _ _ _ _ args) = foldr (+) 0 (map (used n) args)
   used n (COp _ _ args) = foldr (+) 0 (map (used n) args)
@@ -162,8 +162,9 @@ mutual
                  do xn <- genName "act"
                     sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
                     pure $ unload stk $
-                             CLet fc xn False (CApp fc act [world])
-                                              (refToLocal xn xn sc)
+                             CLet fc xn NotInline
+                               (CApp fc act [world])
+                               (refToLocal xn xn sc)
           (True, [act, cont]) =>
                  do wn <- genName "world"
                     xn <- genName "act"
@@ -171,7 +172,7 @@ mutual
                     sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
                     pure $ CLam fc wn
                          $ refToLocal wn wn
-                         $ CLet fc xn False (CApp fc act [world])
+                         $ CLet fc xn NotInline (CApp fc act [world])
                          $ refToLocal xn xn
                          $ sc
           (_,_) =>
@@ -193,12 +194,12 @@ mutual
            sc' <- eval rec (CRef fc xn :: env) [] sc
            pure $ CLam fc x (refToLocal xn x sc')
   eval rec env (e :: stk) (CLam fc x sc) = eval rec (e :: env) stk sc
-  eval {vars} {free} rec env stk (CLet fc x False val sc)
+  eval {vars} {free} rec env stk (CLet fc x NotInline val sc)
       = do xn <- genName "letv"
            sc' <- eval rec (CRef fc xn :: env) [] sc
            val' <- eval rec env [] val
-           pure (unload stk $ CLet fc x False val' (refToLocal xn x sc'))
-  eval {vars} {free} rec env stk (CLet fc x True val sc)
+           pure (unload stk $ CLet fc x NotInline val' (refToLocal xn x sc'))
+  eval {vars} {free} rec env stk (CLet fc x YesInline val sc)
       = do let u = used First sc
            if u < 1 -- TODO: Can make this <= as long as we know *all* inlinings
                     -- are guaranteed not to duplicate work. (We don't know
@@ -208,7 +209,7 @@ mutual
               else do xn <- genName "letv"
                       sc' <- eval rec (CRef fc xn :: env) stk sc
                       val' <- eval rec env [] val
-                      pure (CLet fc x True val' (refToLocal xn x sc'))
+                      pure (CLet fc x YesInline val' (refToLocal xn x sc'))
   eval rec env stk (CApp fc f@(CRef nfc n) args)
       = do -- If we don't know 'n' leave the arity alone, because it's
            -- a name from another module where the job is already done

@@ -22,6 +22,11 @@ import Libraries.Utils.Scheme
 %default covering
 
 export
+TTC InlineOk where
+  toBuf b = toBuf b . (YesInline ==)
+  fromBuf = Core.map (\ b => ifThenElse b YesInline NotInline) . fromBuf
+
+export
 TTC Namespace where
   toBuf b = toBuf b . unsafeUnfoldNamespace
   fromBuf = Core.map unsafeFoldNamespace . fromBuf
