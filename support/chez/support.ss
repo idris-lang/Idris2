@@ -27,7 +27,7 @@
 (define (blodwen-delay-lazy f)
   (weak-cons bwp f))
 
-(define (blodwen-force-lazy e)
+(define (blodwen-force e)
   (if (weak-pair? e)
     (let ((exval (car e)))
       (if (bwp-object? exval)
@@ -627,9 +627,6 @@
 
 (define (blodwen-apply obj arg)
   (obj arg))
-
-(define (blodwen-force obj)
-  (obj))
 
 (define (blodwen-read-symbol sym)
   (symbol->string sym))

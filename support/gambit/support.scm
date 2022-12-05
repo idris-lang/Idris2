@@ -28,8 +28,8 @@
 (define (blodwen-delay-lazy f)
   f)
 
-(define (blodwen-force-lazy e)
-  (e))
+(define (blodwen-force f)
+  (f))
 
 (define (blodwen-toSignedInt x bits)
   (if (bit-set? bits x)

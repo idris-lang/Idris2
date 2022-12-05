@@ -19,8 +19,8 @@
 (define (blodwen-delay-lazy f)
   f)
 
-(define (blodwen-force-lazy e)
-  (e))
+(define (blodwen-force f)
+  (f))
 
 (define (blodwen-toSignedInt x bits)
   (if (bitwise-bit-set? x bits)
@@ -598,9 +598,6 @@
 
 (define (blodwen-apply obj arg)
   (obj arg))
-
-(define (blodwen-force obj)
-  (obj))
 
 (define (blodwen-read-symbol sym)
   (symbol->string sym))
