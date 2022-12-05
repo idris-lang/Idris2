@@ -45,6 +45,12 @@ This CHANGELOG describes the history of already-released versions. Please see [C
 
 ### Backend changes
 
+#### Chez
+
+* `Lazy` values are *weakly* memoised. That is, once accessed, they are allowed
+  to be not re-evaluated until garbage collector wipes them.
+  Unlike `Lazy`, `Inf` values are not memoised.
+
 #### RefC
 
 * Adds support for `CFLAGS`, `CPPFLAGS`, `LDFLAGS` and `LDLIBS` to facilitate
