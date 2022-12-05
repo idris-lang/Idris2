@@ -6,14 +6,18 @@ import Debug.Trace
 S' : (pref : String) -> Nat -> Nat
 S' pref = S . traceValBy (\n => "\{pref} \{show n}")
 
-natsS : Stream Nat
-natsS = iterate (S' "> s") Z
+-- We return lazy values in a monad to avoid behaviour of common expression elimination
 
-natsL : LazyList Nat
-natsL = iterateN 200 (S' "> ll") Z
+natsS' : IO $ Stream Nat
+natsS' = pure $ iterate (S' "> s") Z
+
+natsL' : IO $ LazyList Nat
+natsL' = pure $ iterateN 200 (S' "> ll") Z
 
 main : IO ()
 main = do
+  natsS <- natsS'
+
   putStrLn "\n-----------------------"
   putStrLn "first take of stream (should be `s 0..9`)"
   printLn $ take 10 natsS
@@ -21,6 +25,8 @@ main = do
   putStrLn "\n-----------------------"
   putStrLn "second take of stream (should be `s 0..9`)"
   printLn $ take 10 natsS
+
+  natsL <- natsL'
 
   putStrLn "\n-----------------------"
   putStrLn "first take of short lazy list (should be `ll 0..9`)"
