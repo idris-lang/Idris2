@@ -345,6 +345,11 @@ Context f = All (const (Ty f)) f
 
 parameters {0 m : Type -> Type} {auto _ : MonadError String m}
 
+  levelI : {f : _} -> All (const p) f -> Level nm f -> p
+  levelI vs lvl with (view lvl)
+    levelI (v :: vs) _ | Z = v
+    levelI (v :: vs) _ | S lvl' = levelI vs lvl'
+
   inferI    : {f : _} -> Context f -> Infer f [<] -> m (Ty f)
   checkAbsI : {f : _} -> Context f -> Ty f -> Kripke f -> Abs Check f [<] -> m ()
   checkI    : {f : _} -> Context f -> Ty f -> Check f [<] -> m ()
@@ -380,7 +385,7 @@ parameters {0 m : Type -> Type} {auto _ : MonadError String m}
   inferI ctx (Bnd k) =
     -- unhandled in the original Haskell
     throwError "Oops"
-  inferI ctx (Var v) = ?azeg
+  inferI ctx (Var v) = pure (levelI ctx v)
   inferI ctx (App f t) = do
     (VPi a b) <- inferI ctx f
       | _ => throwError "illegal application"

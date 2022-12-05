@@ -132,8 +132,10 @@ LContext = List Name
 
 public export
 data AtLevel : Nat -> Name -> LContext -> Type where
-  H : n = length ctx -> AtLevel n nm (nm :: ctx)
-  T : AtLevel n nm ctx -> AtLevel n nm (_ :: ctx)
+  H : {0 ctx : LContext} -> {0 nm : String} ->
+      n = length ctx -> AtLevel n nm (nm :: ctx)
+  T : {0 ctx : LContext} -> {0 nm : String} ->
+      AtLevel n nm ctx -> AtLevel n nm (_ :: ctx)
 
 levelIsFin : LTE (length ctx) i -> Not (AtLevel i nm ctx)
 levelIsFin lte (H Refl) = void (succNotLTEpred lte)
@@ -157,6 +159,38 @@ namespace Level
   fresh : {ctx : _} -> Level nm (nm :: ctx)
   fresh = MkLevel (length ctx) (H Refl)
 
+  public export
+  data View : Level nm ctx -> Type where
+    Z : View (Level.fresh {nm, ctx})
+    S : (p : Level nm ctx) -> View (weaken p)
+
+  invertH : (prf : AtLevel (length ctx) nm (nm' :: ctx)) ->
+            (nm === nm', prf ~=~ H {nm, ctx} Refl)
+  invertH (H Refl) = (Refl, Refl)
+  invertH (T p) = void (levelIsFin reflexive p)
+
+  invertT : (prf : AtLevel l nm (nm' :: ctx)) ->
+            Not (l === length ctx) ->
+            (p' : AtLevel l nm ctx ** prf === T p')
+  invertT (H eq) neq = void (neq eq)
+  invertT (T p) neq = (p ** Refl)
+
+  viewAux :
+    {l : Nat} -> (0 p : AtLevel l nm (nm' :: ctx)) ->
+    (0 p' : AtLevel l nm ctx) -> (0 _ : p === T p') ->
+    View (MkLevel l p)
+  viewAux .(T p') p' Refl = S (MkLevel l p')
+
+  public export
+  view : {ctx : _} -> (p : Level nm ctx) -> View p
+  view  {ctx = nm :: ctx} (MkLevel l p) with (decEq l (length ctx))
+    view {ctx = nm :: ctx} (MkLevel .(length ctx) p)
+      | Yes Refl with 0 (snd (invertH p))
+      view {ctx = nm :: ctx} (MkLevel .(length ctx) .(H Refl))
+        | Yes Refl | Refl = Z
+    view (MkLevel l p) | No neq = viewAux p _ (snd (invertT p neq))
+  view (MkLevel _ (H prf)) impossible
+  view (MkLevel _ (T x)) impossible
 
   export
   irrelevantAtLevel :
