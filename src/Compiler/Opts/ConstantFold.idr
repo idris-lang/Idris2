@@ -81,13 +81,13 @@ constFold rho (CLocal fc p) = lookup fc (MkVar p) rho
 constFold rho e@(CRef fc x) = CRef fc x
 constFold rho (CLam fc x y)
   = CLam fc x $ constFold (wk (mkSizeOf [x]) rho) y
-constFold rho (CLet fc x inlineOK y z) =
+constFold rho (CLet fc x inl y z) =
     let val = constFold rho y
      in case val of
-        CPrimVal _ _ => if inlineOK
+        CPrimVal _ _ => if inl == YesInline
             then constFold (val :: rho) z
-            else CLet fc x inlineOK val (constFold (wk (mkSizeOf [x]) rho) z)
-        _ => CLet fc x inlineOK val (constFold (wk (mkSizeOf [x]) rho) z)
+            else CLet fc x inl val (constFold (wk (mkSizeOf [x]) rho) z)
+        _ => CLet fc x inl val (constFold (wk (mkSizeOf [x]) rho) z)
 constFold rho (CApp fc (CRef fc2 n) [x]) =
   if n == NS typesNS (UN $ Basic "prim__integerToNat")
      then case constFold rho x of
