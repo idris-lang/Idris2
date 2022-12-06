@@ -1252,9 +1252,14 @@ namespace NVar
 
 export
 weakenNVar : SizeOf ns -> NVar name inner -> NVar name (ns ++ inner)
-weakenNVar p x = case sizedView p of
-  Z     => x
-  (S p) => later (weakenNVar p x)
+-- weakenNVar p x = case sizedView p of
+--   Z     => x
+--   (S p) => later (weakenNVar p x)
+-- ^^^^ The above is the correct way, the below involves a proof which
+-- is nonsense, but it's okay because it's deleted, and all we're doing is
+-- adding a number so let's do it the quick way
+weakenNVar (MkSizeOf s _)  (MkNVar {i} p)
+    = (MkNVar {i = plus s i} (believe_me p))
 
 export
 insertNVar : SizeOf outer ->
