@@ -308,6 +308,7 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "newints"
     , "integers"
     , "nat2fin"
+    , "inlineiobind"
     , "semaphores001"
     , "semaphores002"
     , "perf001"
