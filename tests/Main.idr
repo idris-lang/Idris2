@@ -148,6 +148,7 @@ idrisTestsPerformance = MkTestPool "Performance" [] Nothing
        -- pose interesting challenges for the elaborator
       ["perf001", "perf002", "perf003", "perf004", "perf005",
        "perf007", "perf008", "perf009", "perf010", "perf011",
+       "perf012",
        "perf2202"]
 
 idrisTestsRegression : TestPool
