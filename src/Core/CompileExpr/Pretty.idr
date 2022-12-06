@@ -60,19 +60,22 @@ prettyCon x ci mtag
       , prettyFlag ci
       ]
 
+prettyName : Name -> Doc IdrisSyntax
+prettyName = pretty0
+
 mutual
 
   prettyNamedCExp : NamedCExp -> Doc IdrisSyntax
   prettyNamedCExp = prettyPrecNamedCExp Open
 
   prettyPrecNamedCExp : Prec -> NamedCExp -> Doc IdrisSyntax
-  prettyPrecNamedCExp d (NmLocal _ x) = annotate Bound $ pretty0 x
-  prettyPrecNamedCExp d (NmRef _ x) = annotate (Fun x) $ pretty0 x
+  prettyPrecNamedCExp d (NmLocal _ x) = annotate Bound $ prettyName x
+  prettyPrecNamedCExp d (NmRef _ x) = annotate (Fun x) $ prettyName x
   prettyPrecNamedCExp d (NmLam _ x y)
-    = parenthesise (d > Open) $ keyword "\\" <+> pretty0 x <+> fatArrow <++> prettyNamedCExp y
+    = parenthesise (d > Open) $ keyword "\\" <+> prettyName x <+> fatArrow <++> prettyNamedCExp y
   prettyPrecNamedCExp d (NmLet _ x y z)
       = parenthesise (d > Open) $
-          vcat [ let_ <++> pretty0 x <++> equals <++> prettyNamedCExp y <++> in_, prettyNamedCExp z ]
+          vcat [ let_ <++> prettyName x <++> equals <++> prettyNamedCExp y <++> in_, prettyNamedCExp z ]
   prettyPrecNamedCExp d (NmApp _ x xs)
       = parenthesise (d > Open) $
           sep (prettyNamedCExp x :: map (prettyPrecNamedCExp App) xs)
@@ -106,7 +109,7 @@ mutual
 
   prettyNamedConAlt : NamedConAlt -> Doc IdrisSyntax
   prettyNamedConAlt (MkNConAlt x ci tag args exp)
-        = sep (prettyCon x ci tag :: map pretty0 args ++ [fatArrow <+> softline <+> align (prettyNamedCExp exp) ])
+        = sep (prettyCon x ci tag :: map prettyName args ++ [fatArrow <+> softline <+> align (prettyNamedCExp exp) ])
 
   prettyNamedConstAlt : NamedConstAlt -> Doc IdrisSyntax
   prettyNamedConstAlt (MkNConstAlt x exp)
@@ -126,7 +129,7 @@ prettyCExp = prettyNamedCExp . forget
 prettyCDef : CDef -> Doc IdrisDocAnn
 prettyCDef (MkFun [] exp) = reAnnotate Syntax $ prettyCExp exp
 prettyCDef (MkFun args exp) = reAnnotate Syntax $
-  keyword "\\" <++> concatWith (\ x, y => x <+> keyword "," <++> y) (map pretty0 args)
+  keyword "\\" <++> concatWith (\ x, y => x <+> keyword "," <++> y) (map prettyName args)
        <++> fatArrow <++> prettyCExp exp
 prettyCDef (MkCon mtag arity nt)
   = vcat $ header (maybe "Data" (const "Type") mtag <++> "Constructor") :: map (indent 2)
