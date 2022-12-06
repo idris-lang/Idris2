@@ -489,7 +489,7 @@ installBuildArtifactFrom : {auto o : Ref ROpts REPLOpts} ->
 installBuildArtifactFrom file_extension builddir destdir ns
     = do let filename_trunk = ModuleIdent.toPath ns
          let filename = builddir </> filename_trunk <.> file_extension
-         
+
          let modPath  = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns
          let destNest = joinPath modPath
          let destPath = destdir </> destNest
