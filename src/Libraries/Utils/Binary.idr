@@ -15,32 +15,32 @@ public export
 record Binary where
   constructor MkBin
   buf : Buffer
-  loc : Int
-  size : Int -- Capacity
-  used : Int -- Amount used
+  loc : Integer
+  size : Integer -- Capacity
+  used : Integer -- Amount used
 
 export
-newBinary : Buffer -> Int -> Binary
+newBinary : Buffer -> Integer -> Binary
 newBinary b s = MkBin b 0 s 0
 
-export
+%inline export
 blockSize : Int
 blockSize = 655360
 
 export
-avail : Binary -> Int
+avail : Binary -> Integer
 avail c = (size c - loc c) - 1
 
 export
-toRead : Binary -> Int
+toRead : Binary -> Integer
 toRead c = used c - loc c
 
 export
-appended : Int -> Binary -> Binary
+appended : Integer -> Binary -> Binary
 appended i (MkBin b loc s used) = MkBin b (loc+i) s (used + i)
 
 export
-incLoc : Int -> Binary -> Binary
+incLoc : Integer -> Binary -> Binary
 incLoc i c = { loc $= (+i) } c
 
 export
@@ -60,12 +60,13 @@ export
 fromBuffer : Buffer -> IO Binary
 fromBuffer buf
     = do len <- rawSize buf
+         let len = cast len
          pure (MkBin buf 0 len len)
 
 export
 writeToFile : (fname : String) -> Binary -> IO (Either FileError ())
 writeToFile fname c
-    = do Right ok <- writeBufferToFile fname (buf c) (used c)
+    = do Right ok <- writeBufferToFile fname (buf c) (cast $ used c)
                | Left (err, size) => pure (Left err)
          pure (Right ok)
 
@@ -75,4 +76,5 @@ readFromFile fname
     = do Right b <- createBufferFromFile fname
                | Left err => pure (Left err)
          bsize <- rawSize b
+         let bsize = cast bsize
          pure (Right (MkBin b 0 bsize bsize))
