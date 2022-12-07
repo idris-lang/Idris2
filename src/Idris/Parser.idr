@@ -1779,7 +1779,11 @@ directiveDecl fname indents
 -- Declared at the top
 -- topDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
 topDecl fname indents
-    = do d <- dataDecl fname indents
+      -- Specifically check if the user has attempted to use a reserved identifier to begin their declaration to give improved error messages.
+      -- i.e. the claim "String : Type" is a parse error, but the underlying reason may not be clear to new users.
+    = do id <- anyReservedIdent
+         the (Rule (List PDecl)) $ fatalLoc id.bounds "Cannot begin a declaration with a reserved identifier"
+  <|> do d <- dataDecl fname indents
          pure [d]
   <|> do ds <- claims fname indents
          pure (forget ds)
@@ -1817,6 +1821,9 @@ topDecl fname indents
          pure [let cgrest = span isAlphaNum dstr.val in
                    PDirective (boundToFC fname dstr)
                         (CGAction (fst cgrest) (stripBraces (trim (snd cgrest))))]
+      -- If the user tried to begin a declaration with any other keyword, then show a more informative error.
+  <|> do kw <- bounds anyKeyword
+         the (Rule (List PDecl)) $ fatalLoc kw.bounds "Keyword '\{kw.val}' is not a valid start to a declaration"
   <|> fatalError "Couldn't parse declaration"
 
 -- All the clauses get parsed as one-clause definitions. Collect any

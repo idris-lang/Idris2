@@ -337,6 +337,13 @@ reservedNames
       , "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"
       ]
 
+export
+anyReservedIdent : Rule (WithBounds String)
+anyReservedIdent = do
+    id <- bounds identPart
+    unless (id.val `elem` reservedNames) $ failLoc id.bounds "Expected reserved identifier"
+    pure id
+
 isNotReservedName : WithBounds String -> EmptyRule ()
 isNotReservedName x
     = when (x.val `elem` reservedNames) $

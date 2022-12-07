@@ -1,0 +1,3 @@
+module ParseError
+
+String : Type
