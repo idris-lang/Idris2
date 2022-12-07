@@ -519,6 +519,17 @@ namespace List
   length []        = Z
   length (x :: xs) = S (length xs)
 
+  ||| Returns a sublist of a given list, starting at position `index`, of length `len`.
+  |||
+  ||| Result is truncated if it overruns the input list
+  public export
+  sublist : (index : Nat) -> (len : Nat) -> (subject : List a) -> List a
+  sublist 0 0 subject = []
+  sublist 0 (S k) [] = []
+  sublist 0 (S k) (x :: xs) = x :: sublist 0 k xs
+  sublist (S k) len [] = []
+  sublist (S k) len (x :: xs) = sublist k len xs
+
   ||| Applied to a predicate and a list, returns the list of those elements that
   ||| satisfy the predicate.
   public export
@@ -770,51 +781,6 @@ take (S k) (x :: xs) = x :: take k xs
 -- STRINGS --
 -------------
 
-namespace String
-  public export
-  (++) : (x : String) -> (y : String) -> String
-  x ++ y = prim__strAppend x y
-
-  ||| Returns the length of the string.
-  |||
-  ||| ```idris example
-  ||| length ""
-  ||| ```
-  ||| ```idris example
-  ||| length "ABC"
-  ||| ```
-  public export
-  length : String -> Nat
-  length str = fromInteger (prim__cast_IntInteger (prim__strLength str))
-
-||| Reverses the elements within a string.
-|||
-||| ```idris example
-||| reverse "ABC"
-||| ```
-||| ```idris example
-||| reverse ""
-||| ```
-public export
-reverse : String -> String
-reverse = prim__strReverse
-
-||| Returns a substring of a given string
-|||
-||| @ index The (zero based) index of the string to extract.  If this is beyond
-|||         the end of the string, the function returns the empty string.
-||| @ len The desired length of the substring.  Truncated if this exceeds the
-|||       length of the input
-||| @ subject The string to return a portion of
-public export
-substr : (index : Nat) -> (len : Nat) -> (subject : String) -> String
-substr s e subj
-    = if natToInteger s < natToInteger (length subj)
-         then prim__strSubstr (prim__cast_IntegerInt (natToInteger s))
-                              (prim__cast_IntegerInt (natToInteger e))
-                              subj
-         else ""
-
 ||| Adds a character to the front of the specified string.
 |||
 ||| ```idris example
@@ -831,6 +797,36 @@ public export
 strUncons : String -> Maybe (Char, String)
 strUncons "" = Nothing
 strUncons str = assert_total $ Just (prim__strHead str, prim__strTail str)
+
+export
+strConsBiinjective : (0 _ : strCons c1 s1 = strCons c2 s2) -> (c1 = c2, s1 = s2)
+strConsBiinjective prf = (believe_me $ Refl {x = c1}, believe_me $ Refl {x = s1})
+
+export
+strUnconsInjective : (0 _ : strUncons s1 = strUncons s2) -> s1 = s2
+strUnconsInjective prf = believe_me $ Refl {x = s1}
+
+export
+strUnconsCons : (0 c : Char) -> (0 s : String) -> strUncons (strCons c s) = Just (c, s)
+strUnconsCons c s = believe_me $ Refl {x = Just (c, s)}
+
+export
+strUnconsIsNothing : (0 _ : strUncons str = Nothing) -> str = ""
+strUnconsIsNothing prf = strUnconsInjective prf
+
+export
+strUnconsIsJust : (0 _ : strUncons str = Just (c, s)) -> str = strCons c s
+strUnconsIsJust prf = strUnconsInjective $ trans prf $ sym $ strUnconsCons c s
+
+public export
+strInduction : {0 p : String -> Type} ->
+               p "" ->
+               ((c : Char) -> (s : String) -> p s -> p (strCons c s)) ->
+               (str : String) ->
+               p str
+strInduction base step str with (strUncons str) proof prf
+  _ | Nothing = replace {p} (sym $ strUnconsIsNothing prf) base
+  _ | Just (c, s) = replace {p} (sym $ strUnconsIsJust prf) $ step c s $ strInduction base step $ assert_smaller str s
 
 ||| Turns a list of characters into a string.
 public export
@@ -855,13 +851,7 @@ fastPack : List Char -> String
 ||| ```
 public export
 unpack : String -> List Char
-unpack str = unpack' (prim__cast_IntegerInt (natToInteger (length str)) - 1) str []
-  where
-    unpack' : Int -> String -> List Char -> List Char
-    unpack' pos str acc
-        = if pos < 0
-             then acc
-             else unpack' (assert_smaller pos (pos - 1)) str $ (assert_total $ prim__strIndex str pos) :: acc
+unpack = strInduction [] $ \c, s, cs => c :: cs
 
 -- This function runs fast when compiled but won't compute at compile time.
 -- If you need to unpack strings at compile time, use Prelude.unpack.
@@ -874,6 +864,67 @@ fastUnpack : String -> List Char
 
 -- always use 'fastPack' at run time
 %transform "fastUnpack" unpack = fastUnpack
+
+namespace String
+  public export
+  (++) : (x : String) -> (y : String) -> String
+  x ++ y = strInduction y (\c, s, res => strCons c res) x
+
+  %transform "fastAppend" String.(++) = prim__strAppend
+
+  ||| Returns the length of the string.
+  |||
+  ||| ```idris example
+  ||| length ""
+  ||| ```
+  ||| ```idris example
+  ||| length "ABC"
+  ||| ```
+  public export
+  length : String -> Nat
+  length = strInduction 0 $ \c, s, n => S n
+
+  public export
+  lengthImpl : String -> Nat
+  lengthImpl str = fromInteger (prim__cast_IntInteger (prim__strLength str))
+
+  %transform "fastLength" String.length = String.lengthImpl
+
+||| Reverses the elements within a string.
+|||
+||| ```idris example
+||| reverse "ABC"
+||| ```
+||| ```idris example
+||| reverse ""
+||| ```
+public export
+reverse : String -> String
+reverse str = pack $ reverse $ unpack str
+
+%transform "fastReverse" Prelude.Types.reverse = prim__strReverse
+
+||| Returns a substring of a given string
+|||
+||| @ index The (zero based) index of the string to extract.  If this is beyond
+|||         the end of the string, the function returns the empty string.
+||| @ len The desired length of the substring.  Truncated if this exceeds the
+|||       length of the input
+||| @ subject The string to return a portion of
+public export
+substr : (index : Nat) -> (len : Nat) -> (subject : String) -> String
+substr index len subject = pack $ sublist index len $ unpack subject
+
+public export
+substrImpl : (index : Nat) -> (len : Nat) -> (subject : String) -> String
+substrImpl s e subj
+    = if natToInteger s < natToInteger (length subj)
+         then prim__strSubstr (prim__cast_IntegerInt (natToInteger s))
+                              (prim__cast_IntegerInt (natToInteger e))
+                              subj
+         else ""
+
+%transform "fastSubstr" substr = substrImpl
 
 public export
 Semigroup String where
