@@ -155,14 +155,15 @@ process (LoadFile fname_in _)
          --LoadFile is invoked. To prevent this, the entirety of dirs is replaced after
          --the operation is complete
          let dirs = defs.options.dirs
-
+         let extraDirs = defs.options.dirs.extra_dirs
+         let packageDirs = defs.options.dirs.package_dirs
          let fname = case !(findIpkg (Just fname_in)) of
                           Nothing => fname_in
                           Just f' => f'
          res <- replWrap $ Idris.REPL.process (Load fname) >>= outputSyntaxHighlighting fname
          --putting the dirs back
-         defs <- get Ctxt
-         put Ctxt ({ options->dirs := dirs } defs)
+         setExtraDirs extraDirs
+         setPackageDirs packageDirs
          pure res
 
 process (NameAt name Nothing)
