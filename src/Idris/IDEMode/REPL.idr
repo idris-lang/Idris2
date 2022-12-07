@@ -438,7 +438,7 @@ displayIDEResult outf i (NameLocList dat)
     sexpOriginDesc (PhysicalIdrSrc modIdent) = do
       defs <- get Ctxt
       let wdir = defs.options.dirs.working_dir
-      let pkg_dirs = filter (/= ".") defs.options.dirs.extra_dirs
+      let pkg_dirs = filter (/= ".") (defs.options.dirs.extra_dirs ++ defs.options.dirs.package_dirs)
       let exts = listOfExtensionsStr
       Just fname <- catch
           (Just . (wdir </>) <$> nsToSource replFC modIdent) -- Try local source first
