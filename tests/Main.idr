@@ -267,7 +267,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Implicit laziness, lazy evaluation
        "lazy001", "lazy002",
        -- Namespace blocks
-       "namespace001", "namespace002",
+       "namespace001", "namespace002", "namespace003",
        -- Parameters blocks
        "params001", "params002", "params003",
        -- Larger programs arising from real usage. Typically things with
