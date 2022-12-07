@@ -40,14 +40,14 @@ expandAmbigName (InLHS _) nest env orig args (IBindVar fc n) exp
             else pure $ orig
 expandAmbigName mode nest env orig args (IVar fc x) exp
    = case lookup x (names nest) of
-          Just _ => do log "elab.ambiguous" 10 $ "Nested " ++ show x
+          Just _ => do log "elab.ambiguous" 20 $ "Nested " ++ show x
                        pure orig
           Nothing => do
              defs <- get Ctxt
              case defined x env of
                   Just _ =>
                     if isNil args || notLHS mode
-                       then do log "elab.ambiguous" 10 $ "Defined in env " ++ show x
+                       then do log "elab.ambiguous" 20 $ "Defined in env " ++ show x
                                pure $ orig
                        else pure $ IMustUnify fc VarApplied orig
                   Nothing =>
@@ -57,18 +57,21 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
                         let primApp = isPrimName prims x
                         case lookupUN (userNameRoot x) (unambiguousNames est) of
                           Just xr => do
-                            log "elab.ambiguous" 10 $ "unambiguous: " ++ show (fst xr)
+                            log "elab.ambiguous" 50 $ "unambiguous: " ++ show (fst xr)
                             pure $ mkAlt primApp est xr
                           Nothing => do
                             ns <- lookupCtxtName x (gamma defs)
                             ns' <- filterM visible ns
                             case ns' of
-                               [] => do log "elab.ambiguous" 10 $ "Failed to find " ++ show orig
+                               [] => do log "elab.ambiguous" 50 $ "Failed to find " ++ show orig
                                         pure orig
                                [nalt] =>
-                                     do log "elab.ambiguous" 10 $ "Only one " ++ show (fst nalt)
+                                     do log "elab.ambiguous" 40 $ "Only one " ++ show (fst nalt)
                                         pure $ mkAlt primApp est nalt
-                               nalts => pure $ IAlternative fc
+                               nalts =>
+                                     do log "elab.ambiguous" 10 $
+                                          "Ambiguous: " ++ joinBy ", " (map (show . fst) nalts)
+                                        pure $ IAlternative fc
                                                       (uniqType primNs x args)
                                                       (map (mkAlt primApp est) nalts)
   where
@@ -161,7 +164,7 @@ expandAmbigName mode nest env orig args (IAutoApp fc f a) exp
     = expandAmbigName mode nest env orig
                       ((fc, Just Nothing, a) :: args) f exp
 expandAmbigName elabmode nest env orig args tm exp
-    = do log "elab.ambiguous" 10 $ "No ambiguity " ++ show orig
+    = do log "elab.ambiguous" 50 $ "No ambiguity " ++ show orig
          pure orig
 
 stripDelay : NF vars -> NF vars
