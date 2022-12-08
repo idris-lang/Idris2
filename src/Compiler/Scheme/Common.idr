@@ -652,6 +652,7 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
 --   schDef n (MkNmFun [] exp)
 --      = pure $ "(define " ++ schName !(getFullName n) ++ "(blodwen-lazy (lambda () "
 --                       ++ !(schExp 0 exp) ++ ")))\n"
+
   schDef n (MkNmFun args exp)
      = pure $ "(define " ++ schName !(getFullName n) ++ " (lambda (" ++ schArglist args ++ ") "
                       ++ !(schExp 0 exp) ++ "))\n"
