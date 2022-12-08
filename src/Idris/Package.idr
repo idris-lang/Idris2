@@ -482,49 +482,66 @@ build pkg opts
          runScript (postbuild pkg)
          pure []
 
-installFrom : {auto o : Ref ROpts REPLOpts} ->
+installBuildArtifactFrom : {auto o : Ref ROpts REPLOpts} ->
               {auto c : Ref Ctxt Defs} ->
+              String ->
               String -> String -> ModuleIdent -> Core ()
-installFrom builddir destdir ns
-    = do let ttcfile = ModuleIdent.toPath ns
-         let ttcPath = builddir </> ttcfile <.> "ttc"
-         objPaths_in <- traverse
-                     (\cg =>
-                        do Just cgdata <- getCG cg
-                                | Nothing => pure Nothing
-                           let Just ext = incExt cgdata
-                                | Nothing => pure Nothing
-                           let srcFile = builddir </> ttcfile <.> ext
-                           let destFile = destdir </> ttcfile <.> ext
-                           let Just (dir, _) = splitParent destFile
-                                | Nothing => pure Nothing
-                           ensureDirectoryExists dir
-                           pure $ Just (srcFile, destFile))
-                     (incrementalCGs !getSession)
-         let objPaths = mapMaybe id objPaths_in
+installBuildArtifactFrom file_extension builddir destdir ns
+    = do let filename_trunk = ModuleIdent.toPath ns
+         let filename = builddir </> filename_trunk <.> file_extension
 
          let modPath  = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns
          let destNest = joinPath modPath
          let destPath = destdir </> destNest
-         let destFile = destdir </> ttcfile <.> "ttc"
+         let destFile = destdir </> filename_trunk <.> file_extension
 
          Right _ <- coreLift $ mkdirAll $ destNest
              | Left err => throw $ InternalError $ unlines
                              [ "Can't make directories " ++ show modPath
                              , show err ]
-         coreLift $ putStrLn $ "Installing " ++ ttcPath ++ " to " ++ destPath
-         Right _ <- coreLift $ copyFile ttcPath destFile
+         coreLift $ putStrLn $ "Installing " ++ filename ++ " to " ++ destPath
+         Right _ <- coreLift $ copyFile filename destFile
              | Left err => throw $ InternalError $ unlines
-                             [ "Can't copy file " ++ ttcPath ++ " to " ++ destPath
+                             [ "Can't copy file " ++ filename ++ " to " ++ destPath
                              , show err ]
-         -- Copy object files, if any. They don't necessarily get created,
-         -- since some modules don't generate any code themselves.
-         traverse_ (\ (obj, dest) =>
-                      do coreLift $ putStrLn $ "Installing " ++ obj ++ " to " ++ destPath
-                         ignore $ coreLift $ copyFile obj dest)
-                   objPaths
 
          pure ()
+
+installFrom : {auto o : Ref ROpts REPLOpts} ->
+              {auto c : Ref Ctxt Defs} ->
+              String -> String -> ModuleIdent -> Core ()
+installFrom builddir destdir ns = do
+  installBuildArtifactFrom "ttc" builddir destdir ns
+  installBuildArtifactFrom "ttm" builddir destdir ns
+
+  let filename_trunk = ModuleIdent.toPath ns
+  let modPath  = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns
+  let destNest = joinPath modPath
+  let destPath = destdir </> destNest
+
+  let installCodeGenFiles = \cg => do
+    Just cgdata <- getCG cg
+      | Nothing => pure Nothing
+    let Just ext = incExt cgdata
+      | Nothing => pure Nothing
+    let srcFile = builddir </> filename_trunk <.> ext
+    let destFile = destdir </> filename_trunk <.> ext
+    let Just (dir, _) = splitParent destFile
+      | Nothing => pure Nothing
+    ensureDirectoryExists dir
+    pure $ Just (srcFile, destFile)
+
+  objPaths_in <- traverse
+                    installCodeGenFiles
+                    (incrementalCGs !getSession)
+  let objPaths = mapMaybe id objPaths_in
+  -- Copy object files, if any. They don't necessarily get created,
+  -- since some modules don't generate any code themselves.
+  traverse_
+    (\ (obj, dest) => do
+      coreLift $ putStrLn $ "Installing " ++ obj ++ " to " ++ destPath
+      ignore $ coreLift $ copyFile obj dest)
+    objPaths
 
 installSrcFrom : {auto c : Ref Ctxt Defs} ->
                  String -> String -> (ModuleIdent, FileName) -> Core ()

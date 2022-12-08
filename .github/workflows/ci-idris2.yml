@@ -231,9 +231,9 @@ jobs:
     needs: quick-check
     runs-on: ubuntu-latest
     if: |
-      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      false && (!contains(needs.initialise.outputs.commit_message, '[ci:')
       || contains(needs.initialise.outputs.commit_message, '[ci: nix]')
-      || contains(needs.initialise.outputs.commit_message, '[ci: chez]')
+      || contains(needs.initialise.outputs.commit_message, '[ci: chez]'))
     steps:
     - uses: actions/checkout@v2
       with:
