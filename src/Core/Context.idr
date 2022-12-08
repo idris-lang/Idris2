@@ -2085,11 +2085,11 @@ getDirs
 
 export
 addExtraDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-addExtraDir dir = update Ctxt { options->dirs->extra_dirs $= (++ [dir]) }
+addExtraDir dir = update Ctxt { options->dirs->extra_dirs $= ((::) dir) . filter (/= dir) }
 
 export
 addPackageDir: {auto c : Ref Ctxt Defs} -> String -> Core ()
-addPackageDir dir = update Ctxt { options->dirs->package_dirs $= (++ [dir]) }
+addPackageDir dir = update Ctxt { options->dirs->package_dirs $= ((::) dir) . filter (/= dir) }
 
 export
 addDataDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
