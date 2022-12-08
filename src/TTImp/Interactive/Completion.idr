@@ -115,6 +115,9 @@ completion line = do
   case task of
     NameCompletion pref => (Just . (ctxt,)) <$> nameCompletion pref
     PragmaCompletion mprag pref => map (mapFst (ctxt ++)) <$> pragmaCompletion mprag pref
-    CommandCompletion pref =>
-      let commands = concatMap fst parserCommandsForHelp in
-      pure $ map ((ctxt,) . map (":" ++)) $ oneOfCompletion pref commands
+    CommandCompletion pref => case words pref of
+      ["logging"] => pure $ Just (ctxt ++ ":logging", map ((" " ++) . show . fst) knownTopics)
+      [pref] => let commands = concatMap fst parserCommandsForHelp in
+                pure $ map ((ctxt,) . map (":" ++)) $ oneOfCompletion pref commands
+      ["logging", w] => pure $ map (ctxt ++ ":logging ",) (oneOfCompletion w (map (show . fst) knownTopics))
+      _ => pure Nothing
