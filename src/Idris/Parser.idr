@@ -1201,7 +1201,7 @@ dataBody : OriginDesc -> Int -> WithBounds t -> Name -> IndentInfo -> PTerm ->
 dataBody fname mincol start n indents ty
     = do atEndIndent indents
          pure (MkPLater (boundToFC fname start) n ty)
-  <|> do b <- bounds (do decoratedKeyword fname "where"
+  <|> do b <- bounds (do (mustWork $ decoratedKeyword fname "where")
                          opts <- dataOpts fname
                          cs <- blockAfter mincol (tyDecls (mustWork $ decoratedDataConstructorName fname) "" fname)
                          pure (opts, concatMap forget cs))

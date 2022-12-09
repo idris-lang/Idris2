@@ -1,0 +1,8 @@
+1/1: Building DataWhere (DataWhere.idr)
+Error: Expected 'where'.
+
+DataWhere:2:7--2:8
+ 1 | data Foo : Type
+ 2 |   Bar : Stnrig -> Foo
+           ^
+
