@@ -234,7 +234,7 @@ checkUpdate rig elabinfo nest env fc upds rec expected
          let solvemode = case elabMode elabinfo of
                               InLHS c => inLHS
                               _ => inTerm
-         delayOnFailure fc rig env (Just recty) needType RecordUpdate $
+         delayOnFailure fc rig elabinfo env (Just recty) needType RecordUpdate $
            \delayed =>
              do solveConstraints solvemode Normal
                 exp <- getTerm recty

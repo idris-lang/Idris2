@@ -1,0 +1,24 @@
+1/1: Building Issue2354 (Issue2354.idr)
+Error: While processing right hand side of ohno. When unifying:
+    Type -> Tuple Type
+and:
+    Type -> Void
+Mismatch between: Tuple Type and Void.
+
+Issue2354:5:9--7:24
+ 5 | ohno = (case True of
+ 6 |   True => MkTuple Unit
+ 7 |   False => MkTuple Unit) Unit
+
+1/1: Building Issue2354-2 (Issue2354-2.idr)
+Error: While processing right hand side of test. When unifying:
+    List Bool -> List Bool
+and:
+    List Bool -> Stream Bool
+Mismatch between: List Bool and Stream Bool.
+
+Issue2354-2:2:9--2:49
+ 1 | test : Stream Bool
+ 2 | test = (if True then id else (Prelude.(::) True)) $ the (List Bool) []
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
