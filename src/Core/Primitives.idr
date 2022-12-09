@@ -172,9 +172,8 @@ strTail _ = Nothing
 
 strIndex : Vect 2 (NF vars) -> Maybe (NF vars)
 strIndex [NPrimVal fc (Str str), NPrimVal _ (I i)]
-    = if i >= 0 && integerToNat (cast i) < length str
-         then Just (NPrimVal fc (Ch (assert_total (prim__strIndex str i))))
-         else Nothing
+    = do guard (i >= 0 && integerToNat (cast i) < length str)
+         pure (NPrimVal fc (Ch (assert_total (prim__strIndex str i))))
 strIndex _ = Nothing
 
 strCons : Vect 2 (NF vars) -> Maybe (NF vars)
