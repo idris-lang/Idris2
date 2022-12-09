@@ -653,6 +653,7 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
   schDef n@(MN _ _) (MkNmFun [] exp)
      = pure $ "(define " ++ schName !(getFullName n) ++ " "
                       ++ !(schExp 0 exp) ++ ")\n"
+
   schDef n (MkNmFun args exp)
      = pure $ "(define " ++ schName !(getFullName n) ++ " (lambda (" ++ schArglist args ++ ") "
                       ++ !(schExp 0 exp) ++ "))\n"
