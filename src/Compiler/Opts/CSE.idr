@@ -37,6 +37,7 @@ import Core.Ord
 import Data.List
 import Data.String
 import Data.Vect
+import Libraries.Data.SortedSet
 import Libraries.Data.SortedMap
 
 ||| Maping from a pairing of closed terms together with
@@ -463,6 +464,87 @@ undefinedCount (_, _, Once) = False
 undefinedCount (_, _, Many) = False
 undefinedCount (_, _, C x)  = True
 
+--------------------------------------------------------------------------------
+--          Sorting Toplevel Defs according tho their call graph
+--------------------------------------------------------------------------------
+
+data SortTag : Type where
+
+record SortST where
+  constructor SST
+  processed : SortedSet Name
+  triples   : SnocList (Name, FC, CDef)
+  map       : SortedMap Name (Name, FC, CDef)
+
+init : List (Name, FC, CDef) -> SortST
+init = SST empty [<] . SortedMap.fromList . map (\t => (fst t, t))
+
+appendDef : Ref SortTag SortST => (Name, FC, CDef) -> Core ()
+appendDef t = do
+  st <- get SortTag
+  put SortTag $ {triples $= (:< t)} st
+
+triple : Ref SortTag SortST => Name -> Core (Maybe (Name, FC, CDef))
+triple n = map (lookup n . map) (get SortTag)
+
+markProcessed : Ref SortTag SortST => Name -> Core ()
+markProcessed n = do
+  st <- get SortTag
+  put SortTag $ {processed $= insert n} st
+
+isProcessed : Ref SortTag SortST => Name -> Core Bool
+isProcessed n = map (contains n . processed) (get SortTag)
+
+sortDefs :
+     Ref SortTag SortST
+  => List (Name, FC, CDef)
+  -> Core (List (Name, FC, CDef))
+
+sortCConAlt : Ref SortTag SortST => CConAlt ns -> Core ()
+
+sortCConstAlt : Ref SortTag SortST => CConstAlt ns -> Core ()
+
+sortCExp : Ref SortTag SortST => CExp ns -> Core ()
+
+sortCExp (CLocal fc p) = pure ()
+sortCExp (CRef fc n)   = do
+  False <- isProcessed n | True => pure ()
+  Just t <- triple n | Nothing => pure ()
+  ignore $ sortDefs [t]
+sortCExp (CLam fc x y) = sortCExp y
+sortCExp (CLet fc x y z w) = sortCExp z >> sortCExp w
+sortCExp (CApp fc x xs) = sortCExp x >> traverse_ sortCExp xs
+sortCExp (CCon fc n x tag xs) = traverse_ sortCExp xs
+sortCExp (COp fc f xs) = traverse_ sortCExp $ toList xs
+sortCExp (CExtPrim fc p xs) = traverse_ sortCExp xs
+sortCExp (CForce fc lz x) = sortCExp x
+sortCExp (CDelay fc lz x) = sortCExp x
+sortCExp (CConCase fc sc xs x) = do
+  sortCExp sc
+  traverse_ sortCConAlt xs
+  traverse_ sortCExp (toList x)
+sortCExp (CConstCase fc sc xs x) = do
+  sortCExp sc
+  traverse_ sortCConstAlt xs
+  traverse_ sortCExp (toList x)
+sortCExp (CPrimVal fc cst) = pure ()
+sortCExp (CErased fc) = pure ()
+sortCExp (CCrash fc str) = pure ()
+
+sortCConAlt (MkConAlt n x tag args y) = sortCExp y
+
+sortCConstAlt (MkConstAlt cst x) = sortCExp x
+
+sortDefs []                  = map ((<>> []) . triples) (get SortTag)
+sortDefs (t@(n, _, x) :: ts) = do
+  False <- isProcessed n | True => sortDefs ts
+  markProcessed n
+  case x of
+    (MkFun args y) => sortCExp y
+    _              => pure ()
+  appendDef t
+  sortDefs ts
+
 ||| Runs the CSE alorithm on all provided names and
 ||| the given main expression.
 export
@@ -485,4 +567,7 @@ cse defs me = do
     ::  map (\(name,(_,cnt)) =>
                   show name ++ ": count " ++ show cnt
            ) filtered
-  pure (newToplevelDefs replaceMap ++ replacedDefs, replacedMain)
+  let newDefs := newToplevelDefs replaceMap ++ replacedDefs
+  sortSt       <- newRef SortTag (init newDefs)
+  sortedDefs   <- sortDefs newDefs
+  pure (sortedDefs, replacedMain)
