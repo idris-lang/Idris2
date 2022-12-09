@@ -148,22 +148,10 @@ process : {auto c : Ref Ctxt Defs} ->
 process (Interpret cmd)
     = replWrap $ interpret cmd
 process (LoadFile fname_in _)
-    = do
-         defs <- get Ctxt
-         --both extra dirs and packageDirs keeps getting added to by findIpkg when we load
-         --the file. If left unchecked, loading time will go slower and slower everytime
-         --LoadFile is invoked. To prevent this, the entirety of dirs is replaced after
-         --the operation is complete
-         let dirs = defs.options.dirs
-
-         let fname = case !(findIpkg (Just fname_in)) of
+    = do let fname = case !(findIpkg (Just fname_in)) of
                           Nothing => fname_in
                           Just f' => f'
-         res <- replWrap $ Idris.REPL.process (Load fname) >>= outputSyntaxHighlighting fname
-         --putting the dirs back
-         defs <- get Ctxt
-         put Ctxt ({ options->dirs := dirs } defs)
-         pure res
+         replWrap $ Idris.REPL.process (Load fname) >>= outputSyntaxHighlighting fname
 
 process (NameAt name Nothing)
     = do defs <- get Ctxt
@@ -438,7 +426,7 @@ displayIDEResult outf i (NameLocList dat)
     sexpOriginDesc (PhysicalIdrSrc modIdent) = do
       defs <- get Ctxt
       let wdir = defs.options.dirs.working_dir
-      let pkg_dirs = filter (/= ".") defs.options.dirs.extra_dirs
+      let pkg_dirs = filter (/= ".") (defs.options.dirs.extra_dirs ++ defs.options.dirs.package_dirs)
       let exts = listOfExtensionsStr
       Just fname <- catch
           (Just . (wdir </>) <$> nsToSource replFC modIdent) -- Try local source first

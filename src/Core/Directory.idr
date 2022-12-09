@@ -48,10 +48,20 @@ ttcBuildDirectory =
      pure (build_dir d </> "ttc" </> show ttcVersion)
 
 export
+libInstallDirectory : {auto c : Ref Ctxt Defs} -> String -> Core String
+libInstallDirectory lib =
+  do gbdir <- pkgGlobalDirectory
+     pure (gbdir </> lib)
+
+export
 ttcInstallDirectory : {auto c : Ref Ctxt Defs} -> String -> Core String
 ttcInstallDirectory lib =
-  do gbdir <- pkgGlobalDirectory
-     pure (gbdir </> lib </> show ttcVersion)
+  do libDir <- libInstallDirectory lib
+     pure (libDir </> show ttcVersion)
+
+export
+srcInstallDirectory : {auto c : Ref Ctxt Defs} -> String -> Core String
+srcInstallDirectory = libInstallDirectory
 
 export
 extraSearchDirectories : {auto c : Ref Ctxt Defs} -> Core (List String)

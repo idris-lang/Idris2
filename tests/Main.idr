@@ -253,7 +253,7 @@ idrisTestsIPKG : TestPool
 idrisTestsIPKG = MkTestPool "Package and .ipkg files" [] Nothing
       ["pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
        "pkg008", "pkg009", "pkg010", "pkg011", "pkg012", "pkg013", "pkg014",
-       "pkg015", "pkg016" ]
+       "pkg015", "pkg016", "pkg017" ]
 
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing

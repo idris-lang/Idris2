@@ -486,6 +486,7 @@ installBuildArtifactFrom : {auto o : Ref ROpts REPLOpts} ->
               {auto c : Ref Ctxt Defs} ->
               String ->
               String -> String -> ModuleIdent -> Core ()
+
 installBuildArtifactFrom file_extension builddir destdir ns
     = do let filename_trunk = ModuleIdent.toPath ns
          let filename = builddir </> filename_trunk <.> file_extension
@@ -495,7 +496,7 @@ installBuildArtifactFrom file_extension builddir destdir ns
          let destPath = destdir </> destNest
          let destFile = destdir </> filename_trunk <.> file_extension
 
-         Right _ <- coreLift $ mkdirAll $ destNest
+         Right _ <- coreLift $ mkdirAll $ destPath
              | Left err => throw $ InternalError $ unlines
                              [ "Can't make directories " ++ show modPath
                              , show err ]
@@ -560,7 +561,7 @@ installSrcFrom wdir destdir (ns, srcRelPath)
          let destPath = destdir </> destNest
          let destFile = destdir </> srcfile <.> ext
 
-         Right _ <- coreLift $ mkdirAll $ destNest
+         Right _ <- coreLift $ mkdirAll $ destPath
              | Left err => throw $ InternalError $ unlines
                              [ "Can't make directories " ++ show modPath
                              , show err ]
@@ -592,8 +593,11 @@ install : {auto c : Ref Ctxt Defs} ->
 install pkg opts installSrc -- not used but might be in the future
     = do defs <- get Ctxt
          build <- ttcBuildDirectory
-         libdir <- (</> installDir pkg) <$> pkgGlobalDirectory
-         targetDir <- ttcInstallDirectory (installDir pkg)
+         let lib = installDir pkg
+         libTargetDir <- libInstallDirectory lib
+         ttcTargetDir <- ttcInstallDirectory lib
+         srcTargetDir <- srcInstallDirectory lib
+
          let src = source_dir (dirs (options defs))
          runScript (preinstall pkg)
          let toInstall = maybe (modules pkg)
@@ -601,27 +605,23 @@ install pkg opts installSrc -- not used but might be in the future
                                (mainmod pkg)
          wdir <- getWorkingDir
          -- Make the package installation directory
-         Right _ <- coreLift $ mkdirAll targetDir
+         Right _ <- coreLift $ mkdirAll libTargetDir
              | Left err => throw $ InternalError $ unlines
-                             [ "Can't make directory " ++ targetDir
+                             [ "Can't make directory " ++ libTargetDir
                              , show err ]
-         True <- coreLift $ changeDir targetDir
-             | False => throw $ InternalError $ "Can't change directory to " ++ targetDir
 
-         -- We're in that directory now, so copy the files from
-         -- wdir/build into it
-         traverse_ (installFrom (wdir </> build) targetDir . fst) toInstall
+         traverse_ (installFrom (wdir </> build) ttcTargetDir . fst) toInstall
+
          when installSrc $ do
-           traverse_ (installSrcFrom wdir targetDir) toInstall
+           traverse_ (installSrcFrom wdir srcTargetDir) toInstall
 
          -- install package file
-         let pkgFile = libdir </> pkg.name <.> "ipkg"
-         coreLift $ putStrLn $ "Installing package file for \{pkg.name} to \{targetDir}"
+         let pkgFile = libTargetDir </> pkg.name <.> "ipkg"
+         coreLift $ putStrLn $ "Installing package file for \{pkg.name} to \{libTargetDir}"
+
          let pkgStr = String.renderString $ layoutUnbounded $ pretty $ savePkgMetadata pkg
          log "package.depends" 25 $ "  package file:\n\{pkgStr}"
          coreLift_ $ writeFile pkgFile pkgStr
-
-         coreLift_ $ changeDir wdir
 
          runScript (postinstall pkg)
   where
