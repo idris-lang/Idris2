@@ -15,6 +15,10 @@
   Versions of the flags with the `IDRIS2_` prefix can also be used and take
   precedence.
 
+#### Chez
+
+* Use `delay` and `force` to lazily compute top-level constants.
+
 ### Compiler changes
 
 * If `IAlternative` expression with `FirstSuccess` rule fails to typecheck,
