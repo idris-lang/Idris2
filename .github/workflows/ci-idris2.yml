@@ -32,6 +32,10 @@ on:
       - '.github/workflows/ci-sphinx.yml'
       - '.github/workflows/ci-super-linter.yml'
 
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   IDRIS2_VERSION: 0.6.0 # For previous-version build
 
