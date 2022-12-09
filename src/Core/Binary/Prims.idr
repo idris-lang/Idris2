@@ -18,6 +18,8 @@ import public Libraries.Utils.String
 import System.Info
 import System.File
 
+%hide Algebra.Preorder.(<)
+
 -- A label for binary states
 export
 data Bin : Type where
