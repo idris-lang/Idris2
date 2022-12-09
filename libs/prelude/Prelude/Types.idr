@@ -519,16 +519,33 @@ namespace List
   length []        = Z
   length (x :: xs) = S (length xs)
 
+  ||| Take `n` first elements from `xs`, returning the whole list if
+  ||| `n` >= length `xs`.
+  |||
+  ||| @ n  the number of elements to take
+  ||| @ xs the list to take the elements from
+  public export
+  take : (n : Nat) -> (xs : List a) -> List a
+  take (S k) (x :: xs) = x :: take k xs
+  take _ _ = []
+
+  ||| Remove `n` first elements from `xs`, returning the empty list if
+  ||| `n >= length xs`
+  |||
+  ||| @ n  the number of elements to remove
+  ||| @ xs the list to drop the elements from
+  public export
+  drop : (n : Nat) -> (xs : List a) -> List a
+  drop Z     xs      = xs
+  drop (S n) []      = []
+  drop (S n) (_::xs) = drop n xs
+
   ||| Returns a sublist of a given list, starting at position `index`, of length `len`.
   |||
   ||| Result is truncated if it overruns the input list
   public export
   sublist : (index : Nat) -> (len : Nat) -> (subject : List a) -> List a
-  sublist 0 0 subject = []
-  sublist 0 (S k) [] = []
-  sublist 0 (S k) (x :: xs) = x :: sublist 0 k xs
-  sublist (S k) len [] = []
-  sublist (S k) len (x :: xs) = sublist k len xs
+  sublist start len = take len . drop start
 
   ||| Applied to a predicate and a list, returns the list of those elements that
   ||| satisfy the predicate.

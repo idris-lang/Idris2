@@ -27,27 +27,6 @@ public export
 snoc : List a -> a -> List a
 snoc xs x = xs ++ [x]
 
-||| Take `n` first elements from `xs`, returning the whole list if
-||| `n` >= length `xs`.
-|||
-||| @ n  the number of elements to take
-||| @ xs the list to take the elements from
-public export
-take : (n : Nat) -> (xs : List a) -> List a
-take (S k) (x :: xs) = x :: take k xs
-take _ _ = []
-
-||| Remove `n` first elements from `xs`, returning the empty list if
-||| `n >= length xs`
-|||
-||| @ n  the number of elements to remove
-||| @ xs the list to drop the elements from
-public export
-drop : (n : Nat) -> (xs : List a) -> List a
-drop Z     xs      = xs
-drop (S n) []      = []
-drop (S n) (_::xs) = drop n xs
-
 ||| Satisfiable if `k` is a valid index into `xs`.
 |||
 ||| @ k  the potential index
