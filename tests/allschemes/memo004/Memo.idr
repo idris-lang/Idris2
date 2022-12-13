@@ -10,7 +10,8 @@ S' pref = S . traceValBy (\n => "\{pref} \{show n}")
 natsL' : IO $ LazyList Nat
 natsL' = pure $ iterateN 200 (S' "> ll") Z
 
-%foreign "scheme:collect"
+%foreign "scheme,chez:collect"
+         "scheme,racket:collect-garbage"
 prim__gc : PrimIO ()
 
 gc : IO ()
