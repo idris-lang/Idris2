@@ -16,11 +16,19 @@
             (void))
         res))))
 
-(define (blodwen-delay-lazy f)
-  f)
+(define bwp 'bwp)
 
-(define (blodwen-force f)
-  (f))
+(define (blodwen-delay-lazy f)
+  (mcons (make-weak-box bwp) f))
+
+(define (blodwen-force e)
+  (if (mpair? e)
+    (let ((exval (weak-box-value (mcar e) bwp)))
+      (if (eq? exval bwp)
+        (let ((val ((mcdr e))))
+          (begin (set-mcar! e (make-weak-box val)) val))
+        exval))
+    (e)))
 
 (define (blodwen-toSignedInt x bits)
   (if (bitwise-bit-set? x bits)
