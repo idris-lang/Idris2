@@ -482,7 +482,7 @@
 ;   )
 
 
-(define (blodwen-make-future work) (future work))
+(define (blodwen-make-future work) (future (lambda () (blodwen-force work))))
 (define (blodwen-await-future ty future) (touch future))
 
 ;; NB: These should *ALWAYS* be used in multi-threaded programs since Racket
