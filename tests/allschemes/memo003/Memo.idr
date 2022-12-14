@@ -23,7 +23,7 @@ main = do
   printLn $ take 10 natsS
 
   putStrLn "\n-----------------------"
-  putStrLn "second take of stream (should be `s 0..9`)"
+  putStrLn "second take of stream (should be no `s *`)"
   printLn $ take 10 natsS
 
   natsL <- natsL'

@@ -22,13 +22,11 @@
   (mcons (make-weak-box bwp) f))
 
 (define (blodwen-force e)
-  (if (mpair? e)
-    (let ((exval (weak-box-value (mcar e) bwp)))
-      (if (eq? exval bwp)
-        (let ((val ((mcdr e))))
-          (begin (set-mcar! e (make-weak-box val)) val))
-        exval))
-    (e)))
+  (let ((exval (weak-box-value (mcar e) bwp)))
+    (if (eq? exval bwp)
+      (let ((val ((mcdr e))))
+        (begin (set-mcar! e (make-weak-box val)) val))
+      exval)))
 
 (define (blodwen-toSignedInt x bits)
   (if (bitwise-bit-set? x bits)

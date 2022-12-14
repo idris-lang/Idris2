@@ -57,7 +57,7 @@ This CHANGELOG describes the history of already-released versions. Please see [C
 * Non-recursive top-level constants are compiled to eagerly evaluated
   constants in Chez Scheme.
 
-* `Lazy` values are *weakly* memoised. That is, once accessed, they are allowed
+* `Lazy` and `Inf` values are *weakly* memoised. That is, once accessed, they are allowed
   to be not re-evaluated until garbage collector wipes them.
 
 #### Racket
@@ -66,7 +66,7 @@ This CHANGELOG describes the history of already-released versions. Please see [C
   library to load before executing the FFI.
   The syntax is `scheme,racket:my-function,my-library`.
 
-* `Lazy` values are *weakly* memoised. That is, once accessed, they are allowed
+* `Lazy` and `Inf` values are *weakly* memoised. That is, once accessed, they are allowed
   to be not re-evaluated until garbage collector wipes them.
 
 #### Node.js/Browser
