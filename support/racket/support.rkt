@@ -21,7 +21,7 @@
 (define (blodwen-delay-lazy f)
   (mcons (make-weak-box bwp) f))
 
-(define (blodwen-force e)
+(define (blodwen-force-lazy e)
   (let ((exval (weak-box-value (mcar e) bwp)))
     (if (eq? exval bwp)
       (let ((val ((mcdr e))))
@@ -480,7 +480,7 @@
 ;   )
 
 
-(define (blodwen-make-future work) (future (lambda () (blodwen-force work))))
+(define (blodwen-make-future work) (future (lambda () (blodwen-force-lazy work))))
 (define (blodwen-await-future ty future) (touch future))
 
 ;; NB: These should *ALWAYS* be used in multi-threaded programs since Racket
@@ -604,6 +604,9 @@
 
 (define (blodwen-apply obj arg)
   (obj arg))
+
+(define (blodwen-force obj)
+  (obj))
 
 (define (blodwen-read-symbol sym)
   (symbol->string sym))

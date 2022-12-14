@@ -27,7 +27,7 @@
 (define (blodwen-delay-lazy f)
   (weak-cons bwp f))
 
-(define (blodwen-force e)
+(define (blodwen-force-lazy e)
   (let ((exval (car e)))
     (if (bwp-object? exval)
       (let ((val ((cdr e))))
@@ -472,7 +472,7 @@
 (define (blodwen-make-future work)
   (let ([future (make-future-internal #f #f (make-mutex) (make-condition))])
     (fork-thread (lambda ()
-      (let ([result (blodwen-force work)])
+      (let ([result (blodwen-force-lazy work)])
         (with-mutex (future-internal-mutex future)
           (set-future-internal-result! future result)
           (set-future-internal-ready! future #t)
@@ -625,6 +625,9 @@
 
 (define (blodwen-apply obj arg)
   (obj arg))
+
+(define (blodwen-force obj)
+  (obj))
 
 (define (blodwen-read-symbol sym)
   (symbol->string sym))
