@@ -1,6 +1,6 @@
 1/1: Building record (record.idr)
-Main> Main.Bar : Nat -> Type
-Main> Main.Bar.Gnu : (X : Nat) -> Bar X -> Foo X
+Main> Main.Bar : Nat -> List a -> Type
+Main> Main.Bar.Gnu : (X : Nat) -> Bar X xs -> Foo X
 Main> Main.Baz : (X : Nat) -> Foo X -> Nat
-Main> Main.Quux : (X : Nat) -> Bar X -> Foo X
+Main> Main.Quux : (X : Nat) -> Bar X xs -> Foo X
 Main> Bye for now!

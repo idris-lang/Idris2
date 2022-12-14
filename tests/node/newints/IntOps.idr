@@ -85,7 +85,7 @@ int64 = intType True "Int64" 64
 int : IntType Int
 int = intType True "Int" 32
 
-record Op a where
+record Op (a : Type) where
   constructor MkOp
   name      : String
   op        : a -> a -> a

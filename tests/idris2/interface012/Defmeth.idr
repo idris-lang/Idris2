@@ -9,7 +9,7 @@ toVect : {0 A : Type} -> {n : Nat} -> (Fin n -> A) -> Vect n A
 toVect {n =   Z} _ = Nil
 toVect {n = S m} f = (f FZ) :: (toVect (tail f))
 
-record Iso a b where
+record Iso (a, b : Type) where
   constructor MkIso
   to : a -> b
   from : b -> a

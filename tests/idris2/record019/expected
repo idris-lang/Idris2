@@ -1,0 +1,10 @@
+1/1: Building BindParams (BindParams.idr)
+LOG declare.record.parameters:50: Decided to bind the following extra parameters:
+  {0 a : %type}
+
+LOG declare.record.parameters:50: Decided to bind the following extra parameters:
+  {0 n : Prelude.Types.Nat}
+  {0 a : %type}
+  {0 xs : ((Main.Vect a) n)}
+  {0 ys : ((Main.Vect a) n)}
+

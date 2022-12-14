@@ -7,7 +7,7 @@ g (Ah xs) = sum xs
 
 --- Records ---
 
-record (.aah) a where
+record (.aah) (a : Type) where
   constructor Aah
   unaah : List a
 

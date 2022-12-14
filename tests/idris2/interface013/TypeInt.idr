@@ -3,7 +3,7 @@
 interface Interface specifier where
   0 concrete : specifier -> Type
 
-record Value s where
+record Value (s : Type) where
   constructor MkValue
   specifier : s
 

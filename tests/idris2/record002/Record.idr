@@ -2,7 +2,7 @@ data Vect : Nat -> Type -> Type where
      Nil : Vect Z a
      (::) : a -> Vect k a -> Vect (S k) a
 
-record MyDPair a p where
+record MyDPair a (p : a -> Type) where
   constructor MkMyDPair
   dfst : a
   dsnd : p dfst

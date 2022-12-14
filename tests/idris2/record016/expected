@@ -1,7 +1,36 @@
 1/1: Building HoleRecord (HoleRecord.idr)
+Error: While processing constructor Wrap. Main.hole is already defined.
+
+HoleRecord:1:18--1:23
+ 1 | record Wrap (a : ?hole) where
+                      ^^^^^
+
+Error: While processing constructor Unit. Main.hole2 is already defined.
+
+HoleRecord:5:18--5:24
+ 1 | record Wrap (a : ?hole) where
+ 2 |   constructor MkWrap
+ 3 |   proj : a
+ 4 | 
+ 5 | record Unit (a : ?hole2) where
+                      ^^^^^^
+
+Error: While processing constructor Tree. Main.hole3 is already defined.
+
+HoleRecord:8:18--8:24
+ 4 | 
+ 5 | record Unit (a : ?hole2) where
+ 6 |   constructor MkUnit
+ 7 | 
+ 8 | record Tree (a : ?hole3) where
+                      ^^^^^^
+
 Main> Main.hole : Type
 Main> Main.hole2 : Type
 Main> Main.hole3 : Type
-Main> 1 hole: Main.hole2 : Type
+Main> 3 holes:
+  Main.hole : Type
+  Main.hole2 : Type
+  Main.hole3 : Type
 Main> 
 Bye for now!
