@@ -1,5 +1,5 @@
 export
-record Core (t : Type) where
+record Core t where
   constructor MkCore
   runCore : IO (Either String t)
 

@@ -19,7 +19,7 @@ interface Multiplicative a where
   (.*.) : a -> a -> a
   I     : a
 
-record MonoidOver (U : Type) where
+record MonoidOver U where
   constructor WithStruct
   Unit    : U
   Mult    : U -> U -> U

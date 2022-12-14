@@ -278,7 +278,7 @@ mapPTermM f = goPTerm where
 
     goPDataDecl : PDataDecl' nm -> Core (PDataDecl' nm)
     goPDataDecl (MkPData fc n t opts tdecls) =
-      MkPData fc n <$> goPTerm t
+      MkPData fc n <$> goMPTerm t
                    <*> pure opts
                    <*> goPTypeDecls tdecls
     goPDataDecl (MkPLater fc n t) = MkPLater fc n <$> goPTerm t
@@ -547,7 +547,7 @@ mapPTerm f = goPTerm where
 
     goPDataDecl : PDataDecl' nm -> PDataDecl' nm
     goPDataDecl (MkPData fc n t opts tdecls)
-      = MkPData fc n (goPTerm t) opts (goPTypeDecl <$> tdecls)
+      = MkPData fc n (map goPTerm t) opts (goPTypeDecl <$> tdecls)
     goPDataDecl (MkPLater fc n t) = MkPLater fc n $ goPTerm t
 
     goPField : PField' nm -> PField' nm

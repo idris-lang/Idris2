@@ -2,7 +2,7 @@
 ||| and record updates
 
 -- `pet` is an excuse to have a type variable
-record Person (animal : Type) where
+record Person animal where
   name : String
   age : Nat
   pet : animal

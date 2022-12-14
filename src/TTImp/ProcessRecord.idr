@@ -23,6 +23,13 @@ import Data.String
 
 %default covering
 
+-- Used to remove the holes so that we don't end up with "hole is already defined"
+-- errors because they've been duplicarted when forming the various types of the
+-- record constructor, getters, etc.
+killHole : RawImp -> RawImp
+killHole (IHole fc str) = Implicit fc True
+killHole t = t
+
 -- Projections are only visible if the record is public export
 projVis : Visibility -> Visibility
 projVis Public = Public
@@ -114,9 +121,9 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params0 opts conName_i
     paramNames : List ImpParameter -> List Name
     paramNames params = map fst params
 
-    mkDataTy : Bool -> FC -> List (Name, RigCount, PiInfo RawImp, RawImp) -> RawImp
-    mkDataTy b fc [] = IType fc
-    mkDataTy b fc ((n, c, p, ty) :: ps) = IPi fc c p (Just n) ty (mkDataTy b fc ps)
+    mkDataTy : FC -> List (Name, RigCount, PiInfo RawImp, RawImp) -> RawImp
+    mkDataTy fc [] = IType fc
+    mkDataTy fc ((n, c, p, ty) :: ps) = IPi fc c p (Just n) ty (mkDataTy fc ps)
 
     -- Parameters may need implicit names to be bound e.g.
     --   record HasLength (xs : List a) (n : Nat)
@@ -129,9 +136,9 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params0 opts conName_i
                     Core (List ImpParameter) -- New telescope of parameters, including missing bindings
     preElabAsData tn
         = do let fc = virtualiseFC fc
-             let dataTy = IBindHere fc (PI erased) !(bindTypeNames fc [] vars (mkDataTy False fc params0))
+             let dataTy = IBindHere fc (PI erased) !(bindTypeNames fc [] vars (mkDataTy fc params0))
              -- we don't use MkImpLater because users may have already declared the record ahead of time
-             let dt = MkImpData fc tn dataTy opts []
+             let dt = MkImpData fc tn (Just dataTy) opts []
              log "declare.record" 10 $ "Pre-declare record data type: \{show dt}"
              processDecl [] nest env (IData fc vis mbtot dt)
              defs <- get Ctxt
@@ -148,7 +155,8 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params0 opts conName_i
           RawImp' KindedName -> -- quoted type (some names may have disappeared)
           Core (SnocList (Maybe Name, RigCount, PiInfo RawImp, RawImp))
         getParameters acc (IPi fc rig pinfo mnm argTy retTy)
-          = getParameters (acc :< ((mnm, rig, map (fullName <$>) pinfo, fullName <$> argTy))) retTy
+          = let clean = mapTTImp killHole . map fullName in
+            getParameters (acc :< ((mnm, rig, map clean pinfo, clean argTy))) retTy
         getParameters acc (IType _) = pure acc
         getParameters acc ty = throw (InternalError "Malformed record type \{show ty}")
 
@@ -188,7 +196,7 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params0 opts conName_i
              let boundNames = paramNames params ++ map fname fields ++ vars
              let con = MkImpTy (virtualiseFC fc) EmptyFC cname
                        !(bindTypeNames fc [] boundNames conty)
-             let dt = MkImpData fc tn (mkDataTy True fc params) opts [con]
+             let dt = MkImpData fc tn Nothing opts [con]
              log "declare.record" 5 $ "Record data type " ++ show dt
              processDecl [] nest env (IData fc vis mbtot dt)
 

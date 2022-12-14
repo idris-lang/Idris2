@@ -266,7 +266,10 @@ mutual
 
   public export
   data PDataDecl' : Type -> Type where
-       MkPData : FC -> (tyname : Name) -> (tycon : PTerm' nm) ->
+       MkPData : FC -> (tyname : Name) ->
+                 -- if we have already declared the type earlier using `MkPLater`,
+                 -- we are allowed to leave the telescope out here
+                 (tycon : Maybe (PTerm' nm)) ->
                  (opts : List DataOpt) ->
                  (datacons : List (PTypeDecl' nm)) -> PDataDecl' nm
        MkPLater : FC -> (tyname : Name) -> (tycon : PTerm' nm) -> PDataDecl' nm

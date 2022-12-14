@@ -468,7 +468,7 @@ mutual
             {auto s : Ref Syn SyntaxInfo} ->
             ImpData' KindedName -> Core (PDataDecl' KindedName)
   toPData (MkImpData fc n ty opts cs)
-      = pure (MkPData fc n !(toPTerm startPrec ty) opts
+      = pure (MkPData fc n !(traverseOpt (toPTerm startPrec) ty) opts
                    !(traverse toPTypeDecl cs))
   toPData (MkImpLater fc n ty)
       = pure (MkPLater fc n !(toPTerm startPrec ty))

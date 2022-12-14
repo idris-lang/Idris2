@@ -18,7 +18,7 @@ namespace OrdinaryDog
     age : Int
     weight : Int
 
-record Other (a : Type) where
+record Other a where
   constructor MkOther
   {imp : String}
   fieldA : a
@@ -115,7 +115,7 @@ showMaybe' = MkShow' { show' = fromMaybe "Nothing" . (("Just " ++ ) . show' <$>)
 showMaybe'Ok : show' (Just "nice") = "Just nice"
 showMaybe'Ok = Refl
 
-record AllFieldTypes (a : Type) where
+record AllFieldTypes a where
    constructor MkAllFieldTypes
    exp : a
    {imp : a}

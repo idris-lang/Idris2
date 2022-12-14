@@ -440,40 +440,51 @@ processData {vars} eopts nest env fc vis mbtot (MkImpLater dfc n_in ty_raw)
                       addHashWithNames fullty
                       log "module.hash" 15 "Adding hash for data declaration with name \{show n}"
 
-processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in ty_raw opts cons_raw)
+processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in mty_raw opts cons_raw)
     = do n <- inCurrentNS n_in
-         ty_raw <- bindTypeNames fc [] vars ty_raw
 
          log "declare.data" 1 $ "Processing " ++ show n
          defs <- get Ctxt
-         u <- uniVar fc
-         (ty, _) <-
-             wrapErrorC eopts (InCon fc n) $
-                    elabTerm !(resolveName n) InType eopts nest env
-                              (IBindHere fc (PI erased) ty_raw)
-                              (Just (gType dfc u))
-         let fullty = abstractEnvType dfc env ty
+
+         mmetasfullty <- flip traverseOpt mty_raw $ \ ty_raw => do
+           ty_raw <- bindTypeNames fc [] vars ty_raw
+
+           u <- uniVar fc
+           (ty, _) <-
+               wrapErrorC eopts (InCon fc n) $
+                      elabTerm !(resolveName n) InType eopts nest env
+                                (IBindHere fc (PI erased) ty_raw)
+                                (Just (gType dfc u))
+           checkIsType fc n env !(nf defs env ty)
+
+           pure (keys (getMetas ty), abstractEnvType dfc env ty)
+
+         let metas = maybe empty fst mmetasfullty
+         let mfullty = map snd mmetasfullty
 
          -- If n exists, check it's the same type as we have here, and is
          -- a data constructor.
          -- When looking up, note the data types which were undefined at the
          -- point of declaration.
          ndefm <- lookupCtxtExact n (gamma defs)
-         mw <- case ndefm of
-                  Nothing => pure []
+         (mw, fullty) <- the (Core (List Name, ClosedTerm)) $ case ndefm of
+                  Nothing => case mfullty of
+                    Nothing => throw (GenericMsg fc "Missing telescope for data definition \{show n_in}")
+                    Just fullty => pure ([], fullty)
                   Just ndef =>
                     case definition ndef of
-                         TCon _ _ _ _ _ mw [] _ =>
+                      TCon _ _ _ _ _ mw [] _ => case mfullty of
+                        Nothing => pure (mw, type ndef)
+                        Just fullty =>
                             do ok <- convert defs [] fullty (type ndef)
-                               if ok then pure mw
+                               if ok then pure (mw, fullty)
                                      else do logTermNF "declare.data" 1 "Previous" [] (type ndef)
                                              logTermNF "declare.data" 1 "Now" [] fullty
                                              throw (AlreadyDefined fc n)
-                         _ => throw (AlreadyDefined fc n)
+                      _ => throw (AlreadyDefined fc n)
 
          logTermNF "declare.data" 5 ("data " ++ show n) [] fullty
 
-         checkIsType fc n env !(nf defs env ty)
          arity <- getArity defs [] fullty
 
          -- Add the type constructor as a placeholder while checking
@@ -513,9 +524,10 @@ processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in ty_raw opts c
          detags <- getDetags fc (map type cons)
          setDetags fc (Resolved tidx) detags
 
-         traverse_ addToSave (keys (getMetas ty))
+         traverse_ addToSave metas
          addToSave n
-         log "declare.data" 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
+         log "declare.data" 10 $
+           "Saving from " ++ show n ++ ": " ++ show metas
 
          let connames = map name cons
          unless (NoHints `elem` opts) $

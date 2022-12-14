@@ -67,7 +67,7 @@ namespace BigTree
 
 namespace Matrix
 
-  record Matrix (m, n : Nat) (a : Type) where
+  record Matrix m n a where
     constructor MkMatrix
     runMatrix : Vect m (Vect n a)
 

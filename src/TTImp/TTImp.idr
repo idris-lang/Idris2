@@ -321,7 +321,10 @@ mutual
 
   public export
   data ImpData' : Type -> Type where
-       MkImpData : FC -> (n : Name) -> (tycon : RawImp' nm) ->
+       MkImpData : FC -> (n : Name) ->
+                   -- if we have already declared the type using `MkImpLater`,
+                   -- we are allowed to leave the telescope out here.
+                   (tycon : Maybe (RawImp' nm)) ->
                    (opts : List DataOpt) ->
                    (datacons : List (ImpTy' nm)) -> ImpData' nm
        MkImpLater : FC -> (n : Name) -> (tycon : RawImp' nm) -> ImpData' nm
@@ -331,9 +334,10 @@ mutual
   export
   covering
   Show nm => Show (ImpData' nm) where
-    show (MkImpData fc n tycon _ cons)
-        = "(%data " ++ show n ++ " " ++ show tycon ++ " " ++
-           show cons ++ ")"
+    show (MkImpData fc n (Just tycon) _ cons)
+        = "(%data " ++ show n ++ " " ++ show tycon ++ " " ++ show cons ++ ")"
+    show (MkImpData fc n Nothing _ cons)
+        = "(%data " ++ show n ++ " " ++ show cons ++ ")"
     show (MkImpLater fc n tycon)
         = "(%datadecl " ++ show n ++ " " ++ show tycon ++ ")"
 

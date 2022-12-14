@@ -7,7 +7,7 @@ record MyDPair a (p : a -> Type) where
   dfst : a
   dsnd : p dfst
 
-record DVect (a : Type) where
+record DVect a where
   constructor MkDVect
   test : Int
   {n : Nat}
