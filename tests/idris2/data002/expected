@@ -1,0 +1,13 @@
+1/1: Building Test (Test.idr)
+Main> data Main.Even : Nat -> Type
+  Totality: total
+  Visibility: private
+  Constructors:
+    Z : Even 0
+    SE : Odd n -> Even (S n)
+Main> data Main.Odd : Nat -> Type
+  Totality: total
+  Visibility: private
+  Constructor: SO : Even n -> Odd (S n)
+Main> 
+Bye for now!

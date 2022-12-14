@@ -166,7 +166,7 @@ idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
 idrisTestsData : TestPool
 idrisTestsData = MkTestPool "Data and record types" [] Nothing
       [-- Data types
-       "data001",
+       "data001", "data002",
        -- Records, access and dependent update
        "record001", "record002", "record003", "record004", "record005",
        "record006", "record007", "record008", "record009", "record010",
