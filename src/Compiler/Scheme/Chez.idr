@@ -469,8 +469,8 @@ compileToSS c prof appdir tm outfile
          support <- readDataFile "chez/support.ss"
          extraRuntime <- getExtraRuntime ds
          let scm = schHeader chez (map snd libs) True ++
-                   support ++ extraRuntime ++ code ++
-                   concat loadlibs ++
+                   support ++ extraRuntime ++
+                   concat loadlibs ++ code ++
                    "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n" ++
                    main ++ schFooter prof True
          Right () <- coreLift $ writeFile outfile scm
