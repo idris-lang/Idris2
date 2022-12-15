@@ -33,9 +33,11 @@ calls (NmExtPrim fc p xs) = concatMap calls xs
 calls (NmForce fc lz x) = calls x
 calls (NmDelay fc lz x) = calls x
 calls (NmConCase fc sc xs x) =
+  calls sc <+>
   concatMap (\(MkNConAlt _ _ _ _ y) => calls y) xs <+>
   concatMap calls x
 calls (NmConstCase fc sc xs x) =
+  calls sc <+>
   concatMap (\(MkNConstAlt _ y) => calls y) xs <+>
   concatMap calls x
 calls (NmPrimVal fc cst) = empty
@@ -108,18 +110,17 @@ isConstant _   _                  = False
 export
 sortDefs : List (Name, FC, NamedDef) -> Core (List (Name, FC, NamedDef), SortedSet Name)
 sortDefs ts =
-  let graph   := callGraph ts
-      rec     := recursiveFunctions graph
-      (cs,fs) := partition (isConstant rec) ts
-      init    := SST {
-                   processed = fromList (map fst fs)
-                 , triples   = Lin <>< fs
-                 , map       = fromList (map (\t => (fst t, t)) ts)
-                 , graph     = graph
-                 }
-      consts  := map fst cs
+  let graph  := callGraph ts
+      rec    := recursiveFunctions graph
+      consts := map fst $ filter (isConstant rec) ts
+      init   := SST {
+                  processed = empty
+                , triples   = Lin
+                , map       = fromList (map (\t => (fst t, t)) ts)
+                , graph     = graph
+                }
    in do
      s       <- newRef SortTag init
-     traverse_ sortDef consts
+     traverse_ sortDef (map fst ts)
      sorted  <- map ((<>> []) . triples) (get SortTag)
      pure (sorted, fromList consts)

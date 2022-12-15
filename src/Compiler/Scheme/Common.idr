@@ -655,8 +655,9 @@ parameters (constants : SortedSet Name,
   schDef : {auto c : Ref Ctxt Defs} ->
            Name -> NamedDef -> Core String
   schDef n (MkNmFun [] exp)
-     = let pre := if contains n constants then " " else "lambda () "
-        in pure $ "(define " ++ schName !(getFullName n) ++ pre ++ !(schExp 0 exp) ++ ")\n"
+     = if contains n constants
+          then pure $ "(define " ++ schName !(getFullName n) ++ " " ++ !(schExp 0 exp) ++ ")\n"
+          else pure $ "(define " ++ schName !(getFullName n) ++ " (lambda () " ++ !(schExp 0 exp) ++ "))\n"
 
   schDef n (MkNmFun args exp)
      = pure $ "(define " ++ schName !(getFullName n) ++ " (lambda (" ++ schArglist args ++ ") "
