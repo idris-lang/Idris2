@@ -56,7 +56,7 @@ rewriteErr (InRHS _ _ err) = rewriteErr err
 rewriteErr (WhenUnifying _ _ _ _ _ err) = rewriteErr err
 rewriteErr _ = False
 
-record Lemma (vars : _) where
+record Lemma vars where
   constructor MkLemma
   ||| The name of the rewriting lemma
   name : Name
