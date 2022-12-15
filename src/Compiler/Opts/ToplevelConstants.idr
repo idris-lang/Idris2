@@ -114,11 +114,11 @@ sortDefs ts =
       rec    := recursiveFunctions graph
       consts := map fst $ filter (isConstant rec) ts
       init   := SST {
-                  processed = empty
-                , triples   = Lin
-                , map       = fromList (map (\t => (fst t, t)) ts)
-                , graph     = graph
-                }
+                    processed = empty
+                  , triples   = Lin
+                  , map       = fromList (map (\t => (fst t, t)) ts)
+                  , graph     = graph
+                  }
    in do
      s       <- newRef SortTag init
      traverse_ sortDef (map fst ts)
