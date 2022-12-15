@@ -22,13 +22,13 @@
 
 * The elaboration of records has been changed so that the unbound implicits in
   the parameters' types become additional parameters e.g.
-  ```
+  ```idris2
   record HasLength (xs : List a) (n : Nat) where
     constructor MkHasLength
     0 prf : length xs === n
   ```
   is now correctly elaborated to
-  ```
+  ```idris2
   record HasLength {0 a : Type} (xs : List a) (n : Nat) where
     constructor MkHasLength
     0 prf : length xs === n
