@@ -14,6 +14,7 @@ import Core.Context.Log
 import Core.Directory
 import Core.Options
 import Core.TT
+import Libraries.Data.SortedSet
 import Libraries.Utils.Path
 
 import Data.List
@@ -221,7 +222,7 @@ compileToSS c chez appdir tm = do
       let footer = ")"
 
       fgndefs <- traverse (Chez.getFgnCall version) cu.definitions
-      compdefs <- traverse (getScheme Chez.chezExtPrim Chez.chezString) cu.definitions
+      compdefs <- traverse (getScheme empty (Chez.chezExtPrim empty) Chez.chezString) cu.definitions
       loadlibs <- traverse (loadLib appdir) (mapMaybe fst fgndefs)
 
       -- write the files
@@ -238,7 +239,7 @@ compileToSS c chez appdir tm = do
     pure (MkChezLib chezLib hashChanged)
 
   -- main module
-  main <- schExp Chez.chezExtPrim Chez.chezString 0 ctm
+  main <- schExp empty (Chez.chezExtPrim empty) Chez.chezString 0 ctm
   Core.writeFile (appdir </> "mainprog.ss") $ unlines $
     [ schHeader (map snd libs) [lib.name | lib <- chezLibs]
     , "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))"
