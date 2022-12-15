@@ -125,6 +125,11 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params0 opts conName_i
     mkDataTy fc [] = IType fc
     mkDataTy fc ((n, c, p, ty) :: ps) = IPi fc c p (Just n) ty (mkDataTy fc ps)
 
+    nestDrop : Core (List (Name, Nat))
+    nestDrop
+      = do let assoc = map (\ (n, (_, ns, _)) => (n, length ns)) (names nest)
+           traverse (\ (n, ns) => pure (!(toFullNames n), ns)) assoc
+
     -- Parameters may need implicit names to be bound e.g.
     --   record HasLength (xs : List a) (n : Nat)
     -- needs to be turned into
@@ -145,10 +150,31 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params0 opts conName_i
              Just ty <- lookupTyExact tn (gamma defs)
                | Nothing => throw (InternalError "Missing data type \{show tn}, despite having just declared it!")
              log "declare.record" 20 "Obtained type: \{show ty}"
-             params <- getParameters [<] !(unelab [] ty)
+             (_ ** (tyenv, ty)) <- dropLeadingPis vars ty []
+             ty <- unelabNest !nestDrop tyenv ty
+             log "declare.record.parameters" 30 "Unelaborated type: \{show ty}"
+             params <- getParameters [<] ty
              addMissingNames ([<] <>< map fst params0) params []
 
       where
+
+        -- We have elaborated the record type in a context (e.g. variables bound on
+        -- a LHS, or inside a `parameters` block) and so we need to start by dropping
+        -- these local variables from the fully elaborated record's type
+        -- We'll use the `env` thus obtained to unelab the remaining scope
+        dropLeadingPis : {vs : _} -> (vars : List Name) -> Term vs -> Env Term vs ->
+                         Core (vars' ** (Env Term vars', Term vars'))
+        dropLeadingPis [] ty env
+          = do unless (null vars) $
+                 log "declare.record.parameters" 60 $ unlines
+                   [ "We elaborated \{show tn} in a non-empty local context."
+                   , "  Dropped: \{show vars}"
+                   , "  Remaining type: \{show ty}"
+                   ]
+               pure (_ ** (env, ty))
+        dropLeadingPis (var :: vars) (Bind fc n b@(Pi _ _ _ _) ty) env
+          = dropLeadingPis vars ty (b :: env)
+        dropLeadingPis _ ty _ = throw (InternalError "Malformed record type \{show ty}")
 
         getParameters :
           SnocList (Maybe Name, RigCount, PiInfo RawImp, RawImp) -> -- accumulator
@@ -168,18 +194,15 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params0 opts conName_i
         addMissingNames (nms :< nm) (tele :< (_, rest)) acc
           = addMissingNames nms tele ((nm, rest) :: acc)
         addMissingNames [<] tele acc
-          = do -- the elaboration gave us back a closed term so we need to start
-               -- by dropping all the bound variables
-               let tele = drop (length vars) (tele <>> [])
-               tele <- flip Core.traverse tele $ \ (mnm, rest) =>
+          = do tele <- flip Core.traverseSnocList tele $ \ (mnm, rest) =>
                          case mnm of
                            Nothing => throw (InternalError "Some names have disappeared?! \{show rest}")
                            Just nm => pure (nm, rest)
                unless (null tele) $
                  log "declare.record.parameters" 50 $
                    unlines ( "Decided to bind the following extra parameters:"
-                           :: map (("  " ++) . displayParam) tele)
-               pure (tele ++ acc)
+                           :: map (("  " ++) . displayParam) (tele <>> []))
+               pure (tele <>> acc)
 
         addMissingNames nms [<] acc
           = throw (InternalError "Some arguments have disappeared")
@@ -233,11 +256,7 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params0 opts conName_i
                    rfNameNS <- inCurrentNS (UN $ Field fldNameStr)
                    unNameNS <- inCurrentNS (UN $ Basic fldNameStr)
 
-                   let nestDrop
-                          = map (\ (n, (_, ns, _)) => (n, length ns))
-                                (names nest)
-                   nestDrop <- traverse (\ (n, ns) => pure (!(toFullNames n), ns)) nestDrop
-                   ty <- unelabNest nestDrop tyenv ty_chk
+                   ty <- unelabNest !nestDrop tyenv ty_chk
                    let ty' = substNames vars upds $ map rawName ty
                    log "declare.record.field" 5 $ "Field type: " ++ show ty'
                    let rname = MN "rec" 0
