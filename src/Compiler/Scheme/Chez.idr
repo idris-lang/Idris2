@@ -205,12 +205,17 @@ cftySpec fc (CFStruct n t) = pure $ "(* " ++ n ++ ")"
 cftySpec fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t ++
                          " to foreign function"))
 
+locateLib : {auto c : Ref Ctxt Defs} -> String -> String -> Core String
+locateLib appdir clib
+    = do (fname, fullname) <- locate clib
+         copyLib (appdir </> fname, fullname)
+         pure fname
+
 export
 loadLib : {auto c : Ref Ctxt Defs} ->
           String -> String -> Core String
 loadLib appdir clib
-    = do (fname, fullname) <- locate clib
-         copyLib (appdir </> fname, fullname)
+    = do fname <- locateLib appdir clib
          pure $ "(load-shared-object \""
                                     ++ escapeStringChez fname
                                     ++ "\")\n"
@@ -460,7 +465,7 @@ compileToSS c prof appdir tm outfile
          chez <- coreLift findChez
          version <- coreLift $ chezVersion chez
          fgndefs <- traverse (getFgnCall version) ndefs
-         loadlibs <- traverse (loadLib appdir) (mapMaybe fst fgndefs)
+         loadlibs <- traverse (locateLib appdir) (mapMaybe fst fgndefs)
 
          (sortedDefs, constants) <- sortDefs ndefs
          compdefs <- traverse (getScheme constants (chezExtPrim constants) chezString) sortedDefs
@@ -468,9 +473,8 @@ compileToSS c prof appdir tm outfile
          main <- schExp constants (chezExtPrim constants) chezString 0 ctm
          support <- readDataFile "chez/support.ss"
          extraRuntime <- getExtraRuntime ds
-         let scm = schHeader chez (map snd libs) True ++
-                   support ++ extraRuntime ++
-                   concat loadlibs ++ code ++
+         let scm = schHeader chez (map snd libs ++ loadlibs) True ++
+                   support ++ extraRuntime ++ code ++
                    "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n" ++
                    main ++ schFooter prof True
          Right () <- coreLift $ writeFile outfile scm
