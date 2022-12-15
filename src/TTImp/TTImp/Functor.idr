@@ -134,7 +134,7 @@ mutual
   export
   Functor ImpData' where
     map f (MkImpData fc n tycon opts datacons)
-      = MkImpData fc n (map f tycon) opts (map (map f) datacons)
+      = MkImpData fc n (map (map f) tycon) opts (map (map f) datacons)
     map f (MkImpLater fc n tycon)
       = MkImpLater fc n (map f tycon)
 

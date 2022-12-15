@@ -20,6 +20,21 @@
 * If `IAlternative` expression with `FirstSuccess` rule fails to typecheck,
   compiler now prints all tried alternatives, not only the last one.
 
+* The elaboration of records has been changed so that the unbound implicits in
+  the parameters' types become additional parameters e.g.
+  ```idris2
+  record HasLength (xs : List a) (n : Nat) where
+    constructor MkHasLength
+    0 prf : length xs === n
+  ```
+  is now correctly elaborated to
+  ```idris2
+  record HasLength {0 a : Type} (xs : List a) (n : Nat) where
+    constructor MkHasLength
+    0 prf : length xs === n
+  ```
+  instead of failing with a strange error about (a) vs (a .rec).
+
 ### Library changes
 
 #### Base

@@ -802,10 +802,11 @@ mutual
       = do addDocString n doc
            syn <- get Syn
            pure $ MkImpData fc n
-                              !(bindTypeNames fc (usingImpl syn)
-                                              ps !(desugar AnyExpr ps tycon))
-                              opts
-                              !(traverse (desugarType ps) datacons)
+                   !(flip traverseOpt tycon $ \ tycon => do
+                      tycon <- desugar AnyExpr ps tycon
+                      bindTypeNames fc (usingImpl syn) ps tycon)
+                   opts
+                   !(traverse (desugarType ps) datacons)
   desugarData ps doc (MkPLater fc n tycon)
       = do addDocString n doc
            syn <- get Syn

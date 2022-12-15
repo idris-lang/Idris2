@@ -137,7 +137,7 @@ mutual
                    ImpData ->
                    Core ImpData
   getUnquoteData (MkImpData fc n tc opts cs)
-      = pure $ MkImpData fc n !(getUnquote tc) opts
+      = pure $ MkImpData fc n !(traverseOpt getUnquote tc) opts
                          !(traverse getUnquoteTy cs)
   getUnquoteData (MkImpLater fc n tc)
       = pure $ MkImpLater fc n !(getUnquote tc)

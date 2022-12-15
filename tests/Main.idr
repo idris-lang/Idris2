@@ -166,12 +166,12 @@ idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
 idrisTestsData : TestPool
 idrisTestsData = MkTestPool "Data and record types" [] Nothing
       [-- Data types
-       "data001",
+       "data001", "data002",
        -- Records, access and dependent update
        "record001", "record002", "record003", "record004", "record005",
        "record006", "record007", "record008", "record009", "record010",
        "record011", "record012", "record013", "record014", "record015",
-       "record016", "record017", "record018" ]
+       "record016", "record017", "record018", "record019" ]
 
 idrisTestsBuiltin : TestPool
 idrisTestsBuiltin = MkTestPool "Builtin types and functions" [] Nothing

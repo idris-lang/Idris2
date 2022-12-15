@@ -1,0 +1,17 @@
+1/1: Building BindParams (BindParams.idr)
+LOG declare.record.parameters:30: Unelaborated type: (%pi Rig0 Implicit (Just a) %type (%pi RigW Explicit Nothing (Prelude.List a) (%pi RigW Explicit Nothing Prelude.Nat %type)))
+LOG declare.record.parameters:50: Decided to bind the following extra parameters:
+  {0 a : %type}
+
+LOG declare.record.parameters:30: Unelaborated type: (%pi Rig0 Implicit (Just n) Prelude.Nat (%pi Rig0 Implicit (Just a) %type (%pi Rig0 Implicit (Just xs) ((Main.Vect a) n) (%pi Rig0 Implicit (Just ys) ((Main.Vect a) n) (%pi RigW Explicit Nothing (((Builtin.=== [a = ((Main.Vect a) n)]) xs) ys) (%pi RigW Explicit (Just zs) ((Main.Vect a) n) (%pi RigW Explicit Nothing (((Builtin.=== [a = ((Main.Vect a) n)]) zs) xs) %type)))))))
+LOG declare.record.parameters:50: Decided to bind the following extra parameters:
+  {0 n : Prelude.Types.Nat}
+  {0 a : %type}
+  {0 xs : ((Main.Vect a) n)}
+  {0 ys : ((Main.Vect a) n)}
+
+LOG declare.record.parameters:60: We elaborated Main.EtaProof in a non-empty local context.
+  Dropped: [b, a]
+  Remaining type: (p : ($resolved2673 a[1] b[0])) -> Type
+
+LOG declare.record.parameters:30: Unelaborated type: (%pi RigW Explicit Nothing Main.Product %type)

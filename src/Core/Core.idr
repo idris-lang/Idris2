@@ -750,6 +750,11 @@ traverseList1 f xxs
           [| f x ::: traverse f xs |]
 
 export
+traverseSnocList : (a -> Core b) -> SnocList a -> Core (SnocList b)
+traverseSnocList f [<] = pure [<]
+traverseSnocList f (as :< a) = (:<) <$> traverseSnocList f as <*> f a
+
+export
 traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
 traverseVect f [] = pure []
 traverseVect f (x :: xs) = [| f x :: traverseVect f xs |]

@@ -13,6 +13,7 @@ on:
       - '**.md'
       - 'CONTRIBUTORS'
       - 'LICENSE'
+      - 'CHANGELOG.md'
       - '.github/workflows/ci-bootstrap.yml'
       - '.github/workflows/ci-lint.yml'
       - '.github/workflows/ci-sphinx.yml'

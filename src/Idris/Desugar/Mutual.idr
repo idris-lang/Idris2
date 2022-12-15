@@ -20,7 +20,7 @@ getDecl p (PNamespace fc ns ds)
     = Just (PNamespace fc ns (assert_total $ mapMaybe (getDecl p) ds))
 
 getDecl AsType d@(PClaim _ _ _ _ _) = Just d
-getDecl AsType (PData fc doc vis mbtot (MkPData dfc tyn tyc _ _))
+getDecl AsType (PData fc doc vis mbtot (MkPData dfc tyn (Just tyc) _ _))
     = Just (PData fc doc vis mbtot (MkPLater dfc tyn tyc))
 getDecl AsType d@(PInterface _ _ _ _ _ _ _ _ _) = Just d
 getDecl AsType (PRecord fc doc vis mbtot (MkPRecord n ps _ _ _))

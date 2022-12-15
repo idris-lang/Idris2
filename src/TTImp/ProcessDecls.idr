@@ -166,7 +166,7 @@ processTTImpDecls {vars} nest env decls
 
     bindDataNames : ImpData -> Core ImpData
     bindDataNames (MkImpData fc n t opts cons)
-        = do t' <- bindTypeNames fc [] vars t
+        = do t' <- traverseOpt (bindTypeNames fc [] vars) t
              cons' <- traverse bindConNames cons
              pure (MkImpData fc n t' opts cons')
     bindDataNames (MkImpLater fc n t)

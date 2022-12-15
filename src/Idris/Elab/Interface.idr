@@ -115,11 +115,13 @@ mkIfaceData {vars} ifc vis env constraints n conName ps dets meths
           retty = apply (IVar vfc n) (map (IVar EmptyFC) pNames)
           conty = mkTy Implicit (map jname ps) $
                   mkTy AutoImplicit (map bhere constraints) (mkTy Explicit (map bname meths) retty)
-          con = MkImpTy vfc EmptyFC conName !(bindTypeNames ifc [] (pNames ++ map fst meths ++ vars) conty) in
-          pure $ IData vfc vis Nothing {- ?? -} (MkImpData vfc n
-                                  !(bindTypeNames ifc [] (pNames ++ map fst meths ++ vars)
-                                                  (mkDataTy vfc ps))
-                                  opts [con])
+          con = MkImpTy vfc EmptyFC conName !(bindTypeNames ifc [] (pNames ++ map fst meths ++ vars) conty)
+          bound = pNames ++ map fst meths ++ vars in
+
+          pure $ IData vfc vis Nothing {- ?? -}
+               $ MkImpData vfc n
+                   (Just !(bindTypeNames ifc [] bound (mkDataTy vfc ps)))
+                   opts [con]
   where
 
     vfc : FC

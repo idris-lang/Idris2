@@ -1178,7 +1178,7 @@ simpleData fname start tyName indents
                            pure (params, tyfc, forget cons))
          (params, tyfc, cons) <- pure b.val
          pure (MkPData (boundToFC fname (mergeBounds start b)) tyName.val
-                       (mkTyConType fname tyfc params) [] cons)
+                       (Just (mkTyConType fname tyfc params)) [] cons)
 
 dataOpt : OriginDesc -> Rule DataOpt
 dataOpt fname
@@ -1196,10 +1196,11 @@ dataOpts fname = option [] $ do
   decoratedSymbol fname "]"
   pure (forget opts)
 
-dataBody : OriginDesc -> Int -> WithBounds t -> Name -> IndentInfo -> PTerm ->
+dataBody : OriginDesc -> Int -> WithBounds t -> Name -> IndentInfo -> Maybe PTerm ->
           EmptyRule PDataDecl
 dataBody fname mincol start n indents ty
-    = do atEndIndent indents
+    = do ty <- maybe (fail "Telescope is not optional in forward declaration") pure ty
+         atEndIndent indents
          pure (MkPLater (boundToFC fname start) n ty)
   <|> do b <- bounds (do (mustWork $ decoratedKeyword fname "where")
                          opts <- dataOpts fname
@@ -1209,11 +1210,12 @@ dataBody fname mincol start n indents ty
          pure (MkPData (boundToFC fname (mergeBounds start b)) n ty opts cs)
 
 gadtData : OriginDesc -> Int -> WithBounds t ->
-           WithBounds Name -> IndentInfo -> Rule PDataDecl
+           WithBounds Name -> IndentInfo -> EmptyRule PDataDecl
 gadtData fname mincol start tyName indents
-    = do mustWork $ decoratedSymbol fname ":"
-         commit
-         ty <- typeExpr pdef fname indents
+    = do ty <- optional $
+                 do decoratedSymbol fname ":"
+                    commit
+                    typeExpr pdef fname indents
          dataBody fname mincol start tyName.val indents ty
 
 dataDeclBody : OriginDesc -> IndentInfo -> Rule PDataDecl
@@ -2602,4 +2604,3 @@ command
           helpType <- getHelpType
           pure $ Help helpType)
   <|> eval
-
