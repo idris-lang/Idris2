@@ -17,7 +17,8 @@
 
 #### Chez
 
-* Use `delay` and `force` to lazily compute top-level constants.
+* Non-recursive top-level constants are compiled to eagerly evaluated
+  constants in Chez Scheme.
 
 ### Compiler changes
 
