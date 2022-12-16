@@ -76,53 +76,42 @@ merge3 (Branch3 a b c d e) f (Branch2 g h i) j k = branch6 a b c d e f g h i j k
 merge3 (Branch3 a b c d e) f (Branch3 g h i j k) l m = branch7 a b c d e f g h i j k l m
 
 treeLookup : Key -> Tree n v -> Maybe v
-treeLookup k (Leaf k' v) =
-  if k == k' then
-    Just v
-  else
-    Nothing
-treeLookup k (Branch2 t1 k' t2) =
-  if k <= k' then
-    treeLookup k t1
-  else
-    treeLookup k t2
-treeLookup k (Branch3 t1 k1 t2 k2 t3) =
-  if k <= k1 then
-    treeLookup k t1
-  else if k <= k2 then
-    treeLookup k t2
-  else
-    treeLookup k t3
+treeLookup k (Leaf k' v) = case prim__eq_Int k k' of
+  0 => Nothing
+  _ => Just v
+treeLookup k (Branch2 t1 k' t2) = case prim__lte_Int k k' of
+  0 => treeLookup k t2
+  _ => treeLookup k t1
+treeLookup k (Branch3 t1 k1 t2 k2 t3) = case prim__lte_Int k k1 of
+  0 => case prim__lte_Int k k2 of
+    0 => treeLookup k t3
+    _ => treeLookup k t2
+  _ => treeLookup k t1
 
 treeInsert' : Key -> v -> Tree n v -> Either (Tree n v) (Tree n v, Key, Tree n v)
-treeInsert' k v (Leaf k' v') =
-  case compare k k' of
-    LT => Right (Leaf k v, k, Leaf k' v')
-    EQ => Left (Leaf k v)
-    GT => Right (Leaf k' v', k', Leaf k v)
-treeInsert' k v (Branch2 t1 k' t2) =
-  if k <= k' then
-    case treeInsert' k v t1 of
-      Left t1' => Left (Branch2 t1' k' t2)
-      Right (a, b, c) => Left (Branch3 a b c k' t2)
-  else
-    case treeInsert' k v t2 of
-      Left t2' => Left (Branch2 t1 k' t2')
-      Right (a, b, c) => Left (Branch3 t1 k' a b c)
-treeInsert' k v (Branch3 t1 k1 t2 k2 t3) =
-  if k <= k1 then
-    case treeInsert' k v t1 of
-      Left t1' => Left (Branch3 t1' k1 t2 k2 t3)
-      Right (a, b, c) => Right (Branch2 a b c, k1, Branch2 t2 k2 t3)
-  else
-    if k <= k2 then
-      case treeInsert' k v t2 of
-        Left t2' => Left (Branch3 t1 k1 t2' k2 t3)
-        Right (a, b, c) => Right (Branch2 t1 k1 a, b, Branch2 c k2 t3)
-    else
-      case treeInsert' k v t3 of
-        Left t3' => Left (Branch3 t1 k1 t2 k2 t3')
-        Right (a, b, c) => Right (Branch2 t1 k1 t2, k2, Branch2 a b c)
+treeInsert' k v (Leaf k' v') = case prim__lt_Int k k' of
+  0 => case prim__gt_Int k k' of
+    0 => Left (Leaf k v)
+    _ => Right (Leaf k' v', k', Leaf k v)
+  _ => Right (Leaf k v, k, Leaf k' v')
+treeInsert' k v (Branch2 t1 k' t2) = case prim__lte_Int k k' of
+  0 => case treeInsert' k v t2 of
+    Left t2' => Left (Branch2 t1 k' t2')
+    Right (a, b, c) => Left (Branch3 t1 k' a b c)
+  _ => case treeInsert' k v t1 of
+    Left t1' => Left (Branch2 t1' k' t2)
+    Right (a, b, c) => Left (Branch3 a b c k' t2)
+treeInsert' k v (Branch3 t1 k1 t2 k2 t3) = case prim__lte_Int k k1 of
+  0 => case prim__lte_Int k k2 of
+    0 => case treeInsert' k v t3 of
+      Left t3' => Left (Branch3 t1 k1 t2 k2 t3')
+      Right (a, b, c) => Right (Branch2 t1 k1 t2, k2, Branch2 a b c)
+    _ => case treeInsert' k v t2 of
+      Left t2' => Left (Branch3 t1 k1 t2' k2 t3)
+      Right (a, b, c) => Right (Branch2 t1 k1 a, b, Branch2 c k2 t3)
+  _ => case treeInsert' k v t1 of
+    Left t1' => Left (Branch3 t1' k1 t2 k2 t3)
+    Right (a, b, c) => Right (Branch2 a b c, k1, Branch2 t2 k2 t3)
 
 treeInsert : Key -> v -> Tree n v -> Either (Tree n v) (Tree (S n) v)
 treeInsert k v t =
@@ -135,61 +124,51 @@ delType Z v = ()
 delType (S n) v = Tree n v
 
 treeDelete : {n : _} -> Key -> Tree n v -> Either (Tree n v) (delType n v)
-treeDelete k (Leaf k' v) =
-  if k == k' then
-    Right ()
-  else
-    Left (Leaf k' v)
-treeDelete {n=S Z} k (Branch2 t1 k' t2) =
-  if k <= k' then
-    case treeDelete k t1 of
-      Left t1' => Left (Branch2 t1' k' t2)
-      Right () => Right t2
-  else
-    case treeDelete k t2 of
-      Left t2' => Left (Branch2 t1 k' t2')
-      Right () => Right t1
-treeDelete {n=S Z} k (Branch3 t1 k1 t2 k2 t3) =
-  if k <= k1 then
-    case treeDelete k t1 of
-      Left t1' => Left (Branch3 t1' k1 t2 k2 t3)
-      Right () => Left (Branch2 t2 k2 t3)
-  else if k <= k2 then
-    case treeDelete k t2 of
-      Left t2' => Left (Branch3 t1 k1 t2' k2 t3)
-      Right () => Left (Branch2 t1 k1 t3)
-  else
-    case treeDelete k t3 of
+treeDelete k (Leaf k' v) = case prim__eq_Int k k' of
+  0 => Left (Leaf k' v)
+  _ => Right ()
+treeDelete {n=S Z} k (Branch2 t1 k' t2) = case prim__lte_Int k k' of
+  0 => case treeDelete k t2 of
+    Left t2' => Left (Branch2 t1 k' t2')
+    Right () => Right t1
+  _ => case treeDelete k t1 of
+    Left t1' => Left (Branch2 t1' k' t2)
+    Right () => Right t2
+treeDelete {n=S Z} k (Branch3 t1 k1 t2 k2 t3) = case prim__lte_Int k k1 of
+  0 => case prim__lte_Int k k2 of
+    0 => case treeDelete k t3 of
       Left t3' => Left (Branch3 t1 k1 t2 k2 t3')
       Right () => Left (Branch2 t1 k1 t2)
-treeDelete {n=S (S _)} k (Branch2 t1 k' t2) =
-  if k <= k' then
-    case treeDelete k t1 of
-      Left t1' => Left (Branch2 t1' k' t2)
-      Right t1' =>
-        case t2 of
-          Branch2 a b c => Right (Branch3 t1' k' a b c)
-          Branch3 a b c d e => Left (branch4 t1' k' a b c d e)
-  else
-    case treeDelete k t2 of
-      Left t2' => Left (Branch2 t1 k' t2')
-      Right t2' =>
-        case t1 of
-          Branch2 a b c => Right (Branch3 a b c k' t2')
-          Branch3 a b c d e => Left (branch4 a b c d e k' t2')
-treeDelete {n=(S (S _))} k (Branch3 t1 k1 t2 k2 t3) =
-  if k <= k1 then
-    case treeDelete k t1 of
-      Left t1' => Left (Branch3 t1' k1 t2 k2 t3)
-      Right t1' => Left (merge1 t1' k1 t2 k2 t3)
-  else if k <= k2 then
-    case treeDelete k t2 of
+    _ => case treeDelete k t2 of
       Left t2' => Left (Branch3 t1 k1 t2' k2 t3)
-      Right t2' => Left (merge2 t1 k1 t2' k2 t3)
-  else
-    case treeDelete k t3 of
+      Right () => Left (Branch2 t1 k1 t3)
+  _ => case treeDelete k t1 of
+    Left t1' => Left (Branch3 t1' k1 t2 k2 t3)
+    Right () => Left (Branch2 t2 k2 t3)
+treeDelete {n=S (S _)} k (Branch2 t1 k' t2) = case prim__lte_Int k k' of
+  0 => case treeDelete k t2 of
+    Left t2' => Left (Branch2 t1 k' t2')
+    Right t2' =>
+      case t1 of
+        Branch2 a b c => Right (Branch3 a b c k' t2')
+        Branch3 a b c d e => Left (branch4 a b c d e k' t2')
+  _ => case treeDelete k t1 of
+    Left t1' => Left (Branch2 t1' k' t2)
+    Right t1' =>
+      case t2 of
+        Branch2 a b c => Right (Branch3 t1' k' a b c)
+        Branch3 a b c d e => Left (branch4 t1' k' a b c d e)
+treeDelete {n=(S (S _))} k (Branch3 t1 k1 t2 k2 t3) = case prim__lte_Int k k1 of
+  0 => case prim__lte_Int k k2 of
+    0 => case treeDelete k t3 of
       Left t3' => Left (Branch3 t1 k1 t2 k2 t3')
       Right t3' => Left (merge3 t1 k1 t2 k2 t3')
+    _ => case treeDelete k t2 of
+      Left t2' => Left (Branch3 t1 k1 t2' k2 t3)
+      Right t2' => Left (merge2 t1 k1 t2' k2 t3)
+  _ => case treeDelete k t1 of
+    Left t1' => Left (Branch3 t1' k1 t2 k2 t3)
+    Right t1' => Left (merge1 t1' k1 t2 k2 t3)
 
 treeToList : Tree n v -> List (Key, v)
 treeToList = treeToList' []
