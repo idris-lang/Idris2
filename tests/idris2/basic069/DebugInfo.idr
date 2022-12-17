@@ -11,9 +11,9 @@ main = do
 
   putStrLn
       """
-         loc further down the file:
+      loc further down the file: \{
 
 
 
-         \{__LOC__}
+           __LOC__}
       """
