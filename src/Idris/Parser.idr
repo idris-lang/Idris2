@@ -191,6 +191,26 @@ argTerm (UnnamedAutoArg t) = t
 argTerm (NamedArg _ t) = t
 argTerm (WithArg t) = t
 
+export
+debugString : OriginDesc -> Rule PTerm
+debugString fname = do
+  di <- bounds debugInfo
+  pure $ PPrimVal (boundToFC fname di) $ Str $ case di.val of
+    DebugLoc =>
+      let bnds = di.bounds in
+      joinBy ", "
+      [ "File \{show fname}"
+      , "line \{show (startLine bnds)}"
+      , "characters \{show (startCol bnds)}\{
+           ifThenElse (startLine bnds == endLine bnds)
+            ("-\{show (endCol bnds)}")
+            ""
+        }"
+      ]
+    DebugFile => "\{show fname}"
+    DebugLine => "\{show (startLine di.bounds)}"
+    DebugCol => "\{show (startCol di.bounds)}"
+
 mutual
   appExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   appExpr q fname indents
@@ -200,6 +220,7 @@ mutual
     <|> lazy fname indents
     <|> if_ fname indents
     <|> with_ fname indents
+    <|> debugString fname
     <|> do b <- bounds (MkPair <$> simpleExpr fname indents <*> many (argExpr q fname indents))
            (f, args) <- pure b.val
            pure (applyExpImp (start b) (end b) f (concat args))

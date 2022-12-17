@@ -71,6 +71,12 @@ actH : String -> EmptyRule ()
 actH s = act (MkState [<] [s])
 
 export
+debugInfo : Rule DebugInfo
+debugInfo = terminal "Expected a magic debug info directive" $ \case
+  MagicDebugInfo di => Just di
+  _ => Nothing
+
+export
 eoi : EmptyRule ()
 eoi = ignore $ nextIs "Expected end of input" isEOI
   where
