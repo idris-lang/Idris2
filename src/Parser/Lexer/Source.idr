@@ -24,6 +24,21 @@ public export
 data IsMultiline = Multi | Single
 
 public export
+data DebugInfo
+  = DebugLoc
+  | DebugFile
+  | DebugLine
+  | DebugCol
+
+export
+Eq DebugInfo where
+  DebugLoc == DebugLoc = True
+  DebugFile == DebugFile = True
+  DebugLine == DebugLine = True
+  DebugCol == DebugCol = True
+  _ == _ = False
+
+public export
 data Token
   -- Literals
   = CharLit String
@@ -51,7 +66,15 @@ data Token
   | EndInput
   | Keyword String
   | Pragma String
+  | MagicDebugInfo DebugInfo
   | Unrecognised String
+
+export
+Show DebugInfo where
+  show DebugLoc = "__LOC__"
+  show DebugFile = "__FILE__"
+  show DebugLine = "__LINE__"
+  show DebugCol = "__COL__"
 
 export
 Show Token where
@@ -82,6 +105,7 @@ Show Token where
   show EndInput = "end of input"
   show (Keyword x) = x
   show (Pragma x) = "pragma " ++ x
+  show (MagicDebugInfo di) = show di
   show (Unrecognised x) = "Unrecognised " ++ x
 
 export
@@ -113,6 +137,7 @@ Pretty Void Token where
   pretty EndInput = reflow "end of input"
   pretty (Keyword x) = pretty x
   pretty (Pragma x) = pretty "pragma" <++> pretty x
+  pretty (MagicDebugInfo di) = pretty (show di)
   pretty (Unrecognised x) = pretty "Unrecognised" <++> pretty x
 
 mutual
@@ -221,6 +246,11 @@ keywords = ["data", "module", "where", "let", "in", "do", "record",
             "infixl", "infixr", "infix", "prefix",
             "total", "partial", "covering"]
 
+public export
+debugInfo : List (String, DebugInfo)
+debugInfo = map (\ di => (show di, di))
+          [ DebugLoc, DebugFile, DebugLine, DebugCol ]
+
 -- Reserved words for internal syntax
 special : List String
 special = ["%lam", "%pi", "%imppi", "%let"]
@@ -328,6 +358,7 @@ mutual
                   (\_ => rawTokens)
                   (exact . groupClose)
                   Symbol
+      <|> match (choice $ (exact . fst) <$> debugInfo) (MagicDebugInfo . fromMaybe DebugLoc . flip lookup debugInfo)
       <|> match (choice $ exact <$> symbols) Symbol
       <|> match doubleLit (DoubleLit . cast)
       <|> match binUnderscoredLit (IntegerLit . fromBinLit . removeUnderscores)

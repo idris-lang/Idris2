@@ -2,6 +2,13 @@
 
 ## [Next version]
 
+### Language changes
+
+* New magic constants `__LOC__`, `__FILE__`, `__LINE__`, `__COL__`
+  substituted at parsing time with a string corresponding to the
+  location, file name, line or column number associated to the
+  magic constant's position.
+
 ### REPL changes
 
 * Adds documentation for unquotes `~( )`.
