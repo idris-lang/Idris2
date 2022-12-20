@@ -31,7 +31,7 @@ of ``fromInteger`` for ``Fin n``.
                   {auto prf : (IsJust (integerToFin x n))} ->
                   Fin n
     fromInteger {n} x {prf} with (integerToFin x n)
-    fromInteger {n} x {prf = ItIsJust} | Just y = y
+      fromInteger {n} x {prf = ItIsJust} | Just y = y
 
 The ``prf`` auto implicit is an automatically constructed proof (if possible) that
 the literal is suitable for the ``Fin n`` type. The restricted behaviour can be
