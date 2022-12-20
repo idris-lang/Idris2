@@ -1,5 +1,6 @@
 module Data.Vect.Quantifiers
 
+import Data.DPair
 import Data.Vect
 
 %default total
@@ -54,6 +55,11 @@ namespace Any
   mapProperty : (f : forall x. p x -> q x) -> Any p l -> Any q l
   mapProperty f (Here p)  = Here (f p)
   mapProperty f (There p) = There (mapProperty f p)
+
+  export
+  toExists : Any p xs -> Exists p
+  toExists (Here prf)  = Evidence _ prf
+  toExists (There prf) = toExists prf
 
 namespace All
   ||| A proof that all elements of a vector satisfy a property. It is a list of
@@ -114,3 +120,8 @@ namespace All
                  All p types -> All q types
   imapProperty _ _              []      = []
   imapProperty i f @{ix :: ixs} (x::xs) = f @{ix} x :: imapProperty i f @{ixs} xs
+
+  public export
+  forget : All (const p) {n} xs -> Vect n p
+  forget []      = []
+  forget (x::xs) = x :: forget xs
