@@ -54,7 +54,11 @@ processFailing eopts nest env fc mmsg decls
          ust <- get UST
          syn <- get Syn
          md <- get MD
+
+         -- We expect the block to fail and so the definitions introduced
+         -- in it should be discarded once we leave the block.
          defs <- branch
+
          -- We're going to run the elaboration, and then return:
          -- * Nothing     if the block correctly failed
          -- * Just err    if it either did not fail or failed with an invalid error message
@@ -65,8 +69,15 @@ processFailing eopts nest env fc mmsg decls
                    after <- getTotalityErrors
                    let errs = after \\ before
                    let (e :: es) = errs
-                     | [] => -- We have (unfortunately) succeeded
-                             pure (Just $ FailingDidNotFail fc)
+                     | [] => do -- We better have unsolved holes
+                                -- checkUserHoles True -- do we need this one too?
+
+                                 -- should we only look at the ones introduced in the block?
+                                Nothing <- checkDelayedHoles
+                                  | Just err => throw err
+
+                                -- Or we have (unfortunately) succeeded
+                                pure (Just $ FailingDidNotFail fc)
                    let Just msg = mmsg
                      | _ => pure Nothing
                    log "elab.failing" 10 $ "Failing block based on \{show msg} failed with \{show errs}"
