@@ -3,6 +3,7 @@ module Compiler.Scheme.Gambit
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Generated
+import Compiler.Opts.ToplevelConstants
 import Compiler.Scheme.Common
 
 import Core.Context
@@ -12,6 +13,7 @@ import Core.Options
 import Core.TT
 import Protocol.Hex
 import Libraries.Utils.Path
+import Libraries.Data.SortedSet
 
 import Data.List
 import Data.Maybe
@@ -81,25 +83,25 @@ mutual
   getFArgs (NmCon fc _ _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
   getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
 
-  gambitPrim : Int -> ExtPrim -> List NamedCExp -> Core String
-  gambitPrim i GetField [NmPrimVal _ (Str s), _, _, struct,
+  gambitPrim : SortedSet Name -> Int -> ExtPrim -> List NamedCExp -> Core String
+  gambitPrim cs i GetField [NmPrimVal _ (Str s), _, _, struct,
                          NmPrimVal _ (Str fld), _]
-      = do structsc <- schExp gambitPrim gambitString 0 struct
+      = do structsc <- schExp cs (gambitPrim cs) gambitString 0 struct
            pure $ "(" ++ s ++ "-" ++ fld ++ " " ++ structsc ++ ")"
-  gambitPrim i GetField [_,_,_,_,_,_]
+  gambitPrim cs i GetField [_,_,_,_,_,_]
       = pure "(error \"bad getField\")"
-  gambitPrim i SetField [NmPrimVal _ (Str s), _, _, struct,
+  gambitPrim cs i SetField [NmPrimVal _ (Str s), _, _, struct,
                          NmPrimVal _ (Str fld), _, val, world]
-      = do structsc <- schExp gambitPrim gambitString 0 struct
-           valsc <- schExp gambitPrim gambitString 0 val
+      = do structsc <- schExp cs (gambitPrim cs) gambitString 0 struct
+           valsc <- schExp cs (gambitPrim cs) gambitString 0 val
            pure $ mkWorld $
                 "(" ++ s ++ "-" ++ fld ++ "-set! " ++ structsc ++ " " ++ valsc ++ ")"
-  gambitPrim i SetField [_,_,_,_,_,_,_,_]
+  gambitPrim cs i SetField [_,_,_,_,_,_,_,_]
       = pure "(error \"bad setField\")"
-  gambitPrim i SysCodegen []
+  gambitPrim cs i SysCodegen []
       = pure $ "\"gambit\""
-  gambitPrim i prim args
-      = schExtCommon gambitPrim gambitString i prim args
+  gambitPrim cs i prim args
+      = schExtCommon cs (gambitPrim cs) gambitString i prim args
 
 -- Reference label for keeping track of loaded external libraries
 data Loaded : Type where
@@ -363,9 +365,10 @@ compileToSCM c tm outfile
          l <- newRef {t = List String} Loaded []
          s <- newRef {t = List String} Structs []
          fgndefs <- traverse getFgnCall ndefs
-         compdefs <- traverse (getScheme gambitPrim gambitString) ndefs
+         (sortedDefs, constants) <- sortDefs ndefs
+         compdefs <- traverse (getScheme constants (gambitPrim constants) gambitString) ndefs
          let code = fastConcat (map snd fgndefs ++ compdefs)
-         main <- schExp gambitPrim gambitString 0 ctm
+         main <- schExp constants (gambitPrim constants) gambitString 0 ctm
          support <- readDataFile "gambit/support.scm"
          ds <- getDirectives Gambit
          extraRuntime <- getExtraRuntime ds

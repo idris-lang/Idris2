@@ -7,6 +7,8 @@ import Core.Context
 import Core.Name
 import Core.TT
 
+import Libraries.Data.SortedSet
+
 import Data.Vect
 
 %default covering
@@ -308,7 +310,8 @@ var : NamedCExp -> Bool
 var (NmLocal _ _) = True
 var _ = False
 
-parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
+parameters (constants : SortedSet Name,
+            schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
             schString : String -> String)
   showTag : Name -> Maybe Int -> String
   showTag n (Just i) = show i
@@ -531,8 +534,10 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
        = do val' <- schExp i val
             sc' <- schExp i sc
             pure $ "(let ((" ++ schName x ++ " " ++ val' ++ ")) " ++ sc' ++ ")"
-    schExp i (NmApp fc x [])
-        = pure $ "(" ++ !(schExp i x) ++ ")"
+    schExp i (NmApp fc x@(NmRef _ n) []) =
+      if contains n constants
+        then schExp i x
+        else pure $ "(" ++ !(schExp i x) ++ ")"
     schExp i (NmApp fc x args)
         = pure $ "(" ++ !(schExp i x) ++ " " ++ showSep " " !(traverse (schExp i) args) ++ ")"
     schExp i (NmCon fc _ NIL tag []) = pure $ "'()"
@@ -650,8 +655,10 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
   schDef : {auto c : Ref Ctxt Defs} ->
            Name -> NamedDef -> Core String
   schDef n (MkNmFun [] exp)
-     = pure $ "(define " ++ schName !(getFullName n) ++ "(blodwen-lazy (lambda () "
-                      ++ !(schExp 0 exp) ++ ")))\n"
+     = if contains n constants
+          then pure $ "(define " ++ schName !(getFullName n) ++ " " ++ !(schExp 0 exp) ++ ")\n"
+          else pure $ "(define " ++ schName !(getFullName n) ++ " (lambda () " ++ !(schExp 0 exp) ++ "))\n"
+
   schDef n (MkNmFun args exp)
      = pure $ "(define " ++ schName !(getFullName n) ++ " (lambda (" ++ schArglist args ++ ") "
                       ++ !(schExp 0 exp) ++ "))\n"
@@ -664,8 +671,9 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
 -- (There may be no code generated, for example if it's a constructor)
 export
 getScheme : {auto c : Ref Ctxt Defs} ->
+            (constants  : SortedSet Name) ->
             (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String) ->
             (schString : String -> String) ->
             (Name, FC, NamedDef) -> Core String
-getScheme schExtPrim schString (n, fc, d)
-    = schDef schExtPrim schString n d
+getScheme constants schExtPrim schString (n, fc, d)
+    = schDef constants schExtPrim schString n d

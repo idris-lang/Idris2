@@ -22,6 +22,7 @@ modules =
     Compiler.Opts.ConstantFold,
     Compiler.Opts.Identity,
     Compiler.Opts.InlineHeuristics,
+    Compiler.Opts.ToplevelConstants,
 
     Compiler.ES.Ast,
     Compiler.ES.Codegen,
