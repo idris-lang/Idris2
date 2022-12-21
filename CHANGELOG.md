@@ -9,6 +9,11 @@
   location, file name, line or column number associated to the
   magic constant's position.
 
+### Package Management
+
+* `--makedoc` now builds documentation in `${buildir}/docs/<package name>`.
+  Typically this will be `build/docs/<package name>`.
+
 ### REPL changes
 
 * Adds documentation for unquotes `~( )`.
