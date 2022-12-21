@@ -1,11 +1,11 @@
 (define (blodwen-os)
   (case (machine-type)
-    [(i3le ti3le a6le ta6le) "unix"]  ; GNU/Linux
-    [(i3ob ti3ob a6ob ta6ob) "unix"]  ; OpenBSD
-    [(i3fb ti3fb a6fb ta6fb) "unix"]  ; FreeBSD
-    [(i3nb ti3nb a6nb ta6nb) "unix"]  ; NetBSD
+    [(i3le ti3le a6le ta6le tarm64le) "unix"]  ; GNU/Linux
+    [(i3ob ti3ob a6ob ta6ob tarm64ob) "unix"]  ; OpenBSD
+    [(i3fb ti3fb a6fb ta6fb tarm64fb) "unix"]  ; FreeBSD
+    [(i3nb ti3nb a6nb ta6nb tarm64nb) "unix"]  ; NetBSD
     [(i3osx ti3osx a6osx ta6osx tarm64osx) "darwin"]
-    [(i3nt ti3nt a6nt ta6nt) "windows"]
+    [(i3nt ti3nt a6nt ta6nt tarm64nt) "windows"]
     [else "unknown"]))
 
 (define blodwen-lazy
