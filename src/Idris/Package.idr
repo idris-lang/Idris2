@@ -659,7 +659,7 @@ makeDoc pkg opts =
 
        defs <- get Ctxt
        let build = build_dir (dirs (options defs))
-       let docBase = build </> "docs"
+       let docBase = build </> "docs" </> (name pkg)
        let docDir = docBase </> "docs"
        Right () <- coreLift $ mkdirAll docDir
          | Left err => fileError docDir err

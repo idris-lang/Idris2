@@ -238,19 +238,14 @@ install-with-src-libs:
 	${MAKE} -C libs/linear install-with-src  IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
 
 install-libdocs: libdocs
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/prelude
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/base
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/contrib
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/network
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/test
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/linear
-	cp -r libs/prelude/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/prelude
-	cp -r libs/base/build/docs/*    ${PREFIX}/${NAME_VERSION}/docs/base
-	cp -r libs/contrib/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/contrib
-	cp -r libs/network/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/network
-	cp -r libs/test/build/docs/*    ${PREFIX}/${NAME_VERSION}/docs/test
-	cp -r libs/linear/build/docs/*  ${PREFIX}/${NAME_VERSION}/docs/linear
-	install -m 644 support/docs/*   ${PREFIX}/${NAME_VERSION}/docs
+	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/
+	cp -r libs/prelude/build/docs/prelude/ ${PREFIX}/${NAME_VERSION}/docs/
+	cp -r libs/base/build/docs/base/       ${PREFIX}/${NAME_VERSION}/docs/
+	cp -r libs/contrib/build/docs/contrib/ ${PREFIX}/${NAME_VERSION}/docs/
+	cp -r libs/network/build/docs/network/ ${PREFIX}/${NAME_VERSION}/docs/
+	cp -r libs/test/build/docs/test/       ${PREFIX}/${NAME_VERSION}/docs/
+	cp -r libs/linear/build/docs/linear/   ${PREFIX}/${NAME_VERSION}/docs/
+	install -m 644 support/docs/*  ${PREFIX}/${NAME_VERSION}/docs
 
 
 .PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
