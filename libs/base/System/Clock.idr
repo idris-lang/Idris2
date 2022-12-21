@@ -232,6 +232,7 @@ clockTime clockType with (isClockMandatory clockType)
       else pure Nothing
 
 ||| Convert the time in the given clock to nanoseconds.
+public export
 toNano : Clock type -> Integer
 toNano (MkClock seconds nanoseconds) =
   let scale = 1000000000
@@ -240,6 +241,7 @@ toNano (MkClock seconds nanoseconds) =
 ||| Convert some time in nanoseconds to a `Clock` containing that time.
 |||
 ||| @ n the time in nanoseconds
+public export
 fromNano : {type : ClockType} -> (n : Integer) -> Clock type
 fromNano n =
   let scale       = 1000000000
@@ -248,9 +250,11 @@ fromNano n =
    in MkClock seconds nanoseconds
 
 ||| Compute difference between two clocks of the same type.
+||| @ end the end time
+||| @ start the start time
 public export
 timeDifference : Clock type -> Clock type -> Clock Duration
-timeDifference clock duration = fromNano $ toNano clock - toNano duration
+timeDifference end start = fromNano $ toNano end - toNano start
 
 ||| Add a duration to a clock value.
 public export
