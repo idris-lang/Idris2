@@ -27,6 +27,10 @@
 * Non-recursive top-level constants are compiled to eagerly evaluated
   constants in Chez Scheme.
 
+#### Node
+
+* Generated javascript files now include a shebang when using the node backend
+
 ### Compiler changes
 
 * If `IAlternative` expression with `FirstSuccess` rule fails to typecheck,
