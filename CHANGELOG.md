@@ -27,7 +27,7 @@
 * Non-recursive top-level constants are compiled to eagerly evaluated
   constants in Chez Scheme.
 
-#### Node
+#### Node.js
 
 * Generated JavaScript files now include a shebang when using the Node.js backend
 
