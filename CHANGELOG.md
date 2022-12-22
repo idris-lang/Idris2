@@ -29,7 +29,7 @@
 
 #### Node
 
-* Generated javascript files now include a shebang when using the node backend
+* Generated JavaScript files now include a shebang when using the Node.js backend
 
 ### Compiler changes
 
