@@ -11,7 +11,7 @@
 
 ### Package Management
 
-* `--makedoc` now builds documentation in `${buildir}/docs/<package name>`.
+* `--mkdoc` now builds documentation in `${buildir}/docs/<package name>`.
   Typically this will be `build/docs/<package name>`.
 
 ### REPL changes
