@@ -53,7 +53,7 @@ public export
 (..>) : (0 y : a) -> (0 step : x ~=~ y) -> Step x y
 (..>) = (...)
 
--- For documenting an equality that the compiler knows about but is not trivial to the reader.
+||| Use a judgemental equality but is not trivial to the reader.
 public export
 (~=) : FastDerivation x y -> (0 z : dom) -> {auto xEqy : y = z} -> FastDerivation x z
 (~=) der y {xEqy = Refl} = der ~~ y ... Refl
