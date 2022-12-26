@@ -135,6 +135,18 @@ Functor (Pair a) where
 
 %inline
 public export
+Foldable (Pair a) where
+  foldr op init (_, x) = x `op` init
+  foldl op init (_, x) = init `op` x
+  null _ = False
+
+%inline
+public export
+Traversable (Pair a) where
+  traverse f (l, r) = (l,) <$> f r
+
+%inline
+public export
 Monoid a => Applicative (Pair a) where
   pure = (neutral,)
   (a1,f) <*> (a2,v) = (a1 <+> a2, f v)

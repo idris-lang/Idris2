@@ -15,9 +15,6 @@ LOG derive.traversable.clauses:1:
   traversePair : {0 a : _} -> {0 a0, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a0 -> f b) -> Pair a a0 -> f (Pair a b)
   traversePair f (MkPair x2 x3) = (MkPair x2) <$> (f x3)
 LOG derive.traversable.clauses:1: 
-  traversePair : {0 a : _} -> {0 a0, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a0 -> f b) -> Pair a a0 -> f (Pair a b)
-  traversePair f (MkPair x2 x3) = (MkPair x2) <$> (f x3)
-LOG derive.traversable.clauses:1: 
   traverseConstant : {0 a : _} -> {0 a0, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a0 -> f b) -> Constant a a0 -> f (Constant a b)
   traverseConstant f (MkConstant x2) = pure (MkConstant x2)
 LOG derive.traversable.clauses:1: 
