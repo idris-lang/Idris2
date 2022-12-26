@@ -1,3 +1,5 @@
+#!chezscheme
+
 (define (blodwen-os)
   (case (machine-type)
     [(i3le ti3le a6le ta6le tarm64le) "unix"]  ; GNU/Linux
@@ -19,13 +21,8 @@
             (void))
         res))))
 
-(define bwp
-  (let ((x (cons 'a 'b)))
-    (let ((p (weak-cons x '())))
-      (begin (set! x '*) (collect) (car p)))))
-
 (define (blodwen-delay-lazy f)
-  (weak-cons bwp f))
+  (weak-cons #!bwp f))
 
 (define (blodwen-force-lazy e)
   (let ((exval (car e)))
