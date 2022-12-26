@@ -57,6 +57,8 @@
 
 * Improved performance of functions `isNL`, `isSpace`, and `isHexDigit`.
 
+* Implements `Foldable` and `Traversable` for pairs, right-biased as `Functor`.
+
 #### Base
 
 * Deprecates `setByte` and `getByte` from `Data.Buffer` for removal in a future
