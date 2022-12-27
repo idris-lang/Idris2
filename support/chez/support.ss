@@ -28,8 +28,8 @@
   (let ((exval (car e)))
     (if (bwp-object? exval)
       (let ((val ((cdr e))))
-        (begin (set-car! e val) val))
-      exval)))
+        (begin (set-car! e (box val)) val))
+      (unbox exval))))
 
 (define (blodwen-toSignedInt x bits)
   (if (logbit? bits x)
