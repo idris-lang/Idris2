@@ -82,7 +82,7 @@ showB : Show a => a -> Builder
 showB = singleton . show
 
 export
-toListFromListId : (xs : _) -> Builder.toList (Builder.fromList xs) === xs   
+toListFromListId : (xs : _) -> Builder.toList (Builder.fromList xs) === xs
 toListFromListId [] = Refl
 toListFromListId (x :: xs) = rewrite appendNilRightNeutral xs in Refl
 
