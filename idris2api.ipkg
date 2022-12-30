@@ -177,6 +177,7 @@ modules =
     Libraries.Data.Span,
     Libraries.Data.SortedMap,
     Libraries.Data.SortedSet,
+    Libraries.Data.String.Builder,
     Libraries.Data.String.Extra,
     Libraries.Data.String.Iterator,
     Libraries.Data.StringMap,
