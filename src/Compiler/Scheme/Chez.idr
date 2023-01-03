@@ -15,6 +15,7 @@ import Core.TT
 import Protocol.Hex
 import Libraries.Utils.Path
 import Libraries.Data.SortedSet
+import Libraries.Data.String.Builder
 
 import Data.List
 import Data.List1
@@ -83,9 +84,10 @@ findLibs ds
              then Just (trim (substr 3 (length d) d))
              else Nothing
 
-schHeader : String -> List String -> Bool -> String
+schHeader : String -> List String -> Bool -> Builder
 schHeader chez libs whole
-  = (if os /= "windows"
+  = fromString $
+    (if os /= "windows"
         then "#!" ++ chez ++ (if whole then " --program\n\n" else " --script\n\n")
         else "") ++ """
     ;; \{ generatedString "Chez" }
@@ -106,8 +108,8 @@ schHeader chez libs whole
 
     """
 
-schFooter : Bool -> Bool -> String
-schFooter prof whole = """
+schFooter : Bool -> Bool -> Builder
+schFooter prof whole = fromString """
 
     (collect 4)
     (blodwen-run-finalisers)
@@ -115,25 +117,25 @@ schFooter prof whole = """
     \{ ifThenElse whole ")" "" }
   """
 
-showChezChar : Char -> String -> String
-showChezChar '\\' = ("\\\\" ++)
-showChezChar c
-   = if c < chr 32 || c > chr 126
-        then (("\\x" ++ asHex (cast c) ++ ";") ++)
-        else strCons c
+showChezChar : Char -> Builder -> Builder
+showChezChar '\\' acc = "\\\\" ++ acc
+showChezChar c acc
+   = if ord c < 32 || ord c > 126
+        then fromString ("\\x" ++ asHex (cast c) ++ ";") ++ acc
+        else char c ++ acc
 
-showChezString : List Char -> String -> String
-showChezString [] = id
-showChezString ('"'::cs) = ("\\\"" ++) . showChezString cs
-showChezString (c ::cs) = (showChezChar c) . showChezString cs
+showChezString : List Char -> Builder -> Builder
+showChezString [] acc = acc
+showChezString ('"' :: cs) acc = "\\\"" ++ showChezString cs acc
+showChezString (c :: cs) acc = showChezChar c $ showChezString cs acc
 
 export
-chezString : String -> String
-chezString cs = strCons '"' (showChezString (unpack cs) "\"")
+chezString : String -> Builder
+chezString cs = "\"" ++ showChezString (unpack cs) "\""
 
 mutual
-  handleRet : String -> String -> String
-  handleRet "void" op = op ++ " " ++ mkWorld (schConstructor chezString (UN $ Basic "") (Just 0) [])
+  handleRet : CFType -> Builder -> Builder
+  handleRet CFUnit op = op ++ " " ++ mkWorld (schConstructor chezString (UN Underscore) (Just 0) [])
   handleRet _ op = mkWorld op
 
   getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))
@@ -142,11 +144,11 @@ mutual
   getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
 
   export
-  chezExtPrim : SortedSet Name -> Int -> ExtPrim -> List NamedCExp -> Core String
+  chezExtPrim : SortedSet Name -> Nat -> ExtPrim -> List NamedCExp -> Core Builder
   chezExtPrim cs i GetField [NmPrimVal _ (Str s), _, _, struct,
                           NmPrimVal _ (Str fld), _]
       = do structsc <- schExp cs (chezExtPrim cs) chezString 0 struct
-           pure $ "(ftype-ref " ++ s ++ " (" ++ fld ++ ") " ++ structsc ++ ")"
+           pure $ "(ftype-ref " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++ structsc ++ ")"
   chezExtPrim cs i GetField [_,_,_,_,_,_]
       = pure "(blodwen-error-quit \"bad getField\")"
   chezExtPrim cs i SetField [NmPrimVal _ (Str s), _, _, struct,
@@ -154,7 +156,7 @@ mutual
       = do structsc <- schExp cs (chezExtPrim cs) chezString 0 struct
            valsc <- schExp cs (chezExtPrim cs) chezString 0 val
            pure $ mkWorld $
-              "(ftype-set! " ++ s ++ " (" ++ fld ++ ") " ++ structsc ++
+              "(ftype-set! " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++ structsc ++
               " " ++ valsc ++ ")"
   chezExtPrim cs i SetField [_,_,_,_,_,_,_,_]
       = pure "(blodwen-error-quit \"bad setField\")"
@@ -182,7 +184,7 @@ data Loaded : Type where
 export
 data Structs : Type where
 
-cftySpec : FC -> CFType -> Core String
+cftySpec : FC -> CFType -> Core Builder
 cftySpec fc CFUnit = pure "void"
 cftySpec fc CFInt = pure "int"
 cftySpec fc CFInt8 = pure "integer-8"
@@ -201,7 +203,7 @@ cftySpec fc CFGCPtr = pure "void*"
 cftySpec fc CFBuffer = pure "u8*"
 cftySpec fc (CFFun s t) = pure "void*"
 cftySpec fc (CFIORes t) = cftySpec fc t
-cftySpec fc (CFStruct n t) = pure $ "(* " ++ n ++ ")"
+cftySpec fc (CFStruct n t) = pure $ "(* " ++ fromString n ++ ")"
 cftySpec fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t ++
                          " to foreign function"))
 
@@ -245,7 +247,7 @@ cCall : {auto c : Ref Ctxt Defs}
      -> List (Name, CFType)
      -> CFType
      -> (collectSafe : Bool)
-     -> Core (Maybe String, String)
+     -> Core (Maybe String, Builder)
 cCall fc cfn clib args (CFIORes CFGCPtr) _
     = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
 cCall fc cfn clib args CFGCPtr _
@@ -263,38 +265,38 @@ cCall fc cfn clib args ret collectSafe
          argTypes <- traverse (cftySpec fc . snd) args
          retType <- cftySpec fc ret
          let callConv = if collectSafe then " __collect_safe" else ""
-         let call = "((foreign-procedure" ++ callConv ++ " " ++ show cfn ++ " ("
-                      ++ showSep " " argTypes ++ ") " ++ retType ++ ") "
-                      ++ showSep " " !(traverse buildArg args) ++ ")"
+         let call = "((foreign-procedure" ++ callConv ++ " " ++ showB cfn ++ " ("
+                      ++ sepBy " " argTypes ++ ") " ++ retType ++ ") "
+                      ++ sepBy " " !(traverse buildArg args) ++ ")"
 
          pure (lib, case ret of
-                         CFIORes _ => handleRet retType call
+                         CFIORes _ => handleRet ret call
                          _ => call)
   where
-    mkNs : Int -> List CFType -> List (Maybe String)
+    mkNs : Int -> List CFType -> List (Maybe Builder)
     mkNs i [] = []
     mkNs i (CFWorld :: xs) = Nothing :: mkNs i xs
-    mkNs i (x :: xs) = Just ("cb" ++ show i) :: mkNs (i + 1) xs
+    mkNs i (x :: xs) = Just (fromString $ "cb" ++ show i) :: mkNs (i + 1) xs
 
-    applyLams : String -> List (Maybe String) -> String
+    applyLams : Builder -> List (Maybe Builder) -> Builder
     applyLams n [] = n
     applyLams n (Nothing :: as) = applyLams ("(" ++ n ++ " #f)") as
     applyLams n (Just a :: as) = applyLams ("(" ++ n ++ " " ++ a ++ ")") as
 
-    getVal : String -> String
+    getVal : Builder -> Builder
     getVal str = "(vector-ref " ++ str ++ "1)"
 
-    mkFun : List CFType -> CFType -> String -> String
+    mkFun : List CFType -> CFType -> Builder -> Builder
     mkFun args ret n
         = let argns = mkNs 0 args in
-              "(lambda (" ++ showSep " " (mapMaybe id argns) ++ ") " ++
+              "(lambda (" ++ sepBy " " (catMaybes argns) ++ ") " ++
               (applyLams n argns ++ ")")
 
     notWorld : CFType -> Bool
     notWorld CFWorld = False
     notWorld _ = True
 
-    callback : String -> List CFType -> CFType -> Core String
+    callback : Builder -> List CFType -> CFType -> Core Builder
     callback n args (CFFun s t) = callback n (s :: args) t
     callback n args_rev retty
         = do let args = reverse args_rev
@@ -303,18 +305,18 @@ cCall fc cfn clib args ret collectSafe
              pure $
                  "(let ([c-code (foreign-callable #f " ++
                        mkFun args retty n ++
-                       " (" ++ showSep " " argTypes ++ ") " ++ retType ++ ")])" ++
+                       " (" ++ sepBy " " argTypes ++ ") " ++ retType ++ ")])" ++
                        " (lock-object c-code) (foreign-callable-entry-point c-code))"
 
-    buildArg : (Name, CFType) -> Core String
+    buildArg : (Name, CFType) -> Core Builder
     buildArg (n, CFFun s t) = callback (schName n) [s] t
     buildArg (n, CFGCPtr) = pure $ "(car " ++ schName n ++ ")"
     buildArg (n, _) = pure $ schName n
 
 schemeCall : FC -> (sfn : String) ->
-             List Name -> CFType -> Core String
+             List Name -> CFType -> Core Builder
 schemeCall fc sfn argns ret
-    = let call = "(" ++ sfn ++ " " ++ showSep " " (map schName argns) ++ ")" in
+    = let call = "(" ++ fromString sfn ++ " " ++ sepBy " " (map schName argns) ++ ")" in
           case ret of
                CFIORes _ => pure $ mkWorld call
                _ => pure call
@@ -325,7 +327,7 @@ schemeCall fc sfn argns ret
 useCC : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         FC -> List String -> List (Name, CFType) -> CFType ->
-        Maybe Version -> Core (Maybe String, String)
+        Maybe Version -> Core (Maybe String, Builder)
 useCC fc ccs args ret version
     = case parseCC ["scheme,chez", "scheme", "C__collect_safe", "C"] ccs of
            Just ("scheme,chez", [sfn]) =>
@@ -350,18 +352,18 @@ mkArgs i (CFWorld :: cs) = (MN "farg" i, False) :: mkArgs i cs
 mkArgs i (c :: cs) = (MN "farg" i, True) :: mkArgs (i + 1) cs
 
 mkStruct : {auto s : Ref Structs (List String)} ->
-           CFType -> Core String
+           CFType -> Core Builder
 mkStruct (CFStruct n flds)
     = do defs <- traverse mkStruct (map snd flds)
          strs <- get Structs
          if n `elem` strs
             then pure (concat defs)
             else do put Structs (n :: strs)
-                    pure $ concat defs ++ "(define-ftype " ++ n ++ " (struct\n\t"
-                           ++ showSep "\n\t" !(traverse showFld flds) ++ "))\n"
+                    pure $ concat defs ++ "(define-ftype " ++ fromString n ++ " (struct\n\t"
+                           ++ sepBy "\n\t" !(traverse showFld flds) ++ "))\n"
   where
-    showFld : (String, CFType) -> Core String
-    showFld (n, ty) = pure $ "[" ++ n ++ " " ++ !(cftySpec emptyFC ty) ++ "]"
+    showFld : (String, CFType) -> Core Builder
+    showFld (n, ty) = pure $ "[" ++ fromString n ++ " " ++ !(cftySpec emptyFC ty) ++ "]"
 mkStruct (CFIORes t) = mkStruct t
 mkStruct (CFFun a b) = do ignore (mkStruct a); mkStruct b
 mkStruct _ = pure ""
@@ -370,7 +372,7 @@ schFgnDef : {auto c : Ref Ctxt Defs} ->
             {auto l : Ref Loaded (List String)} ->
             {auto s : Ref Structs (List String)} ->
             FC -> Name -> NamedDef -> Maybe Version ->
-            Core (Maybe String, String)
+            Core (Maybe String, Builder)
 schFgnDef fc n (MkNmForeign cs args ret) version
     = do let argns = mkArgs 0 args
          let allargns = map fst argns
@@ -382,7 +384,7 @@ schFgnDef fc n (MkNmForeign cs args ret) version
          pure (load,
                 concat argStrs ++ retStr ++
                 "(define " ++ schName !(full (gamma defs) n) ++
-                " (lambda (" ++ showSep " " (map schName allargns) ++ ") " ++
+                " (lambda (" ++ sepBy " " (map schName allargns) ++ ") " ++
                 body ++ "))\n")
 schFgnDef _ _ _ _ = pure (Nothing, "")
 
@@ -391,7 +393,7 @@ getFgnCall : {auto c : Ref Ctxt Defs} ->
              {auto l : Ref Loaded (List String)} ->
              {auto s : Ref Structs (List String)} ->
              Maybe Version -> (Name, FC, NamedDef) ->
-             Core (Maybe String, String)
+             Core (Maybe String, Builder)
 getFgnCall version (n, fc, d) = schFgnDef fc n d version
 
 export
@@ -468,16 +470,21 @@ compileToSS c prof appdir tm outfile
          loadlibs <- traverse (locateLib appdir) (mapMaybe fst fgndefs)
 
          (sortedDefs, constants) <- sortDefs ndefs
-         compdefs <- traverse (getScheme constants (chezExtPrim constants) chezString) sortedDefs
-         let code = fastConcat (map snd fgndefs ++ compdefs)
+         compdefs <- logTime 3 "Print as scheme" $ traverse (getScheme constants (chezExtPrim constants) chezString) sortedDefs
+         let code = concat (map snd fgndefs) ++ concat compdefs
          main <- schExp constants (chezExtPrim constants) chezString 0 ctm
          support <- readDataFile "chez/support.ss"
          extraRuntime <- getExtraRuntime ds
-         let scm = schHeader chez (map snd libs ++ loadlibs) True ++
-                   support ++ extraRuntime ++ code ++
-                   "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n" ++
-                   main ++ schFooter prof True
-         Right () <- coreLift $ writeFile outfile scm
+         let scm = concat $ the (List _)
+                   [ schHeader chez (map snd libs ++ loadlibs) True
+                   , fromString support
+                   , fromString extraRuntime
+                   , code
+                   , "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n"
+                   , main
+                   , schFooter prof True
+                   ]
+         Right () <- coreLift $ writeFile outfile $ build scm
             | Left err => throw (FileErr outfile err)
          coreLift_ $ chmodRaw outfile 0o755
 
@@ -508,20 +515,20 @@ compileToSSInc c mods libs appdir tm outfile
          tmcexp <- compileTerm tm
          let ctm = forget tmcexp
 
-         loadlibs <- traverse (loadLib appdir) (nub libs)
-         loadsos <- traverse (loadSO appdir) (nub mods)
+         loadlibs <- traverse (map fromString . loadLib appdir) (nub libs)
+         loadsos <- traverse (map fromString . loadSO appdir) (nub mods)
 
          main <- schExp empty (chezExtPrim empty) chezString 0 ctm
          support <- readDataFile "chez/support.ss"
 
          let scm = schHeader chez [] False ++
-                   support ++
+                   fromString support ++
                    concat loadlibs ++
                    concat loadsos ++
                    "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n" ++
                    main ++ schFooter False False
 
-         Right () <- coreLift $ writeFile outfile scm
+         Right () <- coreLift $ writeFile outfile $ build scm
             | Left err => throw (FileErr outfile err)
          coreLift_ $ chmodRaw outfile 0o755
          pure ()
@@ -561,7 +568,7 @@ compileExprWhole makeitso c s tmpDir outputDir tm outfile
          let outSoAbs = cwd </> outputDir </> outSoFile
          chez <- coreLift $ findChez
          let prof = profile !getSession
-         compileToSS c (makeitso && prof) appDirGen tm outSsAbs
+         logTime 2 "Compile to scheme" $ compileToSS c (makeitso && prof) appDirGen tm outSsAbs
          logTime 2 "Make SO" $ when makeitso $
            compileToSO prof chez appDirGen outSsAbs
          let outShRel = outputDir </> outfile
@@ -652,8 +659,8 @@ incCompile c s sourceFile
                fgndefs <- traverse (getFgnCall version) ndefs
                (sortedDefs, constants) <- sortDefs ndefs
                compdefs <- traverse (getScheme constants (chezExtPrim constants) chezString) sortedDefs
-               let code = fastConcat (map snd fgndefs ++ compdefs)
-               Right () <- coreLift $ writeFile ssFile code
+               let code = concat $ map snd fgndefs ++ compdefs
+               Right () <- coreLift $ writeFile ssFile $ build code
                   | Left err => throw (FileErr ssFile err)
 
                -- Compile to .so

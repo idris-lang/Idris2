@@ -1,3 +1,8 @@
+||| Code common to all the scheme backend
+|||
+||| In most cases the inital `Nat` argument
+||| is the number of cases a given expression is under.
+||| it is used to generate new unique names for the scrutinee of a case block
 module Compiler.Scheme.Common
 
 import Compiler.Common
@@ -8,6 +13,7 @@ import Core.Name
 import Core.TT
 
 import Libraries.Data.SortedSet
+import Libraries.Data.String.Builder
 
 import Data.Vect
 
@@ -18,81 +24,81 @@ firstExists : List String -> IO (Maybe String)
 firstExists [] = pure Nothing
 firstExists (x :: xs) = if !(exists x) then pure (Just x) else firstExists xs
 
-schString : String -> String
+schString : String -> Builder
 schString s = concatMap okchar (unpack s)
   where
-    okchar : Char -> String
+    okchar : Char -> Builder
     okchar c = if isAlphaNum c || c =='_'
-                  then cast c
-                  else "C-" ++ show (cast {to=Int} c)
+                  then char c
+                  else "C-" ++ showB (ord c)
 
 export
-schUserName : UserName -> String
+schUserName : UserName -> Builder
 schUserName (Basic n) = "u--" ++ schString n
 schUserName (Field n) = "rf--" ++ schString n
 schUserName Underscore = "u--_"
 
 export
-schName : Name -> String
+schName : Name -> Builder
 schName (NS ns (UN (Basic n))) = schString (showNSWithSep "-" ns) ++ "-" ++ schString n
 schName (UN n) = schUserName n
 schName (NS ns n) = schString (showNSWithSep "-" ns) ++ "-" ++ schName n
-schName (MN n i) = schString n ++ "-" ++ show i
+schName (MN n i) = schString n ++ "-" ++ showB i
 schName (PV n d) = "pat--" ++ schName n
 schName (DN _ n) = schName n
-schName (Nested (i, x) n) = "n--" ++ show i ++ "-" ++ show x ++ "-" ++ schName n
-schName (CaseBlock x y) = "case--" ++ schString x ++ "-" ++ show y
-schName (WithBlock x y) = "with--" ++ schString x ++ "-" ++ show y
-schName (Resolved i) = "fn--" ++ show i
+schName (Nested (i, x) n) = "n--" ++ showB i ++ "-" ++ showB x ++ "-" ++ schName n
+schName (CaseBlock x y) = "case--" ++ schString x ++ "-" ++ showB y
+schName (WithBlock x y) = "with--" ++ schString x ++ "-" ++ showB y
+schName (Resolved i) = "fn--" ++ showB i
 
 export
-schConstructor : (String -> String) -> Name -> Maybe Int -> List String -> String
+schConstructor : (String -> Builder) -> Name -> Maybe Int -> List Builder -> Builder
 schConstructor _ _ (Just t) args
-    = "(vector " ++ show t ++ " " ++ showSep " " args ++ ")"
+    = "(vector " ++ showB t ++ " " ++ sepBy " " args ++ ")"
 schConstructor schString n Nothing args
-    = "(vector " ++ schString (show n) ++ " " ++ showSep " " args ++ ")"
+    = "(vector " ++ schString (show n) ++ " " ++ Builder.sepBy " " args ++ ")"
 
 export
-schRecordCon : (String -> String) -> Name -> List String -> String
-schRecordCon _ _ args = "(vector " ++ showSep " " args ++ ")"
+schRecordCon : (String -> Builder) -> Name -> List Builder -> Builder
+schRecordCon _ _ args = "(vector " ++ sepBy " " args ++ ")"
 
 ||| Generate scheme for a plain function.
-op : String -> List String -> String
-op o args = "(" ++ o ++ " " ++ showSep " " args ++ ")"
+op : String -> List Builder -> Builder
+op o args = "(" ++ singleton o ++ " " ++ sepBy " " args ++ ")"
 
 ||| Generate scheme for a boolean operation.
-boolop : String -> List String -> String
+boolop : String -> List Builder -> Builder
 boolop o args = "(or (and " ++ op o args ++ " 1) 0)"
 
-add : Maybe IntKind -> String -> String -> String
-add (Just $ Signed $ P n)   x y = op "bs+" [x, y, show (n-1)]
-add (Just $ Unsigned n)     x y = op "bu+" [x, y, show n]
+add : Maybe IntKind -> Builder -> Builder -> Builder
+add (Just $ Signed $ P n)   x y = op "bs+" [x, y, showB (n-1)]
+add (Just $ Unsigned n)     x y = op "bu+" [x, y, showB n]
 add _                       x y = op "+" [x, y]
 
-sub : Maybe IntKind -> String -> String -> String
-sub (Just $ Signed $ P n)   x y = op "bs-" [x, y, show (n-1)]
-sub (Just $ Unsigned n)     x y = op "bu-" [x, y, show n]
+sub : Maybe IntKind -> Builder -> Builder -> Builder
+sub (Just $ Signed $ P n)   x y = op "bs-" [x, y, showB (n-1)]
+sub (Just $ Unsigned n)     x y = op "bu-" [x, y, showB n]
 sub _                       x y = op "-" [x, y]
 
-mul : Maybe IntKind -> String -> String -> String
-mul (Just $ Signed $ P n)   x y = op "bs*" [x, y, show (n-1)]
-mul (Just $ Unsigned n)     x y = op "bu*" [x, y, show n]
+mul : Maybe IntKind -> Builder -> Builder -> Builder
+mul (Just $ Signed $ P n)   x y = op "bs*" [x, y, showB (n-1)]
+mul (Just $ Unsigned n)     x y = op "bu*" [x, y, showB n]
 mul _                       x y = op "*" [x, y]
 
-div : Maybe IntKind -> String -> String -> String
+div : Maybe IntKind -> Builder -> Builder -> Builder
 div (Just $ Signed Unlimited) x y = op "blodwen-euclidDiv" [x, y]
-div (Just $ Signed $ P n)     x y = op "bs/" [x, y, show (n-1)]
-div (Just $ Unsigned n)       x y = op "bu/" [x, y, show n]
+div (Just $ Signed $ P n)     x y = op "bs/" [x, y, showB (n-1)]
+div (Just $ Unsigned n)       x y = op "bu/" [x, y, showB n]
 div _                         x y = op "/" [x, y]
 
-shl : Maybe IntKind -> String -> String -> String
+shl : Maybe IntKind -> Builder -> Builder -> Builder
 shl (Just $ Signed $ P n) x y = op "blodwen-bits-shl-signed"
-                                   [x, y, show (n-1)]
-shl (Just $ Unsigned n)   x y = op "blodwen-bits-shl" [x, y, show n]
+                                   [x, y, showB (n-1)]
+shl (Just $ Unsigned n)   x y = op "blodwen-bits-shl" [x, y, showB n]
 shl _                     x y = op "blodwen-shl" [x, y]
 
 
-constPrimitives : ConstantPrimitives
+constPrimitives : ConstantPrimitives' Builder
 constPrimitives = MkConstantPrimitives {
     charToInt    = \k     => pure . charTo k
   , intToChar    = \_,x   => pure $ op "cast-int-char" [x]
@@ -102,38 +108,38 @@ constPrimitives = MkConstantPrimitives {
   , intToDouble  = \_,x   => pure $ op "exact->inexact" [x]
   , intToInt     = \k1,k2 => pure . intTo k1 k2
   }
-  where charTo : IntKind -> String -> String
+  where charTo : IntKind -> Builder -> Builder
         charTo (Signed Unlimited) x = op "char->integer" [x]
-        charTo (Signed $ P n)     x = op "cast-char-boundedInt" [x, show (n-1)]
-        charTo (Unsigned n)       x = op "cast-char-boundedUInt" [x,show n]
+        charTo (Signed $ P n)     x = op "cast-char-boundedInt" [x, showB (n-1)]
+        charTo (Unsigned n)       x = op "cast-char-boundedUInt" [x, showB n]
 
-        strTo : IntKind -> String -> String
+        strTo : IntKind -> Builder -> Builder
         strTo (Signed Unlimited) x = op "cast-string-int" [x]
-        strTo (Signed $ P n)     x = op "cast-string-boundedInt" [x, show (n-1)]
-        strTo (Unsigned n)       x = op "cast-string-boundedUInt" [x,show n]
+        strTo (Signed $ P n)     x = op "cast-string-boundedInt" [x, showB (n-1)]
+        strTo (Unsigned n)       x = op "cast-string-boundedUInt" [x, showB n]
 
-        dblTo : IntKind -> String -> String
+        dblTo : IntKind -> Builder -> Builder
         dblTo (Signed Unlimited) x = op "exact-truncate" [x]
-        dblTo (Signed $ P n)     x = op "exact-truncate-boundedInt" [x, show (n-1)]
-        dblTo (Unsigned n)       x = op "exact-truncate-boundedUInt" [x,show n]
+        dblTo (Signed $ P n)     x = op "exact-truncate-boundedInt" [x, showB (n-1)]
+        dblTo (Unsigned n)       x = op "exact-truncate-boundedUInt" [x, showB n]
 
-        intTo : IntKind -> IntKind -> String -> String
+        intTo : IntKind -> IntKind -> Builder -> Builder
         intTo _ (Signed Unlimited) x = x
         intTo (Signed m) (Signed $ P n) x =
-          if P n >= m then x else op "blodwen-toSignedInt" [x,show (n-1)]
+          if P n >= m then x else op "blodwen-toSignedInt" [x, showB (n-1)]
 
         -- Only if the precision of the target is greater
         -- than the one of the source, there is no need to cast.
         intTo (Unsigned m) (Signed $ P n) x =
-          if n > m then x else op "blodwen-toSignedInt" [x,show (n-1)]
+          if n > m then x else op "blodwen-toSignedInt" [x, showB (n-1)]
 
-        intTo (Signed _) (Unsigned n) x = op "blodwen-toUnsignedInt" [x,show n]
+        intTo (Signed _) (Unsigned n) x = op "blodwen-toUnsignedInt" [x, showB n]
 
         intTo (Unsigned m) (Unsigned n) x =
-          if n >= m then x else op "blodwen-toUnsignedInt" [x,show n]
+          if n >= m then x else op "blodwen-toUnsignedInt" [x, showB n]
 
 ||| Generate scheme for a primitive function.
-schOp : {0 arity : Nat} -> PrimFn arity -> Vect arity String -> Core String
+schOp : {0 arity : Nat} -> PrimFn arity -> Vect arity Builder -> Core Builder
 schOp (Add ty) [x, y] = pure $ add (intKind ty) x y
 schOp (Sub ty) [x, y] = pure $ sub (intKind ty) x y
 schOp (Mul ty) [x, y] = pure $ mul (intKind ty) x y
@@ -244,41 +250,42 @@ toPrim pn@(NS _ n)
 toPrim pn = Unknown pn
 
 export
-mkWorld : String -> String
+mkWorld : Builder -> Builder
 mkWorld res = res -- MkIORes is a newtype now! schConstructor 0 [res, "#f"] -- MkIORes
 
-schPrimType : PrimType -> String
+schPrimType : PrimType -> Builder
 schPrimType _ = "#t"
 
-schConstant : (String -> String) -> Constant -> String
-schConstant _ (I x) = show x
-schConstant _ (I8 x) = show x
-schConstant _ (I16 x) = show x
-schConstant _ (I32 x) = show x
-schConstant _ (I64 x) = show x
-schConstant _ (BI x) = show x
-schConstant _ (B8 x) = show x
-schConstant _ (B16 x) = show x
-schConstant _ (B32 x) = show x
-schConstant _ (B64 x) = show x
+schConstant : (String -> Builder) -> Constant -> Builder
+schConstant _ (I x) = showB x
+schConstant _ (I8 x) = showB x
+schConstant _ (I16 x) = showB x
+schConstant _ (I32 x) = showB x
+schConstant _ (I64 x) = showB x
+schConstant _ (BI x) = showB x
+schConstant _ (B8 x) = showB x
+schConstant _ (B16 x) = showB x
+schConstant _ (B32 x) = showB x
+schConstant _ (B64 x) = showB x
 schConstant schString (Str x) = schString x
 schConstant _ (Ch x)
-   = if (the Int (cast x) >= 32 && the Int (cast x) < 127)
-        then "#\\" ++ cast x
-        else "(integer->char " ++ show (the Int (cast x)) ++ ")"
-schConstant _ (Db x) = show x
+   = if (ord x >= 32 && ord x < 127)
+        then "#\\" ++ char x
+        else "(integer->char " ++ showB (ord x) ++ ")"
+schConstant _ (Db x) = showB x
 schConstant _ (PrT t) = schPrimType t
 schConstant _ WorldVal = "#f"
 
-schCaseDef : Maybe String -> String
+schCaseDef : Maybe Builder -> Builder
 schCaseDef Nothing = ""
 schCaseDef (Just tm) = "(else " ++ tm ++ ")"
 
 export
-schArglist : List Name -> String
-schArglist [] = ""
-schArglist [x] = schName x
-schArglist (x :: xs) = schName x ++ " " ++ schArglist xs
+schArglist : List Name -> Builder
+schArglist xs = sepBy " " $ map schName xs
+-- schArglist [] = ""
+-- schArglist [x] = schName x
+-- schArglist (x :: xs) = schName x ++ " " ++ schArglist xs
 
 mutual
   used : Name -> NamedCExp -> Bool
@@ -310,68 +317,70 @@ var : NamedCExp -> Bool
 var (NmLocal _ _) = True
 var _ = False
 
+getScrutineeTemp : Nat -> Builder
+getScrutineeTemp i = fromString $ "sc" ++ show i
+
 parameters (constants : SortedSet Name,
-            schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
-            schString : String -> String)
-  showTag : Name -> Maybe Int -> String
-  showTag n (Just i) = show i
+            schExtPrim : Nat -> ExtPrim -> List NamedCExp -> Core Builder,
+            schString : String -> Builder)
+  showTag : Name -> Maybe Int -> Builder
+  showTag n (Just i) = showB i
   showTag n Nothing = schString (show n)
 
   mutual
-    schConAlt : Int -> String -> NamedConAlt -> Core String
+    ||| Bind arguments of a data constructor represented by a vector
+    ||| @ target the data constructor
+    ||| @ sc the scope (ie the RHS of the alternative)
+    ||| @ i the index to start at (1 for a regular data type, 0 for a record)
+    ||| @ ns the names to bind in order
+    ||| @ body the body of the alternative
+    bindArgs : (target : Builder) -> (sc : NamedCExp) -> (i : Nat) -> (ns : List Name) -> (body : Builder) -> Builder
+    bindArgs target sc i [] body = body
+    bindArgs target sc i (n :: ns) body
+        = if used n sc
+                then "(let ((" ++ schName n ++ " " ++ "(vector-ref " ++ target ++ " " ++ showB i ++ "))) "
+                ++ bindArgs target sc (i + 1) ns body ++ ")"
+                else bindArgs target sc (i + 1) ns body
+
+    schConAlt : Nat -> Builder -> NamedConAlt -> Core Builder
     schConAlt i target (MkNConAlt n ci tag args sc)
         = pure $ "((" ++ showTag n tag ++ ") "
-                      ++ bindArgs 1 args !(schExp i sc) ++ ")"
-      where
-        bindArgs : Int -> (ns : List Name) -> String -> String
-        bindArgs i [] body = body
-        bindArgs i (n :: ns) body
-            = if used n sc
-                 then "(let ((" ++ schName n ++ " " ++ "(vector-ref " ++ target ++ " " ++ show i ++ "))) "
-                    ++ bindArgs (i + 1) ns body ++ ")"
-                 else bindArgs (i + 1) ns body
+                      ++ bindArgs target sc 1 args !(schExp i sc) ++ ")"
 
-    schConUncheckedAlt : Int -> String -> NamedConAlt -> Core String
+    schConUncheckedAlt : Nat -> Builder -> NamedConAlt -> Core Builder
     schConUncheckedAlt i target (MkNConAlt n ci tag args sc)
-        = pure $ bindArgs 1 args !(schExp i sc)
-      where
-        bindArgs : Int -> (ns : List Name) -> String -> String
-        bindArgs i [] body = body
-        bindArgs i (n :: ns) body
-            = if used n sc
-                 then "(let ((" ++ schName n ++ " " ++ "(vector-ref " ++ target ++ " " ++ show i ++ "))) "
-                    ++ bindArgs (i + 1) ns body ++ ")"
-                 else bindArgs (i + 1) ns body
+        = pure $ bindArgs target sc 1 args !(schExp i sc)
 
-    schConstAlt : Int -> String -> NamedConstAlt -> Core String
+    schConstAlt : Nat -> Builder -> NamedConstAlt -> Core Builder
     schConstAlt i target (MkNConstAlt c exp)
         = pure $ "((equal? " ++ target ++ " " ++ schConstant schString c ++ ") " ++ !(schExp i exp) ++ ")"
 
     -- oops, no traverse for Vect in Core
-    schArgs : Int -> Vect n NamedCExp -> Core (Vect n String)
-    schArgs i [] = pure []
-    schArgs i (arg :: args) = pure $ !(schExp i arg) :: !(schArgs i args)
+    schArgs : Nat -> Vect n NamedCExp -> Core (Vect n Builder)
+    schArgs i xs = traverseVect (schExp i) xs
+    -- schArgs i [] = pure []
+    -- schArgs i (arg :: args) = pure $ !(schExp i arg) :: !(schArgs i args)
 
-    schCaseTree : Int -> NamedCExp -> List NamedConAlt -> Maybe NamedCExp ->
-                  Core String
+    schCaseTree : Nat -> NamedCExp -> List NamedConAlt -> Maybe NamedCExp ->
+                  Core Builder
     schCaseTree i sc [] def
-        = do tcode <- schExp (i+1) sc
+        = do tcode <- schExp (i + 1) sc
              defc <- maybe (pure "'erased") (schExp i) def
-             let n = "sc" ++ show i
+             let n = getScrutineeTemp i
              if var sc
                 then pure defc
                 else pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) "
                              ++ defc ++ ")"
     schCaseTree i sc [alt] Nothing
-        = do tcode <- schExp (i+1) sc
-             let n = "sc" ++ show i
+        = do tcode <- schExp (i + 1) sc
+             let n = getScrutineeTemp i
              if var sc
-                then pure !(schConUncheckedAlt (i+1) tcode alt)
+                then pure !(schConUncheckedAlt (i + 1) tcode alt)
                 else pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) " ++
-                        !(schConUncheckedAlt (i+1) n alt) ++ ")"
+                        !(schConUncheckedAlt (i + 1) n alt) ++ ")"
     schCaseTree i sc alts Nothing
-        = do tcode <- schExp (i+1) sc
-             let n = "sc" ++ show i
+        = do tcode <- schExp (i + 1) sc
+             let n = getScrutineeTemp i
              if var sc
                 then pure $ "(case (vector-ref " ++ tcode ++ " 0) "
                        ++ !(showAlts tcode alts) ++
@@ -380,7 +389,7 @@ parameters (constants : SortedSet Name,
                        ++ !(showAlts n alts) ++
                        "))"
       where
-        showAlts : String -> List NamedConAlt -> Core String
+        showAlts : Builder -> List NamedConAlt -> Core Builder
         showAlts n [] = pure ""
         showAlts n [alt]
            = pure $ "(else " ++ !(schConUncheckedAlt (i + 1) n alt) ++ ")"
@@ -388,47 +397,39 @@ parameters (constants : SortedSet Name,
            = pure $ !(schConAlt (i + 1) n alt) ++ " " ++
                     !(showAlts n alts)
     schCaseTree i sc alts def
-        = do tcode <- schExp (i+1) sc
+        = do tcode <- schExp (i + 1) sc
              defc <- maybe (pure Nothing) (\v => pure (Just !(schExp i v))) def
-             let n = "sc" ++ show i
+             let n = getScrutineeTemp i
              if var sc
                 then pure $ "(case (vector-ref " ++ tcode ++ " 0) "
-                               ++ showSep " " !(traverse (schConAlt (i+1) tcode) alts)
+                               ++ sepBy " " !(traverse (schConAlt (i + 1) tcode) alts)
                                ++ schCaseDef defc ++ ")"
                 else pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (case (vector-ref " ++ n ++ " 0) "
-                       ++ showSep " " !(traverse (schConAlt (i+1) n) alts)
+                       ++ sepBy " " !(traverse (schConAlt (i + 1) n) alts)
                        ++ schCaseDef defc ++ "))"
 
-    schRecordCase : Int -> NamedCExp -> List NamedConAlt -> Maybe NamedCExp ->
-                    Core String
+    schRecordCase : Nat -> NamedCExp -> List NamedConAlt -> Maybe NamedCExp ->
+                    Core Builder
     schRecordCase i sc [] _ = pure "#f" -- suggests empty case block!
-    schRecordCase i sc (alt :: _) _
-        = do tcode <- schExp (i+1) sc
-             let n = "sc" ++ show i
+    schRecordCase i sc [alt] _
+        = do tcode <- schExp (i + 1) sc
+             let n = getScrutineeTemp i
              if var sc
                 then getAltCode tcode alt
                 else do alt' <- getAltCode n alt
                         pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) " ++
                                      alt' ++ ")"
       where
-        bindArgs : Int -> String -> (ns : List Name) -> String ->
-                   NamedCExp -> String
-        bindArgs i target [] body sc = body
-        bindArgs i target (n :: ns) body sc
-            = if used n sc
-                 then "(let ((" ++ schName n ++ " " ++ "(vector-ref " ++ target ++ " " ++ show i ++ "))) "
-                    ++ bindArgs (i + 1) target ns body sc ++ ")"
-                 else bindArgs (i + 1) target ns body sc
-
-        getAltCode : String -> NamedConAlt -> Core String
+        getAltCode : Builder -> NamedConAlt -> Core Builder
         getAltCode n (MkNConAlt _ _ _ args sc)
-            = pure $ bindArgs 0 n args !(schExp i sc) sc
+            = pure $ bindArgs n sc 0 args !(schExp i sc)
+    schRecordCase _ _ _ _ = throw $ InternalError "Case of a record has multiple alternatives"
 
-    schListCase : Int -> NamedCExp -> List NamedConAlt -> Maybe NamedCExp ->
-                  Core String
+    schListCase : Nat -> NamedCExp -> List NamedConAlt -> Maybe NamedCExp ->
+                  Core Builder
     schListCase i sc alts def
-        = do tcode <- schExp (i+1) sc
-             let n = "sc" ++ show i
+        = do tcode <- schExp (i + 1) sc
+             let n = getScrutineeTemp i
              defc <- maybe (pure Nothing)
                            (\v => pure (Just !(schExp (i + 1) v))) def
              nil <- getNilCode alts
@@ -439,9 +440,9 @@ parameters (constants : SortedSet Name,
                         pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) " ++
                             buildCase n nil cons defc ++ ")"
       where
-        buildCase : String ->
-                    Maybe String -> Maybe String -> Maybe String ->
-                    String
+        buildCase : Builder ->
+                    Maybe Builder -> Maybe Builder -> Maybe Builder ->
+                    Builder
         buildCase n (Just nil) (Just cons) _
             = "(if (null? " ++ n ++ ") " ++ nil ++ " " ++ cons ++ ")"
         buildCase n (Just nil) Nothing Nothing = nil
@@ -453,19 +454,19 @@ parameters (constants : SortedSet Name,
         buildCase n Nothing Nothing (Just def) = def
         buildCase n Nothing Nothing Nothing = "#f"
 
-        getNilCode : List NamedConAlt -> Core (Maybe String)
+        getNilCode : List NamedConAlt -> Core (Maybe Builder)
         getNilCode [] = pure Nothing
         getNilCode (MkNConAlt _ NIL _ _ sc :: _)
             = pure (Just !(schExp (i + 1) sc))
         getNilCode (_ :: xs) = getNilCode xs
 
-        getConsCode : String -> List NamedConAlt -> Core (Maybe String)
+        getConsCode : Builder -> List NamedConAlt -> Core (Maybe Builder)
         getConsCode n [] = pure Nothing
         getConsCode n (MkNConAlt _ CONS _ [x,xs] sc :: _)
             = do sc' <- schExp (i + 1) sc
                  pure $ Just $ bindArgs [(x, "car"), (xs, "cdr")] sc'
           where
-            bindArgs : (ns : List (Name, String)) -> String -> String
+            bindArgs : (ns : List (Name, Builder)) -> Builder -> Builder
             bindArgs [] body = body
             bindArgs ((x, get) :: ns) body
                 = if used x sc
@@ -474,11 +475,11 @@ parameters (constants : SortedSet Name,
                      else bindArgs ns body
         getConsCode x (_ :: xs) = getConsCode x xs
 
-    schMaybeCase : Int -> NamedCExp -> List NamedConAlt -> Maybe NamedCExp ->
-                   Core String
+    schMaybeCase : Nat -> NamedCExp -> List NamedConAlt -> Maybe NamedCExp ->
+                   Core Builder
     schMaybeCase i sc alts def
-        = do tcode <- schExp (i+1) sc
-             let n = "sc" ++ show i
+        = do tcode <- schExp (i + 1) sc
+             let n = getScrutineeTemp i
              defc <- maybe (pure Nothing)
                            (\v => pure (Just !(schExp (i + 1) v))) def
              nothing <- getNothingCode alts
@@ -489,9 +490,9 @@ parameters (constants : SortedSet Name,
                         pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) " ++
                             buildCase n nothing just defc ++ ")"
       where
-        buildCase : String ->
-                    Maybe String -> Maybe String -> Maybe String ->
-                    String
+        buildCase : Builder ->
+                    Maybe Builder -> Maybe Builder -> Maybe Builder ->
+                    Builder
         buildCase n (Just nothing) (Just just) _
             = "(if (null? " ++ n ++ ") " ++ nothing ++ " " ++ just ++ ")"
         buildCase n (Just nothing) Nothing Nothing = nothing
@@ -503,19 +504,19 @@ parameters (constants : SortedSet Name,
         buildCase n Nothing Nothing (Just def) = def
         buildCase n Nothing Nothing Nothing = "#f"
 
-        getNothingCode : List NamedConAlt -> Core (Maybe String)
+        getNothingCode : List NamedConAlt -> Core (Maybe Builder)
         getNothingCode [] = pure Nothing
         getNothingCode (MkNConAlt _ NOTHING _ _ sc :: _)
             = pure (Just !(schExp (i + 1) sc))
         getNothingCode (_ :: xs) = getNothingCode xs
 
-        getJustCode : String -> List NamedConAlt -> Core (Maybe String)
+        getJustCode : Builder -> List NamedConAlt -> Core (Maybe Builder)
         getJustCode n [] = pure Nothing
         getJustCode n (MkNConAlt _ JUST _ [x] sc :: _)
             = do sc' <- schExp (i + 1) sc
                  pure $ Just $ bindArg x sc'
           where
-            bindArg : Name -> String -> String
+            bindArg : Name -> Builder -> Builder
             bindArg x body
                 = if used x sc
                      then "(let ((" ++ schName x ++ " " ++ "(unbox " ++ n ++ "))) "
@@ -524,7 +525,7 @@ parameters (constants : SortedSet Name,
         getJustCode x (_ :: xs) = getJustCode x xs
 
     export
-    schExp : Int -> NamedCExp -> Core String
+    schExp : Nat -> NamedCExp -> Core Builder
     schExp i (NmLocal fc n) = pure $ schName n
     schExp i (NmRef fc n) = pure $ schName n
     schExp i (NmLam fc x sc)
@@ -539,7 +540,7 @@ parameters (constants : SortedSet Name,
         then schExp i x
         else pure $ "(" ++ !(schExp i x) ++ ")"
     schExp i (NmApp fc x args)
-        = pure $ "(" ++ !(schExp i x) ++ " " ++ showSep " " !(traverse (schExp i) args) ++ ")"
+        = pure $ "(" ++ !(schExp i x) ++ " " ++ sepBy " " !(traverse (schExp i) args) ++ ")"
     schExp i (NmCon fc _ NIL tag []) = pure $ "'()"
     schExp i (NmCon fc _ NIL tag _) = throw (InternalError "Bad NIL")
     schExp i (NmCon fc _ CONS tag [x, xs])
@@ -585,8 +586,8 @@ parameters (constants : SortedSet Name,
         recordCase _ = False
 
     schExp i (NmConstCase fc sc alts Nothing)
-        = do tcode <- schExp (i+1) sc
-             let n = "sc" ++ show i
+        = do tcode <- schExp (i + 1) sc
+             let n = getScrutineeTemp i
              if var sc
                 then pure $ "(cond "
                           ++ !(showConstAlts tcode alts)
@@ -595,7 +596,7 @@ parameters (constants : SortedSet Name,
                           ++ !(showConstAlts n alts)
                           ++ "))"
       where
-        showConstAlts : String -> List NamedConstAlt -> Core String
+        showConstAlts : Builder -> List NamedConstAlt -> Core Builder
         showConstAlts n [] = pure ""
         showConstAlts n [MkNConstAlt c exp]
            = pure $ "(else " ++ !(schExp (i + 1) exp) ++ ")"
@@ -604,26 +605,23 @@ parameters (constants : SortedSet Name,
                     !(showConstAlts n alts)
     schExp i (NmConstCase fc sc alts def)
         = do defc <- maybe (pure Nothing) (\v => pure (Just !(schExp i v))) def
-             tcode <- schExp (i+1) sc
-             let n = "sc" ++ show i
+             tcode <- schExp (i + 1) sc
+             let n = getScrutineeTemp i
              if var sc
                 then pure $ "(cond "
-                          ++ showSep " " !(traverse (schConstAlt (i+1) tcode) alts)
+                          ++ sepBy " " !(traverse (schConstAlt (i + 1) tcode) alts)
                           ++ schCaseDef defc ++ ")"
                 else pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (cond "
-                          ++ showSep " " !(traverse (schConstAlt (i+1) n) alts)
+                          ++ sepBy " " !(traverse (schConstAlt (i + 1) n) alts)
                           ++ schCaseDef defc ++ "))"
     schExp i (NmPrimVal fc c) = pure $ schConstant schString c
     schExp i (NmErased fc) = pure "'erased"
-    schExp i (NmCrash fc msg) = pure $ "(blodwen-error-quit " ++ show msg ++ ")"
-
-  fileOp : String -> String
-  fileOp op = "(blodwen-file-op (lambda () " ++ op ++ "))"
+    schExp i (NmCrash fc msg) = pure $ "(blodwen-error-quit " ++ showB msg ++ ")"
 
   -- External primitives which are common to the scheme codegens (they can be
   -- overridden)
   export
-  schExtCommon : Int -> ExtPrim -> List NamedCExp -> Core String
+  schExtCommon : Nat -> ExtPrim -> List NamedCExp -> Core Builder
   schExtCommon i NewIORef [_, val, world]
       = pure $ mkWorld $ "(box " ++ !(schExp i val) ++ ")"
   schExtCommon i ReadIORef [_, ref, world]
@@ -653,7 +651,7 @@ parameters (constants : SortedSet Name,
                                 ++ " " ++ show args))
 
   schDef : {auto c : Ref Ctxt Defs} ->
-           Name -> NamedDef -> Core String
+           Name -> NamedDef -> Core Builder
   schDef n (MkNmFun [] exp)
      = if contains n constants
           then pure $ "(define " ++ schName !(getFullName n) ++ " " ++ !(schExp 0 exp) ++ ")\n"
@@ -672,8 +670,8 @@ parameters (constants : SortedSet Name,
 export
 getScheme : {auto c : Ref Ctxt Defs} ->
             (constants  : SortedSet Name) ->
-            (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String) ->
-            (schString : String -> String) ->
-            (Name, FC, NamedDef) -> Core String
+            (schExtPrim : Nat -> ExtPrim -> List NamedCExp -> Core Builder) ->
+            (schString : String -> Builder) ->
+            (Name, FC, NamedDef) -> Core Builder
 getScheme constants schExtPrim schString (n, fc, d)
     = schDef constants schExtPrim schString n d

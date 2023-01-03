@@ -15,6 +15,7 @@ import Core.Directory
 import Core.Options
 import Core.TT
 import Libraries.Data.SortedSet
+import Libraries.Data.String.Builder
 import Libraries.Utils.Path
 
 import Data.List
@@ -33,8 +34,8 @@ import Libraries.Utils.String
 
 %default covering
 
-schHeader : List String -> List String -> String
-schHeader libs compilationUnits = """
+schHeader : List String -> List String -> Builder
+schHeader libs compilationUnits = fromString """
   (import (chezscheme) (support)
       \{ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits] })
   (case (machine-type)
@@ -46,7 +47,7 @@ schHeader libs compilationUnits = """
 
   """
 
-schFooter : String
+schFooter : Builder
 schFooter = """
 
   (collect 4)
@@ -98,11 +99,11 @@ startChezWinSh chez appDirSh targetSh = """
 
 -- TODO: parallelise this
 compileChezLibraries : (chez : String) -> (libDir : String) -> (ssFiles : List String) -> Core ()
-compileChezLibraries chez libDir ssFiles = coreLift_ $ system $ unwords
+compileChezLibraries chez libDir ssFiles = coreLift_ $ system
   [ "echo"
   , unwords
-    [ "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ chezString ssFile ++ "))'"
-      ++ " '(delete-file " ++ chezString ssFile ++ ")'"
+    [ "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ build (chezString ssFile) ++ "))'"
+      ++ " '(delete-file " ++ build (chezString ssFile) ++ ")'"
       -- we must delete the SS file to prevent it from interfering with the SO files
       -- we keep the .hash file, though, so we still keep track of what to rebuild
     | ssFile <- ssFiles
@@ -111,18 +112,18 @@ compileChezLibraries chez libDir ssFiles = coreLift_ $ system $ unwords
   ]
 
 compileChezLibrary : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
-compileChezLibrary chez libDir ssFile = coreLift_ $ system $ unwords
+compileChezLibrary chez libDir ssFile = coreLift_ $ system
   [ "echo"
-  , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ chezString ssFile ++ "))'"
-  , "'(delete-file " ++ chezString ssFile ++ ")'"
+  , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ build (chezString ssFile) ++ "))'"
+  , "'(delete-file " ++ build (chezString ssFile) ++ ")'"
   , "|", chez, "-q", "--libdirs", libDir
   ]
 
 compileChezProgram : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
-compileChezProgram chez libDir ssFile = coreLift_ $ system $ unwords
+compileChezProgram chez libDir ssFile = coreLift_ $ system
   [ "echo"
-  , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++ chezString ssFile ++ "))'"
-  , "'(delete-file " ++ chezString ssFile ++ ")'"
+  , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++ build (chezString ssFile) ++ "))'"
+  , "'(delete-file " ++ build (chezString ssFile) ++ ")'"
   , "|", chez, "-q", "--libdirs", libDir
   ]
 
@@ -208,26 +209,26 @@ compileToSS c chez appdir tm = do
               ++ ")"
             | cuid <- SortedSet.toList cu.dependencies
             ]
-      let exports = unwords $ concat
+      let exports = sepBy " " $ catMaybes
             -- constructors don't generate Scheme definitions
             [ case d of
-                MkNmCon _ _ _ => []
-                _ => [schName dn]
+                MkNmCon _ _ _ => Nothing
+                _ => Just $ schName dn
             | (dn, fc, d) <- cu.definitions
             ]
       let header =
-            "(library (" ++ chezLib ++ ")\n"
+            "(library (" ++ fromString chezLib ++ ")\n"
             ++ "  (export " ++ exports ++ ")\n"
-            ++ "  (import (chezscheme) (support) " ++ imports ++ ")\n\n"
+            ++ "  (import (chezscheme) (support) " ++ fromString imports ++ ")\n\n"
       let footer = ")"
 
       fgndefs <- traverse (Chez.getFgnCall version) cu.definitions
       compdefs <- traverse (getScheme empty (Chez.chezExtPrim empty) Chez.chezString) cu.definitions
-      loadlibs <- traverse (loadLib appdir) (mapMaybe fst fgndefs)
+      loadlibs <- traverse (map fromString . loadLib appdir) (mapMaybe fst fgndefs)
 
       -- write the files
       log "compiler.scheme.chez" 3 $ "Generating code for " ++ chezLib
-      Core.writeFile (appdir </> chezLib <.> "ss") $ fastConcat $
+      Core.writeFile (appdir </> chezLib <.> "ss") $ build $ concat $
         [header]
         ++ map snd fgndefs  -- definitions using foreign libs
         ++ compdefs
@@ -240,7 +241,7 @@ compileToSS c chez appdir tm = do
 
   -- main module
   main <- schExp empty (Chez.chezExtPrim empty) Chez.chezString 0 ctm
-  Core.writeFile (appdir </> "mainprog.ss") $ unlines $
+  Core.writeFile (appdir </> "mainprog.ss") $ build $ sepBy "\n"
     [ schHeader (map snd libs) [lib.name | lib <- chezLibs]
     , "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))"
     , main
