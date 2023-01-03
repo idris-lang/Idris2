@@ -56,9 +56,9 @@ schHeader prof libs = fromString """
   (require ffi/unsafe ffi/unsafe/define) ; for calling C
   \{ ifThenElse prof "(require profile)" "" }
   (require racket/flonum)                ; for float-typed transcendental functions
-  """
-  ++ libs ++
-  """
+
+  """ ++ libs ++ """
+
   (let ()
 
   """
