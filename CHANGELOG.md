@@ -70,6 +70,10 @@
 * Changes `getNProcessors` to return the number of online processors rather than
   the number of configured processors.
 
+### Contrib
+
+* Adds `Data.List.Sufficient`, a small library defining a structurally inductive view of lists.
+
 ## v0.6.0
 
 ### REPL changes
