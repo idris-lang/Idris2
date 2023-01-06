@@ -53,6 +53,10 @@
 
 ### Library changes
 
+#### Prelude
+
+* Improved performance of functions `isNL`, `isSpace`, and `isHexDigit`.
+
 #### Base
 
 * Deprecates `setByte` and `getByte` from `Data.Buffer` for removal in a future

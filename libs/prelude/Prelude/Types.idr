@@ -915,15 +915,21 @@ isAlphaNum x = isDigit x || isAlpha x
 ||| Returns true if the character is a whitespace character.
 public export
 isSpace : Char -> Bool
-isSpace x
-    = x == ' '  || x == '\t' || x == '\r' ||
-      x == '\n' || x == '\f' || x == '\v' ||
-      x == '\xa0'
+isSpace ' '    = True
+isSpace '\t'   = True
+isSpace '\r'   = True
+isSpace '\n'   = True
+isSpace '\f'   = True
+isSpace '\v'   = True
+isSpace '\xa0' = True
+isSpace _      = False
 
 ||| Returns true if the character represents a new line.
 public export
 isNL : Char -> Bool
-isNL x = x == '\r' || x == '\n'
+isNL '\r' = True
+isNL '\n' = True
+isNL _    = False
 
 ||| Convert a letter to the corresponding upper-case letter, if any.
 ||| Non-letters are ignored.
@@ -947,11 +953,7 @@ toLower x
 ||| [0-9][a-f][A-F].
 public export
 isHexDigit : Char -> Bool
-isHexDigit x = elem (toUpper x) hexChars where
-  hexChars : List Char
-  hexChars
-      = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-         'A', 'B', 'C', 'D', 'E', 'F']
+isHexDigit x = isDigit x || ('a' <= x && x <= 'f') || ('A' <= x && x <= 'F')
 
 ||| Returns true if the character is an octal digit.
 public export
