@@ -135,3 +135,8 @@ namespace All
         show' acc @{[_]} [px] = acc ++ show px
         show' acc @{_ :: _} (px :: pxs) = show' (acc ++ show px ++ ", ") pxs
 
+  ||| A heterogeneous vector of arbitrary types
+  public export
+  HVect : Vect n Type -> Type
+  HVect = All id
+
