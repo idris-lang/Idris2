@@ -125,3 +125,13 @@ namespace All
   forget : All (const p) {n} xs -> Vect n p
   forget []      = []
   forget (x::xs) = x :: forget xs
+
+  export
+  {0 xs : Vect n _} -> All Show (map p xs) => Show (All p xs) where
+    show pxs = "[" ++ show' "" pxs ++ "]"
+      where
+        show' : {0 xs' : Vect n' _} -> String -> All Show (map p xs') => All p xs' -> String
+        show' acc @{[]} [] = acc
+        show' acc @{[_]} [px] = acc ++ show px
+        show' acc @{_ :: _} (px :: pxs) = show' (acc ++ show px ++ ", ") pxs
+
