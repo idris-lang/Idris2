@@ -140,3 +140,28 @@ namespace All
   HVect : Vect n Type -> Type
   HVect = All id
 
+  ||| Take the first element.
+  export
+  head : All p (x :: xs) -> p x
+  head (y :: _) = y
+
+  ||| Take all but the first element.
+  export
+  tail : All p (x :: xs) -> All p xs
+  tail (_ :: ys) = ys
+
+  ||| Drop the first n elements given knowledge that
+  ||| there are at least n elements available.
+  export
+  drop : {0 m : _} -> (n : Nat) -> {0 xs : Vect (n + m) a} -> All p xs -> All p (the (Vect m a) (Vect.drop n xs))
+  drop 0 ys = ys
+  drop (S k) (y :: ys) = drop k ys
+
+  ||| Drop up to the first l elements, stopping early
+  ||| if all elements have been dropped.
+  export
+  drop' : {0 k : _} -> {0 xs : Vect k _} -> (l : Nat) -> All p xs -> All p (Vect.drop' l xs)
+  drop' 0 ys = rewrite minusZeroRight k in ys
+  drop' (S k) [] = []
+  drop' (S k) (y :: ys) = drop' k ys
+
