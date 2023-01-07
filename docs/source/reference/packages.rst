@@ -172,6 +172,10 @@ Idris 2 treats specially when the package is depended upon by some other Idris p
 
 Those directories are ``lib`` and ``data``.
 
+Below we will refer to these directories as ``pkgname-<version>/lib`` and ``pkgname-<version>/data``
+and in all cases these folders may be located locally in the depending project within a ``depends``
+directory or globally (you can ask Idris 2 for the global install directory with ``idris2 --libdir``).
+
 Library files
 -------------
 
