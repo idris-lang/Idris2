@@ -64,11 +64,21 @@
   convert a `Bits8` to an `Int`), as their values are limited, as opposed to the
   assumption in `setByte` that the value is between 0 and 255.
 * Adds RefC support for 16- and 32-bit access in `Data.Buffer`.
+* Add Data.List.HasLength from the compiler codebase slash contrib library but
+  adopt the type signature from the compiler codebase and some of the naming
+  from the contrib library. The type ended up being `HasLength n xs` rather than
+  `HasLength xs n`.
 
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
   the number of configured processors.
+
+#### Contrib
+* Remove Data.List.HasLength from contrib library but add it to the base library
+  with the type signature from the compiler codebase and some of the naming
+  from the contrib library. The type ended up being `HasLength n xs` rather than
+  `HasLength xs n`.
 
 ## v0.6.0
 
