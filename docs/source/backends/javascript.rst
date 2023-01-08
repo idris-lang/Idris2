@@ -67,7 +67,7 @@ the same across all backends. All signed and unsigned integrals of up to
 32 bit precision (``Int8``, ``Int16``, ``Int32``, ``Bits8``, ``Bits16``, and ``Bits32``)
 are represented by ``Number`` while ``Int64``, ``Bits64``, and ``Integer``
 are represented by ``BigInt``. The example above could therefore be
-improved by using ``Int32`` instad of ``Int``:
+improved by using ``Int32`` instead of ``Int``:
 
 .. code-block:: idris
 
