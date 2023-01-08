@@ -74,11 +74,18 @@
 * Changes `getNProcessors` to return the number of online processors rather than
   the number of configured processors.
 
+
 #### Contrib
 * Remove Data.List.HasLength from contrib library but add it to the base library
   with the type signature from the compiler codebase and some of the naming
   from the contrib library. The type ended up being `HasLength n xs` rather than
   `HasLength xs n`.
+
+### Other Changes
+* The `data` subfolder of an installed or local dependency package is now automatically
+  recognized as a "data" directory by Idris 2. See the
+  [documentation on Packages](https://idris2.readthedocs.io/en/latest/reference/packages.html)
+  for details.
 
 ## v0.6.0
 
