@@ -29,14 +29,11 @@ render : {auto o : Ref ROpts REPLOpts} ->
          Doc ann -> Core String
 render stylerAnn doc = do
   color <- getColor
-  isDumb <- (Just "dumb" ==) <$> coreLift (getEnv "TERM")
-  -- ^-- emacs sets the TERM variable to `dumb` and expects the compiler
-  --     to not emit any ANSI escape codes
   pageWidth <- getPageWidth
   let opts = MkLayoutOptions pageWidth
   let layout = layoutPretty opts doc
   pure $ renderString $
-    if color && not isDumb
+    if color
       then reAnnotateS stylerAnn layout
       else unAnnotateS layout
 
