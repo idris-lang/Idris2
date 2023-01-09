@@ -64,6 +64,11 @@
   convert a `Bits8` to an `Int`), as their values are limited, as opposed to the
   assumption in `setByte` that the value is between 0 and 255.
 * Adds RefC support for 16- and 32-bit access in `Data.Buffer`.
+* Add `Show` instance to `Data.Vect.Quantifiers.All` and add a few helpers for listy
+  computations on the `All` type.
+* Add an alias for `HVect` to `All id` in `Data.Vect.Quantifiers.All`. This is the
+  approach to getting a heterogeneous Vect of elements that is generall preferred by
+  the community vs. a standalone type as seen in `contrib`.
 
 #### System
 
