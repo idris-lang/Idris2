@@ -98,6 +98,10 @@ splittableNames (IApp _ f (IBindVar _ n))
     = splittableNames f ++ [UN $ Basic n]
 splittableNames (IApp _ f _)
     = splittableNames f
+splittableNames (IWithApp _ f (IBindVar _ n))
+    = splittableNames f ++ [UN $ Basic n]
+splittableNames (IWithApp _ f _)
+    = splittableNames f
 splittableNames (IAutoApp _ f _)
     = splittableNames f
 splittableNames (INamedApp _ f _ _)

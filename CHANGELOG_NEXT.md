@@ -28,12 +28,16 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 ### Compiler changes
 
+* LHS of `with`-applications are parsed as `PWithApp` instead of `PApp`. As a consequence,
+  `IWithApp` appears in `TTImp` values in elaborator scripts instead of `IApp`, as it
+  should have been
+
 #### RefC Backend
 
-* Fix invalid memory read onf strSubStr.
+* Fix invalid memory read in `strSubStr`.
 
-* Fix memory leaks of IORef. Now that IORef holds values by itself,
-  global_IORef_Storage is no longer needed.
+* Fix memory leaks of `IORef`. Now that `IORef` holds values by itself,
+  `global_IORef_Storage` is no longer needed.
 
 #### NodeJS Backend
 
