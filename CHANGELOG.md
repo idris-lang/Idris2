@@ -57,6 +57,8 @@
 
 * Improved performance of functions `isNL`, `isSpace`, and `isHexDigit`.
 
+* Implements `Foldable` and `Traversable` for pairs, right-biased as `Functor`.
+
 #### Base
 
 * Deprecates `setByte` and `getByte` from `Data.Buffer` for removal in a future
@@ -64,6 +66,11 @@
   convert a `Bits8` to an `Int`), as their values are limited, as opposed to the
   assumption in `setByte` that the value is between 0 and 255.
 * Adds RefC support for 16- and 32-bit access in `Data.Buffer`.
+* Add `Show` instance to `Data.Vect.Quantifiers.All` and add a few helpers for listy
+  computations on the `All` type.
+* Add an alias for `HVect` to `All id` in `Data.Vect.Quantifiers.All`. This is the
+  approach to getting a heterogeneous Vect of elements that is generall preferred by
+  the community vs. a standalone type as seen in `contrib`.
 
 #### System
 
@@ -73,6 +80,12 @@
 ### Contrib
 
 * Adds `Data.List.Sufficient`, a small library defining a structurally inductive view of lists.
+
+### Other Changes
+* The `data` subfolder of an installed or local dependency package is now automatically
+  recognized as a "data" directory by Idris 2. See the
+  [documentation on Packages](https://idris2.readthedocs.io/en/latest/reference/packages.html)
+  for details.
 
 ## v0.6.0
 
