@@ -37,8 +37,8 @@ else
 endif
 
 ifneq (, $(findstring freebsd, $(MACHINE)))
-	CFLAGS += -I/usr/local/include
-	LDFLAGS += -L/usr/local/lib
+	CFLAGS += -I$(shell /sbin/sysctl -n user.localbase)/include
+	LDFLAGS += -L$(shell /sbin/sysctl -n user.localbase)/lib
 endif
 
 ifneq ($(OS),windows)
