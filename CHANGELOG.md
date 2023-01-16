@@ -71,11 +71,22 @@
 * Add an alias for `HVect` to `All id` in `Data.Vect.Quantifiers.All`. This is the
   approach to getting a heterogeneous Vect of elements that is generall preferred by
   the community vs. a standalone type as seen in `contrib`.
+* Add Data.List.HasLength from the compiler codebase slash contrib library but
+  adopt the type signature from the compiler codebase and some of the naming
+  from the contrib library. The type ended up being `HasLength n xs` rather than
+  `HasLength xs n`.
 
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
   the number of configured processors.
+
+
+#### Contrib
+* Remove Data.List.HasLength from contrib library but add it to the base library
+  with the type signature from the compiler codebase and some of the naming
+  from the contrib library. The type ended up being `HasLength n xs` rather than
+  `HasLength xs n`.
 
 ### Other Changes
 * The `data` subfolder of an installed or local dependency package is now automatically
