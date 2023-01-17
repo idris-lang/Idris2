@@ -273,4 +273,12 @@ exitSuccess = exitWith ExitSuccess
 ||| Print the error message and call exitFailure
 export
 die : HasIO io => String -> io a
-die str = do putStrLn str; exitFailure
+die str
+  = do Right () <- fPutStrLn stderr str
+         | Left err => assert_total $ die
+           """
+           Error \{show err}
+           when printing the error
+           \{str}
+           """
+       exitFailure
