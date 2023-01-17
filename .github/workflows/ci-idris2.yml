@@ -133,7 +133,7 @@ jobs:
   # CHEZ
 
   ubuntu-bootstrap-chez:
-    needs: quick-check
+    needs: [initialise, quick-check]
     runs-on: ubuntu-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -161,7 +161,7 @@ jobs:
           path: ~/.idris2/
 
   macos-bootstrap-chez:
-    needs: quick-check
+    needs: [initialise, quick-check]
     runs-on: macos-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -189,7 +189,7 @@ jobs:
           path: ~/.idris2/
 
   windows-bootstrap-chez:
-    needs: quick-check
+    needs: [initialise, quick-check]
     runs-on: windows-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -239,7 +239,7 @@ jobs:
           path: ${{ env.IDRIS_PREFIX }}
 
   nix-bootstrap-chez:
-    needs: quick-check
+    needs: [initialise, quick-check]
     runs-on: ubuntu-latest
     if: |
       false && (!contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -260,7 +260,7 @@ jobs:
   # RACKET
 
   ubuntu-bootstrap-racket:
-    needs: quick-check
+    needs: [initialise, quick-check]
     runs-on: ubuntu-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -370,7 +370,7 @@ jobs:
         run: make ci-ubuntu-test INTERACTIVE=''
 
   ubuntu-self-host-previous-version:
-    needs: quick-check
+    needs: [initialise, quick-check]
     runs-on: ubuntu-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -403,7 +403,7 @@ jobs:
           path: ~/.idris2/
 
   windows-self-host-racket:
-    needs: windows-bootstrap-chez
+    needs: [initialise, windows-bootstrap-chez]
     runs-on: windows-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -496,7 +496,7 @@ jobs:
   ######################################################################
 
   ubuntu-test-collie:
-    needs: ubuntu-self-host-previous-version
+    needs: [initialise, ubuntu-self-host-previous-version]
     runs-on: ubuntu-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -524,7 +524,7 @@ jobs:
           make
 
   ubuntu-test-frex:
-    needs: ubuntu-self-host-previous-version
+    needs: [initialise, ubuntu-self-host-previous-version]
     runs-on: ubuntu-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -553,7 +553,7 @@ jobs:
           make test
 
   ubuntu-test-elab:
-    needs: ubuntu-self-host-previous-version
+    needs: [initialise, ubuntu-self-host-previous-version]
     runs-on: ubuntu-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -585,7 +585,7 @@ jobs:
   ######################################################################
 
   ubuntu-katla:
-    needs: ubuntu-test-collie
+    needs: [initialise, ubuntu-test-collie]
     runs-on: ubuntu-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
