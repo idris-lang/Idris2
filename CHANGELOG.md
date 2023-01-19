@@ -59,7 +59,10 @@
   release. Use `setBits8` and `getBits8` instead (with `cast` if you need to
   convert a `Bits8` to an `Int`), as their values are limited, as opposed to the
   assumption in `setByte` that the value is between 0 and 255.
+
 * Adds RefC support for 16- and 32-bit access in `Data.Buffer`.
+
+* `System`'s `die` now prints the error message on stderr rather than stdout
 
 #### System
 
