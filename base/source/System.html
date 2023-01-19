@@ -393,8 +393,10 @@
 <div id="line272"><a href="#line272" class="IdrisLineNumber"> 272 | </a><span class="IdrisComment">|||&nbsp;Print&nbsp;the&nbsp;error&nbsp;message&nbsp;and&nbsp;call&nbsp;exitFailure</span></div>
 <div id="line273"><a href="#line273" class="IdrisLineNumber"> 273 | </a><span class="IdrisKeyword">export</span></div>
 <div id="line274"><a href="#line274" class="IdrisLineNumber"> 274 | </a><span class="IdrisFunction">die</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">HasIO</span>&nbsp;<span class="IdrisBound">io</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisType">String</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">io</span>&nbsp;<span class="IdrisBound">a</span></div>
-<div id="line275"><a href="#line275" class="IdrisLineNumber"> 275 | </a><span class="IdrisFunction">die</span>&nbsp;<span class="IdrisBound">str</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisKeyword">do</span>&nbsp;<span class="IdrisFunction">putStrLn</span>&nbsp;<span class="IdrisBound">str</span>;&nbsp;<span class="IdrisFunction">exitFailure</span></div>
-<div id="line276"><a href="#line276" class="IdrisLineNumber"> 276 | </a></div>
+<div id="line275"><a href="#line275" class="IdrisLineNumber"> 275 | </a><span class="IdrisFunction">die</span>&nbsp;<span class="IdrisBound">str</span></div>
+<div id="line276"><a href="#line276" class="IdrisLineNumber"> 276 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisKeyword">do</span>&nbsp;<span class="IdrisFunction">ignore</span>&nbsp;$&nbsp;<span class="IdrisFunction">fPutStrLn</span>&nbsp;<span class="IdrisFunction">stderr</span>&nbsp;<span class="IdrisBound">str</span></div>
+<div id="line277"><a href="#line277" class="IdrisLineNumber"> 277 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisFunction">exitFailure</span></div>
+<div id="line278"><a href="#line278" class="IdrisLineNumber"> 278 | </a></div>
 </code>
 </body>
 </html>
