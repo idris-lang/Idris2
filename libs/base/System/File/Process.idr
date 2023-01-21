@@ -9,8 +9,10 @@ import public System.File.Types
 %foreign "C:fflush,libc 6"
 prim__flush : FilePtr -> PrimIO Int
 %foreign supportC "idris2_popen"
+         supportNode "popen"
 prim__popen : String -> String -> PrimIO FilePtr
 %foreign supportC "idris2_pclose"
+         supportNode "pclose"
 prim__pclose : FilePtr -> PrimIO Int
 
 ||| Force a write of all user-space buffered data for the given `File`.
@@ -24,6 +26,11 @@ fflush (FHandle f)
 ||| Create a new unidirectional pipe by invoking the shell, which is passed the
 ||| given command-string using the '-c' flag, in a new process. The pipe is
 ||| opened with the given mode.
+|||
+||| IMPORTANT: The NodeJS backend only currently supports the Read mode. Also with
+|||            the NodeJS backend, the opened process will finish execution before
+|||            popen returns (it blocks on open) which is different than other
+|||            backends which will block on close.
 |||
 ||| @ cmd the command to pass to the shell
 ||| @ m   the mode the pipe should have
