@@ -1,4 +1,4 @@
 rm -rf build
 
-POPEN_CMD="$1 --version" $1 --no-color --console-width 0 --cg node --no-banner Popen.idr < input
+POPEN_CMD="echo 'Idris 2'" $1 --no-color --console-width 0 --cg node --no-banner Popen.idr < input
 
