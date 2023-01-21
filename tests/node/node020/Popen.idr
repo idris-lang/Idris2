@@ -26,5 +26,4 @@ main = do
     ignore $ pclose fh
     putStrLn "closed"
     let (idris2 ::: _) = split ((==) ',') output
-        | _ => printLn "Unexpected result"
     putStrLn idris2
