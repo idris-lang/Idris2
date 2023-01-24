@@ -43,14 +43,14 @@ integerToNat x
 -- Define separately so we can spot the name when optimising Nats
 ||| Add two natural numbers.
 ||| @ x the number to case-split on
-||| @ y the other numberpublic export
+||| @ y the other number
 public export
 plus : (x : Nat) -> (y : Nat) -> Nat
 plus Z y = y
 plus (S k) y = S (plus k y)
 
-||| Subtract natural numbers.  If the second number is larger than the first,
-||| return 0.
+||| Subtract natural numbers.
+||| If the second number is larger than the first, return 0.
 public export
 minus : (left : Nat) -> Nat -> Nat
 minus Z        right     = Z
