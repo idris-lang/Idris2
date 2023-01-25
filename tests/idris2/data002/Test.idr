@@ -1,3 +1,5 @@
+%default total
+
 data Odd : Nat -> Type
 data Even : Nat -> Type
 
