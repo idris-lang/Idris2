@@ -223,7 +223,7 @@ namespace Section5Sub1
     fromList : List a -> list a
     fromList = foldr (::) []
 
-
+  public export
   0 SpanF : Type -> Type -> Type
   SpanF a x = (List a, x)
 
@@ -236,6 +236,7 @@ namespace Section5Sub1
         then let (r, s) = span xs' in (x :: r, up s)
         else ([], abstIn xs)
 
+  export
   spanr : FoldT (ListF a) (SAlg (ListF a)) r ->
           (a -> Bool) -> (xs : r) -> SpanF a r
   spanr sfo p xs = sfo (SpanSAlg p) @{MkFunctor mapSnd} xs
@@ -304,3 +305,27 @@ namespace Section5Sub3
 
   mirror : tree a -> tree a
   mirror = sfold (TreeF a) @{MkFunctor id} mirrorAlg
+
+namespace Section6Sub4
+
+  0 MappedT : (a, b : Type) -> Type
+  MappedT a b = forall r. FoldT (ListF a) (SAlg (ListF a)) r -> a -> r -> (b, r)
+
+  MapThroughAlg : MappedT a b -> Alg (ListF a) (const (List b))
+  MapThroughAlg f = inAlg (ListF a) $ \fo, sfo, mapThrough, xs =>
+    case xs of
+      [] => []
+      hd :: tl =>
+        let (b, rest) = f sfo hd tl in
+        b :: mapThrough rest
+
+  mapThrough : MappedT a b -> list a -> List b
+  mapThrough f = fold (ListF a) (MapThroughAlg f) @{MkFunctor (const id)}
+
+  compressSpan : Eq a => MappedT a (Nat, a)
+  compressSpan sfo hd tl
+    = let (pref, rest) = spanr sfo (hd ==) tl in
+      ((S (length pref), hd), rest)
+
+  runLengthEncoding : Eq a => List a -> List (Nat, a)
+  runLengthEncoding = mapThrough compressSpan . fromList
