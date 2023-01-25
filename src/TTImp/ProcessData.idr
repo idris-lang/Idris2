@@ -538,5 +538,5 @@ processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in mty_raw opts 
 
          -- #1404
          whenJust mbtot $ \ tot => do
-             log "declare.data" 5 $ "setting totality flag for " ++ show n
-             setFlag fc n (SetTotal tot)
+             log "declare.data" 5 $ "setting totality flag for " ++ show n ++ " and its constructors"
+             for_ (n :: map name cons) $ \ n => setFlag fc n (SetTotal tot)
