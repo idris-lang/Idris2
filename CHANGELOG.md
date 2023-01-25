@@ -51,6 +51,10 @@
   ```
   instead of failing with a strange error about (a) vs (a .rec).
 
+* Elaboration of datatypes now respects the totality annotations:
+  defining a `covering` or `partial` datatype in a `%default total`
+  file will not lead to a positivity error anymore.
+
 ### Library changes
 
 #### Prelude
