@@ -8,3 +8,12 @@ Issue1404:2:1--6:29
  5 |   good : (Int -> Int) -> Bar
  6 |   bad  : (Bar -> Int) -> Bar
 
+Error: MkBar is not total, not strictly positive
+
+Issue1404:2:1--6:29
+ 2 | total
+ 3 | record Bar where
+ 4 |   constructor MkBar
+ 5 |   good : (Int -> Int) -> Bar
+ 6 |   bad  : (Bar -> Int) -> Bar
+
