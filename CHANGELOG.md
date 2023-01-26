@@ -6,7 +6,7 @@
 
 * New magic constants `__LOC__`, `__FILE__`, `__LINE__`, `__COL__`
   substituted at parsing time with a string corresponding to the
-  location, file name, line or column number associated to the
+  location, filename, line or column number associated to the
   magic constant's position.
 
 ### REPL changes
@@ -491,7 +491,7 @@ Changed
   some non-deterministic properties (see issue
   [#1552](https://github.com/idris-lang/idris2/issues/1552)).
   NOTE: Due to complications with race-conditions, Chez not having channels
-  built in, etc, the reimplementation changes the semantics slightly:
+  built-in, etc, the reimplementation changes the semantics slightly:
   `channelPut` no longer blocks until the value has been received under the
   `chez` backend, but instead only blocks if there is already a value in the
   channel that has not been received.
