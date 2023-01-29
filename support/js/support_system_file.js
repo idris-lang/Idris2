@@ -112,12 +112,6 @@ function support_system_file_popen (cmd, m) {
   }
 
   const tmp_file = require('os').tmpdir() + "/" + require('crypto').randomBytes(15).toString('hex')
-  try {
-    support_system_file_fs.writeFileSync(tmp_file, '')
-  } catch (e) {
-    process.__lasterr = e
-    return null
-  }
   const write_fd = support_system_file_fs.openSync(
     tmp_file,
     'w'
@@ -126,10 +120,10 @@ function support_system_file_popen (cmd, m) {
   var io_setting
   switch (mode) {
     case "r":
-      io_setting = ['inherit', write_fd, 2]
+      io_setting = ['ignore', write_fd, 2]
       break
     case "w", "a":
-      io_setting = [write_fd, 'inherit', 2]
+      io_setting = [write_fd, 'ignore', 2]
       break
     default:
       process.__lasterr = 'The popen function cannot be used for reading and writing simultaneously.'
@@ -142,11 +136,13 @@ function support_system_file_popen (cmd, m) {
     { stdio: io_setting, shell: true }
   )
 
+  support_system_file_fs.closeSync(write_fd)
+
   if (error) {
     process.__lasterr = error
+    return null
   }
 
-  support_system_file_fs.closeSync(write_fd)
   const read_ptr = support_system_file_openFile(
     tmp_file,
     'r'
