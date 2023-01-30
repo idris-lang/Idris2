@@ -30,6 +30,7 @@
 #### Node.js
 
 * Generated JavaScript files now include a shebang when using the Node.js backend
+* NodeJS now supports `popen`/`pclose` for the `Read` mode.
 
 ### Compiler changes
 
