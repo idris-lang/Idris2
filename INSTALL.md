@@ -15,7 +15,7 @@ The requirements are:
   `brew install coreutils gmp` and on OpenBSD, with the `pkg_add coreutils
   bash gmake gmp` command. You specifically need the dev GMP library, which
   means on some systems the package you need to install will be named
-  something more like `libgmp3-dev`. MacOS ships with `clang` whereas `gcc` is more
+  something more like `libgmp3-dev`. macOS ships with `clang` whereas `gcc` is more
   common for other \*nix distributions.
 
 On Windows, it has been reported that installing via `MSYS2` works
@@ -104,7 +104,7 @@ executable in `./build/exec`.
 
 If you are working on Idris, incremental compilation means that rebuilds are
 much faster, at the cost of runtime performance being slower. To enable
-incremental compilation for the Chez back end, set the environment variable
+incremental compilation for the Chez backend, set the environment variable
 `IDRIS2_INC_CGS=chez`, or set the `--inc chez` flag in `idris2.ipkg`.
 
 ### 8: (Optional) Installing the Idris 2 API
