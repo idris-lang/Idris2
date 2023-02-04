@@ -63,6 +63,8 @@
 * Improved performance of functions `isNL`, `isSpace`, and `isHexDigit`.
 
 * Implements `Foldable` and `Traversable` for pairs, right-biased as `Functor`.
+* Added a constructor (`MkInterpolation`) to `Interpolation`.
+* Added an `Interpolation` implementation for `Void`.
 
 #### Base
 
