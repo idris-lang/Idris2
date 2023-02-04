@@ -609,10 +609,11 @@ mutual
            rest' <- expandDo side ps' topfc ns rest
            let fcOriginal = fc
            let fc = virtualiseFC fc
+           let patFC = virtualiseFC (getFC bpat)
            pure $ bindFun fc ns exp'
                 $ ILam EmptyFC top Explicit (Just (MN "_" 0))
                           (Implicit fc False)
-                          (ICase fc (IVar EmptyFC (MN "_" 0))
+                          (ICase fc (IVar patFC (MN "_" 0))
                                (Implicit fc False)
                                (PatClause fcOriginal bpat rest'
                                   :: alts'))
