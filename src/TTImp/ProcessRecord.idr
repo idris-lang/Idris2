@@ -166,10 +166,10 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params0 opts conName_i
                          Core (vars' ** (Env Term vars', Term vars'))
         dropLeadingPis [] ty env
           = do unless (null vars) $
-                 log "declare.record.parameters" 60 $ unlines
+                 logC "declare.record.parameters" 60 $ pure $ unlines
                    [ "We elaborated \{show tn} in a non-empty local context."
                    , "  Dropped: \{show vars}"
-                   , "  Remaining type: \{show ty}"
+                   , "  Remaining type: \{show !(toFullNames ty)}"
                    ]
                pure (_ ** (env, ty))
         dropLeadingPis (var :: vars) (Bind fc n b@(Pi _ _ _ _) ty) env
