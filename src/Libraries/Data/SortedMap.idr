@@ -324,6 +324,15 @@ adjust k f m =
     Nothing => m
     Just v => insert k (f v) m
 
+treeMin : Tree n k v o -> (k, v)
+treeMin (Leaf k v) = (k, v)
+treeMin (Branch2 t _ _) = treeMin t
+treeMin (Branch3 t _ _ _ _) = treeMin t
+
+export
+min : SortedMap k v -> Maybe (k, v)
+min Empty = Nothing
+min (M _ t) = Just (treeMin t)
 export
 (Show k, Show v) => Show (SortedMap k v) where
    show m = "fromList " ++ (show $ SortedMap.toList m)
