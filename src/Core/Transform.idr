@@ -96,6 +96,7 @@ tryApply trans@(MkTransform {vars} n _ lhs rhs) tm
                         Just (App fc f' a)
                  _ => Nothing
 
+covering
 apply : List Transform -> Term vars -> (Bool, Term vars)
 apply [] tm = (False, tm)
 apply (t :: ts) tm
