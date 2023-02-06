@@ -716,8 +716,7 @@ checkCon defs tyns cn
         Just ty =>
           case !(totRefsIn defs ty) of
             IsTerminating =>
-              do let opts = { reduceLimit := [(NS builtinNS (UN $ Basic "assert_total"), 0)] } defaultOpts
-                 tyNF <- nfOpts opts defs [] ty
+              do tyNF <- nf defs [] ty
                  logNF "totality.positivity" 20 "Checking the type " [] tyNF
                  checkPosArgs defs tyns tyNF
             bad => pure bad
@@ -745,7 +744,9 @@ calcPositive loc n
                        IsTerminating =>
                             do log "totality.positivity" 30 $
                                  "Now checking constructors of " ++ show !(toFullNames n)
+                               setVisibility loc (NS builtinNS (UN $ Basic "assert_total")) Private
                                t <- checkData defs (n :: tns) dcons
+                               setVisibility loc (NS builtinNS (UN $ Basic "assert_total")) Public
                                pure (t , dcons)
                        bad => pure (bad, dcons)
               Just _ => throw (GenericMsg loc (show n ++ " not a data type"))
