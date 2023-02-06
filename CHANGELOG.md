@@ -8,6 +8,8 @@
   substituted at parsing time with a string corresponding to the
   location, filename, line or column number associated to the
   magic constant's position.
+* The termination checker is now a faithful implementation of the 2001 paper on
+  size-change termination by Lee, Jones and Ben-Amram.
 
 ### REPL changes
 
