@@ -333,6 +333,13 @@ export
 min : SortedMap k v -> Maybe (k, v)
 min Empty = Nothing
 min (M _ t) = Just (treeMin t)
+
+export
+pop : SortedMap k v -> Maybe ((k, v), SortedMap k v)
+pop m = do
+  (k, v) <- min m
+  pure ((k, v), delete k m)
+
 export
 (Show k, Show v) => Show (SortedMap k v) where
    show m = "fromList " ++ (show $ SortedMap.toList m)
