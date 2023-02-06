@@ -1,5 +1,5 @@
 1/1: Building AgdaIssue6059 (AgdaIssue6059.idr)
-Error: f is not total, possibly not terminating due to call to Main.f
+Error: f is not total, possibly not terminating due to call to Main.g
 
 AgdaIssue6059:23:3--23:21
  19 | lem 0 = Refl
@@ -9,7 +9,7 @@ AgdaIssue6059:23:3--23:21
  23 |   f : (x : D) -> P x
         ^^^^^^^^^^^^^^^^^^
 
-Error: g is not total, possibly not terminating due to call to Main.f
+Error: g is not total, possibly not terminating due to recursive path Main.f -> Main.g
 
 AgdaIssue6059:31:3--31:32
  27 |   -- Base cases:
@@ -19,7 +19,7 @@ AgdaIssue6059:31:3--31:32
  31 |   g : (h : Nat -> D) -> P (h 2)
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Error: f is not total, possibly not terminating due to call to Main.f
+Error: f is not total, possibly not terminating due to call to Main.g
 
 AgdaIssue6059:23:3--23:21
  19 | lem 0 = Refl
@@ -29,7 +29,7 @@ AgdaIssue6059:23:3--23:21
  23 |   f : (x : D) -> P x
         ^^^^^^^^^^^^^^^^^^
 
-Error: g is not total, possibly not terminating due to call to Main.f
+Error: g is not total, possibly not terminating due to recursive path Main.f -> Main.g
 
 AgdaIssue6059:31:3--31:32
  27 |   -- Base cases:
