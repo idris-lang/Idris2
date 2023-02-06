@@ -294,6 +294,7 @@ record SCCall where
         -- (in the calling function), and how its size changed in the call.
         -- 'Nothing' if it's not related to any of the calling function's
         -- arguments
+     fnLoc : FC
 
 export
 Show SCCall where
