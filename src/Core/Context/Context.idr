@@ -275,6 +275,16 @@ Eq SizeChange where
   Unknown == Unknown = True
   _ == _ = False
 
+export
+Ord SizeChange where
+  compare Smaller Smaller = EQ
+  compare Smaller _ = LT
+  compare _ Smaller = GT
+  compare Same Same = EQ
+  compare Same _ = LT
+  compare _ Same = GT
+  compare Unknown Unknown = EQ
+
 public export
 record SCCall where
      constructor MkSCCall
