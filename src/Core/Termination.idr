@@ -731,6 +731,17 @@ checkData defs tyns (c :: cs)
            IsTerminating => checkData defs tyns cs
            bad => pure bad
 
+blockingAssertTotal : {auto c : Ref Ctxt Defs} -> FC -> Core a -> Core a
+blockingAssertTotal loc ma
+  = do defs <- get Ctxt
+       let at = NS builtinNS (UN $ Basic "assert_total")
+       Just _ <- lookupCtxtExact at (gamma defs)
+         | Nothing => ma
+       setVisibility loc at Private
+       a <- ma
+       setVisibility loc at Public
+       pure a
+
 -- Calculate whether a type satisfies the strict positivity condition, and
 -- return whether it's terminating, along with its data constructors
 calcPositive : {auto c : Ref Ctxt Defs} ->
@@ -744,9 +755,7 @@ calcPositive loc n
                        IsTerminating =>
                             do log "totality.positivity" 30 $
                                  "Now checking constructors of " ++ show !(toFullNames n)
-                               setVisibility loc (NS builtinNS (UN $ Basic "assert_total")) Private
-                               t <- checkData defs (n :: tns) dcons
-                               setVisibility loc (NS builtinNS (UN $ Basic "assert_total")) Public
+                               t <- blockingAssertTotal loc $ checkData defs (n :: tns) dcons
                                pure (t , dcons)
                        bad => pure (bad, dcons)
               Just _ => throw (GenericMsg loc (show n ++ " not a data type"))
