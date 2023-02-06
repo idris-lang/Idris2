@@ -23,9 +23,9 @@ fuelLemma : (numer, predDenom , fuel : Nat)
           -> (numer `minus` (S predDenom)) `LTE` fuel
 fuelLemma Z predDenom fuel enoughFuel = LTEZero
 fuelLemma (S numer) (S denom) fuel enoughFuel = 
-    fuelLemma numer denom fuel $ lteSuccLeft enoughFuel
+  fuelLemma numer denom fuel $ lteSuccLeft enoughFuel
 fuelLemma (S numer) Z  fuel enoughFuel  = 
-    rewrite minusZeroRight numer in fromLteSucc enoughFuel
+  rewrite minusZeroRight numer in fromLteSucc enoughFuel
 
 -- equivalence between the duplicate definitions in Data.Nar  ---
 
