@@ -105,3 +105,23 @@ multLteMonotoneLeft a b r a_lt_b =
   rewrite multCommutative a r in
   rewrite multCommutative b r in
   multLteMonotoneRight r a b a_lt_b
+
+-- If a number is both GTE and LTE to another number, then they are equal
+export
+oppositeLteEq : LTE a b -> GTE a b -> a = b
+oppositeLteEq LTEZero LTEZero = Refl
+oppositeLteEq (LTESucc a) (LTESucc b) = 
+    let rec = oppositeLteEq a b in cong S rec
+
+export
+lteNotLtEq : (a, b : Nat) -> LTE a b -> Not (LT a b) -> a = b
+lteNotLtEq a b a_lte_b not_n_lte_n = 
+    let b_lte_a = notLTImpliesGTE not_n_lte_n 
+    in oppositeLteEq a_lte_b b_lte_a
+
+-- Try succ left element LTE. Returns LT if successful, otherwise proof of equality a and b
+export
+succLeftLte : (a, b : Nat) -> LTE a b -> Either (LT a b) (a = b)
+succLeftLte a b a_lte_b with (isLT a b)
+    succLeftLte a b a_lte_b | Yes a_lt_b = Left a_lt_b
+    succLeftLte a b a_lte_b | No not_a_lt_b = Right $ lteNotLtEq a b a_lte_b not_a_lt_b
