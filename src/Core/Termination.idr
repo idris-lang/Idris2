@@ -630,6 +630,7 @@ nameIn defs tyns (NTCon _ n _ _ args)
 nameIn defs tyns (NDCon _ n _ _ args)
     = anyM (nameIn defs tyns)
            !(traverse (evalClosure defs . snd) args)
+nameIn defs tyns (NDelayed fc lr ty) = nameIn defs tyns ty
 nameIn defs tyns _ = pure False
 
 -- Check an argument type doesn't contain a negative occurrence of any of
@@ -689,6 +690,7 @@ posArg defs tyns nf@(NApp fc nh args)
          pure $ if !(anyM (nameIn defs tyns) args)
            then NotTerminating NotStrictlyPositive
            else IsTerminating
+posArg defs tyn (NDelayed fc lr ty) = posArg defs tyn ty
 posArg defs tyn nf
   = do logNF "totality.positivity" 50 "Reached the catchall" [] nf
        pure IsTerminating
