@@ -56,6 +56,11 @@
   defining a `covering` or `partial` datatype in a `%default total`
   file will not lead to a positivity error anymore.
 
+* Fixed a bug in the positivity checker that meant `Lazy` could be used
+  to hide negative occurences.
+
+* Made sure that the positivity checker now respects `assert_total` annotations.
+
 ### Library changes
 
 #### Prelude
