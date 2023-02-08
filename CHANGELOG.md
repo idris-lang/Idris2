@@ -66,6 +66,15 @@
 * Changes `getNProcessors` to return the number of online processors rather than
   the number of configured processors.
 
+#### Papers
+
+* In `Control.DivideAndConquer`: a port of the paper
+  `A Type-Based Approach to Divide-And-Conquer Recursion in Coq'
+  by Pedro Abreu, Benjamin Delaware, Alex Hubers, Christa Jenkins,
+  J. Garret Morris, and Aaron Stump
+
+
+
 ## v0.6.0
 
 ### REPL changes
