@@ -13,6 +13,7 @@ import Core.LinearCheck
 import Core.Metadata
 import Core.Normalise
 import Core.Termination
+import Core.Termination.CallGraph
 import Core.Transform
 import Core.Value
 import Core.UnifyState
