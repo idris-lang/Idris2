@@ -5,7 +5,7 @@
 
 module Data.Description.Indexed
 
-%default covering
+%default total
 
 public export
 data IDesc : (p : Type -> Type) -> (i : Type) -> Type where
@@ -16,7 +16,7 @@ data IDesc : (p : Type -> Type) -> (i : Type) -> Type where
   (+) : (d1, d2 : IDesc p i) -> IDesc p i
   Sig : (s : Type) -> p s -> (s -> IDesc p i) -> IDesc p i
 
-total public export
+public export
 Elem : IDesc p i -> (i -> Type) -> Type
 Elem Zero x = Void
 Elem One x = ()
@@ -27,7 +27,7 @@ Elem (Sig s prop d) x = (v : s ** Elem (d v) x)
 
 public export
 data Fix : (i -> IDesc p i) -> i -> Type where
-  MkFix : Elem (d i) (Fix d) -> Fix d i
+  MkFix : assert_total (Elem (d i) (Fix d)) -> Fix d i
 
 namespace Example
 
@@ -35,7 +35,7 @@ namespace Example
   VecD a 0 = One
   VecD a (S n) = Sig a () (const (Id n))
 
-export total
+export
 map : (d : IDesc p i) -> ((v : i) -> x v -> y v) -> Elem d x -> Elem d y
 map Zero f v = v
 map One f v = v
@@ -45,8 +45,8 @@ map (d1 + d2) f (Left v) = Left (map d1 f v)
 map (d1 + d2) f (Right v) = Right (map d2 f v)
 map (Sig s _ d) f (x ** v) = (x ** map (d x) f v)
 
-export covering
+export
 ifold : {d : i -> IDesc p i} ->
         ((v : i) -> Elem (d v) x -> x v) ->
         {v : i} -> Fix d v -> x v
-ifold alg (MkFix t) = alg v (Indexed.map (d v) (\ _ => ifold alg) t)
+ifold alg (MkFix t) = alg v (assert_total $ Indexed.map (d v) (\ _ => ifold alg) t)
