@@ -306,7 +306,7 @@ namespace Section5Sub3
   mirror : tree a -> tree a
   mirror = sfold (TreeF a) @{MkFunctor id} mirrorAlg
 
-namespace Section6Sub4
+namespace Section5Sub4
 
   0 MappedT : (a, b : Type) -> Type
   MappedT a b = forall r. FoldT (ListF a) (SAlg (ListF a)) r -> a -> r -> (b, r)
@@ -329,3 +329,80 @@ namespace Section6Sub4
 
   runLengthEncoding : Eq a => List a -> List (Nat, a)
   runLengthEncoding = mapThrough compressSpan . fromList
+
+namespace Section5Sub5
+
+  K : Type -> Type
+  K t = t -> Bool
+
+  MatchT : Type -> Type
+  MatchT t = K t -> Bool
+
+  data Regex = Zero | Exact Char | Sum Regex Regex | Cat Regex Regex | Plus Regex
+
+  matchi : (t -> Regex -> MatchT t) -> Regex -> Char -> t -> MatchT t
+  matchi matcher Zero c cs k = False
+  matchi matcher (Exact c') c cs k = (c == c') && k cs
+  matchi matcher (Sum r1 r2) c cs k = matchi matcher r1 c cs k || matchi matcher r2 c cs k
+  matchi matcher (Cat r1 r2) c cs k = matchi matcher r1 c cs (\ cs => matcher cs r2 k)
+  matchi matcher (Plus r) c cs k = matchi matcher r c cs (\ cs => k cs || matcher cs (Plus r) k)
+
+  MatcherF : Type -> Type
+  MatcherF t = Regex -> MatchT t
+
+  functorMatcherF : Functor MatcherF
+  functorMatcherF = MkFunctor (\ f, t, r, p => t r (p . f))
+
+  MatcherAlg : Alg (ListF Char) MatcherF
+  MatcherAlg = inAlg (ListF Char) $ \ fo, sfo, matcher, s =>
+    case s of
+      [] =>  \ r, k => False
+      (c :: cs) => \ r => matchi matcher r c cs
+
+  match : Regex -> String -> Bool
+  match r str = fold (ListF Char) MatcherAlg @{functorMatcherF} chars r isNil
+
+    where
+      isNil : Mu (DcF (ListF Char)) -> Bool
+      isNil = fold (ListF Char) {x = const Bool} @{MkFunctor (const id)}
+            $ inAlg (ListF Char)
+            $ \fo, sfo, rec, xs => case xs of
+              Nil => True
+              (_ :: _) => False
+
+      chars : Mu (DcF (ListF Char))
+      chars = fromList (unpack str)
+
+  export
+  matchExample : Bool
+  matchExample = match (Plus $ Cat (Sum (Exact 'a') (Exact 'b')) (Exact 'a')) "aabaaaba"
+
+namespace Section5Sub6
+
+  parameters {0 a : Type} (ltA : a -> a -> Bool)
+
+    0 PartF : Type -> Type
+    PartF x = a -> (x, x)
+
+    PartSAlg : SAlg (ListF a) PartF
+    PartSAlg = inSAlg (ListF a) $ \up, sfo, abstIn, partition, d, pivot => case d of
+      [] => let xs = abstIn d in (xs, xs)
+      x :: xs => let (l, r) = partition xs pivot in
+                 if ltA x pivot then (abstIn (x :: l), up r)
+                 else (up l, abstIn (x :: r))
+
+    partr : (sfo : FoldT (ListF a) (SAlg (ListF a)) r) -> r -> a -> (r, r)
+    partr sfo = sfo @{MkFunctor $ \ f, p, x => bimap f f (p x)} PartSAlg
+
+    QuickSortAlg : Alg (ListF a) (const (List a))
+    QuickSortAlg = inAlg (ListF a) $ \ fo, sfo, qsort, xs => case xs of
+      [] => []
+      p :: xs => let (l, r) = partr sfo xs p in
+                 qsort l ++ p :: qsort r
+
+    quicksort : List a -> List a
+    quicksort = fold (ListF a) QuickSortAlg @{MkFunctor (const id)} . fromList
+
+  export
+  sortExample : String -> String
+  sortExample = pack . quicksort (<=) . unpack
