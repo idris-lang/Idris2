@@ -43,14 +43,14 @@ integerToNat x
 -- Define separately so we can spot the name when optimising Nats
 ||| Add two natural numbers.
 ||| @ x the number to case-split on
-||| @ y the other numberpublic export
+||| @ y the other number
 public export
 plus : (x : Nat) -> (y : Nat) -> Nat
 plus Z y = y
 plus (S k) y = S (plus k y)
 
-||| Subtract natural numbers.  If the second number is larger than the first,
-||| return 0.
+||| Subtract natural numbers.
+||| If the second number is larger than the first, return 0.
 public export
 minus : (left : Nat) -> Nat -> Nat
 minus Z        right     = Z
@@ -132,6 +132,18 @@ Bitraversable Pair where
 public export
 Functor (Pair a) where
   map = mapSnd
+
+%inline
+public export
+Foldable (Pair a) where
+  foldr op init (_, x) = x `op` init
+  foldl op init (_, x) = init `op` x
+  null _ = False
+
+%inline
+public export
+Traversable (Pair a) where
+  traverse f (l, r) = (l,) <$> f r
 
 %inline
 public export
@@ -915,15 +927,21 @@ isAlphaNum x = isDigit x || isAlpha x
 ||| Returns true if the character is a whitespace character.
 public export
 isSpace : Char -> Bool
-isSpace x
-    = x == ' '  || x == '\t' || x == '\r' ||
-      x == '\n' || x == '\f' || x == '\v' ||
-      x == '\xa0'
+isSpace ' '    = True
+isSpace '\t'   = True
+isSpace '\r'   = True
+isSpace '\n'   = True
+isSpace '\f'   = True
+isSpace '\v'   = True
+isSpace '\xa0' = True
+isSpace _      = False
 
 ||| Returns true if the character represents a new line.
 public export
 isNL : Char -> Bool
-isNL x = x == '\r' || x == '\n'
+isNL '\r' = True
+isNL '\n' = True
+isNL _    = False
 
 ||| Convert a letter to the corresponding upper-case letter, if any.
 ||| Non-letters are ignored.
@@ -947,11 +965,7 @@ toLower x
 ||| [0-9][a-f][A-F].
 public export
 isHexDigit : Char -> Bool
-isHexDigit x = elem (toUpper x) hexChars where
-  hexChars : List Char
-  hexChars
-      = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-         'A', 'B', 'C', 'D', 'E', 'F']
+isHexDigit x = isDigit x || ('a' <= x && x <= 'f') || ('A' <= x && x <= 'F')
 
 ||| Returns true if the character is an octal digit.
 public export

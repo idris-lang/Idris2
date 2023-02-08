@@ -380,9 +380,7 @@ mutual
   findSCcall defs env g pats fc fn_in arity args
         -- Under 'assert_total' we assume that all calls are fine, so leave
         -- the size change list empty
-      = do Just gdef <- lookupCtxtExact fn_in (gamma defs)
-                | Nothing => undefinedName fc fn_in
-           let fn = fullname gdef
+      = do fn <- getFullName fn_in
            log "totality.termination.sizechange" 10 $ "Looking under " ++ show !(toFullNames fn)
            aSmaller <- resolved (gamma defs) (NS builtinNS (UN $ Basic "assert_smaller"))
            cond [(fn == NS builtinNS (UN $ Basic "assert_total"), pure [])
@@ -604,6 +602,12 @@ checkTerminating loc n
                     pure tot'
               t => pure t
 
+isAssertTotal : Ref Ctxt Defs => NHead{} -> Core Bool
+isAssertTotal (NRef _ fn_in) =
+  do fn <- getFullName fn_in
+     pure (fn == NS builtinNS (UN $ Basic "assert_total"))
+isAssertTotal _ = pure False
+
 nameIn : {auto c : Ref Ctxt Defs} ->
          Defs -> List Name -> NF [] -> Core Bool
 nameIn defs tyns (NBind fc x b sc)
@@ -613,8 +617,10 @@ nameIn defs tyns (NBind fc x b sc)
                  let arg = toClosure defaultOpts [] nm
                  sc' <- sc defs arg
                  nameIn defs tyns sc'
-nameIn defs tyns (NApp _ _ args)
-    = anyM (nameIn defs tyns)
+nameIn defs tyns (NApp _ nh args)
+    = do False <- isAssertTotal nh
+           | True => pure False
+         anyM (nameIn defs tyns)
            !(traverse (evalClosure defs . snd) args)
 nameIn defs tyns (NTCon _ n _ _ args)
     = if n `elem` tyns
@@ -624,6 +630,7 @@ nameIn defs tyns (NTCon _ n _ _ args)
 nameIn defs tyns (NDCon _ n _ _ args)
     = anyM (nameIn defs tyns)
            !(traverse (evalClosure defs . snd) args)
+nameIn defs tyns (NDelayed fc lr ty) = nameIn defs tyns ty
 nameIn defs tyns _ = pure False
 
 -- Check an argument type doesn't contain a negative occurrence of any of
@@ -674,12 +681,16 @@ posArg defs tyns nf@(NBind fc x (Pi _ _ e ty) sc)
                  let arg = toClosure defaultOpts [] nm
                  sc' <- sc defs arg
                  posArg defs tyns sc'
-posArg defs tyns nf@(NApp _ _ args)
-    = do logNF "totality.positivity" 50 "Found an application" [] nf
+posArg defs tyns nf@(NApp fc nh args)
+    = do False <- isAssertTotal nh
+           | True => do logNF "totality.positivity" 50 "Trusting an assertion" [] nf
+                        pure IsTerminating
+         logNF "totality.positivity" 50 "Found an application" [] nf
          args <- traverse (evalClosure defs . snd) args
          pure $ if !(anyM (nameIn defs tyns) args)
            then NotTerminating NotStrictlyPositive
            else IsTerminating
+posArg defs tyn (NDelayed fc lr ty) = posArg defs tyn ty
 posArg defs tyn nf
   = do logNF "totality.positivity" 50 "Reached the catchall" [] nf
        pure IsTerminating
@@ -722,6 +733,17 @@ checkData defs tyns (c :: cs)
            IsTerminating => checkData defs tyns cs
            bad => pure bad
 
+blockingAssertTotal : {auto c : Ref Ctxt Defs} -> FC -> Core a -> Core a
+blockingAssertTotal loc ma
+  = do defs <- get Ctxt
+       let at = NS builtinNS (UN $ Basic "assert_total")
+       Just _ <- lookupCtxtExact at (gamma defs)
+         | Nothing => ma
+       setVisibility loc at Private
+       a <- ma
+       setVisibility loc at Public
+       pure a
+
 -- Calculate whether a type satisfies the strict positivity condition, and
 -- return whether it's terminating, along with its data constructors
 calcPositive : {auto c : Ref Ctxt Defs} ->
@@ -735,7 +757,7 @@ calcPositive loc n
                        IsTerminating =>
                             do log "totality.positivity" 30 $
                                  "Now checking constructors of " ++ show !(toFullNames n)
-                               t <- checkData defs (n :: tns) dcons
+                               t <- blockingAssertTotal loc $ checkData defs (n :: tns) dcons
                                pure (t , dcons)
                        bad => pure (bad, dcons)
               Just _ => throw (GenericMsg loc (show n ++ " not a data type"))

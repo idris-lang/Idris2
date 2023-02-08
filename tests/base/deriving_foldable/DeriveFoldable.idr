@@ -17,7 +17,6 @@ maybe = %runElab derive
 either : Foldable (Either err)
 either = %runElab derive
 
-%hint
 pair : Foldable (Pair a)
 pair = %runElab derive
 

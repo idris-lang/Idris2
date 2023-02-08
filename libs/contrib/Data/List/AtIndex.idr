@@ -93,24 +93,24 @@ weakenR Z = Z
 weakenR (S p) = S (weakenR p)
 
 export
-weakenL : (p : Subset Nat (HasLength ws)) -> AtIndex x xs n -> AtIndex x (ws ++ xs) (fst p + n)
-weakenL m p = case view m of
-  Z     => p
-  (S m) => S (weakenL m p)
+weakenL : (p : Subset Nat (flip HasLength ws)) -> AtIndex x xs n -> AtIndex x (ws ++ xs) (fst p + n)
+weakenL m p with (view m)
+  weakenL (Element 0 Z) p | Z = p
+  weakenL (Element (S (fst m)) (S (snd m))) p | (S m) = S (weakenL m p)
 
 export
-strengthenL : (p : Subset Nat (HasLength xs)) ->
+strengthenL : (p : Subset Nat (flip HasLength xs)) ->
               lt n (fst p) === True ->
               AtIndex x (xs ++ ys) n -> AtIndex x xs n
-strengthenL m lt idx = case view m of
-  S m => case idx of
-    Z => Z
-    S idx => S (strengthenL m lt idx)
+strengthenL m lt idx with (view m)
+  strengthenL (Element (S (fst m)) (S (snd m))) lt Z | (S m) = Z
+  strengthenL (Element (S (fst m)) (S (snd m))) lt (S k) | (S m) = S (strengthenL m lt k)
 
 export
-strengthenR : (p : Subset Nat (HasLength ws)) ->
+strengthenR : (p : Subset Nat (flip HasLength ws)) ->
               lte (fst p) n === True ->
               AtIndex x (ws ++ xs) n -> AtIndex x xs (minus n (fst p))
-strengthenR m lt idx = case view m of
-  Z => rewrite minusZeroRight n in idx
-  S m => case idx of S idx => strengthenR m lt idx
+strengthenR m lt idx with (view m)
+  strengthenR (Element 0 Z) lt idx | Z = rewrite minusZeroRight n in idx
+  strengthenR (Element (S (fst m)) (S (snd m))) lt (S k) | (S m) = strengthenR m lt k
+

@@ -4,4 +4,4 @@ Uncaught error: EmptyFC:Failed to resolve the dependencies for test3:
 Uncaught error: EmptyFC:Failed to resolve the dependencies for test4:
   required baz any but no matching version is installed
 
-[38;5;3;1mWarning:[0m Deprecation warning: version numbers must now be of the form x.y.z
+Warning: Deprecation warning: version numbers must now be of the form x.y.z

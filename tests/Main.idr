@@ -89,6 +89,7 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
        "error011", "error012", "error013", "error014", "error015",
        "error016", "error017", "error018", "error019", "error020",
        "error021", "error022", "error023", "error024", "error025",
+       "error026",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006", "perror007", "perror008", "perror009", "perror010",
@@ -224,7 +225,8 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
-       "total011", "total012", "total013"
+       "total011", "total012", "total013", "total014", "total015",
+       "total016"
       ]
 
 -- This will only work with an Idris compiled via Chez or Racket, but at
@@ -334,10 +336,10 @@ nodeTests : TestPool
 nodeTests = MkTestPool "Node backend" [] (Just Node)
     [ "node001", "node002", "node003", "node004", "node005", "node006"
     , "node007", "node008", "node009", "node011", "node012", "node015"
-    , "node017", "node018", "node019", "node021", "node022", "node023"
-    , "node024", "node025", "node026", "node027"
+    , "node017", "node018", "node019", "node020", "node021", "node022"
+    , "node023", "node024", "node025", "node026", "node027"
     , "perf001"
-    -- , "node14", "node020"
+    -- , "node14"
     , "args"
     , "bitops"
     , "casts"

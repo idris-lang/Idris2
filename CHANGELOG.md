@@ -6,7 +6,7 @@
 
 * New magic constants `__LOC__`, `__FILE__`, `__LINE__`, `__COL__`
   substituted at parsing time with a string corresponding to the
-  location, file name, line or column number associated to the
+  location, filename, line or column number associated to the
   magic constant's position.
 
 ### REPL changes
@@ -30,6 +30,7 @@
 #### Node.js
 
 * Generated JavaScript files now include a shebang when using the Node.js backend
+* NodeJS now supports `popen`/`pclose` for the `Read` mode.
 
 ### Compiler changes
 
@@ -51,7 +52,24 @@
   ```
   instead of failing with a strange error about (a) vs (a .rec).
 
+* Elaboration of datatypes now respects the totality annotations:
+  defining a `covering` or `partial` datatype in a `%default total`
+  file will not lead to a positivity error anymore.
+
+* Fixed a bug in the positivity checker that meant `Lazy` could be used
+  to hide negative occurences.
+
+* Made sure that the positivity checker now respects `assert_total` annotations.
+
 ### Library changes
+
+#### Prelude
+
+* Improved performance of functions `isNL`, `isSpace`, and `isHexDigit`.
+
+* Implements `Foldable` and `Traversable` for pairs, right-biased as `Functor`.
+* Added a constructor (`MkInterpolation`) to `Interpolation`.
+* Added an `Interpolation` implementation for `Void`.
 
 #### Base
 
@@ -59,12 +77,30 @@
   release. Use `setBits8` and `getBits8` instead (with `cast` if you need to
   convert a `Bits8` to an `Int`), as their values are limited, as opposed to the
   assumption in `setByte` that the value is between 0 and 255.
+
 * Adds RefC support for 16- and 32-bit access in `Data.Buffer`.
+* Add `Show` instance to `Data.Vect.Quantifiers.All` and add a few helpers for listy
+  computations on the `All` type.
+* Add an alias for `HVect` to `All id` in `Data.Vect.Quantifiers.All`. This is the
+  approach to getting a heterogeneous Vect of elements that is generall preferred by
+  the community vs. a standalone type as seen in `contrib`.
+* Add Data.List.HasLength from the compiler codebase slash contrib library but
+  adopt the type signature from the compiler codebase and some of the naming
+  from the contrib library. The type ended up being `HasLength n xs` rather than
+  `HasLength xs n`.
+
+* `System`'s `die` now prints the error message on stderr rather than stdout
 
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
   the number of configured processors.
+
+#### Contrib
+* Remove Data.List.HasLength from contrib library but add it to the base library
+  with the type signature from the compiler codebase and some of the naming
+  from the contrib library. The type ended up being `HasLength n xs` rather than
+  `HasLength xs n`.
 
 #### Papers
 
@@ -73,7 +109,11 @@
   by Pedro Abreu, Benjamin Delaware, Alex Hubers, Christa Jenkins,
   J. Garret Morris, and Aaron Stump
 
-
+### Other Changes
+* The `data` subfolder of an installed or local dependency package is now automatically
+  recognized as a "data" directory by Idris 2. See the
+  [documentation on Packages](https://idris2.readthedocs.io/en/latest/reference/packages.html)
+  for details.
 
 ## v0.6.0
 
@@ -465,7 +505,7 @@ Changed
   some non-deterministic properties (see issue
   [#1552](https://github.com/idris-lang/idris2/issues/1552)).
   NOTE: Due to complications with race-conditions, Chez not having channels
-  built in, etc, the reimplementation changes the semantics slightly:
+  built-in, etc, the reimplementation changes the semantics slightly:
   `channelPut` no longer blocks until the value has been received under the
   `chez` backend, but instead only blocks if there is already a value in the
   channel that has not been received.
