@@ -10,21 +10,59 @@ import Libraries.Data.SortedSet
 
 %default covering
 
+------------------------------------------------------------------------
+-- Basic types
+
+||| Refer to an argument by its position
+-- This seems to assume that a function has a set number of arguments
+-- (a constraint we currently enforce: all clauses' LHS need to have
+-- the same number of arguments)
 Arg : Type
 Arg = Nat
 
-Change : Type
+||| A change in (g y₀ ⋯ yₙ) with respect to (f x₀ ⋯ xₙ) is
+||| for each argument yᵢ in g either:
+|||   Nothing        if it's not related to any of the xⱼ
+|||   Just (j, rel)  if yᵢ `rel` xⱼ
+Change : {- f g -} Type
 Change = List (Maybe (Arg, SizeChange))
 
+||| A path in the call graph lists the source location of the successive calls
+||| and the name of each of the functions being called
+||| TODO: also record the arguments so that we can print e.g.
+|||   flip x y -> flop y x -> flip x y
+||| instead of the less useful
+|||   flip -> flop -> flip
 public export
-Path : Type
+Path : {- f g -} Type
 Path = List (FC, Name)
 
+||| An arg change in g with respect to f is given by:
+|||   the actual changes in g with respect to f
+|||   the path in the call graph leading from f to g
+||| The path is only here for error-reporting purposes
 export
-record ArgChange where
+record ArgChange {- f g -} where
   constructor MkArgChange
-  change : Change
-  path : Path
+  change : Change {- f g -}
+  path : Path {- f g -}
+
+||| Sc graphs to be added
+export
+WorkList : Type
+WorkList = SortedSet (Name, Name, ArgChange)
+
+||| Transitively-closed (modulo work list) set of sc-graphs
+||| Note: oh if only we had dependent name maps!
+export
+SCSet : Type
+SCSet = NameMap {- \ f => -}
+      $ NameMap {- \ g => -}
+      $ SortedSet $ ArgChange {- f g -}
+
+
+------------------------------------------------------------------------
+-- Instances
 
 -- ignore path
 Eq ArgChange where
@@ -36,16 +74,10 @@ Ord ArgChange where
 Show ArgChange where
   show a = show a.change ++ " @" ++ show a.path
 
--- sc-graphs to be added
-export
-WorkList : Type
-WorkList = SortedSet (Name, Name, ArgChange)
+------------------------------------------------------------------------
+-- Utility functions
 
--- transitively-closed (modulo work list) set of sc-graphs
-export
-SCSet : Type
-SCSet = NameMap (NameMap (SortedSet ArgChange))
-
+||| Empty set of sc-graphs
 export
 initSCSet : SCSet
 initSCSet = empty
@@ -59,9 +91,11 @@ lookupSet n m = fromMaybe empty (lookup n m)
 lookupGraphs : Name -> Name -> SCSet -> SortedSet ArgChange
 lookupGraphs f g = lookupSet g . lookupMap f
 
+||| Smart filter: only keep the paths starting from f
 selectDom : Name -> SCSet -> SCSet
 selectDom f s = insert f (lookupMap f s) empty
 
+||| Smart filter: only keep the paths ending in g
 selectCod : Name -> SCSet -> SCSet
 selectCod g s = map (\m => insert g (lookupSet g m) empty) s
 
@@ -73,52 +107,60 @@ foldl f_acc acc
           acc)
         acc
 
-insertGraph : Name -> Name -> ArgChange -> SCSet -> SCSet
+insertGraph : (f, g : Name) -> ArgChange {- f g -} -> SCSet -> SCSet
 insertGraph f g ch s
   = let s_f = lookupMap f s in
     let s_fg = lookupSet g s_f in
     insert f (insert g (insert ch s_fg) s_f) s
 
-composeChange : Change -> Change -> Change
+------------------------------------------------------------------------
+-- Actual size-change computations
+
+||| Diagrammatic composition:
+||| Given a (Change f g) and a (Change g h), compute a (Change f h)
+composeChange : Change {- f g -} -> Change {- g h -} -> Change {- f h -}
 composeChange c1 c2
-    = map ((=<<) (\(i, r) => updateArg r <$> getArg i c1)) c2
+    -- We have (giving more precise types)
+    -- h z₀ ⋯ zₚ, g y₀ ⋯ yₙ, f x₀ ⋯ xₘ
+    -- c1 : Vect n (Maybe (Fin m, SizeChange))
+    -- c2 : Vect p (Maybe (Fin n, SizeChange))
+    -- and we want
+    -- Vect p (Maybe (Fin m, SizeChange))
+    -- We use the SizeChange monoid: Unknown is a 0, Same is a neutral
+    = map (>>= (\(i, r) => map (r <+>) <$> getArg i c1)) c2
   where
-    getArg : forall a . Nat -> List (Maybe a) -> Maybe a
-    getArg _ [] = Nothing
-    getArg Z (x :: xs) = x
-    getArg (S k) (x :: xs) = getArg k xs
+    getArg : Nat -> List (Maybe a) -> Maybe a
+    getArg i c = join $ getAt i c
 
-    updateArg : SizeChange -> (Arg, SizeChange) -> (Arg, SizeChange)
-    updateArg c arg@(_, Unknown) = arg
-    updateArg Unknown (i, _) = (i, Unknown)
-    updateArg c (i, Same) = (i, c)
-    updateArg c arg@(_, Smaller) = arg
-
-composeArgChange : ArgChange -> ArgChange -> ArgChange
+||| Diagrammatic composition:
+||| Given an (ArgChange f g) and an (ArgChange g h), compute an (ArgChange f h)
+composeArgChange : ArgChange {- f g -} -> ArgChange {- g h -} -> ArgChange {- f h -}
 composeArgChange a1 a2
     = MkArgChange
         (composeChange a1.change a2.change)
         (a1.path ++ a2.path)
 
-preCompose : Name -> ArgChange ->
+||| Precompose a given Arg change & insert it in the worklist (unless it's already known)
+preCompose : (f : Name) -> ArgChange {- f g -} -> -- /!\ g bound later
              SCSet ->
              WorkList ->
-             Name -> Name -> ArgChange ->
+             (g : Name) -> (h : Name) -> ArgChange {- g h -} ->
              WorkList
 preCompose f ch1 s work _ h ch2
-   = let ch = composeArgChange ch1 ch2 in
+   = let ch : ArgChange {- f h -} = composeArgChange ch1 ch2 in
      if contains ch (lookupGraphs f h s) then
        work
      else
        insert (f, h, ch) work
 
-postCompose : Name -> ArgChange ->
+||| Precompose a given Arg change & insert it in the worklist (unless it's already known)
+postCompose : (h : Name) -> ArgChange {- g h -} -> -- /!\ g bound later
               SCSet ->
               WorkList ->
-              Name -> Name -> ArgChange ->
+              (f : Name) -> (g : Name) -> ArgChange {- f g -} ->
               WorkList
 postCompose h ch2 s work f _ ch1
-   = let ch = composeArgChange ch1 ch2 in
+   = let ch : ArgChange {- f h -} = composeArgChange ch1 ch2 in
      if contains ch (lookupGraphs f h s) then
        work
      else
@@ -126,16 +168,24 @@ postCompose h ch2 s work f _ ch1
 
 mutual
   addGraph : {auto c : Ref Ctxt Defs} ->
-             Name -> Name -> ArgChange ->
+             (f, g : Name) -> ArgChange {- f g -} ->
              WorkList ->
              SCSet ->
              SCSet
   addGraph f g ch work s_in
       = let s = insertGraph f g ch s_in
+            -- Now that (ch : ArgChange f g) has been added, we need to update
+            -- the graph with the paths it has extended i.e.
+
+            -- the ones start in g
             after = selectDom g s
             work_pre = foldl (preCompose f ch s) work after
+
+            -- and the ones ending in f
             before = selectCod f s
             work_post = foldl (postCompose g ch s) work_pre before in
+
+        -- And then we need to close over all of these new paths too
         transitiveClosure work_post s
 
   export
@@ -151,7 +201,7 @@ mutual
 
 -- find (potential) chain of calls to given function (inclusive)
 export
-prefixPath : NameMap (FC, Name) -> Name -> Path
+prefixPath : NameMap (FC, Name) -> (g : Name) -> {- Exists \ f => -} Path {- f g -}
 prefixPath pred g = go g []
   where
     go : Name -> Path -> Path
@@ -163,9 +213,14 @@ prefixPath pred g = go g []
           else
             go f ((l, g) :: path)
 
-findLoops : {auto c : Ref Ctxt Defs} -> SCSet -> Core (NameMap (Maybe Path))
+||| Finding non-terminating loops
+findLoops : {auto c : Ref Ctxt Defs} -> SCSet ->
+            Core (NameMap {- $ \ f => -} (Maybe (Path {- f f -} )))
 findLoops s
-    = do let loops = filterEndos (\a => composeChange a.change a.change == a.change) s
+    = do -- Comparing (f x₀ ⋯ xₙ) with (f xᵧ₍₀₎ ⋯ xᵧ₍ₙ₎) for size changes only makes
+         -- sense if the position for we can say something are stable under γ.
+         -- Hence the following filter:
+         let loops = filterEndos (\a => composeChange a.change a.change == a.change) s
          log "totality.termination.calc" 7 $ "Loops: " ++ show loops
          let terms = map (foldMap (\a => checkDesc a.change a.path)) loops
          pure terms
@@ -187,9 +242,10 @@ findNonTerminatingLoop s
       findNonTerminating : NameMap (Maybe Path) -> Maybe (Name, Path)
       findNonTerminating = foldlNames (\acc, g, m => map (g,) m <+> acc) empty
 
+||| Steps in a path leading to a loop are also problematic
 export
 setPrefixTerminating : {auto c : Ref Ctxt Defs} ->
-        Path -> Name -> Core ()
+                       Path -> Name -> Core ()
 setPrefixTerminating [] g = pure ()
 setPrefixTerminating (_ :: []) g = pure ()
 setPrefixTerminating ((l, f) :: p) g
@@ -208,11 +264,12 @@ addFunctions defs (d1 :: ds) pred work
     = do log "totality.termination.calc" 8 $ "Adding function: " ++ show d1.fullname
          calls <- foldlC resolveCall [] d1.sizeChange
          let Nothing = find isNonTerminating calls
-            | Just (d2, l, _) => do let g = d2.fullname
-                                    log "totality.termination.calc" 7 $ "Non-terminating function call: " ++ show g
-                                    let init = prefixPath pred d1.fullname ++ [(l, g)]
-                                    setPrefixTerminating init g
-                                    pure $ Left (NotTerminating (BadPath init g))
+            | Just (d2, l, _) =>
+              do let g = d2.fullname
+                 log "totality.termination.calc" 7 $ "Non-terminating function call: " ++ show g
+                 let init = prefixPath pred d1.fullname ++ [(l, g)]
+                 setPrefixTerminating init g
+                 pure $ Left (NotTerminating (BadPath init g))
          let (ds, pred, work) = foldl addCall (ds, pred, work) (filter isUnchecked calls)
          addFunctions defs ds pred work
   where

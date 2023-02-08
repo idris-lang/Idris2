@@ -263,6 +263,19 @@ public export
 data SizeChange = Smaller | Same | Unknown
 
 export
+Semigroup SizeChange where
+  -- Unknown is a 0
+  -- Same is a neutral
+  _ <+> Unknown = Unknown
+  Unknown <+> _ = Unknown
+  c <+> Same = c
+  _ <+> Smaller = Smaller
+
+export
+Monoid SizeChange where
+  neutral = Same
+
+export
 Show SizeChange where
   show Smaller = "Smaller"
   show Same = "Same"
