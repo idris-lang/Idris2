@@ -107,7 +107,7 @@
 #### Papers
 
 * In `Control.DivideAndConquer`: a port of the paper
-  `A Type-Based Approach to Divide-And-Conquer Recursion in Coq'
+  `A Type-Based Approach to Divide-And-Conquer Recursion in Coq`
   by Pedro Abreu, Benjamin Delaware, Alex Hubers, Christa Jenkins,
   J. Garret Morris, and Aaron Stump
 
@@ -116,6 +116,11 @@
   recognized as a "data" directory by Idris 2. See the
   [documentation on Packages](https://idris2.readthedocs.io/en/latest/reference/packages.html)
   for details.
+* The compiler no longer installs its own C support library into `${PREFIX}/lib`. This folder's
+  contents were always duplicates of files installed into `${PREFIX}/idris2-${IDRIS2_VERSION}/lib`. If you
+  need to adjust any tooling or scripts, point them to the latter location which still contains
+  these installed library files.
+* Renamed `support-clean` Makefile target to `clean-support`. This is in line with most of the `install-<something>` and `clean-<something>` naming.
 
 ## v0.6.0
 
