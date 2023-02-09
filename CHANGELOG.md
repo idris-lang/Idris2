@@ -120,6 +120,7 @@
   contents were always duplicates of files installed into `${PREFIX}/idris2-${IDRIS2_VERSION}/lib`. If you
   need to adjust any tooling or scripts, point them to the latter location which still contains
   these installed library files.
+* Renamed `support-clean` Makefile target to `clean-support`. This is in line with most of the `install-<something>` and `clean-<something>` naming.
 
 ## v0.6.0
 
