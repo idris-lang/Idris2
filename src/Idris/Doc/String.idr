@@ -549,7 +549,7 @@ getDocsForPTerm (PType _) = pure $ vcat
   [ "Type : Type"
   , indent 2 "The type of all types is Type. The type of Type is Type."
   ]
-getDocsForPTerm (PString _ _) = pure $ vcat
+getDocsForPTerm (PString _ _ _) = pure $ vcat
   [ "String Literal"
   , indent 2 "Desugars to a fromString call"
   ]
