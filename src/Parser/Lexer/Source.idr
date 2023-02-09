@@ -45,11 +45,11 @@ data Token
   | DoubleLit Double
   | IntegerLit Integer
   -- String
-  | StringBegin IsMultiline -- Whether is multiline string
+  | StringBegin Nat IsMultiline -- The escape depth and whether is multiline string
   | StringEnd
   | InterpBegin
   | InterpEnd
-  | StringLit Nat String
+  | StringLit String
   -- Identifiers
   | HoleIdent String
   | Ident String
@@ -83,12 +83,12 @@ Show Token where
   show (DoubleLit x) = "double " ++ show x
   show (IntegerLit x) = "literal " ++ show x
   -- String
-  show (StringBegin Single) = "string begin"
-  show (StringBegin Multi) = "multiline string begin"
+  show (StringBegin hashtag Single) = "string begin"
+  show (StringBegin hashtag Multi) = "multiline string begin"
   show StringEnd = "string end"
   show InterpBegin = "string interp begin"
   show InterpEnd = "string interp end"
-  show (StringLit n x) = "string" ++ replicate n '#' ++ " " ++ show x
+  show (StringLit x) = "string " ++ show x
   -- Identifiers
   show (HoleIdent x) = "hole identifier " ++ x
   show (Ident x) = "identifier " ++ x
@@ -115,12 +115,12 @@ Pretty Void Token where
   pretty (DoubleLit x) = pretty "double" <++> pretty (show x)
   pretty (IntegerLit x) = pretty "literal" <++> pretty (show x)
   -- String
-  pretty (StringBegin Single) = reflow "string begin"
-  pretty (StringBegin Multi) = reflow "multiline string begin"
+  pretty (StringBegin hashtag Single) = reflow "string begin"
+  pretty (StringBegin hashtag Multi) = reflow "multiline string begin"
   pretty StringEnd = reflow "string end"
   pretty InterpBegin = reflow "string interp begin"
   pretty InterpEnd = reflow "string interp end"
-  pretty (StringLit n x) = pretty ("string" ++ replicate n '#') <++> dquotes (pretty x)
+  pretty (StringLit x) = pretty "string" <++> dquotes (pretty x)
   -- Identifiers
   pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
   pretty (Ident x) = pretty "identifier" <++> pretty x
@@ -337,7 +337,7 @@ mutual
             escapeLexer = escape (exact escapeChars) any
             charLexer = non $ exact (if multi then multilineEnd hashtag else stringEnd hashtag)
           in
-            match (someUntil (exact interpStart) (escapeLexer <|> charLexer)) (\x => StringLit hashtag x)
+            match (someUntil (exact interpStart) (escapeLexer <|> charLexer)) (\x => StringLit x)
         <|> compose (exact interpStart)
                     (const InterpBegin)
                     (const ())
@@ -366,13 +366,13 @@ mutual
       <|> match octUnderscoredLit (IntegerLit . fromOctLit . removeUnderscores)
       <|> match digitsUnderscoredLit (IntegerLit . cast . removeUnderscores)
       <|> compose multilineBegin
-                  (const $ StringBegin Multi)
+                  (\begin => StringBegin (countHashtag begin) Multi)
                   countHashtag
                   (stringTokens True)
                   (exact . multilineEnd)
                   (const StringEnd)
       <|> compose stringBegin
-                  (const $ StringBegin Single)
+                  (\begin => StringBegin (countHashtag begin) Single)
                   countHashtag
                   (stringTokens False)
                   (\hashtag => exact (stringEnd hashtag) <+> reject (is '"'))
