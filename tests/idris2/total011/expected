@@ -1,12 +1,12 @@
 1/1: Building Issue1782 (Issue1782.idr)
-Error: hack is not total, possibly not terminating due to recursive path Main.hack -> Main.hack
+Error: hack is not total, possibly not terminating due to recursive path Main.hack
 
 Issue1782:8:1--9:27
  8 | total
  9 | hack : Nat -> (Void, Void)
 
 1/1: Building Issue1460 (Issue1460.idr)
-Error: nonproductive is not total, possibly not terminating due to recursive path Main.nonproductive -> Main.nonproductive -> Main.nonproductive
+Error: nonproductive is not total, possibly not terminating due to recursive path Main.nonproductive
 
 Issue1460:3:1--3:43
  1 | %default total
@@ -15,7 +15,7 @@ Issue1460:3:1--3:43
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1/1: Building Issue1859 (Issue1859.idr)
-Error: fix is not total, possibly not terminating due to recursive path Main.fix -> Main.fix
+Error: fix is not total, possibly not terminating due to recursive path Main.fix
 
 Issue1859:3:1--3:11
  1 | %default total
@@ -24,7 +24,7 @@ Issue1859:3:1--3:11
      ^^^^^^^^^^
 
 1/1: Building Issue1859-2 (Issue1859-2.idr)
-Error: iamvoid is not total, possibly not terminating due to recursive path Main.iamvoid -> Main.tailRecId -> Main.tailRecId
+Error: iamvoid is not total, possibly not terminating due to call to Main.tailRecId
 
 Issue1859-2:8:1--8:15
  4 | tailRecId f a = case f a of
@@ -34,7 +34,7 @@ Issue1859-2:8:1--8:15
  8 | iamvoid : Void
      ^^^^^^^^^^^^^^
 
-Error: tailRecId is not total, possibly not terminating due to recursive path Main.iamvoid -> Main.tailRecId -> Main.tailRecId
+Error: tailRecId is not total, possibly not terminating due to recursive path Main.tailRecId
 
 Issue1859-2:3:1--3:40
  1 | %default total
@@ -43,7 +43,7 @@ Issue1859-2:3:1--3:40
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1/1: Building Issue1828 (Issue1828.idr)
-Error: caseTest is not total, possibly not terminating due to recursive path Main.caseTest -> Main.dummy -> Main.caseTest
+Error: caseTest is not total, possibly not terminating due to call to Main.dummy
 
 Issue1828:4:3--4:25
  1 | %default total
@@ -52,7 +52,7 @@ Issue1828:4:3--4:25
  4 |   caseTest : Nat -> Bool
        ^^^^^^^^^^^^^^^^^^^^^^
 
-Error: dummy is not total, possibly not terminating due to recursive path Main.caseTest -> Main.dummy -> Main.caseTest
+Error: dummy is not total, possibly not terminating due to recursive path Main.caseTest -> Main.dummy
 
 Issue1828:8:3--8:14
  4 |   caseTest : Nat -> Bool
@@ -62,7 +62,7 @@ Issue1828:8:3--8:14
  8 |   dummy : Nat
        ^^^^^^^^^^^
 
-Error: caseTest is not total, possibly not terminating due to recursive path Main.caseTest -> Main.dummy -> Main.caseTest
+Error: caseTest is not total, possibly not terminating due to call to Main.dummy
 
 Issue1828:4:3--4:25
  1 | %default total
@@ -71,7 +71,7 @@ Issue1828:4:3--4:25
  4 |   caseTest : Nat -> Bool
        ^^^^^^^^^^^^^^^^^^^^^^
 
-Error: dummy is not total, possibly not terminating due to recursive path Main.caseTest -> Main.dummy -> Main.caseTest
+Error: dummy is not total, possibly not terminating due to recursive path Main.caseTest -> Main.dummy
 
 Issue1828:8:3--8:14
  4 |   caseTest : Nat -> Bool

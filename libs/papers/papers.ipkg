@@ -5,7 +5,9 @@ depends = contrib, linear
 
 options = "--ignore-missing-ipkg"
 
-modules = Data.Container,
+modules = Control.DivideAndConquer,
+
+          Data.Container,
 
           Data.Description.Regular,
           Data.Description.Indexed,

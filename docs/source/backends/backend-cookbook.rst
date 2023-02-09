@@ -120,7 +120,7 @@ Which Intermediate Representation (IR) should be consumed by the custom back-end
 
 Now lets turn our attention to the different intermediate representations (IRs)
 that Idris provides.
-When the ``getCompiledData`` function is invoked with the ``Phase`` parameter
+When the ``getCompileData`` function is invoked with the ``UsePhase`` parameter
 it will produce a ``CompileData`` record, which will contain lists of top-level
 definitions that needs to be compiled. These are:
 

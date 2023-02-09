@@ -8,7 +8,7 @@ partial:5:1--6:19
 Missing cases:
     foo Nothing
 
-Error: qsortBad is not total, possibly not terminating due to recursive path Main.qsortBad -> Main.qsortBad -> Main.qsortBad
+Error: qsortBad is not total, possibly not terminating due to recursive path Main.qsortBad
 
 partial:13:1--14:37
  13 | total

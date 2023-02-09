@@ -467,17 +467,18 @@ processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in mty_raw opts 
          -- When looking up, note the data types which were undefined at the
          -- point of declaration.
          ndefm <- lookupCtxtExact n (gamma defs)
-         (mw, fullty) <- the (Core (List Name, ClosedTerm)) $ case ndefm of
+         (mw, vis, fullty) <- the (Core (List Name, Visibility, ClosedTerm)) $ case ndefm of
                   Nothing => case mfullty of
                     Nothing => throw (GenericMsg fc "Missing telescope for data definition \{show n_in}")
-                    Just fullty => pure ([], fullty)
+                    Just fullty => pure ([], vis, fullty)
                   Just ndef =>
+                    let vis = max (visibility ndef) vis in
                     case definition ndef of
                       TCon _ _ _ _ _ mw [] _ => case mfullty of
-                        Nothing => pure (mw, type ndef)
+                        Nothing => pure (mw, vis, type ndef)
                         Just fullty =>
                             do ok <- convert defs [] fullty (type ndef)
-                               if ok then pure (mw, fullty)
+                               if ok then pure (mw, vis, fullty)
                                      else do logTermNF "declare.data" 1 "Previous" [] (type ndef)
                                              logTermNF "declare.data" 1 "Now" [] fullty
                                              throw (AlreadyDefined fc n)

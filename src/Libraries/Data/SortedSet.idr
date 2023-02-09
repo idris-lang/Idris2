@@ -82,3 +82,13 @@ singleton k = insert k empty
 export
 toSortedMap : SortedSet k -> SortedMap k ()
 toSortedMap (SetWrapper m) = m
+
+export
+min : SortedSet k -> Maybe k
+min (SetWrapper m) = fst <$> min m
+
+export
+pop : SortedSet k -> Maybe (k, SortedSet k)
+pop (SetWrapper m) = do
+  ((k, ()), m) <- pop m
+  pure (k, SetWrapper m)

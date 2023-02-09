@@ -1,5 +1,5 @@
 1/1: Building Issue361 (Issue361.idr)
-Error: main is not total, possibly not terminating due to call to Main.(/=)
+Error: main is not total, possibly not terminating due to function Main.(==) being reachable via Main.Eq implementation at Issue361:5:1--5:11 -> Main.(==)
 
 Issue361:7:1--7:13
  3 | data S = T | F
@@ -9,7 +9,7 @@ Issue361:7:1--7:13
  7 | main : IO ()
      ^^^^^^^^^^^^
 
-Error: /= is not total, possibly not terminating due to recursive path Main.main -> Main.Eq implementation at Issue361:5:1--5:11 -> Main.(==) -> Main.(/=) -> Main.(==)
+Error: /= is not total, possibly not terminating due to call to Main.Eq implementation at Issue361:5:1--5:11
 
 Issue361:5:1--5:11
  1 | %default total
@@ -19,7 +19,7 @@ Issue361:5:1--5:11
  5 | Eq S where
      ^^^^^^^^^^
 
-Error: == is not total, possibly not terminating due to call to Main.(/=)
+Error: == is not total, possibly not terminating due to recursive path Main.(/=) -> Main.(==)
 
 Issue361:5:1--5:11
  1 | %default total

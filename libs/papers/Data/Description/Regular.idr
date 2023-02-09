@@ -5,7 +5,7 @@
 
 module Data.Description.Regular
 
-%default covering
+%default total
 
 ||| Description of regular functors
 ||| @ p stores additional data for constant types
@@ -55,7 +55,7 @@ map d f = go d where
 ||| is total because we do not track positivity in function arguments
 public export
 data Fix : Desc p -> Type where
-  MkFix : Elem d (Fix d) -> Fix d
+  MkFix : assert_total (Elem d (Fix d)) -> Fix d
 
 namespace Example
 
@@ -94,7 +94,7 @@ infixr 0 ~>
 export
 record (~>) {p : Type -> Type} (d : Desc p) (b : Fix d -> Type) where
   constructor MkMemo
-  getMemo : Memo d (\ x => Inf (d ~> x)) (b . MkFix)
+  getMemo : assert_total (Memo d (\ x => Inf (d ~> x)) (b . MkFix))
 
 export
 trie : {d : Desc p} -> {0 b : Fix d -> Type} -> ((x : Fix d) -> b x) -> d ~> b
@@ -106,7 +106,7 @@ trie f = MkMemo (go d (\ t => f (MkFix t))) where
        Memo e (\ x => Inf (d ~> x)) b'
   go Zero f = ()
   go One f = f ()
-  go Id f = trie f
+  go Id f = assert_total trie f
   go (Const s prop) f = f
   go (d1 * d2) f = go d1 $ \ v1 => go d2 $ \ v2 => f (v1, v2)
   go (d1 + d2) f = (go d1 (\ v => f (Left v)), go d2 (\ v => f (Right v)))

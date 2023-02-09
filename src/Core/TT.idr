@@ -1144,7 +1144,9 @@ public export
 data PartialReason
        = NotStrictlyPositive
        | BadCall (List Name)
-       | RecPath (List Name)
+       -- sequence of mutually-recursive function calls leading to a non-terminating function
+       | BadPath (List (FC, Name)) Name
+       | RecPath (List (FC, Name))
 
 export
 Show PartialReason where
@@ -1153,8 +1155,12 @@ Show PartialReason where
       = "possibly not terminating due to call to " ++ show n
   show (BadCall ns)
       = "possibly not terminating due to calls to " ++ showSep ", " (map show ns)
-  show (RecPath ns)
-      = "possibly not terminating due to recursive path " ++ showSep " -> " (map show ns)
+  show (BadPath [_] n)
+      = "possibly not terminating due to call  to " ++ show n
+  show (BadPath init n)
+      = "possibly not terminating due to function " ++ show n ++ " being reachable via " ++ showSep " -> " (map show init)
+  show (RecPath loop)
+      = "possibly not terminating due to recursive path " ++ showSep " -> " (map (show . snd) loop)
 
 export
 Pretty Void PartialReason where
@@ -1163,8 +1169,14 @@ Pretty Void PartialReason where
     = reflow "possibly not terminating due to call to" <++> pretty n
   pretty (BadCall ns)
     = reflow "possibly not terminating due to calls to" <++> concatWith (surround (comma <+> space)) (pretty <$> ns)
-  pretty (RecPath ns)
-    = reflow "possibly not terminating due to recursive path" <++> concatWith (surround (pretty " -> ")) (pretty <$> ns)
+  pretty (BadPath [_] n)
+    = reflow "possibly not terminating due to call to" <++> pretty n
+  pretty (BadPath init n)
+    = reflow "possibly not terminating due to function" <++> pretty n
+      <++> reflow "being reachable via"
+      <++> concatWith (surround (pretty " -> ")) (pretty <$> map snd init)
+  pretty (RecPath loop)
+    = reflow "possibly not terminating due to recursive path" <++> concatWith (surround (pretty " -> ")) (pretty <$> map snd loop)
 
 public export
 data Terminating

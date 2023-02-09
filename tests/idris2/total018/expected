@@ -1,0 +1,11 @@
+1/1: Building Issue2448 (Issue2448.idr)
+Error: boom is not total, possibly not terminating due to recursive path Main.boom
+
+Issue2448:5:1--5:19
+ 1 | -- https://github.com/idris-lang/Idris2/issues/2448#issuecomment-1117103496
+ 2 | 
+ 3 | %default total
+ 4 | 
+ 5 | boom : Nat -> Void
+     ^^^^^^^^^^^^^^^^^^
+

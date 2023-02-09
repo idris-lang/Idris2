@@ -8,6 +8,8 @@
   substituted at parsing time with a string corresponding to the
   location, filename, line or column number associated to the
   magic constant's position.
+* The termination checker is now a faithful implementation of the 2001 paper on
+  size-change termination by Lee, Jones and Ben-Amram.
 
 ### REPL changes
 
@@ -56,6 +58,11 @@
   defining a `covering` or `partial` datatype in a `%default total`
   file will not lead to a positivity error anymore.
 
+* Fixed a bug in the positivity checker that meant `Lazy` could be used
+  to hide negative occurences.
+
+* Made sure that the positivity checker now respects `assert_total` annotations.
+
 ### Library changes
 
 #### Prelude
@@ -63,6 +70,8 @@
 * Improved performance of functions `isNL`, `isSpace`, and `isHexDigit`.
 
 * Implements `Foldable` and `Traversable` for pairs, right-biased as `Functor`.
+* Added a constructor (`MkInterpolation`) to `Interpolation`.
+* Added an `Interpolation` implementation for `Void`.
 
 #### Base
 
@@ -89,12 +98,18 @@
 * Changes `getNProcessors` to return the number of online processors rather than
   the number of configured processors.
 
-
 #### Contrib
 * Remove Data.List.HasLength from contrib library but add it to the base library
   with the type signature from the compiler codebase and some of the naming
   from the contrib library. The type ended up being `HasLength n xs` rather than
   `HasLength xs n`.
+
+#### Papers
+
+* In `Control.DivideAndConquer`: a port of the paper
+  `A Type-Based Approach to Divide-And-Conquer Recursion in Coq'
+  by Pedro Abreu, Benjamin Delaware, Alex Hubers, Christa Jenkins,
+  J. Garret Morris, and Aaron Stump
 
 ### Other Changes
 * The `data` subfolder of an installed or local dependency package is now automatically
