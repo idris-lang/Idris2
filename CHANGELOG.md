@@ -93,6 +93,8 @@
 
 * `System`'s `die` now prints the error message on stderr rather than stdout
 
+* Moded `Data.SortedMap` and `Data.SortedSet` from contrib to base.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than

@@ -83,10 +83,6 @@ modules = Control.ANSI,
           Data.Seq.Sized,
           Data.Seq.Unsized,
 
-          Data.SortedMap,
-          Data.SortedMap.Dependent,
-          Data.SortedSet,
-
           Data.Stream.Extra,
 
           Data.String.Extra,
