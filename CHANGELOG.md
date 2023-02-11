@@ -93,7 +93,7 @@
 
 * `System`'s `die` now prints the error message on stderr rather than stdout
 
-* Moded `Data.SortedMap` and `Data.SortedSet` from contrib to base.
+* Moved `Data.SortedMap` and `Data.SortedSet` from contrib to base.
 
 #### System
 
