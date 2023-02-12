@@ -360,3 +360,17 @@ DivisionTheoremUniqueness numer denom denom_nz q r x prf =
   rewrite sym $ sndDivmodNatNZeqMod numer denom denom_nz denom_nz in
   rewrite DivisionTheoremUniquenessDivMod numer denom denom_nz q r x prf in
   (Refl, Refl)
+
+export
+modDividendMinusDivMultDivider : (0 numer, denom : Nat) -> {auto 0 denom_nz : NonZero denom} ->
+  modNatNZ numer denom denom_nz = numer `minus` divNatNZ numer denom denom_nz * denom
+modDividendMinusDivMultDivider numer denom = Calc $
+  |~ (modNatNZ numer denom denom_nz)
+  ~~ (divNatNZ numer denom denom_nz * denom + modNatNZ numer denom denom_nz `minus` divNatNZ numer denom denom_nz * denom)
+            ...(sym $ minusPlus $ divNatNZ numer denom denom_nz * denom)
+  ~~ (modNatNZ numer denom denom_nz + divNatNZ numer denom denom_nz * denom `minus` divNatNZ numer denom denom_nz * denom)
+            ...(rewrite plusCommutative (divNatNZ numer denom denom_nz * denom) (modNatNZ numer denom denom_nz)
+                in Refl)
+  ~~ (numer `minus` divNatNZ numer denom denom_nz * denom)
+            ...(sym $ cong (`minus` (divNatNZ numer denom denom_nz * denom))
+                           (DivisionTheorem numer denom denom_nz denom_nz))
