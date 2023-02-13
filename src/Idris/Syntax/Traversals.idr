@@ -119,11 +119,11 @@ mapPTermM f = goPTerm where
     goPTerm (PBracketed fc x) =
       PBracketed fc <$> goPTerm x
       >>= f
-    goPTerm (PString fc xs) =
-      PString fc <$> goPStrings xs
+    goPTerm (PString fc x ys) =
+      PString fc x <$> goPStrings ys
       >>= f
-    goPTerm (PMultiline fc x ys) =
-      PMultiline fc x <$> goPStringLines ys
+    goPTerm (PMultiline fc x y zs) =
+      PMultiline fc x y <$> goPStringLines zs
       >>= f
     goPTerm (PDoBlock fc ns xs) =
       PDoBlock fc ns <$> goPDos xs
@@ -446,10 +446,10 @@ mapPTerm f = goPTerm where
       = f $ PEq fc (goPTerm x) (goPTerm y)
     goPTerm (PBracketed fc x)
       = f $ PBracketed fc $ goPTerm x
-    goPTerm (PString fc xs)
-      = f $ PString fc $ goPStr <$> xs
-    goPTerm (PMultiline fc x ys)
-      = f $  PMultiline fc x $ map (map goPStr) ys
+    goPTerm (PString fc x ys)
+      = f $ PString fc x $ goPStr <$> ys
+    goPTerm (PMultiline fc x y zs)
+      = f $  PMultiline fc x y $ map (map goPStr) zs
     goPTerm (PDoBlock fc ns xs)
       = f $ PDoBlock fc ns $ goPDo <$> xs
     goPTerm (PBang fc x)
@@ -625,8 +625,8 @@ substFC fc = mapPTerm $ \case
   PSectionR _ _ x y => PSectionR fc fc x y
   PEq _ x y => PEq fc x y
   PBracketed _ x => PBracketed fc x
-  PString _ xs => PString fc xs
-  PMultiline _ indent xs => PMultiline fc indent xs
+  PString _ x ys => PString fc x ys
+  PMultiline _ x y zs => PMultiline fc x y zs
   PDoBlock _ x xs => PDoBlock fc x xs
   PBang _ x => PBang fc x
   PIdiom _ x y => PIdiom fc x y

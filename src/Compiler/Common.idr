@@ -531,7 +531,7 @@ copyLib (lib, fullname)
 export
 getExtraRuntime : List String -> Core String
 getExtraRuntime directives
-    = do fileContents <- traverse readPath paths
+    = do fileContents <- traverse Core.readFile paths
          pure $ concat $ intersperse "\n" fileContents
   where
     getArg : String -> Maybe String
@@ -545,35 +545,32 @@ getExtraRuntime directives
     paths : List String
     paths = nub $ mapMaybe getArg $ reverse directives
 
-    readPath : String -> Core String
-    readPath p = do
-      Right contents <- coreLift $ readFile p
-        | Left err => throw (FileErr p err)
-      pure contents
-
 ||| Cast implementations. Values of `ConstantPrimitives` can
 ||| be used in a call to `castInt`, which then determines
 ||| the cast implementation based on the given pair of
 ||| constants.
 public export
-record ConstantPrimitives where
+record ConstantPrimitives' str where
   constructor MkConstantPrimitives
-  charToInt    : IntKind -> String -> Core String
-  intToChar    : IntKind -> String -> Core String
-  stringToInt  : IntKind -> String -> Core String
-  intToString  : IntKind -> String -> Core String
-  doubleToInt  : IntKind -> String -> Core String
-  intToDouble  : IntKind -> String -> Core String
-  intToInt     : IntKind -> IntKind -> String -> Core String
+  charToInt    : IntKind -> str -> Core str
+  intToChar    : IntKind -> str -> Core str
+  stringToInt  : IntKind -> str -> Core str
+  intToString  : IntKind -> str -> Core str
+  doubleToInt  : IntKind -> str -> Core str
+  intToDouble  : IntKind -> str -> Core str
+  intToInt     : IntKind -> IntKind -> str -> Core str
+
+public export
+ConstantPrimitives : Type = ConstantPrimitives' String
 
 ||| Implements casts from and to integral types by using
 ||| the implementations from the provided `ConstantPrimitives`.
 export
-castInt :  ConstantPrimitives
+castInt :  ConstantPrimitives' str
         -> PrimType
         -> PrimType
-        -> String
-        -> Core String
+        -> str
+        -> Core str
 castInt p from to x =
   case ((from, intKind from), (to, intKind to)) of
        ((CharType, _)  , (_, Just k)) => p.charToInt k x

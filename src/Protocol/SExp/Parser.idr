@@ -33,14 +33,14 @@ symbol req
 
 stringTokens : Tokenizer Token
 stringTokens
-    = match (someUntil (is '"') (escape (is '\\') any <|> any)) $ StringLit 0
+    = match (someUntil (is '"') (escape (is '\\') any <|> any)) StringLit
 
 ideTokens : Tokenizer Token
 ideTokens =
       match (choice $ exact <$> symbols) Symbol
   <|> match digits (IntegerLit . cast)
   <|> compose (is '"')
-              (const $ StringBegin Single)
+              (const $ StringBegin 0 Single)
               (const ())
               (const stringTokens)
               (const $ is '"')

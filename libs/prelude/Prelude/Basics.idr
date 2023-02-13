@@ -37,14 +37,14 @@ const : a -> b -> a
 const x = \value => x
 
 ||| Function composition.
-public export %inline
+public export %inline %tcinline
 (.) : (b -> c) -> (a -> b) -> a -> c
 (.) f g = \x => f (g x)
 
 ||| Composition of a two-argument function with a single-argument one.
 ||| `(.:)` is like `(.)` but the second argument and the result are two-argument functions.
 ||| This operator is also known as "blackbird operator".
-public export %inline
+public export %inline %tcinline
 (.:) : (c -> d) -> (a -> b -> c) -> a -> b -> d
 (.:) = (.) . (.)
 
@@ -61,7 +61,7 @@ public export %inline
 ||| ```idris example
 ||| sortBy (compare `on` fst).
 ||| ```
-public export
+public export %tcinline
 on : (b -> b -> c) -> (a -> b) -> a -> a -> c
 on f g = \x, y => g x `f` g y
 
@@ -69,14 +69,14 @@ infixl 0 `on`
 
 ||| Takes in the first two arguments in reverse order.
 ||| @ f the function to flip
-public export
+public export %tcinline
 flip : (f : a -> b -> c) -> b -> a -> c
-flip f x y = f y x
+flip f = \x, y => f y x
 
 ||| Function application.
-public export
+public export %tcinline
 apply : (a -> b) -> a -> b
-apply f a = f a
+apply f = \a => f a
 
 public export
 curry : ((a, b) -> c) -> a -> b -> c

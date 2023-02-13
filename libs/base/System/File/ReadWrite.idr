@@ -30,7 +30,7 @@ prim__readChar : FilePtr -> PrimIO Int
 prim__writeLine : FilePtr -> String -> PrimIO Int
 
 %foreign supportC "idris2_eof"
-         "node:lambda:x=>(x.eof?1:0)"
+         "node:lambda:f=>(f.eof?1:0)"
 prim__eof : FilePtr -> PrimIO Int
 
 %foreign supportC "idris2_removeFile"

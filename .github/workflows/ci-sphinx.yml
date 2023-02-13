@@ -15,7 +15,7 @@ jobs:
     name: Sphinx
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
     - uses: ammaraskar/sphinx-action@master
       with:
         docs-folder: "docs/"

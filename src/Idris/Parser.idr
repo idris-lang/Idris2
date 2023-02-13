@@ -191,6 +191,26 @@ argTerm (UnnamedAutoArg t) = t
 argTerm (NamedArg _ t) = t
 argTerm (WithArg t) = t
 
+export
+debugString : OriginDesc -> Rule PTerm
+debugString fname = do
+  di <- bounds debugInfo
+  pure $ PPrimVal (boundToFC fname di) $ Str $ case di.val of
+    DebugLoc =>
+      let bnds = di.bounds in
+      joinBy ", "
+      [ "File \{show fname}"
+      , "line \{show (startLine bnds)}"
+      , "characters \{show (startCol bnds)}\{
+           ifThenElse (startLine bnds == endLine bnds)
+            ("-\{show (endCol bnds)}")
+            ""
+        }"
+      ]
+    DebugFile => "\{show fname}"
+    DebugLine => "\{show (startLine di.bounds)}"
+    DebugCol => "\{show (startCol di.bounds)}"
+
 mutual
   appExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   appExpr q fname indents
@@ -200,6 +220,7 @@ mutual
     <|> lazy fname indents
     <|> if_ fname indents
     <|> with_ fname indents
+    <|> debugString fname
     <|> do b <- bounds (MkPair <$> simpleExpr fname indents <*> many (argExpr q fname indents))
            (f, args) <- pure b.val
            pure (applyExpImp (start b) (end b) f (concat args))
@@ -989,8 +1010,9 @@ mutual
                                           Left err => fatalLoc begin.bounds err
                                           Right pstrs => pure $ pstrs
                             strEnd
-                            pure pstrs
-           pure $ PString (boundToFC fname b) b.val
+                            pure (begin.val, pstrs)
+           pure $ let (hashtag, str) = b.val in
+                      PString (boundToFC fname b) hashtag str
     where
       toPStr : (WithBounds $ Either PTerm (List1 String)) -> Either String PStr
       toPStr x = case x.val of
@@ -1002,14 +1024,14 @@ mutual
   multilineStr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   multilineStr q fname idents
       = decorate fname Data $
-        do b <- bounds $ do multilineBegin
+        do b <- bounds $ do hashtag <- multilineBegin
                             commit
                             xs <- many $ bounds $ (interpBlock q fname idents) <||> strLitLines
                             endloc <- location
                             strEnd
-                            pure (endloc, toLines xs [<] [<])
-           pure $ let ((_, col), xs) = b.val in
-                      PMultiline (boundToFC fname b) (fromInteger $ cast col) xs
+                            pure (hashtag, endloc, toLines xs [<] [<])
+           pure $ let (hashtag, (_, col), xs) = b.val in
+                      PMultiline (boundToFC fname b) hashtag (fromInteger $ cast col) xs
     where
       toLines : List (WithBounds $ Either PTerm (List1 String)) ->
                 SnocList PStr -> SnocList (List PStr) -> List (List PStr)

@@ -9,7 +9,7 @@ failing "x is not covering."
 
 
 failing "x is not total, possibly not terminating due to recursive
-         path FailingTotality.x -> FailingTotality.x"
+         path FailingTotality.x"
 
   x : Bool
   x = x

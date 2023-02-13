@@ -103,7 +103,7 @@ stream (MkEnumerator enum) = iterate enum []
 -- Defining generic enumerators for regular types
 ------------------------------------------------------------------------------
 
-covering export
+export
 regular : (d : Desc List) -> Enumerator (Fix d) (Fix d)
 regular d = MkFix <$> go d where
 
@@ -123,11 +123,9 @@ namespace Example
   lists : (xs : List a) -> Nat -> List (Fix (ListD xs))
   lists xs = sized (regular (ListD xs))
 
-  covering
   encode : {0 xs : List a} -> List a -> Fix (ListD xs)
   encode = foldr (\x, xs => MkFix (Right (x, xs))) (MkFix (Left ()))
 
-  covering
   decode : {xs : List a} -> Fix (ListD xs) -> List a
   decode = fold (either (const []) (uncurry (::)))
 

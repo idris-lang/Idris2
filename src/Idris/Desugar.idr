@@ -27,6 +27,7 @@ import Idris.Elab.Interface
 import Idris.Desugar.Mutual
 
 import Parser.Lexer.Source
+import Parser.Support
 
 import TTImp.BindImplicits
 import TTImp.Parser
@@ -329,19 +330,21 @@ mutual
     = do when (side == LHS) $
            throw (GenericMsg fc "? is not a valid pattern")
          pure $ Implicit fc False
-  desugarB side ps (PMultiline fc indent lines)
-      = addFromString fc !(expandString side ps fc !(trimMultiline fc indent lines))
+  desugarB side ps (PMultiline fc hashtag indent lines)
+      = addFromString fc !(expandString side ps fc hashtag !(trimMultiline fc indent lines))
 
   -- We only add `fromString` if we are looking at a plain string literal.
   -- Interpolated string literals don't have a `fromString` call since they
   -- are always concatenated with other strings and therefore can never use
   -- another `fromString` implementation that differs from `id`.
-  desugarB side ps (PString fc [])
+  desugarB side ps (PString fc hashtag [])
       = addFromString fc (IPrimVal fc (Str ""))
-  desugarB side ps (PString fc [StrLiteral fc' str])
-      = addFromString fc (IPrimVal fc' (Str str))
-  desugarB side ps (PString fc strs)
-      = expandString side ps fc strs
+  desugarB side ps (PString fc hashtag [StrLiteral fc' str])
+      = case unescape hashtag str of
+             Just str => addFromString fc (IPrimVal fc' (Str str))
+             Nothing => throw (GenericMsg fc "Invalid escape sequence: \{show str}")
+  desugarB side ps (PString fc hashtag strs)
+      = expandString side ps fc hashtag strs
 
   desugarB side ps (PDoBlock fc ns block)
       = expandDo side ps fc ns block
@@ -491,8 +494,8 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto o : Ref ROpts REPLOpts} ->
-                 Side -> List Name -> FC -> List PStr -> Core RawImp
-  expandString side ps fc xs
+                 Side -> List Name -> FC -> Nat -> List PStr -> Core RawImp
+  expandString side ps fc hashtag xs
     = do xs <- traverse toRawImp (filter notEmpty $ mergeStrLit xs)
          pure $ case xs of
            [] => IPrimVal fc (Str "")
@@ -506,7 +509,10 @@ mutual
                (strInterpolate xs)
     where
       toRawImp : PStr -> Core RawImp
-      toRawImp (StrLiteral fc str) = pure $ IPrimVal fc (Str str)
+      toRawImp (StrLiteral fc str) =
+        case unescape hashtag str of
+             Just str => pure $ IPrimVal fc (Str str)
+             Nothing => throw (GenericMsg fc "Invalid escape sequence: \{show str}")
       toRawImp (StrInterp fc tm) = desugarB side ps tm
 
       -- merge neighbouring StrLiteral
@@ -537,16 +543,14 @@ mutual
 
   trimMultiline : FC -> Nat -> List (List PStr) -> Core (List PStr)
   trimMultiline fc indent lines
-      = if indent == 0
-           then pure $ dropLastNL $ concat lines
-           else do
-             lines <- trimLast fc lines
-             lines <- traverse (trimLeft indent) lines
-             pure $ dropLastNL $ concat lines
+      = do lines <- trimLast fc lines
+           lines <- traverse (trimLeft indent) lines
+           pure $ concat $ dropLastNL lines
+
     where
       trimLast : FC -> List (List PStr) -> Core (List (List PStr))
       trimLast fc lines with (snocList lines)
-        trimLast fc [] | Empty = throw $ BadMultiline fc "Expected line wrap"
+        trimLast fc [] | Empty = throw $ BadMultiline fc "Expected new line"
         trimLast _ (initLines `snoc` []) | Snoc [] initLines _ = pure lines
         trimLast _ (initLines `snoc` [StrLiteral fc str]) | Snoc [(StrLiteral _ _)] initLines _
             = if any (not . isSpace) (fastUnpack str)
@@ -555,13 +559,6 @@ mutual
         trimLast _ (initLines `snoc` xs) | Snoc xs initLines _
             = let fc = fromMaybe fc $ findBy isStrInterp xs in
                   throw $ BadMultiline fc "Closing delimiter of multiline strings cannot be preceded by non-whitespace characters"
-
-      dropLastNL : List PStr -> List PStr
-      dropLastNL pstrs with (snocList pstrs)
-        dropLastNL [] | Empty = []
-        dropLastNL (initLines `snoc` (StrLiteral fc str)) | Snoc (StrLiteral _ _) initLines _
-            = initLines `snoc` (StrLiteral fc (fst $ break isNL str))
-        dropLastNL pstrs | _ = pstrs
 
       trimLeft : Nat -> List PStr -> Core (List PStr)
       trimLeft indent [] = pure []
@@ -577,6 +574,17 @@ mutual
               then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
              else pure $ (StrLiteral fc (fastPack rest))::xs
       trimLeft indent xs = throw $ BadMultiline fc "Line is less indented than the closing delimiter"
+
+      mapLast : (a -> a) -> List a -> List a
+      mapLast f [] = []
+      mapLast f [x] = [f x]
+      mapLast f (x :: xs) = x :: mapLast f xs
+
+      dropLastNL : List (List PStr) -> List (List PStr)
+      dropLastNL
+          = mapLast $ mapLast $
+              \case StrLiteral fc str => StrLiteral fc (fst $ break isNL str)
+                    other => other
 
   expandDo : {auto s : Ref Syn SyntaxInfo} ->
              {auto c : Ref Ctxt Defs} ->
@@ -609,10 +617,11 @@ mutual
            rest' <- expandDo side ps' topfc ns rest
            let fcOriginal = fc
            let fc = virtualiseFC fc
+           let patFC = virtualiseFC (getFC bpat)
            pure $ bindFun fc ns exp'
                 $ ILam EmptyFC top Explicit (Just (MN "_" 0))
                           (Implicit fc False)
-                          (ICase fc (IVar EmptyFC (MN "_" 0))
+                          (ICase fc (IVar patFC (MN "_" 0))
                                (Implicit fc False)
                                (PatClause fcOriginal bpat rest'
                                   :: alts'))

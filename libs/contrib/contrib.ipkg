@@ -46,7 +46,6 @@ modules = Control.ANSI,
           Data.List.Reverse,
           Data.List.Views.Extra,
           Data.List.Palindrome,
-          Data.List.HasLength,
           Data.List.AtIndex,
           Data.List.Alternating,
 

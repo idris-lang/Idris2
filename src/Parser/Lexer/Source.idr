@@ -24,17 +24,32 @@ public export
 data IsMultiline = Multi | Single
 
 public export
+data DebugInfo
+  = DebugLoc
+  | DebugFile
+  | DebugLine
+  | DebugCol
+
+export
+Eq DebugInfo where
+  DebugLoc == DebugLoc = True
+  DebugFile == DebugFile = True
+  DebugLine == DebugLine = True
+  DebugCol == DebugCol = True
+  _ == _ = False
+
+public export
 data Token
   -- Literals
   = CharLit String
   | DoubleLit Double
   | IntegerLit Integer
   -- String
-  | StringBegin IsMultiline -- Whether is multiline string
+  | StringBegin Nat IsMultiline -- The escape depth and whether is multiline string
   | StringEnd
   | InterpBegin
   | InterpEnd
-  | StringLit Nat String
+  | StringLit String
   -- Identifiers
   | HoleIdent String
   | Ident String
@@ -51,7 +66,15 @@ data Token
   | EndInput
   | Keyword String
   | Pragma String
+  | MagicDebugInfo DebugInfo
   | Unrecognised String
+
+export
+Show DebugInfo where
+  show DebugLoc = "__LOC__"
+  show DebugFile = "__FILE__"
+  show DebugLine = "__LINE__"
+  show DebugCol = "__COL__"
 
 export
 Show Token where
@@ -60,12 +83,12 @@ Show Token where
   show (DoubleLit x) = "double " ++ show x
   show (IntegerLit x) = "literal " ++ show x
   -- String
-  show (StringBegin Single) = "string begin"
-  show (StringBegin Multi) = "multiline string begin"
+  show (StringBegin hashtag Single) = "string begin"
+  show (StringBegin hashtag Multi) = "multiline string begin"
   show StringEnd = "string end"
   show InterpBegin = "string interp begin"
   show InterpEnd = "string interp end"
-  show (StringLit n x) = "string" ++ replicate n '#' ++ " " ++ show x
+  show (StringLit x) = "string " ++ show x
   -- Identifiers
   show (HoleIdent x) = "hole identifier " ++ x
   show (Ident x) = "identifier " ++ x
@@ -82,6 +105,7 @@ Show Token where
   show EndInput = "end of input"
   show (Keyword x) = x
   show (Pragma x) = "pragma " ++ x
+  show (MagicDebugInfo di) = show di
   show (Unrecognised x) = "Unrecognised " ++ x
 
 export
@@ -91,12 +115,12 @@ Pretty Void Token where
   pretty (DoubleLit x) = pretty "double" <++> pretty (show x)
   pretty (IntegerLit x) = pretty "literal" <++> pretty (show x)
   -- String
-  pretty (StringBegin Single) = reflow "string begin"
-  pretty (StringBegin Multi) = reflow "multiline string begin"
+  pretty (StringBegin hashtag Single) = reflow "string begin"
+  pretty (StringBegin hashtag Multi) = reflow "multiline string begin"
   pretty StringEnd = reflow "string end"
   pretty InterpBegin = reflow "string interp begin"
   pretty InterpEnd = reflow "string interp end"
-  pretty (StringLit n x) = pretty ("string" ++ replicate n '#') <++> dquotes (pretty x)
+  pretty (StringLit x) = pretty "string" <++> dquotes (pretty x)
   -- Identifiers
   pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
   pretty (Ident x) = pretty "identifier" <++> pretty x
@@ -113,6 +137,7 @@ Pretty Void Token where
   pretty EndInput = reflow "end of input"
   pretty (Keyword x) = pretty x
   pretty (Pragma x) = pretty "pragma" <++> pretty x
+  pretty (MagicDebugInfo di) = pretty (show di)
   pretty (Unrecognised x) = pretty "Unrecognised" <++> pretty x
 
 mutual
@@ -221,6 +246,11 @@ keywords = ["data", "module", "where", "let", "in", "do", "record",
             "infixl", "infixr", "infix", "prefix",
             "total", "partial", "covering"]
 
+public export
+debugInfo : List (String, DebugInfo)
+debugInfo = map (\ di => (show di, di))
+          [ DebugLoc, DebugFile, DebugLine, DebugCol ]
+
 -- Reserved words for internal syntax
 special : List String
 special = ["%lam", "%pi", "%imppi", "%let"]
@@ -307,7 +337,7 @@ mutual
             escapeLexer = escape (exact escapeChars) any
             charLexer = non $ exact (if multi then multilineEnd hashtag else stringEnd hashtag)
           in
-            match (someUntil (exact interpStart) (escapeLexer <|> charLexer)) (\x => StringLit hashtag x)
+            match (someUntil (exact interpStart) (escapeLexer <|> charLexer)) (\x => StringLit x)
         <|> compose (exact interpStart)
                     (const InterpBegin)
                     (const ())
@@ -328,6 +358,7 @@ mutual
                   (\_ => rawTokens)
                   (exact . groupClose)
                   Symbol
+      <|> match (choice $ (exact . fst) <$> debugInfo) (MagicDebugInfo . fromMaybe DebugLoc . flip lookup debugInfo)
       <|> match (choice $ exact <$> symbols) Symbol
       <|> match doubleLit (DoubleLit . cast)
       <|> match binUnderscoredLit (IntegerLit . fromBinLit . removeUnderscores)
@@ -335,13 +366,13 @@ mutual
       <|> match octUnderscoredLit (IntegerLit . fromOctLit . removeUnderscores)
       <|> match digitsUnderscoredLit (IntegerLit . cast . removeUnderscores)
       <|> compose multilineBegin
-                  (const $ StringBegin Multi)
+                  (\begin => StringBegin (countHashtag begin) Multi)
                   countHashtag
                   (stringTokens True)
                   (exact . multilineEnd)
                   (const StringEnd)
       <|> compose stringBegin
-                  (const $ StringBegin Single)
+                  (\begin => StringBegin (countHashtag begin) Single)
                   countHashtag
                   (stringTokens False)
                   (\hashtag => exact (stringEnd hashtag) <+> reject (is '"'))

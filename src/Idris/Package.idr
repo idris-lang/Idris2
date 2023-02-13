@@ -358,6 +358,7 @@ addDeps pkg = do
     | Failed errs => throw $ GenericMsg EmptyFC (printErrs pkg errs)
   log "package.depends" 10 $ "all depends: \{show allPkgs}"
   traverse_ addPackageDir allPkgs
+  traverse_ addDataDir ((</> "data") <$> allPkgs)
   where
     -- Note: findPkgDir throws an error if a package is not found
     -- *unless* --ignore-missing-ipkg is enabled
