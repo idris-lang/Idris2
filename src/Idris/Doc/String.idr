@@ -347,8 +347,11 @@ getDocsForName fc n config
                 case !(traverse (pterm . map defaultKindedName) (parents iface)) of
                      [] => []
                      ps => [hsep (header "Constraints" :: punctuate comma (map (prettyBy Syntax) ps))]
-             icon <- do doc <- getDConDoc =<< toFullNames (iconstructor iface)
-                        pure $ [header "Constructor" <++> annotate Declarations doc]
+             icon <- do cName <- toFullNames (iconstructor iface)
+                        pure $ case dropNS cName of
+                          UN{} => [hsep [header "Constructor", dCon cName (prettyName cName)]]
+                          _ => [] -- machine inserted
+
              mdocs <- traverse getMethDoc (methods iface)
              let meths = case concat mdocs of
                            [] => []

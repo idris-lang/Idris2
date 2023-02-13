@@ -1,7 +1,6 @@
 1/1: Building DocImpl (DocImpl.idr)
 Main> interface Main.Happy : Type -> Type
   Parameters: t
-  Constructor: __mkHappy : t -> Happy t
   Methods:
     happy : t
   Implementations:
@@ -108,7 +107,6 @@ Main> Bye for now!
 1/1: Building List (List.idr)
 List> interface List.Monoid : Type -> Type
   Parameters: ty
-  Constructor: __mkMonoid : ty -> (ty -> ty -> ty) -> Monoid ty
   Methods:
     neutral : ty
     (++) : ty -> ty -> ty
