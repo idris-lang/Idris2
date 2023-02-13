@@ -1553,7 +1553,7 @@ getVisibility v (_ :: xs) = getVisibility v xs
 
 recordConstructor : OriginDesc -> Rule Name
 recordConstructor fname
-  = do exactIdent "constructor"
+  = do decorate fname Keyword $ exactIdent "constructor"
        n <- mustWork $ decoratedDataConstructorName fname
        pure n
 

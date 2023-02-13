@@ -8,6 +8,7 @@
 00007b(:output (:ok (:highlight-source ((((:filename "RecordProjections.idr") (:start 0 17) (:end 0 21)) ((:decor :type)))))) 1)
 00007e(:output (:ok (:highlight-source ((((:filename "RecordProjections.idr") (:start 0 21) (:end 0 22)) ((:decor :keyword)))))) 1)
 00007e(:output (:ok (:highlight-source ((((:filename "RecordProjections.idr") (:start 0 23) (:end 0 28)) ((:decor :keyword)))))) 1)
+00007d(:output (:ok (:highlight-source ((((:filename "RecordProjections.idr") (:start 1 2) (:end 1 13)) ((:decor :keyword)))))) 1)
 00007b(:output (:ok (:highlight-source ((((:filename "RecordProjections.idr") (:start 1 14) (:end 1 20)) ((:decor :data)))))) 1)
 00007d(:output (:ok (:highlight-source ((((:filename "RecordProjections.idr") (:start 2 2) (:end 2 8)) ((:decor :function)))))) 1)
 00007d(:output (:ok (:highlight-source ((((:filename "RecordProjections.idr") (:start 2 9) (:end 2 10)) ((:decor :keyword)))))) 1)
