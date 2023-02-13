@@ -171,7 +171,7 @@
 <div id="line50"><a href="#line50" class="IdrisLineNumber"> &nbsp;50 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisComment">|||&nbsp;Guards&nbsp;are&nbsp;checks&nbsp;on&nbsp;the&nbsp;current&nbsp;state</span></div>
 <div id="line51"><a href="#line51" class="IdrisLineNumber"> &nbsp;51 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
 <div id="line52"><a href="#line52" class="IdrisLineNumber"> &nbsp;52 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">record</span>&nbsp;<span class="IdrisType">GUARD</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line53"><a href="#line53" class="IdrisLineNumber"> &nbsp;53 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkGUARD</span></div>
+<div id="line53"><a href="#line53" class="IdrisLineNumber"> &nbsp;53 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">constructor</span>&nbsp;<span class="IdrisData">MkGUARD</span></div>
 <div id="line54"><a href="#line54" class="IdrisLineNumber"> &nbsp;54 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisComment">|||&nbsp;The&nbsp;check&nbsp;to&nbsp;confirm</span></div>
 <div id="line55"><a href="#line55" class="IdrisLineNumber"> &nbsp;55 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisFunction">g</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">Pred</span></div>
 <div id="line56"><a href="#line56" class="IdrisLineNumber"> &nbsp;56 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisComment">|||&nbsp;The&nbsp;current&nbsp;state</span></div>
@@ -255,7 +255,7 @@
 <div id="line134"><a href="#line134" class="IdrisLineNumber"> 134 | </a></div>
 <div id="line135"><a href="#line135" class="IdrisLineNumber"> 135 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
 <div id="line136"><a href="#line136" class="IdrisLineNumber"> 136 | </a><span class="IdrisKeyword">record</span>&nbsp;<span class="IdrisType">State</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line137"><a href="#line137" class="IdrisLineNumber"> 137 | </a>&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkState</span></div>
+<div id="line137"><a href="#line137" class="IdrisLineNumber"> 137 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">constructor</span>&nbsp;<span class="IdrisData">MkState</span></div>
 <div id="line138"><a href="#line138" class="IdrisLineNumber"> 138 | </a>&nbsp;&nbsp;<span class="IdrisComment">--&nbsp;shared&nbsp;state:&nbsp;intent1,&nbsp;intent2,&nbsp;and&nbsp;turn</span></div>
 <div id="line139"><a href="#line139" class="IdrisLineNumber"> 139 | </a>&nbsp;&nbsp;<span class="IdrisFunction">intent1</span><span class="IdrisKeyword">,</span>&nbsp;<span class="IdrisFunction">intent2</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Bool</span></div>
 <div id="line140"><a href="#line140" class="IdrisLineNumber"> 140 | </a>&nbsp;&nbsp;<span class="IdrisFunction">turn</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Nat</span></div>

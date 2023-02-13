@@ -336,7 +336,7 @@
 <div id="line215"><a href="#line215" class="IdrisLineNumber"> 215 | </a><span class="IdrisComment">--&nbsp;TODO:&nbsp;Expand&nbsp;to&nbsp;non-string&nbsp;payloads</span></div>
 <div id="line216"><a href="#line216" class="IdrisLineNumber"> 216 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
 <div id="line217"><a href="#line217" class="IdrisLineNumber"> 217 | </a><span class="IdrisKeyword">record</span>&nbsp;<span class="IdrisType">UDPRecvData</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line218"><a href="#line218" class="IdrisLineNumber"> 218 | </a>&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkUDPRecvData</span></div>
+<div id="line218"><a href="#line218" class="IdrisLineNumber"> 218 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">constructor</span>&nbsp;<span class="IdrisData">MkUDPRecvData</span></div>
 <div id="line219"><a href="#line219" class="IdrisLineNumber"> 219 | </a>&nbsp;&nbsp;<span class="IdrisFunction">remote_addr</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">SocketAddress</span></div>
 <div id="line220"><a href="#line220" class="IdrisLineNumber"> 220 | </a>&nbsp;&nbsp;<span class="IdrisFunction">remote_port</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">Port</span></div>
 <div id="line221"><a href="#line221" class="IdrisLineNumber"> 221 | </a>&nbsp;&nbsp;<span class="IdrisFunction">recv_data</span>&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">String</span></div>
@@ -344,7 +344,7 @@
 <div id="line223"><a href="#line223" class="IdrisLineNumber"> 223 | </a></div>
 <div id="line224"><a href="#line224" class="IdrisLineNumber"> 224 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
 <div id="line225"><a href="#line225" class="IdrisLineNumber"> 225 | </a><span class="IdrisKeyword">record</span>&nbsp;<span class="IdrisType">UDPAddrInfo</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line226"><a href="#line226" class="IdrisLineNumber"> 226 | </a>&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkUDPAddrInfo</span></div>
+<div id="line226"><a href="#line226" class="IdrisLineNumber"> 226 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">constructor</span>&nbsp;<span class="IdrisData">MkUDPAddrInfo</span></div>
 <div id="line227"><a href="#line227" class="IdrisLineNumber"> 227 | </a>&nbsp;&nbsp;<span class="IdrisFunction">remote_addr</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">SocketAddress</span></div>
 <div id="line228"><a href="#line228" class="IdrisLineNumber"> 228 | </a>&nbsp;&nbsp;<span class="IdrisFunction">remote_port</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">Port</span></div>
 <div id="line229"><a href="#line229" class="IdrisLineNumber"> 229 | </a></div>
@@ -352,7 +352,7 @@
 <div id="line231"><a href="#line231" class="IdrisLineNumber"> 231 | </a><span class="IdrisComment">|||&nbsp;The&nbsp;metadata&nbsp;about&nbsp;a&nbsp;socket</span></div>
 <div id="line232"><a href="#line232" class="IdrisLineNumber"> 232 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
 <div id="line233"><a href="#line233" class="IdrisLineNumber"> 233 | </a><span class="IdrisKeyword">record</span>&nbsp;<span class="IdrisType">Socket</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line234"><a href="#line234" class="IdrisLineNumber"> 234 | </a>&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkSocket</span></div>
+<div id="line234"><a href="#line234" class="IdrisLineNumber"> 234 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">constructor</span>&nbsp;<span class="IdrisData">MkSocket</span></div>
 <div id="line235"><a href="#line235" class="IdrisLineNumber"> 235 | </a>&nbsp;&nbsp;<span class="IdrisFunction">descriptor</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">SocketDescriptor</span></div>
 <div id="line236"><a href="#line236" class="IdrisLineNumber"> 236 | </a>&nbsp;&nbsp;<span class="IdrisFunction">family</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">SocketFamily</span></div>
 <div id="line237"><a href="#line237" class="IdrisLineNumber"> 237 | </a>&nbsp;&nbsp;<span class="IdrisFunction">socketType</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">SocketType</span></div>

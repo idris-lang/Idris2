@@ -213,7 +213,7 @@
 <div id="line92"><a href="#line92" class="IdrisLineNumber"> &nbsp;92 | </a><span class="IdrisComment">|||&nbsp;Options&nbsp;for&nbsp;the&nbsp;test&nbsp;driver.</span></div>
 <div id="line93"><a href="#line93" class="IdrisLineNumber"> &nbsp;93 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
 <div id="line94"><a href="#line94" class="IdrisLineNumber"> &nbsp;94 | </a><span class="IdrisKeyword">record</span>&nbsp;<span class="IdrisType">Options</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line95"><a href="#line95" class="IdrisLineNumber"> &nbsp;95 | </a>&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkOptions</span></div>
+<div id="line95"><a href="#line95" class="IdrisLineNumber"> &nbsp;95 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">constructor</span>&nbsp;<span class="IdrisData">MkOptions</span></div>
 <div id="line96"><a href="#line96" class="IdrisLineNumber"> &nbsp;96 | </a>&nbsp;&nbsp;<span class="IdrisComment">|||&nbsp;Name&nbsp;of&nbsp;the&nbsp;idris2&nbsp;executable</span></div>
 <div id="line97"><a href="#line97" class="IdrisLineNumber"> &nbsp;97 | </a>&nbsp;&nbsp;<span class="IdrisFunction">exeUnderTest</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">String</span></div>
 <div id="line98"><a href="#line98" class="IdrisLineNumber"> &nbsp;98 | </a>&nbsp;&nbsp;<span class="IdrisComment">|||&nbsp;Which&nbsp;codegen&nbsp;should&nbsp;we&nbsp;use?</span></div>
@@ -266,7 +266,7 @@
 <div id="line145"><a href="#line145" class="IdrisLineNumber"> 145 | </a>&nbsp;&nbsp;<span class="IdrisBound">onlyCheck</span>&nbsp;<span class="IdrisFunction">&amp;&amp;</span>&nbsp;<span class="IdrisBound">exceptCheck</span></div>
 <div id="line146"><a href="#line146" class="IdrisLineNumber"> 146 | </a></div>
 <div id="line147"><a href="#line147" class="IdrisLineNumber"> 147 | </a><span class="IdrisKeyword">record</span>&nbsp;<span class="IdrisType">Acc</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line148"><a href="#line148" class="IdrisLineNumber"> 148 | </a>&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkAcc</span></div>
+<div id="line148"><a href="#line148" class="IdrisLineNumber"> 148 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">constructor</span>&nbsp;<span class="IdrisData">MkAcc</span></div>
 <div id="line149"><a href="#line149" class="IdrisLineNumber"> 149 | </a>&nbsp;&nbsp;<span class="IdrisFunction">onlyFile</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Maybe</span>&nbsp;<span class="IdrisType">String</span></div>
 <div id="line150"><a href="#line150" class="IdrisLineNumber"> 150 | </a>&nbsp;&nbsp;<span class="IdrisFunction">onlyNames</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">List</span>&nbsp;<span class="IdrisType">String</span></div>
 <div id="line151"><a href="#line151" class="IdrisLineNumber"> 151 | </a>&nbsp;&nbsp;<span class="IdrisFunction">exceptNames</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">List</span>&nbsp;<span class="IdrisType">String</span></div>
@@ -533,7 +533,7 @@
 <div id="line412"><a href="#line412" class="IdrisLineNumber"> 412 | </a><span class="IdrisComment">|||&nbsp;&nbsp;+&nbsp;and&nbsp;a&nbsp;list&nbsp;of&nbsp;directory&nbsp;paths</span></div>
 <div id="line413"><a href="#line413" class="IdrisLineNumber"> 413 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
 <div id="line414"><a href="#line414" class="IdrisLineNumber"> 414 | </a><span class="IdrisKeyword">record</span>&nbsp;<span class="IdrisType">TestPool</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line415"><a href="#line415" class="IdrisLineNumber"> 415 | </a>&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkTestPool</span></div>
+<div id="line415"><a href="#line415" class="IdrisLineNumber"> 415 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">constructor</span>&nbsp;<span class="IdrisData">MkTestPool</span></div>
 <div id="line416"><a href="#line416" class="IdrisLineNumber"> 416 | </a>&nbsp;&nbsp;<span class="IdrisFunction">poolName</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">String</span></div>
 <div id="line417"><a href="#line417" class="IdrisLineNumber"> 417 | </a>&nbsp;&nbsp;<span class="IdrisFunction">constraints</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">List</span>&nbsp;<span class="IdrisType">Requirement</span></div>
 <div id="line418"><a href="#line418" class="IdrisLineNumber"> 418 | </a>&nbsp;&nbsp;<span class="IdrisFunction">codegen</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Codegen</span></div>
@@ -574,7 +574,7 @@
 <div id="line453"><a href="#line453" class="IdrisLineNumber"> 453 | </a><span class="IdrisComment">|||&nbsp;The&nbsp;summary&nbsp;of&nbsp;a&nbsp;test&nbsp;pool&nbsp;run</span></div>
 <div id="line454"><a href="#line454" class="IdrisLineNumber"> 454 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
 <div id="line455"><a href="#line455" class="IdrisLineNumber"> 455 | </a><span class="IdrisKeyword">record</span>&nbsp;<span class="IdrisType">Summary</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line456"><a href="#line456" class="IdrisLineNumber"> 456 | </a>&nbsp;&nbsp;constructor&nbsp;<span class="IdrisData">MkSummary</span></div>
+<div id="line456"><a href="#line456" class="IdrisLineNumber"> 456 | </a>&nbsp;&nbsp;<span class="IdrisKeyword">constructor</span>&nbsp;<span class="IdrisData">MkSummary</span></div>
 <div id="line457"><a href="#line457" class="IdrisLineNumber"> 457 | </a>&nbsp;&nbsp;<span class="IdrisFunction">success</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">List</span>&nbsp;<span class="IdrisType">String</span></div>
 <div id="line458"><a href="#line458" class="IdrisLineNumber"> 458 | </a>&nbsp;&nbsp;<span class="IdrisFunction">failure</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">List</span>&nbsp;<span class="IdrisType">String</span></div>
 <div id="line459"><a href="#line459" class="IdrisLineNumber"> 459 | </a></div>
