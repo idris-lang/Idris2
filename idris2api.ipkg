@@ -85,6 +85,7 @@ modules =
     Core.Termination.CallGraph,
     Core.Termination.SizeChange,
     Core.Termination.Positivity,
+    Core.Termination.References,
     Core.Termination,
     Core.Transform,
     Core.TT,
