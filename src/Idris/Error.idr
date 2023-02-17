@@ -33,8 +33,8 @@ Eq Warning where
   ParserWarning fc1 x1 == ParserWarning fc2 x2 = fc1 == fc2 && x1 == x2
   UnreachableClause fc1 rho1 s1 == UnreachableClause fc2 rho2 s2 = fc1 == fc2
   ShadowingGlobalDefs fc1 xs1 == ShadowingGlobalDefs fc2 xs2 = fc1 == fc2 && xs1 == xs2
-  Deprecated x1 y1 == Deprecated x2 y2 = x1 == x2 && y1 == y2
-  GenericWarn x1 == GenericWarn x2 = x1 == x2
+  Deprecated fc1 x1 y1 == Deprecated fc2 x2 y2 = fc1 == fc2 && x1 == x2 && y1 == y2
+  GenericWarn fc1 x1 == GenericWarn fc2 x2 = fc1 == fc2 && x1 == x2
   _ == _ = False
 
 export
@@ -281,13 +281,13 @@ pwarningRaw (ShadowingLocalBindings fc ns)
     , !(ploc fc)
     ]
 
-pwarningRaw (Deprecated s fcAndName)
+pwarningRaw (Deprecated fc s fcAndName)
     = do docs <- traverseOpt (\(fc, name) => getDocsForName fc name justUserDoc) fcAndName
          pure . vsep $ catMaybes [ Just $ "Deprecation warning:" <++> pretty0 s
                                  , reAnnotate (const Pretty.UserDocString) <$> docs
                                  ]
-pwarningRaw (GenericWarn s)
-    = pure $ pretty0 s
+pwarningRaw (GenericWarn fc s)
+    = pure $ vcat [pretty0 s, !(ploc fc)]
 
 export
 pwarning : {auto c : Ref Ctxt Defs} ->

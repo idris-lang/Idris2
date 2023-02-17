@@ -215,7 +215,7 @@ addField : {auto c : Ref Ctxt Defs} ->
 addField (PVersion fc n)       pkg = pure $ { version := Just n } pkg
 addField (PLangVersions fc bs) pkg = pure $ { langversion := Just bs } pkg
 addField (PVersionDep fc n)   pkg
-    = do emitWarning (Deprecated "version numbers must now be of the form x.y.z" Nothing)
+    = do emitWarning (Deprecated fc "version numbers must now be of the form x.y.z" Nothing)
          pure pkg
 addField (PAuthors fc a)     pkg = pure $ { authors := Just a } pkg
 addField (PMaintainers fc a) pkg = pure $ { maintainers := Just a } pkg

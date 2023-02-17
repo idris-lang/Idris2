@@ -88,6 +88,7 @@ knownTopics = [
     ("declare.type", Nothing),
     ("desugar.idiom", Nothing),
     ("desugar.failing", Just "Log result of desugaring a `failing' block"),
+    ("desugar.fixity", Just "Log result of desugaring a fixity declaration"),
     ("desugar.lhs", Just "Log result of desugaring a left hand side"),
     ("doc.data", Nothing),
     ("doc.implementation", Nothing),

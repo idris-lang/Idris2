@@ -38,6 +38,14 @@ Show Fixity where
   show Infix  = "infix"
   show Prefix = "prefix"
 
+export
+Eq Fixity where
+  InfixL == InfixL = True
+  InfixR == InfixR = True
+  Infix == Infix = True
+  Prefix == Prefix = True
+  _ == _ = False
+
 public export
 OpStr' : Type -> Type
 OpStr' nm = nm
