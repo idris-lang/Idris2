@@ -12,6 +12,7 @@ RANLIB ?= ranlib
 AR ?= ar
 
 CFLAGS := -Wall $(CFLAGS)
+CPPFLAGS := $(CPPFLAGS)
 LDFLAGS := $(LDFLAGS)
 
 MACHINE := $(shell $(CC) -dumpmachine)
@@ -33,6 +34,11 @@ else ifneq (, $(findstring bsd, $(MACHINE)))
 else
 	OS := linux
 	SHLIB_SUFFIX := .so
+endif
+
+ifneq (, $(findstring freebsd, $(MACHINE)))
+	CFLAGS += -I$(shell /sbin/sysctl -n user.localbase)/include
+	LDFLAGS += -L$(shell /sbin/sysctl -n user.localbase)/lib
 endif
 
 ifneq ($(OS),windows)

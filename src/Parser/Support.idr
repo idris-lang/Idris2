@@ -123,46 +123,46 @@ getEsc "SP" = Just '\SP'
 getEsc "DEL" = Just '\DEL'
 getEsc str = Nothing
 
-escape' : List Char -> List Char -> Maybe (List Char)
-escape' _ [] = pure []
-escape' escapeChars (x::xs)
+unescape' : List Char -> List Char -> Maybe (List Char)
+unescape' _ [] = pure []
+unescape' escapeChars (x::xs)
     = assert_total $ if escapeChars `isPrefixOf` (x::xs)
          then case drop (length escapeChars) (x::xs) of
-                   ('\\' :: xs) => pure $ '\\' :: !(escape' escapeChars xs)
-                   ('\n' :: xs) => pure !(escape' escapeChars xs)
-                   ('&' :: xs) => pure !(escape' escapeChars xs)
-                   ('a' :: xs) => pure $ '\a' :: !(escape' escapeChars xs)
-                   ('b' :: xs) => pure $ '\b' :: !(escape' escapeChars xs)
-                   ('f' :: xs) => pure $ '\f' :: !(escape' escapeChars xs)
-                   ('n' :: xs) => pure $ '\n' :: !(escape' escapeChars xs)
-                   ('r' :: xs) => pure $ '\r' :: !(escape' escapeChars xs)
-                   ('t' :: xs) => pure $ '\t' :: !(escape' escapeChars xs)
-                   ('v' :: xs) => pure $ '\v' :: !(escape' escapeChars xs)
-                   ('\'' :: xs) => pure $ '\'' :: !(escape' escapeChars xs)
-                   ('"' :: xs) => pure $ '"' :: !(escape' escapeChars xs)
+                   ('\\' :: xs) => pure $ '\\' :: !(unescape' escapeChars xs)
+                   ('\n' :: xs) => pure !(unescape' escapeChars xs)
+                   ('&' :: xs) => pure !(unescape' escapeChars xs)
+                   ('a' :: xs) => pure $ '\a' :: !(unescape' escapeChars xs)
+                   ('b' :: xs) => pure $ '\b' :: !(unescape' escapeChars xs)
+                   ('f' :: xs) => pure $ '\f' :: !(unescape' escapeChars xs)
+                   ('n' :: xs) => pure $ '\n' :: !(unescape' escapeChars xs)
+                   ('r' :: xs) => pure $ '\r' :: !(unescape' escapeChars xs)
+                   ('t' :: xs) => pure $ '\t' :: !(unescape' escapeChars xs)
+                   ('v' :: xs) => pure $ '\v' :: !(unescape' escapeChars xs)
+                   ('\'' :: xs) => pure $ '\'' :: !(unescape' escapeChars xs)
+                   ('"' :: xs) => pure $ '"' :: !(unescape' escapeChars xs)
                    ('x' :: xs) => case span isHexDigit xs of
-                                       ([], rest) => escape' escapeChars rest
+                                       ([], rest) => unescape' escapeChars rest
                                        (ds, rest) => pure $ cast !(toHex 1 (reverse ds)) ::
-                                                             !(escape' escapeChars rest)
+                                                             !(unescape' escapeChars rest)
                    ('o' :: xs) => case span isOctDigit xs of
-                                       ([], rest) => escape' escapeChars rest
+                                       ([], rest) => unescape' escapeChars rest
                                        (ds, rest) => pure $ cast !(toOct 1 (reverse ds)) ::
-                                                             !(escape' escapeChars rest)
+                                                             !(unescape' escapeChars rest)
                    xs => case span isDigit xs of
                               ([], (a :: b :: c :: rest)) =>
                                 case getEsc (fastPack [a, b, c]) of
-                                     Just v => Just (v :: !(escape' escapeChars rest))
+                                     Just v => Just (v :: !(unescape' escapeChars rest))
                                      Nothing => case getEsc (fastPack [a, b]) of
-                                                     Just v => Just (v :: !(escape' escapeChars (c :: rest)))
-                                                     Nothing => escape' escapeChars xs
+                                                     Just v => Just (v :: !(unescape' escapeChars (c :: rest)))
+                                                     Nothing => unescape' escapeChars xs
                               ([], (a :: b :: [])) =>
                                 case getEsc (fastPack [a, b]) of
                                      Just v => Just (v :: [])
-                                     Nothing => escape' escapeChars xs
-                              ([], rest) => escape' escapeChars rest
+                                     Nothing => unescape' escapeChars xs
+                              ([], rest) => unescape' escapeChars rest
                               (ds, rest) => Just $ cast (cast {to=Int} (fastPack ds)) ::
-                                              !(escape' escapeChars rest)
-         else Just $ x :: !(escape' escapeChars xs)
+                                              !(unescape' escapeChars rest)
+         else Just $ x :: !(unescape' escapeChars xs)
   where
     toHex : Int -> List Char -> Maybe Int
     toHex _ [] = Just 0
@@ -175,14 +175,14 @@ escape' escapeChars (x::xs)
         = pure $ !(oct (toLower d)) * m + !(toOct (m*8) ds)
 
 export
-escape : Nat -> String -> Maybe String
-escape hashtag x = let escapeChars = '\\' :: replicate hashtag '#' in
-                       fastPack <$> (escape' escapeChars (unpack x))
+unescape : Nat -> String -> Maybe String
+unescape hashtag x = let escapeChars = '\\' :: replicate hashtag '#' in
+                       fastPack <$> (unescape' escapeChars (unpack x))
 
 export
 getCharLit : String -> Maybe Char
 getCharLit str
-   = do e <- escape 0 str
+   = do e <- unescape 0 str
         if length e == 1
            then Just (assert_total (prim__strHead e))
            else if length e == 0 -- parsed the NULL character that terminated the string!

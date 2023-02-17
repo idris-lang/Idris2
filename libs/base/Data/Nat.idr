@@ -1,5 +1,6 @@
 module Data.Nat
 
+import Data.So
 import public Control.Relation
 import public Control.Ord
 import public Control.Order
@@ -285,6 +286,13 @@ export
 ltReflectsLT : (k : Nat) -> (n : Nat) -> lt k n === True -> k `LT` n
 ltReflectsLT k n prf = lteReflectsLTE (S k) n prf
 
+public export
+ltOpReflectsLT : (m,n : Nat) -> So (m < n) -> LT m n
+ltOpReflectsLT 0     (S k) prf = LTESucc LTEZero
+ltOpReflectsLT (S k) (S j) prf = LTESucc (ltOpReflectsLT k j prf)
+ltOpReflectsLT (S k) 0     prf impossible
+ltOpReflectsLT 0 0         prf impossible
+
 export
 gtReflectsGT : (k : Nat) -> (n : Nat) -> gt k n === True -> k `GT` n
 gtReflectsGT k n prf = ltReflectsLT n k prf
@@ -400,7 +408,7 @@ Integral Nat where
 
 export
 covering
-gcd : (a: Nat) -> (b: Nat) -> {auto ok: NotBothZero a b} -> Nat
+gcd : (a: Nat) -> (b: Nat) -> {auto 0 ok: NotBothZero a b} -> Nat
 gcd a Z     = a
 gcd Z b     = b
 gcd a (S b) = gcd (S b) (modNatNZ a (S b) SIsNonZero)

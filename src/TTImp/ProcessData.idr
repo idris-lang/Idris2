@@ -45,7 +45,7 @@ checkRetType : {auto c : Ref Ctxt Defs} ->
                (NF vars -> Core ()) -> Core ()
 checkRetType env (NBind fc x (Pi _ _ _ ty) sc) chk
     = do defs <- get Ctxt
-         checkRetType env !(sc defs (toClosure defaultOpts env (Erased fc False))) chk
+         checkRetType env !(sc defs (toClosure defaultOpts env (Erased fc Placeholder))) chk
 checkRetType env nf chk = chk nf
 
 checkIsType : {auto c : Ref Ctxt Defs} ->
@@ -135,7 +135,7 @@ getIndexPats tm
   where
     getRetType : Defs -> NF [] -> Core (NF [])
     getRetType defs (NBind fc _ (Pi _ _ _ _) sc)
-        = do sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+        = do sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
              getRetType defs sc'
     getRetType defs t = pure t
 
@@ -212,25 +212,25 @@ getRelevantArg : {auto c : Ref Ctxt Defs} ->
                  Core (Maybe (Bool, Nat))
 getRelevantArg defs i rel world (NBind fc _ (Pi _ rig _ val) sc)
     = branchZero (getRelevantArg defs (1 + i) rel world
-                              !(sc defs (toClosure defaultOpts [] (Erased fc False))))
+                              !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder))))
                  (case !(evalClosure defs val) of
                        -- %World is never inspected, so might as well be deleted from data types,
                        -- although it needs care when compiling to ensure that the function that
                        -- returns the IO/%World type isn't erased
                        (NPrimVal _ $ PrT WorldType) =>
                            getRelevantArg defs (1 + i) rel False
-                               !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+                               !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
                        _ =>
                        -- if we haven't found a relevant argument yet, make
                        -- a note of this one and keep going. Otherwise, we
                        -- have more than one, so give up.
-                           maybe (do sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+                           maybe (do sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
                                      getRelevantArg defs (1 + i) (Just i) False sc')
                                  (const (pure Nothing))
                                  rel)
                  rig
 getRelevantArg defs i rel world tm
-    = pure (maybe Nothing (\r => Just (world, r)) rel)
+    = pure ((world,) <$> rel)
 
 -- If there's one constructor with only one non-erased argument, flag it as
 -- a newtype for optimisation
@@ -324,7 +324,7 @@ calcEnum : {auto c : Ref Ctxt Defs} ->
            FC -> List Constructor -> Core Bool
 calcEnum fc cs
     = if !(allM isNullary cs)
-         then do traverse_ (\c => setFlag fc c (ConType ENUM)) (map name cs)
+         then do traverse_ (\c => setFlag fc c (ConType (ENUM $ length cs))) (map name cs)
                  pure True
          else pure False
   where
@@ -440,40 +440,52 @@ processData {vars} eopts nest env fc vis mbtot (MkImpLater dfc n_in ty_raw)
                       addHashWithNames fullty
                       log "module.hash" 15 "Adding hash for data declaration with name \{show n}"
 
-processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in ty_raw opts cons_raw)
+processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in mty_raw opts cons_raw)
     = do n <- inCurrentNS n_in
-         ty_raw <- bindTypeNames fc [] vars ty_raw
 
          log "declare.data" 1 $ "Processing " ++ show n
          defs <- get Ctxt
-         u <- uniVar fc
-         (ty, _) <-
-             wrapErrorC eopts (InCon fc n) $
-                    elabTerm !(resolveName n) InType eopts nest env
-                              (IBindHere fc (PI erased) ty_raw)
-                              (Just (gType dfc u))
-         let fullty = abstractEnvType dfc env ty
+
+         mmetasfullty <- flip traverseOpt mty_raw $ \ ty_raw => do
+           ty_raw <- bindTypeNames fc [] vars ty_raw
+
+           u <- uniVar fc
+           (ty, _) <-
+               wrapErrorC eopts (InCon fc n) $
+                      elabTerm !(resolveName n) InType eopts nest env
+                                (IBindHere fc (PI erased) ty_raw)
+                                (Just (gType dfc u))
+           checkIsType fc n env !(nf defs env ty)
+
+           pure (keys (getMetas ty), abstractEnvType dfc env ty)
+
+         let metas = maybe empty fst mmetasfullty
+         let mfullty = map snd mmetasfullty
 
          -- If n exists, check it's the same type as we have here, and is
          -- a data constructor.
          -- When looking up, note the data types which were undefined at the
          -- point of declaration.
          ndefm <- lookupCtxtExact n (gamma defs)
-         mw <- case ndefm of
-                  Nothing => pure []
+         (mw, vis, fullty) <- the (Core (List Name, Visibility, ClosedTerm)) $ case ndefm of
+                  Nothing => case mfullty of
+                    Nothing => throw (GenericMsg fc "Missing telescope for data definition \{show n_in}")
+                    Just fullty => pure ([], vis, fullty)
                   Just ndef =>
+                    let vis = max (visibility ndef) vis in
                     case definition ndef of
-                         TCon _ _ _ _ _ mw [] _ =>
+                      TCon _ _ _ _ _ mw [] _ => case mfullty of
+                        Nothing => pure (mw, vis, type ndef)
+                        Just fullty =>
                             do ok <- convert defs [] fullty (type ndef)
-                               if ok then pure mw
+                               if ok then pure (mw, vis, fullty)
                                      else do logTermNF "declare.data" 1 "Previous" [] (type ndef)
                                              logTermNF "declare.data" 1 "Now" [] fullty
                                              throw (AlreadyDefined fc n)
-                         _ => throw (AlreadyDefined fc n)
+                      _ => throw (AlreadyDefined fc n)
 
          logTermNF "declare.data" 5 ("data " ++ show n) [] fullty
 
-         checkIsType fc n env !(nf defs env ty)
          arity <- getArity defs [] fullty
 
          -- Add the type constructor as a placeholder while checking
@@ -513,9 +525,10 @@ processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in ty_raw opts c
          detags <- getDetags fc (map type cons)
          setDetags fc (Resolved tidx) detags
 
-         traverse_ addToSave (keys (getMetas ty))
+         traverse_ addToSave metas
          addToSave n
-         log "declare.data" 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
+         log "declare.data" 10 $
+           "Saving from " ++ show n ++ ": " ++ show metas
 
          let connames = map name cons
          unless (NoHints `elem` opts) $
@@ -526,5 +539,5 @@ processData {vars} eopts nest env fc vis mbtot (MkImpData dfc n_in ty_raw opts c
 
          -- #1404
          whenJust mbtot $ \ tot => do
-             log "declare.data" 5 $ "setting totality flag for " ++ show n
-             setFlag fc n (SetTotal tot)
+             log "declare.data" 5 $ "setting totality flag for " ++ show n ++ " and its constructors"
+             for_ (n :: map name cons) $ \ n => setFlag fc n (SetTotal tot)

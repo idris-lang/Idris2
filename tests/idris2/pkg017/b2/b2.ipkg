@@ -1,0 +1,8 @@
+package b2
+sourcedir = "src"
+
+modules = B2
+
+options = "--no-prelude"
+
+depends = a2

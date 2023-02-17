@@ -22,6 +22,11 @@ import Libraries.Utils.Scheme
 %default covering
 
 export
+TTC InlineOk where
+  toBuf b = toBuf b . (YesInline ==)
+  fromBuf = Core.map (\ b => ifThenElse b YesInline NotInline) . fromBuf
+
+export
 TTC Namespace where
   toBuf b = toBuf b . unsafeUnfoldNamespace
   fromBuf = Core.map unsafeFoldNamespace . fromBuf
@@ -274,11 +279,11 @@ mutual
     fromBuf b
         = case !getTag of
                0 => do c <- fromBuf b; x <- fromBuf b; ty <- fromBuf b; pure (Lam emptyFC c x ty)
-               1 => do c <- fromBuf b; x <- fromBuf b; pure (Let emptyFC c x (Erased emptyFC False))
+               1 => do c <- fromBuf b; x <- fromBuf b; pure (Let emptyFC c x (Erased emptyFC Placeholder))
                2 => do c <- fromBuf b; x <- fromBuf b; y <- fromBuf b; pure (Pi emptyFC c x y)
                3 => do c <- fromBuf b; p <- fromBuf b; ty <- fromBuf b; pure (PVar emptyFC c p ty)
-               4 => do c <- fromBuf b; x <- fromBuf b; pure (PLet emptyFC c x (Erased emptyFC False))
-               5 => do c <- fromBuf b; pure (PVTy emptyFC c (Erased emptyFC False))
+               4 => do c <- fromBuf b; x <- fromBuf b; pure (PLet emptyFC c x (Erased emptyFC Placeholder))
+               5 => do c <- fromBuf b; pure (PVTy emptyFC c (Erased emptyFC Placeholder))
                _ => corrupt "Binder"
 
   export
@@ -370,7 +375,7 @@ mutual
                        pure (TForce emptyFC lr tm)
                9 => do c <- fromBuf b
                        pure (PrimVal emptyFC c)
-               10 => pure (Erased emptyFC False)
+               10 => pure (Erased emptyFC Placeholder)
                11 => do u <- fromBuf b; pure (TType emptyFC u)
                12 => do fn <- fromBuf b
                         args <- fromBuf b
@@ -442,7 +447,7 @@ mutual
         = case !getTag of
                0 => do name <- fromBuf b; idx <- fromBuf b
                        xs <- fromBuf b
-                       pure (Case {name} idx (mkPrf idx) (Erased emptyFC False) xs)
+                       pure (Case {name} idx (mkPrf idx) (Erased emptyFC Placeholder) xs)
                1 => do x <- fromBuf b
                        pure (STerm 0 x)
                2 => do msg <- fromBuf b
@@ -504,7 +509,8 @@ export
 TTC PartialReason where
   toBuf b NotStrictlyPositive = tag 0
   toBuf b (BadCall xs) = do tag 1; toBuf b xs
-  toBuf b (RecPath xs) = do tag 2; toBuf b xs
+  toBuf b (BadPath xs n) = do tag 2; toBuf b xs; toBuf b n
+  toBuf b (RecPath xs) = do tag 3; toBuf b xs
 
   fromBuf b
       = case !getTag of
@@ -512,6 +518,9 @@ TTC PartialReason where
              1 => do xs <- fromBuf b
                      pure (BadCall xs)
              2 => do xs <- fromBuf b
+                     n <- fromBuf b
+                     pure (BadPath xs n)
+             3 => do xs <- fromBuf b
                      pure (RecPath xs)
              _ => corrupt "PartialReason"
 
@@ -669,7 +678,7 @@ TTC ConInfo where
   toBuf b TYCON = tag 1
   toBuf b NIL = tag 2
   toBuf b CONS = tag 3
-  toBuf b ENUM = tag 4
+  toBuf b (ENUM n) = do tag 4; toBuf b n
   toBuf b NOTHING = tag 5
   toBuf b JUST = tag 6
   toBuf b RECORD = tag 7
@@ -683,7 +692,7 @@ TTC ConInfo where
              1 => pure TYCON
              2 => pure NIL
              3 => pure CONS
-             4 => pure ENUM
+             4 => do n <- fromBuf b; pure (ENUM n)
              5 => pure NOTHING
              6 => pure JUST
              7 => pure RECORD
@@ -1068,11 +1077,12 @@ TTC SizeChange where
 
 export
 TTC SCCall where
-  toBuf b c = do toBuf b (fnCall c); toBuf b (fnArgs c)
+  toBuf b c = do toBuf b (fnCall c); toBuf b (fnArgs c); toBuf b (fnLoc c)
   fromBuf b
       = do fn <- fromBuf b
            args <- fromBuf b
-           pure (MkSCCall fn args)
+           loc <- fromBuf b
+           pure (MkSCCall fn args loc)
 
 export
 TTC GlobalDef where
@@ -1131,7 +1141,7 @@ TTC GlobalDef where
                       pure (MkGlobalDef loc name ty eargs seargs specargs iargs
                                         mul vars vis
                                         tot fl refs refsR inv c True def cdef Nothing sc Nothing)
-              else pure (MkGlobalDef loc name (Erased loc False) [] [] [] []
+              else pure (MkGlobalDef loc name (Erased loc Placeholder) [] [] [] []
                                      mul [] Public unchecked [] refs refsR
                                      False False True def cdef Nothing [] Nothing)
 

@@ -139,7 +139,7 @@ mutual
 
   public export
   data Data : Type where
-       MkData : FC -> (n : Name) -> (tycon : TTImp) ->
+       MkData : FC -> (n : Name) -> (tycon : Maybe TTImp) ->
                 (opts : List DataOpt) ->
                 (datacons : List ITy) -> Data
        MkLater : FC -> (n : Name) -> (tycon : TTImp) -> Data
@@ -739,7 +739,7 @@ parameters (f : TTImp -> TTImp)
   export
   mapData : Data -> Data
   mapData (MkData fc n tycon opts datacons)
-    = MkData fc n (mapTTImp tycon) opts (map mapITy datacons)
+    = MkData fc n (map mapTTImp tycon) opts (map mapITy datacons)
   mapData (MkLater fc n tycon) = MkLater fc n (mapTTImp tycon)
 
   export
@@ -860,7 +860,7 @@ parameters {0 m : Type -> Type} {auto mon : Monad m} (f : TTImp -> m TTImp)
   export
   mapMData : Data -> m Data
   mapMData (MkData fc n tycon opts datacons)
-    = MkData fc n <$> mapMTTImp tycon <*> pure opts <*> traverse mapMITy datacons
+    = MkData fc n <$> traverse mapMTTImp tycon <*> pure opts <*> traverse mapMITy datacons
   mapMData (MkLater fc n tycon) = MkLater fc n <$> mapMTTImp tycon
 
   export

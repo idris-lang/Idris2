@@ -3,6 +3,7 @@ module Idris.SetOptions
 import Compiler.Common
 
 import Core.Context
+import Core.Directory
 import Core.Metadata
 import Core.Options
 import Core.Unify
@@ -76,20 +77,6 @@ candidateDirs dname pkg bounds =
           do guard (pkgName == pkg && inBounds ver bounds)
              pure ((dname </> dirName), ver)
 
-globalPackageDir : {auto c : Ref Ctxt Defs} -> Core String
-globalPackageDir
-    = do defs <- get Ctxt
-         pure $ prefix_dir (dirs (options defs)) </>
-                  "idris2-" ++ showVersion False version
-
-localPackageDir : {auto c : Ref Ctxt Defs} -> Core String
-localPackageDir
-    = do defs <- get Ctxt
-         Just srcdir <- coreLift currentDir
-             | Nothing => throw (InternalError "Can't get current directory")
-         let depends = depends_dir (dirs (options defs))
-         pure $ srcdir </> depends
-
 ||| Find all package directories (plus version) matching
 ||| the given package name and version bounds. Results
 ||| will be sorted with the latest package version first.
@@ -100,17 +87,16 @@ findPkgDirs :
     PkgVersionBounds ->
     Core (List (String, Maybe PkgVersion))
 findPkgDirs p bounds = do
-  defs <- get Ctxt
-  globaldir <- globalPackageDir
-  localdir <- localPackageDir
+  globaldir <- pkgGlobalDirectory
+  localdir <- pkgLocalDirectory
 
   -- Get candidate directories from the global install location,
   -- and the local package directory
   locFiles <- coreLift $ candidateDirs localdir p bounds
   globFiles <- coreLift $ candidateDirs globaldir p bounds
   -- Look in all the package paths too
-  let pkgdirs = (options defs).dirs.package_dirs
-  pkgFiles <- coreLift $ traverse (\d => candidateDirs d p bounds) pkgdirs
+  d <- getDirs
+  pkgFiles <- coreLift $ traverse (\d => candidateDirs d p bounds) (package_dirs d)
 
   -- If there's anything locally, use that and ignore the global ones
   let allFiles = if isNil locFiles
@@ -142,7 +128,7 @@ addPkgDir : {auto c : Ref Ctxt Defs} ->
 addPkgDir p bounds = do
     Just p <- findPkgDir p bounds
         | Nothing => pure ()
-    addExtraDir p
+    addPackageDir p
 
 visiblePackages : String -> IO (List PkgDir)
 visiblePackages dir = filter viable <$> getPackageDirs dir
@@ -158,14 +144,13 @@ visiblePackages dir = filter viable <$> getPackageDirs dir
 findPackages : {auto c : Ref Ctxt Defs} -> Core (List PkgDir)
 findPackages
     = do -- global packages
-         defs <- get Ctxt
-         globalPkgs <- coreLift $ visiblePackages !globalPackageDir
+         globalPkgs <- coreLift $ visiblePackages !pkgGlobalDirectory
          -- additional packages in directories specified
-         let pkgDirs = (options defs).dirs.package_dirs
-         additionalPkgs <- coreLift $ traverse (\d => visiblePackages d) pkgDirs
+         d <- getDirs
+         additionalPkgs <- coreLift $ traverse (\d => visiblePackages d) (package_dirs d)
          -- local packages
-         localPkgs <- coreLift $ visiblePackages !localPackageDir
-         pure $ globalPkgs ++ (join additionalPkgs) ++ localPkgs
+         localPkgs <- coreLift $ visiblePackages !pkgLocalDirectory
+         pure $ globalPkgs ++ join additionalPkgs ++ localPkgs
 
 listPackages : {auto c : Ref Ctxt Defs} ->
                {auto o : Ref ROpts REPLOpts} ->

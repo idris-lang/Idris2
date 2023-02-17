@@ -1,0 +1,8 @@
+((:interpret ":cd \"b1\"") 1)
+((:load-file "src/B1.idr") 2)
+((:interpret "A.i") 4)
+((:name-at "i") 5)
+((:interpret ":cd \"../b2\"") 6)
+((:load-file "src/B2.idr") 7)
+((:interpret "A.i") 8)
+((:name-at "i") 9)

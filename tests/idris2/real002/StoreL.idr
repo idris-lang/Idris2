@@ -34,7 +34,7 @@ storeProg
     = let (>>=) = bindL in
       let (>>) = seqL in
         do putStr "Password: "
-           password <- Console.getStr
+           password <- Console.getLine
            connect $ \s =>
              do let True # s = login s password
                        | False # s => do putStrLn "Incorrect password"

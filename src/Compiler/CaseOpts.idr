@@ -269,6 +269,7 @@ Case of case:
 
 case (case x of C1 => E1
                 C2 => E2
+                _ => Ed
                 ...) of
      D1 => F1
      D2 => F2
@@ -288,6 +289,11 @@ case x of
                 D2 => F2
                 ...
                 _ => Fd
+    _ => case Ed of
+              D1 => F1
+              D2 => F2
+              ...
+              _ => Fd
 
 to minimise risk of duplication, do this only when E1, E2 are all
 constructor headed, or there's only one branch (for now)
@@ -297,11 +303,12 @@ constructor headed, or there's only one branch (for now)
 doCaseOfCase : FC ->
                (x : CExp vars) ->
                (xalts : List (CConAlt vars)) ->
+               (xdef : Maybe (CExp vars)) ->
                (alts : List (CConAlt vars)) ->
                (def : Maybe (CExp vars)) ->
                CExp vars
-doCaseOfCase fc x xalts alts def
-    = CConCase fc x (map updateAlt xalts) Nothing
+doCaseOfCase fc x xalts xdef alts def
+    = CConCase fc x (map updateAlt xalts) (map updateDef xdef)
   where
     updateAlt : CConAlt vars -> CConAlt vars
     updateAlt (MkConAlt n ci t args sc)
@@ -310,47 +317,62 @@ doCaseOfCase fc x xalts alts def
                        (map (weakenNs (mkSizeOf args)) alts)
                        (map (weakenNs (mkSizeOf args)) def)
 
+    updateDef : CExp vars -> CExp vars
+    updateDef sc = CConCase fc sc alts def
+
 doCaseOfConstCase : FC ->
                     (x : CExp vars) ->
                     (xalts : List (CConstAlt vars)) ->
+                    (xdef : Maybe (CExp vars)) ->
                     (alts : List (CConstAlt vars)) ->
                     (def : Maybe (CExp vars)) ->
                     CExp vars
-doCaseOfConstCase fc x xalts alts def
-    = CConstCase fc x (map updateAlt xalts) Nothing
+doCaseOfConstCase fc x xalts xdef alts def
+    = CConstCase fc x (map updateAlt xalts) (map updateDef xdef)
   where
     updateAlt : CConstAlt vars -> CConstAlt vars
     updateAlt (MkConstAlt c sc)
         = MkConstAlt c $
               CConstCase fc sc alts def
 
+    updateDef : CExp vars -> CExp vars
+    updateDef sc = CConstCase fc sc alts def
+
 tryCaseOfCase : CExp vars -> Maybe (CExp vars)
-tryCaseOfCase (CConCase fc (CConCase fc' x xalts Nothing) alts def)
-    = if canCaseOfCase xalts
-         then Just (doCaseOfCase fc' x xalts alts def)
+tryCaseOfCase (CConCase fc (CConCase fc' x xalts xdef) alts def)
+    = if canCaseOfCase xalts xdef
+         then Just (doCaseOfCase fc' x xalts xdef alts def)
          else Nothing
   where
+    isCon : CExp vars -> Bool
+    isCon (CCon {}) = True
+    isCon _ = False
+
     conCase : CConAlt vars -> Bool
-    conCase (MkConAlt _ _ _ _ (CCon _ _ _ _ _)) = True
+    conCase (MkConAlt _ _ _ _ (CCon {})) = True
     conCase _ = False
 
-    canCaseOfCase : List (CConAlt vars) -> Bool
-    canCaseOfCase [] = True
-    canCaseOfCase [x] = True
-    canCaseOfCase xs = all conCase xs
-tryCaseOfCase (CConstCase fc (CConstCase fc' x xalts Nothing) alts def)
-    = if canCaseOfCase xalts
-         then Just (doCaseOfConstCase fc' x xalts alts def)
+    canCaseOfCase : List (CConAlt vars) -> Maybe (CExp vars) -> Bool
+    canCaseOfCase [] _ = True
+    canCaseOfCase [x] Nothing = True
+    canCaseOfCase xs mdef = all conCase xs && maybe True isCon mdef
+tryCaseOfCase (CConstCase fc (CConstCase fc' x xalts xdef) alts def)
+    = if canCaseOfCase xalts xdef
+         then Just (doCaseOfConstCase fc' x xalts xdef alts def)
          else Nothing
   where
+    isConst : CExp vars -> Bool
+    isConst (CPrimVal {}) = True
+    isConst def = False
+
     constCase : CConstAlt vars -> Bool
-    constCase (MkConstAlt _ (CPrimVal _ _)) = True
+    constCase (MkConstAlt _ (CPrimVal {})) = True
     constCase _ = False
 
-    canCaseOfCase : List (CConstAlt vars) -> Bool
-    canCaseOfCase [] = True
-    canCaseOfCase [x] = True
-    canCaseOfCase xs = all constCase xs
+    canCaseOfCase : List (CConstAlt vars) -> Maybe (CExp vars) -> Bool
+    canCaseOfCase [] _ = True
+    canCaseOfCase [x] Nothing = True
+    canCaseOfCase xs mdef = all constCase xs && maybe True isConst mdef
 tryCaseOfCase _ = Nothing
 
 export

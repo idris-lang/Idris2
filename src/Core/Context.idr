@@ -647,11 +647,13 @@ export
 HasNames PartialReason where
   full gam NotStrictlyPositive = pure NotStrictlyPositive
   full gam (BadCall ns) = pure $ BadCall !(traverse (full gam) ns)
-  full gam (RecPath ns) = pure $ RecPath !(traverse (full gam) ns)
+  full gam (BadPath init n) = pure $ BadPath !(traverse (traversePair (full gam)) init) !(full gam n)
+  full gam (RecPath loop) = pure $ RecPath !(traverse (traversePair (full gam)) loop)
 
   resolved gam NotStrictlyPositive = pure NotStrictlyPositive
   resolved gam (BadCall ns) = pure $ BadCall !(traverse (resolved gam) ns)
-  resolved gam (RecPath ns) = pure $ RecPath !(traverse (resolved gam) ns)
+  resolved gam (BadPath init n) = pure $ BadPath !(traverse (traversePair (resolved gam)) init) !(resolved gam n)
+  resolved gam (RecPath loop) = pure $ RecPath !(traverse (traversePair (resolved gam)) loop)
 
 export
 HasNames Terminating where
@@ -2085,11 +2087,11 @@ getDirs
 
 export
 addExtraDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-addExtraDir dir = update Ctxt { options->dirs->extra_dirs $= (++ [dir]) }
+addExtraDir dir = update Ctxt { options->dirs->extra_dirs $= ((::) dir) . filter (/= dir) }
 
 export
-addPackageDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-addPackageDir dir = update Ctxt { options->dirs->package_dirs $= (++ [dir]) }
+addPackageDir: {auto c : Ref Ctxt Defs} -> String -> Core ()
+addPackageDir dir = update Ctxt { options->dirs->package_dirs $= ((::) dir) . filter (/= dir) }
 
 export
 addDataDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
@@ -2129,6 +2131,14 @@ getWorkingDir
     = do Just d <- coreLift $ currentDir
               | Nothing => throw (InternalError "Can't get current directory")
          pure d
+
+export
+setExtraDirs : {auto c : Ref Ctxt Defs} -> List String -> Core ()
+setExtraDirs dirs = update Ctxt { options->dirs->extra_dirs := dirs }
+
+export
+setPackageDirs : {auto c : Ref Ctxt Defs} -> List String -> Core ()
+setPackageDirs dirs = update Ctxt { options->dirs->package_dirs := dirs }
 
 export
 withCtxt : {auto c : Ref Ctxt Defs} -> Core a -> Core a

@@ -468,7 +468,7 @@ mutual
             {auto s : Ref Syn SyntaxInfo} ->
             ImpData' KindedName -> Core (PDataDecl' KindedName)
   toPData (MkImpData fc n ty opts cs)
-      = pure (MkPData fc n !(toPTerm startPrec ty) opts
+      = pure (MkPData fc n !(traverseOpt (toPTerm startPrec) ty) opts
                    !(traverse toPTypeDecl cs))
   toPData (MkImpLater fc n ty)
       = pure (MkPLater fc n !(toPTerm startPrec ty))
@@ -531,7 +531,7 @@ mutual
                 (catMaybes ds')))
   toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, opts, con, fs) <- toPRecord r
-           pure (Just (PRecord fc "" vis mbtot n ps opts con fs))
+           pure (Just (PRecord fc "" vis mbtot (MkPRecord n ps opts con fs)))
   toPDecl (IFail fc msg ds)
       = do ds' <- traverse toPDecl ds
            pure (Just (PFail fc msg (catMaybes ds')))

@@ -2,6 +2,131 @@
 
 ## [Next version]
 
+### Language changes
+
+* New magic constants `__LOC__`, `__FILE__`, `__LINE__`, `__COL__`
+  substituted at parsing time with a string corresponding to the
+  location, filename, line or column number associated to the
+  magic constant's position.
+* The termination checker is now a faithful implementation of the 2001 paper on
+  size-change termination by Lee, Jones and Ben-Amram.
+
+### REPL changes
+
+* Adds documentation for unquotes `~( )`.
+
+### Backend changes
+
+#### RefC
+
+* Adds support for `CFLAGS`, `CPPFLAGS`, and `LDFLAGS` to facilitate building on
+  systems with non-standard installation locations of libraries (e.g. GMP).
+  Versions of the flags with the `IDRIS2_` prefix can also be used and take
+  precedence.
+
+#### Chez
+
+* Non-recursive top-level constants are compiled to eagerly evaluated
+  constants in Chez Scheme.
+
+#### Node.js/Browser
+
+* Generated JavaScript files now include a shebang when using the Node.js backend
+* NodeJS now supports `popen`/`pclose` for the `Read` mode.
+* `getChar` is now supported on Node.js and `putChar` is supported on both JavaScript backends.
+
+### Compiler changes
+
+* If `IAlternative` expression with `FirstSuccess` rule fails to typecheck,
+  compiler now prints all tried alternatives, not only the last one.
+
+* The elaboration of records has been changed so that the unbound implicits in
+  the parameters' types become additional parameters e.g.
+  ```idris2
+  record HasLength (xs : List a) (n : Nat) where
+    constructor MkHasLength
+    0 prf : length xs === n
+  ```
+  is now correctly elaborated to
+  ```idris2
+  record HasLength {0 a : Type} (xs : List a) (n : Nat) where
+    constructor MkHasLength
+    0 prf : length xs === n
+  ```
+  instead of failing with a strange error about (a) vs (a .rec).
+
+* Elaboration of datatypes now respects the totality annotations:
+  defining a `covering` or `partial` datatype in a `%default total`
+  file will not lead to a positivity error anymore.
+
+* Fixed a bug in the positivity checker that meant `Lazy` could be used
+  to hide negative occurences.
+
+* Made sure that the positivity checker now respects `assert_total` annotations.
+
+### Library changes
+
+#### Prelude
+
+* Improved performance of functions `isNL`, `isSpace`, and `isHexDigit`.
+
+* Implements `Foldable` and `Traversable` for pairs, right-biased as `Functor`.
+* Added a constructor (`MkInterpolation`) to `Interpolation`.
+* Added an `Interpolation` implementation for `Void`.
+
+#### Base
+
+* Deprecates `setByte` and `getByte` from `Data.Buffer` for removal in a future
+  release. Use `setBits8` and `getBits8` instead (with `cast` if you need to
+  convert a `Bits8` to an `Int`), as their values are limited, as opposed to the
+  assumption in `setByte` that the value is between 0 and 255.
+
+* Adds RefC support for 16- and 32-bit access in `Data.Buffer`.
+* Add `Show` instance to `Data.Vect.Quantifiers.All` and add a few helpers for listy
+  computations on the `All` type.
+* Add an alias for `HVect` to `All id` in `Data.Vect.Quantifiers.All`. This is the
+  approach to getting a heterogeneous Vect of elements that is generall preferred by
+  the community vs. a standalone type as seen in `contrib`.
+* Add Data.List.HasLength from the compiler codebase slash contrib library but
+  adopt the type signature from the compiler codebase and some of the naming
+  from the contrib library. The type ended up being `HasLength n xs` rather than
+  `HasLength xs n`.
+
+* `System`'s `die` now prints the error message on stderr rather than stdout
+
+#### System
+
+* Changes `getNProcessors` to return the number of online processors rather than
+  the number of configured processors.
+
+#### Contrib
+
+* Remove Data.List.HasLength from contrib library but add it to the base library
+  with the type signature from the compiler codebase and some of the naming
+  from the contrib library. The type ended up being `HasLength n xs` rather than
+  `HasLength xs n`.
+
+#### Papers
+
+* In `Control.DivideAndConquer`: a port of the paper
+  `A Type-Based Approach to Divide-And-Conquer Recursion in Coq`
+  by Pedro Abreu, Benjamin Delaware, Alex Hubers, Christa Jenkins,
+  J. Garret Morris, and Aaron Stump
+
+### Other Changes
+
+* The `data` subfolder of an installed or local dependency package is now automatically
+  recognized as a "data" directory by Idris 2. See the
+  [documentation on Packages](https://idris2.readthedocs.io/en/latest/reference/packages.html)
+  for details.
+* The compiler no longer installs its own C support library into `${PREFIX}/lib`. This folder's
+  contents were always duplicates of files installed into `${PREFIX}/idris2-${IDRIS2_VERSION}/lib`. If you
+  need to adjust any tooling or scripts, point them to the latter location which still contains
+  these installed library files.
+* Renamed `support-clean` Makefile target to `clean-support`. This is in line with most of the `install-<something>` and `clean-<something>` naming.
+
+## v0.6.0
+
 ### REPL changes
 
 * New experimental Scheme based evaluator (only available if compiled via
@@ -10,6 +135,9 @@
 * New option `evaltiming` to time how long an evaluation takes at the REPL,
   set with `:set evaltiming`.
 * Renames `:lp/loadpackage` to `:package`.
+* Adds `:import`, with the same functionality as `:module`.
+* Adds the ability to request detailed help via `:help <replCmd>`, e.g.
+  `:help :help` or `:help :let`. This also works with the `:?` and `:h` aliases.
 
 ### Language changes
 
@@ -28,10 +156,11 @@
   The former is now deprecated in favour of the latter syntax.
   The compiler will issue a warning when using the `record` keyword.
 
-* Interpolated strings now make use of `concat` which is compiled into `fastConcat`
-  The interpolated slices now make use of the `Interpolation` interface available
-  in the prelude. It has only one method `interpolate` which is called for every
-  expression that appears within an interpolation slice.
+* Interpolated strings now make use of `concat` which is compiled into
+  `fastConcat`.
+  The interpolated slices now make use of the `Interpolation` interface
+  available in the prelude. It has only one method `interpolate` which is called
+  for every expression that appears within an interpolation slice.
 
   ```idris
   "hello \{world}"
@@ -43,32 +172,82 @@
   concat [interpolate "hello ", interpolate world]
   ```
 
-  This allows you to write expressions within slices without having to call `show`
-  but for this you need to implement the `Interpolation` interface for each type
-  that you intend to use within an interpolation slice. The reason for not reusing
-  `Show` is that `Interpolation` and `Show` have conflicting semantics, typically
-  this is the case for `String` which adds double quotes around the string.
+  This allows you to write expressions within slices without having to call
+  `show` but for this you need to implement the `Interpolation` interface for
+  each type that you intend to use within an interpolation slice. The reason for
+  not reusing `Show` is that `Interpolation` and `Show` have conflicting
+  semantics, typically this is the case for `String` which adds double quotes
+  around the string.
 
-* A `failing` block that requires its body to fail with a compile error was added.
-  Optionally this block may contain a string which is checked to be contained in the error message.
+* Adds a `failing` block that requires its body to fail with a compile error.
+  Optionally this block may contain a string which is checked to be contained in
+  the error message.
 
-* Bodies of `mutual`, `failing`, `using` and `parameters` blocks are required to be indented
-  comparing to the position of the keyword.
+* Bodies of `mutual`, `failing`, `using` and `parameters` blocks are required to
+  be indented comparing to the position of the keyword.
 
 * `%nomangle` has been deprecated in favour of `%export`.
+
+* Records now support DataOpts, i.e. we can write things like
+  ```idris
+  record Wrap (phantom : Type) (a : Type) where
+    [search a]    -- this was previously not supported
+    constructor MkWrap
+    unWrap : a
+  ```
+
+* Adds ability to forward-declare interface implementations, e.g.:
+  ```idris
+  implementation IsOdd Nat    -- forward declare for use in `IsEven`
+
+  implementation IsEven Nat where
+   isEven 0 = True
+   isEven (S k) = not $ isOdd k
+
+  implementation IsOdd Nat where
+    isOdd 0 = False
+    isOdd (S k) = not $ isEven k
+  ```
+
+* Adds ability to forward-declare records, e.g.:
+  ```idris
+  record B
+  record A where
+    b : B
+  record B where
+    a : A
+  ```
 
 ### Compiler changes
 
 * Removes deprecated support for `void` primitive. Now `void` is supported via
   `prim__void`.
-* Adds `%deprecate` pragma that can be used to warn when deprecated functions are used.
-* Package files now support a `langversion` field that can be used to specify what versions of Idris a package supports. As with dependency versions, `>`, `<`, `>=`, and `<=` can all be used.
+* Adds `%deprecate` pragma that can be used to warn when deprecated functions
+  are used.
+* Package files now support a `langversion` field that can be used to specify
+  what versions of Idris a package supports. As with dependency versions, `>`,
+  `<`, `>=`, and `<=` can all be used.
   + For example, `langversion >= 0.5.1`.
-* Alternatives for primitive types of the `Core.TT.Constant` are moved out to a separate data type `PrimTypes`.
-  Signatures of functions that were working with `Constant` are changed to use `PrimTypes` when appropriate.
+* Alternatives for primitive types of the `Core.TT.Constant` are moved out to a
+  separate data type `PrimTypes`. Signatures of functions that were working with
+  `Constant` are changed to use `PrimTypes` when appropriate.
 * Codegens now take an additional `Ref Syn SyntaxInfo` argument. This empowers
   compiler writers to pretty print core terms e.g. to add comments with the
   original type annotations in the generated code.
+* `Refc.showcCleanStringChar` forgot some symbols which have now been added,
+  ensuring the string is properly cleaned.
+* Constant-folds all casts and integral expressions (with the exception of type
+  `Int`), leading to improved performance.
+* Increases accuracy of error reporting for keywords.
+* Adds the `eval.stuck.outofscope` log topic in order to be able to spot when we
+  get stuck due to a function being out of scope.
+* Improves the error reporting for syntactically incorrect records.
+* `IPragma` now carries an `FC` with it for better error reporting.
+* Adds the number of enum constructors to enum types during codegen, to allow
+  for trivial conversion to, e.g., `Bits32`.
+* Adds constant-folding for `Nat` literals.
+* Fixes `CyclicMeta` in `TTImp.ProcessDef` being considered a recoverable error.
+
 
 ### IDE protocol changes
 
@@ -88,17 +267,35 @@
   + idris2-mode [PR#11](https://github.com/idris-community/idris2-mode/pull/11)
   + idris-mode [PR#547](https://github.com/idris-hackers/idris-mode/pull/547)
 
+* The IDE protocol now supports specifying a socket and hostname via the
+    `--ide-mode-socket` flag, allowing multiple IDE server instances to run on
+    the same machine.
+
+### Interactive Editing changes
+
+* Case-split no longer generates syntactically invalid Idris when splitting on
+  auto-implicits.
+* Case-split no longer shadows the function name when an internal named argument
+  has the same name as the function.
+* Case-split now avoids using upper-case names for pattern variables.
+
 ### Library changes
 
 #### Prelude
 
-* `elemBy` and `elem` are now defined for any `Foldable` structure. The specialised
-  versions defined in `Data.(List/SnocList/Vect)` have been removed.
-* `filter` and `mapMaybe` functions for `List` were moved to `prelude` from `base`.
+* `elemBy` and `elem` are now defined for any `Foldable` structure. The
+  specialised versions defined in `Data.(List/SnocList/Vect)` have been removed.
+* `filter` and `mapMaybe` functions for `List` were moved to `prelude` from
+  `base`.
 * Basic functions of `SnocList` (`(++)`, `length`, `filter`, `mapMaybe`) and
   implementations of `Eq` and `Ord` were moved to `prelude` from `base`.
-  This may lead to a need to qualifying functions (e.g. `List.filter`) due to possible ambiguity.
-* "Fish" and "chips" operators of `SnocList` were moved to `Prelude.Types` from `Prelude.Basics`.
+  This may lead to a need to qualifying functions (e.g. `List.filter`) due to
+  possible ambiguity.
+* "Fish" and "chips" operators of `SnocList` were moved to `Prelude.Types` from
+  `Prelude.Basics`.
+* Adds `contra` for returning the opposite of a given `Ordering`.
+* Fix `pow`, using backend implementations.
+* Add `subtract` alias for `(-)`
 
 #### Base
 
@@ -109,32 +306,50 @@
 * Adds the `Injective` interface in module `Control.Function`.
 * Changes `System.pclose` to return the return code of the closed process.
 * Deprecates `base`'s `Data.Nat.Order.decideLTE` in favor of `Data.Nat.isLTE`.
-* Removes `base`'s deprecated `System.Directory.dirEntry`. Use `nextDirEntry` instead.
-* Removes `base`'s deprecated `Data.String.fastAppend`. Use `fastConcat` instead.
+* Removes `base`'s deprecated `System.Directory.dirEntry`. Use `nextDirEntry`
+  instead.
+* Removes `base`'s deprecated `Data.String.fastAppend`. Use `fastConcat`
+  instead.
 * `System.File.Buffer.writeBufferData` now returns the number of bytes that have
-   been written when there is a write error.
+  been written when there is a write error.
 * `System.File.Buffer.readBufferData` now returns the number of bytes that have
-   been read into the buffer.
+  been read into the buffer.
 * Adds the `Data.List.Quantifiers.Interleaving` and
   `Data.List.Quantifiers.Split` datatypes, used for provably splitting a list
   into a list of proofs and a list of counter-proofs for a given property.
-* Properties of the `List1` type were moved from `Data.List1` to `Data.List1.Properties`.
+* Properties of the `List1` type were moved from `Data.List1` to
+  `Data.List1.Properties`.
 * `Syntax.PreorderReasoning` was moved to `base` from `contrib`.
 * Move the types and functions in `Data.Vect.Quantifiers` to their respective
   namespaces (`All` for all-related things, and `Any` for any-related things) to
   make the code consistent with the other quantifiers (`List` and `SnocList`).
 * Set the `all` and `any` functions for proof-quantifiers to `public export`
   instead of `export`, allowing them to be used with auto-implicit `IsYes`.
-* Legacy duplicating type `Given` (with constructor `Always`) is removed from the `Decidable.Decidable`.
-  Use the type `IsYes` (with constructor `ItIsYes`) from the same module instead.
+* Legacy duplicating type `Given` (with constructor `Always`) is removed from
+  the `Decidable.Decidable`. Use the type `IsYes` (with constructor `ItIsYes`)
+  from the same module instead.
 * Adds `Data.List1.Elem`, ported from `Data.List.Elem`.
 * Adds `Data.List1.Quantifiers`, ported from `Data.List.Quantifiers`.
-* Changes the order of arguments in `RWST` transformer's runners functions (`runRWST`. `evalRWST`, `execRWST`),
-  now transformer argument is the last, as in the other standard transformers, like `ReaderT` and `StateT`.
+* Changes the order of arguments in `RWST` transformer's runners functions
+  (`runRWST`. `evalRWST`, `execRWST`), now transformer argument is the last, as
+  in the other standard transformers, like `ReaderT` and `StateT`.
 * Adds `Data.Fin.finToNatEqualityAsPointwise`,
   which takes a witness of `finToNat k = finToNat l` and proves `k ~~~ l`.
 * Drop first argument (path to the `node` executable) from `System.getArgs` on
   the Node.js backend to make it consistent with other backends.
+* Adds `Uninhabited` instances for `FZ ~~~ FS k` and `FS k ~~~ FZ`.
+* Change behavior of `channelPut` on the Racket backend to match the behavior
+  on the Chez backend.
+* `fGetLine` has been marked as `covering` instead of `total`.
+* Adds the ability to derive `Functor` and `Traversable` using `%runElab derive`
+    in the implementation definition.
+* Fixes memory leaks in `currentDir`, `fGetLine`, and `fGetChars`.
+* Fixes `natToFinLT` being O(n) by proving that `So (x < n)` implies `LT x n`,
+    allowing the compiler to optimise `natToFinLT` away.
+* Fixes `SnocList.foldr` and `SnocList.foldMap` to be performant and stack-safe.
+* Add `insertAt`, `deleteAt` and `replaceAt` for `List`
+* Add `scanr`, `scanr1` and `unsnoc` for `Vect`
+* Implement `DecEq` for `SnocList`
 
 #### Test
 
@@ -142,14 +357,20 @@
   libraries instead of `System.Future` from `contrib`. In addition to reducing
   the dependency on `contrib` in the core of Idris2, this also seems to provide
   a small performance improvement for `make test`.
+* Splits `runner` into `runnerWith` for processing the options and configuring
+  the test pools, and a new `runner` function for reading options from the
+  command-line.
 
 #### Contrib
 
-* `System.Random` support for `Int` changed to `Int32`; it already limited itself
-  to 32 bits but now that is codified. JavaScript backends are now supported.
+* `System.Random` support for `Int` changed to `Int32`; it already limited
+  itself to 32 bits but now that is codified. JavaScript backends are now
+  supported.
 * Removes `contrib`'s deprecated `Data.Num.Implementations` module. See
   `Prelude.Interfaces` instead.
 * Implements `Show tok => Show (ParsingError tok)` for `Text.Parser.Core`.
+* `Control.Linear.LIO` has been moved from `contribs` to `linear` to guarantee
+  that idris2 does not need to rely on contribs anymore.
 
 #### Network
 
@@ -157,10 +378,58 @@
   can also access the `sendBytes`, `recvBytes` and `recvAllBytes` functions of
   the underlying `Socket` module.
 
+#### Papers, Linear
+
+* Creates the `papers` and `linear` libraries to remove bits of type theory and
+  pl propaganda from `contrib` and instead clearly have them as implementations
+  of their respective papers.
+* Creates `Data.Linear.{Notation,LEither,LMaybe,LVect,Pow}`.
+
+* Moves `Data.Container`, based on the papers "Categories of Containers" by
+  Michael Abbott, Thorsten Altenkirch, and Neil Ghani, and "Derivatives of
+  Containers" by Michael Abbott, Thorsten Altenkirch, Neil Ghani, and Conor
+  McBride, to `papers`.
+  [https://doi.org/10.1007/3-540-36576-1_2](https://doi.org/10.1007/3-540-36576-1_2)
+  [https://doi.org/10.1007/3-540-44904-3_2](https://doi.org/10.1007/3-540-44904-3_2)
+* Moves the implementation of "Indexed induction-recursion" by Dybjer and Setzer
+  to `papers`.
+  [https://doi.org/10.1016/j.jlap.2005.07.001](https://doi.org/10.1016/j.jlap.2005.07.001)
+* Ports "How to Take the Inverse of a Type" by Daniel Marshall and Dominic
+  Orchard as `Data.Linear.{Communications,Diff,Inverse}`.
+  [https://doi.org/10.4230/LIPIcs.ECOOP.2022.5](https://doi.org/10.4230/LIPIcs.ECOOP.2022.5)
+* Moves `Data.OpenUnion`, inspired by the paper "Freer monads, more extensible
+  effects" by Oleg Kiselyov and Hiromi Ishii, to `papers`.
+  [https://doi.org/10.1145/2887747.2804319](https://doi.org/10.1145/2887747.2804319)
+* Moves `Data.Recursion.Free`, partially based on "Turing-Completeness Totally
+  Free" by Conor McBride, to `papers`.
+  [https://doi.org/10.1007/978-3-319-19797-5_13](https://doi.org/10.1007/978-3-319-19797-5_13)
+* Moves `Data.Tree.Perfect` to `papers`.
+* Moves `Data.Vect.Binary`, taken from the paper "Heterogeneous Binary
+  Random-access Lists" by Wouter Swierstra, to `papers`.
+  [https://doi.org/10.1017/S0956796820000064](https://doi.org/10.1017/S0956796820000064)
+* Ports "Applications of Applicative Proof Search" by Liam O'Connor as
+  `Search.{Generator,HDecidable,Negation,Properties,CTL,GCL}`.
+  [https://doi.org/10.1145/2976022.2976030](https://doi.org/10.1145/2976022.2976030)
+* Implements "Dependent Tagless Final" by Nicolas Biri as `Language.Tagless`.
+  [https://doi.org/10.1145/3498886.3502201](https://doi.org/10.1145/3498886.3502201)
+* Ports Todd Waugh Ambridge's Agda blog post series "Search over uniformly
+  continuous decidable predicates on infinite collections of types" as
+  `Search.Tychonoff`.
+  [https://www.cs.bham.ac.uk/~txw467/tychonoff/InfiniteSearch1.html](https://www.cs.bham.ac.uk/~txw467/tychonoff/InfiniteSearch1.html)
+* Ports "Auto in Agda - Programming proof search using reflection" by Wen Kokke
+  and Wouter Swierstra as `Search.Auto`.
+  [https://doi.org/10.1007/978-3-319-19797-5_14](https://doi.org/10.1007/978-3-319-19797-5_14)
+* Ports "Computing with Generic Trees in Agda" by Stephen Dolan as `Data.W`.
+  [https://doi.org/10.1145/3546196.3550165](https://doi.org/10.1145/3546196.3550165)
+
 ### Other changes
 
 * Adds docstrings for the lambda-lifted IR.
-* Package files are now installed along-side build artifacts for installed packages. This means all transitive dependencies of packages you specify with the `depends` field are added automatically.
+* Package files are now installed along-side build artifacts for installed
+  packages. This means all transitive dependencies of packages you specify with
+  the `depends` field are added automatically.
+* No longer builds `contrib` and `papers` during bootstrap, as these may rely on
+  new features not yet present in the bootstrap version of Idris2.
 
 ## v0.5.0/0.5.1
 
@@ -246,7 +515,7 @@ Changed
   some non-deterministic properties (see issue
   [#1552](https://github.com/idris-lang/idris2/issues/1552)).
   NOTE: Due to complications with race-conditions, Chez not having channels
-  built in, etc, the reimplementation changes the semantics slightly:
+  built-in, etc, the reimplementation changes the semantics slightly:
   `channelPut` no longer blocks until the value has been received under the
   `chez` backend, but instead only blocks if there is already a value in the
   channel that has not been received.

@@ -148,18 +148,10 @@ process : {auto c : Ref Ctxt Defs} ->
 process (Interpret cmd)
     = replWrap $ interpret cmd
 process (LoadFile fname_in _)
-    = do
-         defs <- get Ctxt
-         let extraDirs = defs.options.dirs.extra_dirs
-         let fname = case !(findIpkg (Just fname_in)) of
+    = do let fname = case !(findIpkg (Just fname_in)) of
                           Nothing => fname_in
                           Just f' => f'
-         res <- replWrap $ Idris.REPL.process (Load fname) >>= outputSyntaxHighlighting fname
-         --findIpkg keeps adding extra dirs everytime its run, so we need to reset
-         --it back to what it was
-         defs <- get Ctxt
-         put Ctxt ({ options->dirs->extra_dirs := extraDirs } defs)
-         pure res
+         replWrap $ Idris.REPL.process (Load fname) >>= outputSyntaxHighlighting fname
 
 process (NameAt name Nothing)
     = do defs <- get Ctxt
@@ -330,6 +322,8 @@ displayIDEResult outf i  (REPL $ REPLError err)
   = printIDEError outf i err
 displayIDEResult outf i  (REPL RequestedHelp  )
   = printIDEResult outf i $ AString displayHelp
+displayIDEResult outf i  (REPL $ RequestedDetails details)
+  = printIDEResult outf i $ AString details
 displayIDEResult outf i  (REPL $ Evaluated x Nothing)
   = printIDEResultWithHighlight outf i
   $ mapFst AString
@@ -357,8 +351,7 @@ displayIDEResult outf i  (REPL $ FileLoaded x)
 displayIDEResult outf i  (REPL $ ErrorLoadingFile x err)
   = printIDEError outf i $ reflow "Error loading file" <++> pretty0 x <+> colon <++> pretty0 (show err)
 displayIDEResult outf i  (REPL $ ErrorsBuildingFile x errs)
-  = do errs' <- traverse perror errs
-       printIDEError outf i $ reflow "Error(s) building file" <++> pretty0 x <+> colon <++> vsep errs'
+  = printIDEError outf i $ reflow "Error(s) building file" <++> pretty0 x -- messages already displayed while building
 displayIDEResult outf i  (REPL $ NoFileLoaded)
   = printIDEError outf i $ reflow "No file can be reloaded"
 displayIDEResult outf i  (REPL $ CurrentDirectory dir)
@@ -433,7 +426,7 @@ displayIDEResult outf i (NameLocList dat)
     sexpOriginDesc (PhysicalIdrSrc modIdent) = do
       defs <- get Ctxt
       let wdir = defs.options.dirs.working_dir
-      let pkg_dirs = filter (/= ".") defs.options.dirs.extra_dirs
+      let pkg_dirs = filter (/= ".") (defs.options.dirs.extra_dirs ++ defs.options.dirs.package_dirs)
       let exts = listOfExtensionsStr
       Just fname <- catch
           (Just . (wdir </>) <$> nsToSource replFC modIdent) -- Try local source first

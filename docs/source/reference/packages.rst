@@ -162,3 +162,51 @@ package will then be located as follows:
 In each case, if more than one version satisfies the constraint, it will choose
 the one with the highest version number.
 If package versions are omitted in directory names, they are treated as the version ``0``.
+
+Support file install directories
+================================
+
+As noted above, packages can be installed globally or locally to be used as dependencies in
+other projects. In either case, there are two directories within a package's install root that
+Idris 2 treats specially when the package is depended upon by some other Idris package.
+
+Those directories are ``lib`` and ``data``.
+
+Below we will refer to these directories as ``pkgname-<version>/lib`` and ``pkgname-<version>/data``
+and in all cases these folders may be located locally in the depending project within a ``depends``
+directory or globally (you can ask Idris 2 for the global install directory with ``idris2 --libdir``).
+
+Library files
+-------------
+
+Idris will look for library files at ``pkgname-<version>/lib``. Library files are those that
+will need to be around whenever an executable that depends on your library is run. That is,
+these files are not built into the executable, but rather linked against or otherwise referred
+to during building and then loaded in at runtime. A common example of this type of file is a
+shared object file (these commonly have the extension ``.so`` on Linux systems and ``.dylib`` on Mac OS
+systems).
+
+When building with the Scheme or Refc backends, you may want your package to use Idris 2's ``C`` FFI
+and rely on a ``C`` support file. The FFI interface is documented elsewhere so we won't go into that
+here. Once you do have a support file written in ``C``, you can build an ``so`` file using your
+package's post-build hook. Then, install (copy) that ``so`` file into the ``lib`` subfolder where
+Idris has installed your package in your post-install hook. When an executable depends on your package,
+Idris will copy shared object files from the ``lib`` directory into the build folder for the exectuable.
+
+Data files
+----------
+
+Idris will look for data files at ``pkgname-<version>/data``. Data files are a bit open-ended
+in how they are used. One important use-case is adding support files for the ``Javascript`` FFI.
+``Javascript`` support files are different from ``C`` support files in that they get built *into* the
+executable rather than installed alongside it. The FFI interface is documented elsewhere, but we will
+briefly touch on the subject to describe the end-to-end packaging of JS support files using the
+``data`` directory.
+
+When building with the NodeJS backend, you can refer to functions you've defined in external
+support JS files by using the FFI pattern ``node:support:my_func,my_lib``. This pattern will prompt
+idris to look in any ``data`` directories it knows about for a ``js`` folder and a file named
+``my_lib.js`` within it. So, you can specify a post-install hook for your package that copies any
+needed support JS files into the ``pkgname-<version>/data/js`` folder to enable Idris to later build
+that support file into any JS executables that depend on your package.
+

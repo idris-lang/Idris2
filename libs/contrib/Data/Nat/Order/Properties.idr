@@ -105,3 +105,16 @@ multLteMonotoneLeft a b r a_lt_b =
   rewrite multCommutative a r in
   rewrite multCommutative b r in
   multLteMonotoneRight r a b a_lt_b
+
+export
+lteNotLtEq : (a, b : Nat) -> LTE a b -> Not (LT a b) -> a = b
+lteNotLtEq a b a_lte_b not_n_lte_n =
+  let b_lte_a = notLTImpliesGTE not_n_lte_n
+  in antisymmetric a_lte_b b_lte_a
+
+-- Try succ left element LTE. Returns LT if successful, otherwise proof of equality a and b
+export
+decomposeLte : (a, b : Nat) -> LTE a b -> Either (LT a b) (a = b)
+decomposeLte a b a_lte_b with (isLT a b)
+  decomposeLte a b a_lte_b | Yes a_lt_b = Left a_lt_b
+  decomposeLte a b a_lte_b | No not_a_lt_b = Right $ lteNotLtEq a b a_lte_b not_a_lt_b

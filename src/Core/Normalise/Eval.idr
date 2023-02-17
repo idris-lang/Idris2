@@ -140,7 +140,8 @@ parameters (defs : Defs, topopts : EvalOpts)
                       eval env (arg :: locs) (Local {name = UN (Basic "fvar")} fc Nothing _ First) stk
                   _ => pure (NForce fc r tm' stk)
     eval env locs (PrimVal fc c) stk = pure $ NPrimVal fc c
-    eval env locs (Erased fc i) stk = pure $ NErased fc i
+    eval env locs (Erased fc a) stk
+      = NErased fc <$> traverse @{%search} @{CORE} (\ t => eval env locs t stk) a
     eval env locs (TType fc u) stk = pure $ NType fc u
 
     -- Apply an evaluated argument (perhaps cached from an earlier evaluation)
@@ -190,7 +191,8 @@ parameters (defs : Defs, topopts : EvalOpts)
                     eval env [arg] (Local {name = UN (Basic "fvar")} fc Nothing _ First) stk
                  _ => pure (NForce fc r tm' (args ++ stk))
     applyToStack env nf@(NPrimVal fc _) _ = pure nf
-    applyToStack env nf@(NErased fc _) _ = pure nf
+    applyToStack env (NErased fc a) stk
+      = NErased fc <$> traverse @{%search} @{CORE} (\ t => applyToStack env t stk) a
     applyToStack env nf@(NType fc _) _ = pure nf
 
     evalLocClosure : {auto c : Ref Ctxt Defs} ->
@@ -334,6 +336,9 @@ parameters (defs : Defs, topopts : EvalOpts)
              LocalEnv free more -> EvalOpts -> FC ->
              Stack free -> NF free -> CaseAlt more ->
              Core (CaseResult (NF free))
+    -- Dotted values should still reduce at compile time
+    tryAlt {more} env loc opts fc stk (NErased _ (Dotted tm)) alt
+         = tryAlt {more} env loc opts fc stk tm alt
     -- Ordinary constructor matching
     tryAlt {more} env loc opts fc stk (NDCon _ nm tag' arity args') (ConCase x tag args sc)
          = if tag == tag'
@@ -380,6 +385,7 @@ parameters (defs : Defs, topopts : EvalOpts)
         concrete (NPrimVal _ _) = True
         concrete (NBind _ _ _ _) = True
         concrete (NType _ _) = True
+        concrete (NDelay _ _ _ _) = True
         concrete _ = False
     tryAlt _ _ _ _ _ _ _ = pure GotStuck
 
@@ -581,7 +587,7 @@ gType fc u = MkGlue True (pure (TType fc u)) (const (pure (NType fc u)))
 
 export
 gErased : FC -> Glued vars
-gErased fc = MkGlue True (pure (Erased fc False)) (const (pure (NErased fc False)))
+gErased fc = MkGlue True (pure (Erased fc Placeholder)) (const (pure (NErased fc Placeholder)))
 
 -- Resume a previously blocked normalisation with a new environment
 export

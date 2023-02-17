@@ -154,7 +154,7 @@ etaContract tm = do
 export
 getValArity : Defs -> Env Term vars -> NF vars -> Core Nat
 getValArity defs env (NBind fc x (Pi _ _ _ _) sc)
-    = pure (S !(getValArity defs env !(sc defs (toClosure defaultOpts env (Erased fc False)))))
+    = pure (S !(getValArity defs env !(sc defs (toClosure defaultOpts env (Erased fc Placeholder)))))
 getValArity defs env val = pure 0
 
 export
@@ -308,6 +308,9 @@ replace' {vars} tmpi defs env lhs parg tm
         = do args' <- traverse (traversePair repArg) args
              tm' <- repSub tm
              pure $ applyWithFC (TForce fc r tm') args'
+    repSub (NErased fc (Dotted t))
+        = do t' <- repSub t
+             pure (Erased fc (Dotted t'))
     repSub tm = do empty <- clearDefs defs
                    quote empty env tm
 

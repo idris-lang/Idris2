@@ -2,6 +2,7 @@ module Idris.Driver
 
 import Compiler.Common
 
+import Core.Binary
 import Core.Context.Log
 import Core.Core
 import Core.Directory
@@ -27,6 +28,8 @@ import Data.List
 import Data.String
 import System
 import System.Directory
+import System.File.Meta
+import System.File.Virtual
 import Libraries.Utils.Path
 import Libraries.Utils.Term
 
@@ -48,6 +51,8 @@ updateEnv : {auto c : Ref Ctxt Defs} ->
             Core ()
 updateEnv
     = do defs <- get Ctxt
+         noColor <- coreLift [ isJust noc || not tty | noc <- idrisGetEnv "NO_COLOR", tty <- isTTY stdout ]
+         when noColor $ setColor False
          bprefix <- coreLift $ idrisGetEnv "IDRIS2_PREFIX"
          setPrefix (fromMaybe yprefix bprefix)
          bpath <- coreLift $ idrisGetEnv "IDRIS2_PATH"
@@ -239,6 +244,9 @@ quitOpts : List CLOpt -> IO Bool
 quitOpts [] = pure True
 quitOpts (Version :: _)
     = do putStrLn versionMsg
+         pure False
+quitOpts (TTCVersion :: _)
+    = do printLn ttcVersion
          pure False
 quitOpts (Help Nothing :: _)
     = do putStrLn usage

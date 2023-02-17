@@ -47,7 +47,7 @@ parameters (f : RawImp' nm -> RawImp' nm)
   export
   mapImpData : ImpData' nm -> ImpData' nm
   mapImpData (MkImpData fc n tycon opts datacons)
-    = MkImpData fc n (mapTTImp tycon) opts (map mapImpTy datacons)
+    = MkImpData fc n (map mapTTImp tycon) opts (map mapImpTy datacons)
   mapImpData (MkImpLater fc n tycon) = MkImpLater fc n (mapTTImp tycon)
 
   export

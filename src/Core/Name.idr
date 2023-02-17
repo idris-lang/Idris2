@@ -157,6 +157,14 @@ isField (Field str) = Just str
 isField _ = Nothing
 
 export
+caseFn : Name -> Bool
+caseFn (CaseBlock _ _) = True
+caseFn (DN _ n) = caseFn n
+caseFn (NS _ n) = caseFn n
+caseFn _ = False
+
+
+export
 displayUserName : UserName -> String
 displayUserName (Basic n) = n
 displayUserName (Field n) = n

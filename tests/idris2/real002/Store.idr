@@ -37,7 +37,7 @@ storeProg
     = app1 $ do
          s <- connect
          app $ putStr "Password: "
-         pwd <- app $ getStr
+         pwd <- app $ getLine
          True # s <- login s pwd
               | False # s => do app $ putStrLn "Login failed"
                                 app $ disconnect s

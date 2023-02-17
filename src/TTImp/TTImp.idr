@@ -321,7 +321,10 @@ mutual
 
   public export
   data ImpData' : Type -> Type where
-       MkImpData : FC -> (n : Name) -> (tycon : RawImp' nm) ->
+       MkImpData : FC -> (n : Name) ->
+                   -- if we have already declared the type using `MkImpLater`,
+                   -- we are allowed to leave the telescope out here.
+                   (tycon : Maybe (RawImp' nm)) ->
                    (opts : List DataOpt) ->
                    (datacons : List (ImpTy' nm)) -> ImpData' nm
        MkImpLater : FC -> (n : Name) -> (tycon : RawImp' nm) -> ImpData' nm
@@ -331,9 +334,10 @@ mutual
   export
   covering
   Show nm => Show (ImpData' nm) where
-    show (MkImpData fc n tycon _ cons)
-        = "(%data " ++ show n ++ " " ++ show tycon ++ " " ++
-           show cons ++ ")"
+    show (MkImpData fc n (Just tycon) _ cons)
+        = "(%data " ++ show n ++ " " ++ show tycon ++ " " ++ show cons ++ ")"
+    show (MkImpData fc n Nothing _ cons)
+        = "(%data " ++ show n ++ " " ++ show cons ++ ")"
     show (MkImpLater fc n tycon)
         = "(%datadecl " ++ show n ++ " " ++ show tycon ++ ")"
 
@@ -711,12 +715,12 @@ implicitsAs n defs ns tm
         -- So we first peel off all of the explicit quantifiers corresponding
         -- to these variables.
         findImps ns es (_ :: locals) (NBind fc x (Pi _ _ Explicit _) sc)
-          = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+          = do body <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
                findImps ns es locals body
                -- ^ TODO? check that name of the pi matches name of local?
         -- don't add implicits coming after explicits that aren't given
         findImps ns es [] (NBind fc x (Pi _ _ Explicit _) sc)
-            = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+            = do body <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
                  case es of
                    -- Explicits were skipped, therefore all explicits are given anyway
                    Just (UN Underscore) :: _ => findImps ns es [] body
@@ -726,13 +730,13 @@ implicitsAs n defs ns tm
                           Just es' => findImps ns es' [] body
         -- if the implicit was given, skip it
         findImps ns es [] (NBind fc x (Pi _ _ AutoImplicit _) sc)
-            = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+            = do body <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
                  case updateNs x ns of
                    Nothing => -- didn't find explicit call
                       pure $ (x, AutoImplicit) :: !(findImps ns es [] body)
                    Just ns' => findImps ns' es [] body
         findImps ns es [] (NBind fc x (Pi _ _ p _) sc)
-            = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+            = do body <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
                  if Just x `elem` ns
                    then findImps ns es [] body
                    else pure $ (x, forgetDef p) :: !(findImps ns es [] body)

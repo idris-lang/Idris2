@@ -27,7 +27,7 @@ the library. In this document, we will assume the default Chez Scheme code
 generator (the examples also work with the Racket or Gambit code generator) and
 that the foreign language is C.
 
-Scheme Sidenote
+Scheme Details
 ---------------
 
 Scheme foreign specifiers can be written to target particular flavors.
@@ -59,6 +59,33 @@ the individual backends.
 
 The standard C backend is known as "RefC", and uses the ``RefC`` language
 specifier.
+
+Javascript Details
+-------------------
+
+Javascript foreign specifiers can be written to target ``browser``, ``node``,
+or ``javascript``. The former two are mutually exclusive while ``javascript``
+FFI specifiers apply both when building for the browser and when building for
+NodeJS.
+
+Javascript specifiers must be further specialized as ``lambda``, ``support``,
+or ``stringIterator``.
+
+The syntax, therefore, is ``node:lambda:some_func`` (for the NodeJS-specific
+FFI and a lambda that executes a function named ``some_func``).
+
+When using the ``support`` option, you also specify the name of the support
+file. Idris will look in all ``data`` directories under a ``js`` subfolder
+for a file with this name. These file names should be distinct for your
+project so they don't collide with support files from other projects
+further on in the build process for an executable. Suppose your package is
+named "http-idris" and you have FFI specifiers like
+``node:support:http_request,http_idris`` in your Idris code. You should make
+sure a data directory in scope has a ``js`` directory with an
+``http_idris.js`` file in it. Another important note is that functions
+within this file must be prefixed with ``http_idris_``; therefore, the
+function referred to in the example we give here would need to be named
+``http_idris_http_request`` in the ``http_idris.js`` support file.
 
 FFI Example
 -----------

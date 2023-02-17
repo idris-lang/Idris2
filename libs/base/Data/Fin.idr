@@ -184,11 +184,10 @@ natToFinLT Z {prf = LTESucc _} = FZ
 natToFinLT (S k) {prf = LTESucc _} = FS $ natToFinLT k
 
 public export
-natToFinLt : (x : Nat) -> {n : Nat} ->
+natToFinLt : (x : Nat) -> {0 n : Nat} ->
              {auto 0 prf : So (x < n)} ->
              Fin n
-natToFinLt Z     {n = S _} = FZ
-natToFinLt (S k) {n = S _} = FS $ natToFinLt k
+natToFinLt x = let 0 p := ltOpReflectsLT x n prf in natToFinLT x
 
 public export
 natToFin : Nat -> (n : Nat) -> Maybe (Fin n)
@@ -214,7 +213,7 @@ maybeLT : (x : Nat) -> (y : Nat) -> Maybe (x `LT` y)
 maybeLT x y = maybeLTE (S x) y
 
 public export
-finFromInteger : (x : Integer) -> {n : Nat} ->
+finFromInteger : (x : Integer) ->
                  {auto 0 prf : So (fromInteger x < n)} ->
                  Fin n
 finFromInteger x = natToFinLt (fromInteger x)
@@ -234,13 +233,13 @@ integerLessThanNat x n with (x < the Integer 0)
 ||| @ x the Integer that the user typed
 ||| @ prf an automatically-constructed proof that `x` is in bounds
 public export
-fromInteger : (x : Integer) -> {n : Nat} ->
+fromInteger : (x : Integer) ->
               {auto 0 prf : So (integerLessThanNat x n)} ->
               Fin n
 fromInteger x = finFromInteger x {prf = lemma prf} where
   -- to be minimally invasive, we just call the previous implementation.
   -- however, having a different proof obligation resolves #2032
-  0 lemma : {x : Integer} -> {n : Nat} -> So (integerLessThanNat x n) -> So (fromInteger {ty=Nat} x < n)
+  0 lemma : {x : Integer} -> So (integerLessThanNat x n) -> So (fromInteger {ty=Nat} x < n)
   lemma oh = believe_me oh
 
 -- %builtin IntegerToNatural Data.Fin.fromInteger
@@ -304,6 +303,16 @@ namespace Equality
   public export
   (~~~) : Fin m -> Fin n -> Type
   (~~~) = Pointwise
+
+  export
+  Uninhabited (FS k ~~~ FZ) where
+    uninhabited FZ impossible
+    uninhabited (FS _) impossible
+
+  export
+  Uninhabited (FZ ~~~ FS k) where
+    uninhabited FZ impossible
+    uninhabited (FS _) impossible
 
   ||| Pointwise equality is reflexive
   export

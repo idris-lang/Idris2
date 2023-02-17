@@ -1,6 +1,7 @@
 ||| The content of this module is based on the paper
 ||| Applications of Applicative Proof Search
 ||| by Liam O'Connor
+||| https://doi.org/10.1145/2976022.2976030
 |||
 ||| The main difference is that we use `Colist1` for the type of
 ||| generators rather than `Stream`. This allows us to avoid generating

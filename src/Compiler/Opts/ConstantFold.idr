@@ -5,6 +5,7 @@ import Core.Context
 import Core.Context.Log
 import Core.Primitives
 import Core.Value
+import Core.Name
 import Data.List
 import Data.Vect
 
@@ -80,13 +81,20 @@ constFold rho (CLocal fc p) = lookup fc (MkVar p) rho
 constFold rho e@(CRef fc x) = CRef fc x
 constFold rho (CLam fc x y)
   = CLam fc x $ constFold (wk (mkSizeOf [x]) rho) y
-constFold rho (CLet fc x inlineOK y z) =
+constFold rho (CLet fc x inl y z) =
     let val = constFold rho y
      in case val of
-        CPrimVal _ _ => if inlineOK
+        CPrimVal _ _ => if inl == YesInline
             then constFold (val :: rho) z
-            else CLet fc x inlineOK val (constFold (wk (mkSizeOf [x]) rho) z)
-        _ => CLet fc x inlineOK val (constFold (wk (mkSizeOf [x]) rho) z)
+            else CLet fc x inl val (constFold (wk (mkSizeOf [x]) rho) z)
+        _ => CLet fc x inl val (constFold (wk (mkSizeOf [x]) rho) z)
+constFold rho (CApp fc (CRef fc2 n) [x]) =
+  if n == NS typesNS (UN $ Basic "prim__integerToNat")
+     then case constFold rho x of
+            CPrimVal fc3 (BI v) =>
+              if v >= 0 then CPrimVal fc3 (BI v) else CPrimVal fc3 (BI 0)
+            v                   => CApp fc (CRef fc2 n) [v]
+     else CApp fc (CRef fc2 n) [constFold rho x]
 constFold rho (CApp fc x xs) = CApp fc (constFold rho x) (constFold rho <$> xs)
 constFold rho (CCon fc x y tag xs) = CCon fc x y tag $ constFold rho <$> xs
 constFold rho (COp {arity} fc fn xs) =

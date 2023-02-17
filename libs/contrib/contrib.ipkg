@@ -1,5 +1,5 @@
 package contrib
-version = 0.5.1
+version = 0.6.0
 
 opts = "--ignore-missing-ipkg -Wno-shadowing"
 
@@ -8,8 +8,6 @@ modules = Control.ANSI,
           Control.ANSI.CSI,
 
           Control.Delayed,
-
-          Control.Linear.LIO,
 
           Control.Monad.Algebra,
 
@@ -48,7 +46,6 @@ modules = Control.ANSI,
           Data.List.Reverse,
           Data.List.Views.Extra,
           Data.List.Palindrome,
-          Data.List.HasLength,
           Data.List.AtIndex,
           Data.List.Alternating,
 

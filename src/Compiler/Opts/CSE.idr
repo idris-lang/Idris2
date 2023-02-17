@@ -37,6 +37,7 @@ import Core.Ord
 import Data.List
 import Data.String
 import Data.Vect
+import Libraries.Data.SortedSet
 import Libraries.Data.SortedMap
 
 ||| Maping from a pairing of closed terms together with
@@ -485,4 +486,5 @@ cse defs me = do
     ::  map (\(name,(_,cnt)) =>
                   show name ++ ": count " ++ show cnt
            ) filtered
-  pure (newToplevelDefs replaceMap ++ replacedDefs, replacedMain)
+  let newDefs := newToplevelDefs replaceMap ++ replacedDefs
+  pure (newDefs, replacedMain)

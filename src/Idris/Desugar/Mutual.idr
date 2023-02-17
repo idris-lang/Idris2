@@ -20,10 +20,10 @@ getDecl p (PNamespace fc ns ds)
     = Just (PNamespace fc ns (assert_total $ mapMaybe (getDecl p) ds))
 
 getDecl AsType d@(PClaim _ _ _ _ _) = Just d
-getDecl AsType (PData fc doc vis mbtot (MkPData dfc tyn tyc _ _))
+getDecl AsType (PData fc doc vis mbtot (MkPData dfc tyn (Just tyc) _ _))
     = Just (PData fc doc vis mbtot (MkPLater dfc tyn tyc))
 getDecl AsType d@(PInterface _ _ _ _ _ _ _ _ _) = Just d
-getDecl AsType d@(PRecord fc doc vis mbtot n ps _ _ _)
+getDecl AsType (PRecord fc doc vis mbtot (MkPRecord n ps _ _ _))
     = Just (PData fc doc vis mbtot (MkPLater fc n (mkRecType ps)))
   where
     mkRecType : List (Name, RigCount, PiInfo PTerm, PTerm) -> PTerm
@@ -36,7 +36,7 @@ getDecl AsType d = Nothing
 getDecl AsDef (PClaim _ _ _ _ _) = Nothing
 getDecl AsDef d@(PData _ _ _ _ (MkPLater _ _ _)) = Just d
 getDecl AsDef (PInterface _ _ _ _ _ _ _ _ _) = Nothing
-getDecl AsDef d@(PRecord _ _ _ _ _ _ _ _ _) = Just d
+getDecl AsDef d@(PRecord _ _ _ _ (MkPRecordLater _ _)) = Just d
 getDecl AsDef (PFixity _ _ _ _) = Nothing
 getDecl AsDef (PDirective _ _) = Nothing
 getDecl AsDef d = Just d

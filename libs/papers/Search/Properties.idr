@@ -1,6 +1,7 @@
 ||| The content of this module is based on the paper
 ||| Applications of Applicative Proof Search
 ||| by Liam O'Connor
+||| https://doi.org/10.1145/2976022.2976030
 
 module Search.Properties
 
@@ -9,9 +10,10 @@ import Data.List.Lazy
 import Data.List.Lazy.Quantifiers
 import Data.Nat
 import Data.So
-import Data.Stream
-import Data.Colist
-import Data.Colist1
+
+import public Data.Stream
+import public Data.Colist
+import public Data.Colist1
 
 import public Search.Negation
 import public Search.HDecidable

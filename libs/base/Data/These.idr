@@ -101,7 +101,7 @@ Functor (These a) where
   map = mapSnd
 
 public export
-bifold : Monoid m => These m m -> m
+bifold : Semigroup m => These m m -> m
 bifold (This a)   = a
 bifold (That b)   = b
 bifold (Both a b) = a <+> b

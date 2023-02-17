@@ -357,7 +357,8 @@ addDeps pkg = do
   Resolved allPkgs <- getTransitiveDeps pkg.depends empty
     | Failed errs => throw $ GenericMsg EmptyFC (printErrs pkg errs)
   log "package.depends" 10 $ "all depends: \{show allPkgs}"
-  traverse_ addExtraDir allPkgs
+  traverse_ addPackageDir allPkgs
+  traverse_ addDataDir ((</> "data") <$> allPkgs)
   where
     -- Note: findPkgDir throws an error if a package is not found
     -- *unless* --ignore-missing-ipkg is enabled
@@ -472,60 +473,77 @@ build pkg opts
          [] <- prepareCompilation pkg opts
             | errs => pure errs
 
-         case executable pkg of
-              Nothing => pure ()
-              Just exec =>
-                   do let Just (mainNS, mainFile) = mainmod pkg
-                               | Nothing => throw (GenericMsg emptyFC "No main module given")
-                      let mainName = NS (miAsNamespace mainNS) (UN $ Basic "main")
-                      compileMain mainName mainFile exec
+         whenJust (executable pkg) $ \ exec =>
+           do let Just (mainNS, mainFile) = mainmod pkg
+                 | Nothing => throw (GenericMsg emptyFC "No main module given")
+              let mainName = NS (miAsNamespace mainNS) (UN $ Basic "main")
+              coreLift $ putStrLn "Now compiling the executable: \{exec}"
+              compileMain mainName mainFile exec
 
          runScript (postbuild pkg)
          pure []
 
-installFrom : {auto o : Ref ROpts REPLOpts} ->
+installBuildArtifactFrom : {auto o : Ref ROpts REPLOpts} ->
               {auto c : Ref Ctxt Defs} ->
+              String ->
               String -> String -> ModuleIdent -> Core ()
-installFrom builddir destdir ns
-    = do let ttcfile = ModuleIdent.toPath ns
-         let ttcPath = builddir </> "ttc" </> ttcfile <.> "ttc"
-         objPaths_in <- traverse
-                     (\cg =>
-                        do Just cgdata <- getCG cg
-                                | Nothing => pure Nothing
-                           let Just ext = incExt cgdata
-                                | Nothing => pure Nothing
-                           let srcFile = builddir </> "ttc" </> ttcfile <.> ext
-                           let destFile = destdir </> ttcfile <.> ext
-                           let Just (dir, _) = splitParent destFile
-                                | Nothing => pure Nothing
-                           ensureDirectoryExists dir
-                           pure $ Just (srcFile, destFile))
-                     (incrementalCGs !getSession)
-         let objPaths = mapMaybe id objPaths_in
+
+installBuildArtifactFrom file_extension builddir destdir ns
+    = do let filename_trunk = ModuleIdent.toPath ns
+         let filename = builddir </> filename_trunk <.> file_extension
 
          let modPath  = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns
          let destNest = joinPath modPath
          let destPath = destdir </> destNest
-         let destFile = destdir </> ttcfile <.> "ttc"
+         let destFile = destdir </> filename_trunk <.> file_extension
 
-         Right _ <- coreLift $ mkdirAll $ destNest
+         Right _ <- coreLift $ mkdirAll $ destPath
              | Left err => throw $ InternalError $ unlines
                              [ "Can't make directories " ++ show modPath
                              , show err ]
-         coreLift $ putStrLn $ "Installing " ++ ttcPath ++ " to " ++ destPath
-         Right _ <- coreLift $ copyFile ttcPath destFile
+         coreLift $ putStrLn $ "Installing " ++ filename ++ " to " ++ destPath
+         Right _ <- coreLift $ copyFile filename destFile
              | Left err => throw $ InternalError $ unlines
-                             [ "Can't copy file " ++ ttcPath ++ " to " ++ destPath
+                             [ "Can't copy file " ++ filename ++ " to " ++ destPath
                              , show err ]
-         -- Copy object files, if any. They don't necessarily get created,
-         -- since some modules don't generate any code themselves.
-         traverse_ (\ (obj, dest) =>
-                      do coreLift $ putStrLn $ "Installing " ++ obj ++ " to " ++ destPath
-                         ignore $ coreLift $ copyFile obj dest)
-                   objPaths
 
          pure ()
+
+installFrom : {auto o : Ref ROpts REPLOpts} ->
+              {auto c : Ref Ctxt Defs} ->
+              String -> String -> ModuleIdent -> Core ()
+installFrom builddir destdir ns = do
+  installBuildArtifactFrom "ttc" builddir destdir ns
+  installBuildArtifactFrom "ttm" builddir destdir ns
+
+  let filename_trunk = ModuleIdent.toPath ns
+  let modPath  = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns
+  let destNest = joinPath modPath
+  let destPath = destdir </> destNest
+
+  let installCodeGenFiles = \cg => do
+    Just cgdata <- getCG cg
+      | Nothing => pure Nothing
+    let Just ext = incExt cgdata
+      | Nothing => pure Nothing
+    let srcFile = builddir </> filename_trunk <.> ext
+    let destFile = destdir </> filename_trunk <.> ext
+    let Just (dir, _) = splitParent destFile
+      | Nothing => pure Nothing
+    ensureDirectoryExists dir
+    pure $ Just (srcFile, destFile)
+
+  objPaths_in <- traverse
+                    installCodeGenFiles
+                    (incrementalCGs !getSession)
+  let objPaths = mapMaybe id objPaths_in
+  -- Copy object files, if any. They don't necessarily get created,
+  -- since some modules don't generate any code themselves.
+  traverse_
+    (\ (obj, dest) => do
+      coreLift $ putStrLn $ "Installing " ++ obj ++ " to " ++ destPath
+      ignore $ coreLift $ copyFile obj dest)
+    objPaths
 
 installSrcFrom : {auto c : Ref Ctxt Defs} ->
                  String -> String -> (ModuleIdent, FileName) -> Core ()
@@ -544,7 +562,7 @@ installSrcFrom wdir destdir (ns, srcRelPath)
          let destPath = destdir </> destNest
          let destFile = destdir </> srcfile <.> ext
 
-         Right _ <- coreLift $ mkdirAll $ destNest
+         Right _ <- coreLift $ mkdirAll $ destPath
              | Left err => throw $ InternalError $ unlines
                              [ "Can't make directories " ++ show modPath
                              , show err ]
@@ -575,7 +593,12 @@ install : {auto c : Ref Ctxt Defs} ->
           Core ()
 install pkg opts installSrc -- not used but might be in the future
     = do defs <- get Ctxt
-         let build = build_dir (dirs (options defs))
+         build <- ttcBuildDirectory
+         let lib = installDir pkg
+         libTargetDir <- libInstallDirectory lib
+         ttcTargetDir <- ttcInstallDirectory lib
+         srcTargetDir <- srcInstallDirectory lib
+
          let src = source_dir (dirs (options defs))
          runScript (preinstall pkg)
          let toInstall = maybe (modules pkg)
@@ -583,30 +606,23 @@ install pkg opts installSrc -- not used but might be in the future
                                (mainmod pkg)
          wdir <- getWorkingDir
          -- Make the package installation directory
-         let targetDir = prefix_dir (dirs (options defs)) </>
-                             "idris2-" ++ showVersion False version </>
-                             installDir pkg
-         Right _ <- coreLift $ mkdirAll targetDir
+         Right _ <- coreLift $ mkdirAll libTargetDir
              | Left err => throw $ InternalError $ unlines
-                             [ "Can't make directory " ++ targetDir
+                             [ "Can't make directory " ++ libTargetDir
                              , show err ]
-         True <- coreLift $ changeDir targetDir
-             | False => throw $ InternalError $ "Can't change directory to " ++ targetDir
 
-         -- We're in that directory now, so copy the files from
-         -- wdir/build into it
-         traverse_ (installFrom (wdir </> build) targetDir . fst) toInstall
+         traverse_ (installFrom (wdir </> build) ttcTargetDir . fst) toInstall
+
          when installSrc $ do
-           traverse_ (installSrcFrom wdir targetDir) toInstall
+           traverse_ (installSrcFrom wdir srcTargetDir) toInstall
 
          -- install package file
-         let pkgFile = targetDir </> pkg.name <.> "ipkg"
-         coreLift $ putStrLn $ "Installing package file for \{pkg.name} to \{targetDir}"
+         let pkgFile = libTargetDir </> pkg.name <.> "ipkg"
+         coreLift $ putStrLn $ "Installing package file for \{pkg.name} to \{libTargetDir}"
+
          let pkgStr = String.renderString $ layoutUnbounded $ pretty $ savePkgMetadata pkg
          log "package.depends" 25 $ "  package file:\n\{pkgStr}"
          coreLift_ $ writeFile pkgFile pkgStr
-
-         coreLift_ $ changeDir wdir
 
          runScript (postinstall pkg)
   where
@@ -786,7 +802,8 @@ clean pkg opts -- `opts` is not used but might be in the future
                           pkgmods
          srcdir <- getWorkingDir
          let d = dirs (options defs)
-         let builddir = srcdir </> build_dir d </> "ttc"
+         bdir <- ttcBuildDirectory
+         let builddir = srcdir </> bdir </> "ttc"
          let outputdir = srcdir </> outputDirWithDefault d
          -- the usual pair syntax breaks with `No such variable a` here for some reason
          let pkgTrie : StringTrie (List String)

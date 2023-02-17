@@ -2,7 +2,7 @@
 Main> Main.streamCount is total
 Main> Main.badCount is possibly not terminating due to recursive path Main.badCount
 Main> Main.process is total
-Main> Main.badProcess is possibly not terminating due to recursive path Main.badProcess -> Main.badProcess -> Main.badProcess
+Main> Main.badProcess is possibly not terminating due to recursive path Main.badProcess -> Main.badProcess
 Main> Main.doubleInt is total
 Main> Main.main is total
 Main> Bye for now!

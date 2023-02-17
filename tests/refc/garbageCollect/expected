@@ -1,2 +1,2 @@
-allocated (Ptr t) freed
 allocated AnyPtr freed
+allocated (Ptr t) freed

@@ -42,7 +42,7 @@ emptyRHS fc (Case idx el sc alts) = Case idx el sc (map emptyRHSalt alts)
     emptyRHSalt (DelayCase c arg sc) = DelayCase c arg (emptyRHS fc sc)
     emptyRHSalt (ConstCase c sc) = ConstCase c (emptyRHS fc sc)
     emptyRHSalt (DefaultCase sc) = DefaultCase (emptyRHS fc sc)
-emptyRHS fc (STerm i s) = STerm i (Erased fc False)
+emptyRHS fc (STerm i s) = STerm i (Erased fc Placeholder)
 emptyRHS fc sc = sc
 
 export
@@ -58,4 +58,3 @@ tagIs t (ConCase _ t' _ _) = t == t'
 tagIs t (ConstCase _ _) = False
 tagIs t (DelayCase _ _ _) = False
 tagIs t (DefaultCase _) = True
-

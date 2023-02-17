@@ -1,5 +1,6 @@
 module Data.Vect.Quantifiers
 
+import Data.DPair
 import Data.Vect
 
 %default total
@@ -54,6 +55,11 @@ namespace Any
   mapProperty : (f : forall x. p x -> q x) -> Any p l -> Any q l
   mapProperty f (Here p)  = Here (f p)
   mapProperty f (There p) = There (mapProperty f p)
+
+  export
+  toExists : Any p xs -> Exists p
+  toExists (Here prf)  = Evidence _ prf
+  toExists (There prf) = toExists prf
 
 namespace All
   ||| A proof that all elements of a vector satisfy a property. It is a list of
@@ -114,3 +120,48 @@ namespace All
                  All p types -> All q types
   imapProperty _ _              []      = []
   imapProperty i f @{ix :: ixs} (x::xs) = f @{ix} x :: imapProperty i f @{ixs} xs
+
+  public export
+  forget : All (const p) {n} xs -> Vect n p
+  forget []      = []
+  forget (x::xs) = x :: forget xs
+
+  export
+  {0 xs : Vect n _} -> All Show (map p xs) => Show (All p xs) where
+    show pxs = "[" ++ show' "" pxs ++ "]"
+      where
+        show' : {0 xs' : Vect n' _} -> String -> All Show (map p xs') => All p xs' -> String
+        show' acc @{[]} [] = acc
+        show' acc @{[_]} [px] = acc ++ show px
+        show' acc @{_ :: _} (px :: pxs) = show' (acc ++ show px ++ ", ") pxs
+
+  ||| A heterogeneous vector of arbitrary types
+  public export
+  HVect : Vect n Type -> Type
+  HVect = All id
+
+  ||| Take the first element.
+  export
+  head : All p (x :: xs) -> p x
+  head (y :: _) = y
+
+  ||| Take all but the first element.
+  export
+  tail : All p (x :: xs) -> All p xs
+  tail (_ :: ys) = ys
+
+  ||| Drop the first n elements given knowledge that
+  ||| there are at least n elements available.
+  export
+  drop : {0 m : _} -> (n : Nat) -> {0 xs : Vect (n + m) a} -> All p xs -> All p (the (Vect m a) (Vect.drop n xs))
+  drop 0 ys = ys
+  drop (S k) (y :: ys) = drop k ys
+
+  ||| Drop up to the first l elements, stopping early
+  ||| if all elements have been dropped.
+  export
+  drop' : {0 k : _} -> {0 xs : Vect k _} -> (l : Nat) -> All p xs -> All p (Vect.drop' l xs)
+  drop' 0 ys = rewrite minusZeroRight k in ys
+  drop' (S k) [] = []
+  drop' (S k) (y :: ys) = drop' k ys
+

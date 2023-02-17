@@ -1,5 +1,6 @@
 module Deriving.Common
 
+import Data.SnocList
 import Language.Reflection
 
 %default total
@@ -64,7 +65,7 @@ isType : Elaboration m => TTImp -> m IsType
 isType = go Z [] where
 
   go : Nat -> List (Argument Name, Nat) -> TTImp -> m IsType
-  go idx acc (IVar _ n) = MkIsType n acc <$> isTypeCon n
+  go idx acc (IVar _ n) = MkIsType n (map (map (minus idx . S)) acc) <$> isTypeCon n
   go idx acc (IApp _ t (IVar _ nm)) = case nm of
     -- Unqualified: that's a local variable
     UN (Basic _) => go (S idx) ((Arg emptyFC nm, idx) :: acc) t
@@ -86,8 +87,7 @@ isType = go Z [] where
 public export
 record ConstructorView where
   constructor MkConstructorView
-  params      : List Name
-  functorPara : Name
+  params      : SnocList (Name, Nat)
   conArgTypes : List (Count, Argument TTImp)
 
 export
@@ -98,13 +98,13 @@ constructorView (IPi fc rig pinfo x a b) = do
   let True = rig /= M1
     | False => constructorView b -- this better be another boring argument...
   { conArgTypes $= ((rig, arg) ::) } <$> constructorView b
-constructorView (IApp _ f (IVar _ a)) = do
+constructorView f = do
   MkAppView _ ts _ <- appView f
-  let ps = flip mapMaybe ts $ \ t => the (Maybe Name) $ case t of
-             Arg _ (IVar _ nm) => Just nm
+  let range = [<] <>< [0..minus (length ts) 1]
+  let ps = flip mapMaybe (zip ts range) $ \ t => the (Maybe (Name, Nat)) $ case t of
+             (Arg _ (IVar _ nm), n) => Just (nm, n)
              _ => Nothing
-  pure (MkConstructorView (ps <>> []) a [])
-constructorView _ = Nothing
+  pure (MkConstructorView ps [])
 
 ------------------------------------------------------------------------------
 -- Satisfying an interface
@@ -130,6 +130,32 @@ withParams fc params nms t = go nms where
       IPi fc M0 ImplicitArg (Just nm) (Implicit fc True)
     $ addConstraint (params pos) nm
     $ go nms
+
+||| Type of proofs that something has a given type
+export
+data HasType : (nm : Name) -> (ty : TTImp) -> Type where
+  TrustMeHT : HasType nm ty
+
+export
+hasType : Elaboration m => (nm : Name) ->
+          m (Maybe (ty : TTImp ** HasType nm ty))
+hasType nm = catch $ do
+  [(_, ty)] <- getType nm
+    | _ => fail "Ambiguous name"
+  pure (ty ** TrustMeHT)
+
+||| Type of proofs that a type is inhabited
+export
+data IsProvable : (ty : TTImp) -> Type where
+  TrustMeIP : IsProvable ty
+
+export
+isProvable : Elaboration m => (ty : TTImp) ->
+             m (Maybe (IsProvable ty))
+isProvable ty = catch $ do
+  ty <- check {expected = Type} ty
+  ignore $ check {expected = ty} `(%search)
+  pure TrustMeIP
 
 ||| Type of proofs that a type satisfies a constraint.
 ||| Internally it's vacuous. We don't export the constructor so
@@ -196,14 +222,3 @@ freshName ns a = assert_total $ go (basicNames ns) Nothing where
   go ns mi =
     let nm = a ++ maybe "" show mi in
     ifThenElse (nm `elem` ns) (go ns (Just $ maybe 0 S mi)) nm
-
-------------------------------------------------------------------------------
--- TODO: move to Data.List?
-
-export
-elemPos : Eq a => a -> List a -> Maybe Nat
-elemPos x = go 0 where
-
-  go : Nat -> List a -> Maybe Nat
-  go idx [] = Nothing
-  go idx (y :: ys) = idx <$ guard (x == y) <|> go (S idx) ys

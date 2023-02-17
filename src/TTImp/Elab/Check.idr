@@ -23,6 +23,7 @@ import Data.Either
 import Libraries.Data.IntMap
 import Data.List
 import Libraries.Data.NameMap
+import Data.SnocList
 import Libraries.Data.UserNameMap
 
 %default covering
@@ -309,7 +310,7 @@ mustBePoly fc env tm ty = update EST { polyMetavars $= ((fc, env, tm, ty) :: ) }
 export
 concrete : Defs -> Env Term vars -> NF vars -> Core Bool
 concrete defs env (NBind fc _ (Pi _ _ _ _) sc)
-    = do sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
+    = do sc' <- sc defs (toClosure defaultOpts env (Erased fc Placeholder))
          concrete defs env sc'
 concrete defs env (NDCon _ _ _ _ _) = pure True
 concrete defs env (NTCon _ _ _ _ _) = pure True
@@ -410,7 +411,7 @@ uniVar : {auto c : Ref Ctxt Defs} ->
          FC -> Core Name
 uniVar fc
     = do n <- genName "u"
-         idx <- addDef n (newDef fc n erased [] (Erased fc False) Public None)
+         idx <- addDef n (newDef fc n erased [] (Erased fc Placeholder) Public None)
          pure (Resolved idx)
 
 export
@@ -671,9 +672,14 @@ anyOne : {vars : _} ->
          {auto e : Ref EST (EState vars)} ->
          FC -> List (Maybe Name, Core (Term vars, Glued vars)) ->
          Core (Term vars, Glued vars)
-anyOne fc [] = throw (GenericMsg fc "No elaborators provided")
-anyOne fc [(tm, elab)] = elab
-anyOne fc ((tm, elab) :: es) = try elab (anyOne fc es)
+anyOne fc es = anyOneErrs es [<] where
+  anyOneErrs : List (Maybe Name, Core a) -> SnocList (Maybe Name, Error) -> Core a
+  anyOneErrs [] [<]        = throw $ GenericMsg fc "No elaborators provided"
+  anyOneErrs [] [<(tm, e)] = throw e
+  anyOneErrs [] errs       = throw $ AllFailed $ errs <>> []
+  anyOneErrs ((tm, elab) :: es) errs = case !(tryError elab) of
+    Right res => pure res
+    Left err  => anyOneErrs es $ errs :< (tm, err)
 
 -- Implemented in TTImp.Elab.Term; delaring just the type allows us to split
 -- the elaborator over multiple files more easily

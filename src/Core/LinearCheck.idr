@@ -324,7 +324,7 @@ mutual
                    do let checkRig = rigf |*| rig
                       (a', gaty, aused) <- lcheck checkRig erase env a
                       sc' <- scdone defs (toClosure defaultOpts env a')
-                      let aerased = if erase && isErased rigf then Erased fc False else a'
+                      let aerased = if erase && isErased rigf then Erased fc Placeholder else a'
                       -- Possibly remove this check, or make it a compiler
                       -- flag? It is a useful double check on the result of
                       -- elaboration, but there are pathological cases where
@@ -662,7 +662,7 @@ mutual
            (arg', gargTy, aused) <- lcheck checkRig erase env arg
            defs <- get Ctxt
            sc' <- sc defs (toClosure defaultOpts env arg')
-           let aerased = if erase && isErased rigf then Erased fc False else arg'
+           let aerased = if erase && isErased rigf then Erased fc Placeholder else arg'
            (tm, gty, u) <- lcheckMeta rig erase env fc n idx args
                                       (aerased :: chk) sc'
            pure (tm, gty, aused ++ u)

@@ -97,3 +97,26 @@ mapTermM f t = act t where
   go t@(PrimVal fc c) = pure t
   go t@(Erased fc imp) = pure t
   go t@(TType fc u) = pure t
+
+export
+mapTerm : ({vars : _} -> Term vars -> Term vars) ->
+          ({vars : _} -> Term vars -> Term vars)
+mapTerm f t = act t where
+
+  act : {vars : _} -> Term vars -> Term vars
+  go  : {vars : _} -> Term vars -> Term vars
+
+  act t = f (go t)
+
+  go t@(Local fc isLet idx p) = t
+  go t@(Ref fc x name) = t
+  go t@(Meta fc x y xs) = Meta fc x y (map act xs)
+  go t@(Bind fc x b scope) = Bind fc x (map act b) (act scope)
+  go t@(App fc fn arg) = App fc (act fn) (act arg)
+  go t@(As fc x as pat) = As fc x (act as) (act pat)
+  go t@(TDelayed fc x y) = TDelayed fc x (act y)
+  go t@(TDelay fc x ty arg) = TDelay fc x (act ty) (act arg)
+  go t@(TForce fc x y) = t
+  go t@(PrimVal fc c) = t
+  go t@(Erased fc imp) = t
+  go t@(TType fc u) = t
