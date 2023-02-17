@@ -6,34 +6,13 @@ import Core.Env
 import Core.Normalise
 import Core.Value
 
+import Core.Termination.References
+
 import Data.String
 
 import Libraries.Data.NameMap
 
 %default covering
-
--- Check that the names a function refers to are terminating
-export
-totRefs : {auto c : Ref Ctxt Defs} ->
-          Defs -> List Name -> Core Terminating
-totRefs defs [] = pure IsTerminating
-totRefs defs (n :: ns)
-    = do rest <- totRefs defs ns
-         Just d <- lookupCtxtExact n (gamma defs)
-              | Nothing => pure rest
-         case isTerminating (totality d) of
-              IsTerminating => pure rest
-              Unchecked => do
-                log "totality" 20 $ "Totality unchecked for " ++ show !(toFullNames n)
-                pure rest
-              _ => case rest of
-                          NotTerminating (BadCall ns)
-                             => toFullNames $ NotTerminating (BadCall (n :: ns))
-                          _ => toFullNames $ NotTerminating (BadCall [n])
-
-totRefsIn : {auto c : Ref Ctxt Defs} ->
-            Defs -> Term vars -> Core Terminating
-totRefsIn defs ty = totRefs defs (keys (getRefs (Resolved (-1)) ty))
 
 isAssertTotal : Ref Ctxt Defs => NHead{} -> Core Bool
 isAssertTotal (NRef _ fn_in) =

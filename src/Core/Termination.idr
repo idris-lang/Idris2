@@ -4,7 +4,6 @@ import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise
-import Core.TT
 import Core.Value
 
 import Core.Termination.CallGraph
@@ -12,10 +11,6 @@ import Core.Termination.Positivity
 import Core.Termination.SizeChange
 
 import Libraries.Data.NameMap
-import Libraries.Data.SortedMap
-import Libraries.Data.SortedSet
-import Data.List
-import Data.String
 
 %default covering
 
@@ -68,44 +63,6 @@ checkIfGuarded fc n
         = if !(guarded env rhs)
              then allGuarded ps
              else pure False
-
-calcTerminating : {auto c : Ref Ctxt Defs} ->
-                  FC -> Name -> Core Terminating
-calcTerminating loc n
-    = do defs <- get Ctxt
-         log "totality.termination.calc" 7 $ "Calculating termination: " ++ show !(toFullNames n)
-         Just def <- lookupCtxtExact n (gamma defs)
-            | Nothing => undefinedName loc n
-         IsTerminating <- totRefs defs (nub !(addCases defs (keys (refersTo def))))
-            | bad => pure bad
-         Right (work, pred) <- initWork defs def
-            | Left bad => pure bad
-         let s = transitiveClosure work initSCSet
-         Nothing <- findNonTerminatingLoop s
-           | Just (g, loop) =>
-               ifThenElse (def.fullname == g)
-                 (pure $ NotTerminating (RecPath loop))
-                 (do setTerminating EmptyFC g (NotTerminating (RecPath loop))
-                     let init = prefixPath pred g
-                     setPrefixTerminating init g
-                     pure $ NotTerminating (BadPath init g))
-         pure IsTerminating
-  where
-    addCases' : Defs -> NameMap () -> List Name -> Core (List Name)
-    addCases' defs all [] = pure (keys all)
-    addCases' defs all (n :: ns)
-        = case lookup n all of
-             Just _ => addCases' defs all ns
-             Nothing =>
-               if caseFn !(getFullName n)
-                  then case !(lookupCtxtExact n (gamma defs)) of
-                            Just def => addCases' defs (insert n () all)
-                                                  (keys (refersTo def) ++ ns)
-                            Nothing => addCases' defs (insert n () all) ns
-                  else addCases' defs (insert n () all) ns
-
-    addCases : Defs -> List Name -> Core (List Name)
-    addCases defs ns = addCases' defs empty ns
 
 -- Check whether a function is terminating, and record in the context
 export
