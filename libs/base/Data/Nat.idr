@@ -5,6 +5,7 @@ import public Control.Relation
 import public Control.Ord
 import public Control.Order
 import public Control.Function
+import Syntax.PreorderReasoning.Generic
 
 %default total
 
@@ -201,6 +202,23 @@ isLT m n = isLTE (S m) n
 public export
 isGT : (m, n : Nat) -> Dec (GT m n)
 isGT m n = isLT n m
+
+lteRecallLeft : LTE m n -> (m' : Nat ** m = m')
+lteRecallLeft LTEZero = (0 ** Refl)
+lteRecallLeft (LTESucc x) with (lteRecallLeft x)
+  lteRecallLeft (LTESucc x) | (left ** Refl) = (S left ** Refl)
+
+irrelevantLte : {m : Nat} -> (0 prf : LTE m n) -> LTE m n
+irrelevantLte {m = 0} LTEZero = LTEZero
+irrelevantLte {m = (S k)} (LTESucc x) = LTESucc (irrelevantLte x)
+
+lteRecall : LTE m n -> {p : Nat -> Nat} -> (0 prf : LTE (p m) q) -> LTE (p m) q
+lteRecall {m} x prf with (lteRecallLeft x)
+  lteRecall {m = m} x prf | (m ** Refl) = irrelevantLte prf
+
+ltRecall : LT m n -> {p : Nat -> Nat} -> (0 prf : LT (p m) q) -> LT (p m) q
+ltRecall {m} x prf with (lteRecallLeft x)
+  ltRecall {m = m} x prf | (S m ** Refl) = irrelevantLte prf
 
 export
 lteSuccRight : LTE n m -> LTE n (S m)
@@ -640,11 +658,14 @@ minusLteMonotone {p = S p} (LTESucc lte) = minusLteMonotone lte
 
 export
 minusLtMonotone : m `LT` n -> p `LT` n -> minus m p `LT` minus n p
-minusLtMonotone mltn pltn = case view pltn of
-  LTZero => rewrite minusZeroRight m in mltn
-  LTSucc pltn => case view mltn of
-    LTZero => minusPos pltn
-    LTSucc mltn => minusLtMonotone mltn pltn
+minusLtMonotone {m} {p} mltn pltn = case view pltn of
+    LTZero => ltRecall {p = (`minus` 0)} mltn $ CalcSmart {leq = LT} $
+      |~ minus m Z
+      ~~ m ...(minusZeroRight m)
+      <~ minus n Z ...(mltn)
+    LTSucc pltn => case view mltn of
+      LTZero => minusPos pltn
+      LTSucc mltn => minusLtMonotone mltn pltn
 
 public export
 minusPlus : (m : Nat) -> minus (plus m n) m === n

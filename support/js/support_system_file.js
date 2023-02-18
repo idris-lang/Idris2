@@ -62,6 +62,16 @@ function support_system_file_getStr () {
   return support_system_file_readLine({ fd: 0, buffer: Buffer.alloc(0), name: '<stdin>', eof: false })
 }
 
+function support_system_file_getChar() {
+  const readBuf = Buffer.alloc(1);
+  if (support_system_file_fs.readSync(process.stdin.fd, readBuf, 0, 1) === 0) {
+    // No bytes read, getChar from libc returns -1 in this case.
+    return String.fromCharCode(-1)
+  } else {
+    return readBuf.toString('utf-8')
+  }
+}
+
 function support_system_file_parseMode(mode) {
   return mode.replace('b', '')
 }

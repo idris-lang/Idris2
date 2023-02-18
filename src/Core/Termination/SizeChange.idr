@@ -4,6 +4,8 @@ import Core.Context
 import Core.Context.Log
 import Core.Name
 
+import Core.Termination.References
+
 import Libraries.Data.NameMap
 import Libraries.Data.SortedMap
 import Libraries.Data.SortedSet
@@ -41,20 +43,17 @@ Path = List (FC, Name)
 |||   the actual changes in g with respect to f
 |||   the path in the call graph leading from f to g
 ||| The path is only here for error-reporting purposes
-export
 record ArgChange {- f g -} where
   constructor MkArgChange
   change : Change {- f g -}
   path : Path {- f g -}
 
 ||| Sc graphs to be added
-export
 WorkList : Type
 WorkList = SortedSet (Name, Name, ArgChange)
 
 ||| Transitively-closed (modulo work list) set of sc-graphs
 ||| Note: oh if only we had dependent name maps!
-export
 SCSet : Type
 SCSet = NameMap {- \ f => -}
       $ NameMap {- \ g => -}
@@ -78,7 +77,6 @@ Show ArgChange where
 -- Utility functions
 
 ||| Empty set of sc-graphs
-export
 initSCSet : SCSet
 initSCSet = empty
 
@@ -188,7 +186,6 @@ mutual
         -- And then we need to close over all of these new paths too
         transitiveClosure work_post s
 
-  export
   transitiveClosure : {auto c : Ref Ctxt Defs} ->
                       WorkList ->
                       SCSet ->
@@ -200,7 +197,6 @@ mutual
                addGraph f g ch work s
 
 -- find (potential) chain of calls to given function (inclusive)
-export
 prefixPath : NameMap (FC, Name) -> (g : Name) -> {- Exists \ f => -} Path {- f g -}
 prefixPath pred g = go g []
   where
@@ -233,7 +229,6 @@ findLoops s
       checkDesc (Just (_, Smaller) :: _) p = Nothing
       checkDesc (_ :: xs) p = checkDesc xs p
 
-export
 findNonTerminatingLoop : {auto c : Ref Ctxt Defs} -> SCSet -> Core (Maybe (Name, Path))
 findNonTerminatingLoop s
     = do loops <- findLoops s
@@ -243,7 +238,6 @@ findNonTerminatingLoop s
       findNonTerminating = foldlNames (\acc, g, m => map (g,) m <+> acc) empty
 
 ||| Steps in a path leading to a loop are also problematic
-export
 setPrefixTerminating : {auto c : Ref Ctxt Defs} ->
                        Path -> Name -> Core ()
 setPrefixTerminating [] g = pure ()
@@ -305,9 +299,47 @@ addFunctions defs (d1 :: ds) pred work
                Unchecked => True
                _ => False
 
-export
 initWork : {auto c : Ref Ctxt Defs} ->
            Defs ->
            GlobalDef -> -- entry
            Core (Either Terminating (WorkList, NameMap (FC, Name)))
 initWork defs def = addFunctions defs [def] (insert def.fullname (def.location, def.fullname) empty) empty
+
+export
+calcTerminating : {auto c : Ref Ctxt Defs} ->
+                  FC -> Name -> Core Terminating
+calcTerminating loc n
+    = do defs <- get Ctxt
+         log "totality.termination.calc" 7 $ "Calculating termination: " ++ show !(toFullNames n)
+         Just def <- lookupCtxtExact n (gamma defs)
+            | Nothing => undefinedName loc n
+         IsTerminating <- totRefs defs (nub !(addCases defs (keys (refersTo def))))
+            | bad => pure bad
+         Right (work, pred) <- initWork defs def
+            | Left bad => pure bad
+         let s = transitiveClosure work initSCSet
+         Nothing <- findNonTerminatingLoop s
+           | Just (g, loop) =>
+               ifThenElse (def.fullname == g)
+                 (pure $ NotTerminating (RecPath loop))
+                 (do setTerminating EmptyFC g (NotTerminating (RecPath loop))
+                     let init = prefixPath pred g
+                     setPrefixTerminating init g
+                     pure $ NotTerminating (BadPath init g))
+         pure IsTerminating
+  where
+    addCases' : Defs -> NameMap () -> List Name -> Core (List Name)
+    addCases' defs all [] = pure (keys all)
+    addCases' defs all (n :: ns)
+        = case lookup n all of
+             Just _ => addCases' defs all ns
+             Nothing =>
+               if caseFn !(getFullName n)
+                  then case !(lookupCtxtExact n (gamma defs)) of
+                            Just def => addCases' defs (insert n () all)
+                                                  (keys (refersTo def) ++ ns)
+                            Nothing => addCases' defs (insert n () all) ns
+                  else addCases' defs (insert n () all) ns
+
+    addCases : Defs -> List Name -> Core (List Name)
+    addCases defs ns = addCases' defs empty ns

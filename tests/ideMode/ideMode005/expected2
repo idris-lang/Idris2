@@ -16,6 +16,7 @@
 000073(:output (:ok (:highlight-source ((((:filename "Interface.idr") (:start 2 34) (:end 2 38)) ((:decor :type)))))) 1)
 000076(:output (:ok (:highlight-source ((((:filename "Interface.idr") (:start 2 38) (:end 2 39)) ((:decor :keyword)))))) 1)
 000076(:output (:ok (:highlight-source ((((:filename "Interface.idr") (:start 2 40) (:end 2 45)) ((:decor :keyword)))))) 1)
+000075(:output (:ok (:highlight-source ((((:filename "Interface.idr") (:start 3 2) (:end 3 13)) ((:decor :keyword)))))) 1)
 000073(:output (:ok (:highlight-source ((((:filename "Interface.idr") (:start 3 14) (:end 3 22)) ((:decor :data)))))) 1)
 000074(:output (:ok (:highlight-source ((((:filename "Interface.idr") (:start 5 2) (:end 5 3)) ((:decor :keyword)))))) 1)
 0000d7(:output (:ok (:highlight-source ((((:filename "Interface.idr") (:start 5 4) (:end 5 7)) ((:name "Doc") (:namespace "Interface") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
