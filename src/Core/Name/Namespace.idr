@@ -81,7 +81,6 @@ mkModuleIdent (Just (MkNS ns)) n = MkMI (n :: ns)
 -- MANIPULATING NAMESPACES
 -------------------------------------------------------------------------------------
 
-infixl 5 <.>
 ||| Extend an existing namespace with additional name parts to form a more local one.
 ||| e.g. `X.Y.Z <.> S.T.U` to get `X.Y.Z.S.T.U`.
 export
