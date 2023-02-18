@@ -64,6 +64,10 @@
 
 * Made sure that the positivity checker now respects `assert_total` annotations.
 
+* We now raise a warning for conflicting fixity declarations. They are
+  dangerous as Idris will pick an arbitrary one and so the meaning of an
+  expression can depend e.g. on the order in which modules are imported.
+
 ### Library changes
 
 #### Prelude
