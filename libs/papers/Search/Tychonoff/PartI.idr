@@ -318,7 +318,6 @@ IsSubSingleton (So b) where
 IsSubSingleton (v === w) where
   isSubSingleton Refl Refl = Refl
 
-infix 0 ~~~
 0 (~~~) : {0 b : a -> Type} -> (f, g : (x : a) ->  b x) -> Type
 f ~~~ g = (x : a) -> f x === g x
 

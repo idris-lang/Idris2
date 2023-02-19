@@ -205,15 +205,17 @@ checkFixity fc fix prec "-" = pure ()
 checkFixity fc fix prec n =
   do log "desugar.fixity" 10 "Desugaring fixity (\{show fix} \{show prec}) for \{show n}"
      syn <- get Syn
-     let test = do (fix', prec') <- (Prefix,) . snd <$> lookup n (prefixes syn)
-                                     <|> snd <$> lookup n (infixes syn)
+     let test = do (fc', fix', prec') <-
+                     lookup n (infixes syn)
+                     <|> map (map {f = Pair FC} {b = (Fixity, Nat)} (Prefix,)) (lookup n (prefixes syn))
+
                    guard (not (fix == fix' && prec == prec'))
-                   pure (fix', prec')
-     whenJust test $ \ (fix', prec') =>
+                   pure (fc', fix', prec')
+     whenJust test $ \ (fc', fix', prec') =>
        recordWarning $ GenericWarn fc $ unlines
          [ "Conflicting fixity declarations for \{n}:"
-         , "  old: \{show fix'} \{show prec'}"
-         , "  new: \{show fix} \{show prec}"
+         , "  old: \{show fix'} \{show prec'} (\{show fc'})"
+         , "  new: \{show fix} \{show prec} (\{show fc})"
          ]
 
 mutual
