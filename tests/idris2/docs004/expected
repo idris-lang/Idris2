@@ -107,6 +107,8 @@ Main> Bye for now!
 1/1: Building List (List.idr)
 List> interface List.Monoid : Type -> Type
   Parameters: ty
+  Constructor: MkMonoid
+    Users can hand-craft their own monoid implementations
   Methods:
     neutral : ty
     (++) : ty -> ty -> ty

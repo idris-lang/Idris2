@@ -273,7 +273,7 @@ getDocsForName fc n config
     showVisible : Visibility -> Doc IdrisDocAnn
     showVisible vis = header "Visibility" <++> annotate (Syntax Keyword) (pretty0 vis)
 
-    getDConDoc : Name -> Core (Doc IdrisDocAnn)
+    getDConDoc : {default True showType : Bool} -> Name -> Core (Doc IdrisDocAnn)
     getDConDoc con
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact con (gamma defs)
@@ -281,7 +281,11 @@ getDocsForName fc n config
                   | Nothing => pure Empty
              syn <- get Syn
              ty <- prettyType Syntax (type def)
-             let conWithTypeDoc = annotate (Decl con) (hsep [dCon con (prettyName con), colon, ty])
+             let conWithTypeDoc
+                   = annotate (Decl con)
+                   $ ifThenElse showType
+                       (hsep [dCon con (prettyName con), colon, ty])
+                       (dCon con (prettyName con))
              case lookupName con (defDocstrings syn) of
                [(n, "")] => pure conWithTypeDoc
                [(n, str)] => pure $ vcat
@@ -347,9 +351,11 @@ getDocsForName fc n config
                 case !(traverse (pterm . map defaultKindedName) (parents iface)) of
                      [] => []
                      ps => [hsep (header "Constraints" :: punctuate comma (map (prettyBy Syntax) ps))]
-             let icon = case dropNS (iconstructor iface) of
-                          DN _ _ => [] -- machine inserted
-                          nm => [hsep [header "Constructor", dCon nm (prettyName nm)]]
+             icon <- do cName <- toFullNames (iconstructor iface)
+                        case dropNS cName of
+                          UN{} => do doc <- getDConDoc {showType = False} cName
+                                     pure $ [header "Constructor" <++> annotate Declarations doc]
+                          _ => pure [] -- machine inserted
              mdocs <- traverse getMethDoc (methods iface)
              let meths = case concat mdocs of
                            [] => []
