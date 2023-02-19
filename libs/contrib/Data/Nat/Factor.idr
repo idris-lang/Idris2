@@ -52,7 +52,7 @@ public export
 data GCD : Nat -> Nat -> Nat -> Type where
     MkGCD : {a, b, p : Nat} ->
         {auto notBothZero : NotBothZero a b} ->
-        (CommonFactor p a b) ->
+        (Lazy (CommonFactor p a b)) ->
         ((q : Nat) -> CommonFactor q a b -> Factor q p) ->
         GCD p a b
 
@@ -377,7 +377,6 @@ gcdUnproven' m (S n) (Access rec) n_lt_m =
   gcdUnproven' (S n) (modNatNZ m (S n) SIsNonZero) (rec _ n_lt_m) mod_lt_n
 
 ||| Total definition of the gcd function. Does not return GСD evidence, but is faster.
-export
 gcdUnproven : Nat -> Nat -> Nat
 gcdUnproven m n with (isLT n m)
   gcdUnproven m n | Yes n_lt_m = gcdUnproven' m n (wellFounded m) n_lt_m
@@ -417,7 +416,7 @@ gcdUnprovenCommonFactor m n with (isLT n m)
 
 ||| An implementation of Euclidean Algorithm for computing greatest common
 ||| divisors. It is proven correct and total; returns a proof that computed
-||| number actually IS the GCD. Unfortunately it's still slow.
+||| number actually IS the GCD.
 export
 gcd : (a, b : Nat) -> {auto ok : NotBothZero a b} -> (f : Nat ** GCD f a b)
 gcd a b = (_ ** MkGCD (gcdUnprovenCommonFactor a b) (gcdUnprovenGreatest a b))
