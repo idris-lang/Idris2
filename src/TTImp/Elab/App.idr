@@ -98,7 +98,7 @@ getNameType elabMode rigc env fc x
     checkDeprecation fc gdef =
       do when (Deprecate `elem` gdef.flags) $
            recordWarning $
-             Deprecated
+             Deprecated fc
                "\{show gdef.fullname} is deprecated and will be removed in a future version."
                (Just (fc, gdef.fullname))
 

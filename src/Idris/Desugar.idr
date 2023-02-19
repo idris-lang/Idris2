@@ -82,6 +82,29 @@ extendSyn newsyn
            , "New (" ++ unwords (map show $ saveMod newsyn) ++ "): "
               ++ show (modDocstrings newsyn)
            ]
+         -- Check there are no conflicting definitions
+         let oldprefix = map (Prefix,) <$> (prefixes syn)
+         let newprefix = map (Prefix,) <$> (prefixes newsyn)
+         let oldinfix  = infixes syn
+         let newinfix  = infixes newsyn
+
+         let check = mapMaybe (\ entry@(k, ((_, v), (_, v'))) => entry <$ guard (k /= "-" && (v /= v')))
+                   . StringMap.toList
+         let inter = concatMap {t = List} {m = List _} check
+                   [ sharedSupport oldprefix newprefix
+                   , sharedSupport oldprefix newinfix
+                   , sharedSupport oldinfix  newprefix
+                   , sharedSupport oldinfix  newinfix
+                   ]
+         unless (null inter) $ recordWarning $ GenericWarn emptyFC $ unlines
+           $ ("Conflicting fixity declarations:" ::)
+           $ flip (concatMap {m = List _}) inter
+           $ \ (k, ((fc1, fix1, prec1), (fc2, fix2, prec2))) => pure $ unwords
+           [ "\{k}:"
+           , "\{show fix1} \{show prec1} (at \{show fc1})", "and"
+           , "\{show fix2} \{show prec2} (at \{show fc2})"
+           ]
+
          put Syn ({ infixes $= mergeLeft (infixes newsyn),
                     prefixes $= mergeLeft (prefixes newsyn),
                     ifaces $= merge (ifaces newsyn),
@@ -173,6 +196,27 @@ idiomise fc dons mns fn
      in IApp fc (IVar fc nm) fn
 
 data Bang : Type where
+
+checkFixity : {auto c : Ref Ctxt Defs} ->
+              {auto s : Ref Syn SyntaxInfo} ->
+              FC -> Fixity -> Nat -> String -> Core ()
+-- special case for "-", the one thing that's allowed to be both prefix & infix
+checkFixity fc fix prec "-" = pure ()
+checkFixity fc fix prec n =
+  do log "desugar.fixity" 10 "Desugaring fixity (\{show fix} \{show prec}) for \{show n}"
+     syn <- get Syn
+     let test = do (fc', fix', prec') <-
+                     lookup n (infixes syn)
+                     <|> map (map {f = Pair FC} {b = (Fixity, Nat)} (Prefix,)) (lookup n (prefixes syn))
+
+                   guard (not (fix == fix' && prec == prec'))
+                   pure (fc', fix', prec')
+     whenJust test $ \ (fc', fix', prec') =>
+       recordWarning $ GenericWarn fc $ unlines
+         [ "Conflicting fixity declarations for \{n}:"
+         , "  old: \{show fix'} \{show prec'} (\{show fc'})"
+         , "  new: \{show fix} \{show prec} (\{show fc})"
+         ]
 
 mutual
   desugarB : {auto s : Ref Syn SyntaxInfo} ->
@@ -1051,10 +1095,12 @@ mutual
       mapDesugarPiInfo ps = traverse (desugar AnyExpr ps)
 
   desugarDecl ps (PFixity fc Prefix prec (UN (Basic n)))
-      = do update Syn { prefixes $= insert n (fc, prec) }
+      = do checkFixity fc Prefix prec n
+           update Syn { prefixes $= insert n (fc, prec) }
            pure []
   desugarDecl ps (PFixity fc fix prec (UN (Basic n)))
-      = do update Syn { infixes $= insert n (fc, fix, prec) }
+      = do checkFixity fc fix prec n
+           update Syn { infixes $= insert n (fc, fix, prec) }
            pure []
   desugarDecl ps (PFixity fc _ _ _)
       = throw (GenericMsg fc "Fixity declarations must be for unqualified names")

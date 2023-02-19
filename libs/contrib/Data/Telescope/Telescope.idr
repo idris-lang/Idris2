@@ -158,7 +158,7 @@ namespace Right
 
 namespace Tree
 
-  infixl 4 ++
+  infixl 4 ><
 
   mutual
     ||| A tree of dependent types
@@ -166,7 +166,7 @@ namespace Tree
     data Telescope : (k : Nat) -> Type where
       Nil  : Telescope 0
       Elt  : Type -> Telescope 1
-      (++) : (gamma : Tree.Telescope m) ->
+      (><) : (gamma : Tree.Telescope m) ->
              (delta : Tree.Environment gamma -> Tree.Telescope n) ->
               Telescope (m + n)
 
@@ -175,13 +175,13 @@ namespace Tree
     Environment : Tree.Telescope k -> Type
     Environment [] = ()
     Environment (Elt t) = t
-    Environment (gamma ++ delta) = (env : Environment gamma ** Environment (delta env))
+    Environment (gamma >< delta) = (env : Environment gamma ** Environment (delta env))
 
   export
   concat : (gamma : Tree.Telescope k) -> (delta : Right.Telescope k ** Environment delta -> Environment gamma)
   concat Nil = ([] ** id)
   concat (Elt t) = ((t .- const []) ** fst)
-  concat (gamma ++ delta) =
+  concat (gamma >< delta) =
     let (thetaL ** transpL) = concat gamma in
     ((thetaL ++ \ envL => fst (concat (delta (transpL envL))))
     ** \ env =>
