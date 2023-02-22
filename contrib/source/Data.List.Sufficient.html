@@ -1,0 +1,156 @@
+<!DOCTYPE html><html lang="en">
+
+<head><title>Data.List.Sufficient</title>
+  <meta charset="utf-8">
+  <style>
+  .IdrisData {
+  color: darkred
+}
+.IdrisType {
+  color: blue
+}
+.IdrisBound {
+  color: black
+}
+.IdrisFunction {
+  color: darkgreen
+}
+.IdrisKeyword {
+  text-decoration: underline;
+}
+.IdrisComment {
+  color: #b22222
+}
+.IdrisNamespace {
+  font-style: italic;
+  color: black
+}
+.IdrisPostulate {
+  font-weight: bold;
+  color: red
+}
+.IdrisModule {
+  font-style: italic;
+  color: black
+}
+
+  .IdrisLineNumber {
+    text-decoration: none;
+    color: lightgrey;
+    user-select: none;
+  }
+  .IdrisLineNumber:hover {
+    color: darkgray;
+  }
+  .IdrisLineNumber:target {
+    color: gray;
+  }
+  .IdrisHighlight {
+    background-color: yellow;
+  }
+  </style>
+  <script>
+    function initialize() {
+      function handleHash(ev) {
+          if (!location.hash) return
+          let m = location.hash.match(/#(line\d+)(?:-(line\d+))?/)
+          if (m) {
+              let start = document.getElementById(m[1])
+              let end = document.getElementById(m[2])
+              if (start) {
+                  if (end && end.compareDocumentPosition(start) === 4) {
+                      ([start, end] = [end, start])
+                  }
+                  // Only on page load
+                  if (!ev) start.scrollIntoView()
+                  let parent = start.parentElement
+                  let lines = parent.children
+                  let className = ''
+                  for (let n = 0; n < lines.length; n++) {
+                      let el = lines[n]
+                      if (el === start) className = 'IdrisHighlight'
+                      el.className = className
+                      if (el === end || className && !end) className = ''
+                  }
+              }
+          }
+      }
+      let startLine
+      let endLine
+      function handlePointerMove(ev) {
+          if (startLine) {
+              for (let el = document.elementFromPoint(ev.clientX, ev.clientY); el; el = el.parentElement) {
+                  if (el.parentElement === startLine.parentElement) {
+                      if (endLine !== el) {
+                          endLine = el
+                          update()
+                      }
+                      break
+                  }
+              }
+          }
+      }
+      function update(ev) {
+          window.location.hash = startLine === endLine ? startLine.id : startLine.id + '-' + endLine.id
+      }
+      function handlePointerDown(ev) {
+          let target = ev.target
+          if (target.className === 'IdrisLineNumber') {
+              startLine = endLine = target.parentElement
+              window.addEventListener('pointermove', handlePointerMove)
+              update()
+              ev.preventDefault()
+          }
+      }
+      function handlePointerUp(ev) {
+          if (startLine) {
+              update()
+              window.removeEventListener('pointermove', handlePointerMove)
+              startLine = endLine = null
+          }
+      }
+      window.addEventListener('hashchange', handleHash)
+      window.addEventListener('pointerdown', handlePointerDown)
+      window.addEventListener('pointerup', handlePointerUp)
+      handleHash()
+  }
+  </script>
+</head>
+<body onload="initialize()">
+<code class="IdrisCode">
+<div id="line0"><a href="#line0" class="IdrisLineNumber"> &nbsp;0 | </a><span class="IdrisComment">|||&nbsp;&apos;Sufficient&apos;&nbsp;lists:&nbsp;a&nbsp;structurally&nbsp;inductive&nbsp;view&nbsp;of&nbsp;lists&nbsp;xs</span></div>
+<div id="line1"><a href="#line1" class="IdrisLineNumber"> &nbsp;1 | </a><span class="IdrisComment">|||&nbsp;as&nbsp;given&nbsp;by&nbsp;xs&nbsp;=&nbsp;non-empty&nbsp;prefix&nbsp;+&nbsp;sufficient&nbsp;suffix</span></div>
+<div id="line2"><a href="#line2" class="IdrisLineNumber"> &nbsp;2 | </a><span class="IdrisComment">|||</span></div>
+<div id="line3"><a href="#line3" class="IdrisLineNumber"> &nbsp;3 | </a><span class="IdrisComment">|||&nbsp;Useful&nbsp;for&nbsp;termination&nbsp;arguments&nbsp;for&nbsp;function&nbsp;definitions</span></div>
+<div id="line4"><a href="#line4" class="IdrisLineNumber"> &nbsp;4 | </a><span class="IdrisComment">|||&nbsp;which&nbsp;provably&nbsp;consume&nbsp;a&nbsp;non-empty&nbsp;(but&nbsp;otherwise&nbsp;arbitrary)&nbsp;prefix</span></div>
+<div id="line5"><a href="#line5" class="IdrisLineNumber"> &nbsp;5 | </a><span class="IdrisComment">|||&nbsp;*without*&nbsp;having&nbsp;to&nbsp;resort&nbsp;to&nbsp;ancillary&nbsp;WF&nbsp;induction&nbsp;on&nbsp;length&nbsp;etc.</span></div>
+<div id="line6"><a href="#line6" class="IdrisLineNumber"> &nbsp;6 | </a><span class="IdrisComment">|||&nbsp;e.g.&nbsp;lexers,&nbsp;parsers&nbsp;etc.</span></div>
+<div id="line7"><a href="#line7" class="IdrisLineNumber"> &nbsp;7 | </a><span class="IdrisComment">|||</span></div>
+<div id="line8"><a href="#line8" class="IdrisLineNumber"> &nbsp;8 | </a><span class="IdrisComment">|||&nbsp;Credited&nbsp;by&nbsp;Conor&nbsp;McBride&nbsp;as&nbsp;originally&nbsp;due&nbsp;to&nbsp;James&nbsp;McKinna</span></div>
+<div id="line9"><a href="#line9" class="IdrisLineNumber"> &nbsp;9 | </a><span class="IdrisKeyword">module</span>&nbsp;<span class="IdrisModule">Data.List.Sufficient</span></div>
+<div id="line10"><a href="#line10" class="IdrisLineNumber"> 10 | </a></div>
+<div id="line11"><a href="#line11" class="IdrisLineNumber"> 11 | </a><span class="IdrisComment">|||&nbsp;Sufficient&nbsp;view</span></div>
+<div id="line12"><a href="#line12" class="IdrisLineNumber"> 12 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line13"><a href="#line13" class="IdrisLineNumber"> 13 | </a><span class="IdrisKeyword">data</span>&nbsp;<span class="IdrisType">Sufficient</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">List</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Type</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line14"><a href="#line14" class="IdrisLineNumber"> 14 | </a>&nbsp;&nbsp;<span class="IdrisData">SuffAcc</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">{</span><span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">List</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">}</span></div>
+<div id="line15"><a href="#line15" class="IdrisLineNumber"> 15 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">suff_ih</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">{</span><span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">}</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisKeyword">{</span><span class="IdrisBound">pre</span><span class="IdrisKeyword">,</span>&nbsp;<span class="IdrisBound">suff</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">List</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">}</span></div>
+<div id="line16"><a href="#line16" class="IdrisLineNumber"> 16 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisData">::</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">pre</span>&nbsp;<span class="IdrisFunction">++</span>&nbsp;<span class="IdrisBound">suff</span><span class="IdrisKeyword">)</span></div>
+<div id="line17"><a href="#line17" class="IdrisLineNumber"> 17 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Sufficient</span>&nbsp;<span class="IdrisBound">suff</span><span class="IdrisKeyword">)</span></div>
+<div id="line18"><a href="#line18" class="IdrisLineNumber"> 18 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Sufficient</span>&nbsp;<span class="IdrisBound">xs</span></div>
+<div id="line19"><a href="#line19" class="IdrisLineNumber"> 19 | </a></div>
+<div id="line20"><a href="#line20" class="IdrisLineNumber"> 20 | </a><span class="IdrisComment">|||&nbsp;Sufficient&nbsp;view&nbsp;covering&nbsp;property</span></div>
+<div id="line21"><a href="#line21" class="IdrisLineNumber"> 21 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line22"><a href="#line22" class="IdrisLineNumber"> 22 | </a><span class="IdrisFunction">sufficient</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">List</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Sufficient</span>&nbsp;<span class="IdrisBound">xs</span></div>
+<div id="line23"><a href="#line23" class="IdrisLineNumber"> 23 | </a><span class="IdrisFunction">sufficient</span>&nbsp;<span class="IdrisData">[]</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">SuffAcc</span>&nbsp;<span class="IdrisKeyword">(\case</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">impossible)</span></div>
+<div id="line24"><a href="#line24" class="IdrisLineNumber"> 24 | </a><span class="IdrisFunction">sufficient</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">x</span>&nbsp;<span class="IdrisData">::</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">with</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">sufficient</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span></div>
+<div id="line25"><a href="#line25" class="IdrisLineNumber"> 25 | </a>&nbsp;&nbsp;<span class="IdrisFunction">sufficient</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">x</span>&nbsp;<span class="IdrisData">::</span>&nbsp;<span class="IdrisBound">xs</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">|</span>&nbsp;<span class="IdrisBound">suffxs</span><span class="IdrisKeyword">@(</span><span class="IdrisData">SuffAcc</span>&nbsp;<span class="IdrisBound">suff_ih</span><span class="IdrisKeyword">)</span></div>
+<div id="line26"><a href="#line26" class="IdrisLineNumber"> 26 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">SuffAcc</span>&nbsp;<span class="IdrisKeyword">(\case</span>&nbsp;<span class="IdrisData">Refl</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisFunction">prf</span>&nbsp;<span class="IdrisData">Refl</span><span class="IdrisKeyword">)</span></div>
+<div id="line27"><a href="#line27" class="IdrisLineNumber"> 27 | </a>&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">where</span>&nbsp;<span class="IdrisFunction">prf</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">{</span><span class="IdrisBound">pre</span><span class="IdrisKeyword">,</span>&nbsp;<span class="IdrisBound">suff</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">List</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">}</span></div>
+<div id="line28"><a href="#line28" class="IdrisLineNumber"> 28 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">xs</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">pre</span>&nbsp;<span class="IdrisFunction">++</span>&nbsp;<span class="IdrisBound">suff</span></div>
+<div id="line29"><a href="#line29" class="IdrisLineNumber"> 29 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Sufficient</span>&nbsp;<span class="IdrisBound">suff</span></div>
+<div id="line30"><a href="#line30" class="IdrisLineNumber"> 30 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisFunction">prf</span>&nbsp;<span class="IdrisKeyword">{</span><span class="IdrisBound">pre</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">[]</span><span class="IdrisKeyword">}</span>&nbsp;<span class="IdrisData">Refl</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">suffxs</span></div>
+<div id="line31"><a href="#line31" class="IdrisLineNumber"> 31 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisFunction">prf</span>&nbsp;<span class="IdrisKeyword">{</span><span class="IdrisBound">pre</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">y</span>&nbsp;<span class="IdrisData">::</span>&nbsp;<span class="IdrisBound">ys</span><span class="IdrisKeyword">)}</span>&nbsp;<span class="IdrisBound">eq</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">suff_ih</span>&nbsp;<span class="IdrisBound">eq</span></div>
+<div id="line32"><a href="#line32" class="IdrisLineNumber"> 32 | </a></div>
+</code>
+</body>
+</html>

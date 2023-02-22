@@ -1,0 +1,73 @@
+<!DOCTYPE html><html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Data.List.Sufficient</title>
+  <link rel="stylesheet" type="text/css" id="preferredStyle" href="../default.css">
+  <script>
+    /* Updates the stylesheet to use the preferred one.
+       Note that we set the link to root ++ sourceLoc because the config
+       is shared across the whole website, so the root may differ from
+       page to page.
+    */
+    function setStyleSource (sourceLoc) {
+      document.getElementById("preferredStyle").href = "../" + sourceLoc + ".css";
+      document.getElementById("selectPreferredStyle").value = sourceLoc;
+    }
+    /* Initialises the preferred style sheet:
+       1. if there is a stored value then use that
+          otherwise select the default
+       2. set both the css link href & the drop down menu selected option
+    */
+    function initStyleSource () {
+      var preferredStyle = localStorage.getItem("stylefile");
+      if (preferredStyle !== null) {
+        setStyleSource(preferredStyle);
+      } else {
+        setStyleSource("default");
+      };
+    }
+    function saveStyleSource (preferredStyle) {
+      localStorage.stylefile = preferredStyle;
+    }
+    </script>
+</head>
+
+<body class="namespace">
+<header>
+  <strong>Idris2Doc</strong> : Data.List.Sufficient
+  <nav><a href="../index.html">Index</a>
+
+  <select id="selectPreferredStyle">
+    <option value="default">Default</option>
+<option value="alternative">Alternative</option>
+<option value="blackandwhite">Black & White</option>
+
+  </select>
+  </nav>
+
+  <script>
+  /* We start by initialising the style source */
+  initStyleSource();
+
+  /* This listens for changes on the drop down menu and updates the
+     css used for the current page when a selection is made.
+  */
+  document.getElementById("selectPreferredStyle").addEventListener("change", function(){
+    var selected = this.options[this.selectedIndex].value; /* the option chosen */
+    setStyleSource (selected);
+    saveStyleSource (selected);
+  });
+</script>
+
+</header>
+<div class="container"><div id="module-header"><h1>Data.List.Sufficient<span style="float:right">(<a href="../source/Data.List.Sufficient.html">source</a>)</span></h1><pre>&apos;Sufficient&apos; lists: a structurally inductive view of lists xs
+as given by xs = non-empty prefix + sufficient suffix
+
+Useful for termination arguments for function definitions
+which provably consume a non-empty (but otherwise arbitrary) prefix
+*without* having to resort to ancillary WF induction on length etc.
+e.g. lexers, parsers etc.
+
+Credited by Conor McBride as originally due to James McKinna
+</pre></div><code></code><h2>Definitions</h2><dl class="decls"><dt id="Data.List.Sufficient.Sufficient"><code><span class="keyword">data</span>&ensp;<a class="type" href="Data.List.Sufficient.html#Data.List.Sufficient.Sufficient"><span class="name type">Sufficient</span></a>&ensp;:&ensp;<span class="type resolved" title="Prelude.Basics.List"><span class="name type">List</span></span>&ensp;<span class="boundvar">a</span>&ensp;<span class="keyword">-&gt;</span>&ensp;<span class="name type">Type</span></code></dt><dd><pre>  Sufficient view</pre><br>  <b>Totality</b>:&ensp;<span class="keyword">total</span><br>  <b>Visibility</b>:&ensp;<span class="keyword">public&ensp;export</span><br>  <b>Constructor</b>:&ensp;<dl class="decls"><dt id="Data.List.Sufficient.SuffAcc"><code><a class="type" href="Data.List.Sufficient.html#Data.List.Sufficient.SuffAcc"><span class="name constructor">SuffAcc</span></a>&ensp;:&ensp;(<span class="boundvar">xs</span>&ensp;<span class="keyword">=</span>&ensp;<span class="boundvar">x</span>&ensp;<span class="type resolved" title="Prelude.Basics.::"><span class="name constructor">::</span></span>&ensp;(<span class="boundvar">pre</span>&ensp;<span class="type resolved" title="Prelude.Types.List.++"><span class="name function">++</span></span>&ensp;<span class="boundvar">suff</span>)&ensp;<span class="keyword">-&gt;</span>&ensp;<a class="type" href="Data.List.Sufficient.html#Data.List.Sufficient.Sufficient"><span class="name type">Sufficient</span></a>&ensp;<span class="boundvar">suff</span>)&ensp;<span class="keyword">-&gt;</span>&ensp;<a class="type" href="Data.List.Sufficient.html#Data.List.Sufficient.Sufficient"><span class="name type">Sufficient</span></a>&ensp;<span class="boundvar">xs</span></code></dt></dl></dd><dt id="Data.List.Sufficient.sufficient"><code><a class="type" href="Data.List.Sufficient.html#Data.List.Sufficient.sufficient"><span class="name function">sufficient</span></a>&ensp;:&ensp;(<span class="boundvar">xs</span>&ensp;:&ensp;<span class="type resolved" title="Prelude.Basics.List"><span class="name type">List</span></span>&ensp;<span class="boundvar">a</span>)&ensp;<span class="keyword">-&gt;</span>&ensp;<a class="type" href="Data.List.Sufficient.html#Data.List.Sufficient.Sufficient"><span class="name type">Sufficient</span></a>&ensp;<span class="boundvar">xs</span></code></dt><dd><pre>  Sufficient view covering property</pre><br>  <b>Visibility</b>:&ensp;<span class="keyword">export</span></dd></dl></div><footer>Produced by Idris 2 version 0.6.0-a2c82e934</footer></body></html>
