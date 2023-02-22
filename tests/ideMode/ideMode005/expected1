@@ -108,6 +108,7 @@
 000073(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 18 0) (:end 18 6)) ((:decor :keyword)))))) 1)
 000071(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 18 7) (:end 18 11)) ((:decor :type)))))) 1)
 000075(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 18 12) (:end 18 17)) ((:decor :keyword)))))) 1)
+000074(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 19 2) (:end 19 13)) ((:decor :keyword)))))) 1)
 000072(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 19 14) (:end 19 20)) ((:decor :data)))))) 1)
 000074(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 20 2) (:end 20 6)) ((:decor :function)))))) 1)
 000073(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 20 7) (:end 20 8)) ((:decor :keyword)))))) 1)

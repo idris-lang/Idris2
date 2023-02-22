@@ -6,6 +6,8 @@ infixr 5 ::
 infixr 5 ++
 
 interface Monoid ty where
+  ||| Users can hand-craft their own monoid implementations
+  constructor MkMonoid
   neutral : ty
   (++) : ty -> ty -> ty
 

@@ -1,0 +1,12 @@
+1/3: Building Lib1 (Lib1.idr)
+2/3: Building Lib2 (Lib2.idr)
+3/3: Building Main0 (Main0.idr)
+Warning: Conflicting fixity declarations:
+%%%: infixl 5 (at Lib2:3:1--3:13) and infixr 5 (at Lib1:3:1--3:13)
+
+3/3: Building Main1 (Main1.idr)
+Warning: Conflicting fixity declarations:
+%%%: infixr 5 (at Lib1:3:1--3:13) and infixl 5 (at Lib2:3:1--3:13)
+
+0
+1

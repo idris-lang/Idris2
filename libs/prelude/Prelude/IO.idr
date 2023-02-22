@@ -75,8 +75,12 @@ export
 prim__getString : Ptr String -> String
 
 %foreign "C:putchar,libc 6"
+         "node:lambda:x=>process.stdout.write(x)"
+         "browser:lambda:x=>console.log(x)"
 prim__putChar : Char -> (1 x : %World) -> IORes ()
+
 %foreign "C:getchar,libc 6"
+         "node:support:getChar,support_system_file"
 %extern prim__getChar : (1 x : %World) -> IORes Char
 
 %foreign "C:idris2_getStr, libidris2_support, idris_support.h"

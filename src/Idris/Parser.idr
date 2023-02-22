@@ -1010,8 +1010,9 @@ mutual
                                           Left err => fatalLoc begin.bounds err
                                           Right pstrs => pure $ pstrs
                             strEnd
-                            pure pstrs
-           pure $ PString (boundToFC fname b) b.val
+                            pure (begin.val, pstrs)
+           pure $ let (hashtag, str) = b.val in
+                      PString (boundToFC fname b) hashtag str
     where
       toPStr : (WithBounds $ Either PTerm (List1 String)) -> Either String PStr
       toPStr x = case x.val of
@@ -1023,14 +1024,14 @@ mutual
   multilineStr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   multilineStr q fname idents
       = decorate fname Data $
-        do b <- bounds $ do multilineBegin
+        do b <- bounds $ do hashtag <- multilineBegin
                             commit
                             xs <- many $ bounds $ (interpBlock q fname idents) <||> strLitLines
                             endloc <- location
                             strEnd
-                            pure (endloc, toLines xs [<] [<])
-           pure $ let ((_, col), xs) = b.val in
-                      PMultiline (boundToFC fname b) (fromInteger $ cast col) xs
+                            pure (hashtag, endloc, toLines xs [<] [<])
+           pure $ let (hashtag, (_, col), xs) = b.val in
+                      PMultiline (boundToFC fname b) hashtag (fromInteger $ cast col) xs
     where
       toLines : List (WithBounds $ Either PTerm (List1 String)) ->
                 SnocList PStr -> SnocList (List PStr) -> List (List PStr)
@@ -1550,11 +1551,12 @@ getVisibility (Just vis) (Left x :: xs)
    = fatalError "Multiple visibility modifiers"
 getVisibility v (_ :: xs) = getVisibility v xs
 
-recordConstructor : OriginDesc -> Rule Name
+recordConstructor : OriginDesc -> Rule (String, Name)
 recordConstructor fname
-  = do exactIdent "constructor"
+  = do doc <- optDocumentation fname
+       decorate fname Keyword $ exactIdent "constructor"
        n <- mustWork $ decoratedDataConstructorName fname
-       pure n
+       pure (doc, n)
 
 constraints : OriginDesc -> IndentInfo -> EmptyRule (List (Maybe Name, PTerm))
 constraints fname indents

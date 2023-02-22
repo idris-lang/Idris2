@@ -12,6 +12,7 @@
 000074(:output (:ok (:highlight-source ((((:filename "LetBinders.idr") (:start 3 18) (:end 3 22)) ((:decor :type)))))) 1)
 000077(:output (:ok (:highlight-source ((((:filename "LetBinders.idr") (:start 3 22) (:end 3 23)) ((:decor :keyword)))))) 1)
 000077(:output (:ok (:highlight-source ((((:filename "LetBinders.idr") (:start 3 24) (:end 3 29)) ((:decor :keyword)))))) 1)
+000076(:output (:ok (:highlight-source ((((:filename "LetBinders.idr") (:start 4 2) (:end 4 13)) ((:decor :keyword)))))) 1)
 000074(:output (:ok (:highlight-source ((((:filename "LetBinders.idr") (:start 4 14) (:end 4 19)) ((:decor :data)))))) 1)
 000076(:output (:ok (:highlight-source ((((:filename "LetBinders.idr") (:start 5 2) (:end 5 6)) ((:decor :function)))))) 1)
 000075(:output (:ok (:highlight-source ((((:filename "LetBinders.idr") (:start 5 7) (:end 5 8)) ((:decor :keyword)))))) 1)

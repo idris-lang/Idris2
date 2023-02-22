@@ -5,5 +5,5 @@ Yaffle> Main.ack is total
 Yaffle> Main.foo is total
 Yaffle> Main.foo' is total
 Yaffle> Main.foom is total
-Yaffle> Main.pfoom is possibly not terminating due to recursive path Main.pfoom -> Main.pfoom
+Yaffle> Main.pfoom is possibly not terminating due to recursive path Main.pfoom
 Yaffle> Bye for now!

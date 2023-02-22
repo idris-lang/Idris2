@@ -195,7 +195,7 @@ options args = case args of
 
     mkOptions : String -> List String -> IO (Maybe Options)
     mkOptions exe rest
-      = do color <- (Just "DUMB" /=) <$> getEnv "TERM"
+      = do color <- [ (isNothing noc) && tty | noc <- getEnv "NO_COLOR", tty <- isTTY stdout ]
            let Just (acc, opts) = go rest initAcc (initOptions exe color)
                  | Nothing => pure Nothing
            extraOnlyNames <- the (IO (List String)) $ case acc.onlyFile of

@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout Project
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           # for pull_request so we can do HEAD^2
           fetch-depth: 2
@@ -34,9 +34,9 @@ jobs:
         id: get_commit_message
         run: |
           if   [[ '${{ github.event_name }}' == 'push' ]]; then
-            echo "commit_message=$(git log --format=%B -n 1 HEAD)" >> "$GITHUB_OUTPUT"
+            echo "commit_message=$(git log --format=%B -n 1 HEAD | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
           elif [[ '${{ github.event_name }}' == 'pull_request' ]]; then
-            echo "commit_message=$(git log --format=%B -n 1 HEAD^2)" >> "$GITHUB_OUTPUT"
+            echo "commit_message=$(git log --format=%B -n 1 HEAD^2 | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
           fi
 
     outputs:
@@ -53,7 +53,7 @@ jobs:
       SCHEME: scheme
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install build dependencies (LTS versions)
         run: |
           sudo apt-get update

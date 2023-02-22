@@ -2,7 +2,8 @@ module Compiler.ES.Doc
 
 import Data.List
 
-infixl 8 <++>, <?>
+infixr 6 <++>
+infixl 8 <?>
 
 public export
 data Doc

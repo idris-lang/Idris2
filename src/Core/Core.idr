@@ -73,8 +73,8 @@ data Warning : Type where
      ShadowingLocalBindings : FC -> (shadowed : List1 (String, FC, FC)) -> Warning
      ||| A warning about a deprecated definition. Supply an FC and Name to
      ||| have the documentation for the definition printed with the warning.
-     Deprecated : String -> Maybe (FC, Name) -> Warning
-     GenericWarn : String -> Warning
+     Deprecated : FC -> String -> Maybe (FC, Name) -> Warning
+     GenericWarn : FC -> String -> Warning
 
 %name Warning wrn
 
@@ -199,12 +199,12 @@ Show TTCErrorMsg where
 
 export
 Show Warning where
-    show (ParserWarning _ msg) = msg
-    show (UnreachableClause _ _ _) = ":Unreachable clause"
-    show (ShadowingGlobalDefs _ _) = ":Shadowing names"
-    show (ShadowingLocalBindings _ _) = ":Shadowing names"
-    show (Deprecated name _) = ":Deprecated " ++ name
-    show (GenericWarn msg) = msg
+    show (ParserWarning fc msg) = show fc ++ msg
+    show (UnreachableClause fc _ _) = show fc ++ ":Unreachable clause"
+    show (ShadowingGlobalDefs fc _) = show fc ++ ":Shadowing names"
+    show (ShadowingLocalBindings fc _) = show fc ++ ":Shadowing names"
+    show (Deprecated fc name _) = show fc ++ ":Deprecated " ++ name
+    show (GenericWarn fc msg) = show fc ++ msg
 
 
 export
@@ -387,13 +387,13 @@ Show Error where
   show (WarningAsError w) = show w
 
 export
-getWarningLoc : Warning -> Maybe FC
-getWarningLoc (ParserWarning fc _) = Just fc
-getWarningLoc (UnreachableClause fc _ _) = Just fc
-getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
-getWarningLoc (ShadowingLocalBindings fc _) = Just fc
-getWarningLoc (Deprecated _ fcAndName) = fst <$> fcAndName
-getWarningLoc (GenericWarn _) = Nothing
+getWarningLoc : Warning -> FC
+getWarningLoc (ParserWarning fc _) = fc
+getWarningLoc (UnreachableClause fc _ _) = fc
+getWarningLoc (ShadowingGlobalDefs fc _) = fc
+getWarningLoc (ShadowingLocalBindings fc _) = fc
+getWarningLoc (Deprecated fc _ fcAndName) = fromMaybe fc (fst <$> fcAndName)
+getWarningLoc (GenericWarn fc _) = fc
 
 export
 getErrorLoc : Error -> Maybe FC
@@ -470,7 +470,7 @@ getErrorLoc (FailingWrongError fc _ _) = pure fc
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
 getErrorLoc (InRHS _ _ err) = getErrorLoc err
 getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
-getErrorLoc (WarningAsError warn) = getWarningLoc warn
+getErrorLoc (WarningAsError warn) = Just (getWarningLoc warn)
 
 export
 killWarningLoc : Warning -> Warning
@@ -479,8 +479,8 @@ killWarningLoc (UnreachableClause fc x y) = UnreachableClause emptyFC x y
 killWarningLoc (ShadowingGlobalDefs fc xs) = ShadowingGlobalDefs emptyFC xs
 killWarningLoc (ShadowingLocalBindings fc xs) =
     ShadowingLocalBindings emptyFC $ (\(n, _, _) => (n, emptyFC, emptyFC)) <$> xs
-killWarningLoc (Deprecated x y) = Deprecated x (map ((emptyFC,) . snd) y)
-killWarningLoc (GenericWarn x) = GenericWarn x
+killWarningLoc (Deprecated fc x y) = Deprecated emptyFC x (map ((emptyFC,) . snd) y)
+killWarningLoc (GenericWarn fc x) = GenericWarn emptyFC x
 
 export
 killErrorLoc : Error -> Error
@@ -630,19 +630,16 @@ export %inline
 ma >> mb = ma >>= const mb
 
 -- Flipped bind
-infixr 1 =<<
 export %inline
 (=<<) : (a -> Core b) -> Core a -> Core b
 (=<<) = flip (>>=)
 
 -- Kleisli compose
-infixr 1 >=>
 export %inline
 (>=>) : (a -> Core b) -> (b -> Core c) -> (a -> Core c)
 f >=> g = (g =<<) . f
 
 -- Flipped kleisli compose
-infixr 1 <=<
 export %inline
 (<=<) : (b -> Core c) -> (a -> Core b) -> (a -> Core c)
 (<=<) = flip (>=>)

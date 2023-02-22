@@ -647,11 +647,13 @@ export
 HasNames PartialReason where
   full gam NotStrictlyPositive = pure NotStrictlyPositive
   full gam (BadCall ns) = pure $ BadCall !(traverse (full gam) ns)
-  full gam (RecPath ns) = pure $ RecPath !(traverse (full gam) ns)
+  full gam (BadPath init n) = pure $ BadPath !(traverse (traversePair (full gam)) init) !(full gam n)
+  full gam (RecPath loop) = pure $ RecPath !(traverse (traversePair (full gam)) loop)
 
   resolved gam NotStrictlyPositive = pure NotStrictlyPositive
   resolved gam (BadCall ns) = pure $ BadCall !(traverse (resolved gam) ns)
-  resolved gam (RecPath ns) = pure $ RecPath !(traverse (resolved gam) ns)
+  resolved gam (BadPath init n) = pure $ BadPath !(traverse (traversePair (resolved gam)) init) !(resolved gam n)
+  resolved gam (RecPath loop) = pure $ RecPath !(traverse (traversePair (resolved gam)) loop)
 
 export
 HasNames Terminating where
@@ -703,16 +705,16 @@ HasNames Warning where
   full gam (ShadowingGlobalDefs fc xs)
     = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (full gam))) xs
   full gam w@(ShadowingLocalBindings _ _) = pure w
-  full gam (Deprecated x y) = Deprecated x <$> traverseOpt (traversePair (full gam)) y
-  full gam (GenericWarn x) = pure (GenericWarn x)
+  full gam (Deprecated fc x y) = Deprecated fc x <$> traverseOpt (traversePair (full gam)) y
+  full gam (GenericWarn fc x) = pure (GenericWarn fc x)
 
   resolved gam (ParserWarning fc x) = pure (ParserWarning fc x)
   resolved gam (UnreachableClause fc rho s) = UnreachableClause fc <$> resolved gam rho <*> resolved gam s
   resolved gam (ShadowingGlobalDefs fc xs)
     = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (resolved gam))) xs
   resolved gam w@(ShadowingLocalBindings _ _) = pure w
-  resolved gam (Deprecated x y) = Deprecated x <$> traverseOpt (traversePair (resolved gam)) y
-  resolved gam (GenericWarn x) = pure (GenericWarn x)
+  resolved gam (Deprecated fc x y) = Deprecated fc x <$> traverseOpt (traversePair (resolved gam)) y
+  resolved gam (GenericWarn fc x) = pure (GenericWarn fc x)
 
 export
 HasNames Error where
@@ -2481,7 +2483,7 @@ addImportedInc modNS inc
                 Nothing =>
                   -- No incremental compile data for current CG, so we can't
                   -- compile incrementally
-                  do recordWarning (GenericWarn ("No incremental compile data for " ++ show modNS))
+                  do recordWarning (GenericWarn emptyFC ("No incremental compile data for " ++ show modNS))
                      defs <- get Ctxt
                      put Ctxt ({ allIncData $= drop cg } defs)
                      -- Tell session that the codegen is no longer incremental
@@ -2534,5 +2536,5 @@ unhide fc n
               | res => ambiguousName fc n (map fst res)
          put Ctxt ({ gamma $= unhideName nsn } defs)
          unless (isHidden nsn (gamma defs)) $ do
-           recordWarning $ GenericWarn $
+           recordWarning $ GenericWarn fc $
              "Trying to %unhide `" ++ show nsn ++ "`, which was not hidden in the first place"

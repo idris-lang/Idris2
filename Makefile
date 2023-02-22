@@ -57,7 +57,7 @@ export IDRIS2_BOOT_PATH := "$(IDRIS2_BOOT_PATH)"
 
 export SCHEME
 
-.PHONY: all idris2-exec libdocs testenv testenv-clean support support-clean clean FORCE
+.PHONY: all idris2-exec libdocs testenv testenv-clean support clean-support clean FORCE
 
 all: support ${TARGET} libs
 
@@ -162,14 +162,10 @@ test-installed:
 	@${MAKE} -C tests only=$(only) IDRIS2=$(IDRIS2_PREFIX)/bin/idris2 IDRIS2_PREFIX=${IDRIS2_PREFIX}
 
 support:
-	@${MAKE} -C support/c
-	@${MAKE} -C support/refc
-	@${MAKE} -C support/chez
+	@${MAKE} -C support
 
-support-clean:
-	@${MAKE} -C support/c cleandep
-	@${MAKE} -C support/refc cleandep
-	@${MAKE} -C support/chez clean
+clean-support:
+	@${MAKE} -C support clean
 
 clean-libs:
 	${MAKE} -C libs/prelude clean
@@ -180,7 +176,7 @@ clean-libs:
 	${MAKE} -C libs/linear clean
 	${MAKE} -C libs/papers clean
 
-clean: clean-libs support-clean testenv-clean
+clean: clean-libs clean-support testenv-clean
 	-${IDRIS2_BOOT} --clean ${IDRIS2_APP_IPKG}
 	$(RM) src/IdrisPaths.idr
 	${MAKE} -C tests clean
@@ -201,23 +197,11 @@ install-idris2:
 ifeq ($(OS), windows)
 	-install ${TARGET}.cmd ${PREFIX}/bin
 endif
-	mkdir -p ${PREFIX}/lib/
-	install support/c/${IDRIS2_SUPPORT} ${PREFIX}/lib
 	mkdir -p ${PREFIX}/bin/${NAME}_app
 	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
 
 install-support:
-	mkdir -p ${PREFIX}/${NAME_VERSION}/support/docs
-	mkdir -p ${PREFIX}/${NAME_VERSION}/support/racket
-	mkdir -p ${PREFIX}/${NAME_VERSION}/support/gambit
-	mkdir -p ${PREFIX}/${NAME_VERSION}/support/js
-	install -m 644 support/docs/*.css ${PREFIX}/${NAME_VERSION}/support/docs
-	install -m 644 support/racket/* ${PREFIX}/${NAME_VERSION}/support/racket
-	install -m 644 support/gambit/* ${PREFIX}/${NAME_VERSION}/support/gambit
-	install -m 644 support/js/* ${PREFIX}/${NAME_VERSION}/support/js
-	@${MAKE} -C support/c install
-	@${MAKE} -C support/refc install
-	@${MAKE} -C support/chez install
+	@${MAKE} -C support install
 
 install-bootstrap-libs:
 	${MAKE} -C libs/prelude install IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
