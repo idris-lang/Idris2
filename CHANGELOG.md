@@ -105,7 +105,9 @@
 * Changes `getNProcessors` to return the number of online processors rather than
   the number of configured processors.
 
-#### Contrib
+### Contrib
+
+* Adds `Data.List.Sufficient`, a small library defining a structurally inductive view of lists.
 
 * Remove Data.List.HasLength from contrib library but add it to the base library
   with the type signature from the compiler codebase and some of the naming
