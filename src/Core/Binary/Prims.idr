@@ -376,21 +376,28 @@ fromLimbs [] = 0
 fromLimbs (x :: xs) = cast x + prim__shl_Integer (fromLimbs xs) 32
 
 export
+TTC Nat where
+  toBuf b val = toBuf b (toLimbs $ cast val)
+  fromBuf b
+     = do val <- fromBuf b
+          pure (cast $ fromLimbs val)
+
+export
 TTC Integer where
   toBuf b val
     = assert_total $ if val < 0
          then do tag 0
-                 toBuf b (toLimbs (-val))
+                 toBuf b {a = Nat} (cast (-val))
          else do tag 1
-                 toBuf b (toLimbs val)
+                 toBuf b {a = Nat} (cast val)
   fromBuf b
-    = do val <- getTag
-         case val of
-              0 => do val <- fromBuf b
-                      pure (-(fromLimbs val))
-              1 => do val <- fromBuf b
-                      pure (fromLimbs val)
-              _ => corrupt "Integer"
+    = do tag <- getTag
+         case tag of
+           0 => do val <- fromBuf {a = Nat} b
+                   pure (- cast val)
+           1 => do val <- fromBuf {a = Nat} b
+                   pure (cast val)
+           _ => corrupt "Integer"
 
 export
 TTC Bits8 where
@@ -431,13 +438,6 @@ export
 TTC Int64 where
   toBuf b x = toBuf b $ cast {to = Integer} x
   fromBuf b = cast {from = Integer} <$> fromBuf b
-
-export
-TTC Nat where
-  toBuf b val = toBuf b (cast {to=Integer} val)
-  fromBuf b
-     = do val <- fromBuf b
-          pure (fromInteger val)
 
 ||| Get a file's modified time. If it doesn't exist, return 0 (UNIX Epoch)
 export
