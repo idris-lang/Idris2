@@ -100,6 +100,9 @@
 
 * Moved `Data.SortedMap` and `Data.SortedSet` from contrib to base.
 
+* Added missing buffer primitives (chezscheme only):
+  `setInt8`, `getInt8`, `getInt16`, `setInt64`, `getInt64`
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than

@@ -220,6 +220,18 @@
 (define (blodwen-buffer-getbits64 buf loc)
   (bytevector-u64-ref buf loc (native-endianness)))
 
+(define (blodwen-buffer-setint8 buf loc val)
+  (bytevector-s8-set! buf loc val))
+
+(define (blodwen-buffer-getint8 buf loc)
+  (bytevector-s8-ref buf loc))
+
+(define (blodwen-buffer-setint16 buf loc val)
+  (bytevector-s16-set! buf loc val (native-endianness)))
+
+(define (blodwen-buffer-getint16 buf loc)
+  (bytevector-s16-ref buf loc (native-endianness)))
+
 (define (blodwen-buffer-setint32 buf loc val)
   (bytevector-s32-set! buf loc val (native-endianness)))
 
@@ -230,6 +242,12 @@
   (bytevector-s64-set! buf loc val (native-endianness)))
 
 (define (blodwen-buffer-getint buf loc)
+  (bytevector-s64-ref buf loc (native-endianness)))
+
+(define (blodwen-buffer-setint64 buf loc val)
+  (bytevector-s64-set! buf loc val (native-endianness)))
+
+(define (blodwen-buffer-getint64 buf loc)
   (bytevector-s64-ref buf loc (native-endianness)))
 
 (define (blodwen-buffer-setdouble buf loc val)
