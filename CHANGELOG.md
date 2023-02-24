@@ -103,6 +103,8 @@
 * Added missing buffer primitives (chezscheme only):
   `setInt8`, `getInt8`, `getInt16`, `setInt64`, `getInt64`
 
+* Added new buffer (set/get) functions for built-in types `Bool`, `Nat`, `Integer`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
