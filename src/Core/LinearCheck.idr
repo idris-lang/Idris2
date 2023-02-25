@@ -329,7 +329,6 @@ mutual
                    do let checkRig = rigf |*| rig
                       (a', gaty, aused) <- lcheck checkRig erase env a
                       sc' <- scdone defs (toClosure defaultOpts env a')
-                      let aerased = if erase && isErased rigf then Erased fc Placeholder else a'
                       -- Possibly remove this check, or make it a compiler
                       -- flag? It is a useful double check on the result of
                       -- elaboration, but there are pathological cases where
@@ -343,7 +342,7 @@ mutual
                            do ty' <- quote defs env ty
                               aty' <- quote defs env aty
                               throw (CantConvert fc (gamma defs) env ty' aty')
-                      pure (App fc f' aerased,
+                      pure (App fc f' a',
                             glueBack defs env sc',
                             fused ++ aused)
                 NApp _ (NRef _ n) _ =>
