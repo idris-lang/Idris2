@@ -176,10 +176,10 @@ getInt8 buf offset
 %foreign "scheme:blodwen-buffer-setint16"
          "RefC:setBufferInt16LE"
          "node:lambda:(buf,offset,value)=>buf.writeInt16LE(value, offset)"
-prim__setInt16 : Buffer -> (offset : Int) -> (val : Int) -> PrimIO ()
+prim__setInt16 : Buffer -> (offset : Int) -> (val : Int16) -> PrimIO ()
 
 export %inline
-setInt16 : HasIO io => Buffer -> (offset : Int) -> (val : Int) -> io ()
+setInt16 : HasIO io => Buffer -> (offset : Int) -> (val : Int16) -> io ()
 setInt16 buf offset val
     = primIO (prim__setInt16 buf offset val)
 
@@ -299,38 +299,38 @@ setNat buf offset val
 
   where
 
-  toLimbs : Integer -> List Int32
+  toLimbs : Integer -> List Bits32
   toLimbs 0 = []
   toLimbs (-1) = [-1]
   toLimbs x = fromInteger (prim__and_Integer x 0xffffffff) ::
               toLimbs (assert_smaller x (prim__shr_Integer x 32))
 
-  setLimbs : (offset : Int) -> List Int32 -> io Int
+  setLimbs : (offset : Int) -> List Bits32 -> io Int
   setLimbs offset [] = pure offset
   setLimbs offset (limb :: limbs)
-    = do setInt32 buf offset limb
+    = do setBits32 buf offset limb
          setLimbs (offset + 4) limbs
 
+||| getNat returns the end offset
 export
-getNat : HasIO io => Buffer -> (offset : Int) -> io Nat
+getNat : HasIO io => Buffer -> (offset : Int) -> io (Int, Nat)
 getNat buf offset
   = do len <- getInt64 buf offset
        when (len < 0) $ assert_total $ idris_crash "corrupt Nat"
-       limbs <- getLimbs (offset + 8) len
-       pure (cast $ fromLimbs limbs)
+       limbs <- getLimbs [<] (offset + 8) len
+       pure (offset + 8 + 4 * cast len, cast $ fromLimbs limbs)
 
   where
 
-  fromLimbs : List Int32 -> Integer
+  fromLimbs : List Bits32 -> Integer
   fromLimbs [] = 0
   fromLimbs (x :: xs) = cast x + prim__shl_Integer (fromLimbs xs) 32
 
-  getLimbs : (offset : Int) -> (len : Int64) -> io (List Int32)
-  getLimbs offset 0 = pure []
-  getLimbs offset len
-    = do limb <- getInt32 buf offset
-         limbs <- getLimbs (offset + 4) (assert_smaller len (len -1))
-         pure (limb :: limbs)
+  getLimbs : SnocList Bits32 -> (offset : Int) -> (len : Int64) -> io (List Bits32)
+  getLimbs acc offset 0 = pure (acc <>> [])
+  getLimbs acc offset len
+    = do limb <- getBits32 buf offset
+         getLimbs (acc :< limb) (offset + 4) (assert_smaller len (len -1))
 
 ||| setInteger returns the end offset
 export
@@ -341,11 +341,12 @@ setInteger buf offset val = if val < 0
   else do setBool buf offset False
           setNat buf (offset + 1) (cast val)
 
+||| getInteger returns the end offset
 export
-getInteger : HasIO io => Buffer -> (offset : Int) -> io Integer
+getInteger : HasIO io => Buffer -> (offset : Int) -> io (Int, Integer)
 getInteger buf offset
   = do b <- getBool buf offset
-       (ifThenElse b negate id . cast) <$> getNat buf (offset + 1)
+       map (ifThenElse b negate id . cast) <$> getNat buf (offset + 1)
 
 ------------------------------------------------------------------------
 -- String
