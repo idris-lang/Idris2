@@ -9,7 +9,7 @@ record TyProj (d: Ty) where
 
 DepLensToDepOptic :
   {c1 : TyProj (MkTy (Nat -> Type))} ->
-  (c1.proj 3) ->
+  (proj c1 3) ->
   Type
 DepLensToDepOptic =
    (\(b) => ?mmm)

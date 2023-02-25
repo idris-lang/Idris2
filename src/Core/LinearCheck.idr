@@ -185,7 +185,8 @@ mutual
       = let b = getBinder prf env
             rigb = multiplicity b
             ty = binderType b in
-            do when (not erase) $ rigSafe rigb rig
+            do log "quantity" 15 "lcheck Local"
+               when (not erase) $ rigSafe rigb rig
                pure (Local fc x idx prf, gnf env ty, used rig)
     where
       getName : {idx : _} -> (vs : List Name) -> (0 p : IsVar n idx vs) -> Name
@@ -202,7 +203,8 @@ mutual
       used r = if isLinear r then [MkVar prf] else []
 
   lcheck rig erase env (Ref fc nt fn)
-      = do ty <- lcheckDef fc rig erase env fn
+      = do log "quantity" 15 "lcheck Ref \{show (nt)} \{show !(toFullNames fn)}"
+           ty <- lcheckDef fc rig erase env fn
            pure (Ref fc nt fn, gnf env (embed ty), [])
 
   -- If the meta has a definition, and we're not in Rig0, expand it first
@@ -211,7 +213,8 @@ mutual
   -- checking is concerned, update the type so that the binders
   -- are in Rig0
   lcheck {vars} rig erase env (Meta fc n idx args)
-      = do defs <- get Ctxt
+      = do log "quantity" 15 "lcheck Meta"
+           defs <- get Ctxt
            Just gdef <- lookupCtxtExact (Resolved idx) (gamma defs)
                 | _ => undefinedName fc n
            let expand = branchZero
@@ -247,7 +250,8 @@ mutual
       unusedHoleArgs _ ty = ty
 
   lcheck rig_in erase env (Bind fc nm b sc)
-      = do (b', bt, usedb) <- handleUnify (lcheckBinder rig erase env b)
+      = do log "quantity" 15 "lcheck Bind"
+           (b', bt, usedb) <- handleUnify (lcheckBinder rig erase env b)
                                  (\err =>
                                      case err of
                                           LinearMisuse _ _ r _ =>
@@ -313,7 +317,8 @@ mutual
                                  (throw (LinearUsed fc used nm))
 
   lcheck rig erase env (App fc f a)
-      = do (f', gfty, fused) <- lcheck rig erase env f
+      = do log "quantity" 15 "lcheck App \{show !(toFullNames f)} \{show !(toFullNames a)}"
+           (f', gfty, fused) <- lcheck rig erase env f
            defs <- get Ctxt
            fty <- getNF gfty
            case fty of
@@ -347,17 +352,18 @@ mutual
                          tfty <- getTerm gfty
                          throw (GenericMsg fc ("Linearity checking failed on " ++ show !(toFullNames f') ++
                               " (" ++ show !(toFullNames tfty) ++ " not a function type)"))
-
                 _ => do tfty <- getTerm gfty
                         throw (GenericMsg fc ("Linearity checking failed on " ++ show !(toFullNames f') ++
                               " (" ++ show !(toFullNames tfty) ++ " not a function type)"))
 
   lcheck rig erase env (As fc s as pat)
-      = do (as', _, _) <- lcheck rig erase env as
+      = do log "quantity" 15 "lcheck As"
+           (as', _, _) <- lcheck rig erase env as
            (pat', pty, u) <- lcheck rig erase env pat
            pure (As fc s as' pat', pty, u)
   lcheck rig erase env (TDelayed fc r ty)
-      = do (ty', _, u) <- lcheck rig erase env ty
+      = do log "quantity" 15 "lcheck Delayed"
+           (ty', _, u) <- lcheck rig erase env ty
            pure (TDelayed fc r ty', gType fc (MN "top" 0), u)
   lcheck rig erase env (TDelay fc r ty val)
       = do (ty', _, _) <- lcheck erased erase env ty
@@ -365,7 +371,8 @@ mutual
            ty <- getTerm gty
            pure (TDelay fc r ty' val', gnf env (TDelayed fc r ty), u)
   lcheck rig erase env (TForce fc r val)
-      = do (val', gty, u) <- lcheck rig erase env val
+      = do log "quantity" 15 "lcheck Force"
+           (val', gty, u) <- lcheck rig erase env val
            tynf <- getNF gty
            case tynf of
                 NDelayed _ r narg
@@ -373,12 +380,15 @@ mutual
                           pure (TForce fc r val', glueBack defs env narg, u)
                 _ => throw (GenericMsg fc "Not a delayed type")
   lcheck rig erase env (PrimVal fc c)
-      = pure (PrimVal fc c, gErased fc, [])
+      = do log "quantity" 15 "lcheck PrimVal"
+           pure (PrimVal fc c, gErased fc, [])
   lcheck rig erase env (Erased fc i)
-      = pure (Erased fc i, gErased fc, [])
+      = do log "quantity" 15 "lcheck Erased"
+           pure (Erased fc i, gErased fc, [])
   lcheck rig erase env (TType fc u)
       -- Not universe checking here, just use the top of the hierarchy
-      = pure (TType fc u, gType fc (MN "top" 0), [])
+      = do log "quantity" 15 "lcheck TType"
+           pure (TType fc u, gType fc (MN "top" 0), [])
 
   lcheckBinder : {vars : _} ->
                  {auto c : Ref Ctxt Defs} ->
@@ -662,7 +672,9 @@ mutual
            (arg', gargTy, aused) <- lcheck checkRig erase env arg
            defs <- get Ctxt
            sc' <- sc defs (toClosure defaultOpts env arg')
-           let aerased = if erase && isErased rigf then Erased fc Placeholder else arg'
+           let aerased = if erase && isErased rigf
+                            then Erased fc Placeholder
+                            else arg'
            (tm, gty, u) <- lcheckMeta rig erase env fc n idx args
                                       (aerased :: chk) sc'
            pure (tm, gty, aused ++ u)
