@@ -738,7 +738,22 @@ Interfaces, just like records, can be declared with a user-defined constructor.
 
       getB : t
 
-Then ``MkB : A t => t -> B t``.
+Then ``MkB : A t => t -> B t``. If we have 
+
+.. code-block:: idris 
+
+   A Nat where 
+    getA = Z
+
+   getAB : (t : B a) => (a, a)
+   getAB = (getA, getB)
+
+Then we can use the function ``getAB`` even though we didn't implement the
+interface ``B`` for ``Nat`` by passing an implementation inline
+
+.. code-block:: idris 
+
+   natAB = getAB { t = MkB (S Z) } -- === (Z, (S Z))
 
 .. _DeterminingParameters:
 
