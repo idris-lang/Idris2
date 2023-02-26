@@ -105,6 +105,11 @@
 
 * Added new buffer (set/get) functions for built-in types `Bool`, `Nat`, `Integer`.
 
+* Tightened the types of:
+  `setInt16` (now takes an `Int16` instead of an `Int`),
+  `setInt32` (now takes an `Int32` instead of an `Int`),
+  `getInt32` (now returns an `Int32` instead of an `Int`)
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
