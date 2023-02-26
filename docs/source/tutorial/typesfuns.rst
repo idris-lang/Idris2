@@ -1273,15 +1273,16 @@ definition, some expressions can be ambiguous. Here is an example:
    --                        |
    -- Doesnt compile! because ambiguous here
 
-We can also use the symbol ``:=`` instead of ``=`` in this context to, among other things,
-avoid these ambiguities with propositional equality:
+We can also use the symbol ``:=`` instead of ``=`` in this context to, among
+other things, avoid these ambiguities with propositional equality:
 
 .. code-block:: idris
 
    Diag : a -> Type
    Diag v = let ty : Type := v = v in ty
 
-The code above can be read as "``ty`` has type ``Type`` and it's value is ``v = v``".
+The code above can be read as "``ty`` has type ``Type`` and it's value
+is ``v = v``".
 
 Local definitions can also be introduced using ``let``. Just like top level
 ones and ones defined in a ``where`` clause you need to:
