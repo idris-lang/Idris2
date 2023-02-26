@@ -1267,8 +1267,11 @@ definition, some expressions can be ambiguous. Here is an example:
 
 .. code-block:: idris
 
-   Diag : a -> Type
-   Diag v = let ty : Type = v = v in ty
+   -- Diag : a -> Type
+   -- Diag v = let ty : Type = v = v in ty
+   --                        ^
+   --                        |
+   -- Doesnt compile! because ambiguous here
 
 We can also use the symbol ``:=`` instead of ``=`` in this context to, among other things,
 avoid these ambiguities with propositional equality:
