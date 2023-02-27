@@ -151,6 +151,7 @@ knownTopics = [
     ("resugar.var", Just "Resugaring variables"),
     ("resugar.sectionL", Just "Resugaring left sections"),
     ("specialise", Nothing),
+    ("specialise.declare", Nothing),
     ("totality", Nothing),
     ("totality.positivity", Nothing),
     ("totality.requirement", Nothing),

@@ -8,7 +8,7 @@ import TTImp.TTImp
 parameters (f : RawImp' nm -> RawImp' nm)
 
   export
-  mapTTImp :RawImp' nm -> RawImp' nm
+  mapTTImp : RawImp' nm -> RawImp' nm
 
   export
   mapPiInfo : PiInfo (RawImp' nm) -> PiInfo (RawImp' nm)
