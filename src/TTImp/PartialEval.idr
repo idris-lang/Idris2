@@ -225,7 +225,7 @@ mkSpecDef : {auto c : Ref Ctxt Defs} ->
             Name -> List (Nat, ArgMode) -> Name -> List (FC, Term vars) ->
             Core (Term vars)
 mkSpecDef {vars} fc gdef pename sargs fn stk
-    = handleUnify
+    = handleUnify {unResolve = True}
        (do defs <- get Ctxt
            setAllPublic True
            let staticargs
@@ -289,8 +289,9 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            -- if it fails, but I don't want the whole system to be dependent on
            -- the correctness of PE!
         (\err =>
-           do log "specialise" 1 $ "Partial evaluation of " ++ show !(toFullNames fn) ++ " failed" ++
-                      "\n" ++ show err
+           do logC "specialise" 1 $ do
+                 fn <- toFullNames fn
+                 pure "Partial evaluation of \{show fn} failed:\n\{show err}"
               update Ctxt { peFailures $= insert pename () }
               pure (applyWithFC (Ref fc Func fn) stk))
   where
