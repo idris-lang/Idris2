@@ -1,0 +1,5 @@
+rm -rf build
+
+$1 --no-color --console-width 0 --no-banner --log specialise:5 -c Mult3.idr
+$1 --no-color --console-width 0 --no-banner --log specialise:5 -c Desc.idr
+$1 --no-color --console-width 0 --no-banner --log specialise:5 -c Desc2.idr

@@ -187,7 +187,10 @@ idrisTestsEvaluator = MkTestPool "Evaluation" [] Nothing
        "evaluator001", "evaluator002", "evaluator003", "evaluator004",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
-       "interpreter005", "interpreter006", "interpreter007", "interpreter008"]
+       "interpreter005", "interpreter006", "interpreter007", "interpreter008",
+       -- Specialisation
+       "spec001"
+      ]
 
 idrisTestsREPL : TestPool
 idrisTestsREPL = MkTestPool "REPL commands and help" [] Nothing
