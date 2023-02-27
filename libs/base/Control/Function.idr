@@ -2,6 +2,12 @@ module Control.Function
 
 %default total
 
+||| Takes in the first two arguments in reverse order. This is a dependent version of `flip`, where
+||| the return type can depend on the function inputs.
+public export
+dflip : {0 c : a -> b -> Type} -> ((x : a) -> (y : b) -> c x y) -> (y : b) -> (x : a) -> c x y
+dflip f x y = f y x
+
 ||| An injective function maps distinct elements to distinct elements.
 public export
 interface Injective (f : a -> b) | f where
