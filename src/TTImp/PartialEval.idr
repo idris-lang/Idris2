@@ -392,7 +392,7 @@ specialise {vars} fc env gdef fn stk
                Just sargs <- getSpecArgs 0 specs stk
                    | Nothing => pure Nothing
                defs <- get Ctxt
-               sargs <- for sargs $ traverse @{%search} @{CORE} $ traverseArgMode $ \ tm =>
+               sargs <- for sargs $ traversePair $ traverseArgMode $ \ tm =>
                           normalise defs [] tm
                let nhash = hash !(traverse toFullNames $ mapMaybe getStatic $ map snd sargs)
                               `hashWithSalt` fnfull -- add function name to hash to avoid namespace clashes
