@@ -1,4 +1,4 @@
-%spec m
+%inline %spec m
 smult : (m, n : Nat) -> Nat
 smult 0 n = 0
 smult 1 n = n

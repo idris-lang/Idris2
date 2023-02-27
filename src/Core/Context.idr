@@ -313,9 +313,17 @@ commitCtxt ctxt
         = do writeArray arr idx val
              commitStaged rest arr
 
+||| Produce a new global definition with a lot of default values
+||| @fc   definition site
+||| @n    name
+||| @rig  quantity annotation
+||| @vars local variables
+||| @ty   (closed) type
+||| @vis  Visibility
+||| @def  actual definition
 export
-newDef : FC -> Name -> RigCount -> List Name ->
-         ClosedTerm -> Visibility -> Def -> GlobalDef
+newDef : (fc : FC) -> (n : Name) -> (rig : RigCount) -> (vars : List Name) ->
+         (ty : ClosedTerm) -> (vis : Visibility) -> (def : Def) -> GlobalDef
 newDef fc n rig vars ty vis def
     = MkGlobalDef
         { location = fc

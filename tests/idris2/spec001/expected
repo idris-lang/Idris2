@@ -9,6 +9,12 @@ LOG specialise:5: New patterns for _PE.PE_smult_4e8901402355876e:
 (_PE.PE_smult_4e8901402355876e $_pe0) = (($resolved2551 (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))) _pe0)
 LOG specialise:5: New RHS: (Prelude.Types.plus _pe0[0] (Prelude.Types.plus _pe0[0] _pe0[0]))
 LOG specialise:5: Already specialised _PE.PE_smult_4e8901402355876e
+/* Main.main : IO () */
+function Main_main($0) {
+ const $1 = Prelude_IO_prim__getStr($0);
+ const $4 = Prelude_Types_prim__integerToNat(_bigIntOfString($1));
+ return Prelude_IO_prim__putStr((Prelude_Show_show_Show_Nat(($4+($4+$4)))+'\n'), $0);
+}
 1/1: Building Desc (Desc.idr)
 LOG specialise.declare:5: Specialising Desc.fold ($resolved2664) -> _PE.PE_fold_3a845f1ca594c582 by (0, Dynamic), (1, Static (Desc.Sum Desc.Stop (Desc.Prod Desc.Rec Desc.Rec))), (2, Dynamic)
 LOG specialise:3: Specialised type _PE.PE_fold_3a845f1ca594c582: {0 a : Type} -> ({arg:936} : ({arg:938} : (Desc.Meaning (Desc.Sum Desc.Stop (Desc.Prod Desc.Rec Desc.Rec)) a[0])) -> a[1]) -> ({arg:943} : (Desc.Mu (Desc.Sum Desc.Stop (Desc.Prod Desc.Rec Desc.Rec)))) -> a[2]
@@ -40,3 +46,40 @@ LOG specialise:5: New RHS: (alg[0] (Prelude.Types.List.mapAppend (Main.Mu Prelud
 LOG specialise:5: Already specialised _PE.PE_fold_8abb50b713fe8e5e
 LOG specialise:5: New RHS: (alg[0] (Prelude.Types.List.mapAppend (Main.Mu Prelude.Basics.List) Prelude.Types.Nat (Prelude.Basics.Lin Prelude.Types.Nat) (_PE.PE_fold_a727631bc09e3761 alg[0]) t[1]))
 LOG specialise:5: Already specialised _PE.PE_fold_8abb50b713fe8e5e
+1/1: Building Identity (Identity.idr)
+LOG specialise.declare:5: Specialising Main.identity ($resolved2551) -> _PE.PE_identity_3c7f5598e5c9b732 by (0, Static Prelude.Types.Nat), (1, Dynamic)
+LOG specialise:3: Specialised type _PE.PE_identity_3c7f5598e5c9b732: ({arg:813} : (Prelude.Basics.List Prelude.Types.Nat)) -> (Prelude.Basics.List Prelude.Types.Nat)
+LOG specialise:5: Attempting to specialise:
+((Main.identity [a = a]) (Prelude.Basics.Nil [a = a])) = (Prelude.Basics.Nil [a = a])
+((Main.identity [a = a]) (((Prelude.Basics.:: [a = a]) x) xs)) = (((Prelude.Basics.:: [a = a]) x) ((Main.identity [a = a]) xs))
+LOG specialise:5: New patterns for _PE.PE_identity_3c7f5598e5c9b732:
+(_PE.PE_identity_3c7f5598e5c9b732 (Prelude.Basics.Nil [a = Prelude.Types.Nat])) = (Prelude.Basics.Nil [a = Prelude.Types.Nat])
+(_PE.PE_identity_3c7f5598e5c9b732 (((Prelude.Basics.:: [a = Prelude.Types.Nat]) x) xs)) = (((Prelude.Basics.:: [a = Prelude.Types.Nat]) x) ((Main.identity [a = Prelude.Types.Nat]) xs))
+LOG specialise:5: New RHS: (Prelude.Basics.Nil Prelude.Types.Nat)
+LOG specialise:5: Already specialised _PE.PE_identity_3c7f5598e5c9b732
+LOG specialise:5: New RHS: (Prelude.Basics.:: Prelude.Types.Nat x[1] (_PE.PE_identity_3c7f5598e5c9b732 xs[0]))
+LOG specialise:5: Already specialised _PE.PE_identity_3c7f5598e5c9b732
+LOG compiler.identity:5: found identity flag for: _PE.PE_identity_3c7f5598e5c9b732, 0
+	old def: Just [{arg:0}]: (%case !{arg:0} [(%concase [nil] Prelude.Basics.Nil Just 0 [] (%con [nil] Prelude.Basics.Nil Just 0 [])), (%concase [cons] Prelude.Basics.:: Just 1 [{e:2}, {e:3}] (%con [cons] Prelude.Basics.:: Just 1 [!{e:2}, (_PE.PE_identity_3c7f5598e5c9b732 [!{e:3}])]))] Nothing)
+LOG compiler.identity:5: 	new def: [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: found identity flag for: Main.identity, 0
+	old def: Just [{arg:1}]: (%case !{arg:1} [(%concase [nil] Prelude.Basics.Nil Just 0 [] (%con [nil] Prelude.Basics.Nil Just 0 [])), (%concase [cons] Prelude.Basics.:: Just 1 [{e:2}, {e:3}] (%con [cons] Prelude.Basics.:: Just 1 [!{e:2}, (Main.identity [!{e:3}])]))] Nothing)
+LOG compiler.identity:5: 	new def: [{arg:1}]: !{arg:1}
+LOG compiler.identity:5: found identity flag for: _PE.PE_identity_3c7f5598e5c9b732, 0
+	old def: Just [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: 	new def: [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: found identity flag for: Main.identity, 0
+	old def: Just [{arg:1}]: !{arg:1}
+LOG compiler.identity:5: 	new def: [{arg:1}]: !{arg:1}
+LOG compiler.identity:5: found identity flag for: Main.test, 0
+	old def: Just [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: 	new def: [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: found identity flag for: _PE.PE_identity_3c7f5598e5c9b732, 0
+	old def: Just [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: 	new def: [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: found identity flag for: Main.identity, 0
+	old def: Just [{arg:1}]: !{arg:1}
+LOG compiler.identity:5: 	new def: [{arg:1}]: !{arg:1}
+LOG compiler.identity:5: found identity flag for: Main.test, 0
+	old def: Just [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: 	new def: [{arg:0}]: !{arg:0}

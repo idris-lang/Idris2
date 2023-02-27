@@ -277,7 +277,11 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            -- Add as RigW - if it's something else, we don't need it at
            -- runtime anyway so this is wasted effort, therefore a failure
            -- is okay!
-           peidx <- addDef pename (newDef fc pename top [] sty Public None)
+           let defflags := propagateFlags (flags gdef)
+           log "specialise.flags" 20 "Defining \{show pename} with flags: \{show defflags}"
+           peidx <- addDef pename
+                  $ the (GlobalDef -> GlobalDef) { flags := defflags }
+                  $ newDef fc pename top [] sty Public None
            addToSave (Resolved peidx)
 
            -- Reduce the function to be specialised, and reduce any name in
@@ -318,6 +322,21 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
               update Ctxt { peFailures $= insert pename () }
               pure (applyWithFC (Ref fc Func fn) stk))
   where
+
+    identityFlag : List (Nat, ArgMode) -> Nat -> Maybe Nat
+    identityFlag [] k = pure k
+    identityFlag ((pos, mode) :: sargs) k
+      = k <$ guard (k < pos)
+      <|> (case mode of { Static _ => (`minus` 1); Dynamic => id }) <$> identityFlag sargs k
+
+
+    propagateFlags : List DefFlag -> List DefFlag
+    propagateFlags = mapMaybe $ \case
+      Deprecate => Nothing
+      Overloadable => Nothing
+      Identity k => Identity <$> identityFlag sargs k
+      fl => Just fl
+
     getAllRefs : NameMap Bool -> List ArgMode -> NameMap Bool
     getAllRefs ns (Dynamic :: xs) = getAllRefs ns xs
     getAllRefs ns (Static t :: xs)
