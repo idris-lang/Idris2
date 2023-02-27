@@ -350,11 +350,20 @@ mutual
                       do Just _ <- lookupCtxtExact n (gamma defs)
                               | _ => undefinedName fc n
                          tfty <- getTerm gfty
-                         throw (GenericMsg fc ("Linearity checking failed on " ++ show !(toFullNames f') ++
-                              " (" ++ show !(toFullNames tfty) ++ " not a function type)"))
-                _ => do tfty <- getTerm gfty
-                        throw (GenericMsg fc ("Linearity checking failed on " ++ show !(toFullNames f') ++
-                              " (" ++ show !(toFullNames tfty) ++ " not a function type)"))
+                         needFunctionType f' gfty
+                NErased _ Placeholder =>
+                  do when (not erase) $ needFunctionType f' gfty
+                     -- we don't do any linearity checking when `erase` is set
+                     -- so returning an empty usage is fine
+                     pure (App fc f a, gErased fc, [])
+                _ =>
+                  needFunctionType f' gfty
+    where
+      needFunctionType : Term vars -> Glued vars -> Core _
+      needFunctionType f gfty =
+        do tfty <- getTerm gfty
+           throw (GenericMsg fc ("Linearity checking failed on " ++ show !(toFullNames f) ++
+                 " (" ++ show !(toFullNames tfty) ++ " not a function type)"))
 
   lcheck rig erase env (As fc s as pat)
       = do log "quantity" 15 "lcheck As"
