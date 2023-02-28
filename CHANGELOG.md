@@ -124,6 +124,8 @@
   from the contrib library. The type ended up being `HasLength n xs` rather than
   `HasLength xs n`.
 
+* Adds an implementation for `Functor Text.Lexer.Tokenizer.Tokenizer`.
+
 #### Papers
 
 * In `Control.DivideAndConquer`: a port of the paper
