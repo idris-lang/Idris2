@@ -316,7 +316,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            -- if it fails, but I don't want the whole system to be dependent on
            -- the correctness of PE!
         (\err =>
-           do logC "specialise" 1 $ do
+           do logC "specialise.fail" 1 $ do
                  fn <- toFullNames fn
                  pure "Partial evaluation of \{show fn} failed:\n\{show err}"
               update Ctxt { peFailures $= insert pename () }
