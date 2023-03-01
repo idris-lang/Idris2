@@ -677,7 +677,7 @@ delete : {len : _} ->
 delete = deleteBy (==)
 
 --------------------------------------------------------------------------------
--- Splitting and breaking lists
+-- Splitting and breaking vects
 --------------------------------------------------------------------------------
 
 ||| A tuple where the first element is a `Vect` of the `n` first elements and
@@ -712,6 +712,30 @@ partition p (x::xs) =
       ((S leftLen ** x::lefts), (rightLen ** rights))
     else
       ((leftLen ** lefts), (S rightLen ** x::rights))
+
+||| Split a vector whose length is a multiple of two numbers, k times n, into k
+||| sections of length n.
+|||
+||| ```idris example
+||| > kSplits 2 4 [1, 2, 3, 4, 5, 6, 7, 8]
+||| [[1, 2, 3, 4], [5, 6, 7, 8]]
+||| ```
+public export
+kSplits : (k, n : Nat) -> Vect (k * n) a -> Vect k (Vect n a)
+kSplits 0     n xs = []
+kSplits (S k) n xs = let (ys, zs) = splitAt n xs
+                     in ys :: kSplits k n zs
+
+||| Split a vector whose length is a multiple of two numbers, k times n, into n
+||| sections of length k.
+|||
+||| ```idris example
+||| > nSplits 2 4 [1, 2, 3, 4, 5, 6, 7, 8]
+||| [[1, 5], [2, 6], [3, 7], [4, 8]]
+||| ```
+public export
+nSplits : (k, n : Nat) -> Vect (k * n) a -> Vect n (Vect k a)
+-- implemented via matrix transposition, so the definition is further down
 
 --------------------------------------------------------------------------------
 -- Predicates
@@ -896,6 +920,9 @@ public export
 transpose : {n : _} -> (array : Vect m (Vect n elem)) -> Vect n (Vect m elem)
 transpose []        = replicate _ []                 -- = [| [] |]
 transpose (x :: xs) = zipWith (::) x (transpose xs) -- = [| x :: xs |]
+
+-- nSplits from earlier on
+nSplits k n = transpose . kSplits k n
 
 --------------------------------------------------------------------------------
 -- Applicative/Monad/Traversable
