@@ -110,6 +110,8 @@
   `setInt32` (now takes an `Int32` instead of an `Int`),
   `getInt32` (now returns an `Int32` instead of an `Int`)
 
+* Adds left- and right-rotation for `FiniteBits`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
