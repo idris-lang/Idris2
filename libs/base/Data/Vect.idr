@@ -863,8 +863,26 @@ zipWith3IndexLinear _ (_::xs) (_::ys) (_::zs) FZ     = Refl
 zipWith3IndexLinear f (_::xs) (_::ys) (_::zs) (FS i) = zipWith3IndexLinear f xs ys zs i
 
 --------------------------------------------------------------------------------
+-- Permutation
+--------------------------------------------------------------------------------
+
+||| Rearrange the elements of a vector according to some permutation of its
+||| indices.
+||| @ v the vector whose elements to rearrange
+||| @ p the permutation to apply
+|||
+||| ```idris example
+||| > permute ['a', 'b', 'c', 'd'] [0, 3, 2, 1]
+||| ['a', 'd' , 'c' ,'b']
+||| ```
+export
+permute : {len : _} -> (v : Vect len a) -> (p : Vect len (Fin len)) -> Vect len a
+permute v p = zipWith index p (replicate len v)
+
+--------------------------------------------------------------------------------
 -- Matrix transposition
 --------------------------------------------------------------------------------
+
 ||| Transpose a `Vect` of `Vect`s, turning rows into columns and vice versa.
 |||
 ||| This is like zipping all the inner `Vect`s together and is equivalent to `traverse id` (`transposeTraverse`).

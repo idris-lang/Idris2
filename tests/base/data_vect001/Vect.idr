@@ -26,6 +26,9 @@ scanr1Mul = [
     , (_ ** scanr1 (*) [5, 4, 3])
   ]
 
+permutation : Vect 4 Char
+permutation = permute ['a', 'b', 'c', 'd'] [0, 3, 2, 1]
+
 main : IO ()
 main = do
   printLn takeFromStream
@@ -33,3 +36,4 @@ main = do
   printLn scanrMul
   printLn scanrCons
   printLn scanr1Mul
+  printLn permutation
