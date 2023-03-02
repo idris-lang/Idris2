@@ -1,32 +1,23 @@
-||| 'Sufficient' lists: a structurally inductive view of lists xs
-||| as given by xs = non-empty prefix + sufficient suffix
-|||
-||| Useful for termination arguments for function definitions
-||| which provably consume a non-empty (but otherwise arbitrary) prefix
-||| *without* having to resort to ancillary WF induction on length etc.
-||| e.g. lexers, parsers etc.
-|||
-||| Credited by Conor McBride as originally due to James McKinna
+||| WellFounded on List suffixes
 module Data.List.Sufficient
 
-||| Sufficient view
-public export
-data Sufficient : (xs : List a) -> Type where
-  SuffAcc : {xs : List a}
-          -> (suff_ih : {x : a} -> {pre, suff : List a}
-                      -> xs = x :: (pre ++ suff)
-                      -> Sufficient suff)
-          -> Sufficient xs
+import Control.WellFounded
 
-||| Sufficient view covering property
-export
-sufficient : (xs : List a) -> Sufficient xs
-sufficient []        = SuffAcc (\case _ impossible)
-sufficient (x :: xs) with (sufficient xs)
-  sufficient (x :: xs) | suffxs@(SuffAcc suff_ih)
-    = SuffAcc (\case Refl => prf Refl)
-    where prf : {pre, suff : List a}
-              -> xs = pre ++ suff
-              -> Sufficient suff
-          prf {pre = []} Refl = suffxs
-          prf {pre = (y :: ys)} eq = suff_ih eq
+%default total
+
+public export
+data Suffix : (ys,xs : List a) -> Type where
+  IsSuffix : (x : a) -> (zs : List a)
+          -> (0 ford : xs = x :: zs ++ ys) -> Suffix ys xs
+
+SuffixAccessible : (xs : List a) -> Accessible Suffix xs
+SuffixAccessible [] = Access (\y => \case (IsSuffix x zs _) impossible)
+SuffixAccessible ws@(x :: xs) =
+  let fact1@(Access f) = SuffixAccessible xs
+  in Access $ \ys => \case
+    (IsSuffix x [] Refl) => fact1
+    (IsSuffix x (z :: zs) Refl) => f ys (IsSuffix z zs Refl)
+
+public export
+WellFounded (List a) Suffix where
+  wellFounded = SuffixAccessible
