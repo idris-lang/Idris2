@@ -391,7 +391,7 @@ mapMaybe f (x::xs) =
        Just y  => (S len ** y :: ys)
        Nothing => (  len **      ys)
 
--- now that we have `map`, we can finish implementing `allFins` 
+-- now that we have `map`, we can finish implementing `allFins`
 allFins 0 = []
 allFins (S k) = FZ :: map FS (allFins k)
 
