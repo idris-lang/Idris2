@@ -1,6 +1,7 @@
 module Data.Bits
 
 import public Data.Fin
+import Data.Vect
 
 %default total
 
@@ -218,6 +219,14 @@ interface Bits a => FiniteBits a where
   rotL x i =
     (x `shiftL` (bitsToIndex i)) .|. (x `shiftR` (bitsToIndex $ finS (complement i)))
 
+public export
+asBitVector : FiniteBits a => a -> Vect (bitSize {a}) Bool
+asBitVector v = testBit v . bitsToIndex <$> allFins _
+
+public export
+asString : FiniteBits a => a -> String
+asString = pack . toList . map (\ b => ifThenElse b '1' '0') . asBitVector
+
 public export %inline
 FiniteBits Bits8 where
   bitSize     = 8
@@ -433,4 +442,3 @@ FiniteBits Int64 where
     let ux : Bits64
         ux = cast x
     in cast $ ux `rotL` i
-
