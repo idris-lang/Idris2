@@ -110,6 +110,13 @@
   `setInt32` (now takes an `Int32` instead of an `Int`),
   `getInt32` (now returns an `Int32` instead of an `Int`)
 
+* Adds `Vect.permute` for applying permutations to `Vect`s.
+* Adds `Vect.kSplits` and `Vect.nSplits` for splitting a `Vect` whose length is
+  a known multiple of two `Nat`s (k * n) into k vectors of length n (and
+  vice-versa).
+* Adds `Vect.allFins` for generating all the `Fin` elements as a `Vect` with
+  matching length to the number of elements.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
