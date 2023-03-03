@@ -225,7 +225,7 @@ asBitVector v = testBit v . bitsToIndex <$> allFins _
 
 public export
 asString : FiniteBits a => a -> String
-asString = pack . toList . map (\ b => ifThenElse b '1' '0') . asBitVector
+asString = pack . toList . map (\ b => ifThenElse b '1' '0') . reverse . asBitVector
 
 public export %inline
 FiniteBits Bits8 where
