@@ -114,6 +114,8 @@
 * Adds `Vect.kSplits` and `Vect.nSplits` for splitting a `Vect` whose length is
   a known multiple of two `Nat`s (k * n) into k vectors of length n (and
   vice-versa).
+* Adds `Vect.allFins` for generating all the `Fin` elements as a `Vect` with
+  matching length to the number of elements.
 
 #### System
 

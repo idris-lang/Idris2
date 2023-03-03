@@ -117,6 +117,14 @@ drop' 0 xs = rewrite minusZeroRight l in xs
 drop' (S k) [] = rewrite minusZeroLeft (S k) in []
 drop' (S k) (x :: xs) = drop' k xs
 
+||| Generate all of the Fin elements as a Vect whose length is the number of
+||| elements.
+|||
+||| Useful, for example, when one wants all the indices for specific Vect.
+public export
+allFins : (n : Nat) -> Vect n (Fin n)
+-- implemented using `map`, so the definition is further down
+
 ||| Extract a particular element from a vector
 |||
 ||| ```idris example
@@ -383,6 +391,10 @@ mapMaybe f (x::xs) =
        Just y  => (S len ** y :: ys)
        Nothing => (  len **      ys)
 
+-- now that we have `map`, we can finish implementing `allFins` 
+allFins 0 = []
+allFins (S k) = FZ :: map FS (allFins k)
+
 --------------------------------------------------------------------------------
 -- Folds
 --------------------------------------------------------------------------------
@@ -435,6 +447,7 @@ foldr1 f (x::y::xs) = f x (foldr1 f (y::xs))
 public export
 foldl1 : (t -> t -> t) -> Vect (S n) t -> t
 foldl1 f (x::xs) = foldl f x xs
+
 --------------------------------------------------------------------------------
 -- Scans
 --------------------------------------------------------------------------------
