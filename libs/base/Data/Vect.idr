@@ -913,8 +913,8 @@ zipWith3IndexLinear f (_::xs) (_::ys) (_::zs) (FS i) = zipWith3IndexLinear f xs 
 ||| ['a', 'd' , 'c' ,'b']
 ||| ```
 export
-permute : {len : _} -> (v : Vect len a) -> (p : Vect len (Fin len)) -> Vect len a
-permute v p = zipWith index p (replicate len v)
+permute : (v : Vect len a) -> (p : Vect len (Fin len)) -> Vect len a
+permute v p = (`index` v) <$> p
 
 --------------------------------------------------------------------------------
 -- Matrix transposition
