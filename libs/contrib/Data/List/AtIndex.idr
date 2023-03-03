@@ -1,6 +1,8 @@
 module Data.List.AtIndex
 
 import Data.DPair
+import Data.List
+import Data.List.Elem
 import Data.List.HasLength
 import Data.Nat
 import Decidable.Equality
@@ -114,3 +116,53 @@ strengthenR m lt idx with (view m)
   strengthenR (Element 0 Z) lt idx | Z = rewrite minusZeroRight n in idx
   strengthenR (Element (S (fst m)) (S (snd m))) lt (S k) | (S m) = strengthenR m lt k
 
+||| Drop element from list at this index.
+public export
+dropAtIndex : (xs : List a) -> AtIndex x xs n -> List a
+dropAtIndex (_ :: xs) Z = xs
+dropAtIndex (x :: xs) (S n) = x :: (dropAtIndex xs n)
+
+export
+dropMember' :  (t : a) -> (ts : List a) -> {auto atIdx : Subset Nat (AtIndex t ts)} -> List a
+dropMember' {atIdx = Element n prf} t [] impossible
+dropMember' {atIdx = (Element Z prf)} t (x :: xs)   = xs
+dropMember' {atIdx = Element (S n) prf} t (x :: xs) = 
+  let atIdx = Element n (inverseS prf) in  
+  x :: dropMember' t xs {atIdx}
+
+||| Drop member from list.
+export
+dropMember :  (t : a) -> (ts : List a) -> {auto member : Member t ts} -> List a
+dropMember t ts = dropMember' t ts {atIdx = isMember'}
+
+||| Convert AtIndex to Elem.
+export
+atIndexElem : AtIndex x xs n -> Elem x xs
+atIndexElem Z = Here
+atIndexElem (S p) = There $ atIndexElem p
+
+elemSubsetAtIndex : Elem x xs -> Subset Nat (AtIndex x xs)
+elemSubsetAtIndex Here = Element Z Z
+elemSubsetAtIndex (There {y} later) = 
+  let (Element n prf) = elemSubsetAtIndex later in 
+  (Element (S n) (weakenL (Element 1 (hasLength [y])) prf))
+
+atIndexNonEmpty : AtIndex x xs n -> NonEmpty xs
+atIndexNonEmpty (S n) = IsNonEmpty
+atIndexNonEmpty Z = IsNonEmpty
+
+atIndexSNonEmpty : AtIndex x (y :: xs) (S n) -> NonEmpty xs
+atIndexSNonEmpty (S p) = atIndexNonEmpty p
+
+memberElem' : Subset Nat (AtIndex x xs) -> Elem x xs
+memberElem' (Element n prf) = go {ok = atIndexNonEmpty prf} (Element n prf)
+  where
+  go : {auto 0 ok : NonEmpty ys} -> Subset Nat (AtIndex y ys) -> Elem y ys
+  go {ok = IsNonEmpty} (Element Z prf) = rewrite inverseZ prf in Here
+  go {ok = IsNonEmpty} (Element (S n) prf) =
+    There $ go {ok = atIndexSNonEmpty prf} (Element n (inverseS prf))
+
+||| Convert Member to Elem.
+export
+memberElem : {auto member : Member t ts} -> Elem t ts
+memberElem = memberElem' isMember'

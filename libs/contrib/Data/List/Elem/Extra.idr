@@ -2,6 +2,7 @@ module Data.List.Elem.Extra
 
 import Data.List
 import Data.List.Elem
+import Data.List.AtIndex
 
 %default total
 
@@ -44,3 +45,22 @@ notElemAppRight : (ys, xs : List a)
                -> (prf : Not (Elem x (xs ++ ys)))
                -> Not (Elem x ys)
 notElemAppRight ys xs prf = prf . elemAppRight xs ys
+
+||| Convert Elem to AtIndex.
+public export
+elemAtIndex : Elem x xs  -> (n ** AtIndex x xs n)
+elemAtIndex Here = (Z ** Z)
+elemAtIndex (There later) = 
+  let (n ** atIndex) = elemAtIndex later in (S n ** S atIndex)
+
+public export
+data IsSublist : List a -> List a -> Type where
+    Base : IsSublist [] []
+    Skip : (y : a) -> IsSublist xs ys -> IsSublist xs (y :: ys)
+    Keep : (x : a) -> (el : Elem x xs) -> IsSublist (dropElem xs el) ys -> IsSublist xs (x :: ys)
+
+public export
+dropSublist : {0 xs, ys : List a} -> IsSublist xs ys -> List a
+dropSublist Base = []
+dropSublist (Skip y rest) = y :: dropSublist rest
+dropSublist (Keep _ _ rest) = dropSublist rest

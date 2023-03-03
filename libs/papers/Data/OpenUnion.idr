@@ -8,35 +8,42 @@
 module Data.OpenUnion
 
 import Data.DPair
+import Data.List.Elem
+import Data.List.Elem.Extra
 import Data.List.AtIndex
 import Data.List.HasLength
 import Data.Nat
 import Data.Nat.Order.Properties
 import Decidable.Equality
 import Syntax.WithProof
+import Control.Monad.Identity
 
 %default total
 
 ||| An open union of families is an index picking a family out together with
 ||| a value in the family thus picked.
 public export
-data Union : (elt : a -> Type) -> (ts : List a) -> Type where
-  Element : (k : Nat) -> (0 _ : AtIndex t ts k) -> elt t -> Union elt ts
+data UnionF : (elt : a -> Type) -> (ts : List a) -> Type where
+  Element : (k : Nat) -> (0 _ : AtIndex t ts k) -> elt t -> UnionF elt ts
+
+public export
+Union : List Type -> Type
+Union = UnionF Identity
 
 ||| An empty open union of families is empty
 public export
-Uninhabited (Union elt []) where
+Uninhabited (UnionF elt []) where
   uninhabited (Element _ p _) = void (uninhabited p)
 
 ||| Injecting a value into an open union, provided we know the index of
 ||| the appropriate type family.
-inj' : (k : Nat) -> (0 _ : AtIndex t ts k) -> elt t -> Union elt ts
+inj' : (k : Nat) -> (0 _ : AtIndex t ts k) -> elt t -> UnionF elt ts
 inj' = Element
 
 ||| Projecting out of an open union, provided we know the index of the
 ||| appropriate type family. This may obviously fail if the value stored
 ||| actually corresponds to another family.
-prj' : (k : Nat) -> (0 _ : AtIndex t ts k) -> Union elt ts -> Maybe (elt t)
+prj' : (k : Nat) -> (0 _ : AtIndex t ts k) -> UnionF elt ts -> Maybe (elt t)
 prj' k p (Element k' q t) with (decEq k  k')
   prj' k p (Element k q t) | Yes Refl = rewrite atIndexUnique p q in Just t
   prj' k p (Element k' q t) | No neq = Nothing
@@ -45,21 +52,21 @@ prj' k p (Element k' q t) with (decEq k  k')
 ||| rely on the interface `Member` to automatically find the index of a
 ||| given family.
 public export
-inj : Member t ts => elt t -> Union elt ts
+inj : Member t ts => elt t -> UnionF elt ts
 inj = let (Element n p) = isMember t ts in inj' n p
 
 ||| Given that equality of type families is not decidable, we have to
 ||| rely on the interface `Member` to automatically find the index of a
 ||| given family.
 public export
-prj : Member t ts => Union elt ts -> Maybe (elt t)
+prj : Member t ts => UnionF elt ts -> Maybe (elt t)
 prj = let (Element n p) = isMember t ts in prj' n p
 
 ||| By doing a bit of arithmetic we can figure out whether the union's value
 ||| came from the left or the right list used in the index.
 public export
 split : Subset Nat (flip HasLength ss) ->
-        Union elt (ss ++ ts) -> Either (Union elt ss) (Union elt ts)
+        UnionF elt (ss ++ ts) -> Either (UnionF elt ss) (UnionF elt ts)
 split m (Element n p t) with (@@ lt n (fst m))
   split m (Element n p t) | (True ** lt)
     = Left (Element n (strengthenL m lt p) t)
@@ -72,25 +79,67 @@ split m (Element n p t) with (@@ lt n (fst m))
 ||| whether the value it contains belongs either to the first family or any
 ||| other in the tail.
 public export
-decomp : Union elt (t :: ts) -> Either (Union elt ts) (elt t)
+decomp : UnionF elt (t :: ts) -> Either (UnionF elt ts) (elt t)
 decomp (Element 0     (Z)   t) = Right t
 decomp (Element (S n) (S p) t) = Left (Element n p t)
 
 ||| An open union over a singleton list is just a wrapper
 public export
-decomp0 : Union elt [t] -> elt t
+decomp0 : UnionF elt [t] -> elt t
 decomp0 elt = case decomp elt of
   Left t => absurd t
   Right t => t
 
+weakenAppend : UnionF elt ts -> UnionF elt (b :: ts)
+weakenAppend (Element n p t) = Element (S n) (S p) t
+
+public export
+decompAtIndex : {auto p : AtIndex t xs n} -> UnionF elt xs -> Either (UnionF elt (dropAtIndex xs p)) (elt t)
+decompAtIndex {p = Z} (Element 0 Z t) = Right t
+decompAtIndex {p = (S n)} (Element 0 Z t) = Left $ Element 0 Z t
+decompAtIndex {p = Z} (Element (S n) (S p) t) = Left $ Element n p t
+decompAtIndex {p = (S p)} (Element (S q) (S n) t) =
+  bimap weakenAppend id $ decompAtIndex (Element q n t)
+
+insertElem : {0 ts : List a} -> {el : Elem x ts} -> UnionF elt (dropElem ts el) -> UnionF elt ts
+insertElem {el = There el} (Element 0 Z t) = Element 0 Z t
+insertElem {el = Here} (Element n p t) = (Element (S n) (S p) t)
+insertElem {el = There el} (Element (S n) (S p) t) = weakenAppend $ insertElem {el} (Element n p t) 
+
+decompSublist : {0 xs, ts : List a} -> {auto sublist : IsSublist ts xs} -> UnionF elt xs -> Either (UnionF elt (dropSublist sublist)) (UnionF elt ts)
+decompSublist {sublist = Base} (Element 0 Z t) impossible
+decompSublist {sublist = Base} (Element (S n) (S p) t) impossible
+decompSublist {sublist = (Keep x el sublist)} (Element 0 Z t) = 
+  let (n ** atIndex) = elemAtIndex el in 
+  Right (Element n atIndex t)
+decompSublist {sublist = (Skip y sublist)} (Element 0 Z t) = Left (Element 0 Z t)
+decompSublist {sublist = (Keep x el sublist)} (Element (S n) (S p) t) =
+  bimap id insertElem $ decompSublist {elt} {sublist} (Element n p t)
+decompSublist {sublist = (Skip y sublist)} (Element (S n) (S p) t) =
+  bimap weakenAppend id $ decompSublist {elt} {sublist} (Element n p t)
+
 ||| Inserting new union members on the right leaves the index unchanged.
 public export
-weakenR : Union elt ts -> Union elt (ts ++ us)
+weakenR : UnionF elt ts -> UnionF elt (ts ++ us)
 weakenR (Element n p t) = Element n (weakenR p) t
 
 ||| Inserting new union members on the left, requires shifting the index by
 ||| the number of members introduced. Note that this number is the only
 ||| thing we need to keep around at runtime.
 public export
-weakenL : Subset Nat (flip HasLength ss) -> Union elt ts -> Union elt (ss ++ ts)
-weakenL m (Element n p t) = Element (fst m + n) (weakenL m p) t
+weakenL : {0 xs : List a} 
+  -> {default (Element _ (hasLength xs)) hasLen : Subset Nat (flip HasLength xs)} 
+  -> UnionF elt ys 
+  -> UnionF elt (xs ++ ys)
+weakenL {hasLen} (Element n p t) = Element (fst hasLen + n) (weakenL hasLen p) t
+
+public export
+weaken : {0 xs, ys : List a} -> 
+ {default (Element _ (hasLength xs)) hasLenXs : Subset Nat (flip HasLength xs)} ->
+ {default (Element _ (hasLength ys)) hasLenYs : Subset Nat (flip HasLength ys)} ->
+ UnionF elt (xs ++ zs) -> UnionF elt (xs ++ ys ++ zs)
+weaken union with (split hasLenXs union)
+  weaken union | Left unionXs = weakenR unionXs
+  weaken union | Right unionZs =
+    let unionYsZs = weakenL {hasLen = hasLenYs} unionZs in 
+    weakenL {hasLen = hasLenXs} unionYsZs
