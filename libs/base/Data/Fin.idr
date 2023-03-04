@@ -153,11 +153,22 @@ complement : {n : Nat} -> Fin n -> Fin n
 complement {n = S _} FZ = last
 complement {n = S _} (FS x) = weaken $ complement x
 
-||| All of the Fin elements
-public export
-allFins : (n : Nat) -> List1 (Fin (S n))
-allFins Z = FZ ::: []
-allFins (S n) = FZ ::: map FS (forget (allFins n))
+namespace List
+
+  ||| All of the Fin elements
+  public export
+  allFins : (n : Nat) -> List (Fin n)
+  allFins Z = []
+  allFins (S n) = FZ :: map FS (allFins n)
+
+namespace List1
+
+  ||| All of the Fin elements
+  public export
+  allFins : (n : Nat) -> List1 (Fin (S n))
+  allFins Z = FZ ::: []
+  allFins (S n) = FZ ::: map FS (forget (allFins n))
+
 
 export
 Ord (Fin n) where

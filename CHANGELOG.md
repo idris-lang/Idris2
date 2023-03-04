@@ -110,6 +110,8 @@
   `setInt32` (now takes an `Int32` instead of an `Int`),
   `getInt32` (now returns an `Int32` instead of an `Int`)
 
+* Adds left- and right-rotation for `FiniteBits`.
+
 * Adds `Vect.permute` for applying permutations to `Vect`s.
 * Adds `Vect.kSplits` and `Vect.nSplits` for splitting a `Vect` whose length is
   a known multiple of two `Nat`s (k * n) into k vectors of length n (and
