@@ -55,46 +55,7 @@ elemAtIndex (There later) =
   let (n ** atIndex) = elemAtIndex later in (S n ** S atIndex)
 
 public export
-data IsSublist : List a -> List a -> Type where
-    Base : IsSublist [] []
-    Skip : (y : a) -> IsSublist xs ys -> IsSublist xs (y :: ys)
-    Keep : (x : a) -> (el : Elem x xs) -> IsSublist (dropElem xs el) ys -> IsSublist xs (x :: ys)
-
-public export
-dropSublist : {0 xs, ys : List a} -> IsSublist xs ys -> List a
-dropSublist Base = []
-dropSublist (Skip y rest) = y :: dropSublist rest
-dropSublist (Keep _ _ rest) = dropSublist rest
-
-public export
-nilSublist : {xs : List a} -> IsSublist [] xs
-nilSublist {xs = []} = Base
-nilSublist {xs = y :: xs} = Skip y nilSublist
-
-tailSublist : IsSublist (y :: ys) xs -> IsSublist ys xs
-tailSublist (Skip y sublist) = Skip y $ tailSublist sublist
-tailSublist (Keep z Here sublist) =  Skip z sublist
-tailSublist (Keep z (There later) sublist) = Keep z later $ tailSublist sublist
-
-{el : Elem z (x :: (z :: ys))} -> Uninhabited (IsSublist (dropElem (x :: (z :: ys)) el) ys) where
-  uninhabited {el = Here} (Skip y sublist) = ?uninhabited_rhs1
-  uninhabited {el = Here} (Keep z el sublist) = ?uninhabited_rhs2
-  uninhabited {el = There el} sublist = ?uninhabited_rhs3
-
-Uninhabited (IsSublist (x :: ys) ys) where
-  uninhabited Base impossible
-  uninhabited (Skip y sublist) = uninhabited (tailSublist sublist)
-  uninhabited (Keep z (Here {x = z}) sublist) = uninhabited sublist
-  uninhabited (Keep z el sublist) = ?uninhabited_rhs
-
-Reflexive (List a) IsSublist where
-  reflexive {x = []} = Base 
-  reflexive {x = y :: ys} = Keep y Here reflexive
-
-Transitive (List a) IsSublist where
-  transitive sublist Base = sublist
-  transitive sublist (Skip y sublist1) = Skip y $ transitive sublist sublist1
-  transitive (Skip x sublist1) (Keep x Here sublist2) = Skip x $ transitive sublist1 sublist2
-  transitive (Skip z sublist1) (Keep y el sublist2) = ?as2
-  transitive (Keep y el1 sublist1) (Keep z el2 sublist2) = ?as1
-  transitive (Keep y (There el1) sublist1) (Keep z (There el2) sublist2) = ?transitive_rhs
+weakenElem : {el : Elem y xs} -> Elem x (dropElem xs el) -> Elem x xs
+weakenElem {el = Here} elem = There elem
+weakenElem {el = There later} Here = Here
+weakenElem {el = There el} (There later) = There $ weakenElem {el} later

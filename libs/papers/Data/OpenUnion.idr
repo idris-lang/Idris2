@@ -9,7 +9,7 @@ module Data.OpenUnion
 
 import Data.DPair
 import Data.List.Elem
-import Data.List.Elem.Extra
+import Data.List.IsSublist
 import Data.List.AtIndex
 import Data.List.HasLength
 import Data.Nat
@@ -128,17 +128,14 @@ decompMember : {0 ts : List a} -> {auto member : Member t ts} -> UnionF elt ts -
 decompMember = decompMember' {atIndex = isMember'}
 
 public export
-decompSublist : {0 xs, ts : List a} -> {auto sublist : IsSublist ts xs} -> UnionF elt xs 
-  -> Either (UnionF elt (dropSublist sublist)) (UnionF elt ts)
+decompSublist : {auto sublist : IsSublist ts xs} -> UnionF elt xs -> Either (UnionF elt (dropSublist sublist)) (UnionF elt ts)
 decompSublist {sublist = Base} (Element 0 Z t) impossible
 decompSublist {sublist = Base} (Element (S n) (S p) t) impossible
-decompSublist {sublist = Keep x el sublist} (Element 0 Z t) = 
-  let (n ** atIndex) = elemAtIndex el in 
-  Right (Element n atIndex t)
-decompSublist {sublist = Skip y sublist} (Element 0 Z t) = Left (Element 0 Z t)
-decompSublist {sublist = Keep x el sublist} (Element (S n) (S p) t) =
-  bimap id weakenElem $ decompSublist {elt} {sublist} (Element n p t)
-decompSublist {sublist = Skip y sublist} (Element (S n) (S p) t) =
+decompSublist {sublist = Keep sublist} (Element 0 Z t) = Right (Element 0 Z t)
+decompSublist {sublist = Skip sublist} (Element 0 Z t) = Left (Element 0 Z t)
+decompSublist {sublist = Keep sublist} (Element (S n) (S p) t) =
+  bimap id weakenAppend $ decompSublist {elt} {sublist} (Element n p t)
+decompSublist {sublist = Skip sublist} (Element (S n) (S p) t) =
   bimap weakenAppend id $ decompSublist {elt} {sublist} (Element n p t)
 
 ||| Inserting new union members on the right leaves the index unchanged.
