@@ -2387,6 +2387,15 @@ addLogLevel Nothing  = update Ctxt { options->session->logEnabled := False, opti
 addLogLevel (Just l) = update Ctxt { options->session->logEnabled := True, options->session->logLevel $= insertLogLevel l }
 
 export
+setLogLevel : {auto c : Ref Ctxt Defs} ->
+              LogLevel -> Core ()
+setLogLevel = addLogLevel . Just
+
+export
+stopLogging : {auto c : Ref Ctxt Defs} -> Core ()
+stopLogging = addLogLevel Nothing
+
+export
 withLogLevel : {auto c : Ref Ctxt Defs} ->
                LogLevel -> Core a -> Core a
 withLogLevel l comp = do
