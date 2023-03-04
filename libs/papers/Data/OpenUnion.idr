@@ -90,32 +90,55 @@ decomp0 elt = case decomp elt of
   Left t => absurd t
   Right t => t
 
+public export
 weakenAppend : UnionF elt ts -> UnionF elt (b :: ts)
 weakenAppend (Element n p t) = Element (S n) (S p) t
 
 public export
 decompAtIndex : {auto p : AtIndex t xs n} -> UnionF elt xs -> Either (UnionF elt (dropAtIndex xs p)) (elt t)
 decompAtIndex {p = Z} (Element 0 Z t) = Right t
-decompAtIndex {p = (S n)} (Element 0 Z t) = Left $ Element 0 Z t
+decompAtIndex {p = S n} (Element 0 Z t) = Left $ Element 0 Z t
 decompAtIndex {p = Z} (Element (S n) (S p) t) = Left $ Element n p t
-decompAtIndex {p = (S p)} (Element (S q) (S n) t) =
+decompAtIndex {p = S p} (Element (S q) (S n) t) =
   bimap weakenAppend id $ decompAtIndex (Element q n t)
 
-insertElem : {0 ts : List a} -> {el : Elem x ts} -> UnionF elt (dropElem ts el) -> UnionF elt ts
-insertElem {el = There el} (Element 0 Z t) = Element 0 Z t
-insertElem {el = Here} (Element n p t) = (Element (S n) (S p) t)
-insertElem {el = There el} (Element (S n) (S p) t) = weakenAppend $ insertElem {el} (Element n p t) 
+public export
+decompElem : {auto elem : Elem t xs} -> UnionF elt xs -> Either (UnionF elt (dropElem xs elem)) (elt t)
+decompElem {elem = Here} (Element 0 Z t) = Right t
+decompElem {elem = There later} (Element 0 Z t) = Left $ Element 0 Z t
+decompElem {elem = Here} (Element (S n) (S p) t) = Left $ Element n p t
+decompElem {elem = There later} (Element (S q) (S p) t) =
+  bimap weakenAppend id $ decompElem {elem = later} (Element q p t)
 
-decompSublist : {0 xs, ts : List a} -> {auto sublist : IsSublist ts xs} -> UnionF elt xs -> Either (UnionF elt (dropSublist sublist)) (UnionF elt ts)
+public export
+weakenElem : {0 ts : List a} -> {elem : Elem x ts} -> UnionF elt (dropElem ts elem) -> UnionF elt ts
+weakenElem {elem = There elem} (Element 0 Z t) = Element 0 Z t
+weakenElem {elem = Here} (Element n p t) = (Element (S n) (S p) t)
+weakenElem {elem = There elem} (Element (S n) (S p) t) = weakenAppend $ weakenElem {elem} (Element n p t) 
+
+decompMember' : {auto atIndex : Subset Nat (AtIndex t ts)} -> UnionF elt ts -> Either (UnionF elt (dropMember' t ts {atIndex})) (elt t)
+decompMember' {atIndex = Element Z prf1} (Element Z prf2 t) =
+  rewrite atIndexUnique prf1 prf2 in Right t
+decompMember' {atIndex = Element (S n) prf} (Element 0 Z t) = Left $ Element 0 Z t
+decompMember' {atIndex = Element Z prf} (Element (S n) (S p) t) = Left $ Element n p t
+decompMember' {atIndex = Element (S n) prf} (Element (S q) (S p) t) =
+  bimap weakenAppend id $ decompMember' {atIndex = Element n (inverseS prf)} (Element q p t)
+
+decompMember : {0 ts : List a} -> {auto member : Member t ts} -> UnionF elt ts -> Either (UnionF elt (dropMember t ts)) (elt t)
+decompMember = decompMember' {atIndex = isMember'}
+
+public export
+decompSublist : {0 xs, ts : List a} -> {auto sublist : IsSublist ts xs} -> UnionF elt xs 
+  -> Either (UnionF elt (dropSublist sublist)) (UnionF elt ts)
 decompSublist {sublist = Base} (Element 0 Z t) impossible
 decompSublist {sublist = Base} (Element (S n) (S p) t) impossible
-decompSublist {sublist = (Keep x el sublist)} (Element 0 Z t) = 
+decompSublist {sublist = Keep x el sublist} (Element 0 Z t) = 
   let (n ** atIndex) = elemAtIndex el in 
   Right (Element n atIndex t)
-decompSublist {sublist = (Skip y sublist)} (Element 0 Z t) = Left (Element 0 Z t)
-decompSublist {sublist = (Keep x el sublist)} (Element (S n) (S p) t) =
-  bimap id insertElem $ decompSublist {elt} {sublist} (Element n p t)
-decompSublist {sublist = (Skip y sublist)} (Element (S n) (S p) t) =
+decompSublist {sublist = Skip y sublist} (Element 0 Z t) = Left (Element 0 Z t)
+decompSublist {sublist = Keep x el sublist} (Element (S n) (S p) t) =
+  bimap id weakenElem $ decompSublist {elt} {sublist} (Element n p t)
+decompSublist {sublist = Skip y sublist} (Element (S n) (S p) t) =
   bimap weakenAppend id $ decompSublist {elt} {sublist} (Element n p t)
 
 ||| Inserting new union members on the right leaves the index unchanged.
