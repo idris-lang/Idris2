@@ -123,7 +123,7 @@ dropAtIndex (_ :: xs) Z = xs
 dropAtIndex (x :: xs) (S n) = x :: (dropAtIndex xs n)
 
 public export
-dropMember' :  (t : a) -> (ts : List a) -> {auto atIndex : Subset Nat (AtIndex t ts)} -> List a
+dropMember' : (t : a) -> (ts : List a) -> {atIndex : Subset Nat (AtIndex t ts)} -> List a
 dropMember' {atIndex = Element n prf} t [] impossible
 dropMember' {atIndex = (Element Z prf)} t (x :: xs) = xs
 dropMember' {atIndex = Element (S n) prf} t (x :: xs) =
@@ -132,8 +132,8 @@ dropMember' {atIndex = Element (S n) prf} t (x :: xs) =
 
 ||| Drop member from list.
 public export
-dropMember :  (t : a) -> (ts : List a) -> {auto member : Member t ts} -> List a
-dropMember t ts = dropMember' t ts {atIndex = isMember'}
+dropMember : {ts : List a} -> {t : a} -> Member t ts => List a
+dropMember = dropMember' t ts {atIndex = isMember t ts}
 
 ||| Convert AtIndex to Elem.
 export
@@ -157,12 +157,12 @@ atIndexSNonEmpty (S p) = atIndexNonEmpty p
 memberElem' : Subset Nat (AtIndex x xs) -> Elem x xs
 memberElem' (Element n prf) = go {ok = atIndexNonEmpty prf} (Element n prf)
   where
-  go : {auto 0 ok : NonEmpty ys} -> Subset Nat (AtIndex y ys) -> Elem y ys
+  go : {0 ok : NonEmpty ys} -> Subset Nat (AtIndex y ys) -> Elem y ys
   go {ok = IsNonEmpty} (Element Z prf) = rewrite inverseZ prf in Here
   go {ok = IsNonEmpty} (Element (S n) prf) =
     There $ go {ok = atIndexSNonEmpty prf} (Element n (inverseS prf))
 
 ||| Convert Member to Elem.
 public export
-memberElem : {auto member : Member t ts} -> Elem t ts
-memberElem = memberElem' isMember'
+memberElem : Member t ts => Elem t ts
+memberElem = memberElem' $ isMember t ts

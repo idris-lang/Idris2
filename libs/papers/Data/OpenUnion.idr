@@ -95,11 +95,11 @@ weakenAppend : UnionF elt ts -> UnionF elt (b :: ts)
 weakenAppend (Element n p t) = Element (S n) (S p) t
 
 public export
-decompAtIndex : {auto p : AtIndex t xs n} -> UnionF elt xs -> Either (UnionF elt (dropAtIndex xs p)) (elt t)
-decompAtIndex {p = Z} (Element 0 Z t) = Right t
-decompAtIndex {p = S n} (Element 0 Z t) = Left $ Element 0 Z t
-decompAtIndex {p = Z} (Element (S n) (S p) t) = Left $ Element n p t
-decompAtIndex {p = S p} (Element (S q) (S n) t) =
+decompAtIndex : {atIndex : AtIndex t xs n} -> UnionF elt xs -> Either (UnionF elt (dropAtIndex xs atIndex)) (elt t)
+decompAtIndex {atIndex = Z} (Element 0 Z t) = Right t
+decompAtIndex {atIndex = S n} (Element 0 Z t) = Left $ Element 0 Z t
+decompAtIndex {atIndex = Z} (Element (S n) (S p) t) = Left $ Element n p t
+decompAtIndex {atIndex = S p} (Element (S q) (S n) t) =
   bimap weakenAppend id $ decompAtIndex (Element q n t)
 
 public export
@@ -116,7 +116,7 @@ weakenElem {elem = There elem} (Element 0 Z t) = Element 0 Z t
 weakenElem {elem = Here} (Element n p t) = (Element (S n) (S p) t)
 weakenElem {elem = There elem} (Element (S n) (S p) t) = weakenAppend $ weakenElem {elem} (Element n p t) 
 
-decompMember' : {auto atIndex : Subset Nat (AtIndex t ts)} -> UnionF elt ts -> Either (UnionF elt (dropMember' t ts {atIndex})) (elt t)
+decompMember' : {atIndex : Subset Nat (AtIndex t ts)} -> UnionF elt ts -> Either (UnionF elt (dropMember' t ts {atIndex})) (elt t)
 decompMember' {atIndex = Element Z prf1} (Element Z prf2 t) =
   rewrite atIndexUnique prf1 prf2 in Right t
 decompMember' {atIndex = Element (S n) prf} (Element 0 Z t) = Left $ Element 0 Z t
@@ -124,7 +124,7 @@ decompMember' {atIndex = Element Z prf} (Element (S n) (S p) t) = Left $ Element
 decompMember' {atIndex = Element (S n) prf} (Element (S q) (S p) t) =
   bimap weakenAppend id $ decompMember' {atIndex = Element n (inverseS prf)} (Element q p t)
 
-decompMember : {0 ts : List a} -> {auto member : Member t ts} -> UnionF elt ts -> Either (UnionF elt (dropMember t ts)) (elt t)
+decompMember : {0 ts : List a} -> Member t ts => UnionF elt ts -> Either (UnionF elt (dropMember t ts)) (elt t)
 decompMember = decompMember' {atIndex = isMember'}
 
 public export
