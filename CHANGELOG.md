@@ -68,6 +68,9 @@
   dangerous as Idris will pick an arbitrary one and so the meaning of an
   expression can depend e.g. on the order in which modules are imported.
 
+  * Additionally some conflicting fixity declarations in the Idris 2 compiler
+    and libraries have been removed.
+
 ### Library changes
 
 #### Prelude
