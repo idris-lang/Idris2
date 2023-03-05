@@ -561,7 +561,8 @@ record ConstantPrimitives' str where
   intToInt     : IntKind -> IntKind -> str -> Core str
 
 public export
-ConstantPrimitives : Type = ConstantPrimitives' String
+ConstantPrimitives : Type
+ConstantPrimitives = ConstantPrimitives' String
 
 ||| Implements casts from and to integral types by using
 ||| the implementations from the provided `ConstantPrimitives`.
