@@ -128,7 +128,7 @@ decompMember : {0 ts : List a} -> {auto member : Member t ts} -> UnionF elt ts -
 decompMember = decompMember' {atIndex = isMember'}
 
 public export
-decompSublist : {auto sublist : IsSublist ts xs} -> UnionF elt xs -> Either (UnionF elt (dropSublist sublist)) (UnionF elt ts)
+decompSublist : {auto sublist : IsSublist ts xs} -> UnionF elt xs -> Either (UnionF elt (removeSublist sublist)) (UnionF elt ts)
 decompSublist {sublist = Base} (Element 0 Z t) impossible
 decompSublist {sublist = Base} (Element (S n) (S p) t) impossible
 decompSublist {sublist = Keep sublist} (Element 0 Z t) = Right (Element 0 Z t)

@@ -1,6 +1,7 @@
 module Data.List.IsSublist
 
 import Control.Relation
+import Data.List
 
 public export
 data IsSublist : List a -> List a -> Type where
@@ -62,7 +63,28 @@ Antisymmetric (List a) IsSublist where
     absurd $ uninhabited sublist2
 
 public export
-dropSublist : {ys : List a} -> IsSublist xs ys -> List a
-dropSublist Base = []
-dropSublist (Skip {y} rest) = y :: dropSublist rest
-dropSublist (Keep rest) = dropSublist rest
+removeSublist : {ys : List a} -> IsSublist xs ys -> List a
+removeSublist Base = []
+removeSublist (Skip {y} rest) = y :: removeSublist rest
+removeSublist (Keep rest) = removeSublist rest
+
+public export
+filterSublist : {ys : List a} -> {p : a -> Bool} -> IsSublist (filter p ys) ys
+filterSublist {ys = []} = Base
+filterSublist {ys = y :: ys} with (p y) 
+  filterSublist {ys = y :: ys} | True = Keep filterSublist
+  filterSublist {ys = y :: ys} | False = Skip filterSublist
+
+public export
+takeSublist : {ys : List a} -> {n : Nat} -> IsSublist (take n ys) ys
+takeSublist {ys = y :: ys} {n = S k} = Keep takeSublist
+takeSublist {ys = y :: ys} {n = Z} = nilSublist
+takeSublist {ys = []} {n = S k} = Base
+takeSublist {ys = []} {n = Z} = Base
+
+public export
+dropSublist : {ys : List a} -> {n : Nat} -> IsSublist (drop n ys) ys
+dropSublist {ys = y :: ys} {n = S k} = Skip dropSublist
+dropSublist {ys = y :: ys} {n = Z} = reflexive
+dropSublist {ys = []} {n = S k} = Base
+dropSublist {ys = []} {n = Z} = Base
