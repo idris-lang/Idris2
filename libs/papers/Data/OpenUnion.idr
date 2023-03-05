@@ -124,8 +124,8 @@ decompMember' {atIndex = Element Z prf} (Element (S n) (S p) t) = Left $ Element
 decompMember' {atIndex = Element (S n) prf} (Element (S q) (S p) t) =
   bimap weakenAppend id $ decompMember' {atIndex = Element n (inverseS prf)} (Element q p t)
 
-decompMember : {0 ts : List a} -> Member t ts => UnionF elt ts -> Either (UnionF elt (dropMember t ts)) (elt t)
-decompMember = decompMember' {atIndex = isMember'}
+decompMember : {0 ts : List a} -> Member t ts => UnionF elt ts -> Either (UnionF elt (dropMember {ts} {t})) (elt t)
+decompMember = decompMember' {atIndex = isMember t ts}
 
 public export
 decompSublist : {auto sublist : IsSublist ts xs} -> UnionF elt xs -> Either (UnionF elt (removeSublist sublist)) (UnionF elt ts)
