@@ -122,6 +122,8 @@
 * Adds `Vect.allFins` for generating all the `Fin` elements as a `Vect` with
   matching length to the number of elements.
 
+* Add `withRawMode`, `enableRawMode`, `resetRawMode` for character at a time input on stdin.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
