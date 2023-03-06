@@ -22,7 +22,7 @@ export
 checkIfGuarded : {auto c : Ref Ctxt Defs} ->
                  FC -> Name -> Core ()
 checkIfGuarded fc n
-    = do log "totality.termination.guarded" 6 $ "Check if Guarded: " ++ show !(toFullNames n)
+    = do logC "totality.termination.guarded" 6 $ do pure $ "Check if Guarded: " ++ show !(toFullNames n)
          defs <- get Ctxt
          Just (PMDef _ _ _ _ pats) <- lookupDefExact n (gamma defs)
               | _ => pure ()
@@ -70,7 +70,7 @@ checkTerminating : {auto c : Ref Ctxt Defs} ->
                    FC -> Name -> Core Terminating
 checkTerminating loc n
     = do tot <- getTotality loc n
-         log "totality.termination" 6 $ "Checking termination: " ++ show !(toFullNames n)
+         logC "totality.termination" 6 $ do pure $ "Checking termination: " ++ show !(toFullNames n)
          case isTerminating tot of
               Unchecked =>
                  do tot' <- calcTerminating loc n
@@ -86,7 +86,7 @@ checkPositive : {auto c : Ref Ctxt Defs} ->
 checkPositive loc n_in
     = do n <- toResolvedNames n_in
          tot <- getTotality loc n
-         log "totality.positivity" 6 $ "Checking positivity: " ++ show !(toFullNames n)
+         logC "totality.positivity" 6 $ do pure $ "Checking positivity: " ++ show !(toFullNames n)
          case isTerminating tot of
               Unchecked =>
                   do (tot', cons) <- calcPositive loc n
@@ -107,7 +107,7 @@ checkTotal loc n_in
              | Nothing => undefinedName loc n_in
          let n = Resolved nidx
          tot <- getTotality loc n
-         log "totality" 5 $ "Checking totality: " ++ show !(toFullNames n)
+         logC "totality" 5 $ do pure $ "Checking totality: " ++ show !(toFullNames n)
          defs <- get Ctxt
          case isTerminating tot of
               Unchecked => do

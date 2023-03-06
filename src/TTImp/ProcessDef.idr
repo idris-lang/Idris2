@@ -785,7 +785,7 @@ mkRunTime : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
             FC -> Name -> Core ()
 mkRunTime fc n
-    = do log "compile.casetree" 5 $ "Making run time definition for " ++ show !(toFullNames n)
+    = do logC "compile.casetree" 5 $ do pure $ "Making run time definition for " ++ show !(toFullNames n)
          defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | _ => pure ()
@@ -826,7 +826,7 @@ mkRunTime fc n
            when (caseName !(toFullNames n) && noInline (flags gdef)) $
              do inl <- canInlineCaseBlock n
                 when inl $ do
-                  log "compiler.inline.eval" 5 "Marking \{show !(toFullNames n)} for inlining in runtime case tree."
+                  logC "compiler.inline.eval" 5 $ do pure "Marking \{show !(toFullNames n)} for inlining in runtime case tree."
                   setFlag fc n Inline
   where
     -- check if the flags contain explicit inline or noinline directives:
@@ -1137,7 +1137,7 @@ processDef opts nest env fc n_in cs_in
              let covcs = mapMaybe id covcs'
              (_ ** (ctree, _)) <-
                  getPMDef fc (CompileTime mult) (Resolved n) ty covcs
-             log "declare.def" 3 $ "Working from " ++ show !(toFullNames ctree)
+             logC "declare.def" 3 $ do pure $ "Working from " ++ show !(toFullNames ctree)
              missCase <- if any catchAll covcs
                             then do log "declare.def" 3 $ "Catch all case in " ++ show n
                                     pure []
