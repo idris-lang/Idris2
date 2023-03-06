@@ -3,12 +3,14 @@ module Data.List.IsSublist
 import Control.Relation
 import Data.List
 
+||| Inductive Sublist definition known as Order Preserving Embeddings (OPE).
 public export
 data IsSublist : List a -> List a -> Type where
     Base : IsSublist [] []
     Skip : IsSublist xs ys -> IsSublist xs (y :: ys)
     Keep : IsSublist xs ys -> IsSublist (x :: xs) (x :: ys)
 
+||| The tail of a sublist is also a sublist
 public export
 weakenSublist : IsSublist (y :: ys) xs -> IsSublist ys xs
 weakenSublist (Skip sublist) = Skip $ weakenSublist sublist
@@ -31,6 +33,8 @@ Reflexive (List a) IsSublist where
   reflexive {x = []} = Base
   reflexive {x = y :: ys} = Keep reflexive
 
+||| Nil Sublist of all lists
+public export
 nilSublist : {xs : List a} -> IsSublist [] xs
 nilSublist {xs = []} = Base
 nilSublist {xs = y :: xs} = Skip nilSublist
@@ -62,12 +66,14 @@ Antisymmetric (List a) IsSublist where
   antisymmetric (Skip sublist1) sublist2 =
     absurd $ uninhabited sublist2
 
+||| Deleting a sublist
 public export
 removeSublist : {ys : List a} -> IsSublist xs ys -> List a
 removeSublist Base = []
 removeSublist (Skip {y} rest) = y :: removeSublist rest
 removeSublist (Keep rest) = removeSublist rest
 
+||| A list filter is a sublist of it
 public export
 filterSublist : {ys : List a} -> {p : a -> Bool} -> IsSublist (filter p ys) ys
 filterSublist {ys = []} = Base
@@ -75,6 +81,7 @@ filterSublist {ys = y :: ys} with (p y)
   filterSublist {ys = y :: ys} | True = Keep filterSublist
   filterSublist {ys = y :: ys} | False = Skip filterSublist
 
+||| A list take is a sublist of it
 public export
 takeSublist : {ys : List a} -> {n : Nat} -> IsSublist (take n ys) ys
 takeSublist {ys = y :: ys} {n = S k} = Keep takeSublist
@@ -82,6 +89,7 @@ takeSublist {ys = y :: ys} {n = Z} = nilSublist
 takeSublist {ys = []} {n = S k} = Base
 takeSublist {ys = []} {n = Z} = Base
 
+||| A list drop is a sublist of it
 public export
 dropSublist : {ys : List a} -> {n : Nat} -> IsSublist (drop n ys) ys
 dropSublist {ys = y :: ys} {n = S k} = Skip dropSublist

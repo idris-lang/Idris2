@@ -198,6 +198,25 @@ data Interleaving : (xs, ys, xys : List a) -> Type where
   Left  : Interleaving xs ys xys -> Interleaving (x :: xs) ys (x :: xys)
   Right : Interleaving xs ys xys -> Interleaving xs (y :: ys) (y :: xys)
 
+||| Lists are interleaved regardless of order in Interleaving type
+public export
+swapInterleaving : Interleaving xs ys xys -> Interleaving ys xs xys
+swapInterleaving Nil = Nil
+swapInterleaving (Left interleaving) = Right $ swapInterleaving interleaving
+swapInterleaving (Right interleaving) = Left $ swapInterleaving interleaving
+
+||| Interleaving a list with Nil gives the same list
+public export
+nilInterleaving : {xs : List a} -> Interleaving [] xs xs
+nilInterleaving {xs = []} = Nil
+nilInterleaving {xs = x :: xs} = Right nilInterleaving
+
+||| Interleaving a list element and the rest gives this list
+public export
+elemInterleaving : {xs : List a} -> (elem : Elem x xs) -> Interleaving [x] (dropElem xs elem) xs
+elemInterleaving Here = Left nilInterleaving
+elemInterleaving (There later) = Right $ elemInterleaving later
+
 ||| A record for storing the result of splitting a list `xys` according to some
 ||| property `p`.
 ||| The `prfs` and `contras` are related to the original list (`xys`) via

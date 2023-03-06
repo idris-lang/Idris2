@@ -40,6 +40,12 @@ atIndexUnique : AtIndex a as n -> AtIndex b as n -> a === b
 atIndexUnique Z Z = Refl
 atIndexUnique (S p) (S q) = atIndexUnique p q
 
+||| List with given index is NonEmpty
+export
+atIndexNonEmpty : AtIndex x xs n -> NonEmpty xs
+atIndexNonEmpty (S n) = IsNonEmpty
+atIndexNonEmpty Z = IsNonEmpty
+
 ||| Provided that equality is decidable, we can look for the first occurence
 ||| of a value inside of a list
 public export
@@ -123,44 +129,39 @@ dropAtIndex (_ :: xs) Z = xs
 dropAtIndex (x :: xs) (S n) = x :: (dropAtIndex xs n)
 
 public export
-dropMember' : (t : a) -> (ts : List a) -> {atIndex : Subset Nat (AtIndex t ts)} -> List a
-dropMember' {atIndex = Element n prf} t [] impossible
-dropMember' {atIndex = (Element Z prf)} t (x :: xs) = xs
-dropMember' {atIndex = Element (S n) prf} t (x :: xs) =
+dropMember' : {0 t : a} -> (ts : List a) -> Subset Nat (AtIndex t ts) -> List a
+dropMember' [] (Element n prf) impossible
+dropMember' (x :: xs) (Element Z prf) = xs
+dropMember' (x :: xs) (Element (S n) prf) =
   let atIndex = Element n (inverseS prf) in
-  x :: dropMember' t xs {atIndex}
+  x :: dropMember' {t} xs atIndex
 
 ||| Drop member from list.
 public export
-dropMember : {ts : List a} -> {t : a} -> Member t ts => List a
-dropMember = dropMember' t ts {atIndex = isMember t ts}
+dropMember : (ts : List a) -> Member t ts => List a
+dropMember ts = dropMember' ts $ isMember t ts
 
 ||| Convert AtIndex to Elem.
-export
+public export
 atIndexElem : AtIndex x xs n -> Elem x xs
 atIndexElem Z = Here
 atIndexElem (S p) = There $ atIndexElem p
 
+public export
 elemSubsetAtIndex : Elem x xs -> Subset Nat (AtIndex x xs)
 elemSubsetAtIndex Here = Element Z Z
 elemSubsetAtIndex (There {y} later) =
   let (Element n prf) = elemSubsetAtIndex later in
   (Element (S n) (weakenL (Element 1 (hasLength [y])) prf))
 
-atIndexNonEmpty : AtIndex x xs n -> NonEmpty xs
-atIndexNonEmpty (S n) = IsNonEmpty
-atIndexNonEmpty Z = IsNonEmpty
-
-atIndexSNonEmpty : AtIndex x (y :: xs) (S n) -> NonEmpty xs
-atIndexSNonEmpty (S p) = atIndexNonEmpty p
-
+public export
 memberElem' : Subset Nat (AtIndex x xs) -> Elem x xs
 memberElem' (Element n prf) = go {ok = atIndexNonEmpty prf} (Element n prf)
   where
   go : {0 ok : NonEmpty ys} -> Subset Nat (AtIndex y ys) -> Elem y ys
   go {ok = IsNonEmpty} (Element Z prf) = rewrite inverseZ prf in Here
   go {ok = IsNonEmpty} (Element (S n) prf) =
-    There $ go {ok = atIndexSNonEmpty prf} (Element n (inverseS prf))
+    There $ go {ok = atIndexNonEmpty (inverseS prf)} (Element n (inverseS prf))
 
 ||| Convert Member to Elem.
 public export

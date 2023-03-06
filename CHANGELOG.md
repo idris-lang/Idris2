@@ -105,6 +105,9 @@
 
 * Added new buffer (set/get) functions for built-in types `Bool`, `Nat`, `Integer`.
 
+* Added `swapInterleaving`, `nilInterleaving`, and `elemInterleaving` for Interleaving
+  in `Data.List.Quantifiers`.
+
 * Tightened the types of:
   `setInt16` (now takes an `Int16` instead of an `Int`),
   `setInt32` (now takes an `Int32` instead of an `Int`),
@@ -126,12 +129,19 @@
 
 * Adds an implementation for `Functor Text.Lexer.Tokenizer.Tokenizer`.
 
+* Adds `dropAtIndex` function and conversion between AtIndex and Elem in `Data.List.AtIndex`.
+
 #### Papers
 
 * In `Control.DivideAndConquer`: a port of the paper
   `A Type-Based Approach to Divide-And-Conquer Recursion in Coq`
   by Pedro Abreu, Benjamin Delaware, Alex Hubers, Christa Jenkins,
   J. Garret Morris, and Aaron Stump
+
+* Adds `Data.List.IsSublist`, a module defining a inductive definition of sublist known as Order Preserving Embedding.
+
+* Adds some functions decomposition, weaken, and functions `throwUnionF`, `catchUnionF` to use Union with with EitherT
+  in `Data.OpenUnion` module.
 
 ### Other Changes
 

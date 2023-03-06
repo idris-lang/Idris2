@@ -55,7 +55,7 @@ elemAtIndex (There later) =
   let (n ** atIndex) = elemAtIndex later in (S n ** S atIndex)
 
 public export
-weakenElem : {el : Elem y xs} -> Elem x (dropElem xs el) -> Elem x xs
-weakenElem {el = Here} elem = There elem
-weakenElem {el = There later} Here = Here
-weakenElem {el = There el} (There later) = There $ weakenElem {el} later
+weakenElem : {elem : Elem y xs} -> Elem x (dropElem xs elem) -> Elem x xs
+weakenElem {elem = Here} elem = There elem
+weakenElem {elem = There later} Here = Here
+weakenElem {elem = There elem} (There later) = There $ weakenElem {elem} later

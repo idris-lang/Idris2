@@ -17,6 +17,7 @@ import Data.Nat.Order.Properties
 import Decidable.Equality
 import Syntax.WithProof
 import Control.Monad.Identity
+import Control.Monad.Error.Either
 
 %default total
 
@@ -26,6 +27,7 @@ public export
 data UnionF : (elt : a -> Type) -> (ts : List a) -> Type where
   Element : (k : Nat) -> (0 _ : AtIndex t ts k) -> elt t -> UnionF elt ts
 
+||| Open union of types. It's just a type synonym UnionF Identity
 public export
 Union : List Type -> Type
 Union = UnionF Identity
@@ -79,21 +81,31 @@ split m (Element n p t) with (@@ lt n (fst m))
 ||| whether the value it contains belongs either to the first family or any
 ||| other in the tail.
 public export
-decomp : UnionF elt (t :: ts) -> Either (UnionF elt ts) (elt t)
-decomp (Element 0     (Z)   t) = Right t
-decomp (Element (S n) (S p) t) = Left (Element n p t)
+decompF : UnionF elt (t :: ts) -> Either (UnionF elt ts) (elt t)
+decompF (Element 0     (Z)   t) = Right t
+decompF (Element (S n) (S p) t) = Left (Element n p t)
+
+public export
+decomp : Union (t :: ts) -> Either (Union ts) t
+decomp union = map runIdentity $ decompF union
 
 ||| An open union over a singleton list is just a wrapper
 public export
-decomp0 : UnionF elt [t] -> elt t
-decomp0 elt = case decomp elt of
+decomp0F : UnionF elt [t] -> elt t
+decomp0F elt = case decompF elt of
   Left t => absurd t
   Right t => t
 
 public export
+decomp0 : Union [t] -> t
+decomp0 = runIdentity . decomp0F
+
+||| Append new union member
+public export
 weakenAppend : UnionF elt ts -> UnionF elt (b :: ts)
 weakenAppend (Element n p t) = Element (S n) (S p) t
 
+||| Checking if the value belongs to the family at the given index or in the rest of the list
 public export
 decompAtIndex : {atIndex : AtIndex t xs n} -> UnionF elt xs -> Either (UnionF elt (dropAtIndex xs atIndex)) (elt t)
 decompAtIndex {atIndex = Z} (Element 0 Z t) = Right t
@@ -102,8 +114,9 @@ decompAtIndex {atIndex = Z} (Element (S n) (S p) t) = Left $ Element n p t
 decompAtIndex {atIndex = S p} (Element (S q) (S n) t) =
   bimap weakenAppend id $ decompAtIndex (Element q n t)
 
+||| Checking if the value belongs to the family being an element t or in the rest of the list
 public export
-decompElem : {auto elem : Elem t xs} -> UnionF elt xs -> Either (UnionF elt (dropElem xs elem)) (elt t)
+decompElem : {auto elem : Elem t ts} -> UnionF elt ts -> Either (UnionF elt (dropElem ts elem)) (elt t)
 decompElem {elem = Here} (Element 0 Z t) = Right t
 decompElem {elem = There later} (Element 0 Z t) = Left $ Element 0 Z t
 decompElem {elem = Here} (Element (S n) (S p) t) = Left $ Element n p t
@@ -111,12 +124,12 @@ decompElem {elem = There later} (Element (S q) (S p) t) =
   bimap weakenAppend id $ decompElem {elem = later} (Element q p t)
 
 public export
-weakenElem : {0 ts : List a} -> {elem : Elem x ts} -> UnionF elt (dropElem ts elem) -> UnionF elt ts
-weakenElem {elem = There elem} (Element 0 Z t) = Element 0 Z t
-weakenElem {elem = Here} (Element n p t) = (Element (S n) (S p) t)
-weakenElem {elem = There elem} (Element (S n) (S p) t) = weakenAppend $ weakenElem {elem} (Element n p t)
+weakenUnionElem : {elem : Elem x ts} -> UnionF elt (dropElem ts elem) -> UnionF elt ts
+weakenUnionElem {elem = There elem} (Element 0 Z t) = Element 0 Z t
+weakenUnionElem {elem = Here} (Element n p t) = (Element (S n) (S p) t)
+weakenUnionElem {elem = There elem} (Element (S n) (S p) t) = weakenAppend $ weakenUnionElem {elem} (Element n p t)
 
-decompMember' : {atIndex : Subset Nat (AtIndex t ts)} -> UnionF elt ts -> Either (UnionF elt (dropMember' t ts {atIndex})) (elt t)
+decompMember' : {atIndex : Subset Nat (AtIndex t ts)} -> UnionF elt ts -> Either (UnionF elt (dropMember' {t} ts atIndex)) (elt t)
 decompMember' {atIndex = Element Z prf1} (Element Z prf2 t) =
   rewrite atIndexUnique prf1 prf2 in Right t
 decompMember' {atIndex = Element (S n) prf} (Element 0 Z t) = Left $ Element 0 Z t
@@ -124,9 +137,14 @@ decompMember' {atIndex = Element Z prf} (Element (S n) (S p) t) = Left $ Element
 decompMember' {atIndex = Element (S n) prf} (Element (S q) (S p) t) =
   bimap weakenAppend id $ decompMember' {atIndex = Element n (inverseS prf)} (Element q p t)
 
-decompMember : {0 ts : List a} -> Member t ts => UnionF elt ts -> Either (UnionF elt (dropMember {ts} {t})) (elt t)
+
+||| Checking if the value belongs to the family being an member t or in the rest of the list
+public export
+decompMember : {0 ts : List a} -> Member t ts => UnionF elt ts -> Either (UnionF elt (dropMember {t} ts)) (elt t)
 decompMember = decompMember' {atIndex = isMember t ts}
 
+||| We can inspect an open union over a list of families, which is an шnterleaving of the other two to check
+||| whether the value it contains belongs either to the first family lists (xs) or first family lists (ys).
 public export
 decompInterleaving : Interleaving xs ys zs -> UnionF elt zs -> Either (UnionF elt xs) (UnionF elt ys)
 decompInterleaving Nil (Element n p t) impossible
@@ -152,6 +170,8 @@ weakenL : {0 xs : List a}
   -> UnionF elt (xs ++ ys)
 weakenL {hasLen} (Element n p t) = Element (fst hasLen + n) (weakenL hasLen p) t
 
+||| Inserting new union members between two lists.
+||| Requires length it these lists or themselves.
 public export
 weaken : {0 xs, ys : List a} ->
  {default (Element _ (hasLength xs)) hasLenXs : Subset Nat (flip HasLength xs)} ->
@@ -162,3 +182,36 @@ weaken union with (split hasLenXs union)
   weaken union | Right unionZs =
     let unionYsZs = weakenL {hasLen = hasLenYs} unionZs in
     weakenL {hasLen = hasLenXs} unionYsZs
+
+||| Using a union as an error type in EitherT. 
+||| This function throws an error if it is a member of the error list.
+public export
+throwUnionF : (Applicative f, Member x xs) => elt x -> EitherT (UnionF elt xs) f a
+throwUnionF = MkEitherT . pure . Left . inj
+
+public export
+throwUnion : Applicative f => Member x xs => x -> EitherT (Union xs) f a
+throwUnion = throwUnionF . Id
+
+||| Catches an error from the union at Left and returns without it
+public export
+catchUnionF : {0 xs : List b}
+  -> (Monad m, Member t xs)
+  => (f t -> EitherT (UnionF f (dropMember {t} xs)) m a)
+  -> EitherT (UnionF f xs) m a
+  -> EitherT (UnionF f (dropMember {t} xs)) m a
+catchUnionF fun = mapEitherT (>>= go)
+  where
+    go : Either (UnionF f xs) a -> m (Either (UnionF f (dropMember {t} xs)) a)
+    go (Right a) = pure (Right a)
+    go (Left union) with (decompMember {t} union)
+      go (Left union) | Right fx = runEitherT (fun fx)
+      go (Left union) | Left rest = pure (Left rest)
+
+public export
+catchUnion : {0 xs : List Type}
+  -> (Monad m, Member t xs)
+  => (t -> EitherT (Union (dropMember {t} xs)) m a)
+  -> EitherT (Union xs) m a
+  -> EitherT (Union (dropMember {t} xs)) m a
+catchUnion fun = catchUnionF (fun . runIdentity)
