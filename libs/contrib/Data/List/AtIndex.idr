@@ -143,8 +143,8 @@ atIndexElem (S p) = There $ atIndexElem p
 
 elemSubsetAtIndex : Elem x xs -> Subset Nat (AtIndex x xs)
 elemSubsetAtIndex Here = Element Z Z
-elemSubsetAtIndex (There {y} later) = 
-  let (Element n prf) = elemSubsetAtIndex later in 
+elemSubsetAtIndex (There {y} later) =
+  let (Element n prf) = elemSubsetAtIndex later in
   (Element (S n) (weakenL (Element 1 (hasLength [y])) prf))
 
 atIndexNonEmpty : AtIndex x xs n -> NonEmpty xs

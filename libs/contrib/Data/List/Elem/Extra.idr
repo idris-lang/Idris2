@@ -51,7 +51,7 @@ notElemAppRight ys xs prf = prf . elemAppRight xs ys
 public export
 elemAtIndex : Elem x xs  -> (n ** AtIndex x xs n)
 elemAtIndex Here = (Z ** Z)
-elemAtIndex (There later) = 
+elemAtIndex (There later) =
   let (n ** atIndex) = elemAtIndex later in (S n ** S atIndex)
 
 public export

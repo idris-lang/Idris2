@@ -9,7 +9,7 @@ module Data.OpenUnion
 
 import Data.DPair
 import Data.List.Elem
-import Data.List.IsSublist
+import Data.List.Quantifiers
 import Data.List.AtIndex
 import Data.List.HasLength
 import Data.Nat
@@ -114,7 +114,7 @@ public export
 weakenElem : {0 ts : List a} -> {elem : Elem x ts} -> UnionF elt (dropElem ts elem) -> UnionF elt ts
 weakenElem {elem = There elem} (Element 0 Z t) = Element 0 Z t
 weakenElem {elem = Here} (Element n p t) = (Element (S n) (S p) t)
-weakenElem {elem = There elem} (Element (S n) (S p) t) = weakenAppend $ weakenElem {elem} (Element n p t) 
+weakenElem {elem = There elem} (Element (S n) (S p) t) = weakenAppend $ weakenElem {elem} (Element n p t)
 
 decompMember' : {atIndex : Subset Nat (AtIndex t ts)} -> UnionF elt ts -> Either (UnionF elt (dropMember' t ts {atIndex})) (elt t)
 decompMember' {atIndex = Element Z prf1} (Element Z prf2 t) =
@@ -128,15 +128,14 @@ decompMember : {0 ts : List a} -> Member t ts => UnionF elt ts -> Either (UnionF
 decompMember = decompMember' {atIndex = isMember t ts}
 
 public export
-decompSublist : {auto sublist : IsSublist ts xs} -> UnionF elt xs -> Either (UnionF elt (removeSublist sublist)) (UnionF elt ts)
-decompSublist {sublist = Base} (Element 0 Z t) impossible
-decompSublist {sublist = Base} (Element (S n) (S p) t) impossible
-decompSublist {sublist = Keep sublist} (Element 0 Z t) = Right (Element 0 Z t)
-decompSublist {sublist = Skip sublist} (Element 0 Z t) = Left (Element 0 Z t)
-decompSublist {sublist = Keep sublist} (Element (S n) (S p) t) =
-  bimap id weakenAppend $ decompSublist {elt} {sublist} (Element n p t)
-decompSublist {sublist = Skip sublist} (Element (S n) (S p) t) =
-  bimap weakenAppend id $ decompSublist {elt} {sublist} (Element n p t)
+decompInterleaving : Interleaving xs ys zs -> UnionF elt zs -> Either (UnionF elt xs) (UnionF elt ys)
+decompInterleaving Nil (Element n p t) impossible
+decompInterleaving (Right interleaving) (Element 0 Z t) = Right (Element 0 Z t)
+decompInterleaving (Right interleaving) (Element (S n) (S p) t) =
+  bimap id weakenAppend $ decompInterleaving interleaving (Element n p t)
+decompInterleaving (Left interleaving) (Element 0 Z t) = Left (Element 0 Z t)
+decompInterleaving (Left interleaving) (Element (S n) (S p) t) =
+  bimap weakenAppend id $ decompInterleaving interleaving (Element n p t)
 
 ||| Inserting new union members on the right leaves the index unchanged.
 public export
@@ -147,19 +146,19 @@ weakenR (Element n p t) = Element n (weakenR p) t
 ||| the number of members introduced. Note that this number is the only
 ||| thing we need to keep around at runtime.
 public export
-weakenL : {0 xs : List a} 
-  -> {default (Element _ (hasLength xs)) hasLen : Subset Nat (flip HasLength xs)} 
-  -> UnionF elt ys 
+weakenL : {0 xs : List a}
+  -> {default (Element _ (hasLength xs)) hasLen : Subset Nat (flip HasLength xs)}
+  -> UnionF elt ys
   -> UnionF elt (xs ++ ys)
 weakenL {hasLen} (Element n p t) = Element (fst hasLen + n) (weakenL hasLen p) t
 
 public export
-weaken : {0 xs, ys : List a} -> 
+weaken : {0 xs, ys : List a} ->
  {default (Element _ (hasLength xs)) hasLenXs : Subset Nat (flip HasLength xs)} ->
  {default (Element _ (hasLength ys)) hasLenYs : Subset Nat (flip HasLength ys)} ->
  UnionF elt (xs ++ zs) -> UnionF elt (xs ++ ys ++ zs)
 weaken union with (split hasLenXs union)
   weaken union | Left unionXs = weakenR unionXs
   weaken union | Right unionZs =
-    let unionYsZs = weakenL {hasLen = hasLenYs} unionZs in 
+    let unionYsZs = weakenL {hasLen = hasLenYs} unionZs in
     weakenL {hasLen = hasLenXs} unionYsZs

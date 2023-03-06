@@ -28,7 +28,7 @@ Uninhabited (IsSublist xs ys) => Uninhabited (IsSublist (z :: xs) (z :: ys)) whe
 
 public export
 Reflexive (List a) IsSublist where
-  reflexive {x = []} = Base 
+  reflexive {x = []} = Base
   reflexive {x = y :: ys} = Keep reflexive
 
 nilSublist : {xs : List a} -> IsSublist [] xs
@@ -57,9 +57,9 @@ Antisymmetric (List a) IsSublist where
   antisymmetric Base Base = Refl
   antisymmetric (Keep {x} sublist1) (Keep sublist2) =
     cong ((::) x) $ antisymmetric sublist1 sublist2
-  antisymmetric (Keep {x} sublist1) (Skip sublist2) = 
+  antisymmetric (Keep {x} sublist1) (Skip sublist2) =
     let rec = antisymmetric sublist1 $ weakenSublist sublist2 in cong ((::) x) rec
-  antisymmetric (Skip sublist1) sublist2 = 
+  antisymmetric (Skip sublist1) sublist2 =
     absurd $ uninhabited sublist2
 
 public export
@@ -71,7 +71,7 @@ removeSublist (Keep rest) = removeSublist rest
 public export
 filterSublist : {ys : List a} -> {p : a -> Bool} -> IsSublist (filter p ys) ys
 filterSublist {ys = []} = Base
-filterSublist {ys = y :: ys} with (p y) 
+filterSublist {ys = y :: ys} with (p y)
   filterSublist {ys = y :: ys} | True = Keep filterSublist
   filterSublist {ys = y :: ys} | False = Skip filterSublist
 
