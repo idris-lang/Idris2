@@ -203,7 +203,7 @@ mutual
       used r = if isLinear r then [MkVar prf] else []
 
   lcheck rig erase env (Ref fc nt fn)
-      = do log "quantity" 15 "lcheck Ref \{show (nt)} \{show !(toFullNames fn)}"
+      = do logC "quantity" 15 $ do pure "lcheck Ref \{show (nt)} \{show !(toFullNames fn)}"
            ty <- lcheckDef fc rig erase env fn
            pure (Ref fc nt fn, gnf env (embed ty), [])
 
@@ -317,7 +317,7 @@ mutual
                                  (throw (LinearUsed fc used nm))
 
   lcheck rig erase env (App fc f a)
-      = do log "quantity" 15 "lcheck App \{show !(toFullNames f)} \{show !(toFullNames a)}"
+      = do logC "quantity" 15 $ do pure "lcheck App \{show !(toFullNames f)} \{show !(toFullNames a)}"
            (f', gfty, fused) <- lcheck rig erase env f
            defs <- get Ctxt
            fty <- getNF gfty
