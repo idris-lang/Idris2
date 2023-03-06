@@ -183,7 +183,7 @@ weaken union with (split hasLenXs union)
     let unionYsZs = weakenL {hasLen = hasLenYs} unionZs in
     weakenL {hasLen = hasLenXs} unionYsZs
 
-||| Using a union as an error type in EitherT. 
+||| Using a union as an error type in EitherT.
 ||| This function throws an error if it is a member of the error list.
 public export
 throwUnionF : (Applicative f, Member x xs) => elt x -> EitherT (UnionF elt xs) f a
