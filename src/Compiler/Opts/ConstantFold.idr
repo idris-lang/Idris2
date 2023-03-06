@@ -173,7 +173,7 @@ constantFold fn = do
         | Nothing => pure ()
     let Just cdef' = constFoldCDef cdef
         | Nothing => pure ()
-    log "compiler.const-fold" 50 $ "constant folding " ++ show !(getFullName fn)
-                                 ++ "\n\told def: " ++ show cdef
-                                 ++ "\n\tnew def: " ++ show cdef'
+    logC "compiler.const-fold" 50 $ do pure $ "constant folding " ++ show !(getFullName fn)
+                                           ++ "\n\told def: " ++ show cdef
+                                           ++ "\n\tnew def: " ++ show cdef'
     setCompiled (Resolved fnIdx) cdef'

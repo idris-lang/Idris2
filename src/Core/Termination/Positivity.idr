@@ -163,7 +163,7 @@ calcPositive : {auto c : Ref Ctxt Defs} ->
                FC -> Name -> Core (Terminating, List Name)
 calcPositive loc n
     = do defs <- get Ctxt
-         log "totality.positivity" 6 $ "Calculating positivity: " ++ show !(toFullNames n)
+         logC "totality.positivity" 6 $ do pure $ "Calculating positivity: " ++ show !(toFullNames n)
          case !(lookupDefTyExact n (gamma defs)) of
               Just (TCon _ _ _ _ _ tns dcons _, ty) =>
                   case !(totRefsIn defs ty) of

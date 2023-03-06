@@ -247,7 +247,7 @@ retryDelayed' errmode p acc (d@(_, i, hints, elab) :: ds)
               | _ => retryDelayed' errmode p acc ds
          handle
            (do est <- get EST
-               log "elab.retry" 5 (show (delayDepth est) ++ ": Retrying delayed hole " ++ show !(getFullName (Resolved i)))
+               logC "elab.retry" 5 $ do pure $ show (delayDepth est) ++ ": Retrying delayed hole " ++ show !(getFullName (Resolved i))
                -- elab itself might have delays internally, so keep track of them
                update UST { delayedElab := [] }
                update Ctxt { localHints := hints }
@@ -263,8 +263,8 @@ retryDelayed' errmode p acc (d@(_, i, hints, elab) :: ds)
                logTermNF "elab.update" 5 ("Resolved delayed hole NF " ++ show i) [] tm
                removeHole i
                retryDelayed' errmode True acc ds')
-           (\err => do log "elab" 5 $ show errmode ++ ":Error in " ++ show !(getFullName (Resolved i))
-                                ++ "\n" ++ show err
+           (\err => do logC "elab" 5 $ do pure $ show errmode ++ ":Error in " ++ show !(getFullName (Resolved i))
+                                              ++ "\n" ++ show err
                        case errmode of
                          RecoverableErrors =>
                             if not !(recoverable err)

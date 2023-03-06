@@ -677,7 +677,7 @@ tryIntermediateRec fc rig opts hints env ty topty (Just rd)
          let opts' = { inUnwrap := True,
                        recData := Nothing } opts
          logTerm "interaction.search" 10 "Trying recursive search for" ty
-         log "interaction.search" 10 $ show !(toFullNames (recname rd))
+         logC "interaction.search" 10 $ show <$> toFullNames (recname rd)
          logTerm "interaction.search" 10 "LHS" !(toFullNames (lhsapp rd))
          recsearch <- tryRecursive fc rig opts' hints env letty topty rd
          makeHelper fc rig opts' env letty ty recsearch

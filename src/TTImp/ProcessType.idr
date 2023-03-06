@@ -59,7 +59,7 @@ processFnOpt fc True ndef (Hint d)
          target <- getRetTy defs !(nf defs [] ty)
          addHintFor fc target ndef d False
 processFnOpt fc _ ndef (Hint d)
-    = do log "elab" 5 $ "Adding local hint " ++ show !(toFullNames ndef)
+    = do logC "elab" 5 $ do pure $ "Adding local hint " ++ show !(toFullNames ndef)
          addLocalHint ndef
 processFnOpt fc True ndef (GlobalHint a)
     = addGlobalHint ndef a

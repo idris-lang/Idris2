@@ -310,7 +310,7 @@ calcTerminating : {auto c : Ref Ctxt Defs} ->
                   FC -> Name -> Core Terminating
 calcTerminating loc n
     = do defs <- get Ctxt
-         log "totality.termination.calc" 7 $ "Calculating termination: " ++ show !(toFullNames n)
+         logC "totality.termination.calc" 7 $ do pure $ "Calculating termination: " ++ show !(toFullNames n)
          Just def <- lookupCtxtExact n (gamma defs)
             | Nothing => undefinedName loc n
          IsTerminating <- totRefs defs (nub !(addCases defs (keys (refersTo def))))
