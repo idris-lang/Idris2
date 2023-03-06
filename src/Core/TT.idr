@@ -854,6 +854,12 @@ data WhyErased a
   | Impossible
   | Dotted a
 
+export
+Show a => Show (WhyErased a) where
+  show Placeholder = "placeholder"
+  show Impossible = "impossible"
+  show (Dotted x) = "dotted \{show x}"
+
 %name WhyErased why
 
 export

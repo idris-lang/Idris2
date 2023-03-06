@@ -68,6 +68,9 @@
   dangerous as Idris will pick an arbitrary one and so the meaning of an
   expression can depend e.g. on the order in which modules are imported.
 
+  * Additionally some conflicting fixity declarations in the Idris 2 compiler
+    and libraries have been removed.
+
 ### Library changes
 
 #### Prelude
@@ -100,6 +103,25 @@
 
 * Moved `Data.SortedMap` and `Data.SortedSet` from contrib to base.
 
+* Added missing buffer primitives (chezscheme only):
+  `setInt8`, `getInt8`, `getInt16`, `setInt64`, `getInt64`
+
+* Added new buffer (set/get) functions for built-in types `Bool`, `Nat`, `Integer`.
+
+* Tightened the types of:
+  `setInt16` (now takes an `Int16` instead of an `Int`),
+  `setInt32` (now takes an `Int32` instead of an `Int`),
+  `getInt32` (now returns an `Int32` instead of an `Int`)
+
+* Adds left- and right-rotation for `FiniteBits`.
+
+* Adds `Vect.permute` for applying permutations to `Vect`s.
+* Adds `Vect.kSplits` and `Vect.nSplits` for splitting a `Vect` whose length is
+  a known multiple of two `Nat`s (k * n) into k vectors of length n (and
+  vice-versa).
+* Adds `Vect.allFins` for generating all the `Fin` elements as a `Vect` with
+  matching length to the number of elements.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
@@ -113,6 +135,8 @@
   with the type signature from the compiler codebase and some of the naming
   from the contrib library. The type ended up being `HasLength n xs` rather than
   `HasLength xs n`.
+
+* Adds an implementation for `Functor Text.Lexer.Tokenizer.Tokenizer`.
 
 #### Papers
 

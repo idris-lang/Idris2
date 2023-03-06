@@ -1173,7 +1173,7 @@ mutual
                      {-
                      ust <- get UST
                      when (logging ust) $
-                        do log "unify" 20 $ "Constructor " ++ show !(toFullNames x) ++ " " ++ show loc
+                        do logC "unify" 20 $ do pure $ "Constructor " ++ show !(toFullNames x) ++ " " ++ show loc
                            log "unify" 20 "ARGUMENTS:"
                            traverse_ (dumpArg env) xs
                            log "unify" 20 "WITH:"

@@ -299,7 +299,7 @@ mutual
         -- Under 'assert_total' we assume that all calls are fine, so leave
         -- the size change list empty
       = do fn <- getFullName fn_in
-           log "totality.termination.sizechange" 10 $ "Looking under " ++ show !(toFullNames fn)
+           logC "totality.termination.sizechange" 10 $ do pure $ "Looking under " ++ show !(toFullNames fn)
            aSmaller <- resolved (gamma defs) (NS builtinNS (UN $ Basic "assert_smaller"))
            cond [(fn == NS builtinNS (UN $ Basic "assert_total"), pure [])
                 ,(caseFn fn,
@@ -347,7 +347,7 @@ export
 calculateSizeChange : {auto c : Ref Ctxt Defs} ->
                       FC -> Name -> Core (List SCCall)
 calculateSizeChange loc n
-    = do log "totality.termination.sizechange" 5 $ "Calculating Size Change: " ++ show !(toFullNames n)
+    = do logC "totality.termination.sizechange" 5 $ do pure $ "Calculating Size Change: " ++ show !(toFullNames n)
          defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => undefinedName loc n
