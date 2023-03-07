@@ -1,0 +1,85 @@
+1/1: Building Mult3 (Mult3.idr)
+LOG specialise.declare:5: Specialising Main.smult ($resolved2551) -> _PE.PE_smult_4e8901402355876e by (0, Static (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))), (1, Dynamic)
+LOG specialise:3: Specialised type _PE.PE_smult_4e8901402355876e: (n : Prelude.Types.Nat) -> Prelude.Types.Nat
+LOG specialise:5: Attempting to specialise:
+((Main.smult Prelude.Types.Z) n) = Prelude.Types.Z
+((Main.smult (Prelude.Types.S Prelude.Types.Z)) n) = n
+((Main.smult (Prelude.Types.S m)) n) = ((((Prelude.Num.+ [ty = Prelude.Types.Nat]) [__con = Prelude.Types.Num implementation at Prelude.Types:66:1--71:33]) n) ((Main.smult m) n))
+LOG specialise:5: New patterns for _PE.PE_smult_4e8901402355876e:
+(_PE.PE_smult_4e8901402355876e $_pe0) = (($resolved2551 (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))) _pe0)
+LOG specialise:5: New RHS: (Prelude.Types.plus _pe0[0] (Prelude.Types.plus _pe0[0] _pe0[0]))
+LOG specialise:5: Already specialised _PE.PE_smult_4e8901402355876e
+/* Main.main : IO () */
+function Main_main($0) {
+ const $1 = Prelude_IO_prim__getStr($0);
+ const $4 = Prelude_Types_prim__integerToNat(_bigIntOfString($1));
+ return Prelude_IO_prim__putStr((Prelude_Show_show_Show_Nat(($4+($4+$4)))+'\n'), $0);
+}
+1/1: Building Desc (Desc.idr)
+LOG specialise.declare:5: Specialising Desc.fold ($resolved2664) -> _PE.PE_fold_3a845f1ca594c582 by (0, Dynamic), (1, Static (Desc.Sum Desc.Stop (Desc.Prod Desc.Rec Desc.Rec))), (2, Dynamic)
+LOG specialise:3: Specialised type _PE.PE_fold_3a845f1ca594c582: {0 a : Type} -> ({arg:936} : ({arg:938} : (Desc.Meaning (Desc.Sum Desc.Stop (Desc.Prod Desc.Rec Desc.Rec)) a[0])) -> a[1]) -> ({arg:943} : (Desc.Mu (Desc.Sum Desc.Stop (Desc.Prod Desc.Rec Desc.Rec)))) -> a[2]
+LOG specialise:5: Attempting to specialise:
+((((Desc.fold [a = a]) [d = d]) alg) ((Desc.MkMu [d = d]) t)) = (alg (((((Desc.fmap [b = a]) [a = ?a]) d) ((Builtin.assert_total [a = ?a]) (((Desc.fold [a = a]) [d = d]) alg))) t))
+LOG specialise:5: New patterns for _PE.PE_fold_3a845f1ca594c582:
+(((_PE.PE_fold_3a845f1ca594c582 [a = a]) alg) ((Desc.MkMu [d = ((Desc.Sum Desc.Stop) ((Desc.Prod Desc.Rec) Desc.Rec))]) t)) = (alg (((((Desc.fmap [b = a]) [a = ?]) ((Desc.Sum Desc.Stop) ((Desc.Prod Desc.Rec) Desc.Rec))) ((Builtin.assert_total [a = ?]) (((Desc.fold [a = a]) [d = ((Desc.Sum Desc.Stop) ((Desc.Prod Desc.Rec) Desc.Rec))]) alg))) t))
+LOG specialise:5: Already specialised _PE.PE_fold_3a845f1ca594c582
+LOG specialise:5: Already specialised _PE.PE_fold_3a845f1ca594c582
+LOG specialise:5: New RHS: (alg[0] (Prelude.Types.bimap (Builtin.Pair a[1] a[1]) (Builtin.Pair (Desc.Mu (Desc.Sum Desc.Stop (Desc.Prod Desc.Rec Desc.Rec))) (Desc.Mu (Desc.Sum Desc.Stop (Desc.Prod Desc.Rec Desc.Rec)))) Builtin.Unit Builtin.Unit (Prelude.Basics.id Builtin.Unit) \({arg:2} : (Builtin.Pair (Desc.Mu (Desc.Sum Desc.Stop (Desc.Prod Desc.Rec Desc.Rec))) (Desc.Mu (Desc.Sum Desc.Stop (Desc.Prod Desc.Rec Desc.Rec))))) => (Prelude.Types.bimap a[2] (Desc.Mu (Desc.Sum Desc.Stop (Desc.Prod Desc.Rec Desc.Rec))) a[2] (Desc.Mu (Desc.Sum Desc.Stop (Desc.Prod Desc.Rec Desc.Rec))) (_PE.PE_fold_3a845f1ca594c582 a[2] alg[1]) (_PE.PE_fold_3a845f1ca594c582 a[2] alg[1]) {arg:2}[0]) t[2]))
+LOG specialise:5: Already specialised _PE.PE_fold_3a845f1ca594c582
+1/1: Building Desc2 (Desc2.idr)
+LOG specialise.declare:5: Specialising Main.fold ($resolved2574) -> _PE.PE_fold_8abb50b713fe8e5e by (0, Static Prelude.Types.Nat), (1, Static Prelude.Basics.List), (2, Static (Prelude.Interfaces.MkFunctor Prelude.Basics.List \{0 b : Type} => \{0 a : Type} => \(func : ({arg:8738} : a[0]) -> b[2]) => \({arg:8743} : (Prelude.Basics.List a[1])) => (Prelude.Types.List.mapImpl b[3] a[2] func[1] {arg:8743}[0]))), (3, Dynamic)
+LOG specialise:3: Specialised type _PE.PE_fold_8abb50b713fe8e5e: ({arg:840} : ({arg:842} : (Prelude.Basics.List Prelude.Types.Nat)) -> Prelude.Types.Nat) -> ({arg:847} : (Main.Mu Prelude.Basics.List)) -> Prelude.Types.Nat
+LOG specialise:5: Attempting to specialise:
+(((((Main.fold [a = a]) [f = f]) [fun = fun]) alg) ((Main.MkMu [f = f]) t)) = (alg ((((((Prelude.Interfaces.<$> [b = a]) [a = (Main.Mu f)]) [f = f]) [{conArg:8792} = fun]) ((((Main.fold [a = a]) [f = f]) [fun = fun]) alg)) t))
+LOG specialise:5: New patterns for _PE.PE_fold_8abb50b713fe8e5e:
+((_PE.PE_fold_8abb50b713fe8e5e alg) ((Main.MkMu [f = Prelude.Basics.List]) t)) = (alg ((((((Prelude.Interfaces.<$> [b = Prelude.Types.Nat]) [a = (Main.Mu Prelude.Basics.List)]) [f = Prelude.Basics.List]) [{conArg:8792} = ((Prelude.Interfaces.MkFunctor [f = Prelude.Basics.List]) (%lam Rig0 Implicit (Just b) %type (%lam Rig0 Implicit (Just a) %type (%lam RigW Explicit (Just func) (%pi RigW Explicit (Just {arg:8738}) a b) (%lam RigW Explicit (Just {arg:8743}) (Prelude.Basics.List a) ((((Prelude.Types.List.mapImpl [b = b]) [a = a]) func) {arg:8743}))))))]) ((((Main.fold [a = Prelude.Types.Nat]) [f = Prelude.Basics.List]) [fun = ((Prelude.Interfaces.MkFunctor [f = Prelude.Basics.List]) (%lam Rig0 Implicit (Just b) %type (%lam Rig0 Implicit (Just a) %type (%lam RigW Explicit (Just func) (%pi RigW Explicit (Just {arg:8738}) a b) (%lam RigW Explicit (Just {arg:8743}) (Prelude.Basics.List a) ((((Prelude.Types.List.mapImpl [b = b]) [a = a]) func) {arg:8743}))))))]) alg)) t))
+LOG specialise.declare:5: Specialising Main.fold ($resolved2574) -> _PE.PE_fold_a727631bc09e3761 by (0, Static Prelude.Types.Nat), (1, Static Prelude.Basics.List), (2, Static (Prelude.Interfaces.MkFunctor Prelude.Basics.List \{0 b : Type} => \{0 a : Type} => \(func : ({arg:8738} : a[0]) -> b[2]) => \({arg:8743} : (Prelude.Basics.List a[1])) => (Prelude.Types.List.mapAppend a[2] b[3] (Prelude.Basics.Lin b[3]) func[1] {arg:8743}[0]))), (3, Dynamic)
+LOG specialise:3: Specialised type _PE.PE_fold_a727631bc09e3761: ({arg:840} : ({arg:842} : (Prelude.Basics.List Prelude.Types.Nat)) -> Prelude.Types.Nat) -> ({arg:847} : (Main.Mu Prelude.Basics.List)) -> Prelude.Types.Nat
+LOG specialise:5: Attempting to specialise:
+(((((Main.fold [a = a]) [f = f]) [fun = fun]) alg) ((Main.MkMu [f = f]) t)) = (alg ((((((Prelude.Interfaces.<$> [b = a]) [a = (Main.Mu f)]) [f = f]) [{conArg:8792} = fun]) ((((Main.fold [a = a]) [f = f]) [fun = fun]) alg)) t))
+LOG specialise:5: New patterns for _PE.PE_fold_a727631bc09e3761:
+((_PE.PE_fold_a727631bc09e3761 alg) ((Main.MkMu [f = Prelude.Basics.List]) t)) = (alg ((((((Prelude.Interfaces.<$> [b = Prelude.Types.Nat]) [a = (Main.Mu Prelude.Basics.List)]) [f = Prelude.Basics.List]) [{conArg:8792} = ((Prelude.Interfaces.MkFunctor [f = Prelude.Basics.List]) (%lam Rig0 Implicit (Just b) %type (%lam Rig0 Implicit (Just a) %type (%lam RigW Explicit (Just func) (%pi RigW Explicit (Just {arg:8738}) a b) (%lam RigW Explicit (Just {arg:8743}) (Prelude.Basics.List a) (((((Prelude.Types.List.mapAppend [a = a]) [b = b]) (Prelude.Basics.Lin [a = b])) func) {arg:8743}))))))]) ((((Main.fold [a = Prelude.Types.Nat]) [f = Prelude.Basics.List]) [fun = ((Prelude.Interfaces.MkFunctor [f = Prelude.Basics.List]) (%lam Rig0 Implicit (Just b) %type (%lam Rig0 Implicit (Just a) %type (%lam RigW Explicit (Just func) (%pi RigW Explicit (Just {arg:8738}) a b) (%lam RigW Explicit (Just {arg:8743}) (Prelude.Basics.List a) (((((Prelude.Types.List.mapAppend [a = a]) [b = b]) (Prelude.Basics.Lin [a = b])) func) {arg:8743}))))))]) alg)) t))
+LOG specialise:5: Already specialised _PE.PE_fold_a727631bc09e3761
+LOG specialise:5: New RHS: (alg[0] (Prelude.Types.List.mapAppend (Main.Mu Prelude.Basics.List) Prelude.Types.Nat (Prelude.Basics.Lin Prelude.Types.Nat) (_PE.PE_fold_a727631bc09e3761 alg[0]) t[1]))
+LOG specialise:5: Already specialised _PE.PE_fold_a727631bc09e3761
+LOG specialise:5: New RHS: (alg[0] (Prelude.Types.List.mapAppend (Main.Mu Prelude.Basics.List) Prelude.Types.Nat (Prelude.Basics.Lin Prelude.Types.Nat) (_PE.PE_fold_a727631bc09e3761 alg[0]) t[1]))
+LOG specialise:5: Already specialised _PE.PE_fold_8abb50b713fe8e5e
+LOG specialise:5: New RHS: (alg[0] (Prelude.Types.List.mapAppend (Main.Mu Prelude.Basics.List) Prelude.Types.Nat (Prelude.Basics.Lin Prelude.Types.Nat) (_PE.PE_fold_a727631bc09e3761 alg[0]) t[1]))
+LOG specialise:5: Already specialised _PE.PE_fold_8abb50b713fe8e5e
+1/1: Building Identity (Identity.idr)
+LOG specialise.declare:5: Specialising Main.identity ($resolved2551) -> _PE.PE_identity_3c7f5598e5c9b732 by (0, Static Prelude.Types.Nat), (1, Dynamic)
+LOG specialise:3: Specialised type _PE.PE_identity_3c7f5598e5c9b732: ({arg:813} : (Prelude.Basics.List Prelude.Types.Nat)) -> (Prelude.Basics.List Prelude.Types.Nat)
+LOG specialise:5: Attempting to specialise:
+((Main.identity [a = a]) (Prelude.Basics.Nil [a = a])) = (Prelude.Basics.Nil [a = a])
+((Main.identity [a = a]) (((Prelude.Basics.:: [a = a]) x) xs)) = (((Prelude.Basics.:: [a = a]) x) ((Main.identity [a = a]) xs))
+LOG specialise:5: New patterns for _PE.PE_identity_3c7f5598e5c9b732:
+(_PE.PE_identity_3c7f5598e5c9b732 (Prelude.Basics.Nil [a = Prelude.Types.Nat])) = (Prelude.Basics.Nil [a = Prelude.Types.Nat])
+(_PE.PE_identity_3c7f5598e5c9b732 (((Prelude.Basics.:: [a = Prelude.Types.Nat]) x) xs)) = (((Prelude.Basics.:: [a = Prelude.Types.Nat]) x) ((Main.identity [a = Prelude.Types.Nat]) xs))
+LOG specialise:5: New RHS: (Prelude.Basics.Nil Prelude.Types.Nat)
+LOG specialise:5: Already specialised _PE.PE_identity_3c7f5598e5c9b732
+LOG specialise:5: New RHS: (Prelude.Basics.:: Prelude.Types.Nat x[1] (_PE.PE_identity_3c7f5598e5c9b732 xs[0]))
+LOG specialise:5: Already specialised _PE.PE_identity_3c7f5598e5c9b732
+LOG compiler.identity:5: found identity flag for: _PE.PE_identity_3c7f5598e5c9b732, 0
+	old def: Just [{arg:0}]: (%case !{arg:0} [(%concase [nil] Prelude.Basics.Nil Just 0 [] (%con [nil] Prelude.Basics.Nil Just 0 [])), (%concase [cons] Prelude.Basics.:: Just 1 [{e:2}, {e:3}] (%con [cons] Prelude.Basics.:: Just 1 [!{e:2}, (_PE.PE_identity_3c7f5598e5c9b732 [!{e:3}])]))] Nothing)
+LOG compiler.identity:5: 	new def: [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: found identity flag for: Main.identity, 0
+	old def: Just [{arg:1}]: (%case !{arg:1} [(%concase [nil] Prelude.Basics.Nil Just 0 [] (%con [nil] Prelude.Basics.Nil Just 0 [])), (%concase [cons] Prelude.Basics.:: Just 1 [{e:2}, {e:3}] (%con [cons] Prelude.Basics.:: Just 1 [!{e:2}, (Main.identity [!{e:3}])]))] Nothing)
+LOG compiler.identity:5: 	new def: [{arg:1}]: !{arg:1}
+LOG compiler.identity:5: found identity flag for: _PE.PE_identity_3c7f5598e5c9b732, 0
+	old def: Just [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: 	new def: [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: found identity flag for: Main.identity, 0
+	old def: Just [{arg:1}]: !{arg:1}
+LOG compiler.identity:5: 	new def: [{arg:1}]: !{arg:1}
+LOG compiler.identity:5: found identity flag for: Main.test, 0
+	old def: Just [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: 	new def: [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: found identity flag for: _PE.PE_identity_3c7f5598e5c9b732, 0
+	old def: Just [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: 	new def: [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: found identity flag for: Main.identity, 0
+	old def: Just [{arg:1}]: !{arg:1}
+LOG compiler.identity:5: 	new def: [{arg:1}]: !{arg:1}
+LOG compiler.identity:5: found identity flag for: Main.test, 0
+	old def: Just [{arg:0}]: !{arg:0}
+LOG compiler.identity:5: 	new def: [{arg:0}]: !{arg:0}

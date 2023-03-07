@@ -16,6 +16,7 @@ import Idris.Syntax
 import TTImp.Elab.Check
 import TTImp.TTImp
 import TTImp.TTImp.Functor
+import TTImp.TTImp.Traversals
 import TTImp.Unelab
 
 import Protocol.Hex
@@ -25,12 +26,20 @@ import Libraries.Data.NameMap
 
 %default covering
 
-data ArgMode = Static ClosedTerm | Dynamic
+data ArgMode' tm = Static tm | Dynamic
+
+ArgMode : Type
+ArgMode = ArgMode' ClosedTerm
+
+traverseArgMode : (a -> Core b) -> ArgMode' a -> Core (ArgMode' b)
+traverseArgMode f (Static t) = Static <$> f t
+traverseArgMode f Dynamic = pure Dynamic
 
 covering
-Show ArgMode where
+Show a => Show (ArgMode' a) where
   show (Static tm) = "Static " ++ show tm
   show Dynamic = "Dynamic"
+
 
 getStatic : ArgMode -> Maybe (Term [])
 getStatic Dynamic = Nothing
@@ -40,7 +49,7 @@ specialiseTy : {vars : _} ->
                Nat -> List (Nat, Term []) -> Term vars -> Term vars
 specialiseTy i specs (Bind fc x (Pi fc' c p ty) sc)
     = case lookup i specs of
-           Nothing => Bind fc x (Pi fc' c Explicit ty) $ -- easier later if everything explicit
+           Nothing => Bind fc x (Pi fc' c p ty) $ -- easier later if everything explicit
                         specialiseTy (1 + i) specs sc
            Just tm => specialiseTy (1 + i) specs (subst (embed tm) sc)
 specialiseTy i specs tm = tm
@@ -155,11 +164,16 @@ getSpecPats fc pename fn stk fnty args sargs pats
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
              tm' <- unelabNoSugar [] tm
              mkRHSargs sc' (IApp fc app (map rawName tm')) as ds
-    mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app as ((_, Static tm) :: ds)
+    mkRHSargs (NBind _ x (Pi _ _ Implicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
              tm' <- unelabNoSugar [] tm
              mkRHSargs sc' (INamedApp fc app x (map rawName tm')) as ds
+    mkRHSargs (NBind _ _ (Pi _ _ AutoImplicit _) sc) app as ((_, Static tm) :: ds)
+        = do defs <- get Ctxt
+             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+             tm' <- unelabNoSugar [] tm
+             mkRHSargs sc' (IAutoApp fc app (map rawName tm')) as ds
     -- Type will depend on the value here (we assume a variadic function) but
     -- the argument names are still needed
     mkRHSargs ty app (a :: as) ((_, Dynamic) :: ds)
@@ -167,17 +181,21 @@ getSpecPats fc pename fn stk fnty args sargs pats
     mkRHSargs _ app _ _
         = pure app
 
-    getRawArgs : List (Maybe Name, RawImp) -> RawImp -> List (Maybe Name, RawImp)
-    getRawArgs args (IApp _ f arg) = getRawArgs ((Nothing, arg) :: args) f
-    getRawArgs args (INamedApp _ f n arg)
-        = getRawArgs ((Just n, arg) :: args) f
+    getRawArgs : List (Arg' Name) -> RawImp -> List (Arg' Name)
+    getRawArgs args (IApp fc f arg) = getRawArgs (Explicit fc arg :: args) f
+    getRawArgs args (INamedApp fc f n arg)
+        = getRawArgs (Named fc n arg :: args) f
+    getRawArgs args (IAutoApp fc f arg)
+        = getRawArgs (Auto fc arg :: args) f
     getRawArgs args tm = args
 
-    reapply : RawImp -> List (Maybe Name, RawImp) -> RawImp
+    reapply : RawImp -> List (Arg' Name) -> RawImp
     reapply f [] = f
-    reapply f ((Nothing, arg) :: args) = reapply (IApp fc f arg) args
-    reapply f ((Just t, arg) :: args)
-        = reapply (INamedApp fc f t arg) args
+    reapply f (Explicit fc arg :: args) = reapply (IApp fc f arg) args
+    reapply f (Named fc n arg :: args)
+        = reapply (INamedApp fc f n arg) args
+    reapply f (Auto fc arg :: args)
+        = reapply (IAutoApp fc f arg) args
 
     dropArgs : Name -> RawImp -> RawImp
     dropArgs pename tm = reapply (IVar fc pename) (dropSpec 0 sargs (getRawArgs [] tm))
@@ -185,12 +203,17 @@ getSpecPats fc pename fn stk fnty args sargs pats
     unelabPat : Name -> (vs ** (Env Term vs, Term vs, Term vs)) ->
                 Core ImpClause
     unelabPat pename (_ ** (env, lhs, rhs))
-        = do lhsapp <- unelabNoSugar env lhs
+        = do logTerm "specialise" 20 "Unelaborating LHS:" lhs
+             lhsapp <- unelabNoSugar env lhs
+             log "specialise" 20 $ "Unelaborating LHS to: \{show lhsapp}"
              let lhs' = dropArgs pename (map rawName lhsapp)
              defs <- get Ctxt
-             rhsnf <- normaliseArgHoles defs env rhs
-             rhs' <- unelabNoSugar env rhsnf
-             pure (PatClause fc lhs' (map rawName rhs'))
+             rhs <- normaliseArgHoles defs env rhs
+             rhs <- unelabNoSugar env rhs
+             let rhs = flip mapTTImp rhs $ \case
+                      IHole fc _ => Implicit fc False
+                      tm => tm
+             pure (PatClause fc lhs' (map rawName rhs))
 
     unelabLHS : Name -> (vs ** (Env Term vs, Term vs, Term vs)) ->
                 Core RawImp
@@ -225,7 +248,7 @@ mkSpecDef : {auto c : Ref Ctxt Defs} ->
             Name -> List (Nat, ArgMode) -> Name -> List (FC, Term vars) ->
             Core (Term vars)
 mkSpecDef {vars} fc gdef pename sargs fn stk
-    = handleUnify
+    = handleUnify {unResolve = True}
        (do defs <- get Ctxt
            setAllPublic True
            let staticargs
@@ -237,7 +260,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                | Just _ => -- already specialised
                            do log "specialise" 5 $ "Already specialised " ++ show pename
                               pure peapp
-           logC "specialise" 5 $
+           logC "specialise.declare" 5 $
                    do fnfull <- toFullNames fn
                       args' <- traverse (\ (i, arg) =>
                                    do arg' <- the (Core ArgMode) $ case arg of
@@ -246,7 +269,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                                                    Dynamic => pure Dynamic
                                       pure (show (i, arg'))) sargs
                       pure $ "Specialising " ++ show fnfull ++
-                             " (" ++ show fn ++ ") by " ++
+                             " (" ++ show fn ++ ") -> \{show pename} by " ++
                              showSep ", " args'
            let sty = specialiseTy 0 staticargs (type gdef)
            logTermNF "specialise" 3 ("Specialised type " ++ show pename) [] sty
@@ -254,7 +277,11 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            -- Add as RigW - if it's something else, we don't need it at
            -- runtime anyway so this is wasted effort, therefore a failure
            -- is okay!
-           peidx <- addDef pename (newDef fc pename top [] sty Public None)
+           let defflags := propagateFlags (flags gdef)
+           log "specialise.flags" 20 "Defining \{show pename} with flags: \{show defflags}"
+           peidx <- addDef pename
+                  $ the (GlobalDef -> GlobalDef) { flags := defflags }
+                  $ newDef fc pename top [] sty Public None
            addToSave (Resolved peidx)
 
            -- Reduce the function to be specialised, and reduce any name in
@@ -289,11 +316,27 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            -- if it fails, but I don't want the whole system to be dependent on
            -- the correctness of PE!
         (\err =>
-           do logC "specialise" 1 $ do pure $ "Partial evaluation of " ++ show !(toFullNames fn) ++ " failed" ++
-                                              "\n" ++ show err
+           do logC "specialise.fail" 1 $ do
+                 fn <- toFullNames fn
+                 pure "Partial evaluation of \{show fn} failed:\n\{show err}"
               update Ctxt { peFailures $= insert pename () }
               pure (applyWithFC (Ref fc Func fn) stk))
   where
+
+    identityFlag : List (Nat, ArgMode) -> Nat -> Maybe Nat
+    identityFlag [] k = pure k
+    identityFlag ((pos, mode) :: sargs) k
+      = k <$ guard (k < pos)
+      <|> (case mode of { Static _ => (`minus` 1); Dynamic => id }) <$> identityFlag sargs k
+
+
+    propagateFlags : List DefFlag -> List DefFlag
+    propagateFlags = mapMaybe $ \case
+      Deprecate => Nothing
+      Overloadable => Nothing
+      Identity k => Identity <$> identityFlag sargs k
+      fl => Just fl
+
     getAllRefs : NameMap Bool -> List ArgMode -> NameMap Bool
     getAllRefs ns (Dynamic :: xs) = getAllRefs ns xs
     getAllRefs ns (Static t :: xs)
@@ -367,8 +410,11 @@ specialise {vars} fc env gdef fn stk
                -- or holes in them, so they can be a Term []) we can specialise
                Just sargs <- getSpecArgs 0 specs stk
                    | Nothing => pure Nothing
-               let nhash = hash (mapMaybe getStatic (map snd sargs))
-                              `hashWithSalt` fn -- add function name to hash to avoid namespace clashes
+               defs <- get Ctxt
+               sargs <- for sargs $ traversePair $ traverseArgMode $ \ tm =>
+                          normalise defs [] tm
+               let nhash = hash !(traverse toFullNames $ mapMaybe getStatic $ map snd sargs)
+                              `hashWithSalt` fnfull -- add function name to hash to avoid namespace clashes
                let pename = NS partialEvalNS
                             (UN $ Basic ("PE_" ++ nameRoot fnfull ++ "_" ++ asHex (cast nhash)))
                defs <- get Ctxt

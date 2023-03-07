@@ -527,6 +527,7 @@ newDelayed {vars} fc rig env n ty
 export
 tryErrorUnify : {auto c : Ref Ctxt Defs} ->
                 {auto u : Ref UST UState} ->
+                {default False unResolve : Bool} ->
                 Core a -> Core (Either Error a)
 tryErrorUnify elab
     = do ust <- get UST
@@ -535,6 +536,7 @@ tryErrorUnify elab
                    commit
                    pure (Right res))
                (\err => do put UST ust
+                           err <- ifThenElse unResolve toFullNames pure err
                            defs' <- get Ctxt
                            put Ctxt ({ timings := timings defs' } defs)
                            pure (Left err))
@@ -551,9 +553,10 @@ tryUnify elab1 elab2
 export
 handleUnify : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
+              {default False unResolve : Bool} ->
               Core a -> (Error -> Core a) -> Core a
 handleUnify elab1 elab2
-    = do Right ok <- tryErrorUnify elab1
+    = do Right ok <- tryErrorUnify {unResolve} elab1
                | Left err => elab2 err
          pure ok
 
