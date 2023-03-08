@@ -98,6 +98,47 @@ prim__setEnv : String -> String -> Int -> PrimIO Int
          supportNode "unsetEnv"
 prim__unsetEnv : String -> PrimIO Int
 
+%foreign "C:idris2_enableRawMode, libidris2_support, idris_support.h"
+prim__enableRawMode : (1 x : %World) -> IORes Int
+
+%foreign "C:idris2_resetRawMode, libidris2_support, idris_support.h"
+prim__resetRawMode : (1 x : %World) -> IORes ()
+
+||| `enableRawMode` enables raw mode for stdin, allowing characters
+||| to be read one at a time, without buffering or echoing.
+||| If `enableRawMode` is used, the program should call `resetRawMode` before
+||| exiting. Consider using `withRawMode` instead to ensure the tty is reset.
+|||
+||| This is not supported on windows.
+export
+enableRawMode : HasIO io => io (Either FileError ())
+enableRawMode =
+  case !(primIO prim__enableRawMode) of
+    0 => pure $ Right ()
+    _ => returnError
+
+||| `resetRawMode` resets stdin raw mode to original state if
+||| `enableRawMode` had been previously called.
+export
+resetRawMode : HasIO io => io ()
+resetRawMode = primIO prim__resetRawMode
+
+||| `withRawMode` performs a given operation after setting stdin to raw mode
+||| and ensure that stdin is reset to its original state afterwards.
+|||
+||| This is not supported on windows.
+export
+withRawMode : HasIO io =>
+              (onError   : FileError -> io a) ->
+              (onSuccess : () -> io a) ->
+              io a
+withRawMode onError onSuccess = do
+  Right () <- enableRawMode
+    | Left err => onError err
+  result <- onSuccess ()
+  resetRawMode
+  pure result
+
 ||| Retrieve the specified environment variable's value string, or `Nothing` if
 ||| there is no such environment variable.
 |||
