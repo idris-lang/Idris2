@@ -9,6 +9,7 @@ Compiled: \ {arg:0} => case {arg:0} of
   ; _ => 0
   }
 Refers to: Prelude.Basics.True, Prelude.Basics.False
+Refers to (runtime): Prelude.Types.Nat
 Flags: allguarded, covering
 Main> Main.isInt32
 Arguments [{arg:0}]
@@ -20,6 +21,7 @@ Compiled: \ {arg:0} => case {arg:0} of
   ; _ => 0
   }
 Refers to: Prelude.Basics.True, Prelude.Basics.False
+Refers to (runtime): Int32
 Flags: allguarded, covering
 Main> Prelude.Types.plus
 Arguments [{arg:0}, {arg:1}]
