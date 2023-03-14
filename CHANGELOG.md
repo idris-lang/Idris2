@@ -71,6 +71,9 @@
   * Additionally some conflicting fixity declarations in the Idris 2 compiler
     and libraries have been removed.
 
+* Constructors mentioned on the left hand side of functions/case alternatives
+  are now included in the `Refers to (runtime)` section of functions debug info.
+
 ### Library changes
 
 #### Prelude
