@@ -2,6 +2,7 @@ module Data.Fin.Extra
 
 import Data.Fin
 import Data.Nat
+import Data.Nat.Division
 
 import Syntax.WithProof
 import Syntax.PreorderReasoning
@@ -110,6 +111,22 @@ strengthen' {n = S k} (FS m) = case strengthen' m of
     Left eq => Left $ cong FS eq
     Right (m' ** eq) => Right (FS m' ** cong S eq)
 
+||| Tighten the bound on a Fin by taking its current bound modulo the given
+||| non-zero number.
+export
+strengthenMod :  {n : _}
+             -> Fin n
+             -> (m : Nat)
+             -> {auto mNZ : NonZero m}
+             -> Fin m
+strengthenMod _ Z impossible
+strengthenMod {n = 0} f m@(S k) = weakenN m f
+strengthenMod {n = (S j)} f m@(S k) =
+ let n' : Nat
+     n' = modNatNZ (S j) (S k) %search in
+ let ok = boundModNatNZ (S j) (S k) %search
+ in natToFinLT n' @{ok}
+
 ----------------------------
 --- Weakening properties ---
 ----------------------------
@@ -157,6 +174,23 @@ divMod {ok=_} (S n) (S d) =
         Right (r' ** eq') => Fraction {ok=ok} (S n) (S d) q (FS r') $
             rewrite sym $ plusSuccRightSucc (q * S d) (finToNat r') in
                 cong S $ trans (sym $ cong (plus (q * S d)) eq') eq
+
+||| Compute n % m as a Fin with upper bound m.
+|||
+||| Useful, for example, when iterating through a large index, computing
+||| subindices as a function of the larger index (e.g. a flattened 2D-array)
+export
+modFin :  (n : Nat)
+       -> (m : Nat)
+       -> {auto mNZ : NonZero m}
+       -> Fin m
+modFin n 0 impossible
+modFin 0 (S k) = FZ
+modFin (S j) (S k) =
+  let n' : Nat
+      n' = modNatNZ (S j) (S k) mNZ in
+  let ok = boundModNatNZ (S j) (S k) mNZ
+  in natToFinLT n' @{ok}
 
 -------------------
 --- Conversions ---
