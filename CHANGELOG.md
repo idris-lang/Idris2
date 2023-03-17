@@ -148,6 +148,10 @@
 
 * Adds an implementation for `Functor Text.Lexer.Tokenizer.Tokenizer`.
 
+* Adds `modFin` and `strengthenMod` to `Data.Fin.Extra`. These functions reason
+  about the modulo operator's upper bound, which can be useful when working with
+  indices (for example).
+
 #### Papers
 
 * In `Control.DivideAndConquer`: a port of the paper
