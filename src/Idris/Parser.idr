@@ -1376,6 +1376,18 @@ directive fname indents
          n <- name
          atEnd indents
          pure (PrimDouble n)
+  <|> do decoratedPragma fname "TTImpLit"
+         n <- name
+         atEnd indents
+         pure (PrimTTImp n)
+  <|> do decoratedPragma fname "nameLit"
+         n <- name
+         atEnd indents
+         pure (PrimName n)
+  <|> do decoratedPragma fname "declsLit"
+         n <- name
+         atEnd indents
+         pure (PrimDecls n)
   <|> do decoratedPragma fname "name"
          n <- name
          ns <- sepBy1 (decoratedSymbol fname ",")

@@ -345,12 +345,21 @@ mutual
                pure $ IApp vfc (IVar vfc f) (IPrimVal fc (Db x))
   desugarB side ps (PPrimVal fc x) = pure $ IPrimVal fc x
   desugarB side ps (PQuote fc tm)
-      = pure $ IQuote fc !(desugarB side ps tm)
+      = do let q = IQuote fc !(desugarB side ps tm)
+           case side of
+                AnyExpr => pure $ maybeIApp fc !fromTTImpName q
+                _ => pure q
   desugarB side ps (PQuoteName fc n)
-      = pure $ IQuoteName fc n
+      = do let q = IQuoteName fc n
+           case side of
+                AnyExpr => pure $ maybeIApp fc !fromNameName q
+                _ => pure q
   desugarB side ps (PQuoteDecl fc x)
       = do xs <- traverse (desugarDecl ps) x
-           pure $ IQuoteDecl fc (concat xs)
+           let dls = IQuoteDecl fc (concat xs)
+           case side of
+                AnyExpr => pure $ maybeIApp fc !fromDeclsName dls
+                _ => pure dls
   desugarB side ps (PUnquote fc tm)
       = pure $ IUnquote fc !(desugarB side ps tm)
   desugarB side ps (PRunElab fc tm)
@@ -369,17 +378,17 @@ mutual
            throw (GenericMsg fc "? is not a valid pattern")
          pure $ Implicit fc False
   desugarB side ps (PMultiline fc hashtag indent lines)
-      = addFromString fc !(expandString side ps fc hashtag !(trimMultiline fc indent lines))
+      = pure $ maybeIApp fc !fromStringName !(expandString side ps fc hashtag !(trimMultiline fc indent lines))
 
   -- We only add `fromString` if we are looking at a plain string literal.
   -- Interpolated string literals don't have a `fromString` call since they
   -- are always concatenated with other strings and therefore can never use
   -- another `fromString` implementation that differs from `id`.
   desugarB side ps (PString fc hashtag [])
-      = addFromString fc (IPrimVal fc (Str ""))
+      = pure $ maybeIApp fc !fromStringName (IPrimVal fc (Str ""))
   desugarB side ps (PString fc hashtag [StrLiteral fc' str])
       = case unescape hashtag str of
-             Just str => addFromString fc (IPrimVal fc' (Str str))
+             Just str => pure $ maybeIApp fc !fromStringName (IPrimVal fc' (Str str))
              Nothing => throw (GenericMsg fc "Invalid escape sequence: \{show str}")
   desugarB side ps (PString fc hashtag strs)
       = expandString side ps fc hashtag strs
@@ -517,14 +526,13 @@ mutual
       = pure $ apply (IVar consFC (UN $ Basic ":<"))
                 [!(expandSnocList side ps nilFC xs) , !(desugarB side ps x)]
 
-  addFromString : {auto c : Ref Ctxt Defs} ->
-                  FC -> RawImp -> Core RawImp
-  addFromString fc tm
-      = pure $ case !fromStringName of
-                    Nothing => tm
-                    Just f =>
-                      let fc = virtualiseFC fc in
-                      IApp fc (IVar fc f) tm
+  maybeIApp : FC -> Maybe Name -> RawImp -> RawImp
+  maybeIApp fc nm tm
+      = case nm of
+             Nothing => tm
+             Just f =>
+               let fc = virtualiseFC fc in
+               IApp fc (IVar fc f) tm
 
   expandString : {auto s : Ref Syn SyntaxInfo} ->
                  {auto b : Ref Bang BangData} ->
@@ -1183,6 +1191,9 @@ mutual
              PrimString n => pure [IPragma fc [] (\nest, env => setFromString n)]
              PrimChar n => pure [IPragma fc [] (\nest, env => setFromChar n)]
              PrimDouble n => pure [IPragma fc [] (\nest, env => setFromDouble n)]
+             PrimTTImp n => pure [IPragma fc [] (\nest, env => setFromTTImp n)]
+             PrimName n => pure [IPragma fc [] (\nest, env => setFromName n)]
+             PrimDecls n => pure [IPragma fc [] (\nest, env => setFromDecls n)]
              CGAction cg dir => pure [IPragma fc [] (\nest, env => addDirective cg dir)]
              Names n ns => pure [IPragma fc [] (\nest, env => addNameDirective fc n ns)]
              StartExpr tm => pure [IPragma fc [] (\nest, env => throw (InternalError "%start not implemented"))] -- TODO!
