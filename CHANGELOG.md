@@ -142,6 +142,14 @@
 
 * Adds extraction functions to `Data.Singleton`.
 
+* Implemented `Eq`, `Ord`, `Semigroup`, and `Monoid` for `Data.List.Quantifiers.All.All`
+  and `Data.Vect.Quantifiers.All.All`.
+
+* Generalized `imapProperty` in `Data.List.Quantifiers.All.All`
+  and `Data.Vect.Quantifiers.All.All`.
+
+* Add `zipPropertyWith` to `Data.Vect.Quantifiers.All.All`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
