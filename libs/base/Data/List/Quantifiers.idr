@@ -122,7 +122,12 @@ namespace All
 
   export
   All (Show . p) xs => Show (All p xs) where
-    show = show . forget . imapProperty (Show . p) show
+    show pxs = "[" ++ show' "" pxs ++ "]"
+      where
+        show' : String -> All (Show . p) xs' => All p xs' -> String
+        show' acc @{[]} [] = acc
+        show' acc @{[_]} [px] = acc ++ show px
+        show' acc @{_ :: _} (px :: pxs) = show' (acc ++ show px ++ ", ") pxs
 
   export
   All (Eq . p) xs => Eq (All p xs) where
