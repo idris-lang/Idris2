@@ -1,0 +1,23 @@
+1/1: Building FromTTImp (FromTTImp.idr)
+Main> Main.AsMacro.natExprMacroTest : NatExpr
+natExprMacroTest = Plus (Plus (Val 1) (Val 2)) (Var "x")
+Main> Main.AsMacro.natExprPrecedenceTest : NatExpr
+natExprPrecedenceTest = Plus (Plus (Val 1) (Mult (Val 2) (Val 3))) (Val 4)
+Main> Main.AsScript.natExprScriptTest : NatExpr
+natExprScriptTest = Plus (Val 3) (Val 4)
+Main> Plus (Plus (Val 1) (Mult (Val 2) (Val 3))) (Val 4)
+Main> Bye for now!
+1/1: Building FromName (FromName.idr)
+Main> Main.AsMacro.myNameMacroTest : MyName
+myNameMacroTest = MkMyName "x"
+Main> Main.AsScript.myNameScriptTest : MyName
+myNameScriptTest = MkMyName "y"
+Main> MkMyName "z"
+Main> Bye for now!
+2/2: Building FromDecls (FromDecls.idr)
+Main> Main.AsMacro.natDeclsMacroTest : List NatDecl
+natDeclsMacroTest = [MkNatDecl "x" (Plus (Plus (Val 1) (Val 2)) (Var "a")), MkNatDecl "y" (Plus (Plus (Val 1) (Mult (Val 2) (Val 3))) (Val 4))]
+Main> Main.AsScript.natDeclsScriptTest : List NatDecl
+natDeclsScriptTest = [MkNatDecl "x" (Plus (Plus (Val 1) (Mult (Val 2) (Val 3))) (Val 4))]
+Main> [MkNatDecl "x" (Plus (Plus (Val 1) (Mult (Val 2) (Val 3))) (Val 4))]
+Main> Bye for now!
