@@ -82,10 +82,12 @@ namespace All
 
   ||| Modify the property given a pointwise interface function
   public export
-  imapProperty : (0 i : Type -> Type)
-              -> (f : {0 a : Type} -> i a => p a -> q a)
-              -> {0 types : List Type}
-              -> All i types => All p types -> All q types
+  imapProperty : {0 a : Type}
+              -> {0 p,q : a -> Type}
+              -> (0 i : a -> Type)
+              -> (f : {0 x : a} -> i x => p x -> q x)
+              -> {0 as : List a}
+              -> All i as => All p as -> All q as
   imapProperty i f @{[]} [] = []
   imapProperty i f @{ix :: ixs} (x :: xs) = f @{ix} x :: imapProperty i f @{ixs} xs
 
@@ -119,13 +121,40 @@ namespace All
     = f px qx :: zipPropertyWith f pxs qxs
 
   export
-  All Show (map p xs) => Show (All p xs) where
-    show pxs = "[" ++ show' "" pxs ++ "]"
-      where
-        show' : String -> All Show (map p xs') => All p xs' -> String
-        show' acc @{[]} [] = acc
-        show' acc @{[_]} [px] = acc ++ show px
-        show' acc @{_ :: _} (px :: pxs) = show' (acc ++ show px ++ ", ") pxs
+  All (Show . p) xs => Show (All p xs) where
+    show = show . forget . imapProperty (Show . p) show
+
+  export
+  All (Eq . p) xs => Eq (All p xs) where
+    (==)           [] []             = True
+    (==) @{_ :: _} (h1::t1) (h2::t2) = h1 == h2 && t1 == t2
+
+  %hint
+  allEq : All (Ord . p) xs => All (Eq . p) xs
+  allEq @{[]}     = []
+  allEq @{_ :: _} = %search :: allEq
+
+  export
+  All (Ord . p) xs => Ord (All p xs) where
+    compare            [] []            = EQ
+    compare @{_ :: _} (h1::t1) (h2::t2) = case compare h1 h2 of
+      EQ => compare t1 t2
+      o  => o
+
+  export
+  All (Semigroup . p) xs => Semigroup (All p xs) where
+    (<+>)           [] [] = []
+    (<+>) @{_ :: _} (h1::t1) (h2::t2) = (h1 <+> h2) :: (t1 <+> t2)
+
+  %hint
+  allSemigroup : All (Monoid . p) xs => All (Semigroup . p) xs
+  allSemigroup @{[]}     = []
+  allSemigroup @{_ :: _} = %search :: allSemigroup
+
+  export
+  All (Monoid . p) xs => Monoid (All p xs) where
+    neutral @{[]}   = []
+    neutral @{_::_} = neutral :: neutral
 
   ||| A heterogeneous list of arbitrary types
   public export
