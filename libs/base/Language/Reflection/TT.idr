@@ -170,6 +170,12 @@ data Name = NS Namespace Name -- name in a namespace
 
 %name Name nm
 
+%nameLit fromName
+
+public export
+fromName : Name -> Name
+fromName nm = nm
+
 export
 dropNS : Name -> Name
 dropNS (NS _ n) = dropNS n

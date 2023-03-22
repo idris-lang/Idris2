@@ -2,8 +2,6 @@ import Language.Reflection
 
 %language ElabReflection
 
-%nameLit fromName
-
 data MyName = MkMyName String
 
 myName : Name -> Elab MyName
