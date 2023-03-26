@@ -1,0 +1,8 @@
+rm -rf build
+
+$1 --no-color --console-width 0 --no-banner --log specialise:5 -c Mult3.idr
+$1 --no-color --console-width 0 --no-banner --cg node -o mult3.js -c Mult3.idr
+awk -v RS= '/\/\* Main.main/' build/exec/mult3.js
+$1 --no-color --console-width 0 --no-banner --log specialise:5 -c Desc.idr
+$1 --no-color --console-width 0 --no-banner --log specialise:5 -c Desc2.idr
+$1 --no-color --console-width 0 --no-banner --log specialise:5 -c Identity.idr

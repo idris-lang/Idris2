@@ -5,6 +5,7 @@ import public Control.Relation
 import public Control.Ord
 import public Control.Order
 import public Control.Function
+import Syntax.PreorderReasoning
 import Syntax.PreorderReasoning.Generic
 
 %default total
@@ -447,27 +448,34 @@ plusZeroLeftNeutral _ = Refl
 export
 plusZeroRightNeutral : (left : Nat) -> left + 0 = left
 plusZeroRightNeutral Z     = Refl
-plusZeroRightNeutral (S n) = rewrite plusZeroRightNeutral n in Refl
+plusZeroRightNeutral (S n) = Calc $
+  |~ 1 + (n + 0)
+  ~~ 1 + n ...(cong (1+) $ plusZeroRightNeutral n)
 
 export
 plusSuccRightSucc : (left, right : Nat) -> S (left + right) = left + (S right)
 plusSuccRightSucc Z _ = Refl
-plusSuccRightSucc (S left) right = rewrite plusSuccRightSucc left right in Refl
+plusSuccRightSucc (S left) right = Calc $
+  |~ 1 + (1 + (left + right))
+  ~~ 1 + (left + (1 + right)) ...(cong (1+) $ plusSuccRightSucc left right)
 
 export
 plusCommutative : (left, right : Nat) -> left + right = right + left
-plusCommutative Z right = rewrite plusZeroRightNeutral right in Refl
-plusCommutative (S left) right =
-  rewrite plusCommutative left right in
-    rewrite plusSuccRightSucc right left in
-      Refl
+plusCommutative Z right = Calc $
+  |~ right
+  ~~ right + 0 ..<(plusZeroRightNeutral right)
+plusCommutative (S left) right = Calc $
+  |~ 1 + (left + right)
+  ~~ 1 + (right + left) ...(cong (1+) $ plusCommutative left right)
+  ~~ right + (1 + left) ...(plusSuccRightSucc right left)
 
 export
 plusAssociative : (left, centre, right : Nat) ->
   left + (centre + right) = (left + centre) + right
 plusAssociative Z _ _ = Refl
-plusAssociative (S left) centre right =
-    rewrite plusAssociative left centre right in Refl
+plusAssociative (S left) centre right = Calc $
+  |~ 1 + (left + (centre + right))
+  ~~ 1 + ((left + centre) + right) ...(cong (1+) $ plusAssociative left centre right)
 
 export
 plusConstantRight : (left, right, c : Nat) -> left = right ->
@@ -494,39 +502,48 @@ export
 plusRightCancel : (left, left', right : Nat) ->
   left + right = left' + right -> left = left'
 plusRightCancel left left' right p =
-  plusLeftCancel right left left' $
-    rewrite plusCommutative right left in
-      rewrite plusCommutative right left' in
-        p
+  plusLeftCancel right left left' $ Calc $
+  |~ right + left
+  ~~ left  + right ...(plusCommutative right left)
+  ~~ left' + right ...(p)
+  ~~ right + left' ...(plusCommutative left' right)
 
 export
 plusLeftLeftRightZero : (left, right : Nat) ->
   left + right = left -> right = Z
 plusLeftLeftRightZero left right p =
-  plusLeftCancel left right Z $
-    rewrite plusZeroRightNeutral left in
-      p
+  plusLeftCancel left right Z $ Calc $
+  |~ left + right
+  ~~ left     ...(p)
+  ~~ left + 0 ..<(plusZeroRightNeutral left)
 
 export
 plusLteMonotoneRight : (p, q, r : Nat) -> q `LTE` r -> (q+p) `LTE` (r+p)
-plusLteMonotoneRight p  Z     r     LTEZero    = rewrite plusCommutative r p in
-                                                 lteAddRight p
-plusLteMonotoneRight p (S q) (S r) (LTESucc l) = LTESucc $ plusLteMonotoneRight p q r l
+plusLteMonotoneRight p  Z     r     LTEZero    = CalcSmart {leq = LTE} $
+  |~ 0 + p
+  <~ p + r ...(lteAddRight p)
+  <~ r + p .=.(plusCommutative p r)
+plusLteMonotoneRight p (S q) (S r) (LTESucc q_lte_r) =
+  LTESucc $ CalcSmart {leq = LTE} $
+  |~ q + p
+  <~ r + p ...(plusLteMonotoneRight p q r q_lte_r)
 
 export
 plusLteMonotoneLeft : (p, q, r : Nat) -> q `LTE` r -> (p + q) `LTE` (p + r)
-plusLteMonotoneLeft p q r p_lt_q
-   = rewrite plusCommutative p q in
-     rewrite plusCommutative p r in
-     plusLteMonotoneRight p q r p_lt_q
+plusLteMonotoneLeft p q r q_lt_r = CalcSmart {leq = LTE} $
+  |~ p + q
+  <~ q + p .=.(plusCommutative p q)
+  <~ r + p ...(plusLteMonotoneRight p q r q_lt_r)
+  <~ p + r .=.(plusCommutative r p)
+
 
 export
 plusLteMonotone : {m, n, p, q : Nat} -> m `LTE` n -> p `LTE` q ->
                   (m + p) `LTE` (n + q)
-plusLteMonotone left right =
-  transitive
-    (plusLteMonotoneLeft m p q right)
-    (plusLteMonotoneRight q m n left)
+plusLteMonotone left right = CalcSmart {leq = LTE} $
+  |~ m + p
+  <~ m + q ...(plusLteMonotoneLeft m p q right)
+  <~ n + q ...(plusLteMonotoneRight q m n left)
 
 zeroPlusLeftZero : (a,b : Nat) -> (0 = a + b) -> a = 0
 zeroPlusLeftZero 0 0 Refl = Refl
@@ -551,12 +568,18 @@ export
 multRightSuccPlus : (left, right : Nat) ->
   left * (S right) = left + (left * right)
 multRightSuccPlus Z _ = Refl
-multRightSuccPlus (S left) right =
-  rewrite multRightSuccPlus left right in
-  rewrite plusAssociative left right (left * right) in
-  rewrite plusAssociative right left (left * right) in
-  rewrite plusCommutative right left in
-          Refl
+multRightSuccPlus (S left) right = cong (1+) $ Calc $
+  |~ right + (left * (1 + right))
+  ~~ right + (left + (left * right))
+         ...(cong (right +) $ multRightSuccPlus left right)
+  ~~ (right + left) + (left * right)
+         ...(plusAssociative right left (left*right))
+  ~~ (left + right) + (left * right)
+         ...(cong (+ (left * right)) $ plusCommutative right left)
+  ~~ left + (right + (left * right))
+         ..<(plusAssociative left right (left * right))
+  ~~ left + ((1 + left) * right)
+         ...(Refl)
 
 export
 multLeftSuccPlus : (left, right : Nat) ->
@@ -565,38 +588,50 @@ multLeftSuccPlus _ _ = Refl
 
 export
 multCommutative : (left, right : Nat) -> left * right = right * left
-multCommutative Z right = rewrite multZeroRightZero right in Refl
-multCommutative (S left) right =
-  rewrite multCommutative left right in
-  rewrite multRightSuccPlus right left in
-          Refl
+multCommutative Z right = Calc $
+  |~ 0
+  ~~ right * 0 ..<(multZeroRightZero right)
+multCommutative (S left) right = Calc $
+  |~ right + (left * right)
+  ~~ right + (right * left)
+       ...(cong (right +) $ multCommutative left right)
+  ~~ right * (1 + left)
+       ..<(multRightSuccPlus right left)
 
 export
 multDistributesOverPlusLeft : (left, centre, right : Nat) ->
   (left + centre) * right = (left * right) + (centre * right)
 multDistributesOverPlusLeft Z _ _ = Refl
-multDistributesOverPlusLeft (S k) centre right =
-  rewrite multDistributesOverPlusLeft k centre right in
-    rewrite plusAssociative right (k * right) (centre * right) in
-      Refl
-
+multDistributesOverPlusLeft (S left) centre right = Calc $
+  |~ right + ((left + centre) * right)
+  ~~ right + ((left * right) + (centre * right))
+        ...(cong (right +) $
+            multDistributesOverPlusLeft left centre right)
+  ~~ (right + (left * right)) + (centre * right)
+        ...(plusAssociative right (left*right) (centre*right))
 export
 multDistributesOverPlusRight : (left, centre, right : Nat) ->
   left * (centre + right) = (left * centre) + (left * right)
-multDistributesOverPlusRight left centre right =
-  rewrite multCommutative left (centre + right) in
-    rewrite multCommutative left centre in
-      rewrite multCommutative left right in
-  multDistributesOverPlusLeft centre right left
+multDistributesOverPlusRight left centre right = Calc $
+  |~ left * (centre + right)
+  ~~ (centre + right) * left ...(multCommutative left (centre + right))
+  ~~ (centre * left) + (right * left)
+                             ...(multDistributesOverPlusLeft centre right left)
+  ~~ (left * centre) + (left * right)
+                             ...(cong2 (+)
+                                 (multCommutative centre left)
+                                 (multCommutative right left))
 
 export
 multAssociative : (left, centre, right : Nat) ->
   left * (centre * right) = (left * centre) * right
 multAssociative Z _ _ = Refl
-multAssociative (S left) centre right =
-  rewrite multAssociative left centre right in
-    rewrite multDistributesOverPlusLeft centre (mult left centre) right in
-      Refl
+multAssociative (S left) centre right = Calc $
+  |~ (centre * right) + (left * (centre * right))
+  ~~ (centre * right) + ((left * centre) * right)
+        ...(cong ((centre * right) +) $
+            multAssociative left centre right)
+  ~~ ((1 + left) * centre) * right ..<(multDistributesOverPlusLeft centre (left * centre) right)
 
 export
 multOneLeftNeutral : (right : Nat) -> 1 * right = right
@@ -604,9 +639,10 @@ multOneLeftNeutral right = plusZeroRightNeutral right
 
 export
 multOneRightNeutral : (left : Nat) -> left * 1 = left
-multOneRightNeutral left =
-  rewrite multCommutative left 1 in
-  multOneLeftNeutral left
+multOneRightNeutral left = Calc $
+  |~ left * 1
+  ~~ 1 * left ...(multCommutative left 1)
+  ~~ left     ...(multOneLeftNeutral left)
 
 -- Proofs on minus
 
@@ -673,12 +709,18 @@ minusPlus Z = irrelevantEq (minusZeroRight n)
 minusPlus (S m) = minusPlus m
 
 export
-plusMinusLte : (n, m : Nat) -> LTE n m -> (minus m n) + n = m
-plusMinusLte  Z     m    _   = rewrite minusZeroRight m in
-                               plusZeroRightNeutral m
+plusMinusLte : (n, m : Nat) -> LTE n m -> (m `minus` n) + n = m
+plusMinusLte  Z     m    _   = Calc $
+  |~ (m `minus` 0) + 0
+  ~~ m + 0 ...(cong (+0) $ minusZeroRight m)
+  ~~ m     ...(plusZeroRightNeutral m)
 plusMinusLte (S _)  Z    lte = absurd lte
-plusMinusLte (S n) (S m) lte = rewrite sym $ plusSuccRightSucc (minus m n) n in
-                               cong S $ plusMinusLte n m (fromLteSucc lte)
+plusMinusLte (S n) (S m) lte = Calc $
+  |~ ((1+m) `minus` (1+n)) + (1+n)
+  ~~ (m `minus` n) + (1 + n) ...(Refl)
+  ~~ 1+((m `minus` n) + n)   ..<(plusSuccRightSucc (m `minus` n) n)
+  ~~ 1+m                     ...(cong (1+) $ plusMinusLte n m
+                                           $ fromLteSucc lte)
 
 export
 minusMinusMinusPlus : (left, centre, right : Nat) ->
@@ -686,38 +728,53 @@ minusMinusMinusPlus : (left, centre, right : Nat) ->
 minusMinusMinusPlus Z Z _ = Refl
 minusMinusMinusPlus (S _) Z _ = Refl
 minusMinusMinusPlus Z (S _) _ = Refl
-minusMinusMinusPlus (S left) (S centre) right =
-  rewrite minusMinusMinusPlus left centre right in Refl
+minusMinusMinusPlus (S left) (S centre) right = Calc $
+  |~ (((1+left) `minus` (1+centre)) `minus` right)
+  ~~ ((left `minus` centre) `minus` right) ...(Refl)
+  ~~ (left `minus` (centre + right))       ...(minusMinusMinusPlus left centre right)
 
 export
 plusMinusLeftCancel : (left, right : Nat) -> (right' : Nat) ->
   minus (left + right) (left + right') = minus right right'
 plusMinusLeftCancel Z _ _ = Refl
-plusMinusLeftCancel (S left) right right' =
-  rewrite plusMinusLeftCancel left right right' in Refl
+plusMinusLeftCancel (S left) right right' = Calc $
+  |~ ((left + right) `minus` (left + right'))
+  ~~ (right `minus` right') ...(plusMinusLeftCancel left right right')
 
 export
 multDistributesOverMinusLeft : (left, centre, right : Nat) ->
   (minus left centre) * right = minus (left * right) (centre * right)
 multDistributesOverMinusLeft Z Z _ = Refl
-multDistributesOverMinusLeft (S left) Z right =
-  rewrite minusZeroRight (right + (left * right)) in Refl
+multDistributesOverMinusLeft (S left) Z right = Calc $
+  |~ right + (left * right)
+  ~~ ((right + (left * right)) `minus` 0)
+         ..<(minusZeroRight (right + (left*right)))
+  ~~ (((1+left) * right) `minus` (0 * right))
+         ...(Refl)
 multDistributesOverMinusLeft Z (S _) _ = Refl
-multDistributesOverMinusLeft (S left) (S centre) right =
-  rewrite multDistributesOverMinusLeft left centre right in
-  rewrite plusMinusLeftCancel right (left * right) (centre * right) in
-          Refl
-
+multDistributesOverMinusLeft (S left) (S centre) right = Calc $
+  |~ ((1 + left) `minus` (1 + centre)) * right
+  ~~ (left `minus` centre) * right
+       ...(Refl)
+  ~~ ((left*right) `minus` (centre*right))
+       ...(multDistributesOverMinusLeft left centre right)
+  ~~ ((right + (left * right)) `minus` (right + (centre * right)))
+      ..<(plusMinusLeftCancel right (left*right) (centre*right))
+  ~~ (((1+ left) * right) `minus` ((1+centre) * right))
+      ...(Refl)
 export
 multDistributesOverMinusRight : (left, centre, right : Nat) ->
   left * (minus centre right) = minus (left * centre) (left * right)
-multDistributesOverMinusRight left centre right =
-    rewrite multCommutative left (minus centre right) in
-    rewrite multDistributesOverMinusLeft centre right left in
-    rewrite multCommutative centre left in
-    rewrite multCommutative right left in
-            Refl
-
+multDistributesOverMinusRight left centre right = Calc $
+  |~ left * (centre `minus` right)
+  ~~ (centre `minus` right) * left
+         ...(multCommutative left (centre `minus` right))
+  ~~ ((centre*left) `minus` (right*left))
+         ...(multDistributesOverMinusLeft centre right left)
+  ~~ ((left * centre) `minus` (left * right))
+         ...(cong2 minus
+             (multCommutative centre left)
+             (multCommutative right left))
 export
 zeroMultEitherZero : (a,b : Nat) -> a*b = 0 -> Either (a = 0) (b = 0)
 zeroMultEitherZero 0 b prf = Left Refl
@@ -758,14 +815,16 @@ maximumAssociative : (l, c, r : Nat) ->
 maximumAssociative Z _ _ = Refl
 maximumAssociative (S _) Z _ = Refl
 maximumAssociative (S _) (S _) Z = Refl
-maximumAssociative (S k) (S j) (S i) = rewrite maximumAssociative k j i in Refl
+maximumAssociative (S k) (S j) (S i) = cong S $ Calc $
+  |~ maximum k (maximum j i)
+  ~~ maximum (maximum k j) i ...(maximumAssociative k j i)
 
 export
 maximumCommutative : (l, r : Nat) -> maximum l r = maximum r l
 maximumCommutative Z Z = Refl
 maximumCommutative Z (S _) = Refl
 maximumCommutative (S _) Z = Refl
-maximumCommutative (S k) (S j) = rewrite maximumCommutative k j in Refl
+maximumCommutative (S k) (S j) = cong S $ maximumCommutative k j
 
 export
 maximumIdempotent : (n : Nat) -> maximum n n = n
@@ -790,14 +849,14 @@ minimumAssociative : (l, c, r : Nat) ->
 minimumAssociative Z _ _ = Refl
 minimumAssociative (S _) Z _ = Refl
 minimumAssociative (S _) (S _) Z = Refl
-minimumAssociative (S k) (S j) (S i) = rewrite minimumAssociative k j i in Refl
+minimumAssociative (S k) (S j) (S i) = cong S $ minimumAssociative k j i
 
 export
 minimumCommutative : (l, r : Nat) -> minimum l r = minimum r l
 minimumCommutative Z Z = Refl
 minimumCommutative Z (S _) = Refl
 minimumCommutative (S _) Z = Refl
-minimumCommutative (S k) (S j) = rewrite minimumCommutative k j in Refl
+minimumCommutative (S k) (S j) = cong S $ minimumCommutative k j
 
 export
 minimumIdempotent : (n : Nat) -> minimum n n = n
@@ -806,7 +865,10 @@ minimumIdempotent (S k) = cong S $ minimumIdempotent k
 
 export
 minimumZeroZeroLeft : (left : Nat) -> minimum left 0 = Z
-minimumZeroZeroLeft left = rewrite minimumCommutative left 0 in Refl
+minimumZeroZeroLeft left = Calc $
+  |~ minimum left 0
+  ~~ minimum 0 left ...(minimumCommutative left 0)
+  ~~ 0              ...(Refl)
 
 export
 minimumSuccSucc : (left, right : Nat) ->
@@ -815,7 +877,10 @@ minimumSuccSucc _ _ = Refl
 
 export
 maximumZeroNLeft : (left : Nat) -> maximum left Z = left
-maximumZeroNLeft left = rewrite maximumCommutative left Z in Refl
+maximumZeroNLeft left = Calc $
+  |~ maximum left 0
+  ~~ maximum 0 left ...(maximumCommutative left Z)
+  ~~ left           ...(Refl)
 
 export
 maximumSuccSucc : (left, right : Nat) ->

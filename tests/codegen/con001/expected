@@ -9,4 +9,6 @@ Prelude.Num.MkIntegral = Constructor tag Just 0 arity 3
 Prelude.EqOrd.MkOrd = Constructor tag Just 0 arity 8
 Prelude.EqOrd.MkEq = Constructor tag Just 0 arity 2
 Prelude.Interfaces.MkMonoid = Constructor tag Just 0 arity 2
+Prelude.Interfaces.MkMonad = Constructor tag Just 0 arity 3
 Prelude.Interfaces.MkFoldable = Constructor tag Just 0 arity 6
+Prelude.Interfaces.MkApplicative = Constructor tag Just 0 arity 3

@@ -40,6 +40,9 @@ newBuffer size
 --             else pure $ Just $ MkBuffer buf size 0
 
 
+------------------------------------------------------------------------
+-- BitsN primitives
+
 -- There is no endianness indication (LE/BE) for UInt8 since it is a single byte
 
 -- TODO: remove me when we remove the deprecated `setByte` in a future release
@@ -149,37 +152,84 @@ getBits64 : HasIO io => Buffer -> (offset : Int) -> io Bits64
 getBits64 buf offset
     = primIO (prim__getBits64 buf offset)
 
+------------------------------------------------------------------------
+-- IntN primitives
+
+-- There is no endianness indication (LE/BE) for Int8 since it is a single byte
+
+%foreign "scheme:blodwen-buffer-setint8"
+prim__setInt8 : Buffer -> (offset : Int) -> (val : Int8) -> PrimIO ()
+
+export %inline
+setInt8 : HasIO io => Buffer -> (offset : Int) -> (val : Int8) -> io ()
+setInt8 buf offset val
+    = primIO (prim__setInt8 buf offset val)
+
+%foreign "scheme:blodwen-buffer-getint8"
+prim__getInt8 : Buffer -> (offset : Int) -> PrimIO Int8
+
+export %inline
+getInt8 : HasIO io => Buffer -> (offset : Int) -> io Int8
+getInt8 buf offset
+    = primIO (prim__getInt8 buf offset)
+
 %foreign "scheme:blodwen-buffer-setint16"
          "RefC:setBufferInt16LE"
          "node:lambda:(buf,offset,value)=>buf.writeInt16LE(value, offset)"
-prim__setInt16 : Buffer -> (offset : Int) -> (val : Int) -> PrimIO ()
+prim__setInt16 : Buffer -> (offset : Int) -> (val : Int16) -> PrimIO ()
 
 export %inline
-setInt16 : HasIO io => Buffer -> (offset : Int) -> (val : Int) -> io ()
+setInt16 : HasIO io => Buffer -> (offset : Int) -> (val : Int16) -> io ()
 setInt16 buf offset val
     = primIO (prim__setInt16 buf offset val)
 
+%foreign "scheme:blodwen-buffer-getint16"
+prim__getInt16 : Buffer -> (offset : Int) -> PrimIO Int16
+
+export %inline
+getInt16 : HasIO io => Buffer -> (offset : Int) -> io Int16
+getInt16 buf offset
+    = primIO (prim__getInt16 buf offset)
 
 
 %foreign "scheme:blodwen-buffer-setint32"
          "RefC:setBufferInt32LE"
          "node:lambda:(buf,offset,value)=>buf.writeInt32LE(value, offset)"
-prim__setInt32 : Buffer -> (offset : Int) -> (val : Int) -> PrimIO ()
+prim__setInt32 : Buffer -> (offset : Int) -> (val : Int32) -> PrimIO ()
 
 export %inline
-setInt32 : HasIO io => Buffer -> (offset : Int) -> (val : Int) -> io ()
+setInt32 : HasIO io => Buffer -> (offset : Int) -> (val : Int32) -> io ()
 setInt32 buf offset val
     = primIO (prim__setInt32 buf offset val)
 
 %foreign "scheme:blodwen-buffer-getint32"
          "RefC:getBufferInt32LE"
          "node:lambda:(buf,offset)=>buf.readInt32LE(offset)"
-prim__getInt32 : Buffer -> (offset : Int) -> PrimIO Int
+prim__getInt32 : Buffer -> (offset : Int) -> PrimIO Int32
 
 export %inline
-getInt32 : HasIO io => Buffer -> (offset : Int) -> io Int
+getInt32 : HasIO io => Buffer -> (offset : Int) -> io Int32
 getInt32 buf offset
     = primIO (prim__getInt32 buf offset)
+
+%foreign "scheme:blodwen-buffer-setint64"
+prim__setInt64 : Buffer -> (offset : Int) -> (val : Int64) -> PrimIO ()
+
+export %inline
+setInt64 : HasIO io => Buffer -> (offset : Int) -> (val : Int64) -> io ()
+setInt64 buf offset val
+    = primIO (prim__setInt64 buf offset val)
+
+%foreign "scheme:blodwen-buffer-getint64"
+prim__getInt64 : Buffer -> (offset : Int) -> PrimIO Int64
+
+export %inline
+getInt64 : HasIO io => Buffer -> (offset : Int) -> io Int64
+getInt64 buf offset
+    = primIO (prim__getInt64 buf offset)
+
+------------------------------------------------------------------------
+-- Int (backend-dependent: 64 on scheme, refc, and 32 on js)
 
 %foreign "scheme:blodwen-buffer-setint"
          "RefC:setBufferInt64LE"
@@ -201,6 +251,9 @@ getInt : HasIO io => Buffer -> (offset : Int) -> io Int
 getInt buf offset
     = primIO (prim__getInt buf offset)
 
+------------------------------------------------------------------------
+-- Double
+
 %foreign "scheme:blodwen-buffer-setdouble"
          "RefC:setBufferDouble"
          "node:lambda:(buf,offset,value)=>buf.writeDoubleLE(value, offset)"
@@ -220,6 +273,83 @@ export %inline
 getDouble : HasIO io => Buffer -> (offset : Int) -> io Double
 getDouble buf offset
     = primIO (prim__getDouble buf offset)
+
+------------------------------------------------------------------------
+-- Bool
+
+export
+setBool : HasIO io => Buffer -> (offset : Int) -> (val : Bool) -> io ()
+setBool buf offset val = setBits8 buf offset (ifThenElse val 0 1)
+
+export
+getBool : HasIO io => Buffer -> (offset : Int) -> io Bool
+getBool buf offset = (0 ==) <$> getBits8 buf offset
+
+------------------------------------------------------------------------
+-- Arbitrary precision nums
+
+||| setNat returns the end offset
+export
+setNat : HasIO io => Buffer -> (offset : Int) -> (val : Nat) -> io Int
+setNat buf offset val
+  = do let limbs = toLimbs (cast val)
+       let len = foldl (const . (1+)) 0 limbs -- tail recursive length
+       setInt64 buf offset len
+       setLimbs (offset + 8) limbs
+
+  where
+
+  toLimbs : Integer -> List Bits32
+  toLimbs 0 = []
+  toLimbs (-1) = [-1]
+  toLimbs x = fromInteger (prim__and_Integer x 0xffffffff) ::
+              toLimbs (assert_smaller x (prim__shr_Integer x 32))
+
+  setLimbs : (offset : Int) -> List Bits32 -> io Int
+  setLimbs offset [] = pure offset
+  setLimbs offset (limb :: limbs)
+    = do setBits32 buf offset limb
+         setLimbs (offset + 4) limbs
+
+||| getNat returns the end offset
+export
+getNat : HasIO io => Buffer -> (offset : Int) -> io (Int, Nat)
+getNat buf offset
+  = do len <- getInt64 buf offset
+       when (len < 0) $ assert_total $ idris_crash "corrupt Nat"
+       limbs <- getLimbs [<] (offset + 8) len
+       pure (offset + 8 + 4 * cast len, cast $ fromLimbs limbs)
+
+  where
+
+  fromLimbs : List Bits32 -> Integer
+  fromLimbs [] = 0
+  fromLimbs (x :: xs) = cast x + prim__shl_Integer (fromLimbs xs) 32
+
+  getLimbs : SnocList Bits32 -> (offset : Int) -> (len : Int64) -> io (List Bits32)
+  getLimbs acc offset 0 = pure (acc <>> [])
+  getLimbs acc offset len
+    = do limb <- getBits32 buf offset
+         getLimbs (acc :< limb) (offset + 4) (assert_smaller len (len -1))
+
+||| setInteger returns the end offset
+export
+setInteger : HasIO io => Buffer -> (offset : Int) -> (val : Integer) -> io Int
+setInteger buf offset val = if val < 0
+  then do setBool buf offset True
+          setNat buf (offset + 1) (cast (- val))
+  else do setBool buf offset False
+          setNat buf (offset + 1) (cast val)
+
+||| getInteger returns the end offset
+export
+getInteger : HasIO io => Buffer -> (offset : Int) -> io (Int, Integer)
+getInteger buf offset
+  = do b <- getBool buf offset
+       map (ifThenElse b negate id . cast) <$> getNat buf (offset + 1)
+
+------------------------------------------------------------------------
+-- String
 
 -- Get the length of a string in bytes, rather than characters
 export

@@ -132,7 +132,7 @@ idrisTestsLinear = MkTestPool "Quantities" [] Nothing
        ["linear001", "linear002", "linear003", -- "linear004" -- disabled due to requiring linearity subtyping
         "linear005", "linear006", "linear007", "linear008",
         "linear009", "linear010", "linear011", "linear012",
-        "linear013", "linear014", "linear015"]
+        "linear013", "linear014", "linear015", "linear016"]
 
 idrisTestsLiterate : TestPool
 idrisTestsLiterate = MkTestPool "Literate programming" [] Nothing
@@ -162,7 +162,7 @@ idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
        "reg036", "reg037", "reg038", "reg039", "reg040", "reg041", "reg042",
        "reg043", "reg044", "reg045", "reg046", "reg047", "reg048", "reg049",
-       "reg050"]
+       "reg050", "reg051"]
 
 idrisTestsData : TestPool
 idrisTestsData = MkTestPool "Data and record types" [] Nothing
@@ -187,7 +187,10 @@ idrisTestsEvaluator = MkTestPool "Evaluation" [] Nothing
        "evaluator001", "evaluator002", "evaluator003", "evaluator004",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
-       "interpreter005", "interpreter006", "interpreter007", "interpreter008"]
+       "interpreter005", "interpreter006", "interpreter007", "interpreter008",
+       -- Specialisation
+       "spec001"
+      ]
 
 idrisTestsREPL : TestPool
 idrisTestsREPL = MkTestPool "REPL commands and help" [] Nothing
@@ -315,6 +318,7 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "semaphores002"
     , "perf001"
     , "reg001"
+    , "buffer001"
     ]
 
 refcTests : IO TestPool
