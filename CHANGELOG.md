@@ -74,6 +74,9 @@
 * Constructors mentioned on the left hand side of functions/case alternatives
   are now included in the `Refers to (runtime)` section of functions debug info.
 
+* The Lifted IR Representation now has a `HasNamespaces` implementation
+  in `Compiler.Separate` so Compilation Units at that stage can be generated.
+
 ### Library changes
 
 #### Prelude
