@@ -1281,7 +1281,7 @@ other things, avoid these ambiguities with propositional equality:
    Diag : a -> Type
    Diag v = let ty : Type := v = v in ty
 
-The code above can be read as "``ty`` has type ``Type`` and it's value
+The code above can be read as "``ty`` has type ``Type`` and its value
 is ``v = v``".
 
 Local definitions can also be introduced using ``let``. Just like top level
