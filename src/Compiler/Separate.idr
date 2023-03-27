@@ -4,6 +4,7 @@ import public Core.FC
 import public Core.Name
 import public Core.Name.Namespace
 import public Core.CompileExpr
+import public Compiler.LambdaLift
 import public Compiler.VMCode
 import public Libraries.Data.Graph
 import public Libraries.Data.SortedMap
@@ -89,7 +90,7 @@ interface HasNamespaces a where
   ||| Return the set of namespaces mentioned within
   nsRefs : a -> SortedSet Namespace
 
--- For now, we have instances only for NamedDef and VMDef.
+-- For now, we have instances only for NamedDef, LiftedDef and VMDef.
 -- For other IR representations, we'll have to add more instances.
 -- This is not hard, just a bit of tedious mechanical work.
 mutual
@@ -104,7 +105,7 @@ mutual
     nsRefs (NmForce fc reason rhs) = nsRefs rhs
     nsRefs (NmDelay fc reason rhs) = nsRefs rhs
     nsRefs (NmErased fc) = SortedSet.empty
-    nsRefs (NmPrimVal ft x) = SortedSet.empty
+    nsRefs (NmPrimVal fc x) = SortedSet.empty
     nsRefs (NmOp fc op args) = concatMap nsRefs args
     nsRefs (NmExtPrim fc n args) = concatMap nsRefs args
     nsRefs (NmConCase fc scrut alts mbDflt) =
@@ -127,6 +128,42 @@ mutual
     nsRefs (MkNmCon tag arity nt) = SortedSet.empty
     nsRefs (MkNmForeign ccs fargs rty) = SortedSet.empty
     nsRefs (MkNmError rhs) = nsRefs rhs
+
+mutual
+  export
+  HasNamespaces (Lifted vars) where
+    nsRefs (LLocal fc prf) = SortedSet.empty
+    nsRefs (LAppName fc reason n args) =
+      SortedSet.singleton (getNS n) <+> concatMap nsRefs args
+    nsRefs (LUnderApp fc n missing args) =
+      SortedSet.singleton (getNS n) <+> concatMap nsRefs args
+    nsRefs (LApp fc reason f args) = nsRefs f <+> nsRefs args
+    nsRefs (LLet fc n val rhs) = nsRefs val <+> nsRefs rhs
+    nsRefs (LCon fc cn ci tag args) = concatMap nsRefs args
+    nsRefs (LOp fc reason op args) = concatMap nsRefs args
+    nsRefs (LExtPrim fc reason n args) = concatMap nsRefs args
+    nsRefs (LConCase fc scrut alts mbDflt) =
+      nsRefs scrut <+> concatMap nsRefs alts <+> concatMap nsRefs mbDflt
+    nsRefs (LConstCase fc scrut alts mbDflt) =
+      nsRefs scrut <+> concatMap nsRefs alts <+> concatMap nsRefs mbDflt
+    nsRefs (LPrimVal fc x) = SortedSet.empty
+    nsRefs (LErased fc) = SortedSet.empty
+    nsRefs (LCrash fc msg) = SortedSet.empty
+
+  export
+  HasNamespaces (LiftedConAlt vars) where
+    nsRefs (MkLConAlt n ci tag args rhs) = nsRefs rhs
+
+  export
+  HasNamespaces (LiftedConstAlt vars) where
+    nsRefs (MkLConstAlt c rhs) = nsRefs rhs
+
+  export
+  HasNamespaces LiftedDef where
+    nsRefs (MkLFun args scope rhs) = nsRefs rhs
+    nsRefs (MkLCon tag arity nt) = SortedSet.empty
+    nsRefs (MkLForeign ccs fargs rty) = SortedSet.empty
+    nsRefs (MkLError rhs) = nsRefs rhs
 
 export
 HasNamespaces VMInst where
