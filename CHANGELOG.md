@@ -127,6 +127,8 @@
 
 * Add `withRawMode`, `enableRawMode`, `resetRawMode` for character at a time input on stdin.
 
+* Adds extraction functions to `Data.Singleton`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
