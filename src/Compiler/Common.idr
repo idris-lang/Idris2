@@ -151,7 +151,7 @@ getMinimalDef (Coded ns bin)
          name <- fromBuf b
          let def
              = MkGlobalDef fc name (Erased fc Placeholder) [] [] [] [] mul
-                           [] Public (MkTotality Unchecked IsCovering)
+                           [] Public (MkTotality Unchecked IsCovering) False
                            [] Nothing refsR False False True
                            None cdef Nothing [] Nothing
          pure (def, Just (ns, bin))

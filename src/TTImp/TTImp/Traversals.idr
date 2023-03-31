@@ -30,6 +30,7 @@ parameters (f : RawImp' nm -> RawImp' nm)
 
   export
   mapFnOpt : FnOpt' nm -> FnOpt' nm
+  mapFnOpt Unsafe = Unsafe
   mapFnOpt Inline = Inline
   mapFnOpt NoInline = NoInline
   mapFnOpt Deprecate = Deprecate
