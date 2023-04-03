@@ -44,10 +44,11 @@ import Libraries.Data.SortedMap
 
 ||| Maping from a pairing of closed terms together with
 ||| their size (for efficiency) to the number of
-||| occurences in toplevel definitions.
+||| occurences in toplevel definitions and flag for
+||| whether it was encountered in delayed subexpression.
 public export
 UsageMap : Type
-UsageMap = SortedMap (Integer, CExp []) (Name, Integer)
+UsageMap = SortedMap (Integer, CExp []) (Name, Integer, Bool)
 
 ||| Number of appearances of a closed expression.
 |||
@@ -70,15 +71,16 @@ Show Count where
 ||| After common subexpression analysis we get a mapping
 ||| from `Name`s to the closed expressions they replace.
 ||| We use this mapping for substituting the names back
-||| to the corresponding expressions, if and only if
-||| the expression appears only in one place.
+||| to the corresponding expressions, if the expression
+||| appears only in one place or is a subexpression of
+||| some delayed expression.
 public export
 ReplaceMap : Type
-ReplaceMap = SortedMap Name (CExp [], Count)
+ReplaceMap = SortedMap Name (CExp [], Count, Bool)
 
 toReplaceMap : UsageMap -> ReplaceMap
 toReplaceMap = SortedMap.fromList
-             . map (\((_,exp),(n,c)) => (n, (exp, C c)))
+             . map (\((_,exp),(n,c,d)) => (n, (exp, C c, d)))
              . SortedMap.toList
 
 --------------------------------------------------------------------------------
@@ -91,6 +93,7 @@ record St where
   constructor MkSt
   map : UsageMap
   idx : Int
+  inDelay : Bool
 
 -- Adds a new closed expression to the `UsageMap`
 -- returning a new machine generated name to be used
@@ -101,14 +104,14 @@ store sz exp =
   if sz < 5
      then pure Nothing
      else do
-       (MkSt map idx)    <- get Sts
+       (MkSt map idx inDelay)    <- get Sts
 
-       (name,count,idx2) <-
+       (name,count,idx2,delayed) <-
          case lookup (sz,exp) map of
-           Just (nm,cnt) => pure (nm, cnt+1, idx)
-           Nothing       => pure (MN "csegen" idx, 1, idx + 1)
+           Just (nm,cnt,delayed) => pure (nm, cnt+1, idx, delayed)
+           Nothing       => pure (MN "csegen" idx, 1, idx + 1, inDelay)
 
-       put Sts $ MkSt (insert (sz,exp) (name, count) map) idx2
+       put Sts $ MkSt (insert (sz,exp) (name, count, inDelay || delayed) map) idx2 inDelay
        pure (Just name)
 
 --------------------------------------------------------------------------------
@@ -259,7 +262,10 @@ mutual
     pure (sy + 1, CForce f r y')
 
   analyzeSubExp (CDelay f r y) = do
+    MkSt _ _ inDelay <- get Sts
+    update Sts (\(MkSt map idx _) => MkSt map idx True)
     (sy, y') <- analyze y
+    update Sts (\(MkSt map idx _) => MkSt map idx inDelay)
     pure (sy + 1, CDelay f r y')
 
   analyzeSubExp (CConCase f sc xs x) = do
@@ -317,7 +323,8 @@ mutual
   -- During the analysis step, we replaced every closed
   -- expression with a machine generated name. We only
   -- want to keep these substitutions, if a closed term
-  -- appears in several distinct locations in the code.
+  -- appears in several distinct locations in the code
+  -- and does not appear inside `%delay`.
   --
   -- We therefore check for each machine generated name, if
   -- the corresponding closed term has a count > 1. If that's
@@ -354,21 +361,29 @@ mutual
 
       -- Expression count has already been checked and occurs
       -- several times. Replace it with the machine generated name.
-      Just (exp, Many) => do
+      Just (exp, Many, False) => do
         log "compiler.cse" 10 $ "  already replaced: Occurs many times"
         pure (CApp EmptyFC (CRef fc n) [])
 
+      -- Expression count has already been checked, it occurs
+      -- several times, but it has an occurrence inside `%delay`.
+      -- Substitute the machine generated name with the original
+      -- (CSE optimized) expression.
+      Just (exp, Many, True) => do
+        log "compiler.cse" 10 $ "  already replaced: Occurs inside %delay"
+        -- pure (embed exp)
+        pure (CForce EmptyFC LLazy (CApp EmptyFC (CRef fc n) []))
 
       -- Expression count has already been checked and occurs
       -- only once. Substitute the machine generated name with
       -- the original (but CSE optimized) exp
-      Just (exp, Once) => do
+      Just (exp, Once, _) => do
         log "compiler.cse" 10 $ "  already replaced: Occurs once"
         pure (embed exp)
 
       -- Expression count has not yet been compared with the
       -- parent count. Do this now.
-      Just (exp, C c)  => do
+      Just (exp, C c, d)  => do
         log "compiler.cse" 10 $  "  expression of unknown quantity ("
                               ++ show c
                               ++ " occurences)"
@@ -376,18 +391,22 @@ mutual
         exp' <- replaceExp c exp
         if c > pc
            -- This is a common subexpression. We set its count to `Many`
-           -- and replace it with the machine generated name.
+           -- and inspect its occurence in delay to check whether it
+           -- should be replaced or not.
            then do
              log "compiler.cse" 10 $ show n ++ " assigned quantity \"Many\""
-             update ReplaceMap (insert n (exp', Many))
-             pure (CApp EmptyFC (CRef fc n) [])
+             update ReplaceMap (insert n (exp', Many, d))
+             case d of
+                  False => pure (CApp EmptyFC (CRef fc n) [])
+                  True => pure (CForce EmptyFC LLazy (CApp EmptyFC (CRef fc n) []))
 
            -- This expression occurs only once. We set its count to `Once`
            -- and keep it.
            else do
              log "compiler.cse" 10 $ show n ++ " assigned quantity \"Once\""
-             update ReplaceMap (insert n (exp', Once))
+             update ReplaceMap (insert n (exp', Once, d))
              pure (embed exp')
+
 
   replaceExp :  Ref ReplaceMap ReplaceMap
              => Ref Ctxt Defs
@@ -455,8 +474,9 @@ replaceDef (n, fc, d@(MkError _))       = pure (n, fc, d)
 
 newToplevelDefs : ReplaceMap -> List (Name, FC, CDef)
 newToplevelDefs rm = mapMaybe toDef $ SortedMap.toList rm
-  where toDef : (Name,(CExp[],Count)) -> Maybe (Name, FC, CDef)
-        toDef (nm,(exp,Many)) = Just (nm, EmptyFC, MkFun [] exp)
+  where toDef : (Name,(CExp[],Count,Bool)) -> Maybe (Name, FC, CDef)
+        toDef (nm,(exp,Many,False)) = Just (nm, EmptyFC, MkFun [] exp)
+        toDef (nm,(exp,Many,True)) = Just (nm, EmptyFC, MkFun [] (CDelay EmptyFC LLazy exp))
         toDef _               = Nothing
 
 undefinedCount : (Name, (CExp [], Count)) -> Bool
@@ -478,9 +498,9 @@ cse defs me = do
     then pure (compiledDefs, me)
     else do
       log "compiler.cse" 10 $ "Analysing " ++ show (length defs) ++ " names"
-      s            <- newRef Sts $ MkSt empty 0
+      s            <- newRef Sts $ MkSt empty 0 False
       analyzedDefs <- traverse (traversePair (traversePair analyzeDef)) compiledDefs
-      MkSt um _    <- get Sts
+      MkSt um _ _  <- get Sts
       srep         <- newRef ReplaceMap $ toReplaceMap um
       replacedDefs <- traverse replaceDef analyzedDefs
       replacedMain <- replaceExp 1 me
