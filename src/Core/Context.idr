@@ -337,6 +337,7 @@ newDef fc n rig vars ty vis def
         , localVars = vars
         , visibility = vis
         , totality = unchecked
+        , isEscapeHatch = False
         , flags = []
         , refersToM = Nothing
         , refersToRuntimeM = Nothing
@@ -1326,6 +1327,7 @@ addBuiltin n ty tot op
          , localVars = []
          , visibility = Public
          , totality = tot
+         , isEscapeHatch = False
          , flags = [Inline]
          , refersToM = Nothing
          , refersToRuntimeM = Nothing
@@ -1548,6 +1550,15 @@ export
 addHashWithNames : {auto c : Ref Ctxt Defs} ->
   Hashable a => HasNames a => a -> Core ()
 addHashWithNames x = toFullNames x >>= addHash
+
+export
+setIsEscapeHatch : {auto c : Ref Ctxt Defs} ->
+  FC -> Name -> Core ()
+setIsEscapeHatch fc n
+    = do defs <- get Ctxt
+         Just def <- lookupCtxtExact n (gamma defs)
+              | Nothing => undefinedName fc n
+         ignore $ addDef n ({ isEscapeHatch := True } def)
 
 export
 setFlag : {auto c : Ref Ctxt Defs} ->

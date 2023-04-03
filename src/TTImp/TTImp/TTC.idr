@@ -328,20 +328,21 @@ mutual
   export
   TTC FnOpt where
     toBuf b Inline = tag 0
-    toBuf b NoInline = tag 12
-    toBuf b TCInline = tag 11
-    toBuf b Deprecate = tag 14
     toBuf b (Hint t) = do tag 1; toBuf b t
     toBuf b (GlobalHint t) = do tag 2; toBuf b t
     toBuf b ExternFn = tag 3
     toBuf b (ForeignFn cs) = do tag 4; toBuf b cs
-    toBuf b (ForeignExport cs) = do tag 15; toBuf b cs
     toBuf b Invertible = tag 5
     toBuf b (Totality Total) = tag 6
     toBuf b (Totality CoveringOnly) = tag 7
     toBuf b (Totality PartialOK) = tag 8
     toBuf b Macro = tag 9
     toBuf b (SpecArgs ns) = do tag 10; toBuf b ns
+    toBuf b TCInline = tag 11
+    toBuf b NoInline = tag 12
+    toBuf b Unsafe = tag 13
+    toBuf b Deprecate = tag 14
+    toBuf b (ForeignExport cs) = do tag 15; toBuf b cs
 
     fromBuf b
         = case !getTag of
@@ -358,6 +359,7 @@ mutual
                10 => do ns <- fromBuf b; pure (SpecArgs ns)
                11 => pure TCInline
                12 => pure NoInline
+               13 => pure Unsafe
                14 => pure Deprecate
                15 => do cs <- fromBuf b; pure (ForeignExport cs)
                _ => corrupt "FnOpt"

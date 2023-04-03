@@ -16,7 +16,7 @@ module Builtin
 ||| Note: assert_total can reduce at compile time, if required for unification,
 ||| which might mean that it's no longer guarded a subexpression. Therefore,
 ||| it is best to use it around the smallest possible subexpression.
-%inline
+%inline -- %unsafe
 public export
 assert_total : (1 _ : a) -> a
 assert_total x = x
@@ -34,7 +34,7 @@ assert_total x = x
 |||
 ||| @ x the larger value (typically a pattern argument)
 ||| @ y the smaller value (typically an argument to a recursive call)
-%inline
+%inline -- %unsafe
 public export
 assert_smaller : (0 x : a) -> (1 y : b) -> b
 assert_smaller x y = y
@@ -189,19 +189,19 @@ mkDPairInjectiveSnd Refl = Refl
 ||| Subvert the type checker.  This function is abstract, so it will not reduce
 ||| in the type checker.  Use it with care - it can result in segfaults or
 ||| worse!
-public export %inline
+public export %inline -- %unsafe
 believe_me : a -> b -- TODO: make linear
 believe_me v = prim__believe_me _ _ v
 
 ||| Assert to the usage checker that the given function uses its argument linearly.
-public export
+public export -- %unsafe
 assert_linear : (1 f : a -> b) -> (1 val : a) -> b
 assert_linear = believe_me id
   where
     id : (1 f : a -> b) -> a -> b
     id f = f
 
-export partial
+export partial -- %unsafe
 idris_crash : String -> a
 idris_crash = prim__crash _
 

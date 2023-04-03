@@ -344,6 +344,7 @@ record GlobalDef where
   localVars : List Name -- environment name is defined in
   visibility : Visibility
   totality : Totality
+  isEscapeHatch : Bool
   flags : List DefFlag
   refersToM : Maybe (NameMap Bool)
   refersToRuntimeM : Maybe (NameMap Bool)

@@ -10,6 +10,8 @@
   magic constant's position.
 * The termination checker is now a faithful implementation of the 2001 paper on
   size-change termination by Lee, Jones and Ben-Amram.
+* New function option `%unsafe` to mark definitions that are escape hatches
+  similar to the builtins `believe_me`, `assert_total`, etc.
 
 ### REPL changes
 

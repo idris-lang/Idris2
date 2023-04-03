@@ -83,7 +83,7 @@ getNameType elabMode rigc env fc x
 
                  when (isSourceName def.fullname) $
                    whenJust (isConcreteFC fc) $ \nfc => do
-                     let decor = nameDecoration def.fullname nt
+                     let decor = ifThenElse (isEscapeHatch def) Postulate (nameDecoration def.fullname nt)
                      log "ide-mode.highlight" 7
                        $ "getNameType is adding " ++ show decor ++ ": " ++ show def.fullname
                      addSemanticDecorations [(nfc, decor, Just def.fullname)]

@@ -1492,6 +1492,9 @@ fnDirectOpt fname
   <|> do decoratedPragma fname "inline"
          commit
          pure $ IFnOpt Inline
+  <|> do decoratedPragma fname "unsafe"
+         commit
+         pure $ IFnOpt Unsafe
   <|> do decoratedPragma fname "noinline"
          commit
          pure $ IFnOpt NoInline
@@ -1767,8 +1770,7 @@ claims fname indents
                   vis     <- getVisibility Nothing visOpts
                   let opts = mapMaybe getRight visOpts
                   rig  <- multiplicity fname
-                  cls  <- tyDecls (dependentDecorate fname name
-                                  $ \ nm => ifThenElse (isUnsafeBuiltin nm) Postulate Function)
+                  cls  <- tyDecls (decorate fname Function name)
                                   doc fname indents
                   pure $ map (\cl => the (Pair _ _) (doc, vis, opts, rig, cl)) cls)
          pure $ map (\(doc, vis, opts, rig, cl) : Pair _ _ =>

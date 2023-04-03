@@ -1108,6 +1108,7 @@ TTC GlobalDef where
                  toBuf b (localVars gdef)
                  toBuf b (visibility gdef)
                  toBuf b (totality gdef)
+                 toBuf b (isEscapeHatch gdef)
                  toBuf b (flags gdef)
                  toBuf b (invertible gdef)
                  toBuf b (noCycles gdef)
@@ -1133,16 +1134,16 @@ TTC GlobalDef where
                       seargs <- fromBuf b; specargs <- fromBuf b
                       iargs <- fromBuf b;
                       vars <- fromBuf b
-                      vis <- fromBuf b; tot <- fromBuf b
+                      vis <- fromBuf b; tot <- fromBuf b; hatch <- fromBuf b
                       fl <- fromBuf b
                       inv <- fromBuf b
                       c <- fromBuf b
                       sc <- fromBuf b
                       pure (MkGlobalDef loc name ty eargs seargs specargs iargs
                                         mul vars vis
-                                        tot fl refs refsR inv c True def cdef Nothing sc Nothing)
+                                        tot hatch fl refs refsR inv c True def cdef Nothing sc Nothing)
               else pure (MkGlobalDef loc name (Erased loc Placeholder) [] [] [] []
-                                     mul [] Public unchecked [] refs refsR
+                                     mul [] Public unchecked False [] refs refsR
                                      False False True def cdef Nothing [] Nothing)
 
 export
