@@ -128,7 +128,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "import001", "import002", "import003", "import004", "import005", "import006",
        "import007", "import008", "import009",
        -- Implicit laziness, lazy evaluation
-       "lazy001", "lazy002", "lazy003", "lazy004",
+       "lazy001", "lazy002", "lazy003", "lazy004", "lazy005",
        -- Namespace blocks
        "namespace001", "namespace002", "namespace003", "namespace004", "namespace005",
        -- Parameters blocks
