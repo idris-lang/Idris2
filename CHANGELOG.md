@@ -39,8 +39,13 @@
 
 * Non-recursive top-level constants are compiled to eagerly evaluated
   constants in Chez Scheme.
+* Top-level functions without arguments consisting of delayed expressions
+  are now compiled using Scheme's `delay` and `force` to memoize them.
 
 #### Racket
+
+* Top-level functions without arguments consisting of delayed expressions
+  are now compiled using Scheme's `delay` and `force` to memoize them.
 
 * FFI declarations can now specify which `require` to perform, i.e. which
   library to load before executing the FFI.
