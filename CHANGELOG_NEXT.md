@@ -88,6 +88,18 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Switch calling conventions based on the number of arguments to avoid limits on
   the number of arguments and to reduce stack usage.
 
+#### Chez
+
+* Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
+  evaluated. Now when a delayed expression is lifted by CSE, it is compiled
+  using Scheme's `delay` and `force` to memoize them.
+
+#### Racket
+
+* Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
+  evaluated. Now when a delayed expression is lifted by CSE, it is compiled
+  using Scheme's `delay` and `force` to memoize them.
+
 #### NodeJS Backend
 
 * The NodeJS executable output to `build/exec/` now has its executable bit set.
