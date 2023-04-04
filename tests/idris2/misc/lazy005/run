@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+idris2 -p contrib --exec main LiftedTrace.idr
+idris2 -p contrib --exec main LiftedBot.idr
