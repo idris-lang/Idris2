@@ -702,7 +702,8 @@ mutual
                                     , map (Just . UN . Basic) n
                                     , PImplicit (boundToFC fname n))
                              ) (forget ns)
-           mustWorkBecause b.bounds "Cannot return a forall quantifier"
+           b' <- bounds peek
+           mustWorkBecause b'.bounds "Expected ',' or '.'"
              $ decoratedSymbol fname "."
            scope <- mustWork $ typeExpr pdef fname indents
            pure (pibindAll fname Implicit b.val scope)
