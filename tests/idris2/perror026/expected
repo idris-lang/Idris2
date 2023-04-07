@@ -1,0 +1,9 @@
+1/1: Building Micro (Micro.idr)
+Error: Expected ',' or '.'.
+
+Micro:3:14--3:15
+ 1 | module Micro
+ 2 | 
+ 3 | f : forall a b. (Unit -> Unit) -> Unit -> Unit
+                  ^
+
