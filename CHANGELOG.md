@@ -62,7 +62,7 @@
   file will not lead to a positivity error anymore.
 
 * Fixed a bug in the positivity checker that meant `Lazy` could be used
-  to hide negative occurences.
+  to hide negative occurrences.
 
 * Made sure that the positivity checker now respects `assert_total` annotations.
 
@@ -90,8 +90,12 @@
 * Improved performance of functions `isNL`, `isSpace`, and `isHexDigit`.
 
 * Implements `Foldable` and `Traversable` for pairs, right-biased as `Functor`.
+
 * Added a constructor (`MkInterpolation`) to `Interpolation`.
+
 * Added an `Interpolation` implementation for `Void`.
+
+* Added `Compose` instances for `Bifunctor`, `Bifoldable` and `Bitraversable`.
 
 #### Base
 
@@ -104,9 +108,9 @@
 * Add `Show` instance to `Data.Vect.Quantifiers.All` and add a few helpers for listy
   computations on the `All` type.
 * Add an alias for `HVect` to `All id` in `Data.Vect.Quantifiers.All`. This is the
-  approach to getting a heterogeneous Vect of elements that is generall preferred by
+  approach to getting a heterogeneous `Vect` of elements that is general preferred by
   the community vs. a standalone type as seen in `contrib`.
-* Add Data.List.HasLength from the compiler codebase slash contrib library but
+* Add `Data.List.HasLength` from the compiler codebase slash contrib library but
   adopt the type signature from the compiler codebase and some of the naming
   from the contrib library. The type ended up being `HasLength n xs` rather than
   `HasLength xs n`.
