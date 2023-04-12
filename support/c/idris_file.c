@@ -236,10 +236,8 @@ struct child_process *idris2_popen2(char *cmd) {
 #ifdef _WIN32
   return NULL;
 #else
-  pid_t pid;
   int pipes[4];
   int err = 0;
-
   err = pipe(&pipes[0]);
   if (err) {
     return NULL;
@@ -251,16 +249,17 @@ struct child_process *idris2_popen2(char *cmd) {
     close(pipes[1]);
     return NULL;
   }
-  if ((pid = fork()) > 0) {
-    if (pid < 0) {
-      // HANDLE ERROR
-      perror("fork");
-    }
+  pid_t pid = fork();
+  if (pid < 0) {
+    perror("fork");
+    return NULL;
+  } else if (pid > 0) {
     struct child_process *rval = malloc(sizeof(struct child_process));
     close(pipes[1]);
     close(pipes[2]);
-    rval->out = fdopen(pipes[3], "w");
-    rval->in = fdopen(pipes[0], "r");
+    rval->in = fdopen(pipes[3], "w");
+    rval->out = fdopen(pipes[0], "r");
+    rval->pid = pid;
     return rval;
   } else {
     close(STDOUT_FILENO);
@@ -273,7 +272,7 @@ struct child_process *idris2_popen2(char *cmd) {
     close(pipes[2]);
     close(pipes[3]);
 
-    err = execlp("/bin/bash", "bash", "-c", cmd, NULL);
+    err = execlp("/bin/sh", "sh", "-c", cmd, NULL);
     // We only reach this point if there is an error.
     // Maybe report something to stderr so the user knows what's up?
     perror("execl");
