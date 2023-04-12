@@ -223,3 +223,79 @@ FILE *idris2_stdin() { return stdin; }
 FILE *idris2_stdout() { return stdout; }
 
 FILE *idris2_stderr() { return stderr; }
+
+struct child_process {
+  pid_t pid;
+  FILE *in;
+  FILE *out;
+};
+
+// Open a bi-directional pipe, returning the above structure
+// with pid and two file handles.
+struct child_process *idris2_popen2(char *cmd) {
+#ifdef _WIN32
+  return NULL;
+#else
+  pid_t pid;
+  int pipes[4];
+  int err = 0;
+
+  err = pipe(&pipes[0]);
+  if (err) {
+    return NULL;
+  }
+
+  err = pipe(&pipes[2]);
+  if (err) {
+    close(pipes[0]);
+    close(pipes[1]);
+    return NULL;
+  }
+  if ((pid = fork()) > 0) {
+    if (pid < 0) {
+      // HANDLE ERROR
+      perror("fork");
+    }
+    struct child_process *rval = malloc(sizeof(struct child_process));
+    close(pipes[1]);
+    close(pipes[2]);
+    rval->out = fdopen(pipes[3], "w");
+    rval->in = fdopen(pipes[0], "r");
+    return rval;
+  } else {
+    close(STDOUT_FILENO);
+    dup2(pipes[1], STDOUT_FILENO);
+    close(pipes[0]);
+    close(pipes[1]);
+
+    close(STDIN_FILENO);
+    dup2(pipes[2], STDIN_FILENO);
+    close(pipes[2]);
+    close(pipes[3]);
+
+    err = execlp("/bin/bash", "bash", "-c", cmd, NULL);
+    // We only reach this point if there is an error.
+    // Maybe report something to stderr so the user knows what's up?
+    perror("execl");
+    exit(err);
+  }
+#endif
+}
+
+int idris2_popen2ChildPid(struct child_process *ptr) {
+  if (!ptr)
+    return 0;
+  return ptr->pid;
+}
+
+FILE *idris2_popen2FileIn(struct child_process *ptr) {
+  if (!ptr)
+    return NULL;
+  return ptr->in;
+}
+
+FILE *idris2_popen2FileOut(struct child_process *ptr) {
+  if (!ptr)
+    return NULL;
+  return ptr->out;
+}
