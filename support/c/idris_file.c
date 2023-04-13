@@ -11,6 +11,7 @@
 
 #ifdef _WIN32
 #include "windows/win_utils.h"
+#include <windows.h>
 #else
 #include <sys/select.h>
 #include <sys/wait.h>
@@ -234,7 +235,48 @@ struct child_process {
 // with pid and two file handles.
 struct child_process *idris2_popen2(char *cmd) {
 #ifdef _WIN32
-  return NULL;
+  SECURITY_ATTRIBUTES saAttr;
+  HANDLE pipes[4];
+  STARTUPINFO si;
+  PROCESS_INFORMATION pi;
+  ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
+
+  saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+  saAttr.bInheritHandle = TRUE;
+  saAttr.lpSecurityDescriptor = NULL;
+
+  if (!CreatePipe(&pipes[0], &pipes[1], &saAttr, 0) ||
+      !CreatePipe(&pipes[2], &pipes[3], &saAttr, 0)) {
+    return NULL;
+  }
+  char cmdline[4096];
+  int len = snprintf(cmdline, 4096, "cmd /c %s", cmd);
+  if (len > 4095 || len < 0) {
+    return NULL;
+  }
+  ZeroMemory(&si, sizeof(si));
+  si.cb = sizeof(si);
+  si.hStdInput = pipes[2];
+  si.hStdOutput = pipes[1];
+  // si.hStdError = pipes[1];
+  si.dwFlags |= STARTF_USESTDHANDLES;
+  SetHandleInformation(pipes[3], HANDLE_FLAG_INHERIT, 0);
+  SetHandleInformation(pipes[0], HANDLE_FLAG_INHERIT, 0);
+  if (!CreateProcess(NULL, cmdline, NULL, NULL, TRUE, 0, NULL, NULL, &si,
+                     &pi)) {
+    return NULL;
+  }
+  struct child_process *rval = malloc(sizeof(struct child_process));
+  int in_fd = _open_osfhandle((intptr_t)pipes[3], _O_WRONLY);
+  int out_fd = _open_osfhandle((intptr_t)pipes[0], _O_RDONLY);
+  CloseHandle(pipes[1]);
+  CloseHandle(pipes[2]);
+  CloseHandle(pi.hProcess);
+  CloseHandle(pi.hThread);
+  rval->in = _fdopen(in_fd, "w");
+  rval->out = _fdopen(out_fd, "r");
+  rval->pid = pi.dwProcessId;
+  return rval;
 #else
   int pipes[4];
   int err = 0;

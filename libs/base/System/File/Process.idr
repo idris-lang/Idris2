@@ -84,7 +84,7 @@ record SubProcess where
 ||| IMPORTANT: You may deadlock if write to a process which is waiting to flush
 |||            its output.  It is recommended to read and write from separate threads.
 |||
-||| This function is not supported on windows or node at this time.
+||| This function is not supported on node at this time.
 export
 popen2 : HasIO io => (cmd : String) -> io (Either FileError SubProcess)
 popen2 cmd = do
