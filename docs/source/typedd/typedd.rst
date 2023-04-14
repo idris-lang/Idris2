@@ -19,7 +19,7 @@ necessary changes.
 Chapter 1
 ---------
 
-Instead of enterng ``:exec`` to run ``Hello.idr`` in the REPL, enter ``:exec main``.
+Instead of entering ``:exec`` to run ``Hello.idr`` in the REPL, enter ``:exec main``.
 
 Chapter 2
 ---------
