@@ -139,6 +139,8 @@
 * Changes `getNProcessors` to return the number of online processors rather than
   the number of configured processors.
 
+* Adds `popen2` to run a subprocess with bi-directional pipes.
+
 ### Contrib
 
 * Adds `Data.List.Sufficient`, a small library defining a structurally inductive view of lists.

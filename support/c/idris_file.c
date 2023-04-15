@@ -11,6 +11,7 @@
 
 #ifdef _WIN32
 #include "windows/win_utils.h"
+#include <windows.h>
 #else
 #include <sys/select.h>
 #include <sys/wait.h>
@@ -223,3 +224,119 @@ FILE *idris2_stdin() { return stdin; }
 FILE *idris2_stdout() { return stdout; }
 
 FILE *idris2_stderr() { return stderr; }
+
+struct child_process {
+  pid_t pid;
+  FILE *in;
+  FILE *out;
+};
+
+// Open a bi-directional pipe, returning the above structure
+// with pid and two file handles.
+struct child_process *idris2_popen2(char *cmd) {
+#ifdef _WIN32
+  SECURITY_ATTRIBUTES saAttr;
+  HANDLE pipes[4];
+  STARTUPINFO si;
+  PROCESS_INFORMATION pi;
+  ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
+
+  saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+  saAttr.bInheritHandle = TRUE;
+  saAttr.lpSecurityDescriptor = NULL;
+
+  if (!CreatePipe(&pipes[0], &pipes[1], &saAttr, 0) ||
+      !CreatePipe(&pipes[2], &pipes[3], &saAttr, 0)) {
+    return NULL;
+  }
+  char cmdline[4096];
+  int len = snprintf(cmdline, 4096, "cmd /c %s", cmd);
+  if (len > 4095 || len < 0) {
+    return NULL;
+  }
+  ZeroMemory(&si, sizeof(si));
+  si.cb = sizeof(si);
+  si.hStdInput = pipes[2];
+  si.hStdOutput = pipes[1];
+  // si.hStdError = pipes[1];
+  si.dwFlags |= STARTF_USESTDHANDLES;
+  SetHandleInformation(pipes[3], HANDLE_FLAG_INHERIT, 0);
+  SetHandleInformation(pipes[0], HANDLE_FLAG_INHERIT, 0);
+  if (!CreateProcess(NULL, cmdline, NULL, NULL, TRUE, 0, NULL, NULL, &si,
+                     &pi)) {
+    return NULL;
+  }
+  struct child_process *rval = malloc(sizeof(struct child_process));
+  int in_fd = _open_osfhandle((intptr_t)pipes[3], _O_WRONLY);
+  int out_fd = _open_osfhandle((intptr_t)pipes[0], _O_RDONLY);
+  CloseHandle(pipes[1]);
+  CloseHandle(pipes[2]);
+  CloseHandle(pi.hProcess);
+  CloseHandle(pi.hThread);
+  rval->in = _fdopen(in_fd, "w");
+  rval->out = _fdopen(out_fd, "r");
+  rval->pid = pi.dwProcessId;
+  return rval;
+#else
+  int pipes[4];
+  int err = 0;
+  err = pipe(&pipes[0]);
+  if (err) {
+    return NULL;
+  }
+
+  err = pipe(&pipes[2]);
+  if (err) {
+    close(pipes[0]);
+    close(pipes[1]);
+    return NULL;
+  }
+  pid_t pid = fork();
+  if (pid < 0) {
+    perror("fork");
+    return NULL;
+  } else if (pid > 0) {
+    struct child_process *rval = malloc(sizeof(struct child_process));
+    close(pipes[1]);
+    close(pipes[2]);
+    rval->in = fdopen(pipes[3], "w");
+    rval->out = fdopen(pipes[0], "r");
+    rval->pid = pid;
+    return rval;
+  } else {
+    close(STDOUT_FILENO);
+    dup2(pipes[1], STDOUT_FILENO);
+    close(pipes[0]);
+    close(pipes[1]);
+
+    close(STDIN_FILENO);
+    dup2(pipes[2], STDIN_FILENO);
+    close(pipes[2]);
+    close(pipes[3]);
+
+    err = execlp("/bin/sh", "sh", "-c", cmd, NULL);
+    // We only reach this point if there is an error.
+    // Maybe report something to stderr so the user knows what's up?
+    perror("execl");
+    exit(err);
+  }
+#endif
+}
+
+int idris2_popen2ChildPid(struct child_process *ptr) {
+  if (!ptr)
+    return 0;
+  return ptr->pid;
+}
+
+FILE *idris2_popen2FileIn(struct child_process *ptr) {
+  if (!ptr)
+    return NULL;
+  return ptr->in;
+}
+
+FILE *idris2_popen2FileOut(struct child_process *ptr) {
+  if (!ptr)
+    return NULL;
+  return ptr->out;
+}
