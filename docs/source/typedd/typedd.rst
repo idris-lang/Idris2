@@ -40,7 +40,7 @@ In ``AveMain.idr`` and ``Reverse.idr`` add:
 
     import System.REPL -- for 'repl'
 
-Instead of enterng ``:exec`` to run ``main`` from ``AveMain.idr``, enter ``:exec main``.
+Instead of entering ``:exec`` to run ``main`` from ``AveMain.idr``, enter ``:exec main``.
 
 Chapter 3
 ---------
