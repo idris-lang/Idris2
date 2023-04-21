@@ -79,6 +79,10 @@
 * The Lifted IR Representation now has a `HasNamespaces` implementation
   in `Compiler.Separate` so Compilation Units at that stage can be generated.
 
+* Added the `compile.casetree.missing` log topic, along with its use in
+  `TTImp.ProcessDef.genRunTime`. This allows us to track when incomplete `case`
+  blocks get the runtime error added.
+
 ### Library changes
 
 #### Prelude

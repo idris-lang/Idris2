@@ -801,9 +801,10 @@ mkRunTime fc n
                              pats
 
            let clauses_init = map (toClause (location gdef)) pats'
-           let clauses = case cov of
-                              MissingCases _ => addErrorCase clauses_init
-                              _ => clauses_init
+           clauses <- case cov of
+                           MissingCases _ => do log "compile.casetree.missing" 5 $ "Adding uncovered error to \{show clauses_init}"
+                                                pure $ addErrorCase clauses_init
+                           _ => pure clauses_init
 
            (rargs ** (tree_rt, _)) <- getPMDef (location gdef) RunTime n ty clauses
            logC "compile.casetree" 5 $ do
