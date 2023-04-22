@@ -218,16 +218,16 @@ findLoops s
          -- Hence the following filter:
          let loops = filterEndos (\a => composeChange a.change a.change == a.change) s
          log "totality.termination.calc" 7 $ "Loops: " ++ show loops
-         let terms = map (foldMap (\a => checkDesc a.change a.path)) loops
+         let terms = map (foldMap (\a => checkDesc Z a.change a.path)) loops
          pure terms
     where
       filterEndos : (ArgChange -> Bool) -> SCSet -> NameMap (List ArgChange)
       filterEndos p = mapWithKey (\f, m => filter p (Data.SortedSet.toList (lookupSet f m)))
 
-      checkDesc : Change -> Path -> Maybe Path
-      checkDesc [] p = Just p
-      checkDesc (Just (_, Smaller) :: _) p = Nothing
-      checkDesc (_ :: xs) p = checkDesc xs p
+      checkDesc : Nat -> Change -> Path -> Maybe Path
+      checkDesc _ [] p = Just p
+      checkDesc n (Just (k, Smaller) :: xs) p = if n == k then Nothing else checkDesc (S n) xs p
+      checkDesc n (_ :: xs) p = checkDesc (S n) xs p
 
 findNonTerminatingLoop : {auto c : Ref Ctxt Defs} -> SCSet -> Core (Maybe (Name, Path))
 findNonTerminatingLoop s
