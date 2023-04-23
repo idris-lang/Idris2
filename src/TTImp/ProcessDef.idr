@@ -844,7 +844,7 @@ mkRunTime fc n
 
     mkCrash : {vars : _} -> String -> Term vars
     mkCrash msg
-       = apply fc (Ref fc Func (NS builtinNS (UN $ Basic "idris_crash")))
+       = apply fc (Ref fc Func (UN $ Basic "prim__crash"))
                [Erased fc Placeholder, PrimVal fc (Str msg)]
 
     matchAny : Term vars -> Term vars
