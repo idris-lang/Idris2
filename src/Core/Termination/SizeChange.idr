@@ -12,6 +12,11 @@ import Libraries.Data.SortedSet
 
 %default covering
 
+-- Based on:
+-- The Size-Change Principle for Termination
+-- by Chin Soon Lee, Neil D. Jones, Amir M. Ben-Amram
+-- https://doi.org/10.1145/360204.360210
+
 ------------------------------------------------------------------------
 -- Basic types
 
