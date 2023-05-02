@@ -74,7 +74,7 @@ idrisTestsCasetree = MkTestPool "Case tree building" [] Nothing
 
 idrisTestsWarning : TestPool
 idrisTestsWarning = MkTestPool "Warnings" [] Nothing
-     ["warning001", "warning002", "warning003"]
+     ["warning001", "warning002", "warning003", "warning004"]
 
 idrisTestsFailing : TestPool
 idrisTestsFailing = MkTestPool "Failing blocks" [] Nothing
@@ -89,12 +89,14 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
        "error011", "error012", "error013", "error014", "error015",
        "error016", "error017", "error018", "error019", "error020",
        "error021", "error022", "error023", "error024", "error025",
+       "error026", "error027",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006", "perror007", "perror008", "perror009", "perror010",
        "perror011", "perror012", "perror013", "perror014", "perror015",
        "perror016", "perror017", "perror018", "perror019", "perror020",
-       "perror021", "perror022", "perror023", "perror024", "perror025"]
+       "perror021", "perror022", "perror023", "perror024", "perror025",
+       "perror026"]
 
 idrisTestsInteractive : TestPool
 idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
@@ -131,7 +133,7 @@ idrisTestsLinear = MkTestPool "Quantities" [] Nothing
        ["linear001", "linear002", "linear003", -- "linear004" -- disabled due to requiring linearity subtyping
         "linear005", "linear006", "linear007", "linear008",
         "linear009", "linear010", "linear011", "linear012",
-        "linear013", "linear014", "linear015"]
+        "linear013", "linear014", "linear015", "linear016"]
 
 idrisTestsLiterate : TestPool
 idrisTestsLiterate = MkTestPool "Literate programming" [] Nothing
@@ -161,7 +163,7 @@ idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
        "reg036", "reg037", "reg038", "reg039", "reg040", "reg041", "reg042",
        "reg043", "reg044", "reg045", "reg046", "reg047", "reg048", "reg049",
-       "reg050"]
+       "reg050", "reg051"]
 
 idrisTestsData : TestPool
 idrisTestsData = MkTestPool "Data and record types" [] Nothing
@@ -186,7 +188,10 @@ idrisTestsEvaluator = MkTestPool "Evaluation" [] Nothing
        "evaluator001", "evaluator002", "evaluator003", "evaluator004",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
-       "interpreter005", "interpreter006", "interpreter007", "interpreter008"]
+       "interpreter005", "interpreter006", "interpreter007", "interpreter008",
+       -- Specialisation
+       "spec001"
+      ]
 
 idrisTestsREPL : TestPool
 idrisTestsREPL = MkTestPool "REPL commands and help" [] Nothing
@@ -209,6 +214,7 @@ idrisTestsAllBackends cg = MkTestPool
        -- RefC implements IEEE standard and distinguishes between 0.0 and -0.0
        -- unlike other backends. So turn this test for now.
       $ ([ "issue2362" ] <* guard (cg /= C))
+      ++ ([ "popen2" ] <* guard (cg /= Node))
       ++ [ -- Evaluator
        "evaluator004",
        -- Unfortunately the behaviour of Double is platform dependent so the
@@ -224,7 +230,8 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
-       "total011", "total012", "total013"
+       "total011", "total012", "total013", "total014", "total015",
+       "total016", "total017", "total018", "total019"
       ]
 
 -- This will only work with an Idris compiled via Chez or Racket, but at
@@ -246,7 +253,7 @@ idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
 idrisTestsWith : TestPool
 idrisTestsWith = MkTestPool "With abstraction" [] Nothing
       [ "with001", "with002", "with004", "with005", "with006", "with007",
-        "with008", "with009", "with010"
+        "with008", "with009", "with010", "with011"
       ]
 
 idrisTestsIPKG : TestPool
@@ -267,7 +274,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Implicit laziness, lazy evaluation
        "lazy001", "lazy002",
        -- Namespace blocks
-       "namespace001", "namespace002", "namespace003",
+       "namespace001", "namespace002", "namespace003", "namespace004",
        -- Parameters blocks
        "params001", "params002", "params003",
        -- Larger programs arising from real usage. Typically things with
@@ -313,6 +320,7 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "semaphores002"
     , "perf001"
     , "reg001"
+    , "buffer001"
     ]
 
 refcTests : IO TestPool
@@ -334,10 +342,10 @@ nodeTests : TestPool
 nodeTests = MkTestPool "Node backend" [] (Just Node)
     [ "node001", "node002", "node003", "node004", "node005", "node006"
     , "node007", "node008", "node009", "node011", "node012", "node015"
-    , "node017", "node018", "node019", "node021", "node022", "node023"
-    , "node024", "node025", "node026", "node027"
+    , "node017", "node018", "node019", "node020", "node021", "node022"
+    , "node023", "node024", "node025", "node026", "node027"
     , "perf001"
-    -- , "node14", "node020"
+    -- , "node14"
     , "args"
     , "bitops"
     , "casts"

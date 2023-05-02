@@ -82,10 +82,7 @@ const _truncInt8 = x => {
   return res >= 0x80 ? res - 0x100 : res;
 }
 
-const _truncBigInt8 = x => {
-  const res = Number(x & 0xffn);
-  return res >= 0x80 ? res - 0x100 : res;
-}
+const _truncBigInt8 = x => Number(BigInt.asIntN(8, x))
 
 // Euclidian Division
 const _div = (a,b) => {
@@ -124,10 +121,7 @@ const _truncInt16 = x => {
   return res >= 0x8000 ? res - 0x10000 : res;
 }
 
-const _truncBigInt16 = x => {
-  const res = Number(x & 0xffffn);
-  return res >= 0x8000 ? res - 0x10000 : res;
-}
+const _truncBigInt16 = x => Number(BigInt.asIntN(16, x))
 
 const _add16s = (a,b) => _truncInt16(a + b)
 const _sub16s = (a,b) => _truncInt16(a - b)
@@ -139,10 +133,7 @@ const _shr16s = (a,b) => _truncInt16(a >> b)
 //Int32
 const _truncInt32 = x => x & 0xffffffff
 
-const _truncBigInt32 = x => {
-  const res = Number(x & 0xffffffffn);
-  return res >= 0x80000000 ? res - 0x100000000 : res;
-}
+const _truncBigInt32 = x => Number(BigInt.asIntN(32, x))
 
 const _add32s = (a,b) => _truncInt32(a + b)
 const _sub32s = (a,b) => _truncInt32(a - b)
@@ -158,22 +149,19 @@ const _mul32s = (a,b) => {
 }
 
 //Int64
-const _truncBigInt64 = x => {
-  const res = x & 0xffffffffffffffffn;
-  return res >= 0x8000000000000000n ? res - 0x10000000000000000n : res;
-}
+const _truncBigInt64 = x => BigInt.asIntN(64, x)
 
 const _add64s = (a,b) => _truncBigInt64(a + b)
 const _sub64s = (a,b) => _truncBigInt64(a - b)
 const _mul64s = (a,b) => _truncBigInt64(a * b)
-const _div64s = (a,b) => _truncBigInt64(_divBigInt(a,b))
 const _shl64s = (a,b) => _truncBigInt64(a << b)
+const _div64s = (a,b) => _truncBigInt64(_divBigInt(a,b))
 const _shr64s = (a,b) => _truncBigInt64(a >> b)
 
 //Bits8
 const _truncUInt8 = x => x & 0xff
 
-const _truncUBigInt8 = x => Number(x & 0xffn)
+const _truncUBigInt8 = x => Number(BigInt.asUintN(8, x))
 
 const _add8u = (a,b) => (a + b) & 0xff
 const _sub8u = (a,b) => (a - b) & 0xff
@@ -185,7 +173,7 @@ const _shr8u = (a,b) => (a >> b) & 0xff
 //Bits16
 const _truncUInt16 = x => x & 0xffff
 
-const _truncUBigInt16 = x => Number(x & 0xffffn)
+const _truncUBigInt16 = x => Number(BigInt.asUintN(16, x))
 
 const _add16u = (a,b) => (a + b) & 0xffff
 const _sub16u = (a,b) => (a - b) & 0xffff
@@ -195,7 +183,7 @@ const _shl16u = (a,b) => (a << b) & 0xffff
 const _shr16u = (a,b) => (a >> b) & 0xffff
 
 //Bits32
-const _truncUBigInt32 = x => Number(x & 0xffffffffn)
+const _truncUBigInt32 = x => Number(BigInt.asUintN(32, x))
 
 const _truncUInt32 = x => {
   const res = x & -1;
@@ -214,14 +202,14 @@ const _or32u = (a,b)  => _truncUInt32(a | b)
 const _xor32u = (a,b) => _truncUInt32(a ^ b)
 
 //Bits64
-const _truncUBigInt64 = x => x & 0xffffffffffffffffn
+const _truncUBigInt64 = x => BigInt.asUintN(64, x)
 
-const _add64u = (a,b) => (a + b) & 0xffffffffffffffffn
-const _mul64u = (a,b) => (a * b) & 0xffffffffffffffffn
+const _add64u = (a,b) => BigInt.asUintN(64, a + b)
+const _mul64u = (a,b) => BigInt.asUintN(64, a * b)
 const _div64u = (a,b) => a / b
-const _shl64u = (a,b) => (a << b) & 0xffffffffffffffffn
-const _shr64u = (a,b) => (a >> b) & 0xffffffffffffffffn
-const _sub64u = (a,b) => (a - b) & 0xffffffffffffffffn
+const _shl64u = (a,b) => BigInt.asUintN(64, a << b)
+const _shr64u = (a,b) => BigInt.asUintN(64, a >> b)
+const _sub64u = (a,b) => BigInt.asUintN(64, a - b)
 
 //String
 const _strReverse = x => x.split('').reverse().join('')

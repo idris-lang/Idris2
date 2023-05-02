@@ -1,6 +1,7 @@
 module Data.Bits
 
 import public Data.Fin
+import Data.Vect
 
 %default total
 
@@ -208,6 +209,24 @@ interface Bits a => FiniteBits a where
   ||| known as the population count or the Hamming weight.
   popCount : a -> Nat
 
+  ||| Rotate the argument right by the specified number of bits.
+  rotR : a -> Fin bitSize -> a
+  rotR x i =
+    (x `shiftR` (bitsToIndex i)) .|. (x `shiftL` (bitsToIndex $ finS (complement i)))
+
+  ||| Rotate the argument left by the specified number of bits.
+  rotL : a -> Fin bitSize -> a
+  rotL x i =
+    (x `shiftL` (bitsToIndex i)) .|. (x `shiftR` (bitsToIndex $ finS (complement i)))
+
+public export
+asBitVector : FiniteBits a => a -> Vect (bitSize {a}) Bool
+asBitVector v = testBit v . bitsToIndex <$> allFins _
+
+public export
+asString : FiniteBits a => a -> String
+asString = pack . toList . map (\ b => ifThenElse b '1' '0') . reverse . asBitVector
+
 public export %inline
 FiniteBits Bits8 where
   bitSize     = 8
@@ -282,6 +301,19 @@ FiniteBits Int where
         x5 = if x < 0 then x4 + 1 else x4
      in cast x5
 
+  -- Rotating signed integers is tricky because right-shifting a signed integer
+  -- inserts the signed bit rather than a 0-bit. We can work around this by
+  -- casting to (unsigned) Bits64, rotating, and casting back.
+  rotR x i =
+    let ux : Bits64
+        ux = cast x
+    in cast $ ux `rotR` i
+
+  rotL x i =
+    let ux : Bits64
+        ux = cast x
+    in cast $ ux `rotL` i
+
 public export %inline
 FiniteBits Int8 where
   bitSize     = 8
@@ -299,6 +331,19 @@ FiniteBits Int8 where
         x3 = ((x2 + (x2 `shiftR` 4)) .&. 0x0F)
         x4 = if x < 0 then x3 + 1 else x3
      in cast x4
+
+  -- Rotating signed integers is tricky because right-shifting a signed integer
+  -- inserts the signed bit rather than a 0-bit. We can work around this by
+  -- casting to (unsigned) Bits, rotating, and casting back.
+  rotR x i =
+    let ux : Bits8
+        ux = cast x
+    in cast $ ux `rotR` i
+
+  rotL x i =
+    let ux : Bits8
+        ux = cast x
+    in cast $ ux `rotL` i
 
 public export %inline
 FiniteBits Int16 where
@@ -319,6 +364,19 @@ FiniteBits Int16 where
         x5 = if x < 0 then x4 + 1 else x4
      in cast x5
 
+  -- Rotating signed integers is tricky because right-shifting a signed integer
+  -- inserts the signed bit rather than a 0-bit. We can work around this by
+  -- casting to (unsigned) Bits, rotating, and casting back.
+  rotR x i =
+    let ux : Bits16
+        ux = cast x
+    in cast $ ux `rotR` i
+
+  rotL x i =
+    let ux : Bits16
+        ux = cast x
+    in cast $ ux `rotL` i
+
 public export %inline
 FiniteBits Int32 where
   bitSize     = 32
@@ -337,6 +395,19 @@ FiniteBits Int32 where
         x4 = (x3 * 0x01010101) `shiftR` 24
         x5 = if x < 0 then x4 + 1 else x4
      in cast x5
+
+  -- Rotating signed integers is tricky because right-shifting a signed integer
+  -- inserts the signed bit rather than a 0-bit. We can work around this by
+  -- casting to (unsigned) Bits, rotating, and casting back.
+  rotR x i =
+    let ux : Bits32
+        ux = cast x
+    in cast $ ux `rotR` i
+
+  rotL x i =
+    let ux : Bits32
+        ux = cast x
+    in cast $ ux `rotL` i
 
 public export %inline
 FiniteBits Int64 where
@@ -358,3 +429,16 @@ FiniteBits Int64 where
         x4 = (x3 * 0x0101010101010101) `shiftR` 56
         x5 = if x < 0 then x4 + 1 else x4
      in cast x5
+
+  -- Rotating signed integers is tricky because right-shifting a signed integer
+  -- inserts the signed bit rather than a 0-bit. We can work around this by
+  -- casting to (unsigned) Bits, rotating, and casting back.
+  rotR x i =
+    let ux : Bits64
+        ux = cast x
+    in cast $ ux `rotR` i
+
+  rotL x i =
+    let ux : Bits64
+        ux = cast x
+    in cast $ ux `rotL` i

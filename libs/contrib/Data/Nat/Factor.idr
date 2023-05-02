@@ -1,10 +1,13 @@
 module Data.Nat.Factor
 
+import Syntax.PreorderReasoning
 import Control.WellFounded
 import Data.Fin
 import Data.Fin.Extra
 import Data.Nat
+import Data.Nat.Order.Properties
 import Data.Nat.Equational
+import Data.Nat.Division
 
 %default total
 
@@ -49,7 +52,7 @@ public export
 data GCD : Nat -> Nat -> Nat -> Type where
     MkGCD : {a, b, p : Nat} ->
         {auto notBothZero : NotBothZero a b} ->
-        (CommonFactor p a b) ->
+        (Lazy (CommonFactor p a b)) ->
         ((q : Nat) -> CommonFactor q a b -> Factor q p) ->
         GCD p a b
 
@@ -260,6 +263,41 @@ minusFactor (CofactorExists qab prfAB) (CofactorExists qa prfA) =
             rewrite minusZeroRight b in
             Refl
 
+||| If p is a common factor of n and mod m n, then it is also a factor of m.
+export
+modFactorAlsoFactorOfDivider : {m, n, p : Nat} -> {auto 0 nNotZ : NonZero n} -> Factor p n -> Factor p (modNatNZ m n nNotZ) -> Factor p m
+modFactorAlsoFactorOfDivider (CofactorExists qn prfN) (CofactorExists qModMN prfModMN) =
+  CofactorExists (qModMN + divNatNZ m n nNotZ * qn) $ Calc $
+    |~ m
+    ~~ modNatNZ m n nNotZ + divNatNZ m n nNotZ * n ...(DivisionTheorem m n nNotZ nNotZ)
+    ~~ qModMN * p + divNatNZ m n nNotZ * (qn * p)
+              ...(rewrite multCommutative qModMN p in
+                  rewrite multCommutative qn p in
+                  cong2 (+) prfModMN $ cong ((*) (divNatNZ m n nNotZ)) prfN)
+    ~~ qModMN * p + (divNatNZ m n nNotZ * qn) * p
+              ...(cong ((+) (qModMN * p)) $ multAssociative (divNatNZ m n nNotZ) qn p)
+    ~~ (qModMN + divNatNZ m n nNotZ * qn) * p ...(sym $ multDistributesOverPlusLeft qModMN _ p)
+    ~~ p * (qModMN + divNatNZ m n nNotZ * qn) ...(multCommutative _ p)
+
+||| If p is a common factor of m and n, then it is also a factor of their mod.
+export
+commonFactorAlsoFactorOfMod : {0 m, n, p : Nat} -> {auto 0 nNotZ : NonZero n} -> Factor p m -> Factor p n -> Factor p (modNatNZ m n nNotZ)
+commonFactorAlsoFactorOfMod (CofactorExists qm prfM) (CofactorExists qn prfN) =
+  CofactorExists (qm `minus` divNatNZ (qm * p) n nNotZ * qn) $
+      rewrite prfM in
+      rewrite multCommutative p qm
+      in Calc $
+    |~ (modNatNZ (qm * p) n nNotZ)
+    ~~ (qm * p `minus` divNatNZ (qm * p) n nNotZ * n) ...(modDividendMinusDivMultDivider (qm * p) n)
+    ~~ (qm * p `minus` divNatNZ (qm * p) n nNotZ * (qn * p))
+              ...(rewrite multCommutative qn p in
+                  cong (\v => qm * p `minus` divNatNZ (qm * p) n nNotZ * v) prfN)
+    ~~ (qm * p `minus` divNatNZ (qm * p) n nNotZ * qn * p)
+              ...(cong (minus (qm * p)) $ multAssociative (divNatNZ (qm * p) n nNotZ) qn p)
+    ~~ (qm `minus` (divNatNZ (qm * p) n nNotZ * qn)) * p
+              ...(sym $ multDistributesOverMinusLeft qm (divNatNZ (qm * p) n nNotZ * qn) p)
+    ~~ p * (qm `minus` (divNatNZ (qm * p) n nNotZ * qn)) ...(multCommutative _ p)
+
 ||| A decision procedure for whether of not p is a factor of n.
 export
 decFactor : (n, d : Nat) -> DecFactor d n
@@ -332,106 +370,56 @@ export
 selfIsCommonFactor : (a : Nat) -> {auto ok : LTE 1 a} -> CommonFactor a a a
 selfIsCommonFactor a = CommonFactorExists a reflexive reflexive
 
--- Some helpers for the gcd function.
-data Search : Type where
-    SearchArgs : (a, b : Nat) -> LTE b a -> {auto bNonZero : LTE 1 b} -> Search
+gcdUnproven' : (m, n : Nat) -> (0 sizeM : SizeAccessible m) -> (0 n_lt_m : LT n m) -> Nat
+gcdUnproven' m Z _ _ = m
+gcdUnproven' m (S n) (Access rec) n_lt_m =
+  let mod_lt_n = boundModNatNZ m (S n) SIsNonZero in
+  gcdUnproven' (S n) (modNatNZ m (S n) SIsNonZero) (rec _ n_lt_m) mod_lt_n
 
-left : Search -> Nat
-left (SearchArgs l _ _) = l
+||| Total definition of the gcd function. Does not return GСD evidence, but is faster.
+gcdUnproven : Nat -> Nat -> Nat
+gcdUnproven m n with (isLT n m)
+  gcdUnproven m n | Yes n_lt_m = gcdUnproven' m n (wellFounded m) n_lt_m
+  gcdUnproven m n | No not_n_lt_m with (decomposeLte m n $ notLTImpliesGTE not_n_lt_m)
+    gcdUnproven m n | No not_n_lt_m | Left m_lt_n = gcdUnproven' n m (wellFounded n) m_lt_n
+    gcdUnproven m n | No not_n_lt_m | Right m_eq_n = m
 
-right : Search -> Nat
-right (SearchArgs _ r _) = r
+gcdUnproven'Greatest : {m, n, c : Nat} -> (0 sizeM : SizeAccessible m) -> (0 n_lt_m : LT n m)
+  -> Factor c m -> Factor c n -> Factor c (gcdUnproven' m n sizeM n_lt_m)
+gcdUnproven'Greatest {n = Z} _ _ cFactM _ = cFactM
+gcdUnproven'Greatest {n = S n} (Access rec) n_lt_m cFactM cFactN =
+  gcdUnproven'Greatest (rec _ n_lt_m) (boundModNatNZ m (S n) SIsNonZero) cFactN (commonFactorAlsoFactorOfMod cFactM cFactN)
 
-Sized Search where
-    size (SearchArgs a b _) = a + b
+gcdUnprovenGreatest : (m, n : Nat) -> {auto 0 ok : NotBothZero m n} -> (q : Nat) -> CommonFactor q m n -> Factor q (gcdUnproven m n)
+gcdUnprovenGreatest m n q (CommonFactorExists q qFactM qFactN) with (isLT n m)
+  gcdUnprovenGreatest m n q (CommonFactorExists q qFactM qFactN) | Yes n_lt_m
+    = gcdUnproven'Greatest (sizeAccessible m) n_lt_m qFactM qFactN
+  gcdUnprovenGreatest m n q (CommonFactorExists q qFactM qFactN) | No not_n_lt_m with (decomposeLte m n $ notLTImpliesGTE not_n_lt_m)
+    gcdUnprovenGreatest m n q (CommonFactorExists q qFactM qFactN) | No not_n_lt_m | Left m_lt_n
+      = gcdUnproven'Greatest (sizeAccessible n) m_lt_n qFactN qFactM
+    gcdUnprovenGreatest Z Z q (CommonFactorExists q qFactM qFactN) | No not_n_lt_m | Right m_eq_n impossible
+    gcdUnprovenGreatest (S m) (S n) q (CommonFactorExists q qFactM qFactN) | No not_n_lt_m | Right m_eq_n = qFactM
 
-notLteAndGt : (a, b : Nat) -> LTE a b -> Not (GT a b)
-notLteAndGt Z _ _ aGtB = succNotLTEzero aGtB
-notLteAndGt (S _) Z aLteB _ = succNotLTEzero aLteB
-notLteAndGt (S k) (S j) aLteB aGtB = notLteAndGt k j (fromLteSucc aLteB) (fromLteSucc aGtB)
+gcdUnproven'CommonFactor : {m, n : Nat} -> (0 sizeM : SizeAccessible m) -> (0 n_lt_m : LT n m) -> CommonFactor (gcdUnproven' m n sizeM n_lt_m) m n
+gcdUnproven'CommonFactor {n = Z} _ _ = CommonFactorExists _ reflexive (anythingFactorZero m)
+gcdUnproven'CommonFactor {n = S n} (Access rec) n_lt_m with (gcdUnproven'CommonFactor (rec _ n_lt_m) (boundModNatNZ m (S n) SIsNonZero))
+  gcdUnproven'CommonFactor (Access rec) n_lt_m | (CommonFactorExists _ factM factN)
+    = CommonFactorExists _ (modFactorAlsoFactorOfDivider factM factN) factM
 
-gcd_step : (x : Search) ->
-           (rec : (y : Search) -> Smaller y x ->
-                  (f : Nat ** GCD f (left y) (right y))) ->
-           (f : Nat ** GCD f (left x) (right x))
-gcd_step (SearchArgs Z _ bLteA {bNonZero}) _ = absurd . succNotLTEzero $ transitive bNonZero bLteA
-gcd_step (SearchArgs _ Z _ {bNonZero}) _ = absurd $ succNotLTEzero bNonZero
-gcd_step (SearchArgs (S a) (S b) bLteA) rec =
-  case divMod (S a) (S b) of
-    Fraction (S a) (S b) q FZ prf =>
-        let sbIsFactor =
-                rewrite multCommutative b q in
-                rewrite sym $ multRightSuccPlus q b in
-                replace {p = \x => S a = x} (plusZeroRightNeutral (q * S b)) $ sym prf
-            skDividesA = CofactorExists q sbIsFactor
-        in
-        (S b ** MkGCD (CommonFactorExists (S b) skDividesA reflexive)
-                      (\q', (CommonFactorExists q' _ qfb) => qfb))
-
-    Fraction (S a) (S b) q (FS r) prf =>
-            let rLtSb = lteSuccRight $ elemSmallerThanBound r
-                _ = the (LTE 1 q) $ case q of
-                    Z => absurd . notLteAndGt (S $ finToNat r) b (elemSmallerThanBound r) $
-                        replace {p = LTE (S b)} (sym prf) bLteA
-                    (S k) => LTESucc LTEZero
-                (f ** MkGCD (CommonFactorExists f prfSb prfRem) greatestSbSr) =
-                    rec (SearchArgs (S b) (S $ finToNat r) rLtSb) $
-                      rewrite plusCommutative a (S b) in
-                        LTESucc . LTESucc . plusLteLeft b . fromLteSucc $
-                          transitive (elemSmallerThanBound $ FS r) bLteA
-
-                prfSa =
-                    rewrite sym prf in
-                    rewrite multCommutative q (S b) in
-                    plusFactor (multNAlsoFactor prfSb q) prfRem
-                greatest = the
-                    ((q' : Nat) -> CommonFactor q' (S a) (S b) -> Factor q' f)
-                    (\q', (CommonFactorExists q' qfa qfb) =>
-                        let sbfqSb =
-                                rewrite multCommutative q (S b) in
-                                multFactor (S b) q
-                            rightPrf = minusFactor {a = q * S b}
-                                (rewrite prf in qfa)
-                                (transitive qfb sbfqSb)
-                        in
-                        greatestSbSr q' (CommonFactorExists q' qfb rightPrf)
-                    )
-            in
-            (f ** MkGCD (CommonFactorExists f prfSa prfSb) greatest)
+gcdUnprovenCommonFactor : (m, n : Nat) -> {auto 0 ok : NotBothZero m n} -> CommonFactor (gcdUnproven m n) m n
+gcdUnprovenCommonFactor m n with (isLT n m)
+  gcdUnprovenCommonFactor m n | Yes n_lt_m = gcdUnproven'CommonFactor (sizeAccessible m) n_lt_m
+  gcdUnprovenCommonFactor m n | No not_n_lt_m with (decomposeLte m n $ notLTImpliesGTE not_n_lt_m)
+    gcdUnprovenCommonFactor m n | No not_n_lt_m | Left m_lt_n = symmetric $ gcdUnproven'CommonFactor (sizeAccessible n) m_lt_n
+    gcdUnprovenCommonFactor Z Z | No not_n_lt_m | Right m_eq_n impossible
+    gcdUnprovenCommonFactor (S m) (S n) | No not_n_lt_m | Right m_eq_n = rewrite m_eq_n in selfIsCommonFactor (S n)
 
 ||| An implementation of Euclidean Algorithm for computing greatest common
 ||| divisors. It is proven correct and total; returns a proof that computed
-||| number actually IS the GCD. Unfortunately it's very slow, so improvements
-||| in terms of efficiency would be welcome.
+||| number actually IS the GCD.
 export
 gcd : (a, b : Nat) -> {auto ok : NotBothZero a b} -> (f : Nat ** GCD f a b)
-gcd Z Z impossible
-gcd Z b =
-  (b ** MkGCD (CommonFactorExists b (anythingFactorZero b) reflexive) $
-              \q, (CommonFactorExists q _ prf) => prf)
-gcd a Z =
-  (a ** MkGCD (CommonFactorExists a reflexive (anythingFactorZero a)) $
-              \q, (CommonFactorExists q prf _) => prf)
-gcd (S a) (S b) with (cmp (S a) (S b))
-    gcd (S (b + S d)) (S b) | CmpGT d =
-        sizeInd gcd_step $
-          SearchArgs (S (b + S d)) (S b) $
-            rewrite sym $ plusSuccRightSucc b d in
-              LTESucc . lteSuccRight $ lteAddRight b
-
-    gcd (S a) (S a)         | CmpEQ =
-        (S a ** MkGCD (selfIsCommonFactor (S a))
-                      (\q, (CommonFactorExists q qfa _) => qfa))
-
-    gcd (S a) (S (a + S d)) | CmpLT d =
-        let (f ** MkGCD prf greatest) =
-              sizeInd gcd_step $
-                SearchArgs (S (a + S d)) (S a) $
-                  rewrite sym $ plusSuccRightSucc a d in
-                    LTESucc . lteSuccRight $ lteAddRight a
-        in
-        (f ** MkGCD (symmetric prf)
-                    (\q, cf => greatest q $ symmetric cf))
+gcd a b = (_ ** MkGCD (gcdUnprovenCommonFactor a b) (gcdUnprovenGreatest a b))
 
 ||| For every two natural numbers there is a unique greatest common divisor.
 export

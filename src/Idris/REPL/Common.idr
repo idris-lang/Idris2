@@ -144,7 +144,7 @@ emitWarning : {auto c : Ref Ctxt Defs} ->
               {auto o : Ref ROpts REPLOpts} ->
               {auto s : Ref Syn SyntaxInfo} ->
               Warning -> Core ()
-emitWarning w = emitProblem w displayWarning pwarning getWarningLoc MsgStatusInfo
+emitWarning w = emitProblem w displayWarning pwarning (Just . getWarningLoc) MsgStatusInfo
 
 export
 emitWarnings : {auto c : Ref Ctxt Defs} ->

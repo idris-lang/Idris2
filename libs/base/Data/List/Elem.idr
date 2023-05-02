@@ -1,5 +1,6 @@
 module Data.List.Elem
 
+import Data.Singleton
 import Decidable.Equality
 import Control.Function
 
@@ -61,6 +62,18 @@ isElem x (y :: xs) with (decEq x y)
   isElem x (y :: xs) | No xny with (isElem x xs)
     isElem x (y :: xs) | No xny | Yes xxs = Yes (There xxs)
     isElem x (y :: xs) | No xny | No xnxs = No (neitherHereNorThere xny xnxs)
+
+||| Get the element at the given position.
+public export
+get : (xs : List a) -> (p : Elem x xs) -> a
+get (x :: _) Here = x
+get (_ :: xs) (There p) = get xs p
+
+||| Get the element at the given position, with proof that it is the desired element.
+public export
+lookup : (xs : List a) -> (p : Elem x xs) -> Singleton x
+lookup (x :: _) Here = Val x
+lookup (_ :: xs) (There p) = lookup xs p
 
 ||| Remove the element at the given position.
 public export

@@ -2,6 +2,7 @@ import System
 import System.File
 import System.Info
 import Data.String
+import Data.List1
 
 windowsPath : String -> String
 windowsPath path =
@@ -24,6 +25,5 @@ main = do
         | Left err => printLn err
     ignore $ pclose fh
     putStrLn "closed"
-    let [idris2, _] = split ((==) ',') output
-        | _ => printLn "Unexpected result"
+    let (idris2 ::: _) = split ((==) ',') output
     putStrLn idris2

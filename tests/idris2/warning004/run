@@ -1,0 +1,8 @@
+rm -rf ./build
+
+
+$1 --no-color --console-width 0 --check Main0.idr
+$1 --no-color --console-width 0 --check Main1.idr
+
+$1 --no-color --console-width 0 --exec main Main0.idr
+$1 --no-color --console-width 0 --exec main Main1.idr

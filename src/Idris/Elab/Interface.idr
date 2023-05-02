@@ -9,6 +9,7 @@ import Core.Metadata
 import Core.TT
 import Core.Unify
 
+import Idris.Doc.String
 import Idris.REPL.Opts
 import Idris.Syntax
 
@@ -338,15 +339,16 @@ elabInterface : {vars : _} ->
                 Name ->
                 (params : List (Name, (RigCount, RawImp))) ->
                 (dets : List Name) ->
-                (conName : Maybe Name) ->
+                (conName : Maybe (String, Name)) ->
                 List ImpDecl ->
                 Core ()
 elabInterface {vars} ifc vis env nest constraints iname params dets mcon body
     = do fullIName <- getFullName iname
          ns_iname <- inCurrentNS fullIName
-         let conName_in = maybe (mkCon vfc fullIName) id mcon
+         let conName_in = maybe (mkCon vfc fullIName) snd mcon
          -- Machine generated names need to be qualified when looking them up
          conName <- inCurrentNS conName_in
+         whenJust (fst <$> mcon) (addDocString conName)
          let meth_sigs = mapMaybe getSig body
          let meth_decls = map sigToDecl meth_sigs
          let meth_names = map name meth_decls

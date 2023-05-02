@@ -487,7 +487,7 @@ mutual
               Core ( Name
                    , List (Name, RigCount, PiInfo IPTerm, IPTerm)
                    , List DataOpt
-                   , Maybe Name
+                   , Maybe (String, Name)
                    , List (PField' KindedName))
   toPRecord (MkImpRecord fc n ps opts con fs)
       = do ps' <- traverse (\ (n, c, p, ty) =>
@@ -495,7 +495,7 @@ mutual
                                       p' <- mapPiInfo p
                                       pure (n, c, p', ty')) ps
            fs' <- traverse toPField fs
-           pure (n, ps', opts, Just con, fs')
+           pure (n, ps', opts, Just ("", con), fs')
     where
       mapPiInfo : PiInfo IRawImp -> Core (PiInfo IPTerm)
       mapPiInfo Explicit        = pure   Explicit

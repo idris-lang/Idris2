@@ -46,9 +46,9 @@ modules = Control.ANSI,
           Data.List.Reverse,
           Data.List.Views.Extra,
           Data.List.Palindrome,
-          Data.List.HasLength,
           Data.List.AtIndex,
           Data.List.Alternating,
+          Data.List.Sufficient,
 
           Data.List.Elem.Extra,
 
@@ -83,10 +83,6 @@ modules = Control.ANSI,
           Data.Seq.Internal,
           Data.Seq.Sized,
           Data.Seq.Unsized,
-
-          Data.SortedMap,
-          Data.SortedMap.Dependent,
-          Data.SortedSet,
 
           Data.Stream.Extra,
 

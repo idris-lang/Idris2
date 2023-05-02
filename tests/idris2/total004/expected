@@ -6,12 +6,12 @@ Main> Main.bar is total
 Main> Main.swapR is total
 Main> Main.loopy is possibly not terminating due to recursive path Main.loopy
 Main> Main.foom is total
-Main> Main.pfoom is possibly not terminating due to recursive path Main.pfoom -> Main.pfoom
+Main> Main.pfoom is possibly not terminating due to recursive path Main.pfoom
 Main> Main.even is total
-Main> Main.vtrans is possibly not terminating due to recursive path Main.vtrans -> Main.vtrans
+Main> Main.vtrans is possibly not terminating due to recursive path Main.vtrans
 Main> Main.GTree is total
 Main> Main.size is total
-Main> Main.qsortBad is possibly not terminating due to recursive path Main.qsortBad -> Main.qsortBad
+Main> Main.qsortBad is possibly not terminating due to recursive path Main.qsortBad
 Main> Main.qsort is total
 Main> Main.qsort' is total
 Main> Main.mySorted is total

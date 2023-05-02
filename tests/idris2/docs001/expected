@@ -1,7 +1,7 @@
 Main> Prelude.plus : Nat -> Nat -> Nat
   Add two natural numbers.
   @ x the number to case-split on
-  @ y the other numberpublic export
+  @ y the other number
   Totality: total
   Visibility: public export
 Main> data Prelude.Nat : Type

@@ -1,5 +1,6 @@
 module Data.Vect.Elem
 
+import Data.Singleton
 import Data.Vect
 import Decidable.Equality
 
@@ -22,6 +23,17 @@ Uninhabited (Here = There e) where
 export
 Uninhabited (There e = Here) where
   uninhabited Refl impossible
+
+export
+Injective (There {x} {y} {xs}) where
+  injective Refl = Refl
+
+export
+DecEq (Elem x xs) where
+  decEq Here Here = Yes Refl
+  decEq (There this) (There that) = decEqCong $ decEq this that
+  decEq Here (There later) = No absurd
+  decEq (There later) Here = No absurd
 
 export
 Uninhabited (Elem x []) where
@@ -47,6 +59,18 @@ isElem x (y::xs) with (decEq x y)
   isElem x (y::xs) | (No xneqy) with (isElem x xs)
     isElem x (y::xs) | (No xneqy) | (Yes xinxs) = Yes (There xinxs)
     isElem x (y::xs) | (No xneqy) | (No xninxs) = No (neitherHereNorThere xneqy xninxs)
+
+||| Get the element at the given position.
+public export
+get : (xs : Vect n a) -> (p : Elem x xs) -> a
+get (x :: _) Here = x
+get (_ :: xs) (There p) = get xs p
+
+||| Get the element at the given position, with proof that it is the desired element.
+public export
+lookup : (xs : Vect n a) -> (p : Elem x xs) -> Singleton x
+lookup (x :: _) Here = Val x
+lookup (_ :: xs) (There p) = lookup xs p
 
 public export
 replaceElem : (xs : Vect k t) -> Elem x xs -> (y : t) -> (ys : Vect k t ** Elem y ys)

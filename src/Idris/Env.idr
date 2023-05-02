@@ -43,7 +43,8 @@ envs = [
     MkEnvDesc "CPPFLAGS"             "RefC backend: C preprocessor flags (IDRIS2_CPPFLAGS takes precedence).",
     MkEnvDesc "LDFLAGS"              "RefC backend: C linker flags (IDRIS2_LDFLAGS takes precedence).",
     MkEnvDesc "NODE"                 "NodeJS backend: NodeJS executable.",
-    MkEnvDesc "PATH"                 "PATH variable is used to search for executables in certain codegens."]
+    MkEnvDesc "PATH"                 "PATH variable is used to search for executables in certain codegens.",
+    MkEnvDesc "NO_COLOR"             "Instruct Idris not to print color to stdout. Passing the --color/--colour option will supersede this env var."]
 
 --- `public export` only for `auto` to work in `idrisGetEnv`
 public export

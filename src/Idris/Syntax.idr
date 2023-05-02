@@ -38,6 +38,14 @@ Show Fixity where
   show Infix  = "infix"
   show Prefix = "prefix"
 
+export
+Eq Fixity where
+  InfixL == InfixL = True
+  InfixR == InfixR = True
+  Infix == Infix = True
+  Prefix == Prefix = True
+  _ == _ = False
+
 public export
 OpStr' : Type -> Type
 OpStr' nm = nm
@@ -111,8 +119,8 @@ mutual
        PBracketed : FC -> PTerm' nm -> PTerm' nm
 
        -- Syntactic sugar
-       PString : FC -> List (PStr' nm) -> PTerm' nm
-       PMultiline : FC -> (indent : Nat) -> List (List (PStr' nm)) -> PTerm' nm
+       PString : FC -> (hashtag : Nat) -> List (PStr' nm) -> PTerm' nm
+       PMultiline : FC -> (hashtag : Nat) -> (indent : Nat) -> List (List (PStr' nm)) -> PTerm' nm
        PDoBlock : FC -> Maybe Namespace -> List (PDo' nm) -> PTerm' nm
        PBang : FC -> PTerm' nm -> PTerm' nm
        PIdiom : FC -> Maybe Namespace -> PTerm' nm -> PTerm' nm
@@ -175,8 +183,8 @@ mutual
   getPTermLoc (PSectionR fc _ _ _) = fc
   getPTermLoc (PEq fc _ _) = fc
   getPTermLoc (PBracketed fc _) = fc
-  getPTermLoc (PString fc _) = fc
-  getPTermLoc (PMultiline fc _ _) = fc
+  getPTermLoc (PString fc _ _) = fc
+  getPTermLoc (PMultiline fc _ _ _) = fc
   getPTermLoc (PDoBlock fc _ _) = fc
   getPTermLoc (PBang fc _) = fc
   getPTermLoc (PIdiom fc _ _) = fc
@@ -279,8 +287,8 @@ mutual
        MkPRecord : (tyname : Name) ->
                    (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
                    (opts : List DataOpt) ->
-                   (conName : Maybe Name) ->
-                   List (PField' nm) ->
+                   (conName : Maybe (String, Name)) ->
+                   (fields : List (PField' nm)) ->
                    PRecordDecl' nm
        MkPRecordLater : (tyname : Name) ->
                         (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
@@ -407,7 +415,7 @@ mutual
                     (doc : String) ->
                     (params : List (Name, (RigCount, PTerm' nm))) ->
                     (det : List Name) ->
-                    (conName : Maybe Name) ->
+                    (conName : Maybe (String, Name)) ->
                     List (PDecl' nm) ->
                     PDecl' nm
        PImplementation : FC ->
@@ -776,8 +784,8 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (PSectionR _ _ x op) = "(" ++ showPTermPrec d x ++ " " ++ showOpPrec d op ++ ")"
   showPTermPrec d (PEq fc l r) = showPTermPrec d l ++ " = " ++ showPTermPrec d r
   showPTermPrec d (PBracketed _ tm) = "(" ++ showPTermPrec d tm ++ ")"
-  showPTermPrec d (PString _ xs) = join " ++ " $ showPStr <$> xs
-  showPTermPrec d (PMultiline _ indent xs) = "multiline (" ++ (join " ++ " $ showPStr <$> concat xs) ++ ")"
+  showPTermPrec d (PString _ _ xs) = join " ++ " $ showPStr <$> xs
+  showPTermPrec d (PMultiline _ _ indent xs) = "multiline (" ++ (join " ++ " $ showPStr <$> concat xs) ++ ")"
   showPTermPrec d (PDoBlock _ ns ds)
         = "do " ++ showSep " ; " (map showDo ds)
   showPTermPrec d (PBang _ tm) = "!" ++ showPTermPrec d tm

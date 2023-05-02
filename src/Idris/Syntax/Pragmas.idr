@@ -120,8 +120,8 @@ Show KwPragma where
     KwLanguage => "%language"
     KwDefault => "%default"
     KwPrefixRecordProjections => "%prefix_record_projections"
-    KwAutoImplicitDepth => "%auto-implicit_depth"
-    KwNfMetavarThreshold => "%metavar_threshold"
+    KwAutoImplicitDepth => "%auto_implicit_depth"
+    KwNfMetavarThreshold => "%nf_metavar_threshold"
     KwSearchTimeOut => "%search_timeout"
 
 export

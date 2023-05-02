@@ -135,36 +135,42 @@ onOffLit
                  _ => Nothing
 
 export
-strLit : Rule String
-strLit
+simpleStrLit : Rule String
+simpleStrLit
     = terminal "Expected string literal" $
                \case
-                 StringLit n s => escape n s
+                 StringLit s => unescape 0 s
                  _ => Nothing
 
-||| String literal split by line wrap (not striped) before escaping the string.
+||| String literal split by line wrap (not striped).
 export
 strLitLines : Rule (List1 String)
 strLitLines
     = terminal "Expected string literal" $
                \case
-                 StringLit n s =>
-                   traverse (escape n . fastPack)
-                            (splitAfter isNL (fastUnpack s))
+                 StringLit s => Just $ map pack (linesHelp [] (unpack s))
                  _ => Nothing
+  where
+  linesHelp : List Char -> List Char -> List1 (List Char)
+  linesHelp [] [] = List1.singleton []
+  linesHelp acc [] = List1.singleton (reverse acc)
+  linesHelp acc ('\n' :: xs) = reverse ('\n' :: acc) `List1.cons` linesHelp [] xs
+  linesHelp acc ('\r' :: '\n' :: xs) = reverse ('\n' :: '\r' :: acc) `List1.cons` linesHelp [] xs
+  linesHelp acc ('\r' :: xs) = reverse ('\r' :: acc) `List1.cons` linesHelp [] xs
+  linesHelp acc (c :: xs) = linesHelp (c :: acc) xs
 
 export
-strBegin : Rule ()
+strBegin : Rule Nat
 strBegin = terminal "Expected string begin" $
                     \case
-                      StringBegin Single => Just ()
+                      StringBegin hashtag Single => Just hashtag
                       _ => Nothing
 
 export
-multilineBegin : Rule ()
+multilineBegin : Rule Nat
 multilineBegin = terminal "Expected multiline string begin" $
                           \case
-                            StringBegin Multi => Just ()
+                            StringBegin hashtag Multi => Just hashtag
                             _ => Nothing
 
 export
@@ -190,7 +196,7 @@ interpEnd = terminal "Expected string interp end" $
 
 export
 simpleStr : Rule String
-simpleStr = strBegin *> commit *> (option "" strLit) <* strEnd
+simpleStr = strBegin *> commit *> (option "" simpleStrLit) <* strEnd
 
 export
 aDotIdent : Rule String

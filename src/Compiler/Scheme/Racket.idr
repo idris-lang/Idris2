@@ -14,6 +14,7 @@ import Core.Name
 import Core.TT
 import Protocol.Hex
 import Libraries.Data.SortedSet
+import Libraries.Data.String.Builder
 import Libraries.Utils.Path
 
 import Data.List
@@ -40,8 +41,8 @@ findRacoExe =
   do env <- idrisGetEnv "RACKET_RACO"
      pure $ (maybe ["/usr/bin/env", "raco"] singleton env) ++ ["exe"]
 
-schHeader : Bool -> String -> String
-schHeader prof libs = """
+schHeader : Bool -> Builder -> Builder
+schHeader prof libs = fromString """
   #lang racket/base
   ;; \{ generatedString "Racket" }
   (require racket/async-channel)         ; for asynchronous channels
@@ -55,38 +56,40 @@ schHeader prof libs = """
   (require ffi/unsafe ffi/unsafe/define) ; for calling C
   \{ ifThenElse prof "(require profile)" "" }
   (require racket/flonum)                ; for float-typed transcendental functions
-  \{ libs }
+
+  """ ++ libs ++ """
+
   (let ()
 
   """
 
-schFooter : String
+schFooter : Builder
 schFooter = """
   )
   (collect-garbage)
   """
 
-showRacketChar : Char -> String -> String
-showRacketChar '\\' = ("\\\\" ++)
-showRacketChar c
-   = if c < chr 32 || c > chr 126
-        then (("\\u" ++ leftPad '0' 4 (asHex (cast c))) ++)
-        else strCons c
+showRacketChar : Char -> Builder -> Builder
+showRacketChar '\\' acc = "\\\\" ++ acc
+showRacketChar c acc
+   = if ord c < 32 || ord c > 126
+        then fromString ("\\u" ++ leftPad '0' 4 (asHex (cast c))) ++ acc
+        else char c ++ acc
 
-showRacketString : List Char -> String -> String
-showRacketString [] = id
-showRacketString ('"'::cs) = ("\\\"" ++) . showRacketString cs
-showRacketString (c ::cs) = (showRacketChar c) . showRacketString cs
+showRacketString : List Char -> Builder -> Builder
+showRacketString [] acc = acc
+showRacketString ('"' :: cs) acc = "\\\"" ++ showRacketString cs acc
+showRacketString (c :: cs) acc = showRacketChar c $ showRacketString cs acc
 
-racketString : String -> String
-racketString cs = strCons '"' (showRacketString (unpack cs) "\"")
+racketString : String -> Builder
+racketString cs = "\"" ++ showRacketString (unpack cs) "\""
 
 mutual
-  racketPrim : SortedSet Name -> Int -> ExtPrim -> List NamedCExp -> Core String
+  racketPrim : SortedSet Name -> Nat -> ExtPrim -> List NamedCExp -> Core Builder
   racketPrim cs i GetField [NmPrimVal _ (Str s), _, _, struct,
                          NmPrimVal _ (Str fld), _]
       = do structsc <- schExp cs (racketPrim cs) racketString 0 struct
-           pure $ "(" ++ s ++ "-" ++ fld ++ " " ++ structsc ++ ")"
+           pure $ "(" ++ fromString s ++ "-" ++ fromString fld ++ " " ++ structsc ++ ")"
   racketPrim cs i GetField [_,_,_,_,_,_]
       = pure "(error \"bad getField\")"
   racketPrim cs i SetField [NmPrimVal _ (Str s), _, _, struct,
@@ -94,7 +97,7 @@ mutual
       = do structsc <- schExp cs (racketPrim cs) racketString 0 struct
            valsc <- schExp cs (racketPrim cs) racketString 0 val
            pure $ mkWorld $
-                "(set-" ++ s ++ "-" ++ fld ++ "! " ++ structsc ++ " " ++ valsc ++ ")"
+                "(set-" ++ fromString s ++ "-" ++ fromString fld ++ "! " ++ structsc ++ " " ++ valsc ++ ")"
   racketPrim cs i SetField [_,_,_,_,_,_,_,_]
       = pure "(error \"bad setField\")"
   racketPrim cs i SysCodegen []
@@ -122,7 +125,7 @@ data Structs : Type where
 -- Label for noting which foreign names are declared
 data Done : Type where
 
-cftySpec : FC -> CFType -> Core String
+cftySpec : FC -> CFType -> Core Builder
 cftySpec fc CFUnit = pure "_void"
 cftySpec fc CFInt = pure "_int"
 cftySpec fc CFInt8 = pure "_int8"
@@ -140,16 +143,16 @@ cftySpec fc CFPtr = pure "_pointer"
 cftySpec fc CFGCPtr = pure "_pointer"
 cftySpec fc CFBuffer = pure "_bytes"
 cftySpec fc (CFIORes t) = cftySpec fc t
-cftySpec fc (CFStruct n t) = pure $ "_" ++ n ++ "-pointer"
+cftySpec fc (CFStruct n t) = pure $ "_" ++ fromString n ++ "-pointer"
 cftySpec fc (CFFun s t) = funTySpec [s] t
   where
-    funTySpec : List CFType -> CFType -> Core String
+    funTySpec : List CFType -> CFType -> Core Builder
     funTySpec args (CFFun CFWorld t) = funTySpec args t
     funTySpec args (CFFun s t) = funTySpec (s :: args) t
     funTySpec args retty
         = do rtyspec <- cftySpec fc retty
              argspecs <- traverse (cftySpec fc) (reverse args)
-             pure $ "(_fun " ++ showSep " " argspecs ++ " -> " ++ rtyspec ++ ")"
+             pure $ "(_fun " ++ sepBy " " argspecs ++ " -> " ++ rtyspec ++ ")"
 cftySpec fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t ++
                          " to foreign function"))
 
@@ -169,15 +172,15 @@ getLibVers libspec
                (fst (span (/='.') fn),
                   "'(" ++ showSep " " (map show vers) ++ " #f)" )
 
-cToRkt : CFType -> String -> String
+cToRkt : CFType -> Builder -> Builder
 cToRkt CFChar op = "(integer->char " ++ op ++ ")"
 cToRkt _ op = op
 
-rktToC : CFType -> String -> String
+rktToC : CFType -> Builder -> Builder
 rktToC CFChar op = "(char->integer " ++ op ++ ")"
 rktToC _ op = op
 
-handleRet : CFType -> String -> String
+handleRet : CFType -> Builder -> Builder
 handleRet CFUnit op = op ++ " " ++ mkWorld (schConstructor racketString (UN $ Basic "") (Just 0) [])
 handleRet ret op = mkWorld (cToRkt ret op)
 
@@ -185,7 +188,7 @@ cCall : {auto f : Ref Done (List String) } ->
         {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         String -> FC -> (cfn : String) -> (clib : String) ->
-        List (Name, CFType) -> CFType -> Core (String, String)
+        List (Name, CFType) -> CFType -> Core (Builder, Builder)
 cCall appdir fc cfn clib args (CFIORes CFGCPtr)
     = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
 cCall appdir fc cfn clib args CFGCPtr
@@ -212,38 +215,38 @@ cCall appdir fc cfn libspec args ret
          cbind <- if cfn `elem` bound
                      then pure ""
                      else do put Done (cfn :: bound)
-                             pure $ "(define-" ++ libn ++ " " ++ cfn ++
-                                    " (_fun " ++ showSep " " (map snd argTypes) ++ " -> " ++
+                             pure $ "(define-" ++ fromString libn ++ " " ++ fromString cfn ++
+                                    " (_fun " ++ sepBy " " (map snd argTypes) ++ " -> " ++
                                         retType ++ "))\n"
-         let call = "(" ++ cfn ++ " " ++
-                    showSep " " !(traverse useArg (map fst argTypes)) ++ ")"
+         let call = "(" ++ fromString cfn ++ " " ++
+                    sepBy " " !(traverse useArg (map fst argTypes)) ++ ")"
 
-         pure (lib ++ cbind, case ret of
+         pure (fromString lib ++ cbind, case ret of
                                   CFIORes rt => handleRet rt call
                                   _ => call)
   where
-    mkNs : Int -> List CFType -> List (Maybe (String, CFType))
+    mkNs : Int -> List CFType -> List (Maybe (Builder, CFType))
     mkNs i [] = []
     mkNs i (CFWorld :: xs) = Nothing :: mkNs i xs
-    mkNs i (x :: xs) = Just ("cb" ++ show i, x) :: mkNs (i + 1) xs
+    mkNs i (x :: xs) = Just (fromString ("cb" ++ show i), x) :: mkNs (i + 1) xs
 
-    applyLams : String -> List (Maybe (String, CFType)) -> String
+    applyLams : Builder -> List (Maybe (Builder, CFType)) -> Builder
     applyLams n [] = n
     applyLams n (Nothing :: as) = applyLams ("(" ++ n ++ " #f)") as
     applyLams n (Just (a, ty) :: as)
         = applyLams ("(" ++ n ++ " " ++ cToRkt ty a ++ ")") as
 
-    mkFun : List CFType -> CFType -> String -> String
+    mkFun : List CFType -> CFType -> Builder -> Builder
     mkFun args ret n
         = let argns = mkNs 0 args in
-              "(lambda (" ++ showSep " " (map fst (mapMaybe id argns)) ++ ") " ++
+              "(lambda (" ++ sepBy " " (map fst (catMaybes argns)) ++ ") " ++
               (applyLams n argns ++ ")")
 
     notWorld : CFType -> Bool
     notWorld CFWorld = False
     notWorld _ = True
 
-    callback : String -> List CFType -> CFType -> Core String
+    callback : Builder -> List CFType -> CFType -> Core Builder
     callback n args (CFFun s t) = callback n (s :: args) t
     callback n args_rev retty
         = do let args = reverse args_rev
@@ -251,18 +254,18 @@ cCall appdir fc cfn libspec args ret
              retType <- cftySpec fc retty
              pure $ mkFun args retty n
 
-    useArg : (Name, CFType) -> Core String
+    useArg : (Name, CFType) -> Core Builder
     useArg (n, CFFun s t) = callback (schName n) [s] t
     useArg (n, ty)
         = pure $ rktToC ty (schName n)
 
 schemeCall : FC -> (sfn : String) ->
-             List Name -> CFType -> Core String
+             List Name -> CFType -> Builder
 schemeCall fc sfn argns ret
-    = let call = "(" ++ sfn ++ " " ++ showSep " " (map schName argns) ++ ")" in
+    = let call = "(" ++ fromString sfn ++ " " ++ sepBy " " (map schName argns) ++ ")" in
           case ret of
-               CFIORes _ => pure $ mkWorld call
-               _ => pure call
+               CFIORes _ => mkWorld call
+               _ => call
 
 -- Use a calling convention to compile a foreign def.
 -- Returns any preamble needed for loading libraries, and the body of the
@@ -270,15 +273,15 @@ schemeCall fc sfn argns ret
 useCC : {auto f : Ref Done (List String) } ->
         {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
-        String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
+        String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (Builder, Builder)
 useCC appdir fc ccs args ret
     = case parseCC ["scheme,racket", "scheme", "C"] ccs of
            Nothing => throw (NoForeignCC fc ccs)
            Just ("scheme,racket", [sfn]) =>
-               do body <- schemeCall fc sfn (map fst args) ret
+               do let body = schemeCall fc sfn (map fst args) ret
                   pure ("", body)
            Just ("scheme", [sfn]) =>
-               do body <- schemeCall fc sfn (map fst args) ret
+               do let body = schemeCall fc sfn (map fst args) ret
                   pure ("", body)
            Just ("C", [cfn, clib]) => cCall appdir fc cfn clib args ret
            Just ("C", [cfn, clib, chdr]) => cCall appdir fc cfn clib args ret
@@ -292,18 +295,18 @@ mkArgs i (CFWorld :: cs) = (MN "farg" i, False) :: mkArgs i cs
 mkArgs i (c :: cs) = (MN "farg" i, True) :: mkArgs (i + 1) cs
 
 mkStruct : {auto s : Ref Structs (List String)} ->
-           CFType -> Core String
+           CFType -> Core Builder
 mkStruct (CFStruct n flds)
     = do defs <- traverse mkStruct (map snd flds)
          strs <- get Structs
          if n `elem` strs
             then pure (concat defs)
             else do put Structs (n :: strs)
-                    pure $ concat defs ++ "(define-cstruct _" ++ n ++ " ("
-                           ++ showSep "\n\t" !(traverse showFld flds) ++ "))\n"
+                    pure $ concat defs ++ "(define-cstruct _" ++ fromString n ++ " ("
+                           ++ sepBy "\n\t" !(traverse showFld flds) ++ "))\n"
   where
-    showFld : (String, CFType) -> Core String
-    showFld (n, ty) = pure $ "[" ++ n ++ " " ++ !(cftySpec emptyFC ty) ++ "]"
+    showFld : (String, CFType) -> Core Builder
+    showFld (n, ty) = pure $ "[" ++ fromString n ++ " " ++ !(cftySpec emptyFC ty) ++ "]"
 mkStruct (CFIORes t) = mkStruct t
 mkStruct (CFFun a b) = do ignore (mkStruct a); mkStruct b
 mkStruct _ = pure ""
@@ -312,7 +315,7 @@ schFgnDef : {auto f : Ref Done (List String) } ->
             {auto c : Ref Ctxt Defs} ->
             {auto l : Ref Loaded (List String)} ->
             {auto s : Ref Structs (List String)} ->
-            String -> FC -> Name -> NamedDef -> Core (String, String)
+            String -> FC -> Name -> NamedDef -> Core (Builder, Builder)
 schFgnDef appdir fc n (MkNmForeign cs args ret)
     = do let argns = mkArgs 0 args
          let allargns = map fst argns
@@ -323,7 +326,7 @@ schFgnDef appdir fc n (MkNmForeign cs args ret)
          defs <- get Ctxt
          pure (concat argStrs ++ retStr ++ load,
                 "(define " ++ schName !(full (gamma defs) n) ++
-                " (lambda (" ++ showSep " " (map schName allargns) ++ ") " ++
+                " (lambda (" ++ sepBy " " (map schName allargns) ++ ") " ++
                 body ++ "))\n")
 schFgnDef _ _ _ _ = pure ("", "")
 
@@ -331,7 +334,7 @@ getFgnCall : {auto f : Ref Done (List String) } ->
              {auto c : Ref Ctxt Defs} ->
              {auto l : Ref Loaded (List String)} ->
              {auto s : Ref Structs (List String)} ->
-             String -> (Name, FC, NamedDef) -> Core (String, String)
+             String -> (Name, FC, NamedDef) -> Core (Builder, Builder)
 getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
 
 startRacket : String -> String -> String -> String
@@ -392,7 +395,7 @@ compileToRKT c appdir tm outfile
          fgndefs <- traverse (getFgnCall appdir) ndefs
          (sortedDefs, constants) <- sortDefs ndefs
          compdefs <- traverse (getScheme constants (racketPrim constants) racketString) sortedDefs
-         let code = fastConcat (map snd fgndefs ++ compdefs)
+         let code = concat (map snd fgndefs) ++ concat compdefs
          main <- schExp constants (racketPrim constants) racketString 0 ctm
          support <- readDataFile "racket/support.rkt"
          ds <- getDirectives Racket
@@ -403,9 +406,9 @@ compileToRKT c appdir tm outfile
                      then "(profile (void " ++ main ++ ") #:order 'self)\n"
                      else "(void " ++ main ++ ")\n"
          let scm = schHeader prof (concat (map fst fgndefs)) ++
-                   support ++ extraRuntime ++ code ++
+                   fromString support ++ fromString extraRuntime ++ code ++
                    runmain ++ schFooter
-         Right () <- coreLift $ writeFile outfile scm
+         Right () <- coreLift $ writeFile outfile $ build scm
             | Left err => throw (FileErr outfile err)
          coreLift_ $ chmodRaw outfile 0o755
          pure ()

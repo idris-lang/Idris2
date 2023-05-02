@@ -6,8 +6,12 @@
 
 * New magic constants `__LOC__`, `__FILE__`, `__LINE__`, `__COL__`
   substituted at parsing time with a string corresponding to the
-  location, file name, line or column number associated to the
+  location, filename, line or column number associated to the
   magic constant's position.
+* The termination checker is now a faithful implementation of the 2001 paper on
+  size-change termination by Lee, Jones and Ben-Amram.
+* New function option `%unsafe` to mark definitions that are escape hatches
+  similar to the builtins `believe_me`, `assert_total`, etc.
 
 ### REPL changes
 
@@ -27,9 +31,11 @@
 * Non-recursive top-level constants are compiled to eagerly evaluated
   constants in Chez Scheme.
 
-#### Node.js
+#### Node.js/Browser
 
 * Generated JavaScript files now include a shebang when using the Node.js backend
+* NodeJS now supports `popen`/`pclose` for the `Read` mode.
+* `getChar` is now supported on Node.js and `putChar` is supported on both JavaScript backends.
 
 ### Compiler changes
 
@@ -51,7 +57,45 @@
   ```
   instead of failing with a strange error about (a) vs (a .rec).
 
+* Elaboration of datatypes now respects the totality annotations:
+  defining a `covering` or `partial` datatype in a `%default total`
+  file will not lead to a positivity error anymore.
+
+* Fixed a bug in the positivity checker that meant `Lazy` could be used
+  to hide negative occurrences.
+
+* Made sure that the positivity checker now respects `assert_total` annotations.
+
+* We now raise a warning for conflicting fixity declarations. They are
+  dangerous as Idris will pick an arbitrary one and so the meaning of an
+  expression can depend e.g. on the order in which modules are imported.
+
+  * Additionally some conflicting fixity declarations in the Idris 2 compiler
+    and libraries have been removed.
+
+* Constructors mentioned on the left hand side of functions/case alternatives
+  are now included in the `Refers to (runtime)` section of functions debug info.
+
+* The Lifted IR Representation now has a `HasNamespaces` implementation
+  in `Compiler.Separate` so Compilation Units at that stage can be generated.
+
+* Added the `compile.casetree.missing` log topic, along with its use in
+  `TTImp.ProcessDef.genRunTime`. This allows us to track when incomplete `case`
+  blocks get the runtime error added.
+
 ### Library changes
+
+#### Prelude
+
+* Improved performance of functions `isNL`, `isSpace`, and `isHexDigit`.
+
+* Implements `Foldable` and `Traversable` for pairs, right-biased as `Functor`.
+
+* Added a constructor (`MkInterpolation`) to `Interpolation`.
+
+* Added an `Interpolation` implementation for `Void`.
+
+* Added `Compose` instances for `Bifunctor`, `Bifoldable` and `Bitraversable`.
 
 #### Base
 
@@ -59,13 +103,88 @@
   release. Use `setBits8` and `getBits8` instead (with `cast` if you need to
   convert a `Bits8` to an `Int`), as their values are limited, as opposed to the
   assumption in `setByte` that the value is between 0 and 255.
+
 * Adds RefC support for 16- and 32-bit access in `Data.Buffer`.
+
+* Add `Show` instance to `Data.Vect.Quantifiers.All` and add a few helpers for listy
+  computations on the `All` type.
+* Add an alias for `HVect` to `All id` in `Data.Vect.Quantifiers.All`. This is the
+  approach to getting a heterogeneous `Vect` of elements that is general preferred by
+  the community vs. a standalone type as seen in `contrib`.
+* Add `Data.List.HasLength` from the compiler codebase slash contrib library but
+  adopt the type signature from the compiler codebase and some of the naming
+  from the contrib library. The type ended up being `HasLength n xs` rather than
+  `HasLength xs n`.
+
+* `System`'s `die` now prints the error message on stderr rather than stdout
+
+* Moved `Data.SortedMap` and `Data.SortedSet` from contrib to base.
+
+* Added missing buffer primitives (chezscheme only):
+  `setInt8`, `getInt8`, `getInt16`, `setInt64`, `getInt64`
+
+* Added new buffer (set/get) functions for built-in types `Bool`, `Nat`, `Integer`.
+
+* Tightened the types of:
+  `setInt16` (now takes an `Int16` instead of an `Int`),
+  `setInt32` (now takes an `Int32` instead of an `Int`),
+  `getInt32` (now returns an `Int32` instead of an `Int`)
+
+* Adds left- and right-rotation for `FiniteBits`.
+
+* Adds `Vect.permute` for applying permutations to `Vect`s.
+* Adds `Vect.kSplits` and `Vect.nSplits` for splitting a `Vect` whose length is
+  a known multiple of two `Nat`s (k * n) into k vectors of length n (and
+  vice-versa).
+* Adds `Vect.allFins` for generating all the `Fin` elements as a `Vect` with
+  matching length to the number of elements.
+
+* Add `withRawMode`, `enableRawMode`, `resetRawMode` for character at a time input on stdin.
+
+* Adds extraction functions to `Data.Singleton`.
+
 * Adds `Data.Vect.foldrImplGoLemma`.
 
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
   the number of configured processors.
+
+* Adds `popen2` to run a subprocess with bi-directional pipes.
+
+### Contrib
+
+* Adds `Data.List.Sufficient`, a small library defining a structurally inductive view of lists.
+
+* Remove Data.List.HasLength from contrib library but add it to the base library
+  with the type signature from the compiler codebase and some of the naming
+  from the contrib library. The type ended up being `HasLength n xs` rather than
+  `HasLength xs n`.
+
+* Adds an implementation for `Functor Text.Lexer.Tokenizer.Tokenizer`.
+
+* Adds `modFin` and `strengthenMod` to `Data.Fin.Extra`. These functions reason
+  about the modulo operator's upper bound, which can be useful when working with
+  indices (for example).
+
+#### Papers
+
+* In `Control.DivideAndConquer`: a port of the paper
+  `A Type-Based Approach to Divide-And-Conquer Recursion in Coq`
+  by Pedro Abreu, Benjamin Delaware, Alex Hubers, Christa Jenkins,
+  J. Garret Morris, and Aaron Stump
+
+### Other Changes
+
+* The `data` subfolder of an installed or local dependency package is now automatically
+  recognized as a "data" directory by Idris 2. See the
+  [documentation on Packages](https://idris2.readthedocs.io/en/latest/reference/packages.html)
+  for details.
+* The compiler no longer installs its own C support library into `${PREFIX}/lib`. This folder's
+  contents were always duplicates of files installed into `${PREFIX}/idris2-${IDRIS2_VERSION}/lib`. If you
+  need to adjust any tooling or scripts, point them to the latter location which still contains
+  these installed library files.
+* Renamed `support-clean` Makefile target to `clean-support`. This is in line with most of the `install-<something>` and `clean-<something>` naming.
 
 ## v0.6.0
 
@@ -457,7 +576,7 @@ Changed
   some non-deterministic properties (see issue
   [#1552](https://github.com/idris-lang/idris2/issues/1552)).
   NOTE: Due to complications with race-conditions, Chez not having channels
-  built in, etc, the reimplementation changes the semantics slightly:
+  built-in, etc, the reimplementation changes the semantics slightly:
   `channelPut` no longer blocks until the value has been received under the
   `chez` backend, but instead only blocks if there is already a value in the
   channel that has not been received.

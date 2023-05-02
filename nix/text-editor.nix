@@ -7,7 +7,7 @@ let
       ${my-emacs}/bin/emacs -q -l ${init-file} $@
     '';
 in rec {
-  idris2-mode = emacsPackages.melpaBuild {
+  idris2-mode = emacsPackages.trivialBuild {
     pname = "idris2-mode";
     src = idris-emacs-src;
     packageRequires = with pkgs.emacsPackages.melpaPackages; [ prop-menu ];

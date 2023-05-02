@@ -36,6 +36,11 @@ else
 	SHLIB_SUFFIX := .so
 endif
 
+ifneq (, $(findstring freebsd, $(MACHINE)))
+	CFLAGS += -I$(shell /sbin/sysctl -n user.localbase)/include
+	LDFLAGS += -L$(shell /sbin/sysctl -n user.localbase)/lib
+endif
+
 ifneq ($(OS),windows)
 	CFLAGS += -fPIC
 else ifneq (, $(findstring NT-6.1,$(shell uname)))

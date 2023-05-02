@@ -509,7 +509,8 @@ export
 TTC PartialReason where
   toBuf b NotStrictlyPositive = tag 0
   toBuf b (BadCall xs) = do tag 1; toBuf b xs
-  toBuf b (RecPath xs) = do tag 2; toBuf b xs
+  toBuf b (BadPath xs n) = do tag 2; toBuf b xs; toBuf b n
+  toBuf b (RecPath xs) = do tag 3; toBuf b xs
 
   fromBuf b
       = case !getTag of
@@ -517,6 +518,9 @@ TTC PartialReason where
              1 => do xs <- fromBuf b
                      pure (BadCall xs)
              2 => do xs <- fromBuf b
+                     n <- fromBuf b
+                     pure (BadPath xs n)
+             3 => do xs <- fromBuf b
                      pure (RecPath xs)
              _ => corrupt "PartialReason"
 
@@ -1073,11 +1077,12 @@ TTC SizeChange where
 
 export
 TTC SCCall where
-  toBuf b c = do toBuf b (fnCall c); toBuf b (fnArgs c)
+  toBuf b c = do toBuf b (fnCall c); toBuf b (fnArgs c); toBuf b (fnLoc c)
   fromBuf b
       = do fn <- fromBuf b
            args <- fromBuf b
-           pure (MkSCCall fn args)
+           loc <- fromBuf b
+           pure (MkSCCall fn args loc)
 
 export
 TTC GlobalDef where
@@ -1103,6 +1108,7 @@ TTC GlobalDef where
                  toBuf b (localVars gdef)
                  toBuf b (visibility gdef)
                  toBuf b (totality gdef)
+                 toBuf b (isEscapeHatch gdef)
                  toBuf b (flags gdef)
                  toBuf b (invertible gdef)
                  toBuf b (noCycles gdef)
@@ -1128,16 +1134,16 @@ TTC GlobalDef where
                       seargs <- fromBuf b; specargs <- fromBuf b
                       iargs <- fromBuf b;
                       vars <- fromBuf b
-                      vis <- fromBuf b; tot <- fromBuf b
+                      vis <- fromBuf b; tot <- fromBuf b; hatch <- fromBuf b
                       fl <- fromBuf b
                       inv <- fromBuf b
                       c <- fromBuf b
                       sc <- fromBuf b
                       pure (MkGlobalDef loc name ty eargs seargs specargs iargs
                                         mul vars vis
-                                        tot fl refs refsR inv c True def cdef Nothing sc Nothing)
+                                        tot hatch fl refs refsR inv c True def cdef Nothing sc Nothing)
               else pure (MkGlobalDef loc name (Erased loc Placeholder) [] [] [] []
-                                     mul [] Public unchecked [] refs refsR
+                                     mul [] Public unchecked False [] refs refsR
                                      False False True def cdef Nothing [] Nothing)
 
 export

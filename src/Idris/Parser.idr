@@ -702,7 +702,8 @@ mutual
                                     , map (Just . UN . Basic) n
                                     , PImplicit (boundToFC fname n))
                              ) (forget ns)
-           mustWorkBecause b.bounds "Cannot return a forall quantifier"
+           b' <- bounds peek
+           mustWorkBecause b'.bounds "Expected ',' or '.'"
              $ decoratedSymbol fname "."
            scope <- mustWork $ typeExpr pdef fname indents
            pure (pibindAll fname Implicit b.val scope)
@@ -1010,8 +1011,9 @@ mutual
                                           Left err => fatalLoc begin.bounds err
                                           Right pstrs => pure $ pstrs
                             strEnd
-                            pure pstrs
-           pure $ PString (boundToFC fname b) b.val
+                            pure (begin.val, pstrs)
+           pure $ let (hashtag, str) = b.val in
+                      PString (boundToFC fname b) hashtag str
     where
       toPStr : (WithBounds $ Either PTerm (List1 String)) -> Either String PStr
       toPStr x = case x.val of
@@ -1023,14 +1025,14 @@ mutual
   multilineStr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   multilineStr q fname idents
       = decorate fname Data $
-        do b <- bounds $ do multilineBegin
+        do b <- bounds $ do hashtag <- multilineBegin
                             commit
                             xs <- many $ bounds $ (interpBlock q fname idents) <||> strLitLines
                             endloc <- location
                             strEnd
-                            pure (endloc, toLines xs [<] [<])
-           pure $ let ((_, col), xs) = b.val in
-                      PMultiline (boundToFC fname b) (fromInteger $ cast col) xs
+                            pure (hashtag, endloc, toLines xs [<] [<])
+           pure $ let (hashtag, (_, col), xs) = b.val in
+                      PMultiline (boundToFC fname b) hashtag (fromInteger $ cast col) xs
     where
       toLines : List (WithBounds $ Either PTerm (List1 String)) ->
                 SnocList PStr -> SnocList (List PStr) -> List (List PStr)
@@ -1491,6 +1493,9 @@ fnDirectOpt fname
   <|> do decoratedPragma fname "inline"
          commit
          pure $ IFnOpt Inline
+  <|> do decoratedPragma fname "unsafe"
+         commit
+         pure $ IFnOpt Unsafe
   <|> do decoratedPragma fname "noinline"
          commit
          pure $ IFnOpt NoInline
@@ -1550,11 +1555,12 @@ getVisibility (Just vis) (Left x :: xs)
    = fatalError "Multiple visibility modifiers"
 getVisibility v (_ :: xs) = getVisibility v xs
 
-recordConstructor : OriginDesc -> Rule Name
+recordConstructor : OriginDesc -> Rule (String, Name)
 recordConstructor fname
-  = do exactIdent "constructor"
+  = do doc <- optDocumentation fname
+       decorate fname Keyword $ exactIdent "constructor"
        n <- mustWork $ decoratedDataConstructorName fname
-       pure n
+       pure (doc, n)
 
 constraints : OriginDesc -> IndentInfo -> EmptyRule (List (Maybe Name, PTerm))
 constraints fname indents
@@ -1765,8 +1771,7 @@ claims fname indents
                   vis     <- getVisibility Nothing visOpts
                   let opts = mapMaybe getRight visOpts
                   rig  <- multiplicity fname
-                  cls  <- tyDecls (dependentDecorate fname name
-                                  $ \ nm => ifThenElse (isUnsafeBuiltin nm) Postulate Function)
+                  cls  <- tyDecls (decorate fname Function name)
                                   doc fname indents
                   pure $ map (\cl => the (Pair _ _) (doc, vis, opts, rig, cl)) cls)
          pure $ map (\(doc, vis, opts, rig, cl) : Pair _ _ =>

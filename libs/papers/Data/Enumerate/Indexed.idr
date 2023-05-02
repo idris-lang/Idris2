@@ -86,7 +86,7 @@ isized f (S n) v = runIEnumerator (f v) (isized f n)
 -- Defining  generic enumerators for indexed datatypes
 ------------------------------------------------------------------------------
 
-covering export
+export
 indexed : (d : i -> IDesc List i) -> (v : i) -> IEnumerator (Fix d) (Fix d v)
 indexed d v = MkFix <$> go (d v) where
 
@@ -98,11 +98,11 @@ indexed d v = MkFix <$> go (d v) where
   go (d1 + d2) = Left <$> go d1 <|> Right <$> go d2
   go (Sig s vs f) = sig (const vs) (\ x => go (f x))
 
-export covering
+export
 0 Memorator : (d : Desc p) -> (Fix d -> Type) -> Type -> Type
 Memorator d a b = (d ~> (List . a)) -> List b
 
-export covering
+export
 memorate : {d : Desc p} ->
            {0 b : Fix d -> Type} ->
            ((x : Fix d) -> Memorator d b (b x)) ->

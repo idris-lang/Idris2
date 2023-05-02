@@ -27,6 +27,7 @@ import Idris.Elab.Interface
 import Idris.Desugar.Mutual
 
 import Parser.Lexer.Source
+import Parser.Support
 
 import TTImp.BindImplicits
 import TTImp.Parser
@@ -81,6 +82,29 @@ extendSyn newsyn
            , "New (" ++ unwords (map show $ saveMod newsyn) ++ "): "
               ++ show (modDocstrings newsyn)
            ]
+         -- Check there are no conflicting definitions
+         let oldprefix = map (Prefix,) <$> (prefixes syn)
+         let newprefix = map (Prefix,) <$> (prefixes newsyn)
+         let oldinfix  = infixes syn
+         let newinfix  = infixes newsyn
+
+         let check = mapMaybe (\ entry@(k, ((_, v), (_, v'))) => entry <$ guard (k /= "-" && (v /= v')))
+                   . StringMap.toList
+         let inter = concatMap {t = List} {m = List _} check
+                   [ sharedSupport oldprefix newprefix
+                   , sharedSupport oldprefix newinfix
+                   , sharedSupport oldinfix  newprefix
+                   , sharedSupport oldinfix  newinfix
+                   ]
+         unless (null inter) $ recordWarning $ GenericWarn emptyFC $ unlines
+           $ ("Conflicting fixity declarations:" ::)
+           $ flip (concatMap {m = List _}) inter
+           $ \ (k, ((fc1, fix1, prec1), (fc2, fix2, prec2))) => pure $ unwords
+           [ "\{k}:"
+           , "\{show fix1} \{show prec1} (at \{show fc1})", "and"
+           , "\{show fix2} \{show prec2} (at \{show fc2})"
+           ]
+
          put Syn ({ infixes $= mergeLeft (infixes newsyn),
                     prefixes $= mergeLeft (prefixes newsyn),
                     ifaces $= merge (ifaces newsyn),
@@ -172,6 +196,27 @@ idiomise fc dons mns fn
      in IApp fc (IVar fc nm) fn
 
 data Bang : Type where
+
+checkFixity : {auto c : Ref Ctxt Defs} ->
+              {auto s : Ref Syn SyntaxInfo} ->
+              FC -> Fixity -> Nat -> String -> Core ()
+-- special case for "-", the one thing that's allowed to be both prefix & infix
+checkFixity fc fix prec "-" = pure ()
+checkFixity fc fix prec n =
+  do log "desugar.fixity" 10 "Desugaring fixity (\{show fix} \{show prec}) for \{show n}"
+     syn <- get Syn
+     let test = do (fc', fix', prec') <-
+                     lookup n (infixes syn)
+                     <|> map (map {f = Pair FC} {b = (Fixity, Nat)} (Prefix,)) (lookup n (prefixes syn))
+
+                   guard (not (fix == fix' && prec == prec'))
+                   pure (fc', fix', prec')
+     whenJust test $ \ (fc', fix', prec') =>
+       recordWarning $ GenericWarn fc $ unlines
+         [ "Conflicting fixity declarations for \{n}:"
+         , "  old: \{show fix'} \{show prec'} (\{show fc'})"
+         , "  new: \{show fix} \{show prec} (\{show fc})"
+         ]
 
 mutual
   desugarB : {auto s : Ref Syn SyntaxInfo} ->
@@ -329,19 +374,21 @@ mutual
     = do when (side == LHS) $
            throw (GenericMsg fc "? is not a valid pattern")
          pure $ Implicit fc False
-  desugarB side ps (PMultiline fc indent lines)
-      = addFromString fc !(expandString side ps fc !(trimMultiline fc indent lines))
+  desugarB side ps (PMultiline fc hashtag indent lines)
+      = addFromString fc !(expandString side ps fc hashtag !(trimMultiline fc indent lines))
 
   -- We only add `fromString` if we are looking at a plain string literal.
   -- Interpolated string literals don't have a `fromString` call since they
   -- are always concatenated with other strings and therefore can never use
   -- another `fromString` implementation that differs from `id`.
-  desugarB side ps (PString fc [])
+  desugarB side ps (PString fc hashtag [])
       = addFromString fc (IPrimVal fc (Str ""))
-  desugarB side ps (PString fc [StrLiteral fc' str])
-      = addFromString fc (IPrimVal fc' (Str str))
-  desugarB side ps (PString fc strs)
-      = expandString side ps fc strs
+  desugarB side ps (PString fc hashtag [StrLiteral fc' str])
+      = case unescape hashtag str of
+             Just str => addFromString fc (IPrimVal fc' (Str str))
+             Nothing => throw (GenericMsg fc "Invalid escape sequence: \{show str}")
+  desugarB side ps (PString fc hashtag strs)
+      = expandString side ps fc hashtag strs
 
   desugarB side ps (PDoBlock fc ns block)
       = expandDo side ps fc ns block
@@ -491,8 +538,8 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto o : Ref ROpts REPLOpts} ->
-                 Side -> List Name -> FC -> List PStr -> Core RawImp
-  expandString side ps fc xs
+                 Side -> List Name -> FC -> Nat -> List PStr -> Core RawImp
+  expandString side ps fc hashtag xs
     = do xs <- traverse toRawImp (filter notEmpty $ mergeStrLit xs)
          pure $ case xs of
            [] => IPrimVal fc (Str "")
@@ -506,7 +553,10 @@ mutual
                (strInterpolate xs)
     where
       toRawImp : PStr -> Core RawImp
-      toRawImp (StrLiteral fc str) = pure $ IPrimVal fc (Str str)
+      toRawImp (StrLiteral fc str) =
+        case unescape hashtag str of
+             Just str => pure $ IPrimVal fc (Str str)
+             Nothing => throw (GenericMsg fc "Invalid escape sequence: \{show str}")
       toRawImp (StrInterp fc tm) = desugarB side ps tm
 
       -- merge neighbouring StrLiteral
@@ -537,16 +587,14 @@ mutual
 
   trimMultiline : FC -> Nat -> List (List PStr) -> Core (List PStr)
   trimMultiline fc indent lines
-      = if indent == 0
-           then pure $ dropLastNL $ concat lines
-           else do
-             lines <- trimLast fc lines
-             lines <- traverse (trimLeft indent) lines
-             pure $ dropLastNL $ concat lines
+      = do lines <- trimLast fc lines
+           lines <- traverse (trimLeft indent) lines
+           pure $ concat $ dropLastNL lines
+
     where
       trimLast : FC -> List (List PStr) -> Core (List (List PStr))
       trimLast fc lines with (snocList lines)
-        trimLast fc [] | Empty = throw $ BadMultiline fc "Expected line wrap"
+        trimLast fc [] | Empty = throw $ BadMultiline fc "Expected new line"
         trimLast _ (initLines `snoc` []) | Snoc [] initLines _ = pure lines
         trimLast _ (initLines `snoc` [StrLiteral fc str]) | Snoc [(StrLiteral _ _)] initLines _
             = if any (not . isSpace) (fastUnpack str)
@@ -555,13 +603,6 @@ mutual
         trimLast _ (initLines `snoc` xs) | Snoc xs initLines _
             = let fc = fromMaybe fc $ findBy isStrInterp xs in
                   throw $ BadMultiline fc "Closing delimiter of multiline strings cannot be preceded by non-whitespace characters"
-
-      dropLastNL : List PStr -> List PStr
-      dropLastNL pstrs with (snocList pstrs)
-        dropLastNL [] | Empty = []
-        dropLastNL (initLines `snoc` (StrLiteral fc str)) | Snoc (StrLiteral _ _) initLines _
-            = initLines `snoc` (StrLiteral fc (fst $ break isNL str))
-        dropLastNL pstrs | _ = pstrs
 
       trimLeft : Nat -> List PStr -> Core (List PStr)
       trimLeft indent [] = pure []
@@ -577,6 +618,17 @@ mutual
               then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
              else pure $ (StrLiteral fc (fastPack rest))::xs
       trimLeft indent xs = throw $ BadMultiline fc "Line is less indented than the closing delimiter"
+
+      mapLast : (a -> a) -> List a -> List a
+      mapLast f [] = []
+      mapLast f [x] = [f x]
+      mapLast f (x :: xs) = x :: mapLast f xs
+
+      dropLastNL : List (List PStr) -> List (List PStr)
+      dropLastNL
+          = mapLast $ mapLast $
+              \case StrLiteral fc str => StrLiteral fc (fst $ break isNL str)
+                    other => other
 
   expandDo : {auto s : Ref Syn SyntaxInfo} ->
              {auto c : Ref Ctxt Defs} ->
@@ -609,10 +661,11 @@ mutual
            rest' <- expandDo side ps' topfc ns rest
            let fcOriginal = fc
            let fc = virtualiseFC fc
+           let patFC = virtualiseFC (getFC bpat)
            pure $ bindFun fc ns exp'
                 $ ILam EmptyFC top Explicit (Just (MN "_" 0))
                           (Implicit fc False)
-                          (ICase fc (IVar EmptyFC (MN "_" 0))
+                          (ICase fc (IVar patFC (MN "_" 0))
                                (Implicit fc False)
                                (PatClause fcOriginal bpat rest'
                                   :: alts'))
@@ -935,7 +988,7 @@ mutual
            let consb = map (\ (nm, tm) => (nm, doBind bnames tm)) cons'
 
            body' <- traverse (desugarDecl (ps ++ mnames ++ paramNames)) body
-           pure [IPragma fc (maybe [tn] (\n => [tn, n]) conname)
+           pure [IPragma fc (maybe [tn] (\n => [tn, snd n]) conname)
                             (\nest, env =>
                               elabInterface fc vis env nest consb
                                             tn paramsb det conname
@@ -1023,7 +1076,8 @@ mutual
                                               map fst params) (mkNamespace recName))
                                fields
            let _ = the (List IField) fields'
-           let conname = maybe (mkConName tn) id conname_in
+           let conname = maybe (mkConName tn) snd conname_in
+           whenJust (fst <$> conname_in) (addDocString conname)
            let _ = the Name conname
            pure [IRecord fc (Just recName)
                          vis mbtot (MkImpRecord fc tn paramsb opts conname fields')]
@@ -1041,10 +1095,12 @@ mutual
       mapDesugarPiInfo ps = traverse (desugar AnyExpr ps)
 
   desugarDecl ps (PFixity fc Prefix prec (UN (Basic n)))
-      = do update Syn { prefixes $= insert n (fc, prec) }
+      = do checkFixity fc Prefix prec n
+           update Syn { prefixes $= insert n (fc, prec) }
            pure []
   desugarDecl ps (PFixity fc fix prec (UN (Basic n)))
-      = do update Syn { infixes $= insert n (fc, fix, prec) }
+      = do checkFixity fc fix prec n
+           update Syn { infixes $= insert n (fc, fix, prec) }
            pure []
   desugarDecl ps (PFixity fc _ _ _)
       = throw (GenericMsg fc "Fixity declarations must be for unqualified names")

@@ -271,6 +271,15 @@ implementation Functor StringMap where
   map _ Empty = Empty
   map f (M n t) = M _ (treeMap f t)
 
+||| Return a map of pairs of values that happen to share the same keys
+export
+sharedSupport : StringMap v -> StringMap v -> StringMap (v, v)
+sharedSupport l
+  = foldl (\acc, (k, v) => case lookup k l of
+             Just v' => insert k (v, v') acc
+             Nothing => acc)
+    empty . StringMap.toList
+
 ||| Merge two maps. When encountering duplicate keys, using a function to combine the values.
 ||| Uses the ordering of the first map given.
 export

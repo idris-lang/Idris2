@@ -42,6 +42,8 @@ throwIfHasFlag fc ndef fl msg
 processFnOpt : {auto c : Ref Ctxt Defs} ->
                FC -> Bool -> -- ^ top level name?
                Name -> FnOpt -> Core ()
+processFnOpt fc _ ndef Unsafe
+    = do setIsEscapeHatch fc ndef
 processFnOpt fc _ ndef Inline
     = do throwIfHasFlag fc ndef NoInline "%noinline and %inline are mutually exclusive"
          setFlag fc ndef Inline
@@ -59,7 +61,7 @@ processFnOpt fc True ndef (Hint d)
          target <- getRetTy defs !(nf defs [] ty)
          addHintFor fc target ndef d False
 processFnOpt fc _ ndef (Hint d)
-    = do log "elab" 5 $ "Adding local hint " ++ show !(toFullNames ndef)
+    = do logC "elab" 5 $ do pure $ "Adding local hint " ++ show !(toFullNames ndef)
          addLocalHint ndef
 processFnOpt fc True ndef (GlobalHint a)
     = addGlobalHint ndef a
