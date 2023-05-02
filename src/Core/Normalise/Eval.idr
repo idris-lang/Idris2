@@ -85,7 +85,7 @@ data CaseResult a
 
 record TermWithEnv (free : List Name) where
     constructor MkTermEnv
-    varsEnv : List Name
+    { varsEnv : List Name }
     locEnv : LocalEnv free varsEnv
     term : Term $ varsEnv ++ free
 
@@ -322,7 +322,8 @@ parameters (defs : Defs, topopts : EvalOpts)
     getCaseBound (arg :: args) []        loc = Nothing -- mismatched arg length
     getCaseBound (arg :: args) (n :: ns) loc = (arg ::) <$> getCaseBound args ns loc
 
-    conAltTerm : {auto c : Ref Ctxt Defs} ->
+    -- Returns the case term from the matched pattern with the LocalEnv (arguments from constructor pattern ConCase)
+    evalConAlt : {auto c : Ref Ctxt Defs} ->
                  {more, free : _} ->
                  Env Term free ->
                  LocalEnv free more -> EvalOpts -> FC ->
@@ -331,10 +332,10 @@ parameters (defs : Defs, topopts : EvalOpts)
                  List (Closure free) ->
                  CaseTree (args ++ more) ->
                  Core (CaseResult (TermWithEnv free))
-    conAltTerm env loc opts fc stk args args' sc
+    evalConAlt env loc opts fc stk args args' sc
          = do let Just bound = getCaseBound args' args loc
                    | Nothing => pure GotStuck
-              caseTermTree env bound opts fc stk sc
+              evalTree env bound opts fc stk sc
 
     tryAlt : {auto c : Ref Ctxt Defs} ->
              {free, more : _} ->
@@ -348,41 +349,41 @@ parameters (defs : Defs, topopts : EvalOpts)
     -- Ordinary constructor matching
     tryAlt {more} env loc opts fc stk (NDCon _ nm tag' arity args') (ConCase x tag args sc)
          = if tag == tag'
-              then conAltTerm env loc opts fc stk args (map snd args') sc
+              then evalConAlt env loc opts fc stk args (map snd args') sc
               else pure NoMatch
     -- Type constructor matching, in typecase
     tryAlt {more} env loc opts fc stk (NTCon _ nm tag' arity args') (ConCase nm' tag args sc)
          = if nm == nm'
-              then conAltTerm env loc opts fc stk args (map snd args') sc
+              then evalConAlt env loc opts fc stk args (map snd args') sc
               else pure NoMatch
     -- Primitive type matching, in typecase
     tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase nm tag args sc)
          = case args of -- can't just test for it in the `if` for typing reasons
              [] => if UN (Basic $ show c) == nm
-                   then caseTermTree env loc opts fc stk sc
+                   then evalTree env loc opts fc stk sc
                    else pure NoMatch
              _ => pure NoMatch
     -- Type of type matching, in typecase
     tryAlt env loc opts fc stk (NType _ _) (ConCase (UN (Basic "Type")) tag [] sc)
-         = caseTermTree env loc opts fc stk sc
+         = evalTree env loc opts fc stk sc
     -- Arrow matching, in typecase
     tryAlt {more}
            env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN (Basic "->")) tag [s,t] sc)
-       = conAltTerm {more} env loc opts fc stk [s,t]
+       = evalConAlt {more} env loc opts fc stk [s,t]
                   [aty,
                    MkNFClosure opts env (NBind pfc x (Lam fc' r e aty) scty)]
                   sc
     -- Delay matching
     tryAlt env loc opts fc stk (NDelay _ _ ty arg) (DelayCase tyn argn sc)
-         = caseTermTree env (ty :: arg :: loc) opts fc stk sc
+         = evalTree env (ty :: arg :: loc) opts fc stk sc
     -- Constant matching
     tryAlt env loc opts fc stk (NPrimVal _ c') (ConstCase c sc)
-         = if c == c' then caseTermTree env loc opts fc stk sc
+         = if c == c' then evalTree env loc opts fc stk sc
                       else pure NoMatch
     -- Default case matches against any *concrete* value
     tryAlt env loc opts fc stk val (DefaultCase sc)
          = if concrete val
-              then caseTermTree env loc opts fc stk sc
+              then evalTree env loc opts fc stk sc
               else pure GotStuck
       where
         concrete : NF free -> Bool
@@ -405,7 +406,7 @@ parameters (defs : Defs, topopts : EvalOpts)
       log "eval.casetree.stuck" 2 "Ran out of alternatives"
       pure GotStuck
     findAlt env loc opts fc stk val (x :: xs)
-         = do (Result (MkTermEnv vars newLoc val)) <- tryAlt env loc opts fc stk val x
+         = do (Result (MkTermEnv newLoc val)) <- tryAlt env loc opts fc stk val x
                    | NoMatch => findAlt env loc opts fc stk val xs
                    | GotStuck => do
                        logC "eval.casetree.stuck" 5 $ do
@@ -413,14 +414,14 @@ parameters (defs : Defs, topopts : EvalOpts)
                          x <- toFullNames x
                          pure $ "Got stuck matching \{show val} against \{show x}"
                        pure GotStuck
-              pure (Result (MkTermEnv vars newLoc val))
+              pure (Result (MkTermEnv newLoc val))
 
-    caseTermTree : {auto c : Ref Ctxt Defs} ->
+    evalTree : {auto c : Ref Ctxt Defs} ->
                {args, free : _} -> Env Term free -> LocalEnv free args ->
                EvalOpts -> FC ->
                Stack free -> CaseTree args ->
                Core (CaseResult (TermWithEnv free))
-    caseTermTree env loc opts fc stk (Case {name} idx x _ alts)
+    evalTree env loc opts fc stk (Case {name} idx x _ alts)
       = do xval <- evalLocal env fc Nothing idx (varExtend x) [] loc
            -- we have not defined quote yet (it depends on eval itself) so we show the NF
            -- i.e. only the top-level constructor.
@@ -429,9 +430,9 @@ parameters (defs : Defs, topopts : EvalOpts)
              pure "Evaluated \{show name} to \{show xval}"
            let loc' = updateLocal opts env idx (varExtend x) loc xval
            findAlt env loc' opts fc stk xval alts
-    caseTermTree env loc opts fc stk (STerm _ tm)
-          = pure (Result $ MkTermEnv _ loc $ embed tm)
-    caseTermTree env loc opts fc stk _ = pure GotStuck
+    evalTree env loc opts fc stk (STerm _ tm)
+          = pure (Result $ MkTermEnv loc $ embed tm)
+    evalTree env loc opts fc stk _ = pure GotStuck
 
     -- Take arguments from the stack, as long as there's enough.
     -- Returns the arguments, and the rest of the stack
@@ -506,10 +507,10 @@ parameters (defs : Defs, topopts : EvalOpts)
                                        pure "Cannot reduce under-applied \{show def}"
                                      pure def
                        Just (locs', stk') =>
-                            do (Result (MkTermEnv _ newLoc res)) <- caseTermTree env locs' opts fc stk' tree
+                            do (Result (MkTermEnv newLoc res)) <- evalTree env locs' opts fc stk' tree
                                     | _ => do logC "eval.def.stuck" 50 $ do
                                                 def <- toFullNames def
-                                                pure "caseTermTree failed on \{show def}"
+                                                pure "evalTree failed on \{show def}"
                                               pure def
                                case fuel opts of
                                     Nothing => evalWithOpts defs opts env newLoc res stk'
