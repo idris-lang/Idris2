@@ -134,6 +134,9 @@
 
 * Adds extraction functions to `Data.Singleton`.
 
+* `TTImp` reflection functions are now `public export`, enabling use at the
+  type-level.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
