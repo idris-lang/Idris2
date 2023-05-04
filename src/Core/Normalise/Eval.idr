@@ -406,7 +406,7 @@ parameters (defs : Defs, topopts : EvalOpts)
       log "eval.casetree.stuck" 2 "Ran out of alternatives"
       pure GotStuck
     findAlt env loc opts fc stk val (x :: xs)
-         = do (Result (MkTermEnv newLoc val)) <- tryAlt env loc opts fc stk val x
+         = do res@(Result {}) <- tryAlt env loc opts fc stk val x
                    | NoMatch => findAlt env loc opts fc stk val xs
                    | GotStuck => do
                        logC "eval.casetree.stuck" 5 $ do
@@ -414,7 +414,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                          x <- toFullNames x
                          pure $ "Got stuck matching \{show val} against \{show x}"
                        pure GotStuck
-              pure (Result (MkTermEnv newLoc val))
+              pure res
 
     evalTree : {auto c : Ref Ctxt Defs} ->
                {args, free : _} -> Env Term free -> LocalEnv free args ->
