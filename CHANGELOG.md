@@ -142,6 +142,9 @@
 
 * Adds extraction functions to `Data.Singleton`.
 
+* `TTImp` reflection functions are now `public export`, enabling use at the
+  type-level.
+
 * Implemented `Eq`, `Ord`, `Semigroup`, and `Monoid` for `Data.List.Quantifiers.All.All`
   and `Data.Vect.Quantifiers.All.All`.
 
