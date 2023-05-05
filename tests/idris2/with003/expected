@@ -14,6 +14,7 @@ Main> Error: Can't find an implementation for Num ().
                                                                 ^^^^
 
 Main> Error: Ambiguous elaboration. Possible results:
+    Control.Relation.Nil
     Prelude.Nil
     Data.Vect.Nil
 
