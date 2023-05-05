@@ -12,6 +12,11 @@ import Libraries.Data.SortedSet
 
 %default covering
 
+-- Based on:
+-- The Size-Change Principle for Termination
+-- by Chin Soon Lee, Neil D. Jones, Amir M. Ben-Amram
+-- https://doi.org/10.1145/360204.360210
+
 ------------------------------------------------------------------------
 -- Basic types
 
@@ -209,6 +214,16 @@ prefixPath pred g = go g []
           else
             go f ((l, g) :: path)
 
+-- returns `Just a.path` iff there is no self-decreasing edge,
+-- i.e. there is no argument `n` with `index n a.change === (n, Smaller)`
+checkNonDesc : ArgChange -> Maybe Path
+checkNonDesc a = go Z a.change
+  where
+    go : Nat -> Change -> Maybe Path
+    go _ [] = Just a.path
+    go n (Just (k, Smaller) :: xs) = if n == k then Nothing else go (S n) xs
+    go n (_ :: xs) = go (S n) xs
+
 ||| Finding non-terminating loops
 findLoops : {auto c : Ref Ctxt Defs} -> SCSet ->
             Core (NameMap {- $ \ f => -} (Maybe (Path {- f f -} )))
@@ -218,16 +233,12 @@ findLoops s
          -- Hence the following filter:
          let loops = filterEndos (\a => composeChange a.change a.change == a.change) s
          log "totality.termination.calc" 7 $ "Loops: " ++ show loops
-         let terms = map (foldMap (\a => checkDesc a.change a.path)) loops
+         let terms = map (foldMap checkNonDesc) loops
          pure terms
     where
       filterEndos : (ArgChange -> Bool) -> SCSet -> NameMap (List ArgChange)
       filterEndos p = mapWithKey (\f, m => filter p (Data.SortedSet.toList (lookupSet f m)))
 
-      checkDesc : Change -> Path -> Maybe Path
-      checkDesc [] p = Just p
-      checkDesc (Just (_, Smaller) :: _) p = Nothing
-      checkDesc (_ :: xs) p = checkDesc xs p
 
 findNonTerminatingLoop : {auto c : Ref Ctxt Defs} -> SCSet -> Core (Maybe (Name, Path))
 findNonTerminatingLoop s

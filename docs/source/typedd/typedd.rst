@@ -19,7 +19,7 @@ necessary changes.
 Chapter 1
 ---------
 
-No changes necessary
+Instead of entering ``:exec`` to run ``Hello.idr`` in the REPL, enter ``:exec main``.
 
 Chapter 2
 ---------
@@ -39,6 +39,8 @@ In ``AveMain.idr`` and ``Reverse.idr`` add:
 .. code-block:: idris
 
     import System.REPL -- for 'repl'
+
+Instead of entering ``:exec`` to run ``main`` from ``AveMain.idr``, enter ``:exec main``.
 
 Chapter 3
 ---------

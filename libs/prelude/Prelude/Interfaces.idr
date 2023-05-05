@@ -160,6 +160,15 @@ public export
 mapHom : Bifunctor f => (a -> b) -> f a a -> f b b
 mapHom f = bimap f f
 
+namespace Bifunctor
+
+  ||| Composition of a bifunctor and a functor is a bifunctor.
+  public export %inline
+  [Compose] (l : Functor f) => (r : Bifunctor g) => Bifunctor (f .: g) where
+    bimap = map .: bimap
+    mapFst = map . mapFst
+    mapSnd = map . mapSnd
+
 public export
 interface Functor f => Applicative f where
   constructor MkApplicative
@@ -520,6 +529,15 @@ public export
 bifoldMapFst : Monoid acc => Bifoldable p => (a -> acc) -> p a b -> acc
 bifoldMapFst f = bifoldMap f (const neutral)
 
+namespace Bifoldable
+
+  ||| Composition of a bifoldable and a foldable is bifoldable.
+  public export
+  [Compose] (l : Foldable f) => (r : Bifoldable p) => Bifoldable (f .: p) where
+    bifoldr = foldr .: flip .: bifoldr
+    bifoldl = foldl .: bifoldl
+    binull fp = null fp || all binull fp
+
 public export
 interface (Functor t, Foldable t) => Traversable t where
   constructor MkTraversable
@@ -564,6 +582,14 @@ namespace Traversable
   [Compose] (l : Traversable t) => (r : Traversable f) => Traversable (t . f)
     using Foldable.Compose Functor.Compose where
       traverse = traverse . traverse
+
+namespace Bitraveresable
+
+  ||| Composition of a bitraversable and a traversable is bitraversable.
+  public export
+  [Compose] (l : Traversable t) => (r : Bitraversable p) => Bitraversable (t .: p)
+    using Bifoldable.Compose Bifunctor.Compose where
+      bitraverse = traverse .: bitraverse
 
 namespace Monad
   ||| Composition of a traversable monad and a monad is a monad.
