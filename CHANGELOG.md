@@ -83,6 +83,8 @@
   `TTImp.ProcessDef.genRunTime`. This allows us to track when incomplete `case`
   blocks get the runtime error added.
 
+* Constant folding of trivial let statements.
+
 ### Library changes
 
 #### Prelude
