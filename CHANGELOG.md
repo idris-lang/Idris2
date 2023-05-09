@@ -83,6 +83,8 @@
   `TTImp.ProcessDef.genRunTime`. This allows us to track when incomplete `case`
   blocks get the runtime error added.
 
+* Constant folding of trivial let statements and `believe_me`.
+
 ### Library changes
 
 #### Prelude
@@ -142,6 +144,17 @@
 * Add `withRawMode`, `enableRawMode`, `resetRawMode` for character at a time input on stdin.
 
 * Adds extraction functions to `Data.Singleton`.
+
+* `TTImp` reflection functions are now `public export`, enabling use at the
+  type-level.
+
+* Implemented `Eq`, `Ord`, `Semigroup`, and `Monoid` for `Data.List.Quantifiers.All.All`
+  and `Data.Vect.Quantifiers.All.All`.
+
+* Generalized `imapProperty` in `Data.List.Quantifiers.All.All`
+  and `Data.Vect.Quantifiers.All.All`.
+
+* Add `zipPropertyWith` to `Data.Vect.Quantifiers.All.All`.
 
 * Adds `Data.Vect.foldrImplGoLemma`.
 

@@ -454,12 +454,12 @@ data Mode = InDecl | InCase
 
 mutual
 
-  export
+  public export
   Show IField where
     show (MkIField fc rig pinfo nm s) =
       showPiInfo {wrapExplicit=False} pinfo (showCount rig "\{show nm} : \{show s}")
 
-  export
+  public export
   Show Record where
     show (MkRecord fc n params opts conName fields) -- TODO: print opts
       = unwords
@@ -474,7 +474,7 @@ mutual
       , "}"
       ]
 
-  export
+  public export
   Show Data where
     show (MkData fc n tycon opts datacons) -- TODO: print opts
       = unwords
@@ -483,11 +483,11 @@ mutual
       ]
     show (MkLater fc n tycon) = unwords [ "data", show n, ":", show tycon ]
 
-  export
+  public export
   Show ITy where
     show (MkTy fc nameFC n ty) = "\{show n} : \{show ty}"
 
-  export
+  public export
   Show Decl where
     show (IClaim fc rig vis xs sig)
       = unwords [ show vis
@@ -521,12 +521,12 @@ mutual
       Just (topic, lvl) => "%logging \{joinBy "." topic} \{show lvl}"
     show (IBuiltin fc bty nm) = "%builtin \{show bty} \{show nm}"
 
-  export
+  public export
   Show IFieldUpdate where
     show (ISetField path s) = "\{joinBy "->" path} := \{show s}"
     show (ISetFieldApp path s) = "\{joinBy "->" path} $= \{show s}"
 
-  export
+  public export
   showClause : Mode -> Clause -> String
   showClause mode (PatClause fc lhs rhs) = "\{show lhs} \{showSep mode} \{show rhs}" where
     showSep : Mode -> String
@@ -555,7 +555,7 @@ mutual
     else unwords [showPrefix True nm, a, b]
   showIApps f ts = unwords (show f :: ts)
 
-  export
+  public export
   Show TTImp where
     showPrec d (IVar fc nm) = showPrefix True nm
     showPrec d (IPi fc MW ExplicitArg Nothing argTy retTy)
@@ -633,12 +633,12 @@ data Argument a
   | NamedArg FC Name a
   | AutoArg FC a
 
-export
+public export
 isExplicit : Argument a -> Maybe (FC, a)
 isExplicit (Arg fc a) = pure (fc, a)
 isExplicit _ = Nothing
 
-export
+public export
 fromPiInfo : FC -> PiInfo t -> Maybe Name -> a -> Maybe (Argument a)
 fromPiInfo fc ImplicitArg (Just nm) a = pure (NamedArg fc nm a)
 fromPiInfo fc ExplicitArg _ a = pure (Arg fc a)
@@ -646,26 +646,26 @@ fromPiInfo fc AutoImplicit _ a = pure (AutoArg fc a)
 fromPiInfo fc (DefImplicit _) (Just nm) a = pure (NamedArg fc nm a)
 fromPiInfo _ _ _ _ = Nothing
 
-export
+public export
 Functor Argument where
   map f (Arg fc a) = Arg fc (f a)
   map f (NamedArg fc nm a) = NamedArg fc nm (f a)
   map f (AutoArg fc a) = AutoArg fc (f a)
 
-export
+public export
 iApp : TTImp -> Argument TTImp -> TTImp
 iApp f (Arg fc t) = IApp fc f t
 iApp f (NamedArg fc nm t) = INamedApp fc f nm t
 iApp f (AutoArg fc t) = IAutoApp fc f t
 
-export
+public export
 unArg : Argument a -> a
 unArg (Arg _ x) = x
 unArg (NamedArg _ _ x) = x
 unArg (AutoArg _ x) = x
 
 ||| We often apply multiple arguments, this makes things simpler
-export
+public export
 apply : TTImp -> List (Argument TTImp) -> TTImp
 apply = foldl iApp
 
@@ -683,7 +683,7 @@ record AppView (t : TTImp) where
   args : SnocList (Argument TTImp)
   0 isAppView : IsAppView head args t
 
-export
+public export
 appView : (t : TTImp) -> Maybe (AppView t)
 appView (IVar fc f) = Just (MkAppView (fc, f) [<] AVVar)
 appView (IApp fc f t) = do
@@ -699,28 +699,28 @@ appView _ = Nothing
 
 parameters (f : TTImp -> TTImp)
 
-  export
+  public export
   mapTTImp : TTImp -> TTImp
 
-  export
+  public export
   mapPiInfo : PiInfo TTImp -> PiInfo TTImp
   mapPiInfo ImplicitArg = ImplicitArg
   mapPiInfo ExplicitArg = ExplicitArg
   mapPiInfo AutoImplicit = AutoImplicit
   mapPiInfo (DefImplicit t) = DefImplicit (mapTTImp t)
 
-  export
+  public export
   mapClause : Clause -> Clause
   mapClause (PatClause fc lhs rhs) = PatClause fc (mapTTImp lhs) (mapTTImp rhs)
   mapClause (WithClause fc lhs rig wval prf flags cls)
     = WithClause fc (mapTTImp lhs) rig (mapTTImp wval) prf flags (assert_total $ map mapClause cls)
   mapClause (ImpossibleClause fc lhs) = ImpossibleClause fc (mapTTImp lhs)
 
-  export
+  public export
   mapITy : ITy -> ITy
   mapITy (MkTy fc nameFC n ty) = MkTy fc nameFC n (mapTTImp ty)
 
-  export
+  public export
   mapFnOpt : FnOpt -> FnOpt
   mapFnOpt Inline = Inline
   mapFnOpt NoInline = NoInline
@@ -736,22 +736,22 @@ parameters (f : TTImp -> TTImp)
   mapFnOpt Macro = Macro
   mapFnOpt (SpecArgs ns) = SpecArgs ns
 
-  export
+  public export
   mapData : Data -> Data
   mapData (MkData fc n tycon opts datacons)
     = MkData fc n (map mapTTImp tycon) opts (map mapITy datacons)
   mapData (MkLater fc n tycon) = MkLater fc n (mapTTImp tycon)
 
-  export
+  public export
   mapIField : IField -> IField
   mapIField (MkIField fc rig pinfo n t) = MkIField fc rig (mapPiInfo pinfo) n (mapTTImp t)
 
-  export
+  public export
   mapRecord : Record -> Record
   mapRecord (MkRecord fc n params opts conName fields)
     = MkRecord fc n (map (map $ map $ bimap mapPiInfo mapTTImp) params) opts conName (map mapIField fields)
 
-  export
+  public export
   mapDecl : Decl -> Decl
   mapDecl (IClaim fc rig vis opts ty)
     = IClaim fc rig vis (map mapFnOpt opts) (mapITy ty)
@@ -765,12 +765,12 @@ parameters (f : TTImp -> TTImp)
   mapDecl (ILog x) = ILog x
   mapDecl (IBuiltin fc x n) = IBuiltin fc x n
 
-  export
+  public export
   mapIFieldUpdate : IFieldUpdate -> IFieldUpdate
   mapIFieldUpdate (ISetField path t) = ISetField path (mapTTImp t)
   mapIFieldUpdate (ISetFieldApp path t) = ISetFieldApp path (mapTTImp t)
 
-  export
+  public export
   mapAltType : AltType -> AltType
   mapAltType FirstSuccess = FirstSuccess
   mapAltType Unique = Unique
@@ -814,17 +814,17 @@ parameters (f : TTImp -> TTImp)
 
 parameters {0 m : Type -> Type} {auto mon : Monad m} (f : TTImp -> m TTImp)
 
-  export
+  public export
   mapMTTImp : TTImp -> m TTImp
 
-  export
+  public export
   mapMPiInfo : PiInfo TTImp -> m (PiInfo TTImp)
   mapMPiInfo ImplicitArg = pure ImplicitArg
   mapMPiInfo ExplicitArg = pure ExplicitArg
   mapMPiInfo AutoImplicit = pure AutoImplicit
   mapMPiInfo (DefImplicit t) = DefImplicit <$> mapMTTImp t
 
-  export
+  public export
   mapMClause : Clause -> m Clause
   mapMClause (PatClause fc lhs rhs) = PatClause fc <$> mapMTTImp lhs <*> mapMTTImp rhs
   mapMClause (WithClause fc lhs rig wval prf flags cls)
@@ -837,11 +837,11 @@ parameters {0 m : Type -> Type} {auto mon : Monad m} (f : TTImp -> m TTImp)
     <*> assert_total (traverse mapMClause cls)
   mapMClause (ImpossibleClause fc lhs) = ImpossibleClause fc <$> mapMTTImp lhs
 
-  export
+  public export
   mapMITy : ITy -> m ITy
   mapMITy (MkTy fc nameFC n ty) = MkTy fc nameFC n <$> mapMTTImp ty
 
-  export
+  public export
   mapMFnOpt : FnOpt -> m FnOpt
   mapMFnOpt Inline = pure Inline
   mapMFnOpt NoInline = pure NoInline
@@ -857,18 +857,18 @@ parameters {0 m : Type -> Type} {auto mon : Monad m} (f : TTImp -> m TTImp)
   mapMFnOpt Macro = pure Macro
   mapMFnOpt (SpecArgs ns) = pure (SpecArgs ns)
 
-  export
+  public export
   mapMData : Data -> m Data
   mapMData (MkData fc n tycon opts datacons)
     = MkData fc n <$> traverse mapMTTImp tycon <*> pure opts <*> traverse mapMITy datacons
   mapMData (MkLater fc n tycon) = MkLater fc n <$> mapMTTImp tycon
 
-  export
+  public export
   mapMIField : IField -> m IField
   mapMIField (MkIField fc rig pinfo n t)
    = MkIField fc rig <$> mapMPiInfo pinfo <*> pure n <*> mapMTTImp t
 
-  export
+  public export
   mapMRecord : Record -> m Record
   mapMRecord (MkRecord fc n params opts conName fields)
     = MkRecord fc n
@@ -877,7 +877,7 @@ parameters {0 m : Type -> Type} {auto mon : Monad m} (f : TTImp -> m TTImp)
     <*> pure conName
     <*> traverse mapMIField fields
 
-  export
+  public export
   mapMDecl : Decl -> m Decl
   mapMDecl (IClaim fc rig vis opts ty)
     = IClaim fc rig vis <$> traverse mapMFnOpt opts <*> mapMITy ty
@@ -891,12 +891,12 @@ parameters {0 m : Type -> Type} {auto mon : Monad m} (f : TTImp -> m TTImp)
   mapMDecl (ILog x) = pure (ILog x)
   mapMDecl (IBuiltin fc x n) = pure (IBuiltin fc x n)
 
-  export
+  public export
   mapMIFieldUpdate : IFieldUpdate -> m IFieldUpdate
   mapMIFieldUpdate (ISetField path t) = ISetField path <$> mapMTTImp t
   mapMIFieldUpdate (ISetFieldApp path t) = ISetFieldApp path <$> mapMTTImp t
 
-  export
+  public export
   mapMAltType : AltType -> m AltType
   mapMAltType FirstSuccess = pure FirstSuccess
   mapMAltType Unique = pure Unique

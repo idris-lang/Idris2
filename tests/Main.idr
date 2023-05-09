@@ -248,7 +248,7 @@ idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
        "reflection005", "reflection006", "reflection007", "reflection008",
        "reflection009", "reflection010", "reflection011", "reflection012",
        "reflection013", "reflection014", "reflection015", "reflection016",
-       "reflection017"]
+       "reflection017", "reflection018"]
 
 idrisTestsWith : TestPool
 idrisTestsWith = MkTestPool "With abstraction" [] Nothing
@@ -310,7 +310,7 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "futures001"
     , "bitops"
     , "casts"
-    , "constfold"
+    , "constfold", "constfold2", "constfold3"
     , "memo"
     , "newints"
     , "integers"
