@@ -906,12 +906,12 @@ groupAllWith f = groupWith f . sortBy (comparing f)
 
 -- Nil is not Cons
 export
-{0 xs : List a} -> Uninhabited ([] = x :: xs) where
+Uninhabited ([] = x :: xs) where
   uninhabited Refl impossible
 
 -- Cons is not Nil
 export
-{0 xs : List a} -> Uninhabited (x :: xs = []) where
+Uninhabited (x :: xs = []) where
   uninhabited Refl impossible
 
 -- If the heads or the tails of two lists are provably non-equal, then the
