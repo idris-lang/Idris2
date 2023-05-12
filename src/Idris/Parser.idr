@@ -1098,7 +1098,8 @@ mutual
                      rhs <- typeExpr pdef fname indents
                      ws <- option [] $ whereBlock fname col
                      pure (rhs, ws)
-            atEnd indents
+            b' <- bounds peek
+            mustWorkBecause b'.bounds "Not the end of a block entry, check indentation" $ atEnd indents
             (rhs, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
             pure (MkPatClause fc (uncurry applyArgs lhs) rhs ws)

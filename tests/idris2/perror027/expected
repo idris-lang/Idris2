@@ -1,0 +1,10 @@
+1/1: Building Outdent (Outdent.idr)
+Error: Not the end of a block entry, check indentation.
+
+Outdent:4:22--4:28
+ 1 | countdown : (secs: Nat) -> IO ()
+ 2 | countdown Z = putStrLn "Lift off!"
+ 3 | countdown (S secs) = do putStrLn (show (S secs))
+ 4 |                      usleep 1000000
+                          ^^^^^^
+
