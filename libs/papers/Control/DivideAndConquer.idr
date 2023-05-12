@@ -2,6 +2,7 @@
 ||| A Type-Based Approach to Divide-And-Conquer Recursion in Coq
 ||| by Pedro Abreu, Benjamin Delaware, Alex Hubers, Christa Jenkins,
 ||| J. Garret Morris, and Aaron Stump
+||| https://doi.org/10.1145/3571196
 |||
 ||| The original paper relies on Coq's impredicative Set axiom,
 ||| something we don't have access to in Idris 2. We can however

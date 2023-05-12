@@ -180,9 +180,10 @@
 #### Papers
 
 * In `Control.DivideAndConquer`: a port of the paper
-  `A Type-Based Approach to Divide-And-Conquer Recursion in Coq`
+  "A Type-Based Approach to Divide-And-Conquer Recursion in Coq"
   by Pedro Abreu, Benjamin Delaware, Alex Hubers, Christa Jenkins,
-  J. Garret Morris, and Aaron Stump
+  J. Garret Morris, and Aaron Stump.
+  [https://doi.org/10.1145/3571196](https://doi.org/10.1145/3571196)
 
 ### Other Changes
 
