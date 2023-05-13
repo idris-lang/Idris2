@@ -17,3 +17,5 @@ main = do
 
            __LOC__}
       """
+
+  putStrLn __FILE__
