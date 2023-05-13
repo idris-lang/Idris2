@@ -363,6 +363,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "fix1839"
     , "tailrec_libs"
     , "nomangle001", "nomangle002"
+    , "integer_array"
     ]
 
 vmcodeInterpTests : IO TestPool
