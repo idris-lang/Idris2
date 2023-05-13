@@ -220,7 +220,6 @@ mutual
     <|> lazy fname indents
     <|> if_ fname indents
     <|> with_ fname indents
-    <|> debugString fname
     <|> do b <- bounds (MkPair <$> simpleExpr fname indents <*> many (argExpr q fname indents))
            (f, args) <- pure b.val
            pure (applyExpImp (start b) (end b) f (concat args))
@@ -530,6 +529,7 @@ mutual
           pure $ case projs of
             [] => root
             _  => PPostfixApp (boundToFC fname b) root projs
+    <|> debugString fname
     <|> do b <- bounds (forget <$> some (bounds postfixProj))
            pure $ let projs = map (\ proj => (boundToFC fname proj, proj.val)) b.val in
                   PPostfixAppPartial (boundToFC fname b) projs
