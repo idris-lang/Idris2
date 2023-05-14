@@ -56,6 +56,42 @@ install with the command ``make install``.  This will, by default, install into
 
     IDRIS2_PREFIX ?= /usr/local
 
+On Windows
+-------------------------
+
+On Windows systems you can build and use Idris 2 from sources using WSL (Windows Subsystem for Linux).
+
+Open Windows PowerShell as administrator and run:
+
+.. code-block:: PowerShell
+
+	wsl --instal # enable Window to run a linux system 
+	wsl --install -d Ubuntu # install a specific linux distro
+
+A restart may be required.
+
+Open PowerShell and run:
+
+.. code-block:: PowerShell
+
+	wsl -d Ubuntu # open a linux terminal
+	apt update # it is necessary to install dependencies
+	apt install make gcc chezscheme libgmp3-dev # install dependencies required for build from source
+	cd ~ # by default wsl will open in the current Windows directory, so we move to a directory inside the linux filesystem
+	git clone https://github.com/idris-lang/Idris2.git # download source code from github
+	cd Idris2 # move to the source code directory
+	make bootstrap SCHEME=chezscheme # builds the executable
+	make install # installs the executable
+	ln -s /root/.idris2/bin/idris2 /usr/local/bin/idris2 # add the binary to executable path
+	exit # exit the linux terminal 
+
+Open PowerShell in your source code directory and run:
+
+.. code-block:: PowerShell
+
+	wsl -d Ubuntu idris2 # to run idris2 command in the current Windows directory
+
+
 Installing from a Package Manager
 =================================
 
