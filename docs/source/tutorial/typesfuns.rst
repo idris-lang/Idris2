@@ -628,7 +628,7 @@ the run-time system. We’ve already seen one I/O program:
 
 The type of ``putStrLn`` explains that it takes a string, and returns
 an I/O action which produces an element of the unit type ``()``. There is a
-variant ``putStr`` which decribes the output of a string without a newline:
+variant ``putStr`` which describes the output of a string without a newline:
 
 .. code-block:: idris
 
