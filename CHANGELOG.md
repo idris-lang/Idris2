@@ -156,6 +156,9 @@
 
 * Add `zipPropertyWith` to `Data.Vect.Quantifiers.All.All`.
 
+* Implemented `Ord` for `Language.Reflection.TT.Name`, `Language.Reflection.TT.Namespace`
+  and `Language.Reflection.TT.UserName`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
