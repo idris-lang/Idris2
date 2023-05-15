@@ -86,7 +86,8 @@ In ``Loops.idr`` and ``ReadNum.idr`` add ``import Data.String`` and change ``cas
 ``stringToNatOrZ``
 
 In ``ReadNum.idr``, since functions must now be ``covering`` by default, add
-a ``partial`` annotation to ``readNumber_v2``.
+a ``partial`` annotation to ``readNumbers_v2``. (This is the version of ``readNumbers``
+on page 135.)
 
 Chapter 6
 ---------
