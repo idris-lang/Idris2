@@ -186,7 +186,7 @@
   [https://doi.org/10.1145/3571196](https://doi.org/10.1145/3571196)
 
 * Ports "Deferring the Details and Deriving Programs" by Liam O'Connor as
-  TODO
+  `Data.ProofDelay` and `Language.Trip`
   [https://doi.org/10.1145/3331554.3342605](https://doi.org/10.1145/3331554.3342605)
   [http://liamoc.net/images/deferring.pdf](http://liamoc.net/images/deferring.pdf)
 
