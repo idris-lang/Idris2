@@ -80,6 +80,8 @@ data BST : (m, n : Nat) -> Type where
   Leaf : (m `LTE` n) -> BST m n
   Branch : (x : Nat) -> (l : BST m x) -> (r : BST x n) -> BST m n
 
+-- OList
+
 ||| OList `Nil`, but delaying the proof obligation.
 public export
 nil : {m, n : Nat} -> PDelay (OList m n)
@@ -102,12 +104,12 @@ example =
       structure = 1 `cons` (2 `cons` (3 `cons` (4 `cons` (5 `cons` nil))))
 
       proofs : HList ?
-      proofs =  (LTESucc LTEZero)
-             :: (LTESucc LTEZero)
-             :: (LTESucc (LTESucc LTEZero))
-             :: (LTESucc (LTESucc (LTESucc LTEZero)))
-             :: (LTESucc (LTESucc (LTESucc (LTESucc LTEZero))))
-             :: (LTESucc (LTESucc (LTESucc (LTESucc (LTESucc LTEZero)))))
+      proofs =  LTESucc LTEZero
+             :: LTESucc LTEZero
+             :: LTESucc (LTESucc LTEZero)
+             :: LTESucc (LTESucc (LTESucc LTEZero))
+             :: LTESucc (LTESucc (LTESucc (LTESucc LTEZero)))
+             :: LTESucc (LTESucc (LTESucc (LTESucc (LTESucc LTEZero))))
              :: []
 
   in structure.prove proofs
