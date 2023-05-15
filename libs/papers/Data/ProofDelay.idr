@@ -114,3 +114,46 @@ example =
 
   in structure.prove proofs
 
+-- BST
+
+||| BST `Leaf`, but delaying the proof obligation.
+public export
+leaf : {m, n : Nat} -> PDelay (BST m n)
+leaf = [| Leaf later |]
+
+||| BST `Branch`, but delaying the proof obligations.
+public export
+branch :  {m, n : Nat}
+       -> (x : Nat)
+       -> (l : PDelay (BST m x))
+       -> (r : PDelay (BST x n))
+       -> PDelay (BST m n)
+branch x l r =
+  let bx : ?
+      bx = Branch x
+  in [| bx l r |]
+
+||| Once again, extracting the actual `BST` requires providing the uninteresting
+||| proofs.
+public export
+example2 : BST 2 10
+example2 =
+  let structure : ?
+      structure = branch 3
+                    (branch 2 leaf leaf)
+                    (branch 5
+                      (branch 4 leaf leaf)
+                      (branch 10 leaf leaf))
+
+      proofs : HList ?
+      proofs =  LTESucc (LTESucc LTEZero)
+             :: LTESucc (LTESucc LTEZero)
+             :: LTESucc (LTESucc (LTESucc LTEZero))
+             :: LTESucc (LTESucc (LTESucc (LTESucc LTEZero)))
+             :: LTESucc (LTESucc (LTESucc (LTESucc (LTESucc LTEZero))))
+             :: LTESucc (LTESucc (LTESucc (LTESucc (LTESucc (LTESucc
+                        (LTESucc (LTESucc (LTESucc (LTESucc LTEZero)))))))))
+             :: []
+
+  in structure.prove proofs
+
