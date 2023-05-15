@@ -48,8 +48,6 @@ modules = Control.DivideAndConquer,
 
           Language.Tagless,
 
-          Language.Trip,
-
           Language.TypeTheory,
 
           Search.Auto,
