@@ -77,13 +77,13 @@ For the reasons described above:
 Chapter 5
 ---------
 
-There is no longer a ``Cast`` instance from ``String`` to ``Nat``, because its
-behaviour of returing Z if the ``String`` wasn't numeric was thought to be
+Although there is a ``Cast`` instance from ``String`` to ``Nat``, its
+behaviour of returing Z if the ``String`` is not numeric is now thought to be
 confusing and potentially error prone. Instead, there is ``stringToNatOrZ`` in
 ``Data.String`` which at least has a clearer name. So:
 
-In ``Loops.idr`` and ``ReadNum.idr`` add ``import Data.String`` and change ``cast`` to
-``stringToNatOrZ``
+In ``Loops.idr`` and ``ReadNum.idr`` it's preferable to add ``import Data.String``
+and change ``cast`` to ``stringToNatOrZ``.
 
 In ``ReadNum.idr``, since functions must now be ``covering`` by default, add
 a ``partial`` annotation to ``readNumbers_v2``. (This is the version of ``readNumbers``
