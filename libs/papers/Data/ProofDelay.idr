@@ -145,15 +145,25 @@ example2 =
                       (branch 4 leaf leaf)
                       (branch 10 leaf leaf))
 
+      -- we _could_ construct the proofs by hand, but Idris can just also find
+      -- them (as long as we tell it which proof to find)
       proofs : HList ?
-      proofs =  LTESucc (LTESucc LTEZero)
-             :: LTESucc (LTESucc LTEZero)
-             :: LTESucc (LTESucc (LTESucc LTEZero))
-             :: LTESucc (LTESucc (LTESucc (LTESucc LTEZero)))
-             :: LTESucc (LTESucc (LTESucc (LTESucc (LTESucc LTEZero))))
-             :: LTESucc (LTESucc (LTESucc (LTESucc (LTESucc (LTESucc
-                        (LTESucc (LTESucc (LTESucc (LTESucc LTEZero)))))))))
+      proofs =  the ( 2 `LTE`  2) %search
+             :: the ( 2 `LTE`  3) %search
+             :: the ( 3 `LTE`  4) %search
+             :: the ( 4 `LTE`  5) %search
+             :: the ( 5 `LTE` 10) %search
+             :: the (10 `LTE` 10) %search
              :: []
+      {- proofs =  LTESucc (LTESucc LTEZero)
+       -        :: LTESucc (LTESucc LTEZero)
+       -        :: LTESucc (LTESucc (LTESucc LTEZero))
+       -        :: LTESucc (LTESucc (LTESucc (LTESucc LTEZero)))
+       -        :: LTESucc (LTESucc (LTESucc (LTESucc (LTESucc LTEZero))))
+       -        :: LTESucc (LTESucc (LTESucc (LTESucc (LTESucc (LTESucc
+       -                   (LTESucc (LTESucc (LTESucc (LTESucc LTEZero)))))))))
+       -        :: []
+       -}
 
   in structure.prove proofs
 
