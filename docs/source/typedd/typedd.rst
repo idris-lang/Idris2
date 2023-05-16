@@ -89,6 +89,9 @@ In ``ReadNum.idr``, since functions must now be ``covering`` by default, add
 a ``partial`` annotation to ``readNumbers_v2``. (This is the version of ``readNumbers``
 on page 135.)
 
+The file-handling functions for the exercises in section 5.3.4 are no longer in the
+Prelude.  Import `System.File.Handle` and `System.File.ReadWrite` to use them.
+
 Chapter 6
 ---------
 
