@@ -820,7 +820,7 @@ mutual
                            commitKeyword fname indents "else"
                            e <- typeExpr pdef fname indents
                            pure (x, t, e))
-           atEnd indents
+           mustWork $ atEnd indents
            (x, t, e) <- pure b.val
            pure (PIfThenElse (boundToFC fname b) x t e)
 
