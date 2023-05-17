@@ -4,7 +4,7 @@ module System.Errno
 %default total
 
 %foreign "C:idris2_getErrno, libidris2_support, idris_support.h"
-         "node:lambda:() => { throw new Error('TODO prim__getErrno') }"
+         "node:lambda:() => process.__lasterr === undefined ? 0 : process.__lasterr.errno || 0"
 prim__getErrno : PrimIO Int
 
 %foreign "C:idris2_strerror, libidris2_support, idris_support.h"

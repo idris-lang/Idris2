@@ -58,6 +58,27 @@ function support_system_file_readLine (file_ptr) {
   return line
 }
 
+function support_system_file_readChars (length, file_ptr) {
+  const readBuf = Buffer.alloc(length)
+  const bytesRead = support_system_file_fs.readSync(file_ptr.fd, readBuf, 0, length, null)
+  if (bytesRead === 0) {
+    file_ptr.eof = true
+  }
+  const chars = file_ptr.buffer.slice(0, bytesRead + 1).toString('utf-8')
+  return chars
+}
+
+function support_system_file_readChar (file_ptr) {
+  const readBuf = Buffer.alloc(1);
+  if (support_system_file_fs.readSync(file_ptr.fd, readBuf, 0, 1) === 0) {
+    file_ptr.eof = true
+    // No bytes read, getChar from libc returns -1 in this case.
+    return String.fromCharCode(-1)
+  } else {
+    return readBuf.toString('utf-8')
+  }
+}
+
 function support_system_file_getStr () {
   return support_system_file_readLine({ fd: 0, buffer: Buffer.alloc(0), name: '<stdin>', eof: false })
 }
