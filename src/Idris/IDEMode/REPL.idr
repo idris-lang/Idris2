@@ -41,6 +41,7 @@ import Libraries.Data.String.Extra -- until 0.6.0 release
 
 ||| TODO: use the version in `Network.FFI` in network after the next release.
 %foreign "C:idrnet_fdopen, libidris2_support, idris_net.h"
+         "node:lambda:() => { throw new Error('TODO Idris.IDEMode.REPL') }"
 prim__idrnet_fdopen : Int -> String -> PrimIO AnyPtr
 
 export

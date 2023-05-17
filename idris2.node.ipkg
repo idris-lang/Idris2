@@ -1,0 +1,9 @@
+package idris2app
+
+depends = network
+
+sourcedir = "src"
+
+main = Idris.Main
+executable = "idris2.js"
+opts = "--codegen node"

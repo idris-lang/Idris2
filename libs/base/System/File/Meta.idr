@@ -12,9 +12,11 @@ import public System.File.Types
 prim__fileSize : FilePtr -> PrimIO Int
 
 %foreign supportC "idris2_fileSize"
+         "node:lambda:() => { throw new Error('TODO prim__fPoll') }"
 prim__fPoll : FilePtr -> PrimIO Int
 
 %foreign supportC "idris2_fileAccessTime"
+         "node:lambda:() => { throw new Error('TODO prim__fileAccessTime') }"
 prim__fileAccessTime : FilePtr -> PrimIO Int
 
 %foreign supportC "idris2_fileModifiedTime"
@@ -22,6 +24,7 @@ prim__fileAccessTime : FilePtr -> PrimIO Int
 prim__fileModifiedTime : FilePtr -> PrimIO Int
 
 %foreign supportC "idris2_fileStatusTime"
+         "node:lambda:() => { throw new Error('TODO prim__fileStatusTime') }"
 prim__fileStatusTime : FilePtr -> PrimIO Int
 
 %foreign supportC "idris2_fileIsTTY"

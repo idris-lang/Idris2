@@ -4,48 +4,63 @@ export
 data ForeignObj : Type where [external]
 
 %foreign "scheme:blodwen-eval-scheme"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim__evalScheme : String -> ForeignObj
 
 %foreign "scheme:blodwen-eval-okay"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim__evalOkay : ForeignObj -> Int
 
 %foreign "scheme:blodwen-get-eval-result"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim__evalResult : ForeignObj -> ForeignObj
 
 %foreign "scheme:blodwen-debug-scheme"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim__debugScheme : ForeignObj -> PrimIO ()
 
 %foreign "scheme:blodwen-is-number"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim_isNumber : ForeignObj -> Int
 
 %foreign "scheme:blodwen-is-integer"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim_isInteger : ForeignObj -> Int
 
 %foreign "scheme:blodwen-is-float"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim_isFloat : ForeignObj -> Int
 
 %foreign "scheme:blodwen-is-char"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim_isChar : ForeignObj -> Int
 
 %foreign "scheme:blodwen-is-string"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim_isString : ForeignObj -> Int
 
 %foreign "scheme:blodwen-is-procedure"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim_isProcedure : ForeignObj -> Int
 
 %foreign "scheme:blodwen-is-symbol"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim_isSymbol : ForeignObj -> Int
 
 %foreign "scheme:blodwen-is-nil"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim_isNil : ForeignObj -> Int
 
 %foreign "scheme:blodwen-is-pair"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim_isPair : ForeignObj -> Int
 
 %foreign "scheme:blodwen-is-vector"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim_isVector : ForeignObj -> Int
 
 %foreign "scheme:blodwen-is-box"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 prim_isBox : ForeignObj -> Int
 
 export
@@ -95,58 +110,72 @@ isBox x = prim_isBox x == 1
 -- The below are all 'unsafe' because they rely on having done the relevant
 -- check above first
 %foreign "scheme:blodwen-id"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 export
 unsafeGetInteger : ForeignObj -> Integer
 
 %foreign "scheme:blodwen-id"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 export
 unsafeGetString : ForeignObj -> String
 
 %foreign "scheme:blodwen-id"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 export
 unsafeGetFloat : ForeignObj -> Double
 
 %foreign "scheme:blodwen-id"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 export
 unsafeGetChar : ForeignObj -> Char
 
 %foreign "scheme:car"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 export
 unsafeFst : ForeignObj -> ForeignObj
 
 %foreign "scheme:cdr"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 export
 unsafeSnd : ForeignObj -> ForeignObj
 
 %foreign "scheme:blodwen-apply"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 export
 unsafeApply : ForeignObj -> ForeignObj -> ForeignObj
 
 %foreign "scheme:blodwen-force"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 export
 unsafeForce : ForeignObj -> ForeignObj
 
 %foreign "scheme:blodwen-vector-ref"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 export
 unsafeVectorRef : ForeignObj -> Integer -> ForeignObj
 
 %foreign "scheme:blodwen-unbox"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 export
 unsafeUnbox : ForeignObj -> ForeignObj
 
 %foreign "scheme:blodwen-vector-length"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 export
 unsafeVectorLength : ForeignObj -> Integer
 
 %foreign "scheme:blodwen-vector-list"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 export
 unsafeVectorToList : ForeignObj -> List ForeignObj
 
 %foreign "scheme:blodwen-make-symbol"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 export
 makeSymbol : String -> ForeignObj
 
 %foreign "scheme:blodwen-read-symbol"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Scheme') }"
 export
 unsafeReadSymbol : ForeignObj -> String
 

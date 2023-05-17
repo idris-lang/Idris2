@@ -21,8 +21,10 @@ prim__seekLine : FilePtr -> PrimIO Int
 prim__readLine : FilePtr -> PrimIO (Ptr String)
 
 %foreign supportC "idris2_readChars"
+         "node:lambda:() => { throw new Error('TODO prim__readChars') }"
 prim__readChars : Int -> FilePtr -> PrimIO (Ptr String)
 %foreign "C:fgetc,libc 6"
+         "node:lambda:() => { throw new Error('TODO prim__readChar') }"
 prim__readChar : FilePtr -> PrimIO Int
 
 %foreign supportC "idris2_writeLine"

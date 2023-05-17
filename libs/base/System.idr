@@ -31,10 +31,12 @@ libc fn = "C:" ++ fn ++ ", libc 6"
 
 %foreign "scheme,racket:blodwen-sleep"
          supportC "idris2_sleep"
+         "node:lambda:() => { throw new Error('TODO prim__sleep') }"
 prim__sleep : Int -> PrimIO ()
 
 %foreign "scheme,racket:blodwen-usleep"
          supportC "idris2_usleep"
+         "node:lambda:() => { throw new Error('TODO prim__usleep') }"
 prim__usleep : Int -> PrimIO ()
 
 ||| Sleep for the specified number of seconds or, if signals are supported,
@@ -90,6 +92,7 @@ getArgs = do
 prim__getEnv : String -> PrimIO (Ptr String)
 
 %foreign supportC "idris2_getEnvPair"
+         "node:lambda:() => { throw new Error('TODO prim__getEnvPair') }"
 prim__getEnvPair : Int -> PrimIO (Ptr String)
 %foreign supportC "idris2_setenv"
          supportNode "setEnv"

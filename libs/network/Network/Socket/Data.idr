@@ -49,6 +49,7 @@ BACKLOG = 20
 
 -- Repeat to avoid a dependency cycle
 %foreign "C:idrnet_geteagain, libidris2_support, idris_net.h"
+         "node:lambda:() => { throw new Error('TODO Network.Socket.Data') }"
 prim__idrnet_geteagain : PrimIO Int
 
 export
@@ -62,9 +63,11 @@ EAGAIN =
 
 -- repeat without export to avoid dependency cycles
 %foreign "C:idrnet_errno, libidris2_support, idris_net.h"
+         "node:lambda:() => { throw new Error('TODO Network.Socket.Data') }"
 prim__idrnet_errno : PrimIO Int
 
 %foreign "C:isNull, libidris2_support, idris_support.h"
+         "node:lambda:() => { throw new Error('TODO Network.Socket.Data') }"
 prim__idrnet_isNull : (ptr : AnyPtr) -> PrimIO Int
 
 
@@ -114,15 +117,19 @@ Show SocketFamily where
 -- into Idris without having to faff around on the preprocessor on the Idris
 -- side.
 %foreign "C:idrnet_af_unspec, libidris2_support, idris_net.h"
+         "node:lambda:() => { throw new Error('TODO Network.Socket.Data') }"
 prim__idrnet_af_unspec : PrimIO Int
 
 %foreign "C:idrnet_af_unix, libidris2_support, idris_net.h"
+         "node:lambda:() => { throw new Error('TODO Network.Socket.Data') }"
 prim__idrnet_af_unix : PrimIO Int
 
 %foreign "C:idrnet_af_inet, libidris2_support, idris_net.h"
+         "node:lambda:() => { throw new Error('TODO Network.Socket.Data') }"
 prim__idrnet_af_inet : PrimIO Int
 
 %foreign "C:idrnet_af_inet6, libidris2_support, idris_net.h"
+         "node:lambda:() => { throw new Error('TODO Network.Socket.Data') }"
 prim__idrnet_af_inet6 : PrimIO Int
 
 export

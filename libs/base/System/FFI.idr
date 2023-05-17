@@ -49,10 +49,12 @@ setField : {sn : _} -> (s : Struct sn fs) -> (n : String) ->
 setField s n val = primIO (prim__setField s n fieldok val)
 
 %foreign "C:idris2_malloc, libidris2_support, idris_memory.h"
+         "node:lambda:() => { throw new Error('TODO prim__malloc') }"
 prim__malloc : (size : Int) -> PrimIO AnyPtr
 
 %foreign "C:idris2_free, libidris2_support, idris_memory.h"
          "javascript:lambda:()=>undefined"
+         "node:lambda:() => { throw new Error('TODO prim__free') }"
 prim__free : AnyPtr -> PrimIO ()
 
 ||| Allocate memory with libc `malloc`.

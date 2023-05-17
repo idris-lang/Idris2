@@ -6,12 +6,15 @@ libterm : String -> String
 libterm s = "C:" ++ s ++ ", libidris2_support, idris_term.h"
 
 %foreign libterm "idris2_setupTerm"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Term') }"
 prim__setupTerm : PrimIO ()
 
 %foreign libterm "idris2_getTermCols"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Term') }"
 prim__getTermCols : PrimIO Int
 
 %foreign libterm "idris2_getTermLines"
+         "node:lambda:() => { throw new Error('TODO Libraries.Utils.Term') }"
 prim__getTermLines : PrimIO Int
 
 export

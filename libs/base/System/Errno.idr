@@ -4,6 +4,7 @@ module System.Errno
 %default total
 
 %foreign "C:idris2_getErrno, libidris2_support, idris_support.h"
+         "node:lambda:() => { throw new Error('TODO prim__getErrno') }"
 prim__getErrno : PrimIO Int
 
 %foreign "C:idris2_strerror, libidris2_support, idris_support.h"
