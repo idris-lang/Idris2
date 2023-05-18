@@ -54,7 +54,6 @@ prim__malloc : (size : Int) -> PrimIO AnyPtr
 
 %foreign "C:idris2_free, libidris2_support, idris_memory.h"
          "javascript:lambda:()=>undefined"
-         "node:lambda:() => { throw new Error('TODO prim__free') }"
 prim__free : AnyPtr -> PrimIO ()
 
 ||| Allocate memory with libc `malloc`.

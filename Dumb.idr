@@ -1,3 +1,5 @@
 
-x : Integer
-x = 2
+main : IO ()
+main = do
+  putStrLn "Hello"
+  pure ()

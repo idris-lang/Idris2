@@ -79,6 +79,17 @@ function support_system_file_readChar (file_ptr) {
   }
 }
 
+function support_system_file_flush (file_ptr) {
+  try{
+    support_system_file_fs.fdatasyncSync(file_ptr.fd)
+    return 0
+  }catch(e){
+    process.__lasterr = e
+    file_ptr.eof = true
+    return String.fromCharCode(-1)
+  }
+}
+
 function support_system_file_getStr () {
   return support_system_file_readLine({ fd: 0, buffer: Buffer.alloc(0), name: '<stdin>', eof: false })
 }
