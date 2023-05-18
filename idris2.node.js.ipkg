@@ -5,5 +5,5 @@ depends = network
 sourcedir = "src"
 
 main = Idris.Main
-executable = "idris2.js"
+executable = "idris2.node.js"
 opts = "--codegen node"
