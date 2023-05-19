@@ -59,13 +59,29 @@ function support_system_file_readLine (file_ptr) {
 }
 
 function support_system_file_readChars (length, file_ptr) {
-  const readBuf = Buffer.alloc(length)
-  const bytesRead = support_system_file_fs.readSync(file_ptr.fd, readBuf, 0, length, null)
-  if (bytesRead === 0) {
-    file_ptr.eof = true
+  const bytesToRead = length - file_ptr.buffer.length
+  if (bytesToRead > 0) {
+    const readBuf = Buffer.alloc(bytesToRead);
+    const bytesRead = support_system_file_fs.readSync(file_ptr.fd, readBuf, 0, bytesToRead, null)
+    if (bytesRead === 0) {
+      file_ptr.eof = true
+      const readChars = file_ptr.buffer.toString('utf-8')
+      file_ptr.buffer = Buffer.alloc(0)
+      return readChars
+    }
+    file_ptr.buffer = Buffer.concat([file_ptr.buffer, readBuf.slice(0, bytesRead)]);
+    const readLength = Math.min(length, file_ptr.buffer.length)
+    const readChars = file_ptr.buffer.slice(0, readLength).toString('utf-8')
+    if (readLength === file_ptr.buffer.length) {
+      file_ptr.buffer = Buffer.alloc(0)
+    } else {
+      file_ptr.buffer = file_ptr.buffer.slice(readLength + 1)
+    }
+    return readChars
   }
-  const chars = file_ptr.buffer.slice(0, bytesRead + 1).toString('utf-8')
-  return chars
+  const readChars = file_ptr.buffer.slice(0, length).toString('utf-8')
+  file_ptr.buffer = file_ptr.buffer.slice(length + 1)
+  return readChars
 }
 
 function support_system_file_readChar (file_ptr) {
@@ -86,7 +102,7 @@ function support_system_file_flush (file_ptr) {
   }catch(e){
     process.__lasterr = e
     file_ptr.eof = true
-    return String.fromCharCode(-1)
+    return -1
   }
 }
 
