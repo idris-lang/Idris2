@@ -85,6 +85,11 @@ function support_system_file_readChars (length, file_ptr) {
 }
 
 function support_system_file_readChar (file_ptr) {
+  if (file_ptr.buffer.length > 0) {
+    const char = file_ptr.buffer.slice(0, 1).toString('utf-8')
+    file_ptr.buffer = file_ptr.buffer.slice(1)
+    return char
+  }
   const readBuf = Buffer.alloc(1);
   if (support_system_file_fs.readSync(file_ptr.fd, readBuf, 0, 1) === 0) {
     file_ptr.eof = true
