@@ -5,30 +5,9 @@
 module Data.ProofDelay
 
 import Data.Nat
+import Data.List.Quantifiers
 
 %default total
-
-namespace HList
-  ||| Heterogeneous list indexed by list of types of every element.
-  |||
-  ||| [21](https://doi.org/10.1145/1017472.1017488)
-  public export
-  data HList : List Type -> Type where
-    Nil  : HList []
-    (::) : {0 s : _} -> {0 ss : _} -> s -> HList ss -> HList (s :: ss)
-
-  ||| Similar to `take` for normal lists, except for the index.
-  public export
-  takeH : {ss : _} -> HList (ss ++ ts) -> HList ss
-  takeH {ss = []} ys = []
-  takeH {ss = (s :: ss)} (x :: xs) = x :: takeH xs
-
-  ||| Similar to `drop` for normal lists, except for the index.
-  public export
-  dropH : {ss : _} -> HList (ss ++ ts) -> HList ts
-  dropH {ss = []} ys = ys
-  dropH {ss = (s :: ss)} (x :: xs) = dropH xs
-
 
 ||| A type `x` which can only be computed once some, delayed, proof obligations
 ||| have been fulfilled.
@@ -58,7 +37,9 @@ later = Prf (tx :: []) (\(x :: []) => x)
 public export
 (<*>) : PDelay (a -> b) -> PDelay a -> PDelay b
 (Prf goals1 prove1) <*> (Prf goals2 prove2) =
-  Prf (goals1 ++ goals2) (\hl => prove1 (takeH hl) (prove2 (dropH hl)))
+  Prf (goals1 ++ goals2) $ \hl =>
+    let (left , right) = splitAt _ hl in
+    prove1 left (prove2 right)
 
 
 ------------------------------------------------------------------------
@@ -166,4 +147,3 @@ example2 =
        -}
 
   in structure.prove proofs
-

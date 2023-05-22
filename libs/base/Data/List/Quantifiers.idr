@@ -166,6 +166,20 @@ namespace All
   HList : List Type -> Type
   HList = All id
 
+  export
+  splitAt : (xs : List a) -> All p (xs ++ ys) -> (All p xs, All p ys)
+  splitAt [] pxs = ([], pxs)
+  splitAt (_ :: xs) (px :: pxs) = mapFst (px ::) (splitAt xs pxs)
+
+  export
+  take : (xs : List a) -> All p (xs ++ ys) -> All p xs
+  take xs pxs = fst (splitAt xs pxs)
+
+  export
+  drop : (xs : List a) -> All p (xs ++ ys) -> All p ys
+  drop xs pxs = snd (splitAt xs pxs)
+
+
 ------------------------------------------------------------------------
 -- Relationship between all and any
 
