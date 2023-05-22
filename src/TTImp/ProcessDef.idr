@@ -285,10 +285,12 @@ findLinear top bound rig tm
       findLinArg : {vars : _} ->
                    RigCount -> NF [] -> List (Term vars) ->
                    Core (List (Name, RigCount))
-      findLinArg rig ty (As fc UseLeft _ p :: as)
-          = findLinArg rig ty (p :: as)
-      findLinArg rig ty (As fc UseRight p _ :: as)
-          = findLinArg rig ty (p :: as)
+      findLinArg rig ty@(NBind _ _ (Pi _ c _ _) _) (As fc u a p :: as)
+          = if isLinear c
+               then case u of
+                         UseLeft => findLinArg rig ty (p :: as)
+                         UseRight => findLinArg rig ty (a :: as)
+               else pure $ !(findLinArg rig ty [a]) ++ !(findLinArg rig ty (p :: as))
       findLinArg rig (NBind _ x (Pi _ c _ _) sc) (Local {name=a} fc _ idx prf :: as)
           = do defs <- get Ctxt
                let a = nameAt prf
