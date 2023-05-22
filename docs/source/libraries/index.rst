@@ -6,8 +6,9 @@ https://github.com/idris-lang/Idris2/wiki/Third-party-Libraries
 
 Please feel free to contribute your own libraries there! Eventually, we aim to
 have a package manager for managing libraries and dependencies. We do not yet
-have an official one, but there are (at least) two in development:
+have an official one, but there are (at least) three in development:
 
 * Inigo: https://github.com/idris-community/inigo
+* Pack: https://github.com/stefan-hoeck/idris2-pack
 * sae: https://github.com/DoctorRyner/sae
 
