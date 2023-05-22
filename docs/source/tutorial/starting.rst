@@ -82,7 +82,7 @@ Open PowerShell and run:
 	cd Idris2 # move to the source code directory
 	make bootstrap SCHEME=chezscheme # builds the executable
 	make install # installs the executable
-	ln -s /root/.idris2/bin/idris2 /usr/local/bin/idris2 # add the binary to executable path
+	ln -s ~/.idris2/bin/idris2 /usr/local/bin/idris2 # add the binary to executable path
 	exit # exit the linux terminal 
 
 Open PowerShell in your source code directory and run:
@@ -90,6 +90,8 @@ Open PowerShell in your source code directory and run:
 .. code-block:: PowerShell
 
 	wsl -d Ubuntu idris2 # to run idris2 command in the current Windows directory
+
+Or in alternative you can use vscode with wls and idris extensione combined.
 
 
 Installing from a Package Manager
