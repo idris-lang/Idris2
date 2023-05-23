@@ -16,6 +16,8 @@
 ### REPL changes
 
 * Adds documentation for unquotes `~( )`.
+* Adds documentation for laziness and codata primitives: `Lazy`, `Inf`, `Delay`,
+  and `Force`.
 
 ### Backend changes
 

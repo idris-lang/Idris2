@@ -942,16 +942,16 @@ mutual
 
   lazy : OriginDesc -> IndentInfo -> Rule PTerm
   lazy fname indents
-      = do tm <- bounds (decorate fname Typ (exactIdent "Lazy")
+      = do tm <- bounds (decorate fname Typ (lazyPrim "Lazy")
                          *> simpleExpr fname indents)
            pure (PDelayed (boundToFC fname tm) LLazy tm.val)
-    <|> do tm <- bounds (decorate fname Typ (exactIdent "Inf")
+    <|> do tm <- bounds (decorate fname Typ (lazyPrim "Inf")
                          *> simpleExpr fname indents)
            pure (PDelayed (boundToFC fname tm) LInf tm.val)
-    <|> do tm <- bounds (decorate fname Data (exactIdent "Delay")
+    <|> do tm <- bounds (decorate fname Data (lazyPrim "Delay")
                          *> simpleExpr fname indents)
            pure (PDelay (boundToFC fname tm) tm.val)
-    <|> do tm <- bounds (decorate fname Data (exactIdent "Force")
+    <|> do tm <- bounds (decorate fname Data (lazyPrim "Force")
                          *> simpleExpr fname indents)
            pure (PForce (boundToFC fname tm) tm.val)
 
@@ -2316,6 +2316,21 @@ docArgCmd parseCmd command doc = (names, DocArg, doc, parse)
     names : List String
     names = extractNames parseCmd
 
+    -- by default, lazy primitives must be followed by a simpleExpr, so we have
+    -- this custom parser for the doc case
+    docLazyPrim : Rule PTerm
+    docLazyPrim =
+      let placeholeder : PTerm' Name
+          placeholeder = PHole EmptyFC False "lazyDocPlaceholeder"
+      in  do lazyPrim "Lazy"      -- v
+             pure (PDelayed EmptyFC LLazy placeholeder)
+      <|> do lazyPrim "Inf"       -- v
+             pure (PDelayed EmptyFC LInf placeholeder)
+      <|> do lazyPrim "Delay"
+             pure (PDelay EmptyFC placeholeder)
+      <|> do lazyPrim "Force"
+             pure (PForce EmptyFC placeholeder)
+
     parse : Rule REPLCmd
     parse = do
       symbol ":"
@@ -2331,7 +2346,10 @@ docArgCmd parseCmd command doc = (names, DocArg, doc, parse)
               <|> TermQuote <$ symbol "`(" <* symbol ")"
               <|> DeclQuote <$ symbol "`[" <* symbol "]"
               )
-        <|> APTerm <$> typeExpr pdef (Virtual Interactive) init
+        <|> APTerm <$> (
+              docLazyPrim
+              <|> typeExpr pdef (Virtual Interactive) init
+              )
       pure (command dir)
 
 declsArgCmd : ParseCmd -> (List PDecl -> REPLCmd) -> String -> CommandDefinition
