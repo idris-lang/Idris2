@@ -1,0 +1,36 @@
+Main> Laziness annotation:
+
+  Indicates that the values of the type should not be computed until absolutely
+  necessary.
+
+  Also causes the compiler to automatically insert Delay/Force calls
+  respectively wherever a computation can be postponed and where a value is
+  necessary. This can be disabled using the `%auto_lazy off` pragma.
+Main> Codata (infinite data type) annotation:
+
+  Indicates that the data type may be potentially infinite, e.g. Data.Stream.
+  If the data type IS infinite, it has to be productive, i.e. there has to be at
+  least one non-empty, finite prefix of the type.
+
+  Also causes the compiler to automatically insert Delay/Force calls
+  respectively wherever the next part of a potentially infinite structure
+  occurs, and where we need to look under the next finite prefix of the
+  structure. This can be disabled using the `%auto_lazy off` pragma.
+Main> Laziness compiler primitive:
+
+  For `Lazy` types: postpones the computation until a `Force` requires its
+                    result.
+  For `Inf` types: does not try to deconstruct the next part of the codata
+                   (potentially infinite data structure).
+
+  Automatically inserted by the compiler unless `%auto_lazy off` is set.
+Main> Laziness compiler primitive:
+
+  For `Lazy` types: requires the result of a postponed calculation to be
+                    evaluated (see `Delay`).
+  For `Inf` types: deconstructs the next part of the codata (potentially
+                   infinite data structure).
+
+  Automatically inserted by the compiler unless `%auto_lazy off` is set.
+Main> 
+Bye for now!
