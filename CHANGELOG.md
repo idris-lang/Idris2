@@ -12,6 +12,8 @@
   size-change termination by Lee, Jones and Ben-Amram.
 * New function option `%unsafe` to mark definitions that are escape hatches
   similar to the builtins `believe_me`, `assert_total`, etc.
+* Rudimentary support for defining lazy functions (addressing issue
+  [#1066](https://github.com/idris-lang/idris2/issues/1066)).
 
 ### REPL changes
 
