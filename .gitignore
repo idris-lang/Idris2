@@ -8,6 +8,7 @@
 *.dylib
 
 /build
+/node_modules
 
 /lib
 
