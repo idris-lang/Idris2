@@ -161,6 +161,8 @@ data Error : Type where
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
      CantFindPackage : String -> Error
+     LazyImplicitFunction : FC -> Error
+     LazyPatternVar :  FC -> Error
      LitFail : FC -> Error
      LexFail : FC -> String -> Error
      ParseFail : List1 (FC, String) -> Error
@@ -346,6 +348,8 @@ Show Error where
   show (TTCError msg) = "Error in TTC file: " ++ show msg
   show (FileErr fname err) = "File error (" ++ fname ++ "): " ++ show err
   show (CantFindPackage fname) = "Can't find package " ++ fname
+  show (LazyImplicitFunction fc) = "Implicit lazy functions are not yet supported"
+  show (LazyPatternVar fc) = "Defining lazy functions via pattern matching is not yet supported"
   show (LitFail fc) = show fc ++ ":Can't parse literate"
   show (LexFail fc err) = show fc ++ ":Lexer error (" ++ show err ++ ")"
   show (ParseFail errs) = "Parse errors (" ++ show errs ++ ")"
@@ -452,6 +456,8 @@ getErrorLoc (GenericMsg loc _) = Just loc
 getErrorLoc (TTCError _) = Nothing
 getErrorLoc (FileErr _ _) = Nothing
 getErrorLoc (CantFindPackage _) = Nothing
+getErrorLoc (LazyImplicitFunction loc) = Just loc
+getErrorLoc (LazyPatternVar loc) = Just loc
 getErrorLoc (LitFail loc) = Just loc
 getErrorLoc (LexFail loc _) = Just loc
 getErrorLoc (ParseFail ((loc, _) ::: _)) = Just loc
@@ -537,6 +543,8 @@ killErrorLoc (GenericMsg fc x) = GenericMsg emptyFC x
 killErrorLoc (TTCError x) = TTCError x
 killErrorLoc (FileErr x y) = FileErr x y
 killErrorLoc (CantFindPackage x) = CantFindPackage x
+killErrorLoc (LazyImplicitFunction fc) = LazyImplicitFunction emptyFC
+killErrorLoc (LazyPatternVar fc) = LazyPatternVar emptyFC
 killErrorLoc (LitFail fc) = LitFail emptyFC
 killErrorLoc (LexFail fc x) = LexFail emptyFC x
 killErrorLoc (ParseFail xs) = ParseFail $ map ((emptyFC,) . snd) $ xs
