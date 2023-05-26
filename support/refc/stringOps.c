@@ -3,6 +3,7 @@
 
 Value *stringLength(Value *s) {
   int length = strlen(((Value_String *)s)->str);
+  removeReference(s);
   return (Value *)makeInt64(length);
 }
 
@@ -10,6 +11,7 @@ Value *head(Value *str) {
   Value_Char *c = IDRIS2_NEW_VALUE(Value_Char);
   c->header.tag = CHAR_TAG;
   c->c = ((Value_String *)str)->str[0];
+  removeReference(str);
   return (Value *)c;
 }
 
@@ -23,11 +25,13 @@ Value *tail(Value *input) {
     IDRIS2_REFC_VERIFY(tailStr->str, "malloc failed");
     memset(tailStr->str, 0, l);
     memcpy(tailStr->str, s->str + 1, l - 1);
+    removeReference(input);
     return (Value *)tailStr;
   } else {
     tailStr->str = malloc(1);
     IDRIS2_REFC_VERIFY(tailStr->str, "malloc failed");
     tailStr->str[0] = '\0';
+    removeReference(input);
     return (Value *)tailStr;
   }
 }
@@ -45,13 +49,17 @@ Value *reverse(Value *str) {
   for (int i = 0; i < l; i++) {
     *p++ = *q--;
   }
+  removeReference(str);
   return (Value *)retVal;
 }
 
 Value *strIndex(Value *str, Value *i) {
   char *s = ((Value_String *)str)->str;
   int idx = ((Value_Int64 *)i)->i64;
-  return (Value *)makeChar(s[idx]);
+  Value *retVal = (Value *)makeChar(s[idx]);
+  removeReference(str);
+  removeReference(i);
+  return retVal;
 }
 
 Value *strCons(Value *c, Value *str) {
@@ -59,6 +67,8 @@ Value *strCons(Value *c, Value *str) {
   Value_String *retVal = makeEmptyString(l + 2);
   retVal->str[0] = ((Value_Char *)c)->c;
   memcpy(retVal->str + 1, ((Value_String *)str)->str, l);
+  removeReference(c);
+  removeReference(str);
   return (Value *)retVal;
 }
 
@@ -68,6 +78,8 @@ Value *strAppend(Value *a, Value *b) {
   Value_String *retVal = makeEmptyString(la + lb + 1);
   memcpy(retVal->str, ((Value_String *)a)->str, la);
   memcpy(retVal->str + la, ((Value_String *)b)->str, lb);
+  removeReference(a);
+  removeReference(b);
   return (Value *)retVal;
 }
 
@@ -83,7 +95,9 @@ Value *strSubstr(Value *start, Value *len, Value *s) {
 
   Value_String *retVal = makeEmptyString(l + 1);
   memcpy(retVal->str, input + offset, l);
-
+  removeReference(start);
+  removeReference(len);
+  removeReference(s);
   return (Value *)retVal;
 }
 

@@ -22,9 +22,9 @@ Value *apply_closure(Value *_clos, Value *arg) {
   newArgs->filled = oldArgs->filled + 1;
   // add argument to new arglist
   for (int i = 0; i < oldArgs->filled; i++) {
-    newArgs->args[i] = newReference(oldArgs->args[i]);
+    newArgs->args[i] = oldArgs->args[i];
   }
-  newArgs->args[oldArgs->filled] = newReference(arg);
+  newArgs->args[oldArgs->filled] = arg;
 
   Value_Closure *clos = (Value_Closure *)_clos;
 
@@ -32,9 +32,13 @@ Value *apply_closure(Value *_clos, Value *arg) {
   if (newArgs->filled >= newArgs->total) {
     fun_ptr_t f = clos->f;
     while (1) {
+      for (int i = 0; i < newArgs->filled; i++) { //for reuse analysis it should be removed
+        newReference(newArgs->args[i]);
+      }
       Value *retVal = f(newArgs);
       removeReference((Value *)newArgs);
       if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
+        removeReference(clos);
         return retVal;
       }
       f = ((Value_Closure *)retVal)->f;
@@ -56,15 +60,14 @@ Value *tailcall_apply_closure(Value *_clos, Value *arg) {
   for (int i = 0; i < oldArgs->filled; i++) {
     newArgs->args[i] = newReference(oldArgs->args[i]);
   }
-  newArgs->args[oldArgs->filled] = newReference(arg);
+  newArgs->args[oldArgs->filled] = arg;
 
   Value_Closure *clos = (Value_Closure *)_clos;
 
-  // check if enough arguments exist
-  if (newArgs->filled >= newArgs->total)
-    return (Value *)makeClosureFromArglist(clos->f, newArgs);
-
-  return (Value *)makeClosureFromArglist(clos->f, newArgs);
+  fun_ptr_t f = ((Value_Closure *)clos)->f;
+  Value *retVal = (Value *)makeClosureFromArglist(f, newArgs);
+  removeReference(clos);
+  return retVal;
 }
 
 int extractInt(Value *v) {
@@ -102,6 +105,9 @@ Value *trampoline(Value *closure) {
   Value_Arglist *arglist = (Value_Arglist *)newReference((Value *)_arglist);
   removeReference(closure);
   while (1) {
+    for (int i = 0; i < arglist->filled; i++) { //for reuse analysis it should be removed
+      newReference(arglist->args[i]);
+    }
     Value *retVal = f(arglist);
     removeReference((Value *)arglist);
     if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {

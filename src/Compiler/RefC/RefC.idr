@@ -14,9 +14,10 @@ import Core.Directory
 import Idris.Syntax
 
 import Data.List
+import Data.List1
 import Libraries.Data.DList
 import Data.Nat
-import Libraries.Data.SortedSet
+import Data.SortedSet
 import Data.Vect
 
 import System
@@ -277,9 +278,13 @@ varName (ANull)    = "NULL"
 
 data ArgCounter : Type where
 data FunctionDefinitions : Type where
-data TemporaryVariableTracker : Type where
 data IndentLevel : Type where
 data HeaderFiles : Type where
+
+record Env where
+  constructor MkPercEnv
+  borrowed : SortedSet AVar
+  owned : SortedSet AVar
 
 ------------------------------------------------------------------------
 -- Output generation: using a difference list for efficient append
@@ -296,26 +301,6 @@ getNextCounter = do
     c <- get ArgCounter
     put ArgCounter (S c)
     pure c
-
-registerVariableForAutomaticFreeing : {auto t : Ref TemporaryVariableTracker (List (List String))}
-                                   -> String
-                                   -> Core ()
-registerVariableForAutomaticFreeing var
-  = update TemporaryVariableTracker $ \case
-      [] => [[var]]
-      (l :: ls) => ((var :: l) :: ls)
-
-newTemporaryVariableLevel : {auto t : Ref TemporaryVariableTracker (List (List String))} -> Core ()
-newTemporaryVariableLevel = update TemporaryVariableTracker ([] ::)
-
-
-getNewVar : {auto a : Ref ArgCounter Nat} -> {auto t : Ref TemporaryVariableTracker (List (List String))} -> Core String
-getNewVar = do
-    c <- getNextCounter
-    let var = "tmp_" ++ show c
-    registerVariableForAutomaticFreeing var
-    pure var
-
 
 getNewVarThatWillNotBeFreedAtEndOfBlock : {auto a : Ref ArgCounter Nat} -> Core String
 getNewVarThatWillNotBeFreedAtEndOfBlock = do
@@ -363,35 +348,38 @@ emit fc line = do
         (Yes _) => flip snoc (lJust indentedLine maxLineLengthForComment ' ' ++ " " ++ comment)
         (No _)  => flip appendR [indentedLine, (lJust ""   maxLineLengthForComment ' ' ++ " " ++ comment)]
 
-
-freeTmpVars : {auto t : Ref TemporaryVariableTracker (List (List String))}
-           -> {auto oft : Ref OutfileText Output}
-           -> {auto il : Ref IndentLevel Nat}
-           -> Core $ ()
-freeTmpVars = do
-    lists <- get TemporaryVariableTracker
-    case lists of
-        (vars :: varss) => do
-            traverse_ (\v => emit EmptyFC $ "removeReference(" ++ v ++ ");" ) vars
-            put TemporaryVariableTracker varss
-        [] => pure ()
-
-
 addHeader : {auto h : Ref HeaderFiles (SortedSet String)}
          -> String
          -> Core ()
 addHeader = update HeaderFiles . insert
 
+removeVars : {auto oft : Ref OutfileText Output}
+           -> {auto il : Ref IndentLevel Nat}
+           -> List String
+           -> Core $ ()
+removeVars vars = traverse_ (\v => emit EmptyFC $ "removeReference(" ++ v ++ ");" ) vars
 
+dupsVars : {auto oft : Ref OutfileText Output}
+           -> {auto il : Ref IndentLevel Nat}
+           -> List String
+           -> Core $ ()
+dupsVars vars = traverse_ (\v => emit EmptyFC $ "newReference(" ++ v ++ ");" ) vars
+
+avarToC : Env -> AVar -> Core String
+avarToC (MkPercEnv borrowed owned) x = do
+    pure $ if contains x borrowed then "newReference(" ++ varName x ++ ")" else "(" ++ varName x  ++ ")"
+           --if contains x borrowed && (owned == empty) then "newReference(" ++ varName x ++ ")" else 
+           --if (not $ contains x borrowed) && owned == singleton x then "(" ++ varName x  ++ ")"
+           --else assert_total $ idris_crash "INTERNAL ERROR: avarToC: "
 
 makeArglist : {auto a : Ref ArgCounter Nat}
-           -> {auto t : Ref TemporaryVariableTracker (List (List String))}
            -> {auto oft : Ref OutfileText Output}
            -> {auto il : Ref IndentLevel Nat}
+           -> Env
            -> Nat
            -> List AVar
            -> Core (String)
-makeArglist missing xs = do
+makeArglist env missing xs = do
     c <- getNextCounter
     let arglist = "arglist_" ++ (show c)
     emit EmptyFC $  "Value_Arglist *"
@@ -399,39 +387,41 @@ makeArglist missing xs = do
                  ++ " = newArglist(" ++ show missing
                  ++ "," ++ show (length xs + missing)
                  ++ ");"
-    pushArgToArglist arglist xs 0
+    pushArgToArglist env arglist xs 0
     pure arglist
 where
-    pushArgToArglist : String
+    pushArgToArglist : Env -> String
                     -> List AVar
                     -> Nat
                     -> Core ()
-    pushArgToArglist arglist [] k = pure ()
-    pushArgToArglist arglist (arg :: args) k = do
+    pushArgToArglist _ arglist [] k = pure ()
+    pushArgToArglist (MkPercEnv borrowed owned) arglist (arg :: args) k = do
+        let ownedArg = if contains arg owned then singleton arg else empty
         emit EmptyFC $ arglist
-                    ++ "->args[" ++ show k ++ "] = "
-                    ++ " newReference(" ++ varName arg ++");"
-        pushArgToArglist arglist args (S k)
+                    ++ "->args[" ++ show k ++ "] = ("
+                    ++ !(avarToC (MkPercEnv borrowed ownedArg) arg) ++ ");"
+        pushArgToArglist (MkPercEnv (union borrowed ownedArg) (difference owned ownedArg)) arglist args (S k)
 
 fillConstructorArgs : {auto oft : Ref OutfileText Output}
                    -> {auto il : Ref IndentLevel Nat}
+                   -> Env
                    -> String
                    -> List AVar
                    -> Nat
                    -> Core ()
-fillConstructorArgs _ [] _ = pure ()
-fillConstructorArgs cons (v :: vars) k = do
-    emit EmptyFC $ cons ++ "->args["++ show k ++ "] = newReference(" ++ varName v ++");"
-    fillConstructorArgs cons vars (S k)
-
+fillConstructorArgs _ _ [] _ = pure ()
+fillConstructorArgs (MkPercEnv borrowed owned) cons (v :: vars) k = do
+    let ownedVars = if contains v owned then singleton v else empty
+    emit EmptyFC $ cons ++ "->args["++ show k ++ "] = (" ++ !(avarToC (MkPercEnv borrowed ownedVars) v) ++");"
+    fillConstructorArgs (MkPercEnv (union borrowed ownedVars) (difference owned ownedVars)) cons vars (S k)
 
 showTag : Maybe Int -> String
 showTag Nothing = "-1"
 showTag (Just i) = show i
 
-cArgsVectANF : {0 arity : Nat} -> Vect arity AVar -> Core (Vect arity String)
-cArgsVectANF [] = pure []
-cArgsVectANF (x :: xs) = pure $  (varName x) :: !(cArgsVectANF xs)
+cArgsVectANF : {0 arity : Nat} -> Env -> Vect arity AVar -> Core (Vect arity String)
+cArgsVectANF _ [] = pure []
+cArgsVectANF env (x :: xs) = pure $ !(avarToC env x) :: !(cArgsVectANF env xs)
 
 integer_switch : List AConstAlt -> Bool
 integer_switch [] = True
@@ -488,7 +478,6 @@ callByPosition NotInTailPosition = nonTailCall
 
 mutual
     copyConstructors : {auto a : Ref ArgCounter Nat}
-                    -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                     -> {auto oft : Ref OutfileText Output}
                     -> {auto il : Ref IndentLevel Nat}
                     -> String
@@ -510,29 +499,30 @@ mutual
 
 
     conBlocks : {auto a : Ref ArgCounter Nat}
-             -> {auto t : Ref TemporaryVariableTracker (List (List String))}
              -> {auto oft : Ref OutfileText Output}
              -> {auto il : Ref IndentLevel Nat}
+             -> Env
              -> (scrutinee:String)
              -> List AConAlt
-             -> (returnValueVariable:String)
-             -> (nrConBlock:Nat)
+             -> (returnValueVariable : String)
+             -> (nrConBlock : Nat)
              -> TailPositionStatus
              -> Core ()
-    conBlocks _ [] _ _ _ = pure ()
-    conBlocks sc ((MkAConAlt n _ mTag args body) :: xs) retValVar k tailStatus = do
+    conBlocks _ _ [] _ _ _ = pure ()
+    conBlocks env@(MkPercEnv borrowed owned) sc ((MkAConAlt n _ mTag args body) :: xs) retValVar k tailStatus = do
+        let owned' = intersection owned (freeVariables body)
+        let shouldDrop = difference owned owned'
         emit EmptyFC $ "  case " ++ show k ++ ":"
         emit EmptyFC $ "  {"
         increaseIndentation
-        newTemporaryVariableLevel
         varBindLines sc args Z
-        assignment <- cStatementsFromANF body tailStatus
+        assignment <- cStatementsFromANF (MkPercEnv (union (fromList $ ALocal <$> args) borrowed) owned') body tailStatus
         emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
-        freeTmpVars
+        removeVars (varName <$> SortedSet.toList shouldDrop)
         emit EmptyFC $ "break;"
         decreaseIndentation
         emit EmptyFC $ "  }"
-        conBlocks sc xs retValVar (S k) tailStatus
+        conBlocks env sc xs retValVar (S k) tailStatus
     where
         varBindLines : String -> (args : List Int) -> Nat -> Core ()
         varBindLines _ [] _ = pure ()
@@ -543,48 +533,50 @@ mutual
 
 
     constBlockSwitch : {auto a : Ref ArgCounter Nat}
-                       -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                        -> {auto oft : Ref OutfileText Output}
+                       -> Env
                        -> {auto il : Ref IndentLevel Nat}
-                       -> (alts:List AConstAlt)
-                       -> (retValVar:String)
-                       -> (alternativeIntMatcher:Integer)
+                       -> (alts : List AConstAlt)
+                       -> (retValVar : String)
+                       -> (alternativeIntMatcher : Integer)
                        -> TailPositionStatus
                        -> Core ()
-    constBlockSwitch [] _ _ _ = pure ()
-    constBlockSwitch ((MkAConstAlt c' caseBody) :: alts) retValVar i tailStatus = do
+    constBlockSwitch _ [] _ _ _ = pure ()
+    constBlockSwitch env@(MkPercEnv borrowed owned) ((MkAConstAlt c' caseBody) :: alts) retValVar i tailStatus = do
         let c = const2Integer c' i
+        let owned' = intersection owned (freeVariables caseBody)
+        let shouldDrop = difference owned owned'
         emit EmptyFC $ "  case " ++ show c ++ " :"
         emit EmptyFC "  {"
         increaseIndentation
-        newTemporaryVariableLevel
-        assignment <- cStatementsFromANF caseBody tailStatus
+        assignment <- cStatementsFromANF (MkPercEnv borrowed owned') caseBody tailStatus
         emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
-        freeTmpVars
+        removeVars (varName <$> SortedSet.toList shouldDrop)
         emit EmptyFC "break;"
         decreaseIndentation
         emit EmptyFC "  }"
-        constBlockSwitch alts retValVar (i+1) tailStatus
+        constBlockSwitch env alts retValVar (i+1) tailStatus
 
 
 
     constDefaultBlock : {auto a : Ref ArgCounter Nat}
-                     -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                      -> {auto oft : Ref OutfileText Output}
                      -> {auto il : Ref IndentLevel Nat}
-                     -> (def:Maybe ANF)
-                     -> (retValVar:String)
+                     -> Env
+                     -> (def : Maybe ANF)
+                     -> (retValVar : String)
                      -> TailPositionStatus
                      -> Core ()
-    constDefaultBlock Nothing _ _ = pure ()
-    constDefaultBlock (Just defaultBody) retValVar tailStatus = do
+    constDefaultBlock _ Nothing _ _ = pure ()
+    constDefaultBlock env@(MkPercEnv borrowed owned) (Just defaultBody) retValVar tailStatus = do
+        let owned' = intersection owned (freeVariables defaultBody)
+        let shouldDrop = difference owned owned'
         emit EmptyFC "  default :"
         emit EmptyFC "  {"
         increaseIndentation
-        newTemporaryVariableLevel
-        assignment <- cStatementsFromANF defaultBody tailStatus
+        assignment <- cStatementsFromANF (MkPercEnv borrowed owned') defaultBody tailStatus
         emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
-        freeTmpVars
+        removeVars (varName <$> SortedSet.toList shouldDrop)
         decreaseIndentation
         emit EmptyFC "  }"
 
@@ -592,7 +584,6 @@ mutual
 
     makeNonIntSwitchStatementConst :
                     {auto a : Ref ArgCounter Nat}
-                 -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                  -> {auto oft : Ref OutfileText Output}
                  -> {auto il : Ref IndentLevel Nat}
                  -> List AConstAlt
@@ -624,20 +615,19 @@ mutual
     checkTags ((MkAConAlt n _ Nothing args sc) :: xs) = pure False
     checkTags _ = pure True
 
-
     cStatementsFromANF : {auto a : Ref ArgCounter Nat}
-                      -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                       -> {auto oft : Ref OutfileText Output}
                       -> {auto il : Ref IndentLevel Nat}
+                      -> Env
                       -> ANF
                       -> TailPositionStatus
                       -> Core ReturnStatement
-    cStatementsFromANF (AV fc x) _ = do
-        let returnLine = "newReference(" ++ varName x  ++ ")"
+    cStatementsFromANF env (AV fc x) _ = do
+        returnLine <- avarToC env x
         pure $ MkRS returnLine returnLine
-    cStatementsFromANF (AAppName fc _ n args) _ = do
+    cStatementsFromANF env (AAppName fc _ n args) _ = do
         emit fc $ ("// start " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
-        arglist <- makeArglist 0 args
+        arglist <- makeArglist env 0 args
         c <- getNextCounter
         let f_ptr_name = "fPtr_" ++ show c
         emit fc $ "Value *(*"++ f_ptr_name ++ ")(Value_Arglist*) = "++  cName n ++ "_arglist;"
@@ -651,26 +641,29 @@ mutual
                ++ ");"
         emit fc $ ("// end   " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
         pure $ MkRS ("trampoline(" ++ closure_name ++ ")") closure_name
-    cStatementsFromANF (AUnderApp fc n missing args) _ = do
-        arglist <- makeArglist missing args
+    cStatementsFromANF env (AUnderApp fc n missing args) _ = do
+        arglist <- makeArglist env missing args
         c <- getNextCounter
         let f_ptr_name = "closure_" ++ show c
         let f_ptr = "Value *(*"++ f_ptr_name ++ ")(Value_Arglist*) = "++  cName n ++ "_arglist;"
         emit fc f_ptr
         let returnLine = "(Value*)makeClosureFromArglist(" ++ f_ptr_name  ++ ", " ++ arglist ++ ")"
         pure $ MkRS returnLine returnLine
-    cStatementsFromANF (AApp fc _ closure arg) _ =
-        pure $ MkRS ("apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
-                    ("tailcall_apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
-    cStatementsFromANF (ALet fc var value body) tailPosition = do
-        valueAssignment <- cStatementsFromANF value NotInTailPosition
+    cStatementsFromANF env (AApp fc _ closure arg) _ =
+        pure $ MkRS ("apply_closure(" ++ !(avarToC env closure) ++ ", " ++ !(avarToC env arg) ++ ")")
+                    ("tailcall_apply_closure(" ++ !(avarToC env closure) ++ ", " ++ !(avarToC env arg) ++ ")")
+    cStatementsFromANF (MkPercEnv borrowed owned) (ALet fc var value body) tailPosition = do
+        let freeBody = freeVariables body
+        let borrowVal = intersection owned (delete (ALocal var) freeBody)
+        let owned' = if contains (ALocal var) freeBody then insert (ALocal var) borrowVal else borrowVal
+
+        valueAssignment <- cStatementsFromANF (MkPercEnv (union borrowed borrowVal) (difference owned borrowVal)) value NotInTailPosition
         emit fc $ "Value * var_" ++ (show var) ++ " = " ++ nonTailCall valueAssignment ++ ";"
-        registerVariableForAutomaticFreeing $ "var_" ++ (show var)
-        bodyAssignment <- cStatementsFromANF body tailPosition
+        bodyAssignment <- cStatementsFromANF (MkPercEnv borrowed owned') body tailPosition
         pure $ bodyAssignment
-    cStatementsFromANF (ACon fc n UNIT tag []) _ = do
+    cStatementsFromANF _ (ACon fc n UNIT tag []) _ = do
         pure $ MkRS "(Value*)NULL" "(Value*)NULL"
-    cStatementsFromANF (ACon fc n _ tag args) _ = do
+    cStatementsFromANF env (ACon fc n _ tag args) _ = do
         c <- getNextCounter
         let constr = "constructor_" ++ (show c)
         emit fc $ "Value_Constructor* "
@@ -681,17 +674,17 @@ mutual
                 ++ ");"
         emit fc $ " // constructor " ++ cName n
 
-        fillConstructorArgs constr args 0
+        fillConstructorArgs env constr args 0
         pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
-    cStatementsFromANF (AOp fc _ op args) _ = do
-        argsVec <- cArgsVectANF args
+    cStatementsFromANF env (AOp fc _ op args) _ = do
+        argsVec <- cArgsVectANF env args
         let opStatement = cOp op argsVec
         pure $ MkRS opStatement opStatement
-    cStatementsFromANF (AExtPrim fc _ p args) _ = do
+    cStatementsFromANF _ (AExtPrim fc _ p args) _ = do
         emit fc $ "// call to external primitive " ++ cName p
         let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")")
         pure $ MkRS returnLine returnLine
-    cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
+    cStatementsFromANF env@(MkPercEnv borrowed owned) (AConCase fc sc alts mDef) tailPosition = do
         c <- getNextCounter
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
         let newValueLine = "Value * " ++ switchReturnVar ++ " = NULL;"
@@ -709,46 +702,47 @@ mutual
         emit fc constructorFieldLine
         copyConstructors (varName sc) alts constructorField switchReturnVar 0
         emit fc switchLine
-        conBlocks (varName sc) alts switchReturnVar 0 tailPosition
+        conBlocks env (varName sc) alts switchReturnVar 0 tailPosition
         case mDef of
             Nothing => do
                 emit EmptyFC $ "}"
                 emit EmptyFC $ "free(" ++ constructorField ++ ");"
                 pure $ MkRS switchReturnVar switchReturnVar
             (Just d) => do
+                let owned' = intersection owned (freeVariables d)
+                let shouldDrop = difference owned owned'
                 emit EmptyFC $ "  default : {"
                 increaseIndentation
-                newTemporaryVariableLevel
-                defaultAssignment <- cStatementsFromANF d tailPosition
+                defaultAssignment <- cStatementsFromANF (MkPercEnv borrowed owned') d tailPosition
                 emit EmptyFC $ switchReturnVar ++ " = " ++ callByPosition tailPosition defaultAssignment ++ ";"
-                freeTmpVars
+                removeVars (varName <$> SortedSet.toList shouldDrop)
                 decreaseIndentation
                 emit EmptyFC $ "  }"
                 emit EmptyFC $ "}"
                 emit EmptyFC $ "free(" ++ constructorField ++ ");"
                 pure $ MkRS switchReturnVar switchReturnVar
-    cStatementsFromANF (AConstCase fc sc alts def) tailPosition = do
+    cStatementsFromANF env (AConstCase fc sc alts def) tailPosition = do
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
         let newValueLine = "Value * " ++ switchReturnVar ++ " = NULL;"
         emit fc newValueLine
         case integer_switch alts of
             True => do
                 emit fc $ "switch(extractInt(" ++ varName sc ++")){"
-                constBlockSwitch alts switchReturnVar 0 tailPosition
-                constDefaultBlock def switchReturnVar tailPosition
+                constBlockSwitch env alts switchReturnVar 0 tailPosition
+                constDefaultBlock env def switchReturnVar tailPosition
                 emit EmptyFC "}"
                 pure $ MkRS switchReturnVar switchReturnVar
             False => do
                 (compareField, compareFunction) <- makeNonIntSwitchStatementConst alts 0 "" ""
                 emit fc $ "switch("++ compareFunction ++ "(" ++ varName sc ++ ", " ++ show (length alts) ++ ", " ++ compareField ++ ")){"
-                constBlockSwitch alts switchReturnVar 0 tailPosition
-                constDefaultBlock def switchReturnVar tailPosition
+                constBlockSwitch env alts switchReturnVar 0 tailPosition
+                constDefaultBlock env def switchReturnVar tailPosition
                 emit EmptyFC "}"
                 emit EmptyFC $ "free(" ++ compareField ++ ");"
                 pure $ MkRS switchReturnVar switchReturnVar
-    cStatementsFromANF (APrimVal fc c) _ = pure $ MkRS (cConstant c) (cConstant c)
-    cStatementsFromANF (AErased fc) _ = pure $ MkRS "NULL" "NULL"
-    cStatementsFromANF (ACrash fc x) _ = do
+    cStatementsFromANF _ (APrimVal fc c) _ = pure $ MkRS (cConstant c) (cConstant c)
+    cStatementsFromANF _ (AErased fc) _ = pure $ MkRS "NULL" "NULL"
+    cStatementsFromANF _ (ACrash fc x) _ = do
         emit fc $ "// CRASH"
         pure $ MkRS "NULL" "NULL"
 
@@ -890,7 +884,6 @@ additionalFFIStub name argTypes retType =
 createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto a : Ref ArgCounter Nat}
                 -> {auto f : Ref FunctionDefinitions (List String)}
-                -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                 -> {auto oft : Ref OutfileText Output}
                 -> {auto il : Ref IndentLevel Nat}
                 -> {auto h : Ref HeaderFiles (SortedSet String)}
@@ -902,14 +895,19 @@ createCFunctions n (MkAFun args anf) = do
     fn <- functionDefSignature n args
     fn' <- functionDefSignatureArglist n
     update FunctionDefinitions $ \otherDefs => (fn ++ ";\n") :: (fn' ++ ";\n") :: otherDefs
-    newTemporaryVariableLevel
+    let argsSet = fromList $ ALocal <$> args
+    let bodyFreeVars = freeVariables anf
+    let funcFreeVars = difference bodyFreeVars argsSet
+    let shouldOwn = intersection argsSet bodyFreeVars
+    let shouldDrop = difference argsSet bodyFreeVars
     let argsNrs = getArgsNrList args Z
     emit EmptyFC fn
     emit EmptyFC "{"
     increaseIndentation
-    assignment <- cStatementsFromANF anf InTailPosition
+    assignment <- cStatementsFromANF (MkPercEnv empty (union funcFreeVars shouldOwn)) anf InTailPosition
     emit EmptyFC $ "Value *returnValue = " ++ tailCall assignment ++ ";"
-    freeTmpVars
+    removeVars (varName <$> SortedSet.toList shouldDrop)
+    dupsVars (varName <$> SortedSet.toList funcFreeVars)
     emit EmptyFC $ "return returnValue;"
     decreaseIndentation
     emit EmptyFC  "}\n"
@@ -982,18 +980,21 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
+                  removeVars ((\(_, varName, _) => varName) <$> typeVarNameArgList)
                   emit EmptyFC "return NULL;"
               CFIORes ret => do
                   emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
+                  removeVars ((\(_, varName, _) => varName) <$> typeVarNameArgList)
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
               _ => do
                   emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) typeVarNameArgList)
                               ++ ");"
+                  removeVars ((\(_, varName, _) => varName) <$> typeVarNameArgList)
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
 
           decreaseIndentation
@@ -1020,7 +1021,7 @@ header = do
 
 
       """
-    let headerFiles = Libraries.Data.SortedSet.toList !(get HeaderFiles)
+    let headerFiles = SortedSet.toList !(get HeaderFiles)
     let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
     fns <- get FunctionDefinitions
     update OutfileText (appendL ([initLines] ++ headerLines ++ ["\n// function definitions"] ++ fns))
@@ -1055,7 +1056,6 @@ generateCSourceFile : {auto c : Ref Ctxt Defs}
 generateCSourceFile defs outn =
   do _ <- newRef ArgCounter 0
      _ <- newRef FunctionDefinitions []
-     _ <- newRef TemporaryVariableTracker []
      _ <- newRef OutfileText DList.Nil
      _ <- newRef HeaderFiles empty
      _ <- newRef IndentLevel 0
