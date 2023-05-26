@@ -709,9 +709,16 @@ mutual
   checkAppWith' rig elabinfo nest env fc tm dty@(VDelayed dfc r ty) argdata expargs autoargs namedargs kr expty
       = do ty' <- expand ty
            case ty' of
-                VBind _ _ (Pi _ _ _ _) sc =>
-                  checkAppWith' rig elabinfo nest env fc (TForce dfc r tm) !(expand ty)
-                        argdata expargs autoargs namedargs kr expty
+                bty@(VBind _ _ (Pi _ _ i _) sc) =>
+                  if onLHS (elabMode elabinfo)
+                     then do when (isImplicit i) $ throw (LazyImplicitFunction fc)
+                             let ([], [], []) = (expargs, autoargs, namedargs)
+                                 | _ => throw (LazyPatternVar fc)
+                             (tm, gfty) <- checkAppWith' rig elabinfo nest env fc tm bty argdata expargs autoargs namedargs kr expty
+                             fty <- quote env gfty
+                             pure (tm, !(nf env (TDelayed dfc r fty)))
+                     else checkAppWith' rig elabinfo nest env fc (TForce dfc r tm) ty'
+                            argdata expargs autoargs namedargs kr expty
                 _ => checkAppNotFnType rig elabinfo nest env fc tm dty argdata expargs autoargs namedargs kr expty
   -- If there's no more arguments given, and the plicities of the type and
   -- the expected type line up, stop
