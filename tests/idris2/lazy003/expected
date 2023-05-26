@@ -1,0 +1,26 @@
+1/1: Building DelayLam (DelayLam.idr)
+Main> Main.f1
+Arguments []
+Compile time tree: Delay (\x => x)
+Compiled: Delay Lazy (\x=> x)
+Refers to: Builtin.Unit
+Flags: covering
+Main> Main.f6
+Arguments []
+Compile time tree: Delay (\u1, {u2:839} => u1)
+Compiled: Delay Lazy (\u1=> \{u2:839}=> u1)
+Refers to: Builtin.Unit
+Flags: covering
+Main> Main.switch3
+Arguments [{arg:0}]
+Compile time tree: let f = Force (switch {arg:0}) in \{lamc:0} => let (x, (y, z)) = {lamc:0} in (f x, (f y, f z))
+Detaggable arg types: [1]
+Compiled: \ {arg:0} => let f = Force Lazy (Main.switch {arg:0}) in
+\{lamc:0}=> case {lamc:0} of
+  { Builtin.MkPair {tag = 0} [cons] {e:2} {e:3} => case {e:3} of  { Builtin.MkPair {tag = 0} [cons] {e:6} {e:7} => Builtin.MkPair {tag = 0} [cons] (f {e:2}) (Builtin.MkPair {tag = 0} [cons] (f {e:6}) (f {e:7}))}
+  }
+Refers to: Main.case block in switch3, Main.{_:985}, Main.switch, Builtin.Pair, Prelude.Types.Nat
+Refers to (runtime): Main.switch, Builtin.MkPair
+Flags: covering
+Size change: Main.switch: [Just (0, Same)]
+Main> Bye for now!
