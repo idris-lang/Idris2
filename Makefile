@@ -29,7 +29,7 @@ VERSION_TAG ?= $(GIT_SHA1)
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
 export NAME_VERSION := ${NAME}-${IDRIS2_VERSION}
 IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
-IDRIS2_APP_IPKG := idris2.ipkg
+export IDRIS2_APP_IPKG ?= idris2.ipkg
 IDRIS2_LIB_IPKG := idris2api.ipkg
 
 ifeq ($(OS), windows)
@@ -65,6 +65,11 @@ idris2-exec: ${TARGET}
 
 ${TARGET}: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --build ${IDRIS2_APP_IPKG}
+	@if [ "${IDRIS2_APP_IPKG}" = "idris2.node.js.ipkg" ]; then \
+		mv ${TARGET} "${TARGET}.js";\
+		cp idris2.node.js.sh ${TARGET};\
+		chmod +x ${TARGET};\
+		fi
 
 # We use FORCE to always rebuild IdrisPath so that the git SHA1 info is always up to date
 src/IdrisPaths.idr: FORCE
