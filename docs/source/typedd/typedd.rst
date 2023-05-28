@@ -105,6 +105,13 @@ In ``DataStore.idr`` and ``DataStoreHoles.idr``, add ``import Data.String`` and
 
 In ``TypeFuns.idr`` add ``import Data.String``
 
+Listing 6.9 says that ``data Schema`` declares a type that hasn't been defined yet.
+In Idris2, a colon and a type are required:
+
+.. code-block:: idris
+
+    data Schema : Type
+
 Chapter 7
 ---------
 
@@ -156,7 +163,7 @@ In ``Void.idr``, since functions must now be ``covering`` by default, add
 a ``partial`` annotation to ``nohead`` and its helper function ``getHead``.
 
 In Exercise 2 of 8.2.5, the definition of ``reverse'`` should be changed to
-``reverse' : Vect k a -> Vect m a -> Vect (k + m) a``, because the ``n`` in ``reverse'`` 
+``reverse' : Vect k a -> Vect m a -> Vect (k + m) a``, because the ``n`` in ``reverse'``
 is otherwise bound to the same value as the ``n`` in the signature of ``myReverse``.
 
 Chapter 9
