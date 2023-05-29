@@ -942,16 +942,16 @@ mutual
 
   lazy : OriginDesc -> IndentInfo -> Rule PTerm
   lazy fname indents
-      = do tm <- bounds (decorate fname Typ (lazyPrim "Lazy")
+      = do tm <- bounds (decorate fname Typ (exactIdent "Lazy")
                          *> simpleExpr fname indents)
            pure (PDelayed (boundToFC fname tm) LLazy tm.val)
-    <|> do tm <- bounds (decorate fname Typ (lazyPrim "Inf")
+    <|> do tm <- bounds (decorate fname Typ (exactIdent "Inf")
                          *> simpleExpr fname indents)
            pure (PDelayed (boundToFC fname tm) LInf tm.val)
-    <|> do tm <- bounds (decorate fname Data (lazyPrim "Delay")
+    <|> do tm <- bounds (decorate fname Data (exactIdent "Delay")
                          *> simpleExpr fname indents)
            pure (PDelay (boundToFC fname tm) tm.val)
-    <|> do tm <- bounds (decorate fname Data (lazyPrim "Force")
+    <|> do tm <- bounds (decorate fname Data (exactIdent "Force")
                          *> simpleExpr fname indents)
            pure (PForce (boundToFC fname tm) tm.val)
 
@@ -2322,13 +2322,13 @@ docArgCmd parseCmd command doc = (names, DocArg, doc, parse)
     docLazyPrim =
       let placeholeder : PTerm' Name
           placeholeder = PHole EmptyFC False "lazyDocPlaceholeder"
-      in  do lazyPrim "Lazy"      -- v
+      in  do exactIdent "Lazy"    -- v
              pure (PDelayed EmptyFC LLazy placeholeder)
-      <|> do lazyPrim "Inf"       -- v
+      <|> do exactIdent "Inf"     -- v
              pure (PDelayed EmptyFC LInf placeholeder)
-      <|> do lazyPrim "Delay"
+      <|> do exactIdent "Delay"
              pure (PDelay EmptyFC placeholeder)
-      <|> do lazyPrim "Force"
+      <|> do exactIdent "Force"
              pure (PForce EmptyFC placeholeder)
 
     parse : Rule REPLCmd

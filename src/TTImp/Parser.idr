@@ -438,22 +438,22 @@ mutual
   lazy : OriginDesc -> IndentInfo -> Rule RawImp
   lazy fname indents
       = do start <- location
-           lazyPrim "Lazy"
+           exactIdent "Lazy"
            tm <- simpleExpr fname indents
            end <- location
            pure (IDelayed (MkFC fname start end) LLazy tm)
     <|> do start <- location
-           lazyPrim "Inf"
+           exactIdent "Inf"
            tm <- simpleExpr fname indents
            end <- location
            pure (IDelayed (MkFC fname start end) LInf tm)
     <|> do start <- location
-           lazyPrim "Delay"
+           exactIdent "Delay"
            tm <- simpleExpr fname indents
            end <- location
            pure (IDelay (MkFC fname start end) tm)
     <|> do start <- location
-           lazyPrim "Force"
+           exactIdent "Force"
            tm <- simpleExpr fname indents
            end <- location
            pure (IForce (MkFC fname start end) tm)

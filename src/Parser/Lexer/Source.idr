@@ -65,7 +65,6 @@ data Token
   | CGDirective String
   | EndInput
   | Keyword String
-  | LazyPrim String
   | Pragma String
   | MagicDebugInfo DebugInfo
   | Unrecognised String
@@ -105,7 +104,6 @@ Show Token where
   show (CGDirective x) = "CGDirective " ++ x
   show EndInput = "end of input"
   show (Keyword x) = x
-  show (LazyPrim x) = x
   show (Pragma x) = "pragma " ++ x
   show (MagicDebugInfo di) = show di
   show (Unrecognised x) = "Unrecognised " ++ x
@@ -138,7 +136,6 @@ Pretty Void Token where
   pretty (CGDirective x) = pretty "CGDirective" <++> pretty x
   pretty EndInput = reflow "end of input"
   pretty (Keyword x) = pretty x
-  pretty (LazyPrim x) = pretty x
   pretty (Pragma x) = pretty "pragma" <++> pretty x
   pretty (MagicDebugInfo di) = pretty (show di)
   pretty (Unrecognised x) = pretty "Unrecognised" <++> pretty x
@@ -248,10 +245,6 @@ keywords = ["data", "module", "where", "let", "in", "do", "record",
             "public", "export", "private",
             "infixl", "infixr", "infix", "prefix",
             "total", "partial", "covering"]
-
-public export
-lazyPrims : List String
-lazyPrims = ["Lazy", "Inf", "Force", "Delay"]
 
 public export
 debugInfo : List (String, DebugInfo)
@@ -395,8 +388,7 @@ mutual
     where
       parseIdent : String -> Token
       parseIdent x = if x `elem` keywords then Keyword x
-                     else if x `elem` lazyPrims then LazyPrim x
-                          else Ident x
+                     else Ident x
 
       parseNamespace : String -> Token
       parseNamespace ns = case mkNamespacedIdent ns of
