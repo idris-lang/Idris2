@@ -677,9 +677,12 @@ mutual
         fillConstructorArgs env constr args 0
         pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
     cStatementsFromANF env (AOp fc _ op args) _ = do
+        c <- getNextCounter
+        let resultVar = "primVar_" ++ (show c)
         argsVec <- cArgsVectANF env args
-        let opStatement = cOp op argsVec
-        pure $ MkRS opStatement opStatement
+        emit fc $ "Value *" ++ resultVar ++ " = " ++ cOp op argsVec ++ ";"
+        removeVars (foldl (\acc, elem => elem :: acc) [] (map varName args))
+        pure $ MkRS resultVar resultVar
     cStatementsFromANF _ (AExtPrim fc _ p args) _ = do
         emit fc $ "// call to external primitive " ++ cName p
         let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")")

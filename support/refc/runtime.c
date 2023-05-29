@@ -22,23 +22,38 @@ Value *apply_closure(Value *_clos, Value *arg) {
   newArgs->filled = oldArgs->filled + 1;
   // add argument to new arglist
   for (int i = 0; i < oldArgs->filled; i++) {
-    newArgs->args[i] = oldArgs->args[i];
+    if(_clos->header.refCounter <= 1)
+      newArgs->args[i] = oldArgs->args[i];
+    else
+      newArgs->args[i] = newReference(oldArgs->args[i]);
   }
   newArgs->args[oldArgs->filled] = arg;
 
   Value_Closure *clos = (Value_Closure *)_clos;
+  fun_ptr_t f = clos->f;
+
+  clos->header.refCounter--;
+  if(clos->header.refCounter == 0){
+    clos->arglist->header.refCounter--;
+    if(clos->arglist->header.refCounter == 0){
+      free(clos->arglist->args);
+      free(clos->arglist);
+    }
+    free(clos);
+  }
 
   // check if enough arguments exist
   if (newArgs->filled >= newArgs->total) {
-    fun_ptr_t f = clos->f;
     while (1) {
-      for (int i = 0; i < newArgs->filled; i++) { //for reuse analysis it should be removed
-        newReference(newArgs->args[i]);
-      }
       Value *retVal = f(newArgs);
-      removeReference((Value *)newArgs);
+      
+      newArgs->header.refCounter--;
+      if(newArgs->header.refCounter == 0){
+        free(newArgs->args);
+        free(newArgs);
+      }
+      
       if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
-        removeReference(clos);
         return retVal;
       }
       f = ((Value_Closure *)retVal)->f;
@@ -48,7 +63,7 @@ Value *apply_closure(Value *_clos, Value *arg) {
     }
   }
 
-  return (Value *)makeClosureFromArglist(clos->f, newArgs);
+  return (Value *)makeClosureFromArglist(f, newArgs);
 }
 
 Value *tailcall_apply_closure(Value *_clos, Value *arg) {
@@ -58,16 +73,27 @@ Value *tailcall_apply_closure(Value *_clos, Value *arg) {
   newArgs->filled = oldArgs->filled + 1;
   // add argument to new arglist
   for (int i = 0; i < oldArgs->filled; i++) {
-    newArgs->args[i] = newReference(oldArgs->args[i]);
+    if(_clos->header.refCounter <= 1)
+      newArgs->args[i] = oldArgs->args[i];
+    else
+      newArgs->args[i] = newReference(oldArgs->args[i]);
   }
   newArgs->args[oldArgs->filled] = arg;
 
   Value_Closure *clos = (Value_Closure *)_clos;
-
   fun_ptr_t f = ((Value_Closure *)clos)->f;
-  Value *retVal = (Value *)makeClosureFromArglist(f, newArgs);
-  removeReference(clos);
-  return retVal;
+
+  clos->header.refCounter--;
+  if(clos->header.refCounter == 0){
+    clos->arglist->header.refCounter--;
+    if(clos->arglist->header.refCounter == 0){
+      free(clos->arglist->args);
+      free(clos->arglist);
+    }
+    free(clos);
+  }
+
+  return (Value *)makeClosureFromArglist(f, newArgs);
 }
 
 int extractInt(Value *v) {
@@ -105,11 +131,12 @@ Value *trampoline(Value *closure) {
   Value_Arglist *arglist = (Value_Arglist *)newReference((Value *)_arglist);
   removeReference(closure);
   while (1) {
-    for (int i = 0; i < arglist->filled; i++) { //for reuse analysis it should be removed
-      newReference(arglist->args[i]);
-    }
     Value *retVal = f(arglist);
-    removeReference((Value *)arglist);
+    arglist->header.refCounter--;
+    if(arglist->header.refCounter == 0){
+      free(arglist->args);
+      free(arglist);
+    }
     if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
       return retVal;
     }
