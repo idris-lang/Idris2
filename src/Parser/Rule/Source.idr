@@ -242,14 +242,6 @@ keyword req
                  _ => Nothing
 
 export
-lazyPrim : String -> Rule ()
-lazyPrim req
-    = terminal ("Unexpected laziness primitive '" ++ req ++ "'") $
-               \case
-                 LazyPrim s => guard (s == req)
-                 _ => Nothing
-
-export
 exactIdent : String -> Rule ()
 exactIdent req
     = terminal ("Expected " ++ req) $
