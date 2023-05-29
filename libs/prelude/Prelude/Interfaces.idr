@@ -449,13 +449,13 @@ public export
 [MonoidApplicative] Applicative f => Monoid a => Monoid (f a) using SemigroupApplicative where
   neutral = pure neutral
 
-namespace ILazy
+namespace Lazy
   public export
   [SemigroupAlternative] Alternative f => Semigroup (Lazy (f a)) where
     x <+> y = force x <|> y
 
   public export
-  [MonoidAlternative] Alternative f => Monoid (Lazy (f a)) using ILazy.SemigroupAlternative where
+  [MonoidAlternative] Alternative f => Monoid (Lazy (f a)) using Lazy.SemigroupAlternative where
     neutral = delay empty
 
 public export
@@ -488,7 +488,7 @@ public export
 ||| Note: In Haskell, `choice` is called `asum`.
 %inline public export
 choice : Alternative f => Foldable t => t (Lazy (f a)) -> f a
-choice = force . concat @{ILazy.MonoidAlternative}
+choice = force . concat @{Lazy.MonoidAlternative}
 
 ||| A fused version of `choice` and `map`.
 %inline public export
