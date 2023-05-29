@@ -942,16 +942,16 @@ mutual
 
   lazy : OriginDesc -> IndentInfo -> Rule PTerm
   lazy fname indents
-      = do tm <- bounds (decorate fname Typ (exactIdent "Lazy")
+      = do tm <- bounds (decorate fname Typ (lazyPrim "Lazy")
                          *> simpleExpr fname indents)
            pure (PDelayed (boundToFC fname tm) LLazy tm.val)
-    <|> do tm <- bounds (decorate fname Typ (exactIdent "Inf")
+    <|> do tm <- bounds (decorate fname Typ (lazyPrim "Inf")
                          *> simpleExpr fname indents)
            pure (PDelayed (boundToFC fname tm) LInf tm.val)
-    <|> do tm <- bounds (decorate fname Data (exactIdent "Delay")
+    <|> do tm <- bounds (decorate fname Data (lazyPrim "Delay")
                          *> simpleExpr fname indents)
            pure (PDelay (boundToFC fname tm) tm.val)
-    <|> do tm <- bounds (decorate fname Data (exactIdent "Force")
+    <|> do tm <- bounds (decorate fname Data (lazyPrim "Force")
                          *> simpleExpr fname indents)
            pure (PForce (boundToFC fname tm) tm.val)
 

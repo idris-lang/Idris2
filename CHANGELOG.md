@@ -86,6 +86,11 @@
 
 * Constant folding of trivial let statements and `believe_me`.
 
+* Made `Lazy`, `Inf`, `Delay`, and `Force` reserved compiler primitives, rather
+  than being magic string identifiers. This may mean that certain namespaces and
+  libraries need renaming (see, for example, the `Prelude.Interfaces` change
+  below).
+
 ### Library changes
 
 #### Prelude
@@ -99,6 +104,9 @@
 * Added an `Interpolation` implementation for `Void`.
 
 * Added `Compose` instances for `Bifunctor`, `Bifoldable` and `Bitraversable`.
+
+* Renamed the `Lazy` namespace in `Interfaces` to `ILazy` due to `Lazy` now
+  being a reserved compiler primitive.
 
 #### Base
 
