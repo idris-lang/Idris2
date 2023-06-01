@@ -220,7 +220,6 @@ mutual
     <|> lazy fname indents
     <|> if_ fname indents
     <|> with_ fname indents
-    <|> debugString fname
     <|> do b <- bounds (MkPair <$> simpleExpr fname indents <*> many (argExpr q fname indents))
            (f, args) <- pure b.val
            pure (applyExpImp (start b) (end b) f (concat args))
@@ -530,6 +529,7 @@ mutual
           pure $ case projs of
             [] => root
             _  => PPostfixApp (boundToFC fname b) root projs
+    <|> debugString fname
     <|> do b <- bounds (forget <$> some (bounds postfixProj))
            pure $ let projs = map (\ proj => (boundToFC fname proj, proj.val)) b.val in
                   PPostfixAppPartial (boundToFC fname b) projs
@@ -820,7 +820,7 @@ mutual
                            commitKeyword fname indents "else"
                            e <- typeExpr pdef fname indents
                            pure (x, t, e))
-           atEnd indents
+           mustWork $ atEnd indents
            (x, t, e) <- pure b.val
            pure (PIfThenElse (boundToFC fname b) x t e)
 
@@ -1098,7 +1098,8 @@ mutual
                      rhs <- typeExpr pdef fname indents
                      ws <- option [] $ whereBlock fname col
                      pure (rhs, ws)
-            atEnd indents
+            b' <- bounds peek
+            mustWorkBecause b'.bounds "Not the end of a block entry, check indentation" $ atEnd indents
             (rhs, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
             pure (MkPatClause fc (uncurry applyArgs lhs) rhs ws)
@@ -2315,6 +2316,21 @@ docArgCmd parseCmd command doc = (names, DocArg, doc, parse)
     names : List String
     names = extractNames parseCmd
 
+    -- by default, lazy primitives must be followed by a simpleExpr, so we have
+    -- this custom parser for the doc case
+    docLazyPrim : Rule PTerm
+    docLazyPrim =
+      let placeholeder : PTerm' Name
+          placeholeder = PHole EmptyFC False "lazyDocPlaceholeder"
+      in  do exactIdent "Lazy"    -- v
+             pure (PDelayed EmptyFC LLazy placeholeder)
+      <|> do exactIdent "Inf"     -- v
+             pure (PDelayed EmptyFC LInf placeholeder)
+      <|> do exactIdent "Delay"
+             pure (PDelay EmptyFC placeholeder)
+      <|> do exactIdent "Force"
+             pure (PForce EmptyFC placeholeder)
+
     parse : Rule REPLCmd
     parse = do
       symbol ":"
@@ -2330,7 +2346,10 @@ docArgCmd parseCmd command doc = (names, DocArg, doc, parse)
               <|> TermQuote <$ symbol "`(" <* symbol ")"
               <|> DeclQuote <$ symbol "`[" <* symbol "]"
               )
-        <|> APTerm <$> typeExpr pdef (Virtual Interactive) init
+        <|> APTerm <$> (
+              docLazyPrim
+              <|> typeExpr pdef (Virtual Interactive) init
+              )
       pure (command dir)
 
 declsArgCmd : ParseCmd -> (List PDecl -> REPLCmd) -> String -> CommandDefinition

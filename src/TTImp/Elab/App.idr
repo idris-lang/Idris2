@@ -522,6 +522,13 @@ mutual
                  -- reset hole and redo it with the unexpanded definition
                  do updateDef (Resolved idx) (const (Just (Hole 0 (holeInit False))))
                     ignore $ solveIfUndefined env metaval argv
+             -- Mark for reduction when we finish elaborating
+             updateDef (Resolved idx)
+                  (\def => case def of
+                        (PMDef pminfo args treeCT treeRT pats) =>
+                           Just (PMDef ({alwaysReduce := True} pminfo) args treeCT treeRT pats)
+                        _ => Nothing
+                        )
              removeHole idx
              pure (tm, gty)
 

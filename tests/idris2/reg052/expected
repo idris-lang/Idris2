@@ -1,0 +1,7 @@
+1/1: Building DPairQuote (DPairQuote.idr)
+LOG debug.elab:0: type: ((Builtin.DPair.DPair Prelude.Types.Nat) (%lam RigW Explicit (Just n) Prelude.Types.Nat ((Builtin.DPair.DPair %type) (%lam RigW Explicit (Just x) %type ((DPairQuote.Y n) x)))))
+LOG debug.elab:0: type: ((Builtin.DPair.DPair Prelude.Types.Nat) (%lam RigW Explicit (Just n) Prelude.Types.Nat ((Builtin.DPair.DPair %type) (%lam RigW Explicit (Just x) %type ((DPairQuote.Y n) x)))))
+LOG debug.elab:0: type: ((Builtin.DPair.DPair Prelude.Types.Nat) (%lam RigW Explicit (Just n) Prelude.Types.Nat ((Builtin.DPair.DPair %type) (%lam RigW Explicit (Just x) %type ((DPairQuote.Y n) x)))))
+LOG debug.elab:0: type: ((Builtin.DPair.DPair Prelude.Types.Nat) (%lam RigW Explicit (Just n) Prelude.Types.Nat ((Builtin.DPair.DPair %type) (%lam RigW Explicit (Just x) %type ((DPairQuote.Y n) x)))))
+LOG debug.elab:0: type: ((Builtin.DPair.DPair Prelude.Types.Nat) (%lam RigW Explicit (Just n) Prelude.Types.Nat ((Builtin.DPair.DPair %type) (%lam RigW Explicit (Just x) %type ((DPairQuote.Y n) x)))))
+LOG debug.elab:0: type: ((Builtin.DPair.DPair Prelude.Types.Nat) (%lam RigW Explicit (Just n) Prelude.Types.Nat ((Builtin.DPair.DPair %type) (%lam RigW Explicit (Just x) %type ((DPairQuote.Y n) x)))))

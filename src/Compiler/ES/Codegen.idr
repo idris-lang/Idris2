@@ -557,9 +557,9 @@ jsPrim nm docs = case (dropAllNS nm, docs) of
   (UN (Basic "prim__newIORef"), [_,v,_]) => pure $ hcat ["({value:", v, "})"]
   (UN (Basic "prim__readIORef"), [_,r,_]) => pure $ hcat ["(", r, ".value)"]
   (UN (Basic "prim__writeIORef"), [_,r,v,_]) => pure $ hcat ["(", r, ".value=", v, ")"]
-  (UN (Basic "prim__newArray"), [_,s,v,_]) => pure $ hcat ["(Array(", s, ").fill(", v, "))"]
-  (UN (Basic "prim__arrayGet"), [_,x,p,_]) => pure $ hcat ["(", x, "[", p, "])"]
-  (UN (Basic "prim__arraySet"), [_,x,p,v,_]) => pure $ hcat ["(", x, "[", p, "]=", v, ")"]
+  (UN (Basic "prim__newArray"), [_,s,v,_]) => pure $ hcat ["(Array(", fromBigInt s, ").fill(", v, "))"]
+  (UN (Basic "prim__arrayGet"), [_,x,p,_]) => pure $ hcat ["(", x, "[", fromBigInt p, "])"]
+  (UN (Basic "prim__arraySet"), [_,x,p,v,_]) => pure $ hcat ["(", x, "[", fromBigInt p, "]=", v, ")"]
   (UN (Basic "void"), [_, _]) => pure . jsCrashExp $ jsStringDoc "Error: Executed 'void'"
   (UN (Basic "prim__void"), [_, _]) => pure . jsCrashExp $ jsStringDoc "Error: Executed 'void'"
   (UN (Basic "prim__codegen"), []) => do
