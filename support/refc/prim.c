@@ -136,7 +136,7 @@ Value *onCollect(Value *_erased, Value *_anyPtr, Value *_freeingFunction,
   Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
   retVal->header.tag = GC_POINTER_TAG;
   retVal->p = (Value_Pointer *)newReference(_anyPtr);
-  retVal->onCollectFct = (Value_Closure *)newReference(_freeingFunction);
+  retVal->onCollectFct = (Value_Closure *)_freeingFunction;
   return (Value *)retVal;
 }
 
@@ -144,7 +144,7 @@ Value *onCollectAny(Value *_anyPtr, Value *_freeingFunction, Value *_world) {
   Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
   retVal->header.tag = GC_POINTER_TAG;
   retVal->p = (Value_Pointer *)newReference(_anyPtr);
-  retVal->onCollectFct = (Value_Closure *)newReference(_freeingFunction);
+  retVal->onCollectFct = (Value_Closure *)_freeingFunction;
   return (Value *)retVal;
 }
 

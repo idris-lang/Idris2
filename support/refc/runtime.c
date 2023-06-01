@@ -22,7 +22,9 @@ Value *apply_closure(Value *_clos, Value *arg) {
   newArgs->filled = oldArgs->filled + 1;
   // add argument to new arglist
   for (int i = 0; i < oldArgs->filled; i++) {
-    if(_clos->header.refCounter <= 1)
+    // if the closure has multiple references, then apply newReference to arguments
+    // to avoid premature clearing of arguments
+    if (_clos->header.refCounter <= 1)
       newArgs->args[i] = oldArgs->args[i];
     else
       newArgs->args[i] = newReference(oldArgs->args[i]);
@@ -33,9 +35,9 @@ Value *apply_closure(Value *_clos, Value *arg) {
   fun_ptr_t f = clos->f;
 
   clos->header.refCounter--;
-  if(clos->header.refCounter == 0){
+  if (clos->header.refCounter == 0) {
     clos->arglist->header.refCounter--;
-    if(clos->arglist->header.refCounter == 0){
+    if (clos->arglist->header.refCounter == 0) {
       free(clos->arglist->args);
       free(clos->arglist);
     }
@@ -48,7 +50,7 @@ Value *apply_closure(Value *_clos, Value *arg) {
       Value *retVal = f(newArgs);
       
       newArgs->header.refCounter--;
-      if(newArgs->header.refCounter == 0){
+      if (newArgs->header.refCounter == 0) {
         free(newArgs->args);
         free(newArgs);
       }
@@ -73,7 +75,9 @@ Value *tailcall_apply_closure(Value *_clos, Value *arg) {
   newArgs->filled = oldArgs->filled + 1;
   // add argument to new arglist
   for (int i = 0; i < oldArgs->filled; i++) {
-    if(_clos->header.refCounter <= 1)
+    // if the closure has multiple references, then apply newReference to arguments
+    // to avoid premature clearing of arguments
+    if (_clos->header.refCounter <= 1)
       newArgs->args[i] = oldArgs->args[i];
     else
       newArgs->args[i] = newReference(oldArgs->args[i]);
@@ -84,9 +88,9 @@ Value *tailcall_apply_closure(Value *_clos, Value *arg) {
   fun_ptr_t f = ((Value_Closure *)clos)->f;
 
   clos->header.refCounter--;
-  if(clos->header.refCounter == 0){
+  if (clos->header.refCounter == 0) {
     clos->arglist->header.refCounter--;
-    if(clos->arglist->header.refCounter == 0){
+    if (clos->arglist->header.refCounter == 0) {
       free(clos->arglist->args);
       free(clos->arglist);
     }
@@ -133,7 +137,7 @@ Value *trampoline(Value *closure) {
   while (1) {
     Value *retVal = f(arglist);
     arglist->header.refCounter--;
-    if(arglist->header.refCounter == 0){
+    if (arglist->header.refCounter == 0) {
       free(arglist->args);
       free(arglist);
     }

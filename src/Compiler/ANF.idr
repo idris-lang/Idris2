@@ -9,7 +9,7 @@ import Core.TT
 
 import Data.List
 import Data.Vect
-import Data.SortedSet
+import Libraries.Data.SortedSet
 
 %default covering
 
@@ -66,7 +66,7 @@ mutual
   Show AVar where
     show (ALocal i) = "v" ++ show i
     show ANull = "[__]"
-  
+
   export
   Eq AVar where
     (ALocal i1) == (ALocal i2) = i1 == i2
@@ -294,7 +294,9 @@ freeVariables (ACon _ _ _ _ args) = fromList args
 freeVariables (AOp _ _ _ args) = fromList $ foldl (\acc, elem => elem :: acc) [] args
 freeVariables (AExtPrim _ _ _ args) = fromList args
 freeVariables (AConCase _ sc alts mDef) =
-    let altsAnf = map (\(MkAConAlt _ _ _ args caseBody) => difference (freeVariables caseBody) (fromList $ ALocal <$> args)) alts in
+    let altsAnf =
+        map (\(MkAConAlt _ _ _ args caseBody) =>
+                difference (freeVariables caseBody) (fromList $ ALocal <$> args)) alts in
     let anfs : List (SortedSet AVar) = case mDef of
                 Just anf => freeVariables anf :: altsAnf
                 Nothing => altsAnf in

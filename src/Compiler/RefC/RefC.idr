@@ -17,7 +17,7 @@ import Data.List
 import Data.List1
 import Libraries.Data.DList
 import Data.Nat
-import Data.SortedSet
+import Libraries.Data.SortedSet
 import Data.Vect
 
 import System
@@ -367,10 +367,10 @@ dupsVars vars = traverse_ (\v => emit EmptyFC $ "newReference(" ++ v ++ ");" ) v
 
 avarToC : Env -> AVar -> Core String
 avarToC (MkPercEnv borrowed owned) x = do
-    pure $ if contains x borrowed then "newReference(" ++ varName x ++ ")" else "(" ++ varName x  ++ ")"
-           --if contains x borrowed && (owned == empty) then "newReference(" ++ varName x ++ ")" else 
-           --if (not $ contains x borrowed) && owned == singleton x then "(" ++ varName x  ++ ")"
-           --else assert_total $ idris_crash "INTERNAL ERROR: avarToC: "
+    pure $
+        if contains x borrowed then "newReference(" ++ varName x ++ ")"
+        else if contains x owned then varName x
+        else assert_total $ idris_crash "INTERNAL ERROR: variable " ++ varName x ++ " is not owned and borrowed "
 
 makeArglist : {auto a : Ref ArgCounter Nat}
            -> {auto oft : Ref OutfileText Output}
@@ -390,16 +390,13 @@ makeArglist env missing xs = do
     pushArgToArglist env arglist xs 0
     pure arglist
 where
-    pushArgToArglist : Env -> String
-                    -> List AVar
-                    -> Nat
-                    -> Core ()
+    pushArgToArglist : Env -> String -> List AVar -> Nat -> Core ()
     pushArgToArglist _ arglist [] k = pure ()
     pushArgToArglist (MkPercEnv borrowed owned) arglist (arg :: args) k = do
         let ownedArg = if contains arg owned then singleton arg else empty
         emit EmptyFC $ arglist
-                    ++ "->args[" ++ show k ++ "] = ("
-                    ++ !(avarToC (MkPercEnv borrowed ownedArg) arg) ++ ");"
+                    ++ "->args[" ++ show k ++ "] = "
+                    ++ !(avarToC (MkPercEnv borrowed ownedArg) arg) ++ ";"
         pushArgToArglist (MkPercEnv (union borrowed ownedArg) (difference owned ownedArg)) arglist args (S k)
 
 fillConstructorArgs : {auto oft : Ref OutfileText Output}
@@ -412,7 +409,7 @@ fillConstructorArgs : {auto oft : Ref OutfileText Output}
 fillConstructorArgs _ _ [] _ = pure ()
 fillConstructorArgs (MkPercEnv borrowed owned) cons (v :: vars) k = do
     let ownedVars = if contains v owned then singleton v else empty
-    emit EmptyFC $ cons ++ "->args["++ show k ++ "] = (" ++ !(avarToC (MkPercEnv borrowed ownedVars) v) ++");"
+    emit EmptyFC $ cons ++ "->args["++ show k ++ "] = " ++ !(avarToC (MkPercEnv borrowed ownedVars) v) ++";"
     fillConstructorArgs (MkPercEnv (union borrowed ownedVars) (difference owned ownedVars)) cons vars (S k)
 
 showTag : Maybe Int -> String
@@ -659,6 +656,8 @@ mutual
 
         valueAssignment <- cStatementsFromANF (MkPercEnv (union borrowed borrowVal) (difference owned borrowVal)) value NotInTailPosition
         emit fc $ "Value * var_" ++ (show var) ++ " = " ++ nonTailCall valueAssignment ++ ";"
+        unless (contains (ALocal var) freeBody) $ emit fc $ "removeReference(" ++ "var_" ++ (show var) ++ ");"
+
         bodyAssignment <- cStatementsFromANF (MkPercEnv borrowed owned') body tailPosition
         pure $ bodyAssignment
     cStatementsFromANF _ (ACon fc n UNIT tag []) _ = do

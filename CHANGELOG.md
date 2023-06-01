@@ -25,6 +25,8 @@
   systems with non-standard installation locations of libraries (e.g. GMP).
   Versions of the flags with the `IDRIS2_` prefix can also be used and take
   precedence.
+* Compiler can emit precise reference counting instructions where a reference
+  is dropped as soon as possible
 
 #### Chez
 
