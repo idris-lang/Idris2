@@ -16,6 +16,8 @@
 ### REPL changes
 
 * Adds documentation for unquotes `~( )`.
+* Adds documentation for laziness and codata primitives: `Lazy`, `Inf`, `Delay`,
+  and `Force`.
 
 ### Backend changes
 
@@ -38,6 +40,7 @@
 * Generated JavaScript files now include a shebang when using the Node.js backend
 * NodeJS now supports `popen`/`pclose` for the `Read` mode.
 * `getChar` is now supported on Node.js and `putChar` is supported on both JavaScript backends.
+* Integer-indexed arrays are now supported.
 
 ### Compiler changes
 
@@ -86,6 +89,8 @@
   blocks get the runtime error added.
 
 * Constant folding of trivial let statements and `believe_me`.
+
+* Fixed a bug that caused holes to appear unexpectedly during quotation of dependent pairs.
 
 ### Library changes
 
@@ -156,6 +161,9 @@
   and `Data.Vect.Quantifiers.All.All`.
 
 * Add `zipPropertyWith` to `Data.Vect.Quantifiers.All.All`.
+
+* Implemented `Ord` for `Language.Reflection.TT.Name`, `Language.Reflection.TT.Namespace`
+  and `Language.Reflection.TT.UserName`.
 
 #### System
 

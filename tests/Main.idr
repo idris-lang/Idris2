@@ -96,7 +96,7 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
        "perror011", "perror012", "perror013", "perror014", "perror015",
        "perror016", "perror017", "perror018", "perror019", "perror020",
        "perror021", "perror022", "perror023", "perror024", "perror025",
-       "perror026"]
+       "perror026", "perror027"]
 
 idrisTestsInteractive : TestPool
 idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
@@ -133,7 +133,8 @@ idrisTestsLinear = MkTestPool "Quantities" [] Nothing
        ["linear001", "linear002", "linear003", -- "linear004" -- disabled due to requiring linearity subtyping
         "linear005", "linear006", "linear007", "linear008",
         "linear009", "linear010", "linear011", "linear012",
-        "linear013", "linear014", "linear015", "linear016"]
+        "linear013", "linear014", "linear015", "linear016",
+        "linear017"]
 
 idrisTestsLiterate : TestPool
 idrisTestsLiterate = MkTestPool "Literate programming" [] Nothing
@@ -163,7 +164,7 @@ idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
        "reg036", "reg037", "reg038", "reg039", "reg040", "reg041", "reg042",
        "reg043", "reg044", "reg045", "reg046", "reg047", "reg048", "reg049",
-       "reg050", "reg051"]
+       "reg050", "reg051", "reg052"]
 
 idrisTestsData : TestPool
 idrisTestsData = MkTestPool "Data and record types" [] Nothing
@@ -196,6 +197,7 @@ idrisTestsEvaluator = MkTestPool "Evaluation" [] Nothing
 idrisTestsREPL : TestPool
 idrisTestsREPL = MkTestPool "REPL commands and help" [] Nothing
       [ "repl001", "repl002", "repl003", "repl004", "repl005"
+      , "repl006"
       ]
 
 idrisTestsAllSchemes : Requirement -> TestPool
@@ -363,6 +365,7 @@ nodeTests = MkTestPool "Node backend" [] (Just Node)
     , "fix1839"
     , "tailrec_libs"
     , "nomangle001", "nomangle002"
+    , "integer_array"
     ]
 
 vmcodeInterpTests : IO TestPool
