@@ -22,8 +22,10 @@ Value *apply_closure(Value *_clos, Value *arg) {
   newArgs->filled = oldArgs->filled + 1;
   // add argument to new arglist
   for (int i = 0; i < oldArgs->filled; i++) {
-    // if the closure has multiple references, then apply newReference to arguments
-    // to avoid premature clearing of arguments
+    /*
+    if the closure has multiple references, then apply newReference to arguments
+    to avoid premature clearing of arguments
+    */
     if (_clos->header.refCounter <= 1)
       newArgs->args[i] = oldArgs->args[i];
     else
@@ -48,13 +50,11 @@ Value *apply_closure(Value *_clos, Value *arg) {
   if (newArgs->filled >= newArgs->total) {
     while (1) {
       Value *retVal = f(newArgs);
-      
       newArgs->header.refCounter--;
       if (newArgs->header.refCounter == 0) {
         free(newArgs->args);
         free(newArgs);
       }
-      
       if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
         return retVal;
       }
@@ -75,8 +75,10 @@ Value *tailcall_apply_closure(Value *_clos, Value *arg) {
   newArgs->filled = oldArgs->filled + 1;
   // add argument to new arglist
   for (int i = 0; i < oldArgs->filled; i++) {
-    // if the closure has multiple references, then apply newReference to arguments
-    // to avoid premature clearing of arguments
+    /*
+    if the closure has multiple references, then apply newReference to arguments
+    to avoid premature clearing of arguments
+    */
     if (_clos->header.refCounter <= 1)
       newArgs->args[i] = oldArgs->args[i];
     else

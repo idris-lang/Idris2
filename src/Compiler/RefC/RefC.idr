@@ -281,6 +281,9 @@ data FunctionDefinitions : Type where
 data IndentLevel : Type where
 data HeaderFiles : Type where
 
+-- Environment for precise reference counting
+-- If variable borrowed when used, call a function newReference
+-- If variable owned, then use it directly
 record Env where
   constructor MkPercEnv
   borrowed : SortedSet AVar
@@ -358,12 +361,6 @@ removeVars : {auto oft : Ref OutfileText Output}
            -> List String
            -> Core $ ()
 removeVars vars = traverse_ (\v => emit EmptyFC $ "removeReference(" ++ v ++ ");" ) vars
-
-dupsVars : {auto oft : Ref OutfileText Output}
-           -> {auto il : Ref IndentLevel Nat}
-           -> List String
-           -> Core $ ()
-dupsVars vars = traverse_ (\v => emit EmptyFC $ "newReference(" ++ v ++ ");" ) vars
 
 avarToC : Env -> AVar -> Core String
 avarToC (MkPercEnv borrowed owned) x = do
@@ -513,7 +510,9 @@ mutual
         emit EmptyFC $ "  {"
         increaseIndentation
         varBindLines sc args Z
-        assignment <- cStatementsFromANF (MkPercEnv (union (fromList $ ALocal <$> args) borrowed) owned') body tailStatus
+        -- all constructor arguments are borrowed
+        let borrowed' = union (fromList $ ALocal <$> args) borrowed
+        assignment <- cStatementsFromANF (MkPercEnv borrowed' owned') body tailStatus
         emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         removeVars (varName <$> SortedSet.toList shouldDrop)
         emit EmptyFC $ "break;"
@@ -897,19 +896,16 @@ createCFunctions n (MkAFun args anf) = do
     fn <- functionDefSignature n args
     fn' <- functionDefSignatureArglist n
     update FunctionDefinitions $ \otherDefs => (fn ++ ";\n") :: (fn' ++ ";\n") :: otherDefs
-    let argsSet = fromList $ ALocal <$> args
+    let argsVars = fromList $ ALocal <$> args
     let bodyFreeVars = freeVariables anf
-    let funcFreeVars = difference bodyFreeVars argsSet
-    let shouldOwn = intersection argsSet bodyFreeVars
-    let shouldDrop = difference argsSet bodyFreeVars
+    let shouldDrop = difference argsVars bodyFreeVars
     let argsNrs = getArgsNrList args Z
     emit EmptyFC fn
     emit EmptyFC "{"
     increaseIndentation
-    assignment <- cStatementsFromANF (MkPercEnv empty (union funcFreeVars shouldOwn)) anf InTailPosition
+    assignment <- cStatementsFromANF (MkPercEnv empty bodyFreeVars) anf InTailPosition
     emit EmptyFC $ "Value *returnValue = " ++ tailCall assignment ++ ";"
     removeVars (varName <$> SortedSet.toList shouldDrop)
-    dupsVars (varName <$> SortedSet.toList funcFreeVars)
     emit EmptyFC $ "return returnValue;"
     decreaseIndentation
     emit EmptyFC  "}\n"

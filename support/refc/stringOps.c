@@ -199,8 +199,9 @@ Value *onCollectStringIterator_arglist(Value_Arglist *arglist) {
 
 Value *stringIteratorToString(void *a, char *str, Value *it_p,
                               Value_Closure *f) {
-  String_Iterator *it = ((Value_GCPointer *)newReference(it_p))->p->p;
-  return apply_closure(newReference((Value *)f), (Value *)makeString(it->str + it->pos));
+  String_Iterator *it = ((Value_GCPointer *)it_p)->p->p;
+  Value *strVal = (Value *)makeString(it->str + it->pos);
+  return apply_closure(newReference((Value *)f), strVal);
 }
 
 Value *stringIteratorNext(char *s, Value *it_p) {
