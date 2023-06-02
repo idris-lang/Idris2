@@ -15,6 +15,23 @@ void push_Arglist(Value_Arglist *arglist, Value *arg) {
   arglist->filled++;
 }
 
+// necessary because not every variable passed as arguments is duplicated
+void removeArglistWithoutArgs(Value_Arglist *arglist) {
+  arglist->header.refCounter--;
+  if (arglist->header.refCounter == 0) {
+    free(arglist->args);
+    free(arglist);
+  }
+}
+
+void removeClosureWithoutArgs(Value_Closure *clos) {
+  clos->header.refCounter--;
+  if (clos->header.refCounter == 0) {
+    removeArglistWithoutArgs(clos->arglist);
+    free(clos);
+  }
+}
+
 Value *apply_closure(Value *_clos, Value *arg) {
   // create a new arg list
   Value_Arglist *oldArgs = ((Value_Closure *)_clos)->arglist;
@@ -36,25 +53,13 @@ Value *apply_closure(Value *_clos, Value *arg) {
   Value_Closure *clos = (Value_Closure *)_clos;
   fun_ptr_t f = clos->f;
 
-  clos->header.refCounter--;
-  if (clos->header.refCounter == 0) {
-    clos->arglist->header.refCounter--;
-    if (clos->arglist->header.refCounter == 0) {
-      free(clos->arglist->args);
-      free(clos->arglist);
-    }
-    free(clos);
-  }
+  removeClosureWithoutArgs(clos);
 
   // check if enough arguments exist
   if (newArgs->filled >= newArgs->total) {
     while (1) {
       Value *retVal = f(newArgs);
-      newArgs->header.refCounter--;
-      if (newArgs->header.refCounter == 0) {
-        free(newArgs->args);
-        free(newArgs);
-      }
+      removeArglistWithoutArgs(newArgs);
       if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
         return retVal;
       }
@@ -89,15 +94,7 @@ Value *tailcall_apply_closure(Value *_clos, Value *arg) {
   Value_Closure *clos = (Value_Closure *)_clos;
   fun_ptr_t f = ((Value_Closure *)clos)->f;
 
-  clos->header.refCounter--;
-  if (clos->header.refCounter == 0) {
-    clos->arglist->header.refCounter--;
-    if (clos->arglist->header.refCounter == 0) {
-      free(clos->arglist->args);
-      free(clos->arglist);
-    }
-    free(clos);
-  }
+  removeClosureWithoutArgs(clos);
 
   return (Value *)makeClosureFromArglist(f, newArgs);
 }
@@ -138,11 +135,7 @@ Value *trampoline(Value *closure) {
   removeReference(closure);
   while (1) {
     Value *retVal = f(arglist);
-    arglist->header.refCounter--;
-    if (arglist->header.refCounter == 0) {
-      free(arglist->args);
-      free(arglist);
-    }
+    removeArglistWithoutArgs(arglist);
     if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
       return retVal;
     }
