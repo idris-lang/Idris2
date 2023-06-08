@@ -28,7 +28,8 @@
   Versions of the flags with the `IDRIS2_` prefix can also be used and take
   precedence.
 * Compiler can emit precise reference counting instructions where a reference
-  is dropped as soon as possible
+  is dropped as soon as possible. This allows you to reuse unique variables and
+  optimize memory consumption.
 
 #### Chez
 

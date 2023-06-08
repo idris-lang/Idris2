@@ -15,6 +15,13 @@ void push_Arglist(Value_Arglist *arglist, Value *arg) {
   arglist->filled++;
 }
 
+int isUnique(Value *value) {
+  if (value) {
+    return value->header.refCounter == 1;
+  }
+  return 0;
+}
+
 // necessary because not every variable passed as arguments is duplicated
 void removeArglistWithoutArgs(Value_Arglist *arglist) {
   IDRIS2_REFC_VERIFY(arglist->header.refCounter > 0, "refCounter %lld",

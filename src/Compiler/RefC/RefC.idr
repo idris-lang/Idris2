@@ -573,7 +573,7 @@ mutual
                 c <- getNextCounter
                 let constr = "constructor_" ++ (show c)
                 emit EmptyFC $ "Value_Constructor* "++ constr ++ " = NULL;"
-                emit EmptyFC $ "if (" ++ varName sc ++ "->header.refCounter == 1) {"
+                emit EmptyFC $ "if (isUnique(" ++ varName sc ++ ")) {"
                 increaseIndentation
                 emit EmptyFC $ constr ++ " = (Value_Constructor*)" ++ varName sc ++ ";"
                 fillConstructorNull constr 0 conArgs
@@ -583,7 +583,6 @@ mutual
                 increaseIndentation
                 dupVars (varName <$> conArgs)
                 removeVars [varName sc]
-                emit EmptyFC $ constr ++ " = " ++ "NULL;"
                 decreaseIndentation
                 emit EmptyFC "}"
                 pure (delete sc shouldDrop, insert tag constr actualReuseConsts)
@@ -733,7 +732,7 @@ mutual
         let owned' = if contains (ALocal var) freeBody then insert (ALocal var) borrowVal else borrowVal
         let consts = usedConstructorsTags value
 
-        valueAssignment <- cStatementsFromANF (MkPercEnv (union borrowed borrowVal) (difference owned borrowVal) reuseMap) value NotInTailPosition
+        valueAssignment <- cStatementsFromANF (MkPercEnv (union borrowed borrowVal) (difference owned borrowVal) (intersectionMap reuseMap consts)) value NotInTailPosition
         emit fc $ "Value * var_" ++ (show var) ++ " = " ++ nonTailCall valueAssignment ++ ";"
         unless (contains (ALocal var) freeBody) $ emit fc $ "removeReference(" ++ "var_" ++ (show var) ++ ");"
 

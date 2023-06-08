@@ -4,6 +4,7 @@
 
 void missing_ffi();
 
+int isUnique(Value *value);
 void removeReuseConstructor(Value_Constructor *constr);
 
 Value *apply_closure(Value *, Value *arg);
