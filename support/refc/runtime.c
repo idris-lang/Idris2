@@ -17,6 +17,8 @@ void push_Arglist(Value_Arglist *arglist, Value *arg) {
 
 // necessary because not every variable passed as arguments is duplicated
 void removeArglistWithoutArgs(Value_Arglist *arglist) {
+  IDRIS2_REFC_VERIFY(arglist->header.refCounter > 0, "refCounter %lld",
+                     (long long)arglist->header.refCounter);
   arglist->header.refCounter--;
   if (arglist->header.refCounter == 0) {
     free(arglist->args);
@@ -25,10 +27,25 @@ void removeArglistWithoutArgs(Value_Arglist *arglist) {
 }
 
 void removeClosureWithoutArgs(Value_Closure *clos) {
+  IDRIS2_REFC_VERIFY(clos->header.refCounter > 0, "refCounter %lld",
+                     (long long)clos->header.refCounter);
   clos->header.refCounter--;
   if (clos->header.refCounter == 0) {
     removeArglistWithoutArgs(clos->arglist);
     free(clos);
+  }
+}
+
+void removeReuseConstructor(Value_Constructor *constr) {
+  IDRIS2_REFC_VERIFY(constr->header.refCounter > 0, "refCounter %lld",
+                     (long long)constr->header.refCounter);
+  constr->header.refCounter--;
+  if (constr->header.refCounter == 0) {
+    if (constr->name) {
+      free(constr->name);
+    }
+    free(constr->args);
+    free(constr);
   }
 }
 

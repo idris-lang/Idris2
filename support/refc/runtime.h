@@ -4,6 +4,8 @@
 
 void missing_ffi();
 
+void removeReuseConstructor(Value_Constructor *constr);
+
 Value *apply_closure(Value *, Value *arg);
 void push_Arglist(Value_Arglist *arglist, Value *arg);
 

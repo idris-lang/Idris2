@@ -18,6 +18,7 @@ import Data.List1
 import Libraries.Data.DList
 import Data.Nat
 import Libraries.Data.SortedSet
+import Libraries.Data.SortedMap
 import Data.Vect
 
 import System
@@ -281,13 +282,16 @@ data FunctionDefinitions : Type where
 data IndentLevel : Type where
 data HeaderFiles : Type where
 
--- Environment for precise reference counting
--- If variable borrowed when used, call a function newReference
--- If variable owned, then use it directly
+-- Environment for precise reference counting.
+-- If variable borrowed when used, call a function newReference.
+-- If variable owned, then use it directly.
+-- Reuse Map contains the tag of the reusable constructor
+-- and the name of the constructor variable
 record Env where
   constructor MkPercEnv
   borrowed : SortedSet AVar
   owned : SortedSet AVar
+  reuseMap : SortedMap Int String
 
 ------------------------------------------------------------------------
 -- Output generation: using a difference list for efficient append
@@ -356,14 +360,33 @@ addHeader : {auto h : Ref HeaderFiles (SortedSet String)}
          -> Core ()
 addHeader = update HeaderFiles . insert
 
+applyFunctionToVars : {auto oft : Ref OutfileText Output}
+                    -> {auto il : Ref IndentLevel Nat}
+                    -> String
+                    -> List String
+                    -> Core $ ()
+applyFunctionToVars fun vars = traverse_ (\v => emit EmptyFC $ fun ++ "(" ++ v ++ ");" ) vars
+
 removeVars : {auto oft : Ref OutfileText Output}
            -> {auto il : Ref IndentLevel Nat}
            -> List String
            -> Core $ ()
-removeVars vars = traverse_ (\v => emit EmptyFC $ "removeReference(" ++ v ++ ");" ) vars
+removeVars = applyFunctionToVars "removeReference"
+
+dupVars : {auto oft : Ref OutfileText Output}
+           -> {auto il : Ref IndentLevel Nat}
+           -> List String
+           -> Core $ ()
+dupVars = applyFunctionToVars "newReference"
+
+removeReuseConstructors : {auto oft : Ref OutfileText Output}
+                        -> {auto il : Ref IndentLevel Nat}
+                        -> List String
+                        -> Core $ ()
+removeReuseConstructors = applyFunctionToVars "removeReuseConstructor"
 
 avarToC : Env -> AVar -> Core String
-avarToC (MkPercEnv borrowed owned) x = do
+avarToC (MkPercEnv borrowed owned _) x = do
     pure $
         if contains x borrowed then "newReference(" ++ varName x ++ ")"
         else if contains x owned then varName x
@@ -389,12 +412,12 @@ makeArglist env missing xs = do
 where
     pushArgToArglist : Env -> String -> List AVar -> Nat -> Core ()
     pushArgToArglist _ arglist [] k = pure ()
-    pushArgToArglist (MkPercEnv borrowed owned) arglist (arg :: args) k = do
+    pushArgToArglist (MkPercEnv borrowed owned reuseMap) arglist (arg :: args) k = do
         let ownedArg = if contains arg owned then singleton arg else empty
         emit EmptyFC $ arglist
                     ++ "->args[" ++ show k ++ "] = "
-                    ++ !(avarToC (MkPercEnv borrowed ownedArg) arg) ++ ";"
-        pushArgToArglist (MkPercEnv (union borrowed ownedArg) (difference owned ownedArg)) arglist args (S k)
+                    ++ !(avarToC (MkPercEnv borrowed ownedArg reuseMap) arg) ++ ";"
+        pushArgToArglist (MkPercEnv (union borrowed ownedArg) (difference owned ownedArg) reuseMap) arglist args (S k)
 
 fillConstructorArgs : {auto oft : Ref OutfileText Output}
                    -> {auto il : Ref IndentLevel Nat}
@@ -404,10 +427,10 @@ fillConstructorArgs : {auto oft : Ref OutfileText Output}
                    -> Nat
                    -> Core ()
 fillConstructorArgs _ _ [] _ = pure ()
-fillConstructorArgs (MkPercEnv borrowed owned) cons (v :: vars) k = do
+fillConstructorArgs (MkPercEnv borrowed owned reuseMap) cons (v :: vars) k = do
     let ownedVars = if contains v owned then singleton v else empty
-    emit EmptyFC $ cons ++ "->args["++ show k ++ "] = " ++ !(avarToC (MkPercEnv borrowed ownedVars) v) ++";"
-    fillConstructorArgs (MkPercEnv (union borrowed ownedVars) (difference owned ownedVars)) cons vars (S k)
+    emit EmptyFC $ cons ++ "->args["++ show k ++ "] = " ++ !(avarToC (MkPercEnv borrowed ownedVars reuseMap) v) ++";"
+    fillConstructorArgs (MkPercEnv (union borrowed ownedVars) (difference owned ownedVars) reuseMap) cons vars (S k)
 
 showTag : Maybe Int -> String
 showTag Nothing = "-1"
@@ -496,30 +519,78 @@ mutual
              -> {auto oft : Ref OutfileText Output}
              -> {auto il : Ref IndentLevel Nat}
              -> Env
-             -> (scrutinee:String)
+             -> (scrutinee : AVar)
              -> List AConAlt
              -> (returnValueVariable : String)
              -> (nrConBlock : Nat)
              -> TailPositionStatus
              -> Core ()
     conBlocks _ _ [] _ _ _ = pure ()
-    conBlocks env@(MkPercEnv borrowed owned) sc ((MkAConAlt n _ mTag args body) :: xs) retValVar k tailStatus = do
+    conBlocks env@(MkPercEnv borrowed owned reuseMap) sc ((MkAConAlt n _ mTag args body) :: xs) retValVar k tailStatus = do
+        let conArgs = ALocal <$> args
+        let owned = union (fromList conArgs) owned
         let owned' = intersection owned (freeVariables body)
         let shouldDrop = difference owned owned'
+        let consts = usedConstructorsTags body
+        let dropReuseConsts = differenceMap reuseMap consts
+        let actualReuseConsts = intersectionMap reuseMap consts
+
         emit EmptyFC $ "  case " ++ show k ++ ":"
         emit EmptyFC $ "  {"
         increaseIndentation
-        varBindLines sc args Z
-        -- all constructor arguments are borrowed
-        let borrowed' = union (fromList $ ALocal <$> args) borrowed
-        assignment <- cStatementsFromANF (MkPercEnv borrowed' owned') body tailStatus
+        varBindLines (varName sc) args Z
+        (shouldDrop', actualReuseConsts') <- addReuseConstructor mTag conArgs consts shouldDrop actualReuseConsts
+        removeVars (varName <$> SortedSet.toList shouldDrop')
+        removeReuseConstructors $ values dropReuseConsts
+        assignment <- cStatementsFromANF (MkPercEnv borrowed owned' actualReuseConsts') body tailStatus
         emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
-        removeVars (varName <$> SortedSet.toList shouldDrop)
         emit EmptyFC $ "break;"
         decreaseIndentation
         emit EmptyFC $ "  }"
         conBlocks env sc xs retValVar (S k) tailStatus
     where
+        fillConstructorNull : String
+                            -> Nat
+                            -> List AVar
+                            -> Core ()
+        fillConstructorNull _ _ [] = pure ()
+        fillConstructorNull cons k (_ :: vars) = do
+            emit EmptyFC $ cons ++ "->args["++ show k ++ "] = NULL;"
+            fillConstructorNull cons (S k) vars
+
+        -- if the constructor is unique use it, otherwise add it to should drop vars and create null constructor
+        addReuseConstructor : Maybe Int
+                            -> List AVar
+                            -> SortedSet Int
+                            -> SortedSet AVar
+                            -> SortedMap Int String
+                            -> Core (SortedSet AVar, SortedMap Int String)
+        addReuseConstructor Nothing conArgs _ shouldDrop actualReuseConsts = do
+            dupVars (varName <$> conArgs)
+            pure (shouldDrop, actualReuseConsts)
+        addReuseConstructor (Just tag) conArgs consts shouldDrop actualReuseConsts =
+            if (isNothing $ lookup tag reuseMap) && contains tag consts && contains sc shouldDrop then do
+                c <- getNextCounter
+                let constr = "constructor_" ++ (show c)
+                emit EmptyFC $ "Value_Constructor* "++ constr ++ " = NULL;"
+                emit EmptyFC $ "if (" ++ varName sc ++ "->header.refCounter == 1) {"
+                increaseIndentation
+                emit EmptyFC $ constr ++ " = (Value_Constructor*)" ++ varName sc ++ ";"
+                fillConstructorNull constr 0 conArgs
+                decreaseIndentation
+                emit EmptyFC "}"
+                emit EmptyFC "else {"
+                increaseIndentation
+                dupVars (varName <$> conArgs)
+                removeVars [varName sc]
+                emit EmptyFC $ constr ++ " = " ++ "NULL;"
+                decreaseIndentation
+                emit EmptyFC "}"
+                pure (delete sc shouldDrop, insert tag constr actualReuseConsts)
+            else do
+                dupVars (varName <$> conArgs)
+                pure (shouldDrop, actualReuseConsts)
+
         varBindLines : String -> (args : List Int) -> Nat -> Core ()
         varBindLines _ [] _ = pure ()
         varBindLines sc (target :: xs) source = do
@@ -538,16 +609,20 @@ mutual
                        -> TailPositionStatus
                        -> Core ()
     constBlockSwitch _ [] _ _ _ = pure ()
-    constBlockSwitch env@(MkPercEnv borrowed owned) ((MkAConstAlt c' caseBody) :: alts) retValVar i tailStatus = do
+    constBlockSwitch env@(MkPercEnv borrowed owned reuseMap) ((MkAConstAlt c' caseBody) :: alts) retValVar i tailStatus = do
         let c = const2Integer c' i
         let owned' = intersection owned (freeVariables caseBody)
         let shouldDrop = difference owned owned'
+        let consts = usedConstructorsTags caseBody
+        let dropReuseConsts = differenceMap reuseMap consts
+        let actualReuseConsts = intersectionMap reuseMap consts
         emit EmptyFC $ "  case " ++ show c ++ " :"
         emit EmptyFC "  {"
         increaseIndentation
-        assignment <- cStatementsFromANF (MkPercEnv borrowed owned') caseBody tailStatus
-        emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
+        removeReuseConstructors $ values dropReuseConsts
         removeVars (varName <$> SortedSet.toList shouldDrop)
+        assignment <- cStatementsFromANF (MkPercEnv borrowed owned' actualReuseConsts) caseBody tailStatus
+        emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         emit EmptyFC "break;"
         decreaseIndentation
         emit EmptyFC "  }"
@@ -564,15 +639,19 @@ mutual
                      -> TailPositionStatus
                      -> Core ()
     constDefaultBlock _ Nothing _ _ = pure ()
-    constDefaultBlock env@(MkPercEnv borrowed owned) (Just defaultBody) retValVar tailStatus = do
+    constDefaultBlock env@(MkPercEnv borrowed owned reuseMap) (Just defaultBody) retValVar tailStatus = do
         let owned' = intersection owned (freeVariables defaultBody)
         let shouldDrop = difference owned owned'
+        let consts = usedConstructorsTags defaultBody
+        let dropReuseConsts = differenceMap reuseMap consts
+        let actualReuseConsts = intersectionMap reuseMap consts
         emit EmptyFC "  default :"
         emit EmptyFC "  {"
         increaseIndentation
-        assignment <- cStatementsFromANF (MkPercEnv borrowed owned') defaultBody tailStatus
-        emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
+        removeReuseConstructors $ values dropReuseConsts
         removeVars (varName <$> SortedSet.toList shouldDrop)
+        assignment <- cStatementsFromANF (MkPercEnv borrowed owned' actualReuseConsts) defaultBody tailStatus
+        emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         decreaseIndentation
         emit EmptyFC "  }"
 
@@ -648,32 +727,43 @@ mutual
     cStatementsFromANF env (AApp fc _ closure arg) _ =
         pure $ MkRS ("apply_closure(" ++ !(avarToC env closure) ++ ", " ++ !(avarToC env arg) ++ ")")
                     ("tailcall_apply_closure(" ++ !(avarToC env closure) ++ ", " ++ !(avarToC env arg) ++ ")")
-    cStatementsFromANF (MkPercEnv borrowed owned) (ALet fc var value body) tailPosition = do
+    cStatementsFromANF (MkPercEnv borrowed owned reuseMap) (ALet fc var value body) tailPosition = do
         let freeBody = freeVariables body
         let borrowVal = intersection owned (delete (ALocal var) freeBody)
         let owned' = if contains (ALocal var) freeBody then insert (ALocal var) borrowVal else borrowVal
+        let consts = usedConstructorsTags value
 
-        valueAssignment <- cStatementsFromANF (MkPercEnv (union borrowed borrowVal) (difference owned borrowVal)) value NotInTailPosition
+        valueAssignment <- cStatementsFromANF (MkPercEnv (union borrowed borrowVal) (difference owned borrowVal) reuseMap) value NotInTailPosition
         emit fc $ "Value * var_" ++ (show var) ++ " = " ++ nonTailCall valueAssignment ++ ";"
         unless (contains (ALocal var) freeBody) $ emit fc $ "removeReference(" ++ "var_" ++ (show var) ++ ");"
 
-        bodyAssignment <- cStatementsFromANF (MkPercEnv borrowed owned') body tailPosition
+        bodyAssignment <- cStatementsFromANF (MkPercEnv borrowed owned' (differenceMap reuseMap consts)) body tailPosition
         pure $ bodyAssignment
     cStatementsFromANF _ (ACon fc n UNIT tag []) _ = do
         pure $ MkRS "(Value*)NULL" "(Value*)NULL"
-    cStatementsFromANF env (ACon fc n _ tag args) _ = do
-        c <- getNextCounter
-        let constr = "constructor_" ++ (show c)
-        emit fc $ "Value_Constructor* "
-                ++ constr ++ " = newConstructor("
-                ++ (show (length args))
-                ++ ", "  ++ showTag tag  ++ ", "
-                ++ "\"" ++ cName n ++ "\""
-                ++ ");"
-        emit fc $ " // constructor " ++ cName n
-
-        fillConstructorArgs env constr args 0
-        pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
+    cStatementsFromANF env (ACon fc n _ mTag args) _ = do
+        let mConstr = mTag >>= (flip SortedMap.lookup $ reuseMap env)
+        let createNewConstructor = " = newConstructor("
+                        ++ (show (length args))
+                        ++ ", "  ++ showTag mTag  ++ ", "
+                        ++ "\"" ++ cName n ++ "\""
+                        ++ ");"
+        case mConstr of
+            Just constr => do
+                emit fc $ "if (" ++ constr ++ " == NULL) {"
+                increaseIndentation
+                emit fc $ constr ++ createNewConstructor
+                decreaseIndentation
+                emit fc "}"
+                fillConstructorArgs env constr args 0
+                pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
+            Nothing => do
+                c <- getNextCounter
+                let constr = "constructor_" ++ (show c)
+                emit fc $ "Value_Constructor* " ++ constr ++ createNewConstructor
+                emit fc $ " // constructor " ++ cName n
+                fillConstructorArgs env constr args 0
+                pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
     cStatementsFromANF env (AOp fc _ op args) _ = do
         c <- getNextCounter
         let resultVar = "primVar_" ++ (show c)
@@ -685,7 +775,7 @@ mutual
         emit fc $ "// call to external primitive " ++ cName p
         let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")")
         pure $ MkRS returnLine returnLine
-    cStatementsFromANF env@(MkPercEnv borrowed owned) (AConCase fc sc alts mDef) tailPosition = do
+    cStatementsFromANF env@(MkPercEnv borrowed owned reuseMap) (AConCase fc sc alts mDef) tailPosition = do
         c <- getNextCounter
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
         let newValueLine = "Value * " ++ switchReturnVar ++ " = NULL;"
@@ -703,7 +793,7 @@ mutual
         emit fc constructorFieldLine
         copyConstructors (varName sc) alts constructorField switchReturnVar 0
         emit fc switchLine
-        conBlocks env (varName sc) alts switchReturnVar 0 tailPosition
+        conBlocks env sc alts switchReturnVar 0 tailPosition
         case mDef of
             Nothing => do
                 emit EmptyFC $ "}"
@@ -712,11 +802,15 @@ mutual
             (Just d) => do
                 let owned' = intersection owned (freeVariables d)
                 let shouldDrop = difference owned owned'
+                let consts = usedConstructorsTags d
+                let dropReuseConsts = differenceMap reuseMap consts
+                let actualReuseConsts = intersectionMap reuseMap consts
                 emit EmptyFC $ "  default : {"
                 increaseIndentation
-                defaultAssignment <- cStatementsFromANF (MkPercEnv borrowed owned') d tailPosition
-                emit EmptyFC $ switchReturnVar ++ " = " ++ callByPosition tailPosition defaultAssignment ++ ";"
                 removeVars (varName <$> SortedSet.toList shouldDrop)
+                removeReuseConstructors $ values dropReuseConsts
+                defaultAssignment <- cStatementsFromANF (MkPercEnv borrowed owned' actualReuseConsts) d tailPosition
+                emit EmptyFC $ switchReturnVar ++ " = " ++ callByPosition tailPosition defaultAssignment ++ ";"
                 decreaseIndentation
                 emit EmptyFC $ "  }"
                 emit EmptyFC $ "}"
@@ -903,9 +997,9 @@ createCFunctions n (MkAFun args anf) = do
     emit EmptyFC fn
     emit EmptyFC "{"
     increaseIndentation
-    assignment <- cStatementsFromANF (MkPercEnv empty bodyFreeVars) anf InTailPosition
-    emit EmptyFC $ "Value *returnValue = " ++ tailCall assignment ++ ";"
     removeVars (varName <$> SortedSet.toList shouldDrop)
+    assignment <- cStatementsFromANF (MkPercEnv empty bodyFreeVars empty) anf InTailPosition
+    emit EmptyFC $ "Value *returnValue = " ++ tailCall assignment ++ ";"
     emit EmptyFC $ "return returnValue;"
     decreaseIndentation
     emit EmptyFC  "}\n"
@@ -972,27 +1066,28 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
           emit EmptyFC "{"
           increaseIndentation
           emit EmptyFC $ " // ffi call to " ++ cName fctName
+          let removeVarsArgList = removeVars ((\(_, varName, _) => varName) <$> typeVarNameArgList)
           case ret of
               CFIORes CFUnit => do
                   emit EmptyFC $ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
-                  removeVars ((\(_, varName, _) => varName) <$> typeVarNameArgList)
+                  removeVarsArgList
                   emit EmptyFC "return NULL;"
               CFIORes ret => do
                   emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
-                  removeVars ((\(_, varName, _) => varName) <$> typeVarNameArgList)
+                  removeVarsArgList
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
               _ => do
                   emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) typeVarNameArgList)
                               ++ ");"
-                  removeVars ((\(_, varName, _) => varName) <$> typeVarNameArgList)
+                  removeVarsArgList
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
 
           decreaseIndentation
