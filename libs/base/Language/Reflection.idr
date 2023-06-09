@@ -19,6 +19,7 @@ data Elab : Type -> Type where
      Pure : a -> Elab a
      Bind : Elab a -> (a -> Elab b) -> Elab b
      Fail : FC -> String -> Elab a
+     Warn : FC -> String -> Elab ()
 
      Try : Elab a -> Elab a -> Elab a
 
@@ -100,6 +101,9 @@ interface Monad m => Elaboration m where
   ||| Report an error in elaboration at some location
   failAt : FC -> String -> m a
 
+  ||| Report a warning in elaboration at some location
+  warnAt : FC -> String -> m ()
+
   ||| Try the first elaborator. If it fails, reset the elaborator state and
   ||| run the second
   try : Elab a -> Elab a -> m a
@@ -161,6 +165,11 @@ export %inline
 fail : Elaboration m => String -> m a
 fail = failAt EmptyFC
 
+export %inline
+||| Report an error in elaboration
+warn : Elaboration m => String -> m ()
+warn = warnAt EmptyFC
+
 ||| Log the current goal type, if the log level is >= the given level
 export %inline
 logGoal : Elaboration m => String -> Nat -> String -> m ()
@@ -169,6 +178,7 @@ logGoal str n msg = whenJust !goal $ logTerm str n msg
 export
 Elaboration Elab where
   failAt         = Fail
+  warnAt         = Warn
   try            = Try
   logMsg         = LogMsg
   logTerm        = LogTerm
@@ -189,6 +199,7 @@ Elaboration Elab where
 public export
 Elaboration m => MonadTrans t => Monad (t m) => Elaboration (t m) where
   failAt              = lift .: failAt
+  warnAt              = lift .: warnAt
   try                 = lift .: try
   logMsg s            = lift .: logMsg s
   logTerm s n         = lift .: logTerm s n

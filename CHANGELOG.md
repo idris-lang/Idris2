@@ -12,6 +12,7 @@
   size-change termination by Lee, Jones and Ben-Amram.
 * New function option `%unsafe` to mark definitions that are escape hatches
   similar to the builtins `believe_me`, `assert_total`, etc.
+* Elaborator scripts were made be able to record warnings.
 
 ### REPL changes
 
