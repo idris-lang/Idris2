@@ -310,26 +310,26 @@ freeVariables (AConstCase _ sc alts mDef) =
 freeVariables _ = empty
 
 export
-usedConstructorsTags : ANF -> SortedSet Int
-usedConstructorsTags (AV _ x) = empty
-usedConstructorsTags (AAppName _ _ n args) = empty
-usedConstructorsTags (AUnderApp _ n _ args) = empty
-usedConstructorsTags (AApp _ _ closure arg) = empty
-usedConstructorsTags (ALet _ var value body) = union (usedConstructorsTags value) (usedConstructorsTags body)
-usedConstructorsTags (ACon _ _ _ (Just tag) args) = singleton tag
-usedConstructorsTags (AOp _ _ _ args) = empty
-usedConstructorsTags (AExtPrim _ _ _ args) = empty
-usedConstructorsTags (AConCase _ sc alts mDef) =
+usedConstructors : ANF -> SortedSet Name
+usedConstructors (AV _ x) = empty
+usedConstructors (AAppName _ _ n args) = empty
+usedConstructors (AUnderApp _ n _ args) = empty
+usedConstructors (AApp _ _ closure arg) = empty
+usedConstructors (ALet _ var value body) = union (usedConstructors value) (usedConstructors body)
+usedConstructors (ACon _ n _ _ args) = singleton n
+usedConstructors (AOp _ _ _ args) = empty
+usedConstructors (AExtPrim _ _ _ args) = empty
+usedConstructors (AConCase _ sc alts mDef) =
     let altsAnf =
-        map (\(MkAConAlt _ _ _ args caseBody) => usedConstructorsTags caseBody) alts in
-    let anfs : List (SortedSet Int) = case mDef of
-                Just anf => usedConstructorsTags anf :: altsAnf
+        map (\(MkAConAlt _ _ _ args caseBody) => usedConstructors caseBody) alts in
+    let anfs : List (SortedSet Name) = case mDef of
+                Just anf => usedConstructors anf :: altsAnf
                 Nothing => altsAnf in
     foldl (\acc, anf => union acc anf) empty anfs
-usedConstructorsTags (AConstCase _ sc alts mDef) =
+usedConstructors (AConstCase _ sc alts mDef) =
     let altsAnf = map (\(MkAConstAlt _ caseBody) => caseBody) alts in
     let anfs : List ANF = case mDef of
                 Just anf => anf :: altsAnf
                 Nothing => altsAnf in
-    foldl (\acc, anf => union acc $ usedConstructorsTags anf) empty anfs
-usedConstructorsTags _ = empty
+    foldl (\acc, anf => union acc $ usedConstructors anf) empty anfs
+usedConstructors _ = empty

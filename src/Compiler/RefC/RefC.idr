@@ -285,13 +285,13 @@ data HeaderFiles : Type where
 -- Environment for precise reference counting.
 -- If variable borrowed when used, call a function newReference.
 -- If variable owned, then use it directly.
--- Reuse Map contains the tag of the reusable constructor
+-- Reuse Map contains the name of the reusable constructor
 -- and the name of the constructor variable
 record Env where
   constructor MkPercEnv
   borrowed : SortedSet AVar
   owned : SortedSet AVar
-  reuseMap : SortedMap Int String
+  reuseMap : SortedMap Name String
 
 ------------------------------------------------------------------------
 -- Output generation: using a difference list for efficient append
@@ -531,7 +531,7 @@ mutual
         let owned = union (fromList conArgs) owned
         let owned' = intersection owned (freeVariables body)
         let shouldDrop = difference owned owned'
-        let consts = usedConstructorsTags body
+        let consts = usedConstructors body
         let dropReuseConsts = differenceMap reuseMap consts
         let actualReuseConsts = intersectionMap reuseMap consts
 
@@ -539,7 +539,7 @@ mutual
         emit EmptyFC $ "  {"
         increaseIndentation
         varBindLines (varName sc) args Z
-        (shouldDrop', actualReuseConsts') <- addReuseConstructor mTag conArgs consts shouldDrop actualReuseConsts
+        (shouldDrop', actualReuseConsts') <- addReuseConstructor conArgs consts shouldDrop actualReuseConsts
         removeVars (varName <$> SortedSet.toList shouldDrop')
         removeReuseConstructors $ values dropReuseConsts
         assignment <- cStatementsFromANF (MkPercEnv borrowed owned' actualReuseConsts') body tailStatus
@@ -559,17 +559,13 @@ mutual
             fillConstructorNull cons (S k) vars
 
         -- if the constructor is unique use it, otherwise add it to should drop vars and create null constructor
-        addReuseConstructor : Maybe Int
-                            -> List AVar
-                            -> SortedSet Int
+        addReuseConstructor : List AVar
+                            -> SortedSet Name
                             -> SortedSet AVar
-                            -> SortedMap Int String
-                            -> Core (SortedSet AVar, SortedMap Int String)
-        addReuseConstructor Nothing conArgs _ shouldDrop actualReuseConsts = do
-            dupVars (varName <$> conArgs)
-            pure (shouldDrop, actualReuseConsts)
-        addReuseConstructor (Just tag) conArgs consts shouldDrop actualReuseConsts =
-            if (isNothing $ lookup tag reuseMap) && contains tag consts && contains sc shouldDrop then do
+                            -> SortedMap Name String
+                            -> Core (SortedSet AVar, SortedMap Name String)
+        addReuseConstructor conArgs consts shouldDrop actualReuseConsts =
+            if (isNothing $ lookup n reuseMap) && contains n consts && contains sc shouldDrop then do
                 c <- getNextCounter
                 let constr = "constructor_" ++ (show c)
                 emit EmptyFC $ "Value_Constructor* "++ constr ++ " = NULL;"
@@ -585,7 +581,7 @@ mutual
                 removeVars [varName sc]
                 decreaseIndentation
                 emit EmptyFC "}"
-                pure (delete sc shouldDrop, insert tag constr actualReuseConsts)
+                pure (delete sc shouldDrop, insert n constr actualReuseConsts)
             else do
                 dupVars (varName <$> conArgs)
                 pure (shouldDrop, actualReuseConsts)
@@ -612,7 +608,7 @@ mutual
         let c = const2Integer c' i
         let owned' = intersection owned (freeVariables caseBody)
         let shouldDrop = difference owned owned'
-        let consts = usedConstructorsTags caseBody
+        let consts = usedConstructors caseBody
         let dropReuseConsts = differenceMap reuseMap consts
         let actualReuseConsts = intersectionMap reuseMap consts
         emit EmptyFC $ "  case " ++ show c ++ " :"
@@ -641,7 +637,7 @@ mutual
     constDefaultBlock env@(MkPercEnv borrowed owned reuseMap) (Just defaultBody) retValVar tailStatus = do
         let owned' = intersection owned (freeVariables defaultBody)
         let shouldDrop = difference owned owned'
-        let consts = usedConstructorsTags defaultBody
+        let consts = usedConstructors defaultBody
         let dropReuseConsts = differenceMap reuseMap consts
         let actualReuseConsts = intersectionMap reuseMap consts
         emit EmptyFC "  default :"
@@ -730,7 +726,7 @@ mutual
         let freeBody = freeVariables body
         let borrowVal = intersection owned (delete (ALocal var) freeBody)
         let owned' = if contains (ALocal var) freeBody then insert (ALocal var) borrowVal else borrowVal
-        let consts = usedConstructorsTags value
+        let consts = usedConstructors value
 
         valueAssignment <- cStatementsFromANF (MkPercEnv (union borrowed borrowVal) (difference owned borrowVal) (intersectionMap reuseMap consts)) value NotInTailPosition
         emit fc $ "Value * var_" ++ (show var) ++ " = " ++ nonTailCall valueAssignment ++ ";"
@@ -741,7 +737,7 @@ mutual
     cStatementsFromANF _ (ACon fc n UNIT tag []) _ = do
         pure $ MkRS "(Value*)NULL" "(Value*)NULL"
     cStatementsFromANF env (ACon fc n _ mTag args) _ = do
-        let mConstr = mTag >>= (flip SortedMap.lookup $ reuseMap env)
+        let mConstr = SortedMap.lookup n $ reuseMap env
         let createNewConstructor = " = newConstructor("
                         ++ (show (length args))
                         ++ ", "  ++ showTag mTag  ++ ", "
@@ -801,7 +797,7 @@ mutual
             (Just d) => do
                 let owned' = intersection owned (freeVariables d)
                 let shouldDrop = difference owned owned'
-                let consts = usedConstructorsTags d
+                let consts = usedConstructors d
                 let dropReuseConsts = differenceMap reuseMap consts
                 let actualReuseConsts = intersectionMap reuseMap consts
                 emit EmptyFC $ "  default : {"
