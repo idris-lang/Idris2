@@ -288,12 +288,12 @@ namespace Derivative
   toPair v = case fromSum {c = Pair (Derivative c) d} {d = Pair c (Derivative d)} v of
     Left p => let (MkExtension (shp1 ** p1) chld1, MkExtension shp2 chld2) = fromPair {c = Derivative c} p in
               MkExtension ((shp1, shp2) ** Left p1) $ \ (p' ** neq) => case p' of
-                  Left p1' => chld1 (p1' ** (neq . cong Left))
+                  Left p1' => chld1 (p1' ** (\prf => neq $ cong Left prf))
                   Right p2' => chld2 p2'
     Right p => let (MkExtension shp1 chld1, MkExtension (shp2 ** p2) chld2) = fromPair {c} {d = Derivative d} p in
                MkExtension ((shp1, shp2) ** Right p2) $ \ (p' ** neq) => case p' of
                   Left p1' => chld1 p1'
-                  Right p2' => chld2 (p2' ** (neq . cong Right))
+                  Right p2' => chld2 (p2' ** (\prf => neq $ cong Right prf))
 
   export
   fromPair : Extension (Derivative (Pair c d)) x ->
@@ -323,7 +323,7 @@ namespace Derivative
       right = toCompose
             $ MkExtension (shp1 ** p1)
             $ \ (p1' ** neqp1) => MkExtension (shp2 p1')
-                                 $ \ p2' => chld ((p1' ** p2') ** (neqp1 . cong fst))
+                                 $ \ p2' => chld ((p1' ** p2') ** (\prf => neqp1 $ cong fst prf))
 
   export
   toCompose : ((s : _) -> DecEq (Position c s)) -> ((s : _) -> DecEq (Position d s)) ->

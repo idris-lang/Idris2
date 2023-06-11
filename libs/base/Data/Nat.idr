@@ -123,7 +123,7 @@ Connex Nat LTE where
   connex {x = Z} _ = Left LTEZero
   connex {y = Z} _ = Right LTEZero
   connex {x = S _} {y = S _} prf =
-    case connex $ prf . (cong S) of
+    case connex $ \xy => prf $ cong S xy of
       Left jk => Left $ LTESucc jk
       Right kj => Right $ LTESucc kj
 
