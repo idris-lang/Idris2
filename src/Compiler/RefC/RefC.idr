@@ -549,15 +549,6 @@ mutual
         emit EmptyFC $ "  }"
         conBlocks env sc xs retValVar (S k) tailStatus
     where
-        fillConstructorNull : String
-                            -> Nat
-                            -> List AVar
-                            -> Core ()
-        fillConstructorNull _ _ [] = pure ()
-        fillConstructorNull cons k (_ :: vars) = do
-            emit EmptyFC $ cons ++ "->args["++ show k ++ "] = NULL;"
-            fillConstructorNull cons (S k) vars
-
         -- if the constructor is unique use it, otherwise add it to should drop vars and create null constructor
         addReuseConstructor : List AVar
                             -> SortedSet Name
@@ -572,7 +563,6 @@ mutual
                 emit EmptyFC $ "if (isUnique(" ++ varName sc ++ ")) {"
                 increaseIndentation
                 emit EmptyFC $ constr ++ " = (Value_Constructor*)" ++ varName sc ++ ";"
-                fillConstructorNull constr 0 conArgs
                 decreaseIndentation
                 emit EmptyFC "}"
                 emit EmptyFC "else {"
@@ -745,7 +735,7 @@ mutual
                         ++ ");"
         case mConstr of
             Just constr => do
-                emit fc $ "if (" ++ constr ++ " == NULL) {"
+                emit fc $ "if (!" ++ constr ++ ") {"
                 increaseIndentation
                 emit fc $ constr ++ createNewConstructor
                 decreaseIndentation

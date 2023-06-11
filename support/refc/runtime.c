@@ -44,6 +44,9 @@ void removeClosureWithoutArgs(Value_Closure *clos) {
 }
 
 void removeReuseConstructor(Value_Constructor *constr) {
+  if (!constr) {
+    return;
+  }
   IDRIS2_REFC_VERIFY(constr->header.refCounter > 0, "refCounter %lld",
                      (long long)constr->header.refCounter);
   constr->header.refCounter--;
