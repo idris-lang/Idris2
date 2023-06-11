@@ -99,3 +99,28 @@ definition.
 
    %name Foo foo,bar
 
+``%hide``
+====================
+
+Hide a definition from imports. This is particularly useful when you are re-definiing functions or types from
+a module but still need to import it.
+
+.. code-block:: idris
+
+   module MyNat
+
+   %hide Prelude.Nat
+   %hide Prelude.S
+   %hide Prelude.Nat
+
+   data Nat = Z | S Nat
+
+You can also hide fixity declarations if you need to redefine your own.
+
+.. code-block:: idris
+
+   module MyNat
+
+   %hide Prelude.Ops.infixl.(+)
+
+   infixr 5 +

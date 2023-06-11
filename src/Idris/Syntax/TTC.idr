@@ -84,8 +84,8 @@ TTC Import where
 export
 TTC SyntaxInfo where
   toBuf b syn
-      = do toBuf b (StringMap.toList (infixes syn))
-           toBuf b (StringMap.toList (prefixes syn))
+      = do toBuf b (ANameMap.toList (infixes syn))
+           toBuf b (ANameMap.toList (prefixes syn))
            toBuf b (filter (\n => elemBy (==) (fst n) (saveMod syn))
                            (SortedMap.toList $ modDocstrings syn))
            toBuf b (filter (\n => elemBy (==) (fst n) (saveMod syn))

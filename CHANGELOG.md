@@ -14,6 +14,7 @@
   similar to the builtins `believe_me`, `assert_total`, etc.
 * Rudimentary support for defining lazy functions (addressing issue
   [#1066](https://github.com/idris-lang/idris2/issues/1066)).
+* `%hide` directives can now hide conflicting fixities from other modules.
 
 ### REPL changes
 

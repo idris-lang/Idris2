@@ -1,0 +1,20 @@
+rm -rf ./build
+
+
+$1 --no-color --console-width 0 --check Main0.idr
+$1 --no-color --console-width 0 --check Main1.idr
+$1 --no-color --console-width 0 --check MainFail.idr
+$1 --no-color --console-width 0 --check Main3.idr
+
+$1 --no-color --console-width 0 --exec main Main0.idr
+$1 --no-color --console-width 0 --exec main Main1.idr
+
+$1 --no-color --console-width 0 --check MainPre0.idr
+$1 --no-color --console-width 0 --check MainPre1.idr
+
+$1 --no-color --console-width 0 --exec main MainPre0.idr
+$1 --no-color --console-width 0 --exec main MainPre1.idr
+
+$1 --no-color --console-width 0 --check MainConflict.idr
+$1 --no-color --console-width 0 --exec exec MainConflict.idr
+

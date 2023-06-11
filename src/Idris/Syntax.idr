@@ -54,6 +54,10 @@ public export
 OpStr : Type
 OpStr = OpStr' Name
 
+public export
+data HidingDirective = HideName Name
+                     | HideFixity Fixity Name
+
 mutual
 
   ||| Source language as produced by the parser
@@ -331,7 +335,7 @@ mutual
 
   public export
   data Directive : Type where
-       Hide : Name -> Directive
+       Hide : HidingDirective -> Directive
        Unhide : Name -> Directive
        Logging : Maybe LogLevel -> Directive
        LazyOn : Bool -> Directive
@@ -882,10 +886,10 @@ record SyntaxInfo where
   -- (most obviously, -)
   ||| Infix operators as a map from their names to their fixity,
   ||| precedence, and the file context where that fixity was defined.
-  infixes : StringMap (FC, Fixity, Nat)
+  infixes : ANameMap (FC, Fixity, Nat)
   ||| Prefix operators as a map from their names to their precedence
   ||| and the file context where their fixity was defined.
-  prefixes : StringMap (FC, Nat)
+  prefixes : ANameMap (FC, Nat)
   -- info about modules
   saveMod : List ModuleIdent -- current module name
   modDocstrings : SortedMap ModuleIdent String
@@ -902,6 +906,10 @@ record SyntaxInfo where
   usingImpl : List (Maybe Name, RawImp)
   startExpr : RawImp
   holeNames : List String -- hole names in the file
+
+export
+fixities : SyntaxInfo -> ANameMap (FC, Fixity, Nat)
+fixities syn = merge (infixes syn) (ANameMap.fromList $ map (\(nm, fc, lv) => (nm, fc, Prefix, lv)) $ toList $ prefixes syn)
 
 HasNames IFaceInfo where
   full gam iface
@@ -958,13 +966,13 @@ initSyntax
 
   where
 
-    initInfix : StringMap (FC, Fixity, Nat)
-    initInfix = insert "=" (EmptyFC, Infix, 0) empty
+    initInfix : ANameMap (FC, Fixity, Nat)
+    initInfix = addName (UN $ Basic "=") (EmptyFC, Infix, 0) empty
 
-    initPrefix : StringMap (FC, Nat)
+    initPrefix : ANameMap (FC, Nat)
     initPrefix = fromList
-      [ ("-", (EmptyFC, 10))
-      , ("negate", (EmptyFC, 10)) -- for documentation purposes
+      [ (UN $ Basic "-", (EmptyFC, 10))
+      , (UN $ Basic "negate", (EmptyFC, 10)) -- for documentation purposes
       ]
 
     initDocStrings : ANameMap String
@@ -990,6 +998,13 @@ addModDocInfo mi doc reexpts
     = update Syn { saveMod $= (mi ::)
                  , modDocexports $= insert mi reexpts
                  , modDocstrings $= insert mi doc }
+
+-- remove a fixity from the context
+export
+removeFixity :
+    {auto s : Ref Syn SyntaxInfo} -> Fixity -> Name -> Core ()
+removeFixity Prefix key = update Syn ({prefixes $= removeExact key })
+removeFixity _ key = update Syn ({infixes $= removeExact key })
 
 export
 covering

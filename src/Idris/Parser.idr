@@ -1306,7 +1306,7 @@ logLevel fname
 directive : OriginDesc -> IndentInfo -> Rule Directive
 directive fname indents
     = do decoratedPragma fname "hide"
-         n <- name
+         n <- (fixityNS <|> (HideName <$> name))
          atEnd indents
          pure (Hide n)
   <|> do decoratedPragma fname "unhide"

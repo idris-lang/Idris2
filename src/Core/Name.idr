@@ -238,7 +238,10 @@ Show UserName where
 export
 Show Name where
   show (NS ns n@(UN (Field _))) = show ns ++ ".(" ++ show n ++ ")"
-  show (NS ns n) = show ns ++ "." ++ show n
+  show (NS ns (UN (Basic n))) = if any isOpChar (unpack n)
+                       then "\{show ns}.(\{n})"
+                       else "\{show ns}.\{n}"
+  show (NS ns n) = "\{show ns}.\{show n}"
   show (UN x) = show x
   show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
   show (PV n d) = "{P:" ++ show n ++ ":" ++ show d ++ "}"

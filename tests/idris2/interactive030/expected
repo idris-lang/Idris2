@@ -1,4 +1,4 @@
-Main> Prelude.== : Eq ty => ty -> ty -> Bool
+Main> Prelude.(==) : Eq ty => ty -> ty -> Bool
   Totality: total
   Visibility: public export
   Fixity Declaration: infix operator, level 6
@@ -7,13 +7,13 @@ Main> Prelude.negate : Neg ty => ty -> ty
   Totality: total
   Visibility: public export
   Fixity Declaration: prefix operator, level 10
-Prelude.- : Neg ty => ty -> ty -> ty
+Prelude.(-) : Neg ty => ty -> ty -> ty
   Totality: total
   Visibility: public export
   Fixity Declarations:
     infixl operator, level 8
     prefix operator, level 10
-Main> Prelude.<$> : Functor f => (a -> b) -> f a -> f b
+Main> Prelude.(<$>) : Functor f => (a -> b) -> f a -> f b
   An infix alias for `map`, applying a function across everything of type 'a'
   in a parameterised type.
   @ f the parameterised type
@@ -44,20 +44,20 @@ Main> Prelude.div : Integral ty => ty -> ty -> ty
   Totality: total
   Visibility: public export
   Fixity Declaration: infixl operator, level 9
-Main> Prelude.>>= : Monad m => m a -> (a -> m b) -> m b
+Main> Prelude.(>>=) : Monad m => m a -> (a -> m b) -> m b
   Also called `bind`.
   Totality: total
   Visibility: public export
   Fixity Declaration: infixl operator, level 1
-Main> Prelude.>> : Monad m => m () -> Lazy (m b) -> m b
+Main> Prelude.(>>) : Monad m => m () -> Lazy (m b) -> m b
   Sequencing of effectful composition
   Totality: total
   Visibility: public export
   Fixity Declaration: infixl operator, level 1
-Main> Main> Main> Main> Main.@@ : (t : a) -> (u : a ** t = u)
+Main> Main> Main> Main> Main.(@@) : (t : a) -> (u : a ** t = u)
   Visibility: private
   Fixity Declaration: prefix operator, level 10
-Main> Prelude.<$ : Functor f => b -> f a -> f b
+Main> Prelude.(<$) : Functor f => b -> f a -> f b
   Run something for effects, replacing the return value with a given parameter.
   Totality: total
   Visibility: public export

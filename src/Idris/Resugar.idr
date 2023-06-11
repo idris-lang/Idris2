@@ -19,6 +19,7 @@ import Data.List
 import Data.Maybe
 import Data.String
 import Libraries.Data.StringMap
+import Libraries.Data.ANameMap
 
 %default covering
 
@@ -36,20 +37,28 @@ mkOp : {auto s : Ref Syn SyntaxInfo} ->
        IPTerm -> Core IPTerm
 mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
   = do syn <- get Syn
-       let n = rawName kn
+       let raw = rawName kn
+       -- to check if the name is an operator we use the root name as a basic
+       -- user name. This is because if the name is qualified with the namespace
+       -- looking the fixity context will fail. A qualified operator would look
+       -- like this: `M1.M2.(++)` which would not match its fixity namesapce
+       -- that looks like this: `M1.M2.infixl.(++)`. However, since we only want
+       -- to know if the name is an operator or not, it's enough to check
+       -- that the fixity context contains the name `(++)`
+       let rootName = UN (Basic (nameRoot raw))
        let asOp = POp fc opFC kn (unbracketApp x) (unbracketApp y)
-       case StringMap.lookup (snd $ displayName n) (infixes syn) of
-         Just _ => pure asOp
-         Nothing => case dropNS n of
+       if not (null (lookupName rootName (infixes syn)))
+         then pure asOp
+         else case dropNS raw of
            DN str _ => pure $ ifThenElse (isOpUserName (Basic str)) asOp tm
            _ => pure tm
 mkOp tm@(PApp fc (PRef opFC kn) x)
   = do syn <- get Syn
        let n = rawName kn
        let asOp = PSectionR fc opFC (unbracketApp x) kn
-       case StringMap.lookup (snd $ displayName n) (infixes syn) of
-         Just _ => pure asOp
-         Nothing => case dropNS n of
+       if not (null $ lookupName (UN $ Basic (nameRoot n)) (infixes syn))
+         then pure asOp
+         else case dropNS n of
            DN str _ => pure $ ifThenElse (isOpUserName (Basic str)) asOp tm
            _ => pure tm
 mkOp tm = pure tm
@@ -65,9 +74,9 @@ mkSectionL tm@(PLam fc rig info (PRef _ bd) ty
        syn <- get Syn
        let n = rawName kn
        let asOp = PSectionL fc opFC kn (unbracketApp x)
-       case StringMap.lookup (snd $ displayName n) (infixes syn) of
-         Just _ => pure asOp
-         Nothing => case dropNS n of
+       if not (null $ lookupName (UN $ Basic (nameRoot n)) (infixes syn))
+         then pure asOp
+         else case dropNS n of
            DN str _ => pure $ ifThenElse (isOpUserName (Basic str)) asOp tm
            _ => pure tm
 mkSectionL tm = pure tm
