@@ -922,8 +922,11 @@ mutual
     <|> do decoratedKeyword fname "let"
            commit
            res <- nonEmptyBlock (letBlock fname)
-           atEnd indents
-           pure (mkDoLets fname res)
+           do b <- bounds (decoratedKeyword fname "in")
+              fatalLoc {c = True} b.bounds "Let-in not supported in do block. Did you mean (let ... in ...)?"
+             <|>
+           do atEnd indents
+              pure (mkDoLets fname res)
     <|> do b <- bounds (decoratedKeyword fname "rewrite" *> expr pdef fname indents)
            atEnd indents
            pure [DoRewrite (boundToFC fname b) b.val]
