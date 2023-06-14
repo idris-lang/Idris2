@@ -14,7 +14,6 @@ import Core.Directory
 import Idris.Syntax
 
 import Data.List
-import Data.List1
 import Libraries.Data.DList
 import Data.Nat
 import Libraries.Data.SortedSet
@@ -282,13 +281,13 @@ data FunctionDefinitions : Type where
 data IndentLevel : Type where
 data HeaderFiles : Type where
 
--- Environment for precise reference counting.
--- If variable borrowed when used, call a function newReference.
--- If variable owned, then use it directly.
--- Reuse Map contains the name of the reusable constructor
--- and the name of the constructor variable
+||| Environment for precise reference counting.
+||| If variable borrowed when used, call a function newReference.
+||| If variable owned, then use it directly.
+||| Reuse Map contains the name of the reusable constructor
+||| and variable
 record Env where
-  constructor MkPercEnv
+  constructor MkEnv
   borrowed : SortedSet AVar
   owned : SortedSet AVar
   reuseMap : SortedMap Name String
@@ -386,11 +385,13 @@ removeReuseConstructors : {auto oft : Ref OutfileText Output}
 removeReuseConstructors = applyFunctionToVars "removeReuseConstructor"
 
 avarToC : Env -> AVar -> Core String
-avarToC (MkPercEnv borrowed owned _) x = do
-    pure $
-        if contains x borrowed then "newReference(" ++ varName x ++ ")"
-        else if contains x owned then varName x
-        else assert_total $ idris_crash "INTERNAL ERROR: variable " ++ varName x ++ " is not owned and borrowed "
+avarToC env var = do
+    if contains var env.borrowed then pure $ "newReference(" ++ varName var ++ ")"
+        else if contains var env.owned then pure $ varName var
+        else coreFail $ InternalError $ "INTERNAL ERROR: variable " ++ varName var ++ " is not owned and borrowed "
+
+moveFromOwnedToBorrowed : Env -> SortedSet AVar -> Env
+moveFromOwnedToBorrowed env vars = { borrowed $= (union vars), owned $= (`difference` vars) } env
 
 makeArglist : {auto a : Ref ArgCounter Nat}
            -> {auto oft : Ref OutfileText Output}
@@ -398,7 +399,7 @@ makeArglist : {auto a : Ref ArgCounter Nat}
            -> Env
            -> Nat
            -> List AVar
-           -> Core (String)
+           -> Core String
 makeArglist env missing xs = do
     c <- getNextCounter
     let arglist = "arglist_" ++ (show c)
@@ -412,12 +413,12 @@ makeArglist env missing xs = do
 where
     pushArgToArglist : Env -> String -> List AVar -> Nat -> Core ()
     pushArgToArglist _ arglist [] k = pure ()
-    pushArgToArglist (MkPercEnv borrowed owned reuseMap) arglist (arg :: args) k = do
-        let ownedArg = if contains arg owned then singleton arg else empty
+    pushArgToArglist env arglist (arg :: args) k = do
+        let ownedArg = if contains arg env.owned then singleton arg else empty
         emit EmptyFC $ arglist
                     ++ "->args[" ++ show k ++ "] = "
-                    ++ !(avarToC (MkPercEnv borrowed ownedArg reuseMap) arg) ++ ";"
-        pushArgToArglist (MkPercEnv (union borrowed ownedArg) (difference owned ownedArg) reuseMap) arglist args (S k)
+                    ++ !(avarToC env arg) ++ ";"
+        pushArgToArglist (moveFromOwnedToBorrowed env ownedArg) arglist args (S k)
 
 fillConstructorArgs : {auto oft : Ref OutfileText Output}
                    -> {auto il : Ref IndentLevel Nat}
@@ -427,18 +428,14 @@ fillConstructorArgs : {auto oft : Ref OutfileText Output}
                    -> Nat
                    -> Core ()
 fillConstructorArgs _ _ [] _ = pure ()
-fillConstructorArgs (MkPercEnv borrowed owned reuseMap) cons (v :: vars) k = do
-    let ownedVars = if contains v owned then singleton v else empty
-    emit EmptyFC $ cons ++ "->args["++ show k ++ "] = " ++ !(avarToC (MkPercEnv borrowed ownedVars reuseMap) v) ++";"
-    fillConstructorArgs (MkPercEnv (union borrowed ownedVars) (difference owned ownedVars) reuseMap) cons vars (S k)
+fillConstructorArgs env cons (v :: vars) k = do
+    let ownedVars = if contains v env.owned then singleton v else empty
+    emit EmptyFC $ cons ++ "->args["++ show k ++ "] = " ++ !(avarToC env v) ++ ";"
+    fillConstructorArgs (moveFromOwnedToBorrowed env ownedVars) cons vars (S k)
 
 showTag : Maybe Int -> String
 showTag Nothing = "-1"
 showTag (Just i) = show i
-
-cArgsVectANF : {0 arity : Nat} -> Env -> Vect arity AVar -> Core (Vect arity String)
-cArgsVectANF _ [] = pure []
-cArgsVectANF env (x :: xs) = pure $ !(avarToC env x) :: !(cArgsVectANF env xs)
 
 integer_switch : List AConstAlt -> Bool
 integer_switch [] = True
@@ -526,23 +523,24 @@ mutual
              -> TailPositionStatus
              -> Core ()
     conBlocks _ _ [] _ _ _ = pure ()
-    conBlocks env@(MkPercEnv borrowed owned reuseMap) sc ((MkAConAlt n _ mTag args body) :: xs) retValVar k tailStatus = do
+    conBlocks env sc ((MkAConAlt conName _ mTag args body) :: xs) retValVar k tailStatus = do
         let conArgs = ALocal <$> args
-        let owned = union (fromList conArgs) owned
+        let owned = union (fromList conArgs) env.owned
         let owned' = intersection owned (freeVariables body)
         let shouldDrop = difference owned owned'
         let consts = usedConstructors body
-        let dropReuseConsts = differenceMap reuseMap consts
-        let actualReuseConsts = intersectionMap reuseMap consts
+        -- if there is no constructor named by that name, than the reuse constructor is deleted
+        let dropReuseConsts = differenceMap env.reuseMap consts
+        let actualReuseConsts = intersectionMap env.reuseMap consts
 
         emit EmptyFC $ "  case " ++ show k ++ ":"
         emit EmptyFC $ "  {"
         increaseIndentation
         varBindLines (varName sc) args Z
-        (shouldDrop', actualReuseConsts') <- addReuseConstructor conArgs consts shouldDrop actualReuseConsts
-        removeVars (varName <$> SortedSet.toList shouldDrop')
+        (shouldDrop, actualReuseConsts) <- addReuseConstructor conArgs consts shouldDrop actualReuseConsts
+        removeVars (varName <$> SortedSet.toList shouldDrop)
         removeReuseConstructors $ values dropReuseConsts
-        assignment <- cStatementsFromANF (MkPercEnv borrowed owned' actualReuseConsts') body tailStatus
+        assignment <- cStatementsFromANF ({owned := owned', reuseMap := actualReuseConsts} env) body tailStatus
         emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         emit EmptyFC $ "break;"
         decreaseIndentation
@@ -556,7 +554,9 @@ mutual
                             -> SortedMap Name String
                             -> Core (SortedSet AVar, SortedMap Name String)
         addReuseConstructor conArgs consts shouldDrop actualReuseConsts =
-            if (isNothing $ lookup n reuseMap) && contains n consts && contains sc shouldDrop then do
+            -- to avoid conflicts, we check that there is no constructor with the same name in reuse map
+            -- we also check that the constructor will be used later and that the variable will be deleted
+            if (isNothing $ lookup conName env.reuseMap) && contains conName consts && contains sc shouldDrop then do
                 c <- getNextCounter
                 let constr = "constructor_" ++ (show c)
                 emit EmptyFC $ "Value_Constructor* "++ constr ++ " = NULL;"
@@ -571,7 +571,7 @@ mutual
                 removeVars [varName sc]
                 decreaseIndentation
                 emit EmptyFC "}"
-                pure (delete sc shouldDrop, insert n constr actualReuseConsts)
+                pure (delete sc shouldDrop, insert conName constr actualReuseConsts)
             else do
                 dupVars (varName <$> conArgs)
                 pure (shouldDrop, actualReuseConsts)
@@ -594,19 +594,19 @@ mutual
                        -> TailPositionStatus
                        -> Core ()
     constBlockSwitch _ [] _ _ _ = pure ()
-    constBlockSwitch env@(MkPercEnv borrowed owned reuseMap) ((MkAConstAlt c' caseBody) :: alts) retValVar i tailStatus = do
+    constBlockSwitch env ((MkAConstAlt c' caseBody) :: alts) retValVar i tailStatus = do
         let c = const2Integer c' i
-        let owned' = intersection owned (freeVariables caseBody)
-        let shouldDrop = difference owned owned'
+        let owned' = intersection env.owned (freeVariables caseBody)
+        let shouldDrop = difference env.owned owned'
         let consts = usedConstructors caseBody
-        let dropReuseConsts = differenceMap reuseMap consts
-        let actualReuseConsts = intersectionMap reuseMap consts
+        let dropReuseConsts = differenceMap env.reuseMap consts
+        let actualReuseConsts = intersectionMap env.reuseMap consts
         emit EmptyFC $ "  case " ++ show c ++ " :"
         emit EmptyFC "  {"
         increaseIndentation
         removeReuseConstructors $ values dropReuseConsts
         removeVars (varName <$> SortedSet.toList shouldDrop)
-        assignment <- cStatementsFromANF (MkPercEnv borrowed owned' actualReuseConsts) caseBody tailStatus
+        assignment <- cStatementsFromANF ({owned := owned', reuseMap := actualReuseConsts} env) caseBody tailStatus
         emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         emit EmptyFC "break;"
         decreaseIndentation
@@ -624,18 +624,18 @@ mutual
                      -> TailPositionStatus
                      -> Core ()
     constDefaultBlock _ Nothing _ _ = pure ()
-    constDefaultBlock env@(MkPercEnv borrowed owned reuseMap) (Just defaultBody) retValVar tailStatus = do
-        let owned' = intersection owned (freeVariables defaultBody)
-        let shouldDrop = difference owned owned'
+    constDefaultBlock env (Just defaultBody) retValVar tailStatus = do
+        let owned' = intersection env.owned (freeVariables defaultBody)
+        let shouldDrop = difference env.owned owned'
         let consts = usedConstructors defaultBody
-        let dropReuseConsts = differenceMap reuseMap consts
-        let actualReuseConsts = intersectionMap reuseMap consts
+        let dropReuseConsts = differenceMap env.reuseMap consts
+        let actualReuseConsts = intersectionMap env.reuseMap consts
         emit EmptyFC "  default :"
         emit EmptyFC "  {"
         increaseIndentation
         removeReuseConstructors $ values dropReuseConsts
         removeVars (varName <$> SortedSet.toList shouldDrop)
-        assignment <- cStatementsFromANF (MkPercEnv borrowed owned' actualReuseConsts) defaultBody tailStatus
+        assignment <- cStatementsFromANF ({owned := owned', reuseMap := actualReuseConsts} env) defaultBody tailStatus
         emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         decreaseIndentation
         emit EmptyFC "  }"
@@ -712,17 +712,16 @@ mutual
     cStatementsFromANF env (AApp fc _ closure arg) _ =
         pure $ MkRS ("apply_closure(" ++ !(avarToC env closure) ++ ", " ++ !(avarToC env arg) ++ ")")
                     ("tailcall_apply_closure(" ++ !(avarToC env closure) ++ ", " ++ !(avarToC env arg) ++ ")")
-    cStatementsFromANF (MkPercEnv borrowed owned reuseMap) (ALet fc var value body) tailPosition = do
+    cStatementsFromANF env (ALet fc var value body) tailPosition = do
         let freeBody = freeVariables body
-        let borrowVal = intersection owned (delete (ALocal var) freeBody)
+        let borrowVal = intersection env.owned (delete (ALocal var) freeBody)
         let owned' = if contains (ALocal var) freeBody then insert (ALocal var) borrowVal else borrowVal
         let consts = usedConstructors value
-
-        valueAssignment <- cStatementsFromANF (MkPercEnv (union borrowed borrowVal) (difference owned borrowVal) (intersectionMap reuseMap consts)) value NotInTailPosition
+        let valueEnv = { reuseMap $= (`intersectionMap` consts) } (moveFromOwnedToBorrowed env borrowVal)
+        valueAssignment <- cStatementsFromANF valueEnv value NotInTailPosition
         emit fc $ "Value * var_" ++ (show var) ++ " = " ++ nonTailCall valueAssignment ++ ";"
         unless (contains (ALocal var) freeBody) $ emit fc $ "removeReference(" ++ "var_" ++ (show var) ++ ");"
-
-        bodyAssignment <- cStatementsFromANF (MkPercEnv borrowed owned' (differenceMap reuseMap consts)) body tailPosition
+        bodyAssignment <- cStatementsFromANF ({ owned := owned', reuseMap $= (`differenceMap` consts) } env) body tailPosition
         pure $ bodyAssignment
     cStatementsFromANF _ (ACon fc n UNIT tag []) _ = do
         pure $ MkRS "(Value*)NULL" "(Value*)NULL"
@@ -752,7 +751,7 @@ mutual
     cStatementsFromANF env (AOp fc _ op args) _ = do
         c <- getNextCounter
         let resultVar = "primVar_" ++ (show c)
-        argsVec <- cArgsVectANF env args
+        argsVec <- traverseVect (avarToC env) args
         emit fc $ "Value *" ++ resultVar ++ " = " ++ cOp op argsVec ++ ";"
         removeVars (foldl (\acc, elem => elem :: acc) [] (map varName args))
         pure $ MkRS resultVar resultVar
@@ -760,7 +759,7 @@ mutual
         emit fc $ "// call to external primitive " ++ cName p
         let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")")
         pure $ MkRS returnLine returnLine
-    cStatementsFromANF env@(MkPercEnv borrowed owned reuseMap) (AConCase fc sc alts mDef) tailPosition = do
+    cStatementsFromANF env (AConCase fc sc alts mDef) tailPosition = do
         c <- getNextCounter
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
         let newValueLine = "Value * " ++ switchReturnVar ++ " = NULL;"
@@ -785,16 +784,16 @@ mutual
                 emit EmptyFC $ "free(" ++ constructorField ++ ");"
                 pure $ MkRS switchReturnVar switchReturnVar
             (Just d) => do
-                let owned' = intersection owned (freeVariables d)
-                let shouldDrop = difference owned owned'
+                let owned' = intersection env.owned (freeVariables d)
+                let shouldDrop = difference env.owned owned'
                 let consts = usedConstructors d
-                let dropReuseConsts = differenceMap reuseMap consts
-                let actualReuseConsts = intersectionMap reuseMap consts
+                let dropReuseConsts = differenceMap env.reuseMap consts
+                let actualReuseConsts = intersectionMap env.reuseMap consts
                 emit EmptyFC $ "  default : {"
                 increaseIndentation
                 removeVars (varName <$> SortedSet.toList shouldDrop)
                 removeReuseConstructors $ values dropReuseConsts
-                defaultAssignment <- cStatementsFromANF (MkPercEnv borrowed owned' actualReuseConsts) d tailPosition
+                defaultAssignment <- cStatementsFromANF ({owned := owned', reuseMap := actualReuseConsts} env) d tailPosition
                 emit EmptyFC $ switchReturnVar ++ " = " ++ callByPosition tailPosition defaultAssignment ++ ";"
                 decreaseIndentation
                 emit EmptyFC $ "  }"
@@ -983,7 +982,7 @@ createCFunctions n (MkAFun args anf) = do
     emit EmptyFC "{"
     increaseIndentation
     removeVars (varName <$> SortedSet.toList shouldDrop)
-    assignment <- cStatementsFromANF (MkPercEnv empty bodyFreeVars empty) anf InTailPosition
+    assignment <- cStatementsFromANF (MkEnv empty bodyFreeVars empty) anf InTailPosition
     emit EmptyFC $ "Value *returnValue = " ++ tailCall assignment ++ ";"
     emit EmptyFC $ "return returnValue;"
     decreaseIndentation

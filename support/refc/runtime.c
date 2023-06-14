@@ -23,7 +23,7 @@ int isUnique(Value *value) {
 }
 
 // necessary because not every variable passed as arguments is duplicated
-void removeArglistWithoutArgs(Value_Arglist *arglist) {
+void deconstructArglist(Value_Arglist *arglist) {
   IDRIS2_REFC_VERIFY(arglist->header.refCounter > 0, "refCounter %lld",
                      (long long)arglist->header.refCounter);
   arglist->header.refCounter--;
@@ -33,12 +33,12 @@ void removeArglistWithoutArgs(Value_Arglist *arglist) {
   }
 }
 
-void removeClosureWithoutArgs(Value_Closure *clos) {
+void deconstructClosure(Value_Closure *clos) {
   IDRIS2_REFC_VERIFY(clos->header.refCounter > 0, "refCounter %lld",
                      (long long)clos->header.refCounter);
   clos->header.refCounter--;
   if (clos->header.refCounter == 0) {
-    removeArglistWithoutArgs(clos->arglist);
+    deconstructArglist(clos->arglist);
     free(clos);
   }
 }
@@ -59,7 +59,7 @@ void removeReuseConstructor(Value_Constructor *constr) {
   }
 }
 
-Value *apply_closure(Value *_clos, Value *arg) {
+Value_Arglist *makeArglistToApplyClosure(Value *_clos, Value *arg) {
   // create a new arg list
   Value_Arglist *oldArgs = ((Value_Closure *)_clos)->arglist;
   Value_Arglist *newArgs = newArglist(0, oldArgs->total);
@@ -76,17 +76,22 @@ Value *apply_closure(Value *_clos, Value *arg) {
       newArgs->args[i] = newReference(oldArgs->args[i]);
   }
   newArgs->args[oldArgs->filled] = arg;
+  return newArgs;
+}
+
+Value *apply_closure(Value *_clos, Value *arg) {
+  Value_Arglist *newArgs = makeArglistToApplyClosure(_clos, arg);
 
   Value_Closure *clos = (Value_Closure *)_clos;
   fun_ptr_t f = clos->f;
 
-  removeClosureWithoutArgs(clos);
+  deconstructClosure(clos);
 
   // check if enough arguments exist
   if (newArgs->filled >= newArgs->total) {
     while (1) {
       Value *retVal = f(newArgs);
-      removeArglistWithoutArgs(newArgs);
+      deconstructArglist(newArgs);
       if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
         return retVal;
       }
@@ -101,27 +106,12 @@ Value *apply_closure(Value *_clos, Value *arg) {
 }
 
 Value *tailcall_apply_closure(Value *_clos, Value *arg) {
-  // create a new arg list
-  Value_Arglist *oldArgs = ((Value_Closure *)_clos)->arglist;
-  Value_Arglist *newArgs = newArglist(0, oldArgs->total);
-  newArgs->filled = oldArgs->filled + 1;
-  // add argument to new arglist
-  for (int i = 0; i < oldArgs->filled; i++) {
-    /*
-    if the closure has multiple references, then apply newReference to arguments
-    to avoid premature clearing of arguments
-    */
-    if (_clos->header.refCounter <= 1)
-      newArgs->args[i] = oldArgs->args[i];
-    else
-      newArgs->args[i] = newReference(oldArgs->args[i]);
-  }
-  newArgs->args[oldArgs->filled] = arg;
+  Value_Arglist *newArgs = makeArglistToApplyClosure(_clos, arg);
 
   Value_Closure *clos = (Value_Closure *)_clos;
   fun_ptr_t f = ((Value_Closure *)clos)->f;
 
-  removeClosureWithoutArgs(clos);
+  deconstructClosure(clos);
 
   return (Value *)makeClosureFromArglist(f, newArgs);
 }
@@ -162,7 +152,7 @@ Value *trampoline(Value *closure) {
   removeReference(closure);
   while (1) {
     Value *retVal = f(arglist);
-    removeArglistWithoutArgs(arglist);
+    deconstructArglist(arglist);
     if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
       return retVal;
     }
