@@ -2,8 +2,6 @@ module Compiler.ES.Doc
 
 import Data.List
 
-infixr 6 <++>
-
 public export
 data Doc
   = Nil
@@ -48,7 +46,7 @@ isMultiline (Seq x y)  = isMultiline x || isMultiline y
 
 export
 (<++>) : Doc -> Doc -> Doc
-a <++> b = a <+> " " <+> b
+(<++>) a b = a <+> " " <+> b
 
 export
 vcat : List Doc -> Doc

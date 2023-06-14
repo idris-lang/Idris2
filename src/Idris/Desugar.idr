@@ -82,31 +82,9 @@ extendSyn newsyn
            , "New (" ++ unwords (map show $ saveMod newsyn) ++ "): "
               ++ show (modDocstrings newsyn)
            ]
-         -- Check there are no conflicting definitions
-         let oldprefix = map (Prefix,) <$> (prefixes syn)
-         let newprefix = map (Prefix,) <$> (prefixes newsyn)
-         let oldinfix  = infixes syn
-         let newinfix  = infixes newsyn
 
-         let check = mapMaybe (\ entry@(k, ((_, v), (_, v'))) => entry <$ guard (k /= "-" && (v /= v')))
-                   . StringMap.toList
-         let inter = concatMap {t = List} {m = List _} check
-                   [ sharedSupport oldprefix newprefix
-                   , sharedSupport oldprefix newinfix
-                   , sharedSupport oldinfix  newprefix
-                   , sharedSupport oldinfix  newinfix
-                   ]
-         unless (null inter) $ recordWarning $ GenericWarn emptyFC $ unlines
-           $ ("Conflicting fixity declarations:" ::)
-           $ flip (concatMap {m = List _}) inter
-           $ \ (k, ((fc1, fix1, prec1), (fc2, fix2, prec2))) => pure $ unwords
-           [ "\{k}:"
-           , "\{show fix1} \{show prec1} (at \{show fc1})", "and"
-           , "\{show fix2} \{show prec2} (at \{show fc2})"
-           ]
-
-         put Syn ({ infixes $= mergeLeft (infixes newsyn),
-                    prefixes $= mergeLeft (prefixes newsyn),
+         put Syn ({ infixes $= merge (infixes newsyn),
+                    prefixes $= merge (prefixes newsyn),
                     ifaces $= merge (ifaces newsyn),
                     modDocstrings $= mergeLeft (modDocstrings newsyn),
                     modDocexports $= mergeLeft (modDocexports newsyn),
@@ -120,34 +98,69 @@ mkPrec InfixR p = AssocR p
 mkPrec Infix p = NonAssoc p
 mkPrec Prefix p = Prefix p
 
+-- Check that an operator does not have any conflicting fixities in scope.
+-- Each operator can have its fixity defined multiple times across multiple
+-- modules as long as the fixities are consistent. If they aren't, the fixity
+-- can be hidden with %hide, this is handled by `removeFixity`.
+-- Once conflicts are handled we return the operator precedence we found.
+checkConflictingFixities : {auto s : Ref Syn SyntaxInfo} ->
+                           {auto c : Ref Ctxt Defs} ->
+                           (isPrefix : Bool) ->
+                           FC -> Name -> Core OpPrec
+checkConflictingFixities isPrefix exprFC opn
+  = do syn <- get Syn
+       let op = nameRoot opn
+       let foundFixities : List (Name, FC, Fixity, Nat) = lookupName (UN (Basic op)) (fixities syn)
+       let (pre, inf) = partition (\(_, _, fx, _) => fx == Prefix) foundFixities
+       case (isPrefix, pre, inf) of
+            -- If we do not find any fixity for this operator we check that it uses operator
+            -- characters, if not, it must be a backticked expression.
+            (_, [], []) => if any isOpChar (fastUnpack op)
+                              then throw (GenericMsg exprFC "Unknown operator '\{op}'")
+                              else pure (NonAssoc 1) -- Backticks are non associative by default
+
+            (True, ((fxName, _, fix, prec) :: _), _) => do
+                -- in the prefix case, remove conflicts with infix (-)
+                let extraFixities = pre ++ (filter (\(nm, _) => not $ nameRoot nm == "-") inf)
+                unless (isCompatible fxName fix prec extraFixities) $ warnConflict fxName extraFixities
+                pure (mkPrec fix prec)
+            -- Could not find any prefix operator fixities, there may be infix ones
+            (True, [] , _) => throw (GenericMsg exprFC $ "'\{op}' is not a prefix operator")
+
+            (False, _, ((fxName, _, fix, prec) :: _)) => do
+                -- in the infix case, remove conflicts with prefix (-)
+                let extraFixities = (filter (\(nm, _) => not $ nm == UN (Basic "-")) pre) ++ inf
+                unless (isCompatible fxName fix prec extraFixities) $ warnConflict fxName extraFixities
+                pure (mkPrec fix prec)
+            -- Could not find any infix operator fixities, there may be prefix ones
+            (False, _, []) => throw (GenericMsg exprFC $ "'\{op}' is not an infix operator")
+  where
+    -- fixities are compatible with all others of the same name that share the same fixity and precedence
+    isCompatible : Name -> Fixity -> Nat -> (fixities : List (Name, FC, Fixity, Nat)) -> Bool
+    isCompatible opName fx prec fix
+      = all (\(nm, _, fx', prec') => fx' == fx && prec' == prec) fix
+
+    -- Emits a warning using the fixity that we picked and the list of all conflicting fixities
+    warnConflict : (picked : Name) -> (conflicts : List (Name, FC, Fixity, Nat)) -> Core ()
+    warnConflict fxName all =
+      recordWarning $ GenericWarn exprFC $ """
+                   operator fixity is ambiguous, we are picking \{show fxName} out of :
+                   \{unlines $ map (\(nm, _, _, fx) => " - \{show nm}, precedence level \{show fx}") $ toList all}
+                   To remove this warning, use `%hide` with the fixity to remove
+                   For example: %hide \{show fxName}
+                   """
+
 toTokList : {auto s : Ref Syn SyntaxInfo} ->
+            {auto c : Ref Ctxt Defs} ->
             PTerm -> Core (List (Tok OpStr PTerm))
 toTokList (POp fc opFC opn l r)
-    = do syn <- get Syn
-         let op = nameRoot opn
-         case lookup op (infixes syn) of
-              Nothing =>
-                  if any isOpChar (fastUnpack op)
-                     then throw (GenericMsg fc $ "Unknown operator '" ++ op ++ "'")
-                     else do rtoks <- toTokList r
-                             pure (Expr l :: Op fc opFC opn backtickPrec :: rtoks)
-              Just (_, Prefix, _) =>
-                      throw (GenericMsg fc $ "'" ++ op ++ "' is a prefix operator")
-              Just (fixityFc, fix, prec) =>
-                   do rtoks <- toTokList r
-                      pure (Expr l :: Op fc opFC opn (mkPrec fix prec) :: rtoks)
-  where
-    backtickPrec : OpPrec
-    backtickPrec = NonAssoc 1
+    = do precInfo <- checkConflictingFixities False fc opn
+         rtoks <- toTokList r
+         pure (Expr l :: Op fc opFC opn precInfo :: rtoks)
 toTokList (PPrefixOp fc opFC opn arg)
-    = do syn <- get Syn
-         let op = nameRoot opn
-         case lookup op (prefixes syn) of
-              Nothing =>
-                   throw (GenericMsg fc $ "'" ++ op ++ "' is not a prefix operator")
-              Just (fixityFc, prec) =>
-                   do rtoks <- toTokList arg
-                      pure (Op fc opFC opn (Prefix prec) :: rtoks)
+    = do precInfo <- checkConflictingFixities True fc opn
+         rtoks <- toTokList arg
+         pure (Op fc opFC opn precInfo :: rtoks)
 toTokList t = pure [Expr t]
 
 record BangData where
@@ -196,27 +209,6 @@ idiomise fc dons mns fn
      in IApp fc (IVar fc nm) fn
 
 data Bang : Type where
-
-checkFixity : {auto c : Ref Ctxt Defs} ->
-              {auto s : Ref Syn SyntaxInfo} ->
-              FC -> Fixity -> Nat -> String -> Core ()
--- special case for "-", the one thing that's allowed to be both prefix & infix
-checkFixity fc fix prec "-" = pure ()
-checkFixity fc fix prec n =
-  do log "desugar.fixity" 10 "Desugaring fixity (\{show fix} \{show prec}) for \{show n}"
-     syn <- get Syn
-     let test = do (fc', fix', prec') <-
-                     lookup n (infixes syn)
-                     <|> map (map {f = Pair FC} {b = (Fixity, Nat)} (Prefix,)) (lookup n (prefixes syn))
-
-                   guard (not (fix == fix' && prec == prec'))
-                   pure (fc', fix', prec')
-     whenJust test $ \ (fc', fix', prec') =>
-       recordWarning $ GenericWarn fc $ unlines
-         [ "Conflicting fixity declarations for \{n}:"
-         , "  old: \{show fix'} \{show prec'} (\{show fc'})"
-         , "  new: \{show fix} \{show prec} (\{show fc})"
-         ]
 
 mutual
   desugarB : {auto s : Ref Syn SyntaxInfo} ->
@@ -317,14 +309,16 @@ mutual
       = do syn <- get Syn
            -- It might actually be a prefix argument rather than a section
            -- so check that first, otherwise desugar as a lambda
-           case lookup (nameRoot op) (prefixes syn) of
-                Nothing =>
-                   desugarB side ps (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
-                               (POp fc opFC op (PRef fc (MN "arg" 0)) arg))
-                Just prec => desugarB side ps (PPrefixOp fc opFC op arg)
+           case lookupName op (prefixes syn) of
+                [] =>
+                    desugarB side ps
+                        (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
+                            (POp fc opFC op (PRef fc (MN "arg" 0)) arg))
+                (prec :: _) => desugarB side ps (PPrefixOp fc opFC op arg)
   desugarB side ps (PSectionR fc opFC arg op)
-      = desugarB side ps (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
-                 (POp fc opFC op arg (PRef fc (MN "arg" 0))))
+      = desugarB side ps
+          (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
+              (POp fc opFC op arg (PRef fc (MN "arg" 0))))
   desugarB side ps (PSearch fc depth) = pure $ ISearch fc depth
   desugarB side ps (PPrimVal fc (BI x))
       = case !fromIntegerName of
@@ -1094,16 +1088,22 @@ mutual
       mapDesugarPiInfo : List Name -> PiInfo PTerm -> Core (PiInfo RawImp)
       mapDesugarPiInfo ps = traverse (desugar AnyExpr ps)
 
-  desugarDecl ps (PFixity fc Prefix prec (UN (Basic n)))
-      = do checkFixity fc Prefix prec n
-           update Syn { prefixes $= insert n (fc, prec) }
+  desugarDecl ps (PFixity fc fix prec opName)
+      = do ctx <- get Ctxt
+           -- We update the context of fixities by adding a namespaced fixity
+           -- given by the current namespace and its fixity name.
+           -- This allows fixities to be stored along with the namespace at their
+           -- declaration site and detect and handle ambiguous fixities
+           let updatedNS = NS (mkNestedNamespace (Just ctx.currentNS) (show fix))
+                              (UN $ Basic $ nameRoot opName)
+
+           -- Depending on the fixity we update the correct fixity context
+           case fix of
+                Prefix =>
+                    update Syn { prefixes $= addName updatedNS (fc, prec) }
+                _ =>
+                    update Syn { infixes $= addName updatedNS (fc, fix, prec) }
            pure []
-  desugarDecl ps (PFixity fc fix prec (UN (Basic n)))
-      = do checkFixity fc fix prec n
-           update Syn { infixes $= insert n (fc, fix, prec) }
-           pure []
-  desugarDecl ps (PFixity fc _ _ _)
-      = throw (GenericMsg fc "Fixity declarations must be for unqualified names")
   desugarDecl ps d@(PFail fc mmsg ds)
       = do -- save the state: the content of a failing block should be discarded
            ust <- get UST
@@ -1163,7 +1163,8 @@ mutual
            pure [IRunElabDecl fc tm']
   desugarDecl ps (PDirective fc d)
       = case d of
-             Hide n => pure [IPragma fc [] (\nest, env => hide fc n)]
+             Hide (HideName n) => pure [IPragma fc [] (\nest, env => hide fc n)]
+             Hide (HideFixity fx n) => pure [IPragma fc [] (\_, _ => removeFixity fx n)]
              Unhide n => pure [IPragma fc [] (\nest, env => unhide fc n)]
              Logging i => pure [ILog ((\ i => (topics i, verbosity i)) <$> i)]
              LazyOn a => pure [IPragma fc [] (\nest, env => lazyActive a)]

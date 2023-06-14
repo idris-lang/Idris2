@@ -99,8 +99,8 @@ LOG declare.type:1: Processing Vec.Vec
 LOG declare.def:2: Case tree for Vec.Vec: [0] ({arg:N} : (Data.Fin.Fin {arg:N}[1])) -> {arg:N}[1]
 LOG declare.type:1: Processing Vec.Nil
 LOG declare.def:2: Case tree for Vec.Nil: [0] (Prelude.Uninhabited.absurd {arg:N}[0] (Data.Fin.Fin Prelude.Types.Z) Data.Fin.Uninhabited implementation at Data.Fin:L:C--L:C)
-LOG declare.type:1: Processing Vec.::
-LOG declare.def:2: Case tree for Vec.::: case {arg:N}[4] : (Data.Fin.Fin (Prelude.Types.S {arg:N}[0])) of
+LOG declare.type:1: Processing Vec.(::)
+LOG declare.def:2: Case tree for Vec.(::): case {arg:N}[4] : (Data.Fin.Fin (Prelude.Types.S {arg:N}[0])) of
  { Data.Fin.FZ {e:N} => [0] {arg:N}[3]
  | Data.Fin.FS {e:N} {e:N} => [1] ({arg:N}[5] {e:N}[1])
  }
@@ -154,5 +154,5 @@ With default. Target type : Prelude.Types.Nat
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 1 out of 2 candidates) (delayed) at Vec:L:C--L:C:
 $resolvedN
 Target type : (Prelude.Basics.List Prelude.Types.Nat)
-LOG declare.def:2: Case tree for Vec.test: [0] (Vec.:: (Prelude.Types.S Prelude.Types.Z) (Prelude.Basics.List Prelude.Types.Nat) (Prelude.Basics.Nil Prelude.Types.Nat) (Vec.:: Prelude.Types.Z (Prelude.Basics.List Prelude.Types.Nat) (Prelude.Basics.:: Prelude.Types.Nat Prelude.Types.Z (Prelude.Basics.Nil Prelude.Types.Nat)) (Vec.Nil (Prelude.Basics.List Prelude.Types.Nat))))
+LOG declare.def:2: Case tree for Vec.test: [0] (Vec.(::) (Prelude.Types.S Prelude.Types.Z) (Prelude.Basics.List Prelude.Types.Nat) (Prelude.Basics.Nil Prelude.Types.Nat) (Vec.(::) Prelude.Types.Z (Prelude.Basics.List Prelude.Types.Nat) (Prelude.Basics.(::) Prelude.Types.Nat Prelude.Types.Z (Prelude.Basics.Nil Prelude.Types.Nat)) (Vec.Nil (Prelude.Basics.List Prelude.Types.Nat))))
 Vec> Bye for now!
