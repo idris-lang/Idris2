@@ -281,6 +281,10 @@ data FunctionDefinitions : Type where
 data IndentLevel : Type where
 data HeaderFiles : Type where
 
+ReuseMap = SortedMap Name String
+Owned = SortedSet AVar
+Borrowed = SortedSet AVar
+
 ||| Environment for precise reference counting.
 ||| If variable borrowed when used, call a function newReference.
 ||| If variable owned, then use it directly.
@@ -288,9 +292,9 @@ data HeaderFiles : Type where
 ||| and variable
 record Env where
   constructor MkEnv
-  borrowed : SortedSet AVar
-  owned : SortedSet AVar
-  reuseMap : SortedMap Name String
+  borrowed : Borrowed
+  owned : Owned
+  reuseMap : ReuseMap
 
 ------------------------------------------------------------------------
 -- Output generation: using a difference list for efficient append
@@ -490,6 +494,23 @@ callByPosition : TailPositionStatus -> ReturnStatement -> String
 callByPosition InTailPosition = tailCall
 callByPosition NotInTailPosition = nonTailCall
 
+||| The function takes as arguments the current ReuseMap and the constructors that will be used.
+||| Returns constructor variables to remove and constructors to reuse.
+dropUnusedReuseCons : ReuseMap -> SortedSet Name -> (List String, ReuseMap)
+dropUnusedReuseCons reuseMap usedCons =
+    -- if there is no constructor named by that name, than the reuse constructor is deleted
+    let dropReuseMap = differenceMap reuseMap usedCons in
+    let actualReuseMap = intersectionMap reuseMap usedCons in
+    (values dropReuseMap, actualReuseMap)
+
+||| The function takes as arguments the current owned vars and set vars that will be used.
+||| Returns variables to remove and actual owned vars.
+dropUnusedOwnedVars : Owned -> SortedSet AVar -> (List String, Owned)
+dropUnusedOwnedVars owned usedVars =
+    let actualOwned = intersection owned usedVars in
+    let shouldDrop = difference owned actualOwned in
+    (varName <$> SortedSet.toList shouldDrop, actualOwned)
+
 mutual
     copyConstructors : {auto a : Ref ArgCounter Nat}
                     -> {auto oft : Ref OutfileText Output}
@@ -525,22 +546,18 @@ mutual
     conBlocks _ _ [] _ _ _ = pure ()
     conBlocks env sc ((MkAConAlt conName _ mTag args body) :: xs) retValVar k tailStatus = do
         let conArgs = ALocal <$> args
-        let owned = union (fromList conArgs) env.owned
-        let owned' = intersection owned (freeVariables body)
-        let shouldDrop = difference owned owned'
-        let consts = usedConstructors body
-        -- if there is no constructor named by that name, than the reuse constructor is deleted
-        let dropReuseConsts = differenceMap env.reuseMap consts
-        let actualReuseConsts = intersectionMap env.reuseMap consts
-
+        let ownedWithArgs = union (fromList conArgs) env.owned
+        let (shouldDrop, actualOwned) = dropUnusedOwnedVars ownedWithArgs (freeVariables body)
+        let usedCons = usedConstructors body
+        let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
         emit EmptyFC $ "  case " ++ show k ++ ":"
         emit EmptyFC $ "  {"
         increaseIndentation
         varBindLines (varName sc) args Z
-        (shouldDrop, actualReuseConsts) <- addReuseConstructor conArgs consts shouldDrop actualReuseConsts
-        removeVars (varName <$> SortedSet.toList shouldDrop)
-        removeReuseConstructors $ values dropReuseConsts
-        assignment <- cStatementsFromANF ({owned := owned', reuseMap := actualReuseConsts} env) body tailStatus
+        (shouldDrop, actualReuseMap) <- addReuseConstructor conArgs usedCons shouldDrop actualReuseMap
+        removeVars shouldDrop
+        removeReuseConstructors dropReuseCons
+        assignment <- cStatementsFromANF ({owned := actualOwned, reuseMap := actualReuseMap} env) body tailStatus
         emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         emit EmptyFC $ "break;"
         decreaseIndentation
@@ -550,28 +567,32 @@ mutual
         -- if the constructor is unique use it, otherwise add it to should drop vars and create null constructor
         addReuseConstructor : List AVar
                             -> SortedSet Name
-                            -> SortedSet AVar
+                            -> List String
                             -> SortedMap Name String
-                            -> Core (SortedSet AVar, SortedMap Name String)
+                            -> Core (List String, SortedMap Name String)
         addReuseConstructor conArgs consts shouldDrop actualReuseConsts =
             -- to avoid conflicts, we check that there is no constructor with the same name in reuse map
             -- we also check that the constructor will be used later and that the variable will be deleted
-            if (isNothing $ lookup conName env.reuseMap) && contains conName consts && contains sc shouldDrop then do
+            if (isNothing $ lookup conName env.reuseMap)
+               && contains conName consts
+               && (isJust $ find (== varName sc) shouldDrop) then do
                 c <- getNextCounter
                 let constr = "constructor_" ++ (show c)
-                emit EmptyFC $ "Value_Constructor* "++ constr ++ " = NULL;"
+                emit EmptyFC $ "Value_Constructor* " ++ constr ++ " = NULL;"
+                -- If the constructor variable is unique (has 1 reference), then assign it for reuse
                 emit EmptyFC $ "if (isUnique(" ++ varName sc ++ ")) {"
                 increaseIndentation
                 emit EmptyFC $ constr ++ " = (Value_Constructor*)" ++ varName sc ++ ";"
                 decreaseIndentation
                 emit EmptyFC "}"
+                -- Otherwise, delete and duplicate constructor variables
                 emit EmptyFC "else {"
                 increaseIndentation
                 dupVars (varName <$> conArgs)
                 removeVars [varName sc]
                 decreaseIndentation
                 emit EmptyFC "}"
-                pure (delete sc shouldDrop, insert conName constr actualReuseConsts)
+                pure (delete (varName sc) shouldDrop, insert conName constr actualReuseConsts)
             else do
                 dupVars (varName <$> conArgs)
                 pure (shouldDrop, actualReuseConsts)
@@ -596,17 +617,15 @@ mutual
     constBlockSwitch _ [] _ _ _ = pure ()
     constBlockSwitch env ((MkAConstAlt c' caseBody) :: alts) retValVar i tailStatus = do
         let c = const2Integer c' i
-        let owned' = intersection env.owned (freeVariables caseBody)
-        let shouldDrop = difference env.owned owned'
-        let consts = usedConstructors caseBody
-        let dropReuseConsts = differenceMap env.reuseMap consts
-        let actualReuseConsts = intersectionMap env.reuseMap consts
+        let (shouldDrop, actualOwned) = dropUnusedOwnedVars env.owned (freeVariables caseBody)
+        let usedCons = usedConstructors caseBody
+        let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
         emit EmptyFC $ "  case " ++ show c ++ " :"
         emit EmptyFC "  {"
         increaseIndentation
-        removeReuseConstructors $ values dropReuseConsts
-        removeVars (varName <$> SortedSet.toList shouldDrop)
-        assignment <- cStatementsFromANF ({owned := owned', reuseMap := actualReuseConsts} env) caseBody tailStatus
+        removeReuseConstructors dropReuseCons
+        removeVars shouldDrop
+        assignment <- cStatementsFromANF ({owned := actualOwned, reuseMap := actualReuseMap} env) caseBody tailStatus
         emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         emit EmptyFC "break;"
         decreaseIndentation
@@ -625,17 +644,15 @@ mutual
                      -> Core ()
     constDefaultBlock _ Nothing _ _ = pure ()
     constDefaultBlock env (Just defaultBody) retValVar tailStatus = do
-        let owned' = intersection env.owned (freeVariables defaultBody)
-        let shouldDrop = difference env.owned owned'
-        let consts = usedConstructors defaultBody
-        let dropReuseConsts = differenceMap env.reuseMap consts
-        let actualReuseConsts = intersectionMap env.reuseMap consts
+        let (shouldDrop, actualOwned) = dropUnusedOwnedVars env.owned (freeVariables defaultBody)
+        let usedCons = usedConstructors defaultBody
+        let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
         emit EmptyFC "  default :"
         emit EmptyFC "  {"
         increaseIndentation
-        removeReuseConstructors $ values dropReuseConsts
-        removeVars (varName <$> SortedSet.toList shouldDrop)
-        assignment <- cStatementsFromANF ({owned := owned', reuseMap := actualReuseConsts} env) defaultBody tailStatus
+        removeReuseConstructors dropReuseCons
+        removeVars shouldDrop
+        assignment <- cStatementsFromANF ({owned := actualOwned, reuseMap := actualReuseMap} env) defaultBody tailStatus
         emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
         decreaseIndentation
         emit EmptyFC "  }"
@@ -713,15 +730,16 @@ mutual
         pure $ MkRS ("apply_closure(" ++ !(avarToC env closure) ++ ", " ++ !(avarToC env arg) ++ ")")
                     ("tailcall_apply_closure(" ++ !(avarToC env closure) ++ ", " ++ !(avarToC env arg) ++ ")")
     cStatementsFromANF env (ALet fc var value body) tailPosition = do
-        let freeBody = freeVariables body
-        let borrowVal = intersection env.owned (delete (ALocal var) freeBody)
-        let owned' = if contains (ALocal var) freeBody then insert (ALocal var) borrowVal else borrowVal
-        let consts = usedConstructors value
-        let valueEnv = { reuseMap $= (`intersectionMap` consts) } (moveFromOwnedToBorrowed env borrowVal)
+        let usedVars = freeVariables body
+        let borrowVal = intersection env.owned (delete (ALocal var) usedVars)
+        let owned' = if contains (ALocal var) usedVars then insert (ALocal var) borrowVal else borrowVal
+        let usedCons = usedConstructors value
+        -- When translating value into C, we borrow variables that will be used in body
+        let valueEnv = { reuseMap $= (`intersectionMap` usedCons) } (moveFromOwnedToBorrowed env borrowVal)
         valueAssignment <- cStatementsFromANF valueEnv value NotInTailPosition
         emit fc $ "Value * var_" ++ (show var) ++ " = " ++ nonTailCall valueAssignment ++ ";"
-        unless (contains (ALocal var) freeBody) $ emit fc $ "removeReference(" ++ "var_" ++ (show var) ++ ");"
-        bodyAssignment <- cStatementsFromANF ({ owned := owned', reuseMap $= (`differenceMap` consts) } env) body tailPosition
+        unless (contains (ALocal var) usedVars) $ emit fc $ "removeReference(" ++ "var_" ++ (show var) ++ ");"
+        bodyAssignment <- cStatementsFromANF ({ owned := owned', reuseMap $= (`differenceMap` usedCons) } env) body tailPosition
         pure $ bodyAssignment
     cStatementsFromANF _ (ACon fc n UNIT tag []) _ = do
         pure $ MkRS "(Value*)NULL" "(Value*)NULL"
@@ -753,6 +771,7 @@ mutual
         let resultVar = "primVar_" ++ (show c)
         argsVec <- traverseVect (avarToC env) args
         emit fc $ "Value *" ++ resultVar ++ " = " ++ cOp op argsVec ++ ";"
+        -- Removing arguments that apply to primitive functions
         removeVars (foldl (\acc, elem => elem :: acc) [] (map varName args))
         pure $ MkRS resultVar resultVar
     cStatementsFromANF _ (AExtPrim fc _ p args) _ = do
@@ -784,16 +803,14 @@ mutual
                 emit EmptyFC $ "free(" ++ constructorField ++ ");"
                 pure $ MkRS switchReturnVar switchReturnVar
             (Just d) => do
-                let owned' = intersection env.owned (freeVariables d)
-                let shouldDrop = difference env.owned owned'
-                let consts = usedConstructors d
-                let dropReuseConsts = differenceMap env.reuseMap consts
-                let actualReuseConsts = intersectionMap env.reuseMap consts
+                let (shouldDrop, actualOwned) = dropUnusedOwnedVars env.owned (freeVariables d)
+                let usedCons = usedConstructors d
+                let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
                 emit EmptyFC $ "  default : {"
                 increaseIndentation
-                removeVars (varName <$> SortedSet.toList shouldDrop)
-                removeReuseConstructors $ values dropReuseConsts
-                defaultAssignment <- cStatementsFromANF ({owned := owned', reuseMap := actualReuseConsts} env) d tailPosition
+                removeVars shouldDrop
+                removeReuseConstructors dropReuseCons
+                defaultAssignment <- cStatementsFromANF ({owned := actualOwned, reuseMap := actualReuseMap} env) d tailPosition
                 emit EmptyFC $ switchReturnVar ++ " = " ++ callByPosition tailPosition defaultAssignment ++ ";"
                 decreaseIndentation
                 emit EmptyFC $ "  }"
