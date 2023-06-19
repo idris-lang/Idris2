@@ -13,6 +13,9 @@
 * New function option `%unsafe` to mark definitions that are escape hatches
   similar to the builtins `believe_me`, `assert_total`, etc.
 * Elaborator scripts were made be able to record warnings.
+* Rudimentary support for defining lazy functions (addressing issue
+  [#1066](https://github.com/idris-lang/idris2/issues/1066)).
+* `%hide` directives can now hide conflicting fixities from other modules.
 
 ### REPL changes
 
@@ -164,6 +167,8 @@
 * Implemented `Ord` for `Language.Reflection.TT.Name`, `Language.Reflection.TT.Namespace`
   and `Language.Reflection.TT.UserName`.
 
+* Adds `leftmost` and `rightmost` to `Control.Order`, a generalisation of `min` and `max`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
@@ -175,9 +180,9 @@
 
 * Adds `Data.List.Sufficient`, a small library defining a structurally inductive view of lists.
 
-* Remove Data.List.HasLength from contrib library but add it to the base library
+* Remove `Data.List.HasLength` from `contrib` library but add it to the `base` library
   with the type signature from the compiler codebase and some of the naming
-  from the contrib library. The type ended up being `HasLength n xs` rather than
+  from the `contrib` library. The type ended up being `HasLength n xs` rather than
   `HasLength xs n`.
 
 * Adds an implementation for `Functor Text.Lexer.Tokenizer.Tokenizer`.

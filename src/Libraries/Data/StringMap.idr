@@ -278,7 +278,7 @@ sharedSupport l
   = foldl (\acc, (k, v) => case lookup k l of
              Just v' => insert k (v, v') acc
              Nothing => acc)
-    empty . StringMap.toList
+      empty . StringMap.toList
 
 ||| Merge two maps. When encountering duplicate keys, using a function to combine the values.
 ||| Uses the ordering of the first map given.

@@ -311,7 +311,7 @@ So if you have the following, all in the same file...
 
       export
       aVisible : Int -> Int
-      aVisibile x = aHidden x
+      aVisible x = aHidden x
 
     namespace B
       export

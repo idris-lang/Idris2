@@ -632,9 +632,18 @@ mutual
                         checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
                    else -- Some user defined binding is present while we are out of explicit arguments, that's an error
                         throw (InvalidArgs fc env (map (const (UN $ Basic "<auto>")) autoargs ++ map fst namedargs) tm)
-  -- Function type is delayed, so force the term and continue
-  checkAppWith' rig elabinfo nest env fc tm (NDelayed dfc r ty@(NBind _ _ (Pi _ _ _ _) sc)) argdata expargs autoargs namedargs kr expty
-      = checkAppWith' rig elabinfo nest env fc (TForce dfc r tm) ty argdata expargs autoargs namedargs kr expty
+  -- Function type is delayed:
+  --   RHS: force the term
+  --   LHS: strip off delay but only for explicit functions and disallow any further patterns
+  checkAppWith' rig elabinfo nest env fc tm (NDelayed dfc r ty@(NBind _ _ (Pi _ _ i _) sc)) argdata expargs autoargs namedargs kr expty
+      = if onLHS (elabMode elabinfo)
+           then do when (isImplicit i) $ throw (LazyImplicitFunction fc)
+                   let ([], [], []) = (expargs, autoargs, namedargs)
+                       | _ => throw (LazyPatternVar fc)
+                   (tm, gfty) <- checkAppWith' rig elabinfo nest env fc tm ty argdata expargs autoargs namedargs kr expty
+                   fty <- getTerm gfty
+                   pure (tm, gnf env (TDelayed dfc r fty))
+           else checkAppWith' rig elabinfo nest env fc (TForce dfc r tm) ty argdata expargs autoargs namedargs kr expty
   -- If there's no more arguments given, and the plicities of the type and
   -- the expected type line up, stop
   checkAppWith' rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb Implicit aty) sc)

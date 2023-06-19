@@ -314,11 +314,13 @@ getDocsForName fc n config
 
     getInfixDoc : Name -> Core (List (Doc IdrisDocAnn))
     getInfixDoc n
-        = do let Just (Basic n) = userNameRoot n
-                    | _ => pure []
-             let Just (_, fixity, assoc) = S.lookup n (infixes !(get Syn))
-                    | Nothing => pure []
-             pure $ pure $ hsep
+        = let names = lookupName (UN $ Basic $ nameRoot n) (infixes !(get Syn))
+          in pure $ map printName names
+        where
+          printName : (Name, FC, Fixity, Nat) -> (Doc IdrisDocAnn)
+          printName (name,  loc, fixity, assoc) =
+            -- todo,  change display as "infix operator (++)
+             hsep
                   [ pretty0 (show fixity)
                   , "operator,"
                   , "level"
@@ -327,11 +329,11 @@ getDocsForName fc n config
 
     getPrefixDoc : Name -> Core (List (Doc IdrisDocAnn))
     getPrefixDoc n
-        = do let Just (Basic n) = userNameRoot n
-                    | _ => pure []
-             let Just (_, assoc) = S.lookup n (prefixes !(get Syn))
-                    | Nothing => pure []
-             pure $ ["prefix operator, level" <++> pretty0 (show assoc)]
+        = let names = lookupName (UN $ Basic $ nameRoot n) (prefixes !(get Syn))
+          in pure $ map printPrefixName names
+          where
+            printPrefixName : (Name, FC, Nat) -> Doc IdrisDocAnn
+            printPrefixName (_, _, assoc) = "prefix operator, level" <++> pretty0 (show assoc)
 
     getFixityDoc : Name -> Core (List (Doc IdrisDocAnn))
     getFixityDoc n =

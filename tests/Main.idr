@@ -74,7 +74,7 @@ idrisTestsCasetree = MkTestPool "Case tree building" [] Nothing
 
 idrisTestsWarning : TestPool
 idrisTestsWarning = MkTestPool "Warnings" [] Nothing
-     ["warning001", "warning002", "warning003", "warning004"]
+      ["warning001", "warning002", "warning003", "warning004"]
 
 idrisTestsFailing : TestPool
 idrisTestsFailing = MkTestPool "Failing blocks" [] Nothing
@@ -96,7 +96,7 @@ idrisTestsError = MkTestPool "Error messages" [] Nothing
        "perror011", "perror012", "perror013", "perror014", "perror015",
        "perror016", "perror017", "perror018", "perror019", "perror020",
        "perror021", "perror022", "perror023", "perror024", "perror025",
-       "perror026", "perror027"]
+       "perror026", "perror027", "perror028"]
 
 idrisTestsInteractive : TestPool
 idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
@@ -274,9 +274,9 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "import001", "import002", "import003", "import004", "import005", "import006",
        "import007", "import008",
        -- Implicit laziness, lazy evaluation
-       "lazy001", "lazy002",
+       "lazy001", "lazy002", "lazy003",
        -- Namespace blocks
-       "namespace001", "namespace002", "namespace003", "namespace004",
+       "namespace001", "namespace002", "namespace003", "namespace004", "namespace005",
        -- Parameters blocks
        "params001", "params002", "params003",
        -- Larger programs arising from real usage. Typically things with
