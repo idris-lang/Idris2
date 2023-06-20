@@ -283,16 +283,14 @@ data HeaderFiles : Type where
 
 ReuseMap = SortedMap Name String
 Owned = SortedSet AVar
-Borrowed = SortedSet AVar
 
 ||| Environment for precise reference counting.
-||| If variable borrowed when used, call a function newReference.
+||| If variable borrowed (that is, it is not in the owned set) when used, call a function newReference.
 ||| If variable owned, then use it directly.
 ||| Reuse Map contains the name of the reusable constructor
 ||| and variable
 record Env where
   constructor MkEnv
-  borrowed : Borrowed
   owned : Owned
   reuseMap : ReuseMap
 
@@ -389,13 +387,14 @@ removeReuseConstructors : {auto oft : Ref OutfileText Output}
 removeReuseConstructors = applyFunctionToVars "removeReuseConstructor"
 
 avarToC : Env -> AVar -> Core String
-avarToC env var = do
-    if contains var env.borrowed then pure $ "newReference(" ++ varName var ++ ")"
-        else if contains var env.owned then pure $ varName var
-        else coreFail $ InternalError $ "INTERNAL ERROR: variable " ++ varName var ++ " is neither owned nor borrowed "
+avarToC env var =
+    pure $
+        if contains var env.owned then varName var
+        -- case when the variable is borrowed
+        else "newReference(" ++ varName var ++ ")"
 
 moveFromOwnedToBorrowed : Env -> SortedSet AVar -> Env
-moveFromOwnedToBorrowed env vars = { borrowed $= (union vars), owned $= (`difference` vars) } env
+moveFromOwnedToBorrowed env vars = { owned $= (`difference` vars) } env
 
 makeArglist : {auto a : Ref ArgCounter Nat}
            -> {auto oft : Ref OutfileText Output}
@@ -999,7 +998,7 @@ createCFunctions n (MkAFun args anf) = do
     emit EmptyFC "{"
     increaseIndentation
     removeVars (varName <$> SortedSet.toList shouldDrop)
-    assignment <- cStatementsFromANF (MkEnv empty bodyFreeVars empty) anf InTailPosition
+    assignment <- cStatementsFromANF (MkEnv bodyFreeVars empty) anf InTailPosition
     emit EmptyFC $ "Value *returnValue = " ++ tailCall assignment ++ ";"
     emit EmptyFC $ "return returnValue;"
     decreaseIndentation
