@@ -392,7 +392,7 @@ avarToC : Env -> AVar -> Core String
 avarToC env var = do
     if contains var env.borrowed then pure $ "newReference(" ++ varName var ++ ")"
         else if contains var env.owned then pure $ varName var
-        else coreFail $ InternalError $ "INTERNAL ERROR: variable " ++ varName var ++ " is not owned and borrowed "
+        else coreFail $ InternalError $ "INTERNAL ERROR: variable " ++ varName var ++ " is neither owned nor borrowed "
 
 moveFromOwnedToBorrowed : Env -> SortedSet AVar -> Env
 moveFromOwnedToBorrowed env vars = { borrowed $= (union vars), owned $= (`difference` vars) } env
@@ -498,7 +498,7 @@ callByPosition NotInTailPosition = nonTailCall
 ||| Returns constructor variables to remove and constructors to reuse.
 dropUnusedReuseCons : ReuseMap -> SortedSet Name -> (List String, ReuseMap)
 dropUnusedReuseCons reuseMap usedCons =
-    -- if there is no constructor named by that name, than the reuse constructor is deleted
+    -- if there is no constructor named by that name, then the reuse constructor is deleted
     let dropReuseMap = differenceMap reuseMap usedCons in
     let actualReuseMap = intersectionMap reuseMap usedCons in
     (values dropReuseMap, actualReuseMap)

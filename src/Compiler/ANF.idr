@@ -289,7 +289,7 @@ freeVariables (AAppName _ _ n args) = fromList args
 freeVariables (AUnderApp _ n _ args) = fromList args
 freeVariables (AApp _ _ closure arg) = fromList [closure, arg]
 freeVariables (ALet _ var value body) =
-    delete (ALocal var) $ union (freeVariables value) (freeVariables body)
+    union (freeVariables value) (delete (ALocal var) $ freeVariables body)
 freeVariables (ACon _ _ _ _ args) = fromList args
 freeVariables (AOp _ _ _ args) = fromList $ foldl (\acc, elem => elem :: acc) [] args
 freeVariables (AExtPrim _ _ _ args) = fromList args
@@ -300,13 +300,13 @@ freeVariables (AConCase _ sc alts mDef) =
     let vars : List (SortedSet AVar) = case mDef of
                 Just anf => freeVariables anf :: altsAnf
                 Nothing => altsAnf in
-    insert sc $ foldl (\acc, var => union acc var) empty vars
+    insert sc $ concat vars
 freeVariables (AConstCase _ sc alts mDef) =
     let altsAnf = map (\(MkAConstAlt _ caseBody) => caseBody) alts in
     let anfs : List ANF = case mDef of
                 Just anf => anf :: altsAnf
                 Nothing => altsAnf in
-    insert sc $ foldl (\acc, anf => union acc $ freeVariables anf) empty anfs
+    insert sc $ foldMap freeVariables anfs
 freeVariables _ = empty
 
 export
@@ -325,11 +325,11 @@ usedConstructors (AConCase _ sc alts mDef) =
     let anfs : List (SortedSet Name) = case mDef of
                 Just anf => usedConstructors anf :: altsAnf
                 Nothing => altsAnf in
-    foldl (\acc, anf => union acc anf) empty anfs
+    concat anfs
 usedConstructors (AConstCase _ sc alts mDef) =
     let altsAnf = map (\(MkAConstAlt _ caseBody) => caseBody) alts in
     let anfs : List ANF = case mDef of
                 Just anf => anf :: altsAnf
                 Nothing => altsAnf in
-    foldl (\acc, anf => union acc $ usedConstructors anf) empty anfs
+    foldMap usedConstructors anfs
 usedConstructors _ = empty
