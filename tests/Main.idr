@@ -328,6 +328,9 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
 refcTests : IO TestPool
 refcTests = testsInDir "refc" (const True) "Reference counting C backend" [] (Just C)
 
+refcMemoryLeakTests : IO TestPool
+refcMemoryLeakTests = testsInDir "refc-memory" (const True) "Reference counting C backend: memory leak test" [Valgrind] (Just C)
+
 racketTests : TestPool
 racketTests = MkTestPool "Racket backend" [] (Just Racket)
     [ "forkjoin001"
@@ -429,6 +432,7 @@ main = runner $
   , !contribLibraryTests
   , testPaths "chez" chezTests
   , !refcTests
+  , !refcMemoryLeakTests
   , testPaths "racket" racketTests
   , testPaths "node" nodeTests
   , !vmcodeInterpTests
