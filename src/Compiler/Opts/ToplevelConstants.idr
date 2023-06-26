@@ -100,7 +100,7 @@ checkCrash (n, _, MkNmError _) = update SortTag $ { nonconst $= insert n }
 checkCrash (n, _, MkNmFun args (NmCrash _ _)) = update SortTag $ { nonconst $= insert n }
 checkCrash (n, _, def) = do
   st <- get SortTag
-  when (any (flip contains st.nonconst) !(getCalls n)) $
+  when (any (\n => contains n st.nonconst || isUnsafeBuiltin n) !(getCalls n)) $
     put SortTag $ { nonconst $= insert n } st
 
 sortDef : Ref SortTag SortST => Name -> Core ()
