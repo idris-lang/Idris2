@@ -98,9 +98,10 @@ isProcessed n = map (contains n . processed) (get SortTag)
 checkCrash : Ref SortTag SortST => (Name, FC, NamedDef) -> Core ()
 checkCrash (n, _, MkNmError _) = update SortTag $ { nonconst $= insert n }
 checkCrash (n, _, MkNmFun args (NmCrash _ _)) = update SortTag $ { nonconst $= insert n }
+checkCrash (n, _, MkNmFun args (NmOp _ Crash _)) = update SortTag $ { nonconst $= insert n }
 checkCrash (n, _, def) = do
   st <- get SortTag
-  when (any (\n => contains n st.nonconst || isUnsafeBuiltin n) !(getCalls n)) $
+  when (any (flip contains st.nonconst) !(getCalls n)) $
     put SortTag $ { nonconst $= insert n } st
 
 sortDef : Ref SortTag SortST => Name -> Core ()
