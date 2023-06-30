@@ -509,6 +509,13 @@ dropUnusedOwnedVars owned usedVars =
     let shouldDrop = difference owned actualOwned in
     (varName <$> SortedSet.toList shouldDrop, actualOwned)
 
+locally : {auto t : Ref EnvTracker Env} -> Env -> Core () -> Core ()
+locally newEnv act = do
+    oldEnv <- get EnvTracker
+    put EnvTracker newEnv
+    act
+    put EnvTracker oldEnv
+
 mutual
     copyConstructors : {auto a : Ref ArgCounter Nat}
                     -> {auto oft : Ref OutfileText Output}
@@ -556,13 +563,12 @@ mutual
         (shouldDrop, actualReuseMap) <- addReuseConstructor env.reuseMap conArgs usedCons shouldDrop actualReuseMap
         removeVars shouldDrop
         removeReuseConstructors dropReuseCons
-        put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
-        assignment <- cStatementsFromANF body tailStatus
-        emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
-        emit EmptyFC $ "break;"
-        decreaseIndentation
-        emit EmptyFC $ "  }"
-        put EnvTracker env
+        locally ({owned := actualOwned, reuseMap := actualReuseMap} env) $ do
+            assignment <- cStatementsFromANF body tailStatus
+            emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
+            emit EmptyFC $ "break;"
+            decreaseIndentation
+            emit EmptyFC $ "  }"
         conBlocks sc xs retValVar (S k) tailStatus
     where
         -- if the constructor is unique use it, otherwise add it to should drop vars and create null constructor
@@ -628,13 +634,12 @@ mutual
         increaseIndentation
         removeReuseConstructors dropReuseCons
         removeVars shouldDrop
-        put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
-        assignment <- cStatementsFromANF caseBody tailStatus
-        emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
-        emit EmptyFC "break;"
-        decreaseIndentation
-        emit EmptyFC "  }"
-        put EnvTracker env
+        locally ({owned := actualOwned, reuseMap := actualReuseMap} env) $ do
+            assignment <- cStatementsFromANF caseBody tailStatus
+            emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
+            emit EmptyFC "break;"
+            decreaseIndentation
+            emit EmptyFC "  }"
         constBlockSwitch alts retValVar (i+1) tailStatus
 
 
@@ -658,12 +663,11 @@ mutual
         increaseIndentation
         removeReuseConstructors dropReuseCons
         removeVars shouldDrop
-        put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
-        assignment <- cStatementsFromANF defaultBody tailStatus
-        emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
-        decreaseIndentation
-        emit EmptyFC "  }"
-        put EnvTracker env
+        locally ({owned := actualOwned, reuseMap := actualReuseMap} env) $ do
+            assignment <- cStatementsFromANF defaultBody tailStatus
+            emit EmptyFC $ retValVar ++ " = " ++ callByPosition tailStatus assignment ++ ";"
+            decreaseIndentation
+            emit EmptyFC "  }"
 
 
 
@@ -792,7 +796,6 @@ mutual
         let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")")
         pure $ MkRS returnLine returnLine
     cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
-        env <- get EnvTracker
         c <- getNextCounter
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
         let newValueLine = "Value * " ++ switchReturnVar ++ " = NULL;"
@@ -817,6 +820,7 @@ mutual
                 emit EmptyFC $ "free(" ++ constructorField ++ ");"
                 pure $ MkRS switchReturnVar switchReturnVar
             (Just d) => do
+                env <- get EnvTracker
                 let (shouldDrop, actualOwned) = dropUnusedOwnedVars env.owned (freeVariables d)
                 let usedCons = usedConstructors d
                 let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
@@ -833,7 +837,6 @@ mutual
                 emit EmptyFC $ "free(" ++ constructorField ++ ");"
                 pure $ MkRS switchReturnVar switchReturnVar
     cStatementsFromANF (AConstCase fc sc alts def) tailPosition = do
-        env <- get EnvTracker
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
         let newValueLine = "Value * " ++ switchReturnVar ++ " = NULL;"
         emit fc newValueLine
