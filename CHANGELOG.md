@@ -44,6 +44,10 @@
 * `getChar` is now supported on Node.js and `putChar` is supported on both JavaScript backends.
 * Integer-indexed arrays are now supported.
 
+#### Optimizations
+
+* Unit types can now be erased by the optimiser in data types.
+
 ### Compiler changes
 
 * If `IAlternative` expression with `FirstSuccess` rule fails to typecheck,

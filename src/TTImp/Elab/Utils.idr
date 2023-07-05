@@ -1,6 +1,7 @@
 module TTImp.Elab.Utils
 
 import Core.Case.CaseTree
+import Core.CompileExpr
 import Core.Context
 import Core.Core
 import Core.Env
@@ -32,6 +33,23 @@ detagSafe defs (NTCon _ n _ _ args)
         = elem i ns || notErased (i + 1) ns rest
 detagSafe defs _ = pure False
 
+||| Check if the name at the head of a given Term is a unit type.
+||| This does not evaluate the term, so can return false negatives,
+||| if the unit type is not in the Term directly.
+export
+isUnitType :
+    {auto _ : Ref Ctxt Defs} ->
+    Term vs ->
+    Core Bool
+isUnitType (Ref fc (TyCon {}) n) = do
+    defs <- get Ctxt
+    Just (TCon _ _ _ _ _ _ [con] _) <- lookupDefExact n $ gamma defs
+        | _ => pure False
+    hasFlag (virtualiseFC fc) con (ConType UNIT)
+isUnitType (App _ f _) = isUnitType f
+isUnitType (Bind fc x (Let {}) rhs) = isUnitType rhs
+isUnitType _ = pure False
+
 findErasedFrom : {auto c : Ref Ctxt Defs} ->
                  Defs -> Nat -> NF [] -> Core (List Nat, List Nat)
 findErasedFrom defs pos (NBind fc x (Pi _ c _ aty) scf)
@@ -42,9 +60,9 @@ findErasedFrom defs pos (NBind fc x (Pi _ c _ aty) scf)
          (erest, dtrest) <- findErasedFrom defs (1 + pos) sc
          let dt' = if !(detagSafe defs !(evalClosure defs aty))
                       then (pos :: dtrest) else dtrest
-         pure $ if isErased c
-                   then (pos :: erest, dt')
-                   else (erest, dt')
+         if isErased c || !(isUnitType !(quote defs [] aty))
+            then pure (pos :: erest, dt')
+            else pure (erest, dt')
 findErasedFrom defs pos tm = pure ([], [])
 
 -- Find the argument positions in the given type which are guaranteed to be
