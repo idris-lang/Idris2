@@ -26,6 +26,8 @@ modules = Control.DivideAndConquer,
 
           Data.OpenUnion,
 
+          Data.ProofDelay,
+
           Data.Recursion.Free,
 
           Data.Tree.Perfect,
