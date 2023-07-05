@@ -39,7 +39,6 @@ detagSafe defs _ = pure False
 export
 isUnitType :
     {auto _ : Ref Ctxt Defs} ->
-    {vs : _} ->
     Term vs ->
     Core Bool
 isUnitType (Ref fc (TyCon {}) n) = do

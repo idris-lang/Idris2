@@ -247,7 +247,7 @@ findNewtype [con]
                  _ => Nothing
 findNewtype _ = pure ()
 
-hasArgs : {auto _ : Ref Ctxt Defs} -> {vs : _} -> Nat -> Term vs -> Core Bool
+hasArgs : {auto _ : Ref Ctxt Defs} -> Nat -> Term vs -> Core Bool
 hasArgs (S k) (Bind _ _ (Pi _ c _ ty) sc)
     = if isErased c || !(isUnitType ty)
         then hasArgs (S k) sc
@@ -277,7 +277,7 @@ typeCon (App _ fn _) = typeCon fn
 typeCon _ = Nothing
 
 shaped : {auto c : Ref Ctxt Defs} ->
-         ({vs : _} -> Term vs -> Core Bool) ->
+         (forall vs. Term vs -> Core Bool) ->
          List Constructor -> Core (Maybe Name)
 shaped as [] = pure Nothing
 shaped as (c :: cs)
