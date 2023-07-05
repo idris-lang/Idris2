@@ -169,6 +169,8 @@
 
 * Adds `leftmost` and `rightmost` to `Control.Order`, a generalisation of `min` and `max`.
 
+* `Eq` and `Ord` implementations for `Fin n` now run in constant time.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
