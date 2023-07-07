@@ -210,25 +210,25 @@ getDetags fc tys
 getRelevantArg : {auto c : Ref Ctxt Defs} ->
                  Defs -> Nat -> Maybe Nat -> Bool -> NF [] ->
                  Core (Maybe (Bool, Nat))
-getRelevantArg defs i rel world (NBind fc _ (Pi _ rig _ val) sc) =
-    if isErased rig || !(isUnitType !(quote defs [] val))
-        then getRelevantArg defs (1 + i) rel world
-                !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
-        else case !(evalClosure defs val) of
-                  -- %World is never inspected, so might as well be deleted from data types,
-                  -- although it needs care when compiling to ensure that the function that
-                  -- returns the IO/%World type isn't erased
-                  (NPrimVal _ $ PrT WorldType) =>
-                      getRelevantArg defs (1 + i) rel False
-                          !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
-                  _ =>
-                      -- if we haven't found a relevant argument yet, make
-                      -- a note of this one and keep going. Otherwise, we
-                      -- have more than one, so give up.
-                      maybe (do sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
-                                getRelevantArg defs (1 + i) (Just i) False sc')
-                            (const (pure Nothing))
-                            rel
+getRelevantArg defs i rel world (NBind fc _ (Pi _ rig _ val) sc)
+    = branchZero (getRelevantArg defs (1 + i) rel world
+                              !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder))))
+                 (case !(evalClosure defs val) of
+                       -- %World is never inspected, so might as well be deleted from data types,
+                       -- although it needs care when compiling to ensure that the function that
+                       -- returns the IO/%World type isn't erased
+                       (NPrimVal _ $ PrT WorldType) =>
+                           getRelevantArg defs (1 + i) rel False
+                               !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
+                       _ =>
+                       -- if we haven't found a relevant argument yet, make
+                       -- a note of this one and keep going. Otherwise, we
+                       -- have more than one, so give up.
+                           maybe (do sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+                                     getRelevantArg defs (1 + i) (Just i) False sc')
+                                 (const (pure Nothing))
+                                 rel)
+                 rig
 getRelevantArg defs i rel world tm
     = pure ((world,) <$> rel)
 
@@ -247,29 +247,25 @@ findNewtype [con]
                  _ => Nothing
 findNewtype _ = pure ()
 
-hasArgs : {auto _ : Ref Ctxt Defs} -> Nat -> Term vs -> Core Bool
-hasArgs (S k) (Bind _ _ (Pi _ c _ ty) sc)
-    = if isErased c || !(isUnitType ty)
-        then hasArgs (S k) sc
-        else hasArgs k sc
-hasArgs (S k) _ = pure False
-hasArgs Z (Bind _ _ (Pi _ c _ ty) sc)
-    = if isErased c || !(isUnitType ty)
-        then hasArgs Z sc
-        else pure False
-hasArgs Z _ = pure True
+hasArgs : Nat -> Term vs -> Bool
+hasArgs (S k) (Bind _ _ (Pi _ c _ _) sc)
+    = if isErased c
+         then hasArgs (S k) sc
+         else hasArgs k sc
+hasArgs (S k) _ = False
+hasArgs Z (Bind _ _ (Pi _ c _ _) sc)
+    = if isErased c
+         then hasArgs Z sc
+         else False
+hasArgs Z _ = True
 
 -- get the first non-erased argument
-firstArg :
-    Ref Ctxt Defs =>
-    {vs : _} ->
-    Term vs ->
-    Core (Maybe (Exists Term))
+firstArg : Term vs -> Maybe (Exists Term)
 firstArg (Bind _ _ (Pi _ c _ val) sc)
-    = if isErased c || !(isUnitType val)
+    = if isErased c
          then firstArg sc
-         else pure $ Just $ Evidence _ val
-firstArg tm = pure Nothing
+         else Just $ Evidence _ val
+firstArg tm = Nothing
 
 typeCon : Term vs -> Maybe Name
 typeCon (Ref _ (TyCon _ _) n) = Just n
@@ -277,12 +273,12 @@ typeCon (App _ fn _) = typeCon fn
 typeCon _ = Nothing
 
 shaped : {auto c : Ref Ctxt Defs} ->
-         (forall vs. Term vs -> Core Bool) ->
+         (forall vs . Term vs -> Bool) ->
          List Constructor -> Core (Maybe Name)
 shaped as [] = pure Nothing
 shaped as (c :: cs)
     = do defs <- get Ctxt
-         if !(as !(normalise defs [] (type c)))
+         if as !(normalise defs [] (type c))
             then pure (Just (name c))
             else shaped as cs
 
@@ -335,7 +331,7 @@ calcEnum fc cs
     isNullary : Constructor -> Core Bool
     isNullary c
         = do defs <- get Ctxt
-             hasArgs 0 !(normalise defs [] (type c))
+             pure $ hasArgs 0 !(normalise defs [] (type c))
 
 calcRecord : {auto c : Ref Ctxt Defs} ->
              FC -> List Constructor -> Core Bool
@@ -356,7 +352,7 @@ calcNaty fc tyCon cs@[_, _]
               | Nothing => pure False
          let Just succCon = find (\con => name con == succ) cs
               | Nothing => pure False
-         Just (Evidence _ succArgTy) <- firstArg (type succCon)
+         let Just (Evidence _ succArgTy) = firstArg (type succCon)
               | Nothing => pure False
          let Just succArgCon = typeCon succArgTy
               | Nothing => pure False
