@@ -169,6 +169,9 @@
 
 * Adds `leftmost` and `rightmost` to `Control.Order`, a generalisation of `min` and `max`.
 
+* Adds `getTermCols` and `getTermLines` to the base library. They return the size of the
+  terminal if either stdin or stdout is a tty.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
