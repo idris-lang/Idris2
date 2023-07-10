@@ -122,7 +122,7 @@ checkConflictingFixities isPrefix exprFC opn
             (True, ((fxName, _, fix, prec) :: _), _) => do
                 -- in the prefix case, remove conflicts with infix (-)
                 let extraFixities = pre ++ (filter (\(nm, _) => not $ nameRoot nm == "-") inf)
-                unless (isCompatible fxName fix prec extraFixities) $ warnConflict fxName extraFixities
+                unless (isCompatible fix prec extraFixities) $ warnConflict fxName extraFixities
                 pure (mkPrec fix prec)
             -- Could not find any prefix operator fixities, there may be infix ones
             (True, [] , _) => throw (GenericMsg exprFC $ "'\{op}' is not a prefix operator")
@@ -130,15 +130,15 @@ checkConflictingFixities isPrefix exprFC opn
             (False, _, ((fxName, _, fix, prec) :: _)) => do
                 -- in the infix case, remove conflicts with prefix (-)
                 let extraFixities = (filter (\(nm, _) => not $ nm == UN (Basic "-")) pre) ++ inf
-                unless (isCompatible fxName fix prec extraFixities) $ warnConflict fxName extraFixities
+                unless (isCompatible fix prec extraFixities) $ warnConflict fxName extraFixities
                 pure (mkPrec fix prec)
             -- Could not find any infix operator fixities, there may be prefix ones
             (False, _, []) => throw (GenericMsg exprFC $ "'\{op}' is not an infix operator")
   where
-    -- fixities are compatible with all others of the same name that share the same fixity and precedence
-    isCompatible : Name -> Fixity -> Nat -> (fixities : List (Name, FC, Fixity, Nat)) -> Bool
-    isCompatible opName fx prec fix
-      = all (\(nm, _, fx', prec') => fx' == fx && prec' == prec) fix
+    -- Fixities are compatible with all others of the same name that share the same fixity and precedence
+    isCompatible :  Fixity -> Nat -> (fixities : List (Name, FC, Fixity, Nat)) -> Bool
+    isCompatible fx prec fix
+      = all (\(_, _, fx', prec') => fx' == fx && prec' == prec) fix
 
     -- Emits a warning using the fixity that we picked and the list of all conflicting fixities
     warnConflict : (picked : Name) -> (conflicts : List (Name, FC, Fixity, Nat)) -> Core ()
