@@ -92,10 +92,10 @@ extendSyn newsyn
                   syn)
 
 mkPrec : Fixity -> Nat -> OpPrec
-mkPrec InfixL p = AssocL p
-mkPrec InfixR p = AssocR p
-mkPrec Infix p = NonAssoc p
-mkPrec Prefix p = Prefix p
+mkPrec InfixL = AssocL
+mkPrec InfixR = AssocR
+mkPrec Infix  = NonAssoc
+mkPrec Prefix = Prefix
 
 -- Check that an operator does not have any conflicting fixities in scope.
 -- Each operator can have its fixity defined multiple times across multiple
@@ -109,8 +109,8 @@ checkConflictingFixities : {auto s : Ref Syn SyntaxInfo} ->
 checkConflictingFixities isPrefix exprFC opn
   = do syn <- get Syn
        let op = nameRoot opn
-       let foundFixities : List (Name, FC, Fixity, Nat) = lookupName (UN (Basic op)) (fixities syn)
-       let (pre, inf) = partition (\(_, _, fx, _) => fx == Prefix) foundFixities
+       let foundFixities : List (Name, FixityInfo) = lookupName (UN (Basic op)) (fixities syn)
+       let (pre, inf) = partition ((== Prefix) . fix . snd) foundFixities
        case (isPrefix, pre, inf) of
             -- If we do not find any fixity for this operator we check that it uses operator
             -- characters, if not, it must be a backticked expression.
@@ -118,33 +118,33 @@ checkConflictingFixities isPrefix exprFC opn
                               then throw (GenericMsg exprFC "Unknown operator '\{op}'")
                               else pure (NonAssoc 1) -- Backticks are non associative by default
 
-            (True, ((fxName, _, fix, prec) :: _), _) => do
+            (True, ((fxName, fx) :: _), _) => do
                 -- in the prefix case, remove conflicts with infix (-)
                 let extraFixities = pre ++ (filter (\(nm, _) => not $ nameRoot nm == "-") inf)
-                unless (isCompatible fix prec extraFixities) $ warnConflict fxName extraFixities
-                pure (mkPrec fix prec)
+                unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
+                pure (mkPrec fx.fix fx.precedence)
             -- Could not find any prefix operator fixities, there may be infix ones
             (True, [] , _) => throw (GenericMsg exprFC $ "'\{op}' is not a prefix operator")
 
-            (False, _, ((fxName, _, fix, prec) :: _)) => do
-                -- in the infix case, remove conflicts with prefix (-)
+            (False, _, ((fxName, fx) :: _)) => do
+                -- In the infix case, remove conflicts with prefix (-)
                 let extraFixities = (filter (\(nm, _) => not $ nm == UN (Basic "-")) pre) ++ inf
-                unless (isCompatible fix prec extraFixities) $ warnConflict fxName extraFixities
-                pure (mkPrec fix prec)
+                unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
+                pure (mkPrec fx.fix fx.precedence)
             -- Could not find any infix operator fixities, there may be prefix ones
             (False, _, []) => throw (GenericMsg exprFC $ "'\{op}' is not an infix operator")
   where
     -- Fixities are compatible with all others of the same name that share the same fixity and precedence
-    isCompatible :  Fixity -> Nat -> (fixities : List (Name, FC, Fixity, Nat)) -> Bool
-    isCompatible fx prec fix
-      = all (\(_, _, fx', prec') => fx' == fx && prec' == prec) fix
+    isCompatible :  FixityInfo -> (fixities : List (Name, FixityInfo)) -> Bool
+    isCompatible fx
+      = all (\fx' => fx.fix == fx'.fix && fx.precedence == fx'.precedence) . map snd
 
     -- Emits a warning using the fixity that we picked and the list of all conflicting fixities
-    warnConflict : (picked : Name) -> (conflicts : List (Name, FC, Fixity, Nat)) -> Core ()
+    warnConflict : (picked : Name) -> (conflicts : List (Name, FixityInfo)) -> Core ()
     warnConflict fxName all =
       recordWarning $ GenericWarn exprFC $ """
                    operator fixity is ambiguous, we are picking \{show fxName} out of :
-                   \{unlines $ map (\(nm, _, _, fx) => " - \{show nm}, precedence level \{show fx}") $ toList all}
+                   \{unlines $ map (\(nm, fx) => " - \{show nm}, precedence level \{show fx.precedence}") $ toList all}
                    To remove this warning, use `%hide` with the fixity to remove
                    For example: %hide \{show fxName}
                    """
@@ -1096,7 +1096,7 @@ mutual
            let updatedNS = NS (mkNestedNamespace (Just ctx.currentNS) (show fix))
                               (UN $ Basic $ nameRoot opName)
 
-           update Syn { fixities $= addName updatedNS (fc, fix, prec) }
+           update Syn { fixities $= addName updatedNS (MkFixityInfo fc vis fix prec) }
            pure []
   desugarDecl ps d@(PFail fc mmsg ds)
       = do -- save the state: the content of a failing block should be discarded

@@ -46,6 +46,26 @@ Eq Fixity where
   Prefix == Prefix = True
   _ == _ = False
 
+-- A record to hold all the information about a fixity
+public export
+record FixityInfo where
+  constructor MkFixityInfo
+  fc : FC
+  vis : Visibility
+  fix : Fixity
+  precedence : Nat
+
+export
+Show FixityInfo where
+  show fx = "fc: \{show fx.fc}, visibility: \{show fx.vis}, fixity: \{show fx.fix}, precedence: \{show fx.precedence}"
+
+export
+Eq FixityInfo where
+  x == y = x.fc == y.fc
+        && x.vis == y.vis
+        && x.fix == y.fix
+        && x.precedence == y.precedence
+
 public export
 OpStr' : Type -> Type
 OpStr' nm = nm
@@ -884,7 +904,7 @@ record SyntaxInfo where
   constructor MkSyntax
   ||| Operators fixities as a map from their names to their fixity,
   ||| precedence, and the file context where that fixity was defined.
-  fixities : ANameMap (FC, Fixity, Nat)
+  fixities : ANameMap FixityInfo
   -- info about modules
   saveMod : List ModuleIdent -- current module name
   modDocstrings : SortedMap ModuleIdent String
@@ -905,15 +925,16 @@ record SyntaxInfo where
 export
 prefixes : SyntaxInfo -> ANameMap (FC, Nat)
 prefixes = fromList
-    . map (\(nm, fc, _, pre) => (nm, fc, pre))
-    . filter (\(_, _, fix, _) => fix == Prefix)
+    . map (\(name, fx)=> (name, fx.fc, fx.precedence))
+    . filter ((== Prefix) . fix . snd)
     . toList
     . fixities
 
 export
 infixes : SyntaxInfo -> ANameMap (FC, Fixity, Nat)
 infixes = fromList
-    . filter (\(_, _, fix, _) => fix /= Prefix)
+    . map (\(nm, fx) => (nm, fx.fc, fx.fix, fx.precedence))
+    . filter ((/= Prefix) . fix . snd)
     . toList
     . fixities
 
@@ -972,11 +993,11 @@ initSyntax
   where
 
 
-    initFixities : ANameMap (FC, Fixity, Nat)
+    initFixities : ANameMap FixityInfo
     initFixities = fromList
-      [ (UN $ Basic "-", (EmptyFC, Prefix, 10))
-      , (UN $ Basic "negate", (EmptyFC, Prefix, 10)) -- for documentation purposes
-      , (UN $ Basic "=", (EmptyFC, Infix, 0))
+      [ (UN $ Basic "-", MkFixityInfo EmptyFC Export Prefix 10)
+      , (UN $ Basic "negate", MkFixityInfo EmptyFC Export Prefix 10) -- for documentation purposes
+      , (UN $ Basic "=", MkFixityInfo EmptyFC Export Infix 0)
       ]
 
     initDocStrings : ANameMap String

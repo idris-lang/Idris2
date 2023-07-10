@@ -82,6 +82,21 @@ TTC Import where
          pure (MkImport loc reexport path nameAs)
 
 export
+TTC FixityInfo where
+  toBuf b fx
+      = do toBuf b fx.fc
+           toBuf b fx.vis
+           toBuf b fx.fix
+           toBuf b fx.precedence
+  fromBuf b
+      = do fc <- fromBuf b
+           vis <- fromBuf b
+           fix <- fromBuf b
+           prec <- fromBuf b
+           pure $ MkFixityInfo fc vis fix prec
+
+
+export
 TTC SyntaxInfo where
   toBuf b syn
       = do toBuf b (ANameMap.toList (fixities syn))
