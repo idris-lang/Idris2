@@ -1088,7 +1088,7 @@ mutual
       mapDesugarPiInfo : List Name -> PiInfo PTerm -> Core (PiInfo RawImp)
       mapDesugarPiInfo ps = traverse (desugar AnyExpr ps)
 
-  desugarDecl ps (PFixity fc fix prec opName)
+  desugarDecl ps (PFixity fc vis fix prec opName)
       = do ctx <- get Ctxt
            -- We update the context of fixities by adding a namespaced fixity
            -- given by the current namespace and its fixity name.

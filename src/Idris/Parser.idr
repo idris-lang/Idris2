@@ -1808,7 +1808,7 @@ fixDecl fname indents
                          ops <- sepBy1 (decoratedSymbol fname ",") iOperator
                          pure (fixity, prec, ops))
          (fixity, prec, ops) <- pure b.val
-         pure (map (PFixity (boundToFC fname b) fixity (fromInteger prec)) (forget ops))
+         pure (map (PFixity (boundToFC fname b) vis fixity (fromInteger prec)) (forget ops))
 
 directiveDecl : OriginDesc -> IndentInfo -> Rule PDecl
 directiveDecl fname indents

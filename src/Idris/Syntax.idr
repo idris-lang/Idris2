@@ -445,7 +445,7 @@ mutual
        PFail : FC -> Maybe String -> List (PDecl' nm) -> PDecl' nm
 
        PMutual : FC -> List (PDecl' nm) -> PDecl' nm
-       PFixity : FC -> Fixity -> Nat -> OpStr -> PDecl' nm
+       PFixity : FC -> Visibility -> Fixity -> Nat -> OpStr -> PDecl' nm
        PNamespace : FC -> Namespace -> List (PDecl' nm) -> PDecl' nm
        PTransform : FC -> String -> PTerm' nm -> PTerm' nm -> PDecl' nm
        PRunElabDecl : FC -> PTerm' nm -> PDecl' nm
@@ -465,7 +465,7 @@ mutual
   getPDeclLoc (PRecord fc _ _ _ _) = fc
   getPDeclLoc (PMutual fc _) = fc
   getPDeclLoc (PFail fc _ _) = fc
-  getPDeclLoc (PFixity fc _ _ _) = fc
+  getPDeclLoc (PFixity fc _ _ _ _) = fc
   getPDeclLoc (PNamespace fc _ _) = fc
   getPDeclLoc (PTransform fc _ _ _) = fc
   getPDeclLoc (PRunElabDecl fc _) = fc
