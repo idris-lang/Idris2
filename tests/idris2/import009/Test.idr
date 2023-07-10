@@ -3,7 +3,7 @@ module Test
 private
 infixr 5 ~:>
 
-public
+public export
 infixr 5 ~>
 infixl 5 |>
 
