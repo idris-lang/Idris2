@@ -83,8 +83,7 @@ extendSyn newsyn
               ++ show (modDocstrings newsyn)
            ]
 
-         put Syn ({ infixes $= merge (infixes newsyn),
-                    prefixes $= merge (prefixes newsyn),
+         put Syn ({ fixities $= merge (fixities newsyn),
                     ifaces $= merge (ifaces newsyn),
                     modDocstrings $= mergeLeft (modDocstrings newsyn),
                     modDocexports $= mergeLeft (modDocexports newsyn),
@@ -1097,12 +1096,7 @@ mutual
            let updatedNS = NS (mkNestedNamespace (Just ctx.currentNS) (show fix))
                               (UN $ Basic $ nameRoot opName)
 
-           -- Depending on the fixity we update the correct fixity context
-           case fix of
-                Prefix =>
-                    update Syn { prefixes $= addName updatedNS (fc, prec) }
-                _ =>
-                    update Syn { infixes $= addName updatedNS (fc, fix, prec) }
+           update Syn { fixities $= addName updatedNS (fc, fix, prec) }
            pure []
   desugarDecl ps d@(PFail fc mmsg ds)
       = do -- save the state: the content of a failing block should be discarded

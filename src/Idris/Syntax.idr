@@ -882,14 +882,9 @@ record IFaceInfo where
 public export
 record SyntaxInfo where
   constructor MkSyntax
-  -- Keep infix/prefix, then we can define operators which are both
-  -- (most obviously, -)
-  ||| Infix operators as a map from their names to their fixity,
+  ||| Operators fixities as a map from their names to their fixity,
   ||| precedence, and the file context where that fixity was defined.
-  infixes : ANameMap (FC, Fixity, Nat)
-  ||| Prefix operators as a map from their names to their precedence
-  ||| and the file context where their fixity was defined.
-  prefixes : ANameMap (FC, Nat)
+  fixities : ANameMap (FC, Fixity, Nat)
   -- info about modules
   saveMod : List ModuleIdent -- current module name
   modDocstrings : SortedMap ModuleIdent String
@@ -908,8 +903,19 @@ record SyntaxInfo where
   holeNames : List String -- hole names in the file
 
 export
-fixities : SyntaxInfo -> ANameMap (FC, Fixity, Nat)
-fixities syn = merge (infixes syn) (ANameMap.fromList $ map (\(nm, fc, lv) => (nm, fc, Prefix, lv)) $ toList $ prefixes syn)
+prefixes : SyntaxInfo -> ANameMap (FC, Nat)
+prefixes = fromList
+    . map (\(nm, fc, _, pre) => (nm, fc, pre))
+    . filter (\(_, _, fix, _) => fix == Prefix)
+    . toList
+    . fixities
+
+export
+infixes : SyntaxInfo -> ANameMap (FC, Fixity, Nat)
+infixes = fromList
+    . filter (\(_, _, fix, _) => fix /= Prefix)
+    . toList
+    . fixities
 
 HasNames IFaceInfo where
   full gam iface
@@ -950,8 +956,7 @@ HasNames SyntaxInfo where
 export
 initSyntax : SyntaxInfo
 initSyntax
-    = MkSyntax initInfix
-               initPrefix
+    = MkSyntax initFixities
                []
                empty
                empty
@@ -966,13 +971,12 @@ initSyntax
 
   where
 
-    initInfix : ANameMap (FC, Fixity, Nat)
-    initInfix = addName (UN $ Basic "=") (EmptyFC, Infix, 0) empty
 
-    initPrefix : ANameMap (FC, Nat)
-    initPrefix = fromList
-      [ (UN $ Basic "-", (EmptyFC, 10))
-      , (UN $ Basic "negate", (EmptyFC, 10)) -- for documentation purposes
+    initFixities : ANameMap (FC, Fixity, Nat)
+    initFixities = fromList
+      [ (UN $ Basic "-", (EmptyFC, Prefix, 10))
+      , (UN $ Basic "negate", (EmptyFC, Prefix, 10)) -- for documentation purposes
+      , (UN $ Basic "=", (EmptyFC, Infix, 0))
       ]
 
     initDocStrings : ANameMap String
@@ -1003,8 +1007,7 @@ addModDocInfo mi doc reexpts
 export
 removeFixity :
     {auto s : Ref Syn SyntaxInfo} -> Fixity -> Name -> Core ()
-removeFixity Prefix key = update Syn ({prefixes $= removeExact key })
-removeFixity _ key = update Syn ({infixes $= removeExact key })
+removeFixity _ key = update Syn ({fixities $= removeExact key })
 
 export
 covering
