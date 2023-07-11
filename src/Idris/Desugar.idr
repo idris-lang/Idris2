@@ -83,13 +83,21 @@ extendSyn newsyn
               ++ show (modDocstrings newsyn)
            ]
 
-         put Syn ({ fixities $= merge (fixities newsyn),
+         -- Before we merge the two syntax environement, we remove the
+         -- private fixities from the one we are importing.
+         -- We keep the local private fixities since they are visible in the
+         -- current file.
+         let filteredFixities = removePrivate (fixities newsyn)
+         put Syn ({ fixities $= merge filteredFixities,
                     ifaces $= merge (ifaces newsyn),
                     modDocstrings $= mergeLeft (modDocstrings newsyn),
                     modDocexports $= mergeLeft (modDocexports newsyn),
                     defDocstrings $= merge (defDocstrings newsyn),
                     bracketholes $= ((bracketholes newsyn) ++) }
                   syn)
+  where
+    removePrivate : ANameMap FixityInfo -> ANameMap FixityInfo
+    removePrivate = fromList . filter ((/= Private) . vis . snd) . toList
 
 mkPrec : Fixity -> Nat -> OpPrec
 mkPrec InfixL = AssocL

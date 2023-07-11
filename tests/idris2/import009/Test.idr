@@ -17,10 +17,6 @@ public export
 (~>) : (s : HasComp a) => a -> a -> Type
 (~>) = (~:>) s
 
-public export
-(|>) : (s : HasComp x) => {0 a, b, c : x} -> a ~> b -> b ~> c -> a ~> c
-(|>) = comp s
-
 export
 typesHaveComp : HasComp Type
 typesHaveComp = MkComp (\x, y => x -> y) (flip (.))
