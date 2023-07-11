@@ -165,11 +165,14 @@ For interfaces, the meanings are:
 Meaning for fixity declarations
 -------------------------------
 
-For fixity declarations:
+The modifiers differ slightly when applied to fixities. Un-labelled
+fixities are exported rather than be private. There is no difference between
+`public export` and `export`. In summary:
 
-- ``private`` means the fixity declaration is only valid within the file.
+- ``private`` means the fixity declaration is only visible within the file.
 
 - ``public export`` and ``export`` are the same and the fixity is exported.
+  The access modifier could also be eluded for the same effect.
 
 Propagating Inner Module API's
 -------------------------------

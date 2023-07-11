@@ -22,8 +22,6 @@ import Libraries.Utils.String
 
 import Idris.Parser.Let
 
-import Debug.Trace
-
 %default covering
 
 decorate : OriginDesc -> Decoration -> Rule a -> Rule a
