@@ -162,6 +162,15 @@ For interfaces, the meanings are:
 - ``public export`` the interface name, method names and default
   definitions are exported
 
+Meaning for fixity declarations
+-------------------------------
+
+For fixity declarations:
+
+- ``private`` means the fixity declaration is only valid within the file.
+
+- ``public export`` and ``export`` are the same and the fixity is exported.
+
 Propagating Inner Module API's
 -------------------------------
 
