@@ -790,6 +790,7 @@ definedInBlock ns decls =
 
     defName : Namespace -> ImpDecl -> List Name
     defName ns (IClaim _ _ _ _ ty) = [expandNS ns (getName ty)]
+    defName ns (IDef _ nm _) = [expandNS ns nm]
     defName ns (IData _ _ _ (MkImpData _ n _ _ cons))
         = expandNS ns n :: map (expandNS ns) (map getName cons)
     defName ns (IData _ _ _ (MkImpLater _ n _)) = [expandNS ns n]
