@@ -169,6 +169,8 @@
 
 * Adds `leftmost` and `rightmost` to `Control.Order`, a generalisation of `min` and `max`.
 
+* `Eq` and `Ord` implementations for `Fin n` now run in constant time.
+
 * Adds `getTermCols` and `getTermLines` to the base library. They return the size of the
   terminal if either stdin or stdout is a tty.
 
