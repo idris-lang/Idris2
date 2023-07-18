@@ -259,8 +259,8 @@ thinApart FZ FZ neq = absurd (neq Refl)
 thinApart FZ (FS y') neq = (y' ** Refl)
 thinApart (FS FZ) FZ neq = (FZ ** Refl)
 thinApart (FS (FS x)) FZ neq = (FZ ** Refl)
-thinApart (FS x@FZ) (FS y) neq = bimap FS (cong FS) (thinApart x y (neq . cong FS))
-thinApart (FS x@(FS{})) (FS y) neq = bimap FS (cong FS) (thinApart x y (neq . cong FS))
+thinApart (FS x@FZ) (FS y) neq = bimap FS (\prf => cong FS prf) (thinApart x y (\prf => neq $ cong FS prf))
+thinApart (FS x@(FS{})) (FS y) neq = bimap FS (\prf => cong FS prf) (thinApart x y (\prf => neq $ cong FS prf))
 
 public export
 data Thicken : (x, y : Fin n) -> Type where
@@ -462,7 +462,7 @@ apply r args = let (premises, rest) = splitAt r.arity args in
 
 mkVars : (m : Nat) -> (vars : SnocList Name ** length vars = m)
 mkVars Z = ([<] ** Refl)
-mkVars m@(S m') = bimap (:< UN (Basic $ "_invalidName" ++ show m)) (cong S) (mkVars m')
+mkVars m@(S m') = bimap (:< UN (Basic $ "_invalidName" ++ show m)) (\prf => cong S prf) (mkVars m')
 
 solveAcc : {m : _} -> Nat -> HintDB -> PartialProof m -> Space Proof
 solveAcc idx rules (MkPartialProof 0     goals k)

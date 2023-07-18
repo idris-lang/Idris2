@@ -1,8 +1,6 @@
-module Libraries.Utils.Term
+module System.Term
 
 %default total
-
--- TODO: remove this file and use System.Term after version following 0.6.0 is released
 
 libterm : String -> String
 libterm s = "C:" ++ s ++ ", libidris2_support, idris_term.h"

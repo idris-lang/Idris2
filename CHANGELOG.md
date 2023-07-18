@@ -171,6 +171,9 @@
 
 * `Eq` and `Ord` implementations for `Fin n` now run in constant time.
 
+* Adds `getTermCols` and `getTermLines` to the base library. They return the size of the
+  terminal if either stdin or stdout is a tty.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
@@ -196,9 +199,15 @@
 #### Papers
 
 * In `Control.DivideAndConquer`: a port of the paper
-  `A Type-Based Approach to Divide-And-Conquer Recursion in Coq`
+  "A Type-Based Approach to Divide-And-Conquer Recursion in Coq"
   by Pedro Abreu, Benjamin Delaware, Alex Hubers, Christa Jenkins,
-  J. Garret Morris, and Aaron Stump
+  J. Garret Morris, and Aaron Stump.
+  [https://doi.org/10.1145/3571196](https://doi.org/10.1145/3571196)
+
+* Ports the first half of "Deferring the Details and Deriving Programs" by Liam
+  O'Connor as `Data.ProofDelay`.
+  [https://doi.org/10.1145/3331554.3342605](https://doi.org/10.1145/3331554.3342605)
+  [http://liamoc.net/images/deferring.pdf](http://liamoc.net/images/deferring.pdf)
 
 ### Other Changes
 

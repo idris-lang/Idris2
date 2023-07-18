@@ -99,18 +99,18 @@ public export
 
 ||| Equality is a congruence.
 public export
-cong : (0 f : t -> u) -> (p : a = b) -> f a = f b
+cong : (0 f : t -> u) -> (0 p : a = b) -> f a = f b
 cong f Refl = Refl
 
 ||| Two-holed congruence.
 export
 -- These are natural in equational reasoning.
-cong2 : (0 f : t1 -> t2 -> u) -> (p1 : a = b) -> (p2 : c = d) -> f a c = f b d
+cong2 : (0 f : t1 -> t2 -> u) -> (0 p1 : a = b) -> (0 p2 : c = d) -> f a c = f b d
 cong2 f Refl Refl = Refl
 
 ||| Irrelevant equalities can always be made relevant
 export
-irrelevantEq : (0 _ : a === b) -> a === b
+irrelevantEq : (0 _ : a ~=~ b) -> a ~=~ b
 irrelevantEq Refl = Refl
 
 --------------

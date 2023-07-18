@@ -26,7 +26,7 @@ import sphinx_rtd_theme
 
 # General information about the project.
 project = 'Idris2'
-copyright = '2020, The Idris Community'
+copyright = '2020-2023, The Idris Community'
 author = 'The Idris Community'
 
 # The short X.Y version.

@@ -42,7 +42,7 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic051", "basic052", "basic053", "basic054", "basic055",
        "basic056", "basic057", "basic058", "basic059", "basic060",
        "basic061", "basic062", "basic063", "basic064", "basic065",
-       "basic066", "basic067", "basic068", "basic069",
+       "basic066", "basic067", "basic068", "basic069", "basic070",
        "idiom001",
        "dotted001",
        "rewrite001",
@@ -204,7 +204,7 @@ idrisTestsAllSchemes : Requirement -> TestPool
 idrisTestsAllSchemes cg = MkTestPool
       ("Test across all scheme backends: " ++ show cg ++ " instance")
       [] (Just cg)
-      [ "scheme001"
+      [ "scheme001", "scheme002"
       , "channels001", "channels002", "channels003", "channels004", "channels005"
       , "channels006"
       ]
