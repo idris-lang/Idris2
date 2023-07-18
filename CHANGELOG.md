@@ -169,6 +169,8 @@
 
 * Adds `leftmost` and `rightmost` to `Control.Order`, a generalisation of `min` and `max`.
 
+* Adds `even` and `odd` to `Data.Integral`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
