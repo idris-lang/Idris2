@@ -34,11 +34,11 @@ IDRIS2_LIB_IPKG := idris2api.ipkg
 
 ifeq ($(OS), windows)
 	# This produces D:/../.. style paths
-	IDRIS2_PREFIX := $(shell cygpath -m ${PREFIX})
+	IDRIS2_PREFIX ?= $(shell cygpath -m ${PREFIX})
 	IDRIS2_CURDIR := $(shell cygpath -m ${CURDIR})
 	SEP := ;
 else
-	IDRIS2_PREFIX := ${PREFIX}
+	IDRIS2_PREFIX ?= ${PREFIX}
 	IDRIS2_CURDIR := ${CURDIR}
 	SEP := :
 endif
