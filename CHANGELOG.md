@@ -226,6 +226,9 @@
   these installed library files.
 * Renamed `support-clean` Makefile target to `clean-support`. This is in line
   with most of the `install-<something>` and `clean-<something>` naming.
+* Fixes an error in the `Makefile` where setting `IDRIS2_PREFIX` caused
+  bootstrapping to fail.
+* Updates the docs for `envvars` to match the changes introduced in #2649.
 
 ## v0.6.0
 
