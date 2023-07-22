@@ -70,7 +70,7 @@ idrisTestsTermination = MkTestPool "Termination checking" [] Nothing
 idrisTestsCasetree : TestPool
 idrisTestsCasetree = MkTestPool "Case tree building" [] Nothing
        -- Case tree building
-      ["casetree001", "casetree002", "casetree003"]
+      ["casetree001", "casetree002", "casetree003", "casetree004"]
 
 idrisTestsWarning : TestPool
 idrisTestsWarning = MkTestPool "Warnings" [] Nothing
