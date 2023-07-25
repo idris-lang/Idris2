@@ -92,6 +92,9 @@
 
 * Constant folding of trivial let statements and `believe_me`.
 
+* Fixed an issue that caused total functions containing a `let` to be rejected
+  as not total.
+
 * Fixed a bug that caused holes to appear unexpectedly during quotation of dependent pairs.
 
 ### Library changes

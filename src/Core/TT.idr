@@ -1843,7 +1843,7 @@ addRefs ua at ns (Meta fc n i xs)
     addRefsArgs ns [] = ns
     addRefsArgs ns (t :: ts) = addRefsArgs (addRefs ua at ns t) ts
 addRefs ua at ns (Bind fc x (Let _ c val ty) scope)
-    = addRefs ua at (addRefs ua at (addRefs ua at ns val) ty) scope
+    = addRefs ua at (addRefs ua at ns val) scope
 addRefs ua at ns (Bind fc x b scope)
     = addRefs ua at (addRefs ua at ns (binderType b)) scope
 addRefs ua at ns (App _ (App _ (Ref fc _ name) x) y)
