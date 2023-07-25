@@ -1091,14 +1091,7 @@ export
 mkPat : {auto c : Ref Ctxt Defs} -> List Pat -> ClosedTerm -> ClosedTerm -> Core Pat
 -- Only match Bound if it is applied to an empty or unmatchable spine
 -- The latter is needed for matching (x : Nat) -> b
-mkPat args orig (Ref fc Bound n) =
-  if all unmatchable args
-     then pure $ PLoc fc n
-     else pure $ PUnmatchable (getLoc orig) orig
-  where
-    unmatchable : Pat -> Bool
-    unmatchable (PUnmatchable _ _) = True
-    unmatchable _ = False
+mkPat [] orig (Ref fc Bound n) = pure $ PLoc fc n
 mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a args
 mkPat args orig (Ref fc (TyCon t a) n) = pure $ PTyCon fc n a args
 mkPat args orig (Ref fc Func n)
@@ -1116,8 +1109,10 @@ mkPat args orig (Ref fc Func n)
                 "Unmatchable function: " ++ show n
               pure $ PUnmatchable (getLoc orig) orig
 mkPat args orig (Bind fc x (Pi _ _ _ s) t)
-    = let t' = subst (Erased fc Placeholder) t in
-      pure $ PArrow fc x !(mkPat [] s s) !(mkPat [] t' t')
+    -- The codomain looks like b [__], but we want `b` as the pattern
+    = case subst (Erased fc Placeholder) t of
+        App _ t' (Erased _ _) =>  pure $ PArrow fc x !(mkPat [] s s) !(mkPat [] t' t')
+        _ => pure $ PUnmatchable (getLoc orig) orig
 mkPat args orig (App fc fn arg)
     = do parg <- mkPat [] arg arg
          mkPat (parg :: args) orig fn
