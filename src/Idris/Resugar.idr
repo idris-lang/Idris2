@@ -47,7 +47,7 @@ mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
        -- that the fixity context contains the name `(++)`
        let rootName = UN (Basic (nameRoot raw))
        let asOp = POp fc opFC kn (unbracketApp x) (unbracketApp y)
-       if not (null (lookupName rootName (fixities syn)))
+       if not (null (lookupName rootName (infixes syn)))
          then pure asOp
          else case dropNS raw of
            DN str _ => pure $ ifThenElse (isOpUserName (Basic str)) asOp tm
@@ -56,7 +56,7 @@ mkOp tm@(PApp fc (PRef opFC kn) x)
   = do syn <- get Syn
        let n = rawName kn
        let asOp = PSectionR fc opFC (unbracketApp x) kn
-       if not (null $ lookupName (UN $ Basic (nameRoot n)) (fixities syn))
+       if not (null $ lookupName (UN $ Basic (nameRoot n)) (infixes syn))
          then pure asOp
          else case dropNS n of
            DN str _ => pure $ ifThenElse (isOpUserName (Basic str)) asOp tm
