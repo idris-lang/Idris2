@@ -52,11 +52,11 @@ decideLTEBounded pdec n with (decideLTBounded pdec (S n))
 
 public export
 Decidable 2 [Nat,Nat] LTE where
-  decide = decideLTE
+  decide = isLTE
 
 public export
 Decidable 2 [Nat,Nat] LT where
-  decide m = decideLTE (S m)
+  decide m = isLTE (S m)
 
 public export
 lte : (m : Nat) -> (n : Nat) -> Dec (LTE m n)
