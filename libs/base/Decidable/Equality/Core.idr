@@ -45,7 +45,7 @@ decEqCong $ No contra = No $ \c => contra $ inj f c
 public export
 decEqInj : (0 _ : Injective f) => Dec (f x = f y) -> Dec (x = y)
 decEqInj $ Yes prf   = Yes $ inj f prf
-decEqInj $ No contra = No $ contra . cong f
+decEqInj $ No contra = No $ \c => contra $ cong f c
 
 public export
 decEqCong2 : (0 _ : Biinjective f) => Dec (x = y) -> Lazy (Dec (v = w)) -> Dec (f x v = f y w)

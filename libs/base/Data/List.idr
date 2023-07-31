@@ -279,7 +279,7 @@ infix 7 \\
 |||
 ||| In the following example, the result is `[2, 4]`.
 ||| ```idris example
-||| [1, 2, 3, 4] // [1, 3]
+||| [1, 2, 3, 4] \\ [1, 3]
 ||| ```
 |||
 public export

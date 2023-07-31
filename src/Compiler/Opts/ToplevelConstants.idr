@@ -15,7 +15,7 @@ import Libraries.Data.SortedMap
 --          Call Graph
 --------------------------------------------------------------------------------
 
--- direct calls from a top-level funtion's expression to other
+-- direct calls from a top-level function's expression to other
 -- top-level functions.
 0 CallGraph : Type
 CallGraph = SortedMap Name (SortedSet Name)
@@ -71,6 +71,7 @@ data SortTag : Type where
 record SortST where
   constructor SST
   processed : SortedSet Name
+  nonconst  : SortedSet Name
   triples   : SnocList (Name, FC, NamedDef)
   map       : SortedMap Name (Name, FC, NamedDef)
   graph     : CallGraph
@@ -94,6 +95,15 @@ markProcessed n = do
 isProcessed : Ref SortTag SortST => Name -> Core Bool
 isProcessed n = map (contains n . processed) (get SortTag)
 
+checkCrash : Ref SortTag SortST => (Name, FC, NamedDef) -> Core ()
+checkCrash (n, _, MkNmError _) = update SortTag $ { nonconst $= insert n }
+checkCrash (n, _, MkNmFun args (NmCrash _ _)) = update SortTag $ { nonconst $= insert n }
+checkCrash (n, _, MkNmFun args (NmOp _ Crash _)) = update SortTag $ { nonconst $= insert n }
+checkCrash (n, _, def) = do
+  st <- get SortTag
+  when (any (flip contains st.nonconst) !(getCalls n)) $
+    put SortTag $ { nonconst $= insert n } st
+
 sortDef : Ref SortTag SortST => Name -> Core ()
 sortDef n = do
   False  <- isProcessed n | True => pure ()
@@ -102,6 +112,7 @@ sortDef n = do
   traverse_ sortDef cs
   Just t <- getTriple n | Nothing => pure ()
   appendDef t
+  checkCrash t
 
 isConstant : (recursiveFunctions : SortedSet Name) -> (Name,FC,NamedDef) -> Bool
 isConstant rec (n, _, MkNmFun [] _) = not $ contains n rec
@@ -115,6 +126,7 @@ sortDefs ts =
       consts := map fst $ filter (isConstant rec) ts
       init   := SST {
                     processed = empty
+                  , nonconst  = empty
                   , triples   = Lin
                   , map       = fromList (map (\t => (fst t, t)) ts)
                   , graph     = graph
@@ -122,5 +134,7 @@ sortDefs ts =
    in do
      s       <- newRef SortTag init
      traverse_ sortDef (map fst ts)
-     sorted  <- map ((<>> []) . triples) (get SortTag)
+     st <- get SortTag
+     let sorted = triples st <>> []
+     let consts = filter (not . flip contains (nonconst st)) consts
      pure (sorted, fromList consts)

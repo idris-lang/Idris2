@@ -107,10 +107,13 @@ record PrimNames where
   fromStringName : Maybe Name
   fromCharName : Maybe Name
   fromDoubleName : Maybe Name
+  fromTTImpName : Maybe Name
+  fromNameName : Maybe Name
+  fromDeclsName : Maybe Name
 
 export
 primNamesToList : PrimNames -> List Name
-primNamesToList (MkPrimNs i s c d) = catMaybes [i,s,c,d]
+primNamesToList (MkPrimNs i s c d t n dl) = catMaybes [i,s,c,d,t,n,dl]
 
 -- Other options relevant to the current session (so not to be saved in a TTC)
 public export
@@ -250,14 +253,14 @@ defaults
          -- it to fail gracefully.
          pure $ MkOptions
            defaultDirs defaultPPrint defaultSession defaultElab Nothing Nothing
-           (MkPrimNs Nothing Nothing Nothing Nothing) [] [] Nothing
+           (MkPrimNs Nothing Nothing Nothing Nothing Nothing Nothing Nothing) [] [] Nothing
 
 -- Reset the options which are set by source files
 export
 clearNames : Options -> Options
 clearNames = { pairnames := Nothing,
                rewritenames := Nothing,
-               primnames := MkPrimNs Nothing Nothing Nothing Nothing,
+               primnames := MkPrimNs Nothing Nothing Nothing Nothing Nothing Nothing Nothing,
                extensions := []
              }
 
@@ -285,6 +288,18 @@ setFromChar n = { primnames->fromCharName := Just n }
 export
 setFromDouble : Name -> Options -> Options
 setFromDouble n = { primnames->fromDoubleName := Just n }
+
+export
+setFromTTImp : Name -> Options -> Options
+setFromTTImp n = { primnames->fromTTImpName := Just n }
+
+export
+setFromName : Name -> Options -> Options
+setFromName n = { primnames->fromNameName := Just n }
+
+export
+setFromDecls : Name -> Options -> Options
+setFromDecls n = { primnames->fromDeclsName := Just n }
 
 export
 setExtension : LangExt -> Options -> Options

@@ -42,7 +42,7 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic051", "basic052", "basic053", "basic054", "basic055",
        "basic056", "basic057", "basic058", "basic059", "basic060",
        "basic061", "basic062", "basic063", "basic064", "basic065",
-       "basic066", "basic067", "basic068", "basic069",
+       "basic066", "basic067", "basic068", "basic069", "basic070",
        "idiom001",
        "dotted001",
        "rewrite001",
@@ -204,7 +204,7 @@ idrisTestsAllSchemes : Requirement -> TestPool
 idrisTestsAllSchemes cg = MkTestPool
       ("Test across all scheme backends: " ++ show cg ++ " instance")
       [] (Just cg)
-      [ "scheme001"
+      [ "scheme001", "scheme002"
       , "channels001", "channels002", "channels003", "channels004", "channels005"
       , "channels006"
       ]
@@ -250,7 +250,7 @@ idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
        "reflection005", "reflection006", "reflection007", "reflection008",
        "reflection009", "reflection010", "reflection011", "reflection012",
        "reflection013", "reflection014", "reflection015", "reflection016",
-       "reflection017", "reflection018", "reflection019"]
+       "reflection017", "reflection018", "reflection019", "reflection020"]
 
 idrisTestsWith : TestPool
 idrisTestsWith = MkTestPool "With abstraction" [] Nothing
@@ -308,7 +308,7 @@ chezTests = MkTestPool "Chez backend" [] (Just Chez)
     , "chez013", "chez014", "chez015", "chez016", "chez017", "chez018"
     , "chez019", "chez020", "chez021", "chez022", "chez023", "chez024"
     , "chez025", "chez026", "chez027", "chez028", "chez029", "chez030"
-    , "chez031", "chez032", "chez033", "chez034", "chez035"
+    , "chez031", "chez032", "chez033", "chez034", "chez035", "chez036"
     , "futures001"
     , "bitops"
     , "casts"

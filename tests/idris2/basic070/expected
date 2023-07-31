@@ -1,0 +1,14 @@
+1/1: Building Issue3016 (Issue3016.idr)
+1/1: Building Issue2782 (Issue2782.idr)
+Error: While processing right hand side of fee. Undefined name y. 
+
+Issue2782:9:7--9:8
+ 5 |       y = 1
+ 6 |   in y
+ 7 | 
+ 8 | fee : Integer
+ 9 | fee = y
+           ^
+
+1/1: Building Issue2592 (Issue2592.idr)
+1/1: Building Issue2593 (Issue2593.idr)
