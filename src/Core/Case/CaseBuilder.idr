@@ -1107,10 +1107,10 @@ mkPat args orig (Ref fc Func n)
                 "Unmatchable function: " ++ show n
               pure $ PUnmatchable (getLoc orig) orig
 mkPat args orig (Bind fc x (Pi _ _ _ s) t)
-    -- The codomain looks like b [__], but we want `b` as the pattern
+    -- For (b:Nat) -> b, the codomain looks like b [__], but we want `b` as the pattern
     = case subst (Erased fc Placeholder) t of
-        App _ t' (Erased _ _) =>  pure $ PArrow fc x !(mkPat [] s s) !(mkPat [] t' t')
-        _ => pure $ PUnmatchable (getLoc orig) orig
+        App _ t'@(Ref fc Bound n) (Erased _ _) =>  pure $ PArrow fc x !(mkPat [] s s) !(mkPat [] t' t')
+        t' =>  pure $ PArrow fc x !(mkPat [] s s) !(mkPat [] t' t')
 mkPat args orig (App fc fn arg)
     = do parg <- mkPat [] arg arg
          mkPat (parg :: args) orig fn
