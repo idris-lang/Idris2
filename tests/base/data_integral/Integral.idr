@@ -1,4 +1,5 @@
 import Data.Integral
+import Data.Nat
 
 Cases : Type
 Cases = List Bool
