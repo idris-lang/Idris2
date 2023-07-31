@@ -175,6 +175,7 @@
 
 * Adds `leftmost` and `rightmost` to `Control.Order`, a generalisation of `min` and `max`.
 
+* Adds `even` and `odd` to `Data.Integral`.
 * `Eq` and `Ord` implementations for `Fin n` now run in constant time.
 
 * Adds `getTermCols` and `getTermLines` to the base library. They return the
