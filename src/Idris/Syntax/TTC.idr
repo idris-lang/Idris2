@@ -82,10 +82,24 @@ TTC Import where
          pure (MkImport loc reexport path nameAs)
 
 export
+TTC FixityInfo where
+  toBuf b fx
+      = do toBuf b fx.fc
+           toBuf b fx.vis
+           toBuf b fx.fix
+           toBuf b fx.precedence
+  fromBuf b
+      = do fc <- fromBuf b
+           vis <- fromBuf b
+           fix <- fromBuf b
+           prec <- fromBuf b
+           pure $ MkFixityInfo fc vis fix prec
+
+
+export
 TTC SyntaxInfo where
   toBuf b syn
-      = do toBuf b (ANameMap.toList (infixes syn))
-           toBuf b (ANameMap.toList (prefixes syn))
+      = do toBuf b (ANameMap.toList (fixities syn))
            toBuf b (filter (\n => elemBy (==) (fst n) (saveMod syn))
                            (SortedMap.toList $ modDocstrings syn))
            toBuf b (filter (\n => elemBy (==) (fst n) (saveMod syn))
@@ -99,8 +113,7 @@ TTC SyntaxInfo where
            toBuf b (holeNames syn)
 
   fromBuf b
-      = do inf <- fromBuf b
-           pre <- fromBuf b
+      = do fix <- fromBuf b
            moddstr <- fromBuf b
            modexpts <- fromBuf b
            ifs <- fromBuf b
@@ -108,7 +121,7 @@ TTC SyntaxInfo where
            bhs <- fromBuf b
            start <- fromBuf b
            hnames <- fromBuf b
-           pure $ MkSyntax (fromList inf) (fromList pre)
+           pure $ MkSyntax (fromList fix)
                    [] (fromList moddstr) (fromList modexpts)
                    [] (fromList ifs)
                    empty (fromList defdstrs)

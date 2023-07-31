@@ -1054,13 +1054,23 @@ mutual
 visOption : OriginDesc ->  Rule Visibility
 visOption fname
     = (decoratedKeyword fname "public" *> decoratedKeyword fname "export" $> Public)
+    -- If "public export" failed then we try to parse just "public" and emit an error message saying
+    -- the user should use "public export"
+  <|> (bounds (decoratedKeyword fname "public") >>= \x : WithBounds ()
+    => the (Rule Visibility) (fatalLoc x.bounds
+           #""public" keyword by itself is not an export modifier, did you mean "public export"?"#))
   <|> (decoratedKeyword fname "export" $> Export)
   <|> (decoratedKeyword fname "private" $> Private)
 
-visibility : OriginDesc -> EmptyRule Visibility
+
+exportVisibility, visibility : OriginDesc -> EmptyRule Visibility
 visibility fname
     = visOption fname
   <|> pure Private
+
+exportVisibility fname
+    = visOption fname
+  <|> pure Export
 
 tyDecls : Rule Name -> String -> OriginDesc -> IndentInfo -> Rule (List1 PTypeDecl)
 tyDecls declName predoc fname indents
@@ -1801,13 +1811,14 @@ definition fname indents
 
 fixDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
 fixDecl fname indents
-    = do b <- bounds (do fixity <- decorate fname Keyword $ fix
+    = do vis <- exportVisibility fname
+         b <- bounds (do fixity <- decorate fname Keyword $ fix
                          commit
                          prec <- decorate fname Keyword $ intLit
                          ops <- sepBy1 (decoratedSymbol fname ",") iOperator
                          pure (fixity, prec, ops))
          (fixity, prec, ops) <- pure b.val
-         pure (map (PFixity (boundToFC fname b) fixity (fromInteger prec)) (forget ops))
+         pure (map (PFixity (boundToFC fname b) vis fixity (fromInteger prec)) (forget ops))
 
 directiveDecl : OriginDesc -> IndentInfo -> Rule PDecl
 directiveDecl fname indents
