@@ -42,7 +42,7 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic051", "basic052", "basic053", "basic054", "basic055",
        "basic056", "basic057", "basic058", "basic059", "basic060",
        "basic061", "basic062", "basic063", "basic064", "basic065",
-       "basic066", "basic067", "basic068", "basic069",
+       "basic066", "basic067", "basic068", "basic069", "basic070",
        "idiom001",
        "dotted001",
        "rewrite001",
@@ -204,7 +204,7 @@ idrisTestsAllSchemes : Requirement -> TestPool
 idrisTestsAllSchemes cg = MkTestPool
       ("Test across all scheme backends: " ++ show cg ++ " instance")
       [] (Just cg)
-      [ "scheme001"
+      [ "scheme001", "scheme002"
       , "channels001", "channels002", "channels003", "channels004", "channels005"
       , "channels006"
       ]
@@ -250,7 +250,7 @@ idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
        "reflection005", "reflection006", "reflection007", "reflection008",
        "reflection009", "reflection010", "reflection011", "reflection012",
        "reflection013", "reflection014", "reflection015", "reflection016",
-       "reflection017", "reflection018", "reflection019"]
+       "reflection017", "reflection018", "reflection019", "reflection020"]
 
 idrisTestsWith : TestPool
 idrisTestsWith = MkTestPool "With abstraction" [] Nothing
@@ -272,7 +272,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "eta001",
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005", "import006",
-       "import007", "import008",
+       "import007", "import008", "import009",
        -- Implicit laziness, lazy evaluation
        "lazy001", "lazy002", "lazy003",
        -- Namespace blocks

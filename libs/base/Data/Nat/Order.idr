@@ -22,12 +22,6 @@ ltesuccinjective : {0 n, m : Nat} -> Not (LTE n m) -> Not (LTE (S n) (S m))
 ltesuccinjective disprf (LTESucc nLTEm) = void (disprf nLTEm)
 ltesuccinjective disprf LTEZero         impossible
 
--- Remove any time after release of 0.6.0
-||| Deprecated. Use `Nat.isLTE`.
-public export
-decideLTE : (n : Nat) -> (m : Nat) -> Dec (LTE n m)
-decideLTE = isLTE
-
 ||| If a predicate is decidable then we can decide whether it holds on
 ||| a bounded domain.
 public export
@@ -58,11 +52,11 @@ decideLTEBounded pdec n with (decideLTBounded pdec (S n))
 
 public export
 Decidable 2 [Nat,Nat] LTE where
-  decide = decideLTE
+  decide = isLTE
 
 public export
 Decidable 2 [Nat,Nat] LT where
-  decide m = decideLTE (S m)
+  decide m = isLTE (S m)
 
 public export
 lte : (m : Nat) -> (n : Nat) -> Dec (LTE m n)

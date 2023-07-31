@@ -36,13 +36,23 @@ void idris2_setupTerm() {
 
 int idris2_getTermCols() {
   struct winsize ts;
-  ioctl(0, TIOCGWINSZ, &ts);
+  int err = ioctl(0, TIOCGWINSZ, &ts);
+  if (err) {
+    err = ioctl(1, TIOCGWINSZ, &ts);
+  }
+  if (err)
+    return 0;
   return (int)ts.ws_col;
 }
 
 int idris2_getTermLines() {
   struct winsize ts;
-  ioctl(0, TIOCGWINSZ, &ts);
+  int err = ioctl(0, TIOCGWINSZ, &ts);
+  if (err) {
+    err = ioctl(1, TIOCGWINSZ, &ts);
+  }
+  if (err)
+    return 0;
   return (int)ts.ws_row;
 }
 

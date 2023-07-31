@@ -4,7 +4,16 @@ Contributing to Idris 2
 We welcome contributions! This document describes how you can contribute to
 Idris 2, and the kind of contributions which will most benefit the project.
 
-Please remember when making contributions via pull requests, though, that Idris
+This document outlines: the kinds of contributions we will almost certainly
+accept; those we might accept; those we might accept after a proposal and
+discussion; and, those we almost certainly won't. The guidelines here are based
+on decisions we've previously made, and the way we have managed PRs in practice
+up to now.
+
+Disclaimer
+----------
+
+Please remember that Idris
 is primarily a research project, and we are a small team, which limits the time
 we have available for reviewing and maintaining PRs. Nobody works full time on
 Idris - we're a team of academics and students at a university with other
@@ -13,11 +22,6 @@ papers, which will always take priority. This also means we have to be careful
 to make sure that we can commit to maintaining any new features which are
 contributed.
 
-This document outlines: the kinds of contributions we will almost certainly
-accept; those we might accept; those we might accept after a proposal and
-discussion; and, those we almost certainly won't. The guidelines here are based
-on decisions we've previously made, and the way we have managed PRs in practice
-up to now.
 
 General comments
 ----------------
@@ -26,9 +30,16 @@ Overall, when making a contribution, please try to make sure they follow the
 general philosophy of the Idris project, which can be summarised as follows:
 
 * Idris aims to make advanced type-related programming techniques accessible to
-  software practitioners
+  software practitioners.
 * Idris *allows* software developers to express invariants of their data and prove
-  properties of programs, but will not *require* them to do so
+  properties of programs, but will not *require* them to do so.
+
+When writing an issue and describing the problem at hand, avoid linking to
+private channels of discussions such as Discord. Other contributors might not
+have an account, the servers could be down, the information might be hard to
+find, or some people might not be able to use the service from their work
+devices. Instead, write a clear summary of the situation so that anyone can
+understand what the issue is about without additional context.
 
 Many contributions will require accompanying tests and documentation updates.
 Bugfixes in particular should be accompanied by tests, to avoid future
@@ -96,7 +107,7 @@ Things that should be discussed via the issue tracker first
     as interface hierarchies - and while you may not agree with the way it looks,
     by and large these decisions have already been made so there must be a
     compelling reason for them to be changed.
-* Any fundamental changes to build system, library structure, or CI workflow
+* Any fundamental changes to build tools, library structure, or CI workflow
 * Major refactorings (e.g. reorganisation of imports, mass renamings). These
   may be a good idea, but they are often merely a matter of taste, so please
   check whether they will be considered valuable first.

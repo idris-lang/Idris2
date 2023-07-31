@@ -74,7 +74,7 @@ mkSectionL tm@(PLam fc rig info (PRef _ bd) ty
        syn <- get Syn
        let n = rawName kn
        let asOp = PSectionL fc opFC kn (unbracketApp x)
-       if not (null $ lookupName (UN $ Basic (nameRoot n)) (infixes syn))
+       if not (null $ lookupName (UN $ Basic (nameRoot n)) (fixities syn))
          then pure asOp
          else case dropNS n of
            DN str _ => pure $ ifThenElse (isOpUserName (Basic str)) asOp tm

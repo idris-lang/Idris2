@@ -127,4 +127,5 @@ modules = Control.App,
           System.File.Virtual,
           System.Info,
           System.REPL,
-          System.Signal
+          System.Signal,
+          System.Term
