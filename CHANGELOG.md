@@ -43,7 +43,8 @@
 
 * Generated JavaScript files now include a shebang when using the Node.js backend
 * NodeJS now supports `popen`/`pclose` for the `Read` mode.
-* `getChar` is now supported on Node.js and `putChar` is supported on both JavaScript backends.
+* `getChar` is now supported on Node.js and `putChar` is supported on both
+  JavaScript backends.
 * Integer-indexed arrays are now supported.
 
 ### Compiler changes
@@ -94,7 +95,8 @@
 
 * Constant folding of trivial let statements and `believe_me`.
 
-* Fixed a bug that caused holes to appear unexpectedly during quotation of dependent pairs.
+* Fixed a bug that caused holes to appear unexpectedly during quotation of
+  dependent pairs.
 
 ### Library changes
 
@@ -121,8 +123,8 @@
 * Add `Show` instance to `Data.Vect.Quantifiers.All` and add a few helpers for listy
   computations on the `All` type.
 * Add an alias for `HVect` to `All id` in `Data.Vect.Quantifiers.All`. This is the
-  approach to getting a heterogeneous `Vect` of elements that is general preferred by
-  the community vs. a standalone type as seen in `contrib`.
+  approach to getting a heterogeneous `Vect` of elements that is general
+  preferred by the community vs. a standalone type as seen in `contrib`.
 * Add `Data.List.HasLength` from the compiler codebase slash contrib library but
   adopt the type signature from the compiler codebase and some of the naming
   from the contrib library. The type ended up being `HasLength n xs` rather than
@@ -151,7 +153,8 @@
 * Adds `Vect.allFins` for generating all the `Fin` elements as a `Vect` with
   matching length to the number of elements.
 
-* Add `withRawMode`, `enableRawMode`, `resetRawMode` for character at a time input on stdin.
+* Add `withRawMode`, `enableRawMode`, `resetRawMode` for character at a time
+  input on stdin.
 
 * Adds extraction functions to `Data.Singleton`.
 
@@ -173,8 +176,8 @@
 
 * `Eq` and `Ord` implementations for `Fin n` now run in constant time.
 
-* Adds `getTermCols` and `getTermLines` to the base library. They return the size of the
-  terminal if either stdin or stdout is a tty.
+* Adds `getTermCols` and `getTermLines` to the base library. They return the
+  size of the terminal if either stdin or stdout is a tty.
 
 #### System
 
@@ -185,12 +188,13 @@
 
 ### Contrib
 
-* Adds `Data.List.Sufficient`, a small library defining a structurally inductive view of lists.
+* Adds `Data.List.Sufficient`, a small library defining a structurally inductive
+  view of lists.
 
-* Remove `Data.List.HasLength` from `contrib` library but add it to the `base` library
-  with the type signature from the compiler codebase and some of the naming
-  from the `contrib` library. The type ended up being `HasLength n xs` rather than
-  `HasLength xs n`.
+* Remove `Data.List.HasLength` from `contrib` library but add it to the `base`
+  library with the type signature from the compiler codebase and some of the
+  naming from the `contrib` library. The type ended up being `HasLength n xs`
+  rather than `HasLength xs n`.
 
 * Adds an implementation for `Functor Text.Lexer.Tokenizer.Tokenizer`.
 
@@ -217,11 +221,16 @@
   recognized as a "data" directory by Idris 2. See the
   [documentation on Packages](https://idris2.readthedocs.io/en/latest/reference/packages.html)
   for details.
-* The compiler no longer installs its own C support library into `${PREFIX}/lib`. This folder's
-  contents were always duplicates of files installed into `${PREFIX}/idris2-${IDRIS2_VERSION}/lib`. If you
-  need to adjust any tooling or scripts, point them to the latter location which still contains
+* The compiler no longer installs its own C support library into
+  `${PREFIX}/lib`. This folder's contents were always duplicates of files
+  installed into `${PREFIX}/idris2-${IDRIS2_VERSION}/lib`. If you need to adjust
+  any tooling or scripts, point them to the latter location which still contains
   these installed library files.
-* Renamed `support-clean` Makefile target to `clean-support`. This is in line with most of the `install-<something>` and `clean-<something>` naming.
+* Renamed `support-clean` Makefile target to `clean-support`. This is in line
+  with most of the `install-<something>` and `clean-<something>` naming.
+* Fixes an error in the `Makefile` where setting `IDRIS2_PREFIX` caused
+  bootstrapping to fail.
+* Updates the docs for `envvars` to match the changes introduced in #2649.
 
 ## v0.6.0
 
