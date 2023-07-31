@@ -46,6 +46,7 @@ mutual
       = [(n, tm)] <$ addAlias from to
   getMatch lhs (IBindVar _ n) tm = pure [(n, tm)]
   getMatch lhs (Implicit _ _) tm = pure []
+  getMatch lhs _ (IMustUnify _ UserDotted _) = pure []
 
   getMatch lhs (IVar to (NS ns n)) (IVar from (NS ns' n'))
       = if n == n' && isParentOf ns' ns
@@ -83,9 +84,9 @@ mutual
       = matchAll True [(f, f'), (a, a)]
   -- On RHS: Rely on unification to fill in the implicit
   getMatch False (INamedApp fc f n a) f'
-      = getMatch False f f
+      = getMatch False f f'
   getMatch False (IAutoApp fc f a) f'
-      = getMatch False f f
+      = getMatch False f f'
   -- Can't have an implicit in the clause if there wasn't a matching
   -- implicit in the parent
   getMatch lhs f (INamedApp fc f' n a)

@@ -291,6 +291,17 @@ implementation Functor NameMap where
   map _ Empty = Empty
   map f (M n t) = M _ (treeMap f t)
 
+treeMapWithKey : (Name -> a -> b) -> Tree n a -> Tree n b
+treeMapWithKey f (Leaf k v) = Leaf k (f k v)
+treeMapWithKey f (Branch2 t1 k t2) = Branch2 (treeMapWithKey f t1) k (treeMapWithKey f t2)
+treeMapWithKey f (Branch3 t1 k1 t2 k2 t3)
+    = Branch3 (treeMapWithKey f t1) k1 (treeMapWithKey f t2) k2 (treeMapWithKey f t3)
+
+export
+mapWithKey : (Name -> a -> b) -> NameMap a -> NameMap b
+mapWithKey f Empty = Empty
+mapWithKey f (M n t) = M _ (treeMapWithKey f t)
+
 ||| Merge two maps. When encountering duplicate keys, using a function to combine the values.
 ||| Uses the ordering of the first map given.
 export

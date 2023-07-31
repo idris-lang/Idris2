@@ -58,7 +58,7 @@ prj = let (Element n p) = isMember t ts in prj' n p
 ||| By doing a bit of arithmetic we can figure out whether the union's value
 ||| came from the left or the right list used in the index.
 public export
-split : Subset Nat (HasLength ss) ->
+split : Subset Nat (flip HasLength ss) ->
         Union elt (ss ++ ts) -> Either (Union elt ss) (Union elt ts)
 split m (Element n p t) with (@@ lt n (fst m))
   split m (Element n p t) | (True ** lt)
@@ -92,5 +92,5 @@ weakenR (Element n p t) = Element n (weakenR p) t
 ||| the number of members introduced. Note that this number is the only
 ||| thing we need to keep around at runtime.
 public export
-weakenL : Subset Nat (HasLength ss) -> Union elt ts -> Union elt (ss ++ ts)
+weakenL : Subset Nat (flip HasLength ss) -> Union elt ts -> Union elt (ss ++ ts)
 weakenL m (Element n p t) = Element (fst m + n) (weakenL m p) t

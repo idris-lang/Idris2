@@ -119,11 +119,11 @@ mapPTermM f = goPTerm where
     goPTerm (PBracketed fc x) =
       PBracketed fc <$> goPTerm x
       >>= f
-    goPTerm (PString fc xs) =
-      PString fc <$> goPStrings xs
+    goPTerm (PString fc x ys) =
+      PString fc x <$> goPStrings ys
       >>= f
-    goPTerm (PMultiline fc x ys) =
-      PMultiline fc x <$> goPStringLines ys
+    goPTerm (PMultiline fc x y zs) =
+      PMultiline fc x y <$> goPStringLines zs
       >>= f
     goPTerm (PDoBlock fc ns xs) =
       PDoBlock fc ns <$> goPDos xs
@@ -256,14 +256,16 @@ mapPTermM f = goPTerm where
                                   <*> pure mn
                                   <*> pure ns
                                   <*> goMPDecls mps
-    goPDecl (PRecord fc doc v tot n nts opts mn fs) =
-      PRecord fc doc v tot n <$> go4TupledPTerms nts
-                             <*> pure opts
-                             <*> pure mn
-                             <*> goPFields fs
+    goPDecl (PRecord fc doc v tot (MkPRecord n nts opts mn fs)) =
+      pure $ PRecord fc doc v tot !(MkPRecord n <$> go4TupledPTerms nts
+                                                <*> pure opts
+                                                <*> pure mn
+                                                <*> goPFields fs)
+    goPDecl (PRecord fc doc v tot (MkPRecordLater n nts)) =
+      pure $ PRecord fc doc v tot (MkPRecordLater n !(go4TupledPTerms nts))
     goPDecl (PFail fc msg ps) = PFail fc msg <$> goPDecls ps
     goPDecl (PMutual fc ps) = PMutual fc <$> goPDecls ps
-    goPDecl p@(PFixity _ _ _ _) = pure p
+    goPDecl p@(PFixity _ _ _ _ _) = pure p
     goPDecl (PNamespace fc strs ps) = PNamespace fc strs <$> goPDecls ps
     goPDecl (PTransform fc n a b) = PTransform fc n <$> goPTerm a <*> goPTerm b
     goPDecl (PRunElabDecl fc a) = PRunElabDecl fc <$> goPTerm a
@@ -276,7 +278,7 @@ mapPTermM f = goPTerm where
 
     goPDataDecl : PDataDecl' nm -> Core (PDataDecl' nm)
     goPDataDecl (MkPData fc n t opts tdecls) =
-      MkPData fc n <$> goPTerm t
+      MkPData fc n <$> goMPTerm t
                    <*> pure opts
                    <*> goPTypeDecls tdecls
     goPDataDecl (MkPLater fc n t) = MkPLater fc n <$> goPTerm t
@@ -444,10 +446,10 @@ mapPTerm f = goPTerm where
       = f $ PEq fc (goPTerm x) (goPTerm y)
     goPTerm (PBracketed fc x)
       = f $ PBracketed fc $ goPTerm x
-    goPTerm (PString fc xs)
-      = f $ PString fc $ goPStr <$> xs
-    goPTerm (PMultiline fc x ys)
-      = f $  PMultiline fc x $ map (map goPStr) ys
+    goPTerm (PString fc x ys)
+      = f $ PString fc x $ goPStr <$> ys
+    goPTerm (PMultiline fc x y zs)
+      = f $  PMultiline fc x y $ map (map goPStr) zs
     goPTerm (PDoBlock fc ns xs)
       = f $ PDoBlock fc ns $ goPDo <$> xs
     goPTerm (PBang fc x)
@@ -526,11 +528,13 @@ mapPTerm f = goPTerm where
     goPDecl (PImplementation fc v opts p is cs n ts mn ns mps)
       = PImplementation fc v opts p (goImplicits is) (goPairedPTerms cs)
            n (goPTerm <$> ts) mn ns (map (goPDecl <$>) mps)
-    goPDecl (PRecord fc doc v tot n nts opts mn fs)
-      = PRecord fc doc v tot n (go4TupledPTerms nts) opts mn (goPField <$> fs)
+    goPDecl (PRecord fc doc v tot (MkPRecord n nts opts mn fs))
+      = PRecord fc doc v tot (MkPRecord n (go4TupledPTerms nts) opts mn (goPField <$> fs))
+    goPDecl (PRecord fc doc v tot (MkPRecordLater n nts))
+      = PRecord fc doc v tot (MkPRecordLater n (go4TupledPTerms nts))
     goPDecl (PFail fc msg ps) = PFail fc msg $ goPDecl <$> ps
     goPDecl (PMutual fc ps) = PMutual fc $ goPDecl <$> ps
-    goPDecl p@(PFixity _ _ _ _) = p
+    goPDecl p@(PFixity _ _ _ _ _) = p
     goPDecl (PNamespace fc strs ps) = PNamespace fc strs $ goPDecl <$> ps
     goPDecl (PTransform fc n a b) = PTransform fc n (goPTerm a) (goPTerm b)
     goPDecl (PRunElabDecl fc a) = PRunElabDecl fc $ goPTerm a
@@ -543,7 +547,7 @@ mapPTerm f = goPTerm where
 
     goPDataDecl : PDataDecl' nm -> PDataDecl' nm
     goPDataDecl (MkPData fc n t opts tdecls)
-      = MkPData fc n (goPTerm t) opts (goPTypeDecl <$> tdecls)
+      = MkPData fc n (map goPTerm t) opts (goPTypeDecl <$> tdecls)
     goPDataDecl (MkPLater fc n t) = MkPLater fc n $ goPTerm t
 
     goPField : PField' nm -> PField' nm
@@ -621,8 +625,8 @@ substFC fc = mapPTerm $ \case
   PSectionR _ _ x y => PSectionR fc fc x y
   PEq _ x y => PEq fc x y
   PBracketed _ x => PBracketed fc x
-  PString _ xs => PString fc xs
-  PMultiline _ indent xs => PMultiline fc indent xs
+  PString _ x ys => PString fc x ys
+  PMultiline _ x y zs => PMultiline fc x y zs
   PDoBlock _ x xs => PDoBlock fc x xs
   PBang _ x => PBang fc x
   PIdiom _ x y => PIdiom fc x y

@@ -144,7 +144,7 @@ emitWarning : {auto c : Ref Ctxt Defs} ->
               {auto o : Ref ROpts REPLOpts} ->
               {auto s : Ref Syn SyntaxInfo} ->
               Warning -> Core ()
-emitWarning w = emitProblem w displayWarning pwarning getWarningLoc MsgStatusInfo
+emitWarning w = emitProblem w displayWarning pwarning (Just . getWarningLoc) MsgStatusInfo
 
 export
 emitWarnings : {auto c : Ref Ctxt Defs} ->
@@ -214,6 +214,7 @@ data REPLResult : Type where
   REPLError : Doc IdrisAnn -> REPLResult
   Executed : PTerm -> REPLResult
   RequestedHelp : REPLResult
+  RequestedDetails : String -> REPLResult
   Evaluated : IPTerm -> Maybe IPTerm -> REPLResult
   Printed : Doc IdrisAnn -> REPLResult
   PrintedDoc : Doc IdrisDocAnn -> REPLResult

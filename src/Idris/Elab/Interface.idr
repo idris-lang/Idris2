@@ -9,6 +9,7 @@ import Core.Metadata
 import Core.TT
 import Core.Unify
 
+import Idris.Doc.String
 import Idris.REPL.Opts
 import Idris.Syntax
 
@@ -115,11 +116,13 @@ mkIfaceData {vars} ifc vis env constraints n conName ps dets meths
           retty = apply (IVar vfc n) (map (IVar EmptyFC) pNames)
           conty = mkTy Implicit (map jname ps) $
                   mkTy AutoImplicit (map bhere constraints) (mkTy Explicit (map bname meths) retty)
-          con = MkImpTy EmptyFC EmptyFC conName !(bindTypeNames ifc [] (pNames ++ map fst meths ++ vars) conty) in
-          pure $ IData vfc vis Nothing {- ?? -} (MkImpData vfc n
-                                  !(bindTypeNames ifc [] (pNames ++ map fst meths ++ vars)
-                                                  (mkDataTy vfc ps))
-                                  opts [con])
+          con = MkImpTy vfc EmptyFC conName !(bindTypeNames ifc [] (pNames ++ map fst meths ++ vars) conty)
+          bound = pNames ++ map fst meths ++ vars in
+
+          pure $ IData vfc vis Nothing {- ?? -}
+               $ MkImpData vfc n
+                   (Just !(bindTypeNames ifc [] bound (mkDataTy vfc ps)))
+                   opts [con]
   where
 
     vfc : FC
@@ -336,15 +339,16 @@ elabInterface : {vars : _} ->
                 Name ->
                 (params : List (Name, (RigCount, RawImp))) ->
                 (dets : List Name) ->
-                (conName : Maybe Name) ->
+                (conName : Maybe (String, Name)) ->
                 List ImpDecl ->
                 Core ()
 elabInterface {vars} ifc vis env nest constraints iname params dets mcon body
     = do fullIName <- getFullName iname
          ns_iname <- inCurrentNS fullIName
-         let conName_in = maybe (mkCon vfc fullIName) id mcon
+         let conName_in = maybe (mkCon vfc fullIName) snd mcon
          -- Machine generated names need to be qualified when looking them up
          conName <- inCurrentNS conName_in
+         whenJust (fst <$> mcon) (addDocString conName)
          let meth_sigs = mapMaybe getSig body
          let meth_decls = map sigToDecl meth_sigs
          let meth_names = map name meth_decls

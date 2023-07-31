@@ -126,7 +126,10 @@ mutual
              _ => do arg' <- quoteGen q bound env arg
                      pure $ (TForce fc r arg')
   quoteGen q bound env (SPrimVal fc c) = pure $ PrimVal fc c
-  quoteGen q bound env (SErased fc i) = pure $ Erased fc i
+  quoteGen q bound env (SErased fc Impossible) = pure $ Erased fc Impossible
+  quoteGen q bound env (SErased fc Placeholder) = pure $ Erased fc Placeholder
+  quoteGen q bound env (SErased fc (Dotted t))
+    = pure $ Erased fc $ Dotted !(quoteGen q bound env t)
   quoteGen q bound env (SType fc u) = pure $ TType fc u
 
 export

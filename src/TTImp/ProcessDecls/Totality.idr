@@ -19,6 +19,8 @@ checkTotalityOK n
               | Nothing => pure Nothing
          let fc = location gdef
 
+         let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
+
          -- #524: need to check positivity even if we're not in a total context
          -- because a definition coming later may need to know it is positive
          case definition gdef of
@@ -26,7 +28,6 @@ checkTotalityOK n
            _ => pure ()
 
          -- Once that is done, we build up errors if necessary
-         let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
          let tot = totality gdef
          log "totality" 3 $ show n ++ " must be: " ++ show treq
          case treq of

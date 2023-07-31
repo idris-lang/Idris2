@@ -1,5 +1,5 @@
 package base
-version = 0.5.1
+version = 0.6.0
 
 opts = "--ignore-missing-ipkg -Wno-shadowing"
 
@@ -58,6 +58,7 @@ modules = Control.App,
           Data.SnocList.Quantifiers,
           Data.SnocList.Operations,
           Data.List.Elem,
+          Data.List.HasLength,
           Data.List.Views,
           Data.List.Quantifiers,
           Data.List1,
@@ -74,6 +75,9 @@ modules = Control.App,
           Data.Rel,
           Data.Singleton,
           Data.So,
+          Data.SortedMap,
+          Data.SortedMap.Dependent,
+          Data.SortedSet,
           Data.Stream,
           Data.String,
           Data.These,
@@ -88,6 +92,7 @@ modules = Control.App,
           Deriving.Common,
           Deriving.Foldable,
           Deriving.Functor,
+          Deriving.Show,
           Deriving.Traversable,
 
           Decidable.Decidable,
@@ -122,4 +127,5 @@ modules = Control.App,
           System.File.Virtual,
           System.Info,
           System.REPL,
-          System.Signal
+          System.Signal,
+          System.Term

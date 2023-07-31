@@ -13,6 +13,7 @@ import Core.LinearCheck
 import Core.Metadata
 import Core.Normalise
 import Core.Termination
+import Core.Termination.CallGraph
 import Core.Transform
 import Core.Value
 import Core.UnifyState
@@ -218,7 +219,7 @@ recoverableErr defs (CantSolveEq fc gam env l r)
        recoverable defs !(nf defs env l)
                         !(nf defs env r)
 recoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure True
-recoverableErr defs (CyclicMeta _ _ _ _) = pure True
+recoverableErr defs (CyclicMeta _ _ _ _) = pure False
 recoverableErr defs (AllFailed errs)
     = anyM (recoverableErr defs) (map snd errs)
 recoverableErr defs (WhenUnifying _ _ _ _ _ err)
@@ -284,10 +285,12 @@ findLinear top bound rig tm
       findLinArg : {vars : _} ->
                    RigCount -> NF [] -> List (Term vars) ->
                    Core (List (Name, RigCount))
-      findLinArg rig ty (As fc UseLeft _ p :: as)
-          = findLinArg rig ty (p :: as)
-      findLinArg rig ty (As fc UseRight p _ :: as)
-          = findLinArg rig ty (p :: as)
+      findLinArg rig ty@(NBind _ _ (Pi _ c _ _) _) (As fc u a p :: as)
+          = if isLinear c
+               then case u of
+                         UseLeft => findLinArg rig ty (p :: as)
+                         UseRight => findLinArg rig ty (a :: as)
+               else pure $ !(findLinArg rig ty [a]) ++ !(findLinArg rig ty (p :: as))
       findLinArg rig (NBind _ x (Pi _ c _ _) sc) (Local {name=a} fc _ idx prf :: as)
           = do defs <- get Ctxt
                let a = nameAt prf
@@ -784,7 +787,7 @@ mkRunTime : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
             FC -> Name -> Core ()
 mkRunTime fc n
-    = do log "compile.casetree" 5 $ "Making run time definition for " ++ show !(toFullNames n)
+    = do logC "compile.casetree" 5 $ do pure $ "Making run time definition for " ++ show !(toFullNames n)
          defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | _ => pure ()
@@ -800,9 +803,10 @@ mkRunTime fc n
                              pats
 
            let clauses_init = map (toClause (location gdef)) pats'
-           let clauses = case cov of
-                              MissingCases _ => addErrorCase clauses_init
-                              _ => clauses_init
+           clauses <- case cov of
+                           MissingCases _ => do log "compile.casetree.missing" 5 $ "Adding uncovered error to \{show clauses_init}"
+                                                pure $ addErrorCase clauses_init
+                           _ => pure clauses_init
 
            (rargs ** (tree_rt, _)) <- getPMDef (location gdef) RunTime n ty clauses
            logC "compile.casetree" 5 $ do
@@ -825,7 +829,7 @@ mkRunTime fc n
            when (caseName !(toFullNames n) && noInline (flags gdef)) $
              do inl <- canInlineCaseBlock n
                 when inl $ do
-                  log "compiler.inline.eval" 5 "Marking \{show !(toFullNames n)} for inlining in runtime case tree."
+                  logC "compiler.inline.eval" 5 $ do pure "Marking \{show !(toFullNames n)} for inlining in runtime case tree."
                   setFlag fc n Inline
   where
     -- check if the flags contain explicit inline or noinline directives:
@@ -842,11 +846,11 @@ mkRunTime fc n
 
     mkCrash : {vars : _} -> String -> Term vars
     mkCrash msg
-       = apply fc (Ref fc Func (NS builtinNS (UN $ Basic "idris_crash")))
-               [Erased fc False, PrimVal fc (Str msg)]
+       = apply fc (Ref fc Func (UN $ Basic "prim__crash"))
+               [Erased fc Placeholder, PrimVal fc (Str msg)]
 
     matchAny : Term vars -> Term vars
-    matchAny (App fc f a) = App fc (matchAny f) (Erased fc False)
+    matchAny (App fc f a) = App fc (matchAny f) (Erased fc Placeholder)
     matchAny tm = tm
 
     makeErrorClause : {vars : _} -> Env Term vars -> Term vars -> Clause
@@ -1120,7 +1124,7 @@ processDef opts nest env fc n_in cs_in
     getClause (Left rawlhs)
         = catch (do lhsp <- getImpossibleTerm env nest rawlhs
                     log "declare.def.impossible" 3 $ "Generated impossible LHS: " ++ show lhsp
-                    pure $ Just $ MkClause [] lhsp (Erased (getFC rawlhs) True))
+                    pure $ Just $ MkClause [] lhsp (Erased (getFC rawlhs) Impossible))
                 (\e => do log "declare.def" 5 $ "Error in getClause " ++ show e
                           pure Nothing)
     getClause (Right c) = pure (Just c)
@@ -1136,7 +1140,7 @@ processDef opts nest env fc n_in cs_in
              let covcs = mapMaybe id covcs'
              (_ ** (ctree, _)) <-
                  getPMDef fc (CompileTime mult) (Resolved n) ty covcs
-             log "declare.def" 3 $ "Working from " ++ show !(toFullNames ctree)
+             logC "declare.def" 3 $ do pure $ "Working from " ++ show !(toFullNames ctree)
              missCase <- if any catchAll covcs
                             then do log "declare.def" 3 $ "Catch all case in " ++ show n
                                     pure []

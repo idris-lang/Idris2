@@ -157,6 +157,14 @@ isField (Field str) = Just str
 isField _ = Nothing
 
 export
+caseFn : Name -> Bool
+caseFn (CaseBlock _ _) = True
+caseFn (DN _ n) = caseFn n
+caseFn (NS _ n) = caseFn n
+caseFn _ = False
+
+
+export
 displayUserName : UserName -> String
 displayUserName (Basic n) = n
 displayUserName (Field n) = n
@@ -230,7 +238,10 @@ Show UserName where
 export
 Show Name where
   show (NS ns n@(UN (Field _))) = show ns ++ ".(" ++ show n ++ ")"
-  show (NS ns n) = show ns ++ "." ++ show n
+  show (NS ns (UN (Basic n))) = if any isOpChar (unpack n)
+                       then "\{show ns}.(\{n})"
+                       else "\{show ns}.\{n}"
+  show (NS ns n) = "\{show ns}.\{show n}"
   show (UN x) = show x
   show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
   show (PV n d) = "{P:" ++ show n ++ ":" ++ show d ++ "}"
@@ -399,7 +410,7 @@ nameEq (NS xs x) (NS ys y) with (decEq xs ys)
     nameEq (NS ys x) (NS ys y) | (Yes Refl) | Nothing = Nothing
     nameEq (NS ys y) (NS ys y) | (Yes Refl) | (Just Refl) = Just Refl
   nameEq (NS xs x) (NS ys y) | (No contra) = Nothing
-nameEq (UN x) (UN y) = map (cong UN) (userNameEq x y)
+nameEq (UN x) (UN y) = map (\xy => cong UN xy) (userNameEq x y)
 nameEq (MN x t) (MN x' t') with (decEq x x')
   nameEq (MN x t) (MN x t') | (Yes Refl) with (decEq t t')
     nameEq (MN x t) (MN x t) | (Yes Refl) | (Yes Refl) = Just Refl

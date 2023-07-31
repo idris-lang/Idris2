@@ -31,7 +31,12 @@ compileToNode :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   ClosedTerm -> Core String
-compileToNode c s tm = compileToES c s Node tm ["node", "javascript"]
+compileToNode c s tm = do
+  js <- compileToES c s Node tm ["node", "javascript"]
+  pure $ shebang ++ js
+  where
+    shebang : String
+    shebang = "#!/usr/bin/env node\n"
 
 ||| Node implementation of the `compileExpr` interface.
 compileExpr :

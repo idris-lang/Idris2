@@ -8,7 +8,7 @@ import TTImp.TTImp
 parameters (f : RawImp' nm -> RawImp' nm)
 
   export
-  mapTTImp :RawImp' nm -> RawImp' nm
+  mapTTImp : RawImp' nm -> RawImp' nm
 
   export
   mapPiInfo : PiInfo (RawImp' nm) -> PiInfo (RawImp' nm)
@@ -30,6 +30,7 @@ parameters (f : RawImp' nm -> RawImp' nm)
 
   export
   mapFnOpt : FnOpt' nm -> FnOpt' nm
+  mapFnOpt Unsafe = Unsafe
   mapFnOpt Inline = Inline
   mapFnOpt NoInline = NoInline
   mapFnOpt Deprecate = Deprecate
@@ -47,7 +48,7 @@ parameters (f : RawImp' nm -> RawImp' nm)
   export
   mapImpData : ImpData' nm -> ImpData' nm
   mapImpData (MkImpData fc n tycon opts datacons)
-    = MkImpData fc n (mapTTImp tycon) opts (map mapImpTy datacons)
+    = MkImpData fc n (map mapTTImp tycon) opts (map mapImpTy datacons)
   mapImpData (MkImpLater fc n tycon) = MkImpLater fc n (mapTTImp tycon)
 
   export

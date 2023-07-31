@@ -51,17 +51,15 @@ export
 Injective FS where
   injective Refl = Refl
 
-export
-Eq (Fin n) where
-    (==) FZ FZ = True
-    (==) (FS k) (FS k') = k == k'
-    (==) _ _ = False
-
 ||| Convert a Fin to a Nat
 public export
 finToNat : Fin n -> Nat
 finToNat FZ = Z
 finToNat (FS k) = S $ finToNat k
+
+export
+Eq (Fin n) where
+  x == y = finToNat x == finToNat y
 
 finToNatInjective : (fm : Fin k) -> (fn : Fin k) -> (finToNat fm) = (finToNat fn) -> fm = fn
 finToNatInjective FZ     FZ     _    = Refl
@@ -153,18 +151,26 @@ complement : {n : Nat} -> Fin n -> Fin n
 complement {n = S _} FZ = last
 complement {n = S _} (FS x) = weaken $ complement x
 
-||| All of the Fin elements
-public export
-allFins : (n : Nat) -> List1 (Fin (S n))
-allFins Z = FZ ::: []
-allFins (S n) = FZ ::: map FS (forget (allFins n))
+namespace List
+
+  ||| All of the Fin elements
+  public export
+  allFins : (n : Nat) -> List (Fin n)
+  allFins Z = []
+  allFins (S n) = FZ :: map FS (allFins n)
+
+namespace List1
+
+  ||| All of the Fin elements
+  public export
+  allFins : (n : Nat) -> List1 (Fin (S n))
+  allFins Z = FZ ::: []
+  allFins (S n) = FZ ::: map FS (forget (allFins n))
+
 
 export
 Ord (Fin n) where
-  compare  FZ     FZ    = EQ
-  compare  FZ    (FS _) = LT
-  compare (FS _)  FZ    = GT
-  compare (FS x) (FS y) = compare x y
+  compare x y = compare (finToNat x) (finToNat y)
 
 namespace Monoid
 
@@ -213,7 +219,7 @@ maybeLT : (x : Nat) -> (y : Nat) -> Maybe (x `LT` y)
 maybeLT x y = maybeLTE (S x) y
 
 public export
-finFromInteger : (x : Integer) -> {n : Nat} ->
+finFromInteger : (x : Integer) ->
                  {auto 0 prf : So (fromInteger x < n)} ->
                  Fin n
 finFromInteger x = natToFinLt (fromInteger x)
@@ -233,13 +239,13 @@ integerLessThanNat x n with (x < the Integer 0)
 ||| @ x the Integer that the user typed
 ||| @ prf an automatically-constructed proof that `x` is in bounds
 public export
-fromInteger : (x : Integer) -> {n : Nat} ->
+fromInteger : (x : Integer) ->
               {auto 0 prf : So (integerLessThanNat x n)} ->
               Fin n
 fromInteger x = finFromInteger x {prf = lemma prf} where
   -- to be minimally invasive, we just call the previous implementation.
   -- however, having a different proof obligation resolves #2032
-  0 lemma : {x : Integer} -> {n : Nat} -> So (integerLessThanNat x n) -> So (fromInteger {ty=Nat} x < n)
+  0 lemma : {x : Integer} -> So (integerLessThanNat x n) -> So (fromInteger {ty=Nat} x < n)
   lemma oh = believe_me oh
 
 -- %builtin IntegerToNatural Data.Fin.fromInteger

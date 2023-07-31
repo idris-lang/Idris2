@@ -241,7 +241,7 @@ Remember, the intuition is that if ``openDoor d`` is used exactly once,
 then ``d`` is used exactly once. So, provided that a door ``d`` has
 multiplicity ``1`` when it's created, we *know* that once we call
 ``openDoor`` on it, we won't be able to use ``d`` again. Given that
-``d`` is an external resource, and ``openDoor`` has changed it's state,
+``d`` is an external resource, and ``openDoor`` has changed its state,
 this is a good thing!
 
 We can ensure that any door we create has multiplicity ``1`` by
@@ -551,7 +551,7 @@ is certainly not the identity function
 
 .. code-block:: idris
 
-    notId {a = Int} x = x + 1
+    notId {a = Integer} x = x + 1
     notId x = x
 
 ::

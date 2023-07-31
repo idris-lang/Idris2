@@ -1,0 +1,25 @@
+1/1: Building Test (Test.idr)
+Error: While processing right hand side of testFailing1. Ambiguous elaboration. Possible results:
+    Main.B.pure Builtin.MkUnit
+    Main.A.pure Builtin.MkUnit
+
+Test:20:16--20:20
+ 16 |   (<*>) : IO (a -> b) -> IO a -> IO b
+ 17 |   (<*>) = (<*>) @{%search}
+ 18 | 
+ 19 | testFailing1 : IO ()
+ 20 | testFailing1 = pure ()
+                     ^^^^
+
+Error: While processing right hand side of testFailing2. Ambiguous elaboration. Possible results:
+    ?delayed Main.B.(<*>) a
+    ?delayed Main.A.(<*>) a
+
+Test:28:3--28:12
+ 24 |   pure ()
+ 25 | 
+ 26 | testFailing2 : (a -> b) -> IO a -> IO b
+ 27 | testFailing2 f a =
+ 28 |   [| f a |]
+        ^^^^^^^^^
+

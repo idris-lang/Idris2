@@ -83,6 +83,12 @@ data CaseResult a
      | NoMatch -- case alternative didn't match anything
      | GotStuck -- alternative matched, but got stuck later
 
+record TermWithEnv (free : List Name) where
+    constructor MkTermEnv
+    { varsEnv : List Name }
+    locEnv : LocalEnv free varsEnv
+    term : Term $ varsEnv ++ free
+
 parameters (defs : Defs, topopts : EvalOpts)
   mutual
     eval : {auto c : Ref Ctxt Defs} ->
@@ -140,7 +146,8 @@ parameters (defs : Defs, topopts : EvalOpts)
                       eval env (arg :: locs) (Local {name = UN (Basic "fvar")} fc Nothing _ First) stk
                   _ => pure (NForce fc r tm' stk)
     eval env locs (PrimVal fc c) stk = pure $ NPrimVal fc c
-    eval env locs (Erased fc i) stk = pure $ NErased fc i
+    eval env locs (Erased fc a) stk
+      = NErased fc <$> traverse @{%search} @{CORE} (\ t => eval env locs t stk) a
     eval env locs (TType fc u) stk = pure $ NType fc u
 
     -- Apply an evaluated argument (perhaps cached from an earlier evaluation)
@@ -190,7 +197,8 @@ parameters (defs : Defs, topopts : EvalOpts)
                     eval env [arg] (Local {name = UN (Basic "fvar")} fc Nothing _ First) stk
                  _ => pure (NForce fc r tm' (args ++ stk))
     applyToStack env nf@(NPrimVal fc _) _ = pure nf
-    applyToStack env nf@(NErased fc _) _ = pure nf
+    applyToStack env (NErased fc a) stk
+      = NErased fc <$> traverse @{%search} @{CORE} (\ t => applyToStack env t stk) a
     applyToStack env nf@(NType fc _) _ = pure nf
 
     evalLocClosure : {auto c : Ref Ctxt Defs} ->
@@ -314,6 +322,7 @@ parameters (defs : Defs, topopts : EvalOpts)
     getCaseBound (arg :: args) []        loc = Nothing -- mismatched arg length
     getCaseBound (arg :: args) (n :: ns) loc = (arg ::) <$> getCaseBound args ns loc
 
+    -- Returns the case term from the matched pattern with the LocalEnv (arguments from constructor pattern ConCase)
     evalConAlt : {auto c : Ref Ctxt Defs} ->
                  {more, free : _} ->
                  Env Term free ->
@@ -322,7 +331,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                  (args : List Name) ->
                  List (Closure free) ->
                  CaseTree (args ++ more) ->
-                 Core (CaseResult (NF free))
+                 Core (CaseResult (TermWithEnv free))
     evalConAlt env loc opts fc stk args args' sc
          = do let Just bound = getCaseBound args' args loc
                    | Nothing => pure GotStuck
@@ -333,7 +342,10 @@ parameters (defs : Defs, topopts : EvalOpts)
              Env Term free ->
              LocalEnv free more -> EvalOpts -> FC ->
              Stack free -> NF free -> CaseAlt more ->
-             Core (CaseResult (NF free))
+             Core (CaseResult (TermWithEnv free))
+    -- Dotted values should still reduce at compile time
+    tryAlt {more} env loc opts fc stk (NErased _ (Dotted tm)) alt
+         = tryAlt {more} env loc opts fc stk tm alt
     -- Ordinary constructor matching
     tryAlt {more} env loc opts fc stk (NDCon _ nm tag' arity args') (ConCase x tag args sc)
          = if tag == tag'
@@ -389,12 +401,12 @@ parameters (defs : Defs, topopts : EvalOpts)
               Env Term free ->
               LocalEnv free args -> EvalOpts -> FC ->
               Stack free -> NF free -> List (CaseAlt args) ->
-              Core (CaseResult (NF free))
+              Core (CaseResult (TermWithEnv free))
     findAlt env loc opts fc stk val [] = do
       log "eval.casetree.stuck" 2 "Ran out of alternatives"
       pure GotStuck
     findAlt env loc opts fc stk val (x :: xs)
-         = do Result val <- tryAlt env loc opts fc stk val x
+         = do res@(Result {}) <- tryAlt env loc opts fc stk val x
                    | NoMatch => findAlt env loc opts fc stk val xs
                    | GotStuck => do
                        logC "eval.casetree.stuck" 5 $ do
@@ -402,13 +414,13 @@ parameters (defs : Defs, topopts : EvalOpts)
                          x <- toFullNames x
                          pure $ "Got stuck matching \{show val} against \{show x}"
                        pure GotStuck
-              pure (Result val)
+              pure res
 
     evalTree : {auto c : Ref Ctxt Defs} ->
                {args, free : _} -> Env Term free -> LocalEnv free args ->
                EvalOpts -> FC ->
                Stack free -> CaseTree args ->
-               Core (CaseResult (NF free))
+               Core (CaseResult (TermWithEnv free))
     evalTree env loc opts fc stk (Case {name} idx x _ alts)
       = do xval <- evalLocal env fc Nothing idx (varExtend x) [] loc
            -- we have not defined quote yet (it depends on eval itself) so we show the NF
@@ -419,14 +431,7 @@ parameters (defs : Defs, topopts : EvalOpts)
            let loc' = updateLocal opts env idx (varExtend x) loc xval
            findAlt env loc' opts fc stk xval alts
     evalTree env loc opts fc stk (STerm _ tm)
-          = case fuel opts of
-                 Nothing => do res <- evalWithOpts defs opts env loc (embed tm) stk
-                               pure (Result res)
-                 Just Z => pure GotStuck
-                 Just (S k) =>
-                      do let opts' = { fuel := Just k } opts
-                         res <- evalWithOpts defs opts' env loc (embed tm) stk
-                         pure (Result res)
+          = pure (Result $ MkTermEnv loc $ embed tm)
     evalTree env loc opts fc stk _ = pure GotStuck
 
     -- Take arguments from the stack, as long as there's enough.
@@ -502,12 +507,18 @@ parameters (defs : Defs, topopts : EvalOpts)
                                        pure "Cannot reduce under-applied \{show def}"
                                      pure def
                        Just (locs', stk') =>
-                            do Result res <- evalTree env locs' opts fc stk' tree
+                            do (Result (MkTermEnv newLoc res)) <- evalTree env locs' opts fc stk' tree
                                     | _ => do logC "eval.def.stuck" 50 $ do
                                                 def <- toFullNames def
                                                 pure "evalTree failed on \{show def}"
                                               pure def
-                               pure res
+                               case fuel opts of
+                                    Nothing => evalWithOpts defs opts env newLoc res stk'
+                                    Just Z => log "eval.def.stuck" 50 "Recursion depth limit exceeded"
+                                              >> pure def
+                                    Just (S k) =>
+                                        do let opts' = { fuel := Just k } opts
+                                           evalWithOpts defs opts' env newLoc res stk'
              else do -- logC "eval.def.stuck" 50 $ do
                      --   def <- toFullNames def
                      --   pure $ unlines [ "Refusing to reduce \{show def}:"
@@ -582,7 +593,7 @@ gType fc u = MkGlue True (pure (TType fc u)) (const (pure (NType fc u)))
 
 export
 gErased : FC -> Glued vars
-gErased fc = MkGlue True (pure (Erased fc False)) (const (pure (NErased fc False)))
+gErased fc = MkGlue True (pure (Erased fc Placeholder)) (const (pure (NErased fc Placeholder)))
 
 -- Resume a previously blocked normalisation with a new environment
 export

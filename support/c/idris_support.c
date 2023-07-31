@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
+#include <termios.h>
+#endif
 #include <time.h>
 #include <unistd.h>
 
@@ -98,6 +101,36 @@ int idris2_setenv(const char *name, const char *value, int overwrite) {
 #endif
 }
 
+#ifndef _WIN32
+// The initial state of stdin is stored here if enableRawMode is called.
+struct termios *initial_termios = NULL;
+#endif
+
+int idris2_enableRawMode() {
+#ifndef _WIN32
+  struct termios ti;
+  int rval = tcgetattr(STDIN_FILENO, &ti);
+  if (rval != 0)
+    return rval;
+  if (!initial_termios) {
+    initial_termios = malloc(sizeof(struct termios));
+    *initial_termios = ti;
+  }
+  ti.c_lflag &= ~(ECHO | ICANON);
+  return tcsetattr(STDIN_FILENO, TCSAFLUSH, &ti);
+#else
+  return -1;
+#endif
+}
+
+void idris2_resetRawMode() {
+#ifndef _WIN32
+  if (initial_termios != NULL) {
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, initial_termios);
+  }
+#endif
+}
+
 int idris2_unsetenv(const char *name) {
 #ifdef _WIN32
   return win32_modenv(name, "", 1);
@@ -119,6 +152,6 @@ long idris2_getNProcessors() {
 #ifdef _WIN32
   return win32_getNProcessors();
 #else
-  return sysconf(_SC_NPROCESSORS_CONF);
+  return sysconf(_SC_NPROCESSORS_ONLN);
 #endif
 }

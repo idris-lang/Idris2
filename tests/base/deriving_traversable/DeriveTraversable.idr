@@ -19,24 +19,24 @@ maybeT = %runElab derive
 eitherT : Traversable (Either err)
 eitherT = %runElab derive
 
--- Here we don't have a `Foldable (Pair a)` instance and the tactics
+-- If we didn't have a `Foldable (Pair a)` instance and the tactics
 -- unfortunately builds
 -- pairT = let traversePair = (...) in
 --         MkTraversable @{pairT .foldable} traversePair
 -- because the `pairT` name is a %hint.
 --
 -- TODO: find a way to program defensively against this!
-failing "pairT is not total"
+--failing "pairT is not total"
+--
+--  %hint total
+--  pairT : Traversable (Pair a)
+--  pairT = %runElab derive
 
-  %hint total
-  pairT : Traversable (Pair a)
-  pairT = %runElab derive
-
-%hint total
+total
 pairM : Foldable (Pair a)
 pairM = %runElab derive
 
-%hint total
+total
 pairT : Traversable (Pair a)
 pairT = %runElab derive
 

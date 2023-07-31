@@ -189,7 +189,7 @@ constantEq (Ch x) (Ch y) = case decEq x y of
                                 Yes Refl => Just Refl
                                 No contra => Nothing
 constantEq (Db x) (Db y) = Nothing -- no DecEq for Doubles!
-constantEq (PrT x) (PrT y) = cong PrT <$> primTypeEq x y
+constantEq (PrT x) (PrT y) = (\xy => cong PrT xy) <$> primTypeEq x y
 constantEq WorldVal WorldVal = Just Refl
 
 constantEq _ _ = Nothing
@@ -721,26 +721,31 @@ Show (Var ns) where
 
 namespace HasLength
 
+  -- TODO: delete in favor of base lib's List.HasLength once next version _after_ v0.6.0 ships.
   public export
   data HasLength : Nat -> List a -> Type where
     Z : HasLength Z []
     S : HasLength n as -> HasLength (S n) (a :: as)
 
+  -- TODO: Use List.HasLength.sucR from the base lib instead once next version _after_ v0.6.0 ships.
   export
   sucR : HasLength n xs -> HasLength (S n) (xs ++ [x])
   sucR Z     = S Z
   sucR (S n) = S (sucR n)
 
+  -- TODO: Use List.HasLength.hasLengthAppend from the base lib instead once next version _after_ v0.6.0 ships.
   export
   hlAppend : HasLength m xs -> HasLength n ys -> HasLength (m + n) (xs ++ ys)
   hlAppend Z ys = ys
   hlAppend (S xs) ys = S (hlAppend xs ys)
 
+  -- TODO: Use List.HasLength.hasLength from the base lib instead once next version _after_ v0.6.0 ships.
   export
   mkHasLength : (xs : List a) -> HasLength (length xs) xs
   mkHasLength [] = Z
   mkHasLength (_ :: xs) = S (mkHasLength xs)
 
+  -- TODO: Use List.HasLength.take from the base lib instead once next vresion _after_ v0.6.0 ships.
   export
   take : (n : Nat) -> (xs : Stream a) -> HasLength n (take n xs)
   take Z _ = Z
@@ -754,10 +759,12 @@ namespace HasLength
     succInjective : (0 l, r : Nat) -> S l = S r -> l = r
     succInjective _ _ Refl = Refl
 
+  -- TODO: Delete once version _after_ v0.6.0 ships.
   hlReverseOnto : HasLength m acc -> HasLength n xs -> HasLength (m + n) (reverseOnto acc xs)
   hlReverseOnto p Z = rewrite plusZeroRightNeutral m in p
   hlReverseOnto {n = S n} p (S q) = rewrite sym (plusSuccRightSucc m n) in hlReverseOnto (S p) q
 
+  -- TODO: Use List.HasLength.hasLengthReverse from the base lib instead once next version _after_ v0.6.0 ships.
   export
   hlReverse : HasLength m acc -> HasLength m (reverse acc)
   hlReverse = hlReverseOnto Z
@@ -842,6 +849,37 @@ data UseSide = UseLeft | UseRight
 %name UseSide side
 
 public export
+data WhyErased a
+  = Placeholder
+  | Impossible
+  | Dotted a
+
+export
+Show a => Show (WhyErased a) where
+  show Placeholder = "placeholder"
+  show Impossible = "impossible"
+  show (Dotted x) = "dotted \{show x}"
+
+%name WhyErased why
+
+export
+Functor WhyErased where
+  map f Placeholder = Placeholder
+  map f Impossible = Impossible
+  map f (Dotted x) = Dotted (f x)
+
+export
+Foldable WhyErased where
+  foldr c n (Dotted x) = c x n
+  foldr c n _ = n
+
+export
+Traversable WhyErased where
+  traverse f Placeholder = pure Placeholder
+  traverse f Impossible = pure Impossible
+  traverse f (Dotted x) = Dotted <$> f x
+
+public export
 data Term : List Name -> Type where
      Local : FC -> (isLet : Maybe Bool) ->
              (idx : Nat) -> (0 p : IsVar name idx vars) -> Term vars
@@ -865,7 +903,7 @@ data Term : List Name -> Type where
      TDelay : FC -> LazyReason -> (ty : Term vars) -> (arg : Term vars) -> Term vars
      TForce : FC -> LazyReason -> Term vars -> Term vars
      PrimVal : FC -> (c : Constant) -> Term vars
-     Erased : FC -> (imp : Bool) -> -- True == impossible term, for coverage checker
+     Erased : FC -> WhyErased (Term vars) -> -- True == impossible term, for coverage checker
               Term vars
      TType : FC -> Name -> -- universe variable
              Term vars
@@ -980,6 +1018,15 @@ Eq a => Eq (Binder a) where
 
 export
 total
+Eq a => Eq (WhyErased a) where
+  Placeholder == Placeholder = True
+  Impossible == Impossible = True
+  Dotted t == Dotted u = t == u
+  _ == _ = False
+
+
+export
+total
 Eq (Term vars) where
   (==) (Local _ _ idx _) (Local _ _ idx' _) = idx == idx'
   (==) (Ref _ _ n) (Ref _ _ n') = n == n'
@@ -993,11 +1040,13 @@ Eq (Term vars) where
   (==) (TDelay _ _ t x) (TDelay _ _ t' x') = t == t' && x == x'
   (==) (TForce _ _ t) (TForce _ _ t') = t == t'
   (==) (PrimVal _ c) (PrimVal _ c') = c == c'
-  (==) (Erased _ i) (Erased _ i') = i == i'
+  (==) (Erased _ i) (Erased _ i') = assert_total (i == i')
   (==) (TType _ _) (TType _ _) = True
   (==) _ _ = False
 
 -- Check equality, ignoring variable naming and universes
+eqWhyErased : WhyErased (Term vs) -> WhyErased (Term vs') -> Bool
+
 export
 total
 eqTerm : Term vs -> Term vs' -> Bool
@@ -1013,9 +1062,14 @@ eqTerm (TDelayed _ _ t) (TDelayed _ _ t') = eqTerm t t'
 eqTerm (TDelay _ _ t x) (TDelay _ _ t' x') = eqTerm t t' && eqTerm x x'
 eqTerm (TForce _ _ t) (TForce _ _ t') = eqTerm t t'
 eqTerm (PrimVal _ c) (PrimVal _ c') = c == c'
-eqTerm (Erased _ i) (Erased _ i') = i == i'
+eqTerm (Erased _ i) (Erased _ i') = eqWhyErased i i'
 eqTerm (TType _ _) (TType _ _) = True
 eqTerm _ _ = False
+
+eqWhyErased Impossible Impossible = True
+eqWhyErased Placeholder Placeholder = True
+eqWhyErased (Dotted t) (Dotted u)  = eqTerm t u
+eqWhyErased _ _ = False
 
 public export
 interface Weaken tm where
@@ -1096,7 +1150,9 @@ public export
 data PartialReason
        = NotStrictlyPositive
        | BadCall (List Name)
-       | RecPath (List Name)
+       -- sequence of mutually-recursive function calls leading to a non-terminating function
+       | BadPath (List (FC, Name)) Name
+       | RecPath (List (FC, Name))
 
 export
 Show PartialReason where
@@ -1105,8 +1161,12 @@ Show PartialReason where
       = "possibly not terminating due to call to " ++ show n
   show (BadCall ns)
       = "possibly not terminating due to calls to " ++ showSep ", " (map show ns)
-  show (RecPath ns)
-      = "possibly not terminating due to recursive path " ++ showSep " -> " (map show ns)
+  show (BadPath [_] n)
+      = "possibly not terminating due to call  to " ++ show n
+  show (BadPath init n)
+      = "possibly not terminating due to function " ++ show n ++ " being reachable via " ++ showSep " -> " (map show init)
+  show (RecPath loop)
+      = "possibly not terminating due to recursive path " ++ showSep " -> " (map (show . snd) loop)
 
 export
 Pretty Void PartialReason where
@@ -1115,8 +1175,14 @@ Pretty Void PartialReason where
     = reflow "possibly not terminating due to call to" <++> pretty n
   pretty (BadCall ns)
     = reflow "possibly not terminating due to calls to" <++> concatWith (surround (comma <+> space)) (pretty <$> ns)
-  pretty (RecPath ns)
-    = reflow "possibly not terminating due to recursive path" <++> concatWith (surround (pretty " -> ")) (pretty <$> ns)
+  pretty (BadPath [_] n)
+    = reflow "possibly not terminating due to call to" <++> pretty n
+  pretty (BadPath init n)
+    = reflow "possibly not terminating due to function" <++> pretty n
+      <++> reflow "being reachable via"
+      <++> concatWith (surround (pretty " -> ")) (pretty <$> map snd init)
+  pretty (RecPath loop)
+    = reflow "possibly not terminating due to recursive path" <++> concatWith (surround (pretty " -> ")) (pretty <$> map snd loop)
 
 public export
 data Terminating
@@ -1211,9 +1277,14 @@ namespace NVar
 
 export
 weakenNVar : SizeOf ns -> NVar name inner -> NVar name (ns ++ inner)
-weakenNVar p x = case sizedView p of
-  Z     => x
-  (S p) => later (weakenNVar p x)
+-- weakenNVar p x = case sizedView p of
+--   Z     => x
+--   (S p) => later (weakenNVar p x)
+-- ^^^^ The above is the correct way, the below involves a proof which
+-- is nonsense, but it's okay because it's deleted, and all we're doing is
+-- adding a number so let's do it the quick way
+weakenNVar (MkSizeOf s _)  (MkNVar {i} p)
+    = (MkNVar {i = plus s i} (believe_me p))
 
 export
 insertNVar : SizeOf outer ->
@@ -1287,7 +1358,9 @@ insertNames out ns (TDelay fc r ty tm)
     = TDelay fc r (insertNames out ns ty) (insertNames out ns tm)
 insertNames out ns (TForce fc r tm) = TForce fc r (insertNames out ns tm)
 insertNames out ns (PrimVal fc c) = PrimVal fc c
-insertNames out ns (Erased fc i) = Erased fc i
+insertNames out ns (Erased fc Impossible) = Erased fc Impossible
+insertNames out ns (Erased fc Placeholder) = Erased fc Placeholder
+insertNames out ns (Erased fc (Dotted t)) = Erased fc (Dotted (insertNames out ns t))
 insertNames out ns (TType fc u) = TType fc u
 
 export
@@ -1494,7 +1567,9 @@ mutual
   shrinkTerm (TForce fc r x) prf
      = Just (TForce fc r !(shrinkTerm x prf))
   shrinkTerm (PrimVal fc c) prf = Just (PrimVal fc c)
-  shrinkTerm (Erased fc i) prf = Just (Erased fc i)
+  shrinkTerm (Erased fc Placeholder) prf = Just (Erased fc Placeholder)
+  shrinkTerm (Erased fc Impossible) prf = Just (Erased fc Impossible)
+  shrinkTerm (Erased fc (Dotted t)) prf = Erased fc . Dotted <$> shrinkTerm t prf
   shrinkTerm (TType fc u) prf = Just (TType fc u)
 
 varEmbedSub : SubVars small vars ->
@@ -1527,7 +1602,9 @@ embedSub sub (TDelay fc x t y)
     = TDelay fc x (embedSub sub t) (embedSub sub y)
 embedSub sub (TForce fc r x) = TForce fc r (embedSub sub x)
 embedSub sub (PrimVal fc c) = PrimVal fc c
-embedSub sub (Erased fc i) = Erased fc i
+embedSub sub (Erased fc Impossible) = Erased fc Impossible
+embedSub sub (Erased fc Placeholder) = Erased fc Placeholder
+embedSub sub (Erased fc (Dotted t)) = Erased fc (Dotted (embedSub sub t))
 embedSub sub (TType fc u) = TType fc u
 
 namespace Bounds
@@ -1583,7 +1660,9 @@ mkLocals outer bs (TDelay fc x t y)
 mkLocals outer bs (TForce fc r x)
     = TForce fc r (mkLocals outer bs x)
 mkLocals outer bs (PrimVal fc c) = PrimVal fc c
-mkLocals outer bs (Erased fc i) = Erased fc i
+mkLocals outer bs (Erased fc Impossible) = Erased fc Impossible
+mkLocals outer bs (Erased fc Placeholder) = Erased fc Placeholder
+mkLocals outer bs (Erased fc (Dotted t)) = Erased fc (Dotted (mkLocals outer bs t))
 mkLocals outer bs (TType fc u) = TType fc u
 
 export
@@ -1684,7 +1763,9 @@ namespace SubstEnv
       = TDelay fc x (substEnv outer env t) (substEnv outer env y)
   substEnv outer env (TForce fc r x) = TForce fc r (substEnv outer env x)
   substEnv outer env (PrimVal fc c) = PrimVal fc c
-  substEnv outer env (Erased fc i) = Erased fc i
+  substEnv outer env (Erased fc Impossible) = Erased fc Impossible
+  substEnv outer env (Erased fc Placeholder) = Erased fc Placeholder
+  substEnv outer env (Erased fc (Dotted t)) = Erased fc (Dotted (substEnv outer env t))
   substEnv outer env (TType fc u) = TType fc u
 
   export
@@ -1742,7 +1823,7 @@ addMetas res ns (TDelay fc x t y)
     = addMetas res (addMetas res ns t) y
 addMetas res ns (TForce fc r x) = addMetas res ns x
 addMetas res ns (PrimVal fc c) = ns
-addMetas res ns (Erased fc i) = ns
+addMetas res ns (Erased fc i) = foldr (flip $ addMetas res) ns i
 addMetas res ns (TType fc u) = ns
 
 -- Get the metavariable names in a term
@@ -1777,7 +1858,7 @@ addRefs ua at ns (TDelay fc x t y)
     = addRefs ua at (addRefs ua at ns t) y
 addRefs ua at ns (TForce fc r x) = addRefs ua at ns x
 addRefs ua at ns (PrimVal fc c) = ns
-addRefs ua at ns (Erased fc i) = ns
+addRefs ua at ns (Erased fc i) = foldr (flip $ addRefs ua at) ns i
 addRefs ua at ns (TType fc u) = ns
 
 -- As above, but for references. Also flag whether a name is under an
@@ -1837,6 +1918,7 @@ covering
       showApp (TDelay _ _ _ tm) [] = "%Delay " ++ show tm
       showApp (TForce _ _ tm) [] = "%Force " ++ show tm
       showApp (PrimVal _ c) [] = show c
+      showApp (Erased _ (Dotted t)) [] = ".(" ++ show t ++ ")"
       showApp (Erased _ _) [] = "[__]"
       showApp (TType _ u) [] = "Type"
       showApp _ [] = "???"

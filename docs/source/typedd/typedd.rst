@@ -19,7 +19,7 @@ necessary changes.
 Chapter 1
 ---------
 
-No changes necessary
+Instead of entering ``:exec`` to run ``Hello.idr`` in the REPL, enter ``:exec main``.
 
 Chapter 2
 ---------
@@ -39,6 +39,8 @@ In ``AveMain.idr`` and ``Reverse.idr`` add:
 .. code-block:: idris
 
     import System.REPL -- for 'repl'
+
+Instead of entering ``:exec`` to run ``main`` from ``AveMain.idr``, enter ``:exec main``.
 
 Chapter 3
 ---------
@@ -75,16 +77,20 @@ For the reasons described above:
 Chapter 5
 ---------
 
-There is no longer a ``Cast`` instance from ``String`` to ``Nat``, because its
-behaviour of returing Z if the ``String`` wasn't numeric was thought to be
+Although there is a ``Cast`` instance from ``String`` to ``Nat``, its
+behaviour of returning Z if the ``String`` is not numeric is now thought to be
 confusing and potentially error prone. Instead, there is ``stringToNatOrZ`` in
 ``Data.String`` which at least has a clearer name. So:
 
-In ``Loops.idr`` and ``ReadNum.idr`` add ``import Data.String`` and change ``cast`` to
-``stringToNatOrZ``
+In ``Loops.idr`` and ``ReadNum.idr`` it's preferable to add ``import Data.String``
+and change ``cast`` to ``stringToNatOrZ``.
 
 In ``ReadNum.idr``, since functions must now be ``covering`` by default, add
-a ``partial`` annotation to ``readNumber_v2``.
+a ``partial`` annotation to ``readNumbers_v2``. (This is the version of ``readNumbers``
+on page 135.)
+
+The file-handling functions for the exercises in section 5.3.4 are no longer in the
+Prelude.  Import `System.File.Handle` and `System.File.ReadWrite` to use them.
 
 Chapter 6
 ---------
@@ -98,6 +104,13 @@ In ``DataStore.idr`` and ``DataStoreHoles.idr``, add ``import Data.String`` and
     display : {schema : _} -> SchemaType schema -> String
 
 In ``TypeFuns.idr`` add ``import Data.String``
+
+Listing 6.9 says that ``data Schema`` declares a type that hasn't been defined yet.
+In Idris2, a colon and a type are required:
+
+.. code-block:: idris
+
+    data Schema : Type
 
 Chapter 7
 ---------
@@ -150,7 +163,7 @@ In ``Void.idr``, since functions must now be ``covering`` by default, add
 a ``partial`` annotation to ``nohead`` and its helper function ``getHead``.
 
 In Exercise 2 of 8.2.5, the definition of ``reverse'`` should be changed to
-``reverse' : Vect k a -> Vect m a -> Vect (k + m) a``, because the ``n`` in ``reverse'`` 
+``reverse' : Vect k a -> Vect m a -> Vect (k + m) a``, because the ``n`` in ``reverse'``
 is otherwise bound to the same value as the ``n`` in the signature of ``myReverse``.
 
 Chapter 9

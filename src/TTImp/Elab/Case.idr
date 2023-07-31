@@ -432,16 +432,16 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
     applyTo : Defs -> RawImp -> NF [] -> Core RawImp
     applyTo defs ty (NBind fc _ (Pi _ _ Explicit _) sc)
         = applyTo defs (IApp fc ty (Implicit fc False))
-               !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+               !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
     applyTo defs ty (NBind _ x (Pi _ _ _ _) sc)
         = applyTo defs (INamedApp fc ty x (Implicit fc False))
-               !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+               !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
     applyTo defs ty _ = pure ty
 
     -- Get the name and type of the family the scrutinee is in
     getRetTy : Defs -> NF [] -> Core (Maybe (Name, NF []))
     getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
-        = getRetTy defs !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+        = getRetTy defs !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
     getRetTy defs (NTCon _ n _ arity _)
         = do Just ty <- lookupTyExact n (gamma defs)
                   | Nothing => pure Nothing

@@ -11,7 +11,7 @@ Please check INSTALL.md and README.md to ensure you have all the required depend
 
 Some common possible solutions:
 
-* In `make bootstrap`, make sure you have the right exectuable name for `SCHEME`
+* In `make bootstrap`, make sure you have the right executable name for `SCHEME`
 * Stale `.ttc` files from an earlier version, or an out of data `IdrisPaths.idr` might be in the way. Try removing these with `make distclean`
 * Removing all trace of Idris 2 from your installation directory might help. By default this is `$HOME/.idris2` - if you have a particularly out of date version, or you have used a broken build at some point (as much as we try to avoid this) then deleting this might help.
 

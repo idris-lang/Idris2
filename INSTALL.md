@@ -9,13 +9,14 @@ The easiest way to install is via the existing generated Scheme code.
 The requirements are:
 
 - A Scheme compiler; either Chez Scheme (default), or Racket.
-- `bash`, `GNU make`, `sha256sum` and `GMP`.  On Linux, you probably already
+- `bash`, `GNU make`, `gcc` or `clang`, `sha256sum` and `GMP`.  On Linux, you probably already
   have these.  On macOS and major BSD flavours, you can install them using a
   package manager: for instance, on macOS, you can install with the
   `brew install coreutils gmp` and on OpenBSD, with the `pkg_add coreutils
   bash gmake gmp` command. You specifically need the dev GMP library, which
   means on some systems the package you need to install will be named
-  something more like `libgmp3-dev`.
+  something more like `libgmp3-dev`. macOS ships with `clang` whereas `gcc` is more
+  common for other \*nix distributions.
 
 On Windows, it has been reported that installing via `MSYS2` works
 [MSYS2](https://www.msys2.org/). On Windows older than Windows 8, you may need to
@@ -78,10 +79,12 @@ If all is well, to install, type:
 
 - `make install`
 
+If you are building with Racket, you'll need to run `IDRIS2_CG=racket make install`.
+
 ### 3: Installing with an existing Idris 2
 
 If you have the latest *released* version of Idris 2
-(0.4.0 at the time of writing) installed:
+(0.5.1 at the time of writing) installed:
 
 - `make all`
 - `make install`
@@ -111,7 +114,7 @@ executable in `./build/exec`.
 
 If you are working on Idris, incremental compilation means that rebuilds are
 much faster, at the cost of runtime performance being slower. To enable
-incremental compilation for the Chez back end, set the environment variable
+incremental compilation for the Chez backend, set the environment variable
 `IDRIS2_INC_CGS=chez`, or set the `--inc chez` flag in `idris2.ipkg`.
 
 ### 8: (Optional) Installing the Idris 2 API

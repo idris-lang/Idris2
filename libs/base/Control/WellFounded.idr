@@ -59,6 +59,20 @@ accInd : {0 rel : a -> a -> Type} -> {0 P : a -> Type} ->
 accInd step z (Access f) =
   step z $ \y, lt => accInd step y (f y lt)
 
+||| Depedently-typed induction for creating extrinsic proofs on results of `accInd`.
+export
+accIndProp : {0 P : a -> Type} ->
+            (step : (x : a) -> ((y : a) -> rel y x -> P y) -> P x) ->
+            {0 RP : (x : a) -> P x -> Type} ->
+            (ih : (x : a) ->
+                  (f : (y : a) -> rel y x -> P y) ->
+                  ((y : a) -> (isRel : rel y x) -> RP y (f y isRel)) ->
+                  RP x (step x f)) ->
+            (z : a) -> (0 acc : Accessible rel z) -> RP z (accInd step z acc)
+accIndProp step ih z (Access rec) =
+  ih z (\y, lt => accInd step y (rec y lt))
+       (\y, lt => accIndProp {RP} step ih y (rec y lt))
+
 ||| Simply-typed recursion based on well-founded-ness.
 |||
 ||| This is `accRec` applied to accessibility derived from a `WellFounded`
@@ -78,6 +92,19 @@ wfInd : (0 _ : WellFounded a rel) => {0 P : a -> Type} ->
         (step : (x : a) -> ((y : a) -> rel y x -> P y) -> P x) ->
         (myz : a) -> P myz
 wfInd step myz = accInd step myz (wellFounded {rel} myz)
+
+||| Depedently-typed induction for creating extrinsic proofs on results of `wfInd`.
+export
+wfIndProp : (0 _ : WellFounded a rel) =>
+            {0 P : a -> Type} ->
+            (step : (x : a) -> ((y : a) -> rel y x -> P y) -> P x) ->
+            {0 RP : (x : a) -> P x -> Type} ->
+            (ih : (x : a) ->
+                  (f : (y : a) -> rel y x -> P y) ->
+                  ((y : a) -> (isRel : rel y x) -> RP y (f y isRel)) ->
+                  RP x (step x f)) ->
+            (myz : a) -> RP myz (wfInd step myz)
+wfIndProp step ih myz = accIndProp {RP} step ih myz (wellFounded {rel} myz)
 
 ||| Types that have a concept of size. The size must be a natural number.
 public export

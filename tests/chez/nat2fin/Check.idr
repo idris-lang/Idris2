@@ -7,7 +7,7 @@ path = "build/exec/test_app/test.ss"
 
 mainLine : String -> Bool
 mainLine str =
-  ("(define Main-main(" `isPrefixOf` str) && (" 375))))" `isInfixOf` str)
+  ("(define Main-main" `isPrefixOf` str) && (" 375)" `isInfixOf` str)
 
 main : IO ()
 main = do

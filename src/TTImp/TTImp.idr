@@ -13,6 +13,8 @@ import Data.List
 import Data.List1
 import Data.Maybe
 
+import Libraries.Data.SortedSet
+
 %default covering
 
 -- Information about names in nested blocks
@@ -219,6 +221,7 @@ mutual
 
   public export
   data FnOpt' : Type -> Type where
+       Unsafe : FnOpt' nm
        Inline : FnOpt' nm
        NoInline : FnOpt' nm
        ||| Mark a function as deprecated.
@@ -249,6 +252,7 @@ mutual
   export
   covering
   Show nm => Show (FnOpt' nm) where
+    show Unsafe = "%unsafe"
     show Inline = "%inline"
     show NoInline = "%noinline"
     show Deprecate = "%deprecate"
@@ -321,7 +325,10 @@ mutual
 
   public export
   data ImpData' : Type -> Type where
-       MkImpData : FC -> (n : Name) -> (tycon : RawImp' nm) ->
+       MkImpData : FC -> (n : Name) ->
+                   -- if we have already declared the type using `MkImpLater`,
+                   -- we are allowed to leave the telescope out here.
+                   (tycon : Maybe (RawImp' nm)) ->
                    (opts : List DataOpt) ->
                    (datacons : List (ImpTy' nm)) -> ImpData' nm
        MkImpLater : FC -> (n : Name) -> (tycon : RawImp' nm) -> ImpData' nm
@@ -331,9 +338,10 @@ mutual
   export
   covering
   Show nm => Show (ImpData' nm) where
-    show (MkImpData fc n tycon _ cons)
-        = "(%data " ++ show n ++ " " ++ show tycon ++ " " ++
-           show cons ++ ")"
+    show (MkImpData fc n (Just tycon) _ cons)
+        = "(%data " ++ show n ++ " " ++ show tycon ++ " " ++ show cons ++ ")"
+    show (MkImpData fc n Nothing _ cons)
+        = "(%data " ++ show n ++ " " ++ show cons ++ ")"
     show (MkImpLater fc n tycon)
         = "(%datadecl " ++ show n ++ " " ++ show tycon ++ ")"
 
@@ -711,12 +719,12 @@ implicitsAs n defs ns tm
         -- So we first peel off all of the explicit quantifiers corresponding
         -- to these variables.
         findImps ns es (_ :: locals) (NBind fc x (Pi _ _ Explicit _) sc)
-          = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+          = do body <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
                findImps ns es locals body
                -- ^ TODO? check that name of the pi matches name of local?
         -- don't add implicits coming after explicits that aren't given
         findImps ns es [] (NBind fc x (Pi _ _ Explicit _) sc)
-            = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+            = do body <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
                  case es of
                    -- Explicits were skipped, therefore all explicits are given anyway
                    Just (UN Underscore) :: _ => findImps ns es [] body
@@ -726,13 +734,13 @@ implicitsAs n defs ns tm
                           Just es' => findImps ns es' [] body
         -- if the implicit was given, skip it
         findImps ns es [] (NBind fc x (Pi _ _ AutoImplicit _) sc)
-            = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+            = do body <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
                  case updateNs x ns of
                    Nothing => -- didn't find explicit call
                       pure $ (x, AutoImplicit) :: !(findImps ns es [] body)
                    Just ns' => findImps ns' es [] body
         findImps ns es [] (NBind fc x (Pi _ _ p _) sc)
-            = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+            = do body <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
                  if Just x `elem` ns
                    then findImps ns es [] body
                    else pure $ (x, forgetDef p) :: !(findImps ns es [] body)
@@ -766,7 +774,7 @@ export
 definedInBlock : Namespace -> -- namespace to resolve names
                  List ImpDecl -> List Name
 definedInBlock ns decls =
-    concatMap (defName ns) decls
+    SortedSet.toList $ foldl (defName ns) empty decls
   where
     getName : ImpTy -> Name
     getName (MkImpTy _ _ n _) = n
@@ -782,16 +790,17 @@ definedInBlock ns decls =
            DN _ _ => NS ns n
            _ => n
 
-    defName : Namespace -> ImpDecl -> List Name
-    defName ns (IClaim _ _ _ _ ty) = [expandNS ns (getName ty)]
-    defName ns (IData _ _ _ (MkImpData _ n _ _ cons))
-        = expandNS ns n :: map (expandNS ns) (map getName cons)
-    defName ns (IData _ _ _ (MkImpLater _ n _)) = [expandNS ns n]
-    defName ns (IParameters _ _ pds) = concatMap (defName ns) pds
-    defName ns (IFail _ _ nds) = concatMap (defName ns) nds
-    defName ns (INamespace _ n nds) = concatMap (defName (ns <.> n)) nds
-    defName ns (IRecord _ fldns _ _ (MkImpRecord _ n _ opts con flds))
-        = expandNS ns con :: all
+    defName : Namespace -> SortedSet Name -> ImpDecl -> SortedSet Name
+    defName ns acc (IClaim _ _ _ _ ty) = insert (expandNS ns (getName ty)) acc
+    defName ns acc (IDef _ nm _) = insert (expandNS ns nm) acc
+    defName ns acc (IData _ _ _ (MkImpData _ n _ _ cons))
+        = foldl (flip insert) acc $ expandNS ns n :: map (expandNS ns . getName) cons
+    defName ns acc (IData _ _ _ (MkImpLater _ n _)) = insert (expandNS ns n) acc
+    defName ns acc (IParameters _ _ pds) = foldl (defName ns) acc pds
+    defName ns acc (IFail _ _ nds) = foldl (defName ns) acc nds
+    defName ns acc (INamespace _ n nds) = foldl (defName (ns <.> n)) acc nds
+    defName ns acc (IRecord _ fldns _ _ (MkImpRecord _ n _ opts con flds))
+        = foldl (flip insert) acc $ expandNS ns con :: all
       where
         fldns' : Namespace
         fldns' = maybe ns (\ f => ns <.> mkNamespace f) fldns
@@ -816,8 +825,8 @@ definedInBlock ns decls =
         all : List Name
         all = expandNS ns n :: map (expandNS fldns') (fnsRF ++ fnsUN)
 
-    defName ns (IPragma _ pns _) = map (expandNS ns) pns
-    defName _ _ = []
+    defName ns acc (IPragma _ pns _) = foldl (flip insert) acc $ map (expandNS ns) pns
+    defName _ acc _ = acc
 
 export
 isIVar : RawImp' nm -> Maybe (FC, nm)

@@ -10,7 +10,8 @@ while IFS= read -r rawfile; do
     htmlfile="${htmldir}/${filename}.html"
     mkdir -p "${htmldir}"
     idris2 -c "${rawfile}"
-    katla markdown "$rawfile" "build/ttc/source/${filename}.ttm" >"$mdfile"
+    ttc_version=$(ls build/ttc)
+    katla markdown "$rawfile" "build/ttc/${ttc_version}/source/${filename}.ttm" >"$mdfile"
     markdown "$mdfile" >"$htmlfile"
     # rm "$mdfile"
 done <tmp

@@ -28,7 +28,7 @@ of another natural number. These are called Peano numbers.
 At runtime, Idris2 will automatically represent this the same as the ``Integer`` type.
 This will massively reduce the memory usage.
 
-There are a few rules governing when this optimization occures:
+There are a few rules governing when this optimization occurs:
 
 - The data type must have 2 constructors
 

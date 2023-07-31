@@ -1,0 +1,9 @@
+1/1: Building ParseError (ParseError.idr)
+Error: Keyword 'module' is not a valid start to a declaration.
+
+ParseError:3:1--3:7
+ 1 | module ParseError
+ 2 | 
+ 3 | module : Type
+     ^^^^^^
+

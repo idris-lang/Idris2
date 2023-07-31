@@ -1,0 +1,88 @@
+1/1: Building DeriveShow (DeriveShow.idr)
+LOG derive.show.clauses:1: 
+  showPrecEnum : Prec -> Enum -> String
+  showPrecEnum d A = "A"
+  showPrecEnum d B = "B"
+  showPrecEnum d C = "C"
+LOG derive.show.clauses:1: 
+  showPrecSum : Prec -> Sum -> String
+  showPrecSum d (AString x0) = showCon d "AString" (showArg x0)
+  showPrecSum d (ANat x0) = showCon d "ANat" (showArg x0)
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.clauses:1: 
+  showPrecList : {0 a : _} -> Show a => Prec -> List a -> String
+  showPrecList d Nil = "Nil"
+  showPrecList d (x0 :: x1) = showCon d "(::)" (concat ((showArg x0) :: ((assert_total (showArg x1)) :: Nil)))
+LOG derive.show.assumption:10: I am assuming that the parameter ty can be shown
+LOG derive.show.clauses:1: 
+  showPrecMaybe : {0 a : _} -> Show a => Prec -> Maybe a -> String
+  showPrecMaybe d Nothing = "Nothing"
+  showPrecMaybe d (Just x0) = showCon d "Just" (showArg x0)
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.assumption:10: I am assuming that the parameter b can be shown
+LOG derive.show.clauses:1: 
+  showPrecEither : {0 err : _} -> Show err => {0 a : _} -> Show a => Prec -> Either err a -> String
+  showPrecEither d (Left x0) = showCon d "Left" (showArg x0)
+  showPrecEither d (Right x0) = showCon d "Right" (showArg x0)
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.clauses:1: 
+  showPrecConstant : {0 a : _} -> Show a => {0 b : _} -> Prec -> Constant a b -> String
+  showPrecConstant d (MkConstant x0) = showCon d "MkConstant" (showArg x0)
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.clauses:1: 
+  showPrecVect : {0 n, a : _} -> Show a => Prec -> Vect n a -> String
+  showPrecVect d Nil = "Nil"
+  showPrecVect d (x0 :: x1) = showCon d "(::)" (concat ((showArg x0) :: ((assert_total (showArg x1)) :: Nil)))
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.clauses:1: 
+  showPrecMatrix : {0 m, n, a : _} -> Show a => Prec -> Matrix m n a -> String
+  showPrecMatrix d (MkMatrix x0) = showCon d "MkMatrix" (showArg x0)
+LOG derive.show.clauses:1: 
+  showPrecOp : {0 n : _} -> Prec -> Op n -> String
+  showPrecOp d Neg = "Neg"
+  showPrecOp d Add = "Add"
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.clauses:1: 
+  showPrecTm : {0 a : _} -> Show a => Prec -> Tm a -> String
+  showPrecTm d (Var x0) = showCon d "Var" (showArg x0)
+  showPrecTm d (Call x0 x1) = showCon d "Call" (concat ((showArg x0) :: ((assert_total (showArg x1)) :: Nil)))
+  showPrecTm d (Lam x0) = showCon d "Lam" (assert_total (showArg x0))
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.clauses:1: 
+  showPrecTree : {0 a : _} -> Show a => Prec -> Tree a -> String
+  showPrecTree d (Leaf x0) = showCon d "Leaf" (showArg x0)
+  showPrecTree d (Node x0) = showCon d "Node" (assert_total (showArg x0))
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.clauses:1: 
+  showPrecForest : {0 a : _} -> Show a => Prec -> Forest a -> String
+  showPrecForest d Empty = "Empty"
+  showPrecForest d (Plant x0 x1) = showCon d "Plant" (concat ((assert_total (showArg x0)) :: ((assert_total (showArg x1)) :: Nil)))
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.clauses:1: 
+  showPrecList1 : {0 a : _} -> Show a => Prec -> List1 a -> String
+  showPrecList1 d (MkList1 x0) = showCon d "MkList1" (assert_total (showArg x0))
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.clauses:1: 
+  showPrecFull : {0 a : _} -> Show a => Prec -> Full a -> String
+  showPrecFull d (Leaf x0) = showCon d "Leaf" (showArg x0)
+  showPrecFull d (Node x0) = showCon d "Node" (assert_total (showArg x0))
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.clauses:1: 
+  showPrecLAZY : {0 a : _} -> Show a => Prec -> LAZY a -> String
+  showPrecLAZY d (MkLAZY x0) = showCon d "MkLAZY" (showArg (Force x0))
+LOG derive.show.assumption:10: I am assuming that the parameter a can be shown
+LOG derive.show.clauses:1: 
+  showPrecIVect : {0 m, a : _} -> Show a => Prec -> IVect {n = m} a -> String
+  showPrecIVect d (MkIVect x0) = showCon d "MkIVect" (showArg x0)
+LOG derive.show.assumption:10: I am assuming that the parameter key can be shown
+LOG derive.show.assumption:10: I am assuming that the parameter val can be shown
+LOG derive.show.clauses:1: 
+  showPrecEqMap : {0 key : _} -> Show key => {0 eq, val : _} -> Show val => Prec -> EqMap key {{conArg:5125} = eq} val -> String
+  showPrecEqMap d (MkEqMap x0) = showCon d "MkEqMap" (showArg x0)
+DeriveShow> "Lam (Call Add ((::) (Var Nothing) ((::) (Var (Just ())) Nil)))"
+DeriveShow> 
+Bye for now!

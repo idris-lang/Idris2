@@ -67,7 +67,7 @@ the same across all backends. All signed and unsigned integrals of up to
 32 bit precision (``Int8``, ``Int16``, ``Int32``, ``Bits8``, ``Bits16``, and ``Bits32``)
 are represented by ``Number`` while ``Int64``, ``Bits64``, and ``Integer``
 are represented by ``BigInt``. The example above could therefore be
-improved by using ``Int32`` instad of ``Int``:
+improved by using ``Int32`` instead of ``Int``:
 
 .. code-block:: idris
 
@@ -210,7 +210,7 @@ Handling JavaScript events
 
 
 In this example shows how to attach an event handler to a particular DOM element. Values of events
-are also associated with ``AnyPtr`` on the Idris side. To seperate ``DomNode`` form ``DomEvent``
+are also associated with ``AnyPtr`` on the Idris side. To separate ``DomNode`` form ``DomEvent``
 we create two different types. Also it demonstrates how a simple callback function defined in
 Idris can be used on the JavaScript side.
 

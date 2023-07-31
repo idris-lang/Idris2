@@ -262,7 +262,7 @@ getDocsForName fc n config
     showDoc : Config -> (Name, String) -> Core (Doc IdrisDocAnn)
 
     reflowDoc : String -> List (Doc IdrisDocAnn)
-    reflowDoc str = map (indent 2 . reflow) (lines str)
+    reflowDoc str = map (indent 2 . pretty0) (lines str)
 
     showTotal : Totality -> Maybe (Doc IdrisDocAnn)
     showTotal tot
@@ -273,7 +273,7 @@ getDocsForName fc n config
     showVisible : Visibility -> Doc IdrisDocAnn
     showVisible vis = header "Visibility" <++> annotate (Syntax Keyword) (pretty0 vis)
 
-    getDConDoc : Name -> Core (Doc IdrisDocAnn)
+    getDConDoc : {default True showType : Bool} -> Name -> Core (Doc IdrisDocAnn)
     getDConDoc con
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact con (gamma defs)
@@ -281,7 +281,11 @@ getDocsForName fc n config
                   | Nothing => pure Empty
              syn <- get Syn
              ty <- prettyType Syntax (type def)
-             let conWithTypeDoc = annotate (Decl con) (hsep [dCon con (prettyName con), colon, ty])
+             let conWithTypeDoc
+                   = annotate (Decl con)
+                   $ ifThenElse showType
+                       (hsep [dCon con (prettyName con), colon, ty])
+                       (dCon con (prettyName con))
              case lookupName con (defDocstrings syn) of
                [(n, "")] => pure conWithTypeDoc
                [(n, str)] => pure $ vcat
@@ -310,11 +314,13 @@ getDocsForName fc n config
 
     getInfixDoc : Name -> Core (List (Doc IdrisDocAnn))
     getInfixDoc n
-        = do let Just (Basic n) = userNameRoot n
-                    | _ => pure []
-             let Just (_, fixity, assoc) = S.lookup n (infixes !(get Syn))
-                    | Nothing => pure []
-             pure $ pure $ hsep
+        = let names = lookupName (UN $ Basic $ nameRoot n) (infixes !(get Syn))
+          in pure $ map printName names
+        where
+          printName : (Name, FC, Fixity, Nat) -> (Doc IdrisDocAnn)
+          printName (name,  loc, fixity, assoc) =
+            -- todo,  change display as "infix operator (++)
+             hsep
                   [ pretty0 (show fixity)
                   , "operator,"
                   , "level"
@@ -323,11 +329,11 @@ getDocsForName fc n config
 
     getPrefixDoc : Name -> Core (List (Doc IdrisDocAnn))
     getPrefixDoc n
-        = do let Just (Basic n) = userNameRoot n
-                    | _ => pure []
-             let Just (_, assoc) = S.lookup n (prefixes !(get Syn))
-                    | Nothing => pure []
-             pure $ ["prefix operator, level" <++> pretty0 (show assoc)]
+        = let names = lookupName (UN $ Basic $ nameRoot n) (prefixes !(get Syn))
+          in pure $ map printPrefixName names
+          where
+            printPrefixName : (Name, FC, Nat) -> Doc IdrisDocAnn
+            printPrefixName (_, _, assoc) = "prefix operator, level" <++> pretty0 (show assoc)
 
     getFixityDoc : Name -> Core (List (Doc IdrisDocAnn))
     getFixityDoc n =
@@ -347,9 +353,11 @@ getDocsForName fc n config
                 case !(traverse (pterm . map defaultKindedName) (parents iface)) of
                      [] => []
                      ps => [hsep (header "Constraints" :: punctuate comma (map (prettyBy Syntax) ps))]
-             let icon = case dropNS (iconstructor iface) of
-                          DN _ _ => [] -- machine inserted
-                          nm => [hsep [header "Constructor", dCon nm (prettyName nm)]]
+             icon <- do cName <- toFullNames (iconstructor iface)
+                        case dropNS cName of
+                          UN{} => do doc <- getDConDoc {showType = False} cName
+                                     pure $ [header "Constructor" <++> annotate Declarations doc]
+                          _ => pure [] -- machine inserted
              mdocs <- traverse getMethDoc (methods iface)
              let meths = case concat mdocs of
                            [] => []
@@ -549,7 +557,7 @@ getDocsForPTerm (PType _) = pure $ vcat
   [ "Type : Type"
   , indent 2 "The type of all types is Type. The type of Type is Type."
   ]
-getDocsForPTerm (PString _ _) = pure $ vcat
+getDocsForPTerm (PString _ _ _) = pure $ vcat
   [ "String Literal"
   , indent 2 "Desugars to a fromString call"
   ]
@@ -572,6 +580,73 @@ getDocsForPTerm (PDPair _ _ _ _ _) = pure $ vcat
 getDocsForPTerm (PUnit _) = pure $ vcat
   [ "Unit Literal"
   , indent 2 "Desugars to MkUnit or Unit"
+  ]
+getDocsForPTerm (PUnquote _ _) = pure $ vcat $
+  header "Unquotes" :: ""
+  :: map (indent 2) [
+  """
+  Unquotes allows us to use TTImp expressions inside a quoted expression.
+  This is useful when we want to add some computed TTImp while building up
+  complex expressions.
+
+  ```idris
+  module Quote
+
+  import Language.Reflection
+
+  foo : TTImp -> TTImp
+  foo expr = `(either ~(expr) x y)
+  ```
+  """]
+getDocsForPTerm (PDelayed _ LLazy _) = pure $ vcat $
+  header "Laziness annotation" :: ""
+  :: map (indent 2) [
+  """
+  Indicates that the values of the type should not be computed until absolutely
+  necessary.
+
+  Also causes the compiler to automatically insert Delay/Force calls
+  respectively wherever a computation can be postponed and where a value is
+  necessary. This can be disabled using the `%auto_lazy off` pragma.
+  """
+  ]
+getDocsForPTerm (PDelayed _ LInf  _) = pure $ vcat $
+  header "Codata (infinite data type) annotation" :: ""
+  :: map (indent 2) [
+  """
+  Indicates that the data type may be potentially infinite, e.g. Data.Stream.
+  If the data type IS infinite, it has to be productive, i.e. there has to be at
+  least one non-empty, finite prefix of the type.
+
+  Also causes the compiler to automatically insert Delay/Force calls
+  respectively wherever the next part of a potentially infinite structure
+  occurs, and where we need to look under the next finite prefix of the
+  structure. This can be disabled using the `%auto_lazy off` pragma.
+  """
+  ]
+getDocsForPTerm (PDelay _ _) = pure $ vcat $
+  header "Laziness compiler primitive" :: ""
+  :: map (indent 2) [
+  """
+  For `Lazy` types: postpones the computation until a `Force` requires its
+                    result.
+  For `Inf` types: does not try to deconstruct the next part of the codata
+                   (potentially infinite data structure).
+
+  Automatically inserted by the compiler unless `%auto_lazy off` is set.
+  """
+  ]
+getDocsForPTerm (PForce _ _) = pure $ vcat $
+  header "Laziness compiler primitive" :: ""
+  :: map (indent 2) [
+  """
+  For `Lazy` types: requires the result of a postponed calculation to be
+                    evaluated (see `Delay`).
+  For `Inf` types: deconstructs the next part of the codata (potentially
+                   infinite data structure).
+
+  Automatically inserted by the compiler unless `%auto_lazy off` is set.
+  """
   ]
 getDocsForPTerm pterm = pure $ "Docs not implemented for" <++> pretty0 (show pterm) <++> "yet"
 

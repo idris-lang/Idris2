@@ -26,3 +26,15 @@ ParseIf3:3:26--3:30
  3 | test a = (if a < 0 the 0 else 5)
                               ^^^^
 
+1/1: Building ParseIf4 (ParseIf4.idr)
+Error: Couldn't parse any alternatives:
+1: Not the end of a block entry.
+
+ParseIf4:9:39--9:41
+ 5 |     case stuff of
+ 6 |       (Left err) => printLn err
+ 7 |       (Right content) => if content == ""
+ 8 |                             then println "Empty"
+ 9 |                             else blah <- doSomething
+                                           ^^
+... (2 others)

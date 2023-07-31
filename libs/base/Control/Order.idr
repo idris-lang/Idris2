@@ -40,3 +40,75 @@ interface (PartialOrder ty rel, Connex ty rel) => LinearOrder ty rel where
 ||| Every equivalence relation is a preorder.
 public export
 [EP] Equivalence ty rel => Preorder ty rel where
+
+--- Derivaties of order-based stuff ---
+
+||| Gives the leftmost of a strongly connex relation among the given two elements, generalisation of `min`.
+|||
+||| That is, leftmost x y ~ x and leftmost x y ~ y, and `leftmost x y` is either `x` or `y`
+public export
+leftmost : (0 rel : _) -> StronglyConnex ty rel => ty -> ty -> ty
+leftmost rel x y = either (const x) (const y) $ order {rel} x y
+
+||| Gives the rightmost of a strongly connex relation among the given two elements, generalisation of `max`.
+|||
+||| That is, x ~ rightmost x y and y ~ rightmost x y, and `rightmost x y` is either `x` or `y`
+public export
+rightmost : (0 rel : _) -> StronglyConnex ty rel => ty -> ty -> ty
+rightmost rel x y = either (const y) (const x) $ order {rel} x y
+
+-- properties --
+
+export
+leftmostRelL : (0 rel : _) -> Reflexive ty rel => StronglyConnex ty rel => (x, y : ty) -> leftmost rel x y `rel` x
+leftmostRelL rel x y with (order {rel} x y)
+  _ | Left  _  = reflexive {rel}
+  _ | Right yx = yx
+
+export
+leftmostRelR : (0 rel : _) -> Reflexive ty rel => StronglyConnex ty rel => (x, y : ty) -> leftmost rel x y `rel` y
+leftmostRelR rel x y with (order {rel} x y)
+  _ | Left  xy = xy
+  _ | Right _  = reflexive {rel}
+
+export
+leftmostPreserves : (0 rel : _) -> StronglyConnex ty rel => (x, y : ty) -> Either (leftmost rel x y = x) (leftmost rel x y = y)
+leftmostPreserves rel x y with (order {rel} x y)
+  _ | Left  _ = Left  Refl
+  _ | Right _ = Right Refl
+
+export
+leftmostIsRightmostLeft : (0 rel : _) -> StronglyConnex ty rel =>
+                          (x, y : ty) ->
+                          (z : ty) -> (z `rel` x) -> (z `rel` y) ->
+                          (z `rel` leftmost rel x y)
+leftmostIsRightmostLeft rel x y z zx zy with (order {rel} x y)
+  _ | Left  _ = zx
+  _ | Right _ = zy
+
+export
+rightmostRelL : (0 rel : _) -> Reflexive ty rel => StronglyConnex ty rel => (x, y : ty) -> x `rel` rightmost rel x y
+rightmostRelL rel x y with (order {rel} x y)
+  _ | Left  xy = xy
+  _ | Right _  = reflexive {rel}
+
+export
+rightmostRelR : (0 rel : _) -> Reflexive ty rel => StronglyConnex ty rel => (x, y : ty) -> y `rel` rightmost rel x y
+rightmostRelR rel x y with (order {rel} x y)
+  _ | Left  _  = reflexive {rel}
+  _ | Right yx = yx
+
+export
+rightmostPreserves : (0 rel : _) -> StronglyConnex ty rel => (x, y : ty) -> Either (rightmost rel x y = x) (rightmost rel x y = y)
+rightmostPreserves rel x y with (order {rel} x y)
+  _ | Left  _ = Right Refl
+  _ | Right _ = Left  Refl
+
+export
+rightmostIsLeftmostRight : (0 rel : _) -> StronglyConnex ty rel =>
+                           (x, y : ty) ->
+                           (z : ty) -> (x `rel` z) -> (y `rel` z) ->
+                           (leftmost rel x y `rel` z)
+rightmostIsLeftmostRight rel x y z zx zy with (order {rel} x y)
+  _ | Left  _ = zx
+  _ | Right _ = zy

@@ -3,6 +3,7 @@ module Compiler.CompileExpr
 import Core.Case.CaseTree
 import public Core.CompileExpr
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Name
 import Core.Normalise
@@ -226,7 +227,7 @@ natBranch _ = False
 
 trySBranch : CExp vars -> CConAlt vars -> Maybe (CExp vars)
 trySBranch n (MkConAlt nm SUCC _ [arg] sc)
-    = Just (CLet (getFC n) arg True (magic__natUnsuc (getFC n) (getFC n) [n]) sc)
+    = Just (CLet (getFC n) arg YesInline (magic__natUnsuc (getFC n) (getFC n) [n]) sc)
 trySBranch _ _ = Nothing
 
 tryZBranch : CConAlt vars -> Maybe (CExp vars)
@@ -252,7 +253,7 @@ builtinNatTree (CConCase fc sc@(CLocal _ _) alts def)
                else CConCase fc sc alts def
 builtinNatTree (CConCase fc sc alts def)
     = do x <- newMN "succ"
-         pure $ CLet fc x True sc
+         pure $ CLet fc x YesInline sc
                 !(builtinNatTree $ CConCase fc (CLocal fc First) (map weaken alts) (map weaken def))
 builtinNatTree t = pure t
 
@@ -282,7 +283,7 @@ unitTree exp@(CConCase fc sc alts def) = fromMaybe (pure exp)
              | _ => Nothing
          Just $ case sc of -- TODO: Check scrutinee has no effect, and skip let binding
                      CLocal _ _ => pure e
-                     _ => pure $ CLet fc !(newMN "_unit") False sc (weaken e)
+                     _ => pure $ CLet fc !(newMN "_unit") NotInline sc (weaken e)
 unitTree t = pure t
 
 -- See if the constructor is a special constructor type, e.g a nil or cons
@@ -338,7 +339,7 @@ toCExpTm n (Bind fc x (Lam _ _ _ _) sc)
 toCExpTm n (Bind fc x (Let _ rig val _) sc)
     = do sc' <- toCExp n sc
          pure $ branchZero (shrinkCExp (DropCons SubRefl) sc')
-                        (CLet fc x True !(toCExp n val) sc')
+                        (CLet fc x YesInline !(toCExp n val) sc')
                         rig
 toCExpTm n (Bind fc x (Pi _ c e ty) sc)
     = pure $ CCon fc (UN (Basic "->")) TYCON Nothing
@@ -455,6 +456,7 @@ mutual
                         then
                              let env : SubstCEnv args vars
                                      = mkSubst 0 scr pos args in
+                              do log "compiler.newtype.world" 50 "Inlining case on \{show n} (no world)"
                                  pure $ Just (substs env !(toCExpTree n sc))
                         else -- let bind the scrutinee, and substitute the
                              -- name into the RHS
@@ -465,8 +467,9 @@ mutual
                                                         {inner=vars}
                                                         {ns = [MN "eff" 0]}
                                                         (mkSizeOf _) (mkSizeOf _) sc'
-                                pure $ Just (CLet fc (MN "eff" 0) False scr
-                                                  (substs env scope))
+                                let tm = CLet fc (MN "eff" 0) NotInline scr (substs env scope)
+                                log "compiler.newtype.world" 50 "Kept the scrutinee \{show tm}"
+                                pure (Just tm)
                 _ => pure Nothing -- there's a normal match to do
     where
       mkSubst : Nat -> CExp vs ->
@@ -498,8 +501,8 @@ mutual
   toCExpTree n alts@(Case _ x scTy (DelayCase ty arg sc :: rest))
       = let fc = getLoc scTy in
             pure $
-              CLet fc arg True (CForce fc LInf (CLocal (getLoc scTy) x)) $
-              CLet fc ty True (CErased fc)
+              CLet fc arg YesInline (CForce fc LInf (CLocal (getLoc scTy) x)) $
+              CLet fc ty YesInline (CErased fc)
                    !(toCExpTree n sc)
   toCExpTree n alts
       = toCExpTree' n alts
@@ -624,7 +627,7 @@ nfToCFType _ _ (NPrimVal _ $ PrT WorldType) = pure CFWorld
 nfToCFType _ False (NBind fc _ (Pi _ _ _ ty) sc)
     = do defs <- get Ctxt
          sty <- nfToCFType fc False !(evalClosure defs ty)
-         sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+         sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
          tty <- nfToCFType fc False sc'
          pure (CFFun sty tty)
 nfToCFType _ True (NBind fc _ _ _)
@@ -670,7 +673,7 @@ getCFTypes : {auto c : Ref Ctxt Defs} ->
 getCFTypes args (NBind fc _ (Pi _ _ _ ty) sc)
     = do defs <- get Ctxt
          aty <- nfToCFType fc False !(evalClosure defs ty)
-         sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
+         sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
          getCFTypes (aty :: args) sc'
 getCFTypes args t
     = pure (reverse args, !(nfToCFType (getLoc t) False t))
@@ -796,7 +799,7 @@ compileDef n
            -- we do for whole program compilation, though, since that involves
            -- traversing everything from the main expression.
            -- For now, consider it an incentive not to have cycles :).
-            then recordWarning (GenericWarn ("Compiling hole " ++ show n))
+            then recordWarning (GenericWarn emptyFC ("Compiling hole " ++ show n))
             else do ce <- toCDef n (type gdef) (eraseArgs gdef)
                            !(toFullNames (definition gdef))
                     setCompiled n ce

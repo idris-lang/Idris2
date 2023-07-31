@@ -1,5 +1,6 @@
 module Data.Vect.Quantifiers
 
+import Data.DPair
 import Data.Vect
 
 %default total
@@ -55,6 +56,11 @@ namespace Any
   mapProperty f (Here p)  = Here (f p)
   mapProperty f (There p) = There (mapProperty f p)
 
+  export
+  toExists : Any p xs -> Exists p
+  toExists (Here prf)  = Evidence _ prf
+  toExists (There prf) = toExists prf
+
 namespace All
   ||| A proof that all elements of a vector satisfy a property. It is a list of
   ||| proofs, corresponding element-wise to the `Vect`.
@@ -107,10 +113,95 @@ namespace All
   mapProperty f (p::pl) = f p :: mapProperty f pl
 
   public export
-  imapProperty : (0 i : Type -> Type) ->
-                 (f : forall a. i a => p a -> q a) ->
-                 {0 types : Vect n Type} ->
-                 All i types =>
-                 All p types -> All q types
+  imapProperty : {0 a : Type}
+              -> {0 p,q : a -> Type}
+              -> (0 i : a -> Type)
+              -> (f : {0 x : a} -> i x => p x -> q x)
+              -> {0 as : Vect n a}
+              -> All i as => All p as -> All q as
   imapProperty _ _              []      = []
   imapProperty i f @{ix :: ixs} (x::xs) = f @{ix} x :: imapProperty i f @{ixs} xs
+
+  public export
+  forget : All (const p) {n} xs -> Vect n p
+  forget []      = []
+  forget (x::xs) = x :: forget xs
+
+  export
+  zipPropertyWith : (f : {0 x : a} -> p x -> q x -> r x) ->
+                    All p xs -> All q xs -> All r xs
+  zipPropertyWith f [] [] = []
+  zipPropertyWith f (px :: pxs) (qx :: qxs)
+    = f px qx :: zipPropertyWith f pxs qxs
+
+  export
+  All (Show . p) xs => Show (All p xs) where
+    show pxs = "[" ++ show' "" pxs ++ "]"
+      where
+        show' : String -> All (Show . p) xs' => All p xs' -> String
+        show' acc @{[]} [] = acc
+        show' acc @{[_]} [px] = acc ++ show px
+        show' acc @{_ :: _} (px :: pxs) = show' (acc ++ show px ++ ", ") pxs
+
+  export
+  All (Eq . p) xs => Eq (All p xs) where
+    (==)           [] []             = True
+    (==) @{_ :: _} (h1::t1) (h2::t2) = h1 == h2 && t1 == t2
+
+  %hint
+  allEq : All (Ord . p) xs => All (Eq . p) xs
+  allEq @{[]}     = []
+  allEq @{_ :: _} = %search :: allEq
+
+  export
+  All (Ord . p) xs => Ord (All p xs) where
+    compare            [] []            = EQ
+    compare @{_ :: _} (h1::t1) (h2::t2) = case compare h1 h2 of
+      EQ => compare t1 t2
+      o  => o
+
+  export
+  All (Semigroup . p) xs => Semigroup (All p xs) where
+    (<+>)           [] [] = []
+    (<+>) @{_ :: _} (h1::t1) (h2::t2) = (h1 <+> h2) :: (t1 <+> t2)
+
+  %hint
+  allSemigroup : All (Monoid . p) xs => All (Semigroup . p) xs
+  allSemigroup @{[]}     = []
+  allSemigroup @{_ :: _} = %search :: allSemigroup
+
+  export
+  All (Monoid . p) xs => Monoid (All p xs) where
+    neutral @{[]}   = []
+    neutral @{_::_} = neutral :: neutral
+
+  ||| A heterogeneous vector of arbitrary types
+  public export
+  HVect : Vect n Type -> Type
+  HVect = All id
+
+  ||| Take the first element.
+  export
+  head : All p (x :: xs) -> p x
+  head (y :: _) = y
+
+  ||| Take all but the first element.
+  export
+  tail : All p (x :: xs) -> All p xs
+  tail (_ :: ys) = ys
+
+  ||| Drop the first n elements given knowledge that
+  ||| there are at least n elements available.
+  export
+  drop : {0 m : _} -> (n : Nat) -> {0 xs : Vect (n + m) a} -> All p xs -> All p (the (Vect m a) (Vect.drop n xs))
+  drop 0 ys = ys
+  drop (S k) (y :: ys) = drop k ys
+
+  ||| Drop up to the first l elements, stopping early
+  ||| if all elements have been dropped.
+  export
+  drop' : {0 k : _} -> {0 xs : Vect k _} -> (l : Nat) -> All p xs -> All p (Vect.drop' l xs)
+  drop' 0 ys = rewrite minusZeroRight k in ys
+  drop' (S k) [] = []
+  drop' (S k) (y :: ys) = drop' k ys
+

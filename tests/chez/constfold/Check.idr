@@ -7,7 +7,7 @@ path = "build/exec/fold_app/fold.ss"
 
 mainLine : String -> Bool
 mainLine str =
-  ("(define Main-main(" `isPrefixOf` str) &&
+  ("(define Main-main" `isPrefixOf` str) &&
   (" 99)" `isInfixOf` str) &&
   not ("prim__integerToNat" `isInfixOf` str)
 

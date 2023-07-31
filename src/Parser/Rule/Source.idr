@@ -10,6 +10,10 @@ import Data.List1
 import Data.SnocList
 import Data.String
 import Libraries.Data.List.Extra
+import Idris.Syntax
+
+%hide Core.Core.(>>)
+%hide Core.Core.(>>=)
 
 %default total
 
@@ -71,6 +75,12 @@ actH : String -> EmptyRule ()
 actH s = act (MkState [<] [s])
 
 export
+debugInfo : Rule DebugInfo
+debugInfo = terminal "Expected a magic debug info directive" $ \case
+  MagicDebugInfo di => Just di
+  _ => Nothing
+
+export
 eoi : EmptyRule ()
 eoi = ignore $ nextIs "Expected end of input" isEOI
   where
@@ -129,36 +139,42 @@ onOffLit
                  _ => Nothing
 
 export
-strLit : Rule String
-strLit
+simpleStrLit : Rule String
+simpleStrLit
     = terminal "Expected string literal" $
                \case
-                 StringLit n s => escape n s
+                 StringLit s => unescape 0 s
                  _ => Nothing
 
-||| String literal split by line wrap (not striped) before escaping the string.
+||| String literal split by line wrap (not striped).
 export
 strLitLines : Rule (List1 String)
 strLitLines
     = terminal "Expected string literal" $
                \case
-                 StringLit n s =>
-                   traverse (escape n . fastPack)
-                            (splitAfter isNL (fastUnpack s))
+                 StringLit s => Just $ map pack (linesHelp [] (unpack s))
                  _ => Nothing
+  where
+  linesHelp : List Char -> List Char -> List1 (List Char)
+  linesHelp [] [] = List1.singleton []
+  linesHelp acc [] = List1.singleton (reverse acc)
+  linesHelp acc ('\n' :: xs) = reverse ('\n' :: acc) `List1.cons` linesHelp [] xs
+  linesHelp acc ('\r' :: '\n' :: xs) = reverse ('\n' :: '\r' :: acc) `List1.cons` linesHelp [] xs
+  linesHelp acc ('\r' :: xs) = reverse ('\r' :: acc) `List1.cons` linesHelp [] xs
+  linesHelp acc (c :: xs) = linesHelp (c :: acc) xs
 
 export
-strBegin : Rule ()
+strBegin : Rule Nat
 strBegin = terminal "Expected string begin" $
                     \case
-                      StringBegin Single => Just ()
+                      StringBegin hashtag Single => Just hashtag
                       _ => Nothing
 
 export
-multilineBegin : Rule ()
+multilineBegin : Rule Nat
 multilineBegin = terminal "Expected multiline string begin" $
                           \case
-                            StringBegin Multi => Just ()
+                            StringBegin hashtag Multi => Just hashtag
                             _ => Nothing
 
 export
@@ -184,7 +200,7 @@ interpEnd = terminal "Expected string interp end" $
 
 export
 simpleStr : Rule String
-simpleStr = strBegin *> commit *> (option "" strLit) <* strEnd
+simpleStr = strBegin *> commit *> (option "" simpleStrLit) <* strEnd
 
 export
 aDotIdent : Rule String
@@ -293,11 +309,10 @@ isCapitalisedIdent str =
   let val = str.val
       loc = str.bounds
       err : EmptyRule ()
-          = failLoc loc ("Expected a capitalised identifier, got: " ++ val)
+          = failLoc loc ("Expected a capitalised identifier, got: \{val}")
   in case strM val of
        StrNil => err
        StrCons c _ => if (isUpper c || c > chr 160) then pure () else err
-
 
 export
 namespaceId : Rule Namespace
@@ -336,6 +351,13 @@ reservedNames
       , "Bits8", "Bits16", "Bits32", "Bits64"
       , "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"
       ]
+
+export
+anyReservedIdent : Rule (WithBounds String)
+anyReservedIdent = do
+    id <- bounds identPart
+    unless (id.val `elem` reservedNames) $ failLoc id.bounds "Expected reserved identifier"
+    pure id
 
 isNotReservedName : WithBounds String -> EmptyRule ()
 isNotReservedName x
@@ -382,6 +404,24 @@ nameWithCapital b = opNonNS <|> do
     n <- (operator <|> postfixProj)
     symbol ")"
     pure (NS ns n)
+
+export
+fixityNS : Rule HidingDirective
+fixityNS = do
+  namespacePrefix <- bounds namespacedIdent
+  let nsVal = namespacePrefix.val
+  fx <- checkFixity (snd nsVal) namespacePrefix.bounds
+  symbol ".("
+  n <- unqualifiedOperatorName
+  symbol ")"
+  pure (HideFixity fx (NS (uncurry mkNestedNamespace nsVal) $ UN $ Basic n))
+  where
+    checkFixity : String -> Bounds -> EmptyRule Fixity
+    checkFixity "infixl" _ = pure InfixL
+    checkFixity "infixr" _ = pure InfixR
+    checkFixity "infix"  _ = pure Infix
+    checkFixity "prefix" _ = pure Prefix
+    checkFixity _ loc =  failLoc loc ""
 
 export
 name : Rule Name

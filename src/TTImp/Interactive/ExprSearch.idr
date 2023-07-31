@@ -614,7 +614,7 @@ tryIntermediateWith fc rig opts hints env ((p, pty) :: rest) ty topty
     matchable : Defs -> NF vars -> Core Bool
     matchable defs (NBind fc x (Pi _ _ _ _) sc)
         = matchable defs !(sc defs (toClosure defaultOpts env
-                                              (Erased fc False)))
+                                              (Erased fc Placeholder)))
     matchable defs (NTCon _ _ _ _ _) = pure True
     matchable _ _ = pure False
 
@@ -627,7 +627,7 @@ tryIntermediateWith fc rig opts hints env ((p, pty) :: rest) ty topty
           -- the scope of the let binding
           do True <- matchable defs
                            !(sc defs (toClosure defaultOpts env
-                                                (Erased fc False)))
+                                                (Erased fc Placeholder)))
                  | False => noResult
              intnty <- genVarName "cty"
              u <- uniVar fc
@@ -677,7 +677,7 @@ tryIntermediateRec fc rig opts hints env ty topty (Just rd)
          let opts' = { inUnwrap := True,
                        recData := Nothing } opts
          logTerm "interaction.search" 10 "Trying recursive search for" ty
-         log "interaction.search" 10 $ show !(toFullNames (recname rd))
+         logC "interaction.search" 10 $ show <$> toFullNames (recname rd)
          logTerm "interaction.search" 10 "LHS" !(toFullNames (lhsapp rd))
          recsearch <- tryRecursive fc rig opts' hints env letty topty rd
          makeHelper fc rig opts' env letty ty recsearch
@@ -685,7 +685,7 @@ tryIntermediateRec fc rig opts hints env ty topty (Just rd)
     isSingleCon : Defs -> NF [] -> Core Bool
     isSingleCon defs (NBind fc x (Pi _ _ _ _) sc)
         = isSingleCon defs !(sc defs (toClosure defaultOpts []
-                                              (Erased fc False)))
+                                              (Erased fc Placeholder)))
     isSingleCon defs (NTCon _ n _ _ _)
         = do Just (TCon _ _ _ _ _ _ [con] _) <- lookupDefExact n (gamma defs)
                   | _ => pure False

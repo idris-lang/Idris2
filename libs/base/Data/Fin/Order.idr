@@ -43,7 +43,7 @@ using (k : Nat)
     connex {x = FZ} _ =  Left $ FromNatPrf LTEZero
     connex {y = FZ} _ = Right $ FromNatPrf LTEZero
     connex {x = FS k} {y = FS j} prf =
-      case connex {rel = FinLTE} $ prf . (cong FS) of
+      case connex {rel = FinLTE} $ \c => prf $ cong FS c of
         Left  (FromNatPrf p) => Left  $ FromNatPrf $ LTESucc p
         Right (FromNatPrf p) => Right $ FromNatPrf $ LTESucc p
 

@@ -1,2 +1,3 @@
+1/1: Building NotFake (NotFake.idr)
 1/1: Building TestFake (TestFake.idr)
 Error: Error in TTC file: Corrupt TTC data for String (the most likely case is that the ./build directory in your current project contains files from a previous build of idris2 or the idris2 executable is from a different build than the installed .ttc files)

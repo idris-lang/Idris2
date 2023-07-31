@@ -16,29 +16,16 @@ import Data.Nat.Properties
 
 -- Division theorem --------------------
 
--- This is disgusting, but will do for now
 ||| Show that, if we have enough fuel, we have enough fuel for the
 ||| recursive call in `div'` and `mod'`.
-fuelLemma : (numer, predDenom, fuel : Nat)
-          -> (enough : numer `LTE` (S fuel))
-          -> (recurse : Data.Nat.lte numer predDenom = False)
+fuelLemma : (numer, predDenom , fuel : Nat)
+          -> (enoughFuel : numer `LTE` (S fuel))
           -> (numer `minus` (S predDenom)) `LTE` fuel
-fuelLemma numer predDenom fuel enough recurse =
-  let denom  : Nat
-      denom = S predDenom
-      numer' : Nat
-      numer' = numer `minus` denom
-      -- a bunch of inequational reasoning to show we have enough fuel
-      -- on the recursive call
-      denom_lte_numer : denom `LTE` numer
-      denom_lte_numer = Properties.notlteIsLT numer predDenom recurse
-      numer'_lt_numer : numer' `LT` numer
-      numer'_lt_numer = (minusPosLT denom numer
-                          (LTESucc LTEZero)
-                          denom_lte_numer)
-      succenough : S numer' `LTE` S fuel
-      succenough = transitive numer'_lt_numer enough
-  in fromLteSucc succenough
+fuelLemma Z predDenom fuel enoughFuel = LTEZero
+fuelLemma (S numer) (S denom) fuel enoughFuel =
+  fuelLemma numer denom fuel $ lteSuccLeft enoughFuel
+fuelLemma (S numer) Z  fuel enoughFuel =
+  rewrite minusZeroRight numer in fromLteSucc enoughFuel
 
 -- equivalence between the duplicate definitions in Data.Nar  ---
 
@@ -98,7 +85,7 @@ bound_mod'' (S fuel) numer predDenom enough  = case @@(Data.Nat.lte numer predDe
                                  Properties.lteIsLTE _ _ numer_lte_predn
   (False ** numer_gte_n    )  => rewrite numer_gte_n in
                                  bound_mod'' fuel (numer `minus` (S predDenom)) predDenom
-                                                  (fuelLemma numer predDenom fuel enough numer_gte_n)
+                                                  (fuelLemma numer predDenom fuel enough)
 
 export
 boundModNatNZ : (numer, denom : Nat) -> (0 denom_nz : NonZero denom)
@@ -125,7 +112,7 @@ divisionTheorem'  numer predDenom (S fuel) enough with (@@(Data.Nat.lte numer pr
          denom_lte_numer : denom `LTE` numer
          denom_lte_numer = Properties.notlteIsLT numer predDenom prf
          enough' : numer' `LTE` fuel
-         enough' = fuelLemma numer predDenom fuel enough prf
+         enough' = fuelLemma numer predDenom fuel enough
 
          inductionHypothesis : (numer'
                              = (mod'' fuel numer' predDenom) +  (div'' fuel numer' predDenom) * denom)
@@ -190,8 +177,8 @@ divmodFuelLemma  numer denom (S fuel1) (S fuel2) enough1 enough2 with (@@(Data.N
  divmodFuelLemma numer denom (S fuel1) (S fuel2) enough1 enough2 | (False ** prf) =
    rewrite prf in
    rewrite divmodFuelLemma (numer `minus` (S denom)) denom fuel1 fuel2
-             (fuelLemma numer denom fuel1 enough1 prf)
-             (fuelLemma numer denom fuel2 enough2 prf) in
+             (fuelLemma numer denom fuel1 enough1)
+             (fuelLemma numer denom fuel2 enough2) in
    Refl
 
 
@@ -249,7 +236,7 @@ multiplesModuloZero  (S fuel) predn (S k) enough =
       in rewrite skn_minus_n_eq_kn in
       multiplesModuloZero fuel predn k $
       (rewrite sym $ skn_minus_n_eq_kn in
-       fuelLemma ((1 + k)*n) predn fuel enough prf)
+       fuelLemma ((1 + k)*n) predn fuel enough)
 
 -- We also want to show uniqueness of this decomposition
 -- This is, of course, quite horrible, but I want this theorem in the stdlib
@@ -290,7 +277,7 @@ addMultipleMod' (S fuel1) fuel2 predn a (S k) enough1 enough2 =
      rewrite argsimplify in
      addMultipleMod' fuel1 fuel2 predn a k
        (rewrite sym argsimplify in
-        fuelLemma ((1+k)*n + a) predn fuel1 enough1 prf1)
+        fuelLemma ((1+k)*n + a) predn fuel1 enough1)
        enough2
 
 addMultipleMod : (a, b, n : Nat) -> (0 n_neq_z1, n_neq_z2 : NonZero n)
@@ -373,3 +360,17 @@ DivisionTheoremUniqueness numer denom denom_nz q r x prf =
   rewrite sym $ sndDivmodNatNZeqMod numer denom denom_nz denom_nz in
   rewrite DivisionTheoremUniquenessDivMod numer denom denom_nz q r x prf in
   (Refl, Refl)
+
+export
+modDividendMinusDivMultDivider : (0 numer, denom : Nat) -> {auto 0 denom_nz : NonZero denom} ->
+  modNatNZ numer denom denom_nz = numer `minus` divNatNZ numer denom denom_nz * denom
+modDividendMinusDivMultDivider numer denom = Calc $
+  |~ (modNatNZ numer denom denom_nz)
+  ~~ (divNatNZ numer denom denom_nz * denom + modNatNZ numer denom denom_nz `minus` divNatNZ numer denom denom_nz * denom)
+            ...(sym $ minusPlus $ divNatNZ numer denom denom_nz * denom)
+  ~~ (modNatNZ numer denom denom_nz + divNatNZ numer denom denom_nz * denom `minus` divNatNZ numer denom denom_nz * denom)
+            ...(rewrite plusCommutative (divNatNZ numer denom denom_nz * denom) (modNatNZ numer denom denom_nz)
+                in Refl)
+  ~~ (numer `minus` divNatNZ numer denom denom_nz * denom)
+            ...(sym $ cong (`minus` (divNatNZ numer denom denom_nz * denom))
+                           (DivisionTheorem numer denom denom_nz denom_nz))

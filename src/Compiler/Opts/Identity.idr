@@ -32,6 +32,7 @@ parameters (fn1 : Name) (idIdx : Nat)
     cexpIdentity (MkVar {i} _) _ _ (CLocal {idx} fc p) = idx == i
     cexpIdentity var _ _ (CRef _ _) = False
     cexpIdentity var _ _ (CLam _ _ _) = False
+    cexpIdentity var con const (CLet _ _ NotInline val sc) = False
     cexpIdentity var con const (CLet _ _ _ val sc) = (case isUnsucc var val of
         Just (c, var') => unsuccIdentity c var' sc
         Nothing => False)

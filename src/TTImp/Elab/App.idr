@@ -83,7 +83,7 @@ getNameType elabMode rigc env fc x
 
                  when (isSourceName def.fullname) $
                    whenJust (isConcreteFC fc) $ \nfc => do
-                     let decor = nameDecoration def.fullname nt
+                     let decor = ifThenElse (isEscapeHatch def) Postulate (nameDecoration def.fullname nt)
                      log "ide-mode.highlight" 7
                        $ "getNameType is adding " ++ show decor ++ ": " ++ show def.fullname
                      addSemanticDecorations [(nfc, decor, Just def.fullname)]
@@ -98,7 +98,7 @@ getNameType elabMode rigc env fc x
     checkDeprecation fc gdef =
       do when (Deprecate `elem` gdef.flags) $
            recordWarning $
-             Deprecated
+             Deprecated fc
                "\{show gdef.fullname} is deprecated and will be removed in a future version."
                (Just (fc, gdef.fullname))
 
@@ -438,7 +438,7 @@ mutual
           arg <- dotErased aty n argpos (elabMode elabinfo) argRig arg_in
           kr <- if knownret
                    then pure True
-                   else do sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
+                   else do sc' <- sc defs (toClosure defaultOpts env (Erased fc Placeholder))
                            concrete defs env sc'
           -- In theory we can check the arguments in any order. But it turns
           -- out that it's sometimes better to do the rightmost arguments
@@ -522,6 +522,13 @@ mutual
                  -- reset hole and redo it with the unexpanded definition
                  do updateDef (Resolved idx) (const (Just (Hole 0 (holeInit False))))
                     ignore $ solveIfUndefined env metaval argv
+             -- Mark for reduction when we finish elaborating
+             updateDef (Resolved idx)
+                  (\def => case def of
+                        (PMDef pminfo args treeCT treeRT pats) =>
+                           Just (PMDef ({alwaysReduce := True} pminfo) args treeCT treeRT pats)
+                        _ => Nothing
+                        )
              removeHole idx
              pure (tm, gty)
 
@@ -625,9 +632,18 @@ mutual
                         checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
                    else -- Some user defined binding is present while we are out of explicit arguments, that's an error
                         throw (InvalidArgs fc env (map (const (UN $ Basic "<auto>")) autoargs ++ map fst namedargs) tm)
-  -- Function type is delayed, so force the term and continue
-  checkAppWith' rig elabinfo nest env fc tm (NDelayed dfc r ty@(NBind _ _ (Pi _ _ _ _) sc)) argdata expargs autoargs namedargs kr expty
-      = checkAppWith' rig elabinfo nest env fc (TForce dfc r tm) ty argdata expargs autoargs namedargs kr expty
+  -- Function type is delayed:
+  --   RHS: force the term
+  --   LHS: strip off delay but only for explicit functions and disallow any further patterns
+  checkAppWith' rig elabinfo nest env fc tm (NDelayed dfc r ty@(NBind _ _ (Pi _ _ i _) sc)) argdata expargs autoargs namedargs kr expty
+      = if onLHS (elabMode elabinfo)
+           then do when (isImplicit i) $ throw (LazyImplicitFunction fc)
+                   let ([], [], []) = (expargs, autoargs, namedargs)
+                       | _ => throw (LazyPatternVar fc)
+                   (tm, gfty) <- checkAppWith' rig elabinfo nest env fc tm ty argdata expargs autoargs namedargs kr expty
+                   fty <- getTerm gfty
+                   pure (tm, gnf env (TDelayed dfc r fty))
+           else checkAppWith' rig elabinfo nest env fc (TForce dfc r tm) ty argdata expargs autoargs namedargs kr expty
   -- If there's no more arguments given, and the plicities of the type and
   -- the expected type line up, stop
   checkAppWith' rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb Implicit aty) sc)

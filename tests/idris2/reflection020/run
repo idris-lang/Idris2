@@ -1,0 +1,23 @@
+rm -rf build
+
+$1 --no-color --console-width 0 --no-banner FromTTImp.idr << EOF
+    :printdef natExprMacroTest
+    :printdef natExprPrecedenceTest
+    :printdef natExprScriptTest
+    natExprFunctionTest
+    :q
+EOF
+
+$1 --no-color --console-width 0 --no-banner FromName.idr << EOF
+    :printdef myNameMacroTest
+    :printdef myNameScriptTest
+    myNameFunctionTest
+    :q
+EOF
+
+$1 --no-color --console-width 0 --no-banner FromDecls.idr << EOF
+    :printdef natDeclsMacroTest
+    :printdef natDeclsScriptTest
+    natDeclsFunctionTest
+    :q
+EOF

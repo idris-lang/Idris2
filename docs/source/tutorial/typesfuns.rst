@@ -628,7 +628,7 @@ the run-time system. We’ve already seen one I/O program:
 
 The type of ``putStrLn`` explains that it takes a string, and returns
 an I/O action which produces an element of the unit type ``()``. There is a
-variant ``putStr`` which decribes the output of a string without a newline:
+variant ``putStr`` which describes the output of a string without a newline:
 
 .. code-block:: idris
 
@@ -1008,7 +1008,7 @@ intermediate values:
 
 .. code-block:: idris
 
-    filter : (a -> Bool) -> Vect n a -> (p ** Vect p a)
+    filter : (a -> Bool) -> Vect n a -> (n' ** Vect n' a)
     filter p Nil = (_ ** [])
     filter p (x :: xs)
         = case filter p xs of
@@ -1262,13 +1262,27 @@ These let bindings can be annotated with a type:
    mirror xs = let xs' : List a = reverse xs in
                    xs ++ xs'
 
-We can also use the symbol ``:=`` instead of ``=`` to, among other things,
-avoid ambiguities with propositional equality:
+Since ``=`` can either indicate a type of equality (``===`` or ``~=~``) or a
+definition, some expressions can be ambiguous. Here is an example:
+
+.. code-block:: idris
+
+   -- Diag : a -> Type
+   -- Diag v = let ty : Type = v = v in ty
+   --                        ^
+   --                        |
+   -- Doesnt compile! because ambiguous here
+
+We can also use the symbol ``:=`` instead of ``=`` in this context to, among
+other things, avoid these ambiguities with propositional equality:
 
 .. code-block:: idris
 
    Diag : a -> Type
    Diag v = let ty : Type := v = v in ty
+
+The code above can be read as "``ty`` has type ``Type`` and its value
+is ``v = v``".
 
 Local definitions can also be introduced using ``let``. Just like top level
 ones and ones defined in a ``where`` clause you need to:
@@ -1336,7 +1350,7 @@ character:
 
     splitAt : Char -> String -> (String, String)
     splitAt c x = case break (== c) x of
-                      (x, y) => (x, strTail y)
+                      (l, r) => (l, strTail r)
 
 ``break`` is a library function which breaks a string into a pair of
 strings at the point where the given function returns true. We then

@@ -75,8 +75,12 @@ export
 prim__getString : Ptr String -> String
 
 %foreign "C:putchar,libc 6"
+         "node:lambda:x=>process.stdout.write(x)"
+         "browser:lambda:x=>console.log(x)"
 prim__putChar : Char -> (1 x : %World) -> IORes ()
+
 %foreign "C:getchar,libc 6"
+         "node:support:getChar,support_system_file"
 %extern prim__getChar : (1 x : %World) -> IORes Char
 
 %foreign "C:idris2_getStr, libidris2_support, idris_support.h"
@@ -89,32 +93,32 @@ prim__getStr : PrimIO String
 prim__putStr : String -> PrimIO ()
 
 ||| Output a string to stdout without a trailing newline.
-export
+%inline export
 putStr : HasIO io => String -> io ()
 putStr str = primIO (prim__putStr str)
 
 ||| Output a string to stdout with a trailing newline.
 export
-putStrLn : HasIO io => String -> io ()
+%inline putStrLn : HasIO io => String -> io ()
 putStrLn str = putStr (prim__strAppend str "\n")
 
 ||| Read one line of input from stdin, without the trailing newline.
-export
+%inline export
 getLine : HasIO io => io String
 getLine = primIO prim__getStr
 
 ||| Write one single-byte character to stdout.
-export
+%inline export
 putChar : HasIO io => Char -> io ()
 putChar c = primIO (prim__putChar c)
 
 ||| Write one multi-byte character to stdout, with a trailing newline.
-export
+%inline export
 putCharLn : HasIO io => Char -> io ()
 putCharLn c = putStrLn (prim__cast_CharString c)
 
 ||| Read one single-byte character from stdin.
-export
+%inline export
 getChar : HasIO io => io Char
 getChar = primIO prim__getChar
 
@@ -136,11 +140,11 @@ threadWait : (1 threadID : ThreadID) -> IO ()
 threadWait threadID = fromPrim (prim__threadWait threadID)
 
 ||| Output something showable to stdout, without a trailing newline.
-export
-print : (HasIO io, Show a) => a -> io ()
+%inline export
+print : HasIO io => Show a => a -> io ()
 print = putStr . show
 
 ||| Output something showable to stdout, with a trailing newline.
-export
-printLn : (HasIO io, Show a) => a -> io ()
+%inline export
+printLn : HasIO io => Show a => a -> io ()
 printLn = putStrLn . show

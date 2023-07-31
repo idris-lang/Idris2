@@ -54,9 +54,7 @@ localHelper {vars} nest env nestdecls_in func
               else nestdeclsVis
 
          let defNames = definedInBlock emptyNS nestdeclsMult
-         names' <- traverse (applyEnv f)
-                            (nub defNames) -- binding names must be unique
-                                           -- fixes bug #115
+         names' <- traverse (applyEnv f) defNames
          let nest' = { names $= (names' ++) } nest
          let env' = dropLinear env
          -- We don't want to keep rechecking delayed elaborators in the

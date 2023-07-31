@@ -27,6 +27,7 @@ import Idris.Elab.Interface
 import Idris.Desugar.Mutual
 
 import Parser.Lexer.Source
+import Parser.Support
 
 import TTImp.BindImplicits
 import TTImp.Parser
@@ -81,49 +82,92 @@ extendSyn newsyn
            , "New (" ++ unwords (map show $ saveMod newsyn) ++ "): "
               ++ show (modDocstrings newsyn)
            ]
-         put Syn ({ infixes $= mergeLeft (infixes newsyn),
-                    prefixes $= mergeLeft (prefixes newsyn),
+
+         -- Before we merge the two syntax environement, we remove the
+         -- private fixities from the one we are importing.
+         -- We keep the local private fixities since they are visible in the
+         -- current file.
+         let filteredFixities = removePrivate (fixities newsyn)
+         put Syn ({ fixities $= merge filteredFixities,
                     ifaces $= merge (ifaces newsyn),
                     modDocstrings $= mergeLeft (modDocstrings newsyn),
                     modDocexports $= mergeLeft (modDocexports newsyn),
                     defDocstrings $= merge (defDocstrings newsyn),
                     bracketholes $= ((bracketholes newsyn) ++) }
                   syn)
+  where
+    removePrivate : ANameMap FixityInfo -> ANameMap FixityInfo
+    removePrivate = fromList . filter ((/= Private) . vis . snd) . toList
 
 mkPrec : Fixity -> Nat -> OpPrec
-mkPrec InfixL p = AssocL p
-mkPrec InfixR p = AssocR p
-mkPrec Infix p = NonAssoc p
-mkPrec Prefix p = Prefix p
+mkPrec InfixL = AssocL
+mkPrec InfixR = AssocR
+mkPrec Infix  = NonAssoc
+mkPrec Prefix = Prefix
+
+-- Check that an operator does not have any conflicting fixities in scope.
+-- Each operator can have its fixity defined multiple times across multiple
+-- modules as long as the fixities are consistent. If they aren't, the fixity
+-- can be hidden with %hide, this is handled by `removeFixity`.
+-- Once conflicts are handled we return the operator precedence we found.
+checkConflictingFixities : {auto s : Ref Syn SyntaxInfo} ->
+                           {auto c : Ref Ctxt Defs} ->
+                           (isPrefix : Bool) ->
+                           FC -> Name -> Core OpPrec
+checkConflictingFixities isPrefix exprFC opn
+  = do syn <- get Syn
+       let op = nameRoot opn
+       let foundFixities : List (Name, FixityInfo) = lookupName (UN (Basic op)) (fixities syn)
+       let (pre, inf) = partition ((== Prefix) . fix . snd) foundFixities
+       case (isPrefix, pre, inf) of
+            -- If we do not find any fixity for this operator we check that it uses operator
+            -- characters, if not, it must be a backticked expression.
+            (_, [], []) => if any isOpChar (fastUnpack op)
+                              then throw (GenericMsg exprFC "Unknown operator '\{op}'")
+                              else pure (NonAssoc 1) -- Backticks are non associative by default
+
+            (True, ((fxName, fx) :: _), _) => do
+                -- in the prefix case, remove conflicts with infix (-)
+                let extraFixities = pre ++ (filter (\(nm, _) => not $ nameRoot nm == "-") inf)
+                unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
+                pure (mkPrec fx.fix fx.precedence)
+            -- Could not find any prefix operator fixities, there may be infix ones
+            (True, [] , _) => throw (GenericMsg exprFC $ "'\{op}' is not a prefix operator")
+
+            (False, _, ((fxName, fx) :: _)) => do
+                -- In the infix case, remove conflicts with prefix (-)
+                let extraFixities = (filter (\(nm, _) => not $ nm == UN (Basic "-")) pre) ++ inf
+                unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
+                pure (mkPrec fx.fix fx.precedence)
+            -- Could not find any infix operator fixities, there may be prefix ones
+            (False, _, []) => throw (GenericMsg exprFC $ "'\{op}' is not an infix operator")
+  where
+    -- Fixities are compatible with all others of the same name that share the same fixity and precedence
+    isCompatible :  FixityInfo -> (fixities : List (Name, FixityInfo)) -> Bool
+    isCompatible fx
+      = all (\fx' => fx.fix == fx'.fix && fx.precedence == fx'.precedence) . map snd
+
+    -- Emits a warning using the fixity that we picked and the list of all conflicting fixities
+    warnConflict : (picked : Name) -> (conflicts : List (Name, FixityInfo)) -> Core ()
+    warnConflict fxName all =
+      recordWarning $ GenericWarn exprFC $ """
+                   operator fixity is ambiguous, we are picking \{show fxName} out of :
+                   \{unlines $ map (\(nm, fx) => " - \{show nm}, precedence level \{show fx.precedence}") $ toList all}
+                   To remove this warning, use `%hide` with the fixity to remove
+                   For example: %hide \{show fxName}
+                   """
 
 toTokList : {auto s : Ref Syn SyntaxInfo} ->
+            {auto c : Ref Ctxt Defs} ->
             PTerm -> Core (List (Tok OpStr PTerm))
 toTokList (POp fc opFC opn l r)
-    = do syn <- get Syn
-         let op = nameRoot opn
-         case lookup op (infixes syn) of
-              Nothing =>
-                  if any isOpChar (fastUnpack op)
-                     then throw (GenericMsg fc $ "Unknown operator '" ++ op ++ "'")
-                     else do rtoks <- toTokList r
-                             pure (Expr l :: Op fc opFC opn backtickPrec :: rtoks)
-              Just (_, Prefix, _) =>
-                      throw (GenericMsg fc $ "'" ++ op ++ "' is a prefix operator")
-              Just (fixityFc, fix, prec) =>
-                   do rtoks <- toTokList r
-                      pure (Expr l :: Op fc opFC opn (mkPrec fix prec) :: rtoks)
-  where
-    backtickPrec : OpPrec
-    backtickPrec = NonAssoc 1
+    = do precInfo <- checkConflictingFixities False fc opn
+         rtoks <- toTokList r
+         pure (Expr l :: Op fc opFC opn precInfo :: rtoks)
 toTokList (PPrefixOp fc opFC opn arg)
-    = do syn <- get Syn
-         let op = nameRoot opn
-         case lookup op (prefixes syn) of
-              Nothing =>
-                   throw (GenericMsg fc $ "'" ++ op ++ "' is not a prefix operator")
-              Just (fixityFc, prec) =>
-                   do rtoks <- toTokList arg
-                      pure (Op fc opFC opn (Prefix prec) :: rtoks)
+    = do precInfo <- checkConflictingFixities True fc opn
+         rtoks <- toTokList arg
+         pure (Op fc opFC opn precInfo :: rtoks)
 toTokList t = pure [Expr t]
 
 record BangData where
@@ -157,18 +201,18 @@ bindBangs ((n, fc, btm) :: bs) ns tm
     $ bindFun fc ns btm
     $ ILam EmptyFC top Explicit (Just n) (Implicit fc False) tm
 
-idiomise : FC -> Maybe Namespace -> RawImp -> RawImp
-idiomise fc mns (IAlternative afc u alts)
-  = IAlternative afc (mapAltType (idiomise afc mns) u) (idiomise afc mns <$> alts)
-idiomise fc mns (IApp afc f a)
+idiomise : FC -> Maybe Namespace -> Maybe Namespace -> RawImp -> RawImp
+idiomise fc dons mns (IAlternative afc u alts)
+  = IAlternative afc (mapAltType (idiomise afc dons mns) u) (idiomise afc dons mns <$> alts)
+idiomise fc dons mns (IApp afc f a)
   = let fc  = virtualiseFC fc
         app = UN $ Basic "<*>"
-        nm  = maybe app (`NS` app) mns
-     in IApp fc (IApp fc (IVar fc nm) (idiomise afc mns f)) a
-idiomise fc mns fn
+        nm  = maybe app (`NS` app) (mns <|> dons)
+     in IApp fc (IApp fc (IVar fc nm) (idiomise afc dons mns f)) a
+idiomise fc dons mns fn
   = let fc  = virtualiseFC fc
         pur = UN $ Basic "pure"
-        nm  = maybe pur (`NS` pur) mns
+        nm  = maybe pur (`NS` pur) (mns <|> dons)
      in IApp fc (IVar fc nm) fn
 
 data Bang : Type where
@@ -181,7 +225,12 @@ mutual
              {auto u : Ref UST UState} ->
              {auto o : Ref ROpts REPLOpts} ->
              Side -> List Name -> PTerm -> Core RawImp
-  desugarB side ps (PRef fc x) = pure $ IVar fc x
+  desugarB side ps (PRef fc x) = do
+    let ns = mbNamespace !(get Bang)
+    let pur = UN $ Basic "pure"
+    case x == pur of -- implicitly add namespace to unqualified occurrences of `pure` in a qualified do-block
+      False => pure $ IVar fc x
+      True => pure $ IVar fc (maybe pur (`NS` pur) ns)
   desugarB side ps (PPi fc rig p mn argTy retTy)
       = let ps' = maybe ps (:: ps) mn in
             pure $ IPi fc rig !(traverse (desugar side ps') p)
@@ -267,14 +316,16 @@ mutual
       = do syn <- get Syn
            -- It might actually be a prefix argument rather than a section
            -- so check that first, otherwise desugar as a lambda
-           case lookup (nameRoot op) (prefixes syn) of
-                Nothing =>
-                   desugarB side ps (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
-                               (POp fc opFC op (PRef fc (MN "arg" 0)) arg))
-                Just prec => desugarB side ps (PPrefixOp fc opFC op arg)
+           case lookupName op (prefixes syn) of
+                [] =>
+                    desugarB side ps
+                        (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
+                            (POp fc opFC op (PRef fc (MN "arg" 0)) arg))
+                (prec :: _) => desugarB side ps (PPrefixOp fc opFC op arg)
   desugarB side ps (PSectionR fc opFC arg op)
-      = desugarB side ps (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
-                 (POp fc opFC op arg (PRef fc (MN "arg" 0))))
+      = desugarB side ps
+          (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
+              (POp fc opFC op arg (PRef fc (MN "arg" 0))))
   desugarB side ps (PSearch fc depth) = pure $ ISearch fc depth
   desugarB side ps (PPrimVal fc (BI x))
       = case !fromIntegerName of
@@ -301,12 +352,21 @@ mutual
                pure $ IApp vfc (IVar vfc f) (IPrimVal fc (Db x))
   desugarB side ps (PPrimVal fc x) = pure $ IPrimVal fc x
   desugarB side ps (PQuote fc tm)
-      = pure $ IQuote fc !(desugarB side ps tm)
+      = do let q = IQuote fc !(desugarB side ps tm)
+           case side of
+                AnyExpr => pure $ maybeIApp fc !fromTTImpName q
+                _ => pure q
   desugarB side ps (PQuoteName fc n)
-      = pure $ IQuoteName fc n
+      = do let q = IQuoteName fc n
+           case side of
+                AnyExpr => pure $ maybeIApp fc !fromNameName q
+                _ => pure q
   desugarB side ps (PQuoteDecl fc x)
       = do xs <- traverse (desugarDecl ps) x
-           pure $ IQuoteDecl fc (concat xs)
+           let dls = IQuoteDecl fc (concat xs)
+           case side of
+                AnyExpr => pure $ maybeIApp fc !fromDeclsName dls
+                _ => pure dls
   desugarB side ps (PUnquote fc tm)
       = pure $ IUnquote fc !(desugarB side ps tm)
   desugarB side ps (PRunElab fc tm)
@@ -324,19 +384,21 @@ mutual
     = do when (side == LHS) $
            throw (GenericMsg fc "? is not a valid pattern")
          pure $ Implicit fc False
-  desugarB side ps (PMultiline fc indent lines)
-      = addFromString fc !(expandString side ps fc !(trimMultiline fc indent lines))
+  desugarB side ps (PMultiline fc hashtag indent lines)
+      = pure $ maybeIApp fc !fromStringName !(expandString side ps fc hashtag !(trimMultiline fc indent lines))
 
   -- We only add `fromString` if we are looking at a plain string literal.
   -- Interpolated string literals don't have a `fromString` call since they
   -- are always concatenated with other strings and therefore can never use
   -- another `fromString` implementation that differs from `id`.
-  desugarB side ps (PString fc [])
-      = addFromString fc (IPrimVal fc (Str ""))
-  desugarB side ps (PString fc [StrLiteral fc' str])
-      = addFromString fc (IPrimVal fc' (Str str))
-  desugarB side ps (PString fc strs)
-      = expandString side ps fc strs
+  desugarB side ps (PString fc hashtag [])
+      = pure $ maybeIApp fc !fromStringName (IPrimVal fc (Str ""))
+  desugarB side ps (PString fc hashtag [StrLiteral fc' str])
+      = case unescape hashtag str of
+             Just str => pure $ maybeIApp fc !fromStringName (IPrimVal fc' (Str str))
+             Nothing => throw (GenericMsg fc "Invalid escape sequence: \{show str}")
+  desugarB side ps (PString fc hashtag strs)
+      = expandString side ps fc hashtag strs
 
   desugarB side ps (PDoBlock fc ns block)
       = expandDo side ps fc ns block
@@ -347,11 +409,11 @@ mutual
            put Bang ({ nextName $= (+1),
                        bangNames $= ((bn, fc, itm) ::)
                      } bs)
-           pure (IVar EmptyFC bn)
+           pure (IVar (virtualiseFC fc) bn)
   desugarB side ps (PIdiom fc ns term)
       = do itm <- desugarB side ps term
            logRaw "desugar.idiom" 10 "Desugaring idiom for" itm
-           let val = idiomise fc ns itm
+           let val = idiomise fc (mbNamespace !(get Bang)) ns itm
            logRaw "desugar.idiom" 10 "Desugared to" val
            pure val
   desugarB side ps (PList fc nilFC args)
@@ -471,14 +533,13 @@ mutual
       = pure $ apply (IVar consFC (UN $ Basic ":<"))
                 [!(expandSnocList side ps nilFC xs) , !(desugarB side ps x)]
 
-  addFromString : {auto c : Ref Ctxt Defs} ->
-                  FC -> RawImp -> Core RawImp
-  addFromString fc tm
-      = pure $ case !fromStringName of
-                    Nothing => tm
-                    Just f =>
-                      let fc = virtualiseFC fc in
-                      IApp fc (IVar fc f) tm
+  maybeIApp : FC -> Maybe Name -> RawImp -> RawImp
+  maybeIApp fc nm tm
+      = case nm of
+             Nothing => tm
+             Just f =>
+               let fc = virtualiseFC fc in
+               IApp fc (IVar fc f) tm
 
   expandString : {auto s : Ref Syn SyntaxInfo} ->
                  {auto b : Ref Bang BangData} ->
@@ -486,8 +547,8 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  {auto o : Ref ROpts REPLOpts} ->
-                 Side -> List Name -> FC -> List PStr -> Core RawImp
-  expandString side ps fc xs
+                 Side -> List Name -> FC -> Nat -> List PStr -> Core RawImp
+  expandString side ps fc hashtag xs
     = do xs <- traverse toRawImp (filter notEmpty $ mergeStrLit xs)
          pure $ case xs of
            [] => IPrimVal fc (Str "")
@@ -501,7 +562,10 @@ mutual
                (strInterpolate xs)
     where
       toRawImp : PStr -> Core RawImp
-      toRawImp (StrLiteral fc str) = pure $ IPrimVal fc (Str str)
+      toRawImp (StrLiteral fc str) =
+        case unescape hashtag str of
+             Just str => pure $ IPrimVal fc (Str str)
+             Nothing => throw (GenericMsg fc "Invalid escape sequence: \{show str}")
       toRawImp (StrInterp fc tm) = desugarB side ps tm
 
       -- merge neighbouring StrLiteral
@@ -532,16 +596,14 @@ mutual
 
   trimMultiline : FC -> Nat -> List (List PStr) -> Core (List PStr)
   trimMultiline fc indent lines
-      = if indent == 0
-           then pure $ dropLastNL $ concat lines
-           else do
-             lines <- trimLast fc lines
-             lines <- traverse (trimLeft indent) lines
-             pure $ dropLastNL $ concat lines
+      = do lines <- trimLast fc lines
+           lines <- traverse (trimLeft indent) lines
+           pure $ concat $ dropLastNL lines
+
     where
       trimLast : FC -> List (List PStr) -> Core (List (List PStr))
       trimLast fc lines with (snocList lines)
-        trimLast fc [] | Empty = throw $ BadMultiline fc "Expected line wrap"
+        trimLast fc [] | Empty = throw $ BadMultiline fc "Expected new line"
         trimLast _ (initLines `snoc` []) | Snoc [] initLines _ = pure lines
         trimLast _ (initLines `snoc` [StrLiteral fc str]) | Snoc [(StrLiteral _ _)] initLines _
             = if any (not . isSpace) (fastUnpack str)
@@ -550,13 +612,6 @@ mutual
         trimLast _ (initLines `snoc` xs) | Snoc xs initLines _
             = let fc = fromMaybe fc $ findBy isStrInterp xs in
                   throw $ BadMultiline fc "Closing delimiter of multiline strings cannot be preceded by non-whitespace characters"
-
-      dropLastNL : List PStr -> List PStr
-      dropLastNL pstrs with (snocList pstrs)
-        dropLastNL [] | Empty = []
-        dropLastNL (initLines `snoc` (StrLiteral fc str)) | Snoc (StrLiteral _ _) initLines _
-            = initLines `snoc` (StrLiteral fc (fst $ break isNL str))
-        dropLastNL pstrs | _ = pstrs
 
       trimLeft : Nat -> List PStr -> Core (List PStr)
       trimLeft indent [] = pure []
@@ -572,6 +627,17 @@ mutual
               then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
              else pure $ (StrLiteral fc (fastPack rest))::xs
       trimLeft indent xs = throw $ BadMultiline fc "Line is less indented than the closing delimiter"
+
+      mapLast : (a -> a) -> List a -> List a
+      mapLast f [] = []
+      mapLast f [x] = [f x]
+      mapLast f (x :: xs) = x :: mapLast f xs
+
+      dropLastNL : List (List PStr) -> List (List PStr)
+      dropLastNL
+          = mapLast $ mapLast $
+              \case StrLiteral fc str => StrLiteral fc (fst $ break isNL str)
+                    other => other
 
   expandDo : {auto s : Ref Syn SyntaxInfo} ->
              {auto c : Ref Ctxt Defs} ->
@@ -604,10 +670,11 @@ mutual
            rest' <- expandDo side ps' topfc ns rest
            let fcOriginal = fc
            let fc = virtualiseFC fc
+           let patFC = virtualiseFC (getFC bpat)
            pure $ bindFun fc ns exp'
                 $ ILam EmptyFC top Explicit (Just (MN "_" 0))
                           (Implicit fc False)
-                          (ICase fc (IVar EmptyFC (MN "_" 0))
+                          (ICase fc (IVar patFC (MN "_" 0))
                                (Implicit fc False)
                                (PatClause fcOriginal bpat rest'
                                   :: alts'))
@@ -797,10 +864,11 @@ mutual
       = do addDocString n doc
            syn <- get Syn
            pure $ MkImpData fc n
-                              !(bindTypeNames fc (usingImpl syn)
-                                              ps !(desugar AnyExpr ps tycon))
-                              opts
-                              !(traverse (desugarType ps) datacons)
+                   !(flip traverseOpt tycon $ \ tycon => do
+                      tycon <- desugar AnyExpr ps tycon
+                      bindTypeNames fc (usingImpl syn) ps tycon)
+                   opts
+                   !(traverse (desugarType ps) datacons)
   desugarData ps doc (MkPLater fc n tycon)
       = do addDocString n doc
            syn <- get Syn
@@ -929,7 +997,7 @@ mutual
            let consb = map (\ (nm, tm) => (nm, doBind bnames tm)) cons'
 
            body' <- traverse (desugarDecl (ps ++ mnames ++ paramNames)) body
-           pure [IPragma fc (maybe [tn] (\n => [tn, n]) conname)
+           pure [IPragma fc (maybe [tn] (\n => [tn, snd n]) conname)
                             (\nest, env =>
                               elabInterface fc vis env nest consb
                                             tn paramsb det conname
@@ -985,7 +1053,13 @@ mutual
       isNamed Nothing = False
       isNamed (Just _) = True
 
-  desugarDecl ps (PRecord fc doc vis mbtot tn params opts conname_in fields)
+  desugarDecl ps (PRecord fc doc vis mbtot (MkPRecordLater tn params))
+      = desugarDecl ps (PData fc doc vis mbtot (MkPLater fc tn (mkRecType params)))
+    where
+      mkRecType : List (Name, RigCount, PiInfo PTerm, PTerm) -> PTerm
+      mkRecType [] = PType fc
+      mkRecType ((n, c, p, t) :: ts) = PPi fc c p (Just n) t (mkRecType ts)
+  desugarDecl ps (PRecord fc doc vis mbtot (MkPRecord tn params opts conname_in fields))
       = do addDocString tn doc
            params' <- traverse (\ (n,c,p,tm) =>
                           do tm' <- desugar AnyExpr ps tm
@@ -1011,7 +1085,8 @@ mutual
                                               map fst params) (mkNamespace recName))
                                fields
            let _ = the (List IField) fields'
-           let conname = maybe (mkConName tn) id conname_in
+           let conname = maybe (mkConName tn) snd conname_in
+           whenJust (fst <$> conname_in) (addDocString conname)
            let _ = the Name conname
            pure [IRecord fc (Just recName)
                          vis mbtot (MkImpRecord fc tn paramsb opts conname fields')]
@@ -1028,14 +1103,17 @@ mutual
       mapDesugarPiInfo : List Name -> PiInfo PTerm -> Core (PiInfo RawImp)
       mapDesugarPiInfo ps = traverse (desugar AnyExpr ps)
 
-  desugarDecl ps (PFixity fc Prefix prec (UN (Basic n)))
-      = do update Syn { prefixes $= insert n (fc, prec) }
+  desugarDecl ps (PFixity fc vis fix prec opName)
+      = do ctx <- get Ctxt
+           -- We update the context of fixities by adding a namespaced fixity
+           -- given by the current namespace and its fixity name.
+           -- This allows fixities to be stored along with the namespace at their
+           -- declaration site and detect and handle ambiguous fixities
+           let updatedNS = NS (mkNestedNamespace (Just ctx.currentNS) (show fix))
+                              (UN $ Basic $ nameRoot opName)
+
+           update Syn { fixities $= addName updatedNS (MkFixityInfo fc vis fix prec) }
            pure []
-  desugarDecl ps (PFixity fc fix prec (UN (Basic n)))
-      = do update Syn { infixes $= insert n (fc, fix, prec) }
-           pure []
-  desugarDecl ps (PFixity fc _ _ _)
-      = throw (GenericMsg fc "Fixity declarations must be for unqualified names")
   desugarDecl ps d@(PFail fc mmsg ds)
       = do -- save the state: the content of a failing block should be discarded
            ust <- get UST
@@ -1095,7 +1173,8 @@ mutual
            pure [IRunElabDecl fc tm']
   desugarDecl ps (PDirective fc d)
       = case d of
-             Hide n => pure [IPragma fc [] (\nest, env => hide fc n)]
+             Hide (HideName n) => pure [IPragma fc [] (\nest, env => hide fc n)]
+             Hide (HideFixity fx n) => pure [IPragma fc [] (\_, _ => removeFixity fx n)]
              Unhide n => pure [IPragma fc [] (\nest, env => unhide fc n)]
              Logging i => pure [ILog ((\ i => (topics i, verbosity i)) <$> i)]
              LazyOn a => pure [IPragma fc [] (\nest, env => lazyActive a)]
@@ -1114,6 +1193,9 @@ mutual
              PrimString n => pure [IPragma fc [] (\nest, env => setFromString n)]
              PrimChar n => pure [IPragma fc [] (\nest, env => setFromChar n)]
              PrimDouble n => pure [IPragma fc [] (\nest, env => setFromDouble n)]
+             PrimTTImp n => pure [IPragma fc [] (\nest, env => setFromTTImp n)]
+             PrimName n => pure [IPragma fc [] (\nest, env => setFromName n)]
+             PrimDecls n => pure [IPragma fc [] (\nest, env => setFromDecls n)]
              CGAction cg dir => pure [IPragma fc [] (\nest, env => addDirective cg dir)]
              Names n ns => pure [IPragma fc [] (\nest, env => addNameDirective fc n ns)]
              StartExpr tm => pure [IPragma fc [] (\nest, env => throw (InternalError "%start not implemented"))] -- TODO!

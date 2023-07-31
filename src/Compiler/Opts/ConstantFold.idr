@@ -69,6 +69,11 @@ lookup fc (MkVar p) rho = case go p rho of
       Z => Left (MkVar First)
       S i' => bimap later weaken (go (dropLater p) (Wk ws' rho))
 
+replace : CExp vars -> Bool
+replace (CLocal _ _)   = True
+replace (CPrimVal _ _) = True
+replace _              = False
+
 -- constant folding of primitive functions
 -- if a primitive function is applied to only constant
 -- then replace with the result
@@ -81,13 +86,11 @@ constFold rho (CLocal fc p) = lookup fc (MkVar p) rho
 constFold rho e@(CRef fc x) = CRef fc x
 constFold rho (CLam fc x y)
   = CLam fc x $ constFold (wk (mkSizeOf [x]) rho) y
-constFold rho (CLet fc x inlineOK y z) =
+constFold rho (CLet fc x inl y z) =
     let val = constFold rho y
-     in case val of
-        CPrimVal _ _ => if inlineOK
-            then constFold (val :: rho) z
-            else CLet fc x inlineOK val (constFold (wk (mkSizeOf [x]) rho) z)
-        _ => CLet fc x inlineOK val (constFold (wk (mkSizeOf [x]) rho) z)
+     in if replace val
+          then constFold (val :: rho) z
+          else CLet fc x inl val (constFold (wk (mkSizeOf [x]) rho) z)
 constFold rho (CApp fc (CRef fc2 n) [x]) =
   if n == NS typesNS (UN $ Basic "prim__integerToNat")
      then case constFold rho x of
@@ -97,6 +100,7 @@ constFold rho (CApp fc (CRef fc2 n) [x]) =
      else CApp fc (CRef fc2 n) [constFold rho x]
 constFold rho (CApp fc x xs) = CApp fc (constFold rho x) (constFold rho <$> xs)
 constFold rho (CCon fc x y tag xs) = CCon fc x y tag $ constFold rho <$> xs
+constFold rho (COp fc BelieveMe [CErased _, CErased _ , x]) = constFold rho x
 constFold rho (COp {arity} fc fn xs) =
     let xs' = map (constFold rho) xs
         e = constRight fc fn xs'
@@ -173,7 +177,7 @@ constantFold fn = do
         | Nothing => pure ()
     let Just cdef' = constFoldCDef cdef
         | Nothing => pure ()
-    log "compiler.const-fold" 50 $ "constant folding " ++ show !(getFullName fn)
-                                 ++ "\n\told def: " ++ show cdef
-                                 ++ "\n\tnew def: " ++ show cdef'
+    logC "compiler.const-fold" 50 $ do pure $ "constant folding " ++ show !(getFullName fn)
+                                           ++ "\n\told def: " ++ show cdef
+                                           ++ "\n\tnew def: " ++ show cdef'
     setCompiled (Resolved fnIdx) cdef'

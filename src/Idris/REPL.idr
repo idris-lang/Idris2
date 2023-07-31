@@ -965,15 +965,17 @@ process Edit
          case mainfile opts of
               Nothing => pure NoFileLoaded
               Just f =>
-                do let line = maybe "" (\i => " +" ++ show (i + 1)) (errorLine opts)
-                   coreLift_ $ system (editor opts ++ " \"" ++ f ++ "\"" ++ line)
+                do let line = maybe [] (\i => ["+" ++ show (i + 1)]) (errorLine opts)
+                   coreLift_ $ system $ [editor opts, f] ++ line
                    loadMainFile f
 process (Compile ctm outfile)
     = compileExp ctm outfile
 process (Exec ctm)
     = execExp ctm
-process Help
+process (Help GenericHelp)
     = pure RequestedHelp
+process (Help (DetailedHelp details))
+    = pure (RequestedDetails details)
 process (TypeSearch searchTerm)
     = do defs <- branch
          let curr = currentNS defs
@@ -1072,7 +1074,7 @@ process ShowVersion
     = pure $ VersionIs  version
 process (ImportPackage package) = do
   defs <- get Ctxt
-  let searchDirs = defs.options.dirs.extra_dirs
+  searchDirs <- extraSearchDirectories
   let Just packageDir = find
         (\d => isInfixOf package (fromMaybe d (fileName d)))
         searchDirs
@@ -1254,6 +1256,7 @@ mutual
   displayResult (ColorSet b) = printResult (reflow (if b then "Set color on" else "Set color off"))
   displayResult (VersionIs x) = printResult (pretty0 (showVersion True x))
   displayResult (RequestedHelp) = printResult (pretty0 displayHelp)
+  displayResult (RequestedDetails details) = printResult (pretty0 details)
   displayResult (Edited (DisplayEdit Empty)) = pure ()
   displayResult (Edited (DisplayEdit xs)) = printResult xs
   displayResult (Edited (EditError x)) = printResult x

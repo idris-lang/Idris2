@@ -73,8 +73,8 @@ data Warning : Type where
      ShadowingLocalBindings : FC -> (shadowed : List1 (String, FC, FC)) -> Warning
      ||| A warning about a deprecated definition. Supply an FC and Name to
      ||| have the documentation for the definition printed with the warning.
-     Deprecated : String -> Maybe (FC, Name) -> Warning
-     GenericWarn : String -> Warning
+     Deprecated : FC -> String -> Maybe (FC, Name) -> Warning
+     GenericWarn : FC -> String -> Warning
 
 %name Warning wrn
 
@@ -161,6 +161,8 @@ data Error : Type where
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
      CantFindPackage : String -> Error
+     LazyImplicitFunction : FC -> Error
+     LazyPatternVar :  FC -> Error
      LitFail : FC -> Error
      LexFail : FC -> String -> Error
      ParseFail : List1 (FC, String) -> Error
@@ -199,12 +201,12 @@ Show TTCErrorMsg where
 
 export
 Show Warning where
-    show (ParserWarning _ msg) = msg
-    show (UnreachableClause _ _ _) = ":Unreachable clause"
-    show (ShadowingGlobalDefs _ _) = ":Shadowing names"
-    show (ShadowingLocalBindings _ _) = ":Shadowing names"
-    show (Deprecated name _) = ":Deprecated " ++ name
-    show (GenericWarn msg) = msg
+    show (ParserWarning fc msg) = show fc ++ msg
+    show (UnreachableClause fc _ _) = show fc ++ ":Unreachable clause"
+    show (ShadowingGlobalDefs fc _) = show fc ++ ":Shadowing names"
+    show (ShadowingLocalBindings fc _) = show fc ++ ":Shadowing names"
+    show (Deprecated fc name _) = show fc ++ ":Deprecated " ++ name
+    show (GenericWarn fc msg) = show fc ++ msg
 
 
 export
@@ -346,6 +348,8 @@ Show Error where
   show (TTCError msg) = "Error in TTC file: " ++ show msg
   show (FileErr fname err) = "File error (" ++ fname ++ "): " ++ show err
   show (CantFindPackage fname) = "Can't find package " ++ fname
+  show (LazyImplicitFunction fc) = "Implicit lazy functions are not yet supported"
+  show (LazyPatternVar fc) = "Defining lazy functions via pattern matching is not yet supported"
   show (LitFail fc) = show fc ++ ":Can't parse literate"
   show (LexFail fc err) = show fc ++ ":Lexer error (" ++ show err ++ ")"
   show (ParseFail errs) = "Parse errors (" ++ show errs ++ ")"
@@ -387,13 +391,13 @@ Show Error where
   show (WarningAsError w) = show w
 
 export
-getWarningLoc : Warning -> Maybe FC
-getWarningLoc (ParserWarning fc _) = Just fc
-getWarningLoc (UnreachableClause fc _ _) = Just fc
-getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
-getWarningLoc (ShadowingLocalBindings fc _) = Just fc
-getWarningLoc (Deprecated _ fcAndName) = fst <$> fcAndName
-getWarningLoc (GenericWarn _) = Nothing
+getWarningLoc : Warning -> FC
+getWarningLoc (ParserWarning fc _) = fc
+getWarningLoc (UnreachableClause fc _ _) = fc
+getWarningLoc (ShadowingGlobalDefs fc _) = fc
+getWarningLoc (ShadowingLocalBindings fc _) = fc
+getWarningLoc (Deprecated fc _ fcAndName) = fromMaybe fc (fst <$> fcAndName)
+getWarningLoc (GenericWarn fc _) = fc
 
 export
 getErrorLoc : Error -> Maybe FC
@@ -452,6 +456,8 @@ getErrorLoc (GenericMsg loc _) = Just loc
 getErrorLoc (TTCError _) = Nothing
 getErrorLoc (FileErr _ _) = Nothing
 getErrorLoc (CantFindPackage _) = Nothing
+getErrorLoc (LazyImplicitFunction loc) = Just loc
+getErrorLoc (LazyPatternVar loc) = Just loc
 getErrorLoc (LitFail loc) = Just loc
 getErrorLoc (LexFail loc _) = Just loc
 getErrorLoc (ParseFail ((loc, _) ::: _)) = Just loc
@@ -470,7 +476,7 @@ getErrorLoc (FailingWrongError fc _ _) = pure fc
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
 getErrorLoc (InRHS _ _ err) = getErrorLoc err
 getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
-getErrorLoc (WarningAsError warn) = getWarningLoc warn
+getErrorLoc (WarningAsError warn) = Just (getWarningLoc warn)
 
 export
 killWarningLoc : Warning -> Warning
@@ -479,8 +485,8 @@ killWarningLoc (UnreachableClause fc x y) = UnreachableClause emptyFC x y
 killWarningLoc (ShadowingGlobalDefs fc xs) = ShadowingGlobalDefs emptyFC xs
 killWarningLoc (ShadowingLocalBindings fc xs) =
     ShadowingLocalBindings emptyFC $ (\(n, _, _) => (n, emptyFC, emptyFC)) <$> xs
-killWarningLoc (Deprecated x y) = Deprecated x (map ((emptyFC,) . snd) y)
-killWarningLoc (GenericWarn x) = GenericWarn x
+killWarningLoc (Deprecated fc x y) = Deprecated emptyFC x (map ((emptyFC,) . snd) y)
+killWarningLoc (GenericWarn fc x) = GenericWarn emptyFC x
 
 export
 killErrorLoc : Error -> Error
@@ -537,6 +543,8 @@ killErrorLoc (GenericMsg fc x) = GenericMsg emptyFC x
 killErrorLoc (TTCError x) = TTCError x
 killErrorLoc (FileErr x y) = FileErr x y
 killErrorLoc (CantFindPackage x) = CantFindPackage x
+killErrorLoc (LazyImplicitFunction fc) = LazyImplicitFunction emptyFC
+killErrorLoc (LazyPatternVar fc) = LazyPatternVar emptyFC
 killErrorLoc (LitFail fc) = LitFail emptyFC
 killErrorLoc (LexFail fc x) = LexFail emptyFC x
 killErrorLoc (ParseFail xs) = ParseFail $ map ((emptyFC,) . snd) $ xs
@@ -630,19 +638,16 @@ export %inline
 ma >> mb = ma >>= const mb
 
 -- Flipped bind
-infixr 1 =<<
 export %inline
 (=<<) : (a -> Core b) -> Core a -> Core b
 (=<<) = flip (>>=)
 
 -- Kleisli compose
-infixr 1 >=>
 export %inline
 (>=>) : (a -> Core b) -> (b -> Core c) -> (a -> Core c)
 f >=> g = (g =<<) . f
 
 -- Flipped kleisli compose
-infixr 1 <=<
 export %inline
 (<=<) : (b -> Core c) -> (a -> Core b) -> (a -> Core c)
 (<=<) = flip (>=>)
@@ -748,6 +753,11 @@ traverseList1 f xxs
     = let x = head xxs
           xs = tail xxs in
           [| f x ::: traverse f xs |]
+
+export
+traverseSnocList : (a -> Core b) -> SnocList a -> Core (SnocList b)
+traverseSnocList f [<] = pure [<]
+traverseSnocList f (as :< a) = (:<) <$> traverseSnocList f as <*> f a
 
 export
 traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
@@ -892,7 +902,7 @@ wrapRef x onClose op
        pure o
 
 export
-cond : List (Lazy Bool, Lazy a) -> a -> a
+cond : List (Lazy Bool, Lazy a) -> Lazy a -> a
 cond [] def = def
 cond ((x, y) :: xs) def = if x then y else cond xs def
 

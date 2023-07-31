@@ -64,9 +64,31 @@ addName n val (MkANameMap dict hier)
            hier' = addToHier n val hier in
            MkANameMap dict' hier'
 
+||| Remove a fully qualified name
+export
+removeExact : Show a => Name -> ANameMap a -> ANameMap a
+removeExact n (MkANameMap dict hier)
+    = let dict' = delete n dict
+          n' = userNameRoot n
+          hier' = maybe hier
+                     (\foundName => deleteFromList foundName hier) n'
+      in MkANameMap dict' hier'
+  where
+    -- When we find the list of namespace candidates, we need to remove the one that we are pointing
+    -- at and leave the others untouched. We do this by filtering the list of candidates and removing
+    -- the one that matches the namespace of the given name `n`. While we're using `filter`, there should
+    -- only be one of them.
+    deleteFromList : (un : UserName) -> (um : UserNameMap (List (Name, a))) -> UserNameMap (List (Name, a))
+    deleteFromList un = adjust un (filter (\(key, _) => not $ key `matches` n))
+
 export
 toList : ANameMap a -> List (Name, a)
 toList dict = toList (exactNames dict)
+
+||| Export the list of name which are ambiguous without their namespace
+export
+toAmbiguousList : ANameMap a -> List (UserName, List a)
+toAmbiguousList dict = map (mapSnd (map snd)) (toList dict.hierarchy)
 
 export
 fromList : List (Name, a) -> ANameMap a

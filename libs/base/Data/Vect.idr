@@ -117,6 +117,14 @@ drop' 0 xs = rewrite minusZeroRight l in xs
 drop' (S k) [] = rewrite minusZeroLeft (S k) in []
 drop' (S k) (x :: xs) = drop' k xs
 
+||| Generate all of the Fin elements as a Vect whose length is the number of
+||| elements.
+|||
+||| Useful, for example, when one wants all the indices for specific Vect.
+public export
+allFins : (n : Nat) -> Vect n (Fin n)
+-- implemented using `map`, so the definition is further down
+
 ||| Extract a particular element from a vector
 |||
 ||| ```idris example
@@ -251,11 +259,22 @@ replaceAtDiffIndexPreserves : (xs : Vect n a) -> (i, j : Fin n) -> Not (i = j) -
 replaceAtDiffIndexPreserves (_::_) FZ     FZ     co _ = absurd $ co Refl
 replaceAtDiffIndexPreserves (_::_) FZ     (FS _) _  _ = Refl
 replaceAtDiffIndexPreserves (_::_) (FS _) FZ     _  _ = Refl
-replaceAtDiffIndexPreserves (_::_) (FS z) (FS w) co y = replaceAtDiffIndexPreserves _ z w (co . cong FS) y
+replaceAtDiffIndexPreserves (_::_) (FS z) (FS w) co y = replaceAtDiffIndexPreserves _ z w (\zw => co $ cong FS zw) y
 
 --------------------------------------------------------------------------------
 -- Transformations
 --------------------------------------------------------------------------------
+
+||| Reverse the second vector, prepending the result to the first.
+|||
+||| ```idris example
+||| reverseOnto [0, 1] [10, 11, 12]
+||| ```
+public export
+reverseOnto : Vect n elem -> Vect m elem -> Vect (n+m) elem
+reverseOnto {n}         acc []        = rewrite plusZeroRightNeutral n in acc
+reverseOnto {n} {m=S m} acc (x :: xs) = rewrite sym $ plusSuccRightSucc n m
+                                        in reverseOnto (x::acc) xs
 
 ||| Reverse the order of the elements of a vector
 |||
@@ -264,11 +283,7 @@ replaceAtDiffIndexPreserves (_::_) (FS z) (FS w) co y = replaceAtDiffIndexPreser
 ||| ```
 public export
 reverse : (xs : Vect len elem) -> Vect len elem
-reverse xs = go [] xs
-  where go : Vect n elem -> Vect m elem -> Vect (n+m) elem
-        go {n}         acc []        = rewrite plusZeroRightNeutral n in acc
-        go {n} {m=S m} acc (x :: xs) = rewrite sym $ plusSuccRightSucc n m
-                                       in go (x::acc) xs
+reverse = reverseOnto []
 
 ||| Alternate an element between the other elements of a vector
 ||| @ sep the element to intersperse
@@ -376,6 +391,10 @@ mapMaybe f (x::xs) =
        Just y  => (S len ** y :: ys)
        Nothing => (  len **      ys)
 
+-- now that we have `map`, we can finish implementing `allFins`
+allFins 0 = []
+allFins (S k) = FZ :: map FS (allFins k)
+
 --------------------------------------------------------------------------------
 -- Folds
 --------------------------------------------------------------------------------
@@ -428,6 +447,7 @@ foldr1 f (x::y::xs) = f x (foldr1 f (y::xs))
 public export
 foldl1 : (t -> t -> t) -> Vect (S n) t -> t
 foldl1 f (x::xs) = foldl f x xs
+
 --------------------------------------------------------------------------------
 -- Scans
 --------------------------------------------------------------------------------
@@ -670,7 +690,7 @@ delete : {len : _} ->
 delete = deleteBy (==)
 
 --------------------------------------------------------------------------------
--- Splitting and breaking lists
+-- Splitting and breaking vects
 --------------------------------------------------------------------------------
 
 ||| A tuple where the first element is a `Vect` of the `n` first elements and
@@ -705,6 +725,30 @@ partition p (x::xs) =
       ((S leftLen ** x::lefts), (rightLen ** rights))
     else
       ((leftLen ** lefts), (S rightLen ** x::rights))
+
+||| Split a vector whose length is a multiple of two numbers, k times n, into k
+||| sections of length n.
+|||
+||| ```idris example
+||| > kSplits 2 4 [1, 2, 3, 4, 5, 6, 7, 8]
+||| [[1, 2, 3, 4], [5, 6, 7, 8]]
+||| ```
+public export
+kSplits : (k, n : Nat) -> Vect (k * n) a -> Vect k (Vect n a)
+kSplits 0     n xs = []
+kSplits (S k) n xs = let (ys, zs) = splitAt n xs
+                     in ys :: kSplits k n zs
+
+||| Split a vector whose length is a multiple of two numbers, k times n, into n
+||| sections of length k.
+|||
+||| ```idris example
+||| > nSplits 2 4 [1, 2, 3, 4, 5, 6, 7, 8]
+||| [[1, 5], [2, 6], [3, 7], [4, 8]]
+||| ```
+public export
+nSplits : (k, n : Nat) -> Vect (k * n) a -> Vect n (Vect k a)
+-- implemented via matrix transposition, so the definition is further down
 
 --------------------------------------------------------------------------------
 -- Predicates
@@ -856,8 +900,26 @@ zipWith3IndexLinear _ (_::xs) (_::ys) (_::zs) FZ     = Refl
 zipWith3IndexLinear f (_::xs) (_::ys) (_::zs) (FS i) = zipWith3IndexLinear f xs ys zs i
 
 --------------------------------------------------------------------------------
+-- Permutation
+--------------------------------------------------------------------------------
+
+||| Rearrange the elements of a vector according to some permutation of its
+||| indices.
+||| @ v the vector whose elements to rearrange
+||| @ p the permutation to apply
+|||
+||| ```idris example
+||| > permute ['a', 'b', 'c', 'd'] [0, 3, 2, 1]
+||| ['a', 'd' , 'c' ,'b']
+||| ```
+export
+permute : (v : Vect len a) -> (p : Vect len (Fin len)) -> Vect len a
+permute v p = (`index` v) <$> p
+
+--------------------------------------------------------------------------------
 -- Matrix transposition
 --------------------------------------------------------------------------------
+
 ||| Transpose a `Vect` of `Vect`s, turning rows into columns and vice versa.
 |||
 ||| This is like zipping all the inner `Vect`s together and is equivalent to `traverse id` (`transposeTraverse`).
@@ -871,6 +933,9 @@ public export
 transpose : {n : _} -> (array : Vect m (Vect n elem)) -> Vect n (Vect m elem)
 transpose []        = replicate _ []                 -- = [| [] |]
 transpose (x :: xs) = zipWith (::) x (transpose xs) -- = [| x :: xs |]
+
+-- nSplits from earlier on
+nSplits k n = transpose . kSplits k n
 
 --------------------------------------------------------------------------------
 -- Applicative/Monad/Traversable
