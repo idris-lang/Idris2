@@ -25,11 +25,11 @@ import public Libraries.Utils.Binary
 %default covering
 
 ||| TTC files can only be compatible if the version number is the same
-||| Update with the current date in YYYYMMDD format, or bump the auxiliary
+||| Update with the current date in YYYY_MM_DD_00 format, or bump the auxiliary
 ||| version number if you're changing the version more than once in the same day.
 export
 ttcVersion : Int
-ttcVersion = 20230829 * 100 + 0
+ttcVersion = 2023_09_04_00
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()

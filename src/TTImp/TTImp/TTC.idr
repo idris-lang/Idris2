@@ -72,8 +72,8 @@ mutual
         = do tag 23; toBuf b fc; toBuf b t
     toBuf b (IUnquote fc t)
         = do tag 24; toBuf b fc; toBuf b t
-    toBuf b (IRunElab fc t)
-        = do tag 25; toBuf b fc; toBuf b t
+    toBuf b (IRunElab fc re t)
+        = do tag 25; toBuf b fc; toBuf b re; toBuf b t
 
     toBuf b (IPrimVal fc y)
         = do tag 26; toBuf b fc; toBuf b y
@@ -164,8 +164,8 @@ mutual
                         pure (IQuoteDecl fc y)
                24 => do fc <- fromBuf b; y <- fromBuf b
                         pure (IUnquote fc y)
-               25 => do fc <- fromBuf b; y <- fromBuf b
-                        pure (IRunElab fc y)
+               25 => do fc <- fromBuf b; re <- fromBuf b; y <- fromBuf b
+                        pure (IRunElab fc re y)
 
                26 => do fc <- fromBuf b; y <- fromBuf b
                         pure (IPrimVal fc y)

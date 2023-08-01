@@ -62,8 +62,8 @@ mutual
       = IQuoteDecl fc (map (map f) ds)
     map f (IUnquote fc t)
       = IUnquote fc (map f t)
-    map f (IRunElab fc t)
-      = IRunElab fc (map f t)
+    map f (IRunElab fc re t)
+      = IRunElab fc re (map f t)
     map f (IPrimVal fc c)
       = IPrimVal fc c
     map f (IType fc)

@@ -372,7 +372,7 @@ mutual
   desugarB side ps (PUnquote fc tm)
       = pure $ IUnquote fc !(desugarB side ps tm)
   desugarB side ps (PRunElab fc tm)
-      = pure $ IRunElab fc !(desugarB side ps tm)
+      = pure $ IRunElab fc True !(desugarB side ps tm)
   desugarB side ps (PHole fc br holename)
       = do when br $ update Syn { bracketholes $= ((UN (Basic holename)) ::) }
            pure $ IHole fc holename
