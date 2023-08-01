@@ -204,8 +204,8 @@ checkTerm rig elabinfo nest env (IQuoteDecl fc ds) exp
     = checkQuoteDecl rig elabinfo nest env fc ds exp
 checkTerm rig elabinfo nest env (IUnquote fc tm) exp
     = throw (GenericMsg fc "Can't escape outside a quoted term")
-checkTerm rig elabinfo nest env (IRunElab fc tm) exp
-    = checkRunElab rig elabinfo nest env fc tm exp
+checkTerm rig elabinfo nest env (IRunElab fc re tm) exp
+    = checkRunElab rig elabinfo nest env fc re tm exp
 checkTerm {vars} rig elabinfo nest env (IPrimVal fc c) exp
     = do let (cval, cty) = checkPrim {vars} fc c
          checkExp rig elabinfo env fc cval (gnf env cty) exp

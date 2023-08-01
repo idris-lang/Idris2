@@ -245,12 +245,12 @@ checkRunElab : {vars : _} ->
                {auto o : Ref ROpts REPLOpts} ->
                RigCount -> ElabInfo ->
                NestedNames vars -> Env Term vars ->
-               FC -> RawImp -> Maybe (Glued vars) ->
+               FC -> (requireExtension : Bool) -> RawImp -> Maybe (Glued vars) ->
                Core (Term vars, Glued vars)
-checkRunElab rig elabinfo nest env fc script exp
+checkRunElab rig elabinfo nest env fc reqExt script exp
     = do expected <- mkExpected exp
          defs <- get Ctxt
-         unless (isExtension ElabReflection defs) $
+         unless (not reqExt || isExtension ElabReflection defs) $
              throw (GenericMsg fc "%language ElabReflection not enabled")
          let n = NS reflectionNS (UN $ Basic "Elab")
          elabtt <- appCon fc defs n [expected]

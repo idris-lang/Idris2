@@ -119,7 +119,7 @@ mutual
        IQuoteName : FC -> Name -> RawImp' nm
        IQuoteDecl : FC -> List (ImpDecl' nm) -> RawImp' nm
        IUnquote : FC -> RawImp' nm -> RawImp' nm
-       IRunElab : FC -> RawImp' nm -> RawImp' nm
+       IRunElab : FC -> (requireExtension : Bool) -> RawImp' nm -> RawImp' nm
 
        IPrimVal : FC -> (c : Constant) -> RawImp' nm
        IType : FC -> RawImp' nm
@@ -207,7 +207,7 @@ mutual
       show (IQuoteName fc tm) = "(%quotename " ++ show tm ++ ")"
       show (IQuoteDecl fc tm) = "(%quotedecl " ++ show tm ++ ")"
       show (IUnquote fc tm) = "(%unquote " ++ show tm ++ ")"
-      show (IRunElab fc tm) = "(%runelab " ++ show tm ++ ")"
+      show (IRunElab fc _ tm) = "(%runelab " ++ show tm ++ ")"
       show (IPrimVal fc c) = show c
       show (IHole _ x) = "?" ++ x
       show (IUnifyLog _ lvl x) = "(%logging " ++ show lvl ++ " " ++ show x ++ ")"
@@ -608,7 +608,7 @@ findIBinds (IDelay fc tm) = findIBinds tm
 findIBinds (IForce fc tm) = findIBinds tm
 findIBinds (IQuote fc tm) = findIBinds tm
 findIBinds (IUnquote fc tm) = findIBinds tm
-findIBinds (IRunElab fc tm) = findIBinds tm
+findIBinds (IRunElab fc _ tm) = findIBinds tm
 findIBinds (IBindHere _ _ tm) = findIBinds tm
 findIBinds (IBindVar _ n) = [n]
 findIBinds (IUpdate fc updates tm)
@@ -644,7 +644,7 @@ findImplicits (IDelay fc tm) = findImplicits tm
 findImplicits (IForce fc tm) = findImplicits tm
 findImplicits (IQuote fc tm) = findImplicits tm
 findImplicits (IUnquote fc tm) = findImplicits tm
-findImplicits (IRunElab fc tm) = findImplicits tm
+findImplicits (IRunElab fc _ tm) = findImplicits tm
 findImplicits (IBindVar _ n) = [n]
 findImplicits (IUpdate fc updates tm)
     = findImplicits tm ++ concatMap (findImplicits . getFieldUpdateTerm) updates
@@ -877,7 +877,7 @@ getFC (IQuote x _) = x
 getFC (IQuoteName x _) = x
 getFC (IQuoteDecl x _) = x
 getFC (IUnquote x _) = x
-getFC (IRunElab x _) = x
+getFC (IRunElab x _ _) = x
 getFC (IAs x _ _ _ _) = x
 getFC (Implicit x _) = x
 getFC (IWithUnambigNames x _ _) = x

@@ -145,7 +145,7 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
         = if (Context.Macro `elem` flags def) && notLHS mode
              then alternativeFirstSuccess $ reverse $
                     allSplits args <&> \(macroArgs, extArgs) =>
-                      (IRunElab fc $ ICoerced fc $ IVar fc n `buildAlt` macroArgs) `buildAlt` extArgs
+                      (IRunElab fc False $ ICoerced fc $ IVar fc n `buildAlt` macroArgs) `buildAlt` extArgs
              else wrapDot prim est mode n (map (snd . snd) args)
                     (definition def) (buildAlt (IVar fc n) args)
       where

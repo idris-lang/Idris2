@@ -17,8 +17,9 @@
   [#1066](https://github.com/idris-lang/idris2/issues/1066)).
 * `%hide` directives can now hide conflicting fixities from other modules.
 * Fixity declarations can now be kept private with export modifiers.
-* New fromTTImp, fromName, and fromDecls names for custom TTImp, Name, and Decls
-  literals.
+* New `fromTTImp`, `fromName`, and `fromDecls` names for custom `TTImp`,
+  `Name`, and `Decls` literals.
+* Call to `%macro`-functions do not require the `ElabReflection` extension.
 
 ### REPL changes
 
