@@ -16,7 +16,7 @@ in approximately the order you're likely to need them:
 * ``IDRIS2_PACKAGE_PATH`` - Directories where Idris2 looks for Idris 2 packages,
   in addition to the defaults (which are under the ``IDRIS2_PREFIX`` and in the
   ``depends`` subdirectory of the current working directory).
-  Directories are separated by a ``:`` on MacOS and *NIX systems, or a ``;`` on
+  Directories are separated by a ``:`` on MacOS and \*NIX systems, or a ``;`` on
   Windows
 * ``IDRIS2_DATA`` - Directories where Idris2 looks for data files. These are
   typically support code for code generators.
